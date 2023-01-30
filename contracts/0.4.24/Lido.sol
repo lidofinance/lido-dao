@@ -277,7 +277,7 @@ contract Lido is StETHPermit, AragonApp {
      * - 2^256 - 1 if staking is unlimited;
      * - 0 if staking is paused or if limit is exhausted.
      */
-    function getCurrentStakeLimit() public view returns (uint256) {
+    function getCurrentStakeLimit() external view returns (uint256) {
         return _getCurrentStakeLimit(STAKING_STATE_POSITION.getStorageStakeLimitStruct());
     }
 
@@ -600,7 +600,7 @@ contract Lido is StETHPermit, AragonApp {
     *
     * @dev `beacon` in naming still here for historical reasons
     */
-    function getBeaconStat() public view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance) {
+    function getBeaconStat() external view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance) {
         depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
         beaconValidators = CL_VALIDATORS_POSITION.getStorageUint256();
         beaconBalance = CL_BALANCE_POSITION.getStorageUint256();
