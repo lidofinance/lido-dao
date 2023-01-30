@@ -4,7 +4,7 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import {WithdrawalQueueBase} from  "./WithdrawalQueueBase.sol";
+import {WithdrawalQueueBase} from "./WithdrawalQueueBase.sol";
 
 import {IERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
@@ -205,79 +205,10 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
         return !RESUMED_POSITION.getStorageBool();
     }
 
-    /**
-     * @notice Request withdrawal of the provided stETH token amount
-     * @param _amountOfStETH StETH tokens that will be locked for withdrawal
-     * @param _recipient address to send ether to upon withdrawal. Will be set to `msg.sender` if `address(0)` is passed
-     * @dev Reverts with `ResumedExpected()` if contract is paused
-     * @dev Reverts with `RequestAmountTooSmall(_amountOfStETH)` if amount is less than `MIN_STETH_WITHDRAWAL_AMOUNT`
-     * @dev Reverts with `RequestAmountTooLarge(_amountOfStETH)` if amount is greater than `MAX_STETH_WITHDRAWAL_AMOUNT`
-     * @dev Reverts if failed to transfer StETH to the contract
-     */
-    function requestWithdrawal(uint256 _amountOfStETH, address _recipient)
-        external
-        whenResumed
-        returns (uint256 requestId)
-    {
-        _recipient = _checkWithdrawalRequestInput(_amountOfStETH, _recipient);
-
-        return _requestWithdrawal(_amountOfStETH, _recipient);
-    }
-
-    /**
-     * @notice Request withdrawal of the provided stETH token amount using EIP-2612 Permit
-     * @param _amountOfStETH StETH tokens that will be locked for withdrawal
-     * @param _recipient address to send ether to upon withdrawal. Will be set to `msg.sender` if `address(0)` is passed
-     */
-    function requestWithdrawalWithPermit(
-        uint256 _amountOfStETH,
-        address _recipient,
-        uint256 _deadline,
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s
-    ) external whenResumed returns (uint256 requestId) {
-        _recipient = _checkWithdrawalRequestInput(_amountOfStETH, _recipient);
-
-        STETH.permit(msg.sender, address(this), _amountOfStETH, _deadline, _v, _r, _s);
-
-        return _requestWithdrawal(_amountOfStETH, _recipient);
-    }
-
-    /**
-     * @notice Request withdrawal of the provided wstETH token amount
-     * @param _amountOfWstETH StETH tokens that will be locked for withdrawal
-     * @param _recipient address to send ether to upon withdrawal. Will be set to `msg.sender` if `address(0)` is passed
-     */
-    function requestWithdrawalWstETH(uint256 _amountOfWstETH, address _recipient)
-        external
-        whenResumed
-        returns (uint256 requestId)
-    {
-        _recipient = _checkWithdrawalRequestInput(IWstETH(WSTETH).getStETHByWstETH(_amountOfWstETH), _recipient);
-        return _requestWithdrawalWstETH(_amountOfWstETH, _recipient);
-    }
-
-    /**
-     * @notice Request withdrawal of the provided wstETH token amount using EIP-2612 Permit
-     * @param _amountOfWstETH StETH tokens that will be locked for withdrawal
-     * @param _recipient address to send ether to upon withdrawal. Will be set to `msg.sender` if `address(0)` is passed
-     */
-    function requestWithdrawalWstETHWithPermit(
-        uint256 _amountOfWstETH,
-        address _recipient,
-        uint256 _deadline,
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s
-    ) external whenResumed returns (uint256 requestId) {
-        _recipient = _checkWithdrawalRequestInput(IWstETH(WSTETH).getStETHByWstETH(_amountOfWstETH), _recipient);
-        WSTETH.permit(msg.sender, address(this), _amountOfWstETH, _deadline, _v, _r, _s);
-        return _requestWithdrawalWstETH(_amountOfWstETH, _recipient);
-    }
-
     struct WithdrawalRequestInput {
+        /// @notice Amount of the wstETH/StETH tokens that will be locked for withdrawal
         uint256 amount;
+        /// @notice Address to send ether to upon withdrawal
         address recipient;
     }
 
@@ -286,8 +217,8 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     ///  be created for each item in the passed list. If `WithdrawalRequestInput.recipient` is set to `address(0)`,
     ///  `msg.sender` will be used as recipient.
     /// @return requestIds an array of the created withdrawal requests
-    function requestWithdrawalBatch(WithdrawalRequestInput[] memory _withdrawalRequestInputs)
-        external
+    function requestWithdrawals(WithdrawalRequestInput[] calldata _withdrawalRequestInputs)
+        public
         whenResumed
         returns (uint256[] memory requestIds)
     {
@@ -305,7 +236,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     ///  be created for each item in the passed list. If `WithdrawalRequestInput.recipient` is set to `address(0)`,
     ///  `msg.sender` will be used as recipient.
     /// @return requestIds an array of the created withdrawal requests
-    function requestWithdrawalBatchWstETH(WithdrawalRequestInput[] memory _withdrawalRequestInputs)
+    function requestWithdrawalsWstETH(WithdrawalRequestInput[] calldata _withdrawalRequestInputs)
         public
         whenResumed
         returns (uint256[] memory requestIds)
@@ -334,13 +265,12 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     ///  be created for each item in the passed list. If `WithdrawalRequestInput.recipient` is set to `address(0)`,
     ///  `msg.sender` will be used as recipient.
     /// @return requestIds an array of the created withdrawal requests
-    function requestWithdrawalBatchWithPermit(WithdrawalRequestInput[] memory _withdrawalRequestInputs, Permit memory _permit)
-        external
-        whenResumed
-        returns (uint256[] memory requestIds)
-    {
+    function requestWithdrawalsWithPermit(
+        WithdrawalRequestInput[] calldata _withdrawalRequestInputs,
+        Permit calldata _permit
+    ) external whenResumed returns (uint256[] memory requestIds) {
         STETH.permit(msg.sender, address(this), _permit.value, _permit.deadline, _permit.v, _permit.r, _permit.s);
-        return requestWithdrawalBatchWstETH(_withdrawalRequestInputs);
+        return requestWithdrawals(_withdrawalRequestInputs);
     }
 
     /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data using EIP-2612 Permit
@@ -348,22 +278,26 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     ///  be created for each item in the passed list. If `WithdrawalRequestInput.recipient` is set to `address(0)`,
     ///  `msg.sender` will be used as recipient.
     /// @return requestIds an array of the created withdrawal requests
-    function requestWithdrawalBatchWstETHWithPermit(WithdrawalRequestInput[] memory _withdrawalRequestInputs, Permit memory _permit)
-        external
-        whenResumed
-        returns (uint256[] memory requestIds)
-    {
+    function requestWithdrawalsWstETHWithPermit(
+        WithdrawalRequestInput[] calldata _withdrawalRequestInputs,
+        Permit calldata _permit
+    ) external whenResumed returns (uint256[] memory requestIds) {
         WSTETH.permit(msg.sender, address(this), _permit.value, _permit.deadline, _permit.v, _permit.r, _permit.s);
-        return requestWithdrawalBatchWstETH(_withdrawalRequestInputs);
+        return requestWithdrawalsWstETH(_withdrawalRequestInputs);
+    }
+
+    struct ClaimWithdrawalInput {
+        /// @notice id of the finalized requests to claim
+        uint256 requestId;
+        /// @notice rate index found offchain that should be used for claiming
+        uint256 hint;
     }
 
     /// @notice Claim withdrawals batch once finalized (claimable)
-    /// @param _requestIds ids of the finalized requests to claim
-    /// @param _hints rate indices found offchain that should be used for claiming
-    function claimWithdrawals(uint256[] calldata _requestIds, uint256[] calldata _hints) external {
-        if (_requestIds.length != _hints.length) revert LengthsMismatch(_requestIds.length, _hints.length);
-        for (uint256 i = 0; i < _requestIds.length; ++i) {
-            claimWithdrawal(_requestIds[i], _hints[i]);
+    /// @param _claimWithdrawalInputs list of withdrawal request ids and hints to claim
+    function claimWithdrawals(ClaimWithdrawalInput[] calldata _claimWithdrawalInputs) external {
+        for (uint256 i = 0; i < _claimWithdrawalInputs.length; ++i) {
+            claimWithdrawal(_claimWithdrawalInputs[i].requestId, _claimWithdrawalInputs[i].hint);
         }
     }
 
