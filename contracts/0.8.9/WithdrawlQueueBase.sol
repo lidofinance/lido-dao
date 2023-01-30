@@ -4,11 +4,15 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
+import "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
+
 /**
  * @title A dedicated contract for handling stETH withdrawal request queue
  * @author folkyatina
  */
 abstract contract WithdrawalQueueBase {
+    using EnumerableSet for EnumerableSet.UintSet;
+
     /// @notice precision base for share rate and discounting factor values in the contract
     uint96 public constant E27_PRECISION_BASE = 1e27;
     /// @notice discount factor value that means no discount applying
@@ -50,6 +54,8 @@ abstract contract WithdrawalQueueBase {
     error ZeroRecipientAddress();
     error ZeroRequestId();
     error SenderExpected(address _recipient, address _msgSender);
+    error RecipientExpected(address _recipient, address _msgSender);
+    error InvalidRecipient(address _recipient);
     error InvalidRequestId(uint256 _requestId);
     error NotEnoughEther();
     error RequestNotFinalized(uint256 _requestId);
@@ -81,7 +87,7 @@ abstract contract WithdrawalQueueBase {
     uint128 public lockedEtherAmount = 0;
 
     /// @notice withdrawal requests mapped to the recipients
-    mapping(address => uint256[]) internal requestsByRecipient;
+    mapping(address => EnumerableSet.UintSet) private requestsByRecipient;
 
     function _initializeQueue() internal {
         // setting dummy zero structs in discountHistory and queue beginning
@@ -100,9 +106,16 @@ abstract contract WithdrawalQueueBase {
         return queue[lastRequestId].cumulativeStETH - queue[lastFinalizedRequestId].cumulativeStETH;
     }
 
-    /// @notice Returns all withdrawal requests placed for the `_recipient` address
+    /**
+     * @notice Returns all withdrawal requests placed for the `_recipient` address
+     *
+     * WARNING: This operation will copy the entire storage to memory, which can be quite expensive. This is designed
+     * to mostly be used by view accessors that are queried without any gas fees. Developers should keep in mind that
+     * this function has an unbounded cost, and using it as part of a state-changing function may render the function
+     * uncallable if the set grows to a point where copying to memory consumes too much gas to fit in a block.
+     */
     function getWithdrawalRequests(address _recipient) external view returns (uint256[] memory requestsIds) {
-        return requestsByRecipient[_recipient];
+        return requestsByRecipient[_recipient].values();
     }
 
     /**
@@ -229,6 +242,26 @@ abstract contract WithdrawalQueueBase {
         emit WithdrawalClaimed(_requestId, request.recipient, msg.sender);
     }
 
+    /**
+     * @notice Transfer the right to claim withdrawal to another `_newRecipient`
+     * @dev should be called by the old recepient
+     * @param _requestId id of the request subject to change
+     * @param _newRecipient new recipient address for withdrawal
+     */
+    function changeRecipient(uint256 _requestId, address _newRecipient) external {
+        WithdrawalRequest storage request = queue[_requestId];
+
+        if (_requestId > lastRequestId) revert InvalidRequestId(_requestId);
+        if (request.recipient != msg.sender) revert RecipientExpected(request.recipient, msg.sender);
+        if (request.claimed) revert RequestAlreadyClaimed();
+        if (_newRecipient == msg.sender) revert InvalidRecipient(_newRecipient);
+
+        request.recipient = payable(_newRecipient);
+        
+        requestsByRecipient[_newRecipient].add(_requestId);
+        requestsByRecipient[msg.sender].remove(_requestId);
+    }
+
     /// @dev creates a new `WithdrawalRequest` in the queue
     function _enqueue(uint256 _amountOfStETH, uint256 _amountofShares, address _recipient)
         internal
@@ -248,7 +281,7 @@ abstract contract WithdrawalQueueBase {
             _toUint64(block.number),
             false
         );
-        requestsByRecipient[_recipient].push(requestId);
+        requestsByRecipient[_recipient].add(requestId);
 
         emit WithdrawalRequested(requestId, msg.sender, _recipient, _amountOfStETH, _amountofShares);
     }
