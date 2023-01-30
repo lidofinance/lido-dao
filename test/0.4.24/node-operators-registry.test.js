@@ -2262,6 +2262,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await assert.reverts(app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: voting }), 'KEYS_COUNT_TOO_LARGE')
     })
 
+    it('reverts with KEYS_COUNT_TOO_LARGE error when index + keys count greater than UINT64_MAX', async () => {
+      const keyIndex = toBN('0x8000000000000000')
+      const keysCount = toBN('0x8000000000000000')
+      await assert.reverts(app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: voting }), 'KEYS_COUNT_TOO_LARGE')
+    })
+
     it('reverts with KEY_NOT_FOUND error when fromIndex + keysCount is greater than total signing keys count', async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount
       const keysCount = NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount - keyIndex + 1
@@ -2599,6 +2605,15 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('reverts with KEYS_COUNT_TOO_LARGE error when keys count greater than UINT64_MAX', async () => {
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].vettedSigningKeysCount
       const keysCount = toBN('0x10000000000000000')
+      await assert.reverts(
+        app.removeSigningKeysOperatorBH(firstNodeOperatorId, keyIndex, keysCount, { from: voting }),
+        'KEYS_COUNT_TOO_LARGE'
+      )
+    })
+
+    it('reverts with KEYS_COUNT_TOO_LARGE error when index + keys count greater than UINT64_MAX', async () => {
+      const keyIndex = toBN('0x8000000000000000')
+      const keysCount = toBN('0x8000000000000000')
       await assert.reverts(
         app.removeSigningKeysOperatorBH(firstNodeOperatorId, keyIndex, keysCount, { from: voting }),
         'KEYS_COUNT_TOO_LARGE'
