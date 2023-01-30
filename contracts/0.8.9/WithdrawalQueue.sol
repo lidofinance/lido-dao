@@ -120,7 +120,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     error RequestAmountTooSmall(uint256 _amountOfStETH);
     error RequestAmountTooLarge(uint256 _amountOfStETH);
     error LengthsMismatch(uint256 _expectedLength, uint256 _actualLength);
-    error UnsupportedWithdrawalToken(address _token, address[] _supportedTokens);
+    error RequestIdsNotSorted();
 
     /// @notice Reverts when the contract is uninitialized
     modifier whenInitialized() {
@@ -371,11 +371,20 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     }
 
     /// @notice Returns the list of hints for the given request ids
-    /// @param _requestIds ids of the requests to get hints for
-    function findClaimHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex) external view returns (uint256[] memory hintIds) {
+    /// @param _requestIds ids of the requests sorted in the descending order to get hints for
+    /// @return hintIds the hints for `claimWithdrawal` to find the discount for the passed request ids
+    function findClaimHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)
+        external
+        view
+        returns (uint256[] memory hintIds)
+    {
         hintIds = new uint256[](_requestIds.length);
+        uint256 prevRequestId = type(uint256).max;
         for (uint256 i = 0; i < _requestIds.length; ++i) {
+            if (_requestIds[i] > prevRequestId) revert RequestIdsNotSorted();
             hintIds[i] = findClaimHint(_requestIds[i], _firstIndex, _lastIndex);
+            prevRequestId = _requestIds[i];
+            _lastIndex = hintIds[i];
         }
     }
 

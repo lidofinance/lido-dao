@@ -356,7 +356,7 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
 
       const lastDiscountIndex = await withdrawalQueue.lastDiscountIndex()
       const hints = await withdrawalQueue.findClaimHints(
-        [requestId, secondRequestId, thirdRequestId],
+        [thirdRequestId, secondRequestId, requestId],
         0,
         lastDiscountIndex
       )
@@ -364,6 +364,29 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
       assert.equals(hints[0], 0)
       assert.equals(hints[1], 0)
       assert.equals(hints[2], 0)
+    })
+
+    it('reverts with RequestIdsNotSorted error when request ids not in ascending order', async () => {
+      await withdrawalQueue.finalize(requestId, { from: steth.address, value: ETH(20) })
+
+      await steth.mintShares(recipient, shares(1))
+      await steth.approve(withdrawalQueue.address, StETH(300), { from: recipient })
+
+      const secondRequestAmount = ETH(10)
+      await withdrawalQueue.requestWithdrawal(secondRequestAmount, recipient, { from: recipient })
+      const secondRequestId = await withdrawalQueue.lastRequestId()
+
+      const thirdRequestAmount = ETH(30)
+      await withdrawalQueue.requestWithdrawal(thirdRequestAmount, user, { from: user })
+      const thirdRequestId = await withdrawalQueue.lastRequestId()
+
+      await withdrawalQueue.finalize(thirdRequestId, { from: steth.address, value: ETH(40) })
+
+      const lastDiscountIndex = await withdrawalQueue.lastDiscountIndex()
+      await assert.reverts(
+        withdrawalQueue.findClaimHints([requestId, thirdRequestId, secondRequestId], 0, lastDiscountIndex),
+        'RequestIdsNotSorted()'
+      )
     })
   })
 
