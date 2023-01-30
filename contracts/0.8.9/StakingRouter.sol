@@ -631,8 +631,10 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
             (moduleExitedKeysCount, cacheItem.activeKeysCount, cacheItem.availableKeysCount) =
                 IStakingModule(cacheItem.stakingModuleAddress).getValidatorsKeysStats();
             uint256 exitedKeysCount = stakingModuleData.exitedKeysCount;
-            if (exitedKeysCount < moduleExitedKeysCount) {
-                // module hasn't received all exited validators data yet
+            if (exitedKeysCount > moduleExitedKeysCount) {
+                // module hasn't received all exited validators data yet => we need to correct
+                // activeKeysCount (equal to depositedKeysCount - exitedKeysCount) replacing
+                // the exitedKeysCount with the one that staking router is aware of
                 cacheItem.activeKeysCount -= (exitedKeysCount - moduleExitedKeysCount);
             }
         }
