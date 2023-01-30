@@ -66,7 +66,7 @@ contract Lido is StETHPermit, AragonApp {
     bytes32 internal constant CL_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
     /// @dev number of Lido's validators available in the Consensus Layer state
     // "beacon" in the `keccak256()` parameter is staying here for compatibility reason
-    bytes32 internal constant CL_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators"); 
+    bytes32 internal constant CL_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
     /// @dev percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
     bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION = keccak256("lido.Lido.ELRewardsWithdrawalLimit");
     /// @dev Just a counter of total amount of execution layer rewards received by Lido contract. Not used in the logic.
@@ -166,9 +166,9 @@ contract Lido is StETHPermit, AragonApp {
      * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      */
     function finalizeUpgrade_v2(
-        address _stakingRouter, 
-        address _dsm, 
-        address _eip712StETH, 
+        address _stakingRouter,
+        address _dsm,
+        address _eip712StETH,
         address _withdrawalQueue
     ) external {
         require(!isPetrified(), "PETRIFIED");
@@ -277,7 +277,7 @@ contract Lido is StETHPermit, AragonApp {
      * - 2^256 - 1 if staking is unlimited;
      * - 0 if staking is paused or if limit is exhausted.
      */
-    function getCurrentStakeLimit() public view returns (uint256) {
+    function getCurrentStakeLimit() external view returns (uint256) {
         return _getCurrentStakeLimit(STAKING_STATE_POSITION.getStorageStakeLimitStruct());
     }
 
@@ -447,9 +447,9 @@ contract Lido is StETHPermit, AragonApp {
     * @param _clBalance sum of all Lido validators' balances on Consensus Layer
     * @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
     * @param _elRewardsVaultBalance elRewards vault balance on Execution Layer for report block
-    * @param _requestIdToFinalizeUpTo rigth boundary of requestId range if equals 0, no requests should be finalized 
+    * @param _requestIdToFinalizeUpTo rigth boundary of requestId range if equals 0, no requests should be finalized
     * @param _finalizationShareRate share rate that should be used for finalization
-    * 
+    *
     * @return totalPooledEther amount of ether in the protocol after report
     * @return totalShares amount of shares in the protocol after report
     */
@@ -483,6 +483,9 @@ contract Lido is StETHPermit, AragonApp {
             _finalizationShareRate
         );
 
+        // TODO: check rebase boundaries
+        // TODO: emit a rebase event with sufficient data to calc pre- and post-rebase share rates and APR
+
         // distribute rewards to Lido and Node Operators
         _processRewards(
             preClBalance,
@@ -497,28 +500,10 @@ contract Lido is StETHPermit, AragonApp {
     }
 
     /**
-     * @notice Send funds to recovery Vault. Overrides default AragonApp behaviour
-     * @param _token Token to be sent to recovery vault
+     * @notice Overrides default AragonApp behaviour to disallow recovery.
      */
-    function transferToVault(address _token) external {
-        require(allowRecoverability(_token), "RECOVER_DISALLOWED");
-        address vault = getRecoveryVault();
-        require(vault != address(0), "RECOVER_VAULT_ZERO");
-
-        uint256 balance;
-        if (_token == ETH) {
-            balance = _getUnaccountedEther();
-            // Transfer replaced by call to prevent transfer gas amount issue
-            // solhint-disable-next-line
-            require(vault.call.value(balance)(), "RECOVER_TRANSFER_FAILED");
-        } else {
-            ERC20 token = ERC20(_token);
-            balance = token.staticBalanceOf(this);
-            // safeTransfer comes from overridden default implementation
-            require(token.safeTransfer(vault, balance), "RECOVER_TOKEN_TRANSFER_FAILED");
-        }
-
-        emit RecoverToVault(vault, _token, balance);
+    function transferToVault(address /* _token */) external {
+        revert("NOT_SUPPORTED");
     }
 
     /**
@@ -590,42 +575,17 @@ contract Lido is StETHPermit, AragonApp {
     }
 
     /**
-    * @notice Returns the key values related to Consensus Layer side of the contract. It historically contains beacon 
+    * @notice Returns the key values related to Consensus Layer side of the contract. It historically contains beacon
     * @return depositedValidators - number of deposited validators from Lido contract side
     * @return beaconValidators - number of Lido validators visible on Consensus Layer, reported by oracle
     * @return beaconBalance - total amount of ether on the Consensus Layer side (sum of all the balances of Lido validators)
-    * 
+    *
     * @dev `beacon` in naming still here for historical reasons
     */
-    function getBeaconStat() public view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance) {
+    function getBeaconStat() external view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance) {
         depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
         beaconValidators = CL_VALIDATORS_POSITION.getStorageUint256();
         beaconBalance = CL_BALANCE_POSITION.getStorageUint256();
-    }
-
-    /**
-     * @notice Returns current staking rewards fee rate
-     * @return totalFee total rewards fee in base precision
-     * @return basePrecision base precision number, which constitutes 100% fee
-     */
-    function getFee() public view returns (uint96 totalFee, uint256 basePrecision) {
-        (, , totalFee, basePrecision) = getStakingRouter().getStakingRewardsDistribution();
-    }
-
-    /**
-     * @notice Returns current fee distribution proportion
-     * @return modulesFee modules summary fee in base precision
-     * @return treasuryFee treasury fee in base precision
-     * @return basePrecision base precision number, which constitutes 100% fee
-     */
-    function getFeeDistribution() public view returns (uint96 modulesFee, uint96 treasuryFee, uint256 basePrecision) {
-        uint96[] memory moduleFees;
-        uint96 totalFee;
-        (, moduleFees, totalFee, basePrecision) = getStakingRouter().getStakingRewardsDistribution();
-        for (uint256 i; i < moduleFees.length; ++i) {
-            modulesFee += moduleFees[i];
-        }
-        treasuryFee = totalFee - modulesFee;
     }
 
     /**
@@ -868,37 +828,58 @@ contract Lido is StETHPermit, AragonApp {
         // The effect is that the given percentage of the reward goes to the fee recipient, and
         // the rest of the reward is distributed between token holders proportionally to their
         // token shares.
+        IStakingRouter router = getStakingRouter();
 
-        (address[] memory recipients, uint96[] memory modulesFees, uint96 totalFee, uint256 precisionPoints) = getStakingRouter()
-            .getStakingRewardsDistribution();
+        (address[] memory recipients,
+            uint256[] memory moduleIds,
+            uint96[] memory modulesFees,
+            uint96 totalFee,
+            uint256 precisionPoints) = router.getStakingRewardsDistribution();
 
         require(recipients.length == modulesFees.length, "WRONG_RECIPIENTS_INPUT");
+        require(moduleIds.length == modulesFees.length, "WRONG_MODULE_IDS_INPUT");
 
         if (totalFee > 0) {
             uint256 shares2mint =
-                _totalRewards.mul(totalFee).mul(_getTotalShares())
-                .div(
-                    (_getTotalPooledEther().mul(precisionPoints))
-                    .sub(_totalRewards.mul(totalFee))
+                _totalRewards.mul(totalFee).mul(_getTotalShares()).div(
+                    _getTotalPooledEther().mul(precisionPoints).sub(_totalRewards.mul(totalFee))
                 );
+
             _mintShares(address(this), shares2mint);
 
-            uint256 treasuryReward = shares2mint;
-            uint256 recipientReward;
+            (uint256[] memory moduleRewards, uint256 totalModuleRewards) =
+                _transferModuleRewards(recipients, modulesFees, totalFee, shares2mint);
 
-            for (uint256 i = 0; i < recipients.length; i++) {
-                if (modulesFees[i] > 0) {
-                    recipientReward = shares2mint.mul(modulesFees[i]).div(totalFee);
-                    _transferShares(address(this), recipients[i], recipientReward);
-                    _emitTransferAfterMintingShares(recipients[i], recipientReward);
-                    treasuryReward = treasuryReward.sub(recipientReward);
-                }
-            }
+            _transferTreasuryRewards(shares2mint.sub(totalModuleRewards));
 
-            address treasury = getTreasury();
-            _transferShares(address(this), treasury, treasuryReward);
-            _emitTransferAfterMintingShares(treasury, treasuryReward);
+            router.reportRewardsMinted(moduleIds, moduleRewards);
         }
+    }
+
+    function _transferModuleRewards(
+        address[] memory recipients,
+        uint96[] memory modulesFees,
+        uint256 totalFee,
+        uint256 totalRewards
+    ) internal returns (uint256[] memory moduleRewards, uint256 totalModuleRewards) {
+        totalModuleRewards = 0;
+        moduleRewards = new uint256[](recipients.length);
+
+        for (uint256 i = 0; i < recipients.length; i++) {
+            if (modulesFees[i] > 0) {
+                uint256 iModuleRewards = totalRewards.mul(modulesFees[i]).div(totalFee);
+                moduleRewards[i] = iModuleRewards;
+                _transferShares(address(this), recipients[i], iModuleRewards);
+                _emitTransferAfterMintingShares(recipients[i], iModuleRewards);
+                totalModuleRewards = totalModuleRewards.add(iModuleRewards);
+            }
+        }
+    }
+
+    function _transferTreasuryRewards(uint256 treasuryReward) internal {
+        address treasury = getTreasury();
+        _transferShares(address(this), treasury, treasuryReward);
+        _emitTransferAfterMintingShares(treasury, treasuryReward);
     }
 
     /**
@@ -906,8 +887,7 @@ contract Lido is StETHPermit, AragonApp {
     * @param _amount Total amount deposited to the Consensus Layer side
     */
     function _markAsUnbuffered(uint256 _amount) internal {
-        BUFFERED_ETHER_POSITION.setStorageUint256(
-            BUFFERED_ETHER_POSITION.getStorageUint256().sub(_amount));
+        BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().sub(_amount));
 
         emit Unbuffered(_amount);
     }

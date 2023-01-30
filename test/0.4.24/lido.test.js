@@ -84,6 +84,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await stakingRouter.initialize(appManager, app.address, ZERO_ADDRESS)
     await stakingRouter.grantRole(await stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(), voting, { from: appManager })
     await stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_MANAGE_ROLE(), voting, { from: appManager })
+    await stakingRouter.grantRole(await stakingRouter.REPORT_REWARDS_MINTED_ROLE(), app.address, { from: appManager })
 
     // WithdrawalQueue
     const wsteth = await WstETH.new(app.address)
@@ -112,7 +113,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       from: appManager
     })
     await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_LIMIT_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, operators.address, await operators.UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE(), appManager, {
+    await acl.createPermission(voting, operators.address, await operators.STAKING_ROUTER_ROLE(), appManager, {
+      from: appManager
+    })
+    await acl.grantPermission(stakingRouter.address, operators.address, await operators.STAKING_ROUTER_ROLE(), {
       from: appManager
     })
     await acl.createPermission(
@@ -365,10 +369,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       assertBn(await app.getTotalPooledEther(), ETH(depositAmount + elRewards + beaconRewards))
       assertBn(await app.getTotalELRewardsCollected(), ETH(elRewards))
 
-    const {totalFee} = await app.getFee()
-    const stakersReward = bn(ETH(elRewards + beaconRewards))
-      .mul(FEE_PRECISION_POINTS.sub(totalFee))
-      .div(FEE_PRECISION_POINTS)
+      const {modulesFee, treasuryFee} = await stakingRouter.getStakingFeeAggregateDistribution()
+      const stakersReward = bn(ETH(elRewards + beaconRewards))
+        .mul(FEE_PRECISION_POINTS.sub(modulesFee).sub(treasuryFee))
+        .div(FEE_PRECISION_POINTS)
     assertBn(await app.balanceOf(user2), bn(StETH(depositAmount)).add(stakersReward))
   })
 
@@ -560,7 +564,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     })
   })
 
-  it('setModulesFee works', async () => {
+  // TODO: check if reverts are checked in Staking Router tests and remove this test from here
+  it.skip('setModulesFee works', async () => {
     const [curated] = await stakingRouter.getStakingModules()
 
     let module1 = await stakingRouter.getStakingModule(curated.id)
@@ -1816,15 +1821,15 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     })
 
     it('reverts when vault is not set', async () => {
-      await assertRevert(app.transferToVault(anyToken.address, { from: nobody }), 'RECOVER_VAULT_ZERO')
+      await assertRevert(app.transferToVault(anyToken.address, { from: nobody }), 'NOT_SUPPORTED')
     })
 
     it('reverts when recover disallowed', async () => {
       await app.setAllowRecoverability(false)
-      await assertRevert(app.transferToVault(anyToken.address, { from: nobody }), 'RECOVER_DISALLOWED')
+      await assertRevert(app.transferToVault(anyToken.address, { from: nobody }), 'NOT_SUPPORTED')
     })
 
-    context('recovery works with vault mock deployed', () => {
+    context('reverts when vault is set', () => {
       let vault
 
       beforeEach(async () => {
@@ -1839,29 +1844,20 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
         await dao.setRecoveryVaultAppId(vaultId)
       })
 
-      it('recovery with erc20 tokens works and emits event', async () => {
-        const receipt = await app.transferToVault(anyToken.address, { from: nobody })
-        assertEvent(receipt, 'RecoverToVault', { expectedArgs: { vault: vault.address, token: anyToken.address, amount: 100 } })
+      it('recovery with erc20 tokens reverts', async () => {
+        await assertRevert(
+          app.transferToVault(anyToken.address, { from: nobody }),
+          'NOT_SUPPORTED'
+        )
       })
 
-      it('recovery with unaccounted ether works and emits event', async () => {
+      it('recovery with unaccounted ether reverts', async () => {
         await app.makeUnaccountedEther({ from: user1, value: ETH(10) })
-        const receipt = await app.transferToVault(ZERO_ADDRESS, { from: nobody })
-        assertEvent(receipt, 'RecoverToVault', { expectedArgs: { vault: vault.address, token: ZERO_ADDRESS, amount: ETH(10) } })
+        await assertRevert(
+          app.transferToVault(ZERO_ADDRESS, { from: nobody }),
+          'NOT_SUPPORTED'
+        )
       })
-    })
-
-    it('vault is not payable', async () => {
-      const vaultId = hash('vault.aragonpm.test')
-      const vaultBase = await AragonNotPayableVaultMock.new()
-      const vaultReceipt = await dao.newAppInstance(vaultId, vaultBase.address, '0x', true)
-      const vaultAddress = getInstalledApp(vaultReceipt)
-      vault = await AragonNotPayableVaultMock.at(vaultAddress)
-
-      await dao.setRecoveryVaultAppId(vaultId)
-
-      await assertRevert(app.transferToVault(ZERO_ADDRESS, { from: nobody }), 'RECOVER_TRANSFER_FAILED')
-      await assertRevert(app.transferToVault(badToken.address, { from: nobody }), 'RECOVER_TOKEN_TRANSFER_FAILED')
     })
   })
 })

@@ -614,7 +614,8 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
 
     await oracleMock.reportBeacon(105, 2, tokens(96)) // 105 is an epoch number
-    await nodeOperatorsRegistry.distributeRewards({ from: nobody })
+    // kicks rewards distribution
+    await nodeOperatorsRegistry.finishUpdatingExitedValidatorsKeysCount({ from: voting })
 
     const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
     const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)

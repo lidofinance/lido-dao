@@ -87,8 +87,14 @@ contract('Lido: staking router reward distribution', ([appManager, voting, treas
 
     // Set up the staking router permissions.
     const STAKING_MODULE_MANAGE_ROLE = await stakingRouter.STAKING_MODULE_MANAGE_ROLE()
+    const REPORT_REWARDS_MINTED_ROLE = await stakingRouter.REPORT_REWARDS_MINTED_ROLE()
 
+    await stakingRouter.grantRole(REPORT_REWARDS_MINTED_ROLE, app.address, { from: appManager })
     await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, voting, { from: appManager })
+
+    await acl.createPermission(stakingRouter.address, curatedModule.address, await curatedModule.STAKING_ROUTER_ROLE(), appManager, {
+      from: appManager
+    })
 
     soloModule = await ModuleSolo.new(app.address, { from: appManager })
 
