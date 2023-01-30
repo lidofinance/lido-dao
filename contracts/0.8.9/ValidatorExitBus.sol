@@ -140,6 +140,8 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
         _handleMemberReport(msg.sender, _epochId, _reportHash);
     }
 
+    // TODO: what id it should be? NodeOperator registry Id or beacon chain id? validatorIndex
+    // offchain guarantee that don't ask the same validator
     function handleReportData(
         uint256 _epochId,
         address[] calldata _stakingModules,

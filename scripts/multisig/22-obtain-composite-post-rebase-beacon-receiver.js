@@ -14,7 +14,7 @@ const REQUIRED_NET_STATE = [
   'ensAddress',
   'daoAddress',
   `app:${APP_NAMES.ARAGON_VOTING}`,
-  `app:${APP_NAMES.ORACLE}`
+  'lidoOracle',
 ]
 
 async function obtainInstance({ web3, artifacts, appName = APP }) {
@@ -36,7 +36,7 @@ async function obtainInstance({ web3, artifacts, appName = APP }) {
   )
   log(`Checking...`)
   const votingAddress = state[`app:${APP_NAMES.ARAGON_VOTING}`].proxyAddress
-  const lidoOracleAddress = state[`app:${APP_NAMES.ORACLE}`].proxyAddress
+  const lidoOracleAddress = state['lidoOracle'].proxy
 
   await assertAddresses({
     votingAddress,

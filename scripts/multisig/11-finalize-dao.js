@@ -70,12 +70,7 @@ async function finalizeDAO({ web3, artifacts }) {
   await saveCallTxData(`finalizeDAO`, template, 'finalizeDAO', `tx-11-finalize-dao.json`, {
     arguments: [
       state.daoAragonId,
-      percentToBP(fee.totalPercent),
-      percentToBP(fee.treasuryPercent),
-      percentToBP(fee.insurancePercent),
-      percentToBP(fee.nodeOperatorsPercent),
       state.vestingParams.unvestedTokensAmount,
-      state.executionLayerRewardsVaultAddress,
       state.executionLayerRewardsParams.withdrawalLimit
     ],
     from: state.multisigAddress
