@@ -589,15 +589,6 @@ contract Lido is StETHPermit, AragonApp {
     }
 
     /**
-     * @notice Returns current staking rewards fee rate
-     * @return totalFee total rewards fee in base precision
-     * @return basePrecision base precision number, which constitutes 100% fee
-     */
-    function getFee() public view returns (uint96 totalFee, uint256 basePrecision) {
-        (, , , totalFee, basePrecision) = getStakingRouter().getStakingRewardsDistribution();
-    }
-
-    /**
      * @notice Returns current fee distribution proportion
      * @return modulesFee modules summary fee in base precision
      * @return treasuryFee treasury fee in base precision
