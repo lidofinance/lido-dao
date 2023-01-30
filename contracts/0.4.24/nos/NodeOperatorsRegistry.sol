@@ -868,8 +868,10 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         signatures = MemUtils.unsafeAllocateBytes(_limit.mul(SIGNATURE_LENGTH));
         used = new bool[](_limit);
 
+        bytes memory pubkey;
+        bytes memory signature;
         for (uint256 index = 0; index < _limit; index++) {
-            (bytes memory pubkey, bytes memory signature) = _loadSigningKey(_nodeOperatorId, _offset.add(index));
+            (pubkey, signature) = _loadSigningKey(_nodeOperatorId, _offset.add(index));
             MemUtils.copyBytes(pubkey, pubkeys, index.mul(PUBKEY_LENGTH));
             MemUtils.copyBytes(signature, signatures, index.mul(SIGNATURE_LENGTH));
             used[index] = (_offset.add(index)) < nodeOperator.depositedSigningKeysCount;
