@@ -131,9 +131,9 @@ contract HashConsensus is AccessControlEnumerable {
     bytes32 public constant MANAGE_REPORT_PROCESSOR_ROLE = keccak256("MANAGE_REPORT_PROCESSOR_ROLE");
 
     /// Chain specification
-    uint64 immutable SLOTS_PER_EPOCH;
-    uint64 immutable SECONDS_PER_SLOT;
-    uint64 immutable GENESIS_TIME;
+    uint64 internal immutable SLOTS_PER_EPOCH;
+    uint64 internal immutable SECONDS_PER_SLOT;
+    uint64 internal immutable GENESIS_TIME;
 
     /// @dev A quorum value that effectively disables the oracle.
     uint256 internal constant UNREACHABLE_QUORUM = type(uint256).max;
