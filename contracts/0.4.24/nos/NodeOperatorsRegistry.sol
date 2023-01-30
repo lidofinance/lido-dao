@@ -224,8 +224,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         require(!nodeOperator.active, "NODE_OPERATOR_ALREADY_ACTIVATED");
 
-        uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
-        ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.add(1));
+        ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(getActiveNodeOperatorsCount() + 1);
 
         nodeOperator.active = true;
 
@@ -967,8 +966,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         }
 
         (address[] memory recipients, uint256[] memory shares) = getRewardsDistribution(sharesToDistribute);
-
-        assert(recipients.length == shares.length);
 
         distributed = 0;
         for (uint256 idx = 0; idx < recipients.length; ++idx) {
