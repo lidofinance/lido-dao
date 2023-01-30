@@ -421,6 +421,26 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     /**
+     * @notice Returns the aggregate fee distribution proportion
+     * @return modulesFee modules aggregate fee in base precision
+     * @return treasuryFee treasury fee in base precision
+     * @return basePrecision base precision: a value corresponding to the full fee
+     */
+    function getStakingFeeAggregateDistribution() external view returns (
+        uint96 modulesFee,
+        uint96 treasuryFee,
+        uint256 basePrecision
+    ) {
+        uint96[] memory moduleFees;
+        uint96 totalFee;
+        (, , moduleFees, totalFee, basePrecision) = getStakingRewardsDistribution();
+        for (uint256 i; i < moduleFees.length; ++i) {
+            modulesFee += moduleFees[i];
+        }
+        treasuryFee = totalFee - modulesFee;
+    }
+
+    /**
      * @notice Return shares table
      *
      * @return recipients rewards recipient addresses corresponding to each module
@@ -430,7 +450,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      * @return precisionPoints base precision number, which constitutes 100% fee
      */
     function getStakingRewardsDistribution()
-        external
+        public
         view
         returns (
             address[] memory recipients,

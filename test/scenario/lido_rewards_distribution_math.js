@@ -571,7 +571,7 @@ contract('Lido: rewards distribution math', (addresses) => {
     const rewardsToDistribute = await token.getSharesByPooledEth(
       newBeaconBalance.add(bufferedBefore).sub(totalPooledEtherBefore))
 
-    const {treasuryFee} = await pool.getFeeDistribution()
+    const {treasuryFee} = await stakingRouter.getStakingFeeAggregateDistribution()
     const {stakingModuleFees, precisionPoints} = await stakingRouter.getStakingRewardsDistribution()
     const [firstModuleFee, secondModuleFee] = stakingModuleFees
     const expectedRewardsDistribution = {
@@ -606,7 +606,7 @@ contract('Lido: rewards distribution math', (addresses) => {
     assertBn(await token.totalSupply(), newBeaconBalance.add(bufferedBefore), 'token total supply')
 
     const rewardsToDistribute = await token.getSharesByPooledEth(newBeaconBalance.add(bufferedBefore).sub(totalPooledEtherBefore))
-    const {treasuryFee} = await pool.getFeeDistribution()
+    const {treasuryFee} = await stakingRouter.getStakingFeeAggregateDistribution()
     const {stakingModuleFees, precisionPoints} = await stakingRouter.getStakingRewardsDistribution()
     const [firstModuleFee, secondModuleFee] = stakingModuleFees
     const expectedRewardsDistribution = {

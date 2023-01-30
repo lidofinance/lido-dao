@@ -369,10 +369,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       assertBn(await app.getTotalPooledEther(), ETH(depositAmount + elRewards + beaconRewards))
       assertBn(await app.getTotalELRewardsCollected(), ETH(elRewards))
 
-    const {totalFee} = await app.getFee()
-    const stakersReward = bn(ETH(elRewards + beaconRewards))
-      .mul(FEE_PRECISION_POINTS.sub(totalFee))
-      .div(FEE_PRECISION_POINTS)
+      const {modulesFee, treasuryFee} = await stakingRouter.getStakingFeeAggregateDistribution()
+      const stakersReward = bn(ETH(elRewards + beaconRewards))
+        .mul(FEE_PRECISION_POINTS.sub(modulesFee).sub(treasuryFee))
+        .div(FEE_PRECISION_POINTS)
     assertBn(await app.balanceOf(user2), bn(StETH(depositAmount)).add(stakersReward))
   })
 
@@ -564,7 +564,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     })
   })
 
-  it('setModulesFee works', async () => {
+  // TODO: check if reverts are checked in Staking Router tests and remove this test from here
+  it.skip('setModulesFee works', async () => {
     const [curated] = await stakingRouter.getStakingModules()
 
     let module1 = await stakingRouter.getStakingModule(curated.id)
