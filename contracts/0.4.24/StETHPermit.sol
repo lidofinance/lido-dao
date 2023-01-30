@@ -30,7 +30,6 @@ contract StETHPermit is IERC2612, StETH {
     /**
      * @dev Typehash constant for ERC-2612 (Permit)
      */
-    // solhint-disable-next-line var-name-mixedcase
     bytes32 internal constant PERMIT_TYPEHASH =
         keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
