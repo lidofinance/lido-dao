@@ -27,7 +27,7 @@ const cfgCommunity = {
   targetShare: 5000
 }
 
-contract('Lido', ([appManager, voting, treasury, depositor, user2]) => {
+contract('Lido: staking router reward distribution', ([appManager, voting, treasury, depositor, user2]) => {
   let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, curatedModule, stakingRouter, soloModule
   let dao, acl
 

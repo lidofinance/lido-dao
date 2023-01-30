@@ -133,10 +133,6 @@ const newApp = async (dao, appName, baseAppAddress, rootAccount) => {
   return proxyAddress
 }
 
-// createAragonApp(dao, appName, impl, rootAccount, permissions)
-
-// function createAragonApp()
-
 module.exports = {
   AragonDAO,
   newDao,

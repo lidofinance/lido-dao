@@ -11,10 +11,6 @@ const { waitBlocks } = require('../helpers/blockchain')
 
 const INodeOperatorsRegistry = artifacts.require('contracts/0.4.24/interfaces/INodeOperatorsRegistry.sol:INodeOperatorsRegistry')
 
-function logBNDict(x) {
-  console.log( Object.entries(x).map(([k, v]) => `${k}: ${v}`) )
-}
-
 contract('Lido: penalties, slashing, operator stops', (addresses) => {
   const [
     // the root account which deployed the DAO

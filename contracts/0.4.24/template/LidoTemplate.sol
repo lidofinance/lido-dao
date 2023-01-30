@@ -279,7 +279,6 @@ contract LidoTemplate is IsContract {
         string _tokenName,
         string _tokenSymbol,
         uint64[4] _votingSettings,
-        address _eip712StETH,
         address _oracle
     ) external onlyOwner {
         DeployState memory state = deployState;
