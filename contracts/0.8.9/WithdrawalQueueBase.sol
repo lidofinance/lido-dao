@@ -4,11 +4,16 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
+import "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
+
 /**
- * @title A dedicated contract for handling stETH withdrawal request queue
+ * @title Internal logic to handle request queue.
+ *
  * @author folkyatina
  */
 abstract contract WithdrawalQueueBase {
+    using EnumerableSet for EnumerableSet.UintSet;
+
     /// @notice precision base for share rate and discounting factor values in the contract
     uint96 public constant E27_PRECISION_BASE = 1e27;
     /// @notice discount factor value that means no discount applying
@@ -46,19 +51,20 @@ abstract contract WithdrawalQueueBase {
         uint256 amountOfShares
     );
     event WithdrawalClaimed(uint256 indexed requestId, address indexed receiver, address initiator);
+    event WithdrawalRequestRecipientChanged(uint256 indexed requestId, address newRecipient, address oldRecipient);
 
     error ZeroRecipientAddress();
     error ZeroRequestId();
     error SenderExpected(address _recipient, address _msgSender);
+    error RecipientExpected(address _recipient, address _msgSender);
+    error InvalidRecipient(address _recipient);
     error InvalidRequestId(uint256 _requestId);
     error NotEnoughEther();
     error RequestNotFinalized(uint256 _requestId);
     error RequestAlreadyClaimed();
     error InvalidHint(uint256 _hint);
     error CantSendValueRecipientMayHaveReverted();
-    error SafeCastValueDoesNotFit64Bits();
-    error SafeCastValueDoesNotFit96Bits();
-    error SafeCastValueDoesNotFit128Bits();
+    error SafeCastValueDoesNotFit(uint16 maximumBitSize);
 
     /// @notice queue for withdrawal requests
     /// @dev mapping for better upgradability
@@ -81,7 +87,7 @@ abstract contract WithdrawalQueueBase {
     uint128 public lockedEtherAmount = 0;
 
     /// @notice withdrawal requests mapped to the recipients
-    mapping(address => uint256[]) internal requestsByRecipient;
+    mapping(address => EnumerableSet.UintSet) private requestsByRecipient;
 
     function _initializeQueue() internal {
         // setting dummy zero structs in discountHistory and queue beginning
@@ -100,9 +106,16 @@ abstract contract WithdrawalQueueBase {
         return queue[lastRequestId].cumulativeStETH - queue[lastFinalizedRequestId].cumulativeStETH;
     }
 
-    /// @notice Returns all withdrawal requests placed for the `_recipient` address
+    /**
+     * @notice Returns all withdrawal requests placed for the `_recipient` address
+     *
+     * WARNING: This operation will copy the entire storage to memory, which can be quite expensive. This is designed
+     * to mostly be used by view accessors that are queried without any gas fees. Developers should keep in mind that
+     * this function has an unbounded cost, and using it as part of a state-changing function may render the function
+     * uncallable if the set grows to a point where copying to memory consumes too much gas to fit in a block.
+     */
     function getWithdrawalRequests(address _recipient) external view returns (uint256[] memory requestsIds) {
-        return requestsByRecipient[_recipient];
+        return requestsByRecipient[_recipient].values();
     }
 
     /**
@@ -124,16 +137,13 @@ abstract contract WithdrawalQueueBase {
         if (_requestId > lastRequestId) revert InvalidRequestId(_requestId);
 
         WithdrawalRequest memory request = queue[_requestId];
+        WithdrawalRequest memory previousRequest = queue[_requestId - 1];
 
         recipient = request.recipient;
         blockNumber = request.blockNumber;
 
-        amountOfShares = request.cumulativeShares;
-        amountOfStETH = request.cumulativeStETH;
-        if (_requestId > 0) {
-            amountOfShares -= queue[_requestId - 1].cumulativeShares;
-            amountOfStETH -= queue[_requestId - 1].cumulativeStETH;
-        }
+        amountOfShares = request.cumulativeShares - previousRequest.cumulativeShares;
+        amountOfStETH = request.cumulativeStETH - previousRequest.cumulativeStETH;
 
         isFinalized = _requestId <= lastFinalizedRequestId;
         isClaimed = request.claimed;
@@ -160,12 +170,13 @@ abstract contract WithdrawalQueueBase {
         uint96 discountFactor = _calculateDiscountFactor(eth, batchValue);
         eth = _applyDiscount(eth, discountFactor);
     }
+
     /**
      * @notice View function to find a hint to pass it to `claimWithdrawal()`.
-     * @dev NB! OOG is possible if used onchain. See `findClaimHint(uint256 _requestId, uint256 _firstIndex, uint256 _lastIndex)`
+     * @dev WARNING! OOG is possible if used onchain.
+     * See `findClaimHint(uint256 _requestId, uint256 _firstIndex, uint256 _lastIndex)` for onchain use
      * @param _requestId request id to be claimed with this hint
      */
-
     function findClaimHintUnbounded(uint256 _requestId) public view returns (uint256) {
         return findClaimHint(_requestId, 0, lastDiscountIndex);
     }
@@ -229,6 +240,30 @@ abstract contract WithdrawalQueueBase {
         emit WithdrawalClaimed(_requestId, request.recipient, msg.sender);
     }
 
+    /**
+     * @notice Transfer the right to claim withdrawal to another `_newRecipient`
+     * @dev should be called by the old recepient
+     * @param _requestId id of the request subject to change
+     * @param _newRecipient new recipient address for withdrawal
+     */
+    function changeRecipient(uint256 _requestId, address _newRecipient) external {
+        if (_newRecipient == msg.sender) revert InvalidRecipient(_newRecipient);
+        if (_requestId > lastRequestId) revert InvalidRequestId(_requestId);
+
+        WithdrawalRequest storage request = queue[_requestId];
+
+        if (request.recipient != msg.sender) revert RecipientExpected(request.recipient, msg.sender);
+        if (request.claimed) revert RequestAlreadyClaimed();
+       
+
+        request.recipient = payable(_newRecipient);
+
+        requestsByRecipient[_newRecipient].add(_requestId);
+        requestsByRecipient[msg.sender].remove(_requestId);
+
+        emit WithdrawalRequestRecipientChanged(_requestId, _newRecipient, msg.sender);
+    }
+
     /// @dev creates a new `WithdrawalRequest` in the queue
     function _enqueue(uint256 _amountOfStETH, uint256 _amountofShares, address _recipient)
     internal
@@ -248,7 +283,7 @@ abstract contract WithdrawalQueueBase {
             _toUint64(block.number),
             false
         );
-        requestsByRecipient[_recipient].push(requestId);
+        requestsByRecipient[_recipient].add(requestId);
 
         emit WithdrawalRequested(requestId, msg.sender, _recipient, _amountOfStETH, _amountofShares);
     }
@@ -328,17 +363,17 @@ abstract contract WithdrawalQueueBase {
     }
 
     function _toUint64(uint256 _value) internal pure returns (uint64) {
-        if (_value > type(uint64).max) revert SafeCastValueDoesNotFit64Bits();
+        if (_value > type(uint64).max) revert SafeCastValueDoesNotFit(64);
         return uint64(_value);
     }
 
     function _toUint96(uint256 _value) internal pure returns (uint96) {
-        if (_value > type(uint96).max) revert SafeCastValueDoesNotFit96Bits();
+        if (_value > type(uint96).max) revert SafeCastValueDoesNotFit(96);
         return uint96(_value);
     }
 
     function _toUint128(uint256 _value) internal pure returns (uint128) {
-        if (_value > type(uint128).max) revert SafeCastValueDoesNotFit128Bits();
+        if (_value > type(uint128).max) revert SafeCastValueDoesNotFit(128);
         return uint128(_value);
     }
 }

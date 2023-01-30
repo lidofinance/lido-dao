@@ -4,13 +4,13 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
+import {WithdrawalQueueBase} from  "./WithdrawalQueueBase.sol";
+
 import {IERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import {IERC20Permit} from "@openzeppelin/contracts-v4.4/token/ERC20/extensions/draft-IERC20Permit.sol";
 import {SafeERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 import {AccessControlEnumerable} from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
-
-import {WithdrawalQueueBase} from "./WithdrawlQueueBase.sol";
 
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 
@@ -30,9 +30,6 @@ interface IWstETH is IERC20, IERC20Permit {
     /**
      * @notice Exchanges wstETH to stETH
      * @param _wstETHAmount amount of wstETH to unwrap in exchange for stETH
-     * @dev Requirements:
-     *  - `_wstETHAmount` must be non-zero
-     *  - msg.sender must have at least `_wstETHAmount` wstETH.
      * @return Amount of stETH user receives after unwrap
      */
     function unwrap(uint256 _wstETHAmount) external returns (uint256);
@@ -51,7 +48,7 @@ interface IWstETH is IERC20, IERC20Permit {
 }
 
 /**
- * @title A contract for handling stETH withdrawal request queue within Lido protocol
+ * @title A contract for handling stETH withdrawal request queue within the Lido protocol
  * @author folkyatina
  */
 contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {

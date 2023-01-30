@@ -25,7 +25,7 @@ contract LidoPushableMock is Lido {
     }
 
     function setBeaconBalance(uint256 _beaconBalance) public {
-        BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
+        CL_BALANCE_POSITION.setStorageUint256(_beaconBalance);
     }
 
     // value sent to this function becomes buffered
@@ -34,7 +34,7 @@ contract LidoPushableMock is Lido {
     }
 
     function setBeaconValidators(uint256 _beaconValidators) public {
-        BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
+        CL_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
     }
 
     function setTotalShares(uint256 _totalShares) public {
