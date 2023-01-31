@@ -3,7 +3,7 @@
 pragma solidity 0.8.9;
 
 
-import { UnstructuredStorage } from "../../lib/UnstructuredStorage.sol";
+import { UnstructuredStorage } from "../../../common/lib/UnstructuredStorage.sol";
 import { AccountingOracle } from "../../oracle/AccountingOracle.sol";
 
 

@@ -6,7 +6,7 @@ import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
 import { MemUtils } from "../../common/lib/MemUtils.sol";
 import { ResizableArray } from "../lib/ResizableArray.sol";
-import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
+import { UnstructuredStorage } from "../../common/lib/UnstructuredStorage.sol";
 
 import { BaseOracle } from "./BaseOracle.sol";
 

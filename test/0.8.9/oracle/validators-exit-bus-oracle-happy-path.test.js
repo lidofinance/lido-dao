@@ -120,9 +120,9 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     })
 
     it('the data cannot be submitted passing a different contract version', async () => {
-      await assertRevert(
+      await assert.reverts(
         oracle.submitReportData(reportItems, oracleVersion - 1, {from: member1}),
-        `UnexpectedContractVersion(${oracleVersion}, ${oracleVersion - 1})`
+        `UNEXPECTED_CONTRACT_VERSION`
       )
     })
 

@@ -5,11 +5,13 @@
 pragma solidity 0.8.9;
 
 import {StakingRouter} from "../StakingRouter.sol";
+import {UnstructuredStorage} from "../../common/lib/UnstructuredStorage.sol";
 
 contract StakingRouterMock is StakingRouter {
+    using UnstructuredStorage for bytes32;
+
     constructor(address _depositContract) StakingRouter(_depositContract) {
-        // unlock impl
-        _setContractVersion(0);
+        CONTRACT_VERSION_POSITION.setStorageUint256(0);
     }
 
     function getStakingModuleIndexById(uint256 _stakingModuleId) external view returns (uint256) {

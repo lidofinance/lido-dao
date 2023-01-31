@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.9;
 
-import "./lib/UnstructuredStorage.sol";
+import "../common/lib/UnstructuredStorage.sol";
 
 
 contract ReportEpochChecker {

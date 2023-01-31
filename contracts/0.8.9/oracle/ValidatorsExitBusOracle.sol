@@ -5,7 +5,7 @@ pragma solidity 0.8.9;
 import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
 import { Math } from "../lib/Math.sol";
-import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
+import { UnstructuredStorage } from "../../common/lib/UnstructuredStorage.sol";
 import { AllowanceBasedRateLimit as RateLimit } from "../lib/AllowanceBasedRateLimit.sol";
 
 import { BaseOracle } from "./BaseOracle.sol";

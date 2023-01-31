@@ -11,10 +11,6 @@ contract Versioned {
 
     event ContractVersionSet(uint256 version);
 
-    error NonZeroContractVersionOnInit();
-    error InvalidContractVersionIncrement();
-    error UnexpectedContractVersion(uint256 expected, uint256 received);
-
     /// @dev Storage slot: uint256 version
     /// Version of the initialized contract storage.
     /// The version stored in CONTRACT_VERSION_POSITION equals to:
@@ -25,7 +21,12 @@ contract Versioned {
 
     constructor() {
         // lock version in the implementation's storage to prevent initialization
-        CONTRACT_VERSION_POSITION.setStorageUint256(type(uint256).max);
+        CONTRACT_VERSION_POSITION.setStorageUint256(2**256 - 1);
+    }
+
+    /// @notice Returns the current contract version.
+    function getVersion() external view returns (uint256) {
+        return _getContractVersion();
     }
 
     /// @notice Returns the current contract version.
@@ -37,32 +38,23 @@ contract Versioned {
         return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
-    function _checkContractVersion(uint256 version) internal view {
-        uint256 expectedVersion = _getContractVersion();
-        if (version != expectedVersion) {
-            revert UnexpectedContractVersion(expectedVersion, version);
-        }
+    function _checkContractVersion(uint256 expectedVersion) internal view {
+        require(expectedVersion == _getContractVersion(), "UNEXPECTED_CONTRACT_VERSION");
     }
 
     /// @dev Sets the contract version to 1. Should be called from the initialize() function.
     function _initializeContractVersionTo1() internal {
-        if (_getContractVersion() == 0) {
-            _writeContractVersion(1);
-        } else {
-            revert NonZeroContractVersionOnInit();
-        }
+        require(_getContractVersion() == 0, "NON_ZERO_CONTRACT_VERSION_ON_INIT");
+        _writeContractVersion(1);
     }
 
     /// @dev Updates the contract version. Should be called from a finalizeUpgrade_vN() function.
     function _updateContractVersion(uint256 newVersion) internal {
-        if (newVersion == _getContractVersion() + 1) {
-            _writeContractVersion(newVersion);
-        } else {
-            revert InvalidContractVersionIncrement();
-        }
+        require(newVersion == _getContractVersion() + 1, "INVALID_CONTRACT_VERSION_INCREMENT");
+        _writeContractVersion(newVersion);
     }
 
-    function _writeContractVersion(uint256 version) private {
+    function _writeContractVersion(uint256 version) internal {
         CONTRACT_VERSION_POSITION.setStorageUint256(version);
         emit ContractVersionSet(version);
     }

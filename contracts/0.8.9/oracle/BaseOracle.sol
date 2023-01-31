@@ -4,8 +4,8 @@ pragma solidity 0.8.9;
 
 import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
-import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
-import { Versioned } from "../utils/Versioned.sol";
+import { UnstructuredStorage } from "../../common/lib/UnstructuredStorage.sol";
+import { Versioned } from "../../common/utils/Versioned.sol";
 import { AccessControlEnumerable } from "../utils/access/AccessControlEnumerable.sol";
 
 import { IReportAsyncProcessor } from "./HashConsensus.sol";
