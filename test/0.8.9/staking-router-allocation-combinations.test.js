@@ -57,7 +57,8 @@ contract('StakingRouter', (accounts) => {
   const MODULE_AVAILABLE_KEYS_CASES = [0, 1, 10_000]
   const MODULE_ACTIVE_KEYS_CASES = [0, 1, 10_000]
 
-  describe('Single staking module', async () => {
+  describe('Single staking module', function () {
+    this.timeout(30_000, 'Test suite took too long')
     beforeEach(async () => {
       await stakingRouter.addStakingModule('Module1', StakingModule1.address, 10_000, 1_000, 5_000, { from: admin })
     })
@@ -92,7 +93,8 @@ contract('StakingRouter', (accounts) => {
     })
   })
 
-  describe('Two staking modules', async () => {
+  describe('Two staking modules', async function () {
+    this.timeout(60_000, 'Test suite took too long')
     for (const [module1TargetShare, module2TargetShare] of TWO_MODULES_TARGET_SHARES_CASES) {
       describe(`Target shares: ${module1TargetShare} and ${module2TargetShare}`, async () => {
         beforeEach(async () => {

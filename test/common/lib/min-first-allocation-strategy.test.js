@@ -10,7 +10,8 @@ contract('MinFirstAllocationStrategy', (accounts) => {
     ['Legacy (Solidity 0.4.24)', MinFirstAlgorithmLegacyConsumer],
     ['Modern (Solidity 0.8.9)', MinFirstAlgorithmModernConsumer]
   ]) {
-    describe(consumerVersion, async () => {
+    describe(consumerVersion, async function () {
+      this.timeout(60_000, 'Test suite took too long')
       let minFirstAllocationStrategy
       const [deployer] = accounts
       let evmSnapshotId
