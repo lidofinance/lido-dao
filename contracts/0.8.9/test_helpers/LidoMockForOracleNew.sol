@@ -27,7 +27,7 @@ contract LidoMockForOracleNew {
         uint256,
         uint256,
         uint256
-    ) external returns (uint256, uint256) {
+    ) external returns (uint256, uint256, uint256, uint256) {
         totalPooledEther = _beaconBalance;
     }
 

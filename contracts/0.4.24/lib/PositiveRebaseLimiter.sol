@@ -74,7 +74,7 @@ library PositiveRebaseLimiter {
      * @param _limiterState limit repr struct
      * @param _clBalanceDiff cl balance diff (can be negative!)
      *
-     * NB: if `_clBalanceDiff` is negative than max limiter vault is pushed higher
+     * NB: if `_clBalanceDiff` is negative than max limiter value is pushed higher
      * otherwise limiter is updated with the `appendEther` call.
      */
     function applyCLBalanceUpdate(LimiterState.Data memory _limiterState, int256 _clBalanceDiff) internal view {

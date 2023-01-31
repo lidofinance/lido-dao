@@ -465,12 +465,17 @@ contract Lido is StETHPermit, AragonApp {
         // decision
         uint256 _requestIdToFinalizeUpTo,
         uint256 _finalizationShareRate
-    ) external returns (uint256 totalPooledEther, uint256 totalShares){
+    ) external returns (
+        uint256 totalPooledEther,
+        uint256 totalShares,
+        uint256 withdrawnWithdrawals,
+        uint256 elRewards
+    ) {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
         _whenNotStopped();
 
         LimiterState.Data memory rebaseLimiter = PositiveRebaseLimiter.initLimiterState(
-            _getMaxPositiveRebase(),
+            getMaxPositiveRebase(),
             _getTotalPooledEther(),
             _getTotalShares()
         );
@@ -488,8 +493,8 @@ contract Lido is StETHPermit, AragonApp {
             int256(_clBalance.sub(rewardsBase)) : -int256(rewardsBase.sub(_clBalance));
 
         rebaseLimiter.applyCLBalanceUpdate(clBalanceDiff);
-        uint256 withdrawnWithdrawals = rebaseLimiter.appendEther(_withdrawalVaultBalance);
-        uint256 elRewards = rebaseLimiter.appendEther(_elRewardsVaultBalance);
+        withdrawnWithdrawals = rebaseLimiter.appendEther(_withdrawalVaultBalance);
+        elRewards = rebaseLimiter.appendEther(_elRewardsVaultBalance);
 
         // collect ETH from EL and Withdrawal vaults and send some to WithdrawalQueue if required
         _processETHDistribution(
@@ -567,8 +572,8 @@ contract Lido is StETHPermit, AragonApp {
      * @notice Get max positive rebase value
      * @return max positive rebase value, nominated id MAX_POSITIVE_REBASE_PRECISION_POINTS (10**9 == 100% = 10000 BP)
      */
-    function getMaxPositiveRebase() external view returns (uint256) {
-        return _getMaxPositiveRebase();
+    function getMaxPositiveRebase() public view returns (uint256) {
+        return MAX_POSITIVE_REBASE_POSITION.getStorageUint256();
     }
 
     /**
@@ -992,14 +997,6 @@ contract Lido is StETHPermit, AragonApp {
         MAX_POSITIVE_REBASE_POSITION.setStorageUint256(_maxPositiveRebase);
 
         emit MaxPositiveRebaseSet(_maxPositiveRebase);
-    }
-
-    /**
-     * @dev Get max positive rebase value
-     * @return max positive rebase, nominated in MAX_POSITIVE_REBASE_PRECISION_POINTS
-     */
-    function _getMaxPositiveRebase() internal view returns (uint256) {
-        return MAX_POSITIVE_REBASE_POSITION.getStorageUint256();
     }
 
     /**
