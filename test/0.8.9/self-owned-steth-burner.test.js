@@ -18,6 +18,7 @@ const EIP712StETH = artifacts.require('EIP712StETH')
 
 const ERC20OZMock = artifacts.require('ERC20OZMock.sol')
 const ERC721OZMock = artifacts.require('ERC721OZMock.sol')
+const STAB_ADDRESS = '0x0000000000000000000000000000000000000001'
 
 // semantic aliases
 const stETHShares = ETH
@@ -55,10 +56,11 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, anotherAccount,
     await lido.initialize(
       oracle.address,
       treasury,
-      ZERO_ADDRESS,
-      ZERO_ADDRESS,
-      ZERO_ADDRESS,
-      ZERO_ADDRESS,
+      STAB_ADDRESS,
+      STAB_ADDRESS,
+      STAB_ADDRESS,
+      STAB_ADDRESS,
+      STAB_ADDRESS,
       eip712StETH.address
     )
 

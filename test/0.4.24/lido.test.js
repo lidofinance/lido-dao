@@ -23,7 +23,6 @@ const ERC20Mock = artifacts.require('ERC20Mock.sol')
 const WstETH = artifacts.require('WstETH.sol')
 const AragonVaultMock = artifacts.require('AragonVaultMock.sol')
 const ERC20WrongTransferMock = artifacts.require('ERC20WrongTransferMock.sol')
-const AragonNotPayableVaultMock = artifacts.require('AragonNotPayableVaultMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const BeaconChainDepositorMock = artifacts.require('BeaconChainDepositorMock.sol')
@@ -49,12 +48,13 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, operators
   let treasuryAddress
   let dao, acl
-  let elRewardsVault, rewarder
+  let elRewardsVault
   let stakingRouter
   let beaconChainDepositor
-  let yetAnotherOracle, anyToken
+  let yetAnotherOracle, anyToken, badToken
   let eip712StETH
   let withdrawalQueue
+  let withdrawalVault, receipt
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
@@ -139,6 +139,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     )
 
     elRewardsVault = await ELRewardsVault.new(app.address, treasury)
+    withdrawalVault = await WithdrawalVault.new(app.address, treasury)
     eip712StETH = await EIP712StETH.new()
 
     // Initialize the app's proxy.
@@ -148,6 +149,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       stakingRouter.address,
       depositor,
       elRewardsVault.address,
+      withdrawalVault.address,
       withdrawalQueue.address,
       eip712StETH.address
     )
@@ -229,31 +231,98 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     })
 
     it('contract version is correct after finalized', async () => {
-      await app.finalizeUpgrade_v2(stakingRouter.address, depositor, eip712StETH.address, withdrawalQueue.address)
+      await app.finalizeUpgrade_v2(
+        stakingRouter.address,
+        depositor,
+        eip712StETH.address,
+        withdrawalQueue.address,
+        withdrawalVault.address
+      )
       assert.equal(await app.getVersion(), 2)
     })
 
     it('reverts with PETRIFIED on implementation finalized ', async () => {
-      assertRevert(appBase.finalizeUpgrade_v2(stakingRouter.address, depositor, eip712StETH.address, withdrawalQueue.address), 'PETRIFIED')
+      assertRevert(
+        appBase.finalizeUpgrade_v2(
+          stakingRouter.address,
+          depositor,
+          eip712StETH.address,
+          withdrawalQueue.address,
+          withdrawalVault.address
+        ),
+        'PETRIFIED'
+      )
     })
 
     it('reverts if already initialized', async () => {
       assert.equal(await app.getVersion(), 0)
-      await app.finalizeUpgrade_v2(stakingRouter.address, depositor, eip712StETH.address, withdrawalQueue.address)
+      await app.finalizeUpgrade_v2(
+        stakingRouter.address,
+        depositor,
+        eip712StETH.address,
+        withdrawalQueue.address,
+        withdrawalVault.address
+      )
       assert.equal(await app.getVersion(), 2)
-      assertRevert(app.finalizeUpgrade_v2(stakingRouter.address, depositor, eip712StETH.address, withdrawalQueue.address), 'WRONG_BASE_VERSION')
+      assertRevert(
+        app.finalizeUpgrade_v2(
+          stakingRouter.address,
+          depositor,
+          eip712StETH.address,
+          withdrawalQueue.address,
+          withdrawalVault.address
+        ),
+        'WRONG_BASE_VERSION'
+      )
     })
 
     it('reverts if staking router address is ZERO', async () => {
-      assertRevert(app.finalizeUpgrade_v2(ZERO_ADDRESS, depositor, eip712StETH.address, withdrawalQueue.address), 'STAKING_ROUTER_ZERO_ADDRESS')
+      assertRevert(
+        app.finalizeUpgrade_v2(
+          ZERO_ADDRESS,
+          depositor,
+          eip712StETH.address,
+          withdrawalQueue.address,
+          withdrawalVault.address
+        ),
+        'STAKING_ROUTER_ZERO_ADDRESS'
+      )
     })
 
     it('reverts if dsm address is ZERO', async () => {
-      assertRevert(app.finalizeUpgrade_v2(stakingRouter.address, ZERO_ADDRESS, eip712StETH.address, withdrawalQueue.address), 'DSM_ZERO_ADDRESS')
+      assertRevert(
+        app.finalizeUpgrade_v2(
+          stakingRouter.address,
+          ZERO_ADDRESS,
+          eip712StETH.address,
+          withdrawalQueue.address,
+          withdrawalVault.address
+        ),
+        'DSM_ZERO_ADDRESS'
+      )
+    })
+
+    it('reverts if withdrawal vault address is ZERO', async () => {
+      assertRevert(
+        app.finalizeUpgrade_v2(
+          stakingRouter.address,
+          depositor,
+          eip712StETH.address,
+          withdrawalQueue.address,
+          ZERO_ADDRESS
+        ),
+        'WITHDRAWAL_VAULT_ZERO_ADDRESS'
+      )
     })
 
     it('events works', async () => {
-      const receipt = await app.finalizeUpgrade_v2(stakingRouter.address, depositor, eip712StETH.address, withdrawalQueue.address)
+      const receipt = await app.finalizeUpgrade_v2(
+        stakingRouter.address,
+        depositor,
+        eip712StETH.address,
+        withdrawalQueue.address,
+        withdrawalVault.address
+      )
 
       assert.equal(await app.getVersion(), 2)
 
@@ -265,6 +334,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
       assertEvent(receipt, 'DepositSecurityModuleSet', {
         expectedArgs: { dsmAddress: depositor }
+      })
+
+      assertEvent(receipt, 'WithdrawalVaultSet', {
+        expectedArgs: { withdrawalVaultAddress: withdrawalVault.address }
       })
     })
   })
@@ -628,13 +701,16 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   })
 
   it('setOracle works', async () => {
-    await assertRevert(app.setProtocolContracts(ZERO_ADDRESS, user2, ZERO_ADDRESS, { from: voting }), 'ORACLE_ZERO_ADDRESS')
-    const receipt = await app.setProtocolContracts(yetAnotherOracle.address, oracle.address, ZERO_ADDRESS, { from: voting })
+    await assertRevert(
+      app.setProtocolContracts(ZERO_ADDRESS, user2, ZERO_ADDRESS, { from: voting }),
+      'ORACLE_ZERO_ADDRESS'
+    )
+    const receipt = await app.setProtocolContracts(yetAnotherOracle.address, oracle.address, withdrawalVault.address, { from: voting })
     assertEvent(receipt, 'ProtocolContactsSet', {
       expectedArgs: {
         oracle: yetAnotherOracle.address,
         treasury: oracle.address,
-        executionLayerRewardsVault: ZERO_ADDRESS,
+        executionLayerRewardsVault: withdrawalVault.address
       }
     })
     assert.equal(await app.getOracle(), yetAnotherOracle.address)
@@ -1793,17 +1869,25 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     })
 
     it(`treasury can't be set by an arbitrary address`, async () => {
-      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, { from: nobody }))
-      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, { from: user1 }))
+      await assertRevert(
+        app.setProtocolContracts(await app.getOracle(), user1, withdrawalQueue.address, { from: nobody })
+      )
+      await assertRevert(
+        app.setProtocolContracts(await app.getOracle(), user1, withdrawalQueue.address, { from: user1 })
+      )
     })
 
     it('voting can set treasury', async () => {
-      const receipt = await app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, { from: voting })
+      const receipt = await app.setProtocolContracts(await app.getOracle(), user1, withdrawalQueue.address, { from: voting })
       assertEvent(receipt, 'ProtocolContactsSet', { expectedArgs: { treasury: user1 } })
       assert.equal(await app.getTreasury(), user1)
 
-      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, { from: nobody }))
-      await assertRevert(app.setProtocolContracts(await app.getOracle(), user1, ZERO_ADDRESS, { from: user1 }))
+      await assertRevert(
+        app.setProtocolContracts(await app.getOracle(), user1, withdrawalQueue.address, { from: nobody })
+      )
+      await assertRevert(
+        app.setProtocolContracts(await app.getOracle(), user1, withdrawalQueue.address, { from: user1 })
+      )
     })
 
     it('reverts when treasury is zero address', async () => {

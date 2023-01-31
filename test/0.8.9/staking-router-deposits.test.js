@@ -20,6 +20,8 @@ const WstETH = artifacts.require('WstETH')
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
 
+const STAB_ADDRESS = '0x0000000000000000000000000000000000000003'
+
 const MAX_DEPOSITS_PER_BLOCK = 100
 const MIN_DEPOSIT_BLOCK_DISTANCE = 20
 const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 10
@@ -124,7 +126,8 @@ contract('StakingRouter', (accounts) => {
       treasury,
       stakingRouter.address,
       depositSecurityModule.address,
-      ZERO_ADDRESS,
+      STAB_ADDRESS,
+      STAB_ADDRESS,
       withdrawalQueue.address,
       eip712StETH.address
     )

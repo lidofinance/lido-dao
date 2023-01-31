@@ -12,6 +12,7 @@ const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const DepositSecurityModule = artifacts.require('DepositSecurityModule.sol')
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const EIP712StETH = artifacts.require('EIP712StETH')
+const WithdrawalVault = artifacts.require('WithdrawalVault')
 
 const MAX_DEPOSITS_PER_BLOCK = 100
 const MIN_DEPOSIT_BLOCK_DISTANCE = 20
@@ -129,6 +130,7 @@ async function deployDaoAndPool(appManager, voting) {
 
   const wsteth = await WstETH.new(pool.address)
   const withdrawalQueue = (await withdrawals.deploy(appManager, wsteth.address)).queue
+  const withdrawalVault = await WithdrawalVault.new(pool.address, treasury.address)
 
   await pool.initialize(
     oracleMock.address,
@@ -136,6 +138,7 @@ async function deployDaoAndPool(appManager, voting) {
     stakingRouter.address,
     depositSecurityModule.address,
     elRewardsVault.address,
+    withdrawalVault.address,
     withdrawalQueue.address,
     eip712StETH.address
   )

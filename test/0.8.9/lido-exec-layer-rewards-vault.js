@@ -5,6 +5,7 @@ const { assertRevert } = require('../helpers/assertThrow')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const { newDao, newApp } = require('../0.4.24/helpers/dao')
 const { StETH, ETH } = require('../helpers/utils')
+const withdrawals = require('../helpers/withdrawals')
 
 const LidoELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
@@ -12,9 +13,13 @@ const LidoMock = artifacts.require('LidoMock.sol')
 const LidoOracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const EIP712StETH = artifacts.require('EIP712StETH')
+const WithdrawalVault = artifacts.require('WithdrawalVault')
+const WstETH = artifacts.require('WstETH.sol')
 
 const ERC20OZMock = artifacts.require('ERC20OZMock.sol')
 const ERC721OZMock = artifacts.require('ERC721OZMock.sol')
+
+const STAB_ADDRESS = '0x0000000000000000000000000000000000000001'
 
 contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, depositor, anotherAccount, treasury, ...otherAccounts]) => {
   let lido, elRewardsVault
@@ -41,16 +46,20 @@ contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, depos
     await acl.createPermission(voting, lido.address, await lido.BURN_ROLE(), appManager, { from: appManager })
 
     elRewardsVault = await LidoELRewardsVault.new(lido.address, treasury, { from: deployer })
+    const withdrawalVault = await WithdrawalVault.new(lido.address, treasury)
     const eip712StETH = await EIP712StETH.new({ from: deployer })
+    const wsteth = await WstETH.new(lido.address)
+    const withdrawalQueue = (await withdrawals.deploy(dao.address, wsteth.address)).queue
 
     // Initialize the app's proxy.
     await lido.initialize(
       oracle.address,
       treasury,
-      ZERO_ADDRESS,
-      ZERO_ADDRESS,
+      STAB_ADDRESS,
+      STAB_ADDRESS,
       elRewardsVault.address,
-      ZERO_ADDRESS,
+      withdrawalVault.address,
+      withdrawalQueue.address,
       eip712StETH.address
     )
 

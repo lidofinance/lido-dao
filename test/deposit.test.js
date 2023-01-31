@@ -22,6 +22,7 @@ const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
 const ADDRESS_3 = '0x0000000000000000000000000000000000000003'
 const ADDRESS_4 = '0x0000000000000000000000000000000000000004'
+const STAB_ADDRESS = '0x0000000000000000000000000000000000000005'
 
 const UNLIMITED = 1000000000
 const MAX_DEPOSITS = 150
@@ -124,7 +125,8 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
       treasury,
       stakingRouter.address,
       depositor,
-      ZERO_ADDRESS,
+      STAB_ADDRESS,
+      STAB_ADDRESS,
       withdrawalQueue.address,
       eip712StETH.address
     )

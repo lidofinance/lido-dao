@@ -54,6 +54,7 @@ contract Lido is StETHPermit, AragonApp {
     bytes32 internal constant STAKING_ROUTER_POSITION = keccak256("lido.Lido.stakingRouter");
     bytes32 internal constant DEPOSIT_SECURITY_MODULE_POSITION = keccak256("lido.Lido.depositSecurityModule");
     bytes32 internal constant WITHDRAWAL_QUEUE_POSITION = keccak256("lido.Lido.withdrawalQueue");
+    bytes32 internal constant WITHDRAWAL_VAULT_POSITION = keccak256("lido.Lido.withdrawalVault");
 
     /// @dev storage slot position of the staking rate limit structure
     bytes32 internal constant STAKING_STATE_POSITION = keccak256("lido.Lido.stakeLimit");
@@ -110,6 +111,8 @@ contract Lido is StETHPermit, AragonApp {
 
     event WithdrawalQueueSet(address withdrawalQueueAddress);
 
+    event WithdrawalVaultSet(address withdrawalVaultAddress);
+
     // The amount of ETH sended from StakingRouter contract to Lido contract
     event StakingRouterTransferReceived(uint256 amount);
 
@@ -130,6 +133,7 @@ contract Lido is StETHPermit, AragonApp {
         address _stakingRouter,
         address _dsm,
         address _executionLayerRewardsVault,
+        address _withdrawalVault,
         address _withdrawalQueue,
         address _eip712StETH
     )
@@ -137,7 +141,7 @@ contract Lido is StETHPermit, AragonApp {
     {
         _setProtocolContracts(_oracle, _treasury, _executionLayerRewardsVault);
 
-        _initialize_v2(_stakingRouter, _dsm, _eip712StETH, _withdrawalQueue);
+        _initialize_v2(_stakingRouter, _dsm, _eip712StETH, _withdrawalQueue, _withdrawalVault);
         initialized();
     }
 
@@ -145,10 +149,17 @@ contract Lido is StETHPermit, AragonApp {
      * @dev If we are deploying the protocol from scratch there are circular dependencies introduced (StakingRouter and DSM),
      *      so on init stage we need to set `_stakingRouter` and `_dsm` as 0x0, and afterwards use setters for set them correctly
      */
-    function _initialize_v2(address _stakingRouter, address _dsm, address _eip712StETH, address _withdrawalQueue) internal {
+    function _initialize_v2(address _stakingRouter, address _dsm, address _eip712StETH, address _withdrawalQueue, address _withdrawalVault) internal {
+        require(_stakingRouter != address(0), "STAKING_ROUTER_ZERO_ADDRESS");
+        require(_dsm != address(0), "DSM_ZERO_ADDRESS");
+        require(_eip712StETH != address(0), "EIP712_STETH_ZERO_ADDRESS");
+        require(_withdrawalQueue != address(0), "WITHDRAWAL_QUEUE_ZERO_ADDRESS");
+        require(_withdrawalVault != address(0), "WITHDRAWAL_VAULT_ZERO_ADDRESS");
+
         STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouter);
         DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsm);
         WITHDRAWAL_QUEUE_POSITION.setStorageAddress(_withdrawalQueue);
+        WITHDRAWAL_VAULT_POSITION.setStorageAddress(_withdrawalVault);
 
         CONTRACT_VERSION_POSITION.setStorageUint256(2);
 
@@ -158,6 +169,7 @@ contract Lido is StETHPermit, AragonApp {
         emit StakingRouterSet(_stakingRouter);
         emit DepositSecurityModuleSet(_dsm);
         emit WithdrawalQueueSet(_withdrawalQueue);
+        emit WithdrawalVaultSet(_withdrawalVault);
     }
 
     /**
@@ -169,17 +181,13 @@ contract Lido is StETHPermit, AragonApp {
         address _stakingRouter,
         address _dsm,
         address _eip712StETH,
-        address _withdrawalQueue
+        address _withdrawalQueue,
+        address _withdrawalVault
     ) external {
         require(!isPetrified(), "PETRIFIED");
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
 
-        require(_stakingRouter != address(0), "STAKING_ROUTER_ZERO_ADDRESS");
-        require(_dsm != address(0), "DSM_ZERO_ADDRESS");
-        require(_eip712StETH != address(0), "EIP712_STETH_ZERO_ADDRESS");
-        require(_withdrawalQueue != address(0), "WITHDRAWAL_QUEUE_ZERO_ADDRESS");
-
-        _initialize_v2(_stakingRouter, _dsm, _eip712StETH, _withdrawalQueue);
+        _initialize_v2(_stakingRouter, _dsm, _eip712StETH, _withdrawalQueue, _withdrawalVault);
     }
 
     /**
@@ -360,7 +368,7 @@ contract Lido is StETHPermit, AragonApp {
     * are treated as a user deposit
     */
     function receiveWithdrawals() external payable {
-        require(msg.sender == _getWithdrawalVault());
+        require(msg.sender == getWithdrawalVault());
 
         emit WithdrawalsReceived(msg.value);
     }
@@ -511,8 +519,17 @@ contract Lido is StETHPermit, AragonApp {
     * @dev withdrawal vault address is encoded as a last 160 bits of withdrawal credentials type 0x01
     * @return address of the vault or address(0) if the vault is not set
     */
-    function getWithdrawalVault() external view returns (address) {
-        return _getWithdrawalVault();
+    function getWithdrawalVault() public view returns (address) {
+        return WITHDRAWAL_VAULT_POSITION.getStorageAddress();
+    }
+
+    function setWithdrawalVault(address _withdrawalVault) external {
+        _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
+        require(_withdrawalVault != address(0), "WITHDRAWAL_VAULT_ADDRESS_ZERO");
+
+        WITHDRAWAL_VAULT_POSITION.setStorageAddress(_withdrawalVault);
+
+        emit WithdrawalVaultSet(_withdrawalVault);
     }
 
     /**
@@ -636,19 +653,15 @@ contract Lido is StETHPermit, AragonApp {
         address elRewardsVaultAddress = getELRewardsVault();
         // If LidoExecutionLayerRewardsVault address is not set just do as if there were no execution layer rewards at all
         // Otherwise withdraw all rewards and put them to the buffer
-        if (elRewardsVaultAddress != address(0)) {
-            uint256 rewardsLimit = (_getTotalPooledEther() * EL_REWARDS_WITHDRAWAL_LIMIT_POSITION.getStorageUint256()) / TOTAL_BASIS_POINTS;
-            executionLayerRewards = ILidoExecutionLayerRewardsVault(elRewardsVaultAddress).withdrawRewards(
-               _min(rewardsLimit, _elRewardsVaultBalance)
-            );
-        }
+        uint256 rewardsLimit = (_getTotalPooledEther() * EL_REWARDS_WITHDRAWAL_LIMIT_POSITION.getStorageUint256()) / TOTAL_BASIS_POINTS;
 
-        address withdrawalVaultAddress = _getWithdrawalVault();
-        if (withdrawalVaultAddress != address(0)) {
-            if (_withdrawalVaultBalance > 0) {
-                // we pull all the accounted ether from WithdrawalVault
-                IWithdrawalVault(withdrawalVaultAddress).withdrawWithdrawals(_withdrawalVaultBalance);
-            }
+        executionLayerRewards = ILidoExecutionLayerRewardsVault(elRewardsVaultAddress).withdrawRewards(
+            _min(rewardsLimit, _elRewardsVaultBalance)
+        );
+
+        if (_withdrawalVaultBalance > 0) {
+            // we pull all the accounted ether from WithdrawalVault
+            IWithdrawalVault(getWithdrawalVault()).withdrawWithdrawals(_withdrawalVaultBalance);
         }
 
         uint256 lockedToWithdrawalQueue = 0;
@@ -722,7 +735,7 @@ contract Lido is StETHPermit, AragonApp {
     ) internal {
         require(_oracle != address(0), "ORACLE_ZERO_ADDRESS");
         require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
-        //NB: _executionLayerRewardsVault can be zero
+        require(_executionLayerRewardsVault != address(0), "EL_REWARDS_VAULT_ZERO_ADDRESS");
 
         ORACLE_POSITION.setStorageAddress(_oracle);
         TREASURY_POSITION.setStorageAddress(_treasury);
@@ -912,14 +925,6 @@ contract Lido is StETHPermit, AragonApp {
      */
     function _getUnaccountedEther() internal view returns (uint256) {
         return address(this).balance.sub(_getBufferedEther());
-    }
-
-    function _getWithdrawalVault() internal view returns (address) {
-        uint8 credentialsType = uint8(uint256(getWithdrawalCredentials()) >> 248);
-        if (credentialsType == 0x01) {
-            return address(uint160(getWithdrawalCredentials()));
-        }
-        return address(0);
     }
 
     /// @dev Calculates and returns the total base balance (multiple of 32) of validators in transient state,
