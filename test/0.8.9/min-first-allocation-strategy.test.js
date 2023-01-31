@@ -4,7 +4,7 @@ const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 
 const MinFirstAllocationStrategyTest = hre.artifacts.require('MinFirstAllocationStrategyTest')
 
-contract('MinFirstAllocationStrategy', (accounts) => {
+contract('MinFirstAllocationStrategy 0.8.9', (accounts) => {
   let minFirstAllocationStrategy
   const [deployer] = accounts
   let evmSnapshotId
@@ -20,25 +20,31 @@ contract('MinFirstAllocationStrategy', (accounts) => {
   })
 
   describe('allocateToBestCandidate()', () => {
-    describe('allocations.length == 0', () => {
-      for (const maxAllocationSize of [0, 2, 4, 8, 16, 32, 64]) {
-        it(`allocations=[], capacities=[] maxAllocationSize == ${maxAllocationSize}`, async () => {
-          const { allocated, newAllocations } = await minFirstAllocationStrategy.allocateToBestCandidate([], [], maxAllocationSize)
+    describe('no buckets', () => {
+      it('should not perform any allocations', async () => {
+        for (const maxAllocationSize of [0, 2, 4, 8, 16, 32, 64]) {
+          const { allocated, newAllocations } = await minFirstAllocationStrategy.allocateToBestCandidate(
+            [],
+            [],
+            maxAllocationSize
+          )
           assertBn(allocated, 0)
           assert.equal(newAllocations.length, 0)
-        })
-      }
+        }
+      })
     })
 
-    describe('allocations.length == 1', () => {
+    describe('one bucket', () => {
       const allocations = [0, 15, 25, 50]
       const capacities = [0, 15, 24, 50]
       const maxAllocationSizes = [0, 15, 25, 50]
 
-      for (const allocation of allocations) {
-        for (const capacity of capacities) {
-          for (const maxAllocationSize of maxAllocationSizes) {
-            it(`allocations=[${allocation}] capacities=[${capacity}] maxAllocationSize=${maxAllocationSize}`, async () => {
+      // covering multiple cases in a single unit test to prevent terminal output flooding
+      // if this test fails, try zeroing in on the specific case by moving `it()` function inside of the deepest loop
+      it('should allocate to the bucket under different parameters', async () => {
+        for (const allocation of allocations) {
+          for (const capacity of capacities) {
+            for (const maxAllocationSize of maxAllocationSizes) {
               const { allocated, newAllocations } = await minFirstAllocationStrategy.allocateToBestCandidate(
                 [allocation],
                 [capacity],
@@ -48,24 +54,21 @@ contract('MinFirstAllocationStrategy', (accounts) => {
               assertBn(allocated, expectedAllocated)
               assert.equal(newAllocations.length, 1)
               assertBn(newAllocations[0], allocation + expectedAllocated)
-            })
+            }
           }
         }
-      }
+      })
     })
 
-    for (let allocationsLength = 2; allocationsLength <= 16; ++allocationsLength) {
-      const samplesCount = 128
-      const allocationRange = [0, 8192]
-      const capacityRange = [0, 8192]
-      const maxAllocationSizeRange = [0, 1024]
-      describe(`allocations.length == ${allocationsLength} samples count: ${samplesCount}`, async () => {
-        const title = [
-          `allocation: [${allocationRange[0]}..${allocationRange[1]}]`,
-          `capacity: [${capacityRange[0]}..${capacityRange[1]}]`,
-          `maxAllocationSize: [${maxAllocationSizeRange[0]}..${maxAllocationSizeRange[1]}]`
-        ].join(' | ')
-        it(title, async () => {
+    describe('multiple buckets', async () => {
+      // covering multiple cases in a single unit test to prevent terminal output flooding
+      // if this test fails, try zeroing in on the specific case by moving `it()` function inside of the deepest loop
+      it('should allocate to various number of buckets under different parameters', async () => {
+        for (let allocationsLength = 2; allocationsLength <= 16; ++allocationsLength) {
+          const samplesCount = 128
+          const allocationRange = [0, 8192]
+          const capacityRange = [0, 8192]
+          const maxAllocationSizeRange = [0, 1024]
           for (let i = 0; i < samplesCount; ++i) {
             const allocations = getAllocationSample(allocationsLength, allocationRange)
             const capacities = getCapacitiesSample(allocationsLength, capacityRange)
@@ -82,18 +85,24 @@ contract('MinFirstAllocationStrategy', (accounts) => {
               maxAllocationSize
             )
 
-            const assertMessage = getAssertMessage(allocations, capacities, maxAllocationSize, expectedNewAllocations, newAllocations)
+            const assertMessage = getAssertMessage(
+              allocations,
+              capacities,
+              maxAllocationSize,
+              expectedNewAllocations,
+              newAllocations
+            )
             assert.equal(expectedNewAllocations.length, newAllocations.length, assertMessage)
             assertBn(allocated, expectedAllocated, assertMessage)
             for (let i = 0; i < newAllocations.length; ++i) {
               assertBn(newAllocations[i], expectedNewAllocations[i], assertMessage)
             }
           }
-        })
+        }
       })
-    }
+    })
 
-    describe(`edge cases & illustrative examples`, () => {
+    describe('edge cases & illustrative examples', () => {
       const edgeCases = [
         {
           input: [[0, 0, 0, 0], [0, 0, 0, 0], 100],
@@ -112,49 +121,64 @@ contract('MinFirstAllocationStrategy', (accounts) => {
           output: [70, [9998, 70, 70]]
         }
       ]
-      for (const { input, output } of edgeCases) {
-        const [allocations, capacities, maxAllocationSize] = input
-        const [expectedAllocated, expectedNewAllocations] = output
-        const title = `allocations: [${allocations}] capacities: [${capacities}] maxAllocationSize: ${maxAllocationSize}`
-        it(title, async () => {
+
+      // covering multiple cases in a single unit test to prevent terminal output flooding
+      // if this test fails, try zeroing in on the specific case by moving `it()` function inside of the deepest loop
+      it('should not break in edge cases', async () => {
+        for (const { input, output } of edgeCases) {
+          const [allocations, capacities, maxAllocationSize] = input
+          const [expectedAllocated, expectedNewAllocations] = output
           const { allocated, newAllocations } = await minFirstAllocationStrategy.allocateToBestCandidate(
             allocations,
             capacities,
             maxAllocationSize
           )
 
-          const assertMessage = getAssertMessage(allocations, capacities, maxAllocationSize, expectedNewAllocations, newAllocations)
+          const assertMessage = getAssertMessage(
+            allocations,
+            capacities,
+            maxAllocationSize,
+            expectedNewAllocations,
+            newAllocations
+          )
           assert.equal(expectedNewAllocations.length, newAllocations.length, assertMessage)
           assertBn(allocated, expectedAllocated, assertMessage)
           for (let i = 0; i < newAllocations.length; ++i) {
             assertBn(newAllocations[i], expectedNewAllocations[i], assertMessage)
           }
-        })
-      }
+        }
+      })
     })
   })
 
   describe('allocate()', () => {
-    describe('allocations.length == 0', () => {
-      for (const maxAllocationSize of [0, 4, 8, 15, 16, 23, 42]) {
-        it(`allocations=[], capacities=[] maxAllocationSize == ${maxAllocationSize}`, async () => {
+    describe('no buckets', () => {
+      // covering multiple cases in a single unit test to prevent terminal output flooding
+      // if this test fails, try zeroing in on the specific case by moving `it()` function inside of the deepest loop
+      it('should not allocate for various allocation sizes', async () => {
+        for (const maxAllocationSize of [0, 4, 8, 15, 16, 23, 42]) {
           const { allocated, newAllocations } = await minFirstAllocationStrategy.allocate([], [], maxAllocationSize)
           assertBn(allocated, 0)
           assert.equal(newAllocations.length, 0)
-        })
-      }
+        }
+      })
     })
 
-    describe('allocations.length == 1', () => {
+    describe('one bucket', () => {
       const capacities = [0, 13, 17, 19]
       const allocations = [0, 2, 19, 23]
       const maxAllocationSizes = [0, 3, 19, 23]
-
-      it(`allocations[0]=[${allocations}] capacity[0]=[${capacities}] maxAllocationSize=[${maxAllocationSizes}]`, async () => {
+      // covering multiple cases in a single unit test to prevent terminal output flooding
+      // if this test fails, try zeroing in on the specific case by moving `it()` function inside of the deepest loop
+      it('should allocate to the bucket under different parameters', async () => {
         for (const capacity of capacities) {
           for (const allocation of allocations) {
             for (const maxAllocationSize of maxAllocationSizes) {
-              const { allocated, newAllocations } = await minFirstAllocationStrategy.allocate([allocation], [capacity], maxAllocationSize)
+              const { allocated, newAllocations } = await minFirstAllocationStrategy.allocate(
+                [allocation],
+                [capacity],
+                maxAllocationSize
+              )
 
               assertAllocationAssumptions([allocation], [capacity], maxAllocationSize, allocated, newAllocations)
 
@@ -168,41 +192,52 @@ contract('MinFirstAllocationStrategy', (accounts) => {
       })
     })
 
-    for (let allocationsLength = 2; allocationsLength <= 16; ++allocationsLength) {
-      const samplesCount = 128
-      const allocationRange = [0, 8192]
-      const capacityRange = [0, 8192]
-      const maxAllocationSizeRange = [0, 1024]
-      describe(`allocations.length == ${allocationsLength} samples count: ${samplesCount}`, async () => {
-        const title = [
-          `allocation: [${allocationRange[0]}..${allocationRange[1]}]`,
-          `capacity: [${capacityRange[0]}..${capacityRange[1]}]`,
-          `maxAllocationSize: [${maxAllocationSizeRange[0]}..${maxAllocationSizeRange[1]}]`
-        ].join(' ')
-        it(title, async () => {
+    describe('multiple buckets', async () => {
+      // covering multiple cases in a single unit test to prevent terminal output flooding
+      // if this test fails, try zeroing in on the specific case by moving `it()` function inside of the deepest loop
+      it('should allocate to buckets under different parameters', async () => {
+        for (let allocationsLength = 2; allocationsLength <= 16; ++allocationsLength) {
+          const samplesCount = 128
+          const allocationRange = [0, 8192]
+          const capacityRange = [0, 8192]
+          const maxAllocationSizeRange = [0, 1024]
           for (let i = 0; i < samplesCount; ++i) {
             const allocations = getAllocationSample(allocationsLength, allocationRange)
             const capacities = getCapacitiesSample(allocationsLength, capacityRange)
             const maxAllocationSize = getMaxAllocationSizeSample(maxAllocationSizeRange)
 
-            const { allocated, newAllocations } = await minFirstAllocationStrategy.allocate(allocations, capacities, maxAllocationSize)
+            const { allocated, newAllocations } = await minFirstAllocationStrategy.allocate(
+              allocations,
+              capacities,
+              maxAllocationSize
+            )
 
             assertAllocationAssumptions(allocations, capacities, maxAllocationSize, allocated, newAllocations)
 
-            const [expectedAllocated, expectedNewAllocations] = getExpectedAllocate(allocations, capacities, maxAllocationSize)
+            const [expectedAllocated, expectedNewAllocations] = getExpectedAllocate(
+              allocations,
+              capacities,
+              maxAllocationSize
+            )
 
-            const assertMessage = getAssertMessage(allocations, capacities, maxAllocationSize, expectedNewAllocations, newAllocations)
+            const assertMessage = getAssertMessage(
+              allocations,
+              capacities,
+              maxAllocationSize,
+              expectedNewAllocations,
+              newAllocations
+            )
             assert.equal(expectedNewAllocations.length, newAllocations.length, assertMessage)
             assertBn(allocated, expectedAllocated, assertMessage)
             for (let i = 0; i < newAllocations.length; ++i) {
               assertBn(newAllocations[i], expectedNewAllocations[i], assertMessage)
             }
           }
-        })
+        }
       })
-    }
+    })
 
-    describe(`edge cases & illustrative examples`, () => {
+    describe('edge cases & illustrative examples', () => {
       const edgeCases = [
         {
           input: [[0, 0, 0, 0], [0, 0, 0, 0], 100],
@@ -225,23 +260,34 @@ contract('MinFirstAllocationStrategy', (accounts) => {
           output: [1007, [3820, 1061, 5572]]
         }
       ]
-      for (const { input, output } of edgeCases) {
-        const [allocations, capacities, maxAllocationSize] = input
-        const [expectedAllocated, expectedNewAllocations] = output
-        const title = `allocations: [${allocations}] capacities: [${capacities}] maxAllocationSize: ${maxAllocationSize}`
-        it(title, async () => {
-          const { allocated, newAllocations } = await minFirstAllocationStrategy.allocate(allocations, capacities, maxAllocationSize)
+      // covering multiple cases in a single unit test to prevent terminal output flooding
+      // if this test fails, try zeroing in on the specific case by moving `it()` function inside of the deepest loop
+      it('should not break for edge cases', async () => {
+        for (const { input, output } of edgeCases) {
+          const [allocations, capacities, maxAllocationSize] = input
+          const [expectedAllocated, expectedNewAllocations] = output
+          const { allocated, newAllocations } = await minFirstAllocationStrategy.allocate(
+            allocations,
+            capacities,
+            maxAllocationSize
+          )
 
           assertAllocationAssumptions(allocations, capacities, maxAllocationSize, allocated, newAllocations)
 
-          const assertMessage = getAssertMessage(allocations, capacities, maxAllocationSize, expectedNewAllocations, newAllocations)
+          const assertMessage = getAssertMessage(
+            allocations,
+            capacities,
+            maxAllocationSize,
+            expectedNewAllocations,
+            newAllocations
+          )
           assert.equal(expectedNewAllocations.length, newAllocations.length, assertMessage)
           assertBn(allocated, expectedAllocated, assertMessage)
           for (let i = 0; i < newAllocations.length; ++i) {
             assertBn(newAllocations[i], expectedNewAllocations[i], assertMessage)
           }
-        })
-      }
+        }
+      })
     })
   })
 })
