@@ -141,11 +141,6 @@ contract HashConsensus is AccessControlEnumerable {
     uint256 internal constant UNREACHABLE_QUORUM = type(uint256).max;
     bytes32 internal constant ZERO_HASH = bytes32(0);
 
-    ///! STORAGE OF THE CONTRACT
-    ///! Inherited from AccessControlEnumerable:
-    ///! SLOT 0: mapping(bytes32 => AccessControl.RoleData) _roles
-    ///! SLOT 1: mapping(bytes32 => EnumerableSet.AddressSet) _roleMembers
-
     /// @dev Reporting frame configuration
     FrameConfig internal _frameConfig;
 
