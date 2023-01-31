@@ -12,11 +12,13 @@ const NodeOperatorsRegistryMock = artifacts.require('NodeOperatorsRegistryMock')
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 
+const STAB_ADDRESS = '0x0000000000000000000000000000000000000001'
+
 contract('StakingRouter', (accounts) => {
   const snapshot = new EvmSnapshot(hre.ethers.provider)
   let depositContract, stakingRouter
   let dao, acl, lido, oracle
-  const [deployer, voting, admin, treasury, stranger1, dsm, address1, address2, dummy] = accounts
+  const [deployer, voting, admin, treasury, stranger1, dsm, address1, address2] = accounts
 
   before(async () => {
     const lidoBase = await LidoMock.new({ from: deployer })
@@ -53,7 +55,16 @@ contract('StakingRouter', (accounts) => {
     const wsteth = await WstETH.new(lido.address)
     const withdrawalQueue = (await withdrawals.deploy(dao.address, wsteth.address)).queue
 
-    await lido.initialize(oracle.address, treasury, stakingRouter.address, dsm, dummy, withdrawalQueue.address, dummy)
+    await lido.initialize(
+      oracle.address,
+      treasury,
+      stakingRouter.address,
+      dsm,
+      STAB_ADDRESS,
+      STAB_ADDRESS,
+      withdrawalQueue.address,
+      STAB_ADDRESS
+    )
 
     await snapshot.make()
   })

@@ -2,6 +2,7 @@ const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { artifacts } = require('hardhat')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistryMock')
 
@@ -12,6 +13,7 @@ const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const ModuleSolo = artifacts.require('ModuleSolo.sol')
 const EIP712StETH = artifacts.require('EIP712StETH')
 const ELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
+const WithdrawalVault = artifacts.require('WithdrawalVault.sol')
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
@@ -79,6 +81,7 @@ contract('Lido: staking router reward distribution', ([appManager, voting, treas
 
     const eip712StETH = await EIP712StETH.new()
     const elRewardsVault = await ELRewardsVault.new(app.address, treasury)
+    const withdrawalVault = await WithdrawalVault.new(app.address, treasury)
 
     stakingRouter = await StakingRouter.new(depositContract.address)
     // initialize
@@ -134,8 +137,9 @@ contract('Lido: staking router reward distribution', ([appManager, voting, treas
       stakingRouter.address,
       depositor,
       elRewardsVault.address,
-      ZERO_ADDRESS,
-      eip712StETH.address,
+      withdrawalVault.address,
+      withdrawalVault.address,
+      eip712StETH.address
     )
 
     assert((await app.isStakingPaused()) === true)

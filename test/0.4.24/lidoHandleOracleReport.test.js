@@ -5,10 +5,11 @@ const { assertRevert } = require('../helpers/assertThrow')
 
 const LidoPushableMock = artifacts.require('LidoPushableMock.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
+const ELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
-contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
+contract('Lido: handleOracleReport', ([appManager, user1, user2, treasury]) => {
   let appBase, app, oracle
 
   before('deploy base app', async () => {
@@ -21,8 +22,9 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
 
     const proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
     app = await LidoPushableMock.at(proxyAddress)
+    const elRewardsVault = await ELRewardsVault.new(app.address, treasury)
 
-    await app.initialize(oracle.address)
+    await app.initialize(oracle.address, elRewardsVault.address)
     await oracle.setPool(app.address)
   })
 

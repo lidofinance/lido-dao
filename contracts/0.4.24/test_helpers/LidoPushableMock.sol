@@ -14,8 +14,8 @@ contract LidoPushableMock is Lido {
     uint256 public totalRewards;
     bool public distributeFeeCalled;
 
-    function initialize(address _oracle) public onlyInit {
-        _setProtocolContracts(_oracle, _oracle, address(0));
+    function initialize(address _oracle, address _elRewardsVault) public onlyInit {
+        _setProtocolContracts(_oracle, _oracle, _elRewardsVault);
         _resume();
         initialized();
     }
