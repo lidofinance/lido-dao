@@ -8,8 +8,6 @@ pragma solidity 0.4.24;
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 
-import "./interfaces/IWithdrawalQueue.sol";
-
 import "./lib/StakeLimitUtils.sol";
 
 import "./StETHPermit.sol";
@@ -40,6 +38,20 @@ interface IStakingRouter {
 interface IWithdrawalVault {
     function withdrawWithdrawals(uint256 _amount) external;
 }
+
+interface IWithdrawalQueue {
+    function finalizationBatch(uint256 _lastRequestIdToFinalize, uint256 _shareRate)
+        external
+        view
+        returns (uint128 eth, uint128 shares);
+
+    function finalize(uint256 _lastIdToFinalize) external payable;
+
+    function isPaused() external view returns (bool);
+
+    function unfinalizedStETH() external view returns (uint256);
+}
+
 /**
 * @title Liquid staking pool implementation
 *
