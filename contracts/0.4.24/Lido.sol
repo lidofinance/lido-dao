@@ -8,7 +8,6 @@ pragma solidity 0.4.24;
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 
-import "./interfaces/ILidoExecutionLayerRewardsVault.sol";
 import "./interfaces/IWithdrawalQueue.sol";
 import "./interfaces/IWithdrawalVault.sol";
 import "./interfaces/IStakingRouter.sol";
@@ -17,6 +16,9 @@ import "./lib/StakeLimitUtils.sol";
 
 import "./StETHPermit.sol";
 
+interface ILidoExecutionLayerRewardsVault {
+    function withdrawRewards(uint256 _maxAmount) external returns (uint256 amount);
+}
 /**
 * @title Liquid staking pool implementation
 *
