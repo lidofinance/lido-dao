@@ -5,7 +5,6 @@
 pragma solidity 0.8.9;
 
 import {IStakingRouter} from "./interfaces/IStakingRouter.sol";
-import {IDepositContract} from "./interfaces/IDepositContract.sol";
 
 import {ECDSA} from "../common/lib/ECDSA.sol";
 
@@ -15,6 +14,10 @@ interface ILido {
         uint256 _stakingModuleId,
         bytes calldata _depositCalldata
     ) external;
+}
+
+interface IDepositContract {
+    function get_deposit_root() external view returns (bytes32 rootHash);
 }
 
 contract DepositSecurityModule {
