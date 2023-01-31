@@ -9,7 +9,6 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 
 import "./interfaces/IWithdrawalQueue.sol";
-import "./interfaces/IWithdrawalVault.sol";
 
 import "./lib/StakeLimitUtils.sol";
 
@@ -36,6 +35,10 @@ interface IStakingRouter {
     function deposit(uint256 maxDepositsCount, uint256 stakingModuleId, bytes depositCalldata) external payable returns (uint256);
 
     function getWithdrawalCredentials() external view returns (bytes32);
+}
+
+interface IWithdrawalVault {
+    function withdrawWithdrawals(uint256 _amount) external;
 }
 /**
 * @title Liquid staking pool implementation
