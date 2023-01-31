@@ -95,11 +95,19 @@ async function deployDaoAndPool(appManager, voting) {
   await stakingRouter.initialize(appManager, pool.address, wc, { from: appManager })
 
   // Set up the staking router permissions.
-  const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, STAKING_MODULE_PAUSE_ROLE, STAKING_MODULE_MANAGE_ROLE] = await Promise.all([
+  const [
+    MANAGE_WITHDRAWAL_CREDENTIALS_ROLE,
+    STAKING_MODULE_PAUSE_ROLE,
+    STAKING_MODULE_MANAGE_ROLE,
+    REPORT_REWARDS_MINTED_ROLE
+  ] = await Promise.all([
     stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(),
     stakingRouter.STAKING_MODULE_PAUSE_ROLE(),
-    stakingRouter.STAKING_MODULE_MANAGE_ROLE()
+    stakingRouter.STAKING_MODULE_MANAGE_ROLE(),
+    stakingRouter.REPORT_REWARDS_MINTED_ROLE()
   ])
+  await stakingRouter.grantRole(REPORT_REWARDS_MINTED_ROLE, pool.address, { from: appManager })
+
   await stakingRouter.grantRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, voting, { from: appManager })
   await stakingRouter.grantRole(STAKING_MODULE_PAUSE_ROLE, voting, { from: appManager })
   await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, voting, { from: appManager })
@@ -173,7 +181,7 @@ async function setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, s
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_NAME_ROLE,
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ADDRESS_ROLE,
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE,
-    NODE_OPERATOR_REGISTRY_UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE,
+    NODE_OPERATOR_REGISTRY_STAKING_ROUTER_ROLE,
     NODE_OPERATOR_REGISTRY_REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE,
     NODE_OPERATOR_REGISTRY_INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE
   ] = await Promise.all([
@@ -184,7 +192,7 @@ async function setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, s
     nodeOperatorsRegistry.SET_NODE_OPERATOR_NAME_ROLE(),
     nodeOperatorsRegistry.SET_NODE_OPERATOR_ADDRESS_ROLE(),
     nodeOperatorsRegistry.SET_NODE_OPERATOR_LIMIT_ROLE(),
-    nodeOperatorsRegistry.UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE(),
+    nodeOperatorsRegistry.STAKING_ROUTER_ROLE(),
     nodeOperatorsRegistry.REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE(),
     nodeOperatorsRegistry.INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE()
   ])
@@ -215,7 +223,7 @@ async function setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, s
     acl.createPermission(
       voting,
       nodeOperatorsRegistry.address,
-      NODE_OPERATOR_REGISTRY_UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE,
+      NODE_OPERATOR_REGISTRY_STAKING_ROUTER_ROLE,
       appManager,
       { from: appManager }
     ),
@@ -238,6 +246,13 @@ async function setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, s
       }
     )
   ])
+
+  await acl.grantPermission(
+    stakingRouterAddress,
+    nodeOperatorsRegistry.address,
+    NODE_OPERATOR_REGISTRY_STAKING_ROUTER_ROLE,
+    { from: appManager }
+  )
 
   return nodeOperatorsRegistry
 }

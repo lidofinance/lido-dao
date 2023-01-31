@@ -208,6 +208,12 @@ module.exports = {
       key: 'YOUR_PINATA_API_KEY',
       secret: 'YOUR_PINATA_API_SECRET_KEY'
     }
+  },
+  contractSizer: {
+    disambiguatePaths: false,
+    runOnCompile: true,
+    strict: true,
+    except: ['test_helpers', 'template', 'mocks', '@aragon', 'openzeppelin'],
   }
 }
 

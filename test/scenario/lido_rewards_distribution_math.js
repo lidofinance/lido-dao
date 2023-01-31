@@ -250,7 +250,8 @@ contract('Lido: rewards distribution math', (addresses) => {
     assertBn(await token.balanceOf(treasuryAddr), treasuryFeeToMint, 'treasury balance = fee')
     assertBn(treasuryTokenDelta, treasuryFeeToMint, 'treasury balance = fee')
 
-    await nodeOperatorsRegistry.distributeRewards({ from: nobody })
+    // kicks rewards distribution
+    await nodeOperatorsRegistry.finishUpdatingExitedValidatorsKeysCount({ from: voting })
     assertBn(await token.balanceOf(nodeOperator1.address), nodeOperatorsFeeToMint, 'nodeOperator1 balance = fee')
 
     const nodeOperator1TokenDelta = await token.balanceOf(operator_1) - nodeOperator1TokenBefore
@@ -433,7 +434,8 @@ contract('Lido: rewards distribution math', (addresses) => {
     // assertBn(await token.balanceOf(nodeOperatorsRegistry.address), nodeOperatorsFeeToMint, 'nodeOperatorsRegistry balance = fee')
     const nodeOperator1SharesBefore = await token.sharesOf(nodeOperator1.address)
     const nodeOperator2SharesBefore = await token.sharesOf(nodeOperator2.address)
-    await nodeOperatorsRegistry.distributeRewards({ from: nobody })
+    // kicks rewards distribution
+    await nodeOperatorsRegistry.finishUpdatingExitedValidatorsKeysCount({ from: voting })
 
     const nodeOperator1SharesDelta = (await token.sharesOf(nodeOperator1.address)).sub(nodeOperator1SharesBefore)
     const nodeOperator2SharesDelta = (await token.sharesOf(nodeOperator2.address)).sub(nodeOperator2SharesBefore)
@@ -569,7 +571,7 @@ contract('Lido: rewards distribution math', (addresses) => {
     const rewardsToDistribute = await token.getSharesByPooledEth(
       newBeaconBalance.add(bufferedBefore).sub(totalPooledEtherBefore))
 
-    const {treasuryFee} = await pool.getFeeDistribution()
+    const {treasuryFee} = await stakingRouter.getStakingFeeAggregateDistribution()
     const {stakingModuleFees, precisionPoints} = await stakingRouter.getStakingRewardsDistribution()
     const [firstModuleFee, secondModuleFee] = stakingModuleFees
     const expectedRewardsDistribution = {
@@ -604,7 +606,7 @@ contract('Lido: rewards distribution math', (addresses) => {
     assertBn(await token.totalSupply(), newBeaconBalance.add(bufferedBefore), 'token total supply')
 
     const rewardsToDistribute = await token.getSharesByPooledEth(newBeaconBalance.add(bufferedBefore).sub(totalPooledEtherBefore))
-    const {treasuryFee} = await pool.getFeeDistribution()
+    const {treasuryFee} = await stakingRouter.getStakingFeeAggregateDistribution()
     const {stakingModuleFees, precisionPoints} = await stakingRouter.getStakingRewardsDistribution()
     const [firstModuleFee, secondModuleFee] = stakingModuleFees
     const expectedRewardsDistribution = {

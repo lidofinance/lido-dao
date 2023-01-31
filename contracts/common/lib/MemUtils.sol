@@ -1,9 +1,10 @@
-// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
-pragma solidity 0.4.24;
+// solhint-disable-next-line lido/fixed-compiler-version
+pragma solidity >=0.4.24 <0.9.0;
 
 
 library MemUtils {
@@ -33,7 +34,7 @@ library MemUtils {
             if gt(_len, 0) {
                 // read the next 32-byte chunk from _dst, replace the first N bytes
                 // with those left in the _src, and write the transformed chunk back
-                let mask := sub(shl(1, mul(8, sub(32, _len))), 1) // 2 ** (8 * (32 - _len)) - 1
+                let mask := sub(shl(mul(8, sub(32, _len)), 1), 1) // 2 ** (8 * (32 - _len)) - 1
                 let srcMasked := and(mload(_src), not(mask))
                 let dstMasked := and(mload(_dst), mask)
                 mstore(_dst, or(dstMasked, srcMasked))
@@ -53,5 +54,30 @@ library MemUtils {
             dstStartPos := add(add(_dst, 32), _dstStart)
         }
         memcpy(srcStartPos, dstStartPos, _src.length);
+    }
+
+    /**
+     * Calculates keccak256 over a uint256 memory array contents.
+     *
+     * keccakUint256Array(array) is a more gas-efficient equivalent
+     * to keccak256(abi.encodePacked(array)) since copying memory
+     * is avoided.
+     */
+    function keccakUint256Array(uint256[] memory _arr) internal pure returns (bytes32 result) {
+        assembly {
+            let ptr := add(_arr, 32)
+            let len := mul(mload(_arr), 32)
+            result := keccak256(ptr, len)
+        }
+    }
+
+    /**
+     * Decreases length of a uint256 memory array `_arr` by the `_trimBy` items.
+     */
+    function trimUint256Array(uint256[] memory _arr, uint256 _trimBy) internal pure {
+        uint256 newLen = _arr.length - _trimBy;
+        assembly {
+            mstore(_arr, newLen)
+        }
     }
 }

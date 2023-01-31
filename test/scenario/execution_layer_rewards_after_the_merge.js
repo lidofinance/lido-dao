@@ -135,8 +135,6 @@ contract('Lido: merge acceptance', (addresses) => {
 
     await nodeOperatorsRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting })
 
-    const distribution = await pool.getFeeDistribution({ from: nobody })
-
     // The key was added
 
     let totalKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })

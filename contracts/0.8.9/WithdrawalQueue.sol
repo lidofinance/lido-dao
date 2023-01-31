@@ -10,7 +10,7 @@ import {IERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import {IERC20Permit} from "@openzeppelin/contracts-v4.4/token/ERC20/extensions/draft-IERC20Permit.sol";
 import {SafeERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
-import {AccessControlEnumerable} from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
+import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
 
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 
@@ -57,17 +57,14 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     using UnstructuredStorage for bytes32;
 
     ///! STRUCTURED STORAGE OF THE CONTRACT
-    ///  Inherited from AccessControlEnumerable:
-    ///! SLOT 0: mapping(bytes32 => RoleData) _roles
-    ///! SLOT 1: mapping(bytes32 => EnumerableSet.AddressSet) _roleMembers
     ///  Inherited from WithdrawalQueueBase:
-    ///! SLOT 2: mapping(uint256 => WithdrawalRequest) queue
-    ///! SLOT 3: uint256 lastRequestId
-    ///! SLOT 4: uint256 lastFinalizedRequestId
-    ///! SLOT 5: mapping(uint256 => Discount) discountHistory
-    ///! SLOT 6: uint256 lastDiscountIndex
-    ///! SLOT 7: uint128 public lockedEtherAmount
-    ///! SLOT 8: mapping(address => uint256[]) requestsByRecipient
+    ///! SLOT 0: mapping(uint256 => WithdrawalRequest) queue
+    ///! SLOT 1: uint256 lastRequestId
+    ///! SLOT 2: uint256 lastFinalizedRequestId
+    ///! SLOT 3: mapping(uint256 => Discount) discountHistory
+    ///! SLOT 4: uint256 lastDiscountIndex
+    ///! SLOT 5: uint128 public lockedEtherAmount
+    ///! SLOT 6: mapping(address => uint256[]) requestsByRecipient
 
     /// Version of the initialized contract data
     /// NB: Contract versioning starts from 1.

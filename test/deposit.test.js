@@ -92,7 +92,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
       from: appManager
     })
     await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_LIMIT_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, operators.address, await operators.UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE(), appManager, {
+    await acl.createPermission(voting, operators.address, await operators.STAKING_ROUTER_ROLE(), appManager, {
       from: appManager
     })
     await acl.createPermission(

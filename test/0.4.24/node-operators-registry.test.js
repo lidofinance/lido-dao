@@ -86,9 +86,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         SET_NODE_OPERATOR_NAME_ROLE: voting,
         SET_NODE_OPERATOR_ADDRESS_ROLE: voting,
         SET_NODE_OPERATOR_LIMIT_ROLE: voting,
-        UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE: voting,
-        UNSAFE_UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE: voting,
-        INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE: voting
+        INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE: voting,
+        STAKING_ROUTER_ROLE: voting,
       }
     })
 
@@ -972,13 +971,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('reverts with "NODE_OPERATOR_NOT_FOUND" error when called on non existent validator', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE')
+      const hasPermission = await dao.hasPermission(voting, app, 'STAKING_ROUTER_ROLE')
       assert.isTrue(hasPermission)
       await assert.reverts(app.updateExitedValidatorsKeysCount(notExistedNodeOperatorId, 40, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
     })
 
-    it('reverts with "APP_AUTH_FAILED" error when called by sender without UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE', async () => {
-      const hasPermission = await dao.hasPermission(nobody, app, 'UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE')
+    it('reverts with "APP_AUTH_FAILED" error when called by sender without STAKING_ROUTER_ROLE', async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'STAKING_ROUTER_ROLE')
       assert.isFalse(hasPermission)
       await assert.reverts(app.updateExitedValidatorsKeysCount(firstNodeOperatorId, 40, { from: nobody }), 'APP_AUTH_FAILED')
     })
@@ -1064,7 +1063,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('reverts with "NODE_OPERATOR_NOT_FOUND" error when called on non existent validator', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE')
+      const hasPermission = await dao.hasPermission(voting, app, 'STAKING_ROUTER_ROLE')
       assert.isTrue(hasPermission)
       await assert.reverts(
         app.unsafeUpdateExitedValidatorsKeysCount(notExistedNodeOperatorId, 40, { from: voting }),
@@ -1072,8 +1071,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       )
     })
 
-    it('reverts with "APP_AUTH_FAILED" error when called by sender without UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE', async () => {
-      const hasPermission = await dao.hasPermission(nobody, app, 'UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE')
+    it('reverts with "APP_AUTH_FAILED" error when called by sender without STAKING_ROUTER_ROLE', async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'STAKING_ROUTER_ROLE')
       assert.isFalse(hasPermission)
       await assert.reverts(app.unsafeUpdateExitedValidatorsKeysCount(firstNodeOperatorId, 40, { from: nobody }), 'APP_AUTH_FAILED')
     })
@@ -1662,7 +1661,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('reverts with "NODE_OPERATOR_NOT_FOUND" error when called on non existent validator', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE')
+      const hasPermission = await dao.hasPermission(voting, app, 'STAKING_ROUTER_ROLE')
       assert.isTrue(hasPermission)
       await assert.reverts(app.getNodeOperator(notExistedNodeOperatorId, false, { from: voting }), 'NODE_OPERATOR_NOT_FOUND')
     })
@@ -1980,7 +1979,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('reverts with APP_AUTH_FAILED error when called by sender without MANAGE_SIGNING_KEYS role', async () => {
-      const hasPermission = await dao.hasPermission(nobody, app, 'UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE')
+      const hasPermission = await dao.hasPermission(nobody, app, 'STAKING_ROUTER_ROLE')
       assert.isFalse(hasPermission)
       const keyIndex = firstNodeOperatorKeys.count - 1
       await assert.reverts(app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: nobody }), 'APP_AUTH_FAILED')
@@ -2229,7 +2228,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('reverts with APP_AUTH_FAILED error when called by sender without MANAGE_SIGNING_KEYS role', async () => {
-      const hasPermission = await dao.hasPermission(nobody, app, 'UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE')
+      const hasPermission = await dao.hasPermission(nobody, app, 'STAKING_ROUTER_ROLE')
       assert.isFalse(hasPermission)
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount
       const keysCount = NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount - keyIndex
@@ -2623,14 +2622,14 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
   })
 
-  describe('distributeRewards()', () => {
+  describe('distributing rewards', () => {
     beforeEach(async () => {
       await app.testing_addNodeOperator('0', user1, 3, 3, 3, 0)
       await app.testing_addNodeOperator('1', user2, 7, 7, 7, 0)
       await app.testing_addNodeOperator('2', user3, 0, 0, 0, 0)
     })
 
-    it("doesn't distributes rewards if no shares to distribute", async () => {
+    it("doesn't distribute rewards if no shares to distribute", async () => {
       const sharesCount = await steth.sharesOf(app.address)
       assert.equals(sharesCount, 0)
       const recipientsSharesBefore = await Promise.all([steth.sharesOf(user1), steth.sharesOf(user2), steth.sharesOf(user3)])

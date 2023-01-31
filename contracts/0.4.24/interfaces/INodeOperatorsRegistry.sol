@@ -174,11 +174,6 @@ interface INodeOperatorsRegistry {
             bool[] memory used
         );
 
-    /// @notice Unsafely updates the number of the validators in the EXITED state for node operator with given id
-    /// @param _nodeOperatorId Id of the node operator
-    /// @param _exitedValidatorsKeysCount New number of EXITED validators of the node operator
-    function unsafeUpdateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount) external;
-
     event NodeOperatorAdded(uint256 id, string name, address rewardAddress, uint64 stakingLimit);
     event NodeOperatorActiveSet(uint256 indexed id, bool active);
     event NodeOperatorNameSet(uint256 indexed id, string name);

@@ -9,7 +9,13 @@ interface IStakingRouter {
     function getStakingRewardsDistribution()
         external
         view
-        returns (address[] memory recipients, uint96[] memory moduleFees, uint96 totalFeee, uint256 precisionPoints);
+        returns (
+            address[] memory recipients,
+            uint256[] memory stakingModuleIds,
+            uint96[] memory stakingModuleFees,
+            uint96 totalFee,
+            uint256 precisionPoints
+        );
 
     function deposit(uint256 maxDepositsCount, uint256 stakingModuleId, bytes depositCalldata) external payable returns (uint256);
 
@@ -25,6 +31,8 @@ interface IStakingRouter {
      */
     function getWithdrawalCredentials() external view returns (bytes32);
 
+    function getExitedKeysCountAcrossAllModules() external view returns (uint256);
+
     function getStakingModuleStatus(uint256 _stakingModuleId) external view returns (uint8 status);
 
     function setStakingModuleStatus(uint256 _stakingModuleId, uint8 _status) external;
@@ -32,6 +40,19 @@ interface IStakingRouter {
     function pauseStakingModule(uint256 _stakingModuleId) external;
 
     function resumeStakingModule(uint256 _stakingModuleId) external;
+
+    function reportRewardsMinted(uint256[] _stakingModuleIds, uint256[] _totalShares) external;
+
+    function updateExitedKeysCountByStakingModule(
+        uint256[] _stakingModuleIds,
+        uint256[] _exitedKeysCounts
+    ) external;
+
+    function reportStakingModuleExitedKeysCountByNodeOperator(
+        uint256 _stakingModuleId,
+        uint256[] _nodeOperatorIds,
+        uint256[] _exitedKeysCounts
+    ) external;
 
     function getStakingModuleIsStopped(uint256 _stakingModuleId) external view returns (bool);
 

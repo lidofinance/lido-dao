@@ -15,7 +15,7 @@ import {IStETH} from "../interfaces/IStETH.sol";
 
 import {Math64} from "../lib/Math64.sol";
 import {BytesLib} from "../lib/BytesLib.sol";
-import {MemUtils} from "../lib/MemUtils.sol";
+import {MemUtils} from "../../common/lib/MemUtils.sol";
 import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
 import {SigningKeysStats} from "../lib/SigningKeysStats.sol";
 
@@ -42,8 +42,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     bytes32 public constant INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE = keccak256("INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE");
     bytes32 public constant ACTIVATE_NODE_OPERATOR_ROLE = keccak256("ACTIVATE_NODE_OPERATOR_ROLE");
     bytes32 public constant DEACTIVATE_NODE_OPERATOR_ROLE = keccak256("DEACTIVATE_NODE_OPERATOR_ROLE");
-    bytes32 public constant UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE = keccak256("UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE");
-    bytes32 public constant UNSAFE_UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE = keccak256("UNSAFE_UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE");
+    bytes32 public constant STAKING_ROUTER_ROLE = keccak256("STAKING_ROUTER_ROLE");
 
     //
     // CONSTANTS
@@ -329,27 +328,59 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         _increaseValidatorsKeysNonce();
     }
 
+    /// @notice Called by StakingRouter to signal that stETH rewards were minted for this module.
+    /// @param _totalShares Amount of shares that were minted to reward all node operators.
+    function handleRewardsMinted(uint256 _totalShares)
+        external
+        auth(STAKING_ROUTER_ROLE)
+    {
+        // since we're pushing rewards to operators after exited validators counts are
+        // updated (as opposed to pulling by node ops), we don't need any handling here
+    }
+
     /// @notice Updates the number of the validators in the EXITED state for node operator with given id
     /// @param _nodeOperatorId Id of the node operator
     /// @param _exitedValidatorsKeysCount New number of EXITED validators of the node operator
-    function updateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount) external {
-        _updateExitedValidatorsKeysCount(_nodeOperatorId, _exitedValidatorsKeysCount, false);
+    /// @return Total number of exited validators across all node operators.
+    function updateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount)
+        external
+        returns (uint256)
+    {
+        return _updateExitedValidatorsKeysCount(_nodeOperatorId, _exitedValidatorsKeysCount, false);
     }
 
+    /// @notice Called by StakingRouter after oracle finishes updating exited keys counts for all operators.
+    function finishUpdatingExitedValidatorsKeysCount()
+        external
+        auth(STAKING_ROUTER_ROLE)
+    {
+        // for the permissioned module, we're distributing rewards within oracle operation
+        // since the number of node ops won't be high and thus gas costs are limited
+        _distributeRewards();
+    }
+
+    /// FIXME: this conflicts with the two-phase exited keys reporting in the staking router.
+    /// If we want to allow hand-correcting the oracle, we need to also support it in the
+    /// staking router.
+    ///
     /// @notice Unsafely updates the number of the validators in the EXITED state for node operator with given id
     /// @param _nodeOperatorId Id of the node operator
     /// @param _exitedValidatorsKeysCount New number of EXITED validators of the node operator
-    function unsafeUpdateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount) external {
-        _updateExitedValidatorsKeysCount(_nodeOperatorId, _exitedValidatorsKeysCount, true);
+    /// @return Total number of exited validators across all node operators.
+    function unsafeUpdateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount)
+        external
+        returns (uint256)
+    {
+        return _updateExitedValidatorsKeysCount(_nodeOperatorId, _exitedValidatorsKeysCount, true);
     }
 
     function _updateExitedValidatorsKeysCount(
         uint256 _nodeOperatorId,
         uint256 _exitedValidatorsKeysCount,
         bool _allowDecrease
-    ) internal {
+    ) internal returns (uint256) {
         _onlyExistedNodeOperator(_nodeOperatorId);
-        _auth(UPDATE_EXITED_VALIDATORS_KEYS_COUNT_ROLE);
+        _auth(STAKING_ROUTER_ROLE);
 
         uint64 depositedSigningKeysCount = _nodeOperators[_nodeOperatorId].depositedSigningKeysCount;
         uint64 exitedValidatorsCountBefore = _nodeOperators[_nodeOperatorId].exitedSigningKeysCount;
@@ -372,6 +403,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         _setTotalSigningKeysStats(totalSigningKeysStats);
 
         emit ExitedSigningKeysCountChanged(_nodeOperatorId, _exitedValidatorsKeysCount);
+
+        return totalSigningKeysStats.exitedSigningKeysCount;
     }
 
     /// @notice Invalidates all unused validators keys for all node operators
@@ -945,10 +978,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     }
 
     /// @notice distributes rewards among node operators
-    /// @dev This method is supposed to be called just after the oracle report to calculate
-    ///     node operator's rewards correctly
-    /// @return distributed Amount of stETH shares distributed among node operators
-    function distributeRewards() external returns (uint256 distributed) {
+    /// @return the amount of stETH shares distributed among node operators
+    function _distributeRewards() internal returns (uint256 distributed) {
         IStETH stETH = IStETH(STETH_POSITION.getStorageAddress());
 
         uint256 sharesToDistribute = stETH.sharesOf(address(this));
