@@ -372,7 +372,7 @@ contract LidoTemplate is IsContract {
     function finalizeDAO(
         string _daoName,
         uint256 _unvestedTokensAmount,
-        uint16 _elRewardsWithdrawalLimit
+        uint256 _maxPositiveRebase
     )
         external onlyOwner
     {
@@ -382,10 +382,10 @@ contract LidoTemplate is IsContract {
         require(state.dao != address(0), ERROR_DAO_NOT_DEPLOYED);
         require(bytes(_daoName).length > 0, ERROR_INVALID_ID);
 
-        bytes32 LIDO_SET_EL_REWARDS_WITHDRAWAL_LIMIT = state.lido.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE();
-        _createPermissionForTemplate(state.acl, state.lido, LIDO_SET_EL_REWARDS_WITHDRAWAL_LIMIT);
-        state.lido.setELRewardsWithdrawalLimit(_elRewardsWithdrawalLimit);
-        _removePermissionFromTemplate(state.acl, state.lido, LIDO_SET_EL_REWARDS_WITHDRAWAL_LIMIT);
+        bytes32 LIDO_MANAGE_MAX_POSITIVE_REBASE = state.lido.MANAGE_MAX_POSITIVE_REBASE_ROLE();
+        _createPermissionForTemplate(state.acl, state.lido, LIDO_MANAGE_MAX_POSITIVE_REBASE);
+        state.lido.setMaxPositiveRebase(_maxPositiveRebase);
+        _removePermissionFromTemplate(state.acl, state.lido, LIDO_MANAGE_MAX_POSITIVE_REBASE);
 
         if (_unvestedTokensAmount != 0) {
             // using issue + assign to avoid setting the additional MINT_ROLE for the template
@@ -608,7 +608,7 @@ contract LidoTemplate is IsContract {
         perms[3] = _state.lido.RESUME_ROLE();
         perms[4] = _state.lido.STAKING_PAUSE_ROLE();
         perms[5] = _state.lido.STAKING_CONTROL_ROLE();
-        perms[6] = _state.lido.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE();
+        perms[6] = _state.lido.MANAGE_MAX_POSITIVE_REBASE_ROLE();
         for (i = 0; i < 7; ++i) {
             _createPermissionForVoting(acl, _state.lido, perms[i], voting);
         }

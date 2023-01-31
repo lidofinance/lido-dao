@@ -15,6 +15,7 @@ import "./interfaces/IWithdrawalVault.sol";
 import "./interfaces/IStakingRouter.sol";
 
 import "./lib/StakeLimitUtils.sol";
+import "./lib/PositiveRebaseLimiter.sol";
 
 import "./StETHPermit.sol";
 
@@ -35,6 +36,7 @@ contract Lido is StETHPermit, AragonApp {
     using UnstructuredStorage for bytes32;
     using StakeLimitUnstructuredStorage for bytes32;
     using StakeLimitUtils for StakeLimitState.Data;
+    using PositiveRebaseLimiter for LimiterState.Data;
 
     /// ACL
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
@@ -43,10 +45,12 @@ contract Lido is StETHPermit, AragonApp {
     bytes32 public constant STAKING_CONTROL_ROLE = keccak256("STAKING_CONTROL_ROLE");
     bytes32 public constant MANAGE_PROTOCOL_CONTRACTS_ROLE = keccak256("MANAGE_PROTOCOL_CONTRACTS_ROLE");
     bytes32 public constant BURN_ROLE = keccak256("BURN_ROLE");
-    bytes32 public constant SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE = keccak256("SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE");
+    bytes32 public constant MANAGE_MAX_POSITIVE_REBASE_ROLE = keccak256("MANAGE_MAX_POSITIVE_REBASE_ROLE");
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
+    /// @dev max positive rebase precision points (10**9 == 100% == 10_000 BP)
+    uint256 public constant MAX_POSITIVE_REBASE_PRECISION_POINTS = 10**9;
 
     bytes32 internal constant ORACLE_POSITION = keccak256("lido.Lido.oracle");
     bytes32 internal constant TREASURY_POSITION = keccak256("lido.Lido.treasury");
@@ -66,9 +70,9 @@ contract Lido is StETHPermit, AragonApp {
     bytes32 internal constant CL_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
     /// @dev number of Lido's validators available in the Consensus Layer state
     // "beacon" in the `keccak256()` parameter is staying here for compatibility reason
-    bytes32 internal constant CL_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators"); 
-    /// @dev percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
-    bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION = keccak256("lido.Lido.ELRewardsWithdrawalLimit");
+    bytes32 internal constant CL_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
+    /// @dev percent in 10**9 of positive rebase allowed per LidoOracle report
+    bytes32 internal constant MAX_POSITIVE_REBASE_POSITION = keccak256("lido.Lido.MaxPositiveRebase");
     /// @dev Just a counter of total amount of execution layer rewards received by Lido contract. Not used in the logic.
     bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
     /// @dev version of contract
@@ -93,8 +97,8 @@ contract Lido is StETHPermit, AragonApp {
     // The amount of ETH withdrawn from LidoExecutionLayerRewardsVault contract to Lido contract
     event ELRewardsReceived(uint256 amount);
 
-    // Percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
-    event ELRewardsWithdrawalLimitSet(uint256 limitPoints);
+    // Max positive rebase per single oracle report set
+    event MaxPositiveRebaseSet(uint256 maxPositiveRebase);
 
     // Records a deposit made by a user
     event Submitted(address indexed sender, uint256 amount, address referral);
@@ -166,9 +170,9 @@ contract Lido is StETHPermit, AragonApp {
      * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      */
     function finalizeUpgrade_v2(
-        address _stakingRouter, 
-        address _dsm, 
-        address _eip712StETH, 
+        address _stakingRouter,
+        address _dsm,
+        address _eip712StETH,
         address _withdrawalQueue
     ) external {
         require(!isPetrified(), "PETRIFIED");
@@ -430,14 +434,12 @@ contract Lido is StETHPermit, AragonApp {
     }
 
     /**
-     * @dev Sets limit on amount of ETH to withdraw from execution layer rewards vault per LidoOracle report
-     * @param _limitPoints limit in basis points to amount of ETH to withdraw per LidoOracle report
+     * @dev Set max positive rebase allowed per single oracle report
+     * @param _maxPositiveRebase limit value (10**9 == 100% == 10,000 BP)
      */
-    function setELRewardsWithdrawalLimit(uint16 _limitPoints) external {
-        _auth(SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE);
-
-        _setBPValue(EL_REWARDS_WITHDRAWAL_LIMIT_POSITION, _limitPoints);
-        emit ELRewardsWithdrawalLimitSet(_limitPoints);
+    function setMaxPositiveRebase(uint256 _maxPositiveRebase) external {
+        _auth(MANAGE_MAX_POSITIVE_REBASE_ROLE);
+        _setMaxPositiveRebase(_maxPositiveRebase);
     }
 
     /**
@@ -447,9 +449,9 @@ contract Lido is StETHPermit, AragonApp {
     * @param _clBalance sum of all Lido validators' balances on Consensus Layer
     * @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
     * @param _elRewardsVaultBalance elRewards vault balance on Execution Layer for report block
-    * @param _requestIdToFinalizeUpTo rigth boundary of requestId range if equals 0, no requests should be finalized 
+    * @param _requestIdToFinalizeUpTo rigth boundary of requestId range if equals 0, no requests should be finalized
     * @param _finalizationShareRate share rate that should be used for finalization
-    * 
+    *
     * @return totalPooledEther amount of ether in the protocol after report
     * @return totalShares amount of shares in the protocol after report
     */
@@ -467,6 +469,12 @@ contract Lido is StETHPermit, AragonApp {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
         _whenNotStopped();
 
+        LimiterState.Data memory rebaseLimiter = PositiveRebaseLimiter.initLimiterState(
+            MAX_POSITIVE_REBASE_POSITION.getStorageUint256(),
+            _getTotalPooledEther(),
+            _getTotalShares()
+        );
+
         uint256 preClBalance = CL_BALANCE_POSITION.getStorageUint256();
 
         // update saved CL stats checking its sanity
@@ -475,22 +483,26 @@ contract Lido is StETHPermit, AragonApp {
             _clBalance
         );
 
+        uint256 rewardsBase = appearedValidators.mul(DEPOSIT_SIZE).add(preClBalance);
+        int256 clBalanceDiff = _clBalance > rewardsBase ?
+            int256(_clBalance.sub(rewardsBase)) : -int256(rewardsBase.sub(_clBalance));
+
+        rebaseLimiter.applyCLBalanceUpdate(clBalanceDiff);
+        uint256 withdrawnWithdrawals = rebaseLimiter.appendEther(_withdrawalVaultBalance);
+        uint256 elRewards = rebaseLimiter.appendEther(_elRewardsVaultBalance);
+
         // collect ETH from EL and Withdrawal vaults and send some to WithdrawalQueue if required
-        uint256 executionLayerRewards = _processETHDistribution(
-            _withdrawalVaultBalance,
-            _elRewardsVaultBalance,
+        _processETHDistribution(
+            withdrawnWithdrawals,
+            elRewards,
             _requestIdToFinalizeUpTo,
             _finalizationShareRate
         );
 
         // distribute rewards to Lido and Node Operators
-        _processRewards(
-            preClBalance,
-            _clBalance,
-            appearedValidators,
-            executionLayerRewards,
-            _withdrawalVaultBalance
-        );
+        _processRewards(clBalanceDiff, withdrawnWithdrawals, elRewards);
+
+        //TODO(DZhon): apply coverage
 
         totalPooledEther = _getTotalPooledEther();
         totalShares = _getTotalShares();
@@ -570,8 +582,8 @@ contract Lido is StETHPermit, AragonApp {
      * @notice Get limit in basis points to amount of ETH to withdraw per LidoOracle report
      * @return limit in basis points to amount of ETH to withdraw per LidoOracle report
      */
-    function getELRewardsWithdrawalLimit() external view returns (uint256) {
-        return EL_REWARDS_WITHDRAWAL_LIMIT_POSITION.getStorageUint256();
+    function getMaxPositiveRebase() external view returns (uint256) {
+        return MAX_POSITIVE_REBASE_POSITION.getStorageUint256();
     }
 
     /**
@@ -590,11 +602,11 @@ contract Lido is StETHPermit, AragonApp {
     }
 
     /**
-    * @notice Returns the key values related to Consensus Layer side of the contract. It historically contains beacon 
+    * @notice Returns the key values related to Consensus Layer side of the contract. It historically contains beacon
     * @return depositedValidators - number of deposited validators from Lido contract side
     * @return beaconValidators - number of Lido validators visible on Consensus Layer, reported by oracle
     * @return beaconBalance - total amount of ether on the Consensus Layer side (sum of all the balances of Lido validators)
-    * 
+    *
     * @dev `beacon` in naming still here for historical reasons
     */
     function getBeaconStat() public view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance) {
@@ -671,24 +683,17 @@ contract Lido is StETHPermit, AragonApp {
         uint256 _elRewardsVaultBalance,
         uint256 _requestIdToFinalizeUpTo,
         uint256 _finalizationShareRate
-    ) internal returns (uint256 executionLayerRewards) {
-        executionLayerRewards = 0;
+    ) internal {
+        // withdraw execution layer rewards and put them to the buffer
         address elRewardsVaultAddress = getELRewardsVault();
-        // If LidoExecutionLayerRewardsVault address is not set just do as if there were no execution layer rewards at all
-        // Otherwise withdraw all rewards and put them to the buffer
-        if (elRewardsVaultAddress != address(0)) {
-            uint256 rewardsLimit = (_getTotalPooledEther() * EL_REWARDS_WITHDRAWAL_LIMIT_POSITION.getStorageUint256()) / TOTAL_BASIS_POINTS;
-            executionLayerRewards = ILidoExecutionLayerRewardsVault(elRewardsVaultAddress).withdrawRewards(
-               _min(rewardsLimit, _elRewardsVaultBalance)
-            );
+        if (_elRewardsVaultBalance > 0) {
+            ILidoExecutionLayerRewardsVault(elRewardsVaultAddress).withdrawRewards(_elRewardsVaultBalance);
         }
 
+        // Try to withdraw withdrawals and put them to the buffer
         address withdrawalVaultAddress = _getWithdrawalVault();
-        if (withdrawalVaultAddress != address(0)) {
-            if (_withdrawalVaultBalance > 0) {
-                // we pull all the accounted ether from WithdrawalVault
-                IWithdrawalVault(withdrawalVaultAddress).withdrawWithdrawals(_withdrawalVaultBalance);
-            }
+        if (_withdrawalVaultBalance > 0) {
+            IWithdrawalVault(withdrawalVaultAddress).withdrawWithdrawals(_withdrawalVaultBalance);
         }
 
         uint256 lockedToWithdrawalQueue = 0;
@@ -701,7 +706,7 @@ contract Lido is StETHPermit, AragonApp {
 
         uint256 preBufferedEther = _getBufferedEther();
         uint256 postBufferedEther = _getBufferedEther()
-            .add(executionLayerRewards) // Collected from ELVault
+            .add(_elRewardsVaultBalance) // Collected from ELVault
             .add(_withdrawalVaultBalance) // Collected from WithdrawalVault
             .sub(lockedToWithdrawalQueue); // Sent to WithdrawalQueue
 
@@ -733,21 +738,20 @@ contract Lido is StETHPermit, AragonApp {
 
     /// @dev calculate the amount of rewards and distribute it
     function _processRewards(
-        uint256 _preClBalance,
-        uint256 _postClBalance,
-        uint256 _appearedValidators,
-        uint256 _executionLayerRewards,
-        uint256 _withdrawalVaultBalance
+        int256 _clBalanceDiff,
+        uint256 _withdrawnWithdrwawals,
+        uint256 _executionLayerRewards
     ) internal {
-        uint256 rewardsBase = (_appearedValidators.mul(DEPOSIT_SIZE)).add(_preClBalance);
-
+        int256 consensusLayerRewards = _clBalanceDiff > 0 ?
+            int256(uint256(_clBalanceDiff).add(_withdrawnWithdrwawals))
+            :
+            (int256(_withdrawnWithdrwawals) + _clBalanceDiff);
         // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
         // (when consensus layer balance delta is zero or negative).
         // See ADR #3 for details:
         // https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
-        if (_postClBalance.add(_withdrawalVaultBalance) > rewardsBase) {
-            uint256 consensusLayerRewards = _postClBalance.add(_withdrawalVaultBalance).sub(rewardsBase);
-            _distributeFee(consensusLayerRewards.add(_executionLayerRewards));
+        if (consensusLayerRewards> 0) {
+            _distributeFee(uint256(consensusLayerRewards).add(_executionLayerRewards));
         }
     }
 
@@ -988,6 +992,14 @@ contract Lido is StETHPermit, AragonApp {
         }
 
         return _stakeLimitData.calculateCurrentStakeLimit();
+    }
+
+    function _setMaxPositiveRebase(uint256 _maxPositiveRebase) internal {
+        require(_maxPositiveRebase <= MAX_POSITIVE_REBASE_PRECISION_POINTS, "WRONG_MAX_POSITIVE_REBASE");
+
+        MAX_POSITIVE_REBASE_POSITION.setStorageUint256(_maxPositiveRebase);
+
+        emit MaxPositiveRebaseSet(_maxPositiveRebase);
     }
 
     /**

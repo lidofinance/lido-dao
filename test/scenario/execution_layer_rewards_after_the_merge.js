@@ -13,7 +13,8 @@ const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 
 const INodeOperatorsRegistry = artifacts.require('contracts/0.4.24/interfaces/INodeOperatorsRegistry.sol:INodeOperatorsRegistry')
 
-const TOTAL_BASIS_POINTS = 10000
+const TOTAL_BASIS_POINTS = 10**4
+const MAX_POSITIVE_REBASE_PRECISION_POINTS = 10**9
 const CURATED_MODULE_ID = 1
 
 contract('Lido: merge acceptance', (addresses) => {
@@ -100,9 +101,6 @@ contract('Lido: merge acceptance', (addresses) => {
     elRewardsVault = deployed.elRewardsVault
 
     depositRoot = await depositContractMock.get_deposit_root()
-
-    // At first go through tests assuming there is no withdrawal limit
-    await pool.setELRewardsWithdrawalLimit(TOTAL_BASIS_POINTS, { from: voting })
 
     rewarder = await RewardEmulatorMock.new(elRewardsVault.address)
 
@@ -698,79 +696,74 @@ contract('Lido: merge acceptance', (addresses) => {
   })
 
   it('collect 0.1 ETH execution layer rewards to elRewardsVault and withdraw it entirely by means of multiple oracle reports (+1 ETH)', async () => {
-    const toNum = (bn) => {
-      return +bn.toString()
-    }
-    const toE18 = (x) => {
-      return x * 1e18
-    }
-    const fromNum = (x) => {
-      return new BN(String(x))
-    }
-
     // Specify different withdrawal limits for a few epochs to test different values
-    const getELRewardsWithdrawalLimitFromEpoch = (_epoch) => {
+    const getMaxPositiveRebaseForEpoch = (_epoch) => {
+      let ret = 0
+
       if (_epoch === 106) {
-        return 2
+        ret = toBN(2)
       } else if (_epoch === 107) {
-        return 0
+        ret = toBN(1)
       } else {
-        return 3
+        ret = toBN(3)
       }
+
+      return ret.mul(toBN(MAX_POSITIVE_REBASE_PRECISION_POINTS / TOTAL_BASIS_POINTS))
     }
 
-    const elRewards = toE18(0.1)
-    await rewarder.reward({ from: userELRewards, value: fromNum(elRewards) })
-    assertBn(await web3.eth.getBalance(elRewardsVault.address), fromNum(elRewards), 'Execution layer rewards vault balance')
+    const elRewards = ETH(0.1)
+    await rewarder.reward({ from: userELRewards, value: elRewards })
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), elRewards, 'Execution layer rewards vault balance')
 
     let epoch = 106
-    let lastBeaconBalance = toE18(85)
-    await pool.setELRewardsWithdrawalLimit(getELRewardsWithdrawalLimitFromEpoch(epoch), { from: voting })
+    let lastBeaconBalance = toBN(ETH(85))
+    await pool.setMaxPositiveRebase(getMaxPositiveRebaseForEpoch(epoch), { from: voting })
 
-    let elRewardsWithdrawalLimitPoints = toNum(await pool.getELRewardsWithdrawalLimit())
-    let elRewardsVaultBalance = toNum(await web3.eth.getBalance(elRewardsVault.address))
-    let totalPooledEther = toNum(await pool.getTotalPooledEther())
-    let bufferedEther = toNum(await pool.getBufferedEther())
-    let totalSupply = toNum(await pool.totalSupply())
-    const beaconBalanceInc = toE18(1)
-    let elRewardsWithdrawn = 0
+    let maxPositiveRebase = await pool.getMaxPositiveRebase()
+    let elRewardsVaultBalance = toBN(await web3.eth.getBalance(elRewardsVault.address))
+    let totalPooledEther = await pool.getTotalPooledEther()
+    let bufferedEther = await pool.getBufferedEther()
+    let totalSupply = await pool.totalSupply()
+    const beaconBalanceInc = toBN(ETH(0.001))
+    let elRewardsWithdrawn = toBN(0)
 
     // Do multiple oracle reports to withdraw all ETH from execution layer rewards vault
     while (elRewardsVaultBalance > 0) {
-      const elRewardsWithdrawalLimit = getELRewardsWithdrawalLimitFromEpoch(epoch)
-      await pool.setELRewardsWithdrawalLimit(elRewardsWithdrawalLimit, { from: voting })
-      elRewardsWithdrawalLimitPoints = toNum(await pool.getELRewardsWithdrawalLimit())
+      const maxPositiveRebaseCalculated = getMaxPositiveRebaseForEpoch(epoch)
+      await pool.setMaxPositiveRebase(maxPositiveRebaseCalculated, { from: voting })
+      maxPositiveRebase = await pool.getMaxPositiveRebase()
+      const clIncurredRebase = beaconBalanceInc.mul(toBN(MAX_POSITIVE_REBASE_PRECISION_POINTS)).div(totalPooledEther)
 
-      const maxELRewardsAmountPerWithdrawal = Math.floor(
-        ((totalPooledEther + beaconBalanceInc) * elRewardsWithdrawalLimitPoints) / TOTAL_BASIS_POINTS
-      )
-      const elRewardsToWithdraw = Math.min(maxELRewardsAmountPerWithdrawal, elRewardsVaultBalance)
+      const maxELRewardsAmountPerWithdrawal = totalPooledEther.mul(
+        maxPositiveRebase.sub(clIncurredRebase)
+      ).div(toBN(MAX_POSITIVE_REBASE_PRECISION_POINTS))
+
+      const elRewardsToWithdraw = BN.min(maxELRewardsAmountPerWithdrawal, elRewardsVaultBalance)
 
       // Reporting balance increase
-      await oracleMock.reportBeacon(epoch, 2, fromNum(lastBeaconBalance + beaconBalanceInc))
+      await oracleMock.reportBeacon(epoch, 2, lastBeaconBalance.add(beaconBalanceInc))
 
       assertBn(
         await web3.eth.getBalance(elRewardsVault.address),
-        elRewardsVaultBalance - elRewardsToWithdraw,
+        elRewardsVaultBalance.sub(elRewardsToWithdraw),
         'Execution layer rewards vault balance'
       )
 
-      assertBn(await pool.getTotalPooledEther(), totalPooledEther + beaconBalanceInc + elRewardsToWithdraw, 'total pooled ether')
+      assertBn(await pool.getTotalPooledEther(), totalPooledEther.add(beaconBalanceInc).add(elRewardsToWithdraw), 'total pooled ether')
+      assertBn(await pool.totalSupply(), totalSupply.add(beaconBalanceInc).add(elRewardsToWithdraw), 'token total supply')
+      assertBn(await pool.getBufferedEther(), bufferedEther.add(elRewardsToWithdraw), 'buffered ether')
 
-      assertBn(await pool.totalSupply(), totalSupply + beaconBalanceInc + elRewardsToWithdraw, 'token total supply')
+      elRewardsVaultBalance = toBN(await web3.eth.getBalance(elRewardsVault.address))
+      totalPooledEther = await pool.getTotalPooledEther()
+      bufferedEther = await pool.getBufferedEther()
+      totalSupply = await pool.totalSupply()
 
-      assertBn(await pool.getBufferedEther(), bufferedEther + elRewardsToWithdraw, 'buffered ether')
+      lastBeaconBalance = lastBeaconBalance.add(beaconBalanceInc)
+      elRewardsWithdrawn = elRewardsWithdrawn.add(elRewardsToWithdraw)
 
-      elRewardsVaultBalance = toNum(await web3.eth.getBalance(elRewardsVault.address))
-      totalPooledEther = toNum(await pool.getTotalPooledEther())
-      bufferedEther = toNum(await pool.getBufferedEther())
-      totalSupply = toNum(await pool.totalSupply())
-
-      lastBeaconBalance += beaconBalanceInc
       epoch += 1
-      elRewardsWithdrawn += elRewardsToWithdraw
     }
 
-    assert.equal(elRewardsWithdrawn, elRewards)
+    assertBn(elRewardsWithdrawn, elRewards)
   })
 })

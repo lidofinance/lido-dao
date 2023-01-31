@@ -97,7 +97,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await acl.createPermission(voting, app.address, await app.RESUME_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.BURN_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_PROTOCOL_CONTRACTS_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE(), appManager, {
+    await acl.createPermission(voting, app.address, await app.MANAGE_MAX_POSITIVE_REBASE_ROLE(), appManager, {
       from: appManager
     })
     await acl.createPermission(voting, app.address, await app.STAKING_PAUSE_ROLE(), appManager, { from: appManager })
@@ -159,7 +159,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     assert((await app.isStakingPaused()) === true)
     assert((await app.isStopped()) === true)
-    await app.resume({ from: voting })
+    await app.resumeProtocolAndStaking({ from: voting })
     assert((await app.isStakingPaused()) === false)
     assert((await app.isStopped()) === false)
 
@@ -271,10 +271,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     beforeEach('set up rewarder and limits', async () => {
       rewarder = await RewardEmulatorMock.new(elRewardsVault.address)
 
-      const elRewardsWithdrawalLimitPoints = 3
-      await assertRevert(app.setELRewardsWithdrawalLimit(elRewardsWithdrawalLimitPoints), 'APP_AUTH_FAILED')
-      receipt = await app.setELRewardsWithdrawalLimit(elRewardsWithdrawalLimitPoints, { from: voting })
-      assertEvent(receipt, 'ELRewardsWithdrawalLimitSet', { expectedArgs: { limitPoints: elRewardsWithdrawalLimitPoints } })
+      const maxPositiveRebase = bn(1).mul(bn(10).pow(bn(8))) // 10%
+      await assertRevert(app.setMaxPositiveRebase(maxPositiveRebase), 'APP_AUTH_FAILED')
+      receipt = await app.setMaxPositiveRebase(maxPositiveRebase, { from: voting })
+      assertEvent(receipt, 'MaxPositiveRebaseSet', { expectedArgs: { maxPositiveRebase: maxPositiveRebase } })
     })
 
     async function getStEthBalance(address) {
@@ -365,18 +365,20 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       assertBn(await app.getTotalPooledEther(), ETH(depositAmount + elRewards + beaconRewards))
       assertBn(await app.getTotalELRewardsCollected(), ETH(elRewards))
 
-    const {totalFee} = await app.getFee()
-    const stakersReward = bn(ETH(elRewards + beaconRewards))
-      .mul(FEE_PRECISION_POINTS.sub(totalFee))
-      .div(FEE_PRECISION_POINTS)
-    assertBn(await app.balanceOf(user2), bn(StETH(depositAmount)).add(stakersReward))
-  })
+      const { totalFee } = await app.getFee()
+
+      const stakersReward = bn(ETH(elRewards + beaconRewards))
+        .mul(FEE_PRECISION_POINTS.sub(totalFee))
+        .div(FEE_PRECISION_POINTS)
+
+      assertBn(await app.balanceOf(user2), bn(StETH(depositAmount)).add(stakersReward))
+    })
 
     it('Attempt to set invalid execution layer rewards withdrawal limit', async () => {
-      const initialValue = await app.getELRewardsWithdrawalLimit()
+      const initialValue = await app.getMaxPositiveRebase()
 
-      assertEvent(await app.setELRewardsWithdrawalLimit(1, { from: voting }), 'ELRewardsWithdrawalLimitSet', {
-        expectedArgs: { limitPoints: 1 }
+      assertEvent(await app.setMaxPositiveRebase(1, { from: voting }), 'MaxPositiveRebaseSet', {
+        expectedArgs: { maxPositiveRebase: 1 }
       })
 
       const setupNodeOperatorsForELRewardsVaultTests = async (userAddress, initialDepositAmount) => {
