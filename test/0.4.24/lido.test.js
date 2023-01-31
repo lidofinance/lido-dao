@@ -98,7 +98,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await acl.createPermission(voting, app.address, await app.RESUME_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.BURN_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_PROTOCOL_CONTRACTS_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.MANAGE_MAX_POSITIVE_REBASE_ROLE(), appManager, {
+    await acl.createPermission(voting, app.address, await app.MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE(), appManager, {
       from: appManager
     })
     await acl.createPermission(voting, app.address, await app.STAKING_PAUSE_ROLE(), appManager, { from: appManager })

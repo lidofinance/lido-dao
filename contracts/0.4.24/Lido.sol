@@ -45,7 +45,7 @@ contract Lido is StETHPermit, AragonApp {
     bytes32 public constant STAKING_CONTROL_ROLE = keccak256("STAKING_CONTROL_ROLE");
     bytes32 public constant MANAGE_PROTOCOL_CONTRACTS_ROLE = keccak256("MANAGE_PROTOCOL_CONTRACTS_ROLE");
     bytes32 public constant BURN_ROLE = keccak256("BURN_ROLE");
-    bytes32 public constant MANAGE_MAX_POSITIVE_REBASE_ROLE = keccak256("MANAGE_MAX_POSITIVE_REBASE_ROLE");
+    bytes32 public constant MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE = keccak256("MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE");
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
@@ -449,7 +449,7 @@ contract Lido is StETHPermit, AragonApp {
      * NB: the recommended sane values are from 5e5 (0.05%) to 1e6 (0.1%)
      */
     function setMaxPositiveTokenRebase(uint256 _maxTokenPositiveRebase) external {
-        _auth(MANAGE_MAX_POSITIVE_REBASE_ROLE);
+        _auth(MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE);
         _setMaxPositiveTokenRebase(_maxTokenPositiveRebase);
     }
 
@@ -650,21 +650,19 @@ contract Lido is StETHPermit, AragonApp {
 
     /// @dev collect ETH from ELRewardsVault and WithdrawalVault and send to WithdrawalQueue
     function _processETHDistribution(
-        uint256 _withdrawalVaultBalance,
-        uint256 _elRewardsVaultBalance,
+        uint256 _withdrawalsToWithdraw,
+        uint256 _elRewardsToWithdraw,
         uint256 _requestIdToFinalizeUpTo,
         uint256 _finalizationShareRate
     ) internal {
         // withdraw execution layer rewards and put them to the buffer
-        address elRewardsVaultAddress = getELRewardsVault();
-        if (_elRewardsVaultBalance > 0) {
-            ILidoExecutionLayerRewardsVault(elRewardsVaultAddress).withdrawRewards(_elRewardsVaultBalance);
+        if (_elRewardsToWithdraw > 0) {
+            ILidoExecutionLayerRewardsVault(getELRewardsVault()).withdrawRewards(_elRewardsToWithdraw);
         }
 
-        // Try to withdraw withdrawals and put them to the buffer
-        address withdrawalVaultAddress = _getWithdrawalVault();
-        if (_withdrawalVaultBalance > 0) {
-            IWithdrawalVault(withdrawalVaultAddress).withdrawWithdrawals(_withdrawalVaultBalance);
+        // withdraw withdrawals and put them to the buffer
+        if (_withdrawalsToWithdraw > 0) {
+            IWithdrawalVault(_getWithdrawalVault()).withdrawWithdrawals(_withdrawalsToWithdraw);
         }
 
         uint256 lockedToWithdrawalQueue = 0;
@@ -677,8 +675,8 @@ contract Lido is StETHPermit, AragonApp {
 
         uint256 preBufferedEther = _getBufferedEther();
         uint256 postBufferedEther = _getBufferedEther()
-            .add(_elRewardsVaultBalance) // Collected from ELVault
-            .add(_withdrawalVaultBalance) // Collected from WithdrawalVault
+            .add(_elRewardsToWithdraw) // Collected from ELVault
+            .add(_withdrawalsToWithdraw) // Collected from WithdrawalVault
             .sub(lockedToWithdrawalQueue); // Sent to WithdrawalQueue
 
         // Storing even the same value costs gas, so just avoid it
@@ -710,19 +708,19 @@ contract Lido is StETHPermit, AragonApp {
     /// @dev calculate the amount of rewards and distribute it
     function _processRewards(
         int256 _clBalanceDiff,
-        uint256 _withdrawnWithdrwawals,
-        uint256 _executionLayerRewards
+        uint256 _withdrawnWithdrawals,
+        uint256 _withdrawnElRewards
     ) internal {
         int256 consensusLayerRewards = _clBalanceDiff > 0 ?
-            int256(uint256(_clBalanceDiff).add(_withdrawnWithdrwawals))
+            int256(uint256(_clBalanceDiff).add(_withdrawnWithdrawals))
             :
-            (int256(_withdrawnWithdrwawals) + _clBalanceDiff);
+            (int256(_withdrawnWithdrawals) + _clBalanceDiff);
         // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
         // (when consensus layer balance delta is zero or negative).
         // See ADR #3 for details:
         // https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
         if (consensusLayerRewards> 0) {
-            _distributeFee(uint256(consensusLayerRewards).add(_executionLayerRewards));
+            _distributeFee(uint256(consensusLayerRewards).add(_withdrawnElRewards));
         }
     }
 
