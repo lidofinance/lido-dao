@@ -10,7 +10,6 @@ const signingKeys = require('../helpers/signing-keys')
 const { web3 } = require('hardhat')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistryMock')
-const INodeOperatorsRegistry = artifacts.require('contracts/0.4.24/interfaces/INodeOperatorsRegistry.sol:INodeOperatorsRegistry')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -424,7 +423,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         tx,
         'NodeOperatorAdded',
         { nodeOperatorId: 0, name, rewardAddress: ADDRESS_1, stakingLimit: 0 },
-        { abi: INodeOperatorsRegistry._json.abi }
+        { abi: NodeOperatorsRegistry._json.abi }
       )
     })
   })
@@ -770,7 +769,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const nodeOperatorId = 0
       const newName = 'new name'
       const receipt = await app.setNodeOperatorName(nodeOperatorId, newName, { from: voting })
-      assert.emits(receipt, 'NodeOperatorNameSet', { nodeOperatorId, name: newName }, { abi: INodeOperatorsRegistry._json.abi })
+      assert.emits(receipt, 'NodeOperatorNameSet', { nodeOperatorId, name: newName }, { abi: NodeOperatorsRegistry._json.abi })
     })
     it("doesn't affect the names of other node operators", async () => {
       const nodeOperatorId = 0
