@@ -11,8 +11,8 @@ interface INodeOperatorsRegistry {
     /// @notice Add node operator named `name` with reward address `rewardAddress` and staking limit = 0 validators
     /// @param _name Human-readable name
     /// @param _rewardAddress Ethereum 1 address which receives stETH rewards for this operator
-    /// @return id a unique key of the added operator
-    function addNodeOperator(string _name, address _rewardAddress) external returns (uint256 id);
+    /// @return nodeOperatorId a unique key of the added operator
+    function addNodeOperator(string _name, address _rewardAddress) external returns (uint256 nodeOperatorId);
 
     /// @notice Activates deactivated node operator with given id
     /// @param _nodeOperatorId Node operator id to deactivate
@@ -174,19 +174,24 @@ interface INodeOperatorsRegistry {
             bool[] memory used
         );
 
-    event NodeOperatorAdded(uint256 id, string name, address rewardAddress, uint64 stakingLimit);
-    event NodeOperatorActiveSet(uint256 indexed id, bool active);
-    event NodeOperatorNameSet(uint256 indexed id, string name);
-    event NodeOperatorRewardAddressSet(uint256 indexed id, address rewardAddress);
-    event NodeOperatorStakingLimitSet(uint256 indexed id, uint64 stakingLimit);
-    event NodeOperatorTotalStoppedValidatorsReported(uint256 indexed id, uint64 totalStopped);
-    event NodeOperatorTotalKeysTrimmed(uint256 indexed id, uint64 totalKeysTrimmed);
-    event SigningKeyAdded(uint256 indexed operatorId, bytes pubkey);
-    event SigningKeyRemoved(uint256 indexed operatorId, bytes pubkey);
+    /// @notice Unsafely updates the number of the validators in the EXITED state for node operator with given id
+    /// @param _nodeOperatorId Id of the node operator
+    /// @param _exitedValidatorsKeysCount New number of EXITED validators of the node operator
+    function unsafeUpdateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount) external returns (uint256);
+
+    event NodeOperatorAdded(uint256 nodeOperatorId, string name, address rewardAddress, uint64 stakingLimit);
+    event NodeOperatorActiveSet(uint256 indexed nodeOperatorId, bool active);
+    event NodeOperatorNameSet(uint256 indexed nodeOperatorId, string name);
+    event NodeOperatorRewardAddressSet(uint256 indexed nodeOperatorId, address rewardAddress);
+    event NodeOperatorStakingLimitSet(uint256 indexed nodeOperatorId, uint64 stakingLimit);
+    event NodeOperatorTotalStoppedValidatorsReported(uint256 indexed nodeOperatorId, uint64 totalStopped);
+    event NodeOperatorTotalKeysTrimmed(uint256 indexed nodeOperatorId, uint64 totalKeysTrimmed);
+    event SigningKeyAdded(uint256 indexed nodeOperatorId, bytes pubkey);
+    event SigningKeyRemoved(uint256 indexed nodeOperatorId, bytes pubkey);
     event KeysOpIndexSet(uint256 keysOpIndex);
     event ContractVersionSet(uint256 version);
     event StakingModuleTypeSet(bytes32 moduleType);
-    event RewardsDistributed(uint256 indexed id, uint256 sharesAmount);
+    event RewardsDistributed(address indexed rewardAddress, uint256 sharesAmount);
     event StethContractSet(address stethAddress);
 
     event VettedSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 approvedValidatorsCount);

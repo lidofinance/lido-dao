@@ -1,7 +1,4 @@
-const { BN } = require('bn.js')
-const { assert } = require('chai')
-const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
-const { assertRevert } = require('../../helpers/assertThrow')
+const { assert } = require('../../helpers/assert')
 
 const MemUtilsTest = artifacts.require('MemUtilsTest')
 
@@ -47,19 +44,19 @@ contract('AccountingOracle', ([deployer]) => {
       await memUtilsTest.memcpy_copies_mem_chunks_that_are_not_multiples_of_32_bytes_from_and_to_a_non_32b_offset()
     })
 
-    it('copies mem chunks shorher than 32 bytes', async () => {
+    it('copies mem chunks shorter than 32 bytes', async () => {
       await memUtilsTest.memcpy_copies_mem_chunks_shorter_than_32_bytes()
     })
 
-    it('copies mem chunks shorher than 32 bytes from a non-32 byte offset', async () => {
+    it('copies mem chunks shorter than 32 bytes from a non-32 byte offset', async () => {
       await memUtilsTest.memcpy_copies_mem_chunks_shorter_than_32_bytes_from_a_non_32b_offset()
     })
 
-    it('copies mem chunks shorher than 32 bytes to a non-32 byte offset', async () => {
+    it('copies mem chunks shorter than 32 bytes to a non-32 byte offset', async () => {
       await memUtilsTest.memcpy_copies_mem_chunks_shorter_than_32_bytes_to_a_non_32b_offset()
     })
 
-    it('copies mem chunks shorher than 32 bytes from and to a non-32 byte offset', async () => {
+    it('copies mem chunks shorter than 32 bytes from and to a non-32 byte offset', async () => {
       await memUtilsTest.memcpy_copies_mem_chunks_shorter_than_32_bytes_from_and_to_a_non_32b_offset()
     })
   })
@@ -86,7 +83,7 @@ contract('AccountingOracle', ([deployer]) => {
     })
 
     it('reverts on trying to trim by more than the array length', async () => {
-      await assertRevert(
+      await assert.reverts(
         memUtilsTest.trimUint256Array_reverts_on_trying_to_trim_by_more_than_length()
       )
     })
