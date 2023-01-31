@@ -57,7 +57,7 @@ contract HashConsensus is AccessControlEnumerable {
     error AdminCannotBeZero();
     error DuplicateMember();
     error AddressCannotBeZero();
-    error InitialEpochCannotBeInFuture();
+    error InitialEpochIsYetToArrive();
     error EpochsPerFrameCannotBeZero();
     error NonMember();
     error UnexpectedConsensusVersion(uint256 expected, uint256 received);
@@ -186,13 +186,7 @@ contract HashConsensus is AccessControlEnumerable {
 
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
-
-        uint256 currentEpoch = _computeEpochAtTimestamp(_getTime());
-        if (initialEpoch > currentEpoch) {
-            revert InitialEpochCannotBeInFuture();
-        }
         _setFrameConfig(initialEpoch, epochsPerFrame);
-
         // zero address is allowed here, meaning "no processor"
         _reportProcessor = reportProcessor;
     }
@@ -426,8 +420,11 @@ contract HashConsensus is AccessControlEnumerable {
     function _computeFrameStartEpoch(uint256 timestamp, FrameConfig memory config)
         internal view returns (uint256)
     {
-        uint256 epochsSinceInitial = _computeEpochAtTimestamp(timestamp) - config.initialEpoch;
-        uint256 frameIndex = epochsSinceInitial / config.epochsPerFrame;
+        uint256 epoch = _computeEpochAtTimestamp(timestamp);
+        if (epoch < config.initialEpoch) {
+            revert InitialEpochIsYetToArrive();
+        }
+        uint256 frameIndex = (epoch - config.initialEpoch) / config.epochsPerFrame;
         return config.initialEpoch + frameIndex * config.epochsPerFrame;
     }
 

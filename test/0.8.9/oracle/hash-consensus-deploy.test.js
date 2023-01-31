@@ -72,13 +72,15 @@ module.exports = {
   deployHashConsensus
 }
 
-contract('HashConsensus', ([admin]) => {
+contract('HashConsensus', ([admin, member1]) => {
   context('Deployment and initial configuration', () => {
+    const INITIAL_EPOCH = 3
+
     let consensus
     let reportProcessor
 
     it('deploying hash consensus', async () => {
-      const deployed = await deployHashConsensus(admin, {initialEpoch: 3})
+      const deployed = await deployHashConsensus(admin, {initialEpoch: INITIAL_EPOCH})
       consensus = deployed.consensus
       reportProcessor = deployed.reportProcessor
     })
@@ -92,8 +94,7 @@ contract('HashConsensus', ([admin]) => {
 
     it('frame config is correct', async () => {
       const config = await consensus.getFrameConfig()
-      const time = +await consensus.getTime()
-      assert.equal(+config.initialEpoch, 3)
+      assert.equal(+config.initialEpoch, INITIAL_EPOCH)
       assert.equal(+config.epochsPerFrame, EPOCHS_PER_FRAME)
     })
   })
