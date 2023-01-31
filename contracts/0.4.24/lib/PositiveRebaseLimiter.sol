@@ -9,28 +9,28 @@ import {SafeMath} from "@aragon/os/contracts/lib/math/SafeMath.sol";
 
 import {Math256} from "../../common/lib/Math256.sol";
 
-//
-// This library implements positive rebase limiter for `stETH` token.
-// One need to initialize `LimiterState` with the desired parameters:
-// - _maxLimiterValue (limiter saturation value)
-// - _totalPooledEther (see `Lido.getTotalPooledEther()`)
-// - _totalShares (see `Lido.getTotalShares()`)
-//
-// The limiter allows to account for:
-// - consensus layer balance updates (can be either positive or negative)
-// - total pooled ether changes (withdrawing funds from vaults on execution layer)
-// - total shares changes (coverage application)
-//
+/**
+ * This library implements positive rebase limiter for `stETH` token.
+ * One needs to initialize `LimiterState` with the desired parameters:
+ * - _maxLimiterValue (limiter max value, nominated in LIMITER_PRECISION_POINTS)
+ * - _totalPooledEther (see `Lido.getTotalPooledEther()`)
+ * - _totalShares (see `Lido.getTotalShares()`)
+ *
+ * The limiter allows to account for:
+ * - consensus layer balance updates (can be either positive or negative)
+ * - total pooled ether changes (withdrawing funds from vaults on execution layer)
+ * - total shares changes (coverage application)
+ */
 
 library LimiterState {
     /**
       * @dev Internal limiter representation struct (storing in memory)
       */
     struct Data {
-        uint256 totalPooledEther;
-        uint256 totalShares;
-        uint256 maxLimiterValue;
-        uint256 prevLimiterValue;
+        uint256 totalPooledEther; // total pooled ether pre-rebase
+        uint256 totalShares; // total shares before pre-rebase
+        uint256 maxLimiterValue; // max positive rebase (target value)
+        uint256 prevLimiterValue; // accumulated rebase (previous value)
     }
 }
 
@@ -63,6 +63,7 @@ library PositiveRebaseLimiter {
     /**
      * @notice check if positive rebase limit is reached
      * @param _limiterState limit repr struct
+     * @return true if limit is reached
      */
     function isLimitReached(LimiterState.Data memory _limiterState) internal pure returns (bool) {
         return _limiterState.prevLimiterValue == _limiterState.maxLimiterValue;
@@ -73,7 +74,7 @@ library PositiveRebaseLimiter {
      * @param _limiterState limit repr struct
      * @param _clBalanceDiff cl balance diff (can be negative!)
      *
-     * if `_clBalanceDiff` is negative than max limiter vault is pushed higher
+     * NB: if `_clBalanceDiff` is negative than max limiter vault is pushed higher
      * otherwise limiter is updated with the `appendEther` call.
      */
     function applyCLBalanceUpdate(LimiterState.Data memory _limiterState, int256 _clBalanceDiff) internal view {

@@ -353,7 +353,7 @@ contract Lido is StETHPermit, AragonApp {
     function receiveELRewards() external payable {
         require(msg.sender == EL_REWARDS_VAULT_POSITION.getStorageAddress());
 
-        TOTAL_EL_REWARDS_COLLECTED_POSITION.setStorageUint256(TOTAL_EL_REWARDS_COLLECTED_POSITION.getStorageUint256().add(msg.value));
+        TOTAL_EL_REWARDS_COLLECTED_POSITION.setStorageUint256(_getTotalELRewardsCollected().add(msg.value));
 
         emit ELRewardsReceived(msg.value);
     }
@@ -435,7 +435,7 @@ contract Lido is StETHPermit, AragonApp {
 
     /**
      * @dev Set max positive rebase allowed per single oracle report
-     * @param _maxPositiveRebase limit value (10**9 == 100% == 10,000 BP)
+     * @param _maxPositiveRebase max positive rebase value (10**9 == 100% == 10,000 BP)
      */
     function setMaxPositiveRebase(uint256 _maxPositiveRebase) external {
         _auth(MANAGE_MAX_POSITIVE_REBASE_ROLE);
@@ -470,7 +470,7 @@ contract Lido is StETHPermit, AragonApp {
         _whenNotStopped();
 
         LimiterState.Data memory rebaseLimiter = PositiveRebaseLimiter.initLimiterState(
-            MAX_POSITIVE_REBASE_POSITION.getStorageUint256(),
+            _getMaxPositiveRebase(),
             _getTotalPooledEther(),
             _getTotalShares()
         );
@@ -560,15 +560,15 @@ contract Lido is StETHPermit, AragonApp {
      * @return amount of funds received as execution layer rewards (in wei)
      */
     function getTotalELRewardsCollected() external view returns (uint256) {
-        return TOTAL_EL_REWARDS_COLLECTED_POSITION.getStorageUint256();
+        return _getTotalELRewardsCollected();
     }
 
     /**
-     * @notice Get limit in basis points to amount of ETH to withdraw per LidoOracle report
-     * @return limit in basis points to amount of ETH to withdraw per LidoOracle report
+     * @notice Get max positive rebase value
+     * @return max positive rebase value, nominated id MAX_POSITIVE_REBASE_PRECISION_POINTS (10**9 == 100% = 10000 BP)
      */
     function getMaxPositiveRebase() external view returns (uint256) {
-        return MAX_POSITIVE_REBASE_POSITION.getStorageUint256();
+        return _getMaxPositiveRebase();
     }
 
     /**
@@ -974,12 +974,32 @@ contract Lido is StETHPermit, AragonApp {
         return _stakeLimitData.calculateCurrentStakeLimit();
     }
 
+    /**
+     * @dev Get total execution layer rewards collected (ever)
+     * @return incremental amount of the collected rewards
+     */
+    function _getTotalELRewardsCollected() internal view returns (uint256) {
+        return TOTAL_EL_REWARDS_COLLECTED_POSITION.getStorageUint256();
+    }
+
+    /**
+     * @dev Set max positive rebase value
+     * @param _maxPositiveRebase max positive rebase, nominated in MAX_POSITIVE_REBASE_PRECISION_POINTS
+     */
     function _setMaxPositiveRebase(uint256 _maxPositiveRebase) internal {
         require(_maxPositiveRebase <= MAX_POSITIVE_REBASE_PRECISION_POINTS, "WRONG_MAX_POSITIVE_REBASE");
 
         MAX_POSITIVE_REBASE_POSITION.setStorageUint256(_maxPositiveRebase);
 
         emit MaxPositiveRebaseSet(_maxPositiveRebase);
+    }
+
+    /**
+     * @dev Get max positive rebase value
+     * @return max positive rebase, nominated in MAX_POSITIVE_REBASE_PRECISION_POINTS
+     */
+    function _getMaxPositiveRebase() internal view returns (uint256) {
+        return MAX_POSITIVE_REBASE_POSITION.getStorageUint256();
     }
 
     /**
