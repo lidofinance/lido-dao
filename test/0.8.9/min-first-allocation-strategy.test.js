@@ -209,6 +209,10 @@ contract('MinFirstAllocationStrategy', (accounts) => {
           output: [0, [0, 0, 0, 0]]
         },
         {
+          input: [[0, 0, 0, 0, 0], [10, 10, 10, 10, 10], 24],
+          output: [24, [5, 5, 5, 5, 4]]
+        },
+        {
           input: [[100, 100, 100], [200, 300, 600], 600],
           output: [600, [200, 300, 400]]
         },
@@ -334,7 +338,7 @@ function getExpectedAllocateToBestCandidate(allocations, capacities, maxAllocati
     }
   }
 
-  const allocationPerCandidate = Math.max(1, Math.floor(maxAllocationSize / candidatesCount))
+  const allocationPerCandidate = Math.ceil(maxAllocationSize / candidatesCount)
   const allocated = Math.min(allocationPerCandidate, capacity - allocation, allocationBound - allocation)
   const newAllocations = [...allocations]
   newAllocations[index] += allocated

@@ -3,7 +3,7 @@
 pragma solidity 0.8.9;
 
 import { ERC165Checker } from "@openzeppelin/contracts-v4.4/utils/introspection/ERC165Checker.sol";
-import { AccessControlEnumerable } from "@openzeppelin/contracts-v4.4/access/AccessControlEnumerable.sol";
+import { AccessControlEnumerable } from "./utils/access/AccessControlEnumerable.sol";
 
 import "./CommitteeQuorum.sol";
 import "./ReportEpochChecker.sol";
@@ -148,10 +148,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     ///! SLOT 0: address[] members
     ///! SLOT 1: bytes[] distinctReportHashes
     ///! SLOT 2: bytes32[] distinctReportCounters
-    ///! Inherited from AccessControlEnumerable:
-    ///! SLOT 3: mapping(bytes32 => RoleData) _roles
-    ///! SLOT 4: mapping(bytes32 => EnumerableSet.AddressSet) _roleMembers
-
 
     /**
      * @notice Initialize the contract (version 3 for now) from scratch

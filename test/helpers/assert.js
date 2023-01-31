@@ -41,6 +41,23 @@ chai.util.addMethod(chai.assert, 'revertsWithCustomError', async function (recei
   throw new Error(`Transaction has been executed without revert. Expected revert reason ${reason}`)
 })
 
+chai.util.addMethod(chai.assert, 'almostEqual', function (actual, expected, epsilon) {
+  actual = BigInt(actual.toString())
+  expected = BigInt(expected.toString())
+  epsilon = BigInt(epsilon.toString())
+  if (actual > expected) {
+    this.isTrue(
+      actual - expected <= epsilon,
+      `Expected |${actual} - ${expected}| <= ${epsilon}. Actually ${actual - expected} > ${epsilon}`
+    )
+  } else {
+    this.isTrue(
+      expected - actual <= epsilon,
+      `Expected |${expected} - ${actual}| <= ${epsilon}. Actually ${expected - actual} > ${epsilon}`
+    )
+  }
+})
+
 function getEvent(receipt, eventName, args, abi) {
   return getEvents(receipt, eventName, { decodeForAbi: abi }).find((e) =>
     // find the first index where every event argument matches the expected one

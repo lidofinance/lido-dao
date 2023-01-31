@@ -50,7 +50,7 @@ contract('StakingRouter', (accounts) => {
 
   xdescribe('Single staking module', async () => {
     beforeEach(async () => {
-      await stakingRouter.addModule('Module1', StakingModule1.address, 10_000, 1_000, 5_000, { from: admin })
+      await stakingRouter.addStakingModule('Module1', StakingModule1.address, 10_000, 1_000, 5_000, { from: admin })
     })
 
     it('should have only one module', async () => {
@@ -105,8 +105,8 @@ contract('StakingRouter', (accounts) => {
       describe('Allocation with different target shares', async () => {
         beforeEach(async () => {
           await Promise.all([
-            await stakingRouter.addModule('Module1', StakingModule1.address, module1TargetShare, 5_000, 5_000, { from: admin }),
-            await stakingRouter.addModule('Module2', StakingModule2.address, module2TargetShare, 5_000, 5_000, {
+            await stakingRouter.addStakingModule('Module1', StakingModule1.address, module1TargetShare, 5_000, 5_000, { from: admin }),
+            await stakingRouter.addStakingModule('Module2', StakingModule2.address, module2TargetShare, 5_000, 5_000, {
               from: admin
             })
           ])

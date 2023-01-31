@@ -90,7 +90,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
+    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', { decodeForAbi: INodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator1.id, 0, 'operator id')
 
     assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 1, 'total node operators')
@@ -328,7 +328,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
+    nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', { decodeForAbi: INodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator2.id, 1, 'correct operator id added')
 
     assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 2, 'total node operators updated')
