@@ -49,7 +49,7 @@ contract LidoMock is Lido {
     function resumeProtocolAndStaking() public {
         _resume();
         _resumeStaking();
-        _setMaxPositiveRebase(Lido.MAX_POSITIVE_REBASE_PRECISION_POINTS);
+        _setMaxPositiveTokenRebase(Lido.TOKEN_REBASE_PRECISION_BASE);
     }
 
     /**

@@ -372,7 +372,7 @@ contract LidoTemplate is IsContract {
     function finalizeDAO(
         string _daoName,
         uint256 _unvestedTokensAmount,
-        uint256 _maxPositiveRebase
+        uint256 _maxPositiveTokenRebase
     )
         external onlyOwner
     {
@@ -384,7 +384,7 @@ contract LidoTemplate is IsContract {
 
         bytes32 LIDO_MANAGE_MAX_POSITIVE_REBASE = state.lido.MANAGE_MAX_POSITIVE_REBASE_ROLE();
         _createPermissionForTemplate(state.acl, state.lido, LIDO_MANAGE_MAX_POSITIVE_REBASE);
-        state.lido.setMaxPositiveRebase(_maxPositiveRebase);
+        state.lido.setMaxPositiveTokenRebase(_maxPositiveTokenRebase);
         _removePermissionFromTemplate(state.acl, state.lido, LIDO_MANAGE_MAX_POSITIVE_REBASE);
 
         if (_unvestedTokensAmount != 0) {

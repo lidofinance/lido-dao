@@ -28,17 +28,17 @@ library LimiterState {
       */
     struct Data {
         uint256 totalPooledEther; // total pooled ether pre-rebase
-        uint256 totalShares; // total shares before pre-rebase
-        uint256 maxLimiterValue; // max positive rebase (target value)
+        uint256 totalShares;      // total shares before pre-rebase
+        uint256 maxLimiterValue;  // max positive rebase (target value)
         uint256 prevLimiterValue; // accumulated rebase (previous value)
     }
 }
 
-library PositiveRebaseLimiter {
+library PositiveTokenRebaseLimiter {
     using SafeMath for uint256;
 
-    /// @dev Limiter amount precision points (10**9 == 100% == 10_000 BP)
-    uint256 private constant LIMITER_PRECISION_POINTS = 10**9;
+    /// @dev Precision base for the limiter (e.g.: 1e6 - 0.1%; 1e9 - 100%)
+    uint256 private constant LIMITER_PRECISION_BASE = 10**9;
 
     /**
       * @dev Initialize the new `LimiterState` structure instance
@@ -52,8 +52,8 @@ library PositiveRebaseLimiter {
         uint256 _totalPooledEther,
         uint256 _totalShares
     ) internal pure returns (LimiterState.Data memory _limiterState) {
-        require(_maxLimiterValue <= LIMITER_PRECISION_POINTS, "TOO_LARGE_LIMITER_MAX");
-        require(_maxLimiterValue > 0, "TOO_LOW_LIMITER_MAX");
+        require(_maxLimiterValue <= LIMITER_PRECISION_BASE, "TOO_LARGE_TOKEN_REBASE_MAX");
+        require(_maxLimiterValue > 0, "TOO_LOW_TOKEN_REBASE_MAX");
 
         _limiterState.totalPooledEther = _totalPooledEther;
         _limiterState.totalShares = _totalShares;
@@ -83,9 +83,9 @@ library PositiveRebaseLimiter {
         if (_clBalanceDiff < 0) {
             _limiterState.maxLimiterValue = Math256.min(
                 _limiterState.maxLimiterValue.add(
-                    uint256(-_clBalanceDiff).mul(LIMITER_PRECISION_POINTS).div(_limiterState.totalPooledEther)
+                    uint256(-_clBalanceDiff).mul(LIMITER_PRECISION_BASE).div(_limiterState.totalPooledEther)
                 ),
-                LIMITER_PRECISION_POINTS
+                LIMITER_PRECISION_BASE
             );
         } else {
             appendEther(_limiterState, uint256(_clBalanceDiff));
@@ -104,7 +104,7 @@ library PositiveRebaseLimiter {
         returns (uint256 appendableEther)
     {
         uint256 remainingLimit = _limiterState.maxLimiterValue.sub(_limiterState.prevLimiterValue);
-        uint256 remainingLimitEther = remainingLimit.mul(_limiterState.totalPooledEther).div(LIMITER_PRECISION_POINTS);
+        uint256 remainingLimitEther = remainingLimit.mul(_limiterState.totalPooledEther).div(LIMITER_PRECISION_BASE);
 
         appendableEther = Math256.min(remainingLimitEther, _etherAmount);
 
@@ -112,7 +112,7 @@ library PositiveRebaseLimiter {
             _limiterState.prevLimiterValue = _limiterState.maxLimiterValue;
         } else {
             _limiterState.prevLimiterValue = _limiterState.prevLimiterValue.add(
-                appendableEther.mul(LIMITER_PRECISION_POINTS).div(_limiterState.totalPooledEther)
+                appendableEther.mul(LIMITER_PRECISION_BASE).div(_limiterState.totalPooledEther)
             );
         }
     }
@@ -130,7 +130,7 @@ library PositiveRebaseLimiter {
     {
         uint256 remainingLimit = _limiterState.maxLimiterValue.sub(_limiterState.prevLimiterValue);
         uint256 remainingLimitShares = _limiterState.totalShares.mul(remainingLimit).div(
-            LIMITER_PRECISION_POINTS.add(remainingLimit)
+            LIMITER_PRECISION_BASE.add(remainingLimit)
         );
 
         deductableShares = Math256.min(_sharesAmount, remainingLimitShares);
@@ -139,7 +139,7 @@ library PositiveRebaseLimiter {
             _limiterState.prevLimiterValue = _limiterState.maxLimiterValue;
         } else {
             _limiterState.prevLimiterValue = _limiterState.prevLimiterValue.add(
-                deductableShares.mul(LIMITER_PRECISION_POINTS).div(_limiterState.totalShares.sub(deductableShares))
+                deductableShares.mul(LIMITER_PRECISION_BASE).div(_limiterState.totalShares.sub(deductableShares))
             );
         }
     }

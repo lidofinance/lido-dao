@@ -4,15 +4,15 @@ const { assertRevert } = require('../helpers/assertThrow')
 const { bn, MAX_UINT256 } = require('@aragon/contract-helpers-test')
 const { toBN } = require('../helpers/utils')
 
-const PositiveRebaseLimiter = artifacts.require('PositiveRebaseLimiterMock.sol')
+const PositiveTokenRebaseLimiter = artifacts.require('PositiveTokenRebaseLimiterMock.sol')
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
-contract('PositiveRebaseLimiter', ([account1]) => {
+contract('PositiveTokenRebaseLimiter', ([account1]) => {
   let limiter
 
   before('deploy mock', async () => {
-    limiter = await PositiveRebaseLimiter.new()
+    limiter = await PositiveTokenRebaseLimiter.new()
   })
 
   it('check uninitialized state', async () => {

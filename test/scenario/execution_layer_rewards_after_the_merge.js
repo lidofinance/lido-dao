@@ -715,9 +715,9 @@ contract('Lido: merge acceptance', (addresses) => {
 
     let epoch = 106
     let lastBeaconBalance = toBN(ETH(85))
-    await pool.setMaxPositiveRebase(getMaxPositiveRebaseForEpoch(epoch), { from: voting })
+    await pool.setMaxPositiveTokenRebase(getMaxPositiveRebaseForEpoch(epoch), { from: voting })
 
-    let maxPositiveRebase = await pool.getMaxPositiveRebase()
+    let maxPositiveRebase = await pool.getMaxPositiveTokenRebase()
     let elRewardsVaultBalance = toBN(await web3.eth.getBalance(elRewardsVault.address))
     let totalPooledEther = await pool.getTotalPooledEther()
     let bufferedEther = await pool.getBufferedEther()
@@ -728,8 +728,8 @@ contract('Lido: merge acceptance', (addresses) => {
     // Do multiple oracle reports to withdraw all ETH from execution layer rewards vault
     while (elRewardsVaultBalance > 0) {
       const maxPositiveRebaseCalculated = getMaxPositiveRebaseForEpoch(epoch)
-      await pool.setMaxPositiveRebase(maxPositiveRebaseCalculated, { from: voting })
-      maxPositiveRebase = await pool.getMaxPositiveRebase()
+      await pool.setMaxPositiveTokenRebase(maxPositiveRebaseCalculated, { from: voting })
+      maxPositiveRebase = await pool.getMaxPositiveTokenRebase()
       const clIncurredRebase = beaconBalanceInc.mul(toBN(MAX_POSITIVE_REBASE_PRECISION_POINTS)).div(totalPooledEther)
 
       const maxELRewardsAmountPerWithdrawal = totalPooledEther.mul(

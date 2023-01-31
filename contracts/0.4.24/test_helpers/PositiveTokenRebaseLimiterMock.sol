@@ -3,10 +3,10 @@
 
 pragma solidity 0.4.24;
 
-import "../lib/PositiveRebaseLimiter.sol";
+import "../lib/PositiveTokenRebaseLimiter.sol";
 
-contract PositiveRebaseLimiterMock {
-    using PositiveRebaseLimiter for LimiterState.Data;
+contract PositiveTokenRebaseLimiterMock {
+    using PositiveTokenRebaseLimiter for LimiterState.Data;
 
     LimiterState.Data limiter;
 
@@ -35,7 +35,7 @@ contract PositiveRebaseLimiterMock {
         uint256 _totalPooledEther,
         uint256 _totalShares
     ) external {
-        limiter = PositiveRebaseLimiter.initLimiterState(_maxLimiterValue, _totalPooledEther, _totalShares);
+        limiter = PositiveTokenRebaseLimiter.initLimiterState(_maxLimiterValue, _totalPooledEther, _totalShares);
     }
 
     function isLimitReached() external view returns (bool) {
