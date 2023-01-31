@@ -31,7 +31,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     /**
      * Emitted when the StakingRouter received ETH
      */
-    event StakingRouterETHReceived(uint256 amount);
     event StakingRouterETHDeposited(uint24 indexed stakingModuleId, uint256 amount);
 
     /// @dev errors
