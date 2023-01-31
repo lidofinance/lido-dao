@@ -264,6 +264,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
     ///  be created for each item in the passed list. If `WithdrawalRequestInput.recipient` is set to `address(0)`,
     ///  `msg.sender` will be used as recipient.
+    /// @param _permit data required for the stETH.permit() method to set the allowance
     /// @return requestIds an array of the created withdrawal requests
     function requestWithdrawalsWithPermit(
         WithdrawalRequestInput[] calldata _withdrawalRequestInputs,
@@ -277,6 +278,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
     ///  be created for each item in the passed list. If `WithdrawalRequestInput.recipient` is set to `address(0)`,
     ///  `msg.sender` will be used as recipient.
+    /// @param _permit data required for the wstETH.permit() method to set the allowance
     /// @return requestIds an array of the created withdrawal requests
     function requestWithdrawalsWstETHWithPermit(
         WithdrawalRequestInput[] calldata _withdrawalRequestInputs,
@@ -289,7 +291,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     struct ClaimWithdrawalInput {
         /// @notice id of the finalized requests to claim
         uint256 requestId;
-        /// @notice rate index found offchain that should be used for claiming
+        /// @notice rate index that should be used for claiming
         uint256 hint;
     }
 
@@ -301,23 +303,35 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
         }
     }
 
-    /// @notice Returns the list of hints for the given request ids
-    /// @param _requestIds ids of the requests sorted in the descending order to get hints for
+    /// @notice Finds the list of hints for the given `_requestIds` searching among the discounts with indices
+    ///  in the range  `[_firstIndex, _lastIndex]`
+    /// @param _requestIds ids of the requests sorted in the ascending order to get hints for
+    /// @param _firstIndex left boundary of the search range
+    /// @param _lastIndex right boundary of the search range
     /// @return hintIds the hints for `claimWithdrawal` to find the discount for the passed request ids
     function findClaimHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)
-        external
+        public
         view
         returns (uint256[] memory hintIds)
     {
         hintIds = new uint256[](_requestIds.length);
-        uint256 prevRequestId = type(uint256).max;
+        uint256 prevRequestId = 0;
         for (uint256 i = 0; i < _requestIds.length; ++i) {
-            if (_requestIds[i] > prevRequestId) revert RequestIdsNotSorted();
+            if (_requestIds[i] < prevRequestId) revert RequestIdsNotSorted();
             hintIds[i] = findClaimHint(_requestIds[i], _firstIndex, _lastIndex);
+            _firstIndex = hintIds[i];
             prevRequestId = _requestIds[i];
-            _lastIndex = hintIds[i];
         }
     }
+
+    /// @notice Finds the list of hints for the given `_requestIds` searching among the discounts with indices
+    ///  in the range `[0, lastDiscountIndex]`
+    /// @dev WARNING! OOG is possible if used onchain.
+    ///  See `findClaimHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)` for onchain use
+    /// @param _requestIds ids of the requests sorted in the ascending order to get hints for
+    function findClaimHintsUnbounded(uint256[] calldata _requestIds) public view returns (uint256[] memory hintIds) {
+        return findClaimHints(_requestIds, 0, lastDiscountIndex);
+    }    
 
     /**
      * @notice Finalize requests from last finalized one up to `_lastRequestIdToFinalize`

@@ -356,7 +356,7 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
 
       const lastDiscountIndex = await withdrawalQueue.lastDiscountIndex()
       const hints = await withdrawalQueue.findClaimHints(
-        [thirdRequestId, secondRequestId, requestId],
+        [requestId, secondRequestId, thirdRequestId],
         0,
         lastDiscountIndex
       )
@@ -387,6 +387,39 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
         withdrawalQueue.findClaimHints([requestId, thirdRequestId, secondRequestId], 0, lastDiscountIndex),
         'RequestIdsNotSorted()'
       )
+    })
+  })
+
+  context('findClaimHintsUnbounded()', () => {
+    let requestId
+    const amount = ETH(20)
+
+    beforeEach('Enqueue a request', async () => {
+      await withdrawalQueue.requestWithdrawals([[amount, recipient]], { from: user })
+      requestId = await withdrawalQueue.lastRequestId()
+    })
+
+    it('returns correct hints array for given request ids', async () => {
+      await withdrawalQueue.finalize(requestId, { from: steth.address, value: ETH(20) })
+
+      await steth.mintShares(recipient, shares(1))
+      await steth.approve(withdrawalQueue.address, StETH(300), { from: recipient })
+
+      const secondRequestAmount = ETH(10)
+      await withdrawalQueue.requestWithdrawals([[secondRequestAmount, recipient]], { from: recipient })
+      const secondRequestId = await withdrawalQueue.lastRequestId()
+
+      const thirdRequestAmount = ETH(30)
+      await withdrawalQueue.requestWithdrawals([[thirdRequestAmount, user]], { from: user })
+      const thirdRequestId = await withdrawalQueue.lastRequestId()
+
+      await withdrawalQueue.finalize(thirdRequestId, { from: steth.address, value: ETH(40) })
+
+      const hints = await withdrawalQueue.findClaimHintsUnbounded([requestId, secondRequestId, thirdRequestId])
+      assert.equal(hints.length, 3)
+      assert.equals(hints[0], 0)
+      assert.equals(hints[1], 0)
+      assert.equals(hints[2], 0)
     })
   })
 
