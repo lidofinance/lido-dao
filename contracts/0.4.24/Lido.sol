@@ -500,8 +500,7 @@ contract Lido is StETHPermit, AragonApp {
         );
 
         uint256 rewardsBase = appearedValidators.mul(DEPOSIT_SIZE).add(preClBalance);
-        int256 clBalanceDiff = _clBalance > rewardsBase ?
-            int256(_clBalance.sub(rewardsBase)) : -int256(rewardsBase.sub(_clBalance));
+        int256 clBalanceDiff = _signedSub(int256(_clBalance), int256(rewardsBase));
 
         tokenRebaseLimiter.applyCLBalanceUpdate(clBalanceDiff);
         withdrawals = tokenRebaseLimiter.appendEther(_withdrawalVaultBalance);
@@ -711,15 +710,12 @@ contract Lido is StETHPermit, AragonApp {
         uint256 _withdrawnWithdrawals,
         uint256 _withdrawnElRewards
     ) internal {
-        int256 consensusLayerRewards = _clBalanceDiff > 0 ?
-            int256(uint256(_clBalanceDiff).add(_withdrawnWithdrawals))
-            :
-            (int256(_withdrawnWithdrawals) + _clBalanceDiff);
+        int256 consensusLayerRewards = _signedAdd(_clBalanceDiff, int256(_withdrawnWithdrawals));
         // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
         // (when consensus layer balance delta is zero or negative).
         // See ADR #3 for details:
         // https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
-        if (consensusLayerRewards> 0) {
+        if (consensusLayerRewards > 0) {
             _distributeFee(uint256(consensusLayerRewards).add(_withdrawnElRewards));
         }
     }
@@ -1045,5 +1041,15 @@ contract Lido is StETHPermit, AragonApp {
 
     function _min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
+    }
+
+    function _signedSub(int256 a, int256 b) internal pure returns (int256 c) {
+        c = a - b;
+        require(b - a == -c, "MATH_SUB_UNDERFLOW");
+    }
+
+    function _signedAdd(int256 a, int256 b) internal pure returns (int256 c) {
+        c = a + b;
+        require(c - a == b, "MATH_ADD_OVERFLOW");
     }
 }
