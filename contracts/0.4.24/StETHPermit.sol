@@ -20,17 +20,16 @@ contract StETHPermit is IERC2612, StETH {
     /**
      * @dev Nonces for ERC-2612 (Permit)
      */
-    mapping(address => uint256) public nonces;
+    mapping(address => uint256) internal noncesByAddress;
 
     /**
      * @dev EIP712 message utils contract for StETH
      */
-    address public eip712StETH;
+    address internal eip712StETH;
 
     /**
      * @dev Typehash constant for ERC-2612 (Permit)
      */
-    // solhint-disable-next-line var-name-mixedcase
     bytes32 internal constant PERMIT_TYPEHASH =
         keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
@@ -72,7 +71,7 @@ contract StETHPermit is IERC2612, StETH {
      * prevents a signature from being used multiple times.
      */
     function nonces(address owner) external view returns (uint256) {
-        return nonces[owner];
+        return noncesByAddress[owner];
     }
 
     /**
@@ -87,8 +86,8 @@ contract StETHPermit is IERC2612, StETH {
      * @dev "Consume a nonce": return the current value and increment.
      */
     function _useNonce(address _owner) internal returns (uint256 current) {
-        current = nonces[_owner];
-        nonces[_owner] = current.add(1);
+        current = noncesByAddress[_owner];
+        noncesByAddress[_owner] = current.add(1);
     }
 
     /**

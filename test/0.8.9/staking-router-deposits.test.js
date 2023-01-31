@@ -4,6 +4,7 @@ const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const { newDao, newApp } = require('../0.4.24/helpers/dao')
 const { ETH, genKeys, toBN } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
+const withdrawals = require('../helpers/withdrawals')
 
 const LidoMock = artifacts.require('LidoMock.sol')
 const LidoOracleMock = artifacts.require('OracleMock.sol')
@@ -14,6 +15,7 @@ const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const DepositSecurityModule = artifacts.require('DepositSecurityModule.sol')
 const StakingRouterMockForDepositSecurityModule = artifacts.require('StakingRouterMockForDepositSecurityModule')
 const EIP712StETH = artifacts.require('EIP712StETH')
+const WstETH = artifacts.require('WstETH')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -25,7 +27,7 @@ const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 10
 contract('StakingRouter', (accounts) => {
   let evmSnapshotId
   let depositContract, stakingRouter
-  let curatedStakingModuleMock, soloStakingModuleMock, dvtStakingModuleMock
+  let soloStakingModuleMock, dvtStakingModuleMock
   let dao, acl, lido, oracle, operators
   let depositSecurityModule, stakingRouterMock
   const [deployer, voting, admin, treasury, stranger1] = accounts
@@ -114,6 +116,8 @@ contract('StakingRouter', (accounts) => {
     await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, voting, { from: admin })
 
     const eip712StETH = await EIP712StETH.new({ from: deployer })
+    const wsteth = await WstETH.new(lido.address)
+    const withdrawalQueue = await (await withdrawals.deploy(dao.address, wsteth.address)).queue
 
     await lido.initialize(
       oracle.address,
@@ -121,7 +125,7 @@ contract('StakingRouter', (accounts) => {
       stakingRouter.address,
       depositSecurityModule.address,
       ZERO_ADDRESS,
-      ZERO_ADDRESS,
+      withdrawalQueue.address,
       eip712StETH.address
     )
 

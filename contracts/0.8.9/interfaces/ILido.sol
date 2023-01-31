@@ -4,7 +4,6 @@
 
 pragma solidity 0.8.9;
 
-
 interface ILido {
     /**
       * @notice Gets the amount of Ether temporary buffered on this contract balance

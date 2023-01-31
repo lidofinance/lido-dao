@@ -11,10 +11,6 @@ const { waitBlocks } = require('../helpers/blockchain')
 
 const INodeOperatorsRegistry = artifacts.require('contracts/0.4.24/interfaces/INodeOperatorsRegistry.sol:INodeOperatorsRegistry')
 
-function logBNDict(x) {
-  console.log( Object.entries(x).map(([k, v]) => `${k}: ${v}`) )
-}
-
 contract('Lido: penalties, slashing, operator stops', (addresses) => {
   const [
     // the root account which deployed the DAO
@@ -618,7 +614,8 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
 
     await oracleMock.reportBeacon(105, 2, tokens(96)) // 105 is an epoch number
-    await nodeOperatorsRegistry.distributeRewards({ from: nobody })
+    // kicks rewards distribution
+    await nodeOperatorsRegistry.finishUpdatingExitedValidatorsKeysCount({ from: voting })
 
     const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
     const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)

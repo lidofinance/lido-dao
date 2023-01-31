@@ -24,14 +24,18 @@ interface ILido {
 
     function getTotalShares() external returns (uint256);
 
-    function handleOracleReport(uint256, uint256, uint256, uint256, uint256[] calldata, uint256[] calldata) external;
+    function handleOracleReport(uint256, uint256, uint256, uint256, uint256, uint256) 
+        external returns (uint256, uint256);
 }
 
 /**
  * @notice Part of StakingModule interface required for `LidoOracleNew` to work
  */
 interface IStakingModule {
-    function updateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount) external;
+    function updateExitedValidatorsKeysCount(
+        uint256 _nodeOperatorId,
+        uint256 _exitedValidatorsKeysCount
+    ) external returns (uint256);
 }
 
 /**
@@ -61,8 +65,8 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         uint256 beaconBalance,
         uint256 beaconValidators,
         uint256 withdrawalVaultBalance,
-        uint256[] requestIdToFinalizeUpTo,
-        uint256[] finalizationShareRates
+        uint256 requestIdToFinalizeUpTo,
+        uint256 finalizationShareRate
     );
 
     event PostTotalShares(
@@ -86,10 +90,10 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         uint256[] exitedValidatorsNumbers;
         // EL values
         uint256 withdrawalVaultBalance;
+        uint256 elRewardsVaultBalance;
         // decision
-        uint256 newBufferedEtherReserveAmount;
-        uint256[] requestIdToFinalizeUpTo;
-        uint256[] finalizationShareRates;
+        uint256 requestIdToFinalizeUpTo;
+        uint256 finalizationShareRate;
         bool bunkerModeFlag; // todo: to be utilized later
     }
 
@@ -447,7 +451,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
             _report.beaconValidators,
             _report.withdrawalVaultBalance,
             _report.requestIdToFinalizeUpTo,
-            _report.finalizationShareRates
+            _report.finalizationShareRate
         );
 
         // now this frame is completed, so the expected epoch should be advanced to the first epoch
@@ -471,9 +475,9 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
             _report.beaconValidators,
             beaconBalance,
             _report.withdrawalVaultBalance,
-            _report.newBufferedEtherReserveAmount,
+            _report.elRewardsVaultBalance,
             _report.requestIdToFinalizeUpTo,
-            _report.finalizationShareRates
+            _report.finalizationShareRate
         );
         uint256 postTotalPooledEther = lido.totalSupply();
 

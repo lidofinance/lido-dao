@@ -54,14 +54,24 @@ const toBN = (obj) => {
     return new BN(obj)
   }
   const str = obj + ''
-  return str.startsWith('0x') ? new BN(str.substr(2), 16) : new BN(str, 10)
+  return str.startsWith('0x') ? new BN(str.substring(2), 16) : new BN(str, 10)
+}
+
+function hex(n, byteLen) {
+  return toBN(n).toString(16, byteLen * 2)
+}
+
+function strip0x(s) {
+  return s.substr(0, 2) == '0x' ? s.substr(2) : s
 }
 
 // Divides a BN by 1e15
 const div15 = (bn) => bn.div(new BN(1000000)).div(new BN(1000000)).div(new BN(1000))
 
+const e9 = (value) => web3.utils.toWei(value + '', 'gwei')
 const e18 = (value) => web3.utils.toWei(value + '', 'ether')
 const e27 = (value) => web3.utils.toWei(value + '', 'gether')
+const gwei = e9
 const ETH = e18
 const tokens = e18
 const shares = e18
@@ -88,6 +98,15 @@ const assertNoEvent = (receipt, eventName, msg) => {
   assert.equal(event, undefined, msg)
 }
 
+function assertBnClose(x, y, maxDiff, msg = undefined) {
+  const diff = new BN(x).sub(new BN(y)).abs()
+  assert(
+    diff.lte(new BN(maxDiff)),
+    () => `Expected ${x} to be close to ${y} with max diff ${maxDiff}, actual diff ${diff}`,
+    () => `Expected ${x} not to be close to ${y} with min diff ${maxDiff}, actual diff ${diff}`,
+  )
+}
+
 const changeEndianness = (string) => {
   string = string.replace('0x', '')
   const result = []
@@ -104,7 +123,13 @@ module.exports = {
   hexConcat,
   hexSplit,
   toBN,
+  hex,
+  strip0x,
   div15,
+  e9,
+  e18,
+  e27,
+  gwei,
   ETH,
   StETH: ETH,
   tokens,
@@ -113,6 +138,7 @@ module.exports = {
   formatBN,
   formatStEth,
   assertNoEvent,
+  assertBnClose,
   changeEndianness,
   genKeys,
   shareRate,

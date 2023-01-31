@@ -10,6 +10,7 @@ require('@nomiclabs/hardhat-etherscan')
 require('hardhat-gas-reporter')
 require('solidity-coverage')
 require('hardhat-contract-sizer')
+require('hardhat-ignore-warnings')
 
 const NETWORK_NAME = getNetworkName()
 const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
@@ -183,6 +184,14 @@ module.exports = {
       }
     }
   },
+  warnings: {
+    '@aragon/**/*': {
+      default: 'off',
+    },
+    'contracts/*/test_helpers/**/*': {
+      default: 'off',
+    }
+  },
   gasReporter: {
     enabled: !!process.env.REPORT_GAS,
     currency: 'USD'
@@ -199,6 +208,12 @@ module.exports = {
       key: 'YOUR_PINATA_API_KEY',
       secret: 'YOUR_PINATA_API_SECRET_KEY'
     }
+  },
+  contractSizer: {
+    disambiguatePaths: false,
+    runOnCompile: true,
+    strict: true,
+    except: ['test_helpers', 'template', 'mocks', '@aragon', 'openzeppelin'],
   }
 }
 
