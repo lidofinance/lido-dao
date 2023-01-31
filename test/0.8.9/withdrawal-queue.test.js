@@ -1,3 +1,4 @@
+const hre = require('hardhat')
 const { artifacts, contract, ethers } = require('hardhat')
 const { bn, getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
@@ -6,6 +7,7 @@ const { assert } = require('../helpers/assert')
 const withdrawals = require('../helpers/withdrawals')
 const {signPermit, makeDomainSeparator} = require('../0.6.12/helpers/permit_helpers')
 const { MAX_UINT256, ACCOUNTS_AND_KEYS } = require('../0.6.12/helpers/constants')
+const { impersonate } = require('../helpers/blockchain')
 
 const StETHMock = artifacts.require('StETHMock.sol')
 const WstETH = artifacts.require('WstETHMock.sol')
@@ -486,12 +488,15 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
   })
 
   context('requestWithdrawalsWstETHWithPermit()', () => {
+    const [alice] = ACCOUNTS_AND_KEYS
     it('works correctly with non empty payload', async () => {
-      const userPrivateKey = '0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6'
       await wsteth.mint(user, ETH(100))
       await steth.mintShares(wsteth.address, shares(100))
       await steth.mintShares(user, shares(100))
       await wsteth.approve(withdrawalQueue.address, ETH(300), { from: user })
+      await impersonate(hre.ethers.provider, alice.address)
+      await web3.eth.sendTransaction({ to: alice.address, from: user, value: ETH(1) })
+      await wsteth.transfer(alice.address, ETH(100), { from: user })
 
       const requests = []
 
@@ -505,13 +510,13 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
       const deadline = MAX_UINT256
       const domainSeparator = makeDomainSeparator('Wrapped liquid staked Ether 2.0', '1', chainId, wsteth.address)
       const { v, r, s } = signPermit(
-        user,
+        alice.address,
         withdrawalQueue.address,
         amount, // amount
         0, // nonce
         deadline,
         domainSeparator,
-        userPrivateKey
+        alice.key
       )
       const permission = [
         amount,
@@ -521,11 +526,11 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
         s
       ]
 
-      const aliceBalancesBefore = await wsteth.balanceOf(user)
+      const aliceBalancesBefore = await wsteth.balanceOf(alice.address)
       const lastRequestIdBefore = await withdrawalQueue.lastRequestId()
-      await withdrawalQueue.requestWithdrawalsWstETHWithPermit(requests, permission, { from: user })
+      await withdrawalQueue.requestWithdrawalsWstETHWithPermit(requests, permission, { from: alice.address })
       assert.equals(await withdrawalQueue.lastRequestId(), lastRequestIdBefore.add(bn(requests.length)))
-      const aliceBalancesAfter = await wsteth.balanceOf(user)
+      const aliceBalancesAfter = await wsteth.balanceOf(alice.address)
       assert.equals(aliceBalancesAfter, aliceBalancesBefore.sub(bn(ETH(10)).mul(bn(withdrawalRequestsCount))))
     })
   })
