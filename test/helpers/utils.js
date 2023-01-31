@@ -65,6 +65,17 @@ function strip0x(s) {
   return s.substr(0, 2) == '0x' ? s.substr(2) : s
 }
 
+// converts BN to number
+const bnToStr = x => BN.isBN(x) ? +x : x
+// transforms all object entries
+const transformEntries = (obj, tr) => Object.fromEntries(
+  Object.entries(obj).map(tr).filter(x => x !== undefined)
+)
+// converts all object BN keys to strings, drops positional keys
+const processNamedTuple = (obj) => transformEntries(obj, ([k, v]) => {
+  return /^\d+$/.test(k) ? undefined : [k, BN.isBN(v) ? v.toString() : v]
+})
+
 // Divides a BN by 1e15
 const div15 = (bn) => bn.div(new BN(1000000)).div(new BN(1000000)).div(new BN(1000))
 
@@ -125,6 +136,8 @@ module.exports = {
   toBN,
   hex,
   strip0x,
+  transformEntries,
+  processNamedTuple,
   div15,
   e9,
   e18,

@@ -2,6 +2,7 @@ const { BN } = require('bn.js')
 const { assert } = require('chai')
 const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 const { assertRevert } = require('../../helpers/assertThrow')
+const { processNamedTuple } = require('../../helpers/utils')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
 const {
@@ -15,8 +16,10 @@ const {
 const AccountingOracle = artifacts.require('AccountingOracleTimeTravellable')
 const MockLido = artifacts.require('MockLidoForAccountingOracle')
 const MockStakingRouter = artifacts.require('MockStakingRouterForAccountingOracle')
+const MockLegacyOracle = artifacts.require('MockLegacyOracle')
 
-const V1_ORACLE_LAST_REPORT_SLOT = 1000
+const V1_ORACLE_LAST_COMPLETED_EPOCH = 2 * EPOCHS_PER_FRAME
+const V1_ORACLE_LAST_REPORT_SLOT = V1_ORACLE_LAST_COMPLETED_EPOCH * SLOTS_PER_EPOCH
 
 const MAX_EXITED_VALS_PER_HOUR = 10
 const MAX_EXITED_VALS_PER_DAY = 24 * MAX_EXITED_VALS_PER_HOUR
@@ -88,30 +91,74 @@ module.exports = {
   computeSlotAt, computeEpochAt, computeEpochFirstSlotAt,
   computeEpochFirstSlot, computeTimestampAtSlot, computeTimestampAtEpoch,
   ZERO_HASH, CONSENSUS_VERSION,
-  V1_ORACLE_LAST_REPORT_SLOT,
+  V1_ORACLE_LAST_COMPLETED_EPOCH, V1_ORACLE_LAST_REPORT_SLOT,
   MAX_EXITED_VALS_PER_HOUR, MAX_EXITED_VALS_PER_DAY, MAX_EXTRA_DATA_LIST_LEN,
   EXTRA_DATA_FORMAT_LIST, EXTRA_DATA_TYPE_STUCK_VALIDATORS, EXTRA_DATA_TYPE_EXITED_VALIDATORS,
-  deployAccountingOracle, getReportDataItems, calcReportDataHash,
-  encodeExtraDataItem, encodeExtraDataItems, calcExtraDataHash,
+  deployAndConfigureAccountingOracle, deployAccountingOracleSetup, initAccountingOracle,
+  getReportDataItems, calcReportDataHash, encodeExtraDataItem, encodeExtraDataItems,
+  calcExtraDataHash,
 }
 
 
-async function deployAccountingOracle(admin, { dataSubmitter = null } = {}) {
-  const mockStakingRouter = await MockStakingRouter.new({from: admin})
-  const mockLido = await MockLido.new(mockStakingRouter.address, {from: admin})
-  const oracle = await AccountingOracle.new(mockLido.address, SECONDS_PER_SLOT, {from: admin})
-  const {consensus} = await deployHashConsensus(admin, {reportProcessor: oracle})
+async function deployMockLegacyOracle({
+  epochsPerFrame = EPOCHS_PER_FRAME,
+  slotsPerEpoch = SLOTS_PER_EPOCH,
+  secondsPerSlot = SECONDS_PER_SLOT,
+  genesisTime = GENESIS_TIME,
+  lastCompletedEpochId = V1_ORACLE_LAST_COMPLETED_EPOCH
+} = {}) {
+  return await MockLegacyOracle.new(
+    epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime, lastCompletedEpochId
+  )
+}
 
-  await consensus.setTime(GENESIS_TIME + 2 * SECONDS_PER_FRAME + SECONDS_PER_EPOCH + SECONDS_PER_SLOT)
-  assert.isBelow(V1_ORACLE_LAST_REPORT_SLOT, +(await consensus.getCurrentFrame()).refSlot)
+async function deployMockLidoAndStakingRouter() {
+  const mockStakingRouter = await MockStakingRouter.new()
+  const mockLido = await MockLido.new(mockStakingRouter.address)
+  return {lido: mockLido, stakingRouter: mockStakingRouter}
+}
 
-  await oracle.initialize(
+async function deployAccountingOracleSetup(admin, {
+  initialEpoch = null,
+  secondsPerSlot = SECONDS_PER_SLOT,
+  getLidoAndStakingRouter = deployMockLidoAndStakingRouter,
+  getLegacyOracle = deployMockLegacyOracle,
+} = {}) {
+  const {lido, stakingRouter} = await getLidoAndStakingRouter()
+  const legacyOracle = await getLegacyOracle()
+
+  if (initialEpoch == null) {
+    // set initial epoch to the first epoch of the next frame
+    const epochsPerFrame = +(await legacyOracle.getBeaconSpec()).epochsPerFrame
+    initialEpoch = +await legacyOracle.getLastCompletedEpochId() + epochsPerFrame
+  }
+
+  const oracle = await AccountingOracle.new(lido.address, secondsPerSlot, {from: admin})
+  const {consensus} = await deployHashConsensus(admin, {reportProcessor: oracle, initialEpoch})
+
+  // pretend we're at the first slot of the initial frame's epoch
+  await consensus.setTime(GENESIS_TIME + initialEpoch * SLOTS_PER_EPOCH * SECONDS_PER_SLOT)
+
+  return {lido, stakingRouter, legacyOracle, oracle, consensus}
+}
+
+async function initAccountingOracle({
+  admin,
+  oracle,
+  consensus,
+  legacyOracle,
+  dataSubmitter = null,
+  consensusVersion = CONSENSUS_VERSION,
+  maxExitedValidatorsPerDay = MAX_EXITED_VALS_PER_DAY,
+  maxExtraDataListItemsCount = MAX_EXTRA_DATA_LIST_LEN,
+}) {
+  const initTx = await oracle.initialize(
     admin,
     consensus.address,
-    CONSENSUS_VERSION,
-    V1_ORACLE_LAST_REPORT_SLOT,
-    MAX_EXITED_VALS_PER_DAY,
-    MAX_EXTRA_DATA_LIST_LEN,
+    consensusVersion,
+    legacyOracle.address,
+    maxExitedValidatorsPerDay,
+    maxExtraDataListItemsCount,
     {from: admin}
   )
 
@@ -127,7 +174,13 @@ async function deployAccountingOracle(admin, { dataSubmitter = null } = {}) {
   assert.equal(+await oracle.EXTRA_DATA_TYPE_STUCK_VALIDATORS(), EXTRA_DATA_TYPE_STUCK_VALIDATORS)
   assert.equal(+await oracle.EXTRA_DATA_TYPE_EXITED_VALIDATORS(), EXTRA_DATA_TYPE_EXITED_VALIDATORS)
 
-  return {consensus, oracle, mockLido, mockStakingRouter}
+  return initTx
+}
+
+async function deployAndConfigureAccountingOracle(admin) {
+  const deployed = await deployAccountingOracleSetup(admin)
+  const initTx = await initAccountingOracle({admin, ...deployed})
+  return {...deployed, initTx}
 }
 
 
@@ -136,15 +189,62 @@ contract('AccountingOracle', ([admin, member1]) => {
   let oracle
   let mockLido
   let mockStakingRouter
+  let legacyOracle
 
   context('Deployment and initial configuration', () => {
 
-    it('deployment finishes successfully', async () => {
-      const deployed = await deployAccountingOracle(admin)
+    it('init fails if the chain config is different from the one of the legacy oracle', async () => {
+      let deployed = await deployAccountingOracleSetup(admin, {
+        getLegacyOracle: () => deployMockLegacyOracle({slotsPerEpoch: SLOTS_PER_EPOCH + 1})
+      })
+      await assertRevert(initAccountingOracle({admin, ...deployed}), 'IncorrectOracleMigration(0)')
+
+      deployed = await deployAccountingOracleSetup(admin, {
+        getLegacyOracle: () => deployMockLegacyOracle({secondsPerSlot: SECONDS_PER_SLOT + 1})
+      })
+      await assertRevert(initAccountingOracle({admin, ...deployed}), 'IncorrectOracleMigration(0)')
+
+      deployed = await deployAccountingOracleSetup(admin, {
+        getLegacyOracle: () => deployMockLegacyOracle({genesisTime: GENESIS_TIME + 1})
+      })
+      await assertRevert(initAccountingOracle({admin, ...deployed}), 'IncorrectOracleMigration(0)')
+    })
+
+    it('init fails if the frame size is different from the one of the legacy oracle', async () => {
+      const deployed = await deployAccountingOracleSetup(admin, {
+        getLegacyOracle: () => deployMockLegacyOracle({epochsPerFrame: EPOCHS_PER_FRAME - 1})
+      })
+      await assertRevert(initAccountingOracle({admin, ...deployed}), 'IncorrectOracleMigration(1)')
+    })
+
+    it(`init fails if the initial epoch of the new oracle is not the next frame's first epoch`,
+      async () =>
+    {
+      const deployed = await deployAccountingOracleSetup(admin, {initialEpoch: 3 + 10 * EPOCHS_PER_FRAME})
+
+      await deployed.legacyOracle.setLastCompletedEpochId(3 + 11 * EPOCHS_PER_FRAME)
+      await assertRevert(initAccountingOracle({admin, ...deployed}), 'IncorrectOracleMigration(2)')
+
+      await deployed.legacyOracle.setLastCompletedEpochId(3 + 10 * EPOCHS_PER_FRAME)
+      await assertRevert(initAccountingOracle({admin, ...deployed}), 'IncorrectOracleMigration(2)')
+
+      await deployed.legacyOracle.setLastCompletedEpochId(3 + 9 * EPOCHS_PER_FRAME + 1)
+      await assertRevert(initAccountingOracle({admin, ...deployed}), 'IncorrectOracleMigration(2)')
+    })
+
+    it('deployment and init finishes successfully otherwise', async () => {
+      const deployed = await deployAccountingOracleSetup(admin, {initialEpoch: 3 + 10 * EPOCHS_PER_FRAME})
+      await deployed.legacyOracle.setLastCompletedEpochId(3 + 9 * EPOCHS_PER_FRAME)
+      await initAccountingOracle({admin, ...deployed})
+    })
+
+    it('deployment and init finishes successfully (default setup)', async () => {
+      const deployed = await deployAndConfigureAccountingOracle(admin)
       consensus = deployed.consensus
       oracle = deployed.oracle
-      mockLido = deployed.mockLido
-      mockStakingRouter = deployed.mockStakingRouter
+      mockLido = deployed.lido
+      mockStakingRouter = deployed.stakingRouter
+      legacyOracle = deployed.legacyOracle
     })
 
     it('mock setup is correct', async () => {
@@ -168,6 +268,11 @@ contract('AccountingOracle', ([admin, member1]) => {
       const reportExitedKeysByNodeOperatorTotalCalls =
         +await mockStakingRouter.getTotalCalls_reportExitedKeysByNodeOperator()
       assert.equal(reportExitedKeysByNodeOperatorTotalCalls, 0)
+    })
+
+    it('the initial reference slot is greater than the last one of the legacy oracle', async () => {
+      const legacyRefSlot = +await legacyOracle.getLastCompletedEpochId() * SLOTS_PER_EPOCH
+      assert.isAbove(+(await consensus.getCurrentFrame()).refSlot, legacyRefSlot)
     })
 
     it('initial configuration is correct', async () => {

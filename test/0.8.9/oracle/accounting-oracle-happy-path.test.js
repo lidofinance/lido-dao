@@ -14,7 +14,7 @@ const {
   V1_ORACLE_LAST_REPORT_SLOT,
   MAX_EXITED_VALS_PER_HOUR, MAX_EXITED_VALS_PER_DAY, MAX_EXTRA_DATA_LIST_LEN,
   EXTRA_DATA_FORMAT_LIST, EXTRA_DATA_TYPE_STUCK_VALIDATORS, EXTRA_DATA_TYPE_EXITED_VALIDATORS,
-  deployAccountingOracle, getReportDataItems, calcReportDataHash, encodeExtraDataItem,
+  deployAndConfigureAccountingOracle, getReportDataItems, calcReportDataHash, encodeExtraDataItem,
   encodeExtraDataItems, calcExtraDataHash} = require('./accounting-oracle-deploy.test')
 
 
@@ -35,17 +35,19 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
     let reportHash
 
     before(async () => {
-      const deployed = await deployAccountingOracle(admin)
+      const deployed = await deployAndConfigureAccountingOracle(admin)
       consensus = deployed.consensus
       oracle = deployed.oracle
-      mockLido = deployed.mockLido
-      mockStakingRouter = deployed.mockStakingRouter
+      mockLido = deployed.lido
+      mockStakingRouter = deployed.stakingRouter
 
       oracleVersion = +await oracle.getContractVersion()
 
       await consensus.addMember(member1, 1, {from: admin})
       await consensus.addMember(member2, 2, {from: admin})
       await consensus.addMember(member3, 2, {from: admin})
+
+      await consensus.advanceTimeBySlots(SECONDS_PER_EPOCH + 1)
     })
 
     async function triggerConsensusOnHash(hash) {
@@ -158,6 +160,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
     })
 
     it(`a committee member submits the rebase data`, async () => {
+      const lastProcessingRefSlot = +await oracle.getLastProcessingRefSlot()
       const tx = await oracle.submitReportData(reportItems, oracleVersion, {from: member1})
       assertEvent(tx, 'ProcessingStarted', {expectedArgs: {refSlot: reportFields.refSlot}})
       assert.isTrue((await oracle.getConsensusReport()).processingStarted)
