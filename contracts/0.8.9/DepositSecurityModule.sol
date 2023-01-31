@@ -199,8 +199,10 @@ contract DepositSecurityModule {
 
     function _setGuardianQuorum(uint256 newValue) internal {
         // we're intentionally allowing setting quorum value higher than the number of guardians
-        quorum = newValue;
-        emit GuardianQuorumChanged(newValue);
+        if (quorum != newValue) {
+            quorum = newValue;
+            emit GuardianQuorumChanged(newValue);
+        }
     }
 
     /**

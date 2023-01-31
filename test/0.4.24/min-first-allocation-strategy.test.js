@@ -32,24 +32,9 @@ contract('MinFirstAllocationStrategy', (accounts) => {
     })
 
     describe('allocations.length == 1', () => {
-      const allocations = [
-        0,
-        15,
-        25,
-        50
-      ]
-      const capacities = [
-        0,
-        15,
-        24,
-        50
-      ]
-      const maxAllocationSizes = [
-        0,
-        15,
-        25,
-        50
-      ]
+      const allocations = [0, 15, 25, 50]
+      const capacities = [0, 15, 24, 50]
+      const maxAllocationSizes = [0, 15, 25, 50]
 
       for (const allocation of allocations) {
         for (const capacity of capacities) {
@@ -249,6 +234,10 @@ contract('MinFirstAllocationStrategy', (accounts) => {
           output: [0, [0, 0, 0, 0]]
         },
         {
+          input: [[0, 0, 0, 0, 0], [10, 10, 10, 10, 10], 24],
+          output: [24, [5, 5, 5, 5, 4]]
+        },
+        {
           input: [[100, 100, 100], [200, 300, 600], 600],
           output: [600, [200, 300, 400]]
         },
@@ -353,11 +342,10 @@ function getExpectedAllocateToBestCandidate(allocations, capacities, maxAllocati
   const [allocation, capacity, index] = allocations
     .map((a, i) => [a, capacities[i], i])
     .filter(([a, c]) => a < c)
-    .reduce(([minA, minC, minI], [a, c, i]) => (a < minA ? [a, c, i] : [minA, minC, minI]), [
-      Number.MAX_SAFE_INTEGER,
-      Number.MAX_SAFE_INTEGER,
-      Number.MAX_SAFE_INTEGER
-    ])
+    .reduce(
+      ([minA, minC, minI], [a, c, i]) => (a < minA ? [a, c, i] : [minA, minC, minI]),
+      [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER]
+    )
 
   if (allocation === Number.MAX_SAFE_INTEGER || maxAllocationSize === 0) {
     return [0, allocations]
@@ -375,7 +363,7 @@ function getExpectedAllocateToBestCandidate(allocations, capacities, maxAllocati
     }
   }
 
-  const allocationPerCandidate = Math.max(1, Math.floor(maxAllocationSize / candidatesCount))
+  const allocationPerCandidate = Math.ceil(maxAllocationSize / candidatesCount)
   const allocated = Math.min(allocationPerCandidate, capacity - allocation, allocationBound - allocation)
   const newAllocations = [...allocations]
   newAllocations[index] += allocated
@@ -403,8 +391,4 @@ function getRandomValueInRange(min, max) {
   min = Math.ceil(min)
   max = Math.floor(max)
   return Math.floor(Math.random() * (max - min + 1)) + min
-}
-
-function sum(numbers) {
-  return numbers.reduce((acc, cur) => acc + cur, 0)
 }

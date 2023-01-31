@@ -140,12 +140,12 @@ interface ILido {
     /**
      * @notice Returns current staking rewards  fee rate
      */
-    function getFee() external view returns (uint16 feeBasisPoints);
+    function getFee() external view returns (uint96 totalFee);
 
     /**
      * @notice Returns current fee distribution proportion
      */
-    function getFeeDistribution() external view returns (uint16 modulesFeeBasisPoints, uint16 treasuryFeeBasisPoints);
+    function getFeeDistribution() external view returns (uint96 modulesFee, uint96 treasuryFee);
 
     /**
      * @notice A payable function supposed to be called only by LidoExecutionLayerRewardsVault contract

@@ -39,7 +39,7 @@ async function main() {
 
   for (let iProvider = 0; iProvider < numProviders; ++iProvider) {
     const nosTx = await nodeOperatorRegistry.addNodeOperator(`NOS-${iProvider}`, nodeOperator, nosValidatorsLimit, { from: voting })
-    const nodeOperatorId = getEventArgument(nosTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    const nodeOperatorId = getEventArgument(nosTx, 'NodeOperatorAdded', 'nodeOperatorId', { decodeForAbi: NodeOperatorsRegistry._json.abi })
 
     const data = Array.from({ length: numKeys }, (_, iKey) => {
       const n = arbitraryN.clone().addn(10 * iKey + 1000 * iProvider)

@@ -67,6 +67,10 @@ library MinFirstAllocationStrategy {
         uint256 bestCandidateAllocation = MAX_UINT256;
         uint256 bestCandidatesCount = 0;
 
+        if (allocationSize == 0) {
+            return 0;
+        }
+
         for (uint256 i = 0; i < buckets.length; ++i) {
             if (buckets[i] >= capacities[i]) {
                 continue;
@@ -79,7 +83,7 @@ library MinFirstAllocationStrategy {
             }
         }
 
-        if (bestCandidatesCount == 0 || allocationSize == 0) {
+        if (bestCandidatesCount == 0) {
             return 0;
         }
 
@@ -93,11 +97,8 @@ library MinFirstAllocationStrategy {
             }
         }
 
-        // allocate at least one item per iteration
-        allocationSize = Math256.max(allocationSize / bestCandidatesCount, 1);
-
         allocated = Math256.min(
-            allocationSize,
+            bestCandidatesCount > 1 ? Math256.ceilDiv(allocationSize, bestCandidatesCount) : allocationSize,
             Math256.min(allocationSizeUpperBound, capacities[bestCandidateIndex]) - bestCandidateAllocation
         );
         buckets[bestCandidateIndex] += allocated;
