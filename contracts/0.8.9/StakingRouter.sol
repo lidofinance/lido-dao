@@ -290,6 +290,20 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     /**
+     * @notice Returns the ids of all registered staking modules
+     */
+    function getStakingModuleIds() external view returns (uint24[] memory stakingModuleIds) {
+        uint256 stakingModulesCount = getStakingModulesCount();
+        stakingModuleIds = new uint24[](stakingModulesCount);
+        for (uint256 i; i < stakingModulesCount; ) {
+            stakingModuleIds[i] = _getStakingModuleByIndex(i).id;
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /**
      *  @dev Returns staking module by id
      */
     function getStakingModule(uint256 _stakingModuleId)
@@ -306,13 +320,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
      */
     function getStakingModulesCount() public view returns (uint256) {
         return STAKING_MODULES_COUNT_POSITION.getStorageUint256();
-    }
-
-    /**
-     *  @dev Returns staking module by index
-     */
-    function getStakingModuleByIndex(uint256 _stakingModuleIndex) external view returns (StakingModule memory) {
-        return _getStakingModuleByIndex(_stakingModuleIndex);
     }
 
     /**
@@ -415,13 +422,17 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     /**
      * @dev calculate max count of depositable staking module keys based on the current Staking Router balance and buffered Ether amount
      *
-     * @param _stakingModuleIndex index of the staking module to be deposited
+     * @param _stakingModuleId id of the staking module to be deposited
      * @return max depositable keys count
      */
-    function getStakingModuleMaxDepositableKeys(uint256 _stakingModuleIndex) public view returns (uint256) {
+    function getStakingModuleMaxDepositableKeys(uint256 _stakingModuleId) public view
+        validStakingModuleId(_stakingModuleId)
+        returns (uint256)
+    {
+        uint256 stakingModuleIndex = _getStakingModuleIndexById(uint24(_stakingModuleId));
         uint256 _keysToAllocate = getLido().getBufferedEther() / DEPOSIT_SIZE;
         (, uint256[] memory newKeysAllocation, StakingModuleCache[] memory stakingModulesCache) = _getKeysAllocation(_keysToAllocate);
-        return newKeysAllocation[_stakingModuleIndex] - stakingModulesCache[_stakingModuleIndex].activeKeysCount;
+        return newKeysAllocation[stakingModuleIndex] - stakingModulesCache[stakingModuleIndex].activeKeysCount;
     }
 
     /**
@@ -552,7 +563,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         StakingModule storage stakingModule = _getStakingModuleByIndex(stakingModuleIndex);
         if (StakingModuleStatus(stakingModule.status) != StakingModuleStatus.Active) revert ErrorStakingModuleNotActive();
 
-        uint256 maxDepositableKeys = getStakingModuleMaxDepositableKeys(stakingModuleIndex);
+        uint256 maxDepositableKeys = getStakingModuleMaxDepositableKeys(_stakingModuleId);
         uint256 keysToDeposit = Math.min(maxDepositableKeys, _maxDepositsCount);
 
         if (keysToDeposit > 0) {
