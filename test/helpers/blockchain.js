@@ -34,7 +34,12 @@ class EvmSnapshot {
   }
 }
 
+function impersonate(provider, address) {
+  return provider.send('hardhat_impersonateAccount', [address])
+}
+
 module.exports = {
   EvmSnapshot,
-  waitBlocks
+  waitBlocks,
+  impersonate
 }

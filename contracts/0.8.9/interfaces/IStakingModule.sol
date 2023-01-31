@@ -86,11 +86,6 @@ interface IStakingModule {
             bytes memory signatures
         );
 
-    event NodeOperatorAdded(uint256 indexed nodeOperatorId);
     event ValidatorsKeysNonceChanged(uint256 validatorsKeysNonce);
-
-    event NodeOperatorActivated(uint256 indexed nodeOperatorId);
-    event NodeOperatorDeactivated(uint256 indexed nodeOperatorId);
-
     event UnusedValidatorsKeysTrimmed(uint256 indexed nodeOperatorId, uint256 trimmedKeysCount);
 }

@@ -99,12 +99,8 @@ contract('StakingRouter', (accounts) => {
       describe(`Target shares: ${module1TargetShare} and ${module2TargetShare}`, async () => {
         beforeEach(async () => {
           await Promise.all([
-            await stakingRouter.addStakingModule('Module1', StakingModule1.address, module1TargetShare, 5_000, 5_000, {
-              from: admin
-            }),
-            await stakingRouter.addStakingModule('Module2', StakingModule2.address, module2TargetShare, 5_000, 5_000, {
-              from: admin
-            })
+            await stakingRouter.addStakingModule('Module1', StakingModule1.address, module1TargetShare, 5_000, 5_000, { from: admin }),
+            await stakingRouter.addStakingModule('Module2', StakingModule2.address, module2TargetShare, 5_000, 5_000, { from: admin })
           ])
         })
 

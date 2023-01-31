@@ -61,6 +61,8 @@ interface IStakingRouter {
 
     function getStakingModules() external view returns (StakingModule[] memory res);
 
+    function getStakingModuleIds() external view returns (uint24[] memory stakingModuleIds);
+
     function addStakingModule(
         string memory _name,
         address _stakingModuleAddress,
@@ -99,5 +101,5 @@ interface IStakingRouter {
 
     function getKeysAllocation(uint256 _keysToAllocate) external view returns (uint256 allocated, uint256[] memory allocations);
 
-    function getStakingModuleMaxDepositableKeys(uint256 _stakingModuleIndex) external view returns (uint256);
+    function getStakingModuleMaxDepositableKeys(uint256 _stakingModuleId) external view returns (uint256);
 }

@@ -447,7 +447,7 @@ contract Lido is StETHPermit, AragonApp {
     * @param _clBalance sum of all Lido validators' balances on Consensus Layer
     * @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
     * @param _elRewardsVaultBalance elRewards vault balance on Execution Layer for report block
-    * @param _requestIdToFinalizeUpTo rigth boundary of requestId range if equals 0, no requests should be finalized
+    * @param _requestIdToFinalizeUpTo right boundary of requestId range if equals 0, no requests should be finalized
     * @param _finalizationShareRate share rate that should be used for finalization
     *
     * @return totalPooledEther amount of ether in the protocol after report
