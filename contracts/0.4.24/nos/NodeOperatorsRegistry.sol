@@ -10,13 +10,19 @@ import {SafeMath64} from "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import {UnstructuredStorage} from "@aragon/os/contracts/common/UnstructuredStorage.sol";
 
 import {IStakingModule} from "../interfaces/IStakingModule.sol";
-import {IStETH} from "../interfaces/IStETH.sol";
 
 import {Math64} from "../lib/Math64.sol";
 import {BytesLib} from "../lib/BytesLib.sol";
 import {MemUtils} from "../../common/lib/MemUtils.sol";
 import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
 import {SigningKeysStats} from "../lib/SigningKeysStats.sol";
+
+
+interface IStETH {
+    function sharesOf(address _account) external view returns (uint256);
+    function transferShares(address _recipient, uint256 _sharesAmount) external returns (uint256);
+}
+
 
 /// @title Node Operator registry
 /// @notice Node Operator registry manages signing keys and other node operator data.
