@@ -663,23 +663,26 @@ contract LidoOracle is AragonApp {
         // of the next frame
         _clearReportingAndAdvanceTo(_epochId + _beaconSpec.epochsPerFrame);
 
+        uint256 timeElapsed = (_epochId - LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256()) *
+            _beaconSpec.slotsPerEpoch * _beaconSpec.secondsPerSlot;
+
         // report to the Lido and collect stats
         Lido lido = getLido();
         uint256 prevTotalPooledEther = lido.totalSupply();
         lido.handleOracleReport(
+            _epochId * _beaconSpec.slotsPerEpoch * _beaconSpec.secondsPerSlot,
             _beaconValidators,
             _beaconBalanceEth1,
             0,
             0,
             0,
-            0
+            0,
+            false
         ); // here should be withdrawal params
         uint256 postTotalPooledEther = lido.totalSupply();
 
         PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(prevTotalPooledEther);
         POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(postTotalPooledEther);
-        uint256 timeElapsed = (_epochId - LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256()) *
-            _beaconSpec.slotsPerEpoch * _beaconSpec.secondsPerSlot;
         TIME_ELAPSED_POSITION.setStorageUint256(timeElapsed);
         LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(_epochId);
 

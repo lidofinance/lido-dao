@@ -20,7 +20,8 @@ contract LidoMock is Lido {
         address _dsmAddress,
         address _executionLayerRewardsVault,
         address _withdrawalQueue,
-        address _eip712StETH
+        address _eip712StETH,
+        address _selfOwnedStETHBurner
     )
         public
     {
@@ -37,7 +38,8 @@ contract LidoMock is Lido {
             _dsmAddress,
             _executionLayerRewardsVault,
             _withdrawalQueue,
-            _eip712StETH
+            _eip712StETH,
+            _selfOwnedStETHBurner
         );
 
         setAllowRecoverability(true);

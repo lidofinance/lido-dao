@@ -7,7 +7,6 @@ import { AccessControlEnumerable } from "./utils/access/AccessControlEnumerable.
 
 import "./CommitteeQuorum.sol";
 import "./ReportEpochChecker.sol";
-import "./interfaces/IBeaconReportReceiver.sol";
 
 interface INodeOperatorsRegistry {
     /**
@@ -126,9 +125,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     /// - N after upgrading contract from the previous version (after calling finalize_vN())
     bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.LidoOracle.contractVersion");
 
-    /// Receiver address to be called when the report is pushed to Lido
-    bytes32 internal constant BEACON_REPORT_RECEIVER_POSITION = keccak256("lido.LidoOracle.beaconReportReceiver");
-
     /// Upper bound of the reported balance possible increase in APR, controlled by the governance
     bytes32 internal constant ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION =
         keccak256("lido.LidoOracle.allowedBeaconBalanceAnnualRelativeIncrease");
@@ -169,8 +165,7 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         uint64 _secondsPerSlot,
         uint64 _genesisTime,
         uint256 _allowedBeaconBalanceAnnualRelativeIncrease,
-        uint256 _allowedBeaconBalanceRelativeDecrease,
-        address _postRebaseBeaconReportReceiver
+        uint256 _allowedBeaconBalanceRelativeDecrease
     )
         external
     {
@@ -205,8 +200,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
 
         // set expected epoch to the first epoch for the next frame
         _setExpectedEpochToFirstOfNextFrame();
-
-        _setBeaconReportReceiver(_postRebaseBeaconReportReceiver);
     }
 
     /**
@@ -251,13 +244,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     }
 
     /**
-     * @notice Return the receiver contract address to be called when the report is pushed to Lido
-     */
-    function getBeaconReportReceiver() external view returns (address) {
-        return BEACON_REPORT_RECEIVER_POSITION.getStorageAddress();
-    }
-
-    /**
      * @notice Return the current reporting array element with index `_index`
      */
     function getMemberReportHash(uint256 _index)
@@ -269,31 +255,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     {
         reportHash = distinctReportHashes[_index];
     }
-
-    /**
-     * @notice Set the receiver contract address to `_address` to be called when the report is pushed
-     * @dev Specify 0 to disable this functionality
-     */
-    function setBeaconReportReceiver(address _address)
-        external onlyRole(SET_BEACON_REPORT_RECEIVER_ROLE)
-    {
-        _setBeaconReportReceiver(_address);
-    }
-
-    function _setBeaconReportReceiver(address _address)
-        internal
-    {
-        if(_address != address(0)) {
-            IBeaconReportReceiver iBeacon;
-            if (!_address.supportsInterface(iBeacon.processLidoOracleReport.selector)) {
-                revert BadBeaconReportReceiver();
-            }
-        }
-
-        BEACON_REPORT_RECEIVER_POSITION.setStorageAddress(_address);
-        emit BeaconReportReceiverSet(_address);
-    }
-
 
     /**
      * @notice Return the initialized version of this contract starting from 0
@@ -504,10 +465,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
 
         // emit detailed statistics and call the quorum delegate with this data
         emit PostTotalShares(_postTotalPooledEther, _prevTotalPooledEther, timeElapsed, getLido().getTotalShares());
-        IBeaconReportReceiver receiver = IBeaconReportReceiver(BEACON_REPORT_RECEIVER_POSITION.getStorageAddress());
-        if (address(receiver) != address(0)) {
-            receiver.processLidoOracleReport(_postTotalPooledEther, _prevTotalPooledEther, timeElapsed);
-        }
     }
 
     /**

@@ -11,7 +11,6 @@ import "../Lido.sol";
  */
 contract OracleMock {
     Lido private pool;
-    address private beaconReceiver;
 
     function setPool(address _pool) external {
         pool = Lido(_pool);
@@ -23,20 +22,14 @@ contract OracleMock {
         uint128 _beaconBalance
     ) external {
         pool.handleOracleReport(
+            block.timestamp,
             _beaconValidators,
             _beaconBalance,
             0,
             pool.getELRewardsVault().balance,
             0,
-            0
+            0,
+            false
         );
-    }
-
-    function setBeaconReportReceiver(address _receiver) public {
-        beaconReceiver = _receiver;
-    }
-
-    function getBeaconReportReceiver() external view returns (address) {
-        return beaconReceiver;
     }
 }

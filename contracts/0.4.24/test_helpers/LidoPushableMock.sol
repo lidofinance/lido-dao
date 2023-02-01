@@ -55,7 +55,7 @@ contract LidoPushableMock is Lido {
         return bytes32(0);
     }
 
-    function _distributeFee(uint256 _totalRewards) internal {
+    function _distributeFee(uint256 _totalRewards) internal returns(uint256 sharesMintedAsFees) {
         totalRewards = _totalRewards;
         distributeFeeCalled = true;
     }
