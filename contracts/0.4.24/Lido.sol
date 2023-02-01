@@ -18,6 +18,8 @@ import "./lib/StakeLimitUtils.sol";
 
 import "./StETHPermit.sol";
 
+import "./utils/Versioned.sol";
+
 /**
 * @title Liquid staking pool implementation
 *
@@ -30,7 +32,7 @@ import "./StETHPermit.sol";
 * rewards, no Transfer events are generated: doing so would require emitting an event
 * for each token holder and thus running an unbounded loop.
 */
-contract Lido is StETHPermit, AragonApp {
+contract Lido is StETHPermit, AragonApp, Versioned {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;
     using StakeLimitUnstructuredStorage for bytes32;
@@ -72,11 +74,6 @@ contract Lido is StETHPermit, AragonApp {
     bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION = keccak256("lido.Lido.ELRewardsWithdrawalLimit");
     /// @dev Just a counter of total amount of execution layer rewards received by Lido contract. Not used in the logic.
     bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
-    /// @dev version of contract
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.Lido.contractVersion");
-
-    event ContractVersionSet(uint256 version);
-
     event Stopped();
     event Resumed();
 
@@ -161,11 +158,10 @@ contract Lido is StETHPermit, AragonApp {
         WITHDRAWAL_QUEUE_POSITION.setStorageAddress(_withdrawalQueue);
         WITHDRAWAL_VAULT_POSITION.setStorageAddress(_withdrawalVault);
 
-        CONTRACT_VERSION_POSITION.setStorageUint256(2);
+        _writeContractVersion(2);
 
         _initializeEIP712StETH(_eip712StETH);
 
-        emit ContractVersionSet(2);
         emit StakingRouterSet(_stakingRouter);
         emit DepositSecurityModuleSet(_dsm);
         emit WithdrawalQueueSet(_withdrawalQueue);
@@ -185,16 +181,10 @@ contract Lido is StETHPermit, AragonApp {
         address _withdrawalVault
     ) external {
         require(!isPetrified(), "PETRIFIED");
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
+        require(hasInitialized(), "NOT_INITIALIZED");
+        _checkContractVersion(0);
 
         _initialize_v2(_stakingRouter, _dsm, _eip712StETH, _withdrawalQueue, _withdrawalVault);
-    }
-
-    /**
-     * @notice Return the initialized version of this contract starting from 0
-     */
-    function getVersion() external view returns (uint256) {
-        return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
     /**

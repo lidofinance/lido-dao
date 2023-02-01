@@ -47,7 +47,7 @@ contract('StakingRouter', (accounts) => {
     it('initialized correctly', async () => {
       const tx = await app.initialize(admin, lido, wc, { from: deployer })
 
-      assert.equals(await app.getVersion(), 1)
+      assert.equals(await app.getContractVersion(), 1)
       assert.equals(await app.getWithdrawalCredentials(), wc)
       assert.equals(await app.getLido(), lido)
       assert.equals(await app.getStakingModulesCount(), 0)
@@ -63,7 +63,10 @@ contract('StakingRouter', (accounts) => {
     })
 
     it('second initialize reverts', async () => {
-      await assert.revertsWithCustomError(app.initialize(admin, lido, wc, { from: deployer }), 'ErrorBaseVersion()')
+      await assert.revertsWithCustomError(
+        app.initialize(admin, lido, wc, { from: deployer }),
+        'NonZeroContractVersionOnInit()'
+      )
     })
 
     it('stranger is not allowed to grant roles', async () => {
@@ -141,11 +144,14 @@ contract('StakingRouter', (accounts) => {
     })
 
     it('contract version is max uint256', async () => {
-      assert.equals(await stakingRouterImplementation.getVersion(), MaxUint256)
+      assert.equals(await stakingRouterImplementation.getContractVersion(), MaxUint256)
     })
 
     it('initialize reverts on implementation', async () => {
-      await assert.revertsWithCustomError(stakingRouterImplementation.initialize(admin, lido, wc, { from: deployer }), `ErrorBaseVersion()`)
+      await assert.revertsWithCustomError(
+        stakingRouterImplementation.initialize(admin, lido, wc, { from: deployer }),
+        `NonZeroContractVersionOnInit()`
+      )
     })
 
     it('has no granted roles', async () => {

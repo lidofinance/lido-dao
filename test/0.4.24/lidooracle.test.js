@@ -52,22 +52,23 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, user5, 
     // Initialize the app's proxy.
     await app.setTime(GENESIS_TIME)
 
-    assertBn(await app.getVersion(), 0)
+    assertBn(await app.getContractVersion(), 0)
+    await assertRevert(app.finalizeUpgrade_v3(), 'UNEXPECTED_CONTRACT_VERSION')
     await app.setVersion(1)
-    await assertRevert(app.initialize(appLido.address, 1, 32, 12, GENESIS_TIME, 1000, 500), 'BASE_VERSION_MUST_BE_ZERO')
+    await assertRevert(app.initialize(appLido.address, 1, 32, 12, GENESIS_TIME, 1000, 500), 'UNEXPECTED_CONTRACT_VERSION')
     await app.setVersion(0)
 
     // 1000 and 500 stand for 10% yearly increase, 5% moment decrease
     await app.initialize(appLido.address, 1, 32, 12, GENESIS_TIME, 1000, 500)
-    assertBn(await app.getVersion(), 3)
+    assertBn(await app.getContractVersion(), 3)
   })
 
   it('finalizeUpgrade', async () => {
     const baseVersionRequired = 1
     const latestVersion = 3
 
-    assertBn(await app.getVersion(), latestVersion)
-    await assertRevert(app.finalizeUpgrade_v3(), 'WRONG_BASE_VERSION')
+    assertBn(await app.getContractVersion(), latestVersion)
+    await assertRevert(app.finalizeUpgrade_v3(), 'UNEXPECTED_CONTRACT_VERSION')
 
     await app.setVersion(baseVersionRequired)
 
@@ -78,7 +79,7 @@ contract('LidoOracle', ([appManager, voting, user1, user2, user3, user4, user5, 
       }
     })
 
-    assertBn(await app.getVersion(), latestVersion)
+    assertBn(await app.getContractVersion(), latestVersion)
   })
 
   it('check not-mocked _getTime()', async () => {

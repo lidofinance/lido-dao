@@ -15,6 +15,8 @@ import "../Lido.sol";
 
 import "./ReportUtils.sol";
 
+import "../utils/Versioned.sol";
+
 
 /**
  * @title Implementation of an ETH 2.0 -> ETH oracle
@@ -30,7 +32,7 @@ import "./ReportUtils.sol";
  * Not all frames may come to a quorum. Oracles may report only to the first epoch of the frame and
  * only if no quorum is reached for this epoch yet.
  */
-contract LidoOracle is AragonApp {
+contract LidoOracle is AragonApp, Versioned {
     using SafeMath for uint256;
     using ReportUtils for uint256;
     using ERC165Checker for address;
@@ -71,7 +73,6 @@ contract LidoOracle is AragonApp {
          uint256 preTotalPooledEther,
          uint256 timeElapsed,
          uint256 totalShares);
-    event ContractVersionSet(uint256 version);
 
     /// ACL
     bytes32 constant public MANAGE_MEMBERS =
@@ -106,15 +107,6 @@ contract LidoOracle is AragonApp {
     /// Storage for the actual beacon chain specification
     bytes32 internal constant BEACON_SPEC_POSITION =
         0x805e82d53a51be3dfde7cfed901f1f96f5dad18e874708b082adb8841e8ca909; // keccak256("lido.LidoOracle.beaconSpec")
-
-    /// Version of the initialized contract data
-    /// NB: Contract versioning starts from 1.
-    /// The version stored in CONTRACT_VERSION_POSITION equals to
-    /// - 0 right after deployment when no initializer is invoked yet
-    /// - N after calling initialize() during deployment from scratch, where N is the current contract version
-    /// - N after upgrading contract from the previous version (after calling finalize_vN())
-    bytes32 internal constant CONTRACT_VERSION_POSITION =
-        0x75be19a3f314d89bd1f84d30a6c84e2f1cd7afc7b6ca21876564c265113bb7e4; // keccak256("lido.LidoOracle.contractVersion")
 
     /// Epoch that we currently collect reports
     bytes32 internal constant EXPECTED_EPOCH_ID_POSITION =
@@ -275,13 +267,6 @@ contract LidoOracle is AragonApp {
     }
 
     /**
-     * @notice Return the initialized version of this contract starting from 0
-     */
-    function getVersion() external view returns (uint256) {
-        return CONTRACT_VERSION_POSITION.getStorageUint256();
-    }
-
-    /**
      * @notice Return beacon specification data
      */
     function getBeaconSpec()
@@ -403,8 +388,7 @@ contract LidoOracle is AragonApp {
 
         // We consider storage state right after deployment (no initialize() called yet) as version 0
 
-        // Initializations for v0 --> v1
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
+        _checkContractVersion(0);
 
         _setBeaconSpec(
             _epochsPerFrame,
@@ -446,7 +430,7 @@ contract LidoOracle is AragonApp {
      * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      */
     function finalizeUpgrade_v3() external {
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 1, "WRONG_BASE_VERSION");
+        _checkContractVersion(1);
 
         _initialize_v3();
     }
@@ -458,8 +442,7 @@ contract LidoOracle is AragonApp {
      * NB, that thus version 2 is skipped
      */
     function _initialize_v3() internal {
-        CONTRACT_VERSION_POSITION.setStorageUint256(3);
-        emit ContractVersionSet(3);
+        _writeContractVersion(3);
     }
 
     /**

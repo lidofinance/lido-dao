@@ -19,12 +19,14 @@ import {MemUtils} from "../../common/lib/MemUtils.sol";
 import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
 import {SigningKeysStats} from "../lib/SigningKeysStats.sol";
 
+import {Versioned} from "../utils/Versioned.sol";
+
 /// @title Node Operator registry implementation
 ///
 /// See the comment of `INodeOperatorsRegistry`.
 ///
 /// NOTE: the code below assumes moderate amount of node operators, i.e. up to `MAX_NODE_OPERATORS_COUNT`.
-contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingModule {
+contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingModule, Versioned {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
     using UnstructuredStorage for bytes32;
@@ -58,8 +60,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     // UNSTRUCTURED STORAGE POSITIONS
     //
     bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.NodeOperatorsRegistry.signingKeysMappingName");
-
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.NodeOperatorsRegistry.contractVersion");
 
     bytes32 internal constant STETH_POSITION = keccak256("lido.NodeOperatorsRegistry.stETH");
 
@@ -137,7 +137,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     /// For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
     function finalizeUpgrade_v2(address _steth, bytes32 _type) external {
         require(!isPetrified(), "PETRIFIED");
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
+        require(hasInitialized(), "NOT_INITIALIZED");
+        _checkContractVersion(0);
         _initialize_v2(_steth, _type);
 
         uint256 totalOperators = getNodeOperatorsCount();
@@ -180,8 +181,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         STETH_POSITION.setStorageAddress(_steth);
         TYPE_POSITION.setStorageBytes32(_type);
 
-        CONTRACT_VERSION_POSITION.setStorageUint256(2);
-        emit ContractVersionSet(2);
+        _writeContractVersion(2);
+
         emit StethContractSet(_steth);
         emit StakingModuleTypeSet(_type);
     }
@@ -866,11 +867,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     ///      might lead to usage of unvalidated keys in the assignNextSigningKeys method.
     function getKeysOpIndex() external view returns (uint256) {
         return KEYS_OP_INDEX_POSITION.getStorageUint256();
-    }
-
-    /// @notice Return the initialized version of this contract starting from 0
-    function getVersion() external view returns (uint256) {
-        return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
     /// @notice Returns n signing keys of the node operator #`_nodeOperatorId`

@@ -16,8 +16,9 @@ import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 import {MinFirstAllocationStrategy} from "../common/lib/MinFirstAllocationStrategy.sol";
 
 import {BeaconChainDepositor} from "./BeaconChainDepositor.sol";
+import {Versioned} from "./utils/Versioned.sol";
 
-contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDepositor {
+contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDepositor, Versioned {
     using UnstructuredStorage for bytes32;
 
     /// @dev events
@@ -27,7 +28,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     event StakingModuleStatusSet(uint24 indexed stakingModuleId, StakingModuleStatus status, address setBy);
     event StakingModuleExitedKeysIncompleteReporting(uint24 indexed stakingModuleId, uint256 unreportedExitedKeysCount);
     event WithdrawalCredentialsSet(bytes32 withdrawalCredentials, address setBy);
-    event ContractVersionSet(uint256 version);
     /**
      * Emitted when the StakingRouter received ETH
      */
@@ -35,7 +35,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
     /// @dev errors
     error ErrorZeroAddress(string field);
-    error ErrorBaseVersion();
     error ErrorValueOver100Percent(string field);
     error ErrorStakingModuleNotActive();
     error ErrorStakingModuleNotPaused();
@@ -67,14 +66,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     bytes32 public constant REPORT_EXITED_KEYS_ROLE = keccak256("REPORT_EXITED_KEYS_ROLE");
     bytes32 public constant REPORT_REWARDS_MINTED_ROLE = keccak256("REPORT_REWARDS_MINTED_ROLE");
 
-    /// Version of the initialized contract data
-    /// NB: Contract versioning starts from 1.
-    /// The version stored in CONTRACT_VERSION_POSITION equals to
-    /// - 0 right after deployment when no initializer is invoked yet
-    /// - N after calling initialize() during deployment from scratch, where N is the current contract version
-    /// - N after upgrading contract from the previous version (after calling finalize_vN())
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.StakingRouter.contractVersion");
-
     bytes32 internal constant LIDO_POSITION = keccak256("lido.StakingRouter.lido");
 
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
@@ -100,11 +91,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         _;
     }
 
-    constructor(address _depositContract) BeaconChainDepositor(_depositContract) {
-        /// @dev lock version in implementation to avoid initialize() call
-        ///      DEFAULT_ADMIN_ROLE will remain unset, i.e. no ability to add new members or roles
-        _setContractVersion(type(uint256).max);
-    }
+    constructor(address _depositContract) BeaconChainDepositor(_depositContract) {}
 
     /**
      * @dev proxy initialization
@@ -115,8 +102,8 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     function initialize(address _admin, address _lido, bytes32 _withdrawalCredentials) external {
         if (_admin == address(0)) revert ErrorZeroAddress("_admin");
         if (_lido == address(0)) revert ErrorZeroAddress("_lido");
-        if (CONTRACT_VERSION_POSITION.getStorageUint256() != 0) revert ErrorBaseVersion();
-        _setContractVersion(1);
+
+        _initializeContractVersionTo1();
 
         _setupRole(DEFAULT_ADMIN_ROLE, _admin);
 
@@ -733,15 +720,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         return _getStakingModuleByIndex(_stakingModuleIndex).stakingModuleAddress;
     }
 
-    function _setContractVersion(uint256 version) internal {
-        CONTRACT_VERSION_POSITION.setStorageUint256(version);
-        emit ContractVersionSet(version);
-    }
-
-    /// @notice Return the initialized version of this contract starting from 0
-    function getVersion() external view returns (uint256) {
-        return CONTRACT_VERSION_POSITION.getStorageUint256();
-    }
 
     function _getStorageStakingModulesMapping() internal pure returns (mapping(uint256 => StakingModule) storage result) {
         bytes32 position = STAKING_MODULES_MAPPING_POSITION;

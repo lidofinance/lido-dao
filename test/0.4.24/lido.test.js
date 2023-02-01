@@ -142,6 +142,17 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     withdrawalVault = await WithdrawalVault.new(app.address, treasury)
     eip712StETH = await EIP712StETH.new()
 
+    await assert.reverts(
+      app.finalizeUpgrade_v2(
+        stakingRouter.address,
+        depositor,
+        eip712StETH.address,
+        withdrawalQueue.address,
+        withdrawalVault.address
+      ),
+      'NOT_INITIALIZED'
+    )
+
     // Initialize the app's proxy.
     await app.initialize(
       oracle.address,
@@ -238,7 +249,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
         withdrawalQueue.address,
         withdrawalVault.address
       )
-      assert.equal(await app.getVersion(), 2)
+      assert.equal(await app.getContractVersion(), 2)
     })
 
     it('reverts with PETRIFIED on implementation finalized ', async () => {
@@ -255,7 +266,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     })
 
     it('reverts if already initialized', async () => {
-      assert.equal(await app.getVersion(), 0)
+      assert.equal(await app.getContractVersion(), 0)
       await app.finalizeUpgrade_v2(
         stakingRouter.address,
         depositor,
@@ -263,7 +274,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
         withdrawalQueue.address,
         withdrawalVault.address
       )
-      assert.equal(await app.getVersion(), 2)
+      assert.equal(await app.getContractVersion(), 2)
       assertRevert(
         app.finalizeUpgrade_v2(
           stakingRouter.address,
@@ -324,7 +335,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
         withdrawalVault.address
       )
 
-      assert.equal(await app.getVersion(), 2)
+      assert.equal(await app.getContractVersion(), 2)
 
       assertEvent(receipt, 'ContractVersionSet', { expectedArgs: { version: 2 } })
 
