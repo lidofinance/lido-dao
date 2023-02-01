@@ -12,16 +12,12 @@ import "../oracle/LidoOracle.sol";
 contract LidoOracleMock is LidoOracle {
     uint256 private time;
 
-    function setV1LastReportedEpochForTest(uint256 _epoch) public {
-        V1_LAST_REPORTED_EPOCH_ID_POSITION.setStorageUint256(_epoch);
-    }
-
     function setTime(uint256 _time) public {
         time = _time;
     }
 
     function getTimeOriginal() external view returns (uint256) {
-        return LidoOracle._getTime();
+        return block.timestamp;
     }
 
     function _getTime() internal view returns (uint256) {
