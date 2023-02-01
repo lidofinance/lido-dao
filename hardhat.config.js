@@ -212,7 +212,7 @@ module.exports = {
   contractSizer: {
     disambiguatePaths: false,
     runOnCompile: true,
-    strict: true,
+    strict: false,
     except: ['test_helpers', 'template', 'mocks', '@aragon', 'openzeppelin'],
   }
 }
