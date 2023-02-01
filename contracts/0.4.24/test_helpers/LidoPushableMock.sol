@@ -11,13 +11,15 @@ import "./VaultMock.sol";
  * @dev Mock for unit-testing handleOracleReport and how reward get calculated
  */
 contract LidoPushableMock is Lido {
+    uint256 internal constant UNLIMITED_TOKEN_REBASE = uint256(-1);
+
     uint256 public totalRewards;
     bool public distributeFeeCalled;
 
     function initialize(address _oracle) public onlyInit {
         _setProtocolContracts(_oracle, _oracle, address(0));
         _resume();
-        _setMaxPositiveTokenRebase(Lido.TOKEN_REBASE_PRECISION_BASE);
+        _setMaxPositiveTokenRebase(UNLIMITED_TOKEN_REBASE);
         initialized();
     }
 

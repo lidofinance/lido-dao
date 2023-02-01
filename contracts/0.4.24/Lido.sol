@@ -65,8 +65,6 @@ contract Lido is StETHPermit, AragonApp {
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
-    /// @dev precision base for measuring token rebase in the contract (e.g.: 1e6 - 0.1%; 1e9 - 100%)
-    uint256 public constant TOKEN_REBASE_PRECISION_BASE = 1e9;
 
     bytes32 internal constant ORACLE_POSITION = keccak256("lido.Lido.oracle");
     bytes32 internal constant TREASURY_POSITION = keccak256("lido.Lido.treasury");
@@ -92,8 +90,8 @@ contract Lido is StETHPermit, AragonApp {
     /// @dev number of Lido's validators available in the Consensus Layer state
     // "beacon" in the `keccak256()` parameter is staying here for compatibility reason
     bytes32 internal constant CL_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
-    /// @dev positive token rebase allowed per LidoOracle reports with 1e9 precision
-    /// e.g.: 1e6 - 0.1%; 1e9 - 100%
+    /// @dev positive token rebase allowed per single LidoOracle report
+    /// uses 1e9 precision, e.g.: 1e6 - 0.1%; 1e9 - 100%, see `setMaxPositiveTokenRebase()`
     bytes32 internal constant MAX_POSITIVE_TOKEN_REBASE_POSITION = keccak256("lido.Lido.MaxPositiveTokenRebase");
     /// @dev Just a counter of total amount of execution layer rewards received by Lido contract. Not used in the logic.
     bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
@@ -141,7 +139,7 @@ contract Lido is StETHPermit, AragonApp {
     // The amount of ETH withdrawn from WithdrawalVault to Lido
     event WithdrawalsReceived(uint256 amount);
 
-    // Max positive token rebase per single oracle report set
+    // Max positive token rebase set (see `setMaxPositiveTokenRebase()`)
     event MaxPositiveTokenRebaseSet(uint256 maxPositiveTokenRebase);
 
     // Records a deposit made by a user
@@ -494,14 +492,25 @@ contract Lido is StETHPermit, AragonApp {
      * token rebase happens on total supply adjustment,
      * huge positive rebase can incur oracle report sandwitching.
      *
-     * Default value is not set (explicit initialization required).
+     * stETH balance for the `account` defined as:
+     * balanceOf(account) = shares[account] * totalPooledEther / totalShares = shares[account] * shareRate
+     *
+     * Suppose shareRate changes when oracle reports (see `handleOracleReport`)
+     * which means that token rebase happens:
+     *
+     * preShareRate = preTotalPooledEther() / preTotalShares()
+     * postShareRate = postTotalPooledEther() / postTotalShares()
+     * R = (postShareRate - preShareRate) / preShareRate
+     *
+     * R > 0 corresponds to the relative positive rebase value (i.e., instant APR)
+     *
+     * NB: The value is not set by default (explicit initialization required),
+     * the recommended sane values are from 0.05% to 0.1%.
      *
      * @param _maxTokenPositiveRebase max positive token rebase value with 1e9 precision:
      *   e.g.: 1e6 - 0.1%; 1e9 - 100%
      * - passing zero value is prohibited
-     * - to allow unlimited rebases, pass 100% (1e9)
-     *
-     * NB: the recommended sane values are from 5e5 (0.05%) to 1e6 (0.1%)
+     * - to allow unlimited rebases, pass max uint256, i.e.: uint256(-1)
      */
     function setMaxPositiveTokenRebase(uint256 _maxTokenPositiveRebase) external {
         _auth(MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE);
@@ -1055,8 +1064,6 @@ contract Lido is StETHPermit, AragonApp {
      * @param _maxPositiveTokenRebase max positive token rebase, nominated in MAX_POSITIVE_REBASE_PRECISION_POINTS
      */
     function _setMaxPositiveTokenRebase(uint256 _maxPositiveTokenRebase) internal {
-        require(_maxPositiveTokenRebase <= TOKEN_REBASE_PRECISION_BASE, "WRONG_MAX_TOKEN_POSITIVE_REBASE");
-
         MAX_POSITIVE_TOKEN_REBASE_POSITION.setStorageUint256(_maxPositiveTokenRebase);
 
         emit MaxPositiveTokenRebaseSet(_maxPositiveTokenRebase);
