@@ -7,7 +7,6 @@ pragma solidity 0.8.9;
 
 import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
 
-import {IStakingRouter} from "./interfaces/IStakingRouter.sol";
 import {IStakingModule} from "./interfaces/IStakingModule.sol";
 
 import {Math} from "./lib/Math.sol";
@@ -21,7 +20,7 @@ interface ILido {
     function receiveStakingRouter() external payable;
 }
 
-contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDepositor {
+contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor {
     using UnstructuredStorage for bytes32;
 
     /// @dev events
@@ -52,6 +51,35 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     error ErrorAppAuthLidoFailed();
     error ErrorStakingModuleStatusTheSame();
     error ErrorStakingModuleWrongName();
+
+    enum StakingModuleStatus {
+        Active, // deposits and rewards allowed
+        DepositsPaused, // deposits NOT allowed, rewards allowed
+        Stopped // deposits and rewards NOT allowed
+    }
+
+    struct StakingModule {
+        /// @notice unique id of the staking module
+        uint24 id;
+        /// @notice address of staking module
+        address stakingModuleAddress;
+        /// @notice part of the fee taken from staking rewards that goes to the staking module
+        uint16 stakingModuleFee;
+        /// @notice part of the fee taken from staking rewards that goes to the treasury
+        uint16 treasuryFee;
+        /// @notice target percent of total keys in protocol, in BP
+        uint16 targetShare;
+        /// @notice staking module status if staking module can not accept the deposits or can participate in further reward distribution
+        uint8 status;
+        /// @notice name of staking module
+        string name;
+        /// @notice block.timestamp of the last deposit of the staking module
+        uint64 lastDepositAt;
+        /// @notice block.number of the last deposit of the staking module
+        uint256 lastDepositBlock;
+        /// @notice number of exited keys
+        uint256 exitedKeysCount;
+    }
 
     struct StakingModuleCache {
         address stakingModuleAddress;
