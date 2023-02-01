@@ -9,13 +9,17 @@ import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.so
 
 import {IStakingRouter} from "./interfaces/IStakingRouter.sol";
 import {IStakingModule} from "./interfaces/IStakingModule.sol";
-import {ILido} from "./interfaces/ILido.sol";
 
 import {Math} from "./lib/Math.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 import {MinFirstAllocationStrategy} from "../common/lib/MinFirstAllocationStrategy.sol";
 
 import {BeaconChainDepositor} from "./BeaconChainDepositor.sol";
+
+interface ILido {
+    function getBufferedEther() external view returns (uint256);
+    function receiveStakingRouter() external payable;
+}
 
 contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDepositor {
     using UnstructuredStorage for bytes32;
