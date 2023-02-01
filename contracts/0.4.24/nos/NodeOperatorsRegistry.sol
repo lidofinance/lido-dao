@@ -9,8 +9,6 @@ import {SafeMath} from "@aragon/os/contracts/lib/math/SafeMath.sol";
 import {SafeMath64} from "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import {UnstructuredStorage} from "@aragon/os/contracts/common/UnstructuredStorage.sol";
 
-import {IStakingModule} from "../interfaces/IStakingModule.sol";
-
 import {Math64} from "../lib/Math64.sol";
 import {BytesLib} from "../lib/BytesLib.sol";
 import {MemUtils} from "../../common/lib/MemUtils.sol";
@@ -23,10 +21,18 @@ interface IStETH {
     function transferShares(address _recipient, uint256 _sharesAmount) external returns (uint256);
 }
 
+/// @dev This interface describes only tiny part of the full interface, which NodeOperatorsRegistry must implement
+///      See 0.8.9/interface/IStakingModule.sol for the full version.
+///      We don't inherit 0.8.9 IStakingModule due to the solidity version conflict.
+interface IStakingModule {
+    event ValidatorsKeysNonceChanged(uint256 validatorsKeysNonce);
+}
+
 
 /// @title Node Operator registry
 /// @notice Node Operator registry manages signing keys and other node operator data.
-///     It's also responsible for distributing rewards to node operators.
+/// @dev Must implement the full version of IStakingModule interface, not only the one declared locally.
+///      It's also responsible for distributing rewards to node operators.
 /// NOTE: the code below assumes moderate amount of node operators, i.e. up to `MAX_NODE_OPERATORS_COUNT`.
 contract NodeOperatorsRegistry is AragonApp, IStakingModule {
     using SafeMath for uint256;
