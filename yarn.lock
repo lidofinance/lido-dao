@@ -3712,7 +3712,7 @@ __metadata:
     prettier-plugin-solidity: ^1.1.0
     solhint: ^3.3.7
     solhint-plugin-lido: ^0.0.4
-    solidity-coverage: ^0.7.18
+    solidity-coverage: ^0.7.22
     truffle: ^5.1.43
     truffle-extract: ^1.2.1
     truffle-flattener: ^1.5.0
@@ -4441,15 +4441,6 @@ __metadata:
   version: 0.12.2
   resolution: "@solidity-parser/parser@npm:0.12.2"
   checksum: 63f0296606e96c74252452bb48a4d3a4a09185413cd259bd6b1e601c9614115bef5afb3aff11d791584772cca622cad53eefc221667a094fb009215fdd265981
-  languageName: node
-  linkType: hard
-
-"@solidity-parser/parser@npm:^0.13.2":
-  version: 0.13.2
-  resolution: "@solidity-parser/parser@npm:0.13.2"
-  dependencies:
-    antlr4ts: ^0.5.0-alpha.4
-  checksum: ad2f8ca981bf7564711e5d9e709c79d3a44116419b21391692b356387c9528fc8056178378a5118d08389d2c73b93ca30cca9df2bd06de17bb0092b433077b33
   languageName: node
   linkType: hard
 
@@ -13391,19 +13382,6 @@ fsevents@~2.3.2:
   bin:
     ganache-cli: cli.js
   checksum: 32db25381dcea31904ee8233367566548f44f86e9f22da6a8621d5eb5a315b396cb24bec1ffc7fe1e5f197fc8a61a69bd0bcce66a39a63f5326b5c879121d742
-  languageName: node
-  linkType: hard
-
-"ganache-cli@npm:^6.12.2":
-  version: 6.12.2
-  resolution: "ganache-cli@npm:6.12.2"
-  dependencies:
-    ethereumjs-util: 6.2.1
-    source-map-support: 0.5.12
-    yargs: 13.2.4
-  bin:
-    ganache-cli: cli.js
-  checksum: f141003cbd91b8b899e05e54055037cad4463457d619682c83568e423c94663d6a4528d6d09d3dc295193cfe80d05831a9473e1dac57a5d19693c0b9d3d4b472
   languageName: node
   linkType: hard
 
@@ -24242,17 +24220,16 @@ resolve@1.1.x:
   languageName: node
   linkType: hard
 
-"solidity-coverage@npm:^0.7.18":
-  version: 0.7.18
-  resolution: "solidity-coverage@npm:0.7.18"
+"solidity-coverage@npm:^0.7.22":
+  version: 0.7.22
+  resolution: "solidity-coverage@npm:0.7.22"
   dependencies:
-    "@solidity-parser/parser": ^0.13.2
+    "@solidity-parser/parser": ^0.14.0
     "@truffle/provider": ^0.2.24
     chalk: ^2.4.2
     death: ^1.1.0
     detect-port: ^1.3.0
     fs-extra: ^8.1.0
-    ganache-cli: ^6.12.2
     ghost-testrpc: ^0.0.2
     global-modules: ^2.0.0
     globby: ^10.0.1
@@ -24267,7 +24244,7 @@ resolve@1.1.x:
     web3-utils: ^1.3.0
   bin:
     solidity-coverage: plugins/bin.js
-  checksum: e9c8d3e284461e3c7dfc3cd9b6476b0124acbf826582b217a09268808d7129068b2ba7018d8e3e3f134ac4e7538ba7c29dd4d4dbdf1db37f75bda242891d3fea
+  checksum: a29d97d451b0196a0a0de9b9dace2a80b55bd43272038aea23a1db8f9ed547ec0e3843f6073f3005fd73ce2aa054ad8e43f7f25c57bb1bd9c8a50dea015859d9
   languageName: node
   linkType: hard
 
