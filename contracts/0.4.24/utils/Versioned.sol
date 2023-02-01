@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.4.24;
 
@@ -18,9 +18,11 @@ contract Versioned {
     /// - N after upgrading contract by calling finalizeUpgrade_vN().
     bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.Versioned.contractVersion");
 
+    uint256 internal constant PERTIFIED_VERSION_MARK = uint256(-1);
+
     constructor() {
         // lock version in the implementation's storage to prevent initialization
-        CONTRACT_VERSION_POSITION.setStorageUint256(2**256 - 1);
+        CONTRACT_VERSION_POSITION.setStorageUint256(PERTIFIED_VERSION_MARK);
     }
 
     /// @notice Returns the current contract version.
