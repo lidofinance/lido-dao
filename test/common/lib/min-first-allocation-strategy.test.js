@@ -389,7 +389,7 @@ function getExpectedAllocateToBestCandidate(allocations, capacities, maxAllocati
     }
   }
 
-  const allocationPerCandidate = Math.max(1, Math.floor(maxAllocationSize / candidatesCount))
+  const allocationPerCandidate = Math.max(1, Math.ceil(maxAllocationSize / candidatesCount))
   const allocated = Math.min(allocationPerCandidate, capacity - allocation, allocationBound - allocation)
   const newAllocations = [...allocations]
   newAllocations[index] += allocated
