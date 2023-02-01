@@ -126,8 +126,8 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
       stakingRouter.address,
       depositor,
       STAB_ADDRESS,
-      STAB_ADDRESS,
       withdrawalQueue.address,
+      STAB_ADDRESS,
       eip712StETH.address
     )
 

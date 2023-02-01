@@ -85,10 +85,12 @@ contract Lido is StETHPermit, AragonApp {
     event StakingLimitSet(uint256 maxStakeLimit, uint256 stakeLimitIncreasePerBlock);
     event StakingLimitRemoved();
 
-    event ProtocolContactsSet(
+    event ProtocolContractsSet(
         address oracle,
         address treasury,
-        address executionLayerRewardsVault
+        address executionLayerRewardsVault,
+        address withdrawalQueue,
+        address withdrawalVault
     );
 
     // The amount of ETH withdrawn from LidoExecutionLayerRewardsVault contract to Lido contract
@@ -133,13 +135,13 @@ contract Lido is StETHPermit, AragonApp {
         address _stakingRouter,
         address _dsm,
         address _executionLayerRewardsVault,
-        address _withdrawalVault,
         address _withdrawalQueue,
+        address _withdrawalVault,
         address _eip712StETH
     )
         public onlyInit
     {
-        _setProtocolContracts(_oracle, _treasury, _executionLayerRewardsVault);
+        _setProtocolContracts(_oracle, _treasury, _executionLayerRewardsVault, _withdrawalQueue, _withdrawalVault);
 
         _initialize_v2(_stakingRouter, _dsm, _eip712StETH, _withdrawalQueue, _withdrawalVault);
         initialized();
@@ -430,11 +432,13 @@ contract Lido is StETHPermit, AragonApp {
     function setProtocolContracts(
         address _oracle,
         address _treasury,
-        address _executionLayerRewardsVault
+        address _executionLayerRewardsVault,
+        address _withdrawalQueue,
+        address _withdrawalVault
     ) external {
         _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
 
-        _setProtocolContracts(_oracle, _treasury, _executionLayerRewardsVault);
+        _setProtocolContracts(_oracle, _treasury, _executionLayerRewardsVault, _withdrawalQueue, _withdrawalVault);
     }
 
     /**
@@ -523,29 +527,11 @@ contract Lido is StETHPermit, AragonApp {
         return WITHDRAWAL_VAULT_POSITION.getStorageAddress();
     }
 
-    function setWithdrawalVault(address _withdrawalVault) external {
-        _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
-        require(_withdrawalVault != address(0), "WITHDRAWAL_VAULT_ADDRESS_ZERO");
-
-        WITHDRAWAL_VAULT_POSITION.setStorageAddress(_withdrawalVault);
-
-        emit WithdrawalVaultSet(_withdrawalVault);
-    }
-
     /**
      * @notice Returns WithdrawalQueue contract.
      */
     function getWithdrawalQueue() public view returns (address) {
         return WITHDRAWAL_QUEUE_POSITION.getStorageAddress();
-    }
-
-    function setWithdrawalQueue(address _withdrawalQueue) external {
-        _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
-        require(_withdrawalQueue != address(0), "WITHDRAWAL_QUEUE_ADDRESS_ZERO");
-
-        WITHDRAWAL_QUEUE_POSITION.setStorageAddress(_withdrawalQueue);
-
-        emit WithdrawalQueueSet(_withdrawalQueue);
     }
 
     /**
@@ -731,17 +717,21 @@ contract Lido is StETHPermit, AragonApp {
     * @param _executionLayerRewardsVault execution layer rewards vault contract
     */
     function _setProtocolContracts(
-        address _oracle, address _treasury, address _executionLayerRewardsVault
+        address _oracle, address _treasury, address _executionLayerRewardsVault, address _withdrawalQueue, address _withdrawalVault
     ) internal {
         require(_oracle != address(0), "ORACLE_ZERO_ADDRESS");
         require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
         require(_executionLayerRewardsVault != address(0), "EL_REWARDS_VAULT_ZERO_ADDRESS");
+        require(_withdrawalQueue != address(0), "WITHDRAWAL_QUEUE_ADDRESS_ZERO");
+        require(_withdrawalVault != address(0), "WITHDRAWAL_VAULT_ADDRESS_ZERO");
 
         ORACLE_POSITION.setStorageAddress(_oracle);
         TREASURY_POSITION.setStorageAddress(_treasury);
         EL_REWARDS_VAULT_POSITION.setStorageAddress(_executionLayerRewardsVault);
+        WITHDRAWAL_QUEUE_POSITION.setStorageAddress(_withdrawalQueue);
+        WITHDRAWAL_VAULT_POSITION.setStorageAddress(_withdrawalVault);
 
-        emit ProtocolContactsSet(_oracle, _treasury, _executionLayerRewardsVault);
+        emit ProtocolContractsSet(_oracle, _treasury, _executionLayerRewardsVault, _withdrawalQueue, _withdrawalVault );
     }
 
     /**

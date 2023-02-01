@@ -138,8 +138,8 @@ async function deployDaoAndPool(appManager, voting) {
     stakingRouter.address,
     depositSecurityModule.address,
     elRewardsVault.address,
-    withdrawalVault.address,
     withdrawalQueue.address,
+    withdrawalVault.address,
     eip712StETH.address
   )
 

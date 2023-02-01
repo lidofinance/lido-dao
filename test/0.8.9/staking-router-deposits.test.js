@@ -127,8 +127,8 @@ contract('StakingRouter', (accounts) => {
       stakingRouter.address,
       depositSecurityModule.address,
       STAB_ADDRESS,
-      STAB_ADDRESS,
       withdrawalQueue.address,
+      STAB_ADDRESS,
       eip712StETH.address
     )
 

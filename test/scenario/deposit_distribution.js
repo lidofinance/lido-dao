@@ -61,8 +61,8 @@ contract('StakingRouter', (accounts) => {
       stakingRouter.address,
       dsm,
       STAB_ADDRESS,
-      STAB_ADDRESS,
       withdrawalQueue.address,
+      STAB_ADDRESS,
       STAB_ADDRESS
     )
 

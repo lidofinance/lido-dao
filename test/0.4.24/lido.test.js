@@ -149,8 +149,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       stakingRouter.address,
       depositor,
       elRewardsVault.address,
-      withdrawalVault.address,
       withdrawalQueue.address,
+      withdrawalVault.address,
       eip712StETH.address
     )
 
@@ -565,7 +565,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
         await app.getOracle(),
         await app.getTreasury(),
         nobody,
-        { from: voting })
+        withdrawalQueue.address,
+        withdrawalVault.address,
+        { from: voting }
+      )
 
       const receipt = await app.receiveELRewards({ from: nobody, value: ETH(2) })
 
@@ -702,15 +705,25 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
   it('setOracle works', async () => {
     await assertRevert(
-      app.setProtocolContracts(ZERO_ADDRESS, user2, ZERO_ADDRESS, { from: voting }),
+      app.setProtocolContracts(ZERO_ADDRESS, user2, ZERO_ADDRESS, withdrawalQueue.address, withdrawalVault.address, {
+        from: voting
+      }),
       'ORACLE_ZERO_ADDRESS'
     )
-    const receipt = await app.setProtocolContracts(yetAnotherOracle.address, oracle.address, withdrawalVault.address, { from: voting })
-    assertEvent(receipt, 'ProtocolContactsSet', {
+    const receipt = await app.setProtocolContracts(
+      yetAnotherOracle.address,
+      oracle.address,
+      elRewardsVault.address,
+      withdrawalQueue.address,
+      withdrawalVault.address,
+      { from: voting }
+    )
+    assertEvent(receipt, 'ProtocolContractsSet', {
       expectedArgs: {
         oracle: yetAnotherOracle.address,
         treasury: oracle.address,
-        executionLayerRewardsVault: withdrawalVault.address
+        executionLayerRewardsVault: elRewardsVault.address,
+        withdrawalVault: withdrawalVault.address
       }
     })
     assert.equal(await app.getOracle(), yetAnotherOracle.address)
@@ -1870,30 +1883,114 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     it(`treasury can't be set by an arbitrary address`, async () => {
       await assertRevert(
-        app.setProtocolContracts(await app.getOracle(), user1, withdrawalQueue.address, { from: nobody })
+        app.setProtocolContracts(
+          await app.getOracle(),
+          user1,
+          elRewardsVault.address,
+          withdrawalQueue.address,
+          withdrawalVault.address,
+          { from: nobody }
+        )
       )
       await assertRevert(
-        app.setProtocolContracts(await app.getOracle(), user1, withdrawalQueue.address, { from: user1 })
+        app.setProtocolContracts(
+          await app.getOracle(),
+          user1,
+          elRewardsVault.address,
+          withdrawalQueue.address,
+          withdrawalVault.address,
+          { from: user1 }
+        )
       )
     })
 
     it('voting can set treasury', async () => {
-      const receipt = await app.setProtocolContracts(await app.getOracle(), user1, withdrawalQueue.address, { from: voting })
-      assertEvent(receipt, 'ProtocolContactsSet', { expectedArgs: { treasury: user1 } })
+      const receipt = await app.setProtocolContracts(
+        await app.getOracle(),
+        user1,
+        elRewardsVault.address,
+        withdrawalQueue.address,
+        withdrawalVault.address,
+        { from: voting }
+      )
+      assertEvent(receipt, 'ProtocolContractsSet', { expectedArgs: { treasury: user1 } })
       assert.equal(await app.getTreasury(), user1)
 
       await assertRevert(
-        app.setProtocolContracts(await app.getOracle(), user1, withdrawalQueue.address, { from: nobody })
+        app.setProtocolContracts(
+          await app.getOracle(),
+          user1,
+          elRewardsVault.address,
+          withdrawalQueue.address,
+          withdrawalVault.address,
+          { from: nobody }
+        )
       )
       await assertRevert(
-        app.setProtocolContracts(await app.getOracle(), user1, withdrawalQueue.address, { from: user1 })
+        app.setProtocolContracts(
+          await app.getOracle(),
+          user1,
+          elRewardsVault.address,
+          withdrawalQueue.address,
+          withdrawalVault.address,
+          { from: user1 }
+        )
       )
     })
 
     it('reverts when treasury is zero address', async () => {
       await assertRevert(
-        app.setProtocolContracts(await app.getOracle(), ZERO_ADDRESS, ZERO_ADDRESS, { from: voting }),
+        app.setProtocolContracts(
+          await app.getOracle(),
+          ZERO_ADDRESS,
+          elRewardsVault.address,
+          withdrawalQueue.address,
+          withdrawalVault.address,
+          { from: voting }
+        ),
         'TREASURY_ZERO_ADDRESS'
+      )
+    })
+
+    it('reverts when elRewardsVault is zero address', async () => {
+      await assertRevert(
+        app.setProtocolContracts(
+          await app.getOracle(),
+          user1,
+          ZERO_ADDRESS,
+          withdrawalQueue.address,
+          withdrawalVault.address,
+          { from: voting }
+        ),
+        'EL_REWARDS_VAULT_ZERO_ADDRESS'
+      )
+    })
+
+    it('reverts when withdrawalQueue is zero address', async () => {
+      await assertRevert(
+        app.setProtocolContracts(
+          await app.getOracle(),
+          user1,
+          elRewardsVault.address,
+          ZERO_ADDRESS,
+          withdrawalVault.address,
+          { from: voting }
+        ),
+        'WITHDRAWAL_QUEUE_ADDRESS_ZERO'
+      )
+    })
+
+    it('reverts when withdrawalVault is zero address', async () => {
+      await assertRevert(
+        app.setProtocolContracts(
+          await app.getOracle(),
+          user1,
+          elRewardsVault.address,
+          withdrawalQueue.address,
+          ZERO_ADDRESS,
+          { from: voting }
+        ),
+        'WITHDRAWAL_VAULT_ADDRESS_ZERO'
       )
     })
   })

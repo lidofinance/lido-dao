@@ -2,10 +2,14 @@ const { assert } = require('chai')
 const { newDao, newApp } = require('./helpers/dao')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { assertRevert } = require('../helpers/assertThrow')
+const { artifacts } = require('hardhat')
+const withdrawals = require('../helpers/withdrawals')
 
 const LidoPushableMock = artifacts.require('LidoPushableMock.sol')
 const OracleMock = artifacts.require('OracleMock.sol')
 const ELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
+const WithdrawalVault = artifacts.require('WithdrawalVault')
+const WstETH = artifacts.require('WstETH')
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
@@ -22,9 +26,12 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2, treasury]) => {
 
     const proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
     app = await LidoPushableMock.at(proxyAddress)
+    const wsteth = await WstETH.new(app.address)
     const elRewardsVault = await ELRewardsVault.new(app.address, treasury)
+    const withdrawalQueue = (await withdrawals.deploy(dao.address, wsteth.address)).queue
+    const withdrawalVault = await WithdrawalVault.new(app.address, treasury)
 
-    await app.initialize(oracle.address, elRewardsVault.address)
+    await app.initialize(oracle.address, elRewardsVault.address, withdrawalQueue.address, withdrawalVault.address)
     await oracle.setPool(app.address)
   })
 
