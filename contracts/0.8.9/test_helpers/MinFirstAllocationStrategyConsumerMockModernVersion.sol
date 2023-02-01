@@ -6,7 +6,7 @@ pragma solidity 0.8.9;
 
 import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
 
-contract MinFirstAllocationStrategyTest {
+contract MinFirstAllocationStrategyConsumerMockModernVersion {
     function allocate(
         uint256[] memory allocations,
         uint256[] memory capacities,
