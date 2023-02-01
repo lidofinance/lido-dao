@@ -16,8 +16,8 @@ contract LidoPushableMock is Lido {
     uint256 public totalRewards;
     bool public distributeFeeCalled;
 
-    function initialize(address _oracle) public onlyInit {
-        _setProtocolContracts(_oracle, _oracle, address(0));
+    function initialize(address _lidoLocator) public onlyInit {
+        LIDO_LOCATOR_POSITION.setStorageAddress(_lidoLocator);
         _resume();
         _setMaxPositiveTokenRebase(UNLIMITED_TOKEN_REBASE);
         initialized();
@@ -50,7 +50,7 @@ contract LidoPushableMock is Lido {
     }
 
     function getWithdrawalCredentials() public view returns (bytes32) {
-        IStakingRouter stakingRouter = getStakingRouter();
+        IStakingRouter stakingRouter = IStakingRouter(getLidoLocator().getStakingRouter());
         if (address(stakingRouter) != address(0)) {
             return stakingRouter.getWithdrawalCredentials();
         }

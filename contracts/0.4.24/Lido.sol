@@ -8,21 +8,18 @@ pragma solidity 0.4.24;
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 
+
+import "./interfaces/ILidoLocator.sol";
 import "./interfaces/INodeOperatorsRegistry.sol";
 import "./interfaces/ILidoExecutionLayerRewardsVault.sol";
 import "./interfaces/IWithdrawalQueue.sol";
 import "./interfaces/IWithdrawalVault.sol";
 import "./interfaces/IStakingRouter.sol";
 import "./interfaces/ISelfOwnedStETHBurner.sol";
-
 import "./lib/StakeLimitUtils.sol";
 import "./lib/PositiveTokenRebaseLimiter.sol";
 
 import "./StETHPermit.sol";
-
-interface IPreTokenRebaseReceiver {
-    function handlePreTokenRebase(uint256 preTotalShares, uint256 preTotalPooledEther) external;
-}
 
 interface IPostTokenRebaseReceiver {
     function handlePostTokenRebase(
@@ -59,22 +56,14 @@ contract Lido is StETHPermit, AragonApp {
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant STAKING_PAUSE_ROLE = keccak256("STAKING_PAUSE_ROLE");
     bytes32 public constant STAKING_CONTROL_ROLE = keccak256("STAKING_CONTROL_ROLE");
-    bytes32 public constant MANAGE_PROTOCOL_CONTRACTS_ROLE = keccak256("MANAGE_PROTOCOL_CONTRACTS_ROLE");
     bytes32 public constant BURN_ROLE = keccak256("BURN_ROLE");
     bytes32 public constant MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE = keccak256("MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE");
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
 
-    bytes32 internal constant ORACLE_POSITION = keccak256("lido.Lido.oracle");
-    bytes32 internal constant TREASURY_POSITION = keccak256("lido.Lido.treasury");
-    bytes32 internal constant EL_REWARDS_VAULT_POSITION = keccak256("lido.Lido.executionLayerRewardsVault");
-    bytes32 internal constant STAKING_ROUTER_POSITION = keccak256("lido.Lido.stakingRouter");
-    bytes32 internal constant DEPOSIT_SECURITY_MODULE_POSITION = keccak256("lido.Lido.depositSecurityModule");
-    bytes32 internal constant WITHDRAWAL_QUEUE_POSITION = keccak256("lido.Lido.withdrawalQueue");
-    bytes32 internal constant SELF_OWNED_STETH_BURNER_POSITION = keccak256("lido.Lido.selfOwnedStETHBurner");
-    bytes32 internal constant POST_TOKEN_REBASE_RECEIVER_POSITION = keccak256("lido.Lido.postTokenRebaseReceiver");
-
+    /// @dev storage slot position for the Lido protocol contracts locator
+    bytes32 internal constant LIDO_LOCATOR_POSITION = keccak256("lido.Lido.lidoLocator");
     /// @dev storage slot position of the staking rate limit structure
     bytes32 internal constant STAKING_STATE_POSITION = keccak256("lido.Lido.stakeLimit");
     /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
@@ -105,12 +94,6 @@ contract Lido is StETHPermit, AragonApp {
     event StakingLimitSet(uint256 maxStakeLimit, uint256 stakeLimitIncreasePerBlock);
     event StakingLimitRemoved();
 
-    event ProtocolContactsSet(
-        address oracle,
-        address treasury,
-        address executionLayerRewardsVault
-    );
-
     event ETHDistributed(
         int256 clBalanceDiff,
         uint256 withdrawalsWithdrawn,
@@ -127,6 +110,9 @@ contract Lido is StETHPermit, AragonApp {
         uint256 timeElapsed
     );
 
+    // Lido locator set
+    event LidoLocatorSet(address lidoLocator);
+
     // The amount of ETH withdrawn from LidoExecutionLayerRewardsVault to Lido
     event ELRewardsReceived(uint256 amount);
 
@@ -142,72 +128,37 @@ contract Lido is StETHPermit, AragonApp {
     // The `amount` of ether was sent to the deposit_contract.deposit function
     event Unbuffered(uint256 amount);
 
-    event DepositSecurityModuleSet(address dsmAddress);
-
-    event StakingRouterSet(address stakingRouterAddress);
-
-    event WithdrawalQueueSet(address withdrawalQueueAddress);
-
-    event SelfOwnedStETHBurnerSet(address selfOwnedStETHBurner);
-
     // The amount of ETH sended from StakingRouter contract to Lido contract
     event StakingRouterTransferReceived(uint256 amount);
 
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
     *      NB: by default, staking and the whole Lido pool are in paused state
-    * @param _oracle oracle contract
-    * @param _treasury treasury contract
-    * @param _stakingRouter Staking router contract
-    * @param _dsm Deposit security module contract
-    * @param _executionLayerRewardsVault execution layer rewards vault contract
-    * @param _withdrawalQueue withdrawal queue contract
+    * @param _lidoLocator lido locator contract
     * @param _eip712StETH eip712 helper contract for StETH
-    * @param _selfOwnedStETHBurner a dedicated contract for enacting stETH burning requests
     */
     function initialize(
-        address _oracle,
-        address _treasury,
-        address _stakingRouter,
-        address _dsm,
-        address _executionLayerRewardsVault,
-        address _withdrawalQueue,
-        address _eip712StETH,
-        address _selfOwnedStETHBurner
+        address _lidoLocator,
+        address _eip712StETH
     )
         public onlyInit
     {
-        _setProtocolContracts(_oracle, _treasury, _executionLayerRewardsVault);
-
-        _initialize_v2(_stakingRouter, _dsm, _eip712StETH, _withdrawalQueue, _selfOwnedStETHBurner);
+        _initialize_v2(_lidoLocator, _eip712StETH);
         initialized();
     }
 
     /**
-     * @dev If we are deploying the protocol from scratch there are circular dependencies introduced (StakingRouter and DSM),
-     *      so on init stage we need to set `_stakingRouter` and `_dsm` as 0x0, and afterwards use setters for set them correctly
+     * initializer v2
      */
     function _initialize_v2(
-        address _stakingRouter,
-        address _dsm,
-        address _eip712StETH,
-        address _withdrawalQueue,
-        address _selfOwnedStETHBurner
+        address _lidoLocator,
+        address _eip712StETH
     ) internal {
-        STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouter);
-        DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsm);
-        WITHDRAWAL_QUEUE_POSITION.setStorageAddress(_withdrawalQueue);
-        SELF_OWNED_STETH_BURNER_POSITION.setStorageAddress(_selfOwnedStETHBurner);
-
         CONTRACT_VERSION_POSITION.setStorageUint256(2);
-
+        LIDO_LOCATOR_POSITION.setStorageAddress(_lidoLocator);
         _initializeEIP712StETH(_eip712StETH);
 
-        emit ContractVersionSet(2);
-        emit StakingRouterSet(_stakingRouter);
-        emit DepositSecurityModuleSet(_dsm);
-        emit WithdrawalQueueSet(_withdrawalQueue);
-        emit SelfOwnedStETHBurnerSet(_selfOwnedStETHBurner);
+        emit LidoLocatorSet(_lidoLocator);
     }
 
     /**
@@ -216,22 +167,16 @@ contract Lido is StETHPermit, AragonApp {
      * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      */
     function finalizeUpgrade_v2(
-        address _stakingRouter,
-        address _dsm,
-        address _eip712StETH,
-        address _withdrawalQueue,
-        address _selfOwnedStETHBurner
+        address _lidoLocator,
+        address _eip712StETH
     ) external {
         require(!isPetrified(), "PETRIFIED");
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
 
-        require(_stakingRouter != address(0), "STAKING_ROUTER_ZERO_ADDRESS");
-        require(_dsm != address(0), "DSM_ZERO_ADDRESS");
+        require(_lidoLocator != address(0), "LIDO_LOCATOR_ZERO_ADDRESS");
         require(_eip712StETH != address(0), "EIP712_STETH_ZERO_ADDRESS");
-        require(_withdrawalQueue != address(0), "WITHDRAWAL_QUEUE_ZERO_ADDRESS");
-        require(_selfOwnedStETHBurner != address(0), "SELF_OWNED_STETH_BURNER_ZERO_ADDRESS");
 
-        _initialize_v2(_stakingRouter, _dsm, _eip712StETH, _withdrawalQueue, _selfOwnedStETHBurner);
+        _initialize_v2(_lidoLocator, _eip712StETH);
     }
 
     /**
@@ -399,7 +344,7 @@ contract Lido is StETHPermit, AragonApp {
      * are treated as a user deposit
      */
     function receiveELRewards() external payable {
-        require(msg.sender == EL_REWARDS_VAULT_POSITION.getStorageAddress());
+        require(msg.sender == getLidoLocator().getELRewardsVault());
 
         TOTAL_EL_REWARDS_COLLECTED_POSITION.setStorageUint256(getTotalELRewardsCollected().add(msg.value));
 
@@ -412,7 +357,7 @@ contract Lido is StETHPermit, AragonApp {
     * are treated as a user deposit
     */
     function receiveWithdrawals() external payable {
-        require(msg.sender == _getWithdrawalVault());
+        require(msg.sender == getLidoLocator().getWithdrawalVault());
 
         emit WithdrawalsReceived(msg.value);
     }
@@ -423,7 +368,7 @@ contract Lido is StETHPermit, AragonApp {
      * are treated as a user deposit
      */
     function receiveStakingRouter() external payable {
-        require(msg.sender == STAKING_ROUTER_POSITION.getStorageAddress());
+        require(msg.sender == getLidoLocator().getStakingRouter());
 
         emit StakingRouterTransferReceived(msg.value);
     }
@@ -462,23 +407,6 @@ contract Lido is StETHPermit, AragonApp {
 
         _resume();
         _resumeStaking();
-    }
-
-    /**
-    * @notice Set Lido protocol contracts (oracle, treasury, execution layer rewards vault).
-    *
-    * @param _oracle oracle contract
-    * @param _treasury treasury contract
-    * @param _executionLayerRewardsVault execution layer rewards vault contract
-    */
-    function setProtocolContracts(
-        address _oracle,
-        address _treasury,
-        address _executionLayerRewardsVault
-    ) external {
-        _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
-
-        _setProtocolContracts(_oracle, _treasury, _executionLayerRewardsVault);
     }
 
     /**
@@ -561,7 +489,7 @@ contract Lido is StETHPermit, AragonApp {
     ) {
         // TODO: safety checks
 
-        require(msg.sender == getOracle(), "APP_AUTH_FAILED");
+        require(msg.sender == getLidoLocator().getOracle(), "APP_AUTH_FAILED");
         _whenNotStopped();
 
         return _handleOracleReport(
@@ -582,31 +510,6 @@ contract Lido is StETHPermit, AragonApp {
      */
     function transferToVault(address /* _token */) external {
         revert("NOT_SUPPORTED");
-    }
-
-    /**
-    * @notice Returns the address of the vault where withdrawals arrive
-    * @dev withdrawal vault address is encoded as a last 160 bits of withdrawal credentials type 0x01
-    * @return address of the vault or address(0) if the vault is not set
-    */
-    function getWithdrawalVault() external view returns (address) {
-        return _getWithdrawalVault();
-    }
-
-    /**
-     * @notice Returns WithdrawalQueue contract.
-     */
-    function getWithdrawalQueue() public view returns (address) {
-        return WITHDRAWAL_QUEUE_POSITION.getStorageAddress();
-    }
-
-    function setWithdrawalQueue(address _withdrawalQueue) external {
-        _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
-        require(_withdrawalQueue != address(0), "WITHDRAWAL_QUEUE_ADDRESS_ZERO");
-
-        WITHDRAWAL_QUEUE_POSITION.setStorageAddress(_withdrawalQueue);
-
-        emit WithdrawalQueueSet(_withdrawalQueue);
     }
 
     /**
@@ -641,19 +544,8 @@ contract Lido is StETHPermit, AragonApp {
      * @notice Gets authorized oracle address
      * @return address of oracle contract
      */
-    function getOracle() public view returns (address) {
-        return ORACLE_POSITION.getStorageAddress();
-    }
-
-    /**
-     * @notice Returns the treasury address
-     */
-    function getTreasury() public view returns (address) {
-        return TREASURY_POSITION.getStorageAddress();
-    }
-
-    function getPostTokenRebaseReceiver() public view returns (address) {
-        return POST_TOKEN_REBASE_RECEIVER_POSITION.getStorageAddress();
+    function getLidoLocator() public view returns (ILidoLocator) {
+        return ILidoLocator(LIDO_LOCATOR_POSITION.getStorageAddress());
     }
 
     /**
@@ -675,14 +567,7 @@ contract Lido is StETHPermit, AragonApp {
      * @dev DEPRECATED: use StakingRouter.getWithdrawalCredentials() instead
      */
     function getWithdrawalCredentials() public view returns (bytes32) {
-        return getStakingRouter().getWithdrawalCredentials();
-    }
-
-    /**
-     * @notice Returns address of the contract set as LidoExecutionLayerRewardsVault
-     */
-    function getELRewardsVault() public view returns (address) {
-        return EL_REWARDS_VAULT_POSITION.getStorageAddress();
+        return IStakingRouter(getLidoLocator().getStakingRouter()).getWithdrawalCredentials();
     }
 
     /// @dev updates Consensus Layer state according to the current report
@@ -718,14 +603,15 @@ contract Lido is StETHPermit, AragonApp {
         uint256 _requestIdToFinalizeUpTo,
         uint256 _finalizationShareRate
     ) internal {
+        ILidoLocator locator = getLidoLocator();
         // withdraw execution layer rewards and put them to the buffer
         if (_elRewardsToWithdraw > 0) {
-            ILidoExecutionLayerRewardsVault(getELRewardsVault()).withdrawRewards(_elRewardsToWithdraw);
+            ILidoExecutionLayerRewardsVault(locator.getELRewardsVault()).withdrawRewards(_elRewardsToWithdraw);
         }
 
         // withdraw withdrawals and put them to the buffer
         if (_withdrawalsToWithdraw > 0) {
-            IWithdrawalVault(_getWithdrawalVault()).withdrawWithdrawals(_withdrawalsToWithdraw);
+            IWithdrawalVault(locator.getWithdrawalVault()).withdrawWithdrawals(_withdrawalsToWithdraw);
         }
 
         uint256 lockedToWithdrawalQueue = 0;
@@ -753,7 +639,7 @@ contract Lido is StETHPermit, AragonApp {
         uint256 _requestIdToFinalizeUpTo,
         uint256 _finalizationShareRate
     ) internal returns (uint256 lockedToWithdrawalQueue) {
-        IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(getWithdrawalQueue());
+        IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(getLidoLocator().getWithdrawalQueue());
 
         if (withdrawalQueue.isPaused()) return 0;
 
@@ -782,26 +668,6 @@ contract Lido is StETHPermit, AragonApp {
         if (consensusLayerRewards > 0) {
             sharesMintedAsFees = _distributeFee(uint256(consensusLayerRewards).add(_withdrawnElRewards));
         }
-    }
-
-    /**
-    * @dev Internal function to set authorized oracle address
-    * @param _oracle oracle contract
-    * @param _treasury treasury contract
-    * @param _executionLayerRewardsVault execution layer rewards vault contract
-    */
-    function _setProtocolContracts(
-        address _oracle, address _treasury, address _executionLayerRewardsVault
-    ) internal {
-        require(_oracle != address(0), "ORACLE_ZERO_ADDRESS");
-        require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
-        //NB: _executionLayerRewardsVault can be zero
-
-        ORACLE_POSITION.setStorageAddress(_oracle);
-        TREASURY_POSITION.setStorageAddress(_treasury);
-        EL_REWARDS_VAULT_POSITION.setStorageAddress(_executionLayerRewardsVault);
-
-        emit ProtocolContactsSet(_oracle, _treasury, _executionLayerRewardsVault);
     }
 
     /**
@@ -849,30 +715,6 @@ contract Lido is StETHPermit, AragonApp {
         emit TransferShares(address(0), _to, _sharesAmount);
     }
 
-    function getStakingRouter() public view returns (IStakingRouter) {
-        return IStakingRouter(STAKING_ROUTER_POSITION.getStorageAddress());
-    }
-
-    function setStakingRouter(address _stakingRouter) external {
-        _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
-        require(_stakingRouter != address(0), "STAKING_ROUTER_ADDRESS_ZERO");
-        STAKING_ROUTER_POSITION.setStorageAddress(_stakingRouter);
-
-        emit StakingRouterSet(_stakingRouter);
-    }
-
-    function getDepositSecurityModule() public view returns (address) {
-        return DEPOSIT_SECURITY_MODULE_POSITION.getStorageAddress();
-    }
-
-    function setDepositSecurityModule(address _dsm) external {
-        _auth(MANAGE_PROTOCOL_CONTRACTS_ROLE);
-        require(_dsm != address(0), "DSM_ADDRESS_ZERO");
-        DEPOSIT_SECURITY_MODULE_POSITION.setStorageAddress(_dsm);
-
-        emit DepositSecurityModuleSet(_dsm);
-    }
-
     /**
      * @dev Distributes fee portion of the rewards by minting and distributing corresponding amount of liquid tokens.
      * @param _totalRewards Total rewards accrued both on the Execution Layer and the Consensus Layer sides in wei.
@@ -903,7 +745,7 @@ contract Lido is StETHPermit, AragonApp {
         // The effect is that the given percentage of the reward goes to the fee recipient, and
         // the rest of the reward is distributed between token holders proportionally to their
         // token shares.
-        IStakingRouter router = getStakingRouter();
+        IStakingRouter router = IStakingRouter(getLidoLocator().getStakingRouter());
 
         (address[] memory recipients,
             uint256[] memory moduleIds,
@@ -952,7 +794,7 @@ contract Lido is StETHPermit, AragonApp {
     }
 
     function _transferTreasuryRewards(uint256 treasuryReward) internal {
-        address treasury = getTreasury();
+        address treasury = getLidoLocator().getTreasury();
         _transferShares(address(this), treasury, treasuryReward);
         _emitTransferAfterMintingShares(treasury, treasuryReward);
     }
@@ -987,14 +829,6 @@ contract Lido is StETHPermit, AragonApp {
      */
     function _getUnaccountedEther() internal view returns (uint256) {
         return address(this).balance.sub(_getBufferedEther());
-    }
-
-    function _getWithdrawalVault() internal view returns (address) {
-        uint8 credentialsType = uint8(uint256(getWithdrawalCredentials()) >> 248);
-        if (credentialsType == 0x01) {
-            return address(uint160(getWithdrawalCredentials()));
-        }
-        return address(0);
     }
 
     /// @dev Calculates and returns the total base balance (multiple of 32) of validators in transient state,
@@ -1070,14 +904,18 @@ contract Lido is StETHPermit, AragonApp {
      * @param _depositCalldata module calldata
      */
     function deposit(uint256 _maxDepositsCount, uint256 _stakingModuleId, bytes _depositCalldata) external {
-        require(msg.sender == getDepositSecurityModule(), "APP_AUTH_DSM_FAILED");
+        ILidoLocator locator = getLidoLocator();
+
+        require(msg.sender == locator.getDepositSecurityModule(), "APP_AUTH_DSM_FAILED");
         require(_stakingModuleId <= uint24(-1), "STAKING_MODULE_ID_TOO_LARGE");
         _whenNotStopped();
-        require(!IWithdrawalQueue(getWithdrawalQueue()).isBunkerModeActive(), "CANT_DEPOSIT_IN_BUNKER_MODE");
+
+        IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(locator.getWithdrawalQueue());
+        require(!withdrawalQueue.isBunkerModeActive(), "CANT_DEPOSIT_IN_BUNKER_MODE");
 
         uint256 bufferedEth = _getBufferedEther();
         // we dont deposit funds that will go to withdrawals
-        uint256 withdrawalReserve = IWithdrawalQueue(getWithdrawalQueue()).unfinalizedStETH();
+        uint256 withdrawalReserve = withdrawalQueue.unfinalizedStETH();
 
         if (bufferedEth > withdrawalReserve) {
             bufferedEth = bufferedEth.sub(withdrawalReserve);
@@ -1087,7 +925,7 @@ contract Lido is StETHPermit, AragonApp {
             uint256 unaccountedEth = _getUnaccountedEther();
             /// @dev transfer ether to SR and make deposit at the same time
             /// @notice allow zero value of depositableEth, in this case SR will simply transfer the unaccounted ether to Lido contract
-            uint256 depositedKeysCount = getStakingRouter().deposit.value(depositableEth)(
+            uint256 depositedKeysCount = IStakingRouter(locator.getStakingRouter()).deposit.value(depositableEth)(
                 _maxDepositsCount,
                 _stakingModuleId,
                 _depositCalldata
@@ -1162,7 +1000,7 @@ contract Lido is StETHPermit, AragonApp {
         postTotalPooledEther = _getTotalPooledEther();
         postTotalShares = _getTotalShares();
 
-        address postTokenRebaseReceiver = getPostTokenRebaseReceiver();
+        address postTokenRebaseReceiver = getLidoLocator().getPostTokenRebaseReceiver();
         if (postTokenRebaseReceiver != address(0)) {
             IPostTokenRebaseReceiver(postTokenRebaseReceiver).handlePostTokenRebase(
                 preTotalShares,
@@ -1185,7 +1023,7 @@ contract Lido is StETHPermit, AragonApp {
     }
 
     function _applyCoverage(LimiterState.Data memory _tokenRebaseLimiter) internal {
-        ISelfOwnedStETHBurner burner = ISelfOwnedStETHBurner(SELF_OWNED_STETH_BURNER_POSITION.getStorageAddress());
+        ISelfOwnedStETHBurner burner = ISelfOwnedStETHBurner(getLidoLocator().getSelfOwnedStETHBurner());
         (uint256 coverShares, uint256 nonCoverShares) = burner.getSharesRequestedToBurn();
         uint256 maxSharesToBurn = _tokenRebaseLimiter.deductShares(coverShares.add(nonCoverShares));
 

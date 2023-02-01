@@ -27,7 +27,7 @@ contract OracleMock {
             _beaconValidators,
             _beaconBalance,
             0,
-            pool.getELRewardsVault().balance,
+            pool.getLidoLocator().getELRewardsVault().balance,
             0,
             0
         );
