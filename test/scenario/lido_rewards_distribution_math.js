@@ -6,7 +6,8 @@ const { waitBlocks } = require('../helpers/blockchain')
 const { signDepositData } = require('../0.8.9/helpers/signatures')
 
 const { pad, ETH, hexConcat } = require('../helpers/utils')
-const { deployDaoAndPool, setupNodeOperatorsRegistry } = require('./helpers/deploy')
+const { deployProtocol } = require('../helpers/protocol')
+const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 const { DSMAttestMessage, DSMPauseMessage } = require('../0.8.9/helpers/signatures')
 
 const INodeOperatorsRegistry = artifacts.require('contracts/0.4.24/interfaces/INodeOperatorsRegistry.sol:INodeOperatorsRegistry')
@@ -29,26 +30,16 @@ const StakingModuleStatus = {
 }
 
 contract('Lido: rewards distribution math', (addresses) => {
-  const [
-    // the root account which deployed the DAO
-    appManager,
-    // the address which we use to simulate the voting DAO application
-    voting,
-    // node operators
-    operator_1,
-    operator_2,
-    // users who deposit Ether to the pool
-    user1,
-    user2,
-    // unrelated address
-    nobody
-  ] = addresses
+  const [operator_1, operator_2, user1, user2, nobody] = addresses
 
   let pool, nodeOperatorsRegistry, token
   let stakingRouter, dao, acl
   let oracleMock, anotherCuratedModule
-  let treasuryAddr, guardians
-  let depositSecurityModule, depositRoot
+  let treasuryAddr, guardians, depositRoot
+  let depositSecurityModule
+  let voting, deployed
+
+  var epoch = 100
 
   // Each node operator has its Ethereum 1 address, a name and a set of registered
   // validators, each of them defined as a (public key, signature) pair
@@ -78,14 +69,25 @@ contract('Lido: rewards distribution math', (addresses) => {
     ]
   }
 
-  var epoch = 100
-
   function reportBeacon(validatorsCount, balance) {
     return oracleMock.reportBeacon(epoch++, validatorsCount, balance)
   }
 
   before(async () => {
-    const deployed = await deployDaoAndPool(appManager, voting)
+    deployed = await deployProtocol({
+      stakingModulesFactory: async (protocol) => {
+        const curatedModule = await setupNodeOperatorsRegistry(protocol)
+        return [
+          {
+            module: curatedModule,
+            name: 'curated',
+            targetShares: 10000,
+            moduleFee: 500,
+            treasuryFee: 500
+          }
+        ]
+      }
+    })
 
     dao = deployed.dao
     acl = deployed.acl
@@ -97,21 +99,23 @@ contract('Lido: rewards distribution math', (addresses) => {
     pool = deployed.pool
     await pool.resumeProtocolAndStaking()
 
-    // contracts/nos/NodeOperatorsRegistry.sol
-    nodeOperatorsRegistry = deployed.nodeOperatorsRegistry
-
     // contracts/0.8.9/StakingRouter.sol
     stakingRouter = deployed.stakingRouter
 
-    // mocks
-    oracleMock = deployed.oracleMock
+    // contracts/nos/NodeOperatorsRegistry.sol
+    nodeOperatorsRegistry = deployed.stakingModules[0]
 
-    // addresses
-    treasuryAddr = deployed.treasuryAddr
+    // mocks
+    oracleMock = deployed.oracle
+
     depositSecurityModule = deployed.depositSecurityModule
+    treasuryAddr = deployed.treasury.address
+
+    voting = deployed.voting.address
+
     guardians = deployed.guardians
 
-    depositRoot = await deployed.depositContractMock.get_deposit_root()
+    depositRoot = await deployed.depositContract.get_deposit_root()
 
     const withdrawalCredentials = pad('0x0202', 32)
     await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
@@ -158,7 +162,7 @@ contract('Lido: rewards distribution math', (addresses) => {
     const depositedEthValue = 34
     const depositAmount = ETH(depositedEthValue)
 
-    const receipt = await pool.submit(ZERO_ADDRESS, { value: depositAmount, from: user1 })
+    const receipt = await pool.submit(ZERO_ADDRESS, { value: depositAmount, from: user1  })
 
     assertEvent(receipt, 'Transfer', { expectedArgs: { from: 0, to: user1, value: depositAmount } })
 
@@ -481,7 +485,7 @@ contract('Lido: rewards distribution math', (addresses) => {
   })
 
   it(`add another staking module`, async () => {
-    anotherCuratedModule = await setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, stakingRouter.address)
+    anotherCuratedModule = await setupNodeOperatorsRegistry(deployed)
     await stakingRouter.addStakingModule(
       'Curated limited',
       anotherCuratedModule.address,
@@ -595,7 +599,7 @@ contract('Lido: rewards distribution math', (addresses) => {
     const bufferedBefore = await token.getBufferedEther()
     const newBeaconBalance = totalPooledEtherBefore.sub(bufferedBefore).add(new BN(1))
 
-    await stakingRouter.setStakingModuleStatus(firstModule.id, StakingModuleStatus.Stopped, { from: appManager })
+    await stakingRouter.setStakingModuleStatus(firstModule.id, StakingModuleStatus.Stopped, { from: voting })
 
     const firstModuleSharesBefore = await token.sharesOf(nodeOperatorsRegistry.address)
     const secondModuleSharesBefore = await token.sharesOf(anotherCuratedModule.address)
