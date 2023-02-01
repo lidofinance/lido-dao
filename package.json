@@ -113,7 +113,7 @@
     "prettier-plugin-solidity": "^1.1.0",
     "solhint": "^3.3.7",
     "solhint-plugin-lido": "^0.0.4",
-    "solidity-coverage": "^0.7.18",
+    "solidity-coverage": "^0.7.22",
     "truffle": "^5.1.43",
     "truffle-extract": "^1.2.1",
     "truffle-flattener": "^1.5.0",

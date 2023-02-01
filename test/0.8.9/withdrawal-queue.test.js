@@ -5,7 +5,7 @@ const { bn, getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers
 const { ETH, StETH, shareRate, shares } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 const withdrawals = require('../helpers/withdrawals')
-const {signPermit, makeDomainSeparator} = require('../0.6.12/helpers/permit_helpers')
+const { signPermit, makeDomainSeparator } = require('../0.6.12/helpers/permit_helpers')
 const { MAX_UINT256, ACCOUNTS_AND_KEYS } = require('../0.6.12/helpers/constants')
 const { impersonate } = require('../helpers/blockchain')
 
@@ -287,7 +287,7 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
       const balanceBefore = bn(await ethers.provider.getBalance(recipient))
       assert.equals(await withdrawalQueue.lockedEtherAmount(), ETH(150))
 
-      await withdrawalQueue.claimWithdrawal(requestId, hint)
+      await withdrawalQueue.claimWithdrawal(requestId, hint, { from: user })
       assert.equals(await withdrawalQueue.lockedEtherAmount(), ETH(0))
 
       assert.equals(bn(await ethers.provider.getBalance(recipient)).sub(balanceBefore), ETH(150))
@@ -443,10 +443,13 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
       await withdrawalQueue.finalize(secondRequestId, { from: steth.address, value: ETH(40) })
 
       const balanceBefore = bn(await ethers.provider.getBalance(recipient))
-      await withdrawalQueue.claimWithdrawals([
-        [requestId, 0],
-        [secondRequestId, 0]
-      ])
+      await withdrawalQueue.claimWithdrawals(
+        [
+          [requestId, 0],
+          [secondRequestId, 0]
+        ],
+        { from: user }
+      )
       assert.equals(await ethers.provider.getBalance(recipient), balanceBefore.add(bn(ETH(30))))
     })
   })
@@ -534,7 +537,7 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
       assert.equals(aliceBalancesAfter, aliceBalancesBefore.sub(bn(ETH(10)).mul(bn(withdrawalRequestsCount))))
     })
   })
-    
+
   context('Transfer request', async () => {
     const amount = ETH(300)
     let requestId
@@ -588,7 +591,7 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
   context('Transfer request performance', function () {
     const firstRequestCount = 1000
     const secondRequestCount = 10000
-    
+
     this.timeout(1000000)
 
     it.skip('Can perform a lots of requests', async () => {
