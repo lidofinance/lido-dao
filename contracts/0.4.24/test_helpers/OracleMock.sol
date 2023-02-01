@@ -11,6 +11,7 @@ import "../Lido.sol";
  */
 contract OracleMock {
     Lido private pool;
+    uint256 private prevTimestamp;
 
     function setPool(address _pool) external {
         pool = Lido(_pool);
@@ -22,14 +23,14 @@ contract OracleMock {
         uint128 _beaconBalance
     ) external {
         pool.handleOracleReport(
-            block.timestamp,
+            block.timestamp - prevTimestamp,
             _beaconValidators,
             _beaconBalance,
             0,
             pool.getELRewardsVault().balance,
             0,
-            0,
-            false
+            0
         );
+        prevTimestamp = block.timestamp;
     }
 }

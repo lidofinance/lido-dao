@@ -74,8 +74,6 @@ contract Lido is StETHPermit, AragonApp {
     bytes32 internal constant WITHDRAWAL_QUEUE_POSITION = keccak256("lido.Lido.withdrawalQueue");
     bytes32 internal constant SELF_OWNED_STETH_BURNER_POSITION = keccak256("lido.Lido.selfOwnedStETHBurner");
     bytes32 internal constant POST_TOKEN_REBASE_RECEIVER_POSITION = keccak256("lido.Lido.postTokenRebaseReceiver");
-    bytes32 internal constant LAST_ORACLE_REPORT_TIMESTAMP_POSITION = keccak256("lido.Lido.lastOracleReportTimestamp");
-    bytes32 internal constant BUNKER_MODE_SINCE_TIMESTAMP_POSITION = keccak256("lido.Lido.bunkerModeSinceTimestamp");
 
     /// @dev storage slot position of the staking rate limit structure
     bytes32 internal constant STAKING_STATE_POSITION = keccak256("lido.Lido.stakeLimit");
@@ -114,16 +112,13 @@ contract Lido is StETHPermit, AragonApp {
     );
 
     event ETHDistributed(
-        uint256 indexed reportTimestamp,
         int256 clBalanceDiff,
         uint256 withdrawalsWithdrawn,
         uint256 executionLayerRewardsWithdrawn,
-        uint256 preBufferedEther,
         uint256 postBufferredEther
     );
 
     event TokenRebase(
-        uint256 indexed reportTimestamp,
         uint256 preTotalShares,
         uint256 preTotalEther,
         uint256 postTotalShares,
@@ -518,7 +513,7 @@ contract Lido is StETHPermit, AragonApp {
 
     struct OracleReportInputData {
         // Oracle report timing
-        uint256 reportTimestamp;
+        uint256 timeElapsed;
         // CL values
         uint256 clValidators;
         uint256 clBalance;
@@ -528,20 +523,18 @@ contract Lido is StETHPermit, AragonApp {
         // Decision about withdrawals processing
         uint256 requestIdToFinalizeUpTo;
         uint256 finalizationShareRate;
-        bool isBunkerMode;
     }
 
     /**
     * @notice Updates accounting stats, collects EL rewards and distributes collected rewards if beacon balance increased
     * @dev periodically called by the Oracle contract
-    * @param _reportTimestamp when the report was calculated
+    * @param _timeElapsed time elapsed since the previous oracle report
     * @param _clValidators number of Lido validators on Consensus Layer
     * @param _clBalance sum of all Lido validators' balances on Consensus Layer
     * @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
     * @param _elRewardsVaultBalance elRewards vault balance on Execution Layer for report block
     * @param _requestIdToFinalizeUpTo rigth boundary of requestId range if equals 0, no requests should be finalized
     * @param _finalizationShareRate share rate that should be used for finalization
-    * @param _isBunkerMode bunker protocol mode state flag
     *
     * @return totalPooledEther amount of ether in the protocol after report
     * @return totalShares amount of shares in the protocol after report
@@ -550,7 +543,7 @@ contract Lido is StETHPermit, AragonApp {
     */
     function handleOracleReport(
         // Oracle report timing
-        uint256 _reportTimestamp,
+        uint256 _timeElapsed,
         // CL values
         uint256 _clValidators,
         uint256 _clBalance,
@@ -559,8 +552,7 @@ contract Lido is StETHPermit, AragonApp {
         uint256 _elRewardsVaultBalance,
         // Decision about withdrawals processing
         uint256 _requestIdToFinalizeUpTo,
-        uint256 _finalizationShareRate,
-        bool _isBunkerMode
+        uint256 _finalizationShareRate
     ) external returns (
         uint256 totalPooledEther,
         uint256 totalShares,
@@ -574,14 +566,13 @@ contract Lido is StETHPermit, AragonApp {
 
         return _handleOracleReport(
             OracleReportInputData(
-                _reportTimestamp,
+                _timeElapsed,
                 _clValidators,
                 _clBalance,
                 _withdrawalVaultBalance,
                 _elRewardsVaultBalance,
                 _requestIdToFinalizeUpTo,
-                _finalizationShareRate,
-                _isBunkerMode
+                _finalizationShareRate
             )
         );
     }
@@ -1082,7 +1073,7 @@ contract Lido is StETHPermit, AragonApp {
         require(msg.sender == getDepositSecurityModule(), "APP_AUTH_DSM_FAILED");
         require(_stakingModuleId <= uint24(-1), "STAKING_MODULE_ID_TOO_LARGE");
         _whenNotStopped();
-        require(!_isBunkerMode(), "CANT_DEPOSIT_IN_BUNKER_MODE");
+        require(!IWithdrawalQueue(getWithdrawalQueue()).isBunkerModeActive(), "CANT_DEPOSIT_IN_BUNKER_MODE");
 
         uint256 bufferedEth = _getBufferedEther();
         // we dont deposit funds that will go to withdrawals
@@ -1121,10 +1112,7 @@ contract Lido is StETHPermit, AragonApp {
         uint256 withdrawals,
         uint256 elRewards
     ) {
-        _handleBunkerMode(_inputData.isBunkerMode);
-
         int256 clBalanceDiff = _processClStateUpdate(_inputData.clValidators, _inputData.clBalance);
-        uint256 preBufferedEther = _getBufferedEther();
 
         LimiterState.Data memory tokenRebaseLimiter = PositiveTokenRebaseLimiter.initLimiterState(
             getMaxPositiveTokenRebase(),
@@ -1152,15 +1140,13 @@ contract Lido is StETHPermit, AragonApp {
         (
             postTotalPooledEther, postTotalShares
         ) = _completeTokenRebase(
-            tokenRebaseLimiter, sharesMintedAsFees, _inputData.reportTimestamp
+            tokenRebaseLimiter, sharesMintedAsFees, _inputData.timeElapsed
         );
 
         emit ETHDistributed(
-            _inputData.reportTimestamp,
             clBalanceDiff,
             withdrawals,
             elRewards,
-            preBufferedEther,
             _getBufferedEther()
         );
     }
@@ -1168,16 +1154,13 @@ contract Lido is StETHPermit, AragonApp {
     function _completeTokenRebase(
         LimiterState.Data memory _tokenRebaseLimiter,
         uint256 _sharesMintedAsFees,
-        uint256 _reportTimestamp
+        uint256 _timeElapsed
     ) internal returns (uint256 postTotalPooledEther, uint256 postTotalShares) {
         uint256 preTotalPooledEther = _tokenRebaseLimiter.totalPooledEther;
         uint256 preTotalShares = _tokenRebaseLimiter.totalShares;
 
         postTotalPooledEther = _getTotalPooledEther();
         postTotalShares = _getTotalShares();
-
-        uint256 timeElapsed = _reportTimestamp.sub(_getLastOracleReportTimestamp());
-        LAST_ORACLE_REPORT_TIMESTAMP_POSITION.setStorageUint256(_reportTimestamp);
 
         address postTokenRebaseReceiver = getPostTokenRebaseReceiver();
         if (postTokenRebaseReceiver != address(0)) {
@@ -1187,39 +1170,18 @@ contract Lido is StETHPermit, AragonApp {
                 postTotalShares,
                 postTotalPooledEther,
                 _sharesMintedAsFees,
-                timeElapsed
+                _timeElapsed
             );
         }
 
         emit TokenRebase(
-            _reportTimestamp,
             preTotalShares,
             preTotalPooledEther,
             postTotalShares,
             postTotalPooledEther,
             _sharesMintedAsFees,
-            timeElapsed
+            _timeElapsed
         );
-    }
-
-    function _handleBunkerMode(bool _isBunkerModeNow) internal {
-        bool isBunkerModeWasSetBefore = _isBunkerMode();
-
-        // on bunker mode state change
-        if (_isBunkerModeNow != isBunkerModeWasSetBefore) {
-            // write previous timestamp to enable bunker or max uint to disable
-            uint256 newTimestamp = _isBunkerModeNow ? _getLastOracleReportTimestamp() : uint256(-1);
-            BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(newTimestamp);
-        }
-    }
-
-    function _isBunkerMode() internal view returns (bool isBunkerMode) {
-        uint256 bunkerModeSinceTimestamp = BUNKER_MODE_SINCE_TIMESTAMP_POSITION.getStorageUint256();
-        isBunkerMode = bunkerModeSinceTimestamp < uint256(-1);
-    }
-
-    function _getLastOracleReportTimestamp() internal view returns (uint256) {
-        LAST_ORACLE_REPORT_TIMESTAMP_POSITION.getStorageUint256();
     }
 
     function _applyCoverage(LimiterState.Data memory _tokenRebaseLimiter) internal {

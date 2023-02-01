@@ -670,14 +670,13 @@ contract LidoOracle is AragonApp {
         Lido lido = getLido();
         uint256 prevTotalPooledEther = lido.totalSupply();
         lido.handleOracleReport(
-            _epochId * _beaconSpec.slotsPerEpoch * _beaconSpec.secondsPerSlot,
-            _beaconValidators,
+            timeElapsed,
+             _beaconValidators,
             _beaconBalanceEth1,
             0,
             0,
             0,
-            0,
-            false
+            0
         ); // here should be withdrawal params
         uint256 postTotalPooledEther = lido.totalSupply();
 

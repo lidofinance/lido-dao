@@ -75,11 +75,17 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.WithdrawalQueue.contractVersion");
     /// Withdrawal queue resume/pause control storage slot
     bytes32 internal constant RESUMED_POSITION = keccak256("lido.WithdrawalQueue.resumed");
+    /// Bunker mode activation timestamp
+    bytes32 internal constant BUNKER_MODE_SINCE_TIMESTAMP_POSITION = keccak256("lido.WithdrawalQueue.bunkerModeSinceTimestamp");
+    /// Special value for timestamp when bunker mode is inactive (i.e., protocol in turbo mode)
+    uint256 public constant BUNKER_MODE_DISABLED_TIMESTAMP = type(uint256).max;
+
 
     // ACL
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant FINALIZE_ROLE = keccak256("FINALIZE_ROLE");
+    bytes32 public constant BUNKER_MODE_REPORT_ROLE = keccak256("BUNKER_MODE_REPORT_ROLE");
 
     /// @notice minimal possible sum that is possible to withdraw
     uint256 public constant MIN_STETH_WITHDRAWAL_AMOUNT = 100;
@@ -113,6 +119,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     error ResumedExpected();
     error RequestAmountTooSmall(uint256 _amountOfStETH);
     error RequestAmountTooLarge(uint256 _amountOfStETH);
+    error InvalidReportTimestamp();
 
     /// @notice Reverts when the contract is uninitialized
     modifier whenInitialized() {
@@ -137,7 +144,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
         }
         _;
     }
-    
+
     /**
      * @param _wstETH address of WstETH contract
      */
@@ -151,7 +158,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     }
 
     /**
-     * @notice Intialize the contract storage explicitly. 
+     * @notice Intialize the contract storage explicitly.
      * @param _admin admin address that can change every role.
      * @param _pauser address that will be able to pause the withdrawals
      * @param _resumer address that will be able to resume the withdrawals after pause
@@ -296,6 +303,46 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
      */
     function finalize(uint256 _lastRequestIdToFinalize) external payable whenResumed onlyRole(FINALIZE_ROLE) {
         _finalize(_lastRequestIdToFinalize, msg.value);
+    }
+
+    /**
+     * @notice Update bunker mode state
+     * @dev should be called by oracle
+     *
+     * NB: timestamp should correspond to the previous oracle report
+     *
+     * @param _previousOracleReportTimestamp timestamp of the previous oracle report
+     * @param _isBunkerModeNow oracle report
+     */
+    function updateBunkerMode(
+        uint256 _previousOracleReportTimestamp,
+        bool _isBunkerModeNow
+    ) external onlyRole(BUNKER_MODE_REPORT_ROLE) {
+        if (_previousOracleReportTimestamp >= block.timestamp) { revert InvalidReportTimestamp(); }
+
+        bool isBunkerModeWasSetBefore = isBunkerModeActive();
+
+        // on bunker mode state change
+        if (_isBunkerModeNow != isBunkerModeWasSetBefore) {
+            // write previous timestamp to enable bunker or max uint to disable
+            uint256 newTimestamp = _isBunkerModeNow ? _previousOracleReportTimestamp : BUNKER_MODE_DISABLED_TIMESTAMP;
+            BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(newTimestamp);
+        }
+    }
+
+    /**
+     * @notice Check if bunker mode is active
+     */
+    function isBunkerModeActive() public view returns (bool) {
+        return bunkerModeSinceTimestamp() < BUNKER_MODE_DISABLED_TIMESTAMP;
+    }
+
+    /**
+     * @notice Get bunker mode activation timestamp
+     * @dev returns `BUNKER_MODE_DISABLED_TIMESTAMP` if bunker mode is disable (i.e., protocol in turbo mode)
+     */
+    function bunkerModeSinceTimestamp() public view returns (uint256) {
+        return BUNKER_MODE_SINCE_TIMESTAMP_POSITION.getStorageUint256();
     }
 
     /// @dev internal initialization helper. Doesn't check provided addresses intentionally
