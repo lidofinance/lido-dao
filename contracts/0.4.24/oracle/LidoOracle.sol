@@ -9,8 +9,6 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/introspection/ERC165Checker.sol";
 
-import "../interfaces/IBeaconReportReceiver.sol";
-
 import "../Lido.sol";
 
 import "./ReportUtils.sol";
@@ -82,8 +80,6 @@ contract LidoOracle is AragonApp {
         0x16a273d48baf8111397316e6d961e6836913acb23b181e6c5fb35ec0bd2648fc; // keccak256("SET_BEACON_SPEC")
     bytes32 constant public SET_REPORT_BOUNDARIES =
         0x44adaee26c92733e57241cb0b26ffaa2d182ed7120ba3ecd7e0dce3635c01dc1; // keccak256("SET_REPORT_BOUNDARIES")
-    bytes32 constant public SET_BEACON_REPORT_RECEIVER =
-        0xe22a455f1bfbaf705ac3e891a64e156da92cb0b42cfc389158e6e82bd57f37be; // keccak256("SET_BEACON_REPORT_RECEIVER")
 
     /// Maximum number of oracle committee members
     uint256 public constant MAX_MEMBERS = 256;
@@ -133,10 +129,6 @@ contract LidoOracle is AragonApp {
         0xdad15c0beecd15610092d84427258e369d2582df22869138b4c5265f049f574c; // keccak256("lido.LidoOracle.lastCompletedEpochId")
     bytes32 internal constant TIME_ELAPSED_POSITION =
         0x8fe323f4ecd3bf0497252a90142003855cc5125cee76a5b5ba5d508c7ec28c3a; // keccak256("lido.LidoOracle.timeElapsed")
-
-    /// Receiver address to be called when the report is pushed to Lido
-    bytes32 internal constant BEACON_REPORT_RECEIVER_POSITION =
-        0xb59039ed37776bc23c5d272e10b525a957a1dfad97f5006c84394b6b512c1564; // keccak256("lido.LidoOracle.beaconReportReceiver")
 
     /// Upper bound of the reported balance possible increase in APR, controlled by the governance
     bytes32 internal constant ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION =
@@ -203,30 +195,6 @@ contract LidoOracle is AragonApp {
     function setAllowedBeaconBalanceRelativeDecrease(uint256 _value) external auth(SET_REPORT_BOUNDARIES) {
         ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.setStorageUint256(_value);
         emit AllowedBeaconBalanceRelativeDecreaseSet(_value);
-    }
-
-    /**
-     * @notice Return the receiver contract address to be called when the report is pushed to Lido
-     */
-    function getBeaconReportReceiver() external view returns (address) {
-        return address(BEACON_REPORT_RECEIVER_POSITION.getStorageUint256());
-    }
-
-    /**
-     * @notice Set the receiver contract address to `_addr` to be called when the report is pushed
-     * @dev Specify 0 to disable this functionality
-     */
-    function setBeaconReportReceiver(address _addr) external auth(SET_BEACON_REPORT_RECEIVER) {
-        if(_addr != address(0)) {
-            IBeaconReportReceiver iBeacon;
-            require(
-                _addr._supportsInterface(iBeacon.processLidoOracleReport.selector),
-                "BAD_BEACON_REPORT_RECEIVER"
-            );
-        }
-
-        BEACON_REPORT_RECEIVER_POSITION.setStorageUint256(uint256(_addr));
-        emit BeaconReportReceiverSet(_addr);
     }
 
     /**
@@ -690,10 +658,6 @@ contract LidoOracle is AragonApp {
 
         // emit detailed statistics and call the quorum delegate with this data
         emit PostTotalShares(postTotalPooledEther, prevTotalPooledEther, timeElapsed, lido.getTotalShares());
-        IBeaconReportReceiver receiver = IBeaconReportReceiver(BEACON_REPORT_RECEIVER_POSITION.getStorageUint256());
-        if (address(receiver) != address(0)) {
-            receiver.processLidoOracleReport(postTotalPooledEther, prevTotalPooledEther, timeElapsed);
-        }
     }
 
     /**
