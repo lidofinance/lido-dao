@@ -16,7 +16,12 @@ interface ILidoExecutionLayerRewardsVault {
     function withdrawRewards(uint256 _maxAmount) external returns (uint256 amount);
 }
 
+interface IWithdrawalVault {
+    function withdrawWithdrawals(uint256 _amount) external;
+}
+
 interface IStakingRouter {
+    function deposit(uint256 maxDepositsCount, uint256 stakingModuleId, bytes depositCalldata) external payable returns (uint256);
     function getStakingRewardsDistribution()
         external
         view
@@ -27,16 +32,8 @@ interface IStakingRouter {
             uint96 totalFee,
             uint256 precisionPoints
         );
-
-    function reportRewardsMinted(uint256[] _stakingModuleIds, uint256[] _totalShares) external;
-
-    function deposit(uint256 maxDepositsCount, uint256 stakingModuleId, bytes depositCalldata) external payable returns (uint256);
-
     function getWithdrawalCredentials() external view returns (bytes32);
-}
-
-interface IWithdrawalVault {
-    function withdrawWithdrawals(uint256 _amount) external;
+    function reportRewardsMinted(uint256[] _stakingModuleIds, uint256[] _totalShares) external;
 }
 
 interface IWithdrawalQueue {
@@ -44,11 +41,8 @@ interface IWithdrawalQueue {
         external
         view
         returns (uint128 eth, uint128 shares);
-
     function finalize(uint256 _lastIdToFinalize) external payable;
-
     function isPaused() external view returns (bool);
-
     function unfinalizedStETH() external view returns (uint256);
 }
 
