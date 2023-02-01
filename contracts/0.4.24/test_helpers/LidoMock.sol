@@ -12,6 +12,7 @@ import "./VaultMock.sol";
  */
 contract LidoMock is Lido {
     bytes32 internal constant ALLOW_TOKEN_POSITION = keccak256("lido.Lido.allowToken");
+    uint256 internal constant UNLIMITED_TOKEN_REBASE = uint256(-1);
 
     function initialize(
         address _oracle,
@@ -49,7 +50,7 @@ contract LidoMock is Lido {
     function resumeProtocolAndStaking() public {
         _resume();
         _resumeStaking();
-        _setMaxPositiveTokenRebase(Lido.TOKEN_REBASE_PRECISION_BASE);
+        _setMaxPositiveTokenRebase(UNLIMITED_TOKEN_REBASE);
     }
 
     /**

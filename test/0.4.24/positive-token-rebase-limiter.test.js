@@ -20,23 +20,23 @@ contract('PositiveTokenRebaseLimiter', ([account1]) => {
 
     assertBn(limiterValues.totalPooledEther, 0)
     assertBn(limiterValues.totalShares, 0)
-    assertBn(limiterValues.maxLimiterValue, 0)
-    assertBn(limiterValues.prevLimiterValue, 0)
+    assertBn(limiterValues.rebaseLimit, 0)
+    assertBn(limiterValues.accumulatedRebase, 0)
 
     assert.isTrue(await limiter.isLimitReached())
   })
 
   it('initialization check', async () => {
-    const maxLimiterValue = bn('10000000')
+    const rebaseLimit = bn('10000000')
     const totalPooledEther = ETH(101)
     const totalShares = ETH(75)
-    await limiter.initLimiterState(maxLimiterValue, totalPooledEther, totalShares)
+    await limiter.initLimiterState(rebaseLimit, totalPooledEther, totalShares)
 
     const limiterValues = await limiter.getLimiterValues()
     assertBn(limiterValues.totalPooledEther, totalPooledEther)
     assertBn(limiterValues.totalShares, totalShares)
-    assertBn(limiterValues.maxLimiterValue, maxLimiterValue)
-    assertBn(limiterValues.prevLimiterValue, bn(0))
+    assertBn(limiterValues.rebaseLimit, rebaseLimit)
+    assertBn(limiterValues.accumulatedRebase, bn(0))
     assert.isFalse(await limiter.isLimitReached())
 
     assertRevert(
@@ -50,49 +50,49 @@ contract('PositiveTokenRebaseLimiter', ([account1]) => {
   })
 
   it('apply cl balance update', async () => {
-    const maxLimiterValue = bn('7500')
+    const rebaseLimit = bn('7500')
     const totalPooledEther = ETH(101)
     const totalShares = ETH(75)
-    await limiter.initLimiterState(maxLimiterValue, totalPooledEther, totalShares)
+    await limiter.initLimiterState(rebaseLimit, totalPooledEther, totalShares)
 
     await limiter.applyCLBalanceUpdate(ETH(0))
     const limiterValues0 = await limiter.getLimiterValues()
     assertBn(limiterValues0.totalPooledEther, totalPooledEther)
     assertBn(limiterValues0.totalShares, totalShares)
-    assertBn(limiterValues0.maxLimiterValue, maxLimiterValue)
-    assertBn(limiterValues0.prevLimiterValue, bn(0))
+    assertBn(limiterValues0.rebaseLimit, rebaseLimit)
+    assertBn(limiterValues0.accumulatedRebase, bn(0))
     assert.isFalse(await limiter.isLimitReached())
 
     await limiter.applyCLBalanceUpdate(bn(ETH(1)).neg())
     const limiterValuesNeg = await limiter.getLimiterValues()
     assertBn(limiterValuesNeg.totalPooledEther, totalPooledEther)
     assertBn(limiterValuesNeg.totalShares, totalShares)
-    assertBn(limiterValuesNeg.maxLimiterValue, bn(9908490))
-    assertBn(limiterValuesNeg.prevLimiterValue, bn(0))
+    assertBn(limiterValuesNeg.rebaseLimit, bn(9908490))
+    assertBn(limiterValuesNeg.accumulatedRebase, bn(0))
     assert.isFalse(await limiter.isLimitReached())
 
     await limiter.applyCLBalanceUpdate(bn(ETH(3)))
     const limiterValuesPos = await limiter.getLimiterValues()
     assertBn(limiterValuesPos.totalPooledEther, totalPooledEther)
     assertBn(limiterValuesPos.totalShares, totalShares)
-    assertBn(limiterValuesPos.maxLimiterValue, bn(9908490))
-    assertBn(limiterValuesPos.prevLimiterValue, bn(9908490))
+    assertBn(limiterValuesPos.rebaseLimit, bn(9908490))
+    assertBn(limiterValuesPos.accumulatedRebase, bn(9908490))
     assert.isTrue(await limiter.isLimitReached())
   })
 
   it('appendEther', async () => {
-    const maxLimiterValue = bn('7500')
+    const rebaseLimit = bn('7500')
     const totalPooledEther = ETH(1000000)
     const totalShares = ETH(750)
-    await limiter.initLimiterState(maxLimiterValue, totalPooledEther, totalShares)
+    await limiter.initLimiterState(rebaseLimit, totalPooledEther, totalShares)
 
     await limiter.applyCLBalanceUpdate(ETH(1))
     assert.isFalse(await limiter.isLimitReached())
     const limiterValues = await limiter.getLimiterValues()
     assertBn(limiterValues.totalPooledEther, totalPooledEther)
     assertBn(limiterValues.totalShares, totalShares)
-    assertBn(limiterValues.maxLimiterValue, maxLimiterValue)
-    assertBn(limiterValues.prevLimiterValue, bn(1000))
+    assertBn(limiterValues.rebaseLimit, rebaseLimit)
+    assertBn(limiterValues.accumulatedRebase, bn(1000))
     assert.isFalse(await limiter.isLimitReached())
 
     const tx = await limiter.appendEther(ETH(2))
@@ -109,10 +109,10 @@ contract('PositiveTokenRebaseLimiter', ([account1]) => {
   })
 
   it('deductShares', async () => {
-    const maxLimiterValue = bn('5000')
+    const rebaseLimit = bn('5000')
     const totalPooledEther = ETH(2000000)
     const totalShares = ETH(1000000)
-    await limiter.initLimiterState(maxLimiterValue, totalPooledEther, totalShares)
+    await limiter.initLimiterState(rebaseLimit, totalPooledEther, totalShares)
 
     await limiter.applyCLBalanceUpdate(ETH(1))
     assert.isFalse(await limiter.isLimitReached())
@@ -123,8 +123,8 @@ contract('PositiveTokenRebaseLimiter', ([account1]) => {
     const limiterValues = await limiter.getLimiterValues()
     assertBn(limiterValues.totalPooledEther, totalPooledEther)
     assertBn(limiterValues.totalShares, totalShares)
-    assertBn(limiterValues.maxLimiterValue, maxLimiterValue)
-    assertBn(limiterValues.prevLimiterValue, bn(2500))
+    assertBn(limiterValues.rebaseLimit, rebaseLimit)
+    assertBn(limiterValues.accumulatedRebase, bn(2500))
 
     const tx2 = await limiter.deductShares(ETH(4))
     assertEvent(tx2, 'ReturnValue', { expectedArgs: { retValue: bn('2499993750015624960') } })
@@ -132,11 +132,11 @@ contract('PositiveTokenRebaseLimiter', ([account1]) => {
   })
 
   it('zero tvl no reverts', async () => {
-    const maxLimiterValue = bn('5000')
+    const rebaseLimit = bn('5000')
     const totalPooledEther = ETH(0)
     const totalShares = ETH(0)
 
-    await limiter.initLimiterState(maxLimiterValue, totalPooledEther, totalShares)
+    await limiter.initLimiterState(rebaseLimit, totalPooledEther, totalShares)
 
     await limiter.applyCLBalanceUpdate(ETH(0))
     assert.isTrue(await limiter.isLimitReached())

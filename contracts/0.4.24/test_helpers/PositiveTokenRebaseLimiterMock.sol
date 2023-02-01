@@ -20,22 +20,22 @@ contract PositiveTokenRebaseLimiterMock {
         returns (
             uint256 totalPooledEther,
             uint256 totalShares,
-            uint256 maxLimiterValue,
-            uint256 prevLimiterValue
+            uint256 rebaseLimit,
+            uint256 accumulatedRebase
         )
     {
         totalPooledEther = limiter.totalPooledEther;
         totalShares = limiter.totalShares;
-        maxLimiterValue = limiter.maxLimiterValue;
-        prevLimiterValue = limiter.prevLimiterValue;
+        rebaseLimit = limiter.rebaseLimit;
+        accumulatedRebase = limiter.accumulatedRebase;
     }
 
     function initLimiterState(
-        uint256 _maxLimiterValue,
+        uint256 _rebaseLimit,
         uint256 _totalPooledEther,
         uint256 _totalShares
     ) external {
-        limiter = PositiveTokenRebaseLimiter.initLimiterState(_maxLimiterValue, _totalPooledEther, _totalShares);
+        limiter = PositiveTokenRebaseLimiter.initLimiterState(_rebaseLimit, _totalPooledEther, _totalShares);
     }
 
     function isLimitReached() external view returns (bool) {
