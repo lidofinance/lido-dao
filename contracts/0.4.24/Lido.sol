@@ -73,7 +73,6 @@ contract Lido is StETHPermit, AragonApp {
     bytes32 internal constant DEPOSIT_SECURITY_MODULE_POSITION = keccak256("lido.Lido.depositSecurityModule");
     bytes32 internal constant WITHDRAWAL_QUEUE_POSITION = keccak256("lido.Lido.withdrawalQueue");
     bytes32 internal constant SELF_OWNED_STETH_BURNER_POSITION = keccak256("lido.Lido.selfOwnedStETHBurner");
-    bytes32 internal constant PRE_TOKEN_REBASE_RECEIVER_POSITION = keccak256("lido.Lido.preTokenRebaseReceiver");
     bytes32 internal constant POST_TOKEN_REBASE_RECEIVER_POSITION = keccak256("lido.Lido.postTokenRebaseReceiver");
     bytes32 internal constant LAST_ORACLE_REPORT_TIMESTAMP_POSITION = keccak256("lido.Lido.lastOracleReportTimestamp");
     bytes32 internal constant BUNKER_MODE_SINCE_TIMESTAMP_POSITION = keccak256("lido.Lido.bunkerModeSinceTimestamp");
@@ -662,10 +661,6 @@ contract Lido is StETHPermit, AragonApp {
         return TREASURY_POSITION.getStorageAddress();
     }
 
-    function getPreTokenRebaseReceiver() public view returns (address) {
-        return PRE_TOKEN_REBASE_RECEIVER_POSITION.getStorageAddress();
-    }
-
     function getPostTokenRebaseReceiver() public view returns (address) {
         return POST_TOKEN_REBASE_RECEIVER_POSITION.getStorageAddress();
     }
@@ -1131,7 +1126,12 @@ contract Lido is StETHPermit, AragonApp {
         int256 clBalanceDiff = _processClStateUpdate(_inputData.clValidators, _inputData.clBalance);
         uint256 preBufferedEther = _getBufferedEther();
 
-        LimiterState.Data memory tokenRebaseLimiter = _prepareTokenRebase();
+        LimiterState.Data memory tokenRebaseLimiter = PositiveTokenRebaseLimiter.initLimiterState(
+            getMaxPositiveTokenRebase(),
+            _getTotalPooledEther(),
+            _getTotalShares()
+        );
+
         tokenRebaseLimiter.applyCLBalanceUpdate(clBalanceDiff);
         withdrawals = tokenRebaseLimiter.appendEther(_inputData.withdrawalVaultBalance);
         elRewards = tokenRebaseLimiter.appendEther(_inputData.elRewardsVaultBalance);
@@ -1162,25 +1162,6 @@ contract Lido is StETHPermit, AragonApp {
             elRewards,
             preBufferedEther,
             _getBufferedEther()
-        );
-    }
-
-    function _prepareTokenRebase() internal view returns (LimiterState.Data memory)
-    {
-        uint256 preTotalPooledEther = _getTotalPooledEther();
-        uint256 preTotalShares = _getTotalShares();
-
-        address preTokenRebaseReceiver = getPreTokenRebaseReceiver();
-        if (preTokenRebaseReceiver != address(0)) {
-            IPreTokenRebaseReceiver(preTokenRebaseReceiver).handlePreTokenRebase(
-                preTotalShares, preTotalPooledEther
-            );
-        }
-
-        return PositiveTokenRebaseLimiter.initLimiterState(
-            getMaxPositiveTokenRebase(),
-            preTotalPooledEther,
-            preTotalShares
         );
     }
 
