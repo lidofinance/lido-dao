@@ -20,11 +20,7 @@ interface ILido {
 
     function getWithdrawalCredentials() external view returns (bytes32);
 
-    function updateBufferedCounters(uint256 depositsAmount) external;
-
     function getTreasury() external view returns (address);
-
-    function getLastReportTimestamp() external view returns (uint64);
 
     function getBufferedEther() external view returns (uint256);
 
