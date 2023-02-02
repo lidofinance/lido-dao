@@ -8,7 +8,7 @@ import { MemUtils } from "../../common/lib/MemUtils.sol";
 import { ResizableArray } from "../lib/ResizableArray.sol";
 import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
 
-import { BaseOracle } from "./BaseOracle.sol";
+import { BaseOracle, IConsensusContract } from "./BaseOracle.sol";
 
 
 interface ILido {
@@ -27,6 +27,18 @@ interface ILido {
     ) external;
 
     function getStakingRouter() external view returns (address);
+}
+
+
+interface ILegacyOracle {
+    function getBeaconSpec() external view returns (
+        uint64 epochsPerFrame,
+        uint64 slotsPerEpoch,
+        uint64 secondsPerSlot,
+        uint64 genesisTime
+    );
+
+    function getLastCompletedEpochId() external view returns (uint256);
 }
 
 
@@ -60,6 +72,7 @@ contract AccountingOracle is BaseOracle {
 
     error LidoCannotBeZero();
     error AdminCannotBeZero();
+    error IncorrectOracleMigration(uint256 code);
     error SenderNotAllowed();
     error InvalidExitedValidatorsData();
     error NumExitedValidatorsCannotDecrease();
@@ -129,12 +142,13 @@ contract AccountingOracle is BaseOracle {
         address admin,
         address consensusContract,
         uint256 consensusVersion,
-        uint256 lastProcessingRefSlot,
+        address legacyOracle,
         uint256 maxExitedValidatorsPerDay,
         uint256 maxExtraDataListItemsCount
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
+        uint256 lastProcessingRefSlot = _checkOracleMigration(legacyOracle, consensusContract);
         _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
         _setDataBoundaries(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
     }
@@ -352,6 +366,64 @@ contract AccountingOracle is BaseOracle {
     /// Implementation & helpers
     ///
 
+    /// @dev Returns last processed reference slot of the legacy oracle.
+    ///
+    /// Old oracle didn't specify what slot use as a reference one, but actually
+    /// used the first slot of the first frame's epoch. The new oracle uses the
+    /// last slot of the previous frame's last epoch as a reference one.
+    ///
+    /// Oracle migration scheme:
+    ///
+    /// last old frame    <--------->
+    /// old frames       |r  .   .   |
+    /// new frames                  r|   .   .  r|   .   .  r|
+    /// first new frame               <--------->
+    /// events            0  1  2   3  4
+    /// time ------------------------------------------------>
+    ///
+    /// 0. last reference slot of legacy oracle
+    /// 1. last legacy oracle's consensus report arrives
+    /// 2. new oracle is deployed and enabled, legacy oracle is disabled and upgraded to compat code
+    /// 3. first reference slot of the new oracle
+    /// 4. first new oracle's consensus report arrives
+    ///
+    function _checkOracleMigration(address legacyOracle, address consensusContract)
+        internal view returns (uint256)
+    {
+        (uint256 initialEpoch,
+            uint256 epochsPerFrame) = IConsensusContract(consensusContract).getFrameConfig();
+
+        (uint256 slotsPerEpoch,
+            uint256 secondsPerSlot,
+            uint256 genesisTime) = IConsensusContract(consensusContract).getChainConfig();
+
+        {
+            // check chain spec to match the prev. one (a block is used to reduce stack alloc)
+            (uint256 legacyEpochsPerFrame,
+                uint256 legacySlotsPerEpoch,
+                uint256 legacySecondsPerSlot,
+                uint256 legacyGenesisTime) = ILegacyOracle(legacyOracle).getBeaconSpec();
+            if (slotsPerEpoch != legacySlotsPerEpoch ||
+                secondsPerSlot != legacySecondsPerSlot ||
+                genesisTime != legacyGenesisTime
+            ) {
+                revert IncorrectOracleMigration(0);
+            }
+            if (epochsPerFrame != legacyEpochsPerFrame) {
+                revert IncorrectOracleMigration(1);
+            }
+        }
+
+        uint256 legacyProcessedEpoch = ILegacyOracle(legacyOracle).getLastCompletedEpochId();
+        if (initialEpoch != legacyProcessedEpoch + epochsPerFrame) {
+            revert IncorrectOracleMigration(2);
+        }
+
+        // last processing ref. slot of the new oracle should be set to the last processed
+        // ref. slot of the legacy oracle, i.e. the first slot of the last processed epoch
+        return legacyProcessedEpoch * slotsPerEpoch;
+    }
+
     function _setDataBoundaries(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount)
         internal
     {
@@ -407,7 +479,7 @@ contract AccountingOracle is BaseOracle {
         ILido(LIDO).handleOracleReport(
             slotsElapsed * SECONDS_PER_SLOT,
             data.numValidators,
-            uint256(data.clBalanceGwei) * 1e9,
+            data.clBalanceGwei * 1e9,
             data.withdrawalVaultBalance,
             data.elRewardsVaultBalance,
             data.lastWithdrawalRequestIdToFinalize,

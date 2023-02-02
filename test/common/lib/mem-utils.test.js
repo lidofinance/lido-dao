@@ -3,11 +3,11 @@ const { assert } = require('../../helpers/assert')
 const MemUtilsTest = artifacts.require('MemUtilsTest')
 
 
-contract('AccountingOracle', ([deployer]) => {
+contract('AccountingOracle', () => {
   let memUtilsTest
 
   before(async () => {
-    memUtilsTest = await MemUtilsTest.new({from: deployer})
+    memUtilsTest = await MemUtilsTest.new()
   })
 
   context('MemUtils.memcpy', () => {

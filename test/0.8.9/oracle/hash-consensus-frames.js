@@ -4,7 +4,7 @@ const { assertRevert } = require('../../helpers/assertThrow')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
 const {
-  SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, SECONDS_PER_EPOCH,
+  SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, SECONDS_PER_EPOCH, SLOTS_PER_FRAME,
   computeSlotAt, computeEpochAt, computeEpochFirstSlotAt,
   computeEpochFirstSlot, computeTimestampAtSlot, computeTimestampAtEpoch,
   ZERO_HASH, HASH_1, HASH_2, HASH_3, HASH_4, HASH_5, CONSENSUS_VERSION,
@@ -14,24 +14,97 @@ const HashConsensus = artifacts.require('HashConsensusTimeTravellable')
 const MockReportProcessor = artifacts.require('MockReportProcessor')
 
 
-contract('HashConsensus', ([admin, member1]) => {
-  context('Reporting interval manipulation', () => {
-    let consensus
-    let reportProcessor
+const getFrameIndex = (time, epochsPerFrame, initialEpoch) =>
+  Math.floor((computeEpochAt(time) - initialEpoch) / epochsPerFrame)
 
-    beforeEach(async () => {
-      const deployed = await deployHashConsensus(admin)
+const computeIthFrameStartSlot = (frameIndex, epochsPerFrame, initialEpoch) =>
+  (initialEpoch + frameIndex * epochsPerFrame) * SLOTS_PER_EPOCH
+
+const computeIthFrameStartTime = (frameIndex, epochsPerFrame, initialEpoch) =>
+  computeTimestampAtSlot(computeIthFrameStartSlot(frameIndex, epochsPerFrame, initialEpoch))
+
+const computeNextFrameStartSlot = (time, epochsPerFrame, initialEpoch) =>
+  computeIthFrameStartSlot(getFrameIndex(time, epochsPerFrame, initialEpoch), epochsPerFrame, initialEpoch)
+
+
+contract('HashConsensus', ([admin, member1, member2]) => {
+  const INITIAL_EPOCH = 3
+
+  context('State before initial epoch', () => {
+    let consensus
+
+    before(async () => {
+      const deployed = await deployHashConsensus(admin, {initialEpoch: INITIAL_EPOCH})
       consensus = deployed.consensus
-      reportProcessor = deployed.reportProcessor
-      await consensus.addMember(member1, 1, { from: admin })
     })
 
-    const computeIthFrameStartSlot = (frameIndex, epochsPerFrame, initialEpoch) =>
-      (initialEpoch + frameIndex * epochsPerFrame) * SLOTS_PER_EPOCH
+    it('before the initial epoch arrives, members can be added and queried, and quorum increased',
+      async () =>
+    {
+      await consensus.setTimeInEpochs(INITIAL_EPOCH - 1)
 
-    const computeIthFrameStartTime = (frameIndex, epochsPerFrame, initialEpoch) =>
-      computeTimestampAtSlot(computeIthFrameStartSlot(frameIndex, epochsPerFrame, initialEpoch))
+      await consensus.addMember(member1, 1, {from: admin})
+      await consensus.addMember(member2, 2, {from: admin})
+      await consensus.setQuorum(3, {from: admin})
 
+      assert.equal(+await consensus.getQuorum(), 3)
+
+      assert.isTrue(await consensus.getIsMember(member1))
+      assert.isTrue(await consensus.getIsMember(member2))
+      assert.isFalse(await consensus.getIsMember(admin))
+
+      const {addresses, lastReportedRefSlots} = await consensus.getMembers()
+      assert.sameOrderedMembers(addresses, [member1, member2])
+      assert.sameOrderedMembers(lastReportedRefSlots.map(x => +x), [0, 0])
+    })
+
+    it('but otherwise, the contract is dysfunctional', async () => {
+      await assertRevert(consensus.removeMember(member2, 2), 'InitialEpochIsYetToArrive()')
+      await assertRevert(consensus.removeMember(member2, 1), 'InitialEpochIsYetToArrive()')
+      await assertRevert(consensus.setQuorum(2), 'InitialEpochIsYetToArrive()')
+
+      await assertRevert(consensus.getCurrentFrame(), 'InitialEpochIsYetToArrive()')
+      await assertRevert(consensus.getConsensusState(), 'InitialEpochIsYetToArrive()')
+      await assertRevert(consensus.getMemberInfo(member1), 'InitialEpochIsYetToArrive()')
+
+      const firstRefSlot = INITIAL_EPOCH * SLOTS_PER_EPOCH - 1
+      await assertRevert(
+        consensus.submitReport(firstRefSlot, HASH_1, CONSENSUS_VERSION, { from: member1 }),
+        'InitialEpochIsYetToArrive()'
+      )
+    })
+
+    it('after the initial epoch comes, the consensus contract becomes functional', async () => {
+      await consensus.setTimeInEpochs(INITIAL_EPOCH)
+
+      await consensus.setQuorum(2, {from: admin})
+      assert.equal(+await consensus.getQuorum(), 2)
+
+      const frame = await consensus.getCurrentFrame()
+      assert.equal(+frame.refSlot, computeEpochFirstSlot(INITIAL_EPOCH) - 1)
+      assert.equal(+frame.reportProcessingDeadlineSlot, computeEpochFirstSlot(INITIAL_EPOCH) + SLOTS_PER_FRAME - 1)
+
+      const consensusState = await consensus.getConsensusState()
+      assert.equal(consensusState.consensusReport, ZERO_HASH)
+
+      const memberInfo = await consensus.getMemberInfo(member1)
+      assert.isTrue(memberInfo.isMember)
+      assert.equal(+memberInfo.currentRefSlot, +frame.refSlot)
+      assert.equal(+memberInfo.lastReportRefSlot, 0)
+
+      const tx = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, {from: member1})
+      assertEvent(tx, 'ReportReceived', {expectedArgs: {refSlot: frame.refSlot, member: member1, report: HASH_1}})
+    })
+  })
+
+  context('Reporting interval manipulation', () => {
+    let consensus
+
+    beforeEach(async () => {
+      const deployed = await deployHashConsensus(admin, {initialEpoch: 1})
+      consensus = deployed.consensus
+      await consensus.addMember(member1, 1, {from: admin})
+    })
 
     it(`crossing frame boundary time advances reference and deadline slots by the frame size`,
       async () =>

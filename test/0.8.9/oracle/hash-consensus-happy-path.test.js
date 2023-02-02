@@ -4,9 +4,9 @@ const { assertRevert } = require('../../helpers/assertThrow')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
 const {
-  SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, EPOCHS_PER_FRAME,
-  SECONDS_PER_EPOCH, SECONDS_PER_FRAME, SLOTS_PER_FRAME,
-  computeSlotAt, computeEpochAt, computeEpochFirstSlotAt, computeTimestampAtSlot,
+  SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, EPOCHS_PER_FRAME, SECONDS_PER_EPOCH,
+  SECONDS_PER_FRAME, SLOTS_PER_FRAME, computeSlotAt, computeEpochAt, computeEpochFirstSlotAt,
+  computeTimestampAtEpoch, computeTimestampAtSlot,
   ZERO_HASH, HASH_1, HASH_2, HASH_3, HASH_4, HASH_5, CONSENSUS_VERSION,
   deployHashConsensus } = require('./hash-consensus-deploy.test')
 
@@ -18,9 +18,10 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
   let reportProcessor
 
   context('Happy path', () => {
+    const INITIAL_EPOCH = 3
 
     it('deploying hash consensus', async () => {
-      const deployed = await deployHashConsensus(admin)
+      const deployed = await deployHashConsensus(admin, {initialEpoch: INITIAL_EPOCH})
       consensus = deployed.consensus
       reportProcessor = deployed.reportProcessor
     })
@@ -39,9 +40,15 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
       assert.equal(+await consensus.getQuorum(), 2)
     })
 
+    it('some fraction of the reporting frame passes', async () => {
+      assert.equal(+await consensus.getTime(), computeTimestampAtEpoch(INITIAL_EPOCH))
+      await consensus.advanceTimeBySlots(3)
+      assert.equal(+await consensus.getTime(), computeTimestampAtEpoch(INITIAL_EPOCH) + 3 * SECONDS_PER_SLOT)
+    })
+
     let frame
 
-    it('reporting frame changes as time passes', async () => {
+    it('reporting frame changes as more time passes', async () => {
       const frame1 = await consensus.getCurrentFrame()
       const time = +await consensus.getTime()
       const expectedRefSlot = computeEpochFirstSlotAt(time) - 1

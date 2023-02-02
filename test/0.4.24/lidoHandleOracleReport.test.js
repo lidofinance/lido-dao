@@ -4,17 +4,32 @@ const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { assertRevert } = require('../helpers/assertThrow')
 
 const LidoPushableMock = artifacts.require('LidoPushableMock.sol')
-const OracleMock = artifacts.require('OracleMock.sol')
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 
-contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
-  let appBase, app, oracle
+contract('Lido: handleOracleReport', ([appManager, oracle, stranger]) => {
+  let appBase, app, elRewardsVault
 
   before('deploy base app', async () => {
     appBase = await LidoPushableMock.new()
-    oracle = await OracleMock.new()
   })
+
+  ///
+  ///  TODO: proper tests for the new accounting
+  ///
+
+  async function pushOracleReport({epochId, clValidators, clBalance}, options = null) {
+    const elRewardsVaultBalance = await web3.eth.getBalance(elRewardsVault)
+    return await app.handleOracleReport(
+        clValidators,
+        clBalance,
+        0,
+        elRewardsVaultBalance,
+        0,
+        0,
+        options || {from: oracle}
+    )
+  }
 
   beforeEach('deploy dao and app', async () => {
     const { dao } = await newDao(appManager)
@@ -22,8 +37,8 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
     const proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
     app = await LidoPushableMock.at(proxyAddress)
 
-    await app.initialize(oracle.address)
-    await oracle.setPool(app.address)
+    await app.initialize(oracle)
+    elRewardsVault = await app.getELRewardsVault()
   })
 
   const checkStat = async ({ depositedValidators, beaconValidators, beaconBalance }) => {
@@ -34,9 +49,10 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
   }
 
   it('reportBeacon access control', async () => {
-    const fakeOracle = await OracleMock.new()
-    await fakeOracle.setPool(app.address)
-    await assertRevert(fakeOracle.reportBeacon(110, 0, ETH(0), { from: user2 }), 'APP_AUTH_FAILED')
+    await assertRevert(
+      pushOracleReport({epochId: 110, clValidators: 0, clBalance: ETH(0)},  {from: stranger}),
+      'APP_AUTH_FAILED'
+    )
   })
 
   context('with depositedVals=0, beaconVals=0, bcnBal=0, bufferedEth=0', async () => {
@@ -47,7 +63,7 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
     })
 
     it('report BcnValidators:0 BcnBalance:0 = no rewards', async () => {
-      await oracle.reportBeacon(100, 0, ETH(0), { from: user1 })
+      await pushOracleReport({epochId: 100, clValidators: 0, clBalance: ETH(0)})
       checkStat({ depositedValidators: 0, beaconValidators: 0, beaconBalance: ETH(0) })
       assertBn(await app.getBufferedEther(), ETH(0))
       assertBn(await app.getTotalPooledEther(), ETH(0))
@@ -56,7 +72,10 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
     })
 
     it('report BcnValidators:1 = revert', async () => {
-      await assertRevert(oracle.reportBeacon(110, 1, ETH(0), { from: user2 }), 'REPORTED_MORE_DEPOSITED')
+      await assertRevert(
+        pushOracleReport({epochId: 110, clValidators: 1, clBalance: ETH(0)}),
+        'REPORTED_MORE_DEPOSITED'
+      )
       checkStat({ depositedValidators: 0, beaconValidators: 0, beaconBalance: ETH(0) })
       assertBn(await app.getBufferedEther(), ETH(0))
       assertBn(await app.getTotalPooledEther(), ETH(0))
@@ -69,12 +88,12 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
     beforeEach(async function () {
       await app.setDepositedValidators(0)
       await app.setBeaconBalance(0)
-      await app.setBufferedEther({ from: user1, value: ETH(12) })
+      await app.setBufferedEther({ from: stranger, value: ETH(12) })
       await app.setBeaconValidators(0)
     })
 
     it('report BcnValidators:0 BcnBalance:0 = no rewards', async () => {
-      await oracle.reportBeacon(100, 0, ETH(0), { from: user1 })
+      await pushOracleReport({epochId: 100, clValidators: 0, clBalance: ETH(0)})
       checkStat({ depositedValidators: 0, beaconValidators: 0, beaconBalance: ETH(0) })
       assertBn(await app.getBufferedEther(), ETH(12))
       assertBn(await app.getTotalPooledEther(), ETH(12))
@@ -83,7 +102,10 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
     })
 
     it('report BcnValidators:1 = revert', async () => {
-      await assertRevert(oracle.reportBeacon(110, 1, ETH(0), { from: user2 }), 'REPORTED_MORE_DEPOSITED')
+      await assertRevert(
+        pushOracleReport({epochId: 110, clValidators: 1, clBalance: ETH(0)}),
+        'REPORTED_MORE_DEPOSITED'
+      )
       checkStat({ depositedValidators: 0, beaconValidators: 0, beaconBalance: ETH(0) })
       assertBn(await app.getBufferedEther(), ETH(12))
       assertBn(await app.getTotalPooledEther(), ETH(12))
@@ -96,7 +118,7 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
     beforeEach(async function () {
       await app.setDepositedValidators(1)
       await app.setBeaconBalance(0)
-      await app.setBufferedEther({ from: user1, value: ETH(3) })
+      await app.setBufferedEther({ from: stranger, value: ETH(3) })
       await app.setBeaconValidators(0)
     })
 
@@ -107,7 +129,7 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
     })
 
     it('report BcnValidators:0 BcnBalance:0 = no rewards', async () => {
-      await oracle.reportBeacon(100, 0, ETH(0), { from: user1 })
+      await pushOracleReport({epochId: 100, clValidators: 0, clBalance: ETH(0)})
       checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
       assertBn(await app.getBufferedEther(), ETH(3))
       assertBn(await app.getTotalPooledEther(), ETH(35))
@@ -116,7 +138,10 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
     })
 
     it('report BcnValidators:2 = revert', async () => {
-      await assertRevert(oracle.reportBeacon(110, 2, ETH(65), { from: user2 }), 'REPORTED_MORE_DEPOSITED')
+      await assertRevert(
+        pushOracleReport({epochId: 110, clValidators: 2, clBalance: ETH(65)}),
+        'REPORTED_MORE_DEPOSITED'
+      )
       checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
       assertBn(await app.getBufferedEther(), ETH(3))
       assertBn(await app.getTotalPooledEther(), ETH(35))
@@ -125,7 +150,7 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
     })
 
     it('report BcnValidators:1 BcnBalance:31 = no rewards', async () => {
-      await oracle.reportBeacon(100, 1, ETH(31), { from: user1 })
+      await pushOracleReport({epochId: 100, clValidators: 1, clBalance: ETH(31)})
       checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(31) })
       assertBn(await app.getBufferedEther(), ETH(3))
       assertBn(await app.getTotalPooledEther(), ETH(34))
@@ -134,7 +159,7 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
     })
 
     it('report BcnValidators:1 BcnBalance:32 = no rewards', async () => {
-      await oracle.reportBeacon(100, 1, ETH(32), { from: user1 })
+      await pushOracleReport({epochId: 100, clValidators: 1, clBalance: ETH(32)})
       checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(32) })
       assertBn(await app.getBufferedEther(), ETH(3))
       assertBn(await app.getTotalPooledEther(), ETH(35))
@@ -147,7 +172,7 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
     beforeEach(async function () {
       await app.setDepositedValidators(2)
       await app.setBeaconBalance(ETH(30))
-      await app.setBufferedEther({ from: user1, value: ETH(5) })
+      await app.setBufferedEther({ from: stranger, value: ETH(5) })
       await app.setBeaconValidators(1)
       await app.setTotalShares(ETH(67))
     })
@@ -159,7 +184,7 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
     })
 
     it('report BcnValidators:1 BcnBalance:0 = no rewards', async () => {
-      await oracle.reportBeacon(100, 1, ETH(0), { from: user1 })
+      await pushOracleReport({epochId: 100, clValidators: 1, clBalance: ETH(0)})
       checkStat({ depositedValidators: 2, beaconValidators: 1, beaconBalance: ETH(0) })
       assertBn(await app.getBufferedEther(), ETH(5))
       assertBn(await app.getTotalPooledEther(), ETH(37))
@@ -168,7 +193,7 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
     })
 
     it('report BcnValidators:1 BcnBalance:1 = no rewards', async () => {
-      await oracle.reportBeacon(100, 1, ETH(1), { from: user1 })
+      await pushOracleReport({epochId: 100, clValidators: 1, clBalance: ETH(1)})
       checkStat({ depositedValidators: 2, beaconValidators: 1, beaconBalance: ETH(1) })
       assertBn(await app.getBufferedEther(), ETH(5))
       assertBn(await app.getTotalPooledEther(), ETH(38))
@@ -177,7 +202,7 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
     })
 
     it('report BcnValidators:2 BcnBalance:62 = no reward', async () => {
-      await oracle.reportBeacon(100, 2, ETH(62), { from: user1 })
+      await pushOracleReport({epochId: 100, clValidators: 2, clBalance: ETH(62)})
       checkStat({ depositedValidators: 2, beaconValidators: 2, beaconBalance: ETH(62) })
       assertBn(await app.getBufferedEther(), ETH(5))
       assertBn(await app.getTotalPooledEther(), ETH(67))
@@ -186,7 +211,7 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
     })
 
     it('report BcnValidators:1 BcnBalance:31 = reward:1', async () => {
-      await oracle.reportBeacon(100, 2, ETH(63), { from: user1 })
+      await pushOracleReport({epochId: 100, clValidators: 2, clBalance: ETH(63)})
       checkStat({ depositedValidators: 2, beaconValidators: 2, beaconBalance: ETH(63) })
       assertBn(await app.getBufferedEther(), ETH(5))
       assertBn(await app.getTotalPooledEther(), ETH(68))
@@ -195,7 +220,7 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
     })
 
     it('report BcnValidators:2 BcnBalance:63 = reward:1', async () => {
-      await oracle.reportBeacon(100, 2, ETH(63), { from: user1 })
+      await pushOracleReport({epochId: 100, clValidators: 2, clBalance: ETH(63)})
       checkStat({ depositedValidators: 2, beaconValidators: 2, beaconBalance: ETH(63) })
       assertBn(await app.getBufferedEther(), ETH(5))
       assertBn(await app.getTotalPooledEther(), ETH(68))
@@ -204,7 +229,10 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
     })
 
     it('report BcnValidators:3 = revert with REPORTED_MORE_DEPOSITED', async () => {
-      await assertRevert(oracle.reportBeacon(110, 3, ETH(65), { from: user2 }), 'REPORTED_MORE_DEPOSITED')
+      await assertRevert(
+        pushOracleReport({epochId: 110, clValidators: 3, clBalance: ETH(65)}),
+        'REPORTED_MORE_DEPOSITED'
+      )
       checkStat({ depositedValidators: 2, beaconValidators: 1, beaconBalance: ETH(30) })
       assertBn(await app.getBufferedEther(), ETH(5))
       assertBn(await app.getTotalPooledEther(), ETH(67))
@@ -217,16 +245,25 @@ contract('Lido: handleOracleReport', ([appManager, user1, user2]) => {
     beforeEach(async function () {
       await app.setDepositedValidators(5)
       await app.setBeaconBalance(ETH(1))
-      await app.setBufferedEther({ from: user1, value: ETH(0) })
+      await app.setBufferedEther({ from: stranger, value: ETH(0) })
       await app.setBeaconValidators(4)
     })
 
     // See LIP-1 for explanation
     // https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-1.md
     it('report decreased BcnValidators:3 = revert with REPORTED_LESS_VALIDATORS', async () => {
-      await assertRevert(oracle.reportBeacon(123, 3, ETH(1), { from: user2 }), 'REPORTED_LESS_VALIDATORS')
-      await assertRevert(oracle.reportBeacon(321, 2, ETH(10), { from: user2 }), 'REPORTED_LESS_VALIDATORS')
-      await assertRevert(oracle.reportBeacon(12345, 1, ETH(123), { from: user2 }), 'REPORTED_LESS_VALIDATORS')
+      await assertRevert(
+        pushOracleReport({epochId: 123, clValidators: 3, clBalance: ETH(1)}),
+        'REPORTED_LESS_VALIDATORS'
+      )
+      await assertRevert(
+        pushOracleReport({epochId: 321, clValidators: 2, clBalance: ETH(10)}),
+        'REPORTED_LESS_VALIDATORS'
+      )
+      await assertRevert(
+        pushOracleReport({epochId: 12345, clValidators: 1, clBalance: ETH(123)}),
+        'REPORTED_LESS_VALIDATORS'
+      )
       // values stay intact
       checkStat({ depositedValidators: 5, beaconValidators: 4, beaconBalance: ETH(1) })
       assertBn(await app.getBufferedEther(), ETH(0))
