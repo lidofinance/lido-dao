@@ -4,7 +4,7 @@ const { assertRevert } = require('../helpers/assertThrow')
 const { assert } = require('../helpers/assert')
 const { BN } = require('bn.js')
 const { DSMAttestMessage, DSMPauseMessage } = require('./helpers/signatures')
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { ZERO_ADDRESS, getEventAt } = require('@aragon/contract-helpers-test')
 const { artifacts, network } = require('hardhat')
 
 // generateGuardianSignatures
@@ -36,6 +36,11 @@ const UNRELATED_SIGNER2 = '0xe53486BBaC0628C9A5B84eFEf28e08FE73679e4d'
 const UNRELATED_SIGNER_PRIVATE_KEYS = {
   [UNRELATED_SIGNER1]: '0x543488a7f9249f22c1045352a627382cd60692a1b2054e0a9889277f728d8514',
   [UNRELATED_SIGNER2]: '0xbabec7d3867c72f6c275135b1e1423ca8f565d6e21a1947d056a195b1c3cae27'
+}
+
+const assertNoEvent = (receipt, eventName, msg) => {
+  const event = getEventAt(receipt, eventName)
+  assert.equal(event, undefined, msg)
 }
 
 // status enum
@@ -802,6 +807,24 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         const guardians = await depositSecurityModule.getGuardians()
 
         assert.isTrue(quorum > guardians.length)
+      })
+      it(`setGuardianQuorum allows to set the same value, but there no event emitted`, async () => {
+
+        const tx1 = await depositSecurityModule.setGuardianQuorum(2, { from: owner })
+        const quorum1 = await depositSecurityModule.getGuardianQuorum()
+        assert.equal(quorum1, 2)
+
+        const tx2 = await depositSecurityModule.setGuardianQuorum(2, { from: owner })
+        const quorum2 = await depositSecurityModule.getGuardianQuorum()
+        assert.equal(quorum2, 2)
+
+
+        assertEvent(tx1, 'GuardianQuorumChanged', {
+          expectedArgs: { newValue: quorum1 }
+        })
+
+        await assertNoEvent(tx2, 'GuardianQuorumChanged')
+
       })
     })
   })

@@ -13,6 +13,10 @@ contract StakingRouterMock is StakingRouter {
     }
 
     function getStakingModuleIndexById(uint256 _stakingModuleId) external view returns (uint256) {
-        return _getStakingModuleIndexById(uint24(_stakingModuleId));
+        return _getStakingModuleIndexById(_stakingModuleId);
+    }
+
+    function getStakingModuleByIndex(uint256 _stakingModuleId) external view returns (StakingModule memory) {
+        return _getStakingModuleByIndex(_stakingModuleId);
     }
 }

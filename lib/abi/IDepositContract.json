@@ -1,0 +1,1 @@
+[{"inputs":[],"name":"get_deposit_root","outputs":[{"internalType":"bytes32","name":"rootHash","type":"bytes32"}],"stateMutability":"view","type":"function"}]
