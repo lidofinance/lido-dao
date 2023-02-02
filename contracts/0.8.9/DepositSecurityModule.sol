@@ -4,9 +4,6 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import {IStakingRouter} from "./interfaces/IStakingRouter.sol";
-import {IDepositContract} from "./interfaces/IDepositContract.sol";
-
 import {ECDSA} from "../common/lib/ECDSA.sol";
 
 interface ILido {
@@ -16,6 +13,21 @@ interface ILido {
         bytes calldata _depositCalldata
     ) external;
 }
+
+interface IDepositContract {
+    function get_deposit_root() external view returns (bytes32 rootHash);
+}
+
+interface IStakingRouter {
+    function pauseStakingModule(uint256 _stakingModuleId) external;
+    function resumeStakingModule(uint256 _stakingModuleId) external;
+    function getStakingModuleIsDepositsPaused(uint256 _stakingModuleId) external view returns (bool);
+    function getStakingModuleIsActive(uint256 _stakingModuleId) external view returns (bool);
+    function getStakingModuleKeysOpIndex(uint256 _stakingModuleId) external view returns (uint256);
+    function getStakingModuleLastDepositBlock(uint256 _stakingModuleId) external view returns (uint256);
+}
+
+
 
 contract DepositSecurityModule {
     /**
@@ -199,8 +211,10 @@ contract DepositSecurityModule {
 
     function _setGuardianQuorum(uint256 newValue) internal {
         // we're intentionally allowing setting quorum value higher than the number of guardians
-        quorum = newValue;
-        emit GuardianQuorumChanged(newValue);
+        if (quorum != newValue) {
+            quorum = newValue;
+            emit GuardianQuorumChanged(newValue);
+        }
     }
 
     /**

@@ -103,7 +103,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         return CONSENSUS_CONTRACT_POSITION.getStorageAddress();
     }
 
-    /// @notice Sets the addres of the HashConsensus contract.
+    /// @notice Sets the address of the HashConsensus contract.
     ///
     function setConsensusContract(address addr) external onlyRole(MANAGE_CONSENSUS_CONTRACT_ROLE) {
         _setConsensusContract(addr, LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256());

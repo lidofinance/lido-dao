@@ -214,7 +214,7 @@ abstract contract WithdrawalQueueBase {
      * @param _requestId request id to claim
      * @param _hint rate index found offchain that should be used for claiming
      */
-    function claimWithdrawal(uint256 _requestId, uint256 _hint) external {
+    function claimWithdrawal(uint256 _requestId, uint256 _hint) public {
         if (_requestId == 0) revert ZeroRequestId();
         if (_requestId > lastFinalizedRequestId) revert RequestNotFinalized(_requestId);
 
@@ -266,8 +266,8 @@ abstract contract WithdrawalQueueBase {
 
     /// @dev creates a new `WithdrawalRequest` in the queue
     function _enqueue(uint256 _amountOfStETH, uint256 _amountofShares, address _recipient)
-        internal
-        returns (uint256 requestId)
+    internal
+    returns (uint256 requestId)
     {
         WithdrawalRequest memory lastRequest = queue[lastRequestId];
 

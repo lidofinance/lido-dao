@@ -49,8 +49,8 @@ library ResizableArray {
     ///        a new memory region will be allocated and the array contents will be copied
     ///        to that region.
     ///
-    /// @param growthFactor Sets the multiplicator by which the pre-allocated memory size
-    ///        is increased after the previously allocated region is exhausted. The multiplicator
+    /// @param growthFactor Sets the multiplier by which the pre-allocated memory size
+    ///        is increased after the previously allocated region is exhausted. The multiplier
     ///        is expressed in percents, 110 being equal the factor of 1.1, 200 being equal the
     ///        factor of 2.0, and so on. Must be greater than 100.
     ///

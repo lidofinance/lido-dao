@@ -3,7 +3,7 @@ const { BN } = require('bn.js')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
 
-const { ZERO_HASH, pad, toBN, ETH, tokens, gwei } = require('../helpers/utils')
+const { ZERO_HASH, pad, toBN, ETH, tokens, gwei, ethToGwei } = require('../helpers/utils')
 const { deployDaoAndPool, SLOTS_PER_FRAME } = require('./helpers/deploy')
 
 const { DSMAttestMessage, DSMPauseMessage } = require('../0.8.9/helpers/signatures')
@@ -11,9 +11,10 @@ const { waitBlocks } = require('../helpers/blockchain')
 
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 
-const INodeOperatorsRegistry = artifacts.require('contracts/0.4.24/interfaces/INodeOperatorsRegistry.sol:INodeOperatorsRegistry')
+const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
-const TOTAL_BASIS_POINTS = 10000
+const TOTAL_BASIS_POINTS = 10**4
+const MAX_POSITIVE_REBASE_PRECISION_POINTS = 10**9
 const CURATED_MODULE_ID = 1
 
 const makeAccountingReport = ({refSlot, numValidators, clBalanceGwei, elRewardsVaultBalance}) => ({
@@ -118,9 +119,6 @@ contract('Lido: merge acceptance', (addresses) => {
 
     depositRoot = await depositContractMock.get_deposit_root()
 
-    // At first go through tests assuming there is no withdrawal limit
-    await pool.setELRewardsWithdrawalLimit(TOTAL_BASIS_POINTS, { from: voting })
-
     rewarder = await RewardEmulatorMock.new(elRewardsVault.address)
 
     assertBn(await web3.eth.getBalance(rewarder.address), ETH(0), 'rewarder balance')
@@ -135,7 +133,7 @@ contract('Lido: merge acceptance', (addresses) => {
     let txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
+    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', { decodeForAbi: NodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator1.id, 0, 'operator id')
 
     assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 1, 'total node operators')
@@ -167,7 +165,7 @@ contract('Lido: merge acceptance', (addresses) => {
     txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'id', { decodeForAbi: INodeOperatorsRegistry._json.abi })
+    nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', { decodeForAbi: NodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator2.id, 1, 'operator id')
 
     assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 2, 'total node operators')
@@ -743,84 +741,79 @@ contract('Lido: merge acceptance', (addresses) => {
   })
 
   it('collect 0.1 ETH execution layer rewards to elRewardsVault and withdraw it entirely by means of multiple oracle reports (+1 ETH)', async () => {
-    const toNum = (bn) => {
-      return +bn.toString()
-    }
-    const toE18 = (x) => {
-      return x * 1e18
-    }
-    const fromNum = (x) => {
-      return new BN(String(x))
-    }
+    // Specify different withdrawal limits for a few epochs to test different values
+    const getMaxPositiveRebaseForFrame = (_frame) => {
+      let ret = 0
 
-    // Specify different withdrawal limits for a few frames to test different values
-    const getELRewardsWithdrawalLimitFromFrame = (_frame) => {
       if (_frame === 7) {
-        return 2
+        ret = toBN(2)
       } else if (_frame === 8) {
-        return 0
+        ret = toBN(1)
       } else {
-        return 3
+        ret = toBN(3)
       }
+
+      return ret.mul(toBN(MAX_POSITIVE_REBASE_PRECISION_POINTS / TOTAL_BASIS_POINTS))
     }
 
-    const elRewards = toE18(0.1)
-    await rewarder.reward({ from: userELRewards, value: fromNum(elRewards) })
-    assertBn(await web3.eth.getBalance(elRewardsVault.address), fromNum(elRewards), 'Execution layer rewards vault balance')
+    const elRewards = ETH(0.1)
+    await rewarder.reward({ from: userELRewards, value: elRewards })
+    assertBn(await web3.eth.getBalance(elRewardsVault.address), elRewards, 'Execution layer rewards vault balance')
 
     let frame = 7
-    let lastBeaconBalance = toE18(85)
-    await pool.setELRewardsWithdrawalLimit(getELRewardsWithdrawalLimitFromFrame(frame), { from: voting })
+    let lastBeaconBalance = toBN(ETH(85))
+    await pool.setMaxPositiveTokenRebase(getMaxPositiveRebaseForFrame(frame), { from: voting })
 
-    let elRewardsWithdrawalLimitPoints = toNum(await pool.getELRewardsWithdrawalLimit())
-    let elRewardsVaultBalance = toNum(await web3.eth.getBalance(elRewardsVault.address))
-    let totalPooledEther = toNum(await pool.getTotalPooledEther())
-    let bufferedEther = toNum(await pool.getBufferedEther())
-    let totalSupply = toNum(await pool.totalSupply())
-    const beaconBalanceInc = toE18(1)
-    let elRewardsWithdrawn = 0
+    let maxPositiveRebase = await pool.getMaxPositiveTokenRebase()
+    let elRewardsVaultBalance = toBN(await web3.eth.getBalance(elRewardsVault.address))
+    let totalPooledEther = await pool.getTotalPooledEther()
+    let bufferedEther = await pool.getBufferedEther()
+    let totalSupply = await pool.totalSupply()
+    const beaconBalanceInc = toBN(ETH(0.001))
+    let elRewardsWithdrawn = toBN(0)
 
     // Do multiple oracle reports to withdraw all ETH from execution layer rewards vault
     while (elRewardsVaultBalance > 0) {
-      const elRewardsWithdrawalLimit = getELRewardsWithdrawalLimitFromFrame(frame)
-      await pool.setELRewardsWithdrawalLimit(elRewardsWithdrawalLimit, { from: voting })
-      elRewardsWithdrawalLimitPoints = toNum(await pool.getELRewardsWithdrawalLimit())
+      const maxPositiveRebaseCalculated = getMaxPositiveRebaseForFrame(frame)
+      await pool.setMaxPositiveTokenRebase(maxPositiveRebaseCalculated, { from: voting })
+      maxPositiveRebase = await pool.getMaxPositiveTokenRebase()
+      const clIncurredRebase = beaconBalanceInc.mul(toBN(MAX_POSITIVE_REBASE_PRECISION_POINTS)).div(totalPooledEther)
 
-      const maxELRewardsAmountPerWithdrawal = Math.floor(
-        ((totalPooledEther + beaconBalanceInc) * elRewardsWithdrawalLimitPoints) / TOTAL_BASIS_POINTS
-      )
-      const elRewardsToWithdraw = Math.min(maxELRewardsAmountPerWithdrawal, elRewardsVaultBalance)
+      const maxELRewardsAmountPerWithdrawal = totalPooledEther.mul(
+        maxPositiveRebase.sub(clIncurredRebase)
+      ).div(toBN(MAX_POSITIVE_REBASE_PRECISION_POINTS))
+
+      const elRewardsToWithdraw = BN.min(maxELRewardsAmountPerWithdrawal, elRewardsVaultBalance)
 
       // Reporting balance increase
       await oracleMock.submitReportData(makeAccountingReport({
         refSlot: frame * SLOTS_PER_FRAME - 1,
         numValidators: 2,
-        clBalanceGwei: (lastBeaconBalance + beaconBalanceInc) / 1e9,
+        clBalanceGwei: ethToGwei(lastBeaconBalance.add(beaconBalanceInc)),
         elRewardsVaultBalance: await web3.eth.getBalance(elRewardsVault.address),
       }), 1)
 
       assertBn(
         await web3.eth.getBalance(elRewardsVault.address),
-        elRewardsVaultBalance - elRewardsToWithdraw,
+        elRewardsVaultBalance.sub(elRewardsToWithdraw),
         'Execution layer rewards vault balance'
       )
 
-      assertBn(await pool.getTotalPooledEther(), totalPooledEther + beaconBalanceInc + elRewardsToWithdraw, 'total pooled ether')
+      assertBn(await pool.getTotalPooledEther(), totalPooledEther.add(beaconBalanceInc).add(elRewardsToWithdraw), 'total pooled ether')
+      assertBn(await pool.totalSupply(), totalSupply.add(beaconBalanceInc).add(elRewardsToWithdraw), 'token total supply')
+      assertBn(await pool.getBufferedEther(), bufferedEther.add(elRewardsToWithdraw), 'buffered ether')
 
-      assertBn(await pool.totalSupply(), totalSupply + beaconBalanceInc + elRewardsToWithdraw, 'token total supply')
+      elRewardsVaultBalance = toBN(await web3.eth.getBalance(elRewardsVault.address))
+      totalPooledEther = await pool.getTotalPooledEther()
+      bufferedEther = await pool.getBufferedEther()
+      totalSupply = await pool.totalSupply()
 
-      assertBn(await pool.getBufferedEther(), bufferedEther + elRewardsToWithdraw, 'buffered ether')
+      lastBeaconBalance = lastBeaconBalance.add(beaconBalanceInc)
+      elRewardsWithdrawn = elRewardsWithdrawn.add(elRewardsToWithdraw)
 
-      elRewardsVaultBalance = toNum(await web3.eth.getBalance(elRewardsVault.address))
-      totalPooledEther = toNum(await pool.getTotalPooledEther())
-      bufferedEther = toNum(await pool.getBufferedEther())
-      totalSupply = toNum(await pool.totalSupply())
-
-      lastBeaconBalance += beaconBalanceInc
       frame += 1
-      elRewardsWithdrawn += elRewardsToWithdraw
     }
 
-    assert.equal(elRewardsWithdrawn, elRewards)
+    assertBn(elRewardsWithdrawn, elRewards)
   })
 })

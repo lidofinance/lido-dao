@@ -1,0 +1,1 @@
+[{"constant":false,"inputs":[{"name":"_postTotalPooledEther","type":"uint256"},{"name":"_preTotalPooledEther","type":"uint256"},{"name":"_timeElapsed","type":"uint256"}],"name":"processLidoOracleReport","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]

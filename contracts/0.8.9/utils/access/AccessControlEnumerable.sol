@@ -4,7 +4,8 @@
 // A modified AccessControlEnumerable contract using unstructured storage. Copied from tree:
 // https://github.com/OpenZeppelin/openzeppelin-contracts/tree/6bd6b76/contracts/access
 //
-pragma solidity ^0.8.0;
+/* See contracts/COMPILERS.md */
+pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-v4.4/access/IAccessControlEnumerable.sol";
 import "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";

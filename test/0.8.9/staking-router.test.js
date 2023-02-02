@@ -344,6 +344,54 @@ contract('StakingRouter', (accounts) => {
       )
     })
 
+    it('addStakingModule fails on zero address', async () => {
+      await assert.revertsWithCustomError(
+        app.addStakingModule(
+          stakingModulesParams[0].name,
+          ZERO_ADDRESS,
+          stakingModulesParams[0].targetShare,
+          stakingModulesParams[0].stakingModuleFee,
+          stakingModulesParams[0].treasuryFee,
+          {
+            from: appManager
+          }
+        ),
+        `ErrorZeroAddress("_stakingModuleAddress")`
+      )
+    })
+
+    it('addStakingModule fails on incorrect module name', async () => {
+      // check zero length
+      await assert.revertsWithCustomError(
+        app.addStakingModule(
+          '',
+          stakingModule1.address,
+          stakingModulesParams[0].targetShare,
+          stakingModulesParams[0].stakingModuleFee,
+          stakingModulesParams[0].treasuryFee,
+          {
+            from: appManager
+          }
+        ),
+        `ErrorStakingModuleWrongName()`
+      )
+
+      // check length > 32 symbols
+      await assert.revertsWithCustomError(
+        app.addStakingModule(
+          '#'.repeat(33),
+          stakingModule1.address,
+          stakingModulesParams[0].targetShare,
+          stakingModulesParams[0].stakingModuleFee,
+          stakingModulesParams[0].treasuryFee,
+          {
+            from: appManager
+          }
+        ),
+        `ErrorStakingModuleWrongName()`
+      )
+    })
+
     it('add staking module', async () => {
       const tx = await app.addStakingModule(
         stakingModulesParams[0].name,
@@ -387,8 +435,6 @@ contract('StakingRouter', (accounts) => {
       await assert.revertsWithCustomError(app.getStakingModuleIsActive(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
 
       const module = await app.getStakingModule(stakingModulesParams[0].expectedModuleId)
-
-      assert.equals(await app.getStakingModuleByIndex(stakingModulesParams[0].expectedModuleId - 1), module)
 
       assert.equals(module.name, stakingModulesParams[0].name)
       assert.equals(module.stakingModuleAddress, stakingModule1.address)
@@ -439,8 +485,6 @@ contract('StakingRouter', (accounts) => {
 
       const module = await app.getStakingModule(stakingModulesParams[1].expectedModuleId)
 
-      assert.equals(await app.getStakingModuleByIndex(stakingModulesParams[1].expectedModuleId - 1), module)
-
       assert.equals(module.name, stakingModulesParams[1].name)
       assert.equals(module.stakingModuleAddress, stakingModule2.address)
       assert.equals(module.stakingModuleFee, stakingModulesParams[1].stakingModuleFee)
@@ -463,6 +507,15 @@ contract('StakingRouter', (accounts) => {
         assert.equals(stakingModules[i].status, StakingModuleStatus.Active)
         assert.equals(stakingModules[i].lastDepositAt, 0)
         assert.equals(stakingModules[i].lastDepositBlock, 0)
+      }
+    })
+
+    it('get staking module ids', async () => {
+      const stakingModules = await app.getStakingModules()
+      const stakingModuleIds = await app.getStakingModuleIds()
+
+      for (let i = 0; i < stakingModules.length; i++) {
+        assert.equals(stakingModules[i].id, stakingModuleIds[i])
       }
     })
 
@@ -571,6 +624,16 @@ contract('StakingRouter', (accounts) => {
       )
     })
 
+    it('set staking module status reverts if status is the same', async () => {
+      const module = await app.getStakingModule(stakingModulesParams[0].expectedModuleId)
+      await assert.revertsWithCustomError(
+        app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, module.status, {
+          from: appManager
+        }),
+        `ErrorStakingModuleStatusTheSame()`
+      )
+    })
+
     it('set staking module status', async () => {
       const tx = await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Stopped, {
         from: appManager
@@ -602,6 +665,10 @@ contract('StakingRouter', (accounts) => {
     })
 
     it('pause staking module does not allowed at not active staking module', async () => {
+      await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Active, {
+        from: appManager
+      })
+
       await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Stopped, {
         from: appManager
       })

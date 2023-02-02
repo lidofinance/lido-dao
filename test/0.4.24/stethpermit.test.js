@@ -5,6 +5,7 @@ const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/ass
 const { assertRevert } = require('../helpers/assertThrow')
 const { signPermit, signTransferAuthorization, makeDomainSeparator } = require('./helpers/permit_helpers')
 const { hexStringFromBuffer } = require('./helpers/sign_utils')
+const { ETH } = require('../helpers/utils')
 
 const EIP712StETH = artifacts.require('EIP712StETH')
 const StETHPermit = artifacts.require('StETHPermitMock')
@@ -72,7 +73,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       assertEvent(
         receipt,
         'Approval',
-        { 'owner': owner, 'spender': spender, 'value': bn(value) }
+        { expectedArgs: { owner: owner, spender: spender, value: bn(value) } }
       )
 
       assertBn(await stEthPermit.nonces(owner), bn(1))
@@ -92,7 +93,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       assertEvent(
         receipt2,
         'Approval',
-        { 'owner': owner, 'spender': spender, 'value': bn(value) }
+        { expectedArgs: { owner: owner, spender: spender, value: bn(value) } }
       )
 
       assertBn(await stEthPermit.nonces(owner), bn(2))
@@ -151,6 +152,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
 
       // unlock bob account (allow transactions originated from bob.address)
       await ethers.provider.send('hardhat_impersonateAccount', [bob.address])
+      await web3.eth.sendTransaction({ to: bob.address, from: accounts[0], value: ETH(10) })
 
       // even Bob himself can't call permit with the invalid sig
       await assertRevert(
@@ -185,7 +187,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
         assertEvent(
           receipt,
           'Approval',
-          { 'owner': owner, 'spender': spender, 'value': bn(value) }
+          { expectedArgs: { owner: owner, spender: spender, value: bn(value) } }
         )
       }
     })
@@ -225,6 +227,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
 
       // unlock bob account (allow transactions originated from bob.address)
       await ethers.provider.send('hardhat_impersonateAccount', [alice.address])
+      await web3.eth.sendTransaction({ to: alice.address, from: accounts[0], value: ETH(10) })
 
       // try to submit the permit again from Alice herself
       await assertRevert(

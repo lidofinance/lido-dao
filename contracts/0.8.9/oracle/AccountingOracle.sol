@@ -88,16 +88,16 @@ contract AccountingOracle is BaseOracle {
     error UnexpectedExtraDataIndex(uint256 expectedIndex, uint256 receivedIndex);
     error InvalidExtraDataSortOrder();
 
-    event DataBoundraiesSet(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount);
+    event DataBoundariesSet(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount);
     event ExtraDataSubmitted(uint256 indexed refSlot, uint256 itemsProcessed, uint256 itemsCount);
 
-    event WarnExtraDataIncomleteProcessing(
+    event WarnExtraDataIncompleteProcessing(
         uint256 indexed refSlot,
         uint256 processedItemsCount,
         uint256 itemsCount
     );
 
-    struct DataBoundraies {
+    struct DataBoundaries {
         uint64 maxExitedValidatorsPerDay;
         uint64 maxExtraDataListItemsCount;
     }
@@ -111,14 +111,14 @@ contract AccountingOracle is BaseOracle {
         bytes32 dataHash;
     }
 
-    /// @notice An ACL role granting the permission to submit the data for a commitee report.
+    /// @notice An ACL role granting the permission to submit the data for a committee report.
     bytes32 public constant SUBMIT_DATA_ROLE = keccak256("SUBMIT_DATA_ROLE");
 
     /// @notice An ACL role granting the permission to set report data safety boundaries.
     bytes32 constant public MANAGE_DATA_BOUNDARIES_ROLE = keccak256("MANAGE_DATA_BOUNDARIES_ROLE");
 
 
-    /// @dev Storage slot: DataBoundraies dataBoundaries
+    /// @dev Storage slot: DataBoundaries dataBoundaries
     bytes32 internal constant DATA_BOUNDARIES_POSITION =
         keccak256("lido.AccountingOracle.dataBoundaries");
 
@@ -157,7 +157,7 @@ contract AccountingOracle is BaseOracle {
         uint256 maxExitedValidatorsPerDay,
         uint256 maxExtraDataListItemsCount
     ) {
-        DataBoundraies memory b = _storageDataBoundaries().value;
+        DataBoundaries memory b = _storageDataBoundaries().value;
         return (b.maxExitedValidatorsPerDay, b.maxExtraDataListItemsCount);
     }
 
@@ -302,7 +302,7 @@ contract AccountingOracle is BaseOracle {
     /// each item occupying 32 bytes. The Solidity equivalent of the hash calculation code would
     /// be the following (where `array` has the uint256[] type):
     ///
-    /// keccac256(abi.encodePacked(array))
+    /// keccak256(abi.encodePacked(array))
     ///
     uint256 public constant EXTRA_DATA_FORMAT_LIST = 0;
 
@@ -427,11 +427,11 @@ contract AccountingOracle is BaseOracle {
     function _setDataBoundaries(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount)
         internal
     {
-        _storageDataBoundaries().value = DataBoundraies({
+        _storageDataBoundaries().value = DataBoundaries({
             maxExitedValidatorsPerDay: maxExitedValidatorsPerDay.toUint64(),
             maxExtraDataListItemsCount: maxExtraDataListItemsCount.toUint64()
         });
-        emit DataBoundraiesSet(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
+        emit DataBoundariesSet(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
     }
 
     function _handleConsensusReport(
@@ -441,7 +441,7 @@ contract AccountingOracle is BaseOracle {
     ) internal override {
         ExtraDataProcessingState memory state = _storageExtraDataProcessingState().value;
         if (state.refSlot == prevProcessingRefSlot && state.itemsProcessed < state.itemsCount) {
-            emit WarnExtraDataIncomleteProcessing(
+            emit WarnExtraDataIncompleteProcessing(
                 prevProcessingRefSlot,
                 state.itemsProcessed,
                 state.itemsCount);
@@ -456,21 +456,21 @@ contract AccountingOracle is BaseOracle {
     }
 
     function _handleConsensusReportData(ReportData calldata data, uint256 slotsElapsed) internal {
-        DataBoundraies memory boudaries = _storageDataBoundaries().value;
+        DataBoundaries memory boundaries = _storageDataBoundaries().value;
 
         if (data.extraDataFormat != EXTRA_DATA_FORMAT_LIST) {
             revert UnsupportedExtraDataFormat(data.extraDataFormat);
         }
 
-        if (data.extraDataItemsCount > boudaries.maxExtraDataListItemsCount) {
+        if (data.extraDataItemsCount > boundaries.maxExtraDataListItemsCount) {
             revert MaxExtraDataItemsCountExceeded(
-                boudaries.maxExtraDataListItemsCount,
+                boundaries.maxExtraDataListItemsCount,
                 data.extraDataItemsCount
             );
         }
 
         _processStakingRouterExitedKeysByModule(
-            boudaries,
+            boundaries,
             data.stakingModuleIdsWithNewlyExitedValidators,
             data.numExitedValidatorsByStakingModule,
             slotsElapsed
@@ -498,7 +498,7 @@ contract AccountingOracle is BaseOracle {
     }
 
     function _processStakingRouterExitedKeysByModule(
-        DataBoundraies memory boudaries,
+        DataBoundaries memory boundaries,
         uint256[] calldata stakingModuleIds,
         uint256[] calldata numExitedValidatorsByStakingModule,
         uint256 slotsElapsed
@@ -539,9 +539,9 @@ contract AccountingOracle is BaseOracle {
             (exitedValidators - prevExitedValidators) * (1 days) /
             (SECONDS_PER_SLOT * slotsElapsed);
 
-        if (exitedValidatorsPerDay > boudaries.maxExitedValidatorsPerDay) {
+        if (exitedValidatorsPerDay > boundaries.maxExitedValidatorsPerDay) {
             revert ExitedValidatorsLimitExceeded(
-                boudaries.maxExitedValidatorsPerDay,
+                boundaries.maxExitedValidatorsPerDay,
                 exitedValidatorsPerDay
             );
         }
@@ -738,11 +738,11 @@ contract AccountingOracle is BaseOracle {
     /// Storage helpers
     ///
 
-    struct StorageDataBoudaries {
-        DataBoundraies value;
+    struct StorageDataBoundaries {
+        DataBoundaries value;
     }
 
-    function _storageDataBoundaries() internal pure returns (StorageDataBoudaries storage r) {
+    function _storageDataBoundaries() internal pure returns (StorageDataBoundaries storage r) {
         bytes32 position = DATA_BOUNDARIES_POSITION;
         assembly { r.slot := position }
     }
