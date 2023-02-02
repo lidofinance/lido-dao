@@ -12,7 +12,6 @@ const { pad, hexConcat, ETH, changeEndianness } = require('./helpers/utils')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const Lido = artifacts.require('LidoMock.sol')
-const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContract = artifacts.require('DepositContract')
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const EIP712StETH = artifacts.require('EIP712StETH')
@@ -30,13 +29,12 @@ const CALLDATA = '0x0'
 
 const tokens = ETH
 
-contract('Lido with official deposit contract', ([appManager, voting, user1, user2, user3, nobody, depositor, treasury]) => {
-  let appBase, stEthBase, nodeOperatorsRegistryBase, app, token, oracle, depositContract, operators, stakingRouter
+contract('Lido with official deposit contract', ([appManager, oracle, voting, user1, user2, user3, nobody, depositor, treasury]) => {
+  let appBase, stEthBase, nodeOperatorsRegistryBase, app, token, depositContract, operators, stakingRouter
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
     appBase = await Lido.new()
-    oracle = await OracleMock.new()
     nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new()
   })
 
@@ -120,7 +118,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
 
     // Initialize the app's proxy.
     await app.initialize(
-      oracle.address,
+      oracle,
       treasury,
       stakingRouter.address,
       depositor,
@@ -128,8 +126,6 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
       withdrawalQueue.address,
       eip712StETH.address
     )
-
-    await oracle.setPool(app.address)
   })
 
   const checkStat = async ({ depositedValidators, beaconBalance }) => {

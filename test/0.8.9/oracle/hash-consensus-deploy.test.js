@@ -34,6 +34,9 @@ const CONSENSUS_VERSION = 1
 
 async function deployHashConsensus(admin, {
   reportProcessor = null,
+  slotsPerEpoch = SLOTS_PER_EPOCH,
+  secondsPerSlot = SECONDS_PER_SLOT,
+  genesisTime = GENESIS_TIME,
   epochsPerFrame = EPOCHS_PER_FRAME,
   initialEpoch = 1
 } = {}) {
@@ -42,9 +45,9 @@ async function deployHashConsensus(admin, {
   }
 
   const consensus = await HashConsensus.new(
-    SLOTS_PER_EPOCH,
-    SECONDS_PER_SLOT,
-    GENESIS_TIME,
+    slotsPerEpoch,
+    secondsPerSlot,
+    genesisTime,
     epochsPerFrame,
     initialEpoch,
     admin,
@@ -52,7 +55,7 @@ async function deployHashConsensus(admin, {
     { from: admin }
   )
 
-  await consensus.setTime(GENESIS_TIME + initialEpoch * SECONDS_PER_EPOCH)
+  await consensus.setTime(genesisTime + initialEpoch * slotsPerEpoch * secondsPerSlot)
 
   await consensus.grantRole(await consensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(), admin, { from: admin })
   await consensus.grantRole(await consensus.DISABLE_CONSENSUS_ROLE(), admin, { from: admin })

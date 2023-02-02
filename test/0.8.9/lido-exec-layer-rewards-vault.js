@@ -9,19 +9,17 @@ const { StETH, ETH } = require('../helpers/utils')
 const LidoELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const LidoMock = artifacts.require('LidoMock.sol')
-const LidoOracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const EIP712StETH = artifacts.require('EIP712StETH')
 
 const ERC20OZMock = artifacts.require('ERC20OZMock.sol')
 const ERC721OZMock = artifacts.require('ERC721OZMock.sol')
 
-contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, depositor, anotherAccount, treasury, ...otherAccounts]) => {
+contract('LidoExecutionLayerRewardsVault', ([appManager, voting, oracle, deployer, depositor, anotherAccount, treasury, ...otherAccounts]) => {
   let lido, elRewardsVault
 
   beforeEach('deploy lido with dao', async () => {
     const lidoBase = await LidoMock.new({ from: deployer })
-    const oracle = await LidoOracleMock.new({ from: deployer })
     const depositContract = await DepositContractMock.new({ from: deployer })
     const nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new({ from: deployer })
 
@@ -45,7 +43,7 @@ contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, depos
 
     // Initialize the app's proxy.
     await lido.initialize(
-      oracle.address,
+      oracle,
       treasury,
       ZERO_ADDRESS,
       ZERO_ADDRESS,
@@ -54,7 +52,6 @@ contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, depos
       eip712StETH.address
     )
 
-    await oracle.setPool(lido.address)
     await depositContract.reset()
   })
 

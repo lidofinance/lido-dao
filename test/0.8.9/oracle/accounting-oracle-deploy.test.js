@@ -88,6 +88,7 @@ function calcExtraDataHash(extraDataItems) {
 module.exports = {
   SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, SECONDS_PER_EPOCH,
   EPOCHS_PER_FRAME, SLOTS_PER_FRAME, SECONDS_PER_FRAME,
+  ZERO_HASH, HASH_1, HASH_2, HASH_3, HASH_4, HASH_5,
   computeSlotAt, computeEpochAt, computeEpochFirstSlotAt,
   computeEpochFirstSlot, computeTimestampAtSlot, computeTimestampAtEpoch,
   ZERO_HASH, CONSENSUS_VERSION,
@@ -95,6 +96,7 @@ module.exports = {
   MAX_EXITED_VALS_PER_HOUR, MAX_EXITED_VALS_PER_DAY, MAX_EXTRA_DATA_LIST_LEN,
   EXTRA_DATA_FORMAT_LIST, EXTRA_DATA_TYPE_STUCK_VALIDATORS, EXTRA_DATA_TYPE_EXITED_VALIDATORS,
   deployAndConfigureAccountingOracle, deployAccountingOracleSetup, initAccountingOracle,
+  deployMockLegacyOracle, deployMockLidoAndStakingRouter,
   getReportDataItems, calcReportDataHash, encodeExtraDataItem, encodeExtraDataItems,
   calcExtraDataHash,
 }
@@ -120,7 +122,10 @@ async function deployMockLidoAndStakingRouter() {
 
 async function deployAccountingOracleSetup(admin, {
   initialEpoch = null,
+  epochsPerFrame = EPOCHS_PER_FRAME,
+  slotsPerEpoch = SLOTS_PER_EPOCH,
   secondsPerSlot = SECONDS_PER_SLOT,
+  genesisTime = GENESIS_TIME,
   getLidoAndStakingRouter = deployMockLidoAndStakingRouter,
   getLegacyOracle = deployMockLegacyOracle,
 } = {}) {
@@ -128,16 +133,22 @@ async function deployAccountingOracleSetup(admin, {
   const legacyOracle = await getLegacyOracle()
 
   if (initialEpoch == null) {
-    // set initial epoch to the first epoch of the next frame
-    const epochsPerFrame = +(await legacyOracle.getBeaconSpec()).epochsPerFrame
     initialEpoch = +await legacyOracle.getLastCompletedEpochId() + epochsPerFrame
   }
 
   const oracle = await AccountingOracle.new(lido.address, secondsPerSlot, {from: admin})
-  const {consensus} = await deployHashConsensus(admin, {reportProcessor: oracle, initialEpoch})
+
+  const {consensus} = await deployHashConsensus(admin, {
+    reportProcessor: oracle,
+    epochsPerFrame,
+    slotsPerEpoch,
+    secondsPerSlot,
+    genesisTime,
+    initialEpoch
+  })
 
   // pretend we're at the first slot of the initial frame's epoch
-  await consensus.setTime(GENESIS_TIME + initialEpoch * SLOTS_PER_EPOCH * SECONDS_PER_SLOT)
+  await consensus.setTime(genesisTime + initialEpoch * slotsPerEpoch * secondsPerSlot)
 
   return {lido, stakingRouter, legacyOracle, oracle, consensus}
 }

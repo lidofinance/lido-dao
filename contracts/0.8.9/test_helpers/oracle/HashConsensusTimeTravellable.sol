@@ -7,7 +7,7 @@ import { HashConsensus } from "../../oracle/HashConsensus.sol";
 
 
 contract HashConsensusTimeTravellable is HashConsensus {
-    uint256 internal _time = 1000;
+    uint256 internal _time = 2513040315;
 
     constructor(
         uint256 slotsPerEpoch,

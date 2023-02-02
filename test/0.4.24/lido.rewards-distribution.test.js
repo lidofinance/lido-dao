@@ -6,7 +6,6 @@ const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistryMock')
 
 const Lido = artifacts.require('LidoMock.sol')
-const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const ModuleSolo = artifacts.require('ModuleSolo.sol')
@@ -27,17 +26,30 @@ const cfgCommunity = {
   targetShare: 5000
 }
 
-contract('Lido: staking router reward distribution', ([appManager, voting, treasury, depositor, user2]) => {
-  let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, curatedModule, stakingRouter, soloModule
+contract('Lido: staking router reward distribution', ([appManager, voting, treasury, oracle, depositor, user2]) => {
+  let appBase, nodeOperatorsRegistryBase, app, depositContract, curatedModule, stakingRouter, soloModule
   let dao, acl
+  let elRewardsVault
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
     appBase = await Lido.new()
-    oracle = await OracleMock.new()
     depositContract = await DepositContractMock.new()
     nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new()
   })
+
+  const pushOracleReport = async (epochId, clValidators, clBalance) => {
+    const elRewardsVaultBalance = await web3.eth.getBalance(elRewardsVault.address)
+    return await app.handleOracleReport(
+        clValidators,
+        clBalance,
+        0,
+        elRewardsVaultBalance,
+        0,
+        0,
+        {from: oracle}
+    )
+  }
 
   beforeEach('deploy dao and app', async () => {
     ;({ dao, acl } = await newDao(appManager))
@@ -78,7 +90,7 @@ contract('Lido: staking router reward distribution', ([appManager, voting, treas
     })
 
     const eip712StETH = await EIP712StETH.new()
-    const elRewardsVault = await ELRewardsVault.new(app.address, treasury)
+    elRewardsVault = await ELRewardsVault.new(app.address, treasury)
 
     stakingRouter = await StakingRouter.new(depositContract.address)
     // initialize
@@ -129,7 +141,7 @@ contract('Lido: staking router reward distribution', ([appManager, voting, treas
 
     // Initialize the app's proxy.
     await app.initialize(
-      oracle.address,
+      oracle,
       treasury,
       stakingRouter.address,
       depositor,
@@ -144,7 +156,6 @@ contract('Lido: staking router reward distribution', ([appManager, voting, treas
     assert((await app.isStakingPaused()) === false)
     assert((await app.isStopped()) === false)
 
-    await oracle.setPool(app.address)
     await depositContract.reset()
   })
 
@@ -156,7 +167,7 @@ contract('Lido: staking router reward distribution', ([appManager, voting, treas
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
     const treasuryBalanceBefore = await app.balanceOf(treasury)
-    await oracle.reportBeacon(100, 0, beaconBalance, { from: appManager })
+    await pushOracleReport(100, 0, beaconBalance, { from: appManager })
 
     const treasuryBalanceAfter = await app.balanceOf(treasury)
     assert(treasuryBalanceAfter.gt(treasuryBalanceBefore))
@@ -174,7 +185,7 @@ contract('Lido: staking router reward distribution', ([appManager, voting, treas
       moduleBalanceBefore.push(await app.balanceOf(recipients[i]))
     }
 
-    await oracle.reportBeacon(100, 0, beaconBalance, { from: appManager })
+    await pushOracleReport(100, 0, beaconBalance)
 
     for (let i = 0; i < recipients.length; i++) {
       const moduleBalanceAfter = await app.balanceOf(recipients[i])
