@@ -477,13 +477,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
             NodeOperator storage nodeOperator = _nodeOperators[nodeOperatorId];
             if (!nodeOperator.active) continue;
 
-            nodeOperatorIds[activeNodeOperatorIndex] = nodeOperatorId;
-            exitedSigningKeysCount[activeNodeOperatorIndex] = nodeOperator.exitedSigningKeysCount;
             uint256 depositedSigningKeysCount = nodeOperator.depositedSigningKeysCount;
             uint256 vettedSigningKeysCount = nodeOperator.vettedSigningKeysCount;
 
             // the node operator has no available signing keys
             if (depositedSigningKeysCount == vettedSigningKeysCount) continue;
+
+            nodeOperatorIds[activeNodeOperatorIndex] = nodeOperatorId;
+            exitedSigningKeysCount[activeNodeOperatorIndex] = nodeOperator.exitedSigningKeysCount;
 
             activeKeyCountsAfterAllocation[activeNodeOperatorIndex] = depositedSigningKeysCount.sub(
                 exitedSigningKeysCount[activeNodeOperatorIndex]
@@ -902,8 +903,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         uint256 depositedSigningKeysCount = totalSigningKeysStats.depositedSigningKeysCount;
 
         exitedValidatorsCount = totalSigningKeysStats.exitedSigningKeysCount;
-        activeValidatorsKeysCount = depositedSigningKeysCount.sub(exitedValidatorsCount);
-        readyToDepositValidatorsKeysCount = vettedSigningKeysCount.sub(depositedSigningKeysCount);
+        activeValidatorsKeysCount = depositedSigningKeysCount - exitedValidatorsCount;
+        readyToDepositValidatorsKeysCount = vettedSigningKeysCount - depositedSigningKeysCount;
     }
 
     /// @notice Returns the validators stats of given node operator
@@ -912,7 +913,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     /// @return activeValidatorsKeysCount Total number of validators in active state
     /// @return readyToDepositValidatorsKeysCount Total number of validators ready to be deposited
     function getValidatorsKeysStats(uint256 _nodeOperatorId)
-        public
+        external
         view
         returns (
             uint256 exitedValidatorsCount,
