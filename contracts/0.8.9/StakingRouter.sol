@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 
 // SPDX-License-Identifier: GPL-3.0
 
@@ -99,7 +99,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
 
     constructor(address _depositContract) BeaconChainDepositor(_depositContract) {
         /// @dev lock version in implementation to avoid initialize() call
-        ///      DEFAULT_ADMIN_ROLE will remain unset, i.e. no ability to add new members ro roles
+        ///      DEFAULT_ADMIN_ROLE will remain unset, i.e. no ability to add new members or roles
         _setContractVersion(type(uint256).max);
     }
 
@@ -245,13 +245,6 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     /**
-     *  @dev Returns staking module by index
-     */
-    function getStakingModuleByIndex(uint256 _stakingModuleIdndex) external view returns (StakingModule memory) {
-        return _getStakingModuleByIndex(_stakingModuleIdndex);
-    }
-
-    /**
      * @dev Returns status of staking module
      */
     function getStakingModuleStatus(uint256 _stakingModuleId) public view
@@ -349,15 +342,19 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
     }
 
     /**
-     * @dev calculate max count of depositable staking module keys based on the current Staking Router balance and buffered Ether amoutn
+     * @dev calculate max count of depositable staking module keys based on the current Staking Router balance and buffered Ether amount
      *
-     * @param _stakingModuleIndex index of the staking module to be deposited
+     * @param _stakingModuleId id of the staking module to be deposited
      * @return max depositable keys count
      */
-    function getStakingModuleMaxDepositableKeys(uint256 _stakingModuleIndex) public view returns (uint256) {
+    function getStakingModuleMaxDepositableKeys(uint256 _stakingModuleId) public view
+        validStakingModuleId(_stakingModuleId)
+        returns (uint256)
+    {
+        uint256 stakingModuleIndex = _getStakingModuleIndexById(uint24(_stakingModuleId));
         uint256 _keysToAllocate = getLido().getBufferedEther() / DEPOSIT_SIZE;
-        (, uint256[] memory newKeysAllocation, StakingModuleCache[] memory stakingModuleCache) = _getKeysAllocation(_keysToAllocate);
-        return newKeysAllocation[_stakingModuleIndex] - stakingModuleCache[_stakingModuleIndex].activeKeysCount;
+        (, uint256[] memory newKeysAllocation, StakingModuleCache[] memory stakingModulesCache) = _getKeysAllocation(_keysToAllocate);
+        return newKeysAllocation[stakingModuleIndex] - stakingModulesCache[stakingModuleIndex].activeKeysCount;
     }
 
     /**
