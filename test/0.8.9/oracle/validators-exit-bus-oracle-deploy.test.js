@@ -103,7 +103,7 @@ async function deployExitBusOracle(admin, {dataSubmitter = null} = {}) {
 
   assertEvent(tx, 'ConsensusVersionSet', {expectedArgs: {version: CONSENSUS_VERSION, prevVersion: 0}})
 
-  assertEvent(tx, 'DataBoundraiesSet', {expectedArgs: {
+  assertEvent(tx, 'DataBoundariesSet', {expectedArgs: {
     refSlot: +(await consensus.getCurrentFrame()).refSlot,
     maxExitRequestsPerReport: MAX_REQUESTS_PER_REPORT,
     maxExitRequestsListLength: MAX_REQUESTS_LIST_LENGTH,
