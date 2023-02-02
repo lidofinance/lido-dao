@@ -13,6 +13,12 @@ import "../Lido.sol";
 
 import "./ReportUtils.sol";
 
+interface IBeaconReportReceiver {
+    function processLidoOracleReport(uint256 _postTotalPooledEther,
+                                     uint256 _preTotalPooledEther,
+                                     uint256 _timeElapsed) external;
+}
+
 
 /**
  * @title Implementation of an ETH 2.0 -> ETH oracle

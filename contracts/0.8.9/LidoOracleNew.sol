@@ -8,12 +8,6 @@ import { AccessControlEnumerable } from "./utils/access/AccessControlEnumerable.
 import "./CommitteeQuorum.sol";
 import "./ReportEpochChecker.sol";
 
-interface INodeOperatorsRegistry {
-    /**
-      * @notice Report `_stoppedIncrement` more stopped validators of the node operator #`_id`
-      */
-    function reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement) external;
-}
 
 /**
  * @notice Part of Lido interface required for `LidoOracleNew` to work

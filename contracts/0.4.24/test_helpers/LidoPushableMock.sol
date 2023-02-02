@@ -51,6 +51,7 @@ contract LidoPushableMock is Lido {
 
     function getWithdrawalCredentials() public view returns (bytes32) {
         IStakingRouter stakingRouter = IStakingRouter(getLidoLocator().getStakingRouter());
+
         if (address(stakingRouter) != address(0)) {
             return stakingRouter.getWithdrawalCredentials();
         }

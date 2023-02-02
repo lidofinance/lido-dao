@@ -8,14 +8,9 @@ pragma solidity 0.4.24;
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 
-
 import "./interfaces/ILidoLocator.sol";
-import "./interfaces/INodeOperatorsRegistry.sol";
-import "./interfaces/ILidoExecutionLayerRewardsVault.sol";
-import "./interfaces/IWithdrawalQueue.sol";
-import "./interfaces/IWithdrawalVault.sol";
-import "./interfaces/IStakingRouter.sol";
 import "./interfaces/ISelfOwnedStETHBurner.sol";
+
 import "./lib/StakeLimitUtils.sol";
 import "./lib/PositiveTokenRebaseLimiter.sol";
 
@@ -30,6 +25,45 @@ interface IPostTokenRebaseReceiver {
         uint256 sharesMintedAsFees,
         uint256 timeElapsed
     ) external;
+}
+
+interface ILidoExecutionLayerRewardsVault {
+    function withdrawRewards(uint256 _maxAmount) external returns (uint256 amount);
+}
+
+interface IWithdrawalVault {
+    function withdrawWithdrawals(uint256 _amount) external;
+}
+
+interface IStakingRouter {
+    function deposit(
+        uint256 maxDepositsCount,
+        uint256 stakingModuleId,
+        bytes depositCalldata
+    ) external payable returns (uint256);
+    function getStakingRewardsDistribution()
+        external
+        view
+        returns (
+            address[] memory recipients,
+            uint256[] memory stakingModuleIds,
+            uint96[] memory stakingModuleFees,
+            uint96 totalFee,
+            uint256 precisionPoints
+        );
+    function getWithdrawalCredentials() external view returns (bytes32);
+    function reportRewardsMinted(uint256[] _stakingModuleIds, uint256[] _totalShares) external;
+}
+
+interface IWithdrawalQueue {
+    function finalizationBatch(uint256 _lastRequestIdToFinalize, uint256 _shareRate)
+        external
+        view
+        returns (uint128 eth, uint128 shares);
+    function finalize(uint256 _lastIdToFinalize) external payable;
+    function isPaused() external view returns (bool);
+    function unfinalizedStETH() external view returns (uint256);
+    function isBunkerModeActive() external view returns (bool);
 }
 
 /**
@@ -461,7 +495,7 @@ contract Lido is StETHPermit, AragonApp {
     * @param _clBalance sum of all Lido validators' balances on Consensus Layer
     * @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
     * @param _elRewardsVaultBalance elRewards vault balance on Execution Layer for report block
-    * @param _requestIdToFinalizeUpTo rigth boundary of requestId range if equals 0, no requests should be finalized
+    * @param _requestIdToFinalizeUpTo right boundary of requestId range if equals 0, no requests should be finalized
     * @param _finalizationShareRate share rate that should be used for finalization
     *
     * @return totalPooledEther amount of ether in the protocol after report
@@ -569,6 +603,7 @@ contract Lido is StETHPermit, AragonApp {
     function getWithdrawalCredentials() public view returns (bytes32) {
         return IStakingRouter(getLidoLocator().getStakingRouter()).getWithdrawalCredentials();
     }
+
 
     /// @dev updates Consensus Layer state according to the current report
     function _processClStateUpdate(

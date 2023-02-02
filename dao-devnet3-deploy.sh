@@ -93,7 +93,7 @@ mv contracts/common/lib/MinFirstAllocationStrategy.sol contracts/common/lib/MinF
 mv contracts/common/lib/MinFirstAllocationStrategy.sol.4 contracts/common/lib/MinFirstAllocationStrategy.sol
 mv contracts/0.8.9/StakingRouter.sol contracts/0.8.9/StakingRouter.sol.bkp
 mv contracts/0.8.9/test_helpers/StakingRouterMock.sol contracts/0.8.9/test_helpers/StakingRouterMock.sol.bkp
-mv contracts/0.8.9/test_helpers/MinFirstAllocationStrategyTest.sol contracts/0.8.9/test_helpers/MinFirstAllocationStrategyTest.sol.bkp
+mv contracts/0.8.9/test_helpers/MinFirstAllocationStrategyConsumerMockModernVersion.sol contracts/0.8.9/test_helpers/MinFirstAllocationStrategyConsumerMockModernVersion.sol.bkp
 
 yarn hardhat --network $NETWORK run ./scripts/multisig/04-publish-app-frontends.js
 msg "Frontend published to IPFS"
@@ -102,7 +102,7 @@ mv contracts/common/lib/MinFirstAllocationStrategy.sol contracts/common/lib/MinF
 mv contracts/common/lib/MinFirstAllocationStrategy.sol.48 contracts/common/lib/MinFirstAllocationStrategy.sol
 mv contracts/0.8.9/StakingRouter.sol.bkp contracts/0.8.9/StakingRouter.sol
 mv contracts/0.8.9/test_helpers/StakingRouterMock.sol.bkp contracts/0.8.9/test_helpers/StakingRouterMock.sol
-mv contracts/0.8.9/test_helpers/MinFirstAllocationStrategyTest.sol.bkp contracts/0.8.9/test_helpers/MinFirstAllocationStrategyTest.sol
+mv contracts/0.8.9/test_helpers/MinFirstAllocationStrategyConsumerMockModernVersion.sol.bkp contracts/0.8.9/test_helpers/MinFirstAllocationStrategyConsumerMockModernVersion.sol
 
 yarn hardhat --network $NETWORK run ./scripts/multisig/05-deploy-apm.js
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-03-deploy-apm.json

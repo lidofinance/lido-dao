@@ -9,26 +9,58 @@ import {SafeMath} from "@aragon/os/contracts/lib/math/SafeMath.sol";
 import {SafeMath64} from "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import {UnstructuredStorage} from "@aragon/os/contracts/common/UnstructuredStorage.sol";
 
-import {IStakingModule} from "../interfaces/IStakingModule.sol";
-import {INodeOperatorsRegistry} from "../interfaces/INodeOperatorsRegistry.sol";
-import {IStETH} from "../interfaces/IStETH.sol";
-
 import {Math64} from "../lib/Math64.sol";
 import {BytesLib} from "../lib/BytesLib.sol";
 import {MemUtils} from "../../common/lib/MemUtils.sol";
 import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
 import {SigningKeysStats} from "../lib/SigningKeysStats.sol";
 
-/// @title Node Operator registry implementation
-///
-/// See the comment of `INodeOperatorsRegistry`.
-///
+
+interface IStETH {
+    function sharesOf(address _account) external view returns (uint256);
+    function transferShares(address _recipient, uint256 _sharesAmount) external returns (uint256);
+}
+
+/// @dev This interface describes only tiny part of the full interface, which NodeOperatorsRegistry must implement
+///      See 0.8.9/interface/IStakingModule.sol for the full version.
+///      We don't inherit 0.8.9 IStakingModule due to the solidity version conflict.
+interface IStakingModule {
+    event ValidatorsKeysNonceChanged(uint256 validatorsKeysNonce);
+}
+
+
+/// @title Node Operator registry
+/// @notice Node Operator registry manages signing keys and other node operator data.
+/// @dev Must implement the full version of IStakingModule interface, not only the one declared locally.
+///      It's also responsible for distributing rewards to node operators.
 /// NOTE: the code below assumes moderate amount of node operators, i.e. up to `MAX_NODE_OPERATORS_COUNT`.
-contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingModule {
+contract NodeOperatorsRegistry is AragonApp, IStakingModule {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
     using UnstructuredStorage for bytes32;
     using SigningKeysStats for SigningKeysStats.State;
+
+    //
+    // EVENTS
+    //
+    event NodeOperatorAdded(uint256 nodeOperatorId, string name, address rewardAddress, uint64 stakingLimit);
+    event NodeOperatorActiveSet(uint256 indexed nodeOperatorId, bool active);
+    event NodeOperatorNameSet(uint256 indexed nodeOperatorId, string name);
+    event NodeOperatorRewardAddressSet(uint256 indexed nodeOperatorId, address rewardAddress);
+    event NodeOperatorStakingLimitSet(uint256 indexed nodeOperatorId, uint64 stakingLimit);
+    event NodeOperatorTotalStoppedValidatorsReported(uint256 indexed nodeOperatorId, uint64 totalStopped);
+    event NodeOperatorTotalKeysTrimmed(uint256 indexed nodeOperatorId, uint64 totalKeysTrimmed);
+    event SigningKeyAdded(uint256 indexed nodeOperatorId, bytes pubkey);
+    event SigningKeyRemoved(uint256 indexed nodeOperatorId, bytes pubkey);
+    event KeysOpIndexSet(uint256 keysOpIndex);
+    event ContractVersionSet(uint256 version);
+    event StakingModuleTypeSet(bytes32 moduleType);
+    event RewardsDistributed(address indexed rewardAddress, uint256 sharesAmount);
+    event StethContractSet(address stethAddress);
+    event VettedSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 approvedValidatorsCount);
+    event DepositedSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 depositedValidatorsCount);
+    event ExitedSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 exitedValidatorsCount);
+    event TotalSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 totalValidatorsCount);
 
     //
     // ACL
@@ -212,7 +244,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         emit NodeOperatorAdded(id, _name, _rewardAddress, 0);
     }
 
-    // @notice Activates deactivated node operator with given id
     /// @notice Activates deactivated node operator with given id
     /// @param _nodeOperatorId Node operator id to deactivate
     function activateNodeOperator(uint256 _nodeOperatorId) external {
@@ -222,12 +253,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         require(!nodeOperator.active, "NODE_OPERATOR_ALREADY_ACTIVATED");
 
-        uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
-        ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.add(1));
+        ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(getActiveNodeOperatorsCount() + 1);
 
         nodeOperator.active = true;
 
-        emit NodeOperatorActivated(_nodeOperatorId);
+        emit NodeOperatorActiveSet(_nodeOperatorId, true);
         _increaseValidatorsKeysNonce();
     }
 
@@ -245,7 +275,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
         nodeOperator.active = false;
 
-        emit NodeOperatorDeactivated(_nodeOperatorId);
+        emit NodeOperatorActiveSet(_nodeOperatorId, false);
 
         uint64 vettedSigningKeysCount = nodeOperator.vettedSigningKeysCount;
         uint64 depositedSigningKeysCount = nodeOperator.depositedSigningKeysCount;
@@ -554,16 +584,21 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         signatures = MemUtils.unsafeAllocateBytes(_keysCountToLoad * SIGNATURE_LENGTH);
 
         uint256 loadedKeysCount = 0;
+        uint64 depositedSigningKeysCountBefore;
+        uint64 depositedSigningKeysCountAfter;
+        bytes memory pubkey;
+        bytes memory signature;
+        uint256 keyIndex;
         for (uint256 i = 0; i < _nodeOperatorIds.length; ++i) {
             NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorIds[i]];
 
-            uint64 depositedSigningKeysCountBefore = nodeOperator.depositedSigningKeysCount;
-            uint64 depositedSigningKeysCountAfter = uint64(_exitedSigningKeysCount[i].add(_activeKeyCountsAfterAllocation[i]));
+            depositedSigningKeysCountBefore = nodeOperator.depositedSigningKeysCount;
+            depositedSigningKeysCountAfter = uint64(_exitedSigningKeysCount[i].add(_activeKeyCountsAfterAllocation[i]));
 
             if (depositedSigningKeysCountBefore == depositedSigningKeysCountAfter) continue;
 
-            for (uint256 keyIndex = depositedSigningKeysCountBefore; keyIndex < depositedSigningKeysCountAfter; ++keyIndex) {
-                (bytes memory pubkey, bytes memory signature) = _loadSigningKey(_nodeOperatorIds[i], keyIndex);
+            for (keyIndex = depositedSigningKeysCountBefore; keyIndex < depositedSigningKeysCountAfter; ++keyIndex) {
+                (pubkey, signature) = _loadSigningKey(_nodeOperatorIds[i], keyIndex);
                 MemUtils.copyBytes(pubkey, publicKeys, loadedKeysCount * PUBKEY_LENGTH);
                 MemUtils.copyBytes(signature, signatures, loadedKeysCount * SIGNATURE_LENGTH);
                 ++loadedKeysCount;
@@ -692,10 +727,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         uint64 totalSigningKeysCount = nodeOperator.totalSigningKeysCount;
+        bytes memory key;
+        bytes memory sig;
         for (uint256 i = 0; i < _keysCount; ++i) {
-            bytes memory key = BytesLib.slice(_publicKeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
+            key = BytesLib.slice(_publicKeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
             require(!_isEmptySigningKey(key), "EMPTY_KEY");
-            bytes memory sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+            sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
 
             _storeSigningKey(_nodeOperatorId, totalSigningKeysCount, key, sig);
             totalSigningKeysCount = totalSigningKeysCount.add(1);
@@ -731,7 +768,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         uint256 _keysCount
     ) external {
         require(_fromIndex <= UINT64_MAX, "FROM_INDEX_TOO_LARGE");
-        require(_keysCount <= UINT64_MAX, "KEYS_COUNT_TOO_LARGE");
+        /// @dev safemath(unit256) checks for overflow on addition, so _keysCount is guaranteed <= UINT64_MAX
+        require(uint256(_fromIndex).add(_keysCount) <= UINT64_MAX, "KEYS_COUNT_TOO_LARGE");
         _removeUnusedSigningKeys(_nodeOperatorId, uint64(_fromIndex), uint64(_keysCount));
     }
 
@@ -754,7 +792,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         uint256 _keysCount
     ) external {
         require(_fromIndex <= UINT64_MAX, "FROM_INDEX_TOO_LARGE");
-        require(_keysCount <= UINT64_MAX, "KEYS_COUNT_TOO_LARGE");
+        /// @dev safemath(unit256) checks for overflow on addition, so _keysCount is guaranteed <= UINT64_MAX
+        require(uint256(_fromIndex).add(_keysCount) <= UINT64_MAX, "KEYS_COUNT_TOO_LARGE");
         _removeUnusedSigningKeys(_nodeOperatorId, uint64(_fromIndex), uint64(_keysCount));
     }
 
@@ -860,11 +899,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         return KEYS_OP_INDEX_POSITION.getStorageUint256();
     }
 
-    /// @notice Return the initialized version of this contract starting from 0
-    function getVersion() external view returns (uint256) {
-        return CONTRACT_VERSION_POSITION.getStorageUint256();
-    }
-
     /// @notice Returns n signing keys of the node operator #`_nodeOperatorId`
     /// @param _nodeOperatorId Node Operator id
     /// @param _offset Offset of the key, starting with 0
@@ -893,12 +927,19 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         signatures = MemUtils.unsafeAllocateBytes(_limit.mul(SIGNATURE_LENGTH));
         used = new bool[](_limit);
 
+        bytes memory pubkey;
+        bytes memory signature;
         for (uint256 index = 0; index < _limit; index++) {
-            (bytes memory pubkey, bytes memory signature) = _loadSigningKey(_nodeOperatorId, _offset.add(index));
+            (pubkey, signature) = _loadSigningKey(_nodeOperatorId, _offset.add(index));
             MemUtils.copyBytes(pubkey, pubkeys, index.mul(PUBKEY_LENGTH));
             MemUtils.copyBytes(signature, signatures, index.mul(SIGNATURE_LENGTH));
             used[index] = (_offset.add(index)) < nodeOperator.depositedSigningKeysCount;
         }
+    }
+
+    /// @notice Return the initialized version of this contract starting from 0
+    function getVersion() external view returns (uint256) {
+        return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
     /// @notice Returns the type of the staking module
@@ -989,13 +1030,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
 
         (address[] memory recipients, uint256[] memory shares) = getRewardsDistribution(sharesToDistribute);
 
-        assert(recipients.length == shares.length);
-
         distributed = 0;
         for (uint256 idx = 0; idx < recipients.length; ++idx) {
+            if (shares[idx] == 0) continue;
             stETH.transferShares(recipients[idx], shares[idx]);
             distributed = distributed.add(shares[idx]);
-            emit RewardsDistributed(idx, shares[idx]);
+            emit RewardsDistributed(recipients[idx], shares[idx]);
         }
     }
 
@@ -1083,6 +1123,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     function _increaseValidatorsKeysNonce() internal {
         uint256 keysOpIndex = KEYS_OP_INDEX_POSITION.getStorageUint256() + 1;
         KEYS_OP_INDEX_POSITION.setStorageUint256(keysOpIndex);
+        /// @dev [DEPRECATED] event preserved for tooling compatibility
         emit KeysOpIndexSet(keysOpIndex);
         emit ValidatorsKeysNonceChanged(keysOpIndex);
     }
