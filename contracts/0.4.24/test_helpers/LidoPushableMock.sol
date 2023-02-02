@@ -19,7 +19,6 @@ contract LidoPushableMock is Lido {
     function initialize(address _oracle) public onlyInit {
         _setProtocolContracts(_oracle, _oracle, address(0));
         _resume();
-        _setMaxPositiveTokenRebase(UNLIMITED_TOKEN_REBASE);
         initialized();
     }
 

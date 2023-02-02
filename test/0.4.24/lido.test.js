@@ -98,9 +98,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await acl.createPermission(voting, app.address, await app.RESUME_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.BURN_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_PROTOCOL_CONTRACTS_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE(), appManager, {
-      from: appManager
-    })
     await acl.createPermission(voting, app.address, await app.STAKING_PAUSE_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.STAKING_CONTROL_ROLE(), appManager, { from: appManager })
 
@@ -275,10 +272,11 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     beforeEach('set up rewarder and limits', async () => {
       rewarder = await RewardEmulatorMock.new(elRewardsVault.address)
 
-      const maxPositiveTokenRebase = bn(1).mul(bn(10).pow(bn(8))) // 10%
-      await assertRevert(app.setMaxPositiveTokenRebase(maxPositiveTokenRebase), 'APP_AUTH_FAILED')
-      receipt = await app.setMaxPositiveTokenRebase(maxPositiveTokenRebase, { from: voting })
-      assertEvent(receipt, 'MaxPositiveTokenRebaseSet', { expectedArgs: { maxPositiveTokenRebase: maxPositiveTokenRebase } })
+      //TODO: Revive
+      //const maxPositiveTokenRebase = bn(1).mul(bn(10).pow(bn(8))) // 10%
+      //await assertRevert(app.setMaxPositiveTokenRebase(maxPositiveTokenRebase), 'APP_AUTH_FAILED')
+      //receipt = await app.setMaxPositiveTokenRebase(maxPositiveTokenRebase, { from: voting })
+      //assertEvent(receipt, 'MaxPositiveTokenRebaseSet', { expectedArgs: { maxPositiveTokenRebase: maxPositiveTokenRebase } })
     })
 
     async function getStEthBalance(address) {
@@ -379,11 +377,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     })
 
     it('Attempt to set invalid execution layer rewards withdrawal limit', async () => {
-      const initialValue = await app.getMaxPositiveTokenRebase()
+      //TODO: revive
+      //const initialValue = await app.getMaxPositiveTokenRebase()
 
-      assertEvent(await app.setMaxPositiveTokenRebase(1, { from: voting }), 'MaxPositiveTokenRebaseSet', {
-        expectedArgs: { maxPositiveTokenRebase: 1 }
-      })
+      //assertEvent(await app.setMaxPositiveTokenRebase(1, { from: voting }), 'MaxPositiveTokenRebaseSet', {
+      //  expectedArgs: { maxPositiveTokenRebase: 1 }
+      //})
 
       const setupNodeOperatorsForELRewardsVaultTests = async (userAddress, initialDepositAmount) => {
         await app.setFee(1000, { from: voting }) // 10%

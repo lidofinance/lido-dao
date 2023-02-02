@@ -9,7 +9,6 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 
 import "./lib/StakeLimitUtils.sol";
-import "./lib/PositiveTokenRebaseLimiter.sol";
 
 import "./StETHPermit.sol";
 
@@ -64,7 +63,6 @@ contract Lido is StETHPermit, AragonApp {
     using UnstructuredStorage for bytes32;
     using StakeLimitUnstructuredStorage for bytes32;
     using StakeLimitUtils for StakeLimitState.Data;
-    using PositiveTokenRebaseLimiter for LimiterState.Data;
 
     /// ACL
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
@@ -73,7 +71,6 @@ contract Lido is StETHPermit, AragonApp {
     bytes32 public constant STAKING_CONTROL_ROLE = keccak256("STAKING_CONTROL_ROLE");
     bytes32 public constant MANAGE_PROTOCOL_CONTRACTS_ROLE = keccak256("MANAGE_PROTOCOL_CONTRACTS_ROLE");
     bytes32 public constant BURN_ROLE = keccak256("BURN_ROLE");
-    bytes32 public constant MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE = keccak256("MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE");
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
@@ -97,9 +94,6 @@ contract Lido is StETHPermit, AragonApp {
     /// @dev number of Lido's validators available in the Consensus Layer state
     // "beacon" in the `keccak256()` parameter is staying here for compatibility reason
     bytes32 internal constant CL_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
-    /// @dev positive token rebase allowed per single LidoOracle report
-    /// uses 1e9 precision, e.g.: 1e6 - 0.1%; 1e9 - 100%, see `setMaxPositiveTokenRebase()`
-    bytes32 internal constant MAX_POSITIVE_TOKEN_REBASE_POSITION = keccak256("lido.Lido.MaxPositiveTokenRebase");
     /// @dev Just a counter of total amount of execution layer rewards received by Lido contract. Not used in the logic.
     bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
     /// @dev version of contract
@@ -123,9 +117,6 @@ contract Lido is StETHPermit, AragonApp {
 
     // The amount of ETH withdrawn from LidoExecutionLayerRewardsVault contract to Lido contract
     event ELRewardsReceived(uint256 amount);
-
-    // Max positive token rebase set (see `setMaxPositiveTokenRebase()`)
-    event MaxPositiveTokenRebaseSet(uint256 maxPositiveTokenRebase);
 
     // Records a deposit made by a user
     event Submitted(address indexed sender, uint256 amount, address referral);
@@ -461,36 +452,6 @@ contract Lido is StETHPermit, AragonApp {
     }
 
     /**
-     * @dev Set max positive rebase allowed per single oracle report
-     * token rebase happens on total supply adjustment,
-     * huge positive rebase can incur oracle report sandwitching.
-     *
-     * stETH balance for the `account` defined as:
-     * balanceOf(account) = shares[account] * totalPooledEther / totalShares = shares[account] * shareRate
-     *
-     * Suppose shareRate changes when oracle reports (see `handleOracleReport`)
-     * which means that token rebase happens:
-     *
-     * preShareRate = preTotalPooledEther() / preTotalShares()
-     * postShareRate = postTotalPooledEther() / postTotalShares()
-     * R = (postShareRate - preShareRate) / preShareRate
-     *
-     * R > 0 corresponds to the relative positive rebase value (i.e., instant APR)
-     *
-     * NB: The value is not set by default (explicit initialization required),
-     * the recommended sane values are from 0.05% to 0.1%.
-     *
-     * @param _maxTokenPositiveRebase max positive token rebase value with 1e9 precision:
-     *   e.g.: 1e6 - 0.1%; 1e9 - 100%
-     * - passing zero value is prohibited
-     * - to allow unlimited rebases, pass max uint256, i.e.: type(uint256).max
-     */
-    function setMaxPositiveTokenRebase(uint256 _maxTokenPositiveRebase) external {
-        _auth(MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE);
-        _setMaxPositiveTokenRebase(_maxTokenPositiveRebase);
-    }
-
-    /**
     * @notice Updates accounting stats, collects EL rewards and distributes collected rewards if beacon balance increased
     * @dev periodically called by the Oracle contract
     * @param _clValidators number of Lido validators on Consensus Layer
@@ -522,12 +483,6 @@ contract Lido is StETHPermit, AragonApp {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
         _whenNotStopped();
 
-        LimiterState.Data memory tokenRebaseLimiter = PositiveTokenRebaseLimiter.initLimiterState(
-            getMaxPositiveTokenRebase(),
-            _getTotalPooledEther(),
-            _getTotalShares()
-        );
-
         uint256 preClBalance = CL_BALANCE_POSITION.getStorageUint256();
 
         // update saved CL stats checking its sanity
@@ -539,9 +494,9 @@ contract Lido is StETHPermit, AragonApp {
         uint256 rewardsBase = appearedValidators.mul(DEPOSIT_SIZE).add(preClBalance);
         int256 clBalanceDiff = _signedSub(int256(_clBalance), int256(rewardsBase));
 
-        tokenRebaseLimiter.applyCLBalanceUpdate(clBalanceDiff);
-        withdrawals = tokenRebaseLimiter.appendEther(_withdrawalVaultBalance);
-        elRewards = tokenRebaseLimiter.appendEther(_elRewardsVaultBalance);
+        // TODO: temporary disable limit
+        withdrawals = _withdrawalVaultBalance;
+        elRewards = _elRewardsVaultBalance;
 
         // collect ETH from EL and Withdrawal vaults and send some to WithdrawalQueue if required
         _processETHDistribution(withdrawals, elRewards, _requestIdToFinalizeUpTo, _finalizationShareRate);
@@ -608,14 +563,6 @@ contract Lido is StETHPermit, AragonApp {
      */
     function getTotalELRewardsCollected() public view returns (uint256) {
         return TOTAL_EL_REWARDS_COLLECTED_POSITION.getStorageUint256();
-    }
-
-    /**
-     * @notice Get max positive token rebase value
-     * @return max positive token rebase value, nominated id MAX_POSITIVE_REBASE_PRECISION_POINTS (10**9 == 100% = 10000 BP)
-     */
-    function getMaxPositiveTokenRebase() public view returns (uint256) {
-        return MAX_POSITIVE_TOKEN_REBASE_POSITION.getStorageUint256();
     }
 
     /**
@@ -1014,16 +961,6 @@ contract Lido is StETHPermit, AragonApp {
         }
 
         return _stakeLimitData.calculateCurrentStakeLimit();
-    }
-
-    /**
-     * @dev Set max positive token rebase value
-     * @param _maxPositiveTokenRebase max positive token rebase, nominated in MAX_POSITIVE_REBASE_PRECISION_POINTS
-     */
-    function _setMaxPositiveTokenRebase(uint256 _maxPositiveTokenRebase) internal {
-        MAX_POSITIVE_TOKEN_REBASE_POSITION.setStorageUint256(_maxPositiveTokenRebase);
-
-        emit MaxPositiveTokenRebaseSet(_maxPositiveTokenRebase);
     }
 
     /**
