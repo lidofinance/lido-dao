@@ -14,6 +14,8 @@ import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.so
 
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 
+import {Versioned} from "./utils/Versioned.sol";
+
 /**
  * @title Interface defining a Lido liquid staking pool
  * @dev see also [Lido liquid staking pool core contract](https://docs.lido.fi/contracts/lido)
@@ -51,7 +53,7 @@ interface IWstETH is IERC20, IERC20Permit {
  * @title A contract for handling stETH withdrawal request queue within the Lido protocol
  * @author folkyatina
  */
-contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
+contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versioned {
     using SafeERC20 for IWstETH;
     using SafeERC20 for IStETH;
     using UnstructuredStorage for bytes32;
@@ -66,13 +68,6 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     ///! SLOT 5: uint128 public lockedEtherAmount
     ///! SLOT 6: mapping(address => uint256[]) requestsByRecipient
 
-    /// Version of the initialized contract data
-    /// NB: Contract versioning starts from 1.
-    /// The version stored in CONTRACT_VERSION_POSITION equals to
-    /// - 0 right after deployment when no initializer is invoked yet
-    /// - N after calling initialize() during deployment from scratch, where N is the current contract version
-    /// - N after upgrading contract from the previous version (after calling finalize_vN())
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.WithdrawalQueue.contractVersion");
     /// Withdrawal queue resume/pause control storage slot
     bytes32 internal constant RESUMED_POSITION = keccak256("lido.WithdrawalQueue.resumed");
     /// Bunker mode activation timestamp
@@ -154,9 +149,6 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
         // init immutables
         WSTETH = _wstETH;
         STETH = WSTETH.stETH();
-
-        // petrify the implementation by assigning a zero address for every role
-        _initialize(address(0), address(0), address(0), address(0));
     }
 
     /**
@@ -178,7 +170,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
 
     /// @notice Returns whether the contract is initialized or not
     function isInitialized() external view returns (bool) {
-        return CONTRACT_VERSION_POSITION.getStorageUint256() != 0;
+        return getContractVersion() != 0;
     }
 
     /**
@@ -390,16 +382,13 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     /// @dev internal initialization helper. Doesn't check provided addresses intentionally
     function _initialize(address _admin, address _pauser, address _resumer, address _finalizer) internal {
         _initializeQueue();
-        if (CONTRACT_VERSION_POSITION.getStorageUint256() != 0) {
-            revert AlreadyInitialized();
-        }
+
+        _initializeContractVersionTo(1);
 
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(PAUSE_ROLE, _pauser);
         _grantRole(RESUME_ROLE, _resumer);
         _grantRole(FINALIZE_ROLE, _finalizer);
-
-        CONTRACT_VERSION_POSITION.setStorageUint256(1);
 
         RESUMED_POSITION.setStorageBool(false); // pause it explicitly
 

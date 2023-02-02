@@ -16,6 +16,8 @@ import "./lib/PositiveTokenRebaseLimiter.sol";
 
 import "./StETHPermit.sol";
 
+import "./utils/Versioned.sol";
+
 interface IPostTokenRebaseReceiver {
     function handlePostTokenRebase(
         uint256 preTotalShares,
@@ -78,7 +80,7 @@ interface IWithdrawalQueue {
 * rewards, no Transfer events are generated: doing so would require emitting an event
 * for each token holder and thus running an unbounded loop.
 */
-contract Lido is StETHPermit, AragonApp {
+contract Lido is StETHPermit, AragonApp, Versioned {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;
     using StakeLimitUnstructuredStorage for bytes32;
@@ -115,11 +117,6 @@ contract Lido is StETHPermit, AragonApp {
     bytes32 internal constant MAX_POSITIVE_TOKEN_REBASE_POSITION = keccak256("lido.Lido.MaxPositiveTokenRebase");
     /// @dev Just a counter of total amount of execution layer rewards received by Lido contract. Not used in the logic.
     bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
-    /// @dev version of contract
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.Lido.contractVersion");
-
-    event ContractVersionSet(uint256 version);
-
     event Stopped();
     event Resumed();
 
@@ -205,19 +202,13 @@ contract Lido is StETHPermit, AragonApp {
         address _eip712StETH
     ) external {
         require(!isPetrified(), "PETRIFIED");
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
+        require(hasInitialized(), "NOT_INITIALIZED");
+        _checkContractVersion(0);
 
         require(_lidoLocator != address(0), "LIDO_LOCATOR_ZERO_ADDRESS");
         require(_eip712StETH != address(0), "EIP712_STETH_ZERO_ADDRESS");
 
         _initialize_v2(_lidoLocator, _eip712StETH);
-    }
-
-    /**
-     * @notice Return the initialized version of this contract starting from 0
-     */
-    function getVersion() external view returns (uint256) {
-        return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
     /**
