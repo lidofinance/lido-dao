@@ -148,10 +148,10 @@ contract HashConsensus is AccessControlEnumerable {
     /// @dev Reporting frame configuration
     FrameConfig internal _frameConfig;
 
-    /// @dev Oracle commitee members array
+    /// @dev Oracle committee members array
     MemberState[] internal _members;
 
-    /// @dev Mapping from an oracle commitee member address to the 1-based index in the
+    /// @dev Mapping from an oracle committee member address to the 1-based index in the
     /// members array
     mapping(address => uint256) internal _memberIndices1b;
 
@@ -159,7 +159,7 @@ contract HashConsensus is AccessControlEnumerable {
     /// reference slot consensus report was achieved for, and the last consensus variant index
     ReportingState internal _reportingState;
 
-    /// @dev Oracle commitee members quorum value, must be larger than totalMembers // 2
+    /// @dev Oracle committee members quorum value, must be larger than totalMembers // 2
     uint256 internal _quorum;
 
     /// @dev Mapping from a report variant index to the ReportVariant structure
@@ -258,7 +258,7 @@ contract HashConsensus is AccessControlEnumerable {
         }
     }
 
-    /// @notice Returns the information related to an oracle commitee member with the given address.
+    /// @notice Returns the information related to an oracle committee member with the given address.
     ///
     /// @param addr The member address.
     ///
@@ -269,7 +269,7 @@ contract HashConsensus is AccessControlEnumerable {
     /// @return currentRefSlot Current reference slot.
     ///
     /// @return memberReportForCurrentRefSlot The hash reported by the member for the current
-    ///         reference slot. Set to zero bytes if no report was recevied for the current
+    ///         reference slot. Set to zero bytes if no report was received for the current
     ///         reference slot.
     ///
     function getMemberInfo(address addr) external view returns (
