@@ -19,7 +19,7 @@ interface ILido {
     function getTotalShares() external returns (uint256);
 
     function handleOracleReport(uint256, uint256, uint256, uint256, uint256, uint256)
-        external returns (uint256, uint256);
+        external returns (uint256, uint256, uint256, uint256);
 }
 
 /**

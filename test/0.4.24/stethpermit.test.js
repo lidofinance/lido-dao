@@ -73,7 +73,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       assertEvent(
         receipt,
         'Approval',
-        { 'owner': owner, 'spender': spender, 'value': bn(value) }
+        { expectedArgs: { owner: owner, spender: spender, value: bn(value) } }
       )
 
       assertBn(await stEthPermit.nonces(owner), bn(1))
@@ -93,7 +93,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       assertEvent(
         receipt2,
         'Approval',
-        { 'owner': owner, 'spender': spender, 'value': bn(value) }
+        { expectedArgs: { owner: owner, spender: spender, value: bn(value) } }
       )
 
       assertBn(await stEthPermit.nonces(owner), bn(2))
@@ -187,7 +187,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
         assertEvent(
           receipt,
           'Approval',
-          { 'owner': owner, 'spender': spender, 'value': bn(value) }
+          { expectedArgs: { owner: owner, spender: spender, value: bn(value) } }
         )
       }
     })
