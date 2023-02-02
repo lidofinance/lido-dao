@@ -5,6 +5,32 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
+import {ILido, ILidoLocator, IWithdrawalQueue} from "../sanity_checks/AccountingOracleReportSanityChecks.sol";
+
+contract LidoLocatorMock is ILidoLocator {
+    address private immutable LIDO;
+    address private immutable WITHDRAWAL_VAULT;
+    address private immutable WITHDRAWAL_QUEUE;
+
+    constructor(address _lido, address _withdrawalVault, address _withdrawalQueue) {
+        LIDO = _lido;
+        WITHDRAWAL_VAULT = _withdrawalVault;
+        WITHDRAWAL_QUEUE = _withdrawalQueue;
+    }
+
+    function getLido() external view returns (address) {
+        return LIDO;
+    }
+
+    function getWithdrawalQueue() external view returns (address) {
+        return WITHDRAWAL_QUEUE;
+    }
+
+    function getWithdrawalVault() external view returns (address) {
+        return WITHDRAWAL_VAULT;
+    }
+}
+
 contract WithdrawalQueueMockForAccountingOracleSanityChecks {
     mapping(uint256 => uint256) private _blockNumbers;
 

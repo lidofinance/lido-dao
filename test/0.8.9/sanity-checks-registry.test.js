@@ -2,23 +2,26 @@ const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
 const { ETH } = require('../helpers/utils')
 
+const LidoLocatorMock = hre.artifacts.require('LidoLocatorMock')
 const LidoMock = hre.artifacts.require('LidoMockForAccountingOracleSanityChecks')
 const AccountingOracleReportSanityChecks = hre.artifacts.require('AccountingOracleReportSanityChecks')
 const WithdrawalQueueMock = hre.artifacts.require('WithdrawalQueueMockForAccountingOracleSanityChecks')
 
 contract('SanityChecksRegistry', ([owner, admin, manager, withdrawalVault]) => {
-  let accountingOracleSanityChecks, lidoMock, withdrawalQueueMock
+  let accountingOracleSanityChecks, lidoLocatorMock, lidoMock, withdrawalQueueMock
 
   before(async () => {
     lidoMock = await LidoMock.new({ from: owner })
     withdrawalQueueMock = await WithdrawalQueueMock.new({ from: owner })
+    lidoLocatorMock = await LidoLocatorMock.new(lidoMock.address, withdrawalVault, withdrawalQueueMock.address)
+
     accountingOracleSanityChecks = await AccountingOracleReportSanityChecks.new(
-      lidoMock.address,
-      withdrawalVault,
-      withdrawalQueueMock.address,
+      lidoLocatorMock.address,
       admin,
       manager,
-      { from: owner }
+      {
+        from: owner
+      }
     )
   })
 

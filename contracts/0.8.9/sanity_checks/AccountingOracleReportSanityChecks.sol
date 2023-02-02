@@ -7,6 +7,18 @@ pragma solidity 0.8.9;
 import {AccessControlEnumerable} from "../utils/access/AccessControlEnumerable.sol";
 import {PositiveTokenRebaseLimiter, LimiterState} from "../lib/PositiveTokenRebaseLimiter.sol";
 
+interface ILido {
+    function getSharesByPooledEth(uint256 _sharesAmount) external view returns (uint256);
+}
+
+interface ILidoLocator {
+    function getLido() external view returns (address);
+
+    function getWithdrawalVault() external view returns (address);
+
+    function getWithdrawalQueue() external view returns (address);
+}
+
 interface IWithdrawalQueue {
     function getWithdrawalRequestStatus(uint256 _requestId)
         external
@@ -21,9 +33,6 @@ interface IWithdrawalQueue {
         );
 }
 
-interface ILido {
-    function getSharesByPooledEth(uint256 _sharesAmount) external view returns (uint256);
-}
 
 contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
     using PositiveTokenRebaseLimiter for LimiterState.Data;
@@ -34,9 +43,7 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
     uint256 private constant SLOT_DURATION = 12;
     uint256 private constant EPOCH_DURATION = 32 * SLOT_DURATION;
 
-    ILido private immutable LIDO;
-    address private immutable WITHDRAWAL_VAULT;
-    IWithdrawalQueue private immutable WITHDRAWAL_QUEUE;
+    ILidoLocator private immutable LIDO_LOCATOR;
 
     AccountingOracleReportLimits private _limits;
 
@@ -52,21 +59,17 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
     }
 
     constructor(
-        address _lido,
-        address _withdrawalVault,
-        address _withdrawalQueue,
+        address _lidoLocator,
         address _admin,
         address _manager
     ) {
-        LIDO = ILido(_lido);
-        WITHDRAWAL_VAULT = _withdrawalVault;
-        WITHDRAWAL_QUEUE = IWithdrawalQueue(_withdrawalQueue);
+        LIDO_LOCATOR  = ILidoLocator(_lidoLocator);
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(LIMITS_MANAGER_ROLE, _manager);
     }
 
-    function getWithdrawalVault() public view returns (address) {
-        return WITHDRAWAL_VAULT;
+    function getLidoLocator() public view returns (address) {
+        return address(LIDO_LOCATOR);
     }
 
     function getAccountingOracleLimits()
@@ -200,7 +203,8 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
         uint256 _finalizationShareRate
     ) external view {
         // 1. Withdrawals vault one-off reported balance
-        if (_withdrawalVaultBalance > getWithdrawalVault().balance) {
+        address withdrawalVault = LIDO_LOCATOR.getWithdrawalVault();
+        if (_withdrawalVaultBalance > withdrawalVault.balance) {
             revert IncorrectWithdrawalsVaultBalance(_withdrawalVaultBalance);
         }
         AccountingOracleReportLimits memory limits = _limits;
@@ -237,7 +241,8 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
         }
 
         // 5. No finalized id up to newer than the allowed report margin
-        (, , , uint256 lastRequestCreationBlock, , ) = WITHDRAWAL_QUEUE.getWithdrawalRequestStatus(
+        address withdrawalQueue = LIDO_LOCATOR.getWithdrawalQueue();
+        (, , , uint256 lastRequestCreationBlock, , ) = IWithdrawalQueue(withdrawalQueue).getWithdrawalRequestStatus(
             _requestIdToFinalizeUpTo
         );
         if (_reportBlockNumber < lastRequestCreationBlock + limits.requestCreationBlockMargin) {
@@ -248,7 +253,8 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
         }
 
         // 6. shareRate calculated off-chain is consistent with the on-chain one
-        if (_finalizationShareRate != LIDO.getSharesByPooledEth(1 ether)) {
+        address lido = LIDO_LOCATOR.getLido();
+        if (_finalizationShareRate != ILido(lido).getSharesByPooledEth(1 ether)) {
             revert IncorrectShareRate();
         }
     }
