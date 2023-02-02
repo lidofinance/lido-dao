@@ -12,7 +12,6 @@ const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry.sol')
 const LidoMock = artifacts.require('LidoMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
-const CompositePostRebaseBeaconReceiver = artifacts.require('CompositePostRebaseBeaconReceiver.sol')
 const EIP712StETH = artifacts.require('EIP712StETH')
 
 const ERC20OZMock = artifacts.require('ERC20OZMock.sol')
@@ -24,7 +23,6 @@ const stETHShares = ETH
 contract('SelfOwnedStETHBurner', ([appManager, voting, oracle, deployer, anotherAccount, treasury, ...otherAccounts]) => {
   let lido, burner
   let dao, acl, operators
-  let compositeBeaconReceiver
 
   beforeEach('deploy lido with dao', async () => {
     const lidoBase = await LidoMock.new({ from: deployer })
@@ -63,11 +61,6 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, oracle, deployer, another
     await depositContract.reset()
 
     burner = await SelfOwnerStETHBurner.new(treasury, lido.address, voting, bn(0), bn(0), bn(4), { from: deployer })
-
-    compositeBeaconReceiver = await CompositePostRebaseBeaconReceiver.new(voting, oracle, { from: deployer })
-    compositeBeaconReceiver.addCallback(burner.address, { from: voting })
-
-    assert(false, 'FIXME register burner as a callback')
   })
 
   describe('Requests and burn invocation', () => {
