@@ -4,6 +4,7 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
+import {PositiveTokenRebaseLimiter, LimiterState} from "../lib/PositiveTokenRebaseLimiter.sol";
 import {SanityChecksManagement} from "./SanityChecksManagement.sol";
 
 interface IWithdrawalQueue {
@@ -25,11 +26,16 @@ interface ILido {
 }
 
 contract AccountingOracleReportSanityChecks is SanityChecksManagement {
+    using PositiveTokenRebaseLimiter for LimiterState.Data;
+
     uint256 private constant MAX_BASIS_POINTS = 10000;
     uint256 private constant SLOT_DURATION = 12;
     uint256 private constant EPOCH_DURATION = 32 * SLOT_DURATION;
 
     bytes32 private constant LIMITS_POSITION = keccak256("Lido.AccountingOracleSanityChecks.limitsPosition");
+    /// @dev positive token rebase allowed per single LidoOracle report
+    /// uses 1e9 precision, e.g.: 1e6 - 0.1%; 1e9 - 100%, see `setMaxPositiveTokenRebase()`
+    bytes32 private constant MAX_POSITIVE_TOKEN_REBASE_POSITION = keccak256("Lido.AccountingOracleSanityChecks.MaxPositiveTokenRebase");
 
     ILido private immutable LIDO;
     address private immutable WITHDRAWAL_VAULT;
@@ -41,6 +47,7 @@ contract AccountingOracleReportSanityChecks is SanityChecksManagement {
         uint16 annualBalanceIncreaseLimit;
         uint64 requestCreationBlockMargin;
         uint64 finalizationPauseStartBlock;
+        uint64 maxPositiveTokenRebase;
     }
 
     constructor(
@@ -74,6 +81,51 @@ contract AccountingOracleReportSanityChecks is SanityChecksManagement {
         annualBalanceIncreaseLimit = limits.annualBalanceIncreaseLimit;
         requestCreationBlockMargin = limits.requestCreationBlockMargin;
         finalizationPauseStartBlock = limits.finalizationPauseStartBlock;
+    }
+
+    /**
+     * @dev Get max positive rebase allowed per single oracle report
+     * token rebase happens on total supply adjustment,
+     * huge positive rebase can incur oracle report sandwitching.
+     *
+     * stETH balance for the `account` defined as:
+     * balanceOf(account) = shares[account] * totalPooledEther / totalShares = shares[account] * shareRate
+     *
+     * Suppose shareRate changes when oracle reports (see `handleOracleReport`)
+     * which means that token rebase happens:
+     *
+     * preShareRate = preTotalPooledEther() / preTotalShares()
+     * postShareRate = postTotalPooledEther() / postTotalShares()
+     * R = (postShareRate - preShareRate) / preShareRate
+     *
+     * R > 0 corresponds to the relative positive rebase value (i.e., instant APR)
+     *
+     * NB: The value is not set by default (explicit initialization required),
+     * the recommended sane values are from 0.05% to 0.1%.
+     *
+     * @return maxPositiveTokenRebase max positive token rebase value with 1e9 precision:
+     *   e.g.: 1e6 - 0.1%; 1e9 - 100%
+     * - zero value means unititialized
+     * - type(uint64).max means unlimited
+     */
+    function getMaxPositiveTokenRebase() public view returns (uint256 maxPositiveTokenRebase) {
+        return _readLimits().value.maxPositiveTokenRebase;
+    }
+
+    /**
+     * @dev Set max positive token rebase allowed per single oracle report
+     * token rebase happens on total supply adjustment,
+     * huge positive rebase can incur oracle report sandwitching.
+     *
+     * @param _maxTokenPositiveRebase max positive token rebase value with 1e9 precision:
+     *   e.g.: 1e6 - 0.1%; 1e9 - 100%
+     * - passing zero value is prohibited
+     * - to allow unlimited rebases, pass max uint64, i.e.: type(uint64).max
+     */
+    function setMaxPositiveTokenRebase(uint256 _maxTokenPositiveRebase) external onlyLimitsManager {
+        AccountingOracleReportLimits memory limits = _readLimits().value;
+        _setMaxPositiveTokenRebase(limits, _maxTokenPositiveRebase);
+        _writeLimits(limits);
     }
 
     function setAccountingOracleLimits(
@@ -187,6 +239,25 @@ contract AccountingOracleReportSanityChecks is SanityChecksManagement {
         }
     }
 
+    function smoothenTokenRebase(
+        uint256 _preTotalPooledEther,
+        uint256 _preTotalShares,
+        int256 _clBalanceDiff,
+        uint256 _withdrawalVaultBalance,
+        uint256 _elRewardsVaultBalance
+    ) external view returns (uint256 withdrawals, uint256 elRewards) {
+        LimiterState.Data memory tokenRebaseLimiter = PositiveTokenRebaseLimiter.initLimiterState(
+            getMaxPositiveTokenRebase(),
+            _preTotalPooledEther,
+            _preTotalShares
+        );
+
+        tokenRebaseLimiter.applyCLBalanceUpdate(_clBalanceDiff);
+
+        withdrawals = tokenRebaseLimiter.appendEther(_withdrawalVaultBalance);
+        elRewards = tokenRebaseLimiter.appendEther(_elRewardsVaultBalance);
+    }
+
     function _setChurnValidatorsByEpochLimit(
         AccountingOracleReportLimits memory limits,
         uint256 _churnValidatorsByEpochLimit
@@ -237,6 +308,16 @@ contract AccountingOracleReportSanityChecks is SanityChecksManagement {
         emit FinalizationPauseStartBlockSet(_finalizationPauseStartBlock);
     }
 
+    function _setMaxPositiveTokenRebase(
+        AccountingOracleReportLimits memory limits,
+        uint256 _maxPositiveTokenRebase
+    ) internal {
+        if (limits.maxPositiveTokenRebase == _maxPositiveTokenRebase) return;
+        _validateLessThan(_maxPositiveTokenRebase, type(uint64).max, "_maxPositiveTokenRebase");
+        limits.maxPositiveTokenRebase = uint64(_maxPositiveTokenRebase);
+        emit MaxPositiveTokenRebaseSet(_maxPositiveTokenRebase);
+    }
+
     function _validateLessThan(
         uint256 value,
         uint256 maxValue,
@@ -266,6 +347,7 @@ contract AccountingOracleReportSanityChecks is SanityChecksManagement {
     event AnnualBalanceIncreaseLimitSet(uint256 annualBalanceIncreaseLimit);
     event RequestCreationBlockMarginSet(uint256 requestCreationBlockMargin);
     event FinalizationPauseStartBlockSet(uint256 finalizationPauseStartBlock);
+    event MaxPositiveTokenRebaseSet(uint256 maxPositiveTokenRebase);
 
     error IncorrectWithdrawalsVaultBalance(uint256 withdrawalVaultBalance);
     error IncorrectCLBalanceDecrease(uint256 clBalanceDecrease);
