@@ -5,8 +5,8 @@ const { getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-tes
 const { waitBlocks } = require('../helpers/blockchain')
 const { signDepositData } = require('../0.8.9/helpers/signatures')
 
-const { pad, ETH, hexConcat } = require('../helpers/utils')
-const { deployDaoAndPool, setupNodeOperatorsRegistry } = require('./helpers/deploy')
+const { ZERO_HASH, pad, ETH, ethToGwei, hexConcat } = require('../helpers/utils')
+const { SLOTS_PER_FRAME, deployDaoAndPool, setupNodeOperatorsRegistry } = require('./helpers/deploy')
 const { DSMAttestMessage, DSMPauseMessage } = require('../0.8.9/helpers/signatures')
 
 const INodeOperatorsRegistry = artifacts.require('contracts/0.4.24/interfaces/INodeOperatorsRegistry.sol:INodeOperatorsRegistry')
@@ -78,10 +78,25 @@ contract('Lido: rewards distribution math', (addresses) => {
     ]
   }
 
-  var epoch = 100
+  let frame = 1
 
   function reportBeacon(validatorsCount, balance) {
-    return oracleMock.reportBeacon(epoch++, validatorsCount, balance)
+    return oracleMock.submitReportData({
+      refSlot: SLOTS_PER_FRAME * (frame++),
+      consensusVersion: 1,
+      numValidators: validatorsCount,
+      clBalanceGwei: ethToGwei(balance),
+      stakingModuleIdsWithNewlyExitedValidators: [],
+      numExitedValidatorsByStakingModule: [],
+      withdrawalVaultBalance: 0,
+      elRewardsVaultBalance: 0,
+      lastWithdrawalRequestIdToFinalize: 0,
+      finalizationShareRate: 0,
+      isBunkerMode: false,
+      extraDataFormat: 0,
+      extraDataHash: ZERO_HASH,
+      extraDataItemsCount: 0,
+    }, 1)
   }
 
   before(async () => {
@@ -556,6 +571,7 @@ contract('Lido: rewards distribution math', (addresses) => {
   it(`rewards distribution`, async () => {
     const bufferedBefore = await token.getBufferedEther()
     const totalPooledEtherBefore = await token.getTotalPooledEther()
+    // FIXME: oracle doesn't support reporting anything smaller than 1 gwei, here we're trying to report 2 wei
     const newBeaconBalance = totalPooledEtherBefore.sub(bufferedBefore).add(new BN(2))
 
     const firstModuleSharesBefore = await token.sharesOf(nodeOperatorsRegistry.address)
@@ -593,6 +609,7 @@ contract('Lido: rewards distribution math', (addresses) => {
     const [firstModule] = await stakingRouter.getStakingModules()
     const totalPooledEtherBefore = await token.getTotalPooledEther()
     const bufferedBefore = await token.getBufferedEther()
+    // FIXME: oracle doesn't support reporting anything smaller than 1 gwei, here we're trying to report 1 wei
     const newBeaconBalance = totalPooledEtherBefore.sub(bufferedBefore).add(new BN(1))
 
     await stakingRouter.setStakingModuleStatus(firstModule.id, StakingModuleStatus.Stopped, { from: appManager })

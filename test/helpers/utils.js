@@ -1,6 +1,8 @@
 const { BN } = require('bn.js')
 const { getEventAt } = require('@aragon/contract-helpers-test')
 
+const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000'
+
 const pad = (hex, bytesLength, fill = '0') => {
   const absentZeroes = bytesLength * 2 + 2 - hex.length
   if (absentZeroes > 0) hex = '0x' + fill.repeat(absentZeroes) + hex.substr(2)
@@ -87,6 +89,9 @@ const tokens = e18
 const shares = e18
 const shareRate = e27
 
+const bnE9 = new BN(10).pow(new BN(9))
+const ethToGwei = valueEth => toBN(valueEth).div(bnE9).toString()
+
 function formatWei(weiString) {
   return ethers.utils.formatEther(ethers.utils.parseUnits(weiString, 'wei'), { commify: true }) + ' ETH'
 }
@@ -129,6 +134,7 @@ const changeEndianness = (string) => {
 }
 
 module.exports = {
+  ZERO_HASH,
   pad,
   hexConcat,
   hexSplit,
@@ -143,6 +149,7 @@ module.exports = {
   e27,
   gwei,
   ETH,
+  ethToGwei,
   StETH: ETH,
   tokens,
   getEthBalance,

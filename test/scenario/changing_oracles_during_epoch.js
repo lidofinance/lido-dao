@@ -1,98 +1,134 @@
 const { newDao, newApp } = require('../0.4.24/helpers/dao')
 const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const { assertRevert } = require('../helpers/assertThrow')
+const { e9 } = require('../helpers/utils')
 
-const LidoOracle = artifacts.require('LidoOracleMock.sol')
-const Lido = artifacts.require('LidoMockForOracle.sol')
+const {
+  deployAccountingOracleSetup,
+  initAccountingOracle,
+  deployMockLegacyOracle,
+  CONSENSUS_VERSION,
+  HASH_1, ZERO_HASH,
+  getReportDataItems,
+  calcReportDataHash
+} = require('../0.8.9/oracle/accounting-oracle-deploy.test')
 
-const DENOMINATION_OFFSET = 1e9
+const AccountingOracle = artifacts.require('AccountingOracleTimeTravellable.sol')
+const HashConsensus = artifacts.require('HashConsensus.sol')
+const Lido = artifacts.require('LidoMockForOracleNew.sol')
+const MockStakingRouter = artifacts.require('MockStakingRouterForAccountingOracle')
+const MockLegacyOracle = artifacts.require('MockLegacyOracle')
+
+const SLOTS_PER_EPOCH = 32
+const SECONDS_PER_SLOT = 12
 const GENESIS_TIME = 1606824000
-const EPOCH_LENGTH = 32 * 12
+const EPOCHS_PER_FRAME = 225
 
-contract('LidoOracle', ([appManager, voting, malicious1, malicious2, user1, user2, user3]) => {
-  let appBase, appLido, app
-  const BAD_DATA = [42, 42]
-  const GOOD_DATA = [32, 1]
+const SLOTS_PER_FRAME = EPOCHS_PER_FRAME * SLOTS_PER_EPOCH
+const SECONDS_PER_FRAME = SLOTS_PER_FRAME * SECONDS_PER_SLOT
+
+// const EPOCH_LENGTH = 32 * 12
+
+contract('AccountingOracle', ([appManager, voting, malicious1, malicious2, member1, member2, member3]) => {
+  let lido, stakingRouter, consensus, oracle
+
+  const GOOD_DATA = {
+    consensusVersion: CONSENSUS_VERSION,
+    numValidators: 10,
+    clBalanceGwei: 32,
+    stakingModuleIdsWithNewlyExitedValidators: [],
+    numExitedValidatorsByStakingModule: [],
+    withdrawalVaultBalance: 0,
+    elRewardsVaultBalance: 0,
+    lastWithdrawalRequestIdToFinalize: 0,
+    finalizationShareRate: 0,
+    isBunkerMode: false,
+    extraDataFormat: 0,
+    extraDataHash: ZERO_HASH,
+    extraDataItemsCount: 0,
+  }
+
+  const BAD_DATA = {
+    ...GOOD_DATA,
+    clBalanceGwei: 42,
+    numValidators: 42,
+  }
 
   before('Deploy and init Lido and oracle', async () => {
-    // Deploy the app's base contract.
-    appBase = await LidoOracle.new()
-    appLido = await Lido.new()
+    lido = await Lido.new(ZERO_ADDRESS)
+    stakingRouter = await MockStakingRouter.new()
   })
 
   beforeEach('deploy dao and app', async () => {
     const { dao, acl } = await newDao(appManager)
 
-    // Instantiate a proxy for the app, using the base contract as its logic implementation.
-    const proxyAddress = await newApp(dao, 'lidooracle', appBase.address, appManager)
-    app = await LidoOracle.at(proxyAddress)
+    const timeConfig = {
+      epochsPerFrame: EPOCHS_PER_FRAME,
+      slotsPerEpoch: SLOTS_PER_EPOCH,
+      secondsPerSlot: SECONDS_PER_SLOT,
+      genesisTime: GENESIS_TIME,
+    }
 
-    // Set up the app's permissions.
-    await acl.createPermission(voting, app.address, await app.MANAGE_MEMBERS(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.MANAGE_QUORUM(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_BEACON_SPEC(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_REPORT_BOUNDARIES(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_BEACON_REPORT_RECEIVER(), appManager, { from: appManager })
+    const deployed = await deployAccountingOracleSetup(voting, {
+      ...timeConfig,
+      getLidoAndStakingRouter: async () => ({lido, stakingRouter}),
+      getLegacyOracle: () => deployMockLegacyOracle({...timeConfig, lastCompletedEpochId: 0})
+    })
 
-    // Initialize the app's proxy.
-    await app.setTime(GENESIS_TIME + 225 * EPOCH_LENGTH)
-    await app.initialize(appLido.address, 225, 32, 12, GENESIS_TIME, 1000, 500)
+    consensus = deployed.consensus
+    oracle = deployed.oracle
+
+    await initAccountingOracle({...deployed, admin: voting})
+
+    assert.equal(+await oracle.getTime(), GENESIS_TIME + SECONDS_PER_FRAME)
 
     // Initialize the oracle time, quorum and basic oracles
-    await app.setQuorum(4, { from: voting })
-    await app.addOracleMember(user1, { from: voting })
-    await app.addOracleMember(user2, { from: voting })
-    await appLido.pretendTotalPooledEtherGweiForTest(GOOD_DATA[0])
+    await consensus.addMember(member1, 4, { from: voting })
+    await consensus.addMember(member2, 4, { from: voting })
+
+    await lido.pretendTotalPooledEtherGweiForTest(0)
   })
 
-  it('reverts epoch zero', async () => {
-    assertBn(await app.getExpectedEpochId(), 225)
-    await assertRevert(app.reportBeacon(0, 0, 0, { from: user1 }), 'EPOCH_IS_TOO_OLD')
+  it('reverts with zero ref. slot', async () => {
+    assertBn((await consensus.getCurrentFrame()).refSlot, 1 * SLOTS_PER_FRAME - 1)
+    await assertRevert(
+      consensus.submitReport(0, HASH_1, CONSENSUS_VERSION, { from: member1 }),
+      'InvalidSlot()'
+    )
   })
 
   it('oracle conract handles changing the oracles during epoch', async () => {
-    await app.addOracleMember(malicious1, { from: voting })
-    await app.addOracleMember(malicious2, { from: voting })
+    await consensus.addMember(malicious1, 4, { from: voting })
+    await consensus.addMember(malicious2, 4, { from: voting })
 
-    await app.reportBeacon(225, BAD_DATA[0], BAD_DATA[1], { from: malicious1 })
-    await app.reportBeacon(225, BAD_DATA[0], BAD_DATA[1], { from: malicious2 })
-    await app.reportBeacon(225, GOOD_DATA[0], GOOD_DATA[1], { from: user1 })
-    await app.reportBeacon(225, GOOD_DATA[0], GOOD_DATA[1], { from: user2 })
+    const goodDataItems = getReportDataItems({...GOOD_DATA, refSlot: SLOTS_PER_FRAME - 1})
+    const badDataItems = getReportDataItems({...BAD_DATA, refSlot: SLOTS_PER_FRAME - 1})
+    const goodDataHash = calcReportDataHash(goodDataItems)
+    const badDataHash = calcReportDataHash(badDataItems)
 
-    await app.setQuorum(3, { from: voting })
+    await consensus.submitReport(SLOTS_PER_FRAME - 1, badDataHash, CONSENSUS_VERSION, { from: malicious1 })
+    await consensus.submitReport(SLOTS_PER_FRAME - 1, badDataHash, CONSENSUS_VERSION, { from: malicious2 })
+    await consensus.submitReport(SLOTS_PER_FRAME - 1, goodDataHash, CONSENSUS_VERSION, { from: member1 })
+    await consensus.submitReport(SLOTS_PER_FRAME - 1, goodDataHash, CONSENSUS_VERSION, { from: member2 })
 
-    await app.removeOracleMember(malicious1, { from: voting })
-    await app.removeOracleMember(malicious2, { from: voting })
+    await consensus.removeMember(malicious1, 3, { from: voting })
+    await consensus.removeMember(malicious2, 3, { from: voting })
+    await consensus.addMember(member3, 3, { from: voting })
 
-    await app.reportBeacon(225, GOOD_DATA[0], GOOD_DATA[1], { from: user1 }) // user1 reports again
-    await app.reportBeacon(225, GOOD_DATA[0], GOOD_DATA[1], { from: user2 }) // user2 reports again
+    let tx = await consensus.submitReport(
+      SLOTS_PER_FRAME - 1,
+      goodDataHash,
+      CONSENSUS_VERSION,
+      { from: member3 }
+    )
 
-    await app.addOracleMember(user3, { from: voting })
-    const receipt = await app.reportBeacon(225, GOOD_DATA[0], GOOD_DATA[1], { from: user3 })
+    assertEvent(tx, 'ConsensusReached', { expectedArgs: { refSlot: SLOTS_PER_FRAME - 1, report: goodDataHash, support: 3 } })
 
-    assertEvent(receipt, 'Completed', {
-      expectedArgs: { epochId: 225, beaconBalance: GOOD_DATA[0] * DENOMINATION_OFFSET, beaconValidators: GOOD_DATA[1] }
-    })
-    assertBn(await app.getExpectedEpochId(), 450)
-  })
+    tx = await oracle.submitReportData(goodDataItems, await oracle.getContractVersion(), { from: member3 })
 
-  it('report in odd epoch reverts', async () => {
-    assertBn(await app.getExpectedEpochId(), 225)
-    await app.reportBeacon(225, BAD_DATA[0], BAD_DATA[1], { from: user1 })
-    await app.reportBeacon(225, BAD_DATA[0], BAD_DATA[1], { from: user2 })
+    assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: SLOTS_PER_FRAME - 1 } })
 
-    await app.setTime(GENESIS_TIME + 226 * EPOCH_LENGTH)
-    assertBn(await app.getExpectedEpochId(), 225)
-    await assertRevert(app.reportBeacon(226, BAD_DATA[0], BAD_DATA[1], { from: user1 }), 'UNEXPECTED_EPOCH')
-
-    await app.setTime(GENESIS_TIME + 449 * EPOCH_LENGTH)
-    assertBn(await app.getExpectedEpochId(), 225)
-    await assertRevert(app.reportBeacon(449, BAD_DATA[0], BAD_DATA[1], { from: user2 }), 'UNEXPECTED_EPOCH')
-
-    await app.setTime(GENESIS_TIME + 450 * EPOCH_LENGTH)
-    assertBn(await app.getExpectedEpochId(), 225)
-    await app.reportBeacon(450, BAD_DATA[0], BAD_DATA[1], { from: user1 })
-    await app.reportBeacon(450, BAD_DATA[0], BAD_DATA[1], { from: user2 })
-    assertBn(await app.getExpectedEpochId(), 450)
+    assertBn(await lido.totalSupply(), e9(GOOD_DATA.clBalanceGwei))
   })
 })

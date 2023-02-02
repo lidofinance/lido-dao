@@ -7,7 +7,7 @@ const Lido = artifacts.require('LidoMock.sol')
 const WstETH = artifacts.require('WstETH.sol')
 const LidoELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
-const OracleMock = artifacts.require('OracleMock.sol')
+const OracleMock = artifacts.require('AccountingOracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const DepositSecurityModule = artifacts.require('DepositSecurityModule.sol')
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
@@ -26,15 +26,22 @@ const GUARDIAN_PRIVATE_KEYS = {
 }
 const DEPOSIT_ROOT = '0xd151867719c94ad8458feaf491809f9bc8096c702a72747403ecaac30c179137'
 
+const SLOTS_PER_EPOCH = 32
+const SECONDS_PER_SLOT = 12
+const GENESIS_TIME = 1606824000
+const EPOCHS_PER_FRAME = 225
+
+const SLOTS_PER_FRAME = EPOCHS_PER_FRAME * SLOTS_PER_EPOCH
+const SECONDS_PER_FRAME = SLOTS_PER_FRAME * SECONDS_PER_SLOT
+
 async function deployDaoAndPool(appManager, voting) {
   // Deploy the DAO, oracle and deposit contract mocks, and base contracts for
   // Lido (the pool) and NodeOperatorsRegistry (the Node Operators registry)
 
   const treasury = web3.eth.accounts.create()
 
-  const [{ dao, acl }, oracleMock, depositContractMock, poolBase] = await Promise.all([
+  const [{ dao, acl }, depositContractMock, poolBase] = await Promise.all([
     newDao(appManager),
-    OracleMock.new(),
     DepositContractMock.new(),
     Lido.new()
   ])
@@ -47,6 +54,8 @@ async function deployDaoAndPool(appManager, voting) {
   const poolProxyAddress = await newApp(dao, 'lido', poolBase.address, appManager)
 
   const [token, pool] = await Promise.all([Lido.at(poolProxyAddress), Lido.at(poolProxyAddress)])
+
+  const oracleMock = await OracleMock.new(pool.address, SECONDS_PER_SLOT)
 
   const depositSecurityModule = await DepositSecurityModule.new(
     pool.address,
@@ -140,7 +149,6 @@ async function deployDaoAndPool(appManager, voting) {
     eip712StETH.address
   )
 
-  await oracleMock.setPool(pool.address)
   await depositContractMock.reset()
   await depositContractMock.set_deposit_root(DEPOSIT_ROOT)
 
@@ -259,5 +267,11 @@ async function setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, s
 
 module.exports = {
   deployDaoAndPool,
-  setupNodeOperatorsRegistry
+  setupNodeOperatorsRegistry,
+  SLOTS_PER_EPOCH,
+  SECONDS_PER_SLOT,
+  GENESIS_TIME,
+  EPOCHS_PER_FRAME,
+  SLOTS_PER_FRAME,
+  SECONDS_PER_FRAME,
 }
