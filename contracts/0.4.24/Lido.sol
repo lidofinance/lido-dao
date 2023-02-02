@@ -9,6 +9,7 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 
 import "./lib/StakeLimitUtils.sol";
+import "./lib/PositiveTokenRebaseLimiter.sol";
 
 import "./StETHPermit.sol";
 
@@ -63,6 +64,7 @@ contract Lido is StETHPermit, AragonApp {
     using UnstructuredStorage for bytes32;
     using StakeLimitUnstructuredStorage for bytes32;
     using StakeLimitUtils for StakeLimitState.Data;
+    using PositiveTokenRebaseLimiter for LimiterState.Data;
 
     /// ACL
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
@@ -71,7 +73,7 @@ contract Lido is StETHPermit, AragonApp {
     bytes32 public constant STAKING_CONTROL_ROLE = keccak256("STAKING_CONTROL_ROLE");
     bytes32 public constant MANAGE_PROTOCOL_CONTRACTS_ROLE = keccak256("MANAGE_PROTOCOL_CONTRACTS_ROLE");
     bytes32 public constant BURN_ROLE = keccak256("BURN_ROLE");
-    bytes32 public constant SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE = keccak256("SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE");
+    bytes32 public constant MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE = keccak256("MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE");
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
@@ -95,8 +97,9 @@ contract Lido is StETHPermit, AragonApp {
     /// @dev number of Lido's validators available in the Consensus Layer state
     // "beacon" in the `keccak256()` parameter is staying here for compatibility reason
     bytes32 internal constant CL_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
-    /// @dev percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
-    bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION = keccak256("lido.Lido.ELRewardsWithdrawalLimit");
+    /// @dev positive token rebase allowed per single LidoOracle report
+    /// uses 1e9 precision, e.g.: 1e6 - 0.1%; 1e9 - 100%, see `setMaxPositiveTokenRebase()`
+    bytes32 internal constant MAX_POSITIVE_TOKEN_REBASE_POSITION = keccak256("lido.Lido.MaxPositiveTokenRebase");
     /// @dev Just a counter of total amount of execution layer rewards received by Lido contract. Not used in the logic.
     bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
     /// @dev version of contract
@@ -121,8 +124,8 @@ contract Lido is StETHPermit, AragonApp {
     // The amount of ETH withdrawn from LidoExecutionLayerRewardsVault contract to Lido contract
     event ELRewardsReceived(uint256 amount);
 
-    // Percent in basis points of total pooled ether allowed to withdraw from LidoExecutionLayerRewardsVault per LidoOracle report
-    event ELRewardsWithdrawalLimitSet(uint256 limitPoints);
+    // Max positive token rebase set (see `setMaxPositiveTokenRebase()`)
+    event MaxPositiveTokenRebaseSet(uint256 maxPositiveTokenRebase);
 
     // Records a deposit made by a user
     event Submitted(address indexed sender, uint256 amount, address referral);
@@ -377,7 +380,7 @@ contract Lido is StETHPermit, AragonApp {
     function receiveELRewards() external payable {
         require(msg.sender == EL_REWARDS_VAULT_POSITION.getStorageAddress());
 
-        TOTAL_EL_REWARDS_COLLECTED_POSITION.setStorageUint256(TOTAL_EL_REWARDS_COLLECTED_POSITION.getStorageUint256().add(msg.value));
+        TOTAL_EL_REWARDS_COLLECTED_POSITION.setStorageUint256(getTotalELRewardsCollected().add(msg.value));
 
         emit ELRewardsReceived(msg.value);
     }
@@ -458,14 +461,33 @@ contract Lido is StETHPermit, AragonApp {
     }
 
     /**
-     * @dev Sets limit on amount of ETH to withdraw from execution layer rewards vault per LidoOracle report
-     * @param _limitPoints limit in basis points to amount of ETH to withdraw per LidoOracle report
+     * @dev Set max positive rebase allowed per single oracle report
+     * token rebase happens on total supply adjustment,
+     * huge positive rebase can incur oracle report sandwitching.
+     *
+     * stETH balance for the `account` defined as:
+     * balanceOf(account) = shares[account] * totalPooledEther / totalShares = shares[account] * shareRate
+     *
+     * Suppose shareRate changes when oracle reports (see `handleOracleReport`)
+     * which means that token rebase happens:
+     *
+     * preShareRate = preTotalPooledEther() / preTotalShares()
+     * postShareRate = postTotalPooledEther() / postTotalShares()
+     * R = (postShareRate - preShareRate) / preShareRate
+     *
+     * R > 0 corresponds to the relative positive rebase value (i.e., instant APR)
+     *
+     * NB: The value is not set by default (explicit initialization required),
+     * the recommended sane values are from 0.05% to 0.1%.
+     *
+     * @param _maxTokenPositiveRebase max positive token rebase value with 1e9 precision:
+     *   e.g.: 1e6 - 0.1%; 1e9 - 100%
+     * - passing zero value is prohibited
+     * - to allow unlimited rebases, pass max uint256, i.e.: type(uint256).max
      */
-    function setELRewardsWithdrawalLimit(uint16 _limitPoints) external {
-        _auth(SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE);
-
-        _setBPValue(EL_REWARDS_WITHDRAWAL_LIMIT_POSITION, _limitPoints);
-        emit ELRewardsWithdrawalLimitSet(_limitPoints);
+    function setMaxPositiveTokenRebase(uint256 _maxTokenPositiveRebase) external {
+        _auth(MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE);
+        _setMaxPositiveTokenRebase(_maxTokenPositiveRebase);
     }
 
     /**
@@ -491,9 +513,20 @@ contract Lido is StETHPermit, AragonApp {
         // decision
         uint256 _requestIdToFinalizeUpTo,
         uint256 _finalizationShareRate
-    ) external returns (uint256 totalPooledEther, uint256 totalShares){
+    ) external returns (
+        uint256 totalPooledEther,
+        uint256 totalShares,
+        uint256 withdrawals,
+        uint256 elRewards
+    ) {
         require(msg.sender == getOracle(), "APP_AUTH_FAILED");
         _whenNotStopped();
+
+        LimiterState.Data memory tokenRebaseLimiter = PositiveTokenRebaseLimiter.initLimiterState(
+            getMaxPositiveTokenRebase(),
+            _getTotalPooledEther(),
+            _getTotalShares()
+        );
 
         uint256 preClBalance = CL_BALANCE_POSITION.getStorageUint256();
 
@@ -503,25 +536,23 @@ contract Lido is StETHPermit, AragonApp {
             _clBalance
         );
 
+        uint256 rewardsBase = appearedValidators.mul(DEPOSIT_SIZE).add(preClBalance);
+        int256 clBalanceDiff = _signedSub(int256(_clBalance), int256(rewardsBase));
+
+        tokenRebaseLimiter.applyCLBalanceUpdate(clBalanceDiff);
+        withdrawals = tokenRebaseLimiter.appendEther(_withdrawalVaultBalance);
+        elRewards = tokenRebaseLimiter.appendEther(_elRewardsVaultBalance);
+
         // collect ETH from EL and Withdrawal vaults and send some to WithdrawalQueue if required
-        uint256 executionLayerRewards = _processETHDistribution(
-            _withdrawalVaultBalance,
-            _elRewardsVaultBalance,
-            _requestIdToFinalizeUpTo,
-            _finalizationShareRate
-        );
+        _processETHDistribution(withdrawals, elRewards, _requestIdToFinalizeUpTo, _finalizationShareRate);
 
         // TODO: check rebase boundaries
         // TODO: emit a rebase event with sufficient data to calc pre- and post-rebase share rates and APR
 
         // distribute rewards to Lido and Node Operators
-        _processRewards(
-            preClBalance,
-            _clBalance,
-            appearedValidators,
-            executionLayerRewards,
-            _withdrawalVaultBalance
-        );
+        _processRewards(clBalanceDiff, withdrawals, elRewards);
+
+        //TODO(DZhon): apply coverage
 
         totalPooledEther = _getTotalPooledEther();
         totalShares = _getTotalShares();
@@ -575,16 +606,16 @@ contract Lido is StETHPermit, AragonApp {
      * as other buffered Ether is kept (until it gets deposited)
      * @return amount of funds received as execution layer rewards (in wei)
      */
-    function getTotalELRewardsCollected() external view returns (uint256) {
+    function getTotalELRewardsCollected() public view returns (uint256) {
         return TOTAL_EL_REWARDS_COLLECTED_POSITION.getStorageUint256();
     }
 
     /**
-     * @notice Get limit in basis points to amount of ETH to withdraw per LidoOracle report
-     * @return limit in basis points to amount of ETH to withdraw per LidoOracle report
+     * @notice Get max positive token rebase value
+     * @return max positive token rebase value, nominated id MAX_POSITIVE_REBASE_PRECISION_POINTS (10**9 == 100% = 10000 BP)
      */
-    function getELRewardsWithdrawalLimit() external view returns (uint256) {
-        return EL_REWARDS_WITHDRAWAL_LIMIT_POSITION.getStorageUint256();
+    function getMaxPositiveTokenRebase() public view returns (uint256) {
+        return MAX_POSITIVE_TOKEN_REBASE_POSITION.getStorageUint256();
     }
 
     /**
@@ -655,28 +686,19 @@ contract Lido is StETHPermit, AragonApp {
 
     /// @dev collect ETH from ELRewardsVault and WithdrawalVault and send to WithdrawalQueue
     function _processETHDistribution(
-        uint256 _withdrawalVaultBalance,
-        uint256 _elRewardsVaultBalance,
+        uint256 _withdrawalsToWithdraw,
+        uint256 _elRewardsToWithdraw,
         uint256 _requestIdToFinalizeUpTo,
         uint256 _finalizationShareRate
-    ) internal returns (uint256 executionLayerRewards) {
-        executionLayerRewards = 0;
-        address elRewardsVaultAddress = getELRewardsVault();
-        // If LidoExecutionLayerRewardsVault address is not set just do as if there were no execution layer rewards at all
-        // Otherwise withdraw all rewards and put them to the buffer
-        if (elRewardsVaultAddress != address(0)) {
-            uint256 rewardsLimit = (_getTotalPooledEther() * EL_REWARDS_WITHDRAWAL_LIMIT_POSITION.getStorageUint256()) / TOTAL_BASIS_POINTS;
-            executionLayerRewards = ILidoExecutionLayerRewardsVault(elRewardsVaultAddress).withdrawRewards(
-               _min(rewardsLimit, _elRewardsVaultBalance)
-            );
+    ) internal {
+        // withdraw execution layer rewards and put them to the buffer
+        if (_elRewardsToWithdraw > 0) {
+            ILidoExecutionLayerRewardsVault(getELRewardsVault()).withdrawRewards(_elRewardsToWithdraw);
         }
 
-        address withdrawalVaultAddress = _getWithdrawalVault();
-        if (withdrawalVaultAddress != address(0)) {
-            if (_withdrawalVaultBalance > 0) {
-                // we pull all the accounted ether from WithdrawalVault
-                IWithdrawalVault(withdrawalVaultAddress).withdrawWithdrawals(_withdrawalVaultBalance);
-            }
+        // withdraw withdrawals and put them to the buffer
+        if (_withdrawalsToWithdraw > 0) {
+            IWithdrawalVault(_getWithdrawalVault()).withdrawWithdrawals(_withdrawalsToWithdraw);
         }
 
         uint256 lockedToWithdrawalQueue = 0;
@@ -689,8 +711,8 @@ contract Lido is StETHPermit, AragonApp {
 
         uint256 preBufferedEther = _getBufferedEther();
         uint256 postBufferedEther = _getBufferedEther()
-            .add(executionLayerRewards) // Collected from ELVault
-            .add(_withdrawalVaultBalance) // Collected from WithdrawalVault
+            .add(_elRewardsToWithdraw) // Collected from ELVault
+            .add(_withdrawalsToWithdraw) // Collected from WithdrawalVault
             .sub(lockedToWithdrawalQueue); // Sent to WithdrawalQueue
 
         // Storing even the same value costs gas, so just avoid it
@@ -721,21 +743,17 @@ contract Lido is StETHPermit, AragonApp {
 
     /// @dev calculate the amount of rewards and distribute it
     function _processRewards(
-        uint256 _preClBalance,
-        uint256 _postClBalance,
-        uint256 _appearedValidators,
-        uint256 _executionLayerRewards,
-        uint256 _withdrawalVaultBalance
+        int256 _clBalanceDiff,
+        uint256 _withdrawnWithdrawals,
+        uint256 _withdrawnElRewards
     ) internal {
-        uint256 rewardsBase = (_appearedValidators.mul(DEPOSIT_SIZE)).add(_preClBalance);
-
+        int256 consensusLayerRewards = _signedAdd(_clBalanceDiff, int256(_withdrawnWithdrawals));
         // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
         // (when consensus layer balance delta is zero or negative).
         // See ADR #3 for details:
         // https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
-        if (_postClBalance.add(_withdrawalVaultBalance) > rewardsBase) {
-            uint256 consensusLayerRewards = _postClBalance.add(_withdrawalVaultBalance).sub(rewardsBase);
-            _distributeFee(consensusLayerRewards.add(_executionLayerRewards));
+        if (consensusLayerRewards > 0) {
+            _distributeFee(uint256(consensusLayerRewards).add(_withdrawnElRewards));
         }
     }
 
@@ -999,6 +1017,16 @@ contract Lido is StETHPermit, AragonApp {
     }
 
     /**
+     * @dev Set max positive token rebase value
+     * @param _maxPositiveTokenRebase max positive token rebase, nominated in MAX_POSITIVE_REBASE_PRECISION_POINTS
+     */
+    function _setMaxPositiveTokenRebase(uint256 _maxPositiveTokenRebase) internal {
+        MAX_POSITIVE_TOKEN_REBASE_POSITION.setStorageUint256(_maxPositiveTokenRebase);
+
+        emit MaxPositiveTokenRebaseSet(_maxPositiveTokenRebase);
+    }
+
+    /**
      * @dev Size-efficient analog of the `auth(_role)` modifier
      * @param _role Permission name
      */
@@ -1048,5 +1076,15 @@ contract Lido is StETHPermit, AragonApp {
 
     function _min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
+    }
+
+    function _signedSub(int256 a, int256 b) internal pure returns (int256 c) {
+        c = a - b;
+        require(b - a == -c, "MATH_SUB_UNDERFLOW");
+    }
+
+    function _signedAdd(int256 a, int256 b) internal pure returns (int256 c) {
+        c = a + b;
+        require(c - a == b, "MATH_ADD_OVERFLOW");
     }
 }
