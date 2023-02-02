@@ -75,6 +75,14 @@ contract StakingModuleMock is IStakingModule {
 
     function finishUpdatingExitedValidatorsKeysCount() external {}
 
+    function unsafeUpdateExitedValidatorsKeysCount(
+        uint256 /* _nodeOperatorId */,
+        uint256 /* _exitedValidatorsKeysCount */
+    ) external returns (uint256)
+    {
+        return 0;
+    }
+
     function invalidateReadyToDepositKeys() external {
         _availableKeysCount = _activeKeysCount;
     }

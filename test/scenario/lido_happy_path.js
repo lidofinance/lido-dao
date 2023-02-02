@@ -9,7 +9,7 @@ const { deployDaoAndPool } = require('./helpers/deploy')
 const { DSMAttestMessage, DSMPauseMessage } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 
-const INodeOperatorsRegistry = artifacts.require('contracts/0.4.24/interfaces/INodeOperatorsRegistry.sol:INodeOperatorsRegistry')
+const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const CURATED_MODULE_ID = 1
 
 contract('Lido: happy path', (addresses) => {
@@ -110,7 +110,7 @@ contract('Lido: happy path', (addresses) => {
     const txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', { decodeForAbi: INodeOperatorsRegistry._json.abi })
+    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', { decodeForAbi: NodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator1.id, 0, 'operator id')
 
     assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 1, 'total node operators')
@@ -261,7 +261,7 @@ contract('Lido: happy path', (addresses) => {
     const txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', { decodeForAbi: INodeOperatorsRegistry._json.abi })
+    nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', { decodeForAbi: NodeOperatorsRegistry._json.abi })
     assertBn(nodeOperator2.id, 1, 'operator id')
 
     assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 2, 'total node operators')

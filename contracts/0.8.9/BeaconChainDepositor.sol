@@ -6,7 +6,17 @@ pragma solidity 0.8.9;
 
 import {BytesLib} from "./lib/BytesLib.sol";
 
-import {IDepositContract} from "./interfaces/IDepositContract.sol";
+
+interface IDepositContract {
+    function get_deposit_root() external view returns (bytes32 rootHash);
+
+    function deposit(
+        bytes calldata pubkey, // 48 bytes
+        bytes calldata withdrawal_credentials, // 32 bytes
+        bytes calldata signature, // 96 bytes
+        bytes32 deposit_data_root
+    ) external payable;
+}
 
 contract BeaconChainDepositor {
     uint256 internal constant PUBLIC_KEY_LENGTH = 48;

@@ -9,11 +9,15 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/introspection/ERC165Checker.sol";
 
-import "../interfaces/IBeaconReportReceiver.sol";
-
 import "../Lido.sol";
 
 import "./ReportUtils.sol";
+
+interface IBeaconReportReceiver {
+    function processLidoOracleReport(uint256 _postTotalPooledEther,
+                                     uint256 _preTotalPooledEther,
+                                     uint256 _timeElapsed) external;
+}
 
 
 /**

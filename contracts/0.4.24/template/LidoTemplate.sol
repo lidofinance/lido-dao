@@ -27,7 +27,6 @@ import "@aragon/id/contracts/IFIFSResolvingRegistrar.sol";
 
 import "../Lido.sol";
 import "../nos/NodeOperatorsRegistry.sol";
-import "../interfaces/IDepositContract.sol";
 
 contract LidoTemplate is IsContract {
     // Configuration errors

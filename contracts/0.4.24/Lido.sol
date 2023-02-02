@@ -8,15 +8,43 @@ pragma solidity 0.4.24;
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 
-import "./interfaces/INodeOperatorsRegistry.sol";
-import "./interfaces/ILidoExecutionLayerRewardsVault.sol";
-import "./interfaces/IWithdrawalQueue.sol";
-import "./interfaces/IWithdrawalVault.sol";
-import "./interfaces/IStakingRouter.sol";
-
 import "./lib/StakeLimitUtils.sol";
 
 import "./StETHPermit.sol";
+
+interface ILidoExecutionLayerRewardsVault {
+    function withdrawRewards(uint256 _maxAmount) external returns (uint256 amount);
+}
+
+interface IWithdrawalVault {
+    function withdrawWithdrawals(uint256 _amount) external;
+}
+
+interface IStakingRouter {
+    function deposit(uint256 maxDepositsCount, uint256 stakingModuleId, bytes depositCalldata) external payable returns (uint256);
+    function getStakingRewardsDistribution()
+        external
+        view
+        returns (
+            address[] memory recipients,
+            uint256[] memory stakingModuleIds,
+            uint96[] memory stakingModuleFees,
+            uint96 totalFee,
+            uint256 precisionPoints
+        );
+    function getWithdrawalCredentials() external view returns (bytes32);
+    function reportRewardsMinted(uint256[] _stakingModuleIds, uint256[] _totalShares) external;
+}
+
+interface IWithdrawalQueue {
+    function finalizationBatch(uint256 _lastRequestIdToFinalize, uint256 _shareRate)
+        external
+        view
+        returns (uint128 eth, uint128 shares);
+    function finalize(uint256 _lastIdToFinalize) external payable;
+    function isPaused() external view returns (bool);
+    function unfinalizedStETH() external view returns (uint256);
+}
 
 /**
 * @title Liquid staking pool implementation
@@ -593,7 +621,7 @@ contract Lido is StETHPermit, AragonApp {
      * @dev DEPRECATED: use StakingRouter.getWithdrawalCredentials() instead
      */
     function getWithdrawalCredentials() public view returns (bytes32) {
-        return getStakingRouter().getWithdrawalCredentials();
+        return IStakingRouter(getStakingRouter()).getWithdrawalCredentials();
     }
 
     /**
@@ -774,8 +802,8 @@ contract Lido is StETHPermit, AragonApp {
         emit TransferShares(address(0), _to, _sharesAmount);
     }
 
-    function getStakingRouter() public view returns (IStakingRouter) {
-        return IStakingRouter(STAKING_ROUTER_POSITION.getStorageAddress());
+    function getStakingRouter() public view returns (address) {
+        return STAKING_ROUTER_POSITION.getStorageAddress();
     }
 
     function setStakingRouter(address _stakingRouter) external {
@@ -828,7 +856,7 @@ contract Lido is StETHPermit, AragonApp {
         // The effect is that the given percentage of the reward goes to the fee recipient, and
         // the rest of the reward is distributed between token holders proportionally to their
         // token shares.
-        IStakingRouter router = getStakingRouter();
+        IStakingRouter router = IStakingRouter(getStakingRouter());
 
         (address[] memory recipients,
             uint256[] memory moduleIds,
@@ -1001,7 +1029,7 @@ contract Lido is StETHPermit, AragonApp {
             uint256 unaccountedEth = _getUnaccountedEther();
             /// @dev transfer ether to SR and make deposit at the same time
             /// @notice allow zero value of depositableEth, in this case SR will simply transfer the unaccounted ether to Lido contract
-            uint256 depositedKeysCount = getStakingRouter().deposit.value(depositableEth)(
+            uint256 depositedKeysCount = IStakingRouter(getStakingRouter()).deposit.value(depositableEth)(
                 _maxDepositsCount,
                 _stakingModuleId,
                 _depositCalldata

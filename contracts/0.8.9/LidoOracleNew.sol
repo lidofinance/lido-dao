@@ -9,12 +9,6 @@ import "./CommitteeQuorum.sol";
 import "./ReportEpochChecker.sol";
 import "./interfaces/IBeaconReportReceiver.sol";
 
-interface INodeOperatorsRegistry {
-    /**
-      * @notice Report `_stoppedIncrement` more stopped validators of the node operator #`_id`
-      */
-    function reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement) external;
-}
 
 /**
  * @notice Part of Lido interface required for `LidoOracleNew` to work
@@ -24,7 +18,7 @@ interface ILido {
 
     function getTotalShares() external returns (uint256);
 
-    function handleOracleReport(uint256, uint256, uint256, uint256, uint256, uint256) 
+    function handleOracleReport(uint256, uint256, uint256, uint256, uint256, uint256)
         external returns (uint256, uint256);
 }
 

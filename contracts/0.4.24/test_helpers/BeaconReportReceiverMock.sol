@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 
 // SPDX-License-Identifier: GPL-3.0
 
@@ -6,7 +6,7 @@ pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/introspection/ERC165.sol";
 
-import "../interfaces/IBeaconReportReceiver.sol";
+import {IBeaconReportReceiver} from "../oracle/LidoOracle.sol";
 
 
 contract BeaconReportReceiverMock is IBeaconReportReceiver, ERC165 {
@@ -15,7 +15,7 @@ contract BeaconReportReceiverMock is IBeaconReportReceiver, ERC165 {
     uint256 public timeElapsed;
     uint256 public gas;
 
-    constructor() {
+    constructor() public {
         IBeaconReportReceiver iBeacon;
         _registerInterface(iBeacon.processLidoOracleReport.selector);
     }
@@ -31,8 +31,10 @@ contract BeaconReportReceiverMock is IBeaconReportReceiver, ERC165 {
 }
 
 contract BeaconReportReceiverMockWithoutERC165 is IBeaconReportReceiver {
-    function processLidoOracleReport(uint256 _postTotalPooledEther,
-                                     uint256 _preTotalPooledEther,
-                                     uint256 _timeElapsed) external {
-    }
+    function processLidoOracleReport(
+        uint256 /* _postTotalPooledEther */,
+        uint256 /* _preTotalPooledEther */,
+        uint256 /* _timeElapsed */
+    ) external
+    { }
 }
