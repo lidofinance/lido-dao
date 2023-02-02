@@ -7,20 +7,29 @@ const LidoMock = hre.artifacts.require('LidoMockForAccountingOracleSanityChecks'
 const AccountingOracleReportSanityChecks = hre.artifacts.require('AccountingOracleReportSanityChecks')
 const WithdrawalQueueMock = hre.artifacts.require('WithdrawalQueueMockForAccountingOracleSanityChecks')
 
-contract('SanityChecksRegistry', ([owner, admin, manager, withdrawalVault]) => {
+contract('SanityChecksRegistry', ([deployer, admin, manager, withdrawalVault, ...accounts]) => {
   let accountingOracleSanityChecks, lidoLocatorMock, lidoMock, withdrawalQueueMock
+  const managersRoster = {
+    allLimitsManagers: accounts.slice(0, 2),
+    churnValidatorsByEpochLimitManagers: accounts.slice(2, 4),
+    oneOffCLBalanceDecreaseLimitManagers: accounts.slice(4, 6),
+    annualBalanceIncreaseLimitManagers: accounts.slice(6, 8),
+    requestCreationBlockMarginManagers: accounts.slice(8, 10),
+    finalizationPauseStartBlockManagers: accounts.slice(10, 12),
+    maxPositiveTokenRebaseManagers: accounts.slice(12, 14)
+  }
 
   before(async () => {
-    lidoMock = await LidoMock.new({ from: owner })
-    withdrawalQueueMock = await WithdrawalQueueMock.new({ from: owner })
+    lidoMock = await LidoMock.new({ from: deployer })
+    withdrawalQueueMock = await WithdrawalQueueMock.new({ from: deployer })
     lidoLocatorMock = await LidoLocatorMock.new(lidoMock.address, withdrawalVault, withdrawalQueueMock.address)
 
     accountingOracleSanityChecks = await AccountingOracleReportSanityChecks.new(
       lidoLocatorMock.address,
       admin,
-      manager,
+      Object.values(managersRoster),
       {
-        from: owner
+        from: deployer
       }
     )
   })
@@ -32,6 +41,7 @@ contract('SanityChecksRegistry', ([owner, admin, manager, withdrawalVault]) => {
       const annualBalanceIncreaseLimit = 10_00 // 10%
       const requestCreationBlockMargin = 1024
       const finalizationPauseStartBlock = await hre.ethers.provider.getBlockNumber().then((bn) => bn + 1000)
+      const maxPositiveTokenRebase = 5_000_000 // 0.05%
 
       const limitsBefore = await accountingOracleSanityChecks.getAccountingOracleLimits()
       assert.notEquals(limitsBefore.churnValidatorsByEpochLimit, churnValidatorsByEpochLimit)
@@ -39,6 +49,7 @@ contract('SanityChecksRegistry', ([owner, admin, manager, withdrawalVault]) => {
       assert.notEquals(limitsBefore.annualBalanceIncreaseLimit, annualBalanceIncreaseLimit)
       assert.notEquals(limitsBefore.requestCreationBlockMargin, requestCreationBlockMargin)
       assert.notEquals(limitsBefore.finalizationPauseStartBlock, finalizationPauseStartBlock)
+      assert.notEquals(limitsBefore.maxPositiveTokenRebase, maxPositiveTokenRebase)
 
       await accountingOracleSanityChecks.setAccountingOracleLimits(
         churnValidatorsByEpochLimit,
@@ -46,7 +57,8 @@ contract('SanityChecksRegistry', ([owner, admin, manager, withdrawalVault]) => {
         annualBalanceIncreaseLimit,
         requestCreationBlockMargin,
         finalizationPauseStartBlock,
-        { from: manager }
+        maxPositiveTokenRebase,
+        { from: managersRoster.allLimitsManagers[0] }
       )
 
       const limitsAfter = await accountingOracleSanityChecks.getAccountingOracleLimits()
@@ -55,6 +67,7 @@ contract('SanityChecksRegistry', ([owner, admin, manager, withdrawalVault]) => {
       assert.equals(limitsAfter.annualBalanceIncreaseLimit, annualBalanceIncreaseLimit)
       assert.equals(limitsAfter.requestCreationBlockMargin, requestCreationBlockMargin)
       assert.equals(limitsAfter.finalizationPauseStartBlock, finalizationPauseStartBlock)
+      assert.equals(limitsAfter.maxPositiveTokenRebase, maxPositiveTokenRebase)
     })
   })
 
@@ -63,6 +76,7 @@ contract('SanityChecksRegistry', ([owner, admin, manager, withdrawalVault]) => {
     const oneOffCLBalanceDecreaseLimit = 5_00 // 5%
     const annualBalanceIncreaseLimit = 10_00 // 10%
     const requestCreationBlockMargin = 100
+    const maxPositiveTokenRebase = 5_000_000 // 0.05%
     let finalizationPauseStartBlock
 
     before(async () => {
@@ -77,7 +91,8 @@ contract('SanityChecksRegistry', ([owner, admin, manager, withdrawalVault]) => {
         annualBalanceIncreaseLimit,
         requestCreationBlockMargin,
         finalizationPauseStartBlock,
-        { from: manager }
+        maxPositiveTokenRebase,
+        { from: managersRoster.allLimitsManagers[0] }
       )
     })
 

@@ -33,11 +33,22 @@ interface IWithdrawalQueue {
         );
 }
 
-
 contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
     using PositiveTokenRebaseLimiter for LimiterState.Data;
 
-    bytes32 public constant LIMITS_MANAGER_ROLE = keccak256("LIMITS_MANAGER_ROLE");
+    bytes32 public constant ALL_LIMITS_MANAGER_ROLE = keccak256("LIMITS_MANAGER_ROLE");
+    bytes32 public constant CHURN_VALIDATORS_BY_EPOCH_LIMIT_MANGER_ROLE =
+        keccak256("CHURN_VALIDATORS_BY_EPOCH_LIMIT_MANGER_ROLE");
+    bytes32 public constant ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE =
+        keccak256("CHURN_VALIDATORS_BY_EPOCH_LIMIT_MANGER_ROLE");
+    bytes32 public constant ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE =
+        keccak256("ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE");
+    bytes32 public constant REQUEST_CREATION_BLOCK_MARGIN_MANAGER_ROLE =
+        keccak256("REQUEST_CREATION_BLOCK_MARGIN_MANAGER_ROLE");
+    bytes32 public constant FINALIZATION_PAUSE_START_BLOCK_MANAGER_ROLE =
+        keccak256("FINALIZATION_PAUSE_START_BLOCK_MANAGER_ROLE");
+    bytes32 public constant MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE =
+        keccak256("MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE");
 
     uint256 private constant MAX_BASIS_POINTS = 10000;
     uint256 private constant SLOT_DURATION = 12;
@@ -58,14 +69,33 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
         uint64 maxPositiveTokenRebase;
     }
 
+    struct ManagersRoster {
+        address[] allLimitsManagers;
+        address[] churnValidatorsByEpochLimitManagers;
+        address[] oneOffCLBalanceDecreaseLimitManagers;
+        address[] annualBalanceIncreaseLimitManagers;
+        address[] requestCreationBlockMarginManagers;
+        address[] finalizationPauseStartBlockManagers;
+        address[] maxPositiveTokenRebaseManagers;
+    }
+
     constructor(
         address _lidoLocator,
         address _admin,
-        address _manager
+        ManagersRoster memory _managersRoster
     ) {
-        LIDO_LOCATOR  = ILidoLocator(_lidoLocator);
+        LIDO_LOCATOR = ILidoLocator(_lidoLocator);
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
-        _grantRole(LIMITS_MANAGER_ROLE, _manager);
+        _grantRole(ALL_LIMITS_MANAGER_ROLE, _managersRoster.allLimitsManagers);
+        _grantRole(CHURN_VALIDATORS_BY_EPOCH_LIMIT_MANGER_ROLE, _managersRoster.churnValidatorsByEpochLimitManagers);
+        _grantRole(
+            ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE,
+            _managersRoster.oneOffCLBalanceDecreaseLimitManagers
+        );
+        _grantRole(ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE, _managersRoster.annualBalanceIncreaseLimitManagers);
+        _grantRole(REQUEST_CREATION_BLOCK_MARGIN_MANAGER_ROLE, _managersRoster.requestCreationBlockMarginManagers);
+        _grantRole(FINALIZATION_PAUSE_START_BLOCK_MANAGER_ROLE, _managersRoster.finalizationPauseStartBlockManagers);
+        _grantRole(MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE, _managersRoster.maxPositiveTokenRebaseManagers);
     }
 
     function getLidoLocator() public view returns (address) {
@@ -80,7 +110,8 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
             uint256 oneOffCLBalanceDecreaseLimit,
             uint256 annualBalanceIncreaseLimit,
             uint256 requestCreationBlockMargin,
-            uint256 finalizationPauseStartBlock
+            uint256 finalizationPauseStartBlock,
+            uint256 maxPositiveTokenRebase
         )
     {
         AccountingOracleReportLimits memory limits = _limits;
@@ -89,6 +120,7 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
         annualBalanceIncreaseLimit = limits.annualBalanceIncreaseLimit;
         requestCreationBlockMargin = limits.requestCreationBlockMargin;
         finalizationPauseStartBlock = limits.finalizationPauseStartBlock;
+        maxPositiveTokenRebase = limits.maxPositiveTokenRebase;
     }
 
     /**
@@ -120,6 +152,69 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
         return _limits.maxPositiveTokenRebase;
     }
 
+    function setAccountingOracleLimits(
+        uint256 _churnValidatorsByEpochLimit,
+        uint256 _oneOffCLBalanceDecreaseLimit,
+        uint256 _annualBalanceIncreaseLimit,
+        uint256 _requestCreationBlockMargin,
+        uint256 _finalizationPauseStartBlock,
+        uint256 _maxPositiveTokenRebase
+    ) external onlyRole(ALL_LIMITS_MANAGER_ROLE) {
+        AccountingOracleReportLimits memory limits = _limits;
+        _setChurnValidatorsByEpochLimit(limits, _churnValidatorsByEpochLimit);
+        _setOneOffCLBalanceDecreaseLimit(limits, _oneOffCLBalanceDecreaseLimit);
+        _setAnnualBalanceIncreaseLimit(limits, _annualBalanceIncreaseLimit);
+        _setRequestCreationBlockMargin(limits, _requestCreationBlockMargin);
+        _setFinalizationPauseStartBlock(limits, _finalizationPauseStartBlock);
+        _setMaxPositiveTokenRebase(limits, _maxPositiveTokenRebase);
+        _limits = limits;
+    }
+
+    function setChurnValidatorsByEpochLimit(uint256 _churnValidatorsByEpochLimit)
+        external
+        onlyRole(CHURN_VALIDATORS_BY_EPOCH_LIMIT_MANGER_ROLE)
+    {
+        AccountingOracleReportLimits memory limits = _limits;
+        _setChurnValidatorsByEpochLimit(limits, _churnValidatorsByEpochLimit);
+        _limits = limits;
+    }
+
+    function setOneOffCLBalanceDecreaseLimit(uint256 _oneOffCLBalanceDecreaseLimit)
+        external
+        onlyRole(ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE)
+    {
+        AccountingOracleReportLimits memory limits = _limits;
+        _setOneOffCLBalanceDecreaseLimit(limits, _oneOffCLBalanceDecreaseLimit);
+        _limits = limits;
+    }
+
+    function setAnnualBalanceIncreaseLimit(uint256 _annualBalanceIncreaseLimit)
+        external
+        onlyRole(ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE)
+    {
+        AccountingOracleReportLimits memory limits = _limits;
+        _setAnnualBalanceIncreaseLimit(limits, _annualBalanceIncreaseLimit);
+        _limits = limits;
+    }
+
+    function setRequestCreationBlockMargin(uint256 _requestCreationBlockMargin)
+        external
+        onlyRole(REQUEST_CREATION_BLOCK_MARGIN_MANAGER_ROLE)
+    {
+        AccountingOracleReportLimits memory limits = _limits;
+        _setRequestCreationBlockMargin(limits, _requestCreationBlockMargin);
+        _limits = limits;
+    }
+
+    function setFinalizationPauseStartBlock(uint256 _finalizationPauseStartBlock)
+        external
+        onlyRole(FINALIZATION_PAUSE_START_BLOCK_MANAGER_ROLE)
+    {
+        AccountingOracleReportLimits memory limits = _limits;
+        _setFinalizationPauseStartBlock(limits, _finalizationPauseStartBlock);
+        _limits = limits;
+    }
+
     /**
      * @dev Set max positive token rebase allowed per single oracle report
      * token rebase happens on total supply adjustment,
@@ -130,64 +225,12 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
      * - passing zero value is prohibited
      * - to allow unlimited rebases, pass max uint64, i.e.: type(uint64).max
      */
-    function setMaxPositiveTokenRebase(uint256 _maxTokenPositiveRebase) external onlyRole(LIMITS_MANAGER_ROLE) {
+    function setMaxPositiveTokenRebase(uint256 _maxTokenPositiveRebase)
+        external
+        onlyRole(MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE)
+    {
         AccountingOracleReportLimits memory limits = _limits;
         _setMaxPositiveTokenRebase(limits, _maxTokenPositiveRebase);
-        _limits = limits;
-    }
-
-    function setAccountingOracleLimits(
-        uint256 _churnValidatorsByEpochLimit,
-        uint256 _oneOffCLBalanceDecreaseLimit,
-        uint256 _annualBalanceIncreaseLimit,
-        uint256 _requestCreationBlockMargin,
-        uint256 _finalizationPauseStartBlock
-    ) external onlyRole(LIMITS_MANAGER_ROLE) {
-        AccountingOracleReportLimits memory limits = _limits;
-        _setChurnValidatorsByEpochLimit(limits, _churnValidatorsByEpochLimit);
-        _setOneOffCLBalanceDecreaseLimit(limits, _oneOffCLBalanceDecreaseLimit);
-        _setAnnualBalanceIncreaseLimit(limits, _annualBalanceIncreaseLimit);
-        _setRequestCreationBlockMargin(limits, _requestCreationBlockMargin);
-        _setFinalizationPauseStartBlock(limits, _finalizationPauseStartBlock);
-        _limits = limits;
-    }
-
-    function setChurnValidatorsByEpochLimit(uint256 _churnValidatorsByEpochLimit)
-        external
-        onlyRole(LIMITS_MANAGER_ROLE)
-    {
-        AccountingOracleReportLimits memory limits = _limits;
-        _setChurnValidatorsByEpochLimit(limits, _churnValidatorsByEpochLimit);
-        _limits = limits;
-    }
-
-    function setOneOffCLBalanceDecreaseLimit(uint256 _oneOffCLBalanceDecreaseLimit)
-        external
-        onlyRole(LIMITS_MANAGER_ROLE)
-    {
-        AccountingOracleReportLimits memory limits = _limits;
-        _setOneOffCLBalanceDecreaseLimit(limits, _oneOffCLBalanceDecreaseLimit);
-        _limits = limits;
-    }
-
-    function setAnnualBalanceIncreaseLimit(uint256 _annualBalanceIncreaseLimit) external onlyRole(LIMITS_MANAGER_ROLE) {
-        AccountingOracleReportLimits memory limits = _limits;
-        _setAnnualBalanceIncreaseLimit(limits, _annualBalanceIncreaseLimit);
-        _limits = limits;
-    }
-
-    function setRequestCreationBlockMargin(uint256 _requestCreationBlockMargin) external onlyRole(LIMITS_MANAGER_ROLE) {
-        AccountingOracleReportLimits memory limits = _limits;
-        _setRequestCreationBlockMargin(limits, _requestCreationBlockMargin);
-        _limits = limits;
-    }
-
-    function setFinalizationPauseStartBlock(uint256 _finalizationPauseStartBlock)
-        external
-        onlyRole(LIMITS_MANAGER_ROLE)
-    {
-        AccountingOracleReportLimits memory limits = _limits;
-        _setFinalizationPauseStartBlock(limits, _finalizationPauseStartBlock);
         _limits = limits;
     }
 
@@ -276,6 +319,12 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
 
         withdrawals = tokenRebaseLimiter.appendEther(_withdrawalVaultBalance);
         elRewards = tokenRebaseLimiter.appendEther(_elRewardsVaultBalance);
+    }
+
+    function _grantRole(bytes32 _role, address[] memory _accounts) internal {
+        for (uint256 i = 0; i < _accounts.length; ++i) {
+            _grantRole(_role, _accounts[i]);
+        }
     }
 
     function _setChurnValidatorsByEpochLimit(
