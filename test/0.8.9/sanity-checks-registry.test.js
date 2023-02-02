@@ -2,25 +2,29 @@ const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
 const { ETH } = require('../helpers/utils')
 
-const AccountingOracleReportSanityChecks = hre.artifacts.require('AccountingOracleReportSanityChecks')
+const OssifiableProxy = hre.artifacts.require('OssifiableProxy')
+const SanityChecksRegistry = hre.artifacts.require('SanityChecksRegistry')
 const LidoMock = hre.artifacts.require('LidoMockForAccountingOracleSanityChecks')
 const WithdrawalQueueMock = hre.artifacts.require('WithdrawalQueueMockForAccountingOracleSanityChecks')
 
-contract('AccountingOracleReportSanityChecks', ([owner, withdrawalVault]) => {
-  let sanityChecks, lidoMock, withdrawalQueueMock
+contract('SanityChecksRegistry', ([owner, admin, manager, withdrawalVault]) => {
+  let sanityChecksRegistry, lidoMock, withdrawalQueueMock
 
   before(async () => {
     lidoMock = await LidoMock.new({ from: owner })
     withdrawalQueueMock = await WithdrawalQueueMock.new({ from: owner })
-    sanityChecks = await AccountingOracleReportSanityChecks.new(
+    const sanityChecksImpl = await SanityChecksRegistry.new(
       lidoMock.address,
       withdrawalVault,
       withdrawalQueueMock.address,
       { from: owner }
     )
+    const proxy = await OssifiableProxy.new(sanityChecksImpl.address, owner, [], { from: owner })
+    sanityChecksRegistry = await SanityChecksRegistry.at(proxy.address)
+    await sanityChecksRegistry.initialize(admin, manager)
   })
 
-  describe('setLimits()', () => {
+  describe('setAccountingOracleLimits()', () => {
     it('sets limits correctly', async () => {
       const churnValidatorsByEpochLimit = 55
       const oneOffCLBalanceDecreaseLimit = 5_00 // 5%
@@ -28,22 +32,23 @@ contract('AccountingOracleReportSanityChecks', ([owner, withdrawalVault]) => {
       const requestCreationBlockMargin = 1024
       const finalizationPauseStartBlock = await hre.ethers.provider.getBlockNumber().then((bn) => bn + 1000)
 
-      const limitsBefore = await sanityChecks.getAccountingOracleLimits()
+      const limitsBefore = await sanityChecksRegistry.getAccountingOracleLimits()
       assert.notEquals(limitsBefore.churnValidatorsByEpochLimit, churnValidatorsByEpochLimit)
       assert.notEquals(limitsBefore.oneOffCLBalanceDecreaseLimit, oneOffCLBalanceDecreaseLimit)
       assert.notEquals(limitsBefore.annualBalanceIncreaseLimit, annualBalanceIncreaseLimit)
       assert.notEquals(limitsBefore.requestCreationBlockMargin, requestCreationBlockMargin)
       assert.notEquals(limitsBefore.finalizationPauseStartBlock, finalizationPauseStartBlock)
 
-      await sanityChecks.setAccountingOracleLimits(
+      await sanityChecksRegistry.setAccountingOracleLimits(
         churnValidatorsByEpochLimit,
         oneOffCLBalanceDecreaseLimit,
         annualBalanceIncreaseLimit,
         requestCreationBlockMargin,
-        finalizationPauseStartBlock
+        finalizationPauseStartBlock,
+        { from: manager }
       )
 
-      const limitsAfter = await sanityChecks.getAccountingOracleLimits()
+      const limitsAfter = await sanityChecksRegistry.getAccountingOracleLimits()
       assert.equals(limitsAfter.churnValidatorsByEpochLimit, churnValidatorsByEpochLimit)
       assert.equals(limitsAfter.oneOffCLBalanceDecreaseLimit, oneOffCLBalanceDecreaseLimit)
       assert.equals(limitsAfter.annualBalanceIncreaseLimit, annualBalanceIncreaseLimit)
@@ -65,12 +70,13 @@ contract('AccountingOracleReportSanityChecks', ([owner, withdrawalVault]) => {
 
     beforeEach(async () => {
       finalizationPauseStartBlock = await hre.ethers.provider.getBlockNumber().then((bn) => bn + 1000)
-      await sanityChecks.setAccountingOracleLimits(
+      await sanityChecksRegistry.setAccountingOracleLimits(
         churnValidatorsByEpochLimit,
         oneOffCLBalanceDecreaseLimit,
         annualBalanceIncreaseLimit,
         requestCreationBlockMargin,
-        finalizationPauseStartBlock
+        finalizationPauseStartBlock,
+        { from: manager }
       )
     })
 
@@ -90,7 +96,7 @@ contract('AccountingOracleReportSanityChecks', ([owner, withdrawalVault]) => {
       const reportBlockNumber = await hre.ethers.provider.getBlockNumber()
       const finalizationShareRate = ETH(1)
 
-      await sanityChecks.validateAccountingOracleReport(
+      await sanityChecksRegistry.validateAccountingOracleReport(
         timeElapsed,
         preCLBalance,
         postCLBalance,

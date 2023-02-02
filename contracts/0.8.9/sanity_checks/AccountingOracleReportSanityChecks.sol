@@ -4,7 +4,7 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import {Ownable} from "@openzeppelin/contracts-v4.4/access/Ownable.sol";
+import {SanityChecksManagement} from "./SanityChecksManagement.sol";
 
 interface IWithdrawalQueue {
     function getWithdrawalRequestStatus(uint256 _requestId)
@@ -24,7 +24,7 @@ interface ILido {
     function getSharesByPooledEth(uint256 _sharesAmount) external view returns (uint256);
 }
 
-contract AccountingOracleReportSanityChecks is Ownable {
+contract AccountingOracleReportSanityChecks is SanityChecksManagement {
     uint256 private constant MAX_BASIS_POINTS = 10000;
     uint256 private constant SLOT_DURATION = 12;
     uint256 private constant EPOCH_DURATION = 32 * SLOT_DURATION;
@@ -82,7 +82,7 @@ contract AccountingOracleReportSanityChecks is Ownable {
         uint256 _annualBalanceIncreaseLimit,
         uint256 _requestCreationBlockMargin,
         uint256 _finalizationPauseStartBlock
-    ) external onlyOwner {
+    ) external onlyLimitsManager {
         AccountingOracleReportLimits memory limits = _readLimits().value;
         _setChurnValidatorsByEpochLimit(limits, _churnValidatorsByEpochLimit);
         _setOneOffCLBalanceDecreaseLimit(limits, _oneOffCLBalanceDecreaseLimit);
@@ -92,31 +92,31 @@ contract AccountingOracleReportSanityChecks is Ownable {
         _writeLimits(limits);
     }
 
-    function setChurnValidatorsByEpochLimit(uint256 _churnValidatorsByEpochLimit) external onlyOwner {
+    function setChurnValidatorsByEpochLimit(uint256 _churnValidatorsByEpochLimit) external onlyLimitsManager {
         AccountingOracleReportLimits memory limits = _readLimits().value;
         _setChurnValidatorsByEpochLimit(limits, _churnValidatorsByEpochLimit);
         _writeLimits(limits);
     }
 
-    function setOneOffCLBalanceDecreaseLimit(uint256 _oneOffCLBalanceDecreaseLimit) external onlyOwner {
+    function setOneOffCLBalanceDecreaseLimit(uint256 _oneOffCLBalanceDecreaseLimit) external onlyLimitsManager {
         AccountingOracleReportLimits memory limits = _readLimits().value;
         _setOneOffCLBalanceDecreaseLimit(limits, _oneOffCLBalanceDecreaseLimit);
         _writeLimits(limits);
     }
 
-    function setAnnualBalanceIncreaseLimit(uint256 _annualBalanceIncreaseLimit) external onlyOwner {
+    function setAnnualBalanceIncreaseLimit(uint256 _annualBalanceIncreaseLimit) external onlyLimitsManager {
         AccountingOracleReportLimits memory limits = _readLimits().value;
         _setAnnualBalanceIncreaseLimit(limits, _annualBalanceIncreaseLimit);
         _writeLimits(limits);
     }
 
-    function setRequestCreationBlockMargin(uint256 _requestCreationBlockMargin) external onlyOwner {
+    function setRequestCreationBlockMargin(uint256 _requestCreationBlockMargin) external onlyLimitsManager {
         AccountingOracleReportLimits memory limits = _readLimits().value;
         _setRequestCreationBlockMargin(limits, _requestCreationBlockMargin);
         _writeLimits(limits);
     }
 
-    function setFinalizationPauseStartBlock(uint256 _finalizationPauseStartBlock) external onlyOwner {
+    function setFinalizationPauseStartBlock(uint256 _finalizationPauseStartBlock) external onlyLimitsManager {
         AccountingOracleReportLimits memory limits = _readLimits().value;
         _setFinalizationPauseStartBlock(limits, _finalizationPauseStartBlock);
         _writeLimits(limits);
@@ -153,7 +153,9 @@ contract AccountingOracleReportSanityChecks is Ownable {
         if (_postCLBalance > _preCLBalance) {
             uint256 balanceIncrease = _postCLBalance - _preCLBalance;
 
-            uint256 annualBalanceDiff = (365 days * MAX_BASIS_POINTS) * balanceIncrease / _preCLBalance / _timeElapsed;
+            uint256 annualBalanceDiff = ((365 days * MAX_BASIS_POINTS) * balanceIncrease) /
+                _preCLBalance /
+                _timeElapsed;
             if (annualBalanceDiff > limits.annualBalanceIncreaseLimit) {
                 revert IncorrectCLBalanceIncrease(annualBalanceDiff);
             }
