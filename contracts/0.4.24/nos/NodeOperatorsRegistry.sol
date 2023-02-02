@@ -691,7 +691,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     /// @param _index Index of the key, starting with 0
     /// @dev DEPRECATED use removeSigningKeys instead
     function removeSigningKey(uint256 _nodeOperatorId, uint256 _index) external {
-        require(_index <= UINT64_MAX, "INDEX_TOO_LARGE");
+        require(_index < UINT64_MAX, "INDEX_TOO_LARGE");
         _removeUnusedSigningKeys(_nodeOperatorId, uint64(_index), 1);
     }
 
@@ -704,7 +704,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         uint256 _fromIndex,
         uint256 _keysCount
     ) external {
-        require(_fromIndex <= UINT64_MAX, "FROM_INDEX_TOO_LARGE");
+        require(_fromIndex < UINT64_MAX, "FROM_INDEX_TOO_LARGE");
         /// @dev safemath(unit256) checks for overflow on addition, so _keysCount is guaranteed <= UINT64_MAX
         require(_fromIndex.add(_keysCount) <= UINT64_MAX, "KEYS_COUNT_TOO_LARGE");
         _removeUnusedSigningKeys(_nodeOperatorId, uint64(_fromIndex), uint64(_keysCount));
@@ -715,7 +715,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
     /// @param _index Index of the key, starting with 0
     /// @dev DEPRECATED use removeSigningKeysOperatorBH instead
     function removeSigningKeyOperatorBH(uint256 _nodeOperatorId, uint256 _index) external {
-        require(_index <= UINT64_MAX, "INDEX_TOO_LARGE");
+        require(_index < UINT64_MAX, "INDEX_TOO_LARGE");
         _removeUnusedSigningKeys(_nodeOperatorId, uint64(_index), 1);
     }
 
@@ -728,7 +728,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         uint256 _fromIndex,
         uint256 _keysCount
     ) external {
-        require(_fromIndex <= UINT64_MAX, "FROM_INDEX_TOO_LARGE");
+        require(_fromIndex < UINT64_MAX, "FROM_INDEX_TOO_LARGE");
         /// @dev safemath(unit256) checks for overflow on addition, so _keysCount is guaranteed <= UINT64_MAX
         require(_fromIndex.add(_keysCount) <= UINT64_MAX, "KEYS_COUNT_TOO_LARGE");
         _removeUnusedSigningKeys(_nodeOperatorId, uint64(_fromIndex), uint64(_keysCount));
