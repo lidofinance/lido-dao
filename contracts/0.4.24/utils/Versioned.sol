@@ -4,7 +4,12 @@ pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/common/UnstructuredStorage.sol";
 
-
+/**
+ * @title Adapted code of /contracts/0.8.9/utils/Versioned.sol
+ *
+ * This contract contains only core part of original Versioned.sol
+ * to reduce contract size
+ */
 contract Versioned {
     using UnstructuredStorage for bytes32;
 
