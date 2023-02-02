@@ -134,8 +134,10 @@
     "yargs": "^16.0.3"
   },
   "overrides": {
-    "eth-gas-reporter": {
-      "@ethersproject/abi": "^5.7.0"
+    "hardhat-gas-reporter": {
+      "eth-gas-reporter": {
+        "@ethersproject/abi": "^5.7.0"
+      }
     }
   }
 }
