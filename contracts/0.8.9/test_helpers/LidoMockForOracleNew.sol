@@ -23,14 +23,14 @@ contract LidoMockForOracleNew {
     /// FIXME: use the correct signature
 
     function handleOracleReport(
-        uint256 secondsElapsedSinceLastReport,
-        uint256 numValidators,
+        uint256 /* secondsElapsedSinceLastReport */,
+        uint256 /* numValidators */,
         uint256 clBalance,
-        uint256 withdrawalVaultBalance,
-        uint256 elRewardsVaultBalance,
-        uint256 lastWithdrawalRequestIdToFinalize,
-        uint256 finalizationShareRate,
-        bool isBunkerMode
+        uint256 /* withdrawalVaultBalance */,
+        uint256 /* elRewardsVaultBalance */,
+        uint256 /* lastWithdrawalRequestIdToFinalize */,
+        uint256 /* finalizationShareRate */,
+        bool /* isBunkerMode */
     ) external {
         totalPooledEther = clBalance;
     }

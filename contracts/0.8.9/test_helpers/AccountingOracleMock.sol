@@ -36,8 +36,10 @@ contract AccountingOracleMock {
 
     function submitReportData(
         AccountingOracle.ReportData calldata data,
-        uint256 contractVersion
+        uint256 /* contractVersion */
     ) external {
+        // TODO: remove the line below
+        // solhint-disable-next-line
         uint256 slotsElapsed = data.refSlot - _lastRefSlot;
         _lastRefSlot = data.refSlot;
 
