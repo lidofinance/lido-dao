@@ -7,9 +7,10 @@ import { AccessControlEnumerable } from "@openzeppelin/contracts-v4.4/access/Acc
 import "./lib/RateLimitUtils.sol";
 import "./ReportEpochChecker.sol";
 import "./CommitteeQuorum.sol";
+import "./utils/Versioned.sol";
 
 
-contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpochChecker {
+contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpochChecker, Versioned {
     using UnstructuredStorage for bytes32;
     using RateLimitUtils for LimitState.Data;
     using LimitUnstructuredStorage for bytes32;
@@ -34,8 +35,6 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
         uint256 limitIncreasePerBlock
     );
 
-    event ContractVersionSet(uint256 version);
-
     // ACL
 
     bytes32 constant public MANAGE_MEMBERS_ROLE = keccak256("MANAGE_MEMBERS_ROLE");
@@ -46,13 +45,6 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
 
     bytes32 internal constant RATE_LIMIT_STATE_POSITION = keccak256("lido.ValidatorExitBus.rateLimitState");
 
-    /// Version of the initialized contract data
-    /// NB: Contract versioning starts from 1.
-    /// The version stored in CONTRACT_VERSION_POSITION equals to
-    /// - 0 right after deployment when no initializer is invoked yet
-    /// - N after calling initialize() during deployment from scratch, where N is the current contract version
-    /// - N after upgrading contract from the previous version (after calling finalize_vN())
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.ValidatorExitBus.contractVersion");
 
     bytes32 internal constant TOTAL_EXIT_REQUESTS_POSITION = keccak256("lido.ValidatorExitBus.totalExitRequests");
 
@@ -90,14 +82,10 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
         uint64 _genesisTime
     ) external
     {
-        // Initializations for v0 --> v1
-        if (CONTRACT_VERSION_POSITION.getStorageUint256() != 0) {
-            revert CanInitializeOnlyOnZeroVersion();
-        }
+        _initializeContractVersionTo(1);
+
         if (_admin == address(0)) { revert ZeroAdminAddress(); }
 
-        CONTRACT_VERSION_POSITION.setStorageUint256(1);
-        emit ContractVersionSet(1);
 
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
 
@@ -113,14 +101,6 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
 
         // set expected epoch to the first epoch for the next frame
         _setExpectedEpochToFirstOfNextFrame();
-    }
-
-    /**
-     * @notice Return the initialized version of this contract starting from 0
-     * @dev See LIP-10 for the details
-     */
-    function getVersion() external view returns (uint256) {
-        return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
     function getTotalExitRequests() external view returns (uint256) {
@@ -323,7 +303,6 @@ contract ValidatorExitBus is CommitteeQuorum, AccessControlEnumerable, ReportEpo
         );
     }
 
-    error CanInitializeOnlyOnZeroVersion();
     error ZeroAdminAddress();
     error RateLimitExceeded();
     error ArraysMustBeSameSize();

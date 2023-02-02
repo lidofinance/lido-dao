@@ -7,6 +7,7 @@ import { AccessControlEnumerable } from "./utils/access/AccessControlEnumerable.
 
 import "./CommitteeQuorum.sol";
 import "./ReportEpochChecker.sol";
+import "./utils/Versioned.sol";
 
 
 /**
@@ -45,7 +46,7 @@ interface IStakingModule {
  * Not all frames may come to a quorum. Oracles may report only to the first epoch of the frame and
  * only if no quorum is reached for this epoch yet.
  */
-contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochChecker {
+contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochChecker, Versioned {
     using ERC165Checker for address;
     using UnstructuredStorage for bytes32;
 
@@ -68,8 +69,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
          uint256 timeElapsed,
          uint256 totalShares
     );
-
-    event ContractVersionSet(uint256 version);
 
 
     struct Report {
@@ -110,14 +109,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
 
     /// Address of the Lido contract
     bytes32 internal constant LIDO_POSITION = keccak256("lido.LidoOracle.lido");
-
-    /// Version of the initialized contract data
-    /// NB: Contract versioning starts from 1.
-    /// The version stored in CONTRACT_VERSION_POSITION equals to
-    /// - 0 right after deployment when no initializer is invoked yet
-    /// - N after calling initialize() during deployment from scratch, where N is the current contract version
-    /// - N after upgrading contract from the previous version (after calling finalize_vN())
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.LidoOracle.contractVersion");
 
     /// Upper bound of the reported balance possible increase in APR, controlled by the governance
     bytes32 internal constant ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION =
@@ -165,16 +156,9 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
     {
         assert(1 == ((1 << (MAX_MEMBERS - 1)) >> (MAX_MEMBERS - 1)));  // static assert
 
-        // We consider storage state right after deployment (no initialize() called yet) as version 0
+        _initializeContractVersionTo(1);
 
-        // Initializations for v0 --> v1
-        if (CONTRACT_VERSION_POSITION.getStorageUint256() != 0) {
-            revert CanInitializeOnlyOnZeroVersion();
-        }
         if (_admin == address(0)) { revert ZeroAdminAddress(); }
-
-        CONTRACT_VERSION_POSITION.setStorageUint256(1);
-        emit ContractVersionSet(1);
 
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
 
@@ -248,13 +232,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         )
     {
         reportHash = distinctReportHashes[_index];
-    }
-
-    /**
-     * @notice Return the initialized version of this contract starting from 0
-     */
-    function getVersion() external view returns (uint256) {
-        return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
     /**
@@ -504,7 +481,6 @@ contract LidoOracleNew is CommitteeQuorum, AccessControlEnumerable, ReportEpochC
         }
     }
 
-    error CanInitializeOnlyOnZeroVersion();
     error ZeroAdminAddress();
     error InvalidReportFormat();
     error BadBeaconReportReceiver();

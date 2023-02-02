@@ -23,9 +23,11 @@ contract Versioned {
     /// - N after upgrading contract by calling finalizeUpgrade_vN().
     bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.Versioned.contractVersion");
 
+    uint256 internal constant PERTIFIED_VERSION_MARK = type(uint256).max;
+
     constructor() {
         // lock version in the implementation's storage to prevent initialization
-        CONTRACT_VERSION_POSITION.setStorageUint256(type(uint256).max);
+        CONTRACT_VERSION_POSITION.setStorageUint256(PERTIFIED_VERSION_MARK);
     }
 
     /// @notice Returns the current contract version.
@@ -45,21 +47,15 @@ contract Versioned {
     }
 
     /// @dev Sets the contract version to 1. Should be called from the initialize() function.
-    function _initializeContractVersionTo1() internal {
-        if (_getContractVersion() == 0) {
-            _writeContractVersion(1);
-        } else {
-            revert NonZeroContractVersionOnInit();
-        }
+    function _initializeContractVersionTo(uint256 version) internal {
+        if (_getContractVersion() != 0) revert NonZeroContractVersionOnInit();
+        _writeContractVersion(version);
     }
 
     /// @dev Updates the contract version. Should be called from a finalizeUpgrade_vN() function.
     function _updateContractVersion(uint256 newVersion) internal {
-        if (newVersion == _getContractVersion() + 1) {
-            _writeContractVersion(newVersion);
-        } else {
-            revert InvalidContractVersionIncrement();
-        }
+        if (newVersion != _getContractVersion() + 1) revert InvalidContractVersionIncrement();
+        _writeContractVersion(newVersion);
     }
 
     function _writeContractVersion(uint256 version) private {
