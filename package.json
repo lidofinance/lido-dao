@@ -99,7 +99,6 @@
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-standard": "^4.0.1",
     "eth-ens-namehash": "^2.0.8",
-    "eth-gas-reporter": "psirex/eth-gas-reporter#8ae255a8f94bcdb9bd9d669d2c1dbb012c761369",
     "ethereumjs-testrpc-sc": "^6.5.1-sc.1",
     "hardhat": "2.9.9",
     "hardhat-contract-sizer": "^2.5.0",
@@ -133,5 +132,10 @@
     "openzeppelin-solidity": "2.0.0",
     "solhint-plugin-lido": "^0.0.4",
     "yargs": "^16.0.3"
+  },
+  "overrides": {
+    "eth-gas-reporter": {
+      "@ethersproject/abi": "^5.7.0"
+    }
   }
 }

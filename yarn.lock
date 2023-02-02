@@ -3645,7 +3645,6 @@ __metadata:
     eslint-plugin-promise: ^4.2.1
     eslint-plugin-standard: ^4.0.1
     eth-ens-namehash: ^2.0.8
-    eth-gas-reporter: "psirex/eth-gas-reporter#8ae255a8f94bcdb9bd9d669d2c1dbb012c761369"
     ethereumjs-testrpc-sc: ^6.5.1-sc.1
     ethereumjs-util: ^7.0.8
     ethers: ^5.1.4
@@ -11459,34 +11458,6 @@ __metadata:
     "@codechecks/client":
       optional: true
   checksum: c70f9703f9d29e4ad07a703390a77073a193ce4ffa3c774836ab6519623772fc650761e092c84ff506319caa3f3c33f62bf7d5543ae73e12e5502db816fde8dd
-  languageName: node
-  linkType: hard
-
-"eth-gas-reporter@psirex/eth-gas-reporter#8ae255a8f94bcdb9bd9d669d2c1dbb012c761369":
-  version: 0.2.24
-  resolution: "eth-gas-reporter@https://github.com/psirex/eth-gas-reporter.git#commit=8ae255a8f94bcdb9bd9d669d2c1dbb012c761369"
-  dependencies:
-    "@ethersproject/abi": ^5.7.0
-    "@solidity-parser/parser": ^0.14.0
-    cli-table3: ^0.5.0
-    colors: 1.4.0
-    ethereum-cryptography: ^1.0.3
-    ethers: ^4.0.40
-    fs-readdir-recursive: ^1.1.0
-    lodash: ^4.17.14
-    markdown-table: ^1.1.3
-    mocha: ^7.1.1
-    req-cwd: ^2.0.0
-    request: ^2.88.0
-    request-promise-native: ^1.0.5
-    sha1: ^1.1.1
-    sync-request: ^6.0.0
-  peerDependencies:
-    "@codechecks/client": ^0.1.0
-  peerDependenciesMeta:
-    "@codechecks/client":
-      optional: true
-  checksum: 0ae9c3ec29491561ff8072e1b2f65099fa57c772def2e9ec754500b6e9337cae41e0d78f2c77f2597db94497b97089e0ec00f0d6cbdd1ce4854a0ed89adec1a4
   languageName: node
   linkType: hard
 
