@@ -40,7 +40,7 @@ contract('Lido: staking router reward distribution', ([appManager, voting, treas
   })
 
   beforeEach('deploy dao and app', async () => {
-    ;({ dao, acl } = await newDao(appManager))
+    ; ({ dao, acl } = await newDao(appManager))
 
     // Instantiate a proxy for the app, using the base contract as its logic implementation.
     let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
@@ -56,7 +56,7 @@ contract('Lido: staking router reward distribution', ([appManager, voting, treas
     await acl.createPermission(voting, app.address, await app.RESUME_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.BURN_ROLE(), appManager, { from: appManager })
     await acl.createPermission(voting, app.address, await app.MANAGE_PROTOCOL_CONTRACTS_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE(), appManager, {
+    await acl.createPermission(voting, app.address, await app.MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE(), appManager, {
       from: appManager
     })
     await acl.createPermission(voting, app.address, await app.STAKING_PAUSE_ROLE(), appManager, { from: appManager })
@@ -140,7 +140,7 @@ contract('Lido: staking router reward distribution', ([appManager, voting, treas
 
     assert((await app.isStakingPaused()) === true)
     assert((await app.isStopped()) === true)
-    await app.resume({ from: voting })
+    await app.resumeProtocolAndStaking({ from: voting })
     assert((await app.isStakingPaused()) === false)
     assert((await app.isStopped()) === false)
 
