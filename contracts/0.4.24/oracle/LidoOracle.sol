@@ -414,7 +414,7 @@ contract LidoOracle is AragonApp, Versioned {
      * NB, that thus version 2 is skipped
      */
     function _initialize_v3() internal {
-        _writeContractVersion(3);
+        _setContractVersion(3);
     }
 
     /**

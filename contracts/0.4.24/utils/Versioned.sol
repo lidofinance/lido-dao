@@ -39,7 +39,7 @@ contract Versioned {
         require(version == getContractVersion(), "UNEXPECTED_CONTRACT_VERSION");
     }
 
-    function _writeContractVersion(uint256 version) internal {
+    function _setContractVersion(uint256 version) internal {
         CONTRACT_VERSION_POSITION.setStorageUint256(version);
         emit ContractVersionSet(version);
     }

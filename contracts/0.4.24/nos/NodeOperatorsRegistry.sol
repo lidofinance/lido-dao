@@ -211,7 +211,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         STETH_POSITION.setStorageAddress(_steth);
         TYPE_POSITION.setStorageBytes32(_type);
 
-        _writeContractVersion(2);
+        _setContractVersion(2);
 
         emit StethContractSet(_steth);
         emit StakingModuleTypeSet(_type);

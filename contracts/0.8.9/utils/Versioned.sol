@@ -45,16 +45,16 @@ contract Versioned {
     /// @dev Sets the contract version to N. Should be called from the initialize() function.
     function _initializeContractVersionTo(uint256 version) internal {
         if (getContractVersion() != 0) revert NonZeroContractVersionOnInit();
-        _writeContractVersion(version);
+        _setContractVersion(version);
     }
 
     /// @dev Updates the contract version. Should be called from a finalizeUpgrade_vN() function.
     function _updateContractVersion(uint256 newVersion) internal {
         if (newVersion != getContractVersion() + 1) revert InvalidContractVersionIncrement();
-        _writeContractVersion(newVersion);
+        _setContractVersion(newVersion);
     }
 
-    function _writeContractVersion(uint256 version) private {
+    function _setContractVersion(uint256 version) private {
         CONTRACT_VERSION_POSITION.setStorageUint256(version);
         emit ContractVersionSet(version);
     }
