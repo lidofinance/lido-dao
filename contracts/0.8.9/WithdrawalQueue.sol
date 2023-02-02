@@ -170,7 +170,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
 
     /// @notice Returns whether the contract is initialized or not
     function isInitialized() external view returns (bool) {
-        return _getContractVersion() != 0;
+        return getContractVersion() != 0;
     }
 
     /**
