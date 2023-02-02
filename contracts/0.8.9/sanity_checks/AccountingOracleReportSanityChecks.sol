@@ -34,11 +34,11 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
     uint256 private constant SLOT_DURATION = 12;
     uint256 private constant EPOCH_DURATION = 32 * SLOT_DURATION;
 
-    bytes32 private constant LIMITS_POSITION = keccak256("Lido.AccountingOracleSanityChecks.limitsPosition");
-
     ILido private immutable LIDO;
     address private immutable WITHDRAWAL_VAULT;
     IWithdrawalQueue private immutable WITHDRAWAL_QUEUE;
+
+    AccountingOracleReportLimits private _limits;
 
     struct AccountingOracleReportLimits {
         uint8 churnValidatorsByEpochLimit;
@@ -80,7 +80,7 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
             uint256 finalizationPauseStartBlock
         )
     {
-        AccountingOracleReportLimits memory limits = _readLimits().value;
+        AccountingOracleReportLimits memory limits = _limits;
         churnValidatorsByEpochLimit = limits.churnValidatorsByEpochLimit;
         oneOffCLBalanceDecreaseLimit = limits.oneOffCLBalanceDecreaseLimit;
         annualBalanceIncreaseLimit = limits.annualBalanceIncreaseLimit;
@@ -114,7 +114,7 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
      * - type(uint64).max means unlimited
      */
     function getMaxPositiveTokenRebase() public view returns (uint256 maxPositiveTokenRebase) {
-        return _readLimits().value.maxPositiveTokenRebase;
+        return _limits.maxPositiveTokenRebase;
     }
 
     /**
@@ -128,9 +128,9 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
      * - to allow unlimited rebases, pass max uint64, i.e.: type(uint64).max
      */
     function setMaxPositiveTokenRebase(uint256 _maxTokenPositiveRebase) external onlyRole(LIMITS_MANAGER_ROLE) {
-        AccountingOracleReportLimits memory limits = _readLimits().value;
+        AccountingOracleReportLimits memory limits = _limits;
         _setMaxPositiveTokenRebase(limits, _maxTokenPositiveRebase);
-        _writeLimits(limits);
+        _limits = limits;
     }
 
     function setAccountingOracleLimits(
@@ -140,43 +140,52 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
         uint256 _requestCreationBlockMargin,
         uint256 _finalizationPauseStartBlock
     ) external onlyRole(LIMITS_MANAGER_ROLE) {
-        AccountingOracleReportLimits memory limits = _readLimits().value;
+        AccountingOracleReportLimits memory limits = _limits;
         _setChurnValidatorsByEpochLimit(limits, _churnValidatorsByEpochLimit);
         _setOneOffCLBalanceDecreaseLimit(limits, _oneOffCLBalanceDecreaseLimit);
         _setAnnualBalanceIncreaseLimit(limits, _annualBalanceIncreaseLimit);
         _setRequestCreationBlockMargin(limits, _requestCreationBlockMargin);
         _setFinalizationPauseStartBlock(limits, _finalizationPauseStartBlock);
-        _writeLimits(limits);
+        _limits = limits;
     }
 
-    function setChurnValidatorsByEpochLimit(uint256 _churnValidatorsByEpochLimit) external onlyRole(LIMITS_MANAGER_ROLE) {
-        AccountingOracleReportLimits memory limits = _readLimits().value;
+    function setChurnValidatorsByEpochLimit(uint256 _churnValidatorsByEpochLimit)
+        external
+        onlyRole(LIMITS_MANAGER_ROLE)
+    {
+        AccountingOracleReportLimits memory limits = _limits;
         _setChurnValidatorsByEpochLimit(limits, _churnValidatorsByEpochLimit);
-        _writeLimits(limits);
+        _limits = limits;
     }
 
-    function setOneOffCLBalanceDecreaseLimit(uint256 _oneOffCLBalanceDecreaseLimit) external onlyRole(LIMITS_MANAGER_ROLE) {
-        AccountingOracleReportLimits memory limits = _readLimits().value;
+    function setOneOffCLBalanceDecreaseLimit(uint256 _oneOffCLBalanceDecreaseLimit)
+        external
+        onlyRole(LIMITS_MANAGER_ROLE)
+    {
+        AccountingOracleReportLimits memory limits = _limits;
         _setOneOffCLBalanceDecreaseLimit(limits, _oneOffCLBalanceDecreaseLimit);
-        _writeLimits(limits);
+        _limits = limits;
     }
 
     function setAnnualBalanceIncreaseLimit(uint256 _annualBalanceIncreaseLimit) external onlyRole(LIMITS_MANAGER_ROLE) {
-        AccountingOracleReportLimits memory limits = _readLimits().value;
+        AccountingOracleReportLimits memory limits = _limits;
         _setAnnualBalanceIncreaseLimit(limits, _annualBalanceIncreaseLimit);
-        _writeLimits(limits);
+        _limits = limits;
     }
 
     function setRequestCreationBlockMargin(uint256 _requestCreationBlockMargin) external onlyRole(LIMITS_MANAGER_ROLE) {
-        AccountingOracleReportLimits memory limits = _readLimits().value;
+        AccountingOracleReportLimits memory limits = _limits;
         _setRequestCreationBlockMargin(limits, _requestCreationBlockMargin);
-        _writeLimits(limits);
+        _limits = limits;
     }
 
-    function setFinalizationPauseStartBlock(uint256 _finalizationPauseStartBlock) external onlyRole(LIMITS_MANAGER_ROLE) {
-        AccountingOracleReportLimits memory limits = _readLimits().value;
+    function setFinalizationPauseStartBlock(uint256 _finalizationPauseStartBlock)
+        external
+        onlyRole(LIMITS_MANAGER_ROLE)
+    {
+        AccountingOracleReportLimits memory limits = _limits;
         _setFinalizationPauseStartBlock(limits, _finalizationPauseStartBlock);
-        _writeLimits(limits);
+        _limits = limits;
     }
 
     function validateAccountingOracleReport(
@@ -194,7 +203,7 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
         if (_withdrawalVaultBalance > getWithdrawalVault().balance) {
             revert IncorrectWithdrawalsVaultBalance(_withdrawalVaultBalance);
         }
-        AccountingOracleReportLimits memory limits = _readLimits().value;
+        AccountingOracleReportLimits memory limits = _limits;
 
         // 2. Consensus Layer one-off balances decrease
         uint256 unifiedPostCLBalance = _postCLBalance + _withdrawalVaultBalance;
@@ -332,18 +341,6 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
 
     struct StorageLimits {
         AccountingOracleReportLimits value;
-    }
-
-    function _readLimits() internal pure returns (StorageLimits storage limits) {
-        bytes32 position = LIMITS_POSITION;
-        assembly {
-            limits.slot := position
-        }
-    }
-
-    function _writeLimits(AccountingOracleReportLimits memory _limits) internal {
-        StorageLimits storage limits = _readLimits();
-        limits.value = _limits;
     }
 
     event OneOffCLBalanceDecreaseSet(uint256 oneOffCLBalanceDecreaseLimit);
