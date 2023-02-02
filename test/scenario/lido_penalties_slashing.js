@@ -5,66 +5,74 @@ const { getEventArgument } = require('@aragon/contract-helpers-test')
 
 const { assertRevert } = require('../helpers/assertThrow')
 const { pad, ETH, tokens } = require('../helpers/utils')
-const { deployDaoAndPool } = require('./helpers/deploy')
-const { signDepositData } = require('../0.8.9/helpers/signatures')
+const { signDepositData } = require('../helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
+const { deployProtocol } = require('../helpers/protocol')
+const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
 contract('Lido: penalties, slashing, operator stops', (addresses) => {
   const [
-    // the root account which deployed the DAO
-    appManager,
-    // the address which we use to simulate the voting DAO application
-    voting,
     // node operators
     operator_1,
     operator_2,
     // users who deposit Ether to the pool
     user1,
     // unrelated address
-    nobody,
-    depositor
+    nobody
   ] = addresses
 
   let pool, nodeOperatorsRegistry, token
   let oracleMock, depositContractMock
-  let treasuryAddr, guardians
+  let treasuryAddr, guardians, voting
   let depositSecurityModule, depositRoot
   let withdrawalCredentials
   let stakingRouter
 
   before('DAO, node operators registry, token, pool and deposit security module are deployed and initialized', async () => {
-    const deployed = await deployDaoAndPool(appManager, voting, depositor)
+      const deployed = await deployProtocol({
+        stakingModulesFactory: async (protocol) => {
+          const curatedModule = await setupNodeOperatorsRegistry(protocol)
+          return [
+            {
+              module: curatedModule,
+              name: 'Curated',
+              targetShares: 10000,
+              moduleFee: 500,
+              treasuryFee: 500
+            }
+          ]
+        }
+      })
 
-    // contracts/StETH.sol
-    token = deployed.pool
+      // contracts/StETH.sol
+      token = deployed.pool
 
-    // contracts/Lido.sol
-    pool = deployed.pool
-    await pool.resumeProtocolAndStaking()
+      // contracts/Lido.sol
+      pool = deployed.pool
 
-    // contracts/nos/NodeOperatorsRegistry.sol
-    nodeOperatorsRegistry = deployed.nodeOperatorsRegistry
+      // contracts/nos/NodeOperatorsRegistry.sol
+      nodeOperatorsRegistry = deployed.stakingModules[0]
 
-    // mocks
-    oracleMock = deployed.oracleMock
-    depositContractMock = deployed.depositContractMock
+      // mocks
+      oracleMock = deployed.oracle
+      depositContractMock = deployed.depositContract
 
-    stakingRouter = deployed.stakingRouter
+      stakingRouter = deployed.stakingRouter
 
-    // addresses
-    treasuryAddr = deployed.treasuryAddr
-    depositSecurityModule = deployed.depositSecurityModule
-    guardians = deployed.guardians
+      // addresses
+      treasuryAddr = deployed.treasury.address
+      depositSecurityModule = deployed.depositSecurityModule
+      guardians = deployed.guardians
+      voting = deployed.voting.address
 
-    depositRoot = await depositContractMock.get_deposit_root()
-    withdrawalCredentials = pad('0x0202', 32)
+      depositRoot = await depositContractMock.get_deposit_root()
+      withdrawalCredentials = pad('0x0202', 32)
 
-    await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
-  })
-
-
+      await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
+    }
+  )
 
   let awaitingTotalShares = new BN(0)
   let awaitingUser1Balance = new BN(0)

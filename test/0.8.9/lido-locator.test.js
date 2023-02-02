@@ -1,6 +1,6 @@
 const { assert } = require('../helpers/assert')
 
-const LidoLocator = artifacts.require('LidoLocator')
+const LidoLocator = artifacts.require('LidoLocatorMock')
 
 contract(
   'LidoLocator',

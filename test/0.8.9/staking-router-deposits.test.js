@@ -23,8 +23,6 @@ contract('StakingRouter', ([depositor, stranger]) => {
       }
     })
 
-    await deployed.pool.resumeProtocolAndStaking({ from: voting })
-
     lido = deployed.pool
     stakingRouter = deployed.stakingRouter
     operators = await setupNodeOperatorsRegistry(deployed, true)

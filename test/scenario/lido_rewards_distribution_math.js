@@ -1,12 +1,13 @@
-const { assert } = require('chai')
+const hre = require('hardhat')
 const { BN } = require('bn.js')
 const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
-const { waitBlocks } = require('../helpers/blockchain')
+const { waitBlocks, EvmSnapshot } = require('../helpers/blockchain')
 const { pad, ETH, hexConcat } = require('../helpers/utils')
 const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
+const { assert } = require('../helpers/assert')
 const { DSMAttestMessage, DSMPauseMessage, signDepositData } = require('../helpers/signatures')
 
 const tenKBN = new BN(10000)
@@ -26,10 +27,7 @@ const StakingModuleStatus = {
 
 contract('Lido: rewards distribution math', (addresses) => {
   const [
-    // the root account which deployed the DAO
-    appManager,
     // the address which we use to simulate the voting DAO application
-    voting,
     // node operators
     operator_1,
     operator_2,
@@ -45,7 +43,7 @@ contract('Lido: rewards distribution math', (addresses) => {
   let oracle, anotherCuratedModule
   let treasuryAddr, guardians, depositRoot
   let depositSecurityModule
-  let voting, deployed
+  let voting, deployed, snapshot
 
   var epoch = 100
 
@@ -102,7 +100,6 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     // contracts/Lido.sol
     pool = deployed.pool
-    await pool.resumeProtocolAndStaking()
 
     // contracts/0.8.9/StakingRouter.sol
     stakingRouter = deployed.stakingRouter

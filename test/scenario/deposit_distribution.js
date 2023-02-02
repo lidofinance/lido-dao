@@ -44,8 +44,6 @@ contract('StakingRouter', ([depositor, stranger1, dsm, address1, address2]) => {
     lido = deployed.pool
     voting = deployed.voting.address
 
-    await lido.resumeProtocolAndStaking({ from: voting })
-
     await snapshot.make()
   })
 

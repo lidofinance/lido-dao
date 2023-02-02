@@ -192,8 +192,18 @@ async function guardiansFactory(_) {
   }
 }
 
-async function selfOwnedStETHBurnerFactory({ appManager, treasury, pool }) {
-  return SelfOwnedStETHBurner.new(appManager.address, treasury.address, pool.address, 0, 0)
+async function selfOwnedStETHBurnerFactory({ appManager, treasury, pool, voting }) {
+  const burner = await SelfOwnedStETHBurner.new(appManager.address, treasury.address, pool.address, 0, 0)
+
+  const [REQUEST_BURN_MY_STETH_ROLE, RECOVER_ASSETS_ROLE] = await Promise.all([
+    burner.REQUEST_BURN_MY_STETH_ROLE(),
+    burner.RECOVER_ASSETS_ROLE()
+  ])
+
+  await burner.grantRole(REQUEST_BURN_MY_STETH_ROLE, voting.address, { from: appManager.address })
+  await burner.grantRole(RECOVER_ASSETS_ROLE, voting.address, { from: appManager.address })
+
+  return burner
 }
 
 async function lidoLocatorMockFactory(protocol) {
@@ -212,13 +222,23 @@ async function lidoLocatorMockFactory(protocol) {
   )
 }
 
-async function postSetup({ pool, lidoLocator, eip712StETH, oracle, depositContract, withdrawalQueue, appManager }) {
+async function postSetup({
+  pool,
+  lidoLocator,
+  eip712StETH,
+  oracle,
+  depositContract,
+  withdrawalQueue,
+  appManager,
+  voting
+}) {
   await pool.initialize(lidoLocator.address, eip712StETH.address)
 
   await oracle.setPool(pool.address)
   await depositContract.reset()
   await depositContract.set_deposit_root(DEPOSIT_ROOT)
   await withdrawalQueue.updateBunkerMode(0, false, { from: appManager.address })
+  await pool.resumeProtocolAndStaking({ from: voting.address })
 }
 
 module.exports = {

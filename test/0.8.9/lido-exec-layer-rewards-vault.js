@@ -7,7 +7,6 @@ const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const { StETH, ETH } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 const { deployProtocol } = require('../helpers/protocol')
-const { postSetup } = require('../helpers/factories')
 const { EvmSnapshot } = require('../helpers/blockchain')
 
 const ERC20OZMock = artifacts.require('ERC20OZMock.sol')
@@ -17,17 +16,13 @@ contract('LidoExecutionLayerRewardsVault', ([deployer, anotherAccount]) => {
   let lido, elRewardsVault, treasury, appManager, snapshot
 
   before('deploy lido with dao', async () => {
-    const deployed = await deployProtocol({
-      postSetup: async (protocol) => {
-        await postSetup(protocol)
-        await protocol.pool.resumeProtocolAndStaking()
-      }
-    })
+    const deployed = await deployProtocol()
 
     lido = deployed.pool
     elRewardsVault = deployed.elRewardsVault
     treasury = deployed.treasury.address
     appManager = deployed.appManager.address
+
     snapshot = new EvmSnapshot(hre.ethers.provider)
     await snapshot.make()
   })

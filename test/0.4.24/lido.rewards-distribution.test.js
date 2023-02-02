@@ -43,7 +43,6 @@ contract('Lido: staking router reward distribution', ([depositor, user2]) => {
     soloModule = deployed.stakingModules[1]
     oracle = deployed.oracle
     appManager = deployed.appManager.address
-    voting = deployed.voting.address
     treasury = deployed.treasury.address
 
     await curatedModule.increaseTotalSigningKeysCount(500_000, { from: appManager })
@@ -53,8 +52,6 @@ contract('Lido: staking router reward distribution', ([depositor, user2]) => {
     await soloModule.setTotalKeys(100, { from: appManager })
     await soloModule.setTotalUsedKeys(10, { from: appManager })
     await soloModule.setTotalStoppedKeys(0, { from: appManager })
-
-    await app.resumeProtocolAndStaking({ from: voting })
 
     snapshot = new EvmSnapshot(hre.ethers.provider)
     await snapshot.make()

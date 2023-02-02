@@ -88,12 +88,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     withdrawalQueue = deployed.withdrawalQueue
     oracle = deployed.oracle
 
-    assert((await app.isStakingPaused()) === true)
-    assert((await app.isStopped()) === true)
-    await app.resumeProtocolAndStaking({ from: voting })
-    assert((await app.isStakingPaused()) === false)
-    assert((await app.isStopped()) === false)
-
     beaconChainDepositor = await BeaconChainDepositorMock.new(depositContract.address)
 
     snapshot = new EvmSnapshot(hre.ethers.provider)
