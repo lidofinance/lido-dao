@@ -455,7 +455,7 @@ contract StakingRouter is IStakingRouter, AccessControlEnumerable, BeaconChainDe
         StakingModule storage stakingModule = _getStakingModuleByIndex(stakingModuleIndex);
         if (StakingModuleStatus(stakingModule.status) != StakingModuleStatus.Active) revert ErrorStakingModuleNotActive();
 
-        uint256 maxDepositableKeys = getStakingModuleMaxDepositableKeys(stakingModuleIndex);
+        uint256 maxDepositableKeys = getStakingModuleMaxDepositableKeys(_stakingModuleId);
         uint256 keysToDeposit = Math.min(maxDepositableKeys, _maxDepositsCount);
 
         if (keysToDeposit > 0) {
