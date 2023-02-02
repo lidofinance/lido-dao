@@ -2,26 +2,24 @@ const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
 const { ETH } = require('../helpers/utils')
 
-const OssifiableProxy = hre.artifacts.require('OssifiableProxy')
-const SanityChecksRegistry = hre.artifacts.require('SanityChecksRegistry')
 const LidoMock = hre.artifacts.require('LidoMockForAccountingOracleSanityChecks')
+const AccountingOracleReportSanityChecks = hre.artifacts.require('AccountingOracleReportSanityChecks')
 const WithdrawalQueueMock = hre.artifacts.require('WithdrawalQueueMockForAccountingOracleSanityChecks')
 
 contract('SanityChecksRegistry', ([owner, admin, manager, withdrawalVault]) => {
-  let sanityChecksRegistry, lidoMock, withdrawalQueueMock
+  let accountingOracleSanityChecks, lidoMock, withdrawalQueueMock
 
   before(async () => {
     lidoMock = await LidoMock.new({ from: owner })
     withdrawalQueueMock = await WithdrawalQueueMock.new({ from: owner })
-    const sanityChecksImpl = await SanityChecksRegistry.new(
+    accountingOracleSanityChecks = await AccountingOracleReportSanityChecks.new(
       lidoMock.address,
       withdrawalVault,
       withdrawalQueueMock.address,
+      admin,
+      manager,
       { from: owner }
     )
-    const proxy = await OssifiableProxy.new(sanityChecksImpl.address, owner, [], { from: owner })
-    sanityChecksRegistry = await SanityChecksRegistry.at(proxy.address)
-    await sanityChecksRegistry.initialize(admin, manager)
   })
 
   describe('setAccountingOracleLimits()', () => {
@@ -32,14 +30,14 @@ contract('SanityChecksRegistry', ([owner, admin, manager, withdrawalVault]) => {
       const requestCreationBlockMargin = 1024
       const finalizationPauseStartBlock = await hre.ethers.provider.getBlockNumber().then((bn) => bn + 1000)
 
-      const limitsBefore = await sanityChecksRegistry.getAccountingOracleLimits()
+      const limitsBefore = await accountingOracleSanityChecks.getAccountingOracleLimits()
       assert.notEquals(limitsBefore.churnValidatorsByEpochLimit, churnValidatorsByEpochLimit)
       assert.notEquals(limitsBefore.oneOffCLBalanceDecreaseLimit, oneOffCLBalanceDecreaseLimit)
       assert.notEquals(limitsBefore.annualBalanceIncreaseLimit, annualBalanceIncreaseLimit)
       assert.notEquals(limitsBefore.requestCreationBlockMargin, requestCreationBlockMargin)
       assert.notEquals(limitsBefore.finalizationPauseStartBlock, finalizationPauseStartBlock)
 
-      await sanityChecksRegistry.setAccountingOracleLimits(
+      await accountingOracleSanityChecks.setAccountingOracleLimits(
         churnValidatorsByEpochLimit,
         oneOffCLBalanceDecreaseLimit,
         annualBalanceIncreaseLimit,
@@ -48,7 +46,7 @@ contract('SanityChecksRegistry', ([owner, admin, manager, withdrawalVault]) => {
         { from: manager }
       )
 
-      const limitsAfter = await sanityChecksRegistry.getAccountingOracleLimits()
+      const limitsAfter = await accountingOracleSanityChecks.getAccountingOracleLimits()
       assert.equals(limitsAfter.churnValidatorsByEpochLimit, churnValidatorsByEpochLimit)
       assert.equals(limitsAfter.oneOffCLBalanceDecreaseLimit, oneOffCLBalanceDecreaseLimit)
       assert.equals(limitsAfter.annualBalanceIncreaseLimit, annualBalanceIncreaseLimit)
@@ -70,7 +68,7 @@ contract('SanityChecksRegistry', ([owner, admin, manager, withdrawalVault]) => {
 
     beforeEach(async () => {
       finalizationPauseStartBlock = await hre.ethers.provider.getBlockNumber().then((bn) => bn + 1000)
-      await sanityChecksRegistry.setAccountingOracleLimits(
+      await accountingOracleSanityChecks.setAccountingOracleLimits(
         churnValidatorsByEpochLimit,
         oneOffCLBalanceDecreaseLimit,
         annualBalanceIncreaseLimit,
@@ -96,7 +94,7 @@ contract('SanityChecksRegistry', ([owner, admin, manager, withdrawalVault]) => {
       const reportBlockNumber = await hre.ethers.provider.getBlockNumber()
       const finalizationShareRate = ETH(1)
 
-      await sanityChecksRegistry.validateAccountingOracleReport(
+      await accountingOracleSanityChecks.validateAccountingOracleReport(
         timeElapsed,
         preCLBalance,
         postCLBalance,

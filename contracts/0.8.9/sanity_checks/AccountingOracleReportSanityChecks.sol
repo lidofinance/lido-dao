@@ -4,8 +4,8 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
+import {AccessControlEnumerable} from "../utils/access/AccessControlEnumerable.sol";
 import {PositiveTokenRebaseLimiter, LimiterState} from "../lib/PositiveTokenRebaseLimiter.sol";
-import {SanityChecksManagement} from "./SanityChecksManagement.sol";
 
 interface IWithdrawalQueue {
     function getWithdrawalRequestStatus(uint256 _requestId)
@@ -25,17 +25,16 @@ interface ILido {
     function getSharesByPooledEth(uint256 _sharesAmount) external view returns (uint256);
 }
 
-contract AccountingOracleReportSanityChecks is SanityChecksManagement {
+contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
     using PositiveTokenRebaseLimiter for LimiterState.Data;
+
+    bytes32 public constant LIMITS_MANAGER_ROLE = keccak256("LIMITS_MANAGER_ROLE");
 
     uint256 private constant MAX_BASIS_POINTS = 10000;
     uint256 private constant SLOT_DURATION = 12;
     uint256 private constant EPOCH_DURATION = 32 * SLOT_DURATION;
 
     bytes32 private constant LIMITS_POSITION = keccak256("Lido.AccountingOracleSanityChecks.limitsPosition");
-    /// @dev positive token rebase allowed per single LidoOracle report
-    /// uses 1e9 precision, e.g.: 1e6 - 0.1%; 1e9 - 100%, see `setMaxPositiveTokenRebase()`
-    bytes32 private constant MAX_POSITIVE_TOKEN_REBASE_POSITION = keccak256("Lido.AccountingOracleSanityChecks.MaxPositiveTokenRebase");
 
     ILido private immutable LIDO;
     address private immutable WITHDRAWAL_VAULT;
@@ -47,17 +46,23 @@ contract AccountingOracleReportSanityChecks is SanityChecksManagement {
         uint16 annualBalanceIncreaseLimit;
         uint64 requestCreationBlockMargin;
         uint64 finalizationPauseStartBlock;
+        /// @dev positive token rebase allowed per single LidoOracle report
+        /// uses 1e9 precision, e.g.: 1e6 - 0.1%; 1e9 - 100%, see `setMaxPositiveTokenRebase()`
         uint64 maxPositiveTokenRebase;
     }
 
     constructor(
         address _lido,
         address _withdrawalVault,
-        address _withdrawalQueue
+        address _withdrawalQueue,
+        address _admin,
+        address _manager
     ) {
         LIDO = ILido(_lido);
         WITHDRAWAL_VAULT = _withdrawalVault;
         WITHDRAWAL_QUEUE = IWithdrawalQueue(_withdrawalQueue);
+        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+        _grantRole(LIMITS_MANAGER_ROLE, _manager);
     }
 
     function getWithdrawalVault() public view returns (address) {
@@ -122,7 +127,7 @@ contract AccountingOracleReportSanityChecks is SanityChecksManagement {
      * - passing zero value is prohibited
      * - to allow unlimited rebases, pass max uint64, i.e.: type(uint64).max
      */
-    function setMaxPositiveTokenRebase(uint256 _maxTokenPositiveRebase) external onlyLimitsManager {
+    function setMaxPositiveTokenRebase(uint256 _maxTokenPositiveRebase) external onlyRole(LIMITS_MANAGER_ROLE) {
         AccountingOracleReportLimits memory limits = _readLimits().value;
         _setMaxPositiveTokenRebase(limits, _maxTokenPositiveRebase);
         _writeLimits(limits);
@@ -134,7 +139,7 @@ contract AccountingOracleReportSanityChecks is SanityChecksManagement {
         uint256 _annualBalanceIncreaseLimit,
         uint256 _requestCreationBlockMargin,
         uint256 _finalizationPauseStartBlock
-    ) external onlyLimitsManager {
+    ) external onlyRole(LIMITS_MANAGER_ROLE) {
         AccountingOracleReportLimits memory limits = _readLimits().value;
         _setChurnValidatorsByEpochLimit(limits, _churnValidatorsByEpochLimit);
         _setOneOffCLBalanceDecreaseLimit(limits, _oneOffCLBalanceDecreaseLimit);
@@ -144,31 +149,31 @@ contract AccountingOracleReportSanityChecks is SanityChecksManagement {
         _writeLimits(limits);
     }
 
-    function setChurnValidatorsByEpochLimit(uint256 _churnValidatorsByEpochLimit) external onlyLimitsManager {
+    function setChurnValidatorsByEpochLimit(uint256 _churnValidatorsByEpochLimit) external onlyRole(LIMITS_MANAGER_ROLE) {
         AccountingOracleReportLimits memory limits = _readLimits().value;
         _setChurnValidatorsByEpochLimit(limits, _churnValidatorsByEpochLimit);
         _writeLimits(limits);
     }
 
-    function setOneOffCLBalanceDecreaseLimit(uint256 _oneOffCLBalanceDecreaseLimit) external onlyLimitsManager {
+    function setOneOffCLBalanceDecreaseLimit(uint256 _oneOffCLBalanceDecreaseLimit) external onlyRole(LIMITS_MANAGER_ROLE) {
         AccountingOracleReportLimits memory limits = _readLimits().value;
         _setOneOffCLBalanceDecreaseLimit(limits, _oneOffCLBalanceDecreaseLimit);
         _writeLimits(limits);
     }
 
-    function setAnnualBalanceIncreaseLimit(uint256 _annualBalanceIncreaseLimit) external onlyLimitsManager {
+    function setAnnualBalanceIncreaseLimit(uint256 _annualBalanceIncreaseLimit) external onlyRole(LIMITS_MANAGER_ROLE) {
         AccountingOracleReportLimits memory limits = _readLimits().value;
         _setAnnualBalanceIncreaseLimit(limits, _annualBalanceIncreaseLimit);
         _writeLimits(limits);
     }
 
-    function setRequestCreationBlockMargin(uint256 _requestCreationBlockMargin) external onlyLimitsManager {
+    function setRequestCreationBlockMargin(uint256 _requestCreationBlockMargin) external onlyRole(LIMITS_MANAGER_ROLE) {
         AccountingOracleReportLimits memory limits = _readLimits().value;
         _setRequestCreationBlockMargin(limits, _requestCreationBlockMargin);
         _writeLimits(limits);
     }
 
-    function setFinalizationPauseStartBlock(uint256 _finalizationPauseStartBlock) external onlyLimitsManager {
+    function setFinalizationPauseStartBlock(uint256 _finalizationPauseStartBlock) external onlyRole(LIMITS_MANAGER_ROLE) {
         AccountingOracleReportLimits memory limits = _readLimits().value;
         _setFinalizationPauseStartBlock(limits, _finalizationPauseStartBlock);
         _writeLimits(limits);
@@ -308,10 +313,9 @@ contract AccountingOracleReportSanityChecks is SanityChecksManagement {
         emit FinalizationPauseStartBlockSet(_finalizationPauseStartBlock);
     }
 
-    function _setMaxPositiveTokenRebase(
-        AccountingOracleReportLimits memory limits,
-        uint256 _maxPositiveTokenRebase
-    ) internal {
+    function _setMaxPositiveTokenRebase(AccountingOracleReportLimits memory limits, uint256 _maxPositiveTokenRebase)
+        internal
+    {
         if (limits.maxPositiveTokenRebase == _maxPositiveTokenRebase) return;
         _validateLessThan(_maxPositiveTokenRebase, type(uint64).max, "_maxPositiveTokenRebase");
         limits.maxPositiveTokenRebase = uint64(_maxPositiveTokenRebase);
