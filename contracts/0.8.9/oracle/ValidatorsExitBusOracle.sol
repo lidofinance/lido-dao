@@ -25,7 +25,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
     error InvalidRequestsDataSortOrder();
     error ArgumentOutOfBounds();
 
-    event DataBoundraiesSet(
+    event DataBoundariesSet(
         uint256 indexed refSlot,
         uint256 maxExitRequestsPerReport,
         uint256 maxExitRequestsListLength,
@@ -40,13 +40,13 @@ contract ValidatorsExitBusOracle is BaseOracle {
         bytes validatorPubkey
     );
 
-    event WarnDataIncomleteProcessing(
+    event WarnDataIncompleteProcessing(
         uint256 indexed refSlot,
         uint256 requestsProcessed,
         uint256 requestsCount
     );
 
-    struct DataBoundraies {
+    struct DataBoundaries {
         uint64 maxRequestsPerReport;
         uint64 maxRequestsListLength;
     }
@@ -59,7 +59,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
         uint16 dataFormat;
     }
 
-    /// @notice An ACL role granting the permission to submit the data for a commitee report.
+    /// @notice An ACL role granting the permission to submit the data for a committee report.
     bytes32 public constant SUBMIT_DATA_ROLE = keccak256("SUBMIT_DATA_ROLE");
 
     /// @notice An ACL role granting the permission to set report data safety boundaries.
@@ -79,7 +79,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
     bytes32 internal constant RATE_LIMIT_POSITION =
         keccak256("lido.ValidatorsExitBusOracle.rateLimit");
 
-    /// @dev Storage slot: DataBoundraies dataBoundaries
+    /// @dev Storage slot: DataBoundaries dataBoundaries
     bytes32 internal constant DATA_BOUNDARIES_POSITION =
         keccak256("lido.ValidatorsExitBusOracle.dataBoundaries");
 
@@ -156,9 +156,9 @@ contract ValidatorsExitBusOracle is BaseOracle {
         uint256 exitRequestsRateLimitWindowSizeSlots,
         uint256 exitRequestsRateLimitMaxThroughputE18
     ) {
-        DataBoundraies memory boudaries = _storageDataBoundaries().value;
-        maxExitRequestsPerReport = boudaries.maxRequestsPerReport;
-        maxExitRequestsListLength = boudaries.maxRequestsListLength;
+        DataBoundaries memory boundaries = _storageDataBoundaries().value;
+        maxExitRequestsPerReport = boundaries.maxRequestsPerReport;
+        maxExitRequestsListLength = boundaries.maxRequestsListLength;
         (exitRequestsRateLimitMaxThroughputE18, exitRequestsRateLimitWindowSizeSlots) =
             RateLimit.load(RATE_LIMIT_POSITION).getThroughputConfig();
     }
@@ -303,7 +303,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
     ) internal {
         uint256 currentRefSlot = _getCurrentRefSlot();
 
-        _storageDataBoundaries().value = DataBoundraies({
+        _storageDataBoundaries().value = DataBoundaries({
             maxRequestsPerReport: maxRequestsPerReport.toUint64(),
             maxRequestsListLength: maxRequestsListLength.toUint64()
         });
@@ -313,7 +313,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
             .configureThroughput(currentRefSlot, rateLimitWindowSlots, rateLimitMaxThroughputE18)
             .store(RATE_LIMIT_POSITION);
 
-        emit DataBoundraiesSet(
+        emit DataBoundariesSet(
             currentRefSlot,
             maxRequestsPerReport,
             maxRequestsListLength,
@@ -329,7 +329,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
     ) internal override {
         DataProcessingState memory state = _storageDataProcessingState().value;
         if (state.refSlot == prevProcessingRefSlot && state.requestsProcessed < state.requestsCount) {
-            emit WarnDataIncomleteProcessing(
+            emit WarnDataIncompleteProcessing(
                 prevProcessingRefSlot,
                 state.requestsProcessed,
                 state.requestsCount
@@ -463,11 +463,11 @@ contract ValidatorsExitBusOracle is BaseOracle {
         assembly { r.slot := position }
     }
 
-    struct StorageDataBoudaries {
-        DataBoundraies value;
+    struct StorageDataBoundaries {
+        DataBoundaries value;
     }
 
-    function _storageDataBoundaries() internal pure returns (StorageDataBoudaries storage r) {
+    function _storageDataBoundaries() internal pure returns (StorageDataBoundaries storage r) {
         bytes32 position = DATA_BOUNDARIES_POSITION;
         assembly { r.slot := position }
     }
