@@ -383,7 +383,7 @@ contract AccountingOracle is BaseOracle {
     ///
     /// 0. last reference slot of legacy oracle
     /// 1. last legacy oracle's consensus report arrives
-    /// 2. new oracle is deployed, legacy oracle is disabled
+    /// 2. new oracle is deployed and enabled, legacy oracle is disabled and upgraded to compat code
     /// 3. first reference slot of the new oracle
     /// 4. first new oracle's consensus report arrives
     ///
@@ -479,7 +479,7 @@ contract AccountingOracle is BaseOracle {
         ILido(LIDO).handleOracleReport(
             slotsElapsed * SECONDS_PER_SLOT,
             data.numValidators,
-            uint256(data.clBalanceGwei) * 1e9,
+            data.clBalanceGwei * 1e9,
             data.withdrawalVaultBalance,
             data.elRewardsVaultBalance,
             data.lastWithdrawalRequestIdToFinalize,
