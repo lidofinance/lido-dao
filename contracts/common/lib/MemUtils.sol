@@ -43,31 +43,24 @@ library MemUtils {
     }
 
     /**
-     * Copies bytes from `_src` to `_dst`, starting at position `_dstStart` into `_dst`.
+     * Copies `_len` bytes from `_src`, starting at position `_srcStart`, into `_dst`, starting at position `_dstStart` into `_dst`.
      */
-    function copyBytes(bytes memory _src, bytes memory _dst, uint256 _dstStart) internal pure {
-        require(_dstStart + _src.length <= _dst.length, "BYTES_ARRAY_OUT_OF_BOUNDS");
+    function copyBytes(bytes memory _src, bytes memory _dst, uint256 _srcStart, uint256 _dstStart, uint256 _len) internal pure {
+        require(_srcStart + _len <= _src.length && _dstStart + _len <= _dst.length, "BYTES_ARRAY_OUT_OF_BOUNDS");
         uint256 srcStartPos;
         uint256 dstStartPos;
         assembly {
-            srcStartPos := add(_src, 32)
+            srcStartPos := add(add(_src, 32), _srcStart)
             dstStartPos := add(add(_dst, 32), _dstStart)
         }
-        memcpy(srcStartPos, dstStartPos, _src.length);
+        memcpy(srcStartPos, dstStartPos, _len);
     }
 
     /**
-     * Copies `_len` bytes from `_src` starting at position `_start` into `_dst`.
+     * Copies bytes from `_src` to `_dst`, starting at position `_dstStart` into `_dst`.
      */
-    function copyBytesFrom(bytes memory _src, bytes memory _dst, uint256 _start, uint256 _len) internal pure {
-        require(_start + _len <= _src.length && _len <= _dst.length, "BYTES_ARRAY_OUT_OF_BOUNDS");
-        uint256 srcStartPos;
-        uint256 dstStartPos;
-        assembly {
-            srcStartPos := add(add(_src, 32), _start)
-            dstStartPos := add(_dst, 32)
-        }
-        memcpy(srcStartPos, dstStartPos, _len);
+    function copyBytes(bytes memory _src, bytes memory _dst, uint256 _dstStart) internal pure {
+        copyBytes(_src, _dst, 0, _dstStart, _src.length);
     }
 
     /**

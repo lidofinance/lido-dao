@@ -732,9 +732,9 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule {
         bytes memory key = MemUtils.unsafeAllocateBytes(PUBKEY_LENGTH);
         bytes memory sig = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH);
         for (uint256 i = 0; i < _keysCount; ++i) {
-            MemUtils.copyBytesFrom(_publicKeys, key, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
+            MemUtils.copyBytes(_publicKeys, key, i * PUBKEY_LENGTH, 0, PUBKEY_LENGTH);
             require(!_isEmptySigningKey(key), "EMPTY_KEY");
-            MemUtils.copyBytesFrom(_signatures, sig, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+            MemUtils.copyBytes(_signatures, sig, i * SIGNATURE_LENGTH, 0, SIGNATURE_LENGTH);
 
             _storeSigningKey(_nodeOperatorId, totalSigningKeysCount, key, sig);
             totalSigningKeysCount = totalSigningKeysCount.add(1);
@@ -1109,7 +1109,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule {
         }
         offset += 2;
         key = MemUtils.unsafeAllocateBytes(PUBKEY_LENGTH);
-        MemUtils.copyBytesFrom(tmpKey, key, 0, PUBKEY_LENGTH);
+        MemUtils.copyBytes(tmpKey, key, 0, 0, PUBKEY_LENGTH);
         // signature
         signature = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH);
         for (uint256 i = 0; i < SIGNATURE_LENGTH; i += 32) {

@@ -53,8 +53,8 @@ contract BeaconChainDepositor {
         bytes memory signature = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH);
 
         for (uint256 i; i < _keysCount;) {
-            MemUtils.copyBytesFrom(_publicKeysBatch, publicKey, i * PUBLIC_KEY_LENGTH, PUBLIC_KEY_LENGTH);
-            MemUtils.copyBytesFrom(_signaturesBatch, signature, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+            MemUtils.copyBytes(_publicKeysBatch, publicKey, i * PUBLIC_KEY_LENGTH, 0, PUBLIC_KEY_LENGTH);
+            MemUtils.copyBytes(_signaturesBatch, signature, i * SIGNATURE_LENGTH, 0, SIGNATURE_LENGTH);
 
             DEPOSIT_CONTRACT.deposit{value: DEPOSIT_SIZE}(
                 publicKey, _withdrawalCredentials, signature, _computeDepositDataRoot(_withdrawalCredentials, publicKey, signature)
@@ -79,8 +79,8 @@ contract BeaconChainDepositor {
         // Compute deposit data root (`DepositData` hash tree root) according to deposit_contract.sol
         bytes memory sigPart1 = MemUtils.unsafeAllocateBytes(64);
         bytes memory sigPart2 = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH - 64);
-        MemUtils.copyBytesFrom(_signature, sigPart1, 0, 64);
-        MemUtils.copyBytesFrom(_signature, sigPart2, 64, SIGNATURE_LENGTH - 64);
+        MemUtils.copyBytes(_signature, sigPart1, 0, 0, 64);
+        MemUtils.copyBytes(_signature, sigPart2, 64, 0,SIGNATURE_LENGTH - 64);
 
         bytes32 publicKeyRoot = sha256(abi.encodePacked(_publicKey, bytes16(0)));
         bytes32 signatureRoot = sha256(abi.encodePacked(sha256(abi.encodePacked(sigPart1)), sha256(abi.encodePacked(sigPart2, bytes32(0)))));

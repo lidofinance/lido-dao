@@ -161,8 +161,8 @@ contract ModuleSolo is IStakingModule {
 
         publicKeys = MemUtils.unsafeAllocateBytes(_keysCount * PUBKEY_LENGTH);
         signatures = MemUtils.unsafeAllocateBytes(_keysCount * SIGNATURE_LENGTH);
-        MemUtils.copyBytesFrom(_calldata, publicKeys, 0, _keysCount * PUBKEY_LENGTH);
-        MemUtils.copyBytesFrom(_calldata, signatures, _keysCount * PUBKEY_LENGTH, _keysCount * PUBKEY_LENGTH);
+        MemUtils.copyBytes(_calldata, publicKeys, 0, 0, _keysCount * PUBKEY_LENGTH);
+        MemUtils.copyBytes(_calldata, signatures, _keysCount * PUBKEY_LENGTH, 0, _keysCount * PUBKEY_LENGTH);
 
         return (_keysCount, publicKeys, signatures);
     }
