@@ -261,16 +261,27 @@ contract ValidatorsExitBusOracle is BaseOracle {
         return TOTAL_REQUESTS_PROCESSED_POSITION.getStorageUint256();
     }
 
-    /// @notice Returns the latest validator index that was requested to exit
-    /// for the given `nodeOperatorId` in the given `moduleId`.
+    /// @notice Returns the latest validator indices that were requested to exit
+    /// for the given `nodeOpIds` in the given `moduleId`.
     ///
-    function getLastRequestedValidatorIndex(uint256 moduleId, uint256 nodeOpId)
-        external view returns (uint256)
+    /// @param moduleId ID of the staking module.
+    /// @param nodeOpIds IDs of the staking module's node operators.
+    ///
+    function getLastRequestedValidatorIndices(uint256 moduleId, uint256[] calldata nodeOpIds)
+        external view returns (uint256[] memory)
     {
         if (moduleId > type(uint24).max) revert ArgumentOutOfBounds();
-        if (nodeOpId > type(uint40).max) revert ArgumentOutOfBounds();
-        uint256 nodeOpKey = _computeNodeOpKey(moduleId, nodeOpId);
-        return _storageLastRequestedValidatorIndices()[nodeOpKey];
+
+        uint256[] memory indices = new uint256[](nodeOpIds.length);
+
+        for (uint256 i = 0; i < nodeOpIds.length; ++i) {
+            uint256 nodeOpId = nodeOpIds[i];
+            if (nodeOpId > type(uint40).max) revert ArgumentOutOfBounds();
+            uint256 nodeOpKey = _computeNodeOpKey(moduleId, nodeOpId);
+            indices[i] = _storageLastRequestedValidatorIndices()[nodeOpKey];
+        }
+
+        return indices;
     }
 
     /// @notice Returns processing state for the current consensus report.

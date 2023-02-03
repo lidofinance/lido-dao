@@ -2,6 +2,7 @@ const { BN } = require('bn.js')
 const { assert } = require('chai')
 const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 const { assertRevert } = require('../../helpers/assertThrow')
+const { toNum } = require('../../helpers/utils')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
 const {
@@ -166,6 +167,13 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       assert.equal(+procState.requestsCount, exitRequests.length)
       assert.equal(+procState.requestsProcessed, exitRequests.length)
       assert.equal(+procState.dataFormat, DATA_FORMAT_LIST)
+    })
+
+    it('last requested validator indices are updated', async () => {
+      const indices1 = await oracle.getLastRequestedValidatorIndices(1, [0])
+      const indices2 = await oracle.getLastRequestedValidatorIndices(2, [0])
+      assert.sameOrderedMembers(toNum(indices1), [2])
+      assert.sameOrderedMembers(toNum(indices2), [1])
     })
   })
 })
