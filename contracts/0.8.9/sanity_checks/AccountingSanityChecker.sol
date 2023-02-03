@@ -39,7 +39,6 @@ struct LimitsList {
     uint256 oneOffCLBalanceDecreaseLimit;
     uint256 annualBalanceIncreaseLimit;
     uint256 requestCreationBlockMargin;
-    uint256 finalizationPauseStartBlock;
     uint256 maxPositiveTokenRebase;
 }
 
@@ -48,7 +47,6 @@ struct LimitsListPacked {
     uint16 oneOffCLBalanceDecreaseLimit;
     uint16 annualBalanceIncreaseLimit;
     uint64 requestCreationBlockMargin;
-    uint64 finalizationPauseStartBlock;
     /// @dev positive token rebase allowed per single LidoOracle report
     /// uses 1e9 precision, e.g.: 1e6 - 0.1%; 1e9 - 100%, see `setMaxPositiveTokenRebase()`
     uint64 maxPositiveTokenRebase;
@@ -69,8 +67,6 @@ contract AccountingSanityChecker is AccessControlEnumerable {
         keccak256("ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE");
     bytes32 public constant REQUEST_CREATION_BLOCK_MARGIN_MANAGER_ROLE =
         keccak256("REQUEST_CREATION_BLOCK_MARGIN_MANAGER_ROLE");
-    bytes32 public constant FINALIZATION_PAUSE_START_BLOCK_MANAGER_ROLE =
-        keccak256("FINALIZATION_PAUSE_START_BLOCK_MANAGER_ROLE");
     bytes32 public constant MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE =
         keccak256("MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE");
 
@@ -88,7 +84,6 @@ contract AccountingSanityChecker is AccessControlEnumerable {
         address[] oneOffCLBalanceDecreaseLimitManagers;
         address[] annualBalanceIncreaseLimitManagers;
         address[] requestCreationBlockMarginManagers;
-        address[] finalizationPauseStartBlockManagers;
         address[] maxPositiveTokenRebaseManagers;
     }
 
@@ -99,7 +94,7 @@ contract AccountingSanityChecker is AccessControlEnumerable {
         ManagersRoster memory _managersRoster
     ) {
         LIDO_LOCATOR = ILidoLocator(_lidoLocator);
-        _setAccountingOracleLimits(_limitsList);
+        _updateLimits(_limitsList);
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(ALL_LIMITS_MANAGER_ROLE, _managersRoster.allLimitsManagers);
         _grantRole(CHURN_VALIDATORS_BY_EPOCH_LIMIT_MANGER_ROLE, _managersRoster.churnValidatorsByEpochLimitManagers);
@@ -109,7 +104,6 @@ contract AccountingSanityChecker is AccessControlEnumerable {
         );
         _grantRole(ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE, _managersRoster.annualBalanceIncreaseLimitManagers);
         _grantRole(REQUEST_CREATION_BLOCK_MARGIN_MANAGER_ROLE, _managersRoster.requestCreationBlockMarginManagers);
-        _grantRole(FINALIZATION_PAUSE_START_BLOCK_MANAGER_ROLE, _managersRoster.finalizationPauseStartBlockManagers);
         _grantRole(MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE, _managersRoster.maxPositiveTokenRebaseManagers);
     }
 
@@ -117,25 +111,8 @@ contract AccountingSanityChecker is AccessControlEnumerable {
         return address(LIDO_LOCATOR);
     }
 
-    function getAccountingOracleLimits()
-        public
-        view
-        returns (
-            uint256 churnValidatorsByEpochLimit,
-            uint256 oneOffCLBalanceDecreaseLimit,
-            uint256 annualBalanceIncreaseLimit,
-            uint256 requestCreationBlockMargin,
-            uint256 finalizationPauseStartBlock,
-            uint256 maxPositiveTokenRebase
-        )
-    {
-        LimitsListPacked memory limits = _limits;
-        churnValidatorsByEpochLimit = limits.churnValidatorsByEpochLimit;
-        oneOffCLBalanceDecreaseLimit = limits.oneOffCLBalanceDecreaseLimit;
-        annualBalanceIncreaseLimit = limits.annualBalanceIncreaseLimit;
-        requestCreationBlockMargin = limits.requestCreationBlockMargin;
-        finalizationPauseStartBlock = limits.finalizationPauseStartBlock;
-        maxPositiveTokenRebase = limits.maxPositiveTokenRebase;
+    function getLimits() public view returns (LimitsList memory) {
+        return _limits.unpack();
     }
 
     /**
@@ -167,12 +144,8 @@ contract AccountingSanityChecker is AccessControlEnumerable {
         return _limits.maxPositiveTokenRebase;
     }
 
-    function setAccountingOracleLimits(LimitsList memory _limitsList) external onlyRole(ALL_LIMITS_MANAGER_ROLE) {
-        _setAccountingOracleLimits(_limitsList);
-    }
-
-    function _setAccountingOracleLimits(LimitsList memory _limitsList) internal {
-        _updateLimits(_limits.unpack(), _limitsList);
+    function setLimits(LimitsList memory _limitsList) external onlyRole(ALL_LIMITS_MANAGER_ROLE) {
+        _updateLimits(_limitsList);
     }
 
     function setChurnValidatorsByEpochLimit(uint256 _churnValidatorsByEpochLimit)
@@ -201,13 +174,6 @@ contract AccountingSanityChecker is AccessControlEnumerable {
         onlyRole(REQUEST_CREATION_BLOCK_MARGIN_MANAGER_ROLE)
     {
         _updateLimits(_limits.unpack().setRequestCreationBlockMargin(_requestCreationBlockMargin));
-    }
-
-    function setFinalizationPauseStartBlock(uint256 _finalizationPauseStartBlock)
-        external
-        onlyRole(FINALIZATION_PAUSE_START_BLOCK_MANAGER_ROLE)
-    {
-        _updateLimits(_limits.unpack().setRequestCreationBlockMargin(_finalizationPauseStartBlock));
     }
 
     /**
@@ -284,9 +250,6 @@ contract AccountingSanityChecker is AccessControlEnumerable {
         if (_reportBlockNumber < lastRequestCreationBlock + limits.requestCreationBlockMargin) {
             revert IncorrectRequestFinalization();
         }
-        if (limits.finalizationPauseStartBlock < lastRequestCreationBlock) {
-            revert IncorrectRequestFinalization();
-        }
 
         // 6. shareRate calculated off-chain is consistent with the on-chain one
         address lido = LIDO_LOCATOR.getLido();
@@ -337,9 +300,6 @@ contract AccountingSanityChecker is AccessControlEnumerable {
         if (_old.requestCreationBlockMargin != _new.requestCreationBlockMargin) {
             emit RequestCreationBlockMarginSet(_new.requestCreationBlockMargin);
         }
-        if (_old.finalizationPauseStartBlock != _new.finalizationPauseStartBlock) {
-            emit FinalizationPauseStartBlockSet(_new.finalizationPauseStartBlock);
-        }
         if (_old.maxPositiveTokenRebase != _new.maxPositiveTokenRebase) {
             emit MaxPositiveTokenRebaseSet(_new.maxPositiveTokenRebase);
         }
@@ -350,7 +310,6 @@ contract AccountingSanityChecker is AccessControlEnumerable {
     event ChurnValidatorsByEpochLimitSet(uint256 churnValidatorsByEpochLimit);
     event AnnualBalanceIncreaseLimitSet(uint256 annualBalanceIncreaseLimit);
     event RequestCreationBlockMarginSet(uint256 requestCreationBlockMargin);
-    event FinalizationPauseStartBlockSet(uint256 finalizationPauseStartBlock);
     event MaxPositiveTokenRebaseSet(uint256 maxPositiveTokenRebase);
 
     error IncorrectWithdrawalsVaultBalance(uint256 withdrawalVaultBalance);
@@ -369,7 +328,6 @@ library LimitsListPacker {
         res.oneOffCLBalanceDecreaseLimit = SafeCast.toUint16(_limitsList.oneOffCLBalanceDecreaseLimit);
         res.annualBalanceIncreaseLimit = SafeCast.toUint16(_limitsList.annualBalanceIncreaseLimit);
         res.requestCreationBlockMargin = SafeCast.toUint64(_limitsList.requestCreationBlockMargin);
-        res.finalizationPauseStartBlock = SafeCast.toUint64(_limitsList.finalizationPauseStartBlock);
         res.maxPositiveTokenRebase = SafeCast.toUint64(_limitsList.maxPositiveTokenRebase);
     }
 }
@@ -380,7 +338,6 @@ library LimitsListUnpacker {
         res.oneOffCLBalanceDecreaseLimit = _limitsList.oneOffCLBalanceDecreaseLimit;
         res.annualBalanceIncreaseLimit = _limitsList.annualBalanceIncreaseLimit;
         res.requestCreationBlockMargin = _limitsList.requestCreationBlockMargin;
-        res.finalizationPauseStartBlock = _limitsList.finalizationPauseStartBlock;
         res.maxPositiveTokenRebase = _limitsList.maxPositiveTokenRebase;
     }
 }
@@ -419,15 +376,6 @@ library LimitsListUtils {
         returns (LimitsList memory)
     {
         _limitsList.requestCreationBlockMargin = _requestCreationBlockMargin;
-        return _limitsList;
-    }
-
-    function setFinalizationPauseStartBlock(LimitsList memory _limitsList, uint256 _finalizationPauseStartBlock)
-        internal
-        pure
-        returns (LimitsList memory)
-    {
-        _limitsList.finalizationPauseStartBlock = _finalizationPauseStartBlock;
         return _limitsList;
     }
 

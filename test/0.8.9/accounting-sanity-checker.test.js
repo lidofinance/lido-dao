@@ -8,7 +8,7 @@ const LidoMock = hre.artifacts.require(`${mocksFilePath}:LidoStub`)
 const LidoLocatorMock = hre.artifacts.require(`${mocksFilePath}:LidoLocatorStub`)
 const WithdrawalQueueMock = hre.artifacts.require(`${mocksFilePath}:WithdrawalQueueStub`)
 
-contract('SanityChecksRegistry', ([deployer, admin, manager, withdrawalVault, ...accounts]) => {
+contract('AccountingSanityChecker', ([deployer, admin, withdrawalVault, ...accounts]) => {
   let accountingSanityChecker, lidoLocatorMock, lidoMock, withdrawalQueueMock
   const managersRoster = {
     allLimitsManagers: accounts.slice(0, 2),
@@ -16,19 +16,30 @@ contract('SanityChecksRegistry', ([deployer, admin, manager, withdrawalVault, ..
     oneOffCLBalanceDecreaseLimitManagers: accounts.slice(4, 6),
     annualBalanceIncreaseLimitManagers: accounts.slice(6, 8),
     requestCreationBlockMarginManagers: accounts.slice(8, 10),
-    finalizationPauseStartBlockManagers: accounts.slice(10, 12),
-    maxPositiveTokenRebaseManagers: accounts.slice(12, 14)
+    maxPositiveTokenRebaseManagers: accounts.slice(10, 12)
   }
+  const defaultReport = {
+    timeElapsed: 24 * 60 * 60,
+    preCLBalance: ETH(100_000),
+    postCLBalance: ETH(100_001),
+    withdrawalVaultBalance: 0,
+    appearedValidators: 10,
+    exitedValidators: 5,
+    requestIdToFinalizeUpTo: 0,
+    reportBlockNumber: 0,
+    finalizationShareRate: ETH(1)
+  }
+
   const defaultLimitsList = {
-    churnValidatorsByEpochLimit: 0,
-    oneOffCLBalanceDecreaseLimit: 0,
-    annualBalanceIncreaseLimit: 0,
-    requestCreationBlockMargin: 0,
-    finalizationPauseStartBlock: 0,
-    maxPositiveTokenRebase: 0
+    churnValidatorsByEpochLimit: 55,
+    oneOffCLBalanceDecreaseLimit: 5_00, // 5%
+    annualBalanceIncreaseLimit: 10_00, // 10%
+    requestCreationBlockMargin: 128,
+    maxPositiveTokenRebase: 5_000_000 // 0.05%
   }
 
   before(async () => {
+    await hre.ethers.provider.send('hardhat_mine', ['0x400', '0xc']) // mine 1024 blocks
     lidoMock = await LidoMock.new({ from: deployer })
     withdrawalQueueMock = await WithdrawalQueueMock.new({ from: deployer })
     lidoLocatorMock = await LidoLocatorMock.new(lidoMock.address, withdrawalVault, withdrawalQueueMock.address)
@@ -44,78 +55,52 @@ contract('SanityChecksRegistry', ([deployer, admin, manager, withdrawalVault, ..
     )
   })
 
-  describe('setAccountingOracleLimits()', () => {
+  describe('setLimits()', () => {
     it('sets limits correctly', async () => {
-      const churnValidatorsByEpochLimit = 55
-      const oneOffCLBalanceDecreaseLimit = 5_00 // 5%
-      const annualBalanceIncreaseLimit = 10_00 // 10%
-      const requestCreationBlockMargin = 1024
-      const finalizationPauseStartBlock = await hre.ethers.provider.getBlockNumber().then((bn) => bn + 1000)
-      const maxPositiveTokenRebase = 5_000_000 // 0.05%
+      const newLimitsList = {
+        churnValidatorsByEpochLimit: 50,
+        oneOffCLBalanceDecreaseLimit: 10_00,
+        annualBalanceIncreaseLimit: 15_00,
+        requestCreationBlockMargin: 2048,
+        maxPositiveTokenRebase: 10_000_000
+      }
+      const limitsBefore = await accountingSanityChecker.getLimits()
+      assert.notEquals(limitsBefore.churnValidatorsByEpochLimit, newLimitsList.churnValidatorsByEpochLimit)
+      assert.notEquals(limitsBefore.oneOffCLBalanceDecreaseLimit, newLimitsList.oneOffCLBalanceDecreaseLimit)
+      assert.notEquals(limitsBefore.annualBalanceIncreaseLimit, newLimitsList.annualBalanceIncreaseLimit)
+      assert.notEquals(limitsBefore.requestCreationBlockMargin, newLimitsList.requestCreationBlockMargin)
+      assert.notEquals(limitsBefore.maxPositiveTokenRebase, newLimitsList.maxPositiveTokenRebase)
 
-      const limitsBefore = await accountingSanityChecker.getAccountingOracleLimits()
-      assert.notEquals(limitsBefore.churnValidatorsByEpochLimit, churnValidatorsByEpochLimit)
-      assert.notEquals(limitsBefore.oneOffCLBalanceDecreaseLimit, oneOffCLBalanceDecreaseLimit)
-      assert.notEquals(limitsBefore.annualBalanceIncreaseLimit, annualBalanceIncreaseLimit)
-      assert.notEquals(limitsBefore.requestCreationBlockMargin, requestCreationBlockMargin)
-      assert.notEquals(limitsBefore.finalizationPauseStartBlock, finalizationPauseStartBlock)
-      assert.notEquals(limitsBefore.maxPositiveTokenRebase, maxPositiveTokenRebase)
+      await accountingSanityChecker.setLimits(Object.values(newLimitsList), {
+        from: managersRoster.allLimitsManagers[0]
+      })
 
-      await accountingSanityChecker.setAccountingOracleLimits(
-        [
-          churnValidatorsByEpochLimit,
-          oneOffCLBalanceDecreaseLimit,
-          annualBalanceIncreaseLimit,
-          requestCreationBlockMargin,
-          finalizationPauseStartBlock,
-          maxPositiveTokenRebase
-        ],
-        { from: managersRoster.allLimitsManagers[0] }
-      )
-
-      const limitsAfter = await accountingSanityChecker.getAccountingOracleLimits()
-      assert.equals(limitsAfter.churnValidatorsByEpochLimit, churnValidatorsByEpochLimit)
-      assert.equals(limitsAfter.oneOffCLBalanceDecreaseLimit, oneOffCLBalanceDecreaseLimit)
-      assert.equals(limitsAfter.annualBalanceIncreaseLimit, annualBalanceIncreaseLimit)
-      assert.equals(limitsAfter.requestCreationBlockMargin, requestCreationBlockMargin)
-      assert.equals(limitsAfter.finalizationPauseStartBlock, finalizationPauseStartBlock)
-      assert.equals(limitsAfter.maxPositiveTokenRebase, maxPositiveTokenRebase)
+      const limitsAfter = await accountingSanityChecker.getLimits()
+      assert.equals(limitsAfter.churnValidatorsByEpochLimit, newLimitsList.churnValidatorsByEpochLimit)
+      assert.equals(limitsAfter.oneOffCLBalanceDecreaseLimit, newLimitsList.oneOffCLBalanceDecreaseLimit)
+      assert.equals(limitsAfter.annualBalanceIncreaseLimit, newLimitsList.annualBalanceIncreaseLimit)
+      assert.equals(limitsAfter.requestCreationBlockMargin, newLimitsList.requestCreationBlockMargin)
+      assert.equals(limitsAfter.maxPositiveTokenRebase, newLimitsList.maxPositiveTokenRebase)
     })
   })
 
-  describe('validateAccountingOracleReport()', () => {
-    const churnValidatorsByEpochLimit = 55
-    const oneOffCLBalanceDecreaseLimit = 5_00 // 5%
-    const annualBalanceIncreaseLimit = 10_00 // 10%
-    const requestCreationBlockMargin = 100
-    const maxPositiveTokenRebase = 5_000_000 // 0.05%
-    let finalizationPauseStartBlock
-
+  describe('checkReport()', () => {
     before(async () => {
       await hre.ethers.provider.send('hardhat_mine', ['0x400', '0xc'])
     })
 
     beforeEach(async () => {
-      finalizationPauseStartBlock = await hre.ethers.provider.getBlockNumber().then((bn) => bn + 1000)
-      await accountingSanityChecker.setAccountingOracleLimits(
-        [
-          churnValidatorsByEpochLimit,
-          oneOffCLBalanceDecreaseLimit,
-          annualBalanceIncreaseLimit,
-          requestCreationBlockMargin,
-          finalizationPauseStartBlock,
-          maxPositiveTokenRebase
-        ],
-        { from: managersRoster.allLimitsManagers[0] }
-      )
+      await accountingSanityChecker.setLimits(Object.values(defaultLimitsList), {
+        from: managersRoster.allLimitsManagers[0]
+      })
     })
 
     it('passes on correct data', async () => {
-      const requestId = 1
       await lidoMock.setShareRate(ETH(1))
 
-      const requestIdToFinalizeUpTo = finalizationPauseStartBlock - 50
-      await withdrawalQueueMock.setBlockNumber(requestId, requestIdToFinalizeUpTo - 10)
+      const requestIdToFinalizeUpTo = 1
+      const requestCreationBlockNumber = await hre.ethers.provider.getBlockNumber().then((v) => v - 256)
+      await withdrawalQueueMock.setBlockNumber(requestIdToFinalizeUpTo, requestCreationBlockNumber)
 
       const timeElapsed = 24 * 60 * 60 // 24 hours
       const preCLBalance = ETH(10_000)
