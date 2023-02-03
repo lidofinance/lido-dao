@@ -69,7 +69,7 @@ contract('Lido: staking router reward distribution', ([depositor, user2]) => {
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
     const treasuryBalanceBefore = await app.balanceOf(treasury)
-    await oracle.reportBeacon(100, 0, beaconBalance, { from: appManager })
+    await pushOracleReport(100, 0, beaconBalance, { from: appManager })
 
     const treasuryBalanceAfter = await app.balanceOf(treasury)
     assert(treasuryBalanceAfter.gt(treasuryBalanceBefore))
@@ -87,7 +87,7 @@ contract('Lido: staking router reward distribution', ([depositor, user2]) => {
       moduleBalanceBefore.push(await app.balanceOf(recipients[i]))
     }
 
-    await oracle.reportBeacon(100, 0, beaconBalance, { from: appManager })
+    await pushOracleReport(100, 0, beaconBalance)
 
     for (let i = 0; i < recipients.length; i++) {
       const moduleBalanceAfter = await app.balanceOf(recipients[i])

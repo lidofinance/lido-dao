@@ -8,7 +8,7 @@ import "../lib/PositiveTokenRebaseLimiter.sol";
 contract PositiveTokenRebaseLimiterMock {
     using PositiveTokenRebaseLimiter for LimiterState.Data;
 
-    LimiterState.Data limiter;
+    LimiterState.Data public limiter;
 
     event ReturnValue (
         uint256 retValue

@@ -5,6 +5,8 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.4.24;
 
+import {UnstructuredStorage} from "@aragon/os/contracts/common/UnstructuredStorage.sol";
+
 import {ECDSA} from "../common/lib/ECDSA.sol";
 import {IERC2612} from "./interfaces/IERC2612.sol";
 import {IEIP712} from "../common/interfaces/IEIP712.sol";
@@ -12,6 +14,8 @@ import {IEIP712} from "../common/interfaces/IEIP712.sol";
 import {StETH} from "./StETH.sol";
 
 contract StETHPermit is IERC2612, StETH {
+    using UnstructuredStorage for bytes32;
+
     /**
      * @dev Service event for initialization
      */
@@ -23,9 +27,9 @@ contract StETHPermit is IERC2612, StETH {
     mapping(address => uint256) internal noncesByAddress;
 
     /**
-     * @dev EIP712 message utils contract for StETH
+     * @dev Storage position used for the EIP712 message utils contract
      */
-    address internal eip712StETH;
+    bytes32 internal constant EIP712_STETH_POSITION = keccak256("lido.StETHPermit.eip712StETH");
 
     /**
      * @dev Typehash constant for ERC-2612 (Permit)
@@ -55,7 +59,7 @@ contract StETHPermit is IERC2612, StETH {
             abi.encode(PERMIT_TYPEHASH, _owner, _spender, _value, _useNonce(_owner), _deadline)
         );
 
-        bytes32 hash = IEIP712(eip712StETH).hashTypedDataV4(structHash);
+        bytes32 hash = IEIP712(_getEIP712StETH()).hashTypedDataV4(structHash);
 
         address signer = ECDSA.recover(hash, _v, _r, _s);
         require(signer == _owner, "ERC20Permit: invalid signature");
@@ -79,7 +83,7 @@ contract StETHPermit is IERC2612, StETH {
      */
     // solhint-disable-next-line func-name-mixedcase
     function DOMAIN_SEPARATOR() external view returns (bytes32) {
-        return IEIP712(eip712StETH).domainSeparatorV4();
+        return IEIP712(_getEIP712StETH()).domainSeparatorV4();
     }
 
     /**
@@ -95,10 +99,17 @@ contract StETHPermit is IERC2612, StETH {
      */
     function _initializeEIP712StETH(address _eip712StETH) internal {
         require(_eip712StETH != address(0), "StETHPermit: zero eip712StETH");
-        require(eip712StETH == address(0), "StETHPermit: eip712StETH already set");
+        require(_getEIP712StETH() == address(0), "StETHPermit: eip712StETH already set");
 
-        eip712StETH = _eip712StETH;
+        EIP712_STETH_POSITION.setStorageAddress(_eip712StETH);
 
         emit EIP712StETHInitialized(_eip712StETH);
+    }
+
+    /**
+     * @dev Get EIP712 message utils contract
+     */
+    function _getEIP712StETH() internal view returns (address) {
+        return EIP712_STETH_POSITION.getStorageAddress();
     }
 }

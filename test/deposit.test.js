@@ -9,7 +9,7 @@ const { deployProtocol } = require('./helpers/protocol')
 const { ETH, pad, hexConcat, changeEndianness } = require('./helpers/utils')
 const nodeOperators = require('./helpers/node-operators')
 const { assert } = require('./helpers/assert')
-const { depositContractFactory, DEPOSIT_ROOT } = require('./helpers/factories')
+const { depositContractFactory } = require('./helpers/factories')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'

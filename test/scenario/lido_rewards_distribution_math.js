@@ -623,6 +623,7 @@ contract('Lido: rewards distribution math', (addresses) => {
   it(`rewards distribution`, async () => {
     const bufferedBefore = await token.getBufferedEther()
     const totalPooledEtherBefore = await token.getTotalPooledEther()
+    // FIXME: oracle doesn't support reporting anything smaller than 1 gwei, here we're trying to report 2 wei
     const newBeaconBalance = totalPooledEtherBefore.sub(bufferedBefore).add(new BN(2))
 
     const firstModuleSharesBefore = await token.sharesOf(nodeOperatorsRegistry.address)
@@ -667,6 +668,7 @@ contract('Lido: rewards distribution math', (addresses) => {
     const [firstModule] = await stakingRouter.getStakingModules()
     const totalPooledEtherBefore = await token.getTotalPooledEther()
     const bufferedBefore = await token.getBufferedEther()
+    // FIXME: oracle doesn't support reporting anything smaller than 1 gwei, here we're trying to report 1 wei
     const newBeaconBalance = totalPooledEtherBefore.sub(bufferedBefore).add(new BN(1))
 
     await stakingRouter.setStakingModuleStatus(firstModule.id, StakingModuleStatus.Stopped, { from: voting })

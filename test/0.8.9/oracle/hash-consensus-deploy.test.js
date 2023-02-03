@@ -34,25 +34,28 @@ const CONSENSUS_VERSION = 1
 
 async function deployHashConsensus(admin, {
   reportProcessor = null,
-  epochsPerFrame = EPOCHS_PER_FRAME
+  slotsPerEpoch = SLOTS_PER_EPOCH,
+  secondsPerSlot = SECONDS_PER_SLOT,
+  genesisTime = GENESIS_TIME,
+  epochsPerFrame = EPOCHS_PER_FRAME,
+  initialEpoch = 1
 } = {}) {
   if (!reportProcessor) {
     reportProcessor = await MockReportProcessor.new(CONSENSUS_VERSION, { from: admin })
   }
 
-  if (epochsPerFrame === undefined) {
-    epochsPerFrame = EPOCHS_PER_FRAME
-  }
-
   const consensus = await HashConsensus.new(
-    SLOTS_PER_EPOCH,
-    SECONDS_PER_SLOT,
-    GENESIS_TIME,
+    slotsPerEpoch,
+    secondsPerSlot,
+    genesisTime,
     epochsPerFrame,
+    initialEpoch,
     admin,
     reportProcessor.address,
     { from: admin }
   )
+
+  await consensus.setTime(genesisTime + initialEpoch * slotsPerEpoch * secondsPerSlot)
 
   await consensus.grantRole(await consensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(), admin, { from: admin })
   await consensus.grantRole(await consensus.DISABLE_CONSENSUS_ROLE(), admin, { from: admin })
@@ -72,13 +75,15 @@ module.exports = {
   deployHashConsensus
 }
 
-contract('HashConsensus', ([admin]) => {
+contract('HashConsensus', ([admin, member1]) => {
   context('Deployment and initial configuration', () => {
+    const INITIAL_EPOCH = 3
+
     let consensus
     let reportProcessor
 
     it('deploying hash consensus', async () => {
-      const deployed = await deployHashConsensus(admin)
+      const deployed = await deployHashConsensus(admin, {initialEpoch: INITIAL_EPOCH})
       consensus = deployed.consensus
       reportProcessor = deployed.reportProcessor
     })
@@ -92,9 +97,7 @@ contract('HashConsensus', ([admin]) => {
 
     it('frame config is correct', async () => {
       const config = await consensus.getFrameConfig()
-      const time = +await consensus.getTime()
-      const expectedInitialEpoch = computeEpochAt(time)
-      assert.equal(+config.initialEpoch, expectedInitialEpoch)
+      assert.equal(+config.initialEpoch, INITIAL_EPOCH)
       assert.equal(+config.epochsPerFrame, EPOCHS_PER_FRAME)
     })
   })

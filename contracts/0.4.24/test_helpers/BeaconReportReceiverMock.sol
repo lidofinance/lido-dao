@@ -6,17 +6,15 @@ pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/introspection/ERC165.sol";
 
-import {IBeaconReportReceiver} from "../oracle/LidoOracle.sol";
 
-
-contract BeaconReportReceiverMock is IBeaconReportReceiver, ERC165 {
+contract BeaconReportReceiverMock is ERC165 {
     uint256 public postTotalPooledEther;
     uint256 public preTotalPooledEther;
     uint256 public timeElapsed;
     uint256 public gas;
 
     constructor() public {
-        IBeaconReportReceiver iBeacon;
+        BeaconReportReceiverMock iBeacon;
         _registerInterface(iBeacon.processLidoOracleReport.selector);
     }
 
@@ -30,7 +28,7 @@ contract BeaconReportReceiverMock is IBeaconReportReceiver, ERC165 {
     }
 }
 
-contract BeaconReportReceiverMockWithoutERC165 is IBeaconReportReceiver {
+contract BeaconReportReceiverMockWithoutERC165 {
     function processLidoOracleReport(
         uint256 /* _postTotalPooledEther */,
         uint256 /* _preTotalPooledEther */,

@@ -57,6 +57,7 @@ contract HashConsensus is AccessControlEnumerable {
     error AdminCannotBeZero();
     error DuplicateMember();
     error AddressCannotBeZero();
+    error InitialEpochIsYetToArrive();
     error EpochsPerFrameCannotBeZero();
     error NonMember();
     error UnexpectedConsensusVersion(uint256 expected, uint256 received);
@@ -140,18 +141,13 @@ contract HashConsensus is AccessControlEnumerable {
     uint256 internal constant UNREACHABLE_QUORUM = type(uint256).max;
     bytes32 internal constant ZERO_HASH = bytes32(0);
 
-    ///! STORAGE OF THE CONTRACT
-    ///! Inherited from AccessControlEnumerable:
-    ///! SLOT 0: mapping(bytes32 => AccessControl.RoleData) _roles
-    ///! SLOT 1: mapping(bytes32 => EnumerableSet.AddressSet) _roleMembers
-
     /// @dev Reporting frame configuration
     FrameConfig internal _frameConfig;
 
-    /// @dev Oracle commitee members array
+    /// @dev Oracle committee members array
     MemberState[] internal _members;
 
-    /// @dev Mapping from an oracle commitee member address to the 1-based index in the
+    /// @dev Mapping from an oracle committee member address to the 1-based index in the
     /// members array
     mapping(address => uint256) internal _memberIndices1b;
 
@@ -159,7 +155,7 @@ contract HashConsensus is AccessControlEnumerable {
     /// reference slot consensus report was achieved for, and the last consensus variant index
     ReportingState internal _reportingState;
 
-    /// @dev Oracle commitee members quorum value, must be larger than totalMembers // 2
+    /// @dev Oracle committee members quorum value, must be larger than totalMembers // 2
     uint256 internal _quorum;
 
     /// @dev Mapping from a report variant index to the ReportVariant structure
@@ -180,6 +176,7 @@ contract HashConsensus is AccessControlEnumerable {
         uint256 secondsPerSlot,
         uint256 genesisTime,
         uint256 epochsPerFrame,
+        uint256 initialEpoch,
         address admin,
         address reportProcessor
     ) {
@@ -189,10 +186,7 @@ contract HashConsensus is AccessControlEnumerable {
 
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
-
-        uint256 startEpoch = _computeEpochAtTimestamp(_getTime());
-        _setFrameConfig(startEpoch, epochsPerFrame);
-
+        _setFrameConfig(initialEpoch, epochsPerFrame);
         // zero address is allowed here, meaning "no processor"
         _reportProcessor = reportProcessor;
     }
@@ -214,15 +208,15 @@ contract HashConsensus is AccessControlEnumerable {
 
     /// @notice Returns the parameters required to calculate reporting frame given an epoch.
     ///
-    function getFrameConfig() external view returns (uint64 initialEpoch, uint64 epochsPerFrame) {
+    function getFrameConfig() external view returns (uint256 initialEpoch, uint256 epochsPerFrame) {
         return (_frameConfig.initialEpoch, _frameConfig.epochsPerFrame);
     }
 
     /// @notice Returns the current reporting frame.
     ///
     function getCurrentFrame() external view returns (
-        uint64 refSlot,
-        uint64 reportProcessingDeadlineSlot
+        uint256 refSlot,
+        uint256 reportProcessingDeadlineSlot
     ) {
         ConsensusFrame memory frame = _getCurrentFrame();
         return (frame.refSlot, frame.reportProcessingDeadlineSlot);
@@ -258,7 +252,7 @@ contract HashConsensus is AccessControlEnumerable {
         }
     }
 
-    /// @notice Returns the information related to an oracle commitee member with the given address.
+    /// @notice Returns the information related to an oracle committee member with the given address.
     ///
     /// @param addr The member address.
     ///
@@ -269,7 +263,7 @@ contract HashConsensus is AccessControlEnumerable {
     /// @return currentRefSlot Current reference slot.
     ///
     /// @return memberReportForCurrentRefSlot The hash reported by the member for the current
-    ///         reference slot. Set to zero bytes if no report was recevied for the current
+    ///         reference slot. Set to zero bytes if no report was received for the current
     ///         reference slot.
     ///
     function getMemberInfo(address addr) external view returns (
@@ -400,10 +394,10 @@ contract HashConsensus is AccessControlEnumerable {
     /// Implementation: time
     ///
 
-    function _setFrameConfig(uint256 startEpoch, uint256 epochsPerFrame) internal {
+    function _setFrameConfig(uint256 initialEpoch, uint256 epochsPerFrame) internal {
         if (epochsPerFrame == 0) revert EpochsPerFrameCannotBeZero();
-        _frameConfig = FrameConfig(startEpoch.toUint64(), epochsPerFrame.toUint64());
-        emit FrameConfigSet(startEpoch, epochsPerFrame);
+        _frameConfig = FrameConfig(initialEpoch.toUint64(), epochsPerFrame.toUint64());
+        emit FrameConfigSet(initialEpoch, epochsPerFrame);
     }
 
     function _getCurrentFrame() internal view returns (ConsensusFrame memory) {
@@ -426,8 +420,11 @@ contract HashConsensus is AccessControlEnumerable {
     function _computeFrameStartEpoch(uint256 timestamp, FrameConfig memory config)
         internal view returns (uint256)
     {
-        uint256 epochsSinceInitial = _computeEpochAtTimestamp(timestamp) - config.initialEpoch;
-        uint256 frameIndex = epochsSinceInitial / config.epochsPerFrame;
+        uint256 epoch = _computeEpochAtTimestamp(timestamp);
+        if (epoch < config.initialEpoch) {
+            revert InitialEpochIsYetToArrive();
+        }
+        uint256 frameIndex = (epoch - config.initialEpoch) / config.epochsPerFrame;
         return config.initialEpoch + frameIndex * config.epochsPerFrame;
     }
 

@@ -457,7 +457,7 @@ contract Lido is StETHPermit, AragonApp, Versioned {
      * @param _maxTokenPositiveRebase max positive token rebase value with 1e9 precision:
      *   e.g.: 1e6 - 0.1%; 1e9 - 100%
      * - passing zero value is prohibited
-     * - to allow unlimited rebases, pass max uint256, i.e.: uint256(-1)
+     * - to allow unlimited rebases, pass max uint256, i.e.: type(uint256).max
      */
     function setMaxPositiveTokenRebase(uint256 _maxTokenPositiveRebase) external {
         _auth(MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE);

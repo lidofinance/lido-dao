@@ -13,6 +13,23 @@ const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const CURATED_MODULE_ID = 1
 
+const makeAccountingReport = ({refSlot, numValidators, clBalanceGwei}) => ({
+  refSlot,
+  consensusVersion: 1,
+  numValidators: numValidators,
+  clBalanceGwei: clBalanceGwei,
+  stakingModuleIdsWithNewlyExitedValidators: [],
+  numExitedValidatorsByStakingModule: [],
+  withdrawalVaultBalance: 0,
+  elRewardsVaultBalance: 0,
+  lastWithdrawalRequestIdToFinalize: 0,
+  finalizationShareRate: 0,
+  isBunkerMode: false,
+  extraDataFormat: 0,
+  extraDataHash: ZERO_HASH,
+  extraDataItemsCount: 0,
+})
+
 contract('Lido: happy path', (addresses) => {
   const [
     // node operators
@@ -357,7 +374,7 @@ contract('Lido: happy path', (addresses) => {
   })
 
   it('the oracle reports balance increase on Ethereum2 side', async () => {
-    const epoch = 100
+    const refSlot = 100
 
     // Total shares are equal to deposited eth before ratio change and fee mint
 
@@ -371,7 +388,11 @@ contract('Lido: happy path', (addresses) => {
 
     // Reporting 1.5-fold balance increase (64 => 96)
 
-    await oracleMock.reportBeacon(epoch, 2, ETH(96))
+    await oracleMock.submitReportData(makeAccountingReport({
+      refSlot,
+      numValidators: 2,
+      clBalanceGwei: gwei(96)
+    }), 1)
 
     // Total shares increased because fee minted (fee shares added)
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
