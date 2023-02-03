@@ -259,20 +259,24 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor {
     function updateExitedKeysCountByStakingModule(
         uint256[] calldata _stakingModuleIds,
         uint256[] calldata _exitedKeysCounts
-    ) external onlyRole(REPORT_EXITED_KEYS_ROLE) {
+    )
+        external
+        onlyRole(REPORT_EXITED_KEYS_ROLE)
+    {
         for (uint256 i = 0; i < _stakingModuleIds.length; ) {
             StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleIds[i]);
-            uint256 prevExitedKeysCount = stakingModule.exitedKeysCount;
-            if (_exitedKeysCounts[i] < prevExitedKeysCount) {
+            uint256 prevReportedExitedKeysCount = stakingModule.exitedKeysCount;
+            if (_exitedKeysCounts[i] < prevReportedExitedKeysCount) {
                 revert ErrorExitedKeysCountCannotDecrease();
             }
             (uint256 moduleExitedKeysCount,,) = IStakingModule(stakingModule.stakingModuleAddress)
                 .getValidatorsKeysStats();
-            if (moduleExitedKeysCount < prevExitedKeysCount) {
+            if (moduleExitedKeysCount < prevReportedExitedKeysCount) {
                 // not all of the exited keys were async reported to the module
                 emit StakingModuleExitedKeysIncompleteReporting(
                     stakingModule.id,
-                    prevExitedKeysCount - moduleExitedKeysCount);
+                    prevReportedExitedKeysCount - moduleExitedKeysCount
+                );
             }
             stakingModule.exitedKeysCount = _exitedKeysCounts[i];
             unchecked { ++i; }
@@ -283,17 +287,25 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor {
         uint256 _stakingModuleId,
         uint256[] calldata _nodeOperatorIds,
         uint256[] calldata _exitedKeysCounts
-    ) external onlyRole(REPORT_EXITED_KEYS_ROLE) {
+    )
+        external
+        onlyRole(REPORT_EXITED_KEYS_ROLE)
+    {
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         address moduleAddr = stakingModule.stakingModuleAddress;
+        (uint256 prevExitedKeysCount,,) = IStakingModule(moduleAddr).getValidatorsKeysStats();
+        uint256 newExitedKeysCount;
         for (uint256 i = 0; i < _nodeOperatorIds.length; ) {
-            uint256 exitedKeysCount = IStakingModule(moduleAddr)
+            newExitedKeysCount = IStakingModule(moduleAddr)
                 .updateExitedValidatorsKeysCount(_nodeOperatorIds[i], _exitedKeysCounts[i]);
-            if (exitedKeysCount == stakingModule.exitedKeysCount) {
-                // oracle finished updating exited keys for all node ops
-                IStakingModule(moduleAddr).finishUpdatingExitedValidatorsKeysCount();
-            }
             unchecked { ++i; }
+        }
+        uint256 prevReportedExitedKeysCount = stakingModule.exitedKeysCount;
+        if (prevExitedKeysCount < prevReportedExitedKeysCount &&
+            newExitedKeysCount >= prevReportedExitedKeysCount
+        ) {
+            // oracle finished updating exited keys for all node ops
+            IStakingModule(moduleAddr).finishUpdatingExitedValidatorsKeysCount();
         }
     }
 
