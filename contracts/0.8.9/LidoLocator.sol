@@ -14,73 +14,45 @@ import {ILidoLocator} from "../common/interfaces/ILidoLocator.sol";
  */
 contract LidoLocator is ILidoLocator {
     error ErrorIncorrectLength();
-    error ErrorZeroAddress();
+    error ErrorZeroAddress(uint256 index);
 
-    address internal immutable lido;
-    address internal immutable compositePostRebaseBeaconReceiver;
-    address internal immutable depositSecurityModule;
-    address internal immutable elRewardsVault;
-    address internal immutable oracle;
-    address internal immutable safetyNetsRegistry;
-    address internal immutable selfOwnedStETHBurner;
-    address internal immutable stakingRouter;
-    address internal immutable treasury;
-    address internal immutable withdrawalQueue;
-    address internal immutable withdrawalVault;
+    address internal immutable LIDO;
+    address internal immutable COMPOSITE_POST_REBASE_BEACON_RECEIVER;
+    address internal immutable DEPOSIT_SECURITY_MODULE;
+    address internal immutable EL_REWARDS_VAULT;
+    address internal immutable ACCOUNTING_ORACLE;
+    address internal immutable SAFETY_NETS_REGISTRY;
+    address internal immutable SELF_OWNED_STETH_BURNER;
+    address internal immutable STAKING_ROUTER;
+    address internal immutable TREASURY;
+    address internal immutable WITHDRAWAL_QUEUE;
+    address internal immutable WITHDRAWAL_VAULT;
 
     /**
      * @notice declare service locations
      * @dev accepts an array to avoid the "stack-too-deep" error
      * @param _addresses array of addresses
-     * Order follows the logic: Lido and the rest are in the alphabetical order:
-     * [0] Lido
-     * [1] CompositePostRebaseBeaconReceiver;
-     * [2] DepositSecurityModule
-     * [3] ELRewardsVault
-     * [4] Oracle;
-     * [5] SafetyNetsRegistry;
-     * [6] SelfOwnedStETHBurner;
-     * [7] StakingRouter;
-     * [8] Treasury;
-     * [9] WithdrawalQueue;
-     * [10] WithdrawalVault;
+     * Order follows the logic: Lido and the rest are in the alphabetical order
+     * See actual constructor code for the order.
      */
     constructor(address[] memory _addresses) {
         if (_addresses.length != 11) revert ErrorIncorrectLength();
 
-        if (_addresses[0] == address(0)) revert ErrorZeroAddress();
-        lido = _addresses[0];
+        for (uint256 i; i < _addresses.length; ++i) {
+            if (_addresses[i] == address(0)) revert ErrorZeroAddress(i);
+        }
 
-        if (_addresses[1] == address(0)) revert ErrorZeroAddress();
-        compositePostRebaseBeaconReceiver = _addresses[1];
-
-        if (_addresses[2] == address(0)) revert ErrorZeroAddress();
-        depositSecurityModule = _addresses[2];
-
-        if (_addresses[3] == address(0)) revert ErrorZeroAddress();
-        elRewardsVault = _addresses[3];
-
-        if (_addresses[4] == address(0)) revert ErrorZeroAddress();
-        oracle = _addresses[4];
-
-        if (_addresses[5] == address(0)) revert ErrorZeroAddress();
-        safetyNetsRegistry = _addresses[5];
-
-        if (_addresses[6] == address(0)) revert ErrorZeroAddress();
-        selfOwnedStETHBurner = _addresses[6];
-
-        if (_addresses[7] == address(0)) revert ErrorZeroAddress();
-        stakingRouter = _addresses[7];
-
-        if (_addresses[8] == address(0)) revert ErrorZeroAddress();
-        treasury = _addresses[8];
-
-        if (_addresses[9] == address(0)) revert ErrorZeroAddress();
-        withdrawalQueue = _addresses[9];
-
-        if (_addresses[10] == address(0)) revert ErrorZeroAddress();
-        withdrawalVault = _addresses[10];
-
+        LIDO = _addresses[0];
+        COMPOSITE_POST_REBASE_BEACON_RECEIVER = _addresses[1];
+        DEPOSIT_SECURITY_MODULE = _addresses[2];
+        EL_REWARDS_VAULT = _addresses[3];
+        ACCOUNTING_ORACLE = _addresses[4];
+        SAFETY_NETS_REGISTRY = _addresses[5];
+        SELF_OWNED_STETH_BURNER = _addresses[6];
+        STAKING_ROUTER = _addresses[7];
+        TREASURY = _addresses[8];
+        WITHDRAWAL_QUEUE = _addresses[9];
+        WITHDRAWAL_VAULT = _addresses[10];
     }
 
     /**
@@ -88,7 +60,7 @@ contract LidoLocator is ILidoLocator {
      * @return address of the Lido contract
      */
     function getLido() external view returns (address) {
-        return lido;
+        return LIDO;
     }
 
     /**
@@ -96,7 +68,7 @@ contract LidoLocator is ILidoLocator {
      * @return address of the CompositePostRebaseBeaconReceiver contract
      */
     function getCompositePostRebaseBeaconReceiver() external view returns (address) {
-        return compositePostRebaseBeaconReceiver;
+        return COMPOSITE_POST_REBASE_BEACON_RECEIVER;
     }
 
     /**
@@ -104,7 +76,7 @@ contract LidoLocator is ILidoLocator {
      * @return address of the DepositSecurityModule contract
      */
     function getDepositSecurityModule() external view returns (address) {
-        return depositSecurityModule;
+        return DEPOSIT_SECURITY_MODULE;
     }
 
     /**
@@ -112,15 +84,15 @@ contract LidoLocator is ILidoLocator {
      * @return address of the ELRewardsVault contract
      */
     function getELRewardsVault() external view returns (address) {
-        return elRewardsVault;
+        return EL_REWARDS_VAULT;
     }
 
     /**
-     * @notice get the address of the Oracle contract
-     * @return address of the Oracle contract
+     * @notice get the address of the AccountingOracle contract
+     * @return address of the AccountingOracle contract
      */
-    function getOracle() external view returns (address) {
-        return oracle;
+    function getAccountingOracle() external view returns (address) {
+        return ACCOUNTING_ORACLE;
     }
 
     /**
@@ -128,7 +100,7 @@ contract LidoLocator is ILidoLocator {
      * @return address of the SafetyNetsRegistry contract
      */
     function getSafetyNetsRegistry() external view returns (address) {
-        return safetyNetsRegistry;
+        return SAFETY_NETS_REGISTRY;
     }
 
     /**
@@ -136,7 +108,7 @@ contract LidoLocator is ILidoLocator {
      * @return address of the SelfOwnedStETHBurner contract
      */
     function getSelfOwnedStETHBurner() external view returns (address) {
-        return selfOwnedStETHBurner;
+        return SELF_OWNED_STETH_BURNER;
     }
 
     /**
@@ -144,7 +116,7 @@ contract LidoLocator is ILidoLocator {
      * @return address of the StakingRouter contract
      */
     function getStakingRouter() external view returns (address) {
-        return stakingRouter;
+        return STAKING_ROUTER;
     }
 
     /**
@@ -152,7 +124,7 @@ contract LidoLocator is ILidoLocator {
      * @return address of the Treasury contract
      */
     function getTreasury() external view returns (address) {
-        return treasury;
+        return TREASURY;
     }
 
     /**
@@ -160,7 +132,7 @@ contract LidoLocator is ILidoLocator {
      * @return address of the WithdrawalQueue contract
      */
     function getWithdrawalQueue() external view returns (address) {
-        return withdrawalQueue;
+        return WITHDRAWAL_QUEUE;
     }
 
     /**
@@ -168,6 +140,6 @@ contract LidoLocator is ILidoLocator {
      * @return address of the WithdrawalVault contract
      */
     function getWithdrawalVault() external view returns (address) {
-        return withdrawalVault;
+        return WITHDRAWAL_VAULT;
     }
 }

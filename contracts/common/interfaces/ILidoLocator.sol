@@ -10,7 +10,7 @@ interface ILidoLocator {
     function getLido() external view returns(address);
     function getDepositSecurityModule() external view returns (address);
     function getELRewardsVault() external view returns (address);
-    function getOracle() external view returns (address);
+    function getAccountingOracle() external view returns (address);
     function getCompositePostRebaseBeaconReceiver() external view returns (address);
     function getSafetyNetsRegistry() external view returns (address);
     function getSelfOwnedStETHBurner() external view returns (address);
