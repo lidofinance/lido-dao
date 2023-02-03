@@ -8,7 +8,7 @@ import { MemUtils } from "../../common/lib/MemUtils.sol";
 import { ResizableArray } from "../lib/ResizableArray.sol";
 import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
 
-import { BaseOracle } from "./BaseOracle.sol";
+import { BaseOracle, IConsensusContract } from "./BaseOracle.sol";
 
 
 interface ILido {
@@ -27,6 +27,18 @@ interface ILido {
     ) external;
 
     function getStakingRouter() external view returns (address);
+}
+
+
+interface ILegacyOracle {
+    function getBeaconSpec() external view returns (
+        uint64 epochsPerFrame,
+        uint64 slotsPerEpoch,
+        uint64 secondsPerSlot,
+        uint64 genesisTime
+    );
+
+    function getLastCompletedEpochId() external view returns (uint256);
 }
 
 
@@ -60,6 +72,7 @@ contract AccountingOracle is BaseOracle {
 
     error LidoCannotBeZero();
     error AdminCannotBeZero();
+    error IncorrectOracleMigration(uint256 code);
     error SenderNotAllowed();
     error InvalidExitedValidatorsData();
     error NumExitedValidatorsCannotDecrease();
@@ -75,16 +88,16 @@ contract AccountingOracle is BaseOracle {
     error UnexpectedExtraDataIndex(uint256 expectedIndex, uint256 receivedIndex);
     error InvalidExtraDataSortOrder();
 
-    event DataBoundraiesSet(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount);
+    event DataBoundariesSet(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount);
     event ExtraDataSubmitted(uint256 indexed refSlot, uint256 itemsProcessed, uint256 itemsCount);
 
-    event WarnExtraDataIncomleteProcessing(
+    event WarnExtraDataIncompleteProcessing(
         uint256 indexed refSlot,
         uint256 processedItemsCount,
         uint256 itemsCount
     );
 
-    struct DataBoundraies {
+    struct DataBoundaries {
         uint64 maxExitedValidatorsPerDay;
         uint64 maxExtraDataListItemsCount;
     }
@@ -98,14 +111,14 @@ contract AccountingOracle is BaseOracle {
         bytes32 dataHash;
     }
 
-    /// @notice An ACL role granting the permission to submit the data for a commitee report.
+    /// @notice An ACL role granting the permission to submit the data for a committee report.
     bytes32 public constant SUBMIT_DATA_ROLE = keccak256("SUBMIT_DATA_ROLE");
 
     /// @notice An ACL role granting the permission to set report data safety boundaries.
     bytes32 constant public MANAGE_DATA_BOUNDARIES_ROLE = keccak256("MANAGE_DATA_BOUNDARIES_ROLE");
 
 
-    /// @dev Storage slot: DataBoundraies dataBoundaries
+    /// @dev Storage slot: DataBoundaries dataBoundaries
     bytes32 internal constant DATA_BOUNDARIES_POSITION =
         keccak256("lido.AccountingOracle.dataBoundaries");
 
@@ -129,12 +142,13 @@ contract AccountingOracle is BaseOracle {
         address admin,
         address consensusContract,
         uint256 consensusVersion,
-        uint256 lastProcessingRefSlot,
+        address legacyOracle,
         uint256 maxExitedValidatorsPerDay,
         uint256 maxExtraDataListItemsCount
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
+        uint256 lastProcessingRefSlot = _checkOracleMigration(legacyOracle, consensusContract);
         _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
         _setDataBoundaries(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
     }
@@ -143,7 +157,7 @@ contract AccountingOracle is BaseOracle {
         uint256 maxExitedValidatorsPerDay,
         uint256 maxExtraDataListItemsCount
     ) {
-        DataBoundraies memory b = _storageDataBoundaries().value;
+        DataBoundaries memory b = _storageDataBoundaries().value;
         return (b.maxExitedValidatorsPerDay, b.maxExtraDataListItemsCount);
     }
 
@@ -288,7 +302,7 @@ contract AccountingOracle is BaseOracle {
     /// each item occupying 32 bytes. The Solidity equivalent of the hash calculation code would
     /// be the following (where `array` has the uint256[] type):
     ///
-    /// keccac256(abi.encodePacked(array))
+    /// keccak256(abi.encodePacked(array))
     ///
     uint256 public constant EXTRA_DATA_FORMAT_LIST = 0;
 
@@ -352,14 +366,72 @@ contract AccountingOracle is BaseOracle {
     /// Implementation & helpers
     ///
 
+    /// @dev Returns last processed reference slot of the legacy oracle.
+    ///
+    /// Old oracle didn't specify what slot use as a reference one, but actually
+    /// used the first slot of the first frame's epoch. The new oracle uses the
+    /// last slot of the previous frame's last epoch as a reference one.
+    ///
+    /// Oracle migration scheme:
+    ///
+    /// last old frame    <--------->
+    /// old frames       |r  .   .   |
+    /// new frames                  r|   .   .  r|   .   .  r|
+    /// first new frame               <--------->
+    /// events            0  1  2   3  4
+    /// time ------------------------------------------------>
+    ///
+    /// 0. last reference slot of legacy oracle
+    /// 1. last legacy oracle's consensus report arrives
+    /// 2. new oracle is deployed and enabled, legacy oracle is disabled and upgraded to compat code
+    /// 3. first reference slot of the new oracle
+    /// 4. first new oracle's consensus report arrives
+    ///
+    function _checkOracleMigration(address legacyOracle, address consensusContract)
+        internal view returns (uint256)
+    {
+        (uint256 initialEpoch,
+            uint256 epochsPerFrame) = IConsensusContract(consensusContract).getFrameConfig();
+
+        (uint256 slotsPerEpoch,
+            uint256 secondsPerSlot,
+            uint256 genesisTime) = IConsensusContract(consensusContract).getChainConfig();
+
+        {
+            // check chain spec to match the prev. one (a block is used to reduce stack alloc)
+            (uint256 legacyEpochsPerFrame,
+                uint256 legacySlotsPerEpoch,
+                uint256 legacySecondsPerSlot,
+                uint256 legacyGenesisTime) = ILegacyOracle(legacyOracle).getBeaconSpec();
+            if (slotsPerEpoch != legacySlotsPerEpoch ||
+                secondsPerSlot != legacySecondsPerSlot ||
+                genesisTime != legacyGenesisTime
+            ) {
+                revert IncorrectOracleMigration(0);
+            }
+            if (epochsPerFrame != legacyEpochsPerFrame) {
+                revert IncorrectOracleMigration(1);
+            }
+        }
+
+        uint256 legacyProcessedEpoch = ILegacyOracle(legacyOracle).getLastCompletedEpochId();
+        if (initialEpoch != legacyProcessedEpoch + epochsPerFrame) {
+            revert IncorrectOracleMigration(2);
+        }
+
+        // last processing ref. slot of the new oracle should be set to the last processed
+        // ref. slot of the legacy oracle, i.e. the first slot of the last processed epoch
+        return legacyProcessedEpoch * slotsPerEpoch;
+    }
+
     function _setDataBoundaries(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount)
         internal
     {
-        _storageDataBoundaries().value = DataBoundraies({
+        _storageDataBoundaries().value = DataBoundaries({
             maxExitedValidatorsPerDay: maxExitedValidatorsPerDay.toUint64(),
             maxExtraDataListItemsCount: maxExtraDataListItemsCount.toUint64()
         });
-        emit DataBoundraiesSet(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
+        emit DataBoundariesSet(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
     }
 
     function _handleConsensusReport(
@@ -369,7 +441,7 @@ contract AccountingOracle is BaseOracle {
     ) internal override {
         ExtraDataProcessingState memory state = _storageExtraDataProcessingState().value;
         if (state.refSlot == prevProcessingRefSlot && state.itemsProcessed < state.itemsCount) {
-            emit WarnExtraDataIncomleteProcessing(
+            emit WarnExtraDataIncompleteProcessing(
                 prevProcessingRefSlot,
                 state.itemsProcessed,
                 state.itemsCount);
@@ -384,21 +456,21 @@ contract AccountingOracle is BaseOracle {
     }
 
     function _handleConsensusReportData(ReportData calldata data, uint256 slotsElapsed) internal {
-        DataBoundraies memory boudaries = _storageDataBoundaries().value;
+        DataBoundaries memory boundaries = _storageDataBoundaries().value;
 
         if (data.extraDataFormat != EXTRA_DATA_FORMAT_LIST) {
             revert UnsupportedExtraDataFormat(data.extraDataFormat);
         }
 
-        if (data.extraDataItemsCount > boudaries.maxExtraDataListItemsCount) {
+        if (data.extraDataItemsCount > boundaries.maxExtraDataListItemsCount) {
             revert MaxExtraDataItemsCountExceeded(
-                boudaries.maxExtraDataListItemsCount,
+                boundaries.maxExtraDataListItemsCount,
                 data.extraDataItemsCount
             );
         }
 
         _processStakingRouterExitedKeysByModule(
-            boudaries,
+            boundaries,
             data.stakingModuleIdsWithNewlyExitedValidators,
             data.numExitedValidatorsByStakingModule,
             slotsElapsed
@@ -407,7 +479,7 @@ contract AccountingOracle is BaseOracle {
         ILido(LIDO).handleOracleReport(
             slotsElapsed * SECONDS_PER_SLOT,
             data.numValidators,
-            uint256(data.clBalanceGwei) * 1e9,
+            data.clBalanceGwei * 1e9,
             data.withdrawalVaultBalance,
             data.elRewardsVaultBalance,
             data.lastWithdrawalRequestIdToFinalize,
@@ -426,7 +498,7 @@ contract AccountingOracle is BaseOracle {
     }
 
     function _processStakingRouterExitedKeysByModule(
-        DataBoundraies memory boudaries,
+        DataBoundaries memory boundaries,
         uint256[] calldata stakingModuleIds,
         uint256[] calldata numExitedValidatorsByStakingModule,
         uint256 slotsElapsed
@@ -467,9 +539,9 @@ contract AccountingOracle is BaseOracle {
             (exitedValidators - prevExitedValidators) * (1 days) /
             (SECONDS_PER_SLOT * slotsElapsed);
 
-        if (exitedValidatorsPerDay > boudaries.maxExitedValidatorsPerDay) {
+        if (exitedValidatorsPerDay > boundaries.maxExitedValidatorsPerDay) {
             revert ExitedValidatorsLimitExceeded(
-                boudaries.maxExitedValidatorsPerDay,
+                boundaries.maxExitedValidatorsPerDay,
                 exitedValidatorsPerDay
             );
         }
@@ -666,11 +738,11 @@ contract AccountingOracle is BaseOracle {
     /// Storage helpers
     ///
 
-    struct StorageDataBoudaries {
-        DataBoundraies value;
+    struct StorageDataBoundaries {
+        DataBoundaries value;
     }
 
-    function _storageDataBoundaries() internal pure returns (StorageDataBoudaries storage r) {
+    function _storageDataBoundaries() internal pure returns (StorageDataBoundaries storage r) {
         bytes32 position = DATA_BOUNDARIES_POSITION;
         assembly { r.slot := position }
     }

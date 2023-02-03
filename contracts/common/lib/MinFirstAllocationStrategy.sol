@@ -50,7 +50,7 @@ library MinFirstAllocationStrategy {
     ///             than the bucket found in step 1. To preserve proportional allocation the resulting allocation can't exceed this value.
     ///         4. Calculate the allocation size as:
     ///             min(
-    ///                 max(allocationSize / count of least filling buckets, 1),
+    ///                 (count of least filling buckets > 1 ? ceilDiv(allocationSize, count of least filling buckets) : allocationSize),
     ///                 fill factor of the bucket found in step 3,
     ///                 free space of the least filled bucket
     ///             )

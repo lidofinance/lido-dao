@@ -11,7 +11,7 @@ contract('MinFirstAllocationStrategy', (accounts) => {
     ['Modern (Solidity 0.8.9)', MinFirstAlgorithmModernConsumer]
   ]) {
     describe(consumerVersion, async function () {
-      this.timeout(60_000, 'Test suite took too long')
+      this.timeout(0, 'Test suite takes too long') //it takes even longer in coverage tests, so disable timeout here 
       let minFirstAllocationStrategy
       const [deployer] = accounts
       let evmSnapshotId
