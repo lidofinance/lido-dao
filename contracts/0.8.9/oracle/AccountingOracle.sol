@@ -56,12 +56,11 @@ interface IStakingRouter {
         uint256[] calldata _exitedKeysCounts
     ) external;
 
-    // TODO:
-    // function reportStakingModuleStuckKeysCountByNodeOperator(
-    //     uint256 _stakingModuleId,
-    //     uint256[] calldata _nodeOperatorIds,
-    //     uint256[] calldata _stuckKeysCounts
-    // ) external;
+    function reportStakingModuleStuckKeysCountByNodeOperator(
+        uint256 _stakingModuleId,
+        uint256[] calldata _nodeOperatorIds,
+        uint256[] calldata _stuckKeysCounts
+    ) external;
 }
 
 
@@ -637,12 +636,11 @@ contract AccountingOracle is BaseOracle {
                 assert(iter.lastNodeOpId >= 0);
 
                 if (iter.lastType == int256(EXTRA_DATA_TYPE_STUCK_VALIDATORS)) {
-                    // TODO: report stuck validators
-                    // stakingRouter.reportStakingModuleStuckKeysCountByNodeOperator(
-                    //     iter.lastModuleId,
-                    //     iter.nopIds.pointer(),
-                    //     iter.keyCounts.pointer()
-                    // );
+                    stakingRouter.reportStakingModuleStuckKeysCountByNodeOperator(
+                        uint256(iter.lastModuleId),
+                        iter.nopIds.pointer(),
+                        iter.keyCounts.pointer()
+                    );
                 } else if (iter.lastType == int256(EXTRA_DATA_TYPE_EXITED_VALIDATORS)) {
                     stakingRouter.reportStakingModuleExitedKeysCountByNodeOperator(
                         uint256(iter.lastModuleId),

@@ -368,7 +368,20 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule {
         // updated (as opposed to pulling by node ops), we don't need any handling here
     }
 
-    /// @notice Updates the number of the validators in the EXITED state for node operator with given id
+    /// @notice Called by StakingRouter to update the number of the validators of the given node
+    /// operator that were requested to exit but failed to do so in the max allowed time
+    ///
+    /// @param _nodeOperatorId Id of the node operator
+    /// @param _stuckValidatorKeysCount New number of stuck validators of the node operator
+    function updateStuckValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _stuckValidatorKeysCount)
+        external
+    {
+        // FIXME: implement
+    }
+
+    /// @notice Called by StakingRouter to update the number of the validators in the EXITED state
+    /// for node operator with given id
+    ///
     /// @param _nodeOperatorId Id of the node operator
     /// @param _exitedValidatorsKeysCount New number of EXITED validators of the node operator
     /// @return Total number of exited validators across all node operators.

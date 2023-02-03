@@ -258,12 +258,32 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       const call1 = await mockStakingRouter.getCall_reportExitedKeysByNodeOperator(0)
       assert.equal(+call1.stakingModuleId, 1)
       assert.sameOrderedMembers(call1.nodeOperatorIds.map(x => +x), [1, 2])
-      assert.sameOrderedMembers(call1.exitedKeysCounts.map(x => +x), [1, 3])
+      assert.sameOrderedMembers(call1.keysCounts.map(x => +x), [1, 3])
 
       const call2 = await mockStakingRouter.getCall_reportExitedKeysByNodeOperator(1)
       assert.equal(+call2.stakingModuleId, 2)
       assert.sameOrderedMembers(call2.nodeOperatorIds.map(x => +x), [1])
-      assert.sameOrderedMembers(call2.exitedKeysCounts.map(x => +x), [2])
+      assert.sameOrderedMembers(call2.keysCounts.map(x => +x), [2])
+    })
+
+    it('Staking router got the stuck keys by node op report', async () => {
+      const totalReportCalls = +await mockStakingRouter.getTotalCalls_reportStuckKeysByNodeOperator()
+      assert.equal(totalReportCalls, 3)
+
+      const call1 = await mockStakingRouter.getCall_reportStuckKeysByNodeOperator(0)
+      assert.equal(+call1.stakingModuleId, 0)
+      assert.sameOrderedMembers(call1.nodeOperatorIds.map(x => +x), [0])
+      assert.sameOrderedMembers(call1.keysCounts.map(x => +x), [1])
+
+      const call2 = await mockStakingRouter.getCall_reportStuckKeysByNodeOperator(1)
+      assert.equal(+call2.stakingModuleId, 1)
+      assert.sameOrderedMembers(call2.nodeOperatorIds.map(x => +x), [0])
+      assert.sameOrderedMembers(call2.keysCounts.map(x => +x), [2])
+
+      const call3 = await mockStakingRouter.getCall_reportStuckKeysByNodeOperator(2)
+      assert.equal(+call3.stakingModuleId, 2)
+      assert.sameOrderedMembers(call3.nodeOperatorIds.map(x => +x), [2])
+      assert.sameOrderedMembers(call3.keysCounts.map(x => +x), [3])
     })
   })
 })

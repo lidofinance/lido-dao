@@ -309,6 +309,24 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor {
         }
     }
 
+    function reportStakingModuleStuckKeysCountByNodeOperator(
+        uint256 _stakingModuleId,
+        uint256[] calldata _nodeOperatorIds,
+        uint256[] calldata _stuckKeysCounts
+    )
+        external
+        onlyRole(REPORT_EXITED_KEYS_ROLE)
+    {
+        address moduleAddr = _getStakingModuleById(_stakingModuleId).stakingModuleAddress;
+        for (uint256 i = 0; i < _nodeOperatorIds.length; ) {
+            IStakingModule(moduleAddr).updateStuckValidatorsKeysCount(
+                _nodeOperatorIds[i],
+                _stuckKeysCounts[i]
+            );
+            unchecked { ++i; }
+        }
+    }
+
     function getExitedKeysCountAcrossAllModules() external view returns (uint256) {
         uint256 stakingModulesCount = getStakingModulesCount();
         uint256 exitedKeysCount = 0;

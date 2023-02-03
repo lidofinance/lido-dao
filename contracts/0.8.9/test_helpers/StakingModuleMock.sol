@@ -69,6 +69,11 @@ contract StakingModuleMock is IStakingModule {
 
     function handleRewardsMinted(uint256 _totalShares) external {}
 
+    function updateStuckValidatorsKeysCount(
+        uint256 _nodeOperatorId,
+        uint256 _stuckValidatorKeysCount
+    ) external {}
+
     function updateExitedValidatorsKeysCount(uint256, uint256) external returns (uint256) {
         return 0;
     }
