@@ -17,10 +17,10 @@ contract LidoLocator is ILidoLocator {
     error ErrorZeroAddress();
 
     address internal immutable lido;
+    address internal immutable compositePostRebaseBeaconReceiver;
     address internal immutable depositSecurityModule;
     address internal immutable elRewardsVault;
     address internal immutable oracle;
-    address internal immutable compositePostRebaseBeaconReceiver;
     address internal immutable safetyNetsRegistry;
     address internal immutable selfOwnedStETHBurner;
     address internal immutable stakingRouter;
