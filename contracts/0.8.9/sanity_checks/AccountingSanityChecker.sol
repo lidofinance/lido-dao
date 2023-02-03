@@ -54,7 +54,7 @@ struct LimitsListPacked {
     uint64 maxPositiveTokenRebase;
 }
 
-contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
+contract AccountingSanityChecker is AccessControlEnumerable {
     using PositiveTokenRebaseLimiter for LimiterState.Data;
     using LimitsListUnpacker for LimitsListPacked;
     using LimitsListPacker for LimitsList;
@@ -227,7 +227,7 @@ contract AccountingOracleReportSanityChecks is AccessControlEnumerable {
         _updateLimits(_limits.unpack().setMaxPositiveTokenRebase(_maxTokenPositiveRebase));
     }
 
-    function validateAccountingOracleReport(
+    function checkReport(
         uint256 _timeElapsed,
         uint256 _preCLBalance,
         uint256 _postCLBalance,

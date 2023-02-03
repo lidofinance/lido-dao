@@ -2,13 +2,14 @@ const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
 const { ETH } = require('../helpers/utils')
 
-const LidoLocatorMock = hre.artifacts.require('LidoLocatorMock')
-const LidoMock = hre.artifacts.require('LidoMockForAccountingOracleSanityChecks')
-const AccountingOracleReportSanityChecks = hre.artifacts.require('AccountingOracleReportSanityChecks')
-const WithdrawalQueueMock = hre.artifacts.require('WithdrawalQueueMockForAccountingOracleSanityChecks')
+const mocksFilePath = 'contracts/0.8.9/test_helpers/AccountingSanityCheckerMocks.sol'
+const AccountingSanityChecker = hre.artifacts.require('AccountingSanityChecker')
+const LidoMock = hre.artifacts.require(`${mocksFilePath}:LidoStub`)
+const LidoLocatorMock = hre.artifacts.require(`${mocksFilePath}:LidoLocatorStub`)
+const WithdrawalQueueMock = hre.artifacts.require(`${mocksFilePath}:WithdrawalQueueStub`)
 
 contract('SanityChecksRegistry', ([deployer, admin, manager, withdrawalVault, ...accounts]) => {
-  let accountingOracleSanityChecks, lidoLocatorMock, lidoMock, withdrawalQueueMock
+  let accountingSanityChecker, lidoLocatorMock, lidoMock, withdrawalQueueMock
   const managersRoster = {
     allLimitsManagers: accounts.slice(0, 2),
     churnValidatorsByEpochLimitManagers: accounts.slice(2, 4),
@@ -32,7 +33,7 @@ contract('SanityChecksRegistry', ([deployer, admin, manager, withdrawalVault, ..
     withdrawalQueueMock = await WithdrawalQueueMock.new({ from: deployer })
     lidoLocatorMock = await LidoLocatorMock.new(lidoMock.address, withdrawalVault, withdrawalQueueMock.address)
 
-    accountingOracleSanityChecks = await AccountingOracleReportSanityChecks.new(
+    accountingSanityChecker = await AccountingSanityChecker.new(
       lidoLocatorMock.address,
       admin,
       Object.values(defaultLimitsList),
@@ -52,7 +53,7 @@ contract('SanityChecksRegistry', ([deployer, admin, manager, withdrawalVault, ..
       const finalizationPauseStartBlock = await hre.ethers.provider.getBlockNumber().then((bn) => bn + 1000)
       const maxPositiveTokenRebase = 5_000_000 // 0.05%
 
-      const limitsBefore = await accountingOracleSanityChecks.getAccountingOracleLimits()
+      const limitsBefore = await accountingSanityChecker.getAccountingOracleLimits()
       assert.notEquals(limitsBefore.churnValidatorsByEpochLimit, churnValidatorsByEpochLimit)
       assert.notEquals(limitsBefore.oneOffCLBalanceDecreaseLimit, oneOffCLBalanceDecreaseLimit)
       assert.notEquals(limitsBefore.annualBalanceIncreaseLimit, annualBalanceIncreaseLimit)
@@ -60,7 +61,7 @@ contract('SanityChecksRegistry', ([deployer, admin, manager, withdrawalVault, ..
       assert.notEquals(limitsBefore.finalizationPauseStartBlock, finalizationPauseStartBlock)
       assert.notEquals(limitsBefore.maxPositiveTokenRebase, maxPositiveTokenRebase)
 
-      await accountingOracleSanityChecks.setAccountingOracleLimits(
+      await accountingSanityChecker.setAccountingOracleLimits(
         [
           churnValidatorsByEpochLimit,
           oneOffCLBalanceDecreaseLimit,
@@ -72,7 +73,7 @@ contract('SanityChecksRegistry', ([deployer, admin, manager, withdrawalVault, ..
         { from: managersRoster.allLimitsManagers[0] }
       )
 
-      const limitsAfter = await accountingOracleSanityChecks.getAccountingOracleLimits()
+      const limitsAfter = await accountingSanityChecker.getAccountingOracleLimits()
       assert.equals(limitsAfter.churnValidatorsByEpochLimit, churnValidatorsByEpochLimit)
       assert.equals(limitsAfter.oneOffCLBalanceDecreaseLimit, oneOffCLBalanceDecreaseLimit)
       assert.equals(limitsAfter.annualBalanceIncreaseLimit, annualBalanceIncreaseLimit)
@@ -96,7 +97,7 @@ contract('SanityChecksRegistry', ([deployer, admin, manager, withdrawalVault, ..
 
     beforeEach(async () => {
       finalizationPauseStartBlock = await hre.ethers.provider.getBlockNumber().then((bn) => bn + 1000)
-      await accountingOracleSanityChecks.setAccountingOracleLimits(
+      await accountingSanityChecker.setAccountingOracleLimits(
         [
           churnValidatorsByEpochLimit,
           oneOffCLBalanceDecreaseLimit,
@@ -125,7 +126,7 @@ contract('SanityChecksRegistry', ([deployer, admin, manager, withdrawalVault, ..
       const reportBlockNumber = await hre.ethers.provider.getBlockNumber()
       const finalizationShareRate = ETH(1)
 
-      await accountingOracleSanityChecks.validateAccountingOracleReport(
+      await accountingSanityChecker.checkReport(
         timeElapsed,
         preCLBalance,
         postCLBalance,
