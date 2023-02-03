@@ -11,6 +11,20 @@ import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
 import { BaseOracle, IConsensusContract } from "./BaseOracle.sol";
 
 
+interface IComponentLocator {
+    function lido() external view returns (address);
+    function stakingRouter() external view returns (address);
+    function coreComponents() external view returns (
+        address elRewardsVault,
+        address safetyNetsRegistry,
+        address stakingRouter,
+        address treasury,
+        address withdrawalQueue,
+        address withdrawalVault
+    );
+}
+
+
 interface ILido {
     function handleOracleReport(
         uint256 secondsElapsedSinceLastReport,
@@ -24,9 +38,6 @@ interface ILido {
         uint256 requestIdToFinalizeUpTo,
         uint256 finalizationShareRate
     ) external;
-
-    function getStakingRouter() external view returns (address);
-    function getWithdrawalQueue() external view returns (address);
 }
 
 
@@ -74,7 +85,7 @@ contract AccountingOracle is BaseOracle {
     using UnstructuredStorage for bytes32;
     using SafeCast for uint256;
 
-    error LidoCannotBeZero();
+    error ComponentLocatorCannotBeZero();
     error AdminCannotBeZero();
     error IncorrectOracleMigration(uint256 code);
     error SenderNotAllowed();
@@ -132,16 +143,18 @@ contract AccountingOracle is BaseOracle {
 
 
     address public immutable LIDO;
+    IComponentLocator public immutable LOCATOR;
 
     ///
     /// Initialization & admin functions
     ///
 
-    constructor(address lido, uint256 secondsPerSlot, uint256 genesisTime)
+    constructor(address componentLocator, uint256 secondsPerSlot, uint256 genesisTime)
         BaseOracle(secondsPerSlot, genesisTime)
     {
-        if (lido == address(0)) revert LidoCannotBeZero();
-        LIDO = lido;
+        if (componentLocator == address(0)) revert ComponentLocatorCannotBeZero();
+        LOCATOR = IComponentLocator(componentLocator);
+        LIDO = LOCATOR.lido();
     }
 
     function initialize(
@@ -477,14 +490,23 @@ contract AccountingOracle is BaseOracle {
 
         uint256 slotsElapsed = data.refSlot - prevRefSlot;
 
+        (/* address elRewardsVault */,
+            /* address safetyNetsRegistry */,
+            address stakingRouter,
+            /* address treasury */,
+            address withdrawalQueue,
+            /* address withdrawalVault */
+        ) = LOCATOR.coreComponents();
+
         _processStakingRouterExitedKeysByModule(
+            IStakingRouter(stakingRouter),
             boundaries,
             data.stakingModuleIdsWithNewlyExitedValidators,
             data.numExitedValidatorsByStakingModule,
             slotsElapsed
         );
 
-        IWithdrawalQueue(ILido(LIDO).getWithdrawalQueue()).updateBunkerMode(
+        IWithdrawalQueue(withdrawalQueue).updateBunkerMode(
             data.isBunkerMode,
             GENESIS_TIME + prevRefSlot * SECONDS_PER_SLOT
         );
@@ -510,6 +532,7 @@ contract AccountingOracle is BaseOracle {
     }
 
     function _processStakingRouterExitedKeysByModule(
+        IStakingRouter stakingRouter,
         DataBoundaries memory boundaries,
         uint256[] calldata stakingModuleIds,
         uint256[] calldata numExitedValidatorsByStakingModule,
@@ -539,8 +562,6 @@ contract AccountingOracle is BaseOracle {
             }
             unchecked { ++i; }
         }
-
-        IStakingRouter stakingRouter = IStakingRouter(ILido(LIDO).getStakingRouter());
 
         uint256 prevExitedValidators = stakingRouter.getExitedKeysCountAcrossAllModules();
         if (exitedValidators < prevExitedValidators) {
@@ -618,7 +639,7 @@ contract AccountingOracle is BaseOracle {
         uint256 itemsProcessed,
         uint256 lastProcessedItem
     ) internal returns (uint256) {
-        IStakingRouter stakingRouter = IStakingRouter(ILido(LIDO).getStakingRouter());
+        IStakingRouter stakingRouter = IStakingRouter(LOCATOR.stakingRouter());
 
         ExtraDataIterState memory iter = ExtraDataIterState({
             firstItemIndex: itemsProcessed,

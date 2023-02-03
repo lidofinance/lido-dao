@@ -16,9 +16,6 @@ const {
 
 const AccountingOracle = artifacts.require('AccountingOracleTimeTravellable.sol')
 const HashConsensus = artifacts.require('HashConsensus.sol')
-const Lido = artifacts.require('LidoMockForOracleNew.sol')
-const MockStakingRouter = artifacts.require('MockStakingRouterForAccountingOracle')
-const MockLegacyOracle = artifacts.require('MockLegacyOracle')
 
 const SLOTS_PER_EPOCH = 32
 const SECONDS_PER_SLOT = 12
@@ -31,7 +28,7 @@ const SECONDS_PER_FRAME = SLOTS_PER_FRAME * SECONDS_PER_SLOT
 // const EPOCH_LENGTH = 32 * 12
 
 contract('AccountingOracle', ([appManager, voting, malicious1, malicious2, member1, member2, member3]) => {
-  let lido, stakingRouter, consensus, oracle
+  let lido, consensus, oracle
 
   const GOOD_DATA = {
     consensusVersion: CONSENSUS_VERSION,
@@ -55,14 +52,7 @@ contract('AccountingOracle', ([appManager, voting, malicious1, malicious2, membe
     numValidators: 42,
   }
 
-  before('Deploy and init Lido and oracle', async () => {
-    lido = await Lido.new(ZERO_ADDRESS)
-    stakingRouter = await MockStakingRouter.new()
-  })
-
   beforeEach('deploy dao and app', async () => {
-    const { dao, acl } = await newDao(appManager)
-
     const timeConfig = {
       epochsPerFrame: EPOCHS_PER_FRAME,
       slotsPerEpoch: SLOTS_PER_EPOCH,
@@ -72,10 +62,10 @@ contract('AccountingOracle', ([appManager, voting, malicious1, malicious2, membe
 
     const deployed = await deployAccountingOracleSetup(voting, {
       ...timeConfig,
-      getLidoAndStakingRouter: async () => ({lido, stakingRouter}),
       getLegacyOracle: () => deployMockLegacyOracle({...timeConfig, lastCompletedEpochId: 0})
     })
 
+    lido = deployed.lido
     consensus = deployed.consensus
     oracle = deployed.oracle
 
@@ -83,11 +73,8 @@ contract('AccountingOracle', ([appManager, voting, malicious1, malicious2, membe
 
     assert.equal(+await oracle.getTime(), GENESIS_TIME + SECONDS_PER_FRAME)
 
-    // Initialize the oracle time, quorum and basic oracles
     await consensus.addMember(member1, 4, { from: voting })
     await consensus.addMember(member2, 4, { from: voting })
-
-    await lido.pretendTotalPooledEtherGweiForTest(0)
   })
 
   it('reverts with zero ref. slot', async () => {
@@ -129,6 +116,8 @@ contract('AccountingOracle', ([appManager, voting, malicious1, malicious2, membe
 
     assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: SLOTS_PER_FRAME - 1 } })
 
-    assertBn(await lido.totalSupply(), e9(GOOD_DATA.clBalanceGwei))
+    const lastHandleOracleReportCall = await lido.getLastCall_handleOracleReport()
+    assertBn(lastHandleOracleReportCall.clBalance, e9(GOOD_DATA.clBalanceGwei))
+    assertBn(lastHandleOracleReportCall.numValidators, GOOD_DATA.numValidators)
   })
 })
