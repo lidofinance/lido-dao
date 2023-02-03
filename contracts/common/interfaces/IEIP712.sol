@@ -4,7 +4,7 @@
 
 // See contracts/COMPILERS.md
 // solhint-disable-next-line
-pragma solidity 0.4.24||0.8.9;
+pragma solidity >=0.4.24 <0.9.0;
 
 /**
  * @dev Helper interface of EIP712.
