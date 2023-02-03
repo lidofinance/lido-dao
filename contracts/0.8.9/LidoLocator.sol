@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2021 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 
 // SPDX-License-Identifier: GPL-3.0
 
@@ -9,51 +9,165 @@ import {ILidoLocator} from "../common/interfaces/ILidoLocator.sol";
 
 /**
  * @title LidoLocator
- * @notice Service locator for Lido Mainnet
+ * @author mymphe
+ * @notice Service Locator of Lido
  */
 contract LidoLocator is ILidoLocator {
-    function getLido() external pure returns(address) {
-        return 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84; 
+    error ErrorIncorrectLength();
+    error ErrorZeroAddress();
+
+    address internal immutable lido;
+    address internal immutable depositSecurityModule;
+    address internal immutable elRewardsVault;
+    address internal immutable oracle;
+    address internal immutable compositePostRebaseBeaconReceiver;
+    address internal immutable safetyNetsRegistry;
+    address internal immutable selfOwnedStETHBurner;
+    address internal immutable stakingRouter;
+    address internal immutable treasury;
+    address internal immutable withdrawalQueue;
+    address internal immutable withdrawalVault;
+
+    /**
+     * @notice declare service locations
+     * @dev accepts an array to avoid the "stack-too-deep" error
+     * @param _addresses array of addresses
+     * Order follows the logic: Lido and the rest are in the alphabetical order:
+     * [0] Lido
+     * [1] CompositePostRebaseBeaconReceiver;
+     * [2] DepositSecurityModule
+     * [3] ELRewardsVault
+     * [4] Oracle;
+     * [5] SafetyNetsRegistry;
+     * [6] SelfOwnedStETHBurner;
+     * [7] StakingRouter;
+     * [8] Treasury;
+     * [9] WithdrawalQueue;
+     * [10] WithdrawalVault;
+     */
+    constructor(address[] memory _addresses) {
+        if (_addresses.length != 11) revert ErrorIncorrectLength();
+
+        if (_addresses[0] == address(0)) revert ErrorZeroAddress();
+        lido = _addresses[0];
+
+        if (_addresses[1] == address(0)) revert ErrorZeroAddress();
+        compositePostRebaseBeaconReceiver = _addresses[1];
+
+        if (_addresses[2] == address(0)) revert ErrorZeroAddress();
+        depositSecurityModule = _addresses[2];
+
+        if (_addresses[3] == address(0)) revert ErrorZeroAddress();
+        elRewardsVault = _addresses[3];
+
+        if (_addresses[4] == address(0)) revert ErrorZeroAddress();
+        oracle = _addresses[4];
+
+        if (_addresses[5] == address(0)) revert ErrorZeroAddress();
+        safetyNetsRegistry = _addresses[5];
+
+        if (_addresses[6] == address(0)) revert ErrorZeroAddress();
+        selfOwnedStETHBurner = _addresses[6];
+
+        if (_addresses[7] == address(0)) revert ErrorZeroAddress();
+        stakingRouter = _addresses[7];
+
+        if (_addresses[8] == address(0)) revert ErrorZeroAddress();
+        treasury = _addresses[8];
+
+        if (_addresses[9] == address(0)) revert ErrorZeroAddress();
+        withdrawalQueue = _addresses[9];
+
+        if (_addresses[10] == address(0)) revert ErrorZeroAddress();
+        withdrawalVault = _addresses[10];
+
     }
 
-    function getDepositSecurityModule() external pure returns (address) {
-        return 0x710B3303fB508a84F10793c1106e32bE873C24cd; 
+    /**
+     * @notice get the address of the Lido contract
+     * @return address of the Lido contract
+     */
+    function getLido() external view returns (address) {
+        return lido;
     }
 
-    function getELRewardsVault() external pure returns (address) {
-        return 0x388C818CA8B9251b393131C08a736A67ccB19297; 
+    /**
+     * @notice get the address of the CompositePostRebaseBeaconReceiver contract
+     * @return address of the CompositePostRebaseBeaconReceiver contract
+     */
+    function getCompositePostRebaseBeaconReceiver() external view returns (address) {
+        return compositePostRebaseBeaconReceiver;
     }
 
-    function getOracle() external pure returns (address) {
-        return 0x442af784A788A5bd6F42A01Ebe9F287a871243fb; 
+    /**
+     * @notice get the address of the DepositSecurityModule contract
+     * @return address of the DepositSecurityModule contract
+     */
+    function getDepositSecurityModule() external view returns (address) {
+        return depositSecurityModule;
     }
 
-    function getCompositePostRebaseBeaconReceiver() external pure returns (address) {
-        return 0x55a7E1cbD678d9EbD50c7d69Dc75203B0dBdD431; 
+    /**
+     * @notice get the address of the ELRewardsVault contract
+     * @return address of the ELRewardsVault contract
+     */
+    function getELRewardsVault() external view returns (address) {
+        return elRewardsVault;
     }
 
-    function getSafetyNetsRegistry() external pure returns (address) {
-        return 0x1111111111111111111111111111111111111111; // placeholder
+    /**
+     * @notice get the address of the Oracle contract
+     * @return address of the Oracle contract
+     */
+    function getOracle() external view returns (address) {
+        return oracle;
     }
 
-    function getSelfOwnedStETHBurner() external pure returns (address) {
-        return 0xB280E33812c0B09353180e92e27b8AD399B07f26; 
+    /**
+     * @notice get the address of the SafetyNetsRegistry contract
+     * @return address of the SafetyNetsRegistry contract
+     */
+    function getSafetyNetsRegistry() external view returns (address) {
+        return safetyNetsRegistry;
     }
 
-    function getStakingRouter() external pure returns (address) {
-        return 0x2222222222222222222222222222222222222222; // placeholder
+    /**
+     * @notice get the address of the SelfOwnedStETHBurner contract
+     * @return address of the SelfOwnedStETHBurner contract
+     */
+    function getSelfOwnedStETHBurner() external view returns (address) {
+        return selfOwnedStETHBurner;
     }
 
-    function getTreasury() external pure returns (address) {
-        return 0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c; 
+    /**
+     * @notice get the address of the StakingRouter contract
+     * @return address of the StakingRouter contract
+     */
+    function getStakingRouter() external view returns (address) {
+        return stakingRouter;
     }
 
-    function getWithdrawalQueue() external pure returns (address) {
-        return 0x3333333333333333333333333333333333333333; // placeholder
+    /**
+     * @notice get the address of the Treasury contract
+     * @return address of the Treasury contract
+     */
+    function getTreasury() external view returns (address) {
+        return treasury;
     }
 
-    function getWithdrawalVault() external pure returns (address) {
-        return 0x4444444444444444444444444444444444444444; // placeholder
+    /**
+     * @notice get the address of the tWithdrawalQueue contract
+     * @return address of the WithdrawalQueue contract
+     */
+    function getWithdrawalQueue() external view returns (address) {
+        return withdrawalQueue;
     }
 
+    /**
+     * @notice get the address of the WithdrawalVault contract
+     * @return address of the WithdrawalVault contract
+     */
+    function getWithdrawalVault() external view returns (address) {
+        return withdrawalVault;
+    }
 }
