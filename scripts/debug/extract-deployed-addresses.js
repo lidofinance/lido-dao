@@ -52,12 +52,10 @@ async function deployNewContracts({ web3, artifacts }) {
 
   const addressesInfo = `
 Lido ${lidoAddress}
-LidoOracleNew ${oracleAddress}
 WstETH ${state["wstETHAddress"]}
 WithdrawalVault ${withdrawalVault}
 WithdrawalQueue ${withdrawalQueue}
 ExecutionLayerRewardsVault ${executionLayerRewardsVault}
-ValidatorExitBus ${validatorExitBus}
 StakingRouter ${stakingRouter}
 NodeOperatorRegistry ${nodeOperatorsRegistry}
 BeaconChainDepositor ${beaconChainDepositor}
