@@ -50,31 +50,18 @@ contract LidoLocator is ILidoLocator {
      * @param _config struct of addresses
      */
     constructor(Config memory _config) {
-        if (_config.accountingOracle == address(0)) revert ErrorZeroAddress();
-        if (_config.depositSecurityModule == address(0)) revert ErrorZeroAddress();
-        if (_config.elRewardsVault == address(0)) revert ErrorZeroAddress();
-        if (_config.legacyOracle == address(0)) revert ErrorZeroAddress();
-        if (_config.lido == address(0)) revert ErrorZeroAddress();
-        if (_config.safetyNetsRegistry == address(0)) revert ErrorZeroAddress();
-        if (_config.selfOwnedStEthBurner == address(0)) revert ErrorZeroAddress();
-        if (_config.stakingRouter == address(0)) revert ErrorZeroAddress();
-        if (_config.treasury == address(0)) revert ErrorZeroAddress();
-        if (_config.validatorExitBus == address(0)) revert ErrorZeroAddress();
-        if (_config.withdrawalQueue == address(0)) revert ErrorZeroAddress();
-        if (_config.withdrawalVault == address(0)) revert ErrorZeroAddress();
-
-        accountingOracle = _config.accountingOracle;
-        depositSecurityModule = _config.depositSecurityModule;
-        elRewardsVault = _config.elRewardsVault;
-        legacyOracle = _config.legacyOracle;
-        lido = _config.lido;
-        safetyNetsRegistry = _config.safetyNetsRegistry;
-        selfOwnedStEthBurner = _config.selfOwnedStEthBurner;
-        stakingRouter = _config.stakingRouter;
-        treasury = _config.treasury;
-        validatorExitBus = _config.validatorExitBus;
-        withdrawalQueue = _config.withdrawalQueue;
-        withdrawalVault = _config.withdrawalVault;
+        accountingOracle = _assertNonZero(_config.accountingOracle);
+        depositSecurityModule = _assertNonZero(_config.depositSecurityModule);
+        elRewardsVault = _assertNonZero(_config.elRewardsVault);
+        legacyOracle = _assertNonZero(_config.legacyOracle);
+        lido = _assertNonZero(_config.lido);
+        safetyNetsRegistry = _assertNonZero(_config.safetyNetsRegistry);
+        selfOwnedStEthBurner = _assertNonZero(_config.selfOwnedStEthBurner);
+        stakingRouter = _assertNonZero(_config.stakingRouter);
+        treasury = _assertNonZero(_config.treasury);
+        validatorExitBus = _assertNonZero(_config.validatorExitBus);
+        withdrawalQueue = _assertNonZero(_config.withdrawalQueue);
+        withdrawalVault = _assertNonZero(_config.withdrawalVault);
     }
 
     function coreComponents() external view returns(
@@ -95,4 +82,8 @@ contract LidoLocator is ILidoLocator {
         );
     }
 
+    function _assertNonZero(address _address) internal pure returns (address) {
+        if (_address == address(0)) revert ErrorZeroAddress();
+        return _address;
+    }
 }
