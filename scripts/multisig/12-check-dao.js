@@ -102,7 +102,6 @@ async function checkDAO({ web3, artifacts }) {
 
   const [lido, oracle, nopsRegistry, agent, finance, tokenManager, voting] = await Promise.all([
     artifacts.require('Lido').at(apps[APP_NAMES.LIDO].proxyAddress),
-    artifacts.require('LidoOracleNew').at(state['lidoOracle'].proxy),
     artifacts.require('NodeOperatorsRegistry').at(apps[APP_NAMES.NODE_OPERATORS_REGISTRY].proxyAddress),
     artifacts.require('Agent').at(apps[APP_NAMES.ARAGON_AGENT].proxyAddress),
     artifacts.require('Finance').at(apps[APP_NAMES.ARAGON_FINANCE].proxyAddress),

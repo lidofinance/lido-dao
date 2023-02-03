@@ -1,6 +1,8 @@
 const { BN } = require('bn.js')
 const { getEventAt } = require('@aragon/contract-helpers-test')
 
+const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000'
+
 const pad = (hex, bytesLength, fill = '0') => {
   const absentZeroes = bytesLength * 2 + 2 - hex.length
   if (absentZeroes > 0) hex = '0x' + fill.repeat(absentZeroes) + hex.substr(2)
@@ -65,6 +67,16 @@ function strip0x(s) {
   return s.substr(0, 2) == '0x' ? s.substr(2) : s
 }
 
+// transforms all object entries
+const transformEntries = (obj, tr) => Object.fromEntries(
+  Object.entries(obj).map(tr).filter(x => x !== undefined)
+)
+
+// converts all object BN keys to strings, drops positional keys
+const processNamedTuple = (obj) => transformEntries(obj, ([k, v]) => {
+  return /^\d+$/.test(k) ? undefined : [k, BN.isBN(v) ? v.toString() : v]
+})
+
 // Divides a BN by 1e15
 const div15 = (bn) => bn.div(new BN(1000000)).div(new BN(1000000)).div(new BN(1000))
 
@@ -76,6 +88,9 @@ const ETH = e18
 const tokens = e18
 const shares = e18
 const shareRate = e27
+
+const bnE9 = new BN(10).pow(new BN(9))
+const ethToGwei = valueEth => toBN(valueEth).div(bnE9).toString()
 
 function formatWei(weiString) {
   return ethers.utils.formatEther(ethers.utils.parseUnits(weiString, 'wei'), { commify: true }) + ' ETH'
@@ -119,18 +134,22 @@ const changeEndianness = (string) => {
 }
 
 module.exports = {
+  ZERO_HASH,
   pad,
   hexConcat,
   hexSplit,
   toBN,
   hex,
   strip0x,
+  transformEntries,
+  processNamedTuple,
   div15,
   e9,
   e18,
   e27,
   gwei,
   ETH,
+  ethToGwei,
   StETH: ETH,
   tokens,
   getEthBalance,

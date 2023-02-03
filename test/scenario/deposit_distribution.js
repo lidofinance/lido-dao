@@ -7,7 +7,6 @@ const { EvmSnapshot } = require('../helpers/blockchain')
 
 const LidoMock = artifacts.require('LidoMock.sol')
 const WstETH = artifacts.require('WstETH.sol')
-const LidoOracleMock = artifacts.require('OracleMock.sol')
 const NodeOperatorsRegistryMock = artifacts.require('NodeOperatorsRegistryMock')
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
@@ -15,8 +14,8 @@ const DepositContractMock = artifacts.require('DepositContractMock.sol')
 contract('StakingRouter', (accounts) => {
   const snapshot = new EvmSnapshot(hre.ethers.provider)
   let depositContract, stakingRouter
-  let dao, acl, lido, oracle
-  const [deployer, voting, admin, treasury, stranger1, dsm, address1, address2, dummy] = accounts
+  let dao, acl, lido
+  const [deployer, voting, oracle, admin, treasury, stranger1, dsm, address1, address2, dummy] = accounts
 
   before(async () => {
     const lidoBase = await LidoMock.new({ from: deployer })
@@ -32,9 +31,6 @@ contract('StakingRouter', (accounts) => {
 
     depositContract = await DepositContractMock.new({ from: deployer })
     stakingRouter = await StakingRouter.new(depositContract.address, { from: deployer })
-
-    // Oracle
-    oracle = await LidoOracleMock.new({ from: deployer })
 
     const wc = '0x'.padEnd(66, '1234')
     await stakingRouter.initialize(admin, lido.address, wc, { from: deployer })
@@ -53,7 +49,7 @@ contract('StakingRouter', (accounts) => {
     const wsteth = await WstETH.new(lido.address)
     const withdrawalQueue = (await withdrawals.deploy(dao.address, wsteth.address)).queue
 
-    await lido.initialize(oracle.address, treasury, stakingRouter.address, dsm, dummy, withdrawalQueue.address, dummy)
+    await lido.initialize(oracle, treasury, stakingRouter.address, dsm, dummy, withdrawalQueue.address, dummy)
 
     await snapshot.make()
   })

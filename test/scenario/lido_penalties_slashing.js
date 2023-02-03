@@ -4,12 +4,29 @@ const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
 
 const { assertRevert } = require('../helpers/assertThrow')
-const { pad, ETH, tokens } = require('../helpers/utils')
-const { deployDaoAndPool } = require('./helpers/deploy')
+const { ZERO_HASH, pad, ETH, gwei, ethToGwei, tokens } = require('../helpers/utils')
+const { deployDaoAndPool, SLOTS_PER_FRAME } = require('./helpers/deploy')
 const { signDepositData } = require('../0.8.9/helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
+
+const makeAccountingReport = ({refSlot, numValidators, clBalanceGwei}) => ({
+  refSlot,
+  consensusVersion: 1,
+  numValidators: numValidators,
+  clBalanceGwei: clBalanceGwei,
+  stakingModuleIdsWithNewlyExitedValidators: [],
+  numExitedValidatorsByStakingModule: [],
+  withdrawalVaultBalance: 0,
+  elRewardsVaultBalance: 0,
+  lastWithdrawalRequestIdToFinalize: 0,
+  finalizationShareRate: 0,
+  isBunkerMode: false,
+  extraDataFormat: 0,
+  extraDataHash: ZERO_HASH,
+  extraDataItemsCount: 0,
+})
 
 contract('Lido: penalties, slashing, operator stops', (addresses) => {
   const [
@@ -226,12 +243,17 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const oldTotalPooledEther = await pool.getTotalPooledEther()
     assertBn(oldTotalPooledEther, ETH(32), 'total pooled ether')
 
-    const epoch = 100
+    const refSlot = 1 * SLOTS_PER_FRAME
     // Reporting 1 ETH balance loss (32 => 31)
     const balanceReported = ETH(31)
     awaitingTotalShares = oldTotalShares
     awaitingUser1Balance = new BN(balanceReported)
-    await oracleMock.reportBeacon(epoch, 1, balanceReported)
+
+    await oracleMock.submitReportData(makeAccountingReport({
+      refSlot,
+      numValidators: 1,
+      clBalanceGwei: ethToGwei(balanceReported)
+    }), 1)
 
     // Total shares stay the same because no fee shares are added
 
@@ -277,7 +299,11 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     awaitingUser1Balance = new BN(balanceReported)
 
     // Reporting 2 ETH balance loss (31 => 29)
-    await oracleMock.reportBeacon(101, 1, balanceReported) // 101 is an epoch number
+    await oracleMock.submitReportData(makeAccountingReport({
+      refSlot: 2 * SLOTS_PER_FRAME,
+      numValidators: 1,
+      clBalanceGwei: ethToGwei(balanceReported)
+    }), 1)
 
     // Total shares stay the same because no fee shares are added
 
@@ -423,7 +449,11 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     awaitingUser1Balance = awaitingUser1Balance.sub(new BN(lossReported))
 
     // Reporting 1 ETH balance loss (61 => 60)
-    await oracleMock.reportBeacon(103, 2, ETH(60)) // 103 is an epoch number
+    await oracleMock.submitReportData(makeAccountingReport({
+      refSlot: 3 * SLOTS_PER_FRAME,
+      numValidators: 2,
+      clBalanceGwei: gwei(60)
+    }), 1)
 
     // Total shares stay the same because no fee shares are added
 
@@ -459,7 +489,13 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   })
 
   it(`the oracle can't report less validators than previously`, () => {
-    assertRevert(oracleMock.reportBeacon(101, 1, ETH(31)))
+    assertRevert(
+      oracleMock.submitReportData(makeAccountingReport({
+        refSlot: 4 * SLOTS_PER_FRAME,
+        numValidators: 1,
+        clBalanceGwei: gwei(31)
+      }), 1)
+    )
   })
 
   it(`user deposits another 32 ETH to the pool`, async () => {
@@ -566,7 +602,12 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const beaconValidators = 2
     const beaconBalance = 90 // 98
     const beaconBalanceIncrement = beaconBalance - 60
-    await oracleMock.reportBeacon(105, beaconValidators, tokens(beaconBalance)) // 105 is an epoch number
+
+    await oracleMock.submitReportData(makeAccountingReport({
+      refSlot: 5 * SLOTS_PER_FRAME,
+      numValidators: beaconValidators,
+      clBalanceGwei: gwei(beaconBalance)
+    }), 1)
 
     const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
     const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)
@@ -599,7 +640,11 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   it(`oracle reports profit, previously stopped staking module gets the fee`, async () => {
     const stakingModuleTokenSharesBefore = await token.sharesOf(nodeOperatorsRegistry.address)
 
-    await oracleMock.reportBeacon(106, 2, tokens(100)) // 106 is an epoch number
+    await oracleMock.submitReportData(makeAccountingReport({
+      refSlot: 6 * SLOTS_PER_FRAME,
+      numValidators: 2,
+      clBalanceGwei: gwei(100)
+    }), 1)
 
     const stakingModuleTokenSharesAfter = await token.sharesOf(nodeOperatorsRegistry.address)
 
@@ -613,7 +658,12 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const nodeOperator1TokenSharesBefore = await token.sharesOf(nodeOperator1.address)
     const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
 
-    await oracleMock.reportBeacon(105, 2, tokens(96)) // 105 is an epoch number
+    await oracleMock.submitReportData(makeAccountingReport({
+      refSlot: 7 * SLOTS_PER_FRAME,
+      numValidators: 2,
+      clBalanceGwei: gwei(96)
+    }), 1)
+
     // kicks rewards distribution
     await nodeOperatorsRegistry.finishUpdatingExitedValidatorsKeysCount({ from: voting })
 

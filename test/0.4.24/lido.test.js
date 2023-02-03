@@ -17,7 +17,6 @@ const withdrawals = require('../helpers/withdrawals')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const LidoMock = artifacts.require('LidoMock.sol')
 const ELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
-const OracleMock = artifacts.require('OracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const ERC20Mock = artifacts.require('ERC20Mock.sol')
 const WstETH = artifacts.require('WstETH.sol')
@@ -45,22 +44,20 @@ const MAX_DEPOSITS = 150
 const CURATED_MODULE_ID = 1
 const CALLDATA = '0x0'
 
-contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, treasury]) => {
-  let appBase, nodeOperatorsRegistryBase, app, oracle, depositContract, operators
+contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, treasury, oracle, yetAnotherOracle]) => {
+  let appBase, nodeOperatorsRegistryBase, app, depositContract, operators
   let treasuryAddress
   let dao, acl
   let elRewardsVault, rewarder
   let stakingRouter
   let beaconChainDepositor
-  let yetAnotherOracle, anyToken
+  let anyToken
   let eip712StETH
   let withdrawalQueue
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
     appBase = await LidoMock.new()
-    oracle = await OracleMock.new()
-    yetAnotherOracle = await OracleMock.new()
     depositContract = await DepositContractMock.new()
     nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new()
     anyToken = await ERC20Mock.new()
@@ -140,7 +137,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     // Initialize the app's proxy.
     await app.initialize(
-      oracle.address,
+      oracle,
       treasury,
       stakingRouter.address,
       depositor,
@@ -166,9 +163,21 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     treasuryAddress = await app.getTreasury()
 
-    await oracle.setPool(app.address)
     await depositContract.reset()
   })
+
+  const pushOracleReport = async (epochId, clValidators, clBalance) => {
+    const elRewardsVaultBalance = await web3.eth.getBalance(elRewardsVault.address)
+    return await app.handleOracleReport(
+        clValidators,
+        clBalance,
+        0,
+        elRewardsVaultBalance,
+        0,
+        0,
+        {from: oracle}
+    )
+  }
 
   const checkStat = async ({ depositedValidators, beaconValidators, beaconBalance }) => {
     const stat = await app.getBeaconStat()
@@ -326,10 +335,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       const beaconRewards = 0
 
       await setupNodeOperatorsForELRewardsVaultTests(user2, ETH(depositAmount))
-      await oracle.reportBeacon(100, 1, ETH(depositAmount))
+      await pushOracleReport(100, 1, ETH(depositAmount))
 
       await rewarder.reward({ from: user1, value: ETH(elRewards) })
-      await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
+      await pushOracleReport(101, 1, ETH(depositAmount + beaconRewards))
 
       assertBn(await app.getTotalPooledEther(), ETH(depositAmount + elRewards + beaconRewards))
       assertBn(await app.totalSupply(), ETH(depositAmount + elRewards + beaconRewards))
@@ -343,10 +352,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       const beaconRewards = -2
 
       await setupNodeOperatorsForELRewardsVaultTests(user2, ETH(depositAmount))
-      await oracle.reportBeacon(100, 1, ETH(depositAmount))
+      await pushOracleReport(100, 1, ETH(depositAmount))
 
       await rewarder.reward({ from: user1, value: ETH(elRewards) })
-      await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
+      await pushOracleReport(101, 1, ETH(depositAmount + beaconRewards))
 
       assertBn(await app.getTotalPooledEther(), ETH(depositAmount + elRewards + beaconRewards))
       assertBn(await app.balanceOf(user2), StETH(depositAmount + elRewards + beaconRewards))
@@ -359,10 +368,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       const beaconRewards = 3
 
       await setupNodeOperatorsForELRewardsVaultTests(user2, ETH(depositAmount))
-      await oracle.reportBeacon(100, 1, ETH(depositAmount))
+      await pushOracleReport(100, 1, ETH(depositAmount))
 
       await rewarder.reward({ from: user1, value: ETH(elRewards) })
-      await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
+      await pushOracleReport(101, 1, ETH(depositAmount + beaconRewards))
 
       assertBn(await app.getTotalPooledEther(), ETH(depositAmount + elRewards + beaconRewards))
       assertBn(await app.getTotalELRewardsCollected(), ETH(elRewards))
@@ -416,10 +425,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
         const beaconRewards = 0
 
         await setupNodeOperatorsForELRewardsVaultTests(user2, ETH(depositAmount))
-        await oracle.reportBeacon(100, 1, ETH(depositAmount))
+        await pushOracleReport(100, 1, ETH(depositAmount))
 
         await rewarder.reward({ from: user1, value: ETH(elRewards) })
-        await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
+        await pushOracleReport(101, 1, ETH(depositAmount + beaconRewards))
 
         assertBn(await app.getTotalPooledEther(), ETH(depositAmount + elRewards + beaconRewards))
         assertBn(await app.getBufferedEther(), ETH(elRewards))
@@ -433,10 +442,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
         const beaconRewards = -2
 
         await setupNodeOperatorsForELRewardsVaultTests(user2, ETH(depositAmount))
-        await oracle.reportBeacon(100, 1, ETH(depositAmount))
+        await pushOracleReport(100, 1, ETH(depositAmount))
 
         await rewarder.reward({ from: user1, value: ETH(elRewards) })
-        await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
+        await pushOracleReport(101, 1, ETH(depositAmount + beaconRewards))
 
         assertBn(await app.getTotalPooledEther(), ETH(depositAmount + elRewards + beaconRewards))
         assertBn(await app.getBufferedEther(), ETH(elRewards))
@@ -450,10 +459,10 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
         const beaconRewards = 3
 
         await setupNodeOperatorsForELRewardsVaultTests(user2, ETH(depositAmount))
-        await oracle.reportBeacon(100, 1, ETH(depositAmount))
+        await pushOracleReport(100, 1, ETH(depositAmount))
 
         await rewarder.reward({ from: user1, value: ETH(elRewards) })
-        await oracle.reportBeacon(101, 1, ETH(depositAmount + beaconRewards))
+        await pushOracleReport(101, 1, ETH(depositAmount + beaconRewards))
 
       const {totalFee} = await app.getFee()
       const shareOfRewardsForStakers = (TOTAL_BASIS_POINTS - totalFee) / TOTAL_BASIS_POINTS
@@ -511,7 +520,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     })
 
     it('event work', async () => {
-      // unlock oracle account (allow transactions originated from oracle.address)
+      // unlock stakingRouter account (allow transactions originated from stakingRouter.address)
       await ethers.provider.send('hardhat_impersonateAccount', [stakingRouter.address])
 
       // add some amount to the sender
@@ -630,15 +639,15 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
   it('setOracle works', async () => {
     await assertRevert(app.setProtocolContracts(ZERO_ADDRESS, user2, ZERO_ADDRESS, { from: voting }), 'ORACLE_ZERO_ADDRESS')
-    const receipt = await app.setProtocolContracts(yetAnotherOracle.address, oracle.address, ZERO_ADDRESS, { from: voting })
+    const receipt = await app.setProtocolContracts(yetAnotherOracle, oracle, ZERO_ADDRESS, { from: voting })
     assertEvent(receipt, 'ProtocolContactsSet', {
       expectedArgs: {
-        oracle: yetAnotherOracle.address,
-        treasury: oracle.address,
+        oracle: yetAnotherOracle,
+        treasury: oracle,
         executionLayerRewardsVault: ZERO_ADDRESS,
       }
     })
-    assert.equal(await app.getOracle(), yetAnotherOracle.address)
+    assert.equal(await app.getOracle(), yetAnotherOracle)
   })
 
   it('setWithdrawalCredentials resets unused keys', async () => {
@@ -1183,15 +1192,15 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     await assertRevert(app.handleOracleReport(1, ETH(30), 0, 0, 0, 0, { from: appManager }), 'APP_AUTH_FAILED')
 
-    await oracle.reportBeacon(100, 1, ETH(30))
+    await pushOracleReport(100, 1, ETH(30))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(30) })
 
     await assertRevert(app.handleOracleReport(1, ETH(29), 0, 0, 0, 0, { from: nobody }), 'APP_AUTH_FAILED')
 
-    await oracle.reportBeacon(50, 1, ETH(100)) // stale data
+    await pushOracleReport(50, 1, ETH(100)) // stale data
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(100) })
 
-    await oracle.reportBeacon(200, 1, ETH(33))
+    await pushOracleReport(200, 1, ETH(33))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(33) })
   })
 
@@ -1222,7 +1231,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(await app.getBufferedEther(), ETH(2))
 
     // down
-    await oracle.reportBeacon(100, 1, ETH(15))
+    await pushOracleReport(100, 1, ETH(15))
 
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(15) })
     assertBn(await depositContract.totalCalls(), 1)
@@ -1242,8 +1251,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(await app.totalSupply(), tokens(19))
 
     // up
-    await assertRevert(oracle.reportBeacon(200, 2, ETH(48)), 'REPORTED_MORE_DEPOSITED')
-    await oracle.reportBeacon(200, 1, ETH(48))
+    await assertRevert(pushOracleReport(200, 2, ETH(48)), 'REPORTED_MORE_DEPOSITED')
+    await pushOracleReport(200, 1, ETH(48))
 
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(48) })
     assertBn(await depositContract.totalCalls(), 1)
@@ -1331,7 +1340,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(34) })
     await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
-    await oracle.reportBeacon(300, 1, ETH(36))
+    await pushOracleReport(300, 1, ETH(36))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(36) })
     assertBn(await app.totalSupply(), ETH(38)) // remote + buffered
     await checkRewards({ treasury: 0, operator: 0 })
@@ -1340,7 +1349,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await stakingRouter.updateStakingModule(module1.id, module1.targetShare, 500, 500, { from: voting })
 
     //
-    await oracle.reportBeacon(300, 1, ETH(38))
+    await pushOracleReport(300, 1, ETH(38))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(38) })
     assertBn(await app.totalSupply(), ETH(40)) // remote + buffered
     await checkRewards({ treasury: 100, operator: 99 })
@@ -1371,7 +1380,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
-    await oracle.reportBeacon(300, 1, ETH(36))
+    await pushOracleReport(300, 1, ETH(36))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(36) })
     assertBn(await app.totalSupply(), ETH(38)) // remote + buffered
     await checkRewards({ treasury: 199, operator: 199 })
@@ -1398,7 +1407,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
     await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     // some slashing occurred
-    await oracle.reportBeacon(100, 1, ETH(30))
+    await pushOracleReport(100, 1, ETH(30))
 
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(30) })
     // ToDo check buffer=2
@@ -1406,12 +1415,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await checkRewards({ treasury: 0, operator: 0 })
 
     // rewarded 200 Ether (was 30, became 230)
-    await oracle.reportBeacon(200, 1, ETH(130))
+    await pushOracleReport(200, 1, ETH(130))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(130) })
     // Todo check reward effects
     // await checkRewards({ treasury: 0, operator: 0 })
 
-    await oracle.reportBeacon(300, 1, ETH(2230))
+    await pushOracleReport(300, 1, ETH(2230))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(2230) })
     assertBn(await app.totalSupply(), tokens(2232))
     // Todo check reward effects
@@ -1434,7 +1443,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     assertBn(await app.totalSupply(), tokens(64))
 
-    await oracle.reportBeacon(300, 1, ETH(36))
+    await pushOracleReport(300, 1, ETH(36))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(36) })
     assertBn(await app.totalSupply(), tokens(68))
     await checkRewards({ treasury: 200, operator: 199 })

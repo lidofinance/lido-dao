@@ -7,7 +7,6 @@ const { assert } = require('../helpers/assert')
 const withdrawals = require('../helpers/withdrawals')
 
 const LidoMock = artifacts.require('LidoMock.sol')
-const LidoOracleMock = artifacts.require('OracleMock.sol')
 const NodeOperatorsRegistryMock = artifacts.require('NodeOperatorsRegistryMock')
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const StakingModuleMock = artifacts.require('StakingModuleMock.sol')
@@ -28,9 +27,9 @@ contract('StakingRouter', (accounts) => {
   let evmSnapshotId
   let depositContract, stakingRouter
   let soloStakingModuleMock, dvtStakingModuleMock
-  let dao, acl, lido, oracle, operators
+  let dao, acl, lido, operators
   let depositSecurityModule, stakingRouterMock
-  const [deployer, voting, admin, treasury, stranger1] = accounts
+  const [deployer, voting, admin, treasury, oracle, stranger1] = accounts
 
   before(async () => {
     const lidoBase = await LidoMock.new({ from: deployer })
@@ -66,9 +65,6 @@ contract('StakingRouter', (accounts) => {
 
     // unlock dsm account (allow transactions originated from dsm.address)
     await ethers.provider.send('hardhat_impersonateAccount', [depositSecurityModule.address])
-
-    // Oracle
-    oracle = await LidoOracleMock.new({ from: deployer })
 
     // NodeOperatorsRegistry
     const nodeOperatorsRegistryBase = await NodeOperatorsRegistryMock.new({ from: deployer })
@@ -120,7 +116,7 @@ contract('StakingRouter', (accounts) => {
     const withdrawalQueue = await (await withdrawals.deploy(dao.address, wsteth.address)).queue
 
     await lido.initialize(
-      oracle.address,
+      oracle,
       treasury,
       stakingRouter.address,
       depositSecurityModule.address,

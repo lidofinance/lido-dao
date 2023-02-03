@@ -81,6 +81,6 @@ contract LidoMock is Lido {
     }
 
     function resetEip712StETH() external {
-        eip712StETH = address(0);
+        EIP712_STETH_POSITION.setStorageAddress(0);
     }
 }
