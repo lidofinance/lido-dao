@@ -7,15 +7,16 @@
 pragma solidity 0.4.24||0.8.9;
 
 interface ILidoLocator {
-    function getLido() external view returns(address);
-    function getDepositSecurityModule() external view returns (address);
-    function getELRewardsVault() external view returns (address);
-    function getOracle() external view returns (address);
-    function getCompositePostRebaseBeaconReceiver() external view returns (address);
-    function getSafetyNetsRegistry() external view returns (address);
-    function getSelfOwnedStETHBurner() external view returns (address);
-    function getStakingRouter() external view returns (address);
-    function getTreasury() external view returns (address);
-    function getWithdrawalQueue() external view returns (address);
-    function getWithdrawalVault() external view returns (address);
+    function accountingOracle() external view returns(address);
+    function depositSecurityModule() external view returns(address);
+    function elRewardsVault() external view returns(address);
+    function legacyOracle() external view returns(address);
+    function lido() external view returns(address);
+    function safetyNetsRegistry() external view returns(address);
+    function selfOwnedStEthBurner() external view returns(address);
+    function stakingRouter() external view returns(address);
+    function treasury() external view returns(address);
+    function validatorExitBus() external view returns(address);
+    function withdrawalQueue() external view returns(address);
+    function withdrawalVault() external view returns(address);
 }

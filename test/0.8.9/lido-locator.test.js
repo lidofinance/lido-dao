@@ -5,19 +5,30 @@ const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
 const Proxy = artifacts.require('OssifiableProxy.sol')
 const LidoLocator = artifacts.require('LidoLocator.sol')
-const LidoLocatorUpdated = artifacts.require('LidoLocatorUpdatedMock.sol')
 
-contract('LidoLocator', async ([deployer, agent]) => {
+const services = [
+  'accountingOracle',
+  'depositSecurityModule',
+  'elRewardsVault',
+  'legacyOracle',
+  'lido',
+  'safetyNetsRegistry',
+  'selfOwnedStEthBurner',
+  'stakingRouter',
+  'treasury',
+  'validatorExitBus',
+  'withdrawalQueue',
+  'withdrawalVault'
+]
+
+contract('LidoLocator', ([deployer, agent]) => {
   let evmSnapshotId
   let proxy
   let lidoLocatorProxy
-  let initialAddresses = []
-  let updatedAddresses = []
+  const initialConfig = getRandomConfig()
 
   before(async () => {
-    initialAddresses = generateRandomAddresses(getInitialGetters().length)
-
-    const implementation = await LidoLocator.new(initialAddresses, { from: deployer })
+    const implementation = await LidoLocator.new(initialConfig, { from: deployer })
     proxy = await Proxy.new(implementation.address, agent, '0x', { from: deployer })
     lidoLocatorProxy = await LidoLocator.at(proxy.address)
 
@@ -30,9 +41,9 @@ contract('LidoLocator', async ([deployer, agent]) => {
   })
 
   describe('checking initial implementation', () => {
-    for (const [index, getter] of getInitialGetters().entries()) {
+    for (const [getter, address] of Object.entries(initialConfig)) {
       it(`${getter}() matches to what's been passed to constructor`, async () => {
-        const expectedAddress = initialAddresses[index]
+        const expectedAddress = address
         const actualAddress = await lidoLocatorProxy[getter]()
 
         assert(actualAddress === expectedAddress, `expected ${expectedAddress}, got ${actualAddress}`)
@@ -41,104 +52,46 @@ contract('LidoLocator', async ([deployer, agent]) => {
   })
 
   describe('breaking constructor', () => {
-    it('should revert when passing an incorrect number of addresses', async () => {
-      const correctNumberOfAddresses = getInitialGetters().length
-
-      const constructorsInputs = [
-        generateRandomAddresses(0),
-        generateRandomAddresses(correctNumberOfAddresses - 1),
-        generateRandomAddresses(correctNumberOfAddresses + 1)
-      ]
-
-      for (const addresses of constructorsInputs) {
-        await assert.reverts(LidoLocator.new(addresses), 'ErrorIncorrectLength()')
-      }
-    })
-
     it('should revert when passing a zero address', async () => {
-      const numberOfAddresses = getInitialGetters().length
+      const configsWithZeroAddress = []
+      for (const service of services) {
+        const config = getRandomConfig()
+        config[service] = ZERO_ADDRESS
 
-      // generate constructor inputs with a ZERO_ADDRESS at each index
-      const constructorsInputs = []
-      for (let i = 0; i < numberOfAddresses; i++) {
-        const addresses = generateRandomAddresses(numberOfAddresses)
-        addresses[i] = ZERO_ADDRESS
+        configsWithZeroAddress.push(config)
       }
 
-      for (const addresses of constructorsInputs) {
-        await assert.reverts(LidoLocator.new(addresses), 'ErrorZeroAddress()')
+      for (const config of configsWithZeroAddress) {
+        await assert.reverts(LidoLocator.new(config), 'ErrorZeroAddress()')
       }
     })
   })
 
   describe('checking updated implementation', () => {
     it('works after upgrade to a compatible impl', async () => {
-      updatedAddresses = generateRandomAddresses(getInitialGetters().length)
+      const updatedConfig = getRandomConfig()
 
-      const updatedImplementation = await LidoLocator.new(updatedAddresses, { from: deployer })
+      const updatedImplementation = await LidoLocator.new(updatedConfig, { from: deployer })
       await proxy.proxy__upgradeTo(updatedImplementation.address, { from: agent })
       lidoLocatorProxy = await LidoLocator.at(proxy.address)
 
-      for (const [index, getter] of getInitialGetters().entries()) {
-        const expectedAddress = updatedAddresses[index]
-        const actualAddress = await lidoLocatorProxy[getter]()
+      for (const [getter, address] of Object.entries(updatedConfig)) {
+        it(`new ${getter}() matches`, async () => {
+          const expectedAddress = address
+          const actualAddress = await lidoLocatorProxy[getter]()
 
-        assert(actualAddress === expectedAddress, `expected ${expectedAddress}, got ${actualAddress}`)
-      }
-    })
-
-    it('works after upgrade to an incompatible impl', async () => {
-      updatedAddresses = generateRandomAddresses(getUpdatedGetters().length)
-
-      const updatedImplementation = await LidoLocatorUpdated.new(updatedAddresses, { from: deployer })
-      await proxy.proxy__upgradeTo(updatedImplementation.address, { from: agent })
-      lidoLocatorProxy = await LidoLocatorUpdated.at(proxy.address)
-
-      for (const [index, getter] of getUpdatedGetters().entries()) {
-        const expectedAddress = updatedAddresses[index]
-        const actualAddress = await lidoLocatorProxy[getter]()
-
-        assert(actualAddress === expectedAddress, `expected ${expectedAddress}, got ${actualAddress}`)
+          assert(actualAddress === expectedAddress, `expected ${expectedAddress}, got ${actualAddress}`)
+        })
       }
     })
   })
 })
 
-function getInitialGetters() {
-  return [
-    'getLido',
-    'getCompositePostRebaseBeaconReceiver',
-    'getDepositSecurityModule',
-    'getELRewardsVault',
-    'getOracle',
-    'getSafetyNetsRegistry',
-    'getSelfOwnedStETHBurner',
-    'getStakingRouter',
-    'getTreasury',
-    'getWithdrawalQueue',
-    'getWithdrawalVault'
-  ]
-}
-
-function getUpdatedGetters() {
-  return [
-    'getLido',
-    'getElRewardsVault',
-    'getOracle',
-    'getCompositePostRebaseBeaconReceiver',
-    'getSafetyNetsRegistries',
-    'getSelfOwnedStETHBurner',
-    'getStakingRouter',
-    'getSomeNewLidoService0',
-    'getSomeNewLidoService1',
-    'getTreasury',
-    'getWithdrawalQueue',
-    'getWithdrawalVault'
-  ]
-}
-
-function generateRandomAddresses(number) {
-  return Array.from({ length: number }, generateRandomAddress)
+function getRandomConfig() {
+  return services.reduce((config, current) => {
+    config[current] = generateRandomAddress()
+    return config
+  }, {})
 }
 
 function generateRandomAddress() {

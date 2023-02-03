@@ -10,164 +10,70 @@ import {ILidoLocator} from "../common/interfaces/ILidoLocator.sol";
 /**
  * @title LidoLocator
  * @author mymphe
- * @notice Service Locator of Lido
+ * @notice Lido service locator
+ * @dev configuration is stored as public immutables to reduce gas consumption
  */
 contract LidoLocator is ILidoLocator {
-    error ErrorIncorrectLength();
+    struct Config {
+        address accountingOracle;
+        address depositSecurityModule;
+        address elRewardsVault;
+        address legacyOracle;
+        address lido;
+        address safetyNetsRegistry;
+        address selfOwnedStEthBurner;
+        address stakingRouter;
+        address treasury;
+        address validatorExitBus;
+        address withdrawalQueue;
+        address withdrawalVault;
+    }
+
     error ErrorZeroAddress();
 
-    address internal immutable lido;
-    address internal immutable compositePostRebaseBeaconReceiver;
-    address internal immutable depositSecurityModule;
-    address internal immutable elRewardsVault;
-    address internal immutable oracle;
-    address internal immutable safetyNetsRegistry;
-    address internal immutable selfOwnedStETHBurner;
-    address internal immutable stakingRouter;
-    address internal immutable treasury;
-    address internal immutable withdrawalQueue;
-    address internal immutable withdrawalVault;
+    address public immutable accountingOracle;
+    address public immutable depositSecurityModule;
+    address public immutable elRewardsVault;
+    address public immutable legacyOracle;
+    address public immutable lido;
+    address public immutable safetyNetsRegistry;
+    address public immutable selfOwnedStEthBurner;
+    address public immutable stakingRouter;
+    address public immutable treasury;
+    address public immutable validatorExitBus;
+    address public immutable withdrawalQueue;
+    address public immutable withdrawalVault;
 
     /**
      * @notice declare service locations
-     * @dev accepts an array to avoid the "stack-too-deep" error
-     * @param _addresses array of addresses
-     * Order follows the logic: Lido and the rest are in the alphabetical order:
-     * [0] Lido
-     * [1] CompositePostRebaseBeaconReceiver;
-     * [2] DepositSecurityModule
-     * [3] ELRewardsVault
-     * [4] Oracle;
-     * [5] SafetyNetsRegistry;
-     * [6] SelfOwnedStETHBurner;
-     * [7] StakingRouter;
-     * [8] Treasury;
-     * [9] WithdrawalQueue;
-     * [10] WithdrawalVault;
+     * @dev accepts a struct to avoid the "stack-too-deep" error
+     * @param _config struct of addresses
      */
-    constructor(address[] memory _addresses) {
-        if (_addresses.length != 11) revert ErrorIncorrectLength();
+    constructor(Config memory _config) {
+        if (_config.accountingOracle == address(0)) revert ErrorZeroAddress();
+        if (_config.depositSecurityModule == address(0)) revert ErrorZeroAddress();
+        if (_config.elRewardsVault == address(0)) revert ErrorZeroAddress();
+        if (_config.legacyOracle == address(0)) revert ErrorZeroAddress();
+        if (_config.lido == address(0)) revert ErrorZeroAddress();
+        if (_config.safetyNetsRegistry == address(0)) revert ErrorZeroAddress();
+        if (_config.selfOwnedStEthBurner == address(0)) revert ErrorZeroAddress();
+        if (_config.stakingRouter == address(0)) revert ErrorZeroAddress();
+        if (_config.treasury == address(0)) revert ErrorZeroAddress();
+        if (_config.validatorExitBus == address(0)) revert ErrorZeroAddress();
+        if (_config.withdrawalQueue == address(0)) revert ErrorZeroAddress();
+        if (_config.withdrawalVault == address(0)) revert ErrorZeroAddress();
 
-        if (_addresses[0] == address(0)) revert ErrorZeroAddress();
-        lido = _addresses[0];
-
-        if (_addresses[1] == address(0)) revert ErrorZeroAddress();
-        compositePostRebaseBeaconReceiver = _addresses[1];
-
-        if (_addresses[2] == address(0)) revert ErrorZeroAddress();
-        depositSecurityModule = _addresses[2];
-
-        if (_addresses[3] == address(0)) revert ErrorZeroAddress();
-        elRewardsVault = _addresses[3];
-
-        if (_addresses[4] == address(0)) revert ErrorZeroAddress();
-        oracle = _addresses[4];
-
-        if (_addresses[5] == address(0)) revert ErrorZeroAddress();
-        safetyNetsRegistry = _addresses[5];
-
-        if (_addresses[6] == address(0)) revert ErrorZeroAddress();
-        selfOwnedStETHBurner = _addresses[6];
-
-        if (_addresses[7] == address(0)) revert ErrorZeroAddress();
-        stakingRouter = _addresses[7];
-
-        if (_addresses[8] == address(0)) revert ErrorZeroAddress();
-        treasury = _addresses[8];
-
-        if (_addresses[9] == address(0)) revert ErrorZeroAddress();
-        withdrawalQueue = _addresses[9];
-
-        if (_addresses[10] == address(0)) revert ErrorZeroAddress();
-        withdrawalVault = _addresses[10];
-
-    }
-
-    /**
-     * @notice get the address of the Lido contract
-     * @return address of the Lido contract
-     */
-    function getLido() external view returns (address) {
-        return lido;
-    }
-
-    /**
-     * @notice get the address of the CompositePostRebaseBeaconReceiver contract
-     * @return address of the CompositePostRebaseBeaconReceiver contract
-     */
-    function getCompositePostRebaseBeaconReceiver() external view returns (address) {
-        return compositePostRebaseBeaconReceiver;
-    }
-
-    /**
-     * @notice get the address of the DepositSecurityModule contract
-     * @return address of the DepositSecurityModule contract
-     */
-    function getDepositSecurityModule() external view returns (address) {
-        return depositSecurityModule;
-    }
-
-    /**
-     * @notice get the address of the ELRewardsVault contract
-     * @return address of the ELRewardsVault contract
-     */
-    function getELRewardsVault() external view returns (address) {
-        return elRewardsVault;
-    }
-
-    /**
-     * @notice get the address of the Oracle contract
-     * @return address of the Oracle contract
-     */
-    function getOracle() external view returns (address) {
-        return oracle;
-    }
-
-    /**
-     * @notice get the address of the SafetyNetsRegistry contract
-     * @return address of the SafetyNetsRegistry contract
-     */
-    function getSafetyNetsRegistry() external view returns (address) {
-        return safetyNetsRegistry;
-    }
-
-    /**
-     * @notice get the address of the SelfOwnedStETHBurner contract
-     * @return address of the SelfOwnedStETHBurner contract
-     */
-    function getSelfOwnedStETHBurner() external view returns (address) {
-        return selfOwnedStETHBurner;
-    }
-
-    /**
-     * @notice get the address of the StakingRouter contract
-     * @return address of the StakingRouter contract
-     */
-    function getStakingRouter() external view returns (address) {
-        return stakingRouter;
-    }
-
-    /**
-     * @notice get the address of the Treasury contract
-     * @return address of the Treasury contract
-     */
-    function getTreasury() external view returns (address) {
-        return treasury;
-    }
-
-    /**
-     * @notice get the address of the tWithdrawalQueue contract
-     * @return address of the WithdrawalQueue contract
-     */
-    function getWithdrawalQueue() external view returns (address) {
-        return withdrawalQueue;
-    }
-
-    /**
-     * @notice get the address of the WithdrawalVault contract
-     * @return address of the WithdrawalVault contract
-     */
-    function getWithdrawalVault() external view returns (address) {
-        return withdrawalVault;
+        accountingOracle = _config.accountingOracle;
+        depositSecurityModule = _config.depositSecurityModule;
+        elRewardsVault = _config.elRewardsVault;
+        legacyOracle = _config.legacyOracle;
+        lido = _config.lido;
+        safetyNetsRegistry = _config.safetyNetsRegistry;
+        selfOwnedStEthBurner = _config.selfOwnedStEthBurner;
+        stakingRouter = _config.stakingRouter;
+        treasury = _config.treasury;
+        validatorExitBus = _config.validatorExitBus;
+        withdrawalQueue = _config.withdrawalQueue;
+        withdrawalVault = _config.withdrawalVault;
     }
 }
