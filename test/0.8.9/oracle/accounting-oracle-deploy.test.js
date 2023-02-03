@@ -16,6 +16,7 @@ const {
 const AccountingOracle = artifacts.require('AccountingOracleTimeTravellable')
 const MockLido = artifacts.require('MockLidoForAccountingOracle')
 const MockStakingRouter = artifacts.require('MockStakingRouterForAccountingOracle')
+const MockWithdrawalQueue = artifacts.require('MockWithdrawalQueueForAccountingOracle')
 const MockLegacyOracle = artifacts.require('MockLegacyOracle')
 
 const V1_ORACLE_LAST_COMPLETED_EPOCH = 2 * EPOCHS_PER_FRAME
@@ -115,9 +116,10 @@ async function deployMockLegacyOracle({
 }
 
 async function deployMockLidoAndStakingRouter() {
-  const mockStakingRouter = await MockStakingRouter.new()
-  const mockLido = await MockLido.new(mockStakingRouter.address)
-  return {lido: mockLido, stakingRouter: mockStakingRouter}
+  const stakingRouter = await MockStakingRouter.new()
+  const withdrawalQueue = await MockWithdrawalQueue.new()
+  const lido = await MockLido.new(stakingRouter.address, withdrawalQueue.address)
+  return {lido, stakingRouter, withdrawalQueue}
 }
 
 async function deployAccountingOracleSetup(admin, {
@@ -129,14 +131,14 @@ async function deployAccountingOracleSetup(admin, {
   getLidoAndStakingRouter = deployMockLidoAndStakingRouter,
   getLegacyOracle = deployMockLegacyOracle,
 } = {}) {
-  const {lido, stakingRouter} = await getLidoAndStakingRouter()
+  const {lido, stakingRouter, withdrawalQueue} = await getLidoAndStakingRouter()
   const legacyOracle = await getLegacyOracle()
 
   if (initialEpoch == null) {
     initialEpoch = +await legacyOracle.getLastCompletedEpochId() + epochsPerFrame
   }
 
-  const oracle = await AccountingOracle.new(lido.address, secondsPerSlot, {from: admin})
+  const oracle = await AccountingOracle.new(lido.address, secondsPerSlot, genesisTime, {from: admin})
 
   const {consensus} = await deployHashConsensus(admin, {
     reportProcessor: oracle,
@@ -150,7 +152,7 @@ async function deployAccountingOracleSetup(admin, {
   // pretend we're at the first slot of the initial frame's epoch
   await consensus.setTime(genesisTime + initialEpoch * slotsPerEpoch * secondsPerSlot)
 
-  return {lido, stakingRouter, legacyOracle, oracle, consensus}
+  return {lido, stakingRouter, withdrawalQueue, legacyOracle, oracle, consensus}
 }
 
 async function initAccountingOracle({
@@ -200,6 +202,7 @@ contract('AccountingOracle', ([admin, member1]) => {
   let oracle
   let mockLido
   let mockStakingRouter
+  let mockWithdrawalQueue
   let legacyOracle
 
   context('Deployment and initial configuration', () => {
@@ -255,6 +258,7 @@ contract('AccountingOracle', ([admin, member1]) => {
       oracle = deployed.oracle
       mockLido = deployed.lido
       mockStakingRouter = deployed.stakingRouter
+      mockWithdrawalQueue = deployed.withdrawalQueue
       legacyOracle = deployed.legacyOracle
     })
 
@@ -278,6 +282,9 @@ contract('AccountingOracle', ([admin, member1]) => {
 
       assert.equal(+await mockStakingRouter.getTotalCalls_reportExitedKeysByNodeOperator(), 0)
       assert.equal(+await mockStakingRouter.getTotalCalls_reportStuckKeysByNodeOperator(), 0)
+
+      const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
+      assert.equal(+updateBunkerModeLastCall.callCount, 0)
     })
 
     it('the initial reference slot is greater than the last one of the legacy oracle', async () => {

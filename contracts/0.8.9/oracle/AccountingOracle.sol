@@ -22,11 +22,11 @@ interface ILido {
         uint256 elRewardsVaultBalance,
         // decision
         uint256 requestIdToFinalizeUpTo,
-        uint256 finalizationShareRate,
-        bool isBunkerMode
+        uint256 finalizationShareRate
     ) external;
 
     function getStakingRouter() external view returns (address);
+    function getWithdrawalQueue() external view returns (address);
 }
 
 
@@ -61,6 +61,11 @@ interface IStakingRouter {
         uint256[] calldata _nodeOperatorIds,
         uint256[] calldata _stuckKeysCounts
     ) external;
+}
+
+
+interface IWithdrawalQueue {
+    function updateBunkerMode(bool isBunkerMode, uint256 prevReportTimestamp) external;
 }
 
 
@@ -132,7 +137,9 @@ contract AccountingOracle is BaseOracle {
     /// Initialization & admin functions
     ///
 
-    constructor(address lido, uint256 secondsPerSlot) BaseOracle(secondsPerSlot) {
+    constructor(address lido, uint256 secondsPerSlot, uint256 genesisTime)
+        BaseOracle(secondsPerSlot, genesisTime)
+    {
         if (lido == address(0)) revert LidoCannotBeZero();
         LIDO = lido;
     }
@@ -325,9 +332,8 @@ contract AccountingOracle is BaseOracle {
         _checkMsgSenderIsAllowedToSubmitData();
         _checkContractVersion(contractVersion);
         _checkConsensusData(data.refSlot, data.consensusVersion, keccak256(abi.encode(data)));
-        uint256 slotsElapsed = data.refSlot - LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
-        _startProcessing();
-        _handleConsensusReportData(data, slotsElapsed);
+        uint256 prevRefSlot = _startProcessing();
+        _handleConsensusReportData(data, prevRefSlot);
     }
 
     /// @notice Submits report extra data in the EXTRA_DATA_FORMAT_LIST format for processing.
@@ -443,7 +449,8 @@ contract AccountingOracle is BaseOracle {
             emit WarnExtraDataIncompleteProcessing(
                 prevProcessingRefSlot,
                 state.itemsProcessed,
-                state.itemsCount);
+                state.itemsCount
+            );
         }
     }
 
@@ -454,7 +461,7 @@ contract AccountingOracle is BaseOracle {
         }
     }
 
-    function _handleConsensusReportData(ReportData calldata data, uint256 slotsElapsed) internal {
+    function _handleConsensusReportData(ReportData calldata data, uint256 prevRefSlot) internal {
         DataBoundaries memory boundaries = _storageDataBoundaries().value;
 
         if (data.extraDataFormat != EXTRA_DATA_FORMAT_LIST) {
@@ -468,11 +475,18 @@ contract AccountingOracle is BaseOracle {
             );
         }
 
+        uint256 slotsElapsed = data.refSlot - prevRefSlot;
+
         _processStakingRouterExitedKeysByModule(
             boundaries,
             data.stakingModuleIdsWithNewlyExitedValidators,
             data.numExitedValidatorsByStakingModule,
             slotsElapsed
+        );
+
+        IWithdrawalQueue(ILido(LIDO).getWithdrawalQueue()).updateBunkerMode(
+            data.isBunkerMode,
+            GENESIS_TIME + prevRefSlot * SECONDS_PER_SLOT
         );
 
         ILido(LIDO).handleOracleReport(
@@ -482,8 +496,7 @@ contract AccountingOracle is BaseOracle {
             data.withdrawalVaultBalance,
             data.elRewardsVaultBalance,
             data.lastWithdrawalRequestIdToFinalize,
-            data.finalizationShareRate,
-            data.isBunkerMode
+            data.finalizationShareRate
         );
 
         _storageExtraDataProcessingState().value = ExtraDataProcessingState({

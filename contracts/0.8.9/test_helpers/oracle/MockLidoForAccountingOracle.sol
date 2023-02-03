@@ -15,16 +15,17 @@ contract MockLidoForAccountingOracle is ILido {
         uint256 elRewardsVaultBalance;
         uint256 lastWithdrawalRequestIdToFinalize;
         uint256 finalizationShareRate;
-        bool isBunkerMode;
         uint256 callCount;
     }
 
     address internal _stakingRouter;
+    address internal _withdrawalQueue;
     HandleOracleReportLastCall internal _handleOracleReportLastCall;
 
 
-    constructor(address stakingRouter) {
+    constructor(address stakingRouter, address withdrawalQueue) {
         _stakingRouter = stakingRouter;
+        _withdrawalQueue = withdrawalQueue;
     }
 
     function getLastCall_handleOracleReport() external view returns (HandleOracleReportLastCall memory) {
@@ -39,6 +40,10 @@ contract MockLidoForAccountingOracle is ILido {
         return _stakingRouter;
     }
 
+    function getWithdrawalQueue() public view returns (address) {
+        return _withdrawalQueue;
+    }
+
     function handleOracleReport(
         uint256 secondsElapsedSinceLastReport,
         uint256 numValidators,
@@ -46,8 +51,7 @@ contract MockLidoForAccountingOracle is ILido {
         uint256 withdrawalVaultBalance,
         uint256 elRewardsVaultBalance,
         uint256 lastWithdrawalRequestIdToFinalize,
-        uint256 finalizationShareRate,
-        bool isBunkerMode
+        uint256 finalizationShareRate
     ) external {
         _handleOracleReportLastCall.secondsElapsedSinceLastReport = secondsElapsedSinceLastReport;
         _handleOracleReportLastCall.numValidators = numValidators;
@@ -56,7 +60,6 @@ contract MockLidoForAccountingOracle is ILido {
         _handleOracleReportLastCall.elRewardsVaultBalance = elRewardsVaultBalance;
         _handleOracleReportLastCall.lastWithdrawalRequestIdToFinalize = lastWithdrawalRequestIdToFinalize;
         _handleOracleReportLastCall.finalizationShareRate = finalizationShareRate;
-        _handleOracleReportLastCall.isBunkerMode = isBunkerMode;
         ++_handleOracleReportLastCall.callCount;
     }
 }

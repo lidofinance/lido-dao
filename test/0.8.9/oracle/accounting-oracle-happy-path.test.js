@@ -25,6 +25,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
     let oracle
     let oracleVersion
     let mockLido
+    let mockWithdrawalQueue
     let mockStakingRouter
 
     let extraData
@@ -39,6 +40,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       consensus = deployed.consensus
       oracle = deployed.oracle
       mockLido = deployed.lido
+      mockWithdrawalQueue = deployed.withdrawalQueue
       mockStakingRouter = deployed.stakingRouter
 
       oracleVersion = +await oracle.getContractVersion()
@@ -103,7 +105,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
         elRewardsVaultBalance: e18(2),
         lastWithdrawalRequestIdToFinalize: 1,
         finalizationShareRate: e27(1),
-        isBunkerMode: false,
+        isBunkerMode: true,
         extraDataFormat: EXTRA_DATA_FORMAT_LIST,
         extraDataHash: extraDataHash,
         extraDataItemsCount: extraDataItems.length,
@@ -159,11 +161,14 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       )
     })
 
+    let prevProcessingRefSlot
+
     it(`a committee member submits the rebase data`, async () => {
-      const lastProcessingRefSlot = +await oracle.getLastProcessingRefSlot()
+      prevProcessingRefSlot = +await oracle.getLastProcessingRefSlot()
       const tx = await oracle.submitReportData(reportItems, oracleVersion, {from: member1})
       assertEvent(tx, 'ProcessingStarted', {expectedArgs: {refSlot: reportFields.refSlot}})
       assert.isTrue((await oracle.getConsensusReport()).processingStarted)
+      assert.isAbove(+await oracle.getLastProcessingRefSlot(), prevProcessingRefSlot)
     })
 
     it(`extra data processing is started`, async () => {
@@ -188,7 +193,17 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assertBn(lastOracleReportCall.elRewardsVaultBalance, reportFields.elRewardsVaultBalance)
       assertBn(lastOracleReportCall.lastWithdrawalRequestIdToFinalize, reportFields.lastWithdrawalRequestIdToFinalize)
       assertBn(lastOracleReportCall.finalizationShareRate, reportFields.finalizationShareRate)
-      assert.equal(lastOracleReportCall.isBunkerMode, reportFields.isBunkerMode)
+      // assert.equal(lastOracleReportCall.isBunkerMode, reportFields.isBunkerMode)
+    })
+
+    it(`withdrawal queue got bunker mode report`, async () => {
+      const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
+      assert.equal(+updateBunkerModeLastCall.callCount, 1)
+      assert.equal(+updateBunkerModeLastCall.isBunkerMode, reportFields.isBunkerMode)
+      assert.equal(
+        +updateBunkerModeLastCall.prevReportTimestamp,
+        GENESIS_TIME + prevProcessingRefSlot * SECONDS_PER_SLOT
+      )
     })
 
     it(`Staking router got the exited keys report`, async () => {

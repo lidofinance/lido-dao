@@ -88,13 +88,15 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
 
 
     uint256 public immutable SECONDS_PER_SLOT;
+    uint256 public immutable GENESIS_TIME;
 
     ///
     /// Initialization & admin functions
     ///
 
-    constructor(uint256 secondsPerSlot) {
+    constructor(uint256 secondsPerSlot, uint256 genesisTime) {
         SECONDS_PER_SLOT = secondsPerSlot;
+        GENESIS_TIME = genesisTime;
     }
 
     /// @notice Returns the address of the HashConsensus contract.
@@ -259,17 +261,20 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     }
 
     /// @notice Called by a descendant contract to mark the current consensus report
-    /// as being processed.
+    /// as being processed. Returns the last ref. slot which processing was started
+    /// before the call.
     ///
     /// Before this function is called, the oracle committee is free to reach consensus
     /// on another report for the same reporting frame. After this function is called,
     /// the consensus report for the current frame is guaranteed to remain the same.
     ///
-    function _startProcessing() internal {
+    function _startProcessing() internal returns (uint256) {
         _checkProcessingDeadline();
         ConsensusReport memory report = _storageConsensusReport().value;
+        uint256 prevProcessingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
         LAST_PROCESSING_REF_SLOT_POSITION.setStorageUint256(report.refSlot);
         emit ProcessingStarted(report.refSlot, report.hash);
+        return prevProcessingRefSlot;
     }
 
     /// @notice Reverts if the processing deadline for the current consensus report is missed.
@@ -304,8 +309,8 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         address prevAddr = CONSENSUS_CONTRACT_POSITION.getStorageAddress();
         if (addr == prevAddr) revert AddressCannotBeSame();
 
-        (, uint256 secondsPerSlot, ) = IConsensusContract(addr).getChainConfig();
-        if (secondsPerSlot != SECONDS_PER_SLOT) {
+        (, uint256 secondsPerSlot, uint256 genesisTime) = IConsensusContract(addr).getChainConfig();
+        if (secondsPerSlot != SECONDS_PER_SLOT || genesisTime != GENESIS_TIME) {
             revert UnexpectedChainConfig();
         }
 
