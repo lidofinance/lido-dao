@@ -587,12 +587,30 @@ contract Lido is StETHPermit, AragonApp, Versioned {
         beaconBalance = CL_BALANCE_POSITION.getStorageUint256();
     }
 
+    /// DEPRECATED PUBLIC METHODS
+
     /**
      * @notice Returns current withdrawal credentials of deposited validators
      * @dev DEPRECATED: use StakingRouter.getWithdrawalCredentials() instead
      */
-    function getWithdrawalCredentials() public view returns (bytes32) {
+    function getWithdrawalCredentials() external view returns (bytes32) {
         return IStakingRouter(getLidoLocator().stakingRouter()).getWithdrawalCredentials();
+    }
+
+    /**
+     * @notice Returns legacy oracle
+     * @dev DEPRECATED: the `AccountingOracle` superseeded the old one
+     */
+    function getOracle() external view returns (address) {
+        return getLidoLocator().legacyOracle();
+    }
+
+    /**
+     * @notice Returns the treasury address
+     * @dev DEPRECATED: use LidoLocator.treasury()
+     */
+    function getTreasury() external view returns (address) {
+        return getLidoLocator().treasury();
     }
 
 
