@@ -18,6 +18,14 @@ contract('SanityChecksRegistry', ([deployer, admin, manager, withdrawalVault, ..
     finalizationPauseStartBlockManagers: accounts.slice(10, 12),
     maxPositiveTokenRebaseManagers: accounts.slice(12, 14)
   }
+  const defaultLimitsList = {
+    churnValidatorsByEpochLimit: 0,
+    oneOffCLBalanceDecreaseLimit: 0,
+    annualBalanceIncreaseLimit: 0,
+    requestCreationBlockMargin: 0,
+    finalizationPauseStartBlock: 0,
+    maxPositiveTokenRebase: 0
+  }
 
   before(async () => {
     lidoMock = await LidoMock.new({ from: deployer })
@@ -27,6 +35,7 @@ contract('SanityChecksRegistry', ([deployer, admin, manager, withdrawalVault, ..
     accountingOracleSanityChecks = await AccountingOracleReportSanityChecks.new(
       lidoLocatorMock.address,
       admin,
+      Object.values(defaultLimitsList),
       Object.values(managersRoster),
       {
         from: deployer
@@ -52,12 +61,14 @@ contract('SanityChecksRegistry', ([deployer, admin, manager, withdrawalVault, ..
       assert.notEquals(limitsBefore.maxPositiveTokenRebase, maxPositiveTokenRebase)
 
       await accountingOracleSanityChecks.setAccountingOracleLimits(
-        churnValidatorsByEpochLimit,
-        oneOffCLBalanceDecreaseLimit,
-        annualBalanceIncreaseLimit,
-        requestCreationBlockMargin,
-        finalizationPauseStartBlock,
-        maxPositiveTokenRebase,
+        [
+          churnValidatorsByEpochLimit,
+          oneOffCLBalanceDecreaseLimit,
+          annualBalanceIncreaseLimit,
+          requestCreationBlockMargin,
+          finalizationPauseStartBlock,
+          maxPositiveTokenRebase
+        ],
         { from: managersRoster.allLimitsManagers[0] }
       )
 
@@ -86,12 +97,14 @@ contract('SanityChecksRegistry', ([deployer, admin, manager, withdrawalVault, ..
     beforeEach(async () => {
       finalizationPauseStartBlock = await hre.ethers.provider.getBlockNumber().then((bn) => bn + 1000)
       await accountingOracleSanityChecks.setAccountingOracleLimits(
-        churnValidatorsByEpochLimit,
-        oneOffCLBalanceDecreaseLimit,
-        annualBalanceIncreaseLimit,
-        requestCreationBlockMargin,
-        finalizationPauseStartBlock,
-        maxPositiveTokenRebase,
+        [
+          churnValidatorsByEpochLimit,
+          oneOffCLBalanceDecreaseLimit,
+          annualBalanceIncreaseLimit,
+          requestCreationBlockMargin,
+          finalizationPauseStartBlock,
+          maxPositiveTokenRebase
+        ],
         { from: managersRoster.allLimitsManagers[0] }
       )
     })
