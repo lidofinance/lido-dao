@@ -57,6 +57,20 @@ library MemUtils {
     }
 
     /**
+     * Copies `_len` bytes from `_src` starting at position `_start` into `_dst`.
+     */
+    function copyBytesFrom(bytes memory _src, bytes memory _dst, uint256 _start, uint256 _len) internal pure {
+        require(_start + _len <= _src.length && _len <= _dst.length, "BYTES_ARRAY_OUT_OF_BOUNDS");
+        uint256 srcStartPos;
+        uint256 dstStartPos;
+        assembly {
+            srcStartPos := add(add(_src, 32), _start)
+            dstStartPos := add(_dst, 32)
+        }
+        memcpy(srcStartPos, dstStartPos, _len);
+    }
+
+    /**
      * Calculates keccak256 over a uint256 memory array contents.
      *
      * keccakUint256Array(array) is a more gas-efficient equivalent

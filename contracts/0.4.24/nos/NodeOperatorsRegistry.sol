@@ -10,7 +10,6 @@ import {SafeMath64} from "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import {UnstructuredStorage} from "@aragon/os/contracts/common/UnstructuredStorage.sol";
 
 import {Math64} from "../lib/Math64.sol";
-import {BytesLib} from "../lib/BytesLib.sol";
 import {MemUtils} from "../../common/lib/MemUtils.sol";
 import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
 import {SigningKeysStats} from "../lib/SigningKeysStats.sol";
@@ -728,12 +727,14 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule {
 
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         uint64 totalSigningKeysCount = nodeOperator.totalSigningKeysCount;
-        bytes memory key;
-        bytes memory sig;
+
+
+        bytes memory key = MemUtils.unsafeAllocateBytes(PUBKEY_LENGTH);
+        bytes memory sig = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH);
         for (uint256 i = 0; i < _keysCount; ++i) {
-            key = BytesLib.slice(_publicKeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
+            MemUtils.copyBytesFrom(_publicKeys, key, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
             require(!_isEmptySigningKey(key), "EMPTY_KEY");
-            sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+            MemUtils.copyBytesFrom(_signatures, sig, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
 
             _storeSigningKey(_nodeOperatorId, totalSigningKeysCount, key, sig);
             totalSigningKeysCount = totalSigningKeysCount.add(1);
@@ -1101,16 +1102,16 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule {
         uint256 offset = _signingKeyOffset(_nodeOperatorId, _keyIndex);
 
         // key
-        bytes memory tmpKey = new bytes(64);
+         bytes memory tmpKey = MemUtils.unsafeAllocateBytes(64);
         assembly {
             mstore(add(tmpKey, 0x20), sload(offset))
             mstore(add(tmpKey, 0x40), sload(add(offset, 1)))
         }
         offset += 2;
-        key = BytesLib.slice(tmpKey, 0, PUBKEY_LENGTH);
-
+        key = MemUtils.unsafeAllocateBytes(PUBKEY_LENGTH);
+        MemUtils.copyBytesFrom(tmpKey, key, 0, PUBKEY_LENGTH);
         // signature
-        signature = new bytes(SIGNATURE_LENGTH);
+        signature = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH);
         for (uint256 i = 0; i < SIGNATURE_LENGTH; i += 32) {
             assembly {
                 mstore(add(signature, add(0x20, i)), sload(offset))

@@ -25,7 +25,6 @@ const ERC20WrongTransferMock = artifacts.require('ERC20WrongTransferMock.sol')
 const AragonNotPayableVaultMock = artifacts.require('AragonNotPayableVaultMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
-const BeaconChainDepositorMock = artifacts.require('BeaconChainDepositorMock.sol')
 const WithdrawalVault = artifacts.require('WithdrawalVault.sol')
 const EIP712StETH = artifacts.require('EIP712StETH')
 
@@ -50,7 +49,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   let dao, acl
   let elRewardsVault, rewarder
   let stakingRouter
-  let beaconChainDepositor
   let anyToken
   let eip712StETH
   let withdrawalQueue
@@ -86,9 +84,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     // WithdrawalQueue
     const wsteth = await WstETH.new(app.address)
     withdrawalQueue = (await withdrawals.deploy(dao.address, wsteth.address)).queue
-
-    // BeaconChainDepositor
-    beaconChainDepositor = await BeaconChainDepositorMock.new(depositContract.address)
 
     // Set up the app's permissions.
     await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, { from: appManager })
@@ -677,19 +672,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 0)
     assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 0)
     assert.equal(await app.getWithdrawalCredentials({ from: nobody }), pad('0x0203', 32))
-  })
-
-  it('pad64 works', async () => {
-    await assertRevert(beaconChainDepositor.pad64('0x'))
-    await assertRevert(beaconChainDepositor.pad64('0x11'))
-    await assertRevert(beaconChainDepositor.pad64('0x1122'))
-    await assertRevert(beaconChainDepositor.pad64(pad('0x1122', 31)))
-    await assertRevert(beaconChainDepositor.pad64(pad('0x1122', 65)))
-    await assertRevert(beaconChainDepositor.pad64(pad('0x1122', 265)))
-
-    assert.equal(await beaconChainDepositor.pad64(pad('0x1122', 32)), pad('0x1122', 32) + '0'.repeat(64))
-    assert.equal(await beaconChainDepositor.pad64(pad('0x1122', 36)), pad('0x1122', 36) + '0'.repeat(56))
-    assert.equal(await beaconChainDepositor.pad64(pad('0x1122', 64)), pad('0x1122', 64))
   })
 
   it('Lido.deposit(uint256,uint256,bytes) reverts when called by account without DEPOSIT_ROLE granted', async () => {

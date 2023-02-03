@@ -4,8 +4,7 @@
 // See contracts/COMPILERS.md
 pragma solidity 0.8.9;
 
-import {BytesLib} from "./lib/BytesLib.sol";
-
+import {MemUtils} from "../common/lib/MemUtils.sol";
 
 interface IDepositContract {
     function get_deposit_root() external view returns (bytes32 rootHash);
@@ -50,16 +49,15 @@ contract BeaconChainDepositor {
 
         uint256 targetBalance = address(this).balance - (_keysCount * DEPOSIT_SIZE);
 
-        bytes memory publicKey;
-        bytes memory signature;
-        for (uint256 i; i < _keysCount; ) {
-            publicKey = BytesLib.slice(_publicKeysBatch, i * PUBLIC_KEY_LENGTH, PUBLIC_KEY_LENGTH);
-            signature = BytesLib.slice(_signaturesBatch, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+        bytes memory publicKey = MemUtils.unsafeAllocateBytes(PUBLIC_KEY_LENGTH);
+        bytes memory signature = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH);
+
+        for (uint256 i; i < _keysCount;) {
+            MemUtils.copyBytesFrom(_publicKeysBatch, publicKey, i * PUBLIC_KEY_LENGTH, PUBLIC_KEY_LENGTH);
+            MemUtils.copyBytesFrom(_signaturesBatch, signature, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+
             DEPOSIT_CONTRACT.deposit{value: DEPOSIT_SIZE}(
-                publicKey,
-                _withdrawalCredentials,
-                signature,
-                _computeDepositDataRoot(_withdrawalCredentials, publicKey, signature)
+                publicKey, _withdrawalCredentials, signature, _computeDepositDataRoot(_withdrawalCredentials, publicKey, signature)
             );
 
             unchecked {
@@ -73,42 +71,26 @@ contract BeaconChainDepositor {
     /// @dev computes the deposit_root_hash required by official Beacon Deposit contract
     /// @param _publicKey A BLS12-381 public key.
     /// @param _signature A BLS12-381 signature
-    function _computeDepositDataRoot(
-        bytes memory _withdrawalCredentials,
-        bytes memory _publicKey,
-        bytes memory _signature
-    ) private pure returns (bytes32) {
+    function _computeDepositDataRoot(bytes memory _withdrawalCredentials, bytes memory _publicKey, bytes memory _signature)
+        private
+        pure
+        returns (bytes32)
+    {
         // Compute deposit data root (`DepositData` hash tree root) according to deposit_contract.sol
-        bytes32 publicKeyRoot = sha256(_pad64(_publicKey));
-        bytes32 signatureRoot = sha256(
+        bytes memory sigPart1 = MemUtils.unsafeAllocateBytes(64);
+        bytes memory sigPart2 = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH - 64);
+        MemUtils.copyBytesFrom(_signature, sigPart1, 0, 64);
+        MemUtils.copyBytesFrom(_signature, sigPart2, 64, SIGNATURE_LENGTH - 64);
+
+        bytes32 publicKeyRoot = sha256(abi.encodePacked(_publicKey, bytes16(0)));
+        bytes32 signatureRoot = sha256(abi.encodePacked(sha256(abi.encodePacked(sigPart1)), sha256(abi.encodePacked(sigPart2, bytes32(0)))));
+
+        return sha256(
             abi.encodePacked(
-                sha256(BytesLib.slice(_signature, 0, 64)),
-                sha256(_pad64(BytesLib.slice(_signature, 64, SIGNATURE_LENGTH - 64)))
+                sha256(abi.encodePacked(publicKeyRoot, _withdrawalCredentials)),
+                sha256(abi.encodePacked(DEPOSIT_SIZE_IN_GWEI_LE64, bytes24(0), signatureRoot))
             )
         );
-
-        return
-            sha256(
-                abi.encodePacked(
-                    sha256(abi.encodePacked(publicKeyRoot, _withdrawalCredentials)),
-                    sha256(abi.encodePacked(DEPOSIT_SIZE_IN_GWEI_LE64, bytes24(0), signatureRoot))
-                )
-            );
-    }
-
-    /// @dev Padding memory array with zeroes up to 64 bytes on the right
-    /// @param _b Memory array of size 32 .. 64
-    function _pad64(bytes memory _b) internal pure returns (bytes memory) {
-        assert(_b.length >= 32 && _b.length <= 64);
-        if (64 == _b.length) return _b;
-
-        bytes memory zero32 = new bytes(32);
-        assembly {
-            mstore(add(zero32, 0x20), 0)
-        }
-
-        if (32 == _b.length) return BytesLib.concat(_b, zero32);
-        else return BytesLib.concat(_b, BytesLib.slice(zero32, 0, uint256(64) - _b.length));
     }
 
     error ErrorDepositContractZeroAddress();
