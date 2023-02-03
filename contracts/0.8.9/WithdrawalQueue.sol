@@ -358,12 +358,12 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
      *
      * NB: timestamp should correspond to the previous oracle report
      *
-     * @param _previousOracleReportTimestamp timestamp of the previous oracle report
      * @param _isBunkerModeNow oracle report
+     * @param _previousOracleReportTimestamp timestamp of the previous oracle report
      */
     function updateBunkerMode(
-        uint256 _previousOracleReportTimestamp,
-        bool _isBunkerModeNow
+        bool _isBunkerModeNow,
+        uint256 _previousOracleReportTimestamp
     ) external onlyRole(BUNKER_MODE_REPORT_ROLE) {
         if (_previousOracleReportTimestamp >= block.timestamp) { revert InvalidReportTimestamp(); }
 
