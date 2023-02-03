@@ -76,4 +76,23 @@ contract LidoLocator is ILidoLocator {
         withdrawalQueue = _config.withdrawalQueue;
         withdrawalVault = _config.withdrawalVault;
     }
+
+    function coreComponents() external view returns(
+        address,
+        address,
+        address,
+        address,
+        address,
+        address
+    ) {
+        return (
+            elRewardsVault,
+            safetyNetsRegistry,
+            stakingRouter,
+            treasury,
+            withdrawalQueue,
+            withdrawalVault
+        );
+    }
+
 }

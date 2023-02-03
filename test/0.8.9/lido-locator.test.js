@@ -49,6 +49,26 @@ contract('LidoLocator', ([deployer, agent]) => {
         assert(actualAddress === expectedAddress, `expected ${expectedAddress}, got ${actualAddress}`)
       })
     }
+
+    it('coreComponents() matches', async () => {
+      const actualCoreComponents = await lidoLocatorProxy.coreComponents()
+
+      const expectedCoreComponents = [
+        initialConfig.elRewardsVault,
+        initialConfig.safetyNetsRegistry,
+        initialConfig.stakingRouter,
+        initialConfig.treasury,
+        initialConfig.withdrawalQueue,
+        initialConfig.withdrawalVault
+      ]
+
+      for (let i = 0; i < actualCoreComponents.length; i++) {
+        const actual = actualCoreComponents[i]
+        const expected = expectedCoreComponents[i]
+
+        assert(actual === expected, 'coreComponents mismatch')
+      }
+    })
   })
 
   describe('breaking constructor', () => {
@@ -68,21 +88,43 @@ contract('LidoLocator', ([deployer, agent]) => {
   })
 
   describe('checking updated implementation', () => {
-    it('works after upgrade to a compatible impl', async () => {
+    describe('works after upgrade to a compatible impl', () => {
       const updatedConfig = getRandomConfig()
 
-      const updatedImplementation = await LidoLocator.new(updatedConfig, { from: deployer })
-      await proxy.proxy__upgradeTo(updatedImplementation.address, { from: agent })
-      lidoLocatorProxy = await LidoLocator.at(proxy.address)
+      beforeEach(async () => {
+        const updatedImplementation = await LidoLocator.new(updatedConfig, { from: deployer })
+        await proxy.proxy__upgradeTo(updatedImplementation.address, { from: agent })
+        lidoLocatorProxy = await LidoLocator.at(proxy.address)
+      })
 
-      for (const [getter, address] of Object.entries(updatedConfig)) {
-        it(`new ${getter}() matches`, async () => {
+      it(`new implementation config matches`, async () => {
+        for (const [getter, address] of Object.entries(updatedConfig)) {
           const expectedAddress = address
           const actualAddress = await lidoLocatorProxy[getter]()
 
           assert(actualAddress === expectedAddress, `expected ${expectedAddress}, got ${actualAddress}`)
-        })
-      }
+        }
+      })
+
+      it('coreComponents() matches', async () => {
+        const actualCoreComponents = await lidoLocatorProxy.coreComponents()
+
+        const expectedCoreComponents = [
+          updatedConfig.elRewardsVault,
+          updatedConfig.safetyNetsRegistry,
+          updatedConfig.stakingRouter,
+          updatedConfig.treasury,
+          updatedConfig.withdrawalQueue,
+          updatedConfig.withdrawalVault
+        ]
+
+        for (let i = 0; i < actualCoreComponents.length; i++) {
+          const actual = actualCoreComponents[i]
+          const expected = expectedCoreComponents[i]
+
+          assert(actual === expected, 'coreComponents mismatch')
+        }
+      })
     })
   })
 })
