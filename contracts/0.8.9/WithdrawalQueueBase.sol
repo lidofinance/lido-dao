@@ -27,8 +27,8 @@ abstract contract WithdrawalQueueBase {
         uint128 cumulativeShares;
         /// @notice payable address of the recipient eth will be transferred to
         address payable recipient;
-        /// @notice block.number when the request was created
-        uint64 blockNumber;
+        /// @notice block.timestamp when the request was created
+        uint64 timestamp;
         /// @notice flag if the request was claimed
         bool claimed;
     }
@@ -128,7 +128,7 @@ abstract contract WithdrawalQueueBase {
             uint256 amountOfStETH,
             uint256 amountOfShares,
             address recipient,
-            uint256 blockNumber,
+            uint256 timestamp,
             bool isFinalized,
             bool isClaimed
         )
@@ -140,7 +140,7 @@ abstract contract WithdrawalQueueBase {
         WithdrawalRequest memory previousRequest = queue[_requestId - 1];
 
         recipient = request.recipient;
-        blockNumber = request.blockNumber;
+        timestamp = request.timestamp;
 
         amountOfShares = request.cumulativeShares - previousRequest.cumulativeShares;
         amountOfStETH = request.cumulativeStETH - previousRequest.cumulativeStETH;
@@ -254,7 +254,7 @@ abstract contract WithdrawalQueueBase {
 
         if (request.recipient != msg.sender) revert RecipientExpected(request.recipient, msg.sender);
         if (request.claimed) revert RequestAlreadyClaimed();
-       
+
 
         request.recipient = payable(_newRecipient);
 
