@@ -1,22 +1,15 @@
-const { artifacts } = require('hardhat')
+const hre = require('hardhat')
 
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
-const { assertRevert } = require('./helpers/assertThrow')
-
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
-const { newDao, newApp } = require('./0.4.24/helpers/dao')
+
+const { EvmSnapshot } = require('./helpers/blockchain')
+const { setupNodeOperatorsRegistry } = require('./helpers/staking-modules')
+const { deployProtocol } = require('./helpers/protocol')
+const { ETH, pad, hexConcat, changeEndianness } = require('./helpers/utils')
 const nodeOperators = require('./helpers/node-operators')
-const withdrawals = require('./helpers/withdrawals')
-
-const { pad, hexConcat, ETH, changeEndianness } = require('./helpers/utils')
-
-const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
-const Lido = artifacts.require('LidoMock.sol')
-const OracleMock = artifacts.require('OracleMock.sol')
-const DepositContract = artifacts.require('DepositContract')
-const StakingRouter = artifacts.require('StakingRouterMock.sol')
-const EIP712StETH = artifacts.require('EIP712StETH')
-const WstETH = artifacts.require('WstETH')
+const { assert } = require('./helpers/assert')
+const { depositContractFactory, DEPOSIT_ROOT } = require('./helpers/factories')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -30,106 +23,50 @@ const CALLDATA = '0x0'
 
 const tokens = ETH
 
-contract('Lido with official deposit contract', ([appManager, voting, user1, user2, user3, nobody, depositor, treasury]) => {
-  let appBase, stEthBase, nodeOperatorsRegistryBase, app, token, oracle, depositContract, operators, stakingRouter
+contract('Lido with official deposit contract', ([user1, user2, user3, nobody, depositor]) => {
+  let app, token, depositContract, operators, stakingRouter
+  let voting, snapshot
 
   before('deploy base app', async () => {
-    // Deploy the app's base contract.
-    appBase = await Lido.new()
-    oracle = await OracleMock.new()
-    nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new()
+    const deployed = await deployProtocol({
+      stakingModulesFactory: async (protocol) => {
+        const curatedModule = await setupNodeOperatorsRegistry(protocol)
+        return [
+          {
+            module: curatedModule,
+            name: 'curated',
+            targetShares: 10000,
+            moduleFee: 500,
+            treasuryFee: 500
+          }
+        ]
+      },
+      depositSecurityModuleFactory: async () => {
+        return { address: depositor }
+      },
+      depositContractFactory: depositContractFactory,
+      postSetup: async ({ pool, lidoLocator, eip712StETH, oracle, withdrawalQueue, appManager }) => {
+        await pool.initialize(lidoLocator.address, eip712StETH.address)
+        await oracle.setPool(pool.address)
+        await withdrawalQueue.updateBunkerMode(0, false, { from: appManager.address })
+        await pool.resumeProtocolAndStaking({ from: voting })
+      }
+    })
+
+    app = deployed.pool
+    token = deployed.token
+    stakingRouter = deployed.stakingRouter
+    operators = deployed.stakingModules[0]
+    voting = deployed.voting.address
+    depositContract = deployed.depositContract
+    voting = deployed.voting.address
+
+    snapshot = new EvmSnapshot(hre.ethers.provider)
+    await snapshot.make()
   })
 
-  beforeEach('deploy dao and app', async () => {
-    depositContract = await DepositContract.new()
-    const { dao, acl } = await newDao(appManager)
-
-    // Instantiate a proxy for the app, using the base contract as its logic implementation.
-    let proxyAddress = await newApp(dao, 'lido', appBase.address, appManager)
-    app = await Lido.at(proxyAddress)
-    await app.resumeProtocolAndStaking()
-
-    // NodeOperatorsRegistry
-    proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
-    operators = await NodeOperatorsRegistry.at(proxyAddress)
-    await operators.initialize(app.address, '0x')
-
-    // Staking ROuter
-    stakingRouter = await StakingRouter.new(depositContract.address, { from: appManager })
-    await stakingRouter.initialize(appManager, app.address, ZERO_ADDRESS)
-    await stakingRouter.grantRole(await stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(), voting, { from: appManager })
-    await stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_MANAGE_ROLE(), voting, { from: appManager })
-    await stakingRouter.addStakingModule(
-      'Curated',
-      operators.address,
-      10_000, // 100 % _targetShare
-      500, // 5 % _moduleFee
-      500, // 5 % _treasuryFee
-      { from: voting }
-    )
-
-    // token
-    // proxyAddress = await newApp(dao, 'steth', stEthBase.address, appManager)
-    token = app
-    // await token.initialize(app.address)
-
-    // Set up the app's permissions.
-    await acl.createPermission(voting, app.address, await app.PAUSE_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.RESUME_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE(), appManager, {
-      from: appManager
-    })
-    await acl.createPermission(voting, app.address, await app.STAKING_PAUSE_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.STAKING_CONTROL_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, app.address, await app.MANAGE_PROTOCOL_CONTRACTS_ROLE(), appManager, { from: appManager })
-
-    await acl.createPermission(voting, operators.address, await operators.MANAGE_SIGNING_KEYS(), appManager, { from: appManager })
-    await acl.createPermission(voting, operators.address, await operators.ADD_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, operators.address, await operators.ACTIVATE_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, operators.address, await operators.DEACTIVATE_NODE_OPERATOR_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_NAME_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_ADDRESS_ROLE(), appManager, {
-      from: appManager
-    })
-    await acl.createPermission(voting, operators.address, await operators.SET_NODE_OPERATOR_LIMIT_ROLE(), appManager, { from: appManager })
-    await acl.createPermission(voting, operators.address, await operators.STAKING_ROUTER_ROLE(), appManager, {
-      from: appManager
-    })
-    await acl.createPermission(
-      stakingRouter.address,
-      operators.address,
-      await operators.REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE(),
-      appManager,
-      {
-        from: appManager
-      }
-    )
-    await acl.createPermission(
-      stakingRouter.address,
-      operators.address,
-      await operators.INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE(),
-      appManager,
-      {
-        from: appManager
-      }
-    )
-
-    const eip712StETH = await EIP712StETH.new({ from: appManager })
-    const wsteth = await WstETH.new(app.address)
-    const withdrawalQueue = await (await withdrawals.deploy(dao.address, wsteth.address)).queue
-
-    // Initialize the app's proxy.
-    await app.initialize(
-      oracle.address,
-      treasury,
-      stakingRouter.address,
-      depositor,
-      ZERO_ADDRESS,
-      withdrawalQueue.address,
-      eip712StETH.address
-    )
-
-    await oracle.setPool(app.address)
+  afterEach(async () => {
+    await snapshot.rollback()
   })
 
   const checkStat = async ({ depositedValidators, beaconBalance }) => {
@@ -232,7 +169,7 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 1)
-    await assertRevert(operators.removeSigningKey(0, 0, { from: voting }), 'KEY_WAS_USED')
+    await assert.reverts(operators.removeSigningKey(0, 0, { from: voting }), 'KEY_WAS_USED')
 
     await operators.removeSigningKey(0, 1, { from: voting })
 
@@ -240,8 +177,8 @@ contract('Lido with official deposit contract', ([appManager, voting, user1, use
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     // deposit should go to second operator, as the first one got their key limits set to 1
-    await assertRevert(operators.removeSigningKey(1, 0, { from: voting }), 'KEY_WAS_USED')
-    await assertRevert(operators.removeSigningKey(1, 1, { from: voting }), 'KEY_WAS_USED')
+    await assert.reverts(operators.removeSigningKey(1, 0, { from: voting }), 'KEY_WAS_USED')
+    await assert.reverts(operators.removeSigningKey(1, 1, { from: voting }), 'KEY_WAS_USED')
     assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 4)
     assertBn(await app.getTotalPooledEther(), ETH(133))
     assertBn(await app.getBufferedEther(), ETH(5))

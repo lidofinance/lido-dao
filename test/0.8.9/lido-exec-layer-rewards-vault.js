@@ -1,61 +1,39 @@
-const { assert } = require('chai')
+const hre = require('hardhat')
 
 const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { assertRevert } = require('../helpers/assertThrow')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
-const { newDao, newApp } = require('../0.4.24/helpers/dao')
-const { StETH, ETH } = require('../helpers/utils')
 
-const LidoELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
-const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
-const LidoMock = artifacts.require('LidoMock.sol')
-const LidoOracleMock = artifacts.require('OracleMock.sol')
-const DepositContractMock = artifacts.require('DepositContractMock.sol')
-const EIP712StETH = artifacts.require('EIP712StETH')
+const { StETH, ETH } = require('../helpers/utils')
+const { assert } = require('../helpers/assert')
+const { deployProtocol } = require('../helpers/protocol')
+const { postSetup } = require('../helpers/factories')
+const { EvmSnapshot } = require('../helpers/blockchain')
 
 const ERC20OZMock = artifacts.require('ERC20OZMock.sol')
 const ERC721OZMock = artifacts.require('ERC721OZMock.sol')
 
-contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, depositor, anotherAccount, treasury, ...otherAccounts]) => {
-  let lido, elRewardsVault
+contract('LidoExecutionLayerRewardsVault', ([deployer, anotherAccount]) => {
+  let lido, elRewardsVault, treasury, appManager, snapshot
 
-  beforeEach('deploy lido with dao', async () => {
-    const lidoBase = await LidoMock.new({ from: deployer })
-    const oracle = await LidoOracleMock.new({ from: deployer })
-    const depositContract = await DepositContractMock.new({ from: deployer })
-    const nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new({ from: deployer })
+  before('deploy lido with dao', async () => {
+    const deployed = await deployProtocol({
+      postSetup: async (protocol) => {
+        await postSetup(protocol)
+        await protocol.pool.resumeProtocolAndStaking()
+      }
+    })
 
-    const { dao, acl } = await newDao(appManager)
+    lido = deployed.pool
+    elRewardsVault = deployed.elRewardsVault
+    treasury = deployed.treasury.address
+    appManager = deployed.appManager.address
+    snapshot = new EvmSnapshot(hre.ethers.provider)
+    await snapshot.make()
+  })
 
-    // Instantiate a proxy for the app, using the base contract as its logic implementation.
-    let proxyAddress = await newApp(dao, 'lido', lidoBase.address, appManager)
-    lido = await LidoMock.at(proxyAddress)
-    await lido.resumeProtocolAndStaking()
-
-    // NodeOperatorsRegistry
-    proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
-    operators = await NodeOperatorsRegistry.at(proxyAddress)
-    await operators.initialize(lido.address, '0x01')
-
-    // Init the BURN_ROLE role and assign in to voting
-    await acl.createPermission(voting, lido.address, await lido.BURN_ROLE(), appManager, { from: appManager })
-
-    elRewardsVault = await LidoELRewardsVault.new(lido.address, treasury, { from: deployer })
-    const eip712StETH = await EIP712StETH.new({ from: deployer })
-
-    // Initialize the app's proxy.
-    await lido.initialize(
-      oracle.address,
-      treasury,
-      ZERO_ADDRESS,
-      ZERO_ADDRESS,
-      elRewardsVault.address,
-      ZERO_ADDRESS,
-      eip712StETH.address
-    )
-
-    await oracle.setPool(lido.address)
-    await depositContract.reset()
+  afterEach(async () => {
+    await snapshot.rollback()
   })
 
   it('Addresses which are not Lido contract cannot withdraw from execution layer rewards vault', async () => {

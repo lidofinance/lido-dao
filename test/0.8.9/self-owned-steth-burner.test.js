@@ -1,20 +1,17 @@
-const { assert } = require('chai')
-const { artifacts } = require('hardhat')
+const hre = require('hardhat')
 
-const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 const { assertRevert } = require('../helpers/assertThrow')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
-const { newDao, newApp } = require('../0.4.24/helpers/dao')
-const { StETH, ETH } = require('../helpers/utils')
+const { EvmSnapshot } = require('../helpers/blockchain')
+const { ETH, StETH } = require('../helpers/utils')
+const { assert } = require('../helpers/assert')
+const { deployProtocol } = require('../helpers/protocol')
+
+const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 
 const SelfOwnerStETHBurner = artifacts.require('SelfOwnedStETHBurner.sol')
-const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry.sol')
-const LidoMock = artifacts.require('LidoMock.sol')
-const LidoOracleMock = artifacts.require('OracleMock.sol')
-const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 const CompositePostRebaseBeaconReceiver = artifacts.require('CompositePostRebaseBeaconReceiver.sol')
-const EIP712StETH = artifacts.require('EIP712StETH')
 
 const ERC20OZMock = artifacts.require('ERC20OZMock.sol')
 const ERC721OZMock = artifacts.require('ERC721OZMock.sol')
@@ -24,53 +21,28 @@ const stETHShares = ETH
 
 contract('SelfOwnedStETHBurner', ([appManager, voting, deployer, anotherAccount, treasury, ...otherAccounts]) => {
   let oracle, lido, burner
-  let dao, acl, operators
+  let acl, snapshot
   let compositeBeaconReceiver
 
-  beforeEach('deploy lido with dao', async () => {
-    const lidoBase = await LidoMock.new({ from: deployer })
-    oracle = await LidoOracleMock.new({ from: deployer })
-    const depositContract = await DepositContractMock.new({ from: deployer })
-    const nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new({ from: deployer })
+  before('deploy lido with dao', async () => {
+    const deployed = await deployProtocol()
 
-    const daoAclObj = await newDao(appManager)
-    dao = daoAclObj.dao
-    acl = daoAclObj.acl
-
-    // Instantiate a proxy for the app, using the base contract as its logic implementation.
-    let proxyAddress = await newApp(dao, 'lido', lidoBase.address, appManager)
-    lido = await LidoMock.at(proxyAddress)
-    await lido.resumeProtocolAndStaking()
-
-    // NodeOperatorsRegistry
-    proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
-    operators = await NodeOperatorsRegistry.at(proxyAddress)
-    await operators.initialize(lido.address, '0x01')
-
-    // Init the BURN_ROLE role and assign in to voting
-    await acl.createPermission(voting, lido.address, await lido.BURN_ROLE(), appManager, { from: appManager })
-    const eip712StETH = await EIP712StETH.new({ from: deployer })
-
-    // Initialize the app's proxy.
-    await lido.initialize(
-      oracle.address,
-      treasury,
-      ZERO_ADDRESS,
-      ZERO_ADDRESS,
-      ZERO_ADDRESS,
-      ZERO_ADDRESS,
-      eip712StETH.address
-    )
-
-    await oracle.setPool(lido.address)
-    await depositContract.reset()
-
-    burner = await SelfOwnerStETHBurner.new(treasury, lido.address, voting, bn(0), bn(0), bn(4), { from: deployer })
+    lido = deployed.pool
+    oracle = deployed.oracle
+    burner = deployed.selfOwnedStETHBurner
+    acl = deployed.acl
 
     compositeBeaconReceiver = await CompositePostRebaseBeaconReceiver.new(voting, oracle.address, { from: deployer })
     compositeBeaconReceiver.addCallback(burner.address, { from: voting })
 
     await oracle.setBeaconReportReceiver(compositeBeaconReceiver.address)
+
+    snapshot = new EvmSnapshot(hre.ethers.provider)
+    await snapshot.make()
+  })
+
+  afterEach(async () => {
+    await snapshot.rollback()
   })
 
   describe('Requests and burn invocation', () => {
