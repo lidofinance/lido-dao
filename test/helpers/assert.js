@@ -20,15 +20,15 @@ chai.util.addMethod(chai.assert, 'reverts', async function (receipt, reason) {
 })
 
 chai.util.addMethod(chai.assert, 'equals', function (actual, expected, errorMsg) {
-  this.equal(actual.toString(), expected.toString(), `${errorMsg} expected ${expected.toString()} to equal ${actual.toString()}`)
+  this.equal(actual.toString(), expected.toString())
 })
 
 chai.util.addMethod(chai.assert, 'notEquals', function (actual, expected, errorMsg) {
-  this.notEqual(actual.toString(), expected.toString(), `${errorMsg} expected ${expected.toString()} to equal ${actual.toString()}`)
+  this.notEqual(actual.toString(), expected.toString())
 })
 
 chai.util.addMethod(chai.assert, 'equals', function (actual, expected, errorMsg = '') {
-  this.equal(actual.toString(), expected.toString(), `${errorMsg} expected ${expected.toString()} to equal ${actual.toString()}`)
+  this.equal(actual.toString(), expected.toString())
 })
 
 chai.util.addMethod(chai.assert, 'revertsWithCustomError', async function (receipt, reason) {

@@ -55,10 +55,14 @@ abstract contract WithdrawalQueueBase {
 
     error ZeroRecipientAddress();
     error ZeroRequestId();
+    error ZeroAmountOfETH();
+    error ZeroShareRate();
+    error ZeroTimestamp();
     error SenderExpected(address _recipient, address _msgSender);
     error RecipientExpected(address _recipient, address _msgSender);
     error InvalidRecipient(address _recipient);
     error InvalidRequestId(uint256 _requestId);
+    error InvalidRequestIdRange(uint256 startId, uint256 endId);
     error NotEnoughEther();
     error RequestNotFinalized(uint256 _requestId);
     error RequestAlreadyClaimed();
@@ -93,7 +97,7 @@ abstract contract WithdrawalQueueBase {
         // setting dummy zero structs in discountHistory and queue beginning
         // to avoid uint underflows and related if-branches
         queue[lastRequestId] = WithdrawalRequest(0, 0, payable(0), _toUint64(block.number), true);
-        discountHistory[lastDiscountIndex] = Discount(lastRequestId, NO_DISCOUNT);
+        discountHistory[lastDiscountIndex] = Discount(lastRequestId, 0);
     }
 
     /// @notice return the number of unfinalized requests in the queue
@@ -158,10 +162,11 @@ abstract contract WithdrawalQueueBase {
      * @return shares amount of shares that should be burned on finalization
      */
     function finalizationBatch(uint256 _lastRequestIdToFinalize, uint256 _shareRate)
-        external
+        public
         view
         returns (uint128 eth, uint128 shares)
     {
+        if (_shareRate == 0) revert ZeroShareRate();
         if (_lastRequestIdToFinalize <= lastFinalizedRequestId) revert InvalidRequestId(_lastRequestIdToFinalize);
         if (_lastRequestIdToFinalize > lastRequestId) revert InvalidRequestId(_lastRequestIdToFinalize);
 
@@ -173,7 +178,7 @@ abstract contract WithdrawalQueueBase {
 
     /**
      * @notice View function to find a hint to pass it to `claimWithdrawal()`.
-     * @dev WARNING! OOG is possible if used onchain.
+     * @dev WARNING! OOG is possible if used onchain, contains unbounded loop inside
      * See `findClaimHint(uint256 _requestId, uint256 _firstIndex, uint256 _lastIndex)` for onchain use
      * @param _requestId request id to be claimed with this hint
      */
@@ -184,29 +189,29 @@ abstract contract WithdrawalQueueBase {
     /**
      * @notice View function to find a hint for `claimWithdrawal()` in the range of `[_firstIndex, _lastIndex]`
      * @param _requestId request id to be claimed later
-     * @param _firstIndex left boundary of the search range
-     * @param _lastIndex right boundary of the search range
+     * @param _firstDiscountIndex left boundary of the search range
+     * @param _lastDiscountIndex right boundary of the search range
      *
-     * @return the hint for `claimWithdrawal` to find the discount for the request
+     * @return the hint for `claimWithdrawal` to find the discount for the request, or zero if hint not found
      */
-    function findClaimHint(uint256 _requestId, uint256 _firstIndex, uint256 _lastIndex) public view returns (uint256) {
-        if (_requestId == 0) revert ZeroRequestId();
+    function findClaimHint(uint256 _requestId, uint256 _firstDiscountIndex, uint256 _lastDiscountIndex)
+        public
+        view
+        returns (uint256)
+    {
         if (_requestId > lastFinalizedRequestId) revert RequestNotFinalized(_requestId);
 
-        // if we are assuming that:
-        // 1) Discount history are rarely grows durung normal operation (see `_updateDiscountHistory`)
-        // 2) Most users will claim their withdrawal as soon as possible after the finalization
-        //
-        // It's reasonable to check if the last discount is the right one before starting the search
-        uint256 middle = lastDiscountIndex;
-        int8 comparision = _compareWithHint(_requestId, middle);
-        while (comparision != 0) {
-            middle = (_firstIndex + _lastIndex) / 2;
-            comparision = _compareWithHint(_requestId, middle);
-            if (comparision > 0) _firstIndex = middle;
-            if (comparision < 0) _lastIndex = middle;
+        uint256 midDiscountIndex = _lastDiscountIndex;
+        int8 comparisionResult = _compareWithHint(_requestId, midDiscountIndex);
+
+        while (comparisionResult != 0 && _firstDiscountIndex < _lastDiscountIndex) {
+            midDiscountIndex = (_firstDiscountIndex + _lastDiscountIndex) / 2;
+            comparisionResult = _compareWithHint(_requestId, midDiscountIndex);
+            if (comparisionResult > 0) _firstDiscountIndex = midDiscountIndex + 1;
+            if (comparisionResult < 0) _lastDiscountIndex = midDiscountIndex;
         }
-        return middle;
+
+        return comparisionResult == 0 ? midDiscountIndex : 0;
     }
 
     /**
@@ -215,7 +220,6 @@ abstract contract WithdrawalQueueBase {
      * @param _hint rate index found offchain that should be used for claiming
      */
     function claimWithdrawal(uint256 _requestId, uint256 _hint) public {
-        if (_requestId == 0) revert ZeroRequestId();
         if (_requestId > lastFinalizedRequestId) revert RequestNotFinalized(_requestId);
 
         WithdrawalRequest storage request = queue[_requestId];
@@ -255,7 +259,6 @@ abstract contract WithdrawalQueueBase {
         if (request.recipient != msg.sender) revert RecipientExpected(request.recipient, msg.sender);
         if (request.claimed) revert RequestAlreadyClaimed();
 
-
         request.recipient = payable(_newRecipient);
 
         requestsByRecipient[_newRecipient].add(_requestId);
@@ -264,10 +267,104 @@ abstract contract WithdrawalQueueBase {
         emit WithdrawalRequestRecipientChanged(_requestId, _newRecipient, msg.sender);
     }
 
+    /**
+     * @notice Search for the latest request in `[startId, endId]` that has a timestamp <= `maxTimestamp`
+     *
+     * @return finalizableRequestId requested id or 0, if there are no requests in a range with requested timestamp
+     */
+    function findLastFinalizableRequestIdByTimestamp(uint256 _maxTimestamp, uint256 _startId, uint256 _endId)
+        public
+        view
+        returns (uint256 finalizableRequestId)
+    {
+        if (_maxTimestamp == 0) revert ZeroTimestamp();
+        if (_startId <= lastFinalizedRequestId) revert InvalidRequestIdRange(_startId, _endId);
+        if (_endId > lastRequestId) revert InvalidRequestIdRange(_startId, _endId);
+
+        if (_startId > _endId) return 0; // we have an empty range to search in
+
+        uint256 startRequestId = _startId;
+        uint256 endRequestId = _endId;
+
+        finalizableRequestId = 0;
+
+        while (startRequestId <= endRequestId) {
+            uint256 midRequestId = (endRequestId + startRequestId) / 2;
+            if (queue[midRequestId].timestamp <= _maxTimestamp) {
+                finalizableRequestId = midRequestId;
+
+                // Ignore left half
+                startRequestId = midRequestId + 1;
+            } else {
+                // Ignore right half
+                endRequestId = midRequestId - 1;
+            }
+        }
+    }
+
+    /**
+     * @notice Search for the latest request in `[startId, endId]` that can be finalized within the given `ethBudget`
+     * @param _ethBudget amount of ether available for withdrawal fullfilment
+     * @param _shareRate share/ETH rate that will be used for fullfilment
+     * @param _startId requestId to start search from. Should be > lastFinalizedRequestId
+     * @param _endId requestId to search upon to. Should be <= lastRequestId
+     * 
+     * @return finalizableRequestId requested id or 0, if there are no requests finalizable within the given `_ethBudget`
+     */
+    function findLastFinalizableRequestIdByBudget(
+        uint256 _ethBudget,
+        uint256 _shareRate,
+        uint256 _startId,
+        uint256 _endId
+    ) public view returns (uint256 finalizableRequestId) {
+        if (_ethBudget == 0) revert ZeroAmountOfETH();
+        if (_shareRate == 0) revert ZeroShareRate();
+        if (_startId <= lastFinalizedRequestId) revert InvalidRequestIdRange(_startId, _endId);
+        if (_endId > lastRequestId) revert InvalidRequestIdRange(_startId, _endId);
+
+        if (_startId > _endId) return 0; // we have an empty range to search in
+
+        uint256 startRequestId = _startId;
+        uint256 endRequestId = _endId;
+
+        finalizableRequestId = 0;
+
+        while (startRequestId <= endRequestId) {
+            uint256 midRequestId = (endRequestId + startRequestId) / 2;
+            (uint256 requiredEth,) = finalizationBatch(midRequestId, _shareRate);
+
+            if (requiredEth <= _ethBudget) {
+                finalizableRequestId = midRequestId;
+
+                // Ignore left half
+                startRequestId = midRequestId + 1;
+            } else {
+                // Ignore right half
+                endRequestId = midRequestId - 1;
+            }
+        }
+    }
+
+    /**
+     * @notice Returns last requestId, that is finalizable 
+     *  - within `_ethBudget`
+     *  - using  `_shareRate`
+     *  - created earlier than `_maxTimestamp`
+     * @dev WARNING! OOG is possible if used onchain, contains unbounded loop inside
+     */
+    function findLastFinalizableRequestId(uint256 _ethBudget, uint256 _shareRate, uint256 _maxTimestamp)
+        public
+        view
+        returns (uint256 finalizableRequestId)
+    {
+        finalizableRequestId = findLastFinalizableRequestIdByBudget(_ethBudget, _shareRate, lastFinalizedRequestId + 1, lastRequestId);
+        return findLastFinalizableRequestIdByTimestamp(_maxTimestamp, lastFinalizedRequestId + 1, finalizableRequestId);
+    }
+
     /// @dev creates a new `WithdrawalRequest` in the queue
     function _enqueue(uint256 _amountOfStETH, uint256 _amountofShares, address _recipient)
-    internal
-    returns (uint256 requestId)
+        internal
+        returns (uint256 requestId)
     {
         WithdrawalRequest memory lastRequest = queue[lastRequestId];
 
