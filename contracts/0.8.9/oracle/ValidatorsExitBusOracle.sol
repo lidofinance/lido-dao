@@ -288,14 +288,15 @@ contract ValidatorsExitBusOracle is BaseOracle {
     /// @notice Returns processing state for the current consensus report.
     ///
     function getDataProcessingState() external view returns (
+        uint256 refSlot,
         bool processingStarted,
         uint256 requestsCount,
         uint256 requestsProcessed,
         uint256 dataFormat
     ) {
         DataProcessingState memory state = _storageDataProcessingState().value;
-        uint256 processingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
-        processingStarted = state.refSlot != 0 && state.refSlot == processingRefSlot;
+        refSlot = _storageConsensusReport().value.refSlot;
+        processingStarted = state.refSlot != 0 && state.refSlot == refSlot;
         if (processingStarted) {
             requestsCount = state.requestsCount;
             requestsProcessed = state.requestsProcessed;

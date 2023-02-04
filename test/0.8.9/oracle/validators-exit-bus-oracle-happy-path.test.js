@@ -103,6 +103,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       assert.isFalse(report.processingStarted)
 
       const procState = await oracle.getDataProcessingState()
+      assert.equal(+procState.refSlot, +report.refSlot)
       assert.isFalse(procState.processingStarted)
       assert.equal(+procState.requestsCount, 0)
       assert.equal(+procState.requestsProcessed, 0)
@@ -163,6 +164,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
 
     it(`reports are marked as processed`, async () => {
       const procState = await oracle.getDataProcessingState()
+      assert.equal(+procState.refSlot, reportFields.refSlot)
       assert.isTrue(procState.processingStarted)
       assert.equal(+procState.requestsCount, exitRequests.length)
       assert.equal(+procState.requestsProcessed, exitRequests.length)
