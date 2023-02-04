@@ -66,7 +66,13 @@ module.exports = {
 }
 
 
-async function deployExitBusOracle(admin, {dataSubmitter = null} = {}) {
+async function deployExitBusOracle(admin, {
+  dataSubmitter = null,
+  maxRequestsPerReport = MAX_REQUESTS_PER_REPORT,
+  maxRequestsListLength = MAX_REQUESTS_LIST_LENGTH,
+  rateLimitWindowSlots = RATE_LIMIT_WINDOW_SLOTS,
+  rateLimitMaxThroughput = RATE_LIMIT_THROUGHPUT,
+} = {}) {
   const oracle = await ValidatorsExitBusOracle.new(SECONDS_PER_SLOT, GENESIS_TIME, {from: admin})
 
   const {consensus} = await deployHashConsensus(admin, {
@@ -81,10 +87,10 @@ async function deployExitBusOracle(admin, {dataSubmitter = null} = {}) {
     consensus.address,
     CONSENSUS_VERSION,
     lastProcessedRefSlot,
-    MAX_REQUESTS_PER_REPORT,
-    MAX_REQUESTS_LIST_LENGTH,
-    RATE_LIMIT_WINDOW_SLOTS,
-    e18(RATE_LIMIT_THROUGHPUT),
+    maxRequestsPerReport,
+    maxRequestsListLength,
+    rateLimitWindowSlots,
+    e18(rateLimitMaxThroughput),
     {from: admin}
   )
 
@@ -105,10 +111,10 @@ async function deployExitBusOracle(admin, {dataSubmitter = null} = {}) {
 
   assertEvent(tx, 'DataBoundariesSet', {expectedArgs: {
     refSlot: +(await consensus.getCurrentFrame()).refSlot,
-    maxExitRequestsPerReport: MAX_REQUESTS_PER_REPORT,
-    maxExitRequestsListLength: MAX_REQUESTS_LIST_LENGTH,
-    exitRequestsRateLimitWindowSizeSlots: RATE_LIMIT_WINDOW_SLOTS,
-    exitRequestsRateLimitMaxThroughputE18: e18(RATE_LIMIT_THROUGHPUT),
+    maxExitRequestsPerReport: maxRequestsPerReport,
+    maxExitRequestsListLength: maxRequestsListLength,
+    exitRequestsRateLimitWindowSizeSlots: rateLimitWindowSlots,
+    exitRequestsRateLimitMaxThroughputE18: e18(rateLimitMaxThroughput),
   }})
 
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), admin, {from: admin})
