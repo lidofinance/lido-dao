@@ -1056,14 +1056,14 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
 
     await assertRevert(
-      app.handleOracleReport(1, ETH(30), 0, 0, 0, 0, 0, false, { from: appManager }),
+      app.handleOracleReport(1, ETH(30), 0, 0, 0, 0, 0, { from: appManager }),
       'APP_AUTH_FAILED'
     )
 
     await pushReport(1, ETH(30))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(30) })
 
-    await assertRevert(app.handleOracleReport(1, ETH(29), 0, 0, 0, 0, 0, false, { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(app.handleOracleReport(1, ETH(29), 0, 0, 0, 0, 0, { from: nobody }), 'APP_AUTH_FAILED')
 
     await pushReport(1, ETH(100)) // stale data
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(100) })

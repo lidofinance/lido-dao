@@ -46,8 +46,8 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
       },
       depositContractFactory: depositContractFactory,
       postSetup: async ({ pool, lidoLocator, eip712StETH, withdrawalQueue, appManager, voting }) => {
-        await pool.initialize(lidoLocator.address, eip712StETH.address) 
-        await withdrawalQueue.updateBunkerMode(0, false, { from: appManager.address })
+        await pool.initialize(lidoLocator.address, eip712StETH.address)
+        await withdrawalQueue.updateBunkerMode(false, 0, { from: appManager.address })
         await pool.resumeProtocolAndStaking({ from: voting.address })
       }
     })

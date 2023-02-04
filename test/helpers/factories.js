@@ -330,7 +330,7 @@ async function postSetup({ pool, lidoLocator, eip712StETH, depositContract, with
   // await oracle.setPool(pool.address)
   await depositContract.reset()
   await depositContract.set_deposit_root(DEPOSIT_ROOT)
-  await withdrawalQueue.updateBunkerMode(0, false, { from: appManager.address })
+  await withdrawalQueue.updateBunkerMode(false, 0, { from: appManager.address })
   await pool.resumeProtocolAndStaking({ from: voting.address })
 }
 

@@ -22,8 +22,7 @@ interface ILido {
         uint256 elRewardsVaultBalance,
         // decision
         uint256 requestIdToFinalizeUpTo,
-        uint256 finalizationShareRate,
-        bool isBunkerMode
+        uint256 finalizationShareRate
     ) external;
 
     function getStakingRouter() external view returns (address);
@@ -483,8 +482,7 @@ contract AccountingOracle is BaseOracle {
             data.withdrawalVaultBalance,
             data.elRewardsVaultBalance,
             data.lastWithdrawalRequestIdToFinalize,
-            data.finalizationShareRate,
-            data.isBunkerMode
+            data.finalizationShareRate
         );
 
         _storageExtraDataProcessingState().value = ExtraDataProcessingState({

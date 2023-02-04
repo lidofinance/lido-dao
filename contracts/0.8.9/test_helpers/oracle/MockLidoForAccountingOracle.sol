@@ -15,7 +15,6 @@ contract MockLidoForAccountingOracle is ILido {
         uint256 elRewardsVaultBalance;
         uint256 lastWithdrawalRequestIdToFinalize;
         uint256 finalizationShareRate;
-        bool isBunkerMode;
         uint256 callCount;
     }
 
@@ -46,8 +45,7 @@ contract MockLidoForAccountingOracle is ILido {
         uint256 withdrawalVaultBalance,
         uint256 elRewardsVaultBalance,
         uint256 lastWithdrawalRequestIdToFinalize,
-        uint256 finalizationShareRate,
-        bool isBunkerMode
+        uint256 finalizationShareRate
     ) external {
         _handleOracleReportLastCall.secondsElapsedSinceLastReport = secondsElapsedSinceLastReport;
         _handleOracleReportLastCall.numValidators = numValidators;
@@ -56,7 +54,6 @@ contract MockLidoForAccountingOracle is ILido {
         _handleOracleReportLastCall.elRewardsVaultBalance = elRewardsVaultBalance;
         _handleOracleReportLastCall.lastWithdrawalRequestIdToFinalize = lastWithdrawalRequestIdToFinalize;
         _handleOracleReportLastCall.finalizationShareRate = finalizationShareRate;
-        _handleOracleReportLastCall.isBunkerMode = isBunkerMode;
         ++_handleOracleReportLastCall.callCount;
     }
 }

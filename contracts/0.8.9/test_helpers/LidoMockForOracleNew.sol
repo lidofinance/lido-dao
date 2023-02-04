@@ -29,8 +29,7 @@ contract LidoMockForOracleNew {
         uint256 /* withdrawalVaultBalance */,
         uint256 /* elRewardsVaultBalance */,
         uint256 /* lastWithdrawalRequestIdToFinalize */,
-        uint256 /* finalizationShareRate */,
-        bool /* isBunkerMode */
+        uint256 /* finalizationShareRate */
     ) external {
         totalPooledEther = clBalance;
     }

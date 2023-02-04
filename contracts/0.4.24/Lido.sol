@@ -496,7 +496,7 @@ contract Lido is StETHPermit, AragonApp, Versioned {
     * @return elRewards withdrawn from the execution layer rewards vault
     */
     function handleOracleReport(
-        // Oracle report timing
+        // Oracle timing
         uint256 _timeElapsed,
         // CL values
         uint256 _clValidators,
@@ -506,8 +506,7 @@ contract Lido is StETHPermit, AragonApp, Versioned {
         uint256 _elRewardsVaultBalance,
         // Decision about withdrawals processing
         uint256 _requestIdToFinalizeUpTo,
-        uint256 _finalizationShareRate,
-        bool _isBunkerMode
+        uint256 _finalizationShareRate
     ) external returns (
         uint256 totalPooledEther,
         uint256 totalShares,
