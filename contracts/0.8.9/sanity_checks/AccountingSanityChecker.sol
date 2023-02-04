@@ -4,6 +4,7 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
+import {Math256} from "../../common/lib/Math256.sol";
 import {SafeCast} from "../../common/lib/SafeCast.sol";
 import {AccessControlEnumerable} from "../utils/access/AccessControlEnumerable.sol";
 import {PositiveTokenRebaseLimiter, LimiterState} from "../lib/PositiveTokenRebaseLimiter.sol";
@@ -34,29 +35,49 @@ interface IWithdrawalQueue {
         );
 }
 
+/// @notice The set of restrictions used in the sanity checks of the oracle report
+/// @dev struct is loaded from the storage and stored in memory during the tx running
 struct LimitsList {
+    /// @notice The max possible number of validators that might appear or exit on the Consensus
+    ///     Layer during one epoch
     uint256 churnValidatorsByEpochLimit;
+    /// @notice The max decrease of the total validators' balances on the Consensus Layer since
+    ///     the previous oracle report
+    /// @dev Represented in the Basis Points (100% == 100_00)
     uint256 oneOffCLBalanceDecreaseLimit;
+    /// @notice The max annual increase of the total validators' balances on the Consensus Layer
+    ///     since the previous oracle report
+    /// @dev Represented in the Basis Points (100% == 100_00)
     uint256 annualBalanceIncreaseLimit;
-    uint256 requestCreationBlockMargin;
+    /// @notice The max deviation of stETH.totalPooledEther() / stETH.totalShares() ratio since
+    ///     the previous oracle report
+    /// @dev Represented in the Basis Points (100% == 100_00)
+    uint256 shareRateDeviationLimit;
+    /// @notice The min time required to be passed from the creation of the request to be
+    ///     finalized till the time of the oracle report
+    uint256 requestTimestampMargin;
+    /// @notice The positive token rebase allowed per single LidoOracle report
+    /// @dev uses 1e9 precision, e.g.: 1e6 - 0.1%; 1e9 - 100%, see `setMaxPositiveTokenRebase()`
     uint256 maxPositiveTokenRebase;
 }
 
+/// @dev The packed version of the LimitsList struct to be effectively persisted in storage
 struct LimitsListPacked {
     uint8 churnValidatorsByEpochLimit;
     uint16 oneOffCLBalanceDecreaseLimit;
     uint16 annualBalanceIncreaseLimit;
-    uint64 requestCreationBlockMargin;
-    /// @dev positive token rebase allowed per single LidoOracle report
-    /// uses 1e9 precision, e.g.: 1e6 - 0.1%; 1e9 - 100%, see `setMaxPositiveTokenRebase()`
+    uint16 shareRateDeviationLimit;
+    uint64 requestTimestampMargin;
     uint64 maxPositiveTokenRebase;
 }
 
-contract AccountingSanityChecker is AccessControlEnumerable {
-    using PositiveTokenRebaseLimiter for LimiterState.Data;
-    using LimitsListUnpacker for LimitsListPacked;
+/// @title Sanity checks for the Lido's oracle report
+/// @notice The contracts contain view methods to perform sanity checks of the Lido's oracle report
+///     and lever methods for granular tuning of the params of the checks
+contract OracleReportSanityChecker is AccessControlEnumerable {
     using LimitsListPacker for LimitsList;
-    using LimitsListUtils for LimitsList;
+    using LimitsListUnpacker for LimitsListPacked;
+    using PositiveTokenRebaseLimiter for LimiterState.Data;
 
     bytes32 public constant ALL_LIMITS_MANAGER_ROLE = keccak256("LIMITS_MANAGER_ROLE");
     bytes32 public constant CHURN_VALIDATORS_BY_EPOCH_LIMIT_MANGER_ROLE =
@@ -65,17 +86,16 @@ contract AccountingSanityChecker is AccessControlEnumerable {
         keccak256("CHURN_VALIDATORS_BY_EPOCH_LIMIT_MANGER_ROLE");
     bytes32 public constant ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE =
         keccak256("ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE");
-    bytes32 public constant REQUEST_CREATION_BLOCK_MARGIN_MANAGER_ROLE =
-        keccak256("REQUEST_CREATION_BLOCK_MARGIN_MANAGER_ROLE");
+    bytes32 public constant SHARE_RATE_DEVIATION_LIMIT_MANAGER_ROLE =
+        keccak256("SHARE_RATE_DEVIATION_LIMIT_MANAGER_ROLE");
+    bytes32 public constant REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE = keccak256("REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE");
     bytes32 public constant MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE =
         keccak256("MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE");
 
-    uint256 private constant MAX_BASIS_POINTS = 10000;
     uint256 private constant SLOT_DURATION = 12;
     uint256 private constant EPOCH_DURATION = 32 * SLOT_DURATION;
 
     ILidoLocator private immutable LIDO_LOCATOR;
-
     LimitsListPacked private _limits;
 
     struct ManagersRoster {
@@ -83,10 +103,15 @@ contract AccountingSanityChecker is AccessControlEnumerable {
         address[] churnValidatorsByEpochLimitManagers;
         address[] oneOffCLBalanceDecreaseLimitManagers;
         address[] annualBalanceIncreaseLimitManagers;
-        address[] requestCreationBlockMarginManagers;
+        address[] shareRateDeviationLimitManagers;
+        address[] requestTimestampMarginManagers;
         address[] maxPositiveTokenRebaseManagers;
     }
 
+    /// @param _lidoLocator address of the LidoLocator instance
+    /// @param _admin address to grant DEFAULT_ADMIN_ROLE of the AccessControl contract
+    /// @param _limitsList initial values to be set for the limits list
+    /// @param _managersRoster list of the address to grant permissions for granular limits management
     constructor(
         address _lidoLocator,
         address _admin,
@@ -103,159 +128,123 @@ contract AccountingSanityChecker is AccessControlEnumerable {
             _managersRoster.oneOffCLBalanceDecreaseLimitManagers
         );
         _grantRole(ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE, _managersRoster.annualBalanceIncreaseLimitManagers);
-        _grantRole(REQUEST_CREATION_BLOCK_MARGIN_MANAGER_ROLE, _managersRoster.requestCreationBlockMarginManagers);
+        _grantRole(SHARE_RATE_DEVIATION_LIMIT_MANAGER_ROLE, _managersRoster.shareRateDeviationLimitManagers);
+        _grantRole(REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE, _managersRoster.requestTimestampMarginManagers);
         _grantRole(MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE, _managersRoster.maxPositiveTokenRebaseManagers);
     }
 
+    /// @notice returns the address of the LidoLocator
     function getLidoLocator() public view returns (address) {
         return address(LIDO_LOCATOR);
     }
 
-    function getLimits() public view returns (LimitsList memory) {
+    /// @notice Returns the limits list for the Lido's oracle report sanity checks
+    function getOracleReportLimits() public view returns (LimitsList memory) {
         return _limits.unpack();
     }
 
-    /**
-     * @dev Get max positive rebase allowed per single oracle report
-     * token rebase happens on total supply adjustment,
-     * huge positive rebase can incur oracle report sandwitching.
-     *
-     * stETH balance for the `account` defined as:
-     * balanceOf(account) = shares[account] * totalPooledEther / totalShares = shares[account] * shareRate
-     *
-     * Suppose shareRate changes when oracle reports (see `handleOracleReport`)
-     * which means that token rebase happens:
-     *
-     * preShareRate = preTotalPooledEther() / preTotalShares()
-     * postShareRate = postTotalPooledEther() / postTotalShares()
-     * R = (postShareRate - preShareRate) / preShareRate
-     *
-     * R > 0 corresponds to the relative positive rebase value (i.e., instant APR)
-     *
-     * NB: The value is not set by default (explicit initialization required),
-     * the recommended sane values are from 0.05% to 0.1%.
-     *
-     * @return maxPositiveTokenRebase max positive token rebase value with 1e9 precision:
-     *   e.g.: 1e6 - 0.1%; 1e9 - 100%
-     * - zero value means unititialized
-     * - type(uint64).max means unlimited
-     */
-    function getMaxPositiveTokenRebase() public view returns (uint256 maxPositiveTokenRebase) {
+    /// @notice Returns max positive token rebase value with 1e9 precision:
+    ///     e.g.: 1e6 - 0.1%; 1e9 - 100%
+    ///     - zero value means unititialized
+    ///     - type(uint64).max means unlimited
+    ///
+    /// @dev Get max positive rebase allowed per single oracle report token rebase happens on total
+    ///     supply adjustment, huge positive rebase can incur oracle report sandwiching.
+    ///
+    ///     stETH balance for the `account` defined as:
+    ///         balanceOf(account) =
+    ///             shares[account] * totalPooledEther / totalShares = shares[account] * shareRate
+    ///
+    ///     Suppose shareRate changes when oracle reports (see `handleOracleReport`)
+    ///     which means that token rebase happens:
+    ///
+    ///         preShareRate = preTotalPooledEther() / preTotalShares()
+    ///         postShareRate = postTotalPooledEther() / postTotalShares()
+    ///         R = (postShareRate - preShareRate) / preShareRate
+    ///
+    ///         R > 0 corresponds to the relative positive rebase value (i.e., instant APR)
+    ///
+    /// NB: The value is not set by default (explicit initialization required),
+    ///     the recommended sane values are from 0.05% to 0.1%.
+    function getMaxPositiveTokenRebase() public view returns (uint256) {
         return _limits.maxPositiveTokenRebase;
     }
 
-    function setLimits(LimitsList memory _limitsList) external onlyRole(ALL_LIMITS_MANAGER_ROLE) {
+    /// @notice Sets the new values for the limits list
+    /// @param _limitsList new limits list
+    function setOracleReportLimits(LimitsList memory _limitsList) external onlyRole(ALL_LIMITS_MANAGER_ROLE) {
         _updateLimits(_limitsList);
     }
 
+    /// @notice Sets the new value for the churnValidatorsByEpochLimit
+    /// @param _churnValidatorsByEpochLimit new churnValidatorsByEpochLimit value
     function setChurnValidatorsByEpochLimit(uint256 _churnValidatorsByEpochLimit)
         external
         onlyRole(CHURN_VALIDATORS_BY_EPOCH_LIMIT_MANGER_ROLE)
     {
-        _updateLimits(_limits.unpack().setChurnValidatorsByEpochLimit(_churnValidatorsByEpochLimit));
+        LimitsList memory limitsList = _limits.unpack();
+        limitsList.churnValidatorsByEpochLimit = _churnValidatorsByEpochLimit;
+        _updateLimits(limitsList);
     }
 
+    /// @notice Sets the new value for the oneOffCLBalanceDecreaseLimit
+    /// @param _oneOffCLBalanceDecreaseLimit new oneOffCLBalanceDecreaseLimit value
     function setOneOffCLBalanceDecreaseLimit(uint256 _oneOffCLBalanceDecreaseLimit)
         external
         onlyRole(ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE)
     {
-        _updateLimits(_limits.unpack().setOneOffCLBalanceDecreaseLimit(_oneOffCLBalanceDecreaseLimit));
+        LimitsList memory limitsList = _limits.unpack();
+        limitsList.oneOffCLBalanceDecreaseLimit = _oneOffCLBalanceDecreaseLimit;
+        _updateLimits(limitsList);
     }
 
+    /// @notice Sets the new value for the annualBalanceIncreaseLimit
+    /// @param _annualBalanceIncreaseLimit new annualBalanceIncreaseLimit value
     function setAnnualBalanceIncreaseLimit(uint256 _annualBalanceIncreaseLimit)
         external
         onlyRole(ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE)
     {
-        _updateLimits(_limits.unpack().setAnnualBalanceIncreaseLimit(_annualBalanceIncreaseLimit));
+        LimitsList memory limitsList = _limits.unpack();
+        limitsList.annualBalanceIncreaseLimit = _annualBalanceIncreaseLimit;
+        _updateLimits(limitsList);
     }
 
-    function setRequestCreationBlockMargin(uint256 _requestCreationBlockMargin)
+    /// @notice Sets the new value for the shareRateDeviationLimit
+    /// @param _shareRateDeviationLimit new shareRateDeviationLimit value
+    function setShareRateDeviationLimit(uint256 _shareRateDeviationLimit)
         external
-        onlyRole(REQUEST_CREATION_BLOCK_MARGIN_MANAGER_ROLE)
+        onlyRole(SHARE_RATE_DEVIATION_LIMIT_MANAGER_ROLE)
     {
-        _updateLimits(_limits.unpack().setRequestCreationBlockMargin(_requestCreationBlockMargin));
+        LimitsList memory limitsList = _limits.unpack();
+        limitsList.shareRateDeviationLimit = _shareRateDeviationLimit;
+        _updateLimits(limitsList);
     }
 
-    /**
-     * @dev Set max positive token rebase allowed per single oracle report
-     * token rebase happens on total supply adjustment,
-     * huge positive rebase can incur oracle report sandwitching.
-     *
-     * @param _maxTokenPositiveRebase max positive token rebase value with 1e9 precision:
-     *   e.g.: 1e6 - 0.1%; 1e9 - 100%
-     * - passing zero value is prohibited
-     * - to allow unlimited rebases, pass max uint64, i.e.: type(uint64).max
-     */
-    function setMaxPositiveTokenRebase(uint256 _maxTokenPositiveRebase)
+    /// @notice Sets the new value for the requestTimestampMargin
+    /// @param _requestTimestampMargin new requestTimestampMargin value
+    function setRequestTimestampMargin(uint256 _requestTimestampMargin)
+        external
+        onlyRole(REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE)
+    {
+        LimitsList memory limitsList = _limits.unpack();
+        limitsList.requestTimestampMargin = _requestTimestampMargin;
+        _updateLimits(limitsList);
+    }
+
+    /// @notice Set max positive token rebase allowed per single oracle report token rebase happens
+    ///     on total supply adjustment, huge positive rebase can incur oracle report sandwiching.
+    ///
+    /// @param _maxPositiveTokenRebase max positive token rebase value with 1e9 precision:
+    ///     e.g.: 1e6 - 0.1%; 1e9 - 100%
+    ///     - passing zero value is prohibited
+    ///     - to allow unlimited rebases, pass max uint64, i.e.: type(uint64).max
+    function setMaxPositiveTokenRebase(uint256 _maxPositiveTokenRebase)
         external
         onlyRole(MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE)
     {
-        _updateLimits(_limits.unpack().setMaxPositiveTokenRebase(_maxTokenPositiveRebase));
-    }
-
-    function checkReport(
-        uint256 _timeElapsed,
-        uint256 _preCLBalance,
-        uint256 _postCLBalance,
-        uint256 _withdrawalVaultBalance,
-        uint256 _appearedValidators,
-        uint256 _exitedValidators,
-        uint256 _requestIdToFinalizeUpTo,
-        uint256 _reportBlockNumber,
-        uint256 _finalizationShareRate
-    ) external view {
-        // 1. Withdrawals vault one-off reported balance
-        address withdrawalVault = LIDO_LOCATOR.getWithdrawalVault();
-        if (_withdrawalVaultBalance > withdrawalVault.balance) {
-            revert IncorrectWithdrawalsVaultBalance(_withdrawalVaultBalance);
-        }
-        LimitsList memory limits = _limits.unpack();
-
-        // 2. Consensus Layer one-off balances decrease
-        uint256 unifiedPostCLBalance = _postCLBalance + _withdrawalVaultBalance;
-        if (_preCLBalance > unifiedPostCLBalance) {
-            uint256 oneOffCLBalanceDecrease = (MAX_BASIS_POINTS * (_preCLBalance - unifiedPostCLBalance)) /
-                _preCLBalance;
-            if (oneOffCLBalanceDecrease > limits.oneOffCLBalanceDecreaseLimit) {
-                revert IncorrectCLBalanceDecrease(oneOffCLBalanceDecrease);
-            }
-        }
-
-        // 3. Consensus Layer annual balances increase
-        if (_postCLBalance > _preCLBalance) {
-            uint256 balanceIncrease = _postCLBalance - _preCLBalance;
-
-            uint256 annualBalanceDiff = ((365 days * MAX_BASIS_POINTS) * balanceIncrease) /
-                _preCLBalance /
-                _timeElapsed;
-            if (annualBalanceDiff > limits.annualBalanceIncreaseLimit) {
-                revert IncorrectCLBalanceIncrease(annualBalanceDiff);
-            }
-        }
-
-        // 4. Activation & exit churn limit
-        uint256 churnLimit = (limits.churnValidatorsByEpochLimit * _timeElapsed) / EPOCH_DURATION;
-        if (_appearedValidators > churnLimit) {
-            revert IncorrectAppearedValidators();
-        }
-        if (_exitedValidators > churnLimit) {
-            revert IncorrectExitedValidators();
-        }
-
-        // 5. No finalized id up to newer than the allowed report margin
-        address withdrawalQueue = LIDO_LOCATOR.getWithdrawalQueue();
-        (, , , uint256 lastRequestCreationBlock, , ) = IWithdrawalQueue(withdrawalQueue).getWithdrawalRequestStatus(
-            _requestIdToFinalizeUpTo
-        );
-        if (_reportBlockNumber < lastRequestCreationBlock + limits.requestCreationBlockMargin) {
-            revert IncorrectRequestFinalization();
-        }
-
-        // 6. shareRate calculated off-chain is consistent with the on-chain one
-        address lido = LIDO_LOCATOR.getLido();
-        if (_finalizationShareRate != ILido(lido).getSharesByPooledEth(1 ether)) {
-            revert IncorrectShareRate();
-        }
+        LimitsList memory limitsList = _limits.unpack();
+        limitsList.maxPositiveTokenRebase = _maxPositiveTokenRebase;
+        _updateLimits(limitsList);
     }
 
     function smoothenTokenRebase(
@@ -277,57 +266,176 @@ contract AccountingSanityChecker is AccessControlEnumerable {
         elRewards = tokenRebaseLimiter.appendEther(_elRewardsVaultBalance);
     }
 
+    function checkLidoOracleReport(
+        uint256 _timeElapsed,
+        uint256 _preCLBalance,
+        uint256 _postCLBalance,
+        uint256 _withdrawalVaultBalance,
+        uint256 _finalizationShareRate
+    ) external view {
+        LimitsList memory limitsList = _limits.unpack();
+
+        // 1. Withdrawals vault one-off reported balance
+        address withdrawalVault = LIDO_LOCATOR.getWithdrawalVault();
+        _checkWithdrawalVaultBalance(withdrawalVault.balance, _withdrawalVaultBalance);
+
+        // 2. Consensus Layer one-off balance decrease
+        _checkOneOffCLBalanceDecrease(limitsList, _preCLBalance, _postCLBalance + _withdrawalVaultBalance);
+
+        // 3. Consensus Layer annual balances increase
+        _checkAnnualBalancesIncrease(limitsList, _preCLBalance, _postCLBalance, _timeElapsed);
+
+        // 4. shareRate calculated off-chain is consistent with the on-chain one
+        address lido = LIDO_LOCATOR.getLido();
+        _checkFinalizationShareRate(limitsList, lido, _finalizationShareRate);
+    }
+
+    function checkStakingRouterOracleReport(
+        uint256 _timeElapsed,
+        uint256 _appearedValidators,
+        uint256 _exitedValidators
+    ) external view {
+        LimitsList memory limitsList = _limits.unpack();
+        // 1. Activation & exit churn limit
+        _checkValidatorsChurnLimit(limitsList, _appearedValidators, _exitedValidators, _timeElapsed);
+    }
+
+    function checkWithdrawalQueueOracleReport(uint256 _requestIdToFinalizeUpTo, uint256 _refReportTimestamp)
+        external
+        view
+    {
+        LimitsList memory limitsList = _limits.unpack();
+        address withdrawalQueue = LIDO_LOCATOR.getWithdrawalQueue();
+        // 1. No finalized id up to newer than the allowed report margin
+        _checkRequestIdToFinalizeUpTo(limitsList, withdrawalQueue, _requestIdToFinalizeUpTo, _refReportTimestamp);
+    }
+
+    function _checkWithdrawalVaultBalance(
+        uint256 _actualWithdrawalVaultBalance,
+        uint256 _reportedWithdrawalVaultBalance
+    ) internal pure {
+        if (_reportedWithdrawalVaultBalance > _actualWithdrawalVaultBalance)
+            revert IncorrectWithdrawalsVaultBalance(_actualWithdrawalVaultBalance);
+    }
+
+    function _checkOneOffCLBalanceDecrease(
+        LimitsList memory _limitsList,
+        uint256 _preCLBalance,
+        uint256 _unifiedPostCLBalance
+    ) internal pure {
+        if (_preCLBalance <= _unifiedPostCLBalance) return;
+        uint256 oneOffCLBalanceDecreaseBP = (SafeCast.MAX_BASIS_POINTS * (_preCLBalance - _unifiedPostCLBalance)) /
+            _preCLBalance;
+        if (oneOffCLBalanceDecreaseBP > _limitsList.oneOffCLBalanceDecreaseLimit)
+            revert IncorrectCLBalanceDecrease(oneOffCLBalanceDecreaseBP);
+    }
+
+    function _checkAnnualBalancesIncrease(
+        LimitsList memory _limitsList,
+        uint256 _preCLBalance,
+        uint256 _postCLBalance,
+        uint256 _timeElapsed
+    ) internal pure {
+        if (_preCLBalance >= _postCLBalance) return;
+        uint256 balanceIncrease = _postCLBalance - _preCLBalance;
+        uint256 annualBalanceIncrease = (365 days * SafeCast.MAX_BASIS_POINTS * balanceIncrease) /
+            _preCLBalance /
+            _timeElapsed;
+        if (annualBalanceIncrease > _limitsList.annualBalanceIncreaseLimit)
+            revert IncorrectCLBalanceIncrease(annualBalanceIncrease);
+    }
+
+    function _checkValidatorsChurnLimit(
+        LimitsList memory _limitsList,
+        uint256 _appearedValidators,
+        uint256 _exitedValidators,
+        uint256 _timeElapsed
+    ) internal pure {
+        uint256 churnLimit = (_limitsList.churnValidatorsByEpochLimit * _timeElapsed) / EPOCH_DURATION;
+        if (_appearedValidators > churnLimit) revert IncorrectAppearedValidators(churnLimit);
+        if (_exitedValidators > churnLimit) revert IncorrectExitedValidators(churnLimit);
+    }
+
+    function _checkRequestIdToFinalizeUpTo(
+        LimitsList memory _limitsList,
+        address _withdrawalQueue,
+        uint256 _requestIdToFinalizeUpTo,
+        uint256 _refReportTimestamp
+    ) internal view {
+        (, , , uint256 requestTimestampToFinalizeUpTo, , ) = IWithdrawalQueue(_withdrawalQueue)
+            .getWithdrawalRequestStatus(_requestIdToFinalizeUpTo);
+        if (_refReportTimestamp < requestTimestampToFinalizeUpTo + _limitsList.requestTimestampMargin)
+            revert IncorrectRequestFinalization(requestTimestampToFinalizeUpTo);
+    }
+
+    function _checkFinalizationShareRate(
+        LimitsList memory _limitsList,
+        address _lido,
+        uint256 _finalizationShareRate
+    ) internal view {
+        uint256 actualShareRate = ILido(_lido).getSharesByPooledEth(1 ether);
+        uint256 finalizationShareDiff = Math256.abs(
+            SafeCast.toInt256(_finalizationShareRate) - SafeCast.toInt256(actualShareRate)
+        );
+        // TODO: check use actualShareRate or max(actualShareRate, _finalizationShareRate) ?
+        uint256 finalizationShareDeviation = (SafeCast.MAX_BASIS_POINTS * finalizationShareDiff) / actualShareRate;
+        if (finalizationShareDeviation > _limitsList.shareRateDeviationLimit)
+            revert IncorrectFinalizationShareRate(finalizationShareDeviation);
+    }
+
     function _grantRole(bytes32 _role, address[] memory _accounts) internal {
         for (uint256 i = 0; i < _accounts.length; ++i) {
             _grantRole(_role, _accounts[i]);
         }
     }
 
-    function _updateLimits(LimitsList memory _new) internal {
-        _updateLimits(_limits.unpack(), _new);
-    }
-
-    function _updateLimits(LimitsList memory _old, LimitsList memory _new) internal {
-        if (_old.churnValidatorsByEpochLimit != _new.churnValidatorsByEpochLimit) {
-            emit ChurnValidatorsByEpochLimitSet(_new.churnValidatorsByEpochLimit);
+    function _updateLimits(LimitsList memory _newLimitsList) internal {
+        LimitsList memory _oldLimitsList = _limits.unpack();
+        if (_oldLimitsList.churnValidatorsByEpochLimit != _newLimitsList.churnValidatorsByEpochLimit) {
+            emit ChurnValidatorsByEpochLimitSet(_newLimitsList.churnValidatorsByEpochLimit);
         }
-        if (_old.oneOffCLBalanceDecreaseLimit != _new.oneOffCLBalanceDecreaseLimit) {
-            emit OneOffCLBalanceDecreaseSet(_new.oneOffCLBalanceDecreaseLimit);
+        if (_oldLimitsList.oneOffCLBalanceDecreaseLimit != _newLimitsList.oneOffCLBalanceDecreaseLimit) {
+            emit OneOffCLBalanceDecreaseSet(_newLimitsList.oneOffCLBalanceDecreaseLimit);
         }
-        if (_old.annualBalanceIncreaseLimit != _new.annualBalanceIncreaseLimit) {
-            emit AnnualBalanceIncreaseLimitSet(_new.annualBalanceIncreaseLimit);
+        if (_oldLimitsList.annualBalanceIncreaseLimit != _newLimitsList.annualBalanceIncreaseLimit) {
+            emit AnnualBalanceIncreaseLimitSet(_newLimitsList.annualBalanceIncreaseLimit);
         }
-        if (_old.requestCreationBlockMargin != _new.requestCreationBlockMargin) {
-            emit RequestCreationBlockMarginSet(_new.requestCreationBlockMargin);
+        if (_oldLimitsList.shareRateDeviationLimit != _newLimitsList.shareRateDeviationLimit) {
+            emit ShareRateDeviationLimitSet(_newLimitsList.shareRateDeviationLimit);
         }
-        if (_old.maxPositiveTokenRebase != _new.maxPositiveTokenRebase) {
-            emit MaxPositiveTokenRebaseSet(_new.maxPositiveTokenRebase);
+        if (_oldLimitsList.requestTimestampMargin != _newLimitsList.requestTimestampMargin) {
+            emit RequestTimestampMarginSet(_newLimitsList.requestTimestampMargin);
         }
-        _limits = _new.pack();
+        if (_oldLimitsList.maxPositiveTokenRebase != _newLimitsList.maxPositiveTokenRebase) {
+            emit MaxPositiveTokenRebaseSet(_newLimitsList.maxPositiveTokenRebase);
+        }
+        _limits = _newLimitsList.pack();
     }
 
     event OneOffCLBalanceDecreaseSet(uint256 oneOffCLBalanceDecreaseLimit);
     event ChurnValidatorsByEpochLimitSet(uint256 churnValidatorsByEpochLimit);
     event AnnualBalanceIncreaseLimitSet(uint256 annualBalanceIncreaseLimit);
-    event RequestCreationBlockMarginSet(uint256 requestCreationBlockMargin);
+    event ShareRateDeviationLimitSet(uint256 shareRateDeviationLimit);
+    event RequestTimestampMarginSet(uint256 requestTimestampMargin);
     event MaxPositiveTokenRebaseSet(uint256 maxPositiveTokenRebase);
 
-    error IncorrectWithdrawalsVaultBalance(uint256 withdrawalVaultBalance);
-    error IncorrectCLBalanceDecrease(uint256 clBalanceDecrease);
+    error IncorrectWithdrawalsVaultBalance(uint256 actualWithdrawalVaultBalance);
+    error IncorrectCLBalanceDecrease(uint256 oneOffCLBalanceDecreaseBP);
     error IncorrectCLBalanceIncrease(uint256 annualBalanceDiff);
-    error IncorrectAppearedValidators();
-    error IncorrectExitedValidators();
-    error IncorrectRequestFinalization();
-    error IncorrectShareRate();
+    error IncorrectAppearedValidators(uint256 churnLimit);
+    error IncorrectExitedValidators(uint256 churnLimit);
+    error IncorrectRequestFinalization(uint256 requestCreationBlock);
+    error IncorrectFinalizationShareRate(uint256 finalizationShareDeviation);
     error ErrorValueTooHigh(string name, uint256 maxValue, uint256 value);
 }
 
 library LimitsListPacker {
     function pack(LimitsList memory _limitsList) internal pure returns (LimitsListPacked memory res) {
         res.churnValidatorsByEpochLimit = SafeCast.toUint8(_limitsList.churnValidatorsByEpochLimit);
-        res.oneOffCLBalanceDecreaseLimit = SafeCast.toUint16(_limitsList.oneOffCLBalanceDecreaseLimit);
-        res.annualBalanceIncreaseLimit = SafeCast.toUint16(_limitsList.annualBalanceIncreaseLimit);
-        res.requestCreationBlockMargin = SafeCast.toUint64(_limitsList.requestCreationBlockMargin);
+        res.oneOffCLBalanceDecreaseLimit = SafeCast.toBasisPoints(_limitsList.oneOffCLBalanceDecreaseLimit);
+        res.annualBalanceIncreaseLimit = SafeCast.toBasisPoints(_limitsList.annualBalanceIncreaseLimit);
+        res.shareRateDeviationLimit = SafeCast.toBasisPoints(_limitsList.shareRateDeviationLimit);
+        res.requestTimestampMargin = SafeCast.toUint64(_limitsList.requestTimestampMargin);
         res.maxPositiveTokenRebase = SafeCast.toUint64(_limitsList.maxPositiveTokenRebase);
     }
 }
@@ -337,54 +445,8 @@ library LimitsListUnpacker {
         res.churnValidatorsByEpochLimit = _limitsList.churnValidatorsByEpochLimit;
         res.oneOffCLBalanceDecreaseLimit = _limitsList.oneOffCLBalanceDecreaseLimit;
         res.annualBalanceIncreaseLimit = _limitsList.annualBalanceIncreaseLimit;
-        res.requestCreationBlockMargin = _limitsList.requestCreationBlockMargin;
+        res.shareRateDeviationLimit = _limitsList.shareRateDeviationLimit;
+        res.requestTimestampMargin = _limitsList.requestTimestampMargin;
         res.maxPositiveTokenRebase = _limitsList.maxPositiveTokenRebase;
-    }
-}
-
-library LimitsListUtils {
-    function setChurnValidatorsByEpochLimit(LimitsList memory _limitsList, uint256 _churnValidatorsByEpochLimit)
-        internal
-        pure
-        returns (LimitsList memory)
-    {
-        _limitsList.churnValidatorsByEpochLimit = _churnValidatorsByEpochLimit;
-        return _limitsList;
-    }
-
-    function setOneOffCLBalanceDecreaseLimit(LimitsList memory _limitsList, uint256 _oneOffCLBalanceDecreaseLimit)
-        internal
-        pure
-        returns (LimitsList memory)
-    {
-        _limitsList.oneOffCLBalanceDecreaseLimit = _oneOffCLBalanceDecreaseLimit;
-        return _limitsList;
-    }
-
-    function setAnnualBalanceIncreaseLimit(LimitsList memory _limitsList, uint256 _annualBalanceIncreaseLimit)
-        internal
-        pure
-        returns (LimitsList memory)
-    {
-        _limitsList.oneOffCLBalanceDecreaseLimit = _annualBalanceIncreaseLimit;
-        return _limitsList;
-    }
-
-    function setRequestCreationBlockMargin(LimitsList memory _limitsList, uint256 _requestCreationBlockMargin)
-        internal
-        pure
-        returns (LimitsList memory)
-    {
-        _limitsList.requestCreationBlockMargin = _requestCreationBlockMargin;
-        return _limitsList;
-    }
-
-    function setMaxPositiveTokenRebase(LimitsList memory _limitsList, uint256 _maxPositiveTokenRebase)
-        internal
-        pure
-        returns (LimitsList memory)
-    {
-        _limitsList.maxPositiveTokenRebase = _maxPositiveTokenRebase;
-        return _limitsList;
     }
 }
