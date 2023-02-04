@@ -8,7 +8,7 @@ pragma solidity 0.4.24;
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 
-import "./interfaces/ILidoLocator.sol";
+import "../common/interfaces/ILidoLocator.sol";
 import "./interfaces/ISelfOwnedStETHBurner.sol";
 
 import "./lib/StakeLimitUtils.sol";
@@ -369,6 +369,7 @@ contract Lido is StETHPermit, AragonApp, Versioned {
      * are treated as a user deposit
      */
     function receiveELRewards() external payable {
+
         require(msg.sender == getLidoLocator().getELRewardsVault(), "EXECUTION_LAYER_REAWARDS_VAULT_ONLY");
 
         TOTAL_EL_REWARDS_COLLECTED_POSITION.setStorageUint256(getTotalELRewardsCollected().add(msg.value));
@@ -382,7 +383,7 @@ contract Lido is StETHPermit, AragonApp, Versioned {
     * are treated as a user deposit
     */
     function receiveWithdrawals() external payable {
-        require(msg.sender == getLidoLocator().getWithdrawalVault());
+        require(msg.sender == getLidoLocator().withdrawalVault());
 
         emit WithdrawalsReceived(msg.value);
     }
@@ -393,7 +394,7 @@ contract Lido is StETHPermit, AragonApp, Versioned {
      * are treated as a user deposit
      */
     function receiveStakingRouter() external payable {
-        require(msg.sender == getLidoLocator().getStakingRouter());
+        require(msg.sender == getLidoLocator().stakingRouter());
 
         emit StakingRouterTransferReceived(msg.value);
     }
@@ -515,7 +516,7 @@ contract Lido is StETHPermit, AragonApp, Versioned {
     ) {
         // TODO: safety checks
 
-        require(msg.sender == getLidoLocator().getOracle(), "APP_AUTH_FAILED");
+        require(msg.sender == getLidoLocator().accountingOracle(), "APP_AUTH_FAILED");
         _whenNotStopped();
 
         return _handleOracleReport(
@@ -588,12 +589,30 @@ contract Lido is StETHPermit, AragonApp, Versioned {
         beaconBalance = CL_BALANCE_POSITION.getStorageUint256();
     }
 
+    /// DEPRECATED PUBLIC METHODS
+
     /**
      * @notice Returns current withdrawal credentials of deposited validators
      * @dev DEPRECATED: use StakingRouter.getWithdrawalCredentials() instead
      */
-    function getWithdrawalCredentials() public view returns (bytes32) {
-        return IStakingRouter(getLidoLocator().getStakingRouter()).getWithdrawalCredentials();
+    function getWithdrawalCredentials() external view returns (bytes32) {
+        return IStakingRouter(getLidoLocator().stakingRouter()).getWithdrawalCredentials();
+    }
+
+    /**
+     * @notice Returns legacy oracle
+     * @dev DEPRECATED: the `AccountingOracle` superseeded the old one
+     */
+    function getOracle() external view returns (address) {
+        return getLidoLocator().legacyOracle();
+    }
+
+    /**
+     * @notice Returns the treasury address
+     * @dev DEPRECATED: use LidoLocator.treasury()
+     */
+    function getTreasury() external view returns (address) {
+        return getLidoLocator().treasury();
     }
 
 
@@ -631,20 +650,29 @@ contract Lido is StETHPermit, AragonApp, Versioned {
         uint256 _requestIdToFinalizeUpTo,
         uint256 _finalizationShareRate
     ) internal {
-        ILidoLocator locator = getLidoLocator();
+        (
+            address elRewardsVault,
+            ,
+            ,
+            ,
+            address withdrawalQueue,
+            address withdrawalVault
+        ) = getLidoLocator().coreComponents();
+
         // withdraw execution layer rewards and put them to the buffer
         if (_elRewardsToWithdraw > 0) {
-            ILidoExecutionLayerRewardsVault(locator.getELRewardsVault()).withdrawRewards(_elRewardsToWithdraw);
+            ILidoExecutionLayerRewardsVault(elRewardsVault).withdrawRewards(_elRewardsToWithdraw);
         }
 
         // withdraw withdrawals and put them to the buffer
         if (_withdrawalsToWithdraw > 0) {
-            IWithdrawalVault(locator.getWithdrawalVault()).withdrawWithdrawals(_withdrawalsToWithdraw);
+            IWithdrawalVault(withdrawalVault).withdrawWithdrawals(_withdrawalsToWithdraw);
         }
 
         uint256 lockedToWithdrawalQueue = 0;
         if (_requestIdToFinalizeUpTo > 0) {
             lockedToWithdrawalQueue = _processWithdrawalQueue(
+                withdrawalQueue,
                 _requestIdToFinalizeUpTo,
                 _finalizationShareRate
             );
@@ -664,10 +692,11 @@ contract Lido is StETHPermit, AragonApp, Versioned {
 
     ///@dev finalize withdrawal requests in the queue, burn their shares and return the amount of ether locked for claiming
     function _processWithdrawalQueue(
+        address _withdrawalQueue,
         uint256 _requestIdToFinalizeUpTo,
         uint256 _finalizationShareRate
     ) internal returns (uint256 lockedToWithdrawalQueue) {
-        IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(getLidoLocator().getWithdrawalQueue());
+        IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_withdrawalQueue);
 
         if (withdrawalQueue.isPaused()) return 0;
 
@@ -773,7 +802,7 @@ contract Lido is StETHPermit, AragonApp, Versioned {
         // The effect is that the given percentage of the reward goes to the fee recipient, and
         // the rest of the reward is distributed between token holders proportionally to their
         // token shares.
-        IStakingRouter router = IStakingRouter(getLidoLocator().getStakingRouter());
+        IStakingRouter router = IStakingRouter(getLidoLocator().stakingRouter());
 
         (address[] memory recipients,
             uint256[] memory moduleIds,
@@ -822,7 +851,7 @@ contract Lido is StETHPermit, AragonApp, Versioned {
     }
 
     function _transferTreasuryRewards(uint256 treasuryReward) internal {
-        address treasury = getLidoLocator().getTreasury();
+        address treasury = getLidoLocator().treasury();
         _transferShares(address(this), treasury, treasuryReward);
         _emitTransferAfterMintingShares(treasury, treasuryReward);
     }
@@ -934,11 +963,11 @@ contract Lido is StETHPermit, AragonApp, Versioned {
     function deposit(uint256 _maxDepositsCount, uint256 _stakingModuleId, bytes _depositCalldata) external {
         ILidoLocator locator = getLidoLocator();
 
-        require(msg.sender == locator.getDepositSecurityModule(), "APP_AUTH_DSM_FAILED");
+        require(msg.sender == locator.depositSecurityModule(), "APP_AUTH_DSM_FAILED");
         require(_stakingModuleId <= uint24(-1), "STAKING_MODULE_ID_TOO_LARGE");
         _whenNotStopped();
 
-        IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(locator.getWithdrawalQueue());
+        IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(locator.withdrawalQueue());
         require(!withdrawalQueue.isBunkerModeActive(), "CANT_DEPOSIT_IN_BUNKER_MODE");
 
         uint256 bufferedEth = _getBufferedEther();
@@ -953,7 +982,7 @@ contract Lido is StETHPermit, AragonApp, Versioned {
             uint256 unaccountedEth = _getUnaccountedEther();
             /// @dev transfer ether to SR and make deposit at the same time
             /// @notice allow zero value of depositableEth, in this case SR will simply transfer the unaccounted ether to Lido contract
-            uint256 depositedKeysCount = IStakingRouter(locator.getStakingRouter()).deposit.value(depositableEth)(
+            uint256 depositedKeysCount = IStakingRouter(locator.stakingRouter()).deposit.value(depositableEth)(
                 _maxDepositsCount,
                 _stakingModuleId,
                 _depositCalldata
@@ -1027,7 +1056,7 @@ contract Lido is StETHPermit, AragonApp, Versioned {
         postTotalPooledEther = _getTotalPooledEther();
         postTotalShares = _getTotalShares();
 
-        address postTokenRebaseReceiver = getLidoLocator().getPostTokenRebaseReceiver();
+        address postTokenRebaseReceiver = getLidoLocator().rebaseReceiver();
         if (postTokenRebaseReceiver != address(0)) {
             IPostTokenRebaseReceiver(postTokenRebaseReceiver).handlePostTokenRebase(
                 preTotalShares,
@@ -1050,7 +1079,7 @@ contract Lido is StETHPermit, AragonApp, Versioned {
     }
 
     function _applyCoverage(LimiterState.Data memory _tokenRebaseLimiter) internal {
-        ISelfOwnedStETHBurner burner = ISelfOwnedStETHBurner(getLidoLocator().getSelfOwnedStETHBurner());
+        ISelfOwnedStETHBurner burner = ISelfOwnedStETHBurner(getLidoLocator().selfOwnedStEthBurner());
         (uint256 coverShares, uint256 nonCoverShares) = burner.getSharesRequestedToBurn();
         uint256 maxSharesToBurn = _tokenRebaseLimiter.deductShares(coverShares.add(nonCoverShares));
 
