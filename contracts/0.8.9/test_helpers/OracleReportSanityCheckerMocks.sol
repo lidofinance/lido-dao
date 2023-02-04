@@ -5,7 +5,7 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import {ILido, ILidoLocator, IWithdrawalQueue} from "../sanity_checks/AccountingSanityChecker.sol";
+import {ILido, ILidoLocator, IWithdrawalQueue} from "../sanity_checks/OracleReportSanityChecker.sol";
 
 contract LidoStub {
     uint256 private _shareRate = 1 ether;

@@ -1,10 +1,10 @@
 const hre = require('hardhat')
-const { assert } = require('../helpers/assert')
 const { ETH } = require('../helpers/utils')
+const { assert } = require('../helpers/assert')
 
-const mocksFilePath = 'contracts/0.8.9/test_helpers/AccountingSanityCheckerMocks.sol'
-const OracleReportSanityChecker = hre.artifacts.require('OracleReportSanityChecker')
+const mocksFilePath = 'contracts/0.8.9/test_helpers/OracleReportSanityCheckerMocks.sol'
 const LidoMock = hre.artifacts.require(`${mocksFilePath}:LidoStub`)
+const OracleReportSanityChecker = hre.artifacts.require('OracleReportSanityChecker')
 const LidoLocatorMock = hre.artifacts.require(`${mocksFilePath}:LidoLocatorStub`)
 const WithdrawalQueueMock = hre.artifacts.require(`${mocksFilePath}:WithdrawalQueueStub`)
 
