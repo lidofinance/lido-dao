@@ -37,7 +37,8 @@ contract ValidatorsExitBusOracle is BaseOracle {
         uint256 indexed stakingModuleId,
         uint256 indexed nodeOperatorId,
         uint256 indexed validatorIndex,
-        bytes validatorPubkey
+        bytes validatorPubkey,
+        uint256 timestamp
     );
 
     event WarnDataIncompleteProcessing(
@@ -406,7 +407,6 @@ contract ValidatorsExitBusOracle is BaseOracle {
             _storageLastRequestedValidatorIndices();
 
         uint256 lastDataWithoutPubkey = 0;
-        uint256 dataWithoutPubkey;
         uint256 lastNodeOpKey = 0;
         uint256 lastValIndex;
         bytes calldata pubkey;
@@ -416,6 +416,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
         }
 
         while (offset < offsetPastEnd) {
+            uint256 dataWithoutPubkey;
             assembly {
                 // 16 most significant bytes are taken by module id, node op id, and val index
                 dataWithoutPubkey := shr(128, calldataload(offset))
@@ -451,7 +452,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
             lastValIndex = valIndex;
             lastDataWithoutPubkey = dataWithoutPubkey;
 
-            emit ValidatorExitRequest(moduleId, nodeOpId, valIndex, pubkey);
+            emit ValidatorExitRequest(moduleId, nodeOpId, valIndex, pubkey, block.timestamp);
         }
 
         if (lastNodeOpKey != 0) {

@@ -147,12 +147,15 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           assertEvent(tx, 'ProcessingStarted', {expectedArgs: {refSlot: reportFields.refSlot}})
           assert.isTrue((await oracle.getConsensusReport()).processingStarted)
 
+          const {timestamp} = await web3.eth.getBlock(tx.receipt.blockHash)
+
           for (let i = 0; i < exitRequests.length; ++i) {
             assertEvent(tx, 'ValidatorExitRequest', {index: i, expectedArgs: {
               stakingModuleId: exitRequests[i].moduleId,
               nodeOperatorId: exitRequests[i].nodeOpId,
               validatorIndex: exitRequests[i].valIndex,
               validatorPubkey: exitRequests[i].valPubkey,
+              timestamp
             }})
           }
 
