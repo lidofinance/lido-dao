@@ -266,6 +266,14 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         elRewards = tokenRebaseLimiter.appendEther(_elRewardsVaultBalance);
     }
 
+    /// @notice Applies sanity checks to the accounting params of Lido's oracle report
+    /// @param _timeElapsed time elapsed since the previous oracle report
+    /// @param _preCLBalance sum of all Lido validators' balances on the Consensus Layer before the
+    ///     current oracle report
+    /// @param _postCLBalance sum of all Lido validators' balances on the Consensus Layer after the
+    ///     current oracle report
+    /// @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
+    /// @param _finalizationShareRate share rate that should be used for finalization
     function checkLidoOracleReport(
         uint256 _timeElapsed,
         uint256 _preCLBalance,
@@ -275,8 +283,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     ) external view {
         LimitsList memory limitsList = _limits.unpack();
 
-        // 1. Withdrawals vault one-off reported balance
         address withdrawalVault = LIDO_LOCATOR.getWithdrawalVault();
+        // 1. Withdrawals vault one-off reported balance
         _checkWithdrawalVaultBalance(withdrawalVault.balance, _withdrawalVaultBalance);
 
         // 2. Consensus Layer one-off balance decrease
@@ -285,11 +293,17 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         // 3. Consensus Layer annual balances increase
         _checkAnnualBalancesIncrease(limitsList, _preCLBalance, _postCLBalance, _timeElapsed);
 
-        // 4. shareRate calculated off-chain is consistent with the on-chain one
         address lido = LIDO_LOCATOR.getLido();
+        // 4. shareRate calculated off-chain is consistent with the on-chain one
         _checkFinalizationShareRate(limitsList, lido, _finalizationShareRate);
     }
 
+    /// @notice Applies sanity checks to the validators params of Lido's oracle report
+    /// @param _timeElapsed time elapsed since the previous oracle report
+    /// @param _appearedValidators number of validators activated on the Consensus Layer since
+    ///     the previous report
+    /// @param _exitedValidators number of validators deactivated on the Consensus Layer since
+    ///     the previous report
     function checkStakingRouterOracleReport(
         uint256 _timeElapsed,
         uint256 _appearedValidators,
@@ -300,6 +314,10 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _checkValidatorsChurnLimit(limitsList, _appearedValidators, _exitedValidators, _timeElapsed);
     }
 
+    /// @notice Applies sanity checks to the withdrawal requests params of Lido's oracle report
+    /// @param _requestIdToFinalizeUpTo right boundary of requestId range if equals 0, no requests
+    ///     should be finalized
+    /// @param _refReportTimestamp timestamp when the originated oracle report was submitted
     function checkWithdrawalQueueOracleReport(uint256 _requestIdToFinalizeUpTo, uint256 _refReportTimestamp)
         external
         view
@@ -377,7 +395,6 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 finalizationShareDiff = Math256.abs(
             SafeCast.toInt256(_finalizationShareRate) - SafeCast.toInt256(actualShareRate)
         );
-        // TODO: check use actualShareRate or max(actualShareRate, _finalizationShareRate) ?
         uint256 finalizationShareDeviation = (SafeCast.MAX_BASIS_POINTS * finalizationShareDiff) / actualShareRate;
         if (finalizationShareDeviation > _limitsList.shareRateDeviationLimit)
             revert IncorrectFinalizationShareRate(finalizationShareDeviation);
@@ -426,7 +443,6 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     error IncorrectExitedValidators(uint256 churnLimit);
     error IncorrectRequestFinalization(uint256 requestCreationBlock);
     error IncorrectFinalizationShareRate(uint256 finalizationShareDeviation);
-    error ErrorValueTooHigh(string name, uint256 maxValue, uint256 value);
 }
 
 library LimitsListPacker {

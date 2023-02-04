@@ -8,6 +8,14 @@ const LidoMock = hre.artifacts.require(`${mocksFilePath}:LidoStub`)
 const LidoLocatorMock = hre.artifacts.require(`${mocksFilePath}:LidoLocatorStub`)
 const WithdrawalQueueMock = hre.artifacts.require(`${mocksFilePath}:WithdrawalQueueStub`)
 
+function wei(number, units = 'ether') {
+  switch (units) {
+    case 'ether':
+      return BigInt(number) * 10n ** 18n
+  }
+  throw new Error(`Unsupported units "${units}"`)
+}
+
 contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...accounts]) => {
   let oracleReportSanityChecker, lidoLocatorMock, lidoMock, withdrawalQueueMock
   const managersRoster = {
@@ -38,10 +46,6 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
     timeElapsed: 24 * 60 * 60,
     appearedValidators: 10,
     exitedValidators: 5
-  }
-  const correctWithdrawalQueueOracleReport = {
-    requestIdToFinalizeUpTo: 0,
-    refReportTimestamp: 0
   }
 
   before(async () => {
@@ -205,6 +209,45 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
 
     it('passes all checks with correct staking router report data', async () => {
       await oracleReportSanityChecker.checkStakingRouterOracleReport(...Object.values(correctStakingRouterOracleReport))
+    })
+  })
+
+  describe('checkWithdrawalQueueOracleReport()', async () => {
+    const oldRequestId = 1
+    const newRequestId = 2
+    let oldRequestCreationTimestamp, newRequestCreationTimestamp
+    const correctWithdrawalQueueOracleReport = {
+      requestIdToFinalizeUpTo: oldRequestId,
+      refReportTimestamp: -1
+    }
+
+    before(async () => {
+      const currentBlockNumber = await hre.ethers.provider.getBlockNumber()
+      const currentBlock = await hre.ethers.provider.getBlock(currentBlockNumber)
+      correctWithdrawalQueueOracleReport.refReportTimestamp = currentBlock.timestamp
+      oldRequestCreationTimestamp = currentBlock.timestamp - defaultLimitsList.requestTimestampMargin
+      correctWithdrawalQueueOracleReport.requestIdToFinalizeUpTo = oldRequestCreationTimestamp
+      await withdrawalQueueMock.setRequestBlockNumber(oldRequestId, oldRequestCreationTimestamp)
+      newRequestCreationTimestamp = currentBlock.timestamp - Math.floor(defaultLimitsList.requestTimestampMargin / 2)
+      await withdrawalQueueMock.setRequestBlockNumber(newRequestId, newRequestCreationTimestamp)
+    })
+
+    it('reverts with the error IncorrectRequestFinalization() when the creation timestamp of requestIdToFinalizeUpTo is too close to report timestamp', async () => {
+      await assert.revertsWithCustomError(
+        oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
+          ...Object.values({
+            ...correctWithdrawalQueueOracleReport,
+            requestIdToFinalizeUpTo: newRequestId
+          })
+        ),
+        `IncorrectRequestFinalization(${newRequestCreationTimestamp})`
+      )
+    })
+
+    it('passes all checks with correct staking router report data', async () => {
+      await oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
+        ...Object.values(correctWithdrawalQueueOracleReport)
+      )
     })
   })
 })

@@ -22,7 +22,7 @@ contract LidoStub {
 contract WithdrawalQueueStub {
     mapping(uint256 => uint256) private _blockNumbers;
 
-    function setBlockNumber(uint256 _requestId, uint256 _blockNumber) external {
+    function setRequestBlockNumber(uint256 _requestId, uint256 _blockNumber) external {
         _blockNumbers[_requestId] = _blockNumber;
     }
 
