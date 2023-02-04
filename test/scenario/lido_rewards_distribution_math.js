@@ -1,14 +1,15 @@
-const hre = require('hardhat')
 const { BN } = require('bn.js')
 const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
-const { waitBlocks, EvmSnapshot } = require('../helpers/blockchain')
+const { waitBlocks } = require('../helpers/blockchain')
 const { pad, ETH, hexConcat } = require('../helpers/utils')
 const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 const { assert } = require('../helpers/assert')
 const { DSMAttestMessage, DSMPauseMessage, signDepositData } = require('../helpers/signatures')
+const { pushOracleReport } = require('../helpers/oracle')
+const { SECONDS_PER_FRAME } = require('../helpers/constants')
 
 const tenKBN = new BN(10000)
 // Fee and its distribution are in basis points, 10000 corresponding to 100%
@@ -43,9 +44,7 @@ contract('Lido: rewards distribution math', (addresses) => {
   let oracle, anotherCuratedModule
   let treasuryAddr, guardians, depositRoot
   let depositSecurityModule
-  let voting, deployed, snapshot
-
-  var epoch = 100
+  let voting, deployed, consensus
 
   // Each node operator has its Ethereum 1 address, a name and a set of registered
   // validators, each of them defined as a (public key, signature) pair
@@ -75,8 +74,9 @@ contract('Lido: rewards distribution math', (addresses) => {
     ]
   }
 
-  function reportBeacon(validatorsCount, balance) {
-    return oracle.reportBeacon(epoch++, validatorsCount, balance)
+  async function reportBeacon(validatorsCount, balance) {
+    await pushOracleReport(consensus, oracle, validatorsCount, balance)
+    await consensus.advanceTimeBy(SECONDS_PER_FRAME + 1000)
   }
 
   before(async () => {
@@ -109,6 +109,7 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     // mocks
     oracle = deployed.oracle
+    consensus = deployed.consensusContract
 
     depositSecurityModule = deployed.depositSecurityModule
     treasuryAddr = deployed.treasury.address
@@ -402,8 +403,6 @@ contract('Lido: rewards distribution math', (addresses) => {
   })
 
   it(`delta shares are zero on no profit reported after the deposit`, async () => {
-    const beaconState = await pool.getBeaconStat()
-
     const [_, deltas] = await getSharesTokenDeltas(
       () => reportBeacon(2, ETH(32 + 1 + 32)),
       treasuryAddr,
@@ -443,7 +442,6 @@ contract('Lido: rewards distribution math', (addresses) => {
       user2TokenDelta,
       user2SharesDelta
     ] = deltas
-
     const { reportedMintAmount, tos, values } = await readLastPoolEventLog()
 
     const { sharesToMint, nodeOperatorsSharesToMint, treasurySharesToMint, nodeOperatorsFeeToMint, treasuryFeeToMint } =

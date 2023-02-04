@@ -6,12 +6,14 @@ const { EvmSnapshot } = require('../helpers/blockchain')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 const { deployProtocol } = require('../helpers/protocol')
 const { assert } = require('../helpers/assert')
+const { pushOracleReport } = require('../helpers/oracle')
 
 const ModuleSolo = artifacts.require('ModuleSolo.sol')
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 contract('Lido: staking router reward distribution', ([depositor, user2]) => {
-  let app, oracle, curatedModule, stakingRouter, soloModule, snapshot, appManager, voting, treasury
+  let app, oracle, curatedModule, stakingRouter, soloModule, snapshot, appManager, consensus, treasury
+
 
   before(async () => {
     const deployed = await deployProtocol({
@@ -41,6 +43,7 @@ contract('Lido: staking router reward distribution', ([depositor, user2]) => {
     stakingRouter = deployed.stakingRouter
     curatedModule = deployed.stakingModules[0]
     soloModule = deployed.stakingModules[1]
+    consensus = deployed.consensusContract
     oracle = deployed.oracle
     appManager = deployed.appManager.address
     treasury = deployed.treasury.address
@@ -69,7 +72,7 @@ contract('Lido: staking router reward distribution', ([depositor, user2]) => {
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
     const treasuryBalanceBefore = await app.balanceOf(treasury)
-    await pushOracleReport(100, 0, beaconBalance, { from: appManager })
+    await pushOracleReport(consensus, oracle, 0, beaconBalance)
 
     const treasuryBalanceAfter = await app.balanceOf(treasury)
     assert(treasuryBalanceAfter.gt(treasuryBalanceBefore))
@@ -87,7 +90,7 @@ contract('Lido: staking router reward distribution', ([depositor, user2]) => {
       moduleBalanceBefore.push(await app.balanceOf(recipients[i]))
     }
 
-    await pushOracleReport(100, 0, beaconBalance)
+    await pushOracleReport(consensus, oracle, 0, beaconBalance)
 
     for (let i = 0; i < recipients.length; i++) {
       const moduleBalanceAfter = await app.balanceOf(recipients[i])

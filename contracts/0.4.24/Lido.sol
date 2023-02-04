@@ -505,7 +505,8 @@ contract Lido is StETHPermit, AragonApp, Versioned {
         uint256 _elRewardsVaultBalance,
         // Decision about withdrawals processing
         uint256 _requestIdToFinalizeUpTo,
-        uint256 _finalizationShareRate
+        uint256 _finalizationShareRate,
+        bool _isBunkerMode
     ) external returns (
         uint256 totalPooledEther,
         uint256 totalShares,

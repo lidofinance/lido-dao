@@ -9,7 +9,10 @@ const DEAFAULT_FACTORIES = {
   votingFactory: factories.votingEOAFactory,
   lidoFactory: factories.lidoMockFactory,
   wstethFactory: factories.wstethFactory,
-  oracleFactory: factories.oracleMockFactory,
+  legacyOracleFactory: factories.legacyOracleMockFactory,
+  accountingOracleFactory: factories.accountingOracleFactory,
+  hashConsensusFactory: factories.hashConsensusTimeTravellableFactory,
+  reportProcessorFactory: factories.reportProcessorFactory,
   depositContractFactory: factories.depositContractMockFactory,
   stakingRouterFactory: factories.stakingRouterFactory,
   depositSecurityModuleFactory: factories.depositSecurityModuleFactory,
@@ -47,7 +50,11 @@ async function deployProtocol(config = {}) {
   protocol.token = protocol.pool
 
   protocol.wsteth = await getFactory(config, 'wstethFactory')(protocol)
-  protocol.oracle = await getFactory(config, 'oracleFactory')(protocol)
+  protocol.legacyOracle = await getFactory(config, 'legacyOracleFactory')(protocol)
+
+  protocol.reportProcessor = await getFactory(config, 'reportProcessorFactory')(protocol)
+  protocol.consensusContract = await getFactory(config, 'hashConsensusFactory')(protocol)
+  protocol.oracle = await getFactory(config, 'accountingOracleFactory')(protocol)
 
   protocol.depositContract = await getFactory(config, 'depositContractFactory')(protocol)
 

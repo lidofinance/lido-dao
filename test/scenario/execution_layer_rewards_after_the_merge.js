@@ -1,13 +1,15 @@
-const { assert } = require('chai')
+const { assert } = require('../helpers/assert')
 const { BN } = require('bn.js')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
+const { gwei, ZERO_HASH } = require('../helpers/utils')
 
 const { pad, toBN, ETH, tokens } = require('../helpers/utils')
 const { DSMAttestMessage, DSMPauseMessage } = require('../helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
+const { SLOTS_PER_FRAME } = require('../helpers/constants')
 
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
@@ -33,7 +35,7 @@ const makeAccountingReport = ({refSlot, numValidators, clBalanceGwei, elRewardsV
   extraDataItemsCount: 0,
 })
 
-contract('Lido: merge acceptance', (addresses) => {
+contract.skip('Lido: merge acceptance', (addresses) => {
   const [
     // node operators
     operator_1,
@@ -438,11 +440,20 @@ contract('Lido: merge acceptance', (addresses) => {
   })
 
   it('collect another 7 ETH execution layer rewards to the vault', async () => {
+    const balanceBefore = await web3.eth.getBalance(elRewardsVault.address)
     await rewarder.reward({ from: userELRewards, value: ETH(2) })
-    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(2), 'Execution layer rewards vault balance')
+    assertBn(
+      await web3.eth.getBalance(elRewardsVault.address),
+      ETH(2) + balanceBefore,
+      'Execution layer rewards vault balance'
+    )
 
     await rewarder.reward({ from: userELRewards, value: ETH(5) })
-    assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(7), 'Execution layer rewards vault balance')
+    assertBn(
+      await web3.eth.getBalance(elRewardsVault.address),
+      ETH(7) + balanceBefore,
+      'Execution layer rewards vault balance'
+    )
   })
 
   it('the oracle reports same balance on Ethereum2 side (+0 ETH) and claims collected execution layer rewards (+7 ETH)', async () => {

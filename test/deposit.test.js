@@ -45,18 +45,8 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
         return { address: depositor }
       },
       depositContractFactory: depositContractFactory,
-      postSetup: async ({
-        pool,
-        lidoLocator,
-        eip712StETH,
-        oracle,
-        depositContract,
-        withdrawalQueue,
-        appManager,
-        voting
-      }) => {
+      postSetup: async ({ pool, lidoLocator, eip712StETH, withdrawalQueue, appManager, voting }) => {
         await pool.initialize(lidoLocator.address, eip712StETH.address) 
-        await oracle.setPool(pool.address)
         await withdrawalQueue.updateBunkerMode(0, false, { from: appManager.address })
         await pool.resumeProtocolAndStaking({ from: voting.address })
       }

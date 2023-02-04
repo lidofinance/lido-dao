@@ -9,6 +9,8 @@ const { DSMAttestMessage, DSMPauseMessage } = require('../helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
+const { gwei, ZERO_HASH } = require('../helpers/utils')
+const { pushOracleReport } = require('../helpers/oracle')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const CURATED_MODULE_ID = 1
@@ -45,10 +47,11 @@ contract('Lido: happy path', (addresses) => {
   ] = addresses
 
   let pool, nodeOperatorsRegistry, token
-  let oracleMock, depositContractMock
+  let oracle, depositContractMock
   let treasuryAddr, guardians, voting
   let depositSecurityModule, depositRoot
   let withdrawalCredentials, stakingRouter
+  let consensus
 
   before('DAO, node operators registry, token, pool and deposit security module are deployed and initialized', async () => {
       const deployed = await deployProtocol({
@@ -79,8 +82,9 @@ contract('Lido: happy path', (addresses) => {
       stakingRouter = deployed.stakingRouter
 
       // mocks
-      oracleMock = deployed.oracle
+      oracle = deployed.oracle
       depositContractMock = deployed.depositContract
+      consensus = deployed.consensusContract
 
       // addresses
       treasuryAddr = deployed.treasury.address
@@ -374,7 +378,6 @@ contract('Lido: happy path', (addresses) => {
   })
 
   it('the oracle reports balance increase on Ethereum2 side', async () => {
-    const refSlot = 100
 
     // Total shares are equal to deposited eth before ratio change and fee mint
 
@@ -388,11 +391,7 @@ contract('Lido: happy path', (addresses) => {
 
     // Reporting 1.5-fold balance increase (64 => 96)
 
-    await oracleMock.submitReportData(makeAccountingReport({
-      refSlot,
-      numValidators: 2,
-      clBalanceGwei: gwei(96)
-    }), 1)
+    pushOracleReport(consensus, oracle, 2, ETH(96))
 
     // Total shares increased because fee minted (fee shares added)
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
