@@ -370,7 +370,7 @@ contract Lido is StETHPermit, AragonApp, Versioned {
      */
     function receiveELRewards() external payable {
 
-        require(msg.sender == getLidoLocator().getELRewardsVault(), "EXECUTION_LAYER_REAWARDS_VAULT_ONLY");
+        require(msg.sender == getLidoLocator().elRewardsVault(), "EXECUTION_LAYER_REAWARDS_VAULT_ONLY");
 
         TOTAL_EL_REWARDS_COLLECTED_POSITION.setStorageUint256(getTotalELRewardsCollected().add(msg.value));
 

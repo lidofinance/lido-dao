@@ -6,84 +6,63 @@
 pragma solidity 0.8.9;
 
 contract LidoLocatorMock {
+    struct ContractAddresses {
+        address lido;
+        address depositSecurityModule;
+        address elRewardsVault;
+        address accountingOracle;
+        address legacyOracle;
+        address safetyNetsRegistry;
+        address selfOwnedStEthBurner;
+        address validatorExitBus;
+        address stakingRouter;
+        address treasury;
+        address withdrawalQueue;
+        address withdrawalVault;
+        address rebaseReceiver;
+    }
+
     address public immutable lido;
-    address public immutable dsm;
+    address public immutable depositSecurityModule;
     address public immutable elRewardsVault;
-    address public immutable oracle;
-    address public immutable postTokenRebaseReceiver;
-    address public immutable safetyNetsRegestry;
-    address public immutable selfOwnedStETHBurner;
+    address public immutable accountingOracle;
+    address public immutable legacyOracle;
+    address public immutable safetyNetsRegistry;
+    address public immutable selfOwnedStEthBurner;
+    address public immutable validatorExitBus;
     address public immutable stakingRouter;
     address public immutable treasury;
     address public immutable withdrawalQueue;
     address public immutable withdrawalVault;
+    address public immutable rebaseReceiver;
 
     constructor (
-        address _lido,
-        address _dsm,
-        address _elRewardsVault,
-        address _oracle,
-        address _postTokenRebaseReceiver,
-        address _safetyNetsRegestry,
-        address _selfOwnedStETHBurner,
-        address _stakingRouter,
-        address _treasury,
-        address _withdrawalQueue,
-        address _withdrawalVault
+        ContractAddresses memory addrs
     ) {
-        lido = _lido;
-        dsm = _dsm;
-        elRewardsVault = _elRewardsVault;
-        oracle = _oracle;
-        postTokenRebaseReceiver = _postTokenRebaseReceiver;
-        safetyNetsRegestry = _safetyNetsRegestry;
-        selfOwnedStETHBurner = _selfOwnedStETHBurner;
-        stakingRouter = _stakingRouter;
-        treasury = _treasury;
-        withdrawalQueue = _withdrawalQueue;
-        withdrawalVault = _withdrawalVault;
+        lido = addrs.lido;
+        depositSecurityModule = addrs.depositSecurityModule;
+        elRewardsVault = addrs.elRewardsVault;
+        accountingOracle = addrs.accountingOracle;
+        legacyOracle = addrs.legacyOracle;
+        safetyNetsRegistry = addrs.safetyNetsRegistry;
+        selfOwnedStEthBurner = addrs.selfOwnedStEthBurner;
+        validatorExitBus = addrs.validatorExitBus;
+        stakingRouter = addrs.stakingRouter;
+        treasury = addrs.treasury;
+        withdrawalQueue = addrs.withdrawalQueue;
+        withdrawalVault = addrs.withdrawalVault;
+        rebaseReceiver = addrs.rebaseReceiver;
     }
 
-    function getLido() external view returns (address){
-        return lido;
-    }
-    function getDepositSecurityModule() external view returns (address){
-        return dsm;
-    }
-
-    function getELRewardsVault() external view returns (address){
-        return elRewardsVault;
-    }
-
-    function getOracle() external view returns (address){
-        return oracle;
+    function coreComponents() external view returns(address,address,address,address,address,address) {
+        return (
+            elRewardsVault,
+            address(0),
+            address(0),
+            address(0),
+            withdrawalQueue,
+            withdrawalVault
+        );
     }
 
-    function getPostTokenRebaseReceiver() external view returns (address){
-        return postTokenRebaseReceiver;
-    }
-
-    function getSafetyNetsRegistry() external view returns (address){
-        return safetyNetsRegestry;
-    }
-
-    function getSelfOwnedStETHBurner() external view returns (address){
-        return selfOwnedStETHBurner;
-    }
-
-    function getStakingRouter() external view returns (address){
-        return stakingRouter;
-    }
-
-    function getTreasury() external view returns (address){
-        return treasury;
-    }
-
-    function getWithdrawalQueue() external view returns (address){
-        return withdrawalQueue;
-    }
-
-    function getWithdrawalVault() external view returns (address){
-        return withdrawalVault;
-    }
 }

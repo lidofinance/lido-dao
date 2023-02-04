@@ -307,19 +307,21 @@ async function selfOwnedStETHBurnerFactory({ appManager, treasury, pool, voting 
 }
 
 async function lidoLocatorMockFactory(protocol) {
-  return LidoLocatorMock.new(
-    protocol.pool.address,
-    protocol.depositSecurityModule.address,
-    protocol.elRewardsVault.address,
-    protocol.oracle.address,
-    ZERO_ADDRESS,
-    ZERO_ADDRESS,
-    protocol.selfOwnedStETHBurner.address,
-    protocol.stakingRouter.address,
-    protocol.treasury.address,
-    protocol.withdrawalQueue.address,
-    protocol.withdrawalVault.address
-  )
+  return LidoLocatorMock.new({
+    lido: protocol.pool.address,
+    depositSecurityModule: protocol.depositSecurityModule.address,
+    elRewardsVault: protocol.elRewardsVault.address,
+    accountingOracle: protocol.oracle.address,
+    legacyOracle: protocol.legacyOracle.address,
+    safetyNetsRegistry: ZERO_ADDRESS,
+    selfOwnedStEthBurner: protocol.selfOwnedStETHBurner.address,
+    validatorExitBus: ZERO_ADDRESS,
+    stakingRouter: protocol.stakingRouter.address,
+    treasury: protocol.treasury.address,
+    withdrawalQueue: protocol.withdrawalQueue.address,
+    withdrawalVault: protocol.withdrawalVault.address,
+    rebaseReceiver: ZERO_ADDRESS
+  })
 }
 
 async function postSetup({ pool, lidoLocator, eip712StETH, depositContract, withdrawalQueue, appManager, voting }) {

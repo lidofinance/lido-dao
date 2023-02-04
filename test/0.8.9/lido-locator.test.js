@@ -6,68 +6,78 @@ contract(
   'LidoLocator',
   ([
     lido,
-    dsm,
+    depositSecurityModule,
     elRewardsVault,
-    oracle,
-    postTokenRebaseReceiver,
-    safetyNetsRegestry,
-    selfOwnedStETHBurner,
+    accountingOracle,
+    legacyOracle,
+    safetyNetsRegistry,
+    selfOwnedStEthBurner,
     stakingRouter,
     treasury,
+    validatorExitBus,
     withdrawalQueue,
-    withdrawalVault
+    withdrawalVault,
+    rebaseReceiver,
   ]) => {
     let locator
 
     before(async () => {
-      locator = await LidoLocator.new(
+      locator = await LidoLocator.new({
         lido,
-        dsm,
+        depositSecurityModule,
         elRewardsVault,
-        oracle,
-        postTokenRebaseReceiver,
-        safetyNetsRegestry,
-        selfOwnedStETHBurner,
+        accountingOracle,
+        legacyOracle,
+        safetyNetsRegistry,
+        selfOwnedStEthBurner,
         stakingRouter,
         treasury,
+        validatorExitBus,
         withdrawalQueue,
-        withdrawalVault
-      )
+        withdrawalVault,
+        rebaseReceiver
+      })
     })
 
     describe('check getters', async () => {
-      it('getLido()', async () => {
-        assert.equals(await locator.getLido(), lido)
+      it('lido()', async () => {
+        assert.equals(await locator.lido(), lido)
       })
-      it('getDepositSecurityModule()', async () => {
-        assert.equals(await locator.getDepositSecurityModule(), dsm)
+      it('depositSecurityModule()', async () => {
+        assert.equals(await locator.depositSecurityModule(), depositSecurityModule)
       })
-      it('getELRewardsVault()', async () => {
-        assert.equals(await locator.getELRewardsVault(), elRewardsVault)
+      it('elRewardsVault()', async () => {
+        assert.equals(await locator.elRewardsVault(), elRewardsVault)
       })
-      it('getOracle()', async () => {
-        assert.equals(await locator.getOracle(), oracle)
+      it('accountingOracle()', async () => {
+        assert.equals(await locator.accountingOracle(), accountingOracle)
       })
-      it('getPostTokenRebaseReceiver()', async () => {
-        assert.equals(await locator.getPostTokenRebaseReceiver(), postTokenRebaseReceiver)
+      it('legacyOracle()', async () => {
+        assert.equals(await locator.legacyOracle(), legacyOracle)
       })
-      it('getSafetyNetsRegistry()', async () => {
-        assert.equals(await locator.getSafetyNetsRegistry(), safetyNetsRegestry)
+      it('safetyNetsRegistry()', async () => {
+        assert.equals(await locator.safetyNetsRegistry(), safetyNetsRegistry)
       })
-      it('getSelfOwnedStETHBurner()', async () => {
-        assert.equals(await locator.getSelfOwnedStETHBurner(), selfOwnedStETHBurner)
+      it('selfOwnedStEthBurner()', async () => {
+        assert.equals(await locator.selfOwnedStEthBurner(), selfOwnedStEthBurner)
       })
-      it('getStakingRouter()', async () => {
-        assert.equals(await locator.getStakingRouter(), stakingRouter)
+      it('stakingRouter()', async () => {
+        assert.equals(await locator.stakingRouter(), stakingRouter)
       })
-      it('getTreasury()', async () => {
-        assert.equals(await locator.getTreasury(), treasury)
+      it('treasury()', async () => {
+        assert.equals(await locator.treasury(), treasury)
       })
-      it('getWithdrawalQueue()', async () => {
-        assert.equals(await locator.getWithdrawalQueue(), withdrawalQueue)
+      it('validatorExitBus()', async () => {
+        assert.equals(await locator.validatorExitBus(), validatorExitBus)
       })
-      it('getWithdrawalVault()', async () => {
-        assert.equals(await locator.getWithdrawalVault(), withdrawalVault)
+      it('withdrawalQueue()', async () => {
+        assert.equals(await locator.withdrawalQueue(), withdrawalQueue)
+      })
+      it('withdrawalVault()', async () => {
+        assert.equals(await locator.withdrawalVault(), withdrawalVault)
+      })
+      it('rebaseReceiver()', async () => {
+        assert.equals(await locator.rebaseReceiver(), rebaseReceiver)
       })
     })
   }

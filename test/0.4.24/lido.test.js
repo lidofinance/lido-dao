@@ -1667,7 +1667,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
 
   context('treasury', () => {
     it('treasury address has been set after init', async () => {
-      assert.notEqual(await lidoLocator.getTreasury(), ZERO_ADDRESS)
+      assert.notEqual(await lidoLocator.treasury(), ZERO_ADDRESS)
     })
   })
 
