@@ -369,7 +369,8 @@ contract Lido is StETHPermit, AragonApp, Versioned {
      * are treated as a user deposit
      */
     function receiveELRewards() external payable {
-        require(msg.sender == getLidoLocator().elRewardsVault());
+
+        require(msg.sender == getLidoLocator().elRewardsVault(), "EXECUTION_LAYER_REAWARDS_VAULT_ONLY");
 
         TOTAL_EL_REWARDS_COLLECTED_POSITION.setStorageUint256(getTotalELRewardsCollected().add(msg.value));
 
@@ -505,7 +506,8 @@ contract Lido is StETHPermit, AragonApp, Versioned {
         uint256 _elRewardsVaultBalance,
         // Decision about withdrawals processing
         uint256 _requestIdToFinalizeUpTo,
-        uint256 _finalizationShareRate
+        uint256 _finalizationShareRate,
+        bool _isBunkerMode
     ) external returns (
         uint256 totalPooledEther,
         uint256 totalShares,
@@ -625,9 +627,6 @@ contract Lido is StETHPermit, AragonApp, Versioned {
         uint256 preClValidators = CL_VALIDATORS_POSITION.getStorageUint256();
         require(_postClValidators >= preClValidators, "REPORTED_LESS_VALIDATORS");
 
-        // Save the current CL balance and validators to
-        // calculate rewards on the next push
-        CL_BALANCE_POSITION.setStorageUint256(_postClBalance);
 
         if (_postClValidators > preClValidators) {
             CL_VALIDATORS_POSITION.setStorageUint256(_postClValidators);
@@ -636,6 +635,10 @@ contract Lido is StETHPermit, AragonApp, Versioned {
         uint256 appearedValidators = _postClValidators.sub(preClValidators);
         uint256 preCLBalance = CL_BALANCE_POSITION.getStorageUint256();
         uint256 rewardsBase = appearedValidators.mul(DEPOSIT_SIZE).add(preCLBalance);
+
+        // Save the current CL balance and validators to
+        // calculate rewards on the next push
+        CL_BALANCE_POSITION.setStorageUint256(_postClBalance);
 
         return _signedSub(int256(_postClBalance), int256(rewardsBase));
     }
@@ -1026,7 +1029,6 @@ contract Lido is StETHPermit, AragonApp, Versioned {
 
         // distribute rewards to Lido and Node Operators
         uint256 sharesMintedAsFees = _processRewards(clBalanceDiff, withdrawals, elRewards);
-
         _applyCoverage(tokenRebaseLimiter);
 
         (

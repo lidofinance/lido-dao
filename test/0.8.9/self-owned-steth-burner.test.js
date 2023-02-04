@@ -1,18 +1,16 @@
-const { assert } = require('chai')
-const { artifacts } = require('hardhat')
+const hre = require('hardhat')
 
-const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 const { assertRevert } = require('../helpers/assertThrow')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
-const { newDao, newApp } = require('../0.4.24/helpers/dao')
-const { StETH, ETH } = require('../helpers/utils')
+const { EvmSnapshot } = require('../helpers/blockchain')
+const { ETH, StETH } = require('../helpers/utils')
+const { assert } = require('../helpers/assert')
+const { deployProtocol } = require('../helpers/protocol')
+
+const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 
 const SelfOwnerStETHBurner = artifacts.require('SelfOwnedStETHBurner.sol')
-const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry.sol')
-const LidoMock = artifacts.require('LidoMock.sol')
-const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
-const EIP712StETH = artifacts.require('EIP712StETH')
 
 const ERC20OZMock = artifacts.require('ERC20OZMock.sol')
 const ERC721OZMock = artifacts.require('ERC721OZMock.sol')
@@ -20,47 +18,27 @@ const ERC721OZMock = artifacts.require('ERC721OZMock.sol')
 // semantic aliases
 const stETHShares = ETH
 
-contract('SelfOwnedStETHBurner', ([appManager, voting, oracle, deployer, anotherAccount, treasury, ...otherAccounts]) => {
-  let lido, burner
-  let dao, acl, operators
+contract('SelfOwnedStETHBurner', ([deployer, _, anotherAccount]) => {
+  let lido, burner, appManager, voting, oracle, treasury
+  let acl, snapshot
 
-  beforeEach('deploy lido with dao', async () => {
-    const lidoBase = await LidoMock.new({ from: deployer })
-    const depositContract = await DepositContractMock.new({ from: deployer })
-    const nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new({ from: deployer })
+  before('deploy lido with dao', async () => {
+    const deployed = await deployProtocol()
 
-    const daoAclObj = await newDao(appManager)
-    dao = daoAclObj.dao
-    acl = daoAclObj.acl
+    lido = deployed.pool
+    oracle = deployed.oracle
+    burner = deployed.selfOwnedStETHBurner
+    acl = deployed.acl
+    voting = deployed.voting.address
+    appManager = deployed.appManager.address
+    treasury = deployed.treasury.address
 
-    // Instantiate a proxy for the app, using the base contract as its logic implementation.
-    let proxyAddress = await newApp(dao, 'lido', lidoBase.address, appManager)
-    lido = await LidoMock.at(proxyAddress)
-    await lido.resumeProtocolAndStaking()
+    snapshot = new EvmSnapshot(hre.ethers.provider)
+    await snapshot.make()
+  })
 
-    // NodeOperatorsRegistry
-    proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
-    operators = await NodeOperatorsRegistry.at(proxyAddress)
-    await operators.initialize(lido.address, '0x01')
-
-    // Init the BURN_ROLE role and assign in to voting
-    await acl.createPermission(voting, lido.address, await lido.BURN_ROLE(), appManager, { from: appManager })
-    const eip712StETH = await EIP712StETH.new({ from: deployer })
-
-    // Initialize the app's proxy.
-    await lido.initialize(
-      oracle,
-      treasury,
-      ZERO_ADDRESS,
-      ZERO_ADDRESS,
-      ZERO_ADDRESS,
-      ZERO_ADDRESS,
-      eip712StETH.address
-    )
-
-    await depositContract.reset()
-
-    burner = await SelfOwnerStETHBurner.new(treasury, lido.address, voting, bn(0), bn(0), bn(4), { from: deployer })
+  afterEach(async () => {
+    await snapshot.rollback()
   })
 
   describe('Requests and burn invocation', () => {
@@ -606,7 +584,7 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, oracle, deployer, another
       assertBn(await lido.balanceOf(burner.address), StETH(7.1))
 
       // should change nothing
-      const receipt = await burner.recoverExcessStETH()
+      const receipt = await burner.recoverExcessStETH({ from: voting })
       assertAmountOfEvents(receipt, `ExcessStETHRecovered`, { expectedAmount: 0 })
 
       // excess stETH amount didn't changed
@@ -626,9 +604,9 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, oracle, deployer, another
       assertBn(await lido.balanceOf(treasury), StETH(0))
 
       const sharesAmount2_3StETH = await lido.sharesOf(burner.address)
-      const receipt = await burner.recoverExcessStETH({ from: deployer })
+      const receipt = await burner.recoverExcessStETH({ from: voting })
       assertEvent(receipt, `ExcessStETHRecovered`, {
-        expectedArgs: { requestedBy: deployer, amount: StETH(2.3), sharesAmount: sharesAmount2_3StETH }
+        expectedArgs: { requestedBy: voting, amountOfStETH: StETH(2.3), amountOfShares: sharesAmount2_3StETH }
       })
 
       // check burner and treasury balances after recovery
@@ -671,9 +649,9 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, oracle, deployer, another
       // run recovery process, excess stETH amount (5)
       // should be transferred to the treasury
       const sharesAmount5stETH = await lido.getSharesByPooledEth(StETH(5))
-      const receipt = await burner.recoverExcessStETH({ from: anotherAccount })
+      const receipt = await burner.recoverExcessStETH({ from: voting })
       assertEvent(receipt, `ExcessStETHRecovered`, {
-        expectedArgs: { requestedBy: anotherAccount, amount: StETH(5), sharesAmount: sharesAmount5stETH }
+        expectedArgs: { requestedBy: voting, amountOfStETH: StETH(5), amountOfShares: sharesAmount5stETH }
       })
 
       assertBn(await burner.getExcessStETH(), StETH(0))
@@ -746,35 +724,28 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, oracle, deployer, another
 
     it(`recover some accidentally sent ERC20`, async () => {
       // distribute deployer's balance among anotherAccount and burner
-      await mockERC20Token.transfer(anotherAccount, bn(400000), { from: deployer })
       await mockERC20Token.transfer(burner.address, bn(600000), { from: deployer })
 
       // check the resulted state
-      assertBn(await mockERC20Token.balanceOf(deployer), bn(0))
-      assertBn(await mockERC20Token.balanceOf(anotherAccount), bn(400000))
+      assertBn(await mockERC20Token.balanceOf(deployer), bn(400000))
+      assertBn(await mockERC20Token.balanceOf(voting), bn(0))
       assertBn(await mockERC20Token.balanceOf(burner.address), bn(600000))
 
       // recover ERC20
-      const firstReceipt = await burner.recoverERC20(mockERC20Token.address, bn(100000), { from: deployer })
+      const firstReceipt = await burner.recoverERC20(mockERC20Token.address, bn(100000), { from: voting })
       assertEvent(firstReceipt, `ERC20Recovered`, {
-        expectedArgs: { requestedBy: deployer, token: mockERC20Token.address, amount: bn(100000) }
-      })
-
-      const secondReceipt = await burner.recoverERC20(mockERC20Token.address, bn(400000), { from: anotherAccount })
-      assertEvent(secondReceipt, `ERC20Recovered`, {
-        expectedArgs: { requestedBy: anotherAccount, token: mockERC20Token.address, amount: bn(400000) }
+        expectedArgs: { requestedBy: voting, token: mockERC20Token.address, amount: bn(100000) }
       })
 
       // check balances again
-      assertBn(await mockERC20Token.balanceOf(burner.address), bn(100000))
-      assertBn(await mockERC20Token.balanceOf(treasury), bn(500000))
-      assertBn(await mockERC20Token.balanceOf(deployer), bn(0))
-      assertBn(await mockERC20Token.balanceOf(anotherAccount), bn(400000))
+      assertBn(await mockERC20Token.balanceOf(burner.address), bn(500000))
+      assertBn(await mockERC20Token.balanceOf(treasury), bn(100000))
+      assertBn(await mockERC20Token.balanceOf(voting), bn(0))
 
       // recover last portion
-      const lastReceipt = await burner.recoverERC20(mockERC20Token.address, bn(100000), { from: anotherAccount })
+      const lastReceipt = await burner.recoverERC20(mockERC20Token.address, bn(100000), { from: voting })
       assertEvent(lastReceipt, `ERC20Recovered`, {
-        expectedArgs: { requestedBy: anotherAccount, token: mockERC20Token.address, amount: bn(100000) }
+        expectedArgs: { requestedBy: voting, token: mockERC20Token.address, amount: bn(100000) }
       })
 
       // balance is zero already, have to be reverted
@@ -810,9 +781,9 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, oracle, deployer, another
       assertRevert(burner.recoverERC721(lido.address, StETH(1), { from: deployer }), `TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE`)
       assertRevert(burner.recoverERC721(lido.address, StETH(1), { from: voting }), `TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE`)
 
-      const receipt = await burner.recoverExcessStETH({ from: anotherAccount })
+      const receipt = await burner.recoverExcessStETH({ from: voting })
       assertEvent(receipt, `ExcessStETHRecovered`, {
-        expectedArgs: { requestedBy: anotherAccount, amount: StETH(1) }
+        expectedArgs: { requestedBy: voting, amountOfStETH: StETH(1) }
       })
 
       // ensure that excess amount is zero
@@ -834,17 +805,17 @@ contract('SelfOwnedStETHBurner', ([appManager, voting, oracle, deployer, another
       assertBn(await mockNFT.balanceOf(burner.address), bn(1))
 
       // recover nft2 should work
-      const receiptNfc2 = await burner.recoverERC721(mockNFT.address, nft2, { from: anotherAccount })
-      assertEvent(receiptNfc2, `ERC721Recovered`, { expectedArgs: { requestedBy: anotherAccount, token: mockNFT.address, tokenId: nft2 } })
+      const receiptNfc2 = await burner.recoverERC721(mockNFT.address, nft2, { from: voting })
+      assertEvent(receiptNfc2, `ERC721Recovered`, { expectedArgs: { requestedBy: voting, token: mockNFT.address, tokenId: nft2 } })
 
       // but nft1 recovery should revert
       assertRevert(burner.recoverERC721(mockNFT.address, nft1), `ERC721: transfer caller is not owner nor approved`)
 
       // send nft1 to burner and recover it
       await mockNFT.transferFrom(anotherAccount, burner.address, nft1, { from: anotherAccount })
-      const receiptNft1 = await burner.recoverERC721(mockNFT.address, nft1, { from: deployer })
+      const receiptNft1 = await burner.recoverERC721(mockNFT.address, nft1, { from: voting })
 
-      assertEvent(receiptNft1, `ERC721Recovered`, { expectedArgs: { requestedBy: deployer, token: mockNFT.address, tokenId: nft1 } })
+      assertEvent(receiptNft1, `ERC721Recovered`, { expectedArgs: { requestedBy: voting, token: mockNFT.address, tokenId: nft1 } })
 
       // check final NFT ownership state
       assertBn(await mockNFT.balanceOf(treasury), bn(2))
