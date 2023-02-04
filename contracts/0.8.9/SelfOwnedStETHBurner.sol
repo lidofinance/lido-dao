@@ -8,29 +8,16 @@ pragma solidity 0.8.9;
 import {IERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import {SafeERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
-import {ERC165} from "@openzeppelin/contracts-v4.4/utils/introspection/ERC165.sol";
 import {Math} from "@openzeppelin/contracts-v4.4/utils/math/Math.sol";
+
 import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
+import {ISelfOwnedStETHBurner} from "../common/interfaces/ISelfOwnedStETHBurner.sol";
 
 /**
   * @title Interface defining a Lido liquid staking pool
   * @dev see also [Lido liquid staking pool core contract](https://docs.lido.fi/contracts/lido)
   */
 interface ILido {
-    /**
-      * @notice Destroys given amount of shares from account's holdings
-      * @param _account address of the shares holder
-      * @param _sharesAmount shares amount to burn
-      * @dev incurs stETH token rebase by decreasing the total amount of shares.
-      */
-    function burnShares(address _account, uint256 _sharesAmount) external returns (uint256 newTotalShares);
-
-    /**
-      * @notice Gets authorized oracle address
-      * @return address of oracle contract.
-      */
-    function getOracle() external view returns (address);
-
     /**
       * @notice Get stETH amount by the provided shares amount
       * @param _sharesAmount shares amount
@@ -50,46 +37,14 @@ interface ILido {
       * @param _account provided account address.
       */
     function sharesOf(address _account) external view returns (uint256);
-
-    /**
-      * @notice Get total amount of shares in existence
-      */
-    function getTotalShares() external view returns (uint256);
-}
-
-interface ISelfOwnedStETHBurner {
-    /**
-     * Enacts cover/non-cover burning requests and logs cover/non-cover shares amount just burnt.
-     * Increments `totalCoverSharesBurnt` and `totalNonCoverSharesBurnt` counters.
-     * Resets `coverSharesBurnRequested` and `nonCoverSharesBurnRequested` counters to zero.
-     * Does nothing if there are no pending burning requests.
-     */
-    function processLidoOracleReport(uint256 sharesToBurnLimit) external ;
-
-    /**
-      * Returns the current amount of shares locked on the contract to be burnt.
-      */
-    function getSharesRequestedToBurn() external view returns (
-        uint256 coverShares, uint256 nonCoverShares
-    );
-
-    /**
-      * Returns the total cover shares ever burnt.
-      */
-    function getCoverSharesBurnt() external view returns (uint256);
-
-    /**
-      * Returns the total non-cover shares ever burnt.
-      */
-    function getNonCoverSharesBurnt() external view returns (uint256);
 }
 
 /**
-  * @notice A dedicated contract for enacting stETH burning requests
+  * @notice A dedicated contract for stETH burning requests scheduling
   *
-  * @dev Burning stETH means 'decrease total underlying shares amount to perform stETH token rebase'
+  * @dev Burning stETH means 'decrease total underlying shares amount to perform stETH positive token rebase'
   */
-contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, ERC165, AccessControlEnumerable {
+contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable {
     using SafeERC20 for IERC20;
 
     error ErrorAppAuthLidoFailed();
@@ -191,7 +146,6 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, ERC165, AccessControlEnu
 
     /**
       * @notice BE CAREFUL, the provided stETH will be burnt permanently.
-      * @dev only `voting` allowed to call this function.
       *
       * Transfers `_stETH2Burn` stETH tokens from the message sender and irreversibly locks these
       * on the burner contract address. Internally converts `_stETH2Burn` amount into underlying
@@ -207,7 +161,6 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, ERC165, AccessControlEnu
 
     /**
       * @notice BE CAREFUL, the provided stETH will be burnt permanently.
-      * @dev only `voting` allowed to call this function.
       *
       * Transfers `_stETH2Burn` stETH tokens from the message sender and irreversibly locks these
       * on the burner contract address. Internally converts `_stETH2Burn` amount into underlying
@@ -277,13 +230,25 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, ERC165, AccessControlEnu
     }
 
     /**
-     * Enacts cover/non-cover burning requests and logs cover/non-cover shares amount just burnt.
+     * Commit cover/non-cover burning requests and logs cover/non-cover shares amount just burnt.
+     *
+     * NB: The real burn enactment to be invoked after the call (via internal Lido._burnShares())
+     *
      * Increments `totalCoverSharesBurnt` and `totalNonCoverSharesBurnt` counters.
      * Resets `coverSharesBurnRequested` and `nonCoverSharesBurnRequested` counters to zero.
      * Does nothing if there are no pending burning requests.
+     *
+     * @param _sharesToBurnLimit limit of the shares to be burnt
+     * @return sharesToBurnNow the actual value that can be burnt
      */
-    function processLidoOracleReport(uint256 sharesToBurnLimit) external virtual override {
+    function commitSharesToBurn(
+        uint256 _sharesToBurnLimit
+    ) external virtual override returns (uint256 sharesToBurnNow) {
         if (msg.sender != LIDO) revert ErrorAppAuthLidoFailed();
+
+        if (_sharesToBurnLimit == 0) {
+            return 0;
+        }
 
         uint256 memCoverSharesBurnRequested = coverSharesBurnRequested;
         uint256 memNonCoverSharesBurnRequested = nonCoverSharesBurnRequested;
@@ -291,12 +256,11 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, ERC165, AccessControlEnu
         uint256 burnAmount = memCoverSharesBurnRequested + memNonCoverSharesBurnRequested;
 
         if (burnAmount == 0) {
-            return;
+            return 0;
         }
 
-        uint256 sharesToBurnNow;
         if (memCoverSharesBurnRequested > 0) {
-            uint256 sharesToBurnNowForCover = Math.min(sharesToBurnLimit, memCoverSharesBurnRequested);
+            uint256 sharesToBurnNowForCover = Math.min(_sharesToBurnLimit, memCoverSharesBurnRequested);
 
             totalCoverSharesBurnt += sharesToBurnNowForCover;
             uint256 stETHToBurnNowForCover = ILido(LIDO).getPooledEthByShares(sharesToBurnNowForCover);
@@ -305,9 +269,9 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, ERC165, AccessControlEnu
             coverSharesBurnRequested -= sharesToBurnNowForCover;
             sharesToBurnNow += sharesToBurnNowForCover;
         }
-        if ((memNonCoverSharesBurnRequested > 0) && (sharesToBurnNow < sharesToBurnLimit)) {
+        if ((memNonCoverSharesBurnRequested > 0) && (sharesToBurnNow < _sharesToBurnLimit)) {
             uint256 sharesToBurnNowForNonCover = Math.min(
-                sharesToBurnLimit - sharesToBurnNow,
+                _sharesToBurnLimit - sharesToBurnNow,
                 memNonCoverSharesBurnRequested
             );
 
@@ -318,7 +282,6 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, ERC165, AccessControlEnu
             nonCoverSharesBurnRequested -= sharesToBurnNowForNonCover;
             sharesToBurnNow += sharesToBurnNowForNonCover;
         }
-        ILido(LIDO).burnShares(address(this), sharesToBurnNow);
     }
 
     /**
@@ -358,15 +321,6 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, ERC165, AccessControlEnu
         }
 
         return ILido(LIDO).getPooledEthByShares(totalShares - sharesBurnRequested);
-    }
-
-    function supportsInterface(
-        bytes4 _interfaceId
-    ) public view virtual override (ERC165, AccessControlEnumerable) returns (bool) {
-        return (
-            _interfaceId == type(ISelfOwnedStETHBurner).interfaceId
-            || super.supportsInterface(_interfaceId)
-        );
     }
 
     function _requestBurnMyStETH(uint256 _stETH2Burn, bool _isCover) private {

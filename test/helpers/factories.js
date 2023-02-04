@@ -67,14 +67,12 @@ async function grantLidoRoles(pool, acl, voting, appManager) {
   const [
     PAUSE_ROLE,
     RESUME_ROLE,
-    BURN_ROLE,
     STAKING_PAUSE_ROLE,
     STAKING_CONTROL_ROLE,
     MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE
   ] = await Promise.all([
     pool.PAUSE_ROLE(),
     pool.RESUME_ROLE(),
-    pool.BURN_ROLE(),
     pool.STAKING_PAUSE_ROLE(),
     pool.STAKING_CONTROL_ROLE(),
     pool.MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE()
@@ -82,7 +80,6 @@ async function grantLidoRoles(pool, acl, voting, appManager) {
   await Promise.all([
     acl.createPermission(voting.address, pool.address, PAUSE_ROLE, appManager.address, { from: appManager.address }),
     acl.createPermission(voting.address, pool.address, RESUME_ROLE, appManager.address, { from: appManager.address }),
-    acl.createPermission(voting.address, pool.address, BURN_ROLE, appManager.address, { from: appManager.address }),
     acl.createPermission(voting.address, pool.address, STAKING_PAUSE_ROLE, appManager.address, {
       from: appManager.address
     }),

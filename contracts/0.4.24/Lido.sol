@@ -9,7 +9,7 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 
 import "../common/interfaces/ILidoLocator.sol";
-import "./interfaces/ISelfOwnedStETHBurner.sol";
+import "../common/interfaces/ISelfOwnedStETHBurner.sol";
 
 import "./lib/StakeLimitUtils.sol";
 import "./lib/PositiveTokenRebaseLimiter.sol";
@@ -92,7 +92,6 @@ contract Lido is StETHPermit, AragonApp, Versioned {
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant STAKING_PAUSE_ROLE = keccak256("STAKING_PAUSE_ROLE");
     bytes32 public constant STAKING_CONTROL_ROLE = keccak256("STAKING_CONTROL_ROLE");
-    bytes32 public constant BURN_ROLE = keccak256("BURN_ROLE");
     bytes32 public constant MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE = keccak256("MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE");
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
@@ -117,6 +116,7 @@ contract Lido is StETHPermit, AragonApp, Versioned {
     bytes32 internal constant MAX_POSITIVE_TOKEN_REBASE_POSITION = keccak256("lido.Lido.MaxPositiveTokenRebase");
     /// @dev Just a counter of total amount of execution layer rewards received by Lido contract. Not used in the logic.
     bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
+
     event Stopped();
     event Resumed();
 
@@ -397,21 +397,6 @@ contract Lido is StETHPermit, AragonApp, Versioned {
         require(msg.sender == getLidoLocator().stakingRouter());
 
         emit StakingRouterTransferReceived(msg.value);
-    }
-
-    /**
-     * @notice Destroys _sharesAmount shares from _account holdings, decreasing the total amount of shares.
-     *
-     * @param _account Address where shares will be burned
-     * @param _sharesAmount Amount of shares to burn
-     * @return Amount of new total shares after tokens burning
-     */
-    function burnShares(address _account, uint256 _sharesAmount)
-        external
-        authP(BURN_ROLE, arr(_account, _sharesAmount))
-        returns (uint256 newTotalShares)
-    {
-        return _burnShares(_account, _sharesAmount);
     }
 
     /**
@@ -1083,7 +1068,8 @@ contract Lido is StETHPermit, AragonApp, Versioned {
         uint256 maxSharesToBurn = _tokenRebaseLimiter.deductShares(coverShares.add(nonCoverShares));
 
         if (maxSharesToBurn > 0) {
-            burner.processLidoOracleReport(maxSharesToBurn);
+            uint256 sharesToBurnNow = burner.commitSharesToBurn(maxSharesToBurn);
+            _burnShares(address(burner), sharesToBurnNow);
         }
     }
 

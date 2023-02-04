@@ -68,4 +68,8 @@ contract LidoMock is Lido {
     function resetEip712StETH() external {
         EIP712_STETH_POSITION.setStorageAddress(0);
     }
+
+    function burnShares(address _account, uint256 _amount) external {
+        _burnShares(_account, _amount);
+    }
 }

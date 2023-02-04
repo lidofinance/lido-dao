@@ -2,17 +2,12 @@
 
 // SPDX-License-Identifier: GPL-3.0
 
-/* See contracts/COMPILERS.md */
-pragma solidity 0.4.24;
+// See contracts/COMPILERS.md
+// solhint-disable-next-line
+pragma solidity >=0.4.24 <0.9.0;
 
 interface ISelfOwnedStETHBurner {
-    /**
-     * Enacts cover/non-cover burning requests and logs cover/non-cover shares amount just burnt.
-     * Increments `totalCoverSharesBurnt` and `totalNonCoverSharesBurnt` counters.
-     * Resets `coverSharesBurnRequested` and `nonCoverSharesBurnRequested` counters to zero.
-     * Does nothing if there are no pending burning requests.
-     */
-    function processLidoOracleReport(uint256 sharesToBurnLimit) external ;
+    function commitSharesToBurn(uint256 sharesToBurnLimit) external returns (uint256 sharesToBurnNow);
 
     /**
       * Returns the current amount of shares locked on the contract to be burnt.

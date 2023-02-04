@@ -1,3 +1,7 @@
+//TODO: OUTDATED
+// burner doesn't require BURN_ROLE anymore
+// burner doesn't connect with Oracle anymore through the callback
+
 const { encodeCallScript } = require('@aragon/contract-helpers-test/src/aragon-os')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
@@ -91,20 +95,6 @@ async function setupCoverageMechanismImpl({ web3, artifacts }) {
     calldata: await lidoOracle.contract.methods
       .setBeaconReportReceiver(
           compositePostRebaseBeaconReceiver.address
-      )
-      .encodeABI()
-  }
-
-  const burnRoleHash = await lido.BURN_ROLE()
-  log(`BURN_ROLE hash:`, yl(burnRoleHash))
-
-  const revokeBurnPermissionsFromVotingCallData = {
-    to: acl.address,
-    calldata: await acl.contract.methods
-      .revokePermission(
-        voting.address,
-        lido.address,
-        burnRoleHash
       )
       .encodeABI()
   }
