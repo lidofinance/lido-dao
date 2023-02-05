@@ -647,13 +647,15 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         uint256 appearedValidators = _postClValidators.sub(preClValidators);
         uint256 preCLBalance = CL_BALANCE_POSITION.getStorageUint256();
-        uint256 rewardsBase = appearedValidators.mul(DEPOSIT_SIZE).add(preCLBalance);
+        // Take into account the balance of the newly appeared validators
+        uint256 preCLBalanceWithAppeared = appearedValidators.mul(DEPOSIT_SIZE).add(preCLBalance);
 
         // Save the current CL balance and validators to
         // calculate rewards on the next push
         CL_BALANCE_POSITION.setStorageUint256(_postClBalance);
 
-        return _signedSub(int256(_postClBalance), int256(rewardsBase));
+        // Find the difference between CL balances (considering appeared validators)
+        return _signedSub(int256(_postClBalance), int256(preCLBalanceWithAppeared));
     }
 
     /**
