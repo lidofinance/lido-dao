@@ -25,7 +25,9 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
     let oracle
     let oracleVersion
     let mockLido
+    let mockWithdrawalQueue
     let mockStakingRouter
+    let mockLegacyOracle
 
     let extraData
     let extraDataItems
@@ -39,7 +41,9 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       consensus = deployed.consensus
       oracle = deployed.oracle
       mockLido = deployed.lido
+      mockWithdrawalQueue = deployed.withdrawalQueue
       mockStakingRouter = deployed.stakingRouter
+      mockLegacyOracle = deployed.legacyOracle
 
       oracleVersion = +await oracle.getContractVersion()
 
@@ -103,7 +107,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
         elRewardsVaultBalance: e18(2),
         lastWithdrawalRequestIdToFinalize: 1,
         finalizationShareRate: e27(1),
-        isBunkerMode: false,
+        isBunkerMode: true,
         extraDataFormat: EXTRA_DATA_FORMAT_LIST,
         extraDataHash: extraDataHash,
         extraDataItemsCount: extraDataItems.length,
@@ -159,11 +163,14 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       )
     })
 
+    let prevProcessingRefSlot
+
     it(`a committee member submits the rebase data`, async () => {
-      const lastProcessingRefSlot = +await oracle.getLastProcessingRefSlot()
+      prevProcessingRefSlot = +await oracle.getLastProcessingRefSlot()
       const tx = await oracle.submitReportData(reportItems, oracleVersion, {from: member1})
       assertEvent(tx, 'ProcessingStarted', {expectedArgs: {refSlot: reportFields.refSlot}})
       assert.isTrue((await oracle.getConsensusReport()).processingStarted)
+      assert.isAbove(+await oracle.getLastProcessingRefSlot(), prevProcessingRefSlot)
     })
 
     it(`extra data processing is started`, async () => {
@@ -188,8 +195,17 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assertBn(lastOracleReportCall.elRewardsVaultBalance, reportFields.elRewardsVaultBalance)
       assertBn(lastOracleReportCall.lastWithdrawalRequestIdToFinalize, reportFields.lastWithdrawalRequestIdToFinalize)
       assertBn(lastOracleReportCall.finalizationShareRate, reportFields.finalizationShareRate)
-      //assert.equal(lastOracleReportCall.isBunkerMode, reportFields.isBunkerMode)
-      //TODO: should be checked with WithdrawalQueue
+      // assert.equal(lastOracleReportCall.isBunkerMode, reportFields.isBunkerMode)
+    })
+
+    it(`withdrawal queue got bunker mode report`, async () => {
+      const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
+      assert.equal(+updateBunkerModeLastCall.callCount, 1)
+      assert.equal(+updateBunkerModeLastCall.isBunkerMode, reportFields.isBunkerMode)
+      assert.equal(
+        +updateBunkerModeLastCall.prevReportTimestamp,
+        GENESIS_TIME + prevProcessingRefSlot * SECONDS_PER_SLOT
+      )
     })
 
     it(`Staking router got the exited keys report`, async () => {
@@ -203,6 +219,14 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
         lastExitedKeysByModuleCall.exitedKeysCounts.map(x => +x),
         reportFields.numExitedValidatorsByStakingModule
       )
+    })
+
+    it(`legacy oracle got CL data report`, async () => {
+      const lastLegacyOracleCall = await mockLegacyOracle.lastCall__handleConsensusLayerReport()
+      assert.equal(+lastLegacyOracleCall.totalCalls, 1)
+      assert.equal(+lastLegacyOracleCall.refSlot, reportFields.refSlot)
+      assert.equal(+lastLegacyOracleCall.clBalance, e9(reportFields.clBalanceGwei))
+      assert.equal(+lastLegacyOracleCall.clValidators, reportFields.numValidators)
     })
 
     it('some time passes', async () => {
@@ -259,12 +283,32 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       const call1 = await mockStakingRouter.getCall_reportExitedKeysByNodeOperator(0)
       assert.equal(+call1.stakingModuleId, 1)
       assert.sameOrderedMembers(call1.nodeOperatorIds.map(x => +x), [1, 2])
-      assert.sameOrderedMembers(call1.exitedKeysCounts.map(x => +x), [1, 3])
+      assert.sameOrderedMembers(call1.keysCounts.map(x => +x), [1, 3])
 
       const call2 = await mockStakingRouter.getCall_reportExitedKeysByNodeOperator(1)
       assert.equal(+call2.stakingModuleId, 2)
       assert.sameOrderedMembers(call2.nodeOperatorIds.map(x => +x), [1])
-      assert.sameOrderedMembers(call2.exitedKeysCounts.map(x => +x), [2])
+      assert.sameOrderedMembers(call2.keysCounts.map(x => +x), [2])
+    })
+
+    it('Staking router got the stuck keys by node op report', async () => {
+      const totalReportCalls = +await mockStakingRouter.getTotalCalls_reportStuckKeysByNodeOperator()
+      assert.equal(totalReportCalls, 3)
+
+      const call1 = await mockStakingRouter.getCall_reportStuckKeysByNodeOperator(0)
+      assert.equal(+call1.stakingModuleId, 0)
+      assert.sameOrderedMembers(call1.nodeOperatorIds.map(x => +x), [0])
+      assert.sameOrderedMembers(call1.keysCounts.map(x => +x), [1])
+
+      const call2 = await mockStakingRouter.getCall_reportStuckKeysByNodeOperator(1)
+      assert.equal(+call2.stakingModuleId, 1)
+      assert.sameOrderedMembers(call2.nodeOperatorIds.map(x => +x), [0])
+      assert.sameOrderedMembers(call2.keysCounts.map(x => +x), [2])
+
+      const call3 = await mockStakingRouter.getCall_reportStuckKeysByNodeOperator(2)
+      assert.equal(+call3.stakingModuleId, 2)
+      assert.sameOrderedMembers(call3.nodeOperatorIds.map(x => +x), [2])
+      assert.sameOrderedMembers(call3.keysCounts.map(x => +x), [3])
     })
   })
 })

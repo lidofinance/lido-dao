@@ -19,13 +19,7 @@ contract MockLidoForAccountingOracle is ILido {
         uint256 callCount;
     }
 
-    address internal _stakingRouter;
     HandleOracleReportLastCall internal _handleOracleReportLastCall;
-
-
-    constructor(address stakingRouter) {
-        _stakingRouter = stakingRouter;
-    }
 
     function getLastCall_handleOracleReport() external view returns (HandleOracleReportLastCall memory) {
         return _handleOracleReportLastCall;
@@ -34,10 +28,6 @@ contract MockLidoForAccountingOracle is ILido {
     ///
     /// ILido
     ///
-
-    function getStakingRouter() external view returns (address) {
-        return _stakingRouter;
-    }
 
     function handleOracleReport(
         uint256 currentReportTimestamp,

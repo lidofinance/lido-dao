@@ -133,6 +133,8 @@ const changeEndianness = (string) => {
   return '0x' + result.join('')
 }
 
+const toNum = (x) => Array.isArray(x) ? x.map(toNum) : +x
+
 module.exports = {
   ZERO_HASH,
   pad,
@@ -162,5 +164,6 @@ module.exports = {
   genKeys,
   shareRate,
   shares,
-  padRight
+  padRight,
+  toNum,
 }
