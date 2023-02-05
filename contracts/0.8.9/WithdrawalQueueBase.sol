@@ -7,7 +7,9 @@ pragma solidity 0.8.9;
 import "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
 
 /**
- * @title Internal logic to handle request queue.
+ * @title Queue to store and manage WithdrawalRequests. 
+ * @dev Use an optimizations to store discounts heavily inpsired 
+ * by Aragon MiniMe token https://github.com/aragon/aragon-minime/blob/master/contracts/MiniMeToken.sol
  *
  * @author folkyatina
  */
@@ -33,8 +35,8 @@ abstract contract WithdrawalQueueBase {
         bool claimed;
     }
 
-    /// @notice structure representing a discount that is applied to request batch on finalization
-    struct Discount {
+    /// @notice structure to store discount factors for requests in the queue
+    struct DiscountCheckpoint {
         /// @notice last index the discount is applicable to. So, it is valid in (`previuosIndex`, `index`] range
         uint256 indexInQueue;
         /// @notice discount factor with 1e27 precision (0 - 100% discount, 1e27 - means no discount)
@@ -71,7 +73,7 @@ abstract contract WithdrawalQueueBase {
     error SafeCastValueDoesNotFit(uint16 maximumBitSize);
 
     /// @notice queue for withdrawal requests
-    /// @dev mapping for better upgradability
+    /// @dev mapping for better upgradability of underlying struct, because in the array structs are stored packed
     mapping(uint256 => WithdrawalRequest) internal queue;
 
     /// @notice length of the queue
@@ -81,11 +83,11 @@ abstract contract WithdrawalQueueBase {
     uint256 public lastFinalizedRequestId = lastRequestId;
 
     /// @notice finalization discount history
-    /// @dev mapping for better upgradability
-    mapping(uint256 => Discount) internal discountHistory;
+    /// @dev mapping for better upgradability of underlying struct, because in the array structs are stored packed
+    mapping(uint256 => DiscountCheckpoint) internal checkpoints;
 
-    /// @notice size of discount history
-    uint256 public lastDiscountIndex = 0;
+    /// @notice size of checkpoins array
+    uint256 public lastCheckpointIndex = 0;
 
     /// @notice amount of ETH on this contract balance that is locked for withdrawal and waiting for claim
     uint128 public lockedEtherAmount = 0;
@@ -94,10 +96,10 @@ abstract contract WithdrawalQueueBase {
     mapping(address => EnumerableSet.UintSet) private requestsByRecipient;
 
     function _initializeQueue() internal {
-        // setting dummy zero structs in discountHistory and queue beginning
+        // setting dummy zero structs in checkpoints and queue beginning
         // to avoid uint underflows and related if-branches
         queue[lastRequestId] = WithdrawalRequest(0, 0, payable(0), _toUint64(block.number), true);
-        discountHistory[lastDiscountIndex] = Discount(lastRequestId, 0);
+        checkpoints[lastCheckpointIndex] = DiscountCheckpoint(lastRequestId, 0);
     }
 
     /// @notice return the number of unfinalized requests in the queue
@@ -183,41 +185,42 @@ abstract contract WithdrawalQueueBase {
      * @param _requestId request id to be claimed with this hint
      */
     function findClaimHintUnbounded(uint256 _requestId) public view returns (uint256) {
-        return findClaimHint(_requestId, 0, lastDiscountIndex);
+        return findClaimHint(_requestId, 0, lastCheckpointIndex);
     }
 
     /**
      * @notice View function to find a hint for `claimWithdrawal()` in the range of `[_firstIndex, _lastIndex]`
      * @param _requestId request id to be claimed later
-     * @param _firstDiscountIndex left boundary of the search range
-     * @param _lastDiscountIndex right boundary of the search range
+     * @param _firstIndex left boundary of the search range
+     * @param _lastIndex right boundary of the search range
      *
      * @return the hint for `claimWithdrawal` to find the discount for the request, or zero if hint not found
      */
-    function findClaimHint(uint256 _requestId, uint256 _firstDiscountIndex, uint256 _lastDiscountIndex)
+    function findClaimHint(uint256 _requestId, uint256 _firstIndex, uint256 _lastIndex)
         public
         view
         returns (uint256)
     {
         if (_requestId > lastFinalizedRequestId) revert RequestNotFinalized(_requestId);
 
-        uint256 midDiscountIndex = _lastDiscountIndex;
-        int8 comparisionResult = _compareWithHint(_requestId, midDiscountIndex);
+        uint256 midCheckpointIndex = _lastIndex;
+        int8 comparisionResult = _compareWithHint(_requestId, midCheckpointIndex);
 
-        while (comparisionResult != 0 && _firstDiscountIndex < _lastDiscountIndex) {
-            midDiscountIndex = (_firstDiscountIndex + _lastDiscountIndex) / 2;
-            comparisionResult = _compareWithHint(_requestId, midDiscountIndex);
-            if (comparisionResult > 0) _firstDiscountIndex = midDiscountIndex + 1;
-            if (comparisionResult < 0) _lastDiscountIndex = midDiscountIndex;
+        while (comparisionResult != 0 && _firstIndex < _lastIndex) {
+            midCheckpointIndex = (_firstIndex + _lastIndex) / 2;
+            comparisionResult = _compareWithHint(_requestId, midCheckpointIndex);
+            if (comparisionResult > 0) _firstIndex = midCheckpointIndex + 1;
+            if (comparisionResult < 0) _lastIndex = midCheckpointIndex;
         }
 
-        return comparisionResult == 0 ? midDiscountIndex : 0;
+        return comparisionResult == 0 ? midCheckpointIndex : 0;
     }
 
     /**
-     * @notice Claim `_requestId` request and transfer reserved ether to recipient
+     * @notice Claim `_requestId` request and transfer locked ether to recipient
      * @param _requestId request id to claim
-     * @param _hint rate index found offchain that should be used for claiming
+     * @param _hint hint for checkpoint index to avoid extensive search over the checkpointHistory.
+     *  Can be found with `findClaimHint()` or `findClaimHintUnbounded()`
      */
     function claimWithdrawal(uint256 _requestId, uint256 _hint) public {
         if (_requestId > lastFinalizedRequestId) revert RequestNotFinalized(_requestId);
@@ -227,15 +230,15 @@ abstract contract WithdrawalQueueBase {
 
         request.claimed = true;
 
-        Discount memory discount;
-        if (_hint <= lastDiscountIndex && _compareWithHint(_requestId, _hint) == 0) {
-            discount = discountHistory[_hint];
+        DiscountCheckpoint memory checkpoint;
+        if (_hint <= lastCheckpointIndex && _compareWithHint(_requestId, _hint) == 0) {
+            checkpoint = checkpoints[_hint];
         } else {
             revert InvalidHint(_hint);
         }
 
         uint128 ethToSend = queue[_requestId].cumulativeStETH - queue[_requestId - 1].cumulativeStETH;
-        ethToSend = _applyDiscount(ethToSend, discount.discountFactor);
+        ethToSend = _applyDiscount(ethToSend, checkpoint.discountFactor);
 
         lockedEtherAmount -= ethToSend;
 
@@ -394,7 +397,7 @@ abstract contract WithdrawalQueueBase {
         uint128 stETHToFinalize = queue[_lastRequestIdToFinalize].cumulativeStETH - finalizedStETH;
         uint96 discountFactor = _calculateDiscountFactor(stETHToFinalize, _amountofETH);
 
-        _updateDiscountHistory(_lastRequestIdToFinalize, discountFactor);
+        _updateCheckpoints(_lastRequestIdToFinalize, discountFactor);
 
         lockedEtherAmount += _applyDiscount(stETHToFinalize, discountFactor);
         lastFinalizedRequestId = _lastRequestIdToFinalize;
@@ -426,28 +429,28 @@ abstract contract WithdrawalQueueBase {
     /// @dev returns -1 if `requestId` is to the left from the hint range
     ///      returns  0 if `requestId` is inside the hint range
     ///      returns +1 if `requestId` is to the right of the hint range
-    ///      where hint range is `(discountHistory[_hint - 1].indexInQueue, discountHistory[_hint].indexInQueue]`
+    ///      where hint range is `(checkpoints[_hint - 1].indexInQueue, checkpoints[_hint].indexInQueue]`
     function _compareWithHint(uint256 _requestId, uint256 _hint) internal view returns (int8 result) {
-        assert(_hint <= lastDiscountIndex);
+        assert(_hint <= lastCheckpointIndex);
 
-        if (discountHistory[_hint].indexInQueue < _requestId) {
+        if (checkpoints[_hint].indexInQueue < _requestId) {
             return 1;
         }
 
-        if (_hint > 0 && _requestId <= discountHistory[_hint - 1].indexInQueue) {
+        if (_hint > 0 && _requestId <= checkpoints[_hint - 1].indexInQueue) {
             return -1;
         }
     }
 
     /// @dev add a new entry to discount history or modify the last one if discount does not change
-    function _updateDiscountHistory(uint256 _index, uint96 _discountFactor) internal {
-        Discount storage lastDiscount = discountHistory[lastDiscountIndex];
+    function _updateCheckpoints(uint256 _index, uint96 _discountFactor) internal {
+        DiscountCheckpoint storage lastCheckpoint = checkpoints[lastCheckpointIndex];
 
-        if (_discountFactor == lastDiscount.discountFactor) {
-            lastDiscount.indexInQueue = _index;
+        if (_discountFactor == lastCheckpoint.discountFactor) {
+            lastCheckpoint.indexInQueue = _index;
         } else {
-            lastDiscountIndex++;
-            discountHistory[lastDiscountIndex] = Discount(_index, _discountFactor);
+            lastCheckpointIndex++;
+            checkpoints[lastCheckpointIndex] = DiscountCheckpoint(_index, _discountFactor);
         }
     }
 

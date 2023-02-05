@@ -63,8 +63,8 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
     ///! SLOT 0: mapping(uint256 => WithdrawalRequest) queue
     ///! SLOT 1: uint256 lastRequestId
     ///! SLOT 2: uint256 lastFinalizedRequestId
-    ///! SLOT 3: mapping(uint256 => Discount) discountHistory
-    ///! SLOT 4: uint256 lastDiscountIndex
+    ///! SLOT 3: mapping(uint256 => DiscountCheckpoint) checkpoints
+    ///! SLOT 4: uint256 lastCheckpointIndex
     ///! SLOT 5: uint128 public lockedEtherAmount
     ///! SLOT 6: mapping(address => uint256[]) requestsByRecipient
 
@@ -312,12 +312,12 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
         }
     }
 
-    /// @notice Finds the list of hints for the given `_requestIds` searching among the discounts with indices
+    /// @notice Finds the list of hints for the given `_requestIds` searching among the checkpoints with indices
     ///  in the range  `[_firstIndex, _lastIndex]`
     /// @param _requestIds ids of the requests sorted in the ascending order to get hints for
     /// @param _firstIndex left boundary of the search range
     /// @param _lastIndex right boundary of the search range
-    /// @return hintIds the hints for `claimWithdrawal` to find the discount for the passed request ids
+    /// @return hintIds the hints for `claimWithdrawal` to find the checkpoint for the passed request ids
     function findClaimHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)
         public
         view
@@ -333,13 +333,13 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
         }
     }
 
-    /// @notice Finds the list of hints for the given `_requestIds` searching among the discounts with indices
-    ///  in the range `[0, lastDiscountIndex]`
+    /// @notice Finds the list of hints for the given `_requestIds` searching among the checkpoints with indices
+    ///  in the range `[0, lastCheckpointIndex]`
     /// @dev WARNING! OOG is possible if used onchain.
     ///  See `findClaimHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)` for onchain use
     /// @param _requestIds ids of the requests sorted in the ascending order to get hints for
     function findClaimHintsUnbounded(uint256[] calldata _requestIds) public view returns (uint256[] memory hintIds) {
-        return findClaimHints(_requestIds, 0, lastDiscountIndex);
+        return findClaimHints(_requestIds, 0, lastCheckpointIndex);
     }
 
     /**
