@@ -340,23 +340,21 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
      * @notice Update bunker mode state
      * @dev should be called by oracle
      *
-     * NB: timestamp should correspond to the previous oracle report
-     *
      * @param _isBunkerModeNow oracle report
-     * @param _previousOracleReportTimestamp timestamp of the previous oracle report
+     * @param _bunkerModeSinceTimestamp timestamp of start of the bunker mode
      */
-    function updateBunkerMode(bool _isBunkerModeNow, uint256 _previousOracleReportTimestamp)
+    function updateBunkerMode(bool _isBunkerModeNow, uint256 _bunkerModeSinceTimestamp)
         external
         onlyRole(BUNKER_MODE_REPORT_ROLE)
     {
-        if (_previousOracleReportTimestamp >= block.timestamp) revert InvalidReportTimestamp();
+        if (_bunkerModeSinceTimestamp >= block.timestamp) revert InvalidReportTimestamp();
 
         bool isBunkerModeWasSetBefore = isBunkerModeActive();
 
         // on bunker mode state change
         if (_isBunkerModeNow != isBunkerModeWasSetBefore) {
             // write previous timestamp to enable bunker or max uint to disable
-            uint256 newTimestamp = _isBunkerModeNow ? _previousOracleReportTimestamp : BUNKER_MODE_DISABLED_TIMESTAMP;
+            uint256 newTimestamp = _isBunkerModeNow ? _bunkerModeSinceTimestamp : BUNKER_MODE_DISABLED_TIMESTAMP;
             BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(newTimestamp);
         }
     }
