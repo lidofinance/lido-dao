@@ -98,6 +98,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     // const proxyAddress = await newApp(newDAO.dao, 'node-operators-registry', appBase.address, appManager)
     // app = await NodeOperatorsRegistry.at(proxyAddress)
 
+    await assert.reverts(app.finalizeUpgrade_v2(steth.address, CURATED_TYPE), 'NOT_INITIALIZED')
+
     // Initialize the app's proxy.
     const tx = await app.initialize(steth.address, CURATED_TYPE)
 
@@ -129,7 +131,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('sets contract version correctly', async () => {
-      const contractVersion = await app.getVersion()
+      const contractVersion = await app.getContractVersion()
       assert.equal(contractVersion, 2)
     })
 
@@ -165,12 +167,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('sets correct contract version', async () => {
       await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
-      assert.equals(await app.getVersion(), 2)
+      assert.equals(await app.getContractVersion(), 2)
     })
 
     it('reverts with error WRONG_BASE_VERSION when called on already initialized contract', async () => {
       await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
-      assert.equals(await app.getVersion(), 2)
+      assert.equals(await app.getContractVersion(), 2)
       assert.reverts(app.finalizeUpgrade_v2(steth.address, CURATED_TYPE), 'WRONG_BASE_VERSION')
     })
 

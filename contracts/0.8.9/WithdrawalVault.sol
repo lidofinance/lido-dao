@@ -69,7 +69,7 @@ contract WithdrawalVault is Versioned {
      * Sets the contract version to '1'.
      */
     function initialize() external {
-        _initializeContractVersionTo1();
+        _initializeContractVersionTo(1);
     }
 
     /**

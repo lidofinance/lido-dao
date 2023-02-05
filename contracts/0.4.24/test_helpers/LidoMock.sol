@@ -15,29 +15,13 @@ contract LidoMock is Lido {
     uint256 internal constant UNLIMITED_TOKEN_REBASE = uint256(-1);
 
     function initialize(
-        address _oracle,
-        address _treasury,
-        address _stakingRouterAddress,
-        address _dsmAddress,
-        address _executionLayerRewardsVault,
-        address _withdrawalQueue,
+        address _lidoLocator,
         address _eip712StETH
     )
         public
     {
-        if (_treasury == address(0)) {
-            _treasury = new VaultMock();
-        }
-        if (_executionLayerRewardsVault == address(0)) {
-            _executionLayerRewardsVault = new VaultMock();
-        }
         super.initialize(
-            _oracle,
-            _treasury,
-            _stakingRouterAddress,
-            _dsmAddress,
-            _executionLayerRewardsVault,
-            _withdrawalQueue,
+            _lidoLocator,
             _eip712StETH
         );
 
@@ -83,5 +67,9 @@ contract LidoMock is Lido {
 
     function resetEip712StETH() external {
         EIP712_STETH_POSITION.setStorageAddress(0);
+    }
+
+    function burnShares(address _account, uint256 _amount) external {
+        _burnShares(_account, _amount);
     }
 }

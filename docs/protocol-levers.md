@@ -28,15 +28,6 @@ The following contracts are not upgradeable and don't depend on the Aragon code:
 
 ## [Lido.sol](/contracts/0.4.24/Lido.sol)
 
-### Burning stETH tokens
-
-* Mutator: `burnShares(address _account, uint256 _sharesAmount)`
-  * Permission required: `BURN_ROLE`
-
-DAO members can burn token shares via DAO voting to offset slashings using insurance funds.
-E.g. protocol was slashed by 5 Ether; by burning the amount of shares corresponding to 5 stETH
-the stakers can be made whole.
-
 ### Oracle
 
 The address of the oracle contract.
