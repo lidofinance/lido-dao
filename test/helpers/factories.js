@@ -186,7 +186,7 @@ async function hashConsensusTimeTravellableFactory({ legacyOracle, voting, repor
 }
 
 async function accountingOracleFactory({ voting, pool, consensusContract, legacyOracle }) {
-  const base = await AccountingOracle.new(pool.address, SECONDS_PER_SLOT)
+  const base = await AccountingOracle.new(pool.address, SECONDS_PER_SLOT, GENESIS_TIME)
   const proxy = await OssifiableProxy.new(base.address, voting.address, '0x')
   const oracle = await AccountingOracle.at(proxy.address)
 

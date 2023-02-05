@@ -91,7 +91,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
     /// Initialization & admin functions
     ///
 
-    constructor(uint256 secondsPerSlot) BaseOracle(secondsPerSlot) {}
+    constructor(uint256 secondsPerSlot, uint256 genesisTime) BaseOracle(secondsPerSlot, genesisTime) {}
 
     function initialize(
         address admin,

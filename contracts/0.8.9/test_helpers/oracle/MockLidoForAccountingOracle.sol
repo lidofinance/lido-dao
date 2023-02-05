@@ -8,6 +8,7 @@ import { ILido } from "../../oracle/AccountingOracle.sol";
 contract MockLidoForAccountingOracle is ILido {
 
     struct HandleOracleReportLastCall {
+        uint256 currentReportTimestamp;
         uint256 secondsElapsedSinceLastReport;
         uint256 numValidators;
         uint256 clBalance;
@@ -39,6 +40,7 @@ contract MockLidoForAccountingOracle is ILido {
     }
 
     function handleOracleReport(
+        uint256 currentReportTimestamp,
         uint256 secondsElapsedSinceLastReport,
         uint256 numValidators,
         uint256 clBalance,
@@ -47,6 +49,7 @@ contract MockLidoForAccountingOracle is ILido {
         uint256 lastWithdrawalRequestIdToFinalize,
         uint256 finalizationShareRate
     ) external {
+        _handleOracleReportLastCall.currentReportTimestamp = currentReportTimestamp;
         _handleOracleReportLastCall.secondsElapsedSinceLastReport = secondsElapsedSinceLastReport;
         _handleOracleReportLastCall.numValidators = numValidators;
         _handleOracleReportLastCall.clBalance = clBalance;

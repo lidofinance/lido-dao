@@ -67,7 +67,7 @@ module.exports = {
 
 
 async function deployExitBusOracle(admin, {dataSubmitter = null} = {}) {
-  const oracle = await ValidatorsExitBusOracle.new(SECONDS_PER_SLOT, {from: admin})
+  const oracle = await ValidatorsExitBusOracle.new(SECONDS_PER_SLOT, GENESIS_TIME, {from: admin})
 
   const {consensus} = await deployHashConsensus(admin, {
     epochsPerFrame: EPOCHS_PER_FRAME,

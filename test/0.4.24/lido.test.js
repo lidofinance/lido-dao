@@ -43,6 +43,12 @@ const MAX_DEPOSITS = 150
 const CURATED_MODULE_ID = 1
 const CALLDATA = '0x0'
 
+async function getTimestamp() {
+  const blockNum = await ethers.provider.getBlockNumber();
+  const block = await ethers.provider.getBlock(blockNum);
+  return block.timestamp;
+}
+
 contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, treasury]) => {
   let app, oracle, depositContract, operators
   let treasuryAddress
@@ -1056,14 +1062,14 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
 
     await assertRevert(
-      app.handleOracleReport(1, ETH(30), 0, 0, 0, 0, 0, { from: appManager }),
+      app.handleOracleReport(await getTimestamp(), 1, ETH(30), 0, 0, 0, 0, 0, { from: appManager }),
       'APP_AUTH_FAILED'
     )
 
     await pushReport(1, ETH(30))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(30) })
 
-    await assertRevert(app.handleOracleReport(1, ETH(29), 0, 0, 0, 0, 0, { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(app.handleOracleReport(await getTimestamp(), 1, ETH(29), 0, 0, 0, 0, 0, { from: nobody }), 'APP_AUTH_FAILED')
 
     await pushReport(1, ETH(100)) // stale data
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(100) })
@@ -1627,10 +1633,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   it('burnShares works', async () => {
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
 
-    // not permitted from arbitrary address
-    await assertRevert(app.burnShares(user1, ETH(1), { from: nobody }), 'APP_AUTH_FAILED')
-
-    // voting can burn shares of any user
+    // can burn shares of an arbitrary user
     const expectedPreTokenAmount = await app.getPooledEthByShares(ETH(0.5))
     let receipt = await app.burnShares(user1, ETH(0.5), { from: voting })
     const expectedPostTokenAmount = await app.getPooledEthByShares(ETH(0.5))

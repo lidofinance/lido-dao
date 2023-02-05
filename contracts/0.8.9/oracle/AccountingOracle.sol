@@ -13,6 +13,7 @@ import { BaseOracle, IConsensusContract } from "./BaseOracle.sol";
 
 interface ILido {
     function handleOracleReport(
+        uint256 currentReportTimestamp,
         uint256 secondsElapsedSinceLastReport,
         // CL values
         uint256 beaconValidators,
@@ -132,7 +133,7 @@ contract AccountingOracle is BaseOracle {
     /// Initialization & admin functions
     ///
 
-    constructor(address lido, uint256 secondsPerSlot) BaseOracle(secondsPerSlot) {
+    constructor(address lido, uint256 secondsPerSlot, uint256 genesisTime) BaseOracle(secondsPerSlot, genesisTime) {
         if (lido == address(0)) revert LidoCannotBeZero();
         LIDO = lido;
     }
@@ -476,6 +477,7 @@ contract AccountingOracle is BaseOracle {
         );
 
         ILido(LIDO).handleOracleReport(
+            GENESIS_TIME + data.refSlot * SECONDS_PER_SLOT,
             slotsElapsed * SECONDS_PER_SLOT,
             data.numValidators,
             data.clBalanceGwei * 1e9,

@@ -88,13 +88,15 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
 
 
     uint256 public immutable SECONDS_PER_SLOT;
+    uint256 public immutable GENESIS_TIME;
 
     ///
     /// Initialization & admin functions
     ///
 
-    constructor(uint256 secondsPerSlot) {
+    constructor(uint256 secondsPerSlot, uint256 genesisTime) {
         SECONDS_PER_SLOT = secondsPerSlot;
+        GENESIS_TIME = genesisTime;
     }
 
     /// @notice Returns the address of the HashConsensus contract.

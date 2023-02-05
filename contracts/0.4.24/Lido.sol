@@ -20,12 +20,13 @@ import "./utils/Versioned.sol";
 
 interface IPostTokenRebaseReceiver {
     function handlePostTokenRebase(
+        uint256 reportTimestamp,
+        uint256 timeElapsed,
         uint256 preTotalShares,
         uint256 preTotalEther,
         uint256 postTotalShares,
         uint256 postTotalEther,
-        uint256 sharesMintedAsFees,
-        uint256 timeElapsed
+        uint256 sharesMintedAsFees
     ) external;
 }
 
@@ -135,19 +136,21 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     event StakingLimitRemoved();
 
     event ETHDistributed(
+        uint256 indexed reportTimestamp,
         int256 clBalanceDiff,
         uint256 withdrawalsWithdrawn,
         uint256 executionLayerRewardsWithdrawn,
         uint256 postBufferredEther
     );
 
-    event TokenRebase(
+    event TokenRebased(
+        uint256 indexed reportTimestamp,
+        uint256 timeElapsed,
         uint256 preTotalShares,
         uint256 preTotalEther,
         uint256 postTotalShares,
         uint256 postTotalEther,
-        uint256 sharesMintedAsFees,
-        uint256 timeElapsed
+        uint256 sharesMintedAsFees
     );
 
     // Lido locator set
@@ -459,8 +462,13 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         _setMaxPositiveTokenRebase(_maxTokenPositiveRebase);
     }
 
+    /**
+     * The structure is used to aggregate the `handleOracleReport` provided data.
+     * Using the in-memory structure addresses `stack too deep` issues.
+     */
     struct OracleReportInputData {
-        // Oracle report timing
+        // Oracle timings
+        uint256 reportTimestamp;
         uint256 timeElapsed;
         // CL values
         uint256 clValidators;
@@ -476,7 +484,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     /**
     * @notice Updates accounting stats, collects EL rewards and distributes collected rewards if beacon balance increased
     * @dev periodically called by the Oracle contract
-    * @param _timeElapsed time elapsed since the previous oracle report
+    * @param _reportTimestamp the moment of the oracle report calculation
+    * @param _timeElapsed seconds elapsed since the previous report calculation
     * @param _clValidators number of Lido validators on Consensus Layer
     * @param _clBalance sum of all Lido validators' balances on Consensus Layer
     * @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
@@ -490,7 +499,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     * @return elRewards withdrawn from the execution layer rewards vault
     */
     function handleOracleReport(
-        // Oracle timing
+        // Oracle timings
+        uint256 _reportTimestamp,
         uint256 _timeElapsed,
         // CL values
         uint256 _clValidators,
@@ -514,6 +524,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         return _handleOracleReport(
             OracleReportInputData(
+                _reportTimestamp,
                 _timeElapsed,
                 _clValidators,
                 _clBalance,
@@ -1027,10 +1038,11 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         (
             postTotalPooledEther, postTotalShares
         ) = _completeTokenRebase(
-            tokenRebaseLimiter, sharesMintedAsFees, _inputData.timeElapsed
+            tokenRebaseLimiter, _inputData.reportTimestamp, _inputData.timeElapsed, sharesMintedAsFees
         );
 
         emit ETHDistributed(
+            _inputData.reportTimestamp,
             clBalanceDiff,
             withdrawals,
             elRewards,
@@ -1040,8 +1052,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
     function _completeTokenRebase(
         LimiterState.Data memory _tokenRebaseLimiter,
-        uint256 _sharesMintedAsFees,
-        uint256 _timeElapsed
+        uint256 _reportTimestamp,
+        uint256 _timeElapsed,
+        uint256 _sharesMintedAsFees
     ) internal returns (uint256 postTotalPooledEther, uint256 postTotalShares) {
         uint256 preTotalPooledEther = _tokenRebaseLimiter.totalPooledEther;
         uint256 preTotalShares = _tokenRebaseLimiter.totalShares;
@@ -1052,22 +1065,24 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         address postTokenRebaseReceiver = getLidoLocator().rebaseReceiver();
         if (postTokenRebaseReceiver != address(0)) {
             IPostTokenRebaseReceiver(postTokenRebaseReceiver).handlePostTokenRebase(
+                _reportTimestamp,
+                _timeElapsed,
                 preTotalShares,
                 preTotalPooledEther,
                 postTotalShares,
                 postTotalPooledEther,
-                _sharesMintedAsFees,
-                _timeElapsed
+                _sharesMintedAsFees
             );
         }
 
-        emit TokenRebase(
+        emit TokenRebased(
+            _reportTimestamp,
+            _timeElapsed,
             preTotalShares,
             preTotalPooledEther,
             postTotalShares,
             postTotalPooledEther,
-            _sharesMintedAsFees,
-            _timeElapsed
+            _sharesMintedAsFees
         );
     }
 
