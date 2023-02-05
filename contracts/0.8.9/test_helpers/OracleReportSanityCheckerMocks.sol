@@ -57,15 +57,15 @@ contract LidoLocatorStub is ILidoLocator {
         WITHDRAWAL_QUEUE = _withdrawalQueue;
     }
 
-    function getLido() external view returns (address) {
+    function lido() external view returns (address) {
         return LIDO;
     }
 
-    function getWithdrawalQueue() external view returns (address) {
+    function withdrawalQueue() external view returns (address) {
         return WITHDRAWAL_QUEUE;
     }
 
-    function getWithdrawalVault() external view returns (address) {
+    function withdrawalVault() external view returns (address) {
         return WITHDRAWAL_VAULT;
     }
 }

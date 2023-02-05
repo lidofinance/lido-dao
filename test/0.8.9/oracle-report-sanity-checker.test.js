@@ -3,10 +3,10 @@ const { ETH } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 
 const mocksFilePath = 'contracts/0.8.9/test_helpers/OracleReportSanityCheckerMocks.sol'
-const LidoMock = hre.artifacts.require(`${mocksFilePath}:LidoStub`)
+const LidoStub = hre.artifacts.require(`${mocksFilePath}:LidoStub`)
 const OracleReportSanityChecker = hre.artifacts.require('OracleReportSanityChecker')
-const LidoLocatorMock = hre.artifacts.require(`${mocksFilePath}:LidoLocatorStub`)
-const WithdrawalQueueMock = hre.artifacts.require(`${mocksFilePath}:WithdrawalQueueStub`)
+const LidoLocatorStub = hre.artifacts.require(`${mocksFilePath}:LidoLocatorStub`)
+const WithdrawalQueueStub = hre.artifacts.require(`${mocksFilePath}:WithdrawalQueueStub`)
 
 function wei(number, units = 'wei') {
   switch (units.toLowerCase()) {
@@ -19,6 +19,8 @@ function wei(number, units = 'wei') {
   throw new Error(`Unsupported units "${units}"`)
 }
 
+const SECONDS_PER_SLOT = 12
+const SECONDS_PER_EPOCH = 32 * SECONDS_PER_SLOT
 contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...accounts]) => {
   let oracleReportSanityChecker, lidoLocatorMock, lidoMock, withdrawalQueueMock
   const managersRoster = {
@@ -53,12 +55,15 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
 
   before(async () => {
     await hre.ethers.provider.send('hardhat_mine', ['0x400', '0xc']) // mine 1024 blocks
-    lidoMock = await LidoMock.new({ from: deployer })
-    withdrawalQueueMock = await WithdrawalQueueMock.new({ from: deployer })
-    lidoLocatorMock = await LidoLocatorMock.new(lidoMock.address, withdrawalVault, withdrawalQueueMock.address)
+    lidoMock = await LidoStub.new({ from: deployer })
+    withdrawalQueueMock = await WithdrawalQueueStub.new({ from: deployer })
+    lidoLocatorMock = await LidoLocatorStub.new(lidoMock.address, withdrawalVault, withdrawalQueueMock.address, {
+      from: deployer
+    })
 
     oracleReportSanityChecker = await OracleReportSanityChecker.new(
       lidoLocatorMock.address,
+      SECONDS_PER_EPOCH,
       admin,
       Object.values(defaultLimitsList),
       Object.values(managersRoster),

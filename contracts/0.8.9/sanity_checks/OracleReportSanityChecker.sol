@@ -14,11 +14,11 @@ interface ILido {
 }
 
 interface ILidoLocator {
-    function getLido() external view returns (address);
+    function lido() external view returns (address);
 
-    function getWithdrawalVault() external view returns (address);
+    function withdrawalVault() external view returns (address);
 
-    function getWithdrawalQueue() external view returns (address);
+    function withdrawalQueue() external view returns (address);
 }
 
 interface IWithdrawalQueue {
@@ -29,7 +29,7 @@ interface IWithdrawalQueue {
             uint256 amountOfStETH,
             uint256 amountOfShares,
             address recipient,
-            uint256 blockNumber,
+            uint256 timestamp,
             bool isFinalized,
             bool isClaimed
         );
@@ -92,10 +92,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     bytes32 public constant MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE =
         keccak256("MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE");
 
-    uint256 private constant SLOT_DURATION = 12;
-    uint256 private constant EPOCH_DURATION = 32 * SLOT_DURATION;
-
+    uint256 public immutable SECONDS_PER_EPOCH;
     ILidoLocator private immutable LIDO_LOCATOR;
+
     LimitsListPacked private _limits;
 
     struct ManagersRoster {
@@ -114,12 +113,16 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     /// @param _managersRoster list of the address to grant permissions for granular limits management
     constructor(
         address _lidoLocator,
+        uint256 _secondsPerEpoch,
         address _admin,
         LimitsList memory _limitsList,
         ManagersRoster memory _managersRoster
     ) {
         LIDO_LOCATOR = ILidoLocator(_lidoLocator);
+        SECONDS_PER_EPOCH =  _secondsPerEpoch;
+
         _updateLimits(_limitsList);
+        
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(ALL_LIMITS_MANAGER_ROLE, _managersRoster.allLimitsManagers);
         _grantRole(CHURN_VALIDATORS_BY_EPOCH_LIMIT_MANGER_ROLE, _managersRoster.churnValidatorsByEpochLimitManagers);
@@ -283,7 +286,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     ) external view {
         LimitsList memory limitsList = _limits.unpack();
 
-        address withdrawalVault = LIDO_LOCATOR.getWithdrawalVault();
+        address withdrawalVault = LIDO_LOCATOR.withdrawalVault();
         // 1. Withdrawals vault one-off reported balance
         _checkWithdrawalVaultBalance(withdrawalVault.balance, _withdrawalVaultBalance);
 
@@ -293,7 +296,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         // 3. Consensus Layer annual balances increase
         _checkAnnualBalancesIncrease(limitsList, _preCLBalance, _postCLBalance, _timeElapsed);
 
-        address lido = LIDO_LOCATOR.getLido();
+        address lido = LIDO_LOCATOR.lido();
         // 4. shareRate calculated off-chain is consistent with the on-chain one
         _checkFinalizationShareRate(limitsList, lido, _finalizationShareRate);
     }
@@ -323,7 +326,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         view
     {
         LimitsList memory limitsList = _limits.unpack();
-        address withdrawalQueue = LIDO_LOCATOR.getWithdrawalQueue();
+        address withdrawalQueue = LIDO_LOCATOR.withdrawalQueue();
         // 1. No finalized id up to newer than the allowed report margin
         _checkRequestIdToFinalizeUpTo(limitsList, withdrawalQueue, _requestIdToFinalizeUpTo, _refReportTimestamp);
     }
@@ -368,8 +371,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _appearedValidators,
         uint256 _exitedValidators,
         uint256 _timeElapsed
-    ) internal pure {
-        uint256 churnLimit = (_limitsList.churnValidatorsByEpochLimit * _timeElapsed) / EPOCH_DURATION;
+    ) internal view {
+        uint256 churnLimit = (_limitsList.churnValidatorsByEpochLimit * _timeElapsed) / SECONDS_PER_EPOCH;
         if (_appearedValidators > churnLimit) revert IncorrectAppearedValidators(churnLimit);
         if (_exitedValidators > churnLimit) revert IncorrectExitedValidators(churnLimit);
     }
