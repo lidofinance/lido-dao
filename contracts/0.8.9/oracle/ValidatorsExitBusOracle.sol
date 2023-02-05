@@ -7,11 +7,12 @@ import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 import { Math } from "../lib/Math.sol";
 import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
 import { AllowanceBasedRateLimit as RateLimit } from "../lib/AllowanceBasedRateLimit.sol";
+import { PausableUntil } from "../utils/PausableUntil.sol";
 
 import { BaseOracle } from "./BaseOracle.sol";
 
 
-contract ValidatorsExitBusOracle is BaseOracle {
+contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     using RateLimit for RateLimit.State;
     using UnstructuredStorage for bytes32;
     using SafeCast for uint256;
@@ -71,6 +72,11 @@ contract ValidatorsExitBusOracle is BaseOracle {
     /// @notice An ACL role granting the permission to set report data safety boundaries.
     bytes32 public constant MANAGE_DATA_BOUNDARIES_ROLE = keccak256("MANAGE_DATA_BOUNDARIES_ROLE");
 
+    /// @notice An ACL role granting the permission to pause accepting validator exit requests
+    bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
+
+    /// @notice An ACL role granting the permission to resume accepting validator exit requests
+    bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
 
     /// @dev Storage slot: uint256 totalRequestsProcessed
     bytes32 internal constant TOTAL_REQUESTS_PROCESSED_POSITION =
@@ -102,6 +108,8 @@ contract ValidatorsExitBusOracle is BaseOracle {
 
     function initialize(
         address admin,
+        address pauser,
+        address resumer,
         address consensusContract,
         uint256 consensusVersion,
         uint256 lastProcessingRefSlot,
@@ -112,6 +120,8 @@ contract ValidatorsExitBusOracle is BaseOracle {
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(PAUSE_ROLE, pauser);
+        _grantRole(RESUME_ROLE, resumer);
         _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
         _setDataBoundaries(
             maxExitRequestsPerReport,
@@ -119,6 +129,27 @@ contract ValidatorsExitBusOracle is BaseOracle {
             exitRequestsRateLimitWindowSizeSlots,
             exitRequestsRateLimitMaxThroughputE18
         );
+        RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(PAUSE_INFINITELY); // pause it explicitly
+    }
+
+    /// @notice Resume accepting validator exit requests
+    ///
+    /// @dev Reverts with `PausedExpected()` if contract is already resumed
+    /// @dev Reverts with `AccessControl:...` reason if sender has no `RESUME_ROLE`
+    ///
+    function resume() external whenPaused onlyRole(RESUME_ROLE) {
+        _resume();
+    }
+
+    /// @notice Pause accepting validator exit requests util in after duration
+    ///
+    /// @param _duration pause duration, seconds (use `PAUSE_INFINITELY` for unlimited)
+    /// @dev Reverts with `ResumedExpected()` if contract is already paused
+    /// @dev Reverts with `AccessControl:...` reason if sender has no `PAUSE_ROLE`
+    /// @dev Reverts with `ZeroPauseDuration()` if zero duration is passed
+    ///
+    function pause(uint256 _duration) external onlyRole(PAUSE_ROLE) {
+        _pause(_duration);
     }
 
     /// @notice Sets data safety boundaries.
@@ -241,7 +272,9 @@ contract ValidatorsExitBusOracle is BaseOracle {
     ///   provided by the hash consensus contract.
     /// - The provided data doesn't meet safety checks and boundaries.
     ///
-    function submitReportData(ReportData calldata data, uint256 contractVersion) external {
+    function submitReportData(ReportData calldata data, uint256 contractVersion)
+        external whenResumed
+    {
         _checkMsgSenderIsAllowedToSubmitData();
         _checkContractVersion(contractVersion);
         // it's a waste of gas to copy the whole calldata into mem but seems there's no way around
