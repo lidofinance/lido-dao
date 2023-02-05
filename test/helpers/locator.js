@@ -13,7 +13,8 @@ const locatorServices = [
   'treasury',
   'validatorExitBus',
   'withdrawalQueue',
-  'withdrawalVault'
+  'withdrawalVault',
+  'postTokenRebaseReceiver'
 ]
 
 function getRandomLocatorConfig(overrides = {}) {
