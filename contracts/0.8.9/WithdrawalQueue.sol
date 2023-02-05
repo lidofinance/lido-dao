@@ -281,6 +281,18 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
         return requestWithdrawalsWstETH(_withdrawalRequestInputs);
     }
 
+    /// @notice return statuses for the bunch of requests
+    /// @param _requestIds list of withdrawal request ids and hints to claim
+    function getWithdrawalRequestStatuses(uint256[] calldata _requestIds)
+        external
+        returns (WithdrawalRequestStatus[] memory statuses)
+    {
+        statuses = new WithdrawalRequestStatus[](_requestIds.length);
+        for (uint256 i = 0; i < _requestIds.length; ++i) {
+            statuses[i] = getWithdrawalRequestStatus(_requestIds[i]);
+        }
+    }
+
     struct ClaimWithdrawalInput {
         /// @notice id of the finalized requests to claim
         uint256 requestId;
@@ -386,7 +398,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
         _grantRole(FINALIZE_ROLE, _finalizer);
 
         RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(PAUSE_INFINITELY); // pause it explicitly
-        BUNKER_MODE_SINCE_TIMESTAMP_POSITION. setStorageUint256(BUNKER_MODE_DISABLED_TIMESTAMP);
+        BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(BUNKER_MODE_DISABLED_TIMESTAMP);
 
         emit InitializedV1(_admin, _pauser, _resumer, _finalizer, msg.sender);
     }
@@ -399,10 +411,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
         return _enqueue(_amountOfStETH.toUint128(), amountOfShares.toUint128(), _owner);
     }
 
-    function _requestWithdrawalWstETH(uint256 _amountOfWstETH, address _owner)
-        internal
-        returns (uint256 requestId)
-    {
+    function _requestWithdrawalWstETH(uint256 _amountOfWstETH, address _owner) internal returns (uint256 requestId) {
         WSTETH.safeTransferFrom(msg.sender, address(this), _amountOfWstETH);
         uint256 amountOfStETH = IWstETH(WSTETH).unwrap(_amountOfWstETH);
 

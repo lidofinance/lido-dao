@@ -72,13 +72,11 @@ abstract contract WithdrawalQueueBase {
         uint256 amountOfShares
     );
     event WithdrawalBatchFinalized(
-        uint256 indexed from,
-        uint256 indexed to,
-        uint256 amountOfETHLocked,
-        uint256 sharesBurned,
-        uint256 timestamp
+        uint256 indexed from, uint256 indexed to, uint256 amountOfETHLocked, uint256 sharesBurned, uint256 timestamp
     );
-    event WithdrawalClaimed(uint256 indexed requestId, address indexed receiver, address initiator, uint256 amountOfETH);
+    event WithdrawalClaimed(
+        uint256 indexed requestId, address indexed receiver, address initiator, uint256 amountOfETH
+    );
     event WithdrawalRequestTransferred(uint256 indexed requestId, address newOwner, address oldOwner);
 
     error ZeroAmountOfETH();
@@ -138,20 +136,28 @@ abstract contract WithdrawalQueueBase {
         return _getRequestByOwner()[_owner].values();
     }
 
+    struct WithdrawalRequestStatus {
+        /// @notice stETH token amount that was locked on withdrawal queue for this request
+        uint256 amountOfStETH;
+        /// @notice amount of stETH shares locked on withdrawal queue for this request
+        uint256 amountOfShares;
+        /// @notice address that can claim or transfer this request
+        address owner;
+        /// @notice timestamp of when the request was created, in seconds
+        uint256 timestamp;
+        /// @notice true, if request is finalized
+        bool isFinalized;
+        /// @notice true, if request is already claimed. Request can be claimed if (isFinalized && !isClaimed)
+        bool isClaimed;
+    }
+
     /**
      * @notice Returns status of the withdrawal request
      */
     function getWithdrawalRequestStatus(uint256 _requestId)
-        external
+        public
         view
-        returns (
-            uint256 amountOfStETH,
-            uint256 amountOfShares,
-            address owner,
-            uint256 timestamp,
-            bool isFinalized,
-            bool isClaimed
-        )
+        returns (WithdrawalRequestStatus memory status)
     {
         if (_requestId == 0) revert InvalidRequestId(_requestId);
         if (_requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
@@ -159,14 +165,14 @@ abstract contract WithdrawalQueueBase {
         WithdrawalRequest memory request = _getQueue()[_requestId];
         WithdrawalRequest memory previousRequest = _getQueue()[_requestId - 1];
 
-        owner = request.owner;
-        timestamp = request.timestamp;
-
-        amountOfShares = request.cumulativeShares - previousRequest.cumulativeShares;
-        amountOfStETH = request.cumulativeStETH - previousRequest.cumulativeStETH;
-
-        isFinalized = _requestId <= getLastFinalizedRequestId();
-        isClaimed = request.claimed;
+        status = WithdrawalRequestStatus(
+            request.cumulativeStETH - previousRequest.cumulativeStETH,
+            request.cumulativeShares - previousRequest.cumulativeShares,
+            request.owner,
+            request.timestamp,
+            _requestId <= getLastFinalizedRequestId(),
+            request.claimed
+        );
     }
 
     /**
@@ -305,7 +311,7 @@ abstract contract WithdrawalQueueBase {
     /**
      * @notice Claim `_requestId` request and transfer locked ether to the owner
      * @param _requestId request id to claim
-     * @dev will use `findClaimHintUnbounded()` to find a hint, what can lead to OOG 
+     * @dev will use `findClaimHintUnbounded()` to find a hint, what can lead to OOG
      * Prefer `claimWithdrawal(uint256 _requestId, uint256 _hint)` to save gas
      */
     function claimWithdrawal(uint256 _requestId) external {
@@ -465,7 +471,7 @@ abstract contract WithdrawalQueueBase {
 
         WithdrawalRequest memory lastFinalizedRequest = _getQueue()[lastFinalizedRequestId];
         WithdrawalRequest memory requestToFinalize = _getQueue()[_nextFinalizedRequestId];
-       
+
         uint128 stETHToFinalize = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH;
 
         uint256 discountFactor = NO_DISCOUNT;
@@ -492,7 +498,7 @@ abstract contract WithdrawalQueueBase {
             _amountOfETH,
             requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares,
             block.timestamp
-        );
+            );
     }
 
     // quazi-constructor
@@ -515,7 +521,6 @@ abstract contract WithdrawalQueueBase {
     //
     // Internal getters and setters
     //
-
     function _getQueue() internal pure returns (mapping(uint256 => WithdrawalRequest) storage queue) {
         bytes32 position = QUEUE_POSITION;
         assembly {
