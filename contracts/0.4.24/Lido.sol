@@ -13,6 +13,8 @@ import "../common/interfaces/ISelfOwnedStETHBurner.sol";
 
 import "./lib/StakeLimitUtils.sol";
 import "./lib/PositiveTokenRebaseLimiter.sol";
+import "./lib/SafeMathSigned256.sol";
+import "../common/lib/Math256.sol";
 
 import "./StETHPermit.sol";
 
@@ -92,6 +94,7 @@ interface IWithdrawalQueue {
 */
 contract Lido is Versioned, StETHPermit, AragonApp {
     using SafeMath for uint256;
+    using SafeMathSigned256 for int256;
     using UnstructuredStorage for bytes32;
     using StakeLimitUnstructuredStorage for bytes32;
     using StakeLimitUtils for StakeLimitState.Data;
@@ -655,7 +658,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         CL_BALANCE_POSITION.setStorageUint256(_postClBalance);
 
         // Find the difference between CL balances (considering appeared validators)
-        return _signedSub(int256(_postClBalance), int256(preCLBalanceWithAppeared));
+        return int256(_postClBalance).sub(int256(preCLBalanceWithAppeared));
     }
 
     /**
@@ -738,7 +741,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 _withdrawnWithdrawals,
         uint256 _withdrawnElRewards
     ) internal returns (uint256 sharesMintedAsFees) {
-        int256 consensusLayerRewards = _signedAdd(_clBalanceDiff, int256(_withdrawnWithdrawals));
+        int256 consensusLayerRewards = _clBalanceDiff.add(int256(_withdrawnWithdrawals));
         // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
         // (when consensus layer balance delta is zero or negative).
         // See ADR #3 for details:
@@ -998,7 +1001,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         if (bufferedEth > withdrawalReserve) {
             bufferedEth = bufferedEth.sub(withdrawalReserve);
             /// available ether amount for deposits (multiple of 32eth)
-            uint256 depositableEth = _min(bufferedEth.div(DEPOSIT_SIZE), _maxDepositsCount).mul(DEPOSIT_SIZE);
+            uint256 depositableEth = Math256.min(bufferedEth.div(DEPOSIT_SIZE), _maxDepositsCount).mul(DEPOSIT_SIZE);
 
             uint256 unaccountedEth = _getUnaccountedEther();
             /// @dev transfer ether to SR and make deposit at the same time
@@ -1112,19 +1115,5 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             uint256 sharesToBurnNow = burner.commitSharesToBurn(maxSharesToBurn);
             _burnShares(address(burner), sharesToBurnNow);
         }
-    }
-
-    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? a : b;
-    }
-
-    function _signedSub(int256 a, int256 b) internal pure returns (int256 c) {
-        c = a - b;
-        require(b - a == -c, "MATH_SUB_UNDERFLOW");
-    }
-
-    function _signedAdd(int256 a, int256 b) internal pure returns (int256 c) {
-        c = a + b;
-        require(c - a == b, "MATH_ADD_OVERFLOW");
     }
 }
