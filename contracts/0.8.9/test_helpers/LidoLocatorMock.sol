@@ -56,14 +56,7 @@ contract LidoLocatorMock is ILidoLocator {
         postTokenRebaseReceiver = addrs.postTokenRebaseReceiver;
     }
 
-    function coreComponents() external view returns(
-        address elRewardsVault,
-        address safetyNetsRegistry,
-        address stakingRouter,
-        address treasury,
-        address withdrawalQueue,
-        address withdrawalVault
-    ) {
+    function coreComponents() external view returns(address,address,address,address,address,address) {
         return (
             elRewardsVault,
             safetyNetsRegistry,
