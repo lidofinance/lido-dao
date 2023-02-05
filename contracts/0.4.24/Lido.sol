@@ -979,6 +979,14 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
+     * @dev Check that Lido allows depositing
+     * Depends on the bunker state and protocol's pause state
+     */
+    function canDeposit() public view returns (bool) {
+       return !IWithdrawalQueue(getLidoLocator().withdrawalQueue()).isBunkerModeActive() && !isStopped();
+    }
+
+    /**
      * @dev Invokes a deposit call to the Staking Router contract and updates buffered counters
      * @param _maxDepositsCount max deposits count
      * @param _stakingModuleId id of the staking module to be deposited
@@ -989,7 +997,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         require(msg.sender == locator.depositSecurityModule(), "APP_AUTH_DSM_FAILED");
         require(_stakingModuleId <= uint24(-1), "STAKING_MODULE_ID_TOO_LARGE");
-        _whenNotStopped();
+        require(canDeposit(), "CAN_NOT_DEPOSIT");
 
         IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(locator.withdrawalQueue());
         require(!withdrawalQueue.isBunkerModeActive(), "CANT_DEPOSIT_IN_BUNKER_MODE");
