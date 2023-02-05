@@ -109,9 +109,9 @@ async function deployMockLegacyOracle({
   genesisTime = GENESIS_TIME,
   lastCompletedEpochId = V1_ORACLE_LAST_COMPLETED_EPOCH
 } = {}) {
-  return await MockLegacyOracle.new(
-    epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime, lastCompletedEpochId
-  )
+  const legacyOracle = await MockLegacyOracle.new()
+  await legacyOracle.setParams(epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime, lastCompletedEpochId)
+  return legacyOracle
 }
 
 async function deployMockLidoAndStakingRouter() {
