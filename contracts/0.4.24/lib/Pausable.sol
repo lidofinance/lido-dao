@@ -23,7 +23,7 @@ contract Pausable {
         require(!ACTIVE_FLAG_POSITION.getStorageBool(), "CONTRACT_IS_ACTIVE");
     }
 
-    function isStopped() external view returns (bool) {
+    function isStopped() public view returns (bool) {
         return !ACTIVE_FLAG_POSITION.getStorageBool();
     }
 

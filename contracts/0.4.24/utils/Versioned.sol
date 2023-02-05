@@ -21,7 +21,8 @@ contract Versioned {
     /// - 0 right after the deployment, before an initializer is invoked (and only at that moment);
     /// - N after calling initialize(), where N is the initially deployed contract version;
     /// - N after upgrading contract by calling finalizeUpgrade_vN().
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.Versioned.contractVersion");
+    bytes32 internal constant CONTRACT_VERSION_POSITION =
+        0x4dd0f6662ba1d6b081f08b350f5e9a6a7b15cf586926ba66f753594928fa64a6; // keccak256("lido.Versioned.contractVersion");
 
     uint256 internal constant PETRIFIED_VERSION_MARK = uint256(-1);
 

@@ -13,6 +13,8 @@ import "../common/interfaces/ISelfOwnedStETHBurner.sol";
 
 import "./lib/StakeLimitUtils.sol";
 import "./lib/PositiveTokenRebaseLimiter.sol";
+import "./lib/SafeMathSigned256.sol";
+import "../common/lib/Math256.sol";
 
 import "./StETHPermit.sol";
 
@@ -92,6 +94,7 @@ interface IWithdrawalQueue {
 */
 contract Lido is Versioned, StETHPermit, AragonApp {
     using SafeMath for uint256;
+    using SafeMathSigned256 for int256;
     using UnstructuredStorage for bytes32;
     using StakeLimitUnstructuredStorage for bytes32;
     using StakeLimitUtils for StakeLimitState.Data;
@@ -620,7 +623,16 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
 
-    /// @dev updates Consensus Layer state according to the current report
+    /*
+     * @dev updates Consensus Layer state according to the current report
+     *
+     * NB: conventions and assumptions
+     *
+     * `depositedValidators` are total amount of the **ever** deposited validators
+     * `_postClValidators` are total amount of the **ever** deposited validators
+     *
+     * i.e., exited validators persist in the state, just with a different status
+     */
     function _processClStateUpdate(
         uint256 _postClValidators,
         uint256 _postClBalance
@@ -638,17 +650,21 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         uint256 appearedValidators = _postClValidators.sub(preClValidators);
         uint256 preCLBalance = CL_BALANCE_POSITION.getStorageUint256();
-        uint256 rewardsBase = appearedValidators.mul(DEPOSIT_SIZE).add(preCLBalance);
+        // Take into account the balance of the newly appeared validators
+        uint256 preCLBalanceWithAppeared = appearedValidators.mul(DEPOSIT_SIZE).add(preCLBalance);
 
         // Save the current CL balance and validators to
         // calculate rewards on the next push
         CL_BALANCE_POSITION.setStorageUint256(_postClBalance);
 
-        return _signedSub(int256(_postClBalance), int256(rewardsBase));
+        // Find the difference between CL balances (considering appeared validators)
+        return int256(_postClBalance).sub(int256(preCLBalanceWithAppeared));
     }
 
-    /// @dev collect ETH from ELRewardsVault and WithdrawalVault and send to WithdrawalQueue
-    function _processETHDistribution(
+    /**
+     * @dev collect ETH from ELRewardsVault and WithdrawalVault, then send to WithdrawalQueue
+     */
+    function _collectRewardsAndProcessWithdrawals(
         uint256 _withdrawalsToWithdraw,
         uint256 _elRewardsToWithdraw,
         uint256 _requestIdToFinalizeUpTo,
@@ -656,9 +672,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     ) internal {
         (
             address elRewardsVault,
-            ,
-            ,
-            ,
+            /* address safetyNetsRegistry */,
+            /* address stakingRouter */,
+            /* address treasury */,
             address withdrawalQueue,
             address withdrawalVault
         ) = getLidoLocator().coreComponents();
@@ -694,7 +710,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         }
     }
 
-    ///@dev finalize withdrawal requests in the queue, burn their shares and return the amount of ether locked for claiming
+    /**
+     * @dev finalize withdrawal requests in the queue, burn their shares and return the amount of ether locked for claiming
+     */
     function _processWithdrawalQueue(
         address _withdrawalQueue,
         uint256 _requestIdToFinalizeUpTo,
@@ -715,13 +733,15 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         return etherToLock;
     }
 
-    /// @dev calculate the amount of rewards and distribute it
+    /**
+     * @dev calculate the amount of rewards and distribute it
+     */
     function _processRewards(
         int256 _clBalanceDiff,
         uint256 _withdrawnWithdrawals,
         uint256 _withdrawnElRewards
     ) internal returns (uint256 sharesMintedAsFees) {
-        int256 consensusLayerRewards = _signedAdd(_clBalanceDiff, int256(_withdrawnWithdrawals));
+        int256 consensusLayerRewards = _clBalanceDiff.add(int256(_withdrawnWithdrawals));
         // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
         // (when consensus layer balance delta is zero or negative).
         // See ADR #3 for details:
@@ -751,7 +771,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         }
 
         uint256 sharesAmount;
-        if (_getTotalPooledEther() != 0) {
+        if (_getTotalPooledEther() != 0 && _getTotalShares() != 0) {
             sharesAmount = getSharesByPooledEth(msg.value);
         } else {
             // totalPooledEther is 0: for first-ever deposit
@@ -959,6 +979,14 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
+     * @dev Check that Lido allows depositing
+     * Depends on the bunker state and protocol's pause state
+     */
+    function canDeposit() public view returns (bool) {
+       return !IWithdrawalQueue(getLidoLocator().withdrawalQueue()).isBunkerModeActive() && !isStopped();
+    }
+
+    /**
      * @dev Invokes a deposit call to the Staking Router contract and updates buffered counters
      * @param _maxDepositsCount max deposits count
      * @param _stakingModuleId id of the staking module to be deposited
@@ -969,7 +997,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         require(msg.sender == locator.depositSecurityModule(), "APP_AUTH_DSM_FAILED");
         require(_stakingModuleId <= uint24(-1), "STAKING_MODULE_ID_TOO_LARGE");
-        _whenNotStopped();
+        require(canDeposit(), "CAN_NOT_DEPOSIT");
 
         IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(locator.withdrawalQueue());
         require(!withdrawalQueue.isBunkerModeActive(), "CANT_DEPOSIT_IN_BUNKER_MODE");
@@ -981,7 +1009,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         if (bufferedEth > withdrawalReserve) {
             bufferedEth = bufferedEth.sub(withdrawalReserve);
             /// available ether amount for deposits (multiple of 32eth)
-            uint256 depositableEth = _min(bufferedEth.div(DEPOSIT_SIZE), _maxDepositsCount).mul(DEPOSIT_SIZE);
+            uint256 depositableEth = Math256.min(bufferedEth.div(DEPOSIT_SIZE), _maxDepositsCount).mul(DEPOSIT_SIZE);
 
             uint256 unaccountedEth = _getUnaccountedEther();
             /// @dev transfer ether to SR and make deposit at the same time
@@ -1024,7 +1052,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         elRewards = tokenRebaseLimiter.appendEther(_inputData.elRewardsVaultBalance);
 
         // collect ETH from EL and Withdrawal vaults and send some to WithdrawalQueue if required
-        _processETHDistribution(
+        _collectRewardsAndProcessWithdrawals(
             withdrawals,
             elRewards,
             _inputData.requestIdToFinalizeUpTo,
@@ -1092,22 +1120,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 maxSharesToBurn = _tokenRebaseLimiter.deductShares(coverShares.add(nonCoverShares));
 
         if (maxSharesToBurn > 0) {
-            uint256 sharesToBurnNow = burner.commitSharesToBurn(maxSharesToBurn);
-            _burnShares(address(burner), sharesToBurnNow);
+            uint256 sharesCommittedToBurnNow = burner.commitSharesToBurn(maxSharesToBurn);
+            _burnShares(address(burner), sharesCommittedToBurnNow);
         }
-    }
-
-    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? a : b;
-    }
-
-    function _signedSub(int256 a, int256 b) internal pure returns (int256 c) {
-        c = a - b;
-        require(b - a == -c, "MATH_SUB_UNDERFLOW");
-    }
-
-    function _signedAdd(int256 a, int256 b) internal pure returns (int256 c) {
-        c = a + b;
-        require(c - a == b, "MATH_ADD_OVERFLOW");
     }
 }
