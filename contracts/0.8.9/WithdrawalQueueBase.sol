@@ -302,7 +302,9 @@ abstract contract WithdrawalQueueBase {
      * @param _newOwner new owner address for withdrawal request
      */
     function transfer(uint256 _requestId, address _newOwner) external {
+        if (_newOwner == address(0)) revert InvalidOwnerAddress(_newOwner);
         if (_newOwner == msg.sender) revert InvalidOwnerAddress(_newOwner);
+        if (_requestId == 0) revert InvalidRequestId(_requestId);
         if (_requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
         WithdrawalRequest storage request = _getQueue()[_requestId];

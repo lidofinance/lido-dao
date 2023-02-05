@@ -754,6 +754,14 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await assert.reverts(withdrawalQueue.transfer(requestId, stranger, { from: owner }), `InvalidOwner("${user}", "${owner}")`)
     })
 
+    it("One can't pass zero owner", async () => {
+      await assert.reverts(withdrawalQueue.transfer(requestId, ZERO_ADDRESS, { from: owner }), `InvalidOwnerAddress("${ZERO_ADDRESS}")`)
+    })
+
+    it("One can't pass zero requestId", async () => {
+      await assert.reverts(withdrawalQueue.transfer(0, stranger, { from: owner }), `InvalidRequestId(0)`)
+    })
+
     it("One can't change claimed request", async () => {
       await withdrawalQueue.finalize(requestId, { from: steth.address, value: amount })
       await withdrawalQueue.claimWithdrawal(requestId, await withdrawalQueue.findClaimHintUnbounded(requestId), { from: user })
