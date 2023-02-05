@@ -184,7 +184,6 @@ async function setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, s
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ADDRESS_ROLE,
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE,
     NODE_OPERATOR_REGISTRY_STAKING_ROUTER_ROLE,
-    NODE_OPERATOR_REGISTRY_REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE,
     NODE_OPERATOR_REGISTRY_INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE
   ] = await Promise.all([
     nodeOperatorsRegistry.MANAGE_SIGNING_KEYS(),
@@ -195,7 +194,6 @@ async function setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, s
     nodeOperatorsRegistry.SET_NODE_OPERATOR_ADDRESS_ROLE(),
     nodeOperatorsRegistry.SET_NODE_OPERATOR_LIMIT_ROLE(),
     nodeOperatorsRegistry.STAKING_ROUTER_ROLE(),
-    nodeOperatorsRegistry.REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE(),
     nodeOperatorsRegistry.INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE()
   ])
 
@@ -228,15 +226,6 @@ async function setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, s
       NODE_OPERATOR_REGISTRY_STAKING_ROUTER_ROLE,
       appManager,
       { from: appManager }
-    ),
-    acl.createPermission(
-      stakingRouterAddress,
-      nodeOperatorsRegistry.address,
-      NODE_OPERATOR_REGISTRY_REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE,
-      appManager,
-      {
-        from: appManager
-      }
     ),
     acl.createPermission(
       stakingRouterAddress,
