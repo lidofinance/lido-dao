@@ -426,14 +426,14 @@ abstract contract WithdrawalQueueBase {
     }
 
     /// @dev creates a new `WithdrawalRequest` in the queue
-    function _enqueue(uint128 _amountOfStETH, uint128 _amountofShares, address _owner)
+    function _enqueue(uint128 _amountOfStETH, uint128 _amountOfShares, address _owner)
         internal
         returns (uint256 requestId)
     {
         uint256 lastRequestId = getLastRequestId();
         WithdrawalRequest memory lastRequest = _getQueue()[lastRequestId];
 
-        uint128 cumulativeShares = lastRequest.cumulativeShares + _amountofShares;
+        uint128 cumulativeShares = lastRequest.cumulativeShares + _amountOfShares;
         uint128 cumulativeStETH = lastRequest.cumulativeStETH + _amountOfStETH;
 
         requestId = lastRequestId + 1;
@@ -443,11 +443,11 @@ abstract contract WithdrawalQueueBase {
             WithdrawalRequest(cumulativeStETH, cumulativeShares, payable(_owner), uint64(block.number), false);
         _getRequestByOwner()[_owner].add(requestId);
 
-        emit WithdrawalRequested(requestId, msg.sender, _owner, _amountOfStETH, _amountofShares);
+        emit WithdrawalRequested(requestId, msg.sender, _owner, _amountOfStETH, _amountOfShares);
     }
 
     /// @dev Finalize requests from last finalized one up to `_lastRequestIdToFinalize`
-    function _finalize(uint256 _nextFinalizedRequestId, uint128 _amountofETH) internal {
+    function _finalize(uint256 _nextFinalizedRequestId, uint128 _amountOfETH) internal {
         if (_nextFinalizedRequestId > getLastRequestId()) revert InvalidRequestId(_nextFinalizedRequestId);
         uint256 lastFinalizedRequestId = getLastFinalizedRequestId();
         uint256 firstUnfinalizedRequestId = lastFinalizedRequestId + 1;
@@ -459,8 +459,8 @@ abstract contract WithdrawalQueueBase {
         uint128 stETHToFinalize = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH;
 
         uint256 discountFactor = NO_DISCOUNT;
-        if (stETHToFinalize > _amountofETH) {
-            discountFactor = _amountofETH * E27_PRECISION_BASE / stETHToFinalize;
+        if (stETHToFinalize > _amountOfETH) {
+            discountFactor = _amountOfETH * E27_PRECISION_BASE / stETHToFinalize;
         }
 
         uint256 lastCheckpointIndex = getLastCheckpointIndex();
@@ -468,19 +468,18 @@ abstract contract WithdrawalQueueBase {
 
         if (discountFactor != lastCheckpoint.discountFactor) {
             // add a new discount if it differs from the previous
-            
             _getCheckpoints()[lastCheckpointIndex + 1] =
                 DiscountCheckpoint(firstUnfinalizedRequestId, uint96(discountFactor));
             _setLastCheckpointIndex(lastCheckpointIndex + 1);
         }
 
-        _setLockedEtherAmount(getLockedEtherAmount() + _amountofETH);
+        _setLockedEtherAmount(getLockedEtherAmount() + _amountOfETH);
         _setLastFinalizedRequestId(_nextFinalizedRequestId);
 
         emit WithdrawalBatchFinalized(
             firstUnfinalizedRequestId,
             _nextFinalizedRequestId,
-            _amountofETH,
+            _amountOfETH,
             requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares,
             block.timestamp
         );
