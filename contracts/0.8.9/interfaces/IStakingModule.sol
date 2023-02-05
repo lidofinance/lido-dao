@@ -105,6 +105,9 @@ interface IStakingModule {
             bytes memory signatures
         );
 
+    // function updateStuckValidatorsKeysCount(uint256 nodeOperatorId, uint64 stuckSigningKeysCount) external;
+
     event ValidatorsKeysNonceChanged(uint256 validatorsKeysNonce);
     event UnusedValidatorsKeysTrimmed(uint256 indexed nodeOperatorId, uint256 trimmedKeysCount);
+    event ForgivenValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 forgivenValidatorsCount);
 }
