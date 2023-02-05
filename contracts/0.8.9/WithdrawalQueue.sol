@@ -388,6 +388,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
         _grantRole(FINALIZE_ROLE, _finalizer);
 
         RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(PAUSE_INFINITELY); // pause it explicitly
+        BUNKER_MODE_SINCE_TIMESTAMP_POSITION. setStorageUint256(BUNKER_MODE_DISABLED_TIMESTAMP);
 
         emit InitializedV1(_admin, _pauser, _resumer, _finalizer, msg.sender);
     }
