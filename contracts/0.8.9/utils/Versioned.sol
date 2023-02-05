@@ -23,11 +23,11 @@ contract Versioned {
     /// - N after upgrading contract by calling finalizeUpgrade_vN().
     bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.Versioned.contractVersion");
 
-    uint256 internal constant PERTIFIED_VERSION_MARK = type(uint256).max;
+    uint256 internal constant PETRIFIED_VERSION_MARK = type(uint256).max;
 
     constructor() {
         // lock version in the implementation's storage to prevent initialization
-        CONTRACT_VERSION_POSITION.setStorageUint256(PERTIFIED_VERSION_MARK);
+        CONTRACT_VERSION_POSITION.setStorageUint256(PETRIFIED_VERSION_MARK);
     }
 
     /// @notice Returns the current contract version.

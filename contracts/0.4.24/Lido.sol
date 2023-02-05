@@ -197,7 +197,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         address _lidoLocator,
         address _eip712StETH
     ) internal {
-        CONTRACT_VERSION_POSITION.setStorageUint256(2);
+        _setContractVersion(2);
+
         LIDO_LOCATOR_POSITION.setStorageAddress(_lidoLocator);
         _initializeEIP712StETH(_eip712StETH);
 
@@ -213,7 +214,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         address _lidoLocator,
         address _eip712StETH
     ) external {
-        require(!isPetrified(), "PETRIFIED");
         require(hasInitialized(), "NOT_INITIALIZED");
         _checkContractVersion(0);
 
