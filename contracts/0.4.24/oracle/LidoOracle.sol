@@ -256,11 +256,6 @@ contract LidoOracle is AragonApp {
         POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(postTotalEther);
         TIME_ELAPSED_POSITION.setStorageUint256(timeElapsed);
 
-        ChainSpec memory spec = _getChainSpec();
-        uint256 lastEpoch = LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256();
-        uint256 newEpoch = lastEpoch + timeElapsed / (spec.secondsPerSlot * spec.slotsPerEpoch);
-        LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(newEpoch);
-
         emit PostTotalShares(postTotalEther, preTotalEther, timeElapsed, postTotalShares);
     }
 
@@ -271,8 +266,11 @@ contract LidoOracle is AragonApp {
         external
     {
         require(msg.sender == getNewOracle(), "SENDER_NOT_ALLOWED");
+
         // new oracle's ref. slot is the last slot of the epoch preceding the one the frame starts at
         uint256 epochId = (_refSlot + 1) / _getChainSpec().slotsPerEpoch;
+        LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(epochId);
+
         emit Completed(epochId, uint128(_clBalance), uint128(_clValidators));
     }
 
