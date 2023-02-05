@@ -54,7 +54,6 @@ declare -a contracts_with_custom_errors=(
     "0.8.9/test_helpers/StakingRouterMock.sol"
     "0.8.9/WithdrawalQueue.sol"
     "0.8.9/BeaconChainDepositor.sol"
-    "0.8.9/test_helpers/BeaconChainDepositorMock.sol"
 )
 for f in "${contracts_with_custom_errors[@]}"
 do
