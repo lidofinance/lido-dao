@@ -51,6 +51,11 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor {
     error ErrorAppAuthLidoFailed();
     error ErrorStakingModuleStatusTheSame();
     error ErrorStakingModuleWrongName();
+    error UnexpectedCurrentKeysCount(
+        uint256 currentModuleExitedKeysCount,
+        uint256 currentNodeOpExitedKeysCount,
+        uint256 currentNodeOpStuckKeysCount
+    );
 
     enum StakingModuleStatus {
         Active, // deposits and rewards allowed
@@ -97,6 +102,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor {
     bytes32 public constant STAKING_MODULE_RESUME_ROLE = keccak256("STAKING_MODULE_RESUME_ROLE");
     bytes32 public constant STAKING_MODULE_MANAGE_ROLE = keccak256("STAKING_MODULE_MANAGE_ROLE");
     bytes32 public constant REPORT_EXITED_KEYS_ROLE = keccak256("REPORT_EXITED_KEYS_ROLE");
+    bytes32 public constant UNSAFE_SET_EXITED_KEYS_ROLE = keccak256("UNSAFE_SET_EXITED_KEYS_ROLE");
     bytes32 public constant REPORT_REWARDS_MINTED_ROLE = keccak256("REPORT_REWARDS_MINTED_ROLE");
 
     /// Version of the initialized contract data
@@ -305,6 +311,91 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor {
             newExitedKeysCount >= prevReportedExitedKeysCount
         ) {
             // oracle finished updating exited keys for all node ops
+            IStakingModule(moduleAddr).finishUpdatingExitedValidatorsKeysCount();
+        }
+    }
+
+    struct KeysCountCorrection {
+        uint256 currentModuleExitedKeysCount;
+        uint256 currentNodeOperatorExitedKeysCount;
+        uint256 currentNodeOperatorStuckKeysCount;
+        uint256 newModuleExitedKeysCount;
+        uint256 newNodeOperatorExitedKeysCount;
+        uint256 newNodeOperatorStuckKeysCount;
+    }
+
+    /**
+     * @notice Sets exited keys count for the given module and given node operator in that module
+     * without performing critical safety checks, e.g. that exited keys count cannot decrease.
+     *
+     * Should only be used by the DAO in extreme cases and with sufficient precautions to correct
+     * invalid data reported by the oracle committee due to a bug in the oracle daemon.
+     *
+     * @param _stakingModuleId ID of the staking module.
+     *
+     * @param _nodeOperatorId ID of the node operator.
+     *
+     * @param _triggerUpdateFinish Whether to call `finishUpdatingExitedValidatorsKeysCount` on
+     *        the module after applying the corrections.
+     *
+     * @param _correction.currentModuleExitedKeysCount The expected current number of exited keys
+     *        of the module that is being corrected.
+     *
+     * @param _correction.currentNodeOperatorExitedKeysCount The expected current number of exited
+     *        keys of the node operator that is being corrected.
+     *
+     * @param _correction.currentNodeOperatorStuckKeysCount The expected current number of stuck
+     *        keys of the node operator that is being corrected.
+     *
+     * @param _correction.newModuleExitedKeysCount The corrected number of exited keys of the module.
+     *
+     * @param _correction.newNodeOperatorExitedKeysCount The corrected number of exited keys of the
+     *        node operator.
+     *
+     * @param _correction.newNodeOperatorStuckKeysCount The corrected number of stuck keys of the
+     *        node operator.
+     *
+     * Reverts if the current numbers of exited and stuck keys of the module and node operator don't
+     * match the supplied expected current values.
+     */
+    function unsafeSetExitedKeysCount(
+        uint256 _stakingModuleId,
+        uint256 _nodeOperatorId,
+        bool _triggerUpdateFinish,
+        KeysCountCorrection memory _correction
+    )
+        external
+        onlyRole(UNSAFE_SET_EXITED_KEYS_ROLE)
+    {
+        StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
+        address moduleAddr = stakingModule.stakingModuleAddress;
+
+        (uint256 nodeOpExitedKeysCount,,) = IStakingModule(moduleAddr)
+            .getValidatorsKeysStats(_nodeOperatorId);
+
+        // FIXME: get current value from the staking module
+        uint256 nodeOpStuckKeysCount;
+
+        if (_correction.currentModuleExitedKeysCount != stakingModule.exitedKeysCount ||
+            _correction.currentNodeOperatorExitedKeysCount != nodeOpExitedKeysCount ||
+            _correction.currentNodeOperatorStuckKeysCount != nodeOpStuckKeysCount
+        ) {
+            revert UnexpectedCurrentKeysCount(
+                stakingModule.exitedKeysCount,
+                nodeOpExitedKeysCount,
+                nodeOpStuckKeysCount
+            );
+        }
+
+        stakingModule.exitedKeysCount = _correction.newModuleExitedKeysCount;
+
+        IStakingModule(moduleAddr).unsafeUpdateValidatorsKeysCount(
+            _nodeOperatorId,
+            _correction.newNodeOperatorExitedKeysCount,
+            _correction.newNodeOperatorStuckKeysCount
+        );
+
+        if (_triggerUpdateFinish) {
             IStakingModule(moduleAddr).finishUpdatingExitedValidatorsKeysCount();
         }
     }

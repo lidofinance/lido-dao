@@ -75,11 +75,15 @@ interface IStakingModule {
         uint256 _exitedValidatorKeysCount
     ) external returns (uint256);
 
-    /// @notice Unsafely updates the number of the validators in the EXITED state for node operator with given id
+    /// @notice Unsafely updates the validators count stats for node operator with given id
     /// @param _nodeOperatorId Id of the node operator
     /// @param _exitedValidatorsKeysCount New number of EXITED validators of the node operator
-    /// @return number of exited validators across all node operators
-    function unsafeUpdateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount) external returns (uint256);
+    /// @param _stuckValidatorsKeysCount New number of stuck validators of the node operator
+    function unsafeUpdateValidatorsKeysCount(
+        uint256 _nodeOperatorId,
+        uint256 _exitedValidatorsKeysCount,
+        uint256 _stuckValidatorsKeysCount
+    ) external;
 
     /// @notice Called by StakingRouter after oracle finishes updating exited keys counts for all operators.
     function finishUpdatingExitedValidatorsKeysCount() external;

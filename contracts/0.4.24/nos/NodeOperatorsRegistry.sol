@@ -376,7 +376,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule {
     function updateStuckValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _stuckValidatorKeysCount)
         external
     {
-        // FIXME: implement
+        _updateStuckValidatorsKeysCount(_nodeOperatorId, _stuckValidatorKeysCount, false);
     }
 
     /// @notice Called by StakingRouter to update the number of the validators in the EXITED state
@@ -410,11 +410,15 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule {
     /// @param _nodeOperatorId Id of the node operator
     /// @param _exitedValidatorsKeysCount New number of EXITED validators of the node operator
     /// @return Total number of exited validators across all node operators.
-    function unsafeUpdateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount)
+    function unsafeUpdateValidatorsKeysCount(
+        uint256 _nodeOperatorId,
+        uint256 _exitedValidatorsKeysCount,
+        uint256 _stuckValidatorsKeysCount
+    )
         external
-        returns (uint256)
     {
-        return _updateExitedValidatorsKeysCount(_nodeOperatorId, _exitedValidatorsKeysCount, true);
+        _updateStuckValidatorsKeysCount(_nodeOperatorId, _stuckValidatorsKeysCount, true);
+        _updateExitedValidatorsKeysCount(_nodeOperatorId, _exitedValidatorsKeysCount, true);
     }
 
     function _updateExitedValidatorsKeysCount(
@@ -448,6 +452,14 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule {
         emit ExitedSigningKeysCountChanged(_nodeOperatorId, _exitedValidatorsKeysCount);
 
         return totalSigningKeysStats.exitedSigningKeysCount;
+    }
+
+    function _updateStuckValidatorsKeysCount(
+        uint256 _nodeOperatorId,
+        uint256 _stuckValidatorKeysCount,
+        bool _allowDecrease
+    ) internal {
+        // FIXME: implement
     }
 
     /// @notice Invalidates all unused validators keys for all node operators

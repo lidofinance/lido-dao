@@ -97,13 +97,11 @@ contract ModuleSolo is IStakingModule {
 
     function finishUpdatingExitedValidatorsKeysCount() external {}
 
-    function unsafeUpdateExitedValidatorsKeysCount(
+    function unsafeUpdateValidatorsKeysCount(
         uint256 /* _nodeOperatorId */,
-        uint256 /* _exitedValidatorsKeysCount */
-    ) external returns (uint256)
-    {
-        return 0;
-    }
+        uint256 /* _exitedValidatorsKeysCount */,
+        uint256 /* _stuckValidatorsKeysCount */
+    ) external {}
 
     function addSigningKeys(
         uint256 _operator_id,
