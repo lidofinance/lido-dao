@@ -46,7 +46,7 @@ const GUARDIAN_PRIVATE_KEYS = {
 }
 const DEPOSIT_ROOT = '0xd151867719c94ad8458feaf491809f9bc8096c702a72747403ecaac30c179137'
 
-const GENESIS_TIME = 1675150000
+const GENESIS_TIME = ~~(+new Date() / 1000)
 const LAST_COMPLETED_EPOCH = 1
 const V1_ORACLE_LAST_COMPLETED_EPOCH = 2 * EPOCHS_PER_FRAME
 const V1_ORACLE_LAST_REPORT_SLOT = V1_ORACLE_LAST_COMPLETED_EPOCH * SLOTS_PER_EPOCH
@@ -64,31 +64,28 @@ async function lidoMockFactory({ dao, appManager, acl, voting }) {
 }
 
 async function grantLidoRoles(pool, acl, voting, appManager) {
-  const [
-    PAUSE_ROLE,
-    RESUME_ROLE,
-    STAKING_PAUSE_ROLE,
-    STAKING_CONTROL_ROLE,
-    MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE
-  ] = await Promise.all([
-    pool.PAUSE_ROLE(),
-    pool.RESUME_ROLE(),
-    pool.STAKING_PAUSE_ROLE(),
-    pool.STAKING_CONTROL_ROLE(),
-    pool.MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE()
-  ])
   await Promise.all([
-    acl.createPermission(voting.address, pool.address, PAUSE_ROLE, appManager.address, { from: appManager.address }),
-    acl.createPermission(voting.address, pool.address, RESUME_ROLE, appManager.address, { from: appManager.address }),
-    acl.createPermission(voting.address, pool.address, STAKING_PAUSE_ROLE, appManager.address, {
+    acl.createPermission(voting.address, pool.address, await pool.PAUSE_ROLE(), appManager.address, {
       from: appManager.address
     }),
-    acl.createPermission(voting.address, pool.address, STAKING_CONTROL_ROLE, appManager.address, {
+    acl.createPermission(voting.address, pool.address, await pool.RESUME_ROLE(), appManager.address, {
       from: appManager.address
     }),
-    acl.createPermission(voting.address, pool.address, MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE, appManager.address, {
+    acl.createPermission(voting.address, pool.address, await pool.STAKING_PAUSE_ROLE(), appManager.address, {
       from: appManager.address
-    })
+    }),
+    acl.createPermission(voting.address, pool.address, await pool.STAKING_CONTROL_ROLE(), appManager.address, {
+      from: appManager.address
+    }),
+    acl.createPermission(
+      voting.address,
+      pool.address,
+      await pool.MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE(),
+      appManager.address,
+      {
+        from: appManager.address
+      }
+    )
   ])
 }
 
@@ -122,14 +119,22 @@ async function legacyOracleFactory({ appManager }) {
   return await LidoOracle.at(proxy.address)
 }
 
-async function legacyOracleMockFactory({ appManager }) {
-  return await MockLegacyOracle.new(
+async function legacyOracleMockFactory({ appManager, dao }) {
+  const base = await MockLegacyOracle.new()
+
+  const proxyAddress = await newApp(dao, 'lido-legacy-oracle', base.address, appManager.address)
+
+  const oracle = await MockLegacyOracle.at(proxyAddress)
+
+  await oracle.setParams(
     EPOCHS_PER_FRAME,
     SLOTS_PER_EPOCH,
     SECONDS_PER_SLOT,
     GENESIS_TIME,
     V1_ORACLE_LAST_COMPLETED_EPOCH
   )
+
+  return oracle
 }
 
 async function reportProcessorFactory(_) {
@@ -198,6 +203,8 @@ async function accountingOracleFactory({ voting, pool, consensusContract, legacy
     10000,
     10000
   )
+
+  await legacyOracle.initialize(pool.address, oracle.address)
 
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), voting.address, { from: voting.address })
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), voting.address, { from: voting.address })
@@ -317,7 +324,7 @@ async function lidoLocatorMockFactory(protocol) {
     treasury: protocol.treasury.address,
     withdrawalQueue: protocol.withdrawalQueue.address,
     withdrawalVault: protocol.withdrawalVault.address,
-    rebaseReceiver: ZERO_ADDRESS
+    postTokenRebaseReceiver: protocol.legacyOracle.address
   })
 }
 
