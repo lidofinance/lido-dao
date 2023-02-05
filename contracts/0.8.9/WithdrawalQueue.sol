@@ -15,6 +15,7 @@ import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.so
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 
 import {Versioned} from "./utils/Versioned.sol";
+import {SafeCast} from "../common/lib/SafeCast.sol";
 
 /**
  * @title Interface defining a Lido liquid staking pool
@@ -54,6 +55,7 @@ interface IWstETH is IERC20, IERC20Permit {
  * @author folkyatina
  */
 contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versioned {
+    using SafeCast for uint256;
     using SafeERC20 for IWstETH;
     using SafeERC20 for IStETH;
     using UnstructuredStorage for bytes32;
@@ -208,14 +210,14 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
     struct WithdrawalRequestInput {
         /// @notice Amount of the wstETH/StETH tokens that will be locked for withdrawal
         uint256 amount;
-        /// @notice Address to send ether to upon withdrawal
-        address recipient;
+        /// @notice Address that will be able to manage or claim the request
+        address owner;
     }
 
     /// @notice Request the sequence of stETH withdrawals according to passed `withdrawalRequestInputs` data
     /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
-    ///  be created for each item in the passed list. If `WithdrawalRequestInput.recipient` is set to `address(0)`,
-    ///  `msg.sender` will be used as recipient.
+    ///  be created for each item in the passed list. If `WithdrawalRequestInput.owner` is set to `address(0)`,
+    ///  `msg.sender` will be used as owner.
     /// @return requestIds an array of the created withdrawal requests
     function requestWithdrawals(WithdrawalRequestInput[] calldata _withdrawalRequestInputs)
         public
@@ -226,15 +228,15 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
         for (uint256 i = 0; i < _withdrawalRequestInputs.length; ++i) {
             requestIds[i] = _requestWithdrawal(
                 _withdrawalRequestInputs[i].amount,
-                _checkWithdrawalRequestInput(_withdrawalRequestInputs[i].amount, _withdrawalRequestInputs[i].recipient)
+                _checkWithdrawalRequestInput(_withdrawalRequestInputs[i].amount, _withdrawalRequestInputs[i].owner)
             );
         }
     }
 
     /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data
     /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
-    ///  be created for each item in the passed list. If `WithdrawalRequestInput.recipient` is set to `address(0)`,
-    ///  `msg.sender` will be used as recipient.
+    ///  be created for each item in the passed list. If `WithdrawalRequestInput.owner` is set to `address(0)`,
+    ///  `msg.sender` will be used as owner.
     /// @return requestIds an array of the created withdrawal requests
     function requestWithdrawalsWstETH(WithdrawalRequestInput[] calldata _withdrawalRequestInputs)
         public
@@ -244,10 +246,10 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
         requestIds = new uint256[](_withdrawalRequestInputs.length);
         for (uint256 i = 0; i < _withdrawalRequestInputs.length; ++i) {
             uint256 amountOfWstETH = _withdrawalRequestInputs[i].amount;
-            address recipient = _checkWithdrawalRequestInput(
-                IWstETH(WSTETH).getStETHByWstETH(amountOfWstETH), _withdrawalRequestInputs[i].recipient
+            address owner = _checkWithdrawalRequestInput(
+                IWstETH(WSTETH).getStETHByWstETH(amountOfWstETH), _withdrawalRequestInputs[i].owner
             );
-            requestIds[i] = _requestWithdrawalWstETH(amountOfWstETH, recipient);
+            requestIds[i] = _requestWithdrawalWstETH(amountOfWstETH, owner);
         }
     }
 
@@ -261,8 +263,8 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
 
     /// @notice Request the sequence of stETH withdrawals according to passed `withdrawalRequestInputs` data using EIP-2612 Permit
     /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
-    ///  be created for each item in the passed list. If `WithdrawalRequestInput.recipient` is set to `address(0)`,
-    ///  `msg.sender` will be used as recipient.
+    ///  be created for each item in the passed list. If `WithdrawalRequestInput.owner` is set to `address(0)`,
+    ///  `msg.sender` will be used as owner.
     /// @param _permit data required for the stETH.permit() method to set the allowance
     /// @return requestIds an array of the created withdrawal requests
     function requestWithdrawalsWithPermit(
@@ -275,8 +277,8 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
 
     /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data using EIP-2612 Permit
     /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
-    ///  be created for each item in the passed list. If `WithdrawalRequestInput.recipient` is set to `address(0)`,
-    ///  `msg.sender` will be used as recipient.
+    ///  be created for each item in the passed list. If `WithdrawalRequestInput.owner` is set to `address(0)`,
+    ///  `msg.sender` will be used as owner.
     /// @param _permit data required for the wstETH.permit() method to set the allowance
     /// @return requestIds an array of the created withdrawal requests
     function requestWithdrawalsWstETHWithPermit(
@@ -339,7 +341,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
      * @param _lastRequestIdToFinalize request index in the queue that will be last finalized request in a batch
      */
     function finalize(uint256 _lastRequestIdToFinalize) external payable whenResumed onlyRole(FINALIZE_ROLE) {
-        _finalize(_lastRequestIdToFinalize, uint128(msg.value));
+        _finalize(_lastRequestIdToFinalize, msg.value.toUint128());
     }
 
     /**
@@ -398,15 +400,15 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
         emit InitializedV1(_admin, _pauser, _resumer, _finalizer, msg.sender);
     }
 
-    function _requestWithdrawal(uint256 _amountOfStETH, address _recipient) internal returns (uint256 requestId) {
+    function _requestWithdrawal(uint256 _amountOfStETH, address _owner) internal returns (uint256 requestId) {
         STETH.safeTransferFrom(msg.sender, address(this), _amountOfStETH);
 
         uint256 amountOfShares = STETH.getSharesByPooledEth(_amountOfStETH);
 
-        return _enqueue(uint128(_amountOfStETH), uint128(amountOfShares), _recipient);
+        return _enqueue(_amountOfStETH.toUint128(), amountOfShares.toUint128(), _owner);
     }
 
-    function _requestWithdrawalWstETH(uint256 _amountOfWstETH, address _recipient)
+    function _requestWithdrawalWstETH(uint256 _amountOfWstETH, address _owner)
         internal
         returns (uint256 requestId)
     {
@@ -415,20 +417,20 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
 
         uint256 amountOfShares = STETH.getSharesByPooledEth(amountOfStETH);
 
-        return _enqueue(uint128(amountOfStETH), uint128(amountOfShares), _recipient);
+        return _enqueue(amountOfStETH.toUint128(), amountOfShares.toUint128(), _owner);
     }
 
-    function _checkWithdrawalRequestInput(uint256 _amountOfStETH, address _recipient) internal view returns (address) {
+    function _checkWithdrawalRequestInput(uint256 _amountOfStETH, address _owner) internal view returns (address) {
         if (_amountOfStETH < MIN_STETH_WITHDRAWAL_AMOUNT) {
             revert RequestAmountTooSmall(_amountOfStETH);
         }
         if (_amountOfStETH > MAX_STETH_WITHDRAWAL_AMOUNT) {
             revert RequestAmountTooLarge(_amountOfStETH);
         }
-        if (_recipient == address(0)) {
-            _recipient = msg.sender;
+        if (_owner == address(0)) {
+            _owner = msg.sender;
         }
 
-        return _recipient;
+        return _owner;
     }
 }
