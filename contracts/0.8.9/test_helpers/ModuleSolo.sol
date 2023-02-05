@@ -5,7 +5,7 @@
 pragma solidity 0.8.9;
 
 import "../interfaces/IStakingModule.sol";
-import "../lib/BytesLib.sol";
+import {MemUtils} from "../../common/lib/MemUtils.sol";
 
 contract ModuleSolo is IStakingModule {
     address private stakingRouter;
@@ -161,8 +161,11 @@ contract ModuleSolo is IStakingModule {
             bytes memory signatures
         )
     {
-        publicKeys = BytesLib.slice(_calldata, 0, _keysCount * PUBKEY_LENGTH);
-        signatures = BytesLib.slice(_calldata, _keysCount * PUBKEY_LENGTH, _keysCount * SIGNATURE_LENGTH);
+
+        publicKeys = MemUtils.unsafeAllocateBytes(_keysCount * PUBKEY_LENGTH);
+        signatures = MemUtils.unsafeAllocateBytes(_keysCount * SIGNATURE_LENGTH);
+        MemUtils.copyBytes(_calldata, publicKeys, 0, 0, _keysCount * PUBKEY_LENGTH);
+        MemUtils.copyBytes(_calldata, signatures, _keysCount * PUBKEY_LENGTH, 0, _keysCount * PUBKEY_LENGTH);
 
         return (_keysCount, publicKeys, signatures);
     }

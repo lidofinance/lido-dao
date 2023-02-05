@@ -23,46 +23,38 @@ contract Versioned {
     /// - N after upgrading contract by calling finalizeUpgrade_vN().
     bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.Versioned.contractVersion");
 
+    uint256 internal constant PETRIFIED_VERSION_MARK = type(uint256).max;
+
     constructor() {
         // lock version in the implementation's storage to prevent initialization
-        CONTRACT_VERSION_POSITION.setStorageUint256(type(uint256).max);
+        CONTRACT_VERSION_POSITION.setStorageUint256(PETRIFIED_VERSION_MARK);
     }
 
     /// @notice Returns the current contract version.
-    function getContractVersion() external view returns (uint256) {
-        return _getContractVersion();
-    }
-
-    function _getContractVersion() internal view returns (uint256) {
+    function getContractVersion() public view returns (uint256) {
         return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
     function _checkContractVersion(uint256 version) internal view {
-        uint256 expectedVersion = _getContractVersion();
+        uint256 expectedVersion = getContractVersion();
         if (version != expectedVersion) {
             revert UnexpectedContractVersion(expectedVersion, version);
         }
     }
 
-    /// @dev Sets the contract version to 1. Should be called from the initialize() function.
-    function _initializeContractVersionTo1() internal {
-        if (_getContractVersion() == 0) {
-            _writeContractVersion(1);
-        } else {
-            revert NonZeroContractVersionOnInit();
-        }
+    /// @dev Sets the contract version to N. Should be called from the initialize() function.
+    function _initializeContractVersionTo(uint256 version) internal {
+        if (getContractVersion() != 0) revert NonZeroContractVersionOnInit();
+        _setContractVersion(version);
     }
 
     /// @dev Updates the contract version. Should be called from a finalizeUpgrade_vN() function.
     function _updateContractVersion(uint256 newVersion) internal {
-        if (newVersion == _getContractVersion() + 1) {
-            _writeContractVersion(newVersion);
-        } else {
-            revert InvalidContractVersionIncrement();
-        }
+        if (newVersion != getContractVersion() + 1) revert InvalidContractVersionIncrement();
+        _setContractVersion(newVersion);
     }
 
-    function _writeContractVersion(uint256 version) private {
+    function _setContractVersion(uint256 version) private {
         CONTRACT_VERSION_POSITION.setStorageUint256(version);
         emit ContractVersionSet(version);
     }

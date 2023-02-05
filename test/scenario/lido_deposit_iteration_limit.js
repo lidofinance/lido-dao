@@ -2,54 +2,47 @@ const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
 const { pad, ETH, hexConcat } = require('../helpers/utils')
-const { deployDaoAndPool } = require('./helpers/deploy')
 const { waitBlocks } = require('../helpers/blockchain')
-const { DSMAttestMessage, DSMPauseMessage } = require('../0.8.9/helpers/signatures')
+const { DSMAttestMessage, DSMPauseMessage } = require('../helpers/signatures')
+const { deployProtocol } = require('../helpers/protocol')
+const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const CURATED_MODULE_ID = 1
 
-contract('Lido: deposit loop iteration limit', (addresses) => {
-  const [
-    // the root account which deployed the DAO
-    appManager,
-    // the address which we use to simulate the voting DAO application
-    voting,
-    // node operators
-    nodeOperator,
-    // users who deposit Ether to the pool
-    user1,
-    // an unrelated address
-    nobody
-  ] = addresses
-
+contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) => {
   // Limits the number of validators assigned in a single transaction, regardless the amount
   // of Ether submitted to/buffered in the contract and the number of spare validator keys.
   // This is needed to prevent the deposit loop from failing due to it using more gas than
   // available in a single block and to protect from possible attacks exploiting this.
 
   let pool, nodeOperatorsRegistry, depositContractMock
-  let depositSecurityModule, depositRoot, guardians
+  let depositSecurityModule, depositRoot, guardians, appManager, voting
 
   it('DAO, node operators registry, token, pool and deposit security module are deployed and initialized', async () => {
-    const deployed = await deployDaoAndPool(appManager, voting)
+    const deployed = await deployProtocol({
+      stakingModulesFactory: async (protocol) => {
+        const curatedModule = await setupNodeOperatorsRegistry(protocol)
+        return [
+          {
+            module: curatedModule,
+            name: 'Curated',
+            targetShares: 10000,
+            moduleFee: 500,
+            treasuryFee: 500
+          }
+        ]
+      }
+    })
 
-    // contracts/Lido.sol
     pool = deployed.pool
-    await pool.resumeProtocolAndStaking()
-
-    // contracts/nos/NodeOperatorsRegistry.sol
-    nodeOperatorsRegistry = deployed.nodeOperatorsRegistry
-
-    // contracts/0.8.9/StakingRouter.sol
-    stakingRouter = deployed.stakingRouter
-
-    // mocks
-    depositContractMock = deployed.depositContractMock
-
+    nodeOperatorsRegistry = deployed.stakingModules[0]
+    depositContractMock = deployed.depositContract
     depositSecurityModule = deployed.depositSecurityModule
     guardians = deployed.guardians
     depositRoot = await depositContractMock.get_deposit_root()
+    appManager = deployed.appManager.address
+    voting = deployed.voting.address
 
     await depositSecurityModule.setMaxDeposits(10, { from: appManager })
     assertBn(await depositSecurityModule.getMaxDeposits(), 10, 'invariant failed: max deposits')
@@ -62,7 +55,9 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     const txn = await nodeOperatorsRegistry.addNodeOperator('operator_1', nodeOperator, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    const nodeOperatorId = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    const nodeOperatorId = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', {
+      decodeForAbi: NodeOperatorsRegistry._json.abi
+    })
 
     assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 1, 'total node operators')
 
@@ -105,7 +100,13 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
 
-    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, CURATED_MODULE_ID, keysOpIndex)
+    const validAttestMessage = new DSMAttestMessage(
+      block.number,
+      block.hash,
+      depositRoot,
+      CURATED_MODULE_ID,
+      keysOpIndex
+    )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
@@ -137,7 +138,13 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
 
-    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, CURATED_MODULE_ID, keysOpIndex)
+    const validAttestMessage = new DSMAttestMessage(
+      block.number,
+      block.hash,
+      depositRoot,
+      CURATED_MODULE_ID,
+      keysOpIndex
+    )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
@@ -166,7 +173,13 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
 
-    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, CURATED_MODULE_ID, keysOpIndex)
+    const validAttestMessage = new DSMAttestMessage(
+      block.number,
+      block.hash,
+      depositRoot,
+      CURATED_MODULE_ID,
+      keysOpIndex
+    )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
@@ -205,7 +218,13 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
 
-    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, CURATED_MODULE_ID, keysOpIndex)
+    const validAttestMessage = new DSMAttestMessage(
+      block.number,
+      block.hash,
+      depositRoot,
+      CURATED_MODULE_ID,
+      keysOpIndex
+    )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
@@ -236,7 +255,13 @@ contract('Lido: deposit loop iteration limit', (addresses) => {
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
 
-    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, CURATED_MODULE_ID, keysOpIndex)
+    const validAttestMessage = new DSMAttestMessage(
+      block.number,
+      block.hash,
+      depositRoot,
+      CURATED_MODULE_ID,
+      keysOpIndex
+    )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])

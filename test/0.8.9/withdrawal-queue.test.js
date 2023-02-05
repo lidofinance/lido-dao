@@ -187,17 +187,24 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
       assert.equals(await withdrawalQueue.lockedEtherAmount(), await ethers.provider.getBalance(withdrawalQueue.address))
     })
 
-    it('Discount array do not grow if no discount', async () => {
-      assert.equals(await withdrawalQueue.lastDiscountIndex(), 0)
-      await withdrawalQueue.finalize(1, { from: steth.address, value: ETH(300) })
+    it('Same discounts is squashed into one', async () => {
+      await steth.setTotalPooledEther(ETH(600))
+      await steth.mintShares(user, shares(1))
+      await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
 
-      assert.equals(await withdrawalQueue.lastDiscountIndex(), 0)
+      await withdrawalQueue.finalize(1, { from: steth.address, value: ETH(10) })
+      assert.equals(await withdrawalQueue.lastDiscountIndex(), 1)
+
+      await withdrawalQueue.requestWithdrawals([[amount, recipient]], { from: user })
+      await withdrawalQueue.finalize(2, { from: steth.address, value: ETH(10) })
+
+      assert.equals(await withdrawalQueue.lastDiscountIndex(), 1)
     })
 
     it('One can finalize a batch of requests at once', async () => {
       await steth.setTotalPooledEther(ETH(600))
       await steth.mintShares(user, shares(1))
-      await steth.approve(withdrawalQueue.address, StETH(600), { from: user })
+      await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
 
       await withdrawalQueue.requestWithdrawals([[amount, recipient]], { from: user })
       const batch = await withdrawalQueue.finalizationBatch(2, shareRate(300))
@@ -233,7 +240,7 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
     })
   })
 
-  context('Claim', async () => {
+  context('claimWithdrawal()', async () => {
     let requestId
     const amount = ETH(300)
     beforeEach('Enqueue a request', async () => {
@@ -243,12 +250,6 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
 
     it('One cant claim not finalized request', async () => {
       await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 0), `RequestNotFinalized(${requestId})`)
-    })
-
-    it('One can find a right hint to claim a withdrawal', async () => {
-      await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
-
-      assert.equals(await withdrawalQueue.findClaimHintUnbounded(requestId), await withdrawalQueue.lastDiscountIndex())
     })
 
     it('Cant claim request with a wrong hint', async () => {
@@ -300,21 +301,207 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
 
       assert.equals(await withdrawalQueue.lastDiscountIndex(), 0)
       await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
-      assert.equals(await withdrawalQueue.lastDiscountIndex(), 0)
 
       for (let i = 1; i <= 20; i++) {
+        assert.equals(await withdrawalQueue.lastDiscountIndex(), i)
         await withdrawalQueue.requestWithdrawals([[StETH(1), ZERO_ADDRESS]], { from: user })
-        await withdrawalQueue.finalize(i + 1, { from: steth.address, value: bn(ETH(1)).div(bn(i * 1000)) })
+        await withdrawalQueue.finalize(i + 1, { from: steth.address, value: bn(ETH(1)).sub(bn(i * 1000)) })
       }
 
-      assert.equals(await withdrawalQueue.lastDiscountIndex(), 20)
+      assert.equals(await withdrawalQueue.lastDiscountIndex(), 21)
 
       for (let i = 21; i > 0; i--) {
-        await withdrawalQueue.claimWithdrawal(i, await withdrawalQueue.findClaimHintUnbounded(i))
+        assert.equals(await withdrawalQueue.findClaimHintUnbounded(i), i)
+        await withdrawalQueue.claimWithdrawal(i, i)
       }
 
       assert.equals(await withdrawalQueue.lockedEtherAmount(), ETH(0))
     })
+  })
+
+  context('findLastFinalizableRequestIdByTimestamp()', async () => {
+    const numOfRequests = 10;
+
+    beforeEach(async () => {
+      for (i = 1; i <= numOfRequests; i++) {
+        await withdrawalQueue.requestWithdrawals([[ETH(20), recipient]], { from: user })
+      }
+    })
+
+    it('works', async () => {
+      for (let i = 1; i <= numOfRequests; i++) {
+        const timestamp = (await withdrawalQueue.getWithdrawalRequestStatus(i)).timestamp;
+        assert.equals(await withdrawalQueue.findLastFinalizableRequestIdByTimestamp(timestamp, 1, 10), i)
+      }
+    })
+
+    it('returns zero on empty range', async () => {
+      assert.equals(await withdrawalQueue.findLastFinalizableRequestIdByTimestamp(1, 2, 1), 0)
+    })
+
+    it('return zero if no unfinalized request found', async () => {
+      const timestamp = (await withdrawalQueue.getWithdrawalRequestStatus(1)).timestamp;
+
+      await withdrawalQueue.finalize(1, { from: steth.address, value: ETH[10] })
+      assert.equals(await withdrawalQueue.findLastFinalizableRequestIdByTimestamp(timestamp, 2, 10), 0)
+    })
+
+    it('checks params', async () => {
+      await assert.reverts(withdrawalQueue.findLastFinalizableRequestIdByTimestamp(0, 0, 10),
+        "ZeroTimestamp()")
+
+      const timestamp = (await withdrawalQueue.getWithdrawalRequestStatus(2)).timestamp;
+
+      await assert.reverts(withdrawalQueue.findLastFinalizableRequestIdByTimestamp(timestamp, 0, 10),
+        "InvalidRequestIdRange(0, 10)")
+
+      await assert.reverts(withdrawalQueue.findLastFinalizableRequestIdByTimestamp(timestamp, 0, 11),
+        "InvalidRequestIdRange(0, 11)")
+
+      await withdrawalQueue.finalize(1, { from: steth.address, value: ETH(20) })
+      await assert.reverts(withdrawalQueue.findLastFinalizableRequestIdByTimestamp(timestamp, 1, 10),
+        "InvalidRequestIdRange(1, 10)")
+    })
+  })
+
+  context('findLastFinalizableRequestIdByBudget()', async () => {
+    const numOfRequests = 10;
+
+    beforeEach(async () => {
+      for (let i = 1; i <= numOfRequests + 1; i++) {
+        await withdrawalQueue.requestWithdrawals([[ETH(20), recipient]], { from: user })
+      }
+    })
+
+    it('works', async () => {
+      // 1e18 shares is 300e18 ether, let's discount to 150
+      const rate = shareRate(150)
+
+      for (let i = 1; i <= numOfRequests; i++) {
+        const budget = ETH(i * 10 + 5);
+        assert.equals(await withdrawalQueue.findLastFinalizableRequestIdByBudget(budget, rate, 1, 10), i)
+      }
+    })
+
+    it('return zero if no unfinalized request found', async () => {
+      await withdrawalQueue.finalize(1, { from: steth.address, value: ETH[10] })
+      assert.equals(await withdrawalQueue.findLastFinalizableRequestIdByBudget(ETH(1), shareRate(300), 2, 10), 0)
+    })
+
+    it('returns zero on empty range', async () => {
+      assert.equals(await withdrawalQueue.findLastFinalizableRequestIdByBudget(ETH(1), shareRate(300), 2, 1), 0)
+    })
+
+    it('checks params', async () => {
+      await assert.reverts(withdrawalQueue.findLastFinalizableRequestIdByBudget(ETH(0), shareRate(300), 0, 10),
+        "ZeroAmountOfETH()")
+
+      await assert.reverts(withdrawalQueue.findLastFinalizableRequestIdByBudget(ETH(1), shareRate(0), 0, 10),
+        "ZeroShareRate()")
+
+      await assert.reverts(withdrawalQueue.findLastFinalizableRequestIdByBudget(ETH(1), shareRate(300), 0, 10),
+        "InvalidRequestIdRange(0, 10)")
+
+      await assert.reverts(withdrawalQueue.findLastFinalizableRequestIdByBudget(ETH(1), shareRate(300), 0, 11),
+        "InvalidRequestIdRange(0, 11)")
+
+      await withdrawalQueue.finalize(1, { from: steth.address, value: ETH(20) })
+      await assert.reverts(withdrawalQueue.findLastFinalizableRequestIdByBudget(ETH(1), shareRate(300), 1, 10),
+        "InvalidRequestIdRange(1, 10)")
+    })
+  })
+
+  context('findLastFinalizableRequestId()', async () => {
+    const numOfRequests = 10;
+
+    beforeEach(async () => {
+      for (let i = 1; i <= numOfRequests + 1; i++) {
+        await withdrawalQueue.requestWithdrawals([[ETH(20), recipient]], { from: user })
+      }
+    })
+
+    it('works', async () => {
+      for (let i = 1; i <= numOfRequests; i++) {
+        const budget = ETH(i * 10 + 5);
+        const timestamp = (await withdrawalQueue.getWithdrawalRequestStatus(i)).timestamp;
+        assert.equals(await withdrawalQueue.findLastFinalizableRequestId(budget, shareRate(150), timestamp), i)
+      }
+    })
+
+    it('returns zero if no unfinalized requests', async () => {
+      await withdrawalQueue.finalize(10, { from: steth.address, value: ETH[10] })
+
+      const timestamp = (await withdrawalQueue.getWithdrawalRequestStatus(10)).timestamp;
+      assert.equals(await withdrawalQueue.findLastFinalizableRequestId(ETH(100), shareRate(100), timestamp), 0)
+    })
+
+    it('checks params', async () => {
+      await assert.reverts(withdrawalQueue.findLastFinalizableRequestId(ETH(0), shareRate(300), 1),
+        "ZeroAmountOfETH()")
+
+      await assert.reverts(withdrawalQueue.findLastFinalizableRequestId(ETH(1), shareRate(0), 1),
+        "ZeroShareRate()")
+
+      await assert.reverts(withdrawalQueue.findLastFinalizableRequestId(ETH(1), shareRate(1), 0),
+        "ZeroTimestamp()")
+    })
+  })
+
+  context('findClaimHint()', async () => {
+    const numOfRequests = 10;
+    const requests = Array(numOfRequests).fill([ETH(20), recipient])
+    const discountedPrices = Array(numOfRequests).fill().map((_, i) => ETH(i));
+
+    beforeEach(async () => {
+      await withdrawalQueue.requestWithdrawals(requests, { from: user })
+      for (let i = 1; i <= numOfRequests; i++) {
+        await withdrawalQueue.finalize(i, { from: steth.address, value: discountedPrices[i] })
+      }
+      assert.equals(await withdrawalQueue.lastDiscountIndex(), numOfRequests)
+      assert.equals(await withdrawalQueue.findClaimHintUnbounded(await withdrawalQueue.lastFinalizedRequestId()),
+        await withdrawalQueue.lastDiscountIndex())
+    })
+
+    it('works unbounded', async () => {
+      assert.equals(await withdrawalQueue.findClaimHintUnbounded(10), await withdrawalQueue.lastDiscountIndex())
+    })
+
+    it('reverts if request is not finalized', async () => {
+      await assert.reverts(withdrawalQueue.findClaimHint(11, 0, 10), "RequestNotFinalized(11)")
+      await assert.reverts(withdrawalQueue.findClaimHintUnbounded(11), "RequestNotFinalized(11)")
+    })
+
+    it('range search (not found)', async () => {
+      assert.equals(await withdrawalQueue.findClaimHint(5, 1, 9), 5)
+      assert.equals(await withdrawalQueue.findClaimHint(1, 1, 9), 1)
+      assert.equals(await withdrawalQueue.findClaimHint(9, 1, 9), 9)
+      assert.equals(await withdrawalQueue.findClaimHint(5, 5, 5), 5)
+    })
+
+    it('range search (found)', async () => {
+      assert.equals(await withdrawalQueue.findClaimHint(10, 0, 5), 0)
+      assert.equals(await withdrawalQueue.findClaimHint(6, 0, 5), 0)
+      assert.equals(await withdrawalQueue.findClaimHint(0, 5, 5), 0)
+      assert.equals(await withdrawalQueue.findClaimHint(4, 5, 9), 0)
+    })
+
+    it('sequential search', async () => {
+      for ([idToFind, searchLength] of [[1, 3], [1, 10], [10, 2], [10, 3], [8, 2], [9, 3]]) {
+        assert.equals(await sequentialSearch(idToFind, searchLength), idToFind)
+      }
+    })
+
+    const sequentialSearch = async (requestId, searchLength) => {
+      let lastIndex = await withdrawalQueue.lastDiscountIndex()
+
+      for (let i = 1; i <= lastIndex; i += searchLength) {
+        let end = i + searchLength - 1
+        if (end > lastIndex) end = lastIndex
+        let foundIndex = await withdrawalQueue.findClaimHint(requestId, i, end)
+        if (foundIndex != 0) return foundIndex
+      }
+    }
+
   })
 
   context('findClaimHints()', () => {
@@ -337,7 +524,7 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
       const lastDiscountIndex = await withdrawalQueue.lastDiscountIndex()
       const hints = await withdrawalQueue.findClaimHints([requestId], 0, lastDiscountIndex)
       assert.equal(hints.length, 1)
-      assert.equals(hints[0], 0)
+      assert.equals(hints[0], 1)
     })
 
     it('returns correct hints array for given request ids', async () => {
@@ -363,9 +550,9 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
         lastDiscountIndex
       )
       assert.equal(hints.length, 3)
-      assert.equals(hints[0], 0)
-      assert.equals(hints[1], 0)
-      assert.equals(hints[2], 0)
+      assert.equals(hints[0], 1)
+      assert.equals(hints[1], 1)
+      assert.equals(hints[2], 1)
     })
 
     it('reverts with RequestIdsNotSorted error when request ids not in ascending order', async () => {
@@ -419,9 +606,9 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
 
       const hints = await withdrawalQueue.findClaimHintsUnbounded([requestId, secondRequestId, thirdRequestId])
       assert.equal(hints.length, 3)
-      assert.equals(hints[0], 0)
-      assert.equals(hints[1], 0)
-      assert.equals(hints[2], 0)
+      assert.equals(hints[0], 1)
+      assert.equals(hints[1], 1)
+      assert.equals(hints[2], 1)
     })
   })
 
@@ -445,8 +632,8 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
       const balanceBefore = bn(await ethers.provider.getBalance(recipient))
       await withdrawalQueue.claimWithdrawals(
         [
-          [requestId, 0],
-          [secondRequestId, 0]
+          [requestId, 1],
+          [secondRequestId, 1]
         ],
         { from: user }
       )

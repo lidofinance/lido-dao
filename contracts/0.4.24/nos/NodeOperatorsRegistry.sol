@@ -10,11 +10,10 @@ import {SafeMath64} from "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import {UnstructuredStorage} from "@aragon/os/contracts/common/UnstructuredStorage.sol";
 
 import {Math64} from "../lib/Math64.sol";
-import {BytesLib} from "../lib/BytesLib.sol";
 import {MemUtils} from "../../common/lib/MemUtils.sol";
 import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
 import {SigningKeysStats} from "../lib/SigningKeysStats.sol";
-
+import {Versioned} from "../utils/Versioned.sol";
 
 interface IStETH {
     function sharesOf(address _account) external view returns (uint256);
@@ -34,7 +33,7 @@ interface IStakingModule {
 /// @dev Must implement the full version of IStakingModule interface, not only the one declared locally.
 ///      It's also responsible for distributing rewards to node operators.
 /// NOTE: the code below assumes moderate amount of node operators, i.e. up to `MAX_NODE_OPERATORS_COUNT`.
-contract NodeOperatorsRegistry is AragonApp, IStakingModule {
+contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
     using UnstructuredStorage for bytes32;
@@ -90,8 +89,6 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule {
     // UNSTRUCTURED STORAGE POSITIONS
     //
     bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.NodeOperatorsRegistry.signingKeysMappingName");
-
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.NodeOperatorsRegistry.contractVersion");
 
     bytes32 internal constant STETH_POSITION = keccak256("lido.NodeOperatorsRegistry.stETH");
 
@@ -169,7 +166,8 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule {
     /// For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
     function finalizeUpgrade_v2(address _steth, bytes32 _type) external {
         require(!isPetrified(), "PETRIFIED");
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "WRONG_BASE_VERSION");
+        require(hasInitialized(), "NOT_INITIALIZED");
+        _checkContractVersion(0);
         _initialize_v2(_steth, _type);
 
         uint256 totalOperators = getNodeOperatorsCount();
@@ -212,8 +210,8 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule {
         STETH_POSITION.setStorageAddress(_steth);
         TYPE_POSITION.setStorageBytes32(_type);
 
-        CONTRACT_VERSION_POSITION.setStorageUint256(2);
-        emit ContractVersionSet(2);
+        _setContractVersion(2);
+
         emit StethContractSet(_steth);
         emit StakingModuleTypeSet(_type);
     }
@@ -753,12 +751,14 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule {
 
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         uint64 totalSigningKeysCount = nodeOperator.totalSigningKeysCount;
-        bytes memory key;
-        bytes memory sig;
+
+
+        bytes memory key = MemUtils.unsafeAllocateBytes(PUBKEY_LENGTH);
+        bytes memory sig = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH);
         for (uint256 i = 0; i < _keysCount; ++i) {
-            key = BytesLib.slice(_publicKeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
+            MemUtils.copyBytes(_publicKeys, key, i * PUBKEY_LENGTH, 0, PUBKEY_LENGTH);
             require(!_isEmptySigningKey(key), "EMPTY_KEY");
-            sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+            MemUtils.copyBytes(_signatures, sig, i * SIGNATURE_LENGTH, 0, SIGNATURE_LENGTH);
 
             _storeSigningKey(_nodeOperatorId, totalSigningKeysCount, key, sig);
             totalSigningKeysCount = totalSigningKeysCount.add(1);
@@ -1126,16 +1126,16 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule {
         uint256 offset = _signingKeyOffset(_nodeOperatorId, _keyIndex);
 
         // key
-        bytes memory tmpKey = new bytes(64);
+         bytes memory tmpKey = MemUtils.unsafeAllocateBytes(64);
         assembly {
             mstore(add(tmpKey, 0x20), sload(offset))
             mstore(add(tmpKey, 0x40), sload(add(offset, 1)))
         }
         offset += 2;
-        key = BytesLib.slice(tmpKey, 0, PUBKEY_LENGTH);
-
+        key = MemUtils.unsafeAllocateBytes(PUBKEY_LENGTH);
+        MemUtils.copyBytes(tmpKey, key, 0, 0, PUBKEY_LENGTH);
         // signature
-        signature = new bytes(SIGNATURE_LENGTH);
+        signature = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH);
         for (uint256 i = 0; i < SIGNATURE_LENGTH; i += 32) {
             assembly {
                 mstore(add(signature, add(0x20, i)), sload(offset))

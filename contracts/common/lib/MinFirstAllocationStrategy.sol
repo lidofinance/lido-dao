@@ -3,7 +3,7 @@
 
 /* See contracts/COMPILERS.md */
 // solhint-disable-next-line
-pragma solidity 0.4.24||0.8.9;
+pragma solidity >=0.4.24 <0.9.0;
 
 import {Math256} from "./Math256.sol";
 

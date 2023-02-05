@@ -4,6 +4,7 @@ const { utils } = require('web3')
 const { BN } = require('bn.js')
 const { assert } = require('../helpers/assert')
 const { EvmSnapshot } = require('../helpers/blockchain')
+const { newDao, newApp } = require('../helpers/dao')
 const { artifacts } = require('hardhat')
 
 const DepositContractMock = artifacts.require('DepositContractMock')
@@ -27,16 +28,18 @@ const StakingModuleStatus = {
   Stopped: 2 // deposits and rewards NOT allowed
 }
 
-contract('StakingRouter', (accounts) => {
+contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
   let depositContract, app
-  const [deployer, lido, admin, appManager, stranger] = accounts
   const wc = '0x'.padEnd(66, '1234')
   const snapshot = new EvmSnapshot(hre.ethers.provider)
 
   describe('setup env', async () => {
     before(async () => {
-      depositContract = await DepositContractMock.new({ from: deployer })
-      app = await StakingRouterMock.new(depositContract.address, { from: deployer })
+      const { dao } = await newDao(appManager)
+      depositContract = await DepositContractMock.new()
+      const appBase = await StakingRouter.new(depositContract.address)
+      const proxyAddress = await newApp(dao, 'lido-pool', appBase.address, appManager)
+      app = await StakingRouter.at(proxyAddress)
     })
 
     it('init fails on wrong input', async () => {
@@ -47,7 +50,7 @@ contract('StakingRouter', (accounts) => {
     it('initialized correctly', async () => {
       const tx = await app.initialize(admin, lido, wc, { from: deployer })
 
-      assert.equals(await app.getVersion(), 1)
+      assert.equals(await app.getContractVersion(), 1)
       assert.equals(await app.getWithdrawalCredentials(), wc)
       assert.equals(await app.getLido(), lido)
       assert.equals(await app.getStakingModulesCount(), 0)
@@ -63,7 +66,10 @@ contract('StakingRouter', (accounts) => {
     })
 
     it('second initialize reverts', async () => {
-      await assert.revertsWithCustomError(app.initialize(admin, lido, wc, { from: deployer }), 'ErrorBaseVersion()')
+      await assert.revertsWithCustomError(
+        app.initialize(admin, lido, wc, { from: deployer }),
+        'NonZeroContractVersionOnInit()'
+      )
     })
 
     it('stranger is not allowed to grant roles', async () => {
@@ -141,11 +147,14 @@ contract('StakingRouter', (accounts) => {
     })
 
     it('contract version is max uint256', async () => {
-      assert.equals(await stakingRouterImplementation.getVersion(), MaxUint256)
+      assert.equals(await stakingRouterImplementation.getContractVersion(), MaxUint256)
     })
 
     it('initialize reverts on implementation', async () => {
-      await assert.revertsWithCustomError(stakingRouterImplementation.initialize(admin, lido, wc, { from: deployer }), `ErrorBaseVersion()`)
+      await assert.revertsWithCustomError(
+        stakingRouterImplementation.initialize(admin, lido, wc, { from: deployer }),
+        `NonZeroContractVersionOnInit()`
+      )
     })
 
     it('has no granted roles', async () => {
@@ -244,10 +253,6 @@ contract('StakingRouter', (accounts) => {
       })
 
       await app.getStakingRewardsDistribution()
-    })
-
-    it('getStakingModuleIndexById zero index fail', async () => {
-      await assert.revertsWithCustomError(app.getStakingModuleIndexById(0), 'ErrorStakingModuleUnregistered()')
     })
   })
 

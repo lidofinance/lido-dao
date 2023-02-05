@@ -528,7 +528,7 @@ async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent,
         grantee: voting
       }
     ],
-    missingRoleNames: ['MINT_ROLE', 'BURN_ROLE', 'ISSUE_ROLE', 'REVOKE_VESTINGS_ROLE']
+    missingRoleNames: ['MINT_ROLE', 'ISSUE_ROLE', 'REVOKE_VESTINGS_ROLE']
   })
 
   log.splitter()
@@ -563,27 +563,12 @@ async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent,
           'MANAGE_PROTOCOL_CONTRACTS_ROLE',
           'MANAGE_WITHDRAWAL_KEY',
           'STAKING_PAUSE_ROLE',
-          'STAKING_CONTROL_ROLE',
-          'MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE'
+          'STAKING_CONTROL_ROLE'
         ],
         grantee: voting
       }
     ]
   })
-
-  { // Check BURN_ROLE on selfOwnedStETHBurner
-    const burnRoleName = 'BURN_ROLE'
-    const burnRoleGrantee = selfOwnedStETHBurner.address
-    const burnRoleHash = await lido[burnRoleName]()
-    const burnPermissionParams = `0x000100000000000000000000${selfOwnedStETHBurner.address.substring(2)}`
-    const description = `lido.${burnRoleName} perm is accessible by ${chalk.yellow(burnRoleGrantee)} with params ${burnPermissionParams}`
-    assert.isTrue(
-      await acl.methods['hasPermission(address,address,bytes32,uint256[])'](
-        burnRoleGrantee, lido.address, burnRoleHash, [burnPermissionParams]),
-        description
-    )
-    log.success(description)
-  }
 
   log.splitter()
 

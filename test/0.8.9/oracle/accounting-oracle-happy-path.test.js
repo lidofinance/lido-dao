@@ -1,5 +1,5 @@
 const { BN } = require('bn.js')
-const { assert } = require('chai')
+const { assert } = require('../../helpers/assert')
 const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 const { assertRevert } = require('../../helpers/assertThrow')
 const { e9, e18, e27 } = require('../../helpers/utils')

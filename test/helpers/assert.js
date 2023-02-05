@@ -9,6 +9,34 @@ chai.util.addMethod(chai.assert, 'emits', function (receipt, eventName, args = {
   this.isTrue(event !== undefined, `Event ${eventName} with args ${JSON.stringify(args)} wasn't found`)
 })
 
+chai.util.addMethod(
+  chai.assert, 'emitsNumberOfEvents', function (receipt, eventName, numberOfEvents = {}, options = {}
+) {
+  const events = getEvents(receipt, eventName, options.abi)
+  this.equal(
+    events.length,
+    numberOfEvents,
+    `${eventName}: ${numberOfEvents} events expected, but found ${events.length}`
+  )
+})
+
+chai.util.addMethod(
+  chai.assert, 'revertsOZAccessControl', async function (receipt, address, role) {
+    try {
+      await receipt
+    } catch (error) {
+      const msg = error.message.toUpperCase()
+      const reason = `AccessControl: account ${web3.utils.toChecksumAddress(address)} is missing role ${web3.utils.keccak256(role)}`
+
+      chai.expect(msg).to.equal(`VM Exception while processing transaction: reverted with reason string '${reason}'`.toUpperCase())
+      return
+    }
+    throw new Error(
+      `Transaction has been executed without revert. Expected access control error for ${address} without role: ${role}`
+    )
+  }
+)
+
 chai.util.addMethod(chai.assert, 'notEmits', function (receipt, eventName, args = {}, options = {}) {
   const { abi } = options
   const event = getEvent(receipt, eventName, args, abi)
@@ -20,15 +48,15 @@ chai.util.addMethod(chai.assert, 'reverts', async function (receipt, reason) {
 })
 
 chai.util.addMethod(chai.assert, 'equals', function (actual, expected, errorMsg) {
-  this.equal(actual.toString(), expected.toString(), `${errorMsg} expected ${expected.toString()} to equal ${actual.toString()}`)
+  this.equal(actual.toString(), expected.toString())
 })
 
 chai.util.addMethod(chai.assert, 'notEquals', function (actual, expected, errorMsg) {
-  this.notEqual(actual.toString(), expected.toString(), `${errorMsg} expected ${expected.toString()} to equal ${actual.toString()}`)
+  this.notEqual(actual.toString(), expected.toString(), `${errorMsg || ""} expected ${expected.toString()} to not equal ${actual.toString()}`)
 })
 
 chai.util.addMethod(chai.assert, 'equals', function (actual, expected, errorMsg = '') {
-  this.equal(actual.toString(), expected.toString(), `${errorMsg} expected ${expected.toString()} to equal ${actual.toString()}`)
+  this.equal(actual.toString(), expected.toString())
 })
 
 chai.util.addMethod(chai.assert, 'revertsWithCustomError', async function (receipt, reason) {

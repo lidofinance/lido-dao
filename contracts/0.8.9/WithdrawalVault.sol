@@ -8,6 +8,8 @@ import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
+import {Versioned} from "./utils/Versioned.sol";
+
 interface ILido {
     /**
      * @notice A payable function supposed to be called only by WithdrawalVault contract
@@ -20,7 +22,7 @@ interface ILido {
 /**
  * @title A vault for temporary storage of withdrawals
  */
-contract WithdrawalVault {
+contract WithdrawalVault is Versioned {
     using SafeERC20 for IERC20;
 
     ILido public immutable LIDO;
@@ -60,6 +62,14 @@ contract WithdrawalVault {
 
         LIDO = _lido;
         TREASURY = _treasury;
+    }
+
+    /**
+     * @notice Intialize the contract explicitly.
+     * Sets the contract version to '1'.
+     */
+    function initialize() external {
+        _initializeContractVersionTo(1);
     }
 
     /**

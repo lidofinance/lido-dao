@@ -27,6 +27,7 @@ interface IComponentLocator {
 
 interface ILido {
     function handleOracleReport(
+        uint256 currentReportTimestamp,
         uint256 secondsElapsedSinceLastReport,
         // CL values
         uint256 beaconValidators,
@@ -535,6 +536,7 @@ contract AccountingOracle is BaseOracle {
         );
 
         ILido(LIDO).handleOracleReport(
+            GENESIS_TIME + data.refSlot * SECONDS_PER_SLOT,
             slotsElapsed * SECONDS_PER_SLOT,
             data.numValidators,
             data.clBalanceGwei * 1e9,

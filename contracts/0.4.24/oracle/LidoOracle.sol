@@ -240,13 +240,14 @@ contract LidoOracle is AragonApp {
     /**
      * @notice Called by Lido on each rebase.
      */
-    function handleRebase(
+    function handlePostTokenRebase(
+        uint256 /* reportTimestamp */,
+        uint256 timeElapsed,
         uint256 /* preTotalShares */,
         uint256 preTotalEther,
         uint256 postTotalShares,
         uint256 postTotalEther,
-        uint256 /* totalSharesMintedAsFees */,
-        uint256 timeElapsed
+        uint256 /* totalSharesMintedAsFees */
     )
         external
     {

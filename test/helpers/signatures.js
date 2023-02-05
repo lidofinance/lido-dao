@@ -1,6 +1,6 @@
 const BN = require('bn.js')
 const { keccak256 } = require('js-sha3')
-const { ecSign, strip0x, bufferFromHexString, hexStringFromBuffer } = require('../../0.6.12/helpers')
+const { ecSign, strip0x, bufferFromHexString, hexStringFromBuffer } = require('../0.6.12/helpers')
 
 // Converts a ECDSA signature to the format provided in https://eips.ethereum.org/EIPS/eip-2098.
 function toEip2098({ v, r, s }) {
