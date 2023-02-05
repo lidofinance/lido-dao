@@ -12,7 +12,6 @@ import "../common/interfaces/ILidoLocator.sol";
 import "../common/interfaces/ISelfOwnedStETHBurner.sol";
 
 import "./lib/StakeLimitUtils.sol";
-import "./lib/PositiveTokenRebaseLimiter.sol";
 import "./lib/SafeMathSigned256.sol";
 import "../common/lib/Math256.sol";
 
@@ -30,6 +29,20 @@ interface IPostTokenRebaseReceiver {
         uint256 postTotalEther,
         uint256 sharesMintedAsFees
     ) external;
+}
+
+interface IOracleReportSanityChecker {
+    function smoothenTokenRebase(
+        uint256 _preTotalPooledEther,
+        uint256 _preTotalShares,
+        int256 _clBalanceDiff,
+        uint256 _withdrawalVaultBalance,
+        uint256 _elRewardsVaultBalance
+    ) external view returns (
+        uint256 withdrawals,
+        uint256 elRewards,
+        uint256 sharesToBurnLimit
+    );
 }
 
 interface ILidoExecutionLayerRewardsVault {
@@ -98,14 +111,12 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     using UnstructuredStorage for bytes32;
     using StakeLimitUnstructuredStorage for bytes32;
     using StakeLimitUtils for StakeLimitState.Data;
-    using PositiveTokenRebaseLimiter for LimiterState.Data;
 
     /// ACL
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant STAKING_PAUSE_ROLE = keccak256("STAKING_PAUSE_ROLE");
     bytes32 public constant STAKING_CONTROL_ROLE = keccak256("STAKING_CONTROL_ROLE");
-    bytes32 public constant MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE = keccak256("MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE");
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
@@ -124,9 +135,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     /// @dev number of Lido's validators available in the Consensus Layer state
     // "beacon" in the `keccak256()` parameter is staying here for compatibility reason
     bytes32 internal constant CL_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
-    /// @dev positive token rebase allowed per single LidoOracle report
-    /// uses 1e9 precision, e.g.: 1e6 - 0.1%; 1e9 - 100%, see `setMaxPositiveTokenRebase()`
-    bytes32 internal constant MAX_POSITIVE_TOKEN_REBASE_POSITION = keccak256("lido.Lido.MaxPositiveTokenRebase");
     /// @dev Just a counter of total amount of execution layer rewards received by Lido contract. Not used in the logic.
     bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
 
@@ -164,9 +172,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
     // The amount of ETH withdrawn from WithdrawalVault to Lido
     event WithdrawalsReceived(uint256 amount);
-
-    // Max positive token rebase set (see `setMaxPositiveTokenRebase()`)
-    event MaxPositiveTokenRebaseSet(uint256 maxPositiveTokenRebase);
 
     // Records a deposit made by a user
     event Submitted(address indexed sender, uint256 amount, address referral);
@@ -435,35 +440,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         _resumeStaking();
     }
 
-    /**
-     * @dev Set max positive rebase allowed per single oracle report
-     * token rebase happens on total supply adjustment,
-     * huge positive rebase can incur oracle report sandwitching.
-     *
-     * stETH balance for the `account` defined as:
-     * balanceOf(account) = shares[account] * totalPooledEther / totalShares = shares[account] * shareRate
-     *
-     * Suppose shareRate changes when oracle reports (see `handleOracleReport`)
-     * which means that token rebase happens:
-     *
-     * preShareRate = preTotalPooledEther() / preTotalShares()
-     * postShareRate = postTotalPooledEther() / postTotalShares()
-     * R = (postShareRate - preShareRate) / preShareRate
-     *
-     * R > 0 corresponds to the relative positive rebase value (i.e., instant APR)
-     *
-     * NB: The value is not set by default (explicit initialization required),
-     * the recommended sane values are from 0.05% to 0.1%.
-     *
-     * @param _maxTokenPositiveRebase max positive token rebase value with 1e9 precision:
-     *   e.g.: 1e6 - 0.1%; 1e9 - 100%
-     * - passing zero value is prohibited
-     * - to allow unlimited rebases, pass max uint256, i.e.: type(uint256).max
-     */
-    function setMaxPositiveTokenRebase(uint256 _maxTokenPositiveRebase) external {
-        _auth(MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE);
-        _setMaxPositiveTokenRebase(_maxTokenPositiveRebase);
-    }
 
     /**
      * The structure is used to aggregate the `handleOracleReport` provided data.
@@ -564,14 +540,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      */
     function getTotalELRewardsCollected() public view returns (uint256) {
         return TOTAL_EL_REWARDS_COLLECTED_POSITION.getStorageUint256();
-    }
-
-    /**
-     * @notice Get max positive token rebase value
-     * @return max positive token rebase value, nominated id MAX_POSITIVE_REBASE_PRECISION_POINTS (10**9 == 100% = 10000 BP)
-     */
-    function getMaxPositiveTokenRebase() public view returns (uint256) {
-        return MAX_POSITIVE_TOKEN_REBASE_POSITION.getStorageUint256();
     }
 
     /**
@@ -961,16 +929,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @dev Set max positive token rebase value
-     * @param _maxPositiveTokenRebase max positive token rebase, nominated in MAX_POSITIVE_REBASE_PRECISION_POINTS
-     */
-    function _setMaxPositiveTokenRebase(uint256 _maxPositiveTokenRebase) internal {
-        MAX_POSITIVE_TOKEN_REBASE_POSITION.setStorageUint256(_maxPositiveTokenRebase);
-
-        emit MaxPositiveTokenRebaseSet(_maxPositiveTokenRebase);
-    }
-
-    /**
      * @dev Size-efficient analog of the `auth(_role)` modifier
      * @param _role Permission name
      */
@@ -1041,15 +999,19 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     ) {
         int256 clBalanceDiff = _processClStateUpdate(_inputData.clValidators, _inputData.clBalance);
 
-        LimiterState.Data memory tokenRebaseLimiter = PositiveTokenRebaseLimiter.initLimiterState(
-            getMaxPositiveTokenRebase(),
-            _getTotalPooledEther(),
-            _getTotalShares()
-        );
+        uint256 preTotalPooledEther = _getTotalPooledEther();
+        uint256 preTotalShares = _getTotalShares();
 
-        tokenRebaseLimiter.applyCLBalanceUpdate(clBalanceDiff);
-        withdrawals = tokenRebaseLimiter.appendEther(_inputData.withdrawalVaultBalance);
-        elRewards = tokenRebaseLimiter.appendEther(_inputData.elRewardsVaultBalance);
+        uint256 sharesToBurnLimit;
+        (
+            withdrawals, elRewards, sharesToBurnLimit
+        ) = IOracleReportSanityChecker(getLidoLocator().safetyNetsRegistry()).smoothenTokenRebase(
+            preTotalPooledEther,
+            preTotalShares,
+            clBalanceDiff,
+            _inputData.withdrawalVaultBalance,
+            _inputData.elRewardsVaultBalance
+        );
 
         // collect ETH from EL and Withdrawal vaults and send some to WithdrawalQueue if required
         _collectRewardsAndProcessWithdrawals(
@@ -1059,16 +1021,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             _inputData.finalizationShareRate
         );
 
-        // distribute rewards to Lido and Node Operators
-        uint256 sharesMintedAsFees = _processRewards(clBalanceDiff, withdrawals, elRewards);
-        _applyCoverage(tokenRebaseLimiter);
-
-        (
-            postTotalPooledEther, postTotalShares
-        ) = _completeTokenRebase(
-            tokenRebaseLimiter, _inputData.reportTimestamp, _inputData.timeElapsed, sharesMintedAsFees
-        );
-
         emit ETHDistributed(
             _inputData.reportTimestamp,
             clBalanceDiff,
@@ -1076,27 +1028,40 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             elRewards,
             _getBufferedEther()
         );
+
+        // distribute rewards to Lido and Node Operators
+        uint256 sharesMintedAsFees = _processRewards(clBalanceDiff, withdrawals, elRewards);
+        _burnSharesLimited(sharesToBurnLimit);
+
+        (
+            postTotalShares,
+            postTotalPooledEther
+        ) = _completeTokenRebase(
+            preTotalShares,
+            preTotalPooledEther,
+            _inputData.reportTimestamp,
+            _inputData.timeElapsed,
+            sharesMintedAsFees
+        );
     }
 
     function _completeTokenRebase(
-        LimiterState.Data memory _tokenRebaseLimiter,
+        uint256 _preTotalShares,
+        uint256 _preTotalPooledEther,
         uint256 _reportTimestamp,
         uint256 _timeElapsed,
         uint256 _sharesMintedAsFees
-    ) internal returns (uint256 postTotalPooledEther, uint256 postTotalShares) {
-        uint256 preTotalPooledEther = _tokenRebaseLimiter.totalPooledEther;
-        uint256 preTotalShares = _tokenRebaseLimiter.totalShares;
-
-        postTotalPooledEther = _getTotalPooledEther();
+    ) internal returns (uint256 postTotalShares, uint256 postTotalPooledEther) {
         postTotalShares = _getTotalShares();
+        postTotalPooledEther = _getTotalPooledEther();
 
         address postTokenRebaseReceiver = getLidoLocator().postTokenRebaseReceiver();
         if (postTokenRebaseReceiver != address(0)) {
             IPostTokenRebaseReceiver(postTokenRebaseReceiver).handlePostTokenRebase(
                 _reportTimestamp,
                 _timeElapsed,
-                preTotalShares,
-                preTotalPooledEther,
+                _preTotalShares,
+                _preTotalPooledEther,
                 postTotalShares,
                 postTotalPooledEther,
                 _sharesMintedAsFees
@@ -1106,22 +1071,25 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         emit TokenRebased(
             _reportTimestamp,
             _timeElapsed,
-            preTotalShares,
-            preTotalPooledEther,
+            _preTotalShares,
+            _preTotalPooledEther,
             postTotalShares,
             postTotalPooledEther,
             _sharesMintedAsFees
         );
     }
 
-    function _applyCoverage(LimiterState.Data memory _tokenRebaseLimiter) internal {
-        ISelfOwnedStETHBurner burner = ISelfOwnedStETHBurner(getLidoLocator().selfOwnedStEthBurner());
-        (uint256 coverShares, uint256 nonCoverShares) = burner.getSharesRequestedToBurn();
-        uint256 maxSharesToBurn = _tokenRebaseLimiter.deductShares(coverShares.add(nonCoverShares));
+    function _burnSharesLimited(uint256 sharesToBurnLimit) internal {
+        if (sharesToBurnLimit > 0) {
+            ISelfOwnedStETHBurner burner = ISelfOwnedStETHBurner(
+                getLidoLocator().selfOwnedStEthBurner()
+            );
 
-        if (maxSharesToBurn > 0) {
-            uint256 sharesCommittedToBurnNow = burner.commitSharesToBurn(maxSharesToBurn);
-            _burnShares(address(burner), sharesCommittedToBurnNow);
+            uint256 sharesCommittedToBurnNow = burner.commitSharesToBurn(sharesToBurnLimit);
+
+            if (sharesCommittedToBurnNow > 0) {
+                _burnShares(address(burner), sharesCommittedToBurnNow);
+            }
         }
     }
 }

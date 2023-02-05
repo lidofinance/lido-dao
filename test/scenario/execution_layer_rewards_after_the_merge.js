@@ -758,7 +758,8 @@ contract.skip('Lido: merge acceptance', (addresses) => {
     assertBn((await token.balanceOf(nodeOperatorsRegistry.address)).divn(10), new BN('242626811594202898'), 'module1 tokens')
   })
 
-  it('collect 0.1 ETH execution layer rewards to elRewardsVault and withdraw it entirely by means of multiple oracle reports (+1 ETH)', async () => {
+  //TODO: Revive
+  it.skip('collect 0.1 ETH execution layer rewards to elRewardsVault and withdraw it entirely by means of multiple oracle reports (+1 ETH)', async () => {
     // Specify different withdrawal limits for a few epochs to test different values
     const getMaxPositiveRebaseForFrame = (_frame) => {
       let ret = 0

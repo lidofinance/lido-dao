@@ -19,7 +19,6 @@ contract LidoPushableMock is Lido {
     function initialize(address _lidoLocator) public onlyInit {
         LIDO_LOCATOR_POSITION.setStorageAddress(_lidoLocator);
         _resume();
-        _setMaxPositiveTokenRebase(UNLIMITED_TOKEN_REBASE);
         initialized();
     }
 

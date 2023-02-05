@@ -52,7 +52,7 @@ chai.util.addMethod(chai.assert, 'equals', function (actual, expected, errorMsg)
 })
 
 chai.util.addMethod(chai.assert, 'notEquals', function (actual, expected, errorMsg) {
-  this.notEqual(actual.toString(), expected.toString(), `${errorMsg} expected ${expected.toString()} to equal ${actual.toString()}`)
+  this.notEqual(actual.toString(), expected.toString(), `${errorMsg || ""} expected ${expected.toString()} to not equal ${actual.toString()}`)
 })
 
 chai.util.addMethod(chai.assert, 'equals', function (actual, expected, errorMsg = '') {

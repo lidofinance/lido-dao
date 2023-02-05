@@ -76,16 +76,7 @@ async function grantLidoRoles(pool, acl, voting, appManager) {
     }),
     acl.createPermission(voting.address, pool.address, await pool.STAKING_CONTROL_ROLE(), appManager.address, {
       from: appManager.address
-    }),
-    acl.createPermission(
-      voting.address,
-      pool.address,
-      await pool.MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE(),
-      appManager.address,
-      {
-        from: appManager.address
-      }
-    )
+    })
   ])
 }
 
