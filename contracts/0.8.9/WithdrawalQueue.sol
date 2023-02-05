@@ -334,12 +334,12 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
     }
 
     /// @notice Finds the list of hints for the given `_requestIds` searching among the checkpoints with indices
-    ///  in the range `[0, lastCheckpointIndex]`
+    ///  in the range `[1, lastCheckpointIndex]`
     /// @dev WARNING! OOG is possible if used onchain.
     ///  See `findClaimHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)` for onchain use
     /// @param _requestIds ids of the requests sorted in the ascending order to get hints for
     function findClaimHintsUnbounded(uint256[] calldata _requestIds) public view returns (uint256[] memory hintIds) {
-        return findClaimHints(_requestIds, 0, lastCheckpointIndex);
+        return findClaimHints(_requestIds, 1, lastCheckpointIndex);
     }
 
     /**
@@ -349,7 +349,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
      * @param _lastRequestIdToFinalize request index in the queue that will be last finalized request in a batch
      */
     function finalize(uint256 _lastRequestIdToFinalize) external payable whenResumed onlyRole(FINALIZE_ROLE) {
-        _finalize(_lastRequestIdToFinalize, msg.value);
+        _finalize(_lastRequestIdToFinalize, uint128(msg.value));
     }
 
     /**
@@ -413,7 +413,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
 
         uint256 amountOfShares = STETH.getSharesByPooledEth(_amountOfStETH);
 
-        return _enqueue(_amountOfStETH, amountOfShares, _recipient);
+        return _enqueue(uint128(_amountOfStETH), uint128(amountOfShares), _recipient);
     }
 
     function _requestWithdrawalWstETH(uint256 _amountOfWstETH, address _recipient)
@@ -425,7 +425,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
 
         uint256 amountOfShares = STETH.getSharesByPooledEth(amountOfStETH);
 
-        return _enqueue(amountOfStETH, amountOfShares, _recipient);
+        return _enqueue(uint128(amountOfStETH), uint128(amountOfShares), _recipient);
     }
 
     function _checkWithdrawalRequestInput(uint256 _amountOfStETH, address _recipient) internal view returns (address) {

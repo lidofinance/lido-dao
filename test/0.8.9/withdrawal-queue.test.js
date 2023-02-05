@@ -35,7 +35,7 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
     assert.equals(await withdrawalQueue.isPaused(), false)
     assert.equals(await withdrawalQueue.lastRequestId(), 0)
     assert.equals(await withdrawalQueue.lastFinalizedRequestId(), 0)
-    assert.equals(await withdrawalQueue.lastDiscountIndex(), 0)
+    assert.equals(await withdrawalQueue.lastCheckpointIndex(), 0)
     assert.equals(await withdrawalQueue.unfinalizedStETH(), StETH(0))
     assert.equals(await withdrawalQueue.unfinalizedRequestNumber(), 0)
     assert.equals(await withdrawalQueue.lockedEtherAmount(), ETH(0))
@@ -167,8 +167,8 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
     it('Calculate one request batch', async () => {
       const batch = await withdrawalQueue.finalizationBatch(1, shareRate(300))
 
-      assert.equals(batch.eth, ETH(300))
-      assert.equals(batch.shares, shares(1))
+      assert.equals(batch.ethToLock, ETH(300))
+      assert.equals(batch.sharesToBurn, shares(1))
     })
 
     it('Finalizer can finalize a request', async () => {
@@ -193,12 +193,12 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
       await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
 
       await withdrawalQueue.finalize(1, { from: steth.address, value: ETH(10) })
-      assert.equals(await withdrawalQueue.lastDiscountIndex(), 1)
+      assert.equals(await withdrawalQueue.lastCheckpointIndex(), 1)
 
       await withdrawalQueue.requestWithdrawals([[amount, recipient]], { from: user })
       await withdrawalQueue.finalize(2, { from: steth.address, value: ETH(10) })
 
-      assert.equals(await withdrawalQueue.lastDiscountIndex(), 1)
+      assert.equals(await withdrawalQueue.lastCheckpointIndex(), 1)
     })
 
     it('One can finalize a batch of requests at once', async () => {
@@ -208,9 +208,9 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
 
       await withdrawalQueue.requestWithdrawals([[amount, recipient]], { from: user })
       const batch = await withdrawalQueue.finalizationBatch(2, shareRate(300))
-      await withdrawalQueue.finalize(2, { from: steth.address, value: batch.eth })
+      await withdrawalQueue.finalize(2, { from: steth.address, value: batch.ethToLock })
 
-      assert.equals(batch.shares, shares(2))
+      assert.equals(batch.sharesToBurn, shares(2))
       assert.equals(await withdrawalQueue.lastRequestId(), 2)
       assert.equals(await withdrawalQueue.lastFinalizedRequestId(), 2)
       assert.equals(await withdrawalQueue.lockedEtherAmount(), ETH(600))
@@ -249,7 +249,7 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
     })
 
     it('One cant claim not finalized request', async () => {
-      await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 0), `RequestNotFinalized(${requestId})`)
+      await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 1), `RequestNotFinalized(${requestId})`)
     })
 
     it('Cant claim request with a wrong hint', async () => {
@@ -278,7 +278,7 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
       await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
       await withdrawalQueue.claimWithdrawal(requestId, await withdrawalQueue.findClaimHintUnbounded(requestId))
 
-      await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 1), 'RequestAlreadyClaimed()')
+      await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 1), 'RequestAlreadyClaimed(1)')
     })
 
     it('Discounted withdrawals produce less eth', async () => {
@@ -299,16 +299,16 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
       await steth.mintShares(user, shares(21))
       await steth.approve(withdrawalQueue.address, StETH(21), { from: user })
 
-      assert.equals(await withdrawalQueue.lastDiscountIndex(), 0)
+      assert.equals(await withdrawalQueue.lastCheckpointIndex(), 0)
       await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
 
       for (let i = 1; i <= 20; i++) {
-        assert.equals(await withdrawalQueue.lastDiscountIndex(), i)
+        assert.equals(await withdrawalQueue.lastCheckpointIndex(), i)
         await withdrawalQueue.requestWithdrawals([[StETH(1), ZERO_ADDRESS]], { from: user })
         await withdrawalQueue.finalize(i + 1, { from: steth.address, value: bn(ETH(1)).sub(bn(i * 1000)) })
       }
 
-      assert.equals(await withdrawalQueue.lastDiscountIndex(), 21)
+      assert.equals(await withdrawalQueue.lastCheckpointIndex(), 21)
 
       for (let i = 21; i > 0; i--) {
         assert.equals(await withdrawalQueue.findClaimHintUnbounded(i), i)
@@ -368,7 +368,7 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
     const numOfRequests = 10;
 
     beforeEach(async () => {
-      for (let i = 1; i <= numOfRequests + 1; i++) {
+      for (let i = 1; i <= numOfRequests; i++) {
         await withdrawalQueue.requestWithdrawals([[ETH(20), recipient]], { from: user })
       }
     })
@@ -457,31 +457,31 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
       for (let i = 1; i <= numOfRequests; i++) {
         await withdrawalQueue.finalize(i, { from: steth.address, value: discountedPrices[i] })
       }
-      assert.equals(await withdrawalQueue.lastDiscountIndex(), numOfRequests)
+      assert.equals(await withdrawalQueue.lastCheckpointIndex(), numOfRequests)
       assert.equals(await withdrawalQueue.findClaimHintUnbounded(await withdrawalQueue.lastFinalizedRequestId()),
-        await withdrawalQueue.lastDiscountIndex())
+        await withdrawalQueue.lastCheckpointIndex())
     })
 
     it('works unbounded', async () => {
-      assert.equals(await withdrawalQueue.findClaimHintUnbounded(10), await withdrawalQueue.lastDiscountIndex())
+      assert.equals(await withdrawalQueue.findClaimHintUnbounded(10), await withdrawalQueue.lastCheckpointIndex())
     })
 
     it('reverts if request is not finalized', async () => {
-      await assert.reverts(withdrawalQueue.findClaimHint(11, 0, 10), "RequestNotFinalized(11)")
+      await assert.reverts(withdrawalQueue.findClaimHint(11, 1, 10), "RequestNotFinalized(11)")
       await assert.reverts(withdrawalQueue.findClaimHintUnbounded(11), "RequestNotFinalized(11)")
     })
 
-    it('range search (not found)', async () => {
+    it('range search (found)', async () => {
       assert.equals(await withdrawalQueue.findClaimHint(5, 1, 9), 5)
       assert.equals(await withdrawalQueue.findClaimHint(1, 1, 9), 1)
       assert.equals(await withdrawalQueue.findClaimHint(9, 1, 9), 9)
       assert.equals(await withdrawalQueue.findClaimHint(5, 5, 5), 5)
     })
 
-    it('range search (found)', async () => {
-      assert.equals(await withdrawalQueue.findClaimHint(10, 0, 5), 0)
-      assert.equals(await withdrawalQueue.findClaimHint(6, 0, 5), 0)
-      assert.equals(await withdrawalQueue.findClaimHint(0, 5, 5), 0)
+    it('range search (not found)', async () => {
+      assert.equals(await withdrawalQueue.findClaimHint(10, 1, 5), 0)
+      assert.equals(await withdrawalQueue.findClaimHint(6, 1, 5), 0)
+      assert.equals(await withdrawalQueue.findClaimHint(1, 5, 5), 0)
       assert.equals(await withdrawalQueue.findClaimHint(4, 5, 9), 0)
     })
 
@@ -492,7 +492,7 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
     })
 
     const sequentialSearch = async (requestId, searchLength) => {
-      let lastIndex = await withdrawalQueue.lastDiscountIndex()
+      let lastIndex = await withdrawalQueue.lastCheckpointIndex()
 
       for (let i = 1; i <= lastIndex; i += searchLength) {
         let end = i + searchLength - 1
@@ -514,15 +514,15 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
     })
 
     it('returns empty list when passed empty request ids list', async () => {
-      const lastDiscountIndex = await withdrawalQueue.lastDiscountIndex()
-      const hints = await withdrawalQueue.findClaimHints([], 0, lastDiscountIndex)
+      const lastCheckpointIndex = await withdrawalQueue.lastCheckpointIndex()
+      const hints = await withdrawalQueue.findClaimHints([], 1, lastCheckpointIndex)
       assert.equal(hints.length, 0)
     })
 
     it('returns hints array with one item for list from single request id', async () => {
       await withdrawalQueue.finalize(requestId, { from: steth.address, value: ETH(150) })
-      const lastDiscountIndex = await withdrawalQueue.lastDiscountIndex()
-      const hints = await withdrawalQueue.findClaimHints([requestId], 0, lastDiscountIndex)
+      const lastCheckpointIndex = await withdrawalQueue.lastCheckpointIndex()
+      const hints = await withdrawalQueue.findClaimHints([requestId], 1, lastCheckpointIndex)
       assert.equal(hints.length, 1)
       assert.equals(hints[0], 1)
     })
@@ -543,11 +543,11 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
 
       await withdrawalQueue.finalize(thirdRequestId, { from: steth.address, value: ETH(40) })
 
-      const lastDiscountIndex = await withdrawalQueue.lastDiscountIndex()
+      const lastCheckpointIndex = await withdrawalQueue.lastCheckpointIndex()
       const hints = await withdrawalQueue.findClaimHints(
         [requestId, secondRequestId, thirdRequestId],
-        0,
-        lastDiscountIndex
+        1,
+        lastCheckpointIndex
       )
       assert.equal(hints.length, 3)
       assert.equals(hints[0], 1)
@@ -571,9 +571,9 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
 
       await withdrawalQueue.finalize(thirdRequestId, { from: steth.address, value: ETH(40) })
 
-      const lastDiscountIndex = await withdrawalQueue.lastDiscountIndex()
+      const lastCheckpointIndex = await withdrawalQueue.lastCheckpointIndex()
       await assert.reverts(
-        withdrawalQueue.findClaimHints([requestId, thirdRequestId, secondRequestId], 0, lastDiscountIndex),
+        withdrawalQueue.findClaimHints([requestId, thirdRequestId, secondRequestId], 1, lastCheckpointIndex),
         'RequestIdsNotSorted()'
       )
     })
@@ -758,7 +758,7 @@ contract('WithdrawalQueue', ([recipient, stranger, daoAgent, user]) => {
       await withdrawalQueue.finalize(requestId, { from: steth.address, value: amount })
       await withdrawalQueue.claimWithdrawal(requestId, await withdrawalQueue.findClaimHintUnbounded(requestId), { from: user })
 
-      await assert.reverts(withdrawalQueue.changeRecipient(requestId, recipient, { from: user }), `RequestAlreadyClaimed()`)
+      await assert.reverts(withdrawalQueue.changeRecipient(requestId, recipient, { from: user }), `RequestAlreadyClaimed(1)`)
     })
 
     it("One can't pass the same recipient", async () => {
