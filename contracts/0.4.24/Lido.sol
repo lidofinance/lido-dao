@@ -1120,8 +1120,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 maxSharesToBurn = _tokenRebaseLimiter.deductShares(coverShares.add(nonCoverShares));
 
         if (maxSharesToBurn > 0) {
-            uint256 sharesToBurnNow = burner.commitSharesToBurn(maxSharesToBurn);
-            _burnShares(address(burner), sharesToBurnNow);
+            uint256 sharesCommittedToBurnNow = burner.commitSharesToBurn(maxSharesToBurn);
+            _burnShares(address(burner), sharesCommittedToBurnNow);
         }
     }
 }
