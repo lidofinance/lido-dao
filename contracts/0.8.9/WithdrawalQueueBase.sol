@@ -21,8 +21,9 @@ abstract contract WithdrawalQueueBase {
 
     /// @notice precision base for share rate and discounting factor values in the contract
     uint256 public constant E27_PRECISION_BASE = 1e27;
+
     /// @notice discount factor value that means no discount applying
-    uint96 public constant NO_DISCOUNT = uint96(E27_PRECISION_BASE);
+    uint96 internal constant NO_DISCOUNT = uint96(E27_PRECISION_BASE);
 
     // queue for withdrawal requests, indexes (requestId) start from 1
     bytes32 internal constant QUEUE_POSITION = keccak256("lido.WithdrawalQueue.queue");
@@ -62,7 +63,6 @@ abstract contract WithdrawalQueueBase {
         uint96 discountFactor;
     }
 
-    /// @notice Emitted when a new withdrawal request enqueued
     /// @dev Contains both stETH token amount and its corresponding shares amount
     event WithdrawalRequested(
         uint256 indexed requestId,
@@ -71,7 +71,14 @@ abstract contract WithdrawalQueueBase {
         uint256 amountOfStETH,
         uint256 amountOfShares
     );
-    event WithdrawalClaimed(uint256 indexed requestId, address indexed receiver, address initiator);
+    event WithdrawalBatchFinalized(
+        uint256 indexed from,
+        uint256 indexed to,
+        uint256 amountOfETHLocked,
+        uint256 sharesBurned,
+        uint256 timestamp
+    );
+    event WithdrawalClaimed(uint256 indexed requestId, address indexed receiver, address initiator, uint256 amountOfETH);
     event WithdrawalRequestTransferred(uint256 indexed requestId, address newOwner, address oldOwner);
 
     error ZeroAmountOfETH();
@@ -292,7 +299,7 @@ abstract contract WithdrawalQueueBase {
 
         _sendValue(request.owner, ethWithDiscount);
 
-        emit WithdrawalClaimed(_requestId, request.owner, msg.sender);
+        emit WithdrawalClaimed(_requestId, request.owner, msg.sender, ethWithDiscount);
     }
 
     /**
@@ -440,13 +447,16 @@ abstract contract WithdrawalQueueBase {
     }
 
     /// @dev Finalize requests from last finalized one up to `_lastRequestIdToFinalize`
-    function _finalize(uint256 _lastRequestIdToFinalize, uint128 _amountofETH) internal {
-        if (_lastRequestIdToFinalize > getLastRequestId()) revert InvalidRequestId(_lastRequestIdToFinalize);
+    function _finalize(uint256 _nextFinalizedRequestId, uint128 _amountofETH) internal {
+        if (_nextFinalizedRequestId > getLastRequestId()) revert InvalidRequestId(_nextFinalizedRequestId);
         uint256 lastFinalizedRequestId = getLastFinalizedRequestId();
-        if (_lastRequestIdToFinalize <= lastFinalizedRequestId) revert InvalidRequestId(_lastRequestIdToFinalize);
+        uint256 firstUnfinalizedRequestId = lastFinalizedRequestId + 1;
+        if (_nextFinalizedRequestId <= lastFinalizedRequestId) revert InvalidRequestId(_nextFinalizedRequestId);
 
-        uint128 finalizedStETH = _getQueue()[lastFinalizedRequestId].cumulativeStETH;
-        uint128 stETHToFinalize = _getQueue()[_lastRequestIdToFinalize].cumulativeStETH - finalizedStETH;
+        WithdrawalRequest memory lastFinalizedRequest = _getQueue()[lastFinalizedRequestId];
+        WithdrawalRequest memory requestToFinalize = _getQueue()[_nextFinalizedRequestId];
+       
+        uint128 stETHToFinalize = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH;
 
         uint256 discountFactor = NO_DISCOUNT;
         if (stETHToFinalize > _amountofETH) {
@@ -458,14 +468,22 @@ abstract contract WithdrawalQueueBase {
 
         if (discountFactor != lastCheckpoint.discountFactor) {
             // add a new discount if it differs from the previous
-            uint256 firstUnfinalizedRequestId = lastFinalizedRequestId + 1;
+            
             _getCheckpoints()[lastCheckpointIndex + 1] =
                 DiscountCheckpoint(firstUnfinalizedRequestId, uint96(discountFactor));
             _setLastCheckpointIndex(lastCheckpointIndex + 1);
         }
 
         _setLockedEtherAmount(getLockedEtherAmount() + _amountofETH);
-        _setLastFinalizedRequestId(_lastRequestIdToFinalize);
+        _setLastFinalizedRequestId(_nextFinalizedRequestId);
+
+        emit WithdrawalBatchFinalized(
+            firstUnfinalizedRequestId,
+            _nextFinalizedRequestId,
+            _amountofETH,
+            requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares,
+            block.timestamp
+        );
     }
 
     // quazi-constructor
