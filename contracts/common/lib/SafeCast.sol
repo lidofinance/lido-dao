@@ -12,6 +12,7 @@ library SafeCast {
     uint256 internal constant MAX_UINT8 = uint256(2**8 - 1);
     uint256 internal constant MAX_UINT16 = uint256(2**16 - 1);
     uint256 internal constant MAX_UINT64 = uint256(2**64 - 1);
+    uint256 internal constant MAX_UINT128 = uint256(2**128 - 1);
 
     uint256 internal constant MAX_BASIS_POINTS = 100_00;
 
@@ -33,6 +34,11 @@ library SafeCast {
     function toUint64(uint256 _value) internal pure returns (uint64) {
         require(_value <= MAX_UINT64, "UINT64_OVERFLOW");
         return uint64(_value);
+    }
+
+    function toUint128(uint256 _value) internal pure returns (uint128) {
+        require(_value <= MAX_UINT128, "UINT128_OVERFLOW");
+        return uint128(_value);
     }
 
     function toBasisPoints(uint256 _value) internal pure returns (uint16) {

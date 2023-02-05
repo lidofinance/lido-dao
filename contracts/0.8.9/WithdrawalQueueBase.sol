@@ -21,8 +21,9 @@ abstract contract WithdrawalQueueBase {
 
     /// @notice precision base for share rate and discounting factor values in the contract
     uint256 public constant E27_PRECISION_BASE = 1e27;
+
     /// @notice discount factor value that means no discount applying
-    uint96 public constant NO_DISCOUNT = uint96(E27_PRECISION_BASE);
+    uint96 internal constant NO_DISCOUNT = uint96(E27_PRECISION_BASE);
 
     // queue for withdrawal requests, indexes (requestId) start from 1
     bytes32 internal constant QUEUE_POSITION = keccak256("lido.WithdrawalQueue.queue");
@@ -37,8 +38,8 @@ abstract contract WithdrawalQueueBase {
     bytes32 internal constant LAST_CHECKPOINT_INDEX_POSITION = keccak256("lido.WithdrawalQueue.lastCheckpointIndex");
     /// amount of eth locked on contract for withdrawal
     bytes32 internal constant LOCKED_ETHER_AMOUNT_POSITION = keccak256("lido.WithdrawalQueue.lockedEtherAmount");
-    /// withdrawal requests mapped to the recipients
-    bytes32 internal constant REQUEST_BY_RECIPIENT_POSITION = keccak256("lido.WithdrawalQueue.requestsByRecipient");
+    /// withdrawal requests mapped to the owners
+    bytes32 internal constant REQUEST_BY_OWNER_POSITION = keccak256("lido.WithdrawalQueue.requestsByOwner");
 
     /// @notice structure representing a request for withdrawal.
     struct WithdrawalRequest {
@@ -46,8 +47,8 @@ abstract contract WithdrawalQueueBase {
         uint128 cumulativeStETH;
         /// @notice sum of the all shares locked for withdrawal up to this request
         uint128 cumulativeShares;
-        /// @notice payable address of the recipient eth will be transferred to
-        address payable recipient;
+        /// @notice address that can claim or transfer the request
+        address payable owner;
         /// @notice block.timestamp when the request was created
         uint64 timestamp;
         /// @notice flag if the request was claimed
@@ -62,23 +63,27 @@ abstract contract WithdrawalQueueBase {
         uint96 discountFactor;
     }
 
-    /// @notice Emitted when a new withdrawal request enqueued
     /// @dev Contains both stETH token amount and its corresponding shares amount
     event WithdrawalRequested(
         uint256 indexed requestId,
         address indexed requestor,
-        address indexed recipient,
+        address indexed owner,
         uint256 amountOfStETH,
         uint256 amountOfShares
     );
-    event WithdrawalClaimed(uint256 indexed requestId, address indexed receiver, address initiator);
-    event WithdrawalRequestRecipientChanged(uint256 indexed requestId, address newRecipient, address oldRecipient);
+    event WithdrawalBatchFinalized(
+        uint256 indexed from, uint256 indexed to, uint256 amountOfETHLocked, uint256 sharesBurned, uint256 timestamp
+    );
+    event WithdrawalClaimed(
+        uint256 indexed requestId, address indexed receiver, address initiator, uint256 amountOfETH
+    );
+    event WithdrawalRequestTransferred(uint256 indexed requestId, address newOwner, address oldOwner);
 
     error ZeroAmountOfETH();
     error ZeroShareRate();
     error ZeroTimestamp();
-    error RecipientExpected(address _recipient, address _sender);
-    error InvalidRecipient(address _recipient);
+    error InvalidOwner(address _owner, address _sender);
+    error InvalidOwnerAddress(address _owner);
     error InvalidRequestId(uint256 _requestId);
     error InvalidRequestIdRange(uint256 startId, uint256 endId);
     error NotEnoughEther();
@@ -120,31 +125,39 @@ abstract contract WithdrawalQueueBase {
     }
 
     /**
-     * @notice Returns all withdrawal requests placed for the `_recipient` address
+     * @notice Returns all withdrawal requests placed for the `_owner` address
      *
      * WARNING: This operation will copy the entire storage to memory, which can be quite expensive. This is designed
      * to mostly be used by view accessors that are queried without any gas fees. Developers should keep in mind that
      * this function has an unbounded cost, and using it as part of a state-changing function may render the function
      * uncallable if the set grows to a point where copying to memory consumes too much gas to fit in a block.
      */
-    function getWithdrawalRequests(address _recipient) external view returns (uint256[] memory requestsIds) {
-        return _getRequestByRecipient()[_recipient].values();
+    function getWithdrawalRequests(address _owner) external view returns (uint256[] memory requestsIds) {
+        return _getRequestByOwner()[_owner].values();
+    }
+
+    struct WithdrawalRequestStatus {
+        /// @notice stETH token amount that was locked on withdrawal queue for this request
+        uint256 amountOfStETH;
+        /// @notice amount of stETH shares locked on withdrawal queue for this request
+        uint256 amountOfShares;
+        /// @notice address that can claim or transfer this request
+        address owner;
+        /// @notice timestamp of when the request was created, in seconds
+        uint256 timestamp;
+        /// @notice true, if request is finalized
+        bool isFinalized;
+        /// @notice true, if request is already claimed. Request can be claimed if (isFinalized && !isClaimed)
+        bool isClaimed;
     }
 
     /**
      * @notice Returns status of the withdrawal request
      */
     function getWithdrawalRequestStatus(uint256 _requestId)
-        external
+        public
         view
-        returns (
-            uint256 amountOfStETH,
-            uint256 amountOfShares,
-            address recipient,
-            uint256 timestamp,
-            bool isFinalized,
-            bool isClaimed
-        )
+        returns (WithdrawalRequestStatus memory status)
     {
         if (_requestId == 0) revert InvalidRequestId(_requestId);
         if (_requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
@@ -152,14 +165,14 @@ abstract contract WithdrawalQueueBase {
         WithdrawalRequest memory request = _getQueue()[_requestId];
         WithdrawalRequest memory previousRequest = _getQueue()[_requestId - 1];
 
-        recipient = request.recipient;
-        timestamp = request.timestamp;
-
-        amountOfShares = request.cumulativeShares - previousRequest.cumulativeShares;
-        amountOfStETH = request.cumulativeStETH - previousRequest.cumulativeStETH;
-
-        isFinalized = _requestId <= getLastFinalizedRequestId();
-        isClaimed = request.claimed;
+        status = WithdrawalRequestStatus(
+            request.cumulativeStETH - previousRequest.cumulativeStETH,
+            request.cumulativeShares - previousRequest.cumulativeShares,
+            request.owner,
+            request.timestamp,
+            _requestId <= getLastFinalizedRequestId(),
+            request.claimed
+        );
     }
 
     /**
@@ -257,7 +270,7 @@ abstract contract WithdrawalQueueBase {
     }
 
     /**
-     * @notice Claim `_requestId` request and transfer locked ether to recipient
+     * @notice Claim `_requestId` request and transfer locked ether to the owner
      * @param _requestId request id to claim
      * @param _hint hint for checkpoint index to avoid extensive search over the checkpointHistory.
      *  Can be found with `findClaimHint()` or `findClaimHintUnbounded()`
@@ -290,32 +303,44 @@ abstract contract WithdrawalQueueBase {
 
         _setLockedEtherAmount(getLockedEtherAmount() - ethWithDiscount);
 
-        _sendValue(request.recipient, ethWithDiscount);
+        _sendValue(request.owner, ethWithDiscount);
 
-        emit WithdrawalClaimed(_requestId, request.recipient, msg.sender);
+        emit WithdrawalClaimed(_requestId, request.owner, msg.sender, ethWithDiscount);
     }
 
     /**
-     * @notice Transfer the right to claim withdrawal to another `_newRecipient`
+     * @notice Claim `_requestId` request and transfer locked ether to the owner
+     * @param _requestId request id to claim
+     * @dev will use `findClaimHintUnbounded()` to find a hint, what can lead to OOG
+     * Prefer `claimWithdrawal(uint256 _requestId, uint256 _hint)` to save gas
+     */
+    function claimWithdrawal(uint256 _requestId) external {
+        claimWithdrawal(_requestId, findClaimHintUnbounded(_requestId));
+    }
+
+    /**
+     * @notice Transfer the right to claim withdrawal request to `_newRecipient`
      * @dev should be called by the old recepient
      * @param _requestId id of the request subject to change
-     * @param _newRecipient new recipient address for withdrawal
+     * @param _newOwner new owner address for withdrawal request
      */
-    function changeRecipient(uint256 _requestId, address _newRecipient) external {
-        if (_newRecipient == msg.sender) revert InvalidRecipient(_newRecipient);
+    function transfer(uint256 _requestId, address _newOwner) external {
+        if (_newOwner == address(0)) revert InvalidOwnerAddress(_newOwner);
+        if (_newOwner == msg.sender) revert InvalidOwnerAddress(_newOwner);
+        if (_requestId == 0) revert InvalidRequestId(_requestId);
         if (_requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
         WithdrawalRequest storage request = _getQueue()[_requestId];
 
-        if (request.recipient != msg.sender) revert RecipientExpected(request.recipient, msg.sender);
+        if (request.owner != msg.sender) revert InvalidOwner(request.owner, msg.sender);
         if (request.claimed) revert RequestAlreadyClaimed(_requestId);
 
-        request.recipient = payable(_newRecipient);
+        request.owner = payable(_newOwner);
 
-        _getRequestByRecipient()[_newRecipient].add(_requestId);
-        _getRequestByRecipient()[msg.sender].remove(_requestId);
+        _getRequestByOwner()[_newOwner].add(_requestId);
+        _getRequestByOwner()[msg.sender].remove(_requestId);
 
-        emit WithdrawalRequestRecipientChanged(_requestId, _newRecipient, msg.sender);
+        emit WithdrawalRequestTransferred(_requestId, _newOwner, msg.sender);
     }
 
     /**
@@ -417,38 +442,41 @@ abstract contract WithdrawalQueueBase {
     }
 
     /// @dev creates a new `WithdrawalRequest` in the queue
-    function _enqueue(uint128 _amountOfStETH, uint128 _amountofShares, address _recipient)
+    function _enqueue(uint128 _amountOfStETH, uint128 _amountOfShares, address _owner)
         internal
         returns (uint256 requestId)
     {
         uint256 lastRequestId = getLastRequestId();
         WithdrawalRequest memory lastRequest = _getQueue()[lastRequestId];
 
-        uint128 cumulativeShares = lastRequest.cumulativeShares + _amountofShares;
+        uint128 cumulativeShares = lastRequest.cumulativeShares + _amountOfShares;
         uint128 cumulativeStETH = lastRequest.cumulativeStETH + _amountOfStETH;
 
         requestId = lastRequestId + 1;
 
         _setLastRequestId(requestId);
         _getQueue()[requestId] =
-            WithdrawalRequest(cumulativeStETH, cumulativeShares, payable(_recipient), uint64(block.number), false);
-        _getRequestByRecipient()[_recipient].add(requestId);
+            WithdrawalRequest(cumulativeStETH, cumulativeShares, payable(_owner), uint64(block.number), false);
+        _getRequestByOwner()[_owner].add(requestId);
 
-        emit WithdrawalRequested(requestId, msg.sender, _recipient, _amountOfStETH, _amountofShares);
+        emit WithdrawalRequested(requestId, msg.sender, _owner, _amountOfStETH, _amountOfShares);
     }
 
     /// @dev Finalize requests from last finalized one up to `_lastRequestIdToFinalize`
-    function _finalize(uint256 _lastRequestIdToFinalize, uint128 _amountofETH) internal {
-        if (_lastRequestIdToFinalize > getLastRequestId()) revert InvalidRequestId(_lastRequestIdToFinalize);
+    function _finalize(uint256 _nextFinalizedRequestId, uint128 _amountOfETH) internal {
+        if (_nextFinalizedRequestId > getLastRequestId()) revert InvalidRequestId(_nextFinalizedRequestId);
         uint256 lastFinalizedRequestId = getLastFinalizedRequestId();
-        if (_lastRequestIdToFinalize <= lastFinalizedRequestId) revert InvalidRequestId(_lastRequestIdToFinalize);
+        uint256 firstUnfinalizedRequestId = lastFinalizedRequestId + 1;
+        if (_nextFinalizedRequestId <= lastFinalizedRequestId) revert InvalidRequestId(_nextFinalizedRequestId);
 
-        uint128 finalizedStETH = _getQueue()[lastFinalizedRequestId].cumulativeStETH;
-        uint128 stETHToFinalize = _getQueue()[_lastRequestIdToFinalize].cumulativeStETH - finalizedStETH;
+        WithdrawalRequest memory lastFinalizedRequest = _getQueue()[lastFinalizedRequestId];
+        WithdrawalRequest memory requestToFinalize = _getQueue()[_nextFinalizedRequestId];
+
+        uint128 stETHToFinalize = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH;
 
         uint256 discountFactor = NO_DISCOUNT;
-        if (stETHToFinalize > _amountofETH) {
-            discountFactor = _amountofETH * E27_PRECISION_BASE / stETHToFinalize;
+        if (stETHToFinalize > _amountOfETH) {
+            discountFactor = _amountOfETH * E27_PRECISION_BASE / stETHToFinalize;
         }
 
         uint256 lastCheckpointIndex = getLastCheckpointIndex();
@@ -456,14 +484,21 @@ abstract contract WithdrawalQueueBase {
 
         if (discountFactor != lastCheckpoint.discountFactor) {
             // add a new discount if it differs from the previous
-            uint256 firstUnfinalizedRequestId = lastFinalizedRequestId + 1;
             _getCheckpoints()[lastCheckpointIndex + 1] =
                 DiscountCheckpoint(firstUnfinalizedRequestId, uint96(discountFactor));
             _setLastCheckpointIndex(lastCheckpointIndex + 1);
         }
 
-        _setLockedEtherAmount(getLockedEtherAmount() + _amountofETH);
-        _setLastFinalizedRequestId(_lastRequestIdToFinalize);
+        _setLockedEtherAmount(getLockedEtherAmount() + _amountOfETH);
+        _setLastFinalizedRequestId(_nextFinalizedRequestId);
+
+        emit WithdrawalBatchFinalized(
+            firstUnfinalizedRequestId,
+            _nextFinalizedRequestId,
+            _amountOfETH,
+            requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares,
+            block.timestamp
+            );
     }
 
     // quazi-constructor
@@ -486,7 +521,6 @@ abstract contract WithdrawalQueueBase {
     //
     // Internal getters and setters
     //
-
     function _getQueue() internal pure returns (mapping(uint256 => WithdrawalRequest) storage queue) {
         bytes32 position = QUEUE_POSITION;
         assembly {
@@ -501,12 +535,12 @@ abstract contract WithdrawalQueueBase {
         }
     }
 
-    function _getRequestByRecipient()
+    function _getRequestByOwner()
         internal
         pure
         returns (mapping(address => EnumerableSet.UintSet) storage requestsByRecipient)
     {
-        bytes32 position = REQUEST_BY_RECIPIENT_POSITION;
+        bytes32 position = REQUEST_BY_OWNER_POSITION;
         assembly {
             requestsByRecipient.slot := position
         }
