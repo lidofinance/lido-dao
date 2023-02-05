@@ -2,6 +2,7 @@ const { BN } = require('bn.js')
 const { assert } = require('chai')
 const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 const { assertRevert } = require('../../helpers/assertThrow')
+const { toNum } = require('../../helpers/utils')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
 const {
@@ -102,6 +103,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       assert.isFalse(report.processingStarted)
 
       const procState = await oracle.getDataProcessingState()
+      assert.equal(+procState.refSlot, +report.refSlot)
       assert.isFalse(procState.processingStarted)
       assert.equal(+procState.requestsCount, 0)
       assert.equal(+procState.requestsProcessed, 0)
@@ -150,22 +152,33 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       assertEvent(tx, 'ProcessingStarted', {expectedArgs: {refSlot: reportFields.refSlot}})
       assert.isTrue((await oracle.getConsensusReport()).processingStarted)
 
+      const {timestamp} = await web3.eth.getBlock(tx.receipt.blockHash)
+
       for (let i = 0; i < exitRequests.length; ++i) {
         assertEvent(tx, 'ValidatorExitRequest', {index: i, expectedArgs: {
           stakingModuleId: exitRequests[i].moduleId,
           nodeOperatorId: exitRequests[i].nodeOpId,
           validatorIndex: exitRequests[i].valIndex,
           validatorPubkey: exitRequests[i].valPubkey,
+          timestamp
         }})
       }
     })
 
     it(`reports are marked as processed`, async () => {
       const procState = await oracle.getDataProcessingState()
+      assert.equal(+procState.refSlot, reportFields.refSlot)
       assert.isTrue(procState.processingStarted)
       assert.equal(+procState.requestsCount, exitRequests.length)
       assert.equal(+procState.requestsProcessed, exitRequests.length)
       assert.equal(+procState.dataFormat, DATA_FORMAT_LIST)
+    })
+
+    it('last requested validator indices are updated', async () => {
+      const indices1 = await oracle.getLastRequestedValidatorIndices(1, [0, 1, 2])
+      const indices2 = await oracle.getLastRequestedValidatorIndices(2, [0, 1, 2])
+      assert.sameOrderedMembers(toNum(indices1), [2, -1, -1])
+      assert.sameOrderedMembers(toNum(indices2), [1, -1, -1])
     })
   })
 })

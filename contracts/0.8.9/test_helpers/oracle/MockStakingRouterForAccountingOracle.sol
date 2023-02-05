@@ -13,15 +13,16 @@ contract MockStakingRouterForAccountingOracle is IStakingRouter {
         uint256 callCount;
     }
 
-    struct ReportExitedKeysByNodeOperatorCallData {
+    struct ReportKeysByNodeOperatorCallData {
         uint256 stakingModuleId;
         uint256[] nodeOperatorIds;
-        uint256[] exitedKeysCounts;
+        uint256[] keysCounts;
     }
 
     uint256 internal _exitedKeysCountAcrossAllModules;
     UpdateExitedKeysByModuleCallData internal _updateExitedKeysByModuleLastCall;
-    ReportExitedKeysByNodeOperatorCallData[] internal _reportExitedKeysByNodeOperatorCalls;
+    ReportKeysByNodeOperatorCallData[] internal _reportExitedKeysByNodeOperatorCalls;
+    ReportKeysByNodeOperatorCallData[] internal _reportStuckKeysByNodeOperatorCalls;
 
 
     function setExitedKeysCountAcrossAllModules(uint256 count) external {
@@ -39,9 +40,19 @@ contract MockStakingRouterForAccountingOracle is IStakingRouter {
     }
 
     function getCall_reportExitedKeysByNodeOperator(uint256 i)
-        external view returns (ReportExitedKeysByNodeOperatorCallData memory)
+        external view returns (ReportKeysByNodeOperatorCallData memory)
     {
         return _reportExitedKeysByNodeOperatorCalls[i];
+    }
+
+    function getTotalCalls_reportStuckKeysByNodeOperator() external view returns (uint256) {
+        return _reportStuckKeysByNodeOperatorCalls.length;
+    }
+
+    function getCall_reportStuckKeysByNodeOperator(uint256 i)
+        external view returns (ReportKeysByNodeOperatorCallData memory)
+    {
+        return _reportStuckKeysByNodeOperatorCalls[i];
     }
 
     ///
@@ -66,8 +77,18 @@ contract MockStakingRouterForAccountingOracle is IStakingRouter {
         uint256[] calldata nodeOperatorIds,
         uint256[] calldata exitedKeysCounts
     ) external {
-        _reportExitedKeysByNodeOperatorCalls.push(ReportExitedKeysByNodeOperatorCallData(
+        _reportExitedKeysByNodeOperatorCalls.push(ReportKeysByNodeOperatorCallData(
             stakingModuleId, nodeOperatorIds, exitedKeysCounts
+        ));
+    }
+
+    function reportStakingModuleStuckKeysCountByNodeOperator(
+        uint256 stakingModuleId,
+        uint256[] calldata nodeOperatorIds,
+        uint256[] calldata stuckKeysCounts
+    ) external {
+        _reportStuckKeysByNodeOperatorCalls.push(ReportKeysByNodeOperatorCallData(
+            stakingModuleId, nodeOperatorIds, stuckKeysCounts
         ));
     }
 }

@@ -59,6 +59,10 @@ contract('AccountingOracle', () => {
     it('copies mem chunks shorter than 32 bytes from and to a non-32 byte offset', async () => {
       await memUtilsTest.memcpy_copies_mem_chunks_shorter_than_32_bytes_from_and_to_a_non_32b_offset()
     })
+
+    it('zero length is handled correctly', async () => {
+      await memUtilsTest.memcpy_zero_length_is_handled_correctly()
+    })
   })
 
   context('MemUtils.keccakUint256Array', () => {

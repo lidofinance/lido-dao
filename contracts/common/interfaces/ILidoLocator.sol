@@ -19,7 +19,7 @@ interface ILidoLocator {
     function validatorExitBus() external view returns(address);
     function withdrawalQueue() external view returns(address);
     function withdrawalVault() external view returns(address);
-    function rebaseReceiver() external view returns(address);
+    function postTokenRebaseReceiver() external view returns(address);
     function coreComponents() external view returns(
         address elRewardsVault,
         address safetyNetsRegistry,

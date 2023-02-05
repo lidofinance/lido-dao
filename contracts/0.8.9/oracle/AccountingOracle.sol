@@ -11,8 +11,23 @@ import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
 import { BaseOracle, IConsensusContract } from "./BaseOracle.sol";
 
 
+interface IComponentLocator {
+    function lido() external view returns (address);
+    function stakingRouter() external view returns (address);
+    function coreComponents() external view returns (
+        address elRewardsVault,
+        address safetyNetsRegistry,
+        address stakingRouter,
+        address treasury,
+        address withdrawalQueue,
+        address withdrawalVault
+    );
+}
+
+
 interface ILido {
     function handleOracleReport(
+        uint256 currentReportTimestamp,
         uint256 secondsElapsedSinceLastReport,
         // CL values
         uint256 beaconValidators,
@@ -24,12 +39,12 @@ interface ILido {
         uint256 requestIdToFinalizeUpTo,
         uint256 finalizationShareRate
     ) external;
-
-    function getStakingRouter() external view returns (address);
 }
 
 
 interface ILegacyOracle {
+    // only called before the migration
+
     function getBeaconSpec() external view returns (
         uint64 epochsPerFrame,
         uint64 slotsPerEpoch,
@@ -38,6 +53,14 @@ interface ILegacyOracle {
     );
 
     function getLastCompletedEpochId() external view returns (uint256);
+
+    // only called after the migration
+
+    function handleConsensusLayerReport(
+        uint256 refSlot,
+        uint256 clBalance,
+        uint256 clValidators
+    ) external;
 }
 
 
@@ -55,12 +78,16 @@ interface IStakingRouter {
         uint256[] calldata _exitedKeysCounts
     ) external;
 
-    // TODO:
-    // function reportStakingModuleStuckKeysCountByNodeOperator(
-    //     uint256 _stakingModuleId,
-    //     uint256[] calldata _nodeOperatorIds,
-    //     uint256[] calldata _stuckKeysCounts
-    // ) external;
+    function reportStakingModuleStuckKeysCountByNodeOperator(
+        uint256 _stakingModuleId,
+        uint256[] calldata _nodeOperatorIds,
+        uint256[] calldata _stuckKeysCounts
+    ) external;
+}
+
+
+interface IWithdrawalQueue {
+    function updateBunkerMode(bool isBunkerMode, uint256 prevReportTimestamp) external;
 }
 
 
@@ -69,8 +96,9 @@ contract AccountingOracle is BaseOracle {
     using UnstructuredStorage for bytes32;
     using SafeCast for uint256;
 
-    error LidoCannotBeZero();
+    error ComponentLocatorCannotBeZero();
     error AdminCannotBeZero();
+    error LegacyOracleCannotBeZero();
     error IncorrectOracleMigration(uint256 code);
     error SenderNotAllowed();
     error InvalidExitedValidatorsData();
@@ -125,16 +153,24 @@ contract AccountingOracle is BaseOracle {
     bytes32 internal constant EXTRA_DATA_PROCESSING_STATE_POSITION =
         keccak256("lido.AccountingOracle.extraDataProcessingState");
 
+    /// @dev Storage slot: address legacyOracle
+    bytes32 internal constant LEGACY_ORACLE_POSITION =
+        keccak256("lido.AccountingOracle.legacyOracle");
+
 
     address public immutable LIDO;
+    IComponentLocator public immutable LOCATOR;
 
     ///
     /// Initialization & admin functions
     ///
 
-    constructor(address lido, uint256 secondsPerSlot) BaseOracle(secondsPerSlot) {
-        if (lido == address(0)) revert LidoCannotBeZero();
-        LIDO = lido;
+    constructor(address componentLocator, uint256 secondsPerSlot, uint256 genesisTime)
+        BaseOracle(secondsPerSlot, genesisTime)
+    {
+        if (componentLocator == address(0)) revert ComponentLocatorCannotBeZero();
+        LOCATOR = IComponentLocator(componentLocator);
+        LIDO = LOCATOR.lido();
     }
 
     function initialize(
@@ -146,8 +182,10 @@ contract AccountingOracle is BaseOracle {
         uint256 maxExtraDataListItemsCount
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
+        if (legacyOracle == address(0)) revert LegacyOracleCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
         uint256 lastProcessingRefSlot = _checkOracleMigration(legacyOracle, consensusContract);
+        LEGACY_ORACLE_POSITION.setStorageAddress(legacyOracle);
         _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
         _setDataBoundaries(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
     }
@@ -325,9 +363,8 @@ contract AccountingOracle is BaseOracle {
         _checkMsgSenderIsAllowedToSubmitData();
         _checkContractVersion(contractVersion);
         _checkConsensusData(data.refSlot, data.consensusVersion, keccak256(abi.encode(data)));
-        uint256 slotsElapsed = data.refSlot - LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
-        _startProcessing();
-        _handleConsensusReportData(data, slotsElapsed);
+        uint256 prevRefSlot = _startProcessing();
+        _handleConsensusReportData(data, prevRefSlot);
     }
 
     /// @notice Submits report extra data in the EXTRA_DATA_FORMAT_LIST format for processing.
@@ -443,7 +480,8 @@ contract AccountingOracle is BaseOracle {
             emit WarnExtraDataIncompleteProcessing(
                 prevProcessingRefSlot,
                 state.itemsProcessed,
-                state.itemsCount);
+                state.itemsCount
+            );
         }
     }
 
@@ -454,7 +492,7 @@ contract AccountingOracle is BaseOracle {
         }
     }
 
-    function _handleConsensusReportData(ReportData calldata data, uint256 slotsElapsed) internal {
+    function _handleConsensusReportData(ReportData calldata data, uint256 prevRefSlot) internal {
         DataBoundaries memory boundaries = _storageDataBoundaries().value;
 
         if (data.extraDataFormat != EXTRA_DATA_FORMAT_LIST) {
@@ -468,14 +506,37 @@ contract AccountingOracle is BaseOracle {
             );
         }
 
+        ILegacyOracle(LEGACY_ORACLE_POSITION.getStorageAddress()).handleConsensusLayerReport(
+            data.refSlot,
+            data.clBalanceGwei * 1e9,
+            data.numValidators
+        );
+
+        uint256 slotsElapsed = data.refSlot - prevRefSlot;
+
+        (/* address elRewardsVault */,
+            /* address safetyNetsRegistry */,
+            address stakingRouter,
+            /* address treasury */,
+            address withdrawalQueue,
+            /* address withdrawalVault */
+        ) = LOCATOR.coreComponents();
+
         _processStakingRouterExitedKeysByModule(
+            IStakingRouter(stakingRouter),
             boundaries,
             data.stakingModuleIdsWithNewlyExitedValidators,
             data.numExitedValidatorsByStakingModule,
             slotsElapsed
         );
 
+        IWithdrawalQueue(withdrawalQueue).updateBunkerMode(
+            data.isBunkerMode,
+            GENESIS_TIME + prevRefSlot * SECONDS_PER_SLOT
+        );
+
         ILido(LIDO).handleOracleReport(
+            GENESIS_TIME + data.refSlot * SECONDS_PER_SLOT,
             slotsElapsed * SECONDS_PER_SLOT,
             data.numValidators,
             data.clBalanceGwei * 1e9,
@@ -496,6 +557,7 @@ contract AccountingOracle is BaseOracle {
     }
 
     function _processStakingRouterExitedKeysByModule(
+        IStakingRouter stakingRouter,
         DataBoundaries memory boundaries,
         uint256[] calldata stakingModuleIds,
         uint256[] calldata numExitedValidatorsByStakingModule,
@@ -525,8 +587,6 @@ contract AccountingOracle is BaseOracle {
             }
             unchecked { ++i; }
         }
-
-        IStakingRouter stakingRouter = IStakingRouter(ILido(LIDO).getStakingRouter());
 
         uint256 prevExitedValidators = stakingRouter.getExitedKeysCountAcrossAllModules();
         if (exitedValidators < prevExitedValidators) {
@@ -604,7 +664,7 @@ contract AccountingOracle is BaseOracle {
         uint256 itemsProcessed,
         uint256 lastProcessedItem
     ) internal returns (uint256) {
-        IStakingRouter stakingRouter = IStakingRouter(ILido(LIDO).getStakingRouter());
+        IStakingRouter stakingRouter = IStakingRouter(LOCATOR.stakingRouter());
 
         ExtraDataIterState memory iter = ExtraDataIterState({
             firstItemIndex: itemsProcessed,
@@ -635,12 +695,11 @@ contract AccountingOracle is BaseOracle {
                 assert(iter.lastNodeOpId >= 0);
 
                 if (iter.lastType == int256(EXTRA_DATA_TYPE_STUCK_VALIDATORS)) {
-                    // TODO: report stuck validators
-                    // stakingRouter.reportStakingModuleStuckKeysCountByNodeOperator(
-                    //     iter.lastModuleId,
-                    //     iter.nopIds.pointer(),
-                    //     iter.keyCounts.pointer()
-                    // );
+                    stakingRouter.reportStakingModuleStuckKeysCountByNodeOperator(
+                        uint256(iter.lastModuleId),
+                        iter.nopIds.pointer(),
+                        iter.keyCounts.pointer()
+                    );
                 } else if (iter.lastType == int256(EXTRA_DATA_TYPE_EXITED_VALIDATORS)) {
                     stakingRouter.reportStakingModuleExitedKeysCountByNodeOperator(
                         uint256(iter.lastModuleId),

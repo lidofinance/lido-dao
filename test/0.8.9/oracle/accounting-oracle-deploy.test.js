@@ -14,8 +14,10 @@ const {
   deployHashConsensus } = require('./hash-consensus-deploy.test')
 
 const AccountingOracle = artifacts.require('AccountingOracleTimeTravellable')
+const MockLidoLocator = artifacts.require('MockLidoLocatorForOracles')
 const MockLido = artifacts.require('MockLidoForAccountingOracle')
 const MockStakingRouter = artifacts.require('MockStakingRouterForAccountingOracle')
+const MockWithdrawalQueue = artifacts.require('MockWithdrawalQueueForAccountingOracle')
 const MockLegacyOracle = artifacts.require('MockLegacyOracle')
 
 const V1_ORACLE_LAST_COMPLETED_EPOCH = 2 * EPOCHS_PER_FRAME
@@ -109,15 +111,19 @@ async function deployMockLegacyOracle({
   genesisTime = GENESIS_TIME,
   lastCompletedEpochId = V1_ORACLE_LAST_COMPLETED_EPOCH
 } = {}) {
-  return await MockLegacyOracle.new(
-    epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime, lastCompletedEpochId
-  )
+  const legacyOracle = await MockLegacyOracle.new()
+  await legacyOracle.setParams(epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime, lastCompletedEpochId)
+  return legacyOracle
 }
 
 async function deployMockLidoAndStakingRouter() {
-  const mockStakingRouter = await MockStakingRouter.new()
-  const mockLido = await MockLido.new(mockStakingRouter.address)
-  return {lido: mockLido, stakingRouter: mockStakingRouter}
+  const stakingRouter = await MockStakingRouter.new()
+  const withdrawalQueue = await MockWithdrawalQueue.new()
+  const lido = await MockLido.new()
+  const locator = await MockLidoLocator.new(
+    lido.address, stakingRouter.address, withdrawalQueue.address, ZERO_ADDRESS
+  )
+  return {lido, stakingRouter, withdrawalQueue, locator}
 }
 
 async function deployAccountingOracleSetup(admin, {
@@ -129,14 +135,14 @@ async function deployAccountingOracleSetup(admin, {
   getLidoAndStakingRouter = deployMockLidoAndStakingRouter,
   getLegacyOracle = deployMockLegacyOracle,
 } = {}) {
-  const {lido, stakingRouter} = await getLidoAndStakingRouter()
+  const {lido, stakingRouter, withdrawalQueue, locator} = await getLidoAndStakingRouter()
   const legacyOracle = await getLegacyOracle()
 
   if (initialEpoch == null) {
     initialEpoch = +await legacyOracle.getLastCompletedEpochId() + epochsPerFrame
   }
 
-  const oracle = await AccountingOracle.new(lido.address, secondsPerSlot, {from: admin})
+  const oracle = await AccountingOracle.new(locator.address, secondsPerSlot, genesisTime, {from: admin})
 
   const {consensus} = await deployHashConsensus(admin, {
     reportProcessor: oracle,
@@ -150,7 +156,7 @@ async function deployAccountingOracleSetup(admin, {
   // pretend we're at the first slot of the initial frame's epoch
   await consensus.setTime(genesisTime + initialEpoch * slotsPerEpoch * secondsPerSlot)
 
-  return {lido, stakingRouter, legacyOracle, oracle, consensus}
+  return {lido, stakingRouter, withdrawalQueue, locator, legacyOracle, oracle, consensus}
 }
 
 async function initAccountingOracle({
@@ -200,6 +206,7 @@ contract('AccountingOracle', ([admin, member1]) => {
   let oracle
   let mockLido
   let mockStakingRouter
+  let mockWithdrawalQueue
   let legacyOracle
 
   context('Deployment and initial configuration', () => {
@@ -255,6 +262,7 @@ contract('AccountingOracle', ([admin, member1]) => {
       oracle = deployed.oracle
       mockLido = deployed.lido
       mockStakingRouter = deployed.stakingRouter
+      mockWithdrawalQueue = deployed.withdrawalQueue
       legacyOracle = deployed.legacyOracle
     })
 
@@ -276,9 +284,11 @@ contract('AccountingOracle', ([admin, member1]) => {
         await mockStakingRouter.getLastCall_updateExitedKeysByModule()
       assert.equal(+updateExitedKeysByModuleCallData.callCount, 0)
 
-      const reportExitedKeysByNodeOperatorTotalCalls =
-        +await mockStakingRouter.getTotalCalls_reportExitedKeysByNodeOperator()
-      assert.equal(reportExitedKeysByNodeOperatorTotalCalls, 0)
+      assert.equal(+await mockStakingRouter.getTotalCalls_reportExitedKeysByNodeOperator(), 0)
+      assert.equal(+await mockStakingRouter.getTotalCalls_reportStuckKeysByNodeOperator(), 0)
+
+      const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
+      assert.equal(+updateBunkerModeLastCall.callCount, 0)
     })
 
     it('the initial reference slot is greater than the last one of the legacy oracle', async () => {

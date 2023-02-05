@@ -262,6 +262,22 @@ contract MemUtilsTest {
         ));
     }
 
+    function memcpy_zero_length_is_handled_correctly() external pure {
+        bytes memory src = abi.encodePacked(
+            bytes32(0x1111111111111111111111111111111111111111111111111111111111111111)
+        );
+
+        bytes memory dst = abi.encodePacked(
+            bytes32(0x2222222222222222222222222222222222222222222222222222222222222222)
+        );
+
+        MemUtils.memcpy(getDataPtr(src) + 11, getDataPtr(dst) + 13, 0);
+
+        assertBytes(dst, abi.encodePacked(
+            bytes32(0x2222222222222222222222222222222222222222222222222222222222222222)
+        ));
+    }
+
     ///
     /// keccakUint256Array
     ///

@@ -37,7 +37,8 @@ contract ValidatorsExitBusOracle is BaseOracle {
         uint256 indexed stakingModuleId,
         uint256 indexed nodeOperatorId,
         uint256 indexed validatorIndex,
-        bytes validatorPubkey
+        bytes validatorPubkey,
+        uint256 timestamp
     );
 
     event WarnDataIncompleteProcessing(
@@ -59,6 +60,11 @@ contract ValidatorsExitBusOracle is BaseOracle {
         uint16 dataFormat;
     }
 
+    struct RequestedValidator {
+        bool requested;
+        uint64 index;
+    }
+
     /// @notice An ACL role granting the permission to submit the data for a committee report.
     bytes32 public constant SUBMIT_DATA_ROLE = keccak256("SUBMIT_DATA_ROLE");
 
@@ -70,7 +76,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
     bytes32 internal constant TOTAL_REQUESTS_PROCESSED_POSITION =
         keccak256("lido.ValidatorsExitBusOracle.totalRequestsProcessed");
 
-    /// @dev Storage slot: mapping(uint256 => uint256) lastRequestedValidatorIndices
+    /// @dev Storage slot: mapping(uint256 => RequestedValidator) lastRequestedValidatorIndices
     /// A mapping from the (moduleId, nodeOpId) packed key to the last requested validator index.
     bytes32 internal constant LAST_REQUESTED_VALIDATOR_INDICES_POSITION =
         keccak256("lido.ValidatorsExitBusOracle.lastRequestedValidatorIndices");
@@ -91,7 +97,8 @@ contract ValidatorsExitBusOracle is BaseOracle {
     /// Initialization & admin functions
     ///
 
-    constructor(uint256 secondsPerSlot) BaseOracle(secondsPerSlot) {}
+    constructor(uint256 secondsPerSlot, uint256 genesisTime)
+        BaseOracle(secondsPerSlot, genesisTime) {}
 
     function initialize(
         address admin,
@@ -261,29 +268,43 @@ contract ValidatorsExitBusOracle is BaseOracle {
         return TOTAL_REQUESTS_PROCESSED_POSITION.getStorageUint256();
     }
 
-    /// @notice Returns the latest validator index that was requested to exit
-    /// for the given `nodeOperatorId` in the given `moduleId`.
+    /// @notice Returns the latest validator indices that were requested to exit for the given
+    /// `nodeOpIds` in the given `moduleId`. For node operators that were never requested to exit
+    /// any validator, index is set to -1.
     ///
-    function getLastRequestedValidatorIndex(uint256 moduleId, uint256 nodeOpId)
-        external view returns (uint256)
+    /// @param moduleId ID of the staking module.
+    /// @param nodeOpIds IDs of the staking module's node operators.
+    ///
+    function getLastRequestedValidatorIndices(uint256 moduleId, uint256[] calldata nodeOpIds)
+        external view returns (int256[] memory)
     {
         if (moduleId > type(uint24).max) revert ArgumentOutOfBounds();
-        if (nodeOpId > type(uint40).max) revert ArgumentOutOfBounds();
-        uint256 nodeOpKey = _computeNodeOpKey(moduleId, nodeOpId);
-        return _storageLastRequestedValidatorIndices()[nodeOpKey];
+
+        int256[] memory indices = new int256[](nodeOpIds.length);
+
+        for (uint256 i = 0; i < nodeOpIds.length; ++i) {
+            uint256 nodeOpId = nodeOpIds[i];
+            if (nodeOpId > type(uint40).max) revert ArgumentOutOfBounds();
+            uint256 nodeOpKey = _computeNodeOpKey(moduleId, nodeOpId);
+            RequestedValidator memory validator = _storageLastRequestedValidatorIndices()[nodeOpKey];
+            indices[i] = validator.requested ? int256(uint256(validator.index)) : -1;
+        }
+
+        return indices;
     }
 
     /// @notice Returns processing state for the current consensus report.
     ///
     function getDataProcessingState() external view returns (
+        uint256 refSlot,
         bool processingStarted,
         uint256 requestsCount,
         uint256 requestsProcessed,
         uint256 dataFormat
     ) {
         DataProcessingState memory state = _storageDataProcessingState().value;
-        uint256 processingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
-        processingStarted = state.refSlot != 0 && state.refSlot == processingRefSlot;
+        refSlot = _storageConsensusReport().value.refSlot;
+        processingStarted = state.refSlot != 0 && state.refSlot == refSlot;
         if (processingStarted) {
             requestsCount = state.requestsCount;
             requestsProcessed = state.requestsProcessed;
@@ -389,11 +410,10 @@ contract ValidatorsExitBusOracle is BaseOracle {
             offsetPastEnd := add(offset, data.length)
         }
 
-        mapping(uint256 => uint256) storage _lastReqValidatorIndices =
+        mapping(uint256 => RequestedValidator) storage _lastReqValidatorIndices =
             _storageLastRequestedValidatorIndices();
 
         uint256 lastDataWithoutPubkey = 0;
-        uint256 dataWithoutPubkey;
         uint256 lastNodeOpKey = 0;
         uint256 lastValIndex;
         bytes calldata pubkey;
@@ -403,6 +423,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
         }
 
         while (offset < offsetPastEnd) {
+            uint256 dataWithoutPubkey;
             assembly {
                 // 16 most significant bytes are taken by module id, node op id, and val index
                 dataWithoutPubkey := shr(128, calldataload(offset))
@@ -430,7 +451,8 @@ contract ValidatorsExitBusOracle is BaseOracle {
             uint256 nodeOpKey = _computeNodeOpKey(moduleId, nodeOpId);
             if (nodeOpKey != lastNodeOpKey) {
                 if (lastNodeOpKey != 0) {
-                    _lastReqValidatorIndices[lastNodeOpKey] = lastValIndex;
+                    _lastReqValidatorIndices[lastNodeOpKey] =
+                        RequestedValidator(true, uint64(lastValIndex));
                 }
                 lastNodeOpKey = nodeOpKey;
             }
@@ -438,11 +460,11 @@ contract ValidatorsExitBusOracle is BaseOracle {
             lastValIndex = valIndex;
             lastDataWithoutPubkey = dataWithoutPubkey;
 
-            emit ValidatorExitRequest(moduleId, nodeOpId, valIndex, pubkey);
+            emit ValidatorExitRequest(moduleId, nodeOpId, valIndex, pubkey, block.timestamp);
         }
 
         if (lastNodeOpKey != 0) {
-            _lastReqValidatorIndices[lastNodeOpKey] = lastValIndex;
+            _lastReqValidatorIndices[lastNodeOpKey] = RequestedValidator(true, uint64(lastValIndex));
         }
 
         return lastDataWithoutPubkey;
@@ -457,7 +479,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
     ///
 
     function _storageLastRequestedValidatorIndices() internal pure returns (
-        mapping(uint256 => uint256) storage r
+        mapping(uint256 => RequestedValidator) storage r
     ) {
         bytes32 position = LAST_REQUESTED_VALIDATOR_INDICES_POSITION;
         assembly { r.slot := position }

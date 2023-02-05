@@ -5,7 +5,9 @@
 // See contracts/COMPILERS.md
 pragma solidity 0.8.9;
 
-contract LidoLocatorMock {
+import "../../common/interfaces/ILidoLocator.sol";
+
+contract LidoLocatorMock is ILidoLocator {
     struct ContractAddresses {
         address lido;
         address depositSecurityModule;
@@ -19,7 +21,7 @@ contract LidoLocatorMock {
         address treasury;
         address withdrawalQueue;
         address withdrawalVault;
-        address rebaseReceiver;
+        address postTokenRebaseReceiver;
     }
 
     address public immutable lido;
@@ -34,7 +36,7 @@ contract LidoLocatorMock {
     address public immutable treasury;
     address public immutable withdrawalQueue;
     address public immutable withdrawalVault;
-    address public immutable rebaseReceiver;
+    address public immutable postTokenRebaseReceiver;
 
     constructor (
         ContractAddresses memory addrs
@@ -51,15 +53,15 @@ contract LidoLocatorMock {
         treasury = addrs.treasury;
         withdrawalQueue = addrs.withdrawalQueue;
         withdrawalVault = addrs.withdrawalVault;
-        rebaseReceiver = addrs.rebaseReceiver;
+        postTokenRebaseReceiver = addrs.postTokenRebaseReceiver;
     }
 
     function coreComponents() external view returns(address,address,address,address,address,address) {
         return (
             elRewardsVault,
-            address(0),
-            address(0),
-            address(0),
+            safetyNetsRegistry,
+            stakingRouter,
+            treasury,
             withdrawalQueue,
             withdrawalVault
         );

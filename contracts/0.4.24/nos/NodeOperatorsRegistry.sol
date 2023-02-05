@@ -10,7 +10,6 @@ import {SafeMath64} from "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import {UnstructuredStorage} from "@aragon/os/contracts/common/UnstructuredStorage.sol";
 
 import {Math64} from "../lib/Math64.sol";
-import {BytesLib} from "../lib/BytesLib.sol";
 import {MemUtils} from "../../common/lib/MemUtils.sol";
 import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
 import {SigningKeysStats} from "../lib/SigningKeysStats.sol";
@@ -367,7 +366,20 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         // updated (as opposed to pulling by node ops), we don't need any handling here
     }
 
-    /// @notice Updates the number of the validators in the EXITED state for node operator with given id
+    /// @notice Called by StakingRouter to update the number of the validators of the given node
+    /// operator that were requested to exit but failed to do so in the max allowed time
+    ///
+    /// @param _nodeOperatorId Id of the node operator
+    /// @param _stuckValidatorKeysCount New number of stuck validators of the node operator
+    function updateStuckValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _stuckValidatorKeysCount)
+        external
+    {
+        _updateStuckValidatorsKeysCount(_nodeOperatorId, _stuckValidatorKeysCount, false);
+    }
+
+    /// @notice Called by StakingRouter to update the number of the validators in the EXITED state
+    /// for node operator with given id
+    ///
     /// @param _nodeOperatorId Id of the node operator
     /// @param _exitedValidatorsKeysCount New number of EXITED validators of the node operator
     /// @return Total number of exited validators across all node operators.
@@ -396,11 +408,15 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     /// @param _nodeOperatorId Id of the node operator
     /// @param _exitedValidatorsKeysCount New number of EXITED validators of the node operator
     /// @return Total number of exited validators across all node operators.
-    function unsafeUpdateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount)
+    function unsafeUpdateValidatorsKeysCount(
+        uint256 _nodeOperatorId,
+        uint256 _exitedValidatorsKeysCount,
+        uint256 _stuckValidatorsKeysCount
+    )
         external
-        returns (uint256)
     {
-        return _updateExitedValidatorsKeysCount(_nodeOperatorId, _exitedValidatorsKeysCount, true);
+        _updateStuckValidatorsKeysCount(_nodeOperatorId, _stuckValidatorsKeysCount, true);
+        _updateExitedValidatorsKeysCount(_nodeOperatorId, _exitedValidatorsKeysCount, true);
     }
 
     function _updateExitedValidatorsKeysCount(
@@ -434,6 +450,14 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         emit ExitedSigningKeysCountChanged(_nodeOperatorId, _exitedValidatorsKeysCount);
 
         return totalSigningKeysStats.exitedSigningKeysCount;
+    }
+
+    function _updateStuckValidatorsKeysCount(
+        uint256 _nodeOperatorId,
+        uint256 _stuckValidatorKeysCount,
+        bool _allowDecrease
+    ) internal {
+        // FIXME: implement
     }
 
     /// @notice Invalidates all unused validators keys for all node operators
@@ -727,12 +751,14 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
 
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         uint64 totalSigningKeysCount = nodeOperator.totalSigningKeysCount;
-        bytes memory key;
-        bytes memory sig;
+
+
+        bytes memory key = MemUtils.unsafeAllocateBytes(PUBKEY_LENGTH);
+        bytes memory sig = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH);
         for (uint256 i = 0; i < _keysCount; ++i) {
-            key = BytesLib.slice(_publicKeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
+            MemUtils.copyBytes(_publicKeys, key, i * PUBKEY_LENGTH, 0, PUBKEY_LENGTH);
             require(!_isEmptySigningKey(key), "EMPTY_KEY");
-            sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+            MemUtils.copyBytes(_signatures, sig, i * SIGNATURE_LENGTH, 0, SIGNATURE_LENGTH);
 
             _storeSigningKey(_nodeOperatorId, totalSigningKeysCount, key, sig);
             totalSigningKeysCount = totalSigningKeysCount.add(1);
@@ -1100,16 +1126,16 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         uint256 offset = _signingKeyOffset(_nodeOperatorId, _keyIndex);
 
         // key
-        bytes memory tmpKey = new bytes(64);
+         bytes memory tmpKey = MemUtils.unsafeAllocateBytes(64);
         assembly {
             mstore(add(tmpKey, 0x20), sload(offset))
             mstore(add(tmpKey, 0x40), sload(add(offset, 1)))
         }
         offset += 2;
-        key = BytesLib.slice(tmpKey, 0, PUBKEY_LENGTH);
-
+        key = MemUtils.unsafeAllocateBytes(PUBKEY_LENGTH);
+        MemUtils.copyBytes(tmpKey, key, 0, 0, PUBKEY_LENGTH);
         // signature
-        signature = new bytes(SIGNATURE_LENGTH);
+        signature = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH);
         for (uint256 i = 0; i < SIGNATURE_LENGTH; i += 32) {
             assembly {
                 mstore(add(signature, add(0x20, i)), sload(offset))

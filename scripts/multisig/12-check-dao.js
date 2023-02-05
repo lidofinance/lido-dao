@@ -563,8 +563,7 @@ async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent,
           'MANAGE_PROTOCOL_CONTRACTS_ROLE',
           'MANAGE_WITHDRAWAL_KEY',
           'STAKING_PAUSE_ROLE',
-          'STAKING_CONTROL_ROLE',
-          'MANAGE_MAX_POSITIVE_TOKEN_REBASE_ROLE'
+          'STAKING_CONTROL_ROLE'
         ],
         grantee: voting
       }

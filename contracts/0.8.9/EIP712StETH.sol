@@ -14,9 +14,9 @@ import {IEIP712} from "../common/interfaces/IEIP712.sol";
  */
 contract EIP712StETH is IEIP712, EIP712 {
     /**
-     * @dev Constructs specialized EIP712 instance for StETH token, version "1".
+     * @dev Constructs specialized EIP712 instance for StETH token, version "2".
      */
-    constructor() EIP712("Liquid staked Ether 2.0", "1") {}
+    constructor() EIP712("Liquid staked Ether 2.0", "2") {}
 
     /**
      * @dev Returns the domain separator for the current chain.

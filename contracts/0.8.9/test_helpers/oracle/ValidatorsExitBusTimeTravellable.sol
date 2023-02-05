@@ -15,7 +15,9 @@ interface ITimeProvider {
 contract ValidatorsExitBusTimeTravellable is ValidatorsExitBusOracle, ITimeProvider {
     using UnstructuredStorage for bytes32;
 
-    constructor(uint256 secondsPerSlot) ValidatorsExitBusOracle(secondsPerSlot) {
+    constructor(uint256 secondsPerSlot, uint256 genesisTime)
+        ValidatorsExitBusOracle(secondsPerSlot, genesisTime)
+    {
         // allow usage without a proxy for tests
         CONTRACT_VERSION_POSITION.setStorageUint256(0);
     }
