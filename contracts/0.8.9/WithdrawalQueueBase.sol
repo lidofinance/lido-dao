@@ -74,31 +74,23 @@ abstract contract WithdrawalQueueBase {
     mapping(uint256 => WithdrawalRequest) internal queue;
 
     /// @notice length of the queue
-    uint256 public lastRequestId = 0;
+    uint256 public lastRequestId;
 
     /// @notice length of the finalized part of the queue. Always <= `requestCounter`
-    uint256 public lastFinalizedRequestId = lastRequestId;
+    uint256 public lastFinalizedRequestId;
 
     /// @notice finalization discount history, indexes start from 1
     /// @dev mapping for better upgradability of underlying struct, because in the array structs are stored packed
     mapping(uint256 => DiscountCheckpoint) internal checkpoints;
 
     /// @notice size of checkpoins array
-    uint256 public lastCheckpointIndex = 0;
+    uint256 public lastCheckpointIndex;
 
     /// @notice amount of ETH on this contract balance that is locked for withdrawal and waiting for claim
-    uint128 public lockedEtherAmount = 0;
+    uint128 public lockedEtherAmount;
 
     /// @notice withdrawal requests mapped to the recipients
     mapping(address => EnumerableSet.UintSet) private requestsByRecipient;
-
-    function _initializeQueue() internal {
-        // setting dummy zero structs in checkpoints and queue beginning
-        // to avoid uint underflows and related if-branches
-        // 0-index is reserved as 'not_found' response in the interface everywhere
-        queue[lastRequestId] = WithdrawalRequest(0, 0, payable(0), uint64(block.number), true);
-        checkpoints[lastCheckpointIndex] = DiscountCheckpoint(lastRequestId, 0);
-    }
 
     /// @notice return the number of unfinalized requests in the queue
     function unfinalizedRequestNumber() external view returns (uint256) {
@@ -449,6 +441,15 @@ abstract contract WithdrawalQueueBase {
 
         lockedEtherAmount += _amountofETH;
         lastFinalizedRequestId = _lastRequestIdToFinalize;
+    }
+
+    // quazi-constructor
+    function _initializeQueue() internal {
+        // setting dummy zero structs in checkpoints and queue beginning
+        // to avoid uint underflows and related if-branches
+        // 0-index is reserved as 'not_found' response in the interface everywhere
+        queue[lastRequestId] = WithdrawalRequest(0, 0, payable(0), uint64(block.number), true);
+        checkpoints[lastCheckpointIndex] = DiscountCheckpoint(lastRequestId, 0);
     }
 
     function _sendValue(address payable _recipient, uint256 _amount) internal {
