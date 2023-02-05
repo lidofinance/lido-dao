@@ -18,7 +18,8 @@ const services = [
   'treasury',
   'validatorExitBus',
   'withdrawalQueue',
-  'withdrawalVault'
+  'withdrawalVault',
+  'postTokenRebaseReceiver'
 ]
 
 contract('LidoLocator', ([deployer, agent]) => {

@@ -42,25 +42,22 @@ contract PositiveTokenRebaseLimiterMock {
         return limiter.isLimitReached();
     }
 
-    function applyCLBalanceUpdate(int256 _clBalanceDiff) external {
+    function raiseLimit(uint256 _etherAmount) external {
         LimiterState.Data memory limiterMemory = limiter;
-        limiterMemory.applyCLBalanceUpdate(_clBalanceDiff);
+        limiterMemory.raiseLimit(_etherAmount);
         limiter = limiterMemory;
     }
 
-    function appendEther(uint256 _etherAmount) external {
+    function consumeLimit(uint256 _etherAmount) external {
         LimiterState.Data memory limiterMemory = limiter;
-        uint256 appendableEther = limiterMemory.appendEther(_etherAmount);
+        uint256 consumedEther = limiterMemory.consumeLimit(_etherAmount);
         limiter = limiterMemory;
 
-        emit ReturnValue(appendableEther);
+        emit ReturnValue(consumedEther);
     }
 
-    function deductShares(uint256 _sharesAmount) external {
+    function getSharesToBurnLimit() external view returns (uint256) {
         LimiterState.Data memory limiterMemory = limiter;
-        uint256 deductableShares = limiterMemory.deductShares(_sharesAmount);
-        limiter = limiterMemory;
-
-        emit ReturnValue(deductableShares);
+        return limiterMemory.getSharesToBurnLimit();
     }
 }

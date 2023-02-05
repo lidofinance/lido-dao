@@ -579,7 +579,7 @@ contract LidoTemplate is IsContract {
         }
 
         // using loops to save contract size
-        bytes32[7] memory perms;
+        bytes32[6] memory perms;
 
         // NodeOperatorsRegistry
         perms[0] = _state.operators.MANAGE_SIGNING_KEYS();
@@ -595,12 +595,10 @@ contract LidoTemplate is IsContract {
 
         // Lido
         perms[0] = _state.lido.PAUSE_ROLE();
-        perms[1] = _state.lido.MANAGE_PROTOCOL_CONTRACTS_ROLE();
-        perms[2] = _state.lido.BURN_ROLE();
-        perms[3] = _state.lido.RESUME_ROLE();
-        perms[4] = _state.lido.STAKING_PAUSE_ROLE();
-        perms[5] = _state.lido.STAKING_CONTROL_ROLE();
-        for (i = 0; i < 6; ++i) {
+        perms[1] = _state.lido.RESUME_ROLE();
+        perms[2] = _state.lido.STAKING_PAUSE_ROLE();
+        perms[3] = _state.lido.STAKING_CONTROL_ROLE();
+        for (i = 0; i < 4; ++i) {
             _createPermissionForVoting(acl, _state.lido, perms[i], voting);
         }
     }

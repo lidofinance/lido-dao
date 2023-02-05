@@ -3,11 +3,14 @@ const { BN } = require('bn.js')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
 
-const { ZERO_HASH, pad, toBN, ETH, gwei, tokens, hexConcat } = require('../helpers/utils')
-const { deployDaoAndPool } = require('./helpers/deploy')
+const { pad, toBN, ETH, tokens, hexConcat } = require('../helpers/utils')
 
-const { DSMAttestMessage, DSMPauseMessage } = require('../0.8.9/helpers/signatures')
+const { DSMAttestMessage, DSMPauseMessage } = require('../helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
+const { deployProtocol } = require('../helpers/protocol')
+const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
+const { gwei, ZERO_HASH } = require('../helpers/utils')
+const { pushOracleReport } = require('../helpers/oracle')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const CURATED_MODULE_ID = 1
@@ -31,10 +34,6 @@ const makeAccountingReport = ({refSlot, numValidators, clBalanceGwei}) => ({
 
 contract('Lido: happy path', (addresses) => {
   const [
-    // the root account which deployed the DAO
-    appManager,
-    // the address which we use to simulate the voting DAO application
-    voting,
     // node operators
     operator_1,
     operator_2,
@@ -48,41 +47,57 @@ contract('Lido: happy path', (addresses) => {
   ] = addresses
 
   let pool, nodeOperatorsRegistry, token
-  let oracleMock, depositContractMock
-  let treasuryAddr, guardians
+  let oracle, depositContractMock
+  let treasuryAddr, guardians, voting
   let depositSecurityModule, depositRoot
   let withdrawalCredentials, stakingRouter
+  let consensus
 
   before('DAO, node operators registry, token, pool and deposit security module are deployed and initialized', async () => {
-    const deployed = await deployDaoAndPool(appManager, voting)
+      const deployed = await deployProtocol({
+        stakingModulesFactory: async (protocol) => {
+          const curatedModule = await setupNodeOperatorsRegistry(protocol)
+          return [
+            {
+              module: curatedModule,
+              name: 'Curated',
+              targetShares: 10000,
+              moduleFee: 500,
+              treasuryFee: 500
+            }
+          ]
+        }
+      })
 
-    // contracts/StETH.sol
-    token = deployed.pool
+      // contracts/StETH.sol
+      token = deployed.pool
 
-    // contracts/Lido.sol
-    pool = deployed.pool
-    await pool.resumeProtocolAndStaking()
+      // contracts/Lido.sol
+      pool = deployed.pool
 
-    // contracts/nos/NodeOperatorsRegistry.sol
-    nodeOperatorsRegistry = deployed.nodeOperatorsRegistry
+      // contracts/nos/NodeOperatorsRegistry.sol
+      nodeOperatorsRegistry = deployed.stakingModules[0]
 
-    // contracts/0.8.9/StakingRouter.sol
-    stakingRouter = deployed.stakingRouter
+      // contracts/0.8.9/StakingRouter.sol
+      stakingRouter = deployed.stakingRouter
 
-    // mocks
-    oracleMock = deployed.oracleMock
-    depositContractMock = deployed.depositContractMock
+      // mocks
+      oracle = deployed.oracle
+      depositContractMock = deployed.depositContract
+      consensus = deployed.consensusContract
 
-    // addresses
-    treasuryAddr = deployed.treasuryAddr
-    depositSecurityModule = deployed.depositSecurityModule
-    guardians = deployed.guardians
+      // addresses
+      treasuryAddr = deployed.treasury.address
+      depositSecurityModule = deployed.depositSecurityModule
+      guardians = deployed.guardians
+      voting = deployed.voting.address
 
-    depositRoot = await depositContractMock.get_deposit_root()
-    withdrawalCredentials = '0x'.padEnd(66, '1234')
+      depositRoot = await depositContractMock.get_deposit_root()
+      withdrawalCredentials = '0x'.padEnd(66, '1234')
 
-    await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
-  })
+      await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
+    }
+  )
 
   // Fee and its distribution are in basis points, 10000 corresponding to 100%
 
@@ -363,7 +378,6 @@ contract('Lido: happy path', (addresses) => {
   })
 
   it('the oracle reports balance increase on Ethereum2 side', async () => {
-    const refSlot = 100
 
     // Total shares are equal to deposited eth before ratio change and fee mint
 
@@ -377,11 +391,7 @@ contract('Lido: happy path', (addresses) => {
 
     // Reporting 1.5-fold balance increase (64 => 96)
 
-    await oracleMock.submitReportData(makeAccountingReport({
-      refSlot,
-      numValidators: 2,
-      clBalanceGwei: gwei(96)
-    }), 1)
+    pushOracleReport(consensus, oracle, 2, ETH(96))
 
     // Total shares increased because fee minted (fee shares added)
     // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)

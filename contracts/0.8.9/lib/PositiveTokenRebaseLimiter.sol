@@ -68,77 +68,58 @@ library PositiveTokenRebaseLimiter {
     }
 
     /**
-     * @dev apply consensus layer balance update
+     * @notice raise limit using the given amount of ether
      * @param _limiterState limit repr struct
-     * @param _clBalanceDiff cl balance diff (can be negative!)
-     *
-     * NB: if `_clBalanceDiff` is negative than max limiter value is pushed higher
-     * otherwise limiter is updated with the `appendEther` call.
      */
-    function applyCLBalanceUpdate(LimiterState.Data memory _limiterState, int256 _clBalanceDiff) internal pure {
-        require(_limiterState.accumulatedRebase == 0, "DIRTY_LIMITER_STATE");
+    function raiseLimit(LimiterState.Data memory _limiterState, uint256 _etherAmount) internal pure {
+        if(_limiterState.rebaseLimit == UNLIMITED_REBASE) { return; }
 
-        if (_clBalanceDiff < 0 && (_limiterState.rebaseLimit != UNLIMITED_REBASE)) {
-            _limiterState.rebaseLimit += (uint256(-_clBalanceDiff) * LIMITER_PRECISION_BASE) / _limiterState.totalPooledEther;
-        } else {
-            appendEther(_limiterState, uint256(_clBalanceDiff));
-        }
+        _limiterState.rebaseLimit += (_etherAmount * LIMITER_PRECISION_BASE) / _limiterState.totalPooledEther;
     }
 
     /**
-     * @dev append ether and return value not exceeding the limit
+     * @dev append ether and return the consumed value not exceeding the limit
      * @param _limiterState limit repr struct
      * @param _etherAmount desired ether addition
-     * @return appendableEther allowed to add ether to not exceed the limit
+     * @return consumedEther allowed to add ether to not exceed the limit
      */
-    function appendEther(LimiterState.Data memory _limiterState, uint256 _etherAmount)
+    function consumeLimit(LimiterState.Data memory _limiterState, uint256 _etherAmount)
         internal
         pure
-        returns (uint256 appendableEther)
+        returns (uint256 consumedEther)
     {
         if (_limiterState.rebaseLimit == UNLIMITED_REBASE) return _etherAmount;
 
         uint256 remainingRebase = _limiterState.rebaseLimit - _limiterState.accumulatedRebase;
         uint256 remainingEther = (remainingRebase * _limiterState.totalPooledEther) / LIMITER_PRECISION_BASE;
 
-        appendableEther = Math256.min(remainingEther, _etherAmount);
+        consumedEther = Math256.min(remainingEther, _etherAmount);
 
-        if (appendableEther == remainingEther) {
+        if (consumedEther == remainingEther) {
             _limiterState.accumulatedRebase = _limiterState.rebaseLimit;
         } else {
             _limiterState.accumulatedRebase += (
-                appendableEther * LIMITER_PRECISION_BASE
+                consumedEther * LIMITER_PRECISION_BASE
             ) / _limiterState.totalPooledEther;
         }
     }
 
     /**
-     * @dev deduct shares and return value not exceeding the limit
+     * @dev return shares to burn value not exceeding the limit
      * @param _limiterState limit repr struct
-     * @param _sharesAmount desired shares deduction
-     * @return deductableShares allowed to deduct shares to not exceed the limit
+     * @return maxSharesToBurn allowed to deduct shares to not exceed the limit
      */
-    function deductShares(LimiterState.Data memory _limiterState, uint256 _sharesAmount)
+    function getSharesToBurnLimit(LimiterState.Data memory _limiterState)
         internal
         pure
-        returns (uint256 deductableShares)
+        returns (uint256 maxSharesToBurn)
     {
-        if (_limiterState.rebaseLimit == UNLIMITED_REBASE) return _sharesAmount;
+        if (_limiterState.rebaseLimit == UNLIMITED_REBASE) return type(uint256).max;
 
         uint256 remainingRebase = _limiterState.rebaseLimit - _limiterState.accumulatedRebase;
-        uint256 remainingShares = (
+        maxSharesToBurn = (
             _limiterState.totalShares * remainingRebase
         ) / (LIMITER_PRECISION_BASE + remainingRebase);
-
-        deductableShares = Math256.min(_sharesAmount, remainingShares);
-
-        if (deductableShares == remainingShares) {
-            _limiterState.accumulatedRebase = _limiterState.rebaseLimit;
-        } else {
-            _limiterState.accumulatedRebase += (
-                deductableShares * LIMITER_PRECISION_BASE
-            ) / (_limiterState.totalShares - deductableShares);
-        }
     }
 
     function getLimiterPrecisionBase() internal pure returns (uint256) {

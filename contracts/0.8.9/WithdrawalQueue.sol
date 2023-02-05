@@ -14,6 +14,8 @@ import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.so
 
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 
+import {Versioned} from "./utils/Versioned.sol";
+
 /**
  * @title Interface defining a Lido liquid staking pool
  * @dev see also [Lido liquid staking pool core contract](https://docs.lido.fi/contracts/lido)
@@ -51,7 +53,7 @@ interface IWstETH is IERC20, IERC20Permit {
  * @title A contract for handling stETH withdrawal request queue within the Lido protocol
  * @author folkyatina
  */
-contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
+contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versioned {
     using SafeERC20 for IWstETH;
     using SafeERC20 for IStETH;
     using UnstructuredStorage for bytes32;
@@ -66,20 +68,20 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     ///! SLOT 5: uint128 public lockedEtherAmount
     ///! SLOT 6: mapping(address => uint256[]) requestsByRecipient
 
-    /// Version of the initialized contract data
-    /// NB: Contract versioning starts from 1.
-    /// The version stored in CONTRACT_VERSION_POSITION equals to
-    /// - 0 right after deployment when no initializer is invoked yet
-    /// - N after calling initialize() during deployment from scratch, where N is the current contract version
-    /// - N after upgrading contract from the previous version (after calling finalize_vN())
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.WithdrawalQueue.contractVersion");
     /// Withdrawal queue resume/pause control storage slot
-    bytes32 internal constant RESUMED_POSITION = keccak256("lido.WithdrawalQueue.resumed");
+    bytes32 public constant RESUME_SINCE_TIMESTAMP_POSITION = keccak256("lido.WithdrawalQueue.resumeSinceTimestamp");
+    /// Special value for the infinite pause
+    uint256 public constant PAUSE_INFINITELY = type(uint256).max;
+    /// Bunker mode activation timestamp
+    bytes32 public constant BUNKER_MODE_SINCE_TIMESTAMP_POSITION = keccak256("lido.WithdrawalQueue.bunkerModeSinceTimestamp");
+    /// Special value for timestamp when bunker mode is inactive (i.e., protocol in turbo mode)
+    uint256 public constant BUNKER_MODE_DISABLED_TIMESTAMP = type(uint256).max;
 
     // ACL
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant FINALIZE_ROLE = keccak256("FINALIZE_ROLE");
+    bytes32 public constant BUNKER_MODE_REPORT_ROLE = keccak256("BUNKER_MODE_REPORT_ROLE");
 
     /// @notice minimal possible sum that is possible to withdraw
     uint256 public constant MIN_STETH_WITHDRAWAL_AMOUNT = 100;
@@ -96,10 +98,10 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     /// @notice Lido wstETH token address to be set upon construction
     IWstETH public immutable WSTETH;
 
-    /// @notice Emitted when withdrawal requests placement paused
-    event WithdrawalQueuePaused();
-    /// @notice Emitted when withdrawal requests placement resumed
-    event WithdrawalQueueResumed();
+    /// @notice Emitted when withdrawal requests placement and finalization paused by the `pause(duration)` call
+    event Paused(uint256 duration);
+    /// @notice Emitted when withdrawal requests placement and finalization resumed by the `resume` call
+    event Resumed();
     /// @notice Emitted when the contract initialized
     /// @param _admin provided admin address
     /// @param _caller initialization `msg.sender`
@@ -113,8 +115,10 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     error ResumedExpected();
     error RequestAmountTooSmall(uint256 _amountOfStETH);
     error RequestAmountTooLarge(uint256 _amountOfStETH);
+    error InvalidReportTimestamp();
     error LengthsMismatch(uint256 _expectedLength, uint256 _actualLength);
     error RequestIdsNotSorted();
+    error ZeroPauseDuration();
 
     /// @notice Reverts when the contract is uninitialized
     modifier whenInitialized() {
@@ -124,17 +128,17 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
         _;
     }
 
-    /// @notice Reverts when new withdrawal requests placement resumed
+    /// @notice Reverts when new withdrawal requests placement and finalization resumed
     modifier whenPaused() {
-        if (RESUMED_POSITION.getStorageBool()) {
+        if (block.timestamp >= RESUME_SINCE_TIMESTAMP_POSITION.getStorageUint256()) {
             revert PausedExpected();
         }
         _;
     }
 
-    /// @notice Reverts when new withdrawal requests placement paused
+    /// @notice Reverts when new withdrawal requests placement and finalization paused
     modifier whenResumed() {
-        if (!RESUMED_POSITION.getStorageBool()) {
+        if (block.timestamp < RESUME_SINCE_TIMESTAMP_POSITION.getStorageUint256()) {
             revert ResumedExpected();
         }
         _;
@@ -147,9 +151,6 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
         // init immutables
         WSTETH = _wstETH;
         STETH = WSTETH.stETH();
-
-        // petrify the implementation by assigning a zero address for every role
-        _initialize(address(0), address(0), address(0), address(0));
     }
 
     /**
@@ -171,7 +172,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
 
     /// @notice Returns whether the contract is initialized or not
     function isInitialized() external view returns (bool) {
-        return CONTRACT_VERSION_POSITION.getStorageUint256() != 0;
+        return getContractVersion() != 0;
     }
 
     /**
@@ -181,25 +182,36 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
      * @dev Reverts with `AccessControl:...` reason if sender has no `RESUME_ROLE`
      */
     function resume() external whenInitialized whenPaused onlyRole(RESUME_ROLE) {
-        RESUMED_POSITION.setStorageBool(true);
+        RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(block.timestamp);
 
-        emit WithdrawalQueueResumed();
+        emit Resumed();
     }
 
     /**
      * @notice Pause withdrawal requests placement and finalization. Claiming finalized requests will still be available
+     * @param _duration pause duration, seconds (use `PAUSE_INFINITELY` for unlimited)
      * @dev Reverts with `ResumedExpected()` if contract is already paused
      * @dev Reverts with `AccessControl:...` reason if sender has no `PAUSE_ROLE`
+     * @dev Reverts with `ZeroPauseDuration()` if zero duration is passed
      */
-    function pause() external whenResumed onlyRole(PAUSE_ROLE) {
-        RESUMED_POSITION.setStorageBool(false);
+    function pause(uint256 _duration) external whenResumed onlyRole(PAUSE_ROLE) {
+        if (_duration == 0) { revert ZeroPauseDuration(); }
 
-        emit WithdrawalQueuePaused();
+        uint256 pausedUntill;
+        if (_duration == PAUSE_INFINITELY) {
+            pausedUntill = PAUSE_INFINITELY;
+        } else {
+            pausedUntill = block.timestamp + _duration;
+        }
+
+        RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(pausedUntill);
+
+        emit Paused(_duration);
     }
 
     /// @notice Returns whether the requests placement and finalization is paused or not
     function isPaused() external view returns (bool) {
-        return !RESUMED_POSITION.getStorageBool();
+        return block.timestamp < RESUME_SINCE_TIMESTAMP_POSITION.getStorageUint256();
     }
 
     struct WithdrawalRequestInput {
@@ -328,7 +340,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
     /// @param _requestIds ids of the requests sorted in the ascending order to get hints for
     function findClaimHintsUnbounded(uint256[] calldata _requestIds) public view returns (uint256[] memory hintIds) {
         return findClaimHints(_requestIds, 0, lastDiscountIndex);
-    }    
+    }
 
     /**
      * @notice Finalize requests from last finalized one up to `_lastRequestIdToFinalize`
@@ -340,21 +352,58 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase {
         _finalize(_lastRequestIdToFinalize, msg.value);
     }
 
+    /**
+     * @notice Update bunker mode state
+     * @dev should be called by oracle
+     *
+     * NB: timestamp should correspond to the previous oracle report
+     *
+     * @param _isBunkerModeNow oracle report
+     * @param _previousOracleReportTimestamp timestamp of the previous oracle report
+     */
+    function updateBunkerMode(
+        bool _isBunkerModeNow,
+        uint256 _previousOracleReportTimestamp
+    ) external onlyRole(BUNKER_MODE_REPORT_ROLE) {
+        if (_previousOracleReportTimestamp >= block.timestamp) { revert InvalidReportTimestamp(); }
+
+        bool isBunkerModeWasSetBefore = isBunkerModeActive();
+
+        // on bunker mode state change
+        if (_isBunkerModeNow != isBunkerModeWasSetBefore) {
+            // write previous timestamp to enable bunker or max uint to disable
+            uint256 newTimestamp = _isBunkerModeNow ? _previousOracleReportTimestamp : BUNKER_MODE_DISABLED_TIMESTAMP;
+            BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(newTimestamp);
+        }
+    }
+
+    /**
+     * @notice Check if bunker mode is active
+     */
+    function isBunkerModeActive() public view returns (bool) {
+        return bunkerModeSinceTimestamp() < BUNKER_MODE_DISABLED_TIMESTAMP;
+    }
+
+    /**
+     * @notice Get bunker mode activation timestamp
+     * @dev returns `BUNKER_MODE_DISABLED_TIMESTAMP` if bunker mode is disable (i.e., protocol in turbo mode)
+     */
+    function bunkerModeSinceTimestamp() public view returns (uint256) {
+        return BUNKER_MODE_SINCE_TIMESTAMP_POSITION.getStorageUint256();
+    }
+
     /// @dev internal initialization helper. Doesn't check provided addresses intentionally
     function _initialize(address _admin, address _pauser, address _resumer, address _finalizer) internal {
         _initializeQueue();
-        if (CONTRACT_VERSION_POSITION.getStorageUint256() != 0) {
-            revert AlreadyInitialized();
-        }
+
+        _initializeContractVersionTo(1);
 
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(PAUSE_ROLE, _pauser);
         _grantRole(RESUME_ROLE, _resumer);
         _grantRole(FINALIZE_ROLE, _finalizer);
 
-        CONTRACT_VERSION_POSITION.setStorageUint256(1);
-
-        RESUMED_POSITION.setStorageBool(false); // pause it explicitly
+        RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(PAUSE_INFINITELY); // pause it explicitly
 
         emit InitializedV1(_admin, _pauser, _resumer, _finalizer, msg.sender);
     }

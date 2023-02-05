@@ -109,9 +109,9 @@ async function deployMockLegacyOracle({
   genesisTime = GENESIS_TIME,
   lastCompletedEpochId = V1_ORACLE_LAST_COMPLETED_EPOCH
 } = {}) {
-  return await MockLegacyOracle.new(
-    epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime, lastCompletedEpochId
-  )
+  const legacyOracle = await MockLegacyOracle.new()
+  await legacyOracle.setParams(epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime, lastCompletedEpochId)
+  return legacyOracle
 }
 
 async function deployMockLidoAndStakingRouter() {
@@ -136,7 +136,7 @@ async function deployAccountingOracleSetup(admin, {
     initialEpoch = +await legacyOracle.getLastCompletedEpochId() + epochsPerFrame
   }
 
-  const oracle = await AccountingOracle.new(lido.address, secondsPerSlot, {from: admin})
+  const oracle = await AccountingOracle.new(lido.address, secondsPerSlot, genesisTime, {from: admin})
 
   const {consensus} = await deployHashConsensus(admin, {
     reportProcessor: oracle,

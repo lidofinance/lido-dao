@@ -3,7 +3,7 @@ const { assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { assertRevert } = require('../helpers/assertThrow')
 const { assert } = require('../helpers/assert')
 const { BN } = require('bn.js')
-const { DSMAttestMessage, DSMPauseMessage } = require('./helpers/signatures')
+const { DSMAttestMessage, DSMPauseMessage } = require('../helpers/signatures')
 const { ZERO_ADDRESS, getEventAt } = require('@aragon/contract-helpers-test')
 const { artifacts, network } = require('hardhat')
 

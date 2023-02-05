@@ -23,27 +23,16 @@ contract LidoMockForOracleNew {
     /// FIXME: use the correct signature
 
     function handleOracleReport(
+        uint256 /* reportTimestamp */,
         uint256 /* secondsElapsedSinceLastReport */,
         uint256 /* numValidators */,
         uint256 clBalance,
         uint256 /* withdrawalVaultBalance */,
         uint256 /* elRewardsVaultBalance */,
         uint256 /* lastWithdrawalRequestIdToFinalize */,
-        uint256 /* finalizationShareRate */,
-        bool /* isBunkerMode */
-    ) external {
-        totalPooledEther = clBalance;
-    }
-
-    function handleOracleReport(
-        uint256,
-        uint256 _beaconBalance,
-        uint256,
-        uint256,
-        uint256,
-        uint256
+        uint256 /* finalizationShareRate */
     ) external returns (uint256, uint256, uint256, uint256) {
-        totalPooledEther = _beaconBalance;
+        totalPooledEther = clBalance;
     }
 
     function getTotalShares() public pure returns (uint256) {

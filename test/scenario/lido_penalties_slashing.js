@@ -4,84 +4,86 @@ const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
 
 const { assertRevert } = require('../helpers/assertThrow')
-const { ZERO_HASH, pad, ETH, gwei, ethToGwei, tokens } = require('../helpers/utils')
-const { deployDaoAndPool, SLOTS_PER_FRAME } = require('./helpers/deploy')
-const { signDepositData } = require('../0.8.9/helpers/signatures')
+const { pad, ETH, tokens } = require('../helpers/utils')
+const { signDepositData } = require('../helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
+const { deployProtocol } = require('../helpers/protocol')
+const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
+const { SLOTS_PER_FRAME, SECONDS_PER_FRAME } = require('../helpers/constants')
+const { pushOracleReport } = require('../helpers/oracle')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
-const makeAccountingReport = ({refSlot, numValidators, clBalanceGwei}) => ({
-  refSlot,
-  consensusVersion: 1,
-  numValidators: numValidators,
-  clBalanceGwei: clBalanceGwei,
-  stakingModuleIdsWithNewlyExitedValidators: [],
-  numExitedValidatorsByStakingModule: [],
-  withdrawalVaultBalance: 0,
-  elRewardsVaultBalance: 0,
-  lastWithdrawalRequestIdToFinalize: 0,
-  finalizationShareRate: 0,
-  isBunkerMode: false,
-  extraDataFormat: 0,
-  extraDataHash: ZERO_HASH,
-  extraDataItemsCount: 0,
-})
-
 contract('Lido: penalties, slashing, operator stops', (addresses) => {
   const [
-    // the root account which deployed the DAO
-    appManager,
-    // the address which we use to simulate the voting DAO application
-    voting,
     // node operators
     operator_1,
     operator_2,
     // users who deposit Ether to the pool
     user1,
     // unrelated address
-    nobody,
-    depositor
+    nobody
   ] = addresses
 
   let pool, nodeOperatorsRegistry, token
-  let oracleMock, depositContractMock
-  let treasuryAddr, guardians
+  let oracle, depositContractMock
+  let treasuryAddr, guardians, voting
   let depositSecurityModule, depositRoot
   let withdrawalCredentials
-  let stakingRouter
+  let stakingRouter, consensus
+  let elRewardsVault
 
   before('DAO, node operators registry, token, pool and deposit security module are deployed and initialized', async () => {
-    const deployed = await deployDaoAndPool(appManager, voting, depositor)
+      const deployed = await deployProtocol({
+        stakingModulesFactory: async (protocol) => {
+          const curatedModule = await setupNodeOperatorsRegistry(protocol)
+          return [
+            {
+              module: curatedModule,
+              name: 'Curated',
+              targetShares: 10000,
+              moduleFee: 500,
+              treasuryFee: 500
+            }
+          ]
+        }
+      })
 
-    // contracts/StETH.sol
-    token = deployed.pool
+      // contracts/StETH.sol
+      token = deployed.pool
 
-    // contracts/Lido.sol
-    pool = deployed.pool
-    await pool.resumeProtocolAndStaking()
+      // contracts/Lido.sol
+      pool = deployed.pool
 
-    // contracts/nos/NodeOperatorsRegistry.sol
-    nodeOperatorsRegistry = deployed.nodeOperatorsRegistry
+      // contracts/nos/NodeOperatorsRegistry.sol
+      nodeOperatorsRegistry = deployed.stakingModules[0]
 
-    // mocks
-    oracleMock = deployed.oracleMock
-    depositContractMock = deployed.depositContractMock
+      // mocks
+      oracle = deployed.oracle
+      consensus = deployed.consensusContract
+      depositContractMock = deployed.depositContract
 
-    stakingRouter = deployed.stakingRouter
+      stakingRouter = deployed.stakingRouter
 
-    // addresses
-    treasuryAddr = deployed.treasuryAddr
-    depositSecurityModule = deployed.depositSecurityModule
-    guardians = deployed.guardians
+      // addresses
+      treasuryAddr = deployed.treasury.address
+      depositSecurityModule = deployed.depositSecurityModule
+      guardians = deployed.guardians
+      voting = deployed.voting.address
+      elRewardsVault = deployed.elRewardsVault
 
-    depositRoot = await depositContractMock.get_deposit_root()
-    withdrawalCredentials = pad('0x0202', 32)
+      depositRoot = await depositContractMock.get_deposit_root()
+      withdrawalCredentials = pad('0x0202', 32)
 
-    await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
-  })
+      await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
+    }
+  )
 
-
+  const pushReport = async (clValidators, clBalance) => {
+    const elRewards = await web3.eth.getBalance(elRewardsVault.address)
+    await pushOracleReport(consensus, oracle, clValidators, clBalance, elRewards)
+    await consensus.advanceTimeBy(SECONDS_PER_FRAME + 1000)
+  }
 
   let awaitingTotalShares = new BN(0)
   let awaitingUser1Balance = new BN(0)
@@ -249,11 +251,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     awaitingTotalShares = oldTotalShares
     awaitingUser1Balance = new BN(balanceReported)
 
-    await oracleMock.submitReportData(makeAccountingReport({
-      refSlot,
-      numValidators: 1,
-      clBalanceGwei: ethToGwei(balanceReported)
-    }), 1)
+    await pushReport(1, balanceReported)
 
     // Total shares stay the same because no fee shares are added
 
@@ -299,11 +297,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     awaitingUser1Balance = new BN(balanceReported)
 
     // Reporting 2 ETH balance loss (31 => 29)
-    await oracleMock.submitReportData(makeAccountingReport({
-      refSlot: 2 * SLOTS_PER_FRAME,
-      numValidators: 1,
-      clBalanceGwei: ethToGwei(balanceReported)
-    }), 1)
+    await pushReport(1, balanceReported)
 
     // Total shares stay the same because no fee shares are added
 
@@ -449,11 +443,8 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     awaitingUser1Balance = awaitingUser1Balance.sub(new BN(lossReported))
 
     // Reporting 1 ETH balance loss (61 => 60)
-    await oracleMock.submitReportData(makeAccountingReport({
-      refSlot: 3 * SLOTS_PER_FRAME,
-      numValidators: 2,
-      clBalanceGwei: gwei(60)
-    }), 1)
+    
+    await pushReport(1, ETH(60))
 
     // Total shares stay the same because no fee shares are added
 
@@ -489,13 +480,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   })
 
   it(`the oracle can't report less validators than previously`, () => {
-    assertRevert(
-      oracleMock.submitReportData(makeAccountingReport({
-        refSlot: 4 * SLOTS_PER_FRAME,
-        numValidators: 1,
-        clBalanceGwei: gwei(31)
-      }), 1)
-    )
+    assertRevert(pushReport(2, ETH(31)))
   })
 
   it(`user deposits another 32 ETH to the pool`, async () => {
@@ -599,15 +584,12 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     // Total fee is 10%
     const totalFeePoints = 0.1 * 10000
 
-    const beaconValidators = 2
-    const beaconBalance = 90 // 98
-    const beaconBalanceIncrement = beaconBalance - 60
+    const totalSupplyBefore = await token.getTotalPooledEther()
+    
+    await pushReport(2, ETH(90))
 
-    await oracleMock.submitReportData(makeAccountingReport({
-      refSlot: 5 * SLOTS_PER_FRAME,
-      numValidators: beaconValidators,
-      clBalanceGwei: gwei(beaconBalance)
-    }), 1)
+    const totalSupplyAfter = await token.getTotalPooledEther()
+    const beaconBalanceIncrement = totalSupplyAfter - totalSupplyBefore
 
     const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
     const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)
@@ -640,11 +622,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   it(`oracle reports profit, previously stopped staking module gets the fee`, async () => {
     const stakingModuleTokenSharesBefore = await token.sharesOf(nodeOperatorsRegistry.address)
 
-    await oracleMock.submitReportData(makeAccountingReport({
-      refSlot: 6 * SLOTS_PER_FRAME,
-      numValidators: 2,
-      clBalanceGwei: gwei(100)
-    }), 1)
+    await pushReport(2, ETH(100))
 
     const stakingModuleTokenSharesAfter = await token.sharesOf(nodeOperatorsRegistry.address)
 
@@ -658,11 +636,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const nodeOperator1TokenSharesBefore = await token.sharesOf(nodeOperator1.address)
     const nodeOperator2TokenSharesBefore = await token.sharesOf(nodeOperator2.address)
 
-    await oracleMock.submitReportData(makeAccountingReport({
-      refSlot: 7 * SLOTS_PER_FRAME,
-      numValidators: 2,
-      clBalanceGwei: gwei(96)
-    }), 1)
+    await pushReport(2, ETH(96))
 
     // kicks rewards distribution
     await nodeOperatorsRegistry.finishUpdatingExitedValidatorsKeysCount({ from: voting })

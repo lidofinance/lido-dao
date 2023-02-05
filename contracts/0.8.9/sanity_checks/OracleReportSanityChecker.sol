@@ -260,23 +260,30 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     /// @param _elRewardsVaultBalance elRewards vault balance on Execution Layer for report block
     /// @return withdrawals ETH amount allowed to be taken from the withdrawals vault
     /// @return elRewards ETH amount allowed to be taken from the EL rewards vault
+    /// @return sharesToBurnLimit amount allowed to be burnt via `SelfOwnedStETHBurner`
     function smoothenTokenRebase(
         uint256 _preTotalPooledEther,
         uint256 _preTotalShares,
         int256 _clBalanceDiff,
         uint256 _withdrawalVaultBalance,
         uint256 _elRewardsVaultBalance
-    ) external view returns (uint256 withdrawals, uint256 elRewards) {
+    ) external view returns (uint256 withdrawals, uint256 elRewards, uint256 sharesToBurnLimit) {
         LimiterState.Data memory tokenRebaseLimiter = PositiveTokenRebaseLimiter.initLimiterState(
             getMaxPositiveTokenRebase(),
             _preTotalPooledEther,
             _preTotalShares
         );
 
-        tokenRebaseLimiter.applyCLBalanceUpdate(_clBalanceDiff);
+        if (_clBalanceDiff < 0) {
+            tokenRebaseLimiter.raiseLimit(uint256(-_clBalanceDiff));
+        } else {
+            tokenRebaseLimiter.consumeLimit(uint256(_clBalanceDiff));
+        }
 
-        withdrawals = tokenRebaseLimiter.appendEther(_withdrawalVaultBalance);
-        elRewards = tokenRebaseLimiter.appendEther(_elRewardsVaultBalance);
+        withdrawals = tokenRebaseLimiter.consumeLimit(_withdrawalVaultBalance);
+        elRewards = tokenRebaseLimiter.consumeLimit(_elRewardsVaultBalance);
+
+        sharesToBurnLimit = tokenRebaseLimiter.getSharesToBurnLimit();
     }
 
     /// @notice Applies sanity checks to the accounting params of Lido's oracle report

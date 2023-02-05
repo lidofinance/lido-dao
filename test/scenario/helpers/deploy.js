@@ -71,14 +71,12 @@ async function deployDaoAndPool(appManager, voting) {
   const [
     POOL_PAUSE_ROLE,
     POOL_RESUME_ROLE,
-    POOL_BURN_ROLE,
     STAKING_PAUSE_ROLE,
     STAKING_CONTROL_ROLE,
     MANAGE_PROTOCOL_CONTRACTS_ROLE
   ] = await Promise.all([
     pool.PAUSE_ROLE(),
     pool.RESUME_ROLE(),
-    pool.BURN_ROLE(),
     pool.STAKING_PAUSE_ROLE(),
     pool.STAKING_CONTROL_ROLE(),
     pool.MANAGE_PROTOCOL_CONTRACTS_ROLE()
@@ -88,7 +86,6 @@ async function deployDaoAndPool(appManager, voting) {
     // Allow voting to manage the pool
     acl.createPermission(voting, pool.address, POOL_PAUSE_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_RESUME_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, pool.address, POOL_BURN_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, STAKING_PAUSE_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, STAKING_CONTROL_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, MANAGE_PROTOCOL_CONTRACTS_ROLE, appManager, { from: appManager })

@@ -27,6 +27,7 @@ contract LidoLocator is ILidoLocator {
         address validatorExitBus;
         address withdrawalQueue;
         address withdrawalVault;
+        address postTokenRebaseReceiver;
     }
 
     error ErrorZeroAddress();
@@ -43,6 +44,7 @@ contract LidoLocator is ILidoLocator {
     address public immutable validatorExitBus;
     address public immutable withdrawalQueue;
     address public immutable withdrawalVault;
+    address public immutable postTokenRebaseReceiver;
 
     /**
      * @notice declare service locations
@@ -62,6 +64,7 @@ contract LidoLocator is ILidoLocator {
         validatorExitBus = _assertNonZero(_config.validatorExitBus);
         withdrawalQueue = _assertNonZero(_config.withdrawalQueue);
         withdrawalVault = _assertNonZero(_config.withdrawalVault);
+        postTokenRebaseReceiver = _assertNonZero(_config.postTokenRebaseReceiver);
     }
 
     function coreComponents() external view returns(

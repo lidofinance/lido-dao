@@ -4,7 +4,7 @@
 
 // See contracts/COMPILERS.md
 // solhint-disable-next-line
-pragma solidity >=0.4.24 <0.9;
+pragma solidity >=0.4.24 <0.9.0;
 
 interface ILidoLocator {
     function accountingOracle() external view returns(address);
@@ -19,6 +19,7 @@ interface ILidoLocator {
     function validatorExitBus() external view returns(address);
     function withdrawalQueue() external view returns(address);
     function withdrawalVault() external view returns(address);
+    function postTokenRebaseReceiver() external view returns(address);
     function coreComponents() external view returns(
         address elRewardsVault,
         address safetyNetsRegistry,

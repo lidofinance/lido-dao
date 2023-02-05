@@ -20,7 +20,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
 
     chainId = await web3.eth.net.getId();
 
-    domainSeparator = makeDomainSeparator('Liquid staked Ether 2.0', '1', chainId, eip712StETH.address)
+    domainSeparator = makeDomainSeparator('Liquid staked Ether 2.0', '2', chainId, eip712StETH.address)
   })
 
   context('permit', () => {
