@@ -24,7 +24,11 @@ const ERC20Mock = artifacts.require('ERC20Mock.sol')
 const AragonVaultMock = artifacts.require('AragonVaultMock.sol')
 const ERC20WrongTransferMock = artifacts.require('ERC20WrongTransferMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
+<<<<<<< HEAD
 const BeaconChainDepositorMock = artifacts.require('BeaconChainDepositorMock.sol')
+=======
+const StakingRouter = artifacts.require('StakingRouterMock.sol')
+>>>>>>> origin/feature/bye-bye-byteslib
 const WithdrawalVault = artifacts.require('WithdrawalVault.sol')
 const LidoMock = artifacts.require('LidoMock')
 
@@ -55,8 +59,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   let dao
   let elRewardsVault
   let stakingRouter
+<<<<<<< HEAD
   let beaconChainDepositor
   let anyToken, badToken
+=======
+  let anyToken
+>>>>>>> origin/feature/bye-bye-byteslib
   let eip712StETH
   let withdrawalQueue
   let lidoLocator
@@ -546,19 +554,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 0)
     assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 0)
     assert.equal(await app.getWithdrawalCredentials({ from: nobody }), pad('0x0203', 32))
-  })
-
-  it('pad64 works', async () => {
-    await assertRevert(beaconChainDepositor.pad64('0x'))
-    await assertRevert(beaconChainDepositor.pad64('0x11'))
-    await assertRevert(beaconChainDepositor.pad64('0x1122'))
-    await assertRevert(beaconChainDepositor.pad64(pad('0x1122', 31)))
-    await assertRevert(beaconChainDepositor.pad64(pad('0x1122', 65)))
-    await assertRevert(beaconChainDepositor.pad64(pad('0x1122', 265)))
-
-    assert.equal(await beaconChainDepositor.pad64(pad('0x1122', 32)), pad('0x1122', 32) + '0'.repeat(64))
-    assert.equal(await beaconChainDepositor.pad64(pad('0x1122', 36)), pad('0x1122', 36) + '0'.repeat(56))
-    assert.equal(await beaconChainDepositor.pad64(pad('0x1122', 64)), pad('0x1122', 64))
   })
 
   it('Lido.deposit(uint256,uint256,bytes) reverts when called by account without DEPOSIT_ROLE granted', async () => {
