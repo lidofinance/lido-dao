@@ -79,6 +79,15 @@ interface IWithdrawalQueue {
 * events upon explicit transfer between holders. In contrast, when Lido oracle reports
 * rewards, no Transfer events are generated: doing so would require emitting an event
 * for each token holder and thus running an unbounded loop.
+*
+* NB: Order of inheritance must preserve the structured storage layout of the previous versions.
+*
+* @dev Lido is derived from `StETHPermit` that has a structured storage:
+* SLOT 0: mapping (address => uint256) private shares (`StETH`)
+* SLOT 1: mapping (address => mapping (address => uint256)) private allowances (`StETH`)
+* SLOT 2: mapping(address => uint256) internal noncesByAddress (`StETHPermit`)
+*
+* `Versioned` and `AragonApp` both don't have the pre-allocated structured storage.
 */
 contract Lido is Versioned, StETHPermit, AragonApp {
     using SafeMath for uint256;
