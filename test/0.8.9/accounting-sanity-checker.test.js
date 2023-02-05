@@ -29,9 +29,9 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
   }
   const defaultLimitsList = {
     churnValidatorsByEpochLimit: 55,
-    oneOffCLBalanceDecreaseLimit: 5_00, // 5%
-    annualBalanceIncreaseLimit: 10_00, // 10%
-    shareRateDeviationLimit: 2_50, // 2.5%
+    oneOffCLBalanceDecreaseBPLimit: 5_00, // 5%
+    annualBalanceIncreaseBPLimit: 10_00, // 10%
+    shareRateDeviationBPLimit: 2_50, // 2.5%
     requestTimestampMargin: 128,
     maxPositiveTokenRebase: 5_000_000 // 0.05%
   }
@@ -69,17 +69,17 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
     it('sets limits correctly', async () => {
       const newLimitsList = {
         churnValidatorsByEpochLimit: 50,
-        oneOffCLBalanceDecreaseLimit: 10_00,
-        annualBalanceIncreaseLimit: 15_00,
-        shareRateDeviationLimit: 1_50, // 2.5%
+        oneOffCLBalanceDecreaseBPLimit: 10_00,
+        annualBalanceIncreaseBPLimit: 15_00,
+        shareRateDeviationBPLimit: 1_50, // 1.5%
         requestTimestampMargin: 2048,
         maxPositiveTokenRebase: 10_000_000
       }
       const limitsBefore = await oracleReportSanityChecker.getOracleReportLimits()
       assert.notEquals(limitsBefore.churnValidatorsByEpochLimit, newLimitsList.churnValidatorsByEpochLimit)
-      assert.notEquals(limitsBefore.oneOffCLBalanceDecreaseLimit, newLimitsList.oneOffCLBalanceDecreaseLimit)
-      assert.notEquals(limitsBefore.annualBalanceIncreaseLimit, newLimitsList.annualBalanceIncreaseLimit)
-      assert.notEquals(limitsBefore.shareRateDeviationLimit, newLimitsList.shareRateDeviationLimit)
+      assert.notEquals(limitsBefore.oneOffCLBalanceDecreaseBPLimit, newLimitsList.oneOffCLBalanceDecreaseBPLimit)
+      assert.notEquals(limitsBefore.annualBalanceIncreaseBPLimit, newLimitsList.annualBalanceIncreaseBPLimit)
+      assert.notEquals(limitsBefore.shareRateDeviationBPLimit, newLimitsList.shareRateDeviationBPLimit)
       assert.notEquals(limitsBefore.requestTimestampMargin, newLimitsList.requestTimestampMargin)
       assert.notEquals(limitsBefore.maxPositiveTokenRebase, newLimitsList.maxPositiveTokenRebase)
 
@@ -89,9 +89,9 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
 
       const limitsAfter = await oracleReportSanityChecker.getOracleReportLimits()
       assert.equals(limitsAfter.churnValidatorsByEpochLimit, newLimitsList.churnValidatorsByEpochLimit)
-      assert.equals(limitsAfter.oneOffCLBalanceDecreaseLimit, newLimitsList.oneOffCLBalanceDecreaseLimit)
-      assert.equals(limitsAfter.annualBalanceIncreaseLimit, newLimitsList.annualBalanceIncreaseLimit)
-      assert.equals(limitsAfter.shareRateDeviationLimit, newLimitsList.shareRateDeviationLimit)
+      assert.equals(limitsAfter.oneOffCLBalanceDecreaseBPLimit, newLimitsList.oneOffCLBalanceDecreaseBPLimit)
+      assert.equals(limitsAfter.annualBalanceIncreaseBPLimit, newLimitsList.annualBalanceIncreaseBPLimit)
+      assert.equals(limitsAfter.shareRateDeviationBPLimit, newLimitsList.shareRateDeviationBPLimit)
       assert.equals(limitsAfter.requestTimestampMargin, newLimitsList.requestTimestampMargin)
       assert.equals(limitsAfter.maxPositiveTokenRebase, newLimitsList.maxPositiveTokenRebase)
     })

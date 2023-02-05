@@ -44,15 +44,15 @@ struct LimitsList {
     /// @notice The max decrease of the total validators' balances on the Consensus Layer since
     ///     the previous oracle report
     /// @dev Represented in the Basis Points (100% == 100_00)
-    uint256 oneOffCLBalanceDecreaseLimit;
+    uint256 oneOffCLBalanceDecreaseBPLimit;
     /// @notice The max annual increase of the total validators' balances on the Consensus Layer
     ///     since the previous oracle report
     /// @dev Represented in the Basis Points (100% == 100_00)
-    uint256 annualBalanceIncreaseLimit;
+    uint256 annualBalanceIncreaseBPLimit;
     /// @notice The max deviation of stETH.totalPooledEther() / stETH.totalShares() ratio since
     ///     the previous oracle report
     /// @dev Represented in the Basis Points (100% == 100_00)
-    uint256 shareRateDeviationLimit;
+    uint256 shareRateDeviationBPLimit;
     /// @notice The min time required to be passed from the creation of the request to be
     ///     finalized till the time of the oracle report
     uint256 requestTimestampMargin;
@@ -64,9 +64,9 @@ struct LimitsList {
 /// @dev The packed version of the LimitsList struct to be effectively persisted in storage
 struct LimitsListPacked {
     uint8 churnValidatorsByEpochLimit;
-    uint16 oneOffCLBalanceDecreaseLimit;
-    uint16 annualBalanceIncreaseLimit;
-    uint16 shareRateDeviationLimit;
+    uint16 oneOffCLBalanceDecreaseBPLimit;
+    uint16 annualBalanceIncreaseBPLimit;
+    uint16 shareRateDeviationBPLimit;
     uint64 requestTimestampMargin;
     uint64 maxPositiveTokenRebase;
 }
@@ -187,36 +187,36 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _updateLimits(limitsList);
     }
 
-    /// @notice Sets the new value for the oneOffCLBalanceDecreaseLimit
-    /// @param _oneOffCLBalanceDecreaseLimit new oneOffCLBalanceDecreaseLimit value
-    function setOneOffCLBalanceDecreaseLimit(uint256 _oneOffCLBalanceDecreaseLimit)
+    /// @notice Sets the new value for the oneOffCLBalanceDecreaseBPLimit
+    /// @param _oneOffCLBalanceDecreaseBPLimit new oneOffCLBalanceDecreaseBPLimit value
+    function setOneOffCLBalanceDecreaseBPLimit(uint256 _oneOffCLBalanceDecreaseBPLimit)
         external
         onlyRole(ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE)
     {
         LimitsList memory limitsList = _limits.unpack();
-        limitsList.oneOffCLBalanceDecreaseLimit = _oneOffCLBalanceDecreaseLimit;
+        limitsList.oneOffCLBalanceDecreaseBPLimit = _oneOffCLBalanceDecreaseBPLimit;
         _updateLimits(limitsList);
     }
 
-    /// @notice Sets the new value for the annualBalanceIncreaseLimit
-    /// @param _annualBalanceIncreaseLimit new annualBalanceIncreaseLimit value
-    function setAnnualBalanceIncreaseLimit(uint256 _annualBalanceIncreaseLimit)
+    /// @notice Sets the new value for the annualBalanceIncreaseBPLimit
+    /// @param _annualBalanceIncreaseBPLimit new annualBalanceIncreaseBPLimit value
+    function setAnnualBalanceIncreaseBPLimit(uint256 _annualBalanceIncreaseBPLimit)
         external
         onlyRole(ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE)
     {
         LimitsList memory limitsList = _limits.unpack();
-        limitsList.annualBalanceIncreaseLimit = _annualBalanceIncreaseLimit;
+        limitsList.annualBalanceIncreaseBPLimit = _annualBalanceIncreaseBPLimit;
         _updateLimits(limitsList);
     }
 
-    /// @notice Sets the new value for the shareRateDeviationLimit
-    /// @param _shareRateDeviationLimit new shareRateDeviationLimit value
-    function setShareRateDeviationLimit(uint256 _shareRateDeviationLimit)
+    /// @notice Sets the new value for the shareRateDeviationBPLimit
+    /// @param _shareRateDeviationBPLimit new shareRateDeviationBPLimit value
+    function setShareRateDeviationBPLimit(uint256 _shareRateDeviationBPLimit)
         external
         onlyRole(SHARE_RATE_DEVIATION_LIMIT_MANAGER_ROLE)
     {
         LimitsList memory limitsList = _limits.unpack();
-        limitsList.shareRateDeviationLimit = _shareRateDeviationLimit;
+        limitsList.shareRateDeviationBPLimit = _shareRateDeviationBPLimit;
         _updateLimits(limitsList);
     }
 
@@ -344,7 +344,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         if (_preCLBalance <= _unifiedPostCLBalance) return;
         uint256 oneOffCLBalanceDecreaseBP = (SafeCast.MAX_BASIS_POINTS * (_preCLBalance - _unifiedPostCLBalance)) /
             _preCLBalance;
-        if (oneOffCLBalanceDecreaseBP > _limitsList.oneOffCLBalanceDecreaseLimit)
+        if (oneOffCLBalanceDecreaseBP > _limitsList.oneOffCLBalanceDecreaseBPLimit)
             revert IncorrectCLBalanceDecrease(oneOffCLBalanceDecreaseBP);
     }
 
@@ -359,7 +359,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 annualBalanceIncrease = (365 days * SafeCast.MAX_BASIS_POINTS * balanceIncrease) /
             _preCLBalance /
             _timeElapsed;
-        if (annualBalanceIncrease > _limitsList.annualBalanceIncreaseLimit)
+        if (annualBalanceIncrease > _limitsList.annualBalanceIncreaseBPLimit)
             revert IncorrectCLBalanceIncrease(annualBalanceIncrease);
     }
 
@@ -396,7 +396,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             SafeCast.toInt256(_finalizationShareRate) - SafeCast.toInt256(actualShareRate)
         );
         uint256 finalizationShareDeviation = (SafeCast.MAX_BASIS_POINTS * finalizationShareDiff) / actualShareRate;
-        if (finalizationShareDeviation > _limitsList.shareRateDeviationLimit)
+        if (finalizationShareDeviation > _limitsList.shareRateDeviationBPLimit)
             revert IncorrectFinalizationShareRate(finalizationShareDeviation);
     }
 
@@ -411,14 +411,14 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         if (_oldLimitsList.churnValidatorsByEpochLimit != _newLimitsList.churnValidatorsByEpochLimit) {
             emit ChurnValidatorsByEpochLimitSet(_newLimitsList.churnValidatorsByEpochLimit);
         }
-        if (_oldLimitsList.oneOffCLBalanceDecreaseLimit != _newLimitsList.oneOffCLBalanceDecreaseLimit) {
-            emit OneOffCLBalanceDecreaseSet(_newLimitsList.oneOffCLBalanceDecreaseLimit);
+        if (_oldLimitsList.oneOffCLBalanceDecreaseBPLimit != _newLimitsList.oneOffCLBalanceDecreaseBPLimit) {
+            emit OneOffCLBalanceDecreaseBPLimitSet(_newLimitsList.oneOffCLBalanceDecreaseBPLimit);
         }
-        if (_oldLimitsList.annualBalanceIncreaseLimit != _newLimitsList.annualBalanceIncreaseLimit) {
-            emit AnnualBalanceIncreaseLimitSet(_newLimitsList.annualBalanceIncreaseLimit);
+        if (_oldLimitsList.annualBalanceIncreaseBPLimit != _newLimitsList.annualBalanceIncreaseBPLimit) {
+            emit AnnualBalanceIncreaseBPLimitSet(_newLimitsList.annualBalanceIncreaseBPLimit);
         }
-        if (_oldLimitsList.shareRateDeviationLimit != _newLimitsList.shareRateDeviationLimit) {
-            emit ShareRateDeviationLimitSet(_newLimitsList.shareRateDeviationLimit);
+        if (_oldLimitsList.shareRateDeviationBPLimit != _newLimitsList.shareRateDeviationBPLimit) {
+            emit ShareRateDeviationBPLimitSet(_newLimitsList.shareRateDeviationBPLimit);
         }
         if (_oldLimitsList.requestTimestampMargin != _newLimitsList.requestTimestampMargin) {
             emit RequestTimestampMarginSet(_newLimitsList.requestTimestampMargin);
@@ -429,10 +429,10 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _limits = _newLimitsList.pack();
     }
 
-    event OneOffCLBalanceDecreaseSet(uint256 oneOffCLBalanceDecreaseLimit);
     event ChurnValidatorsByEpochLimitSet(uint256 churnValidatorsByEpochLimit);
-    event AnnualBalanceIncreaseLimitSet(uint256 annualBalanceIncreaseLimit);
-    event ShareRateDeviationLimitSet(uint256 shareRateDeviationLimit);
+    event OneOffCLBalanceDecreaseBPLimitSet(uint256 oneOffCLBalanceDecreaseBPLimit);
+    event AnnualBalanceIncreaseBPLimitSet(uint256 annualBalanceIncreaseBPLimit);
+    event ShareRateDeviationBPLimitSet(uint256 shareRateDeviationBPLimit);
     event RequestTimestampMarginSet(uint256 requestTimestampMargin);
     event MaxPositiveTokenRebaseSet(uint256 maxPositiveTokenRebase);
 
@@ -448,9 +448,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 library LimitsListPacker {
     function pack(LimitsList memory _limitsList) internal pure returns (LimitsListPacked memory res) {
         res.churnValidatorsByEpochLimit = SafeCast.toUint8(_limitsList.churnValidatorsByEpochLimit);
-        res.oneOffCLBalanceDecreaseLimit = SafeCast.toBasisPoints(_limitsList.oneOffCLBalanceDecreaseLimit);
-        res.annualBalanceIncreaseLimit = SafeCast.toBasisPoints(_limitsList.annualBalanceIncreaseLimit);
-        res.shareRateDeviationLimit = SafeCast.toBasisPoints(_limitsList.shareRateDeviationLimit);
+        res.oneOffCLBalanceDecreaseBPLimit = SafeCast.toBasisPoints(_limitsList.oneOffCLBalanceDecreaseBPLimit);
+        res.annualBalanceIncreaseBPLimit = SafeCast.toBasisPoints(_limitsList.annualBalanceIncreaseBPLimit);
+        res.shareRateDeviationBPLimit = SafeCast.toBasisPoints(_limitsList.shareRateDeviationBPLimit);
         res.requestTimestampMargin = SafeCast.toUint64(_limitsList.requestTimestampMargin);
         res.maxPositiveTokenRebase = SafeCast.toUint64(_limitsList.maxPositiveTokenRebase);
     }
@@ -459,9 +459,9 @@ library LimitsListPacker {
 library LimitsListUnpacker {
     function unpack(LimitsListPacked memory _limitsList) internal pure returns (LimitsList memory res) {
         res.churnValidatorsByEpochLimit = _limitsList.churnValidatorsByEpochLimit;
-        res.oneOffCLBalanceDecreaseLimit = _limitsList.oneOffCLBalanceDecreaseLimit;
-        res.annualBalanceIncreaseLimit = _limitsList.annualBalanceIncreaseLimit;
-        res.shareRateDeviationLimit = _limitsList.shareRateDeviationLimit;
+        res.oneOffCLBalanceDecreaseBPLimit = _limitsList.oneOffCLBalanceDecreaseBPLimit;
+        res.annualBalanceIncreaseBPLimit = _limitsList.annualBalanceIncreaseBPLimit;
+        res.shareRateDeviationBPLimit = _limitsList.shareRateDeviationBPLimit;
         res.requestTimestampMargin = _limitsList.requestTimestampMargin;
         res.maxPositiveTokenRebase = _limitsList.maxPositiveTokenRebase;
     }
