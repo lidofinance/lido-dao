@@ -376,7 +376,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @notice A payable function for execution layer rewards. Can be called only by ExecutionLayerRewardsVault contract
+     * @notice A payable function for execution layer rewards. Can be called only by ExecutionLayerRewardsVault
      * @dev We need a dedicated function because funds received by the default payable function
      * are treated as a user deposit
      */
@@ -390,7 +390,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-    * @notice A payable function for withdrawals acquisition. Can be called only by WithdrawalVault contract
+    * @notice A payable function for withdrawals acquisition. Can be called only by WithdrawalVault
     * @dev We need a dedicated function because funds received by the default payable function
     * are treated as a user deposit
     */
@@ -401,7 +401,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @notice A payable function for execution layer rewards. Can be called only by ExecutionLayerRewardsVault contract
+     * @notice A payable function for staking router deposits 'change'. Can be called only by StakingRouter
      * @dev We need a dedicated function because funds received by the default payable function
      * are treated as a user deposit
      */
