@@ -24,7 +24,6 @@ const ERC20Mock = artifacts.require('ERC20Mock.sol')
 const AragonVaultMock = artifacts.require('AragonVaultMock.sol')
 const ERC20WrongTransferMock = artifacts.require('ERC20WrongTransferMock.sol')
 const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
-const BeaconChainDepositorMock = artifacts.require('BeaconChainDepositorMock.sol')
 const WithdrawalVault = artifacts.require('WithdrawalVault.sol')
 const LidoMock = artifacts.require('LidoMock')
 
@@ -55,7 +54,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   let dao
   let elRewardsVault
   let stakingRouter
-  let beaconChainDepositor
   let anyToken, badToken
   let eip712StETH
   let withdrawalQueue
@@ -97,8 +95,6 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     withdrawalQueue = deployed.withdrawalQueue
     oracle = deployed.oracle
     consensus = deployed.consensusContract
-
-    beaconChainDepositor = await BeaconChainDepositorMock.new(depositContract.address)
 
     snapshot = new EvmSnapshot(hre.ethers.provider)
     await snapshot.make()
