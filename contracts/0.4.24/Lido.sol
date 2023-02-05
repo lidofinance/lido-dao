@@ -620,7 +620,16 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
 
-    /// @dev updates Consensus Layer state according to the current report
+    /*
+     * @dev updates Consensus Layer state according to the current report
+     *
+     * NB: conventions and assumptions
+     *
+     * `depositedValidators` are total amount of the **ever** deposited validators
+     * `_postClValidators` are total amount of the **ever** deposited validators
+     *
+     * i.e., exited validators persist in the state, just with a different status
+     */
     function _processClStateUpdate(
         uint256 _postClValidators,
         uint256 _postClBalance
@@ -647,7 +656,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         return _signedSub(int256(_postClBalance), int256(rewardsBase));
     }
 
-    /// @dev collect ETH from ELRewardsVault and WithdrawalVault and send to WithdrawalQueue
+    /**
+     * @dev collect ETH from ELRewardsVault and WithdrawalVault, then send to WithdrawalQueue
+     */
     function _processETHDistribution(
         uint256 _withdrawalsToWithdraw,
         uint256 _elRewardsToWithdraw,
@@ -656,9 +667,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     ) internal {
         (
             address elRewardsVault,
-            ,
-            ,
-            ,
+            /* address safetyNetsRegistry */,
+            /* address stakingRouter */,
+            /* address treasury */,
             address withdrawalQueue,
             address withdrawalVault
         ) = getLidoLocator().coreComponents();
@@ -694,7 +705,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         }
     }
 
-    ///@dev finalize withdrawal requests in the queue, burn their shares and return the amount of ether locked for claiming
+    /**
+     * @dev finalize withdrawal requests in the queue, burn their shares and return the amount of ether locked for claiming
+     */
     function _processWithdrawalQueue(
         address _withdrawalQueue,
         uint256 _requestIdToFinalizeUpTo,
@@ -715,7 +728,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         return etherToLock;
     }
 
-    /// @dev calculate the amount of rewards and distribute it
+    /**
+     * @dev calculate the amount of rewards and distribute it
+     */
     function _processRewards(
         int256 _clBalanceDiff,
         uint256 _withdrawnWithdrawals,
