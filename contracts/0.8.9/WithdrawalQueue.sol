@@ -113,14 +113,6 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
     error RequestIdsNotSorted();
     error ZeroPauseDuration();
 
-    /// @notice Reverts when the contract is uninitialized
-    modifier whenInitialized() {
-        if (CONTRACT_VERSION_POSITION.getStorageUint256() == 0) {
-            revert Uninitialized();
-        }
-        _;
-    }
-
     /// @notice Reverts when new withdrawal requests placement and finalization resumed
     modifier whenPaused() {
         if (block.timestamp >= RESUME_SINCE_TIMESTAMP_POSITION.getStorageUint256()) {
@@ -174,7 +166,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
      * @dev Reverts with `PausedExpected()` if contract is already resumed
      * @dev Reverts with `AccessControl:...` reason if sender has no `RESUME_ROLE`
      */
-    function resume() external whenInitialized whenPaused onlyRole(RESUME_ROLE) {
+    function resume() external whenPaused onlyRole(RESUME_ROLE) {
         RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(block.timestamp);
 
         emit Resumed();
