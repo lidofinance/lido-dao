@@ -60,6 +60,11 @@ contract ValidatorsExitBusOracle is BaseOracle {
         uint16 dataFormat;
     }
 
+    struct RequestedValidator {
+        bool requested;
+        uint64 index;
+    }
+
     /// @notice An ACL role granting the permission to submit the data for a committee report.
     bytes32 public constant SUBMIT_DATA_ROLE = keccak256("SUBMIT_DATA_ROLE");
 
@@ -71,7 +76,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
     bytes32 internal constant TOTAL_REQUESTS_PROCESSED_POSITION =
         keccak256("lido.ValidatorsExitBusOracle.totalRequestsProcessed");
 
-    /// @dev Storage slot: mapping(uint256 => uint256) lastRequestedValidatorIndices
+    /// @dev Storage slot: mapping(uint256 => RequestedValidator) lastRequestedValidatorIndices
     /// A mapping from the (moduleId, nodeOpId) packed key to the last requested validator index.
     bytes32 internal constant LAST_REQUESTED_VALIDATOR_INDICES_POSITION =
         keccak256("lido.ValidatorsExitBusOracle.lastRequestedValidatorIndices");
@@ -263,24 +268,26 @@ contract ValidatorsExitBusOracle is BaseOracle {
         return TOTAL_REQUESTS_PROCESSED_POSITION.getStorageUint256();
     }
 
-    /// @notice Returns the latest validator indices that were requested to exit
-    /// for the given `nodeOpIds` in the given `moduleId`.
+    /// @notice Returns the latest validator indices that were requested to exit for the given
+    /// `nodeOpIds` in the given `moduleId`. For node operators that were never requested to exit
+    /// any validator, index is set to -1.
     ///
     /// @param moduleId ID of the staking module.
     /// @param nodeOpIds IDs of the staking module's node operators.
     ///
     function getLastRequestedValidatorIndices(uint256 moduleId, uint256[] calldata nodeOpIds)
-        external view returns (uint256[] memory)
+        external view returns (int256[] memory)
     {
         if (moduleId > type(uint24).max) revert ArgumentOutOfBounds();
 
-        uint256[] memory indices = new uint256[](nodeOpIds.length);
+        int256[] memory indices = new int256[](nodeOpIds.length);
 
         for (uint256 i = 0; i < nodeOpIds.length; ++i) {
             uint256 nodeOpId = nodeOpIds[i];
             if (nodeOpId > type(uint40).max) revert ArgumentOutOfBounds();
             uint256 nodeOpKey = _computeNodeOpKey(moduleId, nodeOpId);
-            indices[i] = _storageLastRequestedValidatorIndices()[nodeOpKey];
+            RequestedValidator memory validator = _storageLastRequestedValidatorIndices()[nodeOpKey];
+            indices[i] = validator.requested ? int256(uint256(validator.index)) : -1;
         }
 
         return indices;
@@ -403,7 +410,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
             offsetPastEnd := add(offset, data.length)
         }
 
-        mapping(uint256 => uint256) storage _lastReqValidatorIndices =
+        mapping(uint256 => RequestedValidator) storage _lastReqValidatorIndices =
             _storageLastRequestedValidatorIndices();
 
         uint256 lastDataWithoutPubkey = 0;
@@ -444,7 +451,8 @@ contract ValidatorsExitBusOracle is BaseOracle {
             uint256 nodeOpKey = _computeNodeOpKey(moduleId, nodeOpId);
             if (nodeOpKey != lastNodeOpKey) {
                 if (lastNodeOpKey != 0) {
-                    _lastReqValidatorIndices[lastNodeOpKey] = lastValIndex;
+                    _lastReqValidatorIndices[lastNodeOpKey] =
+                        RequestedValidator(true, uint64(lastValIndex));
                 }
                 lastNodeOpKey = nodeOpKey;
             }
@@ -456,7 +464,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
         }
 
         if (lastNodeOpKey != 0) {
-            _lastReqValidatorIndices[lastNodeOpKey] = lastValIndex;
+            _lastReqValidatorIndices[lastNodeOpKey] = RequestedValidator(true, uint64(lastValIndex));
         }
 
         return lastDataWithoutPubkey;
@@ -471,7 +479,7 @@ contract ValidatorsExitBusOracle is BaseOracle {
     ///
 
     function _storageLastRequestedValidatorIndices() internal pure returns (
-        mapping(uint256 => uint256) storage r
+        mapping(uint256 => RequestedValidator) storage r
     ) {
         bytes32 position = LAST_REQUESTED_VALIDATOR_INDICES_POSITION;
         assembly { r.slot := position }

@@ -175,10 +175,10 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     })
 
     it('last requested validator indices are updated', async () => {
-      const indices1 = await oracle.getLastRequestedValidatorIndices(1, [0])
-      const indices2 = await oracle.getLastRequestedValidatorIndices(2, [0])
-      assert.sameOrderedMembers(toNum(indices1), [2])
-      assert.sameOrderedMembers(toNum(indices2), [1])
+      const indices1 = await oracle.getLastRequestedValidatorIndices(1, [0, 1, 2])
+      const indices2 = await oracle.getLastRequestedValidatorIndices(2, [0, 1, 2])
+      assert.sameOrderedMembers(toNum(indices1), [2, -1, -1])
+      assert.sameOrderedMembers(toNum(indices2), [1, -1, -1])
     })
   })
 })
