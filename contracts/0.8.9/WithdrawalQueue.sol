@@ -58,22 +58,13 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
     using SafeERC20 for IStETH;
     using UnstructuredStorage for bytes32;
 
-    ///! STRUCTURED STORAGE OF THE CONTRACT
-    ///  Inherited from WithdrawalQueueBase:
-    ///! SLOT 0: mapping(uint256 => WithdrawalRequest) queue
-    ///! SLOT 1: uint256 lastRequestId
-    ///! SLOT 2: uint256 lastFinalizedRequestId
-    ///! SLOT 3: mapping(uint256 => DiscountCheckpoint) checkpoints
-    ///! SLOT 4: uint256 lastCheckpointIndex
-    ///! SLOT 5: uint128 public lockedEtherAmount
-    ///! SLOT 6: mapping(address => uint256[]) requestsByRecipient
-
     /// Withdrawal queue resume/pause control storage slot
     bytes32 public constant RESUME_SINCE_TIMESTAMP_POSITION = keccak256("lido.WithdrawalQueue.resumeSinceTimestamp");
     /// Special value for the infinite pause
     uint256 public constant PAUSE_INFINITELY = type(uint256).max;
     /// Bunker mode activation timestamp
-    bytes32 public constant BUNKER_MODE_SINCE_TIMESTAMP_POSITION = keccak256("lido.WithdrawalQueue.bunkerModeSinceTimestamp");
+    bytes32 public constant BUNKER_MODE_SINCE_TIMESTAMP_POSITION =
+        keccak256("lido.WithdrawalQueue.bunkerModeSinceTimestamp");
     /// Special value for timestamp when bunker mode is inactive (i.e., protocol in turbo mode)
     uint256 public constant BUNKER_MODE_DISABLED_TIMESTAMP = type(uint256).max;
 
@@ -195,7 +186,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
      * @dev Reverts with `ZeroPauseDuration()` if zero duration is passed
      */
     function pause(uint256 _duration) external whenResumed onlyRole(PAUSE_ROLE) {
-        if (_duration == 0) { revert ZeroPauseDuration(); }
+        if (_duration == 0) revert ZeroPauseDuration();
 
         uint256 pausedUntill;
         if (_duration == PAUSE_INFINITELY) {
@@ -254,8 +245,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
         for (uint256 i = 0; i < _withdrawalRequestInputs.length; ++i) {
             uint256 amountOfWstETH = _withdrawalRequestInputs[i].amount;
             address recipient = _checkWithdrawalRequestInput(
-                IWstETH(WSTETH).getStETHByWstETH(amountOfWstETH),
-                _withdrawalRequestInputs[i].recipient
+                IWstETH(WSTETH).getStETHByWstETH(amountOfWstETH), _withdrawalRequestInputs[i].recipient
             );
             requestIds[i] = _requestWithdrawalWstETH(amountOfWstETH, recipient);
         }
@@ -339,7 +329,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
     ///  See `findClaimHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)` for onchain use
     /// @param _requestIds ids of the requests sorted in the ascending order to get hints for
     function findClaimHintsUnbounded(uint256[] calldata _requestIds) public view returns (uint256[] memory hintIds) {
-        return findClaimHints(_requestIds, 1, lastCheckpointIndex);
+        return findClaimHints(_requestIds, 1, getLastCheckpointIndex());
     }
 
     /**
@@ -361,11 +351,11 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
      * @param _isBunkerModeNow oracle report
      * @param _previousOracleReportTimestamp timestamp of the previous oracle report
      */
-    function updateBunkerMode(
-        bool _isBunkerModeNow,
-        uint256 _previousOracleReportTimestamp
-    ) external onlyRole(BUNKER_MODE_REPORT_ROLE) {
-        if (_previousOracleReportTimestamp >= block.timestamp) { revert InvalidReportTimestamp(); }
+    function updateBunkerMode(bool _isBunkerModeNow, uint256 _previousOracleReportTimestamp)
+        external
+        onlyRole(BUNKER_MODE_REPORT_ROLE)
+    {
+        if (_previousOracleReportTimestamp >= block.timestamp) revert InvalidReportTimestamp();
 
         bool isBunkerModeWasSetBefore = isBunkerModeActive();
 

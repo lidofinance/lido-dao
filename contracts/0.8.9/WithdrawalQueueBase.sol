@@ -5,6 +5,8 @@
 pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
+import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
+import {UnstructuredRefStorage} from "./lib/UnstructuredRefStorage.sol";
 
 /**
  * @title Queue to store and manage WithdrawalRequests.
@@ -15,11 +17,28 @@ import "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
  */
 abstract contract WithdrawalQueueBase {
     using EnumerableSet for EnumerableSet.UintSet;
+    using UnstructuredStorage for bytes32;
 
     /// @notice precision base for share rate and discounting factor values in the contract
     uint256 public constant E27_PRECISION_BASE = 1e27;
     /// @notice discount factor value that means no discount applying
     uint96 public constant NO_DISCOUNT = uint96(E27_PRECISION_BASE);
+
+    // queue for withdrawal requests, indexes (requestId) start from 1
+    bytes32 internal constant QUEUE_POSITION = keccak256("lido.WithdrawalQueue.queue");
+    // lenght of the queue
+    bytes32 internal constant LAST_REQUEST_ID_POSITION = keccak256("lido.WithdrawalQueue.lastRequestId");
+    // length of the finalized part of the queue. Always <= `requestCounter`
+    bytes32 internal constant LAST_FINALIZED_REQUEST_ID_POSITION =
+        keccak256("lido.WithdrawalQueue.lastFinalizedRequestId");
+    /// finalization discount history, indexes start from 1
+    bytes32 internal constant CHECKPOINTS_POSITION = keccak256("lido.WithdrawalQueue.checkpoints");
+    /// length of the checkpoints
+    bytes32 internal constant LAST_CHECKPOINT_INDEX_POSITION = keccak256("lido.WithdrawalQueue.lastCheckpointIndex");
+    /// amount of eth locked on contract for withdrawal
+    bytes32 internal constant LOCKED_ETHER_AMOUNT_POSITION = keccak256("lido.WithdrawalQueue.lockedEtherAmount");
+    /// withdrawal requests mapped to the recipients
+    bytes32 internal constant REQUEST_BY_RECIPIENT_POSITION = keccak256("lido.WithdrawalQueue.requestsByRecipient");
 
     /// @notice structure representing a request for withdrawal.
     struct WithdrawalRequest {
@@ -69,37 +88,35 @@ abstract contract WithdrawalQueueBase {
     error CantSendValueRecipientMayHaveReverted();
     error SafeCastValueDoesNotFit(uint16 maximumBitSize);
 
-    /// @notice queue for withdrawal requests, indexes (requestId) start from 1
-    /// @dev mapping for better upgradability of underlying struct, because in the array structs are stored packed
-    mapping(uint256 => WithdrawalRequest) internal queue;
+    /// @notice id of the last request. Equals to the length of the queue
+    function getLastRequestId() public view returns (uint256) {
+        return LAST_REQUEST_ID_POSITION.getStorageUint256();
+    }
 
-    /// @notice length of the queue
-    uint256 public lastRequestId;
-
-    /// @notice length of the finalized part of the queue. Always <= `requestCounter`
-    uint256 public lastFinalizedRequestId;
-
-    /// @notice finalization discount history, indexes start from 1
-    /// @dev mapping for better upgradability of underlying struct, because in the array structs are stored packed
-    mapping(uint256 => DiscountCheckpoint) internal checkpoints;
-
-    /// @notice size of checkpoins array
-    uint256 public lastCheckpointIndex;
+    /// @notice id of the last finalized request
+    function getLastFinalizedRequestId() public view returns (uint256) {
+        return LAST_FINALIZED_REQUEST_ID_POSITION.getStorageUint256();
+    }
 
     /// @notice amount of ETH on this contract balance that is locked for withdrawal and waiting for claim
-    uint128 public lockedEtherAmount;
+    function getLockedEtherAmount() public view returns (uint256) {
+        return LOCKED_ETHER_AMOUNT_POSITION.getStorageUint256();
+    }
 
-    /// @notice withdrawal requests mapped to the recipients
-    mapping(address => EnumerableSet.UintSet) private requestsByRecipient;
+    /// @notice length of the checkpoints. Last possible value for the claim hint
+    function getLastCheckpointIndex() public view returns (uint256) {
+        return LAST_CHECKPOINT_INDEX_POSITION.getStorageUint256();
+    }
 
     /// @notice return the number of unfinalized requests in the queue
     function unfinalizedRequestNumber() external view returns (uint256) {
-        return lastRequestId - lastFinalizedRequestId;
+        return getLastRequestId() - getLastFinalizedRequestId();
     }
 
     /// @notice Returns the amount of stETH yet to be finalized
     function unfinalizedStETH() external view returns (uint256) {
-        return queue[lastRequestId].cumulativeStETH - queue[lastFinalizedRequestId].cumulativeStETH;
+        return
+            _getQueue()[getLastRequestId()].cumulativeStETH - _getQueue()[getLastFinalizedRequestId()].cumulativeStETH;
     }
 
     /**
@@ -111,7 +128,7 @@ abstract contract WithdrawalQueueBase {
      * uncallable if the set grows to a point where copying to memory consumes too much gas to fit in a block.
      */
     function getWithdrawalRequests(address _recipient) external view returns (uint256[] memory requestsIds) {
-        return requestsByRecipient[_recipient].values();
+        return _getRequestByRecipient()[_recipient].values();
     }
 
     /**
@@ -130,10 +147,10 @@ abstract contract WithdrawalQueueBase {
         )
     {
         if (_requestId == 0) revert InvalidRequestId(_requestId);
-        if (_requestId > lastRequestId) revert InvalidRequestId(_requestId);
+        if (_requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
-        WithdrawalRequest memory request = queue[_requestId];
-        WithdrawalRequest memory previousRequest = queue[_requestId - 1];
+        WithdrawalRequest memory request = _getQueue()[_requestId];
+        WithdrawalRequest memory previousRequest = _getQueue()[_requestId - 1];
 
         recipient = request.recipient;
         timestamp = request.timestamp;
@@ -141,13 +158,13 @@ abstract contract WithdrawalQueueBase {
         amountOfShares = request.cumulativeShares - previousRequest.cumulativeShares;
         amountOfStETH = request.cumulativeStETH - previousRequest.cumulativeStETH;
 
-        isFinalized = _requestId <= lastFinalizedRequestId;
+        isFinalized = _requestId <= getLastFinalizedRequestId();
         isClaimed = request.claimed;
     }
 
     /**
      * @notice Returns the amount of ETH to be send along to finalize this batch and the amount of shares to burn after
-     * @param _nextFinalizedRequestId the index in the request queue that should be used as the end of the batch. 
+     * @param _nextFinalizedRequestId the index in the request queue that should be used as the end of the batch.
      *  Should be > 0
      * @param _shareRate share rate that will be used to calculate the batch value with 1e27 precision. Should be > 0
      *
@@ -160,20 +177,22 @@ abstract contract WithdrawalQueueBase {
         returns (uint256 ethToLock, uint256 sharesToBurn)
     {
         if (_shareRate == 0) revert ZeroShareRate();
+        if (_nextFinalizedRequestId > getLastRequestId()) revert InvalidRequestId(_nextFinalizedRequestId);
+        uint256 lastFinalizedRequestId = getLastFinalizedRequestId();
         if (_nextFinalizedRequestId <= lastFinalizedRequestId) revert InvalidRequestId(_nextFinalizedRequestId);
-        if (_nextFinalizedRequestId > lastRequestId) revert InvalidRequestId(_nextFinalizedRequestId);
 
-        WithdrawalRequest memory requestToFinalize = queue[_nextFinalizedRequestId];
-        WithdrawalRequest memory lastFinalizedRequest = queue[lastFinalizedRequestId];
+        WithdrawalRequest memory requestToFinalize = _getQueue()[_nextFinalizedRequestId];
+        WithdrawalRequest memory lastFinalizedRequest = _getQueue()[lastFinalizedRequestId];
 
         uint256 amountOfStETH = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH; //e18
         uint256 amountOfShares = requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares; //e18
 
         uint256 currentValue = (amountOfShares * _shareRate); //e45
-        
+
         uint256 discountFactor = NO_DISCOUNT;
-        if (currentValue < amountOfStETH * E27_PRECISION_BASE) { //e45
-            discountFactor = currentValue  / amountOfStETH; //e27
+        if (currentValue < amountOfStETH * E27_PRECISION_BASE) {
+            //e45
+            discountFactor = currentValue / amountOfStETH; //e27
         }
 
         uint256 amountOfEther = (amountOfStETH * discountFactor) / E27_PRECISION_BASE;
@@ -188,7 +207,7 @@ abstract contract WithdrawalQueueBase {
      * @param _requestId request id to be claimed with this hint
      */
     function findClaimHintUnbounded(uint256 _requestId) public view returns (uint256) {
-        return findClaimHint(_requestId, 1, lastCheckpointIndex);
+        return findClaimHint(_requestId, 1, getLastCheckpointIndex());
     }
 
     /**
@@ -197,37 +216,38 @@ abstract contract WithdrawalQueueBase {
      * @param _start index of the left boundary of the search range
      * @param _end index of the right boundary of the search range
      *
-     * @return the hint that can be used for `claimWithdrawal` to find the discount for the request, 
+     * @return the hint that can be used for `claimWithdrawal` to find the discount for the request,
      *  or 0 if hint not found in the range
      */
     function findClaimHint(uint256 _targetId, uint256 _start, uint256 _end) public view returns (uint256) {
         if (_targetId == 0) revert InvalidRequestId(_targetId);
         if (_start == 0) revert InvalidRequestIdRange(_start, _end);
         if (_start > _end) revert InvalidRequestIdRange(_start, _end);
+        uint256 lastCheckpointIndex = getLastCheckpointIndex();
         if (_end > lastCheckpointIndex) revert InvalidRequestIdRange(_start, _end);
-        if (_targetId > lastFinalizedRequestId) revert RequestNotFinalized(_targetId);
+        if (_targetId > getLastFinalizedRequestId()) revert RequestNotFinalized(_targetId);
 
         // Right boundary
-        if (_targetId >= checkpoints[_end].fromId) {
+        if (_targetId >= _getCheckpoints()[_end].fromId) {
             // it's the last checkpoint, so it's valid
             if (_end == lastCheckpointIndex) return _end;
             // it fits right before the next checkpoint
-            if (_targetId < checkpoints[_end + 1].fromId) return _end;
+            if (_targetId < _getCheckpoints()[_end + 1].fromId) return _end;
 
             return 0;
         }
         // Left boundary
-        if (_targetId < checkpoints[_start].fromId) {
+        if (_targetId < _getCheckpoints()[_start].fromId) {
             return 0;
         }
 
-        // Binary search 
+        // Binary search
         uint256 min = _start;
         uint256 max = _end;
 
         while (max > min) {
             uint256 mid = (max + min + 1) / 2;
-            if (checkpoints[mid].fromId <= _targetId) {
+            if (_getCheckpoints()[mid].fromId <= _targetId) {
                 min = mid;
             } else {
                 max = mid - 1;
@@ -244,30 +264,31 @@ abstract contract WithdrawalQueueBase {
      */
     function claimWithdrawal(uint256 _requestId, uint256 _hint) public {
         if (_hint == 0) revert InvalidHint(_hint);
-        if (_requestId > lastFinalizedRequestId) revert RequestNotFinalized(_requestId);
+        if (_requestId > getLastFinalizedRequestId()) revert RequestNotFinalized(_requestId);
+        uint256 lastCheckpointIndex = getLastCheckpointIndex();
         if (_hint > lastCheckpointIndex) revert InvalidHint(_hint);
 
-        WithdrawalRequest storage request = queue[_requestId];
+        WithdrawalRequest storage request = _getQueue()[_requestId];
         if (request.claimed) revert RequestAlreadyClaimed(_requestId);
 
         request.claimed = true;
 
-        DiscountCheckpoint memory hintCheckpoint = checkpoints[_hint];
+        DiscountCheckpoint memory hintCheckpoint = _getCheckpoints()[_hint];
         // ______(_______
         //    ^  hint
         if (_requestId < hintCheckpoint.fromId) revert InvalidHint(_hint);
         if (_hint + 1 <= lastCheckpointIndex) {
             // ______(_______(_________
             //       hint    hint+1  ^
-            if (checkpoints[_hint + 1].fromId <= _hint) {
+            if (_getCheckpoints()[_hint + 1].fromId <= _hint) {
                 revert InvalidHint(_hint);
             }
         }
 
-        uint256 ethRequested = request.cumulativeStETH - queue[_requestId - 1].cumulativeStETH;
+        uint256 ethRequested = request.cumulativeStETH - _getQueue()[_requestId - 1].cumulativeStETH;
         uint256 ethWithDiscount = ethRequested * hintCheckpoint.discountFactor / E27_PRECISION_BASE;
 
-        lockedEtherAmount -= uint128(ethWithDiscount);
+        _setLockedEtherAmount(getLockedEtherAmount() - ethWithDiscount);
 
         _sendValue(request.recipient, ethWithDiscount);
 
@@ -282,17 +303,17 @@ abstract contract WithdrawalQueueBase {
      */
     function changeRecipient(uint256 _requestId, address _newRecipient) external {
         if (_newRecipient == msg.sender) revert InvalidRecipient(_newRecipient);
-        if (_requestId > lastRequestId) revert InvalidRequestId(_requestId);
+        if (_requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
-        WithdrawalRequest storage request = queue[_requestId];
+        WithdrawalRequest storage request = _getQueue()[_requestId];
 
         if (request.recipient != msg.sender) revert RecipientExpected(request.recipient, msg.sender);
         if (request.claimed) revert RequestAlreadyClaimed(_requestId);
 
         request.recipient = payable(_newRecipient);
 
-        requestsByRecipient[_newRecipient].add(_requestId);
-        requestsByRecipient[msg.sender].remove(_requestId);
+        _getRequestByRecipient()[_newRecipient].add(_requestId);
+        _getRequestByRecipient()[msg.sender].remove(_requestId);
 
         emit WithdrawalRequestRecipientChanged(_requestId, _newRecipient, msg.sender);
     }
@@ -309,8 +330,8 @@ abstract contract WithdrawalQueueBase {
         returns (uint256 finalizableRequestId)
     {
         if (_maxTimestamp == 0) revert ZeroTimestamp();
-        if (_startId <= lastFinalizedRequestId) revert InvalidRequestIdRange(_startId, _endId);
-        if (_endId > lastRequestId) revert InvalidRequestIdRange(_startId, _endId);
+        if (_startId <= getLastFinalizedRequestId()) revert InvalidRequestIdRange(_startId, _endId);
+        if (_endId > getLastRequestId()) revert InvalidRequestIdRange(_startId, _endId);
 
         if (_startId > _endId) return 0; // we have an empty range to search in
 
@@ -321,7 +342,7 @@ abstract contract WithdrawalQueueBase {
 
         while (startRequestId <= endRequestId) {
             uint256 midRequestId = (endRequestId + startRequestId) / 2;
-            if (queue[midRequestId].timestamp <= _maxTimestamp) {
+            if (_getQueue()[midRequestId].timestamp <= _maxTimestamp) {
                 finalizableRequestId = midRequestId;
 
                 // Ignore left half
@@ -351,8 +372,8 @@ abstract contract WithdrawalQueueBase {
     ) public view returns (uint256 finalizableRequestId) {
         if (_ethBudget == 0) revert ZeroAmountOfETH();
         if (_shareRate == 0) revert ZeroShareRate();
-        if (_startId <= lastFinalizedRequestId) revert InvalidRequestIdRange(_startId, _endId);
-        if (_endId > lastRequestId) revert InvalidRequestIdRange(_startId, _endId);
+        if (_startId <= getLastFinalizedRequestId()) revert InvalidRequestIdRange(_startId, _endId);
+        if (_endId > getLastRequestId()) revert InvalidRequestIdRange(_startId, _endId);
 
         if (_startId > _endId) return 0; // we have an empty range to search in
 
@@ -389,9 +410,10 @@ abstract contract WithdrawalQueueBase {
         view
         returns (uint256 finalizableRequestId)
     {
+        uint256 firstUnfinalizedRequestId = getLastFinalizedRequestId() + 1;
         finalizableRequestId =
-            findLastFinalizableRequestIdByBudget(_ethBudget, _shareRate, lastFinalizedRequestId + 1, lastRequestId);
-        return findLastFinalizableRequestIdByTimestamp(_maxTimestamp, lastFinalizedRequestId + 1, finalizableRequestId);
+            findLastFinalizableRequestIdByBudget(_ethBudget, _shareRate, firstUnfinalizedRequestId, getLastRequestId());
+        return findLastFinalizableRequestIdByTimestamp(_maxTimestamp, firstUnfinalizedRequestId, finalizableRequestId);
     }
 
     /// @dev creates a new `WithdrawalRequest` in the queue
@@ -399,48 +421,49 @@ abstract contract WithdrawalQueueBase {
         internal
         returns (uint256 requestId)
     {
-        WithdrawalRequest memory lastRequest = queue[lastRequestId];
+        uint256 lastRequestId = getLastRequestId();
+        WithdrawalRequest memory lastRequest = _getQueue()[lastRequestId];
 
         uint128 cumulativeShares = lastRequest.cumulativeShares + _amountofShares;
         uint128 cumulativeStETH = lastRequest.cumulativeStETH + _amountOfStETH;
 
-        lastRequestId++;
-        requestId = lastRequestId;
-        queue[requestId] = WithdrawalRequest(
-            cumulativeStETH,
-            cumulativeShares,
-            payable(_recipient),
-            uint64(block.number),
-            false
-        );
-        requestsByRecipient[_recipient].add(requestId);
+        requestId = lastRequestId + 1;
+
+        _setLastRequestId(requestId);
+        _getQueue()[requestId] =
+            WithdrawalRequest(cumulativeStETH, cumulativeShares, payable(_recipient), uint64(block.number), false);
+        _getRequestByRecipient()[_recipient].add(requestId);
 
         emit WithdrawalRequested(requestId, msg.sender, _recipient, _amountOfStETH, _amountofShares);
     }
 
     /// @dev Finalize requests from last finalized one up to `_lastRequestIdToFinalize`
     function _finalize(uint256 _lastRequestIdToFinalize, uint128 _amountofETH) internal {
+        if (_lastRequestIdToFinalize > getLastRequestId()) revert InvalidRequestId(_lastRequestIdToFinalize);
+        uint256 lastFinalizedRequestId = getLastFinalizedRequestId();
         if (_lastRequestIdToFinalize <= lastFinalizedRequestId) revert InvalidRequestId(_lastRequestIdToFinalize);
-        if (_lastRequestIdToFinalize > lastRequestId) revert InvalidRequestId(_lastRequestIdToFinalize);
 
-        uint128 finalizedStETH = queue[lastFinalizedRequestId].cumulativeStETH;
-        uint128 stETHToFinalize = queue[_lastRequestIdToFinalize].cumulativeStETH - finalizedStETH;
+        uint128 finalizedStETH = _getQueue()[lastFinalizedRequestId].cumulativeStETH;
+        uint128 stETHToFinalize = _getQueue()[_lastRequestIdToFinalize].cumulativeStETH - finalizedStETH;
 
         uint256 discountFactor = NO_DISCOUNT;
         if (stETHToFinalize > _amountofETH) {
             discountFactor = _amountofETH * E27_PRECISION_BASE / stETHToFinalize;
         }
 
-        DiscountCheckpoint storage lastCheckpoint = checkpoints[lastCheckpointIndex];
+        uint256 lastCheckpointIndex = getLastCheckpointIndex();
+        DiscountCheckpoint storage lastCheckpoint = _getCheckpoints()[lastCheckpointIndex];
 
         if (discountFactor != lastCheckpoint.discountFactor) {
             // add a new discount if it differs from the previous
-            lastCheckpointIndex++;
-            checkpoints[lastCheckpointIndex] = DiscountCheckpoint(lastFinalizedRequestId + 1, uint96(discountFactor));
+            uint256 firstUnfinalizedRequestId = lastFinalizedRequestId + 1;
+            _getCheckpoints()[lastCheckpointIndex + 1] =
+                DiscountCheckpoint(firstUnfinalizedRequestId, uint96(discountFactor));
+            _setLastCheckpointIndex(lastCheckpointIndex + 1);
         }
 
-        lockedEtherAmount += _amountofETH;
-        lastFinalizedRequestId = _lastRequestIdToFinalize;
+        _setLockedEtherAmount(getLockedEtherAmount() + _amountofETH);
+        _setLastFinalizedRequestId(_lastRequestIdToFinalize);
     }
 
     // quazi-constructor
@@ -448,8 +471,8 @@ abstract contract WithdrawalQueueBase {
         // setting dummy zero structs in checkpoints and queue beginning
         // to avoid uint underflows and related if-branches
         // 0-index is reserved as 'not_found' response in the interface everywhere
-        queue[lastRequestId] = WithdrawalRequest(0, 0, payable(0), uint64(block.number), true);
-        checkpoints[lastCheckpointIndex] = DiscountCheckpoint(lastRequestId, 0);
+        _getQueue()[0] = WithdrawalRequest(0, 0, payable(0), uint64(block.number), true);
+        _getCheckpoints()[getLastCheckpointIndex()] = DiscountCheckpoint(0, 0);
     }
 
     function _sendValue(address payable _recipient, uint256 _amount) internal {
@@ -458,5 +481,50 @@ abstract contract WithdrawalQueueBase {
         // solhint-disable-next-line
         (bool success,) = _recipient.call{value: _amount}("");
         if (!success) revert CantSendValueRecipientMayHaveReverted();
+    }
+
+    //
+    // Internal getters and setters
+    //
+
+    function _getQueue() internal pure returns (mapping(uint256 => WithdrawalRequest) storage queue) {
+        bytes32 position = QUEUE_POSITION;
+        assembly {
+            queue.slot := position
+        }
+    }
+
+    function _getCheckpoints() internal pure returns (mapping(uint256 => DiscountCheckpoint) storage checkpoints) {
+        bytes32 position = CHECKPOINTS_POSITION;
+        assembly {
+            checkpoints.slot := position
+        }
+    }
+
+    function _getRequestByRecipient()
+        internal
+        pure
+        returns (mapping(address => EnumerableSet.UintSet) storage requestsByRecipient)
+    {
+        bytes32 position = REQUEST_BY_RECIPIENT_POSITION;
+        assembly {
+            requestsByRecipient.slot := position
+        }
+    }
+
+    function _setLastRequestId(uint256 _lastRequestId) internal {
+        LAST_REQUEST_ID_POSITION.setStorageUint256(_lastRequestId);
+    }
+
+    function _setLastFinalizedRequestId(uint256 _lastFinalizedRequestId) internal {
+        LAST_FINALIZED_REQUEST_ID_POSITION.setStorageUint256(_lastFinalizedRequestId);
+    }
+
+    function _setLastCheckpointIndex(uint256 _lastCheckpointIndex) internal {
+        LAST_CHECKPOINT_INDEX_POSITION.setStorageUint256(_lastCheckpointIndex);
+    }
+
+    function _setLockedEtherAmount(uint256 _lockedEtherAmount) internal {
+        LOCKED_ETHER_AMOUNT_POSITION.setStorageUint256(_lockedEtherAmount);
     }
 }
