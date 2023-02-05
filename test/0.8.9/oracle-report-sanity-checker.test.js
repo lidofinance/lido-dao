@@ -8,8 +8,11 @@ const OracleReportSanityChecker = hre.artifacts.require('OracleReportSanityCheck
 const LidoLocatorMock = hre.artifacts.require(`${mocksFilePath}:LidoLocatorStub`)
 const WithdrawalQueueMock = hre.artifacts.require(`${mocksFilePath}:WithdrawalQueueStub`)
 
-function wei(number, units = 'ether') {
-  switch (units) {
+function wei(number, units = 'wei') {
+  switch (units.toLowerCase()) {
+    case 'wei':
+      return BigInt(number)
+    case 'eth':
     case 'ether':
       return BigInt(number) * 10n ** 18n
   }
@@ -120,9 +123,9 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
 
     it('reverts with error IncorrectCLBalanceDecrease() when one off CL balance decrease more than limit', async () => {
       const maxBasisPoints = 10_000n
-      const preCLBalance = wei(100_000)
-      const postCLBalance = wei(85_000)
-      const withdrawalVaultBalance = wei(500)
+      const preCLBalance = wei(100_000, 'eth')
+      const postCLBalance = wei(85_000, 'eth')
+      const withdrawalVaultBalance = wei(500, 'eth')
       const unifiedPostCLBalance = postCLBalance + withdrawalVaultBalance
       const oneOffCLBalanceDecreaseBP = (maxBasisPoints * (preCLBalance - unifiedPostCLBalance)) / preCLBalance
       await assert.revertsWithCustomError(
@@ -142,7 +145,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
       const maxBasisPoints = 10_000n
       const secondsInOneYear = 365n * 24n * 60n * 60n
       const preCLBalance = BigInt(correctLidoOracleReport.preCLBalance)
-      const postCLBalance = wei(150_000)
+      const postCLBalance = wei(150_000, 'eth')
       const timeElapsed = BigInt(correctLidoOracleReport.timeElapsed)
       const annualBalanceIncrease =
         (secondsInOneYear * maxBasisPoints * (postCLBalance - preCLBalance)) / preCLBalance / timeElapsed
