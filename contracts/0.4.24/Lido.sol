@@ -664,7 +664,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     /**
      * @dev collect ETH from ELRewardsVault and WithdrawalVault, then send to WithdrawalQueue
      */
-    function _processETHDistribution(
+    function _collectRewardsAndProcessWithdrawals(
         uint256 _withdrawalsToWithdraw,
         uint256 _elRewardsToWithdraw,
         uint256 _requestIdToFinalizeUpTo,
@@ -1052,7 +1052,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         elRewards = tokenRebaseLimiter.appendEther(_inputData.elRewardsVaultBalance);
 
         // collect ETH from EL and Withdrawal vaults and send some to WithdrawalQueue if required
-        _processETHDistribution(
+        _collectRewardsAndProcessWithdrawals(
             withdrawals,
             elRewards,
             _inputData.requestIdToFinalizeUpTo,
