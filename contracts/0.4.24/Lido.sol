@@ -771,7 +771,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         }
 
         uint256 sharesAmount;
-        if (_getTotalPooledEther() != 0) {
+        if (_getTotalPooledEther() != 0 && _getTotalShares() != 0) {
             sharesAmount = getSharesByPooledEth(msg.value);
         } else {
             // totalPooledEther is 0: for first-ever deposit
