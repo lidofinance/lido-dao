@@ -248,6 +248,27 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       requestId = getEventArgument(receipt, "WithdrawalRequested", "requestId")
     })
 
+    it('Anyone can claim a finalized token with hint', async () => {
+      await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
+
+      const balanceBefore = bn(await ethers.provider.getBalance(owner))
+
+      await withdrawalQueue.methods["claimWithdrawal(uint256,uint256)"](requestId,
+        await withdrawalQueue.findClaimHintUnbounded(requestId), { from: stranger })
+
+      assert.equals(await ethers.provider.getBalance(owner), balanceBefore.add(bn(amount)))
+    })
+
+    it('Anyone can claim a finalized token without hint', async () => {
+      await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
+
+      const balanceBefore = bn(await ethers.provider.getBalance(owner))
+
+      await withdrawalQueue.methods["claimWithdrawal(uint256)"](requestId, { from: stranger })
+
+      assert.equals(await ethers.provider.getBalance(owner), balanceBefore.add(bn(amount)))
+    })
+
     it('One cant claim not finalized request', async () => {
       await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 1), `RequestNotFinalized(${requestId})`)
     })
@@ -262,16 +283,6 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await withdrawalQueue.finalize(2, { from: steth.address, value: amount })
       await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 0), 'InvalidHint(0)')
       await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 2), 'InvalidHint(2)')
-    })
-
-    it('Anyone can claim a finalized token', async () => {
-      await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
-
-      const balanceBefore = bn(await ethers.provider.getBalance(owner))
-
-      await withdrawalQueue.claimWithdrawal(requestId, await withdrawalQueue.findClaimHintUnbounded(requestId), { from: stranger })
-
-      assert.equals(await ethers.provider.getBalance(owner), balanceBefore.add(bn(amount)))
     })
 
     it('Cant withdraw token two times', async () => {

@@ -303,6 +303,16 @@ abstract contract WithdrawalQueueBase {
     }
 
     /**
+     * @notice Claim `_requestId` request and transfer locked ether to the owner
+     * @param _requestId request id to claim
+     * @dev will use `findClaimHintUnbounded()` to find a hint, what can lead to OOG 
+     * Prefer `claimWithdrawal(uint256 _requestId, uint256 _hint)` to save gas
+     */
+    function claimWithdrawal(uint256 _requestId) external {
+        claimWithdrawal(_requestId, findClaimHintUnbounded(_requestId));
+    }
+
+    /**
      * @notice Transfer the right to claim withdrawal request to `_newRecipient`
      * @dev should be called by the old recepient
      * @param _requestId id of the request subject to change
