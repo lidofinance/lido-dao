@@ -54,7 +54,8 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
   }
 
   before(async () => {
-    await hre.ethers.provider.send('hardhat_mine', ['0x400', '0xc']) // mine 1024 blocks
+    // mine 1024 blocks with block duration 12 seconds
+    await hre.ethers.provider.send('hardhat_mine', ['0x' + Number(1024).toString(16), '0x' + Number(12).toString(16)])
     lidoMock = await LidoStub.new({ from: deployer })
     withdrawalQueueMock = await WithdrawalQueueStub.new({ from: deployer })
     lidoLocatorMock = await LidoLocatorStub.new(lidoMock.address, withdrawalVault, withdrawalQueueMock.address, {
@@ -106,10 +107,6 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
   })
 
   describe('checkLidoOracleReport()', () => {
-    before(async () => {
-      await hre.ethers.provider.send('hardhat_mine', ['0x400', '0xc'])
-    })
-
     beforeEach(async () => {
       await oracleReportSanityChecker.setOracleReportLimits(Object.values(defaultLimitsList), {
         from: managersRoster.allLimitsManagers[0]

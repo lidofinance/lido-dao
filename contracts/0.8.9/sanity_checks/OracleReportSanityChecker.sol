@@ -119,10 +119,10 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         ManagersRoster memory _managersRoster
     ) {
         LIDO_LOCATOR = ILidoLocator(_lidoLocator);
-        SECONDS_PER_EPOCH =  _secondsPerEpoch;
+        SECONDS_PER_EPOCH = _secondsPerEpoch;
 
         _updateLimits(_limitsList);
-        
+
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(ALL_LIMITS_MANAGER_ROLE, _managersRoster.allLimitsManagers);
         _grantRole(CHURN_VALIDATORS_BY_EPOCH_LIMIT_MANGER_ROLE, _managersRoster.churnValidatorsByEpochLimitManagers);
@@ -250,6 +250,16 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _updateLimits(limitsList);
     }
 
+    /// @notice Returns the allowed ETH amount that might be taken from the withdrawal vault and EL
+    ///     rewards vault during Lido's oracle report processing
+    /// @param _preTotalPooledEther total amount of ETH controlled by the protocol
+    /// @param _preTotalShares total amount of minted stETH shares
+    /// @param _clBalanceDiff difference of all Lido validators' balances on the Consensus Layer
+    ///     between the previous and current oracle report
+    /// @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
+    /// @param _elRewardsVaultBalance elRewards vault balance on Execution Layer for report block
+    /// @return withdrawals ETH amount allowed to be taken from the withdrawals vault
+    /// @return elRewards ETH amount allowed to be taken from the EL rewards vault
     function smoothenTokenRebase(
         uint256 _preTotalPooledEther,
         uint256 _preTotalShares,
