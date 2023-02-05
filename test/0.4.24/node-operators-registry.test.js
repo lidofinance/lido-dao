@@ -1335,6 +1335,133 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
   })
 
+  describe('invalidateReadyToDepositKeysForNodeOperator(nodeOperatorId)', () => {
+    const firstNodeOperatorId = 0
+    const secondNodeOperatorId = 1
+
+    beforeEach(async () => {
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: voting })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: voting })
+      // node operator without unused keys
+      await nodeOperators.addNodeOperator(
+        app,
+        {
+          ...NODE_OPERATORS[2],
+          vettedSigningKeysCount: NODE_OPERATORS[2].totalSigningKeysCount,
+          depositedSigningKeysCount: NODE_OPERATORS[2].totalSigningKeysCount
+        },
+        { from: voting }
+      )
+    })
+
+    it('reverts with "APP_AUTH_FAILED" error when called by sender without INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE role', async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE')
+      assert.isFalse(hasPermission)
+      await assert.reverts(app.invalidateReadyToDepositKeysForNodeOperator(firstNodeOperatorId), 'APP_AUTH_FAILED')
+    })
+
+    it('sets totalSigningKeysCount and vettedSigningKeysCount equal to depositedSigningKeys for only firstNodeOperator', async () => {
+      const allNodeOperatorsBefore = await nodeOperators.getAllNodeOperators(app)
+      await app.invalidateReadyToDepositKeysForNodeOperator(firstNodeOperatorId, { from: voting })
+      const allNodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
+
+      for (let i = 0; i < allNodeOperatorsBefore.length; ++i) {
+        const nodeOperatorBefore = allNodeOperatorsBefore[i]
+        const nodeOperatorAfter = allNodeOperatorsAfter[i]
+
+        if (i == firstNodeOperatorId) {
+          assert.equals(nodeOperatorAfter.stakingLimit, nodeOperatorBefore.usedSigningKeys)
+          assert.equals(nodeOperatorAfter.totalSigningKeys, nodeOperatorBefore.usedSigningKeys)
+        } else {
+          assert.equals(nodeOperatorAfter.stakingLimit, nodeOperatorBefore.stakingLimit)
+          assert.equals(nodeOperatorAfter.totalSigningKeys, nodeOperatorBefore.totalSigningKeys)
+        }
+      }
+    })
+
+    it('emits TotalSigningKeysCountChanged & VettedSigningKeysCountChanged events for node operator only if it had unused keys', async () => {
+      const allNodeOperatorsBefore = await nodeOperators.getAllNodeOperators(app)
+      const receipt = await app.invalidateReadyToDepositKeysForNodeOperator(firstNodeOperatorId, { from: voting })
+      const allNodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
+
+      for (let i = 0; i < allNodeOperatorsBefore.length; ++i) {
+        const nodeOperatorBefore = allNodeOperatorsBefore[i]
+        const nodeOperatorAfter = allNodeOperatorsAfter[i]
+        
+        if (i == firstNodeOperatorId) {
+          assert.emits(receipt, 'TotalSigningKeysCountChanged', {
+            nodeOperatorId: i,
+            totalValidatorsCount: nodeOperatorAfter.usedSigningKeys
+          })
+          assert.emits(receipt, 'VettedSigningKeysCountChanged', {
+            nodeOperatorId: i,
+            approvedValidatorsCount: nodeOperatorAfter.usedSigningKeys
+          })
+        } else {
+          assert.notEmits(receipt, 'TotalSigningKeysCountChanged', { nodeOperatorId: i })
+          assert.notEmits(receipt, 'VettedSigningKeysCountChanged', { nodeOperatorId: i })
+        }
+      }
+    })
+
+    it('emits NodeOperatorTotalKeysTrimmed event for node operator only if it had unused keys', async () => {
+      const allNodeOperatorsBefore = await nodeOperators.getAllNodeOperators(app)
+      const receipt = await app.invalidateReadyToDepositKeysForNodeOperator(firstNodeOperatorId, { from: voting })
+      const allNodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
+      
+      for (let i = 0; i < allNodeOperatorsBefore.length; ++i) {
+        const nodeOperatorBefore = allNodeOperatorsBefore[i]
+        const nodeOperatorAfter = allNodeOperatorsAfter[i]
+        
+        if (i == firstNodeOperatorId) {
+          assert.emits(receipt, 'NodeOperatorTotalKeysTrimmed', {
+            id: i,
+            totalKeysTrimmed: nodeOperatorBefore.totalSigningKeys.toNumber() - nodeOperatorAfter.usedSigningKeys.toNumber()
+          })
+        } else {
+          assert.notEmits(receipt, 'NodeOperatorTotalKeysTrimmed', { id: i })
+        }
+      }
+    })
+
+    it('sets total vetted signing keys count & total signing keys count values to deposited signing keys count', async () => {
+      const totalSigningKeysStatsBefore = await app.testing_getTotalSigningKeysStats()
+      assert.notEquals(totalSigningKeysStatsBefore.vettedSigningKeysCount, totalSigningKeysStatsBefore.depositedSigningKeysCount)
+      assert.notEquals(totalSigningKeysStatsBefore.totalSigningKeysCount, totalSigningKeysStatsBefore.depositedSigningKeysCount)
+      await app.invalidateReadyToDepositKeysForNodeOperator(firstNodeOperatorId,{ from: voting })
+      const totalSigningKeysStatsAfter = await app.testing_getTotalSigningKeysStats()
+      assert.equals(totalSigningKeysStatsAfter.vettedSigningKeysCount, totalSigningKeysStatsBefore.depositedSigningKeysCount)
+      assert.equals(totalSigningKeysStatsAfter.totalSigningKeysCount, totalSigningKeysStatsBefore.depositedSigningKeysCount)
+    })
+
+    it('increases keysOpIndex & changes validatorKeysNonce', async () => {
+      const [keysOpIndexBefore, validatorsKeysNonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getValidatorsKeysNonce()])
+      await app.invalidateReadyToDepositKeysForNodeOperator(firstNodeOperatorId, { from: voting })
+      const [keysOpIndexAfter, validatorsKeysNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getValidatorsKeysNonce()])
+      assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
+      assert.notEquals(validatorsKeysNonceAfter, validatorsKeysNonceBefore)
+    })
+
+    it('emits KeysOpIndexSet & ValidatorsKeysNonceChanged', async () => {
+      const keysOpIndexBefore = await app.getKeysOpIndex()
+      const receipt = await app.invalidateReadyToDepositKeysForNodeOperator(firstNodeOperatorId, { from: voting })
+      const validatorsKeysNonceAfter = await app.getValidatorsKeysNonce()
+      assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
+      assert.emits(receipt, 'ValidatorsKeysNonceChanged', { validatorsKeysNonce: validatorsKeysNonceAfter })
+    })
+
+    it("doesn't change validators keys nonce if keys weren't invalidated", async () => {
+      // invalidated all keys before the test to remove all unused keys of node operators
+      await app.invalidateReadyToDepositKeysForNodeOperator(firstNodeOperatorId,{ from: voting })
+      // the second invalidation must not invalidate keys
+      const receipt = app.invalidateReadyToDepositKeysForNodeOperator(firstNodeOperatorId, { from: voting })
+      const validatorsKeysNonceBefore = await app.getValidatorsKeysNonce()
+      assert.notEmits(receipt, 'NodeOperatorTotalKeysTrimmed')
+      const validatorsKeysNonceAfter = await app.getValidatorsKeysNonce()
+      assert.equals(validatorsKeysNonceBefore, validatorsKeysNonceAfter)
+    })
+  })
+
   describe('getSigningKeysAllocationData()', async () => {
     const firstNodeOperatorId = 0
     const secondNodeOperatorId = 1

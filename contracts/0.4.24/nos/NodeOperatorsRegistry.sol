@@ -525,27 +525,45 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AragonApp, IStakingMod
         uint256 nodeOperatorsCount = getNodeOperatorsCount();
 
         for (uint256 _nodeOperatorId = 0; _nodeOperatorId < nodeOperatorsCount; ++_nodeOperatorId) {
-            NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
-            uint64 totalSigningKeysCount = nodeOperator.totalSigningKeysCount;
-            uint64 depositedSigningKeysCount = nodeOperator.depositedSigningKeysCount;
-
-            if (depositedSigningKeysCount == totalSigningKeysCount) {
-                continue;
-            }
-
-            nodeOperator.totalSigningKeysCount = depositedSigningKeysCount;
-            nodeOperator.vettedSigningKeysCount = depositedSigningKeysCount;
-
-            emit TotalSigningKeysCountChanged(_nodeOperatorId, depositedSigningKeysCount);
-            emit VettedSigningKeysCountChanged(_nodeOperatorId, depositedSigningKeysCount);
-            emit NodeOperatorTotalKeysTrimmed(_nodeOperatorId, totalSigningKeysCount - depositedSigningKeysCount);
+            if (!_invalidateReadyToDepositKeys(_nodeOperatorId)) continue;
 
             if (!wereSigningKeysTrimmed) {
                 wereSigningKeysTrimmed = true;
             }
         }
 
-        if (wereSigningKeysTrimmed) {
+        _updateKeyStatsAfterInvalidateReadyToDepositKeys(wereSigningKeysTrimmed);
+    }
+
+    /// @notice Invalidates all unused validators keys for only one node operator
+    function invalidateReadyToDepositKeysForNodeOperator(uint256 _nodeOperatorId) external {
+        _auth(INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE);
+
+        bool wereSigningKeysTrimmed = _invalidateReadyToDepositKeys((_nodeOperatorId));
+        _updateKeyStatsAfterInvalidateReadyToDepositKeys(wereSigningKeysTrimmed);
+    }
+
+    function _invalidateReadyToDepositKeys(uint256 _nodeOperatorId) internal returns(bool)  {
+        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+        uint64 totalSigningKeysCount = nodeOperator.totalSigningKeysCount;
+        uint64 depositedSigningKeysCount = nodeOperator.depositedSigningKeysCount;
+
+        if (depositedSigningKeysCount == totalSigningKeysCount) {
+            return false;
+        }
+
+        nodeOperator.totalSigningKeysCount = depositedSigningKeysCount;
+        nodeOperator.vettedSigningKeysCount = depositedSigningKeysCount;
+
+        emit TotalSigningKeysCountChanged(_nodeOperatorId, depositedSigningKeysCount);
+        emit VettedSigningKeysCountChanged(_nodeOperatorId, depositedSigningKeysCount);
+        emit NodeOperatorTotalKeysTrimmed(_nodeOperatorId, totalSigningKeysCount - depositedSigningKeysCount);
+
+        return true;
+    }
+
+    function _updateKeyStatsAfterInvalidateReadyToDepositKeys(bool _wereSigningKeysTrimmed) internal {
+        if (_wereSigningKeysTrimmed) {
             SigningKeysStats.State memory totalSigningKeysStats = _getTotalSigningKeysStats();
 
             totalSigningKeysStats.totalSigningKeysCount = totalSigningKeysStats.depositedSigningKeysCount;
