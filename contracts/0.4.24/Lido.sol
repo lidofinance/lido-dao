@@ -1062,7 +1062,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         postTotalPooledEther = _getTotalPooledEther();
         postTotalShares = _getTotalShares();
 
-        address postTokenRebaseReceiver = getLidoLocator().rebaseReceiver();
+        address postTokenRebaseReceiver = getLidoLocator().postTokenRebaseReceiver();
         if (postTokenRebaseReceiver != address(0)) {
             IPostTokenRebaseReceiver(postTokenRebaseReceiver).handlePostTokenRebase(
                 _reportTimestamp,
