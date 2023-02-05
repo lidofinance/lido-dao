@@ -42,6 +42,8 @@ interface ILido {
 
 
 interface ILegacyOracle {
+    // only called before the migration
+
     function getBeaconSpec() external view returns (
         uint64 epochsPerFrame,
         uint64 slotsPerEpoch,
@@ -50,6 +52,14 @@ interface ILegacyOracle {
     );
 
     function getLastCompletedEpochId() external view returns (uint256);
+
+    // only called after the migration
+
+    function handleConsensusLayerReport(
+        uint256 refSlot,
+        uint256 clBalance,
+        uint256 clValidators
+    ) external;
 }
 
 
@@ -87,6 +97,7 @@ contract AccountingOracle is BaseOracle {
 
     error ComponentLocatorCannotBeZero();
     error AdminCannotBeZero();
+    error LegacyOracleCannotBeZero();
     error IncorrectOracleMigration(uint256 code);
     error SenderNotAllowed();
     error InvalidExitedValidatorsData();
@@ -141,6 +152,10 @@ contract AccountingOracle is BaseOracle {
     bytes32 internal constant EXTRA_DATA_PROCESSING_STATE_POSITION =
         keccak256("lido.AccountingOracle.extraDataProcessingState");
 
+    /// @dev Storage slot: address legacyOracle
+    bytes32 internal constant LEGACY_ORACLE_POSITION =
+        keccak256("lido.AccountingOracle.legacyOracle");
+
 
     address public immutable LIDO;
     IComponentLocator public immutable LOCATOR;
@@ -166,8 +181,10 @@ contract AccountingOracle is BaseOracle {
         uint256 maxExtraDataListItemsCount
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
+        if (legacyOracle == address(0)) revert LegacyOracleCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
         uint256 lastProcessingRefSlot = _checkOracleMigration(legacyOracle, consensusContract);
+        LEGACY_ORACLE_POSITION.setStorageAddress(legacyOracle);
         _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
         _setDataBoundaries(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
     }
@@ -487,6 +504,12 @@ contract AccountingOracle is BaseOracle {
                 data.extraDataItemsCount
             );
         }
+
+        ILegacyOracle(LEGACY_ORACLE_POSITION.getStorageAddress()).handleConsensusLayerReport(
+            data.refSlot,
+            data.clBalanceGwei * 1e9,
+            data.numValidators
+        );
 
         uint256 slotsElapsed = data.refSlot - prevRefSlot;
 

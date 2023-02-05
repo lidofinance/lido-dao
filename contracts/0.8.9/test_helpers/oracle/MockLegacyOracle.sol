@@ -6,6 +6,15 @@ import { ILegacyOracle } from "../../oracle/AccountingOracle.sol";
 
 
 contract MockLegacyOracle is ILegacyOracle {
+    struct HandleConsensusLayerReportCallData {
+        uint256 totalCalls;
+        uint256 refSlot;
+        uint256 clBalance;
+        uint256 clValidators;
+    }
+
+    HandleConsensusLayerReportCallData public lastCall__handleConsensusLayerReport;
+
     uint64 internal _epochsPerFrame;
     uint64 internal _slotsPerEpoch;
     uint64 internal _secondsPerSlot;
@@ -38,6 +47,15 @@ contract MockLegacyOracle is ILegacyOracle {
             _secondsPerSlot,
             _genesisTime
         );
+    }
+
+    function handleConsensusLayerReport(uint256 refSlot, uint256 clBalance, uint256 clValidators)
+        external
+    {
+        ++lastCall__handleConsensusLayerReport.totalCalls;
+        lastCall__handleConsensusLayerReport.refSlot = refSlot;
+        lastCall__handleConsensusLayerReport.clBalance = clBalance;
+        lastCall__handleConsensusLayerReport.clValidators = clValidators;
     }
 
     function getLastCompletedEpochId() external view returns (uint256) {

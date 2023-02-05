@@ -27,6 +27,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
     let mockLido
     let mockWithdrawalQueue
     let mockStakingRouter
+    let mockLegacyOracle
 
     let extraData
     let extraDataItems
@@ -42,6 +43,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       mockLido = deployed.lido
       mockWithdrawalQueue = deployed.withdrawalQueue
       mockStakingRouter = deployed.stakingRouter
+      mockLegacyOracle = deployed.legacyOracle
 
       oracleVersion = +await oracle.getContractVersion()
 
@@ -217,6 +219,14 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
         lastExitedKeysByModuleCall.exitedKeysCounts.map(x => +x),
         reportFields.numExitedValidatorsByStakingModule
       )
+    })
+
+    it(`legacy oracle got CL data report`, async () => {
+      const lastLegacyOracleCall = await mockLegacyOracle.lastCall__handleConsensusLayerReport()
+      assert.equal(+lastLegacyOracleCall.totalCalls, 1)
+      assert.equal(+lastLegacyOracleCall.refSlot, reportFields.refSlot)
+      assert.equal(+lastLegacyOracleCall.clBalance, e9(reportFields.clBalanceGwei))
+      assert.equal(+lastLegacyOracleCall.clValidators, reportFields.numValidators)
     })
 
     it('some time passes', async () => {
