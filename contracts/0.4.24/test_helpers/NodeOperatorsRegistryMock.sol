@@ -109,15 +109,15 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
 
     function testing_setNodeOperatorLimits(
         uint256 _nodeOperatorId,
-        uint64 stuckSigningKeysCount,
-        uint64 forgivenSigningKeysCount,
+        uint64 stuckValidatorsCount,
+        uint64 forgivenValidatorsCount,
         uint64 stuckPenaltyEndAt
     ) external {
-        NodeOperatorLimit storage operatorLimit = _nodeOperatorsLimits[_nodeOperatorId];
+        ValidatorsStats storage validatorsStats = _validatorsStats[_nodeOperatorId];
 
-        operatorLimit.stuckSigningKeysCount = stuckSigningKeysCount;
-        operatorLimit.forgivenSigningKeysCount = forgivenSigningKeysCount;
-        operatorLimit.stuckPenaltyEndAt = stuckPenaltyEndAt;
+        validatorsStats.stuckValidatorsCount = stuckValidatorsCount;
+        validatorsStats.forgivenValidatorsCount = forgivenValidatorsCount;
+        validatorsStats.stuckPenaltyEndAt = stuckPenaltyEndAt;
     }
 
     function testing_getTotalSigningKeysStats()
@@ -180,10 +180,10 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
     }
 
     function testing_isNodeOperatorPenalized(uint256 operatorId) external view returns (bool) {
-        NodeOperatorLimit memory nodeOperatorLimit = _nodeOperatorsLimits[operatorId];
+        ValidatorsStats memory validatorsStats = _validatorsStats[operatorId];
         if (
-            nodeOperatorLimit.forgivenSigningKeysCount < nodeOperatorLimit.stuckSigningKeysCount
-                || block.timestamp <= nodeOperatorLimit.stuckPenaltyEndAt
+            validatorsStats.forgivenValidatorsCount < validatorsStats.stuckValidatorsCount
+                || block.timestamp <= validatorsStats.stuckPenaltyEndAt
         ) {
             return true;
         }
