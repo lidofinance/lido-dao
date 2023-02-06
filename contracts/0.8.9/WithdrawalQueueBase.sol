@@ -81,6 +81,7 @@ abstract contract WithdrawalQueueBase {
     error ZeroAmountOfETH();
     error ZeroShareRate();
     error ZeroTimestamp();
+    error ZeroRecipient();
     error InvalidOwner(address _owner, address _sender);
     error InvalidOwnerAddress(address _owner);
     error InvalidRequestId(uint256 _requestId);
@@ -274,14 +275,17 @@ abstract contract WithdrawalQueueBase {
      * @param _hint hint for checkpoint index to avoid extensive search over the checkpointHistory.
      *  Can be found with `findClaimHint()` or `findClaimHintUnbounded()`
      */
-    function claimWithdrawal(uint256 _requestId, uint256 _hint) public {
+    function claimWithdrawalTo(uint256 _requestId, uint256 _hint, address _recipient) public {
         if (_hint == 0) revert InvalidHint(_hint);
+        
         if (_requestId > getLastFinalizedRequestId()) revert RequestNotFinalized(_requestId);
         uint256 lastCheckpointIndex = getLastCheckpointIndex();
         if (_hint > lastCheckpointIndex) revert InvalidHint(_hint);
 
         WithdrawalRequest storage request = _getQueue()[_requestId];
         if (request.claimed) revert RequestAlreadyClaimed(_requestId);
+        if (msg.sender != request.owner) revert InvalidOwner(request.owner, msg.sender);
+        if (_recipient == address(0)) _recipient = request.owner;
 
         request.claimed = true;
 
@@ -314,7 +318,7 @@ abstract contract WithdrawalQueueBase {
      * Prefer `claimWithdrawal(uint256 _requestId, uint256 _hint)` to save gas
      */
     function claimWithdrawal(uint256 _requestId) external {
-        claimWithdrawal(_requestId, findClaimHintUnbounded(_requestId));
+        claimWithdrawalTo(_requestId, findClaimHintUnbounded(_requestId), msg.sender);
     }
 
     /**

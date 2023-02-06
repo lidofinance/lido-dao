@@ -304,7 +304,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBas
     /// @param _claimWithdrawalInputs list of withdrawal request ids and hints to claim
     function claimWithdrawals(ClaimWithdrawalInput[] calldata _claimWithdrawalInputs) external {
         for (uint256 i = 0; i < _claimWithdrawalInputs.length; ++i) {
-            claimWithdrawal(_claimWithdrawalInputs[i].requestId, _claimWithdrawalInputs[i].hint);
+            claimWithdrawalTo(_claimWithdrawalInputs[i].requestId, _claimWithdrawalInputs[i].hint, msg.sender);
         }
     }
 
