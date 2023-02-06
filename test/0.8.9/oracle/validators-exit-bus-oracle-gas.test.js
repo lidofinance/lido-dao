@@ -36,11 +36,11 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       const deployed = await deployExitBusOracle(admin, {
         maxRequestsPerReport: 10000,
         maxRequestsListLength: 10000,
-        rateLimitWindowSlots: 1,
-        rateLimitMaxThroughput: 10000,
       })
       consensus = deployed.consensus
       oracle = deployed.oracle
+
+      await oracle.resume({from: admin})
 
       oracleVersion = +await oracle.getContractVersion()
 

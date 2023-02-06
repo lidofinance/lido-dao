@@ -14,7 +14,7 @@ const {
   deployHashConsensus } = require('./hash-consensus-deploy.test')
 
 const AccountingOracle = artifacts.require('AccountingOracleTimeTravellable')
-const MockLidoLocator = artifacts.require('MockLidoLocatorForOracles')
+const LidoLocator = artifacts.require('LidoLocator')
 const MockLido = artifacts.require('MockLidoForAccountingOracle')
 const MockStakingRouter = artifacts.require('MockStakingRouterForAccountingOracle')
 const MockWithdrawalQueue = artifacts.require('MockWithdrawalQueueForAccountingOracle')
@@ -120,9 +120,23 @@ async function deployMockLidoAndStakingRouter() {
   const stakingRouter = await MockStakingRouter.new()
   const withdrawalQueue = await MockWithdrawalQueue.new()
   const lido = await MockLido.new()
-  const locator = await MockLidoLocator.new(
-    lido.address, stakingRouter.address, withdrawalQueue.address, ZERO_ADDRESS
-  )
+
+  const locator = await LidoLocator.new({
+    accountingOracle: ZERO_ADDRESS,
+    depositSecurityModule: ZERO_ADDRESS,
+    elRewardsVault: ZERO_ADDRESS,
+    legacyOracle: ZERO_ADDRESS,
+    lido: lido.address,
+    oracleReportSanityChecker: ZERO_ADDRESS,
+    postTokenRebaseReceiver: ZERO_ADDRESS,
+    selfOwnedStEthBurner: ZERO_ADDRESS,
+    stakingRouter: stakingRouter.address,
+    treasury: ZERO_ADDRESS,
+    validatorExitBus: ZERO_ADDRESS,
+    withdrawalQueue: withdrawalQueue.address,
+    withdrawalVault: ZERO_ADDRESS,
+  })
+
   return {lido, stakingRouter, withdrawalQueue, locator}
 }
 

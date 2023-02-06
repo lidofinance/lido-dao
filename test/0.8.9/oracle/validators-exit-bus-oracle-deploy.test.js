@@ -49,15 +49,13 @@ const SECONDS_PER_FRAME = EPOCHS_PER_FRAME * SECONDS_PER_EPOCH
 const MAX_REQUESTS_PER_REPORT = 6
 const MAX_REQUESTS_LIST_LENGTH = 5
 const MAX_REQUESTS_PER_DAY = 5
-const RATE_LIMIT_WINDOW_SLOTS = Math.floor(60 * 60 * 24 / SECONDS_PER_SLOT)
-const RATE_LIMIT_THROUGHPUT = 20
 
 
 module.exports = {
   SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, SECONDS_PER_EPOCH,
   EPOCHS_PER_FRAME, SLOTS_PER_FRAME, SECONDS_PER_FRAME,
   MAX_REQUESTS_PER_REPORT, MAX_REQUESTS_LIST_LENGTH,
-  MAX_REQUESTS_PER_DAY, RATE_LIMIT_WINDOW_SLOTS, RATE_LIMIT_THROUGHPUT,
+  MAX_REQUESTS_PER_DAY,
   computeSlotAt, computeEpochAt, computeEpochFirstSlotAt,
   computeEpochFirstSlot, computeTimestampAtSlot, computeTimestampAtEpoch,
   ZERO_HASH, CONSENSUS_VERSION, DATA_FORMAT_LIST,
@@ -70,8 +68,6 @@ async function deployExitBusOracle(admin, {
   dataSubmitter = null,
   maxRequestsPerReport = MAX_REQUESTS_PER_REPORT,
   maxRequestsListLength = MAX_REQUESTS_LIST_LENGTH,
-  rateLimitWindowSlots = RATE_LIMIT_WINDOW_SLOTS,
-  rateLimitMaxThroughput = RATE_LIMIT_THROUGHPUT,
 } = {}) {
   const oracle = await ValidatorsExitBusOracle.new(SECONDS_PER_SLOT, GENESIS_TIME, {from: admin})
 
@@ -84,13 +80,13 @@ async function deployExitBusOracle(admin, {
 
   const tx = await oracle.initialize(
     admin,
+    admin, // pauser
+    admin, // resumer
     consensus.address,
     CONSENSUS_VERSION,
     lastProcessedRefSlot,
     maxRequestsPerReport,
     maxRequestsListLength,
-    rateLimitWindowSlots,
-    e18(rateLimitMaxThroughput),
     {from: admin}
   )
 
@@ -113,8 +109,6 @@ async function deployExitBusOracle(admin, {
     refSlot: +(await consensus.getCurrentFrame()).refSlot,
     maxExitRequestsPerReport: maxRequestsPerReport,
     maxExitRequestsListLength: maxRequestsListLength,
-    exitRequestsRateLimitWindowSizeSlots: rateLimitWindowSlots,
-    exitRequestsRateLimitMaxThroughputE18: e18(rateLimitMaxThroughput),
   }})
 
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), admin, {from: admin})
@@ -165,8 +159,6 @@ contract('ValidatorsExitBusOracle', ([admin, member1]) => {
       const dataBoundaries = await oracle.getDataBoundaries()
       assertBn(dataBoundaries.maxExitRequestsPerReport, MAX_REQUESTS_PER_REPORT)
       assertBn(dataBoundaries.maxExitRequestsListLength, MAX_REQUESTS_LIST_LENGTH)
-      assertBn(dataBoundaries.exitRequestsRateLimitWindowSizeSlots, RATE_LIMIT_WINDOW_SLOTS)
-      assertBnClose(dataBoundaries.exitRequestsRateLimitMaxThroughputE18, e18(RATE_LIMIT_THROUGHPUT), 100000)
     })
   })
 })

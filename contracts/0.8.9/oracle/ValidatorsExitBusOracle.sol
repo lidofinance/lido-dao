@@ -4,16 +4,20 @@ pragma solidity 0.8.9;
 
 import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
+import { ILidoLocator } from "../../common/interfaces/ILidoLocator.sol";
 import { Math256 } from "../../common/lib/Math256.sol";
-import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
-import { AllowanceBasedRateLimit as RateLimit } from "../lib/AllowanceBasedRateLimit.sol";
 import { PausableUntil } from "../utils/PausableUntil.sol";
+import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
 
 import { BaseOracle } from "./BaseOracle.sol";
 
 
+interface IOracleReportSanityChecker {
+    function checkExitBusOracleReport(uint256 _exitRequestsCount) external view;
+}
+
+
 contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
-    using RateLimit for RateLimit.State;
     using UnstructuredStorage for bytes32;
     using SafeCast for uint256;
 
@@ -25,14 +29,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     error UnexpectedRequestsDataLength();
     error InvalidRequestsDataSortOrder();
     error ArgumentOutOfBounds();
-
-    event DataBoundariesSet(
-        uint256 indexed refSlot,
-        uint256 maxExitRequestsPerReport,
-        uint256 maxExitRequestsListLength,
-        uint256 exitRequestsRateLimitWindowSizeSlots,
-        uint256 exitRequestsRateLimitMaxThroughputE18
-    );
 
     event ValidatorExitRequest(
         uint256 indexed stakingModuleId,
@@ -87,10 +83,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     bytes32 internal constant LAST_REQUESTED_VALIDATOR_INDICES_POSITION =
         keccak256("lido.ValidatorsExitBusOracle.lastRequestedValidatorIndices");
 
-    /// @dev Storage slot: RateLimit.State rateLimit
-    bytes32 internal constant RATE_LIMIT_POSITION =
-        keccak256("lido.ValidatorsExitBusOracle.rateLimit");
-
     /// @dev Storage slot: DataBoundaries dataBoundaries
     bytes32 internal constant DATA_BOUNDARIES_POSITION =
         keccak256("lido.ValidatorsExitBusOracle.dataBoundaries");
@@ -99,12 +91,17 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     bytes32 internal constant DATA_PROCESSING_STATE_POSITION =
         keccak256("lido.ValidatorsExitBusOracle.dataProcessingState");
 
+    ILidoLocator internal immutable LOCATOR;
+
     ///
     /// Initialization & admin functions
     ///
 
-    constructor(uint256 secondsPerSlot, uint256 genesisTime)
-        BaseOracle(secondsPerSlot, genesisTime) {}
+    constructor(uint256 secondsPerSlot, uint256 genesisTime, address lidoLocator)
+        BaseOracle(secondsPerSlot, genesisTime)
+    {
+        LOCATOR = ILidoLocator(lidoLocator);
+    }
 
     function initialize(
         address admin,
@@ -113,22 +110,14 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         address consensusContract,
         uint256 consensusVersion,
         uint256 lastProcessingRefSlot,
-        uint256 maxExitRequestsPerReport,
-        uint256 maxExitRequestsListLength,
-        uint256 exitRequestsRateLimitWindowSizeSlots,
-        uint256 exitRequestsRateLimitMaxThroughputE18
+        address lidoLocator
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
+        if (lidoLocator == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(PAUSE_ROLE, pauser);
         _grantRole(RESUME_ROLE, resumer);
         _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
-        _setDataBoundaries(
-            maxExitRequestsPerReport,
-            maxExitRequestsListLength,
-            exitRequestsRateLimitWindowSizeSlots,
-            exitRequestsRateLimitMaxThroughputE18
-        );
         RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(PAUSE_INFINITELY); // pause it explicitly
     }
 
@@ -150,55 +139,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     ///
     function pause(uint256 _duration) external onlyRole(PAUSE_ROLE) {
         _pause(_duration);
-    }
-
-    /// @notice Sets data safety boundaries.
-    ///
-    /// @param maxExitRequestsPerReport The maximum number of exit requests per report.
-    ///
-    /// @param maxExitRequestsListLength The maximum number of exit requests in a list
-    ///        for DATA_FORMAT_LIST data format.
-    ///
-    /// @param exitRequestsRateLimitMaxThroughputE18 The maximum number of exit requests
-    ///        in a sliding window lasting `exitRequestsRateLimitWindowSizeSlots` slots,
-    ///        multiplied by 10**18. This sets the maximum throughput after a period of
-    ///        low number of exit requests. If requests continue after the max throughput
-    ///        is exhausted, the throughput will be limited by approx. half of the max
-    ///        throughput until the new period of low number of exit requests occur.
-    ///
-    /// @param exitRequestsRateLimitWindowSizeSlots Size of the rate limiting window.
-    ///        See `exitRequestsRateLimitMaxThroughputE18`.
-    ///
-    function setDataBoundaries(
-        uint256 maxExitRequestsPerReport,
-        uint256 maxExitRequestsListLength,
-        uint256 exitRequestsRateLimitWindowSizeSlots,
-        uint256 exitRequestsRateLimitMaxThroughputE18
-    )
-        external
-        onlyRole(MANAGE_DATA_BOUNDARIES_ROLE)
-    {
-        _setDataBoundaries(
-            maxExitRequestsPerReport,
-            maxExitRequestsListLength,
-            exitRequestsRateLimitWindowSizeSlots,
-            exitRequestsRateLimitMaxThroughputE18
-        );
-    }
-
-    /// @notice Returns the current data safety boundaries. See `setDataBoundaries`.
-    ///
-    function getDataBoundaries() external view returns (
-        uint256 maxExitRequestsPerReport,
-        uint256 maxExitRequestsListLength,
-        uint256 exitRequestsRateLimitWindowSizeSlots,
-        uint256 exitRequestsRateLimitMaxThroughputE18
-    ) {
-        DataBoundaries memory boundaries = _storageDataBoundaries().value;
-        maxExitRequestsPerReport = boundaries.maxRequestsPerReport;
-        maxExitRequestsListLength = boundaries.maxRequestsListLength;
-        (exitRequestsRateLimitMaxThroughputE18, exitRequestsRateLimitWindowSizeSlots) =
-            RateLimit.load(RATE_LIMIT_POSITION).getThroughputConfig();
     }
 
     ///
@@ -224,9 +164,8 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         /// Requests data
         ///
 
-        /// @dev Total number of validator exit requests in this report. Must not be
-        /// greater than the value returned from getMaxExitRequestsForCurrentFrame()
-        /// called within the same reporting frame.
+        /// @dev Total number of validator exit requests in this report. Must not be greater
+        /// than limit checked in OracleReportSanityChecker.checkExitBusOracleReport
         uint256 requestsCount;
 
         /// @dev Format of the validator exit requests data. Currently, only the
@@ -256,6 +195,15 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     ///
     uint256 public constant DATA_FORMAT_LIST = 0;
 
+    /// Length in bytes of packed request
+    uint256 internal constant PACKED_REQUEST_LENGTH = 64;
+
+    /// Max number of exit requests allowed per report. This is a technical limit
+    /// based on gas cost of call of submitReportData().
+    /// @dev The value might need be updated on submitReportData code update
+    // TODO: adjust the value
+    uint256 public constant MAX_EXIT_REQUESTS_PER_REPORT = 4000;
+
     /// @notice Submits report data for processing.
     ///
     /// @param data The data. See the `ReportData` structure's docs for details.
@@ -281,17 +229,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         _checkConsensusData(data.refSlot, data.consensusVersion, keccak256(abi.encode(data)));
         _startProcessing();
         _handleConsensusReportData(data);
-    }
-
-    /// @notice Returns maximum number of validator exit requests that can be
-    /// submitted in the report for the current frame, accounting for both
-    /// the rate limit and the absolute limit per report.
-    ///
-    function getMaxExitRequestsForCurrentFrame() external view returns (uint256) {
-        return Math256.min(
-            _storageDataBoundaries().value.maxRequestsPerReport,
-            RateLimit.load(RATE_LIMIT_POSITION).calculateLimitAt(_getCurrentRefSlot()) / 10**18
-        );
     }
 
     /// @notice Returns the total number of validator exit requests ever processed
@@ -349,33 +286,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     /// Implementation & helpers
     ///
 
-    function _setDataBoundaries(
-        uint256 maxRequestsPerReport,
-        uint256 maxRequestsListLength,
-        uint256 rateLimitWindowSlots,
-        uint256 rateLimitMaxThroughputE18
-    ) internal {
-        uint256 currentRefSlot = _getCurrentRefSlot();
-
-        _storageDataBoundaries().value = DataBoundaries({
-            maxRequestsPerReport: maxRequestsPerReport.toUint64(),
-            maxRequestsListLength: maxRequestsListLength.toUint64()
-        });
-
-        RateLimit
-            .load(RATE_LIMIT_POSITION)
-            .configureThroughput(currentRefSlot, rateLimitWindowSlots, rateLimitMaxThroughputE18)
-            .store(RATE_LIMIT_POSITION);
-
-        emit DataBoundariesSet(
-            currentRefSlot,
-            maxRequestsPerReport,
-            maxRequestsListLength,
-            rateLimitWindowSlots,
-            rateLimitMaxThroughputE18
-        );
-    }
-
     function _handleConsensusReport(
         ConsensusReport memory /* report */,
         uint256 /* prevSubmittedRefSlot */,
@@ -403,11 +313,14 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             revert UnsupportedRequestsDataFormat(data.dataFormat);
         }
 
-        if (data.data.length % 64 != 0) {
+        IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
+            .checkExitBusOracleReport(data.requestsCount);
+
+        if (data.data.length % PACKED_REQUEST_LENGTH != 0) {
             revert InvalidRequestsDataLength();
         }
 
-        if (data.data.length / 64 != data.requestsCount) {
+        if (data.data.length / PACKED_REQUEST_LENGTH != data.requestsCount) {
             revert UnexpectedRequestsDataLength();
         }
 
@@ -424,11 +337,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         if (data.requestsCount == 0) {
             return;
         }
-
-        RateLimit
-            .load(RATE_LIMIT_POSITION)
-            .recordUsageAt(data.refSlot, data.requestsCount * 10**18)
-            .store(RATE_LIMIT_POSITION);
 
         TOTAL_REQUESTS_PROCESSED_POSITION.setStorageUint256(
             TOTAL_REQUESTS_PROCESSED_POSITION.getStorageUint256() + data.requestsCount
