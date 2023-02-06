@@ -7,7 +7,7 @@ const locatorServices = [
   'elRewardsVault',
   'legacyOracle',
   'lido',
-  'safetyNetsRegistry',
+  'oracleReportSanityChecker',
   'selfOwnedStEthBurner',
   'stakingRouter',
   'treasury',

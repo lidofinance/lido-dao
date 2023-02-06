@@ -4,10 +4,11 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
+import {SafeCast} from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
+
 import {Math256} from "../../common/lib/Math256.sol";
-import {SafeCast} from "../../common/lib/SafeCast.sol";
 import {AccessControlEnumerable} from "../utils/access/AccessControlEnumerable.sol";
-import {PositiveTokenRebaseLimiter, LimiterState} from "../lib/PositiveTokenRebaseLimiter.sol";
+import {PositiveTokenRebaseLimiter, TokenRebaseLimiterData} from "../lib/PositiveTokenRebaseLimiter.sol";
 
 interface ILido {
     function getSharesByPooledEth(uint256 _sharesAmount) external view returns (uint256);
@@ -41,21 +42,26 @@ struct LimitsList {
     /// @notice The max possible number of validators that might appear or exit on the Consensus
     ///     Layer during one epoch
     uint256 churnValidatorsByEpochLimit;
+
     /// @notice The max decrease of the total validators' balances on the Consensus Layer since
     ///     the previous oracle report
-    /// @dev Represented in the Basis Points (100% == 100_00)
+    /// @dev Represented in the Basis Points (100% == 10_000)
     uint256 oneOffCLBalanceDecreaseBPLimit;
+
     /// @notice The max annual increase of the total validators' balances on the Consensus Layer
     ///     since the previous oracle report
-    /// @dev Represented in the Basis Points (100% == 100_00)
+    /// @dev Represented in the Basis Points (100% == 10_000)
     uint256 annualBalanceIncreaseBPLimit;
+
     /// @notice The max deviation of stETH.totalPooledEther() / stETH.totalShares() ratio since
     ///     the previous oracle report
-    /// @dev Represented in the Basis Points (100% == 100_00)
+    /// @dev Represented in the Basis Points (100% == 10_000)
     uint256 shareRateDeviationBPLimit;
+
     /// @notice The min time required to be passed from the creation of the request to be
     ///     finalized till the time of the oracle report
     uint256 requestTimestampMargin;
+
     /// @notice The positive token rebase allowed per single LidoOracle report
     /// @dev uses 1e9 precision, e.g.: 1e6 - 0.1%; 1e9 - 100%, see `setMaxPositiveTokenRebase()`
     uint256 maxPositiveTokenRebase;
@@ -71,13 +77,15 @@ struct LimitsListPacked {
     uint64 maxPositiveTokenRebase;
 }
 
+uint256 constant MAX_BASIS_POINTS = 100_00;
+
 /// @title Sanity checks for the Lido's oracle report
 /// @notice The contracts contain view methods to perform sanity checks of the Lido's oracle report
 ///     and lever methods for granular tuning of the params of the checks
 contract OracleReportSanityChecker is AccessControlEnumerable {
     using LimitsListPacker for LimitsList;
     using LimitsListUnpacker for LimitsListPacked;
-    using PositiveTokenRebaseLimiter for LimiterState.Data;
+    using PositiveTokenRebaseLimiter for TokenRebaseLimiterData;
 
     bytes32 public constant ALL_LIMITS_MANAGER_ROLE = keccak256("LIMITS_MANAGER_ROLE");
     bytes32 public constant CHURN_VALIDATORS_BY_EPOCH_LIMIT_MANGER_ROLE =
@@ -148,7 +156,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
     /// @notice Returns max positive token rebase value with 1e9 precision:
     ///     e.g.: 1e6 - 0.1%; 1e9 - 100%
-    ///     - zero value means unititialized
+    ///     - zero value means uninitialized
     ///     - type(uint64).max means unlimited
     ///
     /// @dev Get max positive rebase allowed per single oracle report token rebase happens on total
@@ -254,34 +262,40 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     ///     rewards vault during Lido's oracle report processing
     /// @param _preTotalPooledEther total amount of ETH controlled by the protocol
     /// @param _preTotalShares total amount of minted stETH shares
-    /// @param _clBalanceDiff difference of all Lido validators' balances on the Consensus Layer
-    ///     between the previous and current oracle report
+    /// @param _preCLBalance sum of all Lido validators' balances on the Consensus Layer before the
+    ///     current oracle report
+    /// @param _postCLBalance sum of all Lido validators' balances on the Consensus Layer after the
+    ///     current oracle report
     /// @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
     /// @param _elRewardsVaultBalance elRewards vault balance on Execution Layer for report block
+    /// @param _etherToLockForWithdrawals ether to lock on withdrawals queue contract
     /// @return withdrawals ETH amount allowed to be taken from the withdrawals vault
     /// @return elRewards ETH amount allowed to be taken from the EL rewards vault
-    /// @return sharesToBurnLimit amount allowed to be burnt via `SelfOwnedStETHBurner`
+    /// @return sharesToBurnLimit amount allowed to be burnt as part of the current token rebase
     function smoothenTokenRebase(
         uint256 _preTotalPooledEther,
         uint256 _preTotalShares,
-        int256 _clBalanceDiff,
+        uint256 _preCLBalance,
+        uint256 _postCLBalance,
         uint256 _withdrawalVaultBalance,
-        uint256 _elRewardsVaultBalance
+        uint256 _elRewardsVaultBalance,
+        uint256 _etherToLockForWithdrawals
     ) external view returns (uint256 withdrawals, uint256 elRewards, uint256 sharesToBurnLimit) {
-        LimiterState.Data memory tokenRebaseLimiter = PositiveTokenRebaseLimiter.initLimiterState(
+        TokenRebaseLimiterData memory tokenRebaseLimiter = PositiveTokenRebaseLimiter.initLimiterState(
             getMaxPositiveTokenRebase(),
             _preTotalPooledEther,
             _preTotalShares
         );
 
-        if (_clBalanceDiff < 0) {
-            tokenRebaseLimiter.raiseLimit(uint256(-_clBalanceDiff));
+        if (_postCLBalance < _preCLBalance) {
+            tokenRebaseLimiter.raiseLimit(_preCLBalance - _postCLBalance);
         } else {
-            tokenRebaseLimiter.consumeLimit(uint256(_clBalanceDiff));
+            tokenRebaseLimiter.consumeLimit(_postCLBalance - _preCLBalance);
         }
 
         withdrawals = tokenRebaseLimiter.consumeLimit(_withdrawalVaultBalance);
         elRewards = tokenRebaseLimiter.consumeLimit(_elRewardsVaultBalance);
+        tokenRebaseLimiter.raiseLimit(_etherToLockForWithdrawals);
 
         sharesToBurnLimit = tokenRebaseLimiter.getSharesToBurnLimit();
     }
@@ -362,7 +376,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _unifiedPostCLBalance
     ) internal pure {
         if (_preCLBalance <= _unifiedPostCLBalance) return;
-        uint256 oneOffCLBalanceDecreaseBP = (SafeCast.MAX_BASIS_POINTS * (_preCLBalance - _unifiedPostCLBalance)) /
+        uint256 oneOffCLBalanceDecreaseBP = (MAX_BASIS_POINTS * (_preCLBalance - _unifiedPostCLBalance)) /
             _preCLBalance;
         if (oneOffCLBalanceDecreaseBP > _limitsList.oneOffCLBalanceDecreaseBPLimit)
             revert IncorrectCLBalanceDecrease(oneOffCLBalanceDecreaseBP);
@@ -376,7 +390,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     ) internal pure {
         if (_preCLBalance >= _postCLBalance) return;
         uint256 balanceIncrease = _postCLBalance - _preCLBalance;
-        uint256 annualBalanceIncrease = (365 days * SafeCast.MAX_BASIS_POINTS * balanceIncrease) /
+        uint256 annualBalanceIncrease = (365 days * MAX_BASIS_POINTS * balanceIncrease) /
             _preCLBalance /
             _timeElapsed;
         if (annualBalanceIncrease > _limitsList.annualBalanceIncreaseBPLimit)
@@ -415,7 +429,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 finalizationShareDiff = Math256.abs(
             SafeCast.toInt256(_finalizationShareRate) - SafeCast.toInt256(actualShareRate)
         );
-        uint256 finalizationShareDeviation = (SafeCast.MAX_BASIS_POINTS * finalizationShareDiff) / actualShareRate;
+        uint256 finalizationShareDeviation = (MAX_BASIS_POINTS * finalizationShareDiff) / actualShareRate;
         if (finalizationShareDeviation > _limitsList.shareRateDeviationBPLimit)
             revert IncorrectFinalizationShareRate(finalizationShareDeviation);
     }
@@ -468,11 +482,16 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 library LimitsListPacker {
     function pack(LimitsList memory _limitsList) internal pure returns (LimitsListPacked memory res) {
         res.churnValidatorsByEpochLimit = SafeCast.toUint8(_limitsList.churnValidatorsByEpochLimit);
-        res.oneOffCLBalanceDecreaseBPLimit = SafeCast.toBasisPoints(_limitsList.oneOffCLBalanceDecreaseBPLimit);
-        res.annualBalanceIncreaseBPLimit = SafeCast.toBasisPoints(_limitsList.annualBalanceIncreaseBPLimit);
-        res.shareRateDeviationBPLimit = SafeCast.toBasisPoints(_limitsList.shareRateDeviationBPLimit);
+        res.oneOffCLBalanceDecreaseBPLimit = _toBasisPoints(_limitsList.oneOffCLBalanceDecreaseBPLimit);
+        res.annualBalanceIncreaseBPLimit = _toBasisPoints(_limitsList.annualBalanceIncreaseBPLimit);
+        res.shareRateDeviationBPLimit = _toBasisPoints(_limitsList.shareRateDeviationBPLimit);
         res.requestTimestampMargin = SafeCast.toUint64(_limitsList.requestTimestampMargin);
         res.maxPositiveTokenRebase = SafeCast.toUint64(_limitsList.maxPositiveTokenRebase);
+    }
+
+    function _toBasisPoints(uint256 _value) private pure returns (uint16) {
+        require(_value <= MAX_BASIS_POINTS, "BASIS_POINTS_OVERFLOW");
+        return uint16(_value);
     }
 }
 

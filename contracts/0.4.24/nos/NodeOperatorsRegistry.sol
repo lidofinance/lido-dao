@@ -499,7 +499,6 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         _updateStuckValidatorsKeysCount(_nodeOperatorId, uint64(_stuckValidatorsKeysCount));
         _updateExitedValidatorsKeysCount(_nodeOperatorId, uint64(_exitedValidatorsKeysCount), true);
     }
-    // increasing operator's and total excess validators counters
 
     function _updExcessValidators(uint256 _nodeOperatorId, uint64 _newActiveValidatorsCount) internal {
         uint256 operatorTargetStats = _getOperatorTargetValidtatorsStats(_nodeOperatorId);
@@ -1260,7 +1259,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         uint256 targetDepositedValidatorsCount = exitedValidatorsCount
             + operatorTargetStats.sum(TARGET_VALIDATORS_COUNT_OFFSET, EXCESS_VALIDATORS_COUNT_OFFSET);
 
-        /// @todo minus penalized
+        /// @todo minus penalized?
         if (
             operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET) > 0
                 && targetDepositedValidatorsCount < vettedSigningKeysCount

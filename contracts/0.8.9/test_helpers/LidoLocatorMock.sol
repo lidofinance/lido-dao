@@ -14,7 +14,7 @@ contract LidoLocatorMock is ILidoLocator {
         address elRewardsVault;
         address accountingOracle;
         address legacyOracle;
-        address safetyNetsRegistry;
+        address oracleReportSanityChecker;
         address selfOwnedStEthBurner;
         address validatorExitBus;
         address stakingRouter;
@@ -29,7 +29,7 @@ contract LidoLocatorMock is ILidoLocator {
     address public immutable elRewardsVault;
     address public immutable accountingOracle;
     address public immutable legacyOracle;
-    address public immutable safetyNetsRegistry;
+    address public immutable oracleReportSanityChecker;
     address public immutable selfOwnedStEthBurner;
     address public immutable validatorExitBus;
     address public immutable stakingRouter;
@@ -39,27 +39,27 @@ contract LidoLocatorMock is ILidoLocator {
     address public immutable postTokenRebaseReceiver;
 
     constructor (
-        ContractAddresses memory addrs
+        ContractAddresses memory addresses
     ) {
-        lido = addrs.lido;
-        depositSecurityModule = addrs.depositSecurityModule;
-        elRewardsVault = addrs.elRewardsVault;
-        accountingOracle = addrs.accountingOracle;
-        legacyOracle = addrs.legacyOracle;
-        safetyNetsRegistry = addrs.safetyNetsRegistry;
-        selfOwnedStEthBurner = addrs.selfOwnedStEthBurner;
-        validatorExitBus = addrs.validatorExitBus;
-        stakingRouter = addrs.stakingRouter;
-        treasury = addrs.treasury;
-        withdrawalQueue = addrs.withdrawalQueue;
-        withdrawalVault = addrs.withdrawalVault;
-        postTokenRebaseReceiver = addrs.postTokenRebaseReceiver;
+        lido = addresses.lido;
+        depositSecurityModule = addresses.depositSecurityModule;
+        elRewardsVault = addresses.elRewardsVault;
+        accountingOracle = addresses.accountingOracle;
+        legacyOracle = addresses.legacyOracle;
+        oracleReportSanityChecker = addresses.oracleReportSanityChecker;
+        selfOwnedStEthBurner = addresses.selfOwnedStEthBurner;
+        validatorExitBus = addresses.validatorExitBus;
+        stakingRouter = addresses.stakingRouter;
+        treasury = addresses.treasury;
+        withdrawalQueue = addresses.withdrawalQueue;
+        withdrawalVault = addresses.withdrawalVault;
+        postTokenRebaseReceiver = addresses.postTokenRebaseReceiver;
     }
 
     function coreComponents() external view returns(address,address,address,address,address,address) {
         return (
             elRewardsVault,
-            safetyNetsRegistry,
+            oracleReportSanityChecker,
             stakingRouter,
             treasury,
             withdrawalQueue,
@@ -67,4 +67,23 @@ contract LidoLocatorMock is ILidoLocator {
         );
     }
 
+    function oracleReportComponentsForLido() external view returns(
+        address,
+        address,
+        address,
+        address,
+        address,
+        address,
+        address
+    ) {
+        return (
+            accountingOracle,
+            elRewardsVault,
+            oracleReportSanityChecker,
+            selfOwnedStEthBurner,
+            withdrawalQueue,
+            withdrawalVault,
+            postTokenRebaseReceiver
+        );
+    }
 }

@@ -120,6 +120,8 @@ async function deployExitBusOracle(admin, {
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), admin, {from: admin})
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), admin, {from: admin})
   await oracle.grantRole(await oracle.MANAGE_DATA_BOUNDARIES_ROLE(), admin, {from: admin})
+  await oracle.grantRole(await oracle.PAUSE_ROLE(), admin, {from: admin})
+  await oracle.grantRole(await oracle.RESUME_ROLE(), admin, {from: admin})
 
   if (dataSubmitter != null) {
     await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), dataSubmitter, {from: admin})
@@ -158,6 +160,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1]) => {
       assert.equal(await oracle.getConsensusContract(), consensus.address)
       assert.equal(+await oracle.getConsensusVersion(), CONSENSUS_VERSION)
       assert.equal(+await oracle.SECONDS_PER_SLOT(), SECONDS_PER_SLOT)
+      assert.equal(await oracle.isPaused(), true)
 
       const dataBoundaries = await oracle.getDataBoundaries()
       assertBn(dataBoundaries.maxExitRequestsPerReport, MAX_REQUESTS_PER_REPORT)

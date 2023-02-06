@@ -37,6 +37,9 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
     function increaseVettedSigningKeysCount(uint256 _keysCount) external {
         _incTotalSigningKeysStatsPos(VETTED_KEYS_COUNT_OFFSET, _keysCount);
     }
+    function increaseExitedSigningKeysCount(uint256 _keysCount) external {
+        _incTotalSigningKeysStatsPos(EXITED_KEYS_COUNT_OFFSET, _keysCount);
+    }
 
     function testing_markAllKeysDeposited() external {
         uint256 nodeOperatorsCount = getNodeOperatorsCount();
