@@ -188,8 +188,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     // The `amount` of ether was sent to the deposit_contract.deposit function
     event Unbuffered(uint256 amount);
 
-    // The amount of ETH sended from StakingRouter contract to Lido contract
-    event StakingRouterTransferReceived(uint256 amount);
+    // The amount of ETH sent from StakingRouter contract to Lido contract when deposit called
+    event StakingRouterDepositRemainderReceived(uint256 amount);
 
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
@@ -418,14 +418,14 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @notice A payable function for staking router deposits 'change'. Can be called only by StakingRouter
+     * @notice A payable function for staking router deposits remainder. Can be called only by StakingRouter
      * @dev We need a dedicated function because funds received by the default payable function
      * are treated as a user deposit
      */
-    function receiveStakingRouter() external payable {
+    function receiveStakingRouterDepositRemainder() external payable {
         require(msg.sender == getLidoLocator().stakingRouter());
 
-        emit StakingRouterTransferReceived(msg.value);
+        emit StakingRouterDepositRemainderReceived(msg.value);
     }
 
     /**

@@ -18,7 +18,7 @@ import {Versioned} from "./utils/Versioned.sol";
 
 interface ILido {
     function getBufferedEther() external view returns (uint256);
-    function receiveStakingRouter() external payable;
+    function receiveStakingRouterDepositRemainder() external payable;
 }
 
 contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Versioned {
@@ -728,7 +728,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     function _transferBalanceEthToLido() internal {
         uint256 balance = address(this).balance;
         if (balance > 0) {
-            getLido().receiveStakingRouter{value: balance}();
+            getLido().receiveStakingRouterDepositRemainder{value: balance}();
         }
     }
 
