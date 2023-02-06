@@ -80,6 +80,8 @@ interface IStakingRouter {
         );
     function getWithdrawalCredentials() external view returns (bytes32);
     function reportRewardsMinted(uint256[] _stakingModuleIds, uint256[] _totalShares) external;
+    function getTotalFeeE4Precision() external view returns (uint16 totalFee);
+    function getStakingFeeAggregateDistributionE4Precision() external view returns (uint16 modulesFee, uint16 treasuryFee);
 }
 
 interface IWithdrawalQueue {
@@ -157,7 +159,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 postCLBalance,
         uint256 withdrawalsWithdrawn,
         uint256 executionLayerRewardsWithdrawn,
-        uint256 postBufferredEther
+        uint256 postBufferedEther
     );
 
     event TokenRebased(
@@ -396,7 +398,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      */
     function receiveELRewards() external payable {
 
-        require(msg.sender == getLidoLocator().elRewardsVault(), "EXECUTION_LAYER_REAWARDS_VAULT_ONLY");
+        require(msg.sender == getLidoLocator().elRewardsVault(), "EXECUTION_LAYER_REWARDS_VAULT_ONLY");
 
         TOTAL_EL_REWARDS_COLLECTED_POSITION.setStorageUint256(getTotalELRewardsCollected().add(msg.value));
 
@@ -595,7 +597,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
     /**
      * @notice Returns legacy oracle
-     * @dev DEPRECATED: the `AccountingOracle` superseeded the old one
+     * @dev DEPRECATED: the `AccountingOracle` superseded the old one
      */
     function getOracle() external view returns (address) {
         return getLidoLocator().legacyOracle();
@@ -609,6 +611,41 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         return getLidoLocator().treasury();
     }
 
+    /**
+     * @notice Returns current staking rewards fee rate (DEPRECATED)
+     * @dev Now fees information is stored in StakingRouter and
+     * with higher precision. Use StakingRouter.getStakingFeeAggregateDistribution() instead.
+     * @return totalFee total rewards fee in 1e4 precision (10000 is 100%). The value might be
+     * inaccurate because the actual value is truncated here to 1e4 precision.
+     */
+    function getFee() external view returns (uint16 totalFee) {
+        totalFee = IStakingRouter(getLidoLocator().stakingRouter()).getTotalFeeE4Precision();
+    }
+
+    /**
+     * @notice Returns current fee distribution (DEPRECATED)
+     * @dev Now fees information is stored in StakingRouter and
+     * with higher precision. Use StakingRouter.getStakingFeeAggregateDistribution() instead.
+     * @return treasuryFeeBasisPoints return treasury fee in TOTAL_BASIS_POINTS (10000 is 100% fee) precision
+     * @return insuranceFeeBasisPoints always returns 0 because the capability to send fees to
+     * insurance from Lido contract is removed.
+     * @return operatorsFeeBasisPoints return total fee for all operators of all staking modules in
+     * TOTAL_BASIS_POINTS (10000 is 100% fee) precision.
+     * Previously returned total fee of all node operators of NodeOperatorsRegistry (Curated staking module now)
+     * The value might be inaccurate because the actual value is truncated here to 1e4 precision.
+     */
+    function getFeeDistribution()
+        external view
+        returns (
+            uint16 treasuryFeeBasisPoints,
+            uint16 insuranceFeeBasisPoints,
+            uint16 operatorsFeeBasisPoints
+        )
+    {
+        insuranceFeeBasisPoints = 0;  // explicitly set to zero
+        (treasuryFeeBasisPoints, operatorsFeeBasisPoints) = IStakingRouter(getLidoLocator().stakingRouter())
+            .getStakingFeeAggregateDistributionE4Precision();
+    }
 
     /*
      * @dev updates Consensus Layer state according to the current report

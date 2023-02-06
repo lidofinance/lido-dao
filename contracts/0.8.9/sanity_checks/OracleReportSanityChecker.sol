@@ -4,8 +4,9 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
+import {SafeCast} from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
+
 import {Math256} from "../../common/lib/Math256.sol";
-import {SafeCast} from "../../common/lib/SafeCast.sol";
 import {AccessControlEnumerable} from "../utils/access/AccessControlEnumerable.sol";
 import {PositiveTokenRebaseLimiter, TokenRebaseLimiterData} from "../lib/PositiveTokenRebaseLimiter.sol";
 
@@ -70,6 +71,8 @@ struct LimitsListPacked {
     uint64 requestTimestampMargin;
     uint64 maxPositiveTokenRebase;
 }
+
+uint256 constant MAX_BASIS_POINTS = 100_00;
 
 /// @title Sanity checks for the Lido's oracle report
 /// @notice The contracts contain view methods to perform sanity checks of the Lido's oracle report
@@ -368,7 +371,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _unifiedPostCLBalance
     ) internal pure {
         if (_preCLBalance <= _unifiedPostCLBalance) return;
-        uint256 oneOffCLBalanceDecreaseBP = (SafeCast.MAX_BASIS_POINTS * (_preCLBalance - _unifiedPostCLBalance)) /
+        uint256 oneOffCLBalanceDecreaseBP = (MAX_BASIS_POINTS * (_preCLBalance - _unifiedPostCLBalance)) /
             _preCLBalance;
         if (oneOffCLBalanceDecreaseBP > _limitsList.oneOffCLBalanceDecreaseBPLimit)
             revert IncorrectCLBalanceDecrease(oneOffCLBalanceDecreaseBP);
@@ -382,7 +385,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     ) internal pure {
         if (_preCLBalance >= _postCLBalance) return;
         uint256 balanceIncrease = _postCLBalance - _preCLBalance;
-        uint256 annualBalanceIncrease = (365 days * SafeCast.MAX_BASIS_POINTS * balanceIncrease) /
+        uint256 annualBalanceIncrease = (365 days * MAX_BASIS_POINTS * balanceIncrease) /
             _preCLBalance /
             _timeElapsed;
         if (annualBalanceIncrease > _limitsList.annualBalanceIncreaseBPLimit)
@@ -421,7 +424,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 finalizationShareDiff = Math256.abs(
             SafeCast.toInt256(_finalizationShareRate) - SafeCast.toInt256(actualShareRate)
         );
-        uint256 finalizationShareDeviation = (SafeCast.MAX_BASIS_POINTS * finalizationShareDiff) / actualShareRate;
+        uint256 finalizationShareDeviation = (MAX_BASIS_POINTS * finalizationShareDiff) / actualShareRate;
         if (finalizationShareDeviation > _limitsList.shareRateDeviationBPLimit)
             revert IncorrectFinalizationShareRate(finalizationShareDeviation);
     }
@@ -474,11 +477,16 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 library LimitsListPacker {
     function pack(LimitsList memory _limitsList) internal pure returns (LimitsListPacked memory res) {
         res.churnValidatorsByEpochLimit = SafeCast.toUint8(_limitsList.churnValidatorsByEpochLimit);
-        res.oneOffCLBalanceDecreaseBPLimit = SafeCast.toBasisPoints(_limitsList.oneOffCLBalanceDecreaseBPLimit);
-        res.annualBalanceIncreaseBPLimit = SafeCast.toBasisPoints(_limitsList.annualBalanceIncreaseBPLimit);
-        res.shareRateDeviationBPLimit = SafeCast.toBasisPoints(_limitsList.shareRateDeviationBPLimit);
+        res.oneOffCLBalanceDecreaseBPLimit = _toBasisPoints(_limitsList.oneOffCLBalanceDecreaseBPLimit);
+        res.annualBalanceIncreaseBPLimit = _toBasisPoints(_limitsList.annualBalanceIncreaseBPLimit);
+        res.shareRateDeviationBPLimit = _toBasisPoints(_limitsList.shareRateDeviationBPLimit);
         res.requestTimestampMargin = SafeCast.toUint64(_limitsList.requestTimestampMargin);
         res.maxPositiveTokenRebase = SafeCast.toUint64(_limitsList.maxPositiveTokenRebase);
+    }
+
+    function _toBasisPoints(uint256 _value) private pure returns (uint16) {
+        require(_value <= MAX_BASIS_POINTS, "BASIS_POINTS_OVERFLOW");
+        return uint16(_value);
     }
 }
 

@@ -10,7 +10,7 @@ import {UnstructuredRefStorage} from "./lib/UnstructuredRefStorage.sol";
 
 /**
  * @title Queue to store and manage WithdrawalRequests.
- * @dev Use an optimizations to store discounts heavily inpsired
+ * @dev Use an optimizations to store discounts heavily inspired
  * by Aragon MiniMe token https://github.com/aragon/aragon-minime/blob/master/contracts/MiniMeToken.sol
  *
  * @author folkyatina
@@ -27,7 +27,7 @@ abstract contract WithdrawalQueueBase {
 
     // queue for withdrawal requests, indexes (requestId) start from 1
     bytes32 internal constant QUEUE_POSITION = keccak256("lido.WithdrawalQueue.queue");
-    // lenght of the queue
+    // length of the queue
     bytes32 internal constant LAST_REQUEST_ID_POSITION = keccak256("lido.WithdrawalQueue.lastRequestId");
     // length of the finalized part of the queue. Always <= `requestCounter`
     bytes32 internal constant LAST_FINALIZED_REQUEST_ID_POSITION =
@@ -319,7 +319,7 @@ abstract contract WithdrawalQueueBase {
 
     /**
      * @notice Transfer the right to claim withdrawal request to `_newRecipient`
-     * @dev should be called by the old recepient
+     * @dev should be called by the old recipient
      * @param _requestId id of the request subject to change
      * @param _newOwner new owner address for withdrawal request
      */
@@ -344,7 +344,7 @@ abstract contract WithdrawalQueueBase {
 
     /**
      * @notice Search for the latest request in the queue in the range of `[startId, endId]`,
-     *  that fullfills a constraint `request.timestamp <= maxTimestamp`
+     *  that fulfills a constraint `request.timestamp <= maxTimestamp`
      *
      * @return finalizableRequestId requested id or 0, if there are no requests in a range with requested timestamp
      */
@@ -381,8 +381,8 @@ abstract contract WithdrawalQueueBase {
     /**
      * @notice Search for the latest request in the queue in the range of `[startId, endId]`,
      *  that can be finalized within the given `_ethBudget` by `_shareRate`
-     * @param _ethBudget amount of ether available for withdrawal fullfilment
-     * @param _shareRate share/ETH rate that will be used for fullfilment
+     * @param _ethBudget amount of ether available for withdrawal fulfillment
+     * @param _shareRate share/ETH rate that will be used for fulfillment
      * @param _startId requestId to start search from. Should be > lastFinalizedRequestId
      * @param _endId requestId to search upon to. Should be <= lastRequestId
      *
