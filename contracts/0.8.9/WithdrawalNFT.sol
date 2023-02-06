@@ -207,7 +207,7 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
      */
     function _isApprovedOrOwner(address spender, uint256 tokenId) internal view returns (bool) {
         address owner = ownerOf(tokenId);
-        return (spender == owner); // FIXME: || isApprovedForAll(owner, spender) || getApproved(tokenId) == spender);
+        return (spender == owner || isApprovedForAll(owner, spender) || getApproved(tokenId) == spender);
     }
 
     //
