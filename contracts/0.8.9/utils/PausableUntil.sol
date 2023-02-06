@@ -50,7 +50,7 @@ contract PausableUntil {
     }
 
     function _pause(uint256 _duration) internal whenResumed {
-        if (_duration == 0) { revert ZeroPauseDuration(); }
+        if (_duration == 0) revert ZeroPauseDuration();
 
         uint256 pausedUntil;
         if (_duration == PAUSE_INFINITELY) {
