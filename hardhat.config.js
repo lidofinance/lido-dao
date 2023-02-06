@@ -10,6 +10,7 @@ require('@nomiclabs/hardhat-etherscan')
 require('hardhat-gas-reporter')
 require('solidity-coverage')
 require('hardhat-contract-sizer')
+require('hardhat-ignore-warnings')
 
 const NETWORK_NAME = getNetworkName()
 const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
@@ -41,10 +42,24 @@ const getNetConfig = (networkName, ethAccountName) => {
     ...base,
     url: 'http://localhost:8545',
     chainId: 31337,
-    gas: 8000000 // the same as in Görli
+    gas: 80000000 // the same as in Görli
+  }
+  const mainnetfork = {
+    ...base,
+    url: 'http://localhost:8545',
+    chainId: 1337,
+    gas: 80000000 // the same as in Görli
+  }
+  const devnet3 = {
+    ...base,
+    url: 'http://35.228.211.212:8545',
+    chainId: 1337807,
+    gas: 9194304
   }
   const byNetName = {
     localhost,
+    mainnetfork,
+    devnet3,
     // local
     local: {
       ...base,
@@ -55,7 +70,7 @@ const getNetConfig = (networkName, ethAccountName) => {
       chainId: 1337
     },
     hardhat: {
-      blockGasLimit: 20000000,
+      blockGasLimit: 30000000,
       gasPrice: 0,
       initialBaseFeePerGas: 0,
       allowUnlimitedContractSize: true,
@@ -162,7 +177,19 @@ module.exports = {
             runs: 5000000 // https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa#code
           }
         }
+      },
+      'contracts/0.4.24/test_helpers/MinFirstAllocationStrategyConsumerMockLegacyVersion.sol': {
+        version: '0.4.24',
+        settings: {}
       }
+    }
+  },
+  warnings: {
+    '@aragon/**/*': {
+      default: 'off',
+    },
+    'contracts/*/test_helpers/**/*': {
+      default: 'off',
     }
   },
   gasReporter: {
@@ -181,6 +208,12 @@ module.exports = {
       key: 'YOUR_PINATA_API_KEY',
       secret: 'YOUR_PINATA_API_SECRET_KEY'
     }
+  },
+  contractSizer: {
+    disambiguatePaths: false,
+    runOnCompile: true,
+    strict: true,
+    except: ['test_helpers', 'template', 'mocks', '@aragon', 'openzeppelin'],
   }
 }
 

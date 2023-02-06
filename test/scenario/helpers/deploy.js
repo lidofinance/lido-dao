@@ -1,16 +1,18 @@
+const { artifacts } = require('hardhat')
+const withdrawals = require('../../helpers/withdrawals')
+
 const { newDao, newApp } = require('../../0.4.24/helpers/dao')
 
 const Lido = artifacts.require('LidoMock.sol')
+const WstETH = artifacts.require('WstETH.sol')
+const LidoELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
-const OracleMock = artifacts.require('OracleMock.sol')
+const OracleMock = artifacts.require('AccountingOracleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 const DepositSecurityModule = artifacts.require('DepositSecurityModule.sol')
+const StakingRouter = artifacts.require('StakingRouterMock.sol')
+const EIP712StETH = artifacts.require('EIP712StETH')
 
-module.exports = {
-  deployDaoAndPool
-}
-
-const NETWORK_ID = 1000
 const MAX_DEPOSITS_PER_BLOCK = 100
 const MIN_DEPOSIT_BLOCK_DISTANCE = 20
 const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 10
@@ -24,37 +26,41 @@ const GUARDIAN_PRIVATE_KEYS = {
 }
 const DEPOSIT_ROOT = '0xd151867719c94ad8458feaf491809f9bc8096c702a72747403ecaac30c179137'
 
+const SLOTS_PER_EPOCH = 32
+const SECONDS_PER_SLOT = 12
+const GENESIS_TIME = 1606824000
+const EPOCHS_PER_FRAME = 225
+
+const SLOTS_PER_FRAME = EPOCHS_PER_FRAME * SLOTS_PER_EPOCH
+const SECONDS_PER_FRAME = SLOTS_PER_FRAME * SECONDS_PER_SLOT
+
 async function deployDaoAndPool(appManager, voting) {
   // Deploy the DAO, oracle and deposit contract mocks, and base contracts for
   // Lido (the pool) and NodeOperatorsRegistry (the Node Operators registry)
 
-  const [{ dao, acl }, oracleMock, depositContractMock, poolBase, nodeOperatorRegistryBase] = await Promise.all([
+  const treasury = web3.eth.accounts.create()
+
+  const [{ dao, acl }, depositContractMock, poolBase] = await Promise.all([
     newDao(appManager),
-    OracleMock.new(),
     DepositContractMock.new(),
-    Lido.new(),
-    NodeOperatorsRegistry.new()
+    Lido.new()
   ])
 
-  // Instantiate proxies for the pool, the token, and the node operators registry, using
+  const stakingRouter = await StakingRouter.new(depositContractMock.address)
+
+  // Instantiate proxies for the pool and the token using
   // the base contracts as their logic implementation
 
-  const [poolProxyAddress, nodeOperatorRegistryProxyAddress] = await Promise.all([
-    newApp(dao, 'lido', poolBase.address, appManager),
-    newApp(dao, 'node-operators-registry', nodeOperatorRegistryBase.address, appManager)
-  ])
+  const poolProxyAddress = await newApp(dao, 'lido', poolBase.address, appManager)
 
-  const [token, pool, nodeOperatorRegistry] = await Promise.all([
-    Lido.at(poolProxyAddress),
-    Lido.at(poolProxyAddress),
-    NodeOperatorsRegistry.at(nodeOperatorRegistryProxyAddress)
-  ])
+  const [token, pool] = await Promise.all([Lido.at(poolProxyAddress), Lido.at(poolProxyAddress)])
+
+  const oracleMock = await OracleMock.new(pool.address, SECONDS_PER_SLOT)
 
   const depositSecurityModule = await DepositSecurityModule.new(
     pool.address,
     depositContractMock.address,
-    nodeOperatorRegistry.address,
-    NETWORK_ID,
+    stakingRouter.address,
     MAX_DEPOSITS_PER_BLOCK,
     MIN_DEPOSIT_BLOCK_DISTANCE,
     PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS,
@@ -62,94 +68,85 @@ async function deployDaoAndPool(appManager, voting) {
   )
   await depositSecurityModule.addGuardians([GUARDIAN3, GUARDIAN1, GUARDIAN2], 2, { from: appManager })
 
-  // Initialize the node operators registry and the pool
-  await nodeOperatorRegistry.initialize(pool.address)
-
   const [
     POOL_PAUSE_ROLE,
     POOL_RESUME_ROLE,
-    POOL_MANAGE_FEE,
-    POOL_MANAGE_WITHDRAWAL_KEY,
-    POOL_BURN_ROLE,
-    DEPOSIT_ROLE,
     STAKING_PAUSE_ROLE,
     STAKING_CONTROL_ROLE,
-    SET_EL_REWARDS_VAULT_ROLE,
-    SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE,
-    NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS,
-    NODE_OPERATOR_REGISTRY_ADD_NODE_OPERATOR_ROLE,
-    NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ACTIVE_ROLE,
-    NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_NAME_ROLE,
-    NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ADDRESS_ROLE,
-    NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE,
-    NODE_OPERATOR_REGISTRY_REPORT_STOPPED_VALIDATORS_ROLE
+    MANAGE_PROTOCOL_CONTRACTS_ROLE
   ] = await Promise.all([
     pool.PAUSE_ROLE(),
     pool.RESUME_ROLE(),
-    pool.MANAGE_FEE(),
-    pool.MANAGE_WITHDRAWAL_KEY(),
-    pool.BURN_ROLE(),
-    pool.DEPOSIT_ROLE(),
     pool.STAKING_PAUSE_ROLE(),
     pool.STAKING_CONTROL_ROLE(),
-    pool.SET_EL_REWARDS_VAULT_ROLE(),
-    pool.SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE(),
-    nodeOperatorRegistry.MANAGE_SIGNING_KEYS(),
-    nodeOperatorRegistry.ADD_NODE_OPERATOR_ROLE(),
-    nodeOperatorRegistry.SET_NODE_OPERATOR_ACTIVE_ROLE(),
-    nodeOperatorRegistry.SET_NODE_OPERATOR_NAME_ROLE(),
-    nodeOperatorRegistry.SET_NODE_OPERATOR_ADDRESS_ROLE(),
-    nodeOperatorRegistry.SET_NODE_OPERATOR_LIMIT_ROLE(),
-    nodeOperatorRegistry.REPORT_STOPPED_VALIDATORS_ROLE()
+    pool.MANAGE_PROTOCOL_CONTRACTS_ROLE()
   ])
 
   await Promise.all([
     // Allow voting to manage the pool
     acl.createPermission(voting, pool.address, POOL_PAUSE_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, POOL_RESUME_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, pool.address, POOL_MANAGE_FEE, appManager, { from: appManager }),
-    acl.createPermission(voting, pool.address, POOL_MANAGE_WITHDRAWAL_KEY, appManager, { from: appManager }),
-    acl.createPermission(voting, pool.address, POOL_BURN_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, STAKING_PAUSE_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, STAKING_CONTROL_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, pool.address, SET_EL_REWARDS_VAULT_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, pool.address, SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE, appManager, { from: appManager }),
-
-    // Allow depositor to deposit buffered ether
-    acl.createPermission(depositSecurityModule.address, pool.address, DEPOSIT_ROLE, appManager, { from: appManager }),
-
-    // Allow voting to manage node operators registry
-    acl.createPermission(voting, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS, appManager, {
-      from: appManager
-    }),
-    acl.createPermission(voting, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_ADD_NODE_OPERATOR_ROLE, appManager, {
-      from: appManager
-    }),
-    acl.createPermission(voting, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ACTIVE_ROLE, appManager, {
-      from: appManager
-    }),
-    acl.createPermission(voting, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_NAME_ROLE, appManager, {
-      from: appManager
-    }),
-    acl.createPermission(voting, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ADDRESS_ROLE, appManager, {
-      from: appManager
-    }),
-    acl.createPermission(voting, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE, appManager, {
-      from: appManager
-    }),
-    acl.createPermission(voting, nodeOperatorRegistry.address, NODE_OPERATOR_REGISTRY_REPORT_STOPPED_VALIDATORS_ROLE, appManager, {
-      from: appManager
-    })
+    acl.createPermission(voting, pool.address, MANAGE_PROTOCOL_CONTRACTS_ROLE, appManager, { from: appManager })
   ])
 
-  await pool.initialize(depositContractMock.address, oracleMock.address, nodeOperatorRegistry.address)
+  const elRewardsVault = await LidoELRewardsVault.new(pool.address, treasury.address)
+  const nodeOperatorsRegistry = await setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, stakingRouter.address)
 
-  await oracleMock.setPool(pool.address)
+  const wc = '0x'.padEnd(66, '1234')
+  await stakingRouter.initialize(appManager, pool.address, wc, { from: appManager })
+
+  // Set up the staking router permissions.
+  const [
+    MANAGE_WITHDRAWAL_CREDENTIALS_ROLE,
+    STAKING_MODULE_PAUSE_ROLE,
+    STAKING_MODULE_MANAGE_ROLE,
+    REPORT_REWARDS_MINTED_ROLE
+  ] = await Promise.all([
+    stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(),
+    stakingRouter.STAKING_MODULE_PAUSE_ROLE(),
+    stakingRouter.STAKING_MODULE_MANAGE_ROLE(),
+    stakingRouter.REPORT_REWARDS_MINTED_ROLE()
+  ])
+  await stakingRouter.grantRole(REPORT_REWARDS_MINTED_ROLE, pool.address, { from: appManager })
+
+  await stakingRouter.grantRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, voting, { from: appManager })
+  await stakingRouter.grantRole(STAKING_MODULE_PAUSE_ROLE, voting, { from: appManager })
+  await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, voting, { from: appManager })
+
+  await stakingRouter.grantRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, appManager, { from: appManager })
+  await stakingRouter.grantRole(STAKING_MODULE_PAUSE_ROLE, appManager, { from: appManager })
+  await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, appManager, { from: appManager })
+
+  await stakingRouter.addStakingModule(
+    'Curated',
+    nodeOperatorsRegistry.address,
+    10_000, // 100 % _targetShare
+    500, // 5 % _moduleFee
+    500, // 5 % _treasuryFee
+    { from: voting }
+  )
+
+  const eip712StETH = await EIP712StETH.new({ from: appManager })
+
+  const wsteth = await WstETH.new(pool.address)
+  const withdrawalQueue = (await withdrawals.deploy(appManager, wsteth.address)).queue
+
+  await pool.initialize(
+    oracleMock.address,
+    treasury.address,
+    stakingRouter.address,
+    depositSecurityModule.address,
+    elRewardsVault.address,
+    withdrawalQueue.address,
+    eip712StETH.address
+  )
+
   await depositContractMock.reset()
   await depositContractMock.set_deposit_root(DEPOSIT_ROOT)
 
-  const [treasuryAddr, insuranceAddr] = await Promise.all([pool.getTreasury(), pool.getInsuranceFund()])
-
+  const treasuryAddr = await pool.getTreasury()
   return {
     dao,
     acl,
@@ -157,13 +154,118 @@ async function deployDaoAndPool(appManager, voting) {
     depositContractMock,
     token,
     pool,
-    nodeOperatorRegistry,
+    nodeOperatorsRegistry,
     treasuryAddr,
-    insuranceAddr,
+    elRewardsVault,
     depositSecurityModule,
     guardians: {
       privateKeys: GUARDIAN_PRIVATE_KEYS,
       addresses: [GUARDIAN1, GUARDIAN2, GUARDIAN3]
-    }
+    },
+    stakingRouter
   }
+}
+
+async function setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, stakingRouterAddress) {
+  const nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new()
+  const name = 'node-operators-registry-' + Math.random().toString(36).slice(2, 6)
+  const nodeOperatorsRegistryProxyAddress = await newApp(dao, name, nodeOperatorsRegistryBase.address, appManager)
+  const nodeOperatorsRegistry = await NodeOperatorsRegistry.at(nodeOperatorsRegistryProxyAddress)
+
+  // Initialize the node operators registry and the pool
+  await nodeOperatorsRegistry.initialize(token.address, '0x01')
+
+  const [
+    NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS,
+    NODE_OPERATOR_REGISTRY_ADD_NODE_OPERATOR_ROLE,
+    NODE_OPERATOR_REGISTRY_ACTIVATE_NODE_OPERATOR_ROLE,
+    NODE_OPERATOR_REGISTRY_DEACTIVATE_NODE_OPERATOR_ROLE,
+    NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_NAME_ROLE,
+    NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ADDRESS_ROLE,
+    NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE,
+    NODE_OPERATOR_REGISTRY_STAKING_ROUTER_ROLE,
+    NODE_OPERATOR_REGISTRY_REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE,
+    NODE_OPERATOR_REGISTRY_INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE
+  ] = await Promise.all([
+    nodeOperatorsRegistry.MANAGE_SIGNING_KEYS(),
+    nodeOperatorsRegistry.ADD_NODE_OPERATOR_ROLE(),
+    nodeOperatorsRegistry.ACTIVATE_NODE_OPERATOR_ROLE(),
+    nodeOperatorsRegistry.DEACTIVATE_NODE_OPERATOR_ROLE(),
+    nodeOperatorsRegistry.SET_NODE_OPERATOR_NAME_ROLE(),
+    nodeOperatorsRegistry.SET_NODE_OPERATOR_ADDRESS_ROLE(),
+    nodeOperatorsRegistry.SET_NODE_OPERATOR_LIMIT_ROLE(),
+    nodeOperatorsRegistry.STAKING_ROUTER_ROLE(),
+    nodeOperatorsRegistry.REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE(),
+    nodeOperatorsRegistry.INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE()
+  ])
+
+  await Promise.all([
+    // Allow voting to manage node operators registry
+    acl.createPermission(voting, nodeOperatorsRegistry.address, NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS, appManager, {
+      from: appManager
+    }),
+    acl.createPermission(voting, nodeOperatorsRegistry.address, NODE_OPERATOR_REGISTRY_ADD_NODE_OPERATOR_ROLE, appManager, {
+      from: appManager
+    }),
+    acl.createPermission(voting, nodeOperatorsRegistry.address, NODE_OPERATOR_REGISTRY_ACTIVATE_NODE_OPERATOR_ROLE, appManager, {
+      from: appManager
+    }),
+    acl.createPermission(voting, nodeOperatorsRegistry.address, NODE_OPERATOR_REGISTRY_DEACTIVATE_NODE_OPERATOR_ROLE, appManager, {
+      from: appManager
+    }),
+    acl.createPermission(voting, nodeOperatorsRegistry.address, NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_NAME_ROLE, appManager, {
+      from: appManager
+    }),
+    acl.createPermission(voting, nodeOperatorsRegistry.address, NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ADDRESS_ROLE, appManager, {
+      from: appManager
+    }),
+    acl.createPermission(voting, nodeOperatorsRegistry.address, NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE, appManager, {
+      from: appManager
+    }),
+    acl.createPermission(
+      voting,
+      nodeOperatorsRegistry.address,
+      NODE_OPERATOR_REGISTRY_STAKING_ROUTER_ROLE,
+      appManager,
+      { from: appManager }
+    ),
+    acl.createPermission(
+      stakingRouterAddress,
+      nodeOperatorsRegistry.address,
+      NODE_OPERATOR_REGISTRY_REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE,
+      appManager,
+      {
+        from: appManager
+      }
+    ),
+    acl.createPermission(
+      stakingRouterAddress,
+      nodeOperatorsRegistry.address,
+      NODE_OPERATOR_REGISTRY_INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE,
+      appManager,
+      {
+        from: appManager
+      }
+    )
+  ])
+
+  await acl.grantPermission(
+    stakingRouterAddress,
+    nodeOperatorsRegistry.address,
+    NODE_OPERATOR_REGISTRY_STAKING_ROUTER_ROLE,
+    { from: appManager }
+  )
+
+  return nodeOperatorsRegistry
+}
+
+module.exports = {
+  deployDaoAndPool,
+  setupNodeOperatorsRegistry,
+  SLOTS_PER_EPOCH,
+  SECONDS_PER_SLOT,
+  GENESIS_TIME,
+  EPOCHS_PER_FRAME,
+  SLOTS_PER_FRAME,
+  SECONDS_PER_FRAME,
 }

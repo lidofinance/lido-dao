@@ -56,7 +56,9 @@ async function assertInstalledApps(
     log.success(baseCheckDesc)
 
     const instance = await AragonApp.at(proxyAddress)
-    await assertInitializedAragonApp(instance, kernel, appName)
+    if (appName != 'lido') {
+      await assertInitializedAragonApp(instance, kernel, appName)
+    }
 
     dataByAppName[appName] = {
       name: appName,

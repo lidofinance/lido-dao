@@ -1,61 +1,34 @@
-const { assertBn, assertRevert, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
+const hre = require('hardhat')
+
+const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertRevert } = require('../helpers/assertThrow')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
-const { newDao, newApp } = require('../0.4.24/helpers/dao')
 
-const { assert } = require('chai')
-
-const LidoELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
-
-const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
-
-const LidoMock = artifacts.require('LidoMock.sol')
-const LidoOracleMock = artifacts.require('OracleMock.sol')
-const DepositContractMock = artifacts.require('DepositContractMock.sol')
+const { StETH, ETH } = require('../helpers/utils')
+const { assert } = require('../helpers/assert')
+const { deployProtocol } = require('../helpers/protocol')
+const { EvmSnapshot } = require('../helpers/blockchain')
 
 const ERC20OZMock = artifacts.require('ERC20OZMock.sol')
 const ERC721OZMock = artifacts.require('ERC721OZMock.sol')
 
-const ETH = (value) => web3.utils.toWei(value + '', 'ether')
-// semantic aliases
-const stETH = ETH
-const stETHShares = ETH
+contract('LidoExecutionLayerRewardsVault', ([deployer, anotherAccount]) => {
+  let lido, elRewardsVault, treasury, appManager, snapshot
 
-contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, depositor, anotherAccount, ...otherAccounts]) => {
-  let oracle, lido, elRewardsVault
-  let treasuryAddr
-  let dao, acl, operators
+  before('deploy lido with dao', async () => {
+    const deployed = await deployProtocol()
 
-  beforeEach('deploy lido with dao', async () => {
-    const lidoBase = await LidoMock.new({ from: deployer })
-    oracle = await LidoOracleMock.new({ from: deployer })
-    const depositContract = await DepositContractMock.new({ from: deployer })
-    const nodeOperatorsRegistryBase = await NodeOperatorsRegistry.new({ from: deployer })
+    lido = deployed.pool
+    elRewardsVault = deployed.elRewardsVault
+    treasury = deployed.treasury.address
+    appManager = deployed.appManager.address
 
-    const daoAclObj = await newDao(appManager)
-    dao = daoAclObj.dao
-    acl = daoAclObj.acl
+    snapshot = new EvmSnapshot(hre.ethers.provider)
+    await snapshot.make()
+  })
 
-    // Instantiate a proxy for the app, using the base contract as its logic implementation.
-    let proxyAddress = await newApp(dao, 'lido', lidoBase.address, appManager)
-    lido = await LidoMock.at(proxyAddress)
-    await lido.resumeProtocolAndStaking()
-
-    // NodeOperatorsRegistry
-    proxyAddress = await newApp(dao, 'node-operators-registry', nodeOperatorsRegistryBase.address, appManager)
-    operators = await NodeOperatorsRegistry.at(proxyAddress)
-    await operators.initialize(lido.address)
-
-    // Init the BURN_ROLE role and assign in to voting
-    await acl.createPermission(voting, lido.address, await lido.BURN_ROLE(), appManager, { from: appManager })
-
-    // Initialize the app's proxy.
-    await lido.initialize(depositContract.address, oracle.address, operators.address)
-    treasuryAddr = await lido.getInsuranceFund()
-
-    await oracle.setPool(lido.address)
-    await depositContract.reset()
-
-    elRewardsVault = await LidoELRewardsVault.new(lido.address, treasuryAddr, { from: deployer })
+  afterEach(async () => {
+    await snapshot.rollback()
   })
 
   it('Addresses which are not Lido contract cannot withdraw from execution layer rewards vault', async () => {
@@ -72,7 +45,6 @@ contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, depos
   })
 
   it('Execution layer rewards vault refuses to receive Ether by transfers with call data', async () => {
-    const before = +(await web3.eth.getBalance(elRewardsVault.address)).toString()
     const amount = 0.02
     await assertRevert(
       web3.eth.sendTransaction({ to: elRewardsVault.address, from: anotherAccount, value: ETH(amount), data: '0x12345678' })
@@ -120,16 +92,16 @@ contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, depos
 
     it(`can't recover stETH by recoverERC20`, async () => {
       // initial stETH balance is zero
-      assertBn(await lido.balanceOf(anotherAccount), stETH(0))
+      assertBn(await lido.balanceOf(anotherAccount), StETH(0))
       // submit 10 ETH to mint 10 stETH
       await web3.eth.sendTransaction({ from: anotherAccount, to: lido.address, value: ETH(10) })
       // check 10 stETH minted on balance
-      assertBn(await lido.balanceOf(anotherAccount), stETH(10))
+      assertBn(await lido.balanceOf(anotherAccount), StETH(10))
       // transfer 5 stETH to the elRewardsVault account
-      await lido.transfer(elRewardsVault.address, stETH(5), { from: anotherAccount })
+      await lido.transfer(elRewardsVault.address, StETH(5), { from: anotherAccount })
 
-      assertBn(await lido.balanceOf(anotherAccount), stETH(5))
-      assertBn(await lido.balanceOf(elRewardsVault.address), stETH(5))
+      assertBn(await lido.balanceOf(anotherAccount), StETH(5))
+      assertBn(await lido.balanceOf(elRewardsVault.address), StETH(5))
     })
 
     it(`recover some accidentally sent ERC20`, async () => {
@@ -155,7 +127,7 @@ contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, depos
 
       // check balances again
       assertBn(await mockERC20Token.balanceOf(elRewardsVault.address), bn(100000))
-      assertBn(await mockERC20Token.balanceOf(treasuryAddr), bn(500000))
+      assertBn(await mockERC20Token.balanceOf(treasury), bn(500000))
       assertBn(await mockERC20Token.balanceOf(deployer), bn(0))
       assertBn(await mockERC20Token.balanceOf(anotherAccount), bn(400000))
 
@@ -197,9 +169,9 @@ contract('LidoExecutionLayerRewardsVault', ([appManager, voting, deployer, depos
       assertEvent(receiptNft1, `ERC721Recovered`, { expectedArgs: { requestedBy: deployer, token: mockNFT.address, tokenId: nft1 } })
 
       // check final NFT ownership state
-      assertBn(await mockNFT.balanceOf(treasuryAddr), bn(2))
-      assertBn(await mockNFT.ownerOf(nft1), treasuryAddr)
-      assertBn(await mockNFT.ownerOf(nft2), treasuryAddr)
+      assertBn(await mockNFT.balanceOf(treasury), bn(2))
+      assertBn(await mockNFT.ownerOf(nft1), treasury)
+      assertBn(await mockNFT.ownerOf(nft2), treasury)
     })
   })
 })

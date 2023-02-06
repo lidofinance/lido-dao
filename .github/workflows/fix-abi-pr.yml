@@ -9,55 +9,50 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          persist-credentials: false
 
-    - name: Setup node.js version
-      uses: actions/setup-node@v1
-      with:
-        node-version: 12.x
+      - name: Setup node.js version
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
 
-    - name: Get yarn cache directory path
-      id: yarn-cache-dir-path
-      run: echo "::set-output name=dir::$(yarn config get cacheFolder)"
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
 
-    - name: Cache yarn cache
-      id: cache-yarn-cache
-      uses: actions/cache@v2
-      with:
-        path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-        key: yarn-${{ hashFiles('**/yarn.lock') }}
-        restore-keys: yarn-${{ hashFiles('**/yarn.lock') }}
+      - name: Cache yarn cache
+        id: cache-yarn-cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: yarn-${{ hashFiles('**/yarn.lock') }}
 
-    - name: Cache node_modules
-      id: cache-node-modules
-      uses: actions/cache@v2
-      with:
-        path: '**/node_modules'
-        key: node_modules-${{ hashFiles('**/yarn.lock') }}
-        restore-keys: node_modules-${{ hashFiles('**/yarn.lock') }}
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v3
+        with:
+          path: '**/node_modules'
+          key: node_modules-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: node_modules-${{ hashFiles('**/yarn.lock') }}
 
-    - name: Install modules
-      run: yarn
-      if: |
-        steps.cache-yarn-cache.outputs.cache-hit != 'true' ||
-        steps.cache-node-modules.outputs.cache-hit != 'true'
-    
-    - name: Compile code and extract ABI
-      run: yarn compile
+      - name: Install modules
+        run: yarn
+        if: |
+          steps.cache-yarn-cache.outputs.cache-hit != 'true' ||
+          steps.cache-node-modules.outputs.cache-hit != 'true'
 
-    - name: Check for ABI changes
-      id: changes
-      continue-on-error: true
-      run: .github/assert-git-changes.py
-      env:
-        TARGET_DIR: lib/abi/
+      - name: Compile code and extract ABI
+        run: yarn compile
 
-    - name: Create Pull Request
-      if: steps.changes.outcome != 'success'
-      uses: lidofinance/create-pull-request@v4
-      with:
-        branch: fix-abi-${{ github.ref_name }}
-        delete-branch: true
-        commit-message: "fix: Make ABIs up to date"
-        title: "Fix ABI ${{ github.ref_name }}"
-        body: "This PR is generated automatically. Merge it to apply fixes to the /lib/abi/"
+      - name: Create Pull Request
+        uses: lidofinance/create-pull-request@v4
+        with:
+          add-paths: lib/abi
+          branch: fix-abi-${{ github.ref_name }}
+          delete-branch: true
+          commit-message: 'fix: Make ABIs up to date'
+          title: 'Fix ABI ${{ github.ref_name }}'
+          body: 'This PR is generated automatically. Merge it to apply fixes to the /lib/abi/'

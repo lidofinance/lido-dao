@@ -19,7 +19,6 @@ const REQUIRED_NET_STATE = [
   'compositePostRebaseBeaconReceiverAddress',
   'selfOwnedStETHBurnerParams',
   `app:${APP_NAMES.ARAGON_VOTING}`,
-  `app:${APP_NAMES.ORACLE}`,
   `app:${APP_NAMES.ARAGON_AGENT}`
 ]
 

@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+yarn compile
+yarn lint:sol
+
+# TODO: uncomment. it's temporarily disabled on staking_router + withdrawals-poc merge
+# yarn lint:js:fix

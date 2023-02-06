@@ -102,9 +102,9 @@ async function publishApp(appName, appsRepoPath, hardhatConfig, env, netName, re
 
   if (hasFrontend) {
     logSplitter(`Installing frontend deps for app ${appName}`)
-    await execLive('yarn', {
-      cwd: appFrontendPath
-    })
+    // await execLive('yarn', {
+    //   cwd: appFrontendPath
+    // })
     logSplitter()
 
     // logSplitter(`Build app ${appName}`)

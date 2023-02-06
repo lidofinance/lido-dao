@@ -41,10 +41,10 @@ async function deployTemplate({ web3, artifacts }) {
   await saveDeployTx('Lido', 'tx-01-2-deploy-lido-base.json', {
     from: state.multisigAddress
   })
-  await saveDeployTx('LidoOracle', 'tx-01-3-deploy-oracle-base.json', {
+  await saveDeployTx('NodeOperatorsRegistry', 'tx-01-4-deploy-nops-base.json', {
     from: state.multisigAddress
   })
-  await saveDeployTx('NodeOperatorsRegistry', 'tx-01-4-deploy-nops-base.json', {
+  await saveDeployTx('EIP712StETH', 'tx-01-5-deploy-nops-base.json', {
     from: state.multisigAddress
   })
 
@@ -52,8 +52,8 @@ async function deployTemplate({ web3, artifacts }) {
     daoTemplateConstructorArgs,
     daoTemplateDeployTx: '',
     lidoBaseDeployTx: '',
-    oracleBaseDeployTx: '',
-    nodeOperatorsRegistryBaseDeployTx: ''
+    nodeOperatorsRegistryBaseDeployTx: '',
+    eip712StETHDeployTx: '',
   })
 
   log.splitter()
