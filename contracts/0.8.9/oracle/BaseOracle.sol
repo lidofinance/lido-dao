@@ -48,7 +48,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
 
     event ConsensusContractSet(address indexed addr, address indexed prevAddr);
     event ConsensusVersionSet(uint256 indexed version, uint256 indexed prevVersion);
-    event ReportSubmitted(uint256 indexed refSlot, bytes32 hash, uint256 deadlineTime);
+    event ReportSubmitted(uint256 indexed refSlot, bytes32 hash, uint256 processingDeadlineTime);
     event ProcessingStarted(uint256 indexed refSlot, bytes32 hash);
     event WarnProcessingMissed(uint256 indexed refSlot);
 
@@ -56,7 +56,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         bytes32 hash;
         uint64 refSlot;
         uint64 receptionTime;
-        uint64 deadlineTime;
+        uint64 processingDeadlineTime;
     }
 
     /// @notice An ACL role granting the permission to set the consensus
@@ -136,7 +136,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         bytes32 hash,
         uint256 refSlot,
         uint256 receptionTime,
-        uint256 deadlineTime,
+        uint256 processingDeadlineTime,
         bool processingStarted
     ) {
         ConsensusReport memory report = _storageConsensusReport().value;
@@ -145,7 +145,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
             report.hash,
             report.refSlot,
             report.receptionTime,
-            report.deadlineTime,
+            report.processingDeadlineTime,
             report.refSlot != 0 && report.refSlot == processingRefSlot
         );
     }
@@ -186,7 +186,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
             hash: reportHash,
             refSlot: refSlot.toUint64(),
             receptionTime: uint64(_getTime()),
-            deadlineTime: deadline.toUint64()
+            processingDeadlineTime: deadline.toUint64()
         });
 
         _storageConsensusReport().value = report;
@@ -280,7 +280,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     /// @notice Reverts if the processing deadline for the current consensus report is missed.
     ///
     function _checkProcessingDeadline() internal view {
-        uint256 deadline = _storageConsensusReport().value.deadlineTime;
+        uint256 deadline = _storageConsensusReport().value.processingDeadlineTime;
         if (_getTime() > deadline) revert ProcessingDeadlineMissed(deadline);
     }
 
