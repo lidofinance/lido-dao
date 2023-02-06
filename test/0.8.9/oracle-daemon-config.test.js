@@ -10,7 +10,6 @@ const OracleDaemonConfig = hre.artifacts.require('OracleDaemonConfig.sol')
 contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
   let config, snapshot
   const defaultKey = '12345'
-  const defaultKeyHash = '0x' + keccak256(defaultKey)
   const defaultValue = '0x'.padEnd(66, '0101')
   const updatedDefaultValue = '0x'.padEnd(66, '0202')
 
@@ -61,7 +60,7 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
       assert.reverts(config.get(defaultKey))
     })
 
-    it('gets all values (empty)', async () => {
+    it('reverts while gets all values', async () => {
       assert.reverts(config.getList([defaultKey]), `ErrorValueDoesntExist(${defaultKey})`)
     })
   })
@@ -99,31 +98,31 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
     })
 
     it('stranger cannot set a defaultValue', async () => {
-      assert.reverts(config.set(defaultKeyHash, defaultValue, { from: stranger }))
+      assert.reverts(config.set(defaultKey, defaultValue, { from: stranger }))
     })
 
     it('admin cannot set a defaultValue', async () => {
-      assert.reverts(config.set(defaultKeyHash, defaultValue, { from: deployer }))
+      assert.reverts(config.set(defaultKey, defaultValue, { from: deployer }))
     })
 
     it('stranger cannot update a defaultValue', async () => {
-      await config.set(defaultKeyHash, defaultValue, { from: manager })
-      assert.reverts(config.update(defaultKeyHash, updatedDefaultValue, { from: stranger }))
+      await config.set(defaultKey, defaultValue, { from: manager })
+      assert.reverts(config.update(defaultKey, updatedDefaultValue, { from: stranger }))
     })
 
     it('admin cannot update a defaultValue', async () => {
-      await config.set(defaultKeyHash, defaultValue, { from: manager })
-      assert.reverts(config.update(defaultKeyHash, updatedDefaultValue, { from: deployer }))
+      await config.set(defaultKey, defaultValue, { from: manager })
+      assert.reverts(config.update(defaultKey, updatedDefaultValue, { from: deployer }))
     })
 
     it('stranger cannot unset a defaultValue', async () => {
-      await config.set(defaultKeyHash, defaultValue, { from: manager })
-      assert.reverts(config.unset(defaultKeyHash, { from: stranger }))
+      await config.set(defaultKey, defaultValue, { from: manager })
+      assert.reverts(config.unset(defaultKey, { from: stranger }))
     })
 
     it('stranger cannot unset a defaultValue', async () => {
-      await config.set(defaultKeyHash, defaultValue, { from: manager })
-      assert.reverts(config.unset(defaultKeyHash, { from: deployer }))
+      await config.set(defaultKey, defaultValue, { from: manager })
+      assert.reverts(config.unset(defaultKey, { from: deployer }))
     })
   })
 })
