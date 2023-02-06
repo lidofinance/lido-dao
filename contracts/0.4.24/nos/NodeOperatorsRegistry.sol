@@ -15,6 +15,7 @@ import {UnstrcturedStorageMapping} from "../../common/lib/UnstrcturedStorageMapp
 import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
 import {ILidoLocator} from "../../common/interfaces/ILidoLocator.sol";
 import {SigningKeys} from "../lib/SigningKeys.sol";
+import {Packed64} from "../lib/Packed64.sol";
 import {Versioned} from "../utils/Versioned.sol";
 import "hardhat/console.sol";
 
@@ -33,46 +34,6 @@ interface IStakingModule {
     event ValidatorsKeysNonceChanged(uint256 validatorsKeysNonce);
     event StuckValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 stuckValidatorsCount);
     event ForgivenValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 forgivenValidatorsCount);
-}
-
-library Packed64 {
-    using SafeMath64 for uint64;
-    using Packed64 for uint256;
-
-    //extract n-th uint64 from uint256
-    function get(uint256 v, uint8 n) internal pure returns (uint64) {
-        // n &= 3; //be sure < 4
-        // assert(n < 4);
-        return uint64((v >> (64 * n)) & 0xFFFFFFFFFFFFFFFF);
-    }
-
-    //merge n-th uint64 to uint256
-    function set(uint256 v, uint8 n, uint64 x) internal pure returns (uint256) {
-        // n &= 3; //be sure < 4
-        // assert(n < 4);
-        //number = number & ~(1 << n) | (x << n);
-        return v & ~(uint256(0xFFFFFFFFFFFFFFFF) << (64 * n)) | ((uint256(x) & 0xFFFFFFFFFFFFFFFF) << (64 * n));
-    }
-
-    function inc(uint256 v, uint8 n, uint64 x) internal pure returns (uint256) {
-        return v.set(n, v.get(n).add(x));
-    }
-
-    function dec(uint256 v, uint8 n, uint64 x) internal pure returns (uint256) {
-        return v.set(n, v.get(n).sub(x));
-    }
-
-    function cpy(uint256 v, uint8 na, uint8 nb) internal pure returns (uint256) {
-        return v.set(nb, v.get(na));
-    }
-
-    function sum(uint256 v, uint8 na, uint8 nb) internal pure returns (uint256) {
-        return v.get(na).add(v.get(nb));
-    }
-
-    function diff(uint256 v, uint8 na, uint8 nb) internal pure returns (uint256) {
-        return v.get(na).sub(v.get(nb));
-    }
 }
 
 /// @title Node Operator registry
@@ -109,7 +70,6 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     event TotalSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 totalValidatorsCount);
 
     event TargetValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 targetValidatorsCount);
-    // event TargetValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 totalTargetValidatorsCount, uint64 unavaliableKeysCount);
     event ExcessValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 excessValidatorsCount);
 
     event NodeOperatorPenalized(address indexed receipientAddress, uint256 sharesPenalizedAmount);
@@ -174,10 +134,6 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     // bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lido.NodeOperatorsRegistry.signingKeysMappingName");
     bytes32 internal constant SIGNING_KEYS_MAPPING_NAME =
         0xeb2b7ad4d8ce5610cfb46470f03b14c197c2b751077c70209c5d0139f7c79ee9;
-
-    // bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.NodeOperatorsRegistry.contractVersion");
-    // bytes32 internal constant CONTRACT_VERSION_POSITION =
-    //     0xd5444e06b5773cd8c7a9ca51e00a75c90f604a23a58df8f8ad5a8476fcf99aed;
 
     // bytes32 internal constant LIDO_LOCATOR_POSITION = keccak256("lido.NodeOperatorsRegistry.lidoLocator");
     bytes32 internal constant LIDO_LOCATOR_POSITION = 0xfb2059fd4b64256b64068a0f57046c6d40b9f0e592ba8bcfdf5b941910d03537;
@@ -287,11 +243,9 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
 
         uint256 totalOperators = getNodeOperatorsCount();
         uint256 totalSigningKeysStats = _getTotalSigningKeysStats();
-        NodeOperator storage operator;
         for (uint256 operatorId = 0; operatorId < totalOperators; ++operatorId) {
-
             // uint operatorSigningKeysStats = _getOperatorSigningKeysStats(operatorId);
-            operator = _nodeOperators[operatorId];
+            NodeOperator storage operator = _nodeOperators[operatorId];
 
             uint64 totalSigningKeysCount = operator.totalSigningKeysCount;
             uint64 vettedSigningKeysCount = operator.vettedSigningKeysCount;
@@ -461,27 +415,23 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         nodeOperator.vettedSigningKeysCount = vettedSigningKeysCountAfter;
 
         uint256 totalTargetStats = _getTotalTargetValidtatorsStats();
-        // TargetValidatorsStats memory totalValidatorStats = _getTotalValidtatorsStats();
-        // TargetValidatorsStats memory operatorTargetStats = _operatorTargetStats[_nodeOperatorId];
         uint256 operatorTargetStats = _getOperatorTargetValidtatorsStats(_nodeOperatorId);
-
         uint256 totalSigningKeysStats = _getTotalSigningKeysStats();
 
         uint64 diff;
         if (vettedSigningKeysCountAfter > vettedSigningKeysCountBefore) {
             diff = vettedSigningKeysCountAfter - vettedSigningKeysCountBefore;
             totalSigningKeysStats = totalSigningKeysStats.inc(VETTED_KEYS_COUNT_OFFSET, diff);
-            // totalSigningKeysStats.increaseVettedSigningKeysCount(diff);
 
-            if (operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET) == 0) {
-                // totalTargetStats.targetValidatorsCount = totalTargetStats.targetValidatorsCount.add(diff);
+            if (operatorTargetStats.get(TARGET_VALIDATORS_ACTIVE_OFFSET) == 0) {
+                // target not active
                 totalTargetStats = totalTargetStats.inc(TARGET_VALIDATORS_COUNT_OFFSET, diff);
             }
         } else {
             diff = vettedSigningKeysCountBefore - vettedSigningKeysCountAfter;
             totalSigningKeysStats = totalSigningKeysStats.dec(VETTED_KEYS_COUNT_OFFSET, diff);
-            // totalSigningKeysStats.decreaseVettedSigningKeysCount(diff);
-            if (operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET) == 0) {
+            if (operatorTargetStats.get(TARGET_VALIDATORS_ACTIVE_OFFSET) == 0) {
+                // target not active
                 totalTargetStats = totalTargetStats.dec(TARGET_VALIDATORS_COUNT_OFFSET, diff);
             }
         }
@@ -495,7 +445,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     }
 
     /// @notice Called by StakingRouter to signal that stETH rewards were minted for this module.
-    function handleRewardsMinted(uint256) external {
+    function handleRewardsMinted(uint256) external view {
         _auth(STAKING_ROUTER_ROLE);
         // since we're pushing rewards to operators after exited validators counts are
         // updated (as opposed to pulling by node ops), we don't need any handling here
@@ -554,16 +504,12 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
 
     function _updExcessValidators(uint256 _nodeOperatorId, uint64 _newActiveValidatorsCount) internal {
         uint256 operatorTargetStats = _getOperatorTargetValidtatorsStats(_nodeOperatorId);
-        uint64 targetCount = operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET);
-        uint64 excessCount = operatorTargetStats.get(EXCESS_VALIDATORS_COUNT_OFFSET);
 
         // check if operator's has target validators count set
-        if (targetCount > 0) {
-            // uint64 excessValidatorsCount = _validatorsStats[_nodeOperatorId].excessValidatorsCount;
-            // TargetValidatorsStats memory totalTargetStats = _totalTargetStats;
+        if (operatorTargetStats.get(TARGET_VALIDATORS_ACTIVE_OFFSET) != 0) {
+            uint64 targetCount = operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET);
+            uint64 excessCount = operatorTargetStats.get(EXCESS_VALIDATORS_COUNT_OFFSET);
             uint256 totalTargetStats = _getTotalTargetValidtatorsStats();
-
-            // TargetValidatorsStats memory totalTargetStats = _getTotalValidtatorsStats();
             if (targetCount < _newActiveValidatorsCount) {
                 uint64 diff;
                 // new excess validators
@@ -571,26 +517,15 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
                 if (diff > excessCount) {
                     diff -= excessCount;
                     operatorTargetStats = operatorTargetStats.inc(EXCESS_VALIDATORS_COUNT_OFFSET, diff);
-                    // _operatorTargetStats[_nodeOperatorId].excessValidatorsCount =
-                    //     operatorTargetStats.excessValidatorsCount.add(diff);
-
                     totalTargetStats = totalTargetStats.inc(EXCESS_VALIDATORS_COUNT_OFFSET, diff);
-                    // totalTargetStats.excessValidatorsCount = totalTargetStats.excessValidatorsCount.add(diff);
-                    // _setTotalValidtatorsStats(totalTargetStats);
-                    //  _totalTargetStats = totalTargetStats;
                 } else if (diff < excessCount) {
                     diff = excessCount - diff;
                     operatorTargetStats = operatorTargetStats.dec(EXCESS_VALIDATORS_COUNT_OFFSET, diff);
-                    // _operatorTargetStats[_nodeOperatorId].excessValidatorsCount =
-                    //     operatorTargetStats.excessValidatorsCount.sub(diff);
                     totalTargetStats = totalTargetStats.dec(EXCESS_VALIDATORS_COUNT_OFFSET, diff);
-                    // totalTargetStats.excessValidatorsCount = totalTargetStats.excessValidatorsCount.sub(diff);
-                    // _setTotalValidtatorsStats(totalTargetStats);
                 }
             } else if (excessCount > 0) {
                 operatorTargetStats.set(EXCESS_VALIDATORS_COUNT_OFFSET, 0);
                 totalTargetStats = totalTargetStats.dec(EXCESS_VALIDATORS_COUNT_OFFSET, excessCount);
-                // _setTotalValidtatorsStats(totalTargetStats);
             }
             _setOperatorTargetValidtatorsStats(_nodeOperatorId, operatorTargetStats);
             _setTotalValidtatorsStats(totalTargetStats);
@@ -621,40 +556,72 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
             totalSigningKeysStats = totalSigningKeysStats.inc(
                 EXITED_KEYS_COUNT_OFFSET, _exitedValidatorsKeysCount - exitedValidatorsCountBefore
             );
-            // totalSigningKeysStats.increaseExitedSigningKeysCount(
-            //     _exitedValidatorsKeysCount - exitedValidatorsCountBefore
-            // );
         } else {
             require(_allowDecrease, "EXITED_VALIDATORS_COUNT_DECREASED");
-
             totalSigningKeysStats = totalSigningKeysStats.dec(
                 EXITED_KEYS_COUNT_OFFSET, exitedValidatorsCountBefore - _exitedValidatorsKeysCount
             );
-            // totalSigningKeysStats.decreaseExitedSigningKeysCount(
-            //     exitedValidatorsCountBefore - _exitedValidatorsKeysCount
-            // );
         }
         _updExcessValidators(_nodeOperatorId, depositedSigningKeysCount - _exitedValidatorsKeysCount);
 
         _setTotalSigningKeysStats(totalSigningKeysStats);
 
         emit ExitedSigningKeysCountChanged(_nodeOperatorId, _exitedValidatorsKeysCount);
-
         return totalSigningKeysStats.get(EXITED_KEYS_COUNT_OFFSET);
     }
 
     /// @notice Updates the limit of the validators that can be used for deposit by DAO
     /// @param _nodeOperatorId Id of the node operator
     /// @param _targetValidatorsCount New number of EXITED validators of the node operator
-    // function updateTargetValidatorsLimits(uint256 _nodeOperatorId, uint64 _targetValidatorsCount) external {
-    //     _onlyExistedNodeOperator(_nodeOperatorId);
-    //     _auth(STAKING_ROUTER_ROLE);
+    /// @param _targetActive active flag
+    function updateTargetValidatorsLimits(uint256 _nodeOperatorId, uint64 _targetValidatorsCount, bool _targetActive) external {
+        _onlyExistedNodeOperator(_nodeOperatorId);
+        _auth(STAKING_ROUTER_ROLE);
 
-    //     _operatorTargetStats[_nodeOperatorId].targetValidatorsCount = _targetValidatorsCount;
-    //     emit TargetValidatorsCountChanged(_nodeOperatorId, _targetValidatorsCount);
+        uint256 operatorTargetStats = _getOperatorTargetValidtatorsStats(_nodeOperatorId);
 
-    //     /// @todo update total limits?
-    // }
+        if (operatorTargetStats.get(TARGET_VALIDATORS_ACTIVE_OFFSET) == (_targetActive ? 1 : 0)) return;
+
+        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+        uint256 totalTargetStats = _getTotalTargetValidtatorsStats();
+        // uint256 totalSigningKeysStats = _getTotalSigningKeysStats();
+        // uint64 targetCount = operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET);
+
+        uint64 vettedSigningKeysCount = nodeOperator.vettedSigningKeysCount;
+        uint64 excessCount;
+        if (_targetActive) {
+            // just enabled
+            uint64 activeCount = nodeOperator.depositedSigningKeysCount.sub(nodeOperator.exitedSigningKeysCount);
+            // decreasing total target by operator's vetted count
+            totalTargetStats = totalTargetStats.dec(TARGET_VALIDATORS_COUNT_OFFSET, vettedSigningKeysCount);
+
+            if (_targetValidatorsCount < activeCount) {
+                // new excess validators
+                excessCount = activeCount.sub(_targetValidatorsCount);
+                // if operator will have excess validtators - add them to total
+                operatorTargetStats = operatorTargetStats.set(EXCESS_VALIDATORS_COUNT_OFFSET, excessCount);
+                totalTargetStats = totalTargetStats.inc(EXCESS_VALIDATORS_COUNT_OFFSET, excessCount);
+            }
+        } else {
+            //just disabled
+            excessCount = operatorTargetStats.get(EXCESS_VALIDATORS_COUNT_OFFSET);
+            if (excessCount > 0) {
+                // if operator currently have excess validtators - sustract them from total
+                operatorTargetStats.set(EXCESS_VALIDATORS_COUNT_OFFSET, 0);
+                totalTargetStats = totalTargetStats.dec(EXCESS_VALIDATORS_COUNT_OFFSET, excessCount);
+            }
+
+            // increasing total target by operator's vetted count
+            totalTargetStats = totalTargetStats.inc(TARGET_VALIDATORS_COUNT_OFFSET, vettedSigningKeysCount);
+        }
+        operatorTargetStats.set(TARGET_VALIDATORS_ACTIVE_OFFSET, _targetActive ? 1 : 0);
+        operatorTargetStats = operatorTargetStats.set(TARGET_VALIDATORS_COUNT_OFFSET, _targetActive ? _targetValidatorsCount : 0);
+
+        _setOperatorTargetValidtatorsStats(_nodeOperatorId, operatorTargetStats);
+        _setTotalValidtatorsStats(totalTargetStats);
+
+        emit TargetValidatorsCountChanged(_nodeOperatorId, _targetValidatorsCount);
+    }
 
     /**
      * @notice Set the stuck signings keys count
@@ -707,12 +674,8 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         nodeOperator.totalSigningKeysCount = depositedSigningKeysCount;
         nodeOperator.vettedSigningKeysCount = depositedSigningKeysCount;
 
-        // TargetValidatorsStats memory totalTargetStats = _totalTargetStats;
         if (_getOperatorTargetValidtatorsStats(_nodeOperatorId).get(TARGET_VALIDATORS_COUNT_OFFSET) == 0) {
             totalTargetDiff = vettedSigningKeysCount - depositedSigningKeysCount;
-
-            // _totalTargetStats.targetValidatorsCount =
-            //     _totalTargetStats.targetValidatorsCount.sub(vettedSigningKeysCount - depositedSigningKeysCount);
         }
 
         emit TotalSigningKeysCountChanged(_nodeOperatorId, depositedSigningKeysCount);
@@ -726,11 +689,6 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
 
         bool wereSigningKeysTrimmed = false;
         uint256 nodeOperatorsCount = getNodeOperatorsCount();
-
-        // NodeOperator storage nodeOperator;
-        // uint64 totalSigningKeysCount;
-        // uint64 depositedSigningKeysCount;
-        // uint64 vettedSigningKeysCount;
 
         uint64 trimmedKeysCount;
         uint64 totalTargetDiff;
@@ -750,19 +708,13 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
 
         if (wereSigningKeysTrimmed) {
             uint256 totalSigningKeysStats = _getTotalSigningKeysStats();
+            uint256 totalTargetStats = _getTotalTargetValidtatorsStats();
 
             totalSigningKeysStats = totalSigningKeysStats.cpy(DEPOSITED_KEYS_COUNT_OFFSET, TOTAL_KEYS_COUNT_OFFSET);
             totalSigningKeysStats = totalSigningKeysStats.cpy(DEPOSITED_KEYS_COUNT_OFFSET, VETTED_KEYS_COUNT_OFFSET);
-            // totalSigningKeysStats.totalSigningKeysCount = totalSigningKeysStats.depositedSigningKeysCount;
-            // totalSigningKeysStats.vettedSigningKeysCount = totalSigningKeysStats.depositedSigningKeysCount;
+            totalTargetStats = totalTargetStats.dec(TARGET_VALIDATORS_COUNT_OFFSET, totalTargetDiff);
 
             _setTotalSigningKeysStats(totalSigningKeysStats);
-
-            // TargetValidatorsStats memory totalTargetStats = _totalTargetStats;
-            // totalTargetStats.targetValidatorsCount = totalTargetStats.targetValidatorsCount.sub(totalTargetDiff);
-            // _totalTargetStats = totalTargetStats;
-            uint256 totalTargetStats = _getTotalTargetValidtatorsStats();
-            totalTargetStats = totalTargetStats.dec(TARGET_VALIDATORS_COUNT_OFFSET, totalTargetDiff);
             _setTotalValidtatorsStats(totalTargetStats);
 
             _increaseValidatorsKeysNonce();
@@ -1425,10 +1377,10 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     // function _getOperatorSigningKeysStats(uint256 _nodeOperatorId) internal view returns (uint256) {
     //     // _nodeOperators mapping has slot = 0
     //     // keys stats vars has slot index = 2, i.e.:
-    //     // struct NodeOperator {    
+    //     // struct NodeOperator {
     //     //     bool active;            \   packed titghtly
     //     //     address rewardAddress;  /   slot = 0
-    //     //     string name;            >   slot = 1 
+    //     //     string name;            >   slot = 1
     //     //     uint64 vettedSigningKeysCount;    \
     //     //     uint64 exitedSigningKeysCount;     \  packed tightly
     //     //     uint64 totalSigningKeysCount;      /  slot = 2
