@@ -6,9 +6,9 @@ pragma solidity 0.8.9;
 import "../lib/PositiveTokenRebaseLimiter.sol";
 
 contract PositiveTokenRebaseLimiterMock {
-    using PositiveTokenRebaseLimiter for LimiterState.Data;
+    using PositiveTokenRebaseLimiter for TokenRebaseLimiterData;
 
-    LimiterState.Data public limiter;
+    TokenRebaseLimiterData public limiter;
 
     event ReturnValue (
         uint256 retValue
@@ -43,13 +43,13 @@ contract PositiveTokenRebaseLimiterMock {
     }
 
     function raiseLimit(uint256 _etherAmount) external {
-        LimiterState.Data memory limiterMemory = limiter;
+        TokenRebaseLimiterData memory limiterMemory = limiter;
         limiterMemory.raiseLimit(_etherAmount);
         limiter = limiterMemory;
     }
 
     function consumeLimit(uint256 _etherAmount) external {
-        LimiterState.Data memory limiterMemory = limiter;
+        TokenRebaseLimiterData memory limiterMemory = limiter;
         uint256 consumedEther = limiterMemory.consumeLimit(_etherAmount);
         limiter = limiterMemory;
 
@@ -57,7 +57,7 @@ contract PositiveTokenRebaseLimiterMock {
     }
 
     function getSharesToBurnLimit() external view returns (uint256) {
-        LimiterState.Data memory limiterMemory = limiter;
+        TokenRebaseLimiterData memory limiterMemory = limiter;
         return limiterMemory.getSharesToBurnLimit();
     }
 }

@@ -12,7 +12,7 @@ interface ILidoLocator {
     function elRewardsVault() external view returns(address);
     function legacyOracle() external view returns(address);
     function lido() external view returns(address);
-    function safetyNetsRegistry() external view returns(address);
+    function oracleReportSanityChecker() external view returns(address);
     function selfOwnedStEthBurner() external view returns(address);
     function stakingRouter() external view returns(address);
     function treasury() external view returns(address);
@@ -22,10 +22,19 @@ interface ILidoLocator {
     function postTokenRebaseReceiver() external view returns(address);
     function coreComponents() external view returns(
         address elRewardsVault,
-        address safetyNetsRegistry,
+        address oracleReportSanityChecker,
         address stakingRouter,
         address treasury,
         address withdrawalQueue,
         address withdrawalVault
+    );
+    function oracleReportComponentsForLido() external view returns(
+        address accountingOracle,
+        address elRewardsVault,
+        address oracleReportSanityChecker,
+        address selfOwnedStEthBurner,
+        address withdrawalQueue,
+        address withdrawalVault,
+        address postTokenRebaseReceiver
     );
 }

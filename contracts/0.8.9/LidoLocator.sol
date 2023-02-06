@@ -20,7 +20,7 @@ contract LidoLocator is ILidoLocator {
         address elRewardsVault;
         address legacyOracle;
         address lido;
-        address safetyNetsRegistry;
+        address oracleReportSanityChecker;
         address selfOwnedStEthBurner;
         address stakingRouter;
         address treasury;
@@ -37,7 +37,7 @@ contract LidoLocator is ILidoLocator {
     address public immutable elRewardsVault;
     address public immutable legacyOracle;
     address public immutable lido;
-    address public immutable safetyNetsRegistry;
+    address public immutable oracleReportSanityChecker;
     address public immutable selfOwnedStEthBurner;
     address public immutable stakingRouter;
     address public immutable treasury;
@@ -57,7 +57,7 @@ contract LidoLocator is ILidoLocator {
         elRewardsVault = _assertNonZero(_config.elRewardsVault);
         legacyOracle = _assertNonZero(_config.legacyOracle);
         lido = _assertNonZero(_config.lido);
-        safetyNetsRegistry = _assertNonZero(_config.safetyNetsRegistry);
+        oracleReportSanityChecker = _assertNonZero(_config.oracleReportSanityChecker);
         selfOwnedStEthBurner = _assertNonZero(_config.selfOwnedStEthBurner);
         stakingRouter = _assertNonZero(_config.stakingRouter);
         treasury = _assertNonZero(_config.treasury);
@@ -77,11 +77,31 @@ contract LidoLocator is ILidoLocator {
     ) {
         return (
             elRewardsVault,
-            safetyNetsRegistry,
+            oracleReportSanityChecker,
             stakingRouter,
             treasury,
             withdrawalQueue,
             withdrawalVault
+        );
+    }
+
+    function oracleReportComponentsForLido() external view returns(
+        address,
+        address,
+        address,
+        address,
+        address,
+        address,
+        address
+    ) {
+        return (
+            accountingOracle,
+            elRewardsVault,
+            oracleReportSanityChecker,
+            selfOwnedStEthBurner,
+            withdrawalQueue,
+            withdrawalVault,
+            postTokenRebaseReceiver
         );
     }
 

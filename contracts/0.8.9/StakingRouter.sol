@@ -9,7 +9,7 @@ import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.so
 
 import {IStakingModule} from "./interfaces/IStakingModule.sol";
 
-import {Math} from "./lib/Math.sol";
+import {Math256} from "../common/lib/Math256.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 import {MinFirstAllocationStrategy} from "../common/lib/MinFirstAllocationStrategy.sol";
 
@@ -18,7 +18,7 @@ import {Versioned} from "./utils/Versioned.sol";
 
 interface ILido {
     function getBufferedEther() external view returns (uint256);
-    function receiveStakingRouter() external payable;
+    function receiveStakingRouterDepositRemainder() external payable;
 }
 
 contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Versioned {
@@ -581,7 +581,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
      * @return treasuryFee treasury fee in base precision
      * @return basePrecision base precision: a value corresponding to the full fee
      */
-    function getStakingFeeAggregateDistribution() external view returns (
+    function getStakingFeeAggregateDistribution() public view returns (
         uint96 modulesFee,
         uint96 treasuryFee,
         uint256 basePrecision
@@ -672,6 +672,38 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         }
     }
 
+    /// @notice Helper for Lido contract (DEPRECATED)
+    ///         Returns total fee total fee to mint for each staking
+    ///         module and treasury in reduced, 1e4 precision.
+    ///         In integrations please use getStakingRewardsDistribution().
+    ///         reduced, 1e4 precision.
+    function getTotalFeeE4Precision() external view returns (uint16 totalFee) {
+        /// @dev The logic is placed here but in Lido contract to save Lido bytecode
+        uint256 E4_BASIS_POINTS = 10000;  // Corresponds to Lido.TOTAL_BASIS_POINTS
+        (, , , uint96 totalFeeInHighPrecision, uint256 precision) = getStakingRewardsDistribution();
+        // Here we rely on (totalFeeInHighPrecision <= precision)
+        totalFee = uint16((totalFeeInHighPrecision * E4_BASIS_POINTS) / precision);
+    }
+
+    /// @notice Helper for Lido contract (DEPRECATED)
+    ///         Returns the same as getStakingFeeAggregateDistribution() but in reduced, 1e4 precision
+    /// @dev Helper only for Lido contract. Use getStakingFeeAggregateDistribution() instead
+    function getStakingFeeAggregateDistributionE4Precision()
+        external view
+        returns (uint16 modulesFee, uint16 treasuryFee)
+    {
+        /// @dev The logic is placed here but in Lido contract to save Lido bytecode
+        uint256 E4_BASIS_POINTS = 10000;  // Corresponds to Lido.TOTAL_BASIS_POINTS
+        (
+            uint256 modulesFeeHighPrecision,
+            uint256 treasuryFeeHighPrecision,
+            uint256 precision
+        ) = getStakingFeeAggregateDistribution();
+        // Here we rely on ({modules,treasury}FeeHighPrecision <= precision)
+        modulesFee = uint16((modulesFeeHighPrecision * E4_BASIS_POINTS) / precision);
+        treasuryFee = uint16((treasuryFeeHighPrecision * E4_BASIS_POINTS) / precision);
+    }
+
     /// @notice returns new deposits allocation after the distribution of the `_keysToAllocate` keys
     function getKeysAllocation(uint256 _keysToAllocate) external view returns (uint256 allocated, uint256[] memory allocations) {
         (allocated, allocations, ) = _getKeysAllocation(_keysToAllocate);
@@ -704,7 +736,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         if (StakingModuleStatus(stakingModule.status) != StakingModuleStatus.Active) revert ErrorStakingModuleNotActive();
 
         uint256 maxDepositableKeys = getStakingModuleMaxDepositableKeys(_stakingModuleId);
-        uint256 keysToDeposit = Math.min(maxDepositableKeys, _maxDepositsCount);
+        uint256 keysToDeposit = Math256.min(maxDepositableKeys, _maxDepositsCount);
 
         if (keysToDeposit > 0) {
             bytes memory publicKeysBatch;
@@ -728,7 +760,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     function _transferBalanceEthToLido() internal {
         uint256 balance = address(this).balance;
         if (balance > 0) {
-            getLido().receiveStakingRouter{value: balance}();
+            getLido().receiveStakingRouterDepositRemainder{value: balance}();
         }
     }
 
@@ -834,7 +866,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             for (uint256 i; i < stakingModulesCount; ) {
                 allocations[i] = stakingModulesCache[i].activeKeysCount;
                 targetKeys = (stakingModulesCache[i].targetShare * totalActiveKeys) / TOTAL_BASIS_POINTS;
-                capacities[i] = Math.min(targetKeys, stakingModulesCache[i].activeKeysCount + stakingModulesCache[i].availableKeysCount);
+                capacities[i] = Math256.min(targetKeys, stakingModulesCache[i].activeKeysCount + stakingModulesCache[i].availableKeysCount);
                 unchecked {
                     ++i;
                 }
