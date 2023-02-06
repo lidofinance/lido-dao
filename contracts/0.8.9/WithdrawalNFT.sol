@@ -66,7 +66,7 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
 
     /// @dev See {IERC721Metadata-tokenURI}.
     function tokenURI(uint256 tokenId) public view returns (string memory) {
-        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+        require(_existsAndNotClaimed(tokenId), "ERC721Metadata: URI query for nonexistent or claimed token");
 
         string memory baseURI = _baseURI();
         return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
@@ -94,7 +94,7 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
 
     /// @dev See {IERC721-getApproved}.
     function getApproved(uint256 tokenId) public view returns (address) {
-        require(_exists(tokenId), "ERC721: approved query for nonexistent token");
+        require(_existsAndNotClaimed(tokenId), "ERC721: approved query for nonexistent or claimed token");
 
         return _getTokenApprovals()[tokenId];
     }
@@ -122,39 +122,41 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
 
     /// @dev See {IERC721-transferFrom}.
     function transferFrom(address from, address to, uint256 tokenId) public override {
-        require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: caller is not token owner or approved");
-
+         require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: caller is not token owner or approved");
         _transfer(from, to, tokenId);
 
         emit Transfer(from, to, tokenId);
     }
 
-    function _transfer(address _from, address _to, uint256 _requestId) internal {
-        if (_requestId == 0) revert InvalidRequestId(_requestId);
-        if (_requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
+    /// @dev Transfers `tokenId` from `from` to `to`.
+    ///  As opposed to {transferFrom}, this imposes no restrictions on msg.sender.
+    ///
+    /// Requirements:
+    ///
+    /// - `from` cannot be the zero address.
+    /// - `to` cannot be the zero address.
+    /// - `tokenId` token must be owned by `from`.
+    ///
+    /// Emits a {Transfer} event.
+    function _transfer(address from, address to, uint256 tokenId) internal {
+        require(from != address(0), "ERC721: transfer from zero address");
+        require(to != address(0), "ERC721: transfer to the zero address");
+        require(_existsAndNotClaimed(tokenId), "ERC721: transfer nonexistent or claimed token");
 
-        require(_from != address(0), "ERC721: transfer from zero address");
-        require(_from != ownerOf(_requestId), "ERC721: transfer from incorrect owner");
-        require(_to != address(0), "ERC721: transfer to the zero address");
-       
-        WithdrawalRequest storage request = _getQueue()[_requestId];
+        WithdrawalRequest storage request = _getQueue()[tokenId];
 
-        if (request.claimed) revert RequestAlreadyClaimed(_requestId);
-        require(request.owner == _from, "ERC721: transfer from incorrect owner");
+        if (request.claimed) revert RequestAlreadyClaimed(tokenId);
 
-        delete _getTokenApprovals()[_requestId];
-        request.owner = payable(_to);
+        delete _getTokenApprovals()[tokenId];
+        request.owner = payable(to);
 
-        _getRequestsByOwner()[_to].add(_requestId);
-        _getRequestsByOwner()[_from].remove(_requestId);
+        _getRequestsByOwner()[to].add(tokenId);
+        _getRequestsByOwner()[from].remove(tokenId);
     }
 
     /// @dev Safely transfers `tokenId` token from `from` to `to`, checking first that contract recipients
     ///  are aware of the ERC721 protocol to prevent tokens from being forever locked.
     ///  `data` is additional data, it has no specified format and it is sent in call to `to`.
-    ///
-    ///  This internal function is equivalent to {safeTransferFrom}, and can be used to e.g.
-    ///  implement alternative mechanisms to perform token transfer, such as signature-based.
     ///
     /// Requirements:
     ///
@@ -215,11 +217,9 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
     // Internal getters and setters
     //
 
-    /// @dev Returns whether `tokenId` exists.
-    ///
-    /// Tokens can be managed by their owner or approved accounts via {approve} or {setApprovalForAll}.
-    function _exists(uint256 _tokenId) internal view virtual returns (bool) {
-        return _tokenId != 0 && _tokenId <= getLastRequestId();
+    /// @dev Returns whether `_requestId` exists and not claimed.
+    function _existsAndNotClaimed(uint256 _requestId) internal view returns (bool) {
+        return _requestId > 0 && _requestId <= getLastRequestId() && !_getQueue()[_requestId].claimed;
     }
 
     /// @dev Approve `to` to operate on `tokenId`
