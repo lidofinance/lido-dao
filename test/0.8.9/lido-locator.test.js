@@ -12,7 +12,7 @@ const services = [
   'elRewardsVault',
   'legacyOracle',
   'lido',
-  'safetyNetsRegistry',
+  'oracleReportSanityChecker',
   'selfOwnedStEthBurner',
   'stakingRouter',
   'treasury',

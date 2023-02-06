@@ -42,21 +42,26 @@ struct LimitsList {
     /// @notice The max possible number of validators that might appear or exit on the Consensus
     ///     Layer during one epoch
     uint256 churnValidatorsByEpochLimit;
+
     /// @notice The max decrease of the total validators' balances on the Consensus Layer since
     ///     the previous oracle report
-    /// @dev Represented in the Basis Points (100% == 100_00)
+    /// @dev Represented in the Basis Points (100% == 10_000)
     uint256 oneOffCLBalanceDecreaseBPLimit;
+
     /// @notice The max annual increase of the total validators' balances on the Consensus Layer
     ///     since the previous oracle report
-    /// @dev Represented in the Basis Points (100% == 100_00)
+    /// @dev Represented in the Basis Points (100% == 10_000)
     uint256 annualBalanceIncreaseBPLimit;
+
     /// @notice The max deviation of stETH.totalPooledEther() / stETH.totalShares() ratio since
     ///     the previous oracle report
-    /// @dev Represented in the Basis Points (100% == 100_00)
+    /// @dev Represented in the Basis Points (100% == 10_000)
     uint256 shareRateDeviationBPLimit;
+
     /// @notice The min time required to be passed from the creation of the request to be
     ///     finalized till the time of the oracle report
     uint256 requestTimestampMargin;
+
     /// @notice The positive token rebase allowed per single LidoOracle report
     /// @dev uses 1e9 precision, e.g.: 1e6 - 0.1%; 1e9 - 100%, see `setMaxPositiveTokenRebase()`
     uint256 maxPositiveTokenRebase;
@@ -151,7 +156,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
     /// @notice Returns max positive token rebase value with 1e9 precision:
     ///     e.g.: 1e6 - 0.1%; 1e9 - 100%
-    ///     - zero value means unititialized
+    ///     - zero value means uninitialized
     ///     - type(uint64).max means unlimited
     ///
     /// @dev Get max positive rebase allowed per single oracle report token rebase happens on total
