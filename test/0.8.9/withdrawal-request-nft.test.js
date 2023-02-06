@@ -5,11 +5,11 @@ const { shares, ETH } = require('../helpers/utils')
 
 const StETH = hre.artifacts.require('StETHMock')
 const WstETH = hre.artifacts.require('WstETHMock')
-const WithdrawalNFT = hre.artifacts.require('WithdrawalNFT')
+const WithdrawalNFT = hre.artifacts.require('WithdrawalRequestNFT')
 const OssifiableProxy = hre.artifacts.require('OssifiableProxy')
 
 hre.contract(
-  'WithdrawalNFT',
+  'WithdrawalRequestNFT',
   ([deployer, stEthHolder, wstEthHolder, nftHolderStETH, nftHolderWstETH, recipient, stranger]) => {
     let withdrawalNFT, stETH, wstETH
     let nftHolderStETHTokenIds, nftHolderWstETHTokenIds, nonExistedTokenId

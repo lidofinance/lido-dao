@@ -18,7 +18,7 @@ import {IAccessControlEnumerable, AccessControlEnumerable} from "./utils/access/
 
 /// @title NFT implementation around {WithdrawalRequest}
 /// @author psirex, folkyatina
-contract WithdrawalNFT is IERC721, WithdrawalQueue {
+contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     using Strings for uint256;
     using Address for address;
     using EnumerableSet for EnumerableSet.UintSet;
@@ -46,58 +46,58 @@ contract WithdrawalNFT is IERC721, WithdrawalQueue {
     }
 
     /// @dev See {IERC721-ownerOf}.
-    function ownerOf(uint256 _tokenId) public view returns (address) {
-        if (_tokenId == 0 || _tokenId > getLastRequestId()) revert InvalidRequestId(_tokenId);
-        return _getQueue()[_tokenId].owner;
+    function ownerOf(uint256 _requestId) public view returns (address) {
+        if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
+        return _getQueue()[_requestId].owner;
     }
 
     /// @dev See {IERC721-approve}.
-    function approve(address to, uint256 tokenId) public {
-        address owner = ownerOf(tokenId);
-        require(to != owner, "ERC721: approval to current owner");
+    function approve(address _to, uint256 _requestId) public {
+        address owner = ownerOf(_requestId);
+        require(_to != owner, "ERC721: approval to current owner");
 
         require(
             msg.sender == owner || isApprovedForAll(owner, msg.sender),
             "ERC721: approve caller is not owner nor approved for all"
         );
 
-        _approve(to, tokenId);
+        _approve(_to, _requestId);
     }
 
     /// @dev See {IERC721-getApproved}.
-    function getApproved(uint256 tokenId) public view returns (address) {
-        require(_existsAndNotClaimed(tokenId), "ERC721: approved query for nonexistent or claimed token");
+    function getApproved(uint256 _requestId) public view returns (address) {
+        require(_existsAndNotClaimed(_requestId), "ERC721: approved query for nonexistent or claimed token");
 
-        return _getTokenApprovals()[tokenId];
+        return _getTokenApprovals()[_requestId];
     }
 
     /// @dev See {IERC721-setApprovalForAll}.
-    function setApprovalForAll(address operator, bool approved) public {
-        _setApprovalForAll(msg.sender, operator, approved);
+    function setApprovalForAll(address _operator, bool _approvedd) public {
+        _setApprovalForAll(msg.sender, _operator, _approvedd);
     }
 
     /// @dev See {IERC721-isApprovedForAll}.
-    function isApprovedForAll(address owner, address operator) public view returns (bool) {
-        return _getOperatorApprovals()[owner][operator];
+    function isApprovedForAll(address _owner, address _operator) public view returns (bool) {
+        return _getOperatorApprovals()[_owner][_operator];
     }
 
     /// @dev See {IERC721-safeTransferFrom}.
-    function safeTransferFrom(address from, address to, uint256 tokenId) public override {
-        safeTransferFrom(from, to, tokenId, "");
+    function safeTransferFrom(address _from, address _to, uint256 _requestId) public override {
+        safeTransferFrom(_from, _to, _requestId, "");
     }
 
     /// @dev See {IERC721-safeTransferFrom}.
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public override {
-        require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: caller is not token owner or approved");
-        _safeTransfer(from, to, tokenId, data);
+    function safeTransferFrom(address _from, address _to, uint256 _requestId, bytes memory _data) public override {
+        require(_isApprovedOrOwner(msg.sender, _requestId), "ERC721: caller is not token owner or approved");
+        _safeTransfer(_from, _to, _requestId, _data);
     }
 
     /// @dev See {IERC721-transferFrom}.
-    function transferFrom(address from, address to, uint256 tokenId) public override {
-        require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: caller is not token owner or approved");
-        _transfer(from, to, tokenId);
+    function transferFrom(address _from, address _to, uint256 _requestId) public override {
+        require(_isApprovedOrOwner(msg.sender, _requestId), "ERC721: caller is not token owner or approved");
+        _transfer(_from, _to, _requestId);
 
-        emit Transfer(from, to, tokenId);
+        emit Transfer(_from, _to, _requestId);
     }
 
     /// @dev Transfers `tokenId` from `from` to `to`.
@@ -108,22 +108,22 @@ contract WithdrawalNFT is IERC721, WithdrawalQueue {
     /// - `from` cannot be the zero address.
     /// - `to` cannot be the zero address.
     /// - `tokenId` token must be owned by `from`.
-    function _transfer(address from, address to, uint256 tokenId) internal {
-        require(from != address(0), "ERC721: transfer from zero address");
-        require(to != address(0), "ERC721: transfer to the zero address");
-        require(tokenId > 0 && tokenId <= getLastRequestId(), "ERC721: transfer nonexistent token");
+    function _transfer(address _from, address _to, uint256 _requestId) internal {
+        require(_from != address(0), "ERC721: transfer from zero address");
+        require(_to != address(0), "ERC721: transfer to the zero address");
+        require(_requestId > 0 && _requestId <= getLastRequestId(), "ERC721: transfer nonexistent token");
 
-        WithdrawalRequest storage request = _getQueue()[tokenId];
+        WithdrawalRequest storage request = _getQueue()[_requestId];
 
-        require(request.owner == from, "ERC721: transfer from incorrect owner");
+        require(request.owner == _from, "ERC721: transfer from incorrect owner");
 
-        if (request.claimed) revert RequestAlreadyClaimed(tokenId);
+        if (request.claimed) revert RequestAlreadyClaimed(_requestId);
 
-        delete _getTokenApprovals()[tokenId];
-        request.owner = payable(to);
+        delete _getTokenApprovals()[_requestId];
+        request.owner = payable(_to);
 
-        _getRequestsByOwner()[to].add(tokenId);
-        _getRequestsByOwner()[from].remove(tokenId);
+        _getRequestsByOwner()[_to].add(_requestId);
+        _getRequestsByOwner()[_from].remove(_requestId);
     }
 
     /// @dev Safely transfers `tokenId` token from `from` to `to`, checking first that contract recipients
@@ -138,27 +138,27 @@ contract WithdrawalNFT is IERC721, WithdrawalQueue {
     ///  - If `to` refers to a smart contract, it must implement {IERC721Receiver-onERC721Received}, which is called upon a safe transfer.
     ///
     ///  Emits a {Transfer} event.
-    function _safeTransfer(address from, address to, uint256 tokenId, bytes memory data) internal {
-        _transfer(from, to, tokenId);
-        require(_checkOnERC721Received(from, to, tokenId, data), "ERC721: transfer to non ERC721Receiver implementer");
+    function _safeTransfer(address _from, address _to, uint256 _requestId, bytes memory _data) internal {
+        _transfer(_from, _to, _requestId);
+        require(_checkOnERC721Received(_from, _to, _requestId, _data), "ERC721: transfer to non ERC721Receiver implementer");
 
-        emit Transfer(from, to, tokenId);
+        emit Transfer(_from, _to, _requestId);
     }
 
     /// @dev Internal function to invoke {IERC721Receiver-onERC721Received} on a target address.
     /// The call is not executed if the target address is not a contract.
     ///
-    /// @param from address representing the previous owner of the given token ID
-    /// @param to target address that will receive the tokens
-    /// @param tokenId uint256 ID of the token to be transferred
-    /// @param data bytes optional data to send along with the call
+    /// @param _from address representing the previous owner of the given token ID
+    /// @param _to target address that will receive the tokens
+    /// @param _requestId uint256 ID of the token to be transferred
+    /// @param _data bytes optional data to send along with the call
     /// @return bool whether the call correctly returned the expected magic value
-    function _checkOnERC721Received(address from, address to, uint256 tokenId, bytes memory data)
+    function _checkOnERC721Received(address _from, address _to, uint256 _requestId, bytes memory _data)
     private
     returns (bool)
     {
-        if (to.isContract()) {
-            try IERC721Receiver(to).onERC721Received(msg.sender, from, tokenId, data) returns (bytes4 retval) {
+        if (_to.isContract()) {
+            try IERC721Receiver(_to).onERC721Received(msg.sender, _from, _requestId, _data) returns (bytes4 retval) {
                 return retval == IERC721Receiver.onERC721Received.selector;
             } catch (bytes memory reason) {
                 if (reason.length == 0) {
@@ -180,9 +180,9 @@ contract WithdrawalNFT is IERC721, WithdrawalQueue {
     /// Requirements:
     ///
     /// - `tokenId` must exist.
-    function _isApprovedOrOwner(address spender, uint256 tokenId) internal view returns (bool) {
-        address owner = ownerOf(tokenId);
-        return (spender == owner || isApprovedForAll(owner, spender) || getApproved(tokenId) == spender);
+    function _isApprovedOrOwner(address _spender, uint256 _requestId) internal view returns (bool) {
+        address owner = ownerOf(_requestId);
+        return (_spender == owner || isApprovedForAll(owner, _spender) || getApproved(_requestId) == _spender);
     }
 
     //
@@ -190,8 +190,8 @@ contract WithdrawalNFT is IERC721, WithdrawalQueue {
     //
 
     /// @dev a little crutch to emit { Transfer } on request and on claim like ERC721 states 
-    function _emitTransfer(address from, address to, uint256 tokenId) internal override {
-        emit Transfer(from, to, tokenId);
+    function _emitTransfer(address _from, address _to, uint256 _requestId) internal override {
+        emit Transfer(_from, _to, _requestId);
     }
 
     /// @dev Returns whether `_requestId` exists and not claimed.
@@ -201,17 +201,17 @@ contract WithdrawalNFT is IERC721, WithdrawalQueue {
 
     /// @dev Approve `to` to operate on `tokenId`
     /// Emits a {Approval} event.
-    function _approve(address to, uint256 tokenId) internal virtual {
-        _getTokenApprovals()[tokenId] = to;
-        emit Approval(ownerOf(tokenId), to, tokenId);
+    function _approve(address _to, uint256 _requestId) internal virtual {
+        _getTokenApprovals()[_requestId] = _to;
+        emit Approval(ownerOf(_requestId), _to, _requestId);
     }
 
     /// @dev Approve `operator` to operate on all of `owner` tokens
     /// Emits a {ApprovalForAll} event.
-    function _setApprovalForAll(address owner, address operator, bool approved) internal virtual {
-        require(owner != operator, "ERC721: approve to caller");
-        _getOperatorApprovals()[owner][operator] = approved;
-        emit ApprovalForAll(owner, operator, approved);
+    function _setApprovalForAll(address _owner, address _operator, bool _approved) internal virtual {
+        require(_owner != _operator, "ERC721: approve to caller");
+        _getOperatorApprovals()[_owner][_operator] = _approved;
+        emit ApprovalForAll(_owner, _operator, _approved);
     }
 
     function _getTokenApprovals() internal pure returns (mapping(uint256 => address) storage tokenApprovals) {
