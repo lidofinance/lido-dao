@@ -9,22 +9,25 @@ import {IERC721Receiver} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721
 import {IERC165} from "@openzeppelin/contracts-v4.4/utils/introspection/ERC165.sol";
 
 import {Strings} from "@openzeppelin/contracts-v4.4/utils/Strings.sol";
-import {ERC165} from "@openzeppelin/contracts-v4.4/utils/introspection/ERC165.sol";
 import {EnumerableSet} from "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
 import {Address} from "@openzeppelin/contracts-v4.4/utils/Address.sol";
 
 import {IWstETH, WithdrawalQueue} from "./WithdrawalQueue.sol";
-import {IAccessControlEnumerable, AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
+import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
+import {UnstructuredRefStorage} from "./lib/UnstructuredRefStorage.sol";
 
-/// @title NFT implementation around {WithdrawalRequest}
+/// @title NFT implementation on top of {WithdrawalQueue}
+/// NFT is minted on every request and burned on claim
+/// 
 /// @author psirex, folkyatina
 contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     using Strings for uint256;
     using Address for address;
     using EnumerableSet for EnumerableSet.UintSet;
+    using UnstructuredRefStorage for bytes32;
 
-    bytes32 public constant TOKEN_APPROVALS_POSITION = keccak256("lido.WithdrawalNFT.tokenApprovals");
-    bytes32 public constant OPERATOR_APPROVALS = keccak256("lido.WithdrawalNFT.operatorApprovals");
+    bytes32 internal constant TOKEN_APPROVALS_POSITION = keccak256("lido.WithdrawalNFT.tokenApprovals");
+    bytes32 internal constant OPERATOR_APPROVALS = keccak256("lido.WithdrawalNFT.operatorApprovals");
 
     /// @param _wstETH address of WstETH contract
     constructor(address _wstETH) WithdrawalQueue(IWstETH(_wstETH)) {}
@@ -48,7 +51,12 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     /// @dev See {IERC721-ownerOf}.
     function ownerOf(uint256 _requestId) public view returns (address) {
         if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
-        return _getQueue()[_requestId].owner;
+
+        WithdrawalRequest memory request = _getQueue()[_requestId];
+
+        if (request.claimed) revert RequestAlreadyClaimed(_requestId);
+
+        return request.owner;
     }
 
     /// @dev See {IERC721-approve}.
@@ -110,7 +118,7 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     /// - `tokenId` token must be owned by `from`.
     function _transfer(address _from, address _to, uint256 _requestId) internal {
         require(_from != address(0), "ERC721: transfer from zero address");
-        require(_to != address(0), "ERC721: transfer to the zero address");
+        require(_to != address(0), "ERC721: transfer to zero address");
         require(_requestId > 0 && _requestId <= getLastRequestId(), "ERC721: transfer nonexistent token");
 
         WithdrawalRequest storage request = _getQueue()[_requestId];
@@ -214,21 +222,15 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
         emit ApprovalForAll(_owner, _operator, _approved);
     }
 
-    function _getTokenApprovals() internal pure returns (mapping(uint256 => address) storage tokenApprovals) {
-        bytes32 position = TOKEN_APPROVALS_POSITION;
-        assembly {
-            tokenApprovals.slot := position
-        }
+    function _getTokenApprovals() internal pure returns (mapping(uint256 => address) storage) {
+       return TOKEN_APPROVALS_POSITION.storageMapUint256Address();
     }
 
     function _getOperatorApprovals()
         internal
         pure
-        returns (mapping(address => mapping(address => bool)) storage operatorApprovals)
+        returns (mapping(address => mapping(address => bool)) storage)
     {
-        bytes32 position = TOKEN_APPROVALS_POSITION;
-        assembly {
-            operatorApprovals.slot := position
-        }
+        return OPERATOR_APPROVALS.storageMapAddressMapAddressBool();
     }
 }

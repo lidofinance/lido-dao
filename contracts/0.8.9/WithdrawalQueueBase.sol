@@ -75,7 +75,7 @@ abstract contract WithdrawalQueueBase {
         uint256 indexed from, uint256 indexed to, uint256 amountOfETHLocked, uint256 sharesBurned, uint256 timestamp
     );
     event WithdrawalClaimed(
-        uint256 indexed requestId, address owner, address indexed receiver, uint256 amountOfETH
+        uint256 indexed requestId, address indexed owner, address indexed receiver, uint256 amountOfETH
     );
     
     error ZeroAmountOfETH();
