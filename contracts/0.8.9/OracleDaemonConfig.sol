@@ -21,9 +21,12 @@ contract OracleDaemonConfig is AccessControlEnumerable {
     EnumerableSet.Bytes32Set private _keyHashes;
 
     constructor(address _admin, address[] memory _configManagers) {
+        if (_admin == address(0)) revert ErrorZeroAddress();
+
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
 
         for (uint256 i = 0; i < _configManagers.length; ) {
+            if (_configManagers[i] == address(0)) revert ErrorZeroAddress();
             _grantRole(CONFIG_MANAGER_ROLE, _configManagers[i]);
 
             unchecked {
@@ -32,9 +35,9 @@ contract OracleDaemonConfig is AccessControlEnumerable {
         }
     }
 
-    function set(string memory _key, bytes memory _value) external onlyRole(CONFIG_MANAGER_ROLE) {
+    function set(string calldata _key, bytes calldata _value) external onlyRole(CONFIG_MANAGER_ROLE) {
         bytes32 keyHash = bytes32(keccak256(abi.encodePacked(_key)));
-        require(!_keyHashes.contains(keyHash), "VALUE_EXISTS");
+        if (_keyHashes.contains(keyHash)) revert ErrorValueExists(_key);
 
         _keyHashes.add(keyHash);
         _values[keyHash] = _value;
@@ -42,17 +45,17 @@ contract OracleDaemonConfig is AccessControlEnumerable {
         emit ConfigValueSet(keyHash, _key, _value);
     }
 
-    function update(string memory _key, bytes memory _value) external onlyRole(CONFIG_MANAGER_ROLE) {
+    function update(string calldata _key, bytes calldata _value) external onlyRole(CONFIG_MANAGER_ROLE) {
         bytes32 keyHash = bytes32(keccak256(abi.encodePacked(_key)));
-        require(_keyHashes.contains(keyHash), "VALUE_DOESNT_EXIST");
+        if (!_keyHashes.contains(keyHash)) revert ErrorValueDoesntExist(_key);
         _values[keyHash] = _value;
 
         emit ConfigValueUpdated(keyHash, _key, _value);
     }
 
-    function unset(string memory _key) external onlyRole(CONFIG_MANAGER_ROLE) {
+    function unset(string calldata _key) external onlyRole(CONFIG_MANAGER_ROLE) {
         bytes32 keyHash = bytes32(keccak256(abi.encodePacked(_key)));
-        require(_keyHashes.contains(keyHash), "VALUE_DOESNT_EXIST");
+        if (!_keyHashes.contains(keyHash)) revert ErrorValueDoesntExist(_key);
 
         _keyHashes.remove(keyHash);
         delete _values[keyHash];
@@ -60,9 +63,9 @@ contract OracleDaemonConfig is AccessControlEnumerable {
         emit ConfigValueUnset(keyHash, _key);
     }
 
-    function get(string memory _key) external view returns (Item memory value) {
+    function get(string calldata _key) external view returns (Item memory value) {
         bytes32 keyHash = bytes32(keccak256(abi.encodePacked(_key)));
-        require(_keyHashes.contains(keyHash), "VALUE_DOESNT_EXIST");
+        if (!_keyHashes.contains(keyHash)) revert ErrorValueDoesntExist(_key);
 
         return Item({keyHash: keyHash, value: _values[keyHash]});
     }
@@ -83,7 +86,11 @@ contract OracleDaemonConfig is AccessControlEnumerable {
         return values;
     }
 
-    event ConfigValueSet(bytes32 indexed keyHash_, string key_, bytes value_);
-    event ConfigValueUpdated(bytes32 indexed keyHash_, string key_, bytes value_);
-    event ConfigValueUnset(bytes32 indexed keyHash_, string key_);
+    error ErrorValueExists(string key);
+    error ErrorValueDoesntExist(string key);
+    error ErrorZeroAddress();
+
+    event ConfigValueSet(bytes32 indexed keyHash, string key, bytes value);
+    event ConfigValueUpdated(bytes32 indexed keyHash, string key, bytes value);
+    event ConfigValueUnset(bytes32 indexed keyHash, string key);
 }

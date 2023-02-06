@@ -1,8 +1,8 @@
-const { assert } = require('chai')
 const hre = require('hardhat')
 const { keccak256 } = require('js-sha3')
+const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
-const { assertRevert } = require('../helpers/assertThrow')
+const { assert } = require('../helpers/assert')
 const { EvmSnapshot } = require('../helpers/blockchain')
 
 const OracleDaemonConfig = hre.artifacts.require('OracleDaemonConfig.sol')
@@ -64,7 +64,7 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
     it('removes a value', async () => {
       await config.unset(defaultKey, { from: manager })
 
-      assertRevert(config.get(defaultKey))
+      assert.reverts(config.get(defaultKey))
     })
 
     it('gets all values (empty)', async () => {
@@ -88,16 +88,24 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
     })
 
     it("reverts when defaultValue for update doesn't exist", async () => {
-      assertRevert(config.update(defaultKeyHash, defaultValue, { from: manager }), 'VALUE_DOESNT_EXIST')
+      assert.reverts(config.update(defaultKey, defaultValue, { from: manager }), `ErrorValueDoesntExist(${defaultKey})`)
     })
 
     it("reverts when defaultValue for unset doen't exist", async () => {
-      assertRevert(config.unset(defaultKeyHash, { from: manager }), 'VALUE_DOESNT_EXIST')
+      assert.reverts(config.unset(defaultKey, { from: manager }), `ErrorValueDoesntExist(${defaultKey})`)
     })
 
     it('reverts when defaultValue for set already exists', async () => {
-      await config.set(defaultKeyHash, defaultValue, { from: manager })
-      assertRevert(config.set(defaultKeyHash, updatedDefaultValue, { from: manager }), 'VALUE_EXISTS')
+      await config.set(defaultKey, defaultValue, { from: manager })
+      assert.reverts(config.set(defaultKey, updatedDefaultValue, { from: manager }), `ErrorValueExists(${defaultKey})`)
+    })
+
+    it('reverts when admin is zero address', async () => {
+      assert.reverts(OracleDaemonConfig.new(ZERO_ADDRESS, [manager], { from: deployer }), 'ErrorZeroAddress()')
+    })
+
+    it('reverts when one of managers is zero address', async () => {
+      assert.reverts(OracleDaemonConfig.new(deployer, [manager, ZERO_ADDRESS], { from: deployer }), 'ErrorZeroAddress()')
     })
   })
 
@@ -107,31 +115,31 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
     })
 
     it('stranger cannot set a defaultValue', async () => {
-      assertRevert(config.set(defaultKeyHash, defaultValue, { from: stranger }))
+      assert.reverts(config.set(defaultKeyHash, defaultValue, { from: stranger }))
     })
 
     it('admin cannot set a defaultValue', async () => {
-      assertRevert(config.set(defaultKeyHash, defaultValue, { from: deployer }))
+      assert.reverts(config.set(defaultKeyHash, defaultValue, { from: deployer }))
     })
 
     it('stranger cannot update a defaultValue', async () => {
       await config.set(defaultKeyHash, defaultValue, { from: manager })
-      assertRevert(config.update(defaultKeyHash, updatedDefaultValue, { from: stranger }))
+      assert.reverts(config.update(defaultKeyHash, updatedDefaultValue, { from: stranger }))
     })
 
     it('admin cannot update a defaultValue', async () => {
       await config.set(defaultKeyHash, defaultValue, { from: manager })
-      assertRevert(config.update(defaultKeyHash, updatedDefaultValue, { from: deployer }))
+      assert.reverts(config.update(defaultKeyHash, updatedDefaultValue, { from: deployer }))
     })
 
     it('stranger cannot unset a defaultValue', async () => {
       await config.set(defaultKeyHash, defaultValue, { from: manager })
-      assertRevert(config.unset(defaultKeyHash, { from: stranger }))
+      assert.reverts(config.unset(defaultKeyHash, { from: stranger }))
     })
 
     it('stranger cannot unset a defaultValue', async () => {
       await config.set(defaultKeyHash, defaultValue, { from: manager })
-      assertRevert(config.unset(defaultKeyHash, { from: deployer }))
+      assert.reverts(config.unset(defaultKeyHash, { from: deployer }))
     })
   })
 })
