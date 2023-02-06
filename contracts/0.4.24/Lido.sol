@@ -713,7 +713,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * @dev calculate the amount of rewards and distribute it
      */
     function _processRewards(
-        uint256 _preCLBalance,
+        OracleReportHandlingData memory _handlingData,
         uint256 _postCLBalance,
         uint256 _withdrawnWithdrawals,
         uint256 _withdrawnElRewards
@@ -722,9 +722,16 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // (when consensus layer balance delta is zero or negative).
         // See ADR #3 for details:
         // https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
-        if ((_postCLBalance.add(_withdrawnWithdrawals)) > _preCLBalance) {
-            uint256 consensusLayerRewards = _postCLBalance.add(_withdrawnWithdrawals).sub(_preCLBalance);
-            sharesMintedAsFees = _distributeFee(consensusLayerRewards.add(_withdrawnElRewards));
+        if ((_postCLBalance.add(_withdrawnWithdrawals)) > _handlingData.preCLBalance) {
+            uint256 consensusLayerRewards = _postCLBalance.add(_withdrawnWithdrawals).sub(_handlingData.preCLBalance);
+            uint256 newTotalPooledEtherForRewards =
+                _handlingData.preTotalPooledEther.add(_withdrawnWithdrawals).add(_withdrawnElRewards);
+
+            sharesMintedAsFees = _distributeFee(
+                newTotalPooledEtherForRewards,
+                _handlingData.preTotalShares,
+                consensusLayerRewards.add(_withdrawnElRewards)
+            );
         }
     }
 
@@ -774,10 +781,51 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
+     * @dev Staking router rewards distribution.
+     *
+     * Corresponds to the return value of `IStakingRouter.newTotalPooledEtherForRewards()`
+     * Prevents `stack too deep` issue.
+     */
+    struct StakingRewardsDistribution {
+        address[] recipients;
+        uint256[] moduleIds;
+        uint96[] modulesFees;
+        uint96 totalFee;
+        uint256 precisionPoints;
+    }
+
+    /**
+     * @dev Get staking rewards distribution from staking router.
+     */
+    function _getStakingRewardsDistribution() internal view returns (
+        StakingRewardsDistribution memory ret,
+        IStakingRouter router
+    ) {
+        router = IStakingRouter(getLidoLocator().stakingRouter());
+
+        (
+            ret.recipients,
+            ret.moduleIds,
+            ret.modulesFees,
+            ret.totalFee,
+            ret.precisionPoints
+        ) = router.getStakingRewardsDistribution();
+
+        require(ret.recipients.length == ret.modulesFees.length, "WRONG_RECIPIENTS_INPUT");
+        require(ret.moduleIds.length == ret.modulesFees.length, "WRONG_MODULE_IDS_INPUT");
+    }
+
+    /**
      * @dev Distributes fee portion of the rewards by minting and distributing corresponding amount of liquid tokens.
+     * @param _newTotalPooledEther Total supply when the accrued `_totalRewards` added
+     * @param _prevTotalShares Total shares before minting the fees
      * @param _totalRewards Total rewards accrued both on the Execution Layer and the Consensus Layer sides in wei.
      */
-    function _distributeFee(uint256 _totalRewards) internal returns (uint256 sharesMintedAsFees) {
+    function _distributeFee(
+        uint256 _newTotalPooledEther,
+        uint256 _prevTotalShares,
+        uint256 _totalRewards
+    ) internal returns (uint256 sharesMintedAsFees) {
         // We need to take a defined percentage of the reported reward as a fee, and we do
         // this by minting new token shares and assigning them to the fee recipients (see
         // StETH docs for the explanation of the shares mechanics). The staking rewards fee
@@ -803,31 +851,36 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // The effect is that the given percentage of the reward goes to the fee recipient, and
         // the rest of the reward is distributed between token holders proportionally to their
         // token shares.
-        IStakingRouter router = IStakingRouter(getLidoLocator().stakingRouter());
 
-        (address[] memory recipients,
-            uint256[] memory moduleIds,
-            uint96[] memory modulesFees,
-            uint96 totalFee,
-            uint256 precisionPoints) = router.getStakingRewardsDistribution();
+        (
+            StakingRewardsDistribution memory rewardsDistribution,
+            IStakingRouter router
+        ) = _getStakingRewardsDistribution();
 
-        require(recipients.length == modulesFees.length, "WRONG_RECIPIENTS_INPUT");
-        require(moduleIds.length == modulesFees.length, "WRONG_MODULE_IDS_INPUT");
-
-        if (totalFee > 0) {
+        if (rewardsDistribution.totalFee > 0) {
             sharesMintedAsFees =
-                _totalRewards.mul(totalFee).mul(_getTotalShares()).div(
-                    _getTotalPooledEther().mul(precisionPoints).sub(_totalRewards.mul(totalFee))
+                _totalRewards.mul(rewardsDistribution.totalFee).mul(_prevTotalShares).div(
+                    _newTotalPooledEther.mul(
+                        rewardsDistribution.precisionPoints
+                    ).sub(_totalRewards.mul(rewardsDistribution.totalFee))
                 );
 
             _mintShares(address(this), sharesMintedAsFees);
 
             (uint256[] memory moduleRewards, uint256 totalModuleRewards) =
-                _transferModuleRewards(recipients, modulesFees, totalFee, sharesMintedAsFees);
+                _transferModuleRewards(
+                    rewardsDistribution.recipients,
+                    rewardsDistribution.modulesFees,
+                    rewardsDistribution.totalFee,
+                    sharesMintedAsFees
+                );
 
             _transferTreasuryRewards(sharesMintedAsFees.sub(totalModuleRewards));
 
-            router.reportRewardsMinted(moduleIds, moduleRewards);
+            router.reportRewardsMinted(
+                rewardsDistribution.moduleIds,
+                moduleRewards
+            );
         }
     }
 
@@ -1065,7 +1118,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         // distribute rewards to Lido and Node Operators
         handlingData.sharesMintedAsFees = _processRewards(
-            handlingData.preCLBalance,
+            handlingData,
             _inputData.postCLBalance,
             withdrawals,
             elRewards
