@@ -72,6 +72,7 @@ async function deployExitBusOracle(admin, {
   maxRequestsListLength = MAX_REQUESTS_LIST_LENGTH,
   rateLimitWindowSlots = RATE_LIMIT_WINDOW_SLOTS,
   rateLimitMaxThroughput = RATE_LIMIT_THROUGHPUT,
+  resumeAfterDeploy = true,
 } = {}) {
   const oracle = await ValidatorsExitBusOracle.new(SECONDS_PER_SLOT, GENESIS_TIME, {from: admin})
 
@@ -129,6 +130,10 @@ async function deployExitBusOracle(admin, {
 
   assert.equal(+await oracle.DATA_FORMAT_LIST(), DATA_FORMAT_LIST)
 
+  if (resumeAfterDeploy) {
+    await oracle.resume({from: admin})
+  }
+
   return {consensus, oracle}
 }
 
@@ -140,7 +145,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1]) => {
   context('Deployment and initial configuration', () => {
 
     it('deployment finishes successfully', async () => {
-      const deployed = await deployExitBusOracle(admin)
+      const deployed = await deployExitBusOracle(admin, {resumeAfterDeploy: false})
       consensus = deployed.consensus
       oracle = deployed.oracle
     })
