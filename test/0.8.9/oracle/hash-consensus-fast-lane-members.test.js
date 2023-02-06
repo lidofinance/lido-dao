@@ -20,6 +20,31 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
       consensus = deployed.consensus
     }
 
+    const setTimeToFrame0 = async () => {
+      await consensus.setTimeInEpochs((await consensus.getFrameConfig()).initialEpoch)
+      assert.equal(
+        +await consensus.getTimeInSlots(),
+        +(await consensus.getCurrentFrame()).refSlot + 1
+      )
+    }
+
+    context('State after initialization', () => {
+      before(deploy)
+
+      it('nobody is in the fast lane set', async () => {
+        assert.isFalse(await consensus.getIsFastLaneMember(member1))
+        assert.isFalse((await consensus.getMemberInfo(member1)).isFastLane)
+
+        assert.isFalse(await consensus.getIsFastLaneMember(member2))
+        assert.isFalse((await consensus.getMemberInfo(member2)).isFastLane)
+
+        assert.isFalse(await consensus.getIsFastLaneMember(member3))
+        assert.isFalse((await consensus.getMemberInfo(member3)).isFastLane)
+
+        assert.isEmpty((await consensus.getFastLaneMembers()).addresses)
+      })
+    })
+
     context('Basic scenario', () => {
       const fastLaneLengthSlots = 10
 
@@ -46,13 +71,9 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
         await consensus.addMember(member3, 2, {from: admin})
         await consensus.addMember(member4, 3, {from: admin})
         await consensus.addMember(member5, 3, {from: admin})
-
-        await consensus.setTimeInEpochs((await consensus.getFrameConfig()).initialEpoch)
-        assert.equal(
-          +await consensus.getTimeInSlots(),
-          +(await consensus.getCurrentFrame()).refSlot + 1
-        )
       })
+
+      before(setTimeToFrame0)
 
       const testFrame = ({fastLaneMembers, restMembers}, index) => context(`frame ${index}`, () => {
         let frame
@@ -81,15 +102,20 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
           assert.isFalse(await consensus.getIsFastLaneMember(restMembers[1]))
           assert.isFalse((await consensus.getMemberInfo(restMembers[1])).isFastLane)
 
-          assert.sameOrderedMembers(
+          assert.sameMembers(
             (await consensus.getFastLaneMembers()).addresses,
             fastLaneMembers
           )
 
-          assert.sameOrderedMembers(
+          assert.sameMembers(
             (await consensus.getMembers()).addresses,
             [member1, member2, member3, member4, member5]
           )
+        })
+
+        it('non-members are not in the fast lane set', async () => {
+          assert.isFalse(await consensus.getIsFastLaneMember(stranger))
+          assert.isFalse((await consensus.getMemberInfo(stranger)).isFastLane)
         })
 
         it(`fast lane members can submit a report in the first part of the frame`, async () => {
@@ -137,6 +163,52 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
       })
 
       frames.forEach(testFrame)
+    })
+
+    context('Quorum size equal to total members', () => {
+      before(async () => {
+        await deploy({fastLaneLengthSlots: 10})
+
+        await consensus.addMember(member1, 3, {from: admin})
+        await consensus.addMember(member2, 3, {from: admin})
+        await consensus.addMember(member3, 3, {from: admin})
+      })
+
+      before(setTimeToFrame0)
+
+      const testFrame = (frameIndex) => context(`frame ${frameIndex}`, () => {
+        after(async () => {
+          await consensus.advanceTimeToNextFrameStart()
+        })
+
+        it(`all members are in the fast lane set`, async () => {
+          assert.isTrue(await consensus.getIsFastLaneMember(member1))
+          assert.isTrue((await consensus.getMemberInfo(member1)).isFastLane)
+
+          assert.isTrue(await consensus.getIsFastLaneMember(member2))
+          assert.isTrue((await consensus.getMemberInfo(member2)).isFastLane)
+
+          assert.isTrue(await consensus.getIsFastLaneMember(member3))
+          assert.isTrue((await consensus.getMemberInfo(member3)).isFastLane)
+
+          assert.sameMembers(
+            (await consensus.getFastLaneMembers()).addresses,
+            [member1, member2, member3]
+          )
+
+          assert.sameMembers(
+            (await consensus.getMembers()).addresses,
+            [member1, member2, member3]
+          )
+        })
+
+        it('non-members are not in the fast lane set', async () => {
+          assert.isFalse(await consensus.getIsFastLaneMember(stranger))
+          assert.isFalse((await consensus.getMemberInfo(stranger)).isFastLane)
+        })
+      })
+
+      Array.from({length: 10}, (_, i) => i).forEach(testFrame)
     })
   })
 })

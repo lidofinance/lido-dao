@@ -647,8 +647,10 @@ contract HashConsensus is AccessControlEnumerable {
     function _getFastLaneSubset(uint256 frameIndex, uint256 totalMembers)
         internal view returns (uint256 startIndex, uint256 pastEndIndex)
     {
-        startIndex = frameIndex % totalMembers;
-        pastEndIndex = startIndex + _quorum;
+        if (totalMembers != 0) {
+            startIndex = frameIndex % totalMembers;
+            pastEndIndex = startIndex + _quorum;
+        }
     }
 
     /// @dev Tests whether the member with the given `index` is in the fast lane subset for the
@@ -657,7 +659,12 @@ contract HashConsensus is AccessControlEnumerable {
     function _isFastLaneMember(uint256 index, uint256 frameIndex) internal view returns (bool) {
         uint256 totalMembers = _memberStates.length;
         (uint256 flLeft, uint256 flPastRight) = _getFastLaneSubset(frameIndex, totalMembers);
-        return Math.pointInHalfOpenIntervalModN(index, flLeft, flPastRight, totalMembers);
+        unchecked {
+            return (
+                flPastRight != 0 &&
+                Math.pointInClosedIntervalModN(index, flLeft, flPastRight - 1, totalMembers)
+            );
+        }
     }
 
     function _getMembers(bool fastLane) internal view returns (
