@@ -91,7 +91,6 @@ abstract contract WithdrawalQueueBase {
     error RequestAlreadyClaimed(uint256 _requestId);
     error InvalidHint(uint256 _hint);
     error CantSendValueRecipientMayHaveReverted();
-    error SafeCastValueDoesNotFit(uint16 maximumBitSize);
 
     /// @notice id of the last request. Equals to the length of the queue
     function getLastRequestId() public view returns (uint256) {
