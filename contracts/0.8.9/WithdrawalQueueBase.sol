@@ -77,8 +77,7 @@ abstract contract WithdrawalQueueBase {
     event WithdrawalClaimed(
         uint256 indexed requestId, address indexed receiver, address initiator, uint256 amountOfETH
     );
-    event WithdrawalRequestTransferred(uint256 indexed requestId, address newOwner, address oldOwner);
-
+    
     error ZeroAmountOfETH();
     error ZeroShareRate();
     error ZeroTimestamp();
@@ -133,7 +132,7 @@ abstract contract WithdrawalQueueBase {
      * uncallable if the set grows to a point where copying to memory consumes too much gas to fit in a block.
      */
     function getWithdrawalRequests(address _owner) external view returns (uint256[] memory requestsIds) {
-        return _getRequestByOwner()[_owner].values();
+        return _getRequestsByOwner()[_owner].values();
     }
 
     struct WithdrawalRequestStatus {
@@ -319,31 +318,6 @@ abstract contract WithdrawalQueueBase {
     }
 
     /**
-     * @notice Transfer the right to claim withdrawal request to `_newRecipient`
-     * @dev should be called by the old recipient
-     * @param _requestId id of the request subject to change
-     * @param _newOwner new owner address for withdrawal request
-     */
-    function transfer(uint256 _requestId, address _newOwner) external {
-        if (_newOwner == address(0)) revert InvalidOwnerAddress(_newOwner);
-        if (_newOwner == msg.sender) revert InvalidOwnerAddress(_newOwner);
-        if (_requestId == 0) revert InvalidRequestId(_requestId);
-        if (_requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
-
-        WithdrawalRequest storage request = _getQueue()[_requestId];
-
-        if (request.owner != msg.sender) revert InvalidOwner(request.owner, msg.sender);
-        if (request.claimed) revert RequestAlreadyClaimed(_requestId);
-
-        request.owner = payable(_newOwner);
-
-        _getRequestByOwner()[_newOwner].add(_requestId);
-        _getRequestByOwner()[msg.sender].remove(_requestId);
-
-        emit WithdrawalRequestTransferred(_requestId, _newOwner, msg.sender);
-    }
-
-    /**
      * @notice Search for the latest request in the queue in the range of `[startId, endId]`,
      *  that fulfills a constraint `request.timestamp <= maxTimestamp`
      *
@@ -457,7 +431,7 @@ abstract contract WithdrawalQueueBase {
         _setLastRequestId(requestId);
         _getQueue()[requestId] =
             WithdrawalRequest(cumulativeStETH, cumulativeShares, payable(_owner), uint64(block.number), false);
-        _getRequestByOwner()[_owner].add(requestId);
+        _getRequestsByOwner()[_owner].add(requestId);
 
         emit WithdrawalRequested(requestId, msg.sender, _owner, _amountOfStETH, _amountOfShares);
     }
@@ -535,14 +509,14 @@ abstract contract WithdrawalQueueBase {
         }
     }
 
-    function _getRequestByOwner()
+    function _getRequestsByOwner()
         internal
         pure
-        returns (mapping(address => EnumerableSet.UintSet) storage requestsByRecipient)
+        returns (mapping(address => EnumerableSet.UintSet) storage requestsByOwner)
     {
         bytes32 position = REQUEST_BY_OWNER_POSITION;
         assembly {
-            requestsByRecipient.slot := position
+            requestsByOwner.slot := position
         }
     }
 

@@ -1,22 +1,25 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>, OpenZeppelin
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
 import {IERC721} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721Receiver.sol";
 import {IERC165} from "@openzeppelin/contracts-v4.4/utils/introspection/ERC165.sol";
 import {IERC721Metadata} from "@openzeppelin/contracts-v4.4/token/ERC721/extensions/IERC721Metadata.sol";
 
 import {Strings} from "@openzeppelin/contracts-v4.4/utils/Strings.sol";
 import {ERC165} from "@openzeppelin/contracts-v4.4/utils/introspection/ERC165.sol";
 import {EnumerableSet} from "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
+import {Address} from "@openzeppelin/contracts-v4.4/utils/Address.sol";
 
 import {IWstETH, WithdrawalQueue} from "./WithdrawalQueue.sol";
 import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
 
 contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
     using Strings for uint256;
+    using Address for address;
     using EnumerableSet for EnumerableSet.UintSet;
 
     bytes32 public constant TOKEN_APPROVALS_POSITION = keccak256("lido.WithdrawalNFT.tokenApprovals");
@@ -29,19 +32,18 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
         public
         view
         virtual
-        override(AccessControlEnumerable, ERC165, IERC165)
+        override (ERC165, IERC165)
         returns (bool)
     {
-        return
-            interfaceId == type(IERC721).interfaceId ||
-            interfaceId == type(IERC721Metadata).interfaceId ||
-            super.supportsInterface(interfaceId);
+        return interfaceId == type(IERC721).interfaceId 
+            || interfaceId == type(IERC721Metadata).interfaceId
+            || super.supportsInterface(interfaceId);
     }
 
     /// @dev See {IERC721-balanceOf}.
     function balanceOf(address _owner) public view returns (uint256) {
         if (_owner == address(0)) revert InvalidOwnerAddress(_owner);
-        return _getRequestByOwner()[_owner].length();
+        return _getRequestsByOwner()[_owner].length();
     }
 
     /// @dev See {IERC721-ownerOf}.
@@ -61,7 +63,6 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
     }
 
     /// @dev See {IERC721Metadata-tokenURI}.
-
     function tokenURI(uint256 tokenId) public view returns (string memory) {
         require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
 
@@ -72,7 +73,6 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
     /// @dev Base URI for computing {tokenURI}. If set, the resulting URI for each
     /// token will be the concatenation of the `baseURI` and the `tokenId`. Empty
     /// by default, can be overriden in child contracts.
-
     function _baseURI() internal view returns (string memory) {
         return "";
     }
@@ -107,32 +107,107 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
         return _getOperatorApprovals()[owner][operator];
     }
 
+    /// @dev See {IERC721-safeTransferFrom}.
+    function safeTransferFrom(address from, address to, uint256 tokenId) public override {
+        safeTransferFrom(from, to, tokenId, "");
+    }
+
+    /// @dev See {IERC721-safeTransferFrom}.
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public override {
+        require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: caller is not token owner or approved");
+        _safeTransfer(from, to, tokenId, data);
+    }
+
     /// @dev See {IERC721-transferFrom}.
-    function transferFrom(
-        address, // from
-        address, // to
-        uint256 // tokenId
-    ) public virtual override {
-        revert("Unimplemented");
+    function transferFrom(address from, address to, uint256 tokenId) public override {
+        require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: caller is not token owner or approved");
+
+        _transfer(from, to, tokenId);
+
+        emit Transfer(from, to, tokenId);
     }
 
-    /// @dev See {IERC721-safeTransferFrom}.
-    function safeTransferFrom(
-        address, // from
-        address, // to
-        uint256 // tokenId
-    ) public virtual override {
-        revert("Unimplemented");
+    function _transfer(address _from, address _to, uint256 _requestId) internal {
+        require(_to != address(0), "ERC721: transfer to the zero address");
+        if (_requestId == 0) revert InvalidRequestId(_requestId);
+        if (_requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
+
+        WithdrawalRequest storage request = _getQueue()[_requestId];
+
+        if (request.claimed) revert RequestAlreadyClaimed(_requestId);
+        require(request.owner == _from, "ERC721: transfer from incorrect owner");
+
+        delete _getTokenApprovals()[_requestId];
+        request.owner = payable(_to);
+
+        _getRequestsByOwner()[_to].add(_requestId);
+        _getRequestsByOwner()[_from].remove(_requestId);
     }
 
-    /// @dev See {IERC721-safeTransferFrom}.
-    function safeTransferFrom(
-        address, // from
-        address, // to
-        uint256, // tokenId
-        bytes memory // _data
-    ) public virtual override {
-        revert("Unimplemented");
+    /// @dev Safely transfers `tokenId` token from `from` to `to`, checking first that contract recipients
+    ///  are aware of the ERC721 protocol to prevent tokens from being forever locked.
+    ///  `data` is additional data, it has no specified format and it is sent in call to `to`.
+    ///
+    ///  This internal function is equivalent to {safeTransferFrom}, and can be used to e.g.
+    ///  implement alternative mechanisms to perform token transfer, such as signature-based.
+    ///
+    /// Requirements:
+    ///
+    ///  - `from` cannot be the zero address.
+    ///  - `to` cannot be the zero address.
+    ///  - `tokenId` token must exist and be owned by `from`.
+    ///  - If `to` refers to a smart contract, it must implement {IERC721Receiver-onERC721Received}, which is called upon a safe transfer.
+    ///
+    ///  Emits a {Transfer} event.
+    function _safeTransfer(address from, address to, uint256 tokenId, bytes memory data) internal {
+        _transfer(from, to, tokenId);
+        require(_checkOnERC721Received(from, to, tokenId, data), "ERC721: transfer to non ERC721Receiver implementer");
+
+        emit Transfer(from, to, tokenId);
+    }
+
+    /**
+     * @dev Internal function to invoke {IERC721Receiver-onERC721Received} on a target address.
+     * The call is not executed if the target address is not a contract.
+     *
+     * @param from address representing the previous owner of the given token ID
+     * @param to target address that will receive the tokens
+     * @param tokenId uint256 ID of the token to be transferred
+     * @param data bytes optional data to send along with the call
+     * @return bool whether the call correctly returned the expected magic value
+     */
+    function _checkOnERC721Received(address from, address to, uint256 tokenId, bytes memory data)
+        private
+        returns (bool)
+    {
+        if (to.isContract()) {
+            try IERC721Receiver(to).onERC721Received(msg.sender, from, tokenId, data) returns (bytes4 retval) {
+                return retval == IERC721Receiver.onERC721Received.selector;
+            } catch (bytes memory reason) {
+                if (reason.length == 0) {
+                    revert("ERC721: transfer to non ERC721Receiver implementer");
+                } else {
+                    /// @solidity memory-safe-assembly
+                    assembly {
+                        revert(add(32, reason), mload(reason))
+                    }
+                }
+            }
+        } else {
+            return true;
+        }
+    }
+
+    /**
+     * @dev Returns whether `spender` is allowed to manage `tokenId`.
+     *
+     * Requirements:
+     *
+     * - `tokenId` must exist.
+     */
+    function _isApprovedOrOwner(address spender, uint256 tokenId) internal view returns (bool) {
+        address owner = ownerOf(tokenId);
+        return (spender == owner); // FIXME: || isApprovedForAll(owner, spender) || getApproved(tokenId) == spender);
     }
 
     //
@@ -155,11 +230,7 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
 
     /// @dev Approve `operator` to operate on all of `owner` tokens
     /// Emits a {ApprovalForAll} event.
-    function _setApprovalForAll(
-        address owner,
-        address operator,
-        bool approved
-    ) internal virtual {
+    function _setApprovalForAll(address owner, address operator, bool approved) internal virtual {
         require(owner != operator, "ERC721: approve to caller");
         _getOperatorApprovals()[owner][operator] = approved;
         emit ApprovalForAll(owner, operator, approved);

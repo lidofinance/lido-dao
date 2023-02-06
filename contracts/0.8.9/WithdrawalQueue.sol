@@ -54,7 +54,7 @@ interface IWstETH is IERC20, IERC20Permit {
  * @title A contract for handling stETH withdrawal request queue within the Lido protocol
  * @author folkyatina
  */
-contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versioned {
+abstract contract WithdrawalQueue is IERC721, AccessControlEnumerable, WithdrawalQueueBase, Versioned {
     using SafeCast for uint256;
     using SafeERC20 for IWstETH;
     using SafeERC20 for IStETH;
