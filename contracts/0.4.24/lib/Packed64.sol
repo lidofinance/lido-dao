@@ -40,11 +40,11 @@ library Packed64 {
         return v.set(nb, v.get(na));
     }
 
-    function sum(uint256 v, uint8 na, uint8 nb) internal pure returns (uint256) {
+    function sum(uint256 v, uint8 na, uint8 nb) internal pure returns (uint64) {
         return v.get(na).add(v.get(nb));
     }
 
-    function diff(uint256 v, uint8 na, uint8 nb) internal pure returns (uint256) {
+    function diff(uint256 v, uint8 na, uint8 nb) internal pure returns (uint64) {
         return v.get(na).sub(v.get(nb));
     }
 }

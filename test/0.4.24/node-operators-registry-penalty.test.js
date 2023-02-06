@@ -2,6 +2,7 @@ const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
 const { assertRevert } = require('../helpers/assertThrow')
 const { toBN, padRight } = require('../helpers/utils')
+const { BN } = require('bn.js')
 const { AragonDAO } = require('./helpers/dao')
 const { EvmSnapshot } = require('../helpers/blockchain')
 const { ZERO_ADDRESS, getEventAt } = require('@aragon/contract-helpers-test')
@@ -244,4 +245,132 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.notEmits(receipt, 'NodeOperatorPenalized')
     })
   })
+  describe('getValidatorsKeysStats()', () => {
+    beforeEach(async () => {
+      await app.testing_addNodeOperator('0', user1, 20, 15, 10, 2)
+      await app.testing_addNodeOperator('1', user2, 10, 10, 5, 0)
+      await app.testing_addNodeOperator('2', user3, 15, 5, 0, 0)
+
+      await steth.setTotalPooledEther(ETH(100))
+      await steth.mintShares(app.address, ETH(10))
+
+      await app.increaseTotalSigningKeysCount(45)
+      await app.increaseVettedSigningKeysCount(30)
+      await app.increaseDepositedSigningKeysCount(15)
+      await app.increaseExitedSigningKeysCount(2)
+      // sum of (vetted[i] - exited[i])
+      await app.increaseTargetValidatorsCount(28)
+    })
+
+    it.only('updateTargetValidatorsLimits() no target overflow', async () => {
+      await app.updateTargetValidatorsLimits(0, 10, true, { from: voting })
+
+      let keysStatTotal = await app.getValidatorsKeysStats()
+      // console.log(o2n(keysStatTotal))
+      assert.equal(keysStatTotal.exitedValidatorsCount, 2)
+      assert.equal(keysStatTotal.activeValidatorsKeysCount, 13)
+      assert.equal(keysStatTotal.readyToDepositValidatorsKeysCount, 12)
+
+      let limitStatOp = await app.getNodeOperatorStats(0)
+      assert.equal(limitStatOp.targetValidatorsActive, true)
+      assert.equal(limitStatOp.targetValidatorsCount, 10)
+      assert.equal(limitStatOp.excessValidatorsCount, 0)
+
+      let keysStatOp = await app.getValidatorsKeysStats(0)
+      assert.equal(keysStatOp.exitedValidatorsCount, 2)
+      assert.equal(keysStatOp.activeValidatorsKeysCount, 8)
+      assert.equal(keysStatOp.readyToDepositValidatorsKeysCount, 2)
+      // console.log(stat12)
+
+      await app.updateTargetValidatorsLimits(0, 10, false, { from: voting })
+
+      // keysStatTotal = await app.getValidatorsKeysStats()
+      // assert.equal(keysStatTotal.exitedValidatorsCount, 2)
+      // assert.equal(keysStatTotal.activeValidatorsKeysCount, 12)
+      // assert.equal(keysStatTotal.readyToDepositValidatorsKeysCount, 23)
+
+      limitStatOp = await app.getNodeOperatorStats(0)
+      assert.equal(limitStatOp.targetValidatorsActive, false)
+      assert.equal(limitStatOp.targetValidatorsCount, 0)
+      assert.equal(limitStatOp.excessValidatorsCount, 0)
+
+      keysStatOp = await app.getValidatorsKeysStats(0)
+      assert.equal(keysStatOp.exitedValidatorsCount, 2)
+      assert.equal(keysStatOp.activeValidatorsKeysCount, 8)
+      assert.equal(keysStatOp.readyToDepositValidatorsKeysCount, 5)
+    })
+
+    it.only('updateTargetValidatorsLimits() no target overflow', async () => {
+      await app.updateTargetValidatorsLimits(0, 5, true, { from: voting })
+      await app.updateTargetValidatorsLimits(1, 5, true, { from: voting })
+
+      let keysStatTotal = await app.getValidatorsKeysStats()
+      // console.log(o2n(keysStatTotal))
+      assert.equal(keysStatTotal.exitedValidatorsCount, 2)
+      assert.equal(keysStatTotal.activeValidatorsKeysCount, 13)
+      assert.equal(keysStatTotal.readyToDepositValidatorsKeysCount, 5)
+
+      // op 0
+      let limitStatOp = await app.getNodeOperatorStats(0)
+      assert.equal(limitStatOp.targetValidatorsActive, true)
+      assert.equal(limitStatOp.targetValidatorsCount, 5)
+      assert.equal(limitStatOp.excessValidatorsCount, 3) // deposited - exited - target
+
+      let keysStatOp = await app.getValidatorsKeysStats(0)
+      assert.equal(keysStatOp.exitedValidatorsCount, 2)
+      assert.equal(keysStatOp.activeValidatorsKeysCount, 8)
+      assert.equal(keysStatOp.readyToDepositValidatorsKeysCount, 0)
+
+      // op 1
+      limitStatOp = await app.getNodeOperatorStats(1)
+      assert.equal(limitStatOp.targetValidatorsActive, true)
+      assert.equal(limitStatOp.targetValidatorsCount, 5)
+      assert.equal(limitStatOp.excessValidatorsCount, 0) // deposited - exited - target
+
+      keysStatOp = await app.getValidatorsKeysStats(1)
+      assert.equal(keysStatOp.exitedValidatorsCount, 0)
+      assert.equal(keysStatOp.activeValidatorsKeysCount, 5)
+      assert.equal(keysStatOp.readyToDepositValidatorsKeysCount, 0)
+
+      // // console.log(stat12)
+      await app.updateExitedValidatorsKeysCount(0, 1, { from: voting })
+      await app.updateExitedValidatorsKeysCount(1, 1, { from: voting })
+
+      keysStatTotal = await app.getValidatorsKeysStats()
+      assert.equal(keysStatTotal.exitedValidatorsCount, 4)
+      assert.equal(keysStatTotal.activeValidatorsKeysCount, 9)
+      assert.equal(keysStatTotal.readyToDepositValidatorsKeysCount, 6)
+
+      // op 0
+      limitStatOp = await app.getNodeOperatorStats(0)
+      assert.equal(limitStatOp.targetValidatorsActive, true)
+      assert.equal(limitStatOp.targetValidatorsCount, 5)
+      assert.equal(limitStatOp.excessValidatorsCount, 0)
+
+      keysStatOp = await app.getValidatorsKeysStats(0)
+      assert.equal(keysStatOp.exitedValidatorsCount, 3)
+      assert.equal(keysStatOp.activeValidatorsKeysCount, 5)
+      assert.equal(keysStatOp.readyToDepositValidatorsKeysCount, 0)
+
+      // op 1
+      limitStatOp = await app.getNodeOperatorStats(1)
+      assert.equal(limitStatOp.targetValidatorsActive, true)
+      assert.equal(limitStatOp.targetValidatorsCount, 5)
+      assert.equal(limitStatOp.excessValidatorsCount, 0)
+
+      keysStatOp = await app.getValidatorsKeysStats(1)
+      assert.equal(keysStatOp.exitedValidatorsCount, 0)
+      assert.equal(keysStatOp.activeValidatorsKeysCount, 5)
+      assert.equal(keysStatOp.readyToDepositValidatorsKeysCount, 0)
+    })
+  })
 })
+
+function o2n(o = {}) {
+  for (const k of Object.keys(o)) {
+    if (BN.isBN(o[k])) {
+      o[k] = o[k].toString()
+    }
+  }
+  return o
+}

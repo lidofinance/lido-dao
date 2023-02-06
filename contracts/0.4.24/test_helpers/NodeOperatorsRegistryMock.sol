@@ -8,15 +8,22 @@ import "../nos/NodeOperatorsRegistry.sol";
 
 contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
     function _incTotalSigningKeysStatsPos(uint8 _pos, uint256 _diff) private {
-        uint256 totalSigningKeysStats = TOTAL_SIGNING_KEYS_STATS.getStorageUint256();
-        totalSigningKeysStats = totalSigningKeysStats.inc(_pos, uint64(_diff));
-        TOTAL_SIGNING_KEYS_STATS.setStorageUint256(totalSigningKeysStats);
+        uint256 stats = TOTAL_SIGNING_KEYS_STATS.getStorageUint256();
+        stats = stats.inc(_pos, uint64(_diff));
+        TOTAL_SIGNING_KEYS_STATS.setStorageUint256(stats);
     }
 
     function _decTotalSigningKeysStatsPos(uint8 _pos, uint256 _diff) private {
-        uint256 totalSigningKeysStats = TOTAL_SIGNING_KEYS_STATS.getStorageUint256();
-        totalSigningKeysStats = totalSigningKeysStats.dec(_pos, uint64(_diff));
-        TOTAL_SIGNING_KEYS_STATS.setStorageUint256(totalSigningKeysStats);
+        uint256 stats = TOTAL_SIGNING_KEYS_STATS.getStorageUint256();
+        stats = stats.dec(_pos, uint64(_diff));
+        TOTAL_SIGNING_KEYS_STATS.setStorageUint256(stats);
+    }
+
+
+    function _incTotalTargetStatsPos(uint8 _pos, uint256 _diff) private {
+        uint256 stats = TOTAL_VALIDATORS_STATS.getStorageUint256();
+        stats = stats.inc(_pos, uint64(_diff));
+        TOTAL_VALIDATORS_STATS.setStorageUint256(stats);
     }
 
     function increaseNodeOperatorDepositedSigningKeysCount(uint256 _nodeOperatorId, uint64 _keysCount) external {
@@ -37,8 +44,15 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
     function increaseVettedSigningKeysCount(uint256 _keysCount) external {
         _incTotalSigningKeysStatsPos(VETTED_KEYS_COUNT_OFFSET, _keysCount);
     }
+
     function increaseExitedSigningKeysCount(uint256 _keysCount) external {
         _incTotalSigningKeysStatsPos(EXITED_KEYS_COUNT_OFFSET, _keysCount);
+    }
+    function increaseTargetValidatorsCount(uint256 _keysCount) external {
+        _incTotalTargetStatsPos(TARGET_VALIDATORS_COUNT_OFFSET, _keysCount);
+    }
+    function increaseExcessValidatorsCount(uint256 _keysCount) external {
+        _incTotalTargetStatsPos(EXCESS_VALIDATORS_COUNT_OFFSET, _keysCount);
     }
 
     function testing_markAllKeysDeposited() external {
