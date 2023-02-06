@@ -7,31 +7,33 @@ pragma solidity 0.4.24;
 import "../nos/NodeOperatorsRegistry.sol";
 
 contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
+    function _incTotalSigningKeysStatsPos(uint8 _pos, uint256 _diff) private {
+        uint256 totalSigningKeysStats = TOTAL_SIGNING_KEYS_STATS.getStorageUint256();
+        totalSigningKeysStats = totalSigningKeysStats.inc(_pos, uint64(_diff));
+        TOTAL_SIGNING_KEYS_STATS.setStorageUint256(totalSigningKeysStats);
+    }
+    function _decTotalSigningKeysStatsPos(uint8 _pos, uint256 _diff) private {
+        uint256 totalSigningKeysStats = TOTAL_SIGNING_KEYS_STATS.getStorageUint256();
+        totalSigningKeysStats = totalSigningKeysStats.dec(_pos, uint64(_diff));
+        TOTAL_SIGNING_KEYS_STATS.setStorageUint256(totalSigningKeysStats);
+    }
     function increaseNodeOperatorDepositedSigningKeysCount(uint256 _nodeOperatorId, uint64 _keysCount) external {
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         nodeOperator.depositedSigningKeysCount = nodeOperator.depositedSigningKeysCount.add(_keysCount);
 
-        SigningKeysStats.State memory signingKeysStats = _getTotalSigningKeysStats();
-        signingKeysStats.increaseDepositedSigningKeysCount(_keysCount);
-        _setTotalSigningKeysStats(signingKeysStats);
+        _incTotalSigningKeysStatsPos(DEPOSITED_KEYS_COUNT_OFFSET, _keysCount);
     }
 
     function increaseTotalSigningKeysCount(uint256 _keysCount) external {
-        SigningKeysStats.State memory signingKeysStats = _getTotalSigningKeysStats();
-        signingKeysStats.increaseTotalSigningKeysCount(uint64(_keysCount));
-        _setTotalSigningKeysStats(signingKeysStats);
+        _incTotalSigningKeysStatsPos(TOTAL_KEYS_COUNT_OFFSET, _keysCount);
     }
 
     function increaseDepositedSigningKeysCount(uint256 _keysCount) external {
-        SigningKeysStats.State memory signingKeysStats = _getTotalSigningKeysStats();
-        signingKeysStats.increaseDepositedSigningKeysCount(uint64(_keysCount));
-        _setTotalSigningKeysStats(signingKeysStats);
+        _incTotalSigningKeysStatsPos(DEPOSITED_KEYS_COUNT_OFFSET, _keysCount);
     }
 
     function increaseVettedSigningKeysCount(uint256 _keysCount) external {
-        SigningKeysStats.State memory signingKeysStats = _getTotalSigningKeysStats();
-        signingKeysStats.increaseVettedSigningKeysCount(uint64(_keysCount));
-        _setTotalSigningKeysStats(signingKeysStats);
+        _incTotalSigningKeysStatsPos(VETTED_KEYS_COUNT_OFFSET, _keysCount);
     }
 
     function testing_markAllKeysDeposited() external {
@@ -59,19 +61,18 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         require(_depositedSigningKeysCount <= nodeOperator.vettedSigningKeysCount, "DEPOSITED_SIGNING_KEYS_COUNT_TOO_HIGH");
         require(_depositedSigningKeysCount >= nodeOperator.exitedSigningKeysCount, "DEPOSITED_SIGNING_KEYS_COUNT_TOO_LOW");
         nodeOperator.depositedSigningKeysCount = uint64(_depositedSigningKeysCount);
-        SigningKeysStats.State memory signingKeysStats = _getTotalSigningKeysStats();
+
         if (_depositedSigningKeysCount > depositedSigningKeysCountBefore) {
-            signingKeysStats.increaseDepositedSigningKeysCount(uint64(_depositedSigningKeysCount) - depositedSigningKeysCountBefore);
+            _incTotalSigningKeysStatsPos(DEPOSITED_KEYS_COUNT_OFFSET, (uint64(_depositedSigningKeysCount) - depositedSigningKeysCountBefore));
         } else {
-            signingKeysStats.decreaseDepositedSigningKeysCount(uint64(_depositedSigningKeysCount) - depositedSigningKeysCountBefore);
+            _decTotalSigningKeysStatsPos(DEPOSITED_KEYS_COUNT_OFFSET, (uint64(_depositedSigningKeysCount) - depositedSigningKeysCountBefore));
         }
         emit DepositedSigningKeysCountChanged(_nodeOperatorId, _depositedSigningKeysCount);
         _increaseValidatorsKeysNonce();
     }
 
     function testing_resetTotalSigningKeysStats() public {
-        SigningKeysStats.State memory signingKeysStats;
-        _setTotalSigningKeysStats(signingKeysStats);
+        TOTAL_SIGNING_KEYS_STATS.setStorageUint256(0);
     }
 
     function testing_unsafeDeactivateNodeOperator(uint256 _nodeOperatorId) external {
@@ -130,11 +131,11 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
             uint256 exitedSigningKeysCount
         )
     {
-        SigningKeysStats.State memory signingKeysStats = _getTotalSigningKeysStats();
-        totalSigningKeysCount = signingKeysStats.totalSigningKeysCount;
-        vettedSigningKeysCount = signingKeysStats.vettedSigningKeysCount;
-        depositedSigningKeysCount = signingKeysStats.depositedSigningKeysCount;
-        exitedSigningKeysCount = signingKeysStats.exitedSigningKeysCount;
+        uint256 totalSigningKeysStats = TOTAL_SIGNING_KEYS_STATS.getStorageUint256();
+        totalSigningKeysCount = totalSigningKeysStats.upack(TOTAL_KEYS_COUNT_OFFSET);
+        vettedSigningKeysCount = totalSigningKeysStats.upack(VETTED_KEYS_COUNT_OFFSET);
+        depositedSigningKeysCount = totalSigningKeysStats.upack(DEPOSITED_KEYS_COUNT_OFFSET);
+        exitedSigningKeysCount = totalSigningKeysStats.upack(EXITED_KEYS_COUNT_OFFSET);
     }
 
     function testing_setBaseVersion(uint256 _newBaseVersion) external {
