@@ -18,7 +18,7 @@ import {UnstructuredRefStorage} from "./lib/UnstructuredRefStorage.sol";
 
 /// @title NFT implementation on top of {WithdrawalQueue}
 /// NFT is minted on every request and burned on claim
-/// 
+///
 /// @author psirex, folkyatina
 contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     using Strings for uint256;
@@ -40,35 +40,35 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     /// @param _wstETH address of WstETH contract
     constructor(address _wstETH) WithdrawalQueue(IWstETH(_wstETH)) {}
 
+    /// See {IERC165-supportsInterface}.
     function supportsInterface(bytes4 interfaceId)
         public
         view
         virtual
-        override(IERC165, AccessControlEnumerable)
+        override (IERC165, AccessControlEnumerable)
         returns (bool)
     {
         return interfaceId == type(IERC721).interfaceId || super.supportsInterface(interfaceId);
     }
 
     /// @dev See {IERC721-balanceOf}.
-    function balanceOf(address _owner) public view returns (uint256) {
+    function balanceOf(address _owner) public view override returns (uint256) {
         if (_owner == address(0)) revert InvalidOwnerAddress(_owner);
         return _getRequestsByOwner()[_owner].length();
     }
 
     /// @dev See {IERC721-ownerOf}.
-    function ownerOf(uint256 _requestId) public view returns (address) {
+    function ownerOf(uint256 _requestId) public view override returns (address) {
         if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
         WithdrawalRequest memory request = _getQueue()[_requestId];
-
         if (request.claimed) revert RequestAlreadyClaimed(_requestId);
 
         return request.owner;
     }
 
     /// @dev See {IERC721-approve}.
-    function approve(address _to, uint256 _requestId) public {
+    function approve(address _to, uint256 _requestId) public override {
         address owner = ownerOf(_requestId);
         if (_to == owner) revert ApprovalToOwner();
         if (msg.sender != owner && !isApprovedForAll(owner, msg.sender)) revert NotOwnerOrApprovedForAll(msg.sender);
@@ -77,19 +77,19 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     }
 
     /// @dev See {IERC721-getApproved}.
-    function getApproved(uint256 _requestId) public view returns (address) {
+    function getApproved(uint256 _requestId) public view override returns (address) {
         if (!_existsAndNotClaimed(_requestId)) revert InvalidRequestId(_requestId);
 
         return _getTokenApprovals()[_requestId];
     }
 
     /// @dev See {IERC721-setApprovalForAll}.
-    function setApprovalForAll(address _operator, bool _approvedd) public {
+    function setApprovalForAll(address _operator, bool _approvedd) public override {
         _setApprovalForAll(msg.sender, _operator, _approvedd);
     }
 
     /// @dev See {IERC721-isApprovedForAll}.
-    function isApprovedForAll(address _owner, address _operator) public view returns (bool) {
+    function isApprovedForAll(address _owner, address _operator) public view override returns (bool) {
         return _getOperatorApprovals()[_owner][_operator];
     }
 
@@ -151,7 +151,9 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     ///  Emits a {Transfer} event.
     function _safeTransfer(address _from, address _to, uint256 _requestId, bytes memory _data) internal {
         _transfer(_from, _to, _requestId);
-        require(_checkOnERC721Received(_from, _to, _requestId, _data), "ERC721: transfer to non ERC721Receiver implementer");
+        require(
+            _checkOnERC721Received(_from, _to, _requestId, _data), "ERC721: transfer to non ERC721Receiver implementer"
+        );
 
         emit Transfer(_from, _to, _requestId);
     }
@@ -165,8 +167,8 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     /// @param _data bytes optional data to send along with the call
     /// @return bool whether the call correctly returned the expected magic value
     function _checkOnERC721Received(address _from, address _to, uint256 _requestId, bytes memory _data)
-    private
-    returns (bool)
+        private
+        returns (bool)
     {
         if (_to.isContract()) {
             try IERC721Receiver(_to).onERC721Received(msg.sender, _from, _requestId, _data) returns (bytes4 retval) {
@@ -200,7 +202,7 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     // Internal getters and setters
     //
 
-    /// @dev a little crutch to emit { Transfer } on request and on claim like ERC721 states 
+    /// @dev a little crutch to emit { Transfer } on request and on claim like ERC721 states
     function _emitTransfer(address _from, address _to, uint256 _requestId) internal override {
         emit Transfer(_from, _to, _requestId);
     }
@@ -226,14 +228,10 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     }
 
     function _getTokenApprovals() internal pure returns (mapping(uint256 => address) storage) {
-       return TOKEN_APPROVALS_POSITION.storageMapUint256Address();
+        return TOKEN_APPROVALS_POSITION.storageMapUint256Address();
     }
 
-    function _getOperatorApprovals()
-        internal
-        pure
-        returns (mapping(address => mapping(address => bool)) storage)
-    {
+    function _getOperatorApprovals() internal pure returns (mapping(address => mapping(address => bool)) storage) {
         return OPERATOR_APPROVALS.storageMapAddressMapAddressBool();
     }
 }

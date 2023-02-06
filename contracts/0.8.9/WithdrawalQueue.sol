@@ -17,43 +17,22 @@ import {PausableUntil} from "./utils/PausableUntil.sol";
 
 import {Versioned} from "./utils/Versioned.sol";
 
-/**
- * @title Interface defining a Lido liquid staking pool
- * @dev see also [Lido liquid staking pool core contract](https://docs.lido.fi/contracts/lido)
- */
+/// @notice Interface defining a Lido liquid staking pool
+/// @dev see also [Lido liquid staking pool core contract](https://docs.lido.fi/contracts/lido)
 interface IStETH is IERC20, IERC20Permit {
-    /**
-     * @notice Get shares amount by the stETH token amount
-     * @param _pooledEthAmount stETH token amount
-     */
     function getSharesByPooledEth(uint256 _pooledEthAmount) external view returns (uint256);
 }
 
+/// @notice Interface defining a Lido liquid staking pool wrapper
+/// @dev see WstETH.sol for full docs
 interface IWstETH is IERC20, IERC20Permit {
-    /**
-     * @notice Exchanges wstETH to stETH
-     * @param _wstETHAmount amount of wstETH to unwrap in exchange for stETH
-     * @return Amount of stETH user receives after unwrap
-     */
     function unwrap(uint256 _wstETHAmount) external returns (uint256);
-
-    /**
-     * @notice Get amount of stETH for a given amount of wstETH
-     * @param _wstETHAmount amount of wstETH
-     * @return Amount of stETH for a given wstETH amount
-     */
     function getStETHByWstETH(uint256 _wstETHAmount) external view returns (uint256);
-
-    /**
-     * @notice Returns a contract that this implementation of WstETH is a wrapper for
-     */
     function stETH() external view returns (IStETH);
 }
 
-/**
- * @title A contract for handling stETH withdrawal request queue within the Lido protocol
- * @author folkyatina
- */
+/// @title A contract for handling stETH withdrawal request queue within the Lido protocol
+/// @author folkyatina
 abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, WithdrawalQueueBase, Versioned {
     using SafeCast for uint256;
     using SafeERC20 for IWstETH;
@@ -61,7 +40,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     using UnstructuredStorage for bytes32;
 
     /// Bunker mode activation timestamp
-    bytes32 public constant BUNKER_MODE_SINCE_TIMESTAMP_POSITION =
+    bytes32 internal constant BUNKER_MODE_SINCE_TIMESTAMP_POSITION =
         keccak256("lido.WithdrawalQueue.bunkerModeSinceTimestamp");
     /// Special value for timestamp when bunker mode is inactive (i.e., protocol in turbo mode)
     uint256 public constant BUNKER_MODE_DISABLED_TIMESTAMP = type(uint256).max;
@@ -75,11 +54,9 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @notice minimal possible sum that is possible to withdraw
     uint256 public constant MIN_STETH_WITHDRAWAL_AMOUNT = 100;
 
-    /**
-     * @notice maximum possible sum that is possible to withdraw by a single request
-     * Prevents accumulating too much funds per single request fulfillment in the future.
-     * @dev To withdraw larger amounts, it's recommended to split it to several requests
-     */
+    /// @notice maximum possible sum that is possible to withdraw by a single request
+    /// Prevents accumulating too much funds per single request fulfillment in the future.
+    /// @dev To withdraw larger amounts, it's recommended to split it to several requests
     uint256 public constant MAX_STETH_WITHDRAWAL_AMOUNT = 1000 * 1e18;
 
     /// @notice Lido stETH token address to be set upon construction
@@ -102,55 +79,32 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     error LengthsMismatch(uint256 _expectedLength, uint256 _actualLength);
     error RequestIdsNotSorted();
 
-
-    /**
-     * @param _wstETH address of WstETH contract
-     */
+    /// @param _wstETH address of WstETH contract
     constructor(IWstETH _wstETH) {
         // init immutables
         WSTETH = _wstETH;
         STETH = WSTETH.stETH();
     }
 
-    /**
-     * @notice Initialize the contract storage explicitly.
-     * @param _admin admin address that can change every role.
-     * @param _pauser address that will be able to pause the withdrawals
-     * @param _resumer address that will be able to resume the withdrawals after pause
-     * @param _finalizer address that can finalize requests in the queue
-     * @dev Reverts with `AdminZeroAddress()` if `_admin` equals to `address(0)`
-     * @dev NB! It's initialized in paused state by default and should be resumed explicitly to start
-     */
+    /// @notice Initialize the contract storage explicitly.
+    /// @param _admin admin address that can change every role.
+    /// @param _pauser address that will be able to pause the withdrawals
+    /// @param _resumer address that will be able to resume the withdrawals after pause
+    /// @param _finalizer address that can finalize requests in the queue
+    /// @dev NB! It's initialized in paused state by default and should be resumed explicitly to start
     function initialize(address _admin, address _pauser, address _resumer, address _finalizer) external {
-        if (_admin == address(0)) {
-            revert AdminZeroAddress();
-        }
+        if (_admin == address(0)) revert AdminZeroAddress();
 
         _initialize(_admin, _pauser, _resumer, _finalizer);
     }
 
-    /// @notice Returns whether the contract is initialized or not
-    function isInitialized() public view returns (bool) {
-        return getContractVersion() != 0;
-    }
-
-    /**
-     * @notice Resume withdrawal requests placement and finalization
-     * @dev Reverts with `Uninitialized()` if contract is not initialized
-     * @dev Reverts with `PausedExpected()` if contract is already resumed
-     * @dev Reverts with `AccessControl:...` reason if sender has no `RESUME_ROLE`
-     */
+    /// @notice Resume withdrawal requests placement and finalization
     function resume() external whenPaused onlyRole(RESUME_ROLE) {
         _resume();
     }
 
-    /**
-     * @notice Pause withdrawal requests placement and finalization. Claiming finalized requests will still be available
-     * @param _duration pause duration, seconds (use `PAUSE_INFINITELY` for unlimited)
-     * @dev Reverts with `ResumedExpected()` if contract is already paused
-     * @dev Reverts with `AccessControl:...` reason if sender has no `PAUSE_ROLE`
-     * @dev Reverts with `ZeroPauseDuration()` if zero duration is passed
-     */
+    /// @notice Pause withdrawal requests placement and finalization. Claiming finalized requests will still be available
+    /// @param _duration pause duration, seconds (use `PAUSE_INFINITELY` for unlimited)
     function pause(uint256 _duration) external onlyRole(PAUSE_ROLE) {
         _pause(_duration);
     }
@@ -201,7 +155,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         }
     }
 
-    struct Permit {
+    struct PermitInput {
         uint256 value;
         uint256 deadline;
         uint8 v;
@@ -209,7 +163,8 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         bytes32 s;
     }
 
-    /// @notice Request the sequence of stETH withdrawals according to passed `withdrawalRequestInputs` data using EIP-2612 Permit
+    /// @notice Request the sequence of stETH withdrawals according to passed `withdrawalRequestInputs`
+    ///  using EIP-2612 Permit
     /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
     ///  be created for each item in the passed list. If `WithdrawalRequestInput.owner` is set to `address(0)`,
     ///  `msg.sender` will be used as owner.
@@ -217,13 +172,14 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @return requestIds an array of the created withdrawal requests
     function requestWithdrawalsWithPermit(
         WithdrawalRequestInput[] calldata _withdrawalRequestInputs,
-        Permit calldata _permit
+        PermitInput calldata _permit
     ) external whenResumed returns (uint256[] memory requestIds) {
         STETH.permit(msg.sender, address(this), _permit.value, _permit.deadline, _permit.v, _permit.r, _permit.s);
         return requestWithdrawals(_withdrawalRequestInputs);
     }
 
-    /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data using EIP-2612 Permit
+    /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data
+    ///  using EIP-2612 Permit
     /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
     ///  be created for each item in the passed list. If `WithdrawalRequestInput.owner` is set to `address(0)`,
     ///  `msg.sender` will be used as owner.
@@ -231,7 +187,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @return requestIds an array of the created withdrawal requests
     function requestWithdrawalsWstETHWithPermit(
         WithdrawalRequestInput[] calldata _withdrawalRequestInputs,
-        Permit calldata _permit
+        PermitInput calldata _permit
     ) external whenResumed returns (uint256[] memory requestIds) {
         WSTETH.permit(msg.sender, address(this), _permit.value, _permit.deadline, _permit.v, _permit.r, _permit.s);
         return requestWithdrawalsWstETH(_withdrawalRequestInputs);
@@ -257,12 +213,11 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         uint256 hint;
     }
 
-    /// @notice Claim withdrawals batch once finalized (claimable)
+    /// @notice Claim withdrawals batch once finalized (claimable).
     /// @param _claimWithdrawalInputs list of withdrawal request ids and hints to claim
     function claimWithdrawals(ClaimWithdrawalInput[] calldata _claimWithdrawalInputs) external {
         for (uint256 i = 0; i < _claimWithdrawalInputs.length; ++i) {
             _claimWithdrawalTo(_claimWithdrawalInputs[i].requestId, _claimWithdrawalInputs[i].hint, msg.sender);
-
             _emitTransfer(msg.sender, address(0), _claimWithdrawalInputs[i].requestId);
         }
     }
@@ -270,23 +225,19 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     ///  @notice Claim `_requestId` request and transfer locked ether to the owner
     ///  @param _requestId request id to claim
     ///  @param _hint hint for checkpoint index to avoid extensive search over the checkpointHistory.
-    ///   Can be found with `findClaimHint()` or `findClaimHintUnbounded()`
-    /// @param _recipient address where 
+    ///   Can be retreived with `findClaimHint()` or `findClaimHintUnbounded()`
+    /// @param _recipient address where claimed ether will be sent to
     function claimWithdrawalTo(uint256 _requestId, uint256 _hint, address _recipient) external {
         _claimWithdrawalTo(_requestId, _hint, _recipient);
-
         _emitTransfer(msg.sender, address(0), _requestId);
     }
 
-     /**
-     * @notice Claim `_requestId` request and transfer locked ether to the owner
-     * @param _requestId request id to claim
-     * @dev will use `findClaimHintUnbounded()` to find a hint, what can lead to OOG
-     * Prefer `claimWithdrawal(uint256 _requestId, uint256 _hint)` to save gas
-     */
+    /// @notice Claim `_requestId` request and transfer locked ether to the owner
+    /// @param _requestId request id to claim
+    /// @dev will use `findClaimHintUnbounded()` to find a hint, what can lead to OOG
+    /// Prefer `claimWithdrawal(uint256 _requestId, uint256 _hint)` to save gas
     function claimWithdrawal(uint256 _requestId) external {
         _claimWithdrawalTo(_requestId, findClaimHintUnbounded(_requestId), msg.sender);
-
         _emitTransfer(msg.sender, address(0), _requestId);
     }
 
@@ -320,23 +271,19 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         return findClaimHints(_requestIds, 1, getLastCheckpointIndex());
     }
 
-    /**
-     * @notice Finalize requests from last finalized one up to `_lastRequestIdToFinalize`
-     * @dev ether to finalize all the requests should be calculated using `finalizationBatch()` and sent along
-     *
-     * @param _lastRequestIdToFinalize request index in the queue that will be last finalized request in a batch
-     */
-    function finalize(uint256 _lastRequestIdToFinalize) external payable whenResumed onlyRole(FINALIZE_ROLE) {
-        _finalize(_lastRequestIdToFinalize, msg.value.toUint128());
+    /// @notice Finalize requests from last finalized one up to `_lastRequestIdToFinalize`
+    /// @dev ether to finalize all the requests should be calculated using `finalizationBatch()` and sent along
+    ///
+    /// @param _nextFinalizedRequestId request index in the queue that will be last finalized request in a batch
+    function finalize(uint256 _nextFinalizedRequestId) external payable whenResumed onlyRole(FINALIZE_ROLE) {
+        _finalize(_nextFinalizedRequestId, msg.value.toUint128());
     }
 
-    /**
-     * @notice Update bunker mode state
-     * @dev should be called by oracle
-     *
-     * @param _isBunkerModeNow oracle report
-     * @param _bunkerModeSinceTimestamp timestamp of start of the bunker mode
-     */
+    /// @notice Update bunker mode state
+    /// @dev should be called by oracle
+    ///
+    /// @param _isBunkerModeNow oracle report
+    /// @param _bunkerModeSinceTimestamp timestamp of start of the bunker mode
     function updateBunkerMode(bool _isBunkerModeNow, uint256 _bunkerModeSinceTimestamp)
         external
         onlyRole(BUNKER_MODE_REPORT_ROLE)
@@ -353,22 +300,19 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         }
     }
 
-    /**
-     * @notice Check if bunker mode is active
-     */
+    /// @notice Check if bunker mode is active
     function isBunkerModeActive() public view returns (bool) {
         return bunkerModeSinceTimestamp() < BUNKER_MODE_DISABLED_TIMESTAMP;
     }
 
-    /**
-     * @notice Get bunker mode activation timestamp
-     * @dev returns `BUNKER_MODE_DISABLED_TIMESTAMP` if bunker mode is disable (i.e., protocol in turbo mode)
-     */
+    /// @notice Get bunker mode activation timestamp
+    /// @dev returns `BUNKER_MODE_DISABLED_TIMESTAMP` if bunker mode is disable (i.e., protocol in turbo mode)
     function bunkerModeSinceTimestamp() public view returns (uint256) {
         return BUNKER_MODE_SINCE_TIMESTAMP_POSITION.getStorageUint256();
     }
 
-    function _emitTransfer(address from, address to, uint256 _requestId) internal virtual; 
+    /// @notice Should emit ERC721 Transfer event in the inheriting contract
+    function _emitTransfer(address from, address to, uint256 _requestId) internal virtual;
 
     /// @dev internal initialization helper. Doesn't check provided addresses intentionally
     function _initialize(address _admin, address _pauser, address _resumer, address _finalizer) internal {
