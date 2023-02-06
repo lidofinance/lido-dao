@@ -23,6 +23,16 @@ library Math256 {
         return a < b ? a : b;
     }
 
+    /// @dev Returns the largest of two numbers.
+    function max(int256 a, int256 b) internal pure returns (int256) {
+        return a > b ? a : b;
+    }
+
+    /// @dev Returns the smallest of two numbers.
+    function min(int256 a, int256 b) internal pure returns (int256) {
+        return a < b ? a : b;
+    }
+
     /// @dev Returns the ceiling of the division of two numbers.
     ///
     /// This differs from standard division with `/` in that it rounds up instead
