@@ -7,8 +7,6 @@ pragma solidity 0.8.9;
 import {IERC721} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721Receiver.sol";
 import {IERC165} from "@openzeppelin/contracts-v4.4/utils/introspection/ERC165.sol";
-import {IERC721Metadata} from "@openzeppelin/contracts-v4.4/token/ERC721/extensions/IERC721Metadata.sol";
-
 import {Strings} from "@openzeppelin/contracts-v4.4/utils/Strings.sol";
 import {ERC165} from "@openzeppelin/contracts-v4.4/utils/introspection/ERC165.sol";
 import {EnumerableSet} from "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
@@ -37,9 +35,7 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
         override (AccessControlEnumerable, ERC165, IERC165)
         returns (bool)
     {
-        return interfaceId == type(IERC721).interfaceId 
-            || interfaceId == type(IERC721Metadata).interfaceId
-            || super.supportsInterface(interfaceId);
+        return interfaceId == type(IERC721).interfaceId || super.supportsInterface(interfaceId);
     }
 
     /// @dev See {IERC721-balanceOf}.
@@ -52,31 +48,6 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
     function ownerOf(uint256 _tokenId) public view returns (address) {
         if (_tokenId == 0 || _tokenId > getLastRequestId()) revert InvalidRequestId(_tokenId);
         return _getQueue()[_tokenId].owner;
-    }
-
-    /// @dev See {IERC721Metadata-name}.
-    function name() public view returns (string memory) {
-        revert("Unimplemented");
-    }
-
-    /// @dev See {IERC721Metadata-symbol}.
-    function symbol() public view returns (string memory) {
-        revert("Unimplemented");
-    }
-
-    /// @dev See {IERC721Metadata-tokenURI}.
-    function tokenURI(uint256 tokenId) public view returns (string memory) {
-        require(_existsAndNotClaimed(tokenId), "ERC721Metadata: URI query for nonexistent or claimed token");
-
-        string memory baseURI = _baseURI();
-        return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
-    }
-
-    /// @dev Base URI for computing {tokenURI}. If set, the resulting URI for each
-    /// token will be the concatenation of the `baseURI` and the `tokenId`. Empty
-    /// by default, can be overriden in child contracts.
-    function _baseURI() internal view returns (string memory) {
-        return "";
     }
 
     /// @dev See {IERC721-approve}.
@@ -122,7 +93,7 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
 
     /// @dev See {IERC721-transferFrom}.
     function transferFrom(address from, address to, uint256 tokenId) public override {
-         require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: caller is not token owner or approved");
+        require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: caller is not token owner or approved");
         _transfer(from, to, tokenId);
 
         emit Transfer(from, to, tokenId);
@@ -142,7 +113,7 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
         require(tokenId > 0 && tokenId <= getLastRequestId(), "ERC721: transfer nonexistent token");
 
         WithdrawalRequest storage request = _getQueue()[tokenId];
-        
+
         require(request.owner == from, "ERC721: transfer from incorrect owner");
 
         if (request.claimed) revert RequestAlreadyClaimed(tokenId);
