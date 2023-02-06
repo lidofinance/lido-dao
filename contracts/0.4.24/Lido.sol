@@ -465,8 +465,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 withdrawalVaultBalance;
         uint256 elRewardsVaultBalance;
         // Decision about withdrawals processing
-        uint256 requestIdToFinalizeUpTo;
-        uint256 finalizationShareRate;
+        uint256 lastFinalizableRequestId;
+        uint256 simulatedShareRate;
     }
     /**
      * The structure is used to preload the contract using `getLidoLocator()` via single call
@@ -490,8 +490,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     * @param _clBalance sum of all Lido validators' balances on Consensus Layer
     * @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
     * @param _elRewardsVaultBalance elRewards vault balance on Execution Layer for report block
-    * @param _requestIdToFinalizeUpTo right boundary of requestId range if equals 0, no requests should be finalized
-    * @param _finalizationShareRate share rate that should be used for finalization
+    * @param _lastFinalizableRequestId right boundary of requestId range if equals 0, no requests should be finalized
+    * @param _simulatedShareRate share rate that was simulated by oracle when the report data created
     *
     * @return totalPooledEther amount of ether in the protocol after report
     * @return totalShares amount of shares in the protocol after report
@@ -509,8 +509,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 _withdrawalVaultBalance,
         uint256 _elRewardsVaultBalance,
         // Decision about withdrawals processing
-        uint256 _requestIdToFinalizeUpTo,
-        uint256 _finalizationShareRate
+        uint256 _lastFinalizableRequestId,
+        uint256 _simulatedShareRate
     ) external returns (
         uint256 totalPooledEther,
         uint256 totalShares,
@@ -530,8 +530,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
                 _clBalance,
                 _withdrawalVaultBalance,
                 _elRewardsVaultBalance,
-                _requestIdToFinalizeUpTo,
-                _finalizationShareRate
+                _lastFinalizableRequestId,
+                _simulatedShareRate
             ),
             protocolContracts
         );
@@ -1033,7 +1033,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             handlingData.preCLBalance,
             _inputData.postCLBalance,
             _inputData.withdrawalVaultBalance,
-            _inputData.finalizationShareRate
+            _inputData.simulatedShareRate
         );
 
         (
@@ -1053,8 +1053,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             _protocolContracts,
             withdrawals,
             elRewards,
-            _inputData.requestIdToFinalizeUpTo,
-            _inputData.finalizationShareRate
+            _inputData.lastFinalizableRequestId,
+            _inputData.simulatedShareRate
         );
 
         emit ETHDistributed(
