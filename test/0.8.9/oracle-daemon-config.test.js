@@ -31,20 +31,18 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
     })
 
     it('gets a value', async () => {
-      const { keyHash, value } = await config.get(defaultKey)
+      const value = await config.get(defaultKey)
       
       assert.equal(defaultValue, value)
-      assert.equal(defaultKeyHash, keyHash)
     })
 
     it('updates a value', async () => {
       await config.update(defaultKey, updatedDefaultValue, { from: manager })
 
-      const { keyHash, value } = await config.get(defaultKey)
+      const value = await config.get(defaultKey)
 
       assert.notEqual(defaultValue, value)
       assert.equal(updatedDefaultValue, value)
-      assert.equal(defaultKeyHash, keyHash)
     })
 
     it('gets all values', async () => {
@@ -52,11 +50,7 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
 
       assert.equal(values.length, 1)
       assert.deepEqual(
-        values.map((i) => i.keyHash),
-        [defaultKeyHash]
-      )
-      assert.deepEqual(
-        values.map((i) => i.value),
+        values,
         [updatedDefaultValue]
       )
     })

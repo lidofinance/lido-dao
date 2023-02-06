@@ -7,11 +7,6 @@ pragma solidity 0.8.9;
 import "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
 import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
 
-struct Item {
-    bytes32 keyHash;
-    bytes value;
-}
-
 contract OracleDaemonConfig is AccessControlEnumerable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
@@ -63,23 +58,22 @@ contract OracleDaemonConfig is AccessControlEnumerable {
         emit ConfigValueUnset(keyHash, _key);
     }
 
-    function get(string calldata _key) external view returns (Item memory value) {
+    function get(string calldata _key) external view returns (bytes memory) {
         bytes32 keyHash = bytes32(keccak256(abi.encodePacked(_key)));
         if (!keyHashes.contains(keyHash)) revert ErrorValueDoesntExist(_key);
 
-        return Item({keyHash: keyHash, value: values[keyHash]});
+        return values[keyHash];
     }
 
-    function getList(string[] calldata _keys) external view returns (Item[] memory) {
-        Item[] memory results = new Item[](_keys.length);
+    function getList(string[] calldata _keys) external view returns (bytes[] memory) {
+        bytes[] memory results = new bytes[](_keys.length);
 
         for (uint256 i = 0; i < _keys.length; ) {
             bytes32 hashToRetrieve = bytes32(keccak256(abi.encodePacked(_keys[i])));
 
             if (!keyHashes.contains(hashToRetrieve)) revert ErrorValueDoesntExist(_keys[i]);
 
-            results[i].keyHash = hashToRetrieve;
-            results[i].value = values[hashToRetrieve];
+            results[i] = values[hashToRetrieve];
 
             unchecked {
                 ++i;
