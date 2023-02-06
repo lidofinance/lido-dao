@@ -17,6 +17,8 @@ import {Address} from "@openzeppelin/contracts-v4.4/utils/Address.sol";
 import {IWstETH, WithdrawalQueue} from "./WithdrawalQueue.sol";
 import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
 
+/// @title NFT implementation around {WithdrawalRequest}
+/// @author psirex, folkyatina
 contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
     using Strings for uint256;
     using Address for address;
@@ -169,16 +171,14 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
         emit Transfer(from, to, tokenId);
     }
 
-    /**
-     * @dev Internal function to invoke {IERC721Receiver-onERC721Received} on a target address.
-     * The call is not executed if the target address is not a contract.
-     *
-     * @param from address representing the previous owner of the given token ID
-     * @param to target address that will receive the tokens
-     * @param tokenId uint256 ID of the token to be transferred
-     * @param data bytes optional data to send along with the call
-     * @return bool whether the call correctly returned the expected magic value
-     */
+    /// @dev Internal function to invoke {IERC721Receiver-onERC721Received} on a target address.
+    /// The call is not executed if the target address is not a contract.
+    ///
+    /// @param from address representing the previous owner of the given token ID
+    /// @param to target address that will receive the tokens
+    /// @param tokenId uint256 ID of the token to be transferred
+    /// @param data bytes optional data to send along with the call
+    /// @return bool whether the call correctly returned the expected magic value
     function _checkOnERC721Received(address from, address to, uint256 tokenId, bytes memory data)
         private
         returns (bool)
@@ -201,13 +201,11 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
         }
     }
 
-    /**
-     * @dev Returns whether `spender` is allowed to manage `tokenId`.
-     *
-     * Requirements:
-     *
-     * - `tokenId` must exist.
-     */
+    /// @dev Returns whether `spender` is allowed to manage `tokenId`.
+    ///
+    /// Requirements:
+    ///
+    /// - `tokenId` must exist.
     function _isApprovedOrOwner(address spender, uint256 tokenId) internal view returns (bool) {
         address owner = ownerOf(tokenId);
         return (spender == owner || isApprovedForAll(owner, spender) || getApproved(tokenId) == spender);
