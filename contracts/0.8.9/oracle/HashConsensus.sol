@@ -107,8 +107,6 @@ contract HashConsensus is AccessControlEnumerable {
     }
 
     struct MemberState {
-        // address of the oracle member
-        address addr;
         // the last reference slot a report from this member was received for
         uint64 lastReportRefSlot;
         // the variant index of the last report from this member
@@ -154,8 +152,11 @@ contract HashConsensus is AccessControlEnumerable {
     /// @dev Reporting frame configuration
     FrameConfig internal _frameConfig;
 
-    /// @dev Oracle committee members array
-    MemberState[] internal _members;
+    /// @dev Oracle committee members states array
+    MemberState[] internal _memberStates;
+
+    /// @dev Oracle committee members' addresses array
+    address[] internal _memberAddresses;
 
     /// @dev Mapping from an oracle committee member address to the 1-based index in the
     /// members array
@@ -323,10 +324,10 @@ contract HashConsensus is AccessControlEnumerable {
 
         if (isMember) {
             unchecked { --index; } // convert to 0-based
-            MemberState storage member = _members[index];
-            lastReportRefSlot = member.lastReportRefSlot;
+            MemberState memory memberState = _memberStates[index];
+            lastReportRefSlot = memberState.lastReportRefSlot;
             memberReportForCurrentRefSlot = lastReportRefSlot == frame.refSlot
-                ? _reportVariants[member.lastReportVariantIndex].hash
+                ? _reportVariants[memberState.lastReportVariantIndex].hash
                 : ZERO_HASH;
             uint256 slot = _computeSlotAtTimestamp(_getTime());
             canReport = slot <= frame.reportProcessingDeadlineSlot &&
@@ -379,14 +380,14 @@ contract HashConsensus is AccessControlEnumerable {
 
     function setQuorum(uint256 quorum) external {
         // access control is performed inside the next call
-        _setQuorumAndCheckConsensus(quorum, _members.length);
+        _setQuorumAndCheckConsensus(quorum, _memberStates.length);
     }
 
     /// @notice Disables the oracle by setting the quorum to an unreachable value.
     ///
     function disableConsensus() external {
         // access control is performed inside the next call
-        _setQuorumAndCheckConsensus(UNREACHABLE_QUORUM, _members.length);
+        _setQuorumAndCheckConsensus(UNREACHABLE_QUORUM, _memberStates.length);
     }
 
     ///
@@ -569,9 +570,10 @@ contract HashConsensus is AccessControlEnumerable {
         if (_isMember(addr)) revert DuplicateMember();
         if (addr == address(0)) revert AddressCannotBeZero();
 
-        _members.push(MemberState(addr, 0, 0));
+        _memberStates.push(MemberState(0, 0));
+        _memberAddresses.push(addr);
 
-        uint256 newTotalMembers = _members.length;
+        uint256 newTotalMembers = _memberStates.length;
         _memberIndices1b[addr] = newTotalMembers;
 
         emit MemberAdded(addr, newTotalMembers, quorum);
@@ -581,30 +583,32 @@ contract HashConsensus is AccessControlEnumerable {
 
     function _removeMember(address addr, uint256 quorum) internal {
         uint256 index = _getMemberIndex(addr);
-        uint256 newTotalMembers = _members.length - 1;
+        uint256 newTotalMembers = _memberStates.length - 1;
 
         assert(index <= newTotalMembers);
-        MemberState memory member = _members[index];
+        MemberState memory memberState = _memberStates[index];
 
         if (index != newTotalMembers) {
-            MemberState memory copyFrom = _members[newTotalMembers];
-            _members[index] = copyFrom;
-            _memberIndices1b[copyFrom.addr] = index + 1;
+            address addrToMove = _memberAddresses[newTotalMembers];
+            _memberAddresses[index] = addrToMove;
+            _memberStates[index] = _memberStates[newTotalMembers];
+            _memberIndices1b[addrToMove] = index + 1;
         }
 
-        _members.pop();
+        _memberStates.pop();
+        _memberAddresses.pop();
         _memberIndices1b[addr] = 0;
 
         emit MemberRemoved(addr, newTotalMembers, quorum);
 
         ConsensusFrame memory frame = _getCurrentFrame();
 
-        if (member.lastReportRefSlot == frame.refSlot &&
+        if (memberState.lastReportRefSlot == frame.refSlot &&
             _getLastProcessingRefSlot() < frame.refSlot
         ) {
             // member reported for the current ref. slot and the consensus report
             // is not processing yet => need to cancel the member's report
-            --_reportVariants[member.lastReportVariantIndex].support;
+            --_reportVariants[memberState.lastReportVariantIndex].support;
         }
 
         _setQuorumAndCheckConsensus(quorum, newTotalMembers);
@@ -630,7 +634,7 @@ contract HashConsensus is AccessControlEnumerable {
     /// given reporting `frameIndex`.
     ///
     function _isFastLaneMember(uint256 index, uint256 frameIndex) internal view returns (bool) {
-        uint256 totalMembers = _members.length;
+        uint256 totalMembers = _memberStates.length;
         (uint256 flLeft, uint256 flPastRight) = _getFastLaneSubset(frameIndex, totalMembers);
         return Math.pointInHalfOpenIntervalModN(index, flLeft, flPastRight, totalMembers);
     }
@@ -639,7 +643,7 @@ contract HashConsensus is AccessControlEnumerable {
         address[] memory addresses,
         uint256[] memory lastReportedRefSlots
     ) {
-        uint256 totalMembers = _members.length;
+        uint256 totalMembers = _memberStates.length;
         uint256 left;
         uint256 right;
 
@@ -653,10 +657,11 @@ contract HashConsensus is AccessControlEnumerable {
         lastReportedRefSlots = new uint256[](addresses.length);
 
         for (uint256 i = left; i < right; ++i) {
-            MemberState storage member = _members[i % totalMembers];
+            uint256 iModTotal = i % totalMembers;
+            MemberState memory memberState = _memberStates[iModTotal];
             uint256 k = i - left;
-            addresses[k] = member.addr;
-            lastReportedRefSlots[k] = member.lastReportRefSlot;
+            addresses[k] = _memberAddresses[iModTotal];
+            lastReportedRefSlots[k] = memberState.lastReportRefSlot;
         }
     }
 
@@ -668,7 +673,7 @@ contract HashConsensus is AccessControlEnumerable {
         if (slot > type(uint64).max) revert NumericOverflow();
 
         uint256 memberIndex = _getMemberIndex(_msgSender());
-        MemberState storage member = _members[memberIndex];
+        MemberState memory memberState = _memberStates[memberIndex];
 
         uint256 expectedConsensusVersion = _getConsensusVersion();
         if (consensusVersion != expectedConsensusVersion) {
@@ -692,7 +697,7 @@ contract HashConsensus is AccessControlEnumerable {
 
         if (slot <= _getLastProcessingRefSlot()) {
             // consensus for the ref. slot was already reached and consensus report is processing
-            if (slot == member.lastReportRefSlot) {
+            if (slot == memberState.lastReportRefSlot) {
                 // member sends a report for the same slot => let them know via a revert
                 revert ConsensusReportAlreadyProcessing();
             } else {
@@ -718,8 +723,8 @@ contract HashConsensus is AccessControlEnumerable {
             ++varIndex;
         }
 
-        if (slot == member.lastReportRefSlot) {
-            uint64 prevVarIndex = member.lastReportVariantIndex;
+        if (slot == memberState.lastReportRefSlot) {
+            uint64 prevVarIndex = memberState.lastReportVariantIndex;
             assert(prevVarIndex < variantsLength);
             if (varIndex == prevVarIndex) {
                 revert DuplicateReport();
@@ -736,8 +741,10 @@ contract HashConsensus is AccessControlEnumerable {
             _reportVariantsLength = ++variantsLength;
         }
 
-        member.lastReportRefSlot = uint64(slot);
-        member.lastReportVariantIndex = varIndex;
+        _memberStates[memberIndex] = MemberState({
+            lastReportRefSlot: uint64(slot),
+            lastReportVariantIndex: varIndex
+        });
 
         emit ReportReceived(slot, _msgSender(), report);
 
