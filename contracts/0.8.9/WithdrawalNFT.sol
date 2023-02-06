@@ -218,7 +218,7 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
     ///
     /// Tokens can be managed by their owner or approved accounts via {approve} or {setApprovalForAll}.
     function _exists(uint256 _tokenId) internal view virtual returns (bool) {
-        return _tokenId != 0 && _tokenId < getLastRequestId();
+        return _tokenId != 0 && _tokenId <= getLastRequestId();
     }
 
     /// @dev Approve `to` to operate on `tokenId`

@@ -92,7 +92,7 @@ abstract contract WithdrawalQueueBase {
     error CantSendValueRecipientMayHaveReverted();
     error SafeCastValueDoesNotFit(uint16 maximumBitSize);
 
-    /// @notice id of the last request. Equals to the length of the queue
+    /// @notice id of the last request.
     function getLastRequestId() public view returns (uint256) {
         return LAST_REQUEST_ID_POSITION.getStorageUint256();
     }
