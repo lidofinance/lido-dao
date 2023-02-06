@@ -14,8 +14,6 @@ interface INewOracle {
 
 
 interface IHashConsensus {
-    function getQuorum() external view returns (uint256);
-
     function getChainConfig() external view returns (
         uint256 slotsPerEpoch,
         uint256 secondsPerSlot,
@@ -137,15 +135,6 @@ contract LidoOracle is AragonApp {
     ///
     /// Compatibility interface (DEPRECATED)
     ///
-
-    /**
-     * @notice DEPRECATED, kept for compatibility purposes only.
-     *
-     * Returns the number of exactly the same reports needed to finalize the reporting frame.
-     */
-    function getQuorum() external view returns (uint256) {
-        return _getNewConsensusContract().getQuorum();
-    }
 
     /**
      * @notice DEPRECATED, kept for compatibility purposes only.
