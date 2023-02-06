@@ -108,8 +108,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
 
     function initialize(
         address admin,
-        address pauser,
-        address resumer,
         address consensusContract,
         uint256 consensusVersion,
         uint256 lastProcessingRefSlot,
@@ -120,8 +118,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
-        _grantRole(PAUSE_ROLE, pauser);
-        _grantRole(RESUME_ROLE, resumer);
         _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
         _setDataBoundaries(
             maxExitRequestsPerReport,
