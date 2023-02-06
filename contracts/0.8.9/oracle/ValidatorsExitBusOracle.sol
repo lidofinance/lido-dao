@@ -449,6 +449,8 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             pubkey.length := 48
         }
 
+        uint256 timestamp = _getTime();
+
         while (offset < offsetPastEnd) {
             uint256 dataWithoutPubkey;
             assembly {
@@ -487,7 +489,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             lastValIndex = valIndex;
             lastDataWithoutPubkey = dataWithoutPubkey;
 
-            emit ValidatorExitRequest(moduleId, nodeOpId, valIndex, pubkey, block.timestamp);
+            emit ValidatorExitRequest(moduleId, nodeOpId, valIndex, pubkey, timestamp);
         }
 
         if (lastNodeOpKey != 0) {
