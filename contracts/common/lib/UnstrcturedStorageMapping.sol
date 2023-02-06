@@ -7,7 +7,6 @@
 pragma solidity >=0.4.24 <0.9.0;
 
 library UnstrcturedStorageMapping {
-
     function getStorageMappingUint256(bytes32 position, uint256 key) internal view returns (uint256 data) {
         assembly {
             mstore(0, key)
@@ -25,4 +24,37 @@ library UnstrcturedStorageMapping {
             sstore(hash, data)
         }
     }
+
+
+    // @dev allow read mapping struct sub-slot
+    //
+    // function getStorageMappingUint256(bytes32 position, uint256 key) internal view returns (uint256 data) {
+    //     return getStorageMappingUint256Offset(position, key, 0);
+    // }
+
+    // function getStorageMappingUint256Offset(bytes32 position, uint256 key, uint256 offset)
+    //     internal
+    //     view
+    //     returns (uint256 data)
+    // {
+    //     assembly {
+    //         mstore(0, key)
+    //         mstore(32, position)
+    //         let hash := add(keccak256(0, 64), offset)
+    //         data := sload(hash)
+    //     }
+    // }
+
+    // function setStorageMappingUint256(bytes32 position, uint256 key, uint256 data) internal {
+    //     setStorageMappingUint256Offset(position, key, 0, data);
+    // }
+
+    // function setStorageMappingUint256Offset(bytes32 position, uint256 key, uint256 offset, uint256 data) internal {
+    //     assembly {
+    //         mstore(0, key)
+    //         mstore(32, position)
+    //         let hash := add(keccak256(0, 64), offset)
+    //         sstore(hash, data)
+    //     }
+    // }
 }

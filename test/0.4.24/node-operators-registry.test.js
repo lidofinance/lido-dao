@@ -824,8 +824,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await assert.reverts(app.setNodeOperatorName(nodeOperatorId, tooLongName, { from: voting }), 'NAME_TOO_LONG')
     })
 
-    it('reverts with "APP_AUTH_FAILED" error when called by address without SET_NODE_OPERATOR_NAME_ROLE', async () => {
-      const hasPermission = await dao.hasPermission(nobody, app, 'SET_NODE_OPERATOR_NAME_ROLE')
+    it('reverts with "APP_AUTH_FAILED" error when called by address without ADD_NODE_OPERATOR_ROLE', async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'ADD_NODE_OPERATOR_ROLE')
       assert.isFalse(hasPermission)
       await assert.reverts(app.setNodeOperatorName(0, 'new name', { from: nobody }), 'APP_AUTH_FAILED')
     })
@@ -893,8 +893,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       )
     })
 
-    it(`reverts with "APP_AUTH_FAILED" error when caller doesn't have SET_NODE_OPERATOR_ADDRESS_ROLE`, async () => {
-      const hasPermission = await dao.hasPermission(nobody, app, 'SET_NODE_OPERATOR_ADDRESS_ROLE')
+    it(`reverts with "APP_AUTH_FAILED" error when caller doesn't have ADD_NODE_OPERATOR_ROLE`, async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'ADD_NODE_OPERATOR_ROLE')
       assert.isFalse(hasPermission)
       await assert.reverts(
         app.setNodeOperatorRewardAddress(firstNodeOperatorId, ADDRESS_4, { from: nobody }),

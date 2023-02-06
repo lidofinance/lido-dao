@@ -121,12 +121,6 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     bytes32 public constant MANAGE_SIGNING_KEYS = 0x75abc64490e17b40ea1e66691c3eb493647b24430b358bd87ec3e5127f1621ee;
     // bytes32 public constant ADD_NODE_OPERATOR_ROLE = keccak256("ADD_NODE_OPERATOR_ROLE");
     bytes32 public constant ADD_NODE_OPERATOR_ROLE = 0xe9367af2d321a2fc8d9c8f1e67f0fc1e2adf2f9844fb89ffa212619c713685b2;
-    // bytes32 public constant SET_NODE_OPERATOR_NAME_ROLE = keccak256("SET_NODE_OPERATOR_NAME_ROLE");
-    // bytes32 public constant SET_NODE_OPERATOR_NAME_ROLE =
-    //     0x58412970477f41493548d908d4307dfca38391d6bc001d56ffef86bd4f4a72e8;
-    // bytes32 public constant SET_NODE_OPERATOR_ADDRESS_ROLE = keccak256("SET_NODE_OPERATOR_ADDRESS_ROLE");
-    // bytes32 public constant SET_NODE_OPERATOR_ADDRESS_ROLE =
-    //     0xbf4b1c236312ab76e456c7a8cca624bd2f86c74a4f8e09b3a26d60b1ce492183;
     // bytes32 public constant SET_NODE_OPERATOR_LIMIT_ROLE = keccak256("SET_NODE_OPERATOR_LIMIT_ROLE");
     bytes32 public constant SET_NODE_OPERATOR_LIMIT_ROLE =
         0x07b39e0faf2521001ae4e58cb9ffd3840a63e205d288dc9c93c3774f0d794754;
@@ -141,8 +135,6 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         0xd143dfe933ec009d7da9f00bee064bd3db6a56ff95197dcef9d4b0741a393b6d;
     // bytes32 public constant STAKING_ROUTER_ROLE = keccak256("STAKING_ROUTER_ROLE");
     bytes32 public constant STAKING_ROUTER_ROLE = 0xbb75b874360e0bfd87f964eadd8276d8efb7c942134fc329b513032d0803e0c6;
-    // bytes32 public constant UPDATE_TARGET_VALIDATORS_KEYS_COUNT_ROLE =
-    //     keccak256("UPDATE_TARGET_VALIDATORS_KEYS_COUNT_ROLE");
 
     //
     // CONSTANTS
@@ -163,10 +155,11 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     uint8 internal constant TOTAL_KEYS_COUNT_OFFSET = 3;
 
     // TargetValidatorsStats
+    uint8 internal constant TARGET_VALIDATORS_ACTIVE_OFFSET = 0;
     /// @dev relative target active validators limit for operator, set by DAO, UINT64_MAX === no limit
-    uint8 internal constant TARGET_VALIDATORS_COUNT_OFFSET = 0;
+    uint8 internal constant TARGET_VALIDATORS_COUNT_OFFSET = 1;
     /// @dev excess validators count for operator that will be forced to exit
-    uint8 internal constant EXCESS_VALIDATORS_COUNT_OFFSET = 1;
+    uint8 internal constant EXCESS_VALIDATORS_COUNT_OFFSET = 2;
 
     // StuckPenaltyStats
     /// @dev stuck keys count from oracle report
@@ -186,10 +179,8 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     // bytes32 internal constant CONTRACT_VERSION_POSITION =
     //     0xd5444e06b5773cd8c7a9ca51e00a75c90f604a23a58df8f8ad5a8476fcf99aed;
 
-    // bytes32 internal constant STETH_POSITION = keccak256("lido.NodeOperatorsRegistry.stETH");
-    // bytes32 internal constant STETH_POSITION = 0xec9ed0746eb1900b7a28ec0ec00fa9acae3f6b909bcaec184f2cc4fb3634d753;
-    bytes32 internal constant LIDO_LOCATOR_POSITION = 0xec9ed0746eb1900b7a28ec0ec00fa9acae3f6b909bcaec184f2cc4fb3634d753;
     // bytes32 internal constant LIDO_LOCATOR_POSITION = keccak256("lido.NodeOperatorsRegistry.lidoLocator");
+    bytes32 internal constant LIDO_LOCATOR_POSITION = 0xfb2059fd4b64256b64068a0f57046c6d40b9f0e592ba8bcfdf5b941910d03537;
 
     /// @dev Total number of operators
     // bytes32 internal constant TOTAL_OPERATORS_COUNT_POSITION = keccak256("lido.NodeOperatorsRegistry.totalOperatorsCount");
@@ -213,14 +204,15 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     // bytes32 internal constant TOTAL_SIGNING_KEYS_STATS = keccak256("lido.NodeOperatorsRegistry.totalSigningKeysStats");
     bytes32 internal constant TOTAL_SIGNING_KEYS_STATS =
         0xc33a2ef669a34f5b2d3bbc4b9820f8b3aa025f75811cb235399cc3eb412083c5;
-
     // bytes32 internal constant TOTAL_VALIDATORS_STATS = keccak256("lido.NodeOperatorsRegistry.totaValidatorslStats");
     bytes32 internal constant TOTAL_VALIDATORS_STATS =
-        0xc33a2ef669a34f5b2d3bbc4b9820f8b3aa025f75811cb235399cc3eb41234653;
+        0xbd84f46af4fe8c207f7182f3d6fb093ed9cf63ed9493ee6a1d544f034d2873ec;
+    // bytes32 internal constant OPERATOR_VALIDATORS_STATS_MAP = keccak256("lido.NodeOperatorsRegistry.operatorValidatorsStats");
     bytes32 internal constant OPERATOR_VALIDATORS_STATS_MAP =
-        0xc33a2ef669a34f5b2d3bbc4b9820f8b3aa025f75811cb235399cc3eb41231111;
+        0xf688871c27557b06283da6f231bf23fd992a01e7489de34070ea8206343999ec;
+    // bytes32 internal constant OPERATOR_STUCK_PENALTY_STATS_MAP = keccak256("lido.NodeOperatorsRegistry.operatorStuckPenaltyStats");
     bytes32 internal constant OPERATOR_STUCK_PENALTY_STATS_MAP =
-        0xc33a2ef669a34f5b2d3bbc4b9820f8b3aa025f75811cb235399cc3eb41232222;
+        0x5cbe0b696c8f808b766dcefaac7fece1881adbfdb8dd0fc884335a775b223d3f;
 
     /// @dev DAO target limit, used to check how many keys shoud be go to exit
     ///      UINT64_MAX - unlim
@@ -294,10 +286,12 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         _initialize_v2(_locator, _type);
 
         uint256 totalOperators = getNodeOperatorsCount();
-
         uint256 totalSigningKeysStats = _getTotalSigningKeysStats();
+        NodeOperator storage operator;
         for (uint256 operatorId = 0; operatorId < totalOperators; ++operatorId) {
-            NodeOperator storage operator = _nodeOperators[operatorId];
+
+            // uint operatorSigningKeysStats = _getOperatorSigningKeysStats(operatorId);
+            operator = _nodeOperators[operatorId];
 
             uint64 totalSigningKeysCount = operator.totalSigningKeysCount;
             uint64 vettedSigningKeysCount = operator.vettedSigningKeysCount;
@@ -322,10 +316,6 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
             totalSigningKeysStats = totalSigningKeysStats.inc(DEPOSITED_KEYS_COUNT_OFFSET, depositedSigningKeysCount);
             totalSigningKeysStats = totalSigningKeysStats.inc(EXITED_KEYS_COUNT_OFFSET, exitedSigningKeysCount);
             totalSigningKeysStats = totalSigningKeysStats.inc(TOTAL_KEYS_COUNT_OFFSET, totalSigningKeysCount);
-            // totalSigningKeysStats.increaseVettedSigningKeysCount(vettedSigningKeysCountAfter);
-            // totalSigningKeysStats.increaseDepositedSigningKeysCount(depositedSigningKeysCount);
-            // totalSigningKeysStats.increaseExitedSigningKeysCount(exitedSigningKeysCount);
-            // totalSigningKeysStats.increaseTotalSigningKeysCount(totalSigningKeysCount);
         }
 
         _setTotalSigningKeysStats(totalSigningKeysStats);
@@ -428,7 +418,6 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _authP(ADD_NODE_OPERATOR_ROLE, arr(uint256(_nodeOperatorId)));
 
-        // require(keccak256(bytes(_nodeOperators[_nodeOperatorId].name)) != keccak256(bytes(_name)), "NODE_OPERATOR_NAME_IS_THE_SAME");
         _nodeOperators[_nodeOperatorId].name = _name;
         emit NodeOperatorNameSet(_nodeOperatorId, _name);
     }
@@ -441,7 +430,6 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _authP(ADD_NODE_OPERATOR_ROLE, arr(uint256(_nodeOperatorId), uint256(_rewardAddress)));
 
-        // require(_nodeOperators[_nodeOperatorId].rewardAddress != _rewardAddress, "NODE_OPERATOR_ADDRESS_IS_THE_SAME");
         _nodeOperators[_nodeOperatorId].rewardAddress = _rewardAddress;
         emit NodeOperatorRewardAddressSet(_nodeOperatorId, _rewardAddress);
     }
@@ -1102,9 +1090,9 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     /// @param _nodeOperatorId Node Operator id
     /// @param _index Index of the key, starting with 0
     /// @dev DEPRECATED use removeSigningKeys instead
-    // function removeSigningKey(uint256 _nodeOperatorId, uint256 _index) external {
-    //     _removeUnusedSigningKeys(_nodeOperatorId, _index, 1);
-    // }
+    function removeSigningKey(uint256 _nodeOperatorId, uint256 _index) external {
+        _removeUnusedSigningKeys(_nodeOperatorId, _index, 1);
+    }
 
     /// @notice Removes an #`_keysCount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of DAO.
     /// @param _nodeOperatorId Node Operator id
@@ -1118,17 +1106,17 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     /// @param _nodeOperatorId Node Operator id
     /// @param _index Index of the key, starting with 0
     /// @dev DEPRECATED use removeSigningKeysOperatorBH instead
-    // function removeSigningKeyOperatorBH(uint256 _nodeOperatorId, uint256 _index) external {
-    //     _removeUnusedSigningKeys(_nodeOperatorId, _index, 1);
-    // }
+    function removeSigningKeyOperatorBH(uint256 _nodeOperatorId, uint256 _index) external {
+        _removeUnusedSigningKeys(_nodeOperatorId, _index, 1);
+    }
 
     /// @notice Removes an #`_keysCount` of validator signing keys starting from #`_index` of operator #`_id` usable keys. Executed on behalf of Node Operator.
     /// @param _nodeOperatorId Node Operator id
     /// @param _fromIndex Index of the key, starting with 0
     /// @param _keysCount Number of keys to remove
-    // function removeSigningKeysOperatorBH(uint256 _nodeOperatorId, uint256 _fromIndex, uint256 _keysCount) external {
-    //     _removeUnusedSigningKeys(_nodeOperatorId, uint64(_fromIndex), uint64(_keysCount));
-    // }
+    function removeSigningKeysOperatorBH(uint256 _nodeOperatorId, uint256 _fromIndex, uint256 _keysCount) external {
+        _removeUnusedSigningKeys(_nodeOperatorId, uint64(_fromIndex), uint64(_keysCount));
+    }
 
     function _removeUnusedSigningKeys(uint256 _nodeOperatorId, uint256 _fromIndex, uint256 _keysCount) internal {
         _onlyExistedNodeOperator(_nodeOperatorId);
@@ -1317,12 +1305,15 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
 
         exitedValidatorsCount = nodeOperator.exitedSigningKeysCount;
         activeValidatorsKeysCount = depositedSigningKeysCount - exitedValidatorsCount;
-        
+
         uint256 targetDepositedValidatorsCount = exitedValidatorsCount
             + operatorTargetStats.sum(TARGET_VALIDATORS_COUNT_OFFSET, EXCESS_VALIDATORS_COUNT_OFFSET);
 
         /// @todo minus penalized
-        if (operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET) > 0 && targetDepositedValidatorsCount < vettedSigningKeysCount) {
+        if (
+            operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET) > 0
+                && targetDepositedValidatorsCount < vettedSigningKeysCount
+        ) {
             readyToDepositValidatorsKeysCount = targetDepositedValidatorsCount > depositedSigningKeysCount
                 ? targetDepositedValidatorsCount - depositedSigningKeysCount
                 : 0;
@@ -1430,6 +1421,26 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     function _setOperatorStuckPenaltyStats(uint256 _nodeOperatorId, uint256 _val) internal {
         OPERATOR_STUCK_PENALTY_STATS_MAP.setStorageMappingUint256(_nodeOperatorId, _val);
     }
+
+    // function _getOperatorSigningKeysStats(uint256 _nodeOperatorId) internal view returns (uint256) {
+    //     // _nodeOperators mapping has slot = 0
+    //     // keys stats vars has slot index = 2, i.e.:
+    //     // struct NodeOperator {    
+    //     //     bool active;            \   packed titghtly
+    //     //     address rewardAddress;  /   slot = 0
+    //     //     string name;            >   slot = 1 
+    //     //     uint64 vettedSigningKeysCount;    \
+    //     //     uint64 exitedSigningKeysCount;     \  packed tightly
+    //     //     uint64 totalSigningKeysCount;      /  slot = 2
+    //     //     uint64 depositedSigningKeysCount; /
+    //     // }
+    //     //
+    //     return bytes32(0).getStorageMappingUint256Offset(_nodeOperatorId, 2);
+    // }
+
+    // function _setOperatorSigningKeysStats(uint256 _nodeOperatorId, uint256 _val) internal {
+    //     bytes32(0).setStorageMappingUint256Offset(_nodeOperatorId, 2, _val);
+    // }
 
     function _requireAuth(bool _pass) internal pure {
         require(_pass, "APP_AUTH_FAILED");
