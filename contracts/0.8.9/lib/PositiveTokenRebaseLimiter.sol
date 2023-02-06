@@ -49,8 +49,8 @@ library PositiveTokenRebaseLimiter {
         uint256 _totalPooledEther,
         uint256 _totalShares
     ) internal pure returns (TokenRebaseLimiterData memory limiterState) {
-        require(_rebaseLimit > 0, "TOO_LOW_TOKEN_REBASE_MAX");
-        require(_rebaseLimit <= UNLIMITED_REBASE, "WRONG_REBASE_LIMIT");
+        if(_rebaseLimit == 0) revert TooLowTokenRebaseLimit();
+        if(_rebaseLimit > UNLIMITED_REBASE) revert TooHighTokenRebaseLimit();
 
         limiterState.totalPooledEther = _totalPooledEther;
         limiterState.totalShares = _totalShares;
@@ -73,7 +73,11 @@ library PositiveTokenRebaseLimiter {
     function raiseLimit(TokenRebaseLimiterData memory _limiterState, uint256 _etherAmount) internal pure {
         if(_limiterState.rebaseLimit == UNLIMITED_REBASE) { return; }
 
-        _limiterState.rebaseLimit += (_etherAmount * LIMITER_PRECISION_BASE) / _limiterState.totalPooledEther;
+        uint256 projectedLimit = _limiterState.rebaseLimit + (
+            _etherAmount * LIMITER_PRECISION_BASE
+        ) / _limiterState.totalPooledEther;
+
+        _limiterState.rebaseLimit = Math256.min(projectedLimit, UNLIMITED_REBASE);
     }
 
     /**
@@ -120,4 +124,7 @@ library PositiveTokenRebaseLimiter {
             _limiterState.totalShares * remainingRebase
         ) / (LIMITER_PRECISION_BASE + remainingRebase);
     }
+
+    error TooLowTokenRebaseLimit();
+    error TooHighTokenRebaseLimit();
 }
