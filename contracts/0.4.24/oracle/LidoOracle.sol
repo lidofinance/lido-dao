@@ -214,7 +214,7 @@ contract LidoOracle is AragonApp {
      * The change of the protocol TVL that the last rebase resulted in. Notice that, during
      * a rebase, stETH shares can be minted to distribute protocol fees and burnt to apply
      * cover for losses incurred by slashed or unresponsive validators. A rebase might be
-     * trggered without changing the protocol TVL. Thus, it's impossible to correctly
+     * triggered without changing the protocol TVL. Thus, it's impossible to correctly
      * calculate APR from the numbers returned by this function.
      *
      * See docs.lido.fi for the correct way of onchain and offchain APR calculation.

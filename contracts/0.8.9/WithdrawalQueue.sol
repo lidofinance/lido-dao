@@ -139,7 +139,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
     }
 
     /**
-     * @notice Intialize the contract storage explicitly.
+     * @notice Initialize the contract storage explicitly.
      * @param _admin admin address that can change every role.
      * @param _pauser address that will be able to pause the withdrawals
      * @param _resumer address that will be able to resume the withdrawals after pause
@@ -182,14 +182,14 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
     function pause(uint256 _duration) external whenResumed onlyRole(PAUSE_ROLE) {
         if (_duration == 0) revert ZeroPauseDuration();
 
-        uint256 pausedUntill;
+        uint256 pausedUntil;
         if (_duration == PAUSE_INFINITELY) {
-            pausedUntill = PAUSE_INFINITELY;
+            pausedUntil = PAUSE_INFINITELY;
         } else {
-            pausedUntill = block.timestamp + _duration;
+            pausedUntil = block.timestamp + _duration;
         }
 
-        RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(pausedUntill);
+        RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(pausedUntil);
 
         emit Paused(_duration);
     }

@@ -151,7 +151,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         int256 clBalanceDiff,
         uint256 withdrawalsWithdrawn,
         uint256 executionLayerRewardsWithdrawn,
-        uint256 postBufferredEther
+        uint256 postBufferedEther
     );
 
     event TokenRebased(
@@ -390,7 +390,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      */
     function receiveELRewards() external payable {
 
-        require(msg.sender == getLidoLocator().elRewardsVault(), "EXECUTION_LAYER_REAWARDS_VAULT_ONLY");
+        require(msg.sender == getLidoLocator().elRewardsVault(), "EXECUTION_LAYER_REWARDS_VAULT_ONLY");
 
         TOTAL_EL_REWARDS_COLLECTED_POSITION.setStorageUint256(getTotalELRewardsCollected().add(msg.value));
 
@@ -576,7 +576,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
     /**
      * @notice Returns legacy oracle
-     * @dev DEPRECATED: the `AccountingOracle` superseeded the old one
+     * @dev DEPRECATED: the `AccountingOracle` superseded the old one
      */
     function getOracle() external view returns (address) {
         return getLidoLocator().legacyOracle();
