@@ -158,7 +158,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     /// free to reach consensus on another report for the same reporting frame and submit it
     /// using this same function.
     ///
-    function submitReport(bytes32 reportHash, uint256 refSlot, uint256 deadline) external {
+    function submitConsensusReport(bytes32 reportHash, uint256 refSlot, uint256 deadline) external {
         if (_msgSender() != CONSENSUS_CONTRACT_POSITION.getStorageAddress()) {
             revert OnlyConsensusContractCanSubmitReport();
         }
