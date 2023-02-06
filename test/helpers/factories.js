@@ -314,7 +314,7 @@ async function lidoLocatorMockImplFactory(protocol) {
     elRewardsVault: protocol.elRewardsVault.address,
     accountingOracle: protocol.oracle ? protocol.oracle.address : ZERO_ADDRESS,
     legacyOracle: protocol.legacyOracle.address,
-    safetyNetsRegistry: ZERO_ADDRESS,
+    oracleReportSanityChecker: ZERO_ADDRESS,
     selfOwnedStEthBurner: protocol.selfOwnedStETHBurner.address,
     validatorExitBus: ZERO_ADDRESS,
     stakingRouter: protocol.stakingRouter.address,

@@ -473,7 +473,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     struct OracleReportContracts {
         address accountingOracle;
         address elRewardsVault;
-        address safetyNetsRegistry;
+        address oracleReportSanityChecker;
         address selfOwnedStEthBurner;
         address withdrawalQueue;
         address withdrawalVault;
@@ -1118,7 +1118,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         handlingData.preTotalShares = _getTotalShares();
         handlingData.preCLBalance = _processClStateUpdate(_inputData.clValidators, _inputData.postCLBalance);
 
-        IOracleReportSanityChecker(_protocolContracts.safetyNetsRegistry).checkLidoOracleReport(
+        IOracleReportSanityChecker(_protocolContracts.oracleReportSanityChecker).checkLidoOracleReport(
             _inputData.timeElapsed,
             handlingData.preCLBalance,
             _inputData.postCLBalance,
@@ -1137,7 +1137,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         (
             withdrawals, elRewards, handlingData.sharesToBurnLimit
-        ) = IOracleReportSanityChecker(_protocolContracts.safetyNetsRegistry).smoothenTokenRebase(
+        ) = IOracleReportSanityChecker(_protocolContracts.oracleReportSanityChecker).smoothenTokenRebase(
             handlingData.preTotalPooledEther,
             handlingData.preTotalShares,
             handlingData.preCLBalance,
@@ -1234,7 +1234,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         (
             ret.accountingOracle,
             ret.elRewardsVault,
-            ret.safetyNetsRegistry,
+            ret.oracleReportSanityChecker,
             ret.selfOwnedStEthBurner,
             ret.withdrawalQueue,
             ret.withdrawalVault,
