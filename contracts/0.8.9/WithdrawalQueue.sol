@@ -285,6 +285,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
     /// @param _requestIds list of withdrawal request ids and hints to claim
     function getWithdrawalRequestStatuses(uint256[] calldata _requestIds)
         external
+        view
         returns (WithdrawalRequestStatus[] memory statuses)
     {
         statuses = new WithdrawalRequestStatus[](_requestIds.length);
