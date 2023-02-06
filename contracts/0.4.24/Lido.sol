@@ -959,14 +959,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-    * @dev Write a value nominated in basis points
-    */
-    function _setBPValue(bytes32 _slot, uint16 _value) internal {
-        require(_value <= TOTAL_BASIS_POINTS, "VALUE_OVER_100_PERCENT");
-        _slot.setStorageUint256(uint256(_value));
-    }
-
-    /**
      * @dev Gets the amount of Ether temporary buffered on this contract balance
      */
     function _getBufferedEther() internal view returns (uint256) {
