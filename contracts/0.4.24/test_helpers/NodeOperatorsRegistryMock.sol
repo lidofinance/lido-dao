@@ -132,10 +132,10 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         )
     {
         uint256 totalSigningKeysStats = TOTAL_SIGNING_KEYS_STATS.getStorageUint256();
-        totalSigningKeysCount = totalSigningKeysStats.upack(TOTAL_KEYS_COUNT_OFFSET);
-        vettedSigningKeysCount = totalSigningKeysStats.upack(VETTED_KEYS_COUNT_OFFSET);
-        depositedSigningKeysCount = totalSigningKeysStats.upack(DEPOSITED_KEYS_COUNT_OFFSET);
-        exitedSigningKeysCount = totalSigningKeysStats.upack(EXITED_KEYS_COUNT_OFFSET);
+        totalSigningKeysCount = totalSigningKeysStats.get(TOTAL_KEYS_COUNT_OFFSET);
+        vettedSigningKeysCount = totalSigningKeysStats.get(VETTED_KEYS_COUNT_OFFSET);
+        depositedSigningKeysCount = totalSigningKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET);
+        exitedSigningKeysCount = totalSigningKeysStats.get(EXITED_KEYS_COUNT_OFFSET);
     }
 
     function testing_setBaseVersion(uint256 _newBaseVersion) external {
