@@ -7,17 +7,18 @@ pragma solidity 0.8.9;
 import {IERC721} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721Receiver.sol";
 import {IERC165} from "@openzeppelin/contracts-v4.4/utils/introspection/ERC165.sol";
+
 import {Strings} from "@openzeppelin/contracts-v4.4/utils/Strings.sol";
 import {ERC165} from "@openzeppelin/contracts-v4.4/utils/introspection/ERC165.sol";
 import {EnumerableSet} from "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
 import {Address} from "@openzeppelin/contracts-v4.4/utils/Address.sol";
 
 import {IWstETH, WithdrawalQueue} from "./WithdrawalQueue.sol";
-import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
+import {IAccessControlEnumerable, AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
 
 /// @title NFT implementation around {WithdrawalRequest}
 /// @author psirex, folkyatina
-contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
+contract WithdrawalNFT is IERC721, WithdrawalQueue {
     using Strings for uint256;
     using Address for address;
     using EnumerableSet for EnumerableSet.UintSet;
@@ -32,7 +33,7 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
         public
         view
         virtual
-        override (AccessControlEnumerable, ERC165, IERC165)
+        override(IERC165, AccessControlEnumerable)
         returns (bool)
     {
         return interfaceId == type(IERC721).interfaceId || super.supportsInterface(interfaceId);
@@ -72,7 +73,7 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
 
     /// @dev See {IERC721-setApprovalForAll}.
     function setApprovalForAll(address operator, bool approved) public {
-        _setApprovalForAll(_msgSender(), operator, approved);
+        _setApprovalForAll(msg.sender, operator, approved);
     }
 
     /// @dev See {IERC721-isApprovedForAll}.
@@ -153,8 +154,8 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
     /// @param data bytes optional data to send along with the call
     /// @return bool whether the call correctly returned the expected magic value
     function _checkOnERC721Received(address from, address to, uint256 tokenId, bytes memory data)
-        private
-        returns (bool)
+    private
+    returns (bool)
     {
         if (to.isContract()) {
             try IERC721Receiver(to).onERC721Received(msg.sender, from, tokenId, data) returns (bytes4 retval) {
