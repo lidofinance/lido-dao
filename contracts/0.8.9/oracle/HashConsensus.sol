@@ -70,6 +70,7 @@ contract HashConsensus is AccessControlEnumerable {
     error NonFastLaneMemberCannotReportWithinFastLaneInterval();
     error NewProcessorCannotBeTheSame();
     error ConsensusReportAlreadyProcessing();
+    error FastLanePeriodCannotBeLongerThanFrame();
 
     event FrameConfigSet(uint256 newInitialEpoch, uint256 newEpochsPerFrame);
     event FastLaneConfigSet(uint256 fastLaneLengthSlots);
@@ -128,8 +129,8 @@ contract HashConsensus is AccessControlEnumerable {
     /// of the MANAGE_QUORUM_ROLE.
     bytes32 public constant DISABLE_CONSENSUS_ROLE = keccak256("DISABLE_CONSENSUS_ROLE");
 
-    /// @notice An ACL role granting the permission to change reporting interval
-    /// duration by calling setEpochsPerFrame.
+    /// @notice An ACL role granting the permission to change reporting interval duration
+    /// and fast lane reporting interval length by calling setFrameConfig.
     bytes32 public constant MANAGE_FRAME_CONFIG_ROLE = keccak256("MANAGE_FRAME_CONFIG_ROLE");
 
     /// @notice An ACL role granting the permission to change fast lane reporting interval
@@ -198,8 +199,7 @@ contract HashConsensus is AccessControlEnumerable {
 
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
-        _setFrameConfig(initialEpoch, epochsPerFrame);
-        _setFastLaneConfig(fastLaneLengthSlots);
+        _setFrameConfig(initialEpoch, epochsPerFrame, fastLaneLengthSlots, FrameConfig(0, 0, 0));
         // zero address is allowed here, meaning "no processor"
         _reportProcessor = reportProcessor;
     }
@@ -235,14 +235,14 @@ contract HashConsensus is AccessControlEnumerable {
         return (frame.refSlot, frame.reportProcessingDeadlineSlot);
     }
 
-    function setEpochsPerFrame(uint256 epochsPerFrame)
+    function setFrameConfig(uint256 epochsPerFrame, uint256 fastLaneLengthSlots)
         external onlyRole(MANAGE_FRAME_CONFIG_ROLE)
     {
         // Updates epochsPerFrame in a way that either keeps the current reference slot the same
         // or increases it by at least the minimum of old and new frame sizes.
         uint256 timestamp = _getTime();
         uint256 currentFrameStartEpoch = _computeFrameStartEpoch(timestamp, _frameConfig);
-        _setFrameConfig(currentFrameStartEpoch, epochsPerFrame);
+        _setFrameConfig(currentFrameStartEpoch, epochsPerFrame, fastLaneLengthSlots, _frameConfig);
     }
 
     ///
@@ -357,7 +357,7 @@ contract HashConsensus is AccessControlEnumerable {
     function setFastLaneLengthSlots(uint256 fastLaneLengthSlots)
         external onlyRole(MANAGE_FAST_LANE_CONFIG_ROLE)
     {
-        _setFastLaneConfig(fastLaneLengthSlots);
+        _setFastLaneLengthSlots(fastLaneLengthSlots);
     }
 
     function addMember(address addr, uint256 quorum)
@@ -466,14 +466,31 @@ contract HashConsensus is AccessControlEnumerable {
     /// Implementation: time
     ///
 
-    function _setFrameConfig(uint256 initialEpoch, uint256 epochsPerFrame) internal {
+    function _setFrameConfig(
+        uint256 initialEpoch,
+        uint256 epochsPerFrame,
+        uint256 fastLaneLengthSlots,
+        FrameConfig memory prevConfig
+    ) internal {
         if (epochsPerFrame == 0) revert EpochsPerFrameCannotBeZero();
+
+        if (fastLaneLengthSlots > epochsPerFrame * SLOTS_PER_EPOCH) {
+            revert FastLanePeriodCannotBeLongerThanFrame();
+        }
+
         _frameConfig = FrameConfig(
             initialEpoch.toUint64(),
             epochsPerFrame.toUint64(),
-            _frameConfig.fastLaneLengthSlots
+            fastLaneLengthSlots.toUint64()
         );
-        emit FrameConfigSet(initialEpoch, epochsPerFrame);
+
+        if (initialEpoch != prevConfig.initialEpoch || epochsPerFrame != prevConfig.epochsPerFrame) {
+            emit FrameConfigSet(initialEpoch, epochsPerFrame);
+        }
+
+        if (fastLaneLengthSlots != prevConfig.fastLaneLengthSlots) {
+            emit FastLaneConfigSet(fastLaneLengthSlots);
+        }
     }
 
     function _getCurrentFrame() internal view returns (ConsensusFrame memory) {
@@ -614,8 +631,12 @@ contract HashConsensus is AccessControlEnumerable {
         _setQuorumAndCheckConsensus(quorum, newTotalMembers);
     }
 
-    function _setFastLaneConfig(uint256 fastLaneLengthSlots) internal {
-        if (fastLaneLengthSlots != _frameConfig.fastLaneLengthSlots) {
+    function _setFastLaneLengthSlots(uint256 fastLaneLengthSlots) internal {
+        FrameConfig memory frameConfig = _frameConfig;
+        if (fastLaneLengthSlots > frameConfig.epochsPerFrame * SLOTS_PER_EPOCH) {
+            revert FastLanePeriodCannotBeLongerThanFrame();
+        }
+        if (fastLaneLengthSlots != frameConfig.fastLaneLengthSlots) {
             _frameConfig.fastLaneLengthSlots = fastLaneLengthSlots.toUint64();
             emit FastLaneConfigSet(fastLaneLengthSlots);
         }
