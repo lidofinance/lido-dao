@@ -55,7 +55,6 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     struct ConsensusReport {
         bytes32 hash;
         uint64 refSlot;
-        uint64 receptionTime;
         uint64 processingDeadlineTime;
     }
 
@@ -135,7 +134,6 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     function getConsensusReport() external view returns (
         bytes32 hash,
         uint256 refSlot,
-        uint256 receptionTime,
         uint256 processingDeadlineTime,
         bool processingStarted
     ) {
@@ -144,7 +142,6 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         return (
             report.hash,
             report.refSlot,
-            report.receptionTime,
             report.processingDeadlineTime,
             report.refSlot != 0 && report.refSlot == processingRefSlot
         );
@@ -185,7 +182,6 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         ConsensusReport memory report = ConsensusReport({
             hash: reportHash,
             refSlot: refSlot.toUint64(),
-            receptionTime: uint64(_getTime()),
             processingDeadlineTime: deadline.toUint64()
         });
 
