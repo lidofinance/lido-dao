@@ -32,7 +32,7 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
         public
         view
         virtual
-        override (ERC165, IERC165)
+        override (AccessControlEnumerable, ERC165, IERC165)
         returns (bool)
     {
         return interfaceId == type(IERC721).interfaceId 
