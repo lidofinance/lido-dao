@@ -168,6 +168,13 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     /// @dev excess validators count for operator that will be forced to exit
     uint8 internal constant EXCESS_VALIDATORS_COUNT_OFFSET = 1;
 
+    // StuckPenaltyStats
+    /// @dev stuck keys count from oracle report
+    uint8 internal constant STUCK_VALIDATORS_COUNT_OFFSET = 0;
+    /// @dev forgiven keys count from dao
+    uint8 internal constant FORGIVEN_VALIDATORS_COUNT_OFFSET = 1;
+    uint8 internal constant STUCK_PENALTY_END_TIMESTAMP_OFFSET = 2;
+
     //
     // UNSTRUCTURED STORAGE POSITIONS
     //
@@ -212,6 +219,8 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         0xc33a2ef669a34f5b2d3bbc4b9820f8b3aa025f75811cb235399cc3eb41234653;
     bytes32 internal constant OPERATOR_VALIDATORS_STATS_MAP =
         0xc33a2ef669a34f5b2d3bbc4b9820f8b3aa025f75811cb235399cc3eb41231111;
+    bytes32 internal constant OPERATOR_STUCK_PENALTY_STATS_MAP =
+        0xc33a2ef669a34f5b2d3bbc4b9820f8b3aa025f75811cb235399cc3eb41232222;
 
     /// @dev DAO target limit, used to check how many keys shoud be go to exit
     ///      UINT64_MAX - unlim
@@ -260,39 +269,12 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         uint64 depositedSigningKeysCount;
     }
 
-    /// @dev Node Operator parameters and internal state
-    struct ValidatorsStats {
-        /// @dev relative target active validators limit for operator, set by DAO, UINT64_MAX === no limit
-        // uint64 targetValidatorsCount;
-        /// @dev excess validators count for operator that will be forced to exit
-        // uint64 excessValidatorsCount;
-        /// @dev stuck keys count from oracle report
-        uint64 stuckValidatorsCount;
-        /// @dev forgiven keys count from dao
-        uint64 forgivenValidatorsCount;
-        uint64 stuckPenaltyEndAt;
-    }
-
-    // struct TargetValidatorsStats {
-    //     /// @dev relative target active validators limit for operator, set by DAO, UINT64_MAX === no limit
-    //     uint64 targetValidatorsCount;
-    //     /// @dev excess validators count for operator that will be forced to exit
-    //     uint64 excessValidatorsCount;
-    // }
-
-    /// @dev DAO target limit for operator
-    // uint64 targetValidatorsKeysCount;
-    /// @dev unavaliable keys count
-    // uint64 unavaliableKeysCount;
-
     //
     // STORAGE VARIABLES
     //
 
     /// @dev Mapping of all node operators. Mapping is used to be able to extend the struct.
     mapping(uint256 => NodeOperator) internal _nodeOperators;
-
-    mapping(uint256 => ValidatorsStats) internal _validatorsStats;
 
     //
     // METHODS
@@ -583,9 +565,6 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     // increasing operator's and total excess validators counters
 
     function _updExcessValidators(uint256 _nodeOperatorId, uint64 _newActiveValidatorsCount) internal {
-        // ValidatorsStats memory validatorsStats = _validatorsStats[_nodeOperatorId];
-        // uint64 targetValidatorsCount = _validatorsStats[_nodeOperatorId].targetValidatorsCount;
-
         uint256 operatorTargetStats = _getOperatorTargetValidtatorsStats(_nodeOperatorId);
         uint64 targetCount = operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET);
         uint64 excessCount = operatorTargetStats.get(EXCESS_VALIDATORS_COUNT_OFFSET);
@@ -693,9 +672,10 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
      * @notice Set the stuck signings keys count
      */
     function _updateStuckValidatorsKeysCount(uint256 _nodeOperatorId, uint64 _stuckValidatorsCount) internal {
-        ValidatorsStats storage validatorsStats = _validatorsStats[_nodeOperatorId];
-        // require(validatorsStats.stuckValidatorsCount != _stuckValidatorsCount, "NODE_OPERATOR_TARGET_LIMIT_IS_THE_SAME");
-        validatorsStats.stuckValidatorsCount = _stuckValidatorsCount;
+        _setOperatorStuckPenaltyStats(
+            _nodeOperatorId,
+            _getOperatorStuckPenaltyStats(_nodeOperatorId).set(STUCK_VALIDATORS_COUNT_OFFSET, _stuckValidatorsCount)
+        );
         emit StuckValidatorsCountChanged(_nodeOperatorId, _stuckValidatorsCount);
     }
 
@@ -706,15 +686,18 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
 
-        ValidatorsStats memory validatorsStats = _validatorsStats[_nodeOperatorId];
-        // require(validatorsStats.forgivenValidatorsCount != _forgivenValidatorsCount, "NODE_OPERATOR_TARGET_LIMIT_IS_THE_SAME");
-        validatorsStats.forgivenValidatorsCount = _forgivenValidatorsCount;
+        uint256 stcukPenaltyStats = _getOperatorStuckPenaltyStats(_nodeOperatorId);
 
-        if (validatorsStats.stuckValidatorsCount <= _forgivenValidatorsCount) {
-            validatorsStats.stuckPenaltyEndAt = uint64(block.timestamp + STUCK_VALIDATORS_PENALTY_DELAY);
+        // require(validatorsStats.forgivenValidatorsCount != _forgivenValidatorsCount, "NODE_OPERATOR_TARGET_LIMIT_IS_THE_SAME");
+        stcukPenaltyStats = stcukPenaltyStats.set(FORGIVEN_VALIDATORS_COUNT_OFFSET, _forgivenValidatorsCount);
+
+        if (stcukPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET) <= _forgivenValidatorsCount) {
+            stcukPenaltyStats.set(
+                STUCK_PENALTY_END_TIMESTAMP_OFFSET, uint64(block.timestamp + STUCK_VALIDATORS_PENALTY_DELAY)
+            );
         }
 
-        _validatorsStats[_nodeOperatorId] = validatorsStats;
+        _setOperatorStuckPenaltyStats(_nodeOperatorId, stcukPenaltyStats);
 
         emit ForgivenValidatorsCountChanged(_nodeOperatorId, _forgivenValidatorsCount);
     }
@@ -724,7 +707,6 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         internal
         returns (uint64 trimmedKeysCount, uint64 totalTargetDiff)
     {
-
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         // uint64 totalSigningKeysCount = ;
         uint64 depositedSigningKeysCount = nodeOperator.depositedSigningKeysCount;
@@ -993,20 +975,19 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
             uint64 excessValidatorsCount,
             uint64 stuckValidatorsCount,
             uint64 forgivenValidatorsCount,
-            uint64 stuckPenaltyEndAt
+            uint64 stuckPenaltyEndTimestamp
         )
     {
         _onlyExistedNodeOperator(_nodeOperatorId);
 
-        ValidatorsStats memory validatorsStats = _validatorsStats[_nodeOperatorId];
-        // TargetValidatorsStats memory operatorTargetStats = _operatorTargetStats[_nodeOperatorId];
         uint256 operatorTargetStats = _getOperatorTargetValidtatorsStats(_nodeOperatorId);
+        uint256 stcukPenaltyStats = _getOperatorStuckPenaltyStats(_nodeOperatorId);
 
         targetValidatorsCount = operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET);
         excessValidatorsCount = operatorTargetStats.get(EXCESS_VALIDATORS_COUNT_OFFSET);
-        stuckValidatorsCount = validatorsStats.stuckValidatorsCount;
-        forgivenValidatorsCount = validatorsStats.forgivenValidatorsCount;
-        stuckPenaltyEndAt = validatorsStats.stuckPenaltyEndAt;
+        stuckValidatorsCount = stcukPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET);
+        forgivenValidatorsCount = stcukPenaltyStats.get(FORGIVEN_VALIDATORS_COUNT_OFFSET);
+        stuckPenaltyEndTimestamp = stcukPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET);
     }
 
     /// @notice Returns the rewards distribution proportional to the effective stake for each node operator.
@@ -1036,10 +1017,11 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
             recipients[idx] = nodeOperator.rewardAddress;
             shares[idx] = activeValidatorsCount;
 
-            ValidatorsStats memory validatorsStats = _validatorsStats[operatorId];
+            uint256 stcukPenaltyStats = _getOperatorStuckPenaltyStats(operatorId);
             if (
-                validatorsStats.forgivenValidatorsCount < validatorsStats.stuckValidatorsCount
-                    || block.timestamp <= validatorsStats.stuckPenaltyEndAt
+                stcukPenaltyStats.get(FORGIVEN_VALIDATORS_COUNT_OFFSET)
+                    < stcukPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)
+                    || block.timestamp <= stcukPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET)
             ) {
                 penalized[idx] = true;
             }
@@ -1189,8 +1171,6 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
                 totalSigningKeysStats.dec(VETTED_KEYS_COUNT_OFFSET, vettedSigningKeysCount - uint64(_fromIndex));
             emit VettedSigningKeysCountChanged(_nodeOperatorId, _fromIndex);
 
-            // TargetValidatorsStats memory operatorTargetStats = _operatorTargetStats[_nodeOperatorId];
-            // NodeOperator memory validatorsStats = _validatorsStats[_nodeOperatorId];
             uint256 operatorTargetStats = _getOperatorTargetValidtatorsStats(_nodeOperatorId);
             if (operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET) == 0) {
                 uint256 totalTargetStats = _getTotalTargetValidtatorsStats();
@@ -1330,8 +1310,6 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         )
     {
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
-        // ValidatorsStats memory validatorsStats = _validatorsStats[_nodeOperatorId];
-        // TargetValidatorsStats memory operatorTargetStats = _operatorTargetStats[_nodeOperatorId];
         uint256 operatorTargetStats = _getOperatorTargetValidtatorsStats(_nodeOperatorId);
 
         uint256 vettedSigningKeysCount = nodeOperator.vettedSigningKeysCount;
@@ -1451,7 +1429,13 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         OPERATOR_VALIDATORS_STATS_MAP.setStorageMappingUint256(_nodeOperatorId, _val);
     }
 
-   
+    function _getOperatorStuckPenaltyStats(uint256 _nodeOperatorId) internal view returns (uint256) {
+        return OPERATOR_STUCK_PENALTY_STATS_MAP.getStorageMappingUint256(_nodeOperatorId);
+    }
+
+    function _setOperatorStuckPenaltyStats(uint256 _nodeOperatorId, uint256 _val) internal {
+        OPERATOR_STUCK_PENALTY_STATS_MAP.setStorageMappingUint256(_nodeOperatorId, _val);
+    }
 
     function _requireAuth(bool _pass) internal pure {
         require(_pass, "APP_AUTH_FAILED");
