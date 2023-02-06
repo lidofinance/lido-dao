@@ -6,7 +6,7 @@ pragma solidity 0.8.9;
 
 import {IERC721} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721Receiver.sol";
-import {IERC165} from "@openzeppelin/contracts-v4.4/utils/introspection/ERC165.sol";
+import {IERC165} from "@openzeppelin/contracts-v4.4/utils/introspection/IERC165.sol";
 
 import {Strings} from "@openzeppelin/contracts-v4.4/utils/Strings.sol";
 import {EnumerableSet} from "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
@@ -28,6 +28,14 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
 
     bytes32 internal constant TOKEN_APPROVALS_POSITION = keccak256("lido.WithdrawalNFT.tokenApprovals");
     bytes32 internal constant OPERATOR_APPROVALS = keccak256("lido.WithdrawalNFT.operatorApprovals");
+
+    error ApprovalToOwner();
+    error NotOwnerOrApprovedForAll(address sender);
+    error NotOwnerOrApproved(address sender);
+    error TransferFromIncorrectOwner(address from, address realOwner);
+    error TransferToZeroAddress();
+    error TransferFromZeroAddress();
+    error TransferToNonIERC721Receiver(address);
 
     /// @param _wstETH address of WstETH contract
     constructor(address _wstETH) WithdrawalQueue(IWstETH(_wstETH)) {}
@@ -62,19 +70,15 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     /// @dev See {IERC721-approve}.
     function approve(address _to, uint256 _requestId) public {
         address owner = ownerOf(_requestId);
-        require(_to != owner, "ERC721: approval to current owner");
-
-        require(
-            msg.sender == owner || isApprovedForAll(owner, msg.sender),
-            "ERC721: approve caller is not owner nor approved for all"
-        );
+        if (_to == owner) revert ApprovalToOwner();
+        if (msg.sender != owner && !isApprovedForAll(owner, msg.sender)) revert NotOwnerOrApprovedForAll(msg.sender);
 
         _approve(_to, _requestId);
     }
 
     /// @dev See {IERC721-getApproved}.
     function getApproved(uint256 _requestId) public view returns (address) {
-        require(_existsAndNotClaimed(_requestId), "ERC721: approved query for nonexistent or claimed token");
+        if (!_existsAndNotClaimed(_requestId)) revert InvalidRequestId(_requestId);
 
         return _getTokenApprovals()[_requestId];
     }
@@ -96,13 +100,13 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
 
     /// @dev See {IERC721-safeTransferFrom}.
     function safeTransferFrom(address _from, address _to, uint256 _requestId, bytes memory _data) public override {
-        require(_isApprovedOrOwner(msg.sender, _requestId), "ERC721: caller is not token owner or approved");
+        if (!_isApprovedOrOwner(msg.sender, _requestId)) revert NotOwnerOrApproved(msg.sender);
         _safeTransfer(_from, _to, _requestId, _data);
     }
 
     /// @dev See {IERC721-transferFrom}.
     function transferFrom(address _from, address _to, uint256 _requestId) public override {
-        require(_isApprovedOrOwner(msg.sender, _requestId), "ERC721: caller is not token owner or approved");
+        if (!_isApprovedOrOwner(msg.sender, _requestId)) revert NotOwnerOrApproved(msg.sender);
         _transfer(_from, _to, _requestId);
 
         emit Transfer(_from, _to, _requestId);
@@ -117,14 +121,13 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     /// - `to` cannot be the zero address.
     /// - `tokenId` token must be owned by `from`.
     function _transfer(address _from, address _to, uint256 _requestId) internal {
-        require(_from != address(0), "ERC721: transfer from zero address");
-        require(_to != address(0), "ERC721: transfer to zero address");
-        require(_requestId > 0 && _requestId <= getLastRequestId(), "ERC721: transfer nonexistent token");
+        if (_from == address(0)) revert TransferFromZeroAddress();
+        if (_to == address(0)) revert TransferToZeroAddress();
+        if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
         WithdrawalRequest storage request = _getQueue()[_requestId];
 
-        require(request.owner == _from, "ERC721: transfer from incorrect owner");
-
+        if (_from != request.owner) revert TransferFromIncorrectOwner(_from, request.owner);
         if (request.claimed) revert RequestAlreadyClaimed(_requestId);
 
         delete _getTokenApprovals()[_requestId];
@@ -170,7 +173,7 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
                 return retval == IERC721Receiver.onERC721Received.selector;
             } catch (bytes memory reason) {
                 if (reason.length == 0) {
-                    revert("ERC721: transfer to non ERC721Receiver implementer");
+                    revert TransferToNonIERC721Receiver(_to);
                 } else {
                     /// @solidity memory-safe-assembly
                     assembly {
