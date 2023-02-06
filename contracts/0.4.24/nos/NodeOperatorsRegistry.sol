@@ -1317,18 +1317,12 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
 
         exitedValidatorsCount = nodeOperator.exitedSigningKeysCount;
         activeValidatorsKeysCount = depositedSigningKeysCount - exitedValidatorsCount;
-
-        console.log("vettedSigningKeysCount", vettedSigningKeysCount);
-        console.log("depositedSigningKeysCount", depositedSigningKeysCount);
-        // console.log("exitedValidatorsCount", activeValidatorsKeysCount);
-        // console.log("targetValidatorsCount", operatorTargetStats.targetValidatorsCount);
-        // console.log("excessValidatorsCount", operatorTargetStats.excessValidatorsCount);
-
+        
         uint256 targetDepositedValidatorsCount = exitedValidatorsCount
             + operatorTargetStats.sum(TARGET_VALIDATORS_COUNT_OFFSET, EXCESS_VALIDATORS_COUNT_OFFSET);
 
         /// @todo minus penalized
-        if (targetDepositedValidatorsCount < vettedSigningKeysCount) {
+        if (operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET) > 0 && targetDepositedValidatorsCount < vettedSigningKeysCount) {
             readyToDepositValidatorsKeysCount = targetDepositedValidatorsCount > depositedSigningKeysCount
                 ? targetDepositedValidatorsCount - depositedSigningKeysCount
                 : 0;

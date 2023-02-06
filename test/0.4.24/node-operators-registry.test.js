@@ -1210,7 +1210,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
   })
 
-  describe.only('unsafeUpdateValidatorsKeysCount(): exited validators update', () => {
+  describe('unsafeUpdateValidatorsKeysCount(): exited validators update', () => {
     const firstNodeOperatorId = 0
     const secondNodeOperatorId = 1
     const notExistedNodeOperatorId = 2
