@@ -54,7 +54,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     }
 
     struct DataProcessingState {
-        uint256 lastProcessedItemWithoutPubkey;
         uint64 refSlot;
         uint64 requestsCount;
         uint64 requestsProcessed;
@@ -407,10 +406,9 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             revert UnexpectedRequestsDataLength();
         }
 
-        uint256 lastProcessedItemWithoutPubkey = _processExitRequestsList(data.data);
+        _processExitRequestsList(data.data);
 
         _storageDataProcessingState().value = DataProcessingState({
-            lastProcessedItemWithoutPubkey: lastProcessedItemWithoutPubkey,
             refSlot: data.refSlot.toUint64(),
             requestsCount: data.requestsCount.toUint64(),
             requestsProcessed: data.requestsCount.toUint64(),
