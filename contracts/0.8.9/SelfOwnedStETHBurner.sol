@@ -52,6 +52,7 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable 
     error ZeroRecoveryAmount();
     error StETHRecoveryWrongFunc();
     error ZeroBurnAmount();
+    error NotEnoughExcessStETH();
     error ErrorZeroAddress(string field);
 
     bytes32 public constant REQUEST_BURN_MY_STETH_ROLE = keccak256("REQUEST_BURN_MY_STETH_ROLE");
@@ -147,31 +148,47 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable 
     /**
       * @notice BE CAREFUL, the provided stETH will be burnt permanently.
       *
-      * Transfers `_stETH2Burn` stETH tokens from the message sender and irreversibly locks these
-      * on the burner contract address. Internally converts `_stETH2Burn` amount into underlying
-      * shares amount (`_stETH2BurnAsShares`) and marks the converted amount for burning
+      * Transfers `_stETHAmountForBurning` stETH tokens from the message sender and irreversibly locks these
+      * on the burner contract address. Internally converts `_stETHAmountForBurning` amount into underlying
+      * shares amount (`_stETHAmountForBurningAsShares`) and marks the converted amount for burning
       * by increasing the `coverSharesBurnRequested` counter.
       *
-      * @param _stETH2Burn stETH tokens to burn
+      * @param _stETHAmountForBurning stETH tokens to burn
       *
       */
-    function requestBurnMyStETHForCover(uint256 _stETH2Burn) external onlyRole(REQUEST_BURN_MY_STETH_ROLE) {
-        _requestBurnMyStETH(_stETH2Burn, true);
+    function requestBurnMyStETHForCover(uint256 _stETHAmountForBurning) external onlyRole(REQUEST_BURN_MY_STETH_ROLE) {
+        require(IERC20(LIDO).transferFrom(msg.sender, address(this), _stETHAmountForBurning));
+        _requestBurnMyStETH(_stETHAmountForBurning, true /* _isCover */);
     }
 
     /**
       * @notice BE CAREFUL, the provided stETH will be burnt permanently.
       *
-      * Transfers `_stETH2Burn` stETH tokens from the message sender and irreversibly locks these
-      * on the burner contract address. Internally converts `_stETH2Burn` amount into underlying
-      * shares amount (`_stETH2BurnAsShares`) and marks the converted amount for burning
+      * Transfers `_stETHAmountForBurning` stETH tokens from the message sender and irreversibly locks these
+      * on the burner contract address. Internally converts `_stETHAmountForBurning` amount into underlying
+      * shares amount (`_stETHAmountForBurningAsShares`) and marks the converted amount for burning
       * by increasing the `nonCoverSharesBurnRequested` counter.
       *
-      * @param _stETH2Burn stETH tokens to burn
+      * @param _stETHAmountForBurning stETH tokens to burn
       *
       */
-    function requestBurnMyStETH(uint256 _stETH2Burn) external onlyRole(REQUEST_BURN_MY_STETH_ROLE) {
-        _requestBurnMyStETH(_stETH2Burn, false);
+    function requestBurnMyStETH(uint256 _stETHAmountForBurning) external onlyRole(REQUEST_BURN_MY_STETH_ROLE) {
+        require(IERC20(LIDO).transferFrom(msg.sender, address(this), _stETHAmountForBurning));
+        _requestBurnMyStETH(_stETHAmountForBurning, false /* _isCover */);
+    }
+
+    /**
+      * @notice Mark excess stETH for burning
+      *
+      * @dev Can be called only by `Lido`.
+      *
+      * @param _stETHAmountForBurning stETH tokens to burn
+      */
+    function markExcessStETHForBurn(uint256 _stETHAmountForBurning) external {
+      if (msg.sender != LIDO) revert ErrorAppAuthLidoFailed();
+      if(_stETHAmountForBurning > getExcessStETH()) revert NotEnoughExcessStETH();
+
+      _requestBurnMyStETH(_stETHAmountForBurning, false /* _isCover */);
     }
 
     /**
@@ -323,14 +340,12 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable 
         return ILido(LIDO).getPooledEthByShares(totalShares - sharesBurnRequested);
     }
 
-    function _requestBurnMyStETH(uint256 _stETH2Burn, bool _isCover) private {
-        if (_stETH2Burn == 0) revert ZeroBurnAmount();
+    function _requestBurnMyStETH(uint256 _stETHAmountForBurning, bool _isCover) private {
+        if (_stETHAmountForBurning == 0) revert ZeroBurnAmount();
 
-        require(IERC20(LIDO).transferFrom(msg.sender, address(this), _stETH2Burn));
+        uint256 sharesAmount = ILido(LIDO).getSharesByPooledEth(_stETHAmountForBurning);
 
-        uint256 sharesAmount = ILido(LIDO).getSharesByPooledEth(_stETH2Burn);
-
-        emit StETHBurnRequested(_isCover, msg.sender, _stETH2Burn, sharesAmount);
+        emit StETHBurnRequested(_isCover, msg.sender, _stETHAmountForBurning, sharesAmount);
 
         if (_isCover) {
             coverSharesBurnRequested += sharesAmount;

@@ -28,4 +28,13 @@ interface ILidoLocator {
         address withdrawalQueue,
         address withdrawalVault
     );
+    function oracleReportComponentsForLido() external view returns(
+        address accountingOracle,
+        address elRewardsVault,
+        address safetyNetsRegistry,
+        address selfOwnedStEthBurner,
+        address withdrawalQueue,
+        address withdrawalVault,
+        address postTokenRebaseReceiver
+    );
 }

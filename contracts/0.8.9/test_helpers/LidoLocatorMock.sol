@@ -67,4 +67,23 @@ contract LidoLocatorMock is ILidoLocator {
         );
     }
 
+    function oracleReportComponentsForLido() external view returns(
+        address,
+        address,
+        address,
+        address,
+        address,
+        address,
+        address
+    ) {
+        return (
+            accountingOracle,
+            elRewardsVault,
+            safetyNetsRegistry,
+            selfOwnedStEthBurner,
+            withdrawalQueue,
+            withdrawalVault,
+            postTokenRebaseReceiver
+        );
+    }
 }

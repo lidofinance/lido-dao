@@ -85,6 +85,26 @@ contract LidoLocator is ILidoLocator {
         );
     }
 
+    function oracleReportComponentsForLido() external view returns(
+        address,
+        address,
+        address,
+        address,
+        address,
+        address,
+        address
+    ) {
+        return (
+            accountingOracle,
+            elRewardsVault,
+            safetyNetsRegistry,
+            selfOwnedStEthBurner,
+            withdrawalQueue,
+            withdrawalVault,
+            postTokenRebaseReceiver
+        );
+    }
+
     function _assertNonZero(address _address) internal pure returns (address) {
         if (_address == address(0)) revert ErrorZeroAddress();
         return _address;
