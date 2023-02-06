@@ -304,8 +304,33 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBas
     /// @param _claimWithdrawalInputs list of withdrawal request ids and hints to claim
     function claimWithdrawals(ClaimWithdrawalInput[] calldata _claimWithdrawalInputs) external {
         for (uint256 i = 0; i < _claimWithdrawalInputs.length; ++i) {
-            claimWithdrawalTo(_claimWithdrawalInputs[i].requestId, _claimWithdrawalInputs[i].hint, msg.sender);
+            _claimWithdrawalTo(_claimWithdrawalInputs[i].requestId, _claimWithdrawalInputs[i].hint, msg.sender);
+
+            _emitTransfer(msg.sender, address(0), _claimWithdrawalInputs[i].requestId);
         }
+    }
+
+    ///  @notice Claim `_requestId` request and transfer locked ether to the owner
+    ///  @param _requestId request id to claim
+    ///  @param _hint hint for checkpoint index to avoid extensive search over the checkpointHistory.
+    ///   Can be found with `findClaimHint()` or `findClaimHintUnbounded()`
+    /// @param _recipient address where 
+    function claimWithdrawalTo(uint256 _requestId, uint256 _hint, address _recipient) external {
+        _claimWithdrawalTo(_requestId, _hint, _recipient);
+
+        _emitTransfer(msg.sender, address(0), _requestId);
+    }
+
+     /**
+     * @notice Claim `_requestId` request and transfer locked ether to the owner
+     * @param _requestId request id to claim
+     * @dev will use `findClaimHintUnbounded()` to find a hint, what can lead to OOG
+     * Prefer `claimWithdrawal(uint256 _requestId, uint256 _hint)` to save gas
+     */
+    function claimWithdrawal(uint256 _requestId) external {
+        _claimWithdrawalTo(_requestId, findClaimHintUnbounded(_requestId), msg.sender);
+
+        _emitTransfer(msg.sender, address(0), _requestId);
     }
 
     /// @notice Finds the list of hints for the given `_requestIds` searching among the checkpoints with indices
@@ -386,6 +411,8 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBas
         return BUNKER_MODE_SINCE_TIMESTAMP_POSITION.getStorageUint256();
     }
 
+    function _emitTransfer(address from, address to, uint256 _requestId) internal virtual; 
+
     /// @dev internal initialization helper. Doesn't check provided addresses intentionally
     function _initialize(address _admin, address _pauser, address _resumer, address _finalizer) internal {
         _initializeQueue();
@@ -408,7 +435,9 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBas
 
         uint256 amountOfShares = STETH.getSharesByPooledEth(_amountOfStETH);
 
-        return _enqueue(_amountOfStETH.toUint128(), amountOfShares.toUint128(), _owner);
+        requestId = _enqueue(_amountOfStETH.toUint128(), amountOfShares.toUint128(), _owner);
+
+        _emitTransfer(address(0), _owner, requestId);
     }
 
     function _requestWithdrawalWstETH(uint256 _amountOfWstETH, address _owner) internal returns (uint256 requestId) {
@@ -417,7 +446,9 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBas
 
         uint256 amountOfShares = STETH.getSharesByPooledEth(amountOfStETH);
 
-        return _enqueue(amountOfStETH.toUint128(), amountOfShares.toUint128(), _owner);
+        requestId = _enqueue(amountOfStETH.toUint128(), amountOfShares.toUint128(), _owner);
+
+        _emitTransfer(address(0), _owner, requestId);
     }
 
     function _checkWithdrawalRequestInput(uint256 _amountOfStETH, address _owner) internal view returns (address) {

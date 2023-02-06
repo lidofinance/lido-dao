@@ -75,7 +75,7 @@ abstract contract WithdrawalQueueBase {
         uint256 indexed from, uint256 indexed to, uint256 amountOfETHLocked, uint256 sharesBurned, uint256 timestamp
     );
     event WithdrawalClaimed(
-        uint256 indexed requestId, address indexed receiver, address initiator, uint256 amountOfETH
+        uint256 indexed requestId, address owner, address indexed receiver, uint256 amountOfETH
     );
     
     error ZeroAmountOfETH();
@@ -275,7 +275,7 @@ abstract contract WithdrawalQueueBase {
      * @param _hint hint for checkpoint index to avoid extensive search over the checkpointHistory.
      *  Can be found with `findClaimHint()` or `findClaimHintUnbounded()`
      */
-    function claimWithdrawalTo(uint256 _requestId, uint256 _hint, address _recipient) public {
+    function _claimWithdrawalTo(uint256 _requestId, uint256 _hint, address _recipient) internal {
         if (_hint == 0) revert InvalidHint(_hint);
         
         if (_requestId > getLastFinalizedRequestId()) revert RequestNotFinalized(_requestId);
@@ -306,19 +306,9 @@ abstract contract WithdrawalQueueBase {
 
         _setLockedEtherAmount(getLockedEtherAmount() - ethWithDiscount);
 
-        _sendValue(request.owner, ethWithDiscount);
+        _sendValue(payable(_recipient), ethWithDiscount);
 
-        emit WithdrawalClaimed(_requestId, request.owner, msg.sender, ethWithDiscount);
-    }
-
-    /**
-     * @notice Claim `_requestId` request and transfer locked ether to the owner
-     * @param _requestId request id to claim
-     * @dev will use `findClaimHintUnbounded()` to find a hint, what can lead to OOG
-     * Prefer `claimWithdrawal(uint256 _requestId, uint256 _hint)` to save gas
-     */
-    function claimWithdrawal(uint256 _requestId) external {
-        claimWithdrawalTo(_requestId, findClaimHintUnbounded(_requestId), msg.sender);
+        emit WithdrawalClaimed(_requestId, msg.sender, _recipient, ethWithDiscount);
     }
 
     /**

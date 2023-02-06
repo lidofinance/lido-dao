@@ -189,6 +189,11 @@ contract WithdrawalNFT is IERC721, WithdrawalQueue {
     // Internal getters and setters
     //
 
+    /// @dev a little crutch to emit { Transfer } on request and on claim like ERC721 states 
+    function _emitTransfer(address from, address to, uint256 tokenId) internal override {
+        emit Transfer(from, to, tokenId);
+    }
+
     /// @dev Returns whether `_requestId` exists and not claimed.
     function _existsAndNotClaimed(uint256 _requestId) internal view returns (bool) {
         return _requestId > 0 && _requestId <= getLastRequestId() && !_getQueue()[_requestId].claimed;
