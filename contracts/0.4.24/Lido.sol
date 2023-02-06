@@ -690,7 +690,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 _withdrawalsToWithdraw,
         uint256 _elRewardsToWithdraw,
         uint256 _requestIdToFinalizeUpTo,
-        uint256 _finalizationShareRate
+        uint256 _sharesToBurnFromWithdrawalQueue,
+        uint256 _etherToLockOnWithdrawalQueue
     ) internal {
         // withdraw execution layer rewards and put them to the buffer
         if (_elRewardsToWithdraw > 0) {
@@ -702,20 +703,22 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             IWithdrawalVault(_protocolContracts.withdrawalVault).withdrawWithdrawals(_withdrawalsToWithdraw);
         }
 
-        uint256 lockedToWithdrawalQueue = 0;
-        if (_requestIdToFinalizeUpTo > 0) {
-            lockedToWithdrawalQueue = _processWithdrawalQueue(
-                _protocolContracts.withdrawalQueue,
-                _requestIdToFinalizeUpTo,
-                _finalizationShareRate
-            );
+        // finalize withdrawals (send ether, assign shares for burning)
+        if (_etherToLockOnWithdrawalQueue > 0) {
+            ISelfOwnedStETHBurner burner = ISelfOwnedStETHBurner(_protocolContracts.selfOwnedStEthBurner);
+            IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_protocolContracts.withdrawalQueue);
+
+            _transferShares(address(withdrawalQueue), address(burner), _sharesToBurnFromWithdrawalQueue);
+            burner.markExcessStETHForBurn(getPooledEthByShares(_sharesToBurnFromWithdrawalQueue));
+
+            withdrawalQueue.finalize.value(_etherToLockOnWithdrawalQueue)(_requestIdToFinalizeUpTo);
         }
 
         uint256 preBufferedEther = _getBufferedEther();
-        uint256 postBufferedEther = _getBufferedEther()
+        uint256 postBufferedEther = preBufferedEther
             .add(_elRewardsToWithdraw) // Collected from ELVault
             .add(_withdrawalsToWithdraw) // Collected from WithdrawalVault
-            .sub(lockedToWithdrawalQueue); // Sent to WithdrawalQueue
+            .sub(_etherToLockOnWithdrawalQueue); // Sent to WithdrawalQueue
 
         // Storing even the same value costs gas, so just avoid it
         if (preBufferedEther != postBufferedEther) {
@@ -724,26 +727,24 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @dev finalize withdrawal requests in the queue, burn their shares and return the amount of ether locked for claiming
+     * @dev return amount to lock on withdrawal queue and shares to burn
+     * depending on the finalization batch parameters
      */
-    function _processWithdrawalQueue(
+    function _calculateWithdrawals(
         address _withdrawalQueue,
         uint256 _requestIdToFinalizeUpTo,
         uint256 _finalizationShareRate
-    ) internal returns (uint256 lockedToWithdrawalQueue) {
+    ) returns (
+        uint256 etherToLock, uint256 sharesToBurn
+    ) {
         IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_withdrawalQueue);
 
-        if (withdrawalQueue.isPaused()) return 0;
-
-        (uint256 etherToLock, uint256 sharesToBurn) = withdrawalQueue.finalizationBatch(
-            _requestIdToFinalizeUpTo,
-            _finalizationShareRate
-        );
-
-        _burnShares(address(withdrawalQueue), sharesToBurn);
-        withdrawalQueue.finalize.value(etherToLock)(_requestIdToFinalizeUpTo);
-
-        return etherToLock;
+        if (!withdrawalQueue.isPaused() && _requestIdToFinalizeUpTo != 0) {
+            (etherToLock, sharesToBurn) = withdrawalQueue.finalizationBatch(
+                _requestIdToFinalizeUpTo,
+                _finalizationShareRate
+            );
+        }
     }
 
     /**
@@ -1098,6 +1099,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 preTotalShares;
         uint256 sharesToBurnLimit;
         uint256 sharesMintedAsFees;
+        uint256 etherToLockOnWithdrawalQueue;
+        uint256 sharesToBurnFromWithdrawalQueue;
     }
 
     function _handleOracleReport(
@@ -1111,15 +1114,24 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     ) {
         OracleReportHandlingData memory handlingData;
 
-        handlingData.preCLBalance = _processClStateUpdate(_inputData.clValidators, _inputData.postCLBalance);
         handlingData.preTotalPooledEther = _getTotalPooledEther();
         handlingData.preTotalShares = _getTotalShares();
+        handlingData.preCLBalance = _processClStateUpdate(_inputData.clValidators, _inputData.postCLBalance);
 
         IOracleReportSanityChecker(_protocolContracts.safetyNetsRegistry).checkLidoOracleReport(
             _inputData.timeElapsed,
             handlingData.preCLBalance,
             _inputData.postCLBalance,
             _inputData.withdrawalVaultBalance,
+            _inputData.simulatedShareRate
+        );
+
+        (
+            handlingData.etherToLockOnWithdrawalQueue,
+            handlingData.sharesToBurnFromWithdrawalQueue
+        ) = _calculateWithdrawals(
+            _protocolContracts.withdrawalQueue,
+            _inputData.lastFinalizableRequestId,
             _inputData.simulatedShareRate
         );
 
@@ -1132,7 +1144,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             _inputData.postCLBalance,
             _inputData.withdrawalVaultBalance,
             _inputData.elRewardsVaultBalance,
-            0 //TODO(DZhon): pass amount for withdrawals
+            handlingData.etherToLockOnWithdrawalQueue
         );
 
         // collect ETH from EL and Withdrawal vaults and send some to WithdrawalQueue if required
@@ -1141,7 +1153,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             withdrawals,
             elRewards,
             _inputData.lastFinalizableRequestId,
-            _inputData.simulatedShareRate
+            handlingData.sharesToBurnFromWithdrawalQueue,
+            handlingData.etherToLockOnWithdrawalQueue
         );
 
         emit ETHDistributed(
