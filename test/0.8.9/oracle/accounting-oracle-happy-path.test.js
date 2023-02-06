@@ -64,7 +64,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
     it('initially, consensus report is empty and is not being processed', async () => {
       const report = await oracle.getConsensusReport()
       assert.equal(report.hash, ZERO_HASH)
-      assert.equal(+report.refSlot, 0)
+      // see the next test for refSlot
       assert.equal(+report.processingDeadlineTime, 0)
       assert.isFalse(report.processingStarted)
 
@@ -74,6 +74,13 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assert.equal(+extraState.itemsCount, 0)
       assert.equal(+extraState.itemsProcessed, 0)
       assert.equal(+extraState.lastProcessedItem, 0)
+    })
+
+    it(`reference slot of the empty initial consensus report is set to the last processed slot ` +
+       `of the legacy oracle`, async () =>
+    {
+      const report = await oracle.getConsensusReport()
+      assert.equal(+report.refSlot, V1_ORACLE_LAST_REPORT_SLOT)
     })
 
     it('committee reaches consensus on a report hash', async () => {

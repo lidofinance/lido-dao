@@ -28,6 +28,8 @@ const PUBKEYS = [
 contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger]) => {
 
   context('Happy path', () => {
+    const LAST_PROCESSING_REF_SLOT = 1
+
     let consensus
     let oracle
     let oracleVersion
@@ -38,7 +40,10 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     let reportHash
 
     before(async () => {
-      const deployed = await deployExitBusOracle(admin)
+      const deployed = await deployExitBusOracle(admin, {
+        lastProcessingRefSlot: LAST_PROCESSING_REF_SLOT,
+      })
+
       consensus = deployed.consensus
       oracle = deployed.oracle
 
@@ -59,7 +64,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     it('initially, consensus report is empty and is not being processed', async () => {
       const report = await oracle.getConsensusReport()
       assert.equal(report.hash, ZERO_HASH)
-      assert.equal(+report.refSlot, 0)
+      // see the next test for refSlot
       assert.equal(+report.processingDeadlineTime, 0)
       assert.isFalse(report.processingStarted)
 
@@ -68,6 +73,13 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       assert.equal(+procState.requestsCount, 0)
       assert.equal(+procState.requestsProcessed, 0)
       assert.equal(+procState.dataFormat, 0)
+    })
+
+    it(`reference slot of the empty initial consensus report is set to the last processing slot ` +
+       `passed to the initialize function`, async () =>
+    {
+      const report = await oracle.getConsensusReport()
+      assert.equal(+report.refSlot, LAST_PROCESSING_REF_SLOT)
     })
 
     it('committee reaches consensus on a report hash', async () => {

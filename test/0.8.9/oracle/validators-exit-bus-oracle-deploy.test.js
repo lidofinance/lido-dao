@@ -68,6 +68,7 @@ module.exports = {
 
 async function deployExitBusOracle(admin, {
   dataSubmitter = null,
+  lastProcessingRefSlot = 0,
   maxRequestsPerReport = MAX_REQUESTS_PER_REPORT,
   maxRequestsListLength = MAX_REQUESTS_LIST_LENGTH,
   rateLimitWindowSlots = RATE_LIMIT_WINDOW_SLOTS,
@@ -81,13 +82,11 @@ async function deployExitBusOracle(admin, {
     reportProcessor: oracle,
   })
 
-  const lastProcessedRefSlot = 0
-
   const tx = await oracle.initialize(
     admin,
     consensus.address,
     CONSENSUS_VERSION,
-    lastProcessedRefSlot,
+    lastProcessingRefSlot,
     maxRequestsPerReport,
     maxRequestsListLength,
     rateLimitWindowSlots,

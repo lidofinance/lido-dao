@@ -143,7 +143,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
             report.hash,
             report.refSlot,
             report.processingDeadlineTime,
-            report.refSlot != 0 && report.refSlot == processingRefSlot
+            report.hash != bytes32(0) && report.refSlot == processingRefSlot
         );
     }
 
@@ -211,6 +211,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         _setConsensusContract(consensusContract, lastProcessingRefSlot);
         _setConsensusVersion(consensusVersion);
         LAST_PROCESSING_REF_SLOT_POSITION.setStorageUint256(lastProcessingRefSlot);
+        _storageConsensusReport().value.refSlot = lastProcessingRefSlot.toUint64();
     }
 
     /// @notice Returns whether the given address is a member of the oracle committee.
