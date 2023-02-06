@@ -4,7 +4,7 @@ pragma solidity 0.8.9;
 
 import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
-import { Math } from "../lib/Math.sol";
+import { Math256 } from "../../common/lib/Math256.sol";
 import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
 import { AllowanceBasedRateLimit as RateLimit } from "../lib/AllowanceBasedRateLimit.sol";
 import { PausableUntil } from "../utils/PausableUntil.sol";
@@ -288,7 +288,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     /// the rate limit and the absolute limit per report.
     ///
     function getMaxExitRequestsForCurrentFrame() external view returns (uint256) {
-        return Math.min(
+        return Math256.min(
             _storageDataBoundaries().value.maxRequestsPerReport,
             RateLimit.load(RATE_LIMIT_POSITION).calculateLimitAt(_getCurrentRefSlot()) / 10**18
         );

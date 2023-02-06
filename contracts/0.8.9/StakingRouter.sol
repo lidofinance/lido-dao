@@ -9,7 +9,7 @@ import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.so
 
 import {IStakingModule} from "./interfaces/IStakingModule.sol";
 
-import {Math} from "./lib/Math.sol";
+import {Math256} from "../common/lib/Math256.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 import {MinFirstAllocationStrategy} from "../common/lib/MinFirstAllocationStrategy.sol";
 
@@ -736,7 +736,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         if (StakingModuleStatus(stakingModule.status) != StakingModuleStatus.Active) revert ErrorStakingModuleNotActive();
 
         uint256 maxDepositableKeys = getStakingModuleMaxDepositableKeys(_stakingModuleId);
-        uint256 keysToDeposit = Math.min(maxDepositableKeys, _maxDepositsCount);
+        uint256 keysToDeposit = Math256.min(maxDepositableKeys, _maxDepositsCount);
 
         if (keysToDeposit > 0) {
             bytes memory publicKeysBatch;
@@ -866,7 +866,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             for (uint256 i; i < stakingModulesCount; ) {
                 allocations[i] = stakingModulesCache[i].activeKeysCount;
                 targetKeys = (stakingModulesCache[i].targetShare * totalActiveKeys) / TOTAL_BASIS_POINTS;
-                capacities[i] = Math.min(targetKeys, stakingModulesCache[i].activeKeysCount + stakingModulesCache[i].availableKeysCount);
+                capacities[i] = Math256.min(targetKeys, stakingModulesCache[i].activeKeysCount + stakingModulesCache[i].availableKeysCount);
                 unchecked {
                     ++i;
                 }
