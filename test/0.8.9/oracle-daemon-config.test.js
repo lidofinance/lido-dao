@@ -48,7 +48,7 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
     })
 
     it('gets all values', async () => {
-      const values = await config.values()
+      const values = await config.getList([defaultKey])
 
       assert.equal(values.length, 1)
       assert.deepEqual(
@@ -68,17 +68,7 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
     })
 
     it('gets all values (empty)', async () => {
-      const values = await config.values()
-
-      assert.equal(values.length, 0)
-      assert.deepEqual(
-        values.map((i) => i.keyHash),
-        []
-      )
-      assert.deepEqual(
-        values.map((i) => i.value),
-        []
-      )
+      assert.reverts(config.getList([defaultKey]), `ErrorValueDoesntExist(${defaultKey})`)
     })
   })
 

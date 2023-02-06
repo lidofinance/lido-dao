@@ -17,8 +17,8 @@ contract OracleDaemonConfig is AccessControlEnumerable {
 
     bytes32 public constant CONFIG_MANAGER_ROLE = keccak256("CONFIG_MANAGER_ROLE");
 
-    mapping(bytes32 => bytes) private _values;
-    EnumerableSet.Bytes32Set private _keyHashes;
+    mapping(bytes32 => bytes) private values;
+    EnumerableSet.Bytes32Set private keyHashes;
 
     constructor(address _admin, address[] memory _configManagers) {
         if (_admin == address(0)) revert ErrorZeroAddress();
@@ -37,53 +37,56 @@ contract OracleDaemonConfig is AccessControlEnumerable {
 
     function set(string calldata _key, bytes calldata _value) external onlyRole(CONFIG_MANAGER_ROLE) {
         bytes32 keyHash = bytes32(keccak256(abi.encodePacked(_key)));
-        if (_keyHashes.contains(keyHash)) revert ErrorValueExists(_key);
+        if (keyHashes.contains(keyHash)) revert ErrorValueExists(_key);
 
-        _keyHashes.add(keyHash);
-        _values[keyHash] = _value;
+        keyHashes.add(keyHash);
+        values[keyHash] = _value;
 
         emit ConfigValueSet(keyHash, _key, _value);
     }
 
     function update(string calldata _key, bytes calldata _value) external onlyRole(CONFIG_MANAGER_ROLE) {
         bytes32 keyHash = bytes32(keccak256(abi.encodePacked(_key)));
-        if (!_keyHashes.contains(keyHash)) revert ErrorValueDoesntExist(_key);
-        _values[keyHash] = _value;
+        if (!keyHashes.contains(keyHash)) revert ErrorValueDoesntExist(_key);
+        values[keyHash] = _value;
 
         emit ConfigValueUpdated(keyHash, _key, _value);
     }
 
     function unset(string calldata _key) external onlyRole(CONFIG_MANAGER_ROLE) {
         bytes32 keyHash = bytes32(keccak256(abi.encodePacked(_key)));
-        if (!_keyHashes.contains(keyHash)) revert ErrorValueDoesntExist(_key);
+        if (!keyHashes.contains(keyHash)) revert ErrorValueDoesntExist(_key);
 
-        _keyHashes.remove(keyHash);
-        delete _values[keyHash];
+        keyHashes.remove(keyHash);
+        delete values[keyHash];
 
         emit ConfigValueUnset(keyHash, _key);
     }
 
     function get(string calldata _key) external view returns (Item memory value) {
         bytes32 keyHash = bytes32(keccak256(abi.encodePacked(_key)));
-        if (!_keyHashes.contains(keyHash)) revert ErrorValueDoesntExist(_key);
+        if (!keyHashes.contains(keyHash)) revert ErrorValueDoesntExist(_key);
 
-        return Item({keyHash: keyHash, value: _values[keyHash]});
+        return Item({keyHash: keyHash, value: values[keyHash]});
     }
 
-    function values() external view returns (Item[] memory) {
-        bytes32[] memory keys = _keyHashes.values();
-        Item[] memory values = new Item[](keys.length);
+    function getList(string[] calldata _keys) external view returns (Item[] memory) {
+        Item[] memory results = new Item[](_keys.length);
 
-        for (uint256 i = 0; i < keys.length; ) {
-            values[i].keyHash = keys[i];
-            values[i].value = _values[keys[i]];
+        for (uint256 i = 0; i < _keys.length; ) {
+            bytes32 hashToRetrieve = bytes32(keccak256(abi.encodePacked(_keys[i])));
+
+            if (!keyHashes.contains(hashToRetrieve)) revert ErrorValueDoesntExist(_keys[i]);
+
+            results[i].keyHash = hashToRetrieve;
+            results[i].value = values[hashToRetrieve];
 
             unchecked {
                 ++i;
             }
         }
 
-        return values;
+        return results;
     }
 
     error ErrorValueExists(string key);
