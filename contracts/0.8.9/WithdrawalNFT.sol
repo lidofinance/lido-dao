@@ -128,10 +128,13 @@ contract WithdrawalNFT is IERC721, ERC165, WithdrawalQueue {
     }
 
     function _transfer(address _from, address _to, uint256 _requestId) internal {
-        require(_to != address(0), "ERC721: transfer to the zero address");
         if (_requestId == 0) revert InvalidRequestId(_requestId);
         if (_requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
+        require(_from != address(0), "ERC721: transfer from zero address");
+        require(_from != ownerOf(_requestId), "ERC721: transfer from incorrect owner");
+        require(_to != address(0), "ERC721: transfer to the zero address");
+       
         WithdrawalRequest storage request = _getQueue()[_requestId];
 
         if (request.claimed) revert RequestAlreadyClaimed(_requestId);
