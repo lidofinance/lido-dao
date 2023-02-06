@@ -27,7 +27,7 @@ abstract contract WithdrawalQueueBase {
 
     // queue for withdrawal requests, indexes (requestId) start from 1
     bytes32 internal constant QUEUE_POSITION = keccak256("lido.WithdrawalQueue.queue");
-    // lenght of the queue
+    // length of the queue
     bytes32 internal constant LAST_REQUEST_ID_POSITION = keccak256("lido.WithdrawalQueue.lastRequestId");
     // length of the finalized part of the queue. Always <= `requestCounter`
     bytes32 internal constant LAST_FINALIZED_REQUEST_ID_POSITION =

@@ -14,6 +14,7 @@ import {SafeERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC2
 import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
 
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
+import {PausableUntil} from "./utils/PausableUntil.sol";
 
 import {Versioned} from "./utils/Versioned.sol";
 
@@ -54,16 +55,12 @@ interface IWstETH is IERC20, IERC20Permit {
  * @title A contract for handling stETH withdrawal request queue within the Lido protocol
  * @author folkyatina
  */
-contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versioned {
+contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, WithdrawalQueueBase, Versioned {
     using SafeCast for uint256;
     using SafeERC20 for IWstETH;
     using SafeERC20 for IStETH;
     using UnstructuredStorage for bytes32;
 
-    /// Withdrawal queue resume/pause control storage slot
-    bytes32 public constant RESUME_SINCE_TIMESTAMP_POSITION = keccak256("lido.WithdrawalQueue.resumeSinceTimestamp");
-    /// Special value for the infinite pause
-    uint256 public constant PAUSE_INFINITELY = type(uint256).max;
     /// Bunker mode activation timestamp
     bytes32 public constant BUNKER_MODE_SINCE_TIMESTAMP_POSITION =
         keccak256("lido.WithdrawalQueue.bunkerModeSinceTimestamp");
@@ -91,10 +88,6 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
     /// @notice Lido wstETH token address to be set upon construction
     IWstETH public immutable WSTETH;
 
-    /// @notice Emitted when withdrawal requests placement and finalization paused by the `pause(duration)` call
-    event Paused(uint256 duration);
-    /// @notice Emitted when withdrawal requests placement and finalization resumed by the `resume` call
-    event Resumed();
     /// @notice Emitted when the contract initialized
     /// @param _admin provided admin address
     /// @param _caller initialization `msg.sender`
@@ -104,30 +97,12 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
     error AlreadyInitialized();
     error Uninitialized();
     error Unimplemented();
-    error PausedExpected();
-    error ResumedExpected();
     error RequestAmountTooSmall(uint256 _amountOfStETH);
     error RequestAmountTooLarge(uint256 _amountOfStETH);
     error InvalidReportTimestamp();
     error LengthsMismatch(uint256 _expectedLength, uint256 _actualLength);
     error RequestIdsNotSorted();
-    error ZeroPauseDuration();
 
-    /// @notice Reverts when new withdrawal requests placement and finalization resumed
-    modifier whenPaused() {
-        if (block.timestamp >= RESUME_SINCE_TIMESTAMP_POSITION.getStorageUint256()) {
-            revert PausedExpected();
-        }
-        _;
-    }
-
-    /// @notice Reverts when new withdrawal requests placement and finalization paused
-    modifier whenResumed() {
-        if (block.timestamp < RESUME_SINCE_TIMESTAMP_POSITION.getStorageUint256()) {
-            revert ResumedExpected();
-        }
-        _;
-    }
 
     /**
      * @param _wstETH address of WstETH contract
@@ -156,7 +131,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
     }
 
     /// @notice Returns whether the contract is initialized or not
-    function isInitialized() external view returns (bool) {
+    function isInitialized() public view returns (bool) {
         return getContractVersion() != 0;
     }
 
@@ -167,9 +142,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
      * @dev Reverts with `AccessControl:...` reason if sender has no `RESUME_ROLE`
      */
     function resume() external whenPaused onlyRole(RESUME_ROLE) {
-        RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(block.timestamp);
-
-        emit Resumed();
+        _resume();
     }
 
     /**
@@ -179,24 +152,8 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
      * @dev Reverts with `AccessControl:...` reason if sender has no `PAUSE_ROLE`
      * @dev Reverts with `ZeroPauseDuration()` if zero duration is passed
      */
-    function pause(uint256 _duration) external whenResumed onlyRole(PAUSE_ROLE) {
-        if (_duration == 0) revert ZeroPauseDuration();
-
-        uint256 pausedUntil;
-        if (_duration == PAUSE_INFINITELY) {
-            pausedUntil = PAUSE_INFINITELY;
-        } else {
-            pausedUntil = block.timestamp + _duration;
-        }
-
-        RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(pausedUntil);
-
-        emit Paused(_duration);
-    }
-
-    /// @notice Returns whether the requests placement and finalization is paused or not
-    function isPaused() external view returns (bool) {
-        return block.timestamp < RESUME_SINCE_TIMESTAMP_POSITION.getStorageUint256();
+    function pause(uint256 _duration) external onlyRole(PAUSE_ROLE) {
+        _pause(_duration);
     }
 
     struct WithdrawalRequestInput {
