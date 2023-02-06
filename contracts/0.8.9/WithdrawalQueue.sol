@@ -7,7 +7,6 @@ pragma solidity 0.8.9;
 import {WithdrawalQueueBase} from "./WithdrawalQueueBase.sol";
 
 import {IERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
-import {IERC721} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import {IERC20Permit} from "@openzeppelin/contracts-v4.4/token/ERC20/extensions/draft-IERC20Permit.sol";
 import {SafeCast} from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 import {SafeERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
@@ -54,7 +53,7 @@ interface IWstETH is IERC20, IERC20Permit {
  * @title A contract for handling stETH withdrawal request queue within the Lido protocol
  * @author folkyatina
  */
-abstract contract WithdrawalQueue is IERC721, AccessControlEnumerable, WithdrawalQueueBase, Versioned {
+abstract contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versioned {
     using SafeCast for uint256;
     using SafeERC20 for IWstETH;
     using SafeERC20 for IStETH;
