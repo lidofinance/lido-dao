@@ -17,7 +17,6 @@ import {ILidoLocator} from "../../common/interfaces/ILidoLocator.sol";
 import {SigningKeys} from "../lib/SigningKeys.sol";
 import {Packed64} from "../lib/Packed64.sol";
 import {Versioned} from "../utils/Versioned.sol";
-import "hardhat/console.sol";
 
 interface IStETH {
     function sharesOf(address _account) external view returns (uint256);
@@ -1067,7 +1066,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     /// @param _fromIndex Index of the key, starting with 0
     /// @param _keysCount Number of keys to remove
     function removeSigningKeysOperatorBH(uint256 _nodeOperatorId, uint256 _fromIndex, uint256 _keysCount) external {
-        _removeUnusedSigningKeys(_nodeOperatorId, uint64(_fromIndex), uint64(_keysCount));
+        _removeUnusedSigningKeys(_nodeOperatorId, _fromIndex, _keysCount);
     }
 
     function _removeUnusedSigningKeys(uint256 _nodeOperatorId, uint256 _fromIndex, uint256 _keysCount) internal {
