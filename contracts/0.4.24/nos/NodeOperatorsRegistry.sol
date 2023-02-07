@@ -71,7 +71,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     event TargetValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 targetValidatorsCount);
     event ExcessValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 excessValidatorsCount);
 
-    event NodeOperatorPenalized(address indexed receipientAddress, uint256 sharesPenalizedAmount);
+    event NodeOperatorPenalized(address indexed recipientAddress, uint256 sharesPenalizedAmount);
 
     //
     // ACL
@@ -422,7 +422,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         _setOperatorSigningKeysStats(_nodeOperatorId, signingKeysStats);
 
         uint256 totalTargetStats = _getTotalTargetValidtatorsStats();
-        uint256 operatorTargetStats = _getOperatorTargetValidtatorsStats(_nodeOperatorId);
+        uint256 operatorTargetStats = _getOperatorTargetValidatorsStats(_nodeOperatorId);
         uint256 totalSigningKeysStats = _getTotalSigningKeysStats();
 
         uint64 diff;
@@ -551,7 +551,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     }
 
     function _updExcessValidators(uint256 _nodeOperatorId, uint64 _newActiveValidatorsCount) internal {
-        uint256 operatorTargetStats = _getOperatorTargetValidtatorsStats(_nodeOperatorId);
+        uint256 operatorTargetStats = _getOperatorTargetValidatorsStats(_nodeOperatorId);
 
         // check if operator's has target validators count set
         if (operatorTargetStats.get(TARGET_VALIDATORS_ACTIVE_OFFSET) != 0) {
@@ -572,10 +572,10 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
                     totalTargetStats = totalTargetStats.dec(EXCESS_VALIDATORS_COUNT_OFFSET, diff);
                 }
             } else if (excessCount > 0) {
-                operatorTargetStats.set(EXCESS_VALIDATORS_COUNT_OFFSET, 0);
+                operatorTargetStats = operatorTargetStats.set(EXCESS_VALIDATORS_COUNT_OFFSET, 0);
                 totalTargetStats = totalTargetStats.dec(EXCESS_VALIDATORS_COUNT_OFFSET, excessCount);
             }
-            _setOperatorTargetValidtatorsStats(_nodeOperatorId, operatorTargetStats);
+            _setOperatorTargetValidatorsStats(_nodeOperatorId, operatorTargetStats);
             _setTotalValidatorsStats(totalTargetStats);
 
             // emit ExcessValidatorsCountChanged(_nodeOperatorId, _targetValidatorsCount);
@@ -592,7 +592,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
 
-        uint256 operatorTargetStats = _getOperatorTargetValidtatorsStats(_nodeOperatorId);
+        uint256 operatorTargetStats = _getOperatorTargetValidatorsStats(_nodeOperatorId);
         if (operatorTargetStats.get(TARGET_VALIDATORS_ACTIVE_OFFSET) == (_targetActive ? 1 : 0)) return;
 
         uint256 signingKeysStats = _getOperatorSigningKeysStats(_nodeOperatorId);
@@ -634,7 +634,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         operatorTargetStats =
             operatorTargetStats.set(TARGET_VALIDATORS_COUNT_OFFSET, _targetActive ? _targetValidatorsCount : 0);
 
-        _setOperatorTargetValidtatorsStats(_nodeOperatorId, operatorTargetStats);
+        _setOperatorTargetValidatorsStats(_nodeOperatorId, operatorTargetStats);
         _setTotalValidatorsStats(totalTargetStats);
 
         emit TargetValidatorsCountChanged(_nodeOperatorId, _targetValidatorsCount);
@@ -706,7 +706,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
             totalTrimmedKeysCount += trimmedKeysCount;
             trimmedVettedKeysCount = signingKeysStats.get(VETTED_KEYS_COUNT_OFFSET) - depositedSigningKeysCount;
             totalTrimmedVettedKeysCount += trimmedVettedKeysCount;
-            if (_getOperatorTargetValidtatorsStats(_nodeOperatorId).get(TARGET_VALIDATORS_COUNT_OFFSET) == 0) {
+            if (_getOperatorTargetValidatorsStats(_nodeOperatorId).get(TARGET_VALIDATORS_COUNT_OFFSET) == 0) {
                 totalTrimmedTargertKeysCount += trimmedVettedKeysCount;
             }
 
@@ -779,7 +779,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         depositedSigningKeysCount = nodeOperator.depositedSigningKeysCount;
 
         uint64 targetValidatorsCount =
-            _getOperatorTargetValidtatorsStats(_nodeOperatorId).get(TARGET_VALIDATORS_COUNT_OFFSET);
+            _getOperatorTargetValidatorsStats(_nodeOperatorId).get(TARGET_VALIDATORS_COUNT_OFFSET);
 
         // correct vetted count according to target
         if (targetValidatorsCount > 0) {
@@ -1094,7 +1094,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
                 totalSigningKeysStats.dec(VETTED_KEYS_COUNT_OFFSET, vettedSigningKeysCount - uint64(_fromIndex));
             emit VettedSigningKeysCountChanged(_nodeOperatorId, _fromIndex);
 
-            uint256 operatorTargetStats = _getOperatorTargetValidtatorsStats(_nodeOperatorId);
+            uint256 operatorTargetStats = _getOperatorTargetValidatorsStats(_nodeOperatorId);
             if (operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET) == 0) {
                 uint256 totalTargetStats = _getTotalTargetValidtatorsStats();
                 totalTargetStats =
@@ -1200,7 +1200,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     {
         _onlyExistedNodeOperator(_nodeOperatorId);
 
-        uint256 operatorTargetStats = _getOperatorTargetValidtatorsStats(_nodeOperatorId);
+        uint256 operatorTargetStats = _getOperatorTargetValidatorsStats(_nodeOperatorId);
         uint256 stuckPenaltyStats = _getOperatorStuckPenaltyStats(_nodeOperatorId);
 
         targetValidatorsActive = operatorTargetStats.get(TARGET_VALIDATORS_ACTIVE_OFFSET) != 0;
@@ -1264,7 +1264,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         // NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
 
         uint256 signingKeysStats = _getOperatorSigningKeysStats(_nodeOperatorId);
-        uint256 operatorTargetStats = _getOperatorTargetValidtatorsStats(_nodeOperatorId);
+        uint256 operatorTargetStats = _getOperatorTargetValidatorsStats(_nodeOperatorId);
 
         uint256 depositedSigningKeysCount = signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET);
         uint256 vettedSigningKeysCount = signingKeysStats.get(VETTED_KEYS_COUNT_OFFSET);
@@ -1375,11 +1375,11 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     }
 
     // load mapping value
-    function _getOperatorTargetValidtatorsStats(uint256 _nodeOperatorId) internal view returns (uint256) {
+    function _getOperatorTargetValidatorsStats(uint256 _nodeOperatorId) internal view returns (uint256) {
         return OPERATOR_TARGET_VALIDATORS_STATS_MAP.getStorageMappingUint256(_nodeOperatorId);
     }
 
-    function _setOperatorTargetValidtatorsStats(uint256 _nodeOperatorId, uint256 _val) internal {
+    function _setOperatorTargetValidatorsStats(uint256 _nodeOperatorId, uint256 _val) internal {
         OPERATOR_TARGET_VALIDATORS_STATS_MAP.setStorageMappingUint256(_nodeOperatorId, _val);
     }
 

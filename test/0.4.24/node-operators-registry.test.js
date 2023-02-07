@@ -3189,6 +3189,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await app.testing_addNodeOperator('2', user3, 0, 0, 0, 0)
     })
 
+    it("reverts if no STAKING_ROUTER_ROLE", async () => {
+      await assert.reverts(app.finishUpdatingExitedValidatorsKeysCount({ from: user3 }), 'APP_AUTH_FAILED')
+    })
+
     it("doesn't distribute rewards if no shares to distribute", async () => {
       const sharesCount = await steth.sharesOf(app.address)
       assert.equals(sharesCount, 0)
@@ -3197,7 +3201,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         steth.sharesOf(user2),
         steth.sharesOf(user3)
       ])
-      await app.distributeRewards({ from: user3 })
+      // calls distributeRewards() inside
+      await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
       const recipientsSharesAfter = await Promise.all([
         steth.sharesOf(user1),
         steth.sharesOf(user2),
@@ -3217,7 +3222,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await app.increaseVettedSigningKeysCount(10)
       await app.increaseDepositedSigningKeysCount(10)
 
-      await app.distributeRewards({ from: user3 })
+      // calls distributeRewards() inside
+      await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
 
       assert.equals(await steth.sharesOf(user1), ETH(3))
       assert.equals(await steth.sharesOf(user2), ETH(7))
@@ -3232,7 +3238,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await app.increaseVettedSigningKeysCount(10)
       await app.increaseDepositedSigningKeysCount(10)
 
-      const receipt = await app.distributeRewards({ from: user3 })
+      // calls distributeRewards() inside
+      receipt = await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(3) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(7) })
@@ -3387,6 +3394,19 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equal(pubkeys, keys[1] + keys[2].slice(2))
       assert.equal(signatures, sigs[1] + sigs[2].slice(2))
       assert.sameMembers(used, [false, false])
+    })
+  })
+
+  describe('handleRewardsMinted()', () => {
+    it('reverts with no STAKING_ROUTER_ROLE', async () => {
+      const hasPermission = await dao.hasPermission(user1, app, 'STAKING_ROUTER_ROLE')
+      assert.isFalse(hasPermission)
+      await assert.reverts(app.handleRewardsMinted(123, {from: user1}))
+    })
+    it('no reverts with STAKING_ROUTER_ROLE', async () => {
+      const hasPermission = await dao.hasPermission(voting, app, 'STAKING_ROUTER_ROLE')
+      assert.isTrue(hasPermission)
+      await app.handleRewardsMinted(123, {from: voting })
     })
   })
 })

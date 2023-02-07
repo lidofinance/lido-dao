@@ -141,11 +141,11 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         uint64 forgivenValidatorsCount,
         uint64 stuckPenaltyEndAt
     ) external {
-        uint256 stcukPenaltyStats = _getOperatorStuckPenaltyStats(_nodeOperatorId);
-        stcukPenaltyStats = stcukPenaltyStats.set(STUCK_VALIDATORS_COUNT_OFFSET, stuckValidatorsCount);
-        stcukPenaltyStats = stcukPenaltyStats.set(FORGIVEN_VALIDATORS_COUNT_OFFSET, forgivenValidatorsCount);
-        stcukPenaltyStats = stcukPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, stuckPenaltyEndAt);
-        _setOperatorStuckPenaltyStats(_nodeOperatorId, stcukPenaltyStats);
+        uint256 stuckPenaltyStats = _getOperatorStuckPenaltyStats(_nodeOperatorId);
+        stuckPenaltyStats = stuckPenaltyStats.set(STUCK_VALIDATORS_COUNT_OFFSET, stuckValidatorsCount);
+        stuckPenaltyStats = stuckPenaltyStats.set(FORGIVEN_VALIDATORS_COUNT_OFFSET, forgivenValidatorsCount);
+        stuckPenaltyStats = stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, stuckPenaltyEndAt);
+        _setOperatorStuckPenaltyStats(_nodeOperatorId, stuckPenaltyStats);
     }
 
     function testing_getTotalSigningKeysStats()
@@ -205,11 +205,11 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
     }
 
     function testing_isNodeOperatorPenalized(uint256 operatorId) external view returns (bool) {
-        uint256 stcukPenaltyStats = _getOperatorStuckPenaltyStats(operatorId);
+        uint256 stuckPenaltyStats = _getOperatorStuckPenaltyStats(operatorId);
         if (
-            stcukPenaltyStats.get(FORGIVEN_VALIDATORS_COUNT_OFFSET)
-                < stcukPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)
-                || block.timestamp <= stcukPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET)
+            stuckPenaltyStats.get(FORGIVEN_VALIDATORS_COUNT_OFFSET)
+                < stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)
+                || block.timestamp <= stuckPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET)
         ) {
             return true;
         }
@@ -218,7 +218,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
 
     event ValidatorsKeysLoaded(uint256 count, bytes publicKeys, bytes signatures);
 
-    function distributeRewards() external returns (uint256) {
+    function testing__distributeRewards() external returns (uint256) {
         return _distributeRewards();
     }
 }
