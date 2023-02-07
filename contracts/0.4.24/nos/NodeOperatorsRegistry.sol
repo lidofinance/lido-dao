@@ -444,7 +444,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         }
 
         _setTotalSigningKeysStats(totalSigningKeysStats);
-        _setTotalValidtatorsStats(totalTargetStats);
+        _setTotalValidatorsStats(totalTargetStats);
         // _totalTargetStats = totalTargetStats;
 
         emit VettedSigningKeysCountChanged(_nodeOperatorId, vettedSigningKeysCountAfter);
@@ -576,7 +576,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
                 totalTargetStats = totalTargetStats.dec(EXCESS_VALIDATORS_COUNT_OFFSET, excessCount);
             }
             _setOperatorTargetValidtatorsStats(_nodeOperatorId, operatorTargetStats);
-            _setTotalValidtatorsStats(totalTargetStats);
+            _setTotalValidatorsStats(totalTargetStats);
 
             // emit ExcessValidatorsCountChanged(_nodeOperatorId, _targetValidatorsCount);
         }
@@ -635,7 +635,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
             operatorTargetStats.set(TARGET_VALIDATORS_COUNT_OFFSET, _targetActive ? _targetValidatorsCount : 0);
 
         _setOperatorTargetValidtatorsStats(_nodeOperatorId, operatorTargetStats);
-        _setTotalValidtatorsStats(totalTargetStats);
+        _setTotalValidatorsStats(totalTargetStats);
 
         emit TargetValidatorsCountChanged(_nodeOperatorId, _targetValidatorsCount);
     }
@@ -728,7 +728,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
             totalTargetStats = totalTargetStats.dec(TARGET_VALIDATORS_COUNT_OFFSET, totalTrimmedTargertKeysCount);
 
             _setTotalSigningKeysStats(totalSigningKeysStats);
-            _setTotalValidtatorsStats(totalTargetStats);
+            _setTotalValidatorsStats(totalTargetStats);
 
             _increaseValidatorsKeysNonce();
         }
@@ -1099,7 +1099,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
                 uint256 totalTargetStats = _getTotalTargetValidtatorsStats();
                 totalTargetStats =
                     totalTargetStats.dec(TARGET_VALIDATORS_COUNT_OFFSET, vettedSigningKeysCount - uint64(_fromIndex));
-                _setTotalValidtatorsStats(totalTargetStats);
+                _setTotalValidatorsStats(totalTargetStats);
             }
         }
         _setOperatorSigningKeysStats(_nodeOperatorId, signingKeysStats);
@@ -1366,7 +1366,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         return TOTAL_SIGNING_KEYS_STATS.getStorageUint256();
     }
 
-    function _setTotalValidtatorsStats(uint256 _val) internal {
+    function _setTotalValidatorsStats(uint256 _val) internal {
         TOTAL_TARGET_VALIDATORS_STATS.setStorageUint256(_val);
     }
 
