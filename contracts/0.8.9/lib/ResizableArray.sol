@@ -14,6 +14,7 @@ import { MemUtils } from "../../common/lib/MemUtils.sol";
 /// pre-allocated memory growth factor and maximum one-time increase.
 ///
 library ResizableArray {
+    error Uninitialized();
     error PrealloctedLengthCannotBeZero();
     error GrowthFactorShouldBeMoreThan100();
     error ArrayIsEmpty();
@@ -33,6 +34,20 @@ library ResizableArray {
         //   2 bytes       6 bytes     24 bytes
         // growthFactor | maxGrowth | preallocLen
         uint256 _state;
+    }
+
+    /// @notice Returns an uninitialized internal representation.
+    ///
+    /// Can be used as a placeholder for a missing value. Cannot be initialized.
+    ///
+    function invalid() internal pure returns (Array memory) {
+        return Array(0, 0);
+    }
+
+    /// @notice Returns whether the internal representation is uninitialized.
+    ///
+    function isInvalid(Array memory self) internal pure returns (bool) {
+        return self._memPtr == 0;
     }
 
     /// @notice Pre-allocates memory for a resizable array.
@@ -86,7 +101,7 @@ library ResizableArray {
     /// @notice Returns length of the array.
     ///
     function length(Array memory self) internal pure returns (uint256 len) {
-        uint256 memPtr = self._memPtr;
+        uint256 memPtr = _getMemPtr(self);
         /// @solidity memory-safe-assembly
         assembly {
             len := mload(memPtr)
@@ -96,7 +111,7 @@ library ResizableArray {
     /// @notice Returns memory pointer to the array.
     ///
     function pointer(Array memory self) internal pure returns (uint256[] memory result) {
-        uint256 memPtr = self._memPtr;
+        uint256 memPtr = _getMemPtr(self);
         /// @solidity memory-safe-assembly
         assembly {
             result := memPtr
@@ -128,7 +143,7 @@ library ResizableArray {
     /// @param item The item to add.
     ///
     function push(Array memory self, uint256 item) internal pure {
-        uint256 memPtr = self._memPtr;
+        uint256 memPtr = _getMemPtr(self);
         uint256 prevLen = length(self);
         uint256 allocLen = _decodeAllocLen(self._state);
 
@@ -194,7 +209,7 @@ library ResizableArray {
     /// @notice Sets the array length to zero.
     ///
     function clear(Array memory self) internal pure {
-        uint256 memPtr = self._memPtr;
+        uint256 memPtr = _getMemPtr(self);
         /// @solidity memory-safe-assembly
         assembly {
             mstore(memPtr, 0)
@@ -204,6 +219,12 @@ library ResizableArray {
     ///
     /// Helpers
     ///
+
+    function _getMemPtr(Array memory self) private pure returns (uint256) {
+        uint256 memPtr = self._memPtr;
+        if (memPtr == 0) revert Uninitialized();
+        return memPtr;
+    }
 
     function _malloc(uint256 lenWords) private pure returns (uint256 memPtr) {
         /// @solidity memory-safe-assembly
