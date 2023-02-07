@@ -38,13 +38,13 @@ function getReportDataItems(r) {
     r.consensusVersion, +r.refSlot, r.numValidators, r.clBalanceGwei, r.stakingModuleIdsWithNewlyExitedValidators,
     r.numExitedValidatorsByStakingModule, r.withdrawalVaultBalance, r.elRewardsVaultBalance,
     r.lastWithdrawalRequestIdToFinalize, r.finalizationShareRate, r.isBunkerMode, r.extraDataFormat,
-    r.extraDataHash, r.extraDataItemsCount,
+    r.extraDataHash, r.extraDataItemsCount, r.extraDataMaxNodeOpsCountByModule,
   ]
 }
 
 function calcReportDataHash(reportItems) {
   const data = web3.eth.abi.encodeParameters(
-    ['(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256)'],
+    ['(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256,uint256)'],
     [reportItems]
   )
   // const toS = x => Array.isArray(x) ? `[${x.map(toS)}]` : `${x}`
