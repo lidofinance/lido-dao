@@ -79,6 +79,52 @@ contract('ResizableArray', () => {
     })
   })
 
+  context('push', () => {
+    it(`adds an element (case 1)`, async () => {
+      await test.test_push_adds_an_element_case_1()
+    })
+
+    it(`adds an element (case 2)`, async () => {
+      await test.test_push_adds_an_element_case_2()
+    })
+
+    it(`adds an element (case 3)`, async () => {
+      await test.test_push_adds_an_element_case_3()
+    })
+
+    it('reverts when pushing past the pre-allocated length (case 1)', async () => {
+      await assert.reverts(
+        test.test_push_past_preallocated_length_reverts_case_1(),
+        'MaxLengthReached()'
+      )
+    })
+
+    it(`allows to fill all preallocated memory`, async () => {
+      await test.test_push_allows_to_fill_all_preallocated_memory()
+    })
+
+    it('reverts when pushing past the pre-allocated length (case 2)', async () => {
+      await assert.reverts(
+        test.test_push_past_preallocated_length_reverts_case_2(),
+        'MaxLengthReached()'
+      )
+    })
+
+    it('reverts when pushing past the pre-allocated length (case 3)', async () => {
+      await assert.reverts(
+        test.test_push_past_preallocated_length_reverts_case_3(),
+        'MaxLengthReached()'
+      )
+    })
+
+    it('reverts when pushing past the pre-allocated length (case 4)', async () => {
+      await assert.reverts(
+        test.test_push_past_preallocated_length_reverts_case_4(),
+        'MaxLengthReached()'
+      )
+    })
+  })
+
   context('pop', () => {
     it('reverts on empty array (case 1)', async () => {
       await assert.reverts(

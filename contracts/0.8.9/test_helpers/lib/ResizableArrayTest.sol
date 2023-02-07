@@ -129,6 +129,81 @@ contract ResizableArrayTest {
     }
 
 
+    function test_push_adds_an_element_case_1() external {
+        RA.Array memory arr = RA.preallocate(1);
+        arr.push(F);
+        AssertRA.array(arr, dyn([F]));
+    }
+
+
+    function test_push_adds_an_element_case_2() external {
+        RA.Array memory arr = RA.preallocate(5);
+        arr.push(A);
+        arr.push(B);
+        AssertRA.array(arr, dyn([A, B]));
+    }
+
+
+    function test_push_adds_an_element_case_3() external {
+        RA.Array memory arr = RA.preallocate(100);
+        uint256[] memory expected = new uint256[](100);
+
+        for (uint256 i = 0; i < 100; ++i) {
+            arr.push(i + 1);
+            expected[i] = i + 1;
+        }
+
+        AssertRA.array(arr, expected);
+    }
+
+
+    function test_push_past_preallocated_length_reverts_case_1() external {
+        RA.Array memory arr = RA.preallocate(1);
+        arr.push(F);
+        arr.push(A);
+        revert RevertExpected();
+    }
+
+
+    function test_push_allows_to_fill_all_preallocated_memory() external {
+        RA.Array memory arr = RA.preallocate(5);
+        for (uint256 i = 0; i < 5; ++i) arr.push(F);
+        AssertRA.array(arr, dyn([F, F, F, F, F]));
+    }
+
+
+    function test_push_past_preallocated_length_reverts_case_2() external {
+        RA.Array memory arr = RA.preallocate(5);
+        for (uint256 i = 0; i < 5; ++i) arr.push(F);
+        arr.push(B);
+        revert RevertExpected();
+    }
+
+
+    function test_push_past_preallocated_length_reverts_case_3() external {
+        RA.Array memory arr = RA.preallocate(100);
+
+        for (uint256 i = 0; i < 100; ++i) {
+            arr.push(i + 1);
+        }
+
+        arr.push(X);
+        revert RevertExpected();
+    }
+
+
+    function test_push_past_preallocated_length_reverts_case_4() external {
+        RA.Array memory arr = RA.preallocate(3);
+        arr.push(F);
+        arr.push(F);
+        arr.push(F);
+        arr.pop();
+        arr.push(A);
+        arr.push(B);
+        revert RevertExpected();
+    }
+
+
     function test_pop_reverts_on_empty_array_case_1() external {
         RA.Array memory arr = RA.preallocate(10);
         arr.pop();
