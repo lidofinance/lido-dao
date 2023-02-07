@@ -15,4 +15,16 @@ library UnstructuredRefStorage {
     ) {
         assembly { result.slot := _position }
     }
+
+    function storageMapUint256Address(bytes32 _position) internal pure returns (
+        mapping(uint256 => address) storage result
+    ) {
+        assembly { result.slot := _position }
+    }
+
+    function storageMapAddressMapAddressBool(bytes32 _position) internal pure returns (
+        mapping(address => mapping(address => bool)) storage result
+    ) {
+        assembly { result.slot := _position }
+    }
 }
