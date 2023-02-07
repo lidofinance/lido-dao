@@ -19,7 +19,7 @@ interface IReportAsyncProcessor {
     /// free to reach consensus on another report for the same reporting frame and submit it
     /// using this same function.
     ///
-    function submitReport(bytes32 report, uint256 refSlot, uint256 deadline) external;
+    function submitConsensusReport(bytes32 report, uint256 refSlot, uint256 deadline) external;
 
     /// @notice Returns the last reference slot for which processing of the report was started.
     ///
@@ -906,7 +906,7 @@ contract HashConsensus is AccessControlEnumerable {
         address processor = _reportProcessor;
         if (processor == address(0)) return;
         uint256 deadline = _computeTimestampAtSlot(frame.reportProcessingDeadlineSlot);
-        IReportAsyncProcessor(processor).submitReport(report, frame.refSlot, deadline);
+        IReportAsyncProcessor(processor).submitConsensusReport(report, frame.refSlot, deadline);
     }
 
     function _getConsensusVersion() internal view returns (uint256) {

@@ -45,7 +45,7 @@ contract MockReportProcessor is IReportAsyncProcessor {
         return _consensusVersion;
     }
 
-    function submitReport(bytes32 report, uint256 refSlot, uint256 deadline) external {
+    function submitConsensusReport(bytes32 report, uint256 refSlot, uint256 deadline) external {
         _submitReportLastCall.report = report;
         _submitReportLastCall.refSlot = refSlot;
         _submitReportLastCall.deadline = deadline;

@@ -709,8 +709,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_protocolContracts.withdrawalQueue);
 
             _transferShares(address(withdrawalQueue), address(burner), _sharesToBurnFromWithdrawalQueue);
-            burner.markExcessStETHForBurn(getPooledEthByShares(_sharesToBurnFromWithdrawalQueue));
-
             withdrawalQueue.finalize.value(_etherToLockOnWithdrawalQueue)(_requestIdToFinalizeUpTo);
         }
 
@@ -1093,8 +1091,26 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 sharesMintedAsFees;
         uint256 etherToLockOnWithdrawalQueue;
         uint256 sharesToBurnFromWithdrawalQueue;
+        uint256 preBurnerStETHShares;
+        uint256 postBurnerStETHShares;
     }
 
+    /**
+     * @dev Handle oracle report method operating with the data-packed structs
+     * Using structs helps to overcome 'stack too deep' issue.
+     *
+     * The method updates the protocol's accounting state.
+     * Key steps:
+     * 1. Take a snapshot of the current (pre-) state
+     * 2. Pass the report data to sanity checker (reverts if malformed)
+     * 3. Pre-calculate the ether to lock for withdrawal queue and shares to be burnt
+     * 4. Pass the accounting values to sanity checker to smoothen positive token rebase
+     *    (i.e., postpone the extra rewards to be applied during the next rounds)
+     * 5. Invoke finalizion of the withdrawal requests
+     * 6. Distribute protocol fee (treasury & node operators)
+     * 7. Burn excess shares (withdrawn stETH & rewards of the penalized operators if any)
+     * 8. Complete token rebase by informing observers (emit an event and call the external receivers if any)
+     */
     function _handleOracleReport(
         OracleReportInputData memory _inputData,
         OracleReportContracts memory _protocolContracts
@@ -1106,10 +1122,15 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     ) {
         OracleReportHandlingData memory handlingData;
 
+        // Step 1.
+        // Take a snapshot of the current (pre-) state
         handlingData.preTotalPooledEther = _getTotalPooledEther();
         handlingData.preTotalShares = _getTotalShares();
         handlingData.preCLBalance = _processClStateUpdate(_inputData.clValidators, _inputData.postCLBalance);
+        handlingData.preBurnerStETHShares = _sharesOf(_protocolContracts.selfOwnedStEthBurner);
 
+        // Step 2.
+        // Pass the report data to sanity checker (reverts if malformed)
         IOracleReportSanityChecker(_protocolContracts.oracleReportSanityChecker).checkLidoOracleReport(
             _inputData.timeElapsed,
             handlingData.preCLBalance,
@@ -1118,6 +1139,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             _inputData.simulatedShareRate
         );
 
+        // Step 3.
+        // Pre-calculate the ether to lock for withdrawal queue and shares to be burnt
         (
             handlingData.etherToLockOnWithdrawalQueue,
             handlingData.sharesToBurnFromWithdrawalQueue
@@ -1127,6 +1150,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             _inputData.simulatedShareRate
         );
 
+        // Step 4.
+        // Pass the accounting values to sanity checker to smoothen positive token rebase
         (
             withdrawals, elRewards, handlingData.sharesToBurnLimit
         ) = IOracleReportSanityChecker(_protocolContracts.oracleReportSanityChecker).smoothenTokenRebase(
@@ -1139,7 +1164,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             handlingData.etherToLockOnWithdrawalQueue
         );
 
-        // collect ETH from EL and Withdrawal vaults and send some to WithdrawalQueue if required
+        // Step 5.
+        // Invoke finalizion of the withdrawal requests (send ether to withdrawal queue, assign shares to be burnt)
         _collectRewardsAndProcessWithdrawals(
             _protocolContracts,
             withdrawals,
@@ -1158,7 +1184,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             _getBufferedEther()
         );
 
-        // distribute rewards to Lido and Node Operators
+        // Step 6.
+        // Distribute protocol fee (treasury & node operators)
         handlingData.sharesMintedAsFees = _processRewards(
             handlingData,
             _inputData.postCLBalance,
@@ -1166,11 +1193,13 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             elRewards
         );
 
-        _burnSharesLimited(
-            ISelfOwnedStETHBurner(_protocolContracts.selfOwnedStEthBurner),
-            handlingData.sharesToBurnLimit
-        );
+        // Step 7.
+        // Burn excess shares (withdrawn stETH & rewards of the penalized operators if any)
+        handlingData.postBurnerStETHShares = _sharesOf(_protocolContracts.selfOwnedStEthBurner);
+        _burnSharesLimited(ISelfOwnedStETHBurner(_protocolContracts.selfOwnedStEthBurner), handlingData);
 
+        // Step 8.
+        // Complete token rebase by informing observers (emit an event and call the external receivers if any)
         (
             postTotalShares,
             postTotalPooledEther
@@ -1181,6 +1210,10 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         );
     }
 
+    /**
+     * @dev Notify observers about the completed token rebase.
+     * Emit events and call external receivers.
+     */
     function _completeTokenRebase(
         OracleReportInputData memory _inputData,
         OracleReportHandlingData memory _handlingData,
@@ -1212,9 +1245,21 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         );
     }
 
-    function _burnSharesLimited(ISelfOwnedStETHBurner _burner, uint256 sharesToBurnLimit) internal {
-        if (sharesToBurnLimit > 0) {
-            uint256 sharesCommittedToBurnNow = _burner.commitSharesToBurn(sharesToBurnLimit);
+    /*
+     * @dev Perform burning of `stETH` shares via the dedicated `SelfOwnedStETHBurner` contract.
+     * Some of the burning amount can be postponed for the next reports.
+     */
+    function _burnSharesLimited(ISelfOwnedStETHBurner _burner, OracleReportHandlingData memory _handlingData) internal {
+        // can be assigned via withdrawals fulfillment or by the node operator registry as a kind of penalties
+        // during the current `handleOracleReport()` run
+        uint256 newSharesToBurn = _handlingData.postBurnerStETHShares - _handlingData.preBurnerStETHShares;
+
+        if (newSharesToBurn > 0) {
+            _burner.markExcessStETHSharesForBurn(newSharesToBurn);
+        }
+
+        if (_handlingData.sharesToBurnLimit > 0) {
+            uint256 sharesCommittedToBurnNow = _burner.commitSharesToBurn(_handlingData.sharesToBurnLimit);
 
             if (sharesCommittedToBurnNow > 0) {
                 _burnShares(address(_burner), sharesCommittedToBurnNow);
@@ -1222,6 +1267,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         }
     }
 
+    /**
+     * @dev Load the contracts used for `handleOracleReport` internally.
+     */
     function _loadOracleReportContracts() internal returns (OracleReportContracts memory ret) {
         (
             ret.accountingOracle,
