@@ -14,14 +14,14 @@ const REQUIRED_NET_STATE = [
   'ensAddress',
   'daoAddress',
   'compositePostRebaseBeaconReceiverAddress',
-  'selfOwnedStETHBurnerParams',
+  'burnerParams',
   `app:${APP_NAMES.ARAGON_VOTING}`,
   'lidoOracle',
   `app:${APP_NAMES.ARAGON_AGENT}`
 ]
 
 async function upgradeApp({ web3, artifacts }) {
-  const appArtifact = 'SelfOwnedStETHBurner'
+  const appArtifact = 'Burner'
   const netId = await web3.eth.net.getId()
 
   logWideSplitter()
@@ -43,7 +43,7 @@ async function upgradeApp({ web3, artifacts }) {
     totalCoverSharesBurnt,
     totalNonCoverSharesBurnt,
     maxBurnAmountPerRunBasisPoints
-  } = state.selfOwnedStETHBurnerParams
+  } = state.burnerParams
 
   log(`Total cover shares burnt / init:`, yl(totalCoverSharesBurnt))
   log(`Total non-cover shares burnt / init:`, yl(totalNonCoverSharesBurnt))
@@ -67,8 +67,8 @@ async function upgradeApp({ web3, artifacts }) {
     from: DEPLOYER || state.multisigAddress
   })
   persistNetworkState(network.name, netId, state, {
-    selfOwnedStETHBurnerConstructorArgs: args,
-    selfOwnedStETHBurnerDeployTx: ''
+    burnerConstructorArgs: args,
+    burnerDeployTx: ''
   })
 
   logSplitter()

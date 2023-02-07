@@ -49,7 +49,7 @@
     "end": 1639660100,
     "revokable": false
   },
-  "selfOwnedStETHBurnerParams": {
+  "burnerParams": {
     "totalCoverSharesBurnt": "0",
     "totalNonCoverSharesBurnt": "0",
     "maxBurnAmountPerRunBasisPoints": "4"
