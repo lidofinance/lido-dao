@@ -21,9 +21,9 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
 
 
     function _incTotalTargetStatsPos(uint8 _pos, uint256 _diff) private {
-        uint256 stats = TOTAL_VALIDATORS_STATS.getStorageUint256();
+        uint256 stats = TOTAL_TARGET_VALIDATORS_STATS.getStorageUint256();
         stats = stats.inc(_pos, uint64(_diff));
-        TOTAL_VALIDATORS_STATS.setStorageUint256(stats);
+        TOTAL_TARGET_VALIDATORS_STATS.setStorageUint256(stats);
     }
 
     function increaseNodeOperatorDepositedSigningKeysCount(uint256 _nodeOperatorId, uint64 _keysCount) external {
@@ -142,9 +142,9 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         uint64 stuckPenaltyEndAt
     ) external {
         uint256 stcukPenaltyStats = _getOperatorStuckPenaltyStats(_nodeOperatorId);
-        stcukPenaltyStats.set(STUCK_VALIDATORS_COUNT_OFFSET, stuckValidatorsCount);
-        stcukPenaltyStats.set(FORGIVEN_VALIDATORS_COUNT_OFFSET, forgivenValidatorsCount);
-        stcukPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, stuckPenaltyEndAt);
+        stcukPenaltyStats = stcukPenaltyStats.set(STUCK_VALIDATORS_COUNT_OFFSET, stuckValidatorsCount);
+        stcukPenaltyStats = stcukPenaltyStats.set(FORGIVEN_VALIDATORS_COUNT_OFFSET, forgivenValidatorsCount);
+        stcukPenaltyStats = stcukPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, stuckPenaltyEndAt);
         _setOperatorStuckPenaltyStats(_nodeOperatorId, stcukPenaltyStats);
     }
 

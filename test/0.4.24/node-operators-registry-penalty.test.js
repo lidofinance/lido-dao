@@ -248,13 +248,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
   describe('getValidatorsKeysStats()', () => {
     beforeEach(async () => {
       await app.testing_addNodeOperator('0', user1, 20, 15, 10, 2)
-      await app.testing_addNodeOperator('1', user2, 10, 10, 5, 0)
+      await app.testing_addNodeOperator('1', user2, 20, 10, 5, 0)
       await app.testing_addNodeOperator('2', user3, 15, 5, 0, 0)
 
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.increaseTotalSigningKeysCount(45)
+      await app.increaseTotalSigningKeysCount(55)
       await app.increaseVettedSigningKeysCount(30)
       await app.increaseDepositedSigningKeysCount(15)
       await app.increaseExitedSigningKeysCount(2)
@@ -262,7 +262,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await app.increaseTargetValidatorsCount(28)
     })
 
-    it.only('updateTargetValidatorsLimits() no target overflow', async () => {
+    it('updateTargetValidatorsLimits()', async () => {
       await app.updateTargetValidatorsLimits(0, 10, true, { from: voting })
 
       let keysStatTotal = await app.getValidatorsKeysStats()
@@ -284,10 +284,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
       await app.updateTargetValidatorsLimits(0, 10, false, { from: voting })
 
-      // keysStatTotal = await app.getValidatorsKeysStats()
-      // assert.equal(keysStatTotal.exitedValidatorsCount, 2)
-      // assert.equal(keysStatTotal.activeValidatorsKeysCount, 12)
-      // assert.equal(keysStatTotal.readyToDepositValidatorsKeysCount, 23)
+      keysStatTotal = await app.getValidatorsKeysStats()
+      assert.equal(keysStatTotal.exitedValidatorsCount, 2)
+      assert.equal(keysStatTotal.activeValidatorsKeysCount, 13)
+      assert.equal(keysStatTotal.readyToDepositValidatorsKeysCount, 15)
 
       limitStatOp = await app.getNodeOperatorStats(0)
       assert.equal(limitStatOp.targetValidatorsActive, false)
@@ -300,7 +300,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equal(keysStatOp.readyToDepositValidatorsKeysCount, 5)
     })
 
-    it.only('updateTargetValidatorsLimits() no target overflow', async () => {
+    it('updateExitedValidatorsKeysCount()', async () => {
       await app.updateTargetValidatorsLimits(0, 5, true, { from: voting })
       await app.updateTargetValidatorsLimits(1, 5, true, { from: voting })
 
@@ -333,23 +333,23 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equal(keysStatOp.readyToDepositValidatorsKeysCount, 0)
 
       // // console.log(stat12)
-      await app.updateExitedValidatorsKeysCount(0, 1, { from: voting })
+      await app.updateExitedValidatorsKeysCount(0, 3, { from: voting })
       await app.updateExitedValidatorsKeysCount(1, 1, { from: voting })
 
       keysStatTotal = await app.getValidatorsKeysStats()
       assert.equal(keysStatTotal.exitedValidatorsCount, 4)
-      assert.equal(keysStatTotal.activeValidatorsKeysCount, 9)
+      assert.equal(keysStatTotal.activeValidatorsKeysCount, 11)
       assert.equal(keysStatTotal.readyToDepositValidatorsKeysCount, 6)
 
       // op 0
       limitStatOp = await app.getNodeOperatorStats(0)
       assert.equal(limitStatOp.targetValidatorsActive, true)
       assert.equal(limitStatOp.targetValidatorsCount, 5)
-      assert.equal(limitStatOp.excessValidatorsCount, 0)
+      assert.equal(limitStatOp.excessValidatorsCount, 2)
 
       keysStatOp = await app.getValidatorsKeysStats(0)
       assert.equal(keysStatOp.exitedValidatorsCount, 3)
-      assert.equal(keysStatOp.activeValidatorsKeysCount, 5)
+      assert.equal(keysStatOp.activeValidatorsKeysCount, 7)
       assert.equal(keysStatOp.readyToDepositValidatorsKeysCount, 0)
 
       // op 1
@@ -359,9 +359,45 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equal(limitStatOp.excessValidatorsCount, 0)
 
       keysStatOp = await app.getValidatorsKeysStats(1)
+      assert.equal(keysStatOp.exitedValidatorsCount, 1)
+      assert.equal(keysStatOp.activeValidatorsKeysCount, 4)
+      assert.equal(keysStatOp.readyToDepositValidatorsKeysCount, 1)
+    })
+
+    it('setNodeOperatorStakingLimit()', async () => {
+      await app.updateTargetValidatorsLimits(0, 10, true, { from: voting })
+      await app.updateTargetValidatorsLimits(1, 15, true, { from: voting })
+
+      await app.setNodeOperatorStakingLimit(0, 10, { from: voting })
+      await app.setNodeOperatorStakingLimit(1, 15, { from: voting })
+
+      let keysStatTotal = await app.getValidatorsKeysStats()
+      // console.log(o2n(keysStatTotal))
+      assert.equal(keysStatTotal.exitedValidatorsCount, 2)
+      assert.equal(keysStatTotal.activeValidatorsKeysCount, 13)
+      assert.equal(keysStatTotal.readyToDepositValidatorsKeysCount, 15)
+
+      // op 0
+      let limitStatOp = await app.getNodeOperatorStats(0)
+      assert.equal(limitStatOp.targetValidatorsActive, true)
+      assert.equal(limitStatOp.targetValidatorsCount, 10)
+      assert.equal(limitStatOp.excessValidatorsCount, 0) // deposited - exited - target
+
+      let keysStatOp = await app.getValidatorsKeysStats(0)
+      assert.equal(keysStatOp.exitedValidatorsCount, 2)
+      assert.equal(keysStatOp.activeValidatorsKeysCount, 8)
+      assert.equal(keysStatOp.readyToDepositValidatorsKeysCount, 0)
+
+      // op 1
+      limitStatOp = await app.getNodeOperatorStats(1)
+      assert.equal(limitStatOp.targetValidatorsActive, true)
+      assert.equal(limitStatOp.targetValidatorsCount, 15)
+      assert.equal(limitStatOp.excessValidatorsCount, 0) // deposited - exited - target
+
+      keysStatOp = await app.getValidatorsKeysStats(1)
       assert.equal(keysStatOp.exitedValidatorsCount, 0)
       assert.equal(keysStatOp.activeValidatorsKeysCount, 5)
-      assert.equal(keysStatOp.readyToDepositValidatorsKeysCount, 0)
+      assert.equal(keysStatOp.readyToDepositValidatorsKeysCount, 10)
     })
   })
 })

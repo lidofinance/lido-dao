@@ -36,7 +36,11 @@ library SigningKeys {
         return 0 == k1 && 0 == (k2 >> ((2 * 32 - PUBKEY_LENGTH) * 8));
     }
 
-    function _signingKeyOffset(bytes32 _position, uint256 _nodeOperatorId, uint256 _keyIndex) internal pure returns (uint256) {
+    function _signingKeyOffset(bytes32 _position, uint256 _nodeOperatorId, uint256 _keyIndex)
+        internal
+        pure
+        returns (uint256)
+    {
         return uint256(keccak256(abi.encodePacked(_position, _nodeOperatorId, _keyIndex)));
     }
 
@@ -83,9 +87,13 @@ library SigningKeys {
         return _lastIndex;
     }
 
-    function _storeSigningKey(bytes32 _position, uint256 _nodeOperatorId, uint256 _keyIndex, bytes memory _pubkey, bytes memory _signature)
-        internal
-    {
+    function _storeSigningKey(
+        bytes32 _position,
+        uint256 _nodeOperatorId,
+        uint256 _keyIndex,
+        bytes memory _pubkey,
+        bytes memory _signature
+    ) internal {
         // assert(_pubkey.length == PUBKEY_LENGTH);
         // assert(_signature.length == SIGNATURE_LENGTH);
 
@@ -120,13 +128,13 @@ library SigningKeys {
         bytes32 _position,
         uint256 _nodeOperatorId,
         uint256 _keyIndex,
-        uint256 _pos,
+        uint256 _offset,
         bytes memory _pubkeys,
         bytes memory _signatures
     ) internal view {
         (bytes memory pubkey, bytes memory signature) = _position._loadSigningKey(_nodeOperatorId, _keyIndex);
-        MemUtils.copyBytes(pubkey, _pubkeys, _pos.mul(PUBKEY_LENGTH));
-        MemUtils.copyBytes(signature, _signatures, _pos.mul(SIGNATURE_LENGTH));
+        MemUtils.copyBytes(pubkey, _pubkeys, _offset.mul(PUBKEY_LENGTH));
+        MemUtils.copyBytes(signature, _signatures, _offset.mul(SIGNATURE_LENGTH));
     }
 
     function _loadSigningKey(bytes32 _position, uint256 _nodeOperatorId, uint256 _keyIndex)
@@ -156,6 +164,9 @@ library SigningKeys {
     }
 
     function _initKeySig(uint256 _count) internal pure returns (bytes memory, bytes memory) {
-        return (MemUtils.unsafeAllocateBytes(_count.mul(PUBKEY_LENGTH)), MemUtils.unsafeAllocateBytes(_count.mul(SIGNATURE_LENGTH)));
+        return (
+            MemUtils.unsafeAllocateBytes(_count.mul(PUBKEY_LENGTH)),
+            MemUtils.unsafeAllocateBytes(_count.mul(SIGNATURE_LENGTH))
+        );
     }
 }

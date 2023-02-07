@@ -26,6 +26,8 @@ async function addNodeOperator(registry, config, txOptions) {
   const exitedSigningKeysCount = config.exitedSigningKeysCount || 0
   const depositedSigningKeysCount = config.depositedSigningKeysCount || 0
   const vettedSigningKeysCount = config.vettedSigningKeysCount || 0
+  const forgivenValidatorsKeysCount = config.forgivenValidatorsKeysCount || 0
+  const stuckValidatorsCount = config.stuckValidatorsCount || 0
   const isActive = config.isActive === undefined ? true : config.isActive
 
   if (vettedSigningKeysCount < depositedSigningKeysCount) {
@@ -62,13 +64,20 @@ async function addNodeOperator(registry, config, txOptions) {
     await registry.updateExitedValidatorsKeysCount(newOperatorId, exitedSigningKeysCount, txOptions)
   }
 
+  if (exitedSigningKeysCount > 0) {
+    await registry.updateExitedValidatorsKeysCount(newOperatorId, exitedSigningKeysCount, txOptions)
+  }
+
+  if (stuckValidatorsCount > 0) {
+    await registry.updateStuckValidatorsKeysCount(newOperatorId, stuckValidatorsCount, txOptions)
+  }
+
   if (!isActive) {
     await registry.deactivateNodeOperator(newOperatorId, txOptions)
   }
 
-  const { exitedValidatorsCount, activeValidatorsKeysCount, readyToDepositValidatorsKeysCount } = await registry.getValidatorsKeysStats(
-    newOperatorId
-  )
+  const { exitedValidatorsCount, activeValidatorsKeysCount, readyToDepositValidatorsKeysCount } =
+    await registry.getValidatorsKeysStats(newOperatorId)
   const nodeOperator = await registry.getNodeOperator(newOperatorId, true)
 
   if (isActive) {
