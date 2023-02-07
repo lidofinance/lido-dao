@@ -5,7 +5,7 @@ const { newDao } = require('./dao')
 const OssifiableProxy = artifacts.require('OssifiableProxy')
 
 const factories = require('./factories')
-const DEAFAULT_FACTORIES = {
+const DEFAULT_FACTORIES = {
   appManagerFactory: factories.appManagerFactory,
   treasuryFactory: factories.treasuryFactory,
   votingFactory: factories.votingEOAFactory,
@@ -32,7 +32,7 @@ const DEAFAULT_FACTORIES = {
 }
 
 const getFactory = (config, factoryName) => {
-  return config[factoryName] ? config[factoryName] : DEAFAULT_FACTORIES[factoryName]
+  return config[factoryName] ? config[factoryName] : DEFAULT_FACTORIES[factoryName]
 }
 
 async function deployProtocol(config = {}) {
@@ -102,10 +102,10 @@ async function addStakingModules(stakingModulesFactory, protocol) {
   return stakingModules.map(({ module }) => module)
 }
 
-async function upgradeOssifiableProxy(proxyAddress, newImplemantation, proxyOwner) {
+async function upgradeOssifiableProxy(proxyAddress, newImplementation, proxyOwner) {
   const proxy = await OssifiableProxy.at(proxyAddress)
 
-  await proxy.proxy__upgradeTo(newImplemantation, { from: proxyOwner })
+  await proxy.proxy__upgradeTo(newImplementation, { from: proxyOwner })
 }
 
 module.exports = {

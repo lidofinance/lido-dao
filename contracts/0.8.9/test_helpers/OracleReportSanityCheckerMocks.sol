@@ -5,7 +5,7 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import {ILido, ILidoLocator, IWithdrawalQueue} from "../sanity_checks/OracleReportSanityChecker.sol";
+import {ILido, IWithdrawalQueue} from "../sanity_checks/OracleReportSanityChecker.sol";
 
 contract LidoStub {
     uint256 private _shareRate = 1 ether;
@@ -40,6 +40,12 @@ contract WithdrawalQueueStub {
     {
         blockNumber = _blockNumbers[_requestId];
     }
+}
+
+interface ILidoLocator {
+    function lido() external view returns (address);
+    function withdrawalVault() external view returns (address);
+    function withdrawalQueue() external view returns (address);
 }
 
 contract LidoLocatorStub is ILidoLocator {

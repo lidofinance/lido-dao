@@ -4,25 +4,12 @@ pragma solidity 0.8.9;
 
 import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
+import { ILidoLocator } from "../../common/interfaces/ILidoLocator.sol";
 import { MemUtils } from "../../common/lib/MemUtils.sol";
 import { ResizableArray } from "../lib/ResizableArray.sol";
 import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
 
 import { BaseOracle, IConsensusContract } from "./BaseOracle.sol";
-
-
-interface IComponentLocator {
-    function lido() external view returns (address);
-    function stakingRouter() external view returns (address);
-    function coreComponents() external view returns (
-        address elRewardsVault,
-        address safetyNetsRegistry,
-        address stakingRouter,
-        address treasury,
-        address withdrawalQueue,
-        address withdrawalVault
-    );
-}
 
 
 interface ILido {
@@ -96,7 +83,7 @@ contract AccountingOracle is BaseOracle {
     using UnstructuredStorage for bytes32;
     using SafeCast for uint256;
 
-    error ComponentLocatorCannotBeZero();
+    error LidoLocatorCannotBeZero();
     error AdminCannotBeZero();
     error LegacyOracleCannotBeZero();
     error IncorrectOracleMigration(uint256 code);
@@ -160,18 +147,18 @@ contract AccountingOracle is BaseOracle {
 
 
     address public immutable LIDO;
-    IComponentLocator public immutable LOCATOR;
+    ILidoLocator public immutable LOCATOR;
 
     ///
     /// Initialization & admin functions
     ///
 
-    constructor(address componentLocator, uint256 secondsPerSlot, uint256 genesisTime)
+    constructor(address lidoLocator, address lido, uint256 secondsPerSlot, uint256 genesisTime)
         BaseOracle(secondsPerSlot, genesisTime)
     {
-        if (componentLocator == address(0)) revert ComponentLocatorCannotBeZero();
-        LOCATOR = IComponentLocator(componentLocator);
-        LIDO = LOCATOR.lido();
+        if (lidoLocator == address(0)) revert LidoLocatorCannotBeZero();
+        LOCATOR = ILidoLocator(lidoLocator);
+        LIDO = lido;
     }
 
     function initialize(
@@ -543,23 +530,18 @@ contract AccountingOracle is BaseOracle {
 
         uint256 slotsElapsed = data.refSlot - prevRefSlot;
 
-        (/* address elRewardsVault */,
-            /* address safetyNetsRegistry */,
-            address stakingRouter,
-            /* address treasury */,
-            address withdrawalQueue,
-            /* address withdrawalVault */
-        ) = LOCATOR.coreComponents();
+        IStakingRouter stakingRouter = IStakingRouter(LOCATOR.stakingRouter());
+        IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(LOCATOR.withdrawalQueue());
 
         _processStakingRouterExitedKeysByModule(
-            IStakingRouter(stakingRouter),
+            stakingRouter,
             boundaries,
             data.stakingModuleIdsWithNewlyExitedValidators,
             data.numExitedValidatorsByStakingModule,
             slotsElapsed
         );
 
-        IWithdrawalQueue(withdrawalQueue).updateBunkerMode(
+        withdrawalQueue.updateBunkerMode(
             data.isBunkerMode,
             GENESIS_TIME + prevRefSlot * SECONDS_PER_SLOT
         );

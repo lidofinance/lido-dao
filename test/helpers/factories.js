@@ -141,7 +141,7 @@ async function hashConsensusFactory({ voting, reportProcessor, signers, legacyOr
     EPOCHS_PER_FRAME,
     initialEpoch,
     voting.address,
-    reportProcessor.address
+    reportProcessor.address,
   )
 
   await consensus.grantRole(await consensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(), voting.address, { from: voting.address })
@@ -172,7 +172,7 @@ async function hashConsensusTimeTravellableFactory({
     initialEpoch,
     fastLaneLengthSlots,
     voting.address,
-    reportProcessor.address
+    reportProcessor.address,
   )
 
   await consensus.grantRole(await consensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(), voting.address, { from: voting.address })
@@ -188,8 +188,8 @@ async function hashConsensusTimeTravellableFactory({
   return consensus
 }
 
-async function accountingOracleFactory({ voting, pool, lidoLocator, consensusContract, legacyOracle }) {
-  const base = await AccountingOracle.new(lidoLocator.address, SECONDS_PER_SLOT, GENESIS_TIME)
+async function accountingOracleFactory({ voting, pool, lidoLocator, lidoAddress, consensusContract, legacyOracle }) {
+  const base = await AccountingOracle.new(lidoLocator.address, lidoAddress, SECONDS_PER_SLOT, GENESIS_TIME)
   const proxy = await OssifiableProxy.new(base.address, voting.address, '0x')
   const oracle = await AccountingOracle.at(proxy.address)
 
@@ -199,7 +199,7 @@ async function accountingOracleFactory({ voting, pool, lidoLocator, consensusCon
     CONSENSUS_VERSION,
     legacyOracle.address,
     10000,
-    10000
+    10000,
   )
 
   await legacyOracle.initialize(pool.address, oracle.address)
