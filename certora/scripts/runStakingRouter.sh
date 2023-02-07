@@ -1,15 +1,17 @@
-certoraRun ./contracts/0.8.9/StakingRouter.sol \
+certoraRun \
+./certora/harness/StakingRouter.sol:StakingRouterHarness \
 ./contracts/0.6.11/deposit_contract.sol:DepositContract \
 ./certora/helpers/StakingModuleA.sol \
 ./certora/helpers/StakingModuleB.sol \
 ./certora/helpers/StakingModuleC.sol \
---verify StakingRouter:certora/specs/StakingRouter.spec \
+./certora/harness/LidoMock.sol \
+--verify StakingRouterHarness:certora/specs/StakingRouter.spec \
 \
 \
---link StakingRouter:DEPOSIT_CONTRACT=DepositContract \
+--link StakingRouterHarness:DEPOSIT_CONTRACT=DepositContract \
 \
 \
---solc_map StakingRouter=solc8.9,DepositContract=solc6.11,\
+--solc_map StakingRouterHarness=solc8.9,DepositContract=solc6.11,LidoMock=solc4.24,\
 StakingModuleA=solc8.9,StakingModuleB=solc8.9,StakingModuleC=solc8.9 \
 --loop_iter 4 \
 --staging master \

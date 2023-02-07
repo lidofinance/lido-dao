@@ -12,6 +12,11 @@ methods {
     getValidatorsKeysNonce() => DISPATCHER(true)
     updateStuckValidatorsKeysCount(uint256, uint256) => DISPATCHER(true)
     finishUpdatingExitedValidatorsKeysCount() => DISPATCHER(true)
+    unsafeUpdateValidatorsKeysCount(uint256,uint256,uint256) => DISPATCHER(true)
+
+    // Lido
+    getBufferedEther() returns (uint256) => DISPATCHER(true)
+    receiveStakingRouterDepositRemainder() => DISPATCHER(true)
 
     // StakingRouter
      getStakingModulesCount() returns (uint256) envfree

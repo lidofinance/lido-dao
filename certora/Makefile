@@ -1,0 +1,28 @@
+default: help
+
+PATCH         = applyHarness.patch
+CONTRACTS_DIR = ../contracts
+MUNGED_DIR    = ./munged
+StakingRouter_Origin = ../contracts/0.8.9/StakingRouter.sol
+BeaconChain_Origin = ../contracts/0.8.9/BeaconChainDepositor.sol
+StakingRouter_munged = ./munged/StakingRouter.sol
+BeaconChain_munged = ./munged/BeaconChainDepositor.sol
+
+help:
+	@echo "usage:"
+	@echo "  make clean:  remove all generated files (those ignored by git)"
+	@echo "  make $(MUNGED_DIR): create $(MUNGED_DIR) directory by applying the patch file to $(CONTRACTS_DIR)"
+	@echo "  make record: record a new patch file capturing the differences between $(CONTRACTS_DIR) and $(MUNGED_DIR)"
+
+munge:
+	cp $(StakingRouter_Origin) $(MUNGED_DIR)
+	cp $(BeaconChain_Origin) $(MUNGED_DIR)
+	patch -d $(MUNGED_DIR) < $(PATCH)
+
+record:
+	diff -burN $(StakingRouter_Origin) $(StakingRouter_munged) | sed 's+\$(StakingRouter_Origin)/++g' | sed 's+$(StakingRouter_munged)++g' > $(PATCH)
+	diff -burN $(BeaconChain_Origin) $(BeaconChain_munged) | sed 's+\$(BeaconChain_Origin)/++g' | sed 's+$(BeaconChain_munged)++g' >> $(PATCH)
+
+clean:
+	git clean -fdX
+	touch $(PATCH)

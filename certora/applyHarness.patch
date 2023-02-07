@@ -1,0 +1,93 @@
+--- ../contracts/0.8.9/StakingRouter.sol	2023-02-07 12:36:41.804965100 +0200
++++ 	2023-02-07 15:39:52.473815200 +0200
+@@ -5,23 +5,23 @@
+ /* See contracts/COMPILERS.md */
+ pragma solidity 0.8.9;
+ 
+-import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
++import {AccessControlEnumerable} from "../../contracts/0.8.9/utils/access/AccessControlEnumerable.sol";
+ 
+-import {IStakingModule} from "./interfaces/IStakingModule.sol";
++import {IStakingModule} from "../../contracts/0.8.9/interfaces/IStakingModule.sol";
+ 
+-import {Math256} from "../common/lib/Math256.sol";
+-import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
+-import {MinFirstAllocationStrategy} from "../common/lib/MinFirstAllocationStrategy.sol";
++import {Math256} from "../../contracts/common/lib/Math256.sol";
++import {UnstructuredStorage} from "../../contracts/0.8.9/lib/UnstructuredStorage.sol";
++import {MinFirstAllocationStrategy} from "../../contracts/common/lib/MinFirstAllocationStrategy.sol";
+ 
+-import {BeaconChainDepositor} from "./BeaconChainDepositor.sol";
+-import {Versioned} from "./utils/Versioned.sol";
++import {BeaconChainDepositorHarness} from "../helpers/BeaconChainDepositor.sol";
++import {Versioned} from "../../contracts/0.8.9/utils/Versioned.sol";
+ 
+ interface ILido {
+     function getBufferedEther() external view returns (uint256);
+     function receiveStakingRouterDepositRemainder() external payable;
+ }
+ 
+-contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Versioned {
++contract StakingRouter is AccessControlEnumerable, BeaconChainDepositorHarness, Versioned {
+     using UnstructuredStorage for bytes32;
+ 
+     /// @dev events
+@@ -129,7 +129,7 @@
+         _;
+     }
+ 
+-    constructor(address _depositContract) BeaconChainDepositor(_depositContract) {}
++    constructor(address _depositContract) BeaconChainDepositorHarness(_depositContract) {}
+ 
+     /**
+      * @dev proxy initialization
+--- ../contracts/0.8.9/BeaconChainDepositor.sol	2023-02-07 12:55:12.352395600 +0200
++++ 	2023-02-07 16:08:13.637882400 +0200
+@@ -4,7 +4,7 @@
+ // See contracts/COMPILERS.md
+ pragma solidity 0.8.9;
+ 
+-import {MemUtils} from "../common/lib/MemUtils.sol";
++//import {MemUtils} from "../../contracts/common/lib/MemUtils.sol";
+ 
+ interface IDepositContract {
+     function get_deposit_root() external view returns (bytes32 rootHash);
+@@ -43,18 +43,18 @@
+         bytes memory _withdrawalCredentials,
+         bytes memory _publicKeysBatch,
+         bytes memory _signaturesBatch
+-    ) internal {
++    ) internal virtual {
+         require(_publicKeysBatch.length == PUBLIC_KEY_LENGTH * _keysCount, "INVALID_PUBLIC_KEYS_BATCH_LENGTH");
+         require(_signaturesBatch.length == SIGNATURE_LENGTH * _keysCount, "INVALID_SIGNATURES_BATCH_LENGTH");
+ 
+         uint256 targetBalance = address(this).balance - (_keysCount * DEPOSIT_SIZE);
+ 
+-        bytes memory publicKey = MemUtils.unsafeAllocateBytes(PUBLIC_KEY_LENGTH);
+-        bytes memory signature = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH);
++        bytes memory publicKey;// = MemUtils.unsafeAllocateBytes(PUBLIC_KEY_LENGTH);
++        bytes memory signature;// = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH);
+ 
+         for (uint256 i; i < _keysCount;) {
+-            MemUtils.copyBytes(_publicKeysBatch, publicKey, i * PUBLIC_KEY_LENGTH, 0, PUBLIC_KEY_LENGTH);
+-            MemUtils.copyBytes(_signaturesBatch, signature, i * SIGNATURE_LENGTH, 0, SIGNATURE_LENGTH);
++            //MemUtils.copyBytes(_publicKeysBatch, publicKey, i * PUBLIC_KEY_LENGTH, 0, PUBLIC_KEY_LENGTH);
++            //MemUtils.copyBytes(_signaturesBatch, signature, i * SIGNATURE_LENGTH, 0, SIGNATURE_LENGTH);
+ 
+             DEPOSIT_CONTRACT.deposit{value: DEPOSIT_SIZE}(
+                 publicKey, _withdrawalCredentials, signature, _computeDepositDataRoot(_withdrawalCredentials, publicKey, signature)
+@@ -77,10 +77,10 @@
+         returns (bytes32)
+     {
+         // Compute deposit data root (`DepositData` hash tree root) according to deposit_contract.sol
+-        bytes memory sigPart1 = MemUtils.unsafeAllocateBytes(64);
+-        bytes memory sigPart2 = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH - 64);
+-        MemUtils.copyBytes(_signature, sigPart1, 0, 0, 64);
+-        MemUtils.copyBytes(_signature, sigPart2, 64, 0,SIGNATURE_LENGTH - 64);
++        bytes memory sigPart1; //= MemUtils.unsafeAllocateBytes(64);
++        bytes memory sigPart2; //= MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH - 64);
++        //MemUtils.copyBytes(_signature, sigPart1, 0, 0, 64);
++        //MemUtils.copyBytes(_signature, sigPart2, 64, 0,SIGNATURE_LENGTH - 64);
+ 
+         bytes32 publicKeyRoot = sha256(abi.encodePacked(_publicKey, bytes16(0)));
+         bytes32 signatureRoot = sha256(abi.encodePacked(sha256(abi.encodePacked(sigPart1)), sha256(abi.encodePacked(sigPart2, bytes32(0)))));

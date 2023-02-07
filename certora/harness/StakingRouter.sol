@@ -5,7 +5,7 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import {StakingRouter} from "../../contracts/0.8.9/StakingRouter.sol";
+import {StakingRouter} from "../munged/StakingRouter.sol";
 
 contract StakingRouterHarness is StakingRouter {
     constructor(address _depositContract) StakingRouter(_depositContract) {}

@@ -41,7 +41,6 @@ import "./StakingRouterBase.spec"
 rule sanity(method f) {
     env e;
     calldataarg args;
-    require getStakingModulesCount() == 2;
     f(e,args);
     assert false;
 }
