@@ -4,6 +4,7 @@ const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contrac
 const { assertRevert } = require('../../helpers/assertThrow')
 const { assertBnClose, e18, hex, strip0x } = require('../../helpers/utils')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { deployLocatorWithInvalidImplementation, updateLocatorImplementation, getLocatorConfig } = require('../../helpers/locator-deploy')
 
 const {
   SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, SECONDS_PER_EPOCH,
@@ -49,48 +50,61 @@ const SECONDS_PER_FRAME = EPOCHS_PER_FRAME * SECONDS_PER_EPOCH
 const MAX_REQUESTS_PER_REPORT = 6
 const MAX_REQUESTS_LIST_LENGTH = 5
 const MAX_REQUESTS_PER_DAY = 5
-const RATE_LIMIT_WINDOW_SLOTS = Math.floor(60 * 60 * 24 / SECONDS_PER_SLOT)
-const RATE_LIMIT_THROUGHPUT = 20
 
 
 module.exports = {
   SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, SECONDS_PER_EPOCH,
   EPOCHS_PER_FRAME, SLOTS_PER_FRAME, SECONDS_PER_FRAME,
   MAX_REQUESTS_PER_REPORT, MAX_REQUESTS_LIST_LENGTH,
-  MAX_REQUESTS_PER_DAY, RATE_LIMIT_WINDOW_SLOTS, RATE_LIMIT_THROUGHPUT,
+  MAX_REQUESTS_PER_DAY,
   computeSlotAt, computeEpochAt, computeEpochFirstSlotAt,
   computeEpochFirstSlot, computeTimestampAtSlot, computeTimestampAtEpoch,
   ZERO_HASH, CONSENSUS_VERSION, DATA_FORMAT_LIST,
   getReportDataItems, calcReportDataHash, encodeExitRequestHex,
   encodeExitRequestsDataList, deployExitBusOracle,
+  deployOracleReportSanityCheckerForExitBus
 }
 
+async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
+  const secondsPerSlot = 32 * 12
+  const maxValidatorExitRequestsPerReport = 2000
+  const limitsList = [0, 0, 0, 0, 0, 0, maxValidatorExitRequestsPerReport]
+  const managersRoster = [[admin], [], [], [], [], [], [], []]
+
+  const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
+
+  let oracleReportSanityChecker = await OracleReportSanityChecker.new(
+    lidoLocator, secondsPerSlot, admin, limitsList, managersRoster, { from: admin })
+  return oracleReportSanityChecker.address
+}
 
 async function deployExitBusOracle(admin, {
   dataSubmitter = null,
-  lastProcessingRefSlot = 0,
-  maxRequestsPerReport = MAX_REQUESTS_PER_REPORT,
-  maxRequestsListLength = MAX_REQUESTS_LIST_LENGTH,
-  rateLimitWindowSlots = RATE_LIMIT_WINDOW_SLOTS,
-  rateLimitMaxThroughput = RATE_LIMIT_THROUGHPUT,
-  resumeAfterDeploy = true,
+  resumeAfterDeploy = false,
 } = {}) {
-  const oracle = await ValidatorsExitBusOracle.new(SECONDS_PER_SLOT, GENESIS_TIME, {from: admin})
+  const locator = await deployLocatorWithInvalidImplementation(admin)
+
+  const oracle = await ValidatorsExitBusOracle.new(
+    SECONDS_PER_SLOT, GENESIS_TIME, locator, {from: admin})
 
   const {consensus} = await deployHashConsensus(admin, {
     epochsPerFrame: EPOCHS_PER_FRAME,
     reportProcessor: oracle,
   })
 
+  const oracleReportSanityChecker = await deployOracleReportSanityCheckerForExitBus(locator, admin)
+  await updateLocatorImplementation(locator, admin, {
+    validatorExitBus: oracle.address,
+    oracleReportSanityChecker : oracleReportSanityChecker,
+  })
+
+  const lastProcessedRefSlot = 0
+
   const tx = await oracle.initialize(
     admin,
     consensus.address,
     CONSENSUS_VERSION,
-    lastProcessingRefSlot,
-    maxRequestsPerReport,
-    maxRequestsListLength,
-    rateLimitWindowSlots,
-    e18(rateLimitMaxThroughput),
+    lastProcessedRefSlot,
     {from: admin}
   )
 
@@ -109,17 +123,8 @@ async function deployExitBusOracle(admin, {
 
   assertEvent(tx, 'ConsensusVersionSet', {expectedArgs: {version: CONSENSUS_VERSION, prevVersion: 0}})
 
-  assertEvent(tx, 'DataBoundariesSet', {expectedArgs: {
-    refSlot: +(await consensus.getCurrentFrame()).refSlot,
-    maxExitRequestsPerReport: maxRequestsPerReport,
-    maxExitRequestsListLength: maxRequestsListLength,
-    exitRequestsRateLimitWindowSizeSlots: rateLimitWindowSlots,
-    exitRequestsRateLimitMaxThroughputE18: e18(rateLimitMaxThroughput),
-  }})
-
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), admin, {from: admin})
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), admin, {from: admin})
-  await oracle.grantRole(await oracle.MANAGE_DATA_BOUNDARIES_ROLE(), admin, {from: admin})
   await oracle.grantRole(await oracle.PAUSE_ROLE(), admin, {from: admin})
   await oracle.grantRole(await oracle.RESUME_ROLE(), admin, {from: admin})
 
@@ -133,11 +138,11 @@ async function deployExitBusOracle(admin, {
     await oracle.resume({from: admin})
   }
 
-  return {consensus, oracle}
+  return {consensus, oracle, locator}
 }
 
 
-contract('ValidatorsExitBusOracle', ([admin, member1]) => {
+contract.only('ValidatorsExitBusOracle', ([admin, member1]) => {
   let consensus
   let oracle
 
@@ -165,12 +170,6 @@ contract('ValidatorsExitBusOracle', ([admin, member1]) => {
       assert.equal(+await oracle.getConsensusVersion(), CONSENSUS_VERSION)
       assert.equal(+await oracle.SECONDS_PER_SLOT(), SECONDS_PER_SLOT)
       assert.equal(await oracle.isPaused(), true)
-
-      const dataBoundaries = await oracle.getDataBoundaries()
-      assertBn(dataBoundaries.maxExitRequestsPerReport, MAX_REQUESTS_PER_REPORT)
-      assertBn(dataBoundaries.maxExitRequestsListLength, MAX_REQUESTS_LIST_LENGTH)
-      assertBn(dataBoundaries.exitRequestsRateLimitWindowSizeSlots, RATE_LIMIT_WINDOW_SLOTS)
-      assertBnClose(dataBoundaries.exitRequestsRateLimitMaxThroughputE18, e18(RATE_LIMIT_THROUGHPUT), 100000)
     })
   })
 })

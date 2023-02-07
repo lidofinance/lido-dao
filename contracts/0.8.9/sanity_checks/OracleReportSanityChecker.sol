@@ -9,17 +9,10 @@ import {SafeCast} from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 import {Math256} from "../../common/lib/Math256.sol";
 import {AccessControlEnumerable} from "../utils/access/AccessControlEnumerable.sol";
 import {PositiveTokenRebaseLimiter, TokenRebaseLimiterData} from "../lib/PositiveTokenRebaseLimiter.sol";
+import {ILidoLocator} from "../../common/interfaces/ILidoLocator.sol";
 
 interface ILido {
     function getSharesByPooledEth(uint256 _sharesAmount) external view returns (uint256);
-}
-
-interface ILidoLocator {
-    function lido() external view returns (address);
-
-    function withdrawalVault() external view returns (address);
-
-    function withdrawalQueue() external view returns (address);
 }
 
 interface IWithdrawalQueue {
@@ -65,6 +58,9 @@ struct LimitsList {
     /// @notice The positive token rebase allowed per single LidoOracle report
     /// @dev uses 1e9 precision, e.g.: 1e6 - 0.1%; 1e9 - 100%, see `setMaxPositiveTokenRebase()`
     uint256 maxPositiveTokenRebase;
+
+    /// @notice The max number of exit requests allowed in report to ValidatorExitBusOracle
+    uint256 maxValidatorExitRequestsPerReport;
 }
 
 /// @dev The packed version of the LimitsList struct to be effectively persisted in storage
@@ -73,6 +69,7 @@ struct LimitsListPacked {
     uint16 oneOffCLBalanceDecreaseBPLimit;
     uint16 annualBalanceIncreaseBPLimit;
     uint16 shareRateDeviationBPLimit;
+    uint16 maxValidatorExitRequestsPerReport;
     uint64 requestTimestampMargin;
     uint64 maxPositiveTokenRebase;
 }
@@ -96,6 +93,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         keccak256("ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE");
     bytes32 public constant SHARE_RATE_DEVIATION_LIMIT_MANAGER_ROLE =
         keccak256("SHARE_RATE_DEVIATION_LIMIT_MANAGER_ROLE");
+    bytes32 public constant MAX_VALIDATOR_EXIT_REQUESTS_PER_REPORT_ROLE =
+        keccak256("MAX_VALIDATOR_EXIT_REQUESTS_PER_REPORT_ROLE");
     bytes32 public constant REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE = keccak256("REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE");
     bytes32 public constant MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE =
         keccak256("MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE");
@@ -113,9 +112,11 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         address[] shareRateDeviationLimitManagers;
         address[] requestTimestampMarginManagers;
         address[] maxPositiveTokenRebaseManagers;
+        address[] maxValidatorExitRequestsPerReportManagers;
     }
 
     /// @param _lidoLocator address of the LidoLocator instance
+    /// @param _secondsPerEpoch number of seconds per epoch in the network
     /// @param _admin address to grant DEFAULT_ADMIN_ROLE of the AccessControl contract
     /// @param _limitsList initial values to be set for the limits list
     /// @param _managersRoster list of the address to grant permissions for granular limits management
@@ -134,14 +135,14 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(ALL_LIMITS_MANAGER_ROLE, _managersRoster.allLimitsManagers);
         _grantRole(CHURN_VALIDATORS_BY_EPOCH_LIMIT_MANGER_ROLE, _managersRoster.churnValidatorsByEpochLimitManagers);
-        _grantRole(
-            ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE,
-            _managersRoster.oneOffCLBalanceDecreaseLimitManagers
-        );
+        _grantRole(ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE,
+                   _managersRoster.oneOffCLBalanceDecreaseLimitManagers);
         _grantRole(ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE, _managersRoster.annualBalanceIncreaseLimitManagers);
         _grantRole(SHARE_RATE_DEVIATION_LIMIT_MANAGER_ROLE, _managersRoster.shareRateDeviationLimitManagers);
         _grantRole(REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE, _managersRoster.requestTimestampMarginManagers);
         _grantRole(MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE, _managersRoster.maxPositiveTokenRebaseManagers);
+        _grantRole(MAX_VALIDATOR_EXIT_REQUESTS_PER_REPORT_ROLE,
+                   _managersRoster.maxValidatorExitRequestsPerReportManagers);
     }
 
     /// @notice returns the address of the LidoLocator
@@ -228,6 +229,17 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     {
         LimitsList memory limitsList = _limits.unpack();
         limitsList.shareRateDeviationBPLimit = _shareRateDeviationBPLimit;
+        _updateLimits(limitsList);
+    }
+
+    /// @notice Sets the new value for the maxValidatorExitRequestsPerReport
+    /// @param _maxValidatorExitRequestsPerReport new maxValidatorExitRequestsPerReport value
+    function setMaxExitRequestsPerOracleReport(uint256 _maxValidatorExitRequestsPerReport)
+        external
+        onlyRole(MAX_VALIDATOR_EXIT_REQUESTS_PER_REPORT_ROLE)
+    {
+        LimitsList memory limitsList = _limits.unpack();
+        limitsList.maxValidatorExitRequestsPerReport = _maxValidatorExitRequestsPerReport;
         _updateLimits(limitsList);
     }
 
@@ -348,6 +360,17 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _checkValidatorsChurnLimit(limitsList, _appearedValidators, _exitedValidators, _timeElapsed);
     }
 
+    /// @notice Applies sanity checks to the number of validator exit requests count
+    /// @param _exitRequestsCount Number of validator exit requests supplied per oracle report
+    function checkExitBusOracleReport(uint256 _exitRequestsCount)
+        external
+        view
+    {
+        uint256 limit = _limits.unpack().maxValidatorExitRequestsPerReport;
+        if (_exitRequestsCount > limit)
+            revert IncorrectNumberOfExitRequestsPerReport(limit);
+    }
+
     /// @notice Applies sanity checks to the withdrawal requests params of Lido's oracle report
     /// @param _requestIdToFinalizeUpTo right boundary of requestId range if equals 0, no requests
     ///     should be finalized
@@ -460,6 +483,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         if (_oldLimitsList.maxPositiveTokenRebase != _newLimitsList.maxPositiveTokenRebase) {
             emit MaxPositiveTokenRebaseSet(_newLimitsList.maxPositiveTokenRebase);
         }
+        if (_oldLimitsList.maxValidatorExitRequestsPerReport != _newLimitsList.maxValidatorExitRequestsPerReport) {
+            emit MaxValidatorExitRequestsPerReportSet(_newLimitsList.maxValidatorExitRequestsPerReport);
+        }
         _limits = _newLimitsList.pack();
     }
 
@@ -469,11 +495,13 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     event ShareRateDeviationBPLimitSet(uint256 shareRateDeviationBPLimit);
     event RequestTimestampMarginSet(uint256 requestTimestampMargin);
     event MaxPositiveTokenRebaseSet(uint256 maxPositiveTokenRebase);
+    event MaxValidatorExitRequestsPerReportSet(uint256 maxValidatorExitRequestsPerReport);
 
     error IncorrectWithdrawalsVaultBalance(uint256 actualWithdrawalVaultBalance);
     error IncorrectCLBalanceDecrease(uint256 oneOffCLBalanceDecreaseBP);
     error IncorrectCLBalanceIncrease(uint256 annualBalanceDiff);
     error IncorrectAppearedValidators(uint256 churnLimit);
+    error IncorrectNumberOfExitRequestsPerReport(uint256 maxRequestsCount);
     error IncorrectExitedValidators(uint256 churnLimit);
     error IncorrectRequestFinalization(uint256 requestCreationBlock);
     error IncorrectFinalizationShareRate(uint256 finalizationShareDeviation);
@@ -487,6 +515,7 @@ library LimitsListPacker {
         res.shareRateDeviationBPLimit = _toBasisPoints(_limitsList.shareRateDeviationBPLimit);
         res.requestTimestampMargin = SafeCast.toUint64(_limitsList.requestTimestampMargin);
         res.maxPositiveTokenRebase = SafeCast.toUint64(_limitsList.maxPositiveTokenRebase);
+        res.maxValidatorExitRequestsPerReport = SafeCast.toUint16(_limitsList.maxValidatorExitRequestsPerReport);
     }
 
     function _toBasisPoints(uint256 _value) private pure returns (uint16) {
@@ -503,5 +532,6 @@ library LimitsListUnpacker {
         res.shareRateDeviationBPLimit = _limitsList.shareRateDeviationBPLimit;
         res.requestTimestampMargin = _limitsList.requestTimestampMargin;
         res.maxPositiveTokenRebase = _limitsList.maxPositiveTokenRebase;
+        res.maxValidatorExitRequestsPerReport = _limitsList.maxValidatorExitRequestsPerReport;
     }
 }

@@ -117,6 +117,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
         extraDataFormat: EXTRA_DATA_FORMAT_LIST,
         extraDataHash: extraDataHash,
         extraDataItemsCount: extraDataItems.length,
+        extraDataMaxNodeOpsCountByModule: 2,
       }
 
       reportItems = getReportDataItems(reportFields)
