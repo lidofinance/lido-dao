@@ -1109,7 +1109,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * 5. Invoke finalizion of the withdrawal requests
      * 6. Distribute protocol fee (treasury & node operators)
      * 7. Burn excess shares (withdrawn stETH & rewards of the penalized operators if any)
-     * 8. Complete token rebase by informing onservers (emit an event and call the external receivers if any)
+     * 8. Complete token rebase by informing observers (emit an event and call the external receivers if any)
      */
     function _handleOracleReport(
         OracleReportInputData memory _inputData,
@@ -1199,7 +1199,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         _burnSharesLimited(ISelfOwnedStETHBurner(_protocolContracts.selfOwnedStEthBurner), handlingData);
 
         // Step 8.
-        // Complete token rebase by informing onservers (emit an event and call the external receivers if any)
+        // Complete token rebase by informing observers (emit an event and call the external receivers if any)
         (
             postTotalShares,
             postTotalPooledEther
