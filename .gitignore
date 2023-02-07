@@ -43,3 +43,11 @@ cli/vendor
 
 # OS relative
 .DS_Store
+
+# certora
+.certora*
+.certora*.json
+**.last_conf*
+certora-logs
+certora_debug_log.txt
+resource_errors.json
