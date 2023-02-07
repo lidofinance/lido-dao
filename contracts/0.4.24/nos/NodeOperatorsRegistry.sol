@@ -17,7 +17,6 @@ import {ILidoLocator} from "../../common/interfaces/ILidoLocator.sol";
 import {SigningKeys} from "../lib/SigningKeys.sol";
 import {Packed64} from "../lib/Packed64.sol";
 import {Versioned} from "../utils/Versioned.sol";
-import "hardhat/console.sol";
 
 interface IStETH {
     function sharesOf(address _account) external view returns (uint256);
@@ -87,12 +86,9 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     // bytes32 public constant INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE = keccak256("INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE");
     bytes32 public constant INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE =
         0xeaf200990dc6840b2b98dda560b1fd49fc2bbb13aae6f2864e84b7af0b3026fe;
-    // bytes32 public constant ACTIVATE_NODE_OPERATOR_ROLE = keccak256("ACTIVATE_NODE_OPERATOR_ROLE");
-    bytes32 public constant ACTIVATE_NODE_OPERATOR_ROLE =
-        0x43b30579428d1f58f32a91271777eb4abfafe49c37a1333605ae6805efa05ddc;
-    // bytes32 public constant DEACTIVATE_NODE_OPERATOR_ROLE = keccak256("DEACTIVATE_NODE_OPERATOR_ROLE");
-    bytes32 public constant DEACTIVATE_NODE_OPERATOR_ROLE =
-        0xd143dfe933ec009d7da9f00bee064bd3db6a56ff95197dcef9d4b0741a393b6d;
+    // bytes32 public constant ACTIVATE_NODE_OPERATOR_ROLE = keccak256("MANAGE_NODE_OPERATOR_ROLE");
+    bytes32 public constant MANAGE_NODE_OPERATOR_ROLE =
+        0x78523850fdd761612f46e844cf5a16bda6b3151d6ae961fd7e8e7b92bfbca7f8;
     // bytes32 public constant STAKING_ROUTER_ROLE = keccak256("STAKING_ROUTER_ROLE");
     bytes32 public constant STAKING_ROUTER_ROLE = 0xbb75b874360e0bfd87f964eadd8276d8efb7c942134fc329b513032d0803e0c6;
 
@@ -329,7 +325,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     /// @param _nodeOperatorId Node operator id to deactivate
     function activateNodeOperator(uint256 _nodeOperatorId) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
-        _auth(ACTIVATE_NODE_OPERATOR_ROLE);
+        _auth(MANAGE_NODE_OPERATOR_ROLE);
 
         require(!getNodeOperatorIsActive(_nodeOperatorId), "OPERATOR_ACTIVATED");
 
@@ -345,7 +341,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     /// @param _nodeOperatorId Node operator id to deactivate
     function deactivateNodeOperator(uint256 _nodeOperatorId) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
-        _auth(DEACTIVATE_NODE_OPERATOR_ROLE);
+        _auth(MANAGE_NODE_OPERATOR_ROLE);
 
         require(getNodeOperatorIsActive(_nodeOperatorId), "OPERATOR_DEACTIVATED");
 
@@ -648,14 +644,14 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
      * @notice Set the stuck signings keys count
      */
     function _updateStuckValidatorsKeysCount(uint256 _nodeOperatorId, uint64 _stuckValidatorsCount) internal {
-        uint256 stcukPenaltyStats = _getOperatorStuckPenaltyStats(_nodeOperatorId);
-        if (_stuckValidatorsCount == stcukPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)) return;
+        uint256 stuckPenaltyStats = _getOperatorStuckPenaltyStats(_nodeOperatorId);
+        if (_stuckValidatorsCount == stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)) return;
 
         uint256 signingKeysStats = _getOperatorSigningKeysStats(_nodeOperatorId);
         _requireOutOfRange(_stuckValidatorsCount <= signingKeysStats.get(EXITED_KEYS_COUNT_OFFSET));
 
-        stcukPenaltyStats = stcukPenaltyStats.set(STUCK_VALIDATORS_COUNT_OFFSET, _stuckValidatorsCount);
-        _setOperatorStuckPenaltyStats(_nodeOperatorId, stcukPenaltyStats);
+        stuckPenaltyStats = stuckPenaltyStats.set(STUCK_VALIDATORS_COUNT_OFFSET, _stuckValidatorsCount);
+        _setOperatorStuckPenaltyStats(_nodeOperatorId, stuckPenaltyStats);
 
         emit StuckValidatorsCountChanged(_nodeOperatorId, _stuckValidatorsCount);
     }
@@ -667,18 +663,18 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
 
-        uint256 stcukPenaltyStats = _getOperatorStuckPenaltyStats(_nodeOperatorId);
+        uint256 stuckPenaltyStats = _getOperatorStuckPenaltyStats(_nodeOperatorId);
 
         // require(validatorsStats.forgivenValidatorsCount != _forgivenValidatorsCount, "NODE_OPERATOR_TARGET_LIMIT_IS_THE_SAME");
-        stcukPenaltyStats = stcukPenaltyStats.set(FORGIVEN_VALIDATORS_COUNT_OFFSET, _forgivenValidatorsCount);
+        stuckPenaltyStats = stuckPenaltyStats.set(FORGIVEN_VALIDATORS_COUNT_OFFSET, _forgivenValidatorsCount);
 
-        if (stcukPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET) <= _forgivenValidatorsCount) {
-            stcukPenaltyStats = stcukPenaltyStats.set(
+        if (stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET) <= _forgivenValidatorsCount) {
+            stuckPenaltyStats = stuckPenaltyStats.set(
                 STUCK_PENALTY_END_TIMESTAMP_OFFSET, uint64(block.timestamp + STUCK_VALIDATORS_PENALTY_DELAY)
             );
         }
 
-        _setOperatorStuckPenaltyStats(_nodeOperatorId, stcukPenaltyStats);
+        _setOperatorStuckPenaltyStats(_nodeOperatorId, stuckPenaltyStats);
 
         emit ForgivenValidatorsCountChanged(_nodeOperatorId, _forgivenValidatorsCount);
     }
@@ -957,11 +953,11 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
             recipients[idx] = _nodeOperators[operatorId].rewardAddress;
             shares[idx] = activeValidatorsCount;
 
-            uint256 stcukPenaltyStats = _getOperatorStuckPenaltyStats(operatorId);
+            uint256 stuckPenaltyStats = _getOperatorStuckPenaltyStats(operatorId);
             if (
-                stcukPenaltyStats.get(FORGIVEN_VALIDATORS_COUNT_OFFSET)
-                    < stcukPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)
-                    || block.timestamp <= stcukPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET)
+                stuckPenaltyStats.get(FORGIVEN_VALIDATORS_COUNT_OFFSET)
+                    < stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)
+                    || block.timestamp <= stuckPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET)
             ) {
                 penalized[idx] = true;
             }
@@ -1216,14 +1212,14 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         _onlyExistedNodeOperator(_nodeOperatorId);
 
         uint256 operatorTargetStats = _getOperatorTargetValidtatorsStats(_nodeOperatorId);
-        uint256 stcukPenaltyStats = _getOperatorStuckPenaltyStats(_nodeOperatorId);
+        uint256 stuckPenaltyStats = _getOperatorStuckPenaltyStats(_nodeOperatorId);
 
         targetValidatorsActive = operatorTargetStats.get(TARGET_VALIDATORS_ACTIVE_OFFSET) != 0;
         targetValidatorsCount = operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET);
         excessValidatorsCount = operatorTargetStats.get(EXCESS_VALIDATORS_COUNT_OFFSET);
-        stuckValidatorsCount = stcukPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET);
-        forgivenValidatorsCount = stcukPenaltyStats.get(FORGIVEN_VALIDATORS_COUNT_OFFSET);
-        stuckPenaltyEndTimestamp = stcukPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET);
+        stuckValidatorsCount = stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET);
+        forgivenValidatorsCount = stuckPenaltyStats.get(FORGIVEN_VALIDATORS_COUNT_OFFSET);
+        stuckPenaltyEndTimestamp = stuckPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET);
     }
 
     /// @notice Returns the validators stats of all node operators in the staking module
@@ -1345,6 +1341,8 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
             return;
         }
 
+        address burnerAddress = getLocator().selfOwnedStEthBurner();
+
         (address[] memory recipients, uint256[] memory shares, bool[] memory penalized) =
             getRewardsDistribution(sharesToDistribute);
 
@@ -1357,7 +1355,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
                 /// @dev ignore remainder since it accumulated on contract balance
                 shares[idx] >>= 1;
                 /// @todo transfer to burner
-                stETH.burnShares(address(this), shares[idx]);
+                stETH.transferShares(burnerAddress, shares[idx]);
                 emit NodeOperatorPenalized(recipients[idx], shares[idx]);
             }
             stETH.transferShares(recipients[idx], shares[idx]);

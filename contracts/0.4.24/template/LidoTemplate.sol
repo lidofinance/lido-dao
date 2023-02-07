@@ -584,12 +584,13 @@ contract LidoTemplate is IsContract {
         // NodeOperatorsRegistry
         perms[0] = _state.operators.MANAGE_SIGNING_KEYS();
         perms[1] = _state.operators.ADD_NODE_OPERATOR_ROLE();
-        perms[2] = _state.operators.ACTIVATE_NODE_OPERATOR_ROLE();
-        perms[3] = _state.operators.DEACTIVATE_NODE_OPERATOR_ROLE();
-        perms[4] = _state.operators.SET_NODE_OPERATOR_LIMIT_ROLE();
+        perms[2] = _state.operators.MANAGE_NODE_OPERATOR_ROLE();
+        // perms[2] = _state.operators.ACTIVATE_NODE_OPERATOR_ROLE();
+        // perms[3] = _state.operators.DEACTIVATE_NODE_OPERATOR_ROLE();
+        perms[3] = _state.operators.SET_NODE_OPERATOR_LIMIT_ROLE();
         // perms[5] = _state.operators.SET_NODE_OPERATOR_NAME_ROLE();
         // perms[6] = _state.operators.SET_NODE_OPERATOR_ADDRESS_ROLE();
-        for (i = 0; i < 6; ++i) {
+        for (i = 0; i < 4; ++i) {
             _createPermissionForVoting(acl, _state.operators, perms[i], voting);
         }
 
