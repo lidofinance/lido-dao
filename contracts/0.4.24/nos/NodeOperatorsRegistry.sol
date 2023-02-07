@@ -766,17 +766,6 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         _increaseValidatorsKeysNonce();
     }
 
-    // function _readNOStats(uint256 nodeOperatorId) internal view returns ( SigningKeysStats memory) {
-    //     NodeOperator storage nodeOperator = _nodeOperators[nodeOperatorId];
-
-    //     return SigningKeysStats({
-    //         vettedSigningKeysCount: nodeOperator.vettedSigningKeysCount,
-    //         exitedSigningKeysCount: nodeOperator.exitedSigningKeysCount,
-    //         totalSigningKeysCount: nodeOperator.totalSigningKeysCount,
-    //         depositedSigningKeysCount: nodeOperator.depositedSigningKeysCount
-    //     });
-    // }
-
     function _getCorrectedNodeOperator(uint256 _nodeOperatorId)
         internal
         view
@@ -1244,13 +1233,6 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
 
         uint256 targetDepositedValidatorsCount =
             exitedValidatorsCount + totalTargetStats.sum(TARGET_VALIDATORS_COUNT_OFFSET, EXCESS_VALIDATORS_COUNT_OFFSET);
-        // console.log("depositedValidatorsCount",uint(depositedValidatorsCount));
-        // console.log("exitedValidatorsCount",uint(exitedValidatorsCount));
-        // console.log("activeValidatorsKeysCount",uint(activeValidatorsKeysCount));
-        // console.log("totalTargetStats.sum",uint(totalTargetStats.sum(TARGET_VALIDATORS_COUNT_OFFSET, EXCESS_VALIDATORS_COUNT_OFFSET)));
-        // console.log("targetDepositedValidatorsCount",targetDepositedValidatorsCount);
-        // console.log("totalTargetStats.sum(TARGET_VALIDATORS_COUNT_OFFSET",uint(totalTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET)));
-        // console.log("totalTargetStats.sum(EXCESS_VALIDATORS_COUNT_OFFSET",uint(totalTargetStats.get(EXCESS_VALIDATORS_COUNT_OFFSET)));
 
         if (targetDepositedValidatorsCount < totalSigningKeysStats.get(VETTED_KEYS_COUNT_OFFSET)) {
             readyToDepositValidatorsKeysCount = targetDepositedValidatorsCount > depositedValidatorsCount
