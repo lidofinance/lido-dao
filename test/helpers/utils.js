@@ -72,9 +72,9 @@ const transformEntries = (obj, tr) => Object.fromEntries(
   Object.entries(obj).map(tr).filter(x => x !== undefined)
 )
 
-// converts all object BN keys to strings, drops positional keys
+// converts all object BN keys to strings, drops numeric keys and the __length__ key
 const processNamedTuple = (obj) => transformEntries(obj, ([k, v]) => {
-  return /^\d+$/.test(k) ? undefined : [k, BN.isBN(v) ? v.toString() : v]
+  return /^(\d+|__length__)$/.test(k) ? undefined : [k, BN.isBN(v) ? v.toString() : v]
 })
 
 // Divides a BN by 1e15

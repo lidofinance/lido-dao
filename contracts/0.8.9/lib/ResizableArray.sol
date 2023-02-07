@@ -14,6 +14,11 @@ import { MemUtils } from "../../common/lib/MemUtils.sol";
 /// pre-allocated memory growth factor and maximum one-time increase.
 ///
 library ResizableArray {
+    error Uninitialized();
+    error PrealloctedLengthCannotBeZero();
+    error GrowthFactorShouldBeMoreThan100();
+    error ArrayIsEmpty();
+    error CannotTrimMoreThanLength();
 
     /// @notice A struct holding the array internal representation. Don't mutate the contents
     /// of this struct directly, use the functions below instead.
@@ -29,6 +34,20 @@ library ResizableArray {
         //   2 bytes       6 bytes     24 bytes
         // growthFactor | maxGrowth | preallocLen
         uint256 _state;
+    }
+
+    /// @notice Returns an uninitialized internal representation.
+    ///
+    /// Can be used as a placeholder for a missing value. Cannot be initialized.
+    ///
+    function invalid() internal pure returns (Array memory) {
+        return Array(0, 0);
+    }
+
+    /// @notice Returns whether the internal representation is uninitialized.
+    ///
+    function isInvalid(Array memory self) internal pure returns (bool) {
+        return self._memPtr == 0;
     }
 
     /// @notice Pre-allocates memory for a resizable array.
@@ -62,19 +81,28 @@ library ResizableArray {
     function preallocate(uint256 preallocLen, uint256 growthFactor, uint256 maxGrowth)
         internal pure returns (Array memory)
     {
-        require(preallocLen > 0);
-        require(growthFactor > 100);
+        if (preallocLen == 0) revert PrealloctedLengthCannotBeZero();
+        if (growthFactor <= 100) revert GrowthFactorShouldBeMoreThan100();
+
+        Array memory result;
 
         uint256 memPtr = _malloc(preallocLen);
-        uint256 state = _encodeState(preallocLen, growthFactor, maxGrowth);
+        result._memPtr = memPtr;
+        result._state = _encodeState(preallocLen, growthFactor, maxGrowth);
 
-        return Array(memPtr, state);
+        /// @solidity memory-safe-assembly
+        assembly {
+            mstore(memPtr, 0)
+        }
+
+        return result;
     }
 
     /// @notice Returns length of the array.
     ///
     function length(Array memory self) internal pure returns (uint256 len) {
-        uint256 memPtr = self._memPtr;
+        uint256 memPtr = _getMemPtr(self);
+        /// @solidity memory-safe-assembly
         assembly {
             len := mload(memPtr)
         }
@@ -83,7 +111,8 @@ library ResizableArray {
     /// @notice Returns memory pointer to the array.
     ///
     function pointer(Array memory self) internal pure returns (uint256[] memory result) {
-        uint256 memPtr = self._memPtr;
+        uint256 memPtr = _getMemPtr(self);
+        /// @solidity memory-safe-assembly
         assembly {
             result := memPtr
         }
@@ -114,7 +143,7 @@ library ResizableArray {
     /// @param item The item to add.
     ///
     function push(Array memory self, uint256 item) internal pure {
-        uint256 memPtr = self._memPtr;
+        uint256 memPtr = _getMemPtr(self);
         uint256 prevLen = length(self);
         uint256 allocLen = _decodeAllocLen(self._state);
 
@@ -129,14 +158,12 @@ library ResizableArray {
                 growth = maxGrowth;
             }
             allocLen += growth;
-            memPtr = _malloc(allocLen);
-            unchecked {
-                MemUtils.memcpy(self._memPtr + 32, memPtr + 32, prevLen * 32);
-            }
-            self._memPtr = memPtr;
+            memPtr = _growBytes(memPtr, prevLen, allocLen);
             self._state = _updateAllocLen(self._state, allocLen);
+            self._memPtr = memPtr;
         }
 
+        /// @solidity memory-safe-assembly
         assembly {
             mstore(memPtr, add(prevLen, 1))
             let itemLoc := add(memPtr, add(32, mul(prevLen, 32)))
@@ -150,8 +177,13 @@ library ResizableArray {
     ///
     function pop(Array memory self) internal pure returns (uint256 result) {
         uint256 memPtr = self._memPtr;
-        uint256 newLen = length(self) - 1;
+        uint256 prevLen = length(self);
+        if (prevLen == 0) {
+            revert ArrayIsEmpty();
+        }
+        /// @solidity memory-safe-assembly
         assembly {
+            let newLen := sub(prevLen, 1)
             let itemLoc := add(memPtr, add(32, mul(newLen, 32)))
             result := mload(itemLoc)
             mstore(memPtr, newLen)
@@ -164,26 +196,69 @@ library ResizableArray {
     ///
     function trim(Array memory self, uint256 trimBy) internal pure {
         uint256 memPtr = self._memPtr;
-        uint256 newLen = length(self) - trimBy;
+        uint256 prevLen = length(self);
+        if (prevLen < trimBy) {
+            revert CannotTrimMoreThanLength();
+        }
+        /// @solidity memory-safe-assembly
         assembly {
-            mstore(memPtr, newLen)
+            mstore(memPtr, sub(prevLen, trimBy))
         }
     }
 
     /// @notice Sets the array length to zero.
     ///
     function clear(Array memory self) internal pure {
-        uint256 memPtr = self._memPtr;
+        uint256 memPtr = _getMemPtr(self);
+        /// @solidity memory-safe-assembly
         assembly {
             mstore(memPtr, 0)
         }
     }
 
-    function _malloc(uint256 len) private pure returns (uint256 memPtr) {
+    ///
+    /// Helpers
+    ///
+
+    function _getMemPtr(Array memory self) private pure returns (uint256) {
+        uint256 memPtr = self._memPtr;
+        if (memPtr == 0) revert Uninitialized();
+        return memPtr;
+    }
+
+    function _malloc(uint256 lenWords) private pure returns (uint256 memPtr) {
+        /// @solidity memory-safe-assembly
         assembly {
             memPtr := mload(0x40)
-            mstore(memPtr, 0)
-            mstore(0x40, add(memPtr, add(32, mul(len, 32))))
+            mstore(0x40, add(memPtr, add(32, mul(lenWords, 32))))
+        }
+    }
+
+    function _growBytes(uint256 memPtr, uint256 prevLenWords, uint256 newLenWords)
+        private pure returns (uint256)
+    {
+        uint256 freeMemPtr;
+        uint256 pastDataMemPtr;
+        /// @solidity memory-safe-assembly
+        assembly {
+            freeMemPtr := mload(0x40)
+            pastDataMemPtr := add(add(memPtr, 32), mul(prevLenWords, 32))
+        }
+        if (freeMemPtr == pastDataMemPtr) {
+            // special case: no memory was allocated past the array, can grow inplace
+            /// @solidity memory-safe-assembly
+            assembly {
+                pastDataMemPtr := add(add(memPtr, 32), mul(newLenWords, 32))
+                mstore(0x40, pastDataMemPtr)
+            }
+            return memPtr;
+        } else {
+            // memory was allocated past the array, need to alloc new memory region
+            uint256 newMemPtr = _malloc(newLenWords);
+            unchecked {
+                MemUtils.memcpy(memPtr + 32, newMemPtr + 32, prevLenWords * 32);
+            }
+            return newMemPtr;
         }
     }
 

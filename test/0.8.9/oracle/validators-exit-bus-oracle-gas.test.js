@@ -127,8 +127,10 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           const report = await oracle.getConsensusReport()
           assert.equal(report.hash, reportHash)
           assert.equal(+report.refSlot, +reportFields.refSlot)
-          assert.equal(+report.receptionTime, +await oracle.getTime())
-          assert.equal(+report.deadlineTime, computeTimestampAtSlot(+report.refSlot + SLOTS_PER_FRAME))
+          assert.equal(
+            +report.processingDeadlineTime,
+            computeTimestampAtSlot(+report.refSlot + SLOTS_PER_FRAME)
+          )
           assert.isFalse(report.processingStarted)
 
           const procState = await oracle.getDataProcessingState()
@@ -147,7 +149,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           assertEvent(tx, 'ProcessingStarted', {expectedArgs: {refSlot: reportFields.refSlot}})
           assert.isTrue((await oracle.getConsensusReport()).processingStarted)
 
-          const {timestamp} = await web3.eth.getBlock(tx.receipt.blockHash)
+          const timestamp = await oracle.getTime()
 
           for (let i = 0; i < exitRequests.length; ++i) {
             assertEvent(tx, 'ValidatorExitRequest', {index: i, expectedArgs: {

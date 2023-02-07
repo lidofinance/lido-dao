@@ -48,15 +48,14 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
 
     event ConsensusContractSet(address indexed addr, address indexed prevAddr);
     event ConsensusVersionSet(uint256 indexed version, uint256 indexed prevVersion);
-    event ReportSubmitted(uint256 indexed refSlot, bytes32 hash, uint256 deadlineTime);
+    event ReportSubmitted(uint256 indexed refSlot, bytes32 hash, uint256 processingDeadlineTime);
     event ProcessingStarted(uint256 indexed refSlot, bytes32 hash);
     event WarnProcessingMissed(uint256 indexed refSlot);
 
     struct ConsensusReport {
         bytes32 hash;
         uint64 refSlot;
-        uint64 receptionTime;
-        uint64 deadlineTime;
+        uint64 processingDeadlineTime;
     }
 
     /// @notice An ACL role granting the permission to set the consensus
@@ -135,8 +134,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     function getConsensusReport() external view returns (
         bytes32 hash,
         uint256 refSlot,
-        uint256 receptionTime,
-        uint256 deadlineTime,
+        uint256 processingDeadlineTime,
         bool processingStarted
     ) {
         ConsensusReport memory report = _storageConsensusReport().value;
@@ -144,9 +142,8 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         return (
             report.hash,
             report.refSlot,
-            report.receptionTime,
-            report.deadlineTime,
-            report.refSlot != 0 && report.refSlot == processingRefSlot
+            report.processingDeadlineTime,
+            report.hash != bytes32(0) && report.refSlot == processingRefSlot
         );
     }
 
@@ -161,7 +158,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     /// free to reach consensus on another report for the same reporting frame and submit it
     /// using this same function.
     ///
-    function submitReport(bytes32 reportHash, uint256 refSlot, uint256 deadline) external {
+    function submitConsensusReport(bytes32 reportHash, uint256 refSlot, uint256 deadline) external {
         if (_msgSender() != CONSENSUS_CONTRACT_POSITION.getStorageAddress()) {
             revert OnlyConsensusContractCanSubmitReport();
         }
@@ -185,8 +182,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         ConsensusReport memory report = ConsensusReport({
             hash: reportHash,
             refSlot: refSlot.toUint64(),
-            receptionTime: uint64(_getTime()),
-            deadlineTime: deadline.toUint64()
+            processingDeadlineTime: deadline.toUint64()
         });
 
         _storageConsensusReport().value = report;
@@ -215,6 +211,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         _setConsensusContract(consensusContract, lastProcessingRefSlot);
         _setConsensusVersion(consensusVersion);
         LAST_PROCESSING_REF_SLOT_POSITION.setStorageUint256(lastProcessingRefSlot);
+        _storageConsensusReport().value.refSlot = lastProcessingRefSlot.toUint64();
     }
 
     /// @notice Returns whether the given address is a member of the oracle committee.
@@ -280,7 +277,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     /// @notice Reverts if the processing deadline for the current consensus report is missed.
     ///
     function _checkProcessingDeadline() internal view {
-        uint256 deadline = _storageConsensusReport().value.deadlineTime;
+        uint256 deadline = _storageConsensusReport().value.processingDeadlineTime;
         if (_getTime() > deadline) revert ProcessingDeadlineMissed(deadline);
     }
 

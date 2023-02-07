@@ -672,9 +672,12 @@ contract AccountingOracle is BaseOracle {
             lastType: -1,
             lastModuleId: -1,
             lastNodeOpId: -1,
-            nopIds: ResizableArray.preallocate(20),
-            keyCounts: ResizableArray.preallocate(20)
+            nopIds: ResizableArray.invalid(),
+            keyCounts: ResizableArray.invalid()
         });
+
+        iter.nopIds = ResizableArray.preallocate(20);
+        iter.keyCounts = ResizableArray.preallocate(20);
 
         if (lastProcessedItem != 0) {
             (, uint256 itemType, uint216 payload) = _decodeExtraDataItem(lastProcessedItem);
