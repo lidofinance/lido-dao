@@ -288,12 +288,12 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             revert UnsupportedRequestsDataFormat(data.dataFormat);
         }
 
-        IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
-            .checkExitBusOracleReport(data.requestsCount);
-
         if (data.data.length % PACKED_REQUEST_LENGTH != 0) {
             revert InvalidRequestsDataLength();
         }
+
+        IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
+            .checkExitBusOracleReport(data.requestsCount);
 
         if (data.data.length / PACKED_REQUEST_LENGTH != data.requestsCount) {
             revert UnexpectedRequestsDataLength();

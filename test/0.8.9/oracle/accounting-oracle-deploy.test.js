@@ -156,7 +156,7 @@ async function deployAccountingOracleSetup(admin, {
     initialEpoch = +await legacyOracle.getLastCompletedEpochId() + epochsPerFrame
   }
 
-  const oracle = await AccountingOracle.new(locator.address, secondsPerSlot, genesisTime, {from: admin})
+  const oracle = await AccountingOracle.new(locator.address, lido.address, secondsPerSlot, genesisTime, {from: admin})
 
   const {consensus} = await deployHashConsensus(admin, {
     reportProcessor: oracle,

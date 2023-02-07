@@ -37,7 +37,7 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
             name: 'curated',
             targetShares: 10000,
             moduleFee: 500,
-            treasuryFee: 500
+            treasuryFee: 500,
           }
         ]
       },

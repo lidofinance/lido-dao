@@ -152,12 +152,12 @@ contract AccountingOracle is BaseOracle {
     /// Initialization & admin functions
     ///
 
-    constructor(address lidoLocator, uint256 secondsPerSlot, uint256 genesisTime)
+    constructor(address lidoLocator, address lido, uint256 secondsPerSlot, uint256 genesisTime)
         BaseOracle(secondsPerSlot, genesisTime)
     {
         if (lidoLocator == address(0)) revert LidoLocatorCannotBeZero();
         LOCATOR = ILidoLocator(lidoLocator);
-        LIDO = LOCATOR.lido();
+        LIDO = lido;
     }
 
     function initialize(
