@@ -26,7 +26,7 @@ const DEFAULT_FACTORIES = {
   stakingModulesFactory: factories.stakingModulesFactory,
   guardiansFactory: factories.guardiansFactory,
   lidoLocatorMockImplFactory: factories.lidoLocatorMockImplFactory,
-  selfOwnedStETHBurnerFactory: factories.selfOwnedStETHBurnerFactory,
+  burnerFactory: factories.burnerFactory,
   postSetup: factories.postSetup,
   lidoLocatorFactory: factories.lidoLocatorFactory
 }
@@ -69,7 +69,7 @@ async function deployProtocol(config = {}) {
   protocol.elRewardsVault = await getFactory(config, 'elRewardsVaultFactory')(protocol)
   protocol.withdrawalVault = await getFactory(config, 'withdrawalVaultFactory')(protocol)
   protocol.eip712StETH = await getFactory(config, 'eip712StETHFactory')(protocol)
-  protocol.selfOwnedStETHBurner = await getFactory(config, 'selfOwnedStETHBurnerFactory')(protocol)
+  protocol.burner = await getFactory(config, 'burnerFactory')(protocol)
 
   protocol.lidoLocator = await getFactory(config, 'lidoLocatorFactory')(protocol)
   protocol.oracle = await getFactory(config, 'accountingOracleFactory')(protocol)

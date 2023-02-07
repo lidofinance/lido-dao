@@ -347,6 +347,36 @@ contract StETH is IERC20, Pausable {
     }
 
     /**
+     * @notice Moves `_sharesAmount` token shares from the `_sender` account to the `_recipient` account.
+     *
+     * @return amount of transferred tokens.
+     * Emits a `TransferShares` event.
+     * Emits a `Transfer` event.
+     *
+     * Requirements:
+     *
+     * - `_sender` and `_recipient` cannot be the zero addresses.
+     * - `_sender` must have at least `_sharesAmount` shares.
+     * - the caller must have allowance for `_sender`'s tokens of at least `getPooledEthByShares(_sharesAmount)`.
+     * - the contract must not be paused.
+     *
+     * @dev The `_sharesAmount` argument is the amount of shares, not tokens.
+     */
+    function transferSharesFrom(
+        address _sender, address _recipient, uint256 _sharesAmount
+    ) external returns (uint256) {
+        uint256 currentAllowance = allowances[_sender][msg.sender];
+        uint256 tokensAmount = getPooledEthByShares(_sharesAmount);
+        require(currentAllowance >= tokensAmount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
+
+        _transferShares(_sender, _recipient, _sharesAmount);
+        _approve(_sender, msg.sender, currentAllowance.sub(tokensAmount));
+        emit TransferShares(_sender, _recipient, _sharesAmount);
+        emit Transfer(_sender, _recipient, tokensAmount);
+        return tokensAmount;
+    }
+
+    /**
      * @return the total amount (in wei) of Ether controlled by the protocol.
      * @dev This is used for calculating tokens from shares and vice versa.
      * @dev This function is required to be implemented in a derived contract.

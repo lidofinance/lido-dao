@@ -22,7 +22,7 @@ contract LidoLocator is ILidoLocator {
         address lido;
         address oracleReportSanityChecker;
         address postTokenRebaseReceiver;
-        address selfOwnedStEthBurner;
+        address burner;
         address stakingRouter;
         address treasury;
         address validatorExitBus;
@@ -39,7 +39,7 @@ contract LidoLocator is ILidoLocator {
     address public immutable lido;
     address public immutable oracleReportSanityChecker;
     address public immutable postTokenRebaseReceiver;
-    address public immutable selfOwnedStEthBurner;
+    address public immutable burner;
     address public immutable stakingRouter;
     address public immutable treasury;
     address public immutable validatorExitBus;
@@ -59,7 +59,7 @@ contract LidoLocator is ILidoLocator {
         lido = _assertNonZero(_config.lido);
         oracleReportSanityChecker = _assertNonZero(_config.oracleReportSanityChecker);
         postTokenRebaseReceiver = _assertNonZero(_config.postTokenRebaseReceiver);
-        selfOwnedStEthBurner = _assertNonZero(_config.selfOwnedStEthBurner);
+        burner = _assertNonZero(_config.burner);
         stakingRouter = _assertNonZero(_config.stakingRouter);
         treasury = _assertNonZero(_config.treasury);
         validatorExitBus = _assertNonZero(_config.validatorExitBus);
@@ -98,7 +98,7 @@ contract LidoLocator is ILidoLocator {
             accountingOracle,
             elRewardsVault,
             oracleReportSanityChecker,
-            selfOwnedStEthBurner,
+            burner,
             withdrawalQueue,
             withdrawalVault,
             postTokenRebaseReceiver
