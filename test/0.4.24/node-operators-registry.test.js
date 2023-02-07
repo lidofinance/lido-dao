@@ -98,8 +98,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       permissions: {
         MANAGE_SIGNING_KEYS: voting,
         ADD_NODE_OPERATOR_ROLE: voting,
-        ACTIVATE_NODE_OPERATOR_ROLE: voting,
-        DEACTIVATE_NODE_OPERATOR_ROLE: voting,
+        MANAGE_NODE_OPERATOR_ROLE: voting,
+        // ACTIVATE_NODE_OPERATOR_ROLE: voting,
+        // DEACTIVATE_NODE_OPERATOR_ROLE: voting,
         // SET_NODE_OPERATOR_NAME_ROLE: voting,
         // SET_NODE_OPERATOR_ADDRESS_ROLE: voting,
         SET_NODE_OPERATOR_LIMIT_ROLE: voting,
@@ -497,15 +498,15 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(readyToDepositValidatorsKeysCount, 4)
     })
 
-    it('reverts with APP_AUTH_FAILED error when called by address without ACTIVATE_NODE_OPERATOR_ROLE permission', async () => {
-      const hasPermission = await dao.hasPermission(nobody, app, 'ACTIVATE_NODE_OPERATOR_ROLE')
+    it('reverts with APP_AUTH_FAILED error when called by address without MANAGE_NODE_OPERATOR_ROLE permission', async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isFalse(hasPermission)
       const nodeOperatorId = 2
       await assert.reverts(app.activateNodeOperator(nodeOperatorId, { from: nobody }), 'APP_AUTH_FAILED')
     })
 
     it('reverts when called with non-existent operator id', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'ACTIVATE_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
       const nodeOperatorId = Number.MAX_SAFE_INTEGER
       await assert.reverts(app.activateNodeOperator(nodeOperatorId, { from: voting }), 'OUT_OF_RANGE')
@@ -628,8 +629,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(readyToDepositValidatorsKeysCount, 4)
     })
 
-    it('reverts with "APP_AUTH_FAILED" error when called by address without DEACTIVATE_NODE_OPERATOR_ROLE permission', async () => {
-      const hasPermission = await dao.hasPermission(nobody, app, 'DEACTIVATE_NODE_OPERATOR_ROLE')
+    it('reverts with "APP_AUTH_FAILED" error when called by address without MANAGE_NODE_OPERATOR_ROLE permission', async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isFalse(hasPermission)
 
       const nodeOperatorId = await nodeOperators.findNodeOperatorId(app, (operator) => !operator.active)
@@ -639,7 +640,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('reverts with "OUT_OF_RANGE" error when called with non-existent operator id', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'DEACTIVATE_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
       const nodeOperatorId = Number.MAX_SAFE_INTEGER

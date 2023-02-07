@@ -104,8 +104,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       permissions: {
         MANAGE_SIGNING_KEYS: voting,
         ADD_NODE_OPERATOR_ROLE: voting,
-        ACTIVATE_NODE_OPERATOR_ROLE: voting,
-        DEACTIVATE_NODE_OPERATOR_ROLE: voting,
+        MANAGE_NODE_OPERATOR_ROLE: voting,
+        // ACTIVATE_NODE_OPERATOR_ROLE: voting,
+        // DEACTIVATE_NODE_OPERATOR_ROLE: voting,
         // SET_NODE_OPERATOR_NAME_ROLE: voting,
         // SET_NODE_OPERATOR_ADDRESS_ROLE: voting,
         SET_NODE_OPERATOR_LIMIT_ROLE: voting,
