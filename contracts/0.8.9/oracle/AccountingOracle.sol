@@ -132,6 +132,7 @@ contract AccountingOracle is BaseOracle {
     struct ExtraDataProcessingState {
         uint64 refSlot;
         uint16 dataFormat;
+        uint32 maxNodeOpsCountByModule;
         uint64 itemsCount;
         uint64 itemsProcessed;
         uint256 lastProcessedItem;
@@ -311,6 +312,10 @@ contract AccountingOracle is BaseOracle {
         ///
         /// (itemType, moduleId, nodeOperatorId)
         ///
+        /// The oracle daemon should report exited/stuck validators counts ONLY for those
+        /// (moduleId, nodeOperatorId) pairs that contain outdated counts in the staking
+        /// module smart contract as observed at the reference slot.
+        ///
         /// Extra data array can be passed in different formats, see below.
         ///
 
@@ -324,6 +329,30 @@ contract AccountingOracle is BaseOracle {
 
         /// @dev Number of the extra data items.
         uint256 extraDataItemsCount;
+
+        /// @dev The highest number of items with unique nodeOperatorId among the extra data
+        /// items with any given (itemType, moduleId) pair. Must not exceed 2^32 - 1.
+        ///
+        /// For example, for the following extra data:
+        ///
+        ///   itemType: ST, moduleId: 1, nodeOperatorId: 1, totalStuckValidators: 111
+        ///   itemType: ST, moduleId: 1, nodeOperatorId: 2, totalStuckValidators: 222
+        ///
+        ///   itemType: ST, moduleId: 2, nodeOperatorId: 1, totalStuckValidators: 111
+        ///   itemType: ST, moduleId: 2, nodeOperatorId: 3, totalStuckValidators: 333
+        ///   itemType: ST, moduleId: 2, nodeOperatorId: 5, totalStuckValidators: 555
+        ///   itemType: ST, moduleId: 2, nodeOperatorId: 7, totalStuckValidators: 777
+        ///
+        ///   itemType: EX, moduleId: 1, nodeOperatorId: 5, totalExitedValidators: 555
+        ///   itemType: EX, moduleId: 1, nodeOperatorId: 8, totalExitedValidators: 888
+        ///   itemType: EX, moduleId: 1, nodeOperatorId: 9, totalExitedValidators: 999
+        ///
+        /// extraDataMaxNodeOpsCountByModule should be set to 4 since this is the number of data
+        /// items with unique nodeOperatorId for itemType=EXTRA_DATA_TYPE_STUCK_VALIDATORS and
+        /// moduleId=2, and any other (itemType, moduleId) pair doesn't yield a higher number of
+        /// items with unique nodeOperatorId.
+        ///
+        uint256 extraDataMaxNodeOpsCountByModule;
     }
 
     uint256 public constant EXTRA_DATA_TYPE_STUCK_VALIDATORS = 0;
@@ -550,6 +579,7 @@ contract AccountingOracle is BaseOracle {
             refSlot: data.refSlot.toUint64(),
             dataFormat: data.extraDataFormat.toUint16(),
             dataHash: data.extraDataHash,
+            maxNodeOpsCountByModule: data.extraDataMaxNodeOpsCountByModule.toUint32(),
             itemsCount: data.extraDataItemsCount.toUint16(),
             itemsProcessed: 0,
             lastProcessedItem: 0
@@ -643,7 +673,13 @@ contract AccountingOracle is BaseOracle {
 
         ExtraDataProcessingState storage _procState = _storageExtraDataProcessingState().value;
 
-        _procState.lastProcessedItem = _processExtraDataItems(items, 0, 0);
+        _procState.lastProcessedItem = _processExtraDataItems(
+            items,
+            procState.itemsProcessed,
+            procState.lastProcessedItem,
+            procState.maxNodeOpsCountByModule
+        );
+
         _procState.itemsProcessed = uint64(items.length);
 
         emit ExtraDataSubmitted(procState.refSlot, items.length, items.length);
@@ -662,7 +698,8 @@ contract AccountingOracle is BaseOracle {
     function _processExtraDataItems(
         uint256[] calldata items,
         uint256 itemsProcessed,
-        uint256 lastProcessedItem
+        uint256 lastProcessedItem,
+        uint256 maxNodeOpsCountByModule
     ) internal returns (uint256) {
         IStakingRouter stakingRouter = IStakingRouter(LOCATOR.stakingRouter());
 
@@ -672,12 +709,9 @@ contract AccountingOracle is BaseOracle {
             lastType: -1,
             lastModuleId: -1,
             lastNodeOpId: -1,
-            nopIds: ResizableArray.invalid(),
-            keyCounts: ResizableArray.invalid()
+            nopIds: ResizableArray.preallocate(maxNodeOpsCountByModule),
+            keyCounts: ResizableArray.preallocate(maxNodeOpsCountByModule)
         });
-
-        iter.nopIds = ResizableArray.preallocate(20);
-        iter.keyCounts = ResizableArray.preallocate(20);
 
         if (lastProcessedItem != 0) {
             (, uint256 itemType, uint216 payload) = _decodeExtraDataItem(lastProcessedItem);

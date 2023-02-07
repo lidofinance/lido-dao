@@ -71,28 +71,10 @@ contract('ResizableArray', () => {
       await test.test_preallocate_preallocates_the_required_array_size()
     })
 
-    it('sets config correctly', async () => {
-      await test.test_preallocate_sets_config_correctly()
-    })
-
     it('reverts when called with zero size', async () => {
       await assert.reverts(
         test.test_preallocate_reverts_when_called_with_zero_size(),
-        'PrealloctedLengthCannotBeZero()'
-      )
-    })
-
-    it('reverts when called with growth factor less than or equal 100 (trying 0)', async () => {
-      await assert.reverts(
-        test.test_preallocate_reverts_when_called_with_growth_factor_0(),
-        'GrowthFactorShouldBeMoreThan100()'
-      )
-    })
-
-    it('reverts when called with growth factor less than or equal 100 (trying 100)', async () => {
-      await assert.reverts(
-        test.test_preallocate_reverts_when_called_with_growth_factor_100(),
-        'GrowthFactorShouldBeMoreThan100()'
+        'MaxLengthCannotBeZero()'
       )
     })
   })
@@ -147,25 +129,25 @@ contract('ResizableArray', () => {
     })
 
     it(`doesn't modify non-empty array when trimming by zero`, async () => {
-      await test.test_trim_by_zero_doesnt_modity_non_empty_array()
+      await test.test_trim_by_zero_doesnt_modify_non_empty_array()
     })
 
     it(`doesn't modify empty array when trimming by zero (case 1)`, async () => {
-      await test.test_trim_by_zero_doesnt_modity_empty_array_case_1()
+      await test.test_trim_by_zero_doesnt_modify_empty_array_case_1()
     })
 
     it(`doesn't modify empty array when trimming by zero (case 2)`, async () => {
-      await test.test_trim_by_zero_doesnt_modity_empty_array_case_2()
+      await test.test_trim_by_zero_doesnt_modify_empty_array_case_2()
     })
   })
 
   context('clear', () => {
-    it(`doesn't modity empty array (case 1)`, async () => {
-      await test.test_clear_doesnt_modity_empty_array_case_1()
+    it(`doesn't modify empty array (case 1)`, async () => {
+      await test.test_clear_doesnt_modify_empty_array_case_1()
     })
 
-    it(`doesn't modity empty array (case 2)`, async () => {
-      await test.test_clear_doesnt_modity_empty_array_case_2()
+    it(`doesn't modify empty array (case 2)`, async () => {
+      await test.test_clear_doesnt_modify_empty_array_case_2()
     })
 
     it(`can be called multiple times`, async () => {
@@ -173,36 +155,17 @@ contract('ResizableArray', () => {
     })
   })
 
-  context('growth factor and max growth', () => {
-    it('are respected (case 1)', async () => {
-      await test.test_growth_factor_and_max_growth_are_respected_case_1()
+  context('Array manipulation: push, pop, clear, trim', () => {
+    it('scenario 1', async () => {
+      await test.test_array_manipulation_scenario_1()
     })
 
-    it('are respected (case 2)', async () => {
-      await test.test_growth_factor_and_max_growth_are_respected_case_2()
+    it('scenario 2', async () => {
+      await test.test_array_manipulation_scenario_2()
     })
 
-    it('are respected (case 3)', async () => {
-      await test.test_growth_factor_and_max_growth_are_respected_case_3()
-    })
-  })
-
-  context('push, pop, and trim', () => {
-    it('work as intended within prealloc range', async () => {
-      await test.test_push_pop_and_trim_work_within_prealloc_range()
-    })
-
-    it('work as intended outside of prealloc range (case 1)', async () => {
-      await test.test_push_pop_and_trim_work_outside_of_prealloc_range_case_1()
-    })
-
-    it('work as intended outside of prealloc range wit no mem allocated after the array', async () => {
-      await test.test_push_pop_and_trim_work_outside_of_prealloc_range_with_no_mem_allocated_after()
-      // console.log(tx.logs.map(({event, args}) => ({event, args: processNamedTuple(args)})))
-    })
-
-    it('work as intended outside of prealloc range with mem allocated after the array', async () => {
-      await test.test_push_pop_and_trim_work_outside_of_prealloc_range_with_mem_allocated_after()
+    it('preserves memory safety', async () => {
+      await test.test_array_manipulation_preserves_memory_safety()
     })
   })
 })
