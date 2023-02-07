@@ -156,7 +156,13 @@ async function hashConsensusFactory({ voting, reportProcessor, signers, legacyOr
   return consensus
 }
 
-async function hashConsensusTimeTravellableFactory({ legacyOracle, voting, reportProcessor, signers }) {
+async function hashConsensusTimeTravellableFactory({
+  legacyOracle,
+  voting,
+  reportProcessor,
+  signers,
+  fastLaneLengthSlots = 0
+}) {
   const initialEpoch = +(await legacyOracle.getLastCompletedEpochId()) + EPOCHS_PER_FRAME
   const consensus = await HashConsensusTimeTravellable.new(
     SLOTS_PER_EPOCH,
@@ -164,13 +170,14 @@ async function hashConsensusTimeTravellableFactory({ legacyOracle, voting, repor
     GENESIS_TIME,
     EPOCHS_PER_FRAME,
     initialEpoch,
+    fastLaneLengthSlots,
     voting.address,
     reportProcessor.address
   )
 
   await consensus.grantRole(await consensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(), voting.address, { from: voting.address })
   await consensus.grantRole(await consensus.DISABLE_CONSENSUS_ROLE(), voting.address, { from: voting.address })
-  await consensus.grantRole(await consensus.MANAGE_INTERVAL_ROLE(), voting.address, { from: voting.address })
+  await consensus.grantRole(await consensus.MANAGE_FRAME_CONFIG_ROLE(), voting.address, { from: voting.address })
   await consensus.grantRole(await consensus.MANAGE_REPORT_PROCESSOR_ROLE(), voting.address, { from: voting.address })
 
   await consensus.addMember(signers[2].address, 1, { from: voting.address })

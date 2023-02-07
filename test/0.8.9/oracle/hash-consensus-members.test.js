@@ -1,4 +1,5 @@
-const { assert } = require('chai')
+const { assert } = require('../../helpers/assert')
+const { toNum } = require('../../helpers/utils')
 const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 const { assertRevert } = require('../../helpers/assertThrow')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
@@ -14,8 +15,6 @@ const {
 const HashConsensus = artifacts.require('HashConsensusTimeTravellable')
 const MockReportProcessor = artifacts.require('MockReportProcessor')
 
-const toNum = x => +x
-
 contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, stranger]) => {
   let consensus
   let reportProcessor
@@ -24,8 +23,8 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
     let consensus
     let reportProcessor
 
-    const deploy = async () => {
-      const deployed = await deployHashConsensus(admin)
+    const deploy = async (options = undefined) => {
+      const deployed = await deployHashConsensus(admin, options)
       consensus = deployed.consensus
       reportProcessor = deployed.reportProcessor
     }
