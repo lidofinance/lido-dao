@@ -15,13 +15,13 @@ interface ISelfOwnedStETHBurner {
     function commitSharesToBurn(uint256 sharesToBurnLimit) external returns (uint256 sharesToBurnNow);
 
     /**
-      * @notice Mark excess stETH for burning
+      * @notice Mark excess stETH shares for burning
       *
       * @dev Can be called only by `Lido`.
       *
-      * @param _stETH2Burn stETH tokens to burn
+      * @param _stETHShares stETH shares to burn
       */
-    function markExcessStETHForBurn(uint256 _stETH2Burn) external;
+    function markExcessStETHSharesForBurn(uint256 _stETHShares) external;
 
     /**
       * Returns the current amount of shares locked on the contract to be burnt.
