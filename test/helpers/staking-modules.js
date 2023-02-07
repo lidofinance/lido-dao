@@ -23,22 +23,22 @@ async function setupNodeOperatorsRegistry({ dao, acl, token, stakingRouter, voti
     NODE_OPERATOR_REGISTRY_ADD_NODE_OPERATOR_ROLE,
     NODE_OPERATOR_REGISTRY_ACTIVATE_NODE_OPERATOR_ROLE,
     NODE_OPERATOR_REGISTRY_DEACTIVATE_NODE_OPERATOR_ROLE,
-    NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_NAME_ROLE,
-    NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ADDRESS_ROLE,
+    // NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_NAME_ROLE,
+    // NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ADDRESS_ROLE,
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE,
     NODE_OPERATOR_REGISTRY_STAKING_ROUTER_ROLE,
-    NODE_OPERATOR_REGISTRY_REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE,
+    // NODE_OPERATOR_REGISTRY_REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE,
     NODE_OPERATOR_REGISTRY_INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE
   ] = await Promise.all([
     nodeOperatorsRegistry.MANAGE_SIGNING_KEYS(),
     nodeOperatorsRegistry.ADD_NODE_OPERATOR_ROLE(),
     nodeOperatorsRegistry.ACTIVATE_NODE_OPERATOR_ROLE(),
     nodeOperatorsRegistry.DEACTIVATE_NODE_OPERATOR_ROLE(),
-    nodeOperatorsRegistry.SET_NODE_OPERATOR_NAME_ROLE(),
-    nodeOperatorsRegistry.SET_NODE_OPERATOR_ADDRESS_ROLE(),
+    // nodeOperatorsRegistry.SET_NODE_OPERATOR_NAME_ROLE(),
+    // nodeOperatorsRegistry.SET_NODE_OPERATOR_ADDRESS_ROLE(),
     nodeOperatorsRegistry.SET_NODE_OPERATOR_LIMIT_ROLE(),
     nodeOperatorsRegistry.STAKING_ROUTER_ROLE(),
-    nodeOperatorsRegistry.REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE(),
+    // nodeOperatorsRegistry.REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE(),
     nodeOperatorsRegistry.INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE()
   ])
 
@@ -80,24 +80,24 @@ async function setupNodeOperatorsRegistry({ dao, acl, token, stakingRouter, voti
         from: appManager.address
       }
     ),
-    acl.createPermission(
-      voting.address,
-      nodeOperatorsRegistry.address,
-      NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_NAME_ROLE,
-      appManager.address,
-      {
-        from: appManager.address
-      }
-    ),
-    acl.createPermission(
-      voting.address,
-      nodeOperatorsRegistry.address,
-      NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ADDRESS_ROLE,
-      appManager.address,
-      {
-        from: appManager.address
-      }
-    ),
+    // acl.createPermission(
+    //   voting.address,
+    //   nodeOperatorsRegistry.address,
+    //   NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_NAME_ROLE,
+    //   appManager.address,
+    //   {
+    //     from: appManager.address
+    //   }
+    // ),
+    // acl.createPermission(
+    //   voting.address,
+    //   nodeOperatorsRegistry.address,
+    //   NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ADDRESS_ROLE,
+    //   appManager.address,
+    //   {
+    //     from: appManager.address
+    //   }
+    // ),
     acl.createPermission(
       voting.address,
       nodeOperatorsRegistry.address,
@@ -114,15 +114,15 @@ async function setupNodeOperatorsRegistry({ dao, acl, token, stakingRouter, voti
       appManager.address,
       { from: appManager.address }
     ),
-    acl.createPermission(
-      stakingRouter.address,
-      nodeOperatorsRegistry.address,
-      NODE_OPERATOR_REGISTRY_REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE,
-      appManager.address,
-      {
-        from: appManager.address
-      }
-    ),
+    // acl.createPermission(
+    //   stakingRouter.address,
+    //   nodeOperatorsRegistry.address,
+    //   NODE_OPERATOR_REGISTRY_REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE,
+    //   appManager.address,
+    //   {
+    //     from: appManager.address
+    //   }
+    // ),
     acl.createPermission(
       stakingRouter.address,
       nodeOperatorsRegistry.address,

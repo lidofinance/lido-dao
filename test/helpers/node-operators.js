@@ -12,6 +12,8 @@ const { FakeValidatorKeys } = require('./signing-keys')
  * @param {number} config.depositedSigningKeysCount Count of used signing keys in the new node operator
  * @param {number} config.exitedSigningKeysCount Count of stopped signing keys in the new node operator
  * @param {number} config.vettedSigningKeysCount Staking limit of the new node operator
+ * @param {number} config.stuckValidatorsCount Stuck keys count of the new node operator
+ * @param {number} config.forgivenValidatorsKeysCount Repaid keys count of the new node operator
  * @param {number} config.isActive The active state of new node operator
  * @param {object} txOptions Transaction options, like "from", "gasPrice" and e.t.c
  * @returns {number} newOperatorId Id of newly added Node Operator
@@ -40,6 +42,10 @@ async function addNodeOperator(registry, config, txOptions) {
 
   if (exitedSigningKeysCount > depositedSigningKeysCount) {
     throw new Error('Invalid keys config: depositedSigningKeysCount < exitedSigningKeysCount')
+  }
+
+  if (exitedSigningKeysCount < stuckValidatorsCount) {
+    throw new Error('Invalid keys config: exitedSigningKeysCount < stuckValidatorsCount')
   }
 
   if (totalSigningKeysCount < exitedSigningKeysCount + depositedSigningKeysCount) {
@@ -79,6 +85,7 @@ async function addNodeOperator(registry, config, txOptions) {
   const { exitedValidatorsCount, activeValidatorsKeysCount, readyToDepositValidatorsKeysCount } =
     await registry.getValidatorsKeysStats(newOperatorId)
   const nodeOperator = await registry.getNodeOperator(newOperatorId, true)
+  const nodeOperatorStat = await registry.getNodeOperatorStats(newOperatorId)
 
   if (isActive) {
     assertBn(nodeOperator.stakingLimit, vettedSigningKeysCount)
