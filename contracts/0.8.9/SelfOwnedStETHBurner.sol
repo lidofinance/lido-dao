@@ -97,6 +97,13 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable 
     );
 
     /**
+      * Emitted when the excessive stETH shares `amountOfShares` are requested to burn by `Lido`.
+      */
+    event ExcessStETHSharesMarkedForBurn(
+        uint256 amountOfShares
+    );
+
+    /**
       * Emitted when the ERC20 `token` recovered (i.e. transferred)
       * to the Lido treasure address by `requestedBy` sender.
       */
@@ -178,17 +185,19 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable 
     }
 
     /**
-      * @notice Mark excess stETH for burning
+      * @notice Mark excess stETH shares for burning
       *
       * @dev Can be called only by `Lido`.
       *
-      * @param _stETHAmountForBurning stETH tokens to burn
+      * @param _stETHShares stETH shares to burn
       */
-    function markExcessStETHForBurn(uint256 _stETHAmountForBurning) external {
+    function markExcessStETHSharesForBurn(uint256 _stETHShares) external {
       if (msg.sender != LIDO) revert ErrorAppAuthLidoFailed();
-      if(_stETHAmountForBurning > getExcessStETH()) revert NotEnoughExcessStETH();
+      if(_stETHShares > _getExcessStETHShares()) revert NotEnoughExcessStETH();
 
-      _requestBurnMyStETH(_stETHAmountForBurning, false /* _isCover */);
+      nonCoverSharesBurnRequested += _stETHShares;
+
+      emit ExcessStETHSharesMarkedForBurn(_stETHShares);
     }
 
     /**
@@ -329,6 +338,10 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable 
       * Returns the stETH amount belonging to the burner contract address but not marked for burning.
       */
     function getExcessStETH() public view returns (uint256)  {
+        return ILido(LIDO).getPooledEthByShares(_getExcessStETHShares());
+    }
+
+    function _getExcessStETHShares() internal view returns (uint256) {
         uint256 sharesBurnRequested = (coverSharesBurnRequested + nonCoverSharesBurnRequested);
         uint256 totalShares = ILido(LIDO).sharesOf(address(this));
 
@@ -337,7 +350,7 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable 
             return 0;
         }
 
-        return ILido(LIDO).getPooledEthByShares(totalShares - sharesBurnRequested);
+        return totalShares - sharesBurnRequested;
     }
 
     function _requestBurnMyStETH(uint256 _stETHAmountForBurning, bool _isCover) private {
