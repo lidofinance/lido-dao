@@ -77,7 +77,7 @@ filtered{f -> !f.isView} {
     calldataarg args;
     uint8 statusBefore = getStakingModuleStatus(moduleId);
     require statusBefore != STOPPED();
-    f(e, args);
+        f(e, args);
     uint8 statusAfter = getStakingModuleStatus(moduleId);
     assert statusAfter != STOPPED();
 }

@@ -10,7 +10,7 @@ contract BeaconChainDepositorHarness is BeaconChainDepositor {
 
     mapping(bytes => bytes32) private _publicKeyRoot;
     mapping(bytes => bytes32) private _signatureRoot;
-    uint256 private constant PUBLIC_KEY_LENGTH_2 = 64;
+    bytes32 private constant MASK16 = bytes32(uint256(0xffffffffffffffffffffffffffffffff));
 
     constructor(address _depositContract) BeaconChainDepositor(_depositContract) {}
 
@@ -27,7 +27,7 @@ contract BeaconChainDepositorHarness is BeaconChainDepositor {
         bytes memory _publicKeysBatch,
         bytes memory _signaturesBatch
     ) internal override {
-        require(_publicKeysBatch.length == PUBLIC_KEY_LENGTH_2 * _keysCount, "INVALID_PUBLIC_KEYS_BATCH_LENGTH");
+        require(_publicKeysBatch.length == PUBLIC_KEY_LENGTH * _keysCount, "INVALID_PUBLIC_KEYS_BATCH_LENGTH");
         require(_signaturesBatch.length == SIGNATURE_LENGTH * _keysCount, "INVALID_SIGNATURES_BATCH_LENGTH");
         uint256 targetBalance = address(this).balance - (_keysCount * DEPOSIT_SIZE);
 
@@ -35,13 +35,13 @@ contract BeaconChainDepositorHarness is BeaconChainDepositor {
         bytes memory signature;
 
         for (uint256 i; i < _keysCount;) {
-            uint256 offsetKey = i * PUBLIC_KEY_LENGTH_2;
+            uint256 offsetKey = i * PUBLIC_KEY_LENGTH;
             uint256 offsetSignature = i * SIGNATURE_LENGTH;
 
             // Here it is assumed that the publicKeysBatch is two word aligned
             publicKey = abi.encodePacked(
                 readWordAtOffset(_publicKeysBatch, offsetKey),
-                readWordAtOffset(_publicKeysBatch, offsetKey + 32));
+                (readWordAtOffset(_publicKeysBatch, offsetKey + 32) & MASK16));
 
             signature = abi.encodePacked(
                 readWordAtOffset(_publicKeysBatch, offsetSignature),
@@ -72,10 +72,10 @@ contract BeaconChainDepositorHarness is BeaconChainDepositor {
         bytes32 publicKeyRoot = _publicKeyRoot[_publicKey];
         bytes32 signatureRoot = _signatureRoot[_signature];
 
-        return sha256(
+        return keccak256(
             abi.encodePacked(
-                sha256(abi.encodePacked(publicKeyRoot, _withdrawalCredentials)),
-                sha256(abi.encodePacked(DEPOSIT_SIZE_IN_GWEI_LE64, bytes24(0), signatureRoot))
+                keccak256(abi.encodePacked(publicKeyRoot, _withdrawalCredentials)),
+                keccak256(abi.encodePacked(DEPOSIT_SIZE_IN_GWEI_LE64, bytes24(0), signatureRoot))
             )
         );
     }
