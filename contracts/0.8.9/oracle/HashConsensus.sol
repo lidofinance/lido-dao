@@ -351,7 +351,7 @@ contract HashConsensus is AccessControlEnumerable {
     /// indices (mod total members). The window advances by one index each reporting frame.
     ///
     /// @param fastLaneLengthSlots The length of the fast lane reporting interval in slots. Setting
-    ///        it to zero disables the fast lane subset, alloing any oracle to report starting from
+    ///        it to zero disables the fast lane subset, allowing any oracle to report starting from
     ///        the first slot of a frame and until the frame's reporting deadline.
     ///
     function setFastLaneLengthSlots(uint256 fastLaneLengthSlots)
