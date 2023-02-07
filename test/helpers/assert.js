@@ -55,10 +55,6 @@ chai.util.addMethod(chai.assert, 'notEquals', function (actual, expected, errorM
   this.notEqual(actual.toString(), expected.toString(), `${errorMsg || ""} expected ${expected.toString()} to not equal ${actual.toString()}`)
 })
 
-chai.util.addMethod(chai.assert, 'equals', function (actual, expected, errorMsg = '') {
-  this.equal(actual.toString(), expected.toString())
-})
-
 chai.util.addMethod(chai.assert, 'revertsWithCustomError', async function (receipt, reason) {
   try {
     await receipt

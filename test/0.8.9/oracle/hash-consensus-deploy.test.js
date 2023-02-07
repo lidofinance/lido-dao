@@ -38,6 +38,7 @@ async function deployHashConsensus(admin, {
   secondsPerSlot = SECONDS_PER_SLOT,
   genesisTime = GENESIS_TIME,
   epochsPerFrame = EPOCHS_PER_FRAME,
+  fastLaneLengthSlots = 0,
   initialEpoch = 1
 } = {}) {
   if (!reportProcessor) {
@@ -50,6 +51,7 @@ async function deployHashConsensus(admin, {
     genesisTime,
     epochsPerFrame,
     initialEpoch,
+    fastLaneLengthSlots,
     admin,
     reportProcessor.address,
     { from: admin }
@@ -59,7 +61,8 @@ async function deployHashConsensus(admin, {
 
   await consensus.grantRole(await consensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(), admin, { from: admin })
   await consensus.grantRole(await consensus.DISABLE_CONSENSUS_ROLE(), admin, { from: admin })
-  await consensus.grantRole(await consensus.MANAGE_INTERVAL_ROLE(), admin, { from: admin })
+  await consensus.grantRole(await consensus.MANAGE_FRAME_CONFIG_ROLE(), admin, { from: admin })
+  await consensus.grantRole(await consensus.MANAGE_FAST_LANE_CONFIG_ROLE(), admin, { from: admin })
   await consensus.grantRole(await consensus.MANAGE_REPORT_PROCESSOR_ROLE(), admin, { from: admin })
 
   return { reportProcessor, consensus }

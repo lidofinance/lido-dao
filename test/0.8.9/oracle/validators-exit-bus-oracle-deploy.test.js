@@ -80,6 +80,7 @@ async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
 
 async function deployExitBusOracle(admin, {
   dataSubmitter = null,
+  resumeAfterDeploy = false,
 } = {}) {
   const locator = await deployLocatorWithInvalidImplementation(admin)
 
@@ -101,8 +102,6 @@ async function deployExitBusOracle(admin, {
 
   const tx = await oracle.initialize(
     admin,
-    admin, // pauser
-    admin, // resumer
     consensus.address,
     CONSENSUS_VERSION,
     lastProcessedRefSlot,
@@ -135,18 +134,22 @@ async function deployExitBusOracle(admin, {
 
   assert.equal(+await oracle.DATA_FORMAT_LIST(), DATA_FORMAT_LIST)
 
+  if (resumeAfterDeploy) {
+    await oracle.resume({from: admin})
+  }
+
   return {consensus, oracle, locator}
 }
 
 
-contract('ValidatorsExitBusOracle', ([admin, member1]) => {
+contract.only('ValidatorsExitBusOracle', ([admin, member1]) => {
   let consensus
   let oracle
 
   context('Deployment and initial configuration', () => {
 
     it('deployment finishes successfully', async () => {
-      const deployed = await deployExitBusOracle(admin)
+      const deployed = await deployExitBusOracle(admin, {resumeAfterDeploy: false})
       consensus = deployed.consensus
       oracle = deployed.oracle
     })

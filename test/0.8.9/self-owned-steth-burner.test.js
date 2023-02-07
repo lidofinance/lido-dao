@@ -30,6 +30,7 @@ contract('SelfOwnedStETHBurner', ([deployer, _, anotherAccount]) => {
 
     // allow tx `handleOracleReport` from the Lido contract addr
     await ethers.provider.send('hardhat_impersonateAccount', [lido.address])
+    await ethers.provider.send('hardhat_impersonateAccount', [burner.address])
 
     snapshot = new EvmSnapshot(hre.ethers.provider)
     await snapshot.make()
@@ -480,6 +481,36 @@ contract('SelfOwnedStETHBurner', ([deployer, _, anotherAccount]) => {
       await web3.eth.sendTransaction({ from: voting, to: lido.address, value: ETH(10) })
       // check 10 stETH minted on balance
       assert.equals(await lido.balanceOf(voting), StETH(10))
+    })
+
+    it(`Only Lido can mark the excess stETH to be burnt`, async () => {
+      // 'accidentally` sent stETH from voting
+      await lido.transfer(burner.address, StETH(2.3), { from: voting })
+      const shares = await lido.getSharesByPooledEth(StETH(2.3))
+
+      // can't do from admin
+      await assert.revertsWithCustomError(
+        burner.markExcessStETHSharesForBurn(shares, { from: appManager }),
+        `ErrorAppAuthLidoFailed()`
+      )
+
+      // can't do from voting
+      await assert.revertsWithCustomError(
+        burner.markExcessStETHSharesForBurn(shares, { from: voting }),
+        `ErrorAppAuthLidoFailed()`
+      )
+
+      // can't re-enter
+      await assert.revertsWithCustomError(
+        burner.markExcessStETHSharesForBurn(shares, { from: burner.address }),
+        `ErrorAppAuthLidoFailed()`
+      )
+
+      assert.equals(await burner.getExcessStETH(), StETH(2.3))
+      const tx = await burner.markExcessStETHSharesForBurn(shares, { from: lido.address })
+
+      assert.emits(tx, 'ExcessStETHSharesMarkedForBurn', { 'amountOfShares': shares })
+      assert.equals(await burner.getExcessStETH(), StETH(0))
     })
 
     it(`can't recover requested for burn stETH`, async () => {

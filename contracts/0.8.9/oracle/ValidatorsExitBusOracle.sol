@@ -45,7 +45,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     );
 
     struct DataProcessingState {
-        uint256 lastProcessedItemWithoutPubkey;
         uint64 refSlot;
         uint64 requestsCount;
         uint64 requestsProcessed;
@@ -93,16 +92,12 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
 
     function initialize(
         address admin,
-        address pauser,
-        address resumer,
         address consensusContract,
         uint256 consensusVersion,
         uint256 lastProcessingRefSlot
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
-        _grantRole(PAUSE_ROLE, pauser);
-        _grantRole(RESUME_ROLE, resumer);
         _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
         RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(PAUSE_INFINITELY); // pause it explicitly
     }
@@ -304,10 +299,9 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             revert UnexpectedRequestsDataLength();
         }
 
-        uint256 lastProcessedItemWithoutPubkey = _processExitRequestsList(data.data);
+        _processExitRequestsList(data.data);
 
         _storageDataProcessingState().value = DataProcessingState({
-            lastProcessedItemWithoutPubkey: lastProcessedItemWithoutPubkey,
             refSlot: data.refSlot.toUint64(),
             requestsCount: data.requestsCount.toUint64(),
             requestsProcessed: data.requestsCount.toUint64(),
@@ -342,6 +336,8 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         assembly {
             pubkey.length := 48
         }
+
+        uint256 timestamp = _getTime();
 
         while (offset < offsetPastEnd) {
             uint256 dataWithoutPubkey;
@@ -381,7 +377,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             lastValIndex = valIndex;
             lastDataWithoutPubkey = dataWithoutPubkey;
 
-            emit ValidatorExitRequest(moduleId, nodeOpId, valIndex, pubkey, block.timestamp);
+            emit ValidatorExitRequest(moduleId, nodeOpId, valIndex, pubkey, timestamp);
         }
 
         if (lastNodeOpKey != 0) {

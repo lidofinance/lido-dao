@@ -9,7 +9,7 @@ contract PausableUntil {
     using UnstructuredStorage for bytes32;
 
     /// Contract resume/pause control storage slot
-    bytes32 public constant RESUME_SINCE_TIMESTAMP_POSITION = keccak256("lido.PausableUntil.resumeSinceTimestamp");
+    bytes32 internal constant RESUME_SINCE_TIMESTAMP_POSITION = keccak256("lido.PausableUntil.resumeSinceTimestamp");
     /// Special value for the infinite pause
     uint256 public constant PAUSE_INFINITELY = type(uint256).max;
 
