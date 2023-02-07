@@ -14,6 +14,7 @@ const {
   computeEpochFirstSlot, computeTimestampAtSlot, computeTimestampAtEpoch,
   ZERO_HASH, CONSENSUS_VERSION, DATA_FORMAT_LIST, getReportDataItems, calcReportDataHash,
   encodeExitRequestHex, encodeExitRequestsDataList, deployExitBusOracle,
+  deployOracleReportSanityCheckerForExitBus,
 } = require('./validators-exit-bus-oracle-deploy.test')
 
 
@@ -25,6 +26,7 @@ const PUBKEYS = [
   '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
 ]
 
+
 contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger]) => {
 
   context('Gas test', () => {
@@ -33,10 +35,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     let oracleVersion
 
     before(async () => {
-      const deployed = await deployExitBusOracle(admin, {
-        maxRequestsPerReport: 10000,
-        maxRequestsListLength: 10000,
-      })
+      const deployed = await deployExitBusOracle(admin)
       consensus = deployed.consensus
       oracle = deployed.oracle
 

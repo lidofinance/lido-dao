@@ -44,11 +44,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         uint256 requestsCount
     );
 
-    struct DataBoundaries {
-        uint64 maxRequestsPerReport;
-        uint64 maxRequestsListLength;
-    }
-
     struct DataProcessingState {
         uint256 lastProcessedItemWithoutPubkey;
         uint64 refSlot;
@@ -65,9 +60,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     /// @notice An ACL role granting the permission to submit the data for a committee report.
     bytes32 public constant SUBMIT_DATA_ROLE = keccak256("SUBMIT_DATA_ROLE");
 
-    /// @notice An ACL role granting the permission to set report data safety boundaries.
-    bytes32 public constant MANAGE_DATA_BOUNDARIES_ROLE = keccak256("MANAGE_DATA_BOUNDARIES_ROLE");
-
     /// @notice An ACL role granting the permission to pause accepting validator exit requests
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
 
@@ -82,10 +74,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     /// A mapping from the (moduleId, nodeOpId) packed key to the last requested validator index.
     bytes32 internal constant LAST_REQUESTED_VALIDATOR_INDICES_POSITION =
         keccak256("lido.ValidatorsExitBusOracle.lastRequestedValidatorIndices");
-
-    /// @dev Storage slot: DataBoundaries dataBoundaries
-    bytes32 internal constant DATA_BOUNDARIES_POSITION =
-        keccak256("lido.ValidatorsExitBusOracle.dataBoundaries");
 
     /// @dev Storage slot: DataProcessingState dataProcessingState
     bytes32 internal constant DATA_PROCESSING_STATE_POSITION =
@@ -109,11 +97,9 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         address resumer,
         address consensusContract,
         uint256 consensusVersion,
-        uint256 lastProcessingRefSlot,
-        address lidoLocator
+        uint256 lastProcessingRefSlot
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
-        if (lidoLocator == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(PAUSE_ROLE, pauser);
         _grantRole(RESUME_ROLE, resumer);
@@ -198,12 +184,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     /// Length in bytes of packed request
     uint256 internal constant PACKED_REQUEST_LENGTH = 64;
 
-    /// Max number of exit requests allowed per report. This is a technical limit
-    /// based on gas cost of call of submitReportData().
-    /// @dev The value might need be updated on submitReportData code update
-    // TODO: adjust the value
-    uint256 public constant MAX_EXIT_REQUESTS_PER_REPORT = 4000;
-
     /// @notice Submits report data for processing.
     ///
     /// @param data The data. See the `ReportData` structure's docs for details.
@@ -218,7 +198,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     /// - The processing deadline for the current consensus frame is missed.
     /// - The keccak256 hash of the ABI-encoded data is different from the last hash
     ///   provided by the hash consensus contract.
-    /// - The provided data doesn't meet safety checks and boundaries.
+    /// - The provided data doesn't meet safety checks.
     ///
     function submitReportData(ReportData calldata data, uint256 contractVersion)
         external whenResumed
@@ -423,15 +403,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         mapping(uint256 => RequestedValidator) storage r
     ) {
         bytes32 position = LAST_REQUESTED_VALIDATOR_INDICES_POSITION;
-        assembly { r.slot := position }
-    }
-
-    struct StorageDataBoundaries {
-        DataBoundaries value;
-    }
-
-    function _storageDataBoundaries() internal pure returns (StorageDataBoundaries storage r) {
-        bytes32 position = DATA_BOUNDARIES_POSITION;
         assembly { r.slot := position }
     }
 
