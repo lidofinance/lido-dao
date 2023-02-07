@@ -1,86 +1,53 @@
 const { ethers } = require('hardhat')
+const { DEFAULT_DEPLOY_PARAMS, DEAFAULT_FACTORIES } = require('./config')
+const { getFactory } = require('./factories')
 
 const { newDao } = require('./dao')
 
-const OssifiableProxy = artifacts.require('OssifiableProxy')
-
-const factories = require('./factories')
-const DEAFAULT_FACTORIES = {
-  appManagerFactory: factories.appManagerFactory,
-  treasuryFactory: factories.treasuryFactory,
-  votingFactory: factories.votingEOAFactory,
-  lidoFactory: factories.lidoMockFactory,
-  wstethFactory: factories.wstethFactory,
-  legacyOracleFactory: factories.legacyOracleMockFactory,
-  accountingOracleFactory: factories.accountingOracleFactory,
-  hashConsensusFactory: factories.hashConsensusTimeTravellableFactory,
-  reportProcessorFactory: factories.reportProcessorFactory,
-  depositContractFactory: factories.depositContractMockFactory,
-  stakingRouterFactory: factories.stakingRouterFactory,
-  depositSecurityModuleFactory: factories.depositSecurityModuleFactory,
-  elRewardsVaultFactory: factories.elRewardsVaultFactory,
-  withdrawalQueueFactory: factories.withdrawalQueueFactory,
-  withdrawalVaultFactory: factories.withdrawalVaultFactory,
-  eip712StETHFactory: factories.eip712StETHFactory,
-  withdrawalCredentialsFactory: factories.withdrawalCredentialsFactory,
-  stakingModulesFactory: factories.stakingModulesFactory,
-  guardiansFactory: factories.guardiansFactory,
-  lidoLocatorMockImplFactory: factories.lidoLocatorMockImplFactory,
-  selfOwnedStETHBurnerFactory: factories.selfOwnedStETHBurnerFactory,
-  postSetup: factories.postSetup,
-  lidoLocatorFactory: factories.lidoLocatorFactory
-}
-
-const getFactory = (config, factoryName) => {
-  return config[factoryName] ? config[factoryName] : DEAFAULT_FACTORIES[factoryName]
-}
-
-async function deployProtocol(config = {}) {
+async function deployProtocol(factories = {}, deployParams = {}) {
   const protocol = {}
-
+  protocol.deployParams = { ...DEFAULT_DEPLOY_PARAMS, ...deployParams }
+  protocol.factories = { ...DEAFAULT_FACTORIES, ...factories }
   protocol.signers = await ethers.getSigners()
-  protocol.appManager = await getFactory(config, 'appManagerFactory')(protocol)
-  protocol.treasury = await getFactory(config, 'treasuryFactory')(protocol)
-  protocol.voting = await getFactory(config, 'votingFactory')(protocol)
 
-  protocol.guardians = await getFactory(config, 'guardiansFactory')(protocol)
+  // accounts
+  protocol.appManager = await getFactory(factories, 'appManagerFactory')(protocol)
+  protocol.treasury = await getFactory(factories, 'treasuryFactory')(protocol)
+  protocol.voting = await getFactory(factories, 'votingFactory')(protocol)
+  protocol.guardians = await getFactory(factories, 'guardiansFactory')(protocol)
 
+  // TODO: pass through params
   const { dao, acl } = await newDao(protocol.appManager.address)
   protocol.dao = dao
   protocol.acl = acl
 
-  protocol.pool = await getFactory(config, 'lidoFactory')(protocol)
+  protocol.pool = await getFactory(factories, 'lidoFactory')(protocol)
   protocol.token = protocol.pool
 
-  protocol.wsteth = await getFactory(config, 'wstethFactory')(protocol)
-  protocol.legacyOracle = await getFactory(config, 'legacyOracleFactory')(protocol)
+  protocol.wsteth = await getFactory(factories, 'wstethFactory')(protocol)
+  protocol.legacyOracle = await getFactory(factories, 'legacyOracleFactory')(protocol)
 
-  protocol.reportProcessor = await getFactory(config, 'reportProcessorFactory')(protocol)
-  protocol.consensusContract = await getFactory(config, 'hashConsensusFactory')(protocol)
+  protocol.reportProcessor = await getFactory(factories, 'reportProcessorFactory')(protocol)
+  protocol.consensusContract = await getFactory(factories, 'hashConsensusFactory')(protocol)
 
-  protocol.depositContract = await getFactory(config, 'depositContractFactory')(protocol)
+  protocol.depositContract = await getFactory(factories, 'depositContractFactory')(protocol)
 
-  protocol.withdrawalCredentials = await getFactory(config, 'withdrawalCredentialsFactory')(protocol)
-  protocol.stakingRouter = await getFactory(config, 'stakingRouterFactory')(protocol)
-  const stakingModulesFactory = getFactory(config, 'stakingModulesFactory')
-  protocol.stakingModules = await addStakingModules(stakingModulesFactory, protocol)
+  protocol.withdrawalCredentials = await getFactory(factories, 'withdrawalCredentialsFactory')(protocol)
+  protocol.stakingRouter = await getFactory(factories, 'stakingRouterFactory')(protocol)
 
-  protocol.depositSecurityModule = await getFactory(config, 'depositSecurityModuleFactory')(protocol)
-  protocol.elRewardsVault = await getFactory(config, 'elRewardsVaultFactory')(protocol)
-  protocol.withdrawalVault = await getFactory(config, 'withdrawalVaultFactory')(protocol)
-  protocol.eip712StETH = await getFactory(config, 'eip712StETHFactory')(protocol)
-  protocol.selfOwnedStETHBurner = await getFactory(config, 'selfOwnedStETHBurnerFactory')(protocol)
+  protocol.stakingModules = await addStakingModules(getFactory(factories, 'stakingModulesFactory'), protocol)
 
-  protocol.lidoLocator = await getFactory(config, 'lidoLocatorFactory')(protocol)
-  protocol.oracle = await getFactory(config, 'accountingOracleFactory')(protocol)
-  protocol.withdrawalQueue = await getFactory(config, 'withdrawalQueueFactory')(protocol)
-  await upgradeOssifiableProxy(
-    protocol.lidoLocator.address,
-    (await getFactory(config, 'lidoLocatorMockImplFactory')(protocol)).address,
-    protocol.appManager.address
-  )
+  protocol.depositSecurityModule = await getFactory(factories, 'depositSecurityModuleFactory')(protocol)
+  protocol.elRewardsVault = await getFactory(factories, 'elRewardsVaultFactory')(protocol)
+  protocol.withdrawalVault = await getFactory(factories, 'withdrawalVaultFactory')(protocol)
+  protocol.eip712StETH = await getFactory(factories, 'eip712StETHFactory')(protocol)
+  protocol.selfOwnedStETHBurner = await getFactory(factories, 'selfOwnedStETHBurnerFactory')(protocol)
 
-  await getFactory(config, 'postSetup')(protocol)
+  protocol.lidoLocator = await getFactory(factories, 'lidoLocatorFactory')(protocol)
+  protocol.oracle = await getFactory(factories, 'accountingOracleFactory')(protocol)
+  protocol.withdrawalQueue = await getFactory(factories, 'withdrawalQueueFactory')(protocol)
+
+  await getFactory(factories, 'postSetup')(protocol)
 
   return protocol
 }
@@ -100,12 +67,6 @@ async function addStakingModules(stakingModulesFactory, protocol) {
   }
 
   return stakingModules.map(({ module }) => module)
-}
-
-async function upgradeOssifiableProxy(proxyAddress, newImplemantation, proxyOwner) {
-  const proxy = await OssifiableProxy.at(proxyAddress)
-
-  await proxy.proxy__upgradeTo(newImplemantation, { from: proxyOwner })
 }
 
 module.exports = {

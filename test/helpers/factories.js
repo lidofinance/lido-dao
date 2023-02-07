@@ -3,13 +3,14 @@ const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const withdrawals = require('./withdrawals')
 const { newApp } = require('./dao')
 const { artifacts } = require('hardhat')
+const { DEAFAULT_FACTORIES } = require('./config')
 
 const {
   SLOTS_PER_EPOCH,
   SECONDS_PER_SLOT,
-  SECONDS_PER_EPOCH,
   EPOCHS_PER_FRAME,
-  CONSENSUS_VERSION
+  CONSENSUS_VERSION,
+  SECONDS_PER_FRAME
 } = require('./constants')
 
 const OssifiableProxy = artifacts.require('OssifiableProxy')
@@ -32,24 +33,11 @@ const DepositSecurityModule = artifacts.require('DepositSecurityModule')
 const EIP712StETH = artifacts.require('EIP712StETH')
 const LidoLocatorMock = artifacts.require('LidoLocatorMock')
 const SelfOwnedStETHBurner = artifacts.require('SelfOwnedStETHBurner')
+const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
 
-const MAX_DEPOSITS_PER_BLOCK = 100
-const MIN_DEPOSIT_BLOCK_DISTANCE = 20
-const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 10
-const GUARDIAN1 = '0x5Fc0E75BF6502009943590492B02A1d08EAc9C43'
-const GUARDIAN2 = '0x8516Cbb5ABe73D775bfc0d21Af226e229F7181A3'
-const GUARDIAN3 = '0xdaEAd0E0194abd565d28c1013399801d79627c14'
-const GUARDIAN_PRIVATE_KEYS = {
-  [GUARDIAN1]: '0x3578665169e03e05a26bd5c565ffd12c81a1e0df7d0679f8aee4153110a83c8c',
-  [GUARDIAN2]: '0x88868f0fb667cfe50261bb385be8987e0ce62faee934af33c3026cf65f25f09e',
-  [GUARDIAN3]: '0x75e6f508b637327debc90962cd38943ddb9cfc1fc4a8572fc5e3d0984e1261de'
+function getFactory(config, factoryName) {
+  return config[factoryName] ? config[factoryName] : DEAFAULT_FACTORIES[factoryName]
 }
-const DEPOSIT_ROOT = '0xd151867719c94ad8458feaf491809f9bc8096c702a72747403ecaac30c179137'
-
-const GENESIS_TIME = ~~(+new Date() / 1000)
-const LAST_COMPLETED_EPOCH = 1
-const V1_ORACLE_LAST_COMPLETED_EPOCH = 2 * EPOCHS_PER_FRAME
-const V1_ORACLE_LAST_REPORT_SLOT = V1_ORACLE_LAST_COMPLETED_EPOCH * SLOTS_PER_EPOCH
 
 async function lidoMockFactory({ dao, appManager, acl, voting }) {
   const base = await LidoMock.new()
@@ -110,7 +98,7 @@ async function legacyOracleFactory({ appManager }) {
   return await LidoOracle.at(proxy.address)
 }
 
-async function legacyOracleMockFactory({ appManager, dao }) {
+async function legacyOracleMockFactory({ appManager, dao, deployParams }) {
   const base = await MockLegacyOracle.new()
 
   const proxyAddress = await newApp(dao, 'lido-legacy-oracle', base.address, appManager.address)
@@ -121,23 +109,23 @@ async function legacyOracleMockFactory({ appManager, dao }) {
     EPOCHS_PER_FRAME,
     SLOTS_PER_EPOCH,
     SECONDS_PER_SLOT,
-    GENESIS_TIME,
-    V1_ORACLE_LAST_COMPLETED_EPOCH
+    deployParams.genesisTime,
+    deployParams.v1OracleLastCompletedEpoch
   )
 
   return oracle
 }
 
-async function reportProcessorFactory(_) {
+async function reportProcessorMockFactory(_) {
   return await MockReportProcessor.new(CONSENSUS_VERSION)
 }
 
-async function hashConsensusFactory({ voting, reportProcessor, signers, legacyOracle }) {
+async function hashConsensusFactory({ voting, reportProcessor, signers, legacyOracle, deployParams }) {
   const initialEpoch = (await legacyOracle.getLastCompletedEpochId()) + EPOCHS_PER_FRAME
   const consensus = await HashConsensus.new(
     SLOTS_PER_EPOCH,
     SECONDS_PER_SLOT,
-    GENESIS_TIME,
+    deployParams.genesisTime,
     EPOCHS_PER_FRAME,
     initialEpoch,
     voting.address,
@@ -156,12 +144,12 @@ async function hashConsensusFactory({ voting, reportProcessor, signers, legacyOr
   return consensus
 }
 
-async function hashConsensusTimeTravellableFactory({ legacyOracle, voting, reportProcessor, signers }) {
+async function hashConsensusTimeTravellableFactory({ legacyOracle, voting, reportProcessor, signers, deployParams }) {
   const initialEpoch = +(await legacyOracle.getLastCompletedEpochId()) + EPOCHS_PER_FRAME
   const consensus = await HashConsensusTimeTravellable.new(
     SLOTS_PER_EPOCH,
     SECONDS_PER_SLOT,
-    GENESIS_TIME,
+    deployParams.genesisTime,
     EPOCHS_PER_FRAME,
     initialEpoch,
     voting.address,
@@ -176,13 +164,13 @@ async function hashConsensusTimeTravellableFactory({ legacyOracle, voting, repor
   await consensus.addMember(signers[2].address, 1, { from: voting.address })
   await consensus.addMember(signers[3].address, 2, { from: voting.address })
   await consensus.addMember(signers[4].address, 2, { from: voting.address })
-  await consensus.setTime(GENESIS_TIME + initialEpoch * SLOTS_PER_EPOCH * SECONDS_PER_SLOT)
+  await consensus.setTime(deployParams.genesisTime + initialEpoch * SLOTS_PER_EPOCH * SECONDS_PER_SLOT)
 
   return consensus
 }
 
-async function accountingOracleFactory({ voting, pool, lidoLocator, consensusContract, legacyOracle }) {
-  const base = await AccountingOracle.new(lidoLocator.address, SECONDS_PER_SLOT, GENESIS_TIME)
+async function accountingOracleFactory({ voting, pool, lidoLocator, consensusContract, legacyOracle, deployParams }) {
+  const base = await AccountingOracle.new(lidoLocator.address, SECONDS_PER_SLOT, deployParams.genesisTime)
   const proxy = await OssifiableProxy.new(base.address, voting.address, '0x')
   const oracle = await AccountingOracle.at(proxy.address)
 
@@ -238,17 +226,28 @@ async function stakingRouterFactory({ depositContract, dao, appManager, voting, 
   return stakingRouter
 }
 
-async function depositSecurityModuleFactory({ pool, depositContract, stakingRouter, appManager }) {
+async function depositSecurityModuleFactory({
+  pool,
+  depositContract,
+  stakingRouter,
+  appManager,
+  deployParams,
+  guardians
+}) {
   const depositSecurityModule = await DepositSecurityModule.new(
     pool.address,
     depositContract.address,
     stakingRouter.address,
-    MAX_DEPOSITS_PER_BLOCK,
-    MIN_DEPOSIT_BLOCK_DISTANCE,
-    PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS,
+    deployParams.maxDepositsPerBlock,
+    deployParams.minDepositBlockDistance,
+    deployParams.pauseIntentValidityPeriodBlocks,
     { from: appManager.address }
   )
-  await depositSecurityModule.addGuardians([GUARDIAN3, GUARDIAN1, GUARDIAN2], 2, { from: appManager.address })
+  await depositSecurityModule.addGuardians(
+    guardians.map(({ address }) => address),
+    2,
+    { from: appManager.address }
+  )
 
   return depositSecurityModule
 }
@@ -281,10 +280,10 @@ async function stakingModulesFactory(_) {
   return []
 }
 
-async function guardiansFactory(_) {
+async function guardiansFactory({ deployParams }) {
   return {
-    privateKeys: GUARDIAN_PRIVATE_KEYS,
-    addresses: [GUARDIAN1, GUARDIAN2, GUARDIAN3]
+    privateKeys: deployParams.guardians,
+    addresses: deployParams.guardians.keys()
   }
 }
 
@@ -302,6 +301,20 @@ async function selfOwnedStETHBurnerFactory({ appManager, treasury, pool, voting 
   return burner
 }
 
+async function oracleReportSanityCheckerFactory({ lidoLocator, appManager, deployParams }) {
+  return OracleReportSanityChecker.new(
+    lidoLocator,
+    SECONDS_PER_FRAME,
+    appManager.address,
+    deployParams.oracleReportSanityCheckerLimitsList,
+    deployParams.oracleReportSanityCheckerManagersRoster
+  )
+}
+
+async function validatorExitBus(protocol) {
+  
+}
+
 async function lidoLocatorFactory(protocol) {
   const base = await lidoLocatorMockImplFactory(protocol)
   return await OssifiableProxy.new(base.address, protocol.appManager.address, '0x')
@@ -309,33 +322,52 @@ async function lidoLocatorFactory(protocol) {
 
 async function lidoLocatorMockImplFactory(protocol) {
   return LidoLocatorMock.new({
-    lido: protocol.pool.address,
-    depositSecurityModule: protocol.depositSecurityModule.address,
-    elRewardsVault: protocol.elRewardsVault.address,
+    lido: protocol.pool ? protocol.pool.address : ZERO_ADDRESS,
+    depositSecurityModule: protocol.depositSecurityModule ? protocol.depositSecurityModule.address : ZERO_ADDRESS,
+    elRewardsVault: protocol.elRewardsVault ? protocol.elRewardsVault.address : ZERO_ADDRESS,
     accountingOracle: protocol.oracle ? protocol.oracle.address : ZERO_ADDRESS,
-    legacyOracle: protocol.legacyOracle.address,
-    oracleReportSanityChecker: ZERO_ADDRESS,
-    selfOwnedStEthBurner: protocol.selfOwnedStETHBurner.address,
-    validatorExitBus: ZERO_ADDRESS,
-    stakingRouter: protocol.stakingRouter.address,
-    treasury: protocol.treasury.address,
+    legacyOracle: protocol.legacyOracle ? protocol.legacyOracle.address : ZERO_ADDRESS,
+    oracleReportSanityChecker: protocol.oracleReportSanityChecker
+      ? protocol.oracleReportSanityChecker.address
+      : ZERO_ADDRESS,
+    selfOwnedStEthBurner: protocol.selfOwnedStETHBurner ? protocol.selfOwnedStETHBurner.address : ZERO_ADDRESS,
+    validatorExitBus: protocol.validatorExitBus ? protocol.validatorExitBus.address : ZERO_ADDRESS,
+    stakingRouter: protocol.stakingRouter ? protocol.stakingRouter.address : ZERO_ADDRESS,
+    treasury: protocol.treasury ? protocol.treasury.address : ZERO_ADDRESS,
     withdrawalQueue: protocol.withdrawalQueue ? protocol.withdrawalQueue.address : ZERO_ADDRESS,
-    withdrawalVault: protocol.withdrawalVault.address,
-    postTokenRebaseReceiver: protocol.legacyOracle.address
+    withdrawalVault: protocol.withdrawalVault ? protocol.withdrawalVault.address : ZERO_ADDRESS,
+    postTokenRebaseReceiver: protocol.legacyOracle ? protocol.legacyOracle.address : ZERO_ADDRESS
   })
 }
 
-async function postSetup({ pool, lidoLocator, eip712StETH, depositContract, withdrawalQueue, appManager, voting }) {
+async function postSetup(protocol) {
+  const { pool, lidoLocator, eip712StETH, depositContract, withdrawalQueue, appManager, voting } = protocol
+
+  await upgradeOssifiableProxy(
+    lidoLocator.address,
+    (
+      await getFactory(protocol.factories, 'lidoLocatorImplFactory')(protocol)
+    ).address,
+    appManager.address
+  )
+
   await pool.initialize(lidoLocator.address, eip712StETH.address)
 
-  // await oracle.setPool(pool.address)
   await depositContract.reset()
   await depositContract.set_deposit_root(DEPOSIT_ROOT)
   await withdrawalQueue.updateBunkerMode(false, 0, { from: appManager.address })
   await pool.resumeProtocolAndStaking({ from: voting.address })
 }
 
+async function upgradeOssifiableProxy(proxyAddress, newImplemantation, proxyOwner) {
+  const proxy = await OssifiableProxy.at(proxyAddress)
+
+  await proxy.proxy__upgradeTo(newImplemantation, { from: proxyOwner })
+}
+
 module.exports = {
+  getFactory,
+  upgradeOssifiableProxy,
   appManagerFactory,
   treasuryFactory,
   votingEOAFactory,
@@ -360,6 +392,8 @@ module.exports = {
   legacyOracleMockFactory,
   hashConsensusFactory,
   hashConsensusTimeTravellableFactory,
-  reportProcessorFactory,
-  lidoLocatorFactory
+  reportProcessorMockFactory,
+  lidoLocatorFactory,
+  oracleReportSanityCheckerFactory,
+  validatorExitBus
 }
