@@ -45,6 +45,7 @@ contract ResizableArrayTest {
 
     function test_length_cannot_be_obtained_from_an_uninitialized_representation() external {
         RA.Array memory arr;
+        // solhint-disable-next-line
         uint256 len = arr.length();
         revert RevertExpected();
     }
@@ -52,6 +53,7 @@ contract ResizableArrayTest {
 
     function test_pointer_cannot_be_obtained_from_an_uninitialized_representation() external {
         RA.Array memory arr;
+        // solhint-disable-next-line
         uint256[] memory result = arr.pointer();
         revert RevertExpected();
     }
@@ -106,18 +108,21 @@ contract ResizableArrayTest {
 
 
     function test_preallocate_reverts_when_called_with_zero_size() external {
+        // solhint-disable-next-line
         RA.Array memory arr = RA.preallocate(0, 200, 10);
         revert RevertExpected();
     }
 
 
     function test_preallocate_reverts_when_called_with_growth_factor_0() external {
+        // solhint-disable-next-line
         RA.Array memory arr = RA.preallocate(1, 0, 10);
         revert RevertExpected();
     }
 
 
     function test_preallocate_reverts_when_called_with_growth_factor_100() external {
+        // solhint-disable-next-line
         RA.Array memory arr = RA.preallocate(1, 100, 10);
         revert RevertExpected();
     }
