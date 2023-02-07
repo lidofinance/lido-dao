@@ -14,6 +14,10 @@ import { MemUtils } from "../../common/lib/MemUtils.sol";
 /// pre-allocated memory growth factor and maximum one-time increase.
 ///
 library ResizableArray {
+    error PrealloctedLengthCannotBeZero();
+    error GrowthFactorShouldBeMoreThan100();
+    error ArrayIsEmpty();
+    error CannotTrimMoreThanLength();
 
     /// @notice A struct holding the array internal representation. Don't mutate the contents
     /// of this struct directly, use the functions below instead.
@@ -62,8 +66,8 @@ library ResizableArray {
     function preallocate(uint256 preallocLen, uint256 growthFactor, uint256 maxGrowth)
         internal pure returns (Array memory)
     {
-        require(preallocLen > 0);
-        require(growthFactor > 100);
+        if (preallocLen == 0) revert PrealloctedLengthCannotBeZero();
+        if (growthFactor <= 100) revert GrowthFactorShouldBeMoreThan100();
 
         Array memory result;
 
@@ -158,9 +162,13 @@ library ResizableArray {
     ///
     function pop(Array memory self) internal pure returns (uint256 result) {
         uint256 memPtr = self._memPtr;
-        uint256 newLen = length(self) - 1;
+        uint256 prevLen = length(self);
+        if (prevLen == 0) {
+            revert ArrayIsEmpty();
+        }
         /// @solidity memory-safe-assembly
         assembly {
+            let newLen := sub(prevLen, 1)
             let itemLoc := add(memPtr, add(32, mul(newLen, 32)))
             result := mload(itemLoc)
             mstore(memPtr, newLen)
@@ -173,10 +181,13 @@ library ResizableArray {
     ///
     function trim(Array memory self, uint256 trimBy) internal pure {
         uint256 memPtr = self._memPtr;
-        uint256 newLen = length(self) - trimBy;
+        uint256 prevLen = length(self);
+        if (prevLen < trimBy) {
+            revert CannotTrimMoreThanLength();
+        }
         /// @solidity memory-safe-assembly
         assembly {
-            mstore(memPtr, newLen)
+            mstore(memPtr, sub(prevLen, trimBy))
         }
     }
 
