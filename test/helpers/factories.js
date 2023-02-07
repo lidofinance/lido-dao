@@ -156,7 +156,13 @@ async function hashConsensusFactory({ voting, reportProcessor, signers, legacyOr
   return consensus
 }
 
-async function hashConsensusTimeTravellableFactory({ legacyOracle, voting, reportProcessor, signers }) {
+async function hashConsensusTimeTravellableFactory({
+  legacyOracle,
+  voting,
+  reportProcessor,
+  signers,
+  fastLaneLengthSlots = 0
+}) {
   const initialEpoch = +(await legacyOracle.getLastCompletedEpochId()) + EPOCHS_PER_FRAME
   const consensus = await HashConsensusTimeTravellable.new(
     SLOTS_PER_EPOCH,
@@ -164,13 +170,14 @@ async function hashConsensusTimeTravellableFactory({ legacyOracle, voting, repor
     GENESIS_TIME,
     EPOCHS_PER_FRAME,
     initialEpoch,
+    fastLaneLengthSlots,
     voting.address,
     reportProcessor.address
   )
 
   await consensus.grantRole(await consensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(), voting.address, { from: voting.address })
   await consensus.grantRole(await consensus.DISABLE_CONSENSUS_ROLE(), voting.address, { from: voting.address })
-  await consensus.grantRole(await consensus.MANAGE_INTERVAL_ROLE(), voting.address, { from: voting.address })
+  await consensus.grantRole(await consensus.MANAGE_FRAME_CONFIG_ROLE(), voting.address, { from: voting.address })
   await consensus.grantRole(await consensus.MANAGE_REPORT_PROCESSOR_ROLE(), voting.address, { from: voting.address })
 
   await consensus.addMember(signers[2].address, 1, { from: voting.address })
@@ -181,8 +188,8 @@ async function hashConsensusTimeTravellableFactory({ legacyOracle, voting, repor
   return consensus
 }
 
-async function accountingOracleFactory({ voting, pool, consensusContract, legacyOracle }) {
-  const base = await AccountingOracle.new(pool.address, SECONDS_PER_SLOT, GENESIS_TIME)
+async function accountingOracleFactory({ voting, pool, lidoLocator, consensusContract, legacyOracle }) {
+  const base = await AccountingOracle.new(lidoLocator.address, SECONDS_PER_SLOT, GENESIS_TIME)
   const proxy = await OssifiableProxy.new(base.address, voting.address, '0x')
   const oracle = await AccountingOracle.at(proxy.address)
 
@@ -257,13 +264,14 @@ async function elRewardsVaultFactory({ pool, treasury }) {
   return await LidoExecutionLayerRewardsVault.new(pool.address, treasury.address)
 }
 
-async function withdrawalQueueFactory({ appManager, wsteth }) {
+async function withdrawalQueueFactory({ appManager, oracle, wsteth }) {
   const withdrawalQueue = (await withdrawals.deploy(appManager.address, wsteth.address)).queue
 
   await withdrawalQueue.initialize(appManager.address, appManager.address, appManager.address, appManager.address)
 
   const BUNKER_MODE_REPORT_ROLE = await withdrawalQueue.BUNKER_MODE_REPORT_ROLE()
   await withdrawalQueue.grantRole(BUNKER_MODE_REPORT_ROLE, appManager.address, { from: appManager.address })
+  await withdrawalQueue.grantRole(BUNKER_MODE_REPORT_ROLE, oracle.address, { from: appManager.address })
 
   return withdrawalQueue
 }
@@ -301,19 +309,24 @@ async function selfOwnedStETHBurnerFactory({ appManager, treasury, pool, voting 
   return burner
 }
 
-async function lidoLocatorMockFactory(protocol) {
+async function lidoLocatorFactory(protocol) {
+  const base = await lidoLocatorMockImplFactory(protocol)
+  return await OssifiableProxy.new(base.address, protocol.appManager.address, '0x')
+}
+
+async function lidoLocatorMockImplFactory(protocol) {
   return LidoLocatorMock.new({
     lido: protocol.pool.address,
     depositSecurityModule: protocol.depositSecurityModule.address,
     elRewardsVault: protocol.elRewardsVault.address,
-    accountingOracle: protocol.oracle.address,
+    accountingOracle: protocol.oracle ? protocol.oracle.address : ZERO_ADDRESS,
     legacyOracle: protocol.legacyOracle.address,
-    safetyNetsRegistry: ZERO_ADDRESS,
+    oracleReportSanityChecker: ZERO_ADDRESS,
     selfOwnedStEthBurner: protocol.selfOwnedStETHBurner.address,
     validatorExitBus: ZERO_ADDRESS,
     stakingRouter: protocol.stakingRouter.address,
     treasury: protocol.treasury.address,
-    withdrawalQueue: protocol.withdrawalQueue.address,
+    withdrawalQueue: protocol.withdrawalQueue ? protocol.withdrawalQueue.address : ZERO_ADDRESS,
     withdrawalVault: protocol.withdrawalVault.address,
     postTokenRebaseReceiver: protocol.legacyOracle.address
   })
@@ -347,12 +360,13 @@ module.exports = {
   withdrawalCredentialsFactory,
   stakingModulesFactory,
   guardiansFactory,
-  lidoLocatorMockFactory,
+  lidoLocatorMockImplFactory,
   selfOwnedStETHBurnerFactory,
   postSetup,
   legacyOracleFactory,
   legacyOracleMockFactory,
   hashConsensusFactory,
   hashConsensusTimeTravellableFactory,
-  reportProcessorFactory
+  reportProcessorFactory,
+  lidoLocatorFactory
 }

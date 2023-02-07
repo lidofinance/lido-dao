@@ -20,23 +20,22 @@ import {Math256} from "../../common/lib/Math256.sol";
  * - total shares changes (coverage application)
  */
 
-library LimiterState {
-    /**
-      * @dev Internal limiter representation struct (storing in memory)
-      */
-    struct Data {
-        uint256 totalPooledEther;  // total pooled ether pre-rebase
-        uint256 totalShares;       // total shares before pre-rebase
-        uint256 rebaseLimit;       // positive rebase limit (target value)
-        uint256 accumulatedRebase; // accumulated rebase (previous value)
-    }
+
+/**
+  * @dev Internal limiter representation struct (storing in memory)
+  */
+struct TokenRebaseLimiterData {
+    uint256 totalPooledEther;  // total pooled ether pre-rebase
+    uint256 totalShares;       // total shares before pre-rebase
+    uint256 rebaseLimit;       // positive rebase limit (target value)
+    uint256 accumulatedRebase; // accumulated rebase (previous value)
 }
 
 library PositiveTokenRebaseLimiter {
     /// @dev Precision base for the limiter (e.g.: 1e6 - 0.1%; 1e9 - 100%)
-    uint256 private constant LIMITER_PRECISION_BASE = 10**9;
+    uint256 public constant LIMITER_PRECISION_BASE = 10**9;
     /// @dev Disabled limit
-    uint256 private constant UNLIMITED_REBASE = type(uint64).max;
+    uint256 public constant UNLIMITED_REBASE = type(uint64).max;
 
     /**
       * @dev Initialize the new `LimiterState` structure instance
@@ -49,9 +48,9 @@ library PositiveTokenRebaseLimiter {
         uint256 _rebaseLimit,
         uint256 _totalPooledEther,
         uint256 _totalShares
-    ) internal pure returns (LimiterState.Data memory limiterState) {
-        require(_rebaseLimit > 0, "TOO_LOW_TOKEN_REBASE_MAX");
-        require(_rebaseLimit <= UNLIMITED_REBASE, "WRONG_REBASE_LIMIT");
+    ) internal pure returns (TokenRebaseLimiterData memory limiterState) {
+        if(_rebaseLimit == 0) revert TooLowTokenRebaseLimit();
+        if(_rebaseLimit > UNLIMITED_REBASE) revert TooHighTokenRebaseLimit();
 
         limiterState.totalPooledEther = _totalPooledEther;
         limiterState.totalShares = _totalShares;
@@ -63,7 +62,7 @@ library PositiveTokenRebaseLimiter {
      * @param _limiterState limit repr struct
      * @return true if limit is reached
      */
-    function isLimitReached(LimiterState.Data memory _limiterState) internal pure returns (bool) {
+    function isLimitReached(TokenRebaseLimiterData memory _limiterState) internal pure returns (bool) {
         return _limiterState.accumulatedRebase == _limiterState.rebaseLimit;
     }
 
@@ -71,10 +70,14 @@ library PositiveTokenRebaseLimiter {
      * @notice raise limit using the given amount of ether
      * @param _limiterState limit repr struct
      */
-    function raiseLimit(LimiterState.Data memory _limiterState, uint256 _etherAmount) internal pure {
+    function raiseLimit(TokenRebaseLimiterData memory _limiterState, uint256 _etherAmount) internal pure {
         if(_limiterState.rebaseLimit == UNLIMITED_REBASE) { return; }
 
-        _limiterState.rebaseLimit += (_etherAmount * LIMITER_PRECISION_BASE) / _limiterState.totalPooledEther;
+        uint256 projectedLimit = _limiterState.rebaseLimit + (
+            _etherAmount * LIMITER_PRECISION_BASE
+        ) / _limiterState.totalPooledEther;
+
+        _limiterState.rebaseLimit = Math256.min(projectedLimit, UNLIMITED_REBASE);
     }
 
     /**
@@ -83,7 +86,7 @@ library PositiveTokenRebaseLimiter {
      * @param _etherAmount desired ether addition
      * @return consumedEther allowed to add ether to not exceed the limit
      */
-    function consumeLimit(LimiterState.Data memory _limiterState, uint256 _etherAmount)
+    function consumeLimit(TokenRebaseLimiterData memory _limiterState, uint256 _etherAmount)
         internal
         pure
         returns (uint256 consumedEther)
@@ -109,7 +112,7 @@ library PositiveTokenRebaseLimiter {
      * @param _limiterState limit repr struct
      * @return maxSharesToBurn allowed to deduct shares to not exceed the limit
      */
-    function getSharesToBurnLimit(LimiterState.Data memory _limiterState)
+    function getSharesToBurnLimit(TokenRebaseLimiterData memory _limiterState)
         internal
         pure
         returns (uint256 maxSharesToBurn)
@@ -122,7 +125,6 @@ library PositiveTokenRebaseLimiter {
         ) / (LIMITER_PRECISION_BASE + remainingRebase);
     }
 
-    function getLimiterPrecisionBase() internal pure returns (uint256) {
-        return LIMITER_PRECISION_BASE;
-    }
+    error TooLowTokenRebaseLimit();
+    error TooHighTokenRebaseLimit();
 }

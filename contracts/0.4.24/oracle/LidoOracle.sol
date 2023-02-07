@@ -14,8 +14,6 @@ interface INewOracle {
 
 
 interface IHashConsensus {
-    function getQuorum() external view returns (uint256);
-
     function getChainConfig() external view returns (
         uint256 slotsPerEpoch,
         uint256 secondsPerSlot,
@@ -141,15 +139,6 @@ contract LidoOracle is AragonApp {
     /**
      * @notice DEPRECATED, kept for compatibility purposes only.
      *
-     * Returns the number of exactly the same reports needed to finalize the reporting frame.
-     */
-    function getQuorum() external view returns (uint256) {
-        return _getNewConsensusContract().getQuorum();
-    }
-
-    /**
-     * @notice DEPRECATED, kept for compatibility purposes only.
-     *
      * Returns the Ethereum chain specification.
      */
     function getBeaconSpec()
@@ -214,7 +203,7 @@ contract LidoOracle is AragonApp {
      * The change of the protocol TVL that the last rebase resulted in. Notice that, during
      * a rebase, stETH shares can be minted to distribute protocol fees and burnt to apply
      * cover for losses incurred by slashed or unresponsive validators. A rebase might be
-     * trggered without changing the protocol TVL. Thus, it's impossible to correctly
+     * triggered without changing the protocol TVL. Thus, it's impossible to correctly
      * calculate APR from the numbers returned by this function.
      *
      * See docs.lido.fi for the correct way of onchain and offchain APR calculation.

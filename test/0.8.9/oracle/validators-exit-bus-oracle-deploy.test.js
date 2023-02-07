@@ -72,6 +72,7 @@ async function deployExitBusOracle(admin, {
   maxRequestsListLength = MAX_REQUESTS_LIST_LENGTH,
   rateLimitWindowSlots = RATE_LIMIT_WINDOW_SLOTS,
   rateLimitMaxThroughput = RATE_LIMIT_THROUGHPUT,
+  resumeAfterDeploy = true,
 } = {}) {
   const oracle = await ValidatorsExitBusOracle.new(SECONDS_PER_SLOT, GENESIS_TIME, {from: admin})
 
@@ -120,12 +121,18 @@ async function deployExitBusOracle(admin, {
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), admin, {from: admin})
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), admin, {from: admin})
   await oracle.grantRole(await oracle.MANAGE_DATA_BOUNDARIES_ROLE(), admin, {from: admin})
+  await oracle.grantRole(await oracle.PAUSE_ROLE(), admin, {from: admin})
+  await oracle.grantRole(await oracle.RESUME_ROLE(), admin, {from: admin})
 
   if (dataSubmitter != null) {
     await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), dataSubmitter, {from: admin})
   }
 
   assert.equal(+await oracle.DATA_FORMAT_LIST(), DATA_FORMAT_LIST)
+
+  if (resumeAfterDeploy) {
+    await oracle.resume({from: admin})
+  }
 
   return {consensus, oracle}
 }
@@ -138,7 +145,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1]) => {
   context('Deployment and initial configuration', () => {
 
     it('deployment finishes successfully', async () => {
-      const deployed = await deployExitBusOracle(admin)
+      const deployed = await deployExitBusOracle(admin, {resumeAfterDeploy: false})
       consensus = deployed.consensus
       oracle = deployed.oracle
     })
@@ -158,6 +165,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1]) => {
       assert.equal(await oracle.getConsensusContract(), consensus.address)
       assert.equal(+await oracle.getConsensusVersion(), CONSENSUS_VERSION)
       assert.equal(+await oracle.SECONDS_PER_SLOT(), SECONDS_PER_SLOT)
+      assert.equal(await oracle.isPaused(), true)
 
       const dataBoundaries = await oracle.getDataBoundaries()
       assertBn(dataBoundaries.maxExitRequestsPerReport, MAX_REQUESTS_PER_REPORT)

@@ -15,6 +15,7 @@ contract HashConsensusTimeTravellable is HashConsensus {
         uint256 genesisTime,
         uint256 epochsPerFrame,
         uint256 startEpoch,
+        uint256 fastLaneLengthSlots,
         address admin,
         address reportProcessor
     ) HashConsensus(
@@ -23,6 +24,7 @@ contract HashConsensusTimeTravellable is HashConsensus {
         genesisTime,
         epochsPerFrame,
         startEpoch,
+        fastLaneLengthSlots,
         admin,
         reportProcessor
     ) {
@@ -35,6 +37,10 @@ contract HashConsensusTimeTravellable is HashConsensus {
 
     function getTime() external view returns (uint256) {
         return _time;
+    }
+
+    function getTimeInSlots() external view returns (uint256) {
+        return _computeSlotAtTimestamp(_time);
     }
 
     function setTime(uint256 newTime) external {

@@ -7,65 +7,40 @@ pragma solidity 0.8.9;
 import {WithdrawalQueueBase} from "./WithdrawalQueueBase.sol";
 
 import {IERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
-import {IERC721} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import {IERC20Permit} from "@openzeppelin/contracts-v4.4/token/ERC20/extensions/draft-IERC20Permit.sol";
+import {SafeCast} from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 import {SafeERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
 
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
+import {PausableUntil} from "./utils/PausableUntil.sol";
 
 import {Versioned} from "./utils/Versioned.sol";
-import {SafeCast} from "../common/lib/SafeCast.sol";
 
-/**
- * @title Interface defining a Lido liquid staking pool
- * @dev see also [Lido liquid staking pool core contract](https://docs.lido.fi/contracts/lido)
- */
+/// @notice Interface defining a Lido liquid staking pool
+/// @dev see also [Lido liquid staking pool core contract](https://docs.lido.fi/contracts/lido)
 interface IStETH is IERC20, IERC20Permit {
-    /**
-     * @notice Get shares amount by the stETH token amount
-     * @param _pooledEthAmount stETH token amount
-     */
     function getSharesByPooledEth(uint256 _pooledEthAmount) external view returns (uint256);
 }
 
+/// @notice Interface defining a Lido liquid staking pool wrapper
+/// @dev see WstETH.sol for full docs
 interface IWstETH is IERC20, IERC20Permit {
-    /**
-     * @notice Exchanges wstETH to stETH
-     * @param _wstETHAmount amount of wstETH to unwrap in exchange for stETH
-     * @return Amount of stETH user receives after unwrap
-     */
     function unwrap(uint256 _wstETHAmount) external returns (uint256);
-
-    /**
-     * @notice Get amount of stETH for a given amount of wstETH
-     * @param _wstETHAmount amount of wstETH
-     * @return Amount of stETH for a given wstETH amount
-     */
     function getStETHByWstETH(uint256 _wstETHAmount) external view returns (uint256);
-
-    /**
-     * @notice Returns a contract that this implementation of WstETH is a wrapper for
-     */
     function stETH() external view returns (IStETH);
 }
 
-/**
- * @title A contract for handling stETH withdrawal request queue within the Lido protocol
- * @author folkyatina
- */
-contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versioned {
+/// @title A contract for handling stETH withdrawal request queue within the Lido protocol
+/// @author folkyatina
+abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, WithdrawalQueueBase, Versioned {
     using SafeCast for uint256;
     using SafeERC20 for IWstETH;
     using SafeERC20 for IStETH;
     using UnstructuredStorage for bytes32;
 
-    /// Withdrawal queue resume/pause control storage slot
-    bytes32 public constant RESUME_SINCE_TIMESTAMP_POSITION = keccak256("lido.WithdrawalQueue.resumeSinceTimestamp");
-    /// Special value for the infinite pause
-    uint256 public constant PAUSE_INFINITELY = type(uint256).max;
     /// Bunker mode activation timestamp
-    bytes32 public constant BUNKER_MODE_SINCE_TIMESTAMP_POSITION =
+    bytes32 internal constant BUNKER_MODE_SINCE_TIMESTAMP_POSITION =
         keccak256("lido.WithdrawalQueue.bunkerModeSinceTimestamp");
     /// Special value for timestamp when bunker mode is inactive (i.e., protocol in turbo mode)
     uint256 public constant BUNKER_MODE_DISABLED_TIMESTAMP = type(uint256).max;
@@ -79,11 +54,9 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
     /// @notice minimal possible sum that is possible to withdraw
     uint256 public constant MIN_STETH_WITHDRAWAL_AMOUNT = 100;
 
-    /**
-     * @notice maximum possible sum that is possible to withdraw by a single request
-     * Prevents accumulating too much funds per single request fulfillment in the future.
-     * @dev To withdraw larger amounts, it's recommended to split it to several requests
-     */
+    /// @notice maximum possible sum that is possible to withdraw by a single request
+    /// Prevents accumulating too much funds per single request fulfillment in the future.
+    /// @dev To withdraw larger amounts, it's recommended to split it to several requests
     uint256 public constant MAX_STETH_WITHDRAWAL_AMOUNT = 1000 * 1e18;
 
     /// @notice Lido stETH token address to be set upon construction
@@ -91,10 +64,6 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
     /// @notice Lido wstETH token address to be set upon construction
     IWstETH public immutable WSTETH;
 
-    /// @notice Emitted when withdrawal requests placement and finalization paused by the `pause(duration)` call
-    event Paused(uint256 duration);
-    /// @notice Emitted when withdrawal requests placement and finalization resumed by the `resume` call
-    event Resumed();
     /// @notice Emitted when the contract initialized
     /// @param _admin provided admin address
     /// @param _caller initialization `msg.sender`
@@ -104,99 +73,40 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
     error AlreadyInitialized();
     error Uninitialized();
     error Unimplemented();
-    error PausedExpected();
-    error ResumedExpected();
     error RequestAmountTooSmall(uint256 _amountOfStETH);
     error RequestAmountTooLarge(uint256 _amountOfStETH);
     error InvalidReportTimestamp();
     error LengthsMismatch(uint256 _expectedLength, uint256 _actualLength);
     error RequestIdsNotSorted();
-    error ZeroPauseDuration();
 
-    /// @notice Reverts when new withdrawal requests placement and finalization resumed
-    modifier whenPaused() {
-        if (block.timestamp >= RESUME_SINCE_TIMESTAMP_POSITION.getStorageUint256()) {
-            revert PausedExpected();
-        }
-        _;
-    }
-
-    /// @notice Reverts when new withdrawal requests placement and finalization paused
-    modifier whenResumed() {
-        if (block.timestamp < RESUME_SINCE_TIMESTAMP_POSITION.getStorageUint256()) {
-            revert ResumedExpected();
-        }
-        _;
-    }
-
-    /**
-     * @param _wstETH address of WstETH contract
-     */
+    /// @param _wstETH address of WstETH contract
     constructor(IWstETH _wstETH) {
         // init immutables
         WSTETH = _wstETH;
         STETH = WSTETH.stETH();
     }
 
-    /**
-     * @notice Intialize the contract storage explicitly.
-     * @param _admin admin address that can change every role.
-     * @param _pauser address that will be able to pause the withdrawals
-     * @param _resumer address that will be able to resume the withdrawals after pause
-     * @param _finalizer address that can finalize requests in the queue
-     * @dev Reverts with `AdminZeroAddress()` if `_admin` equals to `address(0)`
-     * @dev NB! It's initialized in paused state by default and should be resumed explicitly to start
-     */
+    /// @notice Initialize the contract storage explicitly.
+    /// @param _admin admin address that can change every role.
+    /// @param _pauser address that will be able to pause the withdrawals
+    /// @param _resumer address that will be able to resume the withdrawals after pause
+    /// @param _finalizer address that can finalize requests in the queue
+    /// @dev NB! It's initialized in paused state by default and should be resumed explicitly to start
     function initialize(address _admin, address _pauser, address _resumer, address _finalizer) external {
-        if (_admin == address(0)) {
-            revert AdminZeroAddress();
-        }
+        if (_admin == address(0)) revert AdminZeroAddress();
 
         _initialize(_admin, _pauser, _resumer, _finalizer);
     }
 
-    /// @notice Returns whether the contract is initialized or not
-    function isInitialized() external view returns (bool) {
-        return getContractVersion() != 0;
-    }
-
-    /**
-     * @notice Resume withdrawal requests placement and finalization
-     * @dev Reverts with `Uninitialized()` if contract is not initialized
-     * @dev Reverts with `PausedExpected()` if contract is already resumed
-     * @dev Reverts with `AccessControl:...` reason if sender has no `RESUME_ROLE`
-     */
+    /// @notice Resume withdrawal requests placement and finalization
     function resume() external whenPaused onlyRole(RESUME_ROLE) {
-        RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(block.timestamp);
-
-        emit Resumed();
+        _resume();
     }
 
-    /**
-     * @notice Pause withdrawal requests placement and finalization. Claiming finalized requests will still be available
-     * @param _duration pause duration, seconds (use `PAUSE_INFINITELY` for unlimited)
-     * @dev Reverts with `ResumedExpected()` if contract is already paused
-     * @dev Reverts with `AccessControl:...` reason if sender has no `PAUSE_ROLE`
-     * @dev Reverts with `ZeroPauseDuration()` if zero duration is passed
-     */
-    function pause(uint256 _duration) external whenResumed onlyRole(PAUSE_ROLE) {
-        if (_duration == 0) revert ZeroPauseDuration();
-
-        uint256 pausedUntill;
-        if (_duration == PAUSE_INFINITELY) {
-            pausedUntill = PAUSE_INFINITELY;
-        } else {
-            pausedUntill = block.timestamp + _duration;
-        }
-
-        RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(pausedUntill);
-
-        emit Paused(_duration);
-    }
-
-    /// @notice Returns whether the requests placement and finalization is paused or not
-    function isPaused() external view returns (bool) {
-        return block.timestamp < RESUME_SINCE_TIMESTAMP_POSITION.getStorageUint256();
+    /// @notice Pause withdrawal requests placement and finalization. Claiming finalized requests will still be available
+    /// @param _duration pause duration, seconds (use `PAUSE_INFINITELY` for unlimited)
+    function pause(uint256 _duration) external onlyRole(PAUSE_ROLE) {
+        _pause(_duration);
     }
 
     struct WithdrawalRequestInput {
@@ -245,7 +155,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
         }
     }
 
-    struct Permit {
+    struct PermitInput {
         uint256 value;
         uint256 deadline;
         uint8 v;
@@ -253,7 +163,8 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
         bytes32 s;
     }
 
-    /// @notice Request the sequence of stETH withdrawals according to passed `withdrawalRequestInputs` data using EIP-2612 Permit
+    /// @notice Request the sequence of stETH withdrawals according to passed `withdrawalRequestInputs`
+    ///  using EIP-2612 Permit
     /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
     ///  be created for each item in the passed list. If `WithdrawalRequestInput.owner` is set to `address(0)`,
     ///  `msg.sender` will be used as owner.
@@ -261,13 +172,14 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
     /// @return requestIds an array of the created withdrawal requests
     function requestWithdrawalsWithPermit(
         WithdrawalRequestInput[] calldata _withdrawalRequestInputs,
-        Permit calldata _permit
+        PermitInput calldata _permit
     ) external whenResumed returns (uint256[] memory requestIds) {
         STETH.permit(msg.sender, address(this), _permit.value, _permit.deadline, _permit.v, _permit.r, _permit.s);
         return requestWithdrawals(_withdrawalRequestInputs);
     }
 
-    /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data using EIP-2612 Permit
+    /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data
+    ///  using EIP-2612 Permit
     /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
     ///  be created for each item in the passed list. If `WithdrawalRequestInput.owner` is set to `address(0)`,
     ///  `msg.sender` will be used as owner.
@@ -275,7 +187,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
     /// @return requestIds an array of the created withdrawal requests
     function requestWithdrawalsWstETHWithPermit(
         WithdrawalRequestInput[] calldata _withdrawalRequestInputs,
-        Permit calldata _permit
+        PermitInput calldata _permit
     ) external whenResumed returns (uint256[] memory requestIds) {
         WSTETH.permit(msg.sender, address(this), _permit.value, _permit.deadline, _permit.v, _permit.r, _permit.s);
         return requestWithdrawalsWstETH(_withdrawalRequestInputs);
@@ -285,6 +197,7 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
     /// @param _requestIds list of withdrawal request ids and hints to claim
     function getWithdrawalRequestStatuses(uint256[] calldata _requestIds)
         external
+        view
         returns (WithdrawalRequestStatus[] memory statuses)
     {
         statuses = new WithdrawalRequestStatus[](_requestIds.length);
@@ -300,12 +213,32 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
         uint256 hint;
     }
 
-    /// @notice Claim withdrawals batch once finalized (claimable)
+    /// @notice Claim withdrawals batch once finalized (claimable).
     /// @param _claimWithdrawalInputs list of withdrawal request ids and hints to claim
     function claimWithdrawals(ClaimWithdrawalInput[] calldata _claimWithdrawalInputs) external {
         for (uint256 i = 0; i < _claimWithdrawalInputs.length; ++i) {
-            claimWithdrawal(_claimWithdrawalInputs[i].requestId, _claimWithdrawalInputs[i].hint);
+            _claimWithdrawalTo(_claimWithdrawalInputs[i].requestId, _claimWithdrawalInputs[i].hint, msg.sender);
+            _emitTransfer(msg.sender, address(0), _claimWithdrawalInputs[i].requestId);
         }
+    }
+
+    ///  @notice Claim `_requestId` request and transfer locked ether to the owner
+    ///  @param _requestId request id to claim
+    ///  @param _hint hint for checkpoint index to avoid extensive search over the checkpointHistory.
+    ///   Can be retreived with `findClaimHint()` or `findClaimHintUnbounded()`
+    /// @param _recipient address where claimed ether will be sent to
+    function claimWithdrawalTo(uint256 _requestId, uint256 _hint, address _recipient) external {
+        _claimWithdrawalTo(_requestId, _hint, _recipient);
+        _emitTransfer(msg.sender, address(0), _requestId);
+    }
+
+    /// @notice Claim `_requestId` request and transfer locked ether to the owner
+    /// @param _requestId request id to claim
+    /// @dev will use `findClaimHintUnbounded()` to find a hint, what can lead to OOG
+    /// Prefer `claimWithdrawal(uint256 _requestId, uint256 _hint)` to save gas
+    function claimWithdrawal(uint256 _requestId) external {
+        _claimWithdrawalTo(_requestId, findClaimHintUnbounded(_requestId), msg.sender);
+        _emitTransfer(msg.sender, address(0), _requestId);
     }
 
     /// @notice Finds the list of hints for the given `_requestIds` searching among the checkpoints with indices
@@ -338,23 +271,19 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
         return findClaimHints(_requestIds, 1, getLastCheckpointIndex());
     }
 
-    /**
-     * @notice Finalize requests from last finalized one up to `_lastRequestIdToFinalize`
-     * @dev ether to finalize all the requests should be calculated using `finalizationBatch()` and sent along
-     *
-     * @param _lastRequestIdToFinalize request index in the queue that will be last finalized request in a batch
-     */
-    function finalize(uint256 _lastRequestIdToFinalize) external payable whenResumed onlyRole(FINALIZE_ROLE) {
-        _finalize(_lastRequestIdToFinalize, msg.value.toUint128());
+    /// @notice Finalize requests from last finalized one up to `_lastRequestIdToFinalize`
+    /// @dev ether to finalize all the requests should be calculated using `finalizationBatch()` and sent along
+    ///
+    /// @param _nextFinalizedRequestId request index in the queue that will be last finalized request in a batch
+    function finalize(uint256 _nextFinalizedRequestId) external payable whenResumed onlyRole(FINALIZE_ROLE) {
+        _finalize(_nextFinalizedRequestId, msg.value.toUint128());
     }
 
-    /**
-     * @notice Update bunker mode state
-     * @dev should be called by oracle
-     *
-     * @param _isBunkerModeNow oracle report
-     * @param _bunkerModeSinceTimestamp timestamp of start of the bunker mode
-     */
+    /// @notice Update bunker mode state
+    /// @dev should be called by oracle
+    ///
+    /// @param _isBunkerModeNow oracle report
+    /// @param _bunkerModeSinceTimestamp timestamp of start of the bunker mode
     function updateBunkerMode(bool _isBunkerModeNow, uint256 _bunkerModeSinceTimestamp)
         external
         onlyRole(BUNKER_MODE_REPORT_ROLE)
@@ -371,20 +300,19 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
         }
     }
 
-    /**
-     * @notice Check if bunker mode is active
-     */
+    /// @notice Check if bunker mode is active
     function isBunkerModeActive() public view returns (bool) {
         return bunkerModeSinceTimestamp() < BUNKER_MODE_DISABLED_TIMESTAMP;
     }
 
-    /**
-     * @notice Get bunker mode activation timestamp
-     * @dev returns `BUNKER_MODE_DISABLED_TIMESTAMP` if bunker mode is disable (i.e., protocol in turbo mode)
-     */
+    /// @notice Get bunker mode activation timestamp
+    /// @dev returns `BUNKER_MODE_DISABLED_TIMESTAMP` if bunker mode is disable (i.e., protocol in turbo mode)
     function bunkerModeSinceTimestamp() public view returns (uint256) {
         return BUNKER_MODE_SINCE_TIMESTAMP_POSITION.getStorageUint256();
     }
+
+    /// @notice Should emit ERC721 Transfer event in the inheriting contract
+    function _emitTransfer(address from, address to, uint256 _requestId) internal virtual;
 
     /// @dev internal initialization helper. Doesn't check provided addresses intentionally
     function _initialize(address _admin, address _pauser, address _resumer, address _finalizer) internal {
@@ -408,7 +336,9 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
 
         uint256 amountOfShares = STETH.getSharesByPooledEth(_amountOfStETH);
 
-        return _enqueue(_amountOfStETH.toUint128(), amountOfShares.toUint128(), _owner);
+        requestId = _enqueue(_amountOfStETH.toUint128(), amountOfShares.toUint128(), _owner);
+
+        _emitTransfer(address(0), _owner, requestId);
     }
 
     function _requestWithdrawalWstETH(uint256 _amountOfWstETH, address _owner) internal returns (uint256 requestId) {
@@ -417,7 +347,9 @@ contract WithdrawalQueue is AccessControlEnumerable, WithdrawalQueueBase, Versio
 
         uint256 amountOfShares = STETH.getSharesByPooledEth(amountOfStETH);
 
-        return _enqueue(amountOfStETH.toUint128(), amountOfShares.toUint128(), _owner);
+        requestId = _enqueue(amountOfStETH.toUint128(), amountOfShares.toUint128(), _owner);
+
+        _emitTransfer(address(0), _owner, requestId);
     }
 
     function _checkWithdrawalRequestInput(uint256 _amountOfStETH, address _owner) internal view returns (address) {
