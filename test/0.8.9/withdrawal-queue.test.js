@@ -248,29 +248,29 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       requestId = getEventArgument(receipt, "WithdrawalRequested", "requestId")
     })
 
-    it('Anyone can claim a finalized token with hint', async () => {
+    it('Owner can claim a finalized request to recipient address', async () => {
       await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
 
-      const balanceBefore = bn(await ethers.provider.getBalance(owner))
+      const balanceBefore = bn(await ethers.provider.getBalance(user))
 
-      await withdrawalQueue.methods["claimWithdrawal(uint256,uint256)"](requestId,
-        await withdrawalQueue.findClaimHintUnbounded(requestId), { from: stranger })
+      await withdrawalQueue.claimWithdrawalTo(requestId, 1, user, { from: owner })
 
-      assert.equals(await ethers.provider.getBalance(owner), balanceBefore.add(bn(amount)))
+      assert.equals(await ethers.provider.getBalance(user), balanceBefore.add(bn(amount)))
     })
 
-    it('Anyone can claim a finalized token without hint', async () => {
+    it('Owner can claim a finalized request without hint', async () => {
       await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
 
       const balanceBefore = bn(await ethers.provider.getBalance(owner))
 
-      await withdrawalQueue.methods["claimWithdrawal(uint256)"](requestId, { from: stranger })
+      await withdrawalQueue.claimWithdrawal(requestId, { from: owner })
 
       assert.equals(await ethers.provider.getBalance(owner), balanceBefore.add(bn(amount)))
     })
 
     it('One cant claim not finalized request', async () => {
-      await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 1), `RequestNotFinalized(${requestId})`)
+      await assert.reverts(withdrawalQueue.claimWithdrawalTo(requestId, 1, owner, { from: owner }),
+        `RequestNotFinalized(${requestId})`)
     })
 
     it('Cant claim request with a wrong hint', async () => {
@@ -281,15 +281,16 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await withdrawalQueue.requestWithdrawals([[amount, owner]], { from: user })
 
       await withdrawalQueue.finalize(2, { from: steth.address, value: amount })
-      await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 0), 'InvalidHint(0)')
-      await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 2), 'InvalidHint(2)')
+      await assert.reverts(withdrawalQueue.claimWithdrawalTo(requestId, 0, owner, { from: owner }), 'InvalidHint(0)')
+      await assert.reverts(withdrawalQueue.claimWithdrawalTo(requestId, 2, owner, { from: owner }), 'InvalidHint(2)')
     })
 
     it('Cant withdraw token two times', async () => {
       await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
-      await withdrawalQueue.claimWithdrawal(requestId, await withdrawalQueue.findClaimHintUnbounded(requestId))
+      await withdrawalQueue.claimWithdrawal(requestId, { from: owner })
 
-      await assert.reverts(withdrawalQueue.claimWithdrawal(requestId, 1), 'RequestAlreadyClaimed(1)')
+      await assert.reverts(withdrawalQueue.claimWithdrawalTo(requestId, 1, owner, { from: owner }),
+        'RequestAlreadyClaimed(1)')
     })
 
     it('Discounted withdrawals produce less eth', async () => {
@@ -299,7 +300,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       const balanceBefore = bn(await ethers.provider.getBalance(owner))
       assert.equals(await withdrawalQueue.getLockedEtherAmount(), ETH(150))
 
-      await withdrawalQueue.claimWithdrawal(requestId, hint, { from: user })
+      await withdrawalQueue.claimWithdrawalTo(requestId, hint, owner, { from: owner })
       assert.equals(await withdrawalQueue.getLockedEtherAmount(), ETH(0))
 
       assert.equals(bn(await ethers.provider.getBalance(owner)).sub(balanceBefore), ETH(150))
@@ -321,10 +322,11 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
 
       assert.equals(await withdrawalQueue.getLastCheckpointIndex(), 21)
 
-      for (let i = 21; i > 0; i--) {
-        assert.equals(await withdrawalQueue.findClaimHintUnbounded(i), i)
-        await withdrawalQueue.claimWithdrawal(i, i)
+      for (let i = 21; i > 1; i--) {
+        await withdrawalQueue.claimWithdrawal(i, { from: user })
       }
+
+      await withdrawalQueue.claimWithdrawal(1, { from: owner })
 
       assert.equals(await withdrawalQueue.getLockedEtherAmount(), ETH(0))
     })
@@ -646,7 +648,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
           [requestId, 1],
           [secondRequestId, 1]
         ],
-        { from: user }
+        { from: owner }
       )
       assert.equals(await ethers.provider.getBalance(owner), balanceBefore.add(bn(ETH(30))))
     })
@@ -752,7 +754,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       assert.isTrue(senderWithdrawalsBefore.map(v => v.toNumber()).includes(requestId))
       assert.isFalse(ownerWithdrawalsBefore.map(v => v.toNumber()).includes(requestId))
 
-      await withdrawalQueue.transfer(requestId, owner, { from: user })
+      await withdrawalQueue.transferFrom(user, owner, requestId, { from: user })
 
       const senderWithdrawalAfter = await withdrawalQueue.getWithdrawalRequests(user)
       const ownerWithdrawalsAfter = await withdrawalQueue.getWithdrawalRequests(owner)
@@ -762,35 +764,30 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     })
 
     it("One can't change someone else's request", async () => {
-      await assert.reverts(withdrawalQueue.transfer(requestId, stranger, { from: owner }), `InvalidOwner("${user}", "${owner}")`)
+      await assert.reverts(withdrawalQueue.transferFrom(user, owner, requestId, { from: stranger }), 
+        'ERC721: caller is not token owner or approved')
     })
 
     it("One can't pass zero owner", async () => {
-      await assert.reverts(withdrawalQueue.transfer(requestId, ZERO_ADDRESS, { from: owner }), `InvalidOwnerAddress("${ZERO_ADDRESS}")`)
+      await assert.reverts(withdrawalQueue.transferFrom(user, ZERO_ADDRESS, requestId, { from: user }), 
+        'ERC721: transfer to the zero address')
     })
 
     it("One can't pass zero requestId", async () => {
-      await assert.reverts(withdrawalQueue.transfer(0, stranger, { from: owner }), `InvalidRequestId(0)`)
+      await assert.reverts(withdrawalQueue.transferFrom(user, owner, 0, { from: user }), `InvalidRequestId(0)`)
     })
 
     it("One can't change claimed request", async () => {
       await withdrawalQueue.finalize(requestId, { from: steth.address, value: amount })
-      await withdrawalQueue.claimWithdrawal(requestId, await withdrawalQueue.findClaimHintUnbounded(requestId), { from: user })
+      await withdrawalQueue.claimWithdrawal(requestId, { from: user })
 
-      await assert.reverts(withdrawalQueue.transfer(requestId, owner, { from: user }), `RequestAlreadyClaimed(1)`)
-    })
-
-    it("One can't pass the same owner", async () => {
-      await assert.reverts(withdrawalQueue.transfer(requestId, user, { from: user }), `InvalidOwnerAddress("${user}")`)
+      await assert.reverts(withdrawalQueue.transferFrom(user, owner, requestId, { from: user }), `RequestAlreadyClaimed(1)`)
     })
 
     it("Changing owner doesn't work with wrong request id", async () => {
       const wrongRequestId = requestId + 1
-      await assert.reverts(withdrawalQueue.transfer(wrongRequestId, stranger, { from: user }), `InvalidRequestId(${wrongRequestId})`)
-    })
-
-    it("NOP Changing owner is forbidden", async () => {
-      await assert.reverts(withdrawalQueue.transfer(requestId, owner, { from: owner }), `InvalidOwnerAddress("${owner}")`)
+      await assert.reverts(withdrawalQueue.transferFrom(user, owner, wrongRequestId, { from: user }),
+       `InvalidRequestId(${wrongRequestId})`)
     })
   })
 
