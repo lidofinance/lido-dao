@@ -133,10 +133,10 @@ hre.contract(
     })
 
     describe('setApprovalForAll()', async () => {
-      it('reverts with message "ERC721: approve to caller" when owner equal to operator', async () => {
+      it('reverts with message "ApproveToCaller()" when owner equal to operator', async () => {
         await assert.reverts(
           withdrawalRequestNFT.setApprovalForAll(nftHolderStETH, true, { from: nftHolderStETH }),
-          'ERC721: approve to caller'
+          'ApproveToCaller()'
         )
       })
     })
