@@ -443,10 +443,10 @@ abstract contract WithdrawalQueueBase {
         // ______(_______
         //    ^  hint
         if (_requestId < hintCheckpoint.fromId) revert InvalidHint(_hint);
-        if (_hint + 1 <= lastCheckpointIndex) {
+        if (_hint < lastCheckpointIndex) {
             // ______(_______(_________
             //       hint    hint+1  ^
-            if (_getCheckpoints()[_hint + 1].fromId <= _hint) {
+            if (_getCheckpoints()[_hint + 1].fromId <= _requestId) {
                 revert InvalidHint(_hint);
             }
         }
