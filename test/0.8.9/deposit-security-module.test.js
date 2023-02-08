@@ -90,14 +90,18 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
   }
 
   describe('depositBufferedEther', () => {
-    const KEYS_OP_INDEX = 12
+    const DEPOSITS_DATA_NONCE = 12
     const DEPOSIT_ROOT = '0xd151867719c94ad8458feaf491809f9bc8096c702a72747403ecaac30c179137'
     let validAttestMessage
 
     beforeEach('init attestMessagePrefix and setup mocks', async () => {
-      validAttestMessage = new DSMAttestMessage(block.number, block.hash, DEPOSIT_ROOT, STAKING_MODULE, KEYS_OP_INDEX)
-      await stakingRouterMock.setStakingModuleKeysOpIndex(KEYS_OP_INDEX)
-      assert.equal(await stakingRouterMock.getStakingModuleKeysOpIndex(STAKING_MODULE), KEYS_OP_INDEX, 'invariant failed: keysOpIndex')
+      validAttestMessage = new DSMAttestMessage(block.number, block.hash, DEPOSIT_ROOT, STAKING_MODULE, DEPOSITS_DATA_NONCE)
+      await stakingRouterMock.setStakingModuleDepositsDataNonce(DEPOSITS_DATA_NONCE)
+      assert.equal(
+        await stakingRouterMock.getStakingModuleDepositsDataNonce(STAKING_MODULE),
+        DEPOSITS_DATA_NONCE,
+        'invariant failed: depositsDataNonce'
+      )
 
       await depositContractMock.set_deposit_root(DEPOSIT_ROOT)
       assert.equal(await depositContractMock.get_deposit_root(), DEPOSIT_ROOT, 'invariant failed: depositRoot')
@@ -119,7 +123,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             block.hash,
             DEPOSIT_ROOT,
             STAKING_MODULE,
-            KEYS_OP_INDEX,
+            DEPOSITS_DATA_NONCE,
             DEPOSIT_CALLDATA,
             [],
             {
@@ -148,7 +152,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
           block.hash,
           DEPOSIT_ROOT,
           STAKING_MODULE,
-          KEYS_OP_INDEX,
+          DEPOSITS_DATA_NONCE,
           DEPOSIT_CALLDATA,
           [validAttestMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN1])],
           { from: stranger }
@@ -166,7 +170,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             block.hash,
             DEPOSIT_ROOT,
             STAKING_MODULE,
-            KEYS_OP_INDEX,
+            DEPOSITS_DATA_NONCE,
             DEPOSIT_CALLDATA,
             [validAttestMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN2])]
           ),
@@ -181,7 +185,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             block.hash,
             DEPOSIT_ROOT,
             STAKING_MODULE,
-            KEYS_OP_INDEX,
+            DEPOSITS_DATA_NONCE,
             DEPOSIT_CALLDATA,
             []
           ),
@@ -201,7 +205,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             block.hash,
             DEPOSIT_ROOT,
             STAKING_MODULE,
-            KEYS_OP_INDEX,
+            DEPOSITS_DATA_NONCE,
             DEPOSIT_CALLDATA,
             [validAttestMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
           ),
@@ -209,10 +213,14 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         )
       })
 
-      it('cannot deposit if keysOpIndex changed', async () => {
-        const newKeysOpIndex = 11
-        await stakingRouterMock.setStakingModuleKeysOpIndex(newKeysOpIndex)
-        assert.equal(await stakingRouterMock.getStakingModuleKeysOpIndex(STAKING_MODULE), newKeysOpIndex, 'invariant failed: keysOpIndex')
+      it('cannot deposit if deposits data nonce changed', async () => {
+        const newDepositsDataNonce = 11
+        await stakingRouterMock.setStakingModuleDepositsDataNonce(newDepositsDataNonce)
+        assert.equal(
+          await stakingRouterMock.getStakingModuleDepositsDataNonce(STAKING_MODULE),
+          newDepositsDataNonce,
+          'invariant failed: depositsDataNonce'
+        )
 
         await assertRevert(
           depositSecurityModule.depositBufferedEther(
@@ -220,11 +228,11 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             block.hash,
             DEPOSIT_ROOT,
             STAKING_MODULE,
-            KEYS_OP_INDEX,
+            DEPOSITS_DATA_NONCE,
             DEPOSIT_CALLDATA,
             [validAttestMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
           ),
-          'keys op index changed'
+          'deposits data nonce changed'
         )
       })
 
@@ -241,7 +249,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             block.hash,
             DEPOSIT_ROOT,
             STAKING_MODULE,
-            KEYS_OP_INDEX,
+            DEPOSITS_DATA_NONCE,
             DEPOSIT_CALLDATA,
             [validAttestMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
           ),
@@ -262,7 +270,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             block.hash,
             DEPOSIT_ROOT,
             STAKING_MODULE,
-            KEYS_OP_INDEX,
+            DEPOSITS_DATA_NONCE,
             DEPOSIT_CALLDATA,
             [validAttestMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
           ),
@@ -280,7 +288,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             block.hash,
             DEPOSIT_ROOT,
             STAKING_MODULE,
-            KEYS_OP_INDEX,
+            DEPOSITS_DATA_NONCE,
             DEPOSIT_CALLDATA,
             [validAttestMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
           ),
@@ -291,7 +299,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       it('cannot deposit with zero block hash', async () => {
         await waitBlocks(255)
         await assertRevert(
-          depositSecurityModule.depositBufferedEther(block.number, '0x', DEPOSIT_ROOT, STAKING_MODULE, KEYS_OP_INDEX, DEPOSIT_CALLDATA, [
+          depositSecurityModule.depositBufferedEther(block.number, '0x', DEPOSIT_ROOT, STAKING_MODULE, DEPOSITS_DATA_NONCE, DEPOSIT_CALLDATA, [
             validAttestMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN1])
           ]),
           'unexpected block hash'
@@ -322,7 +330,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
           block.hash,
           DEPOSIT_ROOT,
           STAKING_MODULE,
-          KEYS_OP_INDEX,
+          DEPOSITS_DATA_NONCE,
           DEPOSIT_CALLDATA,
           signatures,
           { from: stranger }
@@ -345,7 +353,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
           block.hash,
           DEPOSIT_ROOT,
           STAKING_MODULE,
-          KEYS_OP_INDEX,
+          DEPOSITS_DATA_NONCE,
           DEPOSIT_CALLDATA,
           signatures,
           { from: stranger }
@@ -368,7 +376,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
           block.hash,
           DEPOSIT_ROOT,
           STAKING_MODULE,
-          KEYS_OP_INDEX,
+          DEPOSITS_DATA_NONCE,
           DEPOSIT_CALLDATA,
           signatures,
           { from: stranger }
@@ -391,7 +399,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
           block.hash,
           DEPOSIT_ROOT,
           STAKING_MODULE,
-          KEYS_OP_INDEX,
+          DEPOSITS_DATA_NONCE,
           DEPOSIT_CALLDATA,
           signatures,
           { from: stranger }
@@ -410,7 +418,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             block.hash,
             DEPOSIT_ROOT,
             STAKING_MODULE,
-            KEYS_OP_INDEX,
+            DEPOSITS_DATA_NONCE,
             DEPOSIT_CALLDATA,
             [],
             { from: stranger }
@@ -430,7 +438,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             block.hash,
             DEPOSIT_ROOT,
             STAKING_MODULE,
-            KEYS_OP_INDEX,
+            DEPOSITS_DATA_NONCE,
             DEPOSIT_CALLDATA,
             signatures,
             { from: stranger }
@@ -451,7 +459,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             block.hash,
             DEPOSIT_ROOT,
             STAKING_MODULE,
-            KEYS_OP_INDEX,
+            DEPOSITS_DATA_NONCE,
             DEPOSIT_CALLDATA,
             signatures,
             { from: stranger }
@@ -472,7 +480,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             block.hash,
             DEPOSIT_ROOT,
             STAKING_MODULE,
-            KEYS_OP_INDEX,
+            DEPOSITS_DATA_NONCE,
             DEPOSIT_CALLDATA,
             signatures,
             { from: stranger }
@@ -918,15 +926,15 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     })
   })
   describe('canDeposit', () => {
-    const KEYS_OP_INDEX = 12
+    const DEPOSITS_DATA_NONCE = 12
     const DEPOSIT_ROOT = '0xd151867719c94ad8458feaf491809f9bc8096c702a72747403ecaac30c179137'
 
     let validAttestMessage
 
     beforeEach(async () => {
       await depositContractMock.set_deposit_root(DEPOSIT_ROOT)
-      await stakingRouterMock.setStakingModuleKeysOpIndex(KEYS_OP_INDEX)
-      validAttestMessage = new DSMAttestMessage(block.number, block.hash, DEPOSIT_ROOT, STAKING_MODULE, KEYS_OP_INDEX)
+      await stakingRouterMock.setStakingModuleDepositsDataNonce(DEPOSITS_DATA_NONCE)
+      validAttestMessage = new DSMAttestMessage(block.number, block.hash, DEPOSIT_ROOT, STAKING_MODULE, DEPOSITS_DATA_NONCE)
     })
 
     it('true if not paused and quorum > 0 and currentBlock - lastDepositBlock >= minDepositBlockDistance', async () => {

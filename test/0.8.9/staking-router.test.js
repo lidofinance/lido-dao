@@ -126,8 +126,8 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       assert.equals(await app.STAKING_MODULE_MANAGE_ROLE(), STAKING_MODULE_MANAGE_ROLE)
     })
 
-    it('getKeysAllocation', async () => {
-      const keysAllocation = await app.getKeysAllocation(1000)
+    it('getDepositsAllocation', async () => {
+      const keysAllocation = await app.getDepositsAllocation(1000)
 
       assert.equals(keysAllocation.allocated, 0)
       assert.equals(keysAllocation.allocations, [])
@@ -192,7 +192,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
       await stakingModule.setAvailableKeysCount(100, { from: deployer })
 
-      assert.equals(await stakingModule.getAvailableKeysCount(), 100)
+      assert.equals(await stakingModule.getAvailableValidatorsCount(), 100)
     })
 
     after(async () => {
@@ -213,7 +213,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
       await assert.emits(tx, 'WithdrawalCredentialsSet', { withdrawalCredentials: newWC })
 
-      assert.equals(await stakingModule.getAvailableKeysCount(), 0)
+      assert.equals(await stakingModule.getAvailableValidatorsCount(), 0)
     })
 
     it('direct transfer fails', async () => {
@@ -221,28 +221,28 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       await assert.revertsWithCustomError(app.sendTransaction({ value, from: deployer }), `ErrorDirectETHTransfer()`)
     })
 
-    it('getStakingModuleKeysOpIndex', async () => {
-      await stakingModule.setValidatorsKeysNonce(100, { from: deployer })
+    it('getStakingModuleDepositsDataNonce', async () => {
+      await stakingModule.setDepositsDataNonce(100, { from: deployer })
 
-      assert.equals(await app.getStakingModuleKeysOpIndex(1), 100)
+      assert.equals(await app.getStakingModuleDepositsDataNonce(1), 100)
     })
 
-    it('getStakingModuleKeysOpIndex reverts when staking module id too large', async () => {
-      await assert.revertsWithCustomError(app.getStakingModuleKeysOpIndex(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
+    it('getStakingModuleDepositsDataNonce reverts when staking module id too large', async () => {
+      await assert.revertsWithCustomError(app.getStakingModuleDepositsDataNonce(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
     })
 
     it('getStakingModuleLastDepositBlock reverts when staking module id too large', async () => {
       await assert.revertsWithCustomError(app.getStakingModuleLastDepositBlock(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
     })
 
-    it('getStakingModuleActiveKeysCount reverts when staking module id too large', async () => {
-      await assert.revertsWithCustomError(app.getStakingModuleActiveKeysCount(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
+    it('getStakingModuleActiveValidatorsCount reverts when staking module id too large', async () => {
+      await assert.revertsWithCustomError(app.getStakingModuleActiveValidatorsCount(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
     })
 
-    it('getStakingModuleActiveKeysCount', async () => {
-      await stakingModule.setActiveKeysCount(200, { from: deployer })
+    it('getStakingModuleActiveValidatorsCount', async () => {
+      await stakingModule.setActiveValidatorsCount(200, { from: deployer })
 
-      assert.equals(await app.getStakingModuleActiveKeysCount(1), 200)
+      assert.equals(await app.getStakingModuleActiveValidatorsCount(1), 200)
     })
 
     it('getStakingRewardsDistribution', async () => {
@@ -723,8 +723,8 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       )
     })
 
-    it('getKeysAllocation', async () => {
-      const keysAllocation = await app.getKeysAllocation(1000)
+    it('getDepositsAllocation', async () => {
+      const keysAllocation = await app.getDepositsAllocation(1000)
 
       assert.equals(keysAllocation.allocated, 0)
       assert.equals(keysAllocation.allocations, [0, 0])

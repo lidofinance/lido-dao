@@ -13,7 +13,7 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
     event StakingModuleStatusSet(uint24 indexed stakingModuleId, StakingRouter.StakingModuleStatus status, address setBy);
 
     StakingRouter.StakingModuleStatus private status;
-    uint256 private stakingModuleKeysOpIndex;
+    uint256 private stakingModuleDepositsDataNonce;
     uint256 private stakingModuleLastDepositBlock;
 
     function deposit(
@@ -56,16 +56,16 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
         return status == StakingRouter.StakingModuleStatus.Active;
     }
 
-    function getStakingModuleKeysOpIndex(uint256) external view returns (uint256) {
-        return stakingModuleKeysOpIndex;
+    function getStakingModuleDepositsDataNonce(uint256) external view returns (uint256) {
+        return stakingModuleDepositsDataNonce;
     }
 
     function getStakingModuleLastDepositBlock(uint256) external view returns (uint256) {
         return stakingModuleLastDepositBlock;
     }
 
-    function setStakingModuleKeysOpIndex(uint256 value) external {
-        stakingModuleKeysOpIndex = value;
+    function setStakingModuleDepositsDataNonce(uint256 value) external {
+        stakingModuleDepositsDataNonce = value;
     }
 
     function setStakingModuleLastDepositBlock(uint256 value) external {

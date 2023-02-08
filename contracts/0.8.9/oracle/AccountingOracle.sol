@@ -52,23 +52,23 @@ interface ILegacyOracle {
 
 
 interface IStakingRouter {
-    function getExitedKeysCountAcrossAllModules() external view returns (uint256);
+    function getExitedValidatorsCountAcrossAllModules() external view returns (uint256);
 
-    function updateExitedKeysCountByStakingModule(
+    function updateExitedValidatorsCountByStakingModule(
         uint256[] calldata _moduleIds,
-        uint256[] calldata _exitedKeysCounts
+        uint256[] calldata _exitedValidatorsCounts
     ) external;
 
-    function reportStakingModuleExitedKeysCountByNodeOperator(
+    function reportStakingModuleExitedValidatorsCountByNodeOperator(
         uint256 _stakingModuleId,
         uint256[] calldata _nodeOperatorIds,
-        uint256[] calldata _exitedKeysCounts
+        uint256[] calldata _exitedValidatorsCounts
     ) external;
 
-    function reportStakingModuleStuckKeysCountByNodeOperator(
+    function reportStakingModuleStuckValidatorsCountByNodeOperator(
         uint256 _stakingModuleId,
         uint256[] calldata _nodeOperatorIds,
-        uint256[] calldata _stuckKeysCounts
+        uint256[] calldata _stuckValidatorsCounts
     ) external;
 }
 
@@ -533,7 +533,7 @@ contract AccountingOracle is BaseOracle {
         IStakingRouter stakingRouter = IStakingRouter(LOCATOR.stakingRouter());
         IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(LOCATOR.withdrawalQueue());
 
-        _processStakingRouterExitedKeysByModule(
+        _processStakingRouterExitedValidatorsByModule(
             stakingRouter,
             boundaries,
             data.stakingModuleIdsWithNewlyExitedValidators,
@@ -568,7 +568,7 @@ contract AccountingOracle is BaseOracle {
         });
     }
 
-    function _processStakingRouterExitedKeysByModule(
+    function _processStakingRouterExitedValidatorsByModule(
         IStakingRouter stakingRouter,
         DataBoundaries memory boundaries,
         uint256[] calldata stakingModuleIds,
@@ -600,7 +600,7 @@ contract AccountingOracle is BaseOracle {
             unchecked { ++i; }
         }
 
-        uint256 prevExitedValidators = stakingRouter.getExitedKeysCountAcrossAllModules();
+        uint256 prevExitedValidators = stakingRouter.getExitedValidatorsCountAcrossAllModules();
         if (exitedValidators < prevExitedValidators) {
             revert NumExitedValidatorsCannotDecrease();
         }
@@ -616,7 +616,7 @@ contract AccountingOracle is BaseOracle {
             );
         }
 
-        stakingRouter.updateExitedKeysCountByStakingModule(
+        stakingRouter.updateExitedValidatorsCountByStakingModule(
             stakingModuleIds,
             numExitedValidatorsByStakingModule
         );
@@ -674,7 +674,7 @@ contract AccountingOracle is BaseOracle {
         int256 lastModuleId;
         int256 lastNodeOpId;
         ResizableArray.Array nopIds;
-        ResizableArray.Array keyCounts;
+        ResizableArray.Array validatorCounts;
     }
 
     function _processExtraDataItems(
@@ -692,7 +692,7 @@ contract AccountingOracle is BaseOracle {
             lastModuleId: -1,
             lastNodeOpId: -1,
             nopIds: ResizableArray.preallocate(maxNodeOpsCountByModule),
-            keyCounts: ResizableArray.preallocate(maxNodeOpsCountByModule)
+            validatorCounts: ResizableArray.preallocate(maxNodeOpsCountByModule)
         });
 
         if (lastProcessedItem != 0) {
@@ -705,7 +705,7 @@ contract AccountingOracle is BaseOracle {
 
         while (iter.nextIndex < items.length) {
             iter.nopIds.clear();
-            iter.keyCounts.clear();
+            iter.validatorCounts.clear();
 
             _processSingleModule(iter, items);
 
@@ -714,16 +714,16 @@ contract AccountingOracle is BaseOracle {
                 assert(iter.lastNodeOpId >= 0);
 
                 if (iter.lastType == int256(EXTRA_DATA_TYPE_STUCK_VALIDATORS)) {
-                    stakingRouter.reportStakingModuleStuckKeysCountByNodeOperator(
+                    stakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator(
                         uint256(iter.lastModuleId),
                         iter.nopIds.pointer(),
-                        iter.keyCounts.pointer()
+                        iter.validatorCounts.pointer()
                     );
                 } else if (iter.lastType == int256(EXTRA_DATA_TYPE_EXITED_VALIDATORS)) {
-                    stakingRouter.reportStakingModuleExitedKeysCountByNodeOperator(
+                    stakingRouter.reportStakingModuleExitedValidatorsCountByNodeOperator(
                         uint256(iter.lastModuleId),
                         iter.nopIds.pointer(),
-                        iter.keyCounts.pointer()
+                        iter.validatorCounts.pointer()
                     );
                 } else {
                     revert UnsupportedExtraDataType(uint256(iter.lastType));
@@ -755,7 +755,7 @@ contract AccountingOracle is BaseOracle {
                 revert UnexpectedExtraDataIndex(iter.firstItemIndex + i, iIndex);
             }
 
-            (uint256 iModuleId, uint256 iNodeOpId, uint256 iKeysCount) =
+            (uint256 iModuleId, uint256 iNodeOpId, uint256 iValidatorsCount) =
                 _decodeExtraDataPayload(iPayload);
 
             if (started) {
@@ -778,7 +778,7 @@ contract AccountingOracle is BaseOracle {
             }
 
             iter.nopIds.push(iNodeOpId);
-            iter.keyCounts.push(iKeysCount);
+            iter.validatorCounts.push(iValidatorsCount);
             lastNodeOpId = iNodeOpId;
 
             unchecked { ++i; }
@@ -803,9 +803,9 @@ contract AccountingOracle is BaseOracle {
     function _decodeExtraDataPayload(uint216 payload) internal pure returns (
         uint24 moduleId,
         uint64 nodeOperatorId,
-        uint128 keysCount
+        uint128 validatorsCount
     ) {
-        keysCount = uint128(payload);
+        validatorsCount = uint128(payload);
         nodeOperatorId = uint64(payload >> 128);
         moduleId = uint24(payload >> 192);
     }

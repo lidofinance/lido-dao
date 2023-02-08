@@ -11,13 +11,13 @@ contract ModuleSolo is IStakingModule {
     address private stakingRouter;
     address public immutable lido;
 
-    uint256 public totalKeys;
-    uint256 public totalUsedKeys;
-    uint256 public totalStoppedKeys;
+    uint256 public totalVetted;
+    uint256 public totalDeposited;
+    uint256 public totalExited;
 
     bytes32 public moduleType;
 
-    uint16 public keysOpIndex;
+    uint16 public depositsDataNonce;
 
     uint256 public constant PUBKEY_LENGTH = 48;
     uint256 public constant SIGNATURE_LENGTH = 96;
@@ -32,16 +32,16 @@ contract ModuleSolo is IStakingModule {
 
 
     function getValidatorsReport() external view returns (ValidatorsReport memory report) {
-        report.totalExited = totalStoppedKeys;
-        report.totalDeposited = totalUsedKeys;
-        report.totalVetted = totalKeys;
+        report.totalExited = totalExited;
+        report.totalVetted = totalVetted;
+        report.totalDeposited = totalDeposited;
     }
 
     function getValidatorsReport(uint256 _nodeOperatorId) external view returns (ValidatorsReport memory report) {}
 
 
     function getDepositsDataNonce() external view returns (uint256) {
-        return keysOpIndex;
+        return depositsDataNonce;
     }
 
     function getNodeOperatorsCount() external view returns (uint256) {}
@@ -54,16 +54,6 @@ contract ModuleSolo is IStakingModule {
         external
         view
         returns (address[] memory recipients, uint256[] memory shares)
-    {}
-
-    function getNodeOperatorKeysStats(uint56 _nodeOperatorId)
-        external
-        view
-        returns (
-            uint256 everDepositedKeysCount,
-            uint256 everExitedKeysCount,
-            uint256 readyToDepositKeysCount
-        )
     {}
 
     function addNodeOperator(string memory _name, address _rewardAddress) external returns (uint256 id) {}
@@ -89,39 +79,23 @@ contract ModuleSolo is IStakingModule {
         uint256 /* _stuckValidatorsKeysCount */
     ) external {}
 
-    function addSigningKeys(
-        uint256 _operator_id,
-        uint256 _quantity,
-        bytes memory _pubkeys,
-        bytes memory _signatures
-    ) external {}
-
-    function addSigningKeysOperatorBH(
-        uint256 _operator_id,
-        uint256 _quantity,
-        bytes memory _pubkeys,
-        bytes memory _signatures
-    ) external {}
-
-    //only for testing purposal
-    function setTotalKeys(uint256 _keys) external {
-        totalKeys = _keys;
+    //only for testing purposes
+    function setTotalVettedValidators(uint256 _vettedCount) external {
+        totalVetted = _vettedCount;
     }
 
-    function setTotalUsedKeys(uint256 _keys) external {
-        totalUsedKeys = _keys;
+    function setTotalDepositedValidators(uint256 _depositedCount) external {
+        totalDeposited = _depositedCount;
     }
 
-    function setTotalStoppedKeys(uint256 _keys) external {
-        totalStoppedKeys = _keys;
+    function setTotalExitedValidators(uint256 _exitedCount) external {
+        totalExited = _exitedCount;
     }
 
     function setNodeOperatorActive(uint256 _id, bool _active) external {}
 
     function setStakingRouter(address _addr) public {
         stakingRouter = _addr;
-
-        //emit SetStakingRouter(_addr);
     }
 
     function getStakingRouter() external view returns (address) {
@@ -132,10 +106,6 @@ contract ModuleSolo is IStakingModule {
 
     function setType(bytes32 _type) external {
         moduleType = _type;
-    }
-
-    function getKeysOpIndex() external view returns (uint256) {
-        return keysOpIndex;
     }
 
     function provideDepositsData(uint256 _depositsCount, bytes calldata _calldata)

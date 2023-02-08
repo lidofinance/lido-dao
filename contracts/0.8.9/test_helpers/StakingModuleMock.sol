@@ -8,41 +8,34 @@ pragma solidity 0.8.9;
 import {IStakingModule} from "../interfaces/IStakingModule.sol";
 
 contract StakingModuleMock is IStakingModule {
-    uint256 private _activeKeysCount;
-    uint256 private _availableKeysCount;
-    uint256 private _keysNonce;
+    uint256 private _activeValidatorsCount;
+    uint256 private _availableValidatorsCount;
+    uint256 private _depositsDataNonce;
 
-    function getActiveKeysCount() public view returns (uint256) {
-        return _activeKeysCount;
+    function getActiveValidatorsCount() public view returns (uint256) {
+        return _activeValidatorsCount;
     }
 
-    function getAvailableKeysCount() public view returns (uint256) {
-        return _availableKeysCount;
-    }
-
-    function getKeysUsageData() external view returns (uint256 activeKeysCount, uint256 availableKeysCount) {
-        activeKeysCount = getActiveKeysCount();
-        availableKeysCount = getAvailableKeysCount();
+    function getAvailableValidatorsCount() public view returns (uint256) {
+        return _availableValidatorsCount;
     }
 
     function getType() external view returns (bytes32) {}
 
-    function trimUnusedKeys() external {}
-
     function getValidatorsReport() external view returns (ValidatorsReport memory report) {
-        report.totalDeposited = _activeKeysCount;
-        report.totalVetted = _activeKeysCount + _availableKeysCount;
+        report.totalDeposited = _activeValidatorsCount;
+        report.totalVetted = _activeValidatorsCount + _availableValidatorsCount;
     }
 
     function getValidatorsReport(uint256 _nodeOperatorId) external view returns (ValidatorsReport memory report) {
     }
 
     function getDepositsDataNonce() external view returns (uint256) {
-        return _keysNonce;
+        return _depositsDataNonce;
     }
 
-    function setValidatorsKeysNonce(uint256 _newKeysNonce) external {
-        _keysNonce = _newKeysNonce;
+    function setDepositsDataNonce(uint256 _newDepositsDataNonce) external {
+        _depositsDataNonce = _newDepositsDataNonce;
     }
 
     function getNodeOperatorsCount() external view returns (uint256) {}
@@ -71,7 +64,7 @@ contract StakingModuleMock is IStakingModule {
     ) external {}
 
     function invalidateDepositsData() external {
-        _availableKeysCount = _activeKeysCount;
+        _availableValidatorsCount = _activeValidatorsCount;
     }
 
     function provideDepositsData(uint256 _depositsCount, bytes calldata _calldata)
@@ -83,11 +76,11 @@ contract StakingModuleMock is IStakingModule {
         )
     {}
 
-    function setActiveKeysCount(uint256 _newActiveKeysCount) external {
-        _activeKeysCount = _newActiveKeysCount;
+    function setActiveValidatorsCount(uint256 _newActiveValidatorsCount) external {
+        _activeValidatorsCount = _newActiveValidatorsCount;
     }
 
-    function setAvailableKeysCount(uint256 _newAvailableKeysCount) external {
-        _availableKeysCount = _newAvailableKeysCount;
+    function setAvailableKeysCount(uint256 _newAvailableValidatorsCount) external {
+        _availableValidatorsCount = _newAvailableValidatorsCount;
     }
 }
