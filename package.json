@@ -122,6 +122,7 @@
   "dependencies": {
     "@aragon/hardhat-aragon": "^1.0.0",
     "@aragon/os": "^4.4.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.7",
     "@openzeppelin/contracts": "3.4.0",
     "@openzeppelin/contracts-v4.4": "npm:@openzeppelin/contracts@4.4.1",
     "@truffle/contract": "^4.2.22",

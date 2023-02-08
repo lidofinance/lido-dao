@@ -3620,6 +3620,7 @@ __metadata:
     "@babel/node": ^7.12.1
     "@babel/preset-env": ^7.11.5
     "@babel/register": ^7.12.1
+    "@nomicfoundation/hardhat-network-helpers": ^1.0.7
     "@nomiclabs/hardhat-ethers": ^2.0.4
     "@nomiclabs/hardhat-etherscan": ^2.1.8
     "@nomiclabs/hardhat-ganache": ^2.0.1
@@ -3764,6 +3765,17 @@ __metadata:
     "@nodelib/fs.scandir": 2.1.3
     fastq: ^1.6.0
   checksum: f4bffba16cc5d527fa594e120065e6d2376e274fb5df42cc744fcd28805fe23844590db74b20e102805280794208438b574e6e7fc25c6c245896909992a65e83
+  languageName: node
+  linkType: hard
+
+"@nomicfoundation/hardhat-network-helpers@npm:^1.0.7":
+  version: 1.0.7
+  resolution: "@nomicfoundation/hardhat-network-helpers@npm:1.0.7"
+  dependencies:
+    ethereumjs-util: ^7.1.4
+  peerDependencies:
+    hardhat: ^2.9.5
+  checksum: e4a5b5f4e201b55273ecdabec15d266614bc894ae06ef691232c4ae474d8bea6df276028a589f034356d6d787853e0bcc1b44eaa90ab99a4cc96ee080c685f3d
   languageName: node
   linkType: hard
 
