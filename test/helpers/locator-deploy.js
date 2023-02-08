@@ -9,7 +9,7 @@ const invalidButNonZeroLocatorConfig = {
   lido: DUMMY_ADDRESS,
   oracleReportSanityChecker: DUMMY_ADDRESS,
   postTokenRebaseReceiver: DUMMY_ADDRESS,
-  selfOwnedStEthBurner: DUMMY_ADDRESS,
+  burner: DUMMY_ADDRESS,
   stakingRouter: DUMMY_ADDRESS,
   treasury: DUMMY_ADDRESS,
   validatorsExitBusOracle: DUMMY_ADDRESS,
