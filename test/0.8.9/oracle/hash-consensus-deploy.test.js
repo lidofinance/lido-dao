@@ -34,6 +34,7 @@ const CONSENSUS_VERSION = 1
 
 async function deployHashConsensus(admin, {
   reportProcessor = null,
+  reportProcessorAddress = null,
   slotsPerEpoch = SLOTS_PER_EPOCH,
   secondsPerSlot = SECONDS_PER_SLOT,
   genesisTime = GENESIS_TIME,
@@ -41,7 +42,7 @@ async function deployHashConsensus(admin, {
   fastLaneLengthSlots = 0,
   initialEpoch = 1
 } = {}) {
-  if (!reportProcessor) {
+  if (!reportProcessor && !reportProcessorAddress) {
     reportProcessor = await MockReportProcessor.new(CONSENSUS_VERSION, { from: admin })
   }
 
@@ -53,7 +54,7 @@ async function deployHashConsensus(admin, {
     initialEpoch,
     fastLaneLengthSlots,
     admin,
-    reportProcessor.address,
+    reportProcessorAddress || reportProcessor.address,
     { from: admin }
   )
 
