@@ -17,140 +17,220 @@ const {
 } = require('./hash-consensus-deploy.test')
 
 contract('HashConsensus', ([admin, member1, member2, member3]) => {
-  context('setQuorum changes getQuorum', () => {
+  describe('setQuorum and addMember changes getQuorum', () => {
     let consensus
 
-    beforeEach(async () => {
+    const deployContract = async () => {
       const deployed = await deployHashConsensus(admin, { initialEpoch: 1 })
       consensus = deployed.consensus
+    }
+
+    context('at deploy quorum is zero and can be set to any number while event is fired on every change', () => {
+      before(deployContract)
+
+      it('quorum is zero at deploy', async () => {
+        assert.equal(+(await consensus.getQuorum()), 0)
+      })
+
+      it('quorum is changed, event is fired and getter returns new value', async () => {
+        const tx1 = await consensus.setQuorum(1)
+        assert.equal(+(await consensus.getQuorum()), 1)
+        assertEvent(tx1, 'QuorumSet', { expectedArgs: { newQuorum: 1, totalMembers: 0, prevQuorum: 0 } })
+      })
+
+      it('change to same value does not emit event and value is the same', async () => {
+        const tx2 = await consensus.setQuorum(1)
+        assert.equal(+(await consensus.getQuorum()), 1)
+        assertAmountOfEvents(tx2, 'QuorumSet', { expectedAmount: 0 })
+      })
+
+      it('quorum value changes up and down', async () => {
+        const tx3 = await consensus.setQuorum(10)
+        assert.equal(+(await consensus.getQuorum()), 10)
+        assertEvent(tx3, 'QuorumSet', { expectedArgs: { newQuorum: 10, totalMembers: 0, prevQuorum: 1 } })
+
+        const tx4 = await consensus.setQuorum(5)
+        assert.equal(+(await consensus.getQuorum()), 5)
+        assertEvent(tx4, 'QuorumSet', { expectedArgs: { newQuorum: 5, totalMembers: 0, prevQuorum: 10 } })
+      })
     })
 
-    it('at deploy quorum is zero and can be set to any number while event is fired on every changes', async () => {
-      assert.equal(+(await consensus.getQuorum()), 0)
+    context('as new members are added quorum is updated and cannot be set lower than members/2', () => {
+      before(deployContract)
 
-      const tx1 = await consensus.setQuorum(1)
-      assert.equal(+(await consensus.getQuorum()), 1)
-      assertEvent(tx1, 'QuorumSet', { expectedArgs: { newQuorum: 1, totalMembers: 0, prevQuorum: 0 } })
+      it('addMember adds member and updates quorum', async () => {
+        assert.equal(+(await consensus.getQuorum()), 0)
 
-      // dry run
-      const tx2 = await consensus.setQuorum(1)
-      assert.equal(+(await consensus.getQuorum()), 1)
-      assertAmountOfEvents(tx2, 'QuorumSet', { expectedAmount: 0 })
+        const tx1 = await consensus.addMember(member1, 1, { from: admin })
+        assert.equal(+(await consensus.getQuorum()), 1)
+        assertEvent(tx1, 'QuorumSet', { expectedArgs: { newQuorum: 1, totalMembers: 1, prevQuorum: 0 } })
+      })
 
-      const tx3 = await consensus.setQuorum(10)
-      assert.equal(+(await consensus.getQuorum()), 10)
-      assertEvent(tx3, 'QuorumSet', { expectedArgs: { newQuorum: 10, totalMembers: 0, prevQuorum: 1 } })
+      it('setQuorum reverts on value less than members/2', async () => {
+        await assertRevert(consensus.setQuorum(0), 'QuorumTooSmall(1, 0)')
 
-      const tx4 = await consensus.setQuorum(5)
-      assert.equal(+(await consensus.getQuorum()), 5)
-      assertEvent(tx4, 'QuorumSet', { expectedArgs: { newQuorum: 5, totalMembers: 0, prevQuorum: 10 } })
-    })
+        await consensus.addMember(member2, 2, { from: admin })
+        assert.equal(+(await consensus.getQuorum()), 2)
 
-    it('as new members are added quorum is updated and cannot be set lower than members/2', async () => {
-      assert.equal(+(await consensus.getQuorum()), 0)
+        await assertRevert(consensus.setQuorum(1), 'QuorumTooSmall(2, 1)')
+      })
 
-      await consensus.addMember(member1, 1, { from: admin })
-      assert.equal(+(await consensus.getQuorum()), 1)
+      it('addMember sets any valid quorum value', async () => {
+        await consensus.addMember(member3, 2, { from: admin })
+        assert.equal(+(await consensus.getQuorum()), 2)
 
-      await assertRevert(consensus.setQuorum(0), 'QuorumTooSmall(1, 0)')
+        await consensus.setQuorum(3)
+        assert.equal(+(await consensus.getQuorum()), 3)
 
-      await consensus.addMember(member2, 2, { from: admin })
-      assert.equal(+(await consensus.getQuorum()), 2)
+        await assertRevert(consensus.setQuorum(1), 'QuorumTooSmall(2, 1)')
 
-      await assertRevert(consensus.setQuorum(1), 'QuorumTooSmall(2, 1)')
-
-      await consensus.addMember(member3, 2, { from: admin })
-      assert.equal(+(await consensus.getQuorum()), 2)
-
-      await consensus.setQuorum(3)
-      assert.equal(+(await consensus.getQuorum()), 3)
-
-      await assertRevert(consensus.setQuorum(1), 'QuorumTooSmall(2, 1)')
-
-      await consensus.setQuorum(2)
-      assert.equal(+(await consensus.getQuorum()), 2)
+        await consensus.setQuorum(2)
+        assert.equal(+(await consensus.getQuorum()), 2)
+      })
     })
   })
 
-  context('setQuorum changes the effective quorum', () => {
+  describe('setQuorum changes the effective quorum', () => {
     let consensus
+    let reportProcessor
     let frame
 
-    beforeEach(async () => {
+    const deployContractWithMembers = async () => {
       const deployed = await deployHashConsensus(admin, { initialEpoch: 1 })
       consensus = deployed.consensus
+      reportProcessor = deployed.reportProcessor
 
       await consensus.addMember(member1, 1, { from: admin })
       await consensus.addMember(member2, 2, { from: admin })
       await consensus.addMember(member3, 3, { from: admin })
       frame = await consensus.getCurrentFrame()
+    }
+
+    context('quorum increases and cancels current unprocessed consensus', () => {
+      before(deployContractWithMembers)
+
+      it('consensus is reached at 2/3 for quorum of 2', async () => {
+        await consensus.setQuorum(2)
+        const tx1 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
+        assertEvent(tx1, 'ReportReceived', {
+          expectedArgs: { refSlot: frame.refSlot, member: member1, report: HASH_1 }
+        })
+        assertAmountOfEvents(tx1, 'ConsensusReached', { expectedAmount: 0 })
+        const tx2 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
+        assertEvent(tx2, 'ReportReceived', {
+          expectedArgs: { refSlot: frame.refSlot, member: member2, report: HASH_1 }
+        })
+        assertAmountOfEvents(tx2, 'ConsensusReached', { expectedAmount: 1 })
+      })
+
+      it('quorum increases but current report is not cancelled', async () => {
+        const tx3 = await consensus.setQuorum(3)
+        assertAmountOfEvents(tx3, 'ConsensusReached', { expectedAmount: 0 })
+        const consensusState = await consensus.getConsensusState()
+        assert.equal(consensusState.consensusReport, ZERO_HASH)
+        assert.isFalse(consensusState.isReportProcessing)
+      })
     })
 
-    it('setQuorum increases and cancels current consensus', async () => {
-      await consensus.setQuorum(2)
+    context('setQuorum triggers consensus on decrease', () => {
+      before(deployContractWithMembers)
 
-      const tx1 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
-      assertEvent(tx1, 'ReportReceived', { expectedArgs: { refSlot: frame.refSlot, member: member1, report: HASH_1 } })
-      assertAmountOfEvents(tx1, 'ConsensusReached', { expectedAmount: 0 })
+      it('2/3 reports come in', async () => {
+        const tx1 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
+        assertEvent(tx1, 'ReportReceived', {
+          expectedArgs: { refSlot: frame.refSlot, member: member1, report: HASH_1 }
+        })
+        assertAmountOfEvents(tx1, 'ConsensusReached', { expectedAmount: 0 })
 
-      const tx2 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
-      assertEvent(tx2, 'ReportReceived', {
-        expectedArgs: { refSlot: frame.refSlot, member: member2, report: HASH_1 }
+        const tx2 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
+        assertEvent(tx2, 'ReportReceived', {
+          expectedArgs: { refSlot: frame.refSlot, member: member2, report: HASH_1 }
+        })
+        assertAmountOfEvents(tx2, 'ConsensusReached', { expectedAmount: 0 })
       })
-      assertAmountOfEvents(tx2, 'ConsensusReached', { expectedAmount: 1 })
 
-      const tx3 = await consensus.setQuorum(3)
-      assertAmountOfEvents(tx3, 'ConsensusReached', { expectedAmount: 0 })
-      const consensusState = await consensus.getConsensusState()
-      assert.equal(consensusState.consensusReport, ZERO_HASH)
-      assert.isFalse(consensusState.isReportProcessing)
+      it('quorum decreases and consensus is reached', async () => {
+        const tx3 = await consensus.setQuorum(2)
+        assertAmountOfEvents(tx3, 'ConsensusReached', { expectedAmount: 1 })
+        const consensusState = await consensus.getConsensusState()
+        assert.equal(consensusState.consensusReport, HASH_1)
+      })
     })
 
-    it('setQuorum decreases, triggers quorum once and goes up/down again', async () => {
-      await consensus.setQuorum(3)
+    context('setQuorum does not re-trigger same consensus', () => {
+      before(deployContractWithMembers)
 
-      const tx1 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
-      assertEvent(tx1, 'ReportReceived', { expectedArgs: { refSlot: frame.refSlot, member: member1, report: HASH_1 } })
-      assertAmountOfEvents(tx1, 'ConsensusReached', { expectedAmount: 0 })
+      it('2/3 members reach consensus with quorum of 2', async () => {
+        await consensus.setQuorum(2)
+        const tx1 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
+        assertEvent(tx1, 'ReportReceived', {
+          expectedArgs: { refSlot: frame.refSlot, member: member1, report: HASH_1 }
+        })
+        assertAmountOfEvents(tx1, 'ConsensusReached', { expectedAmount: 0 })
 
-      const tx2 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
-      assertEvent(tx2, 'ReportReceived', {
-        expectedArgs: { refSlot: frame.refSlot, member: member2, report: HASH_1 }
+        const tx2 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
+        assertEvent(tx2, 'ReportReceived', {
+          expectedArgs: { refSlot: frame.refSlot, member: member2, report: HASH_1 }
+        })
+        assertAmountOfEvents(tx2, 'ConsensusReached', { expectedAmount: 1 })
+        assert.equal(+(await reportProcessor.getLastCall_submitReport()).callCount, 1)
       })
-      assertAmountOfEvents(tx2, 'ConsensusReached', { expectedAmount: 0 })
 
-      const tx3 = await consensus.setQuorum(2)
-      assertAmountOfEvents(tx3, 'ConsensusReached', { expectedAmount: 1 })
-      let consensusState = await consensus.getConsensusState()
-      assert.equal(consensusState.consensusReport, HASH_1)
+      it('quorum goes up and effective consensus changes to none', async () => {
+        await consensus.setQuorum(3)
+        const consensusState = await consensus.getConsensusState()
+        assert.equal(consensusState.consensusReport, ZERO_HASH)
+        assert.isFalse(consensusState.isReportProcessing)
+      })
 
-      const tx4 = await consensus.setQuorum(3)
-      assertAmountOfEvents(tx4, 'ConsensusReached', { expectedAmount: 0 })
-      consensusState = await consensus.getConsensusState()
-      assert.equal(consensusState.consensusReport, ZERO_HASH)
+      it('quorum goes down but same consensus is not triggered and report is not submitted', async () => {
+        const tx = await consensus.setQuorum(2)
+        assertAmountOfEvents(tx, 'ConsensusReached', { expectedAmount: 0 })
 
-      const tx5 = await consensus.setQuorum(2)
-      assertAmountOfEvents(tx5, 'ConsensusReached', { expectedAmount: 0 })
+        const consensusState = await consensus.getConsensusState()
+        assert.equal(consensusState.consensusReport, HASH_1)
+        assert.isFalse(consensusState.isReportProcessing)
+
+        assert.equal(+(await reportProcessor.getLastCall_submitReport()).callCount, 1)
+      })
     })
 
-    it('setQuorum does not re-trigger consensus if hash is already being processed', async () => {
-      await consensus.setQuorum(3)
-      const tx1 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
-      assertEvent(tx1, 'ReportReceived', {
-        expectedArgs: { refSlot: frame.refSlot, member: member1, report: HASH_1 }
+    context('setQuorum does not re-trigger consensus if hash is already being processed', () => {
+      before(deployContractWithMembers)
+
+      it('2/3 members reach consensus with Quorum of 2', async () => {
+        await consensus.setQuorum(2)
+        const tx1 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
+        assertEvent(tx1, 'ReportReceived', {
+          expectedArgs: { refSlot: frame.refSlot, member: member1, report: HASH_1 }
+        })
+        assertAmountOfEvents(tx1, 'ConsensusReached', { expectedAmount: 0 })
+
+        const tx2 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
+        assertEvent(tx2, 'ReportReceived', {
+          expectedArgs: { refSlot: frame.refSlot, member: member2, report: HASH_1 }
+        })
+        assertAmountOfEvents(tx2, 'ConsensusReached', { expectedAmount: 1 })
       })
-      assertAmountOfEvents(tx1, 'ConsensusReached', { expectedAmount: 0 })
 
-      const tx2 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
-      assertEvent(tx2, 'ReportReceived', {
-        expectedArgs: { refSlot: frame.refSlot, member: member2, report: HASH_1 }
+      it('reportProcessor starts processing', async () => {
+        await reportProcessor.startReportProcessing()
+        const consensusState = await consensus.getConsensusState()
+        assert.equal(consensusState.consensusReport, HASH_1)
+        assert.isTrue(consensusState.isReportProcessing)
       })
-      assertAmountOfEvents(tx2, 'ConsensusReached', { expectedAmount: 0 })
 
-      await consensus.advanceTimeBy(SECONDS_PER_FRAME)
+      it('quorum increases while report is processing', async () => {
+        await consensus.setQuorum(3)
+        const consensusState = await consensus.getConsensusState()
+        assert.isTrue(consensusState.isReportProcessing)
+      })
 
-      const tx3 = await consensus.setQuorum(2)
-      assertAmountOfEvents(tx3, 'ConsensusReached', { expectedAmount: 0 })
+      it('quorum decreases but no consensus is triggered', async () => {
+        const tx = await consensus.setQuorum(2)
+        assertAmountOfEvents(tx, 'ConsensusReached', { expectedAmount: 0 })
+        assert.equal(+(await reportProcessor.getLastCall_submitReport()).callCount, 1)
+      })
     })
   })
 })
