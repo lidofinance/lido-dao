@@ -12,6 +12,8 @@ const {
   ZERO_HASH, HASH_1, HASH_2, HASH_3, HASH_4, HASH_5,
   CONSENSUS_VERSION, deployHashConsensus} = require('./hash-consensus-deploy.test')
 
+const CONSENSUS_VERSION_2 = 2
+
 const HashConsensus = artifacts.require('HashConsensusTimeTravellable')
 const MockReportProcessor = artifacts.require('MockReportProcessor')
 
@@ -28,7 +30,7 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
       const deployed = await deployHashConsensus(admin, options)
       consensus = deployed.consensus
       reportProcessor1 = deployed.reportProcessor
-      reportProcessor2 = await MockReportProcessor.new(CONSENSUS_VERSION, { from: admin })
+      reportProcessor2 = await MockReportProcessor.new(CONSENSUS_VERSION_2, { from: admin })
     }
 
     const deployProcessorZero = async () => {
@@ -43,6 +45,13 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
           await consensus.getReportProcessor(),
           ZERO_ADDRESS,
           'there should be zero address for processor',
+        )
+      })
+
+      it('consensus version equals zero', async () => {
+        assert.equal(
+          await consensus.getConsensusVersion(),
+          0,
         )
       })
     })
@@ -85,6 +94,25 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
         it('emits ReportProcessorSet event', async () => {
           const tx = await consensus.setReportProcessor(reportProcessor2.address)
           assertEvent(tx, 'ReportProcessorSet', {expectedArgs: {processor: reportProcessor2.address, prevProcessor: reportProcessor1.address}})
+        })
+      })
+
+      context('consensus version', () => {
+        beforeEach(deploy)
+
+        it('equals to version of initial processor', async () => {
+          assert.equal(
+            await consensus.getConsensusVersion(),
+            CONSENSUS_VERSION,
+          )
+        })
+
+        it('equals to new processor version after it was changed', async () => {
+          await consensus.setReportProcessor(reportProcessor2.address)
+          assert.equal(
+            await consensus.getConsensusVersion(),
+            CONSENSUS_VERSION_2,
+          )
         })
       })
     })
