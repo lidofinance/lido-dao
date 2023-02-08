@@ -5,7 +5,7 @@ const { newDao } = require('./dao')
 const OssifiableProxy = artifacts.require('OssifiableProxy')
 
 const factories = require('./factories')
-const DEAFAULT_FACTORIES = {
+const DEFAULT_FACTORIES = {
   appManagerFactory: factories.appManagerFactory,
   treasuryFactory: factories.treasuryFactory,
   votingFactory: factories.votingEOAFactory,
@@ -26,13 +26,13 @@ const DEAFAULT_FACTORIES = {
   stakingModulesFactory: factories.stakingModulesFactory,
   guardiansFactory: factories.guardiansFactory,
   lidoLocatorMockImplFactory: factories.lidoLocatorMockImplFactory,
-  selfOwnedStETHBurnerFactory: factories.selfOwnedStETHBurnerFactory,
+  burnerFactory: factories.burnerFactory,
   postSetup: factories.postSetup,
   lidoLocatorFactory: factories.lidoLocatorFactory
 }
 
 const getFactory = (config, factoryName) => {
-  return config[factoryName] ? config[factoryName] : DEAFAULT_FACTORIES[factoryName]
+  return config[factoryName] ? config[factoryName] : DEFAULT_FACTORIES[factoryName]
 }
 
 async function deployProtocol(config = {}) {
@@ -69,7 +69,7 @@ async function deployProtocol(config = {}) {
   protocol.elRewardsVault = await getFactory(config, 'elRewardsVaultFactory')(protocol)
   protocol.withdrawalVault = await getFactory(config, 'withdrawalVaultFactory')(protocol)
   protocol.eip712StETH = await getFactory(config, 'eip712StETHFactory')(protocol)
-  protocol.selfOwnedStETHBurner = await getFactory(config, 'selfOwnedStETHBurnerFactory')(protocol)
+  protocol.burner = await getFactory(config, 'burnerFactory')(protocol)
 
   protocol.lidoLocator = await getFactory(config, 'lidoLocatorFactory')(protocol)
   protocol.oracle = await getFactory(config, 'accountingOracleFactory')(protocol)
@@ -102,10 +102,10 @@ async function addStakingModules(stakingModulesFactory, protocol) {
   return stakingModules.map(({ module }) => module)
 }
 
-async function upgradeOssifiableProxy(proxyAddress, newImplemantation, proxyOwner) {
+async function upgradeOssifiableProxy(proxyAddress, newImplementation, proxyOwner) {
   const proxy = await OssifiableProxy.at(proxyAddress)
 
-  await proxy.proxy__upgradeTo(newImplemantation, { from: proxyOwner })
+  await proxy.proxy__upgradeTo(newImplementation, { from: proxyOwner })
 }
 
 module.exports = {

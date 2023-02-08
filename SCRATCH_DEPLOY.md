@@ -56,8 +56,7 @@ Steps for deploy:
 * [ ] deploy LidoExecutionLayerRewardsVault
 * [ ] finalize DAO setup (via Lido Template)
 * [ ] deploy CompositePostRebaseBeaconReceiver
-* [ ] deploy SelfOwnedStETHBurner
-* [ ] do Aragon voting to attach CompositePostRebaseBeaconReceiver and SelfOwnedStETHBurner to the protocol
+* [ ] deploy Burner
 * [ ] make final deployed DAO check via script
 * [ ] open and check Lido DAO web interface (via Aragon client)
 
@@ -81,6 +80,3 @@ const rootCid = await uploadDirToIpfs({ dirPath: distPath, ipfsApiUrl: ipfsAPI }
 It appeared that `@aragon/buidler-aragon@npm:^0.2.9` uses `ipfs-http-client`.
 
 `ipfs-http-client` has a brittle API. Neither `41.0.0` nor `50.0.0` versions of it will work with `@aragon/buidler-aragon@npm:^0.2.9`.
-
-## Default Aragon voting time
-To attach SelfOwnedStETHBurner to the protocol a DAO voting is needed. To do it reasonably fast on the protocol deployment the default Aragon voting duration time (see `deployed-local-defaults.json`) is set to seconds. Draft script for changing Aragon voting time is at `scripts/multisig/32-change-voting-time.js`.

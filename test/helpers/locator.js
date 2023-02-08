@@ -8,7 +8,7 @@ const locatorServices = [
   'legacyOracle',
   'lido',
   'oracleReportSanityChecker',
-  'selfOwnedStEthBurner',
+  'burner',
   'stakingRouter',
   'treasury',
   'validatorExitBus',

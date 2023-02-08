@@ -433,9 +433,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     })
   })
 
-  describe('receiveStakingRouter()', async () => {
+  describe('receiveStakingRouterRemainder()', async () => {
     it('unable to receive eth from arbitrary account', async () => {
-      assertRevert(app.receiveStakingRouter({ from: nobody, value: ETH(1) }))
+      assertRevert(app.receiveStakingRouterDepositRemainder({ from: nobody, value: ETH(1) }))
     })
 
     it('event work', async () => {
@@ -445,9 +445,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       // add some amount to the sender
       await ethers.provider.send('hardhat_setBalance', [stakingRouter.address, web3.utils.numberToHex(ETH(100))])
 
-      const receipt = await app.receiveStakingRouter({ from: stakingRouter.address, value: ETH(2) })
+      const receipt = await app.receiveStakingRouterDepositRemainder({ from: stakingRouter.address, value: ETH(2) })
 
-      assertEvent(receipt, 'StakingRouterTransferReceived', {
+      assertEvent(receipt, 'StakingRouterDepositRemainderReceived', {
         expectedArgs: { amount: ETH(2) }
       })
     })

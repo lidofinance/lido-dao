@@ -23,7 +23,7 @@ library SigningKeys {
     event SigningKeyAdded(uint256 indexed nodeOperatorId, bytes pubkey);
     event SigningKeyRemoved(uint256 indexed nodeOperatorId, bytes pubkey);
 
-    function _isEmptySigningKey(bytes memory _key) internal pure returns (bool) {
+    function isKeyEmpty(bytes memory _key) internal pure returns (bool) {
         assert(_key.length == PUBKEY_LENGTH);
 
         uint256 k1;
@@ -36,15 +36,15 @@ library SigningKeys {
         return 0 == k1 && 0 == (k2 >> ((2 * 32 - PUBKEY_LENGTH) * 8));
     }
 
-    function _signingKeyOffset(bytes32 _position, uint256 _nodeOperatorId, uint256 _keyIndex)
+    function getKeyOffset(bytes32 _position, uint256 _nodeOperatorId, uint256 _keyIndex)
         internal
         pure
-        returns (uint256)
+        returns (uint256)   
     {
         return uint256(keccak256(abi.encodePacked(_position, _nodeOperatorId, _keyIndex)));
     }
 
-    function _addSigningKeys(
+    function addKeysSigs(
         bytes32 _position,
         uint256 _nodeOperatorId,
         uint256 _keysCount,
@@ -57,37 +57,37 @@ library SigningKeys {
         require(_publicKeys.length == _keysCount.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
         require(_signatures.length == _keysCount.mul(SIGNATURE_LENGTH), "INVALID_LENGTH");
 
-        (bytes memory key, bytes memory sig) = _initKeySig(1);
+        (bytes memory key, bytes memory sig) = initKeySig(1);
         for (uint256 i = 0; i < _keysCount; ++i) {
             MemUtils.copyBytes(_publicKeys, key, i * PUBKEY_LENGTH, 0, PUBKEY_LENGTH);
-            require(!_isEmptySigningKey(key), "EMPTY_KEY");
+            require(!isKeyEmpty(key), "EMPTY_KEY");
             MemUtils.copyBytes(_signatures, sig, i * SIGNATURE_LENGTH, 0, SIGNATURE_LENGTH);
 
-            _position._storeSigningKey(_nodeOperatorId, _startIndex, key, sig);
+            _position.storeKeySig(_nodeOperatorId, _startIndex, key, sig);
             _startIndex = _startIndex.add(1);
             emit SigningKeyAdded(_nodeOperatorId, key);
         }
         return _startIndex;
     }
 
-    function _removeUnusedSigningKey(bytes32 _position, uint256 _nodeOperatorId, uint256 _index, uint256 _lastIndex)
+    function removeUnusedKeySig(bytes32 _position, uint256 _nodeOperatorId, uint256 _index, uint256 _lastIndex)
         internal
         returns (uint256)
     {
-        (bytes memory removedKey,) = _position._loadSigningKey(_nodeOperatorId, _index);
+        (bytes memory removedKey,) = _position.loadKeySig(_nodeOperatorId, _index);
 
         if (_index < _lastIndex) {
-            (bytes memory key, bytes memory signature) = _position._loadSigningKey(_nodeOperatorId, _lastIndex);
-            _position._storeSigningKey(_nodeOperatorId, _index, key, signature);
+            (bytes memory key, bytes memory signature) = _position.loadKeySig(_nodeOperatorId, _lastIndex);
+            _position.storeKeySig(_nodeOperatorId, _index, key, signature);
         }
 
-        _position._deleteSigningKey(_nodeOperatorId, _lastIndex);
+        _position.deleteKeySig(_nodeOperatorId, _lastIndex);
         emit SigningKeyRemoved(_nodeOperatorId, removedKey);
 
         return _lastIndex;
     }
 
-    function _storeSigningKey(
+    function storeKeySig(
         bytes32 _position,
         uint256 _nodeOperatorId,
         uint256 _keyIndex,
@@ -98,7 +98,7 @@ library SigningKeys {
         // assert(_signature.length == SIGNATURE_LENGTH);
 
         // key
-        uint256 offset = _position._signingKeyOffset(_nodeOperatorId, _keyIndex);
+        uint256 offset = _position.getKeyOffset(_nodeOperatorId, _keyIndex);
         uint256 keyExcessBits = (2 * 32 - PUBKEY_LENGTH) * 8;
         assembly {
             sstore(offset, mload(add(_pubkey, 0x20)))
@@ -115,8 +115,8 @@ library SigningKeys {
         }
     }
 
-    function _deleteSigningKey(bytes32 _position, uint256 _nodeOperatorId, uint256 _keyIndex) internal {
-        uint256 offset = _position._signingKeyOffset(_nodeOperatorId, _keyIndex);
+    function deleteKeySig(bytes32 _position, uint256 _nodeOperatorId, uint256 _keyIndex) internal {
+        uint256 offset = _position.getKeyOffset(_nodeOperatorId, _keyIndex);
         for (uint256 i = 0; i < (PUBKEY_LENGTH + SIGNATURE_LENGTH) / 32 + 1; ++i) {
             assembly {
                 sstore(add(offset, i), 0)
@@ -124,7 +124,7 @@ library SigningKeys {
         }
     }
 
-    function _loadSigningKeyAndAppend(
+    function loadKeySigAndAppend(
         bytes32 _position,
         uint256 _nodeOperatorId,
         uint256 _keyIndex,
@@ -132,17 +132,17 @@ library SigningKeys {
         bytes memory _pubkeys,
         bytes memory _signatures
     ) internal view {
-        (bytes memory pubkey, bytes memory signature) = _position._loadSigningKey(_nodeOperatorId, _keyIndex);
+        (bytes memory pubkey, bytes memory signature) = _position.loadKeySig(_nodeOperatorId, _keyIndex);
         MemUtils.copyBytes(pubkey, _pubkeys, _offset.mul(PUBKEY_LENGTH));
         MemUtils.copyBytes(signature, _signatures, _offset.mul(SIGNATURE_LENGTH));
     }
 
-    function _loadSigningKey(bytes32 _position, uint256 _nodeOperatorId, uint256 _keyIndex)
+    function loadKeySig(bytes32 _position, uint256 _nodeOperatorId, uint256 _keyIndex)
         internal
         view
         returns (bytes memory pubkey, bytes memory signature)
     {
-        uint256 offset = _position._signingKeyOffset(_nodeOperatorId, _keyIndex);
+        uint256 offset = _position.getKeyOffset(_nodeOperatorId, _keyIndex);
 
         // key
         bytes memory tmpKey = MemUtils.unsafeAllocateBytes(64);
@@ -163,7 +163,7 @@ library SigningKeys {
         }
     }
 
-    function _initKeySig(uint256 _count) internal pure returns (bytes memory, bytes memory) {
+    function initKeySig(uint256 _count) internal pure returns (bytes memory, bytes memory) {
         return (
             MemUtils.unsafeAllocateBytes(_count.mul(PUBKEY_LENGTH)),
             MemUtils.unsafeAllocateBytes(_count.mul(SIGNATURE_LENGTH))
