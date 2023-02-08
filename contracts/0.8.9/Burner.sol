@@ -373,7 +373,7 @@ contract Burner is IBurner, AccessControlEnumerable {
     }
 
     function _requestBurn(uint256 _sharesAmount, uint256 _stETHAmount, bool _isCover) private {
-        if (_sharesAmount == 0 || _stETHAmount == 0) revert ZeroBurnAmount();
+        if (_sharesAmount == 0) revert ZeroBurnAmount();
 
         emit StETHBurnRequested(_isCover, msg.sender, _stETHAmount, _sharesAmount);
 
