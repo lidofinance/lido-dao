@@ -36,6 +36,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// Bunker mode activation timestamp
     bytes32 internal constant BUNKER_MODE_SINCE_TIMESTAMP_POSITION =
         keccak256("lido.WithdrawalQueue.bunkerModeSinceTimestamp");
+
     /// Special value for timestamp when bunker mode is inactive (i.e., protocol in turbo mode)
     uint256 public constant BUNKER_MODE_DISABLED_TIMESTAMP = type(uint256).max;
 
@@ -105,48 +106,39 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         _pause(_duration);
     }
 
-    struct WithdrawalRequestInput {
-        /// @notice Amount of the wstETH/StETH tokens that will be locked for withdrawal
-        uint256 amount;
-        /// @notice Address that will be able to manage or claim the request
-        address owner;
-    }
-
     /// @notice Request the sequence of stETH withdrawals according to passed `withdrawalRequestInputs` data
-    /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
-    ///  be created for each item in the passed list. If `WithdrawalRequestInput.owner` is set to `address(0)`,
-    ///  `msg.sender` will be used as owner.
+    /// @param amounts an array of stETH amount values. The standalone withdrawal request will
+    ///  be created for each item in the passed list.
+    /// @param _owner address that will be able to transfer or claim the request.
+    ///  If `owner` is set to `address(0)`, `msg.sender` will be used as owner.
     /// @return requestIds an array of the created withdrawal requests
-    function requestWithdrawals(WithdrawalRequestInput[] calldata _withdrawalRequestInputs)
+    function requestWithdrawals(uint256[] calldata amounts, address _owner)
         public
         whenResumed
         returns (uint256[] memory requestIds)
     {
-        requestIds = new uint256[](_withdrawalRequestInputs.length);
-        for (uint256 i = 0; i < _withdrawalRequestInputs.length; ++i) {
-            requestIds[i] = _requestWithdrawal(
-                _withdrawalRequestInputs[i].amount,
-                _checkWithdrawalRequestInput(_withdrawalRequestInputs[i].amount, _withdrawalRequestInputs[i].owner)
-            );
+        requestIds = new uint256[](amounts.length);
+        for (uint256 i = 0; i < amounts.length; ++i) {
+            requestIds[i] = _requestWithdrawal(amounts[i], _checkWithdrawalRequestInput(amounts[i], _owner));
         }
     }
 
     /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data
-    /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
-    ///  be created for each item in the passed list. If `WithdrawalRequestInput.owner` is set to `address(0)`,
-    ///  `msg.sender` will be used as owner.
+    /// @param amounts an array of stETH amount values. The standalone withdrawal request will
+    ///  be created for each item in the passed list.
+    /// @param _owner address that will be able to transfer or claim the request.
+    ///  If `owner` is set to `address(0)`, `msg.sender` will be used as owner.
     /// @return requestIds an array of the created withdrawal requests
-    function requestWithdrawalsWstETH(WithdrawalRequestInput[] calldata _withdrawalRequestInputs)
+    function requestWithdrawalsWstETH(uint256[] calldata amounts, address _owner)
         public
         whenResumed
         returns (uint256[] memory requestIds)
     {
-        requestIds = new uint256[](_withdrawalRequestInputs.length);
-        for (uint256 i = 0; i < _withdrawalRequestInputs.length; ++i) {
-            uint256 amountOfWstETH = _withdrawalRequestInputs[i].amount;
-            address owner = _checkWithdrawalRequestInput(
-                WSTETH.getStETHByWstETH(amountOfWstETH), _withdrawalRequestInputs[i].owner
-            );
+        requestIds = new uint256[](amounts.length);
+        for (uint256 i = 0; i < amounts.length; ++i) {
+            uint256 amountOfWstETH = amounts[i];
+            uint256 amountOfStETH = WSTETH.getStETHByWstETH(amountOfWstETH);
+            address owner = _checkWithdrawalRequestInput(amountOfStETH, _owner);
             requestIds[i] = _requestWithdrawalWstETH(amountOfWstETH, owner);
         }
     }
@@ -161,32 +153,36 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
 
     /// @notice Request the sequence of stETH withdrawals according to passed `withdrawalRequestInputs`
     ///  using EIP-2612 Permit
-    /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
-    ///  be created for each item in the passed list. If `WithdrawalRequestInput.owner` is set to `address(0)`,
-    ///  `msg.sender` will be used as owner.
+    /// @param _amounts an array of stETH amount values. The standalone withdrawal request will
+    ///  be created for each item in the passed list.
+    /// @param _owner address that will be able to transfer or claim the request.
+    ///  If `owner` is set to `address(0)`, `msg.sender` will be used as owner.
     /// @param _permit data required for the stETH.permit() method to set the allowance
     /// @return requestIds an array of the created withdrawal requests
-    function requestWithdrawalsWithPermit(
-        WithdrawalRequestInput[] calldata _withdrawalRequestInputs,
-        PermitInput calldata _permit
-    ) external whenResumed returns (uint256[] memory requestIds) {
+    function requestWithdrawalsWithPermit(uint256[] calldata _amounts, address _owner, PermitInput calldata _permit)
+        external
+        whenResumed
+        returns (uint256[] memory requestIds)
+    {
         STETH.permit(msg.sender, address(this), _permit.value, _permit.deadline, _permit.v, _permit.r, _permit.s);
-        return requestWithdrawals(_withdrawalRequestInputs);
+        return requestWithdrawals(_amounts, _owner);
     }
 
     /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data
     ///  using EIP-2612 Permit
-    /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
-    ///  be created for each item in the passed list. If `WithdrawalRequestInput.owner` is set to `address(0)`,
-    ///  `msg.sender` will be used as owner.
+    /// @param _amounts an array of stETH amount values. The standalone withdrawal request will
+    ///  be created for each item in the passed list.
+    /// @param _owner address that will be able to transfer or claim the request.
+    ///  If `owner` is set to `address(0)`, `msg.sender` will be used as owner.
     /// @param _permit data required for the wstETH.permit() method to set the allowance
     /// @return requestIds an array of the created withdrawal requests
     function requestWithdrawalsWstETHWithPermit(
-        WithdrawalRequestInput[] calldata _withdrawalRequestInputs,
+        uint256[] calldata _amounts,
+        address _owner,
         PermitInput calldata _permit
     ) external whenResumed returns (uint256[] memory requestIds) {
         WSTETH.permit(msg.sender, address(this), _permit.value, _permit.deadline, _permit.v, _permit.r, _permit.s);
-        return requestWithdrawalsWstETH(_withdrawalRequestInputs);
+        return requestWithdrawalsWstETH(_amounts, _owner);
     }
 
     /// @notice return statuses for the bunch of requests

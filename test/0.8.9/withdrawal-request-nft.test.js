@@ -1,3 +1,4 @@
+const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
 const { EvmSnapshot } = require('../helpers/blockchain')
@@ -39,15 +40,9 @@ hre.contract(
 
       await stETH.approve(withdrawalRequestNFT.address, ETH(50), { from: stEthHolder })
       await wstETH.approve(withdrawalRequestNFT.address, ETH(25), { from: wstEthHolder })
-      await withdrawalRequestNFT.requestWithdrawals(
-        [
-          [ETH(25), nftHolderStETH],
-          [ETH(25), nftHolderStETH]
-        ],
-        { from: stEthHolder }
-      )
+      await withdrawalRequestNFT.requestWithdrawals([ETH(25), ETH(25)], nftHolderStETH,{ from: stEthHolder })
       nftHolderStETHTokenIds = [1, 2]
-      await withdrawalRequestNFT.requestWithdrawalsWstETH([[ETH(25), nftHolderWstETH]], { from: wstEthHolder })
+      await withdrawalRequestNFT.requestWithdrawalsWstETH([ETH(25)], nftHolderWstETH, { from: wstEthHolder })
       nftHolderWstETHTokenIds = [3]
       nonExistedTokenId = 4
       await snapshot.make()

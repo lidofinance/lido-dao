@@ -43,7 +43,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
 
   context('Request', async () => {
     it('One can request a withdrawal', async () => {
-      const receipt = await withdrawalQueue.requestWithdrawals([[StETH(300), owner]], { from: user })
+      const receipt = await withdrawalQueue.requestWithdrawals([StETH(300)], owner, { from: user })
       const requestId = getEventArgument(receipt, "WithdrawalRequested", "requestId")
 
       assert.emits(receipt, "WithdrawalRequested", {
@@ -75,7 +75,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
 
       const amount = min.sub(bn(1))
 
-      await assert.reverts(withdrawalQueue.requestWithdrawals([[amount, owner]], { from: user }),
+      await assert.reverts(withdrawalQueue.requestWithdrawals([amount], owner, { from: user }),
         `RequestAmountTooSmall(${amount})`)
     })
 
@@ -83,7 +83,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       const min = await withdrawalQueue.MIN_STETH_WITHDRAWAL_AMOUNT()
       const shares = await steth.getSharesByPooledEth(min)
 
-      const receipt = await withdrawalQueue.requestWithdrawals([[min, owner]], { from: user })
+      const receipt = await withdrawalQueue.requestWithdrawals([min], owner, { from: user })
       const requestId = getEventArgument(receipt, "WithdrawalRequested", "requestId")
 
       assert.emits(receipt, "WithdrawalRequested", {
@@ -112,7 +112,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await steth.setTotalPooledEther(amount)
       await steth.approve(withdrawalQueue.address, amount, { from: user })
 
-      await assert.reverts(withdrawalQueue.requestWithdrawals([[amount, owner]], { from: user }),
+      await assert.reverts(withdrawalQueue.requestWithdrawals([amount], owner, { from: user }),
         `RequestAmountTooLarge(${amount})`)
     })
 
@@ -121,7 +121,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await steth.setTotalPooledEther(max)
       await steth.approve(withdrawalQueue.address, max, { from: user })
 
-      const receipt = await withdrawalQueue.requestWithdrawals([[max, owner]], { from: user })
+      const receipt = await withdrawalQueue.requestWithdrawals([max], owner, { from: user })
       const requestId = getEventArgument(receipt, "WithdrawalRequested", "requestId")
 
       assert.emits(receipt, "WithdrawalRequested", {
@@ -145,14 +145,14 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     })
 
     it('One cant request more than they have', async () => {
-      await assert.reverts(withdrawalQueue.requestWithdrawals([[StETH(400), owner]], { from: user }),
+      await assert.reverts(withdrawalQueue.requestWithdrawals([StETH(400)], owner, { from: user }),
         "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE")
     })
 
     it('One cant request more than allowed', async () => {
       await steth.approve(withdrawalQueue.address, StETH(200), { from: user })
 
-      await assert.reverts(withdrawalQueue.requestWithdrawals([[StETH(300), owner]], { from: user }),
+      await assert.reverts(withdrawalQueue.requestWithdrawals([StETH(300)], owner, { from: user }),
         "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE")
     })
   })
@@ -161,7 +161,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     const amount = bn(ETH(300))
 
     beforeEach('Enqueue a request', async () => {
-      await withdrawalQueue.requestWithdrawals([[amount, owner]], { from: user })
+      await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
     })
 
     it('Calculate one request batch', async () => {
@@ -195,7 +195,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await withdrawalQueue.finalize(1, { from: steth.address, value: ETH(10) })
       assert.equals(await withdrawalQueue.getLastCheckpointIndex(), 1)
 
-      await withdrawalQueue.requestWithdrawals([[amount, owner]], { from: user })
+      await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
       await withdrawalQueue.finalize(2, { from: steth.address, value: ETH(10) })
 
       assert.equals(await withdrawalQueue.getLastCheckpointIndex(), 1)
@@ -206,7 +206,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await steth.mintShares(user, shares(1))
       await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
 
-      await withdrawalQueue.requestWithdrawals([[amount, owner]], { from: user })
+      await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
       const batch = await withdrawalQueue.finalizationBatch(2, shareRate(300))
       await withdrawalQueue.finalize(2, { from: steth.address, value: batch.ethToLock })
 
@@ -222,7 +222,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await steth.mintShares(user, shares(1))
       await steth.approve(withdrawalQueue.address, StETH(600), { from: user })
 
-      await withdrawalQueue.requestWithdrawals([[amount, owner]], { from: user })
+      await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
 
       await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
 
@@ -244,7 +244,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     let requestId
     const amount = ETH(300)
     beforeEach('Enqueue a request', async () => {
-      const receipt = await withdrawalQueue.requestWithdrawals([[amount, owner]], { from: user })
+      const receipt = await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
       requestId = getEventArgument(receipt, "WithdrawalRequested", "requestId")
     })
 
@@ -278,7 +278,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await steth.mintShares(user, shares(1))
       await steth.approve(withdrawalQueue.address, StETH(600), { from: user })
 
-      await withdrawalQueue.requestWithdrawals([[amount, owner]], { from: user })
+      await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
 
       await withdrawalQueue.finalize(2, { from: steth.address, value: amount })
       await assert.reverts(withdrawalQueue.claimWithdrawalTo(requestId, 0, owner, { from: owner }), 'InvalidHint(0)')
@@ -316,7 +316,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
 
       for (let i = 1; i <= 20; i++) {
         assert.equals(await withdrawalQueue.getLastCheckpointIndex(), i)
-        await withdrawalQueue.requestWithdrawals([[StETH(1), ZERO_ADDRESS]], { from: user })
+        await withdrawalQueue.requestWithdrawals([StETH(1)], ZERO_ADDRESS, { from: user })
         await withdrawalQueue.finalize(i + 1, { from: steth.address, value: bn(ETH(1)).sub(bn(i * 1000)) })
       }
 
@@ -337,7 +337,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
 
     beforeEach(async () => {
       for (i = 1; i <= numOfRequests; i++) {
-        await withdrawalQueue.requestWithdrawals([[ETH(20), owner]], { from: user })
+        await withdrawalQueue.requestWithdrawals([ETH(20)], owner, { from: user })
       }
     })
 
@@ -382,7 +382,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
 
     beforeEach(async () => {
       for (let i = 1; i <= numOfRequests; i++) {
-        await withdrawalQueue.requestWithdrawals([[ETH(20), owner]], { from: user })
+        await withdrawalQueue.requestWithdrawals([ETH(20)], owner, { from: user })
       }
     })
 
@@ -429,7 +429,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
 
     beforeEach(async () => {
       for (let i = 1; i <= numOfRequests + 1; i++) {
-        await withdrawalQueue.requestWithdrawals([[ETH(20), owner]], { from: user })
+        await withdrawalQueue.requestWithdrawals([ETH(20)], owner, { from: user })
       }
     })
 
@@ -462,11 +462,11 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
 
   context('findClaimHint()', async () => {
     const numOfRequests = 10;
-    const requests = Array(numOfRequests).fill([ETH(20), owner])
+    const requests = Array(numOfRequests).fill(ETH(20))
     const discountedPrices = Array(numOfRequests).fill().map((_, i) => ETH(i));
 
     beforeEach(async () => {
-      await withdrawalQueue.requestWithdrawals(requests, { from: user })
+      await withdrawalQueue.requestWithdrawals(requests, owner, { from: user })
       for (let i = 1; i <= numOfRequests; i++) {
         await withdrawalQueue.finalize(i, { from: steth.address, value: discountedPrices[i] })
       }
@@ -522,7 +522,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     const amount = ETH(20)
 
     beforeEach('Enqueue a request', async () => {
-      await withdrawalQueue.requestWithdrawals([[amount, owner]], { from: user })
+      await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
       requestId = await withdrawalQueue.getLastRequestId()
     })
 
@@ -547,11 +547,11 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await steth.approve(withdrawalQueue.address, StETH(300), { from: owner })
 
       const secondRequestAmount = ETH(10)
-      await withdrawalQueue.requestWithdrawals([[secondRequestAmount, owner]], { from: owner })
+      await withdrawalQueue.requestWithdrawals([secondRequestAmount], owner, { from: owner })
       const secondRequestId = await withdrawalQueue.getLastRequestId()
 
       const thirdRequestAmount = ETH(30)
-      await withdrawalQueue.requestWithdrawals([[thirdRequestAmount, user]], { from: user })
+      await withdrawalQueue.requestWithdrawals([thirdRequestAmount], user, { from: user })
       const thirdRequestId = await withdrawalQueue.getLastRequestId()
 
       await withdrawalQueue.finalize(thirdRequestId, { from: steth.address, value: ETH(40) })
@@ -575,11 +575,11 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await steth.approve(withdrawalQueue.address, StETH(300), { from: owner })
 
       const secondRequestAmount = ETH(10)
-      await withdrawalQueue.requestWithdrawals([[secondRequestAmount, owner]], { from: owner })
+      await withdrawalQueue.requestWithdrawals([secondRequestAmount], owner, { from: owner })
       const secondRequestId = await withdrawalQueue.getLastRequestId()
 
       const thirdRequestAmount = ETH(30)
-      await withdrawalQueue.requestWithdrawals([[thirdRequestAmount, user]], { from: user })
+      await withdrawalQueue.requestWithdrawals([thirdRequestAmount], user, { from: user })
       const thirdRequestId = await withdrawalQueue.getLastRequestId()
 
       await withdrawalQueue.finalize(thirdRequestId, { from: steth.address, value: ETH(40) })
@@ -597,7 +597,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     const amount = ETH(20)
 
     beforeEach('Enqueue a request', async () => {
-      await withdrawalQueue.requestWithdrawals([[amount, owner]], { from: user })
+      await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
       requestId = await withdrawalQueue.getLastRequestId()
     })
 
@@ -608,11 +608,11 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await steth.approve(withdrawalQueue.address, StETH(300), { from: owner })
 
       const secondRequestAmount = ETH(10)
-      await withdrawalQueue.requestWithdrawals([[secondRequestAmount, owner]], { from: owner })
+      await withdrawalQueue.requestWithdrawals([secondRequestAmount], owner, { from: owner })
       const secondRequestId = await withdrawalQueue.getLastRequestId()
 
       const thirdRequestAmount = ETH(30)
-      await withdrawalQueue.requestWithdrawals([[thirdRequestAmount, user]], { from: user })
+      await withdrawalQueue.requestWithdrawals([thirdRequestAmount], user, { from: user })
       const thirdRequestId = await withdrawalQueue.getLastRequestId()
 
       await withdrawalQueue.finalize(thirdRequestId, { from: steth.address, value: ETH(40) })
@@ -630,7 +630,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     const amount = ETH(20)
 
     beforeEach('Enqueue a request', async () => {
-      await withdrawalQueue.requestWithdrawals([[amount, owner]], { from: user })
+      await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
       requestId = await withdrawalQueue.getLastRequestId()
     })
 
@@ -638,7 +638,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await steth.mintShares(owner, shares(300))
       await steth.approve(withdrawalQueue.address, StETH(300), { from: owner })
       const secondRequestAmount = ETH(10)
-      await withdrawalQueue.requestWithdrawals([[secondRequestAmount, owner]], { from: owner })
+      await withdrawalQueue.requestWithdrawals([secondRequestAmount], owner, { from: owner })
       const secondRequestId = await withdrawalQueue.getLastRequestId()
       await withdrawalQueue.finalize(secondRequestId, { from: steth.address, value: ETH(40) })
 
@@ -658,16 +658,15 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     it('works correctly with non empty payload and different tokens', async () => {
       await steth.mintShares(user, shares(10))
       await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
-      const requests = [
-        [ETH(10), owner],
-        [ETH(20), stranger]
-      ]
+      const requests = [ETH(10), ETH(20)]
       const stETHBalanceBefore = await steth.balanceOf(user)
       const lastRequestIdBefore = await withdrawalQueue.getLastRequestId()
-      await withdrawalQueue.requestWithdrawals(requests, { from: user })
+
+      await withdrawalQueue.requestWithdrawals(requests, stranger, { from: user })
+
       assert.equals(await withdrawalQueue.getLastRequestId(), lastRequestIdBefore.add(bn(requests.length)))
       const stETHBalanceAfter = await steth.balanceOf(user)
-      assert.almostEqual(stETHBalanceAfter, stETHBalanceBefore.sub(bn(requests[0][0])).sub(bn(requests[1][0])), 30)
+      assert.almostEqual(stETHBalanceAfter, stETHBalanceBefore.sub(bn(requests[0])).sub(bn(requests[1])), 30)
     })
   })
 
@@ -677,16 +676,15 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await steth.mintShares(wsteth.address, shares(100))
       await steth.mintShares(user, shares(100))
       await wsteth.approve(withdrawalQueue.address, ETH(300), { from: user })
-      const requests = [
-        [ETH(10), owner],
-        [ETH(20), stranger]
-      ]
+      const requests = [ETH(10), ETH(20)]
       const wstETHBalanceBefore = await wsteth.balanceOf(user)
       const lastRequestIdBefore = await withdrawalQueue.getLastRequestId()
-      await withdrawalQueue.requestWithdrawalsWstETH(requests, { from: user })
+
+      await withdrawalQueue.requestWithdrawalsWstETH(requests, stranger, { from: user })
+
       assert.equals(await withdrawalQueue.getLastRequestId(), lastRequestIdBefore.add(bn(requests.length)))
       const wstETHBalanceAfter = await wsteth.balanceOf(user)
-      assert.equals(wstETHBalanceAfter, wstETHBalanceBefore.sub(bn(requests[0][0])).sub(bn(requests[1][0])))
+      assert.equals(wstETHBalanceAfter, wstETHBalanceBefore.sub(bn(requests[0])).sub(bn(requests[1])))
     })
   })
 
@@ -705,7 +703,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
 
       const withdrawalRequestsCount = 5
       for (let i = 0; i < withdrawalRequestsCount; ++i) {
-        requests.push([ETH(10), owner])
+        requests.push(ETH(10))
       }
 
       const amount = bn(ETH(10)).mul(bn(withdrawalRequestsCount))
@@ -731,7 +729,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
 
       const aliceBalancesBefore = await wsteth.balanceOf(alice.address)
       const lastRequestIdBefore = await withdrawalQueue.getLastRequestId()
-      await withdrawalQueue.requestWithdrawalsWstETHWithPermit(requests, permission, { from: alice.address })
+      await withdrawalQueue.requestWithdrawalsWstETHWithPermit(requests, owner, permission, { from: alice.address })
       assert.equals(await withdrawalQueue.getLastRequestId(), lastRequestIdBefore.add(bn(requests.length)))
       const aliceBalancesAfter = await wsteth.balanceOf(alice.address)
       assert.equals(aliceBalancesAfter, aliceBalancesBefore.sub(bn(ETH(10)).mul(bn(withdrawalRequestsCount))))
@@ -743,7 +741,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     let requestId
 
     beforeEach('Enqueue a request', async () => {
-      await withdrawalQueue.requestWithdrawals([[amount, user]], { from: user })
+      await withdrawalQueue.requestWithdrawals([amount], user, { from: user })
       requestId = (await withdrawalQueue.getLastRequestId()).toNumber()
     })
 
@@ -765,12 +763,12 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
 
     it("One can't change someone else's request", async () => {
       await assert.reverts(withdrawalQueue.transferFrom(user, owner, requestId, { from: stranger }), 
-        'ERC721: caller is not token owner or approved')
+        `NotOwnerOrApproved("${stranger}")`)
     })
 
     it("One can't pass zero owner", async () => {
       await assert.reverts(withdrawalQueue.transferFrom(user, ZERO_ADDRESS, requestId, { from: user }), 
-        'ERC721: transfer to the zero address')
+        'TransferToZeroAddress()')
     })
 
     it("One can't pass zero requestId", async () => {
@@ -799,12 +797,12 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
 
     it.skip('Can perform a lots of requests', async () => {
       for (let i = 0; i < firstRequestCount; i++) {
-        await withdrawalQueue.requestWithdrawals([[bn(ETH(1 / secondRequestCount)), user]], { from: user })
+        await withdrawalQueue.requestWithdrawals([ETH(1 / secondRequestCount)], user, { from: user })
       }
       const firstGasUsed = (await withdrawalQueue.changeRecipient(firstRequestCount - 1, owner, { from: user })).receipt.gasUsed
 
       for (let i = firstRequestCount; i < secondRequestCount; i++) {
-        await withdrawalQueue.requestWithdrawals([[bn(ETH(1 / secondRequestCount)), user]], { from: user })
+        await withdrawalQueue.requestWithdrawals([ETH(1 / secondRequestCount)], user, { from: user })
       }
       const secondGasUsed = (await withdrawalQueue.changeRecipient(secondRequestCount / 2, owner, { from: user })).receipt.gasUsed
 
