@@ -59,9 +59,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     IWstETH public immutable WSTETH;
 
     /// @notice Emitted when the contract initialized
-    /// @param _admin provided admin address
-    /// @param _caller initialization `msg.sender`
-    event InitializedV1(address _admin, address _pauser, address _resumer, address _finalizer, address _caller);
+    event InitializedV1(address _admin, address _pauser, address _resumer, address _finalizer, address _bunkerReporter);
 
     error AdminZeroAddress();
     error AlreadyInitialized();
@@ -85,11 +83,15 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @param _pauser address that will be able to pause the withdrawals
     /// @param _resumer address that will be able to resume the withdrawals after pause
     /// @param _finalizer address that can finalize requests in the queue
+    /// @param _bunkerReporter addres that can report a bunker mode
     /// @dev NB! It's initialized in paused state by default and should be resumed explicitly to start
-    function initialize(address _admin, address _pauser, address _resumer, address _finalizer) external {
+    /// @dev NB! Bunker mode is disabled by default
+    function initialize(address _admin, address _pauser, address _resumer, address _finalizer, address _bunkerReporter)
+        external
+    {
         if (_admin == address(0)) revert AdminZeroAddress();
 
-        _initialize(_admin, _pauser, _resumer, _finalizer);
+        _initialize(_admin, _pauser, _resumer, _finalizer, _bunkerReporter);
     }
 
     /// @notice Resume withdrawal requests placement and finalization
@@ -309,7 +311,9 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     function _emitTransfer(address from, address to, uint256 _requestId) internal virtual;
 
     /// @dev internal initialization helper. Doesn't check provided addresses intentionally
-    function _initialize(address _admin, address _pauser, address _resumer, address _finalizer) internal {
+    function _initialize(address _admin, address _pauser, address _resumer, address _finalizer, address _bunkerReporter)
+        internal
+    {
         _initializeQueue();
 
         _initializeContractVersionTo(1);
@@ -318,6 +322,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         _grantRole(PAUSE_ROLE, _pauser);
         _grantRole(RESUME_ROLE, _resumer);
         _grantRole(FINALIZE_ROLE, _finalizer);
+        _grantRole(BUNKER_MODE_REPORT_ROLE, _bunkerReporter);
 
         RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(PAUSE_INFINITELY); // pause it explicitly
         BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(BUNKER_MODE_DISABLED_TIMESTAMP);
