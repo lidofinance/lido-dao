@@ -238,7 +238,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
     function testing_getTotalTargetStats() external view 
         returns(uint256 targetValidatorsActive, uint256 targetValidatorsCount, uint256 excessValidatorsCount) 
     {
-        Packed64x4.Packed memory totalTargetStats = _loadTotalTargetValidtatorsStats();
+        Packed64x4.Packed memory totalTargetStats = _loadTotalTargetValidatorsStats();
  
         targetValidatorsActive = totalTargetStats.get(TARGET_VALIDATORS_ACTIVE_OFFSET);
         targetValidatorsCount = totalTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET);
