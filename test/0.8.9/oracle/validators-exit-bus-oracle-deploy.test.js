@@ -142,7 +142,7 @@ async function deployExitBusOracle(admin, {
 }
 
 
-contract.only('ValidatorsExitBusOracle', ([admin, member1]) => {
+contract('ValidatorsExitBusOracle', ([admin, member1]) => {
   let consensus
   let oracle
 

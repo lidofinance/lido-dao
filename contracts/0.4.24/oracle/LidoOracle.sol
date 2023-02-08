@@ -268,9 +268,8 @@ contract LidoOracle is AragonApp {
      * @notice Initializes the contract (the compat-only deprecated version 4) from scratch.
      * @param _lido Address of the Lido contract.
      * @param _newOracle Address of the new accounting oracle contract.
-     * @param _newOracleConsensusContract Address of consensus contract of the new accounting oracle contract.
      */
-    function initialize(address _lido, address _newOracle, address _newOracleConsensusContract) external onlyInit {
+    function initialize(address _lido, address _newOracle) external onlyInit {
         // Initializations for v0 --> v3
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
 
@@ -279,10 +278,7 @@ contract LidoOracle is AragonApp {
 
         // Initializations for v3 --> v4
         _initialize_v4(_newOracle);
-
-        // Cannot get consensus contract from new oracle because at this point new oracle is
-        // not initialized with consensus contract address yet
-        _setChainSpec(_getNewOracleChainSpec(_newOracleConsensusContract));
+        _setChainSpec(_getNewOracleChainSpec(_newOracle));
 
         // Needed to finish the Aragon part of initialization (otherwise auth() modifiers will fail)
         initialized();
@@ -292,13 +288,13 @@ contract LidoOracle is AragonApp {
      * @notice A function to finalize upgrade v3 -> v4 (the compat-only deprecated impl).
      * Can be called only once.
      */
-    function finalizeUpgrade_v4(address _newOracle, address _newOracleConsensusContract) external {
+    function finalizeUpgrade_v4(address _newOracle) external {
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 3, "WRONG_BASE_VERSION");
 
         _initialize_v4(_newOracle);
 
         ChainSpec memory spec = _getChainSpec();
-        ChainSpec memory newSpec = _getNewOracleChainSpec(_newOracleConsensusContract);
+        ChainSpec memory newSpec = _getNewOracleChainSpec(_newOracle);
 
         require(
             spec.slotsPerEpoch == newSpec.slotsPerEpoch &&
@@ -343,14 +339,14 @@ contract LidoOracle is AragonApp {
         BEACON_SPEC_POSITION.setStorageUint256(data);
     }
 
-    function _getNewOracleChainSpec(address _newOracleConsensusContract)
+    function _getNewOracleChainSpec(address _newOracle)
         internal
         view
         returns (ChainSpec memory spec)
     {
-        IHashConsensus consensus = IHashConsensus(_newOracleConsensusContract);
+        IHashConsensus consensus = IHashConsensus(INewOracle(_newOracle).getConsensusContract());
         (uint256 slotsPerEpoch, uint256 secondsPerSlot, uint256 genesisTime) = consensus.getChainConfig();
-        (, uint256 epochsPerFrame_) = consensus.getFrameConfig();
+        (, uint256 epochsPerFrame_) = IHashConsensus(consensus).getFrameConfig();
 
         spec.epochsPerFrame = uint64(epochsPerFrame_);
         spec.slotsPerEpoch = uint64(slotsPerEpoch);
