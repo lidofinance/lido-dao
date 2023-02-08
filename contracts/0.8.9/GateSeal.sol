@@ -141,7 +141,7 @@ contract GateSeal {
     /**
      * @notice pause the contract and expire this GateSeal
      * @dev can only be called by the pauser;
-     *      expiring the contract by way of setting `expiryDate` to 0
+     *      expiring the contract by way of setting `expiryDate` to the past second
      */
     function sealGate() external {
         if (pausable == address(0)) revert YetUninitialized();
