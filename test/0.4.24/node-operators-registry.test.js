@@ -30,7 +30,7 @@ const NODE_OPERATORS = [
     exitedSigningKeysCount: 1,
     vettedSigningKeysCount: 6,
     stuckValidatorsCount: 0,
-    forgivenValidatorsCount: 0,
+    refundedValidatorsCount: 0,
     stuckPenaltyEndAt: 0
   },
   {
@@ -41,7 +41,7 @@ const NODE_OPERATORS = [
     exitedSigningKeysCount: 0,
     vettedSigningKeysCount: 10,
     stuckValidatorsCount: 0,
-    forgivenValidatorsCount: 0,
+    refundedValidatorsCount: 0,
     stuckPenaltyEndAt: 0
   },
   {
@@ -53,7 +53,7 @@ const NODE_OPERATORS = [
     exitedSigningKeysCount: 0,
     vettedSigningKeysCount: 5,
     stuckValidatorsCount: 0,
-    forgivenValidatorsCount: 0,
+    refundedValidatorsCount: 0,
     stuckPenaltyEndAt: 0
   }
 ]
@@ -206,7 +206,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         await app.testing_setNodeOperatorLimits(
           i,
           NODE_OPERATORS[i].stuckValidatorsCount,
-          NODE_OPERATORS[i].forgivenValidatorsCount,
+          NODE_OPERATORS[i].refundedValidatorsCount,
           NODE_OPERATORS[i].stuckPenaltyEndAt
         )
 
@@ -225,7 +225,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
         const nodeOperatorLimits = await app.getNodeOperatorStats(i)
         assert.equal(nodeOperatorLimits.stuckValidatorsCount.toNumber(), NODE_OPERATORS[i].stuckValidatorsCount)
-        assert.equal(nodeOperatorLimits.forgivenValidatorsCount.toNumber(), NODE_OPERATORS[i].forgivenValidatorsCount)
+        assert.equal(nodeOperatorLimits.refundedValidatorsCount.toNumber(), NODE_OPERATORS[i].refundedValidatorsCount)
         assert.equal(nodeOperatorLimits.stuckPenaltyEndTimestamp.toNumber(), NODE_OPERATORS[i].stuckPenaltyEndAt)
       }
 
@@ -257,7 +257,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         depositedSigningKeysCount: 7,
         exitedSigningKeysCount: 5,
         stuckValidatorsCount: 0,
-        forgivenValidatorsCount: 0,
+        refundedValidatorsCount: 0,
         stuckPenaltyEndAt: 0
       }
       await app.testing_addNodeOperator(
@@ -272,7 +272,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await app.testing_setNodeOperatorLimits(
         id,
         config.stuckValidatorsCount,
-        config.forgivenValidatorsCount,
+        config.refundedValidatorsCount,
         config.stuckPenaltyEndAt
       )
 
@@ -296,7 +296,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         depositedSigningKeysCount: 7,
         exitedSigningKeysCount: 5,
         stuckValidatorsCount: 0,
-        forgivenValidatorsCount: 0,
+        refundedValidatorsCount: 0,
         stuckPenaltyEndAt: 0
       }
 
@@ -312,7 +312,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await app.testing_setNodeOperatorLimits(
         id,
         config.stuckValidatorsCount,
-        config.forgivenValidatorsCount,
+        config.refundedValidatorsCount,
         config.stuckPenaltyEndAt
       )
 

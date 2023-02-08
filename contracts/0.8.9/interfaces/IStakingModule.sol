@@ -109,5 +109,5 @@ interface IStakingModule {
 
     event ValidatorsKeysNonceChanged(uint256 validatorsKeysNonce);
     event UnusedValidatorsKeysTrimmed(uint256 indexed nodeOperatorId, uint256 trimmedKeysCount);
-    event ForgivenValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 forgivenValidatorsCount);
+    event RefundedValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 refundedValidatorsCount);
 }

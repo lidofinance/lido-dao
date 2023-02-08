@@ -32,7 +32,7 @@ const NODE_OPERATORS = [
     targetValidatorsKeysCount: 1,
     unavaliableKeysCount: 2,
     stuckSigningKeysCount: 3,
-    forgivenSigningKeysCount: 4
+    refundedSigningKeysCount: 4
   },
   {
     name: ' bar',
@@ -45,7 +45,7 @@ const NODE_OPERATORS = [
     targetValidatorsKeysCount: 1,
     unavaliableKeysCount: 2,
     stuckSigningKeysCount: 3,
-    forgivenSigningKeysCount: 4
+    refundedSigningKeysCount: 4
   },
   {
     name: 'deactivated',
@@ -59,7 +59,7 @@ const NODE_OPERATORS = [
     targetValidatorsKeysCount: 1,
     unavaliableKeysCount: 2,
     stuckSigningKeysCount: 3,
-    forgivenSigningKeysCount: 4
+    refundedSigningKeysCount: 4
   }
 ]
 
@@ -306,7 +306,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await app.unsafeUpdateValidatorsKeysCount(firstNodeOperator, 1, 1 , { from: voting })
       await app.unsafeUpdateValidatorsKeysCount(secondNodeOperator, 1, 0 , { from: voting })
 
-      await app.updateForgivenValidatorsKeysCount(firstNodeOperator, 1, { from: voting })
+      await app.updateRefundedValidatorsKeysCount(firstNodeOperator, 1, { from: voting })
 
       // calls distributeRewards() inside
       receipt = await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
@@ -329,7 +329,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await app.unsafeUpdateValidatorsKeysCount(firstNodeOperator, 1, 1 , { from: voting })
       await app.unsafeUpdateValidatorsKeysCount(secondNodeOperator, 1, 0 , { from: voting })
 
-      await app.updateForgivenValidatorsKeysCount(firstNodeOperator, 1000, { from: voting })
+      await app.updateRefundedValidatorsKeysCount(firstNodeOperator, 1000, { from: voting })
 
       // calls distributeRewards() inside
       receipt = await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
@@ -354,7 +354,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
 
       // perValidator = ETH(10) / 5 = 2 eth
 
-      await app.updateForgivenValidatorsKeysCount(firstNodeOperator, 1, { from: voting })
+      await app.updateRefundedValidatorsKeysCount(firstNodeOperator, 1, { from: voting })
 
       // calls distributeRewards() inside
       receipt = await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
@@ -380,7 +380,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await app.unsafeUpdateValidatorsKeysCount(secondNodeOperator, 1, 0 , { from: voting })
       assert.isTrue(await app.testing_isNodeOperatorPenalized(firstNodeOperator))      
 
-      await app.updateForgivenValidatorsKeysCount(firstNodeOperator, 1, { from: voting })
+      await app.updateRefundedValidatorsKeysCount(firstNodeOperator, 1, { from: voting })
       assert.isTrue(await app.testing_isNodeOperatorPenalized(firstNodeOperator))
 
       await hre.network.provider.send('evm_increaseTime', [2 * 24 * 60 * 60 + 10])

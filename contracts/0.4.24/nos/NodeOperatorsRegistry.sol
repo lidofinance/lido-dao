@@ -31,7 +31,7 @@ interface IStakingModule {
 
     event ValidatorsKeysNonceChanged(uint256 validatorsKeysNonce);
     event StuckValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 stuckValidatorsCount);
-    event ForgivenValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 forgivenValidatorsCount);
+    event RefundedValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 RefundedValidatorsCount);
 }
 
 /// @title Node Operator registry
@@ -123,8 +123,8 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     // StuckPenaltyStats
     /// @dev stuck keys count from oracle report
     uint8 internal constant STUCK_VALIDATORS_COUNT_OFFSET = 0;
-    /// @dev forgiven keys count from dao
-    uint8 internal constant FORGIVEN_VALIDATORS_COUNT_OFFSET = 1;
+    /// @dev refunded keys count from dao
+    uint8 internal constant REFUNDED_VALIDATORS_COUNT_OFFSET = 1;
     uint8 internal constant STUCK_PENALTY_END_TIMESTAMP_OFFSET = 2;
 
     //
@@ -616,24 +616,23 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     }
 
     /**
-     * @notice Set the forgivent signing keys count
+     * @notice Set the refunded signing keys count
      */
-    function updateForgivenValidatorsKeysCount(uint256 _nodeOperatorId, uint64 _forgivenValidatorsCount) external {
+    function updateRefundedValidatorsKeysCount(uint256 _nodeOperatorId, uint64 _refundedValidatorsCount) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
 
         Packed64x4.Packed memory stuckPenaltyStats = _loadOperatorStuckPenaltyStats(_nodeOperatorId);
 
-        // require(validatorsStats.forgivenValidatorsCount != _forgivenValidatorsCount, "NODE_OPERATOR_TARGET_LIMIT_IS_THE_SAME");
-        stuckPenaltyStats.set(FORGIVEN_VALIDATORS_COUNT_OFFSET, _forgivenValidatorsCount);
+        stuckPenaltyStats.set(REFUNDED_VALIDATORS_COUNT_OFFSET, _refundedValidatorsCount);
 
-        if (stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET) <= _forgivenValidatorsCount) {
+        if (stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET) <= _refundedValidatorsCount) {
             stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, uint64(block.timestamp + STUCK_VALIDATORS_PENALTY_DELAY));
         }
 
         _saveOperatorStuckPenaltyStats(_nodeOperatorId, stuckPenaltyStats);
 
-        emit ForgivenValidatorsCountChanged(_nodeOperatorId, _forgivenValidatorsCount);
+        emit RefundedValidatorsCountChanged(_nodeOperatorId, _refundedValidatorsCount);
     }
 
     function invalidateReadyToDepositKeys() external {
@@ -900,7 +899,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
 
             Packed64x4.Packed memory stuckPenaltyStats = _loadOperatorStuckPenaltyStats(operatorId);
             if (
-                stuckPenaltyStats.get(FORGIVEN_VALIDATORS_COUNT_OFFSET) < stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)
+                stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET) < stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)
                     || block.timestamp <= stuckPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET)
             ) {
                 penalized[idx] = true;
@@ -1140,7 +1139,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
             uint64 targetValidatorsCount,
             uint64 excessValidatorsCount,
             uint64 stuckValidatorsCount,
-            uint64 forgivenValidatorsCount,
+            uint64 refundedValidatorsCount,
             uint64 stuckPenaltyEndTimestamp
         )
     {
@@ -1153,7 +1152,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         targetValidatorsCount = operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET);
         excessValidatorsCount = operatorTargetStats.get(EXCESS_VALIDATORS_COUNT_OFFSET);
         stuckValidatorsCount = stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET);
-        forgivenValidatorsCount = stuckPenaltyStats.get(FORGIVEN_VALIDATORS_COUNT_OFFSET);
+        refundedValidatorsCount = stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET);
         stuckPenaltyEndTimestamp = stuckPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET);
     }
 

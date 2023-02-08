@@ -150,12 +150,12 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
     function testing_setNodeOperatorLimits(
         uint256 _nodeOperatorId,
         uint64 stuckValidatorsCount,
-        uint64 forgivenValidatorsCount,
+        uint64 refundedValidatorsCount,
         uint64 stuckPenaltyEndAt
     ) external {
         Packed64x4.Packed memory stuckPenaltyStats = _nodeOperators[_nodeOperatorId].stuckPenaltyStats;
         stuckPenaltyStats.set(STUCK_VALIDATORS_COUNT_OFFSET, stuckValidatorsCount);
-        stuckPenaltyStats.set(FORGIVEN_VALIDATORS_COUNT_OFFSET, forgivenValidatorsCount);
+        stuckPenaltyStats.set(REFUNDED_VALIDATORS_COUNT_OFFSET, refundedValidatorsCount);
         stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, stuckPenaltyEndAt);
         _nodeOperators[_nodeOperatorId].stuckPenaltyStats = stuckPenaltyStats;
     }
@@ -221,7 +221,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
     function testing_isNodeOperatorPenalized(uint256 operatorId) external view returns (bool) {
         Packed64x4.Packed memory stuckPenaltyStats = _loadOperatorStuckPenaltyStats(operatorId);
         if (
-            stuckPenaltyStats.get(FORGIVEN_VALIDATORS_COUNT_OFFSET) < stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)
+            stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET) < stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)
                 || block.timestamp <= stuckPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET)
         ) {
             return true;
