@@ -21,7 +21,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
 
     withdrawalQueue = (await withdrawals.deploy(daoAgent, wsteth.address)).queue
 
-    await withdrawalQueue.initialize(daoAgent, daoAgent, daoAgent, steth.address)
+    await withdrawalQueue.initialize(daoAgent, daoAgent, daoAgent, steth.address, steth.address)
     await withdrawalQueue.resume({ from: daoAgent })
 
     await steth.setTotalPooledEther(ETH(300))

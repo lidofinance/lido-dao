@@ -27,7 +27,8 @@ hre.contract(
         deployer, // owner
         deployer, // pauser
         deployer, // resumer
-        deployer // finalizer
+        deployer, // finalizer
+        deployer
       )
       await withdrawalRequestNFT.resume({ from: deployer })
 
