@@ -56,6 +56,7 @@ contract HashConsensus is AccessControlEnumerable {
 
     error NumericOverflow();
     error AdminCannotBeZero();
+    error ReportProcessorCannotBeZero();
     error DuplicateMember();
     error AddressCannotBeZero();
     error InitialEpochIsYetToArrive();
@@ -198,9 +199,9 @@ contract HashConsensus is AccessControlEnumerable {
         GENESIS_TIME = genesisTime.toUint64();
 
         if (admin == address(0)) revert AdminCannotBeZero();
+        if (reportProcessor == address(0)) revert ReportProcessorCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
         _setFrameConfig(initialEpoch, epochsPerFrame, fastLaneLengthSlots, FrameConfig(0, 0, 0));
-        // zero address is allowed here, meaning "no processor"
         _reportProcessor = reportProcessor;
     }
 
@@ -890,7 +891,7 @@ contract HashConsensus is AccessControlEnumerable {
 
     function _setReportProcessor(address newProcessor) internal {
         address prevProcessor = _reportProcessor;
-        if (newProcessor == address(0)) revert AddressCannotBeZero();
+        if (newProcessor == address(0)) revert ReportProcessorCannotBeZero();
         if (newProcessor == prevProcessor) revert NewProcessorCannotBeTheSame();
 
         _reportProcessor = newProcessor;
@@ -910,21 +911,18 @@ contract HashConsensus is AccessControlEnumerable {
     }
 
     function _getLastProcessingRefSlot() internal view returns (uint256) {
-        address processor = _reportProcessor;
-        return processor == address(0)
-            ? _reportingState.lastConsensusRefSlot
-            : IReportAsyncProcessor(processor).getLastProcessingRefSlot();
+        return IReportAsyncProcessor(_reportProcessor).getLastProcessingRefSlot();
     }
 
     function _submitReportForProcessing(ConsensusFrame memory frame, bytes32 report) internal {
-        address processor = _reportProcessor;
-        if (processor == address(0)) return;
-        uint256 deadline = _computeTimestampAtSlot(frame.reportProcessingDeadlineSlot);
-        IReportAsyncProcessor(processor).submitConsensusReport(report, frame.refSlot, deadline);
+        IReportAsyncProcessor(_reportProcessor).submitConsensusReport(
+            report,
+            frame.refSlot,
+            _computeTimestampAtSlot(frame.reportProcessingDeadlineSlot)
+        );
     }
 
     function _getConsensusVersion() internal view returns (uint256) {
-        address processor = _reportProcessor;
-        return processor == address(0) ? 0 : IReportAsyncProcessor(processor).getConsensusVersion();
+        return IReportAsyncProcessor(_reportProcessor).getConsensusVersion();
     }
 }
