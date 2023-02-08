@@ -5,35 +5,25 @@ pragma solidity 0.8.9;
 
 /// @title Lido's Staking Module interface
 interface IStakingModule {
+    struct ValidatorsReport {
+        uint256 totalExited;
+        uint256 totalDeposited;
+        uint256 totalVetted;
+        uint256 totalStuck;
+        uint256 totalRefunded;
+        uint256 targetLimit;
+        uint256 excessCount;
+    }
+
     /// @notice Returns the type of the staking module
     function getType() external view returns (bytes32);
 
-    /// @notice Returns the validators stats of all node operators in the staking module
-    /// @return exitedValidatorsCount Total number of validators in the EXITED state
-    /// @return activeValidatorsKeysCount Total number of validators in active state
-    /// @return readyToDepositValidatorsKeysCount Total number of validators ready to be deposited
-    function getValidatorsKeysStats()
-        external
-        view
-        returns (
-            uint256 exitedValidatorsCount,
-            uint256 activeValidatorsKeysCount,
-            uint256 readyToDepositValidatorsKeysCount
-        );
+    function getValidatorsReport() external view returns (ValidatorsReport memory report);
 
-    /// @notice Returns the validators stats of given node operator
-    /// @param _nodeOperatorId Node operator id to get data for
-    /// @return exitedValidatorsCount Total number of validators in the EXITED state
-    /// @return activeValidatorsKeysCount Total number of validators in active state
-    /// @return readyToDepositValidatorsKeysCount Total number of validators ready to be deposited
-    function getValidatorsKeysStats(uint256 _nodeOperatorId)
+    function getValidatorsReport(uint256 _nodeOperatorId)
         external
         view
-        returns (
-            uint256 exitedValidatorsCount,
-            uint256 activeValidatorsKeysCount,
-            uint256 readyToDepositValidatorsKeysCount
-        );
+        returns (ValidatorsReport memory report);
 
     /// @notice Returns a counter that MUST change it's value when any of the following happens:
     ///     1. a node operator's key(s) is added

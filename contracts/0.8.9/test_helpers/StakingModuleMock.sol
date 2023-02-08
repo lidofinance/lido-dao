@@ -29,18 +29,12 @@ contract StakingModuleMock is IStakingModule {
 
     function trimUnusedKeys() external {}
 
-    function getValidatorsKeysStats()
-        external
-        view
-        returns (
-            uint256 exitedValidatorsCount,
-            uint256 activeValidatorsKeysCount,
-            uint256 readyToDepositValidatorsKeysCount
-        )
-    {
-        exitedValidatorsCount = 0;
-        activeValidatorsKeysCount = _activeKeysCount;
-        readyToDepositValidatorsKeysCount = _availableKeysCount;
+    function getValidatorsReport() external view returns (ValidatorsReport memory report) {
+        report.totalDeposited = _activeKeysCount;
+        report.totalVetted = _activeKeysCount + _availableKeysCount;
+    }
+
+    function getValidatorsReport(uint256 _nodeOperatorId) external view returns (ValidatorsReport memory report) {
     }
 
     function getValidatorsKeysNonce() external view returns (uint256) {
@@ -56,16 +50,6 @@ contract StakingModuleMock is IStakingModule {
     function getActiveNodeOperatorsCount() external view returns (uint256) {}
 
     function getNodeOperatorIsActive(uint256 _nodeOperatorId) external view returns (bool) {}
-
-    function getValidatorsKeysStats(uint256 _nodeOperatorId)
-        external
-        view
-        returns (
-            uint256 exitedValidatorsCount,
-            uint256 activeValidatorsKeysCount,
-            uint256 readyToDepositValidatorsKeysCount
-        )
-    {}
 
     function handleRewardsMinted(uint256 _totalShares) external {}
 

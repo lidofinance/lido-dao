@@ -262,13 +262,15 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             if (_exitedKeysCounts[i] < prevReportedExitedKeysCount) {
                 revert ErrorExitedKeysCountCannotDecrease();
             }
-            (uint256 moduleExitedKeysCount,,) = IStakingModule(stakingModule.stakingModuleAddress)
-                .getValidatorsKeysStats();
-            if (moduleExitedKeysCount < prevReportedExitedKeysCount) {
+
+            IStakingModule.ValidatorsReport memory allValidatorsReport = 
+                IStakingModule(stakingModule.stakingModuleAddress).getValidatorsReport();
+
+            if (allValidatorsReport.totalExited < prevReportedExitedKeysCount) {
                 // not all of the exited keys were async reported to the module
                 emit StakingModuleExitedKeysIncompleteReporting(
                     stakingModule.id,
-                    prevReportedExitedKeysCount - moduleExitedKeysCount
+                    prevReportedExitedKeysCount - allValidatorsReport.totalExited
                 );
             }
             stakingModule.exitedKeysCount = _exitedKeysCounts[i];
@@ -286,7 +288,9 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     {
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         address moduleAddr = stakingModule.stakingModuleAddress;
-        (uint256 prevExitedKeysCount,,) = IStakingModule(moduleAddr).getValidatorsKeysStats();
+        IStakingModule.ValidatorsReport memory allValidatorsReport = 
+                IStakingModule(stakingModule.stakingModuleAddress).getValidatorsReport();
+
         uint256 newExitedKeysCount;
         for (uint256 i = 0; i < _nodeOperatorIds.length; ) {
             newExitedKeysCount = IStakingModule(moduleAddr)
@@ -294,7 +298,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             unchecked { ++i; }
         }
         uint256 prevReportedExitedKeysCount = stakingModule.exitedKeysCount;
-        if (prevExitedKeysCount < prevReportedExitedKeysCount &&
+        if (allValidatorsReport.totalExited < prevReportedExitedKeysCount &&
             newExitedKeysCount >= prevReportedExitedKeysCount
         ) {
             // oracle finished updating exited keys for all node ops
@@ -357,19 +361,19 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         address moduleAddr = stakingModule.stakingModuleAddress;
 
-        (uint256 nodeOpExitedKeysCount,,) = IStakingModule(moduleAddr)
-            .getValidatorsKeysStats(_nodeOperatorId);
+        IStakingModule.ValidatorsReport memory operatorValidatorsReport = 
+            IStakingModule(stakingModule.stakingModuleAddress).getValidatorsReport(_nodeOperatorId);
 
         // FIXME: get current value from the staking module
         uint256 nodeOpStuckKeysCount;
 
         if (_correction.currentModuleExitedKeysCount != stakingModule.exitedKeysCount ||
-            _correction.currentNodeOperatorExitedKeysCount != nodeOpExitedKeysCount ||
+            _correction.currentNodeOperatorExitedKeysCount != operatorValidatorsReport.totalExited ||
             _correction.currentNodeOperatorStuckKeysCount != nodeOpStuckKeysCount
         ) {
             revert UnexpectedCurrentKeysCount(
                 stakingModule.exitedKeysCount,
-                nodeOpExitedKeysCount,
+                operatorValidatorsReport.totalExited,
                 nodeOpStuckKeysCount
             );
         }
@@ -556,7 +560,10 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         validStakingModuleId(_stakingModuleId)
         returns (uint256 activeKeysCount)
     {
-        (, activeKeysCount, ) = IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getValidatorsKeysStats();
+        IStakingModule.ValidatorsReport memory allValidatorsReport = 
+            IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getValidatorsReport();
+
+        activeKeysCount = allValidatorsReport.totalDeposited - allValidatorsReport.totalExited;
     }
 
     /**
@@ -835,8 +842,13 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
         if (!_zeroKeysCountsIfInactive || cacheItem.status == StakingModuleStatus.Active) {
             uint256 moduleExitedKeysCount;
-            (moduleExitedKeysCount, cacheItem.activeKeysCount, cacheItem.availableKeysCount) =
-                IStakingModule(cacheItem.stakingModuleAddress).getValidatorsKeysStats();
+
+            IStakingModule.ValidatorsReport memory allValidatorsReport = 
+                IStakingModule(cacheItem.stakingModuleAddress).getValidatorsReport();
+
+            cacheItem.activeKeysCount = allValidatorsReport.totalDeposited - allValidatorsReport.totalExited;
+            cacheItem.availableKeysCount = allValidatorsReport.totalVetted - allValidatorsReport.totalDeposited;
+
             uint256 exitedKeysCount = stakingModuleData.exitedKeysCount;
             if (exitedKeysCount > moduleExitedKeysCount) {
                 // module hasn't received all exited validators data yet => we need to correct

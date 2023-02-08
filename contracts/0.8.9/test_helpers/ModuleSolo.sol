@@ -30,29 +30,15 @@ contract ModuleSolo is IStakingModule {
         return moduleType;
     }
 
-    function getValidatorsKeysStats()
-        external
-        view
-        returns (
-            uint256 exitedValidatorsCount,
-            uint256 activeValidatorsKeysCount,
-            uint256 readyToDepositValidatorsKeysCount
-        )
-    {
-        exitedValidatorsCount = totalStoppedKeys;
-        activeValidatorsKeysCount = totalUsedKeys - totalStoppedKeys;
-        readyToDepositValidatorsKeysCount = totalKeys - totalUsedKeys;
+
+    function getValidatorsReport() external view returns (ValidatorsReport memory report) {
+        report.totalExited = totalStoppedKeys;
+        report.totalDeposited = totalUsedKeys;
+        report.totalVetted = totalKeys;
     }
 
-    function getValidatorsKeysStats(uint256 _nodeOperatorId)
-        external
-        view
-        returns (
-            uint256 exitedValidatorsCount,
-            uint256 activeValidatorsKeysCount,
-            uint256 readyToDepositValidatorsKeysCount
-        )
-    {}
+    function getValidatorsReport(uint256 _nodeOperatorId) external view returns (ValidatorsReport memory report) {}
+
 
     function getValidatorsKeysNonce() external view returns (uint256) {
         return keysOpIndex;

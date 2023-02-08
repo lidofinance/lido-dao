@@ -973,52 +973,51 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         return TYPE_POSITION.getStorageBytes32();
     }
 
-    /// @notice Returns the validators stats of all node operators in the staking module
-    /// @return exitedValidatorsCount Total number of validators in the EXITED state
-    /// @return activeValidatorsKeysCount Total number of validators in active state
-    /// @return readyToDepositValidatorsKeysCount Total number of validators ready to be deposited
-    function getValidatorsKeysStats()
-        external
-        view
-        returns (
-            uint256 exitedValidatorsCount,
-            uint256 activeValidatorsKeysCount,
-            uint256 readyToDepositValidatorsKeysCount
-        )
-    {
+    // struct ValidatorsReport {
+    //     uint256 totalExited;
+    //     uint256 totalDeposited;
+    //     uint256 totalVetted;
+    //     uint256 totalStuck;
+    //     uint256 totalRefunded;
+    //     uint256 targetLimit;
+    //     uint256 excessCount;
+    // }
+
+    function getValidatorsReport() external view {
         SigningKeysStats.State memory totalSigningKeysStats = _getTotalSigningKeysStats();
-
-        uint256 vettedSigningKeysCount = totalSigningKeysStats.vettedSigningKeysCount;
-        uint256 depositedSigningKeysCount = totalSigningKeysStats.depositedSigningKeysCount;
-
-        exitedValidatorsCount = totalSigningKeysStats.exitedSigningKeysCount;
-        activeValidatorsKeysCount = depositedSigningKeysCount - exitedValidatorsCount;
-        readyToDepositValidatorsKeysCount = vettedSigningKeysCount - depositedSigningKeysCount;
+        bytes memory validatorsReportEncoded = abi.encode(
+            uint256(totalSigningKeysStats.exitedSigningKeysCount),
+            uint256(totalSigningKeysStats.depositedSigningKeysCount),
+            uint256(totalSigningKeysStats.vettedSigningKeysCount),
+            0, // totalStuckValidators
+            0, // totalRefundedValidators
+            0, // excessValidators
+            0 // targetLimit
+        );
+        assembly {
+            return(add(validatorsReportEncoded, 32), mul(32, 7))
+        }
     }
 
-    /// @notice Returns the validators stats of given node operator
-    /// @param _nodeOperatorId Node operator id to get data for
-    /// @return exitedValidatorsCount Total number of validators in the EXITED state
-    /// @return activeValidatorsKeysCount Total number of validators in active state
-    /// @return readyToDepositValidatorsKeysCount Total number of validators ready to be deposited
-    function getValidatorsKeysStats(uint256 _nodeOperatorId)
-        external
-        view
-        returns (
-            uint256 exitedValidatorsCount,
-            uint256 activeValidatorsKeysCount,
-            uint256 readyToDepositValidatorsKeysCount
-        )
-    {
+    function getValidatorsReport(uint256 _nodeOperatorId) external view {
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
-
-        uint256 vettedSigningKeysCount = nodeOperator.vettedSigningKeysCount;
-        uint256 depositedSigningKeysCount = nodeOperator.depositedSigningKeysCount;
-
-        exitedValidatorsCount = nodeOperator.exitedSigningKeysCount;
-        activeValidatorsKeysCount = depositedSigningKeysCount - exitedValidatorsCount;
-        readyToDepositValidatorsKeysCount = vettedSigningKeysCount - depositedSigningKeysCount;
+        uint256 exited = nodeOperator.exitedSigningKeysCount;
+        uint256 deposited = nodeOperator.depositedSigningKeysCount;
+        uint256 vetted = nodeOperator.vettedSigningKeysCount;
+        bytes memory validatorsReportEncoded = abi.encode(
+            exited,
+            deposited,
+            vetted,
+            0, // totalStuckValidators
+            0, // totalRefundedValidators
+            0, // excessValidators
+            0 // targetLimit
+        );
+        assembly {
+            return(add(validatorsReportEncoded, 32), mul(32, 7))
+        }
     }
+
 
     /// @notice Returns total number of node operators
     function getNodeOperatorsCount() public view returns (uint256) {
