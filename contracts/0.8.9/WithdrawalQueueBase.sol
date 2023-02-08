@@ -359,7 +359,7 @@ abstract contract WithdrawalQueueBase {
 
     /// @dev Finalize requests from last finalized one up to `_nextFinalizedRequestId`
     ///  Emits WithdrawalBatchFinalized event.
-    function _finalize(uint256 _nextFinalizedRequestId, uint128 _amountOfETH) internal {
+    function _finalize(uint256 _nextFinalizedRequestId, uint256 _amountOfETH) internal {
         if (_nextFinalizedRequestId > getLastRequestId()) revert InvalidRequestId(_nextFinalizedRequestId);
         uint256 lastFinalizedRequestId = getLastFinalizedRequestId();
         uint256 firstUnfinalizedRequestId = lastFinalizedRequestId + 1;

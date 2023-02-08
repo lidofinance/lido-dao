@@ -8,10 +8,7 @@ import {WithdrawalQueueBase} from "./WithdrawalQueueBase.sol";
 
 import {IERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts-v4.4/token/ERC20/extensions/draft-IERC20Permit.sol";
-import {SafeCast} from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
-import {SafeERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
-
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 import {PausableUntil} from "./utils/PausableUntil.sol";
 
@@ -34,9 +31,6 @@ interface IWstETH is IERC20, IERC20Permit {
 /// @title A contract for handling stETH withdrawal request queue within the Lido protocol
 /// @author folkyatina
 abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, WithdrawalQueueBase, Versioned {
-    using SafeCast for uint256;
-    using SafeERC20 for IWstETH;
-    using SafeERC20 for IStETH;
     using UnstructuredStorage for bytes32;
 
     /// Bunker mode activation timestamp
@@ -149,7 +143,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         for (uint256 i = 0; i < _withdrawalRequestInputs.length; ++i) {
             uint256 amountOfWstETH = _withdrawalRequestInputs[i].amount;
             address owner = _checkWithdrawalRequestInput(
-                IWstETH(WSTETH).getStETHByWstETH(amountOfWstETH), _withdrawalRequestInputs[i].owner
+                WSTETH.getStETHByWstETH(amountOfWstETH), _withdrawalRequestInputs[i].owner
             );
             requestIds[i] = _requestWithdrawalWstETH(amountOfWstETH, owner);
         }
@@ -276,7 +270,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     ///
     /// @param _nextFinalizedRequestId request index in the queue that will be last finalized request in a batch
     function finalize(uint256 _nextFinalizedRequestId) external payable whenResumed onlyRole(FINALIZE_ROLE) {
-        _finalize(_nextFinalizedRequestId, msg.value.toUint128());
+        _finalize(_nextFinalizedRequestId, msg.value);
     }
 
     /// @notice Update bunker mode state
@@ -332,22 +326,22 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     }
 
     function _requestWithdrawal(uint256 _amountOfStETH, address _owner) internal returns (uint256 requestId) {
-        STETH.safeTransferFrom(msg.sender, address(this), _amountOfStETH);
+        STETH.transferFrom(msg.sender, address(this), _amountOfStETH);
 
         uint256 amountOfShares = STETH.getSharesByPooledEth(_amountOfStETH);
 
-        requestId = _enqueue(_amountOfStETH.toUint128(), amountOfShares.toUint128(), _owner);
+        requestId = _enqueue(uint128(_amountOfStETH), uint128(amountOfShares), _owner);
 
         _emitTransfer(address(0), _owner, requestId);
     }
 
     function _requestWithdrawalWstETH(uint256 _amountOfWstETH, address _owner) internal returns (uint256 requestId) {
-        WSTETH.safeTransferFrom(msg.sender, address(this), _amountOfWstETH);
-        uint256 amountOfStETH = IWstETH(WSTETH).unwrap(_amountOfWstETH);
+        WSTETH.transferFrom(msg.sender, address(this), _amountOfWstETH);
+        uint256 amountOfStETH = WSTETH.unwrap(_amountOfWstETH);
 
         uint256 amountOfShares = STETH.getSharesByPooledEth(amountOfStETH);
 
-        requestId = _enqueue(amountOfStETH.toUint128(), amountOfShares.toUint128(), _owner);
+        requestId = _enqueue(uint128(amountOfStETH), uint128(amountOfShares), _owner);
 
         _emitTransfer(address(0), _owner, requestId);
     }

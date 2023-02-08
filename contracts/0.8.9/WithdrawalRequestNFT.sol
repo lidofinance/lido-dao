@@ -8,7 +8,6 @@ import {IERC721} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721Receiver.sol";
 import {IERC165} from "@openzeppelin/contracts-v4.4/utils/introspection/IERC165.sol";
 
-import {Strings} from "@openzeppelin/contracts-v4.4/utils/Strings.sol";
 import {EnumerableSet} from "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
 import {Address} from "@openzeppelin/contracts-v4.4/utils/Address.sol";
 
@@ -21,7 +20,6 @@ import {UnstructuredRefStorage} from "./lib/UnstructuredRefStorage.sol";
 ///
 /// @author psirex, folkyatina
 contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
-    using Strings for uint256;
     using Address for address;
     using EnumerableSet for EnumerableSet.UintSet;
     using UnstructuredRefStorage for bytes32;
