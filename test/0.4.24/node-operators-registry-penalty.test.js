@@ -428,6 +428,40 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       assert.equal(+keyStats1.excessValidatorsCount, 0)
     }) 
 
+    it('updateExitedValidatorsKeysCount() - check if appeared a new deposited keys and stopped, excess no changes                                                                                                                                                                                                                                                                                                                                                                                    ', async () => {
+      await app.updateTargetValidatorsLimits(3, 5, true, { from: voting })
+      let keyStats = await app.getNodeOperatorStats(3)
+
+      //excess = deposited - stopped - targetLimit
+      assert.equal(+keyStats.targetValidatorsCount, 5)
+      assert.equal(+keyStats.excessValidatorsCount, 5)
+
+      //increase _newActiveValidatorsCount by add new depositedKeys
+      await app.increaseNodeOperatorDepositedSigningKeysCount(3, 1)
+    
+      await app.updateExitedValidatorsKeysCount(3, 1, { from: voting })
+
+      keyStats1 = await app.getNodeOperatorStats(3)
+      assert.equal(+keyStats1.excessValidatorsCount, 5)
+    })
+
+    it('updateExitedValidatorsKeysCount() - check if appeared a new deposited keys', async () => {
+      await app.updateTargetValidatorsLimits(3, 5, true, { from: voting })
+      let keyStats = await app.getNodeOperatorStats(3)
+
+      //excess = deposited - stopped - targetLimit
+      assert.equal(+keyStats.targetValidatorsCount, 5)
+      assert.equal(+keyStats.excessValidatorsCount, 5)
+
+      //increase _newActiveValidatorsCount by add new depositedKeys
+      await app.increaseNodeOperatorDepositedSigningKeysCount(3, 2)
+    
+      await app.updateExitedValidatorsKeysCount(3, 1, { from: voting })
+
+      keyStats1 = await app.getNodeOperatorStats(3)
+      assert.equal(+keyStats1.excessValidatorsCount, 6)
+    })
+
     it('updateTargetValidatorsLimits() - try to update to the same active flag', async () => {
       let keyStats = await app.getNodeOperatorStats(0)
       targetValidatorsCountBefore = keyStats.targetValidatorsCount

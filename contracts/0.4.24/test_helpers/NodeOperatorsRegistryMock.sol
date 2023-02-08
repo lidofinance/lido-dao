@@ -216,6 +216,22 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         return false;
     }
 
+    function testing_getCorrectedNodeOperator(uint256 operatorId) external view 
+        returns (uint64 vettedSigningKeysCount, uint64 exitedSigningKeysCount, uint64 depositedSigningKeysCount) 
+    {
+        return _getCorrectedNodeOperator(operatorId);
+    }
+
+    function testing_getTotalTargetStats() external view 
+        returns(uint256 targetValidatorsActive, uint256 targetValidatorsCount, uint256 excessValidatorsCount) 
+    {
+        uint256 totalTargetStats = _getTotalTargetValidtatorsStats();
+ 
+        targetValidatorsActive = totalTargetStats.get(TARGET_VALIDATORS_ACTIVE_OFFSET);
+        targetValidatorsCount = totalTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET);
+        excessValidatorsCount = totalTargetStats.get(EXCESS_VALIDATORS_COUNT_OFFSET);
+    }
+
     event ValidatorsKeysLoaded(uint256 count, bytes publicKeys, bytes signatures);
 
     function testing__distributeRewards() external returns (uint256) {
