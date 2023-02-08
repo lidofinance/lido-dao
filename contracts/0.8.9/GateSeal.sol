@@ -145,7 +145,7 @@ contract GateSeal {
      */
     function sealGate() external {
         if (!_isInitialized()) revert YetUninitialized();
-        if (block.timestamp > expiryDate) revert Expired();
+        if (_isExpired()) revert Expired();
         if (msg.sender != pauser) revert NotPauser();
 
         expiryDate = block.timestamp - 1;
