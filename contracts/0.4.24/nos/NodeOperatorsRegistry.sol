@@ -188,7 +188,6 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
 
     struct NodeOperatorTotals {
         Packed64x4.Packed signingKeysStats;
-        Packed64x4.Packed stuckPenaltyStats;
         Packed64x4.Packed targetValidatorsStats;
     }
     //

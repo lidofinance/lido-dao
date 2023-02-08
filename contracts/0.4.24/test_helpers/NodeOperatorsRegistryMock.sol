@@ -191,7 +191,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         for (uint256 i = 0; i < totalOperatorsCount; ++i) {
             _nodeOperators[i] = NodeOperator(false, address(0), new string(0), tmp, tmp, tmp);
         }
-        _nodeOperatorTotals = NodeOperatorTotals(tmp, tmp, tmp);
+        _nodeOperatorTotals = NodeOperatorTotals(tmp, tmp);
 
         testing_resetTotalSigningKeysStats();
     }
