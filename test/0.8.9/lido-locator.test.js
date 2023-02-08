@@ -39,7 +39,7 @@ contract('LidoLocator', ([deployer, agent]) => {
 
       const expectedCoreComponents = [
         initialConfig.elRewardsVault,
-        initialConfig.safetyNetsRegistry,
+        initialConfig.oracleReportSanityChecker,
         initialConfig.stakingRouter,
         initialConfig.treasury,
         initialConfig.withdrawalQueue,
@@ -93,7 +93,7 @@ contract('LidoLocator', ([deployer, agent]) => {
 
         const expectedCoreComponents = [
           updatedConfig.elRewardsVault,
-          updatedConfig.safetyNetsRegistry,
+          updatedConfig.oracleReportSanityChecker,
           updatedConfig.stakingRouter,
           updatedConfig.treasury,
           updatedConfig.withdrawalQueue,

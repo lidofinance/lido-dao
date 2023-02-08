@@ -68,8 +68,6 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
 
     function testing_markAllKeysDeposited(uint256 _nodeOperatorId) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
-        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
-
         Packed64x4.Packed memory signingKeysStats = _nodeOperators[_nodeOperatorId].signingKeysStats;
         testing_setDepositedSigningKeysCount(_nodeOperatorId, signingKeysStats.get(VETTED_KEYS_COUNT_OFFSET));
     }

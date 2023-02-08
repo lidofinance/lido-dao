@@ -9,7 +9,7 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 
 import "../common/interfaces/ILidoLocator.sol";
-import "../common/interfaces/ISelfOwnedStETHBurner.sol";
+import "../common/interfaces/IBurner.sol";
 
 import "./lib/StakeLimitUtils.sol";
 import "../common/lib/Math256.sol";
@@ -474,7 +474,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         address accountingOracle;
         address elRewardsVault;
         address oracleReportSanityChecker;
-        address selfOwnedStEthBurner;
+        address burner;
         address withdrawalQueue;
         address withdrawalVault;
         address postTokenRebaseReceiver;
@@ -483,6 +483,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     /**
     * @notice Updates accounting stats, collects EL rewards and distributes collected rewards if beacon balance increased
     * @dev periodically called by the Oracle contract
+    *
     * @param _reportTimestamp the moment of the oracle report calculation
     * @param _timeElapsed seconds elapsed since the previous report calculation
     * @param _clValidators number of Lido validators on Consensus Layer
@@ -705,10 +706,10 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         // finalize withdrawals (send ether, assign shares for burning)
         if (_etherToLockOnWithdrawalQueue > 0) {
-            ISelfOwnedStETHBurner burner = ISelfOwnedStETHBurner(_protocolContracts.selfOwnedStEthBurner);
+            IBurner burner = IBurner(_protocolContracts.burner);
             IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_protocolContracts.withdrawalQueue);
 
-            _transferShares(address(withdrawalQueue), address(burner), _sharesToBurnFromWithdrawalQueue);
+            burner.requestBurnShares(address(withdrawalQueue), _sharesToBurnFromWithdrawalQueue);
             withdrawalQueue.finalize.value(_etherToLockOnWithdrawalQueue)(_requestIdToFinalizeUpTo);
         }
 
@@ -1091,8 +1092,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 sharesMintedAsFees;
         uint256 etherToLockOnWithdrawalQueue;
         uint256 sharesToBurnFromWithdrawalQueue;
-        uint256 preBurnerStETHShares;
-        uint256 postBurnerStETHShares;
     }
 
     /**
@@ -1108,7 +1107,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      *    (i.e., postpone the extra rewards to be applied during the next rounds)
      * 5. Invoke finalizion of the withdrawal requests
      * 6. Distribute protocol fee (treasury & node operators)
-     * 7. Burn excess shares (withdrawn stETH & rewards of the penalized operators if any)
+     * 7. Burn excess shares (withdrawn stETH at least)
      * 8. Complete token rebase by informing observers (emit an event and call the external receivers if any)
      */
     function _handleOracleReport(
@@ -1127,7 +1126,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         handlingData.preTotalPooledEther = _getTotalPooledEther();
         handlingData.preTotalShares = _getTotalShares();
         handlingData.preCLBalance = _processClStateUpdate(_inputData.clValidators, _inputData.postCLBalance);
-        handlingData.preBurnerStETHShares = _sharesOf(_protocolContracts.selfOwnedStEthBurner);
 
         // Step 2.
         // Pass the report data to sanity checker (reverts if malformed)
@@ -1194,9 +1192,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         );
 
         // Step 7.
-        // Burn excess shares (withdrawn stETH & rewards of the penalized operators if any)
-        handlingData.postBurnerStETHShares = _sharesOf(_protocolContracts.selfOwnedStEthBurner);
-        _burnSharesLimited(ISelfOwnedStETHBurner(_protocolContracts.selfOwnedStEthBurner), handlingData);
+        // Burn excess shares (withdrawn stETH at least)
+        _burnSharesLimited(IBurner(_protocolContracts.burner), handlingData.sharesToBurnLimit);
 
         // Step 8.
         // Complete token rebase by informing observers (emit an event and call the external receivers if any)
@@ -1246,20 +1243,14 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /*
-     * @dev Perform burning of `stETH` shares via the dedicated `SelfOwnedStETHBurner` contract.
-     * Some of the burning amount can be postponed for the next reports.
+     * @dev Perform burning of `stETH` shares via the dedicated `Burner` contract.
+     *
+     * NB: some of the burning amount can be postponed for the next reports
+     * if positive token rebase smoothened.
      */
-    function _burnSharesLimited(ISelfOwnedStETHBurner _burner, OracleReportHandlingData memory _handlingData) internal {
-        // can be assigned via withdrawals fulfillment or by the node operator registry as a kind of penalties
-        // during the current `handleOracleReport()` run
-        uint256 newSharesToBurn = _handlingData.postBurnerStETHShares - _handlingData.preBurnerStETHShares;
-
-        if (newSharesToBurn > 0) {
-            _burner.markExcessStETHSharesForBurn(newSharesToBurn);
-        }
-
-        if (_handlingData.sharesToBurnLimit > 0) {
-            uint256 sharesCommittedToBurnNow = _burner.commitSharesToBurn(_handlingData.sharesToBurnLimit);
+    function _burnSharesLimited(IBurner _burner, uint256 _sharesToBurnLimit) internal {
+        if (_sharesToBurnLimit > 0) {
+            uint256 sharesCommittedToBurnNow = _burner.commitSharesToBurn(_sharesToBurnLimit);
 
             if (sharesCommittedToBurnNow > 0) {
                 _burnShares(address(_burner), sharesCommittedToBurnNow);
@@ -1275,7 +1266,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             ret.accountingOracle,
             ret.elRewardsVault,
             ret.oracleReportSanityChecker,
-            ret.selfOwnedStEthBurner,
+            ret.burner,
             ret.withdrawalQueue,
             ret.withdrawalVault,
             ret.postTokenRebaseReceiver

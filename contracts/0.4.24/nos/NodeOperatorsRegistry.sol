@@ -1260,8 +1260,6 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
             return;
         }
 
-        address burnerAddress = getLocator().selfOwnedStEthBurner();
-
         (address[] memory recipients, uint256[] memory shares, bool[] memory penalized) =
             getRewardsDistribution(sharesToDistribute);
 
@@ -1273,7 +1271,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
                 /// @dev half reward punishment
                 /// @dev ignore remainder since it accumulated on contract balance
                 shares[idx] >>= 1;
-                stETH.transferShares(burnerAddress, shares[idx]);
+                stETH.transferShares(getLocator().burner(), shares[idx]);
                 emit NodeOperatorPenalized(recipients[idx], shares[idx]);
             }
             stETH.transferShares(recipients[idx], shares[idx]);
