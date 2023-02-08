@@ -450,7 +450,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * The structure is used to aggregate the `handleOracleReport` provided data.
      * @dev Using the in-memory structure addresses `stack too deep` issues.
      */
-    struct OracleReportInputData {
+    struct OracleReportedData {
         // Oracle timings
         uint256 reportTimestamp;
         uint256 timeElapsed;
@@ -522,7 +522,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         require(msg.sender == contracts.accountingOracle, "APP_AUTH_FAILED");
 
         return _handleOracleReport(
-            OracleReportInputData(
+            OracleReportedData(
                 _reportTimestamp,
                 _timeElapsed,
                 _clValidators,
@@ -1110,7 +1110,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * 8. Complete token rebase by informing observers (emit an event and call the external receivers if any)
      */
     function _handleOracleReport(
-        OracleReportInputData memory _inputData,
+        OracleReportedData memory _reportedData,
         OracleReportContracts memory _contracts
     ) internal returns (
         uint256 postTotalPooledEther,
@@ -1124,16 +1124,16 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // Take a snapshot of the current (pre-) state
         handlingData.preTotalPooledEther = _getTotalPooledEther();
         handlingData.preTotalShares = _getTotalShares();
-        handlingData.preCLBalance = _processClStateUpdate(_inputData.clValidators, _inputData.postCLBalance);
+        handlingData.preCLBalance = _processClStateUpdate(_reportedData.clValidators, _reportedData.postCLBalance);
 
         // Step 2.
         // Pass the report data to sanity checker (reverts if malformed)
         IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).checkLidoOracleReport(
-            _inputData.timeElapsed,
+            _reportedData.timeElapsed,
             handlingData.preCLBalance,
-            _inputData.postCLBalance,
-            _inputData.withdrawalVaultBalance,
-            _inputData.simulatedShareRate
+            _reportedData.postCLBalance,
+            _reportedData.withdrawalVaultBalance,
+            _reportedData.simulatedShareRate
         );
 
         // Step 3.
@@ -1143,8 +1143,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             handlingData.sharesToBurnFromWithdrawalQueue
         ) = _calculateWithdrawals(
             _contracts.withdrawalQueue,
-            _inputData.lastFinalizableRequestId,
-            _inputData.simulatedShareRate
+            _reportedData.lastFinalizableRequestId,
+            _reportedData.simulatedShareRate
         );
 
         // Step 4.
@@ -1155,9 +1155,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             handlingData.preTotalPooledEther,
             handlingData.preTotalShares,
             handlingData.preCLBalance,
-            _inputData.postCLBalance,
-            _inputData.withdrawalVaultBalance,
-            _inputData.elRewardsVaultBalance,
+            _reportedData.postCLBalance,
+            _reportedData.withdrawalVaultBalance,
+            _reportedData.elRewardsVaultBalance,
             handlingData.etherToLockOnWithdrawalQueue
         );
 
@@ -1167,15 +1167,15 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             _contracts,
             withdrawals,
             elRewards,
-            _inputData.lastFinalizableRequestId,
+            _reportedData.lastFinalizableRequestId,
             handlingData.sharesToBurnFromWithdrawalQueue,
             handlingData.etherToLockOnWithdrawalQueue
         );
 
         emit ETHDistributed(
-            _inputData.reportTimestamp,
+            _reportedData.reportTimestamp,
             handlingData.preCLBalance,
-            _inputData.postCLBalance,
+            _reportedData.postCLBalance,
             withdrawals,
             elRewards,
             _getBufferedEther()
@@ -1185,7 +1185,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // Distribute protocol fee (treasury & node operators)
         handlingData.sharesMintedAsFees = _processRewards(
             handlingData,
-            _inputData.postCLBalance,
+            _reportedData.postCLBalance,
             withdrawals,
             elRewards
         );
@@ -1200,7 +1200,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             postTotalShares,
             postTotalPooledEther
         ) = _completeTokenRebase(
-            _inputData,
+            _reportedData,
             handlingData,
             IPostTokenRebaseReceiver(_contracts.postTokenRebaseReceiver)
         );
@@ -1211,17 +1211,17 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * Emit events and call external receivers.
      */
     function _completeTokenRebase(
-        OracleReportInputData memory _inputData,
+        OracleReportedData memory _reportedData,
         OracleReportHandlingData memory _handlingData,
         IPostTokenRebaseReceiver _postTokenRebaseReceiver
     ) internal returns (uint256 postTotalShares, uint256 postTotalPooledEther) {
         postTotalShares = _getTotalShares();
         postTotalPooledEther = _getTotalPooledEther();
 
-        if (address(_postTokenRebaseReceiver) != address(0)) {
+        if (_postTokenRebaseReceiver != address(0)) {
             _postTokenRebaseReceiver.handlePostTokenRebase(
-                _inputData.reportTimestamp,
-                _inputData.timeElapsed,
+                _reportedData.reportTimestamp,
+                _reportedData.timeElapsed,
                 _handlingData.preTotalShares,
                 _handlingData.preTotalPooledEther,
                 postTotalShares,
@@ -1231,8 +1231,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         }
 
         emit TokenRebased(
-            _inputData.reportTimestamp,
-            _inputData.timeElapsed,
+            _reportedData.reportTimestamp,
+            _reportedData.timeElapsed,
             _handlingData.preTotalShares,
             _handlingData.preTotalPooledEther,
             postTotalShares,
