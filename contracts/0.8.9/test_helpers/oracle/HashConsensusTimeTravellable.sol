@@ -72,4 +72,12 @@ contract HashConsensusTimeTravellable is HashConsensus {
     function advanceTimeByEpochs(uint256 numEpochs) external {
         _time += SECONDS_PER_SLOT * SLOTS_PER_EPOCH * numEpochs;
     }
+
+    function getReportProcessor() external view returns (address) {
+        return _reportProcessor;
+    }
+
+    function getConsensusVersion() external view returns (uint256) {
+        return _getConsensusVersion();
+    }
 }
