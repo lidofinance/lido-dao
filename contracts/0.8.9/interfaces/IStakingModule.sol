@@ -26,12 +26,12 @@ interface IStakingModule {
         returns (ValidatorsReport memory report);
 
     /// @notice Returns a counter that MUST change it's value when any of the following happens:
-    ///     1. a node operator's key(s) is added
-    ///     2. a node operator's key(s) is removed
-    ///     3. a node operator's ready to deposit keys count is changed
+    ///     1. a node operator's validator(s) is added
+    ///     2. a node operator's validator(s) is removed
+    ///     3. a node operator's ready to deposit validators count is changed
     ///     4. a node operator was activated/deactivated
-    ///     5. a node operator's key(s) is used for the deposit
-    function getValidatorsKeysNonce() external view returns (uint256);
+    ///     5. a node operator's validator(s) is used for the deposit
+    function getDepositsDataNonce() external view returns (uint256);
 
     /// @notice Returns total number of node operators
     function getNodeOperatorsCount() external view returns (uint256);
@@ -50,51 +50,49 @@ interface IStakingModule {
     /// @notice Updates the number of the validators of the given node operator that were requested
     ///         to exit but failed to do so in the max allowed time
     /// @param _nodeOperatorId Id of the node operator
-    /// @param _stuckValidatorKeysCount New number of stuck validators of the node operator
-    function updateStuckValidatorsKeysCount(
+    /// @param _stuckValidatorsCount New number of stuck validators of the node operator
+    function updateStuckValidatorsCount(
         uint256 _nodeOperatorId,
-        uint256 _stuckValidatorKeysCount
+        uint256 _stuckValidatorsCount
     ) external;
 
     /// @notice Updates the number of the validators in the EXITED state for node operator with given id
     /// @param _nodeOperatorId Id of the node operator
-    /// @param _exitedValidatorKeysCount New number of EXITED validators of the node operator
+    /// @param _exitedValidatorsCount New number of EXITED validators of the node operator
     /// @return number of exited validators across all node operators
-    function updateExitedValidatorsKeysCount(
+    function updateExitedValidatorsCount(
         uint256 _nodeOperatorId,
-        uint256 _exitedValidatorKeysCount
+        uint256 _exitedValidatorsCount
     ) external returns (uint256);
 
     /// @notice Unsafely updates the validators count stats for node operator with given id
     /// @param _nodeOperatorId Id of the node operator
-    /// @param _exitedValidatorsKeysCount New number of EXITED validators of the node operator
-    /// @param _stuckValidatorsKeysCount New number of stuck validators of the node operator
-    function unsafeUpdateValidatorsKeysCount(
+    /// @param _exitedValidatorsCount New number of EXITED validators of the node operator
+    /// @param _stuckValidatorsCount New number of stuck validators of the node operator
+    function unsafeUpdateValidatorsCount(
         uint256 _nodeOperatorId,
-        uint256 _exitedValidatorsKeysCount,
-        uint256 _stuckValidatorsKeysCount
+        uint256 _exitedValidatorsCount,
+        uint256 _stuckValidatorsCount
     ) external;
 
-    /// @notice Called by StakingRouter after oracle finishes updating exited keys counts for all operators.
-    function finishUpdatingExitedValidatorsKeysCount() external;
+    /// @notice Called by StakingRouter after oracle finishes updating exited validators counts for all operators.
+    function finishUpdatingExitedValidatorsCount() external;
 
-    /// @notice Invalidates all unused validators keys for all node operators
-    function invalidateReadyToDepositKeys() external;
+    /// @notice Invalidates all unused validators for all node operators
+    function invalidateReadyToDepositValidators() external;
 
-    /// @notice Requests the given number of the validator keys from the staking module
-    /// @param _keysCount Requested keys count to return
+    /// @notice Provides up to _depositsCount deposit data to be used by StakingRouter
+    ///     to deposit to the Ethereum Deposit contract
+    /// @param _depositsCount Desireable number of deposits to be done
     /// @param _calldata Staking module defined data encoded as bytes
-    /// @return returnedKeysCount Actually returned keys count
+    /// @return depositsCount Actual deposits count might be done with returned data
     /// @return publicKeys Batch of the concatenated public validators keys
-    /// @return signatures Batch of the concatenated signatures for returned public keys
-    function requestValidatorsKeysForDeposits(uint256 _keysCount, bytes calldata _calldata)
-        external
-        returns (
-            uint256 returnedKeysCount,
-            bytes memory publicKeys,
-            bytes memory signatures
-        );
+    /// @return signatures Batch of the concatenated deposit signatures for returned public keys
+    function provideDepositsData(uint256 _depositsCount, bytes calldata _calldata) external returns (
+        uint256 depositsCount,
+        bytes memory publicKeys,
+        bytes memory signatures
+    );
 
-    event ValidatorsKeysNonceChanged(uint256 validatorsKeysNonce);
-    event UnusedValidatorsKeysTrimmed(uint256 indexed nodeOperatorId, uint256 trimmedKeysCount);
+    event DepositsDataNonceChanged(uint256 depositsDataNonce);
 }

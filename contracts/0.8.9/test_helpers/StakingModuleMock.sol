@@ -37,7 +37,7 @@ contract StakingModuleMock is IStakingModule {
     function getValidatorsReport(uint256 _nodeOperatorId) external view returns (ValidatorsReport memory report) {
     }
 
-    function getValidatorsKeysNonce() external view returns (uint256) {
+    function getDepositsDataNonce() external view returns (uint256) {
         return _keysNonce;
     }
 
@@ -53,31 +53,31 @@ contract StakingModuleMock is IStakingModule {
 
     function handleRewardsMinted(uint256 _totalShares) external {}
 
-    function updateStuckValidatorsKeysCount(
+    function updateStuckValidatorsCount(
         uint256 _nodeOperatorId,
         uint256 _stuckValidatorKeysCount
     ) external {}
 
-    function updateExitedValidatorsKeysCount(uint256, uint256) external returns (uint256) {
+    function updateExitedValidatorsCount(uint256, uint256) external returns (uint256) {
         return 0;
     }
 
-    function finishUpdatingExitedValidatorsKeysCount() external {}
+    function finishUpdatingExitedValidatorsCount() external {}
 
-    function unsafeUpdateValidatorsKeysCount(
+    function unsafeUpdateValidatorsCount(
         uint256 /* _nodeOperatorId */,
         uint256 /* _exitedValidatorsKeysCount */,
         uint256 /* _stuckValidatorsKeysCount */
     ) external {}
 
-    function invalidateReadyToDepositKeys() external {
+    function invalidateReadyToDepositValidators() external {
         _availableKeysCount = _activeKeysCount;
     }
 
-    function requestValidatorsKeysForDeposits(uint256 _keysCount, bytes calldata _calldata)
+    function provideDepositsData(uint256 _depositsCount, bytes calldata _calldata)
         external
         returns (
-            uint256 enqueuedValidatorsKeysCount,
+            uint256 depositsCount,
             bytes memory publicKeys,
             bytes memory signatures
         )

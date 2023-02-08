@@ -24,7 +24,7 @@ interface IStETH {
 ///      See 0.8.9/interface/IStakingModule.sol for the full version.
 ///      We don't inherit 0.8.9 IStakingModule due to the solidity version conflict.
 interface IStakingModule {
-    event ValidatorsKeysNonceChanged(uint256 validatorsKeysNonce);
+    event DepositsDataNonceChanged(uint256 depositsDataNonce);
 }
 
 
@@ -371,10 +371,10 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     ///
     /// @param _nodeOperatorId Id of the node operator
     /// @param _stuckValidatorKeysCount New number of stuck validators of the node operator
-    function updateStuckValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _stuckValidatorKeysCount)
+    function updateStuckValidatorsCount(uint256 _nodeOperatorId, uint256 _stuckValidatorKeysCount)
         external
     {
-        _updateStuckValidatorsKeysCount(_nodeOperatorId, _stuckValidatorKeysCount, false);
+        _updateStuckValidatorsCount(_nodeOperatorId, _stuckValidatorKeysCount, false);
     }
 
     /// @notice Called by StakingRouter to update the number of the validators in the EXITED state
@@ -383,15 +383,15 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     /// @param _nodeOperatorId Id of the node operator
     /// @param _exitedValidatorsKeysCount New number of EXITED validators of the node operator
     /// @return Total number of exited validators across all node operators.
-    function updateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount)
+    function updateExitedValidatorsCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount)
         external
         returns (uint256)
     {
-        return _updateExitedValidatorsKeysCount(_nodeOperatorId, _exitedValidatorsKeysCount, false);
+        return _updateExitedValidatorsCount(_nodeOperatorId, _exitedValidatorsKeysCount, false);
     }
 
     /// @notice Called by StakingRouter after oracle finishes updating exited keys counts for all operators.
-    function finishUpdatingExitedValidatorsKeysCount()
+    function finishUpdatingExitedValidatorsCount()
         external
         auth(STAKING_ROUTER_ROLE)
     {
@@ -406,22 +406,22 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     ///
     /// @notice Unsafely updates the number of the validators in the EXITED state for node operator with given id
     /// @param _nodeOperatorId Id of the node operator
-    /// @param _exitedValidatorsKeysCount New number of EXITED validators of the node operator
+    /// @param _exitedValidatorsCount New number of EXITED validators of the node operator
     /// @return Total number of exited validators across all node operators.
-    function unsafeUpdateValidatorsKeysCount(
+    function unsafeUpdateValidatorsCount(
         uint256 _nodeOperatorId,
-        uint256 _exitedValidatorsKeysCount,
-        uint256 _stuckValidatorsKeysCount
+        uint256 _exitedValidatorsCount,
+        uint256 _stuckValidatorsCount
     )
         external
     {
-        _updateStuckValidatorsKeysCount(_nodeOperatorId, _stuckValidatorsKeysCount, true);
-        _updateExitedValidatorsKeysCount(_nodeOperatorId, _exitedValidatorsKeysCount, true);
+        _updateStuckValidatorsCount(_nodeOperatorId, _stuckValidatorsCount, true);
+        _updateExitedValidatorsCount(_nodeOperatorId, _exitedValidatorsCount, true);
     }
 
-    function _updateExitedValidatorsKeysCount(
+    function _updateExitedValidatorsCount(
         uint256 _nodeOperatorId,
-        uint256 _exitedValidatorsKeysCount,
+        uint256 _exitedValidatorsCount,
         bool _allowDecrease
     ) internal returns (uint256) {
         _onlyExistedNodeOperator(_nodeOperatorId);
@@ -430,29 +430,29 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         uint64 depositedSigningKeysCount = _nodeOperators[_nodeOperatorId].depositedSigningKeysCount;
         uint64 exitedValidatorsCountBefore = _nodeOperators[_nodeOperatorId].exitedSigningKeysCount;
 
-        if (exitedValidatorsCountBefore == _exitedValidatorsKeysCount) {
+        if (exitedValidatorsCountBefore == _exitedValidatorsCount) {
             return;
         }
 
-        require(_exitedValidatorsKeysCount <= depositedSigningKeysCount, "INVALID_EXITED_VALIDATORS_COUNT");
-        require(_allowDecrease || _exitedValidatorsKeysCount > exitedValidatorsCountBefore, "EXITED_VALIDATORS_COUNT_DECREASED");
+        require(_exitedValidatorsCount <= depositedSigningKeysCount, "INVALID_EXITED_VALIDATORS_COUNT");
+        require(_allowDecrease || _exitedValidatorsCount > exitedValidatorsCountBefore, "EXITED_VALIDATORS_COUNT_DECREASED");
 
-        _nodeOperators[_nodeOperatorId].exitedSigningKeysCount = uint64(_exitedValidatorsKeysCount);
+        _nodeOperators[_nodeOperatorId].exitedSigningKeysCount = uint64(_exitedValidatorsCount);
 
         SigningKeysStats.State memory totalSigningKeysStats = _getTotalSigningKeysStats();
-        if (_exitedValidatorsKeysCount > exitedValidatorsCountBefore) {
-            totalSigningKeysStats.increaseExitedSigningKeysCount(uint64(_exitedValidatorsKeysCount) - exitedValidatorsCountBefore);
+        if (_exitedValidatorsCount > exitedValidatorsCountBefore) {
+            totalSigningKeysStats.increaseExitedSigningKeysCount(uint64(_exitedValidatorsCount) - exitedValidatorsCountBefore);
         } else {
-            totalSigningKeysStats.decreaseExitedSigningKeysCount(exitedValidatorsCountBefore - uint64(_exitedValidatorsKeysCount));
+            totalSigningKeysStats.decreaseExitedSigningKeysCount(exitedValidatorsCountBefore - uint64(_exitedValidatorsCount));
         }
         _setTotalSigningKeysStats(totalSigningKeysStats);
 
-        emit ExitedSigningKeysCountChanged(_nodeOperatorId, _exitedValidatorsKeysCount);
+        emit ExitedSigningKeysCountChanged(_nodeOperatorId, _exitedValidatorsCount);
 
         return totalSigningKeysStats.exitedSigningKeysCount;
     }
 
-    function _updateStuckValidatorsKeysCount(
+    function _updateStuckValidatorsCount(
         uint256 _nodeOperatorId,
         uint256 _stuckValidatorKeysCount,
         bool _allowDecrease
@@ -460,8 +460,8 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         // FIXME: implement
     }
 
-    /// @notice Invalidates all unused validators keys for all node operators
-    function invalidateReadyToDepositKeys() external {
+    /// @notice Invalidates all unused validators for all node operators
+    function invalidateReadyToDepositValidators() external {
         _auth(INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE);
 
         bool wereSigningKeysTrimmed = false;
@@ -501,14 +501,14 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     }
 
     /// @notice Requests the given number of the validator keys from the staking module
-    /// @param _keysCount Requested keys count to return
+    /// @param _depositsCount Requested keys count to return
     /// @return returnedKeysCount Actually returned keys count
     /// @return publicKeys Batch of the concatenated public validators keys
     /// @return signatures Batch of the concatenated signatures for returned public keys
-    function requestValidatorsKeysForDeposits(uint256 _keysCount, bytes)
+    function provideDepositsData(uint256 _depositsCount, bytes)
         external
         returns (
-            uint256 enqueuedValidatorsKeysCount,
+            uint256 depositsCount,
             bytes memory publicKeys,
             bytes memory signatures
         )
@@ -519,25 +519,25 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         uint256[] memory activeKeysCountAfterAllocation;
         uint256[] memory exitedSigningKeysCount;
         (
-            enqueuedValidatorsKeysCount,
+            depositsCount,
             nodeOperatorIds,
             activeKeysCountAfterAllocation,
             exitedSigningKeysCount
-        ) = _getSigningKeysAllocationData(_keysCount);
+        ) = _getSigningKeysAllocationData(_depositsCount);
 
-        if (enqueuedValidatorsKeysCount == 0) {
+        if (depositsCount == 0) {
             return (0, new bytes(0), new bytes(0));
         }
 
         (publicKeys, signatures) = _loadAllocatedSigningKeys(
-            enqueuedValidatorsKeysCount,
+            depositsCount,
             nodeOperatorIds,
             activeKeysCountAfterAllocation,
             exitedSigningKeysCount
         );
 
         SigningKeysStats.State memory totalSigningKeysStats = _getTotalSigningKeysStats();
-        totalSigningKeysStats.increaseDepositedSigningKeysCount(uint64(enqueuedValidatorsKeysCount));
+        totalSigningKeysStats.increaseDepositedSigningKeysCount(uint64(depositsCount));
         _setTotalSigningKeysStats(totalSigningKeysStats);
         _increaseValidatorsKeysNonce();
     }
@@ -1035,11 +1035,12 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     }
 
     /// @notice Returns a counter that MUST change it's value when any of the following happens:
-    ///     1. a node operator's key(s) is added
-    ///     2. a node operator's key(s) is removed
-    ///     3. a node operator's ready to deposit keys count is changed
+    ///     1. a node operator's validator(s) is added
+    ///     2. a node operator's validator(s) is removed
+    ///     3. a node operator's ready to deposit validators count is changed
     ///     4. a node operator was activated/deactivated
-    function getValidatorsKeysNonce() external view returns (uint256) {
+    ///     5. a node operator's validator(s) is used for the deposit
+    function getDepositsDataNonce() external view returns (uint256) {
         return KEYS_OP_INDEX_POSITION.getStorageUint256();
     }
 
@@ -1150,7 +1151,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         KEYS_OP_INDEX_POSITION.setStorageUint256(keysOpIndex);
         /// @dev [DEPRECATED] event preserved for tooling compatibility
         emit KeysOpIndexSet(keysOpIndex);
-        emit ValidatorsKeysNonceChanged(keysOpIndex);
+        emit DepositsDataNonceChanged(keysOpIndex);
     }
 
     function _setTotalSigningKeysStats(SigningKeysStats.State memory _validatorsKeysStats) internal {

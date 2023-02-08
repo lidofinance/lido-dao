@@ -294,7 +294,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint256 newExitedKeysCount;
         for (uint256 i = 0; i < _nodeOperatorIds.length; ) {
             newExitedKeysCount = IStakingModule(moduleAddr)
-                .updateExitedValidatorsKeysCount(_nodeOperatorIds[i], _exitedKeysCounts[i]);
+                .updateExitedValidatorsCount(_nodeOperatorIds[i], _exitedKeysCounts[i]);
             unchecked { ++i; }
         }
         uint256 prevReportedExitedKeysCount = stakingModule.exitedKeysCount;
@@ -302,7 +302,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             newExitedKeysCount >= prevReportedExitedKeysCount
         ) {
             // oracle finished updating exited keys for all node ops
-            IStakingModule(moduleAddr).finishUpdatingExitedValidatorsKeysCount();
+            IStakingModule(moduleAddr).finishUpdatingExitedValidatorsCount();
         }
     }
 
@@ -326,7 +326,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
      *
      * @param _nodeOperatorId ID of the node operator.
      *
-     * @param _triggerUpdateFinish Whether to call `finishUpdatingExitedValidatorsKeysCount` on
+     * @param _triggerUpdateFinish Whether to call `finishUpdatingExitedValidatorsCount` on
      *        the module after applying the corrections.
      *
      * @param _correction.currentModuleExitedKeysCount The expected current number of exited keys
@@ -380,14 +380,14 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
         stakingModule.exitedKeysCount = _correction.newModuleExitedKeysCount;
 
-        IStakingModule(moduleAddr).unsafeUpdateValidatorsKeysCount(
+        IStakingModule(moduleAddr).unsafeUpdateValidatorsCount(
             _nodeOperatorId,
             _correction.newNodeOperatorExitedKeysCount,
             _correction.newNodeOperatorStuckKeysCount
         );
 
         if (_triggerUpdateFinish) {
-            IStakingModule(moduleAddr).finishUpdatingExitedValidatorsKeysCount();
+            IStakingModule(moduleAddr).finishUpdatingExitedValidatorsCount();
         }
     }
 
@@ -401,7 +401,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     {
         address moduleAddr = _getStakingModuleById(_stakingModuleId).stakingModuleAddress;
         for (uint256 i = 0; i < _nodeOperatorIds.length; ) {
-            IStakingModule(moduleAddr).updateStuckValidatorsKeysCount(
+            IStakingModule(moduleAddr).updateStuckValidatorsCount(
                 _nodeOperatorIds[i],
                 _stuckKeysCounts[i]
             );
@@ -545,7 +545,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         validStakingModuleId(_stakingModuleId)
         returns (uint256)
     {
-        return IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getValidatorsKeysNonce();
+        return IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getDepositsDataNonce();
     }
 
     function getStakingModuleLastDepositBlock(uint256 _stakingModuleId) external view
@@ -749,7 +749,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             bytes memory publicKeysBatch;
             bytes memory signaturesBatch;
             (keysCount, publicKeysBatch, signaturesBatch) = IStakingModule(stakingModule.stakingModuleAddress)
-                .requestValidatorsKeysForDeposits(keysToDeposit, _depositCalldata);
+                .provideDepositsData(keysToDeposit, _depositCalldata);
 
             if (keysCount > 0) {
                 _makeBeaconChainDeposits32ETH(keysCount, abi.encodePacked(withdrawalCredentials), publicKeysBatch, signaturesBatch);
@@ -795,7 +795,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     function _trimUnusedKeys() internal {
         uint256 stakingModulesCount = getStakingModulesCount();
         for (uint256 i; i < stakingModulesCount; ) {
-            IStakingModule(_getStakingModuleAddressByIndex(i)).invalidateReadyToDepositKeys();
+            IStakingModule(_getStakingModuleAddressByIndex(i)).invalidateReadyToDepositValidators();
             unchecked {
                 ++i;
             }

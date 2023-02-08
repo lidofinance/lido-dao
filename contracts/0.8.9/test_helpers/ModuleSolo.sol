@@ -40,7 +40,7 @@ contract ModuleSolo is IStakingModule {
     function getValidatorsReport(uint256 _nodeOperatorId) external view returns (ValidatorsReport memory report) {}
 
 
-    function getValidatorsKeysNonce() external view returns (uint256) {
+    function getDepositsDataNonce() external view returns (uint256) {
         return keysOpIndex;
     }
 
@@ -72,18 +72,18 @@ contract ModuleSolo is IStakingModule {
 
     function handleRewardsMinted(uint256 _totalShares) external {}
 
-    function updateStuckValidatorsKeysCount(
+    function updateStuckValidatorsCount(
         uint256 _nodeOperatorId,
         uint256 _stuckValidatorKeysCount
     ) external {}
 
-    function updateExitedValidatorsKeysCount(uint256, uint256) external returns (uint256) {
+    function updateExitedValidatorsCount(uint256, uint256) external returns (uint256) {
         return 0;
     }
 
-    function finishUpdatingExitedValidatorsKeysCount() external {}
+    function finishUpdatingExitedValidatorsCount() external {}
 
-    function unsafeUpdateValidatorsKeysCount(
+    function unsafeUpdateValidatorsCount(
         uint256 /* _nodeOperatorId */,
         uint256 /* _exitedValidatorsKeysCount */,
         uint256 /* _stuckValidatorsKeysCount */
@@ -128,7 +128,7 @@ contract ModuleSolo is IStakingModule {
         return stakingRouter;
     }
 
-    function invalidateReadyToDepositKeys() external {}
+    function invalidateReadyToDepositValidators() external {}
 
     function setType(bytes32 _type) external {
         moduleType = _type;
@@ -138,21 +138,21 @@ contract ModuleSolo is IStakingModule {
         return keysOpIndex;
     }
 
-    function requestValidatorsKeysForDeposits(uint256 _keysCount, bytes calldata _calldata)
+    function provideDepositsData(uint256 _depositsCount, bytes calldata _calldata)
         external
         pure
         returns (
-            uint256 keysCount,
+            uint256 depositsCount,
             bytes memory publicKeys,
             bytes memory signatures
         )
     {
 
-        publicKeys = MemUtils.unsafeAllocateBytes(_keysCount * PUBKEY_LENGTH);
-        signatures = MemUtils.unsafeAllocateBytes(_keysCount * SIGNATURE_LENGTH);
-        MemUtils.copyBytes(_calldata, publicKeys, 0, 0, _keysCount * PUBKEY_LENGTH);
-        MemUtils.copyBytes(_calldata, signatures, _keysCount * PUBKEY_LENGTH, 0, _keysCount * PUBKEY_LENGTH);
+        publicKeys = MemUtils.unsafeAllocateBytes(_depositsCount * PUBKEY_LENGTH);
+        signatures = MemUtils.unsafeAllocateBytes(_depositsCount * SIGNATURE_LENGTH);
+        MemUtils.copyBytes(_calldata, publicKeys, 0, 0, _depositsCount * PUBKEY_LENGTH);
+        MemUtils.copyBytes(_calldata, signatures, _depositsCount * PUBKEY_LENGTH, 0, _depositsCount * PUBKEY_LENGTH);
 
-        return (_keysCount, publicKeys, signatures);
+        return (_depositsCount, publicKeys, signatures);
     }
 }
