@@ -13,6 +13,7 @@ import {Math64} from "../lib/Math64.sol";
 import {MemUtils} from "../../common/lib/MemUtils.sol";
 import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
 import {ILidoLocator} from "../../common/interfaces/ILidoLocator.sol";
+import {IBurner} from "../../common/interfaces/IBurner.sol";
 import {SigningKeys} from "../lib/SigningKeys.sol";
 import {Packed64x4} from "../lib/Packed64x4.sol";
 import {Versioned} from "../utils/Versioned.sol";
@@ -895,6 +896,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
             totalActiveValidatorsCount = totalActiveValidatorsCount.add(activeValidatorsCount);
 
             recipients[idx] = _nodeOperators[operatorId].rewardAddress;
+            // prefill shares array with 'key share' for recipient, see below
             shares[idx] = activeValidatorsCount;
 
             Packed64x4.Packed memory stuckPenaltyStats = _loadOperatorStuckPenaltyStats(operatorId);
@@ -1269,7 +1271,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
                 /// @dev half reward punishment
                 /// @dev ignore remainder since it accumulated on contract balance
                 shares[idx] >>= 1;
-                stETH.transferShares(getLocator().burner(), shares[idx]);
+                IBurner(getLocator().burner()).requestBurnShares(address(this),  shares[idx]);
                 emit NodeOperatorPenalized(recipients[idx], shares[idx]);
             }
             stETH.transferShares(recipients[idx], shares[idx]);
