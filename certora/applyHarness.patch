@@ -1,5 +1,5 @@
 --- ../contracts/0.8.9/StakingRouter.sol	2023-02-07 12:36:41.804965100 +0200
-+++ 	2023-02-07 15:39:52.473815200 +0200
++++ 	2023-02-08 11:59:46.503710900 +0200
 @@ -5,23 +5,23 @@
  /* See contracts/COMPILERS.md */
  pragma solidity 0.8.9;
@@ -41,53 +41,60 @@
  
      /**
       * @dev proxy initialization
+@@ -662,7 +662,10 @@
+         // sanity check
+         if (totalFee >= precisionPoints) revert ErrorValueOver100Percent("totalFee");
+ 
++        /// @notice Certora: restrict the count to avoid the assembly block below.
++        require(rewardedStakingModulesCount >= stakingModulesCount);
+         /// @dev shrink arrays
++        /*
+         if (rewardedStakingModulesCount < stakingModulesCount) {
+             uint256 trim = stakingModulesCount - rewardedStakingModulesCount;
+             assembly {
+@@ -670,6 +673,7 @@
+                 mstore(stakingModuleFees, sub(mload(stakingModuleFees), trim))
+             }
+         }
++        */
+     }
+ 
+     /// @notice Helper for Lido contract (DEPRECATED)
 --- ../contracts/0.8.9/BeaconChainDepositor.sol	2023-02-07 12:55:12.352395600 +0200
-+++ 	2023-02-07 16:08:13.637882400 +0200
++++ 	2023-02-08 14:41:23.713690700 +0200
 @@ -4,7 +4,7 @@
  // See contracts/COMPILERS.md
  pragma solidity 0.8.9;
  
 -import {MemUtils} from "../common/lib/MemUtils.sol";
-+//import {MemUtils} from "../../contracts/common/lib/MemUtils.sol";
++import {MemUtils} from "../../contracts/common/lib/MemUtils.sol";
  
  interface IDepositContract {
      function get_deposit_root() external view returns (bytes32 rootHash);
-@@ -43,18 +43,18 @@
+@@ -15,6 +15,8 @@
+         bytes calldata signature, // 96 bytes
+         bytes32 deposit_data_root
+     ) external payable;
++
++    function get_deposit_count() external view returns (bytes memory);
+ }
+ 
+ contract BeaconChainDepositor {
+@@ -43,7 +45,8 @@
          bytes memory _withdrawalCredentials,
          bytes memory _publicKeysBatch,
          bytes memory _signaturesBatch
 -    ) internal {
 +    ) internal virtual {
++        /*
          require(_publicKeysBatch.length == PUBLIC_KEY_LENGTH * _keysCount, "INVALID_PUBLIC_KEYS_BATCH_LENGTH");
          require(_signaturesBatch.length == SIGNATURE_LENGTH * _keysCount, "INVALID_SIGNATURES_BATCH_LENGTH");
  
-         uint256 targetBalance = address(this).balance - (_keysCount * DEPOSIT_SIZE);
+@@ -66,6 +69,7 @@
+         }
  
--        bytes memory publicKey = MemUtils.unsafeAllocateBytes(PUBLIC_KEY_LENGTH);
--        bytes memory signature = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH);
-+        bytes memory publicKey;// = MemUtils.unsafeAllocateBytes(PUBLIC_KEY_LENGTH);
-+        bytes memory signature;// = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH);
+         if (address(this).balance != targetBalance) revert ErrorNotExpectedBalance();
++        */
+     }
  
-         for (uint256 i; i < _keysCount;) {
--            MemUtils.copyBytes(_publicKeysBatch, publicKey, i * PUBLIC_KEY_LENGTH, 0, PUBLIC_KEY_LENGTH);
--            MemUtils.copyBytes(_signaturesBatch, signature, i * SIGNATURE_LENGTH, 0, SIGNATURE_LENGTH);
-+            //MemUtils.copyBytes(_publicKeysBatch, publicKey, i * PUBLIC_KEY_LENGTH, 0, PUBLIC_KEY_LENGTH);
-+            //MemUtils.copyBytes(_signaturesBatch, signature, i * SIGNATURE_LENGTH, 0, SIGNATURE_LENGTH);
- 
-             DEPOSIT_CONTRACT.deposit{value: DEPOSIT_SIZE}(
-                 publicKey, _withdrawalCredentials, signature, _computeDepositDataRoot(_withdrawalCredentials, publicKey, signature)
-@@ -77,10 +77,10 @@
-         returns (bytes32)
-     {
-         // Compute deposit data root (`DepositData` hash tree root) according to deposit_contract.sol
--        bytes memory sigPart1 = MemUtils.unsafeAllocateBytes(64);
--        bytes memory sigPart2 = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH - 64);
--        MemUtils.copyBytes(_signature, sigPart1, 0, 0, 64);
--        MemUtils.copyBytes(_signature, sigPart2, 64, 0,SIGNATURE_LENGTH - 64);
-+        bytes memory sigPart1; //= MemUtils.unsafeAllocateBytes(64);
-+        bytes memory sigPart2; //= MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH - 64);
-+        //MemUtils.copyBytes(_signature, sigPart1, 0, 0, 64);
-+        //MemUtils.copyBytes(_signature, sigPart2, 64, 0,SIGNATURE_LENGTH - 64);
- 
-         bytes32 publicKeyRoot = sha256(abi.encodePacked(_publicKey, bytes16(0)));
-         bytes32 signatureRoot = sha256(abi.encodePacked(sha256(abi.encodePacked(sigPart1)), sha256(abi.encodePacked(sigPart2, bytes32(0)))));
+     /// @dev computes the deposit_root_hash required by official Beacon Deposit contract

@@ -8,14 +8,15 @@ import {BeaconChainDepositor} from "../munged/BeaconChainDepositor.sol";
 
 contract BeaconChainDepositorHarness is BeaconChainDepositor {
 
+    // Certora replacements for MemUtils
     mapping(bytes => bytes32) private _publicKeyRoot;
     mapping(bytes => bytes32) private _signatureRoot;
-    bytes32 private constant MASK16 = bytes32(uint256(0xffffffffffffffffffffffffffffffff));
+    mapping(bytes => mapping(uint256 => bytes)) private _publicKeyMap;
+    mapping(bytes => mapping(uint256 => bytes)) private _signatureMap;
 
     constructor(address _depositContract) BeaconChainDepositor(_depositContract) {}
 
-    /// @notice Certora implementation : avoiding using MemUtils library
-    /// Assuming the public key length is 64 bytes and not 48 bytes.
+    /// @notice Certora: change root-hashing functions to simple mappings.
     /// @dev Invokes a deposit call to the official Beacon Deposit contract
     /// @param _keysCount amount of keys to deposit
     /// @param _withdrawalCredentials Commitment to a public key for withdrawals
@@ -35,21 +36,13 @@ contract BeaconChainDepositorHarness is BeaconChainDepositor {
         bytes memory signature;
 
         for (uint256 i; i < _keysCount;) {
-            uint256 offsetKey = i * PUBLIC_KEY_LENGTH;
-            uint256 offsetSignature = i * SIGNATURE_LENGTH;
-
-            // Here it is assumed that the publicKeysBatch is two word aligned
-            publicKey = abi.encodePacked(
-                readWordAtOffset(_publicKeysBatch, offsetKey),
-                (readWordAtOffset(_publicKeysBatch, offsetKey + 32) & MASK16));
-
-            signature = abi.encodePacked(
-                readWordAtOffset(_publicKeysBatch, offsetSignature),
-                readWordAtOffset(_publicKeysBatch, offsetSignature + 32),
-                readWordAtOffset(_publicKeysBatch, offsetSignature + 64));
-
+            publicKey = _publicKeyMap[_publicKeysBatch][i];
+            signature = _signatureMap[_signaturesBatch][i];
+            require(publicKey.length == 48);
+            require(signature.length == 96);
+            
             DEPOSIT_CONTRACT.deposit{value: DEPOSIT_SIZE}(
-                publicKey, _withdrawalCredentials, signature,
+                _publicKeysBatch, _withdrawalCredentials, signature,
                 _computeDepositDataRootCertora(_withdrawalCredentials, publicKey, signature)
             );
 
@@ -61,6 +54,7 @@ contract BeaconChainDepositorHarness is BeaconChainDepositor {
         if (address(this).balance != targetBalance) revert ErrorNotExpectedBalance();
     }
 
+    /// @notice Certora: change root-hashing functions to simple mappings.
     /// @dev computes the deposit_root_hash required by official Beacon Deposit contract
     /// @param _publicKey A BLS12-381 public key.
     /// @param _signature A BLS12-381 signature
@@ -72,23 +66,11 @@ contract BeaconChainDepositorHarness is BeaconChainDepositor {
         bytes32 publicKeyRoot = _publicKeyRoot[_publicKey];
         bytes32 signatureRoot = _signatureRoot[_signature];
 
-        return keccak256(
+        return sha256(
             abi.encodePacked(
-                keccak256(abi.encodePacked(publicKeyRoot, _withdrawalCredentials)),
-                keccak256(abi.encodePacked(DEPOSIT_SIZE_IN_GWEI_LE64, bytes24(0), signatureRoot))
+                sha256(abi.encodePacked(publicKeyRoot, _withdrawalCredentials)),
+                sha256(abi.encodePacked(DEPOSIT_SIZE_IN_GWEI_LE64, bytes24(0), signatureRoot))
             )
         );
-    }
-
-    /**
-    * @notice Certora helper: get a single word out of bytes at some offset.   
-    * @param self The byte string to read a word from.
-    * @param offset the offset to read the word at.
-    * @return word The bytes32 word at the offset.
-    */ 
-    function readWordAtOffset(bytes memory self, uint256 offset) private pure returns(bytes32 word) {
-        assembly {
-            word := mload(add(add(self, 32), offset))
-        }
     }
 }

@@ -37,15 +37,28 @@ import "./StakingRouterBase.spec"
 /**************************************************
  *                 MISC Rules                     *
  **************************************************/
-
-rule sanity(method f) {
+rule sanity(method f) 
+filtered{f -> f.selector != deposit(uint256,uint256,bytes).selector} {
     env e;
     calldataarg args;
     f(e,args);
     assert false;
 }
 
-// https://vaas-stg.certora.com/output/41958/7205892f174546a9bb631d57d683eb24/?anonymousKey=870b36f147d44f5f06ed1b5723fa5adb654f8548
+rule depositSanity() {
+    env e;
+    uint256 _maxDepositsCount;
+    uint256 _stakingModuleId;
+    bytes _depositCalldata;
+    uint64 countBefore = getDepositContractCount();
+        deposit(e, _maxDepositsCount, _stakingModuleId, _depositCalldata);
+    uint64 countAfter = getDepositContractCount();
+    
+    // Force at least one call to deposit in the deposit contract.
+    require(countAfter != countBefore);
+    assert false;
+}
+
 /**************************************************
  *          Status Transition Rules               *
  **************************************************/
@@ -57,7 +70,10 @@ filtered{f -> !f.isView} {
     require statusBefore != ACTIVE();
     f(e, args);
     uint8 statusAfter = getStakingModuleStatus(moduleId);
-    assert statusAfter != ACTIVE();
+    assert statusAfter == ACTIVE() =>
+        (f.selector == setStakingModuleStatus(uint256,uint8).selector ||
+        f.selector == addStakingModule(string,address,uint16,uint16,uint16).selector ||
+        f.selector == resumeStakingModule(uint256).selector);
 }
 
 rule StatusChangedToPaused(uint256 moduleId, method f)
@@ -68,7 +84,9 @@ filtered{f -> !f.isView} {
     require statusBefore != PAUSED();
     f(e, args);
     uint8 statusAfter = getStakingModuleStatus(moduleId);
-    assert statusAfter != PAUSED();
+    assert statusAfter == PAUSED() =>
+        (f.selector == setStakingModuleStatus(uint256,uint8).selector ||
+        f.selector == pauseStakingModule(uint256).selector);
 }
 
 rule StatusChangedToStopped(uint256 moduleId, method f) 
@@ -79,5 +97,10 @@ filtered{f -> !f.isView} {
     require statusBefore != STOPPED();
         f(e, args);
     uint8 statusAfter = getStakingModuleStatus(moduleId);
-    assert statusAfter != STOPPED();
+    assert statusAfter == STOPPED() =>
+        (f.selector == setStakingModuleStatus(uint256,uint8).selector);
 }
+
+/**************************************************
+ *          Staking module parameters             *
+ **************************************************/

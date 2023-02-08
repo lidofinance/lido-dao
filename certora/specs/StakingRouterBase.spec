@@ -21,6 +21,7 @@ methods {
     // StakingRouter
      getStakingModulesCount() returns (uint256) envfree
      getStakingModuleStatus(uint256) returns (uint8) envfree
+     getDepositContractCount() returns (uint64) envfree
 }
 
 /**************************************************
@@ -30,3 +31,6 @@ methods {
 definition ACTIVE() returns uint8 = 0; 
 definition PAUSED() returns uint8 = 1; 
 definition STOPPED() returns uint8 = 2; 
+
+// Signature and public key batch count
+definition keyCount() returns uint256 = 4;
