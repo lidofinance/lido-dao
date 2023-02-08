@@ -132,7 +132,7 @@ async function deployMockLidoAndStakingRouter() {
     selfOwnedStEthBurner: ZERO_ADDRESS,
     stakingRouter: stakingRouter.address,
     treasury: ZERO_ADDRESS,
-    validatorExitBus: ZERO_ADDRESS,
+    validatorsExitBusOracle: ZERO_ADDRESS,
     withdrawalQueue: withdrawalQueue.address,
     withdrawalVault: ZERO_ADDRESS,
   })

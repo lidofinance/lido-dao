@@ -16,7 +16,7 @@ const services = [
   'burner',
   'stakingRouter',
   'treasury',
-  'validatorExitBus',
+  'validatorsExitBusOracle',
   'withdrawalQueue',
   'withdrawalVault',
   'postTokenRebaseReceiver'

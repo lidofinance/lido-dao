@@ -9,10 +9,10 @@ const invalidButNonZeroLocatorConfig = {
   lido: DUMMY_ADDRESS,
   oracleReportSanityChecker: DUMMY_ADDRESS,
   postTokenRebaseReceiver: DUMMY_ADDRESS,
-  selfOwnedStEthBurner: DUMMY_ADDRESS,
+  burner: DUMMY_ADDRESS,
   stakingRouter: DUMMY_ADDRESS,
   treasury: DUMMY_ADDRESS,
-  validatorExitBus: DUMMY_ADDRESS,
+  validatorsExitBusOracle: DUMMY_ADDRESS,
   withdrawalQueue: DUMMY_ADDRESS,
   withdrawalVault: DUMMY_ADDRESS,
 }
@@ -53,7 +53,7 @@ async function getLocatorConfig(locatorAddress) {
     selfOwnedStEthBurner: await locator.postTokenRebaseReceiver(),
     stakingRouter: await locator.stakingRouter(),
     treasury: await locator.treasury(),
-    validatorExitBus: await locator.validatorExitBus(),
+    validatorsExitBusOracle: await locator.validatorsExitBusOracle(),
     withdrawalQueue: await locator.withdrawalQueue(),
     withdrawalVault: await locator.withdrawalVault(),
   }
