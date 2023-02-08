@@ -1,82 +1,80 @@
-const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('./persisted-network-state')
+const { readNetworkState, persistNetworkState2 } = require('./persisted-network-state')
 const { artifacts } = require('hardhat')
 
 const GAS_LIMIT = 4194304
+// TODO: GAS_LIMIT - remove or move to env or somewhere
 
-
-async function deployWithoutProxy(nameInState, artifactName, constructorArgs) {
-  const netId = await web3.eth.net.getId()
-  const state = readNetworkState(network.name, netId)
-  const Contract = await hre.ethers.getContractFactory(artifactName)
-  const contractAddress = (await Contract.deploy(...constructorArgs, { gasLimit: GAS_LIMIT})).address
-
-  console.log(`${artifactName} (NO proxy): ${contractAddress}`)
-
-  persistNetworkState(network.name, netId, state, {
-    [nameInState]: {
-      "address": contractAddress,
-    }
-  })
-
-  return contractAddress
-}
-
-async function deployBehindOssifiableProxyOld(nameInState, artifactName, proxyOwner, constructorArgs) {
+async function deployWithoutProxy(nameInState, artifactName, deployer, constructorArgs=[], addressFieldName="address") {
   const netId = await web3.eth.net.getId()
   const state = readNetworkState(network.name, netId)
 
-  const Contract = await hre.ethers.getContractFactory(artifactName)
-  const implementation = (await Contract.deploy(...constructorArgs, { gasLimit: GAS_LIMIT})).address
-  console.log(`${artifactName} implementation: ${implementation}`)
+  if (constructorArgs) {
+    console.log(`${artifactName} constructor args: ${constructorArgs}`)
+  }
 
-  const OssifiableProxy = await hre.ethers.getContractFactory("OssifiableProxy")
-  const proxy = (await OssifiableProxy.deploy(
-    implementation,
-    proxyOwner,
-    [],
-    { gasLimit: GAS_LIMIT},
-  )).address
-  console.log(`${artifactName} proxy: ${proxy} (owner is ${proxyOwner})`)
+  const Contract = await artifacts.require(artifactName)
+  const contract = await Contract.new(...constructorArgs, { from: deployer })
 
-  persistNetworkState(network.name, netId, state, {
-    [nameInState]: {
-      "implementation": implementation,
-      "proxy": proxy,
-    }
-  })
+  console.log(`${artifactName} (NO proxy): ${contract.address}`)
 
-  return proxy
+  if (nameInState) {
+    persistNetworkState2(network.name, netId, state, {
+      [nameInState]: {
+        "contract": artifactName,
+        [addressFieldName]: contract.address,
+        "constructorArgs": constructorArgs,
+      }
+    })
+  }
+
+  return contract.address
 }
 
 
-async function deployBehindOssifiableProxy(nameInState, artifactName, proxyOwner, deployer, constructorArgs) {
+async function deployBehindOssifiableProxy(nameInState, artifactName, proxyOwner, deployer, constructorArgs=[]) {
   const netId = await web3.eth.net.getId()
   const state = readNetworkState(network.name, netId)
 
   const Contract = await artifacts.require(artifactName)
-  const implementation = (await Contract.new(...constructorArgs, { from: deployer })).address
-  console.log(`${artifactName} implementation: ${implementation}`)
+  const implementation = await Contract.new(...constructorArgs, { from: deployer })
+  console.log(`${artifactName} implementation: ${implementation.address}`)
 
   const OssifiableProxy = await artifacts.require("OssifiableProxy")
-  const proxy = (await OssifiableProxy.new(
-    implementation,
+  const proxy = await OssifiableProxy.new(
+    implementation.address,
     proxyOwner,
     [],
     { gasLimit: GAS_LIMIT, from: deployer },
-  )).address
-  console.log(`${artifactName} proxy: ${proxy} (owner is ${proxyOwner})`)
+  )
+  console.log(`${artifactName} proxy: ${proxy.address} (owner is ${proxyOwner})`)
 
-  persistNetworkState(network.name, netId, state, {
+  console.log({nameInState})
+
+  persistNetworkState2(network.name, netId, state, {
     [nameInState]: {
-      "implementation": implementation,
-      "proxy": proxy,
+      "contract": artifactName,
+      "implementation": implementation.address,
+      "address": proxy.address,
+      "constructorArgs": constructorArgs,
     }
   })
 
-  return proxy
+  return proxy.address
+}
+
+
+async function updateProxyImplementation(proxyAddress, artifactName, proxyOwner, constructorArgs) {
+  const OssifiableProxy = await artifacts.require('OssifiableProxy')
+  const proxy = await OssifiableProxy.at(proxyAddress)
+
+  const Contract = await artifacts.require(artifactName)
+  const implementation = await Contract.new(...constructorArgs, { from: proxyOwner })
+
+  await proxy.proxy__upgradeTo(implementation.address, { from: proxyOwner })
 }
 
 module.exports = {
   deployWithoutProxy,
   deployBehindOssifiableProxy,
+  updateProxyImplementation,
 }

@@ -16,10 +16,10 @@ const REQUIRED_NET_STATE = [
   'aragonIDAddress',
   'apmRegistryFactoryAddress',
   'multisigAddress',
-  'daoTemplateDeployTx',
-  'lidoBaseDeployTx',
-  'nodeOperatorsRegistryBaseDeployTx',
-  'eip712StETHDeployTx',
+  'lidoTemplate',
+  `app:${APP_NAMES.LIDO}`,
+  `app:${APP_NAMES.ORACLE}`,
+  `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`,
 ]
 
 async function deployTemplate({ web3, artifacts }) {
@@ -32,68 +32,47 @@ async function deployTemplate({ web3, artifacts }) {
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   logHeader('DAO template')
-  const { daoTemplate, daoTemplateDeployBlock } = await obtainTemplate(state)
-  persistNetworkState(network.name, netId, state, { daoTemplate, daoTemplateDeployBlock })
+  {
+    const daoTemplateAddress = state.lidoTemplate.address
+    const daoTemplate = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
+    log(`Checking...`)
+    await assertDeployedBytecode(daoTemplate.address, 'LidoTemplate')
+    const templateConfig = await daoTemplate.getConfig()
+    assert.addressEqual(templateConfig._owner, state.multisigAddress, 'tmpl: owner')
+    assert.addressEqual(templateConfig._daoFactory, state.daoFactoryAddress, 'tmpl: daoFactory')
+    assert.addressEqual(templateConfig._ens, state.ensAddress, 'tmpl: ens')
+    assert.addressEqual(templateConfig._miniMeFactory, state.miniMeTokenFactoryAddress, 'tmpl: miniMeFactory')
+    assert.addressEqual(templateConfig._aragonID, state.aragonIDAddress, 'tmpl: aragonId')
+    assert.addressEqual(templateConfig._apmRegistryFactory, state.apmRegistryFactoryAddress, 'tmpl: apmRegistryFactory')
+    log.success(`the config`)
+  }
 
   logHeader('Lido app base')
-  const lidoBase = await useOrGetDeployed('Lido', state.lidoBaseAddress, state.lidoBaseDeployTx)
-  log(`Checking...`)
-  await assertDeployedBytecode(lidoBase.address, 'Lido')
-  await assertAragonProxyBase(lidoBase, 'lidoBase')
-  persistNetworkState(network.name, netId, state, {
-    [`app:${APP_NAMES.LIDO}`]: {
-      ...state[`app:${APP_NAMES.LIDO}`],
-      baseAddress: lidoBase.address
-    }
-  })
+  {
+    const lidoBaseAddress = state[`app:${APP_NAMES.LIDO}`].implementation
+    const lidoBase = await artifacts.require('Lido').at(lidoBaseAddress)
+    log(`Checking...`)
+    await assertDeployedBytecode(lidoBaseAddress, 'Lido')
+    await assertAragonProxyBase(lidoBase, 'lidoBase')
+  }
 
   logHeader('NodeOperatorsRegistry app base')
-  const nodeOperatorsRegistryBase = await useOrGetDeployed(
-    'NodeOperatorsRegistry',
-    state.nodeOperatorsRegistryBaseAddress,
-    state.nodeOperatorsRegistryBaseDeployTx
-  )
+  {
+    const nodeOperatorsRegistryBaseAddress = state[`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`].implementation
+    const nodeOperatorsRegistryBase = await artifacts.require('NodeOperatorsRegistry').at(nodeOperatorsRegistryBaseAddress)
+    log(`Checking...`)
+    await assertDeployedBytecode(nodeOperatorsRegistryBase.address, 'NodeOperatorsRegistry')
+    await assertAragonProxyBase(nodeOperatorsRegistryBase, 'nodeOperatorsRegistryBase')
+  }
 
-  log(`Checking...`)
-  await assertDeployedBytecode(nodeOperatorsRegistryBase.address, 'NodeOperatorsRegistry')
-  await assertAragonProxyBase(nodeOperatorsRegistryBase, 'nodeOperatorsRegistryBase')
-  persistNetworkState(network.name, netId, state, {
-    [`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`]: {
-      ...state[`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`],
-      baseAddress: nodeOperatorsRegistryBase.address
-    }
-  })
-
-  log('EIP712StETH')
-  const eip712StETH = await useOrGetDeployed(
-    'EIP712StETH',
-    state.eip712StETHAddress,
-    state.eip712StETHDeployTx
-  )
-
-  log(`Checking...`)
-  await assertDeployedBytecode(eip712StETH.address, 'EIP712StETH')
-  persistNetworkState(network.name, netId, state, {
-    eip712StETHAddress: eip712StETH.address
-  })
-}
-
-async function obtainTemplate(state) {
-  const daoTemplate = await useOrGetDeployed('LidoTemplate', state.daoTemplateAddress, state.daoTemplateDeployTx)
-  const daoTemplateDeployBlock = await getTxBlock(state.daoTemplateDeployTx)
-  log(`LidoTemplate deploy block: ${chalk.yellow(daoTemplateDeployBlock)}`)
-
-  log(`Checking...`)
-  await assertDeployedBytecode(daoTemplate.address, 'LidoTemplate')
-  const templateConfig = await daoTemplate.getConfig()
-  assert.addressEqual(templateConfig._owner, state.multisigAddress, 'tmpl: owner')
-  assert.addressEqual(templateConfig._daoFactory, state.daoFactoryAddress, 'tmpl: daoFactory')
-  assert.addressEqual(templateConfig._ens, state.ensAddress, 'tmpl: ens')
-  assert.addressEqual(templateConfig._miniMeFactory, state.miniMeTokenFactoryAddress, 'tmpl: miniMeFactory')
-  assert.addressEqual(templateConfig._aragonID, state.aragonIDAddress, 'tmpl: aragonId')
-  assert.addressEqual(templateConfig._apmRegistryFactory, state.apmRegistryFactoryAddress, 'tmpl: apmRegistryFactory')
-  log.success(`the config`)
-  return { daoTemplate, daoTemplateDeployBlock }
+  logHeader('LegacyOracle app base')
+  {
+    const legacyOracleBaseAddress = state[`app:${APP_NAMES.ORACLE}`].implementation
+    const legacyOracleBase = await artifacts.require('LegacyOracle').at(legacyOracleBaseAddress)
+    log(`Checking...`)
+    await assertDeployedBytecode(legacyOracleBase.address, 'LegacyOracle')
+    await assertAragonProxyBase(legacyOracleBase, 'legacyOracleBase')
+  }
 }
 
 async function assertAragonProxyBase(instance, desc) {

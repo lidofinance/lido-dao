@@ -3,7 +3,9 @@ const chalk = require('chalk')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, yl, gr } = require('../helpers/log')
 const { saveDeployTx } = require('../helpers/deploy')
+const { deployWithoutProxy } = require('../helpers/deploy-shapella')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
+const { APP_NAMES } = require('./constants')
 
 const REQUIRED_NET_STATE = [
   'ensAddress',
@@ -34,26 +36,17 @@ async function deployTemplate({ web3, artifacts }) {
 
   log.splitter()
 
-  await saveDeployTx('LidoTemplate', 'tx-01-1-deploy-template.json', {
-    arguments: daoTemplateConstructorArgs,
-    from: state.multisigAddress
-  })
-  await saveDeployTx('Lido', 'tx-01-2-deploy-lido-base.json', {
-    from: state.multisigAddress
-  })
-  await saveDeployTx('NodeOperatorsRegistry', 'tx-01-4-deploy-nops-base.json', {
-    from: state.multisigAddress
-  })
-  await saveDeployTx('EIP712StETH', 'tx-01-5-deploy-nops-base.json', {
-    from: state.multisigAddress
-  })
+  await deployWithoutProxy('lidoTemplate', 'LidoTemplate', state.multisigAddress, daoTemplateConstructorArgs)
+  const daoTemplateDeployBlock = (await ethers.provider.getBlock('latest')).number
 
-  persistNetworkState(network.name, netId, state, {
-    daoTemplateConstructorArgs,
-    daoTemplateDeployTx: '',
-    lidoBaseDeployTx: '',
-    nodeOperatorsRegistryBaseDeployTx: '',
-    eip712StETHDeployTx: '',
+  await deployWithoutProxy(`app:${APP_NAMES.LIDO}`, 'Lido', state.multisigAddress, [], 'implementation')
+
+  await deployWithoutProxy(`app:${APP_NAMES.ORACLE}`, 'LegacyOracle', state.multisigAddress, [], 'implementation')
+
+  await deployWithoutProxy(`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`, 'NodeOperatorsRegistry', state.multisigAddress, [], 'implementation')
+
+  persistNetworkState(network.name, netId, readNetworkState(network.name, netId), {
+    daoTemplateDeployBlock,
   })
 
   log.splitter()

@@ -14,11 +14,11 @@ const { assertVesting } = require('./checks/dao-token')
 const REQUIRED_NET_STATE = [
   'daoAddress',
   'daoTokenAddress',
+  'lidoTemplate',
   'daoAragonId',
   'daoInitialSettings',
   'vestingParams',
   `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`,
-  'executionLayerRewardsVaultAddress',
   'executionLayerRewardsParams'
 ]
 
@@ -30,12 +30,13 @@ async function finalizeDAO({ web3, artifacts }) {
 
   const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
+  const daoTemplateAddress = state.lidoTemplate.address
 
   log.splitter()
   log(`Using AragonID name: ${chalk.yellow(state.daoAragonId)}`)
 
-  log(`Using LidoTemplate: ${chalk.yellow(state.daoTemplateAddress)}`)
-  const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
+  log(`Using LidoTemplate: ${chalk.yellow(daoTemplateAddress)}`)
+  const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
   if (state.daoTemplateDeployBlock) {
     log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
   }
@@ -71,7 +72,6 @@ async function finalizeDAO({ web3, artifacts }) {
     arguments: [
       state.daoAragonId,
       state.vestingParams.unvestedTokensAmount,
-      state.executionLayerRewardsParams.withdrawalLimit
     ],
     from: state.multisigAddress
   })

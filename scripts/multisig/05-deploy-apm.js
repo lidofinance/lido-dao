@@ -10,7 +10,12 @@ const { assertNoEvents } = require('../helpers/events')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 const { getENSNodeOwner } = require('../components/ens')
 
-const REQUIRED_NET_STATE = ['multisigAddress', 'daoTemplateAddress', 'ensAddress', 'lidoApmEnsName']
+const REQUIRED_NET_STATE = [
+  'multisigAddress',
+  'lidoTemplate',
+  'ensAddress',
+  'lidoApmEnsName',
+]
 
 async function deployAPM({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
@@ -20,12 +25,13 @@ async function deployAPM({ web3, artifacts }) {
 
   const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
+  const daoTemplateAddress = state.lidoTemplate.address
 
   logSplitter()
   log(`APM ENS domain: ${chalk.yellow(state.lidoApmEnsName)}`)
-  log(`Using DAO template: ${chalk.yellow(state.daoTemplateAddress)}`)
+  log(`Using DAO template: ${chalk.yellow(daoTemplateAddress)}`)
 
-  const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
+  const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
   if (state.daoTemplateDeployBlock) {
     log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
   }
@@ -37,7 +43,7 @@ async function deployAPM({ web3, artifacts }) {
   const lidoApmEnsNodeOwner = await getENSNodeOwner(ens, lidoApmEnsNode)
   const checkDesc = `ENS node is owned by the DAO template`
 
-  assert.equal(lidoApmEnsNodeOwner, state.daoTemplateAddress, checkDesc)
+  assert.equal(lidoApmEnsNodeOwner, daoTemplateAddress, checkDesc)
   log.success(checkDesc)
 
   logSplitter()

@@ -11,8 +11,9 @@ const { APP_NAMES } = require('./constants')
 
 const REQUIRED_NET_STATE = [
   'multisigAddress',
-  'daoTemplateAddress',
+  'lidoTemplate',
   `app:${APP_NAMES.LIDO}`,
+  `app:${APP_NAMES.ORACLE}`,
   `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`
 ]
 
@@ -24,10 +25,11 @@ async function createAppRepos({ web3, artifacts }) {
 
   const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
+  const daoTemplateAddress = state.lidoTemplate.address
 
   logSplitter()
-  log(`Using LidoTemplate: ${chalk.yellow(state.daoTemplateAddress)}`)
-  const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
+  log(`Using LidoTemplate: ${chalk.yellow(daoTemplateAddress)}`)
+  const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
   if (state.daoTemplateDeployBlock) {
     log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
   }
@@ -36,17 +38,21 @@ async function createAppRepos({ web3, artifacts }) {
   logSplitter()
 
   const lidoAppState = state[`app:${APP_NAMES.LIDO}`]
+  const oracleAppState = state[`app:${APP_NAMES.ORACLE}`]
   const nodeOperatorsAppState = state[`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`]
 
   await saveCallTxData(`createRepos`, template, 'createRepos', `tx-07-create-app-repos.json`, {
     arguments: [
       [1, 0, 0],
       // Lido app
-      lidoAppState.baseAddress,
+      lidoAppState.implementation,
       lidoAppState.contentURI,
       // NodeOperatorsRegistry app
-      nodeOperatorsAppState.baseAddress,
+      nodeOperatorsAppState.implementation,
       nodeOperatorsAppState.contentURI,
+      // LegacyOracle app
+      oracleAppState.implementation,
+      oracleAppState.contentURI,
     ],
     from: state.multisigAddress
   })

@@ -44,6 +44,8 @@ async function assertInstalledApps(
     log.splitter()
 
     const appName = appNameByAppId[evt.appId]
+    // if (appName == 'lido') continue
+
     const proxyAddress = toChecksumAddress(evt.appProxy)
 
     const artifact = await loadArtifact(APP_ARTIFACTS[appName], network.name)
@@ -56,7 +58,9 @@ async function assertInstalledApps(
     log.success(baseCheckDesc)
 
     const instance = await AragonApp.at(proxyAddress)
-    if (appName != 'lido') {
+    // We initialize the apps later
+    // TODO: get rid of this hack. Maybe by saving proxy addresses before
+    if (appName != 'lido' && appName != 'node-operators-registry' && appName != 'oracle') {
       await assertInitializedAragonApp(instance, kernel, appName)
     }
 

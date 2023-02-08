@@ -12,7 +12,13 @@ const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = re
 const TLD = 'eth'
 const CONTROLLER_INTERFACE_ID = '0x018fac06'
 
-const REQUIRED_NET_STATE = ['ensAddress', 'lidoApmEnsName', 'lidoApmEnsRegDurationSec', 'multisigAddress', 'daoTemplateAddress']
+const REQUIRED_NET_STATE = [
+  'ensAddress',
+  'lidoApmEnsName',
+  'lidoApmEnsRegDurationSec',
+  'multisigAddress',
+  'lidoTemplate'
+]
 
 async function deployTemplate({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
@@ -31,7 +37,7 @@ async function deployTemplate({ web3, artifacts }) {
   const tldNode = namehash(TLD)
 
   const domainName = state.lidoApmEnsName
-  const domainOwner = state.daoTemplateAddress
+  const domainOwner = state.lidoTemplate.address
   const domainRegDuration = state.lidoApmEnsRegDurationSec
 
   const node = namehash(domainName)

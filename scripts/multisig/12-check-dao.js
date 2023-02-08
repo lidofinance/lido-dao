@@ -21,7 +21,7 @@ const { assertAPMRegistryPermissions } = require('./checks/apm')
 const { assertInstalledApps } = require('./checks/apps')
 const { assertVesting } = require('./checks/dao-token')
 
-const REQUIRED_NET_STATE = ['ensAddress', 'lidoApmEnsName', 'daoAragonId', 'vestingParams', 'daoInitialSettings', 'daoTemplateAddress']
+const REQUIRED_NET_STATE = ['ensAddress', 'lidoApmEnsName', 'daoAragonId', 'vestingParams', 'daoInitialSettings', 'lidoTemplate']
 
 const TOKEN_TRANSFERABLE = true
 const TOKEN_DECIMALS = 18
@@ -46,6 +46,7 @@ async function checkDAO({ web3, artifacts }) {
 
   const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
+  const daoTemplateAddress = state.lidoTemplate.address
 
   log.splitter()
 
@@ -54,8 +55,8 @@ async function checkDAO({ web3, artifacts }) {
 
   log.splitter()
 
-  log(`Using LidoTemplate: ${yl(state.daoTemplateAddress)}`)
-  const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
+  log(`Using LidoTemplate: ${yl(daoTemplateAddress)}`)
+  const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
   if (state.daoTemplateDeployBlock) {
     log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
   }

@@ -48,7 +48,7 @@ yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-01-1-deploy-templa
 pause "!!! Now set the daoTemplateDeployTx hash value in deployed-$NETWORK.json"
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-01-2-deploy-lido-base.json
 pause "!!! Now set the lidoBaseDeployTx hash value in deployed-$NETWORK.json"
-yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-01-3-deploy-oracle-base.json
+yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-01-3-deploy-legacy-oracle-base.json
 pause "!!! Now set the oracleBaseDeployTx hash value in deployed-$NETWORK.json"
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-01-4-deploy-nops-base.json
 pause "!!! Now set the nodeOperatorsRegistryBaseDeployTx hash value in deployed-$NETWORK.json"

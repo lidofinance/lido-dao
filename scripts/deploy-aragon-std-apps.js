@@ -21,6 +21,8 @@ const ARAGON_APPS_REPO = process.env.ARAGON_APPS_REPO || 'https://github.com/ara
 const ARAGON_APPS_REPO_REF = process.env.ARAGON_APPS_REPO_REF || 'master'
 const RELEASE_TYPE = 'major'
 
+const SKIP_APPS_LONG_BUILD_STEPS = process.env.SKIP_APPS_LONG_BUILD_STEPS || false
+
 function writeNetworkStateFile(fileName, state) {
   const data = JSON.stringify(state, null, '  ')
   fs.writeFileSync(fileName, data + '\n', 'utf8')
@@ -101,18 +103,22 @@ async function publishApp(appName, appsRepoPath, hardhatConfig, env, netName, re
   writeNetworkStateFile(arappFile, arapp)
 
   if (hasFrontend) {
-    logSplitter(`Installing frontend deps for app ${appName}`)
-    // await execLive('yarn', {
-    //   cwd: appFrontendPath
-    // })
-    logSplitter()
+    if (!SKIP_APPS_LONG_BUILD_STEPS) {
+      logSplitter(`Installing frontend deps for app ${appName}`)
+      await execLive('yarn', {
+        cwd: appFrontendPath
+      })
+      logSplitter()
 
-    // logSplitter(`Build app ${appName}`)
-    // await execLive('yarn', {
-    //   args: ['build'],
-    //   cwd: appFrontendPath
-    // })
-    // logSplitter()
+      logSplitter(`Build app ${appName}`)
+      await execLive('yarn', {
+        args: ['build'],
+        cwd: appFrontendPath
+      })
+      logSplitter()
+    } else {
+      logSplitter(`Dependencies installing and app build steps are skipped for ${appName}`)
+    }
   } else {
     log(`The app has no frontend`)
   }

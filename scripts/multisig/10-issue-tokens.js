@@ -16,7 +16,7 @@ const { resolveLatestVersion: apmResolveLatest } = require('../components/apm')
 const { APP_NAMES } = require('./constants')
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
-const REQUIRED_NET_STATE = ['daoAddress', 'daoTemplateAddress', 'vestingParams']
+const REQUIRED_NET_STATE = ['daoAddress', 'lidoTemplate', 'vestingParams']
 
 const MAX_HOLDERS_IN_ONE_TX = 30
 
@@ -28,10 +28,11 @@ async function issueTokens({ web3, artifacts }) {
 
   const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
+  const daoTemplateAddress = state.lidoTemplate.address
 
   log.splitter()
-  log(`Using LidoTemplate: ${chalk.yellow(state.daoTemplateAddress)}`)
-  const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
+  log(`Using LidoTemplate: ${chalk.yellow(daoTemplateAddress)}`)
+  const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
   if (state.daoTemplateDeployBlock) {
     log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
   }

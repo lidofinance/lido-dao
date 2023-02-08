@@ -1,5 +1,5 @@
 {
-  "networkId": 1337807,
+  "networkId": 1337803,
   "ipfsAPI": "http://127.0.0.1:5001/api/v0",
   "multisigAddress": "0xa5F1d7D49F581136Cf6e58B32cBE9a2039C48bA1",
   "owner": "0xa5F1d7D49F581136Cf6e58B32cBE9a2039C48bA1",
@@ -14,11 +14,10 @@
       "objectionPhaseDuration": 1
     },
     "beaconSpec": {
-      "depositContractAddress": "",
-      "epochsPerFrame": 10,
+      "depositContractAddress": "0x4242424242424242424242424242424242424242",
       "slotsPerEpoch": 32,
       "secondsPerSlot": 12,
-      "genesisTime": 1673953200
+      "genesisTime": 1675263480
     },
     "fee": {
       "totalPercent": 10,
@@ -49,12 +48,67 @@
     "end": 1639660100,
     "revokable": false
   },
-  "selfOwnedStETHBurnerParams": {
-    "totalCoverSharesBurnt": "0",
-    "totalNonCoverSharesBurnt": "0",
-    "maxBurnAmountPerRunBasisPoints": "4"
+  "burner": {
+    "parameters": {
+        "totalCoverSharesBurnt": "0",
+        "totalNonCoverSharesBurnt": "0"
+    }
   },
   "executionLayerRewardsParams": {
     "withdrawalLimit": "1"
+  },
+  "legacyOracle": {
+    "parameters": {
+      "lastCompletedEpochId": 0
+    }
+  },
+  "hashConsensusForAccounting": {
+    "parameters": {
+      "fastLaneLengthSlots": 10,
+      "epochsPerFrame": 12
+    }
+  },
+  "accountingOracle": {
+    "parameters": {
+      "maxExitedValidatorsPerDay": 240,
+      "maxExtraDataListItemsCount": 15,
+      "consensusVersion": 1
+    }
+  },
+  "hashConsensusForExitBus": {
+    "parameters": {
+      "fastLaneLengthSlots": 10,
+      "epochsPerFrame": 4
+    }
+  },
+  "validatorsExitBusOracle": {
+    "parameters": {
+      "consensusVersion": 1
+    }
+  },
+  "depositSecurityModule": {
+    "parameters": {
+      "maxDepositsPerBlock": 150,
+      "minDepositBlockDistance": 5,
+      "pauseIntentValidityPeriodBlocks": 6646
+    }
+  },
+  "oracleReportSanityChecker": {
+    "parameters": {
+      "churnValidatorsPerDayLimit": 1500,
+      "oneOffCLBalanceDecreaseBPLimit": 500,
+      "annualBalanceIncreaseBPLimit": 1000,
+      "shareRateDeviationBPLimit": 250,
+      "requestTimestampMargin": 128,
+      "maxPositiveTokenRebase": 5000000,
+      "maxValidatorExitRequestsPerReport": 2000,
+      "maxAccountingExtraDataListItemsCount": 100
+    }
+  },
+  "withdrawalRequestNFT": {
+    "parameters": {
+      "name": "stETH Withdrawal NFT",
+      "symbol": "unstETH"
+    }
   }
 }

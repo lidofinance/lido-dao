@@ -2,6 +2,7 @@
 const APP_NAMES = {
   // Lido apps
   LIDO: 'lido',
+  ORACLE: 'oracle',
   NODE_OPERATORS_REGISTRY: 'node-operators-registry',
   // Aragon apps
   ARAGON_AGENT: 'aragon-agent',
@@ -12,6 +13,7 @@ const APP_NAMES = {
 
 const APP_ARTIFACTS = {
   [APP_NAMES.LIDO]: 'Lido',
+  [APP_NAMES.ORACLE]: 'LegacyOracle',
   [APP_NAMES.NODE_OPERATORS_REGISTRY]: 'NodeOperatorsRegistry',
   [APP_NAMES.ARAGON_AGENT]: 'external:Agent',
   [APP_NAMES.ARAGON_FINANCE]: 'external:Finance',

@@ -15,6 +15,7 @@ const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 const RELEASE_TYPE = process.env.RELEASE_TYPE || 'major'
 const APPS = process.env.APPS || '*'
 const APPS_DIR_PATH = process.env.APPS_DIR_PATH || path.resolve(__dirname, '..', 'apps')
+const SKIP_APPS_LONG_BUILD_STEPS = process.env.SKIP_APPS_LONG_BUILD_STEPS || false
 
 function writeNetworkStateFile(fileName, state) {
   const data = JSON.stringify(state, null, '  ')
@@ -96,16 +97,18 @@ async function publishApp(appName, env, netName, appsDirPath, releaseType) {
   logSplitter(`Write state app ${appName}`)
   writeNetworkStateFile(arappFile, arapp)
 
-  // log(`Installing frontend deps for app ${appName}`)
-  // await execLive('yarn', {
-  //   cwd: appFrontendPath
-  // })
+  if (!SKIP_APPS_LONG_BUILD_STEPS) {
+    log(`Installing frontend deps for app ${appName}`)
+    await execLive('yarn', {
+      cwd: appFrontendPath
+    })
 
-  // log(`Build app ${appName}`)
-  // await execLive('yarn', {
-  //   args: ['build'],
-  //   cwd: appFrontendPath
-  // })
+    log(`Build app ${appName}`)
+    await execLive('yarn', {
+      args: ['build'],
+      cwd: appFrontendPath
+    })
+  }
 
   await execLive('hardhat', {
     args: [

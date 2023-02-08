@@ -10,7 +10,7 @@ require('@nomiclabs/hardhat-etherscan')
 require('hardhat-gas-reporter')
 require('solidity-coverage')
 require('hardhat-contract-sizer')
-require('hardhat-ignore-warnings')
+// require('hardhat-ignore-warnings')
 
 const NETWORK_NAME = getNetworkName()
 const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
@@ -50,17 +50,16 @@ const getNetConfig = (networkName, ethAccountName) => {
     chainId: 1337,
     gas: 80000000 // the same as in Görli
   }
-  const devnet3 = {
+  const zhejiang = {
     ...base,
     url: 'http://35.228.211.212:8545',
-    chainId: 1337807,
-    gas: 9194304
+    chainId: 1337803,
+    gas: 25000000
   }
   const byNetName = {
     localhost,
     mainnetfork,
-    devnet3,
-    // local
+    zhejiang,
     local: {
       ...base,
       accounts: {

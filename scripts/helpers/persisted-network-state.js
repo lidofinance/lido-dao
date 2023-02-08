@@ -26,6 +26,26 @@ function persistNetworkState(netName, netId, state, updates = undefined) {
   _writeNetworkStateFile(fileName, state)
 }
 
+function persistNetworkState2(netName, netId, state, updates = undefined) {
+  state.networkId = netId
+  if (updates) {
+    updateNetworkState2(state, updates)
+  }
+  const fileName = _getFileName(netName, NETWORK_STATE_FILE_BASENAME, NETWORK_STATE_FILE_DIR)
+  log(`Writing network state to ${fileName}...`)
+  _writeNetworkStateFile(fileName, state)
+}
+
+function updateNetworkState2(state, newState) {
+  Object.keys(newState).forEach((key) => {
+    const previousValue = state[key]
+    const value = newState[key]
+    if (value != null) {
+      state[key] = Object.assign(previousValue || {}, value)
+    }
+  })
+}
+
 function updateNetworkState(state, newState) {
   Object.keys(newState).forEach((key) => {
     const value = newState[key]
@@ -75,4 +95,10 @@ function _writeNetworkStateFile(fileName, state) {
   fs.writeFileSync(fileName, data + '\n', 'utf8')
 }
 
-module.exports = { readNetworkState, persistNetworkState, updateNetworkState, assertRequiredNetworkState }
+module.exports = {
+  readNetworkState,
+  persistNetworkState,
+  persistNetworkState2,
+  updateNetworkState,
+  assertRequiredNetworkState,
+}

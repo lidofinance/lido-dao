@@ -13,8 +13,9 @@ const { APP_NAMES } = require('./constants')
 
 const REQUIRED_NET_STATE = [
   'lidoApmEnsName',
-  'daoTemplateAddress',
+  'lidoTemplate',
   `app:${APP_NAMES.LIDO}`,
+  `app:${APP_NAMES.ORACLE}`,
   `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`
 ]
 
@@ -28,12 +29,13 @@ async function obtainDeployedAPM({ web3, artifacts }) {
 
   const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
+  const daoTemplateAddress = state.lidoTemplate.address
 
   log.splitter()
 
 
-  log(`Using LidoTemplate: ${chalk.yellow(state.daoTemplateAddress)}`)
-  const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
+  log(`Using LidoTemplate: ${chalk.yellow(daoTemplateAddress)}`)
+  const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
   if (state.daoTemplateDeployBlock) {
     log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
   }

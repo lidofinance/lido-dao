@@ -18,12 +18,11 @@ const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 const REQUIRED_NET_STATE = [
   'ensAddress',
   'multisigAddress',
-  'daoTemplateAddress',
+  'lidoTemplate',
   `app:${APP_NAMES.LIDO}`,
+  `app:${APP_NAMES.ORACLE}`,
   `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`,
   'daoInitialSettings',
-  'eip712StETHAddress',
-  'lidoOracle',
 ]
 
 const ARAGON_APM_ENS_DOMAIN = 'aragonpm.eth'
@@ -36,11 +35,12 @@ async function deployDAO({ web3, artifacts }) {
 
   const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
+  const daoTemplateAddress = state.lidoTemplate.address
 
   log.splitter()
 
-  log(`Using LidoTemplate: ${chalk.yellow(state.daoTemplateAddress)}`)
-  const template = await artifacts.require('LidoTemplate').at(state.daoTemplateAddress)
+  log(`Using LidoTemplate: ${chalk.yellow(daoTemplateAddress)}`)
+  const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
   if (state.daoTemplateDeployBlock) {
     log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
   }
@@ -54,7 +54,7 @@ async function deployDAO({ web3, artifacts }) {
   await checkAppRepos(state)
   log.splitter()
 
-  const { daoInitialSettings, eip712StETHAddress } = state
+  const { daoInitialSettings } = state
 
   const votingSettings = [
     daoInitialSettings.voting.minSupportRequired,
@@ -65,15 +65,12 @@ async function deployDAO({ web3, artifacts }) {
 
   log(`Using DAO token settings:`, daoInitialSettings.token)
   log(`Using DAO voting settings:`, daoInitialSettings.voting)
-  log(`Using eip712StETHAddress:`, eip712StETHAddress)
 
   await saveCallTxData(`newDAO`, template, 'newDAO', `tx-05-deploy-dao.json`, {
     arguments: [
       daoInitialSettings.token.name,
       daoInitialSettings.token.symbol,
       votingSettings,
-      eip712StETHAddress,
-      state.lidoOracle.proxy,
     ],
     from: state.multisigAddress
   })
@@ -117,7 +114,7 @@ async function checkAppRepos(state) {
     const appDesc = `repo ${chalk.yellow(app.appName + '.' + state.lidoApmEnsName)}`
 
     const addrCheckDesc = `${appDesc}: latest version contract address is correct`
-    assert.equal(app.contractAddress, appState.baseAddress, addrCheckDesc)
+    assert.equal(app.contractAddress, appState.implementation, addrCheckDesc)
     log.success(addrCheckDesc)
 
     const contentCheckDesc = `${appDesc}: latest version content URI is correct`
