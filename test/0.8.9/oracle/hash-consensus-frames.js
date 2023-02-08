@@ -65,7 +65,7 @@ contract('HashConsensus', ([admin, member1, member2]) => {
 
       await assertRevert(consensus.getCurrentFrame(), 'InitialEpochIsYetToArrive()')
       await assertRevert(consensus.getConsensusState(), 'InitialEpochIsYetToArrive()')
-      await assertRevert(consensus.getMemberInfo(member1), 'InitialEpochIsYetToArrive()')
+      await assertRevert(consensus.getConsensusStateForMember(member1), 'InitialEpochIsYetToArrive()')
 
       const firstRefSlot = INITIAL_EPOCH * SLOTS_PER_EPOCH - 1
       await assertRevert(
@@ -87,10 +87,10 @@ contract('HashConsensus', ([admin, member1, member2]) => {
       const consensusState = await consensus.getConsensusState()
       assert.equal(consensusState.consensusReport, ZERO_HASH)
 
-      const memberInfo = await consensus.getMemberInfo(member1)
+      const memberInfo = await consensus.getConsensusStateForMember(member1)
       assert.isTrue(memberInfo.isMember)
-      assert.equal(+memberInfo.currentRefSlot, +frame.refSlot)
-      assert.equal(+memberInfo.lastReportRefSlot, 0)
+      assert.equal(+memberInfo.currentFrameRefSlot, +frame.refSlot)
+      assert.equal(+memberInfo.lastMemberReportRefSlot, 0)
 
       const tx = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, {from: member1})
       assertEvent(tx, 'ReportReceived', {expectedArgs: {refSlot: frame.refSlot, member: member1, report: HASH_1}})
