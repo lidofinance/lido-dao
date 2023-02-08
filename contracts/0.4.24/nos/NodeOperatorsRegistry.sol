@@ -21,7 +21,7 @@ import {Versioned} from "../utils/Versioned.sol";
 interface IStETH {
     function sharesOf(address _account) external view returns (uint256);
     function transferShares(address _recipient, uint256 _sharesAmount) external returns (uint256);
-    function burnShares(address _account, uint256 _sharesAmount) external returns (uint256 newTotalShares);
+    function approve(address _spender, uint256 _amount) external returns (bool);
 }
 
 /// @dev This interface describes only tiny part of the full interface, which NodeOperatorsRegistry must implement
@@ -211,8 +211,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     /// @notice A function to finalize upgrade to v2 (from v1). Can be called only once
     /// For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
     function finalizeUpgrade_v2(address _locator, bytes32 _type) external {
-        require(!isPetrified(), "PETRIFIED");
-        require(hasInitialized(), "NOT_INITIALIZED");
+        require(hasInitialized() && !isPetrified(), "CONTRACT_NOT_INITIALIZED_OR_PETRIFIED");
         _checkContractVersion(0);
         _initialize_v2(_locator, _type);
 
@@ -250,6 +249,8 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         _saveTotalSigningKeysStats(totalSigningKeysStats);
 
         _increaseValidatorsKeysNonce();
+
+        IStETH(getLocator().lido()).approve(getLocator().burner(), ~uint256(0));
     }
 
     function _initialize_v2(address _locator, bytes32 _type) internal {
@@ -296,7 +297,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(MANAGE_NODE_OPERATOR_ROLE);
 
-        require(!getNodeOperatorIsActive(_nodeOperatorId), "OPERATOR_ACTIVATED");
+        _onlyCorrectNodeOperatorState(!getNodeOperatorIsActive(_nodeOperatorId));
 
         ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(getActiveNodeOperatorsCount() + 1);
 
@@ -312,7 +313,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(MANAGE_NODE_OPERATOR_ROLE);
 
-        require(getNodeOperatorIsActive(_nodeOperatorId), "OPERATOR_DEACTIVATED");
+        _onlyCorrectNodeOperatorState(getNodeOperatorIsActive(_nodeOperatorId));
 
         uint256 activeOperatorsCount = getActiveNodeOperatorsCount();
         ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperatorsCount.sub(1));
@@ -372,7 +373,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     function setNodeOperatorStakingLimit(uint256 _nodeOperatorId, uint64 _vettedSigningKeysCount) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _authP(SET_NODE_OPERATOR_LIMIT_ROLE, arr(uint256(_nodeOperatorId), uint256(_vettedSigningKeysCount)));
-        require(getNodeOperatorIsActive(_nodeOperatorId), "OPERATOR_DEACTIVATED");
+        _onlyCorrectNodeOperatorState(getNodeOperatorIsActive(_nodeOperatorId));
 
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
         uint64 vettedSigningKeysCountBefore = signingKeysStats.get(VETTED_KEYS_COUNT_OFFSET);
@@ -953,15 +954,13 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _onlyNodeOperatorManager(msg.sender, _nodeOperatorId);
 
-        require(_keysCount != 0, "NO_KEYS");
-        _requireOutOfRange(_keysCount <= UINT64_MAX);
+        _requireOutOfRange(_keysCount != 0 && _keysCount <= UINT64_MAX);
 
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
         uint256 totalSigningKeysCount = signingKeysStats.get(TOTAL_KEYS_COUNT_OFFSET);
 
-        totalSigningKeysCount = SIGNING_KEYS_MAPPING_NAME.addKeysSigs(
-            _nodeOperatorId, _keysCount, totalSigningKeysCount, _publicKeys, _signatures
-        );
+        totalSigningKeysCount =
+            SIGNING_KEYS_MAPPING_NAME.addKeysSigs(_nodeOperatorId, _keysCount, totalSigningKeysCount, _publicKeys, _signatures);
 
         _requireOutOfRange(totalSigningKeysCount.add(_keysCount) <= UINT64_MAX);
 
@@ -1023,8 +1022,10 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
         uint256 totalSigningKeysCount = signingKeysStats.get(TOTAL_KEYS_COUNT_OFFSET);
 
-        require(_toIndex <= totalSigningKeysCount, "KEY_NOT_FOUND");
-        require(_fromIndex >= signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET), "KEY_WAS_USED");
+        require(
+            _fromIndex >= signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET) && _toIndex <= totalSigningKeysCount,
+            "KEY_WAS_USED_OR_NOT_FOUND"
+        );
 
         // removing from the last index to the highest one, so we won't get outside the array
         for (uint256 i = _toIndex; i > _fromIndex; --i) {
@@ -1271,7 +1272,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
                 /// @dev half reward punishment
                 /// @dev ignore remainder since it accumulated on contract balance
                 shares[idx] >>= 1;
-                IBurner(getLocator().burner()).requestBurnShares(address(this),  shares[idx]);
+                IBurner(getLocator().burner()).requestBurnShares(address(this), shares[idx]);
                 emit NodeOperatorPenalized(recipients[idx], shares[idx]);
             }
             stETH.transferShares(recipients[idx], shares[idx]);
@@ -1340,6 +1341,10 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         require(_pass, "OUT_OF_RANGE");
     }
 
+    function _onlyCorrectNodeOperatorState(bool _pass) internal pure {
+        require(_pass, "WORNG_OPERATOR_ACTIVE_STATE");
+    }
+
     function _auth(bytes32 _role) internal view {
         _requireAuth(canPerform(msg.sender, _role, new uint256[](0)));
     }
@@ -1358,8 +1363,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     }
 
     function _onlyValidNodeOperatorName(string _name) internal pure {
-        require(bytes(_name).length > 0, "NAME_IS_EMPTY");
-        require(bytes(_name).length <= MAX_NODE_OPERATOR_NAME_LENGTH, "NAME_TOO_LONG");
+        require(bytes(_name).length > 0 && bytes(_name).length <= MAX_NODE_OPERATOR_NAME_LENGTH, "WRONG_NAME_LENGTH");
     }
 
     function _onlyNonZeroAddress(address _a) internal pure {
