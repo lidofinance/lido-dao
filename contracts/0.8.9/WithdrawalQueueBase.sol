@@ -414,7 +414,7 @@ abstract contract WithdrawalQueueBase {
 
         _setLastRequestId(requestId);
         _getQueue()[requestId] =
-            WithdrawalRequest(cumulativeStETH, cumulativeShares, payable(_owner), uint64(block.number), false);
+            WithdrawalRequest(cumulativeStETH, cumulativeShares, payable(_owner), uint64(block.timestamp), false);
         _getRequestsByOwner()[_owner].add(requestId);
 
         emit WithdrawalRequested(requestId, msg.sender, _owner, _amountOfStETH, _amountOfShares);
