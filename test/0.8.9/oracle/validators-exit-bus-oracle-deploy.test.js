@@ -94,7 +94,7 @@ async function deployExitBusOracle(admin, {
 
   const oracleReportSanityChecker = await deployOracleReportSanityCheckerForExitBus(locator, admin)
   await updateLocatorImplementation(locator, admin, {
-    validatorExitBus: oracle.address,
+    validatorsExitBusOracle: oracle.address,
     oracleReportSanityChecker : oracleReportSanityChecker,
   })
 

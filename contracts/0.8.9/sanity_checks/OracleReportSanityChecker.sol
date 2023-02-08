@@ -59,7 +59,7 @@ struct LimitsList {
     /// @dev uses 1e9 precision, e.g.: 1e6 - 0.1%; 1e9 - 100%, see `setMaxPositiveTokenRebase()`
     uint256 maxPositiveTokenRebase;
 
-    /// @notice The max number of exit requests allowed in report to ValidatorExitBusOracle
+    /// @notice The max number of exit requests allowed in report to ValidatorsExitBusOracle
     uint256 maxValidatorExitRequestsPerReport;
 }
 

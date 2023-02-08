@@ -16,7 +16,7 @@ interface ILidoLocator {
     function burner() external view returns(address);
     function stakingRouter() external view returns(address);
     function treasury() external view returns(address);
-    function validatorExitBus() external view returns(address);
+    function validatorsExitBusOracle() external view returns(address);
     function withdrawalQueue() external view returns(address);
     function withdrawalVault() external view returns(address);
     function postTokenRebaseReceiver() external view returns(address);
