@@ -461,7 +461,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     }
 
     /// @notice Invalidates all unused validators for all node operators
-    function invalidateReadyToDepositValidators() external {
+    function invalidateDepositsData() external {
         _auth(INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE);
 
         bool wereSigningKeysTrimmed = false;

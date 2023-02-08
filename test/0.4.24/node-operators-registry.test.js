@@ -1165,7 +1165,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
   })
 
-  describe('invalidateReadyToDepositValidators()', () => {
+  describe('invalidateDepositsData()', () => {
     beforeEach(async () => {
       await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: voting })
       await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: voting })
@@ -1184,12 +1184,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('reverts with "APP_AUTH_FAILED" error when called by sender without INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE role', async () => {
       const hasPermission = await dao.hasPermission(nobody, app, 'INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE')
       assert.isFalse(hasPermission)
-      await assert.reverts(app.invalidateReadyToDepositValidators(), 'APP_AUTH_FAILED')
+      await assert.reverts(app.invalidateDepositsData(), 'APP_AUTH_FAILED')
     })
 
     it('sets totalSigningKeysCount and vettedSigningKeysCount equal to depositedSigningKeys for all node operators', async () => {
       const allNodeOperatorsBefore = await nodeOperators.getAllNodeOperators(app)
-      await app.invalidateReadyToDepositValidators({ from: voting })
+      await app.invalidateDepositsData({ from: voting })
       const allNodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
       for (let i = 0; i < allNodeOperatorsBefore.length; ++i) {
         const nodeOperatorBefore = allNodeOperatorsBefore[i]
@@ -1201,7 +1201,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('emits TotalSigningKeysCountChanged & VettedSigningKeysCountChanged events for node operator only if it had unused keys', async () => {
       const allNodeOperatorsBefore = await nodeOperators.getAllNodeOperators(app)
-      const receipt = await app.invalidateReadyToDepositValidators({ from: voting })
+      const receipt = await app.invalidateDepositsData({ from: voting })
       const allNodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
       for (let i = 0; i < allNodeOperatorsBefore.length; ++i) {
         const nodeOperatorBefore = allNodeOperatorsBefore[i]
@@ -1224,7 +1224,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('emits NodeOperatorTotalKeysTrimmed event for node operator only if it had unused keys', async () => {
       const allNodeOperatorsBefore = await nodeOperators.getAllNodeOperators(app)
-      const receipt = await app.invalidateReadyToDepositValidators({ from: voting })
+      const receipt = await app.invalidateDepositsData({ from: voting })
       const allNodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
       for (let i = 0; i < allNodeOperatorsBefore.length; ++i) {
         const nodeOperatorBefore = allNodeOperatorsBefore[i]
@@ -1244,7 +1244,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const totalSigningKeysStatsBefore = await app.testing_getTotalSigningKeysStats()
       assert.notEquals(totalSigningKeysStatsBefore.vettedSigningKeysCount, totalSigningKeysStatsBefore.depositedSigningKeysCount)
       assert.notEquals(totalSigningKeysStatsBefore.totalSigningKeysCount, totalSigningKeysStatsBefore.depositedSigningKeysCount)
-      await app.invalidateReadyToDepositValidators({ from: voting })
+      await app.invalidateDepositsData({ from: voting })
       const totalSigningKeysStatsAfter = await app.testing_getTotalSigningKeysStats()
       assert.equals(totalSigningKeysStatsAfter.vettedSigningKeysCount, totalSigningKeysStatsBefore.depositedSigningKeysCount)
       assert.equals(totalSigningKeysStatsAfter.totalSigningKeysCount, totalSigningKeysStatsBefore.depositedSigningKeysCount)
@@ -1252,7 +1252,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('increases keysOpIndex & changes validatorKeysNonce', async () => {
       const [keysOpIndexBefore, validatorsKeysNonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
-      await app.invalidateReadyToDepositValidators({ from: voting })
+      await app.invalidateDepositsData({ from: voting })
       const [keysOpIndexAfter, validatorsKeysNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
       assert.notEquals(validatorsKeysNonceAfter, validatorsKeysNonceBefore)
@@ -1260,7 +1260,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('emits KeysOpIndexSet & DepositsDataNonceChanged', async () => {
       const keysOpIndexBefore = await app.getKeysOpIndex()
-      const receipt = await app.invalidateReadyToDepositValidators({ from: voting })
+      const receipt = await app.invalidateDepositsData({ from: voting })
       const validatorsKeysNonceAfter = await app.getDepositsDataNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
       assert.emits(receipt, 'DepositsDataNonceChanged', { depositsDataNonce: validatorsKeysNonceAfter })
@@ -1268,9 +1268,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it("doesn't change validators keys nonce if keys weren't invalidated", async () => {
       // invalidated all keys before the test to remove all unused keys of node operators
-      await app.invalidateReadyToDepositValidators({ from: voting })
+      await app.invalidateDepositsData({ from: voting })
       // the second invalidation must not invalidate keys
-      const receipt = app.invalidateReadyToDepositValidators({ from: voting })
+      const receipt = app.invalidateDepositsData({ from: voting })
       const validatorsKeysNonceBefore = await app.getDepositsDataNonce()
       assert.notEmits(receipt, 'NodeOperatorTotalKeysTrimmed')
       const validatorsKeysNonceAfter = await app.getDepositsDataNonce()
@@ -1321,7 +1321,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('returns empty result when registry has no unused keys', async () => {
       // remove unused keys
-      await app.invalidateReadyToDepositValidators({ from: voting })
+      await app.invalidateDepositsData({ from: voting })
       const [firstNodeOperator, secondNodeOperator] = await Promise.all([
         app.getNodeOperator(firstNodeOperatorId, false),
         app.getNodeOperator(secondNodeOperatorId, false)
@@ -1562,7 +1562,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it("doesn't emits DepositedSigningKeysCountChanged when no available keys for deposit", async () => {
       // remove unused keys
-      await app.invalidateReadyToDepositValidators({ from: voting })
+      await app.invalidateDepositsData({ from: voting })
       const [firstNodeOperator, secondNodeOperator] = await Promise.all([
         app.getNodeOperator(firstNodeOperatorId, false),
         app.getNodeOperator(secondNodeOperatorId, false)

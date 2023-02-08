@@ -128,7 +128,7 @@ contract ModuleSolo is IStakingModule {
         return stakingRouter;
     }
 
-    function invalidateReadyToDepositValidators() external {}
+    function invalidateDepositsData() external {}
 
     function setType(bytes32 _type) external {
         moduleType = _type;
