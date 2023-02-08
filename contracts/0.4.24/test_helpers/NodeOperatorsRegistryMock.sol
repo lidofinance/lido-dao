@@ -153,11 +153,11 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         uint64 forgivenValidatorsCount,
         uint64 stuckPenaltyEndAt
     ) external {
-        Packed64x4.Packed memory stcukPenaltyStats = _nodeOperators[_nodeOperatorId].stuckPenaltyStats;
-        stcukPenaltyStats.set(STUCK_VALIDATORS_COUNT_OFFSET, stuckValidatorsCount);
-        stcukPenaltyStats.set(FORGIVEN_VALIDATORS_COUNT_OFFSET, forgivenValidatorsCount);
-        stcukPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, stuckPenaltyEndAt);
-        _nodeOperators[_nodeOperatorId].stuckPenaltyStats = stcukPenaltyStats;
+        Packed64x4.Packed memory stuckPenaltyStats = _nodeOperators[_nodeOperatorId].stuckPenaltyStats;
+        stuckPenaltyStats.set(STUCK_VALIDATORS_COUNT_OFFSET, stuckValidatorsCount);
+        stuckPenaltyStats.set(FORGIVEN_VALIDATORS_COUNT_OFFSET, forgivenValidatorsCount);
+        stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, stuckPenaltyEndAt);
+        _nodeOperators[_nodeOperatorId].stuckPenaltyStats = stuckPenaltyStats;
     }
 
     function testing_getTotalSigningKeysStats()
@@ -219,19 +219,35 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
     }
 
     function testing_isNodeOperatorPenalized(uint256 operatorId) external view returns (bool) {
-        Packed64x4.Packed memory stcukPenaltyStats = _loadOperatorStuckPenaltyStats(operatorId);
+        Packed64x4.Packed memory stuckPenaltyStats = _loadOperatorStuckPenaltyStats(operatorId);
         if (
-            stcukPenaltyStats.get(FORGIVEN_VALIDATORS_COUNT_OFFSET) < stcukPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)
-                || block.timestamp <= stcukPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET)
+            stuckPenaltyStats.get(FORGIVEN_VALIDATORS_COUNT_OFFSET) < stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)
+                || block.timestamp <= stuckPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET)
         ) {
             return true;
         }
         return false;
     }
 
+    function testing_getCorrectedNodeOperator(uint256 operatorId) external view 
+        returns (uint64 vettedSigningKeysCount, uint64 exitedSigningKeysCount, uint64 depositedSigningKeysCount) 
+    {
+        return _getCorrectedNodeOperator(operatorId);
+    }
+
+    function testing_getTotalTargetStats() external view 
+        returns(uint256 targetValidatorsActive, uint256 targetValidatorsCount, uint256 excessValidatorsCount) 
+    {
+        Packed64x4.Packed memory totalTargetStats = _loadTotalTargetValidtatorsStats();
+ 
+        targetValidatorsActive = totalTargetStats.get(TARGET_VALIDATORS_ACTIVE_OFFSET);
+        targetValidatorsCount = totalTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET);
+        excessValidatorsCount = totalTargetStats.get(EXCESS_VALIDATORS_COUNT_OFFSET);
+    }
+
     event ValidatorsKeysLoaded(uint256 count, bytes publicKeys, bytes signatures);
 
-    function distributeRewards() external returns (uint256) {
+    function testing__distributeRewards() external returns (uint256) {
         return _distributeRewards();
     }
 }
