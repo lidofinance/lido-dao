@@ -83,8 +83,8 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     }
 
     /// @dev See {IERC721-setApprovalForAll}.
-    function setApprovalForAll(address _operator, bool _approvedd) public override {
-        _setApprovalForAll(msg.sender, _operator, _approvedd);
+    function setApprovalForAll(address _operator, bool _approved) public override {
+        _setApprovalForAll(msg.sender, _operator, _approved);
     }
 
     /// @dev See {IERC721-isApprovedForAll}.
