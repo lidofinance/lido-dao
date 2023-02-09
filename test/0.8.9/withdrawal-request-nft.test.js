@@ -2,11 +2,10 @@ const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
 const { EvmSnapshot } = require('../helpers/blockchain')
 const { shares, ETH, shareRate } = require('../helpers/utils')
+const withdrawals = require('../helpers/withdrawals')
 
 const StETH = hre.artifacts.require('StETHMock')
 const WstETH = hre.artifacts.require('WstETHMock')
-const WithdrawalRequestNFT = hre.artifacts.require('WithdrawalRequestNFT')
-const OssifiableProxy = hre.artifacts.require('OssifiableProxy')
 const ERC721ReceiverMock = hre.artifacts.require('ERC721ReceiverMock')
 
 hre.contract(
@@ -20,9 +19,7 @@ hre.contract(
       stETH = await StETH.new({ value: ETH(100), from: deployer })
       wstETH = await WstETH.new(stETH.address, { from: deployer })
       erc721ReceiverMock = await ERC721ReceiverMock.new({ from: deployer })
-      const withdrawalRequestNFTImpl = await WithdrawalRequestNFT.new(wstETH.address, { from: deployer })
-      const withdrawalRequestNFTProxy = await OssifiableProxy.new(withdrawalRequestNFTImpl.address, deployer, '0x')
-      withdrawalRequestNFT = await WithdrawalRequestNFT.at(withdrawalRequestNFTProxy.address)
+      withdrawalRequestNFT = (await withdrawals.deploy(deployer, wstETH.address)).queue
       await withdrawalRequestNFT.initialize(
         deployer, // owner
         deployer, // pauser
@@ -49,6 +46,13 @@ hre.contract(
 
     afterEach(async () => {
       await snapshot.rollback()
+    })
+
+    describe('ERC721Metadata', () => {
+      it('Initial properties', async () => {
+        assert.equals(await withdrawalRequestNFT.symbol(), "unstETH")
+        assert.equals(await withdrawalRequestNFT.name(), "Lido Withdrawal Request")
+      })
     })
 
     describe('supportsInterface()', () => {
