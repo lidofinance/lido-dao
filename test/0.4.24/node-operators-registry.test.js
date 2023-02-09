@@ -116,7 +116,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     // const proxyAddress = await newApp(newDAO.dao, 'node-operators-registry', appBase.address, appManager)
     // app = await NodeOperatorsRegistry.at(proxyAddress)
 
-    await assert.reverts(app.finalizeUpgrade_v2(steth.address, CURATED_TYPE), 'NOT_INITIALIZED')
+    await assert.reverts(app.finalizeUpgrade_v2(locator.address, CURATED_TYPE), 'CONTRACT_NOT_INITIALIZED_OR_PETRIFIED')
 
     // Initialize the app's proxy.
     const tx = await app.initialize(locator.address, CURATED_TYPE)
@@ -179,18 +179,21 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('fails with PETRIFIED error when called on implementation', async () => {
-      await assert.reverts(appBase.finalizeUpgrade_v2(steth.address, CURATED_TYPE), 'PETRIFIED')
+      await assert.reverts(
+        appBase.finalizeUpgrade_v2(locator.address, CURATED_TYPE),
+        'CONTRACT_NOT_INITIALIZED_OR_PETRIFIED'
+      )
     })
 
     it('sets correct contract version', async () => {
-      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
+      await app.finalizeUpgrade_v2(locator.address, CURATED_TYPE)
       assert.equals(await app.getContractVersion(), 2)
     })
 
     it('reverts with error WRONG_BASE_VERSION when called on already initialized contract', async () => {
-      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
+      await app.finalizeUpgrade_v2(locator.address, CURATED_TYPE)
       assert.equals(await app.getContractVersion(), 2)
-      assert.reverts(app.finalizeUpgrade_v2(steth.address, CURATED_TYPE), 'WRONG_BASE_VERSION')
+      assert.reverts(app.finalizeUpgrade_v2(locator.address, CURATED_TYPE), 'WRONG_BASE_VERSION')
     })
 
     it('sets total signing keys stats correctly', async () => {
@@ -214,7 +217,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
           await app.testing_unsafeDeactivateNodeOperator(i)
         }
       }
-      await app.testing_resetTotalSigningKeysStats()
 
       for (let i = 0; i < NODE_OPERATORS.length; ++i) {
         const nodeOperator = await app.getNodeOperator(i, false)
@@ -229,7 +231,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         assert.equal(nodeOperatorLimits.stuckPenaltyEndTimestamp.toNumber(), NODE_OPERATORS[i].stuckPenaltyEndAt)
       }
 
-      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
+      await app.finalizeUpgrade_v2(locator.address, CURATED_TYPE)
 
       const totalSigningKeysStatsAfter = await app.testing_getTotalSigningKeysStats()
 
@@ -280,7 +282,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equal(nodeOperator.stakingLimit.toNumber(), config.vettedSigningKeysCount)
       assert.equal(nodeOperator.totalSigningKeys.toNumber(), config.totalSigningKeysCount)
 
-      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
+      await app.finalizeUpgrade_v2(locator.address, CURATED_TYPE)
 
       nodeOperator = await app.getNodeOperator(0, false)
       assert.equal(nodeOperator.stakingLimit.toNumber(), config.totalSigningKeysCount)
@@ -320,7 +322,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equal(nodeOperator.stakingLimit.toNumber(), config.vettedSigningKeysCount)
       assert.equal(nodeOperator.totalSigningKeys.toNumber(), config.totalSigningKeysCount)
 
-      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
+      await app.finalizeUpgrade_v2(locator.address, CURATED_TYPE)
 
       nodeOperator = await app.getNodeOperator(0, false)
 
@@ -329,7 +331,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('emits ContractVersionSet event with correct params', async () => {
-      const receipt = await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
+      const receipt = await app.finalizeUpgrade_v2(locator.address, CURATED_TYPE)
       assert.emits(receipt, 'ContractVersionSet', { version: 2 })
     })
 
@@ -349,7 +351,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         app.getKeysOpIndex(),
         app.getValidatorsKeysNonce()
       ])
-      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
+      await app.finalizeUpgrade_v2(locator.address, CURATED_TYPE)
       const [keysOpIndexAfter, validatorsKeysNonceAfter] = await Promise.all([
         app.getKeysOpIndex(),
         app.getValidatorsKeysNonce()
@@ -360,7 +362,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('emits KeysOpIndexSet & ValidatorsKeysNonceChanged', async () => {
       const keysOpIndexBefore = await app.getKeysOpIndex()
-      const receipt = await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
+      const receipt = await app.finalizeUpgrade_v2(locator.address, CURATED_TYPE)
       const validatorsKeysNonceAfter = await app.getValidatorsKeysNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
       assert.emits(receipt, 'ValidatorsKeysNonceChanged', { validatorsKeysNonce: validatorsKeysNonceAfter })
@@ -375,21 +377,21 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await assert.reverts(app.addNodeOperator('1', ADDRESS_1, { from: nobody }), 'APP_AUTH_FAILED')
     })
 
-    it('reverts with error "NAME_IS_EMPTY" when called with empty name', async () => {
+    it('reverts with error "WRONG_NAME_LENGTH" when called with empty name', async () => {
       const hasPermission = await dao.hasPermission(voting, app, 'ADD_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
-      await assert.reverts(app.addNodeOperator('', ADDRESS_1, { from: voting }), 'NAME_IS_EMPTY')
+      await assert.reverts(app.addNodeOperator('', ADDRESS_1, { from: voting }), 'WRONG_NAME_LENGTH')
     })
 
-    it('reverts with error "NAME_TOO_LONG" when called with name length > MAX_NODE_OPERATOR_NAME_LENGTH', async () => {
+    it('reverts with error "WRONG_NAME_LENGTH" when called with name length > MAX_NODE_OPERATOR_NAME_LENGTH', async () => {
       const hasPermission = await dao.hasPermission(voting, app, 'ADD_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
       const maxNameLength = await app.MAX_NODE_OPERATOR_NAME_LENGTH()
       const tooLongName = '&'.repeat(maxNameLength.toNumber() + 1)
 
-      await assert.reverts(app.addNodeOperator(tooLongName, ADDRESS_1, { from: voting }), 'NAME_TOO_LONG')
+      await assert.reverts(app.addNodeOperator(tooLongName, ADDRESS_1, { from: voting }), 'WRONG_NAME_LENGTH')
     })
 
     it('reverts with error "ZERO_ADDRESS" when called with zero reward address', async () => {
@@ -512,13 +514,16 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await assert.reverts(app.activateNodeOperator(nodeOperatorId, { from: voting }), 'OUT_OF_RANGE')
     })
 
-    it('reverts with OPERATOR_ACTIVATED when called on active node operator', async () => {
+    it('reverts with WORNG_OPERATOR_ACTIVE_STATE when called on active node operator', async () => {
       const activeNodeOperatorId = 0
 
       const activeNodeOperator = await app.getNodeOperator(activeNodeOperatorId, false)
       assert.isTrue(activeNodeOperator.active)
 
-      await assert.reverts(app.activateNodeOperator(activeNodeOperatorId, { from: voting }), 'OPERATOR_ACTIVATED')
+      await assert.reverts(
+        app.activateNodeOperator(activeNodeOperatorId, { from: voting }),
+        'WORNG_OPERATOR_ACTIVE_STATE'
+      )
     })
 
     it('increases keysOpIndex & changes validatorKeysNonce', async () => {
@@ -648,14 +653,17 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await assert.reverts(app.deactivateNodeOperator(nodeOperatorId, { from: voting }), 'OUT_OF_RANGE')
     })
 
-    it('reverts with "OPERATOR_DEACTIVATED" when called on not active node operator', async () => {
+    it('reverts with "WORNG_OPERATOR_ACTIVE_STATE" when called on not active node operator', async () => {
       const activeNodeOperatorId = await nodeOperators.findNodeOperatorId(app, (operator) => !operator.active)
       assert.notEqual(activeNodeOperatorId, -1, `Invariant: not active node operator not found`)
 
       const activeNodeOperator = await app.getNodeOperator(activeNodeOperatorId, false)
       assert.isFalse(activeNodeOperator.active)
 
-      await assert.reverts(app.deactivateNodeOperator(activeNodeOperatorId, { from: voting }), 'OPERATOR_DEACTIVATED')
+      await assert.reverts(
+        app.deactivateNodeOperator(activeNodeOperatorId, { from: voting }),
+        'WORNG_OPERATOR_ACTIVE_STATE'
+      )
     })
 
     it('sets active state of node operator to false when it is active', async () => {
@@ -812,17 +820,17 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       )
     })
 
-    it('reverts with "NAME_IS_EMPTY" error when called with empty name', async () => {
+    it('reverts with "WRONG_NAME_LENGTH" error when called with empty name', async () => {
       const nodeOperatorId = 0
-      await assert.reverts(app.setNodeOperatorName(nodeOperatorId, '', { from: voting }), 'NAME_IS_EMPTY')
+      await assert.reverts(app.setNodeOperatorName(nodeOperatorId, '', { from: voting }), 'WRONG_NAME_LENGTH')
     })
 
-    it('reverts with "NAME_TOO_LONG" error when name exceeds MAX_NODE_OPERATOR_NAME_LENGTH', async () => {
+    it('reverts with "WRONG_NAME_LENGTH" error when name exceeds MAX_NODE_OPERATOR_NAME_LENGTH', async () => {
       const nodeOperatorId = 0
       const maxNameLength = await app.MAX_NODE_OPERATOR_NAME_LENGTH()
       const tooLongName = '#'.repeat(maxNameLength.toNumber() + 1)
       assert(tooLongName.length > maxNameLength.toNumber())
-      await assert.reverts(app.setNodeOperatorName(nodeOperatorId, tooLongName, { from: voting }), 'NAME_TOO_LONG')
+      await assert.reverts(app.setNodeOperatorName(nodeOperatorId, tooLongName, { from: voting }), 'WRONG_NAME_LENGTH')
     })
 
     it('reverts with "APP_AUTH_FAILED" error when called by address without ADD_NODE_OPERATOR_ROLE', async () => {
@@ -977,14 +985,14 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       )
     })
 
-    it('reverts with "OPERATOR_DEACTIVATED" error when node operator deactivated', async () => {
+    it('reverts with "WORNG_OPERATOR_ACTIVE_STATE" error when node operator deactivated', async () => {
       const hasPermission = await dao.hasPermission(voting, app, 'SET_NODE_OPERATOR_LIMIT_ROLE')
       assert.isTrue(hasPermission)
       await app.deactivateNodeOperator(secondNodeOperatorId, { from: voting })
       assert.isFalse(await app.getNodeOperatorIsActive(secondNodeOperatorId))
       await assert.reverts(
         app.setNodeOperatorStakingLimit(secondNodeOperatorId, 40, { from: voting }),
-        'OPERATOR_DEACTIVATED'
+        'WORNG_OPERATOR_ACTIVE_STATE'
       )
     })
 
@@ -1219,16 +1227,16 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const stuckValidatorsCount = 2
 
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(
-        app,
-        { ...NODE_OPERATORS[0], exitedSigningKeysCount: 4, stuckValidatorsCount: 2 },
-        { from: voting }
-      )
+      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[0], exitedSigningKeysCount: 4 }, { from: voting })
       await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: voting })
     })
 
     it('decreases the stuck validators count when new value is less then previous one', async () => {
       const newStuckValidatorsCount = 1
+      await app.unsafeUpdateValidatorsKeysCount(firstNodeOperatorId, exitedValidatorsCount, stuckValidatorsCount, {
+        from: voting
+      })
+
       const { stuckValidatorsCount: stuckValidatorsCountBefore } = await app.getNodeOperatorStats(firstNodeOperatorId)
       assert(newStuckValidatorsCount < stuckValidatorsCountBefore)
       await app.unsafeUpdateValidatorsKeysCount(firstNodeOperatorId, exitedValidatorsCount, newStuckValidatorsCount, {
@@ -1671,7 +1679,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await app.updateTargetValidatorsLimits(firstNodeOperatorId, 4, true, { from: voting })
 
       firstNodeOperatorKeysStats = await app.testing_getCorrectedNodeOperator(firstNodeOperatorId)
-      assert.equals(+firstNodeOperatorKeysStats.vettedSigningKeysCount, firstNodeOperatorKeysStats.depositedSigningKeysCount)
+      assert.equals(
+        +firstNodeOperatorKeysStats.vettedSigningKeysCount,
+        firstNodeOperatorKeysStats.depositedSigningKeysCount
+      )
       assert.equals(+firstNodeOperatorKeysStats.depositedSigningKeysCount, 5)
       assert.equals(+firstNodeOperatorKeysStats.exitedSigningKeysCount, 1)
     })
@@ -1718,7 +1729,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     //   assert.equals(exitedSigningKeysCount[0], firstNodeOperatorKeysStats.exitedValidatorsCount)
     //   assert.equals(exitedSigningKeysCount[1], secondNodeOperatorKeysStats.exitedValidatorsCount)
     // })
-
   })
 
   describe('getSigningKeysAllocationData()', async () => {
@@ -2284,9 +2294,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       )
     })
 
-    it('reverts with "NO_KEYS" error when keys count is 0', async () => {
+    it('reverts with "OUT_OF_RANGE" error when keys count is 0', async () => {
       const keysCount = 0
-      await assert.reverts(app.addSigningKeys(firstNodeOperatorId, keysCount, '0x', '0x', { from: voting }), 'NO_KEYS')
+      await assert.reverts(
+        app.addSigningKeys(firstNodeOperatorId, keysCount, '0x', '0x', { from: voting }),
+        'OUT_OF_RANGE'
+      )
     })
 
     it('reverts with "INVALID_LENGTH" error when public keys batch has invalid length', async () => {
@@ -2555,15 +2568,21 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await assert.reverts(app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: voting }), 'OUT_OF_RANGE')
     })
 
-    it('reverts with KEY_NOT_FOUND error when index is greater than total signing keys count', async () => {
+    it('reverts with KEY_WAS_USED_OR_NOT_FOUND error when index is greater than total signing keys count', async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount
-      await assert.reverts(app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: voting }), 'KEY_NOT_FOUND')
+      await assert.reverts(
+        app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: voting }),
+        'KEY_WAS_USED_OR_NOT_FOUND'
+      )
     })
 
-    it('reverts with KEY_WAS_USED error when key with passed index was deposited', async () => {
+    it('reverts with KEY_WAS_USED_OR_NOT_FOUND error when key with passed index was deposited', async () => {
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount - 1
       assert(keyIndex >= 0)
-      await assert.reverts(app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: voting }), 'KEY_WAS_USED')
+      await assert.reverts(
+        app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: voting }),
+        'KEY_WAS_USED_OR_NOT_FOUND'
+      )
     })
 
     it('decreases total signing keys counter for node operator', async () => {
@@ -2628,16 +2647,16 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     //   assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
     //   const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
 
-    //   const { 
+    //   const {
     //     targetValidatorsActive: targetValidatorsActiveBefore,
     //     targetValidatorsCount: targetValidatorsCountBefore,
     //     excessValidatorsCount: excessValidatorsCountBefore,
     //   } = await app.testing_getTotalTargetStats();
-      
+
     //   // await app.updateTargetValidatorsLimits(secondNodeOperatorId, 2, true, { from: voting })
 
     //   await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: voting })
-      
+
     //   const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
     //   const vettedSigningKeysDecrement = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - keyIndex
     //   assert.equal(
@@ -2645,7 +2664,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     //     vettedSigningKeysCountBefore.toNumber() - vettedSigningKeysDecrement
     //   )
 
-    //   const { 
+    //   const {
     //     targetValidatorsActive: targetValidatorsActiveAfter,
     //     targetValidatorsCount: targetValidatorsCountAfter,
     //     excessValidatorsCount: excessValidatorsCountAfter,
@@ -2916,24 +2935,24 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       )
     })
 
-    it('reverts with KEY_NOT_FOUND error when fromIndex + keysCount is greater than total signing keys count', async () => {
+    it('reverts with KEY_WAS_USED_OR_NOT_FOUND error when fromIndex + keysCount is greater than total signing keys count', async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount
       const keysCount = NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount - keyIndex + 1
       assert(keyIndex + keysCount > NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
       await assert.reverts(
         app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: voting }),
-        'KEY_NOT_FOUND'
+        'KEY_WAS_USED_OR_NOT_FOUND'
       )
     })
 
-    it('reverts with KEY_WAS_USED error when fromIndex is less than depositedSigningKeysCount', async () => {
+    it('reverts with KEY_WAS_USED_OR_NOT_FOUND error when fromIndex is less than depositedSigningKeysCount', async () => {
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount - 1
       assert(keyIndex >= 0)
       const keysCount = NODE_OPERATORS[firstNodeOperatorId].vettedSigningKeysCount - keyIndex
       assert(keysCount > 0)
       await assert.reverts(
         app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: voting }),
-        'KEY_WAS_USED'
+        'KEY_WAS_USED_OR_NOT_FOUND'
       )
     })
 
@@ -3328,7 +3347,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await app.testing_addNodeOperator('2', user3, 0, 0, 0, 0)
     })
 
-    it("reverts if no STAKING_ROUTER_ROLE", async () => {
+    it('reverts if no STAKING_ROUTER_ROLE', async () => {
       await assert.reverts(app.finishUpdatingExitedValidatorsKeysCount({ from: user3 }), 'APP_AUTH_FAILED')
     })
 
@@ -3357,10 +3376,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.increaseTotalSigningKeysCount(10)
-      await app.increaseVettedSigningKeysCount(10)
-      await app.increaseDepositedSigningKeysCount(10)
-
       // calls distributeRewards() inside
       await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
 
@@ -3372,10 +3387,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('emits RewardsDistributed with correct params on reward distribution', async () => {
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
-
-      await app.increaseTotalSigningKeysCount(10)
-      await app.increaseVettedSigningKeysCount(10)
-      await app.increaseDepositedSigningKeysCount(10)
 
       // calls distributeRewards() inside
       receipt = await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
@@ -3540,12 +3551,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('reverts with no STAKING_ROUTER_ROLE', async () => {
       const hasPermission = await dao.hasPermission(user1, app, 'STAKING_ROUTER_ROLE')
       assert.isFalse(hasPermission)
-      await assert.reverts(app.handleRewardsMinted(123, {from: user1}))
+      await assert.reverts(app.handleRewardsMinted(123, { from: user1 }))
     })
     it('no reverts with STAKING_ROUTER_ROLE', async () => {
       const hasPermission = await dao.hasPermission(voting, app, 'STAKING_ROUTER_ROLE')
       assert.isTrue(hasPermission)
-      await app.handleRewardsMinted(123, {from: voting })
+      await app.handleRewardsMinted(123, { from: voting })
     })
   })
 })

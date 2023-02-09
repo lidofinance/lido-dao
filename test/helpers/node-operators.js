@@ -74,10 +74,6 @@ async function addNodeOperator(registry, config, txOptions) {
     await registry.updateExitedValidatorsKeysCount(newOperatorId, exitedSigningKeysCount, txOptions)
   }
 
-  if (stuckValidatorsCount > 0) {
-    await registry.updateStuckValidatorsKeysCount(newOperatorId, stuckValidatorsCount, txOptions)
-  }
-
   if (!isActive) {
     await registry.deactivateNodeOperator(newOperatorId, txOptions)
   }
@@ -85,7 +81,6 @@ async function addNodeOperator(registry, config, txOptions) {
   const { exitedValidatorsCount, activeValidatorsKeysCount, readyToDepositValidatorsKeysCount } =
     await registry.getValidatorsKeysStats(newOperatorId)
   const nodeOperator = await registry.getNodeOperator(newOperatorId, true)
-  const nodeOperatorStat = await registry.getNodeOperatorStats(newOperatorId)
 
   if (isActive) {
     assertBn(nodeOperator.stakingLimit, vettedSigningKeysCount)
