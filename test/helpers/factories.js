@@ -189,7 +189,7 @@ async function hashConsensusTimeTravellableFactory({
 }
 
 async function accountingOracleFactory({ voting, pool, lidoLocator, lidoAddress, consensusContract, legacyOracle }) {
-  const base = await AccountingOracle.new(lidoLocator.address, lidoAddress, SECONDS_PER_SLOT, GENESIS_TIME)
+  const base = await AccountingOracle.new(lidoLocator.address, lidoAddress, legacyOracle.address, SECONDS_PER_SLOT, GENESIS_TIME)
   const proxy = await OssifiableProxy.new(base.address, voting.address, '0x')
   const oracle = await AccountingOracle.at(proxy.address)
 
@@ -197,14 +197,12 @@ async function accountingOracleFactory({ voting, pool, lidoLocator, lidoAddress,
     voting.address,
     consensusContract.address,
     CONSENSUS_VERSION,
-    legacyOracle.address,
     10000,
     10000,
-    false, // skipBeaconSpecMigrationCheck
   )
 
   const lastCompletedEpochId = 0
-  await legacyOracle.initialize(pool.address, oracle.address, consensusContract.address, lastCompletedEpochId)
+  await legacyOracle.initialize(lidoLocator.address, consensusContract.address, lastCompletedEpochId)
 
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), voting.address, { from: voting.address })
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), voting.address, { from: voting.address })

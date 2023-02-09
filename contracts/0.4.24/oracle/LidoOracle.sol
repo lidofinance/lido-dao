@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 
 // SPDX-License-Identifier: GPL-3.0
 
@@ -6,6 +6,8 @@
 pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
+
+import "../../common/interfaces/ILidoLocator.sol";
 
 
 interface INewOracle {
@@ -266,29 +268,27 @@ contract LidoOracle is AragonApp {
 
     /**
      * @notice Initializes the contract (the compat-only deprecated version 4) from scratch.
-     * @param _lido Address of the Lido contract.
-     * @param _newOracle Address of the new accounting oracle contract.
+     * @param _lidoLocator Address of the Lido Locator contract.
      * @param _newOracleConsensusContract Address of consensus contract of the new accounting oracle contract.
-     * @param _lastCompletedEpochId Last completed epoch id position. Might want to set non-zero
-     * because on initialization the new oracle checks its initial epoch against last completed epoch of legacy oracle
-     *
+     * @param _lastCompletedEpochId Last completed epoch id position. Might want to set non-zero because
+     *        on initialization the new oracle checks its initial epoch against last completed epoch of legacy oracle
      */
     function initialize(
-        address _lido,
-        address _newOracle,
+        address _lidoLocator,
         address _newOracleConsensusContract,
         uint256 _lastCompletedEpochId
     ) external onlyInit {
         // Initializations for v0 --> v3
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
+        require(_lidoLocator != address(0), "ZERO_LOCATOR_ADDRESS");
+        ILidoLocator locator = ILidoLocator(_lidoLocator);
 
         LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(_lastCompletedEpochId);
 
-        require(_lido != address(0), "ZERO_LIDO_ADDRESS");
-        LIDO_POSITION.setStorageAddress(_lido);
+        LIDO_POSITION.setStorageAddress(locator.lido());
 
         // Initializations for v3 --> v4
-        _initialize_v4(_newOracle);
+        _initialize_v4(locator.accountingOracle());
 
         // Cannot get consensus contract from new oracle because at this point new oracle is
         // not initialized with consensus contract address yet
