@@ -430,6 +430,7 @@ abstract contract WithdrawalQueueBase {
     function _claimWithdrawalTo(uint256 _requestId, uint256 _hint, address _recipient) internal {
         if (_hint == 0) revert InvalidHint(_hint);
 
+        if (_requestId == 0) revert InvalidRequestId(0);
         if (_requestId > getLastFinalizedRequestId()) revert RequestNotFinalized(_requestId);
         uint256 lastCheckpointIndex = getLastCheckpointIndex();
         if (_hint > lastCheckpointIndex) revert InvalidHint(_hint);
