@@ -165,7 +165,7 @@ async function deployAccountingOracleSetup(admin, {
   // pretend we're at the first slot of the initial frame's epoch
   await consensus.setTime(genesisTime + initialEpoch * slotsPerEpoch * secondsPerSlot)
 
-  return {lido, stakingRouter, withdrawalQueue, locatorAddr, oracle, consensus}
+  return {lido, stakingRouter, withdrawalQueue, locatorAddr, legacyOracle, oracle, consensus}
 }
 
 async function initAccountingOracle({
