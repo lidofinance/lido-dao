@@ -1,7 +1,7 @@
 const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
 const { EvmSnapshot } = require('../helpers/blockchain')
-const { shares, ETH } = require('../helpers/utils')
+const { shares, ETH, shareRate } = require('../helpers/utils')
 
 const StETH = hre.artifacts.require('StETHMock')
 const WstETH = hre.artifacts.require('WstETHMock')
@@ -27,7 +27,8 @@ hre.contract(
         deployer, // owner
         deployer, // pauser
         deployer, // resumer
-        deployer // finalizer
+        deployer, // finalizer
+        deployer
       )
       await withdrawalRequestNFT.resume({ from: deployer })
 
@@ -38,15 +39,9 @@ hre.contract(
 
       await stETH.approve(withdrawalRequestNFT.address, ETH(50), { from: stEthHolder })
       await wstETH.approve(withdrawalRequestNFT.address, ETH(25), { from: wstEthHolder })
-      await withdrawalRequestNFT.requestWithdrawals(
-        [
-          [ETH(25), nftHolderStETH],
-          [ETH(25), nftHolderStETH]
-        ],
-        { from: stEthHolder }
-      )
+      await withdrawalRequestNFT.requestWithdrawals([ETH(25), ETH(25)], nftHolderStETH,{ from: stEthHolder })
       nftHolderStETHTokenIds = [1, 2]
-      await withdrawalRequestNFT.requestWithdrawalsWstETH([[ETH(25), nftHolderWstETH]], { from: wstEthHolder })
+      await withdrawalRequestNFT.requestWithdrawalsWstETH([ETH(25)], nftHolderWstETH, { from: wstEthHolder })
       nftHolderWstETHTokenIds = [3]
       nonExistedTokenId = 4
       await snapshot.make()
@@ -132,10 +127,10 @@ hre.contract(
     })
 
     describe('setApprovalForAll()', async () => {
-      it('reverts with message "ERC721: approve to caller" when owner equal to operator', async () => {
+      it('reverts with message "ApproveToCaller()" when owner equal to operator', async () => {
         await assert.reverts(
           withdrawalRequestNFT.setApprovalForAll(nftHolderStETH, true, { from: nftHolderStETH }),
-          'ERC721: approve to caller'
+          'ApproveToCaller()'
         )
       })
     })
@@ -224,7 +219,8 @@ hre.contract(
       })
 
       it('reverts with error "RequestAlreadyClaimed()" when called on claimed request', async () => {
-        await withdrawalRequestNFT.finalize(3, { from: deployer, value: ETH(100) })
+        const batch = await withdrawalRequestNFT.finalizationBatch(3, shareRate(1))
+        await withdrawalRequestNFT.finalize(3, { from: deployer, value: batch.ethToLock })
         const ownerETHBefore = await hre.ethers.provider.getBalance(nftHolderStETH)
         const tx = await withdrawalRequestNFT.methods['claimWithdrawal(uint256)'](nftHolderStETHTokenIds[0], {
           from: nftHolderStETH
@@ -278,7 +274,8 @@ hre.contract(
         })
         assert.equal(await withdrawalRequestNFT.ownerOf(nftHolderStETHTokenIds[0]), recipient)
 
-        await withdrawalRequestNFT.finalize(3, { from: deployer, value: ETH(100) })
+        const batch = await withdrawalRequestNFT.finalizationBatch(3, shareRate(1))
+        await withdrawalRequestNFT.finalize(3, { from: deployer, value: batch.ethToLock })
 
         const recipientETHBefore = await hre.ethers.provider.getBalance(recipient)
         const tx = await withdrawalRequestNFT.methods['claimWithdrawal(uint256)'](nftHolderStETHTokenIds[0], {
