@@ -1,1 +1,1 @@
-[{"anonymous":false,"inputs":[{"indexed":false,"name":"validatorsKeysNonce","type":"uint256"}],"name":"ValidatorsKeysNonceChanged","type":"event"}]
+[{"anonymous":false,"inputs":[{"indexed":false,"name":"depositsDataNonce","type":"uint256"}],"name":"DepositsDataNonceChanged","type":"event"}]
