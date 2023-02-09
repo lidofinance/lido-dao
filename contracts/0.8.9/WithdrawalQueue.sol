@@ -117,9 +117,11 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         whenResumed
         returns (uint256[] memory requestIds)
     {
+        if (_owner == address(0)) _owner = msg.sender;
         requestIds = new uint256[](amounts.length);
         for (uint256 i = 0; i < amounts.length; ++i) {
-            requestIds[i] = _requestWithdrawal(amounts[i], _checkWithdrawalRequestInput(amounts[i], _owner));
+            _checkWithdrawalRequestAmount(amounts[i]);
+            requestIds[i] = _requestWithdrawal(amounts[i], _owner);
         }
     }
 
@@ -134,12 +136,13 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         whenResumed
         returns (uint256[] memory requestIds)
     {
+        if (_owner == address(0)) _owner = msg.sender;
         requestIds = new uint256[](amounts.length);
         for (uint256 i = 0; i < amounts.length; ++i) {
             uint256 amountOfWstETH = amounts[i];
             uint256 amountOfStETH = WSTETH.getStETHByWstETH(amountOfWstETH);
-            address owner = _checkWithdrawalRequestInput(amountOfStETH, _owner);
-            requestIds[i] = _requestWithdrawalWstETH(amountOfWstETH, owner);
+            _checkWithdrawalRequestAmount(amountOfStETH);
+            requestIds[i] = _requestWithdrawalWstETH(amountOfWstETH, _owner);
         }
     }
 
@@ -347,17 +350,12 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         _emitTransfer(address(0), _owner, requestId);
     }
 
-    function _checkWithdrawalRequestInput(uint256 _amountOfStETH, address _owner) internal view returns (address) {
+    function _checkWithdrawalRequestAmount(uint256 _amountOfStETH) internal pure {
         if (_amountOfStETH < MIN_STETH_WITHDRAWAL_AMOUNT) {
             revert RequestAmountTooSmall(_amountOfStETH);
         }
         if (_amountOfStETH > MAX_STETH_WITHDRAWAL_AMOUNT) {
             revert RequestAmountTooLarge(_amountOfStETH);
         }
-        if (_owner == address(0)) {
-            _owner = msg.sender;
-        }
-
-        return _owner;
     }
 }
