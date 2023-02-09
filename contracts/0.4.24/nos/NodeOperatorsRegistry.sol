@@ -983,7 +983,10 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     function getValidatorsReport() external view {
         ValidatorsReport memory report = _prepareAllValidatorsReport();
         assembly {
-            return(report, 224) // length of the returning struct is 7 * 32 = 224
+            // Return the memory slice where the ValidatorsReport data is located. The length of the
+            // returning memory slice is 7 * 32 = 224 (ValidatorsReport struct consists of 7 uint256
+            // fields which lay one by one in the memory)
+            return(report, 224)
         }
     }
 
@@ -994,7 +997,10 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     function getValidatorsReport(uint256 _nodeOperatorId) external view {
         ValidatorsReport memory report = _prepareNodeOperatorValidatorsReport(_nodeOperatorId);
         assembly {
-            return(report, 224) // length of the returning struct is 7 * 32 = 224
+            // Return the memory slice where the ValidatorsReport data is located. The length of the
+            // returning memory slice is 7 * 32 = 224 (ValidatorsReport struct consists of 7 uint256
+            // fields which lay one by one in the memory)
+            return(report, 224)
         }
     }
 
