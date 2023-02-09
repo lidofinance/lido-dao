@@ -304,8 +304,8 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             uint256 keysCount;
             /// @solidity memory-safe-assembly
             assembly {
-                nodeOpId := shr(24, calldataload(add(_nodeOperatorIds.offset, mul(i, 8))))
-                keysCount := shr(16, calldataload(add(_exitedKeysCounts.offset, mul(i, 16))))
+                nodeOpId := shr(192, calldataload(add(_nodeOperatorIds.offset, mul(i, 8))))
+                keysCount := shr(128, calldataload(add(_exitedKeysCounts.offset, mul(i, 16))))
                 i := add(i, 1)
             }
             newExitedKeysCount = moduleContract.updateExitedValidatorsKeysCount(nodeOpId, keysCount);
@@ -429,8 +429,8 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             uint256 keysCount;
             /// @solidity memory-safe-assembly
             assembly {
-                nodeOpId := shr(24, calldataload(add(_nodeOperatorIds.offset, mul(i, 8))))
-                keysCount := shr(16, calldataload(add(_stuckKeysCounts.offset, mul(i, 16))))
+                nodeOpId := shr(192, calldataload(add(_nodeOperatorIds.offset, mul(i, 8))))
+                keysCount := shr(128, calldataload(add(_stuckKeysCounts.offset, mul(i, 16))))
                 i := add(i, 1)
             }
             IStakingModule(moduleAddr).updateStuckValidatorsKeysCount(nodeOpId, keysCount);
