@@ -106,7 +106,7 @@ contract('HashConsensus', ([admin, member1, member2, member3]) => {
       frame = await consensus.getCurrentFrame()
     }
 
-    context('quorum increases and cancels current unprocessed consensus', () => {
+    context('quorum increases and changes effective consensus', () => {
       before(deployContractWithMembers)
 
       it('consensus is reached at 2/3 for quorum of 2', async () => {
@@ -121,14 +121,22 @@ contract('HashConsensus', ([admin, member1, member2, member3]) => {
           expectedArgs: { refSlot: frame.refSlot, member: member2, report: HASH_1 }
         })
         assertAmountOfEvents(tx2, 'ConsensusReached', { expectedAmount: 1 })
+        assert.equal(+(await reportProcessor.getLastCall_submitReport()).callCount, 1)
       })
 
-      it('quorum increases but current report is not cancelled', async () => {
+      it('quorum increases and effective consensus is changed to none', async () => {
         const tx3 = await consensus.setQuorum(3)
         assertAmountOfEvents(tx3, 'ConsensusReached', { expectedAmount: 0 })
         const consensusState = await consensus.getConsensusState()
         assert.equal(consensusState.consensusReport, ZERO_HASH)
         assert.isFalse(consensusState.isReportProcessing)
+      })
+
+      it('report starts processing and it is reflected in getConsensusState', async () => {
+        await reportProcessor.startReportProcessing()
+        const consensusState = await consensus.getConsensusState()
+        assert.equal(consensusState.consensusReport, ZERO_HASH)
+        assert.isTrue(consensusState.isReportProcessing)
       })
     })
 
