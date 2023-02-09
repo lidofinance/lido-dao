@@ -136,6 +136,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
+    /// @dev special value for the last finalizable withdrawal request id
+    uint256 private constant DONT_FINALIZE_WITHDRAWALS = 0;
 
     /// @dev storage slot position for the Lido protocol contracts locator
     bytes32 internal constant LIDO_LOCATOR_POSITION = keccak256("lido.Lido.lidoLocator");
@@ -794,7 +796,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     ) {
         IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_contracts.withdrawalQueue);
 
-        if (!withdrawalQueue.isPaused() && _reportedData.lastFinalizableRequestId != 0) {
+        if (!withdrawalQueue.isPaused() && _reportedData.lastFinalizableRequestId != DONT_FINALIZE_WITHDRAWALS) {
             IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).checkWithdrawalQueueOracleReport(
                 _reportedData.lastFinalizableRequestId,
                 _reportedData.reportTimestamp
@@ -811,22 +813,23 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * @dev calculate the amount of rewards and distribute it
      */
     function _processRewards(
-        OracleReportHandlingData memory _handlingData,
+        OracleReportContext memory _reportContext,
         uint256 _postCLBalance,
         uint256 _withdrawnWithdrawals,
         uint256 _withdrawnElRewards
     ) internal returns (uint256 sharesMintedAsFees) {
+        uint256 postCLTotalBalance = _postCLBalance.add(_withdrawnWithdrawals);
         // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
         // (when consensus layer balance delta is zero or negative).
         // See LIP-12 for details:
         // https://research.lido.fi/t/lip-12-on-chain-part-of-the-rewards-distribution-after-the-merge/1625
-        if ((_postCLBalance.add(_withdrawnWithdrawals)) > _handlingData.preCLBalance) {
-            uint256 consensusLayerRewards = _postCLBalance.add(_withdrawnWithdrawals).sub(_handlingData.preCLBalance);
+        if (postCLTotalBalance > _reportContext.preCLBalance) {
+            uint256 consensusLayerRewards = postCLTotalBalance.sub(_reportContext.preCLBalance);
             uint256 totalRewards = consensusLayerRewards.add(_withdrawnElRewards);
 
             sharesMintedAsFees = _distributeFee(
-                _handlingData.preTotalPooledEther,
-                _handlingData.preTotalShares,
+                _reportContext.preTotalPooledEther,
+                _reportContext.preTotalShares,
                 totalRewards
             );
         }
@@ -1093,7 +1096,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * @dev Intermidiate data structure for `_handleOracleReport`
      * Helps to overcome `stack too deep` issue.
      */
-    struct OracleReportHandlingData {
+    struct OracleReportContext{
         uint256 preCLBalance;
         uint256 preTotalPooledEther;
         uint256 preTotalShares;
@@ -1130,19 +1133,19 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     ) {
         require(_reportedData.reportTimestamp <= block.timestamp, "INVALID_REPORT_TIMESTAMP");
 
-        OracleReportHandlingData memory handlingData;
+        OracleReportContext memory reportContext;
 
         // Step 1.
         // Take a snapshot of the current (pre-) state
-        handlingData.preTotalPooledEther = _getTotalPooledEther();
-        handlingData.preTotalShares = _getTotalShares();
-        handlingData.preCLBalance = _processClStateUpdate(_reportedData.clValidators, _reportedData.postCLBalance);
+        reportContext.preTotalPooledEther = _getTotalPooledEther();
+        reportContext.preTotalShares = _getTotalShares();
+        reportContext.preCLBalance = _processClStateUpdate(_reportedData.clValidators, _reportedData.postCLBalance);
 
         // Step 2.
         // Pass the report data to sanity checker (reverts if malformed)
         IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).checkLidoOracleReport(
             _reportedData.timeElapsed,
-            handlingData.preCLBalance,
+            reportContext.preCLBalance,
             _reportedData.postCLBalance,
             _reportedData.withdrawalVaultBalance,
             _reportedData.simulatedShareRate
@@ -1151,22 +1154,22 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // Step 3.
         // Pre-calculate the ether to lock for withdrawal queue and shares to be burnt
         (
-            handlingData.etherToLockOnWithdrawalQueue,
-            handlingData.sharesToBurnFromWithdrawalQueue
+            reportContext.etherToLockOnWithdrawalQueue,
+            reportContext.sharesToBurnFromWithdrawalQueue
         ) = _calculateWithdrawals(_contracts, _reportedData);
 
         // Step 4.
         // Pass the accounting values to sanity checker to smoothen positive token rebase
         (
-            withdrawals, elRewards, handlingData.sharesToBurnLimit
+            withdrawals, elRewards, reportContext.sharesToBurnLimit
         ) = IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).smoothenTokenRebase(
-            handlingData.preTotalPooledEther,
-            handlingData.preTotalShares,
-            handlingData.preCLBalance,
+            reportContext.preTotalPooledEther,
+            reportContext.preTotalShares,
+            reportContext.preCLBalance,
             _reportedData.postCLBalance,
             _reportedData.withdrawalVaultBalance,
             _reportedData.elRewardsVaultBalance,
-            handlingData.etherToLockOnWithdrawalQueue
+            reportContext.etherToLockOnWithdrawalQueue
         );
 
         // Step 5.
@@ -1176,13 +1179,13 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             withdrawals,
             elRewards,
             _reportedData.lastFinalizableRequestId,
-            handlingData.sharesToBurnFromWithdrawalQueue,
-            handlingData.etherToLockOnWithdrawalQueue
+            reportContext.sharesToBurnFromWithdrawalQueue,
+            reportContext.etherToLockOnWithdrawalQueue
         );
 
         emit ETHDistributed(
             _reportedData.reportTimestamp,
-            handlingData.preCLBalance,
+            reportContext.preCLBalance,
             _reportedData.postCLBalance,
             withdrawals,
             elRewards,
@@ -1191,8 +1194,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         // Step 6.
         // Distribute protocol fee (treasury & node operators)
-        handlingData.sharesMintedAsFees = _processRewards(
-            handlingData,
+        reportContext.sharesMintedAsFees = _processRewards(
+            reportContext,
             _reportedData.postCLBalance,
             withdrawals,
             elRewards
@@ -1200,7 +1203,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         // Step 7.
         // Burn excess shares (withdrawn stETH at least)
-        _burnSharesLimited(IBurner(_contracts.burner), handlingData.sharesToBurnLimit);
+        _burnSharesLimited(IBurner(_contracts.burner), reportContext.sharesToBurnLimit);
 
         // Step 8.
         // Complete token rebase by informing observers (emit an event and call the external receivers if any)
@@ -1209,7 +1212,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             postTotalPooledEther
         ) = _completeTokenRebase(
             _reportedData,
-            handlingData,
+            reportContext,
             IPostTokenRebaseReceiver(_contracts.postTokenRebaseReceiver)
         );
     }
@@ -1220,7 +1223,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      */
     function _completeTokenRebase(
         OracleReportedData memory _reportedData,
-        OracleReportHandlingData memory _handlingData,
+        OracleReportContext memory _reportContext,
         IPostTokenRebaseReceiver _postTokenRebaseReceiver
     ) internal returns (uint256 postTotalShares, uint256 postTotalPooledEther) {
         postTotalShares = _getTotalShares();
@@ -1230,22 +1233,22 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             _postTokenRebaseReceiver.handlePostTokenRebase(
                 _reportedData.reportTimestamp,
                 _reportedData.timeElapsed,
-                _handlingData.preTotalShares,
-                _handlingData.preTotalPooledEther,
+                _reportContext.preTotalShares,
+                _reportContext.preTotalPooledEther,
                 postTotalShares,
                 postTotalPooledEther,
-                _handlingData.sharesMintedAsFees
+                _reportContext.sharesMintedAsFees
             );
         }
 
         emit TokenRebased(
             _reportedData.reportTimestamp,
             _reportedData.timeElapsed,
-            _handlingData.preTotalShares,
-            _handlingData.preTotalPooledEther,
+            _reportContext.preTotalShares,
+            _reportContext.preTotalPooledEther,
             postTotalShares,
             postTotalPooledEther,
-            _handlingData.sharesMintedAsFees
+            _reportContext.sharesMintedAsFees
         );
     }
 
