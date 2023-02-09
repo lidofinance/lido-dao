@@ -52,6 +52,11 @@ interface IOracleReportSanityChecker {
         uint256 elRewards,
         uint256 sharesToBurnLimit
     );
+
+    function checkWithdrawalQueueOracleReport(
+        uint256 _requestIdToFinalizeUpTo,
+        uint256 _refReportTimestamp
+    ) external view;
 }
 
 interface ILidoExecutionLayerRewardsVault {
@@ -782,18 +787,22 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * depending on the finalization batch parameters
      */
     function _calculateWithdrawals(
-        address _withdrawalQueue,
-        uint256 _lastFinalizableRequestId,
-        uint256 _simulatedSharedRate
-    ) returns (
+        OracleReportContracts memory _contracts,
+        OracleReportedData memory _reportedData
+    ) internal view returns (
         uint256 etherToLock, uint256 sharesToBurn
     ) {
-        IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_withdrawalQueue);
+        IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_contracts.withdrawalQueue);
 
-        if (!withdrawalQueue.isPaused() && _lastFinalizableRequestId != 0) {
+        if (!withdrawalQueue.isPaused() && _reportedData.lastFinalizableRequestId != 0) {
+            IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).checkWithdrawalQueueOracleReport(
+                _reportedData.lastFinalizableRequestId,
+                _reportedData.reportTimestamp
+            );
+
             (etherToLock, sharesToBurn) = withdrawalQueue.finalizationBatch(
-                _lastFinalizableRequestId,
-                _simulatedSharedRate
+                _reportedData.lastFinalizableRequestId,
+                _reportedData.simulatedShareRate
             );
         }
     }
@@ -1142,11 +1151,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         (
             handlingData.etherToLockOnWithdrawalQueue,
             handlingData.sharesToBurnFromWithdrawalQueue
-        ) = _calculateWithdrawals(
-            _contracts.withdrawalQueue,
-            _reportedData.lastFinalizableRequestId,
-            _reportedData.simulatedShareRate
-        );
+        ) = _calculateWithdrawals(_contracts, _reportedData);
 
         // Step 4.
         // Pass the accounting values to sanity checker to smoothen positive token rebase
@@ -1261,7 +1266,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     /**
      * @dev Load the contracts used for `handleOracleReport` internally.
      */
-    function _loadOracleReportContracts() internal returns (OracleReportContracts memory ret) {
+    function _loadOracleReportContracts() internal view returns (OracleReportContracts memory ret) {
         (
             ret.accountingOracle,
             ret.elRewardsVault,
