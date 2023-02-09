@@ -973,49 +973,63 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         return TYPE_POSITION.getStorageBytes32();
     }
 
-    // struct ValidatorsReport {
-    //     uint256 totalExited;
-    //     uint256 totalDeposited;
-    //     uint256 totalVetted;
-    //     uint256 totalStuck;
-    //     uint256 totalRefunded;
-    //     uint256 targetLimit;
-    //     uint256 excessCount;
-    // }
 
+    /// @dev In the Solidity 0.4.24, ABI encoder v2 is an experimental feature and not supported by
+    ///     default but to be compatible with the IStakingModule interface, this method must return
+    ///     ABI v2 encoded struct. To overcome the limitations of the ABI v1 encoder uses assembly's
+    ///     return() instruction to pass raw ValidatorsReport bytes from memory as a return value.
     function getValidatorsReport() external view {
-        SigningKeysStats.State memory totalSigningKeysStats = _getTotalSigningKeysStats();
-        bytes memory validatorsReportEncoded = abi.encode(
-            uint256(totalSigningKeysStats.exitedSigningKeysCount),
-            uint256(totalSigningKeysStats.depositedSigningKeysCount),
-            uint256(totalSigningKeysStats.vettedSigningKeysCount),
-            0, // totalStuckValidators
-            0, // totalRefundedValidators
-            0, // excessValidators
-            0 // targetLimit
-        );
+        ValidatorsReport memory report = _prepareAllValidatorsReport();
         assembly {
-            return(add(validatorsReportEncoded, 32), mul(32, 7))
+            return(report, 224) // length of the returning struct is 7 * 32 = 224
         }
     }
 
+    /// @dev In the Solidity 0.4.24, ABI encoder v2 is an experimental feature and not supported by
+    ///     default but to be compatible with the IStakingModule interface, this method must return
+    ///     ABI v2 encoded struct. To overcome the limitations of the ABI v1 encoder uses assembly's
+    ///     return() instruction to pass raw ValidatorsReport bytes from memory as a return value.
     function getValidatorsReport(uint256 _nodeOperatorId) external view {
-        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
-        uint256 exited = nodeOperator.exitedSigningKeysCount;
-        uint256 deposited = nodeOperator.depositedSigningKeysCount;
-        uint256 vetted = nodeOperator.vettedSigningKeysCount;
-        bytes memory validatorsReportEncoded = abi.encode(
-            exited,
-            deposited,
-            vetted,
-            0, // totalStuckValidators
-            0, // totalRefundedValidators
-            0, // excessValidators
-            0 // targetLimit
-        );
+        ValidatorsReport memory report = _prepareNodeOperatorValidatorsReport(_nodeOperatorId);
         assembly {
-            return(add(validatorsReportEncoded, 32), mul(32, 7))
+            return(report, 224) // length of the returning struct is 7 * 32 = 224
         }
+    }
+
+    struct ValidatorsReport {
+        uint256 totalExited;
+        uint256 totalDeposited;
+        uint256 totalVetted;
+        uint256 totalStuck;
+        uint256 totalRefunded;
+        uint256 targetLimit;
+        uint256 excessCount;
+    }
+
+    function _prepareAllValidatorsReport() internal view returns (ValidatorsReport memory) {
+        SigningKeysStats.State memory totalSigningKeysStats = _getTotalSigningKeysStats();
+        return ValidatorsReport({
+            totalExited: totalSigningKeysStats.exitedSigningKeysCount,
+            totalDeposited: totalSigningKeysStats.depositedSigningKeysCount,
+            totalVetted: totalSigningKeysStats.vettedSigningKeysCount,
+            totalStuck: 0,
+            totalRefunded: 0,
+            targetLimit: 0,
+            excessCount: 0
+        });
+    }
+
+    function _prepareNodeOperatorValidatorsReport(uint256 _nodeOperatorId) internal view returns (ValidatorsReport memory) {
+        NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+        return ValidatorsReport({
+            totalExited: nodeOperator.exitedSigningKeysCount,
+            totalDeposited: nodeOperator.depositedSigningKeysCount,
+            totalVetted: nodeOperator.vettedSigningKeysCount,
+            totalStuck: 0,
+            totalRefunded: 0,
+            targetLimit: 0,
+            excessCount: 0
+        });
     }
 
 
