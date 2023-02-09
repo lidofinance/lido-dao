@@ -1128,6 +1128,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 withdrawals,
         uint256 elRewards
     ) {
+        require(_reportedData.reportTimestamp <= block.timestamp, "INVALID_REPORT_TIMESTAMP");
+
         OracleReportHandlingData memory handlingData;
 
         // Step 1.
