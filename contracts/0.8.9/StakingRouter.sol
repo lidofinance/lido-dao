@@ -7,7 +7,7 @@ pragma solidity 0.8.9;
 
 import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
 
-import {IStakingModule} from "./interfaces/IStakingModule.sol";
+import {IStakingModule, ValidatorsReport} from "./interfaces/IStakingModule.sol";
 
 import {Math256} from "../common/lib/Math256.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
@@ -263,7 +263,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
                 revert ErrorExitedValidatorsCountCannotDecrease();
             }
 
-            IStakingModule.ValidatorsReport memory allValidatorsReport = 
+            ValidatorsReport memory allValidatorsReport = 
                 IStakingModule(stakingModule.stakingModuleAddress).getValidatorsReport();
 
             if (allValidatorsReport.totalExited < prevReportedExitedValidatorsCount) {
@@ -288,7 +288,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     {
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         address moduleAddr = stakingModule.stakingModuleAddress;
-        IStakingModule.ValidatorsReport memory allValidatorsReport = 
+        ValidatorsReport memory allValidatorsReport = 
                 IStakingModule(stakingModule.stakingModuleAddress).getValidatorsReport();
 
         uint256 newExitedValidatorsCount;
@@ -361,7 +361,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         address moduleAddr = stakingModule.stakingModuleAddress;
 
-        IStakingModule.ValidatorsReport memory operatorValidatorsReport = 
+        ValidatorsReport memory operatorValidatorsReport = 
             IStakingModule(stakingModule.stakingModuleAddress).getValidatorsReport(_nodeOperatorId);
 
         // FIXME: get current value from the staking module
@@ -560,7 +560,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         validStakingModuleId(_stakingModuleId)
         returns (uint256 activeValidatorsCount)
     {
-        IStakingModule.ValidatorsReport memory allValidatorsReport = 
+        ValidatorsReport memory allValidatorsReport = 
             IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getValidatorsReport();
 
         activeValidatorsCount = allValidatorsReport.totalDeposited - allValidatorsReport.totalExited;
@@ -842,7 +842,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         if (!_zeroValidatorsCountsIfInactive || cacheItem.status == StakingModuleStatus.Active) {
             uint256 moduleExitedValidatorsCount;
 
-            IStakingModule.ValidatorsReport memory allValidatorsReport = 
+            ValidatorsReport memory allValidatorsReport = 
                 IStakingModule(cacheItem.stakingModuleAddress).getValidatorsReport();
 
             cacheItem.activeValidatorsCount = allValidatorsReport.totalDeposited - allValidatorsReport.totalExited;

@@ -5,7 +5,7 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import {IStakingModule} from "../interfaces/IStakingModule.sol";
+import {IStakingModule, ValidatorsReport} from "../interfaces/IStakingModule.sol";
 
 contract StakingModuleMock is IStakingModule {
     uint256 private _activeValidatorsCount;
@@ -43,6 +43,11 @@ contract StakingModuleMock is IStakingModule {
     function getActiveNodeOperatorsCount() external view returns (uint256) {}
 
     function getNodeOperatorIsActive(uint256 _nodeOperatorId) external view returns (bool) {}
+
+    function getNodeOperatorIds(uint256 _offset, uint256 _limit)
+        external
+        view
+        returns (uint256[] memory nodeOperatorIds) {}
 
     function handleRewardsMinted(uint256 _totalShares) external {}
 

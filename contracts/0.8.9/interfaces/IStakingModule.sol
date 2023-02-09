@@ -3,18 +3,18 @@
 
 pragma solidity 0.8.9;
 
+struct ValidatorsReport {
+    uint256 totalExited;
+    uint256 totalDeposited;
+    uint256 totalVetted;
+    uint256 totalStuck;
+    uint256 totalRefunded;
+    uint256 targetLimit;
+    uint256 excessCount;
+}
+
 /// @title Lido's Staking Module interface
 interface IStakingModule {
-    struct ValidatorsReport {
-        uint256 totalExited;
-        uint256 totalDeposited;
-        uint256 totalVetted;
-        uint256 totalStuck;
-        uint256 totalRefunded;
-        uint256 targetLimit;
-        uint256 excessCount;
-    }
-
     /// @notice Returns the type of the staking module
     function getType() external view returns (bytes32);
 
@@ -38,10 +38,20 @@ interface IStakingModule {
 
     /// @notice Returns number of active node operators
     function getActiveNodeOperatorsCount() external view returns (uint256);
-
+    
     /// @notice Returns if the node operator with given id is active
     /// @param _nodeOperatorId Id of the node operator
     function getNodeOperatorIsActive(uint256 _nodeOperatorId) external view returns (bool);
+
+    /// @notice Returns up to `_limit` node operator ids starting from the `_offset`. The order of
+    ///     the returned ids is not defined and might change between calls.
+    /// @dev This view must not revert in case of invalid data passed. When `_offset` exceeds the
+    ///     total node operators count or when `_limit` is equal to 0 MUST be returned empty array.
+    function getNodeOperatorIds(uint256 _offset, uint256 _limit)
+        external
+        view
+        returns (uint256[] memory nodeOperatorIds);
+
 
     /// @notice Called by StakingRouter to signal that stETH rewards were minted for this module.
     /// @param _totalShares Amount of stETH shares that were minted to reward all node operators.

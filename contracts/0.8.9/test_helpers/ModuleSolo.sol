@@ -30,7 +30,6 @@ contract ModuleSolo is IStakingModule {
         return moduleType;
     }
 
-
     function getValidatorsReport() external view returns (ValidatorsReport memory report) {
         report.totalExited = totalExited;
         report.totalVetted = totalVetted;
@@ -38,7 +37,6 @@ contract ModuleSolo is IStakingModule {
     }
 
     function getValidatorsReport(uint256 _nodeOperatorId) external view returns (ValidatorsReport memory report) {}
-
 
     function getDepositsDataNonce() external view returns (uint256) {
         return depositsDataNonce;
@@ -49,6 +47,11 @@ contract ModuleSolo is IStakingModule {
     function getActiveNodeOperatorsCount() external view returns (uint256) {}
 
     function getNodeOperatorIsActive(uint256 _nodeOperatorId) external view returns (bool) {}
+
+    function getNodeOperatorIds(uint256 _offset, uint256 _limit)
+        external
+        view
+        returns (uint256[] memory nodeOperatorIds) {}
 
     function getRewardsDistribution(uint256 _totalRewardShares)
         external

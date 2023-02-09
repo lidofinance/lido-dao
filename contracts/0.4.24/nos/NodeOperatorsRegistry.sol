@@ -10,6 +10,7 @@ import {SafeMath64} from "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import {UnstructuredStorage} from "@aragon/os/contracts/common/UnstructuredStorage.sol";
 
 import {Math64} from "../lib/Math64.sol";
+import {Math256} from "../../common/lib/Math256.sol";
 import {MemUtils} from "../../common/lib/MemUtils.sol";
 import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
 import {SigningKeysStats} from "../lib/SigningKeysStats.sol";
@@ -1047,6 +1048,19 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     function getNodeOperatorIsActive(uint256 _nodeOperatorId) external view returns (bool) {
         return _nodeOperators[_nodeOperatorId].active;
     }
+
+    /// @notice Returns up to `_limit` node operator ids starting from the `_offset`.
+    function getNodeOperatorIds(uint256 _offset, uint256 _limit)
+        external
+        view
+        returns (uint256[] memory nodeOperatorIds) {
+            uint256 nodeOperatorsCount = getNodeOperatorsCount();
+            if (_offset >= nodeOperatorsCount || _limit == 0) return;
+            nodeOperatorIds = new uint256[](Math256.min(_limit, nodeOperatorsCount - _offset));
+            for (uint256 i = 0; i < nodeOperatorIds.length; ++i) {
+                nodeOperatorIds[i] = _offset + i;
+            }
+        }
 
     /// @notice Returns a counter that MUST change it's value when any of the following happens:
     ///     1. a node operator's validator(s) is added
