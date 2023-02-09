@@ -372,17 +372,17 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     }
 
     /// @notice Applies sanity checks to the withdrawal requests params of Lido's oracle report
-    /// @param _requestIdToFinalizeUpTo right boundary of requestId range if equals 0, no requests
+    /// @param _lastFinalizableRequestId right boundary of requestId range if equals 0, no requests
     ///     should be finalized
-    /// @param _refReportTimestamp timestamp when the originated oracle report was submitted
-    function checkWithdrawalQueueOracleReport(uint256 _requestIdToFinalizeUpTo, uint256 _refReportTimestamp)
+    /// @param _reportTimestamp timestamp when the originated oracle report was submitted
+    function checkWithdrawalQueueOracleReport(uint256 _lastFinalizableRequestId, uint256 _reportTimestamp)
         external
         view
     {
         LimitsList memory limitsList = _limits.unpack();
         address withdrawalQueue = LIDO_LOCATOR.withdrawalQueue();
         // 1. No finalized id up to newer than the allowed report margin
-        _checkRequestIdToFinalizeUpTo(limitsList, withdrawalQueue, _requestIdToFinalizeUpTo, _refReportTimestamp);
+        _checkRequestIdToFinalizeUpTo(limitsList, withdrawalQueue, _lastFinalizableRequestId, _reportTimestamp);
     }
 
     function _checkWithdrawalVaultBalance(
