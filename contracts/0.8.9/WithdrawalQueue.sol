@@ -217,7 +217,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     ///  @notice Claim `_requestId` request and transfer locked ether to the owner
     ///  @param _requestId request id to claim
     ///  @param _hint hint for checkpoint index to avoid extensive search over the checkpointHistory.
-    ///   Can be retreived with `findClaimHint()` or `findClaimHintUnbounded()`
+    ///   Can be retreived with `findCheckpointHint()` or `findCheckpointHintUnbounded()`
     /// @param _recipient address where claimed ether will be sent to
     function claimWithdrawalTo(uint256 _requestId, uint256 _hint, address _recipient) external {
         _claimWithdrawalTo(_requestId, _hint, _recipient);
@@ -226,10 +226,10 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
 
     /// @notice Claim `_requestId` request and transfer locked ether to the owner
     /// @param _requestId request id to claim
-    /// @dev will use `findClaimHintUnbounded()` to find a hint, what can lead to OOG
+    /// @dev will use `findCheckpointHintUnbounded()` to find a hint, what can lead to OOG
     /// Prefer `claimWithdrawal(uint256 _requestId, uint256 _hint)` to save gas
     function claimWithdrawal(uint256 _requestId) external {
-        _claimWithdrawalTo(_requestId, findClaimHintUnbounded(_requestId), msg.sender);
+        _claimWithdrawalTo(_requestId, findCheckpointHintUnbounded(_requestId), msg.sender);
         _emitTransfer(msg.sender, address(0), _requestId);
     }
 
@@ -239,7 +239,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @param _firstIndex left boundary of the search range
     /// @param _lastIndex right boundary of the search range
     /// @return hintIds the hints for `claimWithdrawal` to find the checkpoint for the passed request ids
-    function findClaimHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)
+    function findCheckpointHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)
         public
         view
         returns (uint256[] memory hintIds)
@@ -248,7 +248,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         uint256 prevRequestId = 0;
         for (uint256 i = 0; i < _requestIds.length; ++i) {
             if (_requestIds[i] < prevRequestId) revert RequestIdsNotSorted();
-            hintIds[i] = findClaimHint(_requestIds[i], _firstIndex, _lastIndex);
+            hintIds[i] = findCheckpointHint(_requestIds[i], _firstIndex, _lastIndex);
             _firstIndex = hintIds[i];
             prevRequestId = _requestIds[i];
         }
@@ -257,10 +257,10 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @notice Finds the list of hints for the given `_requestIds` searching among the checkpoints with indices
     ///  in the range `[1, lastCheckpointIndex]`
     /// @dev WARNING! OOG is possible if used onchain.
-    ///  See `findClaimHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)` for onchain use
+    ///  See `findCheckpointHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)` for onchain use
     /// @param _requestIds ids of the requests sorted in the ascending order to get hints for
-    function findClaimHintsUnbounded(uint256[] calldata _requestIds) public view returns (uint256[] memory hintIds) {
-        return findClaimHints(_requestIds, 1, getLastCheckpointIndex());
+    function findCheckpointHintsUnbounded(uint256[] calldata _requestIds) public view returns (uint256[] memory hintIds) {
+        return findCheckpointHints(_requestIds, 1, getLastCheckpointIndex());
     }
 
     /// @notice Finalize requests from last finalized one up to `_lastRequestIdToFinalize`

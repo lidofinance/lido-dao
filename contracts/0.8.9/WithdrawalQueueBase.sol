@@ -20,8 +20,11 @@ abstract contract WithdrawalQueueBase {
     /// @notice precision base for share rate and discounting factor values in the contract
     uint256 public constant E27_PRECISION_BASE = 1e27;
 
-    /// @notice discount factor value that means no discount applying
+    /// @dev discount factor value that means no discount applying
     uint96 internal constant NO_DISCOUNT = uint96(E27_PRECISION_BASE);
+
+    /// @dev return value for the `find...` methods in case of no result
+    uint256 internal constant NOT_FOUND = 0;
 
     // queue for withdrawal requests, indexes (requestId) start from 1
     bytes32 internal constant QUEUE_POSITION = keccak256("lido.WithdrawalQueue.queue");
@@ -56,7 +59,7 @@ abstract contract WithdrawalQueueBase {
     /// @notice structure to store discount factors for requests in the queue
     struct DiscountCheckpoint {
         /// @notice first `_requestId` the discount is valid for
-        uint256 fromId;
+        uint256 fromRequestId;
         /// @notice discount factor with 1e27 precision (0 - 100% discount, 1e27 - means no discount)
         uint96 discountFactor;
     }
@@ -70,7 +73,7 @@ abstract contract WithdrawalQueueBase {
         uint256 amountOfShares
     );
     event WithdrawalBatchFinalized(
-        uint256 indexed from, uint256 indexed to, uint256 amountOfETHLocked, uint256 sharesBurned, uint256 timestamp
+        uint256 indexed from, uint256 indexed to, uint256 amountOfETHLocked, uint256 sheresToBurn, uint256 timestamp
     );
     event WithdrawalClaimed(
         uint256 indexed requestId, address indexed owner, address indexed receiver, uint256 amountOfETH
@@ -90,17 +93,17 @@ abstract contract WithdrawalQueueBase {
     error InvalidHint(uint256 _hint);
     error CantSendValueRecipientMayHaveReverted();
 
-    /// @notice id of the last request.
+    /// @notice id of the last request, returns 0, if no request in the queue
     function getLastRequestId() public view returns (uint256) {
         return LAST_REQUEST_ID_POSITION.getStorageUint256();
     }
 
-    /// @notice id of the last finalized request
+    /// @notice id of the last finalized request, returns 0 if no finalized requests in the queue
     function getLastFinalizedRequestId() public view returns (uint256) {
         return LAST_FINALIZED_REQUEST_ID_POSITION.getStorageUint256();
     }
 
-    /// @notice amount of ETH on this contract balance that is locked for withdrawal and waiting for claim
+    /// @notice amount of ETH on this contract balance that is locked for withdrawal and available to claim
     function getLockedEtherAmount() public view returns (uint256) {
         return LOCKED_ETHER_AMOUNT_POSITION.getStorageUint256();
     }
@@ -115,13 +118,13 @@ abstract contract WithdrawalQueueBase {
         return getLastRequestId() - getLastFinalizedRequestId();
     }
 
-    /// @notice Returns the amount of stETH inthe queue yet to be finalized
+    /// @notice Returns the amount of stETH in the queue yet to be finalized
     function unfinalizedStETH() external view returns (uint256) {
         return
             _getQueue()[getLastRequestId()].cumulativeStETH - _getQueue()[getLastFinalizedRequestId()].cumulativeStETH;
     }
 
-    /// @notice Returns all withdrawal requests placed for the `_owner` address
+    /// @notice Returns all withdrawal requests that belongs to the `_owner` address
     ///
     /// WARNING: This operation will copy the entire storage to memory, which can be quite expensive. This is designed
     /// to mostly be used by view accessors that are queried without any gas fees. Developers should keep in mind that
@@ -143,7 +146,7 @@ abstract contract WithdrawalQueueBase {
         uint256 timestamp;
         /// @notice true, if request is finalized
         bool isFinalized;
-        /// @notice true, if request is already claimed. Request can be claimed if (isFinalized && !isClaimed)
+        /// @notice true, if request is claimed. Request is claimable if (isFinalized && !isClaimed)
         bool isClaimed;
     }
 
@@ -153,8 +156,7 @@ abstract contract WithdrawalQueueBase {
         view
         returns (WithdrawalRequestStatus memory status)
     {
-        if (_requestId == 0) revert InvalidRequestId(_requestId);
-        if (_requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
+        if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
         WithdrawalRequest memory request = _getQueue()[_requestId];
         WithdrawalRequest memory previousRequest = _getQueue()[_requestId - 1];
@@ -171,45 +173,47 @@ abstract contract WithdrawalQueueBase {
 
     /// @notice View function to find a hint to pass it to `claimWithdrawal()`.
     /// @dev WARNING! OOG is possible if used onchain, contains unbounded loop inside
-    /// See `findClaimHint(uint256 _requestId, uint256 _firstIndex, uint256 _lastIndex)` for onchain use
+    /// See `findCheckpointHint(uint256 _requestId, uint256 _firstIndex, uint256 _lastIndex)` for onchain use
     /// @param _requestId request id to be claimed with this hint
-    function findClaimHintUnbounded(uint256 _requestId) public view returns (uint256) {
-        return findClaimHint(_requestId, 1, getLastCheckpointIndex());
+    function findCheckpointHintUnbounded(uint256 _requestId) public view returns (uint256) {
+        return findCheckpointHint(_requestId, 1, getLastCheckpointIndex());
     }
 
-    /// @notice View function to find a hint for `claimWithdrawal()` in the range of `[_firstIndex, _lastIndex]`
+    /// @notice View function to find a checkpoint hint for `claimWithdrawal()`
+    ///  Search will be performed in the range of `[_firstIndex, _lastIndex]`
     ///
-    /// Range search ought to be used to optimize gas cost if used onchain.
+    /// NB!: Range search ought to be used to optimize gas cost.
     /// You can utilize the following invariant:
     /// `if (requestId2 > requestId1) than hint2 >= hint1`,
     /// so you can search for `hint2` in the range starting from `hint1`
     ///
-    /// @param _targetId request id to be claimed later
+    /// @param _requestId request id we are searching the checkpoint for
     /// @param _start index of the left boundary of the search range
     /// @param _end index of the right boundary of the search range
     ///
-    /// @return the hint that can be used for `claimWithdrawal` to find the discount for the request,
+    /// @return value that hints `claimWithdrawal` to find the discount for the request,
     ///  or 0 if hint not found in the range
-    function findClaimHint(uint256 _targetId, uint256 _start, uint256 _end) public view returns (uint256) {
-        if (_targetId == 0) revert InvalidRequestId(_targetId);
+    function findCheckpointHint(uint256 _requestId, uint256 _start, uint256 _end) public view returns (uint256) {
+        if (_requestId == 0) revert InvalidRequestId(_requestId);
         if (_start == 0) revert InvalidRequestIdRange(_start, _end);
-        if (_start > _end) revert InvalidRequestIdRange(_start, _end);
         uint256 lastCheckpointIndex = getLastCheckpointIndex();
         if (_end > lastCheckpointIndex) revert InvalidRequestIdRange(_start, _end);
-        if (_targetId > getLastFinalizedRequestId()) revert RequestNotFinalized(_targetId);
+        if (_requestId > getLastFinalizedRequestId()) revert RequestNotFinalized(_requestId);
+
+        if (_start > _end) return NOT_FOUND; // we have an empty range to search in, so return NOT_FOUND
 
         // Right boundary
-        if (_targetId >= _getCheckpoints()[_end].fromId) {
+        if (_requestId >= _getCheckpoints()[_end].fromRequestId) {
             // it's the last checkpoint, so it's valid
             if (_end == lastCheckpointIndex) return _end;
             // it fits right before the next checkpoint
-            if (_targetId < _getCheckpoints()[_end + 1].fromId) return _end;
+            if (_requestId < _getCheckpoints()[_end + 1].fromRequestId) return _end;
 
-            return 0;
+            return NOT_FOUND;
         }
         // Left boundary
-        if (_targetId < _getCheckpoints()[_start].fromId) {
-            return 0;
+        if (_requestId < _getCheckpoints()[_start].fromRequestId) {
+            return NOT_FOUND;
         }
 
         // Binary search
@@ -218,7 +222,7 @@ abstract contract WithdrawalQueueBase {
 
         while (max > min) {
             uint256 mid = (max + min + 1) / 2;
-            if (_getCheckpoints()[mid].fromId <= _targetId) {
+            if (_getCheckpoints()[mid].fromRequestId <= _requestId) {
                 min = mid;
             } else {
                 max = mid - 1;
@@ -237,26 +241,27 @@ abstract contract WithdrawalQueueBase {
         returns (uint256 finalizableRequestId)
     {
         if (_maxTimestamp == 0) revert ZeroTimestamp();
-        if (_startId <= getLastFinalizedRequestId()) revert InvalidRequestIdRange(_startId, _endId);
-        if (_endId > getLastRequestId()) revert InvalidRequestIdRange(_startId, _endId);
+        if (_startId <= getLastFinalizedRequestId() || _endId > getLastRequestId()) {
+            revert InvalidRequestIdRange(_startId, _endId);
+        } 
 
-        if (_startId > _endId) return 0; // we have an empty range to search in
+        if (_startId > _endId) return NOT_FOUND; // we have an empty range to search in
 
-        uint256 startRequestId = _startId;
-        uint256 endRequestId = _endId;
+        uint256 min = _startId;
+        uint256 max = _endId;
 
-        finalizableRequestId = 0;
+        finalizableRequestId = NOT_FOUND;
 
-        while (startRequestId <= endRequestId) {
-            uint256 midRequestId = (endRequestId + startRequestId) / 2;
-            if (_getQueue()[midRequestId].timestamp <= _maxTimestamp) {
-                finalizableRequestId = midRequestId;
+        while (min <= max) {
+            uint256 mid = (max + min) / 2;
+            if (_getQueue()[mid].timestamp <= _maxTimestamp) {
+                finalizableRequestId = mid;
 
                 // Ignore left half
-                startRequestId = midRequestId + 1;
+                min = mid + 1;
             } else {
                 // Ignore right half
-                endRequestId = midRequestId - 1;
+                max = mid - 1;
             }
         }
     }
@@ -277,28 +282,29 @@ abstract contract WithdrawalQueueBase {
     ) public view returns (uint256 finalizableRequestId) {
         if (_ethBudget == 0) revert ZeroAmountOfETH();
         if (_shareRate == 0) revert ZeroShareRate();
-        if (_startId <= getLastFinalizedRequestId()) revert InvalidRequestIdRange(_startId, _endId);
-        if (_endId > getLastRequestId()) revert InvalidRequestIdRange(_startId, _endId);
+        if (_startId <= getLastFinalizedRequestId() || _endId > getLastRequestId()) {
+            revert InvalidRequestIdRange(_startId, _endId);
+        } 
 
-        if (_startId > _endId) return 0; // we have an empty range to search in
+        if (_startId > _endId) return NOT_FOUND; // we have an empty range to search in
 
-        uint256 startRequestId = _startId;
-        uint256 endRequestId = _endId;
+        uint256 min = _startId;
+        uint256 max = _endId;
 
-        finalizableRequestId = 0;
+        finalizableRequestId = NOT_FOUND;
 
-        while (startRequestId <= endRequestId) {
-            uint256 midRequestId = (endRequestId + startRequestId) / 2;
-            (uint256 requiredEth,) = finalizationBatch(midRequestId, _shareRate);
+        while (min <= max) {
+            uint256 mid = (max + min) / 2;
+            (uint256 requiredEth,) = finalizationBatch(mid, _shareRate);
 
             if (requiredEth <= _ethBudget) {
-                finalizableRequestId = midRequestId;
+                finalizableRequestId = mid;
 
                 // Ignore left half
-                startRequestId = midRequestId + 1;
+                min = mid + 1;
             } else {
                 // Ignore right half
-                endRequestId = midRequestId - 1;
+                max = mid - 1;
             }
         }
     }
@@ -394,7 +400,7 @@ abstract contract WithdrawalQueueBase {
             _amountOfETH,
             requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares,
             block.timestamp
-            );
+        );
     }
 
     /// @dev creates a new `WithdrawalRequest` in the queue
@@ -422,8 +428,8 @@ abstract contract WithdrawalQueueBase {
 
     /// @notice Claim `_requestId` request and transfer related ether to the `_recipient`. Emits WithdrawalClaimed event
     /// @param _requestId request id to claim
-    /// @param _hint hint for checkpoint index to avoid extensive search over the checkpointHistory.
-    ///  Can be found with `findClaimHint()` or `findClaimHintUnbounded()`
+    /// @param _hint hint for discount checkpoint index to avoid extensive search over the checkpoints.
+    ///  Can be found with `findCheckpointHint()` or `findCheckpointHintUnbounded()`
     /// @param _recipient address to send ether to. If `==address(0)` then will send to the owner.
     function _claimWithdrawalTo(uint256 _requestId, uint256 _hint, address _recipient) internal {
         if (_hint == 0) revert InvalidHint(_hint);
@@ -442,11 +448,12 @@ abstract contract WithdrawalQueueBase {
         DiscountCheckpoint memory hintCheckpoint = _getCheckpoints()[_hint];
         // ______(_______
         //    ^  hint
-        if (_requestId < hintCheckpoint.fromId) revert InvalidHint(_hint);
+        if (_requestId < hintCheckpoint.fromRequestId) revert InvalidHint(_hint);
         if (_hint < lastCheckpointIndex) {
             // ______(_______(_________
             //       hint    hint+1  ^
-            if (_getCheckpoints()[_hint + 1].fromId <= _requestId) {
+            DiscountCheckpoint memory nextCheckpoint = _getCheckpoints()[_hint + 1];
+            if (nextCheckpoint.fromRequestId <= _requestId) {
                 revert InvalidHint(_hint);
             }
         }
