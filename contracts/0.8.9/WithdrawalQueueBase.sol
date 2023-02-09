@@ -347,20 +347,16 @@ abstract contract WithdrawalQueueBase {
         WithdrawalRequest memory requestToFinalize = _getQueue()[_nextFinalizedRequestId];
         WithdrawalRequest memory lastFinalizedRequest = _getQueue()[lastFinalizedRequestId];
 
-        uint256 amountOfStETH = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH; //e18
-        uint256 amountOfShares = requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares; //e18
+        uint256 amountOfETHRequested = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH;
+        uint256 amountOfShares = requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares;
 
-        uint256 currentValue = (amountOfShares * _shareRate); //e45
+        ethToLock = amountOfETHRequested;
+        sharesToBurn = amountOfShares;
 
-        uint256 discountFactor = NO_DISCOUNT;
-        if (currentValue < amountOfStETH * E27_PRECISION_BASE) {
-            //e45
-            discountFactor = currentValue / amountOfStETH; //e27
+        uint256 currentValueInETH = (amountOfShares * _shareRate) / E27_PRECISION_BASE;
+        if (currentValueInETH < amountOfETHRequested) {
+            ethToLock = currentValueInETH;
         }
-
-        uint256 amountOfEther = (amountOfStETH * discountFactor) / E27_PRECISION_BASE;
-
-        return (amountOfEther, amountOfShares);
     }
 
     /// @dev Finalize requests from last finalized one up to `_nextFinalizedRequestId`
