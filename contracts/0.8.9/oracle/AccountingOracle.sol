@@ -322,14 +322,14 @@ contract AccountingOracle is BaseOracle {
         /// nodeOpsCount contains the number of node operator ids contained in the nodeOperatorIds
         /// array. Thus, nodeOpsCount = byteLength(nodeOperatorIds) / 8.
         ///
-        /// exitedValsCounts contains array of stuck validators total counts for the node operators
+        /// stuckValsCounts contains array of stuck validators total counts for the node operators
         /// from the nodeOperatorIds array, in the same order. Each count is a 16-byte uint, counts
         /// are packed tightly. Thus, byteLength(nodeOperatorIds) = nodeOpsCount * 16.
         ///
-        /// nodeOpsCount must not be greater than TODO. If a staking module has more node operators
-        /// with total stuck validators counts changed compared to the staking module smart
-        /// contract storage observed at the reference slot, reporting for that module should
-        /// be split into multiple items.
+        /// nodeOpsCount must not be greater than maxExtraDataListItemsCount. If a staking module
+        /// has more node operators with total stuck validators counts changed compared to the
+        /// staking module smart contract storage observed at the reference slot, reporting for that
+        /// module should be split into multiple items.
         ///
         /// Item sotring key is a compound key consisting of the module id and the first reported
         /// node opertator's id:
