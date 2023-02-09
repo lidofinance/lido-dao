@@ -35,6 +35,7 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     error TransferToZeroAddress();
     error TransferFromZeroAddress();
     error TransferToNonIERC721Receiver(address);
+    error InvalidOwnerAddress(address);
 
     /// @param _wstETH address of WstETH contract
     constructor(address _wstETH) WithdrawalQueue(IWstETH(_wstETH)) {}

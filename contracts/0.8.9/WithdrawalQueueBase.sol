@@ -82,9 +82,8 @@ abstract contract WithdrawalQueueBase {
     error ZeroAmountOfETH();
     error ZeroShareRate();
     error ZeroTimestamp();
-    error ZeroRecipient();
-    error InvalidOwner(address _owner, address _sender);
-    error InvalidOwnerAddress(address _owner);
+    error TooMuchEtherToFinalize(uint256 sent, uint256 maxExpected);
+    error NotOwner(address _sender, address _owner);
     error InvalidRequestId(uint256 _requestId);
     error InvalidRequestIdRange(uint256 startId, uint256 endId);
     error NotEnoughEther();
@@ -371,6 +370,7 @@ abstract contract WithdrawalQueueBase {
         WithdrawalRequest memory requestToFinalize = _getQueue()[_nextFinalizedRequestId];
 
         uint128 stETHToFinalize = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH;
+        if (_amountOfETH > stETHToFinalize) revert TooMuchEtherToFinalize(_amountOfETH, stETHToFinalize);
 
         uint256 discountFactor = NO_DISCOUNT;
         if (stETHToFinalize > _amountOfETH) {
@@ -436,7 +436,7 @@ abstract contract WithdrawalQueueBase {
 
         WithdrawalRequest storage request = _getQueue()[_requestId];
         if (request.claimed) revert RequestAlreadyClaimed(_requestId);
-        if (msg.sender != request.owner) revert InvalidOwner(request.owner, msg.sender);
+        if (msg.sender != request.owner) revert NotOwner(msg.sender, request.owner);
         if (_recipient == address(0)) _recipient = request.owner;
 
         request.claimed = true;
