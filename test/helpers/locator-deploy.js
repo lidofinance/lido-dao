@@ -1,4 +1,3 @@
-
 const DUMMY_ADDRESS = '0x' + 'f'.repeat(40)
 
 const invalidButNonZeroLocatorConfig = {
@@ -25,7 +24,7 @@ async function deployBehindOssifiableProxy(artifactName, proxyOwner, constructor
   const OssifiableProxy = await artifacts.require("OssifiableProxy")
   const proxy = await OssifiableProxy.new(implementation, proxyOwner, [], { from: proxyOwner })
 
-  return proxy.address
+  return proxy
 }
 
 async function updateProxyImplementation(proxyAddress, artifactName, proxyOwner, constructorArgs) {
@@ -39,7 +38,6 @@ async function updateProxyImplementation(proxyAddress, artifactName, proxyOwner,
 }
 
 async function getLocatorConfig(locatorAddress) {
-  console.log({locatorAddress})
   const LidoLocator = await artifacts.require('LidoLocator')
   const locator = await LidoLocator.at(locatorAddress)
   const config = {
@@ -50,7 +48,7 @@ async function getLocatorConfig(locatorAddress) {
     lido: await locator.lido(),
     oracleReportSanityChecker: await locator.oracleReportSanityChecker(),
     postTokenRebaseReceiver: await locator.postTokenRebaseReceiver(),
-    selfOwnedStEthBurner: await locator.postTokenRebaseReceiver(),
+    burner: await locator.burner(),
     stakingRouter: await locator.stakingRouter(),
     treasury: await locator.treasury(),
     validatorsExitBusOracle: await locator.validatorsExitBusOracle(),
@@ -64,15 +62,20 @@ async function deployLocatorWithInvalidImplementation(admin) {
   return await deployBehindOssifiableProxy('DummyEmptyContract', admin)
 }
 
+async function deployLocatorWithDummyAddressesImplementation(admin) {
+  return await deployBehindOssifiableProxy('LidoLocator', admin, [invalidButNonZeroLocatorConfig])
+}
+
 ///! Not specified in configUpdate values are set to dummy non zero addresses
-async function updateLocatorImplementation(locator, admin, configUpdate={}) {
-  let config = invalidButNonZeroLocatorConfig
-  config = Object.assign({}, config, configUpdate)
-  await updateProxyImplementation(locator, 'LidoLocator', admin, [config])
+async function updateLocatorImplementation(locatorAddress, admin, configUpdate={}) {
+  let config = await getLocatorConfig(locatorAddress)
+  Object.assign(config, configUpdate)
+  await updateProxyImplementation(locatorAddress, 'LidoLocator', admin, [config])
 }
 
 module.exports = {
   deployLocatorWithInvalidImplementation,
   updateLocatorImplementation,
   getLocatorConfig,
+  deployLocatorWithDummyAddressesImplementation,
 }

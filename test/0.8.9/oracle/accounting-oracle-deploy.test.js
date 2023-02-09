@@ -4,7 +4,7 @@ const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contrac
 const { assertRevert } = require('../../helpers/assertThrow')
 const { processNamedTuple } = require('../../helpers/utils')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
-const { deployLocatorWithInvalidImplementation, updateLocatorImplementation, getLocatorConfig } =
+const { updateLocatorImplementation, deployLocatorWithDummyAddressesImplementation } =
   require('../../helpers/locator-deploy')
 
 const {
@@ -136,7 +136,7 @@ async function deployAccountingOracleSetup(admin, {
 } = {}) {
   const {lido, stakingRouter, withdrawalQueue} = await getLidoAndStakingRouter()
 
-  const locatorAddr = await deployLocatorWithInvalidImplementation(admin)
+  const locatorAddr = (await deployLocatorWithDummyAddressesImplementation(admin)).address
 
   await updateLocatorImplementation(locatorAddr, admin, {
     lido: lido.address,
