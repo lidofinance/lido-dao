@@ -10,7 +10,7 @@ import {IStakingModule, ValidatorsReport} from "../interfaces/IStakingModule.sol
 contract StakingModuleMock is IStakingModule {
     uint256 private _activeValidatorsCount;
     uint256 private _availableValidatorsCount;
-    uint256 private _depositsDataNonce;
+    uint256 private _depositNonce;
 
     function getActiveValidatorsCount() public view returns (uint256) {
         return _activeValidatorsCount;
@@ -30,12 +30,12 @@ contract StakingModuleMock is IStakingModule {
     function getValidatorsReport(uint256 _nodeOperatorId) external view returns (ValidatorsReport memory report) {
     }
 
-    function getDepositsDataNonce() external view returns (uint256) {
-        return _depositsDataNonce;
+    function getDepositNonce() external view returns (uint256) {
+        return _depositNonce;
     }
 
-    function setDepositsDataNonce(uint256 _newDepositsDataNonce) external {
-        _depositsDataNonce = _newDepositsDataNonce;
+    function setDepositNonce(uint256 _newDepositNonce) external {
+        _depositNonce = _newDepositNonce;
     }
 
     function getNodeOperatorsCount() external view returns (uint256) {}

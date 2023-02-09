@@ -26,12 +26,12 @@ interface IStakingModule {
         returns (ValidatorsReport memory report);
 
     /// @notice Returns a counter that MUST change it's value when any of the following happens:
-    ///     1. a node operator's validator(s) is added
-    ///     2. a node operator's validator(s) is removed
+    ///     1. a node operator's deposit data is added
+    ///     2. a node operator's deposit data is removed
     ///     3. a node operator's ready to deposit validators count is changed
     ///     4. a node operator was activated/deactivated
-    ///     5. a node operator's validator(s) is used for the deposit
-    function getDepositsDataNonce() external view returns (uint256);
+    ///     5. a node operator's deposit data is used for the deposit
+    function getDepositNonce() external view returns (uint256);
 
     /// @notice Returns total number of node operators
     function getNodeOperatorsCount() external view returns (uint256);
@@ -104,5 +104,5 @@ interface IStakingModule {
         bytes memory signatures
     );
 
-    event DepositsDataNonceChanged(uint256 depositsDataNonce);
+    event DepositNonceChanged(uint256 depositNonce);
 }

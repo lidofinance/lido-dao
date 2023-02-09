@@ -17,7 +17,7 @@ contract ModuleSolo is IStakingModule {
 
     bytes32 public moduleType;
 
-    uint16 public depositsDataNonce;
+    uint16 public depositNonce;
 
     uint256 public constant PUBKEY_LENGTH = 48;
     uint256 public constant SIGNATURE_LENGTH = 96;
@@ -38,8 +38,8 @@ contract ModuleSolo is IStakingModule {
 
     function getValidatorsReport(uint256 _nodeOperatorId) external view returns (ValidatorsReport memory report) {}
 
-    function getDepositsDataNonce() external view returns (uint256) {
-        return depositsDataNonce;
+    function getDepositNonce() external view returns (uint256) {
+        return depositNonce;
     }
 
     function getNodeOperatorsCount() external view returns (uint256) {}

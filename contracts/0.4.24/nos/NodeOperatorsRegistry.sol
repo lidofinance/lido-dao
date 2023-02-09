@@ -25,7 +25,7 @@ interface IStETH {
 ///      See 0.8.9/interface/IStakingModule.sol for the full version.
 ///      We don't inherit 0.8.9 IStakingModule due to the solidity version conflict.
 interface IStakingModule {
-    event DepositsDataNonceChanged(uint256 depositsDataNonce);
+    event DepositNonceChanged(uint256 depositNonce);
 }
 
 
@@ -1075,7 +1075,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     ///     3. a node operator's ready to deposit validators count is changed
     ///     4. a node operator was activated/deactivated
     ///     5. a node operator's validator(s) is used for the deposit
-    function getDepositsDataNonce() external view returns (uint256) {
+    function getDepositNonce() external view returns (uint256) {
         return KEYS_OP_INDEX_POSITION.getStorageUint256();
     }
 
@@ -1186,7 +1186,7 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         KEYS_OP_INDEX_POSITION.setStorageUint256(keysOpIndex);
         /// @dev [DEPRECATED] event preserved for tooling compatibility
         emit KeysOpIndexSet(keysOpIndex);
-        emit DepositsDataNonceChanged(keysOpIndex);
+        emit DepositNonceChanged(keysOpIndex);
     }
 
     function _setTotalSigningKeysStats(SigningKeysStats.State memory _validatorsKeysStats) internal {

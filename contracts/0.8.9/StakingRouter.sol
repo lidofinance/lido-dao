@@ -541,11 +541,11 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         return getStakingModuleStatus(_stakingModuleId) == StakingModuleStatus.Active;
     }
 
-    function getStakingModuleDepositsDataNonce(uint256 _stakingModuleId) external view
+    function getStakingModuleDepositNonce(uint256 _stakingModuleId) external view
         validStakingModuleId(_stakingModuleId)
         returns (uint256)
     {
-        return IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getDepositsDataNonce();
+        return IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getDepositNonce();
     }
 
     function getStakingModuleLastDepositBlock(uint256 _stakingModuleId) external view

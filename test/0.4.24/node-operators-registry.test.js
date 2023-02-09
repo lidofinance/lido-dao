@@ -299,20 +299,20 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.emits(receipt, 'StakingModuleTypeSet', { moduleType })
     })
 
-    it('increases keysOpIndex & changes validatorKeysNonce', async () => {
-      const [keysOpIndexBefore, validatorsKeysNonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
+    it('increases keysOpIndex & changes depositNonce', async () => {
+      const [keysOpIndexBefore, depositNonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getDepositNonce()])
       await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
-      const [keysOpIndexAfter, validatorsKeysNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
+      const [keysOpIndexAfter, depositNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
-      assert.notEquals(validatorsKeysNonceAfter, validatorsKeysNonceBefore)
+      assert.notEquals(depositNonceAfter, depositNonceBefore)
     })
 
-    it('emits KeysOpIndexSet & DepositsDataNonceChanged', async () => {
+    it('emits KeysOpIndexSet & DepositNonceChanged', async () => {
       const keysOpIndexBefore = await app.getKeysOpIndex()
       const receipt = await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
-      const validatorsKeysNonceAfter = await app.getDepositsDataNonce()
+      const depositNonceAfter = await app.getDepositNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
-      assert.emits(receipt, 'DepositsDataNonceChanged', { depositsDataNonce: validatorsKeysNonceAfter })
+      assert.emits(receipt, 'DepositNonceChanged', { depositNonce: depositNonceAfter })
     })
   })
 
@@ -469,29 +469,29 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await assert.reverts(app.activateNodeOperator(activeNodeOperatorId, { from: voting }), 'NODE_OPERATOR_ALREADY_ACTIVATED')
     })
 
-    it('increases keysOpIndex & changes validatorKeysNonce', async () => {
+    it('increases keysOpIndex & changes depositNonce', async () => {
       const nodeOperatorId = 2
-      const [nodeOperator, keysOpIndexBefore, validatorsKeysNonceBefore] = await Promise.all([
+      const [nodeOperator, keysOpIndexBefore, depositNonceBefore] = await Promise.all([
         app.getNodeOperator(nodeOperatorId, false),
         app.getKeysOpIndex(),
-        app.getDepositsDataNonce()
+        app.getDepositNonce()
       ])
       assert.isFalse(nodeOperator.active)
       await app.activateNodeOperator(nodeOperatorId, { from: voting })
-      const [keysOpIndexAfter, validatorsKeysNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
+      const [keysOpIndexAfter, depositNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
-      assert.notEquals(validatorsKeysNonceAfter, validatorsKeysNonceBefore)
+      assert.notEquals(depositNonceAfter, depositNonceBefore)
     })
 
-    it('emits KeysOpIndexSet & DepositsDataNonceChanged', async () => {
+    it('emits KeysOpIndexSet & DepositNonceChanged', async () => {
       const nodeOperatorId = 2
       const nodeOperator = await app.getNodeOperator(nodeOperatorId, false)
       const keysOpIndexBefore = await app.getKeysOpIndex()
       assert.isFalse(nodeOperator.active)
       const receipt = await app.activateNodeOperator(nodeOperatorId, { from: voting })
-      const validatorsKeysNonceAfter = await app.getDepositsDataNonce()
+      const depositNonceAfter = await app.getDepositNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
-      assert.emits(receipt, 'DepositsDataNonceChanged', { depositsDataNonce: validatorsKeysNonceAfter })
+      assert.emits(receipt, 'DepositNonceChanged', { depositNonce: depositNonceAfter })
     })
 
     it('sets active state of node operator to true when it is deactivated', async () => {
@@ -699,24 +699,24 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.emits(receipt, 'NodeOperatorActiveSet', { nodeOperatorId: activeNodeOperatorId, active: false })
     })
 
-    it('increases keysOpIndex & changes validatorKeysNonce', async () => {
+    it('increases keysOpIndex & changes depositNonce', async () => {
       const activeNodeOperatorId = await nodeOperators.findNodeOperatorId(app, (operator) => operator.active)
       assert.notEqual(activeNodeOperatorId, -1, `Invariant: active node operator not found`)
-      const [keysOpIndexBefore, validatorsKeysNonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
+      const [keysOpIndexBefore, depositNonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getDepositNonce()])
       await app.deactivateNodeOperator(activeNodeOperatorId, { from: voting })
-      const [keysOpIndexAfter, validatorsKeysNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
+      const [keysOpIndexAfter, depositNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
-      assert.notEquals(validatorsKeysNonceAfter, validatorsKeysNonceBefore)
+      assert.notEquals(depositNonceAfter, depositNonceBefore)
     })
 
-    it('emits KeysOpIndexSet & DepositsDataNonceChanged', async () => {
+    it('emits KeysOpIndexSet & DepositNonceChanged', async () => {
       const activeNodeOperatorId = await nodeOperators.findNodeOperatorId(app, (operator) => operator.active)
       assert.notEqual(activeNodeOperatorId, -1, `Invariant: active node operator not found`)
       const keysOpIndexBefore = await app.getKeysOpIndex()
       const receipt = await app.deactivateNodeOperator(activeNodeOperatorId, { from: voting })
-      const validatorsKeysNonceAfter = await app.getDepositsDataNonce()
+      const depositNonceAfter = await app.getDepositNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
-      assert.emits(receipt, 'DepositsDataNonceChanged', { depositsDataNonce: validatorsKeysNonceAfter })
+      assert.emits(receipt, 'DepositNonceChanged', { depositNonce: depositNonceAfter })
     })
   })
 
@@ -894,21 +894,21 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it("doesn't change state & doesn't emit events when new staking limit is the same", async () => {
-      const [{ stakingLimit: stakingLimitBefore }, validatorsKeysNonceBefore, keysOpIndexBefore] = await Promise.all([
+      const [{ stakingLimit: stakingLimitBefore }, depositNonceBefore, keysOpIndexBefore] = await Promise.all([
         app.getNodeOperator(firstNodeOperatorId, false),
-        app.getDepositsDataNonce(),
+        app.getDepositNonce(),
         app.getKeysOpIndex()
       ])
       const receipt = await app.setNodeOperatorStakingLimit(firstNodeOperatorId, stakingLimitBefore, { from: voting })
       assert.notEmits(receipt, 'VettedSigningKeysCountChanged')
-      const [{ stakingLimit: stakingLimitAfter }, validatorsKeysNonceAfter, keysOpIndexAfter] = await Promise.all([
+      const [{ stakingLimit: stakingLimitAfter }, depositNonceAfter, keysOpIndexAfter] = await Promise.all([
         app.getNodeOperator(firstNodeOperatorId, false),
-        app.getDepositsDataNonce(),
+        app.getDepositNonce(),
         app.getKeysOpIndex()
       ])
       assert.equals(stakingLimitBefore, stakingLimitAfter)
       assert.equals(keysOpIndexBefore, keysOpIndexAfter)
-      assert.equals(validatorsKeysNonceBefore, validatorsKeysNonceAfter)
+      assert.equals(depositNonceBefore, depositNonceAfter)
     })
 
     it('reduces total vetted validator keys count correctly if new value less than previous', async () => {
@@ -934,20 +934,20 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       })
     })
 
-    it('increases keysOpIndex & changes validatorKeysNonce on vettedSigningKeysCount change', async () => {
-      const [keysOpIndexBefore, validatorsKeysNonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
+    it('increases keysOpIndex & changes depositNonce on vettedSigningKeysCount change', async () => {
+      const [keysOpIndexBefore, depositNonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getDepositNonce()])
       await app.setNodeOperatorStakingLimit(0, 40, { from: voting })
-      const [keysOpIndexAfter, validatorsKeysNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
+      const [keysOpIndexAfter, depositNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
-      assert.equals(validatorsKeysNonceAfter, validatorsKeysNonceBefore.toNumber() + 1)
+      assert.equals(depositNonceAfter, depositNonceBefore.toNumber() + 1)
     })
 
-    it('emits KeysOpIndexSet & DepositsDataNonceChanged on vettedSigningKeysCount change', async () => {
+    it('emits KeysOpIndexSet & DepositNonceChanged on vettedSigningKeysCount change', async () => {
       const keysOpIndexBefore = await app.getKeysOpIndex()
       const receipt = await app.setNodeOperatorStakingLimit(0, 40, { from: voting })
-      const validatorsKeysNonceAfter = await app.getDepositsDataNonce()
+      const depositNonceAfter = await app.getDepositNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
-      assert.emits(receipt, 'DepositsDataNonceChanged', { depositsDataNonce: validatorsKeysNonceAfter })
+      assert.emits(receipt, 'DepositNonceChanged', { depositNonce: depositNonceAfter })
     })
 
     it("doesn't affect other node operators staking limits", async () => {
@@ -1250,20 +1250,20 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(totalSigningKeysStatsAfter.totalSigningKeysCount, totalSigningKeysStatsBefore.depositedSigningKeysCount)
     })
 
-    it('increases keysOpIndex & changes validatorKeysNonce', async () => {
-      const [keysOpIndexBefore, validatorsKeysNonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
+    it('increases keysOpIndex & changes depositNonce', async () => {
+      const [keysOpIndexBefore, depositNonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getDepositNonce()])
       await app.invalidateDepositsData({ from: voting })
-      const [keysOpIndexAfter, validatorsKeysNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
+      const [keysOpIndexAfter, depositNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
-      assert.notEquals(validatorsKeysNonceAfter, validatorsKeysNonceBefore)
+      assert.notEquals(depositNonceAfter, depositNonceBefore)
     })
 
-    it('emits KeysOpIndexSet & DepositsDataNonceChanged', async () => {
+    it('emits KeysOpIndexSet & DepositNonceChanged', async () => {
       const keysOpIndexBefore = await app.getKeysOpIndex()
       const receipt = await app.invalidateDepositsData({ from: voting })
-      const validatorsKeysNonceAfter = await app.getDepositsDataNonce()
+      const depositNonceAfter = await app.getDepositNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
-      assert.emits(receipt, 'DepositsDataNonceChanged', { depositsDataNonce: validatorsKeysNonceAfter })
+      assert.emits(receipt, 'DepositNonceChanged', { depositNonce: depositNonceAfter })
     })
 
     it("doesn't change validators keys nonce if keys weren't invalidated", async () => {
@@ -1271,10 +1271,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await app.invalidateDepositsData({ from: voting })
       // the second invalidation must not invalidate keys
       const receipt = app.invalidateDepositsData({ from: voting })
-      const validatorsKeysNonceBefore = await app.getDepositsDataNonce()
+      const depositNonceBefore = await app.getDepositNonce()
       assert.notEmits(receipt, 'NodeOperatorTotalKeysTrimmed')
-      const validatorsKeysNonceAfter = await app.getDepositsDataNonce()
-      assert.equals(validatorsKeysNonceBefore, validatorsKeysNonceAfter)
+      const depositNonceAfter = await app.getDepositNonce()
+      assert.equals(depositNonceBefore, depositNonceAfter)
     })
   })
 
@@ -1553,11 +1553,11 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const activeNodeOperatorsCount = await app.getActiveNodeOperatorsCount()
       assert.equals(activeNodeOperatorsCount, 0)
 
-      const validatorsKeysNonceBefore = await app.getDepositsDataNonce()
+      const depositNonceBefore = await app.getDepositNonce()
       const keysToAllocate = 10
       await app.testing_obtainDepositData(keysToAllocate)
-      const validatorsKeysNonceAfter = await app.getDepositsDataNonce()
-      assert.equals(validatorsKeysNonceBefore, validatorsKeysNonceAfter)
+      const depositNonceAfter = await app.getDepositNonce()
+      assert.equals(depositNonceBefore, depositNonceAfter)
     })
 
     it("doesn't emits DepositedSigningKeysCountChanged when no available keys for deposit", async () => {
@@ -1637,13 +1637,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equal(keysLoadedEvent.signatures, null, 'no singing keys left: signatures')
     })
 
-    it('increases keysOpIndex & changes validatorKeysNonce', async () => {
-      const [keysOpIndexBefore, validatorsKeysNonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
+    it('increases keysOpIndex & changes depositNonce', async () => {
+      const [keysOpIndexBefore, depositNonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getDepositNonce()])
       const keysToAllocate = 10
       await app.testing_obtainDepositData(keysToAllocate)
-      const [keysOpIndexAfter, validatorsKeysNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
+      const [keysOpIndexAfter, depositNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
-      assert.notEquals(validatorsKeysNonceAfter, validatorsKeysNonceBefore)
+      assert.notEquals(depositNonceAfter, depositNonceBefore)
     })
 
     it('increases global deposited signing keys counter', async () => {
@@ -1656,13 +1656,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equal(depositedSigningKeysCountAfter.toNumber(), depositedSigningKeysCountBefore.toNumber() + 4)
     })
 
-    it('emits KeysOpIndexSet & DepositsDataNonceChanged', async () => {
+    it('emits KeysOpIndexSet & DepositNonceChanged', async () => {
       const keysOpIndexBefore = await app.getKeysOpIndex()
       const keysToAllocate = 10
       const receipt = await app.testing_obtainDepositData(keysToAllocate)
-      const validatorsKeysNonceAfter = await app.getDepositsDataNonce()
+      const depositNonceAfter = await app.getDepositNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
-      assert.emits(receipt, 'DepositsDataNonceChanged', { depositsDataNonce: validatorsKeysNonceAfter })
+      assert.emits(receipt, 'DepositNonceChanged', { depositNonce: depositNonceAfter })
     })
 
     it('emits DepositedSigningKeysCountChanged when keys were loaded', async () => {
@@ -1914,22 +1914,22 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equal(totalSigningKeysCountAfter, totalSigningKeysCountBefore.toNumber() + firstNodeOperatorKeys.count)
     })
 
-    it('increases keysOpIndex & changes validatorKeysNonce', async () => {
-      const [keysOpIndexBefore, validatorsKeysNonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
+    it('increases keysOpIndex & changes depositNonce', async () => {
+      const [keysOpIndexBefore, depositNonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getDepositNonce()])
       await app.addSigningKeys(firstNodeOperatorId, firstNodeOperatorKeys.count, ...firstNodeOperatorKeys.slice(), { from: voting })
-      const [keysOpIndexAfter, validatorsKeysNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
+      const [keysOpIndexAfter, depositNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
-      assert.notEquals(validatorsKeysNonceAfter, validatorsKeysNonceBefore)
+      assert.notEquals(depositNonceAfter, depositNonceBefore)
     })
 
-    it('emits KeysOpIndexSet & DepositsDataNonceChanged', async () => {
+    it('emits KeysOpIndexSet & DepositNonceChanged', async () => {
       const keysOpIndexBefore = await app.getKeysOpIndex()
       const receipt = await app.addSigningKeys(firstNodeOperatorId, firstNodeOperatorKeys.count, ...firstNodeOperatorKeys.slice(), {
         from: voting
       })
-      const validatorsKeysNonceAfter = await app.getDepositsDataNonce()
+      const depositNonceAfter = await app.getDepositNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
-      assert.emits(receipt, 'DepositsDataNonceChanged', { depositsDataNonce: validatorsKeysNonceAfter })
+      assert.emits(receipt, 'DepositNonceChanged', { depositNonce: depositNonceAfter })
     })
 
     it('emits SigningKeyAdded with correct params for every added key', async () => {
@@ -2100,22 +2100,22 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(vettedSigningKeysCountAfter, vettedSigningKeysCountBefore)
     })
 
-    it('increases keysOpIndex & changes validatorKeysNonce', async () => {
+    it('increases keysOpIndex & changes depositNonce', async () => {
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount + 1
-      const [keysOpIndexBefore, validatorsKeysNonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
+      const [keysOpIndexBefore, depositNonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getDepositNonce()])
       await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: voting })
-      const [keysOpIndexAfter, validatorsKeysNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
+      const [keysOpIndexAfter, depositNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
-      assert.notEquals(validatorsKeysNonceAfter, validatorsKeysNonceBefore)
+      assert.notEquals(depositNonceAfter, depositNonceBefore)
     })
 
-    it('emits KeysOpIndexSet & DepositsDataNonceChanged', async () => {
+    it('emits KeysOpIndexSet & DepositNonceChanged', async () => {
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount + 1
       const keysOpIndexBefore = await app.getKeysOpIndex()
       const receipt = await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: voting })
-      const validatorsKeysNonceAfter = await app.getDepositsDataNonce()
+      const depositNonceAfter = await app.getDepositNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
-      assert.emits(receipt, 'DepositsDataNonceChanged', { depositsDataNonce: validatorsKeysNonceAfter })
+      assert.emits(receipt, 'DepositNonceChanged', { depositNonce: depositNonceAfter })
     })
 
     it('correctly removes the last unused signing key', async () => {
@@ -2387,26 +2387,26 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(vettedSigningKeysCountAfter, vettedSigningKeysCountBefore)
     })
 
-    it('increases keysOpIndex & changes validatorKeysNonce', async () => {
+    it('increases keysOpIndex & changes depositNonce', async () => {
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount + 1
       const keysCount = NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount - keyIndex
       assert(keysCount > 0)
-      const [keysOpIndexBefore, validatorsKeysNonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
+      const [keysOpIndexBefore, depositNonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getDepositNonce()])
       await app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: voting })
-      const [keysOpIndexAfter, validatorsKeysNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositsDataNonce()])
+      const [keysOpIndexAfter, depositNonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getDepositNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
-      assert.notEquals(validatorsKeysNonceAfter, validatorsKeysNonceBefore)
+      assert.notEquals(depositNonceAfter, depositNonceBefore)
     })
 
-    it('emits KeysOpIndexSet & DepositsDataNonceChanged', async () => {
+    it('emits KeysOpIndexSet & DepositNonceChanged', async () => {
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount + 1
       const keysCount = NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount - keyIndex
       assert(keysCount > 0)
       const keysOpIndexBefore = await app.getKeysOpIndex()
       const receipt = await app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: voting })
-      const validatorsKeysNonceAfter = await app.getDepositsDataNonce()
+      const depositNonceAfter = await app.getDepositNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
-      assert.emits(receipt, 'DepositsDataNonceChanged', { depositsDataNonce: validatorsKeysNonceAfter })
+      assert.emits(receipt, 'DepositNonceChanged', { depositNonce: depositNonceAfter })
     })
 
     it('correctly removes all unvetted keys', async () => {
