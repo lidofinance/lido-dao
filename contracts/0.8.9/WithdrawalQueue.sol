@@ -141,8 +141,6 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         requestIds = new uint256[](amounts.length);
         for (uint256 i = 0; i < amounts.length; ++i) {
             uint256 amountOfWstETH = amounts[i];
-            uint256 amountOfStETH = WSTETH.getStETHByWstETH(amountOfWstETH);
-            _checkWithdrawalRequestAmount(amountOfStETH);
             requestIds[i] = _requestWithdrawalWstETH(amountOfWstETH, _owner);
         }
     }
@@ -343,9 +341,10 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     function _requestWithdrawalWstETH(uint256 _amountOfWstETH, address _owner) internal returns (uint256 requestId) {
         WSTETH.transferFrom(msg.sender, address(this), _amountOfWstETH);
         uint256 amountOfStETH = WSTETH.unwrap(_amountOfWstETH);
+        _checkWithdrawalRequestAmount(amountOfStETH);
 
         uint256 amountOfShares = STETH.getSharesByPooledEth(amountOfStETH);
-
+        
         requestId = _enqueue(uint128(amountOfStETH), uint128(amountOfShares), _owner);
 
         _emitTransfer(address(0), _owner, requestId);
