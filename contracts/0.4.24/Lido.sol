@@ -54,8 +54,8 @@ interface IOracleReportSanityChecker {
     );
 
     function checkWithdrawalQueueOracleReport(
-        uint256 _requestIdToFinalizeUpTo,
-        uint256 _refReportTimestamp
+        uint256 _lastFinalizableRequestId,
+        uint256 _reportTimestamp
     ) external view;
 }
 
