@@ -143,7 +143,7 @@ contract AccountingOracle is BaseOracle {
 
     address public immutable LIDO;
     ILidoLocator public immutable LOCATOR;
-    address public LEGACY_ORACLE;
+    address public immutable LEGACY_ORACLE;
 
     ///
     /// Initialization & admin functions
@@ -153,6 +153,7 @@ contract AccountingOracle is BaseOracle {
         BaseOracle(secondsPerSlot, genesisTime)
     {
         if (lidoLocator == address(0)) revert LidoLocatorCannotBeZero();
+        if (legacyOracle == address(0)) revert LegacyOracleCannotBeZero();
         LOCATOR = ILidoLocator(lidoLocator);
         LIDO = lido;
         LEGACY_ORACLE = legacyOracle;
@@ -166,7 +167,6 @@ contract AccountingOracle is BaseOracle {
         uint256 maxExtraDataListItemsCount
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
-        if (LEGACY_ORACLE == address(0)) revert LegacyOracleCannotBeZero();
 
         uint256 lastProcessingRefSlot = _checkOracleMigration(LEGACY_ORACLE, consensusContract);
         _initialize(admin, consensusContract, consensusVersion, maxExitedValidatorsPerDay,
@@ -548,13 +548,11 @@ contract AccountingOracle is BaseOracle {
             );
         }
 
-        if (LEGACY_ORACLE != address(0)) {
-            ILegacyOracle(LEGACY_ORACLE).handleConsensusLayerReport(
-                data.refSlot,
-                data.clBalanceGwei * 1e9,
-                data.numValidators
-            );
-        }
+        ILegacyOracle(LEGACY_ORACLE).handleConsensusLayerReport(
+            data.refSlot,
+            data.clBalanceGwei * 1e9,
+            data.numValidators
+        );
 
         uint256 slotsElapsed = data.refSlot - prevRefSlot;
 
