@@ -7,7 +7,7 @@ const { assert } = require('../helpers/assert')
 const withdrawals = require('../helpers/withdrawals')
 const { signPermit, makeDomainSeparator } = require('../0.6.12/helpers/permit_helpers')
 const { MAX_UINT256, ACCOUNTS_AND_KEYS } = require('../0.6.12/helpers/constants')
-const { impersonate } = require('../helpers/blockchain')
+const { impersonate, EvmSnapshot } = require('../helpers/blockchain')
 
 const StETHMock = artifacts.require('StETHMock.sol')
 const WstETH = artifacts.require('WstETHMock.sol')
@@ -15,7 +15,9 @@ const WstETH = artifacts.require('WstETHMock.sol')
 contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
   let withdrawalQueue, steth, wsteth
 
-  beforeEach('Deploy', async () => {
+  const snapshot = new EvmSnapshot(ethers.provider)
+
+  before('Deploy', async () => {
     steth = await StETHMock.new({ value: ETH(601) })
     wsteth = await WstETH.new(steth.address)
 
@@ -28,7 +30,12 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     await steth.mintShares(user, shares(1))
     await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
 
-    await ethers.provider.send('hardhat_impersonateAccount', [steth.address])
+    impersonate(ethers.provider, steth.address)
+    snapshot.make();
+  })
+
+  afterEach(async () => {
+    await snapshot.rollback()
   })
 
   it('Initial properties', async () => {

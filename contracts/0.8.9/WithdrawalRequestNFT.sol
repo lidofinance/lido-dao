@@ -6,10 +6,12 @@ pragma solidity 0.8.9;
 
 import {IERC721} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721Receiver.sol";
+import {IERC721Metadata} from "@openzeppelin/contracts-v4.4/token/ERC721/extensions/IERC721Metadata.sol";
 import {IERC165} from "@openzeppelin/contracts-v4.4/utils/introspection/IERC165.sol";
 
 import {EnumerableSet} from "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
 import {Address} from "@openzeppelin/contracts-v4.4/utils/Address.sol";
+import {Strings} from "@openzeppelin/contracts-v4.4/utils/Strings.sol";
 
 import {IWstETH, WithdrawalQueue} from "./WithdrawalQueue.sol";
 import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
@@ -19,13 +21,21 @@ import {UnstructuredRefStorage} from "./lib/UnstructuredRefStorage.sol";
 /// NFT is minted on every request and burned on claim
 ///
 /// @author psirex, folkyatina
-contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
+contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
     using Address for address;
+    using Strings for uint256;
     using EnumerableSet for EnumerableSet.UintSet;
     using UnstructuredRefStorage for bytes32;
 
     bytes32 internal constant TOKEN_APPROVALS_POSITION = keccak256("lido.WithdrawalRequestNFT.tokenApprovals");
     bytes32 internal constant OPERATOR_APPROVALS_POSITION = keccak256("lido.WithdrawalRequestNFT.operatorApprovals");
+    bytes32 internal constant BASE_URI_POSITION = keccak256("lido.WithdrawalRequestNFT.baseUri");
+
+     bytes32 public constant SET_BASE_URI_ROLE = keccak256("SET_BASE_URI_ROLE");
+
+    struct BaseUri {
+        string value;
+    }
 
     error ApprovalToOwner();
     error ApproveToCaller();
@@ -36,9 +46,20 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     error TransferFromZeroAddress();
     error TransferToNonIERC721Receiver(address);
     error InvalidOwnerAddress(address);
+    error StringTooLong(string str);
+    error ZeroMetadata();
+
+    bytes32 private immutable NAME;
+    bytes32 private immutable SYMBOL;
 
     /// @param _wstETH address of WstETH contract
-    constructor(address _wstETH) WithdrawalQueue(IWstETH(_wstETH)) {}
+    /// @param _name IERC721Metadata name string encoded as bytes32
+    /// @param _symbol IERC721Metadata symbol string encoded as bytes32
+    constructor(address _wstETH, string memory _name, string memory _symbol) WithdrawalQueue(IWstETH(_wstETH)) {
+        if (bytes(_name).length == 0 || bytes(_symbol).length == 0) revert ZeroMetadata();
+        NAME = toShortString(_name);
+        SYMBOL = toShortString(_symbol);
+    }
 
     /// See {IERC165-supportsInterface}.
     function supportsInterface(bytes4 interfaceId)
@@ -48,7 +69,37 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
         override (IERC165, AccessControlEnumerable)
         returns (bool)
     {
-        return interfaceId == type(IERC721).interfaceId || super.supportsInterface(interfaceId);
+        return interfaceId == type(IERC721).interfaceId || interfaceId == type(IERC721Metadata).interfaceId
+            || super.supportsInterface(interfaceId);
+    }
+
+    /// @dev See {IERC721Metadata-name}.
+    function name() external view returns (string memory) {
+        return toString(NAME);
+    }
+
+    /// @dev See {IERC721Metadata-symbol}.
+    function symbol() external view override returns (string memory) {
+        return toString(SYMBOL);
+    }
+
+    /// @dev See {IERC721Metadata-tokenURI}.
+    function tokenURI(uint256 _requestId) public view virtual override returns (string memory) {
+        if (!_existsAndNotClaimed(_requestId)) revert InvalidRequestId(_requestId);
+
+        string memory baseURI = _getBaseUri().value;
+        return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, _requestId.toString())) : "";
+    }
+
+    /// @notice Base URI for computing {tokenURI}. If set, the resulting URI for each
+    /// token will be the concatenation of the `baseURI` and the `_requestId`.
+    function getBaseUri() external view returns (string memory) {
+        return _getBaseUri().value;
+    }
+
+    /// @notice Sets the Base URI for computing {tokenURI}
+    function setBaseUri(string calldata _baseUri) external onlyRole(SET_BASE_URI_ROLE) {
+        _getBaseUri().value = _baseUri;
     }
 
     /// @dev See {IERC721-balanceOf}.
@@ -219,5 +270,38 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
 
     function _getOperatorApprovals() internal pure returns (mapping(address => mapping(address => bool)) storage) {
         return OPERATOR_APPROVALS_POSITION.storageMapAddressMapAddressBool();
+    }
+
+    function _getBaseUri() internal pure returns (BaseUri storage baseUri) {
+        bytes32 position = BASE_URI_POSITION;
+        assembly {
+            baseUri.slot := position
+        }
+    }
+
+    /// @dev Decode a `ShortString` back to a "normal" string.
+    function toString(bytes32 sstr) internal pure returns (string memory) {
+        uint256 len = length(sstr);
+        // using `new string(len)` would work locally but is not memory safe.
+        string memory str = new string(32);
+        /// @solidity memory-safe-assembly
+        assembly {
+            mstore(str, len)
+            mstore(add(str, 0x20), sstr)
+        }
+        return str;
+    }
+
+    function toShortString(string memory str) internal pure returns (bytes32) {
+        bytes memory bstr = bytes(str);
+        if (bstr.length > 31) {
+            revert StringTooLong(str);
+        }
+        return bytes32(uint256(bytes32(bstr)) | bstr.length);
+    }
+
+    /// @dev Return the length of a `ShortString`.
+    function length(bytes32 sstr) internal pure returns (uint256) {
+        return uint256(sstr) & 0xFF;
     }
 }
