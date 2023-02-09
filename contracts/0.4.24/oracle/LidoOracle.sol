@@ -270,20 +270,15 @@ contract LidoOracle is AragonApp {
      * @notice Initializes the contract (the compat-only deprecated version 4) from scratch.
      * @param _lidoLocator Address of the Lido Locator contract.
      * @param _accountingOracleConsensusContract Address of consensus contract of the new accounting oracle contract.
-     * @param _lastCompletedEpochId Last completed epoch id position. Might want to set non-zero because
-     *        on initialization the new oracle checks its initial epoch against last completed epoch of legacy oracle
      */
     function initialize(
         address _lidoLocator,
-        address _accountingOracleConsensusContract,
-        uint256 _lastCompletedEpochId
+        address _accountingOracleConsensusContract
     ) external onlyInit {
         // Initializations for v0 --> v3
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
         require(_lidoLocator != address(0), "ZERO_LOCATOR_ADDRESS");
         ILidoLocator locator = ILidoLocator(_lidoLocator);
-
-        LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(_lastCompletedEpochId);
 
         LIDO_POSITION.setStorageAddress(locator.lido());
 
