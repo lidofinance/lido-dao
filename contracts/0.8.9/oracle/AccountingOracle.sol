@@ -823,7 +823,7 @@ contract AccountingOracle is BaseOracle {
         }
 
         unchecked {
-            // | 2 bytes  | 41 bytes | 3 bytes  |    8 bytes    |
+            // | 2 bytes  | 19 bytes | 3 bytes  |    8 bytes    |
             // | itemType | 00000000 | moduleId | firstNodeOpId |
             uint256 sortingKey = (iter.itemType << 240) | (moduleId << 64) | firstNodeOpId;
             if (sortingKey <= iter.lastSortingKey) {
