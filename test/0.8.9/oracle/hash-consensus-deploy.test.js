@@ -42,8 +42,8 @@ async function deployHashConsensus(
     secondsPerSlot = SECONDS_PER_SLOT,
     genesisTime = GENESIS_TIME,
     epochsPerFrame = EPOCHS_PER_FRAME,
-    fastLaneLengthSlots = 0,
-    initialEpoch = 1
+    fastLaneLengthSlots = INITIAL_FAST_LANE_LENGHT_SLOTS,
+    initialEpoch = INITIAL_EPOCH
   } = {}
 ) {
   if (!reportProcessor) {
@@ -58,7 +58,7 @@ async function deployHashConsensus(
     initialEpoch,
     fastLaneLengthSlots,
     admin,
-    reportProcessorAddress || reportProcessor.address,
+    reportProcessor.address,
     { from: admin }
   )
 
@@ -74,6 +74,8 @@ async function deployHashConsensus(
 }
 
 module.exports = {
+  INITIAL_FAST_LANE_LENGHT_SLOTS,
+  INITIAL_EPOCH,
   SLOTS_PER_EPOCH,
   SECONDS_PER_SLOT,
   GENESIS_TIME,
