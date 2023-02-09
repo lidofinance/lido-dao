@@ -11,6 +11,7 @@ const SECONDS_PER_SLOT = 12
 const GENESIS_TIME = 100
 const EPOCHS_PER_FRAME = 225 // one day
 const INITIAL_EPOCH = 1
+const INITIAL_FAST_LANE_LENGHT_SLOTS = 0
 
 const SECONDS_PER_EPOCH = SLOTS_PER_EPOCH * SECONDS_PER_SLOT
 const SECONDS_PER_FRAME = SECONDS_PER_EPOCH * EPOCHS_PER_FRAME
@@ -42,7 +43,7 @@ async function deployHashConsensus(
     secondsPerSlot = SECONDS_PER_SLOT,
     genesisTime = GENESIS_TIME,
     epochsPerFrame = EPOCHS_PER_FRAME,
-    fastLaneLengthSlots = 0,
+    fastLaneLengthSlots = INITIAL_FAST_LANE_LENGHT_SLOTS,
     initialEpoch = INITIAL_EPOCH
   } = {}
 ) {
@@ -74,6 +75,7 @@ async function deployHashConsensus(
 }
 
 module.exports = {
+  INITIAL_FAST_LANE_LENGHT_SLOTS,
   INITIAL_EPOCH,
   SLOTS_PER_EPOCH,
   SECONDS_PER_SLOT,
