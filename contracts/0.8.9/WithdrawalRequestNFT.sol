@@ -52,7 +52,7 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     }
 
     /// @dev See {IERC721-balanceOf}.
-    function balanceOf(address _owner) public view override returns (uint256) {
+    function balanceOf(address _owner) external view override returns (uint256) {
         if (_owner == address(0)) revert InvalidOwnerAddress(_owner);
         return _getRequestsByOwner()[_owner].length();
     }
@@ -68,7 +68,7 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     }
 
     /// @dev See {IERC721-approve}.
-    function approve(address _to, uint256 _requestId) public override {
+    function approve(address _to, uint256 _requestId) external override {
         address owner = ownerOf(_requestId);
         if (_to == owner) revert ApprovalToOwner();
         if (msg.sender != owner && !isApprovedForAll(owner, msg.sender)) revert NotOwnerOrApprovedForAll(msg.sender);
@@ -77,14 +77,14 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     }
 
     /// @dev See {IERC721-getApproved}.
-    function getApproved(uint256 _requestId) public view override returns (address) {
+    function getApproved(uint256 _requestId) external view override returns (address) {
         if (!_existsAndNotClaimed(_requestId)) revert InvalidRequestId(_requestId);
 
         return _getTokenApprovals()[_requestId];
     }
 
     /// @dev See {IERC721-setApprovalForAll}.
-    function setApprovalForAll(address _operator, bool _approved) public override {
+    function setApprovalForAll(address _operator, bool _approved) external override {
         _setApprovalForAll(msg.sender, _operator, _approved);
     }
 
@@ -94,19 +94,22 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     }
 
     /// @dev See {IERC721-safeTransferFrom}.
-    function safeTransferFrom(address _from, address _to, uint256 _requestId) public override {
+    function safeTransferFrom(address _from, address _to, uint256 _requestId) external override {
         safeTransferFrom(_from, _to, _requestId, "");
     }
 
     /// @dev See {IERC721-safeTransferFrom}.
     function safeTransferFrom(address _from, address _to, uint256 _requestId, bytes memory _data) public override {
-        if (!_isApprovedOrOwner(msg.sender, _requestId)) revert NotOwnerOrApproved(msg.sender);
-        _safeTransfer(_from, _to, _requestId, _data);
+        _transfer(_from, _to, _requestId);
+        if (!_checkOnERC721Received(_from, _to, _requestId, _data)) {
+            revert TransferToNonIERC721Receiver(_to);
+        }
+
+        emit Transfer(_from, _to, _requestId);
     }
 
     /// @dev See {IERC721-transferFrom}.
-    function transferFrom(address _from, address _to, uint256 _requestId) public override {
-        if (!_isApprovedOrOwner(msg.sender, _requestId)) revert NotOwnerOrApproved(msg.sender);
+    function transferFrom(address _from, address _to, uint256 _requestId) external override {
         _transfer(_from, _to, _requestId);
 
         emit Transfer(_from, _to, _requestId);
@@ -118,41 +121,23 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     /// Requirements:
     ///
     /// - `_to` cannot be the zero address.
-    /// - `_requestId` request must be owned by `_from`.
+    /// - `_requestId` request must not be claimed and be owned by `_from`.
+    /// - `msg.sender` should be approved, or approved for all, or owner
     function _transfer(address _from, address _to, uint256 _requestId) internal {
         if (_to == address(0)) revert TransferToZeroAddress();
         if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
         WithdrawalRequest storage request = _getQueue()[_requestId];
+        if (request.claimed) revert RequestAlreadyClaimed(_requestId);
 
         if (_from != request.owner) revert TransferFromIncorrectOwner(_from, request.owner);
-        if (request.claimed) revert RequestAlreadyClaimed(_requestId);
+        if (!_isApprovedOrOwner(msg.sender, _requestId, request)) revert NotOwnerOrApproved(msg.sender);
 
         delete _getTokenApprovals()[_requestId];
         request.owner = payable(_to);
 
         _getRequestsByOwner()[_to].add(_requestId);
         _getRequestsByOwner()[_from].remove(_requestId);
-    }
-
-    /// @dev Safely transfers `_requestId` token from `_from` to `_to`, checking first that contract recipients
-    ///  are aware of the ERC721 protocol to prevent tokens from being forever locked.
-    ///  `_data` is additional data, it has no specified format and it is sent in call to `to`.
-    ///
-    /// Requirements:
-    ///
-    ///  - `_to` cannot be the zero address.
-    ///  - `_requestId` token must exist and be owned by `_from`.
-    ///  - If `to` refers to a smart contract, it must implement {IERC721Receiver-onERC721Received}, which is called upon a safe transfer.
-    ///
-    ///  Emits a {Transfer} event.
-    function _safeTransfer(address _from, address _to, uint256 _requestId, bytes memory _data) internal {
-        _transfer(_from, _to, _requestId);
-        if (!_checkOnERC721Received(_from, _to, _requestId, _data)) {
-            revert TransferToNonIERC721Receiver(_to);
-        }
-
-        emit Transfer(_from, _to, _requestId);
     }
 
     /// @dev Internal function to invoke {IERC721Receiver-onERC721Received} on a target address.
@@ -189,10 +174,14 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     ///
     /// Requirements:
     ///
-    /// - `_requestId` must exist.
-    function _isApprovedOrOwner(address _spender, uint256 _requestId) internal view returns (bool) {
-        address owner = ownerOf(_requestId);
-        return (_spender == owner || isApprovedForAll(owner, _spender) || getApproved(_requestId) == _spender);
+    /// - `_requestId` must exist (not checking).
+    function _isApprovedOrOwner(address _spender, uint256 _requestId, WithdrawalRequest memory request)
+        internal
+        view
+        returns (bool)
+    {
+        address owner = request.owner;
+        return (_spender == owner || isApprovedForAll(owner, _spender) || _getTokenApprovals()[_requestId] == _spender);
     }
 
     //
