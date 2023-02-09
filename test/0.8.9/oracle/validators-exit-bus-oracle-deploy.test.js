@@ -80,6 +80,7 @@ async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
 
 async function deployExitBusOracle(admin, {
   dataSubmitter = null,
+  lastProcessingRefSlot = 0,
   resumeAfterDeploy = false,
 } = {}) {
   const locator = await deployLocatorWithInvalidImplementation(admin)
@@ -94,17 +95,15 @@ async function deployExitBusOracle(admin, {
 
   const oracleReportSanityChecker = await deployOracleReportSanityCheckerForExitBus(locator, admin)
   await updateLocatorImplementation(locator, admin, {
-    validatorExitBus: oracle.address,
+    validatorsExitBusOracle: oracle.address,
     oracleReportSanityChecker : oracleReportSanityChecker,
   })
-
-  const lastProcessedRefSlot = 0
 
   const tx = await oracle.initialize(
     admin,
     consensus.address,
     CONSENSUS_VERSION,
-    lastProcessedRefSlot,
+    lastProcessingRefSlot,
     {from: admin}
   )
 
@@ -142,7 +141,7 @@ async function deployExitBusOracle(admin, {
 }
 
 
-contract.only('ValidatorsExitBusOracle', ([admin, member1]) => {
+contract('ValidatorsExitBusOracle', ([admin, member1]) => {
   let consensus
   let oracle
 

@@ -11,7 +11,7 @@ const locatorServices = [
   'burner',
   'stakingRouter',
   'treasury',
-  'validatorExitBus',
+  'validatorsExitBusOracle',
   'withdrawalQueue',
   'withdrawalVault',
   'postTokenRebaseReceiver'
