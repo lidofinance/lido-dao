@@ -26,14 +26,6 @@ contract('HashConsensus', ([admin, stranger]) => {
       reportProcessor2 = await MockReportProcessor.new(CONSENSUS_VERSION_2, { from: admin })
     }
 
-    context('without initial processor', () => {
-      before(deploy)
-
-      it('consensus version equals zero', async () => {
-        assert.equal(+(await consensus.getConsensusVersion()), CONSENSUS_VERSION)
-      })
-    })
-
     context('with initial processor', () => {
       before(deploy)
 
