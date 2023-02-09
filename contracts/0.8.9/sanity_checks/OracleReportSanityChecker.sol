@@ -380,7 +380,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         view
     {
         LimitsList memory limitsList = _limits.unpack();
-        address withdrawalQueue = LIDO_LOCATOR.withdrawalQueue();
+        address withdrawalQueue = LIDO_LOCATOR.withdrawalRequestNFT();
         // 1. No finalized id up to newer than the allowed report margin
         _checkRequestIdToFinalizeUpTo(limitsList, withdrawalQueue, _requestIdToFinalizeUpTo, _refReportTimestamp);
     }

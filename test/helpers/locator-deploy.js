@@ -13,7 +13,7 @@ const invalidButNonZeroLocatorConfig = {
   stakingRouter: DUMMY_ADDRESS,
   treasury: DUMMY_ADDRESS,
   validatorsExitBusOracle: DUMMY_ADDRESS,
-  withdrawalQueue: DUMMY_ADDRESS,
+  withdrawalRequestNFT: DUMMY_ADDRESS,
   withdrawalVault: DUMMY_ADDRESS,
 }
 
@@ -54,7 +54,7 @@ async function getLocatorConfig(locatorAddress) {
     stakingRouter: await locator.stakingRouter(),
     treasury: await locator.treasury(),
     validatorsExitBusOracle: await locator.validatorsExitBusOracle(),
-    withdrawalQueue: await locator.withdrawalQueue(),
+    withdrawalRequestNFT: await locator.withdrawalRequestNFT(),
     withdrawalVault: await locator.withdrawalVault(),
   }
   return config

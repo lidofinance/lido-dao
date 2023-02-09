@@ -531,7 +531,7 @@ contract AccountingOracle is BaseOracle {
         uint256 slotsElapsed = data.refSlot - prevRefSlot;
 
         IStakingRouter stakingRouter = IStakingRouter(LOCATOR.stakingRouter());
-        IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(LOCATOR.withdrawalQueue());
+        IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(LOCATOR.withdrawalRequestNFT());
 
         _processStakingRouterExitedKeysByModule(
             stakingRouter,

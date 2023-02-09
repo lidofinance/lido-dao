@@ -326,7 +326,7 @@ async function lidoLocatorMockImplFactory(protocol) {
     validatorsExitBusOracle: ZERO_ADDRESS,
     stakingRouter: protocol.stakingRouter.address,
     treasury: protocol.treasury.address,
-    withdrawalQueue: protocol.withdrawalQueue ? protocol.withdrawalQueue.address : ZERO_ADDRESS,
+    withdrawalRequestNFT: protocol.withdrawalQueue ? protocol.withdrawalQueue.address : ZERO_ADDRESS,
     withdrawalVault: protocol.withdrawalVault.address,
     postTokenRebaseReceiver: protocol.legacyOracle.address
   })

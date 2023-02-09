@@ -19,7 +19,7 @@ contract LidoLocatorMock is ILidoLocator {
         address validatorsExitBusOracle;
         address stakingRouter;
         address treasury;
-        address withdrawalQueue;
+        address withdrawalRequestNFT;
         address withdrawalVault;
         address postTokenRebaseReceiver;
     }
@@ -34,7 +34,7 @@ contract LidoLocatorMock is ILidoLocator {
     address public immutable validatorsExitBusOracle;
     address public immutable stakingRouter;
     address public immutable treasury;
-    address public immutable withdrawalQueue;
+    address public immutable withdrawalRequestNFT;
     address public immutable withdrawalVault;
     address public immutable postTokenRebaseReceiver;
 
@@ -51,7 +51,7 @@ contract LidoLocatorMock is ILidoLocator {
         validatorsExitBusOracle = addresses.validatorsExitBusOracle;
         stakingRouter = addresses.stakingRouter;
         treasury = addresses.treasury;
-        withdrawalQueue = addresses.withdrawalQueue;
+        withdrawalRequestNFT = addresses.withdrawalRequestNFT;
         withdrawalVault = addresses.withdrawalVault;
         postTokenRebaseReceiver = addresses.postTokenRebaseReceiver;
     }
@@ -62,7 +62,7 @@ contract LidoLocatorMock is ILidoLocator {
             oracleReportSanityChecker,
             stakingRouter,
             treasury,
-            withdrawalQueue,
+            withdrawalRequestNFT,
             withdrawalVault
         );
     }
@@ -81,7 +81,7 @@ contract LidoLocatorMock is ILidoLocator {
             elRewardsVault,
             oracleReportSanityChecker,
             burner,
-            withdrawalQueue,
+            withdrawalRequestNFT,
             withdrawalVault,
             postTokenRebaseReceiver
         );

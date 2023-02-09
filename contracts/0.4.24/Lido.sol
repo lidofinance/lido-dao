@@ -473,7 +473,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         address elRewardsVault;
         address oracleReportSanityChecker;
         address burner;
-        address withdrawalQueue;
+        address withdrawalRequestNFT;
         address withdrawalVault;
         address postTokenRebaseReceiver;
     }
@@ -590,7 +590,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * Depends on the bunker state and protocol's pause state
      */
     function canDeposit() public view returns (bool) {
-       return !IWithdrawalQueue(getLidoLocator().withdrawalQueue()).isBunkerModeActive() && !isStopped();
+       return !IWithdrawalQueue(getLidoLocator().withdrawalRequestNFT()).isBunkerModeActive() && !isStopped();
     }
 
     /**
@@ -606,7 +606,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         require(_stakingModuleId <= uint24(-1), "STAKING_MODULE_ID_TOO_LARGE");
         require(canDeposit(), "CAN_NOT_DEPOSIT");
 
-        IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(locator.withdrawalQueue());
+        IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(locator.withdrawalRequestNFT());
         require(!withdrawalQueue.isBunkerModeActive(), "CANT_DEPOSIT_IN_BUNKER_MODE");
 
         uint256 bufferedEth = _getBufferedEther();
@@ -759,7 +759,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // finalize withdrawals (send ether, assign shares for burning)
         if (_etherToLockOnWithdrawalQueue > 0) {
             IBurner burner = IBurner(_contracts.burner);
-            IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_contracts.withdrawalQueue);
+            IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_contracts.withdrawalRequestNFT);
 
             burner.requestBurnShares(address(withdrawalQueue), _sharesToBurnFromWithdrawalQueue);
             withdrawalQueue.finalize.value(_etherToLockOnWithdrawalQueue)(_lastFinalizableRequestId);
@@ -1142,7 +1142,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             handlingData.etherToLockOnWithdrawalQueue,
             handlingData.sharesToBurnFromWithdrawalQueue
         ) = _calculateWithdrawals(
-            _contracts.withdrawalQueue,
+            _contracts.withdrawalRequestNFT,
             _reportedData.lastFinalizableRequestId,
             _reportedData.simulatedShareRate
         );
@@ -1266,7 +1266,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             ret.elRewardsVault,
             ret.oracleReportSanityChecker,
             ret.burner,
-            ret.withdrawalQueue,
+            ret.withdrawalRequestNFT,
             ret.withdrawalVault,
             ret.postTokenRebaseReceiver
         ) = getLidoLocator().oracleReportComponentsForLido();

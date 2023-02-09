@@ -11,7 +11,7 @@ interface ILidoLocator {
         address safetyNetsRegistry,
         address stakingRouter,
         address treasury,
-        address withdrawalQueue,
+        address withdrawalRequestNFT,
         address withdrawalVault
     );
 }
@@ -19,18 +19,18 @@ interface ILidoLocator {
 contract MockLidoLocatorForOracles is ILidoLocator {
     address public immutable lido;
     address public immutable stakingRouter;
-    address public immutable withdrawalQueue;
+    address public immutable withdrawalRequestNFT;
     address public immutable oracleReportSanityChecker;
 
     constructor(
         address _lido,
         address _stakingRouter,
-        address _withdrawalQueue,
+        address _withdrawalRequestNFT,
         address _oracleReportSanityChecker
     ) {
         lido = _lido;
         stakingRouter = _stakingRouter;
-        withdrawalQueue = _withdrawalQueue;
+        withdrawalRequestNFT = _withdrawalRequestNFT;
         oracleReportSanityChecker = _oracleReportSanityChecker;
     }
 
@@ -39,11 +39,11 @@ contract MockLidoLocatorForOracles is ILidoLocator {
         address oracleReportSanityChecker_,
         address stakingRouter_,
         address treasury_,
-        address withdrawalQueue_,
+        address withdrawalRequestNFT_,
         address withdrawalVault_
     ) {
         oracleReportSanityChecker_ = oracleReportSanityChecker;
         stakingRouter_ = stakingRouter;
-        withdrawalQueue_ = withdrawalQueue;
+        withdrawalRequestNFT_ = withdrawalRequestNFT;
     }
 }

@@ -26,7 +26,7 @@ contract LidoLocator is ILidoLocator {
         address stakingRouter;
         address treasury;
         address validatorsExitBusOracle;
-        address withdrawalQueue;
+        address withdrawalRequestNFT;
         address withdrawalVault;
     }
 
@@ -43,7 +43,7 @@ contract LidoLocator is ILidoLocator {
     address public immutable stakingRouter;
     address public immutable treasury;
     address public immutable validatorsExitBusOracle;
-    address public immutable withdrawalQueue;
+    address public immutable withdrawalRequestNFT;
     address public immutable withdrawalVault;
 
     /**
@@ -63,7 +63,7 @@ contract LidoLocator is ILidoLocator {
         stakingRouter = _assertNonZero(_config.stakingRouter);
         treasury = _assertNonZero(_config.treasury);
         validatorsExitBusOracle = _assertNonZero(_config.validatorsExitBusOracle);
-        withdrawalQueue = _assertNonZero(_config.withdrawalQueue);
+        withdrawalRequestNFT = _assertNonZero(_config.withdrawalRequestNFT);
         withdrawalVault = _assertNonZero(_config.withdrawalVault);
     }
 
@@ -80,7 +80,7 @@ contract LidoLocator is ILidoLocator {
             oracleReportSanityChecker,
             stakingRouter,
             treasury,
-            withdrawalQueue,
+            withdrawalRequestNFT,
             withdrawalVault
         );
     }
@@ -99,7 +99,7 @@ contract LidoLocator is ILidoLocator {
             elRewardsVault,
             oracleReportSanityChecker,
             burner,
-            withdrawalQueue,
+            withdrawalRequestNFT,
             withdrawalVault,
             postTokenRebaseReceiver
         );

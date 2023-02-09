@@ -17,7 +17,7 @@ const services = [
   'stakingRouter',
   'treasury',
   'validatorsExitBusOracle',
-  'withdrawalQueue',
+  'withdrawalRequestNFT',
   'withdrawalVault',
   'postTokenRebaseReceiver'
 ]
@@ -59,7 +59,7 @@ contract('LidoLocator', ([deployer, agent]) => {
         initialConfig.oracleReportSanityChecker,
         initialConfig.stakingRouter,
         initialConfig.treasury,
-        initialConfig.withdrawalQueue,
+        initialConfig.withdrawalRequestNFT,
         initialConfig.withdrawalVault
       ]
 
@@ -115,7 +115,7 @@ contract('LidoLocator', ([deployer, agent]) => {
           updatedConfig.oracleReportSanityChecker,
           updatedConfig.stakingRouter,
           updatedConfig.treasury,
-          updatedConfig.withdrawalQueue,
+          updatedConfig.withdrawalRequestNFT,
           updatedConfig.withdrawalVault
         ]
 
