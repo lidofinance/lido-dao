@@ -30,7 +30,8 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
     annualBalanceIncreaseLimitManagers: accounts.slice(6, 8),
     shareRateDeviationLimitManagers: accounts.slice(8, 10),
     requestCreationBlockMarginManagers: accounts.slice(10, 12),
-    maxPositiveTokenRebaseManagers: accounts.slice(12, 14)
+    maxPositiveTokenRebaseManagers: accounts.slice(12, 14),
+    maxValidatorExitRequestsPerReportManagers: accounts.slice(14, 16),
   }
   const defaultLimitsList = {
     churnValidatorsByEpochLimit: 55,
@@ -38,7 +39,8 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
     annualBalanceIncreaseBPLimit: 10_00, // 10%
     shareRateDeviationBPLimit: 2_50, // 2.5%
     requestTimestampMargin: 128,
-    maxPositiveTokenRebase: 5_000_000 // 0.05%
+    maxPositiveTokenRebase: 5_000_000, // 0.05%
+    maxValidatorExitRequestsPerReport: 2000,
   }
   const correctLidoOracleReport = {
     timeElapsed: 24 * 60 * 60,
@@ -82,7 +84,8 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
         annualBalanceIncreaseBPLimit: 15_00,
         shareRateDeviationBPLimit: 1_50, // 1.5%
         requestTimestampMargin: 2048,
-        maxPositiveTokenRebase: 10_000_000
+        maxPositiveTokenRebase: 10_000_000,
+        maxValidatorExitRequestsPerReport: 3000,
       }
       const limitsBefore = await oracleReportSanityChecker.getOracleReportLimits()
       assert.notEquals(limitsBefore.churnValidatorsByEpochLimit, newLimitsList.churnValidatorsByEpochLimit)
@@ -91,6 +94,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
       assert.notEquals(limitsBefore.shareRateDeviationBPLimit, newLimitsList.shareRateDeviationBPLimit)
       assert.notEquals(limitsBefore.requestTimestampMargin, newLimitsList.requestTimestampMargin)
       assert.notEquals(limitsBefore.maxPositiveTokenRebase, newLimitsList.maxPositiveTokenRebase)
+      assert.notEquals(limitsBefore.maxValidatorExitRequestsPerReport, newLimitsList.maxValidatorExitRequestsPerReport)
 
       await oracleReportSanityChecker.setOracleReportLimits(Object.values(newLimitsList), {
         from: managersRoster.allLimitsManagers[0]
@@ -103,6 +107,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
       assert.equals(limitsAfter.shareRateDeviationBPLimit, newLimitsList.shareRateDeviationBPLimit)
       assert.equals(limitsAfter.requestTimestampMargin, newLimitsList.requestTimestampMargin)
       assert.equals(limitsAfter.maxPositiveTokenRebase, newLimitsList.maxPositiveTokenRebase)
+      assert.equals(limitsAfter.maxValidatorExitRequestsPerReport, newLimitsList.maxValidatorExitRequestsPerReport)
     })
   })
 

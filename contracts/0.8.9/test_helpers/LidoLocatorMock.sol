@@ -15,8 +15,8 @@ contract LidoLocatorMock is ILidoLocator {
         address accountingOracle;
         address legacyOracle;
         address oracleReportSanityChecker;
-        address selfOwnedStEthBurner;
-        address validatorExitBus;
+        address burner;
+        address validatorsExitBusOracle;
         address stakingRouter;
         address treasury;
         address withdrawalQueue;
@@ -30,8 +30,8 @@ contract LidoLocatorMock is ILidoLocator {
     address public immutable accountingOracle;
     address public immutable legacyOracle;
     address public immutable oracleReportSanityChecker;
-    address public immutable selfOwnedStEthBurner;
-    address public immutable validatorExitBus;
+    address public immutable burner;
+    address public immutable validatorsExitBusOracle;
     address public immutable stakingRouter;
     address public immutable treasury;
     address public immutable withdrawalQueue;
@@ -47,8 +47,8 @@ contract LidoLocatorMock is ILidoLocator {
         accountingOracle = addresses.accountingOracle;
         legacyOracle = addresses.legacyOracle;
         oracleReportSanityChecker = addresses.oracleReportSanityChecker;
-        selfOwnedStEthBurner = addresses.selfOwnedStEthBurner;
-        validatorExitBus = addresses.validatorExitBus;
+        burner = addresses.burner;
+        validatorsExitBusOracle = addresses.validatorsExitBusOracle;
         stakingRouter = addresses.stakingRouter;
         treasury = addresses.treasury;
         withdrawalQueue = addresses.withdrawalQueue;
@@ -80,7 +80,7 @@ contract LidoLocatorMock is ILidoLocator {
             accountingOracle,
             elRewardsVault,
             oracleReportSanityChecker,
-            selfOwnedStEthBurner,
+            burner,
             withdrawalQueue,
             withdrawalVault,
             postTokenRebaseReceiver

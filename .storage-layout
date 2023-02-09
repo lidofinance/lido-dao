@@ -80,16 +80,16 @@
 |------|------|------|--------|-------|----------|
 
 =======================
-➡ SelfOwnedStETHBurner
+➡ Burner
 =======================
 
 | Name                           | Type    | Slot | Offset | Bytes | Contract                                                      |
 |--------------------------------|---------|------|--------|-------|---------------------------------------------------------------|
-| coverSharesBurnRequested       | uint256 | 0    | 0      | 32    | contracts/0.8.9/SelfOwnedStETHBurner.sol:SelfOwnedStETHBurner |
-| nonCoverSharesBurnRequested    | uint256 | 1    | 0      | 32    | contracts/0.8.9/SelfOwnedStETHBurner.sol:SelfOwnedStETHBurner |
-| totalCoverSharesBurnt          | uint256 | 2    | 0      | 32    | contracts/0.8.9/SelfOwnedStETHBurner.sol:SelfOwnedStETHBurner |
-| totalNonCoverSharesBurnt       | uint256 | 3    | 0      | 32    | contracts/0.8.9/SelfOwnedStETHBurner.sol:SelfOwnedStETHBurner |
-| maxBurnAmountPerRunBasisPoints | uint256 | 4    | 0      | 32    | contracts/0.8.9/SelfOwnedStETHBurner.sol:SelfOwnedStETHBurner |
+| coverSharesBurnRequested       | uint256 | 0    | 0      | 32    | contracts/0.8.9/Burner.sol:Burner |
+| nonCoverSharesBurnRequested    | uint256 | 1    | 0      | 32    | contracts/0.8.9/Burner.sol:Burner |
+| totalCoverSharesBurnt          | uint256 | 2    | 0      | 32    | contracts/0.8.9/Burner.sol:Burner |
+| totalNonCoverSharesBurnt       | uint256 | 3    | 0      | 32    | contracts/0.8.9/Burner.sol:Burner |
+| maxBurnAmountPerRunBasisPoints | uint256 | 4    | 0      | 32    | contracts/0.8.9/Burner.sol:Burner |
 
 =======================
 ➡ StETH

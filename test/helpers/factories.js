@@ -31,7 +31,7 @@ const DepositContract = artifacts.require('DepositContract')
 const DepositSecurityModule = artifacts.require('DepositSecurityModule')
 const EIP712StETH = artifacts.require('EIP712StETH')
 const LidoLocatorMock = artifacts.require('LidoLocatorMock')
-const SelfOwnedStETHBurner = artifacts.require('SelfOwnedStETHBurner')
+const Burner = artifacts.require('Burner')
 
 const MAX_DEPOSITS_PER_BLOCK = 100
 const MIN_DEPOSIT_BLOCK_DISTANCE = 20
@@ -141,7 +141,7 @@ async function hashConsensusFactory({ voting, reportProcessor, signers, legacyOr
     EPOCHS_PER_FRAME,
     initialEpoch,
     voting.address,
-    reportProcessor.address
+    reportProcessor.address,
   )
 
   await consensus.grantRole(await consensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(), voting.address, { from: voting.address })
@@ -172,7 +172,7 @@ async function hashConsensusTimeTravellableFactory({
     initialEpoch,
     fastLaneLengthSlots,
     voting.address,
-    reportProcessor.address
+    reportProcessor.address,
   )
 
   await consensus.grantRole(await consensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(), voting.address, { from: voting.address })
@@ -188,8 +188,8 @@ async function hashConsensusTimeTravellableFactory({
   return consensus
 }
 
-async function accountingOracleFactory({ voting, pool, lidoLocator, consensusContract, legacyOracle }) {
-  const base = await AccountingOracle.new(lidoLocator.address, SECONDS_PER_SLOT, GENESIS_TIME)
+async function accountingOracleFactory({ voting, pool, lidoLocator, lidoAddress, consensusContract, legacyOracle }) {
+  const base = await AccountingOracle.new(lidoLocator.address, lidoAddress, SECONDS_PER_SLOT, GENESIS_TIME)
   const proxy = await OssifiableProxy.new(base.address, voting.address, '0x')
   const oracle = await AccountingOracle.at(proxy.address)
 
@@ -199,7 +199,7 @@ async function accountingOracleFactory({ voting, pool, lidoLocator, consensusCon
     CONSENSUS_VERSION,
     legacyOracle.address,
     10000,
-    10000
+    10000,
   )
 
   await legacyOracle.initialize(pool.address, oracle.address)
@@ -295,8 +295,8 @@ async function guardiansFactory(_) {
   }
 }
 
-async function selfOwnedStETHBurnerFactory({ appManager, treasury, pool, voting }) {
-  const burner = await SelfOwnedStETHBurner.new(appManager.address, treasury.address, pool.address, 0, 0)
+async function burnerFactory({ appManager, treasury, pool, voting }) {
+  const burner = await Burner.new(appManager.address, treasury.address, pool.address, 0, 0)
 
   const [REQUEST_BURN_MY_STETH_ROLE, RECOVER_ASSETS_ROLE] = await Promise.all([
     burner.REQUEST_BURN_MY_STETH_ROLE(),
@@ -322,8 +322,8 @@ async function lidoLocatorMockImplFactory(protocol) {
     accountingOracle: protocol.oracle ? protocol.oracle.address : ZERO_ADDRESS,
     legacyOracle: protocol.legacyOracle.address,
     oracleReportSanityChecker: ZERO_ADDRESS,
-    selfOwnedStEthBurner: protocol.selfOwnedStETHBurner.address,
-    validatorExitBus: ZERO_ADDRESS,
+    burner: protocol.burner.address,
+    validatorsExitBusOracle: ZERO_ADDRESS,
     stakingRouter: protocol.stakingRouter.address,
     treasury: protocol.treasury.address,
     withdrawalQueue: protocol.withdrawalQueue ? protocol.withdrawalQueue.address : ZERO_ADDRESS,
@@ -361,7 +361,7 @@ module.exports = {
   stakingModulesFactory,
   guardiansFactory,
   lidoLocatorMockImplFactory,
-  selfOwnedStETHBurnerFactory,
+  burnerFactory,
   postSetup,
   legacyOracleFactory,
   legacyOracleMockFactory,

@@ -55,8 +55,8 @@ chai.util.addMethod(chai.assert, 'notEquals', function (actual, expected, errorM
   this.notEqual(actual.toString(), expected.toString(), `${errorMsg || ""} expected ${expected.toString()} to not equal ${actual.toString()}`)
 })
 
-chai.util.addMethod(chai.assert, 'equals', function (actual, expected, errorMsg = '') {
-  this.equal(actual.toString(), expected.toString())
+chai.util.addMethod(chai.assert, 'addressEqual', function (actual, expected, errorMsg) {
+  assert.equal(toChecksumAddress(actual), toChecksumAddress(expected), errorMsg)
 })
 
 chai.util.addMethod(chai.assert, 'revertsWithCustomError', async function (receipt, reason) {
@@ -108,4 +108,8 @@ function normalizeArg(arg) {
   return arg
 }
 
-module.exports = { assert: chai.assert }
+function getAccessControlMessage(address, role) {
+  return `AccessControl: account ${address} is missing role ${role}`
+}
+
+module.exports = { assert: chai.assert, getAccessControlMessage }

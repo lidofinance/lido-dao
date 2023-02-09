@@ -4,6 +4,8 @@ const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contrac
 const { assertRevert } = require('../../helpers/assertThrow')
 const { processNamedTuple } = require('../../helpers/utils')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { deployLocatorWithInvalidImplementation, updateLocatorImplementation, getLocatorConfig } =
+  require('../../helpers/locator-deploy')
 
 const {
   SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, SECONDS_PER_EPOCH,
@@ -14,7 +16,7 @@ const {
   deployHashConsensus } = require('./hash-consensus-deploy.test')
 
 const AccountingOracle = artifacts.require('AccountingOracleTimeTravellable')
-const MockLidoLocator = artifacts.require('MockLidoLocatorForOracles')
+const LidoLocator = artifacts.require('LidoLocator')
 const MockLido = artifacts.require('MockLidoForAccountingOracle')
 const MockStakingRouter = artifacts.require('MockStakingRouterForAccountingOracle')
 const MockWithdrawalQueue = artifacts.require('MockWithdrawalQueueForAccountingOracle')
@@ -38,13 +40,13 @@ function getReportDataItems(r) {
     r.consensusVersion, +r.refSlot, r.numValidators, r.clBalanceGwei, r.stakingModuleIdsWithNewlyExitedValidators,
     r.numExitedValidatorsByStakingModule, r.withdrawalVaultBalance, r.elRewardsVaultBalance,
     r.lastWithdrawalRequestIdToFinalize, r.finalizationShareRate, r.isBunkerMode, r.extraDataFormat,
-    r.extraDataHash, r.extraDataItemsCount,
+    r.extraDataHash, r.extraDataItemsCount, r.extraDataMaxNodeOpsCountByModule,
   ]
 }
 
 function calcReportDataHash(reportItems) {
   const data = web3.eth.abi.encodeParameters(
-    ['(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256)'],
+    ['(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256,uint256)'],
     [reportItems]
   )
   // const toS = x => Array.isArray(x) ? `[${x.map(toS)}]` : `${x}`
@@ -120,10 +122,7 @@ async function deployMockLidoAndStakingRouter() {
   const stakingRouter = await MockStakingRouter.new()
   const withdrawalQueue = await MockWithdrawalQueue.new()
   const lido = await MockLido.new()
-  const locator = await MockLidoLocator.new(
-    lido.address, stakingRouter.address, withdrawalQueue.address, ZERO_ADDRESS
-  )
-  return {lido, stakingRouter, withdrawalQueue, locator}
+  return {lido, stakingRouter, withdrawalQueue}
 }
 
 async function deployAccountingOracleSetup(admin, {
@@ -135,14 +134,23 @@ async function deployAccountingOracleSetup(admin, {
   getLidoAndStakingRouter = deployMockLidoAndStakingRouter,
   getLegacyOracle = deployMockLegacyOracle,
 } = {}) {
-  const {lido, stakingRouter, withdrawalQueue, locator} = await getLidoAndStakingRouter()
+  const {lido, stakingRouter, withdrawalQueue} = await getLidoAndStakingRouter()
+
+  const locatorAddr = await deployLocatorWithInvalidImplementation(admin)
+
+  await updateLocatorImplementation(locatorAddr, admin, {
+    lido: lido.address,
+    stakingRouter: stakingRouter.address,
+    withdrawalQueue: withdrawalQueue.address
+  })
+
   const legacyOracle = await getLegacyOracle()
 
   if (initialEpoch == null) {
     initialEpoch = +await legacyOracle.getLastCompletedEpochId() + epochsPerFrame
   }
 
-  const oracle = await AccountingOracle.new(locator.address, secondsPerSlot, genesisTime, {from: admin})
+  const oracle = await AccountingOracle.new(locatorAddr, lido.address, secondsPerSlot, genesisTime, {from: admin})
 
   const {consensus} = await deployHashConsensus(admin, {
     reportProcessor: oracle,
@@ -156,7 +164,7 @@ async function deployAccountingOracleSetup(admin, {
   // pretend we're at the first slot of the initial frame's epoch
   await consensus.setTime(genesisTime + initialEpoch * slotsPerEpoch * secondsPerSlot)
 
-  return {lido, stakingRouter, withdrawalQueue, locator, legacyOracle, oracle, consensus}
+  return {lido, stakingRouter, withdrawalQueue, locatorAddr, legacyOracle, oracle, consensus}
 }
 
 async function initAccountingOracle({

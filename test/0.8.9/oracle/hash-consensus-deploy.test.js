@@ -8,6 +8,8 @@ const SLOTS_PER_EPOCH = 32
 const SECONDS_PER_SLOT = 12
 const GENESIS_TIME = 100
 const EPOCHS_PER_FRAME = 225 // one day
+const INITIAL_EPOCH = 1
+const INITIAL_FAST_LANE_LENGHT_SLOTS = 0
 
 const SECONDS_PER_EPOCH = SLOTS_PER_EPOCH * SECONDS_PER_SLOT
 const SECONDS_PER_FRAME = SECONDS_PER_EPOCH * EPOCHS_PER_FRAME
@@ -56,7 +58,7 @@ async function deployHashConsensus(
     initialEpoch,
     fastLaneLengthSlots,
     admin,
-    reportProcessor.address,
+    reportProcessorAddress || reportProcessor.address,
     { from: admin }
   )
 
@@ -91,8 +93,8 @@ module.exports = {
   HASH_3,
   HASH_4,
   HASH_5,
-  UNREACHABLE_QUORUM,
   CONSENSUS_VERSION,
+  UNREACHABLE_QUORUM,
   deployHashConsensus
 }
 

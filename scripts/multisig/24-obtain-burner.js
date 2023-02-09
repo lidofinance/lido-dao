@@ -12,19 +12,18 @@ const { APP_NAMES, APP_ARTIFACTS } = require('./constants')
 
 const APP = process.env.APP || ''
 const REQUIRED_NET_STATE = [
-  'selfOwnedStETHBurnerDeployTx',
+  'burnerDeployTx',
   'lidoApmEnsName',
   'ensAddress',
   'daoAddress',
-  'compositePostRebaseBeaconReceiverAddress',
-  'selfOwnedStETHBurnerParams',
+  'burnerParams',
   `app:${APP_NAMES.ARAGON_VOTING}`,
   `app:${APP_NAMES.ARAGON_AGENT}`
 ]
 
 async function obtainInstance({ web3, artifacts, appName = APP }) {
   // convert dash-ed appName to camel case-d
-  const appArtifact = 'SelfOwnedStETHBurner'
+  const appArtifact = 'Burner'
   const netId = await web3.eth.net.getId()
 
   logWideSplitter()
@@ -34,16 +33,16 @@ async function obtainInstance({ web3, artifacts, appName = APP }) {
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   logHeader(`${appArtifact} app base`)
-  const selfOwnedStETHBurner = await useOrGetDeployed(appArtifact, null, state.selfOwnedStETHBurnerDeployTx)
+  const burner = await useOrGetDeployed(appArtifact, null, state.burnerDeployTx)
   log(`Checking...`)
   const lidoAddress = state[`app:${APP_NAMES.LIDO}`].proxyAddress
   const votingAddress = state[`app:${APP_NAMES.ARAGON_VOTING}`].proxyAddress
   const treasuryAddress = state[`app:${APP_NAMES.ARAGON_AGENT}`].proxyAddress
 
-  await assertParams(state.selfOwnedStETHBurnerParams, selfOwnedStETHBurner, appArtifact)
-  await assertAddresses({ lidoAddress, votingAddress, treasuryAddress }, selfOwnedStETHBurner, appArtifact)
+  await assertParams(state.burnerParams, burner, appArtifact)
+  await assertAddresses({ lidoAddress, votingAddress, treasuryAddress }, burner, appArtifact)
   persistNetworkState(network.name, netId, state, {
-    selfOwnedStETHBurnerAddress: selfOwnedStETHBurner.address
+    burnerAddress: burner.address
   })
 }
 

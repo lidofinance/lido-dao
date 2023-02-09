@@ -6,22 +6,18 @@
 // solhint-disable-next-line
 pragma solidity >=0.4.24 <0.9.0;
 
-interface ISelfOwnedStETHBurner {
+interface IBurner {
     /**
      * Commit cover/non-cover burning requests and logs cover/non-cover shares amount just burnt.
      *
      * NB: The real burn enactment to be invoked after the call (via internal Lido._burnShares())
      */
-    function commitSharesToBurn(uint256 sharesToBurnLimit) external returns (uint256 sharesToBurnNow);
+    function commitSharesToBurn(uint256 _stETHSharesToBurnLimit) external returns (uint256 stETHsharesToBurnNow);
 
     /**
-      * @notice Mark excess stETH for burning
-      *
-      * @dev Can be called only by `Lido`.
-      *
-      * @param _stETH2Burn stETH tokens to burn
-      */
-    function markExcessStETHForBurn(uint256 _stETH2Burn) external;
+     * Request burn shares
+     */
+    function requestBurnShares(address _from, uint256 _sharesAmount) external;
 
     /**
       * Returns the current amount of shares locked on the contract to be burnt.

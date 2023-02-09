@@ -64,9 +64,8 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
     it('initially, consensus report is empty and is not being processed', async () => {
       const report = await oracle.getConsensusReport()
       assert.equal(report.hash, ZERO_HASH)
-      assert.equal(+report.refSlot, 0)
-      assert.equal(+report.receptionTime, 0)
-      assert.equal(+report.deadlineTime, 0)
+      // see the next test for refSlot
+      assert.equal(+report.processingDeadlineTime, 0)
       assert.isFalse(report.processingStarted)
 
       const extraState = await oracle.getExtraDataProcessingState()
@@ -75,6 +74,13 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assert.equal(+extraState.itemsCount, 0)
       assert.equal(+extraState.itemsProcessed, 0)
       assert.equal(+extraState.lastProcessedItem, 0)
+    })
+
+    it(`reference slot of the empty initial consensus report is set to the last processed slot ` +
+       `of the legacy oracle`, async () =>
+    {
+      const report = await oracle.getConsensusReport()
+      assert.equal(+report.refSlot, V1_ORACLE_LAST_REPORT_SLOT)
     })
 
     it('committee reaches consensus on a report hash', async () => {
@@ -111,6 +117,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
         extraDataFormat: EXTRA_DATA_FORMAT_LIST,
         extraDataHash: extraDataHash,
         extraDataItemsCount: extraDataItems.length,
+        extraDataMaxNodeOpsCountByModule: 2,
       }
 
       reportItems = getReportDataItems(reportFields)
@@ -123,8 +130,10 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       const report = await oracle.getConsensusReport()
       assert.equal(report.hash, reportHash)
       assert.equal(+report.refSlot, +reportFields.refSlot)
-      assert.equal(+report.receptionTime, +await oracle.getTime())
-      assert.equal(+report.deadlineTime, computeTimestampAtSlot(+report.refSlot + SLOTS_PER_FRAME))
+      assert.equal(
+        +report.processingDeadlineTime,
+        computeTimestampAtSlot(+report.refSlot + SLOTS_PER_FRAME)
+      )
       assert.isFalse(report.processingStarted)
 
       const extraState = await oracle.getExtraDataProcessingState()
@@ -230,7 +239,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
     })
 
     it('some time passes', async () => {
-      const deadline = (await oracle.getConsensusReport()).deadlineTime
+      const deadline = (await oracle.getConsensusReport()).processingDeadlineTime
       await consensus.setTime(deadline)
     })
 

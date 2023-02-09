@@ -110,7 +110,7 @@ async function checkDAO({ web3, artifacts }) {
   ])
 
   const compositePostRebaseBeaconReceiver = await artifacts.require('CompositePostRebaseBeaconReceiver').at(state.compositePostRebaseBeaconReceiverAddress)
-  const selfOwnedStETHBurner = await artifacts.require('SelfOwnedStETHBurner').at(state.selfOwnedStETHBurnerAddress)
+  const burner = await artifacts.require('Burner').at(state.burnerAddress)
   const elRewardsVault = await artifacts.require('LidoExecutionLayerRewardsVault').at(state.executionLayerRewardsVaultAddress)
 
   log.splitter()
@@ -127,7 +127,7 @@ async function checkDAO({ web3, artifacts }) {
     tokenManager,
     voting,
     compositePostRebaseBeaconReceiver,
-    selfOwnedStETHBurner,
+    burner,
     elRewardsVault,
     daoAragonId: state.daoAragonId,
     daoInitialSettings: state.daoInitialSettings
@@ -144,7 +144,7 @@ async function checkDAO({ web3, artifacts }) {
       finance,
       tokenManager,
       voting,
-      selfOwnedStETHBurner,
+      burner,
     },
     state.daoTemplateDeployBlock
   )
@@ -227,7 +227,7 @@ async function assertDAOConfig({
   tokenManager,
   voting,
   compositePostRebaseBeaconReceiver,
-  selfOwnedStETHBurner,
+  burner,
   elRewardsVault,
   daoInitialSettings: settings
 }) {
@@ -407,7 +407,7 @@ async function assertDAOConfig({
     )
 }
 
-async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent, finance, tokenManager, voting, selfOwnedStETHBurner }, fromBlock = 4532202) {
+async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent, finance, tokenManager, voting, burner }, fromBlock = 4532202) {
   const aclAddress = await kernel.acl()
   const acl = await artifacts.require('ACL').at(aclAddress)
   const allAclEvents = await acl.getPastEvents('allEvents', { fromBlock })
