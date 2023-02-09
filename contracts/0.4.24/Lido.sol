@@ -813,13 +813,12 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // https://research.lido.fi/t/lip-12-on-chain-part-of-the-rewards-distribution-after-the-merge/1625
         if ((_postCLBalance.add(_withdrawnWithdrawals)) > _handlingData.preCLBalance) {
             uint256 consensusLayerRewards = _postCLBalance.add(_withdrawnWithdrawals).sub(_handlingData.preCLBalance);
-            uint256 newTotalPooledEtherForRewards =
-                _handlingData.preTotalPooledEther.add(_withdrawnWithdrawals).add(_withdrawnElRewards);
+            uint256 totalRewards = consensusLayerRewards.add(_withdrawnElRewards);
 
             sharesMintedAsFees = _distributeFee(
-                newTotalPooledEtherForRewards,
+                _handlingData.preTotalPooledEther,
                 _handlingData.preTotalShares,
-                consensusLayerRewards.add(_withdrawnElRewards)
+                totalRewards
             );
         }
     }
@@ -906,13 +905,13 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
     /**
      * @dev Distributes fee portion of the rewards by minting and distributing corresponding amount of liquid tokens.
-     * @param _newTotalPooledEther Total supply when the accrued `_totalRewards` added
-     * @param _prevTotalShares Total shares before minting the fees
+     * @param _preTotalPooledEther Total supply before report-induced changes applied
+     * @param _preTotalShares Total shares before report-induced changes applied
      * @param _totalRewards Total rewards accrued both on the Execution Layer and the Consensus Layer sides in wei.
      */
     function _distributeFee(
-        uint256 _newTotalPooledEther,
-        uint256 _prevTotalShares,
+        uint256 _preTotalPooledEther,
+        uint256 _preTotalShares,
         uint256 _totalRewards
     ) internal returns (uint256 sharesMintedAsFees) {
         // We need to take a defined percentage of the reported reward as a fee, and we do
@@ -920,22 +919,22 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // StETH docs for the explanation of the shares mechanics). The staking rewards fee
         // is defined in basis points (1 basis point is equal to 0.01%, 10000 (TOTAL_BASIS_POINTS) is 100%).
         //
-        // Since we've increased totalPooledEther by _totalRewards (which is already
-        // performed by the time this function is called), the combined cost of all holders'
-        // shares has became _totalRewards StETH tokens more, effectively splitting the reward
-        // between each token holder proportionally to their token share.
+        // Since we are increasing totalPooledEther by _totalRewards (totalPooledEtherWithRewards),
+        // the combined cost of all holders' shares has became _totalRewards StETH tokens more,
+        // effectively splitting the reward between each token holder proportionally to their token share.
         //
         // Now we want to mint new shares to the fee recipient, so that the total cost of the
         // newly-minted shares exactly corresponds to the fee taken:
         //
+        // totalPooledEtherWithRewards = _preTotalPooledEther + _totalRewards
         // shares2mint * newShareCost = (_totalRewards * totalFee) / PRECISION_POINTS
-        // newShareCost = newTotalPooledEther / (prevTotalShares + shares2mint)
+        // newShareCost = totalPooledEtherWithRewards / (_preTotalShares + shares2mint)
         //
         // which follows to:
         //
-        //                        _totalRewards * totalFee * prevTotalShares
+        //                        _totalRewards * totalFee * _preTotalShares
         // shares2mint = --------------------------------------------------------------
-        //                 (newTotalPooledEther * PRECISION_POINTS) - (_totalRewards * totalFee)
+        //                 (totalPooledEtherWithRewards * PRECISION_POINTS) - (_totalRewards * totalFee)
         //
         // The effect is that the given percentage of the reward goes to the fee recipient, and
         // the rest of the reward is distributed between token holders proportionally to their
@@ -947,9 +946,11 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         ) = _getStakingRewardsDistribution();
 
         if (rewardsDistribution.totalFee > 0) {
+            uint256 totalPooledEtherWithRewards = _preTotalPooledEther.add(_totalRewards);
+
             sharesMintedAsFees =
-                _totalRewards.mul(rewardsDistribution.totalFee).mul(_prevTotalShares).div(
-                    _newTotalPooledEther.mul(
+                _totalRewards.mul(rewardsDistribution.totalFee).mul(_preTotalShares).div(
+                    totalPooledEtherWithRewards.mul(
                         rewardsDistribution.precisionPoints
                     ).sub(_totalRewards.mul(rewardsDistribution.totalFee))
                 );
