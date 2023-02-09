@@ -43,6 +43,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     error ErrorStakingModuleNotPaused();
     error ErrorEmptyWithdrawalsCredentials();
     error ErrorDirectETHTransfer();
+    error InvalidReportData();
     error ErrorExitedKeysCountCannotDecrease();
     error ErrorStakingModulesLimitExceeded();
     error ErrorStakingModuleIdTooLarge();
@@ -278,27 +279,44 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
     function reportStakingModuleExitedKeysCountByNodeOperator(
         uint256 _stakingModuleId,
-        uint256[] calldata _nodeOperatorIds,
-        uint256[] calldata _exitedKeysCounts
+        bytes calldata _nodeOperatorIds,
+        bytes calldata _exitedKeysCounts
     )
         external
         onlyRole(REPORT_EXITED_KEYS_ROLE)
     {
-        StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
-        address moduleAddr = stakingModule.stakingModuleAddress;
-        (uint256 prevExitedKeysCount,,) = IStakingModule(moduleAddr).getValidatorsKeysStats();
-        uint256 newExitedKeysCount;
-        for (uint256 i = 0; i < _nodeOperatorIds.length; ) {
-            newExitedKeysCount = IStakingModule(moduleAddr)
-                .updateExitedValidatorsKeysCount(_nodeOperatorIds[i], _exitedKeysCounts[i]);
-            unchecked { ++i; }
+        if (_nodeOperatorIds.length % 8 != 0 || _exitedKeysCounts.length % 16 != 0) {
+            revert InvalidReportData();
         }
+
+        uint256 totalNodeOps = _nodeOperatorIds.length / 8;
+        if (_exitedKeysCounts.length / 16 != totalNodeOps) {
+            revert InvalidReportData();
+        }
+
+        StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
+        IStakingModule moduleContract = IStakingModule(stakingModule.stakingModuleAddress);
+        (uint256 prevExitedKeysCount,,) = moduleContract.getValidatorsKeysStats();
+        uint256 newExitedKeysCount;
+
+        for (uint256 i = 0; i < totalNodeOps; ) {
+            uint256 nodeOpId;
+            uint256 keysCount;
+            /// @solidity memory-safe-assembly
+            assembly {
+                nodeOpId := shr(24, calldataload(add(_nodeOperatorIds.offset, mul(i, 8))))
+                keysCount := shr(16, calldataload(add(_exitedKeysCounts.offset, mul(i, 16))))
+                i := add(i, 1)
+            }
+            newExitedKeysCount = moduleContract.updateExitedValidatorsKeysCount(nodeOpId, keysCount);
+        }
+
         uint256 prevReportedExitedKeysCount = stakingModule.exitedKeysCount;
         if (prevExitedKeysCount < prevReportedExitedKeysCount &&
             newExitedKeysCount >= prevReportedExitedKeysCount
         ) {
             // oracle finished updating exited keys for all node ops
-            IStakingModule(moduleAddr).finishUpdatingExitedValidatorsKeysCount();
+            moduleContract.finishUpdatingExitedValidatorsKeysCount();
         }
     }
 
@@ -389,19 +407,33 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
     function reportStakingModuleStuckKeysCountByNodeOperator(
         uint256 _stakingModuleId,
-        uint256[] calldata _nodeOperatorIds,
-        uint256[] calldata _stuckKeysCounts
+        bytes calldata _nodeOperatorIds,
+        bytes calldata _stuckKeysCounts
     )
         external
         onlyRole(REPORT_EXITED_KEYS_ROLE)
     {
+        if (_nodeOperatorIds.length % 8 != 0 || _stuckKeysCounts.length % 16 != 0) {
+            revert InvalidReportData();
+        }
+
+        uint256 totalNodeOps = _nodeOperatorIds.length / 8;
+        if (_stuckKeysCounts.length / 16 != totalNodeOps) {
+            revert InvalidReportData();
+        }
+
         address moduleAddr = _getStakingModuleById(_stakingModuleId).stakingModuleAddress;
-        for (uint256 i = 0; i < _nodeOperatorIds.length; ) {
-            IStakingModule(moduleAddr).updateStuckValidatorsKeysCount(
-                _nodeOperatorIds[i],
-                _stuckKeysCounts[i]
-            );
-            unchecked { ++i; }
+
+        for (uint256 i = 0; i < totalNodeOps; ) {
+            uint256 nodeOpId;
+            uint256 keysCount;
+            /// @solidity memory-safe-assembly
+            assembly {
+                nodeOpId := shr(24, calldataload(add(_nodeOperatorIds.offset, mul(i, 8))))
+                keysCount := shr(16, calldataload(add(_stuckKeysCounts.offset, mul(i, 16))))
+                i := add(i, 1)
+            }
+            IStakingModule(moduleAddr).updateStuckValidatorsKeysCount(nodeOpId, keysCount);
         }
     }
 
