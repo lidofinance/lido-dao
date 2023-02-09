@@ -112,14 +112,13 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
         emit Transfer(_from, _to, _requestId);
     }
 
-    /// @dev Transfers `tokenId` from `from` to `to`.
+    /// @dev Transfers `_requestId` from `_from` to `_to`.
     ///  As opposed to {transferFrom}, this imposes no restrictions on msg.sender.
     ///
     /// Requirements:
     ///
-    /// - `from` cannot be the zero address.
-    /// - `to` cannot be the zero address.
-    /// - `tokenId` token must be owned by `from`.
+    /// - `_to` cannot be the zero address.
+    /// - `_requestId` request must be owned by `_from`.
     function _transfer(address _from, address _to, uint256 _requestId) internal {
         if (_to == address(0)) revert TransferToZeroAddress();
         if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
@@ -136,15 +135,14 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
         _getRequestsByOwner()[_from].remove(_requestId);
     }
 
-    /// @dev Safely transfers `tokenId` token from `from` to `to`, checking first that contract recipients
+    /// @dev Safely transfers `_requestId` token from `_from` to `_to`, checking first that contract recipients
     ///  are aware of the ERC721 protocol to prevent tokens from being forever locked.
-    ///  `data` is additional data, it has no specified format and it is sent in call to `to`.
+    ///  `_data` is additional data, it has no specified format and it is sent in call to `to`.
     ///
     /// Requirements:
     ///
-    ///  - `from` cannot be the zero address.
-    ///  - `to` cannot be the zero address.
-    ///  - `tokenId` token must exist and be owned by `from`.
+    ///  - `_to` cannot be the zero address.
+    ///  - `_requestId` token must exist and be owned by `_from`.
     ///  - If `to` refers to a smart contract, it must implement {IERC721Receiver-onERC721Received}, which is called upon a safe transfer.
     ///
     ///  Emits a {Transfer} event.
@@ -187,11 +185,11 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
         }
     }
 
-    /// @dev Returns whether `spender` is allowed to manage `tokenId`.
+    /// @dev Returns whether `_spender` is allowed to manage `_requestId`.
     ///
     /// Requirements:
     ///
-    /// - `tokenId` must exist.
+    /// - `_requestId` must exist.
     function _isApprovedOrOwner(address _spender, uint256 _requestId) internal view returns (bool) {
         address owner = ownerOf(_requestId);
         return (_spender == owner || isApprovedForAll(owner, _spender) || getApproved(_requestId) == _spender);
@@ -211,15 +209,15 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
         return _requestId > 0 && _requestId <= getLastRequestId() && !_getQueue()[_requestId].claimed;
     }
 
-    /// @dev Approve `to` to operate on `tokenId`
-    /// Emits a {Approval} event.
+    /// @dev Approve `_to` to operate on `_requestId`
+    /// Emits a { Approval } event.
     function _approve(address _to, uint256 _requestId) internal virtual {
         _getTokenApprovals()[_requestId] = _to;
         emit Approval(ownerOf(_requestId), _to, _requestId);
     }
 
     /// @dev Approve `operator` to operate on all of `owner` tokens
-    /// Emits a {ApprovalForAll} event.
+    /// Emits a { ApprovalForAll } event.
     function _setApprovalForAll(address _owner, address _operator, bool _approved) internal virtual {
         if (_owner == _operator) revert ApproveToCaller();
         _getOperatorApprovals()[_owner][_operator] = _approved;
