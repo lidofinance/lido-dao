@@ -111,7 +111,7 @@ contract ModuleSolo is IStakingModule {
         moduleType = _type;
     }
 
-    function provideDepositsData(uint256 _depositsCount, bytes calldata _calldata)
+    function obtainDepositData(uint256 _depositsCount, bytes calldata _calldata)
         external
         pure
         returns (

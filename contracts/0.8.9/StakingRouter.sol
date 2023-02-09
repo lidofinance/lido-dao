@@ -753,7 +753,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             bytes memory publicKeysBatch;
             bytes memory signaturesBatch;
             (depositsCount, publicKeysBatch, signaturesBatch) = IStakingModule(stakingModule.stakingModuleAddress)
-                .provideDepositsData(maxDepositsCount, _depositCalldata);
+                .obtainDepositData(maxDepositsCount, _depositCalldata);
 
             if (depositsCount > 0) {
                 _makeBeaconChainDeposits32ETH(depositsCount, abi.encodePacked(withdrawalCredentials), publicKeysBatch, signaturesBatch);

@@ -501,12 +501,13 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         }
     }
 
-    /// @notice Requests the given number of the validator keys from the staking module
-    /// @param _depositsCount Requested keys count to return
-    /// @return returnedKeysCount Actually returned keys count
+    /// @notice Obtains up to _depositsCount deposit data to be used by StakingRouter
+    ///     to deposit to the Ethereum Deposit contract
+    /// @param _depositsCount Desireable number of deposits to be done
+    /// @return depositsCount Actual deposits count might be done with returned data
     /// @return publicKeys Batch of the concatenated public validators keys
-    /// @return signatures Batch of the concatenated signatures for returned public keys
-    function provideDepositsData(uint256 _depositsCount, bytes)
+    /// @return signatures Batch of the concatenated deposit signatures for returned public keys
+    function obtainDepositData(uint256 _depositsCount, bytes)
         external
         returns (
             uint256 depositsCount,

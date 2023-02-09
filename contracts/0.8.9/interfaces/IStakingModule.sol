@@ -91,14 +91,14 @@ interface IStakingModule {
     /// @notice Invalidates all unused validators for all node operators
     function invalidateDepositsData() external;
 
-    /// @notice Provides up to _depositsCount deposit data to be used by StakingRouter
+    /// @notice Obtains up to _depositsCount deposit data to be used by StakingRouter
     ///     to deposit to the Ethereum Deposit contract
     /// @param _depositsCount Desireable number of deposits to be done
     /// @param _calldata Staking module defined data encoded as bytes
     /// @return depositsCount Actual deposits count might be done with returned data
     /// @return publicKeys Batch of the concatenated public validators keys
     /// @return signatures Batch of the concatenated deposit signatures for returned public keys
-    function provideDepositsData(uint256 _depositsCount, bytes calldata _calldata) external returns (
+    function obtainDepositData(uint256 _depositsCount, bytes calldata _calldata) external returns (
         uint256 depositsCount,
         bytes memory publicKeys,
         bytes memory signatures
