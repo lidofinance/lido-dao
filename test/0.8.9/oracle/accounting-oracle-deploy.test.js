@@ -150,7 +150,8 @@ async function deployAccountingOracleSetup(admin, {
     initialEpoch = +await legacyOracle.getLastCompletedEpochId() + epochsPerFrame
   }
 
-  const oracle = await AccountingOracle.new(locatorAddr, lido.address, secondsPerSlot, genesisTime, {from: admin})
+  const oracle = await AccountingOracle.new(locatorAddr, lido.address, legacyOracle.address,
+    secondsPerSlot, genesisTime, {from: admin})
 
   const {consensus} = await deployHashConsensus(admin, {
     reportProcessor: oracle,
@@ -164,14 +165,13 @@ async function deployAccountingOracleSetup(admin, {
   // pretend we're at the first slot of the initial frame's epoch
   await consensus.setTime(genesisTime + initialEpoch * slotsPerEpoch * secondsPerSlot)
 
-  return {lido, stakingRouter, withdrawalQueue, locatorAddr, legacyOracle, oracle, consensus}
+  return {lido, stakingRouter, withdrawalQueue, locatorAddr, oracle, consensus}
 }
 
 async function initAccountingOracle({
   admin,
   oracle,
   consensus,
-  legacyOracle,
   dataSubmitter = null,
   consensusVersion = CONSENSUS_VERSION,
   maxExitedValidatorsPerDay = MAX_EXITED_VALS_PER_DAY,
@@ -181,7 +181,6 @@ async function initAccountingOracle({
     admin,
     consensus.address,
     consensusVersion,
-    legacyOracle.address,
     maxExitedValidatorsPerDay,
     maxExtraDataListItemsCount,
     {from: admin}

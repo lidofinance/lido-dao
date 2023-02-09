@@ -141,41 +141,64 @@ contract AccountingOracle is BaseOracle {
     bytes32 internal constant EXTRA_DATA_PROCESSING_STATE_POSITION =
         keccak256("lido.AccountingOracle.extraDataProcessingState");
 
-    /// @dev Storage slot: address legacyOracle
-    bytes32 internal constant LEGACY_ORACLE_POSITION =
-        keccak256("lido.AccountingOracle.legacyOracle");
-
-
     address public immutable LIDO;
     ILidoLocator public immutable LOCATOR;
+    address public immutable LEGACY_ORACLE;
 
     ///
     /// Initialization & admin functions
     ///
 
-    constructor(address lidoLocator, address lido, uint256 secondsPerSlot, uint256 genesisTime)
+    constructor(address lidoLocator, address lido, address legacyOracle, uint256 secondsPerSlot, uint256 genesisTime)
         BaseOracle(secondsPerSlot, genesisTime)
     {
         if (lidoLocator == address(0)) revert LidoLocatorCannotBeZero();
+        if (legacyOracle == address(0)) revert LegacyOracleCannotBeZero();
         LOCATOR = ILidoLocator(lidoLocator);
         LIDO = lido;
+        LEGACY_ORACLE = legacyOracle;
     }
 
     function initialize(
         address admin,
         address consensusContract,
         uint256 consensusVersion,
-        address legacyOracle,
         uint256 maxExitedValidatorsPerDay,
         uint256 maxExtraDataListItemsCount
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
-        if (legacyOracle == address(0)) revert LegacyOracleCannotBeZero();
+
+        uint256 lastProcessingRefSlot = _checkOracleMigration(LEGACY_ORACLE, consensusContract);
+        _initialize(admin, consensusContract, consensusVersion, maxExitedValidatorsPerDay,
+                    maxExtraDataListItemsCount, lastProcessingRefSlot);
+    }
+
+    function initializeWithoutMigration(
+        address admin,
+        address consensusContract,
+        uint256 consensusVersion,
+        uint256 maxExitedValidatorsPerDay,
+        uint256 maxExtraDataListItemsCount,
+        uint256 lastProcessingRefSlot
+    ) external {
+        if (admin == address(0)) revert AdminCannotBeZero();
+
+        _initialize(admin, consensusContract, consensusVersion, maxExitedValidatorsPerDay,
+                    maxExtraDataListItemsCount, lastProcessingRefSlot);
+    }
+
+    function _initialize(
+        address admin,
+        address consensusContract,
+        uint256 consensusVersion,
+        uint256 maxExitedValidatorsPerDay,
+        uint256 maxExtraDataListItemsCount,
+        uint256 lastProcessingRefSlot
+    ) internal {
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
-        uint256 lastProcessingRefSlot = _checkOracleMigration(legacyOracle, consensusContract);
-        LEGACY_ORACLE_POSITION.setStorageAddress(legacyOracle);
-        _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
+
         _setDataBoundaries(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
+        BaseOracle._initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
     }
 
     function getDataBoundaries() external view returns (
@@ -473,7 +496,10 @@ contract AccountingOracle is BaseOracle {
     /// 3. first reference slot of the new oracle
     /// 4. first new oracle's consensus report arrives
     ///
-    function _checkOracleMigration(address legacyOracle, address consensusContract)
+    function _checkOracleMigration(
+        address legacyOracle,
+        address consensusContract
+    )
         internal view returns (uint256)
     {
         (uint256 initialEpoch,
@@ -556,7 +582,7 @@ contract AccountingOracle is BaseOracle {
             );
         }
 
-        ILegacyOracle(LEGACY_ORACLE_POSITION.getStorageAddress()).handleConsensusLayerReport(
+        ILegacyOracle(LEGACY_ORACLE).handleConsensusLayerReport(
             data.refSlot,
             data.clBalanceGwei * 1e9,
             data.numValidators

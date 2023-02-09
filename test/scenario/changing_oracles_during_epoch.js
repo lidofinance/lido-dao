@@ -14,9 +14,6 @@ const {
   calcReportDataHash
 } = require('../0.8.9/oracle/accounting-oracle-deploy.test')
 
-const AccountingOracle = artifacts.require('AccountingOracleTimeTravellable.sol')
-const HashConsensus = artifacts.require('HashConsensus.sol')
-
 const SLOTS_PER_EPOCH = 32
 const SECONDS_PER_SLOT = 12
 const GENESIS_TIME = 1606824000
