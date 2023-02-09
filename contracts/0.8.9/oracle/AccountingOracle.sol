@@ -167,12 +167,14 @@ contract AccountingOracle is BaseOracle {
         uint256 consensusVersion,
         address legacyOracle,
         uint256 maxExitedValidatorsPerDay,
-        uint256 maxExtraDataListItemsCount
+        uint256 maxExtraDataListItemsCount,
+        bool skipBeaconSpecMigrationCheck
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         if (legacyOracle == address(0)) revert LegacyOracleCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
-        uint256 lastProcessingRefSlot = _checkOracleMigration(legacyOracle, consensusContract);
+
+        uint256 lastProcessingRefSlot = _checkOracleMigration(legacyOracle, consensusContract, skipBeaconSpecMigrationCheck);
         LEGACY_ORACLE_POSITION.setStorageAddress(legacyOracle);
         _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
         _setDataBoundaries(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
@@ -439,7 +441,11 @@ contract AccountingOracle is BaseOracle {
     /// 3. first reference slot of the new oracle
     /// 4. first new oracle's consensus report arrives
     ///
-    function _checkOracleMigration(address legacyOracle, address consensusContract)
+    function _checkOracleMigration(
+        address legacyOracle,
+        address consensusContract,
+        bool skipBeaconSpecMigrationCheck
+    )
         internal view returns (uint256)
     {
         (uint256 initialEpoch,
@@ -449,7 +455,7 @@ contract AccountingOracle is BaseOracle {
             uint256 secondsPerSlot,
             uint256 genesisTime) = IConsensusContract(consensusContract).getChainConfig();
 
-        {
+        if (!skipBeaconSpecMigrationCheck) {
             // check chain spec to match the prev. one (a block is used to reduce stack alloc)
             (uint256 legacyEpochsPerFrame,
                 uint256 legacySlotsPerEpoch,

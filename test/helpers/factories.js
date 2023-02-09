@@ -200,9 +200,11 @@ async function accountingOracleFactory({ voting, pool, lidoLocator, lidoAddress,
     legacyOracle.address,
     10000,
     10000,
+    false, // skipBeaconSpecMigrationCheck
   )
 
-  await legacyOracle.initialize(pool.address, oracle.address)
+  const lastCompletedEpochId = 0
+  await legacyOracle.initialize(pool.address, oracle.address, consensusContract.address, lastCompletedEpochId)
 
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), voting.address, { from: voting.address })
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), voting.address, { from: voting.address })

@@ -176,6 +176,7 @@ async function initAccountingOracle({
   consensusVersion = CONSENSUS_VERSION,
   maxExitedValidatorsPerDay = MAX_EXITED_VALS_PER_DAY,
   maxExtraDataListItemsCount = MAX_EXTRA_DATA_LIST_LEN,
+  skipBeaconSpecMigrationCheck = false,
 }) {
   const initTx = await oracle.initialize(
     admin,
@@ -184,6 +185,7 @@ async function initAccountingOracle({
     legacyOracle.address,
     maxExitedValidatorsPerDay,
     maxExtraDataListItemsCount,
+    skipBeaconSpecMigrationCheck,
     {from: admin}
   )
 
