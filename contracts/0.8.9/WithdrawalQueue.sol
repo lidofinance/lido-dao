@@ -261,7 +261,11 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @dev WARNING! OOG is possible if used onchain.
     ///  See `findCheckpointHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)` for onchain use
     /// @param _requestIds ids of the requests sorted in the ascending order to get hints for
-    function findCheckpointHintsUnbounded(uint256[] calldata _requestIds) public view returns (uint256[] memory hintIds) {
+    function findCheckpointHintsUnbounded(uint256[] calldata _requestIds)
+        public
+        view
+        returns (uint256[] memory hintIds)
+    {
         return findCheckpointHints(_requestIds, 1, getLastCheckpointIndex());
     }
 
@@ -344,7 +348,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         _checkWithdrawalRequestAmount(amountOfStETH);
 
         uint256 amountOfShares = STETH.getSharesByPooledEth(amountOfStETH);
-        
+
         requestId = _enqueue(uint128(amountOfStETH), uint128(amountOfShares), _owner);
 
         _emitTransfer(address(0), _owner, requestId);
