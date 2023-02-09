@@ -317,7 +317,7 @@ abstract contract WithdrawalQueueBase {
     /// @dev WARNING! OOG is possible if used onchain, contains unbounded loop inside
     /// @return finalizableRequestId or 0, if there are no requests finalizable under given conditions
     function findLastFinalizableRequestId(uint256 _ethBudget, uint256 _shareRate, uint256 _maxTimestamp)
-        public
+        external
         view
         returns (uint256 finalizableRequestId)
     {
