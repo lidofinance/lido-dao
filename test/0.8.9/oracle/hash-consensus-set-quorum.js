@@ -1,5 +1,5 @@
 const { assert } = require('chai')
-const { assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertEvent, assertAmountOfEvents, assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { assertRevert } = require('../../helpers/assertThrow')
 
 const {
@@ -10,6 +10,7 @@ const {
   computeEpochFirstSlot,
   computeTimestampAtEpoch,
   ZERO_HASH,
+  UNREACHABLE_QUORUM,
   HASH_1,
   HASH_3,
   CONSENSUS_VERSION,
@@ -86,6 +87,18 @@ contract('HashConsensus', ([admin, member1, member2, member3]) => {
 
         await consensus.setQuorum(2)
         assert.equal(+(await consensus.getQuorum()), 2)
+      })
+    })
+
+    context('disableConsensus sets unreachable quorum value', () => {
+      before(deployContract)
+
+      it('disableConsensus updated quorum value and emits events', async () => {
+        const tx = await consensus.disableConsensus()
+        assertEvent(tx, 'QuorumSet', {
+          expectedArgs: { newQuorum: UNREACHABLE_QUORUM.toString(10), totalMembers: 0, prevQuorum: 0 }
+        })
+        assertBn(await consensus.getQuorum(), UNREACHABLE_QUORUM)
       })
     })
   })
