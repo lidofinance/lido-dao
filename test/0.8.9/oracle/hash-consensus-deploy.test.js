@@ -1,7 +1,5 @@
 const { assert } = require('chai')
-const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
-const { assertRevert } = require('../../helpers/assertThrow')
-const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { bn } = require('@aragon/contract-helpers-test')
 
 const HashConsensus = artifacts.require('HashConsensusTimeTravellable')
 const MockReportProcessor = artifacts.require('MockReportProcessor')
@@ -32,22 +30,23 @@ const HASH_3 = '0x33333333333333333333333333333333333333333333333333333333333333
 const HASH_4 = '0x4444444444444444444444444444444444444444444444444444444444444444'
 const HASH_5 = '0x5555555555555555555555555555555555555555555555555555555555555555'
 
+const UNREACHABLE_QUORUM = bn('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
+
 const CONSENSUS_VERSION = 1
 
 async function deployHashConsensus(
   admin,
   {
     reportProcessor = null,
-    reportProcessorAddress = null,
     slotsPerEpoch = SLOTS_PER_EPOCH,
     secondsPerSlot = SECONDS_PER_SLOT,
     genesisTime = GENESIS_TIME,
     epochsPerFrame = EPOCHS_PER_FRAME,
-    fastLaneLengthSlots = INITIAL_FAST_LANE_LENGHT_SLOTS,
-    initialEpoch = INITIAL_EPOCH
+    fastLaneLengthSlots = 0,
+    initialEpoch = 1
   } = {}
 ) {
-  if (!reportProcessor && !reportProcessorAddress) {
+  if (!reportProcessor) {
     reportProcessor = await MockReportProcessor.new(CONSENSUS_VERSION, { from: admin })
   }
 
@@ -75,8 +74,6 @@ async function deployHashConsensus(
 }
 
 module.exports = {
-  INITIAL_FAST_LANE_LENGHT_SLOTS,
-  INITIAL_EPOCH,
   SLOTS_PER_EPOCH,
   SECONDS_PER_SLOT,
   GENESIS_TIME,
@@ -97,6 +94,7 @@ module.exports = {
   HASH_4,
   HASH_5,
   CONSENSUS_VERSION,
+  UNREACHABLE_QUORUM,
   deployHashConsensus
 }
 
