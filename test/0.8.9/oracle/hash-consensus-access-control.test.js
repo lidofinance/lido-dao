@@ -202,7 +202,7 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2, strange
         await consensus.grantRole(manageFastLineConfigRoleKeccak156, account2)
         await consensus.setFastLaneLengthSlots(64, { from: account2 })
 
-        assert.equal(+(await consensus.getFrameConfigFastLaneLengthSlots()), 64)
+        assert.equal(+(await consensus.getFrameConfig()).fastLaneLengthSlots, 64)
       })
     })
   })

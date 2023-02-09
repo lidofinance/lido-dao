@@ -52,7 +52,7 @@ contract('HashConsensus', ([admin, member1, member2]) => {
         await consensus.setFrameConfig(100, 50)
 
         assert.equal(+(await consensus.getFrameConfig()).epochsPerFrame, 100)
-        assert.equal(+(await consensus.getFrameConfigFastLaneLengthSlots()), 50)
+        assert.equal(+(await consensus.getFrameConfig()).fastLaneLengthSlots, 50)
         assert.equal(+(await consensus.getFrameConfig()).initialEpoch, INITIAL_EPOCH)
       })
     })
@@ -63,7 +63,7 @@ contract('HashConsensus', ([admin, member1, member2]) => {
         await consensus.setFrameConfig(100, 50)
 
         assert.equal(+(await consensus.getFrameConfig()).epochsPerFrame, 100)
-        assert.equal(+(await consensus.getFrameConfigFastLaneLengthSlots()), 50)
+        assert.equal(+(await consensus.getFrameConfig()).fastLaneLengthSlots, 50)
         assert.equal(+(await consensus.getFrameConfig()).initialEpoch, INITIAL_EPOCH)
       })
 
@@ -72,7 +72,7 @@ contract('HashConsensus', ([admin, member1, member2]) => {
         await consensus.setFrameConfig(100, 50)
 
         assert.equal(+(await consensus.getFrameConfig()).epochsPerFrame, 100)
-        assert.equal(+(await consensus.getFrameConfigFastLaneLengthSlots()), 50)
+        assert.equal(+(await consensus.getFrameConfig()).fastLaneLengthSlots, 50)
         assert.equal(+(await consensus.getFrameConfig()).initialEpoch, EPOCHS_PER_FRAME + 1)
       })
 
@@ -93,8 +93,8 @@ contract('HashConsensus', ([admin, member1, member2]) => {
       it('should emit FrameConfigSet & FastLaneConfigSet event', async () => {
         const tx = await consensus.setFrameConfig(100, 50)
 
-        assertEvent(tx, 'FrameConfigSet')
-        assertEvent(tx, 'FastLaneConfigSet')
+        assertEvent(tx, 'FrameConfigSet', { expectedArgs: { newInitialEpoch: 1, newEpochsPerFrame: 100 } })
+        assertEvent(tx, 'FastLaneConfigSet', { expectedArgs: { fastLaneLengthSlots: 50 } })
       })
 
       it('should not emit FrameConfigSet & FastLaneConfigSet event', async () => {
@@ -262,34 +262,31 @@ contract('HashConsensus', ([admin, member1, member2]) => {
       assert.equal(+newFrame.reportProcessingDeadlineSlot, computeEpochFirstSlot(10) - 1)
     })
 
-    it(
-      `decreasing the frame size may advance the current reference slot, ` + `but at least by the new frame size`,
-      async () => {
-        assert.equal(+(await consensus.getTime()), computeTimestampAtEpoch(1))
+    it('decreasing the frame size may advance the current reference slot, but at least by the new frame size', async () => {
+      assert.equal(+(await consensus.getTime()), computeTimestampAtEpoch(1))
 
-        await consensus.setFrameConfig(5, 0)
-        assert.equal(+(await consensus.getFrameConfig()).initialEpoch, 1)
+      await consensus.setFrameConfig(5, 0)
+      assert.equal(+(await consensus.getFrameConfig()).initialEpoch, 1)
 
-        /// we're at the end of the frame 1 spanning epochs 6-10
-        ///
-        ///        epochs  00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20
-        /// frames before    |-------------r|------------^-|--------------|--------------|
-        ///  frames after    |--------------|----------r|^----------|-----------|---------
-        ///                  |
-        /// NOT like this    |-----------|----------r|---^-------|-----------|-----------|
-        ///
-        await consensus.setTime(computeTimestampAtEpoch(10))
+      /// we're at the end of the frame 1 spanning epochs 6-10
+      ///
+      ///        epochs  00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20
+      /// frames before    |-------------r|------------^-|--------------|--------------|
+      ///  frames after    |--------------|----------r|^----------|-----------|---------
+      ///                  |
+      /// NOT like this    |-----------|----------r|---^-------|-----------|-----------|
+      ///
+      await consensus.setTime(computeTimestampAtEpoch(10))
 
-        const frame = await consensus.getCurrentFrame()
-        assert.equal(+frame.refSlot, computeEpochFirstSlot(6) - 1)
-        assert.equal(+frame.reportProcessingDeadlineSlot, computeEpochFirstSlot(11) - 1)
+      const frame = await consensus.getCurrentFrame()
+      assert.equal(+frame.refSlot, computeEpochFirstSlot(6) - 1)
+      assert.equal(+frame.reportProcessingDeadlineSlot, computeEpochFirstSlot(11) - 1)
 
-        await consensus.setFrameConfig(4, 0)
+      await consensus.setFrameConfig(4, 0)
 
-        const newFrame = await consensus.getCurrentFrame()
-        assert.equal(+newFrame.refSlot, computeEpochFirstSlot(10) - 1)
-        assert.equal(+newFrame.reportProcessingDeadlineSlot, computeEpochFirstSlot(14) - 1)
-      }
-    )
+      const newFrame = await consensus.getCurrentFrame()
+      assert.equal(+newFrame.refSlot, computeEpochFirstSlot(10) - 1)
+      assert.equal(+newFrame.reportProcessingDeadlineSlot, computeEpochFirstSlot(14) - 1)
+    })
   })
 })

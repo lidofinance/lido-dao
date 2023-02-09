@@ -73,10 +73,6 @@ contract HashConsensusTimeTravellable is HashConsensus {
         _time += SECONDS_PER_SLOT * SLOTS_PER_EPOCH * numEpochs;
     }
 
-    function getFrameConfigFastLaneLengthSlots() external view returns (uint256 fastLaneLengthSlots) {
-        return  (_frameConfig.fastLaneLengthSlots);
-    }
-
     function getReportProcessor() external view returns (address) {
         return _reportProcessor;
     }
