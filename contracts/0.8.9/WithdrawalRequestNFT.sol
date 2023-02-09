@@ -24,8 +24,8 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     using EnumerableSet for EnumerableSet.UintSet;
     using UnstructuredRefStorage for bytes32;
 
-    bytes32 internal constant TOKEN_APPROVALS_POSITION = keccak256("lido.WithdrawalNFT.tokenApprovals");
-    bytes32 internal constant OPERATOR_APPROVALS = keccak256("lido.WithdrawalNFT.operatorApprovals");
+    bytes32 internal constant TOKEN_APPROVALS_POSITION = keccak256("lido.WithdrawalRequestNFT.tokenApprovals");
+    bytes32 internal constant OPERATOR_APPROVALS_POSITION = keccak256("lido.WithdrawalRequestNFT.operatorApprovals");
 
     error ApprovalToOwner();
     error ApproveToCaller();
@@ -200,14 +200,14 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
 
     /// @dev Approve `_to` to operate on `_requestId`
     /// Emits a { Approval } event.
-    function _approve(address _to, uint256 _requestId) internal virtual {
+    function _approve(address _to, uint256 _requestId) internal {
         _getTokenApprovals()[_requestId] = _to;
         emit Approval(ownerOf(_requestId), _to, _requestId);
     }
 
     /// @dev Approve `operator` to operate on all of `owner` tokens
     /// Emits a { ApprovalForAll } event.
-    function _setApprovalForAll(address _owner, address _operator, bool _approved) internal virtual {
+    function _setApprovalForAll(address _owner, address _operator, bool _approved) internal {
         if (_owner == _operator) revert ApproveToCaller();
         _getOperatorApprovals()[_owner][_operator] = _approved;
         emit ApprovalForAll(_owner, _operator, _approved);
@@ -218,6 +218,6 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     }
 
     function _getOperatorApprovals() internal pure returns (mapping(address => mapping(address => bool)) storage) {
-        return OPERATOR_APPROVALS.storageMapAddressMapAddressBool();
+        return OPERATOR_APPROVALS_POSITION.storageMapAddressMapAddressBool();
     }
 }
