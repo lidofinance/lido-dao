@@ -238,23 +238,51 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         return indices;
     }
 
-    /// @notice Returns processing state for the current consensus report.
+    struct ProcessingState {
+        /// @notice Reference slot for the current reporting frame.
+        uint256 currentFrameRefSlot;
+        /// @notice The last time at which a report data can be submitted for the current
+        /// reporting frame.
+        uint256 processingDeadlineTime;
+        /// @notice Hash of the report data. Zero bytes if consensus on the hash hasn't
+        /// been reached yet for the current reporting frame.
+        bytes32 dataHash;
+        /// @notice Whether any report data for the for the current reporting frame has been
+        /// already submitted.
+        bool dataSubmitted;
+        /// @notice Format of the report data for the current reporting frame.
+        uint256 dataFormat;
+        /// @notice Total number of validator exit requests for the current reporting frame.
+        uint256 requestsCount;
+        /// @notice How many validator exit requests are already submitted for the current
+        /// reporting frame.
+        uint256 requestsSubmitted;
+    }
+
+    /// @notice Returns data processing state for the current reporting frame.
+    /// @return result See the docs for the `ProcessingState` struct.
     ///
-    function getDataProcessingState() external view returns (
-        uint256 refSlot,
-        bool processingStarted,
-        uint256 requestsCount,
-        uint256 requestsProcessed,
-        uint256 dataFormat
-    ) {
-        DataProcessingState memory state = _storageDataProcessingState().value;
-        refSlot = _storageConsensusReport().value.refSlot;
-        processingStarted = state.refSlot != 0 && state.refSlot == refSlot;
-        if (processingStarted) {
-            requestsCount = state.requestsCount;
-            requestsProcessed = state.requestsProcessed;
-            dataFormat = state.dataFormat;
+    function getProcessingState() external view returns (ProcessingState memory result) {
+        ConsensusReport memory report = _storageConsensusReport().value;
+        result.currentFrameRefSlot = _getCurrentRefSlot();
+
+        if (result.currentFrameRefSlot != report.refSlot) {
+            return result;
         }
+
+        result.processingDeadlineTime = report.processingDeadlineTime;
+        result.dataHash = report.hash;
+
+        DataProcessingState memory procState = _storageDataProcessingState().value;
+
+        result.dataSubmitted = procState.refSlot == result.currentFrameRefSlot;
+        if (!result.dataSubmitted) {
+            return result;
+        }
+
+        result.dataFormat = procState.dataFormat;
+        result.requestsCount = procState.requestsCount;
+        result.requestsSubmitted = procState.requestsProcessed;
     }
 
     ///
