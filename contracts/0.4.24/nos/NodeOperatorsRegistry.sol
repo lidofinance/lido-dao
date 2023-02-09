@@ -68,13 +68,8 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     //
     // bytes32 public constant MANAGE_SIGNING_KEYS = keccak256("MANAGE_SIGNING_KEYS");
     bytes32 public constant MANAGE_SIGNING_KEYS = 0x75abc64490e17b40ea1e66691c3eb493647b24430b358bd87ec3e5127f1621ee;
-    // bytes32 public constant ADD_NODE_OPERATOR_ROLE = keccak256("ADD_NODE_OPERATOR_ROLE");
-    bytes32 public constant ADD_NODE_OPERATOR_ROLE = 0xe9367af2d321a2fc8d9c8f1e67f0fc1e2adf2f9844fb89ffa212619c713685b2;
     // bytes32 public constant SET_NODE_OPERATOR_LIMIT_ROLE = keccak256("SET_NODE_OPERATOR_LIMIT_ROLE");
     bytes32 public constant SET_NODE_OPERATOR_LIMIT_ROLE = 0x07b39e0faf2521001ae4e58cb9ffd3840a63e205d288dc9c93c3774f0d794754;
-    // bytes32 public constant INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE = keccak256("INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE");
-    bytes32 public constant INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE =
-        0xeaf200990dc6840b2b98dda560b1fd49fc2bbb13aae6f2864e84b7af0b3026fe;
     // bytes32 public constant ACTIVATE_NODE_OPERATOR_ROLE = keccak256("MANAGE_NODE_OPERATOR_ROLE");
     bytes32 public constant MANAGE_NODE_OPERATOR_ROLE = 0x78523850fdd761612f46e844cf5a16bda6b3151d6ae961fd7e8e7b92bfbca7f8;
     // bytes32 public constant STAKING_ROUTER_ROLE = keccak256("STAKING_ROUTER_ROLE");
@@ -249,7 +244,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     function addNodeOperator(string _name, address _rewardAddress) external returns (uint256 id) {
         _onlyValidNodeOperatorName(_name);
         _onlyNonZeroAddress(_rewardAddress);
-        _auth(ADD_NODE_OPERATOR_ROLE);
+        _auth(MANAGE_NODE_OPERATOR_ROLE);
 
         id = getNodeOperatorsCount();
         require(id < MAX_NODE_OPERATORS_COUNT, "MAX_OPERATORS_COUNT_EXCEEDED");
@@ -319,7 +314,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     function setNodeOperatorName(uint256 _nodeOperatorId, string _name) external {
         _onlyValidNodeOperatorName(_name);
         _onlyExistedNodeOperator(_nodeOperatorId);
-        _authP(ADD_NODE_OPERATOR_ROLE, arr(uint256(_nodeOperatorId)));
+        _authP(MANAGE_NODE_OPERATOR_ROLE, arr(uint256(_nodeOperatorId)));
 
         _nodeOperators[_nodeOperatorId].name = _name;
         emit NodeOperatorNameSet(_nodeOperatorId, _name);
@@ -331,7 +326,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     function setNodeOperatorRewardAddress(uint256 _nodeOperatorId, address _rewardAddress) external {
         _onlyNonZeroAddress(_rewardAddress);
         _onlyExistedNodeOperator(_nodeOperatorId);
-        _authP(ADD_NODE_OPERATOR_ROLE, arr(uint256(_nodeOperatorId), uint256(_rewardAddress)));
+        _authP(MANAGE_NODE_OPERATOR_ROLE, arr(uint256(_nodeOperatorId), uint256(_rewardAddress)));
 
         _nodeOperators[_nodeOperatorId].rewardAddress = _rewardAddress;
         emit NodeOperatorRewardAddressSet(_nodeOperatorId, _rewardAddress);
@@ -482,7 +477,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         if (_stuckValidatorsCount == stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)) return;
 
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
-        _requireOutOfRange(_stuckValidatorsCount <= signingKeysStats.get(EXITED_KEYS_COUNT_OFFSET));
+        _requireOutOfRange(_stuckValidatorsCount <= signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET));
 
         stuckPenaltyStats.set(STUCK_VALIDATORS_COUNT_OFFSET, _stuckValidatorsCount);
         _saveOperatorStuckPenaltyStats(_nodeOperatorId, stuckPenaltyStats);
@@ -518,7 +513,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     /// @notice Invalidates all unused validators keys for all node operators
     function invalidateReadyToDepositKeysRange(uint256 _indexFrom, uint256 _indexTo) public {
-        _auth(INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE);
+        _auth(MANAGE_NODE_OPERATOR_ROLE);
         _requireOutOfRange(_indexFrom <= _indexTo && _indexTo < getNodeOperatorsCount());
 
         uint64 trimmedKeysCount;
@@ -793,6 +788,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     /// @param _keysCount Number of signing keys provided
     /// @param _publicKeys Several concatenated validator signing keys
     /// @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
+    /// @dev DEPRECATED use addSigningKeys instead
     function addSigningKeysOperatorBH(uint256 _nodeOperatorId, uint256 _keysCount, bytes _publicKeys, bytes _signatures)
         external
     {
@@ -840,7 +836,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     /// @notice Removes a validator signing key #`_index` of operator #`_id` from the set of usable keys. Executed on behalf of Node Operator.
     /// @param _nodeOperatorId Node Operator id
     /// @param _index Index of the key, starting with 0
-    /// @dev DEPRECATED use removeSigningKeysOperatorBH instead
+    /// @dev DEPRECATED use removeSigningKeys instead
     function removeSigningKeyOperatorBH(uint256 _nodeOperatorId, uint256 _index) external {
         _removeUnusedSigningKeys(_nodeOperatorId, _index, 1);
     }
@@ -849,6 +845,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     /// @param _nodeOperatorId Node Operator id
     /// @param _fromIndex Index of the key, starting with 0
     /// @param _keysCount Number of keys to remove
+    /// @dev DEPRECATED use removeSigningKeys instead
     function removeSigningKeysOperatorBH(uint256 _nodeOperatorId, uint256 _fromIndex, uint256 _keysCount) external {
         _removeUnusedSigningKeys(_nodeOperatorId, _fromIndex, _keysCount);
     }

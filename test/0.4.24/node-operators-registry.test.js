@@ -97,12 +97,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       base: appBase,
       permissions: {
         MANAGE_SIGNING_KEYS: voting,
-        ADD_NODE_OPERATOR_ROLE: voting,
         MANAGE_NODE_OPERATOR_ROLE: voting,
-        // ACTIVATE_NODE_OPERATOR_ROLE: voting,
-        // DEACTIVATE_NODE_OPERATOR_ROLE: voting,
-        // SET_NODE_OPERATOR_NAME_ROLE: voting,
-        // SET_NODE_OPERATOR_ADDRESS_ROLE: voting,
         SET_NODE_OPERATOR_LIMIT_ROLE: voting,
         INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE: voting,
         STAKING_ROUTER_ROLE: voting
@@ -370,22 +365,22 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
   })
 
   describe('addNodeOperator()', () => {
-    it('reverts when called by sender without ADD_NODE_OPERATOR_ROLE', async () => {
-      const hasPermission = await dao.hasPermission(nobody, app, 'ADD_NODE_OPERATOR_ROLE')
+    it('reverts when called by sender without MANAGE_NODE_OPERATOR_ROLE', async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isFalse(hasPermission)
 
       await assert.reverts(app.addNodeOperator('1', ADDRESS_1, { from: nobody }), 'APP_AUTH_FAILED')
     })
 
     it('reverts with error "WRONG_NAME_LENGTH" when called with empty name', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'ADD_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
       await assert.reverts(app.addNodeOperator('', ADDRESS_1, { from: voting }), 'WRONG_NAME_LENGTH')
     })
 
     it('reverts with error "WRONG_NAME_LENGTH" when called with name length > MAX_NODE_OPERATOR_NAME_LENGTH', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'ADD_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
       const maxNameLength = await app.MAX_NODE_OPERATOR_NAME_LENGTH()
@@ -395,7 +390,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('reverts with error "ZERO_ADDRESS" when called with zero reward address', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'ADD_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
       const name = 'Node Operator #1'
@@ -404,7 +399,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('reverts with error "MAX_COUNT_EXCEEDED" when total count of node operators = MAX_COUNT_EXCEEDED', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'ADD_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
       const maxNodeOperatorsCount = await app.MAX_NODE_OPERATORS_COUNT()
@@ -418,7 +413,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('creates node operator with correct state', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'ADD_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
       const name = `Node Operator #1`
@@ -438,7 +433,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('returns correct node operator id', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'ADD_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
       assert.equals(await app.getNodeOperatorsCount(), 0)
@@ -456,7 +451,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('active & total operators count update correctly', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'ADD_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
       assert.equals(await app.getNodeOperatorsCount(), 0)
@@ -469,7 +464,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('emits NodeOperatorAdded events with correct params', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'ADD_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
       assert.equals(await app.getNodeOperatorsCount(), 0)
@@ -833,8 +828,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await assert.reverts(app.setNodeOperatorName(nodeOperatorId, tooLongName, { from: voting }), 'WRONG_NAME_LENGTH')
     })
 
-    it('reverts with "APP_AUTH_FAILED" error when called by address without ADD_NODE_OPERATOR_ROLE', async () => {
-      const hasPermission = await dao.hasPermission(nobody, app, 'ADD_NODE_OPERATOR_ROLE')
+    it('reverts with "APP_AUTH_FAILED" error when called by address without MANAGE_NODE_OPERATOR_ROLE', async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isFalse(hasPermission)
       await assert.reverts(app.setNodeOperatorName(0, 'new name', { from: nobody }), 'APP_AUTH_FAILED')
     })
@@ -902,8 +897,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       )
     })
 
-    it(`reverts with "APP_AUTH_FAILED" error when caller doesn't have ADD_NODE_OPERATOR_ROLE`, async () => {
-      const hasPermission = await dao.hasPermission(nobody, app, 'ADD_NODE_OPERATOR_ROLE')
+    it(`reverts with "APP_AUTH_FAILED" error when caller doesn't have MANAGE_NODE_OPERATOR_ROLE`, async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isFalse(hasPermission)
       await assert.reverts(
         app.setNodeOperatorRewardAddress(firstNodeOperatorId, ADDRESS_4, { from: nobody }),
