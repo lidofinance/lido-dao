@@ -85,6 +85,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @param _resumer address that will be able to resume the withdrawals after pause
     /// @param _finalizer address that can finalize requests in the queue
     /// @param _bunkerReporter addres that can report a bunker mode
+    /// @dev Reverts if `_admin` equals to `address(0)`
     /// @dev NB! It's initialized in paused state by default and should be resumed explicitly to start
     /// @dev NB! Bunker mode is disabled by default
     function initialize(address _admin, address _pauser, address _resumer, address _finalizer, address _bunkerReporter)
@@ -220,7 +221,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     ///  @notice Claim `_requestId` request and transfer locked ether to the owner
     ///  @param _requestId request id to claim
     ///  @param _hint hint for checkpoint index to avoid extensive search over the checkpointHistory.
-    ///   Can be retreived with `findCheckpointHint()` or `findCheckpointHintUnbounded()`
+    ///   Can be retrieved with `findCheckpointHint()` or `findCheckpointHintUnbounded()`
     /// @param _recipient address where claimed ether will be sent to
     function claimWithdrawalTo(uint256 _requestId, uint256 _hint, address _recipient) external {
         _claimWithdrawalTo(_requestId, _hint, _recipient);

@@ -25,7 +25,7 @@ contract LidoLocator is ILidoLocator {
         address burner;
         address stakingRouter;
         address treasury;
-        address validatorExitBus;
+        address validatorsExitBusOracle;
         address withdrawalQueue;
         address withdrawalVault;
     }
@@ -42,7 +42,7 @@ contract LidoLocator is ILidoLocator {
     address public immutable burner;
     address public immutable stakingRouter;
     address public immutable treasury;
-    address public immutable validatorExitBus;
+    address public immutable validatorsExitBusOracle;
     address public immutable withdrawalQueue;
     address public immutable withdrawalVault;
 
@@ -62,7 +62,7 @@ contract LidoLocator is ILidoLocator {
         burner = _assertNonZero(_config.burner);
         stakingRouter = _assertNonZero(_config.stakingRouter);
         treasury = _assertNonZero(_config.treasury);
-        validatorExitBus = _assertNonZero(_config.validatorExitBus);
+        validatorsExitBusOracle = _assertNonZero(_config.validatorsExitBusOracle);
         withdrawalQueue = _assertNonZero(_config.withdrawalQueue);
         withdrawalVault = _assertNonZero(_config.withdrawalVault);
     }

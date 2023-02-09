@@ -39,10 +39,11 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
 
         assert.isFalse(await consensus.getIsMember(member1))
 
-        const member1Info = await consensus.getMemberInfo(member1)
+        const member1Info = await consensus.getConsensusStateForMember(member1)
         assert.isFalse(member1Info.isMember)
-        assert.equal(+member1Info.lastReportRefSlot, 0)
-        assert.equal(member1Info.memberReportForCurrentRefSlot, ZERO_HASH)
+        assert.isFalse(member1Info.canReport)
+        assert.equal(+member1Info.lastMemberReportRefSlot, 0)
+        assert.equal(member1Info.currentFrameMemberReport, ZERO_HASH)
       })
 
       it('quorum is zero', async () => {
@@ -64,10 +65,11 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
         assert.sameOrderedMembers(membersInfo.addresses, [member1])
         assert.sameOrderedMembers(membersInfo.lastReportedRefSlots.map(toNum), [0])
 
-        const member1Info = await consensus.getMemberInfo(member1)
+        const member1Info = await consensus.getConsensusStateForMember(member1)
         assert.isTrue(member1Info.isMember)
-        assert.equal(+member1Info.lastReportRefSlot, 0)
-        assert.equal(member1Info.memberReportForCurrentRefSlot, ZERO_HASH)
+        assert.isTrue(member1Info.canReport)
+        assert.equal(+member1Info.lastMemberReportRefSlot, 0)
+        assert.equal(member1Info.currentFrameMemberReport, ZERO_HASH)
 
         assert.equal(+await consensus.getQuorum(), 1)
       })
@@ -133,10 +135,10 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
         assert.isFalse(await consensus.getIsMember(member1))
         assert.equal(+await consensus.getQuorum(), 3)
 
-        const member1Info = await consensus.getMemberInfo(member1)
+        const member1Info = await consensus.getConsensusStateForMember(member1)
         assert.isFalse(member1Info.isMember)
-        assert.equal(+member1Info.lastReportRefSlot, 0)
-        assert.equal(member1Info.memberReportForCurrentRefSlot, ZERO_HASH)
+        assert.equal(+member1Info.lastMemberReportRefSlot, 0)
+        assert.equal(member1Info.currentFrameMemberReport, ZERO_HASH)
       })
 
       it(`doesn't allow removing a non-member`, async () => {

@@ -67,16 +67,19 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
     })
 
     it('first member votes for hash 3', async () => {
+      assert.isTrue((await consensus.getConsensusStateForMember(member1)).canReport)
+
       const tx = await consensus.submitReport(frame.refSlot, HASH_3, CONSENSUS_VERSION, { from: member1 })
 
       assertEvent(tx, 'ReportReceived', { expectedArgs: { refSlot: frame.refSlot, member: member1, report: HASH_3 } })
       assertAmountOfEvents(tx, 'ConsensusReached', { expectedAmount: 0 })
 
-      const memberInfo = await consensus.getMemberInfo(member1)
+      const memberInfo = await consensus.getConsensusStateForMember(member1)
       assert.isTrue(memberInfo.isMember)
-      assert.equal(+memberInfo.lastReportRefSlot, +frame.refSlot)
-      assert.equal(+memberInfo.currentRefSlot, +frame.refSlot)
-      assert.equal(memberInfo.memberReportForCurrentRefSlot, HASH_3)
+      assert.equal(+memberInfo.lastMemberReportRefSlot, +frame.refSlot)
+      assert.equal(+memberInfo.currentFrameRefSlot, +frame.refSlot)
+      assert.equal(memberInfo.currentFrameMemberReport, HASH_3)
+      assert.isTrue(memberInfo.canReport)
     })
 
     it('consensus is not reached', async () => {
@@ -84,21 +87,27 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
       assert.equal(consensusState.consensusReport, ZERO_HASH)
       assert.isFalse(consensusState.isReportProcessing)
       assert.equal(+(await reportProcessor.getLastCall_submitReport()).callCount, 0)
+
+      const memberInfo = await consensus.getConsensusStateForMember(member1)
+      assert.equal(memberInfo.currentFrameConsensusReport, ZERO_HASH)
     })
 
     it('second member votes for hash 1', async () => {
       await consensus.advanceTimeBy(SECONDS_PER_EPOCH + 70)
+
+      assert.isTrue((await consensus.getConsensusStateForMember(member2)).canReport)
 
       const tx = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
 
       assertEvent(tx, 'ReportReceived', { expectedArgs: { refSlot: frame.refSlot, member: member2, report: HASH_1 } })
       assertAmountOfEvents(tx, 'ConsensusReached', { expectedAmount: 0 })
 
-      const memberInfo = await consensus.getMemberInfo(member2)
+      const memberInfo = await consensus.getConsensusStateForMember(member2)
       assert.isTrue(memberInfo.isMember)
-      assert.equal(+memberInfo.lastReportRefSlot, +frame.refSlot)
-      assert.equal(+memberInfo.currentRefSlot, +frame.refSlot)
-      assert.equal(memberInfo.memberReportForCurrentRefSlot, HASH_1)
+      assert.equal(+memberInfo.lastMemberReportRefSlot, +frame.refSlot)
+      assert.equal(+memberInfo.currentFrameRefSlot, +frame.refSlot)
+      assert.equal(memberInfo.currentFrameMemberReport, HASH_1)
+      assert.isTrue(memberInfo.canReport)
     })
 
     it('consensus is not reached', async () => {
@@ -106,27 +115,36 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
       assert.equal(consensusState.consensusReport, ZERO_HASH)
       assert.isFalse(consensusState.isReportProcessing)
       assert.equal(+(await reportProcessor.getLastCall_submitReport()).callCount, 0)
+
+      const memberInfo = await consensus.getConsensusStateForMember(member1)
+      assert.equal(memberInfo.currentFrameConsensusReport, ZERO_HASH)
     })
 
     it('third member votes for hash 3', async () => {
       await consensus.advanceTimeBy(SECONDS_PER_EPOCH + 5)
+
+      assert.isTrue((await consensus.getConsensusStateForMember(member3)).canReport)
 
       const tx = await consensus.submitReport(frame.refSlot, HASH_3, CONSENSUS_VERSION, { from: member3 })
 
       assertEvent(tx, 'ReportReceived', { expectedArgs: { refSlot: frame.refSlot, member: member3, report: HASH_3 } })
       assertEvent(tx, 'ConsensusReached', { expectedArgs: { refSlot: frame.refSlot, report: HASH_3, support: 2 } })
 
-      const memberInfo = await consensus.getMemberInfo(member3)
+      const memberInfo = await consensus.getConsensusStateForMember(member3)
       assert.isTrue(memberInfo.isMember)
-      assert.equal(+memberInfo.lastReportRefSlot, +frame.refSlot)
-      assert.equal(+memberInfo.currentRefSlot, +frame.refSlot)
-      assert.equal(memberInfo.memberReportForCurrentRefSlot, HASH_3)
+      assert.equal(+memberInfo.lastMemberReportRefSlot, +frame.refSlot)
+      assert.equal(+memberInfo.currentFrameRefSlot, +frame.refSlot)
+      assert.equal(memberInfo.currentFrameMemberReport, HASH_3)
+      assert.isTrue(memberInfo.canReport)
     })
 
     it('consensus is reached', async () => {
       const consensusState = await consensus.getConsensusState()
       assert.equal(consensusState.consensusReport, HASH_3)
       assert.isFalse(consensusState.isReportProcessing)
+
+      const memberInfo = await consensus.getConsensusStateForMember(member1)
+      assert.equal(memberInfo.currentFrameConsensusReport, HASH_3)
 
       const submitReportLastCall = await reportProcessor.getLastCall_submitReport()
       assert.equal(+submitReportLastCall.callCount, 1)
@@ -138,22 +156,28 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
     it('first member votes for hash 1', async () => {
       await consensus.advanceTimeBy(SECONDS_PER_EPOCH + 5)
 
+      assert.isTrue((await consensus.getConsensusStateForMember(member1)).canReport)
+
       const tx = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
 
       assertEvent(tx, 'ReportReceived', { expectedArgs: { refSlot: frame.refSlot, member: member1, report: HASH_1 } })
       assertEvent(tx, 'ConsensusReached', { expectedArgs: { refSlot: frame.refSlot, report: HASH_1, support: 2 } })
 
-      const memberInfo = await consensus.getMemberInfo(member1)
+      const memberInfo = await consensus.getConsensusStateForMember(member1)
       assert.isTrue(memberInfo.isMember)
-      assert.equal(+memberInfo.lastReportRefSlot, +frame.refSlot)
-      assert.equal(+memberInfo.currentRefSlot, +frame.refSlot)
-      assert.equal(memberInfo.memberReportForCurrentRefSlot, HASH_1)
+      assert.equal(+memberInfo.lastMemberReportRefSlot, +frame.refSlot)
+      assert.equal(+memberInfo.currentFrameRefSlot, +frame.refSlot)
+      assert.equal(memberInfo.currentFrameMemberReport, HASH_1)
+      assert.isTrue(memberInfo.canReport)
     })
 
     it('new consensus is reached', async () => {
       const consensusState = await consensus.getConsensusState()
       assert.equal(consensusState.consensusReport, HASH_1)
       assert.isFalse(consensusState.isReportProcessing)
+
+      const memberInfo = await consensus.getConsensusStateForMember(member1)
+      assert.equal(memberInfo.currentFrameConsensusReport, HASH_1)
 
       const submitReportLastCall = await reportProcessor.getLastCall_submitReport()
       assert.equal(+submitReportLastCall.callCount, 2)
@@ -174,6 +198,8 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
 
     it('second member cannot change their vote anymore', async () => {
       await consensus.advanceTimeBy(SECONDS_PER_EPOCH + 70)
+
+      assert.isFalse((await consensus.getConsensusStateForMember(member2)).canReport)
 
       await assertRevert(
         consensus.submitReport(frame.refSlot, HASH_3, CONSENSUS_VERSION, { from: member2 }),
@@ -196,11 +222,13 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
       assert.isFalse(consensusState.isReportProcessing)
 
       let checkMember = async (member) => {
-        const memberInfo = await consensus.getMemberInfo(member)
+        const memberInfo = await consensus.getConsensusStateForMember(member)
+        assert.equal(+memberInfo.currentFrameRefSlot, +newFrame.refSlot)
+        assert.equal(memberInfo.currentFrameConsensusReport, ZERO_HASH)
         assert.isTrue(memberInfo.isMember)
-        assert.equal(+memberInfo.lastReportRefSlot, +prevFrame.refSlot)
-        assert.equal(+memberInfo.currentRefSlot, +newFrame.refSlot)
-        assert.equal(memberInfo.memberReportForCurrentRefSlot, ZERO_HASH)
+        assert.equal(+memberInfo.lastMemberReportRefSlot, +prevFrame.refSlot)
+        assert.equal(memberInfo.currentFrameMemberReport, ZERO_HASH)
+        assert.isTrue(memberInfo.canReport)
       }
 
       await checkMember(member1)
@@ -234,11 +262,12 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
       assertEvent(tx, 'ReportReceived', { expectedArgs: { refSlot: newFrame.refSlot, member: member1, report: HASH_2 } })
       assertAmountOfEvents(tx, 'ConsensusReached', { expectedAmount: 0 })
 
-      const memberInfo = await consensus.getMemberInfo(member1)
+      const memberInfo = await consensus.getConsensusStateForMember(member1)
       assert.isTrue(memberInfo.isMember)
-      assert.equal(+memberInfo.lastReportRefSlot, +newFrame.refSlot)
-      assert.equal(+memberInfo.currentRefSlot, +newFrame.refSlot)
-      assert.equal(memberInfo.memberReportForCurrentRefSlot, HASH_2)
+      assert.equal(+memberInfo.lastMemberReportRefSlot, +newFrame.refSlot)
+      assert.equal(+memberInfo.currentFrameRefSlot, +newFrame.refSlot)
+      assert.equal(memberInfo.currentFrameMemberReport, HASH_2)
+      assert.isTrue(memberInfo.canReport)
     })
 
     it('consensus is not reached', async () => {
@@ -246,6 +275,9 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
       assert.equal(consensusState.consensusReport, ZERO_HASH)
       assert.isFalse(consensusState.isReportProcessing)
       assert.equal(+(await reportProcessor.getLastCall_submitReport()).callCount, 2)
+
+      const memberInfo = await consensus.getConsensusStateForMember(member1)
+      assert.equal(memberInfo.currentFrameConsensusReport, ZERO_HASH)
     })
   })
 })
