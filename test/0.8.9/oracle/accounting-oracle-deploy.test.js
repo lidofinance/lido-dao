@@ -4,6 +4,8 @@ const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contrac
 const { assertRevert } = require('../../helpers/assertThrow')
 const { processNamedTuple } = require('../../helpers/utils')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { deployLocatorWithInvalidImplementation, updateLocatorImplementation, getLocatorConfig } =
+  require('../../helpers/locator-deploy')
 
 const {
   SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, SECONDS_PER_EPOCH,
@@ -120,24 +122,7 @@ async function deployMockLidoAndStakingRouter() {
   const stakingRouter = await MockStakingRouter.new()
   const withdrawalQueue = await MockWithdrawalQueue.new()
   const lido = await MockLido.new()
-
-  const locator = await LidoLocator.new({
-    accountingOracle: ZERO_ADDRESS,
-    depositSecurityModule: ZERO_ADDRESS,
-    elRewardsVault: ZERO_ADDRESS,
-    legacyOracle: ZERO_ADDRESS,
-    lido: lido.address,
-    oracleReportSanityChecker: ZERO_ADDRESS,
-    postTokenRebaseReceiver: ZERO_ADDRESS,
-    selfOwnedStEthBurner: ZERO_ADDRESS,
-    stakingRouter: stakingRouter.address,
-    treasury: ZERO_ADDRESS,
-    validatorExitBus: ZERO_ADDRESS,
-    withdrawalQueue: withdrawalQueue.address,
-    withdrawalVault: ZERO_ADDRESS,
-  })
-
-  return {lido, stakingRouter, withdrawalQueue, locator}
+  return {lido, stakingRouter, withdrawalQueue}
 }
 
 async function deployAccountingOracleSetup(admin, {
@@ -149,14 +134,23 @@ async function deployAccountingOracleSetup(admin, {
   getLidoAndStakingRouter = deployMockLidoAndStakingRouter,
   getLegacyOracle = deployMockLegacyOracle,
 } = {}) {
-  const {lido, stakingRouter, withdrawalQueue, locator} = await getLidoAndStakingRouter()
+  const {lido, stakingRouter, withdrawalQueue} = await getLidoAndStakingRouter()
+
+  const locatorAddr = await deployLocatorWithInvalidImplementation(admin)
+
+  await updateLocatorImplementation(locatorAddr, admin, {
+    lido: lido.address,
+    stakingRouter: stakingRouter.address,
+    withdrawalQueue: withdrawalQueue.address
+  })
+
   const legacyOracle = await getLegacyOracle()
 
   if (initialEpoch == null) {
     initialEpoch = +await legacyOracle.getLastCompletedEpochId() + epochsPerFrame
   }
 
-  const oracle = await AccountingOracle.new(locator.address, lido.address, secondsPerSlot, genesisTime, {from: admin})
+  const oracle = await AccountingOracle.new(locatorAddr, lido.address, secondsPerSlot, genesisTime, {from: admin})
 
   const {consensus} = await deployHashConsensus(admin, {
     reportProcessor: oracle,
@@ -170,7 +164,7 @@ async function deployAccountingOracleSetup(admin, {
   // pretend we're at the first slot of the initial frame's epoch
   await consensus.setTime(genesisTime + initialEpoch * slotsPerEpoch * secondsPerSlot)
 
-  return {lido, stakingRouter, withdrawalQueue, locator, legacyOracle, oracle, consensus}
+  return {lido, stakingRouter, withdrawalQueue, locatorAddr, legacyOracle, oracle, consensus}
 }
 
 async function initAccountingOracle({

@@ -26,7 +26,7 @@ contract Versioned {
 
     uint256 internal constant PETRIFIED_VERSION_MARK = uint256(-1);
 
-    constructor() {
+    constructor() public {
         // lock version in the implementation's storage to prevent initialization
         CONTRACT_VERSION_POSITION.setStorageUint256(PETRIFIED_VERSION_MARK);
     }

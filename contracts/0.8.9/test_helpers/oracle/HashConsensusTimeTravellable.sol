@@ -77,7 +77,11 @@ contract HashConsensusTimeTravellable is HashConsensus {
         return  (_frameConfig.fastLaneLengthSlots);
     }
 
-     function getReportProcessor() external view returns (address) {
-        return  _reportProcessor;
+    function getReportProcessor() external view returns (address) {
+        return _reportProcessor;
+    }
+
+    function getConsensusVersion() external view returns (uint256) {
+        return _getConsensusVersion();
     }
 }

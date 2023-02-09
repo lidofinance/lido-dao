@@ -323,7 +323,7 @@ async function lidoLocatorMockImplFactory(protocol) {
     legacyOracle: protocol.legacyOracle.address,
     oracleReportSanityChecker: ZERO_ADDRESS,
     burner: protocol.burner.address,
-    validatorExitBus: ZERO_ADDRESS,
+    validatorsExitBusOracle: ZERO_ADDRESS,
     stakingRouter: protocol.stakingRouter.address,
     treasury: protocol.treasury.address,
     withdrawalQueue: protocol.withdrawalQueue ? protocol.withdrawalQueue.address : ZERO_ADDRESS,
