@@ -121,7 +121,6 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     /// - `to` cannot be the zero address.
     /// - `tokenId` token must be owned by `from`.
     function _transfer(address _from, address _to, uint256 _requestId) internal {
-        if (_from == address(0)) revert TransferFromZeroAddress();
         if (_to == address(0)) revert TransferToZeroAddress();
         if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
