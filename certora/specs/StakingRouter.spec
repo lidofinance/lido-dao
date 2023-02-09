@@ -47,15 +47,14 @@ filtered{f -> f.selector != deposit(uint256,uint256,bytes).selector} {
 
 rule depositSanity() {
     env e;
+    require e.msg.value > 0;
     uint256 _maxDepositsCount;
     uint256 _stakingModuleId;
     bytes _depositCalldata;
-    uint64 countBefore = getDepositContractCount();
-        deposit(e, _maxDepositsCount, _stakingModuleId, _depositCalldata);
-    uint64 countAfter = getDepositContractCount();
+    uint256 keysCount = deposit(e, _maxDepositsCount, _stakingModuleId, _depositCalldata);
     
     // Force at least one call to deposit in the deposit contract.
-    require(countAfter != countBefore);
+    require(keysCount != 0);
     assert false;
 }
 

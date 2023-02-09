@@ -11,11 +11,12 @@ certoraRun \
 --link StakingRouterHarness:DEPOSIT_CONTRACT=DepositContract \
 \
 \
---solc_map StakingRouterHarness=solc8.9,DepositContract=solc6.11,LidoMock=solc4.24,\
+--solc_map StakingRouterHarness=solc8.9,DepositContract=solc6.11,LidoMock=solc6.11,\
 StakingModuleA=solc8.9,StakingModuleB=solc8.9,StakingModuleC=solc8.9 \
 --loop_iter 4 \
 --staging master \
 --optimistic_loop \
 --send_only \
+--rule depositSanity \
 --settings -copyLoopUnroll=5,-optimisticUnboundedHashing=true \
---msg "Staking Router"
+--msg "Staking Router "

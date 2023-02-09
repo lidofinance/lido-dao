@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
-pragma solidity 0.4.24;
+// Lido is originally 0.4.24 - mock contract compiler was upgraded.
+pragma solidity 0.6.11;
 
 interface LidoMockInterface {
     function receiveStakingRouterDepositRemainder() external payable;
@@ -17,7 +18,7 @@ contract LidoMock is LidoMockInterface {
     // The amount of ETH sent from StakingRouter contract to Lido contract when deposit called
     event StakingRouterDepositRemainderReceived(uint256 amount);
 
-    constructor(address _stakingRouter) {
+    constructor(address _stakingRouter) public {
         stakingRouter = _stakingRouter;
     }
 
@@ -26,7 +27,7 @@ contract LidoMock is LidoMockInterface {
      * @dev We need a dedicated function because funds received by the default payable function
      * are treated as a user deposit
      */
-    function receiveStakingRouterDepositRemainder() external payable {
+    function receiveStakingRouterDepositRemainder() external override payable {
         require(msg.sender == stakingRouter);
 
         emit StakingRouterDepositRemainderReceived(msg.value);
@@ -38,7 +39,7 @@ contract LidoMock is LidoMockInterface {
     * until the moment they are actually sent to the official Deposit contract.
     * @return amount of buffered funds in wei
     */
-    function getBufferedEther() external view returns (uint256) {
+    function getBufferedEther() external override view returns (uint256) {
         return _BufferedEther;
     }
 }

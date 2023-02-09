@@ -21,7 +21,6 @@ methods {
     // StakingRouter
      getStakingModulesCount() returns (uint256) envfree
      getStakingModuleStatus(uint256) returns (uint8) envfree
-     getDepositContractCount() returns (uint64) envfree
 }
 
 /**************************************************

@@ -17,10 +17,4 @@ contract StakingRouterHarness is StakingRouter {
     function getStakingModuleAddressByIndex(uint256 _stakingModuleIndex) public view returns (address) {
         return _getStakingModuleAddressByIndex(_stakingModuleIndex);
     }
-
-    // Returns the first 2 bytes of the deposit_count as uint64
-    function getDepositContractCount() public view returns (uint64) {
-        bytes memory ret = DEPOSIT_CONTRACT.get_deposit_count();
-        return uint64(uint8(ret[0])) + uint64(256*uint8(ret[1])); 
-    }
 }
