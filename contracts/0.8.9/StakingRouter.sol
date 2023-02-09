@@ -364,17 +364,14 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         ValidatorsReport memory operatorValidatorsReport = 
             IStakingModule(stakingModule.stakingModuleAddress).getValidatorsReport(_nodeOperatorId);
 
-        // FIXME: get current value from the staking module
-        uint256 nodeOpStuckValidatorsCount;
-
         if (_correction.currentModuleExitedValidatorsCount != stakingModule.exitedValidatorsCount ||
             _correction.currentNodeOperatorExitedValidatorsCount != operatorValidatorsReport.totalExited ||
-            _correction.currentNodeOperatorStuckValidatorsCount != nodeOpStuckValidatorsCount
+            _correction.currentNodeOperatorStuckValidatorsCount != operatorValidatorsReport.totalStuck
         ) {
             revert UnexpectedCurrentValidatorsCount(
                 stakingModule.exitedValidatorsCount,
                 operatorValidatorsReport.totalExited,
-                nodeOpStuckValidatorsCount
+                operatorValidatorsReport.totalStuck
             );
         }
 
@@ -840,21 +837,19 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         cacheItem.status = StakingModuleStatus(stakingModuleData.status);
 
         if (!_zeroValidatorsCountsIfInactive || cacheItem.status == StakingModuleStatus.Active) {
-            uint256 moduleExitedValidatorsCount;
 
             ValidatorsReport memory allValidatorsReport = 
                 IStakingModule(cacheItem.stakingModuleAddress).getValidatorsReport();
 
-            cacheItem.activeValidatorsCount = allValidatorsReport.totalDeposited - allValidatorsReport.totalExited;
-            cacheItem.availableValidatorsCount = allValidatorsReport.totalVetted - allValidatorsReport.totalDeposited;
+            // the module might not receive all exited validators data yet => we need to replacing
+            // the exitedValidatorsCount with the one that the staking router is aware of
+            cacheItem.activeValidatorsCount = allValidatorsReport.totalDeposited - Math256.max(
+                allValidatorsReport.totalExited,
+                stakingModuleData.exitedValidatorsCount
+            );
 
-            uint256 exitedValidatorsCount = stakingModuleData.exitedValidatorsCount;
-            if (exitedValidatorsCount > moduleExitedValidatorsCount) {
-                // module hasn't received all exited validators data yet => we need to correct
-                // activeValidatorsCount (equal to depositedValidatorsCount - exitedValidatorsCount) replacing
-                // the exitedValidatorsCount with the one that staking router is aware of
-                cacheItem.activeValidatorsCount -= (exitedValidatorsCount - moduleExitedValidatorsCount);
-            }
+            // FIXME: actually take min between totalVetted and targetLimit
+            cacheItem.availableValidatorsCount = allValidatorsReport.totalVetted - allValidatorsReport.totalDeposited;
         }
     }
 
