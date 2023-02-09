@@ -533,7 +533,8 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     })
 
     it('returns hints array with one item for list from single request id', async () => {
-      await withdrawalQueue.finalize(requestId, { from: steth.address, value: ETH(150) })
+      const batch = await withdrawalQueue.finalizationBatch(requestId, shareRate(300))
+      await withdrawalQueue.finalize(requestId, { from: steth.address, value: batch.ethToLock })
       const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
       const hints = await withdrawalQueue.findCheckpointHints([requestId], 1, lastCheckpointIndex)
       assert.equal(hints.length, 1)
@@ -635,12 +636,13 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     })
 
     it('claims correct requests', async () => {
-      await steth.mintShares(owner, shares(300))
+      await steth.mintShares(owner, shares(300)) // 1 share to user and 299 shares to owner total = 300 ETH
       await steth.approve(withdrawalQueue.address, StETH(300), { from: owner })
+
       const secondRequestAmount = ETH(10)
       await withdrawalQueue.requestWithdrawals([secondRequestAmount], owner, { from: owner })
       const secondRequestId = await withdrawalQueue.getLastRequestId()
-      await withdrawalQueue.finalize(secondRequestId, { from: steth.address, value: ETH(40) })
+      await withdrawalQueue.finalize(secondRequestId, { from: steth.address, value: ETH(30) })
 
       const balanceBefore = bn(await ethers.provider.getBalance(owner))
       await withdrawalQueue.claimWithdrawals(

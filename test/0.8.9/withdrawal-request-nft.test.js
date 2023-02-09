@@ -1,8 +1,7 @@
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
 const { EvmSnapshot } = require('../helpers/blockchain')
-const { shares, ETH } = require('../helpers/utils')
+const { shares, ETH, shareRate } = require('../helpers/utils')
 
 const StETH = hre.artifacts.require('StETHMock')
 const WstETH = hre.artifacts.require('WstETHMock')
@@ -220,7 +219,8 @@ hre.contract(
       })
 
       it('reverts with error "RequestAlreadyClaimed()" when called on claimed request', async () => {
-        await withdrawalRequestNFT.finalize(3, { from: deployer, value: ETH(100) })
+        const batch = await withdrawalRequestNFT.finalizationBatch(3, shareRate(1))
+        await withdrawalRequestNFT.finalize(3, { from: deployer, value: batch.ethToLock })
         const ownerETHBefore = await hre.ethers.provider.getBalance(nftHolderStETH)
         const tx = await withdrawalRequestNFT.methods['claimWithdrawal(uint256)'](nftHolderStETHTokenIds[0], {
           from: nftHolderStETH
@@ -274,7 +274,8 @@ hre.contract(
         })
         assert.equal(await withdrawalRequestNFT.ownerOf(nftHolderStETHTokenIds[0]), recipient)
 
-        await withdrawalRequestNFT.finalize(3, { from: deployer, value: ETH(100) })
+        const batch = await withdrawalRequestNFT.finalizationBatch(3, shareRate(1))
+        await withdrawalRequestNFT.finalize(3, { from: deployer, value: batch.ethToLock })
 
         const recipientETHBefore = await hre.ethers.provider.getBalance(recipient)
         const tx = await withdrawalRequestNFT.methods['claimWithdrawal(uint256)'](nftHolderStETHTokenIds[0], {
