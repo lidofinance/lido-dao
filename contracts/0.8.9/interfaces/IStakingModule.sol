@@ -89,7 +89,7 @@ interface IStakingModule {
     function finishUpdatingExitedValidatorsCount() external;
 
     /// @notice Invalidates all unused validators for all node operators
-    function invalidateDepositsData() external;
+    function invalidateDepositData() external;
 
     /// @notice Obtains up to _depositsCount deposit data to be used by StakingRouter
     ///     to deposit to the Ethereum Deposit contract

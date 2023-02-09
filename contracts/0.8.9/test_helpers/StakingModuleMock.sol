@@ -68,7 +68,7 @@ contract StakingModuleMock is IStakingModule {
         uint256 /* _stuckValidatorsKeysCount */
     ) external {}
 
-    function invalidateDepositsData() external {
+    function invalidateDepositData() external {
         _availableValidatorsCount = _activeValidatorsCount;
     }
 
