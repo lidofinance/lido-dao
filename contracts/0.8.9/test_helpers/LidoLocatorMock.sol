@@ -16,7 +16,7 @@ contract LidoLocatorMock is ILidoLocator {
         address legacyOracle;
         address oracleReportSanityChecker;
         address burner;
-        address validatorExitBus;
+        address validatorsExitBusOracle;
         address stakingRouter;
         address treasury;
         address withdrawalQueue;
@@ -31,7 +31,7 @@ contract LidoLocatorMock is ILidoLocator {
     address public immutable legacyOracle;
     address public immutable oracleReportSanityChecker;
     address public immutable burner;
-    address public immutable validatorExitBus;
+    address public immutable validatorsExitBusOracle;
     address public immutable stakingRouter;
     address public immutable treasury;
     address public immutable withdrawalQueue;
@@ -48,7 +48,7 @@ contract LidoLocatorMock is ILidoLocator {
         legacyOracle = addresses.legacyOracle;
         oracleReportSanityChecker = addresses.oracleReportSanityChecker;
         burner = addresses.burner;
-        validatorExitBus = addresses.validatorExitBus;
+        validatorsExitBusOracle = addresses.validatorsExitBusOracle;
         stakingRouter = addresses.stakingRouter;
         treasury = addresses.treasury;
         withdrawalQueue = addresses.withdrawalQueue;

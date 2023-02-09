@@ -42,6 +42,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     before(async () => {
       const deployed = await deployExitBusOracle(admin, {
         lastProcessingRefSlot: LAST_PROCESSING_REF_SLOT,
+        resumeAfterDeploy: true
       })
 
       consensus = deployed.consensus

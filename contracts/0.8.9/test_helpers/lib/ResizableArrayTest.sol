@@ -4,30 +4,30 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import { ResizableArray as RA } from "../../lib/ResizableArray.sol";
+import "../../../common/test_helpers/Assertions.sol";
 
-import "./Assertions.sol";
+import { ResizableArray as RA } from "../../lib/ResizableArray.sol";
 
 
 library AssertRA {
     using RA for RA.Array;
 
-    function array(RA.Array memory actual, uint256[] memory expected) internal pure {
+    function equal(RA.Array memory actual, uint256[] memory expected) internal pure {
         if (actual.length() != expected.length) {
-            revert Assert.AssertArrayFailed(actual.pointer(), expected);
+            revert Assert.AssertEqualFailed_uint256arr(actual.pointer(), expected);
         }
-        Assert.array(actual.pointer(), expected);
+        Assert.equal(actual.pointer(), expected);
     }
 
-    function arrayLength(RA.Array memory actual, uint256 expectedLen) internal pure {
+    function length(RA.Array memory actual, uint256 expectedLen) internal pure {
         if (actual.length() != expectedLen) {
-            revert Assert.AssertArrayLengthFailed(actual.length(), expectedLen);
+            revert Assert.AssertLengthFailed(actual.length(), expectedLen);
         }
-        Assert.arrayLength(actual.pointer(), expectedLen);
+        Assert.length(actual.pointer(), expectedLen);
     }
 
-    function emptyArray(RA.Array memory actual) internal pure {
-        arrayLength(actual, 0);
+    function empty(RA.Array memory actual) internal pure {
+        length(actual, 0);
     }
 }
 
@@ -69,7 +69,7 @@ contract ResizableArrayTest {
         RA.Array memory arr;
         // solhint-disable-next-line
         uint256 len = arr.length();
-        revert RevertExpected();
+        revert Assert.RevertExpected();
     }
 
 
@@ -77,42 +77,42 @@ contract ResizableArrayTest {
         RA.Array memory arr;
         // solhint-disable-next-line
         uint256[] memory result = arr.pointer();
-        revert RevertExpected();
+        revert Assert.RevertExpected();
     }
 
 
     function test_push_cannot_be_called_on_an_uninitialized_representation() external {
         RA.Array memory arr;
         arr.push(A);
-        revert RevertExpected();
+        revert Assert.RevertExpected();
     }
 
 
     function test_pop_cannot_be_called_on_an_uninitialized_representation() external {
         RA.Array memory arr;
         arr.pop();
-        revert RevertExpected();
+        revert Assert.RevertExpected();
     }
 
 
     function test_trim_cannot_be_called_on_an_uninitialized_representation() external {
         RA.Array memory arr;
         arr.trim(1);
-        revert RevertExpected();
+        revert Assert.RevertExpected();
     }
 
 
     function test_clear_cannot_be_called_on_an_uninitialized_representation() external {
         RA.Array memory arr;
         arr.clear();
-        revert RevertExpected();
+        revert Assert.RevertExpected();
     }
 
 
     function test_preallocate_returns_array_of_zero_length() external {
         RA.Array memory arr = RA.preallocate(3);
         Assert.isFalse(arr.isInvalid());
-        AssertRA.emptyArray(arr);
+        AssertRA.empty(arr);
     }
 
 
@@ -125,14 +125,14 @@ contract ResizableArrayTest {
     function test_preallocate_reverts_when_called_with_zero_size() external {
         // solhint-disable-next-line
         RA.Array memory arr = RA.preallocate(0);
-        revert RevertExpected();
+        revert Assert.RevertExpected();
     }
 
 
     function test_push_adds_an_element_case_1() external {
         RA.Array memory arr = RA.preallocate(1);
         arr.push(F);
-        AssertRA.array(arr, dyn([F]));
+        AssertRA.equal(arr, dyn([F]));
     }
 
 
@@ -140,7 +140,7 @@ contract ResizableArrayTest {
         RA.Array memory arr = RA.preallocate(5);
         arr.push(A);
         arr.push(B);
-        AssertRA.array(arr, dyn([A, B]));
+        AssertRA.equal(arr, dyn([A, B]));
     }
 
 
@@ -153,7 +153,7 @@ contract ResizableArrayTest {
             expected[i] = i + 1;
         }
 
-        AssertRA.array(arr, expected);
+        AssertRA.equal(arr, expected);
     }
 
 
@@ -161,14 +161,14 @@ contract ResizableArrayTest {
         RA.Array memory arr = RA.preallocate(1);
         arr.push(F);
         arr.push(A);
-        revert RevertExpected();
+        revert Assert.RevertExpected();
     }
 
 
     function test_push_allows_to_fill_all_preallocated_memory() external {
         RA.Array memory arr = RA.preallocate(5);
         for (uint256 i = 0; i < 5; ++i) arr.push(F);
-        AssertRA.array(arr, dyn([F, F, F, F, F]));
+        AssertRA.equal(arr, dyn([F, F, F, F, F]));
     }
 
 
@@ -176,7 +176,7 @@ contract ResizableArrayTest {
         RA.Array memory arr = RA.preallocate(5);
         for (uint256 i = 0; i < 5; ++i) arr.push(F);
         arr.push(B);
-        revert RevertExpected();
+        revert Assert.RevertExpected();
     }
 
 
@@ -188,7 +188,7 @@ contract ResizableArrayTest {
         }
 
         arr.push(X);
-        revert RevertExpected();
+        revert Assert.RevertExpected();
     }
 
 
@@ -200,14 +200,14 @@ contract ResizableArrayTest {
         arr.pop();
         arr.push(A);
         arr.push(B);
-        revert RevertExpected();
+        revert Assert.RevertExpected();
     }
 
 
     function test_pop_reverts_on_empty_array_case_1() external {
         RA.Array memory arr = RA.preallocate(10);
         arr.pop();
-        revert RevertExpected();
+        revert Assert.RevertExpected();
     }
 
 
@@ -215,7 +215,7 @@ contract ResizableArrayTest {
         RA.Array memory arr = RA.preallocate(10);
         arr.push(A);
         arr.pop();
-        AssertRA.emptyArray(arr);
+        AssertRA.empty(arr);
     }
 
 
@@ -224,7 +224,7 @@ contract ResizableArrayTest {
         arr.push(A);
         arr.pop();
         arr.pop();
-        revert RevertExpected();
+        revert Assert.RevertExpected();
     }
 
 
@@ -234,14 +234,14 @@ contract ResizableArrayTest {
         arr.push(B);
         arr.clear();
         arr.pop();
-        revert RevertExpected();
+        revert Assert.RevertExpected();
     }
 
 
     function test_trim_reverts_on_empty_array_case_1() external {
         RA.Array memory arr = RA.preallocate(10);
         arr.trim(1);
-        revert RevertExpected();
+        revert Assert.RevertExpected();
     }
 
 
@@ -250,7 +250,7 @@ contract ResizableArrayTest {
         arr.push(A);
         arr.pop();
         arr.trim(1);
-        revert RevertExpected();
+        revert Assert.RevertExpected();
     }
 
 
@@ -259,7 +259,7 @@ contract ResizableArrayTest {
         arr.push(A);
         arr.push(B);
         arr.trim(3);
-        revert RevertExpected();
+        revert Assert.RevertExpected();
     }
 
 
@@ -268,14 +268,14 @@ contract ResizableArrayTest {
         arr.push(A);
         arr.push(B);
         arr.trim(0);
-        AssertRA.array(arr, dyn([A, B]));
+        AssertRA.equal(arr, dyn([A, B]));
     }
 
 
     function test_trim_by_zero_doesnt_modify_empty_array_case_1() external {
         RA.Array memory arr = RA.preallocate(10);
         arr.trim(0);
-        AssertRA.emptyArray(arr);
+        AssertRA.empty(arr);
     }
 
 
@@ -284,14 +284,14 @@ contract ResizableArrayTest {
         arr.push(A);
         arr.pop();
         arr.trim(0);
-        AssertRA.emptyArray(arr);
+        AssertRA.empty(arr);
     }
 
 
     function test_clear_doesnt_modify_empty_array_case_1() external {
         RA.Array memory arr = RA.preallocate(10);
         arr.clear();
-        AssertRA.emptyArray(arr);
+        AssertRA.empty(arr);
     }
 
 
@@ -300,7 +300,7 @@ contract ResizableArrayTest {
         arr.push(A);
         arr.pop();
         arr.clear();
-        AssertRA.emptyArray(arr);
+        AssertRA.empty(arr);
     }
 
 
@@ -308,7 +308,7 @@ contract ResizableArrayTest {
         RA.Array memory arr = RA.preallocate(10);
         arr.clear();
         arr.clear();
-        AssertRA.emptyArray(arr);
+        AssertRA.empty(arr);
     }
 
 
@@ -316,112 +316,108 @@ contract ResizableArrayTest {
         RA.Array memory arr = RA.preallocate(5);
 
         arr.push(A);
-        AssertRA.array(arr, dyn([A]));
+        AssertRA.equal(arr, dyn([A]));
 
         uint256 last = arr.pop();
         Assert.equal(last, A);
-        AssertRA.emptyArray(arr);
+        AssertRA.empty(arr);
 
         arr.push(B);
         arr.push(C);
         arr.push(D);
-        AssertRA.array(arr, dyn([B, C, D]));
+        AssertRA.equal(arr, dyn([B, C, D]));
 
         last = arr.pop();
         Assert.equal(last, D);
-        AssertRA.array(arr, dyn([B, C]));
+        AssertRA.equal(arr, dyn([B, C]));
 
         last = arr.pop();
         Assert.equal(last, C);
-        AssertRA.array(arr, dyn([B]));
+        AssertRA.equal(arr, dyn([B]));
 
         arr.push(A);
         arr.push(C);
         arr.push(D);
         arr.push(E);
-        AssertRA.array(arr, dyn([B, A, C, D, E]));
+        AssertRA.equal(arr, dyn([B, A, C, D, E]));
 
         arr.trim(3);
-        AssertRA.array(arr, dyn([B, A]));
+        AssertRA.equal(arr, dyn([B, A]));
 
         arr.clear();
-        AssertRA.emptyArray(arr);
+        AssertRA.empty(arr);
     }
 
 
     function test_array_manipulation_scenario_2() external {
         RA.Array memory arr = RA.preallocate(6);
-        AssertRA.emptyArray(arr);
+        AssertRA.empty(arr);
 
         arr.push(A);
-        AssertRA.array(arr, dyn([A]));
+        AssertRA.equal(arr, dyn([A]));
 
         uint256 last = arr.pop();
         Assert.equal(last, A);
-        AssertRA.emptyArray(arr);
+        AssertRA.empty(arr);
 
         arr.push(B);
-        AssertRA.array(arr, dyn([B]));
+        AssertRA.equal(arr, dyn([B]));
 
         arr.push(C);
-        AssertRA.array(arr, dyn([B, C]));
+        AssertRA.equal(arr, dyn([B, C]));
 
         last = arr.pop();
         Assert.equal(last, C);
-        AssertRA.array(arr, dyn([B]));
+        AssertRA.equal(arr, dyn([B]));
 
         arr.push(D);
-        AssertRA.array(arr, dyn([B, D]));
+        AssertRA.equal(arr, dyn([B, D]));
 
         arr.push(E);
-        AssertRA.array(arr, dyn([B, D, E]));
+        AssertRA.equal(arr, dyn([B, D, E]));
 
         arr.trim(1);
-        AssertRA.array(arr, dyn([B, D]));
+        AssertRA.equal(arr, dyn([B, D]));
 
         last = arr.pop();
         Assert.equal(last, D);
-        AssertRA.array(arr, dyn([B]));
+        AssertRA.equal(arr, dyn([B]));
 
         arr.push(F);
-        AssertRA.array(arr, dyn([B, F]));
+        AssertRA.equal(arr, dyn([B, F]));
 
         arr.trim(2);
-        AssertRA.emptyArray(arr);
+        AssertRA.empty(arr);
 
         arr.push(A);
         arr.push(B);
         arr.push(C);
         arr.push(D);
-        AssertRA.array(arr, dyn([A, B, C, D]));
+        AssertRA.equal(arr, dyn([A, B, C, D]));
 
         arr.push(E);
-        AssertRA.array(arr, dyn([A, B, C, D, E]));
+        AssertRA.equal(arr, dyn([A, B, C, D, E]));
 
         arr.push(F);
-        AssertRA.array(arr, dyn([A, B, C, D, E, F]));
+        AssertRA.equal(arr, dyn([A, B, C, D, E, F]));
 
         last = arr.pop();
         Assert.equal(last, F);
-        AssertRA.array(arr, dyn([A, B, C, D, E]));
+        AssertRA.equal(arr, dyn([A, B, C, D, E]));
 
         last = arr.pop();
         Assert.equal(last, E);
-        AssertRA.array(arr, dyn([A, B, C, D]));
+        AssertRA.equal(arr, dyn([A, B, C, D]));
 
         arr.clear();
-        AssertRA.emptyArray(arr);
+        AssertRA.empty(arr);
 
         arr.push(X);
-        AssertRA.array(arr, dyn([X]));
+        AssertRA.equal(arr, dyn([X]));
 
         last = arr.pop();
         Assert.equal(last, X);
     }
-
-    // Address of the memory "zero slot"
-    // https://docs.soliditylang.org/en/v0.8.9/internals/layout_in_memory.html
-    uint256 internal constant ZERO_MEM_SLOT_ADDR = 96;
 
     function test_array_manipulation_preserves_memory_safety() external {
         // disable all compiler optimizations by including an assembly block not marked as mem-safe
@@ -441,7 +437,7 @@ contract ResizableArrayTest {
 
         Assert.atLeast(arr._memPtr, preAllocFreeMemPtr);
         Assert.above(postAllocFreeMemPtr, arr._memPtr);
-        Assert.atLeast(postAllocFreeMemPtr, preAllocFreeMemPtr + _memSizeForArrayLength(6));
+        Assert.atLeast(postAllocFreeMemPtr, preAllocFreeMemPtr + memSizeForArrayLength(6));
 
         // allocate some memory after the array
         uint256[] memory ABCDE = dyn([A, B, C, D, E]);
@@ -449,10 +445,10 @@ contract ResizableArrayTest {
         uint256[] memory YZF = dyn([Y, Z, F]);
 
         uint256 freeMemPtr = getFreeMemPtr();
-        bytes32 prefixMemHash = memKeccak(ZERO_MEM_SLOT_ADDR, preAllocFreeMemPtr);
+        bytes32 prefixMemHash = memKeccak(ZERO_MEM_SLOT_PTR, preAllocFreeMemPtr);
         bytes32 suffixMemHash = memKeccak(postAllocFreeMemPtr, freeMemPtr);
 
-        AssertRA.emptyArray(arr);
+        AssertRA.empty(arr);
 
         arr.push(A);
         arr.push(B);
@@ -460,39 +456,39 @@ contract ResizableArrayTest {
         arr.push(D);
         arr.push(E);
         arr.push(F);
-        AssertRA.array(arr, ABCDEF);
+        AssertRA.equal(arr, ABCDEF);
 
         uint256 last = arr.pop();
         Assert.equal(last, F);
-        AssertRA.array(arr, ABCDE);
+        AssertRA.equal(arr, ABCDE);
 
         last = arr.pop();
         Assert.equal(last, E);
-        AssertRA.array(arr, ABCD);
+        AssertRA.equal(arr, ABCD);
 
         arr.trim(2);
-        AssertRA.array(arr, AB);
+        AssertRA.equal(arr, AB);
 
         arr.push(X);
-        AssertRA.array(arr, ABX);
+        AssertRA.equal(arr, ABX);
 
         last = arr.pop();
         Assert.equal(last, X);
-        AssertRA.array(arr, AB);
+        AssertRA.equal(arr, AB);
 
         arr.clear();
-        AssertRA.emptyArray(arr);
+        AssertRA.empty(arr);
 
         arr.push(Y);
         arr.push(Z);
         arr.push(F);
-        AssertRA.array(arr, YZF);
+        AssertRA.equal(arr, YZF);
 
         // check no memory corruption occurred
 
         Assert.equal(getFreeMemPtr(), freeMemPtr);
 
-        bytes32 newPrefixMemHash = memKeccak(ZERO_MEM_SLOT_ADDR, preAllocFreeMemPtr);
+        bytes32 newPrefixMemHash = memKeccak(ZERO_MEM_SLOT_PTR, preAllocFreeMemPtr);
         bytes32 newSuffixMemHash = memKeccak(postAllocFreeMemPtr, freeMemPtr);
 
         Assert.equal(newPrefixMemHash, prefixMemHash);
@@ -503,20 +499,7 @@ contract ResizableArrayTest {
     /// Helpers
     ///
 
-    function _memSizeForArrayLength(uint256 numItems) internal pure returns (uint256) {
+    function memSizeForArrayLength(uint256 numItems) internal pure returns (uint256) {
         return 32 + numItems * 32;
-    }
-
-    function getFreeMemPtr() internal pure returns (uint256 result) {
-        assembly {
-            result := mload(0x40)
-        }
-    }
-
-    function memKeccak(uint256 start, uint256 pastEnd) internal pure returns (bytes32 result) {
-        uint256 len = pastEnd - start;
-        assembly {
-            result := keccak256(start, len)
-        }
     }
 }
