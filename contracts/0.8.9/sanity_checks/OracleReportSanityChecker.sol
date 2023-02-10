@@ -121,10 +121,10 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         address[] oneOffCLBalanceDecreaseLimitManagers;
         address[] annualBalanceIncreaseLimitManagers;
         address[] shareRateDeviationLimitManagers;
-        address[] requestTimestampMarginManagers;
-        address[] maxPositiveTokenRebaseManagers;
         address[] maxValidatorExitRequestsPerReportManagers;
         address[] maxAccountingExtraDataListItemsCountManagers;
+        address[] requestTimestampMarginManagers;
+        address[] maxPositiveTokenRebaseManagers;
     }
 
     /// @param _lidoLocator address of the LidoLocator instance
