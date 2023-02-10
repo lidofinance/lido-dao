@@ -1,77 +1,44 @@
 const { ethers } = require('hardhat')
+const { DEFAULT_DEPLOY_PARAMS, DEFAULT_FACTORIES } = require('./config')
 
 const { newDao } = require('./dao')
 const { updateLocatorImplementation } = require('./locator-deploy')
 
-const OssifiableProxy = artifacts.require('OssifiableProxy')
-
-const factories = require('./factories')
-const DEFAULT_FACTORIES = {
-  appManagerFactory: factories.appManagerFactory,
-  treasuryFactory: factories.treasuryFactory,
-  votingFactory: factories.votingEOAFactory,
-  lidoFactory: factories.lidoMockFactory,
-  wstethFactory: factories.wstethFactory,
-  legacyOracleFactory: factories.legacyOracleMockFactory,
-  accountingOracleFactory: factories.accountingOracleFactory,
-  hashConsensusFactory: factories.hashConsensusTimeTravellableFactory,
-  reportProcessorFactory: factories.reportProcessorFactory,
-  depositContractFactory: factories.depositContractMockFactory,
-  stakingRouterFactory: factories.stakingRouterFactory,
-  depositSecurityModuleFactory: factories.depositSecurityModuleFactory,
-  elRewardsVaultFactory: factories.elRewardsVaultFactory,
-  withdrawalQueueFactory: factories.withdrawalQueueFactory,
-  withdrawalVaultFactory: factories.withdrawalVaultFactory,
-  eip712StETHFactory: factories.eip712StETHFactory,
-  withdrawalCredentialsFactory: factories.withdrawalCredentialsFactory,
-  stakingModulesFactory: factories.stakingModulesFactory,
-  guardiansFactory: factories.guardiansFactory,
-  burnerFactory: factories.burnerFactory,
-  postSetup: factories.postSetup,
-  lidoLocatorFactory: factories.lidoLocatorFactory
-}
-
-const getFactory = (config, factoryName) => {
-  return config[factoryName] ? config[factoryName] : DEFAULT_FACTORIES[factoryName]
-}
-
-async function deployProtocol(config = {}) {
+async function deployProtocol(factories = {}, deployParams = {}) {
   const protocol = {}
+  protocol.deployParams = { ...DEFAULT_DEPLOY_PARAMS, ...deployParams }
+  protocol.factories = { ...DEFAULT_FACTORIES, ...factories }
 
+  // accounts
   protocol.signers = await ethers.getSigners()
-  protocol.appManager = await getFactory(config, 'appManagerFactory')(protocol)
-  protocol.treasury = await getFactory(config, 'treasuryFactory')(protocol)
-  protocol.voting = await getFactory(config, 'votingFactory')(protocol)
-
-  protocol.guardians = await getFactory(config, 'guardiansFactory')(protocol)
+  protocol.appManager = await protocol.factories.appManagerFactory(protocol)
+  protocol.treasury = await protocol.factories.treasuryFactory(protocol)
+  protocol.voting = await protocol.factories.votingFactory(protocol)
+  protocol.guardians = await protocol.factories.guardiansFactory(protocol)
 
   const { dao, acl } = await newDao(protocol.appManager.address)
   protocol.dao = dao
   protocol.acl = acl
 
-  protocol.pool = await getFactory(config, 'lidoFactory')(protocol)
+  protocol.pool = await protocol.factories.lidoFactory(protocol)
   protocol.token = protocol.pool
+  protocol.wsteth = await protocol.factories.wstethFactory(protocol)
 
-  protocol.wsteth = await getFactory(config, 'wstethFactory')(protocol)
-  protocol.legacyOracle = await getFactory(config, 'legacyOracleFactory')(protocol)
+  protocol.legacyOracle = await protocol.factories.legacyOracleFactory(protocol)
 
-  protocol.reportProcessor = await getFactory(config, 'reportProcessorFactory')(protocol)
-  protocol.consensusContract = await getFactory(config, 'hashConsensusFactory')(protocol)
+  protocol.depositContract = await protocol.factories.depositContractFactory(protocol)
 
-  protocol.depositContract = await getFactory(config, 'depositContractFactory')(protocol)
+  protocol.withdrawalCredentials = await protocol.factories.withdrawalCredentialsFactory(protocol)
+  protocol.stakingRouter = await protocol.factories.stakingRouterFactory(protocol)
+  protocol.stakingModules = await addStakingModules(protocol.factories.stakingModulesFactory, protocol)
+  protocol.depositSecurityModule = await protocol.factories.depositSecurityModuleFactory(protocol)
 
-  protocol.withdrawalCredentials = await getFactory(config, 'withdrawalCredentialsFactory')(protocol)
-  protocol.stakingRouter = await getFactory(config, 'stakingRouterFactory')(protocol)
-  const stakingModulesFactory = getFactory(config, 'stakingModulesFactory')
-  protocol.stakingModules = await addStakingModules(stakingModulesFactory, protocol)
+  protocol.elRewardsVault = await protocol.factories.elRewardsVaultFactory(protocol)
+  protocol.withdrawalVault = await protocol.factories.withdrawalVaultFactory(protocol)
+  protocol.eip712StETH = await protocol.factories.eip712StETHFactory(protocol)
+  protocol.burner = await protocol.factories.burnerFactory(protocol)
 
-  protocol.depositSecurityModule = await getFactory(config, 'depositSecurityModuleFactory')(protocol)
-  protocol.elRewardsVault = await getFactory(config, 'elRewardsVaultFactory')(protocol)
-  protocol.withdrawalVault = await getFactory(config, 'withdrawalVaultFactory')(protocol)
-  protocol.eip712StETH = await getFactory(config, 'eip712StETHFactory')(protocol)
-  protocol.burner = await getFactory(config, 'burnerFactory')(protocol)
-
-  protocol.lidoLocator = await getFactory(config, 'lidoLocatorFactory')(protocol)
+  protocol.lidoLocator = await protocol.factories.lidoLocatorFactory(protocol)
 
   await updateLocatorImplementation(protocol.lidoLocator.address, protocol.appManager.address, {
     lido: protocol.pool.address,
@@ -85,22 +52,25 @@ async function deployProtocol(config = {}) {
     postTokenRebaseReceiver: protocol.legacyOracle.address
   })
 
-  protocol.oracle = await getFactory(config, 'accountingOracleFactory')(protocol)
+  protocol.validatorExitBus = await protocol.factories.validatorExitBusFactory(protocol)
+  protocol.oracleReportSanityChecker = await protocol.factories.oracleReportSanityCheckerFactory(protocol)
+  protocol.oracle = await protocol.factories.accountingOracleFactory(protocol)
+
   await updateLocatorImplementation(protocol.lidoLocator.address, protocol.appManager.address, {
     accountingOracle: protocol.oracle.address,
+    oracleReportSanityChecker: protocol.oracleReportSanityChecker.address,
+    validatorsExitBusOracle: protocol.validatorExitBus.address
   })
 
-  await protocol.legacyOracle.initialize(
-    protocol.lidoLocator.address,
-    protocol.consensusContract.address)
+  protocol.consensusContract = await protocol.factories.hashConsensusFactory(protocol)
 
-  protocol.withdrawalQueue = await getFactory(config, 'withdrawalQueueFactory')(protocol)
+  protocol.withdrawalQueue = await protocol.factories.withdrawalQueueFactory(protocol)
 
   await updateLocatorImplementation(protocol.lidoLocator.address, protocol.appManager.address, {
-    withdrawalQueue: protocol.withdrawalQueue.address,
+    withdrawalQueue: protocol.withdrawalQueue.address
   })
 
-  await getFactory(config, 'postSetup')(protocol)
+  await protocol.factories.postSetup(protocol)
 
   return protocol
 }
@@ -120,12 +90,6 @@ async function addStakingModules(stakingModulesFactory, protocol) {
   }
 
   return stakingModules.map(({ module }) => module)
-}
-
-async function upgradeOssifiableProxy(proxyAddress, newImplementation, proxyOwner) {
-  const proxy = await OssifiableProxy.at(proxyAddress)
-
-  await proxy.proxy__upgradeTo(newImplementation, { from: proxyOwner })
 }
 
 module.exports = {

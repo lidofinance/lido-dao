@@ -107,7 +107,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   const pushReport = async (clValidators, clBalance) => {
     const elRewards = await web3.eth.getBalance(elRewardsVault.address)
     await pushOracleReport(consensus, oracle, clValidators, clBalance, elRewards)
-    await consensus.advanceTimeBy(SECONDS_PER_FRAME + 1000)
+    await ethers.provider.send('evm_increaseTime', [SECONDS_PER_FRAME + 1000])
+    await ethers.provider.send('evm_mine')
   }
 
   const checkStat = async ({ depositedValidators, beaconValidators, beaconBalance }) => {
