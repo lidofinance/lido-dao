@@ -464,7 +464,6 @@ contract StETH is IERC20, Pausable {
      */
     function _mintShares(address _recipient, uint256 _sharesAmount) internal returns (uint256 newTotalShares) {
         require(_recipient != address(0), "MINT_TO_THE_ZERO_ADDRESS");
-        _whenNotStopped();
 
         newTotalShares = _getTotalShares().add(_sharesAmount);
         TOTAL_SHARES_POSITION.setStorageUint256(newTotalShares);

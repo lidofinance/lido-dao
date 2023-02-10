@@ -854,6 +854,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         require(msg.value != 0, "ZERO_DEPOSIT");
 
         StakeLimitState.Data memory stakeLimitData = STAKING_STATE_POSITION.getStorageStakeLimitStruct();
+        // There is an invariant that protocol pause also implies staking pause.
+        // Thus, no need to check protocol pause explicitly.
         require(!stakeLimitData.isStakingPaused(), "STAKING_PAUSED");
 
         if (stakeLimitData.isStakingLimitSet()) {
