@@ -12,7 +12,6 @@ const {
   computeEpochFirstSlot, computeTimestampAtSlot, computeTimestampAtEpoch,
   ZERO_HASH, CONSENSUS_VERSION,
   V1_ORACLE_LAST_REPORT_SLOT,
-  MAX_EXITED_VALS_PER_HOUR, MAX_EXITED_VALS_PER_DAY, MAX_EXTRA_DATA_LIST_LEN,
   EXTRA_DATA_FORMAT_LIST, EXTRA_DATA_TYPE_STUCK_VALIDATORS, EXTRA_DATA_TYPE_EXITED_VALIDATORS,
   deployAndConfigureAccountingOracle, getReportDataItems, calcReportDataHash, encodeExtraDataItem,
   encodeExtraDataItems, calcExtraDataHash} = require('./accounting-oracle-deploy.test')

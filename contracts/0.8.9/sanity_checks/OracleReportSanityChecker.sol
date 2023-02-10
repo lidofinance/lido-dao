@@ -61,6 +61,12 @@ struct LimitsList {
 
     /// @notice The max number of exit requests allowed in report to ValidatorsExitBusOracle
     uint256 maxValidatorExitRequestsPerReport;
+
+    /// @notice The max number of exited validators reported to accounting oracle
+    uint256 maxExitedValidatorsRatePerDay;
+
+    /// @notice The max number of data list items reported to accounting oracle in extra data
+    uint256 maxAccountingExtraDataListItemsCount;
 }
 
 /// @dev The packed version of the LimitsList struct to be effectively persisted in storage
@@ -72,9 +78,11 @@ struct LimitsListPacked {
     uint16 maxValidatorExitRequestsPerReport;
     uint64 requestTimestampMargin;
     uint64 maxPositiveTokenRebase;
+    uint64 maxExitedValidatorsRatePerDay;
+    uint64 maxAccountingExtraDataListItemsCount;
 }
 
-uint256 constant MAX_BASIS_POINTS = 100_00;
+uint256 constant MAX_BASIS_POINTS = 10_000;
 
 /// @title Sanity checks for the Lido's oracle report
 /// @notice The contracts contain view methods to perform sanity checks of the Lido's oracle report
@@ -98,6 +106,10 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     bytes32 public constant REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE = keccak256("REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE");
     bytes32 public constant MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE =
         keccak256("MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE");
+    bytes32 public constant MAX_EXITED_VALIDATORS_RATE_PER_DAY_ROLE =
+        keccak256("MAX_EXITED_VALIDATORS_RATE_PER_DAY_ROLE");
+    bytes32 public constant MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE =
+        keccak256("MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE");
 
     uint256 private constant DEFAULT_TIME_ELAPSED = 1 hours;
     uint256 private constant DEFAULT_CL_BALANCE = 1 gwei;
@@ -116,6 +128,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         address[] requestTimestampMarginManagers;
         address[] maxPositiveTokenRebaseManagers;
         address[] maxValidatorExitRequestsPerReportManagers;
+        address[] maxExitedValidatorsRatePerDayManagers;
+        address[] maxAccountingExtraDataListItemsCountManagers;
     }
 
     /// @param _lidoLocator address of the LidoLocator instance
@@ -146,6 +160,10 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _grantRole(MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE, _managersRoster.maxPositiveTokenRebaseManagers);
         _grantRole(MAX_VALIDATOR_EXIT_REQUESTS_PER_REPORT_ROLE,
                    _managersRoster.maxValidatorExitRequestsPerReportManagers);
+        _grantRole(MAX_EXITED_VALIDATORS_RATE_PER_DAY_ROLE,
+                   _managersRoster.maxExitedValidatorsRatePerDayManagers);
+        _grantRole(MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE,
+                   _managersRoster.maxAccountingExtraDataListItemsCountManagers);
     }
 
     /// @notice returns the address of the LidoLocator
@@ -273,6 +291,28 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _updateLimits(limitsList);
     }
 
+    /// @notice Sets the new value for the maxValidatorExitRequestsPerReport
+    /// @param _maxExitedValidatorsRatePerDay new maxExitedValidatorsRatePerDay value
+    function setMaxExitedValidatorsRatePerDay(uint256 _maxExitedValidatorsRatePerDay)
+        external
+        onlyRole(MAX_EXITED_VALIDATORS_RATE_PER_DAY_ROLE)
+    {
+        LimitsList memory limitsList = _limits.unpack();
+        limitsList.maxExitedValidatorsRatePerDay = _maxExitedValidatorsRatePerDay;
+        _updateLimits(limitsList);
+    }
+
+    /// @notice Sets the new value for the maxValidatorExitRequestsPerReport
+    /// @param _maxAccountingExtraDataListItemsCount new maxAccountingExtraDataListItemsCount value
+    function setMaxAccountingExtraDataListItemsCount(uint256 _maxAccountingExtraDataListItemsCount)
+        external
+        onlyRole(MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE)
+    {
+        LimitsList memory limitsList = _limits.unpack();
+        limitsList.maxAccountingExtraDataListItemsCount = _maxAccountingExtraDataListItemsCount;
+        _updateLimits(limitsList);
+    }
+
     /// @notice Returns the allowed ETH amount that might be taken from the withdrawal vault and EL
     ///     rewards vault during Lido's oracle report processing
     /// @param _preTotalPooledEther total amount of ETH controlled by the protocol
@@ -357,7 +397,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _checkValidatorsChurnLimit(limitsList, _appearedValidators, _exitedValidators, _timeElapsed);
     }
 
-    /// @notice Applies sanity checks to the number of validator exit requests count
+    /// @notice Applies sanity checks to the number of validator exit requests supplied to ValidatorExitBusOracle
     /// @param _exitRequestsCount Number of validator exit requests supplied per oracle report
     function checkExitBusOracleReport(uint256 _exitRequestsCount)
         external
@@ -366,6 +406,28 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 limit = _limits.unpack().maxValidatorExitRequestsPerReport;
         if (_exitRequestsCount > limit)
             revert IncorrectNumberOfExitRequestsPerReport(limit);
+    }
+
+    /// @notice Check rate of exited validators per day
+    /// @param _exitedValidatorsCount Number of validator exit requests supplied per oracle report
+    function checkExitedValidatorsRatePerDay(uint256 _exitedValidatorsCount)
+        external
+        view
+    {
+        uint256 limit = _limits.unpack().maxExitedValidatorsRatePerDay;
+        if (_exitedValidatorsCount > limit)
+            revert ExitedValidatorsLimitExceeded(limit, _exitedValidatorsCount);
+    }
+
+    /// @notice Check max accounting extra data list items count
+    /// @param _extraDataListItemsCount Number of validator exit requests supplied per oracle report
+    function checkMaxAccountingExtraDataListItemsCount(uint256 _extraDataListItemsCount)
+        external
+        view
+    {
+        uint256 limit = _limits.unpack().maxAccountingExtraDataListItemsCount;
+        if (_extraDataListItemsCount > limit)
+            revert MaxAccountingExtraDataItemsCountExceeded(limit, _extraDataListItemsCount);
     }
 
     /// @notice Applies sanity checks to the withdrawal requests params of Lido's oracle report
@@ -513,6 +575,12 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         if (_oldLimitsList.maxValidatorExitRequestsPerReport != _newLimitsList.maxValidatorExitRequestsPerReport) {
             emit MaxValidatorExitRequestsPerReportSet(_newLimitsList.maxValidatorExitRequestsPerReport);
         }
+        if (_oldLimitsList.maxExitedValidatorsRatePerDay != _newLimitsList.maxExitedValidatorsRatePerDay) {
+            emit maxExitedValidatorsRatePerDaySet(_newLimitsList.maxExitedValidatorsRatePerDay);
+        }
+        if (_oldLimitsList.maxAccountingExtraDataListItemsCount != _newLimitsList.maxAccountingExtraDataListItemsCount) {
+            emit maxAccountingExtraDataListItemsCountSet(_newLimitsList.maxAccountingExtraDataListItemsCount);
+        }
         _limits = _newLimitsList.pack();
     }
 
@@ -523,6 +591,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     event RequestTimestampMarginSet(uint256 requestTimestampMargin);
     event MaxPositiveTokenRebaseSet(uint256 maxPositiveTokenRebase);
     event MaxValidatorExitRequestsPerReportSet(uint256 maxValidatorExitRequestsPerReport);
+    event maxExitedValidatorsRatePerDaySet(uint256 maxExitedValidatorsRatePerDay);
+    event maxAccountingExtraDataListItemsCountSet(uint256 maxAccountingExtraDataListItemsCount);
 
     error IncorrectWithdrawalsVaultBalance(uint256 actualWithdrawalVaultBalance);
     error IncorrectCLBalanceDecrease(uint256 oneOffCLBalanceDecreaseBP);
@@ -532,6 +602,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     error IncorrectExitedValidators(uint256 churnLimit);
     error IncorrectRequestFinalization(uint256 requestCreationBlock);
     error IncorrectFinalizationShareRate(uint256 finalizationShareDeviation);
+    error MaxAccountingExtraDataItemsCountExceeded(uint256 maxItemsCount, uint256 receivedItemsCount);
+    error ExitedValidatorsLimitExceeded(uint256 limitPerDay, uint256 exitedPerDay);
 }
 
 library LimitsListPacker {
@@ -543,6 +615,8 @@ library LimitsListPacker {
         res.requestTimestampMargin = SafeCast.toUint64(_limitsList.requestTimestampMargin);
         res.maxPositiveTokenRebase = SafeCast.toUint64(_limitsList.maxPositiveTokenRebase);
         res.maxValidatorExitRequestsPerReport = SafeCast.toUint16(_limitsList.maxValidatorExitRequestsPerReport);
+        res.maxExitedValidatorsRatePerDay = SafeCast.toUint64(_limitsList.maxExitedValidatorsRatePerDay);
+        res.maxAccountingExtraDataListItemsCount = SafeCast.toUint64(_limitsList.maxAccountingExtraDataListItemsCount);
     }
 
     function _toBasisPoints(uint256 _value) private pure returns (uint16) {
@@ -560,5 +634,7 @@ library LimitsListUnpacker {
         res.requestTimestampMargin = _limitsList.requestTimestampMargin;
         res.maxPositiveTokenRebase = _limitsList.maxPositiveTokenRebase;
         res.maxValidatorExitRequestsPerReport = _limitsList.maxValidatorExitRequestsPerReport;
+        res.maxExitedValidatorsRatePerDay = _limitsList.maxExitedValidatorsRatePerDay;
+        res.maxAccountingExtraDataListItemsCount = _limitsList.maxAccountingExtraDataListItemsCount;
     }
 }
