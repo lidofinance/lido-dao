@@ -83,7 +83,7 @@ const hexConcat = (first, ...rest) => {
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const StETH = artifacts.require('StETHMock')
 
-contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, user4]) => {
+contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, user4, no1]) => {
   let appBase, app, pool, steth, dao, locator
   const snapshot = new EvmSnapshot(hre.ethers.provider)
 
@@ -173,9 +173,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.increaseTotalSigningKeysCount(10)
-      await app.increaseVettedSigningKeysCount(10)
-      await app.increaseDepositedSigningKeysCount(10)
+      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
 
       // calls distributeRewards() inside
       await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
@@ -189,9 +187,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.increaseTotalSigningKeysCount(10)
-      await app.increaseVettedSigningKeysCount(10)
-      await app.increaseDepositedSigningKeysCount(10)
+      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
 
       // calls distributeRewards() inside
       receipt = await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
@@ -207,9 +203,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, totalRewardShares)
 
-      await app.increaseTotalSigningKeysCount(10)
-      await app.increaseVettedSigningKeysCount(10)
-      await app.increaseDepositedSigningKeysCount(10)
+      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
 
       //before
       //      operatorId | Total | Deposited | Exited | Active (deposited-exited)
@@ -250,9 +244,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, totalRewardShares)
 
-      await app.increaseTotalSigningKeysCount(10)
-      await app.increaseVettedSigningKeysCount(10)
-      await app.increaseDepositedSigningKeysCount(10)
+      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
 
       //before
       //      operatorId | Total | Deposited | Exited | Active (deposited-exited)
@@ -292,9 +284,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.increaseTotalSigningKeysCount(10)
-      await app.increaseVettedSigningKeysCount(10)
-      await app.increaseDepositedSigningKeysCount(10)
+      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
 
       //update [operator, exited, stuck]
       await app.unsafeUpdateValidatorsKeysCount(firstNodeOperator, 1, 1 , { from: voting })
@@ -315,13 +305,11 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.increaseTotalSigningKeysCount(10)
-      await app.increaseVettedSigningKeysCount(10)
-      await app.increaseDepositedSigningKeysCount(10)
+      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
 
       //update [operator, exited, stuck]
-      await app.unsafeUpdateValidatorsKeysCount(firstNodeOperator, 1, 1 , { from: voting })
-      await app.unsafeUpdateValidatorsKeysCount(secondNodeOperator, 1, 0 , { from: voting })
+      await app.unsafeUpdateValidatorsKeysCount(firstNodeOperator, 1, 1, { from: voting })
+      await app.unsafeUpdateValidatorsKeysCount(secondNodeOperator, 1, 0, { from: voting })
 
       await app.updateRefundedValidatorsKeysCount(firstNodeOperator, 1000, { from: voting })
 
@@ -338,9 +326,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.increaseTotalSigningKeysCount(10)
-      await app.increaseVettedSigningKeysCount(10)
-      await app.increaseDepositedSigningKeysCount(10)
+      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
 
       //update [operator, exited, stuck]
       await app.unsafeUpdateValidatorsKeysCount(firstNodeOperator, 2, 2 , { from: voting })
@@ -363,9 +349,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.increaseTotalSigningKeysCount(10)
-      await app.increaseVettedSigningKeysCount(10)
-      await app.increaseDepositedSigningKeysCount(10)
+      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
 
       assert.isFalse(await app.testing_isNodeOperatorPenalized(firstNodeOperator))
 
@@ -402,10 +386,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.increaseTotalSigningKeysCount(55)
-      await app.increaseVettedSigningKeysCount(30)
-      await app.increaseDepositedSigningKeysCount(15)
-      await app.increaseExitedSigningKeysCount(2)
+      await app.testing_addNodeOperator('no', no1, 55, 30, 15, 2)
+
       // sum of (vetted[i] - exited[i])
       await app.increaseTargetValidatorsCount(28)
     })

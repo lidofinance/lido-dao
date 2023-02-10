@@ -3,6 +3,7 @@ const { getEvents, isBn } = require('@aragon/contract-helpers-test')
 const { assertRevert } = require('./assertThrow')
 const { toChecksumAddress } = require('ethereumjs-util')
 const { isAddress } = require('ethers/lib/utils')
+const { toBN } = require('./utils')
 
 chai.util.addMethod(chai.assert, 'emits', function (receipt, eventName, args = {}, options = {}) {
   const event = getEvent(receipt, eventName, args, options.abi)
@@ -48,7 +49,11 @@ chai.util.addMethod(chai.assert, 'reverts', async function (receipt, reason) {
 })
 
 chai.util.addMethod(chai.assert, 'equals', function (actual, expected, errorMsg) {
-  this.equal(actual.toString(), expected.toString())
+  this.equal(actual.toString(), expected.toString(), errorMsg)
+})
+
+chai.util.addMethod(chai.assert, 'equalsDelta', function (actual, expected, delta, errorMsg) {
+  this.isAtMost(+toBN(actual.toString()).sub(toBN(expected.toString())).abs().toString(), delta, errorMsg)
 })
 
 chai.util.addMethod(chai.assert, 'notEquals', function (actual, expected, errorMsg) {

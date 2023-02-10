@@ -17,6 +17,7 @@ const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 const { pushOracleReport } = require('../helpers/oracle')
 const { SECONDS_PER_FRAME } = require('../helpers/constants')
+const { oracleReportSanityCheckerStubFactory } = require('../helpers/factories')
 
 const { newApp } = require('../helpers/dao')
 
@@ -48,7 +49,7 @@ async function getTimestamp() {
   return block.timestamp;
 }
 
-contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, treasury]) => {
+contract('Lido', ([appManager, user1, user2, user3, nobody, depositor, treasury]) => {
   let app, oracle, depositContract, operators
   let treasuryAddress
   let dao
@@ -60,14 +61,28 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   let lidoLocator
   let snapshot
   let consensus
+  let voting
 
   before('deploy base app', async () => {
     anyToken = await ERC20Mock.new()
     badToken = await ERC20WrongTransferMock.new()
 
     const deployed = await deployProtocol({
+      oracleReportSanityCheckerFactory: oracleReportSanityCheckerStubFactory,
       stakingModulesFactory: async (protocol) => {
         const curatedModule = await setupNodeOperatorsRegistry(protocol)
+
+        await protocol.acl.grantPermission(
+          protocol.stakingRouter.address,
+          curatedModule.address,
+          await curatedModule.MANAGE_NODE_OPERATOR_ROLE()
+        )
+        await protocol.acl.grantPermission(
+          protocol.voting.address,
+          curatedModule.address,
+          await curatedModule.MANAGE_NODE_OPERATOR_ROLE()
+        )
+
         return [
           {
             module: curatedModule,
@@ -95,6 +110,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     withdrawalQueue = deployed.withdrawalQueue
     oracle = deployed.oracle
     consensus = deployed.consensusContract
+    voting = deployed.voting.address
 
     snapshot = new EvmSnapshot(hre.ethers.provider)
     await snapshot.make()
@@ -107,7 +123,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   const pushReport = async (clValidators, clBalance) => {
     const elRewards = await web3.eth.getBalance(elRewardsVault.address)
     await pushOracleReport(consensus, oracle, clValidators, clBalance, elRewards)
-    await consensus.advanceTimeBy(SECONDS_PER_FRAME + 1000)
+    await ethers.provider.send('evm_increaseTime', [SECONDS_PER_FRAME + 1000])
+    await ethers.provider.send('evm_mine')
   }
 
   const checkStat = async ({ depositedValidators, beaconValidators, beaconBalance }) => {
