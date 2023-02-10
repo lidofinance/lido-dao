@@ -33,6 +33,8 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
 
     bytes32 public constant SET_BASE_URI_ROLE = keccak256("SET_BASE_URI_ROLE");
 
+    // @notion simple wrapper for base URI string
+    //  Solidity does not allow to store string in UnstructuredStorage
     struct BaseUri {
         string value;
     }
@@ -49,19 +51,20 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
     error StringTooLong(string str);
     error ZeroMetadata();
 
+    // short strings for ERC721 name and symbol
     bytes32 private immutable NAME;
     bytes32 private immutable SYMBOL;
 
     /// @param _wstETH address of WstETH contract
-    /// @param _name IERC721Metadata name string encoded as bytes32
-    /// @param _symbol IERC721Metadata symbol string encoded as bytes32
+    /// @param _name IERC721Metadata name string. Should be shorter than 32 bytes
+    /// @param _symbol IERC721Metadata symbol string. Should be shorter than 32 bytes
     constructor(address _wstETH, string memory _name, string memory _symbol) WithdrawalQueue(IWstETH(_wstETH)) {
         if (bytes(_name).length == 0 || bytes(_symbol).length == 0) revert ZeroMetadata();
-        NAME = _toShortString(_name);
-        SYMBOL = _toShortString(_symbol);
+        NAME = _toBytes32(_name);
+        SYMBOL = _toBytes32(_symbol);
     }
 
-    /// See {IERC165-supportsInterface}.
+    /// @dev See {IERC165-supportsInterface}.
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -73,12 +76,12 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
             || super.supportsInterface(interfaceId);
     }
 
-    /// @dev See {IERC721Metadata-name}.
+    /// @dev Se_toBytes321Metadata-name}.
     function name() external view returns (string memory) {
         return _toString(NAME);
     }
 
-    /// @dev See {IERC721Metadata-symbol}.
+    /// @dev Se_toBytes321Metadata-symbol}.
     function symbol() external view override returns (string memory) {
         return _toString(SYMBOL);
     }
@@ -264,6 +267,33 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
         emit ApprovalForAll(_owner, _operator, _approved);
     }
 
+    /// @dev Decode a `bytes32 to string
+    function _toString(bytes32 _sstr) internal pure returns (string memory) {
+        uint256 len = _length(_sstr);
+        // using `new string(len)` would work locally but is not memory safe.
+        string memory str = new string(32);
+        /// @solidity memory-safe-assembly
+        assembly {
+            mstore(str, len)
+            mstore(add(str, 0x20), _sstr)
+        }
+        return str;
+    }
+
+    /// @dev encodes string `_str` in bytes32. Reverts if the string length > 31
+    function _toBytes32(string memory _str) internal pure returns (bytes32) {
+        bytes memory bstr = bytes(_str);
+        if (bstr.length > 31) {
+            revert StringTooLong(_str);
+        }
+        return bytes32(uint256(bytes32(bstr)) | bstr.length);
+    }
+
+    /// @dev Return the length of a string encoded in bytes32
+    function _length(bytes32 _sstr) internal pure returns (uint256) {
+        return uint256(_sstr) & 0xFF;
+    }
+
     function _getTokenApprovals() internal pure returns (mapping(uint256 => address) storage) {
         return TOKEN_APPROVALS_POSITION.storageMapUint256Address();
     }
@@ -277,31 +307,5 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
         assembly {
             baseUri.slot := position
         }
-    }
-
-    /// @dev Decode a `ShortString` back to a "normal" string.
-    function _toString(bytes32 _sstr) internal pure returns (string memory) {
-        uint256 len = _length(_sstr);
-        // using `new string(len)` would work locally but is not memory safe.
-        string memory str = new string(32);
-        /// @solidity memory-safe-assembly
-        assembly {
-            mstore(str, len)
-            mstore(add(str, 0x20), _sstr)
-        }
-        return str;
-    }
-
-    function _toShortString(string memory _str) internal pure returns (bytes32) {
-        bytes memory bstr = bytes(_str);
-        if (bstr.length > 31) {
-            revert StringTooLong(_str);
-        }
-        return bytes32(uint256(bytes32(bstr)) | bstr.length);
-    }
-
-    /// @dev Return the length of a `ShortString`.
-    function _length(bytes32 _sstr) internal pure returns (uint256) {
-        return uint256(_sstr) & 0xFF;
     }
 }
