@@ -304,7 +304,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             totalExitedValidatorsCountAfter >= prevReportedExitedValidatorsCount
         ) {
             // oracle finished updating exited validators for all node ops
-            IStakingModule(moduleAddr).onAllValidatorsCountersUpdated();
+            IStakingModule(moduleAddr).onAllValidatorCountersUpdated();
         }
     }
 
@@ -328,7 +328,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
      *
      * @param _nodeOperatorId ID of the node operator.
      *
-     * @param _triggerUpdateFinish Whether to call `onAllValidatorsCountersUpdated` on
+     * @param _triggerUpdateFinish Whether to call `onAllValidatorCountersUpdated` on
      *        the module after applying the corrections.
      *
      * @param _correction.currentModuleExitedValidatorsCount The expected current number of exited
@@ -386,7 +386,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         );
 
         if (_triggerUpdateFinish) {
-            IStakingModule(moduleAddr).onAllValidatorsCountersUpdated();
+            IStakingModule(moduleAddr).onAllValidatorCountersUpdated();
         }
     }
 

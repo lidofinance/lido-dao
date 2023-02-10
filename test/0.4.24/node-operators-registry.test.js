@@ -3145,7 +3145,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('reverts if no STAKING_ROUTER_ROLE', async () => {
-      await assert.reverts(app.onAllValidatorsCountersUpdated({ from: user3 }), 'APP_AUTH_FAILED')
+      await assert.reverts(app.onAllValidatorCountersUpdated({ from: user3 }), 'APP_AUTH_FAILED')
     })
 
     it("doesn't distribute rewards if no shares to distribute", async () => {
@@ -3157,7 +3157,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         steth.sharesOf(user3)
       ])
       // calls distributeRewards() inside
-      await app.onAllValidatorsCountersUpdated({ from: voting })
+      await app.onAllValidatorCountersUpdated({ from: voting })
       const recipientsSharesAfter = await Promise.all([
         steth.sharesOf(user1),
         steth.sharesOf(user2),
@@ -3174,7 +3174,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await steth.mintShares(app.address, ETH(10))
 
       // calls distributeRewards() inside
-      await app.onAllValidatorsCountersUpdated({ from: voting })
+      await app.onAllValidatorCountersUpdated({ from: voting })
 
       assert.equals(await steth.sharesOf(user1), ETH(3))
       assert.equals(await steth.sharesOf(user2), ETH(7))
@@ -3186,7 +3186,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await steth.mintShares(app.address, ETH(10))
 
       // calls distributeRewards() inside
-      receipt = await app.onAllValidatorsCountersUpdated({ from: voting })
+      receipt = await app.onAllValidatorCountersUpdated({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(3) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(7) })

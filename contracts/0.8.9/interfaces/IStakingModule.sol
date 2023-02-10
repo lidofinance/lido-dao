@@ -108,7 +108,7 @@ interface IStakingModule {
     );
 
     /// @notice Called by StakingRouter after oracle finishes updating validators counters for all node operators
-    function onAllValidatorsCountersUpdated() external;
+    function onAllValidatorCountersUpdated() external;
 
     /// @notice Called by StakingRouter when withdrawal credentials are changed.
     /// @dev This method MUST discard all StakingModule's unused deposit data cause they become

@@ -413,7 +413,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     }
 
     /// @notice Called by StakingRouter after oracle finishes updating validators counters for all node operators
-    function onAllValidatorsCountersUpdated() external
+    function onAllValidatorCountersUpdated() external
     {
         _auth(STAKING_ROUTER_ROLE);
         // for the permissioned module, we're distributing rewards within oracle operation
