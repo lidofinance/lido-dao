@@ -103,15 +103,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       base: appBase,
       permissions: {
         MANAGE_SIGNING_KEYS: voting,
-        ADD_NODE_OPERATOR_ROLE: voting,
         MANAGE_NODE_OPERATOR_ROLE: voting,
-        // ACTIVATE_NODE_OPERATOR_ROLE: voting,
-        // DEACTIVATE_NODE_OPERATOR_ROLE: voting,
-        // SET_NODE_OPERATOR_NAME_ROLE: voting,
-        // SET_NODE_OPERATOR_ADDRESS_ROLE: voting,
         SET_NODE_OPERATOR_LIMIT_ROLE: voting,
-        STAKING_ROUTER_ROLE: voting,
-        INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE: voting
+        STAKING_ROUTER_ROLE: voting
       }
     })
 
@@ -160,7 +154,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
         steth.sharesOf(user2),
         steth.sharesOf(user3)
       ])
-      
+
       // calls distributeRewards() inside
       await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
 
@@ -378,7 +372,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       //update [operator, exited, stuck]
       await app.unsafeUpdateValidatorsKeysCount(firstNodeOperator, 1, 1 , { from: voting })
       await app.unsafeUpdateValidatorsKeysCount(secondNodeOperator, 1, 0 , { from: voting })
-      assert.isTrue(await app.testing_isNodeOperatorPenalized(firstNodeOperator))      
+      assert.isTrue(await app.testing_isNodeOperatorPenalized(firstNodeOperator))
 
       await app.updateRefundedValidatorsKeysCount(firstNodeOperator, 1, { from: voting })
       assert.isTrue(await app.testing_isNodeOperatorPenalized(firstNodeOperator))
@@ -421,12 +415,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       let keyStats = await app.getNodeOperatorStats(3)
 
       assert.equal(+keyStats.excessValidatorsCount, 5)
-    
+
       await app.updateExitedValidatorsKeysCount(3, 9, { from: voting })
 
       keyStats1 = await app.getNodeOperatorStats(3)
       assert.equal(+keyStats1.excessValidatorsCount, 0)
-    }) 
+    })
 
     it('updateExitedValidatorsKeysCount() - check if appeared a new deposited keys and stopped, excess no changes                                                                                                                                                                                                                                                                                                                                                                                    ', async () => {
       await app.updateTargetValidatorsLimits(3, 5, true, { from: voting })
@@ -438,7 +432,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
 
       //increase _newActiveValidatorsCount by add new depositedKeys
       await app.increaseNodeOperatorDepositedSigningKeysCount(3, 1)
-    
+
       await app.updateExitedValidatorsKeysCount(3, 1, { from: voting })
 
       keyStats1 = await app.getNodeOperatorStats(3)
@@ -455,7 +449,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
 
       //increase _newActiveValidatorsCount by add new depositedKeys
       await app.increaseNodeOperatorDepositedSigningKeysCount(3, 2)
-    
+
       await app.updateExitedValidatorsKeysCount(3, 1, { from: voting })
 
       keyStats1 = await app.getNodeOperatorStats(3)

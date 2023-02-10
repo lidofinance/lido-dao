@@ -35,6 +35,8 @@ interface IStakingModule {
             uint256 readyToDepositValidatorsKeysCount
         );
 
+    function getTotalExitedValidatorsCount() external view returns (uint256);
+
     /// @notice Returns a counter that MUST change it's value when any of the following happens:
     ///     1. a node operator's key(s) is added
     ///     2. a node operator's key(s) is removed
@@ -69,11 +71,10 @@ interface IStakingModule {
     /// @notice Updates the number of the validators in the EXITED state for node operator with given id
     /// @param _nodeOperatorId Id of the node operator
     /// @param _exitedValidatorKeysCount New number of EXITED validators of the node operator
-    /// @return number of exited validators across all node operators
     function updateExitedValidatorsKeysCount(
         uint256 _nodeOperatorId,
         uint256 _exitedValidatorKeysCount
-    ) external returns (uint256);
+    ) external;
 
     /// @notice Unsafely updates the validators count stats for node operator with given id
     /// @param _nodeOperatorId Id of the node operator

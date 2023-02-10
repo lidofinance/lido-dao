@@ -67,6 +67,10 @@ contract StakingModuleMock is IStakingModule {
         )
     {}
 
+    function getTotalExitedValidatorsCount() external view returns (uint256) {
+        return 0;
+    }
+
     function handleRewardsMinted(uint256 _totalShares) external {}
 
     function updateStuckValidatorsKeysCount(
@@ -74,9 +78,7 @@ contract StakingModuleMock is IStakingModule {
         uint256 _stuckValidatorKeysCount
     ) external {}
 
-    function updateExitedValidatorsKeysCount(uint256, uint256) external returns (uint256) {
-        return 0;
-    }
+    function updateExitedValidatorsKeysCount(uint256, uint256) external {}
 
     function finishUpdatingExitedValidatorsKeysCount() external {}
 
