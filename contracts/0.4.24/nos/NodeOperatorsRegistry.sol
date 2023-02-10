@@ -81,7 +81,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     uint256 public constant MAX_NODE_OPERATOR_NAME_LENGTH = 255;
 
     uint256 internal constant UINT64_MAX = 0xFFFFFFFFFFFFFFFF;
-    uint256 internal constant STUCK_VALIDATORS_PENALTY_DELAY = 2 days;
 
     // SigningKeysStats
     uint8 internal constant VETTED_KEYS_COUNT_OFFSET = 0;
@@ -138,6 +137,9 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     // bytes32 internal constant TYPE_POSITION = keccak256("lido.NodeOperatorsRegistry.type");
     bytes32 internal constant TYPE_POSITION = 0xbacf4236659a602d72c631ba0b0d67ec320aaf523f3ae3590d7faee4f42351d0;
 
+    // bytes32 internal constant TYPE_POSITION = keccak256("lido.NodeOperatorsRegistry.stuckPenaltyDelay");
+    bytes32 internal constant STUCK_PENALTY_DELAY_POSITION = 0x8e3a1f3826a82c1116044b334cae49f3c3d12c3866a1c4b18af461e12e58a18e;
+
     //
     // DATA TYPES
     //
@@ -193,6 +195,8 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         require(hasInitialized() && !isPetrified(), "CONTRACT_NOT_INITIALIZED_OR_PETRIFIED");
         _checkContractVersion(0);
         _initialize_v2(_locator, _type);
+
+        _setStuckPenaltyDelay(2 days);
 
         uint256 totalOperators = getNodeOperatorsCount();
         Packed64x4.Packed memory signingKeysStats;
@@ -471,8 +475,10 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _requireValidRange(_stuckValidatorsCount <= signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET));
 
         stuckPenaltyStats.set(STUCK_VALIDATORS_COUNT_OFFSET, _stuckValidatorsCount);
+        if (_stuckValidatorsCount <= stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET)) {
+            stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, uint64(block.timestamp + _getStuckPenaltyDelay()));
+        }
         _saveOperatorStuckPenaltyStats(_nodeOperatorId, stuckPenaltyStats);
-
         emit StuckValidatorsCountChanged(_nodeOperatorId, _stuckValidatorsCount);
     }
 
@@ -483,23 +489,29 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
 
+        _updateRefundValidatorsKeysCount(_nodeOperatorId, uint64(_refundedValidatorsCount));
+    }
+
+    function _updateRefundValidatorsKeysCount(uint256 _nodeOperatorId, uint64 _refundedValidatorsCount) internal {
         Packed64x4.Packed memory stuckPenaltyStats = _loadOperatorStuckPenaltyStats(_nodeOperatorId);
+        if (_refundedValidatorsCount == stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET)) return;
 
-        stuckPenaltyStats.set(REFUNDED_VALIDATORS_COUNT_OFFSET, uint64(_refundedValidatorsCount));
+        Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
+        _requireValidRange(_refundedValidatorsCount <= signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET));
 
+        stuckPenaltyStats.set(REFUNDED_VALIDATORS_COUNT_OFFSET, _refundedValidatorsCount);
         if (stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET) <= _refundedValidatorsCount) {
-            stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, uint64(block.timestamp + STUCK_VALIDATORS_PENALTY_DELAY));
+            stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, uint64(block.timestamp + _getStuckPenaltyDelay()));
         }
-
         _saveOperatorStuckPenaltyStats(_nodeOperatorId, stuckPenaltyStats);
-
         emit RefundedValidatorsCountChanged(_nodeOperatorId, _refundedValidatorsCount);
     }
 
     function invalidateReadyToDepositKeys() external {
         uint256 operatorsCount = getNodeOperatorsCount();
-        _requireValidRange(operatorsCount > 0);
-        invalidateReadyToDepositKeysRange(0, operatorsCount - 1);
+        if (operatorsCount > 0) {
+            invalidateReadyToDepositKeysRange(0, operatorsCount - 1);
+        }
     }
 
     /// @notice Invalidates all unused validators keys for all node operators
@@ -528,7 +540,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
             emit NodeOperatorTotalKeysTrimmed(_nodeOperatorId, trimmedKeysCount);
         }
 
-        /// @todo revert?
         if (totalTrimmedKeysCount > 0) {
             _increaseValidatorsKeysNonce();
         }
@@ -1074,6 +1085,20 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     function getLocator() public view returns (ILidoLocator) {
         return ILidoLocator(LIDO_LOCATOR_POSITION.getStorageAddress());
+    }
+
+    function updateStuckPenaltyDelay(uint256 _delay) external {
+        _auth(MANAGE_NODE_OPERATOR_ROLE);
+
+        _setStuckPenaltyDelay(_delay);
+    }
+
+    function _getStuckPenaltyDelay() internal view returns (uint256) {
+        return STUCK_PENALTY_DELAY_POSITION.getStorageUint256();
+    }
+
+    function _setStuckPenaltyDelay(uint256 _delay) internal {
+        STUCK_PENALTY_DELAY_POSITION.setStorageUint256(_delay);
     }
 
     function _increaseValidatorsKeysNonce() internal {
