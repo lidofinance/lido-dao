@@ -82,7 +82,8 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   const pushReport = async (clValidators, clBalance) => {
     const elRewards = await web3.eth.getBalance(elRewardsVault.address)
     await pushOracleReport(consensus, oracle, clValidators, clBalance, elRewards)
-    await consensus.advanceTimeBy(SECONDS_PER_FRAME + 1000)
+    await ethers.provider.send('evm_increaseTime', [SECONDS_PER_FRAME + 1000])
+    await ethers.provider.send('evm_mine')
   }
 
   let awaitingTotalShares = new BN(0)
@@ -443,7 +444,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     awaitingUser1Balance = awaitingUser1Balance.sub(new BN(lossReported))
 
     // Reporting 1 ETH balance loss (61 => 60)
-    
+
     await pushReport(1, ETH(60))
 
     // Total shares stay the same because no fee shares are added
@@ -585,7 +586,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const totalFeePoints = 0.1 * 10000
 
     const totalSupplyBefore = await token.getTotalPooledEther()
-    
+
     await pushReport(2, ETH(90))
 
     const totalSupplyAfter = await token.getTotalPooledEther()
