@@ -85,6 +85,21 @@ contract('HashConsensus', ([admin, member1, member2, stranger]) => {
         assert.equal(+(await reportProcessor2.getLastCall_submitReport()).callCount, 0)
       })
 
+      it('next processor already have processed report for current frame', async () => {
+        const frame = await consensus.getCurrentFrame()
+
+        // 1 — Make up state of unfinished processing for reportProcessor1
+        await consensus.addMember(member1, 1, { from: admin })
+        await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
+
+        // 2 — Make up state of finished processing for reportProcessor2
+        await reportProcessor2.setLastProcessingStartedRefSlot(frame.refSlot)
+
+        // 3 — Check call count of report submits
+        await consensus.setReportProcessor(reportProcessor2.address, { from: admin })
+        assert.equal(+(await reportProcessor2.getLastCall_submitReport()).callCount, 0)
+      })
+
       it('do not submit report to next processor if there was no conensus', async () => {
         const frame = await consensus.getCurrentFrame()
 
