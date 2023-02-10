@@ -97,8 +97,9 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           const report = await oracle.getConsensusReport()
           assert.isAbove(+refSlot, +report.refSlot)
 
-          const procState = await oracle.getDataProcessingState()
-          assert.equal(+procState.refSlot, +report.refSlot)
+          const procState = await oracle.getProcessingState()
+          assert.equal(procState.dataHash, ZERO_HASH)
+          assert.isFalse(procState.dataSubmitted)
         })
 
         it('committee reaches consensus on a report hash', async () => {
@@ -130,11 +131,12 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           )
           assert.isFalse(report.processingStarted)
 
-          const procState = await oracle.getDataProcessingState()
-          assert.isFalse(procState.processingStarted)
-          assert.equal(+procState.requestsCount, 0)
-          assert.equal(+procState.requestsProcessed, 0)
+          const procState = await oracle.getProcessingState()
+          assert.equal(procState.dataHash, reportHash)
+          assert.isFalse(procState.dataSubmitted)
           assert.equal(+procState.dataFormat, 0)
+          assert.equal(+procState.requestsCount, 0)
+          assert.equal(+procState.requestsSubmitted, 0)
         })
 
         it('some time passes', async () => {
@@ -163,11 +165,12 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         })
 
         it(`reports are marked as processed`, async () => {
-          const procState = await oracle.getDataProcessingState()
-          assert.isTrue(procState.processingStarted)
-          assert.equal(+procState.requestsCount, exitRequests.length)
-          assert.equal(+procState.requestsProcessed, exitRequests.length)
+          const procState = await oracle.getProcessingState()
+          assert.equal(procState.dataHash, reportHash)
+          assert.isTrue(procState.dataSubmitted)
           assert.equal(+procState.dataFormat, DATA_FORMAT_LIST)
+          assert.equal(+procState.requestsCount, exitRequests.length)
+          assert.equal(+procState.requestsSubmitted, exitRequests.length)
         })
 
         it('some time passes', async () => {

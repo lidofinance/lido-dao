@@ -1,6 +1,7 @@
 const { ethers } = require('hardhat')
 
 const { newDao } = require('./dao')
+const { updateLocatorImplementation } = require('./locator-deploy')
 
 const OssifiableProxy = artifacts.require('OssifiableProxy')
 
@@ -25,7 +26,6 @@ const DEFAULT_FACTORIES = {
   withdrawalCredentialsFactory: factories.withdrawalCredentialsFactory,
   stakingModulesFactory: factories.stakingModulesFactory,
   guardiansFactory: factories.guardiansFactory,
-  lidoLocatorMockImplFactory: factories.lidoLocatorMockImplFactory,
   burnerFactory: factories.burnerFactory,
   postSetup: factories.postSetup,
   lidoLocatorFactory: factories.lidoLocatorFactory
@@ -72,13 +72,33 @@ async function deployProtocol(config = {}) {
   protocol.burner = await getFactory(config, 'burnerFactory')(protocol)
 
   protocol.lidoLocator = await getFactory(config, 'lidoLocatorFactory')(protocol)
+
+  await updateLocatorImplementation(protocol.lidoLocator.address, protocol.appManager.address, {
+    lido: protocol.pool.address,
+    depositSecurityModule: protocol.depositSecurityModule.address,
+    elRewardsVault: protocol.elRewardsVault.address,
+    legacyOracle: protocol.legacyOracle.address,
+    burner: protocol.burner.address,
+    stakingRouter: protocol.stakingRouter.address,
+    treasury: protocol.treasury.address,
+    withdrawalVault: protocol.withdrawalVault.address,
+    postTokenRebaseReceiver: protocol.legacyOracle.address
+  })
+
   protocol.oracle = await getFactory(config, 'accountingOracleFactory')(protocol)
-  protocol.withdrawalQueue = await getFactory(config, 'withdrawalQueueFactory')(protocol)
-  await upgradeOssifiableProxy(
+  await updateLocatorImplementation(protocol.lidoLocator.address, protocol.appManager.address, {
+    accountingOracle: protocol.oracle.address,
+  })
+
+  await protocol.legacyOracle.initialize(
     protocol.lidoLocator.address,
-    (await getFactory(config, 'lidoLocatorMockImplFactory')(protocol)).address,
-    protocol.appManager.address
-  )
+    protocol.consensusContract.address)
+
+  protocol.withdrawalQueue = await getFactory(config, 'withdrawalQueueFactory')(protocol)
+
+  await updateLocatorImplementation(protocol.lidoLocator.address, protocol.appManager.address, {
+    withdrawalQueue: protocol.withdrawalQueue.address,
+  })
 
   await getFactory(config, 'postSetup')(protocol)
 

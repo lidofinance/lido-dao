@@ -4,7 +4,7 @@ const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contrac
 const { assertRevert } = require('../../helpers/assertThrow')
 const { assertBnClose, e18, hex, strip0x } = require('../../helpers/utils')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
-const { deployLocatorWithInvalidImplementation, updateLocatorImplementation, getLocatorConfig } = require('../../helpers/locator-deploy')
+const { updateLocatorImplementation, deployLocatorWithDummyAddressesImplementation } = require('../../helpers/locator-deploy')
 
 const {
   SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, SECONDS_PER_EPOCH,
@@ -83,7 +83,7 @@ async function deployExitBusOracle(admin, {
   lastProcessingRefSlot = 0,
   resumeAfterDeploy = false,
 } = {}) {
-  const locator = await deployLocatorWithInvalidImplementation(admin)
+  const locator = (await deployLocatorWithDummyAddressesImplementation(admin)).address
 
   const oracle = await ValidatorsExitBusOracle.new(
     SECONDS_PER_SLOT, GENESIS_TIME, locator, {from: admin})
