@@ -282,42 +282,42 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     function reportStakingModuleExitedValidatorsCountByNodeOperator(
         uint256 _stakingModuleId,
         bytes calldata _nodeOperatorIds,
-        bytes calldata _exitedKeysCounts
+        bytes calldata _exitedValidatorsCounts
     )
         external
         onlyRole(REPORT_EXITED_VALIDATORS_ROLE)
     {
-        if (_nodeOperatorIds.length % 8 != 0 || _exitedKeysCounts.length % 16 != 0) {
+        if (_nodeOperatorIds.length % 8 != 0 || _exitedValidatorsCounts.length % 16 != 0) {
             revert InvalidReportData();
         }
 
         uint256 totalNodeOps = _nodeOperatorIds.length / 8;
-        if (_exitedKeysCounts.length / 16 != totalNodeOps) {
+        if (_exitedValidatorsCounts.length / 16 != totalNodeOps) {
             revert InvalidReportData();
         }
 
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         IStakingModule moduleContract = IStakingModule(stakingModule.stakingModuleAddress);
-        (uint256 prevExitedKeysCount,,) = moduleContract.getStakingModuleSummary();
+        (uint256 prevExitedValidatorsCount,,) = moduleContract.getStakingModuleSummary();
 
         for (uint256 i = 0; i < totalNodeOps; ) {
             uint256 nodeOpId;
-            uint256 keysCount;
+            uint256 validatorsCount;
             /// @solidity memory-safe-assembly
             assembly {
                 nodeOpId := shr(192, calldataload(add(_nodeOperatorIds.offset, mul(i, 8))))
-                keysCount := shr(128, calldataload(add(_exitedKeysCounts.offset, mul(i, 16))))
+                validatorsCount := shr(128, calldataload(add(_exitedValidatorsCounts.offset, mul(i, 16))))
                 i := add(i, 1)
             }
-            moduleContract.updateExitedValidatorsCount(nodeOpId, keysCount);
+            moduleContract.updateExitedValidatorsCount(nodeOpId, validatorsCount);
         }
 
-        uint256 prevReportedExitedKeysCount = stakingModule.exitedValidatorsCount;
-        (uint256 newExitedKeysCount,,) =  moduleContract.getStakingModuleSummary();
-        if (prevExitedKeysCount < prevReportedExitedKeysCount &&
-            newExitedKeysCount >= prevReportedExitedKeysCount
+        uint256 prevReportedExitedValidatorsCount = stakingModule.exitedValidatorsCount;
+        (uint256 newExitedValidatorsCount,,) =  moduleContract.getStakingModuleSummary();
+        if (prevExitedValidatorsCount < prevReportedExitedValidatorsCount &&
+            newExitedValidatorsCount >= prevReportedExitedValidatorsCount
         ) {
-            // oracle finished updating exited keys for all node ops
+            // oracle finished updating exited validators for all node ops
             moduleContract.onAllValidatorCountersUpdated();
         }
     }
@@ -407,17 +407,17 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     function reportStakingModuleStuckValidatorsCountByNodeOperator(
         uint256 _stakingModuleId,
         bytes calldata _nodeOperatorIds,
-        bytes calldata _stuckKeysCounts
+        bytes calldata _stuckValidatorsCounts
     )
         external
         onlyRole(REPORT_EXITED_VALIDATORS_ROLE)
     {
-        if (_nodeOperatorIds.length % 8 != 0 || _stuckKeysCounts.length % 16 != 0) {
+        if (_nodeOperatorIds.length % 8 != 0 || _stuckValidatorsCounts.length % 16 != 0) {
             revert InvalidReportData();
         }
 
         uint256 totalNodeOps = _nodeOperatorIds.length / 8;
-        if (_stuckKeysCounts.length / 16 != totalNodeOps) {
+        if (_stuckValidatorsCounts.length / 16 != totalNodeOps) {
             revert InvalidReportData();
         }
 
@@ -425,14 +425,14 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
         for (uint256 i = 0; i < totalNodeOps; ) {
             uint256 nodeOpId;
-            uint256 keysCount;
+            uint256 validatorsCount;
             /// @solidity memory-safe-assembly
             assembly {
                 nodeOpId := shr(192, calldataload(add(_nodeOperatorIds.offset, mul(i, 8))))
-                keysCount := shr(128, calldataload(add(_stuckKeysCounts.offset, mul(i, 16))))
+                validatorsCount := shr(128, calldataload(add(_stuckValidatorsCounts.offset, mul(i, 16))))
                 i := add(i, 1)
             }
-            IStakingModule(moduleAddr).updateStuckValidatorsCount(nodeOpId, keysCount);
+            IStakingModule(moduleAddr).updateStuckValidatorsCount(nodeOpId, validatorsCount);
         }
     }
 
