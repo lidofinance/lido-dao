@@ -85,14 +85,13 @@ function calcExtraDataListHash(packedExtraDataList) {
 
 
 async function deployOracleReportSanityCheckerForAccounting(lidoLocator, admin) {
-  const secondsPerSlot = 32 * 12
   const limitsList = [0, 0, 0, 0, 0, 0, 0, 32 * 12, 15]
   const managersRoster = [[admin], [], [], [], [], [], [], [], [], []]
 
   const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
 
   let oracleReportSanityChecker = await OracleReportSanityChecker.new(
-    lidoLocator, secondsPerSlot, admin, limitsList, managersRoster, { from: admin })
+    lidoLocator, admin, limitsList, managersRoster, { from: admin })
   return oracleReportSanityChecker
 }
 
