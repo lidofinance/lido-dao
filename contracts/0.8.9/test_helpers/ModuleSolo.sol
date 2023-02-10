@@ -33,11 +33,11 @@ contract ModuleSolo is IStakingModule {
     function getStakingModuleSummary() external view returns (
         uint256 totalExitedValidators,
         uint256 totalDepositedValidators,
-        uint256 depositableValidators
+        uint256 depositableValidatorsCount
     ) {
         totalExitedValidators = totalExited;
         totalDepositedValidators = totalDeposited;
-        depositableValidators = totalVetted - totalDeposited;
+        depositableValidatorsCount = totalVetted - totalDeposited;
     }
 
     function getNodeOperatorSummary(uint256 _nodeOperatorId) external view returns (

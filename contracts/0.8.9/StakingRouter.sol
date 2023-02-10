@@ -463,7 +463,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     /**
      * @notice Returns the ids of all registered staking modules
      */
-    function getStakingModuleIds() external view returns (uint24[] memory stakingModuleIds) {
+    function getStakingModuleIds() public view returns (uint24[] memory stakingModuleIds) {
         uint256 stakingModulesCount = getStakingModulesCount();
         stakingModuleIds = new uint24[](stakingModulesCount);
         for (uint256 i; i < stakingModulesCount; ) {
@@ -478,7 +478,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
      *  @dev Returns staking module by id
      */
     function getStakingModule(uint256 _stakingModuleId)
-        external
+        public
         view
         validStakingModuleId(_stakingModuleId)
         returns (StakingModule memory)
@@ -501,6 +501,125 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         returns (StakingModuleStatus)
     {
         return StakingModuleStatus(_getStakingModuleById(_stakingModuleId).status);
+    }
+
+    struct ValidatorsReport {
+        uint256 totalExited;
+        uint256 totalDeposited;
+        uint256 depositable;
+    }
+
+    struct StakingModuleReport {
+        StakingModule state;
+        uint256 nodeOperatorsCount;
+        uint256 activeNodeOperatorsCount;
+        ValidatorsReport validatorsReport;
+    }
+
+
+    struct NodeOperatorReport {
+        uint256 id;
+        bool isActive;
+        bool isTargetLimitActive;
+        uint256 targetValidatorsCount;
+        uint256 stuckValidatorsCount;
+        uint256 refundedValidatorsCount;
+        uint256 stuckPenaltyEndTimestamp;
+        ValidatorsReport validatorsReport;
+    }
+
+    /// @dev WARNING: This method is not supposed to be used for onchain calls due to high gas costs
+    ///     for data aggregation
+    function getAllStakingModuleReports() external view returns (StakingModuleReport[] memory) {
+        return getStakingModuleReports(getStakingModuleIds());
+    }
+
+    /// @dev WARNING: This method is not supposed to be used for onchain calls due to high gas costs
+    ///     for data aggregation
+    function getStakingModuleReports(uint24[] memory _stakingModuleIds)
+        public
+        view
+        returns (StakingModuleReport[] memory reports)
+    {
+        reports = new StakingModuleReport[](_stakingModuleIds.length);
+        for (uint256 i = 0; i < _stakingModuleIds.length; ++i) {
+            StakingModule memory stakingModuleState = getStakingModule(_stakingModuleIds[i]);
+            IStakingModule stakingModule = IStakingModule(stakingModuleState.stakingModuleAddress);
+            (
+                uint256 totalExitedValidators,
+                uint256 totalDepositedValidators,
+                uint256 depositableValidatorsCount
+            ) = stakingModule.getStakingModuleSummary();
+            reports[i] = StakingModuleReport({
+                state: stakingModuleState,
+                nodeOperatorsCount: stakingModule.getNodeOperatorsCount(),
+                activeNodeOperatorsCount: stakingModule.getActiveNodeOperatorsCount(),
+                validatorsReport: ValidatorsReport({
+                    totalExited: totalExitedValidators,
+                    totalDeposited: totalDepositedValidators,
+                    depositable: depositableValidatorsCount
+                })
+            });
+        }
+    }
+
+    /// @dev WARNING: This method is not supposed to be used for onchain calls due to high gas costs
+    ///     for data aggregation
+    function getAllNodeOperatorReports(uint256 _stakingModuleId) external view returns (NodeOperatorReport[] memory) {
+        IStakingModule stakingModule = IStakingModule(_getStakingModuleAddressById(_stakingModuleId));
+        uint256 nodeOperatorsCount = stakingModule.getNodeOperatorsCount();
+        return getNodeOperatorReports(_stakingModuleId, 0, nodeOperatorsCount);
+    }
+
+    /// @dev WARNING: This method is not supposed to be used for onchain calls due to high gas costs
+    ///     for data aggregation
+    function getNodeOperatorReports(
+        uint256 _stakingModuleId,
+        uint256 _offset,
+        uint256 _limit
+    ) public view returns (NodeOperatorReport[] memory summaries) {
+        IStakingModule stakingModule = IStakingModule(_getStakingModuleAddressById(_stakingModuleId));
+        uint256[] memory nodeOperatorIds = stakingModule.getNodeOperatorIds(_offset, _limit);
+        return getNodeOperatorReports(_stakingModuleId, nodeOperatorIds);
+    }
+
+    /// @dev WARNING: This method is not supposed to be used for onchain calls due to high gas costs
+    ///     for data aggregation
+    function getNodeOperatorReports(uint256 _stakingModuleId, uint256[] memory _nodeOperatorIds)
+        public
+        view
+        returns (NodeOperatorReport[] memory summaries)
+    {
+        IStakingModule stakingModule = IStakingModule(_getStakingModuleAddressById(_stakingModuleId));
+        summaries = new NodeOperatorReport[](_nodeOperatorIds.length);
+        for (uint256 i = 0; i < _nodeOperatorIds.length; ++i) {
+            bool isActive = stakingModule.getNodeOperatorIsActive(_nodeOperatorIds[i]);
+
+            (
+                bool isTargetLimitActive,
+                uint256 targetValidatorsCount,
+                uint256 stuckValidatorsCount,
+                uint256 refundedValidatorsCount,
+                uint256 stuckPenaltyEndTimestamp,
+                uint256 totalExitedValidators,
+                uint256 totalDepositedValidators,
+                uint256 depositableValidatorsCount
+            ) = stakingModule.getNodeOperatorSummary(i);
+            summaries[i] = NodeOperatorReport({
+                isActive: isActive,
+                id: _nodeOperatorIds[i],
+                isTargetLimitActive: isTargetLimitActive,
+                targetValidatorsCount: targetValidatorsCount,
+                stuckValidatorsCount: stuckValidatorsCount,
+                refundedValidatorsCount: refundedValidatorsCount,
+                stuckPenaltyEndTimestamp: stuckPenaltyEndTimestamp,
+                validatorsReport: ValidatorsReport({
+                    totalExited: totalExitedValidators,
+                    totalDeposited: totalDepositedValidators,
+                    depositable: depositableValidatorsCount
+                })
+            });
+        }
     }
 
     /**

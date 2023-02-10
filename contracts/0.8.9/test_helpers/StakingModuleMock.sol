@@ -25,11 +25,11 @@ contract StakingModuleMock is IStakingModule {
     function getStakingModuleSummary() external view returns (
         uint256 totalExitedValidators,
         uint256 totalDepositedValidators,
-        uint256 depositableValidators
+        uint256 depositableValidatorsCount
     ) {
         totalExitedValidators = 0;
         totalDepositedValidators = _activeValidatorsCount;
-        depositableValidators = _availableValidatorsCount;
+        depositableValidatorsCount = _availableValidatorsCount;
     }
 
     function getNodeOperatorSummary(uint256 _nodeOperatorId) external view returns (
