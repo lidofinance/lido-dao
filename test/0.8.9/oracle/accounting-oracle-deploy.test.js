@@ -4,7 +4,7 @@ const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contrac
 const { assertRevert } = require('../../helpers/assertThrow')
 const { processNamedTuple } = require('../../helpers/utils')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
-const { deployLocatorWithInvalidImplementation, updateLocatorImplementation, getLocatorConfig } =
+const { updateLocatorImplementation, deployLocatorWithDummyAddressesImplementation } =
   require('../../helpers/locator-deploy')
 
 const {
@@ -136,7 +136,7 @@ async function deployAccountingOracleSetup(admin, {
 } = {}) {
   const {lido, stakingRouter, withdrawalQueue} = await getLidoAndStakingRouter()
 
-  const locatorAddr = await deployLocatorWithInvalidImplementation(admin)
+  const locatorAddr = (await deployLocatorWithDummyAddressesImplementation(admin)).address
 
   await updateLocatorImplementation(locatorAddr, admin, {
     lido: lido.address,
@@ -150,7 +150,8 @@ async function deployAccountingOracleSetup(admin, {
     initialEpoch = +await legacyOracle.getLastCompletedEpochId() + epochsPerFrame
   }
 
-  const oracle = await AccountingOracle.new(locatorAddr, lido.address, secondsPerSlot, genesisTime, {from: admin})
+  const oracle = await AccountingOracle.new(locatorAddr, lido.address, legacyOracle.address,
+    secondsPerSlot, genesisTime, {from: admin})
 
   const {consensus} = await deployHashConsensus(admin, {
     reportProcessor: oracle,
@@ -171,7 +172,6 @@ async function initAccountingOracle({
   admin,
   oracle,
   consensus,
-  legacyOracle,
   dataSubmitter = null,
   consensusVersion = CONSENSUS_VERSION,
   maxExitedValidatorsPerDay = MAX_EXITED_VALS_PER_DAY,
@@ -181,7 +181,6 @@ async function initAccountingOracle({
     admin,
     consensus.address,
     consensusVersion,
-    legacyOracle.address,
     maxExitedValidatorsPerDay,
     maxExtraDataListItemsCount,
     {from: admin}

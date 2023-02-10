@@ -288,18 +288,16 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     {
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         address moduleAddr = stakingModule.stakingModuleAddress;
-        ValidatorsReport memory stakingModuleReport =
-                IStakingModule(stakingModule.stakingModuleAddress).getValidatorsReport();
-
-        uint256 newExitedValidatorsCount;
+        ValidatorsReport memory prevValidatorsReport = IStakingModule(moduleAddr).getValidatorsReport();
         for (uint256 i = 0; i < _nodeOperatorIds.length; ) {
-            newExitedValidatorsCount = IStakingModule(moduleAddr)
+            IStakingModule(moduleAddr)
                 .updateExitedValidatorsCount(_nodeOperatorIds[i], _exitedValidatorsCounts[i]);
             unchecked { ++i; }
         }
         uint256 prevReportedExitedValidatorsCount = stakingModule.exitedValidatorsCount;
-        if (stakingModuleReport.totalExited < prevReportedExitedValidatorsCount &&
-            newExitedValidatorsCount >= prevReportedExitedValidatorsCount
+        ValidatorsReport memory newValidatorsReport = IStakingModule(moduleAddr).getValidatorsReport();
+        if (prevValidatorsReport.totalExited < prevReportedExitedValidatorsCount &&
+            newValidatorsReport.totalExited >= prevReportedExitedValidatorsCount
         ) {
             // oracle finished updating exited validators for all node ops
             IStakingModule(moduleAddr).onAllValidatorsCountersUpdated();

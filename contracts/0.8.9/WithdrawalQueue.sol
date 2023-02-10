@@ -8,10 +8,7 @@ import {WithdrawalQueueBase} from "./WithdrawalQueueBase.sol";
 
 import {IERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts-v4.4/token/ERC20/extensions/draft-IERC20Permit.sol";
-import {SafeCast} from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
-import {SafeERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
-
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 import {PausableUntil} from "./utils/PausableUntil.sol";
 
@@ -34,14 +31,12 @@ interface IWstETH is IERC20, IERC20Permit {
 /// @title A contract for handling stETH withdrawal request queue within the Lido protocol
 /// @author folkyatina
 abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, WithdrawalQueueBase, Versioned {
-    using SafeCast for uint256;
-    using SafeERC20 for IWstETH;
-    using SafeERC20 for IStETH;
     using UnstructuredStorage for bytes32;
 
     /// Bunker mode activation timestamp
     bytes32 internal constant BUNKER_MODE_SINCE_TIMESTAMP_POSITION =
         keccak256("lido.WithdrawalQueue.bunkerModeSinceTimestamp");
+
     /// Special value for timestamp when bunker mode is inactive (i.e., protocol in turbo mode)
     uint256 public constant BUNKER_MODE_DISABLED_TIMESTAMP = type(uint256).max;
 
@@ -65,9 +60,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     IWstETH public immutable WSTETH;
 
     /// @notice Emitted when the contract initialized
-    /// @param _admin provided admin address
-    /// @param _caller initialization `msg.sender`
-    event InitializedV1(address _admin, address _pauser, address _resumer, address _finalizer, address _caller);
+    event InitializedV1(address _admin, address _pauser, address _resumer, address _finalizer, address _bunkerReporter);
 
     error AdminZeroAddress();
     error AlreadyInitialized();
@@ -91,12 +84,16 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @param _pauser address that will be able to pause the withdrawals
     /// @param _resumer address that will be able to resume the withdrawals after pause
     /// @param _finalizer address that can finalize requests in the queue
-    /// @dev Reverts with `AdminZeroAddress()` if `_admin` equals to `address(0)`
+    /// @param _bunkerReporter addres that can report a bunker mode
+    /// @dev Reverts if `_admin` equals to `address(0)`
     /// @dev NB! It's initialized in paused state by default and should be resumed explicitly to start
-    function initialize(address _admin, address _pauser, address _resumer, address _finalizer) external {
+    /// @dev NB! Bunker mode is disabled by default
+    function initialize(address _admin, address _pauser, address _resumer, address _finalizer, address _bunkerReporter)
+        external
+    {
         if (_admin == address(0)) revert AdminZeroAddress();
 
-        _initialize(_admin, _pauser, _resumer, _finalizer);
+        _initialize(_admin, _pauser, _resumer, _finalizer, _bunkerReporter);
     }
 
     /// @notice Resume withdrawal requests placement and finalization
@@ -110,49 +107,41 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         _pause(_duration);
     }
 
-    struct WithdrawalRequestInput {
-        /// @notice Amount of the wstETH/StETH tokens that will be locked for withdrawal
-        uint256 amount;
-        /// @notice Address that will be able to manage or claim the request
-        address owner;
-    }
-
     /// @notice Request the sequence of stETH withdrawals according to passed `withdrawalRequestInputs` data
-    /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
-    ///  be created for each item in the passed list. If `WithdrawalRequestInput.owner` is set to `address(0)`,
-    ///  `msg.sender` will be used as owner.
+    /// @param amounts an array of stETH amount values. The standalone withdrawal request will
+    ///  be created for each item in the passed list.
+    /// @param _owner address that will be able to transfer or claim the request.
+    ///  If `owner` is set to `address(0)`, `msg.sender` will be used as owner.
     /// @return requestIds an array of the created withdrawal requests
-    function requestWithdrawals(WithdrawalRequestInput[] calldata _withdrawalRequestInputs)
+    function requestWithdrawals(uint256[] calldata amounts, address _owner)
         public
         whenResumed
         returns (uint256[] memory requestIds)
     {
-        requestIds = new uint256[](_withdrawalRequestInputs.length);
-        for (uint256 i = 0; i < _withdrawalRequestInputs.length; ++i) {
-            requestIds[i] = _requestWithdrawal(
-                _withdrawalRequestInputs[i].amount,
-                _checkWithdrawalRequestInput(_withdrawalRequestInputs[i].amount, _withdrawalRequestInputs[i].owner)
-            );
+        if (_owner == address(0)) _owner = msg.sender;
+        requestIds = new uint256[](amounts.length);
+        for (uint256 i = 0; i < amounts.length; ++i) {
+            _checkWithdrawalRequestAmount(amounts[i]);
+            requestIds[i] = _requestWithdrawal(amounts[i], _owner);
         }
     }
 
     /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data
-    /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
-    ///  be created for each item in the passed list. If `WithdrawalRequestInput.owner` is set to `address(0)`,
-    ///  `msg.sender` will be used as owner.
+    /// @param amounts an array of stETH amount values. The standalone withdrawal request will
+    ///  be created for each item in the passed list.
+    /// @param _owner address that will be able to transfer or claim the request.
+    ///  If `owner` is set to `address(0)`, `msg.sender` will be used as owner.
     /// @return requestIds an array of the created withdrawal requests
-    function requestWithdrawalsWstETH(WithdrawalRequestInput[] calldata _withdrawalRequestInputs)
+    function requestWithdrawalsWstETH(uint256[] calldata amounts, address _owner)
         public
         whenResumed
         returns (uint256[] memory requestIds)
     {
-        requestIds = new uint256[](_withdrawalRequestInputs.length);
-        for (uint256 i = 0; i < _withdrawalRequestInputs.length; ++i) {
-            uint256 amountOfWstETH = _withdrawalRequestInputs[i].amount;
-            address owner = _checkWithdrawalRequestInput(
-                IWstETH(WSTETH).getStETHByWstETH(amountOfWstETH), _withdrawalRequestInputs[i].owner
-            );
-            requestIds[i] = _requestWithdrawalWstETH(amountOfWstETH, owner);
+        if (_owner == address(0)) _owner = msg.sender;
+        requestIds = new uint256[](amounts.length);
+        for (uint256 i = 0; i < amounts.length; ++i) {
+            uint256 amountOfWstETH = amounts[i];
+            requestIds[i] = _requestWithdrawalWstETH(amountOfWstETH, _owner);
         }
     }
 
@@ -166,32 +155,36 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
 
     /// @notice Request the sequence of stETH withdrawals according to passed `withdrawalRequestInputs`
     ///  using EIP-2612 Permit
-    /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
-    ///  be created for each item in the passed list. If `WithdrawalRequestInput.owner` is set to `address(0)`,
-    ///  `msg.sender` will be used as owner.
+    /// @param _amounts an array of stETH amount values. The standalone withdrawal request will
+    ///  be created for each item in the passed list.
+    /// @param _owner address that will be able to transfer or claim the request.
+    ///  If `owner` is set to `address(0)`, `msg.sender` will be used as owner.
     /// @param _permit data required for the stETH.permit() method to set the allowance
     /// @return requestIds an array of the created withdrawal requests
-    function requestWithdrawalsWithPermit(
-        WithdrawalRequestInput[] calldata _withdrawalRequestInputs,
-        PermitInput calldata _permit
-    ) external whenResumed returns (uint256[] memory requestIds) {
+    function requestWithdrawalsWithPermit(uint256[] calldata _amounts, address _owner, PermitInput calldata _permit)
+        external
+        whenResumed
+        returns (uint256[] memory requestIds)
+    {
         STETH.permit(msg.sender, address(this), _permit.value, _permit.deadline, _permit.v, _permit.r, _permit.s);
-        return requestWithdrawals(_withdrawalRequestInputs);
+        return requestWithdrawals(_amounts, _owner);
     }
 
     /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data
     ///  using EIP-2612 Permit
-    /// @param _withdrawalRequestInputs an array of `WithdrawalRequestInput` data. The standalone withdrawal request will
-    ///  be created for each item in the passed list. If `WithdrawalRequestInput.owner` is set to `address(0)`,
-    ///  `msg.sender` will be used as owner.
+    /// @param _amounts an array of stETH amount values. The standalone withdrawal request will
+    ///  be created for each item in the passed list.
+    /// @param _owner address that will be able to transfer or claim the request.
+    ///  If `owner` is set to `address(0)`, `msg.sender` will be used as owner.
     /// @param _permit data required for the wstETH.permit() method to set the allowance
     /// @return requestIds an array of the created withdrawal requests
     function requestWithdrawalsWstETHWithPermit(
-        WithdrawalRequestInput[] calldata _withdrawalRequestInputs,
+        uint256[] calldata _amounts,
+        address _owner,
         PermitInput calldata _permit
     ) external whenResumed returns (uint256[] memory requestIds) {
         WSTETH.permit(msg.sender, address(this), _permit.value, _permit.deadline, _permit.v, _permit.r, _permit.s);
-        return requestWithdrawalsWstETH(_withdrawalRequestInputs);
+        return requestWithdrawalsWstETH(_amounts, _owner);
     }
 
     /// @notice return statuses for the bunch of requests
@@ -226,7 +219,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     ///  @notice Claim `_requestId` request and transfer locked ether to the owner
     ///  @param _requestId request id to claim
     ///  @param _hint hint for checkpoint index to avoid extensive search over the checkpointHistory.
-    ///   Can be retrieved with `findClaimHint()` or `findClaimHintUnbounded()`
+    ///   Can be retrieved with `findCheckpointHint()` or `findCheckpointHintUnbounded()`
     /// @param _recipient address where claimed ether will be sent to
     function claimWithdrawalTo(uint256 _requestId, uint256 _hint, address _recipient) external {
         _claimWithdrawalTo(_requestId, _hint, _recipient);
@@ -235,10 +228,10 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
 
     /// @notice Claim `_requestId` request and transfer locked ether to the owner
     /// @param _requestId request id to claim
-    /// @dev will use `findClaimHintUnbounded()` to find a hint, what can lead to OOG
+    /// @dev will use `findCheckpointHintUnbounded()` to find a hint, what can lead to OOG
     /// Prefer `claimWithdrawal(uint256 _requestId, uint256 _hint)` to save gas
     function claimWithdrawal(uint256 _requestId) external {
-        _claimWithdrawalTo(_requestId, findClaimHintUnbounded(_requestId), msg.sender);
+        _claimWithdrawalTo(_requestId, findCheckpointHintUnbounded(_requestId), msg.sender);
         _emitTransfer(msg.sender, address(0), _requestId);
     }
 
@@ -248,7 +241,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @param _firstIndex left boundary of the search range
     /// @param _lastIndex right boundary of the search range
     /// @return hintIds the hints for `claimWithdrawal` to find the checkpoint for the passed request ids
-    function findClaimHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)
+    function findCheckpointHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)
         public
         view
         returns (uint256[] memory hintIds)
@@ -257,7 +250,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         uint256 prevRequestId = 0;
         for (uint256 i = 0; i < _requestIds.length; ++i) {
             if (_requestIds[i] < prevRequestId) revert RequestIdsNotSorted();
-            hintIds[i] = findClaimHint(_requestIds[i], _firstIndex, _lastIndex);
+            hintIds[i] = findCheckpointHint(_requestIds[i], _firstIndex, _lastIndex);
             _firstIndex = hintIds[i];
             prevRequestId = _requestIds[i];
         }
@@ -266,10 +259,14 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @notice Finds the list of hints for the given `_requestIds` searching among the checkpoints with indices
     ///  in the range `[1, lastCheckpointIndex]`
     /// @dev WARNING! OOG is possible if used onchain.
-    ///  See `findClaimHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)` for onchain use
+    ///  See `findCheckpointHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)` for onchain use
     /// @param _requestIds ids of the requests sorted in the ascending order to get hints for
-    function findClaimHintsUnbounded(uint256[] calldata _requestIds) public view returns (uint256[] memory hintIds) {
-        return findClaimHints(_requestIds, 1, getLastCheckpointIndex());
+    function findCheckpointHintsUnbounded(uint256[] calldata _requestIds)
+        public
+        view
+        returns (uint256[] memory hintIds)
+    {
+        return findCheckpointHints(_requestIds, 1, getLastCheckpointIndex());
     }
 
     /// @notice Finalize requests from last finalized one up to `_lastRequestIdToFinalize`
@@ -277,7 +274,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     ///
     /// @param _nextFinalizedRequestId request index in the queue that will be last finalized request in a batch
     function finalize(uint256 _nextFinalizedRequestId) external payable whenResumed onlyRole(FINALIZE_ROLE) {
-        _finalize(_nextFinalizedRequestId, msg.value.toUint128());
+        _finalize(_nextFinalizedRequestId, msg.value);
     }
 
     /// @notice Update bunker mode state
@@ -316,7 +313,9 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     function _emitTransfer(address from, address to, uint256 _requestId) internal virtual;
 
     /// @dev internal initialization helper. Doesn't check provided addresses intentionally
-    function _initialize(address _admin, address _pauser, address _resumer, address _finalizer) internal {
+    function _initialize(address _admin, address _pauser, address _resumer, address _finalizer, address _bunkerReporter)
+        internal
+    {
         _initializeQueue();
 
         _initializeContractVersionTo(1);
@@ -325,6 +324,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         _grantRole(PAUSE_ROLE, _pauser);
         _grantRole(RESUME_ROLE, _resumer);
         _grantRole(FINALIZE_ROLE, _finalizer);
+        _grantRole(BUNKER_MODE_REPORT_ROLE, _bunkerReporter);
 
         RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(PAUSE_INFINITELY); // pause it explicitly
         BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(BUNKER_MODE_DISABLED_TIMESTAMP);
@@ -333,37 +333,33 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     }
 
     function _requestWithdrawal(uint256 _amountOfStETH, address _owner) internal returns (uint256 requestId) {
-        STETH.safeTransferFrom(msg.sender, address(this), _amountOfStETH);
+        STETH.transferFrom(msg.sender, address(this), _amountOfStETH);
 
         uint256 amountOfShares = STETH.getSharesByPooledEth(_amountOfStETH);
 
-        requestId = _enqueue(_amountOfStETH.toUint128(), amountOfShares.toUint128(), _owner);
+        requestId = _enqueue(uint128(_amountOfStETH), uint128(amountOfShares), _owner);
 
         _emitTransfer(address(0), _owner, requestId);
     }
 
     function _requestWithdrawalWstETH(uint256 _amountOfWstETH, address _owner) internal returns (uint256 requestId) {
-        WSTETH.safeTransferFrom(msg.sender, address(this), _amountOfWstETH);
-        uint256 amountOfStETH = IWstETH(WSTETH).unwrap(_amountOfWstETH);
+        WSTETH.transferFrom(msg.sender, address(this), _amountOfWstETH);
+        uint256 amountOfStETH = WSTETH.unwrap(_amountOfWstETH);
+        _checkWithdrawalRequestAmount(amountOfStETH);
 
         uint256 amountOfShares = STETH.getSharesByPooledEth(amountOfStETH);
 
-        requestId = _enqueue(amountOfStETH.toUint128(), amountOfShares.toUint128(), _owner);
+        requestId = _enqueue(uint128(amountOfStETH), uint128(amountOfShares), _owner);
 
         _emitTransfer(address(0), _owner, requestId);
     }
 
-    function _checkWithdrawalRequestInput(uint256 _amountOfStETH, address _owner) internal view returns (address) {
+    function _checkWithdrawalRequestAmount(uint256 _amountOfStETH) internal pure {
         if (_amountOfStETH < MIN_STETH_WITHDRAWAL_AMOUNT) {
             revert RequestAmountTooSmall(_amountOfStETH);
         }
         if (_amountOfStETH > MAX_STETH_WITHDRAWAL_AMOUNT) {
             revert RequestAmountTooLarge(_amountOfStETH);
         }
-        if (_owner == address(0)) {
-            _owner = msg.sender;
-        }
-
-        return _owner;
     }
 }

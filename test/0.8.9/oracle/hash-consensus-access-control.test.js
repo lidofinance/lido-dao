@@ -28,18 +28,20 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2, strange
   })
 
   context('MANAGE_MEMBERS_AND_QUORUM_ROLE', () => {
-    const errorMessage = `AccessControl: account ${account1.toLowerCase()} is missing role ${manageMembersAndQuorumRoleKeccak156}`
-
     beforeEach(deploy)
 
     context('addMember', () => {
-      it('should revert without manage members and qourum role', async () => {
-        await assert.reverts(consensus.addMember(member1, 2, { from: account1 }), errorMessage)
+      it('should revert without MANAGE_MEMBERS_AND_QUORUM_ROLE role', async () => {
+        await assert.revertsOZAccessControl(
+          consensus.addMember(member1, 2, { from: account1 }),
+          account1,
+          'MANAGE_MEMBERS_AND_QUORUM_ROLE'
+        )
         assert.equal(await consensus.getIsMember(member1), false)
         assert.equal(+(await consensus.getQuorum()), 0)
       })
 
-      it('should check manage members and qourum role', async () => {
+      it('should allow calling from a possessor of MANAGE_MEMBERS_AND_QUORUM_ROLE role', async () => {
         await consensus.grantRole(manageMembersAndQuorumRoleKeccak156, account2)
         await consensus.addMember(member2, 1, { from: account2 })
 
@@ -49,13 +51,17 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2, strange
     })
 
     context('removeMember', () => {
-      it('should revert without manage members and qourum role', async () => {
-        await assert.reverts(consensus.removeMember(member1, 2, { from: account1 }), errorMessage)
+      it('should revert without MANAGE_MEMBERS_AND_QUORUM_ROLE role', async () => {
+        await assert.revertsOZAccessControl(
+          consensus.removeMember(member1, 2, { from: account1 }),
+          account1,
+          'MANAGE_MEMBERS_AND_QUORUM_ROLE'
+        )
         assert.equal(await consensus.getIsMember(member1), false)
         assert.equal(+(await consensus.getQuorum()), 0)
       })
 
-      it('should check manage members and qourum role', async () => {
+      it('should allow calling from a possessor of MANAGE_MEMBERS_AND_QUORUM_ROLE role', async () => {
         await consensus.grantRole(manageMembersAndQuorumRoleKeccak156, account2)
         await consensus.addMember(member2, 1, { from: account2 })
         assert.equal(await consensus.getIsMember(member2), true)
@@ -68,12 +74,16 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2, strange
     })
 
     context('setQuorum', () => {
-      it('should revert without manage members and qourum role', async () => {
-        await assert.reverts(consensus.setQuorum(1, { from: account1 }), errorMessage)
+      it('should revert without MANAGE_MEMBERS_AND_QUORUM_ROLE role', async () => {
+        await assert.revertsOZAccessControl(
+          consensus.setQuorum(1, { from: account1 }),
+          account1,
+          'MANAGE_MEMBERS_AND_QUORUM_ROLE'
+        )
         assert.equal(+(await consensus.getQuorum()), 0)
       })
 
-      it('should check manage members and qourum role', async () => {
+      it('should allow calling from a possessor of MANAGE_MEMBERS_AND_QUORUM_ROLE role', async () => {
         await consensus.grantRole(manageMembersAndQuorumRoleKeccak156, account2)
         await consensus.setQuorum(1, { from: account2 })
 
@@ -82,27 +92,31 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2, strange
     })
 
     context('disableConsensus', () => {
-      it('should revert without manage members and qourum role', async () => {
-        const errorMessage = `AccessControl: account ${account1.toLowerCase()} is missing role ${disableConsensusRoleKeccak156}`
-
-        await assert.reverts(consensus.disableConsensus({ from: account1 }), errorMessage)
+      it('should revert without MANAGE_MEMBERS_AND_QUORUM_ROLE role', async () => {
+        await assert.revertsOZAccessControl(
+          consensus.disableConsensus({ from: account1 }),
+          account1,
+          'DISABLE_CONSENSUS_ROLE'
+        )
         assert.equal(+(await consensus.getQuorum()), 0)
       })
     })
   })
 
   context('DISABLE_CONSENSUS_ROLE', () => {
-    const errorMessage = `AccessControl: account ${account1.toLowerCase()} is missing role ${disableConsensusRoleKeccak156}`
-
     beforeEach(deploy)
 
     context('setQuorum', () => {
-      it('should revert without disable consensus role', async () => {
-        await assert.reverts(consensus.setQuorum(MaxUint256, { from: account1 }), errorMessage)
+      it('should revert without DISABLE_CONSENSUS_ROLE role', async () => {
+        await assert.revertsOZAccessControl(
+          consensus.setQuorum(MaxUint256, { from: account1 }),
+          account1,
+          'DISABLE_CONSENSUS_ROLE'
+        )
         assert.equal(+(await consensus.getQuorum()), 0)
       })
 
-      it('should check disable consensus role', async () => {
+      it('should allow calling from a possessor of DISABLE_CONSENSUS_ROLE role', async () => {
         await consensus.grantRole(disableConsensusRoleKeccak156, account2)
         await consensus.setQuorum(MaxUint256, { from: account2 })
 
@@ -111,12 +125,16 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2, strange
     })
 
     context('disableConsensus', () => {
-      it('should revert without disable consensus role', async () => {
-        await assert.reverts(consensus.disableConsensus({ from: account1 }), errorMessage)
+      it('should revert without DISABLE_CONSENSUS_ROLE role', async () => {
+        await assert.revertsOZAccessControl(
+          consensus.disableConsensus({ from: account1 }),
+          account1,
+          'DISABLE_CONSENSUS_ROLE'
+        )
         assert.equal(+(await consensus.getQuorum()), 0)
       })
 
-      it('should check disable consensus role', async () => {
+      it('should allow calling from a possessor of DISABLE_CONSENSUS_ROLE role', async () => {
         await consensus.grantRole(disableConsensusRoleKeccak156, account2)
         await consensus.disableConsensus({ from: account2 })
 
@@ -126,17 +144,19 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2, strange
   })
 
   context('MANAGE_FRAME_CONFIG_ROLE', () => {
-    const errorMessage = `AccessControl: account ${account1.toLowerCase()} is missing role ${manageFrameConfigRoleKeccak156}`
-
     beforeEach(deploy)
 
     context('setFrameConfig', () => {
-      it('should revert without manage frame config role', async () => {
-        await assert.reverts(consensus.setFrameConfig(5, 0, { from: account1 }), errorMessage)
+      it('should revert without MANAGE_FRAME_CONFIG_ROLE role', async () => {
+        await assert.revertsOZAccessControl(
+          consensus.setFrameConfig(5, 0, { from: account1 }),
+          account1,
+          'MANAGE_FRAME_CONFIG_ROLE'
+        )
         assert.equal(+(await consensus.getFrameConfig()).epochsPerFrame, EPOCHS_PER_FRAME)
       })
 
-      it('should check manage frame config role', async () => {
+      it('should allow calling from a possessor of MANAGE_FRAME_CONFIG_ROLE role', async () => {
         await consensus.grantRole(manageFrameConfigRoleKeccak156, account2)
         await consensus.setFrameConfig(5, 0, { from: account2 })
 
@@ -146,25 +166,43 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2, strange
   })
 
   context('MANAGE_REPORT_PROCESSOR_ROLE', () => {
-    const errorMessage = `AccessControl: account ${account1.toLowerCase()} is missing role ${manageReportProcessorRoleKeccak156}`
-
     beforeEach(deploy)
 
     context('setReportProcessor', () => {
-      it('should revert without manage report processor role', async () => {
-        await assert.reverts(consensus.setReportProcessor(member1, { from: account1 }), errorMessage)
+      it('should revert without MANAGE_REPORT_PROCESSOR_ROLE role', async () => {
+        await assert.revertsOZAccessControl(
+          consensus.setReportProcessor(member1, { from: account1 }),
+          account1,
+          'MANAGE_REPORT_PROCESSOR_ROLE'
+        )
+      })
+
+      it('should allow calling from a possessor of MANAGE_REPORT_PROCESSOR_ROLE role', async () => {
+        await consensus.grantRole(manageReportProcessorRoleKeccak156, account2)
+        await consensus.setReportProcessor(member1, { from: account2 })
+
+        assert.equal(+(await consensus.getReportProcessor()), member1)
       })
     })
   })
 
   context('MANAGE_FAST_LANE_CONFIG_ROLE', () => {
-    const errorMessage = `AccessControl: account ${account1.toLowerCase()} is missing role ${manageFastLineConfigRoleKeccak156}`
-
     beforeEach(deploy)
 
     context('setFastLaneLengthSlots', () => {
-      it('should revert without manage fast lane config role', async () => {
-        await assert.reverts(consensus.setFastLaneLengthSlots(member1, { from: account1 }), errorMessage)
+      it('should revert without MANAGE_FAST_LANE_CONFIG_ROLE role', async () => {
+        await assert.revertsOZAccessControl(
+          consensus.setFastLaneLengthSlots(5, { from: account1 }),
+          account1,
+          'MANAGE_FAST_LANE_CONFIG_ROLE'
+        )
+      })
+
+      it('should allow calling from a possessor of MANAGE_FAST_LANE_CONFIG_ROLE role', async () => {
+        await consensus.grantRole(manageFastLineConfigRoleKeccak156, account2)
+        await consensus.setFastLaneLengthSlots(64, { from: account2 })
+
+        assert.equal(+(await consensus.getFrameConfig()).fastLaneLengthSlots, 64)
       })
     })
   })

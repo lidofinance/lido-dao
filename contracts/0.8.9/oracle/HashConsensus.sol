@@ -222,8 +222,8 @@ contract HashConsensus is AccessControlEnumerable {
 
     /// @notice Returns the parameters required to calculate reporting frame given an epoch.
     ///
-    function getFrameConfig() external view returns (uint256 initialEpoch, uint256 epochsPerFrame) {
-        return (_frameConfig.initialEpoch, _frameConfig.epochsPerFrame);
+    function getFrameConfig() external view returns (uint256 initialEpoch, uint256 epochsPerFrame, uint256 fastLaneLengthSlots) {
+        return (_frameConfig.initialEpoch, _frameConfig.epochsPerFrame, _frameConfig.fastLaneLengthSlots);
     }
 
     /// @notice Returns the current reporting frame.
@@ -900,9 +900,7 @@ contract HashConsensus is AccessControlEnumerable {
         ConsensusFrame memory frame = _getCurrentFrame();
         uint256 lastConsensusRefSlot = _reportingState.lastConsensusRefSlot;
 
-        uint256 processingRefSlot = prevProcessor == address(0)
-            ? lastConsensusRefSlot
-            : IReportAsyncProcessor(prevProcessor).getLastProcessingRefSlot();
+        uint256 processingRefSlot = IReportAsyncProcessor(prevProcessor).getLastProcessingRefSlot();
 
         if (processingRefSlot < frame.refSlot && lastConsensusRefSlot == frame.refSlot) {
             bytes32 report = _reportVariants[_reportingState.lastConsensusVariantIndex].hash;

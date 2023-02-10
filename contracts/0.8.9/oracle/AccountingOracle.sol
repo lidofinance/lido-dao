@@ -141,41 +141,64 @@ contract AccountingOracle is BaseOracle {
     bytes32 internal constant EXTRA_DATA_PROCESSING_STATE_POSITION =
         keccak256("lido.AccountingOracle.extraDataProcessingState");
 
-    /// @dev Storage slot: address legacyOracle
-    bytes32 internal constant LEGACY_ORACLE_POSITION =
-        keccak256("lido.AccountingOracle.legacyOracle");
-
-
     address public immutable LIDO;
     ILidoLocator public immutable LOCATOR;
+    address public immutable LEGACY_ORACLE;
 
     ///
     /// Initialization & admin functions
     ///
 
-    constructor(address lidoLocator, address lido, uint256 secondsPerSlot, uint256 genesisTime)
+    constructor(address lidoLocator, address lido, address legacyOracle, uint256 secondsPerSlot, uint256 genesisTime)
         BaseOracle(secondsPerSlot, genesisTime)
     {
         if (lidoLocator == address(0)) revert LidoLocatorCannotBeZero();
+        if (legacyOracle == address(0)) revert LegacyOracleCannotBeZero();
         LOCATOR = ILidoLocator(lidoLocator);
         LIDO = lido;
+        LEGACY_ORACLE = legacyOracle;
     }
 
     function initialize(
         address admin,
         address consensusContract,
         uint256 consensusVersion,
-        address legacyOracle,
         uint256 maxExitedValidatorsPerDay,
         uint256 maxExtraDataListItemsCount
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
-        if (legacyOracle == address(0)) revert LegacyOracleCannotBeZero();
+
+        uint256 lastProcessingRefSlot = _checkOracleMigration(LEGACY_ORACLE, consensusContract);
+        _initialize(admin, consensusContract, consensusVersion, maxExitedValidatorsPerDay,
+                    maxExtraDataListItemsCount, lastProcessingRefSlot);
+    }
+
+    function initializeWithoutMigration(
+        address admin,
+        address consensusContract,
+        uint256 consensusVersion,
+        uint256 maxExitedValidatorsPerDay,
+        uint256 maxExtraDataListItemsCount,
+        uint256 lastProcessingRefSlot
+    ) external {
+        if (admin == address(0)) revert AdminCannotBeZero();
+
+        _initialize(admin, consensusContract, consensusVersion, maxExitedValidatorsPerDay,
+                    maxExtraDataListItemsCount, lastProcessingRefSlot);
+    }
+
+    function _initialize(
+        address admin,
+        address consensusContract,
+        uint256 consensusVersion,
+        uint256 maxExitedValidatorsPerDay,
+        uint256 maxExtraDataListItemsCount,
+        uint256 lastProcessingRefSlot
+    ) internal {
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
-        uint256 lastProcessingRefSlot = _checkOracleMigration(legacyOracle, consensusContract);
-        LEGACY_ORACLE_POSITION.setStorageAddress(legacyOracle);
-        _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
+
         _setDataBoundaries(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
+        BaseOracle._initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
     }
 
     function getDataBoundaries() external view returns (
@@ -392,26 +415,60 @@ contract AccountingOracle is BaseOracle {
         _submitReportExtraDataList(items);
     }
 
-    /// @notice Returns extra data processing state for the current consensus report.
+    struct ProcessingState {
+        /// @notice Reference slot for the current reporting frame.
+        uint256 currentFrameRefSlot;
+        /// @notice The last time at which a data can be submitted for the current reporting frame.
+        uint256 processingDeadlineTime;
+        /// @notice Hash of the main report data. Zero bytes if consensus on the hash hasn't been
+        /// reached yet for the current reporting frame.
+        bytes32 mainDataHash;
+        /// @notice Whether main report data for the for the current reporting frame has been
+        /// already submitted.
+        bool mainDataSubmitted;
+        /// @notice Hash of the extra report data. Zero bytes if consensus on the main data hash
+        /// hasn't been reached yet, or if the main report data hasn't been submitted yet, for the
+        /// current reporting frame. Also zero bytes if the current reporting frame's data doesn't
+        /// contain any extra data.
+        bytes32 extraDataHash;
+        /// @notice Format of the extra report data for the current reporting frame.
+        uint256 extraDataFormat;
+        /// @notice Total number of extra report data items for the current reporting frame.
+        uint256 extraDataItemsCount;
+        /// @notice How many extra report data items are already submitted for the current
+        /// reporting frame.
+        uint256 extraDataItemsSubmitted;
+    }
+
+    /// @notice Returns data processing state for the current reporting frame.
+    /// @return result See the docs for the `ProcessingState` struct.
     ///
-    function getExtraDataProcessingState() external view returns (
-        bool processingStarted,
-        uint256 lastProcessedItem,
-        bytes32 dataHash,
-        uint256 dataFormat,
-        uint256 itemsCount,
-        uint256 itemsProcessed
-    ) {
-        ExtraDataProcessingState memory state = _storageExtraDataProcessingState().value;
-        uint256 processingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
-        processingStarted = state.refSlot != 0 && state.refSlot == processingRefSlot;
-        if (processingStarted) {
-            lastProcessedItem = state.lastProcessedItem;
-            dataHash = state.dataHash;
-            dataFormat = state.dataFormat;
-            itemsCount = state.itemsCount;
-            itemsProcessed = state.itemsProcessed;
+    function getProcessingState() external view returns (ProcessingState memory result) {
+        ConsensusReport memory report = _storageConsensusReport().value;
+        result.currentFrameRefSlot = _getCurrentRefSlot();
+
+        if (result.currentFrameRefSlot != report.refSlot) {
+            return result;
         }
+
+        result.processingDeadlineTime = report.processingDeadlineTime;
+        result.mainDataHash = report.hash;
+
+        uint256 processingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
+        result.mainDataSubmitted = report.hash != bytes32(0) && report.refSlot == processingRefSlot;
+        if (!result.mainDataSubmitted) {
+            return result;
+        }
+
+        ExtraDataProcessingState memory extraState = _storageExtraDataProcessingState().value;
+        if (extraState.dataHash == bytes32(0) || extraState.refSlot != processingRefSlot) {
+            return result;
+        }
+
+        result.extraDataHash = extraState.dataHash;
+        result.extraDataFormat = extraState.dataFormat;
+        result.extraDataItemsCount = extraState.itemsCount;
+        result.extraDataItemsSubmitted = extraState.itemsProcessed;
     }
 
     ///
@@ -439,7 +496,10 @@ contract AccountingOracle is BaseOracle {
     /// 3. first reference slot of the new oracle
     /// 4. first new oracle's consensus report arrives
     ///
-    function _checkOracleMigration(address legacyOracle, address consensusContract)
+    function _checkOracleMigration(
+        address legacyOracle,
+        address consensusContract
+    )
         internal view returns (uint256)
     {
         (uint256 initialEpoch,
@@ -522,7 +582,7 @@ contract AccountingOracle is BaseOracle {
             );
         }
 
-        ILegacyOracle(LEGACY_ORACLE_POSITION.getStorageAddress()).handleConsensusLayerReport(
+        ILegacyOracle(LEGACY_ORACLE).handleConsensusLayerReport(
             data.refSlot,
             data.clBalanceGwei * 1e9,
             data.numValidators

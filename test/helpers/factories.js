@@ -3,6 +3,7 @@ const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const withdrawals = require('./withdrawals')
 const { newApp } = require('./dao')
 const { artifacts } = require('hardhat')
+const { deployLocatorWithDummyAddressesImplementation } = require('./locator-deploy')
 
 const {
   SLOTS_PER_EPOCH,
@@ -30,7 +31,6 @@ const DepositContractMock = artifacts.require('DepositContractMock')
 const DepositContract = artifacts.require('DepositContract')
 const DepositSecurityModule = artifacts.require('DepositSecurityModule')
 const EIP712StETH = artifacts.require('EIP712StETH')
-const LidoLocatorMock = artifacts.require('LidoLocatorMock')
 const Burner = artifacts.require('Burner')
 
 const MAX_DEPOSITS_PER_BLOCK = 100
@@ -188,8 +188,8 @@ async function hashConsensusTimeTravellableFactory({
   return consensus
 }
 
-async function accountingOracleFactory({ voting, pool, lidoLocator, lidoAddress, consensusContract, legacyOracle }) {
-  const base = await AccountingOracle.new(lidoLocator.address, lidoAddress, SECONDS_PER_SLOT, GENESIS_TIME)
+async function accountingOracleFactory({ voting, pool, lidoLocator, consensusContract, legacyOracle }) {
+  const base = await AccountingOracle.new(lidoLocator.address, pool.address, legacyOracle.address, SECONDS_PER_SLOT, GENESIS_TIME)
   const proxy = await OssifiableProxy.new(base.address, voting.address, '0x')
   const oracle = await AccountingOracle.at(proxy.address)
 
@@ -197,12 +197,9 @@ async function accountingOracleFactory({ voting, pool, lidoLocator, lidoAddress,
     voting.address,
     consensusContract.address,
     CONSENSUS_VERSION,
-    legacyOracle.address,
     10000,
     10000,
   )
-
-  await legacyOracle.initialize(pool.address, oracle.address)
 
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), voting.address, { from: voting.address })
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), voting.address, { from: voting.address })
@@ -309,27 +306,8 @@ async function burnerFactory({ appManager, treasury, pool, voting }) {
   return burner
 }
 
-async function lidoLocatorFactory(protocol) {
-  const base = await lidoLocatorMockImplFactory(protocol)
-  return await OssifiableProxy.new(base.address, protocol.appManager.address, '0x')
-}
-
-async function lidoLocatorMockImplFactory(protocol) {
-  return LidoLocatorMock.new({
-    lido: protocol.pool.address,
-    depositSecurityModule: protocol.depositSecurityModule.address,
-    elRewardsVault: protocol.elRewardsVault.address,
-    accountingOracle: protocol.oracle ? protocol.oracle.address : ZERO_ADDRESS,
-    legacyOracle: protocol.legacyOracle.address,
-    oracleReportSanityChecker: ZERO_ADDRESS,
-    burner: protocol.burner.address,
-    validatorsExitBusOracle: ZERO_ADDRESS,
-    stakingRouter: protocol.stakingRouter.address,
-    treasury: protocol.treasury.address,
-    withdrawalQueue: protocol.withdrawalQueue ? protocol.withdrawalQueue.address : ZERO_ADDRESS,
-    withdrawalVault: protocol.withdrawalVault.address,
-    postTokenRebaseReceiver: protocol.legacyOracle.address
-  })
+async function lidoLocatorFactory({appManager}) {
+  return await deployLocatorWithDummyAddressesImplementation(appManager.address)
 }
 
 async function postSetup({ pool, lidoLocator, eip712StETH, depositContract, withdrawalQueue, appManager, voting }) {
@@ -360,7 +338,6 @@ module.exports = {
   withdrawalCredentialsFactory,
   stakingModulesFactory,
   guardiansFactory,
-  lidoLocatorMockImplFactory,
   burnerFactory,
   postSetup,
   legacyOracleFactory,
@@ -368,5 +345,5 @@ module.exports = {
   hashConsensusFactory,
   hashConsensusTimeTravellableFactory,
   reportProcessorFactory,
-  lidoLocatorFactory
+  lidoLocatorFactory,
 }

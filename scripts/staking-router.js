@@ -29,7 +29,7 @@ const communityModule = {
   cap: 100,
   paused: false,
 
-  total_keys: 0, 
+  total_keys: 0,
   used_keys: 0,
   stopped_keys: 0,
   exited_keys: 0,
@@ -120,7 +120,7 @@ let StakingRouter = {
       modules[i].paused = entry.paused
       modules[i].assigned_keys = 0
     }
-    
+
     return modules
   },
 
@@ -180,7 +180,7 @@ let StakingRouter = {
 
     // let now = Math.round((new Date()).getTime() / 1000)+13200
 
-    let now = Math.round((new Date()).getTime() / 1000)+63200 // 
+    let now = Math.round((new Date()).getTime() / 1000)+63200 //
 
     if (amount >= keys) {
       this.allocation[index] -= keys
@@ -189,7 +189,7 @@ let StakingRouter = {
 
       return keys;
     }
-    
+
     if (now - this.last_distribute < 86400/2) {
       console.log('no keys')
       return false
@@ -232,7 +232,7 @@ function main() {
 
   curatedModule.setStakingRouter(StakingRouter)
   communityModule.setStakingRouter(StakingRouter)
-  
+
 
   // transfer ether for allocation
   StakingRouter.buffer = 100;
@@ -333,7 +333,7 @@ function rewards() {
 
   for (let index = 0; index < modules.length; index++) {
     let entry = modules[index];
-    
+
     let moduleShares = (entry.keys / totalKeys) * entry.fee/100
     treasuryShares += (entry.keys / totalKeys) * entry.treasury/100
     entry.moduleShares = moduleShares

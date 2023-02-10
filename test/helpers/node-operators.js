@@ -13,6 +13,8 @@ const { FakeValidatorKeys } = require('./signing-keys')
  * @param {number} config.depositedSigningKeysCount Count of used signing keys in the new node operator
  * @param {number} config.exitedSigningKeysCount Count of stopped signing keys in the new node operator
  * @param {number} config.vettedSigningKeysCount Staking limit of the new node operator
+ * @param {number} config.stuckValidatorsCount Stuck keys count of the new node operator
+ * @param {number} config.refundedValidatorsKeysCount Repaid keys count of the new node operator
  * @param {number} config.isActive The active state of new node operator
  * @param {object} txOptions Transaction options, like "from", "gasPrice" and e.t.c
  * @returns {number} newOperatorId Id of newly added Node Operator
@@ -26,6 +28,8 @@ async function addNodeOperator(registry, config, txOptions) {
   const exitedSigningKeysCount = config.exitedSigningKeysCount || 0
   const depositedSigningKeysCount = config.depositedSigningKeysCount || 0
   const vettedSigningKeysCount = config.vettedSigningKeysCount || 0
+  const refundedValidatorsKeysCount = config.refundedValidatorsKeysCount || 0
+  const stuckValidatorsCount = config.stuckValidatorsCount || 0
   const isActive = config.isActive === undefined ? true : config.isActive
 
   if (vettedSigningKeysCount < depositedSigningKeysCount) {
@@ -38,6 +42,10 @@ async function addNodeOperator(registry, config, txOptions) {
 
   if (exitedSigningKeysCount > depositedSigningKeysCount) {
     throw new Error('Invalid keys config: depositedSigningKeysCount < exitedSigningKeysCount')
+  }
+
+  if (exitedSigningKeysCount < stuckValidatorsCount) {
+    throw new Error('Invalid keys config: exitedSigningKeysCount < stuckValidatorsCount')
   }
 
   if (totalSigningKeysCount < exitedSigningKeysCount + depositedSigningKeysCount) {
@@ -56,6 +64,10 @@ async function addNodeOperator(registry, config, txOptions) {
 
   if (vettedSigningKeysCount > 0) {
     await registry.setNodeOperatorStakingLimit(newOperatorId, vettedSigningKeysCount, txOptions)
+  }
+
+  if (exitedSigningKeysCount > 0) {
+    await registry.updateExitedValidatorsCount(newOperatorId, exitedSigningKeysCount, txOptions)
   }
 
   if (exitedSigningKeysCount > 0) {

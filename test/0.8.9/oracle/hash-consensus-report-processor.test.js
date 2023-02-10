@@ -1,23 +1,16 @@
 const { assert, getAccessControlMessage } = require('../../helpers/assert')
-const { toNum } = require('../../helpers/utils')
-const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
+const { assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { assertRevert } = require('../../helpers/assertThrow')
-const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
-const {
-  SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, EPOCHS_PER_FRAME,
-  SECONDS_PER_EPOCH, SECONDS_PER_FRAME, SLOTS_PER_FRAME,
-  computeSlotAt, computeEpochAt, computeEpochFirstSlot, computeEpochFirstSlotAt,
-  computeTimestampAtSlot, computeTimestampAtEpoch,
-  ZERO_HASH, HASH_1, HASH_2, HASH_3, HASH_4, HASH_5,
-  CONSENSUS_VERSION, deployHashConsensus} = require('./hash-consensus-deploy.test')
+const { CONSENSUS_VERSION, deployHashConsensus } = require('./hash-consensus-deploy.test')
 
 const CONSENSUS_VERSION_2 = 2
 
 const HashConsensus = artifacts.require('HashConsensusTimeTravellable')
 const MockReportProcessor = artifacts.require('MockReportProcessor')
 
-contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, stranger]) => {
+contract('HashConsensus', ([admin, stranger]) => {
   let consensus
   let reportProcessor
 
@@ -33,67 +26,36 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
       reportProcessor2 = await MockReportProcessor.new(CONSENSUS_VERSION_2, { from: admin })
     }
 
-    const deployProcessorZero = async () => {
-      await deploy({ reportProcessorAddress: ZERO_ADDRESS })
-    }
-
-    context('without initial processor', () => {
-      before(deployProcessorZero)
-
-      it('has no initial processor', async () => {
-        assert.addressEqual(
-          await consensus.getReportProcessor(),
-          ZERO_ADDRESS,
-          'there should be zero address for processor',
-        )
-      })
-
-      it('consensus version equals zero', async () => {
-        assert.equal(
-          await consensus.getConsensusVersion(),
-          0,
-        )
-      })
-    })
-
     context('with initial processor', () => {
       before(deploy)
 
       it('properly set initial report processor', async () => {
-        assert.addressEqual(
-          await consensus.getReportProcessor(),
-          reportProcessor1.address,
-          'processor address differs',
-        )
+        assert.addressEqual(await consensus.getReportProcessor(), reportProcessor1.address, 'processor address differs')
       })
 
       context('method setReportProcessor', () => {
         before(deploy)
 
         it('checks next processor is not zero', async () => {
-          await assertRevert(
-            consensus.setReportProcessor(ZERO_ADDRESS),
-            'AddressCannotBeZero()',
-          )
+          await assertRevert(consensus.setReportProcessor(ZERO_ADDRESS), 'ReportProcessorCannotBeZero()')
         })
 
         it('checks next processor is not the same as previous', async () => {
-          await assertRevert(
-            consensus.setReportProcessor(reportProcessor1.address),
-            'NewProcessorCannotBeTheSame()',
-          )
+          await assertRevert(consensus.setReportProcessor(reportProcessor1.address), 'NewProcessorCannotBeTheSame()')
         })
 
         it('checks tx sender for MANAGE_REPORT_PROCESSOR_ROLE', async () => {
           await assertRevert(
-            consensus.setReportProcessor(reportProcessor2.address, {from: stranger}),
+            consensus.setReportProcessor(reportProcessor2.address, { from: stranger }),
             getAccessControlMessage(stranger.toLowerCase(), await consensus.MANAGE_REPORT_PROCESSOR_ROLE())
           )
         })
 
         it('emits ReportProcessorSet event', async () => {
           const tx = await consensus.setReportProcessor(reportProcessor2.address)
-          assertEvent(tx, 'ReportProcessorSet', {expectedArgs: {processor: reportProcessor2.address, prevProcessor: reportProcessor1.address}})
+          assertEvent(tx, 'ReportProcessorSet', {
+            expectedArgs: { processor: reportProcessor2.address, prevProcessor: reportProcessor1.address }
+          })
         })
       })
 
@@ -101,18 +63,12 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
         beforeEach(deploy)
 
         it('equals to version of initial processor', async () => {
-          assert.equal(
-            await consensus.getConsensusVersion(),
-            CONSENSUS_VERSION,
-          )
+          assert.equal(await consensus.getConsensusVersion(), CONSENSUS_VERSION)
         })
 
         it('equals to new processor version after it was changed', async () => {
           await consensus.setReportProcessor(reportProcessor2.address)
-          assert.equal(
-            await consensus.getConsensusVersion(),
-            CONSENSUS_VERSION_2,
-          )
+          assert.equal(await consensus.getConsensusVersion(), CONSENSUS_VERSION_2)
         })
       })
     })

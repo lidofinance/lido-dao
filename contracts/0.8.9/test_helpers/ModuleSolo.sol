@@ -70,9 +70,7 @@ contract ModuleSolo is IStakingModule {
         uint256 _stuckValidatorKeysCount
     ) external {}
 
-    function updateExitedValidatorsCount(uint256, uint256) external returns (uint256) {
-        return 0;
-    }
+    function updateExitedValidatorsCount(uint256, uint256) external {}
 
     function updateRefundedValidatorsCount(uint256 _nodeOperatorId, uint256 _refundedValidatorsCount) external {}
 
