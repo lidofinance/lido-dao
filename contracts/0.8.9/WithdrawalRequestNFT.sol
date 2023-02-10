@@ -31,7 +31,7 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
     bytes32 internal constant OPERATOR_APPROVALS_POSITION = keccak256("lido.WithdrawalRequestNFT.operatorApprovals");
     bytes32 internal constant BASE_URI_POSITION = keccak256("lido.WithdrawalRequestNFT.baseUri");
 
-     bytes32 public constant SET_BASE_URI_ROLE = keccak256("SET_BASE_URI_ROLE");
+    bytes32 public constant SET_BASE_URI_ROLE = keccak256("SET_BASE_URI_ROLE");
 
     struct BaseUri {
         string value;
