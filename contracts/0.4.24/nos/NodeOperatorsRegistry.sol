@@ -953,13 +953,13 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         uint256 tmpTotalExitedValidators;
         uint256 tmpTotalDepositedValidators;
-        uint256 tmpDepostiableValidatorsCount;
+        uint256 tmpDepositableValidatorsCount;
         for (uint256 i; i < nodeOperatorsCount; ++i) {
-            (tmpTotalExitedValidators, tmpTotalDepositedValidators, tmpDepostiableValidatorsCount) =
+            (tmpTotalExitedValidators, tmpTotalDepositedValidators, tmpDepositableValidatorsCount) =
                 _getNodeOperatorValidatorsSummary(i);
             totalExitedValidators += tmpTotalExitedValidators;
             totalDepositedValidators += tmpTotalDepositedValidators;
-            depositableValidatorsCount += tmpDepostiableValidatorsCount;
+            depositableValidatorsCount += tmpDepositableValidatorsCount;
         }
     }
 
