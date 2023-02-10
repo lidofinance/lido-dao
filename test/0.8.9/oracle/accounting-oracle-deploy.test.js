@@ -2,7 +2,7 @@ const { BN } = require('bn.js')
 const { assert } = require('chai')
 const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 const { assertRevert } = require('../../helpers/assertThrow')
-const { processNamedTuple } = require('../../helpers/utils')
+const { hex, processNamedTuple } = require('../../helpers/utils')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const { updateLocatorImplementation, deployLocatorWithDummyAddressesImplementation } =
   require('../../helpers/locator-deploy')
@@ -29,10 +29,10 @@ const MAX_EXITED_VALS_PER_HOUR = 10
 const MAX_EXITED_VALS_PER_DAY = 24 * MAX_EXITED_VALS_PER_HOUR
 const MAX_EXTRA_DATA_LIST_LEN = 15
 
-const EXTRA_DATA_FORMAT_LIST = 0
+const EXTRA_DATA_FORMAT_LIST = 1
 
-const EXTRA_DATA_TYPE_STUCK_VALIDATORS = 0
-const EXTRA_DATA_TYPE_EXITED_VALIDATORS = 1
+const EXTRA_DATA_TYPE_STUCK_VALIDATORS = 1
+const EXTRA_DATA_TYPE_EXITED_VALIDATORS = 2
 
 
 function getReportDataItems(r) {
@@ -40,52 +40,51 @@ function getReportDataItems(r) {
     r.consensusVersion, +r.refSlot, r.numValidators, r.clBalanceGwei, r.stakingModuleIdsWithNewlyExitedValidators,
     r.numExitedValidatorsByStakingModule, r.withdrawalVaultBalance, r.elRewardsVaultBalance,
     r.lastWithdrawalRequestIdToFinalize, r.finalizationShareRate, r.isBunkerMode, r.extraDataFormat,
-    r.extraDataHash, r.extraDataItemsCount, r.extraDataMaxNodeOpsCountByModule,
+    r.extraDataHash, r.extraDataItemsCount,
   ]
 }
 
 function calcReportDataHash(reportItems) {
   const data = web3.eth.abi.encodeParameters(
-    ['(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256,uint256)'],
+    ['(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256)'],
     [reportItems]
   )
-  // const toS = x => Array.isArray(x) ? `[${x.map(toS)}]` : `${x}`
-  // console.log(toS(reportItems))
-  // console.log(data)
   return web3.utils.keccak256(data)
 }
 
-function encodeExtraDataItem(itemIndex, itemType, moduleId, nodeOperatorId, keysCount) {
-  return '0x' + new BN(keysCount)
-    .add(new BN(nodeOperatorId).shln(8 * 16))
-    .add(new BN(moduleId).shln(8 * (16 + 8)))
-    .add(new BN(itemType).shln(8 * (16 + 8 + 3)))
-    .add(new BN(itemIndex).shln(8 * (16 + 8 + 3 + 2)))
-    .toString(16, 64)
+function encodeExtraDataItem(itemIndex, itemType, moduleId, nodeOperatorIds, keysCounts) {
+  const itemHeader = hex(itemIndex, 3) + hex(itemType, 2)
+  const payloadHeader = hex(moduleId, 3) + hex(nodeOperatorIds.length, 8)
+  const operatorIdsPayload = nodeOperatorIds.map(id => hex(id, 8)).join('')
+  const keysCountsPayload = keysCounts.map(count => hex(count, 16)).join('')
+  return '0x' + itemHeader + payloadHeader + operatorIdsPayload + keysCountsPayload
 }
 
 function encodeExtraDataItems({ stuckKeys, exitedKeys }) {
-  const data = []
+  const items = []
   let itemType = EXTRA_DATA_TYPE_STUCK_VALIDATORS
 
   for (let i = 0; i < stuckKeys.length; ++i) {
     const item = stuckKeys[i]
-    data.push(encodeExtraDataItem(data.length, itemType, item.moduleId, item.nodeOpId, item.keysCount))
+    items.push(encodeExtraDataItem(items.length, itemType, item.moduleId, item.nodeOpIds, item.keysCounts))
   }
 
   itemType = EXTRA_DATA_TYPE_EXITED_VALIDATORS
 
   for (let i = 0; i < exitedKeys.length; ++i) {
     const item = exitedKeys[i]
-    data.push(encodeExtraDataItem(data.length, itemType, item.moduleId, item.nodeOpId, item.keysCount))
+    items.push(encodeExtraDataItem(items.length, itemType, item.moduleId, item.nodeOpIds, item.keysCounts))
   }
 
-  return data
+  return items
 }
 
-function calcExtraDataHash(extraDataItems) {
-  const data = '0x' + extraDataItems.map(s => s.substr(2)).join('')
-  return web3.utils.keccak256(data)
+function packExtraDataList(extraDataItems) {
+  return '0x' + extraDataItems.map(s => s.substr(2)).join('')
+}
+
+function calcExtraDataListHash(packedExtraDataList) {
+  return web3.utils.keccak256(packedExtraDataList)
 }
 
 
@@ -102,7 +101,7 @@ module.exports = {
   deployAndConfigureAccountingOracle, deployAccountingOracleSetup, initAccountingOracle,
   deployMockLegacyOracle, deployMockLidoAndStakingRouter,
   getReportDataItems, calcReportDataHash, encodeExtraDataItem, encodeExtraDataItems,
-  calcExtraDataHash,
+  packExtraDataList, calcExtraDataListHash
 }
 
 
@@ -288,11 +287,11 @@ contract('AccountingOracle', ([admin, member1]) => {
       assert.equal(+handleOracleReportCallData.callCount, 0)
 
       const updateExitedKeysByModuleCallData =
-        await mockStakingRouter.getLastCall_updateExitedKeysByModule()
+        await mockStakingRouter.lastCall_updateExitedKeysByModule()
       assert.equal(+updateExitedKeysByModuleCallData.callCount, 0)
 
-      assert.equal(+await mockStakingRouter.getTotalCalls_reportExitedKeysByNodeOperator(), 0)
-      assert.equal(+await mockStakingRouter.getTotalCalls_reportStuckKeysByNodeOperator(), 0)
+      assert.equal(+await mockStakingRouter.totalCalls_reportExitedKeysByNodeOperator(), 0)
+      assert.equal(+await mockStakingRouter.totalCalls_reportStuckKeysByNodeOperator(), 0)
 
       const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
       assert.equal(+updateBunkerModeLastCall.callCount, 0)

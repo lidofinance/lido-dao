@@ -174,7 +174,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     /// Requests must be sorted in the ascending order by the following compound
     /// key: (moduleId, nodeOpId, validatorIndex).
     ///
-    uint256 public constant DATA_FORMAT_LIST = 0;
+    uint256 public constant DATA_FORMAT_LIST = 1;
 
     /// Length in bytes of packed request
     uint256 internal constant PACKED_REQUEST_LENGTH = 64;

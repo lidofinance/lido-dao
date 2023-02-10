@@ -5,8 +5,6 @@ pragma solidity 0.8.9;
 import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
 import { ILidoLocator } from "../../common/interfaces/ILidoLocator.sol";
-import { MemUtils } from "../../common/lib/MemUtils.sol";
-import { ResizableArray } from "../lib/ResizableArray.sol";
 import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
 
 import { BaseOracle, IConsensusContract } from "./BaseOracle.sol";
@@ -55,20 +53,20 @@ interface IStakingRouter {
     function getExitedKeysCountAcrossAllModules() external view returns (uint256);
 
     function updateExitedKeysCountByStakingModule(
-        uint256[] calldata _moduleIds,
-        uint256[] calldata _exitedKeysCounts
+        uint256[] calldata moduleIds,
+        uint256[] calldata exitedKeysCounts
     ) external;
 
     function reportStakingModuleExitedKeysCountByNodeOperator(
-        uint256 _stakingModuleId,
-        uint256[] calldata _nodeOperatorIds,
-        uint256[] calldata _exitedKeysCounts
+        uint256 stakingModuleId,
+        bytes calldata nodeOperatorIds,
+        bytes calldata exitedKeysCounts
     ) external;
 
     function reportStakingModuleStuckKeysCountByNodeOperator(
-        uint256 _stakingModuleId,
-        uint256[] calldata _nodeOperatorIds,
-        uint256[] calldata _stuckKeysCounts
+        uint256 stakingModuleId,
+        bytes calldata nodeOperatorIds,
+        bytes calldata stuckKeysCounts
     ) external;
 }
 
@@ -79,7 +77,6 @@ interface IWithdrawalQueue {
 
 
 contract AccountingOracle is BaseOracle {
-    using ResizableArray for ResizableArray.Array;
     using UnstructuredStorage for bytes32;
     using SafeCast for uint256;
 
@@ -92,7 +89,8 @@ contract AccountingOracle is BaseOracle {
     error NumExitedValidatorsCannotDecrease();
     error ExitedValidatorsLimitExceeded(uint256 limitPerDay, uint256 exitedPerDay);
     error UnsupportedExtraDataFormat(uint256 format);
-    error UnsupportedExtraDataType(uint256 dataType);
+    error UnsupportedExtraDataType(uint256 itemIndex, uint256 dataType);
+    error TooManyNodeOpsPerExtraDataItem(uint256 itemIndex, uint256 nodeOpsCount);
     error MaxExtraDataItemsCountExceeded(uint256 maxItemsCount, uint256 receivedItemsCount);
     error CannotSubmitExtraDataBeforeMainData();
     error ExtraDataAlreadyProcessed();
@@ -100,7 +98,8 @@ contract AccountingOracle is BaseOracle {
     error UnexpectedExtraDataFormat(uint256 expectedFormat, uint256 receivedFormat);
     error UnexpectedExtraDataItemsCount(uint256 expectedCount, uint256 receivedCount);
     error UnexpectedExtraDataIndex(uint256 expectedIndex, uint256 receivedIndex);
-    error InvalidExtraDataSortOrder();
+    error InvalidExtraDataItem(uint256 itemIndex);
+    error InvalidExtraDataSortOrder(uint256 itemIndex);
 
     event DataBoundariesSet(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount);
     event ExtraDataSubmitted(uint256 indexed refSlot, uint256 itemsProcessed, uint256 itemsCount);
@@ -119,10 +118,9 @@ contract AccountingOracle is BaseOracle {
     struct ExtraDataProcessingState {
         uint64 refSlot;
         uint16 dataFormat;
-        uint32 maxNodeOpsCountByModule;
         uint64 itemsCount;
         uint64 itemsProcessed;
-        uint256 lastProcessedItem;
+        uint256 lastSortingKey;
         bytes32 dataHash;
     }
 
@@ -297,30 +295,57 @@ contract AccountingOracle is BaseOracle {
         ///
         /// Extra data is an array of items, each item being encoded as follows:
         ///
-        ///    3 bytes    2 bytes     27 bytes
+        ///    3 bytes    2 bytes      X bytes
         /// | itemIndex | itemType | itemPayload |
         ///
         /// itemIndex is a 0-based index into the extra data array;
         /// itemType is the type of extra data item;
         /// itemPayload is the item's data which interpretation depends on the item's type.
         ///
-        /// Two types of items are supported:
+        /// Items should be sorted acsendingly by the (itemType, ...itemSortingKey) compound key
+        /// where `itemSortingKey` calculation depends on the item's type (see below).
         ///
-        /// itemType=EXTRA_DATA_TYPE_STUCK_VALIDATORS: stuck validators by node operator.
+        /// ----------------------------------------------------------------------------------------
+        ///
+        /// itemType=0 (EXTRA_DATA_TYPE_STUCK_VALIDATORS): stuck validators by node operators.
         /// itemPayload format:
         ///
-        ///   3 bytes        8 bytes            16 bytes
-        /// | moduleId | nodeOperatorId | totalStuckValidators |
+        /// | 3 bytes  |   8 bytes    |  nodeOpsCount * 8 bytes  |  nodeOpsCount * 16 bytes  |
+        /// | moduleId | nodeOpsCount |      nodeOperatorIds     |   stuckValidatorsCounts   |
         ///
-        /// itemType=EXTRA_DATA_TYPE_EXITED_VALIDATORS: exited validators by node operator.
-        /// itemPayload format:
+        /// moduleId is the staking module for which exited keys counts are being reported.
         ///
-        ///   3 bytes        8 bytes             16 bytes
-        /// | moduleId | nodeOperatorId | totalExitedValidators |
+        /// nodeOperatorIds contains an array of ids of node operators that have total stuck
+        /// validators counts changed compared to the staking module smart contract storage as
+        /// observed at the reference slot. Each id is a 8-byte uint, ids are packed tightly.
         ///
-        /// Extra data array should be sorted in ascending order by the following compound key:
+        /// nodeOpsCount contains the number of node operator ids contained in the nodeOperatorIds
+        /// array. Thus, nodeOpsCount = byteLength(nodeOperatorIds) / 8.
         ///
-        /// (itemType, moduleId, nodeOperatorId)
+        /// stuckValidatorsCounts contains an array of stuck validators total counts, as observed at
+        /// the reference slot, for the node operators from the nodeOperatorIds array, in the same
+        /// order. Each count is a 16-byte uint, counts are packed tightly. Thus,
+        /// byteLength(stuckValidatorsCounts) = nodeOpsCount * 16.
+        ///
+        /// nodeOpsCount must not be greater than maxExtraDataListItemsCount. If a staking module
+        /// has more node operators with total stuck validators counts changed compared to the
+        /// staking module smart contract storage (as observed at the reference slot), reporting for
+        /// that module should be split into multiple items.
+        ///
+        /// Item sorting key is a compound key consisting of the module id and the first reported
+        /// node opertator's id:
+        ///
+        /// itemSortingKey = (moduleId, nodeOperatorIds[0:8])
+        ///
+        /// ----------------------------------------------------------------------------------------
+        ///
+        /// itemType=1 (EXTRA_DATA_TYPE_EXITED_VALIDATORS): exited validators by node operators.
+        ///
+        /// The payload format is exactly the same as for itemType=EXTRA_DATA_TYPE_STUCK_VALIDATORS,
+        /// except that, instead of stuck validators counts, exited validators counts are reported.
+        /// The `itemSortingKey` is calculated identically.
+        ///
+        /// ----------------------------------------------------------------------------------------
         ///
         /// The oracle daemon should report exited/stuck validators counts ONLY for those
         /// (moduleId, nodeOperatorId) pairs that contain outdated counts in the staking
@@ -339,48 +364,21 @@ contract AccountingOracle is BaseOracle {
 
         /// @dev Number of the extra data items.
         uint256 extraDataItemsCount;
-
-        /// @dev The highest number of items with unique nodeOperatorId among the extra data
-        /// items with any given (itemType, moduleId) pair. Must not exceed 2^32 - 1.
-        ///
-        /// For example, for the following extra data:
-        ///
-        ///   itemType: ST, moduleId: 1, nodeOperatorId: 1, totalStuckValidators: 111
-        ///   itemType: ST, moduleId: 1, nodeOperatorId: 2, totalStuckValidators: 222
-        ///
-        ///   itemType: ST, moduleId: 2, nodeOperatorId: 1, totalStuckValidators: 111
-        ///   itemType: ST, moduleId: 2, nodeOperatorId: 3, totalStuckValidators: 333
-        ///   itemType: ST, moduleId: 2, nodeOperatorId: 5, totalStuckValidators: 555
-        ///   itemType: ST, moduleId: 2, nodeOperatorId: 7, totalStuckValidators: 777
-        ///
-        ///   itemType: EX, moduleId: 1, nodeOperatorId: 5, totalExitedValidators: 555
-        ///   itemType: EX, moduleId: 1, nodeOperatorId: 8, totalExitedValidators: 888
-        ///   itemType: EX, moduleId: 1, nodeOperatorId: 9, totalExitedValidators: 999
-        ///
-        /// extraDataMaxNodeOpsCountByModule should be set to 4 since this is the number of data
-        /// items with unique nodeOperatorId for itemType=EXTRA_DATA_TYPE_STUCK_VALIDATORS and
-        /// moduleId=2, and any other (itemType, moduleId) pair doesn't yield a higher number of
-        /// items with unique nodeOperatorId.
-        ///
-        uint256 extraDataMaxNodeOpsCountByModule;
     }
 
-    uint256 public constant EXTRA_DATA_TYPE_STUCK_VALIDATORS = 0;
-    uint256 public constant EXTRA_DATA_TYPE_EXITED_VALIDATORS = 1;
+    uint256 public constant EXTRA_DATA_TYPE_STUCK_VALIDATORS = 1;
+    uint256 public constant EXTRA_DATA_TYPE_EXITED_VALIDATORS = 2;
 
     /// @notice The list format for the extra data array. Used when all extra data processing
     /// fits into a single transaction.
     ///
-    /// Extra data is passed as a uint256[] array containing all data items within a
-    /// single transaction.
+    /// Extra data is passed within a single transaction as a bytearray containing all data items
+    /// packed tightly.
     ///
-    /// Hash is a keccak256 hash calculated over the array items laid out continuously in memory,
-    /// each item occupying 32 bytes. The Solidity equivalent of the hash calculation code would
-    /// be the following (where `array` has the uint256[] type):
+    /// Hash is a keccak256 hash calculated over the bytearray items. The Solidity equivalent of
+    /// the hash calculation code would be `keccak256(array)`, where `array` has the `bytes` type.
     ///
-    /// keccak256(abi.encodePacked(array))
-    ///
-    uint256 public constant EXTRA_DATA_FORMAT_LIST = 0;
+    uint256 public constant EXTRA_DATA_FORMAT_LIST = 1;
 
     /// @notice Submits report data for processing.
     ///
@@ -411,7 +409,7 @@ contract AccountingOracle is BaseOracle {
     /// @param items The extra data items list. See docs for the `EXTRA_DATA_FORMAT_LIST`
     ///              constant for details.
     ///
-    function submitReportExtraDataList(uint256[] calldata items) external {
+    function submitReportExtraDataList(bytes calldata items) external {
         _submitReportExtraDataList(items);
     }
 
@@ -621,10 +619,9 @@ contract AccountingOracle is BaseOracle {
             refSlot: data.refSlot.toUint64(),
             dataFormat: data.extraDataFormat.toUint16(),
             dataHash: data.extraDataHash,
-            maxNodeOpsCountByModule: data.extraDataMaxNodeOpsCountByModule.toUint32(),
             itemsCount: data.extraDataItemsCount.toUint16(),
             itemsProcessed: 0,
-            lastProcessedItem: 0
+            lastSortingKey: 0
         });
     }
 
@@ -682,7 +679,18 @@ contract AccountingOracle is BaseOracle {
         );
     }
 
-    function _submitReportExtraDataList(uint256[] calldata items) internal {
+    struct ExtraDataIterState {
+        // volatile
+        uint256 index;
+        uint256 itemType;
+        uint256 dataOffset;
+        uint256 lastSortingKey;
+        // config
+        address stakingRouter;
+        uint256 maxNodeOpsByItem;
+    }
+
+    function _submitReportExtraDataList(bytes calldata items) internal {
         _checkMsgSenderIsAllowedToSubmitData();
         _checkProcessingDeadline();
 
@@ -700,174 +708,142 @@ contract AccountingOracle is BaseOracle {
             revert ExtraDataListOnlySupportsSingleTx();
         }
 
-        if (items.length != procState.itemsCount) {
-            revert UnexpectedExtraDataItemsCount(procState.itemsCount, items.length);
-        }
-
         if (procState.dataFormat != EXTRA_DATA_FORMAT_LIST) {
             revert UnexpectedExtraDataFormat(procState.dataFormat, EXTRA_DATA_FORMAT_LIST);
         }
 
-        bytes32 dataHash = MemUtils.keccakUint256Array(items);
+        bytes32 dataHash = keccak256(items);
         if (dataHash != procState.dataHash) {
             revert UnexpectedDataHash(procState.dataHash, dataHash);
         }
 
-        ExtraDataProcessingState storage _procState = _storageExtraDataProcessingState().value;
-
-        _procState.lastProcessedItem = _processExtraDataItems(
-            items,
-            procState.itemsProcessed,
-            procState.lastProcessedItem,
-            procState.maxNodeOpsCountByModule
-        );
-
-        _procState.itemsProcessed = uint64(items.length);
-
-        emit ExtraDataSubmitted(procState.refSlot, items.length, items.length);
-    }
-
-    struct ExtraDataIterState {
-        uint256 firstItemIndex;
-        uint256 nextIndex;
-        int256 lastType;
-        int256 lastModuleId;
-        int256 lastNodeOpId;
-        ResizableArray.Array nopIds;
-        ResizableArray.Array keyCounts;
-    }
-
-    function _processExtraDataItems(
-        uint256[] calldata items,
-        uint256 itemsProcessed,
-        uint256 lastProcessedItem,
-        uint256 maxNodeOpsCountByModule
-    ) internal returns (uint256) {
-        IStakingRouter stakingRouter = IStakingRouter(LOCATOR.stakingRouter());
-
         ExtraDataIterState memory iter = ExtraDataIterState({
-            firstItemIndex: itemsProcessed,
-            nextIndex: 0,
-            lastType: -1,
-            lastModuleId: -1,
-            lastNodeOpId: -1,
-            nopIds: ResizableArray.preallocate(maxNodeOpsCountByModule),
-            keyCounts: ResizableArray.preallocate(maxNodeOpsCountByModule)
+            index: 0,
+            itemType: 0,
+            dataOffset: 0,
+            lastSortingKey: 0,
+            stakingRouter: LOCATOR.stakingRouter(),
+            maxNodeOpsByItem: _storageDataBoundaries().value.maxExtraDataListItemsCount
         });
 
-        if (lastProcessedItem != 0) {
-            (, uint256 itemType, uint216 payload) = _decodeExtraDataItem(lastProcessedItem);
-            (uint256 moduleId, uint256 nodeOpId, ) = _decodeExtraDataPayload(payload);
-            iter.lastType = int256(itemType);
-            iter.lastModuleId = int256(moduleId);
-            iter.lastNodeOpId = int256(nodeOpId);
+        _processExtraDataItems(items, iter);
+        uint256 itemsProcessed = iter.index + 1;
+
+        if (itemsProcessed != procState.itemsCount) {
+            revert UnexpectedExtraDataItemsCount(procState.itemsCount, itemsProcessed);
         }
 
-        while (iter.nextIndex < items.length) {
-            iter.nopIds.clear();
-            iter.keyCounts.clear();
+        ExtraDataProcessingState storage _procState = _storageExtraDataProcessingState().value;
+        _procState.itemsProcessed = uint64(itemsProcessed);
+        _procState.lastSortingKey = iter.lastSortingKey;
 
-            _processSingleModule(iter, items);
-
-            if (iter.lastType != -1) {
-                assert(iter.lastModuleId >= 0);
-                assert(iter.lastNodeOpId >= 0);
-
-                if (iter.lastType == int256(EXTRA_DATA_TYPE_STUCK_VALIDATORS)) {
-                    stakingRouter.reportStakingModuleStuckKeysCountByNodeOperator(
-                        uint256(iter.lastModuleId),
-                        iter.nopIds.pointer(),
-                        iter.keyCounts.pointer()
-                    );
-                } else if (iter.lastType == int256(EXTRA_DATA_TYPE_EXITED_VALIDATORS)) {
-                    stakingRouter.reportStakingModuleExitedKeysCountByNodeOperator(
-                        uint256(iter.lastModuleId),
-                        iter.nopIds.pointer(),
-                        iter.keyCounts.pointer()
-                    );
-                } else {
-                    revert UnsupportedExtraDataType(uint256(iter.lastType));
-                }
-            }
-        }
-
-        return iter.nextIndex == 0 ? 0 : items[iter.nextIndex - 1];
+        emit ExtraDataSubmitted(procState.refSlot, itemsProcessed, itemsProcessed);
     }
 
-    function _processSingleModule(ExtraDataIterState memory iter, uint256[] calldata items)
-        internal pure
-    {
-        if (items.length == 0) {
-            return;
-        }
+    function _processExtraDataItems(bytes calldata data, ExtraDataIterState memory iter) internal {
+        uint256 dataOffset = iter.dataOffset;
 
-        uint256 i = iter.nextIndex;
-        bool started = false;
+        /// @solidity memory-safe-assembly
+        while (dataOffset < data.length) {
+            uint256 index;
+            uint256 itemType;
 
-        uint256 itemType;
-        uint256 moduleId;
-        uint256 lastNodeOpId;
-
-        while (i < items.length) {
-            (uint256 iIndex, uint256 iType, uint216 iPayload) = _decodeExtraDataItem(items[i]);
-
-            if (iIndex != iter.firstItemIndex + i) {
-                revert UnexpectedExtraDataIndex(iter.firstItemIndex + i, iIndex);
+            assembly {
+                // layout at the dataOffset:
+                // |  3 bytes  | 2 bytes  |   X bytes   |
+                // | itemIndex | itemType | itemPayload |
+                let header := calldataload(add(data.offset, dataOffset))
+                index := shr(232, header)
+                itemType := and(shr(216, header), 0xffff)
+                dataOffset := add(dataOffset, 5)
             }
 
-            (uint256 iModuleId, uint256 iNodeOpId, uint256 iKeysCount) =
-                _decodeExtraDataPayload(iPayload);
+            if (iter.itemType == 0) {
+                if (index != 0) {
+                    revert UnexpectedExtraDataIndex(0, index);
+                }
+            } else if (index != iter.index + 1) {
+                revert UnexpectedExtraDataIndex(iter.index + 1, index);
+            }
 
-            if (started) {
-                if (iType != itemType || iModuleId != moduleId) {
-                    break;
-                }
-                if (iNodeOpId <= lastNodeOpId) {
-                    revert InvalidExtraDataSortOrder();
-                }
+            iter.index = index;
+            iter.itemType = itemType;
+            iter.dataOffset = dataOffset;
+
+            if (itemType == EXTRA_DATA_TYPE_EXITED_VALIDATORS ||
+                itemType == EXTRA_DATA_TYPE_STUCK_VALIDATORS
+            ) {
+                _processExtraDataItem(data, iter);
             } else {
-                if (int256(iType) < iter.lastType || int256(iType) == iter.lastType && (
-                    int256(iModuleId) < iter.lastModuleId ||
-                    int256(iModuleId) == iter.lastModuleId && int256(iNodeOpId) <= iter.lastNodeOpId
-                )) {
-                    revert InvalidExtraDataSortOrder();
-                }
-                itemType = iType;
-                moduleId = iModuleId;
-                started = true;
+                revert UnsupportedExtraDataType(index, itemType);
             }
 
-            iter.nopIds.push(iNodeOpId);
-            iter.keyCounts.push(iKeysCount);
-            lastNodeOpId = iNodeOpId;
+            assert(iter.dataOffset > dataOffset);
+            dataOffset = iter.dataOffset;
+        }
+    }
 
-            unchecked { ++i; }
+    function _processExtraDataItem(bytes calldata data, ExtraDataIterState memory iter) internal {
+        uint256 dataOffset = iter.dataOffset;
+        uint256 moduleId;
+        uint256 nodeOpsCount;
+        uint256 firstNodeOpId;
+        bytes calldata nodeOpIds;
+        bytes calldata valsCounts;
+
+        if (dataOffset + 35 > data.length) {
+            // has to fit at least moduleId (3 bytes), nodeOpsCount (8 bytes),
+            // and data for one node operator (8 + 16 bytes), total 35 bytes
+            revert InvalidExtraDataItem(iter.index);
         }
 
-        iter.nextIndex = i;
-        iter.lastType = int256(itemType);
-        iter.lastModuleId = int256(moduleId);
-        iter.lastNodeOpId = int256(lastNodeOpId);
-    }
+        /// @solidity memory-safe-assembly
+        assembly {
+            // layout at the dataOffset:
+            // | 3 bytes  |   8 bytes    |  nodeOpsCount * 8 bytes  |  nodeOpsCount * 16 bytes  |
+            // | moduleId | nodeOpsCount |      nodeOperatorIds     |      validatorsCounts     |
+            let header := calldataload(add(data.offset, dataOffset))
+            moduleId := shr(232, header)
+            nodeOpsCount := and(shr(168, header), 0xffffffffffffffff)
+            nodeOpIds.offset := add(data.offset, add(dataOffset, 11))
+            nodeOpIds.length := mul(nodeOpsCount, 8)
+            firstNodeOpId := shr(192, calldataload(nodeOpIds.offset))
+            valsCounts.offset := add(nodeOpIds.offset, nodeOpIds.length)
+            valsCounts.length := mul(nodeOpsCount, 16)
+            dataOffset := sub(add(valsCounts.offset, valsCounts.length), data.offset)
+        }
 
-    function _decodeExtraDataItem(uint256 item) internal pure returns (
-        uint24 itemIndex,
-        uint16 itemType,
-        uint216 itemPayload
-    ) {
-        itemPayload = uint216(item);
-        itemType = uint16(item >> 216);
-        itemIndex = uint24(item >> 232);
-    }
+        if (moduleId == 0) {
+            revert InvalidExtraDataItem(iter.index);
+        }
 
-    function _decodeExtraDataPayload(uint216 payload) internal pure returns (
-        uint24 moduleId,
-        uint64 nodeOperatorId,
-        uint128 keysCount
-    ) {
-        keysCount = uint128(payload);
-        nodeOperatorId = uint64(payload >> 128);
-        moduleId = uint24(payload >> 192);
+        unchecked {
+            // | 2 bytes  | 19 bytes | 3 bytes  |    8 bytes    |
+            // | itemType | 00000000 | moduleId | firstNodeOpId |
+            uint256 sortingKey = (iter.itemType << 240) | (moduleId << 64) | firstNodeOpId;
+            if (sortingKey <= iter.lastSortingKey) {
+                revert InvalidExtraDataSortOrder(iter.index);
+            }
+            iter.lastSortingKey = sortingKey;
+        }
+
+        if (dataOffset > data.length || nodeOpsCount == 0) {
+            revert InvalidExtraDataItem(iter.index);
+        }
+
+        if (nodeOpsCount > iter.maxNodeOpsByItem) {
+            revert TooManyNodeOpsPerExtraDataItem(iter.index, nodeOpsCount);
+        }
+
+        if (iter.itemType == EXTRA_DATA_TYPE_STUCK_VALIDATORS) {
+            IStakingRouter(iter.stakingRouter)
+                .reportStakingModuleStuckKeysCountByNodeOperator(moduleId, nodeOpIds, valsCounts);
+        } else {
+            IStakingRouter(iter.stakingRouter)
+                .reportStakingModuleExitedKeysCountByNodeOperator(moduleId, nodeOpIds, valsCounts);
+        }
+
+        iter.dataOffset = dataOffset;
     }
 
     ///
