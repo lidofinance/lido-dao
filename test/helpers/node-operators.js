@@ -79,11 +79,11 @@ async function addNodeOperator(registry, config, txOptions) {
     assertBn(nodeOperator.totalSigningKeys, totalSigningKeysCount)
     assertBn(validatorsReport.totalExited, exitedSigningKeysCount)
     assertBn(validatorsReport.totalDeposited, depositedSigningKeysCount)
-    assertBn(validatorsReport.totalVetted, vettedSigningKeysCount)
+    assertBn(validatorsReport.depositable, vettedSigningKeysCount - depositedSigningKeysCount)
   } else {
     assertBn(validatorsReport.totalExited, exitedSigningKeysCount)
     assertBn(validatorsReport.totalDeposited, depositedSigningKeysCount)
-    assertBn(validatorsReport.totalVetted, depositedSigningKeysCount)
+    assertBn(validatorsReport.depositable, 0)
   }
   return { validatorKeys, id: newOperatorId.toNumber() }
 }

@@ -24,7 +24,7 @@ contract StakingModuleMock is IStakingModule {
 
     function getValidatorsReport() external view returns (ValidatorsReport memory report) {
         report.totalDeposited = _activeValidatorsCount;
-        report.totalVetted = _activeValidatorsCount + _availableValidatorsCount;
+        report.depositable = _availableValidatorsCount;
     }
 
     function getValidatorsReport(uint256 _nodeOperatorId) external view returns (ValidatorsReport memory report) {

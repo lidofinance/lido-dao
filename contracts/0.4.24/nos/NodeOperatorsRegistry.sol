@@ -1007,36 +1007,40 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
     struct ValidatorsReport {
         uint256 totalExited;
         uint256 totalDeposited;
-        uint256 totalVetted;
-        uint256 totalStuck;
-        uint256 totalRefunded;
+        uint256 depositable;
+        uint256 stuck;
+        uint256 refunded;
+        uint256 excess;
         uint256 targetLimit;
-        uint256 excessCount;
     }
 
     function _prepareAllValidatorsReport() internal view returns (ValidatorsReport memory) {
         SigningKeysStats.State memory totalSigningKeysStats = _getTotalSigningKeysStats();
+        uint256 totalDeposited = totalSigningKeysStats.depositedSigningKeysCount;
+        uint256 totalVetted = totalSigningKeysStats.vettedSigningKeysCount;
         return ValidatorsReport({
             totalExited: totalSigningKeysStats.exitedSigningKeysCount,
-            totalDeposited: totalSigningKeysStats.depositedSigningKeysCount,
-            totalVetted: totalSigningKeysStats.vettedSigningKeysCount,
-            totalStuck: 0,
-            totalRefunded: 0,
-            targetLimit: 0,
-            excessCount: 0
+            totalDeposited: totalDeposited,
+            depositable: totalVetted - totalDeposited,
+            stuck: 0,
+            refunded: 0,
+            excess: 0,
+            targetLimit: 0
         });
     }
 
     function _prepareNodeOperatorValidatorsReport(uint256 _nodeOperatorId) internal view returns (ValidatorsReport memory) {
         NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
+        uint256 totalDeposited = nodeOperator.depositedSigningKeysCount;
+        uint256 totalVetted = nodeOperator.vettedSigningKeysCount;
         return ValidatorsReport({
             totalExited: nodeOperator.exitedSigningKeysCount,
             totalDeposited: nodeOperator.depositedSigningKeysCount,
-            totalVetted: nodeOperator.vettedSigningKeysCount,
-            totalStuck: 0,
-            totalRefunded: 0,
-            targetLimit: 0,
-            excessCount: 0
+            depositable: totalVetted - totalDeposited,
+            stuck: 0,
+            refunded: 0,
+            excess: 0,
+            targetLimit: 0
         });
     }
 

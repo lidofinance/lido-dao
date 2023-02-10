@@ -6,11 +6,11 @@ pragma solidity 0.8.9;
 struct ValidatorsReport {
     uint256 totalExited;
     uint256 totalDeposited;
-    uint256 totalVetted;
-    uint256 totalStuck;
-    uint256 totalRefunded;
+    uint256 depositable;
+    uint256 stuck;
+    uint256 refunded;
+    uint256 excess;
     uint256 targetLimit;
-    uint256 excessCount;
 }
 
 /// @title Lido's Staking Module interface

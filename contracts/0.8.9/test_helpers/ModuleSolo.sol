@@ -32,8 +32,8 @@ contract ModuleSolo is IStakingModule {
 
     function getValidatorsReport() external view returns (ValidatorsReport memory report) {
         report.totalExited = totalExited;
-        report.totalVetted = totalVetted;
         report.totalDeposited = totalDeposited;
+        report.depositable = totalVetted - totalDeposited;
     }
 
     function getValidatorsReport(uint256 _nodeOperatorId) external view returns (ValidatorsReport memory report) {}

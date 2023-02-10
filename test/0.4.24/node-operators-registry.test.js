@@ -443,7 +443,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const validatorsReport = await stakingModule.getValidatorsReport()
       assert.equals(validatorsReport.totalExited, 1)
       assert.equals(validatorsReport.totalDeposited, 12)
-      assert.equals(validatorsReport.totalVetted, 16)
+      assert.equals(validatorsReport.depositable, 4)
     })
 
     it('reverts with APP_AUTH_FAILED error when called by address without ACTIVATE_NODE_OPERATOR_ROLE permission', async () => {
@@ -565,7 +565,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const validatorsReport = await stakingModule.getValidatorsReport()
       assert.equals(validatorsReport.totalExited, 1)
       assert.equals(validatorsReport.totalDeposited, 12)
-      assert.equals(validatorsReport.totalVetted, 16)
+      assert.equals(validatorsReport.depositable, 4)
     })
 
     it('reverts with "APP_AUTH_FAILED" error when called by address without DEACTIVATE_NODE_OPERATOR_ROLE permission', async () => {
@@ -619,7 +619,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equal(activeNodeOperatorsCountAfter.toNumber(), activeNodeOperatorsCountBefore.toNumber() - 1)
     })
 
-    it('resets vettedSigningKeysCount to depositedSigningKeysCount when vettedSigningKeysCount > depositedSigningKeysCount', async () => {
+    it('resets depositable when depositable was greater thatn zero', async () => {
       const activeNodeOperatorId = await nodeOperators.findNodeOperatorId(app, (operator) => operator.active)
       assert.notEqual(activeNodeOperatorId, -1, `Invariant: active node operator not found`)
 
@@ -630,7 +630,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       ])
 
       assert.isTrue(
-        +operatorReportBefore.totalVetted > +operatorReportBefore.totalDeposited,
+        +operatorReportBefore.depositable > 0,
         'invariant failed: readyToDepositValidatorsKeysCountBefore <= depositedSigningKeysCount'
       )
       assert.isTrue(nodeOperator.active, 'Invariant Failed: not active')
@@ -642,11 +642,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         stakingModule.getValidatorsReport()
       ])
 
-      assert.equals(+operatorReportAfter.totalVetted, +operatorReportAfter.totalDeposited)
+      assert.equals(+operatorReportAfter.depositable, 0)
 
+      // check that total and node operator's data were changed on same value
       assert.equals(
-        +allValidatorsReportBefore.totalVetted - +allValidatorsReportAfter.totalVetted,
-        +operatorReportBefore.totalVetted - +operatorReportAfter.totalVetted
+        +allValidatorsReportBefore.depositable - +allValidatorsReportAfter.depositable,
+        +operatorReportBefore.depositable
       )
     })
 
@@ -1366,8 +1367,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         await app.testing_getSigningKeysAllocationData(keysToAllocate)
 
       const secondNodeOperatorReport = await stakingModule.getValidatorsReport(secondNodeOperatorId)
-      const availableKeysCount =
-        +secondNodeOperatorReport.totalVetted - +secondNodeOperatorReport.totalDeposited
+      const availableKeysCount = +secondNodeOperatorReport.depositable
 
       const expectedAllocatedKeysCount = Math.min(availableKeysCount, keysToAllocate)
 
@@ -1389,21 +1389,19 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         stakingModule.getValidatorsReport(secondNodeOperatorId)
       ])
 
-      const firstNodeOperatorAvailableValidators =
-        firstNodeOperatorReport.totalVetted - firstNodeOperatorReport.totalDeposited
-      const secondNodeOperatorAvailableValidators =
-        secondNodeOperatorReport.totalVetted - secondNodeOperatorReport.totalDeposited
+      const firstNodeOperatorAvailableValidators = +firstNodeOperatorReport.depositable
+      const secondNodeOperatorAvailableValidators = +secondNodeOperatorReport.depositable
 
       assert.isTrue(firstNodeOperatorAvailableValidators > 0)
       assert.isTrue(secondNodeOperatorAvailableValidators > 0)
 
       assert.equals(firstNodeOperatorReport.totalExited, 1)
       assert.equals(firstNodeOperatorReport.totalDeposited, 5)
-      assert.equals(firstNodeOperatorReport.totalVetted, 8)
+      assert.equals(firstNodeOperatorReport.depositable, 3)
 
       assert.equals(secondNodeOperatorReport.totalExited, 0)
       assert.equals(secondNodeOperatorReport.totalDeposited, 5)
-      assert.equals(secondNodeOperatorReport.totalVetted, 10)
+      assert.equals(secondNodeOperatorReport.depositable, 5)
 
       const keysToAllocate = 3
       const { allocatedKeysCount, nodeOperatorIds, activeKeyCountsAfterAllocation, exitedSigningKeysCount } =
@@ -1437,21 +1435,19 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         stakingModule.getValidatorsReport(secondNodeOperatorId)
       ])
 
-      const firstNodeOperatorAvailableValidators =
-        firstNodeOperatorReport.totalVetted - firstNodeOperatorReport.totalDeposited
-      const secondNodeOperatorAvailableValidators =
-        secondNodeOperatorReport.totalVetted - secondNodeOperatorReport.totalDeposited
+      const firstNodeOperatorAvailableValidators = +firstNodeOperatorReport.depositable
+      const secondNodeOperatorAvailableValidators = +secondNodeOperatorReport.depositable
 
       assert.equals(firstNodeOperatorAvailableValidators, 0)
       assert.isTrue(secondNodeOperatorAvailableValidators > 0)
 
       assert.equals(firstNodeOperatorReport.totalExited, 1)
       assert.equals(firstNodeOperatorReport.totalDeposited, 5)
-      assert.equals(firstNodeOperatorReport.totalVetted, 5)
+      assert.equals(firstNodeOperatorReport.depositable, 0)
 
       assert.equals(secondNodeOperatorReport.totalExited, 0)
       assert.equals(secondNodeOperatorReport.totalDeposited, 5)
-      assert.equals(secondNodeOperatorReport.totalVetted, 10)
+      assert.equals(secondNodeOperatorReport.depositable, 5)
 
       const keysToAllocate = 3
       const { allocatedKeysCount, nodeOperatorIds, activeKeyCountsAfterAllocation, exitedSigningKeysCount } =
@@ -1471,27 +1467,25 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(exitedSigningKeysCount[0], secondNodeOperatorReport.totalExited)
     })
 
-    it  ('respects staking limit', async () => {
+    it('respects staking limit', async () => {
       const [firstNodeOperatorReport, secondNodeOperatorReport] = await Promise.all([
         stakingModule.getValidatorsReport(firstNodeOperatorId),
         stakingModule.getValidatorsReport(secondNodeOperatorId)
       ])
 
-      const firstNodeOperatorAvailableValidators =
-        firstNodeOperatorReport.totalVetted - firstNodeOperatorReport.totalDeposited
-      const secondNodeOperatorAvailableValidators =
-        secondNodeOperatorReport.totalVetted - secondNodeOperatorReport.totalDeposited
+      const firstNodeOperatorAvailableValidators = firstNodeOperatorReport.depositable
+      const secondNodeOperatorAvailableValidators = secondNodeOperatorReport.depositable
 
       assert.isTrue(firstNodeOperatorAvailableValidators > 0)
       assert.isTrue(secondNodeOperatorAvailableValidators > 0)
 
       assert.equals(firstNodeOperatorReport.totalExited, 1)
       assert.equals(firstNodeOperatorReport.totalDeposited, 5)
-      assert.equals(firstNodeOperatorReport.totalVetted, 8)
+      assert.equals(firstNodeOperatorReport.depositable, 3)
 
       assert.equals(secondNodeOperatorReport.totalExited, 0)
       assert.equals(secondNodeOperatorReport.totalDeposited, 5)
-      assert.equals(secondNodeOperatorReport.totalVetted, 10)
+      assert.equals(secondNodeOperatorReport.depositable, 5)
 
       const keysToAllocate = 7
       const { allocatedKeysCount, nodeOperatorIds, activeKeyCountsAfterAllocation, exitedSigningKeysCount } =
