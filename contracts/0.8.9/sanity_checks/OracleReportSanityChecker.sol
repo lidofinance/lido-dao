@@ -557,7 +557,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             emit MaxValidatorExitRequestsPerReportSet(_newLimitsList.maxValidatorExitRequestsPerReport);
         }
         if (_oldLimitsList.maxAccountingExtraDataListItemsCount != _newLimitsList.maxAccountingExtraDataListItemsCount) {
-            emit maxAccountingExtraDataListItemsCountSet(_newLimitsList.maxAccountingExtraDataListItemsCount);
+            emit MaxAccountingExtraDataListItemsCountSet(_newLimitsList.maxAccountingExtraDataListItemsCount);
         }
         _limits = _newLimitsList.pack();
     }
@@ -569,7 +569,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     event RequestTimestampMarginSet(uint256 requestTimestampMargin);
     event MaxPositiveTokenRebaseSet(uint256 maxPositiveTokenRebase);
     event MaxValidatorExitRequestsPerReportSet(uint256 maxValidatorExitRequestsPerReport);
-    event maxAccountingExtraDataListItemsCountSet(uint256 maxAccountingExtraDataListItemsCount);
+    event MaxAccountingExtraDataListItemsCountSet(uint256 maxAccountingExtraDataListItemsCount);
 
     error IncorrectWithdrawalsVaultBalance(uint256 actualWithdrawalVaultBalance);
     error IncorrectCLBalanceDecrease(uint256 oneOffCLBalanceDecreaseBP);
