@@ -6,7 +6,6 @@ const { deployLocatorWithDummyAddressesImplementation } = require('./locator-dep
 const {
   SLOTS_PER_EPOCH,
   SECONDS_PER_SLOT,
-  SECONDS_PER_FRAME,
   EPOCHS_PER_FRAME,
   CONSENSUS_VERSION
 } = require('./constants')
@@ -138,12 +137,11 @@ async function hashConsensusFactory({ voting, oracle, signers, legacyOracle, dep
   await consensus.addMember(signers[3].address, 2, { from: voting.address })
   await consensus.addMember(signers[4].address, 2, { from: voting.address })
 
-  await oracle.initialize(voting.address, consensus.address, CONSENSUS_VERSION, 10000, 10000)
+  await oracle.initialize(voting.address, consensus.address, CONSENSUS_VERSION)
 
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), voting.address, { from: voting.address })
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), voting.address, { from: voting.address })
   await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), voting.address, { from: voting.address })
-  await oracle.grantRole(await oracle.MANAGE_DATA_BOUNDARIES_ROLE(), voting.address, { from: voting.address })
 
   return consensus
 }
@@ -177,13 +175,6 @@ async function hashConsensusTimeTravellableFactory({
   await consensus.addMember(signers[3].address, 2, { from: voting.address })
   await consensus.addMember(signers[4].address, 2, { from: voting.address })
   await consensus.setTime(deployParams.genesisTime + initialEpoch * SLOTS_PER_EPOCH * SECONDS_PER_SLOT)
-
-  await oracle.initialize(voting.address, consensus.address, CONSENSUS_VERSION, 10000, 10000)
-
-  await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), voting.address, { from: voting.address })
-  await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), voting.address, { from: voting.address })
-  await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), voting.address, { from: voting.address })
-  await oracle.grantRole(await oracle.MANAGE_DATA_BOUNDARIES_ROLE(), voting.address, { from: voting.address })
 
   return consensus
 }
@@ -325,7 +316,6 @@ async function lidoLocatorFactory({ appManager }) {
 async function oracleReportSanityCheckerFactory({ lidoLocator, voting, appManager, deployParams }) {
   const checker = await OracleReportSanityChecker.new(
     lidoLocator.address,
-    SECONDS_PER_FRAME,
     appManager.address,
     deployParams.oracleReportSanityChecker.limitsList,
     deployParams.oracleReportSanityChecker.managersRoster

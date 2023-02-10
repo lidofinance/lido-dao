@@ -48,6 +48,11 @@ interface ILegacyOracle {
     ) external;
 }
 
+interface IOracleReportSanityChecker {
+    function checkExitedValidatorsRatePerDay(uint256 _exitedValidatorsCount) external view;
+    function checkAccountingExtraDataListItemsCount(uint256 _extraDataListItemsCount) external view;
+    function checkNodeOperatorsPerExtraDataItemCount(uint256 _itemIndex, uint256 _nodeOperatorsCount) external view;
+}
 
 interface IStakingRouter {
     function getExitedValidatorsCountAcrossAllModules() external view returns (uint256);
@@ -87,11 +92,8 @@ contract AccountingOracle is BaseOracle {
     error SenderNotAllowed();
     error InvalidExitedValidatorsData();
     error NumExitedValidatorsCannotDecrease();
-    error ExitedValidatorsLimitExceeded(uint256 limitPerDay, uint256 exitedPerDay);
     error UnsupportedExtraDataFormat(uint256 format);
     error UnsupportedExtraDataType(uint256 itemIndex, uint256 dataType);
-    error TooManyNodeOpsPerExtraDataItem(uint256 itemIndex, uint256 nodeOpsCount);
-    error MaxExtraDataItemsCountExceeded(uint256 maxItemsCount, uint256 receivedItemsCount);
     error CannotSubmitExtraDataBeforeMainData();
     error ExtraDataAlreadyProcessed();
     error ExtraDataListOnlySupportsSingleTx();
@@ -101,7 +103,6 @@ contract AccountingOracle is BaseOracle {
     error InvalidExtraDataItem(uint256 itemIndex);
     error InvalidExtraDataSortOrder(uint256 itemIndex);
 
-    event DataBoundariesSet(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount);
     event ExtraDataSubmitted(uint256 indexed refSlot, uint256 itemsProcessed, uint256 itemsCount);
 
     event WarnExtraDataIncompleteProcessing(
@@ -109,11 +110,6 @@ contract AccountingOracle is BaseOracle {
         uint256 processedItemsCount,
         uint256 itemsCount
     );
-
-    struct DataBoundaries {
-        uint64 maxExitedValidatorsPerDay;
-        uint64 maxExtraDataListItemsCount;
-    }
 
     struct ExtraDataProcessingState {
         uint64 refSlot;
@@ -126,14 +122,6 @@ contract AccountingOracle is BaseOracle {
 
     /// @notice An ACL role granting the permission to submit the data for a committee report.
     bytes32 public constant SUBMIT_DATA_ROLE = keccak256("SUBMIT_DATA_ROLE");
-
-    /// @notice An ACL role granting the permission to set report data safety boundaries.
-    bytes32 constant public MANAGE_DATA_BOUNDARIES_ROLE = keccak256("MANAGE_DATA_BOUNDARIES_ROLE");
-
-
-    /// @dev Storage slot: DataBoundaries dataBoundaries
-    bytes32 internal constant DATA_BOUNDARIES_POSITION =
-        keccak256("lido.AccountingOracle.dataBoundaries");
 
     /// @dev Storage slot: ExtraDataProcessingState state
     bytes32 internal constant EXTRA_DATA_PROCESSING_STATE_POSITION =
@@ -160,58 +148,34 @@ contract AccountingOracle is BaseOracle {
     function initialize(
         address admin,
         address consensusContract,
-        uint256 consensusVersion,
-        uint256 maxExitedValidatorsPerDay,
-        uint256 maxExtraDataListItemsCount
+        uint256 consensusVersion
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
 
         uint256 lastProcessingRefSlot = _checkOracleMigration(LEGACY_ORACLE, consensusContract);
-        _initialize(admin, consensusContract, consensusVersion, maxExitedValidatorsPerDay,
-                    maxExtraDataListItemsCount, lastProcessingRefSlot);
+        _initialize(admin, consensusContract, consensusVersion, lastProcessingRefSlot);
     }
 
     function initializeWithoutMigration(
         address admin,
         address consensusContract,
         uint256 consensusVersion,
-        uint256 maxExitedValidatorsPerDay,
-        uint256 maxExtraDataListItemsCount,
         uint256 lastProcessingRefSlot
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
 
-        _initialize(admin, consensusContract, consensusVersion, maxExitedValidatorsPerDay,
-                    maxExtraDataListItemsCount, lastProcessingRefSlot);
+        _initialize(admin, consensusContract, consensusVersion, lastProcessingRefSlot);
     }
 
     function _initialize(
         address admin,
         address consensusContract,
         uint256 consensusVersion,
-        uint256 maxExitedValidatorsPerDay,
-        uint256 maxExtraDataListItemsCount,
         uint256 lastProcessingRefSlot
     ) internal {
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
 
-        _setDataBoundaries(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
         BaseOracle._initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
-    }
-
-    function getDataBoundaries() external view returns (
-        uint256 maxExitedValidatorsPerDay,
-        uint256 maxExtraDataListItemsCount
-    ) {
-        DataBoundaries memory b = _storageDataBoundaries().value;
-        return (b.maxExitedValidatorsPerDay, b.maxExtraDataListItemsCount);
-    }
-
-    function setDataBoundaries(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount)
-        external
-        onlyRole(MANAGE_DATA_BOUNDARIES_ROLE)
-    {
-        _setDataBoundaries(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
     }
 
     ///
@@ -302,7 +266,7 @@ contract AccountingOracle is BaseOracle {
         /// itemType is the type of extra data item;
         /// itemPayload is the item's data which interpretation depends on the item's type.
         ///
-        /// Items should be sorted acsendingly by the (itemType, ...itemSortingKey) compound key
+        /// Items should be sorted ascendingly by the (itemType, ...itemSortingKey) compound key
         /// where `itemSortingKey` calculation depends on the item's type (see below).
         ///
         /// ----------------------------------------------------------------------------------------
@@ -327,13 +291,14 @@ contract AccountingOracle is BaseOracle {
         /// order. Each count is a 16-byte uint, counts are packed tightly. Thus,
         /// byteLength(stuckValidatorsCounts) = nodeOpsCount * 16.
         ///
-        /// nodeOpsCount must not be greater than maxExtraDataListItemsCount. If a staking module
-        /// has more node operators with total stuck validators counts changed compared to the
-        /// staking module smart contract storage (as observed at the reference slot), reporting for
-        /// that module should be split into multiple items.
+        /// nodeOpsCount must not be greater than maxAccountingExtraDataListItemsCount specified
+        /// in OracleReportSanityChecker contract. If a staking module has more node operators
+        /// with total stuck validators counts changed compared to the staking module smart contract
+        /// storage (as observed at the reference slot), reporting for that module should be split
+        /// into multiple items.
         ///
         /// Item sorting key is a compound key consisting of the module id and the first reported
-        /// node opertator's id:
+        /// node operator's id:
         ///
         /// itemSortingKey = (moduleId, nodeOperatorIds[0:8])
         ///
@@ -394,7 +359,7 @@ contract AccountingOracle is BaseOracle {
     /// - The processing deadline for the current consensus frame is missed.
     /// - The keccak256 hash of the ABI-encoded data is different from the last hash
     ///   provided by the hash consensus contract.
-    /// - The provided data doesn't meet safety checks and boundaries.
+    /// - The provided data doesn't meet safety checks.
     ///
     function submitReportData(ReportData calldata data, uint256 contractVersion) external {
         _checkMsgSenderIsAllowedToSubmitData();
@@ -534,16 +499,6 @@ contract AccountingOracle is BaseOracle {
         return legacyProcessedEpoch * slotsPerEpoch;
     }
 
-    function _setDataBoundaries(uint256 maxExitedValidatorsPerDay, uint256 maxExtraDataListItemsCount)
-        internal
-    {
-        _storageDataBoundaries().value = DataBoundaries({
-            maxExitedValidatorsPerDay: maxExitedValidatorsPerDay.toUint64(),
-            maxExtraDataListItemsCount: maxExtraDataListItemsCount.toUint64()
-        });
-        emit DataBoundariesSet(maxExitedValidatorsPerDay, maxExtraDataListItemsCount);
-    }
-
     function _handleConsensusReport(
         ConsensusReport memory /* report */,
         uint256 /* prevSubmittedRefSlot */,
@@ -567,18 +522,12 @@ contract AccountingOracle is BaseOracle {
     }
 
     function _handleConsensusReportData(ReportData calldata data, uint256 prevRefSlot) internal {
-        DataBoundaries memory boundaries = _storageDataBoundaries().value;
-
         if (data.extraDataFormat != EXTRA_DATA_FORMAT_LIST) {
             revert UnsupportedExtraDataFormat(data.extraDataFormat);
         }
 
-        if (data.extraDataItemsCount > boundaries.maxExtraDataListItemsCount) {
-            revert MaxExtraDataItemsCountExceeded(
-                boundaries.maxExtraDataListItemsCount,
-                data.extraDataItemsCount
-            );
-        }
+        IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
+            .checkAccountingExtraDataListItemsCount(data.extraDataItemsCount);
 
         ILegacyOracle(LEGACY_ORACLE).handleConsensusLayerReport(
             data.refSlot,
@@ -593,7 +542,6 @@ contract AccountingOracle is BaseOracle {
 
         _processStakingRouterExitedValidatorsByModule(
             stakingRouter,
-            boundaries,
             data.stakingModuleIdsWithNewlyExitedValidators,
             data.numExitedValidatorsByStakingModule,
             slotsElapsed
@@ -627,7 +575,6 @@ contract AccountingOracle is BaseOracle {
 
     function _processStakingRouterExitedValidatorsByModule(
         IStakingRouter stakingRouter,
-        DataBoundaries memory boundaries,
         uint256[] calldata stakingModuleIds,
         uint256[] calldata numExitedValidatorsByStakingModule,
         uint256 slotsElapsed
@@ -666,12 +613,8 @@ contract AccountingOracle is BaseOracle {
             (exitedValidators - prevExitedValidators) * (1 days) /
             (SECONDS_PER_SLOT * slotsElapsed);
 
-        if (exitedValidatorsPerDay > boundaries.maxExitedValidatorsPerDay) {
-            revert ExitedValidatorsLimitExceeded(
-                boundaries.maxExitedValidatorsPerDay,
-                exitedValidatorsPerDay
-            );
-        }
+        IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
+            .checkExitedValidatorsRatePerDay(exitedValidatorsPerDay);
 
         stakingRouter.updateExitedValidatorsCountByStakingModule(
             stakingModuleIds,
@@ -687,7 +630,6 @@ contract AccountingOracle is BaseOracle {
         uint256 lastSortingKey;
         // config
         address stakingRouter;
-        uint256 maxNodeOpsByItem;
     }
 
     function _submitReportExtraDataList(bytes calldata items) internal {
@@ -722,8 +664,7 @@ contract AccountingOracle is BaseOracle {
             itemType: 0,
             dataOffset: 0,
             lastSortingKey: 0,
-            stakingRouter: LOCATOR.stakingRouter(),
-            maxNodeOpsByItem: _storageDataBoundaries().value.maxExtraDataListItemsCount
+            stakingRouter: LOCATOR.stakingRouter()
         });
 
         _processExtraDataItems(items, iter);
@@ -831,9 +772,8 @@ contract AccountingOracle is BaseOracle {
             revert InvalidExtraDataItem(iter.index);
         }
 
-        if (nodeOpsCount > iter.maxNodeOpsByItem) {
-            revert TooManyNodeOpsPerExtraDataItem(iter.index, nodeOpsCount);
-        }
+        IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
+            .checkNodeOperatorsPerExtraDataItemCount(iter.index, nodeOpsCount);
 
         if (iter.itemType == EXTRA_DATA_TYPE_STUCK_VALIDATORS) {
             IStakingRouter(iter.stakingRouter)
@@ -849,15 +789,6 @@ contract AccountingOracle is BaseOracle {
     ///
     /// Storage helpers
     ///
-
-    struct StorageDataBoundaries {
-        DataBoundaries value;
-    }
-
-    function _storageDataBoundaries() internal pure returns (StorageDataBoundaries storage r) {
-        bytes32 position = DATA_BOUNDARIES_POSITION;
-        assembly { r.slot := position }
-    }
 
     struct StorageExtraDataProcessingState {
         ExtraDataProcessingState value;

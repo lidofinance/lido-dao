@@ -86,7 +86,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @param _pauser address that will be able to pause the withdrawals
     /// @param _resumer address that will be able to resume the withdrawals after pause
     /// @param _finalizer address that can finalize requests in the queue
-    /// @param _bunkerReporter addres that can report a bunker mode
+    /// @param _bunkerReporter address that can report a bunker mode
     /// @dev Reverts if `_admin` equals to `address(0)`
     /// @dev NB! It's initialized in paused state by default and should be resumed explicitly to start
     /// @dev NB! Bunker mode is disabled by default

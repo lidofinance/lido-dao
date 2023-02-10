@@ -20,23 +20,25 @@ const DEFAULT_DEPLOY_PARAMS = {
   },
   oracleReportSanityChecker: {
     limitsList: {
-      churnValidatorsByEpochLimit: 255,
+      churnValidatorsPerDayLimit: 255,
       oneOffCLBalanceDecreaseBPLimit: 10000,
       annualBalanceIncreaseBPLimit: 10000,
       shareRateDeviationBPLimit: 10000,
       maxValidatorExitRequestsPerReport: 10000,
+      maxAccountingExtraDataListItemsCount: 100,
       requestTimestampMargin: 0,
-      maxPositiveTokenRebase: 1000000000
+      maxPositiveTokenRebase: 1000000000,
     },
     managersRoster: {
       allLimitsManagers: [],
-      churnValidatorsByEpochLimitManagers: [],
+      churnValidatorsPerDayLimitManagers: [],
       oneOffCLBalanceDecreaseLimitManagers: [],
       annualBalanceIncreaseLimitManagers: [],
       shareRateDeviationLimitManagers: [],
       maxValidatorExitRequestsPerReportManagers: [],
+      maxAccountingExtraDataListItemsCountManagers: [],
       requestTimestampMarginManagers: [],
-      maxPositiveTokenRebaseManagers: []
+      maxPositiveTokenRebaseManagers: [],
     }
   }
 }
