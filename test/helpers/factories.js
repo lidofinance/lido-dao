@@ -197,14 +197,11 @@ async function accountingOracleFactory({ voting, pool, lidoLocator, consensusCon
     voting.address,
     consensusContract.address,
     CONSENSUS_VERSION,
-    10000,
-    10000,
   )
 
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), voting.address, { from: voting.address })
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), voting.address, { from: voting.address })
   await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), voting.address, { from: voting.address })
-  await oracle.grantRole(await oracle.MANAGE_DATA_BOUNDARIES_ROLE(), voting.address, { from: voting.address })
 
   await consensusContract.setReportProcessor(oracle.address, { from: voting.address })
 

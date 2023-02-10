@@ -34,6 +34,7 @@ interface IWithdrawalQueue {
 struct LimitsList {
     /// @notice The max possible number of validators that might appear or exit on the Consensus
     ///     Layer during one day
+    /// @dev Must fit into uint16 (<= 65_535)
     uint256 churnValidatorsPerDayLimit;
 
     /// @notice The max decrease of the total validators' balances on the Consensus Layer since
@@ -62,23 +63,18 @@ struct LimitsList {
     /// @notice The max number of exit requests allowed in report to ValidatorsExitBusOracle
     uint256 maxValidatorExitRequestsPerReport;
 
-    /// @notice The max number of exited validators reported to accounting oracle
-    /// @dev Must fit into uin16 (<= 65_535)
-    uint256 maxExitedValidatorsRatePerDay;
-
     /// @notice The max number of data list items reported to accounting oracle in extra data
-    /// @dev Must fit into uin16 (<= 65_535)
+    /// @dev Must fit into uint16 (<= 65_535)
     uint256 maxAccountingExtraDataListItemsCount;
 }
 
 /// @dev The packed version of the LimitsList struct to be effectively persisted in storage
 struct LimitsListPacked {
-    uint8 churnValidatorsPerDayLimit;
+    uint16 churnValidatorsPerDayLimit;
     uint16 oneOffCLBalanceDecreaseBPLimit;
     uint16 annualBalanceIncreaseBPLimit;
     uint16 shareRateDeviationBPLimit;
     uint16 maxValidatorExitRequestsPerReport;
-    uint16 maxExitedValidatorsRatePerDay;
     uint16 maxAccountingExtraDataListItemsCount;
     uint64 requestTimestampMargin;
     uint64 maxPositiveTokenRebase;
@@ -108,8 +104,6 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     bytes32 public constant REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE = keccak256("REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE");
     bytes32 public constant MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE =
         keccak256("MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE");
-    bytes32 public constant MAX_EXITED_VALIDATORS_RATE_PER_DAY_ROLE =
-        keccak256("MAX_EXITED_VALIDATORS_RATE_PER_DAY_ROLE");
     bytes32 public constant MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE =
         keccak256("MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE");
 
@@ -130,7 +124,6 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         address[] requestTimestampMarginManagers;
         address[] maxPositiveTokenRebaseManagers;
         address[] maxValidatorExitRequestsPerReportManagers;
-        address[] maxExitedValidatorsRatePerDayManagers;
         address[] maxAccountingExtraDataListItemsCountManagers;
     }
 
@@ -159,8 +152,6 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _grantRole(MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE, _managersRoster.maxPositiveTokenRebaseManagers);
         _grantRole(MAX_VALIDATOR_EXIT_REQUESTS_PER_REPORT_ROLE,
                    _managersRoster.maxValidatorExitRequestsPerReportManagers);
-        _grantRole(MAX_EXITED_VALIDATORS_RATE_PER_DAY_ROLE,
-                   _managersRoster.maxExitedValidatorsRatePerDayManagers);
         _grantRole(MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE,
                    _managersRoster.maxAccountingExtraDataListItemsCountManagers);
     }
@@ -290,18 +281,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _updateLimits(limitsList);
     }
 
-    /// @notice Sets the new value for the maxValidatorExitRequestsPerReport
-    /// @param _maxExitedValidatorsRatePerDay new maxExitedValidatorsRatePerDay value
-    function setMaxExitedValidatorsRatePerDay(uint256 _maxExitedValidatorsRatePerDay)
-        external
-        onlyRole(MAX_EXITED_VALIDATORS_RATE_PER_DAY_ROLE)
-    {
-        LimitsList memory limitsList = _limits.unpack();
-        limitsList.maxExitedValidatorsRatePerDay = _maxExitedValidatorsRatePerDay;
-        _updateLimits(limitsList);
-    }
-
-    /// @notice Sets the new value for the maxValidatorExitRequestsPerReport
+    /// @notice Sets the new value for the maxAccountingExtraDataListItemsCount
     /// @param _maxAccountingExtraDataListItemsCount new maxAccountingExtraDataListItemsCount value
     function setMaxAccountingExtraDataListItemsCount(uint256 _maxAccountingExtraDataListItemsCount)
         external
@@ -404,7 +384,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         external
         view
     {
-        uint256 limit = _limits.unpack().maxExitedValidatorsRatePerDay;
+        uint256 limit = _limits.unpack().churnValidatorsPerDayLimit;
         if (_exitedValidatorsCount > limit)
             revert ExitedValidatorsLimitExceeded(limit, _exitedValidatorsCount);
     }
@@ -576,9 +556,6 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         if (_oldLimitsList.maxValidatorExitRequestsPerReport != _newLimitsList.maxValidatorExitRequestsPerReport) {
             emit MaxValidatorExitRequestsPerReportSet(_newLimitsList.maxValidatorExitRequestsPerReport);
         }
-        if (_oldLimitsList.maxExitedValidatorsRatePerDay != _newLimitsList.maxExitedValidatorsRatePerDay) {
-            emit maxExitedValidatorsRatePerDaySet(_newLimitsList.maxExitedValidatorsRatePerDay);
-        }
         if (_oldLimitsList.maxAccountingExtraDataListItemsCount != _newLimitsList.maxAccountingExtraDataListItemsCount) {
             emit maxAccountingExtraDataListItemsCountSet(_newLimitsList.maxAccountingExtraDataListItemsCount);
         }
@@ -592,7 +569,6 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     event RequestTimestampMarginSet(uint256 requestTimestampMargin);
     event MaxPositiveTokenRebaseSet(uint256 maxPositiveTokenRebase);
     event MaxValidatorExitRequestsPerReportSet(uint256 maxValidatorExitRequestsPerReport);
-    event maxExitedValidatorsRatePerDaySet(uint256 maxExitedValidatorsRatePerDay);
     event maxAccountingExtraDataListItemsCountSet(uint256 maxAccountingExtraDataListItemsCount);
 
     error IncorrectWithdrawalsVaultBalance(uint256 actualWithdrawalVaultBalance);
@@ -610,14 +586,13 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
 library LimitsListPacker {
     function pack(LimitsList memory _limitsList) internal pure returns (LimitsListPacked memory res) {
-        res.churnValidatorsPerDayLimit = SafeCast.toUint8(_limitsList.churnValidatorsPerDayLimit);
+        res.churnValidatorsPerDayLimit = SafeCast.toUint16(_limitsList.churnValidatorsPerDayLimit);
         res.oneOffCLBalanceDecreaseBPLimit = _toBasisPoints(_limitsList.oneOffCLBalanceDecreaseBPLimit);
         res.annualBalanceIncreaseBPLimit = _toBasisPoints(_limitsList.annualBalanceIncreaseBPLimit);
         res.shareRateDeviationBPLimit = _toBasisPoints(_limitsList.shareRateDeviationBPLimit);
         res.requestTimestampMargin = SafeCast.toUint64(_limitsList.requestTimestampMargin);
         res.maxPositiveTokenRebase = SafeCast.toUint64(_limitsList.maxPositiveTokenRebase);
         res.maxValidatorExitRequestsPerReport = SafeCast.toUint16(_limitsList.maxValidatorExitRequestsPerReport);
-        res.maxExitedValidatorsRatePerDay = SafeCast.toUint16(_limitsList.maxExitedValidatorsRatePerDay);
         res.maxAccountingExtraDataListItemsCount = SafeCast.toUint16(_limitsList.maxAccountingExtraDataListItemsCount);
     }
 
@@ -636,7 +611,6 @@ library LimitsListUnpacker {
         res.requestTimestampMargin = _limitsList.requestTimestampMargin;
         res.maxPositiveTokenRebase = _limitsList.maxPositiveTokenRebase;
         res.maxValidatorExitRequestsPerReport = _limitsList.maxValidatorExitRequestsPerReport;
-        res.maxExitedValidatorsRatePerDay = _limitsList.maxExitedValidatorsRatePerDay;
         res.maxAccountingExtraDataListItemsCount = _limitsList.maxAccountingExtraDataListItemsCount;
     }
 }

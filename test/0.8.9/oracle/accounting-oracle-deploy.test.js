@@ -85,8 +85,9 @@ function calcExtraDataListHash(packedExtraDataList) {
 
 
 async function deployOracleReportSanityCheckerForAccounting(lidoLocator, admin) {
-  const limitsList = [0, 0, 0, 0, 0, 0, 0, 32 * 12, 15]
-  const managersRoster = [[admin], [], [], [], [], [], [], [], [], []]
+  const churnValidatorsPerDayLimit = 100
+  const limitsList = [churnValidatorsPerDayLimit, 0, 0, 0, 0, 0, 32 * 12, 15]
+  const managersRoster = [[admin], [], [], [], [], [], [], [], []]
 
   const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
 
