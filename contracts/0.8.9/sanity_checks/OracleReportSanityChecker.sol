@@ -322,13 +322,11 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     /// @param _postCLBalance sum of all Lido validators' balances on the Consensus Layer after the
     ///     current oracle report
     /// @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
-    /// @param _simulatedShareRate share rate that should be used for finalization
     function checkLidoOracleReport(
         uint256 _timeElapsed,
         uint256 _preCLBalance,
         uint256 _postCLBalance,
-        uint256 _withdrawalVaultBalance,
-        uint256 _simulatedShareRate
+        uint256 _withdrawalVaultBalance
     ) external view {
         LimitsList memory limitsList = _limits.unpack();
 
@@ -341,10 +339,6 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
         // 3. Consensus Layer annual balances increase
         _checkAnnualBalancesIncrease(limitsList, _preCLBalance, _postCLBalance, _timeElapsed);
-
-        address lido = LIDO_LOCATOR.lido();
-        // 4. shareRate calculated off-chain is consistent with the on-chain one
-        _checkFinalizationShareRate(limitsList, lido, _simulatedShareRate);
     }
 
     /// @notice Applies sanity checks to the validators params of Lido's oracle report
@@ -377,8 +371,13 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     /// @notice Applies sanity checks to the withdrawal requests params of Lido's oracle report
     /// @param _lastFinalizableRequestId right boundary of requestId range if equals 0, no requests
     ///     should be finalized
+    /// @param _simulatedShareRate share rate that should be used for finalization
     /// @param _reportTimestamp timestamp when the originated oracle report was submitted
-    function checkWithdrawalQueueOracleReport(uint256 _lastFinalizableRequestId, uint256 _reportTimestamp)
+    function checkWithdrawalQueueOracleReport(
+        uint256 _lastFinalizableRequestId,
+        uint256 _simulatedShareRate,
+        uint256 _reportTimestamp
+   )
         external
         view
     {
@@ -386,6 +385,10 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         address withdrawalQueue = LIDO_LOCATOR.withdrawalQueue();
         // 1. No finalized id up to newer than the allowed report margin
         _checkRequestIdToFinalizeUpTo(limitsList, withdrawalQueue, _lastFinalizableRequestId, _reportTimestamp);
+
+        address lido = LIDO_LOCATOR.lido();
+        // 2. shareRate calculated off-chain is consistent with the on-chain one
+        _checkFinalizationShareRate(limitsList, lido, _simulatedShareRate);
     }
 
     function _checkWithdrawalVaultBalance(
