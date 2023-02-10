@@ -2,7 +2,7 @@ const { BN } = require('bn.js')
 const { assert } = require('../../helpers/assert')
 const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 const { assertRevert } = require('../../helpers/assertThrow')
-const { e9, e18, e27 } = require('../../helpers/utils')
+const { e9, e18, e27, hex, printEvents } = require('../../helpers/utils')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
 const {
@@ -13,8 +13,8 @@ const {
   ZERO_HASH, CONSENSUS_VERSION,
   V1_ORACLE_LAST_REPORT_SLOT,
   EXTRA_DATA_FORMAT_LIST, EXTRA_DATA_TYPE_STUCK_VALIDATORS, EXTRA_DATA_TYPE_EXITED_VALIDATORS,
-  deployAndConfigureAccountingOracle, getReportDataItems, calcReportDataHash, encodeExtraDataItem,
-  encodeExtraDataItems, calcExtraDataHash} = require('./accounting-oracle-deploy.test')
+  deployAndConfigureAccountingOracle, getReportDataItems, calcReportDataHash, encodeExtraDataItems,
+  packExtraDataList, calcExtraDataListHash} = require('./accounting-oracle-deploy.test')
 
 
 contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
@@ -30,6 +30,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
 
     let extraData
     let extraDataItems
+    let extraDataList
     let extraDataHash
     let reportFields
     let reportItems
@@ -92,19 +93,19 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
 
       extraData = {
         stuckKeys: [
-          {moduleId: 0, nodeOpId: 0, keysCount: 1},
-          {moduleId: 1, nodeOpId: 0, keysCount: 2},
-          {moduleId: 2, nodeOpId: 2, keysCount: 3},
+          {moduleId: 1, nodeOpIds: [0], keysCounts: [1]},
+          {moduleId: 2, nodeOpIds: [0], keysCounts: [2]},
+          {moduleId: 3, nodeOpIds: [2], keysCounts: [3]},
         ],
         exitedKeys: [
-          {moduleId: 1, nodeOpId: 1, keysCount: 1},
-          {moduleId: 1, nodeOpId: 2, keysCount: 3},
-          {moduleId: 2, nodeOpId: 1, keysCount: 2},
+          {moduleId: 2, nodeOpIds: [1, 2], keysCounts: [1, 3]},
+          {moduleId: 3, nodeOpIds: [1], keysCounts: [2]},
         ],
       }
 
       extraDataItems = encodeExtraDataItems(extraData)
-      extraDataHash = calcExtraDataHash(extraDataItems)
+      extraDataList = packExtraDataList(extraDataItems)
+      extraDataHash = calcExtraDataListHash(extraDataList)
 
       reportFields = {
         consensusVersion: CONSENSUS_VERSION,
@@ -121,7 +122,6 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
         extraDataFormat: EXTRA_DATA_FORMAT_LIST,
         extraDataHash: extraDataHash,
         extraDataItemsCount: extraDataItems.length,
-        extraDataMaxNodeOpsCountByModule: 2,
       }
 
       reportItems = getReportDataItems(reportFields)
@@ -238,7 +238,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
     })
 
     it(`Staking router got the exited keys report`, async () => {
-      const lastExitedKeysByModuleCall = await mockStakingRouter.getLastCall_updateExitedKeysByModule()
+      const lastExitedKeysByModuleCall = await mockStakingRouter.lastCall_updateExitedKeysByModule()
       assert.equal(lastExitedKeysByModuleCall.callCount, 1)
       assert.sameOrderedMembers(
         lastExitedKeysByModuleCall.moduleIds.map(x => +x),
@@ -265,7 +265,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
 
     it('a non-member cannot submit extra data', async () => {
       await assertRevert(
-        oracle.submitReportExtraDataList(extraDataItems, {from: stranger}),
+        oracle.submitReportExtraDataList(extraDataList, {from: stranger}),
         'SenderNotAllowed()'
       )
     })
@@ -275,17 +275,19 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
         stuckKeys: [ ...extraData.stuckKeys ],
         exitedKeys: [ ...extraData.exitedKeys ],
       }
-      ++invalidExtraData.exitedKeys[0].keysCount
+      invalidExtraData.exitedKeys[0].keysCounts = [...invalidExtraData.exitedKeys[0].keysCounts]
+      ++invalidExtraData.exitedKeys[0].keysCounts[0]
       const invalidExtraDataItems = encodeExtraDataItems(invalidExtraData)
-      const invalidExtraDataHash = calcExtraDataHash(invalidExtraDataItems)
+      const invalidExtraDataList = packExtraDataList(invalidExtraDataItems)
+      const invalidExtraDataHash = calcExtraDataListHash(invalidExtraDataList)
       await assertRevert(
-        oracle.submitReportExtraDataList(invalidExtraDataItems, {from: member2}),
+        oracle.submitReportExtraDataList(invalidExtraDataList, {from: member2}),
         `UnexpectedDataHash("${extraDataHash}", "${invalidExtraDataHash}")`
       )
     })
 
     it('a committee member submits extra data', async () => {
-      const tx = await oracle.submitReportExtraDataList(extraDataItems, {from: member2})
+      const tx = await oracle.submitReportExtraDataList(extraDataList, {from: member2})
 
       assertEvent(tx, 'ExtraDataSubmitted', {expectedArgs: {
         refSlot: reportFields.refSlot,
@@ -310,38 +312,38 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
     })
 
     it('Staking router got the exited keys by node op report', async () => {
-      const totalReportCalls = +await mockStakingRouter.getTotalCalls_reportExitedKeysByNodeOperator()
+      const totalReportCalls = +await mockStakingRouter.totalCalls_reportExitedKeysByNodeOperator()
       assert.equal(totalReportCalls, 2)
 
-      const call1 = await mockStakingRouter.getCall_reportExitedKeysByNodeOperator(0)
-      assert.equal(+call1.stakingModuleId, 1)
-      assert.sameOrderedMembers(call1.nodeOperatorIds.map(x => +x), [1, 2])
-      assert.sameOrderedMembers(call1.keysCounts.map(x => +x), [1, 3])
+      const call1 = await mockStakingRouter.calls_reportExitedKeysByNodeOperator(0)
+      assert.equal(+call1.stakingModuleId, 2)
+      assert.equal(call1.nodeOperatorIds, '0x' + [1, 2].map(i => hex(i, 8)).join(''))
+      assert.equal(call1.keysCounts, '0x' + [1, 3].map(i => hex(i, 16)).join(''))
 
-      const call2 = await mockStakingRouter.getCall_reportExitedKeysByNodeOperator(1)
-      assert.equal(+call2.stakingModuleId, 2)
-      assert.sameOrderedMembers(call2.nodeOperatorIds.map(x => +x), [1])
-      assert.sameOrderedMembers(call2.keysCounts.map(x => +x), [2])
+      const call2 = await mockStakingRouter.calls_reportExitedKeysByNodeOperator(1)
+      assert.equal(+call2.stakingModuleId, 3)
+      assert.equal(call2.nodeOperatorIds, '0x' + [1].map(i => hex(i, 8)).join(''))
+      assert.equal(call2.keysCounts, '0x' + [2].map(i => hex(i, 16)).join(''))
     })
 
     it('Staking router got the stuck keys by node op report', async () => {
-      const totalReportCalls = +await mockStakingRouter.getTotalCalls_reportStuckKeysByNodeOperator()
+      const totalReportCalls = +await mockStakingRouter.totalCalls_reportStuckKeysByNodeOperator()
       assert.equal(totalReportCalls, 3)
 
-      const call1 = await mockStakingRouter.getCall_reportStuckKeysByNodeOperator(0)
-      assert.equal(+call1.stakingModuleId, 0)
-      assert.sameOrderedMembers(call1.nodeOperatorIds.map(x => +x), [0])
-      assert.sameOrderedMembers(call1.keysCounts.map(x => +x), [1])
+      const call1 = await mockStakingRouter.calls_reportStuckKeysByNodeOperator(0)
+      assert.equal(+call1.stakingModuleId, 1)
+      assert.equal(call1.nodeOperatorIds, '0x' + [0].map(i => hex(i, 8)).join(''))
+      assert.equal(call1.keysCounts, '0x' + [1].map(i => hex(i, 16)).join(''))
 
-      const call2 = await mockStakingRouter.getCall_reportStuckKeysByNodeOperator(1)
-      assert.equal(+call2.stakingModuleId, 1)
-      assert.sameOrderedMembers(call2.nodeOperatorIds.map(x => +x), [0])
-      assert.sameOrderedMembers(call2.keysCounts.map(x => +x), [2])
+      const call2 = await mockStakingRouter.calls_reportStuckKeysByNodeOperator(1)
+      assert.equal(+call2.stakingModuleId, 2)
+      assert.equal(call2.nodeOperatorIds, '0x' + [0].map(i => hex(i, 8)).join(''))
+      assert.equal(call2.keysCounts, '0x' + [2].map(i => hex(i, 16)).join(''))
 
-      const call3 = await mockStakingRouter.getCall_reportStuckKeysByNodeOperator(2)
-      assert.equal(+call3.stakingModuleId, 2)
-      assert.sameOrderedMembers(call3.nodeOperatorIds.map(x => +x), [2])
-      assert.sameOrderedMembers(call3.keysCounts.map(x => +x), [3])
+      const call3 = await mockStakingRouter.calls_reportStuckKeysByNodeOperator(2)
+      assert.equal(+call3.stakingModuleId, 3)
+      assert.equal(call3.nodeOperatorIds, '0x' + [2].map(i => hex(i, 8)).join(''))
+      assert.equal(call3.keysCounts, '0x' + [3].map(i => hex(i, 16)).join(''))
     })
   })
 })

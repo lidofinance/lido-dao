@@ -1,1 +1,0 @@
-[{"inputs":[],"name":"ArrayIsEmpty","type":"error"},{"inputs":[],"name":"CannotTrimMoreThanLength","type":"error"},{"inputs":[],"name":"MaxLengthCannotBeZero","type":"error"},{"inputs":[],"name":"MaxLengthReached","type":"error"},{"inputs":[],"name":"Uninitialized","type":"error"}]

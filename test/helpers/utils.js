@@ -60,7 +60,7 @@ const toBN = (obj) => {
 }
 
 function hex(n, byteLen) {
-  return toBN(n).toString(16, byteLen * 2)
+  return n.toString(16).padStart(byteLen * 2, '0')
 }
 
 function strip0x(s) {

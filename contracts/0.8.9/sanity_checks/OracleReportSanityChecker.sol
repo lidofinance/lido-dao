@@ -419,6 +419,19 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             revert ExitedValidatorsLimitExceeded(limit, _exitedValidatorsCount);
     }
 
+    /// @notice Check number of node operators reported per extra data item in accounting oracle
+    /// @param _itemIndex Index of item in extra data
+    /// @param _nodeOperatorsCount Number of validator exit requests supplied per oracle report
+    /// @dev Checks against the same limit as used in checkMaxAccountingExtraDataListItemsCount
+    function checkNodeOperatorsPerExtraDataItemCount(uint256 _itemIndex, uint256 _nodeOperatorsCount)
+        external
+        view
+    {
+        uint256 limit = _limits.unpack().maxAccountingExtraDataListItemsCount;
+        if (_nodeOperatorsCount > limit)
+            revert TooManyNodeOpsPerExtraDataItem(_itemIndex, _nodeOperatorsCount);
+    }
+
     /// @notice Check max accounting extra data list items count
     /// @param _extraDataListItemsCount Number of validator exit requests supplied per oracle report
     function checkMaxAccountingExtraDataListItemsCount(uint256 _extraDataListItemsCount)
@@ -604,6 +617,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     error IncorrectFinalizationShareRate(uint256 finalizationShareDeviation);
     error MaxAccountingExtraDataItemsCountExceeded(uint256 maxItemsCount, uint256 receivedItemsCount);
     error ExitedValidatorsLimitExceeded(uint256 limitPerDay, uint256 exitedPerDay);
+    error TooManyNodeOpsPerExtraDataItem(uint256 itemIndex, uint256 nodeOpsCount);
 }
 
 library LimitsListPacker {
