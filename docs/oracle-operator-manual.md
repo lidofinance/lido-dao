@@ -1,6 +1,6 @@
 # Oracle Operator Manual
 
-This document is intended for those who wish to participate in the Lido protocol as Oracle—an entity who runs a daemon synchronizing state from ETH2 to ETH1 part of the protocol. To be precise, the daemon fetches the number of validators participating in the protocol, as well as their combined balance, from the Beacon chain and submits this data to the `LegacyOracle` ETH1 smart contract.
+This document is intended for those who wish to participate in the Lido protocol as Oracle—an entity who runs a daemon synchronizing state from ETH2 to ETH1 part of the protocol. To be precise, the daemon fetches the number of validators participating in the protocol, as well as their combined balance, from the Beacon chain and submits this data to the `LidoOracle` ETH1 smart contract.
 
 The daemon also fetches historical stETH token price (shifted by fifteen blocks) from Curve ETH/stETH pool and reports any significant changes to the `StableSwapOracle` contract. Using price data from this oracle as a safeguard helps to keep stETH token price resistant to flash-loan and sandwich attacks by removing the ability to significantly change the price in a single block.
 
@@ -19,9 +19,9 @@ The daemon also fetches historical stETH token price (shifted by fifteen blocks)
 
 Total supply of the StETH token always corresponds to the amount of Ether in control of the protocol. It increases on user deposits and Beacon chain staking rewards, and decreases on Beacon chain penalties and slashings. Since the Beacon chain is a separate chain, Lido ETH1 smart contracts can’t get direct access to its data.
 
-Communication between Ethereum 1.0 part of the system and the Beacon network is performed by the DAO-assigned oracles. They monitor staking providers’ Beacon chain accounts and submit corresponding data to the `LegacyOracle` contract. The latter takes care of making sure that quorum about the data being pushed is reached within the oracles and enforcing data submission order (so that oracle contract never pushes data that is older than the already pushed one).
+Communication between Ethereum 1.0 part of the system and the Beacon network is performed by the DAO-assigned oracles. They monitor staking providers’ Beacon chain accounts and submit corresponding data to the `LidoOracle` contract. The latter takes care of making sure that quorum about the data being pushed is reached within the oracles and enforcing data submission order (so that oracle contract never pushes data that is older than the already pushed one).
 
-Upon every update submitted by the `LegacyOracle` contract, the system recalculates the total stETH token balance. If the overall staking rewards are bigger than the slashing penalties, the system registers profit, and fee is taken from the profit and distributed between the insurance fund, the treasury, and node operators.
+Upon every update submitted by the `LidoOracle` contract, the system recalculates the total stETH token balance. If the overall staking rewards are bigger than the slashing penalties, the system registers profit, and fee is taken from the profit and distributed between the insurance fund, the treasury, and node operators.
 
 To protect stETH token price from attacks with borrowed money or flash loans, `StableSwapOracle` keeps valid stETH stats from Curve Pool (ETH balance, stETH balance and stETH price), shifted by fifteen blocks, onchain. To keep these stats in actual state, the daemon reports required data to the oracle when price difference between the time-shifted stETH pool price and the last reported price exceeds the threshold limit. `StableSwapOracle` validates all of the recorded data using cryptographic proofs. The threshold limit is set in the oracle contract and is purely advisory. It's introduced to prevent sending large number transactions which are pretty costly due to the Partricia Merkle proof verification.
 
@@ -38,7 +38,7 @@ In order to launch oracle daemon on your machine, you need to have several thing
 
 ## The oracle daemon
 
-The oracle daemon is a simple Python app that watches the Beacon chain and pushes the data to the LegacyOracle Smart Contract: [Mainnet](https://etherscan.io/address/0x442af784A788A5bd6F42A01Ebe9F287a871243fb) / [Görli](https://goerli.etherscan.io/address/0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F).
+The oracle daemon is a simple Python app that watches the Beacon chain and pushes the data to the LidoOracle Smart Contract: [Mainnet](https://etherscan.io/address/0x442af784A788A5bd6F42A01Ebe9F287a871243fb) / [Görli](https://goerli.etherscan.io/address/0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F).
 
 The oracle source code is available at https://github.com/lidofinance/lido-oracle. The `StableSwapOracle` source code can be found at https://github.com/lidofinance/curve-merkle-oracle. The docker image is available in the public Docker Hub registry: https://hub.docker.com/r/lidofinance/oracle.
 
@@ -46,7 +46,7 @@ The algorithm of the above oracle implementation is simple and each step of an i
 
 Update Beacon Data
 
-The daemon fetches the reportable epoch from the `LegacyOracle` contract, and if this epoch is finalized on the Beacon chain, pushes the data to the `LegacyOracle` contract by submitting a transaction. The transaction contains a tuple:
+The daemon fetches the reportable epoch from the `LidoOracle` contract, and if this epoch is finalized on the Beacon chain, pushes the data to the `LidoOracle` contract by submitting a transaction. The transaction contains a tuple:
 
 ```text
 (
