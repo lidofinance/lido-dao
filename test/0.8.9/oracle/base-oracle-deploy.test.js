@@ -43,7 +43,8 @@ async function deployBaseOracle(
     consensusContract = null,
     epochsPerFrame = EPOCHS_PER_FRAME,
     fastLaneLengthSlots = INITIAL_FAST_LANE_LENGHT_SLOTS,
-    initialEpoch = INITIAL_EPOCH
+    initialEpoch = INITIAL_EPOCH,
+    mockMember = admin
   } = {}
 ) {
   if (!consensusContract) {
@@ -54,6 +55,7 @@ async function deployBaseOracle(
       epochsPerFrame,
       fastLaneLengthSlots,
       initialEpoch,
+      mockMember,
       { from: admin }
     )
   }
@@ -62,7 +64,9 @@ async function deployBaseOracle(
 
   await oracle.initialize(consensusContract.address, CONSENSUS_VERSION, 0)
 
-  return { oracle }
+  await consensusContract.setAsyncProcessor(oracle.address)
+
+  return { oracle, consensusContract }
 }
 
 module.exports = {

@@ -66,4 +66,14 @@ contract BaseOracleTimeTravellable is BaseOracle {
         _handleConsensusReportLastCall.prevProcessingRefSlot = prevProcessingRefSlot;
         ++_handleConsensusReportLastCall.callCount;
     }
+
+    function getConsensusReportLastCall()  view external returns (HandleConsensusReportLastCall memory) {
+        return _handleConsensusReportLastCall;
+    }
+
+    function startProcessing() external {
+         _startProcessing();
+    }
+
+    
 }

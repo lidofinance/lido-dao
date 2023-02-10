@@ -5,6 +5,7 @@ pragma solidity 0.8.9;
 import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
 import { IConsensusContract } from "../../oracle/BaseOracle.sol";
+import {IReportAsyncProcessor} from '../../oracle/HashConsensus.sol';
 
 contract MockConsensusContract is IConsensusContract {
     using SafeCast for uint256;
@@ -12,6 +13,8 @@ contract MockConsensusContract is IConsensusContract {
     uint64 internal immutable SLOTS_PER_EPOCH;
     uint64 internal immutable SECONDS_PER_SLOT;
     uint64 internal immutable GENESIS_TIME;
+
+    address internal _reportProcessor;
 
     mapping(address => uint256) internal _memberIndices1b;
 
@@ -34,14 +37,19 @@ contract MockConsensusContract is IConsensusContract {
         uint256 genesisTime,
         uint256 epochsPerFrame,
         uint256 initialEpoch,
-        uint256 fastLaneLengthSlots
+        uint256 fastLaneLengthSlots,
+        address mockMember
     ) {
         SLOTS_PER_EPOCH = slotsPerEpoch.toUint64();
         SECONDS_PER_SLOT = secondsPerSlot.toUint64();
         GENESIS_TIME = genesisTime.toUint64();
 
         _setFrameConfig(initialEpoch, epochsPerFrame, fastLaneLengthSlots);
+        _memberIndices1b[mockMember] = 1;
+ 
     }
+
+
 
     function getIsMember(address addr) external view returns (bool) {
         return _memberIndices1b[addr] != 0;
@@ -77,4 +85,25 @@ contract MockConsensusContract is IConsensusContract {
             fastLaneLengthSlots.toUint64()
         );
     }
+
+    // 
+    // IReportAsyncProcessor relevant mocks&handels
+    //
+
+    function setAsyncProcessor(address reportProcessor) external {
+        _reportProcessor = reportProcessor;
+    } 
+
+    function submitReportAsConsensus(bytes32 reportHash, uint256 refSlot, uint256 deadline) external {
+         IReportAsyncProcessor(_reportProcessor).submitConsensusReport(
+            reportHash,
+            refSlot,
+            deadline
+        );
+    } 
+
+    
+
+
+
 }
