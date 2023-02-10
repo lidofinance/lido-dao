@@ -170,9 +170,10 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2, strange
   context('MANAGE_REPORT_PROCESSOR_ROLE', () => {
     beforeEach(deploy)
 
-    context('setReportProcessor', () => {
+    context('setReportProcessor', async () => {
+      const reportProcessor2 = await MockReportProcessor.new(CONSENSUS_VERSION, { from: admin })
+
       it('should revert without MANAGE_REPORT_PROCESSOR_ROLE role', async () => {
-        const reportProcessor2 = await MockReportProcessor.new(CONSENSUS_VERSION, { from: admin })
         await assert.revertsOZAccessControl(
           consensus.setReportProcessor(reportProcessor2.address, { from: account1 }),
           account1,
@@ -181,7 +182,6 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2, strange
       })
 
       it('should allow calling from a possessor of MANAGE_REPORT_PROCESSOR_ROLE role', async () => {
-        const reportProcessor2 = await MockReportProcessor.new(CONSENSUS_VERSION, { from: admin })
         await consensus.grantRole(manageReportProcessorRoleKeccak156, account2)
         await consensus.setReportProcessor(reportProcessor2.address, { from: account2 })
 
