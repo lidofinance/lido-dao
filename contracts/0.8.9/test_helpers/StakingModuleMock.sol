@@ -62,7 +62,7 @@ contract StakingModuleMock is IStakingModule {
 
     function updateRefundedValidatorsCount(uint256 _nodeOperatorId, uint256 _refundedValidatorsCount) external {}
 
-    function finishUpdatingExitedValidatorsCount() external {}
+    function onAllValidatorsCountersUpdated() external {}
 
     function unsafeUpdateValidatorsCount(
         uint256 /* _nodeOperatorId */,

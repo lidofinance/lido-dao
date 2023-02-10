@@ -92,9 +92,6 @@ interface IStakingModule {
         uint256 _stuckValidatorsCount
     ) external;
 
-    /// @notice Called by StakingRouter after oracle finishes updating exited validators counts for all operators.
-    function finishUpdatingExitedValidatorsCount() external;
-
     /// @notice Invalidates all unused validators for all node operators
     function invalidateDepositData() external;
 
@@ -110,6 +107,9 @@ interface IStakingModule {
         bytes memory publicKeys,
         bytes memory signatures
     );
+
+    /// @notice Called by StakingRouter after oracle finishes updating validators counters for all node operators
+    function onAllValidatorsCountersUpdated() external;
 
     event NonceChanged(uint256 nonce);
 }

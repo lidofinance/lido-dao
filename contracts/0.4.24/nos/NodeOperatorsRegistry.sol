@@ -398,8 +398,8 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         // FIXME: implement logic
     }
 
-    /// @notice Called by StakingRouter after oracle finishes updating exited keys counts for all operators.
-    function finishUpdatingExitedValidatorsCount()
+    /// @notice Called by StakingRouter after oracle finishes updating validators counters for all node operators
+    function onAllValidatorsCountersUpdated()
         external
         auth(STAKING_ROUTER_ROLE)
     {
