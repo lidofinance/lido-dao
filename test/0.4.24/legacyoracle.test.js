@@ -7,6 +7,6 @@ const { toBN } = require('../helpers/utils')
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
 
-contract('LidoOracle', ([admin, stranger]) => {
+contract('LegacyOracle', ([admin, stranger]) => {
   it.skip('TODO: legacy compat tests', async () => {})
 })
