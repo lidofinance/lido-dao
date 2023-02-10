@@ -74,7 +74,7 @@ abstract contract WithdrawalQueueBase {
         uint256 amountOfShares
     );
     event WithdrawalBatchFinalized(
-        uint256 indexed from, uint256 indexed to, uint256 amountOfETHLocked, uint256 sheresToBurn, uint256 timestamp
+        uint256 indexed from, uint256 indexed to, uint256 amountOfETHLocked, uint256 sharesToBurn, uint256 timestamp
     );
     event WithdrawalClaimed(
         uint256 indexed requestId, address indexed owner, address indexed receiver, uint256 amountOfETH
@@ -397,7 +397,7 @@ abstract contract WithdrawalQueueBase {
             _amountOfETH,
             requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares,
             block.timestamp
-            );
+        );
     }
 
     /// @dev creates a new `WithdrawalRequest` in the queue
