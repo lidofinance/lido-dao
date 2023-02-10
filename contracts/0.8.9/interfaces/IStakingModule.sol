@@ -3,13 +3,31 @@
 
 pragma solidity 0.8.9;
 
+/// @notice Contains main information about a set of validators
 struct ValidatorsReport {
+    /// @notice The total number of validators from the set in the EXITED state on the Consensus Layer
+    /// @dev This value can't decrease in normal conditions
     uint256 totalExited;
+
+    /// @notice The total number of validators from the set deposited via the official Deposit Contract
+    /// @dev This value is a cumulative counter: even when the validator goes into EXITED state this
+    ///     counter is not decreasing.
     uint256 totalDeposited;
+
+    /// @notice The number of validators in the set available for deposit
     uint256 depositable;
+
+    /// @notice The number of the validators from the set with an expired request to exit time
     uint256 stuck;
+
+    /// @notice The number of validators from the set that can't be withdrawn, but deposit costs
+    ///     were compensated to the Lido
     uint256 refunded;
+
+    /// @notice The number of validators above the target limit
     uint256 excess;
+
+    /// @notice The desired number of validators in the set. This value is set by the Lido
     uint256 targetLimit;
 }
 
@@ -18,8 +36,12 @@ interface IStakingModule {
     /// @notice Returns the type of the staking module
     function getType() external view returns (bytes32);
 
+    /// @notice Returns validators report about all validators in the staking module
     function getValidatorsReport() external view returns (ValidatorsReport memory report);
 
+    /// @notice Returns validators report about all validators belonging to the node operator with
+    ///     the given id
+    /// @param _nodeOperatorId id of the operator to return report for
     function getValidatorsReport(uint256 _nodeOperatorId)
         external
         view
@@ -113,5 +135,6 @@ interface IStakingModule {
     ///     invalid after the withdrawal credentials are changed
     function onWithdrawalCredentialsChanged() external;
 
+    /// @dev Event to be emitted on StakingModule's nonce change
     event NonceChanged(uint256 nonce);
 }
