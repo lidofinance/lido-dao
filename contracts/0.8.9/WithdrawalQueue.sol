@@ -61,6 +61,8 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
 
     /// @notice Emitted when the contract initialized
     event InitializedV1(address _admin, address _pauser, address _resumer, address _finalizer, address _bunkerReporter);
+    event BunkerModeEnabled(uint256 _sinceTimestamp);
+    event BunkerModeDisabled();
 
     error AdminZeroAddress();
     error AlreadyInitialized();
@@ -293,8 +295,15 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         // on bunker mode state change
         if (_isBunkerModeNow != isBunkerModeWasSetBefore) {
             // write previous timestamp to enable bunker or max uint to disable
-            uint256 newTimestamp = _isBunkerModeNow ? _sinceTimestamp : BUNKER_MODE_DISABLED_TIMESTAMP;
-            BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(newTimestamp);
+            if (_isBunkerModeNow) {
+                BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(_sinceTimestamp);
+
+                emit BunkerModeEnabled(_sinceTimestamp);
+            } else {
+                BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(BUNKER_MODE_DISABLED_TIMESTAMP);
+
+                emit BunkerModeDisabled();
+            }
         }
     }
 
