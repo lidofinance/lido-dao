@@ -1034,11 +1034,11 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         }
 
     /// @notice Returns a counter that MUST change it's value when any of the following happens:
-    ///     1. a node operator's validator(s) is added
-    ///     2. a node operator's validator(s) is removed
-    ///     3. a node operator's ready to deposit validators count is changed
+    ///     1. a node operator's deposit data is added
+    ///     2. a node operator's deposit data is removed
+    ///     3. a node operator's ready-to-deposit data size is changed
     ///     4. a node operator was activated/deactivated
-    ///     5. a node operator's validator(s) is used for the deposit
+    ///     5. a node operator's deposit data is used for the deposit
     function getNonce() external view returns (uint256) {
         return KEYS_OP_INDEX_POSITION.getStorageUint256();
     }
