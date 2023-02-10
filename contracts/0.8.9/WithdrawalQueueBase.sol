@@ -242,7 +242,7 @@ abstract contract WithdrawalQueueBase {
         if (_maxTimestamp == 0) revert ZeroTimestamp();
         if (_startId <= getLastFinalizedRequestId() || _endId > getLastRequestId()) {
             revert InvalidRequestIdRange(_startId, _endId);
-        } 
+        }
 
         if (_startId > _endId) return NOT_FOUND; // we have an empty range to search in
 
@@ -283,7 +283,7 @@ abstract contract WithdrawalQueueBase {
         if (_shareRate == 0) revert ZeroShareRate();
         if (_startId <= getLastFinalizedRequestId() || _endId > getLastRequestId()) {
             revert InvalidRequestIdRange(_startId, _endId);
-        } 
+        }
 
         if (_startId > _endId) return NOT_FOUND; // we have an empty range to search in
 
@@ -396,7 +396,7 @@ abstract contract WithdrawalQueueBase {
             _amountOfETH,
             requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares,
             block.timestamp
-        );
+            );
     }
 
     /// @dev creates a new `WithdrawalRequest` in the queue
