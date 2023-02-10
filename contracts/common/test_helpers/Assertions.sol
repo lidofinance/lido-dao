@@ -101,7 +101,8 @@ library Assert {
     }
 }
 
-
+/* solhint-disable func-visibility */
+// solhint does not understand free functions https://github.com/protofire/solhint/issues/276
 function memKeccak(uint256 start, uint256 pastEnd) pure returns (bytes32 result) {
     uint256 len = pastEnd - start;
     assembly {
@@ -212,3 +213,4 @@ function dyn(uint256[10] memory arr) pure returns (uint256[] memory result) {
         result[i] = arr[i];
     }
 }
+/* solhint-enable func-visibility */

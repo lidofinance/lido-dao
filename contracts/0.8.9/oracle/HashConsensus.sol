@@ -900,9 +900,14 @@ contract HashConsensus is AccessControlEnumerable {
         ConsensusFrame memory frame = _getCurrentFrame();
         uint256 lastConsensusRefSlot = _reportingState.lastConsensusRefSlot;
 
-        uint256 processingRefSlot = IReportAsyncProcessor(prevProcessor).getLastProcessingRefSlot();
+        uint256 processingRefSlotPrev = IReportAsyncProcessor(prevProcessor).getLastProcessingRefSlot();
+        uint256 processingRefSlotNext = IReportAsyncProcessor(newProcessor).getLastProcessingRefSlot();
 
-        if (processingRefSlot < frame.refSlot && lastConsensusRefSlot == frame.refSlot) {
+        if (
+            processingRefSlotPrev < frame.refSlot &&
+            processingRefSlotNext < frame.refSlot &&
+            lastConsensusRefSlot == frame.refSlot
+        ) {
             bytes32 report = _reportVariants[_reportingState.lastConsensusVariantIndex].hash;
             _submitReportForProcessing(frame, report);
         }
