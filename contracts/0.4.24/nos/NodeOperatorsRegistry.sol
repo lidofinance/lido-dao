@@ -476,7 +476,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         stuckPenaltyStats.set(STUCK_VALIDATORS_COUNT_OFFSET, _stuckValidatorsCount);
         if (_stuckValidatorsCount <= stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET)) {
-            stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, uint64(block.timestamp + _getStuckPenaltyDelay()));
+            stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, uint64(block.timestamp + getStuckPenaltyDelay()));
         }
         _saveOperatorStuckPenaltyStats(_nodeOperatorId, stuckPenaltyStats);
         emit StuckValidatorsCountChanged(_nodeOperatorId, _stuckValidatorsCount);
@@ -501,7 +501,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         stuckPenaltyStats.set(REFUNDED_VALIDATORS_COUNT_OFFSET, _refundedValidatorsCount);
         if (stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET) <= _refundedValidatorsCount) {
-            stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, uint64(block.timestamp + _getStuckPenaltyDelay()));
+            stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, uint64(block.timestamp + getStuckPenaltyDelay()));
         }
         _saveOperatorStuckPenaltyStats(_nodeOperatorId, stuckPenaltyStats);
         emit RefundedValidatorsCountChanged(_nodeOperatorId, _refundedValidatorsCount);
@@ -1087,14 +1087,14 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         return ILidoLocator(LIDO_LOCATOR_POSITION.getStorageAddress());
     }
 
-    function updateStuckPenaltyDelay(uint256 _delay) external {
+    function getStuckPenaltyDelay() public view returns (uint256) {
+        return STUCK_PENALTY_DELAY_POSITION.getStorageUint256();
+    }
+
+    function setStuckPenaltyDelay(uint256 _delay) external {
         _auth(MANAGE_NODE_OPERATOR_ROLE);
 
         _setStuckPenaltyDelay(_delay);
-    }
-
-    function _getStuckPenaltyDelay() internal view returns (uint256) {
-        return STUCK_PENALTY_DELAY_POSITION.getStorageUint256();
     }
 
     function _setStuckPenaltyDelay(uint256 _delay) internal {
