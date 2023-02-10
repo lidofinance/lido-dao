@@ -3,7 +3,7 @@ const { assert } = require('../../helpers/assert')
 
 const { deployHashConsensus, EPOCHS_PER_FRAME } = require('./hash-consensus-deploy.test')
 
-contract('HashConsensus', ([admin, account1, account2, member1, member2, stranger]) => {
+contract('HashConsensus', ([admin, account1, account2, member1, member2]) => {
   let consensus = null
   let reportProcessor = null
   const manageMembersAndQuorumRoleKeccak156 = web3.utils.keccak256('MANAGE_MEMBERS_AND_QUORUM_ROLE')
