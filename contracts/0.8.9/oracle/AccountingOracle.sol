@@ -50,23 +50,23 @@ interface ILegacyOracle {
 
 
 interface IStakingRouter {
-    function getExitedKeysCountAcrossAllModules() external view returns (uint256);
+    function getExitedValidatorsCountAcrossAllModules() external view returns (uint256);
 
-    function updateExitedKeysCountByStakingModule(
+    function updateExitedValidatorsCountByStakingModule(
         uint256[] calldata moduleIds,
-        uint256[] calldata exitedKeysCounts
+        uint256[] calldata exitedValidatorsCounts
     ) external;
 
-    function reportStakingModuleExitedKeysCountByNodeOperator(
+    function reportStakingModuleExitedValidatorsCountByNodeOperator(
         uint256 stakingModuleId,
         bytes calldata nodeOperatorIds,
-        bytes calldata exitedKeysCounts
+        bytes calldata exitedValidatorsCounts
     ) external;
 
-    function reportStakingModuleStuckKeysCountByNodeOperator(
+    function reportStakingModuleStuckValidatorsCountByNodeOperator(
         uint256 stakingModuleId,
         bytes calldata nodeOperatorIds,
-        bytes calldata stuckKeysCounts
+        bytes calldata stuckValidatorsCounts
     ) external;
 }
 
@@ -591,7 +591,7 @@ contract AccountingOracle is BaseOracle {
         IStakingRouter stakingRouter = IStakingRouter(LOCATOR.stakingRouter());
         IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(LOCATOR.withdrawalQueue());
 
-        _processStakingRouterExitedKeysByModule(
+        _processStakingRouterExitedValidatorsByModule(
             stakingRouter,
             boundaries,
             data.stakingModuleIdsWithNewlyExitedValidators,
@@ -625,7 +625,7 @@ contract AccountingOracle is BaseOracle {
         });
     }
 
-    function _processStakingRouterExitedKeysByModule(
+    function _processStakingRouterExitedValidatorsByModule(
         IStakingRouter stakingRouter,
         DataBoundaries memory boundaries,
         uint256[] calldata stakingModuleIds,
@@ -657,7 +657,7 @@ contract AccountingOracle is BaseOracle {
             unchecked { ++i; }
         }
 
-        uint256 prevExitedValidators = stakingRouter.getExitedKeysCountAcrossAllModules();
+        uint256 prevExitedValidators = stakingRouter.getExitedValidatorsCountAcrossAllModules();
         if (exitedValidators < prevExitedValidators) {
             revert NumExitedValidatorsCannotDecrease();
         }
@@ -673,7 +673,7 @@ contract AccountingOracle is BaseOracle {
             );
         }
 
-        stakingRouter.updateExitedKeysCountByStakingModule(
+        stakingRouter.updateExitedValidatorsCountByStakingModule(
             stakingModuleIds,
             numExitedValidatorsByStakingModule
         );
@@ -837,10 +837,10 @@ contract AccountingOracle is BaseOracle {
 
         if (iter.itemType == EXTRA_DATA_TYPE_STUCK_VALIDATORS) {
             IStakingRouter(iter.stakingRouter)
-                .reportStakingModuleStuckKeysCountByNodeOperator(moduleId, nodeOpIds, valsCounts);
+                .reportStakingModuleStuckValidatorsCountByNodeOperator(moduleId, nodeOpIds, valsCounts);
         } else {
             IStakingRouter(iter.stakingRouter)
-                .reportStakingModuleExitedKeysCountByNodeOperator(moduleId, nodeOpIds, valsCounts);
+                .reportStakingModuleExitedValidatorsCountByNodeOperator(moduleId, nodeOpIds, valsCounts);
         }
 
         iter.dataOffset = dataOffset;

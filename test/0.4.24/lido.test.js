@@ -627,7 +627,7 @@ contract('Lido', ([appManager, user1, user2, user3, nobody, depositor, treasury]
     // set withdrawalCredentials with keys, because they were trimmed
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
-    assertBn(await stakingRouter.getStakingModuleMaxDepositableKeys(CURATED_MODULE_ID), 0)
+    assertBn(await stakingRouter.getStakingModuleMaxDepositsCount(CURATED_MODULE_ID), 0)
 
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
@@ -639,7 +639,7 @@ contract('Lido', ([appManager, user1, user2, user3, nobody, depositor, treasury]
     )
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
 
-    assertBn(await stakingRouter.getStakingModuleMaxDepositableKeys(CURATED_MODULE_ID), 1)
+    assertBn(await stakingRouter.getStakingModuleMaxDepositsCount(CURATED_MODULE_ID), 1)
     assertBn(await app.getTotalPooledEther(), ETH(33))
     assertBn(await app.getBufferedEther(), ETH(33))
 
@@ -1389,7 +1389,7 @@ contract('Lido', ([appManager, user1, user2, user3, nobody, depositor, treasury]
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // #1 goes below the limit
-    await operators.updateExitedValidatorsKeysCount(1, 1, { from: voting })
+    await operators.updateExitedValidatorsCount(1, 1, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
     await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
@@ -1515,7 +1515,7 @@ contract('Lido', ([appManager, user1, user2, user3, nobody, depositor, treasury]
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // #1 goes below the limit (doesn't change situation. validator stop decreases limit)
-    await operators.updateExitedValidatorsKeysCount(1, 1, { from: voting })
+    await operators.updateExitedValidatorsCount(1, 1, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
     await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })

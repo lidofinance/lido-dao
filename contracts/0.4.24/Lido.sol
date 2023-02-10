@@ -635,16 +635,16 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             uint256 unaccountedEth = _getUnaccountedEther();
             /// @dev transfer ether to SR and make deposit at the same time
             /// @notice allow zero value of depositableEth, in this case SR will simply transfer the unaccounted ether to Lido contract
-            uint256 depositedKeysCount = IStakingRouter(locator.stakingRouter()).deposit.value(depositableEth)(
+            uint256 depositsCount = IStakingRouter(locator.stakingRouter()).deposit.value(depositableEth)(
                 _maxDepositsCount,
                 _stakingModuleId,
                 _depositCalldata
             );
-            assert(depositedKeysCount <= depositableEth / DEPOSIT_SIZE );
+            assert(depositsCount <= depositableEth / DEPOSIT_SIZE );
 
-            if (depositedKeysCount > 0) {
-                uint256 depositedAmount = depositedKeysCount.mul(DEPOSIT_SIZE);
-                DEPOSITED_VALIDATORS_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(depositedKeysCount));
+            if (depositsCount > 0) {
+                uint256 depositedAmount = depositsCount.mul(DEPOSIT_SIZE);
+                DEPOSITED_VALIDATORS_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(depositsCount));
 
                 _markAsUnbuffered(depositedAmount);
                 assert(_getUnaccountedEther() == unaccountedEth);

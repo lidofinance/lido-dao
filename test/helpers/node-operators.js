@@ -1,3 +1,4 @@
+const hre = require('hardhat')
 const { assert } = require('chai')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { FakeValidatorKeys } = require('./signing-keys')
@@ -20,7 +21,6 @@ const { FakeValidatorKeys } = require('./signing-keys')
  */
 async function addNodeOperator(registry, config, txOptions) {
   const newOperatorId = await registry.getNodeOperatorsCount()
-  // const { activeKeysCount: activeKeysCountBefore, availableKeysCount: availableKeysCountBefore } = await registry.getKeysUsageData()
 
   await registry.addNodeOperator(config.name, config.rewardAddress, txOptions)
 
@@ -67,31 +67,35 @@ async function addNodeOperator(registry, config, txOptions) {
   }
 
   if (exitedSigningKeysCount > 0) {
-    await registry.updateExitedValidatorsKeysCount(newOperatorId, exitedSigningKeysCount, txOptions)
+    await registry.updateExitedValidatorsCount(newOperatorId, exitedSigningKeysCount, txOptions)
   }
 
   if (exitedSigningKeysCount > 0) {
-    await registry.updateExitedValidatorsKeysCount(newOperatorId, exitedSigningKeysCount, txOptions)
+    await registry.updateExitedValidatorsCount(newOperatorId, exitedSigningKeysCount, txOptions)
   }
 
   if (!isActive) {
     await registry.deactivateNodeOperator(newOperatorId, txOptions)
   }
 
-  const { exitedValidatorsCount, activeValidatorsKeysCount, readyToDepositValidatorsKeysCount } =
-    await registry.getValidatorsKeysStats(newOperatorId)
+  const stakingModule = await hre.artifacts
+    .require('contracts/0.8.9/interfaces/IStakingModule.sol:IStakingModule')
+    .at(registry.address)
+
+  const nodeOperatorsSummary = await stakingModule.getNodeOperatorSummary(newOperatorId)
+
   const nodeOperator = await registry.getNodeOperator(newOperatorId, true)
 
   if (isActive) {
     assertBn(nodeOperator.stakingLimit, vettedSigningKeysCount)
     assertBn(nodeOperator.totalSigningKeys, totalSigningKeysCount)
-    assertBn(exitedValidatorsCount, exitedSigningKeysCount)
-    assertBn(activeValidatorsKeysCount, depositedSigningKeysCount - exitedSigningKeysCount)
-    assertBn(readyToDepositValidatorsKeysCount, vettedSigningKeysCount - depositedSigningKeysCount)
+    assertBn(nodeOperatorsSummary.totalExitedValidators, exitedSigningKeysCount)
+    assertBn(nodeOperatorsSummary.totalDepositedValidators, depositedSigningKeysCount)
+    assertBn(nodeOperatorsSummary.depositableValidatorsCount, vettedSigningKeysCount - depositedSigningKeysCount)
   } else {
-    assertBn(exitedValidatorsCount, exitedSigningKeysCount)
-    assertBn(activeValidatorsKeysCount, depositedSigningKeysCount - exitedSigningKeysCount)
-    assertBn(readyToDepositValidatorsKeysCount, 0)
+    assertBn(nodeOperatorsSummary.totalExitedValidators, exitedSigningKeysCount)
+    assertBn(nodeOperatorsSummary.totalDepositedValidators, depositedSigningKeysCount)
+    assertBn(nodeOperatorsSummary.depositableValidatorsCount, 0)
   }
   return { validatorKeys, id: newOperatorId.toNumber() }
 }

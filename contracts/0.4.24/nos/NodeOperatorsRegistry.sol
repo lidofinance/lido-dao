@@ -10,6 +10,7 @@ import {SafeMath64} from "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import {UnstructuredStorage} from "@aragon/os/contracts/common/UnstructuredStorage.sol";
 
 import {Math64} from "../lib/Math64.sol";
+import {Math256} from "../../common/lib/Math256.sol";
 import {MemUtils} from "../../common/lib/MemUtils.sol";
 import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
 import {ILidoLocator} from "../../common/interfaces/ILidoLocator.sol";
@@ -56,7 +57,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     event ExitedSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 exitedValidatorsCount);
     event TotalSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 totalValidatorsCount);
 
-    event ValidatorsKeysNonceChanged(uint256 validatorsKeysNonce);
+    event NonceChanged(uint256 nonce);
     event StuckValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 stuckValidatorsCount);
     event RefundedValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 RefundedValidatorsCount);
     event TargetValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 targetValidatorsCount);
@@ -380,58 +381,65 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     ///
     /// @param _nodeOperatorId Id of the node operator
     /// @param _stuckValidatorsCount New number of stuck validators of the node operator
-    function updateStuckValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _stuckValidatorsCount) external {
+    function updateStuckValidatorsCount(uint256 _nodeOperatorId, uint256 _stuckValidatorsCount) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
 
-        _updateStuckValidatorsKeysCount(_nodeOperatorId, uint64(_stuckValidatorsCount));
+        _updateStuckValidatorsCount(_nodeOperatorId, uint64(_stuckValidatorsCount));
     }
 
     /// @notice Called by StakingRouter to update the number of the validators in the EXITED state
     /// for node operator with given id
     ///
     /// @param _nodeOperatorId Id of the node operator
-    /// @param _exitedValidatorsKeysCount New number of EXITED validators of the node operator
+    /// @param _exitedValidatorsCount New number of EXITED validators of the node operator
     /// @return Total number of exited validators across all node operators.
-    function updateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsKeysCount)
+    function updateExitedValidatorsCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsCount)
         external
         returns (uint256)
     {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
 
-        _updateExitedValidatorsKeysCount(_nodeOperatorId, uint64(_exitedValidatorsKeysCount), false);
+        _updateExitedValidatorsCount(_nodeOperatorId, uint64(_exitedValidatorsCount), false);
     }
 
-    /// @notice Called by StakingRouter after oracle finishes updating exited keys counts for all operators.
-    function finishUpdatingExitedValidatorsKeysCount() external {
+    /// @notice Updates the number of the refunded validators for node operator with the given id
+    /// @param _nodeOperatorId Id of the node operator
+    /// @param _refundedValidatorsCount New number of refunded validators of the node operator
+    function updateRefundedValidatorsCount(uint256 _nodeOperatorId, uint256 _refundedValidatorsCount) external {
+        _onlyExistedNodeOperator(_nodeOperatorId);
+        _auth(STAKING_ROUTER_ROLE);
+
+        _updateRefundValidatorsKeysCount(_nodeOperatorId, uint64(_refundedValidatorsCount));
+    }
+
+    /// @notice Called by StakingRouter after oracle finishes updating validators counters for all node operators
+    function onAllValidatorCountersUpdated() external
+    {
         _auth(STAKING_ROUTER_ROLE);
         // for the permissioned module, we're distributing rewards within oracle operation
         // since the number of node ops won't be high and thus gas costs are limited
         _distributeRewards();
     }
 
-    /// FIXME: this conflicts with the two-phase exited keys reporting in the staking router.
-    /// If we want to allow hand-correcting the oracle, we need to also support it in the
-    /// staking router.
-    ///
     /// @notice Unsafely updates the number of the validators in the EXITED state for node operator with given id
     /// @param _nodeOperatorId Id of the node operator
-    /// @param _exitedValidatorsKeysCount New number of EXITED validators of the node operator
+    /// @param _exitedValidatorsCount New number of EXITED validators of the node operator
     /// @return Total number of exited validators across all node operators.
-    function unsafeUpdateValidatorsKeysCount(
+    function unsafeUpdateValidatorsCount(
         uint256 _nodeOperatorId,
-        uint256 _exitedValidatorsKeysCount,
+        uint256 _exitedValidatorsCount,
         uint256 _stuckValidatorsKeysCount
     ) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
 
-        _updateExitedValidatorsKeysCount(_nodeOperatorId, uint64(_exitedValidatorsKeysCount), true);
-        _updateStuckValidatorsKeysCount(_nodeOperatorId, uint64(_stuckValidatorsKeysCount));
+        _updateExitedValidatorsCount(_nodeOperatorId, uint64(_exitedValidatorsCount), true);
+        _updateStuckValidatorsCount(_nodeOperatorId, uint64(_stuckValidatorsKeysCount));
     }
 
-    function _updateExitedValidatorsKeysCount(uint256 _nodeOperatorId, uint64 _exitedValidatorsKeysCount, bool _allowDecrease)
+    function _updateExitedValidatorsCount(uint256 _nodeOperatorId, uint64 _exitedValidatorsKeysCount, bool _allowDecrease)
         internal
     {
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
@@ -469,7 +477,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     /**
      * @notice Set the stuck signings keys count
      */
-    function _updateStuckValidatorsKeysCount(uint256 _nodeOperatorId, uint64 _stuckValidatorsCount) internal {
+    function _updateStuckValidatorsCount(uint256 _nodeOperatorId, uint64 _stuckValidatorsCount) internal {
         Packed64x4.Packed memory stuckPenaltyStats = _loadOperatorStuckPenaltyStats(_nodeOperatorId);
         if (_stuckValidatorsCount == stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)) return;
 
@@ -482,16 +490,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         }
         _saveOperatorStuckPenaltyStats(_nodeOperatorId, stuckPenaltyStats);
         emit StuckValidatorsCountChanged(_nodeOperatorId, _stuckValidatorsCount);
-    }
-
-    /**
-     * @notice Set the refunded signing keys count
-     */
-    function updateRefundedValidatorsKeysCount(uint256 _nodeOperatorId, uint256 _refundedValidatorsCount) external {
-        _onlyExistedNodeOperator(_nodeOperatorId);
-        _auth(STAKING_ROUTER_ROLE);
-
-        _updateRefundValidatorsKeysCount(_nodeOperatorId, uint64(_refundedValidatorsCount));
     }
 
     function _updateRefundValidatorsKeysCount(uint256 _nodeOperatorId, uint64 _refundedValidatorsCount) internal {
@@ -509,7 +507,8 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         emit RefundedValidatorsCountChanged(_nodeOperatorId, _refundedValidatorsCount);
     }
 
-    function invalidateReadyToDepositKeys() external {
+    /// @notice Invalidates all unused validators for all node operators
+    function onWithdrawalCredentialsChanged() external {
         uint256 operatorsCount = getNodeOperatorsCount();
         if (operatorsCount > 0) {
             invalidateReadyToDepositKeysRange(0, operatorsCount - 1);
@@ -547,28 +546,34 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         }
     }
 
-    /// @notice Requests the given number of the validator keys from the staking module
-    /// @param _keysCount Requested keys count to return
-    /// @return returnedKeysCount Actually returned keys count
+    /// @notice Obtains up to _depositsCount deposit data to be used by StakingRouter
+    ///     to deposit to the Ethereum Deposit contract
+    /// @param _depositsCount Desireable number of deposits to be done
+    /// @return depositsCount Actual deposits count might be done with returned data
     /// @return publicKeys Batch of the concatenated public validators keys
-    /// @return signatures Batch of the concatenated signatures for returned public keys
-    function requestValidatorsKeysForDeposits(uint256 _keysCount, bytes)
+    /// @return signatures Batch of the concatenated deposit signatures for returned public keys
+    function obtainDepositData(uint256 _depositsCount, bytes)
         external
-        returns (uint256 enqueuedValidatorsKeysCount, bytes memory publicKeys, bytes memory signatures)
+        returns (
+            uint256 depositsCount,
+            bytes memory publicKeys,
+            bytes memory signatures
+        )
     {
         _auth(STAKING_ROUTER_ROLE);
 
         uint256[] memory nodeOperatorIds;
         uint256[] memory activeKeysCountAfterAllocation;
-        (enqueuedValidatorsKeysCount, nodeOperatorIds, activeKeysCountAfterAllocation) =
-            _getSigningKeysAllocationData(_keysCount);
 
-        if (enqueuedValidatorsKeysCount == 0) {
+        (depositsCount, nodeOperatorIds, activeKeysCountAfterAllocation) =
+            _getSigningKeysAllocationData(_depositsCount);
+
+        if (depositsCount == 0) {
             return (0, new bytes(0), new bytes(0));
         }
 
         (publicKeys, signatures) =
-            _loadAllocatedSigningKeys(enqueuedValidatorsKeysCount, nodeOperatorIds, activeKeysCountAfterAllocation);
+            _loadAllocatedSigningKeys(depositsCount, nodeOperatorIds, activeKeysCountAfterAllocation);
         _increaseValidatorsKeysNonce();
     }
 
@@ -941,17 +946,35 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         return TYPE_POSITION.getStorageBytes32();
     }
 
-    function getNodeOperatorStats(uint256 _nodeOperatorId)
-        external
-        view
-        returns (
-            bool isTargetLimitActive,
-            uint64 targetValidatorsCount,
-            uint64 stuckValidatorsCount,
-            uint64 refundedValidatorsCount,
-            uint64 stuckPenaltyEndTimestamp
-        )
-    {
+    function getStakingModuleSummary() external view returns (
+        uint256 totalExitedValidators,
+        uint256 totalDepositedValidators,
+        uint256 depositableValidatorsCount
+    ) {
+        uint256 nodeOperatorsCount = getNodeOperatorsCount();
+
+        uint256 tmpTotalExitedValidators;
+        uint256 tmpTotalDepositedValidators;
+        uint256 tmpDepositableValidatorsCount;
+        for (uint256 i; i < nodeOperatorsCount; ++i) {
+            (tmpTotalExitedValidators, tmpTotalDepositedValidators, tmpDepositableValidatorsCount) =
+                _getNodeOperatorValidatorsSummary(i);
+            totalExitedValidators += tmpTotalExitedValidators;
+            totalDepositedValidators += tmpTotalDepositedValidators;
+            depositableValidatorsCount += tmpDepositableValidatorsCount;
+        }
+    }
+
+    function getNodeOperatorSummary(uint256 _nodeOperatorId) external view returns (
+        bool isTargetLimitActive,
+        uint256 targetValidatorsCount,
+        uint256 stuckValidatorsCount,
+        uint256 refundedValidatorsCount,
+        uint256 stuckPenaltyEndTimestamp,
+        uint256 totalExitedValidators,
+        uint256 totalDepositedValidators,
+        uint256 depositableValidatorsCount
+    ) {
         _onlyExistedNodeOperator(_nodeOperatorId);
 
         Packed64x4.Packed memory operatorTargetStats = _loadOperatorTargetValidatorsStats(_nodeOperatorId);
@@ -962,72 +985,26 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         stuckValidatorsCount = stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET);
         refundedValidatorsCount = stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET);
         stuckPenaltyEndTimestamp = stuckPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET);
+
+        (totalExitedValidators, totalDepositedValidators, depositableValidatorsCount) =
+                _getNodeOperatorValidatorsSummary(_nodeOperatorId);
+    }
+
+    function _getNodeOperatorValidatorsSummary(uint256 _nodeOperatorId) internal view returns (
+        uint256 totalExitedValidators,
+        uint256 totalDepositedValidators,
+        uint256 depositableValidatorsCount
+    ) {
+        uint256 totalVettedValidators;
+        (totalVettedValidators, totalExitedValidators, totalDepositedValidators) =
+            _getNodeOperatorWithLimitApplied(_nodeOperatorId);
+        depositableValidatorsCount = totalVettedValidators - totalDepositedValidators;
     }
 
     function isOperatorPenalized(uint256 _nodeOperatorId) public view returns (bool) {
         Packed64x4.Packed memory stuckPenaltyStats = _loadOperatorStuckPenaltyStats(_nodeOperatorId);
         return stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET) < stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)
             || block.timestamp <= stuckPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET);
-    }
-    /// @notice Returns the validators stats of given node operator
-    /// @param _nodeOperatorId Node operator id to get data for
-    /// @return exitedValidatorsCount Total number of validators in the EXITED state
-    /// @return activeValidatorsKeysCount Total number of validators in active state
-    /// @return readyToDepositValidatorsKeysCount Total number of validators ready to be deposited
-
-    function _getValidatorsKeysStats(uint256 _nodeOperatorId)
-        internal
-        view
-        returns (uint64 exitedValidatorsCount, uint64 activeValidatorsKeysCount, uint64 readyToDepositValidatorsKeysCount)
-    {
-        uint64 vettedSigningKeysCount;
-        uint64 depositedSigningKeysCount;
-
-        (vettedSigningKeysCount, exitedValidatorsCount, depositedSigningKeysCount) =
-            _getNodeOperatorWithLimitApplied(_nodeOperatorId);
-
-        activeValidatorsKeysCount = depositedSigningKeysCount - exitedValidatorsCount;
-        readyToDepositValidatorsKeysCount = vettedSigningKeysCount - depositedSigningKeysCount;
-    }
-
-    function getValidatorsKeysStats(uint256 _nodeOperatorId)
-        external
-        view
-        returns (uint256 exitedValidatorsCount, uint256 activeValidatorsKeysCount, uint256 readyToDepositValidatorsKeysCount)
-    {
-        _onlyExistedNodeOperator(_nodeOperatorId);
-        return _getValidatorsKeysStats(_nodeOperatorId);
-    }
-
-    /// @notice Returns the validators stats of all node operators in the staking module
-    /// @return exitedValidatorsCount Total number of validators in the EXITED state
-    /// @return activeValidatorsKeysCount Total number of validators in active state
-    /// @return readyToDepositValidatorsKeysCount Total number of validators ready to be deposited
-    function getValidatorsKeysStats()
-        external
-        view
-        returns (uint256 exitedValidatorsCount, uint256 activeValidatorsKeysCount, uint256 readyToDepositValidatorsKeysCount)
-    {
-        uint256 nodeOperatorsCount = getNodeOperatorsCount();
-        uint256 tmpExitedValidatorsCount;
-        uint256 tmpActiveValidatorsKeysCount;
-        uint256 tmpReadyToDepositValidatorsKeysCount;
-        for (uint256 i; i < nodeOperatorsCount; ++i) {
-            (tmpExitedValidatorsCount, tmpActiveValidatorsKeysCount, tmpReadyToDepositValidatorsKeysCount) =
-                _getValidatorsKeysStats(i);
-            exitedValidatorsCount += tmpExitedValidatorsCount;
-            activeValidatorsKeysCount += tmpActiveValidatorsKeysCount;
-            readyToDepositValidatorsKeysCount += tmpReadyToDepositValidatorsKeysCount;
-        }
-    }
-
-    function getTotalExitedValidatorsCount() external view returns (uint256 exitedValidatorsCount) {
-        uint256 nodeOperatorsCount = getNodeOperatorsCount();
-        Packed64x4.Packed memory signingKeysStats;
-        for (uint256 i; i < nodeOperatorsCount; ++i) {
-            signingKeysStats = _loadOperatorSigningKeysStats(i);
-            exitedValidatorsCount += signingKeysStats.get(EXITED_KEYS_COUNT_OFFSET);
-        }
     }
 
     /// @notice Returns total number of node operators
@@ -1045,12 +1022,26 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         return _nodeOperators[_nodeOperatorId].active;
     }
 
+    /// @notice Returns up to `_limit` node operator ids starting from the `_offset`.
+    function getNodeOperatorIds(uint256 _offset, uint256 _limit)
+        external
+        view
+        returns (uint256[] memory nodeOperatorIds) {
+            uint256 nodeOperatorsCount = getNodeOperatorsCount();
+            if (_offset >= nodeOperatorsCount || _limit == 0) return;
+            nodeOperatorIds = new uint256[](Math256.min(_limit, nodeOperatorsCount - _offset));
+            for (uint256 i = 0; i < nodeOperatorIds.length; ++i) {
+                nodeOperatorIds[i] = _offset + i;
+            }
+        }
+
     /// @notice Returns a counter that MUST change it's value when any of the following happens:
-    ///     1. a node operator's key(s) is added
-    ///     2. a node operator's key(s) is removed
-    ///     3. a node operator's ready to deposit keys count is changed
+    ///     1. a node operator's deposit data is added
+    ///     2. a node operator's deposit data is removed
+    ///     3. a node operator's ready-to-deposit data size is changed
     ///     4. a node operator was activated/deactivated
-    function getValidatorsKeysNonce() external view returns (uint256) {
+    ///     5. a node operator's deposit data is used for the deposit
+    function getNonce() external view returns (uint256) {
         return KEYS_OP_INDEX_POSITION.getStorageUint256();
     }
 
@@ -1108,7 +1099,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         KEYS_OP_INDEX_POSITION.setStorageUint256(keysOpIndex);
         /// @dev [DEPRECATED] event preserved for tooling compatibility
         emit KeysOpIndexSet(keysOpIndex);
-        emit ValidatorsKeysNonceChanged(keysOpIndex);
+        emit NonceChanged(keysOpIndex);
     }
 
     function _loadOperatorTargetValidatorsStats(uint256 _nodeOperatorId) internal view returns (Packed64x4.Packed memory) {
