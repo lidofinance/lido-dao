@@ -264,10 +264,15 @@ async function elRewardsVaultFactory({ pool, treasury }) {
 async function withdrawalQueueFactory({ appManager, oracle, wsteth }) {
   const withdrawalQueue = (await withdrawals.deploy(appManager.address, wsteth.address)).queue
 
-  await withdrawalQueue.initialize(appManager.address, appManager.address, appManager.address, appManager.address)
+  await withdrawalQueue.initialize(
+    appManager.address,
+    appManager.address,
+    appManager.address,
+    appManager.address,
+    appManager.address
+  )
 
   const BUNKER_MODE_REPORT_ROLE = await withdrawalQueue.BUNKER_MODE_REPORT_ROLE()
-  await withdrawalQueue.grantRole(BUNKER_MODE_REPORT_ROLE, appManager.address, { from: appManager.address })
   await withdrawalQueue.grantRole(BUNKER_MODE_REPORT_ROLE, oracle.address, { from: appManager.address })
 
   return withdrawalQueue
