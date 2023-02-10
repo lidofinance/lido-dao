@@ -286,14 +286,13 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     {
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         address moduleAddr = stakingModule.stakingModuleAddress;
-        (uint256 prevExitedKeysCount,,) = IStakingModule(moduleAddr).getValidatorsKeysStats();
-        uint256 newExitedKeysCount;
+        uint256 prevExitedKeysCount = IStakingModule(moduleAddr).getTotalExitedValidatorsCount();
         for (uint256 i = 0; i < _nodeOperatorIds.length; ) {
-            newExitedKeysCount = IStakingModule(moduleAddr)
-                .updateExitedValidatorsKeysCount(_nodeOperatorIds[i], _exitedKeysCounts[i]);
+            IStakingModule(moduleAddr).updateExitedValidatorsKeysCount(_nodeOperatorIds[i], _exitedKeysCounts[i]);
             unchecked { ++i; }
         }
         uint256 prevReportedExitedKeysCount = stakingModule.exitedKeysCount;
+        uint256 newExitedKeysCount = IStakingModule(moduleAddr).getTotalExitedValidatorsCount();
         if (prevExitedKeysCount < prevReportedExitedKeysCount &&
             newExitedKeysCount >= prevReportedExitedKeysCount
         ) {
