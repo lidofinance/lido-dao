@@ -1,5 +1,4 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
@@ -44,7 +43,7 @@ interface IHashConsensus {
  *
  * See docs.lido.fi for more info.
  */
-contract LidoOracle is AragonApp {
+contract LegacyOracle is AragonApp {
 
     struct ChainSpec {
         uint64 epochsPerFrame;
