@@ -421,10 +421,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _distributeRewards();
     }
 
-    /// FIXME: this conflicts with the two-phase exited keys reporting in the staking router.
-    /// If we want to allow hand-correcting the oracle, we need to also support it in the
-    /// staking router.
-    ///
     /// @notice Unsafely updates the number of the validators in the EXITED state for node operator with given id
     /// @param _nodeOperatorId Id of the node operator
     /// @param _exitedValidatorsCount New number of EXITED validators of the node operator
