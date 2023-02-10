@@ -59,7 +59,8 @@ abstract contract WithdrawalQueueBase {
     /// @notice structure to store discount factors for requests in the queue
     struct DiscountCheckpoint {
         /// @notice first `_requestId` the discount is valid for
-        uint256 fromRequestId;
+        /// @dev storing in uint160 to pack into one slot. Overflowing here is unlikely
+        uint160 fromRequestId;
         /// @notice discount factor with 1e27 precision (0 - 100% discount, 1e27 - means no discount)
         uint96 discountFactor;
     }
@@ -383,7 +384,7 @@ abstract contract WithdrawalQueueBase {
         if (discountFactor != lastCheckpoint.discountFactor) {
             // add a new discount if it differs from the previous
             _getCheckpoints()[lastCheckpointIndex + 1] =
-                DiscountCheckpoint(firstUnfinalizedRequestId, uint96(discountFactor));
+                DiscountCheckpoint(uint160(firstUnfinalizedRequestId), uint96(discountFactor));
             _setLastCheckpointIndex(lastCheckpointIndex + 1);
         }
 

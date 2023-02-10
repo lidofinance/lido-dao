@@ -331,8 +331,8 @@ contract AccountingOracle is BaseOracle {
         uint256 extraDataItemsCount;
     }
 
-    uint256 public constant EXTRA_DATA_TYPE_STUCK_VALIDATORS = 0;
-    uint256 public constant EXTRA_DATA_TYPE_EXITED_VALIDATORS = 1;
+    uint256 public constant EXTRA_DATA_TYPE_STUCK_VALIDATORS = 1;
+    uint256 public constant EXTRA_DATA_TYPE_EXITED_VALIDATORS = 2;
 
     /// @notice The list format for the extra data array. Used when all extra data processing
     /// fits into a single transaction.
@@ -341,11 +341,9 @@ contract AccountingOracle is BaseOracle {
     /// packed tightly.
     ///
     /// Hash is a keccak256 hash calculated over the bytearray items. The Solidity equivalent of
-    /// the hash calculation code would be the following (where `array` has the `bytes` type):
+    /// the hash calculation code would be `keccak256(array)`, where `array` has the `bytes` type.
     ///
-    /// keccak256(array)
-    ///
-    uint256 public constant EXTRA_DATA_FORMAT_LIST = 0;
+    uint256 public constant EXTRA_DATA_FORMAT_LIST = 1;
 
     /// @notice Submits report data for processing.
     ///
@@ -626,7 +624,6 @@ contract AccountingOracle is BaseOracle {
 
     struct ExtraDataIterState {
         // volatile
-        bool started;
         uint256 index;
         uint256 itemType;
         uint256 dataOffset;
@@ -663,7 +660,6 @@ contract AccountingOracle is BaseOracle {
         }
 
         ExtraDataIterState memory iter = ExtraDataIterState({
-            started: false,
             index: 0,
             itemType: 0,
             dataOffset: 0,
@@ -703,11 +699,10 @@ contract AccountingOracle is BaseOracle {
                 dataOffset := add(dataOffset, 5)
             }
 
-            if (!iter.started) {
+            if (iter.itemType == 0) {
                 if (index != 0) {
                     revert UnexpectedExtraDataIndex(0, index);
                 }
-                iter.started = true;
             } else if (index != iter.index + 1) {
                 revert UnexpectedExtraDataIndex(iter.index + 1, index);
             }

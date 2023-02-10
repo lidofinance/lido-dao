@@ -27,7 +27,7 @@ async function upgradeApp({ web3, artifacts }) {
   const votingAddress = state[`app:${APP_NAMES.ARAGON_VOTING}`].proxyAddress
   const lidoOracleAddress = state['lidoOracle'].proxy
   log(`Using Voting address:`, yl(votingAddress))
-  log(`Using LidoOracle address:`, yl(lidoOracleAddress))
+  log(`Using LegacyOracle address:`, yl(lidoOracleAddress))
   logSplitter()
 
   const args = [ votingAddress, lidoOracleAddress ]

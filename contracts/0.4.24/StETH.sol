@@ -1,5 +1,4 @@
-// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
-
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
@@ -231,6 +230,8 @@ contract StETH is IERC20, Pausable {
      * @dev The `_amount` argument is the amount of tokens, not shares.
      */
     function transferFrom(address _sender, address _recipient, uint256 _amount) external returns (bool) {
+        _whenNotStopped();
+
         uint256 currentAllowance = allowances[_sender][msg.sender];
         require(currentAllowance >= _amount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
 
@@ -365,6 +366,8 @@ contract StETH is IERC20, Pausable {
     function transferSharesFrom(
         address _sender, address _recipient, uint256 _sharesAmount
     ) external returns (uint256) {
+        _whenNotStopped();
+
         uint256 currentAllowance = allowances[_sender][msg.sender];
         uint256 tokensAmount = getPooledEthByShares(_sharesAmount);
         require(currentAllowance >= tokensAmount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
@@ -409,7 +412,6 @@ contract StETH is IERC20, Pausable {
     function _approve(address _owner, address _spender, uint256 _amount) internal {
         require(_owner != address(0), "APPROVE_FROM_ZERO_ADDRESS");
         require(_spender != address(0), "APPROVE_TO_ZERO_ADDRESS");
-        _whenNotStopped();
 
         allowances[_owner][_spender] = _amount;
         emit Approval(_owner, _spender, _amount);

@@ -223,8 +223,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         }
 
         _increaseValidatorsKeysNonce();
-
-        IStETH(getLocator().lido()).approve(getLocator().burner(), ~uint256(0));
     }
 
     function _initialize_v2(address _locator, bytes32 _type) internal {
@@ -233,6 +231,10 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         TYPE_POSITION.setStorageBytes32(_type);
 
         _setContractVersion(2);
+
+        // set unlimited allowance for burner from staking router
+        // to burn finalized requests' shares
+        IStETH(getLocator().lido()).approve(getLocator().burner(), ~uint256(0));
 
         emit ContractVersionSet(2);
         emit LocatorContractSet(_locator);

@@ -13,7 +13,7 @@ The following contracts are upgradeable by the DAO voting:
 
 * `contracts/0.4.24/Lido.sol`
 * `contracts/0.4.24/NodeOperatorsRegistry.sol`
-* `contracts/0.4.24/LidoOracle.sol`
+* `contracts/0.4.24/LegacyOracle.sol`
 
 Upgradeability is implemented by the Aragon kernel and base contracts. To upgrade an app, one needs
 the `dao.APP_MANAGER_ROLE` permission provided by Aragon. All upgradeable contracts use the
@@ -173,7 +173,7 @@ Allow to manage signing keys for the given node operator.
 Allows to report that `_stoppedIncrement` more validators of a node operator have become stopped.
 
 
-## [LidoOracle.sol](/contracts/0.4.24/oracle/LidoOracle.sol)
+## [LegacyOracle.sol](/contracts/0.4.24/oracle/LegacyOracle.sol)
 
 ### Lido
 

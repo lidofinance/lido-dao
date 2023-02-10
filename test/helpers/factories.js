@@ -15,7 +15,7 @@ const LidoMock = artifacts.require('LidoMock')
 const Lido = artifacts.require('Lido')
 const WstETHMock = artifacts.require('WstETHMock')
 const WstETH = artifacts.require('WstETH')
-const LidoOracle = artifacts.require('LidoOracle')
+const LegacyOracle = artifacts.require('LegacyOracle')
 const MockLegacyOracle = artifacts.require('MockLegacyOracle')
 const AccountingOracle = artifacts.require('AccountingOracle')
 const HashConsensus = artifacts.require('HashConsensus')
@@ -87,9 +87,9 @@ async function treasuryFactory(_) {
 }
 
 async function legacyOracleFactory({ appManager }) {
-  const base = await LidoOracle.new()
+  const base = await LegacyOracle.new()
   const proxy = await OssifiableProxy.new(base.address, appManager.address, '0x')
-  return await LidoOracle.at(proxy.address)
+  return await LegacyOracle.at(proxy.address)
 }
 
 async function legacyOracleMockFactory({ appManager, dao, deployParams }) {

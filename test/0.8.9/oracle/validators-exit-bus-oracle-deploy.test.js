@@ -15,7 +15,7 @@ const {
 
 const ValidatorsExitBusOracle = artifacts.require('ValidatorsExitBusTimeTravellable')
 
-const DATA_FORMAT_LIST = 0
+const DATA_FORMAT_LIST = 1
 
 
 function getReportDataItems(r) {
