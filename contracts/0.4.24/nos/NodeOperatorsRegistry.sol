@@ -391,6 +391,13 @@ contract NodeOperatorsRegistry is AragonApp, IStakingModule, Versioned {
         return _updateExitedValidatorsCount(_nodeOperatorId, _exitedValidatorsKeysCount, false);
     }
 
+    /// @notice Updates the number of the refunded validators for node operator with the given id
+    /// @param _nodeOperatorId Id of the node operator
+    /// @param _refundedValidatorsCount New number of refunded validators of the node operator
+    function updateRefundedValidatorsCount(uint256 _nodeOperatorId, uint256 _refundedValidatorsCount) external {
+        // FIXME: implement logic
+    }
+
     /// @notice Called by StakingRouter after oracle finishes updating exited keys counts for all operators.
     function finishUpdatingExitedValidatorsCount()
         external

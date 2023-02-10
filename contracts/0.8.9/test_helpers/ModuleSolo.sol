@@ -74,6 +74,8 @@ contract ModuleSolo is IStakingModule {
         return 0;
     }
 
+    function updateRefundedValidatorsCount(uint256 _nodeOperatorId, uint256 _refundedValidatorsCount) external {}
+
     function finishUpdatingExitedValidatorsCount() external {}
 
     function unsafeUpdateValidatorsCount(
