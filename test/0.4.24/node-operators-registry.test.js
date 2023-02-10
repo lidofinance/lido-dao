@@ -346,7 +346,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('increases keysOpIndex & changes nonce', async () => {
       const [keysOpIndexBefore, nonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getNonce()])
-      await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
+      await app.finalizeUpgrade_v2(locator.address, CURATED_TYPE)
       const [keysOpIndexAfter, nonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
       assert.notEquals(nonceAfter, nonceBefore)
@@ -354,7 +354,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('emits KeysOpIndexSet & NonceChanged', async () => {
       const keysOpIndexBefore = await app.getKeysOpIndex()
-      const receipt = await app.finalizeUpgrade_v2(steth.address, CURATED_TYPE)
+      const receipt = await app.finalizeUpgrade_v2(locator.address, CURATED_TYPE)
       const nonceAfter = await app.getNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
       assert.emits(receipt, 'NonceChanged', { nonce: nonceAfter })
@@ -1697,9 +1697,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equal(activeKeyCountsAfterAllocation.length, 1)
       assert.equal(activeKeyCountsAfterAllocation[0], availableKeysCount + expectedAllocatedKeysCount)
 
-      const secondNodeOperatorKeysStats = await app.testing_getCorrectedNodeOperator(firstNodeOperatorId)
-      assert.equal(
-        secondNodeOperatorKeysStats.exitedValidatorsCount,
+      assert.equals(
+        secondNodeOperatorReport.totalExited,
         NODE_OPERATORS[secondNodeOperatorId].exitedSigningKeysCount
       )
     })
@@ -1742,10 +1741,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const secondNodeOperatorActiveValidators =
         secondNodeOperatorReport.totalDeposited - secondNodeOperatorReport.totalExited
       assert.equals(activeKeyCountsAfterAllocation[1], +secondNodeOperatorActiveValidators + 1)
-
-      assert.equals(exitedSigningKeysCount.length, 2)
-      assert.equals(exitedSigningKeysCount[0], firstNodeOperatorReport.totalExited)
-      assert.equals(exitedSigningKeysCount[1], secondNodeOperatorReport.totalExited)
     })
 
     it("doesn't allocates keys to deactivated node operators", async () => {
@@ -1783,9 +1778,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const secondNodeOperatorActiveValidators =
         secondNodeOperatorReport.totalDeposited - secondNodeOperatorReport.totalExited
       assert.equals(activeKeyCountsAfterAllocation[0].toString(), secondNodeOperatorActiveValidators + keysToAllocate)
-
-      assert.equals(exitedSigningKeysCount.length, 1)
-      assert.equals(exitedSigningKeysCount[0], secondNodeOperatorReport.totalExited)
     })
 
     it('respects staking limit', async () => {
@@ -1826,10 +1818,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const secondNodeOperatorActiveValidators =
         secondNodeOperatorReport.totalDeposited - secondNodeOperatorReport.totalExited
       assert.equals(activeKeyCountsAfterAllocation[1], secondNodeOperatorActiveValidators + 4)
-
-      assert.equals(exitedSigningKeysCount.length, 2)
-      assert.equals(exitedSigningKeysCount[0], firstNodeOperatorReport.totalExited)
-      assert.equals(exitedSigningKeysCount[1], secondNodeOperatorReport.totalExited)
     })
   })
 
@@ -3159,7 +3147,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('reverts if no STAKING_ROUTER_ROLE', async () => {
-      await assert.reverts(app.finishUpdatingExitedValidatorsCount({ from: user3 }), 'APP_AUTH_FAILED')
+      await assert.reverts(app.onAllValidatorsCountersUpdated({ from: user3 }), 'APP_AUTH_FAILED')
     })
 
     it("doesn't distribute rewards if no shares to distribute", async () => {
@@ -3171,7 +3159,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         steth.sharesOf(user3)
       ])
       // calls distributeRewards() inside
-      await app.finishUpdatingExitedValidatorsCount({ from: voting })
+      await app.onAllValidatorsCountersUpdated({ from: voting })
       const recipientsSharesAfter = await Promise.all([
         steth.sharesOf(user1),
         steth.sharesOf(user2),
@@ -3188,7 +3176,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await steth.mintShares(app.address, ETH(10))
 
       // calls distributeRewards() inside
-      await app.finishUpdatingExitedValidatorsCount({ from: voting })
+      await app.onAllValidatorsCountersUpdated({ from: voting })
 
       assert.equals(await steth.sharesOf(user1), ETH(3))
       assert.equals(await steth.sharesOf(user2), ETH(7))
@@ -3200,7 +3188,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await steth.mintShares(app.address, ETH(10))
 
       // calls distributeRewards() inside
-      receipt = await app.finishUpdatingExitedValidatorsCount({ from: voting })
+      receipt = await app.onAllValidatorsCountersUpdated({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(3) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(7) })
