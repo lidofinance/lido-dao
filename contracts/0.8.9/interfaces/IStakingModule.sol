@@ -25,20 +25,22 @@ interface IStakingModule {
         view
         returns (ValidatorsReport memory report);
 
-    /// @notice Returns a counter that MUST change it's value when any of the following happens:
+    /// @notice Returns a counter that MUST change its value whenever the deposit data set changes.
+    ///     Below is the typical list of actions that requires an update of the nonce:
     ///     1. a node operator's deposit data is added
     ///     2. a node operator's deposit data is removed
-    ///     3. a node operator's ready to deposit validators count is changed
+    ///     3. a node operator's ready-to-deposit data size is changed
     ///     4. a node operator was activated/deactivated
     ///     5. a node operator's deposit data is used for the deposit
-    function getDepositNonce() external view returns (uint256);
+    ///     Note: Depending on the StakingModule implementation above list might be extended
+    function getNonce() external view returns (uint256);
 
     /// @notice Returns total number of node operators
     function getNodeOperatorsCount() external view returns (uint256);
 
     /// @notice Returns number of active node operators
     function getActiveNodeOperatorsCount() external view returns (uint256);
-    
+
     /// @notice Returns if the node operator with given id is active
     /// @param _nodeOperatorId Id of the node operator
     function getNodeOperatorIsActive(uint256 _nodeOperatorId) external view returns (bool);
@@ -104,5 +106,5 @@ interface IStakingModule {
         bytes memory signatures
     );
 
-    event DepositNonceChanged(uint256 depositNonce);
+    event NonceChanged(uint256 nonce);
 }

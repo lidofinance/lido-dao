@@ -23,7 +23,7 @@ interface IStakingRouter {
     function resumeStakingModule(uint256 _stakingModuleId) external;
     function getStakingModuleIsDepositsPaused(uint256 _stakingModuleId) external view returns (bool);
     function getStakingModuleIsActive(uint256 _stakingModuleId) external view returns (bool);
-    function getStakingModuleDepositNonce(uint256 _stakingModuleId) external view returns (uint256);
+    function getStakingModuleNonce(uint256 _stakingModuleId) external view returns (uint256);
     function getStakingModuleLastDepositBlock(uint256 _stakingModuleId) external view returns (uint256);
 }
 
@@ -199,7 +199,7 @@ contract DepositSecurityModule {
     }
 
     /**
-     * Returns number of valid guardian signatures required to vet (depositRoot, depositNonce) pair.
+     * Returns number of valid guardian signatures required to vet (depositRoot, nonce) pair.
      */
     function getGuardianQuorum() external view returns (uint256) {
         return quorum;
@@ -364,7 +364,7 @@ contract DepositSecurityModule {
 
     /**
      * Returns whether LIDO.deposit() can be called, given that the caller will provide
-     * guardian attestations of non-stale deposit root and `depositNonce`, and the number of
+     * guardian attestations of non-stale deposit root and `nonce`, and the number of
      * such attestations will be enough to reach quorum.
      */
     function canDeposit(uint256 stakingModuleId) external view validStakingModuleId(stakingModuleId) returns (bool) {
@@ -378,7 +378,7 @@ contract DepositSecurityModule {
      *
      * Reverts if any of the following is true:
      *   1. IDepositContract.get_deposit_root() != depositRoot.
-     *   2. StakingModule.getDepositNonce() != depositNonce.
+     *   2. StakingModule.getNonce() != nonce.
      *   3. The number of guardian signatures is less than getGuardianQuorum().
      *   4. An invalid or non-guardian signature received.
      *   5. block.number - StakingModule.getLastDepositBlock() < minDepositBlockDistance.
@@ -387,14 +387,14 @@ contract DepositSecurityModule {
      * Signatures must be sorted in ascending order by index of the guardian. Each signature must
      * be produced for keccak256 hash of the following message (each component taking 32 bytes):
      *
-     * | ATTEST_MESSAGE_PREFIX | blockNumber | blockHash | depositRoot | stakingModuleId | depositNonce |
+     * | ATTEST_MESSAGE_PREFIX | blockNumber | blockHash | depositRoot | stakingModuleId | nonce |
      */
     function depositBufferedEther(
         uint256 blockNumber,
         bytes32 blockHash,
         bytes32 depositRoot,
         uint256 stakingModuleId,
-        uint256 depositNonce,
+        uint256 nonce,
         bytes calldata depositCalldata,
         Signature[] calldata sortedGuardianSignatures
     ) external validStakingModuleId(stakingModuleId) {
@@ -409,10 +409,10 @@ contract DepositSecurityModule {
         require(block.number - lastDepositBlock >= minDepositBlockDistance, "too frequent deposits");
         require(blockHash != bytes32(0) && blockhash(blockNumber) == blockHash, "unexpected block hash");
 
-        uint256 onchainDepositNonce = STAKING_ROUTER.getStakingModuleDepositNonce(stakingModuleId);
-        require(depositNonce == onchainDepositNonce, "deposit nonce changed");
+        uint256 onchainNonce = STAKING_ROUTER.getStakingModuleNonce(stakingModuleId);
+        require(nonce == onchainNonce, "nonce changed");
 
-        _verifySignatures(depositRoot, blockNumber, blockHash, stakingModuleId, depositNonce, sortedGuardianSignatures);
+        _verifySignatures(depositRoot, blockNumber, blockHash, stakingModuleId, nonce, sortedGuardianSignatures);
 
         LIDO.deposit(maxDepositsPerBlock, stakingModuleId, depositCalldata);
     }
@@ -422,11 +422,11 @@ contract DepositSecurityModule {
         uint256 blockNumber,
         bytes32 blockHash,
         uint256 stakingModuleId,
-        uint256 depositNonce,
+        uint256 nonce,
         Signature[] memory sigs
     ) internal view {
         bytes32 msgHash = keccak256(
-            abi.encodePacked(ATTEST_MESSAGE_PREFIX, blockNumber, blockHash, depositRoot, stakingModuleId, depositNonce)
+            abi.encodePacked(ATTEST_MESSAGE_PREFIX, blockNumber, blockHash, depositRoot, stakingModuleId, nonce)
         );
 
         address prevSignerAddr = address(0);

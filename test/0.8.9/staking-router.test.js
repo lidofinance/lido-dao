@@ -221,14 +221,14 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       await assert.revertsWithCustomError(app.sendTransaction({ value, from: deployer }), `ErrorDirectETHTransfer()`)
     })
 
-    it('getStakingModuleDepositNonce', async () => {
-      await stakingModule.setDepositNonce(100, { from: deployer })
+    it('getStakingModuleNonce', async () => {
+      await stakingModule.setNonce(100, { from: deployer })
 
-      assert.equals(await app.getStakingModuleDepositNonce(1), 100)
+      assert.equals(await app.getStakingModuleNonce(1), 100)
     })
 
-    it('getStakingModuleDepositNonce reverts when staking module id too large', async () => {
-      await assert.revertsWithCustomError(app.getStakingModuleDepositNonce(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
+    it('getStakingModuleNonce reverts when staking module id too large', async () => {
+      await assert.revertsWithCustomError(app.getStakingModuleNonce(UINT24_MAX), 'ErrorStakingModuleIdTooLarge()')
     })
 
     it('getStakingModuleLastDepositBlock reverts when staking module id too large', async () => {

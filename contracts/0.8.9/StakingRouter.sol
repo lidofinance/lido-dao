@@ -263,7 +263,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
                 revert ErrorExitedValidatorsCountCannotDecrease();
             }
 
-            ValidatorsReport memory allValidatorsReport = 
+            ValidatorsReport memory allValidatorsReport =
                 IStakingModule(stakingModule.stakingModuleAddress).getValidatorsReport();
 
             if (allValidatorsReport.totalExited < prevReportedExitedValidatorsCount) {
@@ -288,7 +288,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     {
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         address moduleAddr = stakingModule.stakingModuleAddress;
-        ValidatorsReport memory allValidatorsReport = 
+        ValidatorsReport memory allValidatorsReport =
                 IStakingModule(stakingModule.stakingModuleAddress).getValidatorsReport();
 
         uint256 newExitedValidatorsCount;
@@ -361,7 +361,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         address moduleAddr = stakingModule.stakingModuleAddress;
 
-        ValidatorsReport memory operatorValidatorsReport = 
+        ValidatorsReport memory operatorValidatorsReport =
             IStakingModule(stakingModule.stakingModuleAddress).getValidatorsReport(_nodeOperatorId);
 
         if (_correction.currentModuleExitedValidatorsCount != stakingModule.exitedValidatorsCount ||
@@ -538,11 +538,11 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         return getStakingModuleStatus(_stakingModuleId) == StakingModuleStatus.Active;
     }
 
-    function getStakingModuleDepositNonce(uint256 _stakingModuleId) external view
+    function getStakingModuleNonce(uint256 _stakingModuleId) external view
         validStakingModuleId(_stakingModuleId)
         returns (uint256)
     {
-        return IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getDepositNonce();
+        return IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getNonce();
     }
 
     function getStakingModuleLastDepositBlock(uint256 _stakingModuleId) external view
@@ -557,7 +557,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         validStakingModuleId(_stakingModuleId)
         returns (uint256 activeValidatorsCount)
     {
-        ValidatorsReport memory allValidatorsReport = 
+        ValidatorsReport memory allValidatorsReport =
             IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getValidatorsReport();
 
         activeValidatorsCount = allValidatorsReport.totalDeposited - allValidatorsReport.totalExited;
@@ -838,7 +838,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
         if (!_zeroValidatorsCountsIfInactive || cacheItem.status == StakingModuleStatus.Active) {
 
-            ValidatorsReport memory allValidatorsReport = 
+            ValidatorsReport memory allValidatorsReport =
                 IStakingModule(cacheItem.stakingModuleAddress).getValidatorsReport();
 
             // the module might not receive all exited validators data yet => we need to replacing

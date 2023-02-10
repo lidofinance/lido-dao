@@ -96,11 +96,11 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
 
     beforeEach('init attestMessagePrefix and setup mocks', async () => {
       validAttestMessage = new DSMAttestMessage(block.number, block.hash, DEPOSIT_ROOT, STAKING_MODULE, DEPOSIT_NONCE)
-      await stakingRouterMock.setStakingModuleDepositNonce(DEPOSIT_NONCE)
+      await stakingRouterMock.setStakingModuleNonce(DEPOSIT_NONCE)
       assert.equal(
-        await stakingRouterMock.getStakingModuleDepositNonce(STAKING_MODULE),
+        await stakingRouterMock.getStakingModuleNonce(STAKING_MODULE),
         DEPOSIT_NONCE,
-        'invariant failed: depositNonce'
+        'invariant failed: nonce'
       )
 
       await depositContractMock.set_deposit_root(DEPOSIT_ROOT)
@@ -213,14 +213,10 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         )
       })
 
-      it('cannot deposit if deposit nonce changed', async () => {
-        const newDepositNonce = 11
-        await stakingRouterMock.setStakingModuleDepositNonce(newDepositNonce)
-        assert.equal(
-          await stakingRouterMock.getStakingModuleDepositNonce(STAKING_MODULE),
-          newDepositNonce,
-          'invariant failed: depositNonce'
-        )
+      it('cannot deposit if nonce changed', async () => {
+        const newNonce = 11
+        await stakingRouterMock.setStakingModuleNonce(newNonce)
+        assert.equal(await stakingRouterMock.getStakingModuleNonce(STAKING_MODULE), newNonce, 'invariant failed: nonce')
 
         await assertRevert(
           depositSecurityModule.depositBufferedEther(
@@ -232,7 +228,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             DEPOSIT_CALLDATA,
             [validAttestMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
           ),
-          'deposit nonce changed'
+          'nonce changed'
         )
       })
 
@@ -933,7 +929,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
 
     beforeEach(async () => {
       await depositContractMock.set_deposit_root(DEPOSIT_ROOT)
-      await stakingRouterMock.setStakingModuleDepositNonce(DEPOSIT_NONCE)
+      await stakingRouterMock.setStakingModuleNonce(DEPOSIT_NONCE)
       validAttestMessage = new DSMAttestMessage(block.number, block.hash, DEPOSIT_ROOT, STAKING_MODULE, DEPOSIT_NONCE)
     })
 
