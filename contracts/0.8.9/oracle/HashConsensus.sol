@@ -11,6 +11,17 @@ import { AccessControlEnumerable } from "../utils/access/AccessControlEnumerable
 /// @notice A contract that gets consensus reports (i.e. hashes) pushed to and processes them
 /// asynchronously.
 ///
+/// HashConsensus doesn't expect any specific behavior from a report processor, and guarantees
+/// the following:
+///
+/// 1. HashConsensus won't submit reports via `IReportAsyncProcessor.submitConsensusReport` for the
+///    slot returned from `IReportAsyncProcessor.getLastProcessingRefSlot` and any slot preceding it.
+///
+/// 2. HashConsensus won't accept member reports (and thus won't include such reports in calculating
+///    the consensus) that have `consensusVersion` argument of the `HashConsensus.submitReport` call
+///    holding a diff. value than the one returned from `IReportAsyncProcessor.getConsensusVersion()`
+///    at the moment of the `HashConsensus.submitReport` call.
+///
 interface IReportAsyncProcessor {
     /// @notice Submits a consensus report for processing.
     ///
@@ -23,12 +34,17 @@ interface IReportAsyncProcessor {
 
     /// @notice Returns the last reference slot for which processing of the report was started.
     ///
+    /// HashConsensus won't submit reports for any slot less than or equal to this slot.
+    ///
     function getLastProcessingRefSlot() external view returns (uint256);
 
     /// @notice Returns the current consensus version.
     ///
     /// Consensus version must change every time consensus rules change, meaning that
     /// an oracle looking at the same reference slot would calculate a different hash.
+    ///
+    /// HashConsensus won't accept member reports any consensus version different form the
+    /// one returned from this function.
     ///
     function getConsensusVersion() external view returns (uint256);
 }
