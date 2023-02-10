@@ -10,6 +10,7 @@ const { assert } = require('../helpers/assert')
 const { DSMAttestMessage, DSMPauseMessage, signDepositData } = require('../helpers/signatures')
 const { pushOracleReport } = require('../helpers/oracle')
 const { SECONDS_PER_FRAME } = require('../helpers/constants')
+const { oracleReportSanityCheckerStubFactory } = require('../helpers/factories')
 
 const tenKBN = new BN(10000)
 // Fee and its distribution are in basis points, 10000 corresponding to 100%
@@ -84,6 +85,7 @@ contract('Lido: rewards distribution math', (addresses) => {
 
   before(async () => {
     deployed = await deployProtocol({
+      oracleReportSanityCheckerFactory: oracleReportSanityCheckerStubFactory,
       stakingModulesFactory: async (protocol) => {
         const curatedModule = await setupNodeOperatorsRegistry(protocol)
         return [

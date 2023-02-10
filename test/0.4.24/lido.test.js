@@ -17,6 +17,7 @@ const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 const { pushOracleReport } = require('../helpers/oracle')
 const { SECONDS_PER_FRAME } = require('../helpers/constants')
+const { oracleReportSanityCheckerStubFactory } = require('../helpers/factories')
 
 const { newApp } = require('../helpers/dao')
 
@@ -67,6 +68,7 @@ contract('Lido', ([appManager, user1, user2, user3, nobody, depositor, treasury]
     badToken = await ERC20WrongTransferMock.new()
 
     const deployed = await deployProtocol({
+      oracleReportSanityCheckerFactory: oracleReportSanityCheckerStubFactory,
       stakingModulesFactory: async (protocol) => {
         const curatedModule = await setupNodeOperatorsRegistry(protocol)
 
@@ -75,6 +77,12 @@ contract('Lido', ([appManager, user1, user2, user3, nobody, depositor, treasury]
           curatedModule.address,
           await curatedModule.MANAGE_NODE_OPERATOR_ROLE()
         )
+        await protocol.acl.grantPermission(
+          protocol.voting.address,
+          curatedModule.address,
+          await curatedModule.MANAGE_NODE_OPERATOR_ROLE()
+        )
+
         return [
           {
             module: curatedModule,
@@ -102,6 +110,7 @@ contract('Lido', ([appManager, user1, user2, user3, nobody, depositor, treasury]
     withdrawalQueue = deployed.withdrawalQueue
     oracle = deployed.oracle
     consensus = deployed.consensusContract
+    voting = deployed.voting.address
 
     snapshot = new EvmSnapshot(hre.ethers.provider)
     await snapshot.make()

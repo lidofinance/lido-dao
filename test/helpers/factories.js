@@ -32,6 +32,7 @@ const EIP712StETH = artifacts.require('EIP712StETH')
 const Burner = artifacts.require('Burner')
 const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
 const ValidatorsExitBusOracle = artifacts.require('ValidatorsExitBusOracle')
+const OracleReportSanityCheckerStub = artifacts.require('OracleReportSanityCheckerStub')
 
 async function lidoMockFactory({ dao, appManager, acl, voting }) {
   const base = await LidoMock.new()
@@ -335,6 +336,10 @@ async function oracleReportSanityCheckerFactory({ lidoLocator, voting, appManage
   return checker
 }
 
+async function oracleReportSanityCheckerStubFactory(_) {
+  return await OracleReportSanityCheckerStub.new()
+}
+
 async function validatorExitBusFactory(protocol) {
   const base = await ValidatorsExitBusOracle.new(
     SECONDS_PER_SLOT,
@@ -394,5 +399,6 @@ module.exports = {
   reportProcessorFactory,
   lidoLocatorFactory,
   oracleReportSanityCheckerFactory,
-  validatorExitBusFactory
+  validatorExitBusFactory,
+  oracleReportSanityCheckerStubFactory
 }
