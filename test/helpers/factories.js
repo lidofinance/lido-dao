@@ -274,7 +274,6 @@ async function withdrawalQueueFactory({ appManager, oracle, wsteth }) {
   )
 
   const BUNKER_MODE_REPORT_ROLE = await withdrawalQueue.BUNKER_MODE_REPORT_ROLE()
-  await withdrawalQueue.grantRole(BUNKER_MODE_REPORT_ROLE, appManager.address, { from: appManager.address })
   await withdrawalQueue.grantRole(BUNKER_MODE_REPORT_ROLE, oracle.address, { from: appManager.address })
 
   return withdrawalQueue

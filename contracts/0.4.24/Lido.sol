@@ -35,8 +35,7 @@ interface IOracleReportSanityChecker {
         uint256 _timeElapsed,
         uint256 _preCLBalance,
         uint256 _postCLBalance,
-        uint256 _withdrawalVaultBalance,
-        uint256 _simulatedSharedRate
+        uint256 _withdrawalVaultBalance
     ) external view;
 
     function smoothenTokenRebase(
@@ -55,6 +54,7 @@ interface IOracleReportSanityChecker {
 
     function checkWithdrawalQueueOracleReport(
         uint256 _lastFinalizableRequestId,
+        uint256 _simulatedShareRate,
         uint256 _reportTimestamp
     ) external view;
 }
@@ -799,6 +799,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         if (!withdrawalQueue.isPaused() && _reportedData.lastFinalizableRequestId != DONT_FINALIZE_WITHDRAWALS) {
             IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).checkWithdrawalQueueOracleReport(
                 _reportedData.lastFinalizableRequestId,
+                _reportedData.simulatedShareRate,
                 _reportedData.reportTimestamp
             );
 
@@ -1147,8 +1148,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             _reportedData.timeElapsed,
             reportContext.preCLBalance,
             _reportedData.postCLBalance,
-            _reportedData.withdrawalVaultBalance,
-            _reportedData.simulatedShareRate
+            _reportedData.withdrawalVaultBalance
         );
 
         // Step 3.

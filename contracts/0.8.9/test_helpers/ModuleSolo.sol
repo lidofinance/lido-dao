@@ -70,7 +70,7 @@ contract ModuleSolo is IStakingModule {
         returns (address[] memory recipients, uint256[] memory shares)
     {}
 
-    function getNodeOperatorKeysStats(uint56 _nodeOperatorId)
+    function getNodeOperatorKeysStats(uint256 _nodeOperatorId)
         external
         view
         returns (
@@ -79,6 +79,10 @@ contract ModuleSolo is IStakingModule {
             uint256 readyToDepositKeysCount
         )
     {}
+
+    function getTotalExitedValidatorsCount() external view returns (uint256) {
+        return 0;
+    }
 
     function addNodeOperator(string memory _name, address _rewardAddress) external returns (uint256 id) {}
 
@@ -91,9 +95,7 @@ contract ModuleSolo is IStakingModule {
         uint256 _stuckValidatorKeysCount
     ) external {}
 
-    function updateExitedValidatorsKeysCount(uint256, uint256) external returns (uint256) {
-        return 0;
-    }
+    function updateExitedValidatorsKeysCount(uint256, uint256) external {}
 
     function finishUpdatingExitedValidatorsKeysCount() external {}
 
