@@ -33,8 +33,8 @@ interface IWithdrawalQueue {
 /// @dev struct is loaded from the storage and stored in memory during the tx running
 struct LimitsList {
     /// @notice The max possible number of validators that might appear or exit on the Consensus
-    ///     Layer during one epoch
-    uint256 churnValidatorsByEpochLimit;
+    ///     Layer during one day
+    uint256 churnValidatorsPerDayLimit;
 
     /// @notice The max decrease of the total validators' balances on the Consensus Layer since
     ///     the previous oracle report
@@ -73,7 +73,7 @@ struct LimitsList {
 
 /// @dev The packed version of the LimitsList struct to be effectively persisted in storage
 struct LimitsListPacked {
-    uint8 churnValidatorsByEpochLimit;
+    uint8 churnValidatorsPerDayLimit;
     uint16 oneOffCLBalanceDecreaseBPLimit;
     uint16 annualBalanceIncreaseBPLimit;
     uint16 shareRateDeviationBPLimit;
@@ -95,10 +95,10 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     using PositiveTokenRebaseLimiter for TokenRebaseLimiterData;
 
     bytes32 public constant ALL_LIMITS_MANAGER_ROLE = keccak256("LIMITS_MANAGER_ROLE");
-    bytes32 public constant CHURN_VALIDATORS_BY_EPOCH_LIMIT_MANGER_ROLE =
-        keccak256("CHURN_VALIDATORS_BY_EPOCH_LIMIT_MANGER_ROLE");
+    bytes32 public constant CHURN_VALIDATORS_PER_DAY_LIMIT_MANGER_ROLE =
+        keccak256("CHURN_VALIDATORS_PER_DAY_LIMIT_MANGER_ROLE");
     bytes32 public constant ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE =
-        keccak256("CHURN_VALIDATORS_BY_EPOCH_LIMIT_MANGER_ROLE");
+        keccak256("ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE_ROLE");
     bytes32 public constant ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE =
         keccak256("ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE");
     bytes32 public constant SHARE_RATE_DEVIATION_LIMIT_MANAGER_ROLE =
@@ -115,15 +115,15 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
     uint256 private constant DEFAULT_TIME_ELAPSED = 1 hours;
     uint256 private constant DEFAULT_CL_BALANCE = 1 gwei;
+    uint256 private constant SECONDS_PER_DAY = 24 * 60 * 60;
 
-    uint256 public immutable SECONDS_PER_EPOCH;
     ILidoLocator private immutable LIDO_LOCATOR;
 
     LimitsListPacked private _limits;
 
     struct ManagersRoster {
         address[] allLimitsManagers;
-        address[] churnValidatorsByEpochLimitManagers;
+        address[] churnValidatorsPerDayLimitManagers;
         address[] oneOffCLBalanceDecreaseLimitManagers;
         address[] annualBalanceIncreaseLimitManagers;
         address[] shareRateDeviationLimitManagers;
@@ -135,25 +135,22 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     }
 
     /// @param _lidoLocator address of the LidoLocator instance
-    /// @param _secondsPerEpoch number of seconds per epoch in the network
     /// @param _admin address to grant DEFAULT_ADMIN_ROLE of the AccessControl contract
     /// @param _limitsList initial values to be set for the limits list
     /// @param _managersRoster list of the address to grant permissions for granular limits management
     constructor(
         address _lidoLocator,
-        uint256 _secondsPerEpoch,
         address _admin,
         LimitsList memory _limitsList,
         ManagersRoster memory _managersRoster
     ) {
         LIDO_LOCATOR = ILidoLocator(_lidoLocator);
-        SECONDS_PER_EPOCH = _secondsPerEpoch;
 
         _updateLimits(_limitsList);
 
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(ALL_LIMITS_MANAGER_ROLE, _managersRoster.allLimitsManagers);
-        _grantRole(CHURN_VALIDATORS_BY_EPOCH_LIMIT_MANGER_ROLE, _managersRoster.churnValidatorsByEpochLimitManagers);
+        _grantRole(CHURN_VALIDATORS_PER_DAY_LIMIT_MANGER_ROLE, _managersRoster.churnValidatorsPerDayLimitManagers);
         _grantRole(ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE,
                    _managersRoster.oneOffCLBalanceDecreaseLimitManagers);
         _grantRole(ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE, _managersRoster.annualBalanceIncreaseLimitManagers);
@@ -211,14 +208,14 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _updateLimits(_limitsList);
     }
 
-    /// @notice Sets the new value for the churnValidatorsByEpochLimit
-    /// @param _churnValidatorsByEpochLimit new churnValidatorsByEpochLimit value
-    function setChurnValidatorsByEpochLimit(uint256 _churnValidatorsByEpochLimit)
+    /// @notice Sets the new value for the churnValidatorsPerDayLimit
+    /// @param _churnValidatorsPerDayLimit new churnValidatorsPerDayLimit value
+    function setChurnValidatorsPerDayLimit(uint256 _churnValidatorsPerDayLimit)
         external
-        onlyRole(CHURN_VALIDATORS_BY_EPOCH_LIMIT_MANGER_ROLE)
+        onlyRole(CHURN_VALIDATORS_PER_DAY_LIMIT_MANGER_ROLE)
     {
         LimitsList memory limitsList = _limits.unpack();
-        limitsList.churnValidatorsByEpochLimit = _churnValidatorsByEpochLimit;
+        limitsList.churnValidatorsPerDayLimit = _churnValidatorsPerDayLimit;
         _updateLimits(limitsList);
     }
 
@@ -368,7 +365,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _timeElapsed,
         uint256 _preCLBalance,
         uint256 _postCLBalance,
-        uint256 _withdrawalVaultBalance
+        uint256 _withdrawalVaultBalance,
+        uint256 _preCLValidators,
+        uint256 _postCLValidators
     ) external view {
         LimitsList memory limitsList = _limits.unpack();
 
@@ -381,22 +380,11 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
         // 3. Consensus Layer annual balances increase
         _checkAnnualBalancesIncrease(limitsList, _preCLBalance, _postCLBalance, _timeElapsed);
-    }
 
-    /// @notice Applies sanity checks to the validators params of Lido's oracle report
-    /// @param _timeElapsed time elapsed since the previous oracle report
-    /// @param _appearedValidators number of validators activated on the Consensus Layer since
-    ///     the previous report
-    /// @param _exitedValidators number of validators deactivated on the Consensus Layer since
-    ///     the previous report
-    function checkStakingRouterOracleReport(
-        uint256 _timeElapsed,
-        uint256 _appearedValidators,
-        uint256 _exitedValidators
-    ) external view {
-        LimitsList memory limitsList = _limits.unpack();
-        // 1. Activation & exit churn limit
-        _checkValidatorsChurnLimit(limitsList, _appearedValidators, _exitedValidators, _timeElapsed);
+        // 4. Appeared validators increase
+        if (_postCLValidators > _preCLValidators) {
+            _checkValidatorsChurnLimit(limitsList, (_postCLValidators - _preCLValidators), _timeElapsed);
+        }
     }
 
     /// @notice Applies sanity checks to the number of validator exit requests supplied to ValidatorExitBusOracle
@@ -517,17 +505,15 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     function _checkValidatorsChurnLimit(
         LimitsList memory _limitsList,
         uint256 _appearedValidators,
-        uint256 _exitedValidators,
         uint256 _timeElapsed
-    ) internal view {
+    ) internal pure {
         if (_timeElapsed == 0) {
             _timeElapsed = DEFAULT_TIME_ELAPSED;
         }
 
-        uint256 churnLimit = (_limitsList.churnValidatorsByEpochLimit * _timeElapsed) / SECONDS_PER_EPOCH;
+        uint256 churnLimit = (_limitsList.churnValidatorsPerDayLimit * _timeElapsed) / SECONDS_PER_DAY;
 
         if (_appearedValidators > churnLimit) revert IncorrectAppearedValidators(churnLimit);
-        if (_exitedValidators > churnLimit) revert IncorrectExitedValidators(churnLimit);
     }
 
     function _checkRequestIdToFinalizeUpTo(
@@ -569,8 +555,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
     function _updateLimits(LimitsList memory _newLimitsList) internal {
         LimitsList memory _oldLimitsList = _limits.unpack();
-        if (_oldLimitsList.churnValidatorsByEpochLimit != _newLimitsList.churnValidatorsByEpochLimit) {
-            emit ChurnValidatorsByEpochLimitSet(_newLimitsList.churnValidatorsByEpochLimit);
+        if (_oldLimitsList.churnValidatorsPerDayLimit != _newLimitsList.churnValidatorsPerDayLimit) {
+            emit ChurnValidatorsPerDayLimitSet(_newLimitsList.churnValidatorsPerDayLimit);
         }
         if (_oldLimitsList.oneOffCLBalanceDecreaseBPLimit != _newLimitsList.oneOffCLBalanceDecreaseBPLimit) {
             emit OneOffCLBalanceDecreaseBPLimitSet(_newLimitsList.oneOffCLBalanceDecreaseBPLimit);
@@ -599,7 +585,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _limits = _newLimitsList.pack();
     }
 
-    event ChurnValidatorsByEpochLimitSet(uint256 churnValidatorsByEpochLimit);
+    event ChurnValidatorsPerDayLimitSet(uint256 churnValidatorsPerDayLimit);
     event OneOffCLBalanceDecreaseBPLimitSet(uint256 oneOffCLBalanceDecreaseBPLimit);
     event AnnualBalanceIncreaseBPLimitSet(uint256 annualBalanceIncreaseBPLimit);
     event ShareRateDeviationBPLimitSet(uint256 shareRateDeviationBPLimit);
@@ -624,7 +610,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
 library LimitsListPacker {
     function pack(LimitsList memory _limitsList) internal pure returns (LimitsListPacked memory res) {
-        res.churnValidatorsByEpochLimit = SafeCast.toUint8(_limitsList.churnValidatorsByEpochLimit);
+        res.churnValidatorsPerDayLimit = SafeCast.toUint8(_limitsList.churnValidatorsPerDayLimit);
         res.oneOffCLBalanceDecreaseBPLimit = _toBasisPoints(_limitsList.oneOffCLBalanceDecreaseBPLimit);
         res.annualBalanceIncreaseBPLimit = _toBasisPoints(_limitsList.annualBalanceIncreaseBPLimit);
         res.shareRateDeviationBPLimit = _toBasisPoints(_limitsList.shareRateDeviationBPLimit);
@@ -643,7 +629,7 @@ library LimitsListPacker {
 
 library LimitsListUnpacker {
     function unpack(LimitsListPacked memory _limitsList) internal pure returns (LimitsList memory res) {
-        res.churnValidatorsByEpochLimit = _limitsList.churnValidatorsByEpochLimit;
+        res.churnValidatorsPerDayLimit = _limitsList.churnValidatorsPerDayLimit;
         res.oneOffCLBalanceDecreaseBPLimit = _limitsList.oneOffCLBalanceDecreaseBPLimit;
         res.annualBalanceIncreaseBPLimit = _limitsList.annualBalanceIncreaseBPLimit;
         res.shareRateDeviationBPLimit = _limitsList.shareRateDeviationBPLimit;

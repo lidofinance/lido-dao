@@ -35,7 +35,9 @@ interface IOracleReportSanityChecker {
         uint256 _timeElapsed,
         uint256 _preCLBalance,
         uint256 _postCLBalance,
-        uint256 _withdrawalVaultBalance
+        uint256 _withdrawalVaultBalance,
+        uint256 _preCLValidators,
+        uint256 _postCLValidators
     ) external view;
 
     function smoothenTokenRebase(
@@ -718,21 +720,21 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * i.e., exited validators persist in the state, just with a different status
      */
     function _processClStateUpdate(
+        uint256 _preClValidators,
         uint256 _postClValidators,
         uint256 _postClBalance
     ) internal returns (uint256 preCLBalance) {
         uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
         require(_postClValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
 
-        uint256 preClValidators = CL_VALIDATORS_POSITION.getStorageUint256();
-        require(_postClValidators >= preClValidators, "REPORTED_LESS_VALIDATORS");
+        require(_postClValidators >= _preClValidators, "REPORTED_LESS_VALIDATORS");
 
 
-        if (_postClValidators > preClValidators) {
+        if (_postClValidators > _preClValidators) {
             CL_VALIDATORS_POSITION.setStorageUint256(_postClValidators);
         }
 
-        uint256 appearedValidators = _postClValidators.sub(preClValidators);
+        uint256 appearedValidators = _postClValidators.sub(_preClValidators);
         preCLBalance = CL_BALANCE_POSITION.getStorageUint256();
         // Take into account the balance of the newly appeared validators
         preCLBalance = preCLBalance.add(appearedValidators.mul(DEPOSIT_SIZE));
@@ -1098,6 +1100,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * Helps to overcome `stack too deep` issue.
      */
     struct OracleReportContext{
+        uint256 preCLValidators;
         uint256 preCLBalance;
         uint256 preTotalPooledEther;
         uint256 preTotalShares;
@@ -1140,7 +1143,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // Take a snapshot of the current (pre-) state
         reportContext.preTotalPooledEther = _getTotalPooledEther();
         reportContext.preTotalShares = _getTotalShares();
-        reportContext.preCLBalance = _processClStateUpdate(_reportedData.clValidators, _reportedData.postCLBalance);
+        reportContext.preCLValidators = CL_VALIDATORS_POSITION.getStorageUint256();
+        reportContext.preCLBalance = _processClStateUpdate(
+            reportContext.preCLValidators, _reportedData.clValidators, _reportedData.postCLBalance);
 
         // Step 2.
         // Pass the report data to sanity checker (reverts if malformed)
@@ -1148,7 +1153,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             _reportedData.timeElapsed,
             reportContext.preCLBalance,
             _reportedData.postCLBalance,
-            _reportedData.withdrawalVaultBalance
+            _reportedData.withdrawalVaultBalance,
+            reportContext.preCLValidators,
+            _reportedData.clValidators
         );
 
         // Step 3.
