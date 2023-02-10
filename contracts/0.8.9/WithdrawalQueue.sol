@@ -281,19 +281,19 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @dev should be called by oracle
     ///
     /// @param _isBunkerModeNow oracle report
-    /// @param _bunkerModeSinceTimestamp timestamp of start of the bunker mode
-    function updateBunkerMode(bool _isBunkerModeNow, uint256 _bunkerModeSinceTimestamp)
+    /// @param _sinceTimestamp timestamp of start of the bunker mode
+    function updateBunkerMode(bool _isBunkerModeNow, uint256 _sinceTimestamp)
         external
         onlyRole(BUNKER_MODE_REPORT_ROLE)
     {
-        if (_bunkerModeSinceTimestamp >= block.timestamp) revert InvalidReportTimestamp();
+        if (_sinceTimestamp >= block.timestamp) revert InvalidReportTimestamp();
 
         bool isBunkerModeWasSetBefore = isBunkerModeActive();
 
         // on bunker mode state change
         if (_isBunkerModeNow != isBunkerModeWasSetBefore) {
             // write previous timestamp to enable bunker or max uint to disable
-            uint256 newTimestamp = _isBunkerModeNow ? _bunkerModeSinceTimestamp : BUNKER_MODE_DISABLED_TIMESTAMP;
+            uint256 newTimestamp = _isBunkerModeNow ? _sinceTimestamp : BUNKER_MODE_DISABLED_TIMESTAMP;
             BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(newTimestamp);
         }
     }
