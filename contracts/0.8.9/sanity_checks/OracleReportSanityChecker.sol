@@ -412,7 +412,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     /// @notice Check number of node operators reported per extra data item in accounting oracle
     /// @param _itemIndex Index of item in extra data
     /// @param _nodeOperatorsCount Number of validator exit requests supplied per oracle report
-    /// @dev Checks against the same limit as used in checkMaxAccountingExtraDataListItemsCount
+    /// @dev Checks against the same limit as used in checkAccountingExtraDataListItemsCount
     function checkNodeOperatorsPerExtraDataItemCount(uint256 _itemIndex, uint256 _nodeOperatorsCount)
         external
         view
@@ -424,7 +424,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
     /// @notice Check max accounting extra data list items count
     /// @param _extraDataListItemsCount Number of validator exit requests supplied per oracle report
-    function checkMaxAccountingExtraDataListItemsCount(uint256 _extraDataListItemsCount)
+    function checkAccountingExtraDataListItemsCount(uint256 _extraDataListItemsCount)
         external
         view
     {

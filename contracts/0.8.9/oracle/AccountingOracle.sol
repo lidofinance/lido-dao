@@ -50,7 +50,7 @@ interface ILegacyOracle {
 
 interface IOracleReportSanityChecker {
     function checkExitedValidatorsRatePerDay(uint256 _exitedValidatorsCount) external view;
-    function checkMaxAccountingExtraDataListItemsCount(uint256 _extraDataListItemsCount) external view;
+    function checkAccountingExtraDataListItemsCount(uint256 _extraDataListItemsCount) external view;
     function checkNodeOperatorsPerExtraDataItemCount(uint256 _itemIndex, uint256 _nodeOperatorsCount) external view;
 }
 
@@ -529,7 +529,7 @@ contract AccountingOracle is BaseOracle {
         }
 
         IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
-            .checkMaxAccountingExtraDataListItemsCount(data.extraDataItemsCount);
+            .checkAccountingExtraDataListItemsCount(data.extraDataItemsCount);
 
         ILegacyOracle(LEGACY_ORACLE).handleConsensusLayerReport(
             data.refSlot,
