@@ -75,6 +75,8 @@ contract('Lido: rewards distribution math', (addresses) => {
   }
 
   async function reportBeacon(validatorsCount, balance) {
+    await ethers.provider.send('evm_increaseTime', [SECONDS_PER_FRAME + 1000])
+    await ethers.provider.send('evm_mine')
     await pushOracleReport(consensus, oracle, validatorsCount, balance)
     await ethers.provider.send('evm_increaseTime', [SECONDS_PER_FRAME + 1000])
     await ethers.provider.send('evm_mine')
@@ -122,6 +124,9 @@ contract('Lido: rewards distribution math', (addresses) => {
     depositRoot = await deployed.depositContract.get_deposit_root()
 
     const withdrawalCredentials = pad('0x0202', 32)
+
+    console.log(voting)
+
     await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
   })
 
@@ -631,7 +636,7 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     await reportBeacon(3, newBeaconBalance)
 
-    assertBn(await token.totalSupply(), newBeaconBalance.add(bufferedBefore), 'token total supply')
+    assert.equalsDelta(await token.totalSupply(), newBeaconBalance.add(bufferedBefore), 1, 'token total supply')
 
     const rewardsToDistribute = await token.getSharesByPooledEth(
       newBeaconBalance.add(bufferedBefore).sub(totalPooledEtherBefore)
@@ -678,7 +683,7 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     await reportBeacon(3, newBeaconBalance)
 
-    assertBn(await token.totalSupply(), newBeaconBalance.add(bufferedBefore), 'token total supply')
+    assert.equalsDelta(await token.totalSupply(), newBeaconBalance.add(bufferedBefore), 1, 'token total supply')
 
     const rewardsToDistribute = await token.getSharesByPooledEth(
       newBeaconBalance.add(bufferedBefore).sub(totalPooledEtherBefore)

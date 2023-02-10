@@ -16,15 +16,14 @@ function getReportDataItems(r) {
     r.isBunkerMode,
     r.extraDataFormat,
     r.extraDataHash,
-    r.extraDataItemsCount,
-    r.extraDataMaxNodeOpsCountByModule
+    r.extraDataItemsCount
   ]
 }
 
 function calcReportDataHash(reportItems) {
   const data = web3.eth.abi.encodeParameters(
     [
-      '(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256,uint256)'
+      '(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256)'
     ],
     [reportItems]
   )
@@ -56,8 +55,7 @@ async function pushOracleReport(consensus, oracle, numValidators, clBalance, elR
     isBunkerMode: false,
     extraDataFormat: 0,
     extraDataHash: ZERO_BYTES32,
-    extraDataItemsCount: 0,
-    extraDataMaxNodeOpsCountByModule: 0
+    extraDataItemsCount: 0
   }
   const reportItems = getReportDataItems(reportFields)
   const reportHash = calcReportDataHash(reportItems)

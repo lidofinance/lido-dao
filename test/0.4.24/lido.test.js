@@ -48,7 +48,7 @@ async function getTimestamp() {
   return block.timestamp;
 }
 
-contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, treasury]) => {
+contract('Lido', ([appManager, user1, user2, user3, nobody, depositor, treasury]) => {
   let app, oracle, depositContract, operators
   let treasuryAddress
   let dao
@@ -60,6 +60,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   let lidoLocator
   let snapshot
   let consensus
+  let voting
 
   before('deploy base app', async () => {
     anyToken = await ERC20Mock.new()
@@ -68,6 +69,12 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     const deployed = await deployProtocol({
       stakingModulesFactory: async (protocol) => {
         const curatedModule = await setupNodeOperatorsRegistry(protocol)
+
+        await protocol.acl.grantPermission(
+          protocol.stakingRouter.address,
+          curatedModule.address,
+          await curatedModule.MANAGE_NODE_OPERATOR_ROLE()
+        )
         return [
           {
             module: curatedModule,

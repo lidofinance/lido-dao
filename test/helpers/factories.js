@@ -177,13 +177,7 @@ async function hashConsensusTimeTravellableFactory({
   await consensus.addMember(signers[4].address, 2, { from: voting.address })
   await consensus.setTime(deployParams.genesisTime + initialEpoch * SLOTS_PER_EPOCH * SECONDS_PER_SLOT)
 
-  await oracle.initialize(
-    voting.address,
-    consensus.address,
-    CONSENSUS_VERSION,
-    10000,
-    10000,
-  )
+  await oracle.initialize(voting.address, consensus.address, CONSENSUS_VERSION, 10000, 10000)
 
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), voting.address, { from: voting.address })
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), voting.address, { from: voting.address })
@@ -216,22 +210,33 @@ async function stakingRouterFactory({ depositContract, dao, appManager, voting, 
   const stakingRouter = await StakingRouter.at(proxyAddress)
   await stakingRouter.initialize(appManager.address, pool.address, withdrawalCredentials, { from: appManager.address })
 
-  const [
-    MANAGE_WITHDRAWAL_CREDENTIALS_ROLE,
-    STAKING_MODULE_PAUSE_ROLE,
-    STAKING_MODULE_MANAGE_ROLE,
-    REPORT_REWARDS_MINTED_ROLE
-  ] = await Promise.all([
-    stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(),
-    stakingRouter.STAKING_MODULE_PAUSE_ROLE(),
-    stakingRouter.STAKING_MODULE_MANAGE_ROLE(),
-    stakingRouter.REPORT_REWARDS_MINTED_ROLE()
-  ])
-  await stakingRouter.grantRole(REPORT_REWARDS_MINTED_ROLE, pool.address, { from: appManager.address })
-
-  await stakingRouter.grantRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, voting.address, { from: appManager.address })
-  await stakingRouter.grantRole(STAKING_MODULE_PAUSE_ROLE, voting.address, { from: appManager.address })
-  await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, voting.address, { from: appManager.address })
+  await stakingRouter.grantRole(await stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(), pool.address, {
+    from: appManager.address
+  })
+  await stakingRouter.grantRole(await stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(), voting.address, {
+    from: appManager.address
+  })
+  await stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_PAUSE_ROLE(), voting.address, {
+    from: appManager.address
+  })
+  await stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_RESUME_ROLE(), voting.address, {
+    from: appManager.address
+  })
+  await stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_MANAGE_ROLE(), voting.address, {
+    from: appManager.address
+  })
+  await stakingRouter.grantRole(await stakingRouter.REPORT_EXITED_KEYS_ROLE(), pool.address, {
+    from: appManager.address
+  })
+  await stakingRouter.grantRole(await stakingRouter.UNSAFE_SET_EXITED_KEYS_ROLE(), voting.address, {
+    from: appManager.address
+  })
+  await stakingRouter.grantRole(await stakingRouter.REPORT_REWARDS_MINTED_ROLE(), voting.address, {
+    from: appManager.address
+  })
+  await stakingRouter.grantRole(await stakingRouter.REPORT_REWARDS_MINTED_ROLE(), pool.address, {
+    from: appManager.address
+  })
 
   return stakingRouter
 }
@@ -312,7 +317,7 @@ async function burnerFactory({ appManager, treasury, pool, voting }) {
   return burner
 }
 
-async function lidoLocatorFactory({appManager}) {
+async function lidoLocatorFactory({ appManager }) {
   return await deployLocatorWithDummyAddressesImplementation(appManager.address)
 }
 

@@ -164,7 +164,7 @@ contract('Lido: handleOracleReport', ([, , , , , , , stranger, anotherStranger, 
         totalPooledEtherDiff: ETH(-0.96),
         treasuryBalanceDiff: ETH(0),
         strangerBalanceDiff: ETH(-30 * 0.0096),
-        anotherStrangerBalanceDiff: ETH(-70 * 0.0096),
+        anotherStrangerBalanceDiff: toBN(ETH(0.0096)).mul(toBN(-70)).toString(),
         curatedModuleBalanceDiff: ETH(0)
       })
     })

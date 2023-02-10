@@ -1,6 +1,6 @@
 const factories = require('./factories')
 
-const { EPOCHS_PER_FRAME, SECONDS_PER_EPOCH } = require('./constants')
+const { SECONDS_PER_EPOCH } = require('./constants')
 
 const DEFAULT_DEPLOY_PARAMS = {
   maxDepositsPerBlock: 100,
