@@ -74,3 +74,32 @@ contract LidoLocatorStub is ILidoLocator {
         return WITHDRAWAL_VAULT;
     }
 }
+
+contract OracleReportSanityCheckerStub {
+    function checkLidoOracleReport(
+        uint256 _timeElapsed,
+        uint256 _preCLBalance,
+        uint256 _postCLBalance,
+        uint256 _withdrawalVaultBalance
+    ) external view {}
+
+    function checkWithdrawalQueueOracleReport(
+        uint256 _lastFinalizableRequestId,
+        uint256 _simulatedShareRate,
+        uint256 _reportTimestamp
+   ) external view {}
+
+    function smoothenTokenRebase(
+        uint256,
+        uint256,
+        uint256,
+        uint256,
+        uint256 _withdrawalVaultBalance,
+        uint256 _elRewardsVaultBalance,
+        uint256 _etherToLockForWithdrawals
+    ) external view returns (uint256 withdrawals, uint256 elRewards, uint256 sharesToBurnLimit) {
+        withdrawals = _withdrawalVaultBalance;
+        elRewards = _elRewardsVaultBalance;
+        sharesToBurnLimit = _etherToLockForWithdrawals;
+    }
+}

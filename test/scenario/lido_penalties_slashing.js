@@ -11,6 +11,7 @@ const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 const { SLOTS_PER_FRAME, SECONDS_PER_FRAME } = require('../helpers/constants')
 const { pushOracleReport } = require('../helpers/oracle')
+const { oracleReportSanityCheckerStubFactory } = require('../helpers/factories')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
@@ -35,6 +36,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
   before('DAO, node operators registry, token, pool and deposit security module are deployed and initialized', async () => {
       const deployed = await deployProtocol({
+        oracleReportSanityCheckerFactory: oracleReportSanityCheckerStubFactory,
         stakingModulesFactory: async (protocol) => {
           const curatedModule = await setupNodeOperatorsRegistry(protocol)
           return [
