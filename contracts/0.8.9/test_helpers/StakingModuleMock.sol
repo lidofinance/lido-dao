@@ -5,7 +5,7 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import {IStakingModule, ValidatorsReport} from "../interfaces/IStakingModule.sol";
+import {IStakingModule} from "../interfaces/IStakingModule.sol";
 
 contract StakingModuleMock is IStakingModule {
     uint256 private _activeValidatorsCount;
@@ -22,13 +22,26 @@ contract StakingModuleMock is IStakingModule {
 
     function getType() external view returns (bytes32) {}
 
-    function getValidatorsReport() external view returns (ValidatorsReport memory report) {
-        report.totalDeposited = _activeValidatorsCount;
-        report.depositable = _availableValidatorsCount;
+    function getStakingModuleSummary() external view returns (
+        uint256 totalExitedValidators,
+        uint256 totalDepositedValidators,
+        uint256 depositableValidators
+    ) {
+        totalExitedValidators = 0;
+        totalDepositedValidators = _activeValidatorsCount;
+        depositableValidators = _availableValidatorsCount;
     }
 
-    function getValidatorsReport(uint256 _nodeOperatorId) external view returns (ValidatorsReport memory report) {
-    }
+    function getNodeOperatorSummary(uint256 _nodeOperatorId) external view returns (
+        bool isTargetLimitActive,
+        uint256 targetValidatorsCount,
+        uint256 stuckValidatorsCount,
+        uint256 refundedValidatorsCount,
+        uint256 stuckPenaltyEndTimestamp,
+        uint256 totalExitedValidators,
+        uint256 totalDepositedValidators,
+        uint256 depositableValidatorsCount
+    ) {}
 
     function getNonce() external view returns (uint256) {
         return _nonce;
@@ -48,10 +61,6 @@ contract StakingModuleMock is IStakingModule {
         external
         view
         returns (uint256[] memory nodeOperatorIds) {}
-
-    function getTotalExitedValidatorsCount() external view returns (uint256) {
-        return 0;
-    }
 
     function handleRewardsMinted(uint256 _totalShares) external {}
 

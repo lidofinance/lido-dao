@@ -944,101 +944,35 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         return TYPE_POSITION.getStorageBytes32();
     }
 
-    /// @dev In the Solidity 0.4.24, ABI encoder v2 is an experimental feature and not supported by
-    ///     default but to be compatible with the IStakingModule interface, this method must return
-    ///     ABI v2 encoded struct. To overcome the limitations of the ABI v1 encoder uses assembly's
-    ///     return() instruction to pass raw ValidatorsReport bytes from memory as a return value.
-    function getValidatorsReport() external view {
-        ValidatorsReport memory report = _prepareAllValidatorsReport();
-        assembly {
-            // Return the memory slice where the ValidatorsReport data is located. The length of the
-            // returning memory slice is 7 * 32 = 224 (ValidatorsReport struct consists of 7 uint256
-            // fields which lay one by one in the memory)
-            return(report, 224)
-        }
-    }
-
-    /// @dev In the Solidity 0.4.24, ABI encoder v2 is an experimental feature and not supported by
-    ///     default but to be compatible with the IStakingModule interface, this method must return
-    ///     ABI v2 encoded struct. To overcome the limitations of the ABI v1 encoder uses assembly's
-    ///     return() instruction to pass raw ValidatorsReport bytes from memory as a return value.
-    function getValidatorsReport(uint256 _nodeOperatorId) external view {
-        ValidatorsReport memory report = _prepareNodeOperatorValidatorsReport(_nodeOperatorId);
-        assembly {
-            // Return the memory slice where the ValidatorsReport data is located. The length of the
-            // returning memory slice is 7 * 32 = 224 (ValidatorsReport struct consists of 7 uint256
-            // fields which lay one by one in the memory)
-            return(report, 224)
-        }
-    }
-
-    struct ValidatorsReport {
-        uint256 totalExited;
-        uint256 totalDeposited;
-        uint256 depositable;
-        uint256 stuck;
-        uint256 refunded;
-        uint256 excess;
-        uint256 targetLimit;
-    }
-
-    function _prepareAllValidatorsReport() internal view returns (ValidatorsReport memory) {
+    function getStakingModuleSummary() external view returns (
+        uint256 totalExitedValidators,
+        uint256 totalDepositedValidators,
+        uint256 depositableValidatorsCount
+    ) {
         uint256 nodeOperatorsCount = getNodeOperatorsCount();
 
-        uint256 totalExited;
-        uint256 tmpTotalExited;
-
-        uint256 totalVetted;
-        uint256 tmpTotalVetted;
-
-        uint256 totalDeposited;
-        uint256 tmpTotalDeposited;
-
+        uint256 tmpTotalExitedValidators;
+        uint256 tmpTotalDepositedValidators;
+        uint256 tmpDepostiableValidatorsCount;
         for (uint256 i; i < nodeOperatorsCount; ++i) {
-            (tmpTotalVetted, tmpTotalExited, tmpTotalDeposited) =
-                _getNodeOperatorWithLimitApplied(i);
-            totalExited += tmpTotalExited;
-            totalVetted += tmpTotalVetted;
-            totalDeposited += tmpTotalDeposited;
+            (tmpTotalExitedValidators, tmpTotalDepositedValidators, tmpDepostiableValidatorsCount) =
+                _getNodeOperatorValidatorsSummary(i);
+            totalExitedValidators += tmpTotalExitedValidators;
+            totalDepositedValidators += tmpTotalDepositedValidators;
+            depositableValidatorsCount += tmpDepostiableValidatorsCount;
         }
-
-        return ValidatorsReport({
-            totalExited: totalExited,
-            totalDeposited: totalDeposited,
-            depositable: totalVetted - totalDeposited,
-            stuck: 0,
-            refunded: 0,
-            excess: 0,
-            targetLimit: 0
-        });
     }
 
-    function _prepareNodeOperatorValidatorsReport(uint256 _nodeOperatorId) internal view returns (ValidatorsReport memory) {
-        (uint256 totalVetted, uint256 totalExited, uint256 totalDeposited) =
-            _getNodeOperatorWithLimitApplied(_nodeOperatorId);
-
-        return ValidatorsReport({
-            totalExited: totalExited,
-            totalDeposited: totalDeposited,
-            depositable: totalVetted - totalDeposited,
-            stuck: 0,
-            refunded: 0,
-            excess: 0,
-            targetLimit: 0
-        });
-    }
-
-    function getNodeOperatorStats(uint256 _nodeOperatorId)
-        external
-        view
-        returns (
-            bool isTargetLimitActive,
-            uint64 targetValidatorsCount,
-            uint64 stuckValidatorsCount,
-            uint64 refundedValidatorsCount,
-            uint64 stuckPenaltyEndTimestamp
-        )
-    {
+    function getNodeOperatorSummary(uint256 _nodeOperatorId) external view returns (
+        bool isTargetLimitActive,
+        uint256 targetValidatorsCount,
+        uint256 stuckValidatorsCount,
+        uint256 refundedValidatorsCount,
+        uint256 stuckPenaltyEndTimestamp,
+        uint256 totalExitedValidators,
+        uint256 totalDepositedValidators,
+        uint256 depositableValidatorsCount
+    ) {
         _onlyExistedNodeOperator(_nodeOperatorId);
 
         Packed64x4.Packed memory operatorTargetStats = _loadOperatorTargetValidatorsStats(_nodeOperatorId);
@@ -1049,21 +983,26 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         stuckValidatorsCount = stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET);
         refundedValidatorsCount = stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET);
         stuckPenaltyEndTimestamp = stuckPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET);
+
+        (totalExitedValidators, totalDepositedValidators, depositableValidatorsCount) =
+                _getNodeOperatorValidatorsSummary(_nodeOperatorId);
+    }
+
+    function _getNodeOperatorValidatorsSummary(uint256 _nodeOperatorId) internal view returns (
+        uint256 totalExitedValidators,
+        uint256 totalDepositedValidators,
+        uint256 depositableValidatorsCount
+    ) {
+        uint256 totalVettedValidators;
+        (totalVettedValidators, totalExitedValidators, totalDepositedValidators) =
+            _getNodeOperatorWithLimitApplied(_nodeOperatorId);
+        depositableValidatorsCount = totalVettedValidators - totalDepositedValidators;
     }
 
     function isOperatorPenalized(uint256 _nodeOperatorId) public view returns (bool) {
         Packed64x4.Packed memory stuckPenaltyStats = _loadOperatorStuckPenaltyStats(_nodeOperatorId);
         return stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET) < stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)
             || block.timestamp <= stuckPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET);
-    }
-
-    function getTotalExitedValidatorsCount() external view returns (uint256 exitedValidatorsCount) {
-        uint256 nodeOperatorsCount = getNodeOperatorsCount();
-        Packed64x4.Packed memory signingKeysStats;
-        for (uint256 i; i < nodeOperatorsCount; ++i) {
-            signingKeysStats = _loadOperatorSigningKeysStats(i);
-            exitedValidatorsCount += signingKeysStats.get(EXITED_KEYS_COUNT_OFFSET);
-        }
     }
 
     /// @notice Returns total number of node operators

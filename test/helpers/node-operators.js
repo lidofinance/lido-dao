@@ -82,20 +82,20 @@ async function addNodeOperator(registry, config, txOptions) {
     .require('contracts/0.8.9/interfaces/IStakingModule.sol:IStakingModule')
     .at(registry.address)
 
-  const validatorsReport = await stakingModule.getValidatorsReport(newOperatorId)
+  const nodeOperatorsSummary = await stakingModule.getNodeOperatorSummary(newOperatorId)
 
   const nodeOperator = await registry.getNodeOperator(newOperatorId, true)
 
   if (isActive) {
     assertBn(nodeOperator.stakingLimit, vettedSigningKeysCount)
     assertBn(nodeOperator.totalSigningKeys, totalSigningKeysCount)
-    assertBn(validatorsReport.totalExited, exitedSigningKeysCount)
-    assertBn(validatorsReport.totalDeposited, depositedSigningKeysCount)
-    assertBn(validatorsReport.depositable, vettedSigningKeysCount - depositedSigningKeysCount)
+    assertBn(nodeOperatorsSummary.totalExitedValidators, exitedSigningKeysCount)
+    assertBn(nodeOperatorsSummary.totalDepositedValidators, depositedSigningKeysCount)
+    assertBn(nodeOperatorsSummary.depositableValidatorsCount, vettedSigningKeysCount - depositedSigningKeysCount)
   } else {
-    assertBn(validatorsReport.totalExited, exitedSigningKeysCount)
-    assertBn(validatorsReport.totalDeposited, depositedSigningKeysCount)
-    assertBn(validatorsReport.depositable, 0)
+    assertBn(nodeOperatorsSummary.totalExitedValidators, exitedSigningKeysCount)
+    assertBn(nodeOperatorsSummary.totalDepositedValidators, depositedSigningKeysCount)
+    assertBn(nodeOperatorsSummary.depositableValidatorsCount, 0)
   }
   return { validatorKeys, id: newOperatorId.toNumber() }
 }

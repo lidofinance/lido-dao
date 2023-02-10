@@ -30,13 +30,26 @@ contract ModuleSolo is IStakingModule {
         return moduleType;
     }
 
-    function getValidatorsReport() external view returns (ValidatorsReport memory report) {
-        report.totalExited = totalExited;
-        report.totalDeposited = totalDeposited;
-        report.depositable = totalVetted - totalDeposited;
+    function getStakingModuleSummary() external view returns (
+        uint256 totalExitedValidators,
+        uint256 totalDepositedValidators,
+        uint256 depositableValidators
+    ) {
+        totalExitedValidators = totalExited;
+        totalDepositedValidators = totalDeposited;
+        depositableValidators = totalVetted - totalDeposited;
     }
 
-    function getValidatorsReport(uint256 _nodeOperatorId) external view returns (ValidatorsReport memory report) {}
+    function getNodeOperatorSummary(uint256 _nodeOperatorId) external view returns (
+        bool isTargetLimitActive,
+        uint256 targetValidatorsCount,
+        uint256 stuckValidatorsCount,
+        uint256 refundedValidatorsCount,
+        uint256 stuckPenaltyEndTimestamp,
+        uint256 totalExitedValidators,
+        uint256 totalDepositedValidators,
+        uint256 depositableValidatorsCount
+    ) {}
 
     function getNonce() external view returns (uint256) {
         return nonce;
