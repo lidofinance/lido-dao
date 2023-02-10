@@ -46,8 +46,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
     timeElapsed: 24 * 60 * 60,
     preCLBalance: ETH(100_000),
     postCLBalance: ETH(100_001),
-    withdrawalVaultBalance: 0,
-    finalizationShareRate: ETH(1)
+    withdrawalVaultBalance: 0
   }
   const correctStakingRouterOracleReport = {
     timeElapsed: 24 * 60 * 60,
@@ -167,18 +166,6 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
       )
     })
 
-    it('reverts with error IncorrectFinalizationShareRate() when reported and onchain share rate differs', async () => {
-      const finalizationShareRate = BigInt(ETH(1.05))
-      const actualShareRate = BigInt(ETH(1))
-      const deviation = (100_00n * (finalizationShareRate - actualShareRate)) / actualShareRate
-      await assert.revertsWithCustomError(
-        oracleReportSanityChecker.checkLidoOracleReport(
-          ...Object.values({ ...correctLidoOracleReport, finalizationShareRate: finalizationShareRate.toString() })
-        ),
-        `IncorrectFinalizationShareRate(${deviation.toString()})`
-      )
-    })
-
     it('passes all checks with correct oracle report data', async () => {
       await oracleReportSanityChecker.checkLidoOracleReport(...Object.values(correctLidoOracleReport))
     })
@@ -228,6 +215,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
     let oldRequestCreationTimestamp, newRequestCreationTimestamp
     const correctWithdrawalQueueOracleReport = {
       requestIdToFinalizeUpTo: oldRequestId,
+      finalizationShareRate: ETH(1),
       refReportTimestamp: -1
     }
 
@@ -254,7 +242,22 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
       )
     })
 
-    it('passes all checks with correct staking router report data', async () => {
+    it('reverts with error IncorrectFinalizationShareRate() when reported and onchain share rate differs', async () => {
+      const finalizationShareRate = BigInt(ETH(1.05))
+      const actualShareRate = BigInt(ETH(1))
+      const deviation = (100_00n * (finalizationShareRate - actualShareRate)) / actualShareRate
+      await assert.revertsWithCustomError(
+        oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
+          ...Object.values({
+            ...correctWithdrawalQueueOracleReport,
+            finalizationShareRate: finalizationShareRate.toString()
+          })
+        ),
+        `IncorrectFinalizationShareRate(${deviation.toString()})`
+      )
+    })
+
+    it('passes all checks with correct withdrawal queue report data', async () => {
       await oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
         ...Object.values(correctWithdrawalQueueOracleReport)
       )
