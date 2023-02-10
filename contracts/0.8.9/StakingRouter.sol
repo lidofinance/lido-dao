@@ -782,7 +782,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
         uint256 stakingModulesCount = getStakingModulesCount();
         for (uint256 i; i < stakingModulesCount; ) {
-            IStakingModule(_getStakingModuleAddressByIndex(i)).invalidateDepositData();
+            IStakingModule(_getStakingModuleAddressByIndex(i)).onWithdrawalCredentialsChanged();
             unchecked {
                 ++i;
             }

@@ -107,7 +107,7 @@ contract ModuleSolo is IStakingModule {
         return stakingRouter;
     }
 
-    function invalidateDepositData() external {}
+    function onWithdrawalCredentialsChanged() external {}
 
     function setType(bytes32 _type) external {
         moduleType = _type;

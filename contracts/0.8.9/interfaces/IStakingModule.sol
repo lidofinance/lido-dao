@@ -92,9 +92,6 @@ interface IStakingModule {
         uint256 _stuckValidatorsCount
     ) external;
 
-    /// @notice Invalidates all unused validators for all node operators
-    function invalidateDepositData() external;
-
     /// @notice Obtains up to _depositsCount deposit data to be used by StakingRouter
     ///     to deposit to the Ethereum Deposit contract
     /// @param _depositsCount Desireable number of deposits to be done
@@ -110,6 +107,11 @@ interface IStakingModule {
 
     /// @notice Called by StakingRouter after oracle finishes updating validators counters for all node operators
     function onAllValidatorsCountersUpdated() external;
+
+    /// @notice Called by StakingRouter when withdrawal credentials are changed.
+    /// @dev This method MUST discard all StakingModule's unused deposit data cause they become
+    ///     invalid after the withdrawal credentials are changed
+    function onWithdrawalCredentialsChanged() external;
 
     event NonceChanged(uint256 nonce);
 }
