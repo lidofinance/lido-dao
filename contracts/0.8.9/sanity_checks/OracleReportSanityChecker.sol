@@ -63,9 +63,11 @@ struct LimitsList {
     uint256 maxValidatorExitRequestsPerReport;
 
     /// @notice The max number of exited validators reported to accounting oracle
+    /// @dev Must fit into uin16 (<= 65_535)
     uint256 maxExitedValidatorsRatePerDay;
 
     /// @notice The max number of data list items reported to accounting oracle in extra data
+    /// @dev Must fit into uin16 (<= 65_535)
     uint256 maxAccountingExtraDataListItemsCount;
 }
 
@@ -76,10 +78,10 @@ struct LimitsListPacked {
     uint16 annualBalanceIncreaseBPLimit;
     uint16 shareRateDeviationBPLimit;
     uint16 maxValidatorExitRequestsPerReport;
+    uint16 maxExitedValidatorsRatePerDay;
+    uint16 maxAccountingExtraDataListItemsCount;
     uint64 requestTimestampMargin;
     uint64 maxPositiveTokenRebase;
-    uint64 maxExitedValidatorsRatePerDay;
-    uint64 maxAccountingExtraDataListItemsCount;
 }
 
 uint256 constant MAX_BASIS_POINTS = 10_000;
@@ -629,8 +631,8 @@ library LimitsListPacker {
         res.requestTimestampMargin = SafeCast.toUint64(_limitsList.requestTimestampMargin);
         res.maxPositiveTokenRebase = SafeCast.toUint64(_limitsList.maxPositiveTokenRebase);
         res.maxValidatorExitRequestsPerReport = SafeCast.toUint16(_limitsList.maxValidatorExitRequestsPerReport);
-        res.maxExitedValidatorsRatePerDay = SafeCast.toUint64(_limitsList.maxExitedValidatorsRatePerDay);
-        res.maxAccountingExtraDataListItemsCount = SafeCast.toUint64(_limitsList.maxAccountingExtraDataListItemsCount);
+        res.maxExitedValidatorsRatePerDay = SafeCast.toUint16(_limitsList.maxExitedValidatorsRatePerDay);
+        res.maxAccountingExtraDataListItemsCount = SafeCast.toUint16(_limitsList.maxAccountingExtraDataListItemsCount);
     }
 
     function _toBasisPoints(uint256 _value) private pure returns (uint16) {

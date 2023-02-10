@@ -1094,7 +1094,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @dev Intermidiate data structure for `_handleOracleReport`
+     * @dev Intermediate data structure for `_handleOracleReport`
      * Helps to overcome `stack too deep` issue.
      */
     struct OracleReportContext{
@@ -1118,7 +1118,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * 3. Pre-calculate the ether to lock for withdrawal queue and shares to be burnt
      * 4. Pass the accounting values to sanity checker to smoothen positive token rebase
      *    (i.e., postpone the extra rewards to be applied during the next rounds)
-     * 5. Invoke finalizion of the withdrawal requests
+     * 5. Invoke finalization of the withdrawal requests
      * 6. Distribute protocol fee (treasury & node operators)
      * 7. Burn excess shares (withdrawn stETH at least)
      * 8. Complete token rebase by informing observers (emit an event and call the external receivers if any)
@@ -1173,7 +1173,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         );
 
         // Step 5.
-        // Invoke finalizion of the withdrawal requests (send ether to withdrawal queue, assign shares to be burnt)
+        // Invoke finalization of the withdrawal requests (send ether to withdrawal queue, assign shares to be burnt)
         _collectRewardsAndProcessWithdrawals(
             _contracts,
             withdrawals,
