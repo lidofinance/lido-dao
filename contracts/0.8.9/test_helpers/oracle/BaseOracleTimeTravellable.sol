@@ -67,7 +67,7 @@ contract BaseOracleTimeTravellable is BaseOracle {
         ++_handleConsensusReportLastCall.callCount;
     }
 
-    function getConsensusReportLastCall()  view external returns (HandleConsensusReportLastCall memory) {
+    function getConsensusReportLastCall() external view returns (HandleConsensusReportLastCall memory) {
         return _handleConsensusReportLastCall;
     }
 
