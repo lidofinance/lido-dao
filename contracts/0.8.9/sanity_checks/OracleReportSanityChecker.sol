@@ -337,11 +337,13 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     /// @notice Applies sanity checks to the accounting params of Lido's oracle report
     /// @param _timeElapsed time elapsed since the previous oracle report
     /// @param _preCLBalance sum of all Lido validators' balances on the Consensus Layer before the
-    ///     current oracle report
+    ///     current oracle report (NB: also include the initial balance of newly appeared validators)
     /// @param _postCLBalance sum of all Lido validators' balances on the Consensus Layer after the
     ///     current oracle report
     /// @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
-    function checkLidoOracleReport(
+    /// @param _preCLValidators Lido-participating validators on the CL side before the current oracle report
+    /// @param _postCLValidators Lido-participating validators on the CL side after the current oracle report
+    function checkAccountingOracleReport(
         uint256 _timeElapsed,
         uint256 _preCLBalance,
         uint256 _postCLBalance,

@@ -76,7 +76,7 @@ contract LidoLocatorStub is ILidoLocator {
 }
 
 contract OracleReportSanityCheckerStub {
-    function checkLidoOracleReport(
+    function checkAccountingOracleReport(
         uint256 _timeElapsed,
         uint256 _preCLBalance,
         uint256 _postCLBalance,

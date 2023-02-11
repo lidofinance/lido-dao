@@ -109,7 +109,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
     })
   })
 
-  describe('checkLidoOracleReport()', () => {
+  describe('checkAccountingOracleReport()', () => {
     beforeEach(async () => {
       await oracleReportSanityChecker.setOracleReportLimits(Object.values(defaultLimitsList), {
         from: managersRoster.allLimitsManagers[0]
@@ -119,7 +119,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
     it('reverts with error IncorrectWithdrawalsVaultBalance() when actual withdrawal vault balance is less than passed', async () => {
       const currentWithdrawalVaultBalance = await hre.ethers.provider.getBalance(withdrawalVault)
       await assert.revertsWithCustomError(
-        oracleReportSanityChecker.checkLidoOracleReport(
+        oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({ ...correctLidoOracleReport, withdrawalVaultBalance: currentWithdrawalVaultBalance.add(1) })
         ),
         `IncorrectWithdrawalsVaultBalance(${currentWithdrawalVaultBalance.toString()})`
@@ -134,7 +134,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
       const unifiedPostCLBalance = postCLBalance + withdrawalVaultBalance
       const oneOffCLBalanceDecreaseBP = (maxBasisPoints * (preCLBalance - unifiedPostCLBalance)) / preCLBalance
       await assert.revertsWithCustomError(
-        oracleReportSanityChecker.checkLidoOracleReport(
+        oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({
             ...correctLidoOracleReport,
             preCLBalance: preCLBalance.toString(),
@@ -155,7 +155,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
       const annualBalanceIncrease =
         (secondsInOneYear * maxBasisPoints * (postCLBalance - preCLBalance)) / preCLBalance / timeElapsed
       await assert.revertsWithCustomError(
-        oracleReportSanityChecker.checkLidoOracleReport(
+        oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({
             ...correctLidoOracleReport,
             postCLBalance: postCLBalance.toString()
@@ -166,7 +166,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
     })
 
     it('passes all checks with correct oracle report data', async () => {
-      await oracleReportSanityChecker.checkLidoOracleReport(...Object.values(correctLidoOracleReport))
+      await oracleReportSanityChecker.checkAccountingOracleReport(...Object.values(correctLidoOracleReport))
     })
   })
 
