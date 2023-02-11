@@ -12,6 +12,7 @@ interface ILido {
         uint256 _stakingModuleId,
         bytes calldata _depositCalldata
     ) external;
+    function canDeposit() external view returns (bool);
 }
 
 interface IDepositContract {
@@ -378,7 +379,13 @@ contract DepositSecurityModule {
     function canDeposit(uint256 stakingModuleId) external view validStakingModuleId(stakingModuleId) returns (bool) {
         bool isModuleActive = STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId);
         uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
-        return isModuleActive && quorum > 0 && block.number - lastDepositBlock >= minDepositBlockDistance;
+        bool isLidoCanDeposit = LIDO.canDeposit();
+        return (
+            isModuleActive
+            && quorum > 0
+            && block.number - lastDepositBlock >= minDepositBlockDistance
+            && isLidoCanDeposit
+        );
     }
 
     /**

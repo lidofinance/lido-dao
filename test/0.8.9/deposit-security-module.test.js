@@ -1029,5 +1029,28 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       assert.isTrue(currentBlockNumber - lastDepositBlockNumber < minDepositBlockDistance)
       assert.isFalse(await depositSecurityModule.canDeposit(STAKING_MODULE))
     })
+    it('false if Lido cant deposit', async () => {
+      await depositSecurityModule.addGuardian(GUARDIAN1, 1, { from: owner })
+
+      assert.equal(await stakingRouterMock.getStakingModuleIsDepositsPaused(STAKING_MODULE), false, 'invariant failed: isPaused')
+      assert.isTrue((await depositSecurityModule.getGuardianQuorum()) > 0, 'invariant failed: quorum > 0')
+
+      const lastDepositBlockNumber = await web3.eth.getBlockNumber()
+      stakingRouterMock.setStakingModuleLastDepositBlock(lastDepositBlockNumber)
+      await waitBlocks(2 * MIN_DEPOSIT_BLOCK_DISTANCE)
+
+      const currentBlockNumber = await web3.eth.getBlockNumber()
+      const minDepositBlockDistance = await depositSecurityModule.getMinDepositBlockDistance()
+
+      assert.isTrue(currentBlockNumber - lastDepositBlockNumber >= minDepositBlockDistance)
+      assert.isTrue(await depositSecurityModule.canDeposit(STAKING_MODULE))
+      assert.isTrue(await lidoMock.canDeposit())
+
+      await lidoMock.setCanDeposit(false);
+
+      assert.isFalse(await lidoMock.canDeposit())
+      assert.isTrue(currentBlockNumber - lastDepositBlockNumber >= minDepositBlockDistance)
+      assert.isFalse(await depositSecurityModule.canDeposit(STAKING_MODULE))
+    })
   })
 })
