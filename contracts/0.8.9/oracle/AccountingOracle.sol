@@ -12,17 +12,18 @@ import { BaseOracle, IConsensusContract } from "./BaseOracle.sol";
 
 interface ILido {
     function handleOracleReport(
-        uint256 currentReportTimestamp,
-        uint256 secondsElapsedSinceLastReport,
+        // Oracle timings
+        uint256 _currentReportTimestamp,
+        uint256 _timeElapsedSeconds,
         // CL values
-        uint256 beaconValidators,
-        uint256 beaconBalance,
+        uint256 _clValidators,
+        uint256 _clBalance,
         // EL values
-        uint256 withdrawalVaultBalance,
-        uint256 elRewardsVaultBalance,
-        // decision
-        uint256 requestIdToFinalizeUpTo,
-        uint256 finalizationShareRate
+        uint256 _withdrawalVaultBalance,
+        uint256 _elRewardsVaultBalance,
+        // Decision about withdrawals processing
+        uint256 _lastFinalizableRequestId,
+        uint256 _simulatedShareRate
     ) external;
 }
 
