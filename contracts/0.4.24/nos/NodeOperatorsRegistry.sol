@@ -423,20 +423,21 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _distributeRewards();
     }
 
-    /// @notice Unsafely updates the number of the validators in the EXITED state for node operator with given id
+    /// @notice Unsafely updates the number of validators in the EXITED/STUCK states for node operator with given id
+    ///      'unsafely' means that this method can both increase and decrease exited and stuck counters
     /// @param _nodeOperatorId Id of the node operator
-    /// @param _exitedValidatorsCount New number of EXITED validators of the node operator
-    /// @return Total number of exited validators across all node operators.
+    /// @param _exitedValidatorsCount New number of EXITED validators for the node operator
+    /// @param _stuckValidatorsCount New number of STUCK validator for the node operator
     function unsafeUpdateValidatorsCount(
         uint256 _nodeOperatorId,
         uint256 _exitedValidatorsCount,
-        uint256 _stuckValidatorsKeysCount
+        uint256 _stuckValidatorsCount
     ) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
 
         _updateExitedValidatorsCount(_nodeOperatorId, uint64(_exitedValidatorsCount), true);
-        _updateStuckValidatorsCount(_nodeOperatorId, uint64(_stuckValidatorsKeysCount));
+        _updateStuckValidatorsCount(_nodeOperatorId, uint64(_stuckValidatorsCount));
     }
 
     function _updateExitedValidatorsCount(uint256 _nodeOperatorId, uint64 _exitedValidatorsKeysCount, bool _allowDecrease)
