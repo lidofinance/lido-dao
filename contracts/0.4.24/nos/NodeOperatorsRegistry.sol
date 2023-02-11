@@ -894,6 +894,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     ///   3. a node operator's vetted keys count is changed.
     ///   4. a node operator was activated/deactivated. Activation or deactivation of node operator
     ///      might lead to usage of unvalidated keys in the assignNextSigningKeys method.
+    ///   5. a node operator's deposit data is used for the deposit
     function getKeysOpIndex() external view returns (uint256) {
         return KEYS_OP_INDEX_POSITION.getStorageUint256();
     }
