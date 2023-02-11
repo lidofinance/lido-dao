@@ -9,7 +9,7 @@ import {Math256} from "../../common/lib/Math256.sol";
 /**
  * This library implements positive rebase limiter for `stETH` token.
  * One needs to initialize `LimiterState` with the desired parameters:
- * - _rebaseLimit (limiter max value, nominated in LIMITER_PRECISION_POINTS)
+ * - _rebaseLimit (limiter max value, nominated in LIMITER_PRECISION_BASE)
  * - _totalPooledEther (see `Lido.getTotalPooledEther()`)
  * - _totalShares (see `Lido.getTotalShares()`)
  *
@@ -38,7 +38,7 @@ library PositiveTokenRebaseLimiter {
 
     /**
       * @dev Initialize the new `LimiterState` structure instance
-      * @param _rebaseLimit max limiter value (saturation point), see `LIMITER_PRECISION_POINTS`
+      * @param _rebaseLimit max limiter value (saturation point), see `LIMITER_PRECISION_BASE`
       * @param _totalPooledEther total pooled ether, see `Lido.getTotalPooledEther()`
       * @param _totalShares total shares, see `Lido.getTotalShares()`
       * @return limiterState newly initialized limiter structure
