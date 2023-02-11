@@ -1,7 +1,7 @@
 const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
 const { assertRevert } = require('../helpers/assertThrow')
-const { toBN, padRight, shares } = require('../helpers/utils')
+const { toBN, padRight, printEvents } = require('../helpers/utils')
 const { BN } = require('bn.js')
 const { AragonDAO } = require('./helpers/dao')
 const { EvmSnapshot } = require('../helpers/blockchain')
@@ -173,8 +173,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
-
       // calls distributeRewards() inside
       await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
 
@@ -186,8 +184,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
     it('emits RewardsDistributed with correct params on reward distribution', async () => {
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
-
-      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
 
       // calls distributeRewards() inside
       receipt = await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
@@ -202,8 +198,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
 
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, totalRewardShares)
-
-      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
 
       //before
       //      operatorId | Total | Deposited | Exited | Active (deposited-exited)
@@ -244,8 +238,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, totalRewardShares)
 
-      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
-
       //before
       //      operatorId | Total | Deposited | Exited | Active (deposited-exited)
       //         0           3         3         0        3
@@ -284,8 +276,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
-
       //update [operator, exited, stuck]
       await app.unsafeUpdateValidatorsKeysCount(firstNodeOperator, 1, 1 , { from: voting })
       await app.unsafeUpdateValidatorsKeysCount(secondNodeOperator, 1, 0 , { from: voting })
@@ -305,7 +295,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
+
 
       //update [operator, exited, stuck]
       await app.unsafeUpdateValidatorsKeysCount(firstNodeOperator, 1, 1, { from: voting })
@@ -326,7 +316,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
+
 
       //update [operator, exited, stuck]
       await app.unsafeUpdateValidatorsKeysCount(firstNodeOperator, 2, 2 , { from: voting })
@@ -349,7 +339,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
+
 
       assert.isFalse(await app.testing_isNodeOperatorPenalized(firstNodeOperator))
 
@@ -386,7 +376,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.testing_addNodeOperator('no', no1, 55, 30, 15, 2)
+      // await app.testing_addNodeOperator('no', no1, 55, 30, 15, 2)
 
       // sum of (vetted[i] - exited[i])
       await app.increaseTargetValidatorsCount(28)
