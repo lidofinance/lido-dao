@@ -41,6 +41,7 @@ contract BaseOracleTimeTravellable is BaseOracle {
         uint256 consensusVersion,
         uint256 lastProcessingRefSlot
     ) external {
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
     }
 
