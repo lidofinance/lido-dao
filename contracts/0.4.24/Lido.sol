@@ -19,18 +19,18 @@ import "./utils/Versioned.sol";
 
 interface IPostTokenRebaseReceiver {
     function handlePostTokenRebase(
-        uint256 reportTimestamp,
-        uint256 timeElapsed,
-        uint256 preTotalShares,
-        uint256 preTotalEther,
-        uint256 postTotalShares,
-        uint256 postTotalEther,
-        uint256 sharesMintedAsFees
+        uint256 _reportTimestamp,
+        uint256 _timeElapsed,
+        uint256 _preTotalShares,
+        uint256 _preTotalEther,
+        uint256 _postTotalShares,
+        uint256 _postTotalEther,
+        uint256 _sharesMintedAsFees
     ) external;
 }
 
 interface IOracleReportSanityChecker {
-    function checkLidoOracleReport(
+    function checkAccountingOracleReport(
         uint256 _timeElapsed,
         uint256 _preCLBalance,
         uint256 _postCLBalance,
@@ -70,10 +70,11 @@ interface IWithdrawalVault {
 
 interface IStakingRouter {
     function deposit(
-        uint256 maxDepositsCount,
-        uint256 stakingModuleId,
-        bytes depositCalldata
+        uint256 _maxDepositsCount,
+        uint256 _stakingModuleId,
+        bytes _depositCalldata
     ) external payable returns (uint256);
+
     function getStakingRewardsDistribution()
         external
         view
@@ -84,9 +85,13 @@ interface IStakingRouter {
             uint96 totalFee,
             uint256 precisionPoints
         );
+
     function getWithdrawalCredentials() external view returns (bytes32);
+
     function reportRewardsMinted(uint256[] _stakingModuleIds, uint256[] _totalShares) external;
+
     function getTotalFeeE4Precision() external view returns (uint16 totalFee);
+
     function getStakingFeeAggregateDistributionE4Precision() external view returns (uint16 modulesFee, uint16 treasuryFee);
 }
 
@@ -1158,7 +1163,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         // Step 2.
         // Pass the report data to sanity checker (reverts if malformed)
-        IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).checkLidoOracleReport(
+        IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).checkAccountingOracleReport(
             _reportedData.timeElapsed,
             reportContext.preCLBalance,
             _reportedData.postCLBalance,
