@@ -1,5 +1,4 @@
-// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
-
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.4.24;
@@ -70,5 +69,42 @@ contract LidoMock is Lido {
 
     function burnShares(address _account, uint256 _amount) external {
         _burnShares(_account, _amount);
+    }
+
+    function handleOracleReportDirect(
+        // Oracle timings
+        uint256 _reportTimestamp,
+        uint256 _timeElapsed,
+        // CL values
+        uint256 _clValidators,
+        uint256 _clBalance,
+        // EL values
+        uint256 _withdrawalVaultBalance,
+        uint256 _elRewardsVaultBalance,
+        // Decision about withdrawals processing
+        uint256 _lastFinalizableRequestId,
+        uint256 _simulatedShareRate
+    ) external returns (
+        uint256 totalPooledEther,
+        uint256 totalShares,
+        uint256 withdrawals,
+        uint256 elRewards
+    ) {
+
+        OracleReportContracts memory protocolContracts = _loadOracleReportContracts();
+
+        return _handleOracleReport(
+            OracleReportedData(
+                _reportTimestamp,
+                _timeElapsed,
+                _clValidators,
+                _clBalance,
+                _withdrawalVaultBalance,
+                _elRewardsVaultBalance,
+                _lastFinalizableRequestId,
+                _simulatedShareRate
+            ),
+            protocolContracts
+        );
     }
 }

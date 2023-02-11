@@ -19,40 +19,36 @@ function wei(number, units = 'wei') {
   throw new Error(`Unsupported units "${units}"`)
 }
 
-const SECONDS_PER_SLOT = 12
-const SECONDS_PER_EPOCH = 32 * SECONDS_PER_SLOT
 contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...accounts]) => {
   let oracleReportSanityChecker, lidoLocatorMock, lidoMock, withdrawalQueueMock
   const managersRoster = {
     allLimitsManagers: accounts.slice(0, 2),
-    churnValidatorsByEpochLimitManagers: accounts.slice(2, 4),
+    churnValidatorsPerDayLimitManagers: accounts.slice(2, 4),
     oneOffCLBalanceDecreaseLimitManagers: accounts.slice(4, 6),
     annualBalanceIncreaseLimitManagers: accounts.slice(6, 8),
     shareRateDeviationLimitManagers: accounts.slice(8, 10),
     requestCreationBlockMarginManagers: accounts.slice(10, 12),
     maxPositiveTokenRebaseManagers: accounts.slice(12, 14),
     maxValidatorExitRequestsPerReportManagers: accounts.slice(14, 16),
+    maxAccountingExtraDataListItemsCountManagers: accounts.slice(16, 18),
   }
   const defaultLimitsList = {
-    churnValidatorsByEpochLimit: 55,
+    churnValidatorsPerDayLimit: 55,
     oneOffCLBalanceDecreaseBPLimit: 5_00, // 5%
     annualBalanceIncreaseBPLimit: 10_00, // 10%
     shareRateDeviationBPLimit: 2_50, // 2.5%
     requestTimestampMargin: 128,
     maxPositiveTokenRebase: 5_000_000, // 0.05%
     maxValidatorExitRequestsPerReport: 2000,
+    maxAccountingExtraDataListItemsCount: 15,
   }
   const correctLidoOracleReport = {
     timeElapsed: 24 * 60 * 60,
     preCLBalance: ETH(100_000),
     postCLBalance: ETH(100_001),
     withdrawalVaultBalance: 0,
-    finalizationShareRate: ETH(1)
-  }
-  const correctStakingRouterOracleReport = {
-    timeElapsed: 24 * 60 * 60,
-    appearedValidators: 10,
-    exitedValidators: 5
+    preCLValidators: 0,
+    postCLValidators: 0,
   }
 
   before(async () => {
@@ -66,7 +62,6 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
 
     oracleReportSanityChecker = await OracleReportSanityChecker.new(
       lidoLocatorMock.address,
-      SECONDS_PER_EPOCH,
       admin,
       Object.values(defaultLimitsList),
       Object.values(managersRoster),
@@ -79,35 +74,38 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
   describe('setOracleReportLimits()', () => {
     it('sets limits correctly', async () => {
       const newLimitsList = {
-        churnValidatorsByEpochLimit: 50,
+        churnValidatorsPerDayLimit: 50,
         oneOffCLBalanceDecreaseBPLimit: 10_00,
         annualBalanceIncreaseBPLimit: 15_00,
         shareRateDeviationBPLimit: 1_50, // 1.5%
         requestTimestampMargin: 2048,
         maxPositiveTokenRebase: 10_000_000,
         maxValidatorExitRequestsPerReport: 3000,
+        maxAccountingExtraDataListItemsCount: 15 + 1,
       }
       const limitsBefore = await oracleReportSanityChecker.getOracleReportLimits()
-      assert.notEquals(limitsBefore.churnValidatorsByEpochLimit, newLimitsList.churnValidatorsByEpochLimit)
+      assert.notEquals(limitsBefore.churnValidatorsPerDayLimit, newLimitsList.churnValidatorsPerDayLimit)
       assert.notEquals(limitsBefore.oneOffCLBalanceDecreaseBPLimit, newLimitsList.oneOffCLBalanceDecreaseBPLimit)
       assert.notEquals(limitsBefore.annualBalanceIncreaseBPLimit, newLimitsList.annualBalanceIncreaseBPLimit)
       assert.notEquals(limitsBefore.shareRateDeviationBPLimit, newLimitsList.shareRateDeviationBPLimit)
       assert.notEquals(limitsBefore.requestTimestampMargin, newLimitsList.requestTimestampMargin)
       assert.notEquals(limitsBefore.maxPositiveTokenRebase, newLimitsList.maxPositiveTokenRebase)
       assert.notEquals(limitsBefore.maxValidatorExitRequestsPerReport, newLimitsList.maxValidatorExitRequestsPerReport)
+      assert.notEquals(limitsBefore.maxAccountingExtraDataListItemsCount, newLimitsList.maxAccountingExtraDataListItemsCount)
 
       await oracleReportSanityChecker.setOracleReportLimits(Object.values(newLimitsList), {
         from: managersRoster.allLimitsManagers[0]
       })
 
       const limitsAfter = await oracleReportSanityChecker.getOracleReportLimits()
-      assert.equals(limitsAfter.churnValidatorsByEpochLimit, newLimitsList.churnValidatorsByEpochLimit)
+      assert.equals(limitsAfter.churnValidatorsPerDayLimit, newLimitsList.churnValidatorsPerDayLimit)
       assert.equals(limitsAfter.oneOffCLBalanceDecreaseBPLimit, newLimitsList.oneOffCLBalanceDecreaseBPLimit)
       assert.equals(limitsAfter.annualBalanceIncreaseBPLimit, newLimitsList.annualBalanceIncreaseBPLimit)
       assert.equals(limitsAfter.shareRateDeviationBPLimit, newLimitsList.shareRateDeviationBPLimit)
       assert.equals(limitsAfter.requestTimestampMargin, newLimitsList.requestTimestampMargin)
       assert.equals(limitsAfter.maxPositiveTokenRebase, newLimitsList.maxPositiveTokenRebase)
       assert.equals(limitsAfter.maxValidatorExitRequestsPerReport, newLimitsList.maxValidatorExitRequestsPerReport)
+      assert.equals(limitsAfter.maxAccountingExtraDataListItemsCount, newLimitsList.maxAccountingExtraDataListItemsCount)
     })
   })
 
@@ -167,58 +165,8 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
       )
     })
 
-    it('reverts with error IncorrectFinalizationShareRate() when reported and onchain share rate differs', async () => {
-      const finalizationShareRate = BigInt(ETH(1.05))
-      const actualShareRate = BigInt(ETH(1))
-      const deviation = (100_00n * (finalizationShareRate - actualShareRate)) / actualShareRate
-      await assert.revertsWithCustomError(
-        oracleReportSanityChecker.checkLidoOracleReport(
-          ...Object.values({ ...correctLidoOracleReport, finalizationShareRate: finalizationShareRate.toString() })
-        ),
-        `IncorrectFinalizationShareRate(${deviation.toString()})`
-      )
-    })
-
     it('passes all checks with correct oracle report data', async () => {
       await oracleReportSanityChecker.checkLidoOracleReport(...Object.values(correctLidoOracleReport))
-    })
-  })
-
-  describe('checkStakingRouterOracleReport()', () => {
-    it('reverts with error IncorrectAppearedValidators() when appeared validators is greater than churn limit', async () => {
-      const EPOCH_DURATION = 32n * 12n
-      const churnLimit =
-        (BigInt(defaultLimitsList.churnValidatorsByEpochLimit) * BigInt(correctLidoOracleReport.timeElapsed)) /
-        EPOCH_DURATION
-      await assert.revertsWithCustomError(
-        oracleReportSanityChecker.checkStakingRouterOracleReport(
-          ...Object.values({
-            ...correctStakingRouterOracleReport,
-            appearedValidators: Number(churnLimit.toString()) + 1
-          })
-        ),
-        `IncorrectAppearedValidators(${churnLimit.toString()})`
-      )
-    })
-
-    it('reverts with error IncorrectExitedValidators() when exited validators is greater than churn limit', async () => {
-      const EPOCH_DURATION = 32n * 12n
-      const churnLimit =
-        (BigInt(defaultLimitsList.churnValidatorsByEpochLimit) * BigInt(correctLidoOracleReport.timeElapsed)) /
-        EPOCH_DURATION
-      await assert.revertsWithCustomError(
-        oracleReportSanityChecker.checkStakingRouterOracleReport(
-          ...Object.values({
-            ...correctStakingRouterOracleReport,
-            exitedValidators: Number(churnLimit.toString()) + 1
-          })
-        ),
-        `IncorrectExitedValidators(${churnLimit.toString()})`
-      )
-    })
-
-    it('passes all checks with correct staking router report data', async () => {
-      await oracleReportSanityChecker.checkStakingRouterOracleReport(...Object.values(correctStakingRouterOracleReport))
     })
   })
 
@@ -228,6 +176,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
     let oldRequestCreationTimestamp, newRequestCreationTimestamp
     const correctWithdrawalQueueOracleReport = {
       requestIdToFinalizeUpTo: oldRequestId,
+      finalizationShareRate: ETH(1),
       refReportTimestamp: -1
     }
 
@@ -254,7 +203,22 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
       )
     })
 
-    it('passes all checks with correct staking router report data', async () => {
+    it('reverts with error IncorrectFinalizationShareRate() when reported and onchain share rate differs', async () => {
+      const finalizationShareRate = BigInt(ETH(1.05))
+      const actualShareRate = BigInt(ETH(1))
+      const deviation = (100_00n * (finalizationShareRate - actualShareRate)) / actualShareRate
+      await assert.revertsWithCustomError(
+        oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
+          ...Object.values({
+            ...correctWithdrawalQueueOracleReport,
+            finalizationShareRate: finalizationShareRate.toString()
+          })
+        ),
+        `IncorrectFinalizationShareRate(${deviation.toString()})`
+      )
+    })
+
+    it('passes all checks with correct withdrawal queue report data', async () => {
       await oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
         ...Object.values(correctWithdrawalQueueOracleReport)
       )

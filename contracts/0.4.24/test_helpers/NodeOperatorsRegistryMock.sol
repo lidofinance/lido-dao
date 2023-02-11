@@ -1,5 +1,4 @@
-// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
-
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.4.24;
@@ -152,12 +151,11 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         return _getSigningKeysAllocationData(_keysCount);
     }
 
-    function testing_requestValidatorsKeysForDeposits(uint256 _keysToAllocate)
+    function testing_obtainDepositData(uint256 _keysToAllocate)
         external
         returns (uint256 loadedValidatorsKeysCount, bytes memory publicKeys, bytes memory signatures)
     {
-        (loadedValidatorsKeysCount, publicKeys, signatures) =
-            this.requestValidatorsKeysForDeposits(_keysToAllocate, new bytes(0));
+        (loadedValidatorsKeysCount, publicKeys, signatures) = this.obtainDepositData(_keysToAllocate, new bytes(0));
         emit ValidatorsKeysLoaded(loadedValidatorsKeysCount, publicKeys, signatures);
     }
 

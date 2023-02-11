@@ -61,6 +61,8 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
 
     /// @notice Emitted when the contract initialized
     event InitializedV1(address _admin, address _pauser, address _resumer, address _finalizer, address _bunkerReporter);
+    event BunkerModeEnabled(uint256 _sinceTimestamp);
+    event BunkerModeDisabled();
 
     error AdminZeroAddress();
     error AlreadyInitialized();
@@ -84,7 +86,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @param _pauser address that will be able to pause the withdrawals
     /// @param _resumer address that will be able to resume the withdrawals after pause
     /// @param _finalizer address that can finalize requests in the queue
-    /// @param _bunkerReporter addres that can report a bunker mode
+    /// @param _bunkerReporter address that can report a bunker mode
     /// @dev Reverts if `_admin` equals to `address(0)`
     /// @dev NB! It's initialized in paused state by default and should be resumed explicitly to start
     /// @dev NB! Bunker mode is disabled by default
@@ -281,20 +283,27 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @dev should be called by oracle
     ///
     /// @param _isBunkerModeNow oracle report
-    /// @param _bunkerModeSinceTimestamp timestamp of start of the bunker mode
-    function updateBunkerMode(bool _isBunkerModeNow, uint256 _bunkerModeSinceTimestamp)
+    /// @param _sinceTimestamp timestamp of start of the bunker mode
+    function updateBunkerMode(bool _isBunkerModeNow, uint256 _sinceTimestamp)
         external
         onlyRole(BUNKER_MODE_REPORT_ROLE)
     {
-        if (_bunkerModeSinceTimestamp >= block.timestamp) revert InvalidReportTimestamp();
+        if (_sinceTimestamp >= block.timestamp) revert InvalidReportTimestamp();
 
         bool isBunkerModeWasSetBefore = isBunkerModeActive();
 
         // on bunker mode state change
         if (_isBunkerModeNow != isBunkerModeWasSetBefore) {
             // write previous timestamp to enable bunker or max uint to disable
-            uint256 newTimestamp = _isBunkerModeNow ? _bunkerModeSinceTimestamp : BUNKER_MODE_DISABLED_TIMESTAMP;
-            BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(newTimestamp);
+            if (_isBunkerModeNow) {
+                BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(_sinceTimestamp);
+
+                emit BunkerModeEnabled(_sinceTimestamp);
+            } else {
+                BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(BUNKER_MODE_DISABLED_TIMESTAMP);
+
+                emit BunkerModeDisabled();
+            }
         }
     }
 
@@ -317,6 +326,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         internal
     {
         _initializeQueue();
+        _initializePausable();
 
         _initializeContractVersionTo(1);
 

@@ -59,7 +59,8 @@ abstract contract WithdrawalQueueBase {
     /// @notice structure to store discount factors for requests in the queue
     struct DiscountCheckpoint {
         /// @notice first `_requestId` the discount is valid for
-        uint256 fromRequestId;
+        /// @dev storing in uint160 to pack into one slot. Overflowing here is unlikely
+        uint160 fromRequestId;
         /// @notice discount factor with 1e27 precision (0 - 100% discount, 1e27 - means no discount)
         uint96 discountFactor;
     }
@@ -73,7 +74,7 @@ abstract contract WithdrawalQueueBase {
         uint256 amountOfShares
     );
     event WithdrawalBatchFinalized(
-        uint256 indexed from, uint256 indexed to, uint256 amountOfETHLocked, uint256 sheresToBurn, uint256 timestamp
+        uint256 indexed from, uint256 indexed to, uint256 amountOfETHLocked, uint256 sharesToBurn, uint256 timestamp
     );
     event WithdrawalClaimed(
         uint256 indexed requestId, address indexed owner, address indexed receiver, uint256 amountOfETH
@@ -242,7 +243,7 @@ abstract contract WithdrawalQueueBase {
         if (_maxTimestamp == 0) revert ZeroTimestamp();
         if (_startId <= getLastFinalizedRequestId() || _endId > getLastRequestId()) {
             revert InvalidRequestIdRange(_startId, _endId);
-        } 
+        }
 
         if (_startId > _endId) return NOT_FOUND; // we have an empty range to search in
 
@@ -283,7 +284,7 @@ abstract contract WithdrawalQueueBase {
         if (_shareRate == 0) revert ZeroShareRate();
         if (_startId <= getLastFinalizedRequestId() || _endId > getLastRequestId()) {
             revert InvalidRequestIdRange(_startId, _endId);
-        } 
+        }
 
         if (_startId > _endId) return NOT_FOUND; // we have an empty range to search in
 
@@ -383,7 +384,7 @@ abstract contract WithdrawalQueueBase {
         if (discountFactor != lastCheckpoint.discountFactor) {
             // add a new discount if it differs from the previous
             _getCheckpoints()[lastCheckpointIndex + 1] =
-                DiscountCheckpoint(firstUnfinalizedRequestId, uint96(discountFactor));
+                DiscountCheckpoint(uint160(firstUnfinalizedRequestId), uint96(discountFactor));
             _setLastCheckpointIndex(lastCheckpointIndex + 1);
         }
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.4.24;
 
+import "../oracle/LegacyOracle.sol";
 
 interface ILegacyOracle {
     function getBeaconSpec() external view returns (
@@ -14,9 +15,8 @@ interface ILegacyOracle {
     function getLastCompletedEpochId() external view returns (uint256);
 }
 
-import "../oracle/LidoOracle.sol";
 
-contract MockLegacyOracle is ILegacyOracle, LidoOracle {
+contract MockLegacyOracle is ILegacyOracle, LegacyOracle {
 
     struct HandleConsensusLayerReportCallData {
         uint256 totalCalls;

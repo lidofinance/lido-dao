@@ -1,7 +1,9 @@
 const { MaxUint256 } = require('@ethersproject/constants')
 const { assert } = require('../../helpers/assert')
 
-const { deployHashConsensus, EPOCHS_PER_FRAME } = require('./hash-consensus-deploy.test')
+const { deployHashConsensus, EPOCHS_PER_FRAME, CONSENSUS_VERSION } = require('./hash-consensus-deploy.test')
+
+const MockReportProcessor = artifacts.require('MockReportProcessor')
 
 contract('HashConsensus', ([admin, account1, account2, member1, member2]) => {
   let consensus = null
@@ -168,10 +170,12 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2]) => {
   context('MANAGE_REPORT_PROCESSOR_ROLE', () => {
     beforeEach(deploy)
 
-    context('setReportProcessor', () => {
+    context('setReportProcessor', async () => {
+      const reportProcessor2 = await MockReportProcessor.new(CONSENSUS_VERSION, { from: admin })
+
       it('should revert without MANAGE_REPORT_PROCESSOR_ROLE role', async () => {
         await assert.revertsOZAccessControl(
-          consensus.setReportProcessor(member1, { from: account1 }),
+          consensus.setReportProcessor(reportProcessor2.address, { from: account1 }),
           account1,
           'MANAGE_REPORT_PROCESSOR_ROLE'
         )
@@ -179,9 +183,9 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2]) => {
 
       it('should allow calling from a possessor of MANAGE_REPORT_PROCESSOR_ROLE role', async () => {
         await consensus.grantRole(manageReportProcessorRoleKeccak156, account2)
-        await consensus.setReportProcessor(member1, { from: account2 })
+        await consensus.setReportProcessor(reportProcessor2.address, { from: account2 })
 
-        assert.equal(+(await consensus.getReportProcessor()), member1)
+        assert.equal(+(await consensus.getReportProcessor()), reportProcessor2.address)
       })
     })
   })

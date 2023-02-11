@@ -1,5 +1,4 @@
-// SPDX-FileCopyrightText: 2021 Lido <info@lido.fi>
-
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.9;
@@ -13,7 +12,7 @@ contract ERC721ReceiverMock is IERC721Receiver  {
     function setDoesAcceptTokens(bool _value) external {
         doesAcceptTokens = _value;
     }
-    
+
     function onERC721Received(
         address, // operator,
         address, // from,
