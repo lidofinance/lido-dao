@@ -96,13 +96,17 @@ interface IStakingRouter {
 }
 
 interface IWithdrawalQueue {
-    function finalizationBatch(uint256 _lastRequestIdToFinalize, uint256 _shareRate)
+    function finalizationBatch(uint256 _nextFinalizedRequestId, uint256 _shareRate)
         external
         view
         returns (uint128 eth, uint128 shares);
+
     function finalize(uint256 _lastIdToFinalize) external payable;
+
     function isPaused() external view returns (bool);
+
     function unfinalizedStETH() external view returns (uint256);
+
     function isBunkerModeActive() external view returns (bool);
 }
 
@@ -647,10 +651,11 @@ contract Lido is Versioned, StETHPermit, AragonApp {
                 _stakingModuleId,
                 _depositCalldata
             );
-            assert(depositsCount <= depositableEth / DEPOSIT_SIZE );
+
+            uint256 depositedAmount = depositsCount.mul(DEPOSIT_SIZE);
+            assert(depositedAmount <= depositableEth);
 
             if (depositsCount > 0) {
-                uint256 depositedAmount = depositsCount.mul(DEPOSIT_SIZE);
                 DEPOSITED_VALIDATORS_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(depositsCount));
 
                 _markAsUnbuffered(depositedAmount);
@@ -726,10 +731,10 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      *
      * NB: conventions and assumptions
      *
-     * `depositedValidators` are total amount of the **ever** deposited validators
-     * `_postClValidators` are total amount of the **ever** deposited validators
+     * `depositedValidators` are total amount of the **ever** deposited Lido validators
+     * `_postClValidators` are total amount of the **ever** appeared on the CL side Lido validators
      *
-     * i.e., exited validators persist in the state, just with a different status
+     * i.e., exited Lido validators persist in the state, just with a different status
      */
     function _processClStateUpdate(
         uint256 _preClValidators,
@@ -738,15 +743,13 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     ) internal returns (uint256 preCLBalance) {
         uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
         require(_postClValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
-
         require(_postClValidators >= _preClValidators, "REPORTED_LESS_VALIDATORS");
-
 
         if (_postClValidators > _preClValidators) {
             CL_VALIDATORS_POSITION.setStorageUint256(_postClValidators);
         }
 
-        uint256 appearedValidators = _postClValidators.sub(_preClValidators);
+        uint256 appearedValidators = _postClValidators - _preClValidators;
         preCLBalance = CL_BALANCE_POSITION.getStorageUint256();
         // Take into account the balance of the newly appeared validators
         preCLBalance = preCLBalance.add(appearedValidators.mul(DEPOSIT_SIZE));
