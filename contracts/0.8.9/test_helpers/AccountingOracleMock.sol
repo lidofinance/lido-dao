@@ -50,8 +50,8 @@ contract AccountingOracleMock {
         //     data.clBalanceGwei * 1e9,
         //     data.withdrawalVaultBalance,
         //     data.elRewardsVaultBalance,
-        //     data.lastWithdrawalRequestIdToFinalize,
-        //     data.finalizationShareRate,
+        //     data.lastFinalizableWithdrawalRequestId,
+        //     data.simulatedShareRate,
         //     data.isBunkerMode
         // );
 
@@ -60,8 +60,8 @@ contract AccountingOracleMock {
             data.clBalanceGwei * 1e9,
             data.withdrawalVaultBalance,
             data.elRewardsVaultBalance,
-            data.lastWithdrawalRequestIdToFinalize,
-            data.finalizationShareRate
+            data.lastFinalizableWithdrawalRequestId,
+            data.simulatedShareRate
         );
     }
 
