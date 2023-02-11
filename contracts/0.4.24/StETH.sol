@@ -363,8 +363,6 @@ contract StETH is IERC20, Pausable {
     function transferSharesFrom(
         address _sender, address _recipient, uint256 _sharesAmount
     ) external returns (uint256) {
-        _whenNotStopped();
-
         uint256 currentAllowance = allowances[_sender][msg.sender];
         uint256 tokensAmount = getPooledEthByShares(_sharesAmount);
         require(currentAllowance >= tokensAmount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
