@@ -76,11 +76,18 @@ contract LidoLocatorStub is ILidoLocator {
 }
 
 contract OracleReportSanityCheckerStub {
+
+    error SelectorNotFound(bytes4 sig, uint256 value, bytes data);
+
+    fallback() external payable { revert SelectorNotFound(msg.sig, msg.value, msg.data); }
+
     function checkLidoOracleReport(
         uint256 _timeElapsed,
         uint256 _preCLBalance,
         uint256 _postCLBalance,
-        uint256 _withdrawalVaultBalance
+        uint256 _withdrawalVaultBalance,
+        uint256 _preCLValidators,
+        uint256 _postCLValidators
     ) external view {}
 
     function checkWithdrawalQueueOracleReport(
@@ -102,4 +109,6 @@ contract OracleReportSanityCheckerStub {
         elRewards = _elRewardsVaultBalance;
         sharesToBurnLimit = _etherToLockForWithdrawals;
     }
+
+    function checkAccountingExtraDataListItemsCount(uint256 _extraDataListItemsCount) external view {}
 }

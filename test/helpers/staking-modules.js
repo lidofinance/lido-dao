@@ -2,7 +2,7 @@ const { newApp } = require('./dao')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const NodeOperatorsRegistryMock = artifacts.require('NodeOperatorsRegistryMock')
 
-async function setupNodeOperatorsRegistry({ dao, acl, token, stakingRouter, voting, appManager }, mock = false) {
+async function setupNodeOperatorsRegistry({ dao, acl, lidoLocator, stakingRouter, voting, appManager }, mock = false) {
   const nodeOperatorsRegistryBase = mock ? await NodeOperatorsRegistryMock.new() : await NodeOperatorsRegistry.new()
   const name = 'node-operators-registry-' + Math.random().toString(36).slice(2, 6)
   const nodeOperatorsRegistryProxyAddress = await newApp(
@@ -16,7 +16,7 @@ async function setupNodeOperatorsRegistry({ dao, acl, token, stakingRouter, voti
     ? await NodeOperatorsRegistryMock.at(nodeOperatorsRegistryProxyAddress)
     : await NodeOperatorsRegistry.at(nodeOperatorsRegistryProxyAddress)
 
-  await nodeOperatorsRegistry.initialize(token.address, '0x01')
+  await nodeOperatorsRegistry.initialize(lidoLocator.address, '0x01')
 
   const [
     NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS,
