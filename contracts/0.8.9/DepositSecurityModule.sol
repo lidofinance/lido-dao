@@ -49,6 +49,14 @@ contract DepositSecurityModule {
     event DepositsUnpaused(uint24 indexed stakingModuleId);
 
     error ErrorStakingModuleIdTooLarge();
+    error ErrorZeroAddress(string field);
+    error ErrorDuplicateAddress(address addr);
+    error ErrorNotAnOwner(address caller);
+    error ErrorSignature(string reason);
+    error ErrorDeposit(string reason);
+    error ErrorPauseIntentExpired();
+    error ErrorNotAGuardian(address addr);
+    error ErrorZeroParameter(string parameter);
 
     bytes32 public immutable ATTEST_MESSAGE_PREFIX;
     bytes32 public immutable PAUSE_MESSAGE_PREFIX;
@@ -75,9 +83,9 @@ contract DepositSecurityModule {
         uint256 _minDepositBlockDistance,
         uint256 _pauseIntentValidityPeriodBlocks
     ) {
-        require(_lido != address(0), "LIDO_CONTRACT_ZERO_ADDRESS");
-        require(_stakingRouter != address(0), "STAKING_ROUTER_ZERO_ADDRESS");
-        require(_depositContract != address(0), "DEPOSIT_CONTRACT_ZERO_ADDRESS");
+        if (_lido == address(0)) revert ErrorZeroAddress("_lido");
+        if (_depositContract == address(0)) revert ErrorZeroAddress ("_depositContract");
+        if (_stakingRouter == address(0)) revert ErrorZeroAddress ("_stakingRouter");
 
         LIDO = ILido(_lido);
         STAKING_ROUTER = IStakingRouter(_stakingRouter);
@@ -115,7 +123,7 @@ contract DepositSecurityModule {
     }
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "not an owner");
+        if (msg.sender != owner) revert ErrorNotAnOwner(msg.sender);
         _;
     }
 
@@ -131,10 +139,10 @@ contract DepositSecurityModule {
         _setOwner(newValue);
     }
 
-    function _setOwner(address newValue) internal {
-        require(newValue != address(0), "invalid value for owner: must be different from zero address");
-        owner = newValue;
-        emit OwnerChanged(newValue);
+    function _setOwner(address _newOwner) internal {
+        if (_newOwner == address(0)) revert ErrorZeroAddress("_newOwner");
+        owner = _newOwner;
+        emit OwnerChanged(_newOwner);
     }
 
     /**
@@ -152,7 +160,7 @@ contract DepositSecurityModule {
     }
 
     function _setPauseIntentValidityPeriodBlocks(uint256 newValue) internal {
-        require(newValue > 0, "invalid value for pauseIntentValidityPeriodBlocks: must be greater then 0");
+        if (newValue == 0) revert ErrorZeroParameter("pauseIntentValidityPeriodBlocks");
         pauseIntentValidityPeriodBlocks = newValue;
         emit PauseIntentValidityPeriodBlocksChanged(newValue);
     }
@@ -191,7 +199,7 @@ contract DepositSecurityModule {
     }
 
     function _setMinDepositBlockDistance(uint256 newValue) internal {
-        require(newValue > 0, "invalid value for minDepositBlockDistance: must be greater then 0");
+        if (newValue == 0) revert ErrorZeroParameter("minDepositBlockDistance");
         if (newValue != minDepositBlockDistance) {
             minDepositBlockDistance = newValue;
             emit MinDepositBlockDistanceChanged(newValue);
@@ -270,12 +278,12 @@ contract DepositSecurityModule {
         _setGuardianQuorum(newQuorum);
     }
 
-    function _addGuardian(address addr) internal {
-        require(addr != address(0), "guardian zero address");
-        require(!_isGuardian(addr), "duplicate address");
-        guardians.push(addr);
-        guardianIndicesOneBased[addr] = guardians.length;
-        emit GuardianAdded(addr);
+    function _addGuardian(address _newGuardian) internal {
+        if (_newGuardian == address(0)) revert ErrorZeroAddress("_newGuardian");
+        if (_isGuardian(_newGuardian)) revert ErrorDuplicateAddress(_newGuardian);
+        guardians.push(_newGuardian);
+        guardianIndicesOneBased[_newGuardian] = guardians.length;
+        emit GuardianAdded(_newGuardian);
     }
 
     /**
@@ -285,7 +293,7 @@ contract DepositSecurityModule {
      */
     function removeGuardian(address addr, uint256 newQuorum) external onlyOwner {
         uint256 indexOneBased = guardianIndicesOneBased[addr];
-        require(indexOneBased != 0, "not a guardian");
+        if (indexOneBased == 0) revert ErrorNotAGuardian(addr);
 
         uint256 totalGuardians = guardians.length;
         assert(indexOneBased <= totalGuardians);
@@ -340,10 +348,10 @@ contract DepositSecurityModule {
             bytes32 msgHash = keccak256(abi.encodePacked(PAUSE_MESSAGE_PREFIX, blockNumber, stakingModuleId));
             guardianAddr = ECDSA.recover(msgHash, sig.r, sig.vs);
             guardianIndex = _getGuardianIndex(guardianAddr);
-            require(guardianIndex != -1, "invalid signature");
+            if (guardianIndex == -1) revert ErrorSignature("invalid");
         }
 
-        require(block.number - blockNumber <= pauseIntentValidityPeriodBlocks, "pause intent expired");
+        if (block.number - blockNumber >  pauseIntentValidityPeriodBlocks) revert ErrorPauseIntentExpired();
 
         STAKING_ROUTER.pauseStakingModule(stakingModuleId);
         emit DepositsPaused(guardianAddr, uint24(stakingModuleId));
@@ -398,19 +406,19 @@ contract DepositSecurityModule {
         bytes calldata depositCalldata,
         Signature[] calldata sortedGuardianSignatures
     ) external validStakingModuleId(stakingModuleId) {
-        require(quorum > 0 && sortedGuardianSignatures.length >= quorum, "no guardian quorum");
+        if (quorum == 0 || sortedGuardianSignatures.length < quorum) revert ErrorDeposit("no quorum");
 
         bytes32 onchainDepositRoot = IDepositContract(DEPOSIT_CONTRACT).get_deposit_root();
-        require(depositRoot == onchainDepositRoot, "deposit root changed");
+        if (depositRoot != onchainDepositRoot) revert ErrorDeposit("deposit root changed");
 
-        require(STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId), "module not active");
+        if (!STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId)) revert ErrorDeposit("inactive module");
 
         uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
-        require(block.number - lastDepositBlock >= minDepositBlockDistance, "too frequent deposits");
-        require(blockHash != bytes32(0) && blockhash(blockNumber) == blockHash, "unexpected block hash");
+        if (block.number - lastDepositBlock < minDepositBlockDistance) revert ErrorDeposit("too frequent");
+        if (blockHash == bytes32(0) || blockhash(blockNumber) != blockHash) revert ErrorDeposit("unexpected block hash");
 
         uint256 onchainNonce = STAKING_ROUTER.getStakingModuleNonce(stakingModuleId);
-        require(nonce == onchainNonce, "nonce changed");
+        if (nonce != onchainNonce) revert ErrorDeposit("nonce changed");
 
         _verifySignatures(depositRoot, blockNumber, blockHash, stakingModuleId, nonce, sortedGuardianSignatures);
 
@@ -433,8 +441,8 @@ contract DepositSecurityModule {
 
         for (uint256 i = 0; i < sigs.length; ++i) {
             address signerAddr = ECDSA.recover(msgHash, sigs[i].r, sigs[i].vs);
-            require(_isGuardian(signerAddr), "invalid signature");
-            require(signerAddr > prevSignerAddr, "signatures not sorted");
+            if (!_isGuardian(signerAddr)) revert ErrorSignature("invalid");
+            if (signerAddr <= prevSignerAddr) revert ErrorSignature("not sorted");
             prevSignerAddr = signerAddr;
         }
     }

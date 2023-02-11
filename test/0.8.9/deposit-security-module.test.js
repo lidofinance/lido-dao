@@ -130,7 +130,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
               from: stranger
             }
           ),
-          'no guardian quorum'
+          'ErrorDeposit("no quorum")'
         )
       })
     })
@@ -174,7 +174,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             DEPOSIT_CALLDATA,
             [validAttestMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN2])]
           ),
-          'invalid signature'
+          'ErrorSignature("invalid")'
         )
       })
 
@@ -189,7 +189,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             DEPOSIT_CALLDATA,
             []
           ),
-          'no guardian quorum'
+          'ErrorDeposit("no quorum")'
         )
       })
 
@@ -209,7 +209,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             DEPOSIT_CALLDATA,
             [validAttestMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
           ),
-          'deposit root changed'
+          'ErrorDeposit("deposit root changed")'
         )
       })
 
@@ -228,7 +228,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             DEPOSIT_CALLDATA,
             [validAttestMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
           ),
-          'nonce changed'
+          'ErrorDeposit("nonce changed")'
         )
       })
 
@@ -249,7 +249,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             DEPOSIT_CALLDATA,
             [validAttestMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
           ),
-          'too frequent deposits'
+          'ErrorDeposit("too frequent")'
         )
       })
 
@@ -270,7 +270,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             DEPOSIT_CALLDATA,
             [validAttestMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
           ),
-          'module not active'
+          'ErrorDeposit("inactive module")'
         )
       })
 
@@ -288,7 +288,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             DEPOSIT_CALLDATA,
             [validAttestMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN1])]
           ),
-          'unexpected block hash'
+          'ErrorDeposit("unexpected block hash")'
         )
       })
 
@@ -298,7 +298,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
           depositSecurityModule.depositBufferedEther(block.number, '0x', DEPOSIT_ROOT, STAKING_MODULE, DEPOSIT_NONCE, DEPOSIT_CALLDATA, [
             validAttestMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN1])
           ]),
-          'unexpected block hash'
+          'ErrorDeposit("unexpected block hash")'
         )
       })
     })
@@ -419,7 +419,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             [],
             { from: stranger }
           ),
-          'no guardian quorum'
+          'ErrorDeposit("no quorum")'
         )
       })
       it("cannot deposit with guardian's sigs (1,0)", async () => {
@@ -439,7 +439,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             signatures,
             { from: stranger }
           ),
-          'signatures not sorted'
+          'ErrorSignature("not sorted")'
         )
       })
 
@@ -460,7 +460,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             signatures,
             { from: stranger }
           ),
-          'signatures not sorted'
+          'ErrorSignature("not sorted")'
         )
       })
 
@@ -481,7 +481,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             signatures,
             { from: stranger }
           ),
-          'invalid signature'
+          'ErrorSignature("invalid")'
         )
       })
     })
@@ -548,7 +548,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
           validPauseMessage.sign(UNRELATED_SIGNER_PRIVATE_KEYS[UNRELATED_SIGNER1]),
           { from: guardian }
         ),
-        'pause intent expired'
+        'ErrorPauseIntentExpired()'
       )
     })
 
@@ -560,7 +560,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
           stalePauseMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN2]),
           { from: stranger }
         ),
-        'pause intent expired'
+        'ErrorPauseIntentExpired()'
       )
     })
 
@@ -645,7 +645,10 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     })
 
     it('cannot be called by non-admin', async () => {
-      await assertRevert(depositSecurityModule.unpauseDeposits(STAKING_MODULE, { from: stranger }), 'not an owner')
+      await assertRevert(
+        depositSecurityModule.unpauseDeposits(STAKING_MODULE, { from: stranger }),
+        `ErrorNotAnOwner("${stranger}")`
+      )
     })
   })
   describe('Guardians', () => {
@@ -654,7 +657,10 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         assert.equal((await depositSecurityModule.getGuardians()).length, 0)
       })
       it(`addGuardian can't be called by non-admin`, async () => {
-        await assertRevert(depositSecurityModule.addGuardian(GUARDIAN1, 0, { from: stranger }), 'not an owner')
+        await assertRevert(
+          depositSecurityModule.addGuardian(GUARDIAN1, 0, { from: stranger }),
+          `ErrorNotAnOwner("${stranger}")`
+        )
       })
       it(`addGuardian adds a guardian`, async () => {
         await depositSecurityModule.addGuardian(GUARDIAN1, 0, { from: owner })
@@ -687,10 +693,16 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       })
       it(`addGuardian doesn't add duplicate`, async () => {
         await depositSecurityModule.addGuardian(GUARDIAN1, 0, { from: owner })
-        await assertRevert(depositSecurityModule.addGuardian(GUARDIAN1, 0, { from: owner }), 'duplicate address')
+        await assertRevert(
+          depositSecurityModule.addGuardian(GUARDIAN1, 0, { from: owner }),
+          `ErrorDuplicateAddress("${GUARDIAN1}")`
+        )
       })
       it(`addGuardians can't be called by non-admin`, async () => {
-        await assertRevert(depositSecurityModule.addGuardians([GUARDIAN1], 0, { from: stranger }), 'not an owner')
+        await assertRevert(
+          depositSecurityModule.addGuardians([GUARDIAN1], 0, { from: stranger }),
+          `ErrorNotAnOwner("${stranger}")`
+        )
       })
       it(`addGuardians adds set of guardians`, async () => {
         await depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2], 0, { from: owner })
@@ -701,15 +713,27 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         assert.isTrue((await depositSecurityModule.getGuardians()).includes(GUARDIAN2))
       })
       it(`addGuardians doesn't add a set with duplicate`, async () => {
-        await assertRevert(depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN1], 0, { from: owner }), 'duplicate address')
+        await assertRevert(
+          depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN1], 0, { from: owner }),
+          `ErrorDuplicateAddress("${GUARDIAN1}")`
+        )
         await depositSecurityModule.addGuardians([GUARDIAN1], 0, { from: owner })
-        await assertRevert(depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2], 0, { from: owner }), 'duplicate address')
+        await assertRevert(
+          depositSecurityModule.addGuardians([GUARDIAN1, GUARDIAN2], 0, { from: owner }),
+          `ErrorDuplicateAddress("${GUARDIAN1}")`
+        )
       })
       it(`removeGuardian can't be called by non-admin`, async () => {
-        await assertRevert(depositSecurityModule.removeGuardian(GUARDIAN1, 0, { from: stranger }), 'not an owner')
+        await assertRevert(
+          depositSecurityModule.removeGuardian(GUARDIAN1, 0, { from: stranger }),
+          `ErrorNotAnOwner("${stranger}")`
+        )
       })
       it(`removeGuardian reverts on incorrect address`, async () => {
-        await assertRevert(depositSecurityModule.removeGuardian(GUARDIAN1, 0, { from: owner }), 'not a guardian')
+        await assertRevert(
+          depositSecurityModule.removeGuardian(GUARDIAN1, 0, { from: owner }),
+          `ErrorNotAGuardian("${GUARDIAN1}")`
+        )
       })
       it(`removeGuardian removes guardian and sets new quorum`, async () => {
         await depositSecurityModule.addGuardian(GUARDIAN1, 1, { from: owner })
@@ -795,7 +819,10 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
         assert.isTrue((await depositSecurityModule.getGuardians()).includes(GUARDIAN1))
       })
       it(`setGuardianQuorum can't be called by non-admin`, async () => {
-        await assertRevert(depositSecurityModule.setGuardianQuorum(1, { from: stranger }), 'not an owner')
+        await assertRevert(
+          depositSecurityModule.setGuardianQuorum(1, { from: stranger }),
+          `ErrorNotAnOwner("${stranger}")`
+        )
       })
       it(`setGuardianQuorum sets the quorum`, async () => {
         await depositSecurityModule.setGuardianQuorum(1, { from: owner })
@@ -837,12 +864,15 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       assert.equal(await depositSecurityModule.getOwner(), owner, 'wrong initial owner')
     })
     it('not owner cannot change', async () => {
-      await assertRevert(depositSecurityModule.setOwner(stranger, { from: stranger }), 'not an owner')
+      await assertRevert(
+        depositSecurityModule.setOwner(stranger, { from: stranger }),
+        `ErrorNotAnOwner("${stranger}")`
+      )
     })
     it('set new owner to zero address should reverts', async () => {
       await assertRevert(
         depositSecurityModule.setOwner(ZERO_ADDRESS, { from: owner }),
-        'invalid value for owner: must be different from zero address'
+        'ErrorZeroAddress("_newOwner")'
       )
     })
     it('set new owner by owner', async () => {
@@ -856,7 +886,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     it('pauseIntentValidityPeriodBlocks should be gt 0', async () => {
       await assertRevert(
         depositSecurityModule.setPauseIntentValidityPeriodBlocks(0, { from: owner }),
-        'invalid value for pauseIntentValidityPeriodBlocks: must be greater then 0'
+        'ErrorZeroParameter("pauseIntentValidityPeriodBlocks")'
       )
     })
     it('setPauseIntentValidityPeriodBlocks sets new value for pauseIntentValidityPeriodBlocks if called by owner', async () => {
@@ -896,7 +926,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     it('minDepositBlockDistance should be gt 0', async () => {
       await assertRevert(
         depositSecurityModule.setMinDepositBlockDistance(0, { from: owner }),
-        'invalid value for minDepositBlockDistance: must be greater then 0'
+        'ErrorZeroParameter("minDepositBlockDistance")'
       )
     })
     it('setMinDepositBlockDistance sets new value for minDepositBlockDistance if called by owner', async () => {
