@@ -1,5 +1,4 @@
-// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
-
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
@@ -8,7 +7,7 @@ pragma solidity 0.4.24;
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "@aragon/os/contracts/common/UnstructuredStorage.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
-import "./lib/Pausable.sol";
+import "./utils/Pausable.sol";
 
 /**
  * @title Interest-bearing ERC20-like token for Lido Liquid Stacking protocol.
@@ -201,7 +200,6 @@ contract StETH is IERC20, Pausable {
      * Requirements:
      *
      * - `_spender` cannot be the zero address.
-     * - the contract must not be paused.
      *
      * @dev The `_amount` argument is the amount of tokens, not shares.
      */
@@ -231,6 +229,8 @@ contract StETH is IERC20, Pausable {
      * @dev The `_amount` argument is the amount of tokens, not shares.
      */
     function transferFrom(address _sender, address _recipient, uint256 _amount) external returns (bool) {
+        _whenNotStopped();
+
         uint256 currentAllowance = allowances[_sender][msg.sender];
         require(currentAllowance >= _amount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
 
@@ -250,7 +250,6 @@ contract StETH is IERC20, Pausable {
      * Requirements:
      *
      * - `_spender` cannot be the the zero address.
-     * - the contract must not be paused.
      */
     function increaseAllowance(address _spender, uint256 _addedValue) external returns (bool) {
         _approve(msg.sender, _spender, allowances[msg.sender][_spender].add(_addedValue));
@@ -269,7 +268,6 @@ contract StETH is IERC20, Pausable {
      *
      * - `_spender` cannot be the zero address.
      * - `_spender` must have allowance for the caller of at least `_subtractedValue`.
-     * - the contract must not be paused.
      */
     function decreaseAllowance(address _spender, uint256 _subtractedValue) external returns (bool) {
         uint256 currentAllowance = allowances[msg.sender][_spender];
@@ -365,6 +363,8 @@ contract StETH is IERC20, Pausable {
     function transferSharesFrom(
         address _sender, address _recipient, uint256 _sharesAmount
     ) external returns (uint256) {
+        _whenNotStopped();
+
         uint256 currentAllowance = allowances[_sender][msg.sender];
         uint256 tokensAmount = getPooledEthByShares(_sharesAmount);
         require(currentAllowance >= tokensAmount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
@@ -400,16 +400,16 @@ contract StETH is IERC20, Pausable {
      *
      * Emits an `Approval` event.
      *
+     * NB: the method can be invoken even if the protocol paused.
+     *
      * Requirements:
      *
      * - `_owner` cannot be the zero address.
      * - `_spender` cannot be the zero address.
-     * - the contract must not be paused.
      */
     function _approve(address _owner, address _spender, uint256 _amount) internal {
         require(_owner != address(0), "APPROVE_FROM_ZERO_ADDRESS");
         require(_spender != address(0), "APPROVE_TO_ZERO_ADDRESS");
-        _whenNotStopped();
 
         allowances[_owner][_spender] = _amount;
         emit Approval(_owner, _spender, _amount);
@@ -455,6 +455,8 @@ contract StETH is IERC20, Pausable {
      * @notice Creates `_sharesAmount` shares and assigns them to `_recipient`, increasing the total amount of shares.
      * @dev This doesn't increase the token total supply.
      *
+     * NB: The method doesn't check protocol pause relying on the external enforcement.
+     *
      * Requirements:
      *
      * - `_recipient` cannot be the zero address.
@@ -462,7 +464,6 @@ contract StETH is IERC20, Pausable {
      */
     function _mintShares(address _recipient, uint256 _sharesAmount) internal returns (uint256 newTotalShares) {
         require(_recipient != address(0), "MINT_TO_THE_ZERO_ADDRESS");
-        _whenNotStopped();
 
         newTotalShares = _getTotalShares().add(_sharesAmount);
         TOTAL_SHARES_POSITION.setStorageUint256(newTotalShares);

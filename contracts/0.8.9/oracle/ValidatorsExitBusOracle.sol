@@ -98,6 +98,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
+        _initializePausable();
         _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
         RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(PAUSE_INFINITELY); // pause it explicitly
     }
@@ -174,7 +175,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     /// Requests must be sorted in the ascending order by the following compound
     /// key: (moduleId, nodeOpId, validatorIndex).
     ///
-    uint256 public constant DATA_FORMAT_LIST = 0;
+    uint256 public constant DATA_FORMAT_LIST = 1;
 
     /// Length in bytes of packed request
     uint256 internal constant PACKED_REQUEST_LENGTH = 64;

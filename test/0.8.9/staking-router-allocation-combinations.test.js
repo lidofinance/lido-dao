@@ -75,12 +75,12 @@ contract('StakingRouter', (accounts) => {
         for (const availableKeys of MODULE_AVAILABLE_KEYS_CASES) {
           for (const activeKeys of MODULE_ACTIVE_KEYS_CASES) {
             await StakingModule1.setAvailableKeysCount(availableKeys)
-            assertBn(await StakingModule1.getAvailableKeysCount(), availableKeys)
+            assertBn(await StakingModule1.getAvailableValidatorsCount(), availableKeys)
 
-            await StakingModule1.setActiveKeysCount(activeKeys)
-            assertBn(await StakingModule1.getActiveKeysCount(), activeKeys)
+            await StakingModule1.setActiveValidatorsCount(activeKeys)
+            assertBn(await StakingModule1.getActiveValidatorsCount(), activeKeys)
 
-            const { allocated, allocations } = await stakingRouter.getKeysAllocation(depositableKeys)
+            const { allocated, allocations } = await stakingRouter.getDepositsAllocation(depositableKeys)
 
             const expectedAllocated = Math.min(depositableKeys, availableKeys)
 
@@ -121,18 +121,18 @@ contract('StakingRouter', (accounts) => {
                     assertBn((await stakingRouter.getStakingModuleByIndex(1)).targetShare, module2TargetShare)
 
                     await StakingModule1.setAvailableKeysCount(module1AvailableKeys)
-                    assertBn(await StakingModule1.getAvailableKeysCount(), module1AvailableKeys)
+                    assertBn(await StakingModule1.getAvailableValidatorsCount(), module1AvailableKeys)
 
                     await StakingModule2.setAvailableKeysCount(module2AvailableKeys)
-                    assertBn(await StakingModule2.getAvailableKeysCount(), module2AvailableKeys)
+                    assertBn(await StakingModule2.getAvailableValidatorsCount(), module2AvailableKeys)
 
-                    await StakingModule1.setActiveKeysCount(module1ActiveKeys)
-                    assertBn(await StakingModule1.getActiveKeysCount(), module1ActiveKeys)
+                    await StakingModule1.setActiveValidatorsCount(module1ActiveKeys)
+                    assertBn(await StakingModule1.getActiveValidatorsCount(), module1ActiveKeys)
 
-                    await StakingModule2.setActiveKeysCount(module2ActiveKeys)
-                    assertBn(await StakingModule2.getActiveKeysCount(), module2ActiveKeys)
+                    await StakingModule2.setActiveValidatorsCount(module2ActiveKeys)
+                    assertBn(await StakingModule2.getActiveValidatorsCount(), module2ActiveKeys)
 
-                    const { allocated, allocations } = await stakingRouter.getKeysAllocation(depositableKeys)
+                    const { allocated, allocations } = await stakingRouter.getDepositsAllocation(depositableKeys)
 
                     const newTotalActiveKeys = module1ActiveKeys + module2ActiveKeys + depositableKeys
 

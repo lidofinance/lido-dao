@@ -384,19 +384,19 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
 
     it('updateTargetValidatorsLimits()', async () => {
       await app.updateTargetValidatorsLimits(3, 5, true, { from: voting })
-      let keyStats = await app.getNodeOperatorStats(3)
+      let keyStats = await app.getNodeOperatorSummary(3)
 
       assert.equal(+keyStats.excessValidatorsCount, 5)
 
       await app.updateExitedValidatorsKeysCount(3, 9, { from: voting })
 
-      keyStats1 = await app.getNodeOperatorStats(3)
+      keyStats1 = await app.getNodeOperatorSummary(3)
       assert.equal(+keyStats1.excessValidatorsCount, 0)
     })
 
     it('updateExitedValidatorsKeysCount() - check if appeared a new deposited keys and stopped, excess no changes                                                                                                                                                                                                                                                                                                                                                                                    ', async () => {
       await app.updateTargetValidatorsLimits(3, 5, true, { from: voting })
-      let keyStats = await app.getNodeOperatorStats(3)
+      let keyStats = await app.getNodeOperatorSummary(3)
 
       //excess = deposited - stopped - targetLimit
       assert.equal(+keyStats.targetValidatorsCount, 5)
@@ -407,13 +407,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
 
       await app.updateExitedValidatorsKeysCount(3, 1, { from: voting })
 
-      keyStats1 = await app.getNodeOperatorStats(3)
+      keyStats1 = await app.getNodeOperatorSummary(3)
       assert.equal(+keyStats1.excessValidatorsCount, 5)
     })
 
     it('updateExitedValidatorsKeysCount() - check if appeared a new deposited keys', async () => {
       await app.updateTargetValidatorsLimits(3, 5, true, { from: voting })
-      let keyStats = await app.getNodeOperatorStats(3)
+      let keyStats = await app.getNodeOperatorSummary(3)
 
       //excess = deposited - stopped - targetLimit
       assert.equal(+keyStats.targetValidatorsCount, 5)
@@ -424,31 +424,31 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
 
       await app.updateExitedValidatorsKeysCount(3, 1, { from: voting })
 
-      keyStats1 = await app.getNodeOperatorStats(3)
+      keyStats1 = await app.getNodeOperatorSummary(3)
       assert.equal(+keyStats1.excessValidatorsCount, 6)
     })
 
     it('updateTargetValidatorsLimits() - try to update to the same active flag', async () => {
-      let keyStats = await app.getNodeOperatorStats(0)
+      let keyStats = await app.getNodeOperatorSummary(0)
       targetValidatorsCountBefore = keyStats.targetValidatorsCount
       assert.isFalse(keyStats.targetValidatorsActive)
 
       await app.updateTargetValidatorsLimits(0, 10, false, { from: voting })
-      keyStats = await app.getNodeOperatorStats(0)
+      keyStats = await app.getNodeOperatorSummary(0)
       targetValidatorsCountAfter = keyStats.targetValidatorsCount
       assert.isFalse(keyStats.targetValidatorsActive)
       assert.equal(+targetValidatorsCountBefore, +targetValidatorsCountAfter)
 
       targetValidatorsCountBefore =  keyStats.targetValidatorsCount
       await app.updateTargetValidatorsLimits(0, 20, true, { from: voting })
-      keyStats = await app.getNodeOperatorStats(0)
+      keyStats = await app.getNodeOperatorSummary(0)
       targetValidatorsCountAfter = keyStats.targetValidatorsCount
       assert.isTrue(keyStats.targetValidatorsActive)
       assert.notEqual(+targetValidatorsCountBefore, +targetValidatorsCountAfter)
 
       targetValidatorsCountBefore =  keyStats.targetValidatorsCount
       await app.updateTargetValidatorsLimits(0, 30, true, { from: voting })
-      keyStats = await app.getNodeOperatorStats(0)
+      keyStats = await app.getNodeOperatorSummary(0)
       targetValidatorsCountAfter = keyStats.targetValidatorsCount
       assert.isTrue(keyStats.targetValidatorsActive)
       assert.equal(+targetValidatorsCountBefore, +targetValidatorsCountAfter)
@@ -463,7 +463,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       assert.equal(keysStatTotal.activeValidatorsKeysCount, 13)
       assert.equal(keysStatTotal.readyToDepositValidatorsKeysCount, 12)
 
-      let limitStatOp = await app.getNodeOperatorStats(0)
+      let limitStatOp = await app.getNodeOperatorSummary(0)
       assert.equal(limitStatOp.targetValidatorsActive, true)
       assert.equal(limitStatOp.targetValidatorsCount, 10)
       assert.equal(limitStatOp.excessValidatorsCount, 0)
@@ -481,7 +481,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       assert.equal(keysStatTotal.activeValidatorsKeysCount, 13)
       assert.equal(keysStatTotal.readyToDepositValidatorsKeysCount, 15)
 
-      limitStatOp = await app.getNodeOperatorStats(0)
+      limitStatOp = await app.getNodeOperatorSummary(0)
       assert.equal(limitStatOp.targetValidatorsActive, false)
       assert.equal(limitStatOp.targetValidatorsCount, 0)
       assert.equal(limitStatOp.excessValidatorsCount, 0)
@@ -503,7 +503,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       assert.equal(keysStatTotal.readyToDepositValidatorsKeysCount, 5)
 
       // op 0
-      let limitStatOp = await app.getNodeOperatorStats(0)
+      let limitStatOp = await app.getNodeOperatorSummary(0)
       assert.equal(limitStatOp.targetValidatorsActive, true)
       assert.equal(limitStatOp.targetValidatorsCount, 5)
       assert.equal(limitStatOp.excessValidatorsCount, 3) // deposited - exited - target
@@ -514,7 +514,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       assert.equal(keysStatOp.readyToDepositValidatorsKeysCount, 0)
 
       // op 1
-      limitStatOp = await app.getNodeOperatorStats(1)
+      limitStatOp = await app.getNodeOperatorSummary(1)
       assert.equal(limitStatOp.targetValidatorsActive, true)
       assert.equal(limitStatOp.targetValidatorsCount, 5)
       assert.equal(limitStatOp.excessValidatorsCount, 0) // deposited - exited - target
@@ -534,7 +534,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       assert.equal(keysStatTotal.readyToDepositValidatorsKeysCount, 6)
 
       // op 0
-      limitStatOp = await app.getNodeOperatorStats(0)
+      limitStatOp = await app.getNodeOperatorSummary(0)
       assert.equal(limitStatOp.targetValidatorsActive, true)
       assert.equal(limitStatOp.targetValidatorsCount, 5)
       assert.equal(limitStatOp.excessValidatorsCount, 2)
@@ -545,7 +545,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       assert.equal(keysStatOp.readyToDepositValidatorsKeysCount, 0)
 
       // op 1
-      limitStatOp = await app.getNodeOperatorStats(1)
+      limitStatOp = await app.getNodeOperatorSummary(1)
       assert.equal(limitStatOp.targetValidatorsActive, true)
       assert.equal(limitStatOp.targetValidatorsCount, 5)
       assert.equal(limitStatOp.excessValidatorsCount, 0)
@@ -570,7 +570,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       assert.equal(keysStatTotal.readyToDepositValidatorsKeysCount, 15)
 
       // op 0
-      let limitStatOp = await app.getNodeOperatorStats(0)
+      let limitStatOp = await app.getNodeOperatorSummary(0)
       assert.equal(limitStatOp.targetValidatorsActive, true)
       assert.equal(limitStatOp.targetValidatorsCount, 10)
       assert.equal(limitStatOp.excessValidatorsCount, 0) // deposited - exited - target
@@ -581,7 +581,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       assert.equal(keysStatOp.readyToDepositValidatorsKeysCount, 0)
 
       // op 1
-      limitStatOp = await app.getNodeOperatorStats(1)
+      limitStatOp = await app.getNodeOperatorSummary(1)
       assert.equal(limitStatOp.targetValidatorsActive, true)
       assert.equal(limitStatOp.targetValidatorsCount, 15)
       assert.equal(limitStatOp.excessValidatorsCount, 0) // deposited - exited - target

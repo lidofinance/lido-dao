@@ -15,7 +15,7 @@ const {
 
 const ValidatorsExitBusOracle = artifacts.require('ValidatorsExitBusTimeTravellable')
 
-const DATA_FORMAT_LIST = 0
+const DATA_FORMAT_LIST = 1
 
 
 function getReportDataItems(r) {
@@ -66,15 +66,14 @@ module.exports = {
 }
 
 async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
-  const secondsPerSlot = 32 * 12
   const maxValidatorExitRequestsPerReport = 2000
-  const limitsList = [0, 0, 0, 0, 0, 0, maxValidatorExitRequestsPerReport]
-  const managersRoster = [[admin], [], [], [], [], [], [], []]
+  const limitsList = [0, 0, 0, 0, 0, 0, maxValidatorExitRequestsPerReport, 0]
+  const managersRoster = [[admin], [], [], [], [], [], [], [], []]
 
   const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
 
   let oracleReportSanityChecker = await OracleReportSanityChecker.new(
-    lidoLocator, secondsPerSlot, admin, limitsList, managersRoster, { from: admin })
+    lidoLocator, admin, limitsList, managersRoster, { from: admin })
   return oracleReportSanityChecker.address
 }
 

@@ -54,33 +54,33 @@ contract('StakingRouter', (accounts) => {
       )
     })
 
-    it('getKeysAllocation :: staking module without keys', async () => {
-      const { allocated, allocations } = await stakingRouter.getKeysAllocation(0)
+    it('getDepositsAllocation :: staking module without keys', async () => {
+      const { allocated, allocations } = await stakingRouter.getDepositsAllocation(0)
 
       assertBn(allocated, 0)
       assert.equal(allocations.length, 1)
       assertBn(allocations[0], 0)
     })
 
-    it('getKeysAllocation :: staking module with zero used keys', async () => {
+    it('getDepositsAllocation :: staking module with zero used keys', async () => {
       await curatedStakingModuleMock.setAvailableKeysCount(500)
-      assertBn(await curatedStakingModuleMock.getAvailableKeysCount(), 500)
+      assertBn(await curatedStakingModuleMock.getAvailableValidatorsCount(), 500)
 
-      const { allocated, allocations } = await stakingRouter.getKeysAllocation(1000)
+      const { allocated, allocations } = await stakingRouter.getDepositsAllocation(1000)
 
       assertBn(allocated, 500)
       assert.equal(allocations.length, 1)
       assertBn(allocations[0], 500)
     })
 
-    it('getKeysAllocation :: staking module with non zero used keys', async () => {
-      await curatedStakingModuleMock.setActiveKeysCount(250)
-      assertBn(await curatedStakingModuleMock.getActiveKeysCount(), 250)
+    it('getDepositsAllocation :: staking module with non zero used keys', async () => {
+      await curatedStakingModuleMock.setActiveValidatorsCount(250)
+      assertBn(await curatedStakingModuleMock.getActiveValidatorsCount(), 250)
 
       await curatedStakingModuleMock.setAvailableKeysCount(250)
-      assertBn(await curatedStakingModuleMock.getAvailableKeysCount(), 250)
+      assertBn(await curatedStakingModuleMock.getAvailableValidatorsCount(), 250)
 
-      const { allocated, allocations } = await stakingRouter.getKeysAllocation(250)
+      const { allocated, allocations } = await stakingRouter.getDepositsAllocation(250)
 
       assertBn(allocated, 250)
       assert.equal(allocations.length, 1)
@@ -108,20 +108,20 @@ contract('StakingRouter', (accounts) => {
       )
     })
 
-    it('getKeysAllocation :: equal available keys', async () => {
-      await curatedStakingModuleMock.setActiveKeysCount(4500)
-      assertBn(await curatedStakingModuleMock.getActiveKeysCount(), 4500)
+    it('getDepositsAllocation :: equal available keys', async () => {
+      await curatedStakingModuleMock.setActiveValidatorsCount(4500)
+      assertBn(await curatedStakingModuleMock.getActiveValidatorsCount(), 4500)
 
       await curatedStakingModuleMock.setAvailableKeysCount(500)
-      assertBn(await curatedStakingModuleMock.getAvailableKeysCount(), 500)
+      assertBn(await curatedStakingModuleMock.getAvailableValidatorsCount(), 500)
 
-      await soloStakingModuleMock.setActiveKeysCount(50)
-      assertBn(await soloStakingModuleMock.getActiveKeysCount(), 50)
+      await soloStakingModuleMock.setActiveValidatorsCount(50)
+      assertBn(await soloStakingModuleMock.getActiveValidatorsCount(), 50)
 
       await soloStakingModuleMock.setAvailableKeysCount(250)
-      assertBn(await soloStakingModuleMock.getAvailableKeysCount(), 250)
+      assertBn(await soloStakingModuleMock.getAvailableValidatorsCount(), 250)
 
-      const { allocated, allocations } = await stakingRouter.getKeysAllocation(333)
+      const { allocated, allocations } = await stakingRouter.getDepositsAllocation(333)
 
       assertBn(allocated, 333)
       assert.equal(allocations.length, 2)

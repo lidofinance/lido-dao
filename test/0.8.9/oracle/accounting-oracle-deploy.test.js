@@ -25,14 +25,10 @@ const MockLegacyOracle = artifacts.require('MockLegacyOracle')
 const V1_ORACLE_LAST_COMPLETED_EPOCH = 2 * EPOCHS_PER_FRAME
 const V1_ORACLE_LAST_REPORT_SLOT = V1_ORACLE_LAST_COMPLETED_EPOCH * SLOTS_PER_EPOCH
 
-const MAX_EXITED_VALS_PER_HOUR = 10
-const MAX_EXITED_VALS_PER_DAY = 24 * MAX_EXITED_VALS_PER_HOUR
-const MAX_EXTRA_DATA_LIST_LEN = 15
+const EXTRA_DATA_FORMAT_LIST = 1
 
-const EXTRA_DATA_FORMAT_LIST = 0
-
-const EXTRA_DATA_TYPE_STUCK_VALIDATORS = 0
-const EXTRA_DATA_TYPE_EXITED_VALIDATORS = 1
+const EXTRA_DATA_TYPE_STUCK_VALIDATORS = 1
+const EXTRA_DATA_TYPE_EXITED_VALIDATORS = 2
 
 
 function getReportDataItems(r) {
@@ -88,6 +84,18 @@ function calcExtraDataListHash(packedExtraDataList) {
 }
 
 
+async function deployOracleReportSanityCheckerForAccounting(lidoLocator, admin) {
+  const churnValidatorsPerDayLimit = 100
+  const limitsList = [churnValidatorsPerDayLimit, 0, 0, 0, 0, 0, 32 * 12, 15]
+  const managersRoster = [[admin], [], [], [], [], [], [], [], []]
+
+  const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
+
+  let oracleReportSanityChecker = await OracleReportSanityChecker.new(
+    lidoLocator, admin, limitsList, managersRoster, { from: admin })
+  return oracleReportSanityChecker
+}
+
 module.exports = {
   SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, SECONDS_PER_EPOCH,
   EPOCHS_PER_FRAME, SLOTS_PER_FRAME, SECONDS_PER_FRAME,
@@ -96,7 +104,6 @@ module.exports = {
   computeEpochFirstSlot, computeTimestampAtSlot, computeTimestampAtEpoch,
   ZERO_HASH, CONSENSUS_VERSION,
   V1_ORACLE_LAST_COMPLETED_EPOCH, V1_ORACLE_LAST_REPORT_SLOT,
-  MAX_EXITED_VALS_PER_HOUR, MAX_EXITED_VALS_PER_DAY, MAX_EXTRA_DATA_LIST_LEN,
   EXTRA_DATA_FORMAT_LIST, EXTRA_DATA_TYPE_STUCK_VALIDATORS, EXTRA_DATA_TYPE_EXITED_VALIDATORS,
   deployAndConfigureAccountingOracle, deployAccountingOracleSetup, initAccountingOracle,
   deployMockLegacyOracle, deployMockLidoAndStakingRouter,
@@ -133,14 +140,15 @@ async function deployAccountingOracleSetup(admin, {
   getLidoAndStakingRouter = deployMockLidoAndStakingRouter,
   getLegacyOracle = deployMockLegacyOracle,
 } = {}) {
-  const {lido, stakingRouter, withdrawalQueue} = await getLidoAndStakingRouter()
-
   const locatorAddr = (await deployLocatorWithDummyAddressesImplementation(admin)).address
+  const {lido, stakingRouter, withdrawalQueue} = await getLidoAndStakingRouter()
+  const oracleReportSanityChecker = await deployOracleReportSanityCheckerForAccounting(locatorAddr, admin)
 
   await updateLocatorImplementation(locatorAddr, admin, {
     lido: lido.address,
     stakingRouter: stakingRouter.address,
-    withdrawalQueue: withdrawalQueue.address
+    withdrawalQueue: withdrawalQueue.address,
+    oracleReportSanityChecker: oracleReportSanityChecker.address,
   })
 
   const legacyOracle = await getLegacyOracle()
@@ -173,21 +181,16 @@ async function initAccountingOracle({
   consensus,
   dataSubmitter = null,
   consensusVersion = CONSENSUS_VERSION,
-  maxExitedValidatorsPerDay = MAX_EXITED_VALS_PER_DAY,
-  maxExtraDataListItemsCount = MAX_EXTRA_DATA_LIST_LEN,
 }) {
   const initTx = await oracle.initialize(
     admin,
     consensus.address,
     consensusVersion,
-    maxExitedValidatorsPerDay,
-    maxExtraDataListItemsCount,
     {from: admin}
   )
 
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), admin, {from: admin})
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), admin, {from: admin})
-  await oracle.grantRole(await oracle.MANAGE_DATA_BOUNDARIES_ROLE(), admin, {from: admin})
 
   if (dataSubmitter != null) {
     await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), dataSubmitter, {from: admin})
@@ -307,10 +310,6 @@ contract('AccountingOracle', ([admin, member1]) => {
       assert.equal(+await oracle.getConsensusVersion(), CONSENSUS_VERSION)
       assert.equal(await oracle.LIDO(), mockLido.address)
       assert.equal(+await oracle.SECONDS_PER_SLOT(), SECONDS_PER_SLOT)
-
-      const dataBoundaries = await oracle.getDataBoundaries()
-      assert.equal(+dataBoundaries.maxExitedValidatorsPerDay, MAX_EXITED_VALS_PER_DAY)
-      assert.equal(+dataBoundaries.maxExtraDataListItemsCount, MAX_EXTRA_DATA_LIST_LEN)
     })
   })
 })

@@ -52,9 +52,9 @@ contract('Lido: staking router reward distribution', ([depositor, user2]) => {
     await curatedModule.increaseDepositedSigningKeysCount(499_950, { from: appManager })
     await curatedModule.increaseVettedSigningKeysCount(499_950, { from: appManager })
 
-    await soloModule.setTotalKeys(100, { from: appManager })
-    await soloModule.setTotalUsedKeys(10, { from: appManager })
-    await soloModule.setTotalStoppedKeys(0, { from: appManager })
+    await soloModule.setTotalVettedValidators(100, { from: appManager })
+    await soloModule.setTotalDepositedValidators(10, { from: appManager })
+    await soloModule.setTotalExitedValidators(0, { from: appManager })
 
     snapshot = new EvmSnapshot(hre.ethers.provider)
     await snapshot.make()

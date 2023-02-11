@@ -254,7 +254,7 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // #1 goes below the limit (nothing changed cause staking limit decreases)
-    await operators.updateExitedValidatorsKeysCount(1, 1, { from: voting })
+    await operators.updateExitedValidatorsCount(1, 1, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
@@ -385,7 +385,7 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // #1 goes below the limit (nothing changed cause staking limit decreases)
-    await operators.updateExitedValidatorsKeysCount(1, 1, { from: voting })
+    await operators.updateExitedValidatorsCount(1, 1, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 

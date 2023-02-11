@@ -8,8 +8,6 @@ import {SafeMath} from "@aragon/os/contracts/lib/math/SafeMath.sol";
 import {SafeMath64} from "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import {MemUtils} from "../../common/lib/MemUtils.sol";
 
-import "hardhat/console.sol";
-
 library SigningKeys {
     using SafeMath for uint256;
     using SafeMath64 for uint64;
@@ -39,7 +37,7 @@ library SigningKeys {
     function getKeyOffset(bytes32 _position, uint256 _nodeOperatorId, uint256 _keyIndex)
         internal
         pure
-        returns (uint256)   
+        returns (uint256)
     {
         return uint256(keccak256(abi.encodePacked(_position, _nodeOperatorId, _keyIndex)));
     }

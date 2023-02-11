@@ -1,5 +1,4 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
@@ -29,7 +28,7 @@ contract MemUtilsTest {
     /// unsafeAllocateBytes
     ///
 
-    function unsafeAlloc_allocates_empty_byte_array() external {
+    function unsafeAlloc_allocates_empty_byte_array() external pure {
         // disable all compiler optimizations by including an assembly block not marked as mem-safe
         assembly {
             mstore(0x00, 0x1)
@@ -48,7 +47,7 @@ contract MemUtilsTest {
         Assert.equal(freeMemPtr, preAllocFreeMemPtr + 32);
     }
 
-    function unsafeAlloc_allocates_memory_and_advances_free_mem_pointer() external {
+    function unsafeAlloc_allocates_memory_and_advances_free_mem_pointer() external pure {
         // disable all compiler optimizations by including an assembly block not marked as mem-safe
         assembly {
             mstore(0x00, 0x1)
@@ -116,7 +115,7 @@ contract MemUtilsTest {
         ));
     }
 
-    function unsafeAlloc_pads_free_mem_pointer_to_32_bytes() external {
+    function unsafeAlloc_pads_free_mem_pointer_to_32_bytes() external pure {
         // disable all compiler optimizations by including an assembly block not marked as mem-safe
         assembly {
             mstore(0x00, 0x1)
@@ -167,7 +166,7 @@ contract MemUtilsTest {
         Assert.equal(freeMemPtr, preAllocFreeMemPtr + 32 + 32 * 101);
     }
 
-    function unsafeAlloc_handles_misaligned_free_mem_pointer_and_pads_to_32_bytes() external {
+    function unsafeAlloc_handles_misaligned_free_mem_pointer_and_pads_to_32_bytes() external pure {
         uint256 freeMemPtr = getFreeMemPtr();
 
         // assert free mem pointer is 32-byte aligned initially

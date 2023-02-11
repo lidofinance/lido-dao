@@ -6,7 +6,6 @@ const { deployLocatorWithDummyAddressesImplementation } = require('./locator-dep
 const {
   SLOTS_PER_EPOCH,
   SECONDS_PER_SLOT,
-  SECONDS_PER_FRAME,
   EPOCHS_PER_FRAME,
   CONSENSUS_VERSION
 } = require('./constants')
@@ -16,7 +15,7 @@ const LidoMock = artifacts.require('LidoMock')
 const Lido = artifacts.require('Lido')
 const WstETHMock = artifacts.require('WstETHMock')
 const WstETH = artifacts.require('WstETH')
-const LidoOracle = artifacts.require('LidoOracle')
+const LegacyOracle = artifacts.require('LegacyOracle')
 const MockLegacyOracle = artifacts.require('MockLegacyOracle')
 const AccountingOracle = artifacts.require('AccountingOracle')
 const HashConsensus = artifacts.require('HashConsensus')
@@ -88,9 +87,9 @@ async function treasuryFactory(_) {
 }
 
 async function legacyOracleFactory({ appManager }) {
-  const base = await LidoOracle.new()
+  const base = await LegacyOracle.new()
   const proxy = await OssifiableProxy.new(base.address, appManager.address, '0x')
-  return await LidoOracle.at(proxy.address)
+  return await LegacyOracle.at(proxy.address)
 }
 
 async function legacyOracleMockFactory({ appManager, dao, deployParams }) {
@@ -138,12 +137,11 @@ async function hashConsensusFactory({ voting, oracle, signers, legacyOracle, dep
   await consensus.addMember(signers[3].address, 2, { from: voting.address })
   await consensus.addMember(signers[4].address, 2, { from: voting.address })
 
-  await oracle.initialize(voting.address, consensus.address, CONSENSUS_VERSION, 10000, 10000)
+  await oracle.initialize(voting.address, consensus.address, CONSENSUS_VERSION)
 
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), voting.address, { from: voting.address })
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), voting.address, { from: voting.address })
   await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), voting.address, { from: voting.address })
-  await oracle.grantRole(await oracle.MANAGE_DATA_BOUNDARIES_ROLE(), voting.address, { from: voting.address })
 
   return consensus
 }
@@ -177,13 +175,6 @@ async function hashConsensusTimeTravellableFactory({
   await consensus.addMember(signers[3].address, 2, { from: voting.address })
   await consensus.addMember(signers[4].address, 2, { from: voting.address })
   await consensus.setTime(deployParams.genesisTime + initialEpoch * SLOTS_PER_EPOCH * SECONDS_PER_SLOT)
-
-  await oracle.initialize(voting.address, consensus.address, CONSENSUS_VERSION, 10000, 10000)
-
-  await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), voting.address, { from: voting.address })
-  await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), voting.address, { from: voting.address })
-  await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), voting.address, { from: voting.address })
-  await oracle.grantRole(await oracle.MANAGE_DATA_BOUNDARIES_ROLE(), voting.address, { from: voting.address })
 
   return consensus
 }
@@ -226,10 +217,10 @@ async function stakingRouterFactory({ depositContract, dao, appManager, voting, 
   await stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_MANAGE_ROLE(), voting.address, {
     from: appManager.address
   })
-  await stakingRouter.grantRole(await stakingRouter.REPORT_EXITED_KEYS_ROLE(), pool.address, {
+  await stakingRouter.grantRole(await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(), pool.address, {
     from: appManager.address
   })
-  await stakingRouter.grantRole(await stakingRouter.UNSAFE_SET_EXITED_KEYS_ROLE(), voting.address, {
+  await stakingRouter.grantRole(await stakingRouter.UNSAFE_SET_EXITED_VALIDATORS_ROLE(), voting.address, {
     from: appManager.address
   })
   await stakingRouter.grantRole(await stakingRouter.REPORT_REWARDS_MINTED_ROLE(), voting.address, {
@@ -325,7 +316,6 @@ async function lidoLocatorFactory({ appManager }) {
 async function oracleReportSanityCheckerFactory({ lidoLocator, voting, appManager, deployParams }) {
   const checker = await OracleReportSanityChecker.new(
     lidoLocator.address,
-    SECONDS_PER_FRAME,
     appManager.address,
     deployParams.oracleReportSanityChecker.limitsList,
     deployParams.oracleReportSanityChecker.managersRoster

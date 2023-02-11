@@ -1,5 +1,4 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
@@ -8,47 +7,47 @@ pragma solidity 0.8.9;
 import {IStakingModule} from "../interfaces/IStakingModule.sol";
 
 contract StakingModuleMock is IStakingModule {
-    uint256 private _activeKeysCount;
-    uint256 private _availableKeysCount;
-    uint256 private _keysNonce;
+    uint256 private _activeValidatorsCount;
+    uint256 private _availableValidatorsCount;
+    uint256 private _nonce;
 
-    function getActiveKeysCount() public view returns (uint256) {
-        return _activeKeysCount;
+    function getActiveValidatorsCount() public view returns (uint256) {
+        return _activeValidatorsCount;
     }
 
-    function getAvailableKeysCount() public view returns (uint256) {
-        return _availableKeysCount;
-    }
-
-    function getKeysUsageData() external view returns (uint256 activeKeysCount, uint256 availableKeysCount) {
-        activeKeysCount = getActiveKeysCount();
-        availableKeysCount = getAvailableKeysCount();
+    function getAvailableValidatorsCount() public view returns (uint256) {
+        return _availableValidatorsCount;
     }
 
     function getType() external view returns (bytes32) {}
 
-    function trimUnusedKeys() external {}
-
-    function getValidatorsKeysStats()
-        external
-        view
-        returns (
-            uint256 exitedValidatorsCount,
-            uint256 activeValidatorsKeysCount,
-            uint256 readyToDepositValidatorsKeysCount
-        )
-    {
-        exitedValidatorsCount = 0;
-        activeValidatorsKeysCount = _activeKeysCount;
-        readyToDepositValidatorsKeysCount = _availableKeysCount;
+    function getStakingModuleSummary() external view returns (
+        uint256 totalExitedValidators,
+        uint256 totalDepositedValidators,
+        uint256 depositableValidatorsCount
+    ) {
+        totalExitedValidators = 0;
+        totalDepositedValidators = _activeValidatorsCount;
+        depositableValidatorsCount = _availableValidatorsCount;
     }
 
-    function getValidatorsKeysNonce() external view returns (uint256) {
-        return _keysNonce;
+    function getNodeOperatorSummary(uint256 _nodeOperatorId) external view returns (
+        bool isTargetLimitActive,
+        uint256 targetValidatorsCount,
+        uint256 stuckValidatorsCount,
+        uint256 refundedValidatorsCount,
+        uint256 stuckPenaltyEndTimestamp,
+        uint256 totalExitedValidators,
+        uint256 totalDepositedValidators,
+        uint256 depositableValidatorsCount
+    ) {}
+
+    function getNonce() external view returns (uint256) {
+        return _nonce;
     }
 
-    function setValidatorsKeysNonce(uint256 _newKeysNonce) external {
-        _keysNonce = _newKeysNonce;
+    function setNonce(uint256 _newNonce) external {
+        _nonce = _newNonce;
     }
 
     function getNodeOperatorsCount() external view returns (uint256) {}
@@ -57,55 +56,48 @@ contract StakingModuleMock is IStakingModule {
 
     function getNodeOperatorIsActive(uint256 _nodeOperatorId) external view returns (bool) {}
 
-    function getValidatorsKeysStats(uint256 _nodeOperatorId)
+    function getNodeOperatorIds(uint256 _offset, uint256 _limit)
         external
         view
-        returns (
-            uint256 exitedValidatorsCount,
-            uint256 activeValidatorsKeysCount,
-            uint256 readyToDepositValidatorsKeysCount
-        )
-    {}
-
-    function getTotalExitedValidatorsCount() external view returns (uint256) {
-        return 0;
-    }
+        returns (uint256[] memory nodeOperatorIds) {}
 
     function handleRewardsMinted(uint256 _totalShares) external {}
 
-    function updateStuckValidatorsKeysCount(
+    function updateStuckValidatorsCount(
         uint256 _nodeOperatorId,
         uint256 _stuckValidatorKeysCount
     ) external {}
 
-    function updateExitedValidatorsKeysCount(uint256, uint256) external {}
+    function updateExitedValidatorsCount(uint256, uint256) external {}
 
-    function finishUpdatingExitedValidatorsKeysCount() external {}
+    function updateRefundedValidatorsCount(uint256 _nodeOperatorId, uint256 _refundedValidatorsCount) external {}
 
-    function unsafeUpdateValidatorsKeysCount(
+    function onAllValidatorCountersUpdated() external {}
+
+    function unsafeUpdateValidatorsCount(
         uint256 /* _nodeOperatorId */,
         uint256 /* _exitedValidatorsKeysCount */,
         uint256 /* _stuckValidatorsKeysCount */
     ) external {}
 
-    function invalidateReadyToDepositKeys() external {
-        _availableKeysCount = _activeKeysCount;
+    function onWithdrawalCredentialsChanged() external {
+        _availableValidatorsCount = _activeValidatorsCount;
     }
 
-    function requestValidatorsKeysForDeposits(uint256 _keysCount, bytes calldata _calldata)
+    function obtainDepositData(uint256 _depositsCount, bytes calldata _calldata)
         external
         returns (
-            uint256 enqueuedValidatorsKeysCount,
+            uint256 depositsCount,
             bytes memory publicKeys,
             bytes memory signatures
         )
     {}
 
-    function setActiveKeysCount(uint256 _newActiveKeysCount) external {
-        _activeKeysCount = _newActiveKeysCount;
+    function setActiveValidatorsCount(uint256 _newActiveValidatorsCount) external {
+        _activeValidatorsCount = _newActiveValidatorsCount;
     }
 
-    function setAvailableKeysCount(uint256 _newAvailableKeysCount) external {
-        _availableKeysCount = _newAvailableKeysCount;
+    function setAvailableKeysCount(uint256 _newAvailableValidatorsCount) external {
+        _availableValidatorsCount = _newAvailableValidatorsCount;
     }
 }

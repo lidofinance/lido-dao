@@ -1,5 +1,4 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
@@ -35,7 +34,9 @@ interface IOracleReportSanityChecker {
         uint256 _timeElapsed,
         uint256 _preCLBalance,
         uint256 _postCLBalance,
-        uint256 _withdrawalVaultBalance
+        uint256 _withdrawalVaultBalance,
+        uint256 _preCLValidators,
+        uint256 _postCLValidators
     ) external view;
 
     function smoothenTokenRebase(
@@ -225,6 +226,14 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         LIDO_LOCATOR_POSITION.setStorageAddress(_lidoLocator);
         _initializeEIP712StETH(_eip712StETH);
+
+        // set unlimited allowance for burner from withdrawal queue
+        // to burn finalized requests' shares
+        _approve(
+            ILidoLocator(_lidoLocator).withdrawalQueue(),
+            ILidoLocator(_lidoLocator).burner(),
+           ~uint256(0)
+        );
 
         emit LidoLocatorSet(_lidoLocator);
     }
@@ -628,16 +637,16 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             uint256 unaccountedEth = _getUnaccountedEther();
             /// @dev transfer ether to SR and make deposit at the same time
             /// @notice allow zero value of depositableEth, in this case SR will simply transfer the unaccounted ether to Lido contract
-            uint256 depositedKeysCount = IStakingRouter(locator.stakingRouter()).deposit.value(depositableEth)(
+            uint256 depositsCount = IStakingRouter(locator.stakingRouter()).deposit.value(depositableEth)(
                 _maxDepositsCount,
                 _stakingModuleId,
                 _depositCalldata
             );
-            assert(depositedKeysCount <= depositableEth / DEPOSIT_SIZE );
+            assert(depositsCount <= depositableEth / DEPOSIT_SIZE );
 
-            if (depositedKeysCount > 0) {
-                uint256 depositedAmount = depositedKeysCount.mul(DEPOSIT_SIZE);
-                DEPOSITED_VALIDATORS_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(depositedKeysCount));
+            if (depositsCount > 0) {
+                uint256 depositedAmount = depositsCount.mul(DEPOSIT_SIZE);
+                DEPOSITED_VALIDATORS_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(depositsCount));
 
                 _markAsUnbuffered(depositedAmount);
                 assert(_getUnaccountedEther() == unaccountedEth);
@@ -718,21 +727,21 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * i.e., exited validators persist in the state, just with a different status
      */
     function _processClStateUpdate(
+        uint256 _preClValidators,
         uint256 _postClValidators,
         uint256 _postClBalance
     ) internal returns (uint256 preCLBalance) {
         uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
         require(_postClValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
 
-        uint256 preClValidators = CL_VALIDATORS_POSITION.getStorageUint256();
-        require(_postClValidators >= preClValidators, "REPORTED_LESS_VALIDATORS");
+        require(_postClValidators >= _preClValidators, "REPORTED_LESS_VALIDATORS");
 
 
-        if (_postClValidators > preClValidators) {
+        if (_postClValidators > _preClValidators) {
             CL_VALIDATORS_POSITION.setStorageUint256(_postClValidators);
         }
 
-        uint256 appearedValidators = _postClValidators.sub(preClValidators);
+        uint256 appearedValidators = _postClValidators.sub(_preClValidators);
         preCLBalance = CL_BALANCE_POSITION.getStorageUint256();
         // Take into account the balance of the newly appeared validators
         preCLBalance = preCLBalance.add(appearedValidators.mul(DEPOSIT_SIZE));
@@ -845,6 +854,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         require(msg.value != 0, "ZERO_DEPOSIT");
 
         StakeLimitState.Data memory stakeLimitData = STAKING_STATE_POSITION.getStorageStakeLimitStruct();
+        // There is an invariant that protocol pause also implies staking pause.
+        // Thus, no need to check protocol pause explicitly.
         require(!stakeLimitData.isStakingPaused(), "STAKING_PAUSED");
 
         if (stakeLimitData.isStakingLimitSet()) {
@@ -1094,10 +1105,11 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @dev Intermidiate data structure for `_handleOracleReport`
+     * @dev Intermediate data structure for `_handleOracleReport`
      * Helps to overcome `stack too deep` issue.
      */
     struct OracleReportContext{
+        uint256 preCLValidators;
         uint256 preCLBalance;
         uint256 preTotalPooledEther;
         uint256 preTotalShares;
@@ -1118,7 +1130,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * 3. Pre-calculate the ether to lock for withdrawal queue and shares to be burnt
      * 4. Pass the accounting values to sanity checker to smoothen positive token rebase
      *    (i.e., postpone the extra rewards to be applied during the next rounds)
-     * 5. Invoke finalizion of the withdrawal requests
+     * 5. Invoke finalization of the withdrawal requests
      * 6. Distribute protocol fee (treasury & node operators)
      * 7. Burn excess shares (withdrawn stETH at least)
      * 8. Complete token rebase by informing observers (emit an event and call the external receivers if any)
@@ -1140,7 +1152,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // Take a snapshot of the current (pre-) state
         reportContext.preTotalPooledEther = _getTotalPooledEther();
         reportContext.preTotalShares = _getTotalShares();
-        reportContext.preCLBalance = _processClStateUpdate(_reportedData.clValidators, _reportedData.postCLBalance);
+        reportContext.preCLValidators = CL_VALIDATORS_POSITION.getStorageUint256();
+        reportContext.preCLBalance = _processClStateUpdate(
+            reportContext.preCLValidators, _reportedData.clValidators, _reportedData.postCLBalance);
 
         // Step 2.
         // Pass the report data to sanity checker (reverts if malformed)
@@ -1148,7 +1162,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             _reportedData.timeElapsed,
             reportContext.preCLBalance,
             _reportedData.postCLBalance,
-            _reportedData.withdrawalVaultBalance
+            _reportedData.withdrawalVaultBalance,
+            reportContext.preCLValidators,
+            _reportedData.clValidators
         );
 
         // Step 3.
@@ -1173,7 +1189,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         );
 
         // Step 5.
-        // Invoke finalizion of the withdrawal requests (send ether to withdrawal queue, assign shares to be burnt)
+        // Invoke finalization of the withdrawal requests (send ether to withdrawal queue, assign shares to be burnt)
         _collectRewardsAndProcessWithdrawals(
             _contracts,
             withdrawals,
