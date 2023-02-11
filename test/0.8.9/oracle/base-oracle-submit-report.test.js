@@ -5,32 +5,7 @@ const { assertRevert } = require('../../helpers/assertThrow')
 
 const baseOracleAbi = require('../../../lib/abi/BaseOracle.json')
 
-const {
-  INITIAL_FAST_LANE_LENGHT_SLOTS,
-  INITIAL_EPOCH,
-  SLOTS_PER_EPOCH,
-  SECONDS_PER_SLOT,
-  GENESIS_TIME,
-  EPOCHS_PER_FRAME,
-  SECONDS_PER_EPOCH,
-  SECONDS_PER_FRAME,
-  SLOTS_PER_FRAME,
-  computeSlotAt,
-  computeEpochAt,
-  computeEpochFirstSlot,
-  computeEpochFirstSlotAt,
-  computeTimestampAtSlot,
-  computeTimestampAtEpoch,
-  ZERO_HASH,
-  HASH_1,
-  HASH_2,
-  HASH_3,
-  HASH_4,
-  HASH_5,
-  CONSENSUS_VERSION,
-  UNREACHABLE_QUORUM,
-  deployBaseOracle
-} = require('./base-oracle-deploy.test')
+const { SLOTS_PER_FRAME, ZERO_HASH, HASH_1, HASH_2, HASH_3, deployBaseOracle } = require('./base-oracle-deploy.test')
 
 contract('BaseOracle', ([admin]) => {
   let consensus
@@ -49,7 +24,7 @@ contract('BaseOracle', ([admin]) => {
       before(deployContract)
 
       it('only setConsensus contract can call submitConsensusReport', async () => {
-        assertRevert(
+        await assertRevert(
           baseOracle.submitConsensusReport(HASH_1, initialRefSlot, initialRefSlot + SLOTS_PER_FRAME),
           'OnlyConsensusContractCanSubmitReport()'
         )
@@ -74,9 +49,9 @@ contract('BaseOracle', ([admin]) => {
       })
 
       it('older report cannot be submitted', async () => {
-        assertRevert(
-          baseOracle.submitConsensusReport(HASH_1, initialRefSlot - 1, initialRefSlot + SLOTS_PER_FRAME),
-          'RefSlotCannotDecrease(29,31)'
+        await assertRevert(
+          consensus.submitReportAsConsensus(HASH_1, initialRefSlot - 1, initialRefSlot + SLOTS_PER_FRAME),
+          `RefSlotCannotDecrease(${initialRefSlot - 1}, ${initialRefSlot})`
         )
       })
 
@@ -85,9 +60,9 @@ contract('BaseOracle', ([admin]) => {
       })
 
       it('consensus cannot resubmit already processing report', async () => {
-        assertRevert(
-          baseOracle.submitConsensusReport(HASH_1, initialRefSlot, initialRefSlot + SLOTS_PER_FRAME),
-          'RefSlotMustBeGreaterThanProcessingOne(31,31)'
+        await assertRevert(
+          consensus.submitReportAsConsensus(HASH_1, initialRefSlot, initialRefSlot + SLOTS_PER_FRAME),
+          `RefSlotMustBeGreaterThanProcessingOne(${initialRefSlot}, ${initialRefSlot})`
         )
       })
 
