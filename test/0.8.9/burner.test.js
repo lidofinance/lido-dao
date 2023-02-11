@@ -98,13 +98,13 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       // but zero request on cover
       await assert.revertsWithCustomError(
         burner.requestBurnMyStETHForCover(StETH(0), { from: voting }),
-        `ZeroBurnAmount()`
+        `ErrorZeroBurnAmount()`
       )
 
       // and zero request on non-cover
       await assert.revertsWithCustomError(
         burner.requestBurnMyStETH(StETH(0), { from: voting }),
-        `ZeroBurnAmount()`
+        `ErrorZeroBurnAmount()`
       )
     })
 
@@ -643,7 +643,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
 
     it(`can't recover zero ERC20 amount`, async () => {
       await assert.revertsWithCustomError(
-        burner.recoverERC20(mockERC20Token.address, bn(0), { from: voting }), `ZeroRecoveryAmount()`
+        burner.recoverERC20(mockERC20Token.address, bn(0), { from: voting }), `ErrorZeroRecoveryAmount()`
       )
     })
 
@@ -670,7 +670,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       // need to use recoverExcessStETH
       await assert.revertsWithCustomError(
         burner.recoverERC20(lido.address, StETH(1), { from: voting }),
-        `StETHRecoveryWrongFunc()`
+        `ErrorStETHRecoveryWrongFunc()`
       )
 
       // revert from deployer
@@ -755,7 +755,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       )
       await assert.revertsWithCustomError(
         burner.recoverERC721(lido.address, StETH(1), { from: voting }),
-        `StETHRecoveryWrongFunc()`
+        `ErrorStETHRecoveryWrongFunc()`
       )
 
       const receipt = await burner.recoverExcessStETH({ from: voting })
