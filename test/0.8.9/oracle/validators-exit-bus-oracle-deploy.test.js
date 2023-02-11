@@ -114,7 +114,7 @@ async function deployExitBusOracle(admin, {
     sender: admin
   }})
 
-  assertEvent(tx, 'ConsensusContractSet', {expectedArgs: {
+  assertEvent(tx, 'ConsensusHashContractSet', {expectedArgs: {
     addr: consensus.address,
     prevAddr: ZERO_ADDRESS
   }})
