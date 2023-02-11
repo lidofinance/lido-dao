@@ -549,11 +549,13 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     /// @notice Obtains up to _depositsCount deposit data to be used by StakingRouter
     ///     to deposit to the Ethereum Deposit contract
+    /// @dev the second param is optional staking module calldata
+    ///     (not used for NodeOperatorsRegistry)
     /// @param _depositsCount Desireable number of deposits to be done
     /// @return depositsCount Actual deposits count might be done with returned data
     /// @return publicKeys Batch of the concatenated public validators keys
     /// @return signatures Batch of the concatenated deposit signatures for returned public keys
-    function obtainDepositData(uint256 _depositsCount, bytes)
+    function obtainDepositData(uint256 _depositsCount, bytes /* _depositCalldata */)
         external
         returns (
             uint256 depositsCount,
