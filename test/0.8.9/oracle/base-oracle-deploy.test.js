@@ -60,7 +60,7 @@ async function deployBaseOracle(
     )
   }
 
-  const oracle = await BaseOracle.new(secondsPerSlot, genesisTime, { from: admin })
+  const oracle = await BaseOracle.new(secondsPerSlot, genesisTime, admin, { from: admin })
 
   await oracle.initialize(consensusContract.address, CONSENSUS_VERSION, 0)
 

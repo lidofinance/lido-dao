@@ -27,11 +27,13 @@ contract BaseOracleTimeTravellable is BaseOracle {
 
     constructor(
         uint256 secondsPerSlot,
-        uint256 genesisTime
+        uint256 genesisTime,
+        address admin
     ) BaseOracle(
         secondsPerSlot,
         genesisTime
     ) {
+        _setupRole(DEFAULT_ADMIN_ROLE, admin);
         CONTRACT_VERSION_POSITION.setStorageUint256(0);
         require(genesisTime <= _time, "GENESIS_TIME_CANNOT_BE_MORE_THAN_MOCK_TIME");
     }
@@ -74,6 +76,4 @@ contract BaseOracleTimeTravellable is BaseOracle {
     function startProcessing() external {
          _startProcessing();
     }
-
-    
 }
