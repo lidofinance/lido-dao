@@ -31,7 +31,7 @@ contract MockConsensusContract is IConsensusContract {
     FrameConfig internal _frameConfig;
     ConsensusFrame internal _consensusFrame;
 
-     constructor(
+    constructor(
         uint256 slotsPerEpoch,
         uint256 secondsPerSlot,
         uint256 genesisTime,
@@ -46,27 +46,31 @@ contract MockConsensusContract is IConsensusContract {
 
         _setFrameConfig(initialEpoch, epochsPerFrame, fastLaneLengthSlots);
         _memberIndices1b[mockMember] = 1;
- 
+
+        _consensusFrame.index = 10;
+        _consensusFrame.refSlot = 1;
+        _consensusFrame.reportProcessingDeadlineSlot = 7001;
     }
-
-
 
     function getIsMember(address addr) external view returns (bool) {
         return _memberIndices1b[addr] != 0;
     }
 
-    function getCurrentFrame() external view returns (
-        uint256 refSlot,
-        uint256 reportProcessingDeadlineSlot
-    ) {
+    function getCurrentFrame() external view returns (uint256 refSlot, uint256 reportProcessingDeadlineSlot) {
         return (_consensusFrame.refSlot, _consensusFrame.reportProcessingDeadlineSlot);
     }
 
-    function getChainConfig() external view returns (
-        uint256 slotsPerEpoch,
-        uint256 secondsPerSlot,
-        uint256 genesisTime
-    ) {
+    function setCurrentFrame(uint256 index, uint256 refSlot, uint256 reportProcessingDeadlineSlot) external {
+        _consensusFrame.index = index;
+        _consensusFrame.refSlot = refSlot;
+        _consensusFrame.reportProcessingDeadlineSlot = reportProcessingDeadlineSlot;
+    }
+
+    function getChainConfig()
+        external
+        view
+        returns (uint256 slotsPerEpoch, uint256 secondsPerSlot, uint256 genesisTime)
+    {
         return (SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME);
     }
 
@@ -74,31 +78,19 @@ contract MockConsensusContract is IConsensusContract {
         return (_frameConfig.initialEpoch, _frameConfig.epochsPerFrame);
     }
 
-    function _setFrameConfig(
-        uint256 initialEpoch,
-        uint256 epochsPerFrame,
-        uint256 fastLaneLengthSlots
-    ) internal {
-        _frameConfig = FrameConfig(
-            initialEpoch.toUint64(),
-            epochsPerFrame.toUint64(),
-            fastLaneLengthSlots.toUint64()
-        );
+    function _setFrameConfig(uint256 initialEpoch, uint256 epochsPerFrame, uint256 fastLaneLengthSlots) internal {
+        _frameConfig = FrameConfig(initialEpoch.toUint64(), epochsPerFrame.toUint64(), fastLaneLengthSlots.toUint64());
     }
 
-    // 
+    //
     // IReportAsyncProcessor relevant mocks&handels
     //
 
     function setAsyncProcessor(address reportProcessor) external {
         _reportProcessor = reportProcessor;
-    } 
+    }
 
     function submitReportAsConsensus(bytes32 reportHash, uint256 refSlot, uint256 deadline) external {
-         IReportAsyncProcessor(_reportProcessor).submitConsensusReport(
-            reportHash,
-            refSlot,
-            deadline
-        );
+        IReportAsyncProcessor(_reportProcessor).submitConsensusReport(reportHash, refSlot, deadline);
     }
 }
