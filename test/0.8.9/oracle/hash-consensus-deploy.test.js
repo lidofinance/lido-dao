@@ -127,7 +127,7 @@ contract('HashConsensus', ([admin, member1]) => {
     })
 
     it('reverts if report processor address is zero', async () => {
-      await assert.revertsWithCustomError(HashConsensus.new(
+      await assert.reverts(HashConsensus.new(
           SLOTS_PER_EPOCH,
           SECONDS_PER_SLOT,
           GENESIS_TIME,
@@ -144,7 +144,7 @@ contract('HashConsensus', ([admin, member1]) => {
 
     it('reverts if admin address is zero', async () => {
       const reportProcessor = await MockReportProcessor.new(CONSENSUS_VERSION, { from: admin })
-      await assert.revertsWithCustomError(HashConsensus.new(
+      await assert.reverts(HashConsensus.new(
           SLOTS_PER_EPOCH,
           SECONDS_PER_SLOT,
           GENESIS_TIME,

@@ -1,14 +1,10 @@
-const { assert, getAccessControlMessage } = require('../../helpers/assert')
-const { assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
-const { assertRevert } = require('../../helpers/assertThrow')
+const { assert } = require('../../helpers/assert')
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
 const {
   HASH_1,
-  HASH_2,
   CONSENSUS_VERSION,
   deployHashConsensus,
-  computeTimestampAtEpoch
 } = require('./hash-consensus-deploy.test')
 const { toNum } = require('../../helpers/utils')
 
@@ -40,24 +36,26 @@ contract('HashConsensus', ([admin, member1, member2, stranger]) => {
       beforeEach(deploy)
 
       it('checks next processor is not zero', async () => {
-        await assertRevert(consensus.setReportProcessor(ZERO_ADDRESS), 'ReportProcessorCannotBeZero()')
+        await assert.reverts(consensus.setReportProcessor(ZERO_ADDRESS), 'ReportProcessorCannotBeZero()')
       })
 
       it('checks next processor is not the same as previous', async () => {
-        await assertRevert(consensus.setReportProcessor(reportProcessor1.address), 'NewProcessorCannotBeTheSame()')
+        await assert.reverts(consensus.setReportProcessor(reportProcessor1.address), 'NewProcessorCannotBeTheSame()')
       })
 
       it('checks tx sender for MANAGE_REPORT_PROCESSOR_ROLE', async () => {
-        await assertRevert(
+        await assert.revertsOZAccessControl(
           consensus.setReportProcessor(reportProcessor2.address, { from: stranger }),
-          getAccessControlMessage(stranger.toLowerCase(), await consensus.MANAGE_REPORT_PROCESSOR_ROLE())
+          stranger,
+          'MANAGE_REPORT_PROCESSOR_ROLE'
         )
       })
 
       it('emits ReportProcessorSet event', async () => {
         const tx = await consensus.setReportProcessor(reportProcessor2.address)
-        assertEvent(tx, 'ReportProcessorSet', {
-          expectedArgs: { processor: reportProcessor2.address, prevProcessor: reportProcessor1.address }
+        assert.emits(tx, 'ReportProcessorSet', {
+          processor: reportProcessor2.address,
+          prevProcessor: reportProcessor1.address
         })
       })
 
