@@ -642,7 +642,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         require(canDeposit(), "CAN_NOT_DEPOSIT");
 
         IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(locator.withdrawalQueue());
-        require(!withdrawalQueue.isBunkerModeActive(), "CANT_DEPOSIT_IN_BUNKER_MODE");
 
         uint256 bufferedEth = _getBufferedEther();
         // we dont deposit funds that will go to withdrawals
