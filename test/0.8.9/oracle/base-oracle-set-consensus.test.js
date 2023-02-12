@@ -2,32 +2,15 @@ const { assert } = require('../../helpers/assert')
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const MockConsensusContract = artifacts.require('MockConsensusContract')
 
-const baseOracleAbi = require('../../../lib/abi/BaseOracle.json')
-
 const {
-  INITIAL_FAST_LANE_LENGHT_SLOTS,
-  INITIAL_EPOCH,
   SLOTS_PER_EPOCH,
   SECONDS_PER_SLOT,
   GENESIS_TIME,
   EPOCHS_PER_FRAME,
-  SECONDS_PER_EPOCH,
-  SECONDS_PER_FRAME,
   SLOTS_PER_FRAME,
-  computeSlotAt,
-  computeEpochAt,
-  computeEpochFirstSlot,
-  computeEpochFirstSlotAt,
-  computeTimestampAtSlot,
-  computeTimestampAtEpoch,
-  ZERO_HASH,
   HASH_1,
   HASH_2,
-  HASH_3,
-  HASH_4,
-  HASH_5,
   CONSENSUS_VERSION,
-  UNREACHABLE_QUORUM,
   deployBaseOracle
 } = require('./base-oracle-deploy.test')
 

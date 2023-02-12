@@ -1,4 +1,3 @@
-const { assert } = require('chai')
 const { bn } = require('@aragon/contract-helpers-test')
 
 const BaseOracle = artifacts.require('BaseOracleTimeTravellable')
@@ -9,7 +8,7 @@ const SECONDS_PER_SLOT = 12
 const GENESIS_TIME = 100
 const EPOCHS_PER_FRAME = 225 // one day
 const INITIAL_EPOCH = 1
-const INITIAL_FAST_LANE_LENGHT_SLOTS = 0
+const INITIAL_FAST_LANE_LENGTH_SLOTS = 0
 
 const SECONDS_PER_EPOCH = SLOTS_PER_EPOCH * SECONDS_PER_SLOT
 const SECONDS_PER_FRAME = SECONDS_PER_EPOCH * EPOCHS_PER_FRAME
@@ -42,7 +41,7 @@ async function deployBaseOracle(
     slotsPerEpoch = SLOTS_PER_EPOCH,
     consensusContract = null,
     epochsPerFrame = EPOCHS_PER_FRAME,
-    fastLaneLengthSlots = INITIAL_FAST_LANE_LENGHT_SLOTS,
+    fastLaneLengthSlots = INITIAL_FAST_LANE_LENGTH_SLOTS,
     initialEpoch = INITIAL_EPOCH,
     mockMember = admin
   } = {}
@@ -70,7 +69,7 @@ async function deployBaseOracle(
 }
 
 module.exports = {
-  INITIAL_FAST_LANE_LENGHT_SLOTS,
+  INITIAL_FAST_LANE_LENGTH_SLOTS,
   INITIAL_EPOCH,
   SLOTS_PER_EPOCH,
   SECONDS_PER_SLOT,
@@ -100,7 +99,7 @@ contract('BaseOracle', ([admin, member1]) => {
   context('Deployment and initial configuration', () => {
     let oracle
 
-    it('deploying base oracle', async () => {
+    it('deploying base oracle ', async () => {
       const deployed = await deployBaseOracle(admin)
       oracle = deployed.oracle
     })

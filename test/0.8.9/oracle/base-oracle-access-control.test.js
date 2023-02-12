@@ -6,7 +6,7 @@ const {
   SECONDS_PER_EPOCH,
   SECONDS_PER_SLOT,
   GENESIS_TIME,
-  INITIAL_FAST_LANE_LENGHT_SLOTS,
+  INITIAL_FAST_LANE_LENGTH_SLOTS,
   INITIAL_EPOCH,
   CONSENSUS_VERSION,
   HASH_1,
@@ -56,7 +56,7 @@ contract('BaseOracle', ([admin, account1, account2, member1, member2]) => {
           SECONDS_PER_SLOT,
           GENESIS_TIME,
           EPOCHS_PER_FRAME,
-          INITIAL_FAST_LANE_LENGHT_SLOTS,
+          INITIAL_FAST_LANE_LENGTH_SLOTS,
           INITIAL_EPOCH,
           admin,
           { from: admin }
