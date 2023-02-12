@@ -31,6 +31,7 @@ const {
   deployBaseOracle
 } = require('./base-oracle-deploy.test')
 
+
 contract('BaseOracle', ([admin, member]) => {
   let consensus
   let baseOracle
@@ -122,14 +123,56 @@ contract('BaseOracle', ([admin, member]) => {
     before(deployContract)
 
     it('reverts on same version', async () => {
-      await assert.revertsWithCustomError(baseOracle.setConsensusVersion(1), 'VersionCannotBeSame()')
+      await assert.revertsWithCustomError(baseOracle.setConsensusVersion(CONSENSUS_VERSION), 'VersionCannotBeSame()')
     })
 
     it('sets updated version', async () => {
       const tx = await baseOracle.setConsensusVersion(2)
-      assert.emits(tx, 'ConsensusVersionSet', { version: 2, prevVersion: 1 })
+      assert.emits(tx, 'ConsensusVersionSet', { version: 2, prevVersion: CONSENSUS_VERSION })
       const versionInState = await baseOracle.getConsensusVersion()
       assert.equal(versionInState, 2)
+    })
+  })
+
+  describe('_checkConsensusData checks provided data against internal state', () => {
+    before(deployContract)
+
+    it('report is submitted', async () => {
+      await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, initialRefSlot + 10)
+    })
+
+    it('deadline missed on current ref slot, reverts on any arguments', async () => {
+      await baseOracle.advanceTimeBy(11)
+      await assert.revertsWithCustomError(
+        baseOracle.checkConsensusData(initialRefSlot, CONSENSUS_VERSION, HASH_1),
+        `ProcessingDeadlineMissed(${initialRefSlot + 10})`
+      )
+      await baseOracle.setTime(initialRefSlot)
+    })
+
+    it('reverts on mismatched slot', async () => {
+      await assert.revertsWithCustomError(
+        baseOracle.checkConsensusData(initialRefSlot + 1, CONSENSUS_VERSION, HASH_1),
+        `UnexpectedRefSlot(${initialRefSlot}, ${initialRefSlot + 1})`
+      )
+    })
+
+    it('reverts on mismatched consensus version', async () => {
+      await assert.revertsWithCustomError(
+        baseOracle.checkConsensusData(initialRefSlot, CONSENSUS_VERSION + 1, HASH_1),
+        `UnexpectedConsensusVersion(${CONSENSUS_VERSION}, ${CONSENSUS_VERSION + 1})`
+      )
+    })
+
+    it('reverts on mismatched hash', async () => {
+      await assert.revertsWithCustomError(
+        baseOracle.checkConsensusData(initialRefSlot, CONSENSUS_VERSION, HASH_2),
+        `UnexpectedDataHash("${HASH_1}", "${HASH_2}")`
+      )
+    })
+
+    it('check succeeds', async () => {
+      await baseOracle.checkConsensusData(initialRefSlot, CONSENSUS_VERSION, HASH_1)
     })
   })
 })
