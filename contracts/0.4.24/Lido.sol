@@ -1259,13 +1259,13 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         if (_reportedData.lastFinalizableRequestId != DONT_FINALIZE_WITHDRAWALS) {
             uint256 noWithdrawalsPostTotalShares = postTotalShares;
             if (postponedSharesToBurn < reportContext.sharesToBurnFromWithdrawalQueue) {
-                noWithdrawalsPostTotalShares = noWithdrawalsPostTotalShares.sub(
+                noWithdrawalsPostTotalShares = noWithdrawalsPostTotalShares.add(
                     reportContext.sharesToBurnFromWithdrawalQueue - postponedSharesToBurn
                 );
             }
 
             IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).checkSimulatedShareRate(
-                postTotalPooledEther.sub(reportContext.etherToLockOnWithdrawalQueue),
+                postTotalPooledEther.add(reportContext.etherToLockOnWithdrawalQueue),
                 noWithdrawalsPostTotalShares,
                 _reportedData.simulatedShareRate
             );
