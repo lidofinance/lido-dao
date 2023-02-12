@@ -1,7 +1,5 @@
-const { assert } = require('chai')
-const { assertEvent, assertAmountOfEvents, assertBn } = require('@aragon/contract-helpers-test/src/asserts')
+const { assert } = require('../../helpers/assert')
 const { bn } = require('@aragon/contract-helpers-test')
-const { assertRevert } = require('../../helpers/assertThrow')
 
 const baseOracleAbi = require('../../../lib/abi/BaseOracle.json')
 
@@ -24,7 +22,7 @@ contract('BaseOracle', ([admin]) => {
       before(deployContract)
 
       it('only setConsensus contract can call submitConsensusReport', async () => {
-        await assertRevert(
+        await assert.revertsWithCustomError(
           baseOracle.submitConsensusReport(HASH_1, initialRefSlot, initialRefSlot + SLOTS_PER_FRAME),
           'OnlyConsensusContractCanSubmitReport()'
         )
@@ -49,7 +47,7 @@ contract('BaseOracle', ([admin]) => {
       })
 
       it('older report cannot be submitted', async () => {
-        await assertRevert(
+        await assert.revertsWithCustomError(
           consensus.submitReportAsConsensus(HASH_1, initialRefSlot - 1, initialRefSlot + SLOTS_PER_FRAME),
           `RefSlotCannotDecrease(${initialRefSlot - 1}, ${initialRefSlot})`
         )
@@ -60,7 +58,7 @@ contract('BaseOracle', ([admin]) => {
       })
 
       it('consensus cannot resubmit already processing report', async () => {
-        await assertRevert(
+        await assert.revertsWithCustomError(
           consensus.submitReportAsConsensus(HASH_1, initialRefSlot, initialRefSlot + SLOTS_PER_FRAME),
           `RefSlotMustBeGreaterThanProcessingOne(${initialRefSlot}, ${initialRefSlot})`
         )
@@ -146,6 +144,45 @@ contract('BaseOracle', ([admin]) => {
         assertBn(report.processingDeadlineTime, bn(nextRefSlot + SLOTS_PER_FRAME + 10))
         assert(report.processingStarted)
       })
+    })
+  })
+
+  describe('_startProcessing safely advances processing state', () => {
+    before(deployContract)
+
+    it('initial contract state,no reports, can not startProcessing', async () => {
+      await assert.revertsWithCustomError(baseOracle.startProcessing(), 'ProcessingDeadlineMissed(0)')
+    })
+
+    it('submit first report for initial slot', async () => {
+      await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, initialRefSlot + 20)
+      const tx = await baseOracle.startProcessing()
+      assert.emits(tx, 'ProcessingStarted', { refSlot: initialRefSlot, hash: HASH_1 })
+      assert.emits(tx, 'MockStartProcessingResult', { prevProcessingRefSlot: '0' })
+    })
+
+    it('no next report, processing same slot again, state is not changed', async () => {
+      const tx = await baseOracle.startProcessing()
+      assert.emits(tx, 'ProcessingStarted', { refSlot: initialRefSlot, hash: HASH_1 })
+      assert.emits(tx, 'MockStartProcessingResult', { prevProcessingRefSlot: String(initialRefSlot) })
+      const processingSlot = await baseOracle.getLastProcessingRefSlot()
+      assert.equals(processingSlot, initialRefSlot)
+    })
+
+    it('next report comes in, start processing, state advances', async () => {
+      await consensus.submitReportAsConsensus(HASH_2, initialRefSlot + 10, initialRefSlot + 20)
+      const tx = await baseOracle.startProcessing()
+      assert.emits(tx, 'ProcessingStarted', { refSlot: initialRefSlot + 10, hash: HASH_2 })
+      assert.emits(tx, 'MockStartProcessingResult', { prevProcessingRefSlot: String(initialRefSlot) })
+      const processingSlot = await baseOracle.getLastProcessingRefSlot()
+      assert.equals(processingSlot, initialRefSlot + 10)
+    })
+
+    it('another report but deadline is missed, reverts', async () => {
+      const nextSlot = initialRefSlot + 20
+      await consensus.submitReportAsConsensus(HASH_3, nextSlot, nextSlot + 30)
+      await baseOracle.setTime(nextSlot + 40)
+      await assert.revertsWithCustomError(baseOracle.startProcessing(), `ProcessingDeadlineMissed(${nextSlot + 30})`)
     })
   })
 })

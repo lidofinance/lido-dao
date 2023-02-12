@@ -15,6 +15,9 @@ contract BaseOracleTimeTravellable is BaseOracle {
     using UnstructuredStorage for bytes32;
     uint256 internal _time = 2513040315;
 
+    event MockStartProcessingResult(uint256 prevProcessingRefSlot);
+
+
     struct HandleConsensusReportLastCall {
         ConsensusReport report;
         uint256 prevSubmittedRefSlot;
@@ -65,7 +68,8 @@ contract BaseOracleTimeTravellable is BaseOracle {
     }
 
     function startProcessing() external {
-        _startProcessing();
+        uint256 _res = _startProcessing();
+        emit MockStartProcessingResult(_res);
     }
 
     function checkConsensusData(uint256 refSlot, uint256 consensusVersion, bytes32 hash) external view {
