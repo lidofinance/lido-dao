@@ -6,7 +6,7 @@ const HashConsensus = artifacts.require('HashConsensusTimeTravellable')
 const MockReportProcessor = artifacts.require('MockReportProcessor')
 
 contract('HashConsensus', ([admin, member1, member2, stranger]) => {
-  context('Report Processor', () => {
+  context('Fast Lane Length', () => {
     let consensus
 
     const deploy = async (options = undefined) => {
@@ -23,7 +23,7 @@ contract('HashConsensus', ([admin, member1, member2, stranger]) => {
       })
     })
 
-    context('setFastLaneLengthSlots', () => {
+    context('method setFastLaneLengthSlots', () => {
       beforeEach(deploy)
 
       const getFastLaneLengthSlotsLimit = async () => {
