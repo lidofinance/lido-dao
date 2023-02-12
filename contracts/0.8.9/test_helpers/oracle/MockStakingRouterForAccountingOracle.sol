@@ -15,79 +15,68 @@ contract MockStakingRouterForAccountingOracle is IStakingRouter {
 
     struct ReportKeysByNodeOperatorCallData {
         uint256 stakingModuleId;
-        uint256[] nodeOperatorIds;
-        uint256[] keysCounts;
+        bytes nodeOperatorIds;
+        bytes keysCounts;
     }
 
     uint256 internal _exitedKeysCountAcrossAllModules;
-    UpdateExitedKeysByModuleCallData internal _updateExitedKeysByModuleLastCall;
-    ReportKeysByNodeOperatorCallData[] internal _reportExitedKeysByNodeOperatorCalls;
-    ReportKeysByNodeOperatorCallData[] internal _reportStuckKeysByNodeOperatorCalls;
+    UpdateExitedKeysByModuleCallData internal _lastCall_updateExitedKeysByModule;
+
+    ReportKeysByNodeOperatorCallData[] public calls_reportExitedKeysByNodeOperator;
+    ReportKeysByNodeOperatorCallData[] public calls_reportStuckKeysByNodeOperator;
 
 
     function setExitedKeysCountAcrossAllModules(uint256 count) external {
         _exitedKeysCountAcrossAllModules = count;
     }
 
-    function getLastCall_updateExitedKeysByModule()
+    function lastCall_updateExitedKeysByModule()
         external view returns (UpdateExitedKeysByModuleCallData memory)
     {
-        return _updateExitedKeysByModuleLastCall;
+        return _lastCall_updateExitedKeysByModule;
     }
 
-    function getTotalCalls_reportExitedKeysByNodeOperator() external view returns (uint256) {
-        return _reportExitedKeysByNodeOperatorCalls.length;
+    function totalCalls_reportExitedKeysByNodeOperator() external view returns (uint256) {
+        return calls_reportExitedKeysByNodeOperator.length;
     }
 
-    function getCall_reportExitedKeysByNodeOperator(uint256 i)
-        external view returns (ReportKeysByNodeOperatorCallData memory)
-    {
-        return _reportExitedKeysByNodeOperatorCalls[i];
-    }
-
-    function getTotalCalls_reportStuckKeysByNodeOperator() external view returns (uint256) {
-        return _reportStuckKeysByNodeOperatorCalls.length;
-    }
-
-    function getCall_reportStuckKeysByNodeOperator(uint256 i)
-        external view returns (ReportKeysByNodeOperatorCallData memory)
-    {
-        return _reportStuckKeysByNodeOperatorCalls[i];
+    function totalCalls_reportStuckKeysByNodeOperator() external view returns (uint256) {
+        return calls_reportStuckKeysByNodeOperator.length;
     }
 
     ///
     /// IStakingRouter
     ///
 
-    function getExitedKeysCountAcrossAllModules() external view returns (uint256) {
+    function getExitedValidatorsCountAcrossAllModules() external view returns (uint256) {
         return _exitedKeysCountAcrossAllModules;
     }
 
-    function updateExitedKeysCountByStakingModule(
+    function updateExitedValidatorsCountByStakingModule(
         uint256[] calldata moduleIds,
         uint256[] calldata exitedKeysCounts
     ) external {
-        _updateExitedKeysByModuleLastCall.moduleIds = moduleIds;
-        _updateExitedKeysByModuleLastCall.exitedKeysCounts = exitedKeysCounts;
-        ++_updateExitedKeysByModuleLastCall.callCount;
+        _lastCall_updateExitedKeysByModule.moduleIds = moduleIds;
+        _lastCall_updateExitedKeysByModule.exitedKeysCounts = exitedKeysCounts;
+        ++_lastCall_updateExitedKeysByModule.callCount;
     }
 
-    function reportStakingModuleExitedKeysCountByNodeOperator(
+    function reportStakingModuleExitedValidatorsCountByNodeOperator(
         uint256 stakingModuleId,
-        uint256[] calldata nodeOperatorIds,
-        uint256[] calldata exitedKeysCounts
+        bytes calldata nodeOperatorIds,
+        bytes calldata exitedKeysCounts
     ) external {
-        _reportExitedKeysByNodeOperatorCalls.push(ReportKeysByNodeOperatorCallData(
+        calls_reportExitedKeysByNodeOperator.push(ReportKeysByNodeOperatorCallData(
             stakingModuleId, nodeOperatorIds, exitedKeysCounts
         ));
     }
 
-    function reportStakingModuleStuckKeysCountByNodeOperator(
+    function reportStakingModuleStuckValidatorsCountByNodeOperator(
         uint256 stakingModuleId,
-        uint256[] calldata nodeOperatorIds,
-        uint256[] calldata stuckKeysCounts
+        bytes calldata nodeOperatorIds,
+        bytes calldata stuckKeysCounts
     ) external {
-        _reportStuckKeysByNodeOperatorCalls.push(ReportKeysByNodeOperatorCallData(
+        calls_reportStuckKeysByNodeOperator.push(ReportKeysByNodeOperatorCallData(
             stakingModuleId, nodeOperatorIds, stuckKeysCounts
         ));
     }

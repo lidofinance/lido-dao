@@ -1,32 +1,15 @@
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
-const { randomBytes } = require('crypto')
-const { toChecksumAddress } = require('ethereumjs-util')
 const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
+const { locatorServices, getRandomLocatorConfig } = require('../helpers/locator')
 const Proxy = artifacts.require('OssifiableProxy.sol')
 const LidoLocator = artifacts.require('LidoLocator.sol')
-
-const services = [
-  'accountingOracle',
-  'depositSecurityModule',
-  'elRewardsVault',
-  'legacyOracle',
-  'lido',
-  'oracleReportSanityChecker',
-  'selfOwnedStEthBurner',
-  'stakingRouter',
-  'treasury',
-  'validatorExitBus',
-  'withdrawalQueue',
-  'withdrawalVault',
-  'postTokenRebaseReceiver'
-]
 
 contract('LidoLocator', ([deployer, agent]) => {
   let evmSnapshotId
   let proxy
   let lidoLocatorProxy
-  const initialConfig = getRandomConfig()
+  const initialConfig = getRandomLocatorConfig()
 
   before(async () => {
     const implementation = await LidoLocator.new(initialConfig, { from: deployer })
@@ -56,7 +39,7 @@ contract('LidoLocator', ([deployer, agent]) => {
 
       const expectedCoreComponents = [
         initialConfig.elRewardsVault,
-        initialConfig.safetyNetsRegistry,
+        initialConfig.oracleReportSanityChecker,
         initialConfig.stakingRouter,
         initialConfig.treasury,
         initialConfig.withdrawalQueue,
@@ -75,10 +58,8 @@ contract('LidoLocator', ([deployer, agent]) => {
   describe('breaking constructor', () => {
     it('should revert when passing a zero address', async () => {
       const configsWithZeroAddress = []
-      for (const service of services) {
-        const config = getRandomConfig()
-        config[service] = ZERO_ADDRESS
-
+      for (const service of locatorServices) {
+        const config = getRandomLocatorConfig({ [service]: ZERO_ADDRESS })
         configsWithZeroAddress.push(config)
       }
 
@@ -90,7 +71,7 @@ contract('LidoLocator', ([deployer, agent]) => {
 
   describe('checking updated implementation', () => {
     describe('works after upgrade to a compatible impl', () => {
-      const updatedConfig = getRandomConfig()
+      const updatedConfig = getRandomLocatorConfig()
 
       beforeEach(async () => {
         const updatedImplementation = await LidoLocator.new(updatedConfig, { from: deployer })
@@ -112,7 +93,7 @@ contract('LidoLocator', ([deployer, agent]) => {
 
         const expectedCoreComponents = [
           updatedConfig.elRewardsVault,
-          updatedConfig.safetyNetsRegistry,
+          updatedConfig.oracleReportSanityChecker,
           updatedConfig.stakingRouter,
           updatedConfig.treasury,
           updatedConfig.withdrawalQueue,
@@ -129,14 +110,3 @@ contract('LidoLocator', ([deployer, agent]) => {
     })
   })
 })
-
-function getRandomConfig() {
-  return services.reduce((config, current) => {
-    config[current] = generateRandomAddress()
-    return config
-  }, {})
-}
-
-function generateRandomAddress() {
-  return toChecksumAddress('0x' + randomBytes(20).toString('hex'))
-}

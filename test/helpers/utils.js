@@ -60,7 +60,7 @@ const toBN = (obj) => {
 }
 
 function hex(n, byteLen) {
-  return toBN(n).toString(16, byteLen * 2)
+  return n.toString(16).padStart(byteLen * 2, '0')
 }
 
 function strip0x(s) {
@@ -72,10 +72,14 @@ const transformEntries = (obj, tr) => Object.fromEntries(
   Object.entries(obj).map(tr).filter(x => x !== undefined)
 )
 
-// converts all object BN keys to strings, drops positional keys
+// converts all object BN keys to strings, drops numeric keys and the __length__ key
 const processNamedTuple = (obj) => transformEntries(obj, ([k, v]) => {
-  return /^\d+$/.test(k) ? undefined : [k, BN.isBN(v) ? v.toString() : v]
+  return /^(\d+|__length__)$/.test(k) ? undefined : [k, BN.isBN(v) ? v.toString() : v]
 })
+
+const printEvents = (tx) => {
+  console.log(tx.receipt.logs.map(({event, args}) => ({event, args: processNamedTuple(args)})))
+}
 
 // Divides a BN by 1e15
 const div15 = (bn) => bn.div(new BN(1000000)).div(new BN(1000000)).div(new BN(1000))
@@ -146,6 +150,7 @@ module.exports = {
   strip0x,
   transformEntries,
   processNamedTuple,
+  printEvents,
   div15,
   e9,
   e18,

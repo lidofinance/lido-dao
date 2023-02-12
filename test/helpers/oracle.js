@@ -66,7 +66,6 @@ async function pushOracleReport(consensus, oracle, numValidators, clBalance, elR
 
   const oracleVersion = await oracle.getContractVersion()
 
-
   await oracle.submitReportData(reportItems, oracleVersion, { from: members.addresses[0] })
 }
 

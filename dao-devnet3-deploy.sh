@@ -132,12 +132,12 @@ pause "!!! Now set the compositePostRebaseBeaconReceiverDeployTx hash value in d
 yarn hardhat --network $NETWORK run ./scripts/multisig/22-obtain-composite-post-rebase-beacon-receiver.js
 msg "CompositePostRebaseBeaconReceiver deployed"
 
-# Insurance: deploy SelfOwnedStETHBurner
-yarn hardhat --network $NETWORK run ./scripts/multisig/23-deploy-self-owned-steth-burner.js
-yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-23-deploy-self-owned-steth-burner.json
-pause "!!! Now set the selfOwnedStETHBurnerDeployTx hash value in deployed-$NETWORK.json"
-yarn hardhat --network $NETWORK run ./scripts/multisig/24-obtain-self-owned-steth-burner.js
-msg "SelfOwnedStETHBurner deployed"
+# Insurance: deploy Burner
+yarn hardhat --network $NETWORK run ./scripts/multisig/23-deploy-burner.js
+yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-23-deploy-burner.json
+pause "!!! Now set the burnerDeployTx hash value in deployed-$NETWORK.json"
+yarn hardhat --network $NETWORK run ./scripts/multisig/24-obtain-burner.js
+msg "Burner deployed"
 
 yarn hardhat --network $NETWORK run ./scripts/multisig/35-initialize-lido-and-oracle.js
 

@@ -52,7 +52,7 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   const appBaseAddress = state[`app:${appName}`].baseAddress
   const oracleAddress = state[`app:${APP}`].proxyAddress
 
-  const oracle = await artifacts.require('LidoOracle').at(oracleAddress)
+  const oracle = await artifacts.require('LegacyOracle').at(oracleAddress)
   const kernel = await artifacts.require('Kernel').at(state.daoAddress)
   const repo = await artifacts.require('Repo').at(repoAddress)
   const voting = await artifacts.require('Voting').at(votingAddress)

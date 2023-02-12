@@ -1,5 +1,4 @@
-// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
-
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
@@ -7,8 +6,10 @@ pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
 
+import "../../common/interfaces/ILidoLocator.sol";
 
-interface INewOracle {
+
+interface IAccountingOracle {
     function getConsensusContract() external view returns (address);
 }
 
@@ -42,7 +43,7 @@ interface IHashConsensus {
  *
  * See docs.lido.fi for more info.
  */
-contract LidoOracle is AragonApp {
+contract LegacyOracle is AragonApp {
 
     struct ChainSpec {
         uint64 epochsPerFrame;
@@ -85,8 +86,8 @@ contract LidoOracle is AragonApp {
         0xf6978a4f7e200f6d3a24d82d44c48bddabce399a3b8ec42a480ea8a2d5fe6ec5; // keccak256("lido.LidoOracle.lido")
 
     /// Address of the new accounting oracle contract
-    bytes32 internal constant NEW_ORACLE_POSITION =
-        0x6071464af3a725b2c260db7b8df5f609fc12a4b15ab905324f56370bd90b5ed2; // keccak256("lido.LidoOracle.newOracle");
+    bytes32 internal constant ACCOUNTING_ORACLE_POSITION =
+        0xea0b659bb027a76ad14e51fad85cb5d4cedf3fd9dc4531be67b31d6d8725e9c6; // keccak256("lido.LidoOracle.accountingOracle");
 
     /// Storage for the Ethereum chain specification
     bytes32 internal constant BEACON_SPEC_POSITION =
@@ -119,10 +120,10 @@ contract LidoOracle is AragonApp {
     }
 
     /**
-     * @notice Returns the new oracle contract address.
+     * @notice Returns the accounting (new) oracle contract address.
      */
-    function getNewOracle() public view returns (address) {
-        return NEW_ORACLE_POSITION.getStorageAddress();
+    function getAccountingOracle() public view returns (address) {
+        return ACCOUNTING_ORACLE_POSITION.getStorageAddress();
     }
 
     /**
@@ -151,7 +152,7 @@ contract LidoOracle is AragonApp {
             uint64 genesisTime
         )
     {
-        (, uint256 epochsPerFrame_) = _getNewConsensusContract().getFrameConfig();
+        (, uint256 epochsPerFrame_) = _getAccountingConsensusContract().getFrameConfig();
         epochsPerFrame = uint64(epochsPerFrame_);
 
         ChainSpec memory spec = _getChainSpec();
@@ -166,7 +167,7 @@ contract LidoOracle is AragonApp {
      * Returns the epoch calculated from current timestamp
      */
     function getCurrentEpochId() external view returns (uint256 epochId) {
-        (epochId, ,) = _getCurrentFrameFromNewOracle();
+        (epochId, ,) = _getCurrentFrameFromAccountingOracle();
     }
 
     /**
@@ -184,7 +185,7 @@ contract LidoOracle is AragonApp {
             uint256 frameEndTime
         )
     {
-        return _getCurrentFrameFromNewOracle();
+        return _getCurrentFrameFromAccountingOracle();
     }
 
     /**
@@ -255,9 +256,9 @@ contract LidoOracle is AragonApp {
     function handleConsensusLayerReport(uint256 _refSlot, uint256 _clBalance, uint256 _clValidators)
         external
     {
-        require(msg.sender == getNewOracle(), "SENDER_NOT_ALLOWED");
+        require(msg.sender == getAccountingOracle(), "SENDER_NOT_ALLOWED");
 
-        // new oracle's ref. slot is the last slot of the epoch preceding the one the frame starts at
+        // new accounting oracle's ref. slot is the last slot of the epoch preceding the one the frame starts at
         uint256 epochId = (_refSlot + 1) / _getChainSpec().slotsPerEpoch;
         LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(epochId);
 
@@ -266,19 +267,26 @@ contract LidoOracle is AragonApp {
 
     /**
      * @notice Initializes the contract (the compat-only deprecated version 4) from scratch.
-     * @param _lido Address of the Lido contract.
-     * @param _newOracle Address of the new accounting oracle contract.
+     * @param _lidoLocator Address of the Lido Locator contract.
+     * @param _accountingOracleConsensusContract Address of consensus contract of the new accounting oracle contract.
      */
-    function initialize(address _lido, address _newOracle) external onlyInit {
+    function initialize(
+        address _lidoLocator,
+        address _accountingOracleConsensusContract
+    ) external onlyInit {
         // Initializations for v0 --> v3
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
+        require(_lidoLocator != address(0), "ZERO_LOCATOR_ADDRESS");
+        ILidoLocator locator = ILidoLocator(_lidoLocator);
 
-        require(_lido != address(0), "ZERO_LIDO_ADDRESS");
-        LIDO_POSITION.setStorageAddress(_lido);
+        LIDO_POSITION.setStorageAddress(locator.lido());
 
         // Initializations for v3 --> v4
-        _initialize_v4(_newOracle);
-        _setChainSpec(_getNewOracleChainSpec(_newOracle));
+        _initialize_v4(locator.accountingOracle());
+
+        // Cannot get consensus contract from new oracle because at this point new oracle is
+        // not initialized with consensus contract address yet
+        _setChainSpec(_getAccountingOracleChainSpec(_accountingOracleConsensusContract));
 
         // Needed to finish the Aragon part of initialization (otherwise auth() modifiers will fail)
         initialized();
@@ -288,13 +296,14 @@ contract LidoOracle is AragonApp {
      * @notice A function to finalize upgrade v3 -> v4 (the compat-only deprecated impl).
      * Can be called only once.
      */
-    function finalizeUpgrade_v4(address _newOracle) external {
+    function finalizeUpgrade_v4(address _accountingOracle) external {
         require(CONTRACT_VERSION_POSITION.getStorageUint256() == 3, "WRONG_BASE_VERSION");
+        IHashConsensus consensus = IHashConsensus(IAccountingOracle(_accountingOracle).getConsensusContract());
 
-        _initialize_v4(_newOracle);
+        _initialize_v4(_accountingOracle);
 
         ChainSpec memory spec = _getChainSpec();
-        ChainSpec memory newSpec = _getNewOracleChainSpec(_newOracle);
+        ChainSpec memory newSpec = _getAccountingOracleChainSpec(consensus);
 
         require(
             spec.slotsPerEpoch == newSpec.slotsPerEpoch &&
@@ -304,9 +313,9 @@ contract LidoOracle is AragonApp {
         );
     }
 
-    function _initialize_v4(address _newOracle) internal {
-        require(_newOracle != address(0), "ZERO_NEW_ORACLE_ADDRESS");
-        NEW_ORACLE_POSITION.setStorageAddress(_newOracle);
+    function _initialize_v4(address _accountingOracle) internal {
+        require(_accountingOracle != address(0), "ZERO_ACCOUNTING_ORACLE_ADDRESS");
+        ACCOUNTING_ORACLE_POSITION.setStorageAddress(_accountingOracle);
         CONTRACT_VERSION_POSITION.setStorageUint256(4);
         emit ContractVersionSet(4);
     }
@@ -339,14 +348,14 @@ contract LidoOracle is AragonApp {
         BEACON_SPEC_POSITION.setStorageUint256(data);
     }
 
-    function _getNewOracleChainSpec(address _newOracle)
+    function _getAccountingOracleChainSpec(address _accountingOracleConsensusContract)
         internal
         view
         returns (ChainSpec memory spec)
     {
-        IHashConsensus consensus = IHashConsensus(INewOracle(_newOracle).getConsensusContract());
+        IHashConsensus consensus = IHashConsensus(_accountingOracleConsensusContract);
         (uint256 slotsPerEpoch, uint256 secondsPerSlot, uint256 genesisTime) = consensus.getChainConfig();
-        (, uint256 epochsPerFrame_) = IHashConsensus(consensus).getFrameConfig();
+        (, uint256 epochsPerFrame_) = consensus.getFrameConfig();
 
         spec.epochsPerFrame = uint64(epochsPerFrame_);
         spec.slotsPerEpoch = uint64(slotsPerEpoch);
@@ -354,7 +363,7 @@ contract LidoOracle is AragonApp {
         spec.genesisTime = uint64(genesisTime);
     }
 
-    function _getCurrentFrameFromNewOracle()
+    function _getCurrentFrameFromAccountingOracle()
         internal
         view
         returns (
@@ -364,18 +373,18 @@ contract LidoOracle is AragonApp {
         )
     {
         ChainSpec memory spec = _getChainSpec();
-        IHashConsensus consensus = _getNewConsensusContract();
+        IHashConsensus consensus = _getAccountingConsensusContract();
         uint256 refSlot;
         (refSlot, frameEndTime) =  consensus.getCurrentFrame();
-        // new oracle's frame ends at the timestamp of the frame's last slot; old oracle's frame
+        // new accounting oracle's frame ends at the timestamp of the frame's last slot; old oracle's frame
         // ended a second before the timestamp of the first slot of the next frame
         frameEndTime += spec.secondsPerSlot - 1;
-        // new oracle's ref. slot is the last slot of the epoch preceding the one the frame starts at
+        // new accounting oracle's ref. slot is the last slot of the epoch preceding the one the frame starts at
         frameStartTime = spec.genesisTime + (refSlot + 1) * spec.secondsPerSlot;
         frameEpochId = (refSlot + 1) / spec.slotsPerEpoch;
     }
 
-    function _getNewConsensusContract() internal view returns (IHashConsensus) {
-        return IHashConsensus(INewOracle(getNewOracle()).getConsensusContract());
+    function _getAccountingConsensusContract() internal view returns (IHashConsensus) {
+        return IHashConsensus(IAccountingOracle(getAccountingOracle()).getConsensusContract());
     }
 }

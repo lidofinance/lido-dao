@@ -61,7 +61,7 @@ NodeOperatorRegistry ${nodeOperatorsRegistry}
 BeaconChainDepositor ${beaconChainDepositor}
 DepositSecurityModule ${depositSecurityModule}
 CompositePostRebaseBeaconReceive ${compositePostRebaseBeaconReceiverAddress}
-SelfOwnedStETHBurner ${state["selfOwnedStETHBurnerAddress"]}
+Burner ${state["burnerAddress"]}
 `
   console.log(addressesInfo)
   // fs.writeFileSync(fileName, data + '\n', 'utf8')

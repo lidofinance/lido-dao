@@ -6,11 +6,12 @@ pragma solidity 0.8.9;
 
 import {IERC721} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721Receiver.sol";
+import {IERC721Metadata} from "@openzeppelin/contracts-v4.4/token/ERC721/extensions/IERC721Metadata.sol";
 import {IERC165} from "@openzeppelin/contracts-v4.4/utils/introspection/IERC165.sol";
 
-import {Strings} from "@openzeppelin/contracts-v4.4/utils/Strings.sol";
 import {EnumerableSet} from "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
 import {Address} from "@openzeppelin/contracts-v4.4/utils/Address.sol";
+import {Strings} from "@openzeppelin/contracts-v4.4/utils/Strings.sol";
 
 import {IWstETH, WithdrawalQueue} from "./WithdrawalQueue.sol";
 import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
@@ -20,27 +21,50 @@ import {UnstructuredRefStorage} from "./lib/UnstructuredRefStorage.sol";
 /// NFT is minted on every request and burned on claim
 ///
 /// @author psirex, folkyatina
-contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
-    using Strings for uint256;
+contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
     using Address for address;
+    using Strings for uint256;
     using EnumerableSet for EnumerableSet.UintSet;
     using UnstructuredRefStorage for bytes32;
 
-    bytes32 internal constant TOKEN_APPROVALS_POSITION = keccak256("lido.WithdrawalNFT.tokenApprovals");
-    bytes32 internal constant OPERATOR_APPROVALS = keccak256("lido.WithdrawalNFT.operatorApprovals");
+    bytes32 internal constant TOKEN_APPROVALS_POSITION = keccak256("lido.WithdrawalRequestNFT.tokenApprovals");
+    bytes32 internal constant OPERATOR_APPROVALS_POSITION = keccak256("lido.WithdrawalRequestNFT.operatorApprovals");
+    bytes32 internal constant BASE_URI_POSITION = keccak256("lido.WithdrawalRequestNFT.baseUri");
+
+    bytes32 public constant SET_BASE_URI_ROLE = keccak256("SET_BASE_URI_ROLE");
+
+    // @notion simple wrapper for base URI string
+    //  Solidity does not allow to store string in UnstructuredStorage
+    struct BaseUri {
+        string value;
+    }
 
     error ApprovalToOwner();
+    error ApproveToCaller();
     error NotOwnerOrApprovedForAll(address sender);
     error NotOwnerOrApproved(address sender);
     error TransferFromIncorrectOwner(address from, address realOwner);
     error TransferToZeroAddress();
     error TransferFromZeroAddress();
     error TransferToNonIERC721Receiver(address);
+    error InvalidOwnerAddress(address);
+    error StringTooLong(string str);
+    error ZeroMetadata();
+
+    // short strings for ERC721 name and symbol
+    bytes32 private immutable NAME;
+    bytes32 private immutable SYMBOL;
 
     /// @param _wstETH address of WstETH contract
-    constructor(address _wstETH) WithdrawalQueue(IWstETH(_wstETH)) {}
+    /// @param _name IERC721Metadata name string. Should be shorter than 32 bytes
+    /// @param _symbol IERC721Metadata symbol string. Should be shorter than 32 bytes
+    constructor(address _wstETH, string memory _name, string memory _symbol) WithdrawalQueue(IWstETH(_wstETH)) {
+        if (bytes(_name).length == 0 || bytes(_symbol).length == 0) revert ZeroMetadata();
+        NAME = _toBytes32(_name);
+        SYMBOL = _toBytes32(_symbol);
+    }
 
-    /// See {IERC165-supportsInterface}.
+    /// @dev See {IERC165-supportsInterface}.
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -48,11 +72,41 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
         override (IERC165, AccessControlEnumerable)
         returns (bool)
     {
-        return interfaceId == type(IERC721).interfaceId || super.supportsInterface(interfaceId);
+        return interfaceId == type(IERC721).interfaceId || interfaceId == type(IERC721Metadata).interfaceId
+            || super.supportsInterface(interfaceId);
+    }
+
+    /// @dev Se_toBytes321Metadata-name}.
+    function name() external view returns (string memory) {
+        return _toString(NAME);
+    }
+
+    /// @dev Se_toBytes321Metadata-symbol}.
+    function symbol() external view override returns (string memory) {
+        return _toString(SYMBOL);
+    }
+
+    /// @dev See {IERC721Metadata-tokenURI}.
+    function tokenURI(uint256 _requestId) public view virtual override returns (string memory) {
+        if (!_existsAndNotClaimed(_requestId)) revert InvalidRequestId(_requestId);
+
+        string memory baseURI = _getBaseUri().value;
+        return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, _requestId.toString())) : "";
+    }
+
+    /// @notice Base URI for computing {tokenURI}. If set, the resulting URI for each
+    /// token will be the concatenation of the `baseURI` and the `_requestId`.
+    function getBaseUri() external view returns (string memory) {
+        return _getBaseUri().value;
+    }
+
+    /// @notice Sets the Base URI for computing {tokenURI}
+    function setBaseUri(string calldata _baseUri) external onlyRole(SET_BASE_URI_ROLE) {
+        _getBaseUri().value = _baseUri;
     }
 
     /// @dev See {IERC721-balanceOf}.
-    function balanceOf(address _owner) public view override returns (uint256) {
+    function balanceOf(address _owner) external view override returns (uint256) {
         if (_owner == address(0)) revert InvalidOwnerAddress(_owner);
         return _getRequestsByOwner()[_owner].length();
     }
@@ -68,7 +122,7 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     }
 
     /// @dev See {IERC721-approve}.
-    function approve(address _to, uint256 _requestId) public override {
+    function approve(address _to, uint256 _requestId) external override {
         address owner = ownerOf(_requestId);
         if (_to == owner) revert ApprovalToOwner();
         if (msg.sender != owner && !isApprovedForAll(owner, msg.sender)) revert NotOwnerOrApprovedForAll(msg.sender);
@@ -77,15 +131,15 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     }
 
     /// @dev See {IERC721-getApproved}.
-    function getApproved(uint256 _requestId) public view override returns (address) {
+    function getApproved(uint256 _requestId) external view override returns (address) {
         if (!_existsAndNotClaimed(_requestId)) revert InvalidRequestId(_requestId);
 
         return _getTokenApprovals()[_requestId];
     }
 
     /// @dev See {IERC721-setApprovalForAll}.
-    function setApprovalForAll(address _operator, bool _approvedd) public override {
-        _setApprovalForAll(msg.sender, _operator, _approvedd);
+    function setApprovalForAll(address _operator, bool _approved) external override {
+        _setApprovalForAll(msg.sender, _operator, _approved);
     }
 
     /// @dev See {IERC721-isApprovedForAll}.
@@ -94,68 +148,50 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     }
 
     /// @dev See {IERC721-safeTransferFrom}.
-    function safeTransferFrom(address _from, address _to, uint256 _requestId) public override {
+    function safeTransferFrom(address _from, address _to, uint256 _requestId) external override {
         safeTransferFrom(_from, _to, _requestId, "");
     }
 
     /// @dev See {IERC721-safeTransferFrom}.
     function safeTransferFrom(address _from, address _to, uint256 _requestId, bytes memory _data) public override {
-        if (!_isApprovedOrOwner(msg.sender, _requestId)) revert NotOwnerOrApproved(msg.sender);
-        _safeTransfer(_from, _to, _requestId, _data);
+        _transfer(_from, _to, _requestId);
+        if (!_checkOnERC721Received(_from, _to, _requestId, _data)) {
+            revert TransferToNonIERC721Receiver(_to);
+        }
+
+        emit Transfer(_from, _to, _requestId);
     }
 
     /// @dev See {IERC721-transferFrom}.
-    function transferFrom(address _from, address _to, uint256 _requestId) public override {
-        if (!_isApprovedOrOwner(msg.sender, _requestId)) revert NotOwnerOrApproved(msg.sender);
+    function transferFrom(address _from, address _to, uint256 _requestId) external override {
         _transfer(_from, _to, _requestId);
 
         emit Transfer(_from, _to, _requestId);
     }
 
-    /// @dev Transfers `tokenId` from `from` to `to`.
+    /// @dev Transfers `_requestId` from `_from` to `_to`.
     ///  As opposed to {transferFrom}, this imposes no restrictions on msg.sender.
     ///
     /// Requirements:
     ///
-    /// - `from` cannot be the zero address.
-    /// - `to` cannot be the zero address.
-    /// - `tokenId` token must be owned by `from`.
+    /// - `_to` cannot be the zero address.
+    /// - `_requestId` request must not be claimed and be owned by `_from`.
+    /// - `msg.sender` should be approved, or approved for all, or owner
     function _transfer(address _from, address _to, uint256 _requestId) internal {
-        if (_from == address(0)) revert TransferFromZeroAddress();
         if (_to == address(0)) revert TransferToZeroAddress();
         if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
         WithdrawalRequest storage request = _getQueue()[_requestId];
+        if (request.claimed) revert RequestAlreadyClaimed(_requestId);
 
         if (_from != request.owner) revert TransferFromIncorrectOwner(_from, request.owner);
-        if (request.claimed) revert RequestAlreadyClaimed(_requestId);
+        if (!_isApprovedOrOwner(msg.sender, _requestId, request)) revert NotOwnerOrApproved(msg.sender);
 
         delete _getTokenApprovals()[_requestId];
         request.owner = payable(_to);
 
         _getRequestsByOwner()[_to].add(_requestId);
         _getRequestsByOwner()[_from].remove(_requestId);
-    }
-
-    /// @dev Safely transfers `tokenId` token from `from` to `to`, checking first that contract recipients
-    ///  are aware of the ERC721 protocol to prevent tokens from being forever locked.
-    ///  `data` is additional data, it has no specified format and it is sent in call to `to`.
-    ///
-    /// Requirements:
-    ///
-    ///  - `from` cannot be the zero address.
-    ///  - `to` cannot be the zero address.
-    ///  - `tokenId` token must exist and be owned by `from`.
-    ///  - If `to` refers to a smart contract, it must implement {IERC721Receiver-onERC721Received}, which is called upon a safe transfer.
-    ///
-    ///  Emits a {Transfer} event.
-    function _safeTransfer(address _from, address _to, uint256 _requestId, bytes memory _data) internal {
-        _transfer(_from, _to, _requestId);
-        require(
-            _checkOnERC721Received(_from, _to, _requestId, _data), "ERC721: transfer to non ERC721Receiver implementer"
-        );
-
-        emit Transfer(_from, _to, _requestId);
     }
 
     /// @dev Internal function to invoke {IERC721Receiver-onERC721Received} on a target address.
@@ -188,14 +224,18 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
         }
     }
 
-    /// @dev Returns whether `spender` is allowed to manage `tokenId`.
+    /// @dev Returns whether `_spender` is allowed to manage `_requestId`.
     ///
     /// Requirements:
     ///
-    /// - `tokenId` must exist.
-    function _isApprovedOrOwner(address _spender, uint256 _requestId) internal view returns (bool) {
-        address owner = ownerOf(_requestId);
-        return (_spender == owner || isApprovedForAll(owner, _spender) || getApproved(_requestId) == _spender);
+    /// - `_requestId` must exist (not checking).
+    function _isApprovedOrOwner(address _spender, uint256 _requestId, WithdrawalRequest memory request)
+        internal
+        view
+        returns (bool)
+    {
+        address owner = request.owner;
+        return (_spender == owner || isApprovedForAll(owner, _spender) || _getTokenApprovals()[_requestId] == _spender);
     }
 
     //
@@ -212,19 +252,46 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
         return _requestId > 0 && _requestId <= getLastRequestId() && !_getQueue()[_requestId].claimed;
     }
 
-    /// @dev Approve `to` to operate on `tokenId`
-    /// Emits a {Approval} event.
-    function _approve(address _to, uint256 _requestId) internal virtual {
+    /// @dev Approve `_to` to operate on `_requestId`
+    /// Emits a { Approval } event.
+    function _approve(address _to, uint256 _requestId) internal {
         _getTokenApprovals()[_requestId] = _to;
         emit Approval(ownerOf(_requestId), _to, _requestId);
     }
 
     /// @dev Approve `operator` to operate on all of `owner` tokens
-    /// Emits a {ApprovalForAll} event.
-    function _setApprovalForAll(address _owner, address _operator, bool _approved) internal virtual {
-        require(_owner != _operator, "ERC721: approve to caller");
+    /// Emits a { ApprovalForAll } event.
+    function _setApprovalForAll(address _owner, address _operator, bool _approved) internal {
+        if (_owner == _operator) revert ApproveToCaller();
         _getOperatorApprovals()[_owner][_operator] = _approved;
         emit ApprovalForAll(_owner, _operator, _approved);
+    }
+
+    /// @dev Decode a `bytes32 to string
+    function _toString(bytes32 _sstr) internal pure returns (string memory) {
+        uint256 len = _length(_sstr);
+        // using `new string(len)` would work locally but is not memory safe.
+        string memory str = new string(32);
+        /// @solidity memory-safe-assembly
+        assembly {
+            mstore(str, len)
+            mstore(add(str, 0x20), _sstr)
+        }
+        return str;
+    }
+
+    /// @dev encodes string `_str` in bytes32. Reverts if the string length > 31
+    function _toBytes32(string memory _str) internal pure returns (bytes32) {
+        bytes memory bstr = bytes(_str);
+        if (bstr.length > 31) {
+            revert StringTooLong(_str);
+        }
+        return bytes32(uint256(bytes32(bstr)) | bstr.length);
+    }
+
+    /// @dev Return the length of a string encoded in bytes32
+    function _length(bytes32 _sstr) internal pure returns (uint256) {
+        return uint256(_sstr) & 0xFF;
     }
 
     function _getTokenApprovals() internal pure returns (mapping(uint256 => address) storage) {
@@ -232,6 +299,13 @@ contract WithdrawalRequestNFT is IERC721, WithdrawalQueue {
     }
 
     function _getOperatorApprovals() internal pure returns (mapping(address => mapping(address => bool)) storage) {
-        return OPERATOR_APPROVALS.storageMapAddressMapAddressBool();
+        return OPERATOR_APPROVALS_POSITION.storageMapAddressMapAddressBool();
+    }
+
+    function _getBaseUri() internal pure returns (BaseUri storage baseUri) {
+        bytes32 position = BASE_URI_POSITION;
+        assembly {
+            baseUri.slot := position
+        }
     }
 }

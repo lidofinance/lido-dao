@@ -68,19 +68,14 @@ async function deployDaoAndPool(appManager, voting) {
   )
   await depositSecurityModule.addGuardians([GUARDIAN3, GUARDIAN1, GUARDIAN2], 2, { from: appManager })
 
-  const [
-    POOL_PAUSE_ROLE,
-    POOL_RESUME_ROLE,
-    STAKING_PAUSE_ROLE,
-    STAKING_CONTROL_ROLE,
-    MANAGE_PROTOCOL_CONTRACTS_ROLE
-  ] = await Promise.all([
-    pool.PAUSE_ROLE(),
-    pool.RESUME_ROLE(),
-    pool.STAKING_PAUSE_ROLE(),
-    pool.STAKING_CONTROL_ROLE(),
-    pool.MANAGE_PROTOCOL_CONTRACTS_ROLE()
-  ])
+  const [POOL_PAUSE_ROLE, POOL_RESUME_ROLE, STAKING_PAUSE_ROLE, STAKING_CONTROL_ROLE, MANAGE_PROTOCOL_CONTRACTS_ROLE] =
+    await Promise.all([
+      pool.PAUSE_ROLE(),
+      pool.RESUME_ROLE(),
+      pool.STAKING_PAUSE_ROLE(),
+      pool.STAKING_CONTROL_ROLE(),
+      pool.MANAGE_PROTOCOL_CONTRACTS_ROLE()
+    ])
 
   await Promise.all([
     // Allow voting to manage the pool
@@ -92,7 +87,14 @@ async function deployDaoAndPool(appManager, voting) {
   ])
 
   const elRewardsVault = await LidoELRewardsVault.new(pool.address, treasury.address)
-  const nodeOperatorsRegistry = await setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, stakingRouter.address)
+  const nodeOperatorsRegistry = await setupNodeOperatorsRegistry(
+    dao,
+    acl,
+    voting,
+    token,
+    appManager,
+    stakingRouter.address
+  )
 
   const wc = '0x'.padEnd(66, '1234')
   await stakingRouter.initialize(appManager, pool.address, wc, { from: appManager })
@@ -177,75 +179,50 @@ async function setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, s
 
   const [
     NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS,
-    NODE_OPERATOR_REGISTRY_ADD_NODE_OPERATOR_ROLE,
-    NODE_OPERATOR_REGISTRY_ACTIVATE_NODE_OPERATOR_ROLE,
-    NODE_OPERATOR_REGISTRY_DEACTIVATE_NODE_OPERATOR_ROLE,
-    NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_NAME_ROLE,
-    NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ADDRESS_ROLE,
+    NODE_OPERATOR_REGISTRY_MANAGE_NODE_OPERATOR_ROLE,
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE,
-    NODE_OPERATOR_REGISTRY_STAKING_ROUTER_ROLE,
-    NODE_OPERATOR_REGISTRY_REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE,
-    NODE_OPERATOR_REGISTRY_INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE
+    NODE_OPERATOR_REGISTRY_STAKING_ROUTER_ROLE
   ] = await Promise.all([
     nodeOperatorsRegistry.MANAGE_SIGNING_KEYS(),
-    nodeOperatorsRegistry.ADD_NODE_OPERATOR_ROLE(),
-    nodeOperatorsRegistry.ACTIVATE_NODE_OPERATOR_ROLE(),
-    nodeOperatorsRegistry.DEACTIVATE_NODE_OPERATOR_ROLE(),
-    nodeOperatorsRegistry.SET_NODE_OPERATOR_NAME_ROLE(),
-    nodeOperatorsRegistry.SET_NODE_OPERATOR_ADDRESS_ROLE(),
+    nodeOperatorsRegistry.MANAGE_NODE_OPERATOR_ROLE(),
     nodeOperatorsRegistry.SET_NODE_OPERATOR_LIMIT_ROLE(),
-    nodeOperatorsRegistry.STAKING_ROUTER_ROLE(),
-    nodeOperatorsRegistry.REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE(),
-    nodeOperatorsRegistry.INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE()
+    nodeOperatorsRegistry.STAKING_ROUTER_ROLE()
   ])
-
   await Promise.all([
     // Allow voting to manage node operators registry
-    acl.createPermission(voting, nodeOperatorsRegistry.address, NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS, appManager, {
-      from: appManager
-    }),
-    acl.createPermission(voting, nodeOperatorsRegistry.address, NODE_OPERATOR_REGISTRY_ADD_NODE_OPERATOR_ROLE, appManager, {
-      from: appManager
-    }),
-    acl.createPermission(voting, nodeOperatorsRegistry.address, NODE_OPERATOR_REGISTRY_ACTIVATE_NODE_OPERATOR_ROLE, appManager, {
-      from: appManager
-    }),
-    acl.createPermission(voting, nodeOperatorsRegistry.address, NODE_OPERATOR_REGISTRY_DEACTIVATE_NODE_OPERATOR_ROLE, appManager, {
-      from: appManager
-    }),
-    acl.createPermission(voting, nodeOperatorsRegistry.address, NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_NAME_ROLE, appManager, {
-      from: appManager
-    }),
-    acl.createPermission(voting, nodeOperatorsRegistry.address, NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_ADDRESS_ROLE, appManager, {
-      from: appManager
-    }),
-    acl.createPermission(voting, nodeOperatorsRegistry.address, NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE, appManager, {
-      from: appManager
-    }),
+    acl.createPermission(
+      voting,
+      nodeOperatorsRegistry.address,
+      NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS,
+      appManager,
+      {
+        from: appManager
+      }
+    ),
+    acl.createPermission(
+      voting,
+      nodeOperatorsRegistry.address,
+      NODE_OPERATOR_REGISTRY_MANAGE_NODE_OPERATOR_ROLE,
+      appManager,
+      {
+        from: appManager
+      }
+    ),
+    acl.createPermission(
+      voting,
+      nodeOperatorsRegistry.address,
+      NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE,
+      appManager,
+      {
+        from: appManager
+      }
+    ),
     acl.createPermission(
       voting,
       nodeOperatorsRegistry.address,
       NODE_OPERATOR_REGISTRY_STAKING_ROUTER_ROLE,
       appManager,
       { from: appManager }
-    ),
-    acl.createPermission(
-      stakingRouterAddress,
-      nodeOperatorsRegistry.address,
-      NODE_OPERATOR_REGISTRY_REQUEST_VALIDATORS_KEYS_FOR_DEPOSITS_ROLE,
-      appManager,
-      {
-        from: appManager
-      }
-    ),
-    acl.createPermission(
-      stakingRouterAddress,
-      nodeOperatorsRegistry.address,
-      NODE_OPERATOR_REGISTRY_INVALIDATE_READY_TO_DEPOSIT_KEYS_ROLE,
-      appManager,
-      {
-        from: appManager
-      }
     )
   ])
 
@@ -267,5 +244,5 @@ module.exports = {
   GENESIS_TIME,
   EPOCHS_PER_FRAME,
   SLOTS_PER_FRAME,
-  SECONDS_PER_FRAME,
+  SECONDS_PER_FRAME
 }

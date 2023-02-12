@@ -1,5 +1,4 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
@@ -15,7 +14,9 @@ library MemUtils {
         assembly {
             result := mload(0x40)
             mstore(result, _len)
-            mstore(0x40, add(add(result, _len), 32))
+            let freeMemPtr := add(add(result, 32), _len)
+            // align free mem ptr to 32 bytes as the compiler does now
+            mstore(0x40, and(add(freeMemPtr, 31), not(31)))
         }
     }
 

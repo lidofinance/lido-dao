@@ -1,5 +1,4 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
@@ -11,13 +10,12 @@ import {SafeERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC2
 import {Math} from "@openzeppelin/contracts-v4.4/utils/math/Math.sol";
 
 import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
-import {ISelfOwnedStETHBurner} from "../common/interfaces/ISelfOwnedStETHBurner.sol";
+import {IBurner} from "../common/interfaces/IBurner.sol";
 
 /**
-  * @title Interface defining a Lido liquid staking pool
-  * @dev see also [Lido liquid staking pool core contract](https://docs.lido.fi/contracts/lido)
+  * @title Interface defining ERC20-compatible StETH token
   */
-interface ILido {
+interface IStETH is IERC20 {
     /**
       * @notice Get stETH amount by the provided shares amount
       * @param _sharesAmount shares amount
@@ -37,6 +35,13 @@ interface ILido {
       * @param _account provided account address.
       */
     function sharesOf(address _account) external view returns (uint256);
+
+    /**
+      * @notice Transfer `_sharesAmount` stETH shares from `_sender` to `_receiver` using allowance.
+      */
+    function transferSharesFrom(
+        address _sender, address _recipient, uint256 _sharesAmount
+    ) external returns (uint256);
 }
 
 /**
@@ -44,7 +49,7 @@ interface ILido {
   *
   * @dev Burning stETH means 'decrease total underlying shares amount to perform stETH positive token rebase'
   */
-contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable {
+contract Burner is IBurner, AccessControlEnumerable {
     using SafeERC20 for IERC20;
 
     error ErrorAppAuthLidoFailed();
@@ -57,6 +62,7 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable 
 
     bytes32 public constant REQUEST_BURN_MY_STETH_ROLE = keccak256("REQUEST_BURN_MY_STETH_ROLE");
     bytes32 public constant RECOVER_ASSETS_ROLE = keccak256("RECOVER_ASSETS_ROLE");
+    bytes32 public constant REQUEST_BURN_SHARES_ROLE = keccak256("REQUEST_BURN_SHARES_ROLE");
 
     uint256 private coverSharesBurnRequested;
     uint256 private nonCoverSharesBurnRequested;
@@ -64,7 +70,7 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable 
     uint256 private totalCoverSharesBurnt;
     uint256 private totalNonCoverSharesBurnt;
 
-    address public immutable LIDO;
+    address public immutable STETH;
     address public immutable TREASURY;
 
     /**
@@ -121,25 +127,26 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable 
       *
       * @param _admin the Lido DAO Aragon agent contract address
       * @param _treasury the Lido treasury address (see StETH/ERC20/ERC721-recovery interfaces)
-      * @param _lido the Lido token (stETH) address
+      * @param _stETH stETH token address
       * @param _totalCoverSharesBurnt Shares burnt counter init value (cover case)
       * @param _totalNonCoverSharesBurnt Shares burnt counter init value (non-cover case)
       */
     constructor(
         address _admin,
         address _treasury,
-        address _lido,
+        address _stETH,
         uint256 _totalCoverSharesBurnt,
         uint256 _totalNonCoverSharesBurnt
     ) {
         if (_admin == address(0)) revert ErrorZeroAddress("_admin");
         if (_treasury == address(0)) revert ErrorZeroAddress("_treasury");
-        if (_lido == address(0)) revert ErrorZeroAddress("_lido");
+        if (_stETH == address(0)) revert ErrorZeroAddress("_stETH");
 
         _setupRole(DEFAULT_ADMIN_ROLE, _admin);
+        _setupRole(REQUEST_BURN_SHARES_ROLE, _stETH);
 
         TREASURY = _treasury;
-        LIDO = _lido;
+        STETH = _stETH;
 
         totalCoverSharesBurnt = _totalCoverSharesBurnt;
         totalNonCoverSharesBurnt = _totalNonCoverSharesBurnt;
@@ -148,47 +155,67 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable 
     /**
       * @notice BE CAREFUL, the provided stETH will be burnt permanently.
       *
-      * Transfers `_stETHAmountForBurning` stETH tokens from the message sender and irreversibly locks these
-      * on the burner contract address. Internally converts `_stETHAmountForBurning` amount into underlying
-      * shares amount (`_stETHAmountForBurningAsShares`) and marks the converted amount for burning
+      * Transfers `_stETHAmountToBurn` stETH tokens from the message sender and irreversibly locks these
+      * on the burner contract address. Internally converts `_stETHAmountToBurn` amount into underlying
+      * shares amount (`_stETHAmountToBurnAsShares`) and marks the converted amount for burning
       * by increasing the `coverSharesBurnRequested` counter.
       *
-      * @param _stETHAmountForBurning stETH tokens to burn
+      * @param _stETHAmountToBurn stETH tokens to burn
       *
       */
-    function requestBurnMyStETHForCover(uint256 _stETHAmountForBurning) external onlyRole(REQUEST_BURN_MY_STETH_ROLE) {
-        require(IERC20(LIDO).transferFrom(msg.sender, address(this), _stETHAmountForBurning));
-        _requestBurnMyStETH(_stETHAmountForBurning, true /* _isCover */);
+    function requestBurnMyStETHForCover(uint256 _stETHAmountToBurn) external onlyRole(REQUEST_BURN_MY_STETH_ROLE) {
+        require(IStETH(STETH).transferFrom(msg.sender, address(this), _stETHAmountToBurn));
+        uint256 sharesAmount = IStETH(STETH).getSharesByPooledEth(_stETHAmountToBurn);
+        _requestBurn(sharesAmount, _stETHAmountToBurn, true /* _isCover */);
     }
 
     /**
       * @notice BE CAREFUL, the provided stETH will be burnt permanently.
       *
-      * Transfers `_stETHAmountForBurning` stETH tokens from the message sender and irreversibly locks these
-      * on the burner contract address. Internally converts `_stETHAmountForBurning` amount into underlying
-      * shares amount (`_stETHAmountForBurningAsShares`) and marks the converted amount for burning
-      * by increasing the `nonCoverSharesBurnRequested` counter.
+      * Transfers `_sharesAmountToBurn` stETH shares from `_from` and irreversibly locks these
+      * on the burner contract address. Marks the shares amount for burning
+      * by increasing the `coverSharesBurnRequested` counter.
       *
-      * @param _stETHAmountForBurning stETH tokens to burn
+      * @param _from address to transfer shares from
+      * @param _sharesAmountToBurn stETH shares to burn
       *
       */
-    function requestBurnMyStETH(uint256 _stETHAmountForBurning) external onlyRole(REQUEST_BURN_MY_STETH_ROLE) {
-        require(IERC20(LIDO).transferFrom(msg.sender, address(this), _stETHAmountForBurning));
-        _requestBurnMyStETH(_stETHAmountForBurning, false /* _isCover */);
+    function requestBurnSharesForCover(address _from, uint256 _sharesAmountToBurn) external onlyRole(REQUEST_BURN_SHARES_ROLE) {
+        uint256 stETHAmount = IStETH(STETH).transferSharesFrom(_from, address(this), _sharesAmountToBurn);
+        _requestBurn(_sharesAmountToBurn, stETHAmount, true /* _isCover */);
     }
 
     /**
-      * @notice Mark excess stETH for burning
+      * @notice BE CAREFUL, the provided stETH will be burnt permanently.
       *
-      * @dev Can be called only by `Lido`.
+      * Transfers `_stETHAmountToBurn` stETH tokens from the message sender and irreversibly locks these
+      * on the burner contract address. Internally converts `_stETHAmountToBurn` amount into underlying
+      * shares amount (`_stETHAmountToBurnAsShares`) and marks the converted amount for burning
+      * by increasing the `nonCoverSharesBurnRequested` counter.
       *
-      * @param _stETHAmountForBurning stETH tokens to burn
+      * @param _stETHAmountToBurn stETH tokens to burn
+      *
       */
-    function markExcessStETHForBurn(uint256 _stETHAmountForBurning) external {
-      if (msg.sender != LIDO) revert ErrorAppAuthLidoFailed();
-      if(_stETHAmountForBurning > getExcessStETH()) revert NotEnoughExcessStETH();
+    function requestBurnMyStETH(uint256 _stETHAmountToBurn) external onlyRole(REQUEST_BURN_MY_STETH_ROLE) {
+        require(IStETH(STETH).transferFrom(msg.sender, address(this), _stETHAmountToBurn));
+        uint256 sharesAmount = IStETH(STETH).getSharesByPooledEth(_stETHAmountToBurn);
+        _requestBurn(sharesAmount, _stETHAmountToBurn, false /* _isCover */);
+    }
 
-      _requestBurnMyStETH(_stETHAmountForBurning, false /* _isCover */);
+    /**
+      * @notice BE CAREFUL, the provided stETH will be burnt permanently.
+      *
+      * Transfers `_sharesAmountToBurn` stETH shares from `_from` and irreversibly locks these
+      * on the burner contract address. Marks the shares amount for burning
+      * by increasing the `nonCoverSharesBurnRequested` counter.
+      *
+      * @param _from address to transfer shares from
+      * @param _sharesAmountToBurn stETH shares to burn
+      *
+      */
+    function requestBurnShares(address _from, uint256 _sharesAmountToBurn) external onlyRole(REQUEST_BURN_SHARES_ROLE) {
+        uint256 stETHAmount = IStETH(STETH).transferSharesFrom(_from, address(this), _sharesAmountToBurn);
+        _requestBurn(_sharesAmountToBurn, stETHAmount, false /* _isCover */);
     }
 
     /**
@@ -200,11 +227,11 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable 
         uint256 excessStETH = getExcessStETH();
 
         if (excessStETH > 0) {
-            uint256 excessSharesAmount = ILido(LIDO).getSharesByPooledEth(excessStETH);
+            uint256 excessSharesAmount = IStETH(STETH).getSharesByPooledEth(excessStETH);
 
             emit ExcessStETHRecovered(msg.sender, excessStETH, excessSharesAmount);
 
-            require(IERC20(LIDO).transfer(TREASURY, excessStETH));
+            require(IStETH(STETH).transfer(TREASURY, excessStETH));
         }
     }
 
@@ -224,7 +251,7 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable 
       */
     function recoverERC20(address _token, uint256 _amount) external onlyRole(RECOVER_ASSETS_ROLE) {
         if (_amount == 0) revert ZeroRecoveryAmount();
-        if (_token == LIDO) revert StETHRecoveryWrongFunc();
+        if (_token == STETH) revert StETHRecoveryWrongFunc();
 
         emit ERC20Recovered(msg.sender, _token, _amount);
 
@@ -239,7 +266,7 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable 
       * @param _tokenId minted token id
       */
     function recoverERC721(address _token, uint256 _tokenId) external onlyRole(RECOVER_ASSETS_ROLE) {
-        if (_token == LIDO) revert StETHRecoveryWrongFunc();
+        if (_token == STETH) revert StETHRecoveryWrongFunc();
 
         emit ERC721Recovered(msg.sender, _token, _tokenId);
 
@@ -261,7 +288,7 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable 
     function commitSharesToBurn(
         uint256 _sharesToBurnLimit
     ) external virtual override returns (uint256 sharesToBurnNow) {
-        if (msg.sender != LIDO) revert ErrorAppAuthLidoFailed();
+        if (msg.sender != STETH) revert ErrorAppAuthLidoFailed();
 
         if (_sharesToBurnLimit == 0) {
             return 0;
@@ -280,7 +307,7 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable 
             uint256 sharesToBurnNowForCover = Math.min(_sharesToBurnLimit, memCoverSharesBurnRequested);
 
             totalCoverSharesBurnt += sharesToBurnNowForCover;
-            uint256 stETHToBurnNowForCover = ILido(LIDO).getPooledEthByShares(sharesToBurnNowForCover);
+            uint256 stETHToBurnNowForCover = IStETH(STETH).getPooledEthByShares(sharesToBurnNowForCover);
             emit StETHBurnt(true /* isCover */, stETHToBurnNowForCover, sharesToBurnNowForCover);
 
             coverSharesBurnRequested -= sharesToBurnNowForCover;
@@ -293,7 +320,7 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable 
             );
 
             totalNonCoverSharesBurnt += sharesToBurnNowForNonCover;
-            uint256 stETHToBurnNowForNonCover = ILido(LIDO).getPooledEthByShares(sharesToBurnNowForNonCover);
+            uint256 stETHToBurnNowForNonCover = IStETH(STETH).getPooledEthByShares(sharesToBurnNowForNonCover);
             emit StETHBurnt(false /* isCover */, stETHToBurnNowForNonCover, sharesToBurnNowForNonCover);
 
             nonCoverSharesBurnRequested -= sharesToBurnNowForNonCover;
@@ -329,28 +356,30 @@ contract SelfOwnedStETHBurner is ISelfOwnedStETHBurner, AccessControlEnumerable 
       * Returns the stETH amount belonging to the burner contract address but not marked for burning.
       */
     function getExcessStETH() public view returns (uint256)  {
+        return IStETH(STETH).getPooledEthByShares(_getExcessStETHShares());
+    }
+
+    function _getExcessStETHShares() internal view returns (uint256) {
         uint256 sharesBurnRequested = (coverSharesBurnRequested + nonCoverSharesBurnRequested);
-        uint256 totalShares = ILido(LIDO).sharesOf(address(this));
+        uint256 totalShares = IStETH(STETH).sharesOf(address(this));
 
         // sanity check, don't revert
         if (totalShares <= sharesBurnRequested) {
             return 0;
         }
 
-        return ILido(LIDO).getPooledEthByShares(totalShares - sharesBurnRequested);
+        return totalShares - sharesBurnRequested;
     }
 
-    function _requestBurnMyStETH(uint256 _stETHAmountForBurning, bool _isCover) private {
-        if (_stETHAmountForBurning == 0) revert ZeroBurnAmount();
+    function _requestBurn(uint256 _sharesAmount, uint256 _stETHAmount, bool _isCover) private {
+        if (_sharesAmount == 0) revert ZeroBurnAmount();
 
-        uint256 sharesAmount = ILido(LIDO).getSharesByPooledEth(_stETHAmountForBurning);
-
-        emit StETHBurnRequested(_isCover, msg.sender, _stETHAmountForBurning, sharesAmount);
+        emit StETHBurnRequested(_isCover, msg.sender, _stETHAmount, _sharesAmount);
 
         if (_isCover) {
-            coverSharesBurnRequested += sharesAmount;
+            coverSharesBurnRequested += _sharesAmount;
         } else {
-            nonCoverSharesBurnRequested += sharesAmount;
+            nonCoverSharesBurnRequested += _sharesAmount;
         }
     }
 }

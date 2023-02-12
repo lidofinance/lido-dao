@@ -1,5 +1,4 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
@@ -52,6 +51,9 @@ library PositiveTokenRebaseLimiter {
         if(_rebaseLimit == 0) revert TooLowTokenRebaseLimit();
         if(_rebaseLimit > UNLIMITED_REBASE) revert TooHighTokenRebaseLimit();
 
+        // special case
+        if(_totalPooledEther == 0) { _rebaseLimit = UNLIMITED_REBASE; }
+
         limiterState.totalPooledEther = _totalPooledEther;
         limiterState.totalShares = _totalShares;
         limiterState.rebaseLimit = _rebaseLimit;
@@ -91,7 +93,9 @@ library PositiveTokenRebaseLimiter {
         pure
         returns (uint256 consumedEther)
     {
-        if (_limiterState.rebaseLimit == UNLIMITED_REBASE) return _etherAmount;
+        if (_limiterState.rebaseLimit == UNLIMITED_REBASE) {
+            return _etherAmount;
+        }
 
         uint256 remainingRebase = _limiterState.rebaseLimit - _limiterState.accumulatedRebase;
         uint256 remainingEther = (remainingRebase * _limiterState.totalPooledEther) / LIMITER_PRECISION_BASE;
@@ -117,7 +121,9 @@ library PositiveTokenRebaseLimiter {
         pure
         returns (uint256 maxSharesToBurn)
     {
-        if (_limiterState.rebaseLimit == UNLIMITED_REBASE) return type(uint256).max;
+        if (_limiterState.rebaseLimit == UNLIMITED_REBASE) {
+            return _limiterState.totalShares;
+        }
 
         uint256 remainingRebase = _limiterState.rebaseLimit - _limiterState.accumulatedRebase;
         maxSharesToBurn = (

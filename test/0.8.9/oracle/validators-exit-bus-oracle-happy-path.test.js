@@ -28,6 +28,8 @@ const PUBKEYS = [
 contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger]) => {
 
   context('Happy path', () => {
+    const LAST_PROCESSING_REF_SLOT = 1
+
     let consensus
     let oracle
     let oracleVersion
@@ -38,7 +40,11 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     let reportHash
 
     before(async () => {
-      const deployed = await deployExitBusOracle(admin)
+      const deployed = await deployExitBusOracle(admin, {
+        lastProcessingRefSlot: LAST_PROCESSING_REF_SLOT,
+        resumeAfterDeploy: true
+      })
+
       consensus = deployed.consensus
       oracle = deployed.oracle
 
@@ -59,16 +65,27 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     it('initially, consensus report is empty and is not being processed', async () => {
       const report = await oracle.getConsensusReport()
       assert.equal(report.hash, ZERO_HASH)
-      assert.equal(+report.refSlot, 0)
-      assert.equal(+report.receptionTime, 0)
-      assert.equal(+report.deadlineTime, 0)
+      // see the next test for refSlot
+      assert.equal(+report.processingDeadlineTime, 0)
       assert.isFalse(report.processingStarted)
 
-      const procState = await oracle.getDataProcessingState()
-      assert.isFalse(procState.processingStarted)
-      assert.equal(+procState.requestsCount, 0)
-      assert.equal(+procState.requestsProcessed, 0)
+      const frame = await consensus.getCurrentFrame()
+      const procState = await oracle.getProcessingState()
+
+      assert.equal(procState.currentFrameRefSlot, +frame.refSlot)
+      assert.equal(procState.dataHash, ZERO_HASH)
+      assert.equal(procState.processingDeadlineTime, 0)
+      assert.isFalse(procState.dataSubmitted)
       assert.equal(+procState.dataFormat, 0)
+      assert.equal(+procState.requestsCount, 0)
+      assert.equal(+procState.requestsSubmitted, 0)
+    })
+
+    it(`reference slot of the empty initial consensus report is set to the last processing slot ` +
+       `passed to the initialize function`, async () =>
+    {
+      const report = await oracle.getConsensusReport()
+      assert.equal(+report.refSlot, LAST_PROCESSING_REF_SLOT)
     })
 
     it('committee reaches consensus on a report hash', async () => {
@@ -98,16 +115,25 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       const report = await oracle.getConsensusReport()
       assert.equal(report.hash, reportHash)
       assert.equal(+report.refSlot, +reportFields.refSlot)
-      assert.equal(+report.receptionTime, +await oracle.getTime())
-      assert.equal(+report.deadlineTime, computeTimestampAtSlot(+report.refSlot + SLOTS_PER_FRAME))
+      assert.equal(
+        +report.processingDeadlineTime,
+        computeTimestampAtSlot(+report.refSlot + SLOTS_PER_FRAME)
+      )
       assert.isFalse(report.processingStarted)
 
-      const procState = await oracle.getDataProcessingState()
-      assert.equal(+procState.refSlot, +report.refSlot)
-      assert.isFalse(procState.processingStarted)
-      assert.equal(+procState.requestsCount, 0)
-      assert.equal(+procState.requestsProcessed, 0)
+      const frame = await consensus.getCurrentFrame()
+      const procState = await oracle.getProcessingState()
+
+      assert.equal(procState.currentFrameRefSlot, +frame.refSlot)
+      assert.equal(procState.dataHash, reportHash)
+      assert.equal(
+        procState.processingDeadlineTime,
+        computeTimestampAtSlot(+frame.reportProcessingDeadlineSlot)
+      )
+      assert.isFalse(procState.dataSubmitted)
       assert.equal(+procState.dataFormat, 0)
+      assert.equal(+procState.requestsCount, 0)
+      assert.equal(+procState.requestsSubmitted, 0)
     })
 
     it('some time passes', async () => {
@@ -152,7 +178,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       assertEvent(tx, 'ProcessingStarted', {expectedArgs: {refSlot: reportFields.refSlot}})
       assert.isTrue((await oracle.getConsensusReport()).processingStarted)
 
-      const {timestamp} = await web3.eth.getBlock(tx.receipt.blockHash)
+      const timestamp = await oracle.getTime()
 
       for (let i = 0; i < exitRequests.length; ++i) {
         assertEvent(tx, 'ValidatorExitRequest', {index: i, expectedArgs: {
@@ -166,12 +192,19 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     })
 
     it(`reports are marked as processed`, async () => {
-      const procState = await oracle.getDataProcessingState()
-      assert.equal(+procState.refSlot, reportFields.refSlot)
-      assert.isTrue(procState.processingStarted)
-      assert.equal(+procState.requestsCount, exitRequests.length)
-      assert.equal(+procState.requestsProcessed, exitRequests.length)
+      const frame = await consensus.getCurrentFrame()
+      const procState = await oracle.getProcessingState()
+
+      assert.equal(procState.currentFrameRefSlot, +frame.refSlot)
+      assert.equal(procState.dataHash, reportHash)
+      assert.equal(
+        procState.processingDeadlineTime,
+        computeTimestampAtSlot(+frame.reportProcessingDeadlineSlot)
+      )
+      assert.isTrue(procState.dataSubmitted)
       assert.equal(+procState.dataFormat, DATA_FORMAT_LIST)
+      assert.equal(+procState.requestsCount, exitRequests.length)
+      assert.equal(+procState.requestsSubmitted, exitRequests.length)
     })
 
     it('last requested validator indices are updated', async () => {

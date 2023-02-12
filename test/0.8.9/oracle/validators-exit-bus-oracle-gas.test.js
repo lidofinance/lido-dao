@@ -14,6 +14,7 @@ const {
   computeEpochFirstSlot, computeTimestampAtSlot, computeTimestampAtEpoch,
   ZERO_HASH, CONSENSUS_VERSION, DATA_FORMAT_LIST, getReportDataItems, calcReportDataHash,
   encodeExitRequestHex, encodeExitRequestsDataList, deployExitBusOracle,
+  deployOracleReportSanityCheckerForExitBus,
 } = require('./validators-exit-bus-oracle-deploy.test')
 
 
@@ -25,6 +26,7 @@ const PUBKEYS = [
   '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
 ]
 
+
 contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger]) => {
 
   context('Gas test', () => {
@@ -33,12 +35,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     let oracleVersion
 
     before(async () => {
-      const deployed = await deployExitBusOracle(admin, {
-        maxRequestsPerReport: 10000,
-        maxRequestsListLength: 10000,
-        rateLimitWindowSlots: 1,
-        rateLimitMaxThroughput: 10000,
-      })
+      const deployed = await deployExitBusOracle(admin, {resumeAfterDeploy: true})
       consensus = deployed.consensus
       oracle = deployed.oracle
 
@@ -100,8 +97,9 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           const report = await oracle.getConsensusReport()
           assert.isAbove(+refSlot, +report.refSlot)
 
-          const procState = await oracle.getDataProcessingState()
-          assert.equal(+procState.refSlot, +report.refSlot)
+          const procState = await oracle.getProcessingState()
+          assert.equal(procState.dataHash, ZERO_HASH)
+          assert.isFalse(procState.dataSubmitted)
         })
 
         it('committee reaches consensus on a report hash', async () => {
@@ -127,15 +125,18 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           const report = await oracle.getConsensusReport()
           assert.equal(report.hash, reportHash)
           assert.equal(+report.refSlot, +reportFields.refSlot)
-          assert.equal(+report.receptionTime, +await oracle.getTime())
-          assert.equal(+report.deadlineTime, computeTimestampAtSlot(+report.refSlot + SLOTS_PER_FRAME))
+          assert.equal(
+            +report.processingDeadlineTime,
+            computeTimestampAtSlot(+report.refSlot + SLOTS_PER_FRAME)
+          )
           assert.isFalse(report.processingStarted)
 
-          const procState = await oracle.getDataProcessingState()
-          assert.isFalse(procState.processingStarted)
-          assert.equal(+procState.requestsCount, 0)
-          assert.equal(+procState.requestsProcessed, 0)
+          const procState = await oracle.getProcessingState()
+          assert.equal(procState.dataHash, reportHash)
+          assert.isFalse(procState.dataSubmitted)
           assert.equal(+procState.dataFormat, 0)
+          assert.equal(+procState.requestsCount, 0)
+          assert.equal(+procState.requestsSubmitted, 0)
         })
 
         it('some time passes', async () => {
@@ -147,7 +148,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           assertEvent(tx, 'ProcessingStarted', {expectedArgs: {refSlot: reportFields.refSlot}})
           assert.isTrue((await oracle.getConsensusReport()).processingStarted)
 
-          const {timestamp} = await web3.eth.getBlock(tx.receipt.blockHash)
+          const timestamp = await oracle.getTime()
 
           for (let i = 0; i < exitRequests.length; ++i) {
             assertEvent(tx, 'ValidatorExitRequest', {index: i, expectedArgs: {
@@ -164,11 +165,12 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         })
 
         it(`reports are marked as processed`, async () => {
-          const procState = await oracle.getDataProcessingState()
-          assert.isTrue(procState.processingStarted)
-          assert.equal(+procState.requestsCount, exitRequests.length)
-          assert.equal(+procState.requestsProcessed, exitRequests.length)
+          const procState = await oracle.getProcessingState()
+          assert.equal(procState.dataHash, reportHash)
+          assert.isTrue(procState.dataSubmitted)
           assert.equal(+procState.dataFormat, DATA_FORMAT_LIST)
+          assert.equal(+procState.requestsCount, exitRequests.length)
+          assert.equal(+procState.requestsSubmitted, exitRequests.length)
         })
 
         it('some time passes', async () => {

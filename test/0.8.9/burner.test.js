@@ -6,7 +6,7 @@ const { ETH, StETH } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 const { deployProtocol } = require('../helpers/protocol')
 
-const SelfOwnerStETHBurner = artifacts.require('SelfOwnedStETHBurner.sol')
+const Burner = artifacts.require('Burner.sol')
 
 const ERC20OZMock = artifacts.require('ERC20OZMock.sol')
 const ERC721OZMock = artifacts.require('ERC721OZMock.sol')
@@ -14,7 +14,7 @@ const ERC721OZMock = artifacts.require('ERC721OZMock.sol')
 // semantic aliases
 const stETHShares = ETH
 
-contract('SelfOwnedStETHBurner', ([deployer, _, anotherAccount]) => {
+contract('Burner', ([deployer, _, anotherAccount]) => {
   let lido, burner, appManager, voting, treasury
   let snapshot
 
@@ -22,7 +22,7 @@ contract('SelfOwnedStETHBurner', ([deployer, _, anotherAccount]) => {
     const deployed = await deployProtocol()
 
     lido = deployed.pool
-    burner = deployed.selfOwnedStETHBurner
+    burner = deployed.burner
     acl = deployed.acl
     voting = deployed.voting.address
     appManager = deployed.appManager.address
@@ -30,6 +30,7 @@ contract('SelfOwnedStETHBurner', ([deployer, _, anotherAccount]) => {
 
     // allow tx `handleOracleReport` from the Lido contract addr
     await ethers.provider.send('hardhat_impersonateAccount', [lido.address])
+    await ethers.provider.send('hardhat_impersonateAccount', [burner.address])
 
     snapshot = new EvmSnapshot(hre.ethers.provider)
     await snapshot.make()
@@ -58,14 +59,14 @@ contract('SelfOwnedStETHBurner', ([deployer, _, anotherAccount]) => {
     })
 
     it(`init with already burnt counters works`, async () => {
-      let newBurner = await SelfOwnerStETHBurner.new(
+      let newBurner = await Burner.new(
         voting, treasury, lido.address, bn(0), bn(0), { from: deployer }
       )
 
       assert.equals(await newBurner.getCoverSharesBurnt(), bn(0))
       assert.equals(await newBurner.getNonCoverSharesBurnt(), bn(0))
 
-      newBurner = await SelfOwnerStETHBurner.new(
+      newBurner = await Burner.new(
         voting, treasury, lido.address, bn(123), bn(456), { from: deployer }
       )
 
@@ -75,18 +76,18 @@ contract('SelfOwnedStETHBurner', ([deployer, _, anotherAccount]) => {
 
     it(`can't use zero init addresses`, async () => {
       await assert.revertsWithCustomError(
-        SelfOwnerStETHBurner.new(ZERO_ADDRESS, treasury, lido.address, bn(0), bn(0), { from: deployer }),
+        Burner.new(ZERO_ADDRESS, treasury, lido.address, bn(0), bn(0), { from: deployer }),
         `ErrorZeroAddress("_admin")`
       )
 
       await assert.revertsWithCustomError(
-        SelfOwnerStETHBurner.new(voting, ZERO_ADDRESS, lido.address, bn(0), bn(0), { from: deployer }),
+        Burner.new(voting, ZERO_ADDRESS, lido.address, bn(0), bn(0), { from: deployer }),
         `ErrorZeroAddress("_treasury")`
       )
 
       await assert.revertsWithCustomError(
-        SelfOwnerStETHBurner.new(voting, treasury, ZERO_ADDRESS, bn(0), bn(0), { from: deployer }),
-        `ErrorZeroAddress("_lido")`
+        Burner.new(voting, treasury, ZERO_ADDRESS, bn(0), bn(0), { from: deployer }),
+        `ErrorZeroAddress("_stETH")`
       )
     })
 
@@ -129,6 +130,13 @@ contract('SelfOwnedStETHBurner', ([deployer, _, anotherAccount]) => {
 
       await burner.grantRole(web3.utils.keccak256(`REQUEST_BURN_MY_STETH_ROLE`), deployer, { from: appManager })
       await burner.requestBurnMyStETH(StETH(8), { from: deployer }) // doesn't revert anymore
+
+      // event deployer can't place burn request
+      await assert.revertsOZAccessControl(
+        burner.requestBurnShares(deployer, StETH(8), { from: deployer }),
+        deployer,
+        `REQUEST_BURN_SHARES_ROLE`
+      )
 
       assert.equals(await lido.balanceOf(deployer), StETH(22))
     })
@@ -451,6 +459,34 @@ contract('SelfOwnedStETHBurner', ([deployer, _, anotherAccount]) => {
       await lido.approve(burner.address, StETH(25), { from: voting })
       await burner.requestBurnMyStETH(StETH(0.8), { from: voting })
       await burner.requestBurnMyStETHForCover(StETH(0.1), { from: voting })
+
+      assert.equals(await lido.sharesOf(burner.address), stETHShares(0.9))
+      const receipt = await burner.commitSharesToBurn(ETH(0.5), { from: lido.address })
+
+      assert.emits(receipt, `StETHBurnt`, { isCover: true, amountOfStETH: StETH(0.1), amountOfShares: stETHShares(0.1) })
+      assert.emits(receipt, `StETHBurnt`, { isCover: false, amountOfStETH: StETH(0.4), amountOfShares: stETHShares(0.4) })
+
+      assert.emitsNumberOfEvents(receipt, `StETHBurnt`, 2)
+      assert.equals(await burner.getCoverSharesBurnt(), stETHShares(0.1))
+      assert.equals(await burner.getNonCoverSharesBurnt(), stETHShares(0.4))
+
+      const receipt2 = await burner.commitSharesToBurn(ETH(0.5), { from: lido.address })
+
+      assert.emits(receipt2, `StETHBurnt`, { isCover: false, amountOfStETH: StETH(0.4), amountOfShares: stETHShares(0.4) })
+
+      assert.emitsNumberOfEvents(receipt2, `StETHBurnt`, 1)
+      assert.equals(await burner.getCoverSharesBurnt(), stETHShares(0.1))
+      assert.equals(await burner.getNonCoverSharesBurnt(), stETHShares(0.8))
+    })
+
+    it(`limit burn shares per run works (cover/noncover mix) via requestBurnMyShares`, async () => {
+      await burner.grantRole(web3.utils.keccak256(`REQUEST_BURN_SHARES_ROLE`), voting, { from: appManager })
+
+      assert.equals(await lido.getTotalShares(), StETH(75))
+
+      await lido.approve(burner.address, StETH(25), { from: voting })
+      await burner.requestBurnShares(voting, StETH(0.8), { from: voting })
+      await burner.requestBurnSharesForCover(voting, StETH(0.1), { from: voting })
 
       assert.equals(await lido.sharesOf(burner.address), stETHShares(0.9))
       const receipt = await burner.commitSharesToBurn(ETH(0.5), { from: lido.address })

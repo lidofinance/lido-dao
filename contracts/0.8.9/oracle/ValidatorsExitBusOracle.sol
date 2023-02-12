@@ -4,16 +4,20 @@ pragma solidity 0.8.9;
 
 import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
+import { ILidoLocator } from "../../common/interfaces/ILidoLocator.sol";
 import { Math256 } from "../../common/lib/Math256.sol";
-import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
-import { AllowanceBasedRateLimit as RateLimit } from "../lib/AllowanceBasedRateLimit.sol";
 import { PausableUntil } from "../utils/PausableUntil.sol";
+import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
 
 import { BaseOracle } from "./BaseOracle.sol";
 
 
+interface IOracleReportSanityChecker {
+    function checkExitBusOracleReport(uint256 _exitRequestsCount) external view;
+}
+
+
 contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
-    using RateLimit for RateLimit.State;
     using UnstructuredStorage for bytes32;
     using SafeCast for uint256;
 
@@ -25,14 +29,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     error UnexpectedRequestsDataLength();
     error InvalidRequestsDataSortOrder();
     error ArgumentOutOfBounds();
-
-    event DataBoundariesSet(
-        uint256 indexed refSlot,
-        uint256 maxExitRequestsPerReport,
-        uint256 maxExitRequestsListLength,
-        uint256 exitRequestsRateLimitWindowSizeSlots,
-        uint256 exitRequestsRateLimitMaxThroughputE18
-    );
 
     event ValidatorExitRequest(
         uint256 indexed stakingModuleId,
@@ -48,13 +44,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         uint256 requestsCount
     );
 
-    struct DataBoundaries {
-        uint64 maxRequestsPerReport;
-        uint64 maxRequestsListLength;
-    }
-
     struct DataProcessingState {
-        uint256 lastProcessedItemWithoutPubkey;
         uint64 refSlot;
         uint64 requestsCount;
         uint64 requestsProcessed;
@@ -68,9 +58,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
 
     /// @notice An ACL role granting the permission to submit the data for a committee report.
     bytes32 public constant SUBMIT_DATA_ROLE = keccak256("SUBMIT_DATA_ROLE");
-
-    /// @notice An ACL role granting the permission to set report data safety boundaries.
-    bytes32 public constant MANAGE_DATA_BOUNDARIES_ROLE = keccak256("MANAGE_DATA_BOUNDARIES_ROLE");
 
     /// @notice An ACL role granting the permission to pause accepting validator exit requests
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
@@ -87,44 +74,32 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     bytes32 internal constant LAST_REQUESTED_VALIDATOR_INDICES_POSITION =
         keccak256("lido.ValidatorsExitBusOracle.lastRequestedValidatorIndices");
 
-    /// @dev Storage slot: RateLimit.State rateLimit
-    bytes32 internal constant RATE_LIMIT_POSITION =
-        keccak256("lido.ValidatorsExitBusOracle.rateLimit");
-
-    /// @dev Storage slot: DataBoundaries dataBoundaries
-    bytes32 internal constant DATA_BOUNDARIES_POSITION =
-        keccak256("lido.ValidatorsExitBusOracle.dataBoundaries");
-
     /// @dev Storage slot: DataProcessingState dataProcessingState
     bytes32 internal constant DATA_PROCESSING_STATE_POSITION =
         keccak256("lido.ValidatorsExitBusOracle.dataProcessingState");
+
+    ILidoLocator internal immutable LOCATOR;
 
     ///
     /// Initialization & admin functions
     ///
 
-    constructor(uint256 secondsPerSlot, uint256 genesisTime)
-        BaseOracle(secondsPerSlot, genesisTime) {}
+    constructor(uint256 secondsPerSlot, uint256 genesisTime, address lidoLocator)
+        BaseOracle(secondsPerSlot, genesisTime)
+    {
+        LOCATOR = ILidoLocator(lidoLocator);
+    }
 
     function initialize(
         address admin,
         address consensusContract,
         uint256 consensusVersion,
-        uint256 lastProcessingRefSlot,
-        uint256 maxExitRequestsPerReport,
-        uint256 maxExitRequestsListLength,
-        uint256 exitRequestsRateLimitWindowSizeSlots,
-        uint256 exitRequestsRateLimitMaxThroughputE18
+        uint256 lastProcessingRefSlot
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
+        _initializePausable();
         _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
-        _setDataBoundaries(
-            maxExitRequestsPerReport,
-            maxExitRequestsListLength,
-            exitRequestsRateLimitWindowSizeSlots,
-            exitRequestsRateLimitMaxThroughputE18
-        );
         RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(PAUSE_INFINITELY); // pause it explicitly
     }
 
@@ -146,55 +121,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     ///
     function pause(uint256 _duration) external onlyRole(PAUSE_ROLE) {
         _pause(_duration);
-    }
-
-    /// @notice Sets data safety boundaries.
-    ///
-    /// @param maxExitRequestsPerReport The maximum number of exit requests per report.
-    ///
-    /// @param maxExitRequestsListLength The maximum number of exit requests in a list
-    ///        for DATA_FORMAT_LIST data format.
-    ///
-    /// @param exitRequestsRateLimitMaxThroughputE18 The maximum number of exit requests
-    ///        in a sliding window lasting `exitRequestsRateLimitWindowSizeSlots` slots,
-    ///        multiplied by 10**18. This sets the maximum throughput after a period of
-    ///        low number of exit requests. If requests continue after the max throughput
-    ///        is exhausted, the throughput will be limited by approx. half of the max
-    ///        throughput until the new period of low number of exit requests occur.
-    ///
-    /// @param exitRequestsRateLimitWindowSizeSlots Size of the rate limiting window.
-    ///        See `exitRequestsRateLimitMaxThroughputE18`.
-    ///
-    function setDataBoundaries(
-        uint256 maxExitRequestsPerReport,
-        uint256 maxExitRequestsListLength,
-        uint256 exitRequestsRateLimitWindowSizeSlots,
-        uint256 exitRequestsRateLimitMaxThroughputE18
-    )
-        external
-        onlyRole(MANAGE_DATA_BOUNDARIES_ROLE)
-    {
-        _setDataBoundaries(
-            maxExitRequestsPerReport,
-            maxExitRequestsListLength,
-            exitRequestsRateLimitWindowSizeSlots,
-            exitRequestsRateLimitMaxThroughputE18
-        );
-    }
-
-    /// @notice Returns the current data safety boundaries. See `setDataBoundaries`.
-    ///
-    function getDataBoundaries() external view returns (
-        uint256 maxExitRequestsPerReport,
-        uint256 maxExitRequestsListLength,
-        uint256 exitRequestsRateLimitWindowSizeSlots,
-        uint256 exitRequestsRateLimitMaxThroughputE18
-    ) {
-        DataBoundaries memory boundaries = _storageDataBoundaries().value;
-        maxExitRequestsPerReport = boundaries.maxRequestsPerReport;
-        maxExitRequestsListLength = boundaries.maxRequestsListLength;
-        (exitRequestsRateLimitMaxThroughputE18, exitRequestsRateLimitWindowSizeSlots) =
-            RateLimit.load(RATE_LIMIT_POSITION).getThroughputConfig();
     }
 
     ///
@@ -220,9 +146,8 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         /// Requests data
         ///
 
-        /// @dev Total number of validator exit requests in this report. Must not be
-        /// greater than the value returned from getMaxExitRequestsForCurrentFrame()
-        /// called within the same reporting frame.
+        /// @dev Total number of validator exit requests in this report. Must not be greater
+        /// than limit checked in OracleReportSanityChecker.checkExitBusOracleReport
         uint256 requestsCount;
 
         /// @dev Format of the validator exit requests data. Currently, only the
@@ -250,7 +175,10 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     /// Requests must be sorted in the ascending order by the following compound
     /// key: (moduleId, nodeOpId, validatorIndex).
     ///
-    uint256 public constant DATA_FORMAT_LIST = 0;
+    uint256 public constant DATA_FORMAT_LIST = 1;
+
+    /// Length in bytes of packed request
+    uint256 internal constant PACKED_REQUEST_LENGTH = 64;
 
     /// @notice Submits report data for processing.
     ///
@@ -266,7 +194,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     /// - The processing deadline for the current consensus frame is missed.
     /// - The keccak256 hash of the ABI-encoded data is different from the last hash
     ///   provided by the hash consensus contract.
-    /// - The provided data doesn't meet safety checks and boundaries.
+    /// - The provided data doesn't meet safety checks.
     ///
     function submitReportData(ReportData calldata data, uint256 contractVersion)
         external whenResumed
@@ -277,17 +205,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         _checkConsensusData(data.refSlot, data.consensusVersion, keccak256(abi.encode(data)));
         _startProcessing();
         _handleConsensusReportData(data);
-    }
-
-    /// @notice Returns maximum number of validator exit requests that can be
-    /// submitted in the report for the current frame, accounting for both
-    /// the rate limit and the absolute limit per report.
-    ///
-    function getMaxExitRequestsForCurrentFrame() external view returns (uint256) {
-        return Math256.min(
-            _storageDataBoundaries().value.maxRequestsPerReport,
-            RateLimit.load(RATE_LIMIT_POSITION).calculateLimitAt(_getCurrentRefSlot()) / 10**18
-        );
     }
 
     /// @notice Returns the total number of validator exit requests ever processed
@@ -322,55 +239,56 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         return indices;
     }
 
-    /// @notice Returns processing state for the current consensus report.
+    struct ProcessingState {
+        /// @notice Reference slot for the current reporting frame.
+        uint256 currentFrameRefSlot;
+        /// @notice The last time at which a report data can be submitted for the current
+        /// reporting frame.
+        uint256 processingDeadlineTime;
+        /// @notice Hash of the report data. Zero bytes if consensus on the hash hasn't
+        /// been reached yet for the current reporting frame.
+        bytes32 dataHash;
+        /// @notice Whether any report data for the for the current reporting frame has been
+        /// already submitted.
+        bool dataSubmitted;
+        /// @notice Format of the report data for the current reporting frame.
+        uint256 dataFormat;
+        /// @notice Total number of validator exit requests for the current reporting frame.
+        uint256 requestsCount;
+        /// @notice How many validator exit requests are already submitted for the current
+        /// reporting frame.
+        uint256 requestsSubmitted;
+    }
+
+    /// @notice Returns data processing state for the current reporting frame.
+    /// @return result See the docs for the `ProcessingState` struct.
     ///
-    function getDataProcessingState() external view returns (
-        uint256 refSlot,
-        bool processingStarted,
-        uint256 requestsCount,
-        uint256 requestsProcessed,
-        uint256 dataFormat
-    ) {
-        DataProcessingState memory state = _storageDataProcessingState().value;
-        refSlot = _storageConsensusReport().value.refSlot;
-        processingStarted = state.refSlot != 0 && state.refSlot == refSlot;
-        if (processingStarted) {
-            requestsCount = state.requestsCount;
-            requestsProcessed = state.requestsProcessed;
-            dataFormat = state.dataFormat;
+    function getProcessingState() external view returns (ProcessingState memory result) {
+        ConsensusReport memory report = _storageConsensusReport().value;
+        result.currentFrameRefSlot = _getCurrentRefSlot();
+
+        if (result.currentFrameRefSlot != report.refSlot) {
+            return result;
         }
+
+        result.processingDeadlineTime = report.processingDeadlineTime;
+        result.dataHash = report.hash;
+
+        DataProcessingState memory procState = _storageDataProcessingState().value;
+
+        result.dataSubmitted = procState.refSlot == result.currentFrameRefSlot;
+        if (!result.dataSubmitted) {
+            return result;
+        }
+
+        result.dataFormat = procState.dataFormat;
+        result.requestsCount = procState.requestsCount;
+        result.requestsSubmitted = procState.requestsProcessed;
     }
 
     ///
     /// Implementation & helpers
     ///
-
-    function _setDataBoundaries(
-        uint256 maxRequestsPerReport,
-        uint256 maxRequestsListLength,
-        uint256 rateLimitWindowSlots,
-        uint256 rateLimitMaxThroughputE18
-    ) internal {
-        uint256 currentRefSlot = _getCurrentRefSlot();
-
-        _storageDataBoundaries().value = DataBoundaries({
-            maxRequestsPerReport: maxRequestsPerReport.toUint64(),
-            maxRequestsListLength: maxRequestsListLength.toUint64()
-        });
-
-        RateLimit
-            .load(RATE_LIMIT_POSITION)
-            .configureThroughput(currentRefSlot, rateLimitWindowSlots, rateLimitMaxThroughputE18)
-            .store(RATE_LIMIT_POSITION);
-
-        emit DataBoundariesSet(
-            currentRefSlot,
-            maxRequestsPerReport,
-            maxRequestsListLength,
-            rateLimitWindowSlots,
-            rateLimitMaxThroughputE18
-        );
-    }
 
     function _handleConsensusReport(
         ConsensusReport memory /* report */,
@@ -399,18 +317,20 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             revert UnsupportedRequestsDataFormat(data.dataFormat);
         }
 
-        if (data.data.length % 64 != 0) {
+        if (data.data.length % PACKED_REQUEST_LENGTH != 0) {
             revert InvalidRequestsDataLength();
         }
 
-        if (data.data.length / 64 != data.requestsCount) {
+        IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
+            .checkExitBusOracleReport(data.requestsCount);
+
+        if (data.data.length / PACKED_REQUEST_LENGTH != data.requestsCount) {
             revert UnexpectedRequestsDataLength();
         }
 
-        uint256 lastProcessedItemWithoutPubkey = _processExitRequestsList(data.data);
+        _processExitRequestsList(data.data);
 
         _storageDataProcessingState().value = DataProcessingState({
-            lastProcessedItemWithoutPubkey: lastProcessedItemWithoutPubkey,
             refSlot: data.refSlot.toUint64(),
             requestsCount: data.requestsCount.toUint64(),
             requestsProcessed: data.requestsCount.toUint64(),
@@ -420,11 +340,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         if (data.requestsCount == 0) {
             return;
         }
-
-        RateLimit
-            .load(RATE_LIMIT_POSITION)
-            .recordUsageAt(data.refSlot, data.requestsCount * 10**18)
-            .store(RATE_LIMIT_POSITION);
 
         TOTAL_REQUESTS_PROCESSED_POSITION.setStorageUint256(
             TOTAL_REQUESTS_PROCESSED_POSITION.getStorageUint256() + data.requestsCount
@@ -450,6 +365,8 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         assembly {
             pubkey.length := 48
         }
+
+        uint256 timestamp = _getTime();
 
         while (offset < offsetPastEnd) {
             uint256 dataWithoutPubkey;
@@ -489,7 +406,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             lastValIndex = valIndex;
             lastDataWithoutPubkey = dataWithoutPubkey;
 
-            emit ValidatorExitRequest(moduleId, nodeOpId, valIndex, pubkey, block.timestamp);
+            emit ValidatorExitRequest(moduleId, nodeOpId, valIndex, pubkey, timestamp);
         }
 
         if (lastNodeOpKey != 0) {
@@ -511,15 +428,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         mapping(uint256 => RequestedValidator) storage r
     ) {
         bytes32 position = LAST_REQUESTED_VALIDATOR_INDICES_POSITION;
-        assembly { r.slot := position }
-    }
-
-    struct StorageDataBoundaries {
-        DataBoundaries value;
-    }
-
-    function _storageDataBoundaries() internal pure returns (StorageDataBoundaries storage r) {
-        bytes32 position = DATA_BOUNDARIES_POSITION;
         assembly { r.slot := position }
     }
 

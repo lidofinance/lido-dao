@@ -11,6 +11,17 @@ import { AccessControlEnumerable } from "../utils/access/AccessControlEnumerable
 /// @notice A contract that gets consensus reports (i.e. hashes) pushed to and processes them
 /// asynchronously.
 ///
+/// HashConsensus doesn't expect any specific behavior from a report processor, and guarantees
+/// the following:
+///
+/// 1. HashConsensus won't submit reports via `IReportAsyncProcessor.submitConsensusReport` for the
+///    slot returned from `IReportAsyncProcessor.getLastProcessingRefSlot` and any slot preceding it.
+///
+/// 2. HashConsensus won't accept member reports (and thus won't include such reports in calculating
+///    the consensus) that have `consensusVersion` argument of the `HashConsensus.submitReport` call
+///    holding a diff. value than the one returned from `IReportAsyncProcessor.getConsensusVersion()`
+///    at the moment of the `HashConsensus.submitReport` call.
+///
 interface IReportAsyncProcessor {
     /// @notice Submits a consensus report for processing.
     ///
@@ -19,9 +30,11 @@ interface IReportAsyncProcessor {
     /// free to reach consensus on another report for the same reporting frame and submit it
     /// using this same function.
     ///
-    function submitReport(bytes32 report, uint256 refSlot, uint256 deadline) external;
+    function submitConsensusReport(bytes32 report, uint256 refSlot, uint256 deadline) external;
 
     /// @notice Returns the last reference slot for which processing of the report was started.
+    ///
+    /// HashConsensus won't submit reports for any slot less than or equal to this slot.
     ///
     function getLastProcessingRefSlot() external view returns (uint256);
 
@@ -29,6 +42,9 @@ interface IReportAsyncProcessor {
     ///
     /// Consensus version must change every time consensus rules change, meaning that
     /// an oracle looking at the same reference slot would calculate a different hash.
+    ///
+    /// HashConsensus won't accept member reports any consensus version different form the
+    /// one returned from this function.
     ///
     function getConsensusVersion() external view returns (uint256);
 }
@@ -56,6 +72,7 @@ contract HashConsensus is AccessControlEnumerable {
 
     error NumericOverflow();
     error AdminCannotBeZero();
+    error ReportProcessorCannotBeZero();
     error DuplicateMember();
     error AddressCannotBeZero();
     error InitialEpochIsYetToArrive();
@@ -198,9 +215,9 @@ contract HashConsensus is AccessControlEnumerable {
         GENESIS_TIME = genesisTime.toUint64();
 
         if (admin == address(0)) revert AdminCannotBeZero();
+        if (reportProcessor == address(0)) revert ReportProcessorCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
         _setFrameConfig(initialEpoch, epochsPerFrame, fastLaneLengthSlots, FrameConfig(0, 0, 0));
-        // zero address is allowed here, meaning "no processor"
         _reportProcessor = reportProcessor;
     }
 
@@ -221,8 +238,8 @@ contract HashConsensus is AccessControlEnumerable {
 
     /// @notice Returns the parameters required to calculate reporting frame given an epoch.
     ///
-    function getFrameConfig() external view returns (uint256 initialEpoch, uint256 epochsPerFrame) {
-        return (_frameConfig.initialEpoch, _frameConfig.epochsPerFrame);
+    function getFrameConfig() external view returns (uint256 initialEpoch, uint256 epochsPerFrame, uint256 fastLaneLengthSlots) {
+        return (_frameConfig.initialEpoch, _frameConfig.epochsPerFrame, _frameConfig.fastLaneLengthSlots);
     }
 
     /// @notice Returns the current reporting frame.
@@ -287,58 +304,6 @@ contract HashConsensus is AccessControlEnumerable {
         return _getMembers(true);
     }
 
-    /// @notice Returns the extended information related to an oracle committee member with the
-    /// given address.
-    ///
-    /// @param addr The member address.
-    ///
-    /// @return isMember Whether the provided address is a member of the oracle.
-    ///
-    /// @return isFastLane Whether the oracle member is in the fast lane members subset of the
-    ///         current reporting frame. See `getIsFastLaneMember`.
-    ///
-    /// @return canReport Whether the oracle member is allowed to submit a report at the moment
-    ///         of the call.
-    ///
-    /// @return lastReportRefSlot The last reference slot for which the member reported a data hash.
-    ///
-    /// @return currentRefSlot Current reference slot.
-    ///
-    /// @return memberReportForCurrentRefSlot The hash reported by the member for the current
-    ///         reference slot. Set to zero bytes if no report was received for the current
-    ///         reference slot.
-    ///
-    function getMemberInfo(address addr) external view returns (
-        bool isMember,
-        bool isFastLane,
-        bool canReport,
-        uint256 lastReportRefSlot,
-        uint256 currentRefSlot,
-        bytes32 memberReportForCurrentRefSlot
-    ) {
-        ConsensusFrame memory frame = _getCurrentFrame();
-        currentRefSlot = frame.refSlot;
-
-        uint256 index = _memberIndices1b[addr];
-        isMember = index != 0;
-
-        if (isMember) {
-            unchecked { --index; } // convert to 0-based
-            MemberState memory memberState = _memberStates[index];
-            lastReportRefSlot = memberState.lastReportRefSlot;
-            memberReportForCurrentRefSlot = lastReportRefSlot == frame.refSlot
-                ? _reportVariants[memberState.lastReportVariantIndex].hash
-                : ZERO_HASH;
-            uint256 slot = _computeSlotAtTimestamp(_getTime());
-            canReport = slot <= frame.reportProcessingDeadlineSlot &&
-                frame.refSlot > _getLastProcessingRefSlot();
-            isFastLane = _isFastLaneMember(index, frame.index);
-            if (!isFastLane && canReport) {
-                canReport = slot > frame.refSlot + _frameConfig.fastLaneLengthSlots;
-            }
-        }
-    }
-
     /// @notice Sets the duration of the interval starting at the beginning of the frame during
     /// which only the selected "fast lane" subset of oracle committee memebrs can (and expected
     /// to) submit a report.
@@ -351,7 +316,7 @@ contract HashConsensus is AccessControlEnumerable {
     /// indices (mod total members). The window advances by one index each reporting frame.
     ///
     /// @param fastLaneLengthSlots The length of the fast lane reporting interval in slots. Setting
-    ///        it to zero disables the fast lane subset, alloing any oracle to report starting from
+    ///        it to zero disables the fast lane subset, allowing any oracle to report starting from
     ///        the first slot of a frame and until the frame's reporting deadline.
     ///
     function setFastLaneLengthSlots(uint256 fastLaneLengthSlots)
@@ -407,7 +372,7 @@ contract HashConsensus is AccessControlEnumerable {
 
     /// @notice Returns info about the current frame and consensus state in that frame.
     ///
-    /// @return frame Current reporting frame.
+    /// @return refSlot Reference slot of the current reporting frame.
     ///
     /// @return consensusReport Consensus report for the current frame, if any.
     ///         Zero bytes otherwise.
@@ -416,13 +381,13 @@ contract HashConsensus is AccessControlEnumerable {
     ///         being processed. Consensus can be changed before the processing starts.
     ///
     function getConsensusState() external view returns (
-        ConsensusFrame memory frame,
+        uint256 refSlot,
         bytes32 consensusReport,
         bool isReportProcessing
     ) {
-        frame = _getCurrentFrame();
-        (consensusReport,,) = _getConsensusReport(frame.refSlot, _quorum);
-        isReportProcessing = _getLastProcessingRefSlot() == frame.refSlot;
+        refSlot = _getCurrentFrame().refSlot;
+        (consensusReport,,) = _getConsensusReport(refSlot, _quorum);
+        isReportProcessing = _getLastProcessingRefSlot() == refSlot;
     }
 
     /// @notice Returns report variants and their support for the current reference slot.
@@ -443,6 +408,72 @@ contract HashConsensus is AccessControlEnumerable {
             ReportVariant memory variant = _reportVariants[i];
             variants[i] = variant.hash;
             support[i] = variant.support;
+        }
+    }
+
+    struct MemberConsensusState {
+        /// @notice Current frame's reference slot.
+        uint256 currentFrameRefSlot;
+
+        /// @notice Consensus report for the current frame, if any. Zero bytes otherwise.
+        bytes32 currentFrameConsensusReport;
+
+        /// @notice Whether the provided address is a member of the oracle committee.
+        bool isMember;
+
+        /// @notice Whether the oracle committee member is in the fast lane members subset
+        /// of the current reporting frame. See `getIsFastLaneMember`.
+        bool isFastLane;
+
+        /// @notice Whether the oracle committee member is allowed to submit a report at
+        /// the moment of the call.
+        bool canReport;
+
+        /// @notice The last reference slot for which the member submitted a report.
+        uint256 lastMemberReportRefSlot;
+
+        /// @notice The hash reported by the member for the current frame, if any.
+        /// Zero bytes otherwise.
+        bytes32 currentFrameMemberReport;
+    }
+
+    /// @notice Returns the extended information related to an oracle committee member with the
+    /// given address and the current consensus state. Provides all the information needed for
+    /// an oracle daemon to decide if it needs to submit a report.
+    ///
+    /// @param addr The member address.
+    /// @return result See the docs for `MemberConsensusState`.
+    ///
+    function getConsensusStateForMember(address addr)
+        external view returns (MemberConsensusState memory result)
+    {
+        ConsensusFrame memory frame = _getCurrentFrame();
+        result.currentFrameRefSlot = frame.refSlot;
+        (result.currentFrameConsensusReport,,) = _getConsensusReport(frame.refSlot, _quorum);
+
+        uint256 index = _memberIndices1b[addr];
+        result.isMember = index != 0;
+
+        if (index != 0) {
+            unchecked { --index; } // convert to 0-based
+            MemberState memory memberState = _memberStates[index];
+
+            result.lastMemberReportRefSlot = memberState.lastReportRefSlot;
+            result.currentFrameMemberReport =
+                result.lastMemberReportRefSlot == frame.refSlot
+                    ? _reportVariants[memberState.lastReportVariantIndex].hash
+                    : ZERO_HASH;
+
+            uint256 slot = _computeSlotAtTimestamp(_getTime());
+
+            result.canReport = slot <= frame.reportProcessingDeadlineSlot &&
+                frame.refSlot > _getLastProcessingRefSlot();
+
+            result.isFastLane = _isFastLaneMember(index, frame.index);
+
+            if (!result.isFastLane && result.canReport) {
+                result.canReport = slot > frame.refSlot + _frameConfig.fastLaneLengthSlots;
+            }
         }
     }
 
@@ -876,7 +907,7 @@ contract HashConsensus is AccessControlEnumerable {
 
     function _setReportProcessor(address newProcessor) internal {
         address prevProcessor = _reportProcessor;
-        if (newProcessor == address(0)) revert AddressCannotBeZero();
+        if (newProcessor == address(0)) revert ReportProcessorCannotBeZero();
         if (newProcessor == prevProcessor) revert NewProcessorCannotBeTheSame();
 
         _reportProcessor = newProcessor;
@@ -885,32 +916,32 @@ contract HashConsensus is AccessControlEnumerable {
         ConsensusFrame memory frame = _getCurrentFrame();
         uint256 lastConsensusRefSlot = _reportingState.lastConsensusRefSlot;
 
-        uint256 processingRefSlot = prevProcessor == address(0)
-            ? lastConsensusRefSlot
-            : IReportAsyncProcessor(prevProcessor).getLastProcessingRefSlot();
+        uint256 processingRefSlotPrev = IReportAsyncProcessor(prevProcessor).getLastProcessingRefSlot();
+        uint256 processingRefSlotNext = IReportAsyncProcessor(newProcessor).getLastProcessingRefSlot();
 
-        if (processingRefSlot < frame.refSlot && lastConsensusRefSlot == frame.refSlot) {
+        if (
+            processingRefSlotPrev < frame.refSlot &&
+            processingRefSlotNext < frame.refSlot &&
+            lastConsensusRefSlot == frame.refSlot
+        ) {
             bytes32 report = _reportVariants[_reportingState.lastConsensusVariantIndex].hash;
             _submitReportForProcessing(frame, report);
         }
     }
 
     function _getLastProcessingRefSlot() internal view returns (uint256) {
-        address processor = _reportProcessor;
-        return processor == address(0)
-            ? _reportingState.lastConsensusRefSlot
-            : IReportAsyncProcessor(processor).getLastProcessingRefSlot();
+        return IReportAsyncProcessor(_reportProcessor).getLastProcessingRefSlot();
     }
 
     function _submitReportForProcessing(ConsensusFrame memory frame, bytes32 report) internal {
-        address processor = _reportProcessor;
-        if (processor == address(0)) return;
-        uint256 deadline = _computeTimestampAtSlot(frame.reportProcessingDeadlineSlot);
-        IReportAsyncProcessor(processor).submitReport(report, frame.refSlot, deadline);
+        IReportAsyncProcessor(_reportProcessor).submitConsensusReport(
+            report,
+            frame.refSlot,
+            _computeTimestampAtSlot(frame.reportProcessingDeadlineSlot)
+        );
     }
 
     function _getConsensusVersion() internal view returns (uint256) {
-        address processor = _reportProcessor;
-        return processor == address(0) ? 0 : IReportAsyncProcessor(processor).getConsensusVersion();
+        return IReportAsyncProcessor(_reportProcessor).getConsensusVersion();
     }
 }

@@ -17,6 +17,7 @@ const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 const { pushOracleReport } = require('../helpers/oracle')
 const { SECONDS_PER_FRAME } = require('../helpers/constants')
+const { oracleReportSanityCheckerStubFactory } = require('../helpers/factories')
 
 const { newApp } = require('../helpers/dao')
 
@@ -48,7 +49,7 @@ async function getTimestamp() {
   return block.timestamp;
 }
 
-contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, treasury]) => {
+contract('Lido', ([appManager, user1, user2, user3, nobody, depositor, treasury]) => {
   let app, oracle, depositContract, operators
   let treasuryAddress
   let dao
@@ -60,14 +61,28 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   let lidoLocator
   let snapshot
   let consensus
+  let voting
 
   before('deploy base app', async () => {
     anyToken = await ERC20Mock.new()
     badToken = await ERC20WrongTransferMock.new()
 
     const deployed = await deployProtocol({
+      oracleReportSanityCheckerFactory: oracleReportSanityCheckerStubFactory,
       stakingModulesFactory: async (protocol) => {
         const curatedModule = await setupNodeOperatorsRegistry(protocol)
+
+        await protocol.acl.grantPermission(
+          protocol.stakingRouter.address,
+          curatedModule.address,
+          await curatedModule.MANAGE_NODE_OPERATOR_ROLE()
+        )
+        await protocol.acl.grantPermission(
+          protocol.voting.address,
+          curatedModule.address,
+          await curatedModule.MANAGE_NODE_OPERATOR_ROLE()
+        )
+
         return [
           {
             module: curatedModule,
@@ -95,6 +110,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     withdrawalQueue = deployed.withdrawalQueue
     oracle = deployed.oracle
     consensus = deployed.consensusContract
+    voting = deployed.voting.address
 
     snapshot = new EvmSnapshot(hre.ethers.provider)
     await snapshot.make()
@@ -107,7 +123,8 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
   const pushReport = async (clValidators, clBalance) => {
     const elRewards = await web3.eth.getBalance(elRewardsVault.address)
     await pushOracleReport(consensus, oracle, clValidators, clBalance, elRewards)
-    await consensus.advanceTimeBy(SECONDS_PER_FRAME + 1000)
+    await ethers.provider.send('evm_increaseTime', [SECONDS_PER_FRAME + 1000])
+    await ethers.provider.send('evm_mine')
   }
 
   const checkStat = async ({ depositedValidators, beaconValidators, beaconBalance }) => {
@@ -433,9 +450,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     })
   })
 
-  describe('receiveStakingRouter()', async () => {
+  describe('receiveStakingRouterRemainder()', async () => {
     it('unable to receive eth from arbitrary account', async () => {
-      assertRevert(app.receiveStakingRouter({ from: nobody, value: ETH(1) }))
+      assertRevert(app.receiveStakingRouterDepositRemainder({ from: nobody, value: ETH(1) }))
     })
 
     it('event work', async () => {
@@ -445,9 +462,9 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
       // add some amount to the sender
       await ethers.provider.send('hardhat_setBalance', [stakingRouter.address, web3.utils.numberToHex(ETH(100))])
 
-      const receipt = await app.receiveStakingRouter({ from: stakingRouter.address, value: ETH(2) })
+      const receipt = await app.receiveStakingRouterDepositRemainder({ from: stakingRouter.address, value: ETH(2) })
 
-      assertEvent(receipt, 'StakingRouterTransferReceived', {
+      assertEvent(receipt, 'StakingRouterDepositRemainderReceived', {
         expectedArgs: { amount: ETH(2) }
       })
     })
@@ -610,7 +627,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     // set withdrawalCredentials with keys, because they were trimmed
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
-    assertBn(await stakingRouter.getStakingModuleMaxDepositableKeys(CURATED_MODULE_ID), 0)
+    assertBn(await stakingRouter.getStakingModuleMaxDepositsCount(CURATED_MODULE_ID), 0)
 
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
@@ -622,7 +639,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     )
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
 
-    assertBn(await stakingRouter.getStakingModuleMaxDepositableKeys(CURATED_MODULE_ID), 1)
+    assertBn(await stakingRouter.getStakingModuleMaxDepositsCount(CURATED_MODULE_ID), 1)
     assertBn(await app.getTotalPooledEther(), ETH(33))
     assertBn(await app.getBufferedEther(), ETH(33))
 
@@ -1372,7 +1389,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // #1 goes below the limit
-    await operators.updateExitedValidatorsKeysCount(1, 1, { from: voting })
+    await operators.updateExitedValidatorsCount(1, 1, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
     await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
@@ -1498,7 +1515,7 @@ contract('Lido', ([appManager, voting, user1, user2, user3, nobody, depositor, t
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // #1 goes below the limit (doesn't change situation. validator stop decreases limit)
-    await operators.updateExitedValidatorsKeysCount(1, 1, { from: voting })
+    await operators.updateExitedValidatorsCount(1, 1, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
     await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })

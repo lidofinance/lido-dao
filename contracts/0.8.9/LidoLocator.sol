@@ -1,5 +1,4 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
@@ -21,13 +20,13 @@ contract LidoLocator is ILidoLocator {
         address legacyOracle;
         address lido;
         address oracleReportSanityChecker;
-        address selfOwnedStEthBurner;
+        address postTokenRebaseReceiver;
+        address burner;
         address stakingRouter;
         address treasury;
-        address validatorExitBus;
+        address validatorsExitBusOracle;
         address withdrawalQueue;
         address withdrawalVault;
-        address postTokenRebaseReceiver;
     }
 
     error ErrorZeroAddress();
@@ -38,13 +37,13 @@ contract LidoLocator is ILidoLocator {
     address public immutable legacyOracle;
     address public immutable lido;
     address public immutable oracleReportSanityChecker;
-    address public immutable selfOwnedStEthBurner;
+    address public immutable postTokenRebaseReceiver;
+    address public immutable burner;
     address public immutable stakingRouter;
     address public immutable treasury;
-    address public immutable validatorExitBus;
+    address public immutable validatorsExitBusOracle;
     address public immutable withdrawalQueue;
     address public immutable withdrawalVault;
-    address public immutable postTokenRebaseReceiver;
 
     /**
      * @notice declare service locations
@@ -58,13 +57,13 @@ contract LidoLocator is ILidoLocator {
         legacyOracle = _assertNonZero(_config.legacyOracle);
         lido = _assertNonZero(_config.lido);
         oracleReportSanityChecker = _assertNonZero(_config.oracleReportSanityChecker);
-        selfOwnedStEthBurner = _assertNonZero(_config.selfOwnedStEthBurner);
+        postTokenRebaseReceiver = _assertNonZero(_config.postTokenRebaseReceiver);
+        burner = _assertNonZero(_config.burner);
         stakingRouter = _assertNonZero(_config.stakingRouter);
         treasury = _assertNonZero(_config.treasury);
-        validatorExitBus = _assertNonZero(_config.validatorExitBus);
+        validatorsExitBusOracle = _assertNonZero(_config.validatorsExitBusOracle);
         withdrawalQueue = _assertNonZero(_config.withdrawalQueue);
         withdrawalVault = _assertNonZero(_config.withdrawalVault);
-        postTokenRebaseReceiver = _assertNonZero(_config.postTokenRebaseReceiver);
     }
 
     function coreComponents() external view returns(
@@ -98,7 +97,7 @@ contract LidoLocator is ILidoLocator {
             accountingOracle,
             elRewardsVault,
             oracleReportSanityChecker,
-            selfOwnedStEthBurner,
+            burner,
             withdrawalQueue,
             withdrawalVault,
             postTokenRebaseReceiver
