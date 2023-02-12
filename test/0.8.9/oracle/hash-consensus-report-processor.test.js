@@ -10,6 +10,7 @@ const {
   deployHashConsensus,
   computeTimestampAtEpoch
 } = require('./hash-consensus-deploy.test')
+const { toNum } = require('../../helpers/utils')
 
 const HashConsensus = artifacts.require('HashConsensusTimeTravellable')
 const MockReportProcessor = artifacts.require('MockReportProcessor')
@@ -130,6 +131,25 @@ contract('HashConsensus', ([admin, member1, member2, stranger]) => {
         const reportProcessor_v2 = await MockReportProcessor.new(CONSENSUS_VERSION_2, { from: admin })
         await consensus.setReportProcessor(reportProcessor_v2.address)
         assert.equal(await consensus.getConsensusVersion(), CONSENSUS_VERSION_2)
+      })
+    })
+
+    context('method getReportVariants', () => {
+      beforeEach(deploy)
+
+      it(`returns empty data if lastReportRefSlot != currentFrame.refSlot`, async () => {
+        const { refSlot } = await consensus.getCurrentFrame()
+        await consensus.addMember(member1, 1, { from: admin })
+
+        await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
+        const reportVariants1 = await consensus.getReportVariants()
+        assert.sameOrderedMembers(reportVariants1.variants, [HASH_1])
+        assert.sameOrderedMembers(reportVariants1.support.map(toNum), [1])
+
+        await consensus.advanceTimeToNextFrameStart()
+        const reportVariants2 = await consensus.getReportVariants()
+        assert.sameOrderedMembers(reportVariants2.variants, [])
+        assert.sameOrderedMembers(reportVariants2.support.map(toNum), [])
       })
     })
   })
