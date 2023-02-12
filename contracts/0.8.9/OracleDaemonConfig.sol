@@ -36,6 +36,7 @@ contract OracleDaemonConfig is AccessControlEnumerable {
 
     function update(string calldata _key, bytes calldata _value) external onlyRole(CONFIG_MANAGER_ROLE) {
         if (values[_key].length == 0) revert ErrorValueDoesntExist(_key);
+        if (_value.length == 0) revert ErrorEmptyValue(_key);
         values[_key] = _value;
 
         emit ConfigValueUpdated(_key, _value);
@@ -71,6 +72,7 @@ contract OracleDaemonConfig is AccessControlEnumerable {
     }
 
     error ErrorValueExists(string key);
+    error ErrorEmptyValue(string key);
     error ErrorValueDoesntExist(string key);
     error ErrorZeroAddress();
 
