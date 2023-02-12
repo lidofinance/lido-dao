@@ -3,7 +3,7 @@ const { assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { assertRevert } = require('../../helpers/assertThrow')
 
 const {
-  INITIAL_FAST_LANE_LENGHT_SLOTS,
+  INITIAL_FAST_LANE_LENGTH_SLOTS,
   INITIAL_EPOCH,
   EPOCHS_PER_FRAME,
   SLOTS_PER_EPOCH,
@@ -47,7 +47,7 @@ contract('HashConsensus', ([admin, member1, member2]) => {
       it('should return initial data', async () => {
         assert.equal(+(await consensus.getFrameConfig()).epochsPerFrame, EPOCHS_PER_FRAME)
         assert.equal(+(await consensus.getFrameConfig()).initialEpoch, INITIAL_EPOCH)
-        assert.equal(+(await consensus.getFrameConfig()).fastLaneLengthSlots, INITIAL_FAST_LANE_LENGHT_SLOTS)
+        assert.equal(+(await consensus.getFrameConfig()).fastLaneLengthSlots, INITIAL_FAST_LANE_LENGTH_SLOTS)
       })
 
       it('should return new data', async () => {
