@@ -93,15 +93,15 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     uint8 internal constant DEPOSITED_KEYS_COUNT_OFFSET = 3;
 
     // TargetValidatorsStats
-    /// @dev DAO target limit, used to check how many keys shoud be go to exit
-    ///      UINT64_MAX - unlim
+    /// @dev DAO target limit, used to check how many keys should go to exit
+    ///      UINT64_MAX - unlimited
     ///      0 - all deposited keys
-    ///      N < deposited keys -
+    ///      N < deposited keys - (deposited-N) keys
     ///      deposited < N < vetted - use (N-deposited) as available
     uint8 internal constant IS_TARGET_LIMIT_ACTIVE_OFFSET = 0;
-    /// @dev relative target active validators limit for operator, set by DAO, UINT64_MAX === no limit
-    /// @notice stores value +1 based, so 0 is means target coun is unlimited (i.e. = -1),
-    ///         and 1 is means target count = 0 (i.e. all validaotrs should be exited)
+    /// @dev relative target active validators limit for operator, set by DAO, UINT64_MAX === 'no limit'
+    /// @notice stores value +1 based, so 0 is means target count is unlimited (i.e. = -1),
+    ///         and 1 is means target count = 0 (i.e. all validators should be exited)
     uint8 internal constant TARGET_VALIDATORS_COUNT_OFFSET = 1;
 
     // StuckPenaltyStats
@@ -109,6 +109,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     uint8 internal constant STUCK_VALIDATORS_COUNT_OFFSET = 0;
     /// @dev refunded keys count from dao
     uint8 internal constant REFUNDED_VALIDATORS_COUNT_OFFSET = 1;
+    /// @dev extra penalty time after stuck keys resolved (refunded and/or exited)
     uint8 internal constant STUCK_PENALTY_END_TIMESTAMP_OFFSET = 2;
 
     //
@@ -149,7 +150,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     struct NodeOperator {
         /// @dev Flag indicating if the operator can participate in further staking and reward distribution
         bool active;
-        /// @dev Ethereum address on Execution Layer which receives steth rewards for this operator
+        /// @dev Ethereum address on Execution Layer which receives stETH rewards for this operator
         address rewardAddress;
         /// @dev Human-readable name
         string name;
@@ -179,7 +180,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     /// @dev Mapping of all node operators. Mapping is used to be able to extend the struct.
     mapping(uint256 => NodeOperator) internal _nodeOperators;
-    // NodeOperatorTotals internal _nodeOperatorTotals;
 
     //
     // METHODS
@@ -234,7 +234,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _setContractVersion(2);
 
         // set unlimited allowance for burner from staking router
-        // to burn finalized requests' shares
+        // to burn stuck keys penalized shares
         IStETH(getLocator().lido()).approve(getLocator().burner(), ~uint256(0));
 
         emit ContractVersionSet(2);
@@ -319,7 +319,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     function setNodeOperatorName(uint256 _nodeOperatorId, string _name) external {
         _onlyValidNodeOperatorName(_name);
         _onlyExistedNodeOperator(_nodeOperatorId);
-        _authP(MANAGE_NODE_OPERATOR_ROLE, arr(uint256(_nodeOperatorId)));
+        _auth(MANAGE_NODE_OPERATOR_ROLE);
 
         _requireNotSameValue(keccak256(bytes(_nodeOperators[_nodeOperatorId].name)) != keccak256(bytes(_name)));
         _nodeOperators[_nodeOperatorId].name = _name;
@@ -332,7 +332,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     function setNodeOperatorRewardAddress(uint256 _nodeOperatorId, address _rewardAddress) external {
         _onlyNonZeroAddress(_rewardAddress);
         _onlyExistedNodeOperator(_nodeOperatorId);
-        _authP(MANAGE_NODE_OPERATOR_ROLE, arr(uint256(_nodeOperatorId), uint256(_rewardAddress)));
+        _auth(MANAGE_NODE_OPERATOR_ROLE);
 
         _requireNotSameValue(_nodeOperators[_nodeOperatorId].rewardAddress != _rewardAddress);
         _nodeOperators[_nodeOperatorId].rewardAddress = _rewardAddress;
@@ -374,6 +374,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _auth(STAKING_ROUTER_ROLE);
         // since we're pushing rewards to operators after exited validators counts are
         // updated (as opposed to pulling by node ops), we don't need any handling here
+        // see `onAllValidatorCountersUpdated()`
     }
 
     /// @notice Called by StakingRouter to update the number of the validators of the given node
@@ -892,6 +893,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     }
 
     /// @notice Returns a monotonically increasing counter that gets incremented when any of the following happens:
+    /// @dev DEPRECATED: use getNonce() instead
     ///   1. a node operator's key(s) is added;
     ///   2. a node operator's key(s) is removed;
     ///   3. a node operator's vetted keys count is changed.
