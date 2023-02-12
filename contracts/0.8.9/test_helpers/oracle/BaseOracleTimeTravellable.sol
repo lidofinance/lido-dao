@@ -72,6 +72,14 @@ contract BaseOracleTimeTravellable is BaseOracle {
         emit MockStartProcessingResult(_res);
     }
 
+    function isConsensusMember(address addr) external view returns (bool) {
+        return _isConsensusMember(addr);
+    }
+
+    function  getCurrentRefSlot() external  view returns (uint256) {
+        return _getCurrentRefSlot();
+    }
+
     function checkConsensusData(uint256 refSlot, uint256 consensusVersion, bytes32 hash) external view {
         _checkConsensusData(refSlot, consensusVersion, hash);
     }

@@ -31,14 +31,13 @@ const {
   deployBaseOracle
 } = require('./base-oracle-deploy.test')
 
-
-contract('BaseOracle', ([admin, member]) => {
+contract('BaseOracle', ([admin, member, notMember]) => {
   let consensus
   let baseOracle
   let initialRefSlot
 
   const deployContract = async () => {
-    const deployed = await deployBaseOracle(admin, { initialEpoch: 1 })
+    const deployed = await deployBaseOracle(admin, { initialEpoch: 1, mockMember: member })
     consensus = deployed.consensusContract
     baseOracle = deployed.oracle
     await baseOracle.grantRole(web3.utils.keccak256('MANAGE_CONSENSUS_CONTRACT_ROLE'), admin, { from: admin })
@@ -173,6 +172,30 @@ contract('BaseOracle', ([admin, member]) => {
 
     it('check succeeds', async () => {
       await baseOracle.checkConsensusData(initialRefSlot, CONSENSUS_VERSION, HASH_1)
+    })
+  })
+
+  describe('_isConsensusMember correctly check address for consensus membership trough consensus contract', () => {
+    before(deployContract)
+
+    it('returns false on non member', async () => {
+      const r = await baseOracle.isConsensusMember(notMember)
+      assert(!r)
+    })
+
+    it('returns true on member', async () => {
+      const r = await baseOracle.isConsensusMember(member)
+      assert(r)
+    })
+  })
+
+  describe('_getCurrentRefSlot correctly gets refSlot trough consensus contract', () => {
+    before(deployContract)
+
+    it('refSlot matches', async () => {
+      const oracle_slot = await baseOracle.getCurrentRefSlot()
+      const consensus_slot = (await consensus.getCurrentFrame()).refSlot
+      assert.equals(oracle_slot, consensus_slot)
     })
   })
 })
