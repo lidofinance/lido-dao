@@ -19,7 +19,7 @@ function wei(number, units = 'wei') {
   throw new Error(`Unsupported units "${units}"`)
 }
 
-contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...accounts]) => {
+contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewardsVault, ...accounts]) => {
   let oracleReportSanityChecker, lidoLocatorMock, lidoMock, withdrawalQueueMock
   const managersRoster = {
     allLimitsManagers: accounts.slice(0, 2),
@@ -47,6 +47,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
     preCLBalance: ETH(100_000),
     postCLBalance: ETH(100_001),
     withdrawalVaultBalance: 0,
+    elRewardsVaultBalance: 0,
     preCLValidators: 0,
     postCLValidators: 0,
   }
@@ -56,9 +57,10 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
     await hre.ethers.provider.send('hardhat_mine', ['0x' + Number(1024).toString(16), '0x' + Number(12).toString(16)])
     lidoMock = await LidoStub.new({ from: deployer })
     withdrawalQueueMock = await WithdrawalQueueStub.new({ from: deployer })
-    lidoLocatorMock = await LidoLocatorStub.new(lidoMock.address, withdrawalVault, withdrawalQueueMock.address, {
-      from: deployer
-    })
+    lidoLocatorMock = await LidoLocatorStub.new(
+      lidoMock.address, withdrawalVault, withdrawalQueueMock.address, elRewardsVault,
+      { from: deployer }
+    )
 
     oracleReportSanityChecker = await OracleReportSanityChecker.new(
       lidoLocatorMock.address,
@@ -123,6 +125,16 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
           ...Object.values({ ...correctLidoOracleReport, withdrawalVaultBalance: currentWithdrawalVaultBalance.add(1) })
         ),
         `IncorrectWithdrawalsVaultBalance(${currentWithdrawalVaultBalance.toString()})`
+      )
+    })
+
+    it('reverts with error IncorrectELRewardsVaultBalance() when actual el rewards vault balance is less than passed', async () => {
+      const currentELRewardsVaultBalance = await hre.ethers.provider.getBalance(elRewardsVault)
+      await assert.revertsWithCustomError(
+        oracleReportSanityChecker.checkAccountingOracleReport(
+          ...Object.values({ ...correctLidoOracleReport, elRewardsVaultBalance: currentELRewardsVaultBalance.add(1) })
+        ),
+        `IncorrectELRewardsVaultBalance(${currentELRewardsVaultBalance.toString()})`
       )
     })
 

@@ -51,15 +51,18 @@ contract LidoLocatorStub is ILidoLocator {
     address private immutable LIDO;
     address private immutable WITHDRAWAL_VAULT;
     address private immutable WITHDRAWAL_QUEUE;
+    address private immutable EL_REWARDS_VAULT;
 
     constructor(
         address _lido,
         address _withdrawalVault,
-        address _withdrawalQueue
+        address _withdrawalQueue,
+        address _elRewardsVault
     ) {
         LIDO = _lido;
         WITHDRAWAL_VAULT = _withdrawalVault;
         WITHDRAWAL_QUEUE = _withdrawalQueue;
+        EL_REWARDS_VAULT = _elRewardsVault;
     }
 
     function lido() external view returns (address) {
@@ -72,6 +75,10 @@ contract LidoLocatorStub is ILidoLocator {
 
     function withdrawalVault() external view returns (address) {
         return WITHDRAWAL_VAULT;
+    }
+
+    function elRewardsVault() external view returns (address) {
+        return EL_REWARDS_VAULT;
     }
 }
 

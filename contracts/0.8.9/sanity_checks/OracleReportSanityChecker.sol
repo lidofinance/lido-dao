@@ -338,6 +338,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     /// @param _postCLBalance sum of all Lido validators' balances on the Consensus Layer after the
     ///     current oracle report
     /// @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
+    /// @param _elRewardsVaultBalance el rewards vault balance on Execution Layer for report block
     /// @param _preCLValidators Lido-participating validators on the CL side before the current oracle report
     /// @param _postCLValidators Lido-participating validators on the CL side after the current oracle report
     function checkAccountingOracleReport(
@@ -345,22 +346,27 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _preCLBalance,
         uint256 _postCLBalance,
         uint256 _withdrawalVaultBalance,
+        uint256 _elRewardsVaultBalance,
         uint256 _preCLValidators,
         uint256 _postCLValidators
     ) external view {
         LimitsList memory limitsList = _limits.unpack();
 
         address withdrawalVault = LIDO_LOCATOR.withdrawalVault();
-        // 1. Withdrawals vault one-off reported balance
+        // 1. Withdrawals vault reported balance
         _checkWithdrawalVaultBalance(withdrawalVault.balance, _withdrawalVaultBalance);
 
-        // 2. Consensus Layer one-off balance decrease
+        address elRewardsVault = LIDO_LOCATOR.elRewardsVault();
+        // 2. EL rewards vault reported balance
+        _checkELRewardsVaultBalance(elRewardsVault.balance, _elRewardsVaultBalance);
+
+        // 3. Consensus Layer one-off balance decrease
         _checkOneOffCLBalanceDecrease(limitsList, _preCLBalance, _postCLBalance + _withdrawalVaultBalance);
 
-        // 3. Consensus Layer annual balances increase
+        // 4. Consensus Layer annual balances increase
         _checkAnnualBalancesIncrease(limitsList, _preCLBalance, _postCLBalance, _timeElapsed);
 
-        // 4. Appeared validators increase
+        // 5. Appeared validators increase
         if (_postCLValidators > _preCLValidators) {
             _checkValidatorsChurnLimit(limitsList, (_postCLValidators - _preCLValidators), _timeElapsed);
         }
@@ -451,6 +457,14 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     ) internal pure {
         if (_reportedWithdrawalVaultBalance > _actualWithdrawalVaultBalance)
             revert IncorrectWithdrawalsVaultBalance(_actualWithdrawalVaultBalance);
+    }
+
+    function _checkELRewardsVaultBalance(
+        uint256 _actualELRewardsVaultBalance,
+        uint256 _reportedELRewardsVaultBalance
+    ) internal pure {
+        if (_reportedELRewardsVaultBalance > _actualELRewardsVaultBalance)
+            revert IncorrectELRewardsVaultBalance(_actualELRewardsVaultBalance);
     }
 
     function _checkOneOffCLBalanceDecrease(
@@ -585,6 +599,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     event MaxAccountingExtraDataListItemsCountSet(uint256 maxAccountingExtraDataListItemsCount);
 
     error IncorrectWithdrawalsVaultBalance(uint256 actualWithdrawalVaultBalance);
+    error IncorrectELRewardsVaultBalance(uint256 actualELRewardsVaultBalance);
     error IncorrectCLBalanceDecrease(uint256 oneOffCLBalanceDecreaseBP);
     error IncorrectCLBalanceIncrease(uint256 annualBalanceDiff);
     error IncorrectAppearedValidators(uint256 churnLimit);

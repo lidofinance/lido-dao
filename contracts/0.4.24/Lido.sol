@@ -35,6 +35,7 @@ interface IOracleReportSanityChecker {
         uint256 _preCLBalance,
         uint256 _postCLBalance,
         uint256 _withdrawalVaultBalance,
+        uint256 _elRewardsVaultBalance,
         uint256 _preCLValidators,
         uint256 _postCLValidators
     ) external view;
@@ -1171,18 +1172,12 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         reportContext.preTotalShares = _getTotalShares();
         reportContext.preCLValidators = CL_VALIDATORS_POSITION.getStorageUint256();
         reportContext.preCLBalance = _processClStateUpdate(
-            reportContext.preCLValidators, _reportedData.clValidators, _reportedData.postCLBalance);
+            reportContext.preCLValidators, _reportedData.clValidators, _reportedData.postCLBalance
+        );
 
         // Step 2.
         // Pass the report data to sanity checker (reverts if malformed)
-        IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).checkAccountingOracleReport(
-            _reportedData.timeElapsed,
-            reportContext.preCLBalance,
-            _reportedData.postCLBalance,
-            _reportedData.withdrawalVaultBalance,
-            reportContext.preCLValidators,
-            _reportedData.clValidators
-        );
+        _checkAccountingOracleReport(_contracts, _reportedData, reportContext);
 
         // Step 3.
         // Pre-calculate the ether to lock for withdrawal queue and shares to be burnt
@@ -1269,6 +1264,26 @@ contract Lido is Versioned, StETHPermit, AragonApp {
                 _reportedData.simulatedShareRate
             );
         }
+    }
+
+    /**
+     * @dev Pass the provided oracle data to the sanity checker contract
+     * Works with structures to overcome `stack too deep`
+     */
+    function _checkAccountingOracleReport(
+        OracleReportContracts memory _contracts,
+        OracleReportedData memory _reportedData,
+        OracleReportContext memory _reportContext
+    ) internal view {
+        IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).checkAccountingOracleReport(
+            _reportedData.timeElapsed,
+            _reportContext.preCLBalance,
+            _reportedData.postCLBalance,
+            _reportedData.withdrawalVaultBalance,
+            _reportedData.elRewardsVaultBalance,
+            _reportContext.preCLValidators,
+            _reportedData.clValidators
+        );
     }
 
     /**
