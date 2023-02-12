@@ -11,10 +11,6 @@ import {AccessControlEnumerable} from "../utils/access/AccessControlEnumerable.s
 import {PositiveTokenRebaseLimiter, TokenRebaseLimiterData} from "../lib/PositiveTokenRebaseLimiter.sol";
 import {ILidoLocator} from "../../common/interfaces/ILidoLocator.sol";
 
-interface ILido {
-    function getSharesByPooledEth(uint256 _sharesAmount) external view returns (uint256);
-}
-
 interface IWithdrawalQueue {
     function getWithdrawalRequestStatus(uint256 _requestId)
         external
@@ -81,6 +77,7 @@ struct LimitsListPacked {
 }
 
 uint256 constant MAX_BASIS_POINTS = 10_000;
+uint256 constant SHARE_RATE_PRECISION_E27 = 1e27;
 
 /// @title Sanity checks for the Lido's oracle report
 /// @notice The contracts contain view methods to perform sanity checks of the Lido's oracle report
@@ -415,27 +412,37 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             revert MaxAccountingExtraDataItemsCountExceeded(limit, _extraDataListItemsCount);
     }
 
-    /// @notice Applies sanity checks to the withdrawal requests params of Lido's oracle report
+    /// @notice Applies sanity checks to the withdrawal requests finalization
     /// @param _lastFinalizableRequestId right boundary of requestId range if equals 0, no requests
     ///     should be finalized
-    /// @param _simulatedShareRate share rate that should be used for finalization
     /// @param _reportTimestamp timestamp when the originated oracle report was submitted
     function checkWithdrawalQueueOracleReport(
         uint256 _lastFinalizableRequestId,
-        uint256 _simulatedShareRate,
         uint256 _reportTimestamp
-   )
+    )
         external
         view
     {
         LimitsList memory limitsList = _limits.unpack();
         address withdrawalQueue = LIDO_LOCATOR.withdrawalQueue();
-        // 1. No finalized id up to newer than the allowed report margin
-        _checkRequestIdToFinalizeUpTo(limitsList, withdrawalQueue, _lastFinalizableRequestId, _reportTimestamp);
 
-        address lido = LIDO_LOCATOR.lido();
-        // 2. shareRate calculated off-chain is consistent with the on-chain one
-        _checkFinalizationShareRate(limitsList, lido, _simulatedShareRate);
+        _checkRequestIdToFinalizeUpTo(limitsList, withdrawalQueue, _lastFinalizableRequestId, _reportTimestamp);
+    }
+
+    /// @notice Applies sanity checks to the simulated share rate for withdrawal requests finalization
+    /// @param _noWithdrawalsPostTotalPooledEther total pooled ether after report applied if no withdrawal requests finalized
+    /// @param _noWithdrawalsPostTotalShares total shares after report applied if no withdrawal requests finalized
+    /// @param _simulatedShareRate share rate provided with the oracle report (simulated via static call)
+    function checkSimulatedShareRate(
+        uint256 _noWithdrawalsPostTotalPooledEther,
+        uint256 _noWithdrawalsPostTotalShares,
+        uint256 _simulatedShareRate
+    ) external view {
+        LimitsList memory limitsList = _limits.unpack();
+
+        _checkFinalizationShareRate(
+            limitsList, _noWithdrawalsPostTotalPooledEther, _noWithdrawalsPostTotalShares, _simulatedShareRate
+        );
     }
 
     function _checkWithdrawalVaultBalance(
@@ -504,8 +511,6 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _requestIdToFinalizeUpTo,
         uint256 _reportTimestamp
     ) internal view {
-        if (_requestIdToFinalizeUpTo == 0) { return; }
-
         (, , , uint256 requestTimestampToFinalizeUpTo, , ) = IWithdrawalQueue(_withdrawalQueue)
             .getWithdrawalRequestStatus(_requestIdToFinalizeUpTo);
         if (_reportTimestamp < requestTimestampToFinalizeUpTo + _limitsList.requestTimestampMargin)
@@ -514,12 +519,18 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
     function _checkFinalizationShareRate(
         LimitsList memory _limitsList,
-        address _lido,
+        uint256 _noWithdrawalsPostTotalPooledEther,
+        uint256 _noWithdrawalsPostTotalShares,
         uint256 _simulatedShareRate
     ) internal view {
-        uint256 actualShareRate = ILido(_lido).getSharesByPooledEth(1 ether);
+        uint256 actualShareRate = (
+            _noWithdrawalsPostTotalPooledEther * SHARE_RATE_PRECISION_E27
+        ) / _noWithdrawalsPostTotalShares;
 
-        if (actualShareRate == 0 || _simulatedShareRate == 0) { return; }
+        if (actualShareRate == 0) {
+            // can't finalize anything if the actual share rate is zero
+            revert IncorrectFinalizationShareRate(MAX_BASIS_POINTS);
+        }
 
         uint256 finalizationShareDiff = Math256.abs(
             SafeCast.toInt256(_simulatedShareRate) - SafeCast.toInt256(actualShareRate)

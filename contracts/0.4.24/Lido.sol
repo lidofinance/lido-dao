@@ -55,8 +55,13 @@ interface IOracleReportSanityChecker {
 
     function checkWithdrawalQueueOracleReport(
         uint256 _lastFinalizableRequestId,
-        uint256 _simulatedShareRate,
         uint256 _reportTimestamp
+    ) external view;
+
+    function checkSimulatedShareRate(
+        uint256 _noWithdrawalsPostTotalPooledEther,
+        uint256 _noWithdrawalsPostTotalShares,
+        uint256 _simulatedShareRate
     ) external view;
 }
 
@@ -515,10 +520,15 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     * @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
     * @param _elRewardsVaultBalance elRewards vault balance on Execution Layer for report block
     * @param _lastFinalizableRequestId right boundary of requestId range if equals 0, no requests should be finalized
-    * @param _simulatedShareRate share rate that was simulated by oracle when the report data created
+    * @param _simulatedShareRate share rate that was simulated by oracle when the report data created (1e27 precision)
     *
-    * @return totalPooledEther amount of ether in the protocol after report
-    * @return totalShares amount of shares in the protocol after report
+    * NB: `_simulatedShareRate` should be calculated by the Oracle daemon
+    * invoking the method with static call and passing `_lastFinalizableRequestId` == `_simulatedShareRate` == 0
+    * plugging the returned values to the following formula:
+    * `_simulatedShareRate = (postTotalPooledEther * 1e27) / postTotalShares`
+    *
+    * @return postTotalPooledEther amount of ether in the protocol after report
+    * @return postTotalShares amount of shares in the protocol after report
     * @return withdrawals withdrawn from the withdrawals vault
     * @return elRewards withdrawn from the execution layer rewards vault
     */
@@ -536,8 +546,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 _lastFinalizableRequestId,
         uint256 _simulatedShareRate
     ) external returns (
-        uint256 totalPooledEther,
-        uint256 totalShares,
+        uint256 postTotalPooledEther,
+        uint256 postTotalShares,
         uint256 withdrawals,
         uint256 elRewards
     ) {
@@ -813,10 +823,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     ) {
         IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_contracts.withdrawalQueue);
 
-        if (!withdrawalQueue.isPaused() && _reportedData.lastFinalizableRequestId != DONT_FINALIZE_WITHDRAWALS) {
+        if (!withdrawalQueue.isPaused()) {
             IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).checkWithdrawalQueueOracleReport(
                 _reportedData.lastFinalizableRequestId,
-                _reportedData.simulatedShareRate,
                 _reportedData.reportTimestamp
             );
 
@@ -1142,6 +1151,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * 6. Distribute protocol fee (treasury & node operators)
      * 7. Burn excess shares (withdrawn stETH at least)
      * 8. Complete token rebase by informing observers (emit an event and call the external receivers if any)
+     * 9. Sanity check for the provided simulated share rate
      */
     function _handleOracleReport(
         OracleReportedData memory _reportedData,
@@ -1177,10 +1187,12 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         // Step 3.
         // Pre-calculate the ether to lock for withdrawal queue and shares to be burnt
-        (
-            reportContext.etherToLockOnWithdrawalQueue,
-            reportContext.sharesToBurnFromWithdrawalQueue
-        ) = _calculateWithdrawals(_contracts, _reportedData);
+        if (_reportedData.lastFinalizableRequestId != DONT_FINALIZE_WITHDRAWALS) {
+            (
+                reportContext.etherToLockOnWithdrawalQueue,
+                reportContext.sharesToBurnFromWithdrawalQueue
+            ) = _calculateWithdrawals(_contracts, _reportedData);
+        }
 
         // Step 4.
         // Pass the accounting values to sanity checker to smoothen positive token rebase
@@ -1227,7 +1239,10 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         // Step 7.
         // Burn excess shares (withdrawn stETH at least)
-        _burnSharesLimited(IBurner(_contracts.burner), reportContext.sharesToBurnLimit);
+        uint256 postponedSharesToBurn = _burnSharesLimited(
+            IBurner(_contracts.burner),
+            reportContext.sharesToBurnLimit
+        );
 
         // Step 8.
         // Complete token rebase by informing observers (emit an event and call the external receivers if any)
@@ -1239,6 +1254,22 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             reportContext,
             IPostTokenRebaseReceiver(_contracts.postTokenRebaseReceiver)
         );
+
+        // Step 9. Sanity check for the provided simulated share rate
+        if (_reportedData.lastFinalizableRequestId != DONT_FINALIZE_WITHDRAWALS) {
+            uint256 noWithdrawalsPostTotalShares = postTotalShares;
+            if (postponedSharesToBurn < reportContext.sharesToBurnFromWithdrawalQueue) {
+                noWithdrawalsPostTotalShares = noWithdrawalsPostTotalShares.sub(
+                    reportContext.sharesToBurnFromWithdrawalQueue - postponedSharesToBurn
+                );
+            }
+
+            IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).checkSimulatedShareRate(
+                postTotalPooledEther.sub(reportContext.etherToLockOnWithdrawalQueue),
+                noWithdrawalsPostTotalShares,
+                _reportedData.simulatedShareRate
+            );
+        }
     }
 
     /**
@@ -1281,8 +1312,12 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      *
      * NB: some of the burning amount can be postponed for the next reports
      * if positive token rebase smoothened.
+     *
+     * @return unburnt shares (postponed for next oracle reports)
      */
-    function _burnSharesLimited(IBurner _burner, uint256 _sharesToBurnLimit) internal {
+    function _burnSharesLimited(
+        IBurner _burner, uint256 _sharesToBurnLimit
+    ) internal returns (uint256 postponedSharesToBurn) {
         if (_sharesToBurnLimit > 0) {
             uint256 sharesCommittedToBurnNow = _burner.commitSharesToBurn(_sharesToBurnLimit);
 
@@ -1290,6 +1325,10 @@ contract Lido is Versioned, StETHPermit, AragonApp {
                 _burnShares(address(_burner), sharesCommittedToBurnNow);
             }
         }
+
+        (uint256 coverShares, uint256 nonCoverShares) = _burner.getSharesRequestedToBurn();
+
+        return coverShares.add(nonCoverShares);
     }
 
     /**
