@@ -1,4 +1,3 @@
-const { MaxUint256 } = require('@ethersproject/constants')
 const { assert } = require('../../helpers/assert')
 
 const {
@@ -31,7 +30,7 @@ contract('BaseOracle', ([admin, account1, account2, member1, member2]) => {
   context('deploying', () => {
     before(deploy)
 
-    it('deploying hash oracle', async () => {
+    it('deploying oracle', async () => {
       assert.isNotNull(oracle)
       assert.isNotNull(consensus)
     })
