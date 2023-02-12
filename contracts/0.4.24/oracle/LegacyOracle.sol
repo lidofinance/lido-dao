@@ -8,6 +8,8 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 
 import "../../common/interfaces/ILidoLocator.sol";
 
+import "../utils/Versioned.sol";
+
 
 interface IAccountingOracle {
     function getConsensusContract() external view returns (address);
@@ -43,7 +45,7 @@ interface IHashConsensus {
  *
  * See docs.lido.fi for more info.
  */
-contract LegacyOracle is AragonApp {
+contract LegacyOracle is Versioned, AragonApp {
 
     struct ChainSpec {
         uint64 epochsPerFrame;
@@ -79,8 +81,6 @@ contract LegacyOracle is AragonApp {
         uint256 totalShares
     );
 
-    event ContractVersionSet(uint256 version);
-
     /// Address of the Lido contract
     bytes32 internal constant LIDO_POSITION =
         0xf6978a4f7e200f6d3a24d82d44c48bddabce399a3b8ec42a480ea8a2d5fe6ec5; // keccak256("lido.LidoOracle.lido")
@@ -93,13 +93,8 @@ contract LegacyOracle is AragonApp {
     bytes32 internal constant BEACON_SPEC_POSITION =
         0x805e82d53a51be3dfde7cfed901f1f96f5dad18e874708b082adb8841e8ca909; // keccak256("lido.LidoOracle.beaconSpec")
 
-    /// Version of the initialized contract data
-    /// NB: Contract versioning starts from 1.
-    /// The version stored in CONTRACT_VERSION_POSITION equals to
-    /// - 0 right after deployment when no initializer is invoked yet
-    /// - N after calling initialize() during deployment from scratch, where N is the current contract version
-    /// - N after upgrading contract from the previous version (after calling finalize_vN())
-    bytes32 internal constant CONTRACT_VERSION_POSITION =
+    /// Version of the initialized contract data (DEPRECATED)
+    bytes32 internal constant CONTRACT_VERSION_POSITION_DEPRECATED =
         0x75be19a3f314d89bd1f84d30a6c84e2f1cd7afc7b6ca21876564c265113bb7e4; // keccak256("lido.LidoOracle.contractVersion")
 
     /// Historic data about 2 last completed reports and their times
@@ -126,16 +121,16 @@ contract LegacyOracle is AragonApp {
         return ACCOUNTING_ORACLE_POSITION.getStorageAddress();
     }
 
+    ///
+    /// Compatibility interface (DEPRECATED)
+    ///
+
     /**
      * @notice Returns the initialized version of this contract starting from 0.
      */
     function getVersion() external view returns (uint256) {
-        return CONTRACT_VERSION_POSITION.getStorageUint256();
+        return getContractVersion();
     }
-
-    ///
-    /// Compatibility interface (DEPRECATED)
-    ///
 
     /**
      * @notice DEPRECATED, kept for compatibility purposes only.
@@ -275,7 +270,7 @@ contract LegacyOracle is AragonApp {
         address _accountingOracleConsensusContract
     ) external onlyInit {
         // Initializations for v0 --> v3
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "BASE_VERSION_MUST_BE_ZERO");
+        _checkContractVersion(0);
         require(_lidoLocator != address(0), "ZERO_LOCATOR_ADDRESS");
         ILidoLocator locator = ILidoLocator(_lidoLocator);
 
@@ -297,7 +292,7 @@ contract LegacyOracle is AragonApp {
      * Can be called only once.
      */
     function finalizeUpgrade_v4(address _accountingOracle) external {
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 3, "WRONG_BASE_VERSION");
+        require(CONTRACT_VERSION_POSITION_DEPRECATED.getStorageUint256() == 3, "WRONG_BASE_VERSION");
         IHashConsensus consensus = IHashConsensus(IAccountingOracle(_accountingOracle).getConsensusContract());
 
         _initialize_v4(_accountingOracle);
@@ -316,8 +311,7 @@ contract LegacyOracle is AragonApp {
     function _initialize_v4(address _accountingOracle) internal {
         require(_accountingOracle != address(0), "ZERO_ACCOUNTING_ORACLE_ADDRESS");
         ACCOUNTING_ORACLE_POSITION.setStorageAddress(_accountingOracle);
-        CONTRACT_VERSION_POSITION.setStorageUint256(4);
-        emit ContractVersionSet(4);
+        _setContractVersion(4);
     }
 
     function _getChainSpec()
