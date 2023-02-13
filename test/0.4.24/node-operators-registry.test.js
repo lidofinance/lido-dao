@@ -503,7 +503,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await assert.reverts(app.activateNodeOperator(nodeOperatorId, { from: voting }), 'OUT_OF_RANGE')
     })
 
-    it('reverts with WORNG_OPERATOR_ACTIVE_STATE when called on active node operator', async () => {
+    it('reverts with WRONG_OPERATOR_ACTIVE_STATE when called on active node operator', async () => {
       const activeNodeOperatorId = 0
 
       const activeNodeOperator = await app.getNodeOperator(activeNodeOperatorId, false)
@@ -511,7 +511,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
       await assert.reverts(
         app.activateNodeOperator(activeNodeOperatorId, { from: voting }),
-        'WORNG_OPERATOR_ACTIVE_STATE'
+        'WRONG_OPERATOR_ACTIVE_STATE'
       )
     })
 
@@ -638,7 +638,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await assert.reverts(app.deactivateNodeOperator(nodeOperatorId, { from: voting }), 'OUT_OF_RANGE')
     })
 
-    it('reverts with "WORNG_OPERATOR_ACTIVE_STATE" when called on not active node operator', async () => {
+    it('reverts with "WRONG_OPERATOR_ACTIVE_STATE" when called on not active node operator', async () => {
       const activeNodeOperatorId = await nodeOperators.findNodeOperatorId(app, (operator) => !operator.active)
       assert.notEqual(activeNodeOperatorId, -1, `Invariant: not active node operator not found`)
 
@@ -647,7 +647,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
       await assert.reverts(
         app.deactivateNodeOperator(activeNodeOperatorId, { from: voting }),
-        'WORNG_OPERATOR_ACTIVE_STATE'
+        'WRONG_OPERATOR_ACTIVE_STATE'
       )
     })
 
@@ -951,14 +951,14 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       )
     })
 
-    it('reverts with "WORNG_OPERATOR_ACTIVE_STATE" error when node operator deactivated', async () => {
+    it('reverts with "WRONG_OPERATOR_ACTIVE_STATE" error when node operator deactivated', async () => {
       const hasPermission = await dao.hasPermission(voting, app, 'SET_NODE_OPERATOR_LIMIT_ROLE')
       assert.isTrue(hasPermission)
       await app.deactivateNodeOperator(secondNodeOperatorId, { from: voting })
       assert.isFalse(await app.getNodeOperatorIsActive(secondNodeOperatorId))
       await assert.reverts(
         app.setNodeOperatorStakingLimit(secondNodeOperatorId, 40, { from: voting }),
-        'WORNG_OPERATOR_ACTIVE_STATE'
+        'WRONG_OPERATOR_ACTIVE_STATE'
       )
     })
 

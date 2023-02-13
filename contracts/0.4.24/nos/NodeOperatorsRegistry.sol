@@ -1145,7 +1145,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     }
 
     function _onlyCorrectNodeOperatorState(bool _pass) internal pure {
-        require(_pass, "WORNG_OPERATOR_ACTIVE_STATE");
+        require(_pass, "WRONG_OPERATOR_ACTIVE_STATE");
     }
 
     function _auth(bytes32 _role) internal view {
