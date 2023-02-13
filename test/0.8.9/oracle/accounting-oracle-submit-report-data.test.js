@@ -19,7 +19,6 @@ const {
 contract('AccountingOracle', ([admin, account1, account2, member1, member2, stranger]) => {
   let consensus = null
   let oracle = null
-  let mockLido = null
   let reportItems = null
   let reportFields = null
   let extraDataList = null
@@ -77,7 +76,6 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
     oracle = deployed.oracle
     consensus = deployed.consensus
-    mockLido = deploy.mockLido
     mockStakingRouter = deployed.stakingRouter
     lido = deployed.lido
     oracleReportSanityChecker = deployed.oracleReportSanityChecker
@@ -101,7 +99,6 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     it('deploying accounting oracle', async () => {
       assert.isNotNull(oracle)
       assert.isNotNull(consensus)
-      assert.isNotNull(mockLido)
       assert.isNotNull(reportItems)
       assert.isNotNull(extraData)
       assert.isNotNull(extraDataList)
