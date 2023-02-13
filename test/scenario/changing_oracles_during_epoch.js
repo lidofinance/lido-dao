@@ -38,10 +38,9 @@ contract('AccountingOracle', ([appManager, voting, malicious1, malicious2, membe
     lastWithdrawalRequestIdToFinalize: 0,
     finalizationShareRate: 0,
     isBunkerMode: false,
-    extraDataFormat: 0,
+    extraDataFormat: 1,
     extraDataHash: ZERO_HASH,
-    extraDataItemsCount: 0,
-    extraDataMaxNodeOpsCountByModule: 0,
+    extraDataItemsCount: 0
   }
 
   const BAD_DATA = {

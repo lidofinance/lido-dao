@@ -1,7 +1,7 @@
 const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
 const { assertRevert } = require('../helpers/assertThrow')
-const { toBN, padRight, shares } = require('../helpers/utils')
+const { toBN, padRight, printEvents } = require('../helpers/utils')
 const { BN } = require('bn.js')
 const { AragonDAO } = require('./helpers/dao')
 const { EvmSnapshot } = require('../helpers/blockchain')
@@ -156,7 +156,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       ])
 
       // calls distributeRewards() inside
-      await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
+      await app.testing__distributeRewards({ from: voting })
 
       const recipientsSharesAfter = await Promise.all([
         steth.sharesOf(user1),
@@ -173,10 +173,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
-
       // calls distributeRewards() inside
-      await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
+      await app.testing__distributeRewards({ from: voting })
 
       assert.equals(await steth.sharesOf(user1), ETH(3))
       assert.equals(await steth.sharesOf(user2), ETH(7))
@@ -187,10 +185,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
-
       // calls distributeRewards() inside
-      receipt = await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
+      receipt = await app.testing__distributeRewards({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(3) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(7) })
@@ -203,8 +199,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, totalRewardShares)
 
-      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
-
       //before
       //      operatorId | Total | Deposited | Exited | Active (deposited-exited)
       //         0           3         3         0        3
@@ -216,8 +210,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       //perValidatorShare 10*10^18 / 10 = 10^18
 
       //update [operator, exited, stuck]
-      await app.unsafeUpdateValidatorsKeysCount(firstNodeOperator, 1, 0 , { from: voting })
-      await app.unsafeUpdateValidatorsKeysCount(secondNodeOperator, 1, 0 , { from: voting })
+      await app.unsafeUpdateValidatorsCount(firstNodeOperator, 1, 0 , { from: voting })
+      await app.unsafeUpdateValidatorsCount(secondNodeOperator, 1, 0 , { from: voting })
 
       //after
       //      operatorId | Total | Deposited | Exited | Stuck | Active (deposited-exited)
@@ -230,7 +224,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       //perValidatorShare 10*10^18 / 8 = 1250000000000000000 == 1.25 * 10^18
 
       // calls distributeRewards() inside
-      receipt = await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
+      receipt = await app.testing__distributeRewards({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(2*1.25) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(6*1.25) })
@@ -244,8 +238,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, totalRewardShares)
 
-      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
-
       //before
       //      operatorId | Total | Deposited | Exited | Active (deposited-exited)
       //         0           3         3         0        3
@@ -257,8 +249,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       //perValidatorShare 10*10^18 / 10 = 10^18
 
       //update [operator, exited, stuck]
-      await app.unsafeUpdateValidatorsKeysCount(firstNodeOperator, 1, 1 , { from: voting })
-      await app.unsafeUpdateValidatorsKeysCount(secondNodeOperator, 1, 0 , { from: voting })
+      await app.unsafeUpdateValidatorsCount(firstNodeOperator, 1, 1 , { from: voting })
+      await app.unsafeUpdateValidatorsCount(secondNodeOperator, 1, 0 , { from: voting })
 
       //after
       //      operatorId | Total | Deposited | Exited | Stuck | Active (deposited-exited)
@@ -272,7 +264,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       // but half goes to burner
 
       // calls distributeRewards() inside
-      receipt = await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
+      receipt = await app.testing__distributeRewards({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(1.25) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(6*1.25) })
@@ -284,16 +276,14 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
-
       //update [operator, exited, stuck]
-      await app.unsafeUpdateValidatorsKeysCount(firstNodeOperator, 1, 1 , { from: voting })
-      await app.unsafeUpdateValidatorsKeysCount(secondNodeOperator, 1, 0 , { from: voting })
+      await app.unsafeUpdateValidatorsCount(firstNodeOperator, 1, 1 , { from: voting })
+      await app.unsafeUpdateValidatorsCount(secondNodeOperator, 1, 0 , { from: voting })
 
-      await app.updateRefundedValidatorsKeysCount(firstNodeOperator, 1, { from: voting })
+      await app.updateRefundedValidatorsCount(firstNodeOperator, 1, { from: voting })
 
       // calls distributeRewards() inside
-      receipt = await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
+      receipt = await app.testing__distributeRewards({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(1.25) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(6*1.25) })
@@ -305,16 +295,16 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
+
 
       //update [operator, exited, stuck]
-      await app.unsafeUpdateValidatorsKeysCount(firstNodeOperator, 1, 1, { from: voting })
-      await app.unsafeUpdateValidatorsKeysCount(secondNodeOperator, 1, 0, { from: voting })
+      await app.unsafeUpdateValidatorsCount(firstNodeOperator, 1, 1, { from: voting })
+      await app.unsafeUpdateValidatorsCount(secondNodeOperator, 1, 0, { from: voting })
 
-      await app.updateRefundedValidatorsKeysCount(firstNodeOperator, 1000, { from: voting })
+      await app.updateRefundedValidatorsCount(firstNodeOperator, 1000, { from: voting })
 
       // calls distributeRewards() inside
-      receipt = await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
+      receipt = await app.testing__distributeRewards({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(1.25) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(6*1.25) })
@@ -326,18 +316,18 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
+
 
       //update [operator, exited, stuck]
-      await app.unsafeUpdateValidatorsKeysCount(firstNodeOperator, 2, 2 , { from: voting })
-      await app.unsafeUpdateValidatorsKeysCount(secondNodeOperator, 3, 0 , { from: voting })
+      await app.unsafeUpdateValidatorsCount(firstNodeOperator, 2, 2 , { from: voting })
+      await app.unsafeUpdateValidatorsCount(secondNodeOperator, 3, 0 , { from: voting })
 
       // perValidator = ETH(10) / 5 = 2 eth
 
-      await app.updateRefundedValidatorsKeysCount(firstNodeOperator, 1, { from: voting })
+      await app.updateRefundedValidatorsCount(firstNodeOperator, 1, { from: voting })
 
       // calls distributeRewards() inside
-      receipt = await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
+      receipt = await app.testing__distributeRewards({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(1) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(4*2) })
@@ -349,16 +339,16 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.testing_addNodeOperator('no', no1, 10, 10, 10, 0)
+
 
       assert.isFalse(await app.testing_isNodeOperatorPenalized(firstNodeOperator))
 
       //update [operator, exited, stuck]
-      await app.unsafeUpdateValidatorsKeysCount(firstNodeOperator, 1, 1 , { from: voting })
-      await app.unsafeUpdateValidatorsKeysCount(secondNodeOperator, 1, 0 , { from: voting })
+      await app.unsafeUpdateValidatorsCount(firstNodeOperator, 1, 1 , { from: voting })
+      await app.unsafeUpdateValidatorsCount(secondNodeOperator, 1, 0 , { from: voting })
       assert.isTrue(await app.testing_isNodeOperatorPenalized(firstNodeOperator))
 
-      await app.updateRefundedValidatorsKeysCount(firstNodeOperator, 1, { from: voting })
+      await app.updateRefundedValidatorsCount(firstNodeOperator, 1, { from: voting })
       assert.isTrue(await app.testing_isNodeOperatorPenalized(firstNodeOperator))
 
       await hre.network.provider.send('evm_increaseTime', [2 * 24 * 60 * 60 + 10])
@@ -367,7 +357,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       assert.isFalse(await app.testing_isNodeOperatorPenalized(firstNodeOperator))
 
       // calls distributeRewards() inside
-      receipt = await app.finishUpdatingExitedValidatorsKeysCount({ from: voting })
+      receipt = await app.testing__distributeRewards({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(2.5) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(7.5) })
@@ -386,7 +376,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      await app.testing_addNodeOperator('no', no1, 55, 30, 15, 2)
+      // await app.testing_addNodeOperator('no', no1, 55, 30, 15, 2)
 
       // sum of (vetted[i] - exited[i])
       await app.increaseTargetValidatorsCount(28)

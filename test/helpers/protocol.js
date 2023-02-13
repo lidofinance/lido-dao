@@ -28,6 +28,13 @@ async function deployProtocol(factories = {}, deployParams = {}) {
 
   protocol.depositContract = await protocol.factories.depositContractFactory(protocol)
 
+  protocol.burner = await protocol.factories.burnerFactory(protocol)
+  protocol.lidoLocator = await protocol.factories.lidoLocatorFactory(protocol)
+  await updateLocatorImplementation(protocol.lidoLocator.address, protocol.appManager.address, {
+    lido: protocol.pool.address,
+    burner: protocol.burner.address
+  })
+
   protocol.withdrawalCredentials = await protocol.factories.withdrawalCredentialsFactory(protocol)
   protocol.stakingRouter = await protocol.factories.stakingRouterFactory(protocol)
   protocol.stakingModules = await addStakingModules(protocol.factories.stakingModulesFactory, protocol)
@@ -36,16 +43,11 @@ async function deployProtocol(factories = {}, deployParams = {}) {
   protocol.elRewardsVault = await protocol.factories.elRewardsVaultFactory(protocol)
   protocol.withdrawalVault = await protocol.factories.withdrawalVaultFactory(protocol)
   protocol.eip712StETH = await protocol.factories.eip712StETHFactory(protocol)
-  protocol.burner = await protocol.factories.burnerFactory(protocol)
-
-  protocol.lidoLocator = await protocol.factories.lidoLocatorFactory(protocol)
 
   await updateLocatorImplementation(protocol.lidoLocator.address, protocol.appManager.address, {
-    lido: protocol.pool.address,
     depositSecurityModule: protocol.depositSecurityModule.address,
     elRewardsVault: protocol.elRewardsVault.address,
     legacyOracle: protocol.legacyOracle.address,
-    burner: protocol.burner.address,
     stakingRouter: protocol.stakingRouter.address,
     treasury: protocol.treasury.address,
     withdrawalVault: protocol.withdrawalVault.address,
