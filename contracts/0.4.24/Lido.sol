@@ -201,6 +201,11 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 postCLValidators
     );
 
+    // Emits when var at `DEPOSITED_VALIDATORS_POSITION` changed
+    event DepositedValidatorsChanged(
+        uint256 depositedValidators
+    );
+
     // Emits when oracle accounting report processed
     event ETHDistributed(
         uint256 indexed reportTimestamp,
@@ -593,6 +598,23 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
+     * @notice Unsafely change deposited validators
+     *
+     * The method unsafely changes deposited validator counter.
+     * Can be required when onboarding external validators to Lido
+     * (i.e., had deposited before and rotated their type-0x00 withdrawal credentials to Lido)
+     *
+     * @param _newDepositedValidators new value
+     */
+    function unsafeChangeDepositedValidators(uint256 _newDepositedValidators) {
+        _auth(UNSAFE_CHANGE_DEPOSITED_VALIDATORS_ROLE);
+
+        DEPOSITED_VALIDATORS_POSITION.setStorageUint256(_newDepositedValidators);
+
+        emit DepositedValidatorsChanged(_newDepositedValidators);
+    }
+
+    /**
      * @notice Overrides default AragonApp behaviour to disallow recovery.
      */
     function transferToVault(address /* _token */) external {
@@ -662,11 +684,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         require(_stakingModuleId <= uint24(-1), "STAKING_MODULE_ID_TOO_LARGE");
         require(canDeposit(), "CAN_NOT_DEPOSIT");
 
-        IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(locator.withdrawalQueue());
-
         uint256 bufferedEth = _getBufferedEther();
         // we dont deposit funds that will go to withdrawals
-        uint256 withdrawalReserve = withdrawalQueue.unfinalizedStETH();
+        uint256 withdrawalReserve = IWithdrawalQueue(locator.withdrawalQueue()).unfinalizedStETH();
 
         if (bufferedEth > withdrawalReserve) {
             bufferedEth = bufferedEth.sub(withdrawalReserve);
@@ -686,7 +706,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             assert(depositedAmount <= depositableEth);
 
             if (depositsCount > 0) {
-                DEPOSITED_VALIDATORS_POSITION.setStorageUint256(DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(depositsCount));
+                uint256 newDepositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(depositsCount);
+                DEPOSITED_VALIDATORS_POSITION.setStorageUint256(newDepositedValidators);
+                emit DepositedValidatorsChanged(newDepositedValidators);
 
                 _markAsUnbuffered(depositedAmount);
                 assert(_getUnaccountedEther() == unaccountedEth);
