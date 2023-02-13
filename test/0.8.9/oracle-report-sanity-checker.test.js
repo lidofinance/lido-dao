@@ -223,8 +223,10 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
 
   describe('checkSimulatedShareRate', async () => {
     const correctSimulatedShareRate = {
-      noWithdrawalsPostTotalPooledEther: ETH(10),
-      noWithdrawalsPostTotalShares: ETH(5),
+      postTotalPooledEther: ETH(9),
+      postTotalShares: ETH(4),
+      etherLockedOnWithdrawalQueue: ETH(1),
+      sharesBurntFromWithdrawalQueue: ETH(1),
       simulatedShareRate: (BigInt(2) * 10n ** 27n).toString()
     }
 
@@ -249,7 +251,8 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
         oracleReportSanityChecker.checkSimulatedShareRate(
           ...Object.values({
             ...correctSimulatedShareRate,
-            noWithdrawalsPostTotalPooledEther: ETH(0)
+            etherLockedOnWithdrawalQueue: ETH(0),
+            postTotalPooledEther: ETH(0)
           })
         ),
         `IncorrectFinalizationShareRate(${deviation.toString()})`
