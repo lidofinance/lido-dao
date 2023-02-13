@@ -50,6 +50,8 @@ contract StETH is IERC20, Pausable {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;
 
+    address internal INITIAL_TOKEN_HOLDER = 0xdead;
+
     /**
      * @dev StETH balances are dynamic and are calculated based on the accounts' shares
      * and the total amount of Ether controlled by the protocol. Account shares aren't
@@ -508,19 +510,21 @@ contract StETH is IERC20, Pausable {
      *  It allows to get rid of zero checks and corner cases
      * @dev should be invoked before using the token
      */
-    function _bootstrapInitialHolder() internal returns (address, uint256) {
+    function _bootstrapInitialHolder() internal returns (uint256) {
         uint256 balance = address(this).balance;
         require(balance != 0, "EMPTY_INIT_BALANCE");
 
         if (_getTotalShares() == 0) {
              // if protocol is empty bootstrap it with the contract's balance
             // 0xdead is a holder for initial shares
-            address bootstrapSharesHolder = 0xdead;
-            _mintShares(bootstrapSharesHolder, balance);
+            _mintShares(INITIAL_TOKEN_HOLDER, balance);
 
-            return (bootstrapSharesHolder, balance);
+            emit Transfer(0x0, INITIAL_TOKEN_HOLDER, balance);
+            emit TransferShares(0x0, INITIAL_TOKEN_HOLDER, balance);
+
+            return balance;
         }
 
-        return (address(0), 0);
+        return 0;
     }
 }

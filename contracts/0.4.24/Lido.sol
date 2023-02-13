@@ -256,11 +256,10 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         payable
         onlyInit
     {
-        (address holder, uint256 amount) = _bootstrapInitialHolder();
+        uint256 amount = _bootstrapInitialHolder();
         BUFFERED_ETHER_POSITION.setStorageUint256(amount);
 
-        emit Submitted(holder, amount, 0);
-        _emitTransferAfterMintingShares(holder, amount);
+        emit Submitted(INITIAL_TOKEN_HOLDER, amount, 0);
 
         _initialize_v2(_lidoLocator, _eip712StETH);
         initialized();
@@ -298,6 +297,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         require(_lidoLocator != address(0), "LIDO_LOCATOR_ZERO_ADDRESS");
         require(_eip712StETH != address(0), "EIP712_STETH_ZERO_ADDRESS");
+
+        require(_sharesOf(INITIAL_TOKEN_HOLDER) != 0, "INITIAL_HOLDER_EXISTS");
 
         _initialize_v2(_lidoLocator, _eip712StETH);
     }
