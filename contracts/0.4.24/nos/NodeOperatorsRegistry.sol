@@ -45,7 +45,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     event NodeOperatorNameSet(uint256 indexed nodeOperatorId, string name);
     event NodeOperatorRewardAddressSet(uint256 indexed nodeOperatorId, address rewardAddress);
     event NodeOperatorStakingLimitSet(uint256 indexed nodeOperatorId, uint64 stakingLimit);
-    event NodeOperatorTotalStoppedValidatorsReported(uint256 indexed nodeOperatorId, uint64 totalStopped);
     event NodeOperatorTotalKeysTrimmed(uint256 indexed nodeOperatorId, uint64 totalKeysTrimmed);
     event KeysOpIndexSet(uint256 keysOpIndex);
     event ContractVersionSet(uint256 version);
