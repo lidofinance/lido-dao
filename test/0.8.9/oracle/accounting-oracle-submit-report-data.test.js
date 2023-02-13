@@ -345,7 +345,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         assert.equals(lastOracleReportToLido.finalizationShareRate, reportFields.finalizationShareRate)
       })
 
-      it('should call updateExitedValidatorsCountByStakingModule on stakingRouter', async () => {
+      it('should call updateExitedValidatorsCountByStakingModule on StakingRouter', async () => {
         assert.equals((await mockStakingRouter.lastCall_updateExitedKeysByModule()).callCount, 0)
         await consensus.setTime(deadline)
         const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
@@ -356,6 +356,18 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         assert.equals(lastOracleReportToStakingRouter.callCount, 1)
         assert.equals(lastOracleReportToStakingRouter.moduleIds, reportFields.stakingModuleIdsWithNewlyExitedValidators)
         assert.equals(lastOracleReportToStakingRouter.exitedKeysCounts, reportFields.numExitedValidatorsByStakingModule)
+      })
+
+      it('does not calling StakingRouter.updateExitedKeysByModule if lists of exited validators is empty', async () => {
+        const { newReportItems, newReportFields } = await prepareNextReportInNextFrame({
+          ...reportFields,
+          stakingModuleIdsWithNewlyExitedValidators: [],
+          numExitedValidatorsByStakingModule: []
+        })
+        const tx = await oracle.submitReportData(newReportItems, oracleVersion, { from: member1 })
+        assert.emits(tx, 'ProcessingStarted', { refSlot: newReportFields.refSlot })
+        const lastOracleReportToStakingRouter = await mockStakingRouter.lastCall_updateExitedKeysByModule()
+        assert.equals(lastOracleReportToStakingRouter.callCount, 0)
       })
 
       it('should call handleConsensusLayerReport on legacyOracle', async () => {
