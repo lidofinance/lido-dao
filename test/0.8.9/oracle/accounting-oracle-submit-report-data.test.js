@@ -295,7 +295,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     })
 
     context('enforces data safety boundaries', () => {
-      it('reverts with MaxAccountingExtraDataItemsCountExceeded if limits exceeds', async () => {
+      it('reverts with MaxAccountingExtraDataItemsCountExceeded if data limit exceeds', async () => {
         const MAX_ACCOUNTING_EXTRA_DATA_LIMIT = 1
         await oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(MAX_ACCOUNTING_EXTRA_DATA_LIMIT, {
           from: admin
@@ -310,6 +310,21 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           oracle.submitReportData(reportItems, oracleVersion, { from: member1 }),
           `MaxAccountingExtraDataItemsCountExceeded(${MAX_ACCOUNTING_EXTRA_DATA_LIMIT}, ${reportFields.extraDataItemsCount})`
         )
+      })
+
+      it('passes fine on borderline data limit value — when it equals to count of passed items', async () => {
+        const MAX_ACCOUNTING_EXTRA_DATA_LIMIT = reportFields.extraDataItemsCount
+
+        await oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(MAX_ACCOUNTING_EXTRA_DATA_LIMIT, {
+          from: admin
+        })
+
+        assert.equals(
+          (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount,
+          MAX_ACCOUNTING_EXTRA_DATA_LIMIT
+        )
+
+        await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
       })
     })
 
