@@ -199,20 +199,20 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
     it('reverts if not initialized', async () => {
       const proxyAddress = await newApp(dao, 'lido-pool', appBase.address, appManager.address)
       const appProxy = await LidoMock.at(proxyAddress)
-      assert.reverts(appProxy.finalizeUpgrade_v2(lidoLocator.address, eip712StETH.address), 'NOT_INITIALIZED')
+      await assert.reverts(appProxy.finalizeUpgrade_v2(lidoLocator.address, eip712StETH.address), 'NOT_INITIALIZED')
     })
 
-    it('reverts with PETRIFIED on implementation finalized ', async () => {
-      assert.reverts(appBase.finalizeUpgrade_v2(lidoLocator.address, eip712StETH.address), 'PETRIFIED')
+    it('reverts with NOT_INITIALIZED on implementation finalized ', async () => {
+      await assert.reverts(appBase.finalizeUpgrade_v2(lidoLocator.address, eip712StETH.address), 'NOT_INITIALIZED')
     })
 
     it('reverts if already initialized', async () => {
       assert.equal(await app.getContractVersion(), 0)
       await app.finalizeUpgrade_v2(lidoLocator.address, eip712StETH.address)
       assert.equal(await app.getContractVersion(), 2)
-      assertRevert(
-        app.finalizeUpgrade_v2(stakingRouter.address, depositor, eip712StETH.address, withdrawalQueue.address),
-        'WRONG_BASE_VERSION'
+      await assert.reverts(
+        app.finalizeUpgrade_v2(lidoLocator.address, eip712StETH.address),
+        'UNEXPECTED_CONTRACT_VERSION'
       )
     })
 
