@@ -239,10 +239,23 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     context('enforces module ids sorting order', () => {
       beforeEach(deploy)
 
-      it('should revert if incorrect stakingModuleIdsWithNewlyExitedValidators order', async () => {
+      it('should revert if incorrect stakingModuleIdsWithNewlyExitedValidators order (when next number in list is less than previous)', async () => {
         const { newReportItems } = await prepareNextReportInNextFrame({
           ...reportFields,
           stakingModuleIdsWithNewlyExitedValidators: [2, 1],
+          numExitedValidatorsByStakingModule: [3, 4]
+        })
+
+        await assert.reverts(
+          oracle.submitReportData(newReportItems, oracleVersion, { from: member1 }),
+          'InvalidExitedValidatorsData()'
+        )
+      })
+
+      it('should revert if incorrect stakingModuleIdsWithNewlyExitedValidators order (when next number in list is less than previous)', async () => {
+        const { newReportItems } = await prepareNextReportInNextFrame({
+          ...reportFields,
+          stakingModuleIdsWithNewlyExitedValidators: [1, 1],
           numExitedValidatorsByStakingModule: [3, 4]
         })
 
@@ -322,8 +335,20 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       it('reverts with InvalidExitedValidatorsData if counts of stakingModuleIds and numExitedValidatorsByStakingModule does not match', async () => {
         const { newReportItems } = await prepareNextReportInNextFrame({
           ...reportFields,
-          stakingModuleIdsWithNewlyExitedValidators: [2, 1],
+          stakingModuleIdsWithNewlyExitedValidators: [1, 2],
           numExitedValidatorsByStakingModule: [3]
+        })
+        await assert.reverts(
+          oracle.submitReportData(newReportItems, oracleVersion, { from: member1 }),
+          'InvalidExitedValidatorsData()'
+        )
+      })
+
+      it('reverts with InvalidExitedValidatorsData if any record for number of exited validators equals 0', async () => {
+        const { newReportItems } = await prepareNextReportInNextFrame({
+          ...reportFields,
+          stakingModuleIdsWithNewlyExitedValidators: [1, 2],
+          numExitedValidatorsByStakingModule: [3, 0]
         })
         await assert.reverts(
           oracle.submitReportData(newReportItems, oracleVersion, { from: member1 }),
