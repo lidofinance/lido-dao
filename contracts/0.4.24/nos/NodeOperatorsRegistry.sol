@@ -507,7 +507,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         emit RefundedValidatorsCountChanged(_nodeOperatorId, _refundedValidatorsCount);
     }
 
-    /// @notice Invalidates all unused validators for all node operators
+    /// @notice Invalidates all unused deposit data for all node operators
     function onWithdrawalCredentialsChanged() external {
         uint256 operatorsCount = getNodeOperatorsCount();
         if (operatorsCount > 0) {
