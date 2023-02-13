@@ -11,7 +11,9 @@ const {
   calcExtraDataListHash,
   calcReportDataHash,
   EXTRA_DATA_FORMAT_LIST,
-  SLOTS_PER_FRAME
+  SLOTS_PER_FRAME,
+  SECONDS_PER_SLOT,
+  GENESIS_TIME
 } = require('./accounting-oracle-deploy.test')
 
 contract('AccountingOracle', ([admin, account1, account2, member1, member2, stranger]) => {
@@ -25,6 +27,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
   let extraDataItems = null
   let oracleVersion = null
   let deadline = null
+  let stakingRouter = null
 
   const deploy = async (options = undefined) => {
     const deployed = await deployAndConfigureAccountingOracle(admin)
@@ -71,7 +74,8 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
     oracle = deployed.oracle
     consensus = deployed.consensus
-    mockLido = deploy.mockLido
+    mockLido = deployed.lido
+    stakingRouter = deployed.stakingRouter
   }
 
   context('deploying', () => {
@@ -184,6 +188,45 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           oracle.submitReportData(reportItemsPrevVersion, oracleVersion, { from: member1 }),
           `UnexpectedConsensusVersion(${oracleVersion}, ${incorrectPrevVersion})`
         )
+      })
+    })
+
+    context('delivers the data to Lido and StakingRouter', () => {
+      it('should call handleOracleReport on Lido', async () => {
+        assert.equals((await mockLido.getLastCall_handleOracleReport()).callCount, 0)
+        await consensus.setTime(deadline)
+        const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
+        assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
+
+        const lastOracleReportToLido = await mockLido.getLastCall_handleOracleReport()
+
+        assert.equals(lastOracleReportToLido.callCount, 1)
+        assert.equals(
+          lastOracleReportToLido.currentReportTimestamp,
+          GENESIS_TIME + reportFields.refSlot * SECONDS_PER_SLOT
+        )
+
+        assert.equals(lastOracleReportToLido.clBalance, reportFields.clBalanceGwei + '000000000')
+        assert.equals(lastOracleReportToLido.withdrawalVaultBalance, reportFields.withdrawalVaultBalance)
+        assert.equals(lastOracleReportToLido.elRewardsVaultBalance, reportFields.elRewardsVaultBalance)
+        assert.equals(
+          lastOracleReportToLido.lastWithdrawalRequestIdToFinalize,
+          reportFields.lastWithdrawalRequestIdToFinalize
+        )
+        assert.equals(lastOracleReportToLido.finalizationShareRate, reportFields.finalizationShareRate)
+      })
+
+      it('should call updateExitedValidatorsCountByStakingModule on stakingRouter', async () => {
+        assert.equals((await stakingRouter.lastCall_updateExitedKeysByModule()).callCount, 0)
+        await consensus.setTime(deadline)
+        const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
+        assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
+
+        const lastOracleReportToStakingRouter = await stakingRouter.lastCall_updateExitedKeysByModule()
+
+        assert.equals(lastOracleReportToStakingRouter.callCount, 1)
+        assert.equals(lastOracleReportToStakingRouter.moduleIds, reportFields.stakingModuleIdsWithNewlyExitedValidators)
+        assert.equals(lastOracleReportToStakingRouter.exitedKeysCounts, reportFields.numExitedValidatorsByStakingModule)
       })
     })
   })
