@@ -448,22 +448,22 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _updateStuckValidatorsCount(_nodeOperatorId, uint64(_stuckValidatorsCount));
     }
 
-    function _updateExitedValidatorsCount(uint256 _nodeOperatorId, uint64 _exitedValidatorsKeysCount, bool _allowDecrease)
+    function _updateExitedValidatorsCount(uint256 _nodeOperatorId, uint64 _exitedValidatorsCount, bool _allowDecrease)
         internal
     {
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
         uint64 depositedSigningKeysCount = signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET);
-        uint64 exitedValidatorsCount = signingKeysStats.get(EXITED_KEYS_COUNT_OFFSET);
+        uint64 exitedSigningKeysCount = signingKeysStats.get(EXITED_KEYS_COUNT_OFFSET);
 
-        if (exitedValidatorsCount != _exitedValidatorsKeysCount) {
-            _requireValidRange(_exitedValidatorsKeysCount <= depositedSigningKeysCount);
-            if (_exitedValidatorsKeysCount < exitedValidatorsCount && !_allowDecrease) {
+        if (exitedSigningKeysCount != _exitedValidatorsCount) {
+            _requireValidRange(_exitedValidatorsCount <= depositedSigningKeysCount);
+            if (_exitedValidatorsCount < exitedSigningKeysCount && !_allowDecrease) {
                 revert("EXITED_VALIDATORS_COUNT_DECREASED");
             }
 
-            signingKeysStats.set(EXITED_KEYS_COUNT_OFFSET, _exitedValidatorsKeysCount);
+            signingKeysStats.set(EXITED_KEYS_COUNT_OFFSET, _exitedValidatorsCount);
             _saveOperatorSigningKeysStats(_nodeOperatorId, signingKeysStats);
-            emit ExitedSigningKeysCountChanged(_nodeOperatorId, _exitedValidatorsKeysCount);
+            emit ExitedSigningKeysCountChanged(_nodeOperatorId, _exitedValidatorsCount);
         }
     }
 
