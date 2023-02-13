@@ -30,6 +30,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
   let mockStakingRouter = null
   let extraData = null
   let lido = null
+  let oracleReportSanityChecker = null
 
   const deploy = async (options = undefined) => {
     const deployed = await deployAndConfigureAccountingOracle(admin)
@@ -79,6 +80,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     mockLido = deploy.mockLido
     mockStakingRouter = deployed.stakingRouter
     lido = deployed.lido
+    oracleReportSanityChecker = deployed.oracleReportSanityChecker
   }
 
   async function prepareNextReport(newReportFields) {
@@ -286,6 +288,25 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         await assert.reverts(
           oracle.submitReportData(incorrectReportItems, oracleVersion, { from: member1 }),
           `UnexpectedDataHash("${correctDataHash}", "${incorrectDataHash}")`
+        )
+      })
+    })
+
+    context('enforces data safety boundaries', () => {
+      it('reverts with MaxAccountingExtraDataItemsCountExceeded if limits exceeds', async () => {
+        const MAX_ACCOUNTING_EXTRA_DATA_LIMIT = 1
+        await oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(MAX_ACCOUNTING_EXTRA_DATA_LIMIT, {
+          from: admin
+        })
+
+        assert.equals(
+          (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount,
+          MAX_ACCOUNTING_EXTRA_DATA_LIMIT
+        )
+
+        await assert.reverts(
+          oracle.submitReportData(reportItems, oracleVersion, { from: member1 }),
+          `MaxAccountingExtraDataItemsCountExceeded(${MAX_ACCOUNTING_EXTRA_DATA_LIMIT}, ${reportFields.extraDataItemsCount})`
         )
       })
     })
