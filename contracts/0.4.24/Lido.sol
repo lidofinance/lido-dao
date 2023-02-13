@@ -670,7 +670,21 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * Depends on the bunker state and protocol's pause state
      */
     function canDeposit() public view returns (bool) {
-       return !IWithdrawalQueue(getLidoLocator().withdrawalQueue()).isBunkerModeActive() && !isStopped();
+        return !IWithdrawalQueue(getLidoLocator().withdrawalQueue()).isBunkerModeActive() && !isStopped();
+    }
+
+    /**
+     * @dev Returns depositable ether amount.
+     * Takes into account unfinalized stETH required by WithdrawalQueue
+     */
+    function getDepositableEther() public view returns (uint256 depositableEth) {
+        uint256 bufferedEth = _getBufferedEther();
+        uint256 withdrawalReserve = IWithdrawalQueue(getLidoLocator().withdrawalQueue()).unfinalizedStETH();
+
+        if (bufferedEth > withdrawalReserve) {
+            bufferedEth = bufferedEth - withdrawalReserve;
+            depositableEth = bufferedEth.div(DEPOSIT_SIZE).mul(DEPOSIT_SIZE);
+        }
     }
 
     /**
@@ -686,14 +700,11 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         require(_stakingModuleId <= uint24(-1), "STAKING_MODULE_ID_TOO_LARGE");
         require(canDeposit(), "CAN_NOT_DEPOSIT");
 
-        uint256 bufferedEth = _getBufferedEther();
-        // we dont deposit funds that will go to withdrawals
-        uint256 withdrawalReserve = IWithdrawalQueue(locator.withdrawalQueue()).unfinalizedStETH();
+        uint256 depositableEth = getDepositableEther();
 
-        if (bufferedEth > withdrawalReserve) {
-            bufferedEth = bufferedEth.sub(withdrawalReserve);
+        if (depositableEth > 0) {
             /// available ether amount for deposits (multiple of 32eth)
-            uint256 depositableEth = Math256.min(bufferedEth.div(DEPOSIT_SIZE), _maxDepositsCount).mul(DEPOSIT_SIZE);
+            depositableEth = Math256.min(depositableEth, _maxDepositsCount.mul(DEPOSIT_SIZE));
 
             uint256 unaccountedEth = _getUnaccountedEther();
             /// @dev transfer ether to SR and make deposit at the same time

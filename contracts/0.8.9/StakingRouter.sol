@@ -16,7 +16,7 @@ import {BeaconChainDepositor} from "./BeaconChainDepositor.sol";
 import {Versioned} from "./utils/Versioned.sol";
 
 interface ILido {
-    function getBufferedEther() external view returns (uint256);
+    function getDepositableEther() external view returns (uint256);
     function receiveStakingRouterDepositRemainder() external payable;
 }
 
@@ -839,7 +839,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         returns (uint256)
     {
         uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
-        uint256 depositsToAllocate = getLido().getBufferedEther() / DEPOSIT_SIZE;
+        uint256 depositsToAllocate = getLido().getDepositableEther() / DEPOSIT_SIZE;
         (, uint256[] memory newDepositsAllocation, StakingModuleCache[] memory stakingModulesCache)
             = _getDepositsAllocation(depositsToAllocate);
         return newDepositsAllocation[stakingModuleIndex] - stakingModulesCache[stakingModuleIndex].activeValidatorsCount;
