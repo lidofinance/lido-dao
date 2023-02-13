@@ -181,6 +181,13 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     // Staking limit was removed
     event StakingLimitRemoved();
 
+    // Emits when validators number delivered by the oracle
+    event CLValidatorsUpdated(
+        uint256 indexed reportTimestamp,
+        uint256 preCLValidators,
+        uint256 postCLValidators
+    );
+
     // Emits when oracle accounting report processed
     event ETHDistributed(
         uint256 indexed reportTimestamp,
@@ -747,6 +754,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * i.e., exited Lido validators persist in the state, just with a different status
      */
     function _processClStateUpdate(
+        uint256 _reportTimestamp,
         uint256 _preClValidators,
         uint256 _postClValidators,
         uint256 _postClBalance
@@ -767,6 +775,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // Save the current CL balance and validators to
         // calculate rewards on the next push
         CL_BALANCE_POSITION.setStorageUint256(_postClBalance);
+
+        emit CLValidatorsUpdated(_reportTimestamp, _preClValidators, _postClValidators);
     }
 
     /**
@@ -1172,7 +1182,10 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         reportContext.preTotalShares = _getTotalShares();
         reportContext.preCLValidators = CL_VALIDATORS_POSITION.getStorageUint256();
         reportContext.preCLBalance = _processClStateUpdate(
-            reportContext.preCLValidators, _reportedData.clValidators, _reportedData.postCLBalance
+            _reportedData.reportTimestamp,
+            reportContext.preCLValidators,
+            _reportedData.clValidators,
+            _reportedData.postCLBalance
         );
 
         // Step 2.
