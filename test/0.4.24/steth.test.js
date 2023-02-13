@@ -52,9 +52,9 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
       })
 
       it(`transfers works with no pooled ehter, balances aren't changed`, async () => {
-        stEth.transfer(user1, tokens(1), { from: user2 })
-        stEth.transfer(user2, tokens(100), { from: user3 })
-        stEth.transfer(user3, tokens(1000), { from: user1 })
+        await stEth.transfer(user1, tokens(1), { from: user2 })
+        await stEth.transfer(user2, tokens(100), { from: user3 })
+        await stEth.transfer(user3, tokens(1000), { from: user1 })
 
         assertBn(await stEth.balanceOf(user1), tokens(0))
         assertBn(await stEth.balanceOf(user2), tokens(0))

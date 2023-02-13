@@ -30,8 +30,8 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     await steth.mintShares(user, shares(1))
     await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
 
-    impersonate(ethers.provider, steth.address)
-    snapshot.make();
+    await impersonate(ethers.provider, steth.address)
+    await snapshot.make();
   })
 
   afterEach(async () => {
@@ -771,12 +771,12 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     })
 
     it("One can't change someone else's request", async () => {
-      await assert.reverts(withdrawalQueue.transferFrom(user, owner, requestId, { from: stranger }), 
+      await assert.reverts(withdrawalQueue.transferFrom(user, owner, requestId, { from: stranger }),
         `NotOwnerOrApproved("${stranger}")`)
     })
 
     it("One can't pass zero owner", async () => {
-      await assert.reverts(withdrawalQueue.transferFrom(user, ZERO_ADDRESS, requestId, { from: user }), 
+      await assert.reverts(withdrawalQueue.transferFrom(user, ZERO_ADDRESS, requestId, { from: user }),
         'TransferToZeroAddress()')
     })
 

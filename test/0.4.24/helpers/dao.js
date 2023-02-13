@@ -81,19 +81,19 @@ class AragonDAO {
 
   async createPermission(entityAddress, app, permissionName) {
     const permission = await app[permissionName]()
-    return this.acl.createPermission(entityAddress, app.address, permission, this.appManager, {
+    return await this.acl.createPermission(entityAddress, app.address, permission, this.appManager, {
       from: this.appManager
     })
   }
 
   async grantPermission(entityAddress, app, permissionName) {
     const permission = await app[permissionName]()
-    return this.acl.grantPermission(entityAddress, app.address, permission, { from: this.appManager })
+    return await this.acl.grantPermission(entityAddress, app.address, permission, { from: this.appManager })
   }
 
   async hasPermission(entity, app, permissionName) {
     const permission = await app[permissionName]()
-    return this.acl.hasPermission(entity, app.address, permission)
+    return await this.acl.hasPermission(entity, app.address, permission)
   }
 }
 

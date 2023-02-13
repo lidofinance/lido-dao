@@ -65,7 +65,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
     oracle = deployed.oracle
     consensus = deployed.consensus
-    mockLido = deploy.mockLido
+    mockLido = deployed.mockLido
   }
 
   context('deploying', () => {
