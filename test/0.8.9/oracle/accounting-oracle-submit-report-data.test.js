@@ -271,5 +271,30 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         assert.equals(lastOracleReportToStakingRouter.exitedKeysCounts, reportFields.numExitedValidatorsByStakingModule)
       })
     })
+
+    context('enforces extra data format', () => {
+      it('should revert on invalid extra data format', async () => {
+        await consensus.setTime(deadline)
+        await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
+
+        const nextRefSlot = reportFields.refSlot + SLOTS_PER_FRAME
+        const changedReportItems = getReportDataItems({
+          ...reportFields,
+          refSlot: nextRefSlot,
+          extraDataFormat: EXTRA_DATA_FORMAT_LIST + 1
+        })
+
+        const changedReportHash = calcReportDataHash(changedReportItems)
+        await consensus.advanceTimeToNextFrameStart()
+        await consensus.submitReport(nextRefSlot, changedReportHash, CONSENSUS_VERSION, {
+          from: member1
+        })
+
+        await assert.revertsWithCustomError(
+          oracle.submitReportData(changedReportItems, oracleVersion, { from: member1 }),
+          `UnsupportedExtraDataFormat(${EXTRA_DATA_FORMAT_LIST + 1})`
+        )
+      })
+    })
   })
 })
