@@ -686,11 +686,11 @@ contract AccountingOracle is BaseOracle {
         uint256 maxNodeOperatorsPerItem = 0;
         uint256 maxNodeOperatorItemIndex = 0;
 
-        /// @solidity memory-safe-assembly
         while (dataOffset < data.length) {
             uint256 index;
             uint256 itemType;
 
+            /// @solidity memory-safe-assembly
             assembly {
                 // layout at the dataOffset:
                 // |  3 bytes  | 2 bytes  |   X bytes   |
@@ -736,7 +736,7 @@ contract AccountingOracle is BaseOracle {
         }
     }
 
-    function _processExtraDataItem(bytes calldata data, ExtraDataIterState memory iter) internal returns (uint256 nodeOpsProcessed) {
+    function _processExtraDataItem(bytes calldata data, ExtraDataIterState memory iter) internal returns (uint256) {
         uint256 dataOffset = iter.dataOffset;
         uint256 moduleId;
         uint256 nodeOpsCount;
