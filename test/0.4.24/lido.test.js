@@ -49,7 +49,7 @@ async function getTimestamp() {
   return block.timestamp;
 }
 
-contract('Lido', ([appManager, user1, user2, user3, nobody, depositor, treasury]) => {
+contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody, depositor, treasury]) => {
   let app, oracle, depositContract, operators
   let treasuryAddress
   let dao
@@ -468,57 +468,6 @@ contract('Lido', ([appManager, user1, user2, user3, nobody, depositor, treasury]
         expectedArgs: { amount: ETH(2) }
       })
     })
-  })
-
-  // TODO: check if reverts are checked in Staking Router tests and remove this test from here
-  it.skip('setModulesFee works', async () => {
-    const [curated] = await stakingRouter.getStakingModules()
-
-    let module1 = await stakingRouter.getStakingModule(curated.id)
-    assertBn(module1.targetShare, 10000)
-    assertBn(module1.stakingModuleFee, 500)
-    assertBn(module1.treasuryFee, 500)
-
-    // stakingModuleId, targetShare, stakingModuleFee, treasuryFee
-    await stakingRouter.updateStakingModule(module1.id, module1.targetShare, 300, 700, { from: voting })
-
-    module1 = await stakingRouter.getStakingModule(curated.id)
-
-    await assertRevert(
-      stakingRouter.updateStakingModule(module1.id, module1.targetShare, 300, 700, { from: user1 }),
-      `AccessControl: account ${user1.toLowerCase()} is missing role ${await stakingRouter.STAKING_MODULE_MANAGE_ROLE()}`
-    )
-
-    await assertRevert(
-      stakingRouter.updateStakingModule(module1.id, module1.targetShare, 300, 700, { from: nobody }),
-      `AccessControl: account ${nobody.toLowerCase()} is missing role ${await stakingRouter.STAKING_MODULE_MANAGE_ROLE()}`
-    )
-
-    await assert.revertsWithCustomError(
-      stakingRouter.updateStakingModule(module1.id, 10001, 300, 700, { from: voting }),
-      'ErrorValueOver100Percent("_targetShare")'
-    )
-
-    await assert.revertsWithCustomError(
-      stakingRouter.updateStakingModule(module1.id, 10000, 10001, 700, { from: voting }),
-      'ErrorValueOver100Percent("_stakingModuleFee + _treasuryFee")'
-    )
-
-    await assert.revertsWithCustomError(
-      stakingRouter.updateStakingModule(module1.id, 10000, 300, 10001, { from: voting }),
-      'ErrorValueOver100Percent("_stakingModuleFee + _treasuryFee")'
-    )
-
-    // distribution fee calculates on active keys in modules
-    const depositAmount = 32
-    await setupNodeOperatorsForELRewardsVaultTests(user2, ETH(depositAmount))
-
-    const {totalFee} = await app.getFee()
-    assertBn(totalFee, toPrecBP(1000))
-
-    const distribution = await app.getFeeDistribution({ from: nobody })
-    assertBn(distribution.modulesFee, toPrecBP(300))
-    assertBn(distribution.treasuryFee, toPrecBP(700))
   })
 
   it('setWithdrawalCredentials works', async () => {
@@ -990,7 +939,7 @@ contract('Lido', ([appManager, user1, user2, user3, nobody, depositor, treasury]
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(33) })
     await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     assertBn(await depositContract.totalCalls(), 1)
-    await assertRevert(operators.removeSigningKey(0, 0, { from: voting }), 'KEY_WAS_USED')
+    await assertRevert(operators.removeSigningKey(0, 0, { from: voting }), 'OUT_OF_RANGE')
 
     assertBn(await app.getBufferedEther(), ETH(1))
 

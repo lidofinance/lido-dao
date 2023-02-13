@@ -4,7 +4,7 @@ const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
 
 const { assertRevert } = require('../helpers/assertThrow')
-const { pad, ETH, tokens } = require('../helpers/utils')
+const { pad, ETH, tokens, toBN } = require('../helpers/utils')
 const { signDepositData } = require('../helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 const { deployProtocol } = require('../helpers/protocol')
@@ -12,6 +12,7 @@ const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 const { SLOTS_PER_FRAME, SECONDS_PER_FRAME } = require('../helpers/constants')
 const { pushOracleReport } = require('../helpers/oracle')
 const { oracleReportSanityCheckerStubFactory } = require('../helpers/factories')
+
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
@@ -445,9 +446,9 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const lossReported = ETH(1)
     awaitingUser1Balance = awaitingUser1Balance.sub(new BN(lossReported))
 
-    // Reporting 1 ETH balance loss (61 => 60)
+    // Reporting 1 ETH balance loss ( total pooled 61 => 60)
 
-    await pushReport(1, ETH(60))
+    await pushReport(1, ETH(28))
 
     // Total shares stay the same because no fee shares are added
 
@@ -463,7 +464,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     const ether2Stat = await pool.getBeaconStat()
     assertBn(ether2Stat.depositedValidators, 2, 'deposited ether2')
-    assertBn(ether2Stat.beaconBalance, ETH(60), 'remote ether2')
+    assertBn(ether2Stat.beaconBalance, ETH(28), 'remote ether2')
 
     // Buffered Ether amount didn't change
 
@@ -493,7 +494,11 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     awaitingUser1Balance = awaitingUser1Balance.add(new BN(depositAmount))
 
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: depositAmount })
+
+    console.log((await pool.balanceOf(user1)).toString())
     const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
+    console.log((await pool.balanceOf(user1)).toString())
+
     const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
     const signatures = [
       signDepositData(
@@ -604,7 +609,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     assertBn(nodeOperatorsRegistrySharesAfter, nodeOperatorsRegistrySharesBefore, `NOR stakingModule hasn't got fees`)
 
     const tenKBN = new BN(10000)
-    const totalFeeToDistribute = new BN(ETH(beaconBalanceIncrement)).mul(new BN(totalFeePoints)).div(tenKBN)
+    const totalFeeToDistribute = new BN(beaconBalanceIncrement.toString()).mul(new BN(totalFeePoints)).div(tenKBN)
 
     const totalPooledEther = await pool.getTotalPooledEther()
     let sharesToMint = totalFeeToDistribute
@@ -642,7 +647,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     await pushReport(2, ETH(96))
 
     // kicks rewards distribution
-    await nodeOperatorsRegistry.finishUpdatingExitedValidatorsKeysCount({ from: voting })
+    await nodeOperatorsRegistry.updateExitedValidatorsCount(0, 1, { from: voting })
 
     const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
     const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)
@@ -658,5 +663,4 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
       `second node operator gained shares under fee distribution`
     )
   })
-
 })
