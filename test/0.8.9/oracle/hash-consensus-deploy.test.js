@@ -1,5 +1,5 @@
-const { assert } = require('chai')
-const { bn } = require('@aragon/contract-helpers-test')
+const { assert } = require('../../helpers/assert')
+const { bn, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
 const HashConsensus = artifacts.require('HashConsensusTimeTravellable')
 const MockReportProcessor = artifacts.require('MockReportProcessor')
@@ -124,6 +124,39 @@ contract('HashConsensus', ([admin, member1]) => {
       const config = await consensus.getFrameConfig()
       assert.equal(+config.initialEpoch, INITIAL_EPOCH)
       assert.equal(+config.epochsPerFrame, EPOCHS_PER_FRAME)
+    })
+
+    it('reverts if report processor address is zero', async () => {
+      await assert.reverts(HashConsensus.new(
+          SLOTS_PER_EPOCH,
+          SECONDS_PER_SLOT,
+          GENESIS_TIME,
+          EPOCHS_PER_FRAME,
+          INITIAL_EPOCH,
+          INITIAL_FAST_LANE_LENGTH_SLOTS,
+          admin,
+          ZERO_ADDRESS,
+          { from: admin }
+        ),
+        'ReportProcessorCannotBeZero()'
+      )
+    })
+
+    it('reverts if admin address is zero', async () => {
+      const reportProcessor = await MockReportProcessor.new(CONSENSUS_VERSION, { from: admin })
+      await assert.reverts(HashConsensus.new(
+          SLOTS_PER_EPOCH,
+          SECONDS_PER_SLOT,
+          GENESIS_TIME,
+          EPOCHS_PER_FRAME,
+          INITIAL_EPOCH,
+          INITIAL_FAST_LANE_LENGTH_SLOTS,
+          ZERO_ADDRESS,
+          reportProcessor.address,
+          { from: admin }
+        ),
+        'AdminCannotBeZero()'
+      )
     })
   })
 })
