@@ -35,9 +35,11 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
 
     // @notion simple wrapper for base URI string
     //  Solidity does not allow to store string in UnstructuredStorage
-    struct BaseUri {
+    struct BaseURI {
         string value;
     }
+
+    event BaseURISet(string baseURI);
 
     error ApprovalToOwner();
     error ApproveToCaller();
@@ -90,19 +92,20 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
     function tokenURI(uint256 _requestId) public view virtual override returns (string memory) {
         if (!_existsAndNotClaimed(_requestId)) revert InvalidRequestId(_requestId);
 
-        string memory baseURI = _getBaseUri().value;
+        string memory baseURI = _getBaseURI().value;
         return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, _requestId.toString())) : "";
     }
 
     /// @notice Base URI for computing {tokenURI}. If set, the resulting URI for each
     /// token will be the concatenation of the `baseURI` and the `_requestId`.
-    function getBaseUri() external view returns (string memory) {
-        return _getBaseUri().value;
+    function getBaseURI() external view returns (string memory) {
+        return _getBaseURI().value;
     }
 
     /// @notice Sets the Base URI for computing {tokenURI}
-    function setBaseUri(string calldata _baseUri) external onlyRole(SET_BASE_URI_ROLE) {
-        _getBaseUri().value = _baseUri;
+    function setBaseURI(string calldata _baseURI) external onlyRole(SET_BASE_URI_ROLE) {
+        _getBaseURI().value = _baseURI;
+        emit BaseURISet(_baseURI);
     }
 
     /// @dev See {IERC721-balanceOf}.
@@ -302,10 +305,10 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
         return OPERATOR_APPROVALS_POSITION.storageMapAddressMapAddressBool();
     }
 
-    function _getBaseUri() internal pure returns (BaseUri storage baseUri) {
+    function _getBaseURI() internal pure returns (BaseURI storage baseURI) {
         bytes32 position = BASE_URI_POSITION;
         assembly {
-            baseUri.slot := position
+            baseURI.slot := position
         }
     }
 }
