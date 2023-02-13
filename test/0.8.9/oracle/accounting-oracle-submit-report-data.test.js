@@ -1,5 +1,4 @@
 const { assert } = require('../../helpers/assert')
-const { assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { e9, e18, e27 } = require('../../helpers/utils')
 
 const {
@@ -153,7 +152,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         await consensus.setTime(deadline)
 
         const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
-        assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
+        assert.emits(tx, 'ProcessingStarted', { refSlot: reportFields.refSlot })
       })
     })
 
@@ -180,7 +179,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         await consensus.setTime(deadline)
         const { newReportFields, newReportItems } = await prepareNextReportInNextFrame({ ...reportFields })
         const tx = await oracle.submitReportData(newReportItems, oracleVersion, { from: member1 })
-        assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: newReportFields.refSlot } })
+        assert.emits(tx, 'ProcessingStarted', { refSlot: newReportFields.refSlot })
       })
     })
 
@@ -216,7 +215,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const { refSlot } = await consensus.getCurrentFrame()
 
         const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
-        assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
+        assert.emits(tx, 'ProcessingStarted', { refSlot: reportFields.refSlot })
 
         const newConsensusVersion = CONSENSUS_VERSION + 1
         const nextRefSlot = +refSlot + SLOTS_PER_FRAME
@@ -233,7 +232,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         await consensus.submitReport(newReportFields.refSlot, newReportHash, newConsensusVersion, { from: member1 })
 
         const txNewVersion = await oracle.submitReportData(newReportItems, oracleVersion, { from: member1 })
-        assertEvent(txNewVersion, 'ProcessingStarted', { expectedArgs: { refSlot: newReportFields.refSlot } })
+        assert.emits(txNewVersion, 'ProcessingStarted', { refSlot: newReportFields.refSlot })
       })
     })
 
@@ -261,7 +260,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         })
 
         const tx = await oracle.submitReportData(newReportItems, oracleVersion, { from: member1 })
-        assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: newReportFields.refSlot } })
+        assert.emits(tx, 'ProcessingStarted', { refSlot: newReportFields.refSlot })
       })
     })
 
@@ -283,7 +282,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
       it('submits if data successfully pass hash validation', async () => {
         const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
-        assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
+        assert.emits(tx, 'ProcessingStarted', { refSlot: reportFields.refSlot })
       })
     })
 
@@ -326,7 +325,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         assert.equals((await mockLido.getLastCall_handleOracleReport()).callCount, 0)
         await consensus.setTime(deadline)
         const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
-        assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
+        assert.emits(tx, 'ProcessingStarted', { refSlot: reportFields.refSlot })
 
         const lastOracleReportToLido = await mockLido.getLastCall_handleOracleReport()
 
@@ -350,7 +349,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         assert.equals((await mockStakingRouter.lastCall_updateExitedKeysByModule()).callCount, 0)
         await consensus.setTime(deadline)
         const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
-        assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
+        assert.emits(tx, 'ProcessingStarted', { refSlot: reportFields.refSlot })
 
         const lastOracleReportToStakingRouter = await mockStakingRouter.lastCall_updateExitedKeysByModule()
 
