@@ -12,7 +12,8 @@ const {
   EXTRA_DATA_FORMAT_LIST,
   SLOTS_PER_FRAME,
   SECONDS_PER_SLOT,
-  GENESIS_TIME
+  GENESIS_TIME,
+  ZERO_HASH
 } = require('./accounting-oracle-deploy.test')
 
 contract('AccountingOracle', ([admin, account1, account2, member1, member2, stranger]) => {
@@ -489,6 +490,29 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           oracle.submitReportData(changedReportItems, oracleVersion, { from: member1 }),
           `UnsupportedExtraDataFormat(${EXTRA_DATA_FORMAT_LIST + 1})`
         )
+      })
+    })
+
+    context('ExtraDataProcessingState', () => {
+      it('should be empty from start', async () => {
+        const data = await oracle.getExtraDataProcessingState()
+        assert.equals(data.refSlot, '0')
+        assert.equals(data.dataFormat, '0')
+        assert.equals(data.itemsCount, '0')
+        assert.equals(data.itemsProcessed, '0')
+        assert.equals(data.lastSortingKey, '0')
+        assert.equals(data.dataHash, ZERO_HASH)
+      })
+
+      it('should be filled with report data after submitting', async () => {
+        await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
+        const data = await oracle.getExtraDataProcessingState()
+        assert.equals(data.refSlot, reportFields.refSlot)
+        assert.equals(data.dataFormat, reportFields.extraDataFormat)
+        assert.equals(data.itemsCount, reportFields.extraDataItemsCount)
+        assert.equals(data.itemsProcessed, '0')
+        assert.equals(data.lastSortingKey, '0')
+        assert.equals(data.dataHash, reportFields.extraDataHash)
       })
     })
   })

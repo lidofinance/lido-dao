@@ -30,4 +30,8 @@ contract AccountingOracleTimeTravellable is AccountingOracle, ITimeProvider {
         address consensus = CONSENSUS_CONTRACT_POSITION.getStorageAddress();
         return ITimeProvider(consensus).getTime();
     }
+
+    function getExtraDataProcessingState() external view returns (ExtraDataProcessingState memory) {
+        return _storageExtraDataProcessingState().value;
+    }
 }
