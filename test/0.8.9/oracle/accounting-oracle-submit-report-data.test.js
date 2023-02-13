@@ -30,6 +30,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
   let extraData = null
   let lido = null
   let oracleReportSanityChecker = null
+  let legacyOracle = null
 
   const deploy = async (options = undefined) => {
     const deployed = await deployAndConfigureAccountingOracle(admin)
@@ -79,6 +80,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     mockStakingRouter = deployed.stakingRouter
     lido = deployed.lido
     oracleReportSanityChecker = deployed.oracleReportSanityChecker
+    legacyOracle = deployed.legacyOracle
   }
 
   async function prepareNextReport(newReportFields) {
@@ -328,7 +330,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       })
     })
 
-    context('delivers the data to Lido and StakingRouter', () => {
+    context('delivers the data to Lido, StakingRouter and LegacyOracle', () => {
       it('should call handleOracleReport on Lido', async () => {
         assert.equals((await lido.getLastCall_handleOracleReport()).callCount, 0)
         await consensus.setTime(deadline)
@@ -364,6 +366,15 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         assert.equals(lastOracleReportToStakingRouter.callCount, 1)
         assert.equals(lastOracleReportToStakingRouter.moduleIds, reportFields.stakingModuleIdsWithNewlyExitedValidators)
         assert.equals(lastOracleReportToStakingRouter.exitedKeysCounts, reportFields.numExitedValidatorsByStakingModule)
+      })
+
+      it('should call call handleConsensusLayerReport on legacyOracle', async () => {
+        await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
+        const lastCall = await legacyOracle.lastCall__handleConsensusLayerReport();
+        assert.equal(+lastCall.totalCalls, 1)
+        assert.equal(+lastCall.refSlot, reportFields.refSlot)
+        assert.equal(+lastCall.clBalance, e9(reportFields.clBalanceGwei))
+        assert.equal(+lastCall.clValidators, reportFields.numValidators)
       })
     })
 
