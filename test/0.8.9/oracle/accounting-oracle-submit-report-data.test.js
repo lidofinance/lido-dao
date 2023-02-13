@@ -138,7 +138,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         )
       })
 
-      it('should should allow calling if correct ref slot version', async () => {
+      it('should should allow calling if correct ref slot', async () => {
         await consensus.setTime(deadline)
         const { refSlot } = await consensus.getCurrentFrame()
 
@@ -184,6 +184,31 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           oracle.submitReportData(reportItemsPrevVersion, oracleVersion, { from: member1 }),
           `UnexpectedConsensusVersion(${oracleVersion}, ${incorrectPrevVersion})`
         )
+      })
+
+      it('should should allow calling if correct consensus version', async () => {
+        await consensus.setTime(deadline)
+        const { refSlot } = await consensus.getCurrentFrame()
+
+        const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
+        assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
+
+        const newConsensusVersion = CONSENSUS_VERSION + 1
+        const nextRefSlot = +refSlot + SLOTS_PER_FRAME
+        const newReportFields = {
+          ...reportFields,
+          refSlot: nextRefSlot,
+          consensusVersion: newConsensusVersion
+        }
+        const newReportItems = getReportDataItems(newReportFields)
+        const newReportHash = calcReportDataHash(newReportItems)
+
+        await oracle.setConsensusVersion(newConsensusVersion, { from: admin })
+        await consensus.advanceTimeToNextFrameStart()
+        await consensus.submitReport(newReportFields.refSlot, newReportHash, newConsensusVersion, { from: member1 })
+
+        const txNewVersion = await oracle.submitReportData(newReportItems, oracleVersion, { from: member1 })
+        assertEvent(txNewVersion, 'ProcessingStarted', { expectedArgs: { refSlot: newReportFields.refSlot } })
       })
     })
   })
