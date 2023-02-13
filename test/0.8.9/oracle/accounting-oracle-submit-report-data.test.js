@@ -11,7 +11,9 @@ const {
   calcExtraDataListHash,
   calcReportDataHash,
   EXTRA_DATA_FORMAT_LIST,
-  SLOTS_PER_FRAME
+  SLOTS_PER_FRAME,
+  SECONDS_PER_SLOT,
+  GENESIS_TIME
 } = require('./accounting-oracle-deploy.test')
 
 contract('AccountingOracle', ([admin, account1, account2, member1, member2, stranger]) => {
@@ -27,6 +29,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
   let deadline = null
   let mockStakingRouter = null
   let extraData = null
+  let lido = null
 
   const deploy = async (options = undefined) => {
     const deployed = await deployAndConfigureAccountingOracle(admin)
@@ -75,6 +78,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     consensus = deployed.consensus
     mockLido = deploy.mockLido
     mockStakingRouter = deployed.stakingRouter
+    lido = deployed.lido
   }
 
   async function prepareNextReport(newReportFields) {
@@ -103,6 +107,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       assert.isNotNull(oracleVersion)
       assert.isNotNull(deadline)
       assert.isNotNull(mockStakingRouter)
+      assert.isNotNull(lido)
     })
   })
 
@@ -328,6 +333,87 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
         const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
         assertEvent(tx, 'ExtraDataSubmitted', { expectedArgs: { refSlot: newReportFields.refSlot } })
+      })
+    })
+
+    context('checks data cache', () => {
+      it('reverts with UnexpectedDataHash', async () => {
+        const incorrectReportItems = getReportDataItems({
+          ...reportFields,
+          numValidators: reportFields.numValidators - 1
+        })
+
+        const correctDataHash = calcReportDataHash(reportItems)
+        const incorrectDataHash = calcReportDataHash(incorrectReportItems)
+
+        await assert.reverts(
+          oracle.submitReportData(incorrectReportItems, oracleVersion, { from: member1 }),
+          `UnexpectedDataHash("${correctDataHash}", "${incorrectDataHash}")`
+        )
+      })
+    })
+
+    context('delivers the data to Lido and StakingRouter', () => {
+      it('should call handleOracleReport on Lido', async () => {
+        assert.equals((await lido.getLastCall_handleOracleReport()).callCount, 0)
+        await consensus.setTime(deadline)
+        const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
+        assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
+
+        const lastOracleReportToLido = await lido.getLastCall_handleOracleReport()
+
+        assert.equals(lastOracleReportToLido.callCount, 1)
+        assert.equals(
+          lastOracleReportToLido.currentReportTimestamp,
+          GENESIS_TIME + reportFields.refSlot * SECONDS_PER_SLOT
+        )
+
+        assert.equals(lastOracleReportToLido.clBalance, reportFields.clBalanceGwei + '000000000')
+        assert.equals(lastOracleReportToLido.withdrawalVaultBalance, reportFields.withdrawalVaultBalance)
+        assert.equals(lastOracleReportToLido.elRewardsVaultBalance, reportFields.elRewardsVaultBalance)
+        assert.equals(
+          lastOracleReportToLido.lastWithdrawalRequestIdToFinalize,
+          reportFields.lastWithdrawalRequestIdToFinalize
+        )
+        assert.equals(lastOracleReportToLido.finalizationShareRate, reportFields.finalizationShareRate)
+      })
+
+      it('should call updateExitedValidatorsCountByStakingModule on stakingRouter', async () => {
+        assert.equals((await mockStakingRouter.lastCall_updateExitedKeysByModule()).callCount, 0)
+        await consensus.setTime(deadline)
+        const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
+        assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
+
+        const lastOracleReportToStakingRouter = await mockStakingRouter.lastCall_updateExitedKeysByModule()
+
+        assert.equals(lastOracleReportToStakingRouter.callCount, 1)
+        assert.equals(lastOracleReportToStakingRouter.moduleIds, reportFields.stakingModuleIdsWithNewlyExitedValidators)
+        assert.equals(lastOracleReportToStakingRouter.exitedKeysCounts, reportFields.numExitedValidatorsByStakingModule)
+      })
+    })
+
+    context('enforces extra data format', () => {
+      it('should revert on invalid extra data format', async () => {
+        await consensus.setTime(deadline)
+        await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
+
+        const nextRefSlot = reportFields.refSlot + SLOTS_PER_FRAME
+        const changedReportItems = getReportDataItems({
+          ...reportFields,
+          refSlot: nextRefSlot,
+          extraDataFormat: EXTRA_DATA_FORMAT_LIST + 1
+        })
+
+        const changedReportHash = calcReportDataHash(changedReportItems)
+        await consensus.advanceTimeToNextFrameStart()
+        await consensus.submitReport(nextRefSlot, changedReportHash, CONSENSUS_VERSION, {
+          from: member1
+        })
+
+        await assert.revertsWithCustomError(
+          oracle.submitReportData(changedReportItems, oracleVersion, { from: member1 }),
+          `UnsupportedExtraDataFormat(${EXTRA_DATA_FORMAT_LIST + 1})`
+        )
       })
     })
   })
