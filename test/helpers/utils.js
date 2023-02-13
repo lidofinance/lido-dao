@@ -142,7 +142,7 @@ const toNum = (x) => Array.isArray(x) ? x.map(toNum) : +x
 const toStr = (x) => Array.isArray(x) ? x.map(toStr) : `${x}`
 
 const setBalance = async (address, value) => {
-  await hre.network.provider.send('hardhat_setBalance', [address, '0x' + toBN(value).toString(16)])
+  await hre.network.provider.send('hardhat_setBalance', [address, web3.utils.numberToHex(value)])
 }
 
 module.exports = {

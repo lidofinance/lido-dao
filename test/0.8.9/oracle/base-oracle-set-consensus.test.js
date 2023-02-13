@@ -95,7 +95,7 @@ contract('BaseOracle', ([admin, member, notMember]) => {
       )
       await newConsensusContract.setCurrentFrame(10, initialRefSlot + 1, initialRefSlot + SLOTS_PER_FRAME)
       const tx = await baseOracle.setConsensusContract(newConsensusContract.address)
-      assert.emits(tx, 'ConsensusContractSet', { addr: newConsensusContract.address, prevAddr: consensus.address })
+      assert.emits(tx, 'ConsensusHashContractSet', { addr: newConsensusContract.address, prevAddr: consensus.address })
       const addressAtStorage = await baseOracle.getConsensusContract()
       assert.addressEqual(addressAtStorage, newConsensusContract.address)
     })
