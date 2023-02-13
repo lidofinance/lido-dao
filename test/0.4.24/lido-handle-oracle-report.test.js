@@ -1,20 +1,18 @@
 const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
-const { ETH, toBN, genKeys } = require('../helpers/utils')
+const { ETH, toBN, genKeys, setBalance } = require('../helpers/utils')
 const { deployProtocol } = require('../helpers/protocol')
 const { EvmSnapshot } = require('../helpers/blockchain')
 const { ZERO_ADDRESS } = require('../helpers/constants')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 
-const FunderMock = artifacts.require('FunderMock')
-const RewardEmulatorMock = artifacts.require('RewardEmulatorMock')
 const ONE_YEAR = 3600 * 24 * 365
 const ONE_DAY = 3600 * 24
 
 contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, anotherStranger, depositor, operator]) => {
   let deployed, snapshot, lido, treasury, voting, oracle
   let curatedModule, oracleReportSanityChecker, elRewardsVault
-  let withdrawalRewarderMock, withdrawalVault, elRewarderMock
+  let withdrawalVault
   let strangerBalanceBefore,
     anotherStrangerBalanceBefore,
     totalPooledEtherBefore,
@@ -40,10 +38,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
       }
     })
 
-    const funder = await FunderMock.new()
-    await funder.pay(deployed.oracle.address, { value: ETH(1) })
-    withdrawalRewarderMock = await RewardEmulatorMock.new(deployed.withdrawalVault.address)
-    elRewarderMock = await RewardEmulatorMock.new(deployed.elRewardsVault.address)
+    await setBalance(deployed.oracle.address, ETH(1))
     await hre.ethers.getImpersonatedSigner(deployed.oracle.address)
 
     await curatedModule.addNodeOperator('1', operator, { from: deployed.voting.address })
@@ -481,7 +476,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     })
 
     it('does not smooth withdrawals if report in limits', async () => {
-      await withdrawalRewarderMock.reward({ value: ETH(1) })
+      await setBalance(withdrawalVault, ETH(1))
 
       await oracleReportSanityChecker.setOracleReportLimits(
         {
@@ -509,7 +504,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     })
 
     it('smooths withdrawals if report out of limit', async () => {
-      await withdrawalRewarderMock.reward({ value: ETH(1.1) })
+      await setBalance(withdrawalVault, ETH(1.1))
 
       await oracleReportSanityChecker.setOracleReportLimits(
         {
@@ -538,7 +533,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     })
 
     it('does not smooth el rewards if report in limit without lido fee', async () => {
-      await elRewarderMock.reward({ value: ETH(1) })
+      await setBalance(elRewardsVault, ETH(1))
 
       await oracleReportSanityChecker.setOracleReportLimits(
         {
@@ -568,7 +563,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     })
 
     it('does not smooth el rewards if report in limit without lido fee', async () => {
-      await elRewarderMock.reward({ value: ETH(1.5) })
+      await setBalance(elRewardsVault, ETH(1.5))
 
       await oracleReportSanityChecker.setOracleReportLimits(
         {
@@ -597,7 +592,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     })
 
     it('smooths el rewards if report out of limit without lido fee', async () => {
-      await elRewarderMock.reward({ value: ETH(1.1) })
+      await setBalance(elRewardsVault, ETH(1.1))
 
       await oracleReportSanityChecker.setOracleReportLimits(
         {
@@ -626,7 +621,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     })
 
     it('does not smooth el rewards if report in limit', async () => {
-      await elRewarderMock.reward({ value: ETH(1) })
+      await setBalance(elRewardsVault, ETH(1))
 
       await oracleReportSanityChecker.setOracleReportLimits(
         {
@@ -656,7 +651,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     })
 
     it('smooths el rewards if report out of limit', async () => {
-      await elRewarderMock.reward({ value: ETH(1.1) })
+      await setBalance(elRewardsVault, ETH(1.1))
 
       await oracleReportSanityChecker.setOracleReportLimits(
         {
