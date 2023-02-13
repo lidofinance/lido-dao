@@ -272,7 +272,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       })
     })
 
-    context('checks data cache', () => {
+    context('checks data hash', () => {
       it('reverts with UnexpectedDataHash', async () => {
         const incorrectReportItems = getReportDataItems({
           ...reportFields,
