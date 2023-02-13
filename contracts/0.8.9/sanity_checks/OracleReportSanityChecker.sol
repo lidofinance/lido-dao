@@ -540,7 +540,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _noWithdrawalsPostTotalPooledEther,
         uint256 _noWithdrawalsPostTotalShares,
         uint256 _simulatedShareRate
-    ) internal view {
+    ) internal pure {
         uint256 actualShareRate = (
             _noWithdrawalsPostTotalPooledEther * SHARE_RATE_PRECISION_E27
         ) / _noWithdrawalsPostTotalShares;
