@@ -28,9 +28,10 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
   let deadline = null
   let mockStakingRouter = null
   let extraData = null
-  let lido = null
+  let mockLido = null
   let oracleReportSanityChecker = null
-  let legacyOracle = null
+  let mockLegacyOracle = null
+  let mockWithdrawalQueue = null
 
   const deploy = async (options = undefined) => {
     const deployed = await deployAndConfigureAccountingOracle(admin)
@@ -78,9 +79,10 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     oracle = deployed.oracle
     consensus = deployed.consensus
     mockStakingRouter = deployed.stakingRouter
-    lido = deployed.lido
+    mockLido = deployed.lido
     oracleReportSanityChecker = deployed.oracleReportSanityChecker
-    legacyOracle = deployed.legacyOracle
+    mockLegacyOracle = deployed.legacyOracle
+    mockWithdrawalQueue = deployed.withdrawalQueue
   }
 
   async function prepareNextReport(newReportFields) {
@@ -109,7 +111,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       assert.isNotNull(oracleVersion)
       assert.isNotNull(deadline)
       assert.isNotNull(mockStakingRouter)
-      assert.isNotNull(lido)
+      assert.isNotNull(mockLido)
     })
   })
 
@@ -330,14 +332,14 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       })
     })
 
-    context('delivers the data to Lido, StakingRouter and LegacyOracle', () => {
+    context('delivers the data to corresponded contracts', () => {
       it('should call handleOracleReport on Lido', async () => {
-        assert.equals((await lido.getLastCall_handleOracleReport()).callCount, 0)
+        assert.equals((await mockLido.getLastCall_handleOracleReport()).callCount, 0)
         await consensus.setTime(deadline)
         const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
         assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
 
-        const lastOracleReportToLido = await lido.getLastCall_handleOracleReport()
+        const lastOracleReportToLido = await mockLido.getLastCall_handleOracleReport()
 
         assert.equals(lastOracleReportToLido.callCount, 1)
         assert.equals(
@@ -368,13 +370,22 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         assert.equals(lastOracleReportToStakingRouter.exitedKeysCounts, reportFields.numExitedValidatorsByStakingModule)
       })
 
-      it('should call call handleConsensusLayerReport on legacyOracle', async () => {
+      it('should call handleConsensusLayerReport on legacyOracle', async () => {
         await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
-        const lastCall = await legacyOracle.lastCall__handleConsensusLayerReport();
+        const lastCall = await mockLegacyOracle.lastCall__handleConsensusLayerReport()
         assert.equal(+lastCall.totalCalls, 1)
         assert.equal(+lastCall.refSlot, reportFields.refSlot)
         assert.equal(+lastCall.clBalance, e9(reportFields.clBalanceGwei))
         assert.equal(+lastCall.clValidators, reportFields.numValidators)
+      })
+
+      it('should call updateBunkerMode on WithdrawalQueue', async () => {
+        const prevProcessingRefSlot = +(await oracle.getLastProcessingRefSlot())
+        await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
+        const lastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
+        assert.equal(+lastCall.callCount, 1)
+        assert.equal(+lastCall.isBunkerMode, reportFields.isBunkerMode)
+        assert.equal(+lastCall.prevReportTimestamp, GENESIS_TIME + prevProcessingRefSlot * SECONDS_PER_SLOT)
       })
     })
 
