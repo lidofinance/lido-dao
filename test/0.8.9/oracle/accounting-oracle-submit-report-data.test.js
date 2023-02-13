@@ -25,12 +25,14 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
   let extraDataItems = null
   let oracleVersion = null
   let deadline = null
+  let mockStakingRouter = null
+  let extraData = null
 
   const deploy = async (options = undefined) => {
     const deployed = await deployAndConfigureAccountingOracle(admin)
     const { refSlot } = await deployed.consensus.getCurrentFrame()
 
-    const extraData = {
+    extraData = {
       stuckKeys: [
         { moduleId: 1, nodeOpIds: [0], keysCounts: [1] },
         { moduleId: 2, nodeOpIds: [0], keysCounts: [2] },
@@ -72,6 +74,18 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     oracle = deployed.oracle
     consensus = deployed.consensus
     mockLido = deploy.mockLido
+    mockStakingRouter = deployed.stakingRouter
+  }
+
+  async function prepareNextReport(newReportFields) {
+    await consensus.setTime(deadline)
+
+    const newReportItems = getReportDataItems(newReportFields)
+    const reportHash = calcReportDataHash(newReportItems)
+
+    await consensus.advanceTimeToNextFrameStart()
+    await consensus.submitReport(newReportFields.refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
+    await oracle.submitReportData(newReportItems, oracleVersion, { from: member1 })
   }
 
   context('deploying', () => {
@@ -82,11 +96,13 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       assert.isNotNull(consensus)
       assert.isNotNull(mockLido)
       assert.isNotNull(reportItems)
+      assert.isNotNull(extraData)
       assert.isNotNull(extraDataList)
       assert.isNotNull(extraDataHash)
       assert.isNotNull(extraDataItems)
       assert.isNotNull(oracleVersion)
       assert.isNotNull(deadline)
+      assert.isNotNull(mockStakingRouter)
     })
   })
 
@@ -209,6 +225,109 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
         const txNewVersion = await oracle.submitReportData(newReportItems, oracleVersion, { from: member1 })
         assertEvent(txNewVersion, 'ProcessingStarted', { expectedArgs: { refSlot: newReportFields.refSlot } })
+      })
+    })
+
+    context('enforces module ids sorting order', () => {
+      beforeEach(deploy)
+
+      it('should revert if incorrect extra data list stuckKeys moduleId', async () => {
+        const { refSlot } = await consensus.getCurrentFrame()
+
+        const nextRefSlot = +refSlot + SLOTS_PER_FRAME
+        const invalidExtraData = {
+          ...extraData,
+          stuckKeys: [
+            ...extraData.stuckKeys,
+            { moduleId: 4, nodeOpIds: [1], keysCounts: [2] },
+            { moduleId: 4, nodeOpIds: [1], keysCounts: [2] }
+          ]
+        }
+        const extraDataItems = encodeExtraDataItems(invalidExtraData)
+        const extraDataList = packExtraDataList(extraDataItems)
+        const extraDataHash = calcExtraDataListHash(extraDataList)
+
+        const newReportFields = {
+          ...reportFields,
+          refSlot: nextRefSlot,
+          extraDataHash: extraDataHash,
+          extraDataItemsCount: extraDataItems.length
+        }
+
+        await prepareNextReport(newReportFields)
+
+        await assert.reverts(
+          oracle.submitReportExtraDataList(extraDataList, {
+            from: member1
+          }),
+          'InvalidExtraDataSortOrder(4)'
+        )
+      })
+
+      it('should revert if incorrect extra data list exitedKeys moduleId', async () => {
+        const { refSlot } = await consensus.getCurrentFrame()
+
+        const nextRefSlot = +refSlot + SLOTS_PER_FRAME
+        const invalidExtraData = {
+          ...extraData,
+          exitedKeys: [
+            ...extraData.exitedKeys,
+            { moduleId: 4, nodeOpIds: [1], keysCounts: [2] },
+            { moduleId: 4, nodeOpIds: [1], keysCounts: [2] }
+          ]
+        }
+        const extraDataItems = encodeExtraDataItems(invalidExtraData)
+        const extraDataList = packExtraDataList(extraDataItems)
+        const extraDataHash = calcExtraDataListHash(extraDataList)
+
+        const newReportFields = {
+          ...reportFields,
+          refSlot: nextRefSlot,
+          extraDataHash: extraDataHash,
+          extraDataItemsCount: extraDataItems.length
+        }
+
+        await prepareNextReport(newReportFields)
+
+        await assert.reverts(
+          oracle.submitReportExtraDataList(extraDataList, {
+            from: member1
+          }),
+          'InvalidExtraDataSortOrder(6)'
+        )
+      })
+
+      it('should should allow calling if correct extra data list moduleId', async () => {
+        const { refSlot } = await consensus.getCurrentFrame()
+
+        const nextRefSlot = +refSlot + SLOTS_PER_FRAME
+        const invalidExtraData = {
+          stuckKeys: [
+            ...extraData.stuckKeys,
+            { moduleId: 4, nodeOpIds: [1], keysCounts: [2] },
+            { moduleId: 5, nodeOpIds: [1], keysCounts: [2] }
+          ],
+          exitedKeys: [
+            ...extraData.exitedKeys,
+            { moduleId: 4, nodeOpIds: [1], keysCounts: [2] },
+            { moduleId: 5, nodeOpIds: [1], keysCounts: [2] }
+          ]
+        }
+        const extraDataItems = encodeExtraDataItems(invalidExtraData)
+        const extraDataList = packExtraDataList(extraDataItems)
+        const extraDataHash = calcExtraDataListHash(extraDataList)
+
+        const newReportFields = {
+          ...reportFields,
+          refSlot: nextRefSlot,
+          extraDataHash: extraDataHash,
+          extraDataItemsCount: extraDataItems.length
+        }
+
+        await prepareNextReport(newReportFields)
+
+        const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
+        assertEvent(tx, 'ExtraDataSubmitted', { expectedArgs: { refSlot: newReportFields.refSlot } })
       })
     })
   })
