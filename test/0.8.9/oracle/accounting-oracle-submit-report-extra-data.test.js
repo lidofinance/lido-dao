@@ -50,7 +50,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       refSlot: +refSlot,
       numValidators: 10,
       clBalanceGwei: e9(320),
-      stakingModuleIdsWithNewlyExitedValidators: [1, 2, 1],
+      stakingModuleIdsWithNewlyExitedValidators: [1],
       numExitedValidatorsByStakingModule: [3],
       withdrawalVaultBalance: e18(1),
       elRewardsVaultBalance: e18(2),
