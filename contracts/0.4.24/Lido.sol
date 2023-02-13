@@ -145,10 +145,16 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     using StakeLimitUtils for StakeLimitState.Data;
 
     /// ACL
-    bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
-    bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
-    bytes32 public constant STAKING_PAUSE_ROLE = keccak256("STAKING_PAUSE_ROLE");
-    bytes32 public constant STAKING_CONTROL_ROLE = keccak256("STAKING_CONTROL_ROLE");
+    bytes32 public constant PAUSE_ROLE =
+        0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d; // keccak256("PAUSE_ROLE");
+    bytes32 public constant RESUME_ROLE =
+        0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7; // keccak256("RESUME_ROLE");
+    bytes32 public constant STAKING_PAUSE_ROLE =
+        0x84ea57490227bc2be925c684e2a367071d69890b629590198f4125a018eb1de8; // keccak256("STAKING_PAUSE_ROLE")
+    bytes32 public constant STAKING_CONTROL_ROLE =
+        0xa42eee1333c0758ba72be38e728b6dadb32ea767de5b4ddbaea1dae85b1b051f; // keccak256("STAKING_CONTROL_ROLE")
+    bytes32 public constant UNSAFE_CHANGE_DEPOSITED_VALIDATORS_ROLE =
+        0xe6dc5d79630c61871e99d341ad72c5a052bed2fc8c79e5a4480a7cd31117576c; // keccak256("UNSAFE_CHANGE_DEPOSITED_VALIDATORS_ROLE")
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
@@ -156,21 +162,28 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     uint256 private constant DONT_FINALIZE_WITHDRAWALS = 0;
 
     /// @dev storage slot position for the Lido protocol contracts locator
-    bytes32 internal constant LIDO_LOCATOR_POSITION = keccak256("lido.Lido.lidoLocator");
+    bytes32 internal constant LIDO_LOCATOR_POSITION =
+        0x9ef78dff90f100ea94042bd00ccb978430524befc391d3e510b5f55ff3166df7; // keccak256("lido.Lido.lidoLocator")
     /// @dev storage slot position of the staking rate limit structure
-    bytes32 internal constant STAKING_STATE_POSITION = keccak256("lido.Lido.stakeLimit");
+    bytes32 internal constant STAKING_STATE_POSITION =
+        0xa3678de4a579be090bed1177e0a24f77cc29d181ac22fd7688aca344d8938015; // keccak256("lido.Lido.stakeLimit");
     /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
-    bytes32 internal constant BUFFERED_ETHER_POSITION = keccak256("lido.Lido.bufferedEther");
+    bytes32 internal constant BUFFERED_ETHER_POSITION =
+        0xed310af23f61f96daefbcd140b306c0bdbf8c178398299741687b90e794772b0; // keccak256("lido.Lido.bufferedEther");
     /// @dev number of deposited validators (incrementing counter of deposit operations).
-    bytes32 internal constant DEPOSITED_VALIDATORS_POSITION = keccak256("lido.Lido.depositedValidators");
+    bytes32 internal constant DEPOSITED_VALIDATORS_POSITION =
+        0xe6e35175eb53fc006520a2a9c3e9711a7c00de6ff2c32dd31df8c5a24cac1b5c; // keccak256("lido.Lido.depositedValidators");
     /// @dev total amount of ether on Consensus Layer (sum of all the balances of Lido validators)
     // "beacon" in the `keccak256()` parameter is staying here for compatibility reason
-    bytes32 internal constant CL_BALANCE_POSITION = keccak256("lido.Lido.beaconBalance");
+    bytes32 internal constant CL_BALANCE_POSITION =
+        0xa66d35f054e68143c18f32c990ed5cb972bb68a68f500cd2dd3a16bbf3686483; // keccak256("lido.Lido.beaconBalance");
     /// @dev number of Lido's validators available in the Consensus Layer state
     // "beacon" in the `keccak256()` parameter is staying here for compatibility reason
-    bytes32 internal constant CL_VALIDATORS_POSITION = keccak256("lido.Lido.beaconValidators");
+    bytes32 internal constant CL_VALIDATORS_POSITION =
+        0x9f70001d82b6ef54e9d3725b46581c3eb9ee3aa02b941b6aa54d678a9ca35b10; // keccak256("lido.Lido.beaconValidators");
     /// @dev Just a counter of total amount of execution layer rewards received by Lido contract. Not used in the logic.
-    bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lido.Lido.totalELRewardsCollected");
+    bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION =
+        0xafe016039542d12eec0183bb0b1ffc2ca45b027126a494672fba4154ee77facb; // keccak256("lido.Lido.totalELRewardsCollected");
 
     // Staking was paused (don't accept user's ether submits)
     event StakingPaused();
