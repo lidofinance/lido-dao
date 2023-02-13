@@ -311,7 +311,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await app.unsafeUpdateValidatorsCount(firstNodeOperator, 1, 1, { from: voting })
       await app.unsafeUpdateValidatorsCount(secondNodeOperator, 1, 0, { from: voting })
 
-      await assert.reverts(app.updateRefundedValidatorsCount(firstNodeOperator, 1000, { from: voting }), "test")
+      await assert.reverts(app.updateRefundedValidatorsCount(firstNodeOperator, 1000, { from: voting }), "OUT_OF_RANGE")
     })
 
     it('penalized firstOperator, add refund less than stuck validators', async () => {
