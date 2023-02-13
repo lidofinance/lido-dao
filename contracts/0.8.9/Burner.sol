@@ -52,13 +52,13 @@ interface IStETH is IERC20 {
 contract Burner is IBurner, AccessControlEnumerable {
     using SafeERC20 for IERC20;
 
-    error ErrorAppAuthLidoFailed();
-    error ErrorDirectETHTransfer();
-    error ErrorZeroRecoveryAmount();
-    error ErrorStETHRecoveryWrongFunc();
-    error ErrorZeroBurnAmount();
-    error ErrorNotEnoughExcessStETH();
-    error ErrorZeroAddress(string field);
+    error AppAuthLidoFailed();
+    error DirectETHTransfer();
+    error ZeroRecoveryAmount();
+    error StETHRecoveryWrongFunc();
+    error ZeroBurnAmount();
+    error NotEnoughExcessStETH();
+    error ZeroAddress(string field);
 
     bytes32 public constant REQUEST_BURN_MY_STETH_ROLE = keccak256("REQUEST_BURN_MY_STETH_ROLE");
     bytes32 public constant RECOVER_ASSETS_ROLE = keccak256("RECOVER_ASSETS_ROLE");
@@ -138,9 +138,9 @@ contract Burner is IBurner, AccessControlEnumerable {
         uint256 _totalCoverSharesBurnt,
         uint256 _totalNonCoverSharesBurnt
     ) {
-        if (_admin == address(0)) revert ErrorZeroAddress("_admin");
-        if (_treasury == address(0)) revert ErrorZeroAddress("_treasury");
-        if (_stETH == address(0)) revert ErrorZeroAddress("_stETH");
+        if (_admin == address(0)) revert ZeroAddress("_admin");
+        if (_treasury == address(0)) revert ZeroAddress("_treasury");
+        if (_stETH == address(0)) revert ZeroAddress("_stETH");
 
         _setupRole(DEFAULT_ADMIN_ROLE, _admin);
         _setupRole(REQUEST_BURN_SHARES_ROLE, _stETH);
@@ -239,7 +239,7 @@ contract Burner is IBurner, AccessControlEnumerable {
       * Intentionally deny incoming ether
       */
     receive() external payable {
-        revert ErrorDirectETHTransfer();
+        revert DirectETHTransfer();
     }
 
     /**
@@ -250,8 +250,8 @@ contract Burner is IBurner, AccessControlEnumerable {
       * @param _amount token amount
       */
     function recoverERC20(address _token, uint256 _amount) external onlyRole(RECOVER_ASSETS_ROLE) {
-        if (_amount == 0) revert ErrorZeroRecoveryAmount();
-        if (_token == STETH) revert ErrorStETHRecoveryWrongFunc();
+        if (_amount == 0) revert ZeroRecoveryAmount();
+        if (_token == STETH) revert StETHRecoveryWrongFunc();
 
         emit ERC20Recovered(msg.sender, _token, _amount);
 
@@ -266,7 +266,7 @@ contract Burner is IBurner, AccessControlEnumerable {
       * @param _tokenId minted token id
       */
     function recoverERC721(address _token, uint256 _tokenId) external onlyRole(RECOVER_ASSETS_ROLE) {
-        if (_token == STETH) revert ErrorStETHRecoveryWrongFunc();
+        if (_token == STETH) revert StETHRecoveryWrongFunc();
 
         emit ERC721Recovered(msg.sender, _token, _tokenId);
 
@@ -288,7 +288,7 @@ contract Burner is IBurner, AccessControlEnumerable {
     function commitSharesToBurn(
         uint256 _sharesToBurnLimit
     ) external virtual override returns (uint256 sharesToBurnNow) {
-        if (msg.sender != STETH) revert ErrorAppAuthLidoFailed();
+        if (msg.sender != STETH) revert AppAuthLidoFailed();
 
         if (_sharesToBurnLimit == 0) {
             return 0;
@@ -372,7 +372,7 @@ contract Burner is IBurner, AccessControlEnumerable {
     }
 
     function _requestBurn(uint256 _sharesAmount, uint256 _stETHAmount, bool _isCover) private {
-        if (_sharesAmount == 0) revert ErrorZeroBurnAmount();
+        if (_sharesAmount == 0) revert ZeroBurnAmount();
 
         emit StETHBurnRequested(_isCover, msg.sender, _stETHAmount, _sharesAmount);
 

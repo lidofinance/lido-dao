@@ -496,17 +496,17 @@ contract('Lido', ([appManager, user1, user2, user3, nobody, depositor, treasury]
 
     await assert.revertsWithCustomError(
       stakingRouter.updateStakingModule(module1.id, 10001, 300, 700, { from: voting }),
-      'ErrorValueOver100Percent("_targetShare")'
+      'ValueOver100Percent("_targetShare")'
     )
 
     await assert.revertsWithCustomError(
       stakingRouter.updateStakingModule(module1.id, 10000, 10001, 700, { from: voting }),
-      'ErrorValueOver100Percent("_stakingModuleFee + _treasuryFee")'
+      'ValueOver100Percent("_stakingModuleFee + _treasuryFee")'
     )
 
     await assert.revertsWithCustomError(
       stakingRouter.updateStakingModule(module1.id, 10000, 300, 10001, { from: voting }),
-      'ErrorValueOver100Percent("_stakingModuleFee + _treasuryFee")'
+      'ValueOver100Percent("_stakingModuleFee + _treasuryFee")'
     )
 
     // distribution fee calculates on active keys in modules
@@ -622,7 +622,7 @@ contract('Lido', ([appManager, user1, user2, user3, nobody, depositor, treasury]
     // can not deposit with unset withdrawalCredentials
     await assert.revertsWithCustomError(
       app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor }),
-      'ErrorEmptyWithdrawalsCredentials()'
+      'EmptyWithdrawalsCredentials()'
     )
     // set withdrawalCredentials with keys, because they were trimmed
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })

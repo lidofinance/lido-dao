@@ -49,15 +49,21 @@ contract DepositSecurityModule {
     event DepositsPaused(address indexed guardian, uint24 indexed stakingModuleId);
     event DepositsUnpaused(uint24 indexed stakingModuleId);
 
-    error ErrorStakingModuleIdTooLarge();
-    error ErrorZeroAddress(string field);
-    error ErrorDuplicateAddress(address addr);
-    error ErrorNotAnOwner(address caller);
-    error ErrorSignature(string reason);
-    error ErrorDeposit(string reason);
-    error ErrorPauseIntentExpired();
-    error ErrorNotAGuardian(address addr);
-    error ErrorZeroParameter(string parameter);
+    error StakingModuleIdTooLarge();
+    error ZeroAddress(string field);
+    error DuplicateAddress(address addr);
+    error NotAnOwner(address caller);
+    error InvalidSignature();
+    error SignatureNotSorted();
+    error DepositNoQuorum();
+    error DepositRootChanged();
+    error DepositInactiveModule();
+    error DepositTooFrequent();
+    error DepositUnexpectedBlockHash();
+    error DepositNonceChanged();
+    error PauseIntentExpired();
+    error NotAGuardian(address addr);
+    error ZeroParameter(string parameter);
 
     bytes32 public immutable ATTEST_MESSAGE_PREFIX;
     bytes32 public immutable PAUSE_MESSAGE_PREFIX;
@@ -84,9 +90,9 @@ contract DepositSecurityModule {
         uint256 _minDepositBlockDistance,
         uint256 _pauseIntentValidityPeriodBlocks
     ) {
-        if (_lido == address(0)) revert ErrorZeroAddress("_lido");
-        if (_depositContract == address(0)) revert ErrorZeroAddress ("_depositContract");
-        if (_stakingRouter == address(0)) revert ErrorZeroAddress ("_stakingRouter");
+        if (_lido == address(0)) revert ZeroAddress("_lido");
+        if (_depositContract == address(0)) revert ZeroAddress ("_depositContract");
+        if (_stakingRouter == address(0)) revert ZeroAddress ("_stakingRouter");
 
         LIDO = ILido(_lido);
         STAKING_ROUTER = IStakingRouter(_stakingRouter);
@@ -124,12 +130,12 @@ contract DepositSecurityModule {
     }
 
     modifier onlyOwner() {
-        if (msg.sender != owner) revert ErrorNotAnOwner(msg.sender);
+        if (msg.sender != owner) revert NotAnOwner(msg.sender);
         _;
     }
 
     modifier validStakingModuleId(uint256 _stakingModuleId) {
-        if (_stakingModuleId > type(uint24).max) revert ErrorStakingModuleIdTooLarge();
+        if (_stakingModuleId > type(uint24).max) revert StakingModuleIdTooLarge();
         _;
     }
 
@@ -141,7 +147,7 @@ contract DepositSecurityModule {
     }
 
     function _setOwner(address _newOwner) internal {
-        if (_newOwner == address(0)) revert ErrorZeroAddress("_newOwner");
+        if (_newOwner == address(0)) revert ZeroAddress("_newOwner");
         owner = _newOwner;
         emit OwnerChanged(_newOwner);
     }
@@ -161,7 +167,7 @@ contract DepositSecurityModule {
     }
 
     function _setPauseIntentValidityPeriodBlocks(uint256 newValue) internal {
-        if (newValue == 0) revert ErrorZeroParameter("pauseIntentValidityPeriodBlocks");
+        if (newValue == 0) revert ZeroParameter("pauseIntentValidityPeriodBlocks");
         pauseIntentValidityPeriodBlocks = newValue;
         emit PauseIntentValidityPeriodBlocksChanged(newValue);
     }
@@ -200,7 +206,7 @@ contract DepositSecurityModule {
     }
 
     function _setMinDepositBlockDistance(uint256 newValue) internal {
-        if (newValue == 0) revert ErrorZeroParameter("minDepositBlockDistance");
+        if (newValue == 0) revert ZeroParameter("minDepositBlockDistance");
         if (newValue != minDepositBlockDistance) {
             minDepositBlockDistance = newValue;
             emit MinDepositBlockDistanceChanged(newValue);
@@ -280,8 +286,8 @@ contract DepositSecurityModule {
     }
 
     function _addGuardian(address _newGuardian) internal {
-        if (_newGuardian == address(0)) revert ErrorZeroAddress("_newGuardian");
-        if (_isGuardian(_newGuardian)) revert ErrorDuplicateAddress(_newGuardian);
+        if (_newGuardian == address(0)) revert ZeroAddress("_newGuardian");
+        if (_isGuardian(_newGuardian)) revert DuplicateAddress(_newGuardian);
         guardians.push(_newGuardian);
         guardianIndicesOneBased[_newGuardian] = guardians.length;
         emit GuardianAdded(_newGuardian);
@@ -294,7 +300,7 @@ contract DepositSecurityModule {
      */
     function removeGuardian(address addr, uint256 newQuorum) external onlyOwner {
         uint256 indexOneBased = guardianIndicesOneBased[addr];
-        if (indexOneBased == 0) revert ErrorNotAGuardian(addr);
+        if (indexOneBased == 0) revert NotAGuardian(addr);
 
         uint256 totalGuardians = guardians.length;
         assert(indexOneBased <= totalGuardians);
@@ -349,10 +355,10 @@ contract DepositSecurityModule {
             bytes32 msgHash = keccak256(abi.encodePacked(PAUSE_MESSAGE_PREFIX, blockNumber, stakingModuleId));
             guardianAddr = ECDSA.recover(msgHash, sig.r, sig.vs);
             guardianIndex = _getGuardianIndex(guardianAddr);
-            if (guardianIndex == -1) revert ErrorSignature("invalid");
+            if (guardianIndex == -1) revert InvalidSignature();
         }
 
-        if (block.number - blockNumber >  pauseIntentValidityPeriodBlocks) revert ErrorPauseIntentExpired();
+        if (block.number - blockNumber >  pauseIntentValidityPeriodBlocks) revert PauseIntentExpired();
 
         STAKING_ROUTER.pauseStakingModule(stakingModuleId);
         emit DepositsPaused(guardianAddr, uint24(stakingModuleId));
@@ -413,19 +419,19 @@ contract DepositSecurityModule {
         bytes calldata depositCalldata,
         Signature[] calldata sortedGuardianSignatures
     ) external validStakingModuleId(stakingModuleId) {
-        if (quorum == 0 || sortedGuardianSignatures.length < quorum) revert ErrorDeposit("no quorum");
+        if (quorum == 0 || sortedGuardianSignatures.length < quorum) revert DepositNoQuorum();
 
         bytes32 onchainDepositRoot = IDepositContract(DEPOSIT_CONTRACT).get_deposit_root();
-        if (depositRoot != onchainDepositRoot) revert ErrorDeposit("deposit root changed");
+        if (depositRoot != onchainDepositRoot) revert DepositRootChanged();
 
-        if (!STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId)) revert ErrorDeposit("inactive module");
+        if (!STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId)) revert DepositInactiveModule();
 
         uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
-        if (block.number - lastDepositBlock < minDepositBlockDistance) revert ErrorDeposit("too frequent");
-        if (blockHash == bytes32(0) || blockhash(blockNumber) != blockHash) revert ErrorDeposit("unexpected block hash");
+        if (block.number - lastDepositBlock < minDepositBlockDistance) revert DepositTooFrequent();
+        if (blockHash == bytes32(0) || blockhash(blockNumber) != blockHash) revert DepositUnexpectedBlockHash();
 
         uint256 onchainNonce = STAKING_ROUTER.getStakingModuleNonce(stakingModuleId);
-        if (nonce != onchainNonce) revert ErrorDeposit("nonce changed");
+        if (nonce != onchainNonce) revert DepositNonceChanged();
 
         _verifySignatures(depositRoot, blockNumber, blockHash, stakingModuleId, nonce, sortedGuardianSignatures);
 
@@ -448,8 +454,8 @@ contract DepositSecurityModule {
 
         for (uint256 i = 0; i < sigs.length; ++i) {
             address signerAddr = ECDSA.recover(msgHash, sigs[i].r, sigs[i].vs);
-            if (!_isGuardian(signerAddr)) revert ErrorSignature("invalid");
-            if (signerAddr <= prevSignerAddr) revert ErrorSignature("not sorted");
+            if (!_isGuardian(signerAddr)) revert InvalidSignature();
+            if (signerAddr <= prevSignerAddr) revert SignatureNotSorted();
             prevSignerAddr = signerAddr;
         }
     }

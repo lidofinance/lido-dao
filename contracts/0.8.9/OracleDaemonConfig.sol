@@ -13,12 +13,12 @@ contract OracleDaemonConfig is AccessControlEnumerable {
     mapping(string => bytes) private values;
 
     constructor(address _admin, address[] memory _configManagers) {
-        if (_admin == address(0)) revert ErrorZeroAddress();
+        if (_admin == address(0)) revert ZeroAddress();
 
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
 
         for (uint256 i = 0; i < _configManagers.length; ) {
-            if (_configManagers[i] == address(0)) revert ErrorZeroAddress();
+            if (_configManagers[i] == address(0)) revert ZeroAddress();
             _grantRole(CONFIG_MANAGER_ROLE, _configManagers[i]);
 
             unchecked {
@@ -28,30 +28,30 @@ contract OracleDaemonConfig is AccessControlEnumerable {
     }
 
     function set(string calldata _key, bytes calldata _value) external onlyRole(CONFIG_MANAGER_ROLE) {
-        if (values[_key].length > 0) revert ErrorValueExists(_key);
-        if (_value.length == 0) revert ErrorEmptyValue(_key);
+        if (values[_key].length > 0) revert ValueExists(_key);
+        if (_value.length == 0) revert EmptyValue(_key);
         values[_key] = _value;
 
         emit ConfigValueSet(_key, _value);
     }
 
     function update(string calldata _key, bytes calldata _value) external onlyRole(CONFIG_MANAGER_ROLE) {
-        if (values[_key].length == 0) revert ErrorValueDoesntExist(_key);
-        if (_value.length == 0) revert ErrorEmptyValue(_key);
+        if (values[_key].length == 0) revert ValueDoesntExist(_key);
+        if (_value.length == 0) revert EmptyValue(_key);
         values[_key] = _value;
 
         emit ConfigValueUpdated(_key, _value);
     }
 
     function unset(string calldata _key) external onlyRole(CONFIG_MANAGER_ROLE) {
-        if (values[_key].length == 0) revert ErrorValueDoesntExist(_key);
+        if (values[_key].length == 0) revert ValueDoesntExist(_key);
         delete values[_key];
 
         emit ConfigValueUnset(_key);
     }
 
     function get(string calldata _key) external view returns (bytes memory) {
-        if (values[_key].length == 0) revert ErrorValueDoesntExist(_key);
+        if (values[_key].length == 0) revert ValueDoesntExist(_key);
 
         return values[_key];
     }
@@ -60,7 +60,7 @@ contract OracleDaemonConfig is AccessControlEnumerable {
         bytes[] memory results = new bytes[](_keys.length);
 
         for (uint256 i = 0; i < _keys.length; ) {
-            if (values[_keys[i]].length == 0) revert ErrorValueDoesntExist(_keys[i]);
+            if (values[_keys[i]].length == 0) revert ValueDoesntExist(_keys[i]);
 
             results[i] = values[_keys[i]];
 
@@ -72,10 +72,10 @@ contract OracleDaemonConfig is AccessControlEnumerable {
         return results;
     }
 
-    error ErrorValueExists(string key);
-    error ErrorEmptyValue(string key);
-    error ErrorValueDoesntExist(string key);
-    error ErrorZeroAddress();
+    error ValueExists(string key);
+    error EmptyValue(string key);
+    error ValueDoesntExist(string key);
+    error ZeroAddress();
 
     event ConfigValueSet(string key, bytes value);
     event ConfigValueUpdated(string key, bytes value);

@@ -60,7 +60,7 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
     })
 
     it('reverts while gets all values', async () => {
-      await assert.revertsWithCustomError(config.getList([defaultKey]), `ErrorValueDoesntExist("${defaultKey}")`)
+      await assert.revertsWithCustomError(config.getList([defaultKey]), `ValueDoesntExist("${defaultKey}")`)
     })
   })
 
@@ -72,14 +72,14 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
     it("reverts when defaultValue for update doesn't exist", async () => {
       await assert.revertsWithCustomError(
         config.update(defaultKey, defaultValue, { from: manager }),
-        `ErrorValueDoesntExist("${defaultKey}")`
+        `ValueDoesntExist("${defaultKey}")`
       )
     })
 
     it("reverts when defaultValue for unset doen't exist", async () => {
       await assert.revertsWithCustomError(
         config.unset(defaultKey, { from: manager }),
-        `ErrorValueDoesntExist("${defaultKey}")`
+        `ValueDoesntExist("${defaultKey}")`
       )
     })
 
@@ -87,25 +87,25 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
       await config.set(defaultKey, defaultValue, { from: manager })
       await assert.revertsWithCustomError(
         config.set(defaultKey, updatedDefaultValue, { from: manager }),
-        `ErrorValueExists("${defaultKey}")`
+        `ValueExists("${defaultKey}")`
       )
     })
 
     it('reverts when admin is zero address', async () => {
       await assert.revertsWithCustomError(
         OracleDaemonConfig.new(ZERO_ADDRESS, [manager], { from: deployer }),
-        'ErrorZeroAddress()'
+        'ZeroAddress()'
       )
     })
 
     it('reverts when one of managers is zero address', async () => {
-      await assert.revertsWithCustomError(OracleDaemonConfig.new(deployer, [manager, ZERO_ADDRESS], { from: deployer }), 'ErrorZeroAddress()')
+      await assert.revertsWithCustomError(OracleDaemonConfig.new(deployer, [manager, ZERO_ADDRESS], { from: deployer }), 'ZeroAddress()')
     })
 
     it('revers when empty value passed to set', async () => {
       await assert.revertsWithCustomError(
         config.set(defaultKey, '0x', { from: manager }),
-        `ErrorEmptyValue("${defaultKey}")`
+        `EmptyValue("${defaultKey}")`
       )
     })
 
@@ -113,7 +113,7 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
       await config.set(defaultKey, defaultValue, { from: manager })
       await assert.revertsWithCustomError(
         config.update(defaultKey, '0x', { from: manager }),
-        `ErrorEmptyValue("${defaultKey}")`
+        `EmptyValue("${defaultKey}")`
       )
     })
   })

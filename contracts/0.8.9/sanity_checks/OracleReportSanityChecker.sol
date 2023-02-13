@@ -379,8 +379,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         view
     {
         uint256 limit = _limits.unpack().maxValidatorExitRequestsPerReport;
-        if (_exitRequestsCount > limit)
+        if (_exitRequestsCount > limit) {
             revert IncorrectNumberOfExitRequestsPerReport(limit);
+        }
     }
 
     /// @notice Check rate of exited validators per day
@@ -390,8 +391,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         view
     {
         uint256 limit = _limits.unpack().churnValidatorsPerDayLimit;
-        if (_exitedValidatorsCount > limit)
+        if (_exitedValidatorsCount > limit) {
             revert ExitedValidatorsLimitExceeded(limit, _exitedValidatorsCount);
+        }
     }
 
     /// @notice Check number of node operators reported per extra data item in accounting oracle
@@ -403,8 +405,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         view
     {
         uint256 limit = _limits.unpack().maxAccountingExtraDataListItemsCount;
-        if (_nodeOperatorsCount > limit)
+        if (_nodeOperatorsCount > limit) {
             revert TooManyNodeOpsPerExtraDataItem(_itemIndex, _nodeOperatorsCount);
+        }
     }
 
     /// @notice Check max accounting extra data list items count
@@ -414,8 +417,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         view
     {
         uint256 limit = _limits.unpack().maxAccountingExtraDataListItemsCount;
-        if (_extraDataListItemsCount > limit)
+        if (_extraDataListItemsCount > limit) {
             revert MaxAccountingExtraDataItemsCountExceeded(limit, _extraDataListItemsCount);
+        }
     }
 
     /// @notice Applies sanity checks to the withdrawal requests finalization

@@ -77,17 +77,17 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
     it(`can't use zero init addresses`, async () => {
       await assert.revertsWithCustomError(
         Burner.new(ZERO_ADDRESS, treasury, lido.address, bn(0), bn(0), { from: deployer }),
-        `ErrorZeroAddress("_admin")`
+        `ZeroAddress("_admin")`
       )
 
       await assert.revertsWithCustomError(
         Burner.new(voting, ZERO_ADDRESS, lido.address, bn(0), bn(0), { from: deployer }),
-        `ErrorZeroAddress("_treasury")`
+        `ZeroAddress("_treasury")`
       )
 
       await assert.revertsWithCustomError(
         Burner.new(voting, treasury, ZERO_ADDRESS, bn(0), bn(0), { from: deployer }),
-        `ErrorZeroAddress("_stETH")`
+        `ZeroAddress("_stETH")`
       )
     })
 
@@ -98,13 +98,13 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       // but zero request on cover
       await assert.revertsWithCustomError(
         burner.requestBurnMyStETHForCover(StETH(0), { from: voting }),
-        `ErrorZeroBurnAmount()`
+        `ZeroBurnAmount()`
       )
 
       // and zero request on non-cover
       await assert.revertsWithCustomError(
         burner.requestBurnMyStETH(StETH(0), { from: voting }),
-        `ErrorZeroBurnAmount()`
+        `ZeroBurnAmount()`
       )
     })
 
@@ -189,7 +189,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
 
       await assert.revertsWithCustomError(
         burner.commitSharesToBurn(ETH(10)),
-        `ErrorAppAuthLidoFailed()`
+        `AppAuthLidoFailed()`
       )
 
       // mimic the Lido for the callback invocation
@@ -219,12 +219,12 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       await assert.revertsWithCustomError(
         // should revert
         burner.commitSharesToBurn(ETH(10), { from: deployer }),
-        `ErrorAppAuthLidoFailed()`
+        `AppAuthLidoFailed()`
       )
 
       await assert.revertsWithCustomError(
         burner.commitSharesToBurn(ETH(10), { from: anotherAccount }),
-        `ErrorAppAuthLidoFailed()`
+        `AppAuthLidoFailed()`
       )
 
       const receipt = await burner.commitSharesToBurn(ETH(10), { from: lido.address })
@@ -273,13 +273,13 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
 
       await assert.revertsWithCustomError(
         burner.commitSharesToBurn(bn(500), { from: deployer }),
-        `ErrorAppAuthLidoFailed()`
+        `AppAuthLidoFailed()`
       )
 
       await assert.revertsWithCustomError(
         // even
         burner.commitSharesToBurn(ETH(6), { from: appManager }),
-        `ErrorAppAuthLidoFailed()`
+        `AppAuthLidoFailed()`
       )
 
       const receipt = await burner.commitSharesToBurn(ETH(3), { from: lido.address })
@@ -643,7 +643,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
 
     it(`can't recover zero ERC20 amount`, async () => {
       await assert.revertsWithCustomError(
-        burner.recoverERC20(mockERC20Token.address, bn(0), { from: voting }), `ErrorZeroRecoveryAmount()`
+        burner.recoverERC20(mockERC20Token.address, bn(0), { from: voting }), `ZeroRecoveryAmount()`
       )
     })
 
@@ -670,7 +670,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       // need to use recoverExcessStETH
       await assert.revertsWithCustomError(
         burner.recoverERC20(lido.address, StETH(1), { from: voting }),
-        `ErrorStETHRecoveryWrongFunc()`
+        `StETHRecoveryWrongFunc()`
       )
 
       // revert from deployer
@@ -755,7 +755,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       )
       await assert.revertsWithCustomError(
         burner.recoverERC721(lido.address, StETH(1), { from: voting }),
-        `ErrorStETHRecoveryWrongFunc()`
+        `StETHRecoveryWrongFunc()`
       )
 
       const receipt = await burner.recoverExcessStETH({ from: voting })
@@ -814,7 +814,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
 
     // try to send 1 ETH, should be reverted with fallback defined reason
     await assert.revertsWithCustomError(
-      web3.eth.sendTransaction({ from: anotherAccount, to: burner_addr, value: ETH(1) }), `ErrorDirectETHTransfer()`
+      web3.eth.sendTransaction({ from: anotherAccount, to: burner_addr, value: ETH(1) }), `DirectETHTransfer()`
     )
   })
 })
