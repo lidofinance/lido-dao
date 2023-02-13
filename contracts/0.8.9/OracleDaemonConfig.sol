@@ -29,6 +29,7 @@ contract OracleDaemonConfig is AccessControlEnumerable {
 
     function set(string calldata _key, bytes calldata _value) external onlyRole(CONFIG_MANAGER_ROLE) {
         if (values[_key].length > 0) revert ErrorValueExists(_key);
+        if (_value.length == 0) revert ErrorEmptyValue(_key);
         values[_key] = _value;
 
         emit ConfigValueSet(_key, _value);
