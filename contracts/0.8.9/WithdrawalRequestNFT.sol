@@ -39,6 +39,8 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
         string value;
     }
 
+    event BaseURISet(string baseURI);
+
     error ApprovalToOwner();
     error ApproveToCaller();
     error NotOwnerOrApprovedForAll(address sender);
@@ -103,6 +105,7 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
     /// @notice Sets the Base URI for computing {tokenURI}
     function setBaseUri(string calldata _baseUri) external onlyRole(SET_BASE_URI_ROLE) {
         _getBaseUri().value = _baseUri;
+        emit BaseURISet(_baseUri);
     }
 
     /// @dev See {IERC721-balanceOf}.
