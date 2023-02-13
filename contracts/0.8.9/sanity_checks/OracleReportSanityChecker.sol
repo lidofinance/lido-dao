@@ -493,7 +493,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
         uint256 churnLimit = (_limitsList.churnValidatorsPerDayLimit * _timeElapsed) / SECONDS_PER_DAY;
 
-        if (_appearedValidators > churnLimit) revert IncorrectAppearedValidators(churnLimit);
+        if (_appearedValidators > churnLimit) revert IncorrectAppearedValidators(_appearedValidators);
     }
 
     function _checkRequestIdToFinalizeUpTo(

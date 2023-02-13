@@ -8,6 +8,7 @@ const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 
 const ETHForwarderMock = artifacts.require('ETHForwarderMock')
 const ONE_YEAR = 3600 * 24 * 365
+const ONE_DAY = 3600 * 24
 
 contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, anotherStranger, depositor, operator]) => {
   let deployed, snapshot, lido, treasury, voting, oracle
@@ -37,11 +38,11 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
       }
     })
 
-    ETHForwarderMock.new(deployed.oracle.address, { from: appManager })
+    await ETHForwarderMock.new(deployed.oracle.address, { from: appManager, value: ETH(1) })
     await hre.ethers.getImpersonatedSigner(deployed.oracle.address)
 
     await curatedModule.addNodeOperator('1', operator, { from: deployed.voting.address })
-    const keysAmount = 50
+    const keysAmount = 120
     const keys1 = genKeys(keysAmount)
     await curatedModule.addSigningKeys(0, keysAmount, keys1.pubkeys, keys1.sigkeys, { from: deployed.voting.address })
     await curatedModule.setNodeOperatorStakingLimit(0, keysAmount, { from: deployed.voting.address })
@@ -371,5 +372,104 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         'IncorrectCLBalanceIncrease(101)'
       )
     })
+
+    it('does not revert on validators reported under limit', async () => {
+      await lido.submit(ZERO_ADDRESS, { from: stranger, value: ETH(3100), gasPrice: 1 })
+      await lido.deposit(100, 1, '0x', { from: depositor })
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
+          churnValidatorsPerDayLimit: 100,
+          oneOffCLBalanceDecreaseBPLimit: 100,
+          annualBalanceIncreaseBPLimit: 100,
+          shareRateDeviationBPLimit: 10000,
+          maxValidatorExitRequestsPerReport: 10000,
+          requestTimestampMargin: 0,
+          maxPositiveTokenRebase: 1000000000,
+          maxAccountingExtraDataListItemsCount: 10000
+        },
+        { from: voting, gasPrice: 1 }
+      )
+
+      await lido.handleOracleReport(0, ONE_DAY, 100, ETH(3200), 0, 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await checkStat({ depositedValidators: 100, beaconValidators: 100, beaconBalance: ETH(3200) })
+    })
+
+    it('reverts on validators reported when over limit', async () => {
+      await lido.submit(ZERO_ADDRESS, { from: stranger, value: ETH(3200), gasPrice: 1 })
+      await lido.deposit(101, 1, '0x', { from: depositor })
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
+          churnValidatorsPerDayLimit: 100,
+          oneOffCLBalanceDecreaseBPLimit: 100,
+          annualBalanceIncreaseBPLimit: 100,
+          shareRateDeviationBPLimit: 10000,
+          maxValidatorExitRequestsPerReport: 10000,
+          requestTimestampMargin: 0,
+          maxPositiveTokenRebase: 1000000000,
+          maxAccountingExtraDataListItemsCount: 10000
+        },
+        { from: voting, gasPrice: 1 }
+      )
+      await assert.reverts(
+        lido.handleOracleReport(0, ONE_DAY, 101, ETH(3200), 0, 0, 0, 0, { from: oracle, gasPrice: 1 }),
+        'IncorrectAppearedValidators(101)'
+      )
+    })
+
+    it('does not smooth if report in limits', async () => {
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
+          churnValidatorsPerDayLimit: 100,
+          oneOffCLBalanceDecreaseBPLimit: 100,
+          annualBalanceIncreaseBPLimit: 10000,
+          shareRateDeviationBPLimit: 10000,
+          maxValidatorExitRequestsPerReport: 10000,
+          requestTimestampMargin: 0,
+          maxPositiveTokenRebase: 10000000,
+          maxAccountingExtraDataListItemsCount: 10000
+        },
+        { from: voting, gasPrice: 1 }
+      )
+      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(97), 0, 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(97) })
+    })
+
+    it('does not smooth if cl balance report over limit', async () => {
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
+          churnValidatorsPerDayLimit: 100,
+          oneOffCLBalanceDecreaseBPLimit: 100,
+          annualBalanceIncreaseBPLimit: 10000,
+          shareRateDeviationBPLimit: 10000,
+          maxValidatorExitRequestsPerReport: 10000,
+          requestTimestampMargin: 0,
+          maxPositiveTokenRebase: 1000000,
+          maxAccountingExtraDataListItemsCount: 10000
+        },
+        { from: voting, gasPrice: 1 }
+      )
+      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(100), 0, 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(100) })
+    })
+
+    // it('smooths withdrawals if report in limits', async () => {
+    //   await ETHForwarderMock.new(deployed.withdrawalVault.address, { from: appManager, value: ETH(1) })
+
+    //   await oracleReportSanityChecker.setOracleReportLimits(
+    //     {
+    //       churnValidatorsPerDayLimit: 100,
+    //       oneOffCLBalanceDecreaseBPLimit: 100,
+    //       annualBalanceIncreaseBPLimit: 10000,
+    //       shareRateDeviationBPLimit: 10000,
+    //       maxValidatorExitRequestsPerReport: 10000,
+    //       requestTimestampMargin: 0,
+    //       maxPositiveTokenRebase: 10000000,
+    //       maxAccountingExtraDataListItemsCount: 10000
+    //     },
+    //     { from: voting, gasPrice: 1 }
+    //   )
+    //   await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96), ETH(1), 0, 0, 0, { from: oracle, gasPrice: 1 })
+    //   await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(97) })
+    // })
   })
 })
