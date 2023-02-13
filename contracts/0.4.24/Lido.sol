@@ -682,7 +682,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 withdrawalReserve = IWithdrawalQueue(getLidoLocator().withdrawalQueue()).unfinalizedStETH();
 
         if (bufferedEth > withdrawalReserve) {
-            bufferedEth = bufferedEth - withdrawalReserve;
+            bufferedEth -= withdrawalReserve;
             depositableEth = bufferedEth.div(DEPOSIT_SIZE).mul(DEPOSIT_SIZE);
         }
     }
