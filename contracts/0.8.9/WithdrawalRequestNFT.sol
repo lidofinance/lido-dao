@@ -161,15 +161,11 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
         if (!_checkOnERC721Received(_from, _to, _requestId, _data)) {
             revert TransferToNonIERC721Receiver(_to);
         }
-
-        emit Transfer(_from, _to, _requestId);
     }
 
     /// @dev See {IERC721-transferFrom}.
     function transferFrom(address _from, address _to, uint256 _requestId) external override {
         _transfer(_from, _to, _requestId);
-
-        emit Transfer(_from, _to, _requestId);
     }
 
     /// @dev Transfers `_requestId` from `_from` to `_to`.
@@ -181,6 +177,9 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
     /// - `_requestId` request must not be claimed and be owned by `_from`.
     /// - `msg.sender` should be approved, or approved for all, or owner
     function _transfer(address _from, address _to, uint256 _requestId) internal {
+
+
+
         if (_to == address(0)) revert TransferToZeroAddress();
         if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
@@ -188,13 +187,15 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
         if (request.claimed) revert RequestAlreadyClaimed(_requestId);
 
         if (_from != request.owner) revert TransferFromIncorrectOwner(_from, request.owner);
-        if (!_isApprovedOrOwner(msg.sender, _requestId, request)) revert NotOwnerOrApproved(msg.sender);
+        if (!(msg.sender == _from || isApprovedForAll(_from, msg.sender) || _getTokenApprovals()[_requestId] == msg.sender)) revert NotOwnerOrApproved(msg.sender);
 
         delete _getTokenApprovals()[_requestId];
         request.owner = payable(_to);
 
         _getRequestsByOwner()[_to].add(_requestId);
         _getRequestsByOwner()[_from].remove(_requestId);
+
+        _emitTransfer(_from, _to, _requestId);
     }
 
     /// @dev Internal function to invoke {IERC721Receiver-onERC721Received} on a target address.
@@ -225,20 +226,6 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
         } else {
             return true;
         }
-    }
-
-    /// @dev Returns whether `_spender` is allowed to manage `_requestId`.
-    ///
-    /// Requirements:
-    ///
-    /// - `_requestId` must exist (not checking).
-    function _isApprovedOrOwner(address _spender, uint256 _requestId, WithdrawalRequest memory request)
-        internal
-        view
-        returns (bool)
-    {
-        address owner = request.owner;
-        return (_spender == owner || isApprovedForAll(owner, _spender) || _getTokenApprovals()[_requestId] == _spender);
     }
 
     //
