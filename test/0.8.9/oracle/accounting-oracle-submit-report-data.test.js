@@ -94,7 +94,20 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     await consensus.advanceTimeToNextFrameStart()
     await consensus.submitReport(newReportFields.refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
 
-    return newReportItems
+    return {
+      newReportFields,
+      newReportItems,
+      reportHash
+    }
+  }
+
+  async function prepareNextReportInNextFrame(newReportFields) {
+    const { refSlot } = await consensus.getCurrentFrame()
+    const next = await prepareNextReport({
+      ...newReportFields,
+      refSlot: +refSlot + SLOTS_PER_FRAME
+    })
+    return next
   }
 
   context('deploying', () => {
@@ -165,21 +178,8 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
       it('should should allow calling if correct ref slot', async () => {
         await consensus.setTime(deadline)
-        const { refSlot } = await consensus.getCurrentFrame()
-
-        const nextRefSlot = +refSlot + SLOTS_PER_FRAME
-
-        const newReportFields = {
-          ...reportFields,
-          refSlot: nextRefSlot
-        }
-        const reportItems = getReportDataItems(newReportFields)
-
-        const reportHash = calcReportDataHash(reportItems)
-        await consensus.advanceTimeToNextFrameStart()
-        await consensus.submitReport(nextRefSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
-
-        const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
+        const { newReportFields, newReportItems } = await prepareNextReportInNextFrame({ ...reportFields })
+        const tx = await oracle.submitReportData(newReportItems, oracleVersion, { from: member1 })
         assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: newReportFields.refSlot } })
       })
     })
@@ -241,16 +241,11 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       beforeEach(deploy)
 
       it('should revert if incorrect stakingModuleIdsWithNewlyExitedValidators order', async () => {
-        const { refSlot } = await consensus.getCurrentFrame()
-
-        const nextRefSlot = +refSlot + SLOTS_PER_FRAME
-        const newReportFields = {
+        const { newReportItems } = await prepareNextReportInNextFrame({
           ...reportFields,
-          refSlot: nextRefSlot,
           stakingModuleIdsWithNewlyExitedValidators: [2, 1],
           numExitedValidatorsByStakingModule: [3, 4]
-        }
-        const newReportItems = await prepareNextReport(newReportFields)
+        })
 
         await assert.reverts(
           oracle.submitReportData(newReportItems, oracleVersion, { from: member1 }),
@@ -259,17 +254,11 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       })
 
       it('should should allow calling if correct extra data list moduleId', async () => {
-        const { refSlot } = await consensus.getCurrentFrame()
-
-        const nextRefSlot = +refSlot + SLOTS_PER_FRAME
-
-        const newReportFields = {
+        const { newReportFields, newReportItems } = await prepareNextReportInNextFrame({
           ...reportFields,
-          refSlot: nextRefSlot,
           stakingModuleIdsWithNewlyExitedValidators: [1, 2],
           numExitedValidatorsByStakingModule: [3, 4]
-        }
-        const newReportItems = await prepareNextReport(newReportFields)
+        })
 
         const tx = await oracle.submitReportData(newReportItems, oracleVersion, { from: member1 })
         assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: newReportFields.refSlot } })
