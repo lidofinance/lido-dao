@@ -482,8 +482,8 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     assertBn(await token.balanceOf(user1), ETH(60), `user1 balance decreased by lost ETH`)
   })
 
-  it(`the oracle can't report less validators than previously`, () => {
-    assert.reverts(pushReport(2, ETH(31)))
+  it(`the oracle can't report less validators than previously`, async () => {
+    await assert.reverts(pushReport(0, ETH(31)))
   })
 
   it(`user deposits another 32 ETH to the pool`, async () => {
@@ -517,7 +517,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
       '0x',
       signatures
     )
-    // TODO: check getBeaconStat call
+
     const ether2Stat = await pool.getBeaconStat()
     assertBn(ether2Stat.depositedValidators, 2, 'no validators have received the current deposit')
 
