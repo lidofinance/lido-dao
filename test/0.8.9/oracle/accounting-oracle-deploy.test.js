@@ -109,7 +109,7 @@ function calcExtraDataListHash(packedExtraDataList) {
 async function deployOracleReportSanityCheckerForAccounting(lidoLocator, admin) {
   const churnValidatorsPerDayLimit = 100
   const limitsList = [churnValidatorsPerDayLimit, 0, 0, 0, 0, 0, 32 * 12, 15]
-  const managersRoster = [[admin], [], [], [], [], [], [], [], []]
+  const managersRoster = [[admin], [admin], [admin], [admin], [admin], [admin], [admin], [admin], [admin]]
 
   const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
 
@@ -232,7 +232,7 @@ async function deployAccountingOracleSetup(
   // pretend we're at the first slot of the initial frame's epoch
   await consensus.setTime(genesisTime + initialEpoch * slotsPerEpoch * secondsPerSlot)
 
-  return { lido, stakingRouter, withdrawalQueue, locatorAddr, legacyOracle, oracle, consensus }
+  return { lido, stakingRouter, withdrawalQueue, locatorAddr, legacyOracle, oracle, consensus, oracleReportSanityChecker }
 }
 
 async function initAccountingOracle({
