@@ -287,6 +287,11 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           `UnexpectedDataHash("${correctDataHash}", "${incorrectDataHash}")`
         )
       })
+
+      it('submits if data successfully pass hash validation', async () => {
+        const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
+        assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
+      })
     })
 
     context('enforces data safety boundaries', () => {
