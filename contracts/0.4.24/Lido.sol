@@ -1374,11 +1374,11 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     function _burnSharesLimited(
         IBurner _burner,
         address _withdrawalQueue,
-        uint256 _withdrawalsSharesToBurn,
+        uint256 _sharesToBurnFromWithdrawalQueue,
         uint256 _sharesToBurnLimit
     ) internal returns (uint256 burntWithdrawalsShares) {
-        if (_withdrawalsSharesToBurn > 0) {
-            _burner.requestBurnShares(_withdrawalQueue, _withdrawalsSharesToBurn);
+        if (_sharesToBurnFromWithdrawalQueue > 0) {
+            _burner.requestBurnShares(_withdrawalQueue, _sharesToBurnFromWithdrawalQueue);
         }
 
         if (_sharesToBurnLimit > 0) {
@@ -1393,8 +1393,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 postponedSharesToBurn = coverShares.add(nonCoverShares);
 
         burntWithdrawalsShares =
-            postponedSharesToBurn < _withdrawalsSharesToBurn ?
-            _withdrawalsSharesToBurn - postponedSharesToBurn : 0;
+            postponedSharesToBurn < _sharesToBurnFromWithdrawalQueue ?
+            _sharesToBurnFromWithdrawalQueue - postponedSharesToBurn : 0;
     }
 
     /**
