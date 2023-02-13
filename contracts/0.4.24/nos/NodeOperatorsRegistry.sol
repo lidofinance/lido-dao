@@ -44,8 +44,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     event NodeOperatorActiveSet(uint256 indexed nodeOperatorId, bool active);
     event NodeOperatorNameSet(uint256 indexed nodeOperatorId, string name);
     event NodeOperatorRewardAddressSet(uint256 indexed nodeOperatorId, address rewardAddress);
-    event NodeOperatorStakingLimitSet(uint256 indexed nodeOperatorId, uint64 stakingLimit);
-    event NodeOperatorTotalStoppedValidatorsReported(uint256 indexed nodeOperatorId, uint64 totalStopped);
     event NodeOperatorTotalKeysTrimmed(uint256 indexed nodeOperatorId, uint64 totalKeysTrimmed);
     event KeysOpIndexSet(uint256 keysOpIndex);
     event ContractVersionSet(uint256 version);
@@ -437,7 +435,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
 
-        _updateExitedValidatorsCount(_nodeOperatorId, uint64(_exitedValidatorsCount), true);
+        _updateExitedValidatorsCount(_nodeOperatorId, uint64(_exitedValidatorsCount), true /* _allowDecrease */);
         _updateStuckValidatorsCount(_nodeOperatorId, uint64(_stuckValidatorsCount));
     }
 
@@ -462,7 +460,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     /// @notice Updates the limit of the validators that can be used for deposit by DAO
     /// @param _nodeOperatorId Id of the node operator
-    /// @param _targetLimit New number of EXITED validators of the node operator
+    /// @param _targetLimit Target limit of the node operator
     /// @param _isTargetLimitActive active flag
     function updateTargetValidatorsLimits(uint256 _nodeOperatorId, bool _isTargetLimitActive, uint64 _targetLimit) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
@@ -799,10 +797,10 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
         uint256 totalSigningKeysCount = signingKeysStats.get(TOTAL_KEYS_COUNT_OFFSET);
 
+        _requireValidRange(totalSigningKeysCount.add(_keysCount) <= UINT64_MAX);
+
         totalSigningKeysCount =
             SIGNING_KEYS_MAPPING_NAME.addKeysSigs(_nodeOperatorId, _keysCount, totalSigningKeysCount, _publicKeys, _signatures);
-
-        _requireValidRange(totalSigningKeysCount.add(_keysCount) <= UINT64_MAX);
 
         emit TotalSigningKeysCountChanged(_nodeOperatorId, totalSigningKeysCount);
 

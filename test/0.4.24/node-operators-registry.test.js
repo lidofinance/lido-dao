@@ -1560,7 +1560,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     // it('respects staking limit', async () => {
     //   const [firstNodeOperatorKeysStats, secondNodeOperatorKeysStats] = await Promise.all([
-    //     app.getValidatorsKeysStats(firstNodeOperatorId),
+    //     app.getNodeOperatorSummary(firstNodeOperatorId),
     //     app.getValidatorsKeysStats(secondNodeOperatorId)
     //   ])
 
