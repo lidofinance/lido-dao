@@ -454,6 +454,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     ) external view {
         LimitsList memory limitsList = _limits.unpack();
 
+        // Pretending that withdrawals were not processed
+        // virtually return locked ether back to postTotalPooledEther
+        // virtually return burnt shares back to postTotalShares
         _checkFinalizationShareRate(
             limitsList,
             _postTotalPooledEther + _etherLockedOnWithdrawalQueue,
