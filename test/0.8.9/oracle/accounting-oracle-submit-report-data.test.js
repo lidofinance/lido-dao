@@ -89,7 +89,8 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
     await consensus.advanceTimeToNextFrameStart()
     await consensus.submitReport(newReportFields.refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
-    await oracle.submitReportData(newReportItems, oracleVersion, { from: member1 })
+
+    return newReportItems
   }
 
   context('deploying', () => {
@@ -236,69 +237,21 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     context('enforces module ids sorting order', () => {
       beforeEach(deploy)
 
-      it('should revert if incorrect extra data list stuckKeys moduleId', async () => {
+      it('should revert if incorrect stakingModuleIdsWithNewlyExitedValidators order', async () => {
         const { refSlot } = await consensus.getCurrentFrame()
 
         const nextRefSlot = +refSlot + SLOTS_PER_FRAME
-        const invalidExtraData = {
-          ...extraData,
-          stuckKeys: [
-            ...extraData.stuckKeys,
-            { moduleId: 4, nodeOpIds: [1], keysCounts: [2] },
-            { moduleId: 4, nodeOpIds: [1], keysCounts: [2] }
-          ]
-        }
-        const extraDataItems = encodeExtraDataItems(invalidExtraData)
-        const extraDataList = packExtraDataList(extraDataItems)
-        const extraDataHash = calcExtraDataListHash(extraDataList)
-
         const newReportFields = {
           ...reportFields,
           refSlot: nextRefSlot,
-          extraDataHash: extraDataHash,
-          extraDataItemsCount: extraDataItems.length
+          stakingModuleIdsWithNewlyExitedValidators: [2, 1],
+          numExitedValidatorsByStakingModule: [3, 4]
         }
-
-        await prepareNextReport(newReportFields)
+        const newReportItems = await prepareNextReport(newReportFields)
 
         await assert.reverts(
-          oracle.submitReportExtraDataList(extraDataList, {
-            from: member1
-          }),
-          'InvalidExtraDataSortOrder(4)'
-        )
-      })
-
-      it('should revert if incorrect extra data list exitedKeys moduleId', async () => {
-        const { refSlot } = await consensus.getCurrentFrame()
-
-        const nextRefSlot = +refSlot + SLOTS_PER_FRAME
-        const invalidExtraData = {
-          ...extraData,
-          exitedKeys: [
-            ...extraData.exitedKeys,
-            { moduleId: 4, nodeOpIds: [1], keysCounts: [2] },
-            { moduleId: 4, nodeOpIds: [1], keysCounts: [2] }
-          ]
-        }
-        const extraDataItems = encodeExtraDataItems(invalidExtraData)
-        const extraDataList = packExtraDataList(extraDataItems)
-        const extraDataHash = calcExtraDataListHash(extraDataList)
-
-        const newReportFields = {
-          ...reportFields,
-          refSlot: nextRefSlot,
-          extraDataHash: extraDataHash,
-          extraDataItemsCount: extraDataItems.length
-        }
-
-        await prepareNextReport(newReportFields)
-
-        await assert.reverts(
-          oracle.submitReportExtraDataList(extraDataList, {
-            from: member1
-          }),
-          'InvalidExtraDataSortOrder(6)'
+          oracle.submitReportData(newReportItems, oracleVersion, { from: member1 }),
+          'InvalidExitedValidatorsData()'
         )
       })
 
@@ -306,33 +259,17 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const { refSlot } = await consensus.getCurrentFrame()
 
         const nextRefSlot = +refSlot + SLOTS_PER_FRAME
-        const invalidExtraData = {
-          stuckKeys: [
-            ...extraData.stuckKeys,
-            { moduleId: 4, nodeOpIds: [1], keysCounts: [2] },
-            { moduleId: 5, nodeOpIds: [1], keysCounts: [2] }
-          ],
-          exitedKeys: [
-            ...extraData.exitedKeys,
-            { moduleId: 4, nodeOpIds: [1], keysCounts: [2] },
-            { moduleId: 5, nodeOpIds: [1], keysCounts: [2] }
-          ]
-        }
-        const extraDataItems = encodeExtraDataItems(invalidExtraData)
-        const extraDataList = packExtraDataList(extraDataItems)
-        const extraDataHash = calcExtraDataListHash(extraDataList)
 
         const newReportFields = {
           ...reportFields,
           refSlot: nextRefSlot,
-          extraDataHash: extraDataHash,
-          extraDataItemsCount: extraDataItems.length
+          stakingModuleIdsWithNewlyExitedValidators: [1, 2],
+          numExitedValidatorsByStakingModule: [3, 4]
         }
+        const newReportItems = await prepareNextReport(newReportFields)
 
-        await prepareNextReport(newReportFields)
-
-        const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
-        assertEvent(tx, 'ExtraDataSubmitted', { expectedArgs: { refSlot: newReportFields.refSlot } })
+        const tx = await oracle.submitReportData(newReportItems, oracleVersion, { from: member1 })
+        assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: newReportFields.refSlot } })
       })
     })
 
