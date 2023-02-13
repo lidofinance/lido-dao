@@ -53,7 +53,7 @@ async function pushOracleReport(consensus, oracle, numValidators, clBalance, elR
     lastWithdrawalRequestIdToFinalize: 0,
     finalizationShareRate: 0,
     isBunkerMode: false,
-    extraDataFormat: 0,
+    extraDataFormat: 1,
     extraDataHash: ZERO_BYTES32,
     extraDataItemsCount: 0
   }
@@ -66,7 +66,7 @@ async function pushOracleReport(consensus, oracle, numValidators, clBalance, elR
 
   const oracleVersion = await oracle.getContractVersion()
 
-  await oracle.submitReportData(reportItems, oracleVersion, { from: members.addresses[0] })
+  return await oracle.submitReportData(reportItems, oracleVersion, { from: members.addresses[0] })
 }
 
 module.exports = { getReportDataItems, calcReportDataHash, pushOracleReport }

@@ -19,7 +19,7 @@ function wei(number, units = 'wei') {
   throw new Error(`Unsupported units "${units}"`)
 }
 
-contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...accounts]) => {
+contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewardsVault, ...accounts]) => {
   let oracleReportSanityChecker, lidoLocatorMock, lidoMock, withdrawalQueueMock
   const managersRoster = {
     allLimitsManagers: accounts.slice(0, 2),
@@ -47,6 +47,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
     preCLBalance: ETH(100_000),
     postCLBalance: ETH(100_001),
     withdrawalVaultBalance: 0,
+    elRewardsVaultBalance: 0,
     preCLValidators: 0,
     postCLValidators: 0,
   }
@@ -56,9 +57,10 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
     await hre.ethers.provider.send('hardhat_mine', ['0x' + Number(1024).toString(16), '0x' + Number(12).toString(16)])
     lidoMock = await LidoStub.new({ from: deployer })
     withdrawalQueueMock = await WithdrawalQueueStub.new({ from: deployer })
-    lidoLocatorMock = await LidoLocatorStub.new(lidoMock.address, withdrawalVault, withdrawalQueueMock.address, {
-      from: deployer
-    })
+    lidoLocatorMock = await LidoLocatorStub.new(
+      lidoMock.address, withdrawalVault, withdrawalQueueMock.address, elRewardsVault,
+      { from: deployer }
+    )
 
     oracleReportSanityChecker = await OracleReportSanityChecker.new(
       lidoLocatorMock.address,
@@ -109,7 +111,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
     })
   })
 
-  describe('checkLidoOracleReport()', () => {
+  describe('checkAccountingOracleReport()', () => {
     beforeEach(async () => {
       await oracleReportSanityChecker.setOracleReportLimits(Object.values(defaultLimitsList), {
         from: managersRoster.allLimitsManagers[0]
@@ -119,10 +121,20 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
     it('reverts with error IncorrectWithdrawalsVaultBalance() when actual withdrawal vault balance is less than passed', async () => {
       const currentWithdrawalVaultBalance = await hre.ethers.provider.getBalance(withdrawalVault)
       await assert.revertsWithCustomError(
-        oracleReportSanityChecker.checkLidoOracleReport(
+        oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({ ...correctLidoOracleReport, withdrawalVaultBalance: currentWithdrawalVaultBalance.add(1) })
         ),
         `IncorrectWithdrawalsVaultBalance(${currentWithdrawalVaultBalance.toString()})`
+      )
+    })
+
+    it('reverts with error IncorrectELRewardsVaultBalance() when actual el rewards vault balance is less than passed', async () => {
+      const currentELRewardsVaultBalance = await hre.ethers.provider.getBalance(elRewardsVault)
+      await assert.revertsWithCustomError(
+        oracleReportSanityChecker.checkAccountingOracleReport(
+          ...Object.values({ ...correctLidoOracleReport, elRewardsVaultBalance: currentELRewardsVaultBalance.add(1) })
+        ),
+        `IncorrectELRewardsVaultBalance(${currentELRewardsVaultBalance.toString()})`
       )
     })
 
@@ -134,7 +146,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
       const unifiedPostCLBalance = postCLBalance + withdrawalVaultBalance
       const oneOffCLBalanceDecreaseBP = (maxBasisPoints * (preCLBalance - unifiedPostCLBalance)) / preCLBalance
       await assert.revertsWithCustomError(
-        oracleReportSanityChecker.checkLidoOracleReport(
+        oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({
             ...correctLidoOracleReport,
             preCLBalance: preCLBalance.toString(),
@@ -155,7 +167,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
       const annualBalanceIncrease =
         (secondsInOneYear * maxBasisPoints * (postCLBalance - preCLBalance)) / preCLBalance / timeElapsed
       await assert.revertsWithCustomError(
-        oracleReportSanityChecker.checkLidoOracleReport(
+        oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({
             ...correctLidoOracleReport,
             postCLBalance: postCLBalance.toString()
@@ -166,7 +178,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
     })
 
     it('passes all checks with correct oracle report data', async () => {
-      await oracleReportSanityChecker.checkLidoOracleReport(...Object.values(correctLidoOracleReport))
+      await oracleReportSanityChecker.checkAccountingOracleReport(...Object.values(correctLidoOracleReport))
     })
   })
 
@@ -176,7 +188,6 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
     let oldRequestCreationTimestamp, newRequestCreationTimestamp
     const correctWithdrawalQueueOracleReport = {
       requestIdToFinalizeUpTo: oldRequestId,
-      finalizationShareRate: ETH(1),
       refReportTimestamp: -1
     }
 
@@ -203,24 +214,54 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, ...acc
       )
     })
 
+    it('passes all checks with correct withdrawal queue report data', async () => {
+      await oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
+        ...Object.values(correctWithdrawalQueueOracleReport)
+      )
+    })
+  })
+
+  describe('checkSimulatedShareRate', async () => {
+    const correctSimulatedShareRate = {
+      postTotalPooledEther: ETH(9),
+      postTotalShares: ETH(4),
+      etherLockedOnWithdrawalQueue: ETH(1),
+      sharesBurntFromWithdrawalQueue: ETH(1),
+      simulatedShareRate: (BigInt(2) * 10n ** 27n).toString()
+    }
+
     it('reverts with error IncorrectFinalizationShareRate() when reported and onchain share rate differs', async () => {
-      const finalizationShareRate = BigInt(ETH(1.05))
-      const actualShareRate = BigInt(ETH(1))
+      const finalizationShareRate = BigInt(ETH(2.10)) * 10n ** 9n
+      const actualShareRate = BigInt(2) * 10n ** 27n
       const deviation = (100_00n * (finalizationShareRate - actualShareRate)) / actualShareRate
       await assert.revertsWithCustomError(
-        oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
+        oracleReportSanityChecker.checkSimulatedShareRate(
           ...Object.values({
-            ...correctWithdrawalQueueOracleReport,
-            finalizationShareRate: finalizationShareRate.toString()
+            ...correctSimulatedShareRate,
+            simulatedShareRate: finalizationShareRate.toString()
           })
         ),
         `IncorrectFinalizationShareRate(${deviation.toString()})`
       )
     })
 
-    it('passes all checks with correct withdrawal queue report data', async () => {
-      await oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
-        ...Object.values(correctWithdrawalQueueOracleReport)
+    it('reverts with error IncorrectFinalizationShareRate() when actual share rate is zero', async () => {
+      const deviation = 100_00n
+      await assert.revertsWithCustomError(
+        oracleReportSanityChecker.checkSimulatedShareRate(
+          ...Object.values({
+            ...correctSimulatedShareRate,
+            etherLockedOnWithdrawalQueue: ETH(0),
+            postTotalPooledEther: ETH(0)
+          })
+        ),
+        `IncorrectFinalizationShareRate(${deviation.toString()})`
+      )
+    })
+
+    it('passes all checks with correct share rate', async () => {
+      await oracleReportSanityChecker.checkSimulatedShareRate(
+        ...Object.values(correctSimulatedShareRate)
       )
     })
   })

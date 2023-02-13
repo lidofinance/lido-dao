@@ -4,14 +4,13 @@ const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
 const { gwei, ZERO_HASH } = require('../helpers/utils')
 
-const { pad, toBN, ETH, tokens } = require('../helpers/utils')
+const { pad, toBN, ETH, tokens, setBalance } = require('../helpers/utils')
 const { DSMAttestMessage, DSMPauseMessage } = require('../helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 const { SLOTS_PER_FRAME } = require('../helpers/constants')
 
-const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
 const TOTAL_BASIS_POINTS = 10**4
@@ -54,7 +53,7 @@ contract.skip('Lido: merge acceptance', (addresses) => {
   let oracleMock, depositContractMock
   let treasuryAddr, guardians, stakingRouter
   let depositSecurityModule, depositRoot
-  let rewarder, elRewardsVault, voting
+  let elRewardsVault, voting
 
   // Total fee is 1%
   const totalFeePoints = 0.01 * TOTAL_BASIS_POINTS
@@ -128,9 +127,6 @@ contract.skip('Lido: merge acceptance', (addresses) => {
 
     depositRoot = await depositContractMock.get_deposit_root()
 
-    rewarder = await RewardEmulatorMock.new(elRewardsVault.address)
-
-    assertBn(await web3.eth.getBalance(rewarder.address), ETH(0), 'rewarder balance')
     assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(0), 'Execution layer rewards vault balance')
     await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
 
@@ -352,7 +348,7 @@ contract.skip('Lido: merge acceptance', (addresses) => {
   })
 
   it('collect 9 ETH execution layer rewards to the vault', async () => {
-    await rewarder.reward({ from: userELRewards, value: ETH(9) })
+    await setBalance(elRewardsVault.address, ETH(9))
     assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(9), 'Execution layer rewards vault balance')
   })
 
@@ -441,14 +437,14 @@ contract.skip('Lido: merge acceptance', (addresses) => {
 
   it('collect another 7 ETH execution layer rewards to the vault', async () => {
     const balanceBefore = await web3.eth.getBalance(elRewardsVault.address)
-    await rewarder.reward({ from: userELRewards, value: ETH(2) })
+    await setBalance(elRewardsVault.address, ETH(2))
     assertBn(
       await web3.eth.getBalance(elRewardsVault.address),
       ETH(2) + balanceBefore,
       'Execution layer rewards vault balance'
     )
 
-    await rewarder.reward({ from: userELRewards, value: ETH(5) })
+    await setBalance(elRewardsVault.address, ETH(5))
     assertBn(
       await web3.eth.getBalance(elRewardsVault.address),
       ETH(7) + balanceBefore,
@@ -520,7 +516,7 @@ contract.skip('Lido: merge acceptance', (addresses) => {
   })
 
   it('collect another 5 ETH execution layer rewards to the vault', async () => {
-    await rewarder.reward({ from: userELRewards, value: ETH(5) })
+    await setBalance(elRewardsVault.address, ETH(5))
     assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(5), 'Execution layer rewards vault balance')
   })
 
@@ -581,7 +577,7 @@ contract.skip('Lido: merge acceptance', (addresses) => {
   })
 
   it('collect another 3 ETH execution layer rewards to the vault', async () => {
-    await rewarder.reward({ from: userELRewards, value: ETH(3) })
+    await setBalance(elRewardsVault.address, ETH(3))
     assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(3), 'Execution layer rewards vault balance')
   })
 
@@ -640,7 +636,7 @@ contract.skip('Lido: merge acceptance', (addresses) => {
   })
 
   it('collect another 2 ETH execution layer rewards to the vault', async () => {
-    await rewarder.reward({ from: userELRewards, value: ETH(2) })
+    await setBalance(elRewardsVault.address, ETH(2))
     assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(2), 'Execution layer rewards vault balance')
   })
 
@@ -699,7 +695,7 @@ contract.skip('Lido: merge acceptance', (addresses) => {
   })
 
   it('collect another 3 ETH execution layer rewards to the vault', async () => {
-    await rewarder.reward({ from: userELRewards, value: ETH(3) })
+    await setBalance(elRewardsVault.address, ETH(3))
     assertBn(await web3.eth.getBalance(elRewardsVault.address), ETH(3), 'Execution layer vault balance')
   })
 
@@ -776,7 +772,7 @@ contract.skip('Lido: merge acceptance', (addresses) => {
     }
 
     const elRewards = ETH(0.1)
-    await rewarder.reward({ from: userELRewards, value: elRewards })
+    await setBalance(elRewardsVault.address, elRewards)
     assertBn(await web3.eth.getBalance(elRewardsVault.address), elRewards, 'Execution layer rewards vault balance')
 
     let frame = 7

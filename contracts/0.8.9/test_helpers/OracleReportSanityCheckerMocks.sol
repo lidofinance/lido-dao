@@ -4,7 +4,7 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import {ILido, IWithdrawalQueue} from "../sanity_checks/OracleReportSanityChecker.sol";
+import {IWithdrawalQueue} from "../sanity_checks/OracleReportSanityChecker.sol";
 
 contract LidoStub {
     uint256 private _shareRate = 1 ether;
@@ -51,15 +51,18 @@ contract LidoLocatorStub is ILidoLocator {
     address private immutable LIDO;
     address private immutable WITHDRAWAL_VAULT;
     address private immutable WITHDRAWAL_QUEUE;
+    address private immutable EL_REWARDS_VAULT;
 
     constructor(
         address _lido,
         address _withdrawalVault,
-        address _withdrawalQueue
+        address _withdrawalQueue,
+        address _elRewardsVault
     ) {
         LIDO = _lido;
         WITHDRAWAL_VAULT = _withdrawalVault;
         WITHDRAWAL_QUEUE = _withdrawalQueue;
+        EL_REWARDS_VAULT = _elRewardsVault;
     }
 
     function lido() external view returns (address) {
@@ -73,21 +76,40 @@ contract LidoLocatorStub is ILidoLocator {
     function withdrawalVault() external view returns (address) {
         return WITHDRAWAL_VAULT;
     }
+
+    function elRewardsVault() external view returns (address) {
+        return EL_REWARDS_VAULT;
+    }
 }
 
 contract OracleReportSanityCheckerStub {
-    function checkLidoOracleReport(
+    error SelectorNotFound(bytes4 sig, uint256 value, bytes data);
+
+    fallback() external payable { revert SelectorNotFound(msg.sig, msg.value, msg.data); }
+
+    function checkAccountingOracleReport(
         uint256 _timeElapsed,
         uint256 _preCLBalance,
         uint256 _postCLBalance,
-        uint256 _withdrawalVaultBalance
+        uint256 _withdrawalVaultBalance,
+        uint256 _elRewardsVaultBalance,
+        uint256 _preCLValidators,
+        uint256 _postCLValidators
     ) external view {}
 
     function checkWithdrawalQueueOracleReport(
         uint256 _lastFinalizableRequestId,
         uint256 _simulatedShareRate,
         uint256 _reportTimestamp
-   ) external view {}
+    ) external view {}
+
+    function checkSimulatedShareRate(
+        uint256 _postTotalPooledEther,
+        uint256 _postTotalShares,
+        uint256 _etherLockedOnWithdrawalQueue,
+        uint256 _sharesBurntFromWithdrawalQueue,
+        uint256 _simulatedShareRate
+    ) external view {}
 
     function smoothenTokenRebase(
         uint256,
@@ -102,4 +124,6 @@ contract OracleReportSanityCheckerStub {
         elRewards = _elRewardsVaultBalance;
         sharesToBurnLimit = _etherToLockForWithdrawals;
     }
+
+    function checkAccountingExtraDataListItemsCount(uint256 _extraDataListItemsCount) external view {}
 }

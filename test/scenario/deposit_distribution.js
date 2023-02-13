@@ -75,7 +75,7 @@ contract('StakingRouter', ([depositor, stranger1, dsm, address1, address2]) => {
       await web3.eth.sendTransaction({ value: sendEthForKeys, to: lido.address, from: stranger1 })
       assert.equals(await lido.getBufferedEther(), sendEthForKeys)
 
-      const keysAllocation = await stakingRouter.getKeysAllocation(200)
+      const keysAllocation = await stakingRouter.getDepositsAllocation(200)
 
       assert.equals(keysAllocation.allocated, 200)
       assert.equals(keysAllocation.allocations, [100, 100])

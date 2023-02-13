@@ -35,20 +35,20 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     event StakingRouterETHDeposited(uint256 indexed stakingModuleId, uint256 amount);
 
     /// @dev errors
-    error ErrorZeroAddress(string field);
-    error ErrorValueOver100Percent(string field);
-    error ErrorStakingModuleNotActive();
-    error ErrorStakingModuleNotPaused();
-    error ErrorEmptyWithdrawalsCredentials();
-    error ErrorDirectETHTransfer();
+    error ZeroAddress(string field);
+    error ValueOver100Percent(string field);
+    error StakingModuleNotActive();
+    error StakingModuleNotPaused();
+    error EmptyWithdrawalsCredentials();
+    error DirectETHTransfer();
     error InvalidReportData();
-    error ErrorExitedValidatorsCountCannotDecrease();
-    error ErrorStakingModulesLimitExceeded();
-    error ErrorStakingModuleIdTooLarge();
-    error ErrorStakingModuleUnregistered();
-    error ErrorAppAuthLidoFailed();
-    error ErrorStakingModuleStatusTheSame();
-    error ErrorStakingModuleWrongName();
+    error ExitedValidatorsCountCannotDecrease();
+    error StakingModulesLimitExceeded();
+    error StakingModuleIdTooLarge();
+    error StakingModuleUnregistered();
+    error AppAuthLidoFailed();
+    error StakingModuleStatusTheSame();
+    error StakingModuleWrongName();
     error UnexpectedCurrentValidatorsCount(
         uint256 currentModuleExitedValidatorsCount,
         uint256 currentNodeOpExitedValidatorsCount,
@@ -124,7 +124,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     uint256 internal constant UINT24_MAX = type(uint24).max;
 
     modifier validStakingModuleId(uint256 _stakingModuleId) {
-        if (_stakingModuleId > UINT24_MAX) revert ErrorStakingModuleIdTooLarge();
+        if (_stakingModuleId > UINT24_MAX) revert StakingModuleIdTooLarge();
         _;
     }
 
@@ -137,8 +137,8 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
      * @param _withdrawalCredentials Lido withdrawal vault contract address
      */
     function initialize(address _admin, address _lido, bytes32 _withdrawalCredentials) external {
-        if (_admin == address(0)) revert ErrorZeroAddress("_admin");
-        if (_lido == address(0)) revert ErrorZeroAddress("_lido");
+        if (_admin == address(0)) revert ZeroAddress("_admin");
+        if (_lido == address(0)) revert ZeroAddress("_lido");
 
         _initializeContractVersionTo(1);
 
@@ -151,7 +151,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
     /// @dev prohibit direct transfer to contract
     receive() external payable {
-        revert ErrorDirectETHTransfer();
+        revert DirectETHTransfer();
     }
 
     /**
@@ -176,14 +176,14 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint256 _stakingModuleFee,
         uint256 _treasuryFee
     ) external onlyRole(STAKING_MODULE_MANAGE_ROLE) {
-        if (_targetShare > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_targetShare");
-        if (_stakingModuleFee + _treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_stakingModuleFee + _treasuryFee");
-        if (_stakingModuleAddress == address(0)) revert ErrorZeroAddress("_stakingModuleAddress");
-        if (bytes(_name).length == 0 || bytes(_name).length > 32) revert ErrorStakingModuleWrongName();
+        if (_targetShare > TOTAL_BASIS_POINTS) revert ValueOver100Percent("_targetShare");
+        if (_stakingModuleFee + _treasuryFee > TOTAL_BASIS_POINTS) revert ValueOver100Percent("_stakingModuleFee + _treasuryFee");
+        if (_stakingModuleAddress == address(0)) revert ZeroAddress("_stakingModuleAddress");
+        if (bytes(_name).length == 0 || bytes(_name).length > 32) revert StakingModuleWrongName();
 
         uint256 newStakingModuleIndex = getStakingModulesCount();
 
-        if (newStakingModuleIndex >= 32) revert ErrorStakingModulesLimitExceeded();
+        if (newStakingModuleIndex >= 32) revert StakingModulesLimitExceeded();
         StakingModule storage newStakingModule = _getStakingModuleByIndex(newStakingModuleIndex);
         uint24 newStakingModuleId = uint24(LAST_STAKING_MODULE_ID_POSITION.getStorageUint256()) + 1;
 
@@ -223,8 +223,8 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
       validStakingModuleId(_stakingModuleId)
       onlyRole(STAKING_MODULE_MANAGE_ROLE)
     {
-        if (_targetShare > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_targetShare");
-        if (_stakingModuleFee + _treasuryFee > TOTAL_BASIS_POINTS) revert ErrorValueOver100Percent("_stakingModuleFee + _treasuryFee");
+        if (_targetShare > TOTAL_BASIS_POINTS) revert ValueOver100Percent("_targetShare");
+        if (_stakingModuleFee + _treasuryFee > TOTAL_BASIS_POINTS) revert ValueOver100Percent("_stakingModuleFee + _treasuryFee");
 
         uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
         StakingModule storage stakingModule = _getStakingModuleByIndex(stakingModuleIndex);
@@ -274,7 +274,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleIds[i]);
             uint256 prevReportedExitedValidatorsCount = stakingModule.exitedValidatorsCount;
             if (_exitedValidatorsCounts[i] < prevReportedExitedValidatorsCount) {
-                revert ErrorExitedValidatorsCountCannotDecrease();
+                revert ExitedValidatorsCountCannotDecrease();
             }
 
             (
@@ -535,121 +535,201 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         return StakingModuleStatus(_getStakingModuleById(_stakingModuleId).status);
     }
 
-    struct ValidatorsReport {
-        uint256 totalExited;
-        uint256 totalDeposited;
-        uint256 depositable;
+    /// @notice A summary of the staking module's validators
+    struct StakingModuleSummary {
+        /// @notice The total number of validators in the EXITED state on the Consensus Layer
+        /// @dev This value can't decrease in normal conditions
+        uint256 totalExitedValidators;
+
+        /// @notice The total number of validators deposited via the official Deposit Contract
+        /// @dev This value is a cumulative counter: even when the validator goes into EXITED state this
+        ///     counter is not decreasing
+        uint256 totalDepositedValidators;
+
+        /// @notice The number of validators in the set available for deposit
+        uint256 depositableValidatorsCount;
     }
 
-    struct StakingModuleReport {
-        StakingModule state;
-        uint256 nodeOperatorsCount;
-        uint256 activeNodeOperatorsCount;
-        ValidatorsReport validatorsReport;
-    }
-
-
-    struct NodeOperatorReport {
-        uint256 id;
-        bool isActive;
+    /// @notice A summary of node operator and its validators
+    struct NodeOperatorSummary {
+        /// @notice Shows whether the current target limit applied to the node operator
         bool isTargetLimitActive;
+
+        /// @notice Relative target active validators limit for operator
         uint256 targetValidatorsCount;
+
+        /// @notice The number of validators with an expired request to exit time
         uint256 stuckValidatorsCount;
+
+        /// @notice The number of validators that can't be withdrawn, but deposit costs were
+        ///     compensated to the Lido by the node operator
         uint256 refundedValidatorsCount;
+
+        /// @notice A time when the penalty for stuck validators stops applying to node operator rewards
         uint256 stuckPenaltyEndTimestamp;
-        ValidatorsReport validatorsReport;
+
+        /// @notice The total number of validators in the EXITED state on the Consensus Layer
+        /// @dev This value can't decrease in normal conditions
+        uint256 totalExitedValidators;
+
+        /// @notice The total number of validators deposited via the official Deposit Contract
+        /// @dev This value is a cumulative counter: even when the validator goes into EXITED state this
+        ///     counter is not decreasing
+        uint256 totalDepositedValidators;
+
+        /// @notice The number of validators in the set available for deposit
+        uint256 depositableValidatorsCount;
     }
 
-    /// @dev WARNING: This method is not supposed to be used for onchain calls due to high gas costs
-    ///     for data aggregation
-    function getAllStakingModuleReports() external view returns (StakingModuleReport[] memory) {
-        return getStakingModuleReports(getStakingModuleIds());
-    }
-
-    /// @dev WARNING: This method is not supposed to be used for onchain calls due to high gas costs
-    ///     for data aggregation
-    function getStakingModuleReports(uint256[] memory _stakingModuleIds)
+    /// @notice Returns all-validators summary in the staking module
+    /// @param _stakingModuleId id of the staking module to return summary for
+    function getStakingModuleSummary(uint256 _stakingModuleId)
         public
         view
-        returns (StakingModuleReport[] memory reports)
+        returns (StakingModuleSummary memory summary)
     {
-        reports = new StakingModuleReport[](_stakingModuleIds.length);
+        StakingModule memory stakingModuleState = getStakingModule(_stakingModuleId);
+        IStakingModule stakingModule = IStakingModule(stakingModuleState.stakingModuleAddress);
+        (
+            summary.totalExitedValidators,
+            summary.totalDepositedValidators,
+            summary.depositableValidatorsCount
+        ) = stakingModule.getStakingModuleSummary();
+    }
+
+
+    /// @notice Returns node operator summary from the staking module
+    /// @param _stakingModuleId id of the staking module where node operator is onboarded
+    /// @param _nodeOperatorId id of the node operator to return summary for
+    function getNodeOperatorSummary(uint256 _stakingModuleId, uint256 _nodeOperatorId)
+        public
+        view
+        returns (NodeOperatorSummary memory summary)
+    {
+        StakingModule memory stakingModuleState = getStakingModule(_stakingModuleId);
+        IStakingModule stakingModule = IStakingModule(stakingModuleState.stakingModuleAddress);
+        /// @dev using intermediate variables below due to "Stack too deep" error in case of
+        ///     assigning directly into the NodeOperatorSummary struct
+        (
+            bool isTargetLimitActive,
+            uint256 targetValidatorsCount,
+            uint256 stuckValidatorsCount,
+            uint256 refundedValidatorsCount,
+            uint256 stuckPenaltyEndTimestamp,
+            uint256 totalExitedValidators,
+            uint256 totalDepositedValidators,
+            uint256 depositableValidatorsCount
+        ) = stakingModule.getNodeOperatorSummary(_nodeOperatorId);
+        summary.isTargetLimitActive = isTargetLimitActive;
+        summary.targetValidatorsCount = targetValidatorsCount;
+        summary.stuckValidatorsCount = stuckValidatorsCount;
+        summary.refundedValidatorsCount = refundedValidatorsCount;
+        summary.stuckPenaltyEndTimestamp = stuckPenaltyEndTimestamp;
+        summary.totalExitedValidators = totalExitedValidators;
+        summary.totalDepositedValidators = totalDepositedValidators;
+        summary.depositableValidatorsCount = depositableValidatorsCount;
+    }
+
+    /// @notice A collection of the staking module data stored across the StakingRouter and the
+    ///     staking module contract
+    /// @dev This data, first of all, is designed for off-chain usage and might be redundant for
+    ///     on-chain calls. Give preference for dedicated methods for gas-efficient on-chain calls
+    struct StakingModuleDigest {
+        /// @notice The number of node operators registered in the staking module
+        uint256 nodeOperatorsCount;
+        /// @notice The number of node operators registered in the staking module in active state
+        uint256 activeNodeOperatorsCount;
+        /// @notice The current state of the staking module taken from the StakingRouter
+        StakingModule state;
+        /// @notice A summary of the staking module's validators
+        StakingModuleSummary summary;
+    }
+
+    /// @notice A collection of the node operator data stored in the staking module
+    /// @dev This data, first of all, is designed for off-chain usage and might be redundant for
+    ///     on-chain calls. Give preference for dedicated methods for gas-efficient on-chain calls
+    struct NodeOperatorDigest {
+        /// @notice id of the node operator
+        uint256 id;
+        /// @notice Shows whether the node operator is active or not
+        bool isActive;
+        /// @notice A summary of node operator and its validators
+        NodeOperatorSummary summary;
+    }
+
+    /// @notice Returns staking module digest for each staking module registered in the staking router
+    /// @dev WARNING: This method is not supposed to be used for onchain calls due to high gas costs
+    ///     for data aggregation
+    function getAllStakingModuleDigests() external view returns (StakingModuleDigest[] memory) {
+        return getStakingModuleDigests(getStakingModuleIds());
+    }
+
+    /// @notice Returns staking module digest for passed staking module ids
+    /// @param _stakingModuleIds ids of the staking modules to return data for
+    /// @dev WARNING: This method is not supposed to be used for onchain calls due to high gas costs
+    ///     for data aggregation
+    function getStakingModuleDigests(uint256[] memory _stakingModuleIds)
+        public
+        view
+        returns (StakingModuleDigest[] memory digests)
+    {
+        digests = new StakingModuleDigest[](_stakingModuleIds.length);
         for (uint256 i = 0; i < _stakingModuleIds.length; ++i) {
             StakingModule memory stakingModuleState = getStakingModule(_stakingModuleIds[i]);
             IStakingModule stakingModule = IStakingModule(stakingModuleState.stakingModuleAddress);
-            (
-                uint256 totalExitedValidators,
-                uint256 totalDepositedValidators,
-                uint256 depositableValidatorsCount
-            ) = stakingModule.getStakingModuleSummary();
-            reports[i] = StakingModuleReport({
-                state: stakingModuleState,
+            digests[i] = StakingModuleDigest({
                 nodeOperatorsCount: stakingModule.getNodeOperatorsCount(),
                 activeNodeOperatorsCount: stakingModule.getActiveNodeOperatorsCount(),
-                validatorsReport: ValidatorsReport({
-                    totalExited: totalExitedValidators,
-                    totalDeposited: totalDepositedValidators,
-                    depositable: depositableValidatorsCount
-                })
+                state: stakingModuleState,
+                summary: getStakingModuleSummary(_stakingModuleIds[i])
             });
         }
     }
 
+    /// @notice Returns node operator digest for each node operator registered in the given staking module
+    /// @param _stakingModuleId id of the staking module to return data for
     /// @dev WARNING: This method is not supposed to be used for onchain calls due to high gas costs
     ///     for data aggregation
-    function getAllNodeOperatorReports(uint256 _stakingModuleId) external view returns (NodeOperatorReport[] memory) {
+    function getAllNodeOperatorDigests(uint256 _stakingModuleId) external view returns (NodeOperatorDigest[] memory) {
         IStakingModule stakingModule = IStakingModule(_getStakingModuleAddressById(_stakingModuleId));
         uint256 nodeOperatorsCount = stakingModule.getNodeOperatorsCount();
-        return getNodeOperatorReports(_stakingModuleId, 0, nodeOperatorsCount);
+        return getNodeOperatorDigests(_stakingModuleId, 0, nodeOperatorsCount);
     }
 
+    /// @notice Returns node operator digest for passed node operator ids in the given staking module
+    /// @param _stakingModuleId id of the staking module where node operators registered
+    /// @param _offset node operators offset starting with 0
+    /// @param _limit the max number of node operators to return
     /// @dev WARNING: This method is not supposed to be used for onchain calls due to high gas costs
     ///     for data aggregation
-    function getNodeOperatorReports(
+    function getNodeOperatorDigests(
         uint256 _stakingModuleId,
         uint256 _offset,
         uint256 _limit
-    ) public view returns (NodeOperatorReport[] memory summaries) {
+    ) public view returns (NodeOperatorDigest[] memory) {
         IStakingModule stakingModule = IStakingModule(_getStakingModuleAddressById(_stakingModuleId));
         uint256[] memory nodeOperatorIds = stakingModule.getNodeOperatorIds(_offset, _limit);
-        return getNodeOperatorReports(_stakingModuleId, nodeOperatorIds);
+        return getNodeOperatorDigests(_stakingModuleId, nodeOperatorIds);
     }
 
+    /// @notice Returns node operator digest for a slice of node operators registered in the given
+    ///     staking module
+    /// @param _stakingModuleId id of the staking module where node operators registered
+    /// @param _nodeOperatorIds ids of the node operators to return data for
     /// @dev WARNING: This method is not supposed to be used for onchain calls due to high gas costs
     ///     for data aggregation
-    function getNodeOperatorReports(uint256 _stakingModuleId, uint256[] memory _nodeOperatorIds)
+    function getNodeOperatorDigests(uint256 _stakingModuleId, uint256[] memory _nodeOperatorIds)
         public
         view
-        returns (NodeOperatorReport[] memory summaries)
+        returns (NodeOperatorDigest[] memory digests)
     {
         IStakingModule stakingModule = IStakingModule(_getStakingModuleAddressById(_stakingModuleId));
-        summaries = new NodeOperatorReport[](_nodeOperatorIds.length);
+        digests = new NodeOperatorDigest[](_nodeOperatorIds.length);
         for (uint256 i = 0; i < _nodeOperatorIds.length; ++i) {
-            bool isActive = stakingModule.getNodeOperatorIsActive(_nodeOperatorIds[i]);
-
-            (
-                bool isTargetLimitActive,
-                uint256 targetValidatorsCount,
-                uint256 stuckValidatorsCount,
-                uint256 refundedValidatorsCount,
-                uint256 stuckPenaltyEndTimestamp,
-                uint256 totalExitedValidators,
-                uint256 totalDepositedValidators,
-                uint256 depositableValidatorsCount
-            ) = stakingModule.getNodeOperatorSummary(i);
-            summaries[i] = NodeOperatorReport({
-                isActive: isActive,
+            digests[i] = NodeOperatorDigest({
                 id: _nodeOperatorIds[i],
-                isTargetLimitActive: isTargetLimitActive,
-                targetValidatorsCount: targetValidatorsCount,
-                stuckValidatorsCount: stuckValidatorsCount,
-                refundedValidatorsCount: refundedValidatorsCount,
-                stuckPenaltyEndTimestamp: stuckPenaltyEndTimestamp,
-                validatorsReport: ValidatorsReport({
-                    totalExited: totalExitedValidators,
-                    totalDeposited: totalDepositedValidators,
-                    depositable: depositableValidatorsCount
-                })
+                isActive: stakingModule.getNodeOperatorIsActive(_nodeOperatorIds[i]),
+                summary: getNodeOperatorSummary(_stakingModuleId, _nodeOperatorIds[i])
             });
         }
     }
@@ -663,7 +743,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     {
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         StakingModuleStatus _prevStatus = StakingModuleStatus(stakingModule.status);
-        if (_prevStatus == _status) revert ErrorStakingModuleStatusTheSame();
+        if (_prevStatus == _status) revert StakingModuleStatusTheSame();
         stakingModule.status = uint8(_status);
         emit StakingModuleStatusSet(_stakingModuleId, _status, msg.sender);
     }
@@ -678,7 +758,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     {
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         StakingModuleStatus _prevStatus = StakingModuleStatus(stakingModule.status);
-        if (_prevStatus != StakingModuleStatus.Active) revert ErrorStakingModuleNotActive();
+        if (_prevStatus != StakingModuleStatus.Active) revert StakingModuleNotActive();
         stakingModule.status = uint8(StakingModuleStatus.DepositsPaused);
         emit StakingModuleStatusSet(_stakingModuleId, StakingModuleStatus.DepositsPaused, msg.sender);
     }
@@ -693,7 +773,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     {
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         StakingModuleStatus _prevStatus = StakingModuleStatus(stakingModule.status);
-        if (_prevStatus != StakingModuleStatus.DepositsPaused) revert ErrorStakingModuleNotPaused();
+        if (_prevStatus != StakingModuleStatus.DepositsPaused) revert StakingModuleNotPaused();
         stakingModule.status = uint8(StakingModuleStatus.Active);
         emit StakingModuleStatusSet(_stakingModuleId, StakingModuleStatus.Active, msg.sender);
     }
@@ -850,7 +930,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         }
 
         // sanity check
-        if (totalFee >= precisionPoints) revert ErrorValueOver100Percent("totalFee");
+        if (totalFee >= precisionPoints) revert ValueOver100Percent("totalFee");
 
         /// @dev shrink arrays
         if (rewardedStakingModulesCount < stakingModulesCount) {
@@ -910,7 +990,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint256 _stakingModuleId,
         bytes calldata _depositCalldata
     ) external payable validStakingModuleId(_stakingModuleId)  returns (uint256 depositsCount) {
-        if (msg.sender != LIDO_POSITION.getStorageAddress()) revert ErrorAppAuthLidoFailed();
+        if (msg.sender != LIDO_POSITION.getStorageAddress()) revert AppAuthLidoFailed();
 
         uint256 depositableEth = msg.value;
         if (depositableEth == 0) {
@@ -919,11 +999,11 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         }
 
         bytes32 withdrawalCredentials = getWithdrawalCredentials();
-        if (withdrawalCredentials == 0) revert ErrorEmptyWithdrawalsCredentials();
+        if (withdrawalCredentials == 0) revert EmptyWithdrawalsCredentials();
 
         uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
         StakingModule storage stakingModule = _getStakingModuleByIndex(stakingModuleIndex);
-        if (StakingModuleStatus(stakingModule.status) != StakingModuleStatus.Active) revert ErrorStakingModuleNotActive();
+        if (StakingModuleStatus(stakingModule.status) != StakingModuleStatus.Active) revert StakingModuleNotActive();
 
         uint256 maxDepositsCount = Math256.min(
             _maxDepositsCount,
@@ -1066,7 +1146,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     function _getStakingModuleIndexById(uint256 _stakingModuleId) internal view returns (uint256) {
         mapping(uint256 => uint256) storage _stakingModuleIndicesOneBased = _getStorageStakingIndicesMapping();
         uint256 indexOneBased = _stakingModuleIndicesOneBased[_stakingModuleId];
-        if (indexOneBased == 0) revert ErrorStakingModuleUnregistered();
+        if (indexOneBased == 0) revert StakingModuleUnregistered();
         return indexOneBased - 1;
     }
 

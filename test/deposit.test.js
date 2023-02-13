@@ -31,6 +31,13 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     const deployed = await deployProtocol({
       stakingModulesFactory: async (protocol) => {
         const curatedModule = await setupNodeOperatorsRegistry(protocol)
+
+        await protocol.acl.grantPermission(
+          protocol.stakingRouter.address,
+          curatedModule.address,
+          await curatedModule.MANAGE_NODE_OPERATOR_ROLE()
+        )
+
         return [
           {
             module: curatedModule,
@@ -58,7 +65,6 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     operators = deployed.stakingModules[0]
     voting = deployed.voting.address
     depositContract = deployed.depositContract
-    voting = deployed.voting.address
 
     snapshot = new EvmSnapshot(hre.ethers.provider)
     await snapshot.make()
@@ -168,7 +174,7 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 1)
-    await assert.reverts(operators.removeSigningKey(0, 0, { from: voting }), 'KEY_WAS_USED')
+    await assert.reverts(operators.removeSigningKey(0, 0, { from: voting }), 'OUT_OF_RANGE')
 
     await operators.removeSigningKey(0, 1, { from: voting })
 
@@ -176,8 +182,8 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     // deposit should go to second operator, as the first one got their key limits set to 1
-    await assert.reverts(operators.removeSigningKey(1, 0, { from: voting }), 'KEY_WAS_USED')
-    await assert.reverts(operators.removeSigningKey(1, 1, { from: voting }), 'KEY_WAS_USED')
+    await assert.reverts(operators.removeSigningKey(1, 0, { from: voting }), 'OUT_OF_RANGE')
+    await assert.reverts(operators.removeSigningKey(1, 1, { from: voting }), 'OUT_OF_RANGE')
     assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 4)
     assertBn(await app.getTotalPooledEther(), ETH(133))
     assertBn(await app.getBufferedEther(), ETH(5))
