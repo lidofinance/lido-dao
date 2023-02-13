@@ -24,6 +24,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
   let extraDataHash = null
   let extraDataItems = null
   let oracleVersion = null
+  let deadline = null
 
   const deploy = async (options = undefined) => {
     const deployed = await deployAndConfigureAccountingOracle(admin)
@@ -64,7 +65,9 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     const reportHash = calcReportDataHash(reportItems)
     await deployed.consensus.addMember(member1, 1, { from: admin })
     await deployed.consensus.submitReport(refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
+
     oracleVersion = +(await deployed.oracle.getContractVersion())
+    deadline = (await deployed.oracle.getConsensusReport()).processingDeadlineTime
 
     oracle = deployed.oracle
     consensus = deployed.consensus
@@ -83,6 +86,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       assert.isNotNull(extraDataHash)
       assert.isNotNull(extraDataItems)
       assert.isNotNull(oracleVersion)
+      assert.isNotNull(deadline)
     })
   })
 
@@ -91,11 +95,10 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
     context('checks contract version', () => {
       it('should revert if incorrect contract version', async () => {
-        const deadline = (await oracle.getConsensusReport()).processingDeadlineTime
         await consensus.setTime(deadline)
 
         const incorrectNextVersion = oracleVersion + 1
-        const incorrectPrevVersion = oracleVersion + 1
+        const incorrectPrevVersion = oracleVersion - 1
 
         await assert.reverts(
           oracle.submitReportData(reportItems, incorrectNextVersion, { from: member1 }),
@@ -109,7 +112,6 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       })
 
       it('should should allow calling if correct contract version', async () => {
-        const deadline = (await oracle.getConsensusReport()).processingDeadlineTime
         await consensus.setTime(deadline)
 
         const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
@@ -119,29 +121,16 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
     context('checks ref slot', () => {
       it('should revert if incorrect ref slot', async () => {
-        const deadline = (await oracle.getConsensusReport()).processingDeadlineTime
         await consensus.setTime(deadline)
         const { refSlot } = await consensus.getCurrentFrame()
 
         const incorrectRefSlot = +refSlot + 1
 
-        const reportFields = {
-          consensusVersion: CONSENSUS_VERSION,
-          refSlot: incorrectRefSlot,
-          numValidators: 10,
-          clBalanceGwei: e9(320),
-          stakingModuleIdsWithNewlyExitedValidators: [1],
-          numExitedValidatorsByStakingModule: [3],
-          withdrawalVaultBalance: e18(1),
-          elRewardsVaultBalance: e18(2),
-          lastWithdrawalRequestIdToFinalize: 1,
-          finalizationShareRate: e27(1),
-          isBunkerMode: true,
-          extraDataFormat: EXTRA_DATA_FORMAT_LIST,
-          extraDataHash: extraDataHash,
-          extraDataItemsCount: extraDataItems.length
+        const newReportFields = {
+          ...reportFields,
+          refSlot: incorrectRefSlot
         }
-        const reportItems = getReportDataItems(reportFields)
+        const reportItems = getReportDataItems(newReportFields)
 
         await assert.reverts(
           oracle.submitReportData(reportItems, oracleVersion, { from: member1 }),
@@ -150,41 +139,52 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       })
 
       it('should should allow calling if correct ref slot version', async () => {
-        const deadline = (await oracle.getConsensusReport()).processingDeadlineTime
         await consensus.setTime(deadline)
         const { refSlot } = await consensus.getCurrentFrame()
 
         const nextRefSlot = +refSlot + SLOTS_PER_FRAME
 
-        const reportFields = {
-          consensusVersion: CONSENSUS_VERSION,
-          refSlot: nextRefSlot,
-          numValidators: 10,
-          clBalanceGwei: e9(320),
-          stakingModuleIdsWithNewlyExitedValidators: [1],
-          numExitedValidatorsByStakingModule: [3],
-          withdrawalVaultBalance: e18(1),
-          elRewardsVaultBalance: e18(2),
-          lastWithdrawalRequestIdToFinalize: 1,
-          finalizationShareRate: e27(1),
-          isBunkerMode: true,
-          extraDataFormat: EXTRA_DATA_FORMAT_LIST,
-          extraDataHash: extraDataHash,
-          extraDataItemsCount: extraDataItems.length
+        const newReportFields = {
+          ...reportFields,
+          refSlot: nextRefSlot
         }
-        const reportItems = getReportDataItems(reportFields)
+        const reportItems = getReportDataItems(newReportFields)
 
         const reportHash = calcReportDataHash(reportItems)
         await consensus.advanceTimeToNextFrameStart()
         await consensus.submitReport(nextRefSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
 
-        const tx = await oracle.submitReportData(reportItems, CONSENSUS_VERSION, { from: member1 })
-        assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
+        const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
+        assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: newReportFields.refSlot } })
       })
     })
 
     context('checks consensus version', () => {
-      it('should revert if incorrect ref slot', async () => {})
+      it('should revert if incorrect consensus version', async () => {
+        await consensus.setTime(deadline)
+
+        const incorrectNextVersion = CONSENSUS_VERSION + 1
+        const incorrectPrevVersion = CONSENSUS_VERSION + 1
+
+        const newReportFields = {
+          ...reportFields,
+          consensusVersion: incorrectNextVersion
+        }
+        const reportItems = getReportDataItems(newReportFields)
+
+        const reportFiledsPrevVersion = { ...reportFields, consensusVersion: incorrectPrevVersion }
+        const reportItemsPrevVersion = getReportDataItems(reportFiledsPrevVersion)
+
+        await assert.reverts(
+          oracle.submitReportData(reportItems, oracleVersion, { from: member1 }),
+          `UnexpectedConsensusVersion(${oracleVersion}, ${incorrectNextVersion})`
+        )
+
+        await assert.reverts(
+          oracle.submitReportData(reportItemsPrevVersion, oracleVersion, { from: member1 }),
+          `UnexpectedConsensusVersion(${oracleVersion}, ${incorrectPrevVersion})`
+        )
+      })
     })
   })
 })
