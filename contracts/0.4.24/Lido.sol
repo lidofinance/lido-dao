@@ -606,7 +606,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      *
      * @param _newDepositedValidators new value
      */
-    function unsafeChangeDepositedValidators(uint256 _newDepositedValidators) {
+    function unsafeChangeDepositedValidators(uint256 _newDepositedValidators) external {
         _auth(UNSAFE_CHANGE_DEPOSITED_VALIDATORS_ROLE);
 
         DEPOSITED_VALIDATORS_POSITION.setStorageUint256(_newDepositedValidators);
