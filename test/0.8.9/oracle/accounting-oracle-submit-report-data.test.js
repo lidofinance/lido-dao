@@ -23,8 +23,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
   let extraDataList = null
   let extraDataHash = null
   let extraDataItems = null
-
-  const submitDataRoleKeccak156 = web3.utils.keccak256('SUBMIT_DATA_ROLE')
+  let oracleVersion = null
 
   const deploy = async (options = undefined) => {
     const deployed = await deployAndConfigureAccountingOracle(admin)
@@ -65,6 +64,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     const reportHash = calcReportDataHash(reportItems)
     await deployed.consensus.addMember(member1, 1, { from: admin })
     await deployed.consensus.submitReport(refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
+    oracleVersion = +(await deployed.oracle.getContractVersion())
 
     oracle = deployed.oracle
     consensus = deployed.consensus
@@ -82,6 +82,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       assert.isNotNull(extraDataList)
       assert.isNotNull(extraDataHash)
       assert.isNotNull(extraDataItems)
+      assert.isNotNull(oracleVersion)
     })
   })
 
@@ -93,17 +94,17 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const deadline = (await oracle.getConsensusReport()).processingDeadlineTime
         await consensus.setTime(deadline)
 
-        const incorrectNextVersion = CONSENSUS_VERSION + 1
-        const incorrectPrevVersion = CONSENSUS_VERSION + 1
+        const incorrectNextVersion = oracleVersion + 1
+        const incorrectPrevVersion = oracleVersion + 1
 
         await assert.reverts(
           oracle.submitReportData(reportItems, incorrectNextVersion, { from: member1 }),
-          `UnexpectedContractVersion(${CONSENSUS_VERSION}, ${incorrectNextVersion})`
+          `UnexpectedContractVersion(${oracleVersion}, ${incorrectNextVersion})`
         )
 
         await assert.reverts(
           oracle.submitReportData(reportItems, incorrectPrevVersion, { from: member1 }),
-          `UnexpectedContractVersion(${CONSENSUS_VERSION}, ${incorrectPrevVersion})`
+          `UnexpectedContractVersion(${oracleVersion}, ${incorrectPrevVersion})`
         )
       })
 
@@ -111,7 +112,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const deadline = (await oracle.getConsensusReport()).processingDeadlineTime
         await consensus.setTime(deadline)
 
-        const tx = await oracle.submitReportData(reportItems, CONSENSUS_VERSION, { from: member1 })
+        const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
         assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
       })
     })
@@ -143,7 +144,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const reportItems = getReportDataItems(reportFields)
 
         await assert.reverts(
-          oracle.submitReportData(reportItems, CONSENSUS_VERSION, { from: member1 }),
+          oracle.submitReportData(reportItems, oracleVersion, { from: member1 }),
           `UnexpectedRefSlot(${refSlot}, ${incorrectRefSlot})`
         )
       })
@@ -180,6 +181,10 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const tx = await oracle.submitReportData(reportItems, CONSENSUS_VERSION, { from: member1 })
         assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
       })
+    })
+
+    context('checks consensus version', () => {
+      it('should revert if incorrect ref slot', async () => {})
     })
   })
 })
