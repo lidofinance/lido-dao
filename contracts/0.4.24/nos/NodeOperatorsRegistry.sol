@@ -401,7 +401,11 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
 
-        _updateExitedValidatorsCount(_nodeOperatorId, uint64(_exitedValidatorsCount), false);
+        _updateExitedValidatorsCount(
+            _nodeOperatorId,
+            uint64(_exitedValidatorsCount),
+            false // allowDecrease
+        );
     }
 
     /// @notice Updates the number of the refunded validators for node operator with the given id
@@ -436,7 +440,11 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
 
-        _updateExitedValidatorsCount(_nodeOperatorId, uint64(_exitedValidatorsCount), true);
+        _updateExitedValidatorsCount(
+            _nodeOperatorId,
+            uint64(_exitedValidatorsCount),
+            true // allowDecrease
+        );
         _updateStuckValidatorsCount(_nodeOperatorId, uint64(_stuckValidatorsCount));
     }
 
