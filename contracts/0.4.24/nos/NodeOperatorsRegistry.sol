@@ -890,18 +890,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         return signingKeysStats.get(TOTAL_KEYS_COUNT_OFFSET) - signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET);
     }
 
-    /// @notice Returns a monotonically increasing counter that gets incremented when any of the following happens:
-    /// @dev DEPRECATED: use getNonce() instead
-    ///   1. a node operator's key(s) is added;
-    ///   2. a node operator's key(s) is removed;
-    ///   3. a node operator's vetted keys count is changed.
-    ///   4. a node operator was activated/deactivated. Activation or deactivation of node operator
-    ///      might lead to usage of unvalidated keys in the assignNextSigningKeys method.
-    ///   5. a node operator's deposit data is used for the deposit
-    function getKeysOpIndex() external view returns (uint256) {
-        return KEYS_OP_INDEX_POSITION.getStorageUint256();
-    }
-
     /// @notice Returns n-th signing key of the node operator #`_nodeOperatorId`
     /// @param _nodeOperatorId Node Operator id
     /// @param _index Index of the key, starting with 0
@@ -1046,6 +1034,19 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     ///     4. a node operator was activated/deactivated
     ///     5. a node operator's deposit data is used for the deposit
     function getNonce() external view returns (uint256) {
+        return KEYS_OP_INDEX_POSITION.getStorageUint256();
+    }
+
+    /// @notice Returns a counter that MUST change its value whenever the deposit data set changes.
+    ///     Below is the typical list of actions that requires an update of the nonce:
+    ///     1. a node operator's deposit data is added
+    ///     2. a node operator's deposit data is removed
+    ///     3. a node operator's ready-to-deposit data size is changed
+    ///     4. a node operator was activated/deactivated
+    ///     5. a node operator's deposit data is used for the deposit
+    ///     Note: Depending on the StakingModule implementation above list might be extended
+    /// @dev DEPRECATED use getNonce() instead
+    function getKeysOpIndex() external view returns (uint256) {
         return KEYS_OP_INDEX_POSITION.getStorageUint256();
     }
 
