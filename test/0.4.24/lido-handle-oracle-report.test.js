@@ -6,13 +6,15 @@ const { EvmSnapshot } = require('../helpers/blockchain')
 const { ZERO_ADDRESS } = require('../helpers/constants')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 
-const ETHForwarderMock = artifacts.require('ETHForwarderMock')
+const FunderMock = artifacts.require('FunderMock')
+const RewardEmulatorMock = artifacts.require('RewardEmulatorMock')
 const ONE_YEAR = 3600 * 24 * 365
 const ONE_DAY = 3600 * 24
 
 contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, anotherStranger, depositor, operator]) => {
   let deployed, snapshot, lido, treasury, voting, oracle
-  let curatedModule, oracleReportSanityChecker
+  let curatedModule, oracleReportSanityChecker, elRewardsVault
+  let withdrawalRewarderMock, withdrawalVault, elRewarderMock
   let strangerBalanceBefore,
     anotherStrangerBalanceBefore,
     totalPooledEtherBefore,
@@ -38,7 +40,10 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
       }
     })
 
-    await ETHForwarderMock.new(deployed.oracle.address, { from: appManager, value: ETH(1) })
+    const funder = await FunderMock.new()
+    await funder.pay(deployed.oracle.address, { value: ETH(1) })
+    withdrawalRewarderMock = await RewardEmulatorMock.new(deployed.withdrawalVault.address)
+    elRewarderMock = await RewardEmulatorMock.new(deployed.elRewardsVault.address)
     await hre.ethers.getImpersonatedSigner(deployed.oracle.address)
 
     await curatedModule.addNodeOperator('1', operator, { from: deployed.voting.address })
@@ -52,6 +57,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     voting = deployed.voting.address
     oracle = deployed.oracle.address
     oracleReportSanityChecker = deployed.oracleReportSanityChecker
+    withdrawalVault = deployed.withdrawalVault.address
+    elRewardsVault = deployed.elRewardsVault.address
 
     await lido.submit(ZERO_ADDRESS, { from: stranger, value: ETH(30) })
     await lido.submit(ZERO_ADDRESS, { from: anotherStranger, value: ETH(70) })
@@ -415,6 +422,20 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         'IncorrectAppearedValidators(101)'
       )
     })
+  })
+
+  describe('smooth report', async () => {
+    beforeEach(async () => {
+      await await lido.deposit(3, 1, '0x', { from: depositor })
+      await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: 0 })
+      await checkBalanceDeltas({
+        totalPooledEtherDiff: 0,
+        treasuryBalanceDiff: 0,
+        strangerBalanceDiff: 0,
+        anotherStrangerBalanceDiff: 0,
+        curatedModuleBalanceDiff: 0
+      })
+    })
 
     it('does not smooth if report in limits', async () => {
       await oracleReportSanityChecker.setOracleReportLimits(
@@ -450,26 +471,217 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
       )
       await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(100), 0, 0, 0, 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(100) })
+      await checkBalanceDeltas({
+        totalPooledEtherDiff: ETH(4),
+        treasuryBalanceDiff: ETH(4 * 0.05),
+        strangerBalanceDiff: ETH(4 * 0.3 * 0.9),
+        anotherStrangerBalanceDiff: ETH(4 * 0.7 * 0.9),
+        curatedModuleBalanceDiff: ETH(4 * 0.05)
+      })
     })
 
-    // it('smooths withdrawals if report in limits', async () => {
-    //   await ETHForwarderMock.new(deployed.withdrawalVault.address, { from: appManager, value: ETH(1) })
+    it('does not smooth withdrawals if report in limits', async () => {
+      await withdrawalRewarderMock.reward({ value: ETH(1) })
 
-    //   await oracleReportSanityChecker.setOracleReportLimits(
-    //     {
-    //       churnValidatorsPerDayLimit: 100,
-    //       oneOffCLBalanceDecreaseBPLimit: 100,
-    //       annualBalanceIncreaseBPLimit: 10000,
-    //       shareRateDeviationBPLimit: 10000,
-    //       maxValidatorExitRequestsPerReport: 10000,
-    //       requestTimestampMargin: 0,
-    //       maxPositiveTokenRebase: 10000000,
-    //       maxAccountingExtraDataListItemsCount: 10000
-    //     },
-    //     { from: voting, gasPrice: 1 }
-    //   )
-    //   await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96), ETH(1), 0, 0, 0, { from: oracle, gasPrice: 1 })
-    //   await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(97) })
-    // })
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
+          churnValidatorsPerDayLimit: 100,
+          oneOffCLBalanceDecreaseBPLimit: 100,
+          annualBalanceIncreaseBPLimit: 10000,
+          shareRateDeviationBPLimit: 10000,
+          maxValidatorExitRequestsPerReport: 10000,
+          requestTimestampMargin: 0,
+          maxPositiveTokenRebase: 10000000,
+          maxAccountingExtraDataListItemsCount: 10000
+        },
+        { from: voting, gasPrice: 1 }
+      )
+      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96), ETH(1), 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
+      await checkBalanceDeltas({
+        totalPooledEtherDiff: ETH(1),
+        treasuryBalanceDiff: ETH(0.05),
+        strangerBalanceDiff: ETH(0.3 * 0.9),
+        anotherStrangerBalanceDiff: ETH(0.7 * 0.9),
+        curatedModuleBalanceDiff: ETH(0.05)
+      })
+      assert.equals(await ethers.provider.getBalance(withdrawalVault), 0)
+    })
+
+    it('smooths withdrawals if report out of limit', async () => {
+      await withdrawalRewarderMock.reward({ value: ETH(1.1) })
+
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
+          churnValidatorsPerDayLimit: 100,
+          oneOffCLBalanceDecreaseBPLimit: 100,
+          annualBalanceIncreaseBPLimit: 10000,
+          shareRateDeviationBPLimit: 10000,
+          maxValidatorExitRequestsPerReport: 10000,
+          requestTimestampMargin: 0,
+          maxPositiveTokenRebase: 10000000,
+          maxAccountingExtraDataListItemsCount: 10000
+        },
+        { from: voting, gasPrice: 1 }
+      )
+      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96), ETH(1.1), 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
+      await checkBalanceDeltas({
+        totalPooledEtherDiff: ETH(1),
+        treasuryBalanceDiff: ETH(0.05),
+        strangerBalanceDiff: ETH(0.3 * 0.9),
+        anotherStrangerBalanceDiff: ETH(0.7 * 0.9),
+        curatedModuleBalanceDiff: ETH(0.05)
+      })
+
+      assert.equals(await ethers.provider.getBalance(withdrawalVault), ETH(0.1))
+    })
+
+    it('does not smooth el rewards if report in limit without lido fee', async () => {
+      await elRewarderMock.reward({ value: ETH(1) })
+
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
+          churnValidatorsPerDayLimit: 100,
+          oneOffCLBalanceDecreaseBPLimit: 100,
+          annualBalanceIncreaseBPLimit: 10000,
+          shareRateDeviationBPLimit: 10000,
+          maxValidatorExitRequestsPerReport: 10000,
+          requestTimestampMargin: 0,
+          maxPositiveTokenRebase: 10000000,
+          maxAccountingExtraDataListItemsCount: 10000
+        },
+        { from: voting, gasPrice: 1 }
+      )
+      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96), 0, ETH(1), 0, 0, { from: oracle, gasPrice: 1 })
+      await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
+
+      await checkBalanceDeltas({
+        totalPooledEtherDiff: ETH(1),
+        treasuryBalanceDiff: 0,
+        strangerBalanceDiff: ETH(0.3),
+        anotherStrangerBalanceDiff: ETH(0.7),
+        curatedModuleBalanceDiff: 0
+      })
+
+      assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0))
+    })
+
+    it('does not smooth el rewards if report in limit without lido fee', async () => {
+      await elRewarderMock.reward({ value: ETH(1.5) })
+
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
+          churnValidatorsPerDayLimit: 100,
+          oneOffCLBalanceDecreaseBPLimit: 100,
+          annualBalanceIncreaseBPLimit: 10000,
+          shareRateDeviationBPLimit: 10000,
+          maxValidatorExitRequestsPerReport: 10000,
+          requestTimestampMargin: 0,
+          maxPositiveTokenRebase: 10000000,
+          maxAccountingExtraDataListItemsCount: 10000
+        },
+        { from: voting, gasPrice: 1 }
+      )
+      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(95.5), 0, ETH(1.5), 0, 0, { from: oracle, gasPrice: 1 })
+      await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(95.5) })
+      await checkBalanceDeltas({
+        totalPooledEtherDiff: ETH(1),
+        treasuryBalanceDiff: 0,
+        strangerBalanceDiff: ETH(0.3),
+        anotherStrangerBalanceDiff: ETH(0.7),
+        curatedModuleBalanceDiff: 0
+      })
+
+      assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0))
+    })
+
+    it('smooths el rewards if report out of limit without lido fee', async () => {
+      await elRewarderMock.reward({ value: ETH(1.1) })
+
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
+          churnValidatorsPerDayLimit: 100,
+          oneOffCLBalanceDecreaseBPLimit: 100,
+          annualBalanceIncreaseBPLimit: 10000,
+          shareRateDeviationBPLimit: 10000,
+          maxValidatorExitRequestsPerReport: 10000,
+          requestTimestampMargin: 0,
+          maxPositiveTokenRebase: 10000000,
+          maxAccountingExtraDataListItemsCount: 10000
+        },
+        { from: voting, gasPrice: 1 }
+      )
+      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96), 0, ETH(1.1), 0, 0, { from: oracle, gasPrice: 1 })
+      await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
+      await checkBalanceDeltas({
+        totalPooledEtherDiff: ETH(1),
+        treasuryBalanceDiff: 0,
+        strangerBalanceDiff: ETH(0.3),
+        anotherStrangerBalanceDiff: ETH(0.7),
+        curatedModuleBalanceDiff: 0
+      })
+
+      assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0.1))
+    })
+
+    it('does not smooth el rewards if report in limit', async () => {
+      await elRewarderMock.reward({ value: ETH(1) })
+
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
+          churnValidatorsPerDayLimit: 100,
+          oneOffCLBalanceDecreaseBPLimit: 100,
+          annualBalanceIncreaseBPLimit: 10000,
+          shareRateDeviationBPLimit: 10000,
+          maxValidatorExitRequestsPerReport: 10000,
+          requestTimestampMargin: 0,
+          maxPositiveTokenRebase: 10000000,
+          maxAccountingExtraDataListItemsCount: 10000
+        },
+        { from: voting, gasPrice: 1 }
+      )
+      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96.1), 0, ETH(0.9), 0, 0, { from: oracle, gasPrice: 1 })
+      await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96.1) })
+
+      await checkBalanceDeltas({
+        totalPooledEtherDiff: ETH(1),
+        treasuryBalanceDiff: ETH(0.05),
+        strangerBalanceDiff: ETH(0.3 * 0.9),
+        anotherStrangerBalanceDiff: ETH(0.7 * 0.9),
+        curatedModuleBalanceDiff: ETH(0.05)
+      })
+
+      assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0.1))
+    })
+
+    it('smooths el rewards if report out of limit', async () => {
+      await elRewarderMock.reward({ value: ETH(1.1) })
+
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
+          churnValidatorsPerDayLimit: 100,
+          oneOffCLBalanceDecreaseBPLimit: 100,
+          annualBalanceIncreaseBPLimit: 10000,
+          shareRateDeviationBPLimit: 10000,
+          maxValidatorExitRequestsPerReport: 10000,
+          requestTimestampMargin: 0,
+          maxPositiveTokenRebase: 10000000,
+          maxAccountingExtraDataListItemsCount: 10000
+        },
+        { from: voting, gasPrice: 1 }
+      )
+      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96.1), 0, ETH(1.1), 0, 0, { from: oracle, gasPrice: 1 })
+      await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96.1) })
+      await checkBalanceDeltas({
+        totalPooledEtherDiff: ETH(1),
+        treasuryBalanceDiff: ETH(0.05),
+        strangerBalanceDiff: ETH(0.3 * 0.9),
+        anotherStrangerBalanceDiff: ETH(0.7 * 0.9),
+        curatedModuleBalanceDiff: ETH(0.05)
+      })
+
+      assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0.2))
+    })
   })
 })
