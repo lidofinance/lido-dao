@@ -108,18 +108,18 @@ contract('StakingLimits', ([account1]) => {
 
     maxStakeLimit = 5
     maxStakeLimitGrowthBlocks = 6
-    assertRevert(limits.setStakingLimit(slot, maxStakeLimit, maxStakeLimitGrowthBlocks), 'TOO_LARGE_LIMIT_INCREASE')
+    await assertRevert(limits.setStakingLimit(slot, maxStakeLimit, maxStakeLimitGrowthBlocks), 'TOO_LARGE_LIMIT_INCREASE')
   })
 
   it('stake limit reverts on large values', async () => {
     let maxStakeLimit = toBN(2).pow(toBN(96))
     let maxStakeLimitIncreasePerBlock = 1
     const slot = await limits.setStorageStakeLimitStruct(0, 0, 0, 0)
-    assertRevert(limits.setStakingLimit(slot, maxStakeLimit, maxStakeLimitIncreasePerBlock), 'TOO_LARGE_MAX_STAKE_LIMIT')
+    await assertRevert(limits.setStakingLimit(slot, maxStakeLimit, maxStakeLimitIncreasePerBlock), 'TOO_LARGE_MAX_STAKE_LIMIT')
 
     maxStakeLimit = toBN(2).mul(toBN(10).pow(toBN(18)))
     maxStakeLimitIncreasePerBlock = toBN(10)
-    assertRevert(limits.setStakingLimit(slot, maxStakeLimit, maxStakeLimitIncreasePerBlock), `TOO_SMALL_LIMIT_INCREASE`)
+    await assertRevert(limits.setStakingLimit(slot, maxStakeLimit, maxStakeLimitIncreasePerBlock), `TOO_SMALL_LIMIT_INCREASE`)
   })
 
   it('check update calculate stake limit with different blocks', async () => {
