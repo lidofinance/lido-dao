@@ -177,9 +177,6 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
     /// - `_requestId` request must not be claimed and be owned by `_from`.
     /// - `msg.sender` should be approved, or approved for all, or owner
     function _transfer(address _from, address _to, uint256 _requestId) internal {
-
-
-
         if (_to == address(0)) revert TransferToZeroAddress();
         if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
@@ -187,7 +184,9 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
         if (request.claimed) revert RequestAlreadyClaimed(_requestId);
 
         if (_from != request.owner) revert TransferFromIncorrectOwner(_from, request.owner);
-        if (!(msg.sender == _from || isApprovedForAll(_from, msg.sender) || _getTokenApprovals()[_requestId] == msg.sender)) revert NotOwnerOrApproved(msg.sender);
+        // here and below we are sure that `_from` is the owner of the request
+        address msgSender = msg.sender;
+        if (!(_from == msgSender || isApprovedForAll(_from, msgSender) || _getTokenApprovals()[_requestId] == msgSender)) revert NotOwnerOrApproved(msgSender);
 
         delete _getTokenApprovals()[_requestId];
         request.owner = payable(_to);
