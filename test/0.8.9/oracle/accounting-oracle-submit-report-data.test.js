@@ -211,5 +211,22 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         assertEvent(txNewVersion, 'ProcessingStarted', { expectedArgs: { refSlot: newReportFields.refSlot } })
       })
     })
+
+    context('checks data cache', () => {
+      it('reverts with UnexpectedDataHash', async () => {
+        incorrectReportItems = getReportDataItems({
+          ...reportFields,
+          numValidators: reportFields.numValidators - 1
+        })
+
+        const correctDataHash = calcReportDataHash(reportItems)
+        const incorrectDataHash = calcReportDataHash(incorrectReportItems)
+
+        await assert.reverts(
+          oracle.submitReportData(incorrectReportItems, oracleVersion, { from: member1 }),
+          `UnexpectedDataHash("${correctDataHash}", "${incorrectDataHash}")`
+        )
+      })
+    })
   })
 })
