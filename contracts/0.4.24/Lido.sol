@@ -824,7 +824,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 _withdrawalsToWithdraw,
         uint256 _elRewardsToWithdraw,
         uint256 _lastFinalizableRequestId,
-        uint256 _sharesToBurnFromWithdrawalQueue,
         uint256 _etherToLockOnWithdrawalQueue
     ) internal {
         // withdraw execution layer rewards and put them to the buffer
@@ -839,10 +838,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         // finalize withdrawals (send ether, assign shares for burning)
         if (_etherToLockOnWithdrawalQueue > 0) {
-            IBurner burner = IBurner(_contracts.burner);
             IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_contracts.withdrawalQueue);
-
-            burner.requestBurnShares(address(withdrawalQueue), _sharesToBurnFromWithdrawalQueue);
             withdrawalQueue.finalize.value(_etherToLockOnWithdrawalQueue)(_lastFinalizableRequestId);
         }
 
@@ -1259,7 +1255,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             withdrawals,
             elRewards,
             _reportedData.lastFinalizableRequestId,
-            reportContext.sharesToBurnFromWithdrawalQueue,
             reportContext.etherToLockOnWithdrawalQueue
         );
 
@@ -1285,6 +1280,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // Burn excess shares (withdrawn stETH at least)
         uint256 burntWithdrawalQueueShares = _burnSharesLimited(
             IBurner(_contracts.burner),
+            _contracts.withdrawalQueue,
             reportContext.sharesToBurnFromWithdrawalQueue,
             reportContext.sharesToBurnLimit
         );
@@ -1377,9 +1373,14 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      */
     function _burnSharesLimited(
         IBurner _burner,
+        address _withdrawalQueue,
         uint256 _withdrawalsSharesToBurn,
         uint256 _sharesToBurnLimit
     ) internal returns (uint256 burntWithdrawalsShares) {
+        if (_withdrawalsSharesToBurn > 0) {
+            _burner.requestBurnShares(_withdrawalQueue, _withdrawalsSharesToBurn);
+        }
+
         if (_sharesToBurnLimit > 0) {
             uint256 sharesCommittedToBurnNow = _burner.commitSharesToBurn(_sharesToBurnLimit);
 
