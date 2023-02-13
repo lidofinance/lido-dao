@@ -44,8 +44,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     event NodeOperatorActiveSet(uint256 indexed nodeOperatorId, bool active);
     event NodeOperatorNameSet(uint256 indexed nodeOperatorId, string name);
     event NodeOperatorRewardAddressSet(uint256 indexed nodeOperatorId, address rewardAddress);
-    event NodeOperatorStakingLimitSet(uint256 indexed nodeOperatorId, uint64 stakingLimit);
-    event NodeOperatorTotalStoppedValidatorsReported(uint256 indexed nodeOperatorId, uint64 totalStopped);
     event NodeOperatorTotalKeysTrimmed(uint256 indexed nodeOperatorId, uint64 totalKeysTrimmed);
     event KeysOpIndexSet(uint256 keysOpIndex);
     event ContractVersionSet(uint256 version);
@@ -155,6 +153,9 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         /// @dev Human-readable name
         string name;
         /// @dev The below variables store the signing keys info of the node operator.
+        ///     signingKeysStats - contains packed variables: uint64 exitedSigningKeysCount, uint64 depositedSigningKeysCount,
+        ///                        uint64 vettedSigningKeysCount, uint64 totalSigningKeysCount
+        ///
         ///     These variables can take values in the following ranges:
         ///
         ///                0             <=  exitedSigningKeysCount   <= depositedSigningKeysCount
@@ -197,8 +198,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _checkContractVersion(0);
         _initialize_v2(_locator, _type);
 
-        _setStuckPenaltyDelay(2 days);
-
         uint256 totalOperators = getNodeOperatorsCount();
         Packed64x4.Packed memory signingKeysStats;
         for (uint256 operatorId; operatorId < totalOperators; ++operatorId) {
@@ -232,6 +231,8 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         TYPE_POSITION.setStorageBytes32(_type);
 
         _setContractVersion(2);
+
+        _setStuckPenaltyDelay(2 days);
 
         // set unlimited allowance for burner from staking router
         // to burn stuck keys penalized shares
@@ -437,7 +438,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
 
-        _updateExitedValidatorsCount(_nodeOperatorId, uint64(_exitedValidatorsCount), true);
+        _updateExitedValidatorsCount(_nodeOperatorId, uint64(_exitedValidatorsCount), true /* _allowDecrease */);
         _updateStuckValidatorsCount(_nodeOperatorId, uint64(_stuckValidatorsCount));
     }
 
@@ -462,7 +463,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     /// @notice Updates the limit of the validators that can be used for deposit by DAO
     /// @param _nodeOperatorId Id of the node operator
-    /// @param _targetLimit New number of EXITED validators of the node operator
+    /// @param _targetLimit Target limit of the node operator
     /// @param _isTargetLimitActive active flag
     function updateTargetValidatorsLimits(uint256 _nodeOperatorId, bool _isTargetLimitActive, uint64 _targetLimit) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
@@ -509,7 +510,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         emit RefundedValidatorsCountChanged(_nodeOperatorId, _refundedValidatorsCount);
     }
 
-    /// @notice Invalidates all unused validators for all node operators
+    /// @notice Invalidates all unused deposit data for all node operators
     function onWithdrawalCredentialsChanged() external {
         uint256 operatorsCount = getNodeOperatorsCount();
         if (operatorsCount > 0) {
@@ -799,10 +800,10 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
         uint256 totalSigningKeysCount = signingKeysStats.get(TOTAL_KEYS_COUNT_OFFSET);
 
+        _requireValidRange(totalSigningKeysCount.add(_keysCount) <= UINT64_MAX);
+
         totalSigningKeysCount =
             SIGNING_KEYS_MAPPING_NAME.addKeysSigs(_nodeOperatorId, _keysCount, totalSigningKeysCount, _publicKeys, _signatures);
-
-        _requireValidRange(totalSigningKeysCount.add(_keysCount) <= UINT64_MAX);
 
         emit TotalSigningKeysCountChanged(_nodeOperatorId, totalSigningKeysCount);
 
@@ -890,18 +891,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
         return signingKeysStats.get(TOTAL_KEYS_COUNT_OFFSET) - signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET);
-    }
-
-    /// @notice Returns a monotonically increasing counter that gets incremented when any of the following happens:
-    /// @dev DEPRECATED: use getNonce() instead
-    ///   1. a node operator's key(s) is added;
-    ///   2. a node operator's key(s) is removed;
-    ///   3. a node operator's vetted keys count is changed.
-    ///   4. a node operator was activated/deactivated. Activation or deactivation of node operator
-    ///      might lead to usage of unvalidated keys in the assignNextSigningKeys method.
-    ///   5. a node operator's deposit data is used for the deposit
-    function getKeysOpIndex() external view returns (uint256) {
-        return KEYS_OP_INDEX_POSITION.getStorageUint256();
     }
 
     /// @notice Returns n-th signing key of the node operator #`_nodeOperatorId`
@@ -1048,6 +1037,19 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     ///     4. a node operator was activated/deactivated
     ///     5. a node operator's deposit data is used for the deposit
     function getNonce() external view returns (uint256) {
+        return KEYS_OP_INDEX_POSITION.getStorageUint256();
+    }
+
+    /// @notice Returns a counter that MUST change its value whenever the deposit data set changes.
+    ///     Below is the typical list of actions that requires an update of the nonce:
+    ///     1. a node operator's deposit data is added
+    ///     2. a node operator's deposit data is removed
+    ///     3. a node operator's ready-to-deposit data size is changed
+    ///     4. a node operator was activated/deactivated
+    ///     5. a node operator's deposit data is used for the deposit
+    ///     Note: Depending on the StakingModule implementation above list might be extended
+    /// @dev DEPRECATED use getNonce() instead
+    function getKeysOpIndex() external view returns (uint256) {
         return KEYS_OP_INDEX_POSITION.getStorageUint256();
     }
 
