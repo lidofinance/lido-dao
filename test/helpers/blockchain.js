@@ -3,7 +3,6 @@ async function waitBlocks(numBlocksToMine) {
   for (let i = 0; i < numBlocksToMine; ++i) {
     await network.provider.send('evm_mine')
     block = await web3.eth.getBlock('latest')
-    console.log(block)
   }
   return block
 }

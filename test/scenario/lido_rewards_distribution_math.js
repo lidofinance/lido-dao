@@ -194,7 +194,10 @@ contract('Lido: rewards distribution math', (addresses) => {
   it(`the first deposit gets deployed`, async () => {
     const [curated] = await stakingRouter.getStakingModules()
 
-    const block = await web3.eth.getBlock('latest')
+    await ethers.provider.send('evm_increaseTime', [SECONDS_PER_FRAME *2])
+    await ethers.provider.send('evm_mine')
+    const block = await ethers.provider.getBlock('latest')
+
     const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
 
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
@@ -246,11 +249,9 @@ contract('Lido: rewards distribution math', (addresses) => {
     const nodeOperatorsRegistryBalanceBefore = await pool.balanceOf(nodeOperatorsRegistry.address)
     const treasurySharesBefore = await pool.sharesOf(treasuryAddr)
     const nodeOperatorsRegistrySharesBefore = await pool.sharesOf(nodeOperatorsRegistry.address)
-    console.log((await pool.getTotalShares()).toString())
 
     const receipt = await reportBeacon(1, reportingValue)
 
-    console.log((await pool.getTotalPooledEther()).toString())
     const treasuryTokenDelta = (await pool.balanceOf(treasuryAddr)) - treasuryBalanceBefore
     const treasurySharesDelta = (await pool.sharesOf(treasuryAddr)) - treasurySharesBefore
     const nodeOperatorsRegistryTokenDelta =
@@ -752,7 +753,15 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     const totalFeeToDistribute = new BN(profitAmount).mul(new BN(totalFeePoints)).div(tenKBN)
 
+    const sharesToMintSol = new BN(profitAmount)
+      .mul(new BN(totalFeePoints))
+      .mul(prevTotalShares)
+      .div(totalPooledEther.mul(tenKBN).sub(new BN(profitAmount).mul(new BN(totalFeePoints))))
+
     const sharesToMint = totalFeeToDistribute.mul(prevTotalShares).div(totalPooledEther.sub(totalFeeToDistribute))
+
+    assert.equals(sharesToMintSol, sharesToMint)
+
     const nodeOperatorsSharesToMint = sharesToMint.mul(new BN(nodeOperatorsFeePoints)).div(tenKBN)
     const treasurySharesToMint = sharesToMint.sub(nodeOperatorsSharesToMint)
 

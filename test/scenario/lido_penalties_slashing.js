@@ -1,18 +1,17 @@
-const { assert } = require('chai')
+const hre = require('hardhat')
 const { BN } = require('bn.js')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
 
-const { assertRevert } = require('../helpers/assertThrow')
+const { assert } = require('../helpers/assert')
 const { pad, ETH, tokens, toBN } = require('../helpers/utils')
-const { signDepositData } = require('../helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 const { SLOTS_PER_FRAME, SECONDS_PER_FRAME } = require('../helpers/constants')
 const { pushOracleReport } = require('../helpers/oracle')
 const { oracleReportSanityCheckerStubFactory } = require('../helpers/factories')
-
+const { DSMAttestMessage, DSMPauseMessage, signDepositData } = require('../helpers/signatures')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
@@ -484,7 +483,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   })
 
   it(`the oracle can't report less validators than previously`, () => {
-    assertRevert(pushReport(2, ETH(31)))
+    assert.reverts(pushReport(2, ETH(31)))
   })
 
   it(`user deposits another 32 ETH to the pool`, async () => {
@@ -492,38 +491,33 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const depositAmount = ETH(32)
     awaitingTotalShares = awaitingTotalShares.add(new BN(depositAmount).mul(awaitingTotalShares).div(totalPooledEther))
     awaitingUser1Balance = awaitingUser1Balance.add(new BN(depositAmount))
-
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: depositAmount })
 
-    console.log((await pool.balanceOf(user1)).toString())
-    const block = await waitBlocks(await depositSecurityModule.getMinDepositBlockDistance())
-    console.log((await pool.balanceOf(user1)).toString())
+    await hre.network.provider.send("hardhat_mine", ['0x100'])
 
+    const block = await web3.eth.getBlock('latest')
     const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
-    const signatures = [
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        block.number,
-        block.hash,
-        depositRoot,
-        1,
-        keysOpIndex,
-        '0x00',
-        guardians.privateKeys[guardians.addresses[0]]
-      ),
-      signDepositData(
-        await depositSecurityModule.ATTEST_MESSAGE_PREFIX(),
-        block.number,
-        block.hash,
-        depositRoot,
-        1,
-        keysOpIndex,
-        '0x00',
-        guardians.privateKeys[guardians.addresses[1]]
-      )
-    ]
-    await depositSecurityModule.depositBufferedEther(block.number, block.hash, depositRoot, 1, keysOpIndex, '0x00', signatures)
 
+    DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
+    DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
+
+    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, 1, keysOpIndex)
+
+    const signatures = [
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+    ]
+
+    await depositSecurityModule.depositBufferedEther(
+      block.number,
+      block.hash,
+      depositRoot,
+      1,
+      keysOpIndex,
+      '0x',
+      signatures
+    )
+    // TODO: check getBeaconStat call
     const ether2Stat = await pool.getBeaconStat()
     assertBn(ether2Stat.depositedValidators, 2, 'no validators have received the current deposit')
 
