@@ -153,6 +153,9 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         /// @dev Human-readable name
         string name;
         /// @dev The below variables store the signing keys info of the node operator.
+        ///     signingKeysStats - contains packed variables: uint64 exitedSigningKeysCount, uint64 depositedSigningKeysCount,
+        ///                        uint64 vettedSigningKeysCount, uint64 totalSigningKeysCount
+        ///
         ///     These variables can take values in the following ranges:
         ///
         ///                0             <=  exitedSigningKeysCount   <= depositedSigningKeysCount
@@ -195,8 +198,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _checkContractVersion(0);
         _initialize_v2(_locator, _type);
 
-        _setStuckPenaltyDelay(2 days);
-
         uint256 totalOperators = getNodeOperatorsCount();
         Packed64x4.Packed memory signingKeysStats;
         for (uint256 operatorId; operatorId < totalOperators; ++operatorId) {
@@ -230,6 +231,8 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         TYPE_POSITION.setStorageBytes32(_type);
 
         _setContractVersion(2);
+
+        _setStuckPenaltyDelay(2 days);
 
         // set unlimited allowance for burner from staking router
         // to burn stuck keys penalized shares
