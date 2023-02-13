@@ -318,6 +318,18 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
         await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
       })
+
+      it('reverts with InvalidExitedValidatorsData if counts of stakingModuleIds and numExitedValidatorsByStakingModule does not match', async () => {
+        const { newReportItems } = await prepareNextReportInNextFrame({
+          ...reportFields,
+          stakingModuleIdsWithNewlyExitedValidators: [2, 1],
+          numExitedValidatorsByStakingModule: [3]
+        })
+        await assert.reverts(
+          oracle.submitReportData(newReportItems, oracleVersion, { from: member1 }),
+          'InvalidExitedValidatorsData()'
+        )
+      })
     })
 
     context('delivers the data to corresponded contracts', () => {
