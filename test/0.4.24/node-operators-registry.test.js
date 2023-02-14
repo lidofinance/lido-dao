@@ -9,9 +9,7 @@ const nodeOperators = require('../helpers/node-operators')
 const signingKeys = require('../helpers/signing-keys')
 const { web3, artifacts } = require('hardhat')
 const { getRandomLocatorConfig } = require('../helpers/locator')
-const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 
-const IStakingModule = artifacts.require('contracts/0.8.9/interfaces/IStakingModule.sol:IStakingModule')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistryMock')
 const SigningKeys = artifacts.require('SigningKeys')
 const LidoLocator = artifacts.require('LidoLocator')
@@ -85,7 +83,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
   before('deploy base app', async () => {
     // Deploy the app's base contract.
     appBase = await NodeOperatorsRegistry.new()
-    steth = await StETH.new()
+    steth = await StETH.new({ value: ETH(1) })
     const locatorConfig = getRandomLocatorConfig({
       lido: steth.address
     })
@@ -2885,8 +2883,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(
         totalSigningKeys,
         NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount -
-          (NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount -
-            NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount)
+        (NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount -
+          NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount)
       )
       assert.equals(stakingLimit, NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount)
 
