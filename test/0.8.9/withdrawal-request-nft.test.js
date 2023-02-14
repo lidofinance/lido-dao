@@ -1,7 +1,7 @@
 const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
 const { EvmSnapshot } = require('../helpers/blockchain')
-const { shares, ETH, shareRate } = require('../helpers/utils')
+const { shares, ETH, shareRate, setBalance } = require('../helpers/utils')
 const withdrawals = require('../helpers/withdrawals')
 
 const StETH = hre.artifacts.require('StETHMock')
@@ -16,7 +16,9 @@ hre.contract(
     const snapshot = new EvmSnapshot(hre.ethers.provider)
 
     before(async () => {
-      stETH = await StETH.new({ value: ETH(100), from: deployer })
+      stETH = await StETH.new({ value: ETH(1), from: deployer })
+      await setBalance(stETH.address, ETH(100))
+
       wstETH = await WstETH.new(stETH.address, { from: deployer })
       erc721ReceiverMock = await ERC721ReceiverMock.new({ from: deployer })
       withdrawalRequestNFT = (await withdrawals.deploy(deployer, wstETH.address)).queue
@@ -29,7 +31,7 @@ hre.contract(
       )
       await withdrawalRequestNFT.resume({ from: deployer })
 
-      await stETH.setTotalPooledEther(ETH(100))
+      await stETH.setTotalPooledEther(ETH(101))
       await stETH.mintShares(stEthHolder, shares(50))
       await stETH.mintShares(wstETH.address, shares(50))
       await wstETH.mint(wstEthHolder, ETH(25))
