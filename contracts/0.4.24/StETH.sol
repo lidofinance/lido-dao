@@ -50,7 +50,7 @@ contract StETH is IERC20, Pausable {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;
 
-    address internal INITIAL_TOKEN_HOLDER = 0xdead;
+    address constant internal INITIAL_TOKEN_HOLDER = 0xdead;
 
     /**
      * @dev StETH balances are dynamic and are calculated based on the accounts' shares
