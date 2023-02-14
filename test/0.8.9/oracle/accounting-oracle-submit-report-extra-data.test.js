@@ -125,9 +125,10 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       })
 
       it('pass successfully if time is equals exactly to deadline value', async () => {
-        const { extraDataList, deadline } = await prepareNextReportInNextFrame()
+        const { extraDataList, deadline, reportFields } = await prepareNextReportInNextFrame()
         await consensus.setTime(deadline)
-        await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
+        const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
+        assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
       })
     })
 
@@ -146,8 +147,9 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       })
 
       it('pass successfully if data hash matches', async () => {
-        const { extraDataList } = await prepareNextReportInNextFrame()
-        await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
+        const { extraDataList, reportFields } = await prepareNextReportInNextFrame()
+        const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
+        assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
       })
     })
 
