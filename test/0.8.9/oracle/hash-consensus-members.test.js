@@ -54,6 +54,13 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
     context('addMember', () => {
       before(deploy)
 
+      it('reverts if member address equals zero', async () => {
+        await assert.revertsWithCustomError(
+          consensus.addMember(ZERO_ADDRESS, 1, {from: admin}),
+          'AddressCannotBeZero()'
+        )
+      })
+
       it('allows to add a member, setting the new quorum', async () => {
         const newQuorum = 1
         const tx = await consensus.addMember(member1, newQuorum, {from: admin})

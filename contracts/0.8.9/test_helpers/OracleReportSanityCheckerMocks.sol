@@ -104,8 +104,10 @@ contract OracleReportSanityCheckerStub {
     ) external view {}
 
     function checkSimulatedShareRate(
-        uint256 _noWithdrawalsPostTotalPooledEther,
-        uint256 _noWithdrawalsPostTotalShares,
+        uint256 _postTotalPooledEther,
+        uint256 _postTotalShares,
+        uint256 _etherLockedOnWithdrawalQueue,
+        uint256 _sharesBurntFromWithdrawalQueue,
         uint256 _simulatedShareRate
     ) external view {}
 

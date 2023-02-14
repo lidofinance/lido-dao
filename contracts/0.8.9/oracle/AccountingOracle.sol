@@ -684,12 +684,14 @@ contract AccountingOracle is BaseOracle {
 
     function _processExtraDataItems(bytes calldata data, ExtraDataIterState memory iter) internal {
         uint256 dataOffset = iter.dataOffset;
+        uint256 maxNodeOperatorsPerItem = 0;
+        uint256 maxNodeOperatorItemIndex = 0;
 
-        /// @solidity memory-safe-assembly
         while (dataOffset < data.length) {
             uint256 index;
             uint256 itemType;
 
+            /// @solidity memory-safe-assembly
             assembly {
                 // layout at the dataOffset:
                 // |  3 bytes  | 2 bytes  |   X bytes   |
@@ -715,7 +717,12 @@ contract AccountingOracle is BaseOracle {
             if (itemType == EXTRA_DATA_TYPE_EXITED_VALIDATORS ||
                 itemType == EXTRA_DATA_TYPE_STUCK_VALIDATORS
             ) {
-                _processExtraDataItem(data, iter);
+                uint256 nodeOpsProcessed = _processExtraDataItem(data, iter);
+
+                if (nodeOpsProcessed > maxNodeOperatorsPerItem) {
+                    maxNodeOperatorsPerItem = nodeOpsProcessed;
+                    maxNodeOperatorItemIndex = index;
+                }
             } else {
                 revert UnsupportedExtraDataType(index, itemType);
             }
@@ -723,9 +730,14 @@ contract AccountingOracle is BaseOracle {
             assert(iter.dataOffset > dataOffset);
             dataOffset = iter.dataOffset;
         }
+
+        if (maxNodeOperatorsPerItem > 0) {
+            IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
+                .checkNodeOperatorsPerExtraDataItemCount(maxNodeOperatorItemIndex, maxNodeOperatorsPerItem);
+        }
     }
 
-    function _processExtraDataItem(bytes calldata data, ExtraDataIterState memory iter) internal {
+    function _processExtraDataItem(bytes calldata data, ExtraDataIterState memory iter) internal returns (uint256) {
         uint256 dataOffset = iter.dataOffset;
         uint256 moduleId;
         uint256 nodeOpsCount;
@@ -773,9 +785,6 @@ contract AccountingOracle is BaseOracle {
             revert InvalidExtraDataItem(iter.index);
         }
 
-        IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
-            .checkNodeOperatorsPerExtraDataItemCount(iter.index, nodeOpsCount);
-
         if (iter.itemType == EXTRA_DATA_TYPE_STUCK_VALIDATORS) {
             IStakingRouter(iter.stakingRouter)
                 .reportStakingModuleStuckValidatorsCountByNodeOperator(moduleId, nodeOpIds, valsCounts);
@@ -785,6 +794,7 @@ contract AccountingOracle is BaseOracle {
         }
 
         iter.dataOffset = dataOffset;
+        return nodeOpsCount;
     }
 
     ///

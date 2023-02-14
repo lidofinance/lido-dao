@@ -1,16 +1,25 @@
 const hre = require('hardhat')
 
 const { hash } = require('eth-ens-namehash')
-const { artifacts } = require('hardhat')
+const { artifacts, ethers } = require('hardhat')
 
 const { getInstalledApp } = require('@aragon/contract-helpers-test/src/aragon-os')
 const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 
 const { assertRevert } = require('../helpers/assertThrow')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
-const { formatEther } = require('ethers/lib/utils')
 const { waitBlocks, EvmSnapshot } = require('../helpers/blockchain')
-const { getEthBalance, formatStEth, formatBN, hexConcat, pad, ETH, tokens, div15, assertNoEvent, StETH, shares } = require('../helpers/utils')
+const {
+  hexConcat,
+  pad,
+  ETH,
+  tokens,
+  div15,
+  assertNoEvent,
+  StETH,
+  shares,
+  setBalance
+} = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 const nodeOperators = require('../helpers/node-operators')
 const { deployProtocol } = require('../helpers/protocol')
@@ -24,7 +33,6 @@ const { newApp } = require('../helpers/dao')
 const ERC20Mock = artifacts.require('ERC20Mock.sol')
 const AragonVaultMock = artifacts.require('AragonVaultMock.sol')
 const ERC20WrongTransferMock = artifacts.require('ERC20WrongTransferMock.sol')
-const RewardEmulatorMock = artifacts.require('RewardEmulatorMock.sol')
 const WithdrawalVault = artifacts.require('WithdrawalVault.sol')
 const LidoMock = artifacts.require('LidoMock')
 
@@ -189,9 +197,8 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
       await assert.reverts(appProxy.finalizeUpgrade_v2(lidoLocator.address, eip712StETH.address), 'NOT_INITIALIZED')
     })
 
-    it('reverts with NOT_INITIALIZED on implementation', async () => {
-      await assert.reverts(appBase.finalizeUpgrade_v2(lidoLocator.address, eip712StETH.address),
-        'UNEXPECTED_CONTRACT_VERSION')
+    it('reverts with UNEXPECTED_CONTRACT_VERSION on implementation finalization', async () => {
+      await assert.reverts(appBase.finalizeUpgrade_v2(lidoLocator.address, eip712StETH.address), 'UNEXPECTED_CONTRACT_VERSION')
     })
 
     it('reverts if already initialized', async () => {
@@ -214,58 +221,14 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
   })
 
   context('EL Rewards', async () => {
-    let rewarder
 
-    beforeEach('set up rewarder and limits', async () => {
-      rewarder = await RewardEmulatorMock.new(elRewardsVault.address)
-
+    beforeEach('set up limits', async () => {
       //TODO(DZhon): revive
       //const maxPositiveTokenRebase = bn(1).mul(bn(10).pow(bn(8))) // 10%
       //await assertRevert(app.setMaxPositiveTokenRebase(maxPositiveTokenRebase), 'APP_AUTH_FAILED')
       //const receipt = await app.setMaxPositiveTokenRebase(maxPositiveTokenRebase, { from: voting })
       //assertEvent(receipt, 'MaxPositiveTokenRebaseSet', { expectedArgs: { maxPositiveTokenRebase: maxPositiveTokenRebase } })
     })
-
-    async function getStEthBalance(address) {
-      return formatStEth(await app.balanceOf(address))
-    }
-
-    const logLidoState = async () => {
-      const elRewardsVaultBalance = await getEthBalance(elRewardsVault.address)
-      const lidoBalance = await getEthBalance(app.address)
-      const lidoTotalSupply = formatBN(await app.totalSupply())
-      const lidoTotalPooledEther = formatBN(await app.getTotalPooledEther())
-      const lidoBufferedEther = formatBN(await app.getBufferedEther())
-      const lidoTotalShares = formatBN(await app.getTotalShares())
-      const beaconStat = await app.getBeaconStat()
-      const depositedValidators = beaconStat.depositedValidators.toString()
-      const beaconValidators = beaconStat.beaconValidators.toString()
-      const beaconBalance = formatEther(beaconStat.beaconBalance)
-
-      console.log({
-        elRewardsVaultBalance,
-        lidoBalance,
-        lidoTotalSupply,
-        lidoTotalPooledEther,
-        lidoBufferedEther,
-        lidoTotalShares,
-        depositedValidators,
-        beaconValidators,
-        beaconBalance
-      })
-    }
-
-    const logBalances = async () => {
-      const user2stEthBalance = await getStEthBalance(user2)
-      const treasuryStEthBalance = await getStEthBalance(treasury)
-      console.log({ user2stEthBalance, treasuryStEthBalance })
-    }
-
-    const logAll = async () => {
-      await logLidoState()
-      await logBalances()
-      console.log()
-    }
 
     it('Execution layer rewards distribution works when zero cl rewards reported', async () => {
       const clRewards = 0
@@ -277,8 +240,8 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
 
       await setupNodeOperatorsForELRewardsVaultTests(user2, ETH(user2Deposit))
       await pushReport(1, ETH(totalDeposit))
+      await setBalance(elRewardsVault.address, ETH(totalElRewards))
 
-      await rewarder.reward({ from: user1, value: ETH(totalElRewards) })
       await pushReport(1, ETH(totalDeposit + clRewards))
 
       assertBn(await app.getTotalPooledEther(), ETH(initialDeposit + user2Deposit + totalElRewards + clRewards))
@@ -298,7 +261,7 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
       await setupNodeOperatorsForELRewardsVaultTests(user2, ETH(user2Deposit))
       await pushReport(1, ETH(totalDeposit))
 
-      await rewarder.reward({ from: user1, value: ETH(totalElRewards) })
+      await setBalance(elRewardsVault.address, ETH(totalElRewards))
       await pushReport(1, ETH(totalDeposit + clRewards))
 
       assertBn(await app.getTotalPooledEther(), ETH(initialDeposit + user2Deposit + totalElRewards + clRewards))
@@ -316,7 +279,7 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
       await setupNodeOperatorsForELRewardsVaultTests(user2, ETH(user2Deposit))
       await pushReport(1, ETH(totalDeposit))
 
-      await rewarder.reward({ from: user1, value: ETH(totalElRewards) })
+      await setBalance(elRewardsVault.address, ETH(totalElRewards))
       await pushReport(1, ETH(totalDeposit + clRewards))
 
       assertBn(await app.getTotalPooledEther(), ETH(totalDeposit + totalElRewards + clRewards))
@@ -335,7 +298,6 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
 
       //assertEvent(await app.setMaxPositiveTokenRebase(1, { from: voting }), 'MaxPositiveTokenRebaseSet', {
       //  expectedArgs: { maxPositiveTokenRebase: 1 }
-      //})
 
       const setupNodeOperatorsForELRewardsVaultTests = async (userAddress, initialDepositAmount) => {
         await app.setFee(1000, { from: voting }) // 10%
@@ -371,7 +333,7 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
         await setupNodeOperatorsForELRewardsVaultTests(user2, ETH(depositAmount))
         await pushReport(1, ETH(depositAmount))
 
-        await rewarder.reward({ from: user1, value: ETH(elRewards) })
+        await setBalance(elRewardsVault.address, ETH(elRewards))
         await pushReport(1, ETH(depositAmount + beaconRewards))
 
         assertBn(await app.getTotalPooledEther(), ETH(depositAmount + elRewards + beaconRewards))
@@ -388,7 +350,7 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
         await setupNodeOperatorsForELRewardsVaultTests(user2, ETH(depositAmount))
         await pushReport(1, ETH(depositAmount))
 
-        await rewarder.reward({ from: user1, value: ETH(elRewards) })
+        await setBalance(elRewardsVault.address, ETH(elRewards))
         await pushReport(1, ETH(depositAmount + beaconRewards))
 
         assertBn(await app.getTotalPooledEther(), ETH(depositAmount + elRewards + beaconRewards))
@@ -405,7 +367,7 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
         await setupNodeOperatorsForELRewardsVaultTests(user2, ETH(depositAmount))
         await pushReport(1, ETH(depositAmount))
 
-        await rewarder.reward({ from: user1, value: ETH(elRewards) })
+        await setBalance(elRewardsVault.address, ETH(elRewards))
         await pushReport(1, ETH(depositAmount + beaconRewards))
 
         const { totalFee } = await app.getFee()
@@ -443,7 +405,7 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
 
     it('event work', async () => {
       await ethers.provider.send('hardhat_impersonateAccount', [elRewardsVault.address])
-      await ethers.provider.send('hardhat_setBalance', [elRewardsVault.address, web3.utils.numberToHex(ETH(100))])
+      await setBalance(elRewardsVault.address, ETH(100))
 
       const receipt = await app.receiveELRewards({ from: elRewardsVault.address, value: ETH(2) })
 
@@ -465,7 +427,8 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
       await ethers.provider.send('hardhat_impersonateAccount', [stakingRouter.address])
 
       // add some amount to the sender
-      await ethers.provider.send('hardhat_setBalance', [stakingRouter.address, web3.utils.numberToHex(ETH(100))])
+
+      await setBalance(stakingRouter.address, ETH(100))
 
       const receipt = await app.receiveStakingRouterDepositRemainder({ from: stakingRouter.address, value: ETH(2) })
 

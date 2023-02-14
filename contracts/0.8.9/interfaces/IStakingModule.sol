@@ -8,15 +8,34 @@ interface IStakingModule {
     /// @notice Returns the type of the staking module
     function getType() external view returns (bytes32);
 
-    /// @notice Returns validators summary about all validators in the staking module
+    /// @notice Returns all-validators summary in the staking module
+    /// @return totalExitedValidators total number of validators in the EXITED state
+    ///     on the Consensus Layer. This value can't decrease in normal conditions
+    /// @return totalDepositedValidators total number of validators deposited via the
+    ///     official Deposit Contract. This value is a cumulative counter: even when the validator
+    ///     goes into EXITED state this counter is not decreasing
+    /// @return depositableValidatorsCount number of validators in the set available for deposit
     function getStakingModuleSummary() external view returns (
         uint256 totalExitedValidators,
         uint256 totalDepositedValidators,
-        uint256 depositableValidators
+        uint256 depositableValidatorsCount
     );
 
-    /// @notice Returns summary about all validators belonging to the node operator with the given id
+    /// @notice Returns all-validators summary belonging to the node operator with the given id
     /// @param _nodeOperatorId id of the operator to return report for
+    /// @return isTargetLimitActive shows whether the current target limit applied to the node operator
+    /// @return targetValidatorsCount relative target active validators limit for operator
+    /// @return stuckValidatorsCount number of validators with an expired request to exit time
+    /// @return refundedValidatorsCount number of validators that can't be withdrawn, but deposit
+    ///     costs were compensated to the Lido by the node operator
+    /// @return stuckPenaltyEndTimestamp time when the penalty for stuck validators stops applying
+    ///     to node operator rewards
+    /// @return totalExitedValidators total number of validators in the EXITED state
+    ///     on the Consensus Layer. This value can't decrease in normal conditions
+    /// @return totalDepositedValidators total number of validators deposited via the official
+    ///     Deposit Contract. This value is a cumulative counter: even when the validator goes into
+    ///     EXITED state this counter is not decreasing
+    /// @return depositableValidatorsCount number of validators in the set available for deposit
     function getNodeOperatorSummary(uint256 _nodeOperatorId) external view returns (
         bool isTargetLimitActive,
         uint256 targetValidatorsCount,
