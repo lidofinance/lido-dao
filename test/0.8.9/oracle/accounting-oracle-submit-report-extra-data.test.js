@@ -56,7 +56,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     await consensus.addMember(member1, 1, { from: admin })
   }
 
-  async function prepareNextReport({ extraData: extraDataArg = {}, reportFields: reportFieldsArg = {} }) {
+  async function prepareNextReport({ extraData: extraDataArg, reportFields: reportFieldsArg = {} } = {}) {
     const extraData = extraDataArg || getDefaultExtraData()
 
     const extraDataItems = encodeExtraDataItems(extraData)
@@ -89,7 +89,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     }
   }
 
-  async function prepareNextReportInNextFrame({ extraData = {}, reportFields = {} }) {
+  async function prepareNextReportInNextFrame({ extraData, reportFields = {} } = {}) {
     const { refSlot } = await consensus.getCurrentFrame()
     const next = await prepareNextReport({
       extraData,
@@ -113,6 +113,23 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
   context('submitReportExtraDataList', () => {
     beforeEach(deploy)
+
+    context('enforces the deadline', () => {
+      it('reverts with ProcessingDeadlineMissed if deadline missed', async () => {
+        const { extraDataList, deadline } = await prepareNextReportInNextFrame()
+        await consensus.advanceTimeToNextFrameStart()
+        await assert.revertsWithCustomError(
+          oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+          `ProcessingDeadlineMissed(${+deadline})`
+        )
+      })
+
+      it('pass successsfully if time is equals exactly to deadline value', async () => {
+        const { extraDataList, deadline } = await prepareNextReportInNextFrame()
+        await consensus.setTime(deadline)
+        await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
+      })
+    })
 
     context('enforces module ids sorting order', () => {
       beforeEach(deploy)
