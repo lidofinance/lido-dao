@@ -23,7 +23,7 @@
 +import {Versioned} from "../../contracts/0.8.9/utils/Versioned.sol";
  
  interface ILido {
-     function getBufferedEther() external view returns (uint256);
+     function getDepositableEther() external view returns (uint256);
      function receiveStakingRouterDepositRemainder() external payable;
  }
  
@@ -32,7 +32,7 @@
      using UnstructuredStorage for bytes32;
  
      /// @dev events
-@@ -129,7 +129,7 @@
+@@ -128,7 +128,7 @@
          _;
      }
  
@@ -41,9 +41,18 @@
  
      /**
       * @dev proxy initialization
-@@ -662,7 +662,10 @@
+@@ -136,7 +136,7 @@
+      * @param _lido Lido address
+      * @param _withdrawalCredentials Lido withdrawal vault contract address
+      */
+-    function initialize(address _admin, address _lido, bytes32 _withdrawalCredentials) external {
++    function initialize(address _admin, address _lido, bytes32 _withdrawalCredentials) public {
+         if (_admin == address(0)) revert ZeroAddress("_admin");
+         if (_lido == address(0)) revert ZeroAddress("_lido");
+ 
+@@ -932,7 +932,10 @@
          // sanity check
-         if (totalFee >= precisionPoints) revert ErrorValueOver100Percent("totalFee");
+         if (totalFee >= precisionPoints) revert ValueOver100Percent("totalFee");
  
 +        /// @notice Certora: restrict the count to avoid the assembly block below.
 +        require(rewardedStakingModulesCount >= stakingModulesCount);
@@ -52,7 +61,7 @@
          if (rewardedStakingModulesCount < stakingModulesCount) {
              uint256 trim = stakingModulesCount - rewardedStakingModulesCount;
              assembly {
-@@ -670,6 +673,7 @@
+@@ -940,6 +943,7 @@
                  mstore(stakingModuleFees, sub(mload(stakingModuleFees), trim))
              }
          }
@@ -60,8 +69,8 @@
      }
  
      /// @notice Helper for Lido contract (DEPRECATED)
---- ../contracts/0.8.9/BeaconChainDepositor.sol	2023-02-07 12:55:12.352395600 +0200
-+++ 	2023-02-08 14:41:23.713690700 +0200
+--- ../contracts/0.8.9/BeaconChainDepositor.sol	2023-02-14 08:59:54.247838500 +0200
++++ 	2023-02-14 09:39:23.855343900 +0200
 @@ -4,7 +4,7 @@
  // See contracts/COMPILERS.md
  pragma solidity 0.8.9;
@@ -71,16 +80,7 @@
  
  interface IDepositContract {
      function get_deposit_root() external view returns (bytes32 rootHash);
-@@ -15,6 +15,8 @@
-         bytes calldata signature, // 96 bytes
-         bytes32 deposit_data_root
-     ) external payable;
-+
-+    function get_deposit_count() external view returns (bytes memory);
- }
- 
- contract BeaconChainDepositor {
-@@ -43,7 +45,8 @@
+@@ -43,7 +43,8 @@
          bytes memory _withdrawalCredentials,
          bytes memory _publicKeysBatch,
          bytes memory _signaturesBatch
@@ -90,10 +90,10 @@
          require(_publicKeysBatch.length == PUBLIC_KEY_LENGTH * _keysCount, "INVALID_PUBLIC_KEYS_BATCH_LENGTH");
          require(_signaturesBatch.length == SIGNATURE_LENGTH * _keysCount, "INVALID_SIGNATURES_BATCH_LENGTH");
  
-@@ -66,6 +69,7 @@
+@@ -66,6 +67,7 @@
          }
  
-         if (address(this).balance != targetBalance) revert ErrorNotExpectedBalance();
+         if (address(this).balance != targetBalance) revert NotExpectedBalance();
 +        */
      }
  

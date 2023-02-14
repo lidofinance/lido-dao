@@ -6,5 +6,6 @@ certoraRun \
 --loop_iter 5 \
 --staging master \
 --optimistic_loop \
+--rule incrementsReduceDifferences \
 --send_only \
 --msg "MinFirstAllocationStrategyTest"

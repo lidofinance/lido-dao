@@ -8,12 +8,12 @@ pragma solidity 0.6.11;
 
 interface LidoMockInterface {
     function receiveStakingRouterDepositRemainder() external payable;
-    function getBufferedEther() external view returns(uint256);
+    function getDepositableEther() external view returns(uint256);
 }
 
 contract LidoMock is LidoMockInterface {
     address public stakingRouter;
-    uint256 internal _BufferedEther;
+    uint256 internal _DepositableEther;
 
     // The amount of ETH sent from StakingRouter contract to Lido contract when deposit called
     event StakingRouterDepositRemainderReceived(uint256 amount);
@@ -39,7 +39,7 @@ contract LidoMock is LidoMockInterface {
     * until the moment they are actually sent to the official Deposit contract.
     * @return amount of buffered funds in wei
     */
-    function getBufferedEther() external override view returns (uint256) {
-        return _BufferedEther;
+    function getDepositableEther() external override view returns (uint256) {
+        return _DepositableEther;
     }
 }

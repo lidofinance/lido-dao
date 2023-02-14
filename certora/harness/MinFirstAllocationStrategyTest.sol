@@ -34,7 +34,12 @@ contract MinFirstAllocationStrategyTest {
         } 
     }
 
-    // Getters
+    function addBucket(uint256 bucket, uint256 capacity) public {
+        buckets.push(bucket);
+        capacities.push(capacity);
+    }
+
+    // Getters : array sums
 
     function sumOfBuckets() public view returns (uint256 sum) {
         sum = 0;
@@ -45,20 +50,29 @@ contract MinFirstAllocationStrategyTest {
 
     function sumOfIncrements() public view returns (uint256 sum) {
         sum = 0;
-        for (uint256 i = 0; i < buckets.length; ++i) {
+        for (uint256 i = 0; i < increments.length; ++i) {
             sum += increments[i];
         }
     }
+
+    function sumOfCapacities() public view returns (uint256 sum) {
+        sum = 0;
+        for (uint256 i = 0; i < capacities.length; ++i) {
+            sum += capacities[i];
+        }
+    }
+
+    // Getters : arrays elements by index
 
     function getBucket(uint256 index) public view returns (uint256 bucket) {
         bucket = buckets[index];
     }
 
-    function getCapacity(uint256 index) public view returns (uint256 capacity) {
-        capacity = capacities[index];
-    }
-
     function getIncrement(uint256 index) public view returns (uint256 increment) {
         increment = increments[index];
+    }
+
+    function getCapacity(uint256 index) public view returns (uint256 capacity) {
+        capacity = capacities[index];
     }
 }

@@ -38,8 +38,8 @@ contract BeaconChainDepositorHarness is BeaconChainDepositor {
         for (uint256 i; i < _keysCount;) {
             publicKey = _publicKeyMap[_publicKeysBatch][i];
             signature = _signatureMap[_signaturesBatch][i];
-            require(publicKey.length == 48);
-            require(signature.length == 96);
+            require(publicKey.length == PUBLIC_KEY_LENGTH);
+            require(signature.length == SIGNATURE_LENGTH);
             
             DEPOSIT_CONTRACT.deposit{value: DEPOSIT_SIZE}(
                 _publicKeysBatch, _withdrawalCredentials, signature,
@@ -51,7 +51,7 @@ contract BeaconChainDepositorHarness is BeaconChainDepositor {
             }
         }
 
-        if (address(this).balance != targetBalance) revert ErrorNotExpectedBalance();
+        if (address(this).balance != targetBalance) revert NotExpectedBalance();
     }
 
     /// @notice Certora: change root-hashing functions to simple mappings.
