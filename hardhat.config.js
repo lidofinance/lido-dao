@@ -11,6 +11,7 @@ require('hardhat-gas-reporter')
 require('solidity-coverage')
 require('hardhat-contract-sizer')
 require('hardhat-ignore-warnings')
+require('@nomicfoundation/hardhat-foundry')
 
 const NETWORK_NAME = getNetworkName()
 const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
@@ -75,7 +76,8 @@ const getNetConfig = (networkName, ethAccountName) => {
       initialBaseFeePerGas: 0,
       allowUnlimitedContractSize: true,
       accounts: {
-        mnemonic: 'hardhat',
+        // default hardhat's node mnemonic
+        mnemonic: 'test test test test test test test test test test test junk',
         count: 20,
         accountsBalance: '100000000000000000000000',
         gasPrice: 0
@@ -214,6 +216,9 @@ module.exports = {
     runOnCompile: true,
     strict: true,
     except: ['test_helpers', 'template', 'mocks', '@aragon', 'openzeppelin'],
+  },
+  paths: {
+    sources: 'contracts'
   }
 }
 
