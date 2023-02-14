@@ -10,7 +10,7 @@ const { waitBlocks } = require('../helpers/blockchain')
 const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 const { pushOracleReport } = require('../helpers/oracle')
-const { INITIAL_HOLDER } = require('../0.4.24/helpers/constants')
+const { INITIAL_HOLDER } = require('../helpers/constants')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const CURATED_MODULE_ID = 1
