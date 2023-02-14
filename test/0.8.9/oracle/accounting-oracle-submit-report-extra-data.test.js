@@ -9,8 +9,7 @@ const {
   packExtraDataList,
   calcExtraDataListHash,
   calcReportDataHash,
-  EXTRA_DATA_FORMAT_LIST,
-  SLOTS_PER_FRAME
+  EXTRA_DATA_FORMAT_LIST
 } = require('./accounting-oracle-deploy.test')
 
 const getDefaultExtraData = () => ({
@@ -56,7 +55,8 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     await consensus.addMember(member1, 1, { from: admin })
   }
 
-  async function prepareNextReport({ extraData: extraDataArg, reportFields: reportFieldsArg = {} } = {}) {
+  // note: reportFieldsArg.refSlot is required to pass here
+  function getReportData({ extraData: extraDataArg, reportFields: reportFieldsArg } = {}) {
     const extraData = extraDataArg || getDefaultExtraData()
 
     const extraDataItems = encodeExtraDataItems(extraData)
@@ -72,11 +72,6 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     const reportItems = getReportDataItems(reportFields)
     const reportHash = calcReportDataHash(reportItems)
 
-    await consensus.advanceTimeToNextFrameStart()
-    await consensus.submitReport(reportFields.refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
-    const deadline = (await oracle.getConsensusReport()).processingDeadlineTime
-    await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
-
     return {
       extraData,
       extraDataItems,
@@ -84,18 +79,32 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       extraDataHash,
       reportFields,
       reportItems,
-      reportHash,
+      reportHash
+    }
+  }
+
+  async function prepareNextReport({ extraData, reportFields = {} } = {}) {
+    const data = getReportData({ extraData, reportFields })
+
+    await consensus.submitReport(data.reportFields.refSlot, data.reportHash, CONSENSUS_VERSION, { from: member1 })
+    await oracle.submitReportData(data.reportItems, oracleVersion, { from: member1 })
+
+    const deadline = (await oracle.getConsensusReport()).processingDeadlineTime
+
+    return {
+      ...data,
       deadline
     }
   }
 
   async function prepareNextReportInNextFrame({ extraData, reportFields = {} } = {}) {
+    await consensus.advanceTimeToNextFrameStart()
     const { refSlot } = await consensus.getCurrentFrame()
     const next = await prepareNextReport({
       extraData,
       reportFields: {
         ...reportFields,
-        refSlot: +refSlot + SLOTS_PER_FRAME
+        refSlot
       }
     })
     return next
@@ -127,6 +136,29 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       it('pass successfully if time is equals exactly to deadline value', async () => {
         const { extraDataList, deadline, reportFields } = await prepareNextReportInNextFrame()
         await consensus.setTime(deadline)
+        const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
+        assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
+      })
+    })
+
+    context('checks ref slot', () => {
+      it('reverts with CannotSubmitExtraDataBeforeMainData in attempt of try to pass extra data ahead of submitReportData', async () => {
+        const { refSlot } = await consensus.getCurrentFrame()
+        const { reportHash, extraDataList } = getReportData({ reportFields: { refSlot } })
+        await consensus.submitReport(refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
+        // No submitReportData here — trying to send extra data ahead of it
+        await assert.reverts(
+          oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+          `CannotSubmitExtraDataBeforeMainData()`
+        )
+      })
+
+      it('pass successfully ', async () => {
+        const { refSlot } = await consensus.getCurrentFrame()
+        const { reportFields, reportItems, reportHash, extraDataList } = getReportData({ reportFields: { refSlot } })
+        await consensus.submitReport(refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
+        // Now submitReportData on it's place
+        await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
         const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
         assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
       })
