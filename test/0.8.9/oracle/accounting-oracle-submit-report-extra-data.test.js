@@ -5,7 +5,6 @@ const {
   CONSENSUS_VERSION,
   deployAndConfigureAccountingOracle,
   getReportDataItems,
-  encodeExtraDataItem,
   encodeExtraDataItems,
   packExtraDataList,
   calcExtraDataListHash,
@@ -287,6 +286,34 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           assert.equals(call.keysCounts, '0x' + item.keysCounts.map((count) => hex(count, 16)).join(''))
         }
       })
+    })
+
+    it('updates extra data processing state', async () => {
+      const { extraDataItems, extraDataHash, reportFields, extraDataList } = await prepareNextReportInNextFrame()
+
+      const stateBefore = await oracle.getExtraDataProcessingState()
+
+      assert.equals(+stateBefore.refSlot, reportFields.refSlot)
+      assert.equals(+stateBefore.dataFormat, EXTRA_DATA_FORMAT_LIST)
+      assert.equals(+stateBefore.itemsCount, extraDataItems.length)
+      assert.equals(+stateBefore.itemsProcessed, 0)
+      assert.equals(+stateBefore.lastSortingKey, '0')
+      assert.equals(stateBefore.dataHash, extraDataHash)
+
+      await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
+
+      const stateAfter = await oracle.getExtraDataProcessingState()
+
+      assert.equals(+stateAfter.refSlot, reportFields.refSlot)
+      assert.equals(+stateAfter.dataFormat, EXTRA_DATA_FORMAT_LIST)
+      assert.equals(+stateAfter.itemsCount, extraDataItems.length)
+      assert.equals(stateAfter.itemsProcessed, extraDataItems.length)
+      // TODO: figure out how to build this value and test it properly
+      assert.equals(
+        stateAfter.lastSortingKey,
+        '3533694129556768659166595001485837031654967793751237971583444623713894401'
+      )
+      assert.equals(stateAfter.dataHash, extraDataHash)
     })
   })
 })
