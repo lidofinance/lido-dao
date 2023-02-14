@@ -189,7 +189,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('reverts with error WRONG_BASE_VERSION when called on already initialized contract', async () => {
       await app.finalizeUpgrade_v2(locator.address, CURATED_TYPE)
       assert.equals(await app.getContractVersion(), 2)
-      assert.reverts(app.finalizeUpgrade_v2(locator.address, CURATED_TYPE), 'WRONG_BASE_VERSION')
+      await assert.reverts(app.finalizeUpgrade_v2(locator.address, CURATED_TYPE), 'UNEXPECTED_CONTRACT_VERSION')
     })
 
     it('sets total signing keys stats correctly', async () => {

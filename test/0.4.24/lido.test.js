@@ -426,14 +426,14 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
         await app.setELRewardsWithdrawalLimit(initialValue, { from: voting })
 
         // unable to receive execution layer rewards from arbitrary account
-        assertRevert(app.receiveELRewards({ from: user1, value: ETH(1) }), 'EXECUTION_LAYER_REAWARDS_VAULT_ONLY')
+        await assertRevert(app.receiveELRewards({ from: user1, value: ETH(1) }), 'EXECUTION_LAYER_REWARDS_VAULT_ONLY')
       })
     })
   })
 
   describe('receiveELRewards()', async () => {
     it('unable to receive eth from arbitrary account', async () => {
-      assertRevert(app.receiveELRewards({ from: nobody, value: ETH(1) }), 'EXECUTION_LAYER_REAWARDS_VAULT_ONLY')
+      await assertRevert(app.receiveELRewards({ from: nobody, value: ETH(1) }), 'EXECUTION_LAYER_REWARDS_VAULT_ONLY')
     })
 
     it('event work', async () => {
@@ -452,7 +452,7 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
 
   describe('receiveStakingRouterRemainder()', async () => {
     it('unable to receive eth from arbitrary account', async () => {
-      assertRevert(app.receiveStakingRouterDepositRemainder({ from: nobody, value: ETH(1) }))
+      await assertRevert(app.receiveStakingRouterDepositRemainder({ from: nobody, value: ETH(1) }))
     })
 
     it('event work', async () => {
