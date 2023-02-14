@@ -77,8 +77,6 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     const deadline = (await oracle.getConsensusReport()).processingDeadlineTime
     await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
 
-    console.log(deadline)
-
     return {
       extraData,
       extraDataItems,
