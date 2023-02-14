@@ -118,15 +118,35 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       it('reverts with ProcessingDeadlineMissed if deadline missed', async () => {
         const { extraDataList, deadline } = await prepareNextReportInNextFrame()
         await consensus.advanceTimeToNextFrameStart()
-        await assert.revertsWithCustomError(
+        await assert.reverts(
           oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
           `ProcessingDeadlineMissed(${+deadline})`
         )
       })
 
-      it('pass successsfully if time is equals exactly to deadline value', async () => {
+      it('pass successfully if time is equals exactly to deadline value', async () => {
         const { extraDataList, deadline } = await prepareNextReportInNextFrame()
         await consensus.setTime(deadline)
+        await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
+      })
+    })
+
+    context('checks extra data hash', () => {
+      it('reverts with UnexpectedDataHash if hash did not match', async () => {
+        const { extraDataHash } = await prepareNextReportInNextFrame()
+        const incorrectExtraData = getDefaultExtraData()
+        ++incorrectExtraData.stuckKeys[0].nodeOpIds[0]
+        const incorrectExtraDataItems = encodeExtraDataItems(incorrectExtraData)
+        const incorrectExtraDataList = packExtraDataList(incorrectExtraDataItems)
+        const incorrectExtraDataHash = calcExtraDataListHash(incorrectExtraDataList)
+        await assert.reverts(
+          oracle.submitReportExtraDataList(incorrectExtraDataList, { from: member1 }),
+          `UnexpectedDataHash("${extraDataHash}", "${incorrectExtraDataHash}")`
+        )
+      })
+
+      it('pass successfully if data hash matches', async () => {
+        const { extraDataList } = await prepareNextReportInNextFrame()
         await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
       })
     })
