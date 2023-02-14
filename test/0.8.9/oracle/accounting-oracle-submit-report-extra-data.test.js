@@ -1,10 +1,11 @@
 const { assert } = require('../../helpers/assert')
-const { e9, e18, e27 } = require('../../helpers/utils')
+const { e9, e18, e27, hex } = require('../../helpers/utils')
 
 const {
   CONSENSUS_VERSION,
   deployAndConfigureAccountingOracle,
   getReportDataItems,
+  encodeExtraDataItem,
   encodeExtraDataItems,
   packExtraDataList,
   calcExtraDataListHash,
@@ -46,11 +47,13 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
   let consensus = null
   let oracle = null
   let oracleVersion = null
+  let stakingRouter = null
 
   const deploy = async (options = undefined) => {
     const deployed = await deployAndConfigureAccountingOracle(admin)
     oracle = deployed.oracle
     consensus = deployed.consensus
+    stakingRouter = deployed.stakingRouter
     oracleVersion = +(await oracle.getContractVersion())
     await consensus.addMember(member1, 1, { from: admin })
   }
@@ -249,6 +252,40 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
         const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
         assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
+      })
+    })
+
+    context('delivers the data to staking router', () => {
+      it('calling reportStakingModuleStuckValidatorsCountByNodeOperator on StakingRouter', async () => {
+        const { extraData, extraDataList } = await prepareNextReportInNextFrame()
+        await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
+
+        const callsCount = await stakingRouter.totalCalls_reportStuckKeysByNodeOperator()
+        assert.equals(callsCount, extraData.stuckKeys.length)
+
+        for (let i = 0; i < callsCount; i++) {
+          const call = await stakingRouter.calls_reportStuckKeysByNodeOperator(i)
+          const item = extraData.stuckKeys[i]
+          assert.equals(+call.stakingModuleId, item.moduleId)
+          assert.equals(call.nodeOperatorIds, '0x' + item.nodeOpIds.map((id) => hex(id, 8)).join(''))
+          assert.equals(call.keysCounts, '0x' + item.keysCounts.map((count) => hex(count, 16)).join(''))
+        }
+      })
+
+      it('calling reportStakingModuleExitedValidatorsCountByNodeOperator on StakingRouter', async () => {
+        const { extraData, extraDataList } = await prepareNextReportInNextFrame()
+        await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
+
+        const callsCount = await stakingRouter.totalCalls_reportExitedKeysByNodeOperator()
+        assert.equals(callsCount, extraData.exitedKeys.length)
+
+        for (let i = 0; i < callsCount; i++) {
+          const call = await stakingRouter.calls_reportExitedKeysByNodeOperator(i)
+          const item = extraData.exitedKeys[i]
+          assert.equals(+call.stakingModuleId, item.moduleId)
+          assert.equals(call.nodeOperatorIds, '0x' + item.nodeOpIds.map((id) => hex(id, 8)).join(''))
+          assert.equals(call.keysCounts, '0x' + item.keysCounts.map((count) => hex(count, 16)).join(''))
+        }
       })
     })
   })
