@@ -229,8 +229,6 @@ contract StETH is IERC20, Pausable {
      * @dev The `_amount` argument is the amount of tokens, not shares.
      */
     function transferFrom(address _sender, address _recipient, uint256 _amount) external returns (bool) {
-        _whenNotStopped();
-
         uint256 currentAllowance = allowances[_sender][msg.sender];
         require(currentAllowance >= _amount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
 
@@ -363,8 +361,6 @@ contract StETH is IERC20, Pausable {
     function transferSharesFrom(
         address _sender, address _recipient, uint256 _sharesAmount
     ) external returns (uint256) {
-        _whenNotStopped();
-
         uint256 currentAllowance = allowances[_sender][msg.sender];
         uint256 tokensAmount = getPooledEthByShares(_sharesAmount);
         require(currentAllowance >= tokensAmount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
@@ -490,7 +486,6 @@ contract StETH is IERC20, Pausable {
      */
     function _burnShares(address _account, uint256 _sharesAmount) internal returns (uint256 newTotalShares) {
         require(_account != address(0), "BURN_FROM_THE_ZERO_ADDRESS");
-        _whenNotStopped();
 
         uint256 accountShares = shares[_account];
         require(_sharesAmount <= accountShares, "BURN_AMOUNT_EXCEEDS_BALANCE");

@@ -29,7 +29,7 @@ contract LidoLocator is ILidoLocator {
         address withdrawalVault;
     }
 
-    error ErrorZeroAddress();
+    error ZeroAddress();
 
     address public immutable accountingOracle;
     address public immutable depositSecurityModule;
@@ -105,7 +105,7 @@ contract LidoLocator is ILidoLocator {
     }
 
     function _assertNonZero(address _address) internal pure returns (address) {
-        if (_address == address(0)) revert ErrorZeroAddress();
+        if (_address == address(0)) revert ZeroAddress();
         return _address;
     }
 }

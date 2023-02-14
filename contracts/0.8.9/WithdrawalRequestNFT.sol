@@ -35,9 +35,11 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
 
     // @notion simple wrapper for base URI string
     //  Solidity does not allow to store string in UnstructuredStorage
-    struct BaseUri {
+    struct BaseURI {
         string value;
     }
+
+    event BaseURISet(string baseURI);
 
     error ApprovalToOwner();
     error ApproveToCaller();
@@ -90,19 +92,20 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
     function tokenURI(uint256 _requestId) public view virtual override returns (string memory) {
         if (!_existsAndNotClaimed(_requestId)) revert InvalidRequestId(_requestId);
 
-        string memory baseURI = _getBaseUri().value;
+        string memory baseURI = _getBaseURI().value;
         return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, _requestId.toString())) : "";
     }
 
     /// @notice Base URI for computing {tokenURI}. If set, the resulting URI for each
     /// token will be the concatenation of the `baseURI` and the `_requestId`.
-    function getBaseUri() external view returns (string memory) {
-        return _getBaseUri().value;
+    function getBaseURI() external view returns (string memory) {
+        return _getBaseURI().value;
     }
 
     /// @notice Sets the Base URI for computing {tokenURI}
-    function setBaseUri(string calldata _baseUri) external onlyRole(SET_BASE_URI_ROLE) {
-        _getBaseUri().value = _baseUri;
+    function setBaseURI(string calldata _baseURI) external onlyRole(SET_BASE_URI_ROLE) {
+        _getBaseURI().value = _baseURI;
+        emit BaseURISet(_baseURI);
     }
 
     /// @dev See {IERC721-balanceOf}.
@@ -158,15 +161,11 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
         if (!_checkOnERC721Received(_from, _to, _requestId, _data)) {
             revert TransferToNonIERC721Receiver(_to);
         }
-
-        emit Transfer(_from, _to, _requestId);
     }
 
     /// @dev See {IERC721-transferFrom}.
     function transferFrom(address _from, address _to, uint256 _requestId) external override {
         _transfer(_from, _to, _requestId);
-
-        emit Transfer(_from, _to, _requestId);
     }
 
     /// @dev Transfers `_requestId` from `_from` to `_to`.
@@ -185,13 +184,17 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
         if (request.claimed) revert RequestAlreadyClaimed(_requestId);
 
         if (_from != request.owner) revert TransferFromIncorrectOwner(_from, request.owner);
-        if (!_isApprovedOrOwner(msg.sender, _requestId, request)) revert NotOwnerOrApproved(msg.sender);
+        // here and below we are sure that `_from` is the owner of the request
+        address msgSender = msg.sender;
+        if (!(_from == msgSender || isApprovedForAll(_from, msgSender) || _getTokenApprovals()[_requestId] == msgSender)) revert NotOwnerOrApproved(msgSender);
 
         delete _getTokenApprovals()[_requestId];
         request.owner = payable(_to);
 
         _getRequestsByOwner()[_to].add(_requestId);
         _getRequestsByOwner()[_from].remove(_requestId);
+
+        _emitTransfer(_from, _to, _requestId);
     }
 
     /// @dev Internal function to invoke {IERC721Receiver-onERC721Received} on a target address.
@@ -222,20 +225,6 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
         } else {
             return true;
         }
-    }
-
-    /// @dev Returns whether `_spender` is allowed to manage `_requestId`.
-    ///
-    /// Requirements:
-    ///
-    /// - `_requestId` must exist (not checking).
-    function _isApprovedOrOwner(address _spender, uint256 _requestId, WithdrawalRequest memory request)
-        internal
-        view
-        returns (bool)
-    {
-        address owner = request.owner;
-        return (_spender == owner || isApprovedForAll(owner, _spender) || _getTokenApprovals()[_requestId] == _spender);
     }
 
     //
@@ -302,10 +291,10 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
         return OPERATOR_APPROVALS_POSITION.storageMapAddressMapAddressBool();
     }
 
-    function _getBaseUri() internal pure returns (BaseUri storage baseUri) {
+    function _getBaseURI() internal pure returns (BaseURI storage baseURI) {
         bytes32 position = BASE_URI_POSITION;
         assembly {
-            baseUri.slot := position
+            baseURI.slot := position
         }
     }
 }

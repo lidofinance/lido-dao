@@ -44,8 +44,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     event NodeOperatorActiveSet(uint256 indexed nodeOperatorId, bool active);
     event NodeOperatorNameSet(uint256 indexed nodeOperatorId, string name);
     event NodeOperatorRewardAddressSet(uint256 indexed nodeOperatorId, address rewardAddress);
-    event NodeOperatorStakingLimitSet(uint256 indexed nodeOperatorId, uint64 stakingLimit);
-    event NodeOperatorTotalStoppedValidatorsReported(uint256 indexed nodeOperatorId, uint64 totalStopped);
     event NodeOperatorTotalKeysTrimmed(uint256 indexed nodeOperatorId, uint64 totalKeysTrimmed);
     event KeysOpIndexSet(uint256 keysOpIndex);
     event ContractVersionSet(uint256 version);
@@ -93,15 +91,15 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     uint8 internal constant DEPOSITED_KEYS_COUNT_OFFSET = 3;
 
     // TargetValidatorsStats
-    /// @dev DAO target limit, used to check how many keys shoud be go to exit
-    ///      UINT64_MAX - unlim
+    /// @dev DAO target limit, used to check how many keys should go to exit
+    ///      UINT64_MAX - unlimited
     ///      0 - all deposited keys
-    ///      N < deposited keys -
+    ///      N < deposited keys - (deposited-N) keys
     ///      deposited < N < vetted - use (N-deposited) as available
     uint8 internal constant IS_TARGET_LIMIT_ACTIVE_OFFSET = 0;
-    /// @dev relative target active validators limit for operator, set by DAO, UINT64_MAX === no limit
-    /// @notice stores value +1 based, so 0 is means target coun is unlimited (i.e. = -1),
-    ///         and 1 is means target count = 0 (i.e. all validaotrs should be exited)
+    /// @dev relative target active validators limit for operator, set by DAO, UINT64_MAX === 'no limit'
+    /// @notice stores value +1 based, so 0 is means target count is unlimited (i.e. = -1),
+    ///         and 1 is means target count = 0 (i.e. all validators should be exited)
     uint8 internal constant TARGET_VALIDATORS_COUNT_OFFSET = 1;
 
     // StuckPenaltyStats
@@ -109,6 +107,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     uint8 internal constant STUCK_VALIDATORS_COUNT_OFFSET = 0;
     /// @dev refunded keys count from dao
     uint8 internal constant REFUNDED_VALIDATORS_COUNT_OFFSET = 1;
+    /// @dev extra penalty time after stuck keys resolved (refunded and/or exited)
     uint8 internal constant STUCK_PENALTY_END_TIMESTAMP_OFFSET = 2;
 
     //
@@ -149,11 +148,14 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     struct NodeOperator {
         /// @dev Flag indicating if the operator can participate in further staking and reward distribution
         bool active;
-        /// @dev Ethereum address on Execution Layer which receives steth rewards for this operator
+        /// @dev Ethereum address on Execution Layer which receives stETH rewards for this operator
         address rewardAddress;
         /// @dev Human-readable name
         string name;
         /// @dev The below variables store the signing keys info of the node operator.
+        ///     signingKeysStats - contains packed variables: uint64 exitedSigningKeysCount, uint64 depositedSigningKeysCount,
+        ///                        uint64 vettedSigningKeysCount, uint64 totalSigningKeysCount
+        ///
         ///     These variables can take values in the following ranges:
         ///
         ///                0             <=  exitedSigningKeysCount   <= depositedSigningKeysCount
@@ -179,7 +181,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     /// @dev Mapping of all node operators. Mapping is used to be able to extend the struct.
     mapping(uint256 => NodeOperator) internal _nodeOperators;
-    // NodeOperatorTotals internal _nodeOperatorTotals;
 
     //
     // METHODS
@@ -196,8 +197,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         require(hasInitialized() && !isPetrified(), "CONTRACT_NOT_INITIALIZED_OR_PETRIFIED");
         _checkContractVersion(0);
         _initialize_v2(_locator, _type);
-
-        _setStuckPenaltyDelay(2 days);
 
         uint256 totalOperators = getNodeOperatorsCount();
         Packed64x4.Packed memory signingKeysStats;
@@ -233,8 +232,10 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         _setContractVersion(2);
 
+        _setStuckPenaltyDelay(2 days);
+
         // set unlimited allowance for burner from staking router
-        // to burn finalized requests' shares
+        // to burn stuck keys penalized shares
         IStETH(getLocator().lido()).approve(getLocator().burner(), ~uint256(0));
 
         emit ContractVersionSet(2);
@@ -319,7 +320,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     function setNodeOperatorName(uint256 _nodeOperatorId, string _name) external {
         _onlyValidNodeOperatorName(_name);
         _onlyExistedNodeOperator(_nodeOperatorId);
-        _authP(MANAGE_NODE_OPERATOR_ROLE, arr(uint256(_nodeOperatorId)));
+        _auth(MANAGE_NODE_OPERATOR_ROLE);
 
         _requireNotSameValue(keccak256(bytes(_nodeOperators[_nodeOperatorId].name)) != keccak256(bytes(_name)));
         _nodeOperators[_nodeOperatorId].name = _name;
@@ -332,7 +333,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     function setNodeOperatorRewardAddress(uint256 _nodeOperatorId, address _rewardAddress) external {
         _onlyNonZeroAddress(_rewardAddress);
         _onlyExistedNodeOperator(_nodeOperatorId);
-        _authP(MANAGE_NODE_OPERATOR_ROLE, arr(uint256(_nodeOperatorId), uint256(_rewardAddress)));
+        _auth(MANAGE_NODE_OPERATOR_ROLE);
 
         _requireNotSameValue(_nodeOperators[_nodeOperatorId].rewardAddress != _rewardAddress);
         _nodeOperators[_nodeOperatorId].rewardAddress = _rewardAddress;
@@ -374,6 +375,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _auth(STAKING_ROUTER_ROLE);
         // since we're pushing rewards to operators after exited validators counts are
         // updated (as opposed to pulling by node ops), we don't need any handling here
+        // see `onAllValidatorCountersUpdated()`
     }
 
     /// @notice Called by StakingRouter to update the number of the validators of the given node
@@ -423,20 +425,21 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _distributeRewards();
     }
 
-    /// @notice Unsafely updates the number of the validators in the EXITED state for node operator with given id
+    /// @notice Unsafely updates the number of validators in the EXITED/STUCK states for node operator with given id
+    ///      'unsafely' means that this method can both increase and decrease exited and stuck counters
     /// @param _nodeOperatorId Id of the node operator
-    /// @param _exitedValidatorsCount New number of EXITED validators of the node operator
-    /// @return Total number of exited validators across all node operators.
+    /// @param _exitedValidatorsCount New number of EXITED validators for the node operator
+    /// @param _stuckValidatorsCount New number of STUCK validator for the node operator
     function unsafeUpdateValidatorsCount(
         uint256 _nodeOperatorId,
         uint256 _exitedValidatorsCount,
-        uint256 _stuckValidatorsKeysCount
+        uint256 _stuckValidatorsCount
     ) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
 
-        _updateExitedValidatorsCount(_nodeOperatorId, uint64(_exitedValidatorsCount), true);
-        _updateStuckValidatorsCount(_nodeOperatorId, uint64(_stuckValidatorsKeysCount));
+        _updateExitedValidatorsCount(_nodeOperatorId, uint64(_exitedValidatorsCount), true /* _allowDecrease */);
+        _updateStuckValidatorsCount(_nodeOperatorId, uint64(_stuckValidatorsCount));
     }
 
     function _updateExitedValidatorsCount(uint256 _nodeOperatorId, uint64 _exitedValidatorsKeysCount, bool _allowDecrease)
@@ -460,7 +463,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     /// @notice Updates the limit of the validators that can be used for deposit by DAO
     /// @param _nodeOperatorId Id of the node operator
-    /// @param _targetLimit New number of EXITED validators of the node operator
+    /// @param _targetLimit Target limit of the node operator
     /// @param _isTargetLimitActive active flag
     function updateTargetValidatorsLimits(uint256 _nodeOperatorId, bool _isTargetLimitActive, uint64 _targetLimit) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
@@ -507,7 +510,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         emit RefundedValidatorsCountChanged(_nodeOperatorId, _refundedValidatorsCount);
     }
 
-    /// @notice Invalidates all unused validators for all node operators
+    /// @notice Invalidates all unused deposit data for all node operators
     function onWithdrawalCredentialsChanged() external {
         uint256 operatorsCount = getNodeOperatorsCount();
         if (operatorsCount > 0) {
@@ -548,11 +551,13 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     /// @notice Obtains up to _depositsCount deposit data to be used by StakingRouter
     ///     to deposit to the Ethereum Deposit contract
+    /// @dev the second param is optional staking module calldata
+    ///     (not used for NodeOperatorsRegistry)
     /// @param _depositsCount Desireable number of deposits to be done
     /// @return depositsCount Actual deposits count might be done with returned data
     /// @return publicKeys Batch of the concatenated public validators keys
     /// @return signatures Batch of the concatenated deposit signatures for returned public keys
-    function obtainDepositData(uint256 _depositsCount, bytes)
+    function obtainDepositData(uint256 _depositsCount, bytes /* _depositCalldata */)
         external
         returns (
             uint256 depositsCount,
@@ -795,10 +800,10 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
         uint256 totalSigningKeysCount = signingKeysStats.get(TOTAL_KEYS_COUNT_OFFSET);
 
+        _requireValidRange(totalSigningKeysCount.add(_keysCount) <= UINT64_MAX);
+
         totalSigningKeysCount =
             SIGNING_KEYS_MAPPING_NAME.addKeysSigs(_nodeOperatorId, _keysCount, totalSigningKeysCount, _publicKeys, _signatures);
-
-        _requireValidRange(totalSigningKeysCount.add(_keysCount) <= UINT64_MAX);
 
         emit TotalSigningKeysCountChanged(_nodeOperatorId, totalSigningKeysCount);
 
@@ -886,16 +891,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
         return signingKeysStats.get(TOTAL_KEYS_COUNT_OFFSET) - signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET);
-    }
-
-    /// @notice Returns a monotonically increasing counter that gets incremented when any of the following happens:
-    ///   1. a node operator's key(s) is added;
-    ///   2. a node operator's key(s) is removed;
-    ///   3. a node operator's vetted keys count is changed.
-    ///   4. a node operator was activated/deactivated. Activation or deactivation of node operator
-    ///      might lead to usage of unvalidated keys in the assignNextSigningKeys method.
-    function getKeysOpIndex() external view returns (uint256) {
-        return KEYS_OP_INDEX_POSITION.getStorageUint256();
     }
 
     /// @notice Returns n-th signing key of the node operator #`_nodeOperatorId`
@@ -1045,6 +1040,19 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         return KEYS_OP_INDEX_POSITION.getStorageUint256();
     }
 
+    /// @notice Returns a counter that MUST change its value whenever the deposit data set changes.
+    ///     Below is the typical list of actions that requires an update of the nonce:
+    ///     1. a node operator's deposit data is added
+    ///     2. a node operator's deposit data is removed
+    ///     3. a node operator's ready-to-deposit data size is changed
+    ///     4. a node operator was activated/deactivated
+    ///     5. a node operator's deposit data is used for the deposit
+    ///     Note: Depending on the StakingModule implementation above list might be extended
+    /// @dev DEPRECATED use getNonce() instead
+    function getKeysOpIndex() external view returns (uint256) {
+        return KEYS_OP_INDEX_POSITION.getStorageUint256();
+    }
+
     /// @notice distributes rewards among node operators
     /// @return the amount of stETH shares distributed among node operators
     function _distributeRewards() internal returns (uint256 distributed) {
@@ -1139,7 +1147,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     }
 
     function _onlyCorrectNodeOperatorState(bool _pass) internal pure {
-        require(_pass, "WORNG_OPERATOR_ACTIVE_STATE");
+        require(_pass, "WRONG_OPERATOR_ACTIVE_STATE");
     }
 
     function _auth(bytes32 _role) internal view {

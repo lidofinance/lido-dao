@@ -186,10 +186,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(await app.getContractVersion(), 2)
     })
 
-    it('reverts with error WRONG_BASE_VERSION when called on already initialized contract', async () => {
+    it('reverts with error UNEXPECTED_CONTRACT_VERSION when called on already initialized contract', async () => {
       await app.finalizeUpgrade_v2(locator.address, CURATED_TYPE)
       assert.equals(await app.getContractVersion(), 2)
-      assert.reverts(app.finalizeUpgrade_v2(locator.address, CURATED_TYPE), 'WRONG_BASE_VERSION')
+      await assert.reverts(app.finalizeUpgrade_v2(locator.address, CURATED_TYPE), 'UNEXPECTED_CONTRACT_VERSION')
     })
 
     it('sets total signing keys stats correctly', async () => {
@@ -503,7 +503,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await assert.reverts(app.activateNodeOperator(nodeOperatorId, { from: voting }), 'OUT_OF_RANGE')
     })
 
-    it('reverts with WORNG_OPERATOR_ACTIVE_STATE when called on active node operator', async () => {
+    it('reverts with WRONG_OPERATOR_ACTIVE_STATE when called on active node operator', async () => {
       const activeNodeOperatorId = 0
 
       const activeNodeOperator = await app.getNodeOperator(activeNodeOperatorId, false)
@@ -511,7 +511,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
       await assert.reverts(
         app.activateNodeOperator(activeNodeOperatorId, { from: voting }),
-        'WORNG_OPERATOR_ACTIVE_STATE'
+        'WRONG_OPERATOR_ACTIVE_STATE'
       )
     })
 
@@ -638,7 +638,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await assert.reverts(app.deactivateNodeOperator(nodeOperatorId, { from: voting }), 'OUT_OF_RANGE')
     })
 
-    it('reverts with "WORNG_OPERATOR_ACTIVE_STATE" when called on not active node operator', async () => {
+    it('reverts with "WRONG_OPERATOR_ACTIVE_STATE" when called on not active node operator', async () => {
       const activeNodeOperatorId = await nodeOperators.findNodeOperatorId(app, (operator) => !operator.active)
       assert.notEqual(activeNodeOperatorId, -1, `Invariant: not active node operator not found`)
 
@@ -647,7 +647,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
       await assert.reverts(
         app.deactivateNodeOperator(activeNodeOperatorId, { from: voting }),
-        'WORNG_OPERATOR_ACTIVE_STATE'
+        'WRONG_OPERATOR_ACTIVE_STATE'
       )
     })
 
@@ -951,14 +951,14 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       )
     })
 
-    it('reverts with "WORNG_OPERATOR_ACTIVE_STATE" error when node operator deactivated', async () => {
+    it('reverts with "WRONG_OPERATOR_ACTIVE_STATE" error when node operator deactivated', async () => {
       const hasPermission = await dao.hasPermission(voting, app, 'SET_NODE_OPERATOR_LIMIT_ROLE')
       assert.isTrue(hasPermission)
       await app.deactivateNodeOperator(secondNodeOperatorId, { from: voting })
       assert.isFalse(await app.getNodeOperatorIsActive(secondNodeOperatorId))
       await assert.reverts(
         app.setNodeOperatorStakingLimit(secondNodeOperatorId, 40, { from: voting }),
-        'WORNG_OPERATOR_ACTIVE_STATE'
+        'WRONG_OPERATOR_ACTIVE_STATE'
       )
     })
 
@@ -1558,44 +1558,44 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(+firstNodeOperatorKeysStats.exitedSigningKeysCount, 1)
     })
 
-    // it('respects staking limit', async () => {
-    //   const [firstNodeOperatorKeysStats, secondNodeOperatorKeysStats] = await Promise.all([
-    //     app.getValidatorsKeysStats(firstNodeOperatorId),
-    //     app.getValidatorsKeysStats(secondNodeOperatorId)
-    //   ])
+    it.skip('respects staking limit', async () => {
+      const [firstNodeOperatorKeysStats, secondNodeOperatorKeysStats] = await Promise.all([
+        app.getNodeOperatorSummary(firstNodeOperatorId),
+        app.getValidatorsKeysStats(secondNodeOperatorId)
+      ])
 
-    //   assert.isTrue(firstNodeOperatorKeysStats.readyToDepositValidatorsKeysCount.toNumber() > 0)
-    //   assert.isTrue(secondNodeOperatorKeysStats.readyToDepositValidatorsKeysCount.toNumber() > 0)
+      assert.isTrue(firstNodeOperatorKeysStats.readyToDepositValidatorsKeysCount.toNumber() > 0)
+      assert.isTrue(secondNodeOperatorKeysStats.readyToDepositValidatorsKeysCount.toNumber() > 0)
 
-    //   assert.equals(firstNodeOperatorKeysStats.exitedValidatorsCount, 1)
-    //   assert.equals(firstNodeOperatorKeysStats.activeValidatorsKeysCount, 4)
-    //   assert.equals(firstNodeOperatorKeysStats.readyToDepositValidatorsKeysCount, 3)
+      assert.equals(firstNodeOperatorKeysStats.exitedValidatorsCount, 1)
+      assert.equals(firstNodeOperatorKeysStats.activeValidatorsKeysCount, 4)
+      assert.equals(firstNodeOperatorKeysStats.readyToDepositValidatorsKeysCount, 3)
 
-    //   assert.equals(secondNodeOperatorKeysStats.exitedValidatorsCount, 0)
-    //   assert.equals(secondNodeOperatorKeysStats.activeValidatorsKeysCount, 5)
-    //   assert.equals(secondNodeOperatorKeysStats.readyToDepositValidatorsKeysCount, 5)
+      assert.equals(secondNodeOperatorKeysStats.exitedValidatorsCount, 0)
+      assert.equals(secondNodeOperatorKeysStats.activeValidatorsKeysCount, 5)
+      assert.equals(secondNodeOperatorKeysStats.readyToDepositValidatorsKeysCount, 5)
 
-    //   const keysToAllocate = 7
-    //   const { allocatedKeysCount, nodeOperatorIds, activeKeyCountsAfterAllocation } =
-    //     await app.testing_getSigningKeysAllocationData(keysToAllocate)
+      const keysToAllocate = 7
+      const { allocatedKeysCount, nodeOperatorIds, activeKeyCountsAfterAllocation } =
+        await app.testing_getSigningKeysAllocationData(keysToAllocate)
 
-    //   assert.equals(allocatedKeysCount, keysToAllocate)
-    //   assert.equal(nodeOperatorIds.length, 2)
-    //   assert.equals(nodeOperatorIds[0], firstNodeOperatorId)
-    //   assert.equals(nodeOperatorIds[1], secondNodeOperatorId)
+      assert.equals(allocatedKeysCount, keysToAllocate)
+      assert.equal(nodeOperatorIds.length, 2)
+      assert.equals(nodeOperatorIds[0], firstNodeOperatorId)
+      assert.equals(nodeOperatorIds[1], secondNodeOperatorId)
 
-    //   assert.equal(activeKeyCountsAfterAllocation.length, 2)
-    //   // the first node operator has to receive 3 deposits cause reached limit
-    //   assert.equals(
-    //     activeKeyCountsAfterAllocation[0],
-    //     firstNodeOperatorKeysStats.activeValidatorsKeysCount.toNumber() + 3
-    //   )
-    //   // the second receives 4 deposits
-    //   assert.equals(
-    //     activeKeyCountsAfterAllocation[1],
-    //     secondNodeOperatorKeysStats.activeValidatorsKeysCount.toNumber() + 4
-    //   )
-    // })
+      assert.equal(activeKeyCountsAfterAllocation.length, 2)
+      // the first node operator has to receive 3 deposits cause reached limit
+      assert.equals(
+        activeKeyCountsAfterAllocation[0],
+        firstNodeOperatorKeysStats.activeValidatorsKeysCount.toNumber() + 3
+      )
+      // the second receives 4 deposits
+      assert.equals(
+        activeKeyCountsAfterAllocation[1],
+        secondNodeOperatorKeysStats.activeValidatorsKeysCount.toNumber() + 4
+      )
+    })
   })
 
   describe('getSigningKeysAllocationData()', async () => {
@@ -2451,46 +2451,44 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       )
     })
 
-    // it.only('correctly decreases global vetted signing keys and totalTargetStats count if key index is less then vetted keys counter of node operator', async () => {
-    //   const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - 1
-    //   assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
-    //   const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+    it.skip('correctly decreases global vetted signing keys and totalTargetStats count if key index is less then vetted keys counter of node operator', async () => {
+      const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - 1
+      assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
+      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
 
-    //   const {
-    //     isTargetLimitActive: isTargetLimitActiveBefore,
-    //     targetValidatorsCount: targetValidatorsCountBefore,
-    //     excessValidatorsCount: excessValidatorsCountBefore,
-    //   } = await app.testing_getTotalTargetStats();
+      const {
+        isTargetLimitActive: isTargetLimitActiveBefore,
+        targetValidatorsCount: targetValidatorsCountBefore,
+        excessValidatorsCount: excessValidatorsCountBefore,
+      } = await app.testing_getTotalTargetStats();
 
-    //   // await app.updateTargetValidatorsLimits(secondNodeOperatorId,  true, 2, { from: voting })
+      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: voting })
 
-    //   await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: voting })
+      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const vettedSigningKeysDecrement = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - keyIndex
+      assert.equal(
+        vettedSigningKeysCountAfter.toNumber(),
+        vettedSigningKeysCountBefore.toNumber() - vettedSigningKeysDecrement
+      )
 
-    //   const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
-    //   const vettedSigningKeysDecrement = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - keyIndex
-    //   assert.equal(
-    //     vettedSigningKeysCountAfter.toNumber(),
-    //     vettedSigningKeysCountBefore.toNumber() - vettedSigningKeysDecrement
-    //   )
+      const {
+        isTargetLimitActive: isTargetLimitActiveAfter,
+        targetValidatorsCount: targetValidatorsCountAfter,
+        excessValidatorsCount: excessValidatorsCountAfter,
+      } = await app.testing_getTotalTargetStats();
 
-    //   const {
-    //     isTargetLimitActive: isTargetLimitActiveAfter,
-    //     targetValidatorsCount: targetValidatorsCountAfter,
-    //     excessValidatorsCount: excessValidatorsCountAfter,
-    //   } = await app.testing_getTotalTargetStats();
+      console.log({
+        targetValidatorsCountBefore: targetValidatorsCountBefore.toNumber(),
+        targetValidatorsCountAfter: targetValidatorsCountAfter.toNumber(),
+        vettedSigningKeysCountBefore: vettedSigningKeysCountBefore.toNumber() ,
+        vettedSigningKeysDecrement
 
-    //   console.log({
-    //     targetValidatorsCountBefore: targetValidatorsCountBefore.toNumber(),
-    //     targetValidatorsCountAfter: targetValidatorsCountAfter.toNumber(),
-    //     vettedSigningKeysCountBefore: vettedSigningKeysCountBefore.toNumber() ,
-    //     vettedSigningKeysDecrement
+      })
 
-    //   })
-
-    //   assertBn(isTargetLimitActiveAfter, isTargetLimitActiveBefore)
-    //   assertBn(targetValidatorsCountAfter, targetValidatorsCountBefore.toNumber() - vettedSigningKeysCountBefore.toNumber() - vettedSigningKeysDecrement)
-    //   assertBn(excessValidatorsCountAfter, excessValidatorsCountBefore)
-    // })
+      assertBn(isTargetLimitActiveAfter, isTargetLimitActiveBefore)
+      assertBn(targetValidatorsCountAfter, targetValidatorsCountBefore.toNumber() - vettedSigningKeysCountBefore.toNumber() - vettedSigningKeysDecrement)
+      assertBn(excessValidatorsCountAfter, excessValidatorsCountBefore)
+    })
 
     it("doesn't modify global vetted signing keys count if key index is equal to vettedSigningKeysCount", async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount

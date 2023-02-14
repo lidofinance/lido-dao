@@ -64,7 +64,7 @@ contract('LidoLocator', ([deployer, agent]) => {
       }
 
       for (const config of configsWithZeroAddress) {
-        await assert.reverts(LidoLocator.new(config), 'ErrorZeroAddress()')
+        await assert.reverts(LidoLocator.new(config), 'ZeroAddress()')
       }
     })
   })

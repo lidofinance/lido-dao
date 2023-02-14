@@ -29,7 +29,7 @@ contract BeaconChainDepositor {
     IDepositContract public immutable DEPOSIT_CONTRACT;
 
     constructor(address _depositContract) {
-        if (_depositContract == address(0)) revert ErrorDepositContractZeroAddress();
+        if (_depositContract == address(0)) revert DepositContractZeroAddress();
         DEPOSIT_CONTRACT = IDepositContract(_depositContract);
     }
 
@@ -65,7 +65,7 @@ contract BeaconChainDepositor {
             }
         }
 
-        if (address(this).balance != targetBalance) revert ErrorNotExpectedBalance();
+        if (address(this).balance != targetBalance) revert NotExpectedBalance();
     }
 
     /// @dev computes the deposit_root_hash required by official Beacon Deposit contract
@@ -93,6 +93,6 @@ contract BeaconChainDepositor {
         );
     }
 
-    error ErrorDepositContractZeroAddress();
-    error ErrorNotExpectedBalance();
+    error DepositContractZeroAddress();
+    error NotExpectedBalance();
 }

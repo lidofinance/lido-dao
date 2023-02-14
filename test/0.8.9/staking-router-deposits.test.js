@@ -61,7 +61,7 @@ contract('StakingRouter', ([depositor, stranger]) => {
 
       await assert.revertsWithCustomError(
         stakingRouter.deposit(maxDepositsCount, curated.id, '0x', { from: voting }),
-        'ErrorAppAuthLidoFailed()'
+        'AppAuthLidoFailed()'
       )
     })
 

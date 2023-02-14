@@ -12,17 +12,18 @@ import { BaseOracle, IConsensusContract } from "./BaseOracle.sol";
 
 interface ILido {
     function handleOracleReport(
-        uint256 currentReportTimestamp,
-        uint256 secondsElapsedSinceLastReport,
+        // Oracle timings
+        uint256 _currentReportTimestamp,
+        uint256 _timeElapsedSeconds,
         // CL values
-        uint256 beaconValidators,
-        uint256 beaconBalance,
+        uint256 _clValidators,
+        uint256 _clBalance,
         // EL values
-        uint256 withdrawalVaultBalance,
-        uint256 elRewardsVaultBalance,
-        // decision
-        uint256 requestIdToFinalizeUpTo,
-        uint256 finalizationShareRate
+        uint256 _withdrawalVaultBalance,
+        uint256 _elRewardsVaultBalance,
+        // Decision about withdrawals processing
+        uint256 _lastFinalizableRequestId,
+        uint256 _simulatedShareRate
     ) external;
 }
 
@@ -237,13 +238,13 @@ contract AccountingOracle is BaseOracle {
         /// @dev The id of the last withdrawal request that should be finalized as the result
         /// of applying this oracle report. The zero value means that no requests should be
         /// finalized.
-        uint256 lastWithdrawalRequestIdToFinalize;
+        uint256 lastFinalizableWithdrawalRequestId;
 
         /// @dev The share/ETH rate with the 10^27 precision (i.e. the price of one stETH share
         /// in ETH where one ETH is denominated as 10^27) used for finalizing withdrawal requests
         /// up to (and including) the one passed in the lastWithdrawalRequestIdToFinalize field.
         /// Must be set to zero if lastWithdrawalRequestIdToFinalize is zero.
-        uint256 finalizationShareRate;
+        uint256 simulatedShareRate;
 
         /// @dev Whether, based on the state observed at the reference slot, the protocol should
         /// be in the bunker mode.
@@ -559,8 +560,8 @@ contract AccountingOracle is BaseOracle {
             data.clBalanceGwei * 1e9,
             data.withdrawalVaultBalance,
             data.elRewardsVaultBalance,
-            data.lastWithdrawalRequestIdToFinalize,
-            data.finalizationShareRate
+            data.lastFinalizableWithdrawalRequestId,
+            data.simulatedShareRate
         );
 
         _storageExtraDataProcessingState().value = ExtraDataProcessingState({
@@ -683,12 +684,14 @@ contract AccountingOracle is BaseOracle {
 
     function _processExtraDataItems(bytes calldata data, ExtraDataIterState memory iter) internal {
         uint256 dataOffset = iter.dataOffset;
+        uint256 maxNodeOperatorsPerItem = 0;
+        uint256 maxNodeOperatorItemIndex = 0;
 
-        /// @solidity memory-safe-assembly
         while (dataOffset < data.length) {
             uint256 index;
             uint256 itemType;
 
+            /// @solidity memory-safe-assembly
             assembly {
                 // layout at the dataOffset:
                 // |  3 bytes  | 2 bytes  |   X bytes   |
@@ -714,7 +717,12 @@ contract AccountingOracle is BaseOracle {
             if (itemType == EXTRA_DATA_TYPE_EXITED_VALIDATORS ||
                 itemType == EXTRA_DATA_TYPE_STUCK_VALIDATORS
             ) {
-                _processExtraDataItem(data, iter);
+                uint256 nodeOpsProcessed = _processExtraDataItem(data, iter);
+
+                if (nodeOpsProcessed > maxNodeOperatorsPerItem) {
+                    maxNodeOperatorsPerItem = nodeOpsProcessed;
+                    maxNodeOperatorItemIndex = index;
+                }
             } else {
                 revert UnsupportedExtraDataType(index, itemType);
             }
@@ -722,9 +730,14 @@ contract AccountingOracle is BaseOracle {
             assert(iter.dataOffset > dataOffset);
             dataOffset = iter.dataOffset;
         }
+
+        if (maxNodeOperatorsPerItem > 0) {
+            IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
+                .checkNodeOperatorsPerExtraDataItemCount(maxNodeOperatorItemIndex, maxNodeOperatorsPerItem);
+        }
     }
 
-    function _processExtraDataItem(bytes calldata data, ExtraDataIterState memory iter) internal {
+    function _processExtraDataItem(bytes calldata data, ExtraDataIterState memory iter) internal returns (uint256) {
         uint256 dataOffset = iter.dataOffset;
         uint256 moduleId;
         uint256 nodeOpsCount;
@@ -772,9 +785,6 @@ contract AccountingOracle is BaseOracle {
             revert InvalidExtraDataItem(iter.index);
         }
 
-        IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
-            .checkNodeOperatorsPerExtraDataItemCount(iter.index, nodeOpsCount);
-
         if (iter.itemType == EXTRA_DATA_TYPE_STUCK_VALIDATORS) {
             IStakingRouter(iter.stakingRouter)
                 .reportStakingModuleStuckValidatorsCountByNodeOperator(moduleId, nodeOpIds, valsCounts);
@@ -784,6 +794,7 @@ contract AccountingOracle is BaseOracle {
         }
 
         iter.dataOffset = dataOffset;
+        return nodeOpsCount;
     }
 
     ///

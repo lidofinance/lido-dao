@@ -83,11 +83,11 @@ contract('LidoExecutionLayerRewardsVault', ([deployer, anotherAccount]) => {
     })
 
     it(`can't recover zero ERC20 amount`, async () => {
-      assertRevert(elRewardsVault.recoverERC20(mockERC20Token.address, bn(0)), `ZERO_RECOVERY_AMOUNT`)
+      await assertRevert(elRewardsVault.recoverERC20(mockERC20Token.address, bn(0)), `ZERO_RECOVERY_AMOUNT`)
     })
 
     it(`can't recover zero-address ERC20`, async () => {
-      assertRevert(elRewardsVault.recoverERC20(ZERO_ADDRESS, bn(10)))
+      await assertRevert(elRewardsVault.recoverERC20(ZERO_ADDRESS, bn(10)))
     })
 
     it(`can't recover stETH by recoverERC20`, async () => {
@@ -138,11 +138,11 @@ contract('LidoExecutionLayerRewardsVault', ([deployer, anotherAccount]) => {
       })
 
       // balance is zero already, have to be reverted
-      assertRevert(elRewardsVault.recoverERC20(mockERC20Token.address, bn(1), { from: deployer }), `ERC20: transfer amount exceeds balance`)
+      await assertRevert(elRewardsVault.recoverERC20(mockERC20Token.address, bn(1), { from: deployer }), `ERC20: transfer amount exceeds balance`)
     })
 
     it(`can't recover zero-address ERC721(NFT)`, async () => {
-      assertRevert(elRewardsVault.recoverERC721(ZERO_ADDRESS, 0))
+      await assertRevert(elRewardsVault.recoverERC721(ZERO_ADDRESS, 0))
     })
 
     it(`recover some accidentally sent NFTs`, async () => {
@@ -160,7 +160,7 @@ contract('LidoExecutionLayerRewardsVault', ([deployer, anotherAccount]) => {
       assertEvent(receiptNfc2, `ERC721Recovered`, { expectedArgs: { requestedBy: anotherAccount, token: mockNFT.address, tokenId: nft2 } })
 
       // but nft1 recovery should revert
-      assertRevert(elRewardsVault.recoverERC721(mockNFT.address, nft1), `ERC721: transfer caller is not owner nor approved`)
+      await assertRevert(elRewardsVault.recoverERC721(mockNFT.address, nft1), `ERC721: transfer caller is not owner nor approved`)
 
       // send nft1 to elRewardsVault and recover it
       await mockNFT.transferFrom(anotherAccount, elRewardsVault.address, nft1, { from: anotherAccount })

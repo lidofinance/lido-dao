@@ -79,16 +79,16 @@ contract OssifiableProxy is ERC1967Proxy {
     modifier onlyAdmin() {
         address admin = _getAdmin();
         if (admin == address(0)) {
-            revert ErrorProxyIsOssified();
+            revert ProxyIsOssified();
         }
         if (admin != msg.sender) {
-            revert ErrorNotAdmin();
+            revert NotAdmin();
         }
         _;
     }
 
     event ProxyOssified();
 
-    error ErrorNotAdmin();
-    error ErrorProxyIsOssified();
+    error NotAdmin();
+    error ProxyIsOssified();
 }

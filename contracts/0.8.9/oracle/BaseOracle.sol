@@ -46,7 +46,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     error UnexpectedConsensusVersion(uint256 expectedVersion, uint256 receivedVersion);
     error UnexpectedDataHash(bytes32 consensusHash, bytes32 receivedHash);
 
-    event ConsensusContractSet(address indexed addr, address indexed prevAddr);
+    event ConsensusHashContractSet(address indexed addr, address indexed prevAddr);
     event ConsensusVersionSet(uint256 indexed version, uint256 indexed prevVersion);
     event ReportSubmitted(uint256 indexed refSlot, bytes32 hash, uint256 processingDeadlineTime);
     event ProcessingStarted(uint256 indexed refSlot, bytes32 hash);
@@ -173,7 +173,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
             revert RefSlotMustBeGreaterThanProcessingOne(refSlot, prevProcessingRefSlot);
         }
 
-        if (prevProcessingRefSlot != prevSubmittedRefSlot) {
+        if (refSlot != prevSubmittedRefSlot && prevProcessingRefSlot != prevSubmittedRefSlot) {
             emit WarnProcessingMissed(prevSubmittedRefSlot);
         }
 
@@ -317,7 +317,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         }
 
         CONSENSUS_CONTRACT_POSITION.setStorageAddress(addr);
-        emit ConsensusContractSet(addr, prevAddr);
+        emit ConsensusHashContractSet(addr, prevAddr);
     }
 
     function _getTime() internal virtual view returns (uint256) {

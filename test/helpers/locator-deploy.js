@@ -1,3 +1,5 @@
+const LidoLocator = artifacts.require('LidoLocator')
+
 const DUMMY_ADDRESS = '0x' + 'f'.repeat(40)
 
 const invalidButNonZeroLocatorConfig = {
@@ -38,7 +40,7 @@ async function updateProxyImplementation(proxyAddress, artifactName, proxyOwner,
 }
 
 async function getLocatorConfig(locatorAddress) {
-  const LidoLocator = await artifacts.require('LidoLocator')
+
   const locator = await LidoLocator.at(locatorAddress)
   const config = {
     accountingOracle: await locator.accountingOracle(),
@@ -63,7 +65,8 @@ async function deployLocatorWithInvalidImplementation(admin) {
 }
 
 async function deployLocatorWithDummyAddressesImplementation(admin) {
-  return await deployBehindOssifiableProxy('LidoLocator', admin, [invalidButNonZeroLocatorConfig])
+  const proxy = await deployBehindOssifiableProxy('LidoLocator', admin, [invalidButNonZeroLocatorConfig])
+  return await LidoLocator.at(proxy.address)
 }
 
 ///! Not specified in configUpdate values are set to dummy non zero addresses

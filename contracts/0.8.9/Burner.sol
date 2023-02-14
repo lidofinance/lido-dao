@@ -52,13 +52,13 @@ interface IStETH is IERC20 {
 contract Burner is IBurner, AccessControlEnumerable {
     using SafeERC20 for IERC20;
 
-    error ErrorAppAuthLidoFailed();
-    error ErrorDirectETHTransfer();
+    error AppAuthLidoFailed();
+    error DirectETHTransfer();
     error ZeroRecoveryAmount();
     error StETHRecoveryWrongFunc();
     error ZeroBurnAmount();
     error NotEnoughExcessStETH();
-    error ErrorZeroAddress(string field);
+    error ZeroAddress(string field);
 
     bytes32 public constant REQUEST_BURN_MY_STETH_ROLE = keccak256("REQUEST_BURN_MY_STETH_ROLE");
     bytes32 public constant RECOVER_ASSETS_ROLE = keccak256("RECOVER_ASSETS_ROLE");
@@ -138,9 +138,9 @@ contract Burner is IBurner, AccessControlEnumerable {
         uint256 _totalCoverSharesBurnt,
         uint256 _totalNonCoverSharesBurnt
     ) {
-        if (_admin == address(0)) revert ErrorZeroAddress("_admin");
-        if (_treasury == address(0)) revert ErrorZeroAddress("_treasury");
-        if (_stETH == address(0)) revert ErrorZeroAddress("_stETH");
+        if (_admin == address(0)) revert ZeroAddress("_admin");
+        if (_treasury == address(0)) revert ZeroAddress("_treasury");
+        if (_stETH == address(0)) revert ZeroAddress("_stETH");
 
         _setupRole(DEFAULT_ADMIN_ROLE, _admin);
         _setupRole(REQUEST_BURN_SHARES_ROLE, _stETH);
@@ -239,7 +239,7 @@ contract Burner is IBurner, AccessControlEnumerable {
       * Intentionally deny incoming ether
       */
     receive() external payable {
-        revert ErrorDirectETHTransfer();
+        revert DirectETHTransfer();
     }
 
     /**
@@ -288,7 +288,7 @@ contract Burner is IBurner, AccessControlEnumerable {
     function commitSharesToBurn(
         uint256 _sharesToBurnLimit
     ) external virtual override returns (uint256 sharesToBurnNow) {
-        if (msg.sender != STETH) revert ErrorAppAuthLidoFailed();
+        if (msg.sender != STETH) revert AppAuthLidoFailed();
 
         if (_sharesToBurnLimit == 0) {
             return 0;

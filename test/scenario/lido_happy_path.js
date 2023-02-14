@@ -389,51 +389,57 @@ contract('Lido: happy path', (addresses) => {
     const oldTotalPooledEther = await pool.getTotalPooledEther()
     assertBn(oldTotalPooledEther, ETH(33 + 64), 'total pooled ether')
 
-    // Reporting 1.5-fold balance increase (64 => 96)
+    // Reporting 1.005-fold balance increase (64 => 64.32) to stay in limits
 
-    pushOracleReport(consensus, oracle, 2, ETH(96))
+    await pushOracleReport(consensus, oracle, 2, ETH(64.32))
 
     // Total shares increased because fee minted (fee shares added)
-    // shares ~= oldTotalShares + reward * oldTotalShares / (newTotalPooledEther - reward)
+    // shares = oldTotalShares + reward * totalFee * oldTotalShares / (newTotalPooledEther - reward * totalFee)
 
     const newTotalShares = await token.getTotalShares()
-    assertBn(newTotalShares, new BN('99467408585055643879'), 'total shares')
+    assertBn(newTotalShares, '97031905270948112819', 'total shares')
 
     // Total pooled Ether increased
 
     const newTotalPooledEther = await pool.getTotalPooledEther()
-    assertBn(newTotalPooledEther, ETH(33 + 96), 'total pooled ether')
+    assertBn(newTotalPooledEther, ETH(33 + 64.32), 'total pooled ether')
 
     // Ether2 stat reported by the pool changed correspondingly
 
     const ether2Stat = await pool.getBeaconStat()
     assertBn(ether2Stat.depositedValidators, 2, 'deposited ether2')
-    assertBn(ether2Stat.beaconBalance, ETH(96), 'remote ether2')
+    assertBn(ether2Stat.beaconBalance, ETH(64.32), 'remote ether2')
 
     // Buffered Ether amount didn't change
 
     assertBn(await pool.getBufferedEther(), ETH(33), 'buffered ether')
 
     // New tokens was minted to distribute fee
-    assertBn(await token.totalSupply(), tokens(129), 'token total supply')
+    assertBn(await token.totalSupply(), tokens(97.32), 'token total supply')
 
-    const reward = toBN(ETH(96 - 64))
+    const reward = toBN(ETH(64.32 - 64))
     const mintedAmount = new BN(totalFeePoints).mul(reward).divn(10000)
 
     // Token user balances increased
-    assertBn(await token.balanceOf(user1), new BN('3890721649484536082'), 'user1 tokens')
-    assertBn(await token.balanceOf(user2), new BN('38907216494845360824'), 'user2 tokens')
-    assertBn(await token.balanceOf(user3), new BN('83002061855670103092'), 'user3 tokens')
+
+    assertBn(await token.balanceOf(user1), new BN('3008907216494845360'), 'user1 tokens')
+    assertBn(await token.balanceOf(user2), new BN('30089072164948453608'), 'user2 tokens')
+    assertBn(await token.balanceOf(user3), new BN('64190020618556701031'), 'user3 tokens')
 
     // Fee, in the form of minted tokens, was distributed between treasury, insurance fund
     // and node operators
     // treasuryTokenBalance ~= mintedAmount * treasuryFeePoints / 10000
     // insuranceTokenBalance ~= mintedAmount * insuranceFeePoints / 10000
-    assertBn(await token.balanceOf(treasuryAddr), new BN('1600000000000000000'), 'treasury tokens')
-    assertBn(await token.balanceOf(nodeOperatorsRegistry.address), new BN('1599999999999999999'), 'insurance tokens')
+    assert.equalsDelta(await token.balanceOf(treasuryAddr), new BN('16000000000000000'), 1, 'treasury tokens')
+    assert.equalsDelta(
+      await token.balanceOf(nodeOperatorsRegistry.address),
+      new BN('16000000000000000'),
+      1,
+      'insurance tokens'
+    )
 
     // The node operators' fee is distributed between all active node operators,
-    // proprotional to their effective stake (the amount of Ether staked by the operator's
+    // proportional to their effective stake (the amount of Ether staked by the operator's
     // used and non-stopped validators).
     //
     // In our case, both node operators received the same fee since they have the same

@@ -113,8 +113,4 @@ function normalizeArg(arg) {
   return arg
 }
 
-function getAccessControlMessage(address, role) {
-  return `AccessControl: account ${address} is missing role ${role}`
-}
-
-module.exports = { assert: chai.assert, getAccessControlMessage }
+module.exports = { assert: chai.assert }

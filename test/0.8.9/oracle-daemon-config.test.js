@@ -1,5 +1,4 @@
 const hre = require('hardhat')
-const { keccak256 } = require('js-sha3')
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
 const { assert } = require('../helpers/assert')
@@ -31,7 +30,7 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
 
     it('gets a value', async () => {
       const value = await config.get(defaultKey)
-      
+
       assert.equal(defaultValue, value)
     })
 
@@ -57,11 +56,11 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
     it('removes a value', async () => {
       await config.unset(defaultKey, { from: manager })
 
-      assert.reverts(config.get(defaultKey))
+      await assert.reverts(config.get(defaultKey))
     })
 
     it('reverts while gets all values', async () => {
-      assert.reverts(config.getList([defaultKey]), `ErrorValueDoesntExist(${defaultKey})`)
+      await assert.revertsWithCustomError(config.getList([defaultKey]), `ValueDoesntExist("${defaultKey}")`)
     })
   })
 
@@ -71,24 +70,51 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
     })
 
     it("reverts when defaultValue for update doesn't exist", async () => {
-      assert.reverts(config.update(defaultKey, defaultValue, { from: manager }), `ErrorValueDoesntExist(${defaultKey})`)
+      await assert.revertsWithCustomError(
+        config.update(defaultKey, defaultValue, { from: manager }),
+        `ValueDoesntExist("${defaultKey}")`
+      )
     })
 
     it("reverts when defaultValue for unset doen't exist", async () => {
-      assert.reverts(config.unset(defaultKey, { from: manager }), `ErrorValueDoesntExist(${defaultKey})`)
+      await assert.revertsWithCustomError(
+        config.unset(defaultKey, { from: manager }),
+        `ValueDoesntExist("${defaultKey}")`
+      )
     })
 
     it('reverts when defaultValue for set already exists', async () => {
       await config.set(defaultKey, defaultValue, { from: manager })
-      assert.reverts(config.set(defaultKey, updatedDefaultValue, { from: manager }), `ErrorValueExists(${defaultKey})`)
+      await assert.revertsWithCustomError(
+        config.set(defaultKey, updatedDefaultValue, { from: manager }),
+        `ValueExists("${defaultKey}")`
+      )
     })
 
     it('reverts when admin is zero address', async () => {
-      assert.reverts(OracleDaemonConfig.new(ZERO_ADDRESS, [manager], { from: deployer }), 'ErrorZeroAddress()')
+      await assert.revertsWithCustomError(
+        OracleDaemonConfig.new(ZERO_ADDRESS, [manager], { from: deployer }),
+        'ZeroAddress()'
+      )
     })
 
     it('reverts when one of managers is zero address', async () => {
-      assert.reverts(OracleDaemonConfig.new(deployer, [manager, ZERO_ADDRESS], { from: deployer }), 'ErrorZeroAddress()')
+      await assert.revertsWithCustomError(OracleDaemonConfig.new(deployer, [manager, ZERO_ADDRESS], { from: deployer }), 'ZeroAddress()')
+    })
+
+    it('revers when empty value passed to set', async () => {
+      await assert.revertsWithCustomError(
+        config.set(defaultKey, '0x', { from: manager }),
+        `EmptyValue("${defaultKey}")`
+      )
+    })
+
+    it('revers when empty value passed to update', async () => {
+      await config.set(defaultKey, defaultValue, { from: manager })
+      await assert.revertsWithCustomError(
+        config.update(defaultKey, '0x', { from: manager }),
+        `EmptyValue("${defaultKey}")`
+      )
     })
   })
 
@@ -98,31 +124,55 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
     })
 
     it('stranger cannot set a defaultValue', async () => {
-      assert.reverts(config.set(defaultKey, defaultValue, { from: stranger }))
+      await assert.revertsOZAccessControl(
+        config.set(defaultKey, defaultValue, { from: stranger }),
+        stranger,
+        `CONFIG_MANAGER_ROLE`
+      )
     })
 
-    it('admin cannot set a defaultValue', async () => {
-      assert.reverts(config.set(defaultKey, defaultValue, { from: deployer }))
+    it('deployer cannot set a defaultValue', async () => {
+      await assert.revertsOZAccessControl(
+        config.set(defaultKey, defaultValue, { from: deployer }),
+        deployer,
+        `CONFIG_MANAGER_ROLE`
+      )
     })
 
     it('stranger cannot update a defaultValue', async () => {
       await config.set(defaultKey, defaultValue, { from: manager })
-      assert.reverts(config.update(defaultKey, updatedDefaultValue, { from: stranger }))
+      await assert.revertsOZAccessControl(
+        config.update(defaultKey, updatedDefaultValue, { from: stranger }),
+        stranger,
+        `CONFIG_MANAGER_ROLE`
+      )
     })
 
-    it('admin cannot update a defaultValue', async () => {
+    it('deployer cannot update a defaultValue', async () => {
       await config.set(defaultKey, defaultValue, { from: manager })
-      assert.reverts(config.update(defaultKey, updatedDefaultValue, { from: deployer }))
+      await assert.revertsOZAccessControl(
+        config.update(defaultKey, updatedDefaultValue, { from: deployer }),
+        deployer,
+        `CONFIG_MANAGER_ROLE`
+      )
     })
 
-    it('stranger cannot unset a defaultValue', async () => {
+    it('deployer cannot unset a defaultValue', async () => {
       await config.set(defaultKey, defaultValue, { from: manager })
-      assert.reverts(config.unset(defaultKey, { from: stranger }))
+      await assert.revertsOZAccessControl(
+        config.unset(defaultKey, { from: deployer }),
+        deployer,
+        `CONFIG_MANAGER_ROLE`
+      )
     })
 
-    it('stranger cannot unset a defaultValue', async () => {
+    it('deployer cannot unset a defaultValue', async () => {
       await config.set(defaultKey, defaultValue, { from: manager })
-      assert.reverts(config.unset(defaultKey, { from: deployer }))
+      assert.revertsOZAccessControl(
+        config.unset(defaultKey, { from: deployer }),
+        deployer,
+        `CONFIG_MANAGER_ROLE`
+      )
     })
   })
 })
