@@ -16,7 +16,7 @@ const nodeOperators = require('../helpers/node-operators')
 const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 const { pushOracleReport } = require('../helpers/oracle')
-const { SECONDS_PER_FRAME, MAX_UINT256 } = require('../helpers/constants')
+const { SECONDS_PER_FRAME, INITIAL_HOLDER, MAX_UINT256 } = require('../helpers/constants')
 const { oracleReportSanityCheckerStubFactory } = require('../helpers/factories')
 
 const { newApp } = require('../helpers/dao')
@@ -32,8 +32,6 @@ const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
 const ADDRESS_3 = '0x0000000000000000000000000000000000000003'
 const ADDRESS_4 = '0x0000000000000000000000000000000000000004'
-
-const INITIAL_HOLDER = '0x000000000000000000000000000000000000dead'
 
 const UNLIMITED = 1000000000
 const TOTAL_BASIS_POINTS = 10000
@@ -767,7 +765,7 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
 
     let receipt
 
-    await verifyStakeLimitState(0, 0, MAX_UINT256, false, false)
+    await verifyStakeLimitState(0, 0, bn(MAX_UINT256), false, false)
     receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) })
     assertEvent(receipt, 'Submitted', { expectedArgs: { sender: user2, amount: ETH(2), referral: ZERO_ADDRESS } })
 
@@ -782,7 +780,7 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
     await assertRevert(app.resumeStaking(), 'APP_AUTH_FAILED')
     receipt = await app.resumeStaking({ from: voting })
     assertEvent(receipt, 'StakingResumed')
-    await verifyStakeLimitState(0, 0, MAX_UINT256, false, false)
+    await verifyStakeLimitState(0, 0, bn(MAX_UINT256), false, false)
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(1.1) })
     receipt = await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(1.4) })
