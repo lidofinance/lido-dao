@@ -14,7 +14,7 @@ const { DSMAttestMessage, DSMPauseMessage, signDepositData } = require('../helpe
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
-contract.only('Lido: penalties, slashing, operator stops', (addresses) => {
+contract('Lido: penalties, slashing, operator stops', (addresses) => {
   const [
     // node operators
     operator_1,
