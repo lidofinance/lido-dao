@@ -5,11 +5,13 @@ const {
   CONSENSUS_VERSION,
   deployAndConfigureAccountingOracle,
   getReportDataItems,
+  encodeExtraDataItem,
   encodeExtraDataItems,
   packExtraDataList,
   calcExtraDataListHash,
   calcReportDataHash,
-  EXTRA_DATA_FORMAT_LIST
+  EXTRA_DATA_FORMAT_LIST,
+  EXTRA_DATA_TYPE_STUCK_VALIDATORS
 } = require('./accounting-oracle-deploy.test')
 
 const getDefaultExtraData = () => ({
@@ -58,10 +60,13 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
   }
 
   // note: reportFieldsArg.refSlot is required to pass here
-  function getReportData({ extraData: extraDataArg, reportFields: reportFieldsArg } = {}) {
+  function getReportData({
+    extraData: extraDataArg,
+    extraDataItems: extraDataItemsArgs,
+    reportFields: reportFieldsArg
+  } = {}) {
     const extraData = extraDataArg || getDefaultExtraData()
-
-    const extraDataItems = encodeExtraDataItems(extraData)
+    const extraDataItems = extraDataItemsArgs || encodeExtraDataItems(extraData)
     const extraDataList = packExtraDataList(extraDataItems)
     const extraDataHash = calcExtraDataListHash(extraDataList)
 
@@ -85,8 +90,8 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     }
   }
 
-  async function prepareNextReport({ extraData, reportFields = {} } = {}) {
-    const data = getReportData({ extraData, reportFields })
+  async function prepareNextReport({ extraData, extraDataItems, reportFields = {} } = {}) {
+    const data = getReportData({ extraData, extraDataItems, reportFields })
 
     await consensus.submitReport(data.reportFields.refSlot, data.reportHash, CONSENSUS_VERSION, { from: member1 })
     await oracle.submitReportData(data.reportItems, oracleVersion, { from: member1 })
@@ -99,11 +104,11 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     }
   }
 
-  async function prepareNextReportInNextFrame({ extraData, reportFields = {} } = {}) {
+  async function prepareNextReportInNextFrame({ reportFields = {}, ...prepareArgs } = {}) {
     await consensus.advanceTimeToNextFrameStart()
     const { refSlot } = await consensus.getCurrentFrame()
     const next = await prepareNextReport({
-      extraData,
+      ...prepareArgs,
       reportFields: {
         ...reportFields,
         refSlot
@@ -251,6 +256,73 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
         const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
         assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
+      })
+    })
+
+    context('enforces data safety boundaries', () => {
+      context('checks encoded data indexes for UnexpectedExtraDataIndex reverts', () => {
+        // contextual helper to prepeare wrong indexed data
+        const getExtraWithCustomLastIndex = (itemsCount, lastIndexCustom) => {
+          const dummyArr = Array.from(Array(itemsCount))
+          const stuckKeys = dummyArr.map((_, i) => ({ moduleId: i + 1, nodeOpIds: [0], keysCounts: [i + 1] }))
+          const extraData = { stuckKeys, exitedKeys: [] }
+          const extraDataItems = []
+          const type = EXTRA_DATA_TYPE_STUCK_VALIDATORS
+          dummyArr.forEach((_, i) => {
+            const item = extraData.stuckKeys[i]
+            const index = i < itemsCount - 1 ? i : lastIndexCustom
+            extraDataItems.push(encodeExtraDataItem(index, type, item.moduleId, item.nodeOpIds, item.keysCounts))
+          })
+          return {
+            extraData,
+            extraDataItems,
+            lastIndexDefault: itemsCount - 1,
+            lastIndexCustom
+          }
+        }
+
+        it('if first item index is not zero', async () => {
+          const { extraData, extraDataItems, lastIndexDefault, lastIndexCustom } = getExtraWithCustomLastIndex(1, 1)
+          const { extraDataList } = await prepareNextReportInNextFrame({ extraData, extraDataItems })
+          await assert.reverts(
+            oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+            `UnexpectedExtraDataIndex(${lastIndexDefault}, ${lastIndexCustom})`
+          )
+        })
+
+        it('if next index is greater than previous for more than +1', async () => {
+          const { extraData, extraDataItems, lastIndexDefault, lastIndexCustom } = getExtraWithCustomLastIndex(2, 2)
+          const { extraDataList } = await prepareNextReportInNextFrame({ extraData, extraDataItems })
+          await assert.reverts(
+            oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+            `UnexpectedExtraDataIndex(${lastIndexDefault}, ${lastIndexCustom})`
+          )
+        })
+
+        it('if next index equals to previous', async () => {
+          const { extraData, extraDataItems, lastIndexDefault, lastIndexCustom } = getExtraWithCustomLastIndex(3, 1)
+          const { extraDataList } = await prepareNextReportInNextFrame({ extraData, extraDataItems })
+          await assert.reverts(
+            oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+            `UnexpectedExtraDataIndex(${lastIndexDefault}, ${lastIndexCustom})`
+          )
+        })
+
+        it('if next index less than previous', async () => {
+          const { extraData, extraDataItems, lastIndexDefault, lastIndexCustom } = getExtraWithCustomLastIndex(3, 0)
+          const { extraDataList } = await prepareNextReportInNextFrame({ extraData, extraDataItems })
+          await assert.reverts(
+            oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+            `UnexpectedExtraDataIndex(${lastIndexDefault}, ${lastIndexCustom})`
+          )
+        })
+
+        it('succeeds if indexes were passed sequentially', async () => {
+          const { extraData, extraDataItems } = getExtraWithCustomLastIndex(3, 2)
+          const { extraDataList, reportFields } = await prepareNextReportInNextFrame({ extraData, extraDataItems })
+          const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
+          assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
+        })
       })
     })
 
