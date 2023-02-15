@@ -176,7 +176,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const incorrectExtraDataHash = calcExtraDataListHash(incorrectExtraDataList)
         await assert.reverts(
           oracle.submitReportExtraDataList(incorrectExtraDataList, { from: member1 }),
-          `UnexpectedDataHash("${extraDataHash}", "${incorrectExtraDataHash}")`
+          `UnexpectedExtraDataHash("${extraDataHash}", "${incorrectExtraDataHash}")`
         )
       })
 
