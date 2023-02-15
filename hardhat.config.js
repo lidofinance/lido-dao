@@ -11,7 +11,7 @@ require('hardhat-gas-reporter')
 require('solidity-coverage')
 require('hardhat-contract-sizer')
 require('hardhat-ignore-warnings')
-require('@nomicfoundation/hardhat-foundry')
+require('./foundry/skip-sol-tests-compilation')
 
 const NETWORK_NAME = getNetworkName()
 const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
@@ -216,9 +216,6 @@ module.exports = {
     runOnCompile: true,
     strict: true,
     except: ['test_helpers', 'template', 'mocks', '@aragon', 'openzeppelin'],
-  },
-  paths: {
-    sources: 'contracts'
   }
 }
 

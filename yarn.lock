@@ -1804,7 +1804,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ethersproject/abi@npm:5.7.0, @ethersproject/abi@npm:^5.0.0-beta.146, @ethersproject/abi@npm:^5.7.0":
+"@ethersproject/abi@npm:5.7.0, @ethersproject/abi@npm:^5.0.0-beta.146, @ethersproject/abi@npm:^5.0.9, @ethersproject/abi@npm:^5.7.0":
   version: 5.7.0
   resolution: "@ethersproject/abi@npm:5.7.0"
   dependencies:
@@ -3539,7 +3539,6 @@ __metadata:
     "@babel/node": ^7.12.1
     "@babel/preset-env": ^7.11.5
     "@babel/register": ^7.12.1
-    "@nomicfoundation/hardhat-foundry": ^1.0.0
     "@nomiclabs/hardhat-ethers": ^2.0.4
     "@nomiclabs/hardhat-etherscan": ^2.1.8
     "@nomiclabs/hardhat-ganache": ^2.0.1
@@ -3570,19 +3569,20 @@ __metadata:
     ethers: ^5.1.4
     hardhat: 2.12.7
     hardhat-contract-sizer: ^2.5.0
-    hardhat-gas-reporter: 1.0.8
+    hardhat-gas-reporter: ^1.0.8
     hardhat-ignore-warnings: "skozin/hardhat-ignore-warnings#0ecf2ae85bddb83594193ee5c463cb4ae54cde7d"
     husky: ^8.0.2
     ipfs-http-client: ^55.0.0
     lerna: ^3.22.1
     lint-staged: ">=10"
+    minimatch: ^6.2.0
     node-gyp: ^8.4.1
     openzeppelin-solidity: 2.0.0
     prettier: ^2.8.1
     prettier-plugin-solidity: ^1.1.0
     solhint: ^3.3.7
     solhint-plugin-lido: ^0.0.4
-    solidity-coverage: ^0.7.22
+    solidity-coverage: ^0.8.2
     truffle: ^5.1.43
     truffle-extract: ^1.2.1
     truffle-flattener: ^1.5.0
@@ -3840,17 +3840,6 @@ __metadata:
     mcl-wasm: ^0.7.1
     rustbn.js: ~0.2.0
   checksum: 4cb2de3821f5b3b649e3652473aa1e2661fc8f958770720a027cfdeb8887b8946e9ad85f98703e44e2d23b53def89fec73e5192de6b9ef0243ccc33dfd6975f8
-  languageName: node
-  linkType: hard
-
-"@nomicfoundation/hardhat-foundry@npm:^1.0.0":
-  version: 1.0.0
-  resolution: "@nomicfoundation/hardhat-foundry@npm:1.0.0"
-  dependencies:
-    chalk: ^2.4.2
-  peerDependencies:
-    hardhat: ^2.12.6
-  checksum: ca4768663b9d6345c1a83ecbbbc4272c5f5920d7c366963aab3ed92048c08a59838e9b9a97422ad687fe0d730b5fd1be971572139641c673448983b8798a4c3f
   languageName: node
   linkType: hard
 
@@ -4890,13 +4879,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@truffle/error@npm:^0.0.12":
-  version: 0.0.12
-  resolution: "@truffle/error@npm:0.0.12"
-  checksum: 0065c5c8fd5023a54886a8962250e05fd570c52bc947420130a9ff824fe916f695f5efe342ecf8e0c16aaf70be5a35fa36d126ca3bbc18bcb345f60c3d0854b6
-  languageName: node
-  linkType: hard
-
 "@truffle/error@npm:^0.0.8":
   version: 0.0.8
   resolution: "@truffle/error@npm:0.0.8"
@@ -4943,29 +4925,6 @@ __metadata:
     source-map-support: ^0.5.19
     web3: 1.2.9
   checksum: 9ef556c076305726c8205a975b4e5172f0f69e896d91df01e7c2218c30ca523cdc6df28022584f7c41ee8453f38b7c93255a8c1625d40c17714aed72e1f02396
-  languageName: node
-  linkType: hard
-
-"@truffle/interface-adapter@npm:^0.4.19":
-  version: 0.4.19
-  resolution: "@truffle/interface-adapter@npm:0.4.19"
-  dependencies:
-    bn.js: ^5.1.3
-    ethers: ^4.0.32
-    source-map-support: ^0.5.19
-    web3: 1.2.9
-  checksum: 434f1ab60621d03a3aef82ea4eea5034231b78a6ff36990e43e5f0596e2dd641967d35dd262f3bc9197abd4282dd9f263561dde0bf13fcd2f690708900cf206b
-  languageName: node
-  linkType: hard
-
-"@truffle/provider@npm:^0.2.24":
-  version: 0.2.26
-  resolution: "@truffle/provider@npm:0.2.26"
-  dependencies:
-    "@truffle/error": ^0.0.12
-    "@truffle/interface-adapter": ^0.4.19
-    web3: 1.2.9
-  checksum: bbec2ab2724ef7fdb1017a38202de6807ff33dae0fc7cfd9d92e23a0cdc72b1202e8cb6fcd577c566f17a33ed09de57fb770aeccb68968f93f5c269d74c59f94
   languageName: node
   linkType: hard
 
@@ -10387,6 +10346,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"difflib@npm:^0.2.4":
+  version: 0.2.4
+  resolution: "difflib@npm:0.2.4"
+  dependencies:
+    heap: ">= 0.2.0"
+  checksum: e65f90b03773277b0b1137b22fccb8abc70e8dcee3d8402370966188a31934eb8ea463a81ffab2a0803c45409314b78ed865494bee66c39ce72a1649b6192682
+  languageName: node
+  linkType: hard
+
 "dir-glob@npm:^2.2.2":
   version: 2.2.2
   resolution: "dir-glob@npm:2.2.2"
@@ -11632,7 +11600,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eth-gas-reporter@npm:^0.2.24":
+"eth-gas-reporter@npm:^0.2.25":
   version: 0.2.25
   resolution: "eth-gas-reporter@npm:0.2.25"
   dependencies:
@@ -14330,16 +14298,16 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
-"hardhat-gas-reporter@npm:1.0.8":
-  version: 1.0.8
-  resolution: "hardhat-gas-reporter@npm:1.0.8"
+"hardhat-gas-reporter@npm:^1.0.8":
+  version: 1.0.9
+  resolution: "hardhat-gas-reporter@npm:1.0.9"
   dependencies:
     array-uniq: 1.0.3
-    eth-gas-reporter: ^0.2.24
+    eth-gas-reporter: ^0.2.25
     sha1: ^1.1.1
   peerDependencies:
     hardhat: ^2.0.2
-  checksum: cbee5088e797a149360a2e38ef40edb7234de272993c3ef426b4635991cb176964fd816caa8f40ec3931025b2164d46b7e3f6b24e9a14d110ac26d1f3ca65a25
+  checksum: 97997c5c146bbb89b1915692c06a4100898d67b5d0a5e205f4e21a59f900b728486ea6e5cd3d0c8edf3004a3787ca30fd0041815622392c4f5c02c32f4dfdbac
   languageName: node
   linkType: hard
 
@@ -14581,6 +14549,13 @@ fsevents@~2.3.2:
   version: 0.2.6
   resolution: "heap@npm:0.2.6"
   checksum: 7bb8c80753b64cfbb4685bd0aa4ba52101d63c4a90d450b151931e23d0e30552a60be5db4dd109d1a18e73d1af27ceca9884b1cc451a1b7757f3dd89bcdc21a4
+  languageName: node
+  linkType: hard
+
+"heap@npm:>= 0.2.0":
+  version: 0.2.7
+  resolution: "heap@npm:0.2.7"
+  checksum: bedbcb978c6e3845af2b6484ac0fdfc131dd95c99a4e905791ceb80e883a6264d9583983cc9e509665b629c3d8e7813b55a5fa689e9fd2166feaadd6f55eac34
   languageName: node
   linkType: hard
 
@@ -18677,6 +18652,15 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
+"minimatch@npm:^6.2.0":
+  version: 6.2.0
+  resolution: "minimatch@npm:6.2.0"
+  dependencies:
+    brace-expansion: ^2.0.1
+  checksum: 675bc5a2f94ee6a762fd70baf777520c841cdca16cf6e9fc918171ca436cf4ebb8f3fb1ccaa5fd20e370ae60044fb6bfe653ceee4f18aec7fa51a79984a71316
+  languageName: node
+  linkType: hard
+
 "minimist-options@npm:4.1.0":
   version: 4.1.0
   resolution: "minimist-options@npm:4.1.0"
@@ -18873,6 +18857,41 @@ fsevents@~2.3.2:
   dependencies:
     obliterator: ^2.0.0
   checksum: d45ad89c80b4874695e3595265191c9327977754dd0b10de5fae65b62ba0754cf19286f135c9999df52aad14df0016a313b87882f133d519fbc0914ebd9ea676
+  languageName: node
+  linkType: hard
+
+"mocha@npm:7.1.2":
+  version: 7.1.2
+  resolution: "mocha@npm:7.1.2"
+  dependencies:
+    ansi-colors: 3.2.3
+    browser-stdout: 1.3.1
+    chokidar: 3.3.0
+    debug: 3.2.6
+    diff: 3.5.0
+    escape-string-regexp: 1.0.5
+    find-up: 3.0.0
+    glob: 7.1.3
+    growl: 1.10.5
+    he: 1.2.0
+    js-yaml: 3.13.1
+    log-symbols: 3.0.0
+    minimatch: 3.0.4
+    mkdirp: 0.5.5
+    ms: 2.1.1
+    node-environment-flags: 1.0.6
+    object.assign: 4.1.0
+    strip-json-comments: 2.0.1
+    supports-color: 6.0.0
+    which: 1.3.1
+    wide-align: 1.1.3
+    yargs: 13.3.2
+    yargs-parser: 13.1.2
+    yargs-unparser: 1.6.0
+  bin:
+    _mocha: bin/_mocha
+    mocha: bin/mocha
+  checksum: 19d87fa1f957b1f3ec725e110ab5cf4c117b9716a307f53823dbe5d1e94173638804ca3263700ffd07645f39339f501f4c17fd0d27f93d2dcdc2e51e5843bb98
   languageName: node
   linkType: hard
 
@@ -24339,31 +24358,35 @@ resolve@1.1.x:
   languageName: node
   linkType: hard
 
-"solidity-coverage@npm:^0.7.22":
-  version: 0.7.22
-  resolution: "solidity-coverage@npm:0.7.22"
+"solidity-coverage@npm:^0.8.2":
+  version: 0.8.2
+  resolution: "solidity-coverage@npm:0.8.2"
   dependencies:
-    "@solidity-parser/parser": ^0.14.0
-    "@truffle/provider": ^0.2.24
+    "@ethersproject/abi": ^5.0.9
+    "@solidity-parser/parser": ^0.14.1
     chalk: ^2.4.2
     death: ^1.1.0
     detect-port: ^1.3.0
+    difflib: ^0.2.4
     fs-extra: ^8.1.0
     ghost-testrpc: ^0.0.2
     global-modules: ^2.0.0
     globby: ^10.0.1
     jsonschema: ^1.2.4
     lodash: ^4.17.15
+    mocha: 7.1.2
     node-emoji: ^1.10.0
     pify: ^4.0.1
     recursive-readdir: ^2.2.2
     sc-istanbul: ^0.4.5
     semver: ^7.3.4
     shelljs: ^0.8.3
-    web3-utils: ^1.3.0
+    web3-utils: ^1.3.6
+  peerDependencies:
+    hardhat: ^2.11.0
   bin:
     solidity-coverage: plugins/bin.js
-  checksum: a29d97d451b0196a0a0de9b9dace2a80b55bd43272038aea23a1db8f9ed547ec0e3843f6073f3005fd73ce2aa054ad8e43f7f25c57bb1bd9c8a50dea015859d9
+  checksum: 3cf570696a74c3fa9b45625ea11b73c9539a5a22400fe81449856d106697418cb55c0225c3ad9257caee6731503c5f63a2979658ab28c6e715c6b179a741e26b
   languageName: node
   linkType: hard
 
@@ -27889,6 +27912,21 @@ resolve@1.1.x:
     underscore: 1.9.1
     utf8: 3.0.0
   checksum: 031045620e3f76c34f0b57ed7f63e21eb5f323cf26958fe9ba49f6879cb19b04a52d6cfe6d92d8bea1c3c6a524d7e05c00b372444e7de7eca7ff05a777cfdaae
+  languageName: node
+  linkType: hard
+
+"web3-utils@npm:^1.3.6":
+  version: 1.8.2
+  resolution: "web3-utils@npm:1.8.2"
+  dependencies:
+    bn.js: ^5.2.1
+    ethereum-bloom-filters: ^1.0.6
+    ethereumjs-util: ^7.1.0
+    ethjs-unit: 0.1.6
+    number-to-bn: 1.7.0
+    randombytes: ^2.1.0
+    utf8: 3.0.0
+  checksum: bf401b4fa55da722c552299f459365edd2afffa71995479eb39dc233e74c267f584c13a6b288a344a866950dba1dcaa75620f1b5f6c46bd96afc523ccc1685a7
   languageName: node
   linkType: hard
 
