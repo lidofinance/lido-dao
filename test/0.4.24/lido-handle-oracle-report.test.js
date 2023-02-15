@@ -1,9 +1,9 @@
 const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
-const { ETH, toBN, genKeys, setBalance } = require('../helpers/utils')
+const { ETH, toBN, genKeys, setBalance, StETH } = require('../helpers/utils')
 const { deployProtocol } = require('../helpers/protocol')
 const { EvmSnapshot } = require('../helpers/blockchain')
-const { ZERO_ADDRESS } = require('../helpers/constants')
+const { ZERO_ADDRESS, INITIAL_HOLDER } = require('../helpers/constants')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 
 const ONE_YEAR = 3600 * 24 * 365
@@ -55,8 +55,9 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     withdrawalVault = deployed.withdrawalVault.address
     elRewardsVault = deployed.elRewardsVault.address
 
+    assert.equals(await lido.balanceOf(INITIAL_HOLDER), StETH(1))
     await lido.submit(ZERO_ADDRESS, { from: stranger, value: ETH(30) })
-    await lido.submit(ZERO_ADDRESS, { from: anotherStranger, value: ETH(70) })
+    await lido.submit(ZERO_ADDRESS, { from: anotherStranger, value: ETH(69) })
 
     await checkStat({ depositedValidators: 0, beaconValidators: 0, beaconBalance: 0 })
 
@@ -180,7 +181,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         totalPooledEtherDiff: ETH(1),
         treasuryBalanceDiff: ETH(0.05),
         strangerBalanceDiff: ETH(0.3 * 0.9),
-        anotherStrangerBalanceDiff: ETH(0.7 * 0.9),
+        anotherStrangerBalanceDiff: ETH(0.69 * 0.9),
         curatedModuleBalanceDiff: ETH(0.05)
       })
     })
@@ -211,7 +212,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
       )
     })
 
-    it('withdrawal vault balance check', async () => {
+    it('withdrawal vault balance check 2', async () => {
       await assert.reverts(
         lido.handleOracleReport(0, 0, 0, 0, 1, 0, 0, 0, { from: oracle }),
         'IncorrectWithdrawalsVaultBalance(0)'
@@ -271,7 +272,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         totalPooledEtherDiff: ETH(-0.96),
         treasuryBalanceDiff: ETH(0),
         strangerBalanceDiff: ETH(-30 * 0.0096),
-        anotherStrangerBalanceDiff: toBN(ETH(0.0096)).mul(toBN(-70)).toString(),
+        anotherStrangerBalanceDiff: toBN(ETH(0.0096)).mul(toBN(-69)).toString(),
         curatedModuleBalanceDiff: ETH(0)
       })
     })
@@ -339,7 +340,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         totalPooledEtherDiff: ETH(0.96),
         treasuryBalanceDiff: ETH(0.96 * 0.05),
         strangerBalanceDiff: ETH(30 * 0.0096 * 0.9),
-        anotherStrangerBalanceDiff: ETH(70 * 0.0096 * 0.9),
+        anotherStrangerBalanceDiff: ETH(69 * 0.0096 * 0.9),
         curatedModuleBalanceDiff: ETH(0.96 * 0.05)
       })
     })
@@ -470,7 +471,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         totalPooledEtherDiff: ETH(4),
         treasuryBalanceDiff: ETH(4 * 0.05),
         strangerBalanceDiff: ETH(4 * 0.3 * 0.9),
-        anotherStrangerBalanceDiff: ETH(4 * 0.7 * 0.9),
+        anotherStrangerBalanceDiff: ETH(4 * 0.69 * 0.9),
         curatedModuleBalanceDiff: ETH(4 * 0.05)
       })
     })
@@ -497,7 +498,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         totalPooledEtherDiff: ETH(1),
         treasuryBalanceDiff: ETH(0.05),
         strangerBalanceDiff: ETH(0.3 * 0.9),
-        anotherStrangerBalanceDiff: ETH(0.7 * 0.9),
+        anotherStrangerBalanceDiff: ETH(0.69 * 0.9),
         curatedModuleBalanceDiff: ETH(0.05)
       })
       assert.equals(await ethers.provider.getBalance(withdrawalVault), 0)
@@ -525,7 +526,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         totalPooledEtherDiff: ETH(1),
         treasuryBalanceDiff: ETH(0.05),
         strangerBalanceDiff: ETH(0.3 * 0.9),
-        anotherStrangerBalanceDiff: ETH(0.7 * 0.9),
+        anotherStrangerBalanceDiff: ETH(0.69 * 0.9),
         curatedModuleBalanceDiff: ETH(0.05)
       })
 
@@ -555,14 +556,14 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         totalPooledEtherDiff: ETH(1),
         treasuryBalanceDiff: 0,
         strangerBalanceDiff: ETH(0.3),
-        anotherStrangerBalanceDiff: ETH(0.7),
+        anotherStrangerBalanceDiff: ETH(0.69),
         curatedModuleBalanceDiff: 0
       })
 
       assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0))
     })
 
-    it('does not smooth el rewards if report in limit without lido fee', async () => {
+    it('does not smooth el rewards if report in limit without lido fee 2', async () => {
       await setBalance(elRewardsVault, ETH(1.5))
 
       await oracleReportSanityChecker.setOracleReportLimits(
@@ -584,7 +585,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         totalPooledEtherDiff: ETH(1),
         treasuryBalanceDiff: 0,
         strangerBalanceDiff: ETH(0.3),
-        anotherStrangerBalanceDiff: ETH(0.7),
+        anotherStrangerBalanceDiff: ETH(0.69),
         curatedModuleBalanceDiff: 0
       })
 
@@ -613,7 +614,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         totalPooledEtherDiff: ETH(1),
         treasuryBalanceDiff: 0,
         strangerBalanceDiff: ETH(0.3),
-        anotherStrangerBalanceDiff: ETH(0.7),
+        anotherStrangerBalanceDiff: ETH(0.69),
         curatedModuleBalanceDiff: 0
       })
 
@@ -643,7 +644,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         totalPooledEtherDiff: ETH(1),
         treasuryBalanceDiff: ETH(0.05),
         strangerBalanceDiff: ETH(0.3 * 0.9),
-        anotherStrangerBalanceDiff: ETH(0.7 * 0.9),
+        anotherStrangerBalanceDiff: ETH(0.69 * 0.9),
         curatedModuleBalanceDiff: ETH(0.05)
       })
 
@@ -672,7 +673,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         totalPooledEtherDiff: ETH(1),
         treasuryBalanceDiff: ETH(0.05),
         strangerBalanceDiff: ETH(0.3 * 0.9),
-        anotherStrangerBalanceDiff: ETH(0.7 * 0.9),
+        anotherStrangerBalanceDiff: ETH(0.69 * 0.9),
         curatedModuleBalanceDiff: ETH(0.05)
       })
 
