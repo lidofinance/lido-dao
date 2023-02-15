@@ -375,6 +375,85 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
         })
       })
+
+      context('checks for InvalidExtraDataItem reverts', () => {
+        it('reverts if some item not long enough to contain all necessary data — early cut', async () => {
+          const invalidItemIndex = 1
+          const extraData = {
+            stuckKeys: [
+              { moduleId: 1, nodeOpIds: [1], keysCounts: [2] },
+              { moduleId: 2, nodeOpIds: [1], keysCounts: [2] }
+            ],
+            exitedKeys: []
+          }
+          const extraDataItems = encodeExtraDataItems(extraData)
+          // Cutting item to provoke error on early stage
+          // of `_processExtraDataItem` function, check on 776 line in AccountingOracle
+          const cutStop = 36
+          extraDataItems[invalidItemIndex] = extraDataItems[invalidItemIndex].slice(0, cutStop)
+          const { extraDataList } = await prepareNextReportInNextFrame({ extraData, extraDataItems })
+          await assert.reverts(
+            oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+            `InvalidExtraDataItem(${invalidItemIndex})`
+          )
+        })
+
+        it('reverts if some item not long enough to contain all necessary data — late cut', async () => {
+          const invalidItemIndex = 1
+          const extraData = {
+            stuckKeys: [
+              { moduleId: 1, nodeOpIds: [1], keysCounts: [2] },
+              { moduleId: 2, nodeOpIds: [1, 2, 3, 4], keysCounts: [2] }
+            ],
+            exitedKeys: []
+          }
+          const extraDataItems = encodeExtraDataItems(extraData)
+          // Providing long items and cutting them from end to provoke error on late stage
+          // of `_processExtraDataItem` function, check on 812 line in AccountingOracle, first condition
+          const cutStop = extraDataItems[invalidItemIndex].length - 2
+          extraDataItems[invalidItemIndex] = extraDataItems[invalidItemIndex].slice(0, cutStop)
+          const { extraDataList } = await prepareNextReportInNextFrame({ extraData, extraDataItems })
+          await assert.reverts(
+            oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+            `InvalidExtraDataItem(${invalidItemIndex})`
+          )
+        })
+
+        it('moduleId cannot be zero', async () => {
+          const invalidItemIndex = 1
+          const extraData = {
+            stuckKeys: [
+              { moduleId: 1, nodeOpIds: [1], keysCounts: [2] },
+              { moduleId: 0, nodeOpIds: [1], keysCounts: [2] }
+            ],
+            exitedKeys: []
+          }
+          const { extraDataList } = await prepareNextReportInNextFrame({ extraData })
+          await assert.reverts(
+            oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+            `InvalidExtraDataItem(${invalidItemIndex})`
+          )
+        })
+
+        it('checks node ops count to be non-zero', async () => {
+          const invalidItemIndex = 0
+          // Empty nodeOpIds list should provoke check fail
+          //  in `_processExtraDataItem` function, 812 line in AccountingOracle, second condition
+          const extraData = {
+            stuckKeys: [
+              { moduleId: 1, nodeOpIds: [], keysCounts: [2] },
+              { moduleId: 2, nodeOpIds: [1], keysCounts: [2] }
+            ],
+            exitedKeys: []
+          }
+          const extraDataItems = encodeExtraDataItems(extraData)
+          const { extraDataList } = await prepareNextReportInNextFrame({ extraData, extraDataItems })
+          await assert.reverts(
+            oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+            `InvalidExtraDataItem(${invalidItemIndex})`
+          )
+        })
+      })
     })
 
     context('delivers the data to staking router', () => {
