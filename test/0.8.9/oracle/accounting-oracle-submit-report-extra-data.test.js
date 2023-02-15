@@ -324,6 +324,57 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
         })
       })
+
+      context('checks data type for UnsupportedExtraDataType reverts (only supported types are `1` and `2`)', () => {
+        // contextual helper to prepeare wrong typed data
+        const getExtraWithCustomType = (typeCustom) => {
+          const extraData = {
+            stuckKeys: [{ moduleId: 1, nodeOpIds: [1], keysCounts: [2] }],
+            exitedKeys: []
+          }
+          const item = extraData.stuckKeys[0]
+          const extraDataItems = []
+          extraDataItems.push(encodeExtraDataItem(0, typeCustom, item.moduleId, item.nodeOpIds, item.keysCounts))
+          return {
+            extraData,
+            extraDataItems,
+            wrongTypedIndex: 0,
+            typeCustom
+          }
+        }
+
+        it('if type `0` was passed', async () => {
+          const { extraData, extraDataItems, wrongTypedIndex, typeCustom } = getExtraWithCustomType(0)
+          const { extraDataList } = await prepareNextReportInNextFrame({ extraData, extraDataItems })
+          await assert.reverts(
+            oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+            `UnsupportedExtraDataType(${wrongTypedIndex}, ${typeCustom})`
+          )
+        })
+
+        it('if type `3` was passed', async () => {
+          const { extraData, extraDataItems, wrongTypedIndex, typeCustom } = getExtraWithCustomType(3)
+          const { extraDataList } = await prepareNextReportInNextFrame({ extraData, extraDataItems })
+          await assert.reverts(
+            oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+            `UnsupportedExtraDataType(${wrongTypedIndex}, ${typeCustom})`
+          )
+        })
+
+        it('succeeds if `1` was passed', async () => {
+          const { extraData, extraDataItems } = getExtraWithCustomType(1)
+          const { extraDataList, reportFields } = await prepareNextReportInNextFrame({ extraData, extraDataItems })
+          const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
+          assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
+        })
+
+        it('succeeds if `2` was passed', async () => {
+          const { extraData, extraDataItems } = getExtraWithCustomType(2)
+          const { extraDataList, reportFields } = await prepareNextReportInNextFrame({ extraData, extraDataItems })
+          const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
+          assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
+        })
+      })
     })
 
     context('delivers the data to staking router', () => {
