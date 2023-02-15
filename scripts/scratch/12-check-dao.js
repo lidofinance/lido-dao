@@ -15,7 +15,7 @@ const { assert } = require('../helpers/assert')
 const { percentToBP } = require('../helpers/index')
 const { resolveEnsAddress } = require('../components/ens')
 
-const { APP_NAMES } = require('./constants')
+const { APP_NAMES } = require('../constants')
 
 const { assertAPMRegistryPermissions } = require('./checks/apm')
 const { assertInstalledApps } = require('./checks/apps')

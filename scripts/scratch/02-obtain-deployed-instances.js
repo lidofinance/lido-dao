@@ -6,7 +6,7 @@ const { useOrGetDeployed, assertDeployedBytecode, getTxBlock } = require('../hel
 const { assert } = require('../helpers/assert')
 const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 
-const { APP_NAMES } = require('./constants')
+const { APP_NAMES } = require('../constants')
 const { network } = require('hardhat')
 
 const REQUIRED_NET_STATE = [

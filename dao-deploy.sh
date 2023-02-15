@@ -4,9 +4,6 @@ set -o pipefail
 
 ARAGON_APPS_REPO_REF=import-shared-minime
 
-# Set the variable to skip long Aragon apps frontend rebuild step on repetetive deploys
-# export SKIP_APPS_LONG_BUILD_STEPS=0
-
 if [[ -z "${DEPLOYER}" ]]; then
   echo "Env variable DEPLOYER must be set"
   exit 1
@@ -35,14 +32,12 @@ function pause() {
   echo ""
 }
 
-set -x
-
 yarn install --immutable
 yarn compile
 
-# Don't deploy DepositContract because it exists in mainnet and specified in deployd-${NETWORK}-defaults.json
-# yarn hardhat --network $NETWORK run --no-compile ./scripts/deploy-beacon-deposit-contract.js
-# msg "Deposit contract deployed."
+# It does not deploy DepositContract if it is specified in deployd-${NETWORK}-defaults.json
+yarn hardhat --network $NETWORK run --no-compile ./scripts/scratch/deploy-beacon-deposit-contract.js
+msg "Deposit contract deployed or is specified."
 
 rm -f deployed-$NETWORK.json
 cp deployed-$NETWORK-defaults.json deployed-$NETWORK.json
@@ -66,19 +61,19 @@ for ff in $(grep -l -R "${MULTI_VERSION_PRAGMA}" contracts/common); do
 yarn deploy:$NETWORK:aragon-std-apps
 msg "Aragon STD apps deployed."
 
-yarn hardhat --network $NETWORK run ./scripts/multisig/01-deploy-lido-template-and-bases.js
+yarn hardhat --network $NETWORK run ./scripts/scratch/01-deploy-lido-template-and-bases.js
 
-yarn hardhat --network $NETWORK run ./scripts/multisig/02-obtain-deployed-instances.js
+yarn hardhat --network $NETWORK run ./scripts/scratch/02-obtain-deployed-instances.js
 msg "Apps instances deployed"
 
-yarn hardhat --network $NETWORK run ./scripts/multisig/03-register-ens-domain.js
+yarn hardhat --network $NETWORK run ./scripts/scratch/03-register-ens-domain.js
 if [ -f "tx-02-1-commit-ens-registration.json" ]; then
   yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-02-1-commit-ens-registration.json
 fi
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-02-2-make-ens-registration.json
 msg "ENS registered"
 
-yarn hardhat --network $NETWORK run ./scripts/multisig/04-publish-app-frontends.js
+yarn hardhat --network $NETWORK run ./scripts/scratch/04-publish-app-frontends.js
 msg "Frontend published to IPFS"
 
 # Okay, now we can restore the contracts
@@ -86,34 +81,34 @@ for ff in $(find contracts/0.8.9 -iname '*.sol.tmp'); do mv "$ff" "${ff%.*}" ; d
 for ff in $(grep -l -R "${SINGLE_VERSION_PRAGMA}" contracts/common); do
     sed -i '' "s/${SINGLE_VERSION_PRAGMA}/${MULTI_VERSION_PRAGMA}/g" "$ff" ; done
 
-yarn hardhat --network $NETWORK run ./scripts/multisig/05-deploy-apm.js
+yarn hardhat --network $NETWORK run ./scripts/scratch/05-deploy-apm.js
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-03-deploy-apm.json
-yarn hardhat --network $NETWORK run ./scripts/multisig/06-obtain-deployed-apm.js
+yarn hardhat --network $NETWORK run ./scripts/scratch/06-obtain-deployed-apm.js
 msg "APM deployed"
 
 
-yarn hardhat --network $NETWORK run ./scripts/multisig/07-create-app-repos.js
+yarn hardhat --network $NETWORK run ./scripts/scratch/07-create-app-repos.js
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-07-create-app-repos.json
 msg "App repos created"
 
-yarn hardhat --network $NETWORK run ./scripts/multisig/08-deploy-dao.js
+yarn hardhat --network $NETWORK run ./scripts/scratch/08-deploy-dao.js
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-05-deploy-dao.json
 
-yarn hardhat --network $NETWORK run ./scripts/multisig/09-obtain-deployed-dao.js
+yarn hardhat --network $NETWORK run ./scripts/scratch/09-obtain-deployed-dao.js
 msg "DAO deploy started"
 
 
 # Do it at the end, because might need the contracts initialized
-yarn hardhat --network $NETWORK run ./scripts/multisig/10-issue-tokens.js
+yarn hardhat --network $NETWORK run ./scripts/scratch/10-issue-tokens.js
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-06-1-issue-tokens.json
 msg "Tokens issued"
 
-yarn hardhat --network $NETWORK run ./scripts/multisig/11-finalize-dao.js
+yarn hardhat --network $NETWORK run ./scripts/scratch/11-finalize-dao.js
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-11-finalize-dao.json
 msg "DAO deploy finalized"
 
-DEPLOYER=$DEPLOYER yarn hardhat --network $NETWORK run ./scripts/multisig/34-deploy-non-aragon-contracts.js
+DEPLOYER=$DEPLOYER yarn hardhat --network $NETWORK run ./scripts/scratch/13-deploy-non-aragon-contracts.js
 
-DEPLOYER=$DEPLOYER yarn hardhat --network $NETWORK run ./scripts/multisig/35-initialize-non-aragon-contracts.js
+DEPLOYER=$DEPLOYER yarn hardhat --network $NETWORK run ./scripts/scratch/14-initialize-non-aragon-contracts.js
 
 # TODO: check DAO

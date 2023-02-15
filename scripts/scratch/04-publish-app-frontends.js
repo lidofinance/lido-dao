@@ -20,7 +20,7 @@ const { generateArtifacts } = require('@aragon/buidler-aragon/dist/src/utils/art
 const { uploadDirToIpfs } = require('@aragon/buidler-aragon/dist/src/utils/ipfs')
 const { toContentUri } = require('@aragon/buidler-aragon/dist/src/utils/apm/utils')
 
-const { APP_NAMES } = require('./constants')
+const { APP_NAMES } = require('../constants')
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
 const REQUIRED_NET_STATE = ['lidoApmEnsName', 'ipfsAPI']

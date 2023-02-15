@@ -2,13 +2,13 @@ const fs = require('fs')
 const path = require('path')
 const namehash = require('eth-ens-namehash').hash
 
-const runOrWrapScript = require('./helpers/run-or-wrap-script')
-const { log, logSplitter, logWideSplitter, logHeader, yl } = require('./helpers/log')
-const { readNetworkState, persistNetworkState, updateNetworkState } = require('./helpers/persisted-network-state')
-const { execLive } = require('./helpers/exec')
-const { filterObject } = require('./helpers/collections')
-const { readAppName } = require('./helpers/aragon')
-const { readJSON } = require('./helpers/fs')
+const runOrWrapScript = require('../helpers/run-or-wrap-script')
+const { log, logSplitter, logWideSplitter, logHeader, yl } = require('../helpers/log')
+const { readNetworkState, persistNetworkState, updateNetworkState } = require('../helpers/persisted-network-state')
+const { execLive } = require('../helpers/exec')
+const { filterObject } = require('../helpers/collections')
+const { readAppName } = require('../helpers/aragon')
+const { readJSON } = require('../helpers/fs')
 
 
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'

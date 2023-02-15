@@ -3,13 +3,13 @@ const namehash = require('eth-ens-namehash').hash
 const keccak256 = require('js-sha3').keccak_256
 const getAccounts = require('@aragon/os/scripts/helpers/get-accounts')
 
-const runOrWrapScript = require('./helpers/run-or-wrap-script')
-const { log, logSplitter, logWideSplitter, logHeader, logTx, logDeploy } = require('./helpers/log')
-const { deploy, useOrDeploy, withArgs } = require('./helpers/deploy')
-const { readNetworkState, persistNetworkState, updateNetworkState } = require('./helpers/persisted-network-state')
+const runOrWrapScript = require('../helpers/run-or-wrap-script')
+const { log, logSplitter, logWideSplitter, logHeader, logTx, logDeploy } = require('../helpers/log')
+const { deploy, useOrDeploy, withArgs } = require('../helpers/deploy')
+const { readNetworkState, persistNetworkState, updateNetworkState } = require('../helpers/persisted-network-state')
 
-const { deployAPM } = require('./components/apm')
-const { assignENSName } = require('./components/ens')
+const { deployAPM } = require('../components/apm')
+const { assignENSName } = require('../components/ens')
 
 const OWNER = process.env.OWNER
 const ARAGON_ENS_LABEL = process.env.ARAGON_ENS_LABEL || 'aragonpm'

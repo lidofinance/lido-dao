@@ -9,7 +9,7 @@ const { assertLastEvent } = require('../helpers/events')
 const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 
 const { assertInstalledApps } = require('./checks/apps')
-const { APP_NAMES } = require('./constants')
+const { APP_NAMES } = require('../constants')
 
 const REQUIRED_NET_STATE = [
   'lidoApmEnsName',

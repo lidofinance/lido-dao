@@ -3,7 +3,7 @@ const { log, logSplitter, logWideSplitter, yl, gr } = require('../helpers/log')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
-const { APP_NAMES } = require('./constants')
+const { APP_NAMES } = require('../constants')
 
 
 const DEPLOYER = process.env.DEPLOYER || ''

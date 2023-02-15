@@ -7,7 +7,7 @@ const { assert } = require('../../helpers/assert')
 const { loadArtifact } = require('../../helpers/artifacts')
 const { assertProxiedContractBytecode } = require('../../helpers/deploy')
 
-const { APP_NAMES, APP_ARTIFACTS } = require('../constants')
+const { APP_NAMES, APP_ARTIFACTS } = require('../../constants')
 
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 

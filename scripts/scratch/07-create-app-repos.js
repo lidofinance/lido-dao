@@ -7,7 +7,7 @@ const { saveCallTxData } = require('../helpers/tx-data')
 const { assertLastEvent } = require('../helpers/events')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 
-const { APP_NAMES } = require('./constants')
+const { APP_NAMES } = require('../constants')
 
 const REQUIRED_NET_STATE = [
   'multisigAddress',

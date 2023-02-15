@@ -3,7 +3,7 @@ const { log, logSplitter, logWideSplitter, yl, gr } = require('../helpers/log')
 const { saveDeployTx } = require('../helpers/deploy')
 const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 
-const { APP_NAMES, APP_ARTIFACTS } = require('./constants')
+const { APP_NAMES, APP_ARTIFACTS } = require('../constants')
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
 const APP = process.env.APP || ''

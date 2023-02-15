@@ -13,7 +13,7 @@ const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = re
 const { saveCallTxData } = require('../helpers/tx-data')
 const { resolveLatestVersion: apmResolveLatest } = require('../components/apm')
 
-const { APP_NAMES } = require('./constants')
+const { APP_NAMES } = require('../constants')
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
 const REQUIRED_NET_STATE = ['daoAddress', 'lidoTemplate', 'vestingParams']

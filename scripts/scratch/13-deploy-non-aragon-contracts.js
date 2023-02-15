@@ -5,7 +5,7 @@ const { readNetworkState, assertRequiredNetworkState } = require('../helpers/per
 const { deployWithoutProxy, deployBehindOssifiableProxy, updateProxyImplementation } = require('../helpers/deploy-shapella')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
-const { APP_NAMES } = require('./constants')
+const { APP_NAMES } = require('../constants')
 
 const DEPLOYER = process.env.DEPLOYER || ''
 const REQUIRED_NET_STATE = [

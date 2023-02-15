@@ -7,7 +7,7 @@ const { saveCallTxData } = require('../helpers/tx-data')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 const { resolveEnsAddress } = require('../components/ens')
 
-const { APP_NAMES } = require('./constants')
+const { APP_NAMES } = require('../constants')
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
 const APP = process.env.APP || ''

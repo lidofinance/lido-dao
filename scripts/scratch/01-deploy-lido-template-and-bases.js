@@ -5,7 +5,7 @@ const { log, yl, gr } = require('../helpers/log')
 const { saveDeployTx } = require('../helpers/deploy')
 const { deployWithoutProxy } = require('../helpers/deploy-shapella')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
-const { APP_NAMES } = require('./constants')
+const { APP_NAMES } = require('../constants')
 
 const REQUIRED_NET_STATE = [
   'ensAddress',

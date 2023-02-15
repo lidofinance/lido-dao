@@ -1,10 +1,10 @@
 const chalk = require('chalk')
 const namehash = require('eth-ens-namehash').hash
 
-const runOrWrapScript = require('./helpers/run-or-wrap-script')
-const { log, logSplitter, logWideSplitter, logHeader, logTx } = require('./helpers/log')
-const { deploy, withArgs } = require('./helpers/deploy')
-const { readNetworkState, persistNetworkState, updateNetworkState } = require('./helpers/persisted-network-state')
+const runOrWrapScript = require('../helpers/run-or-wrap-script')
+const { log, logSplitter, logWideSplitter, logHeader, logTx } = require('../helpers/log')
+const { deploy, withArgs } = require('../helpers/deploy')
+const { readNetworkState, persistNetworkState, updateNetworkState } = require('../helpers/persisted-network-state')
 
 const { deployAPM, resolveLatestVersion } = require('./components/apm')
 const { getENSNodeOwner } = require('./components/ens')

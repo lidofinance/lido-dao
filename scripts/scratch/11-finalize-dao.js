@@ -8,7 +8,7 @@ const { saveCallTxData } = require('../helpers/tx-data')
 const { assertLastEvent } = require('../helpers/events')
 const { percentToBP } = require('../helpers/index')
 
-const { APP_NAMES } = require('./constants')
+const { APP_NAMES } = require('../constants')
 const { assertVesting } = require('./checks/dao-token')
 
 const REQUIRED_NET_STATE = [
