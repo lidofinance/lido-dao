@@ -10,6 +10,8 @@ const signingKeys = require('../helpers/signing-keys')
 const { web3, artifacts } = require('hardhat')
 const { getRandomLocatorConfig } = require('../helpers/locator')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
+const { randomBytes } = require('crypto')
+const { toChecksumAddress } = require('ethereumjs-util')
 
 const IStakingModule = artifacts.require('contracts/0.8.9/interfaces/IStakingModule.sol:IStakingModule')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistryMock')
@@ -3189,6 +3191,32 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(3) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(7) })
       assert.notEmits(receipt, 'RewardsDistributed', { rewardAddress: user3, sharesAmount: 0 })
+    })
+
+    it('able to distribute rewards to the `MAX_NODE_OPERATORS_COUNT` operators', async () => {
+      const maxNodeOperatorsCount = await app.MAX_NODE_OPERATORS_COUNT()
+
+      function generateRandomAddress() {
+        return toChecksumAddress('0x' + randomBytes(20).toString('hex'))
+      }
+
+      // already have three operators added
+      for (let i = 3; i < maxNodeOperatorsCount; ++i) {
+        await app.testing_addNodeOperator(`Node Operator #${i}`, generateRandomAddress(), 5, 5, 5, 0, { from: voting })
+      }
+      assert.equals(await app.getNodeOperatorsCount(), maxNodeOperatorsCount)
+
+      await steth.setTotalPooledEther(ETH(100))
+      await steth.mintShares(app.address, ETH(10))
+
+      // calls distributeRewards() inside
+      const tx = await app.onAllValidatorCountersUpdated({ from: voting })
+
+      // just show the used gas
+      console.log(`gas used to distribute rewards for ${maxNodeOperatorsCount} NOs:`, +tx.receipt.gasUsed)
+
+      // check that gas is lower than 10M
+      assert.isTrue(+tx.receipt.gasUsed < 10 * 10**6)
     })
   })
 
