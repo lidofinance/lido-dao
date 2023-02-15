@@ -546,14 +546,13 @@ contract AccountingOracle is BaseOracle {
             if (data.extraDataItemsCount != 0) {
                 revert UnexpectedExtraDataItemsCount(0, data.extraDataItemsCount);
             }
-        }
-
-        if (data.extraDataFormat != EXTRA_DATA_FORMAT_LIST) {
-            revert UnsupportedExtraDataFormat(data.extraDataFormat);
-        }
-
-        if (data.extraDataItemsCount == 0) {
-            revert ExtraDataItemsCountCannotBeZeroForNonEmptyData();
+        } else {
+            if (data.extraDataFormat != EXTRA_DATA_FORMAT_LIST) {
+                revert UnsupportedExtraDataFormat(data.extraDataFormat);
+            }
+            if (data.extraDataItemsCount == 0) {
+                revert ExtraDataItemsCountCannotBeZeroForNonEmptyData();
+            }
         }
 
         IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
