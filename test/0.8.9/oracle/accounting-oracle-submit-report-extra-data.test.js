@@ -49,12 +49,14 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
   let oracle = null
   let oracleVersion = null
   let stakingRouter = null
+  let oracleReportSanityChecker = null
 
   const deploy = async (options = undefined) => {
     const deployed = await deployAndConfigureAccountingOracle(admin)
     oracle = deployed.oracle
     consensus = deployed.consensus
     stakingRouter = deployed.stakingRouter
+    oracleReportSanityChecker = deployed.oracleReportSanityChecker
     oracleVersion = +(await oracle.getContractVersion())
     await consensus.addMember(member1, 1, { from: admin })
   }
@@ -371,6 +373,36 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         it('succeeds if `2` was passed', async () => {
           const { extraData, extraDataItems } = getExtraWithCustomType(2)
           const { extraDataList, reportFields } = await prepareNextReportInNextFrame({ extraData, extraDataItems })
+          const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
+          assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
+        })
+      })
+
+      context('should check node operators processing limits with OracleReportSanityChecker', () => {
+        it('by reverting TooManyNodeOpsPerExtraDataItem if there was too much node operators', async () => {
+          const problematicItemIdx = 0
+          const extraData = {
+            stuckKeys: [{ moduleId: 1, nodeOpIds: [1, 2], keysCounts: [2, 3] }],
+            exitedKeys: []
+          }
+          const problematicItemsCount = extraData.stuckKeys[problematicItemIdx].nodeOpIds.length
+          const { extraDataList } = await prepareNextReportInNextFrame({ extraData })
+          await oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(problematicItemsCount - 1)
+          await assert.reverts(
+            oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+            `TooManyNodeOpsPerExtraDataItem(${problematicItemIdx}, ${problematicItemsCount})`
+          )
+        })
+
+        it('should not revert in case when items count exactly equals limit', async () => {
+          const problematicItemIdx = 0
+          const extraData = {
+            stuckKeys: [{ moduleId: 1, nodeOpIds: [1, 2], keysCounts: [2, 3] }],
+            exitedKeys: []
+          }
+          const problematicItemsCount = extraData.stuckKeys[problematicItemIdx].nodeOpIds.length
+          const { extraDataList, reportFields } = await prepareNextReportInNextFrame({ extraData })
+          await oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(problematicItemsCount)
           const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
           assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
         })
