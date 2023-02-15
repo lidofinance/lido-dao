@@ -40,9 +40,9 @@ set -x
 yarn install --immutable
 yarn compile
 
-Don't deploy DepositContract because it exists in mainnet and specified in deployd-${NETWORK}-defaults.json
-yarn hardhat --network $NETWORK run --no-compile ./scripts/deploy-beacon-deposit-contract.js
-msg "Deposit contract deployed."
+# Don't deploy DepositContract because it exists in mainnet and specified in deployd-${NETWORK}-defaults.json
+# yarn hardhat --network $NETWORK run --no-compile ./scripts/deploy-beacon-deposit-contract.js
+# msg "Deposit contract deployed."
 
 rm -f deployed-$NETWORK.json
 cp deployed-$NETWORK-defaults.json deployed-$NETWORK.json
