@@ -10,6 +10,8 @@ const {
   packExtraDataList,
   calcExtraDataListHash,
   calcReportDataHash,
+  ZERO_HASH,
+  EXTRA_DATA_FORMAT_EMPTY,
   EXTRA_DATA_FORMAT_LIST,
   EXTRA_DATA_TYPE_STUCK_VALIDATORS
 } = require('./accounting-oracle-deploy.test')
@@ -204,6 +206,21 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         await assert.reverts(
           oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
           `UnexpectedExtraDataItemsCount(${reportFields.extraDataItemsCount}, ${extraDataItems.length})`
+        )
+      })
+    })
+
+    context('enforces data format', () => {
+      it('reverts with UnexpectedExtraDataFormat if there was empty format submitted on first phase', async () => {
+        const reportFields = {
+          extraDataHash: ZERO_HASH,
+          extraDataFormat: EXTRA_DATA_FORMAT_EMPTY,
+          extraDataItemsCount: 0
+        }
+        const { extraDataList } = await prepareNextReportInNextFrame({ reportFields })
+        await assert.reverts(
+          oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+          `UnexpectedExtraDataFormat(${EXTRA_DATA_FORMAT_EMPTY}, ${EXTRA_DATA_FORMAT_LIST})`
         )
       })
     })
