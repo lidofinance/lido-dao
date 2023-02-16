@@ -512,6 +512,22 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           `ExtraDataItemsCountCannotBeZeroForNonEmptyData()`
         )
       })
+
+      it('should revert on non-empty format but zero hash', async () => {
+        await consensus.setTime(deadline)
+        const { refSlot } = await consensus.getCurrentFrame()
+        const reportFields = getReportFields({
+          refSlot: +refSlot,
+          extraDataHash: ZERO_HASH
+        })
+        const reportItems = getReportDataItems(reportFields)
+        const reportHash = calcReportDataHash(reportItems)
+        await consensus.submitReport(refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
+        await assert.revertsWithCustomError(
+          oracle.submitReportData(reportItems, oracleVersion, { from: member1 }),
+          `ExtraDataHashCannotBeZeroForNonEmptyData()`
+        )
+      })
     })
 
     context('enforces zero extraData fields for the empty format', () => {
