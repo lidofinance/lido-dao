@@ -962,7 +962,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
         uint256 totalSigningKeysCount = signingKeysStats.get(TOTAL_KEYS_COUNT_OFFSET);
         uint256 _toIndex = _fromIndex.add(_keysCount);
-        // comapring _toIndex <= totalSigningKeysCount is enough as totalSigningKeysCount is always less than MAX_UINT64
+        // comparing _toIndex <= totalSigningKeysCount is enough as totalSigningKeysCount is always less than MAX_UINT64
         _requireValidRange(_fromIndex >= signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET) && _toIndex <= totalSigningKeysCount);
 
         /// @todo: move to lib
