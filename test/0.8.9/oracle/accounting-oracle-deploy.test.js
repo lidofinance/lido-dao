@@ -397,5 +397,11 @@ contract('AccountingOracle', ([admin, member1]) => {
         'AdminCannotBeZero()'
       )
     })
+
+    it('initializeWithoutMigration succeeds', async () => {
+      const deployed = await deployAccountingOracleSetup(admin)
+      const { refSlot } = await deployed.consensus.getCurrentFrame()
+      await deployed.oracle.initializeWithoutMigration(admin, deployed.consensus.address, CONSENSUS_VERSION, refSlot, { from: admin })
+    })
   })
 })
