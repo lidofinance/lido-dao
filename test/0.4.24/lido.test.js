@@ -9,7 +9,7 @@ const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/ass
 const { assertRevert } = require('../helpers/assertThrow')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const { formatEther } = require('ethers/lib/utils')
-const { waitBlocks, EvmSnapshot } = require('../helpers/blockchain')
+const { waitBlocks, EvmSnapshot, advanceChainTime, getCurrentBlockTimestamp } = require('../helpers/blockchain')
 const {
   getEthBalance,
   formatStEth,
@@ -54,11 +54,6 @@ const MAX_DEPOSITS = 150
 const CURATED_MODULE_ID = 1
 const CALLDATA = '0x0'
 
-async function getTimestamp() {
-  const blockNum = await ethers.provider.getBlockNumber();
-  const block = await ethers.provider.getBlock(blockNum);
-  return block.timestamp;
-}
 
 contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody, depositor, treasury]) => {
   let app, oracle, depositContract, operators
@@ -134,8 +129,7 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
   const pushReport = async (clValidators, clBalance) => {
     const elRewards = await web3.eth.getBalance(elRewardsVault.address)
     await pushOracleReport(consensus, oracle, clValidators, clBalance, elRewards)
-    await ethers.provider.send('evm_increaseTime', [SECONDS_PER_FRAME + 1000])
-    await ethers.provider.send('evm_mine')
+    await advanceChainTime(SECONDS_PER_FRAME + 1000)
   }
 
   const checkStat = async ({ depositedValidators, beaconValidators, beaconBalance }) => {
@@ -1023,14 +1017,14 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
     await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
 
     await assertRevert(
-      app.handleOracleReport(await getTimestamp(), 1, ETH(30), 0, 0, 0, 0, 0, { from: appManager }),
+      app.handleOracleReport(await getCurrentBlockTimestamp(), 1, ETH(30), 0, 0, 0, 0, 0, { from: appManager }),
       'APP_AUTH_FAILED'
     )
 
     await pushReport(1, ETH(30))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(30) })
 
-    await assertRevert(app.handleOracleReport(await getTimestamp(), 1, ETH(29), 0, 0, 0, 0, 0, { from: nobody }), 'APP_AUTH_FAILED')
+    await assertRevert(app.handleOracleReport(await getCurrentBlockTimestamp(), 1, ETH(29), 0, 0, 0, 0, 0, { from: nobody }), 'APP_AUTH_FAILED')
 
     await pushReport(1, ETH(100)) // stale data
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(100) })
