@@ -326,7 +326,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         internal
     {
         _initializeQueue();
-        _initializePausable();
+        _pause(PAUSE_INFINITELY);
 
         _initializeContractVersionTo(1);
 
@@ -336,7 +336,6 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         _grantRole(FINALIZE_ROLE, _finalizer);
         _grantRole(BUNKER_MODE_REPORT_ROLE, _bunkerReporter);
 
-        RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(PAUSE_INFINITELY); // pause it explicitly
         BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(BUNKER_MODE_DISABLED_TIMESTAMP);
 
         emit InitializedV1(_admin, _pauser, _resumer, _finalizer, msg.sender);
