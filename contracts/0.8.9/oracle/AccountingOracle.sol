@@ -759,10 +759,9 @@ contract AccountingOracle is BaseOracle {
             dataOffset = iter.dataOffset;
         }
 
-        if (maxNodeOperatorsPerItem > 0) {
-            IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
-                .checkNodeOperatorsPerExtraDataItemCount(maxNodeOperatorItemIndex, maxNodeOperatorsPerItem);
-        }
+        assert(maxNodeOperatorsPerItem > 0);
+        IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
+            .checkNodeOperatorsPerExtraDataItemCount(maxNodeOperatorItemIndex, maxNodeOperatorsPerItem);
     }
 
     function _processExtraDataItem(bytes calldata data, ExtraDataIterState memory iter) internal returns (uint256) {
