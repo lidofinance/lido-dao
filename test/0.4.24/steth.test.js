@@ -2,16 +2,25 @@ const { assert } = require('chai')
 const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 const { assertRevert } = require('../helpers/assertThrow')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { tokens, ETH } = require('./../helpers/utils')
+const { EvmSnapshot } = require('../helpers/blockchain')
+const { INITIAL_HOLDER } = require('../helpers/constants')
 
-const StETH = artifacts.require('StETHMock')
-
-const tokens = (value) => web3.utils.toWei(value + '', 'ether')
+const StETHMock = artifacts.require('StETHMock')
 
 contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
   let stEth
+  const snapshot = new EvmSnapshot(hre.ethers.provider)
 
-  beforeEach('deploy mock token', async () => {
-    stEth = await StETH.new()
+  before('deploy mock token', async () => {
+    stEth = await StETHMock.new({ value: ETH(1) })
+    await stEth.setTotalPooledEther(ETH(1))
+
+    await snapshot.make()
+  })
+
+  afterEach(async () => {
+    await snapshot.rollback()
   })
 
   context('ERC20 methods', () => {
@@ -23,7 +32,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
 
     context('zero supply', async () => {
       it('initial total supply is correct', async () => {
-        assertBn(await stEth.totalSupply(), tokens(0))
+        assertBn(await stEth.totalSupply(), tokens(1))
       })
 
       it('initial balances are correct', async () => {
@@ -51,16 +60,6 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
         assertBn(await stEth.allowance(user1, user2), tokens(1))
       })
 
-      it(`transfers works with no pooled ehter, balances aren't changed`, async () => {
-        stEth.transfer(user1, tokens(1), { from: user2 })
-        stEth.transfer(user2, tokens(100), { from: user3 })
-        stEth.transfer(user3, tokens(1000), { from: user1 })
-
-        assertBn(await stEth.balanceOf(user1), tokens(0))
-        assertBn(await stEth.balanceOf(user2), tokens(0))
-        assertBn(await stEth.balanceOf(user3), tokens(0))
-      })
-
       it(`balances aren't changed even if total pooled ether increased`, async () => {
         await stEth.setTotalPooledEther(tokens(100))
         assertBn(await stEth.totalSupply(), tokens(100))
@@ -74,7 +73,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
     context('with non-zero supply', async () => {
       beforeEach(async () => {
         await stEth.setTotalPooledEther(tokens(100))
-        await stEth.mintShares(user1, tokens(100))
+        await stEth.mintShares(user1, tokens(99))
       })
 
       it('total supply is correct', async () => {
@@ -82,7 +81,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
       })
 
       it('balances are correct', async () => {
-        assertBn(await stEth.balanceOf(user1), tokens(100))
+        assertBn(await stEth.balanceOf(user1), tokens(99))
         assertBn(await stEth.balanceOf(user2), tokens(0))
         assertBn(await stEth.balanceOf(user3), tokens(0))
       })
@@ -106,7 +105,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
           assertEvent(receipt, 'Transfer', { expectedArgs: { from: user1, to: user2, value: amount } })
           assertEvent(receipt, 'TransferShares', { expectedArgs: { from: user1, to: user2, sharesValue: sharesAmount } })
           assertBn(await stEth.balanceOf(user1), tokens(0))
-          assertBn(await stEth.balanceOf(user2), tokens(100))
+          assertBn(await stEth.balanceOf(user2), tokens(99))
         })
 
         it('transfer zero tokens works and emits event', async () => {
@@ -117,7 +116,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
           assertAmountOfEvents(receipt, 'TransferShares', { expectedAmount: 1 })
           assertEvent(receipt, 'Transfer', { expectedArgs: { from: user1, to: user2, value: amount } })
           assertEvent(receipt, 'TransferShares', { expectedArgs: { from: user1, to: user2, sharesValue: sharesAmount } })
-          assertBn(await stEth.balanceOf(user1), tokens(100))
+          assertBn(await stEth.balanceOf(user1), tokens(99))
           assertBn(await stEth.balanceOf(user2), tokens(0))
         })
       })
@@ -186,7 +185,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
           assertEvent(receipt, 'Transfer', { expectedArgs: { from: user1, to: user3, value: amount } })
           assertEvent(receipt, 'TransferShares', { expectedArgs: { from: user1, to: user3, sharesValue: sharesAmount } })
           assertBn(await stEth.allowance(user2, user1), bn(0))
-          assertBn(await stEth.balanceOf(user1), tokens(50))
+          assertBn(await stEth.balanceOf(user1), tokens(49))
           assertBn(await stEth.balanceOf(user3), tokens(50))
         })
       })
@@ -267,7 +266,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
   context('with non-zero supply', async () => {
     beforeEach(async () => {
       await stEth.setTotalPooledEther(tokens(100))
-      await stEth.mintShares(user1, tokens(100))
+      await stEth.mintShares(user1, tokens(99)) // 1 ETH is initial hold
     })
 
     it('stop/resume works', async () => {
@@ -301,7 +300,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
       assert.equal(await stEth.isStopped(), false)
 
       await stEth.transfer(user2, tokens(2), { from: user1 })
-      assertBn(await stEth.balanceOf(user1), tokens(96))
+      assertBn(await stEth.balanceOf(user1), tokens(95))
       assertBn(await stEth.balanceOf(user2), tokens(4))
     })
 
@@ -310,19 +309,19 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
 
       await stEth.setTotalPooledEther(tokens(50))
 
-      assertBn(await stEth.balanceOf(user1), tokens(50))
-      assertBn(await stEth.sharesOf(user1), tokens(100))
+      assertBn(await stEth.balanceOf(user1), tokens(49.5))
+      assertBn(await stEth.sharesOf(user1), tokens(99))
 
       assertBn(await stEth.allowance(user1, user2), tokens(75))
 
       await assertRevert(stEth.transferFrom(user1, user2, tokens(75), { from: user2 }))
       await assertRevert(stEth.transferFrom(user1, user2, bn(tokens(50)).addn(10), { from: user2 }))
-      await stEth.transferFrom(user1, user2, tokens(50), { from: user2 })
+      await stEth.transferFrom(user1, user2, tokens(49.5), { from: user2 })
 
       assertBn(await stEth.balanceOf(user1), tokens(0))
       assertBn(await stEth.sharesOf(user1), tokens(0))
-      assertBn(await stEth.balanceOf(user2), tokens(50))
-      assertBn(await stEth.sharesOf(user2), tokens(100))
+      assertBn(await stEth.balanceOf(user2), tokens(49.5))
+      assertBn(await stEth.sharesOf(user2), tokens(99))
     })
 
     context('mint', () => {
@@ -332,20 +331,20 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
         await stEth.setTotalPooledEther(tokens(112))
 
         assertBn(await stEth.totalSupply(), tokens(112))
-        assertBn(await stEth.balanceOf(user1), tokens(112))
+        assertBn(await stEth.balanceOf(user1), tokens(111))
         assertBn(await stEth.balanceOf(user2), tokens(0))
         assertBn(await stEth.getTotalShares(), tokens(112))
-        assertBn(await stEth.sharesOf(user1), tokens(112))
+        assertBn(await stEth.sharesOf(user1), tokens(111))
         assertBn(await stEth.sharesOf(user2), tokens(0))
 
         await stEth.mintShares(user2, tokens(4))
         await stEth.setTotalPooledEther(tokens(116))
 
         assertBn(await stEth.totalSupply(), tokens(116))
-        assertBn(await stEth.balanceOf(user1), tokens(112))
+        assertBn(await stEth.balanceOf(user1), tokens(111))
         assertBn(await stEth.balanceOf(user2), tokens(4))
         assertBn(await stEth.getTotalShares(), tokens(116))
-        assertBn(await stEth.sharesOf(user1), tokens(112))
+        assertBn(await stEth.sharesOf(user1), tokens(111))
         assertBn(await stEth.sharesOf(user2), tokens(4))
       })
 
@@ -356,9 +355,9 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
 
     context('burn', () => {
       beforeEach(async () => {
-        // user1 already had 100 tokens
-        // 100 + 100 + 100 = 300
-        await stEth.setTotalPooledEther(tokens(300))
+        // user1 already had 99 tokens
+        // 1 + 99 + 100 + 100 = 300
+        await stEth.setTotalPooledEther(ETH(300))
         await stEth.mintShares(user2, tokens(100))
         await stEth.mintShares(user3, tokens(100))
       })
@@ -383,11 +382,11 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
         })
 
         assertBn(await stEth.totalSupply(), tokens(300))
-        assertBn(await stEth.balanceOf(user1), tokens(100))
+        assertBn(await stEth.balanceOf(user1), tokens(99))
         assertBn(await stEth.balanceOf(user2), tokens(100))
         assertBn(await stEth.balanceOf(user3), tokens(100))
         assertBn(await stEth.getTotalShares(), tokens(300))
-        assertBn(await stEth.sharesOf(user1), tokens(100))
+        assertBn(await stEth.sharesOf(user1), tokens(99))
         assertBn(await stEth.sharesOf(user2), tokens(100))
         assertBn(await stEth.sharesOf(user3), tokens(100))
       })
@@ -395,19 +394,21 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
       it('burning works (redistributes tokens)', async () => {
         const totalShares = await stEth.getTotalShares()
         const totalSupply = await stEth.totalSupply()
-        const user1Balance = await stEth.balanceOf(user1)
-        const user1Shares = await stEth.sharesOf(user1)
+        const user2Balance = await stEth.balanceOf(user2)
+        const user2Shares = await stEth.sharesOf(user2)
 
         const sharesToBurn = totalShares.sub(
-          totalSupply.mul(totalShares.sub(user1Shares)).div(totalSupply.sub(user1Balance).add(bn(tokens(10))))
+          totalSupply
+            .mul(totalShares.sub(user2Shares))
+            .div(totalSupply.sub(user2Balance).add(bn(tokens(10))))
         )
 
         const expectedPreTokenAmount = await stEth.getPooledEthByShares(sharesToBurn)
-        const receipt = await stEth.burnShares(user1, sharesToBurn)
+        const receipt = await stEth.burnShares(user2, sharesToBurn)
         const expectedPostTokenAmount = await stEth.getPooledEthByShares(sharesToBurn)
         assertEvent(receipt, 'SharesBurnt', {
           expectedArgs: {
-            account: user1,
+            account: user2,
             preRebaseTokenAmount: expectedPreTokenAmount,
             postRebaseTokenAmount: expectedPostTokenAmount,
             sharesAmount: sharesToBurn
@@ -415,62 +416,64 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
         })
 
         assertBn(await stEth.totalSupply(), tokens(300))
-        assertBn(await stEth.balanceOf(user1), bn(tokens(90)).subn(1)) // expected round error
-        assertBn(await stEth.balanceOf(user2), tokens(105))
+        assertBn((await stEth.balanceOf(user1)).add(await stEth.balanceOf(INITIAL_HOLDER)), tokens(105))
+        assertBn(await stEth.balanceOf(user2), bn(tokens(90)).subn(1)) // expected round error
         assertBn(await stEth.balanceOf(user3), tokens(105))
         assertBn(await stEth.getTotalShares(), bn('285714285714285714285'))
-        assertBn(await stEth.sharesOf(user1), bn('85714285714285714285'))
-        assertBn(await stEth.sharesOf(user2), tokens(100))
+        assertBn(await stEth.sharesOf(INITIAL_HOLDER), tokens(1))
+        assertBn(await stEth.sharesOf(user1), tokens(99))
+        assertBn(await stEth.sharesOf(user2), bn('85714285714285714285'))
         assertBn(await stEth.sharesOf(user3), tokens(100))
       })
 
       it('allowance behavior is correct after burning', async () => {
-        await stEth.approve(user2, tokens(75), { from: user1 })
+        await stEth.approve(user3, tokens(75), { from: user2 })
 
         const totalShares = await stEth.getTotalShares()
         const totalSupply = await stEth.totalSupply()
-        const user1Balance = await stEth.balanceOf(user1)
-        const user1Shares = await stEth.sharesOf(user1)
+        const user2Balance = await stEth.balanceOf(user2)
+        const user2Shares = await stEth.sharesOf(user2)
 
         const sharesToBurn = totalShares.sub(
-          totalSupply.mul(totalShares.sub(user1Shares)).div(totalSupply.sub(user1Balance).add(bn(tokens(50))))
+          totalSupply.mul(totalShares.sub(user2Shares))
+            .div(totalSupply.sub(user2Balance).add(bn(tokens(50))))
         )
 
         const expectedPreTokenAmount = await stEth.getPooledEthByShares(sharesToBurn)
-        const receipt = await stEth.burnShares(user1, sharesToBurn)
+        const receipt = await stEth.burnShares(user2, sharesToBurn)
         const expectedPostTokenAmount = await stEth.getPooledEthByShares(sharesToBurn)
         assertEvent(receipt, 'SharesBurnt', {
           expectedArgs: {
-            account: user1,
+            account: user2,
             preRebaseTokenAmount: expectedPreTokenAmount,
             postRebaseTokenAmount: expectedPostTokenAmount,
             sharesAmount: sharesToBurn
           }
         })
 
-        assertBn(await stEth.balanceOf(user1), tokens(50))
+        assertBn(await stEth.balanceOf(user2), tokens(50))
 
-        assertBn(await stEth.allowance(user1, user2), tokens(75))
+        assertBn(await stEth.allowance(user2, user3), tokens(75))
 
-        await assertRevert(stEth.transferFrom(user1, user2, tokens(75), { from: user2 }))
-        await assertRevert(stEth.transferFrom(user1, user2, bn(tokens(50)).addn(10), { from: user2 }))
-        await stEth.transferFrom(user1, user2, tokens(50), { from: user2 })
+        await assertRevert(stEth.transferFrom(user2, user3, tokens(75), { from: user3 }))
+        await assertRevert(stEth.transferFrom(user2, user3, bn(tokens(50)).addn(10), { from: user3 }))
+        await stEth.transferFrom(user2, user3, tokens(50), { from: user3 })
       })
     })
   })
 
   context('share-related getters and transfers', async () => {
-    context('with zero totalPooledEther (supply)', async () => {
+    context('with initial totalPooledEther (supply)', async () => {
       it('getTotalSupply', async () => {
-        assertBn(await stEth.totalSupply({ from: nobody }), tokens(0))
+        assertBn(await stEth.totalSupply({ from: nobody }), tokens(1))
       })
 
       it('getTotalShares', async () => {
-        assertBn(await stEth.getTotalShares(), tokens(0))
+        assertBn(await stEth.getTotalShares(), tokens(1))
       })
 
       it('getTotalPooledEther', async () => {
-        assertBn(await stEth.getTotalPooledEther(), tokens(0))
+        assertBn(await stEth.getTotalPooledEther(), tokens(1))
       })
 
       it('sharesOf', async () => {
@@ -479,8 +482,8 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
 
       it('getPooledEthByShares', async () => {
         assertBn(await stEth.getPooledEthByShares(tokens(0)), tokens(0))
-        assertBn(await stEth.getPooledEthByShares(tokens(1)), tokens(0))
-        assertBn(await stEth.getPooledEthByShares(tokens(100)), tokens(0))
+        assertBn(await stEth.getPooledEthByShares(tokens(1)), tokens(1))
+        assertBn(await stEth.getPooledEthByShares(tokens(100)), tokens(100))
       })
 
       it('balanceOf', async () => {
@@ -488,9 +491,9 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
       })
 
       it('getSharesByPooledEth', async () => {
-        assertBn(await stEth.getSharesByPooledEth(tokens(1)), tokens(0))
+        assertBn(await stEth.getSharesByPooledEth(tokens(1)), tokens(1))
         assertBn(await stEth.getSharesByPooledEth(tokens(0)), tokens(0))
-        assertBn(await stEth.getSharesByPooledEth(tokens(100)), tokens(0))
+        assertBn(await stEth.getSharesByPooledEth(tokens(100)), tokens(100))
       })
 
       it('transferShares', async () => {
@@ -514,10 +517,10 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
       })
     })
 
-    context('with non-zero totalPooledEther (supply)', async () => {
+    context('with additional totalPooledEther (supply)', async () => {
       beforeEach(async () => {
         await stEth.setTotalPooledEther(tokens(100))
-        await stEth.mintShares(user1, tokens(100))
+        await stEth.mintShares(user1, tokens(99))
       })
 
       it('getTotalSupply', async () => {
@@ -533,7 +536,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
       })
 
       it('sharesOf', async () => {
-        assertBn(await stEth.sharesOf(user1), tokens(100))
+        assertBn(await stEth.sharesOf(user1), tokens(99))
       })
 
       it('getPooledEthByShares', async () => {
@@ -543,7 +546,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
       })
 
       it('balanceOf', async () => {
-        assertBn(await stEth.balanceOf(user1), tokens(100))
+        assertBn(await stEth.balanceOf(user1), tokens(99))
         assertBn(await stEth.balanceOf(user2), tokens(0))
       })
 
@@ -554,7 +557,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
       })
 
       it('transferShares', async () => {
-        assertBn(await stEth.balanceOf(user1), tokens(100))
+        assertBn(await stEth.balanceOf(user1), tokens(99))
         assertBn(await stEth.balanceOf(nobody), tokens(0))
 
         let receipt = await stEth.transferShares(nobody, tokens(0), { from: user1 })
@@ -563,7 +566,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
         assertEvent(receipt, 'Transfer', { expectedArgs: { from: user1, to: nobody, value: tokens(0) } })
         assertEvent(receipt, 'TransferShares', { expectedArgs: { from: user1, to: nobody, sharesValue: tokens(0) } })
 
-        assertBn(await stEth.balanceOf(user1), tokens(100))
+        assertBn(await stEth.balanceOf(user1), tokens(99))
         assertBn(await stEth.balanceOf(nobody), tokens(0))
 
         receipt = await stEth.transferShares(nobody, tokens(30), { from: user1 })
@@ -572,25 +575,27 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
         assertEvent(receipt, 'Transfer', { expectedArgs: { from: user1, to: nobody, value: tokens(30) } })
         assertEvent(receipt, 'TransferShares', { expectedArgs: { from: user1, to: nobody, sharesValue: tokens(30) } })
 
-        assertBn(await stEth.balanceOf(user1), tokens(70))
+        assertBn(await stEth.balanceOf(user1), tokens(69))
         assertBn(await stEth.balanceOf(nobody), tokens(30))
 
         await assertRevert(stEth.transferShares(nobody, tokens(75), { from: user1 }), 'TRANSFER_AMOUNT_EXCEEDS_BALANCE')
 
         await stEth.setTotalPooledEther(tokens(120))
 
-        receipt = await stEth.transferShares(nobody, tokens(70), { from: user1 })
+        const tokensToTransfer = tokens(120 * 69 / 100)
+
+        receipt = await stEth.transferShares(nobody, tokens(69), { from: user1 })
         assertAmountOfEvents(receipt, 'Transfer', { expectedAmount: 1 })
         assertAmountOfEvents(receipt, 'TransferShares', { expectedAmount: 1 })
-        assertEvent(receipt, 'Transfer', { expectedArgs: { from: user1, to: nobody, value: tokens(84) } })
-        assertEvent(receipt, 'TransferShares', { expectedArgs: { from: user1, to: nobody, sharesValue: tokens(70) } })
+        assertEvent(receipt, 'Transfer', { expectedArgs: { from: user1, to: nobody, value: tokensToTransfer } })
+        assertEvent(receipt, 'TransferShares', { expectedArgs: { from: user1, to: nobody, sharesValue: tokens(69) } })
 
         assertBn(await stEth.balanceOf(user1), tokens(0))
-        assertBn(await stEth.balanceOf(nobody), tokens(120))
+        assertBn(await stEth.balanceOf(nobody), '118800000000000000000')
       })
 
       it('transferSharesFrom', async () => {
-        assertBn(await stEth.balanceOf(user1), tokens(100))
+        assertBn(await stEth.balanceOf(user1), tokens(99))
         assertBn(await stEth.balanceOf(nobody), tokens(0))
 
         let receipt = await stEth.transferSharesFrom(user1, nobody, tokens(0), { from: user2 })
@@ -599,7 +604,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
         assertEvent(receipt, 'Transfer', { expectedArgs: { from: user1, to: nobody, value: tokens(0) } })
         assertEvent(receipt, 'TransferShares', { expectedArgs: { from: user1, to: nobody, sharesValue: tokens(0) } })
 
-        assertBn(await stEth.balanceOf(user1), tokens(100))
+        assertBn(await stEth.balanceOf(user1), tokens(99))
         assertBn(await stEth.balanceOf(nobody), tokens(0))
 
         await assertRevert(
@@ -613,7 +618,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
         assertEvent(receipt, 'Transfer', { expectedArgs: { from: user1, to: nobody, value: tokens(30) } })
         assertEvent(receipt, 'TransferShares', { expectedArgs: { from: user1, to: nobody, sharesValue: tokens(30) } })
 
-        assertBn(await stEth.balanceOf(user1), tokens(70))
+        assertBn(await stEth.balanceOf(user1), tokens(69))
         assertBn(await stEth.balanceOf(nobody), tokens(30))
 
         await assertRevert(stEth.transferSharesFrom(user1, nobody, tokens(75), { from: user2 }), 'TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE')
@@ -625,14 +630,14 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
         await assertRevert(stEth.transferSharesFrom(user1, nobody, tokens(70), { from: user2 }), 'TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE')
 
         await stEth.approve(user2, tokens(84), { from: user1 })
-        receipt = await stEth.transferSharesFrom(user1, nobody, tokens(70), { from: user2 })
+        receipt = await stEth.transferSharesFrom(user1, nobody, tokens(69), { from: user2 })
         assertAmountOfEvents(receipt, 'Transfer', { expectedAmount: 1 })
         assertAmountOfEvents(receipt, 'TransferShares', { expectedAmount: 1 })
-        assertEvent(receipt, 'Transfer', { expectedArgs: { from: user1, to: nobody, value: tokens(84) } })
-        assertEvent(receipt, 'TransferShares', { expectedArgs: { from: user1, to: nobody, sharesValue: tokens(70) } })
+        assertEvent(receipt, 'Transfer', { expectedArgs: { from: user1, to: nobody, value: '82800000000000000000' } })
+        assertEvent(receipt, 'TransferShares', { expectedArgs: { from: user1, to: nobody, sharesValue: tokens(69) } })
 
         assertBn(await stEth.balanceOf(user1), tokens(0))
-        assertBn(await stEth.balanceOf(nobody), tokens(120))
+        assertBn(await stEth.balanceOf(nobody), '118800000000000000000')
       })
     })
   })

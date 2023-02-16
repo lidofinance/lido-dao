@@ -18,6 +18,7 @@ contract LidoMock is Lido {
         address _eip712StETH
     )
         public
+        payable
     {
         super.initialize(
             _lidoLocator,

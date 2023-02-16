@@ -1,7 +1,7 @@
 const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
 const { assertRevert } = require('../helpers/assertThrow')
-const { toBN, padRight, printEvents } = require('../helpers/utils')
+const { padRight, ETH } = require('../helpers/utils')
 const { BN } = require('bn.js')
 const { AragonDAO } = require('./helpers/dao')
 const { EvmSnapshot } = require('../helpers/blockchain')
@@ -9,7 +9,6 @@ const { ZERO_ADDRESS, getEventAt, bn } = require('@aragon/contract-helpers-test'
 const nodeOperators = require('../helpers/node-operators')
 const signingKeys = require('../helpers/signing-keys')
 const { web3 } = require('hardhat')
-const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getRandomLocatorConfig } = require('../helpers/locator')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistryMock')
@@ -66,22 +65,6 @@ const NODE_OPERATORS = [
 
 // bytes32 0x63757261746564
 const CURATED_TYPE = padRight(web3.utils.fromAscii('curated'), 32)
-
-const pad = (hex, bytesLength) => {
-  const absentZeroes = bytesLength * 2 + 2 - hex.length
-  if (absentZeroes > 0) hex = '0x' + '0'.repeat(absentZeroes) + hex.substr(2)
-  return hex
-}
-
-const hexConcat = (first, ...rest) => {
-  let result = first.startsWith('0x') ? first : '0x' + first
-  rest.forEach((item) => {
-    result += item.startsWith('0x') ? item.substr(2) : item
-  })
-  return result
-}
-
-const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const StETH = artifacts.require('StETHMock')
 
 contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, user4, no1, treasury]) => {
@@ -91,7 +74,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
   before('deploy base app', async () => {
     // Deploy the app's base contract.
     appBase = await NodeOperatorsRegistry.new()
-    steth = await StETH.new()
+    steth = await StETH.new({ value: ETH(1) })
 
     burner = await Burner.new(
       voting, treasury, steth.address, bn(0), bn(0), { from: appManager }

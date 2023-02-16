@@ -2,7 +2,7 @@ const hre = require('hardhat')
 const { artifacts, contract, ethers } = require('hardhat')
 const { bn, getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
-const { ETH, StETH, shareRate, shares } = require('../helpers/utils')
+const { ETH, StETH, shareRate, shares, setBalance } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 const withdrawals = require('../helpers/withdrawals')
 const { signPermit, makeDomainSeparator } = require('../0.6.12/helpers/permit_helpers')
@@ -18,7 +18,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
   const snapshot = new EvmSnapshot(ethers.provider)
 
   before('Deploy', async () => {
-    steth = await StETHMock.new({ value: ETH(601) })
+    steth = await StETHMock.new({ value: ETH(1) })
     wsteth = await WstETH.new(steth.address)
 
     withdrawalQueue = (await withdrawals.deploy(daoAgent, wsteth.address)).queue
@@ -26,11 +26,13 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     await withdrawalQueue.initialize(daoAgent, daoAgent, daoAgent, steth.address, steth.address)
     await withdrawalQueue.resume({ from: daoAgent })
 
-    await steth.setTotalPooledEther(ETH(300))
+    await steth.setTotalPooledEther(ETH(600))
+    await setBalance(steth.address, ETH(600))
     await steth.mintShares(user, shares(1))
     await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
 
     impersonate(ethers.provider, steth.address)
+
     snapshot.make();
   })
 
@@ -125,7 +127,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
 
     it('One can request MAX', async () => {
       const max = await withdrawalQueue.MAX_STETH_WITHDRAWAL_AMOUNT()
-      await steth.setTotalPooledEther(max)
+      await steth.setTotalPooledEther(max.muln(2))
       await steth.approve(withdrawalQueue.address, max, { from: user })
 
       const receipt = await withdrawalQueue.requestWithdrawals([max], owner, { from: user })
@@ -195,7 +197,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     })
 
     it('Same discounts is squashed into one', async () => {
-      await steth.setTotalPooledEther(ETH(600))
+      await steth.setTotalPooledEther(ETH(900))
       await steth.mintShares(user, shares(1))
       await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
 
@@ -209,7 +211,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     })
 
     it('One can finalize a batch of requests at once', async () => {
-      await steth.setTotalPooledEther(ETH(600))
+      await steth.setTotalPooledEther(ETH(900))
       await steth.mintShares(user, shares(1))
       await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
 
@@ -225,7 +227,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     })
 
     it('One can finalize part of the queue', async () => {
-      await steth.setTotalPooledEther(ETH(600))
+      await steth.setTotalPooledEther(ETH(900))
       await steth.mintShares(user, shares(1))
       await steth.approve(withdrawalQueue.address, StETH(600), { from: user })
 
@@ -281,7 +283,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     })
 
     it('Cant claim request with a wrong hint', async () => {
-      await steth.setTotalPooledEther(ETH(600))
+      await steth.setTotalPooledEther(ETH(900))
       await steth.mintShares(user, shares(1))
       await steth.approve(withdrawalQueue.address, StETH(600), { from: user })
 
@@ -314,7 +316,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     })
 
     it('One can claim a lot of withdrawals with different discounts', async () => {
-      await steth.setTotalPooledEther(ETH(21))
+      await steth.setTotalPooledEther(ETH(22))
       await steth.mintShares(user, shares(21))
       await steth.approve(withdrawalQueue.address, StETH(21), { from: user })
 
@@ -771,12 +773,12 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     })
 
     it("One can't change someone else's request", async () => {
-      await assert.reverts(withdrawalQueue.transferFrom(user, owner, requestId, { from: stranger }), 
+      await assert.reverts(withdrawalQueue.transferFrom(user, owner, requestId, { from: stranger }),
         `NotOwnerOrApproved("${stranger}")`)
     })
 
     it("One can't pass zero owner", async () => {
-      await assert.reverts(withdrawalQueue.transferFrom(user, ZERO_ADDRESS, requestId, { from: user }), 
+      await assert.reverts(withdrawalQueue.transferFrom(user, ZERO_ADDRESS, requestId, { from: user }),
         'TransferToZeroAddress()')
     })
 

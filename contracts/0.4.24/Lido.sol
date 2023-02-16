@@ -254,8 +254,15 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     * @param _eip712StETH eip712 helper contract for StETH
     */
     function initialize(address _lidoLocator, address _eip712StETH)
-        public onlyInit
+        public
+        payable
+        onlyInit
     {
+        uint256 amount = _bootstrapInitialHolder();
+        BUFFERED_ETHER_POSITION.setStorageUint256(amount);
+
+        emit Submitted(INITIAL_TOKEN_HOLDER, amount, 0);
+
         _initialize_v2(_lidoLocator, _eip712StETH);
         initialized();
     }
@@ -287,11 +294,13 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      */
     function finalizeUpgrade_v2(address _lidoLocator, address _eip712StETH) external {
-        require(hasInitialized(), "NOT_INITIALIZED");
         _checkContractVersion(0);
+        require(hasInitialized(), "NOT_INITIALIZED");
 
         require(_lidoLocator != address(0), "LIDO_LOCATOR_ZERO_ADDRESS");
         require(_eip712StETH != address(0), "EIP712_STETH_ZERO_ADDRESS");
+
+        require(_sharesOf(INITIAL_TOKEN_HOLDER) != 0, "INITIAL_HOLDER_EXISTS");
 
         _initialize_v2(_lidoLocator, _eip712StETH);
     }
@@ -432,7 +441,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     * accepts payments of any size. Submitted Ethers are stored in Buffer until someone calls
     * deposit() and pushes them to the Ethereum Deposit contract.
     */
-    // solhint-disable-next-line
+    // solhint-disable-next-line no-complex-fallback
     function() external payable {
         // protection against accidental submissions by calling non-existent function
         require(msg.data.length == 0, "NON_EMPTY_DATA");
@@ -937,14 +946,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             STAKING_STATE_POSITION.setStorageStakeLimitStruct(stakeLimitData.updatePrevStakeLimit(currentStakeLimit - msg.value));
         }
 
-        uint256 sharesAmount;
-        if (_getTotalPooledEther() != 0 && _getTotalShares() != 0) {
-            sharesAmount = getSharesByPooledEth(msg.value);
-        } else {
-            // totalPooledEther is 0: for first-ever deposit
-            // assume that shares correspond to Ether 1-to-1
-            sharesAmount = msg.value;
-        }
+        uint256 sharesAmount = getSharesByPooledEth(msg.value);
 
         _mintShares(msg.sender, sharesAmount);
 
