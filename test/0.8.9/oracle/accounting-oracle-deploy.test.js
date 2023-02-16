@@ -40,6 +40,7 @@ const V1_ORACLE_LAST_COMPLETED_EPOCH = 2 * EPOCHS_PER_FRAME
 const V1_ORACLE_LAST_REPORT_SLOT = V1_ORACLE_LAST_COMPLETED_EPOCH * SLOTS_PER_EPOCH
 
 const EXTRA_DATA_FORMAT_LIST = 1
+const EXTRA_DATA_FORMAT_EMPTY = 0
 
 const EXTRA_DATA_TYPE_STUCK_VALIDATORS = 1
 const EXTRA_DATA_TYPE_EXITED_VALIDATORS = 2
@@ -139,6 +140,7 @@ module.exports = {
   V1_ORACLE_LAST_COMPLETED_EPOCH,
   V1_ORACLE_LAST_REPORT_SLOT,
   EXTRA_DATA_FORMAT_LIST,
+  EXTRA_DATA_FORMAT_EMPTY,
   EXTRA_DATA_TYPE_STUCK_VALIDATORS,
   EXTRA_DATA_TYPE_EXITED_VALIDATORS,
   deployAndConfigureAccountingOracle,
@@ -222,7 +224,16 @@ async function deployAccountingOracleSetup(
   // pretend we're at the first slot of the initial frame's epoch
   await consensus.setTime(genesisTime + initialEpoch * slotsPerEpoch * secondsPerSlot)
 
-  return { lido, stakingRouter, withdrawalQueue, locatorAddr, legacyOracle, oracle, consensus, oracleReportSanityChecker }
+  return {
+    lido,
+    stakingRouter,
+    withdrawalQueue,
+    locatorAddr,
+    legacyOracle,
+    oracle,
+    consensus,
+    oracleReportSanityChecker
+  }
 }
 
 async function initAccountingOracle({
