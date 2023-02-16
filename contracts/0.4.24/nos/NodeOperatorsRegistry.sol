@@ -420,27 +420,70 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     /// @notice Called by StakingRouter to update the number of the validators of the given node
     /// operator that were requested to exit but failed to do so in the max allowed time
     ///
-    /// @param _nodeOperatorId Id of the node operator
-    /// @param _stuckValidatorsCount New number of stuck validators of the node operator
-    function updateStuckValidatorsCount(uint256 _nodeOperatorId, uint256 _stuckValidatorsCount) external {
-        _onlyExistedNodeOperator(_nodeOperatorId);
+    /// @param _nodeOperatorIds bytes packed array of the node operators id
+    /// @param _stuckValidatorsCounts bytes packed array of the new number of stuck validators for the node operators
+    function updateStuckValidatorsCount(
+        bytes _nodeOperatorIds,
+        bytes _stuckValidatorsCounts
+    )
+        external
+    {
         _auth(STAKING_ROUTER_ROLE);
+        _requireValidReportData(_nodeOperatorIds.length % 8 == 0 && _stuckValidatorsCounts.length % 16 == 0);
 
-        _updateStuckValidatorsCount(_nodeOperatorId, uint64(_stuckValidatorsCount));
+        uint256 nodeOperatorsCount = _nodeOperatorIds.length / 8;
+        _requireValidReportData(_stuckValidatorsCounts.length / 16 == nodeOperatorsCount);
+        uint256 totalNodeOperatorsCount = getNodeOperatorsCount();
+
+        uint256 nodeOperatorId;
+        uint64 validatorsCount;
+        for (uint256 i; i < nodeOperatorsCount; ) {
+            /// @solidity memory-safe-assembly
+            assembly {
+                let _nodeOperatorIdsOffset := add(calldataload(4), 36) // arg1 calldata offset + 4 (signature len) + 32 (length slot)
+                let _stuckValidatorsCountsOffset := add(calldataload(36), 36) // arg2 calldata offset + 4 (signature len) + 32 (length slot)
+                nodeOperatorId := shr(192, calldataload(add(_nodeOperatorIdsOffset, mul(i, 8))))
+                validatorsCount := shr(128, calldataload(add(_stuckValidatorsCountsOffset, mul(i, 16))))
+                i := add(i, 1)
+            }
+            _requireValidRange(nodeOperatorId < totalNodeOperatorsCount);
+            _updateStuckValidatorsCount(nodeOperatorId, validatorsCount);
+        }
     }
 
     /// @notice Called by StakingRouter to update the number of the validators in the EXITED state
     /// for node operator with given id
     ///
-    /// @param _nodeOperatorId Id of the node operator
-    /// @param _exitedValidatorsCount New number of EXITED validators of the node operator
-    function updateExitedValidatorsCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsCount)
+    /// @param _nodeOperatorIds bytes packed array of the node operators id
+    /// @param _stuckValidatorsCounts bytes packed array of the new number of EXITED validators for the node operators
+    function updateExitedValidatorsCount(
+        bytes _nodeOperatorIds,
+        bytes _stuckValidatorsCounts
+    )
         external
     {
-        _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
+        _requireValidReportData(_nodeOperatorIds.length % 8 == 0 && _stuckValidatorsCounts.length % 16 == 0);
 
-        _updateExitedValidatorsCount(_nodeOperatorId, uint64(_exitedValidatorsCount), false);
+        uint256 nodeOperatorsCount = _nodeOperatorIds.length / 8;
+        _requireValidReportData(_stuckValidatorsCounts.length / 16 == nodeOperatorsCount);
+        uint256 totalNodeOperatorsCount = getNodeOperatorsCount();
+
+        uint256 nodeOperatorId;
+        uint64 validatorsCount;
+
+         for (uint256 i; i < nodeOperatorsCount; ) {
+            /// @solidity memory-safe-assembly
+            assembly {
+                let _nodeOperatorIdsOffset := add(calldataload(4), 36) // arg1 calldata offset + 4 (signature len) + 32 (length slot)
+                let _stuckValidatorsCountsOffset := add(calldataload(36), 36) // arg2 calldata offset + 4 (signature len) + 32 (length slot)
+                nodeOperatorId := shr(192, calldataload(add(_nodeOperatorIdsOffset, mul(i, 8))))
+                validatorsCount := shr(128, calldataload(add(_stuckValidatorsCountsOffset, mul(i, 16))))
+                i := add(i, 1)
+            }
+            _requireValidRange(nodeOperatorId < totalNodeOperatorsCount);
+            _updateExitedValidatorsCount(nodeOperatorId, validatorsCount, false);
+        }
     }
 
     /// @notice Updates the number of the refunded validators for node operator with the given id
@@ -1270,6 +1313,10 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     function _requireValidRange(bool _pass) internal pure {
         require(_pass, "OUT_OF_RANGE");
+    }
+
+    function _requireValidReportData(bool _pass) internal pure {
+        require(_pass, "INVALID_REPORT_DATA");
     }
 
     function _onlyCorrectNodeOperatorState(bool _pass) internal pure {

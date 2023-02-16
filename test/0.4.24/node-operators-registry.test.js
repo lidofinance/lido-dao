@@ -7,6 +7,7 @@ const { EvmSnapshot } = require('../helpers/blockchain')
 const { ZERO_ADDRESS, getEventAt } = require('@aragon/contract-helpers-test')
 const nodeOperators = require('../helpers/node-operators')
 const signingKeys = require('../helpers/signing-keys')
+const { hex } = require('../helpers/utils')
 const { web3, artifacts } = require('hardhat')
 const { getRandomLocatorConfig } = require('../helpers/locator')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
@@ -77,6 +78,15 @@ const hexConcat = (first, ...rest) => {
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const StETH = artifacts.require('StETHMock')
+
+function prepIdsCountsPayload(ids, counts) {
+  if (!Array.isArray(ids)) ids = [ids]
+  if (!Array.isArray(counts)) counts = [counts]
+  return {
+    operatorIds: '0x' + ids.map((id) => hex(id, 8)).join(''),
+    keysCounts: '0x' + counts.map((count) => hex(count, 16)).join('')
+  }
+}
 
 contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nobody]) => {
   let appBase, app, locator, steth, dao
@@ -1064,25 +1074,29 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('reverts with "OUT_OF_RANGE" error when called on non existent validator', async () => {
       const hasPermission = await dao.hasPermission(voting, app, 'STAKING_ROUTER_ROLE')
       assert.isTrue(hasPermission)
-      await assert.reverts(app.updateExitedValidatorsCount(notExistedNodeOperatorId, 40, { from: voting }), 'OUT_OF_RANGE')
+      const { operatorIds, keysCounts } = prepIdsCountsPayload(notExistedNodeOperatorId, 40)
+      await assert.reverts(app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting }), 'OUT_OF_RANGE')
     })
 
     it('reverts with "APP_AUTH_FAILED" error when called by sender without STAKING_ROUTER_ROLE', async () => {
       const hasPermission = await dao.hasPermission(nobody, app, 'STAKING_ROUTER_ROLE')
       assert.isFalse(hasPermission)
-      await assert.reverts(app.updateExitedValidatorsCount(firstNodeOperatorId, 40, { from: nobody }), 'APP_AUTH_FAILED')
+      const { operatorIds, keysCounts } = prepIdsCountsPayload(firstNodeOperatorId, 40)
+      await assert.reverts(app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: nobody }), 'APP_AUTH_FAILED')
     })
 
     it("doesn't change the state when new value is equal to the previous one", async () => {
       const { stoppedValidators: exitedValidatorsKeysCountBefore } = await app.getNodeOperator(firstNodeOperatorId, false)
-      await app.updateExitedValidatorsCount(firstNodeOperatorId, exitedValidatorsKeysCountBefore, { from: voting })
+      const { operatorIds, keysCounts } = prepIdsCountsPayload(firstNodeOperatorId, exitedValidatorsKeysCountBefore)
+      await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
       const { stoppedValidators: exitedValidatorsKeysCountAfter } = await app.getNodeOperator(firstNodeOperatorId, false)
       assert.equals(exitedValidatorsKeysCountBefore, exitedValidatorsKeysCountAfter)
     })
 
     it("doesn't emit ExitedSigningKeysCountChanged event when new value is equal to the previous one", async () => {
       const { stoppedValidators: exitedValidatorsKeysCountBefore } = await app.getNodeOperator(firstNodeOperatorId, false)
-      const receipt = await app.updateExitedValidatorsCount(firstNodeOperatorId, exitedValidatorsKeysCountBefore, { from: voting })
+      const { operatorIds, keysCounts } = prepIdsCountsPayload(firstNodeOperatorId, exitedValidatorsKeysCountBefore)
+      const receipt = await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
       assert.notEmits(receipt, 'ExitedSigningKeysCountChanged')
     })
 
@@ -1090,18 +1104,17 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const newExitedValidatorsCount = 1000
       const nodeOperator = await app.getNodeOperator(firstNodeOperatorId, false)
       assert(newExitedValidatorsCount > nodeOperator.usedSigningKeys.toNumber())
-      await assert.reverts(
-        app.updateExitedValidatorsCount(firstNodeOperatorId, newExitedValidatorsCount, { from: voting }),
-        'OUT_OF_RANGE'
-      )
+      const { operatorIds, keysCounts } = prepIdsCountsPayload(firstNodeOperatorId, newExitedValidatorsCount)
+      await assert.reverts(app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting }), 'OUT_OF_RANGE')
     })
 
     it('reverts with "EXITED_VALIDATORS_COUNT_DECREASED" error when new exitedValidatorsKeysCount less then current one', async () => {
       const nodeOperator = await app.getNodeOperator(firstNodeOperatorId, false)
       assert(nodeOperator.stoppedValidators.toNumber() > 0, 'invariant failed: no exited validators')
       const newExitedValidatorsKeysCount = nodeOperator.stoppedValidators.toNumber() - 1
+      const { operatorIds, keysCounts } = prepIdsCountsPayload(firstNodeOperatorId, newExitedValidatorsKeysCount)
       await assert.reverts(
-        app.updateExitedValidatorsCount(firstNodeOperatorId, newExitedValidatorsKeysCount, { from: voting }),
+        app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting }),
         'EXITED_VALIDATORS_COUNT_DECREASED'
       )
     })
@@ -1113,16 +1126,23 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         false
       )
       assert.notEquals(exitedValidatorsKeysCountBefore, newExitedValidatorsCount)
-      await app.updateExitedValidatorsCount(secondNodeOperatorId, newExitedValidatorsCount, { from: voting })
+      const { operatorIds, keysCounts } = prepIdsCountsPayload(secondNodeOperatorId, newExitedValidatorsCount)
+      await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
       const { stoppedValidators: exitedValidatorsKeysCountAfter } = await app.getNodeOperator(secondNodeOperatorId, false)
       assert.equals(exitedValidatorsKeysCountAfter, newExitedValidatorsCount)
     })
 
     it('increases the total exited signing keys count', async () => {
       const newExitedValidatorsCount = 4
-      const [{ stoppedValidators: exitedValidatorsKeysCountBefore }, { exitedSigningKeysCount: exitedSigningKeysCountBefore }] =
-        await Promise.all([await app.getNodeOperator(firstNodeOperatorId, false), app.testing_getTotalSigningKeysStats()])
-      await app.updateExitedValidatorsCount(firstNodeOperatorId, newExitedValidatorsCount, { from: voting })
+      const [
+        { stoppedValidators: exitedValidatorsKeysCountBefore },
+        { exitedSigningKeysCount: exitedSigningKeysCountBefore }
+      ] = await Promise.all([
+        await app.getNodeOperator(firstNodeOperatorId, false),
+        app.testing_getTotalSigningKeysStats()
+      ])
+      const { operatorIds, keysCounts } = prepIdsCountsPayload(firstNodeOperatorId, newExitedValidatorsCount)
+      await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
       const exitedSigningKeysCountIncrement = newExitedValidatorsCount - exitedValidatorsKeysCountBefore.toNumber()
       const { exitedSigningKeysCount: exitedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       assert.equals(
@@ -1133,7 +1153,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('emits ExitedSigningKeysCountChanged event with correct params', async () => {
       const newExitedValidatorsCount = 4
-      const receipt = await app.updateExitedValidatorsCount(firstNodeOperatorId, newExitedValidatorsCount, { from: voting })
+      const { operatorIds, keysCounts } = prepIdsCountsPayload(firstNodeOperatorId, newExitedValidatorsCount)
+      const receipt = await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
       assert.emits(receipt, 'ExitedSigningKeysCountChanged', {
         nodeOperatorId: firstNodeOperatorId,
         exitedValidatorsCount: newExitedValidatorsCount
@@ -1143,7 +1164,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it("doesn't change the exited signing keys count of other node operators", async () => {
       const newExitedValidatorsCount = 4
       const { stakingLimit: secondNodeOperatorStakingLimitBefore } = await app.getNodeOperator(firstNodeOperatorId, true)
-      await app.updateExitedValidatorsCount(secondNodeOperatorId, newExitedValidatorsCount, { from: voting })
+      const { operatorIds, keysCounts } = prepIdsCountsPayload(secondNodeOperatorId, newExitedValidatorsCount)
+      await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
       const { stakingLimit: secondNodeOperatorStakingLimitAfter } = await app.getNodeOperator(firstNodeOperatorId, true)
       assert.equals(secondNodeOperatorStakingLimitAfter, secondNodeOperatorStakingLimitBefore)
     })
@@ -1969,13 +1991,25 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('emits DepositedSigningKeysCountChanged when keys were loaded', async () => {
       let keysToAllocate = 2
       let receipt = await app.testing_obtainDepositData(keysToAllocate)
-      assert.emits(receipt, 'DepositedSigningKeysCountChanged', { nodeOperatorId: firstNodeOperatorId, depositedValidatorsCount: 6 })
-      assert.emits(receipt, 'DepositedSigningKeysCountChanged', { nodeOperatorId: secondNodeOperatorId, depositedValidatorsCount: 8 })
+      assert.emits(receipt, 'DepositedSigningKeysCountChanged', {
+        nodeOperatorId: firstNodeOperatorId,
+        depositedValidatorsCount: 6
+      })
+      assert.emits(receipt, 'DepositedSigningKeysCountChanged', {
+        nodeOperatorId: secondNodeOperatorId,
+        depositedValidatorsCount: 8
+      })
 
       keysToAllocate = 10
       receipt = await app.testing_obtainDepositData(keysToAllocate)
-      assert.notEmits(receipt, 'DepositedSigningKeysCountChanged', { nodeOperatorId: firstNodeOperatorId, depositedSigningKeysCount: 6 })
-      assert.emits(receipt, 'DepositedSigningKeysCountChanged', { nodeOperatorId: secondNodeOperatorId, depositedValidatorsCount: 10 })
+      assert.notEmits(receipt, 'DepositedSigningKeysCountChanged', {
+        nodeOperatorId: firstNodeOperatorId,
+        depositedSigningKeysCount: 6
+      })
+      assert.emits(receipt, 'DepositedSigningKeysCountChanged', {
+        nodeOperatorId: secondNodeOperatorId,
+        depositedValidatorsCount: 10
+      })
     })
   })
 
@@ -2043,12 +2077,14 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('returns zero shares when all validators are exited', async () => {
-      await app.updateExitedValidatorsCount(firstNodeOperatorId, NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount, {
-        from: voting
-      })
-      await app.updateExitedValidatorsCount(secondNodeOperatorId, NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount, {
-        from: voting
-      })
+      const { operatorIds, keysCounts } = prepIdsCountsPayload(
+        [firstNodeOperatorId, secondNodeOperatorId],
+        [
+          NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount,
+          NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount
+        ]
+      )
+      await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
       const activeNodeOperators = await nodeOperators.filterNodeOperators(app, (nodeOperator) => nodeOperator.active)
       const totalRewardsShare = web3.utils.toWei('10')
       const { recipients, shares } = await app.getRewardsDistribution(totalRewardsShare)
