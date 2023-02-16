@@ -1,3 +1,4 @@
+const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const { assert } = require('../../helpers/assert')
 const { hex } = require('../../helpers/utils')
 const {
@@ -39,6 +40,7 @@ const MockLegacyOracle = artifacts.require('MockLegacyOracle')
 const V1_ORACLE_LAST_COMPLETED_EPOCH = 2 * EPOCHS_PER_FRAME
 const V1_ORACLE_LAST_REPORT_SLOT = V1_ORACLE_LAST_COMPLETED_EPOCH * SLOTS_PER_EPOCH
 
+const EXTRA_DATA_FORMAT_EMPTY = 0
 const EXTRA_DATA_FORMAT_LIST = 1
 
 const EXTRA_DATA_TYPE_STUCK_VALIDATORS = 1
@@ -138,6 +140,7 @@ module.exports = {
   CONSENSUS_VERSION,
   V1_ORACLE_LAST_COMPLETED_EPOCH,
   V1_ORACLE_LAST_REPORT_SLOT,
+  EXTRA_DATA_FORMAT_EMPTY,
   EXTRA_DATA_FORMAT_LIST,
   EXTRA_DATA_TYPE_STUCK_VALIDATORS,
   EXTRA_DATA_TYPE_EXITED_VALIDATORS,
@@ -181,7 +184,9 @@ async function deployAccountingOracleSetup(
     secondsPerSlot = SECONDS_PER_SLOT,
     genesisTime = GENESIS_TIME,
     getLidoAndStakingRouter = deployMockLidoAndStakingRouter,
-    getLegacyOracle = deployMockLegacyOracle
+    getLegacyOracle = deployMockLegacyOracle,
+    lidoLocatorAddr: lidoLocatorAddrArg,
+    legacyOracleAddr: legacyOracleAddrArg
   } = {}
 ) {
   const locatorAddr = (await deployLocatorWithDummyAddressesImplementation(admin)).address
@@ -202,9 +207,9 @@ async function deployAccountingOracleSetup(
   }
 
   const oracle = await AccountingOracle.new(
-    locatorAddr,
+    lidoLocatorAddrArg || locatorAddr,
     lido.address,
-    legacyOracle.address,
+    legacyOracleAddrArg || legacyOracle.address,
     secondsPerSlot,
     genesisTime,
     { from: admin }
@@ -241,6 +246,7 @@ async function initAccountingOracle({
     await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), dataSubmitter, { from: admin })
   }
 
+  assert.equal(+(await oracle.EXTRA_DATA_FORMAT_EMPTY()), EXTRA_DATA_FORMAT_EMPTY)
   assert.equal(+(await oracle.EXTRA_DATA_FORMAT_LIST()), EXTRA_DATA_FORMAT_LIST)
   assert.equal(+(await oracle.EXTRA_DATA_TYPE_STUCK_VALIDATORS()), EXTRA_DATA_TYPE_STUCK_VALIDATORS)
   assert.equal(+(await oracle.EXTRA_DATA_TYPE_EXITED_VALIDATORS()), EXTRA_DATA_TYPE_EXITED_VALIDATORS)
@@ -349,6 +355,37 @@ contract('AccountingOracle', ([admin, member1]) => {
       assert.equal(+(await oracle.getConsensusVersion()), CONSENSUS_VERSION)
       assert.equal(await oracle.LIDO(), mockLido.address)
       assert.equal(+(await oracle.SECONDS_PER_SLOT()), SECONDS_PER_SLOT)
+    })
+
+    it('reverts if lido locator address is zero', async () => {
+      await assert.reverts(
+        deployAccountingOracleSetup(admin, { lidoLocatorAddr: ZERO_ADDRESS }),
+        'LidoLocatorCannotBeZero()'
+      )
+    })
+
+    it('reverts if legacy oracle address is zero', async () => {
+      await assert.reverts(
+        deployAccountingOracleSetup(admin, { legacyOracleAddr: ZERO_ADDRESS }),
+        'LegacyOracleCannotBeZero()'
+      )
+    })
+
+    it('initialize reverts if admin address is zero', async () => {
+      const { consensus } = await deployAccountingOracleSetup(admin)
+      await assert.reverts(
+        oracle.initialize(ZERO_ADDRESS, consensus.address, CONSENSUS_VERSION, { from: admin }),
+        'AdminCannotBeZero()'
+      )
+    })
+
+    it('initializeWithoutMigration reverts if admin address is zero', async () => {
+      const { consensus } = await deployAccountingOracleSetup(admin)
+      const { refSlot } = await consensus.getCurrentFrame()
+      await assert.reverts(
+        oracle.initializeWithoutMigration(ZERO_ADDRESS, consensus.address, CONSENSUS_VERSION, refSlot, { from: admin }),
+        'AdminCannotBeZero()'
+      )
     })
   })
 })
