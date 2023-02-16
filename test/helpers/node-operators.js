@@ -58,16 +58,12 @@ async function addNodeOperator(registry, config, txOptions) {
     await registry.addSigningKeys(newOperatorId, totalSigningKeysCount, ...validatorKeys.slice(), txOptions)
   }
 
-  if (depositedSigningKeysCount > 0) {
-    await registry.increaseNodeOperatorDepositedSigningKeysCount(newOperatorId, depositedSigningKeysCount, txOptions)
-  }
-
   if (vettedSigningKeysCount > 0) {
     await registry.setNodeOperatorStakingLimit(newOperatorId, vettedSigningKeysCount, txOptions)
   }
 
-  if (exitedSigningKeysCount > 0) {
-    await registry.updateExitedValidatorsCount(newOperatorId, exitedSigningKeysCount, txOptions)
+  if (depositedSigningKeysCount > 0) {
+    await registry.increaseNodeOperatorDepositedSigningKeysCount(newOperatorId, depositedSigningKeysCount, txOptions)
   }
 
   if (exitedSigningKeysCount > 0) {
