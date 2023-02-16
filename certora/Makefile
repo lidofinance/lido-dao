@@ -5,8 +5,13 @@ CONTRACTS_DIR = ../contracts
 MUNGED_DIR    = ./munged
 StakingRouter_Origin = ../contracts/0.8.9/StakingRouter.sol
 BeaconChain_Origin = ../contracts/0.8.9/BeaconChainDepositor.sol
+NodeOperatorsRegistry_Origin = ../contracts/0.4.24/nos/NodeOperatorsRegistry.sol
+SigningKeys_Origin = ../contracts/0.4.24/lib/SigningKeys.sol 
 StakingRouter_munged = ./munged/StakingRouter.sol
 BeaconChain_munged = ./munged/BeaconChainDepositor.sol
+NodeOperatorsRegistry_munged = ./munged/NodeOperatorsRegistry.sol
+SigningKeys_munged = ./munged/SigningKeys.sol
+
 
 help:
 	@echo "usage:"
@@ -17,11 +22,15 @@ help:
 munge:
 	cp $(StakingRouter_Origin) $(MUNGED_DIR)
 	cp $(BeaconChain_Origin) $(MUNGED_DIR)
+	cp $(NodeOperatorsRegistry_Origin) $(MUNGED_DIR)
+	cp $(SigningKeys_Origin) $(MUNGED_DIR)
 	patch -d $(MUNGED_DIR) < $(PATCH)
 
 record:
 	diff -burN $(StakingRouter_Origin) $(StakingRouter_munged) | sed 's+\$(StakingRouter_Origin)/++g' | sed 's+$(StakingRouter_munged)++g' > $(PATCH)
 	diff -burN $(BeaconChain_Origin) $(BeaconChain_munged) | sed 's+\$(BeaconChain_Origin)/++g' | sed 's+$(BeaconChain_munged)++g' >> $(PATCH)
+	diff -burN $(NodeOperatorsRegistry_Origin) $(NodeOperatorsRegistry_munged) | sed 's+\$(NodeOperatorsRegistry_Origin)/++g' | sed 's+$(NodeOperatorsRegistry_munged)++g' >> $(PATCH)
+	diff -burN $(SigningKeys_Origin) $(SigningKeys_munged) | sed 's+\$(SigningKeys_Origin)/++g' | sed 's+$(SigningKeys_munged)++g' >> $(PATCH)
 
 clean:
 	git clean -fdX

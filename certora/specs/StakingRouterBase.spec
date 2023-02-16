@@ -24,9 +24,6 @@ methods {
     getDepositableEther() returns (uint256) => DISPATCHER(true)
     receiveStakingRouterDepositRemainder() => DISPATCHER(true)
 
-    // NodeOperatorsRegistry
-     hasPermission(address, address, bytes32, bytes) returns (bool) => NONDET 
-
     // StakingRouter
      getStakingModulesCount() returns (uint256) envfree
      getStakingModuleStatus(uint256) returns (uint8) envfree
@@ -34,6 +31,8 @@ methods {
      getStakingModuleIsDepositsPaused(uint256) returns (bool) envfree
      getStakingModuleIsActive(uint256) returns (bool) envfree
      getStakingFeeAggregateDistribution() returns (uint96,uint96,uint256) envfree
+     FEE_PRECISION_POINTS() returns (uint256) envfree
+     TOTAL_BASIS_POINTS() returns (uint256) envfree
 
      // StakingRouter harness getters
      getStakingModuleAddressByIndex(uint256) returns (address) envfree
@@ -42,6 +41,9 @@ methods {
      getStakingModuleIdById(uint256) returns (uint256) envfree
      getStakingModuleIndexById(uint256) returns (uint256) envfree
      getLastStakingModuleId() returns (uint24) envfree
+     getStakingModuleFeeById(uint256) returns (uint16) envfree
+     getStakingModuleTreasuryFeeById(uint256) returns (uint16) envfree
+     getStakingModuleTargetShareById(uint256) returns (uint16) envfree
 }
 
 /**************************************************

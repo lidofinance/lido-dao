@@ -1,4 +1,5 @@
 import "./StakingRouterBase.spec"
+import "./NodeRegistryMethods.spec"
 
 /*
     Staking Modules Invariants
@@ -67,6 +68,18 @@ invariant StakingModuleAddressIsUnique(uint256 moduleId1, uint256 moduleId2)
         }
     }
 
+invariant StakingModuleTargetShareLEMAX(uint256 moduleId) 
+    getStakingModuleTargetShareById(moduleId) <= TOTAL_BASIS_POINTS()
+    filtered{f -> !isDeposit(f)}
+
+invariant StakingModuleTotalFeeLEMAX(uint256 moduleId)
+    getStakingModuleFeeById(moduleId) + getStakingModuleTreasuryFeeById(moduleId) <= TOTAL_BASIS_POINTS()
+    filtered{f -> !isDeposit(f)}
+
+//invariant StakingModulesDistributionTotalFeeIsBounded()
+//    getStakingRewardsDistributionTotalFee() <= TOTAL_BASIS_POINTS()
+//    filtered{f -> !isDeposit(f)}
+
 function differentOrEqualToZero_Address(address a, address b) returns bool {
     return a != b || (a == 0 || b == 0);
 }
@@ -78,6 +91,8 @@ function safeAssumptions(uint256 moduleId) {
     requireInvariant StakingModuleId(moduleId);
     requireInvariant StakingModuleIdLECount(moduleId);
     requireInvariant StakingModuleAddressIsNeverZero(moduleId);
+    requireInvariant StakingModuleTotalFeeLEMAX(moduleId);
+    requireInvariant StakingModuleTargetShareLEMAX(moduleId);
 }
     
 /*

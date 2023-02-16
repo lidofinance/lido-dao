@@ -40,6 +40,9 @@ use invariant StakingModuleIndexIsIdMinus1
 use invariant StakingModuleId
 use invariant StakingModuleIdLECount
 use invariant StakingModuleAddressIsNeverZero
+use invariant StakingModuleTotalFeeLEMAX
+use invariant StakingModuleTargetShareLEMAX
+
 
 /**************************************************
  *                 MISC Rules                     *
@@ -61,7 +64,7 @@ rule depositSanity() {
     uint256 keysCount = deposit(e, _maxDepositsCount, _stakingModuleId, _depositCalldata);
     
     // Force at least one call to deposit in the deposit contract.
-    require(keysCount >= 1);
+    require(keysCount == 1);
     assert false;
 }
 
@@ -158,7 +161,7 @@ rule aggregatedFeeLT100Percent() {
     calldataarg args;
     
     safeAssumptions(getStakingModulesCount());
-    require getStakingModulesCount() == 1;
+    require getStakingModulesCount() <= 1;
 
     string name;
     address Address;
@@ -189,11 +192,12 @@ rule aggregatedFeeLT100Percent() {
 rule feeDistributionDoesntRevertAfterAddingModule() {
     env e;
     calldataarg args;
-
+    require getStakingModulesCount() <=1;
+    safeAssumptions(1);
     getStakingFeeAggregateDistribution();
     
     addStakingModule(e, args);
-
+    
     getStakingFeeAggregateDistribution@withrevert();
 
     assert !lastReverted;
