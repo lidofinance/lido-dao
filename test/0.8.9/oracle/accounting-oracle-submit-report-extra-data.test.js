@@ -194,6 +194,20 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       })
     })
 
+    context('checks items count', () => {
+      it('reverts with UnexpectedExtraDataItemsCount if there was wrong amount of items', async () => {
+        const wrongItemsCount = 1
+        const reportFields = {
+          extraDataItemsCount: wrongItemsCount
+        }
+        const { extraDataList, extraDataItems } = await prepareNextReportInNextFrame({ reportFields })
+        await assert.reverts(
+          oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+          `UnexpectedExtraDataItemsCount(${reportFields.extraDataItemsCount}, ${extraDataItems.length})`
+        )
+      })
+    })
+
     context('enforces module ids sorting order', () => {
       beforeEach(deploy)
 
