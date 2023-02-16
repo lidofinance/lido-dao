@@ -101,6 +101,7 @@ contract AccountingOracle is BaseOracle {
     error UnexpectedExtraDataHash(bytes32 consensusHash, bytes32 receivedHash);
     error UnexpectedExtraDataFormat(uint256 expectedFormat, uint256 receivedFormat);
     error ExtraDataItemsCountCannotBeZeroForNonEmptyData();
+    error ExtraDataHashCannotBeZeroForNonEmptyData();
     error UnexpectedExtraDataItemsCount(uint256 expectedCount, uint256 receivedCount);
     error UnexpectedExtraDataIndex(uint256 expectedIndex, uint256 receivedIndex);
     error InvalidExtraDataItem(uint256 itemIndex);
@@ -552,6 +553,9 @@ contract AccountingOracle is BaseOracle {
             }
             if (data.extraDataItemsCount == 0) {
                 revert ExtraDataItemsCountCannotBeZeroForNonEmptyData();
+            }
+             if (data.extraDataHash == bytes32(0)) {
+                revert ExtraDataHashCannotBeZeroForNonEmptyData();
             }
         }
 
