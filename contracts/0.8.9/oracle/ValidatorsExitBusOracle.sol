@@ -147,11 +147,15 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         ///
 
         /// @dev Total number of validator exit requests in this report. Must not be greater
-        /// than limit checked in OracleReportSanityChecker.checkExitBusOracleReport
+        /// than limit checked in OracleReportSanityChecker.checkExitBusOracleReport.
+        ///
+        /// Cannot be zero: in the case there's no newly exited or stuck validators at the moment
+        /// of the reference slot that staking module contracts are not aware of at the same moment,
+        /// oracles should skip submitting the report.
         uint256 requestsCount;
 
         /// @dev Format of the validator exit requests data. Currently, only the
-        /// DATA_FORMAT_LIST=0 is supported.
+        /// DATA_FORMAT_LIST=1 is supported.
         uint256 dataFormat;
 
         /// @dev Validator exit requests data. Can differ based on the data format,

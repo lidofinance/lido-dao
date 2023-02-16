@@ -253,7 +253,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         )
       })
 
-      it('should revert if incorrect stakingModuleIdsWithNewlyExitedValidators order (when next number in list is less than previous)', async () => {
+      it('should revert if incorrect stakingModuleIdsWithNewlyExitedValidators order (when next number in list equals to previous)', async () => {
         const { newReportItems } = await prepareNextReportInNextFrame({
           ...reportFields,
           stakingModuleIdsWithNewlyExitedValidators: [1, 1],
