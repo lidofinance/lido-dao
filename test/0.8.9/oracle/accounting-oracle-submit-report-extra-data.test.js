@@ -522,6 +522,29 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       })
     })
 
+    it('reverts if extraData has already been already processed', async () => {
+      const { extraDataItems, extraDataList } = await prepareNextReportInNextFrame()
+      await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
+      const state = await oracle.getExtraDataProcessingState()
+      assert.equals(+state.itemsCount, extraDataItems.length)
+      assert.equals(+state.itemsCount, state.itemsProcessed)
+      await assert.revertsWithCustomError(
+        oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+        `ExtraDataAlreadyProcessed()`
+      )
+    })
+
+    it('reverts if main data has not been processed yet', async () => {
+      await consensus.advanceTimeToNextFrameStart()
+      const { refSlot } = await consensus.getCurrentFrame()
+      const { reportFields, reportHash, extraDataList } = getReportData({ reportFields: { refSlot } })
+      await consensus.submitReport(reportFields.refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
+      await assert.revertsWithCustomError(
+        oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+        'CannotSubmitExtraDataBeforeMainData()'
+      )
+    })
+
     it('updates extra data processing state', async () => {
       const { extraDataItems, extraDataHash, reportFields, extraDataList } = await prepareNextReportInNextFrame()
 
