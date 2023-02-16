@@ -671,16 +671,16 @@ contract AccountingOracle is BaseOracle {
             revert CannotSubmitExtraDataBeforeMainData();
         }
 
+        if (procState.dataFormat != EXTRA_DATA_FORMAT_LIST) {
+            revert UnexpectedExtraDataFormat(procState.dataFormat, EXTRA_DATA_FORMAT_LIST);
+        }
+
         if (procState.itemsProcessed == procState.itemsCount) {
             revert ExtraDataAlreadyProcessed();
         }
 
         if (procState.itemsProcessed != 0) {
             revert ExtraDataListOnlySupportsSingleTx();
-        }
-
-        if (procState.dataFormat != EXTRA_DATA_FORMAT_LIST) {
-            revert UnexpectedExtraDataFormat(procState.dataFormat, EXTRA_DATA_FORMAT_LIST);
         }
 
         bytes32 dataHash = keccak256(items);
