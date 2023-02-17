@@ -1,6 +1,8 @@
 const { assert } = require('../../helpers/assert')
 const { e9, e18, e27 } = require('../../helpers/utils')
 
+const AccountingOracleAbi = require('../../../lib/abi/AccountingOracle.json')
+
 const {
   CONSENSUS_VERSION,
   deployAndConfigureAccountingOracle,
@@ -14,7 +16,8 @@ const {
   SLOTS_PER_FRAME,
   SECONDS_PER_SLOT,
   GENESIS_TIME,
-  ZERO_HASH
+  ZERO_HASH,
+  HASH_1
 } = require('./accounting-oracle-deploy.test')
 
 contract('AccountingOracle', ([admin, account1, account2, member1, member2, stranger]) => {
@@ -470,6 +473,27 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         assert.equal(+lastCall.callCount, 1)
         assert.equal(+lastCall.isBunkerMode, reportFields.isBunkerMode)
         assert.equal(+lastCall.prevReportTimestamp, GENESIS_TIME + prevProcessingRefSlot * SECONDS_PER_SLOT)
+      })
+    })
+
+    context('warns when prev extra data has not been processed yet', () => {
+      it('emits WarnExtraDataIncompleteProcessing', async () => {
+        await consensus.setTime(deadline)
+        const prevRefSlot = +(await consensus.getCurrentFrame()).refSlot
+        await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
+        await consensus.advanceTimeToNextFrameStart()
+        const nextRefSlot = +(await consensus.getCurrentFrame()).refSlot
+        const tx = await consensus.submitReport(nextRefSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
+        assert.emits(
+          tx,
+          'WarnExtraDataIncompleteProcessing',
+          {
+            refSlot: prevRefSlot,
+            processedItemsCount: 0,
+            itemsCount: extraDataItems.length
+          },
+          { abi: AccountingOracleAbi }
+        )
       })
     })
 
