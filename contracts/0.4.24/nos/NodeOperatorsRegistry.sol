@@ -730,7 +730,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
                 // correct max count according to target if target is enabled
                 uint64 targetLimit = exitedSigningKeysCount.add(operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET));
                 if (targetLimit > depositedSigningKeysCount) {
-                    newMaxSigningKeysCount = uint64(Math256.max(uint256(vettedSigningKeysCount), uint256(targetLimit)));
+                    newMaxSigningKeysCount = uint64(Math256.min(uint256(vettedSigningKeysCount), uint256(targetLimit)));
                 }
             }
         } // else newMaxSigningKeysCount = depositedSigningKeysCount, so depositable keys count = 0

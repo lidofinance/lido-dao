@@ -1532,48 +1532,48 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[1], depositedSigningKeysCount: 5 }, { from: voting })
     })
 
-    it('_getCorrectedNodeOperator() - deposited < target < vetted', async () => {
-      let firstNodeOperatorKeysStats = await app.testing_getCorrectedNodeOperator(firstNodeOperatorId)
+    it('_getCorrectedNodeOperator() - deposited < exited+target < vetted', async () => {
+      let firstNodeOperatorKeysStats = await app.testing_getNodeOperatorWithLimitApplied(firstNodeOperatorId)
 
-      assert.equals(+firstNodeOperatorKeysStats.vettedSigningKeysCount, 8)
+      assert.equals(+firstNodeOperatorKeysStats.maxSigningKeysCount, 8)
       assert.equals(+firstNodeOperatorKeysStats.depositedSigningKeysCount, 5)
       assert.equals(+firstNodeOperatorKeysStats.exitedSigningKeysCount, 1)
 
       await app.updateTargetValidatorsLimits(firstNodeOperatorId, true, 6, { from: voting })
 
-      firstNodeOperatorKeysStats = await app.testing_getCorrectedNodeOperator(firstNodeOperatorId)
-      assert.equals(+firstNodeOperatorKeysStats.vettedSigningKeysCount, 7)
+      firstNodeOperatorKeysStats = await app.testing_getNodeOperatorWithLimitApplied(firstNodeOperatorId)
+      assert.equals(+firstNodeOperatorKeysStats.maxSigningKeysCount, 7)
       assert.equals(+firstNodeOperatorKeysStats.depositedSigningKeysCount, 5)
       assert.equals(+firstNodeOperatorKeysStats.exitedSigningKeysCount, 1)
     })
 
-    it('_getCorrectedNodeOperator() - target >= vetted', async () => {
-      let firstNodeOperatorKeysStats = await app.testing_getCorrectedNodeOperator(firstNodeOperatorId)
+    it('_getNodeOperatorWithLimitApplied() - exited+target >= vetted', async () => {
+      let firstNodeOperatorKeysStats = await app.testing_getNodeOperatorWithLimitApplied(firstNodeOperatorId)
 
-      assert.equals(+firstNodeOperatorKeysStats.vettedSigningKeysCount, 8)
+      assert.equals(+firstNodeOperatorKeysStats.maxSigningKeysCount, 8)
       assert.equals(+firstNodeOperatorKeysStats.depositedSigningKeysCount, 5)
       assert.equals(+firstNodeOperatorKeysStats.exitedSigningKeysCount, 1)
 
       await app.updateTargetValidatorsLimits(firstNodeOperatorId, true, 1000, { from: voting })
 
-      firstNodeOperatorKeysStats = await app.testing_getCorrectedNodeOperator(firstNodeOperatorId)
-      assert.equals(+firstNodeOperatorKeysStats.vettedSigningKeysCount, 8)
+      firstNodeOperatorKeysStats = await app.testing_getNodeOperatorWithLimitApplied(firstNodeOperatorId)
+      assert.equals(+firstNodeOperatorKeysStats.maxSigningKeysCount, 8)
       assert.equals(+firstNodeOperatorKeysStats.depositedSigningKeysCount, 5)
       assert.equals(+firstNodeOperatorKeysStats.exitedSigningKeysCount, 1)
     })
 
-    it('_getCorrectedNodeOperator() - target <= deposited-exited', async () => {
-      let firstNodeOperatorKeysStats = await app.testing_getCorrectedNodeOperator(firstNodeOperatorId)
+    it('_getNodeOperatorWithLimitApplied() - exited+target <= deposited', async () => {
+      let firstNodeOperatorKeysStats = await app.testing_getNodeOperatorWithLimitApplied(firstNodeOperatorId)
 
-      assert.equals(+firstNodeOperatorKeysStats.vettedSigningKeysCount, 8)
+      assert.equals(+firstNodeOperatorKeysStats.maxSigningKeysCount, 8)
       assert.equals(+firstNodeOperatorKeysStats.depositedSigningKeysCount, 5)
       assert.equals(+firstNodeOperatorKeysStats.exitedSigningKeysCount, 1)
 
       await app.updateTargetValidatorsLimits(firstNodeOperatorId, true, 4, { from: voting })
 
-      firstNodeOperatorKeysStats = await app.testing_getCorrectedNodeOperator(firstNodeOperatorId)
+      firstNodeOperatorKeysStats = await app.testing_getNodeOperatorWithLimitApplied(firstNodeOperatorId)
       assert.equals(
-        +firstNodeOperatorKeysStats.vettedSigningKeysCount,
+        +firstNodeOperatorKeysStats.maxSigningKeysCount,
         firstNodeOperatorKeysStats.depositedSigningKeysCount
       )
       assert.equals(+firstNodeOperatorKeysStats.depositedSigningKeysCount, 5)
