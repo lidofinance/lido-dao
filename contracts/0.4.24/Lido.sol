@@ -702,15 +702,17 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             _maxDepositsCount,
             stakingRouter.getStakingModuleMaxDepositsCount(_stakingModuleId, getDepositableEther())
         );
-
         if (depositsCount == 0) return;
-
-        uint256 unaccountedEth = _getUnaccountedEther();
         uint256 depositsValue = depositsCount.mul(DEPOSIT_SIZE);
+
+        /// @dev At first update the local state of the contract to reduce the chances of the
+        ///     reentrancy attack, even though the StakingRouter is a trusted contract
         _markAsUnbuffered(depositsValue);
-        /// @dev transfer ether to SR and make deposit at the same time
+
+        /// @dev transfer ether to StakingRouter and make a deposit at the same time. All the ether
+        ///     sent to StakingRouter is counted as deposited. If StakingRouter can't deposit all
+        ///     passed ether it will revert the whole transaction
         stakingRouter.deposit.value(depositsValue)(depositsCount, _stakingModuleId, _depositCalldata);
-        assert(_getUnaccountedEther() == unaccountedEth);
 
         uint256 newDepositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(depositsCount);
         DEPOSITED_VALIDATORS_POSITION.setStorageUint256(newDepositedValidators);
@@ -1091,13 +1093,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      */
     function _getBufferedEther() internal view returns (uint256) {
         return BUFFERED_ETHER_POSITION.getStorageUint256();
-    }
-
-    /**
-     * @dev Gets unaccounted (excess) Ether on this contract balance
-     */
-    function _getUnaccountedEther() internal view returns (uint256) {
-        return address(this).balance.sub(_getBufferedEther());
     }
 
     /// @dev Calculates and returns the total base balance (multiple of 32) of validators in transient state,
