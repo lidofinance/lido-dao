@@ -337,7 +337,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
 
         BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(BUNKER_MODE_DISABLED_TIMESTAMP);
 
-        emit InitializedV1(_admin, _pauser, _resumer, _finalizer, msg.sender);
+        emit InitializedV1(_admin, _pauser, _resumer, _finalizer, _bunkerReporter);
     }
 
     function _requestWithdrawal(uint256 _amountOfStETH, address _owner) internal returns (uint256 requestId) {
