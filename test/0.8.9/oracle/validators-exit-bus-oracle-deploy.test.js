@@ -67,8 +67,8 @@ module.exports = {
 
 async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
   const maxValidatorExitRequestsPerReport = 2000
-  const limitsList = [0, 0, 0, 0, 0, 0, maxValidatorExitRequestsPerReport, 0]
-  const managersRoster = [[admin], [], [], [], [], [], [], [], []]
+  const limitsList = [0, 0, 0, 0, maxValidatorExitRequestsPerReport, 0, 0, 0, 0]
+  const managersRoster = [[admin], [], [], [], [], [], [], [], [], []]
 
   const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
 
