@@ -549,36 +549,29 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         }
     }
 
-    /// @notice Obtains up to _depositsCount deposit data to be used by StakingRouter
-    ///     to deposit to the Ethereum Deposit contract
-    /// @dev the second param is optional staking module calldata
-    ///     (not used for NodeOperatorsRegistry)
-    /// @param _depositsCount Desireable number of deposits to be done
-    /// @return depositsCount Actual deposits count might be done with returned data
+    /// @notice Obtains deposit data to be used by StakingRouter to deposit to the Ethereum Deposit
+    ///     contract
+    /// @param _depositsCount Number of deposits to be done
     /// @return publicKeys Batch of the concatenated public validators keys
     /// @return signatures Batch of the concatenated deposit signatures for returned public keys
-    function obtainDepositData(uint256 _depositsCount, bytes /* _depositCalldata */)
-        external
-        returns (
-            uint256 depositsCount,
-            bytes memory publicKeys,
-            bytes memory signatures
-        )
-    {
+    function obtainDepositData(
+        uint256 _depositsCount,
+        bytes /* _depositCalldata */
+    ) external returns (bytes memory publicKeys, bytes memory signatures) {
         _auth(STAKING_ROUTER_ROLE);
+        (
+            uint256 allocatedKeysCount,
+            uint256[] memory nodeOperatorIds,
+            uint256[] memory activeKeysCountAfterAllocation
+        ) = _getSigningKeysAllocationData(_depositsCount);
 
-        uint256[] memory nodeOperatorIds;
-        uint256[] memory activeKeysCountAfterAllocation;
+        require(allocatedKeysCount == _depositsCount, "INSUFFICIENT_KEYS_COUNT");
 
-        (depositsCount, nodeOperatorIds, activeKeysCountAfterAllocation) =
-            _getSigningKeysAllocationData(_depositsCount);
-
-        if (depositsCount == 0) {
-            return (0, new bytes(0), new bytes(0));
-        }
-
-        (publicKeys, signatures) =
-            _loadAllocatedSigningKeys(depositsCount, nodeOperatorIds, activeKeysCountAfterAllocation);
+        (publicKeys, signatures) = _loadAllocatedSigningKeys(
+            allocatedKeysCount,
+            nodeOperatorIds,
+            activeKeysCountAfterAllocation
+        );
         _increaseValidatorsKeysNonce();
     }
 

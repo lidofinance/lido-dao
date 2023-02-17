@@ -1834,46 +1834,34 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await assert.reverts(app.obtainDepositData(10, '0x', { from: nobody }), 'APP_AUTH_FAILED')
     })
 
-    it('returns empty result when no validators to deposit to', async () => {
-      // clear the registry to remove all unused keys with node operators
+    it('reverts with error "INSUFFICIENT_KEYS_COUNT" when no validators to deposit to', async () => {
       await app.testing_resetRegistry()
       const nodeOperatorsCount = await app.getNodeOperatorsCount()
       assert.equals(nodeOperatorsCount, 0)
       const keysToAllocate = 10
-      const receipt = await app.testing_obtainDepositData(keysToAllocate)
-      const keysLoadedEvent = getEventAt(receipt, 'ValidatorsKeysLoaded').args
-      assert.equals(keysLoadedEvent.count, 0)
-      assert.isNull(keysLoadedEvent.publicKeys)
-      assert.isNull(keysLoadedEvent.signatures)
+      await assert.reverts(app.testing_obtainDepositData(keysToAllocate), 'INSUFFICIENT_KEYS_COUNT')
     })
 
-    it("doesn't change validators keys nonce when no available keys for deposit", async () => {
-      // deactivate node operators before testing to remove available keys
-      await app.deactivateNodeOperator(firstNodeOperatorId, { from: voting })
-      await app.deactivateNodeOperator(secondNodeOperatorId, { from: voting })
-      const activeNodeOperatorsCount = await app.getActiveNodeOperatorsCount()
-      assert.equals(activeNodeOperatorsCount, 0)
+    it('reverts with error "INSUFFICIENT_KEYS_COUNT" when module has not enough keys', async () => {
+      await app.testing_resetRegistry()
 
-      const nonceBefore = await app.getNonce()
-      const keysToAllocate = 10
-      await app.testing_obtainDepositData(keysToAllocate)
-      const nonceAfter = await app.getNonce()
-      assert.equals(nonceBefore, nonceAfter)
-    })
+      await app.addNodeOperator('fo o', ADDRESS_1, { from: voting })
+      await app.addNodeOperator(' bar', ADDRESS_2, { from: voting })
 
-    it("doesn't emits DepositedSigningKeysCountChanged when no available keys for deposit", async () => {
-      // remove unused keys
-      await app.onWithdrawalCredentialsChanged({ from: voting })
-      const [firstNodeOperator, secondNodeOperator] = await Promise.all([
-        app.getNodeOperator(firstNodeOperatorId, false),
-        app.getNodeOperator(secondNodeOperatorId, false)
-      ])
-      assert.equals(firstNodeOperator.totalSigningKeys, firstNodeOperator.usedSigningKeys)
-      assert.equals(secondNodeOperator.totalSigningKeys, secondNodeOperator.usedSigningKeys)
+      const firstOperatorKeys = new signingKeys.FakeValidatorKeys(3)
+      const secondOperatorKeys = new signingKeys.FakeValidatorKeys(3)
 
-      const keysToAllocate = 10
-      const receipt = await app.testing_obtainDepositData(keysToAllocate)
-      assert.notEmits(receipt, 'DepositedSigningKeysCountChanged')
+      await app.addSigningKeys(0, 3, ...firstOperatorKeys.slice(), { from: voting })
+      await app.addSigningKeys(1, 3, ...secondOperatorKeys.slice(), { from: voting })
+
+      await app.setNodeOperatorStakingLimit(0, 10, { from: voting })
+      await app.setNodeOperatorStakingLimit(1, 10, { from: voting })
+
+      const stakingModuleSummary = await app.getStakingModuleSummary()
+      assert.equals(stakingModuleSummary.depositableValidatorsCount, 6)
+
+      const keysToAllocate = 7
+      await assert.reverts(app.testing_obtainDepositData(keysToAllocate), 'INSUFFICIENT_KEYS_COUNT')
     })
 
     it('loads correct signing keys', async () => {
@@ -1892,12 +1880,18 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await app.setNodeOperatorStakingLimit(0, 10, { from: voting })
       await app.setNodeOperatorStakingLimit(1, 10, { from: voting })
 
+      let stakingModuleSummary = await app.getStakingModuleSummary()
+      assert.equals(stakingModuleSummary.depositableValidatorsCount, 6)
+
       let keysToAllocate = 1
       let receipt = await app.testing_obtainDepositData(keysToAllocate)
       let keysLoadedEvent = getEventAt(receipt, 'ValidatorsKeysLoaded').args
 
       assert.equal(keysLoadedEvent.publicKeys, firstOperatorKeys.get(0)[0], 'assignment 1: pubkeys')
       assert.equal(keysLoadedEvent.signatures, firstOperatorKeys.get(0)[1], 'assignment 1: signatures')
+
+      stakingModuleSummary = await app.getStakingModuleSummary()
+      assert.equals(stakingModuleSummary.depositableValidatorsCount, 5)
 
       keysToAllocate = 2
       receipt = await app.testing_obtainDepositData(keysToAllocate)
@@ -1915,7 +1909,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         'assignment 2: signatures'
       )
 
+      stakingModuleSummary = await app.getStakingModuleSummary()
+      assert.equals(stakingModuleSummary.depositableValidatorsCount, 3)
+
       keysToAllocate = 10
+      await assert.reverts(app.testing_obtainDepositData(keysToAllocate), 'INSUFFICIENT_KEYS_COUNT')
+
+      keysToAllocate = 3
       receipt = await app.testing_obtainDepositData(keysToAllocate)
       keysLoadedEvent = getEventAt(receipt, 'ValidatorsKeysLoaded').args
 
@@ -1930,17 +1930,16 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         'assignment 2: signatures'
       )
 
-      keysToAllocate = 10
-      receipt = await app.testing_obtainDepositData(keysToAllocate)
-      keysLoadedEvent = getEventAt(receipt, 'ValidatorsKeysLoaded').args
+      stakingModuleSummary = await app.getStakingModuleSummary()
+      assert.equals(stakingModuleSummary.depositableValidatorsCount, 0)
 
-      assert.equal(keysLoadedEvent.publicKeys, null, 'no singing keys left: publicKeys')
-      assert.equal(keysLoadedEvent.signatures, null, 'no singing keys left: signatures')
+      keysToAllocate = 1
+      await assert.reverts(app.testing_obtainDepositData(keysToAllocate), 'INSUFFICIENT_KEYS_COUNT')
     })
 
     it('increases keysOpIndex & changes nonce', async () => {
       const [keysOpIndexBefore, nonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getNonce()])
-      const keysToAllocate = 10
+      const { depositableValidatorsCount: keysToAllocate } = await app.getStakingModuleSummary()
       await app.testing_obtainDepositData(keysToAllocate)
       const [keysOpIndexAfter, nonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
@@ -1948,7 +1947,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('increases global deposited signing keys counter', async () => {
-      const keysToAllocate = 10
+      const { depositableValidatorsCount: keysToAllocate } = await app.getStakingModuleSummary()
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount + 1
       assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
       const { depositedSigningKeysCount: depositedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
@@ -1959,7 +1958,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('emits KeysOpIndexSet & NonceChanged', async () => {
       const keysOpIndexBefore = await app.getKeysOpIndex()
-      const keysToAllocate = 10
+      const { depositableValidatorsCount: keysToAllocate } = await app.getStakingModuleSummary()
       const receipt = await app.testing_obtainDepositData(keysToAllocate)
       const nonceAfter = await app.getNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
@@ -1972,7 +1971,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.emits(receipt, 'DepositedSigningKeysCountChanged', { nodeOperatorId: firstNodeOperatorId, depositedValidatorsCount: 6 })
       assert.emits(receipt, 'DepositedSigningKeysCountChanged', { nodeOperatorId: secondNodeOperatorId, depositedValidatorsCount: 8 })
 
-      keysToAllocate = 10
+      const stakingModuleSummary = await app.getStakingModuleSummary()
+      keysToAllocate = stakingModuleSummary.depositableValidatorsCount
       receipt = await app.testing_obtainDepositData(keysToAllocate)
       assert.notEmits(receipt, 'DepositedSigningKeysCountChanged', { nodeOperatorId: firstNodeOperatorId, depositedSigningKeysCount: 6 })
       assert.emits(receipt, 'DepositedSigningKeysCountChanged', { nodeOperatorId: secondNodeOperatorId, depositedValidatorsCount: 10 })

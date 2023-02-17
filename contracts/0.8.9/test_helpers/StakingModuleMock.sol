@@ -87,7 +87,6 @@ contract StakingModuleMock is IStakingModule {
     function obtainDepositData(uint256 _depositsCount, bytes calldata _calldata)
         external
         returns (
-            uint256 depositsCount,
             bytes memory publicKeys,
             bytes memory signatures
         )

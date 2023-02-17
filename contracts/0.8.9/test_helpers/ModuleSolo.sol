@@ -128,7 +128,6 @@ contract ModuleSolo is IStakingModule {
         external
         pure
         returns (
-            uint256 depositsCount,
             bytes memory publicKeys,
             bytes memory signatures
         )
@@ -139,6 +138,6 @@ contract ModuleSolo is IStakingModule {
         MemUtils.copyBytes(_calldata, publicKeys, 0, 0, _depositsCount * PUBKEY_LENGTH);
         MemUtils.copyBytes(_calldata, signatures, _depositsCount * PUBKEY_LENGTH, 0, _depositsCount * PUBKEY_LENGTH);
 
-        return (_depositsCount, publicKeys, signatures);
+        return (publicKeys, signatures);
     }
 }
