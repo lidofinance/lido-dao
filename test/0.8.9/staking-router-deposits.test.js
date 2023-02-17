@@ -118,7 +118,7 @@ contract('StakingRouter', ([depositor, stranger]) => {
 
       await assert.reverts(
         lido.methods[`deposit(uint256,uint256,bytes)`](maxDepositsCount, maxModuleId, '0x', { from: depositor }),
-        'STAKING_MODULE_ID_TOO_LARGE'
+        'StakingModuleIdTooLarge()'
       )
     })
   })

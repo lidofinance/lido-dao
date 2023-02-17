@@ -694,7 +694,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         ILidoLocator locator = getLidoLocator();
 
         require(msg.sender == locator.depositSecurityModule(), "APP_AUTH_DSM_FAILED");
-        require(_stakingModuleId <= uint24(-1), "STAKING_MODULE_ID_TOO_LARGE");
         require(canDeposit(), "CAN_NOT_DEPOSIT");
 
         IStakingRouter stakingRouter = IStakingRouter(locator.stakingRouter());
