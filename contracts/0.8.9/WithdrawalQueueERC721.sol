@@ -48,6 +48,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
     error TransferFromIncorrectOwner(address from, address realOwner);
     error TransferToZeroAddress();
     error TransferFromZeroAddress();
+    error TransferToThemselves();
     error TransferToNonIERC721Receiver(address);
     error InvalidOwnerAddress(address);
     error StringTooLong(string str);
@@ -178,6 +179,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
     /// - `msg.sender` should be approved, or approved for all, or owner
     function _transfer(address _from, address _to, uint256 _requestId) internal {
         if (_to == address(0)) revert TransferToZeroAddress();
+        if (_to == _from) revert TransferToThemselves();
         if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
         WithdrawalRequest storage request = _getQueue()[_requestId];
@@ -191,8 +193,8 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
         delete _getTokenApprovals()[_requestId];
         request.owner = payable(_to);
 
-        _getRequestsByOwner()[_to].add(_requestId);
         _getRequestsByOwner()[_from].remove(_requestId);
+        _getRequestsByOwner()[_to].add(_requestId);
 
         _emitTransfer(_from, _to, _requestId);
     }

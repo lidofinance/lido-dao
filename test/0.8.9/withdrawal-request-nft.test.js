@@ -224,6 +224,16 @@ hre.contract(
         )
       })
 
+      it('reverts when transfer to the same address', async () => {
+        await assert.reverts(
+          withdrawalQueueERC721.transferFrom(
+            nftHolderWstETH, nftHolderWstETH, nftHolderWstETHTokenIds[0],
+            {from: nftHolderWstETH }
+          ),
+          'TransferToThemselves()'
+        )
+      })
+
       it('reverts with error "RequestAlreadyClaimed()" when called on claimed request', async () => {
         const batch = await withdrawalQueueERC721.finalizationBatch(3, shareRate(1))
         await withdrawalQueueERC721.finalize(3, { from: deployer, value: batch.ethToLock })
