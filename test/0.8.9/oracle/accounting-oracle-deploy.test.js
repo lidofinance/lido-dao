@@ -319,6 +319,9 @@ contract('AccountingOracle', ([admin, member1]) => {
       const deployed = await deployAccountingOracleSetup(admin, { initialEpoch: 3 + 10 * EPOCHS_PER_FRAME })
       await deployed.legacyOracle.setLastCompletedEpochId(3 + 9 * EPOCHS_PER_FRAME)
       await initAccountingOracle({ admin, ...deployed })
+      const refSlot = await deployed.oracle.getLastProcessingRefSlot()
+      const epoch = await deployed.legacyOracle.getLastCompletedEpochId()
+      assert.equals(refSlot, epoch.muln(SLOTS_PER_EPOCH))
     })
 
     it('deployment and init finishes successfully (default setup)', async () => {
