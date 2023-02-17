@@ -517,6 +517,34 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           )
         })
       })
+
+      it('reverts on extra bytes in data', async () => {
+        await consensus.advanceTimeToNextFrameStart()
+        const { refSlot } = await consensus.getCurrentFrame()
+
+        const extraDataItems = encodeExtraDataItems(getDefaultExtraData())
+        const extraDataList = packExtraDataList(extraDataItems) + 'ffff'
+        const extraDataHash = calcExtraDataListHash(extraDataList)
+
+        const reportFields = getDefaultReportFields({
+          extraDataHash,
+          extraDataItemsCount: extraDataItems.length,
+          refSlot
+        })
+
+        const reportItems = getReportDataItems(reportFields)
+        const reportHash = calcReportDataHash(reportItems)
+
+        await consensus.submitReport(reportFields.refSlot, reportHash, CONSENSUS_VERSION, {
+          from: member1
+        })
+        await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
+
+        await assert.reverts(
+          oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+          'UnexpectedExtraDataIndex(5, 16776960)'
+        )
+      })
     })
 
     context('delivers the data to staking router', () => {
