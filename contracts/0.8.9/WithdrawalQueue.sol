@@ -142,8 +142,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         if (_owner == address(0)) _owner = msg.sender;
         requestIds = new uint256[](amounts.length);
         for (uint256 i = 0; i < amounts.length; ++i) {
-            uint256 amountOfWstETH = amounts[i];
-            requestIds[i] = _requestWithdrawalWstETH(amountOfWstETH, _owner);
+            requestIds[i] = _requestWithdrawalWstETH(amounts[i], _owner);
         }
     }
 
