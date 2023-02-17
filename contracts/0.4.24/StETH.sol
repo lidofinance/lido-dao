@@ -50,6 +50,8 @@ contract StETH is IERC20, Pausable {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;
 
+    address constant internal INITIAL_TOKEN_HOLDER = 0xdead;
+
     /**
      * @dev StETH balances are dynamic and are calculated based on the accounts' shares
      * and the total amount of Ether controlled by the protocol. Account shares aren't
@@ -295,28 +297,18 @@ contract StETH is IERC20, Pausable {
      * @return the amount of shares that corresponds to `_ethAmount` protocol-controlled Ether.
      */
     function getSharesByPooledEth(uint256 _ethAmount) public view returns (uint256) {
-        uint256 totalPooledEther = _getTotalPooledEther();
-        if (totalPooledEther == 0) {
-            return 0;
-        } else {
-            return _ethAmount
-                .mul(_getTotalShares())
-                .div(totalPooledEther);
-        }
+        return _ethAmount
+            .mul(_getTotalShares())
+            .div(_getTotalPooledEther());
     }
 
     /**
      * @return the amount of Ether that corresponds to `_sharesAmount` token shares.
      */
     function getPooledEthByShares(uint256 _sharesAmount) public view returns (uint256) {
-        uint256 totalShares = _getTotalShares();
-        if (totalShares == 0) {
-            return 0;
-        } else {
-            return _sharesAmount
-                .mul(_getTotalPooledEther())
-                .div(totalShares);
-        }
+        return _sharesAmount
+            .mul(_getTotalPooledEther())
+            .div(_getTotalShares());
     }
 
     /**
@@ -396,7 +388,7 @@ contract StETH is IERC20, Pausable {
      *
      * Emits an `Approval` event.
      *
-     * NB: the method can be invoken even if the protocol paused.
+     * NB: the method can be invoked even if the protocol paused.
      *
      * Requirements:
      *
@@ -508,5 +500,28 @@ contract StETH is IERC20, Pausable {
         // but we cannot reflect this as it would require sending an unbounded number of events.
 
         // We're emitting `SharesBurnt` event to provide an explicit rebase log record nonetheless.
+    }
+
+    /**
+     * @notice Mints amount of shares equal to contract balance to 0xdead address
+     *  It allows to get rid of zero checks and corner cases
+     * @dev should be invoked before using the token
+     */
+    function _bootstrapInitialHolder() internal returns (uint256) {
+        uint256 balance = address(this).balance;
+        require(balance != 0, "EMPTY_INIT_BALANCE");
+
+        if (_getTotalShares() == 0) {
+             // if protocol is empty bootstrap it with the contract's balance
+            // 0xdead is a holder for initial shares
+            _mintShares(INITIAL_TOKEN_HOLDER, balance);
+
+            emit Transfer(0x0, INITIAL_TOKEN_HOLDER, balance);
+            emit TransferShares(0x0, INITIAL_TOKEN_HOLDER, balance);
+
+            return balance;
+        }
+
+        return 0;
     }
 }

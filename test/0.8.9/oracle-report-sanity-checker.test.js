@@ -1,6 +1,7 @@
 const hre = require('hardhat')
 const { ETH } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
+const { getCurrentBlockTimestamp } = require('../helpers/blockchain')
 
 const mocksFilePath = 'contracts/0.8.9/test_helpers/OracleReportSanityCheckerMocks.sol'
 const LidoStub = hre.artifacts.require(`${mocksFilePath}:LidoStub`)
@@ -192,13 +193,12 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     }
 
     before(async () => {
-      const currentBlockNumber = await hre.ethers.provider.getBlockNumber()
-      const currentBlock = await hre.ethers.provider.getBlock(currentBlockNumber)
-      correctWithdrawalQueueOracleReport.refReportTimestamp = currentBlock.timestamp
-      oldRequestCreationTimestamp = currentBlock.timestamp - defaultLimitsList.requestTimestampMargin
+      const currentBlockTimestamp = await getCurrentBlockTimestamp()
+      correctWithdrawalQueueOracleReport.refReportTimestamp = currentBlockTimestamp
+      oldRequestCreationTimestamp = currentBlockTimestamp - defaultLimitsList.requestTimestampMargin
       correctWithdrawalQueueOracleReport.requestIdToFinalizeUpTo = oldRequestCreationTimestamp
       await withdrawalQueueMock.setRequestBlockNumber(oldRequestId, oldRequestCreationTimestamp)
-      newRequestCreationTimestamp = currentBlock.timestamp - Math.floor(defaultLimitsList.requestTimestampMargin / 2)
+      newRequestCreationTimestamp = currentBlockTimestamp - Math.floor(defaultLimitsList.requestTimestampMargin / 2)
       await withdrawalQueueMock.setRequestBlockNumber(newRequestId, newRequestCreationTimestamp)
     })
 
