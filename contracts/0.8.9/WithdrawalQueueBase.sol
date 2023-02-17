@@ -218,7 +218,7 @@ abstract contract WithdrawalQueueBase {
 
         // Binary search
         uint256 min = _start;
-        uint256 max = _end;
+        uint256 max = _end - 1;
 
         while (max > min) {
             uint256 mid = (max + min + 1) / 2;
