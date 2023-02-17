@@ -65,13 +65,9 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     event BunkerModeDisabled();
 
     error AdminZeroAddress();
-    error AlreadyInitialized();
-    error Uninitialized();
-    error Unimplemented();
     error RequestAmountTooSmall(uint256 _amountOfStETH);
     error RequestAmountTooLarge(uint256 _amountOfStETH);
     error InvalidReportTimestamp();
-    error LengthsMismatch(uint256 _expectedLength, uint256 _actualLength);
     error RequestIdsNotSorted();
 
     /// @param _wstETH address of WstETH contract

@@ -57,7 +57,6 @@ contract Burner is IBurner, AccessControlEnumerable {
     error ZeroRecoveryAmount();
     error StETHRecoveryWrongFunc();
     error ZeroBurnAmount();
-    error NotEnoughExcessStETH();
     error ZeroAddress(string field);
 
     bytes32 public constant REQUEST_BURN_MY_STETH_ROLE = keccak256("REQUEST_BURN_MY_STETH_ROLE");
