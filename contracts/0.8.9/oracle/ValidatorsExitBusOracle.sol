@@ -100,7 +100,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
         _initializePausable();
         _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
-        RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(PAUSE_INFINITELY); // pause it explicitly
     }
 
     /// @notice Resume accepting validator exit requests
