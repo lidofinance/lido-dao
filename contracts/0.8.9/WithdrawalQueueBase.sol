@@ -424,31 +424,56 @@ abstract contract WithdrawalQueueBase {
     }
 
     /// @notice Claim `_requestId` request and transfer related ether to the `_recipient`. Emits WithdrawalClaimed event
+    /// @dev Reverts if request is not finalized
+    ///  Reverts if request is claimed
     /// @param _requestId request id to claim
     /// @param _hint hint for discount checkpoint index to avoid extensive search over the checkpoints.
     ///  Can be found with `findCheckpointHint()` or `findCheckpointHintUnbounded()`
     /// @param _recipient address to send ether to. If `==address(0)` then will send to the owner.
     function _claimWithdrawalTo(uint256 _requestId, uint256 _hint, address _recipient) internal {
-        if (_hint == 0) revert InvalidHint(_hint);
-
-        if (_requestId == 0) revert InvalidRequestId(0);
         if (_requestId > getLastFinalizedRequestId()) revert RequestNotFinalized(_requestId);
-        uint256 lastCheckpointIndex = getLastCheckpointIndex();
-        if (_hint > lastCheckpointIndex) revert InvalidHint(_hint);
 
-        WithdrawalRequest storage request = _getQueue()[_requestId];
+        (WithdrawalRequest storage request, uint256 ethWithDiscount) = _calculateClaimableEth(_requestId, _hint);
+
         if (request.claimed) revert RequestAlreadyClaimed(_requestId);
         if (msg.sender != request.owner) revert NotOwner(msg.sender, request.owner);
+
         if (_recipient == address(0)) _recipient = request.owner;
 
         request.claimed = true;
+        _setLockedEtherAmount(getLockedEtherAmount() - ethWithDiscount);
+
+        _sendValue(payable(_recipient), ethWithDiscount);
+
+        emit WithdrawalClaimed(_requestId, msg.sender, _recipient, ethWithDiscount);
+    }
+
+    /// @notice Calculates discounted ether value for `_requestId` using a provided `_hint`
+    /// @return request link to request in storage
+    /// @return ethWithDiscount discounted eth for `_requestId`. Returns 0 if request is not claimable
+    function _calculateClaimableEth(uint256 _requestId, uint256 _hint)
+        internal
+        view
+        returns (WithdrawalRequest storage, uint256)
+    {
+        if (_hint == 0) revert InvalidHint(_hint);
+        if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
+
+        WithdrawalRequest storage request = _getQueue()[_requestId];
+
+        // shortcuts
+        if (_requestId > getLastFinalizedRequestId()) return (request, 0);
+        if (request.claimed) return (request, 0);
+
+        uint256 lastCheckpointIndex = getLastCheckpointIndex();
+        if (_hint > lastCheckpointIndex) revert InvalidHint(_hint);
 
         DiscountCheckpoint memory hintCheckpoint = _getCheckpoints()[_hint];
-        // ______(_______
+        // ______(>______
         //    ^  hint
         if (_requestId < hintCheckpoint.fromRequestId) revert InvalidHint(_hint);
         if (_hint < lastCheckpointIndex) {
-            // ______(_______(_________
+            // ______(>______(>________
             //       hint    hint+1  ^
             DiscountCheckpoint memory nextCheckpoint = _getCheckpoints()[_hint + 1];
             if (nextCheckpoint.fromRequestId <= _requestId) {
@@ -459,11 +484,7 @@ abstract contract WithdrawalQueueBase {
         uint256 ethRequested = request.cumulativeStETH - _getQueue()[_requestId - 1].cumulativeStETH;
         uint256 ethWithDiscount = ethRequested * hintCheckpoint.discountFactor / E27_PRECISION_BASE;
 
-        _setLockedEtherAmount(getLockedEtherAmount() - ethWithDiscount);
-
-        _sendValue(payable(_recipient), ethWithDiscount);
-
-        emit WithdrawalClaimed(_requestId, msg.sender, _recipient, ethWithDiscount);
+        return (request, ethWithDiscount);
     }
 
     // quazi-constructor

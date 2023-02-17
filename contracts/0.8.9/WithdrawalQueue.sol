@@ -209,7 +209,21 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         uint256 hint;
     }
 
-    /// @notice Claim withdrawals batch once finalized (claimable).
+    /// @notice Return batch of claimable eth amounts that is locked for each request
+    /// @param _claimWithdrawalInputs list of withdrawal request ids and hints to claim
+    function getClaimableEther(ClaimWithdrawalInput[] calldata _claimWithdrawalInputs)
+        external
+        view
+        returns (uint256[] memory finalEthValues)
+    {
+        finalEthValues = new uint256[](_claimWithdrawalInputs.length);
+        for (uint256 i = 0; i < _claimWithdrawalInputs.length; ++i) {
+            (, finalEthValues[i]) =
+                _calculateClaimableEth(_claimWithdrawalInputs[i].requestId, _claimWithdrawalInputs[i].hint);
+        }
+    }
+
+    /// @notice Claim withdrawals batch once finalized (claimable) and send claimable ether to `msg.sender`
     /// @param _claimWithdrawalInputs list of withdrawal request ids and hints to claim
     function claimWithdrawals(ClaimWithdrawalInput[] calldata _claimWithdrawalInputs) external {
         for (uint256 i = 0; i < _claimWithdrawalInputs.length; ++i) {

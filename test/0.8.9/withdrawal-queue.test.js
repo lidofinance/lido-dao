@@ -249,6 +249,42 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     })
   })
 
+  context('getClaimableEth()', () => {
+    beforeEach(async () => {
+      await withdrawalQueue.requestWithdrawals([ETH(1)], owner, { from: user })
+    })
+
+    it('works', async () => {
+      await withdrawalQueue.requestWithdrawals([ETH(1)], owner, { from: user })
+      await withdrawalQueue.finalize(1, { from: steth.address, value: ETH(1) })
+
+      assert.equals(await withdrawalQueue.getClaimableEther([[1, 1]]), ETH(1))
+    })
+
+    it('return 0 for non-finalized request', async () => {
+      assert.equals(await withdrawalQueue.getClaimableEther([[1, 1]]), ETH(0))
+    })
+
+    it('return 0 for claimed request', async () => {
+      await withdrawalQueue.finalize(1, { from: steth.address, value: ETH(1) })
+      await withdrawalQueue.claimWithdrawalTo(1, 1, user, { from: owner })
+
+      assert.equals(await withdrawalQueue.getClaimableEther([[1, 1]]), ETH(0))
+    })
+
+    it('reverts on invalid params', async () => {
+      await assert.reverts(withdrawalQueue.getClaimableEther([[0, 1]]), 'InvalidRequestId(0)')
+      await assert.reverts(withdrawalQueue.getClaimableEther([[2, 1]]), 'InvalidRequestId(2)')
+      await assert.reverts(withdrawalQueue.getClaimableEther([[1, 0]]), 'InvalidHint(0)')
+
+      await withdrawalQueue.finalize(1, { from: steth.address, value: ETH(1) })
+      await assert.reverts(withdrawalQueue.getClaimableEther([[1, 2]]), 'InvalidHint(2)')
+
+      await withdrawalQueue.requestWithdrawals([ETH(1)], owner, { from: user })
+      await assert.reverts(withdrawalQueue.getClaimableEther([[1, 2]]), 'InvalidHint(2)')
+    })
+  })
+
   context('claimWithdrawal()', async () => {
     let requestId
     const amount = ETH(300)
@@ -796,7 +832,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     it("Changing owner doesn't work with wrong request id", async () => {
       const wrongRequestId = requestId + 1
       await assert.reverts(withdrawalQueue.transferFrom(user, owner, wrongRequestId, { from: user }),
-       `InvalidRequestId(${wrongRequestId})`)
+        `InvalidRequestId(${wrongRequestId})`)
     })
   })
 
