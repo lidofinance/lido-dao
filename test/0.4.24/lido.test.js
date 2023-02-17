@@ -411,27 +411,6 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
     })
   })
 
-  describe('receiveStakingRouterRemainder()', async () => {
-    it('unable to receive eth from arbitrary account', async () => {
-      await assertRevert(app.receiveStakingRouterDepositRemainder({ from: nobody, value: ETH(1) }))
-    })
-
-    it('event work', async () => {
-      // unlock stakingRouter account (allow transactions originated from stakingRouter.address)
-      await ethers.provider.send('hardhat_impersonateAccount', [stakingRouter.address])
-
-      // add some amount to the sender
-
-      await setBalance(stakingRouter.address, ETH(100))
-
-      const receipt = await app.receiveStakingRouterDepositRemainder({ from: stakingRouter.address, value: ETH(2) })
-
-      assertEvent(receipt, 'StakingRouterDepositRemainderReceived', {
-        expectedArgs: { amount: ETH(2) }
-      })
-    })
-  })
-
   it('setWithdrawalCredentials works', async () => {
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
@@ -544,7 +523,10 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
     // set withdrawalCredentials with keys, because they were trimmed
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
-    assertBn(await stakingRouter.getStakingModuleMaxDepositsCount(CURATED_MODULE_ID), 0)
+    assertBn(
+      await stakingRouter.getStakingModuleMaxDepositsCount(CURATED_MODULE_ID, await app.getDepositableEther()),
+      0
+    )
 
     await operators.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting })
     await operators.addSigningKeys(
@@ -556,7 +538,10 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
     )
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
 
-    assertBn(await stakingRouter.getStakingModuleMaxDepositsCount(CURATED_MODULE_ID), 1)
+    assertBn(
+      await stakingRouter.getStakingModuleMaxDepositsCount(CURATED_MODULE_ID, await app.getDepositableEther()),
+      1
+    )
     assertBn(await app.getTotalPooledEther(), ETH(34))
     assertBn(await app.getBufferedEther(), ETH(34))
 

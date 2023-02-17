@@ -149,6 +149,10 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(0);
         KEYS_OP_INDEX_POSITION.setStorageUint256(0);
 
+        _nodeOperatorTotals = NodeOperatorTotals({
+            signingKeysStats: Packed64x4.Packed(0)
+        });
+
         Packed64x4.Packed memory tmp;
         for (uint256 i = 0; i < totalOperatorsCount; ++i) {
             _nodeOperators[i] = NodeOperator(false, address(0), new string(0), tmp, tmp, tmp);
