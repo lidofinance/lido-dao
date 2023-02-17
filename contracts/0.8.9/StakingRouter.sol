@@ -824,21 +824,25 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         activeValidatorsCount = totalDepositedValidatorsCount - totalExitedValidatorsCount;
     }
 
-    /**
-     * @dev calculate max count of deposits which staking module can provide data for based on the
-     *      current Staking Router balance and buffered Ether amount
-     *
-     * @param _stakingModuleId id of the staking module to be deposited
-     * @return max number of deposits might be done using given staking module
-     */
-    function getStakingModuleMaxDepositsCount(uint256 _stakingModuleId, uint256 _depositableEther) public view
+    /// @dev calculate the max count of deposits which the staking module can provide data for based
+    ///     on the passed `_maxDepositsValue` amount
+    /// @param _stakingModuleId id of the staking module to be deposited
+    /// @param _maxDepositsValue max amount of ether that might be used for deposits count calculation
+    /// @return max number of deposits might be done using the given staking module
+    function getStakingModuleMaxDepositsCount(uint256 _stakingModuleId, uint256 _maxDepositsValue)
+        public
+        view
         validStakingModuleId(_stakingModuleId)
         returns (uint256)
     {
+        (
+            /* uint256 allocated */,
+            uint256[] memory newDepositsAllocation,
+            StakingModuleCache[] memory stakingModulesCache
+        ) = _getDepositsAllocation(_maxDepositsValue / DEPOSIT_SIZE);
         uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
-        (, uint256[] memory newDepositsAllocation, StakingModuleCache[] memory stakingModulesCache)
-            = _getDepositsAllocation(_depositableEther / DEPOSIT_SIZE);
-        return newDepositsAllocation[stakingModuleIndex] - stakingModulesCache[stakingModuleIndex].activeValidatorsCount;
+        return
+            newDepositsAllocation[stakingModuleIndex] - stakingModulesCache[stakingModuleIndex].activeValidatorsCount;
     }
 
     /**
@@ -1014,7 +1018,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         );
         uint256 etherBalanceAfterDeposits = address(this).balance;
 
-        /// @dev make sure that deposited correct amount of ETH
+        /// @dev make sure that was deposited exactly sent amount of ETH
         assert(etherBalanceBeforeDeposits - etherBalanceAfterDeposits == depositsValue);
 
         stakingModule.lastDepositAt = uint64(block.timestamp);
