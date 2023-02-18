@@ -442,7 +442,7 @@ abstract contract WithdrawalQueueBase {
         if (_recipient == address(0)) _recipient = request.owner;
 
         request.claimed = true;
-        _getRequestsByOwner()[request.owner].remove(_requestId);
+        assert(_getRequestsByOwner()[request.owner].remove(_requestId));
 
         DiscountCheckpoint memory hintCheckpoint = _getCheckpoints()[_hint];
         // ______(_______
