@@ -653,7 +653,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     }
 
     function _checkLimitValue(uint256 _value, uint256 _maxAllowedValue) internal pure {
-        if (_value >= _maxAllowedValue) {
+        if (_value > _maxAllowedValue) {
             revert IncorrectLimitValue(_value, _maxAllowedValue);
         }
     }
