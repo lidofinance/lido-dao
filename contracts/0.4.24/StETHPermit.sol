@@ -100,7 +100,7 @@ contract StETHPermit is IERC2612, StETH {
             abi.encode(PERMIT_TYPEHASH, _owner, _spender, _value, _useNonce(_owner), _deadline)
         );
 
-        bytes32 hash = IEIP712(_getEIP712StETH()).hashTypedDataV4(structHash);
+        bytes32 hash = IEIP712(getEIP712StETH()).hashTypedDataV4(structHash);
 
         address signer = ECDSA.recover(hash, _v, _r, _s);
         require(signer == _owner, "ERC20Permit: invalid signature");
@@ -124,7 +124,7 @@ contract StETHPermit is IERC2612, StETH {
      */
     // solhint-disable-next-line func-name-mixedcase
     function DOMAIN_SEPARATOR() external view returns (bytes32) {
-        return IEIP712(_getEIP712StETH()).domainSeparatorV4();
+        return IEIP712(getEIP712StETH()).domainSeparatorV4();
     }
 
     /**
@@ -140,7 +140,7 @@ contract StETHPermit is IERC2612, StETH {
      */
     function _initializeEIP712StETH(address _eip712StETH) internal {
         require(_eip712StETH != address(0), "StETHPermit: zero eip712StETH");
-        require(_getEIP712StETH() == address(0), "StETHPermit: eip712StETH already set");
+        require(getEIP712StETH() == address(0), "StETHPermit: eip712StETH already set");
 
         EIP712_STETH_POSITION.setStorageAddress(_eip712StETH);
 
@@ -150,7 +150,7 @@ contract StETHPermit is IERC2612, StETH {
     /**
      * @dev Get EIP712 message utils contract
      */
-    function _getEIP712StETH() internal view returns (address) {
+    function getEIP712StETH() public view returns (address) {
         return EIP712_STETH_POSITION.getStorageAddress();
     }
 }

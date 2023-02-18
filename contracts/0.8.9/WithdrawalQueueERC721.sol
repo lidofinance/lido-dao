@@ -21,15 +21,15 @@ import {UnstructuredRefStorage} from "./lib/UnstructuredRefStorage.sol";
 /// NFT is minted on every request and burned on claim
 ///
 /// @author psirex, folkyatina
-contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
+contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
     using Address for address;
     using Strings for uint256;
     using EnumerableSet for EnumerableSet.UintSet;
     using UnstructuredRefStorage for bytes32;
 
-    bytes32 internal constant TOKEN_APPROVALS_POSITION = keccak256("lido.WithdrawalRequestNFT.tokenApprovals");
-    bytes32 internal constant OPERATOR_APPROVALS_POSITION = keccak256("lido.WithdrawalRequestNFT.operatorApprovals");
-    bytes32 internal constant BASE_URI_POSITION = keccak256("lido.WithdrawalRequestNFT.baseUri");
+    bytes32 internal constant TOKEN_APPROVALS_POSITION = keccak256("lido.WithdrawalQueueERC721.tokenApprovals");
+    bytes32 internal constant OPERATOR_APPROVALS_POSITION = keccak256("lido.WithdrawalQueueERC721.operatorApprovals");
+    bytes32 internal constant BASE_URI_POSITION = keccak256("lido.WithdrawalQueueERC721.baseUri");
 
     bytes32 public constant SET_BASE_URI_ROLE = keccak256("SET_BASE_URI_ROLE");
 

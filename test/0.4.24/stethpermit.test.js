@@ -6,21 +6,28 @@ const { assertRevert } = require('../helpers/assertThrow')
 const { signPermit, signTransferAuthorization, makeDomainSeparator } = require('./helpers/permit_helpers')
 const { hexStringFromBuffer } = require('./helpers/sign_utils')
 const { ETH } = require('../helpers/utils')
+const { EvmSnapshot } = require('../helpers/blockchain')
 
 const EIP712StETH = artifacts.require('EIP712StETH')
 const StETHPermit = artifacts.require('StETHPermitMock')
 
 contract('StETHPermit', ([deployer, ...accounts]) => {
-  let stEthPermit, chainId, domainSeparator
+  let stEthPermit, eip712StETH, chainId, domainSeparator
+  const snapshot = new EvmSnapshot(hre.ethers.provider)
 
-  beforeEach('deploy mock token', async () => {
-    const eip712StETH = await EIP712StETH.new({ from: deployer })
-    stEthPermit = await StETHPermit.new({ from: deployer })
+  before('deploy mock token', async () => {
+    eip712StETH = await EIP712StETH.new({ from: deployer })
+    stEthPermit = await StETHPermit.new({ from: deployer, value: ETH(1) })
     await stEthPermit.initializeEIP712StETH(eip712StETH.address)
 
     chainId = await web3.eth.net.getId();
 
     domainSeparator = makeDomainSeparator('Liquid staked Ether 2.0', '2', chainId, eip712StETH.address)
+    await snapshot.make()
+  })
+
+  afterEach(async () => {
+    await snapshot.rollback()
   })
 
   context('permit', () => {
@@ -41,6 +48,10 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
     beforeEach(async () => {
       await stEthPermit.setTotalPooledEther(initialTotalSupply, { from: deployer })
       await stEthPermit.mintShares(permitParams.owner, initialBalance, { from: deployer })
+    })
+
+    it('EIP-712 signature helper contract matches the stored one', async () => {
+      assert.equal(await stEthPermit.getEIP712StETH(), eip712StETH.address)
     })
 
     it('grants allowance when a valid permit is given', async () => {

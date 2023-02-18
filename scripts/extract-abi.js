@@ -29,7 +29,7 @@ async function extractABIs(artifactPaths, abisPath) {
     for (const file of files) {
       await fs.unlink(path.join(abisPath, file))
     }
-    await fs.rmdir(abisPath, { recursive: true })
+    await fs.rm(abisPath, { recursive: true })
   }
 
   await fs.mkdir(abisPath, { recursive: true })

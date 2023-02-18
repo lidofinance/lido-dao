@@ -52,7 +52,7 @@ contract('StakingRouter', ([depositor, stranger]) => {
       const maxDepositsCount = 150
 
       await web3.eth.sendTransaction({ value: ETH(maxDepositsCount * 32), to: lido.address, from: stranger })
-      assert.equals(await lido.getBufferedEther(), ETH(maxDepositsCount * 32))
+      assert.equals(await lido.getBufferedEther(), ETH(maxDepositsCount * 32 + 1))
 
       const [curated] = await stakingRouter.getStakingModules()
 
@@ -66,18 +66,19 @@ contract('StakingRouter', ([depositor, stranger]) => {
     })
 
     it('Lido.deposit() :: check deposit with keys', async () => {
-      // balance are 0
-      assert.equals(await web3.eth.getBalance(lido.address), 0)
+      // balance are initial
+      assert.equals(await web3.eth.getBalance(lido.address), ETH(1))
       assert.equals(await web3.eth.getBalance(stakingRouter.address), 0)
 
-      const sendEthForKeys = ETH(101 * 32)
+      const sendEthForKeys = ETH(101 * 32 - 1)
+      const totalPooledEther = ETH(101 * 32)
       const maxDepositsCount = 100
 
       await web3.eth.sendTransaction({ value: sendEthForKeys, to: lido.address, from: stranger })
-      assert.equals(await lido.getBufferedEther(), sendEthForKeys)
+      assert.equals(await lido.getBufferedEther(), totalPooledEther)
 
       // updated balance are lido 100 && sr 0
-      assert.equals(await web3.eth.getBalance(lido.address), sendEthForKeys)
+      assert.equals(await web3.eth.getBalance(lido.address), totalPooledEther)
       assert.equals(await web3.eth.getBalance(stakingRouter.address), 0)
 
       const [curated] = await stakingRouter.getStakingModules()
