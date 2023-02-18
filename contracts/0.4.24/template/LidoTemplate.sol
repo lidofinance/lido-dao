@@ -104,6 +104,7 @@ contract LidoTemplate is IsContract {
         Lido lido;
         LegacyOracle oracle;
         NodeOperatorsRegistry operators;
+        address stakingRouter;
     }
 
     struct AppVersion {
@@ -382,10 +383,12 @@ contract LidoTemplate is IsContract {
 
     function finalizeDAO(
         string _daoName,
-        uint256 _unvestedTokensAmount
+        uint256 _unvestedTokensAmount,
+        address _stakingRouter
     )
         external onlyOwner
     {
+        require(_stakingRouter != address(0));
         DeployState memory state = deployState;
         APMRepos memory repos = apmRepos;
 
@@ -601,13 +604,15 @@ contract LidoTemplate is IsContract {
         for (i = 0; i < 4; ++i) {
             _createPermissionForVoting(acl, _state.operators, perms[i], voting);
         }
+        acl.createPermission(_state.stakingRouter, _state.operators, _state.operators.STAKING_ROUTER_ROLE(), voting);
 
         // Lido
         perms[0] = _state.lido.PAUSE_ROLE();
         perms[1] = _state.lido.RESUME_ROLE();
         perms[2] = _state.lido.STAKING_PAUSE_ROLE();
         perms[3] = _state.lido.STAKING_CONTROL_ROLE();
-        for (i = 0; i < 4; ++i) {
+        perms[4] = _state.lido.UNSAFE_CHANGE_DEPOSITED_VALIDATORS_ROLE();
+        for (i = 0; i < 5; ++i) {
             _createPermissionForVoting(acl, _state.lido, perms[i], voting);
         }
     }

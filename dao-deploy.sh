@@ -102,12 +102,19 @@ yarn hardhat --network $NETWORK run ./scripts/scratch/10-issue-tokens.js
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-06-1-issue-tokens.json
 msg "Tokens issued"
 
+
+# Deploy the contracts before finalizing DAO, because the template might set permissions on some of them
+yarn hardhat --network $NETWORK run ./scripts/scratch/13-deploy-non-aragon-contracts.js
+
+
 yarn hardhat --network $NETWORK run ./scripts/scratch/11-finalize-dao.js
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-11-finalize-dao.json
 msg "DAO deploy finalized"
 
-DEPLOYER=$DEPLOYER yarn hardhat --network $NETWORK run ./scripts/scratch/13-deploy-non-aragon-contracts.js
+rm ./tx-*.json
 
-DEPLOYER=$DEPLOYER yarn hardhat --network $NETWORK run ./scripts/scratch/14-initialize-non-aragon-contracts.js
+yarn hardhat --network $NETWORK run ./scripts/scratch/14-initialize-non-aragon-contracts.js
+
+yarn hardhat --network $NETWORK run ./scripts/scratch/15-grant-roles.js
 
 # TODO: check DAO
