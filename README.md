@@ -244,7 +244,7 @@ Run fuzzing tests with foundry:
 
 ```bash
 curl -L https://foundry.paradigm.xyz | bash
-foundry up
+foundryup
 forge test
 ```
 
