@@ -186,8 +186,8 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         return false;
     }
 
-    function testing_getCorrectedNodeOperator(uint256 operatorId) external view
-        returns (uint64 vettedSigningKeysCount, uint64 exitedSigningKeysCount, uint64 depositedSigningKeysCount)
+    function testing_getNodeOperatorWithLimitApplied(uint256 operatorId) external view
+        returns (uint64 maxSigningKeysCount, uint64 exitedSigningKeysCount, uint64 depositedSigningKeysCount)
     {
         return _getNodeOperatorWithLimitApplied(operatorId);
     }

@@ -9,9 +9,7 @@ import {SafeMath} from "@aragon/os/contracts/lib/math/SafeMath.sol";
 import {SafeMath64} from "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import {UnstructuredStorage} from "@aragon/os/contracts/common/UnstructuredStorage.sol";
 
-import {Math64} from "../lib/Math64.sol";
 import {Math256} from "../../common/lib/Math256.sol";
-import {MemUtils} from "../../common/lib/MemUtils.sol";
 import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
 import {ILidoLocator} from "../../common/interfaces/ILidoLocator.sol";
 import {IBurner} from "../../common/interfaces/IBurner.sol";
@@ -224,8 +222,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
                 // trim vetted signing keys count when node operator is not active
                 vettedSigningKeysCountAfter = depositedSigningKeysCount;
             } else {
-                vettedSigningKeysCountAfter =
-                    Math64.min(totalSigningKeysCount, Math64.max(depositedSigningKeysCount, vettedSigningKeysCountBefore));
+                vettedSigningKeysCountAfter = uint64(Math256.min(totalSigningKeysCount, Math256.max(uint256(depositedSigningKeysCount), uint256(vettedSigningKeysCountBefore))));
             }
 
             if (vettedSigningKeysCountBefore != vettedSigningKeysCountAfter) {
@@ -393,8 +390,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         uint64 depositedSigningKeysCount = signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET);
         uint64 totalSigningKeysCount = signingKeysStats.get(TOTAL_KEYS_COUNT_OFFSET);
 
-        uint64 vettedSigningKeysCountAfter =
-            Math64.min(totalSigningKeysCount, Math64.max(_vettedSigningKeysCount, depositedSigningKeysCount));
+        uint64 vettedSigningKeysCountAfter = uint64(Math256.min(totalSigningKeysCount, Math256.max(uint256(_vettedSigningKeysCount), uint256(depositedSigningKeysCount))));
 
         if (vettedSigningKeysCountAfter == vettedSigningKeysCountBefore) {
             return;
@@ -420,27 +416,77 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     /// @notice Called by StakingRouter to update the number of the validators of the given node
     /// operator that were requested to exit but failed to do so in the max allowed time
     ///
-    /// @param _nodeOperatorId Id of the node operator
-    /// @param _stuckValidatorsCount New number of stuck validators of the node operator
-    function updateStuckValidatorsCount(uint256 _nodeOperatorId, uint256 _stuckValidatorsCount) external {
-        _onlyExistedNodeOperator(_nodeOperatorId);
+    /// @param _nodeOperatorIds bytes packed array of the node operators id
+    /// @param _stuckValidatorsCounts bytes packed array of the new number of stuck validators for the node operators
+    function updateStuckValidatorsCount(
+        bytes _nodeOperatorIds,
+        bytes _stuckValidatorsCounts
+    )
+        external
+    {
         _auth(STAKING_ROUTER_ROLE);
+        _requireValidReportData(_nodeOperatorIds.length % 8 == 0 && _stuckValidatorsCounts.length % 16 == 0);
 
-        _updateStuckValidatorsCount(_nodeOperatorId, uint64(_stuckValidatorsCount));
+        uint256 nodeOperatorsCount = _nodeOperatorIds.length / 8;
+        _requireValidReportData(_stuckValidatorsCounts.length / 16 == nodeOperatorsCount);
+        uint256 totalNodeOperatorsCount = getNodeOperatorsCount();
+
+        uint256 nodeOperatorId;
+        uint64 validatorsCount;
+        uint256 _nodeOperatorIdsOffset;
+        uint256 _stuckValidatorsCountsOffset;
+        assembly {
+            _nodeOperatorIdsOffset := add(calldataload(4), 36) // arg1 calldata offset + 4 (signature len) + 32 (length slot)
+            _stuckValidatorsCountsOffset := add(calldataload(36), 36) // signature_bytes4 + arg2_bytes calldata offset + 32 (length slot))
+        }
+        for (uint256 i; i < nodeOperatorsCount; ) {
+            /// @solidity memory-safe-assembly
+            assembly {
+                nodeOperatorId := shr(192, calldataload(add(_nodeOperatorIdsOffset, mul(i, 8))))
+                validatorsCount := shr(128, calldataload(add(_stuckValidatorsCountsOffset, mul(i, 16))))
+                i := add(i, 1)
+            }
+            _requireValidRange(nodeOperatorId < totalNodeOperatorsCount);
+            _updateStuckValidatorsCount(nodeOperatorId, validatorsCount);
+        }
     }
 
     /// @notice Called by StakingRouter to update the number of the validators in the EXITED state
     /// for node operator with given id
     ///
-    /// @param _nodeOperatorId Id of the node operator
-    /// @param _exitedValidatorsCount New number of EXITED validators of the node operator
-    function updateExitedValidatorsCount(uint256 _nodeOperatorId, uint256 _exitedValidatorsCount)
+    /// @param _nodeOperatorIds bytes packed array of the node operators id
+    /// @param _stuckValidatorsCounts bytes packed array of the new number of EXITED validators for the node operators
+    function updateExitedValidatorsCount(
+        bytes _nodeOperatorIds,
+        bytes _stuckValidatorsCounts
+    )
         external
     {
-        _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
+        _requireValidReportData(_nodeOperatorIds.length % 8 == 0 && _stuckValidatorsCounts.length % 16 == 0);
 
-        _updateExitedValidatorsCount(_nodeOperatorId, uint64(_exitedValidatorsCount), false);
+        uint256 nodeOperatorsCount = _nodeOperatorIds.length / 8;
+        _requireValidReportData(_stuckValidatorsCounts.length / 16 == nodeOperatorsCount);
+        uint256 totalNodeOperatorsCount = getNodeOperatorsCount();
+
+        uint256 nodeOperatorId;
+        uint64 validatorsCount;
+        uint256 _nodeOperatorIdsOffset;
+        uint256 _stuckValidatorsCountsOffset;
+        assembly {
+            _nodeOperatorIdsOffset := add(calldataload(4), 36) // arg1 calldata offset + 4 (signature len) + 32 (length slot)
+            _stuckValidatorsCountsOffset := add(calldataload(36), 36) // signature_bytes4 + arg2_bytes calldata offset + 32 (length slot))
+        }
+         for (uint256 i; i < nodeOperatorsCount; ) {
+            /// @solidity memory-safe-assembly
+            assembly {
+                nodeOperatorId := shr(192, calldataload(add(_nodeOperatorIdsOffset, mul(i, 8))))
+                validatorsCount := shr(128, calldataload(add(_stuckValidatorsCountsOffset, mul(i, 16))))
+                i := add(i, 1)
+            }
+            _requireValidRange(nodeOperatorId < totalNodeOperatorsCount);
+            _updateExitedValidatorsCount(nodeOperatorId, validatorsCount, false);
+        }
     }
 
     /// @notice Updates the number of the refunded validators for node operator with the given id
@@ -684,7 +730,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
                 // correct max count according to target if target is enabled
                 uint64 targetLimit = exitedSigningKeysCount.add(operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET));
                 if (targetLimit > depositedSigningKeysCount) {
-                    newMaxSigningKeysCount = Math64.min(vettedSigningKeysCount, targetLimit);
+                    newMaxSigningKeysCount = uint64(Math256.min(uint256(vettedSigningKeysCount), uint256(targetLimit)));
                 }
             }
         } // else newMaxSigningKeysCount = depositedSigningKeysCount, so depositable keys count = 0
@@ -1270,6 +1316,10 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     function _requireValidRange(bool _pass) internal pure {
         require(_pass, "OUT_OF_RANGE");
+    }
+
+    function _requireValidReportData(bool _pass) internal pure {
+        require(_pass, "INVALID_REPORT_DATA");
     }
 
     function _onlyCorrectNodeOperatorState(bool _pass) internal pure {
