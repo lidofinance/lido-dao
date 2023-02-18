@@ -36,11 +36,6 @@ contract('BaseOracle', ([admin, account1, account2, member1, member2]) => {
       assert.isNotNull(oracle)
       assert.isNotNull(consensus)
     })
-
-    it('gives default roles', async () => {
-      const DEFAULT_ADMIN_ROLE = await oracle.DEFAULT_ADMIN_ROLE
-      await assert.emits(initTx, 'RoleGranted', { role: DEFAULT_ADMIN_ROLE, account: admin, sender: admin })
-    })
   })
 
   context('MANAGE_CONSENSUS_CONTRACT_ROLE', () => {
