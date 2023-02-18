@@ -16,7 +16,6 @@ const {
 const MockConsensusContract = artifacts.require('MockConsensusContract')
 
 contract('BaseOracle', ([admin, account1, account2, member1, member2]) => {
-  let initTx
   let oracle = null
   let consensus = null
   const manageConsensusContractRoleKeccak156 = web3.utils.keccak256('MANAGE_CONSENSUS_CONTRACT_ROLE')
@@ -24,7 +23,6 @@ contract('BaseOracle', ([admin, account1, account2, member1, member2]) => {
 
   const deploy = async (options = undefined) => {
     const deployed = await deployBaseOracle(admin, options)
-    initTx = deployed.initTx
     oracle = deployed.oracle
     consensus = deployed.consensusContract
   }
