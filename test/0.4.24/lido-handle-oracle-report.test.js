@@ -8,6 +8,17 @@ const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 
 const ONE_YEAR = 3600 * 24 * 365
 const ONE_DAY = 3600 * 24
+const ORACLE_REPORT_LIMITS_BOILERPLATE = {
+  churnValidatorsPerDayLimit: 255,
+  oneOffCLBalanceDecreaseBPLimit: 100,
+  annualBalanceIncreaseBPLimit: 10000,
+  shareRateDeviationBPLimit: 10000,
+  maxValidatorExitRequestsPerReport: 10000,
+  maxAccountingExtraDataListItemsCount: 10000,
+  maxNodeOperatorsPerExtraDataItemCount: 10000,
+  requestTimestampMargin: 0,
+  maxPositiveTokenRebase: 1000000000,
+}
 
 contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, anotherStranger, depositor, operator]) => {
   let deployed, snapshot, lido, treasury, voting, oracle
@@ -243,16 +254,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('does not revert on new total balance decrease under the limit', async () => {
       // set oneOffCLBalanceDecreaseBPLimit = 1%
       await oracleReportSanityChecker.setOracleReportLimits(
-        {
-          churnValidatorsPerDayLimit: 255,
-          oneOffCLBalanceDecreaseBPLimit: 100,
-          annualBalanceIncreaseBPLimit: 10000,
-          shareRateDeviationBPLimit: 10000,
-          maxValidatorExitRequestsPerReport: 10000,
-          requestTimestampMargin: 0,
-          maxPositiveTokenRebase: 1000000000,
-          maxAccountingExtraDataListItemsCount: 10000
-        },
+        ORACLE_REPORT_LIMITS_BOILERPLATE,
         { from: voting }
       )
 
@@ -280,16 +282,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('reverts on new total balance decrease over the limit', async () => {
       // set oneOffCLBalanceDecreaseBPLimit = 1%
       await oracleReportSanityChecker.setOracleReportLimits(
-        {
-          churnValidatorsPerDayLimit: 255,
-          oneOffCLBalanceDecreaseBPLimit: 100,
-          annualBalanceIncreaseBPLimit: 10000,
-          shareRateDeviationBPLimit: 10000,
-          maxValidatorExitRequestsPerReport: 10000,
-          requestTimestampMargin: 0,
-          maxPositiveTokenRebase: 1000000000,
-          maxAccountingExtraDataListItemsCount: 10000
-        },
+        ORACLE_REPORT_LIMITS_BOILERPLATE,
         { from: voting }
       )
 
@@ -310,16 +303,9 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
 
     it('does not revert on new total balance increase under the limit', async () => {
       // set annualBalanceIncreaseBPLimit = 1%
-      await oracleReportSanityChecker.setOracleReportLimits(
-        {
-          churnValidatorsPerDayLimit: 255,
-          oneOffCLBalanceDecreaseBPLimit: 100,
+      await oracleReportSanityChecker.setOracleReportLimits({
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           annualBalanceIncreaseBPLimit: 100,
-          shareRateDeviationBPLimit: 10000,
-          maxValidatorExitRequestsPerReport: 10000,
-          requestTimestampMargin: 0,
-          maxPositiveTokenRebase: 1000000000,
-          maxAccountingExtraDataListItemsCount: 10000
         },
         { from: voting }
       )
@@ -347,16 +333,9 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
 
     it('reverts on new total balance increase over the limit', async () => {
       // set annualBalanceIncreaseBPLimit = 1%
-      await oracleReportSanityChecker.setOracleReportLimits(
-        {
-          churnValidatorsPerDayLimit: 255,
-          oneOffCLBalanceDecreaseBPLimit: 100,
+      await oracleReportSanityChecker.setOracleReportLimits({
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           annualBalanceIncreaseBPLimit: 100,
-          shareRateDeviationBPLimit: 10000,
-          maxValidatorExitRequestsPerReport: 10000,
-          requestTimestampMargin: 0,
-          maxPositiveTokenRebase: 1000000000,
-          maxAccountingExtraDataListItemsCount: 10000
         },
         { from: voting }
       )
@@ -379,16 +358,10 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('does not revert on validators reported under limit', async () => {
       await lido.submit(ZERO_ADDRESS, { from: stranger, value: ETH(3100), gasPrice: 1 })
       await lido.deposit(100, 1, '0x', { from: depositor })
-      await oracleReportSanityChecker.setOracleReportLimits(
-        {
+      await oracleReportSanityChecker.setOracleReportLimits({
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
-          oneOffCLBalanceDecreaseBPLimit: 100,
           annualBalanceIncreaseBPLimit: 100,
-          shareRateDeviationBPLimit: 10000,
-          maxValidatorExitRequestsPerReport: 10000,
-          requestTimestampMargin: 0,
-          maxPositiveTokenRebase: 1000000000,
-          maxAccountingExtraDataListItemsCount: 10000
         },
         { from: voting, gasPrice: 1 }
       )
@@ -400,16 +373,10 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('reverts on validators reported when over limit', async () => {
       await lido.submit(ZERO_ADDRESS, { from: stranger, value: ETH(3200), gasPrice: 1 })
       await lido.deposit(101, 1, '0x', { from: depositor })
-      await oracleReportSanityChecker.setOracleReportLimits(
-        {
+      await oracleReportSanityChecker.setOracleReportLimits({
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
-          oneOffCLBalanceDecreaseBPLimit: 100,
           annualBalanceIncreaseBPLimit: 100,
-          shareRateDeviationBPLimit: 10000,
-          maxValidatorExitRequestsPerReport: 10000,
-          requestTimestampMargin: 0,
-          maxPositiveTokenRebase: 1000000000,
-          maxAccountingExtraDataListItemsCount: 10000
         },
         { from: voting, gasPrice: 1 }
       )
@@ -434,16 +401,9 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     })
 
     it('does not smooth if report in limits', async () => {
-      await oracleReportSanityChecker.setOracleReportLimits(
-        {
+      await oracleReportSanityChecker.setOracleReportLimits({
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
-          oneOffCLBalanceDecreaseBPLimit: 100,
-          annualBalanceIncreaseBPLimit: 10000,
-          shareRateDeviationBPLimit: 10000,
-          maxValidatorExitRequestsPerReport: 10000,
-          requestTimestampMargin: 0,
-          maxPositiveTokenRebase: 10000000,
-          maxAccountingExtraDataListItemsCount: 10000
         },
         { from: voting, gasPrice: 1 }
       )
@@ -452,16 +412,9 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     })
 
     it('does not smooth if cl balance report over limit', async () => {
-      await oracleReportSanityChecker.setOracleReportLimits(
-        {
+      await oracleReportSanityChecker.setOracleReportLimits({
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
-          oneOffCLBalanceDecreaseBPLimit: 100,
-          annualBalanceIncreaseBPLimit: 10000,
-          shareRateDeviationBPLimit: 10000,
-          maxValidatorExitRequestsPerReport: 10000,
-          requestTimestampMargin: 0,
-          maxPositiveTokenRebase: 1000000,
-          maxAccountingExtraDataListItemsCount: 10000
         },
         { from: voting, gasPrice: 1 }
       )
@@ -479,16 +432,10 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('does not smooth withdrawals if report in limits', async () => {
       await setBalance(withdrawalVault, ETH(1))
 
-      await oracleReportSanityChecker.setOracleReportLimits(
-        {
+      await oracleReportSanityChecker.setOracleReportLimits({
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
-          oneOffCLBalanceDecreaseBPLimit: 100,
-          annualBalanceIncreaseBPLimit: 10000,
-          shareRateDeviationBPLimit: 10000,
-          maxValidatorExitRequestsPerReport: 10000,
-          requestTimestampMargin: 0,
-          maxPositiveTokenRebase: 10000000,
-          maxAccountingExtraDataListItemsCount: 10000
+          annualBalanceIncreaseBPLimit: 100,
         },
         { from: voting, gasPrice: 1 }
       )
@@ -507,16 +454,10 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('smooths withdrawals if report out of limit', async () => {
       await setBalance(withdrawalVault, ETH(1.1))
 
-      await oracleReportSanityChecker.setOracleReportLimits(
-        {
+      await oracleReportSanityChecker.setOracleReportLimits({
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
-          oneOffCLBalanceDecreaseBPLimit: 100,
-          annualBalanceIncreaseBPLimit: 10000,
-          shareRateDeviationBPLimit: 10000,
-          maxValidatorExitRequestsPerReport: 10000,
-          requestTimestampMargin: 0,
           maxPositiveTokenRebase: 10000000,
-          maxAccountingExtraDataListItemsCount: 10000
         },
         { from: voting, gasPrice: 1 }
       )
@@ -536,16 +477,10 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('does not smooth el rewards if report in limit without lido fee', async () => {
       await setBalance(elRewardsVault, ETH(1))
 
-      await oracleReportSanityChecker.setOracleReportLimits(
-        {
+      await oracleReportSanityChecker.setOracleReportLimits({
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
-          oneOffCLBalanceDecreaseBPLimit: 100,
-          annualBalanceIncreaseBPLimit: 10000,
-          shareRateDeviationBPLimit: 10000,
-          maxValidatorExitRequestsPerReport: 10000,
-          requestTimestampMargin: 0,
           maxPositiveTokenRebase: 10000000,
-          maxAccountingExtraDataListItemsCount: 10000
         },
         { from: voting, gasPrice: 1 }
       )
@@ -566,16 +501,10 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('does not smooth el rewards if report in limit without lido fee 2', async () => {
       await setBalance(elRewardsVault, ETH(1.5))
 
-      await oracleReportSanityChecker.setOracleReportLimits(
-        {
+      await oracleReportSanityChecker.setOracleReportLimits({
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
-          oneOffCLBalanceDecreaseBPLimit: 100,
-          annualBalanceIncreaseBPLimit: 10000,
-          shareRateDeviationBPLimit: 10000,
-          maxValidatorExitRequestsPerReport: 10000,
-          requestTimestampMargin: 0,
           maxPositiveTokenRebase: 10000000,
-          maxAccountingExtraDataListItemsCount: 10000
         },
         { from: voting, gasPrice: 1 }
       )
@@ -595,16 +524,10 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('smooths el rewards if report out of limit without lido fee', async () => {
       await setBalance(elRewardsVault, ETH(1.1))
 
-      await oracleReportSanityChecker.setOracleReportLimits(
-        {
+      await oracleReportSanityChecker.setOracleReportLimits({
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
-          oneOffCLBalanceDecreaseBPLimit: 100,
-          annualBalanceIncreaseBPLimit: 10000,
-          shareRateDeviationBPLimit: 10000,
-          maxValidatorExitRequestsPerReport: 10000,
-          requestTimestampMargin: 0,
           maxPositiveTokenRebase: 10000000,
-          maxAccountingExtraDataListItemsCount: 10000
         },
         { from: voting, gasPrice: 1 }
       )
@@ -624,16 +547,9 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('does not smooth el rewards if report in limit', async () => {
       await setBalance(elRewardsVault, ETH(1))
 
-      await oracleReportSanityChecker.setOracleReportLimits(
-        {
+      await oracleReportSanityChecker.setOracleReportLimits({
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
-          oneOffCLBalanceDecreaseBPLimit: 100,
-          annualBalanceIncreaseBPLimit: 10000,
-          shareRateDeviationBPLimit: 10000,
-          maxValidatorExitRequestsPerReport: 10000,
-          requestTimestampMargin: 0,
-          maxPositiveTokenRebase: 10000000,
-          maxAccountingExtraDataListItemsCount: 10000
         },
         { from: voting, gasPrice: 1 }
       )
@@ -654,16 +570,10 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('smooths el rewards if report out of limit', async () => {
       await setBalance(elRewardsVault, ETH(1.1))
 
-      await oracleReportSanityChecker.setOracleReportLimits(
-        {
+      await oracleReportSanityChecker.setOracleReportLimits({
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
-          oneOffCLBalanceDecreaseBPLimit: 100,
-          annualBalanceIncreaseBPLimit: 10000,
-          shareRateDeviationBPLimit: 10000,
-          maxValidatorExitRequestsPerReport: 10000,
-          requestTimestampMargin: 0,
           maxPositiveTokenRebase: 10000000,
-          maxAccountingExtraDataListItemsCount: 10000
         },
         { from: voting, gasPrice: 1 }
       )
