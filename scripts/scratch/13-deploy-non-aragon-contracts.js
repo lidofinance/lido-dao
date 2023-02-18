@@ -67,13 +67,13 @@ async function deployNewContracts({ web3, artifacts }) {
     admin,
     [admin],
   ]
-  await deployBehindOssifiableProxy('oracleDaemonConfig', 'OracleDaemonConfig', proxyContractsOwner, DEPLOYER, oracleDaemonConfigArgs)
+  await deployWithoutProxy('oracleDaemonConfig', 'OracleDaemonConfig', deployer, oracleDaemonConfigArgs)
   logWideSplitter()
 
   //
   // === LidoLocator: dummy invalid implementation ===
   //
-  const locatorAddress = await deployBehindOssifiableProxy('lidoLocator', 'DummyEmptyContract', proxyContractsOwner, DEPLOYER)
+  const locatorAddress = await deployBehindOssifiableProxy('lidoLocator', 'DummyEmptyContract', proxyContractsOwner, deployer)
   logWideSplitter()
 
   //
