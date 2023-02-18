@@ -387,7 +387,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           }
           const problematicItemsCount = extraData.stuckKeys[problematicItemIdx].nodeOpIds.length
           const { extraDataList } = await prepareNextReportInNextFrame({ extraData })
-          await oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(problematicItemsCount - 1)
+          await oracleReportSanityChecker.setMaxNodeOperatorsPerExtraDataItemCount(problematicItemsCount - 1)
           await assert.reverts(
             oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
             `TooManyNodeOpsPerExtraDataItem(${problematicItemIdx}, ${problematicItemsCount})`
