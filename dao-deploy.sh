@@ -35,16 +35,15 @@ function pause() {
 yarn install --immutable
 yarn compile
 
-# It does not deploy DepositContract if it is specified in deployd-${NETWORK}-defaults.json
-yarn hardhat --network $NETWORK run --no-compile ./scripts/scratch/deploy-beacon-deposit-contract.js
-msg "Deposit contract deployed or is specified."
-
 rm -f deployed-$NETWORK.json
 cp deployed-$NETWORK-defaults.json deployed-$NETWORK.json
 
+# It does not deploy DepositContract if it is specified in deployed-${NETWORK}-defaults.json
+yarn hardhat --network $NETWORK run --no-compile ./scripts/scratch/deploy-beacon-deposit-contract.js
+msg "Deposit contract deployed or is specified."
+
 yarn deploy:$NETWORK:aragon-env
 msg "Aragon ENV deployed."
-
 
 # NB!
 # Need this renaming because during publishing of aragon apps and deploying their frontends
