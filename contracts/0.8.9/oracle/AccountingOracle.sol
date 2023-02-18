@@ -171,17 +171,6 @@ contract AccountingOracle is BaseOracle {
         _initialize(admin, consensusContract, consensusVersion, lastProcessingRefSlot);
     }
 
-    function _initialize(
-        address admin,
-        address consensusContract,
-        uint256 consensusVersion,
-        uint256 lastProcessingRefSlot
-    ) internal {
-        _setupRole(DEFAULT_ADMIN_ROLE, admin);
-
-        BaseOracle._initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
-    }
-
     ///
     /// Data provider interface
     ///
@@ -515,6 +504,17 @@ contract AccountingOracle is BaseOracle {
         // last processing ref. slot of the new oracle should be set to the last processed
         // ref. slot of the legacy oracle, i.e. the first slot of the last processed epoch
         return legacyProcessedEpoch * slotsPerEpoch;
+    }
+
+    function _initialize(
+        address admin,
+        address consensusContract,
+        uint256 consensusVersion,
+        uint256 lastProcessingRefSlot
+    ) internal {
+        _setupRole(DEFAULT_ADMIN_ROLE, admin);
+
+        BaseOracle._initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
     }
 
     function _handleConsensusReport(
