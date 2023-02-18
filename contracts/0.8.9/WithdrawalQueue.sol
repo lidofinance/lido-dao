@@ -326,10 +326,10 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         _initializeContractVersionTo(1);
 
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
-        _grantRole(PAUSE_ROLE, _pauser);
-        _grantRole(RESUME_ROLE, _resumer);
-        _grantRole(FINALIZE_ROLE, _finalizer);
-        _grantRole(BUNKER_MODE_REPORT_ROLE, _bunkerReporter);
+        if (_pauser != address(0)) _grantRole(PAUSE_ROLE, _pauser);
+        if (_resumer != address(0)) _grantRole(RESUME_ROLE, _resumer);
+        if (_finalizer != address(0)) _grantRole(FINALIZE_ROLE, _finalizer);
+        if (_bunkerReporter != address(0)) _grantRole(BUNKER_MODE_REPORT_ROLE, _bunkerReporter);
 
         BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(BUNKER_MODE_DISABLED_TIMESTAMP);
 
