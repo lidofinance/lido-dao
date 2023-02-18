@@ -43,12 +43,6 @@ contract PausableUntil {
         return block.timestamp < RESUME_SINCE_TIMESTAMP_POSITION.getStorageUint256();
     }
 
-    function _initializePausable() internal {
-        RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(PAUSE_INFINITELY);
-
-        emit Paused(PAUSE_INFINITELY);
-    }
-
     function _resume() internal {
         RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(block.timestamp);
 

@@ -321,7 +321,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         internal
     {
         _initializeQueue();
-        _initializePausable();
+        _pause(PAUSE_INFINITELY);
 
         _initializeContractVersionTo(1);
 

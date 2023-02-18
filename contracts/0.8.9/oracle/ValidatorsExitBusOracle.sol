@@ -98,7 +98,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
-        _initializePausable();
+        _pause(PAUSE_INFINITELY);
         _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
     }
 
