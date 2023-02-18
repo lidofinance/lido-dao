@@ -16,6 +16,7 @@ const invalidButNonZeroLocatorConfig = {
   validatorsExitBusOracle: DUMMY_ADDRESS,
   withdrawalQueue: DUMMY_ADDRESS,
   withdrawalVault: DUMMY_ADDRESS,
+  oracleDaemonConfig: DUMMY_ADDRESS
 }
 
 
@@ -56,6 +57,7 @@ async function getLocatorConfig(locatorAddress) {
     validatorsExitBusOracle: await locator.validatorsExitBusOracle(),
     withdrawalQueue: await locator.withdrawalQueue(),
     withdrawalVault: await locator.withdrawalVault(),
+    oracleDaemonConfig: await locator.oracleDaemonConfig()
   }
   return config
 }
