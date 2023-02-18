@@ -82,20 +82,10 @@ function encodeExtraDataItem(itemIndex, itemType, moduleId, nodeOperatorIds, key
 
 function encodeExtraDataItems({ stuckKeys, exitedKeys }) {
   const items = []
-  let itemType = EXTRA_DATA_TYPE_STUCK_VALIDATORS
-
-  for (let i = 0; i < stuckKeys.length; ++i) {
-    const item = stuckKeys[i]
-    items.push(encodeExtraDataItem(items.length, itemType, item.moduleId, item.nodeOpIds, item.keysCounts))
-  }
-
-  itemType = EXTRA_DATA_TYPE_EXITED_VALIDATORS
-
-  for (let i = 0; i < exitedKeys.length; ++i) {
-    const item = exitedKeys[i]
-    items.push(encodeExtraDataItem(items.length, itemType, item.moduleId, item.nodeOpIds, item.keysCounts))
-  }
-
+  const encodeItem = (item, type) =>
+    encodeExtraDataItem(items.length, type, item.moduleId, item.nodeOpIds, item.keysCounts)
+  stuckKeys.forEach((item) => items.push(encodeItem(item, EXTRA_DATA_TYPE_STUCK_VALIDATORS)))
+  exitedKeys.forEach((item) => items.push(encodeItem(item, EXTRA_DATA_TYPE_EXITED_VALIDATORS)))
   return items
 }
 
@@ -108,8 +98,8 @@ function calcExtraDataListHash(packedExtraDataList) {
 }
 async function deployOracleReportSanityCheckerForAccounting(lidoLocator, admin) {
   const churnValidatorsPerDayLimit = 100
-  const limitsList = [churnValidatorsPerDayLimit, 0, 0, 0, 0, 0, 32 * 12, 15]
-  const managersRoster = [[admin], [admin], [admin], [admin], [admin], [admin], [admin], [admin], [admin]]
+  const limitsList = [churnValidatorsPerDayLimit, 0, 0, 0, 32 * 12, 15, 16, 0, 0]
+  const managersRoster = [[admin], [admin], [admin], [admin], [admin], [admin], [admin], [admin], [admin], [admin]]
 
   const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
 

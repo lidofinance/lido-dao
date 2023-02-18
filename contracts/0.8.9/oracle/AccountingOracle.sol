@@ -98,7 +98,9 @@ contract AccountingOracle is BaseOracle {
     error CannotSubmitExtraDataBeforeMainData();
     error ExtraDataAlreadyProcessed();
     error ExtraDataListOnlySupportsSingleTx();
+    error UnexpectedExtraDataHash(bytes32 consensusHash, bytes32 receivedHash);
     error UnexpectedExtraDataFormat(uint256 expectedFormat, uint256 receivedFormat);
+    error ExtraDataItemsCountCannotBeZeroForNonEmptyData();
     error UnexpectedExtraDataItemsCount(uint256 expectedCount, uint256 receivedCount);
     error UnexpectedExtraDataIndex(uint256 expectedIndex, uint256 receivedIndex);
     error InvalidExtraDataItem(uint256 itemIndex);
@@ -320,20 +322,34 @@ contract AccountingOracle is BaseOracle {
         /// Extra data array can be passed in different formats, see below.
         ///
 
-        /// @dev Format of the extra data. Currently, only the EXTRA_DATA_FORMAT_LIST=0 is
-        /// supported. See the constant defining a specific extra data format for more info.
+        /// @dev Format of the extra data.
+        ///
+        /// Currently, only the EXTRA_DATA_FORMAT_EMPTY=0 and EXTRA_DATA_FORMAT_LIST=1
+        /// formats are supported. See the constant defining a specific data format for
+        /// more info.
+        ///
         uint256 extraDataFormat;
 
         /// @dev Hash of the extra data. See the constant defining a specific extra data
         /// format for the info on how to calculate the hash.
+        ///
+        /// Must be set to a zero hash if the oracle report contains no extra data.
+        ///
         bytes32 extraDataHash;
 
         /// @dev Number of the extra data items.
+        ///
+        /// Must be set to zero if the oracle report contains no extra data.
+        ///
         uint256 extraDataItemsCount;
     }
 
     uint256 public constant EXTRA_DATA_TYPE_STUCK_VALIDATORS = 1;
     uint256 public constant EXTRA_DATA_TYPE_EXITED_VALIDATORS = 2;
+
+    /// @notice The extra data format used to signify that the oracle report contains no extra data.
+    ///
+    uint256 public constant EXTRA_DATA_FORMAT_EMPTY = 0;
 
     /// @notice The list format for the extra data array. Used when all extra data processing
     /// fits into a single transaction.
@@ -456,7 +472,7 @@ contract AccountingOracle is BaseOracle {
     ///
     /// 0. last reference slot of legacy oracle
     /// 1. last legacy oracle's consensus report arrives
-    /// 2. new oracle is deployed and enabled, legacy oracle is disabled and upgraded to compat code
+    /// 2. new oracle is deployed and enabled, legacy oracle is disabled and upgraded to compatibility code
     /// 3. first reference slot of the new oracle
     /// 4. first new oracle's consensus report arrives
     ///
@@ -474,7 +490,7 @@ contract AccountingOracle is BaseOracle {
             uint256 genesisTime) = IConsensusContract(consensusContract).getChainConfig();
 
         {
-            // check chain spec to match the prev. one (a block is used to reduce stack alloc)
+            // check chain spec to match the prev. one (a block is used to reduce stack allocation)
             (uint256 legacyEpochsPerFrame,
                 uint256 legacySlotsPerEpoch,
                 uint256 legacySecondsPerSlot,
@@ -523,8 +539,20 @@ contract AccountingOracle is BaseOracle {
     }
 
     function _handleConsensusReportData(ReportData calldata data, uint256 prevRefSlot) internal {
-        if (data.extraDataFormat != EXTRA_DATA_FORMAT_LIST) {
-            revert UnsupportedExtraDataFormat(data.extraDataFormat);
+        if (data.extraDataFormat == EXTRA_DATA_FORMAT_EMPTY) {
+            if (data.extraDataHash != bytes32(0)) {
+                revert UnexpectedExtraDataHash(bytes32(0), data.extraDataHash);
+            }
+            if (data.extraDataItemsCount != 0) {
+                revert UnexpectedExtraDataItemsCount(0, data.extraDataItemsCount);
+            }
+        } else {
+            if (data.extraDataFormat != EXTRA_DATA_FORMAT_LIST) {
+                revert UnsupportedExtraDataFormat(data.extraDataFormat);
+            }
+            if (data.extraDataItemsCount == 0) {
+                revert ExtraDataItemsCountCannotBeZeroForNonEmptyData();
+            }
         }
 
         IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
@@ -657,7 +685,7 @@ contract AccountingOracle is BaseOracle {
 
         bytes32 dataHash = keccak256(items);
         if (dataHash != procState.dataHash) {
-            revert UnexpectedDataHash(procState.dataHash, dataHash);
+            revert UnexpectedExtraDataHash(procState.dataHash, dataHash);
         }
 
         ExtraDataIterState memory iter = ExtraDataIterState({
@@ -743,7 +771,7 @@ contract AccountingOracle is BaseOracle {
         uint256 nodeOpsCount;
         uint256 firstNodeOpId;
         bytes calldata nodeOpIds;
-        bytes calldata valsCounts;
+        bytes calldata valuesCounts;
 
         if (dataOffset + 35 > data.length) {
             // has to fit at least moduleId (3 bytes), nodeOpsCount (8 bytes),
@@ -762,9 +790,9 @@ contract AccountingOracle is BaseOracle {
             nodeOpIds.offset := add(data.offset, add(dataOffset, 11))
             nodeOpIds.length := mul(nodeOpsCount, 8)
             firstNodeOpId := shr(192, calldataload(nodeOpIds.offset))
-            valsCounts.offset := add(nodeOpIds.offset, nodeOpIds.length)
-            valsCounts.length := mul(nodeOpsCount, 16)
-            dataOffset := sub(add(valsCounts.offset, valsCounts.length), data.offset)
+            valuesCounts.offset := add(nodeOpIds.offset, nodeOpIds.length)
+            valuesCounts.length := mul(nodeOpsCount, 16)
+            dataOffset := sub(add(valuesCounts.offset, valuesCounts.length), data.offset)
         }
 
         if (moduleId == 0) {
@@ -787,10 +815,10 @@ contract AccountingOracle is BaseOracle {
 
         if (iter.itemType == EXTRA_DATA_TYPE_STUCK_VALIDATORS) {
             IStakingRouter(iter.stakingRouter)
-                .reportStakingModuleStuckValidatorsCountByNodeOperator(moduleId, nodeOpIds, valsCounts);
+                .reportStakingModuleStuckValidatorsCountByNodeOperator(moduleId, nodeOpIds, valuesCounts);
         } else {
             IStakingRouter(iter.stakingRouter)
-                .reportStakingModuleExitedValidatorsCountByNodeOperator(moduleId, nodeOpIds, valsCounts);
+                .reportStakingModuleExitedValidatorsCountByNodeOperator(moduleId, nodeOpIds, valuesCounts);
         }
 
         iter.dataOffset = dataOffset;

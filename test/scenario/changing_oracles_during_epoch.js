@@ -38,7 +38,7 @@ contract('AccountingOracle', ([appManager, voting, malicious1, malicious2, membe
     lastWithdrawalRequestIdToFinalize: 0,
     finalizationShareRate: 0,
     isBunkerMode: false,
-    extraDataFormat: 1,
+    extraDataFormat: 0,
     extraDataHash: ZERO_HASH,
     extraDataItemsCount: 0
   }

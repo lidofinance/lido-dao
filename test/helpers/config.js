@@ -26,6 +26,7 @@ const DEFAULT_DEPLOY_PARAMS = {
       shareRateDeviationBPLimit: 10000,
       maxValidatorExitRequestsPerReport: 10000,
       maxAccountingExtraDataListItemsCount: 100,
+      maxNodeOperatorsPerExtraDataItemCount: 100,
       requestTimestampMargin: 0,
       maxPositiveTokenRebase: 1000000000,
     },
@@ -37,6 +38,7 @@ const DEFAULT_DEPLOY_PARAMS = {
       shareRateDeviationLimitManagers: [],
       maxValidatorExitRequestsPerReportManagers: [],
       maxAccountingExtraDataListItemsCountManagers: [],
+      maxNodeOperatorsPerExtraDataItemCountManagers: [],
       requestTimestampMarginManagers: [],
       maxPositiveTokenRebaseManagers: [],
     }

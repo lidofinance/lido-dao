@@ -1,0 +1,21 @@
+[profile.default]
+# The source directory
+src = 'contracts'
+
+# The artifact directory
+out = 'foundry/out'
+
+# A list of paths to look for libraries in
+libs = ['node_modules', 'foundry/lib']
+
+# The test directory
+test = 'test'
+
+# Whether to cache builds or not
+cache = true
+
+# The cache directory if enabled
+cache_path  = 'foundry/cache'
+
+# Only run tests in contracts matching the specified glob pattern
+match_path = '**/test/**/*.test.sol'

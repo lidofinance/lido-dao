@@ -2,6 +2,7 @@ const hre = require('hardhat')
 const { assert } = require('chai')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { FakeValidatorKeys } = require('./signing-keys')
+const { hex } = require('./utils')
 
 /***
  * Adds new Node Operator to the registry and configures it
@@ -58,20 +59,18 @@ async function addNodeOperator(registry, config, txOptions) {
     await registry.addSigningKeys(newOperatorId, totalSigningKeysCount, ...validatorKeys.slice(), txOptions)
   }
 
-  if (depositedSigningKeysCount > 0) {
-    await registry.increaseNodeOperatorDepositedSigningKeysCount(newOperatorId, depositedSigningKeysCount, txOptions)
-  }
-
   if (vettedSigningKeysCount > 0) {
     await registry.setNodeOperatorStakingLimit(newOperatorId, vettedSigningKeysCount, txOptions)
   }
 
-  if (exitedSigningKeysCount > 0) {
-    await registry.updateExitedValidatorsCount(newOperatorId, exitedSigningKeysCount, txOptions)
+  if (depositedSigningKeysCount > 0) {
+    await registry.increaseNodeOperatorDepositedSigningKeysCount(newOperatorId, depositedSigningKeysCount, txOptions)
   }
 
   if (exitedSigningKeysCount > 0) {
-    await registry.updateExitedValidatorsCount(newOperatorId, exitedSigningKeysCount, txOptions)
+    const operatorIdsPayload = '0x' + [newOperatorId].map((id) => hex(id, 8)).join('')
+    const keysCountsPayload = '0x' + [exitedSigningKeysCount].map((count) => hex(count, 16)).join('')
+    await registry.updateExitedValidatorsCount(operatorIdsPayload, keysCountsPayload, txOptions)
   }
 
   if (!isActive) {
