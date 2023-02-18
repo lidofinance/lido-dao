@@ -66,7 +66,6 @@ struct LimitsList {
     /// @notice The positive token rebase allowed per single LidoOracle report
     /// @dev uses 1e9 precision, e.g.: 1e6 - 0.1%; 1e9 - 100%, see `setMaxPositiveTokenRebase()`
     uint256 maxPositiveTokenRebase;
-
 }
 
 /// @dev The packed version of the LimitsList struct to be effectively persisted in storage
@@ -225,7 +224,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         external
         onlyRole(ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE)
     {
-        _checkLimitValue(_oneOffCLBalanceDecreaseBPLimit, type(uint16).max);
+        _checkLimitValue(_oneOffCLBalanceDecreaseBPLimit, MAX_BASIS_POINTS);
         LimitsList memory limitsList = _limits.unpack();
         limitsList.oneOffCLBalanceDecreaseBPLimit = _oneOffCLBalanceDecreaseBPLimit;
         _updateLimits(limitsList);
@@ -237,7 +236,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         external
         onlyRole(ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE)
     {
-        _checkLimitValue(_annualBalanceIncreaseBPLimit, type(uint16).max);
+        _checkLimitValue(_annualBalanceIncreaseBPLimit, MAX_BASIS_POINTS);
         LimitsList memory limitsList = _limits.unpack();
         limitsList.annualBalanceIncreaseBPLimit = _annualBalanceIncreaseBPLimit;
         _updateLimits(limitsList);
@@ -249,7 +248,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         external
         onlyRole(SHARE_RATE_DEVIATION_LIMIT_MANAGER_ROLE)
     {
-        _checkLimitValue(_shareRateDeviationBPLimit, type(uint16).max);
+        _checkLimitValue(_shareRateDeviationBPLimit, MAX_BASIS_POINTS);
         LimitsList memory limitsList = _limits.unpack();
         limitsList.shareRateDeviationBPLimit = _shareRateDeviationBPLimit;
         _updateLimits(limitsList);
@@ -500,16 +499,18 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _actualWithdrawalVaultBalance,
         uint256 _reportedWithdrawalVaultBalance
     ) internal pure {
-        if (_reportedWithdrawalVaultBalance > _actualWithdrawalVaultBalance)
+        if (_reportedWithdrawalVaultBalance > _actualWithdrawalVaultBalance) {
             revert IncorrectWithdrawalsVaultBalance(_actualWithdrawalVaultBalance);
+        }
     }
 
     function _checkELRewardsVaultBalance(
         uint256 _actualELRewardsVaultBalance,
         uint256 _reportedELRewardsVaultBalance
     ) internal pure {
-        if (_reportedELRewardsVaultBalance > _actualELRewardsVaultBalance)
+        if (_reportedELRewardsVaultBalance > _actualELRewardsVaultBalance) {
             revert IncorrectELRewardsVaultBalance(_actualELRewardsVaultBalance);
+        }
     }
 
     function _checkOneOffCLBalanceDecrease(
@@ -520,8 +521,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         if (_preCLBalance <= _unifiedPostCLBalance) return;
         uint256 oneOffCLBalanceDecreaseBP = (MAX_BASIS_POINTS * (_preCLBalance - _unifiedPostCLBalance)) /
             _preCLBalance;
-        if (oneOffCLBalanceDecreaseBP > _limitsList.oneOffCLBalanceDecreaseBPLimit)
+        if (oneOffCLBalanceDecreaseBP > _limitsList.oneOffCLBalanceDecreaseBPLimit) {
             revert IncorrectCLBalanceDecrease(oneOffCLBalanceDecreaseBP);
+        }
     }
 
     function _checkAnnualBalancesIncrease(
@@ -546,8 +548,10 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 annualBalanceIncrease = ((365 days * MAX_BASIS_POINTS * balanceIncrease) /
             _preCLBalance) /
             _timeElapsed;
-        if (annualBalanceIncrease > _limitsList.annualBalanceIncreaseBPLimit)
+
+        if (annualBalanceIncrease > _limitsList.annualBalanceIncreaseBPLimit) {
             revert IncorrectCLBalanceIncrease(annualBalanceIncrease);
+        }
     }
 
     function _checkValidatorsChurnLimit(
@@ -595,8 +599,10 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             SafeCast.toInt256(_simulatedShareRate) - SafeCast.toInt256(actualShareRate)
         );
         uint256 finalizationShareDeviation = (MAX_BASIS_POINTS * finalizationShareDiff) / actualShareRate;
-        if (finalizationShareDeviation > _limitsList.shareRateDeviationBPLimit)
+
+        if (finalizationShareDeviation > _limitsList.shareRateDeviationBPLimit) {
             revert IncorrectFinalizationShareRate(finalizationShareDeviation);
+        }
     }
 
     function _grantRole(bytes32 _role, address[] memory _accounts) internal {
