@@ -192,6 +192,18 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       })
     })
 
+    context('only allows submitting main data for the same ref. slot once', () => {
+      it('reverts on trying to submit the second time', async () => {
+        const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
+        assert.emits(tx, 'ProcessingStarted', { refSlot: reportFields.refSlot })
+
+        await assert.reverts(
+          oracle.submitReportData(reportItems, oracleVersion, { from: member1 }),
+          'RefSlotAlreadyProcessing()'
+        )
+      })
+    })
+
     context('checks consensus version', () => {
       it('should revert if incorrect consensus version', async () => {
         await consensus.setTime(deadline)
