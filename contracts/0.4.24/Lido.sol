@@ -564,10 +564,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     * @param _lastFinalizableRequestId right boundary of requestId range if equals 0, no requests should be finalized
     * @param _simulatedShareRate share rate that was simulated by oracle when the report data created (1e27 precision)
     *
-    * NB: `_simulatedShareRate` should be calculated by the Oracle daemon
-    * invoking the method with static call and passing `_lastFinalizableRequestId` == `_simulatedShareRate` == 0
-    * plugging the returned values to the following formula:
-    * `_simulatedShareRate = (postTotalPooledEther * 1e27) / postTotalShares`
+    * NB: `_simulatedShareRate` should be calculated off-chain by calling the method with `eth_call` JSON-RPC API
+    * while passing `_lastFinalizableRequestId` == `_simulatedShareRate` == 0, and plugging the returned values
+    * to the following formula: `_simulatedShareRate = (postTotalPooledEther * 1e27) / postTotalShares`
     *
     * @return postTotalPooledEther amount of ether in the protocol after report
     * @return postTotalShares amount of shares in the protocol after report
