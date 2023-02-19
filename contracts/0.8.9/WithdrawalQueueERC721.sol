@@ -21,15 +21,15 @@ import {UnstructuredRefStorage} from "./lib/UnstructuredRefStorage.sol";
 /// NFT is minted on every request and burned on claim
 ///
 /// @author psirex, folkyatina
-contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
+contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
     using Address for address;
     using Strings for uint256;
     using EnumerableSet for EnumerableSet.UintSet;
     using UnstructuredRefStorage for bytes32;
 
-    bytes32 internal constant TOKEN_APPROVALS_POSITION = keccak256("lido.WithdrawalRequestNFT.tokenApprovals");
-    bytes32 internal constant OPERATOR_APPROVALS_POSITION = keccak256("lido.WithdrawalRequestNFT.operatorApprovals");
-    bytes32 internal constant BASE_URI_POSITION = keccak256("lido.WithdrawalRequestNFT.baseUri");
+    bytes32 internal constant TOKEN_APPROVALS_POSITION = keccak256("lido.WithdrawalQueueERC721.tokenApprovals");
+    bytes32 internal constant OPERATOR_APPROVALS_POSITION = keccak256("lido.WithdrawalQueueERC721.operatorApprovals");
+    bytes32 internal constant BASE_URI_POSITION = keccak256("lido.WithdrawalQueueERC721.baseUri");
 
     bytes32 public constant SET_BASE_URI_ROLE = keccak256("SET_BASE_URI_ROLE");
 
@@ -48,6 +48,7 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
     error TransferFromIncorrectOwner(address from, address realOwner);
     error TransferToZeroAddress();
     error TransferFromZeroAddress();
+    error TransferToThemselves();
     error TransferToNonIERC721Receiver(address);
     error InvalidOwnerAddress(address);
     error StringTooLong(string str);
@@ -178,6 +179,7 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
     /// - `msg.sender` should be approved, or approved for all, or owner
     function _transfer(address _from, address _to, uint256 _requestId) internal {
         if (_to == address(0)) revert TransferToZeroAddress();
+        if (_to == _from) revert TransferToThemselves();
         if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
         WithdrawalRequest storage request = _getQueue()[_requestId];
@@ -191,8 +193,8 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
         delete _getTokenApprovals()[_requestId];
         request.owner = payable(_to);
 
-        _getRequestsByOwner()[_to].add(_requestId);
-        _getRequestsByOwner()[_from].remove(_requestId);
+        assert(_getRequestsByOwner()[_from].remove(_requestId));
+        assert(_getRequestsByOwner()[_to].add(_requestId));
 
         _emitTransfer(_from, _to, _requestId);
     }

@@ -53,6 +53,27 @@ contract('LidoLocator', ([deployer, agent]) => {
         assert(actual === expected, 'coreComponents mismatch')
       }
     })
+
+    it('oracleReportComponentsForLido() matches', async () => {
+      const actualReportComponents = await lidoLocatorProxy.oracleReportComponentsForLido()
+
+      const expectedReportComponents = [
+        initialConfig.accountingOracle,
+        initialConfig.elRewardsVault,
+        initialConfig.oracleReportSanityChecker,
+        initialConfig.burner,
+        initialConfig.withdrawalQueue,
+        initialConfig.withdrawalVault,
+        initialConfig.postTokenRebaseReceiver
+      ]
+
+      for (let i = 0; i < actualReportComponents.length; i++) {
+        const actual = actualReportComponents[i]
+        const expected = expectedReportComponents[i]
+
+        assert(actual === expected, 'reportComponentsForLido mismatch')
+      }
+    })
   })
 
   describe('breaking constructor', () => {
@@ -105,6 +126,27 @@ contract('LidoLocator', ([deployer, agent]) => {
           const expected = expectedCoreComponents[i]
 
           assert(actual === expected, 'coreComponents mismatch')
+        }
+      })
+
+      it('oracleReportComponentsForLido() matches', async () => {
+        const actualReportComponents = await lidoLocatorProxy.oracleReportComponentsForLido()
+
+        const expectedReportComponents = [
+          initialConfig.accountingOracle,
+          initialConfig.elRewardsVault,
+          initialConfig.oracleReportSanityChecker,
+          initialConfig.burner,
+          initialConfig.withdrawalQueue,
+          initialConfig.withdrawalVault,
+          initialConfig.postTokenRebaseReceiver
+        ]
+
+        for (let i = 0; i < actualReportComponents.length; i++) {
+          const actual = actualReportComponents[i]
+          const expected = expectedReportComponents[i]
+
+          assert(actual === expected, 'reportComponentsForLido mismatch')
         }
       })
     })

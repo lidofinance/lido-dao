@@ -217,8 +217,8 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         }
         const reportItems = getReportDataItems(newReportFields)
 
-        const reportFiledsPrevVersion = { ...reportFields, consensusVersion: incorrectPrevVersion }
-        const reportItemsPrevVersion = getReportDataItems(reportFiledsPrevVersion)
+        const reportFieldsPrevVersion = { ...reportFields, consensusVersion: incorrectPrevVersion }
+        const reportItemsPrevVersion = getReportDataItems(reportFieldsPrevVersion)
 
         await assert.reverts(
           oracle.submitReportData(reportItems, oracleVersion, { from: member1 }),

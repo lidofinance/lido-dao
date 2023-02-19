@@ -53,7 +53,7 @@ async function pushOracleReport(consensus, oracle, numValidators, clBalance, elR
     lastWithdrawalRequestIdToFinalize: 0,
     finalizationShareRate: 0,
     isBunkerMode: false,
-    extraDataFormat: 1,
+    extraDataFormat: 0,
     extraDataHash: ZERO_BYTES32,
     extraDataItemsCount: 0
   }

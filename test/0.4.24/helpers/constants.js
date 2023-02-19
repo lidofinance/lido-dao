@@ -16,5 +16,5 @@ const ACCOUNTS_AND_KEYS = [
 module.exports = {
   ZERO_ADDRESS,
   MAX_UINT256,
-  ACCOUNTS_AND_KEYS
+  ACCOUNTS_AND_KEYS,
 }
