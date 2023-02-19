@@ -33,7 +33,7 @@ contract GenericStub {
         bytes32 t4;
     }
 
-    struct ETHForward {
+    struct ForwardETH {
         address payable recipient;
         uint256 value;
     }
@@ -46,7 +46,7 @@ contract GenericStub {
         /// @notice events to emit during method execution
         Log[] logs;
         /// @notice optional ETH send on method execution
-        ETHForward ethForward;
+        ForwardETH forwardETH;
         /// @notice shall method ends with revert instead of return
         bool isRevert;
         /// @notice index of the state to set as current after stub call
@@ -75,7 +75,7 @@ contract GenericStub {
         uint256 newStubIndex = currentState.stubs.length - 1;
         currentState.stubs[newStubIndex].input = _stub.input;
         currentState.stubs[newStubIndex].output = _stub.output;
-        currentState.stubs[newStubIndex].ethForward = _stub.ethForward;
+        currentState.stubs[newStubIndex].forwardETH = _stub.forwardETH;
         currentState.stubs[newStubIndex].isRevert = _stub.isRevert;
         currentState.stubs[newStubIndex].nextStateIndexOneBased = _stub.nextStateIndexOneBased;
 
@@ -98,15 +98,9 @@ contract GenericStub {
         _currentStateIndexOneBased = _stateIndex;
     }
 
-
-    // function GenericStub__cloneState(uint256 _clonedStateIndex) external {
-    //     _states.push(_getState(_clonedStateIndex));
-    // }
-
-
     fallback() external payable {
         MethodStub memory stub = _getMethodStub();
-        _forwardETH(stub.ethForward);
+        _forwardETH(stub.forwardETH);
         _logEvents(stub.logs);
         bytes memory output = stub.output;
         uint256 outputLength = output.length;
@@ -141,7 +135,7 @@ contract GenericStub {
         }
     }
 
-    function _forwardETH(ETHForward memory _ethForward) internal {
+    function _forwardETH(ForwardETH memory _ethForward) internal {
         if (_ethForward.value == 0) return;
         new ETHForwarder{value: _ethForward.value}(_ethForward.recipient);
         emit GenericStub__ethSent(_ethForward.recipient, _ethForward.value);
