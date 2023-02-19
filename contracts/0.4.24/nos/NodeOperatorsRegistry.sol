@@ -635,7 +635,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
             uint256[] memory activeKeysCountAfterAllocation
         ) = _getSigningKeysAllocationData(_depositsCount);
 
-        require(allocatedKeysCount == _depositsCount, "INSUFFICIENT_KEYS_COUNT");
+        require(allocatedKeysCount == _depositsCount, "INVALID_ALLOCATED_KEYS_COUNT");
 
         (publicKeys, signatures) = _loadAllocatedSigningKeys(
             allocatedKeysCount,
@@ -734,6 +734,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         allocatedKeysCount =
             MinFirstAllocationStrategy.allocate(activeKeyCountsAfterAllocation, activeKeysCapacities, uint64(_keysCount));
 
+        /// @dev method NEVER allocates more keys than was requested
         assert(allocatedKeysCount <= _keysCount);
     }
 

@@ -1834,15 +1834,15 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await assert.reverts(app.obtainDepositData(10, '0x', { from: nobody }), 'APP_AUTH_FAILED')
     })
 
-    it('reverts with error "INSUFFICIENT_KEYS_COUNT" when no validators to deposit to', async () => {
+    it('reverts with error "INVALID_ALLOCATED_KEYS_COUNT" when no validators to deposit to', async () => {
       await app.testing_resetRegistry()
       const nodeOperatorsCount = await app.getNodeOperatorsCount()
       assert.equals(nodeOperatorsCount, 0)
       const keysToAllocate = 10
-      await assert.reverts(app.testing_obtainDepositData(keysToAllocate), 'INSUFFICIENT_KEYS_COUNT')
+      await assert.reverts(app.testing_obtainDepositData(keysToAllocate), 'INVALID_ALLOCATED_KEYS_COUNT')
     })
 
-    it('reverts with error "INSUFFICIENT_KEYS_COUNT" when module has not enough keys', async () => {
+    it('reverts with error "INVALID_ALLOCATED_KEYS_COUNT" when module has not enough keys', async () => {
       await app.testing_resetRegistry()
 
       await app.addNodeOperator('fo o', ADDRESS_1, { from: voting })
@@ -1861,7 +1861,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(stakingModuleSummary.depositableValidatorsCount, 6)
 
       const keysToAllocate = 7
-      await assert.reverts(app.testing_obtainDepositData(keysToAllocate), 'INSUFFICIENT_KEYS_COUNT')
+      await assert.reverts(app.testing_obtainDepositData(keysToAllocate), 'INVALID_ALLOCATED_KEYS_COUNT')
     })
 
     it('loads correct signing keys', async () => {
@@ -1913,7 +1913,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(stakingModuleSummary.depositableValidatorsCount, 3)
 
       keysToAllocate = 10
-      await assert.reverts(app.testing_obtainDepositData(keysToAllocate), 'INSUFFICIENT_KEYS_COUNT')
+      await assert.reverts(app.testing_obtainDepositData(keysToAllocate), 'INVALID_ALLOCATED_KEYS_COUNT')
 
       keysToAllocate = 3
       receipt = await app.testing_obtainDepositData(keysToAllocate)
@@ -1934,7 +1934,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(stakingModuleSummary.depositableValidatorsCount, 0)
 
       keysToAllocate = 1
-      await assert.reverts(app.testing_obtainDepositData(keysToAllocate), 'INSUFFICIENT_KEYS_COUNT')
+      await assert.reverts(app.testing_obtainDepositData(keysToAllocate), 'INVALID_ALLOCATED_KEYS_COUNT')
     })
 
     it('increases keysOpIndex & changes nonce', async () => {

@@ -677,11 +677,10 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * @dev Returns depositable ether amount.
      * Takes into account unfinalized stETH required by WithdrawalQueue
      */
-    function getDepositableEther() public view returns (uint256 depositableEther) {
+    function getDepositableEther() public view returns (uint256) {
         uint256 bufferedEther = _getBufferedEther();
         uint256 withdrawalReserve = IWithdrawalQueue(getLidoLocator().withdrawalQueue()).unfinalizedStETH();
-
-        depositableEther = bufferedEther > withdrawalReserve ? bufferedEther - withdrawalReserve : 0;
+        return bufferedEther > withdrawalReserve ? bufferedEther - withdrawalReserve : 0;
     }
 
     /**
@@ -702,20 +701,21 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             stakingRouter.getStakingModuleMaxDepositsCount(_stakingModuleId, getDepositableEther())
         );
         if (depositsCount == 0) return;
+
         uint256 depositsValue = depositsCount.mul(DEPOSIT_SIZE);
-
-        /// @dev At first update the local state of the contract to reduce the chances of the
-        ///     reentrancy attack, even though the StakingRouter is a trusted contract
-        _markAsUnbuffered(depositsValue);
-
-        /// @dev transfer ether to StakingRouter and make a deposit at the same time. All the ether
-        ///     sent to StakingRouter is counted as deposited. If StakingRouter can't deposit all
-        ///     passed ether it will revert the whole transaction
-        stakingRouter.deposit.value(depositsValue)(depositsCount, _stakingModuleId, _depositCalldata);
+        /// @dev firstly update the local state of the contract to prevent a reentrancy attack,
+        ///     even if the StakingRouter is a trusted contract.
+        BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().sub(depositsValue));
+        emit Unbuffered(depositsValue);
 
         uint256 newDepositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(depositsCount);
         DEPOSITED_VALIDATORS_POSITION.setStorageUint256(newDepositedValidators);
         emit DepositedValidatorsChanged(newDepositedValidators);
+
+        /// @dev transfer ether to StakingRouter and make a deposit at the same time. All the ether
+        ///     sent to StakingRouter is counted as deposited. If StakingRouter can't deposit all
+        ///     passed ether it MUST revert the whole transaction (never happens in normal circumstances)
+        stakingRouter.deposit.value(depositsValue)(depositsCount, _stakingModuleId, _depositCalldata);
     }
 
     /// DEPRECATED PUBLIC METHODS
@@ -1075,16 +1075,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         address treasury = getLidoLocator().treasury();
         _transferShares(address(this), treasury, treasuryReward);
         _emitTransferAfterMintingShares(treasury, treasuryReward);
-    }
-
-    /**
-    * @dev Records a deposit to the deposit_contract.deposit function
-    * @param _amount Total amount deposited to the Consensus Layer side
-    */
-    function _markAsUnbuffered(uint256 _amount) internal {
-        BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().sub(_amount));
-
-        emit Unbuffered(_amount);
     }
 
     /**

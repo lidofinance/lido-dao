@@ -50,7 +50,6 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint256 currentNodeOpStuckValidatorsCount
     );
     error InvalidDepositsValue(uint256 etherValue);
-    error DepositsCountMismatch(uint256 desiredDepositsCount, uint256 actualDepositsCount);
 
     enum StakingModuleStatus {
         Active, // deposits and rewards allowed
@@ -1018,7 +1017,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         );
         uint256 etherBalanceAfterDeposits = address(this).balance;
 
-        /// @dev make sure that was deposited exactly sent amount of ETH
+        /// @dev all sent ETH must be deposited and self balance stay the same
         assert(etherBalanceBeforeDeposits - etherBalanceAfterDeposits == depositsValue);
 
         stakingModule.lastDepositAt = uint64(block.timestamp);
