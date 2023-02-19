@@ -1209,7 +1209,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      *    (i.e., postpone the extra rewards to be applied during the next rounds)
      * 5. Invoke finalization of the withdrawal requests
      * 6. Distribute protocol fee (treasury & node operators)
-     * 7. Burn excess shares (withdrawn stETH at least)
+     * 7. Burn excess shares within the allowed limit (can postpone some shares to be burnt later)
      * 8. Complete token rebase by informing observers (emit an event and call the external receivers if any)
      * 9. Sanity check for the provided simulated share rate
      */
@@ -1294,8 +1294,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         );
 
         // Step 7.
-        // Burn excess shares (withdrawn stETH at least)
-        uint256 burntWithdrawalQueueShares = _burnSharesLimited(
+        // Burn excess shares within the allowed limit (can postpone some shares to be burnt later)
+        // Return actually burnt shares of the current report's finalized withdrawal requests to use in sanity checks
+        uint256 burntCurrentWithdrawalShares = _burnSharesLimited(
             IBurner(_contracts.burner),
             _contracts.withdrawalQueue,
             reportContext.sharesToBurnFromWithdrawalQueue,
@@ -1319,7 +1320,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
                 postTotalPooledEther,
                 postTotalShares,
                 reportContext.etherToLockOnWithdrawalQueue,
-                burntWithdrawalQueueShares,
+                burntCurrentWithdrawalShares,
                 _reportedData.simulatedShareRate
             );
         }
@@ -1383,17 +1384,20 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     /*
      * @dev Perform burning of `stETH` shares via the dedicated `Burner` contract.
      *
-     * NB: some of the burning amount can be postponed for the next reports
-     * if positive token rebase smoothened.
+     * NB: some of the burning amount can be postponed for the next reports if positive token rebase smoothened.
+     * It's possible that underlying shares of the current oracle report's finalized withdrawals won't be burnt
+     * completely in a single oracle report round due to the provided `_sharesToBurnLimit` limit
      *
-     * @return burnt shares from withdrawals queue (when some requests finalized)
+     * @return shares actually burnt for the current oracle report's finalized withdrawals
+     * these shares are assigned to be burnt most recently, so the amount can be calculated deducting
+     * `postponedSharesToBurn` shares (if any) after the burn commitment & execution
      */
     function _burnSharesLimited(
         IBurner _burner,
         address _withdrawalQueue,
         uint256 _sharesToBurnFromWithdrawalQueue,
         uint256 _sharesToBurnLimit
-    ) internal returns (uint256 burntWithdrawalsShares) {
+    ) internal returns (uint256 burntCurrentWithdrawalShares) {
         if (_sharesToBurnFromWithdrawalQueue > 0) {
             _burner.requestBurnShares(_withdrawalQueue, _sharesToBurnFromWithdrawalQueue);
         }
@@ -1409,7 +1413,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         (uint256 coverShares, uint256 nonCoverShares) = _burner.getSharesRequestedToBurn();
         uint256 postponedSharesToBurn = coverShares.add(nonCoverShares);
 
-        burntWithdrawalsShares =
+        burntCurrentWithdrawalShares =
             postponedSharesToBurn < _sharesToBurnFromWithdrawalQueue ?
             _sharesToBurnFromWithdrawalQueue - postponedSharesToBurn : 0;
     }
