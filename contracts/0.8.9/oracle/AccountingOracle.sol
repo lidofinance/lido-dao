@@ -101,6 +101,7 @@ contract AccountingOracle is BaseOracle {
     error UnexpectedExtraDataHash(bytes32 consensusHash, bytes32 receivedHash);
     error UnexpectedExtraDataFormat(uint256 expectedFormat, uint256 receivedFormat);
     error ExtraDataItemsCountCannotBeZeroForNonEmptyData();
+    error ExtraDataHashCannotBeZeroForNonEmptyData();
     error UnexpectedExtraDataItemsCount(uint256 expectedCount, uint256 receivedCount);
     error UnexpectedExtraDataIndex(uint256 expectedIndex, uint256 receivedIndex);
     error InvalidExtraDataItem(uint256 itemIndex);
@@ -168,17 +169,6 @@ contract AccountingOracle is BaseOracle {
         if (admin == address(0)) revert AdminCannotBeZero();
 
         _initialize(admin, consensusContract, consensusVersion, lastProcessingRefSlot);
-    }
-
-    function _initialize(
-        address admin,
-        address consensusContract,
-        uint256 consensusVersion,
-        uint256 lastProcessingRefSlot
-    ) internal {
-        _setupRole(DEFAULT_ADMIN_ROLE, admin);
-
-        BaseOracle._initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
     }
 
     ///
@@ -516,6 +506,17 @@ contract AccountingOracle is BaseOracle {
         return legacyProcessedEpoch * slotsPerEpoch;
     }
 
+    function _initialize(
+        address admin,
+        address consensusContract,
+        uint256 consensusVersion,
+        uint256 lastProcessingRefSlot
+    ) internal {
+        _setupRole(DEFAULT_ADMIN_ROLE, admin);
+
+        BaseOracle._initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
+    }
+
     function _handleConsensusReport(
         ConsensusReport memory /* report */,
         uint256 /* prevSubmittedRefSlot */,
@@ -552,6 +553,9 @@ contract AccountingOracle is BaseOracle {
             }
             if (data.extraDataItemsCount == 0) {
                 revert ExtraDataItemsCountCannotBeZeroForNonEmptyData();
+            }
+             if (data.extraDataHash == bytes32(0)) {
+                revert ExtraDataHashCannotBeZeroForNonEmptyData();
             }
         }
 
@@ -671,16 +675,16 @@ contract AccountingOracle is BaseOracle {
             revert CannotSubmitExtraDataBeforeMainData();
         }
 
+        if (procState.dataFormat != EXTRA_DATA_FORMAT_LIST) {
+            revert UnexpectedExtraDataFormat(procState.dataFormat, EXTRA_DATA_FORMAT_LIST);
+        }
+
         if (procState.itemsProcessed == procState.itemsCount) {
             revert ExtraDataAlreadyProcessed();
         }
 
         if (procState.itemsProcessed != 0) {
             revert ExtraDataListOnlySupportsSingleTx();
-        }
-
-        if (procState.dataFormat != EXTRA_DATA_FORMAT_LIST) {
-            revert UnexpectedExtraDataFormat(procState.dataFormat, EXTRA_DATA_FORMAT_LIST);
         }
 
         bytes32 dataHash = keccak256(items);
@@ -759,10 +763,9 @@ contract AccountingOracle is BaseOracle {
             dataOffset = iter.dataOffset;
         }
 
-        if (maxNodeOperatorsPerItem > 0) {
-            IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
-                .checkNodeOperatorsPerExtraDataItemCount(maxNodeOperatorItemIndex, maxNodeOperatorsPerItem);
-        }
+        assert(maxNodeOperatorsPerItem > 0);
+        IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
+            .checkNodeOperatorsPerExtraDataItemCount(maxNodeOperatorItemIndex, maxNodeOperatorsPerItem);
     }
 
     function _processExtraDataItem(bytes calldata data, ExtraDataIterState memory iter) internal returns (uint256) {

@@ -10,6 +10,8 @@ const {
   packExtraDataList,
   calcExtraDataListHash,
   calcReportDataHash,
+  ZERO_HASH,
+  EXTRA_DATA_FORMAT_EMPTY,
   EXTRA_DATA_FORMAT_LIST,
   EXTRA_DATA_TYPE_STUCK_VALIDATORS
 } = require('./accounting-oracle-deploy.test')
@@ -191,6 +193,35 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const { extraDataList, reportFields } = await prepareNextReportInNextFrame()
         const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
         assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
+      })
+    })
+
+    context('checks items count', () => {
+      it('reverts with UnexpectedExtraDataItemsCount if there was wrong amount of items', async () => {
+        const wrongItemsCount = 1
+        const reportFields = {
+          extraDataItemsCount: wrongItemsCount
+        }
+        const { extraDataList, extraDataItems } = await prepareNextReportInNextFrame({ reportFields })
+        await assert.reverts(
+          oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+          `UnexpectedExtraDataItemsCount(${reportFields.extraDataItemsCount}, ${extraDataItems.length})`
+        )
+      })
+    })
+
+    context('enforces data format', () => {
+      it('reverts with UnexpectedExtraDataFormat if there was empty format submitted on first phase', async () => {
+        const reportFields = {
+          extraDataHash: ZERO_HASH,
+          extraDataFormat: EXTRA_DATA_FORMAT_EMPTY,
+          extraDataItemsCount: 0
+        }
+        const { extraDataList } = await prepareNextReportInNextFrame({ reportFields })
+        await assert.reverts(
+          oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+          `UnexpectedExtraDataFormat(${EXTRA_DATA_FORMAT_EMPTY}, ${EXTRA_DATA_FORMAT_LIST})`
+        )
       })
     })
 
@@ -486,6 +517,34 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           )
         })
       })
+
+      it('reverts on extra bytes in data', async () => {
+        await consensus.advanceTimeToNextFrameStart()
+        const { refSlot } = await consensus.getCurrentFrame()
+
+        const extraDataItems = encodeExtraDataItems(getDefaultExtraData())
+        const extraDataList = packExtraDataList(extraDataItems) + 'ffff'
+        const extraDataHash = calcExtraDataListHash(extraDataList)
+
+        const reportFields = getDefaultReportFields({
+          extraDataHash,
+          extraDataItemsCount: extraDataItems.length,
+          refSlot
+        })
+
+        const reportItems = getReportDataItems(reportFields)
+        const reportHash = calcReportDataHash(reportItems)
+
+        await consensus.submitReport(reportFields.refSlot, reportHash, CONSENSUS_VERSION, {
+          from: member1
+        })
+        await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
+
+        await assert.reverts(
+          oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+          'UnexpectedExtraDataIndex(5, 16776960)'
+        )
+      })
     })
 
     context('delivers the data to staking router', () => {
@@ -520,6 +579,29 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           assert.equals(call.keysCounts, '0x' + item.keysCounts.map((count) => hex(count, 16)).join(''))
         }
       })
+    })
+
+    it('reverts if extraData has already been already processed', async () => {
+      const { extraDataItems, extraDataList } = await prepareNextReportInNextFrame()
+      await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
+      const state = await oracle.getExtraDataProcessingState()
+      assert.equals(+state.itemsCount, extraDataItems.length)
+      assert.equals(+state.itemsCount, state.itemsProcessed)
+      await assert.revertsWithCustomError(
+        oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+        `ExtraDataAlreadyProcessed()`
+      )
+    })
+
+    it('reverts if main data has not been processed yet', async () => {
+      await consensus.advanceTimeToNextFrameStart()
+      const { refSlot } = await consensus.getCurrentFrame()
+      const { reportFields, reportHash, extraDataList } = getReportData({ reportFields: { refSlot } })
+      await consensus.submitReport(reportFields.refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
+      await assert.revertsWithCustomError(
+        oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+        'CannotSubmitExtraDataBeforeMainData()'
+      )
     })
 
     it('updates extra data processing state', async () => {
