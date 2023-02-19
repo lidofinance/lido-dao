@@ -35,7 +35,7 @@ hre.contract('Lido deposit scenarios', ([staker, depositor]) => {
       depositSecurityModuleFactory: async () => ({ address: depositor }),
       depositContractFactory: () => depositContractStub,
       postSetup: async ({ pool, lidoLocator, eip712StETH, voting }) => {
-        await pool.initialize(lidoLocator.address, eip712StETH.address, { value: wei.str(wei`1 ether`) })
+        await pool.initialize(lidoLocator.address, eip712StETH.address, { value: wei.str`1 ether` })
         await pool.resumeProtocolAndStaking({ from: voting.address })
       }
     })
@@ -195,7 +195,7 @@ hre.contract('Lido deposit scenarios', ([staker, depositor]) => {
     it('invalid ETH value was used for deposits in StakingRouter', async () => {
       // on each deposit call forward back 1 ether to the staking router
       await GenericStub.stub(depositContractStub, 'deposit', {
-        forwardETH: { value: wei.str(wei`1 ether`), recipient: stakingRouter.address }
+        forwardETH: { value: wei.str`1 ether`, recipient: stakingRouter.address }
       })
 
       const submitAmount = wei`320 ether`
