@@ -472,9 +472,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     /// @notice Applies sanity checks to the simulated share rate for withdrawal requests finalization
     /// @param _postTotalPooledEther total pooled ether after report applied
     /// @param _postTotalShares total shares after report applied
-    /// @param _etherLockedOnWithdrawalQueue ether to lock on withdrawal queue
-    /// @param _sharesBurntFromWithdrawalQueue shares assigned to burn from withdrawal queue
-    /// @param _simulatedShareRate share rate provided with the oracle report (simulated via static call)
+    /// @param _etherLockedOnWithdrawalQueue ether locked on withdrawal queue for the current oracle report
+    /// @param _sharesBurntFromWithdrawalQueue shares burnt from withdrawal queue for the current oracle report
+    /// @param _simulatedShareRate share rate provided with the oracle report (simulated via off-chain "eth_call")
     function checkSimulatedShareRate(
         uint256 _postTotalPooledEther,
         uint256 _postTotalShares,
@@ -485,8 +485,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         LimitsList memory limitsList = _limits.unpack();
 
         // Pretending that withdrawals were not processed
-        // virtually return locked ether back to postTotalPooledEther
-        // virtually return burnt shares back to postTotalShares
+        // virtually return locked ether back to `_postTotalPooledEther`
+        // virtually return burnt just finalized withdrawals shares back to `_postTotalShares`
         _checkSimulatedShareRate(
             limitsList,
             _postTotalPooledEther + _etherLockedOnWithdrawalQueue,
