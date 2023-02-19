@@ -128,15 +128,15 @@ contract GenericStub {
             bytes memory data = _logs[i].data;
             uint256 dataLength = data.length;
             if (_logs[i].logType == LogType.LOG0) {
-                assembly { log0(data, dataLength) }
+                assembly { log0(add(data, 32), dataLength) }
             } else if (_logs[i].logType == LogType.LOG1) {
-                assembly { log1(data, dataLength, t1) }
+                assembly { log1(add(data, 32), dataLength, t1) }
             } else if (_logs[i].logType == LogType.LOG2) {
-                assembly { log2(data, dataLength, t1, t2) }
+                assembly { log2(add(data, 32), dataLength, t1, t2) }
             } else if (_logs[i].logType == LogType.LOG3) {
-                assembly { log3(data, dataLength, t1, t2, t3) }
+                assembly { log3(add(data, 32), dataLength, t1, t2, t3) }
             } else if (_logs[i].logType == LogType.LOG4) {
-                assembly { log4(data, dataLength, t1, t2, t3, t4) }
+                assembly { log4(add(data, 32), dataLength, t1, t2, t3, t4) }
             }
         }
     }
