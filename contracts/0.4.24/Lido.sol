@@ -160,7 +160,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
-    /// @dev special value for the last finalizable withdrawal request id
+    /// @dev special value to not finalize withdrawal requests
+    /// see the `_lastFinalizableRequestId` arg for `handleOracleReport()`
     uint256 private constant DONT_FINALIZE_WITHDRAWALS = 0;
 
     /// @dev storage slot position for the Lido protocol contracts locator
