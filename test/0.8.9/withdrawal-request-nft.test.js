@@ -310,5 +310,20 @@ hre.contract(
         assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderWstETHTokenIds[0]), stETH.address)
       })
     })
+
+    describe('Burn', () => {
+      it('balanceOf decreases after claim', async () => {
+        const balanceBefore = await withdrawalQueueERC721.balanceOf(nftHolderStETH);
+
+        const batch = await withdrawalQueueERC721.finalizationBatch(3, shareRate(1))
+        await withdrawalQueueERC721.finalize(3, { from: deployer, value: batch.ethToLock })
+
+        await withdrawalQueueERC721.methods['claimWithdrawal(uint256)'](nftHolderStETHTokenIds[0], {
+          from: nftHolderStETH
+        })
+
+        assert.equals(balanceBefore - await withdrawalQueueERC721.balanceOf(nftHolderStETH), 1)
+      })
+    })
   }
 )

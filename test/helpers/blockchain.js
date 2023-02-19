@@ -7,6 +7,17 @@ async function waitBlocks(numBlocksToMine) {
   return block
 }
 
+async function advanceChainTime(seconds) {
+  await hre.network.provider.send('evm_increaseTime', [seconds])
+  await hre.network.provider.send('evm_mine')
+}
+
+async function getCurrentBlockTimestamp() {
+  const blockNum = await ethers.provider.getBlockNumber();
+  const block = await ethers.provider.getBlock(blockNum);
+  return block.timestamp;
+}
+
 /**
  * Allows to make snapshot of the blockchain and revert to the previous state
  */
@@ -38,8 +49,11 @@ function impersonate(provider, address) {
   return provider.send('hardhat_impersonateAccount', [address])
 }
 
+
 module.exports = {
   EvmSnapshot,
   waitBlocks,
-  impersonate
+  advanceChainTime,
+  getCurrentBlockTimestamp,
+  impersonate,
 }

@@ -27,6 +27,7 @@ contract LidoLocator is ILidoLocator {
         address validatorsExitBusOracle;
         address withdrawalQueue;
         address withdrawalVault;
+        address oracleDaemonConfig;
     }
 
     error ZeroAddress();
@@ -44,6 +45,7 @@ contract LidoLocator is ILidoLocator {
     address public immutable validatorsExitBusOracle;
     address public immutable withdrawalQueue;
     address public immutable withdrawalVault;
+    address public immutable oracleDaemonConfig;
 
     /**
      * @notice declare service locations
@@ -64,6 +66,7 @@ contract LidoLocator is ILidoLocator {
         validatorsExitBusOracle = _assertNonZero(_config.validatorsExitBusOracle);
         withdrawalQueue = _assertNonZero(_config.withdrawalQueue);
         withdrawalVault = _assertNonZero(_config.withdrawalVault);
+        oracleDaemonConfig = _assertNonZero(_config.oracleDaemonConfig);
     }
 
     function coreComponents() external view returns(
