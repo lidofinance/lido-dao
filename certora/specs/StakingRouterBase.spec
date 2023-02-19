@@ -10,7 +10,8 @@ methods {
     updateStuckValidatorsCount(uint256, uint256) => DISPATCHER(true)
     updateExitedValidatorsCount(uint256, uint256) => DISPATCHER(true) 
     updateRefundedValidatorsCount(uint256, uint256) => DISPATCHER(true)
-    obtainDepositData(uint256, bytes) returns (uint256, bytes, bytes) => DISPATCHER(true)
+    // Will be set back to dispatcher once the implementation of loadKeys is replaced.
+    obtainDepositData(uint256, bytes) returns (uint256, bytes, bytes) => NONDET // DISPATCHER(true)
     handleRewardsMinted(uint256) => DISPATCHER(true)
     onWithdrawalCredentialsChanged() => DISPATCHER(true)
     onAllValidatorCountersUpdated() => DISPATCHER(true)
@@ -44,6 +45,7 @@ methods {
      getStakingModuleFeeById(uint256) returns (uint16) envfree
      getStakingModuleTreasuryFeeById(uint256) returns (uint16) envfree
      getStakingModuleTargetShareById(uint256) returns (uint16) envfree
+     getStakingModuleNameLengthByIndex(uint256) returns (uint256) envfree
 }
 
 /**************************************************

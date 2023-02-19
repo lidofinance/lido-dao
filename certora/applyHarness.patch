@@ -1,5 +1,5 @@
 --- ../contracts/0.8.9/StakingRouter.sol	2023-02-14 08:59:54.251839900 +0200
-+++ 	2023-02-16 17:06:45.583614300 +0200
++++ 	2023-02-19 15:53:46.200051800 +0200
 @@ -4,23 +4,23 @@
  /* See contracts/COMPILERS.md */
  pragma solidity 0.8.9;
@@ -70,7 +70,7 @@
  
      /// @notice Helper for Lido contract (DEPRECATED)
 --- ../contracts/0.8.9/BeaconChainDepositor.sol	2023-02-14 08:59:54.247838500 +0200
-+++ 	2023-02-14 09:39:23.855343900 +0200
++++ 	2023-02-19 15:53:46.210509200 +0200
 @@ -4,7 +4,7 @@
  // See contracts/COMPILERS.md
  pragma solidity 0.8.9;
@@ -99,7 +99,7 @@
  
      /// @dev computes the deposit_root_hash required by official Beacon Deposit contract
 --- ../contracts/0.4.24/nos/NodeOperatorsRegistry.sol	2023-02-14 15:15:48.017349700 +0200
-+++ 	2023-02-16 11:38:30.562026700 +0200
++++ 	2023-02-19 15:54:10.383922900 +0200
 @@ -9,15 +9,15 @@
  import {SafeMath64} from "@aragon/os/contracts/lib/math/SafeMath64.sol";
  import {UnstructuredStorage} from "@aragon/os/contracts/common/UnstructuredStorage.sol";
@@ -125,7 +125,25 @@
  
  interface IStETH {
      function sharesOf(address _account) external view returns (uint256);
-@@ -904,23 +904,26 @@
+@@ -639,6 +639,9 @@
+         if (activeNodeOperatorIndex == 0) return (0, new uint256[](0), new uint256[](0));
+ 
+         /// @dev shrink the length of the resulting arrays if some active node operators have no available keys to be deposited
++        /// @notice Certora: restrict the count to avoid the assembly block below.
++        require(activeNodeOperatorIndex >= activeNodeOperatorsCount);
++        /*
+         if (activeNodeOperatorIndex < activeNodeOperatorsCount) {
+             assembly {
+                 mstore(nodeOperatorIds, activeNodeOperatorIndex)
+@@ -646,6 +649,7 @@
+                 mstore(activeKeysCapacities, activeNodeOperatorIndex)
+             }
+         }
++        */
+ 
+         allocatedKeysCount =
+             MinFirstAllocationStrategy.allocate(activeKeyCountsAfterAllocation, activeKeysCapacities, uint64(_keysCount));
+@@ -904,23 +908,26 @@
          view
          returns (bytes key, bytes depositSignature, bool used)
      {
@@ -154,7 +172,7 @@
          _onlyExistedNodeOperator(_nodeOperatorId);
  
          Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
-@@ -934,6 +937,7 @@
+@@ -934,6 +941,7 @@
              SIGNING_KEYS_MAPPING_NAME.loadKeySigAndAppend(_nodeOperatorId, _offset + i, i, pubkeys, signatures);
              used[i] = (_offset + i) < depositedSigningKeysCount;
          }
@@ -163,7 +181,7 @@
  
      /// @notice Returns the type of the staking module
 --- ../contracts/0.4.24/lib/SigningKeys.sol	2023-02-15 09:44:24.460316000 +0200
-+++ 	2023-02-16 18:45:36.767814600 +0200
++++ 	2023-02-19 15:53:46.216528600 +0200
 @@ -6,7 +6,7 @@
  
  import {SafeMath} from "@aragon/os/contracts/lib/math/SafeMath.sol";

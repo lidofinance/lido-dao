@@ -53,6 +53,11 @@ contract StakingRouterHarness is StakingRouter {
         return stakingModule.targetShare;
     }
 
+    function getStakingModuleNameLengthByIndex(uint256 index) public view returns (uint256) {
+        StakingModule storage stakingModule = _getStakingModuleByIndex(index);
+        return bytes(stakingModule.name).length;
+    }
+
     function getStakingModuleIndexById(uint256 _stakingModuleId) public view returns (uint256) {
         return _getStakingModuleIndexById(_stakingModuleId);
     }

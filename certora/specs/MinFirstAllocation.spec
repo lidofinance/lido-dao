@@ -17,6 +17,13 @@ function nonOverFlow(uint256 allocationSize) returns bool {
     return sumOfBuckets() + allocationSize <= to_mathint(max_uint);
 }
 
+rule allocateDoesntRevert(uint256 allocationSize) {
+    require bucketLength() >= getLength();
+    require nonOverFlow(allocationSize);
+    allocate@withrevert(allocationSize);
+    assert !lastReverted;
+}
+
 rule sumOfIncrementsEqualsAllocated(uint256 allocationSize) {
     require bucketLength() >= getLength();
     require nonOverFlow(allocationSize);
