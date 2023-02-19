@@ -224,6 +224,16 @@ hre.contract(
         )
       })
 
+      it('reverts when transfer to the same address', async () => {
+        await assert.reverts(
+          withdrawalQueueERC721.transferFrom(
+            nftHolderWstETH, nftHolderWstETH, nftHolderWstETHTokenIds[0],
+            {from: nftHolderWstETH }
+          ),
+          'TransferToThemselves()'
+        )
+      })
+
       it('reverts with error "RequestAlreadyClaimed()" when called on claimed request', async () => {
         const batch = await withdrawalQueueERC721.finalizationBatch(3, shareRate(1))
         await withdrawalQueueERC721.finalize(3, { from: deployer, value: batch.ethToLock })
@@ -298,6 +308,21 @@ hre.contract(
           from: nftHolderWstETH
         })
         assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderWstETHTokenIds[0]), stETH.address)
+      })
+    })
+
+    describe('Burn', () => {
+      it('balanceOf decreases after claim', async () => {
+        const balanceBefore = await withdrawalQueueERC721.balanceOf(nftHolderStETH);
+
+        const batch = await withdrawalQueueERC721.finalizationBatch(3, shareRate(1))
+        await withdrawalQueueERC721.finalize(3, { from: deployer, value: batch.ethToLock })
+
+        await withdrawalQueueERC721.methods['claimWithdrawal(uint256)'](nftHolderStETHTokenIds[0], {
+          from: nftHolderStETH
+        })
+
+        assert.equals(balanceBefore - await withdrawalQueueERC721.balanceOf(nftHolderStETH), 1)
       })
     })
   }

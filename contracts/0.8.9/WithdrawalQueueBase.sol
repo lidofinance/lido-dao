@@ -49,7 +49,7 @@ abstract contract WithdrawalQueueBase {
         /// @notice sum of the all shares locked for withdrawal up to this request
         uint128 cumulativeShares;
         /// @notice address that can claim or transfer the request
-        address payable owner;
+        address owner;
         /// @notice block.timestamp when the request was created
         uint64 timestamp;
         /// @notice flag if the request was claimed
@@ -218,7 +218,7 @@ abstract contract WithdrawalQueueBase {
 
         // Binary search
         uint256 min = _start;
-        uint256 max = _end;
+        uint256 max = _end - 1;
 
         while (max > min) {
             uint256 mid = (max + min + 1) / 2;
@@ -417,7 +417,7 @@ abstract contract WithdrawalQueueBase {
 
         _setLastRequestId(requestId);
         _getQueue()[requestId] =
-            WithdrawalRequest(cumulativeStETH, cumulativeShares, payable(_owner), uint64(block.timestamp), false);
+            WithdrawalRequest(cumulativeStETH, cumulativeShares, _owner, uint64(block.timestamp), false);
         _getRequestsByOwner()[_owner].add(requestId);
 
         emit WithdrawalRequested(requestId, msg.sender, _owner, _amountOfStETH, _amountOfShares);
@@ -442,6 +442,7 @@ abstract contract WithdrawalQueueBase {
         if (_recipient == address(0)) _recipient = request.owner;
 
         request.claimed = true;
+        assert(_getRequestsByOwner()[request.owner].remove(_requestId));
 
         DiscountCheckpoint memory hintCheckpoint = _getCheckpoints()[_hint];
         // ______(_______
@@ -461,7 +462,7 @@ abstract contract WithdrawalQueueBase {
 
         _setLockedEtherAmount(getLockedEtherAmount() - ethWithDiscount);
 
-        _sendValue(payable(_recipient), ethWithDiscount);
+        _sendValue(_recipient, ethWithDiscount);
 
         emit WithdrawalClaimed(_requestId, msg.sender, _recipient, ethWithDiscount);
     }
@@ -471,11 +472,11 @@ abstract contract WithdrawalQueueBase {
         // setting dummy zero structs in checkpoints and queue beginning
         // to avoid uint underflows and related if-branches
         // 0-index is reserved as 'not_found' response in the interface everywhere
-        _getQueue()[0] = WithdrawalRequest(0, 0, payable(0), uint64(block.number), true);
+        _getQueue()[0] = WithdrawalRequest(0, 0, address(0), uint64(block.number), true);
         _getCheckpoints()[getLastCheckpointIndex()] = DiscountCheckpoint(0, 0);
     }
 
-    function _sendValue(address payable _recipient, uint256 _amount) internal {
+    function _sendValue(address _recipient, uint256 _amount) internal {
         if (address(this).balance < _amount) revert NotEnoughEther();
 
         // solhint-disable-next-line
