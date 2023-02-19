@@ -1,5 +1,4 @@
 const { assert } = require('../../helpers/assert')
-const { assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { hex, strip0x } = require('../../helpers/utils')
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const {
@@ -120,24 +119,24 @@ async function deployExitBusOracle(
     oracleReportSanityChecker: oracleReportSanityChecker
   })
 
-  const tx = await oracle.initialize(admin, consensus.address, CONSENSUS_VERSION, lastProcessingRefSlot, {
+  const initTx = await oracle.initialize(admin, consensus.address, CONSENSUS_VERSION, lastProcessingRefSlot, {
     from: admin
   })
 
-  assert.emits(tx, 'ContractVersionSet', { version: 1 })
+  assert.emits(initTx, 'ContractVersionSet', { version: 1 })
 
-  assert.emits(tx, 'RoleGranted', {
+  assert.emits(initTx, 'RoleGranted', {
     role: await consensus.DEFAULT_ADMIN_ROLE(),
     account: admin,
     sender: admin
   })
 
-  assert.emits(tx, 'ConsensusHashContractSet', {
+  assert.emits(initTx, 'ConsensusHashContractSet', {
     addr: consensus.address,
     prevAddr: ZERO_ADDRESS
   })
 
-  assert.emits(tx, 'ConsensusVersionSet', { version: CONSENSUS_VERSION, prevVersion: 0 })
+  assert.emits(initTx, 'ConsensusVersionSet', { version: CONSENSUS_VERSION, prevVersion: 0 })
 
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), admin, { from: admin })
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), admin, { from: admin })
@@ -154,7 +153,7 @@ async function deployExitBusOracle(
     await oracle.resume({ from: admin })
   }
 
-  return { consensus, oracle, locator }
+  return { consensus, oracle, locator, initTx }
 }
 contract('ValidatorsExitBusOracle', ([admin, member1]) => {
   let consensus
