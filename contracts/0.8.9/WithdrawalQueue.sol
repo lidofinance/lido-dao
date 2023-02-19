@@ -65,13 +65,9 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     event BunkerModeDisabled();
 
     error AdminZeroAddress();
-    error AlreadyInitialized();
-    error Uninitialized();
-    error Unimplemented();
     error RequestAmountTooSmall(uint256 _amountOfStETH);
     error RequestAmountTooLarge(uint256 _amountOfStETH);
     error InvalidReportTimestamp();
-    error LengthsMismatch(uint256 _expectedLength, uint256 _actualLength);
     error RequestIdsNotSorted();
 
     /// @param _wstETH address of WstETH contract
@@ -142,8 +138,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         if (_owner == address(0)) _owner = msg.sender;
         requestIds = new uint256[](amounts.length);
         for (uint256 i = 0; i < amounts.length; ++i) {
-            uint256 amountOfWstETH = amounts[i];
-            requestIds[i] = _requestWithdrawalWstETH(amountOfWstETH, _owner);
+            requestIds[i] = _requestWithdrawalWstETH(amounts[i], _owner);
         }
     }
 
@@ -331,14 +326,14 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         _initializeContractVersionTo(1);
 
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
-        _grantRole(PAUSE_ROLE, _pauser);
-        _grantRole(RESUME_ROLE, _resumer);
-        _grantRole(FINALIZE_ROLE, _finalizer);
-        _grantRole(BUNKER_MODE_REPORT_ROLE, _bunkerReporter);
+        if (_pauser != address(0)) _grantRole(PAUSE_ROLE, _pauser);
+        if (_resumer != address(0)) _grantRole(RESUME_ROLE, _resumer);
+        if (_finalizer != address(0)) _grantRole(FINALIZE_ROLE, _finalizer);
+        if (_bunkerReporter != address(0)) _grantRole(BUNKER_MODE_REPORT_ROLE, _bunkerReporter);
 
         BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(BUNKER_MODE_DISABLED_TIMESTAMP);
 
-        emit InitializedV1(_admin, _pauser, _resumer, _finalizer, msg.sender);
+        emit InitializedV1(_admin, _pauser, _resumer, _finalizer, _bunkerReporter);
     }
 
     function _requestWithdrawal(uint256 _amountOfStETH, address _owner) internal returns (uint256 requestId) {

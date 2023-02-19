@@ -252,6 +252,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
     *      NB: by default, staking and the whole Lido pool are in paused state
+    *
+    * The contract's balance must be non-zero to allow initial holder bootstrap.
+    *
     * @param _lidoLocator lido locator contract
     * @param _eip712StETH eip712 helper contract for StETH
     */
@@ -292,6 +295,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     /**
      * @notice A function to finalize upgrade to v2 (from v1). Can be called only once
      * @dev Value "1" in CONTRACT_VERSION_POSITION is skipped due to change in numbering
+     *
+     * The initial protocol token holder must exist.
      *
      * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      */

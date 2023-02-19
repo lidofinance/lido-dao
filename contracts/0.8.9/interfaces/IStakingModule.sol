@@ -83,19 +83,19 @@ interface IStakingModule {
 
     /// @notice Updates the number of the validators of the given node operator that were requested
     ///         to exit but failed to do so in the max allowed time
-    /// @param _nodeOperatorId Id of the node operator
-    /// @param _stuckValidatorsCount New number of stuck validators of the node operator
+    /// @param _nodeOperatorIds bytes packed array of the node operators id
+    /// @param _stuckValidatorsCounts bytes packed array of the new number of STUCK validators for the node operators
     function updateStuckValidatorsCount(
-        uint256 _nodeOperatorId,
-        uint256 _stuckValidatorsCount
+        bytes calldata _nodeOperatorIds,
+        bytes calldata _stuckValidatorsCounts
     ) external;
 
     /// @notice Updates the number of the validators in the EXITED state for node operator with given id
-    /// @param _nodeOperatorId Id of the node operator
-    /// @param _exitedValidatorsCount New number of EXITED validators of the node operator
+    /// @param _nodeOperatorIds bytes packed array of the node operators id
+        /// @param _stuckValidatorsCounts bytes packed array of the new number of EXITED validators for the node operators
     function updateExitedValidatorsCount(
-        uint256 _nodeOperatorId,
-        uint256 _exitedValidatorsCount
+        bytes calldata _nodeOperatorIds,
+        bytes calldata _stuckValidatorsCounts
     ) external;
 
     /// @notice Updates the number of the refunded validators for node operator with the given id

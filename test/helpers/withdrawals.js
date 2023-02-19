@@ -1,12 +1,12 @@
 const { utils } = require('ethers')
 
 const OssifiableProxy = artifacts.require('OssifiableProxy.sol')
-const WithdrawalRequestNFT = artifacts.require('WithdrawalRequestNFT.sol')
+const WithdrawalQueueERC721 = artifacts.require('WithdrawalQueueERC721.sol')
 
-async function deploy(ownerAddress, wstethAddress, name = "Lido Withdrawal Request", symbol = "unstETH") {
-  const impl = await WithdrawalRequestNFT.new(wstethAddress, name, symbol)
+async function deploy(ownerAddress, wstethAddress, name = "Lido: Withdrawal Request NFT", symbol = "unstETH") {
+  const impl = await WithdrawalQueueERC721.new(wstethAddress, name, symbol)
   const proxy = await OssifiableProxy.new(impl.address, ownerAddress, '0x')
-  const queue = await WithdrawalRequestNFT.at(proxy.address)
+  const queue = await WithdrawalQueueERC721.at(proxy.address)
 
   return {
     impl,
