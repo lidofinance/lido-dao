@@ -7,7 +7,7 @@ const { EvmSnapshot } = require('../helpers/blockchain')
 const { ZERO_ADDRESS, getEventAt } = require('@aragon/contract-helpers-test')
 const nodeOperators = require('../helpers/node-operators')
 const signingKeys = require('../helpers/signing-keys')
-const { hex } = require('../helpers/utils')
+const { prepIdsCountsPayload } = require('../helpers/utils')
 const { web3, artifacts } = require('hardhat')
 const { getRandomLocatorConfig } = require('../helpers/locator')
 const { randomBytes } = require('crypto')
@@ -78,15 +78,6 @@ const hexConcat = (first, ...rest) => {
 
 const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const StETH = artifacts.require('StETHMock')
-
-function prepIdsCountsPayload(ids, counts) {
-  if (!Array.isArray(ids)) ids = [ids]
-  if (!Array.isArray(counts)) counts = [counts]
-  return {
-    operatorIds: '0x' + ids.map((id) => hex(id, 8)).join(''),
-    keysCounts: '0x' + counts.map((count) => hex(count, 16)).join('')
-  }
-}
 
 contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nobody]) => {
   let appBase, app, locator, steth, dao

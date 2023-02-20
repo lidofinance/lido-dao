@@ -3,7 +3,7 @@ const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument, bn } = require('@aragon/contract-helpers-test')
 
 const { assert } = require('../helpers/assert')
-const { pad, ETH, tokens, StETH, shares } = require('../helpers/utils')
+const { pad, ETH, StETH, shares, prepIdsCountsPayload } = require('../helpers/utils')
 const { waitBlocks } = require('../helpers/blockchain')
 const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
@@ -583,7 +583,8 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     await pushReport(2, ETH(96))
 
     // kicks rewards distribution
-    await nodeOperatorsRegistry.updateExitedValidatorsCount(0, 1, { from: voting })
+    const { operatorIds, keysCounts } = prepIdsCountsPayload(0, 1)
+    await nodeOperatorsRegistry.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
 
     const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
     const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)

@@ -6,7 +6,7 @@ const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const { EvmSnapshot } = require('./helpers/blockchain')
 const { setupNodeOperatorsRegistry } = require('./helpers/staking-modules')
 const { deployProtocol } = require('./helpers/protocol')
-const { ETH, pad, hexConcat, changeEndianness } = require('./helpers/utils')
+const { ETH, pad, hexConcat, changeEndianness, prepIdsCountsPayload } = require('./helpers/utils')
 const nodeOperators = require('./helpers/node-operators')
 const { assert } = require('./helpers/assert')
 const { depositContractFactory } = require('./helpers/factories')
@@ -260,7 +260,8 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // #1 goes below the limit (nothing changed cause staking limit decreases)
-    await operators.updateExitedValidatorsCount(1, 1, { from: voting })
+    const { operatorIds, keysCounts } = prepIdsCountsPayload(1, 1)
+    await operators.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
@@ -391,7 +392,8 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // #1 goes below the limit (nothing changed cause staking limit decreases)
-    await operators.updateExitedValidatorsCount(1, 1, { from: voting })
+    const { operatorIds, keysCounts } = prepIdsCountsPayload(1, 1)
+    await operators.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
