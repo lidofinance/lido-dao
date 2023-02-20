@@ -48,18 +48,25 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       assert.equal((await consensus.getConsensusState()).consensusReport, hash)
     }
 
+    const getDefaultReportFields = (overrides) => ({
+      consensusVersion: CONSENSUS_VERSION,
+      dataFormat: DATA_FORMAT_LIST,
+      // required override: refSlot
+      // required override: requestsCount
+      // required override: data
+      ...overrides
+    })
+
     async function prepareReportAndSubmitHash(exitRequests, options = {}) {
       const { reportFields: reportFieldsArg = {} } = options
       const { refSlot } = await consensus.getCurrentFrame()
 
-      const reportFields = {
-        consensusVersion: CONSENSUS_VERSION,
+      const reportFields = getDefaultReportFields({
         refSlot: +refSlot,
         requestsCount: exitRequests.length,
-        dataFormat: DATA_FORMAT_LIST,
         data: encodeExitRequestsDataList(exitRequests),
         ...reportFieldsArg
-      }
+      })
 
       const reportItems = getReportDataItems(reportFields)
       const reportHash = calcReportDataHash(reportItems)
@@ -105,6 +112,55 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         })
 
         it('dataFormat = 1 pass', async () => {
+          const report = await prepareReportAndSubmitHash([
+            { moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }
+          ])
+          await oracle.submitReportData(report, oracleVersion, { from: member1 })
+        })
+      })
+
+      context('enforces data length', () => {
+        it('reverts if there is more data than expected', async () => {
+          const { refSlot } = await consensus.getCurrentFrame()
+          const exitRequests = [{ moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }]
+          const reportFields = getDefaultReportFields({
+            refSlot: +refSlot,
+            requestsCount: exitRequests.length,
+            data: encodeExitRequestsDataList(exitRequests)
+          })
+
+          reportFields.data += 'aaaaaaaaaaaaaaaaaa'
+          const reportItems = getReportDataItems(reportFields)
+          const reportHash = calcReportDataHash(reportItems)
+          await triggerConsensusOnHash(reportHash)
+
+          await assert.reverts(
+            oracle.submitReportData(reportItems, oracleVersion, { from: member1 }),
+            'InvalidRequestsDataLength()'
+          )
+        })
+
+        it('reverts if there is less data than expected', async () => {
+          const { refSlot } = await consensus.getCurrentFrame()
+          const exitRequests = [{ moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }]
+          const reportFields = getDefaultReportFields({
+            refSlot: +refSlot,
+            requestsCount: exitRequests.length,
+            data: encodeExitRequestsDataList(exitRequests)
+          })
+
+          reportFields.data = reportFields.data.slice(0, reportFields.data.length - 18)
+          const reportItems = getReportDataItems(reportFields)
+          const reportHash = calcReportDataHash(reportItems)
+          await triggerConsensusOnHash(reportHash)
+
+          await assert.reverts(
+            oracle.submitReportData(reportItems, oracleVersion, { from: member1 }),
+            'InvalidRequestsDataLength()'
+          )
+        })
+
+        it('pass if there is exact amount of data', async () => {
           const report = await prepareReportAndSubmitHash([
             { moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }
           ])
