@@ -220,6 +220,39 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         })
       })
 
+      it('reverts if moduleId equals zero', async () => {
+        const report = await prepareReportAndSubmitHash([
+          { moduleId: 0, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }
+        ])
+        await assert.reverts(oracle.submitReportData(report, oracleVersion, { from: member1 }), 'InvalidRequestsData()')
+      })
+
+      it('emits ValidatorExitRequest events', async () => {
+        const requests = [
+          { moduleId: 4, nodeOpId: 2, valIndex: 2, valPubkey: PUBKEYS[2] },
+          { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[3] }
+        ]
+        const report = await prepareReportAndSubmitHash(requests)
+        const tx = await oracle.submitReportData(report, oracleVersion, { from: member1 })
+        const timestamp = await consensus.getTime()
+
+        assert.emits(tx, 'ValidatorExitRequest', {
+          stakingModuleId: requests[0].moduleId,
+          nodeOperatorId: requests[0].nodeOpId,
+          validatorIndex: requests[0].valIndex,
+          validatorPubkey: requests[0].valPubkey,
+          timestamp
+        })
+
+        assert.emits(tx, 'ValidatorExitRequest', {
+          stakingModuleId: requests[1].moduleId,
+          nodeOperatorId: requests[1].nodeOpId,
+          validatorIndex: requests[1].valIndex,
+          validatorPubkey: requests[1].valPubkey,
+          timestamp
+        })
+      })
+
       it('updates processing state', async () => {
         const storageBefore = await oracle.getDataProcessingState()
         assert.equals(+storageBefore.refSlot, 0)
