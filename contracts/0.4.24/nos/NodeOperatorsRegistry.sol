@@ -675,6 +675,9 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         bytes /* _depositCalldata */
     ) external returns (bytes memory publicKeys, bytes memory signatures) {
         _auth(STAKING_ROUTER_ROLE);
+
+        if (_depositsCount == 0) return (new bytes(0), new bytes(0));
+
         (
             uint256 allocatedKeysCount,
             uint256[] memory nodeOperatorIds,
