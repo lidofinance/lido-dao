@@ -1,32 +1,36 @@
-const { BN } = require('bn.js')
-const { assert } = require('chai')
-const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
-const { assertRevert } = require('../../helpers/assertThrow')
-const { assertBnClose, e18, hex, strip0x } = require('../../helpers/utils')
-const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
-const { updateLocatorImplementation, deployLocatorWithDummyAddressesImplementation } = require('../../helpers/locator-deploy')
+const { assert } = require('../../helpers/assert')
+const { hex, strip0x } = require('../../helpers/utils')
+const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const {
+  updateLocatorImplementation,
+  deployLocatorWithDummyAddressesImplementation
+} = require('../../helpers/locator-deploy')
 
 const {
-  SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, SECONDS_PER_EPOCH,
-  computeSlotAt, computeEpochAt, computeEpochFirstSlotAt,
-  computeEpochFirstSlot, computeTimestampAtSlot, computeTimestampAtEpoch,
-  ZERO_HASH, HASH_1, HASH_2, HASH_3, HASH_4, HASH_5, CONSENSUS_VERSION,
-  deployHashConsensus } = require('./hash-consensus-deploy.test')
+  SLOTS_PER_EPOCH,
+  SECONDS_PER_SLOT,
+  GENESIS_TIME,
+  SECONDS_PER_EPOCH,
+  computeSlotAt,
+  computeEpochAt,
+  computeEpochFirstSlotAt,
+  computeEpochFirstSlot,
+  computeTimestampAtSlot,
+  computeTimestampAtEpoch,
+  ZERO_HASH,
+  CONSENSUS_VERSION,
+  deployHashConsensus
+} = require('./hash-consensus-deploy.test')
 
 const ValidatorsExitBusOracle = artifacts.require('ValidatorsExitBusTimeTravellable')
 
 const DATA_FORMAT_LIST = 1
-
-
 function getReportDataItems(r) {
   return [r.consensusVersion, r.refSlot, r.requestsCount, r.dataFormat, r.data]
 }
 
 function calcReportDataHash(reportItems) {
-  const data = web3.eth.abi.encodeParameters(
-    ['(uint256,uint256,uint256,uint256,bytes)'],
-    [reportItems]
-  )
+  const data = web3.eth.abi.encodeParameters(['(uint256,uint256,uint256,uint256,bytes)'], [reportItems])
   // const toS = x => Array.isArray(x) ? `[${x.map(toS)}]` : `${x}`
   // console.log(toS(reportItems))
   // console.log(data)
@@ -50,21 +54,33 @@ const SECONDS_PER_FRAME = EPOCHS_PER_FRAME * SECONDS_PER_EPOCH
 const MAX_REQUESTS_PER_REPORT = 6
 const MAX_REQUESTS_LIST_LENGTH = 5
 const MAX_REQUESTS_PER_DAY = 5
-
-
 module.exports = {
-  SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, SECONDS_PER_EPOCH,
-  EPOCHS_PER_FRAME, SLOTS_PER_FRAME, SECONDS_PER_FRAME,
-  MAX_REQUESTS_PER_REPORT, MAX_REQUESTS_LIST_LENGTH,
+  SLOTS_PER_EPOCH,
+  SECONDS_PER_SLOT,
+  GENESIS_TIME,
+  SECONDS_PER_EPOCH,
+  EPOCHS_PER_FRAME,
+  SLOTS_PER_FRAME,
+  SECONDS_PER_FRAME,
+  MAX_REQUESTS_PER_REPORT,
+  MAX_REQUESTS_LIST_LENGTH,
   MAX_REQUESTS_PER_DAY,
-  computeSlotAt, computeEpochAt, computeEpochFirstSlotAt,
-  computeEpochFirstSlot, computeTimestampAtSlot, computeTimestampAtEpoch,
-  ZERO_HASH, CONSENSUS_VERSION, DATA_FORMAT_LIST,
-  getReportDataItems, calcReportDataHash, encodeExitRequestHex,
-  encodeExitRequestsDataList, deployExitBusOracle,
+  computeSlotAt,
+  computeEpochAt,
+  computeEpochFirstSlotAt,
+  computeEpochFirstSlot,
+  computeTimestampAtSlot,
+  computeTimestampAtEpoch,
+  ZERO_HASH,
+  CONSENSUS_VERSION,
+  DATA_FORMAT_LIST,
+  getReportDataItems,
+  calcReportDataHash,
+  encodeExitRequestHex,
+  encodeExitRequestsDataList,
+  deployExitBusOracle,
   deployOracleReportSanityCheckerForExitBus
 }
-
 async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
   const maxValidatorExitRequestsPerReport = 2000
   const limitsList = [0, 0, 0, 0, maxValidatorExitRequestsPerReport, 0, 0, 0, 0]
@@ -72,8 +88,15 @@ async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
 
   const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
 
-  let oracleReportSanityChecker = await OracleReportSanityChecker.new(
-    lidoLocator, admin, limitsList, managersRoster, { from: admin })
+  const oracleReportSanityChecker = await OracleReportSanityChecker.new(
+    lidoLocator,
+    admin,
+    limitsList,
+    managersRoster,
+    {
+      from: admin
+    }
+  )
   return oracleReportSanityChecker.address
 }
 
@@ -86,21 +109,20 @@ async function deployExitBusOracle(admin, {
 } = {}) {
   const locator = (await deployLocatorWithDummyAddressesImplementation(admin)).address
 
-  const oracle = await ValidatorsExitBusOracle.new(
-    SECONDS_PER_SLOT, GENESIS_TIME, locator, {from: admin})
+  const oracle = await ValidatorsExitBusOracle.new(SECONDS_PER_SLOT, GENESIS_TIME, locator, { from: admin })
 
-  const {consensus} = await deployHashConsensus(admin, {
+  const { consensus } = await deployHashConsensus(admin, {
     epochsPerFrame: EPOCHS_PER_FRAME,
-    reportProcessor: oracle,
+    reportProcessor: oracle
   })
 
   const oracleReportSanityChecker = await deployOracleReportSanityCheckerForExitBus(locator, admin)
   await updateLocatorImplementation(locator, admin, {
     validatorsExitBusOracle: oracle.address,
-    oracleReportSanityChecker : oracleReportSanityChecker,
+    oracleReportSanityChecker: oracleReportSanityChecker
   })
 
-  const tx = await oracle.initialize(
+  const initTx = await oracle.initialize(
     admin,
     pauser,
     resumer,
@@ -110,67 +132,64 @@ async function deployExitBusOracle(admin, {
     {from: admin}
   )
 
-  assertEvent(tx, 'ContractVersionSet', {expectedArgs: {version: 1}})
+  assert.emits(initTx, 'ContractVersionSet', { version: 1 })
 
-  assertEvent(tx, 'RoleGranted', {expectedArgs: {
+  assert.emits(initTx, 'RoleGranted', {
     role: await consensus.DEFAULT_ADMIN_ROLE(),
     account: admin,
     sender: admin
-  }})
+  })
 
-  assertEvent(tx, 'ConsensusHashContractSet', {expectedArgs: {
+  assert.emits(initTx, 'ConsensusHashContractSet', {
     addr: consensus.address,
     prevAddr: ZERO_ADDRESS
-  }})
+  })
 
-  assertEvent(tx, 'ConsensusVersionSet', {expectedArgs: {version: CONSENSUS_VERSION, prevVersion: 0}})
+  assert.emits(initTx, 'ConsensusVersionSet', { version: CONSENSUS_VERSION, prevVersion: 0 })
 
-  await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), admin, {from: admin})
-  await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), admin, {from: admin})
-  await oracle.grantRole(await oracle.PAUSE_ROLE(), admin, {from: admin})
-  await oracle.grantRole(await oracle.RESUME_ROLE(), admin, {from: admin})
+  await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), admin, { from: admin })
+  await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), admin, { from: admin })
+  await oracle.grantRole(await oracle.PAUSE_ROLE(), admin, { from: admin })
+  await oracle.grantRole(await oracle.RESUME_ROLE(), admin, { from: admin })
 
   if (dataSubmitter != null) {
-    await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), dataSubmitter, {from: admin})
+    await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), dataSubmitter, { from: admin })
   }
 
-  assert.equal(+await oracle.DATA_FORMAT_LIST(), DATA_FORMAT_LIST)
+  assert.equal(+(await oracle.DATA_FORMAT_LIST()), DATA_FORMAT_LIST)
 
   if (resumeAfterDeploy) {
-    await oracle.resume({from: admin})
+    await oracle.resume({ from: admin })
   }
 
-  return {consensus, oracle, locator}
+  return { consensus, oracle, locator, initTx }
 }
-
-
 contract('ValidatorsExitBusOracle', ([admin, member1]) => {
   let consensus
   let oracle
 
   context('Deployment and initial configuration', () => {
-
     it('deployment finishes successfully', async () => {
-      const deployed = await deployExitBusOracle(admin, {resumeAfterDeploy: false})
+      const deployed = await deployExitBusOracle(admin, { resumeAfterDeploy: false })
       consensus = deployed.consensus
       oracle = deployed.oracle
     })
 
     it('mock time-travellable setup is correct', async () => {
-      const time1 = +await consensus.getTime()
-      assert.equal(+await oracle.getTime(), time1)
+      const time1 = +(await consensus.getTime())
+      assert.equal(+(await oracle.getTime()), time1)
 
       await consensus.advanceTimeBy(SECONDS_PER_SLOT)
 
-      const time2 = +await consensus.getTime()
+      const time2 = +(await consensus.getTime())
       assert.equal(time2, time1 + SECONDS_PER_SLOT)
-      assert.equal(+await oracle.getTime(), time2)
+      assert.equal(+(await oracle.getTime()), time2)
     })
 
     it('initial configuration is correct', async () => {
       assert.equal(await oracle.getConsensusContract(), consensus.address)
-      assert.equal(+await oracle.getConsensusVersion(), CONSENSUS_VERSION)
-      assert.equal(+await oracle.SECONDS_PER_SLOT(), SECONDS_PER_SLOT)
+      assert.equal(+(await oracle.getConsensusVersion()), CONSENSUS_VERSION)
+      assert.equal(+(await oracle.SECONDS_PER_SLOT()), SECONDS_PER_SLOT)
       assert.equal(await oracle.isPaused(), true)
     })
   })
