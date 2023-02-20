@@ -550,7 +550,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
             );
             _saveTotalSigningKeysStats(totalSigningKeysStats);
 
-            /// @todo optimize: reuse totalSigningKeysStats
             _updateTotalMaxValidatorsCount(_nodeOperatorId);
         }
     }
@@ -715,7 +714,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         uint64 depositedSigningKeysCount = signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET);
         uint64 vettedSigningKeysCount = signingKeysStats.get(VETTED_KEYS_COUNT_OFFSET);
 
-        /// @todo check for MAX_VALIDATORS_COUNT_OFFSET < MAX_UINT64 - 1
         uint64 oldMaxSigningKeysCount = operatorTargetStats.get(MAX_VALIDATORS_COUNT_OFFSET);
         uint64 newMaxSigningKeysCount = depositedSigningKeysCount;
 
@@ -753,8 +751,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         uint256 maxSigningKeysCount;
         uint256 depositedSigningKeysCount;
         uint256 exitedSigningKeysCount;
-
-        /// @todo check for MAX_VALIDATORS_COUNT_OFFSET < MAX_UINT64 - 1
 
         for (uint256 nodeOperatorId; nodeOperatorId < nodeOperatorsCount; ++nodeOperatorId) {
             (maxSigningKeysCount, exitedSigningKeysCount, depositedSigningKeysCount) =
@@ -1008,7 +1004,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         // comparing _toIndex <= totalSigningKeysCount is enough as totalSigningKeysCount is always less than MAX_UINT64
         _requireValidRange(_fromIndex >= signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET) && _toIndex <= totalSigningKeysCount);
 
-        /// @todo: move to lib
         // removing from the last index to the highest one, so we won't get outside the array
         for (uint256 i = _toIndex; i > _fromIndex; --i) {
             totalSigningKeysCount =
@@ -1031,7 +1026,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
             TOTAL_KEYS_COUNT_OFFSET, totalSigningKeysStats.get(TOTAL_KEYS_COUNT_OFFSET).sub(uint64(_keysCount))
         );
         _saveTotalSigningKeysStats(totalSigningKeysStats);
-        /// @todo optimize: reuse totalSigningKeysStats
         _updateTotalMaxValidatorsCount(_nodeOperatorId);
 
         _increaseValidatorsKeysNonce();
