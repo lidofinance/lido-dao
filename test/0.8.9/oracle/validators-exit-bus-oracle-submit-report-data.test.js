@@ -6,7 +6,9 @@ const {
   getReportDataItems,
   calcReportDataHash,
   encodeExitRequestsDataList,
-  deployExitBusOracle
+  deployExitBusOracle,
+  computeTimestampAtSlot,
+  ZERO_HASH
 } = require('./validators-exit-bus-oracle-deploy.test')
 
 const PUBKEYS = [
@@ -16,6 +18,14 @@ const PUBKEYS = [
   '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
   '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
 ]
+
+function assertEqualsObject(state, desired) {
+  for (const key in desired) {
+    if (Object.hasOwnProperty.call(desired, key)) {
+      assert.equals(state[key], desired[key], key)
+    }
+  }
+}
 
 contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger]) => {
   context('submitReportData', () => {
@@ -382,6 +392,76 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         const report = await prepareReportAndSubmitHash([])
         await oracle.submitReportData(report, oracleVersion, { from: member1 })
         assert.equals(await oracle.getTotalRequestsProcessed(), requestCount)
+      })
+    })
+
+    context('getProcessingState reflects state change', () => {
+      before(setup)
+
+      let report
+      let hash
+
+      it('has correct defaults on init', async () => {
+        const state = await oracle.getProcessingState()
+        assertEqualsObject(state, {
+          currentFrameRefSlot: (await consensus.getCurrentFrame()).refSlot,
+          processingDeadlineTime: 0,
+          dataHash: ZERO_HASH,
+          dataSubmitted: false,
+          dataFormat: 0,
+          requestsCount: 0,
+          requestsSubmitted: 0
+        })
+      })
+
+      it('consensus report submitted', async () => {
+        report = await prepareReportAndSubmitHash([
+          { moduleId: 5, nodeOpId: 1, valIndex: 10, valPubkey: PUBKEYS[2] },
+          { moduleId: 5, nodeOpId: 3, valIndex: 1, valPubkey: PUBKEYS[3] }
+        ])
+        hash = calcReportDataHash(report)
+        const state = await oracle.getProcessingState()
+        assertEqualsObject(state, {
+          currentFrameRefSlot: (await consensus.getCurrentFrame()).refSlot,
+          processingDeadlineTime: computeTimestampAtSlot(
+            (await consensus.getCurrentFrame()).reportProcessingDeadlineSlot
+          ),
+          dataHash: hash,
+          dataSubmitted: false,
+          dataFormat: 0,
+          requestsCount: 0,
+          requestsSubmitted: 0
+        })
+      })
+
+      it('report is processed', async () => {
+        await oracle.submitReportData(report, oracleVersion, { from: member1 })
+        const state = await oracle.getProcessingState()
+        assertEqualsObject(state, {
+          currentFrameRefSlot: (await consensus.getCurrentFrame()).refSlot,
+          processingDeadlineTime: computeTimestampAtSlot(
+            (await consensus.getCurrentFrame()).reportProcessingDeadlineSlot
+          ),
+          dataHash: hash,
+          dataSubmitted: true,
+          dataFormat: DATA_FORMAT_LIST,
+          requestsCount: 2,
+          requestsSubmitted: 2
+        })
+      })
+
+      it('at next frame state resets', async () => {
+        await consensus.advanceTimeToNextFrameStart()
+        const state = await oracle.getProcessingState()
+        assertEqualsObject(state, {
+          currentFrameRefSlot: (await consensus.getCurrentFrame()).refSlot,
+          processingDeadlineTime: 0,
+          dataHash: ZERO_HASH,
+          dataSubmitted: false,
+          dataFormat: 0,
+          requestsCount: 0,
+          requestsSubmitted: 0
+        })
       })
     })
   })
