@@ -65,6 +65,22 @@ abstract contract WithdrawalQueueBase {
         uint96 discountFactor;
     }
 
+    /// @notice output format struct for `_getWithdrawalRequestStatus()`
+    struct WithdrawalRequestStatus {
+        /// @notice stETH token amount that was locked on withdrawal queue for this request
+        uint256 amountOfStETH;
+        /// @notice amount of stETH shares locked on withdrawal queue for this request
+        uint256 amountOfShares;
+        /// @notice address that can claim or transfer this request
+        address owner;
+        /// @notice timestamp of when the request was created, in seconds
+        uint256 timestamp;
+        /// @notice true, if request is finalized
+        bool isFinalized;
+        /// @notice true, if request is claimed. Request is claimable if (isFinalized && !isClaimed)
+        bool isClaimed;
+    }
+
     /// @dev Contains both stETH token amount and its corresponding shares amount
     event WithdrawalRequested(
         uint256 indexed requestId,
@@ -122,113 +138,6 @@ abstract contract WithdrawalQueueBase {
     function unfinalizedStETH() external view returns (uint256) {
         return
             _getQueue()[getLastRequestId()].cumulativeStETH - _getQueue()[getLastFinalizedRequestId()].cumulativeStETH;
-    }
-
-    /// @notice Returns all withdrawal requests that belongs to the `_owner` address
-    ///
-    /// WARNING: This operation will copy the entire storage to memory, which can be quite expensive. This is designed
-    /// to mostly be used by view accessors that are queried without any gas fees. Developers should keep in mind that
-    /// this function has an unbounded cost, and using it as part of a state-changing function may render the function
-    /// uncallable if the set grows to a point where copying to memory consumes too much gas to fit in a block.
-    function getWithdrawalRequests(address _owner) external view returns (uint256[] memory requestsIds) {
-        return _getRequestsByOwner()[_owner].values();
-    }
-
-    /// @notice output format struct for `getWithdrawalRequestStatus()`
-    struct WithdrawalRequestStatus {
-        /// @notice stETH token amount that was locked on withdrawal queue for this request
-        uint256 amountOfStETH;
-        /// @notice amount of stETH shares locked on withdrawal queue for this request
-        uint256 amountOfShares;
-        /// @notice address that can claim or transfer this request
-        address owner;
-        /// @notice timestamp of when the request was created, in seconds
-        uint256 timestamp;
-        /// @notice true, if request is finalized
-        bool isFinalized;
-        /// @notice true, if request is claimed. Request is claimable if (isFinalized && !isClaimed)
-        bool isClaimed;
-    }
-
-    /// @notice Returns status of the withdrawal request with `_requestId` id
-    function getWithdrawalRequestStatus(uint256 _requestId)
-        public
-        view
-        returns (WithdrawalRequestStatus memory status)
-    {
-        if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
-
-        WithdrawalRequest memory request = _getQueue()[_requestId];
-        WithdrawalRequest memory previousRequest = _getQueue()[_requestId - 1];
-
-        status = WithdrawalRequestStatus(
-            request.cumulativeStETH - previousRequest.cumulativeStETH,
-            request.cumulativeShares - previousRequest.cumulativeShares,
-            request.owner,
-            request.timestamp,
-            _requestId <= getLastFinalizedRequestId(),
-            request.claimed
-        );
-    }
-
-    /// @notice View function to find a hint to pass it to `claimWithdrawal()`.
-    /// @dev WARNING! OOG is possible if used onchain, contains unbounded loop inside
-    /// See `findCheckpointHint(uint256 _requestId, uint256 _firstIndex, uint256 _lastIndex)` for onchain use
-    /// @param _requestId request id to be claimed with this hint
-    function findCheckpointHintUnbounded(uint256 _requestId) public view returns (uint256) {
-        return findCheckpointHint(_requestId, 1, getLastCheckpointIndex());
-    }
-
-    /// @notice View function to find a checkpoint hint for `claimWithdrawal()`
-    ///  Search will be performed in the range of `[_firstIndex, _lastIndex]`
-    ///
-    /// NB!: Range search ought to be used to optimize gas cost.
-    /// You can utilize the following invariant:
-    /// `if (requestId2 > requestId1) than hint2 >= hint1`,
-    /// so you can search for `hint2` in the range starting from `hint1`
-    ///
-    /// @param _requestId request id we are searching the checkpoint for
-    /// @param _start index of the left boundary of the search range
-    /// @param _end index of the right boundary of the search range
-    ///
-    /// @return value that hints `claimWithdrawal` to find the discount for the request,
-    ///  or 0 if hint not found in the range
-    function findCheckpointHint(uint256 _requestId, uint256 _start, uint256 _end) public view returns (uint256) {
-        if (_requestId == 0) revert InvalidRequestId(_requestId);
-        if (_start == 0) revert InvalidRequestIdRange(_start, _end);
-        uint256 lastCheckpointIndex = getLastCheckpointIndex();
-        if (_end > lastCheckpointIndex) revert InvalidRequestIdRange(_start, _end);
-        if (_requestId > getLastFinalizedRequestId()) revert RequestNotFoundOrNotFinalized(_requestId);
-
-        if (_start > _end) return NOT_FOUND; // we have an empty range to search in, so return NOT_FOUND
-
-        // Right boundary
-        if (_requestId >= _getCheckpoints()[_end].fromRequestId) {
-            // it's the last checkpoint, so it's valid
-            if (_end == lastCheckpointIndex) return _end;
-            // it fits right before the next checkpoint
-            if (_requestId < _getCheckpoints()[_end + 1].fromRequestId) return _end;
-
-            return NOT_FOUND;
-        }
-        // Left boundary
-        if (_requestId < _getCheckpoints()[_start].fromRequestId) {
-            return NOT_FOUND;
-        }
-
-        // Binary search
-        uint256 min = _start;
-        uint256 max = _end - 1;
-
-        while (max > min) {
-            uint256 mid = (max + min + 1) / 2;
-            if (_getCheckpoints()[mid].fromRequestId <= _requestId) {
-                min = mid;
-            } else {
-                max = mid - 1;
-            }
-        }
-        return min;
     }
 
     /// @notice Search for the latest request in the queue in the range of `[startId, endId]`,
@@ -397,7 +306,7 @@ abstract contract WithdrawalQueueBase {
             _amountOfETH,
             requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares,
             block.timestamp
-        );
+            );
     }
 
     /// @dev creates a new `WithdrawalRequest` in the queue
@@ -421,6 +330,75 @@ abstract contract WithdrawalQueueBase {
         assert(_getRequestsByOwner()[_owner].add(requestId));
 
         emit WithdrawalRequested(requestId, msg.sender, _owner, _amountOfStETH, _amountOfShares);
+    }
+
+    /// @notice Returns status of the withdrawal request with `_requestId` id
+    function _getStatus(uint256 _requestId) internal view returns (WithdrawalRequestStatus memory status) {
+        if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
+
+        WithdrawalRequest memory request = _getQueue()[_requestId];
+        WithdrawalRequest memory previousRequest = _getQueue()[_requestId - 1];
+
+        status = WithdrawalRequestStatus(
+            request.cumulativeStETH - previousRequest.cumulativeStETH,
+            request.cumulativeShares - previousRequest.cumulativeShares,
+            request.owner,
+            request.timestamp,
+            _requestId <= getLastFinalizedRequestId(),
+            request.claimed
+        );
+    }
+
+    /// @notice View function to find a checkpoint hint for `claimWithdrawal()`
+    ///  Search will be performed in the range of `[_firstIndex, _lastIndex]`
+    ///
+    /// NB!: Range search ought to be used to optimize gas cost.
+    /// You can utilize the following invariant:
+    /// `if (requestId2 > requestId1) than hint2 >= hint1`,
+    /// so you can search for `hint2` in the range starting from `hint1`
+    ///
+    /// @param _requestId request id we are searching the checkpoint for
+    /// @param _start index of the left boundary of the search range
+    /// @param _end index of the right boundary of the search range
+    ///
+    /// @return value that hints `claimWithdrawal` to find the discount for the request,
+    ///  or 0 if hint not found in the range
+    function _findCheckpointHint(uint256 _requestId, uint256 _start, uint256 _end) internal view returns (uint256) {
+        if (_requestId == 0) revert InvalidRequestId(_requestId);
+        if (_start == 0) revert InvalidRequestIdRange(_start, _end);
+        uint256 lastCheckpointIndex = getLastCheckpointIndex();
+        if (_end > lastCheckpointIndex) revert InvalidRequestIdRange(_start, _end);
+        if (_requestId > getLastFinalizedRequestId()) revert RequestNotFoundOrNotFinalized(_requestId);
+
+        if (_start > _end) return NOT_FOUND; // we have an empty range to search in, so return NOT_FOUND
+
+        // Right boundary
+        if (_requestId >= _getCheckpoints()[_end].fromRequestId) {
+            // it's the last checkpoint, so it's valid
+            if (_end == lastCheckpointIndex) return _end;
+            // it fits right before the next checkpoint
+            if (_requestId < _getCheckpoints()[_end + 1].fromRequestId) return _end;
+
+            return NOT_FOUND;
+        }
+        // Left boundary
+        if (_requestId < _getCheckpoints()[_start].fromRequestId) {
+            return NOT_FOUND;
+        }
+
+        // Binary search
+        uint256 min = _start;
+        uint256 max = _end - 1;
+
+        while (max > min) {
+            uint256 mid = (max + min + 1) / 2;
+            if (_getCheckpoints()[mid].fromRequestId <= _requestId) {
+                min = mid;
+            } else {
+                max = mid - 1;
+            }
+        }
+        return min;
     }
 
     /// @notice Claim `_requestId` request and transfer locked ether to `_recipient`. Emits WithdrawalClaimed event

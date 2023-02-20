@@ -8,6 +8,7 @@ import {WithdrawalQueueBase} from "./WithdrawalQueueBase.sol";
 
 import {IERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts-v4.4/token/ERC20/extensions/draft-IERC20Permit.sol";
+import {EnumerableSet} from "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
 import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 import {PausableUntil} from "./utils/PausableUntil.sol";
@@ -32,6 +33,7 @@ interface IWstETH is IERC20, IERC20Permit {
 /// @author folkyatina
 abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, WithdrawalQueueBase, Versioned {
     using UnstructuredStorage for bytes32;
+    using EnumerableSet for EnumerableSet.UintSet;
 
     /// Bunker mode activation timestamp
     bytes32 internal constant BUNKER_MODE_SINCE_TIMESTAMP_POSITION =
@@ -185,16 +187,26 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         return requestWithdrawalsWstETH(_amounts, _owner);
     }
 
+    /// @notice Returns all withdrawal requests that belongs to the `_owner` address
+    ///
+    /// WARNING: This operation will copy the entire storage to memory, which can be quite expensive. This is designed
+    /// to mostly be used by view accessors that are queried without any gas fees. Developers should keep in mind that
+    /// this function has an unbounded cost, and using it as part of a state-changing function may render the function
+    /// uncallable if the set grows to a point where copying to memory consumes too much gas to fit in a block.
+    function getWithdrawalRequests(address _owner) external view returns (uint256[] memory requestsIds) {
+        return _getRequestsByOwner()[_owner].values();
+    }
+
     /// @notice Returns statuses for the array of request ids
     /// @param _requestIds array of withdrawal request ids
-    function getWithdrawalRequestStatuses(uint256[] calldata _requestIds)
+    function getWithdrawalStatus(uint256[] calldata _requestIds)
         external
         view
         returns (WithdrawalRequestStatus[] memory statuses)
     {
         statuses = new WithdrawalRequestStatus[](_requestIds.length);
         for (uint256 i = 0; i < _requestIds.length; ++i) {
-            statuses[i] = getWithdrawalRequestStatus(_requestIds[i]);
+            statuses[i] = _getStatus(_requestIds[i]);
         }
     }
 
@@ -251,13 +263,13 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
 
     /// @notice Claim one`_requestId` request once finalized sending locked ether to the owner
     /// @param _requestId request id to claim
-    /// @dev will use `findCheckpointHintUnbounded()` to find a hint, which can lead to OOG
+    /// @dev use unbounded loop to find a hint, which can lead to OOG
     /// @dev
     ///  Reverts if requestId or hint are not valid
     ///  Reverts if request is not finalized or already claimed
     ///  Reverts if msg sender is not an owner of request
     function claimWithdrawal(uint256 _requestId) external {
-        _claim(_requestId, findCheckpointHintUnbounded(_requestId), msg.sender);
+        _claim(_requestId, _findCheckpointHint(_requestId, 1, getLastCheckpointIndex()), msg.sender);
         _emitTransfer(msg.sender, address(0), _requestId);
     }
 
@@ -276,7 +288,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         uint256 prevRequestId = 0;
         for (uint256 i = 0; i < _requestIds.length; ++i) {
             if (_requestIds[i] < prevRequestId) revert RequestIdsNotSorted();
-            hintIds[i] = findCheckpointHint(_requestIds[i], _firstIndex, _lastIndex);
+            hintIds[i] = _findCheckpointHint(_requestIds[i], _firstIndex, _lastIndex);
             _firstIndex = hintIds[i];
             prevRequestId = _requestIds[i];
         }
@@ -285,7 +297,6 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @notice Finds the list of hints for the given `_requestIds` searching among the checkpoints with indices
     ///  in the range `[1, lastCheckpointIndex]`. NB! Array of request ids should be sorted
     /// @dev WARNING! OOG is possible if used onchain.
-    ///  See `findCheckpointHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)` for onchain use
     /// @param _requestIds ids of the requests sorted in the ascending order to get hints for
     function findCheckpointHintsUnbounded(uint256[] calldata _requestIds)
         public
