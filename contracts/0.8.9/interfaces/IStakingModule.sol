@@ -79,7 +79,7 @@ interface IStakingModule {
 
     /// @notice Called by StakingRouter to signal that stETH rewards were minted for this module.
     /// @param _totalShares Amount of stETH shares that were minted to reward all node operators.
-    function handleRewardsMinted(uint256 _totalShares) external;
+    function onRewardsMinted(uint256 _totalShares) external;
 
     /// @notice Updates the number of the validators of the given node operator that were requested
     ///         to exit but failed to do so in the max allowed time
@@ -125,8 +125,9 @@ interface IStakingModule {
         external
         returns (bytes memory publicKeys, bytes memory signatures);
 
-    /// @notice Called by StakingRouter after oracle finishes updating validators counters for all node operators
-    function onAllValidatorCountersUpdated() external;
+    /// @notice Called by StakingRouter after it finishes updating exited and stuck validators
+    /// counts for this module's node operators.
+    function onExitedAndStuckValidatorsCountsUpdated() external;
 
     /// @notice Called by StakingRouter when withdrawal credentials are changed.
     /// @dev This method MUST discard all StakingModule's unused deposit data cause they become

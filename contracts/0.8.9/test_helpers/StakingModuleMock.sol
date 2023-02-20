@@ -61,7 +61,7 @@ contract StakingModuleMock is IStakingModule {
         view
         returns (uint256[] memory nodeOperatorIds) {}
 
-    function handleRewardsMinted(uint256 _totalShares) external {}
+    function onRewardsMinted(uint256 _totalShares) external {}
 
     function updateStuckValidatorsCount(
         bytes calldata _nodeOperatorIds,
@@ -75,7 +75,7 @@ contract StakingModuleMock is IStakingModule {
 
     function updateRefundedValidatorsCount(uint256 _nodeOperatorId, uint256 _refundedValidatorsCount) external {}
 
-    function onAllValidatorCountersUpdated() external {}
+    function onExitedAndStuckValidatorsCountsUpdated() external {}
 
     function unsafeUpdateValidatorsCount(
         uint256 /* _nodeOperatorId */,

@@ -76,7 +76,7 @@ contract ModuleSolo is IStakingModule {
 
     function setNodeOperatorStakingLimit(uint256 _id, uint256 _stakingLimit) external {}
 
-    function handleRewardsMinted(uint256 _totalShares) external {}
+    function onRewardsMinted(uint256 _totalShares) external {}
 
     function updateStuckValidatorsCount(
         bytes calldata _nodeOperatorIds,
@@ -90,7 +90,7 @@ contract ModuleSolo is IStakingModule {
 
     function updateRefundedValidatorsCount(uint256 _nodeOperatorId, uint256 _refundedValidatorsCount) external {}
 
-    function onAllValidatorCountersUpdated() external {}
+    function onExitedAndStuckValidatorsCountsUpdated() external {}
 
     function unsafeUpdateValidatorsCount(
         uint256 /* _nodeOperatorId */,

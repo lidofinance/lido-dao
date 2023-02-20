@@ -3260,7 +3260,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('reverts if no STAKING_ROUTER_ROLE', async () => {
-      await assert.reverts(app.onAllValidatorCountersUpdated({ from: user3 }), 'APP_AUTH_FAILED')
+      await assert.reverts(app.onExitedAndStuckValidatorsCountsUpdated({ from: user3 }), 'APP_AUTH_FAILED')
     })
 
     it("doesn't distribute rewards if no shares to distribute", async () => {
@@ -3272,7 +3272,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         steth.sharesOf(user3)
       ])
       // calls distributeRewards() inside
-      await app.onAllValidatorCountersUpdated({ from: voting })
+      await app.onExitedAndStuckValidatorsCountsUpdated({ from: voting })
       const recipientsSharesAfter = await Promise.all([
         steth.sharesOf(user1),
         steth.sharesOf(user2),
@@ -3289,7 +3289,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await steth.mintShares(app.address, ETH(10))
 
       // calls distributeRewards() inside
-      await app.onAllValidatorCountersUpdated({ from: voting })
+      await app.onExitedAndStuckValidatorsCountsUpdated({ from: voting })
 
       assert.equals(await steth.sharesOf(user1), ETH(3))
       assert.equals(await steth.sharesOf(user2), ETH(7))
@@ -3301,7 +3301,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await steth.mintShares(app.address, ETH(10))
 
       // calls distributeRewards() inside
-      receipt = await app.onAllValidatorCountersUpdated({ from: voting })
+      receipt = await app.onExitedAndStuckValidatorsCountsUpdated({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(3) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(7) })
@@ -3485,16 +3485,16 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
   })
 
-  describe('handleRewardsMinted()', () => {
+  describe('onRewardsMinted()', () => {
     it('reverts with no STAKING_ROUTER_ROLE', async () => {
       const hasPermission = await dao.hasPermission(user1, app, 'STAKING_ROUTER_ROLE')
       assert.isFalse(hasPermission)
-      await assert.reverts(app.handleRewardsMinted(123, { from: user1 }))
+      await assert.reverts(app.onRewardsMinted(123, { from: user1 }))
     })
     it('no reverts with STAKING_ROUTER_ROLE', async () => {
       const hasPermission = await dao.hasPermission(voting, app, 'STAKING_ROUTER_ROLE')
       assert.isTrue(hasPermission)
-      await app.handleRewardsMinted(123, { from: voting })
+      await app.onRewardsMinted(123, { from: voting })
     })
   })
 })

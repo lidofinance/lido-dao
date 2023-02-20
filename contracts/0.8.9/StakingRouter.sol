@@ -263,7 +263,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     {
         for (uint256 i = 0; i < _stakingModuleIds.length; ) {
             address moduleAddr = _getStakingModuleById(_stakingModuleIds[i]).stakingModuleAddress;
-            IStakingModule(moduleAddr).handleRewardsMinted(_totalShares[i]);
+            IStakingModule(moduleAddr).onRewardsMinted(_totalShares[i]);
             unchecked { ++i; }
         }
     }
@@ -328,7 +328,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             newExitedValidatorsCount >= prevReportedExitedValidatorsCount
         ) {
             // oracle finished updating exited validators for all node ops
-            moduleContract.onAllValidatorCountersUpdated();
+            moduleContract.onExitedAndStuckValidatorsCountsUpdated();
         }
     }
 
@@ -362,7 +362,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
      *
      * @param _nodeOperatorId ID of the node operator.
      *
-     * @param _triggerUpdateFinish Whether to call `onAllValidatorCountersUpdated` on
+     * @param _triggerUpdateFinish Whether to call `onExitedAndStuckValidatorsCountsUpdated` on
      *        the module after applying the corrections.
      *
      * @param _correction See the docs for the `ValidatorsCountsCorrection` struct.
@@ -413,7 +413,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         );
 
         if (_triggerUpdateFinish) {
-            IStakingModule(moduleAddr).onAllValidatorCountersUpdated();
+            IStakingModule(moduleAddr).onExitedAndStuckValidatorsCountsUpdated();
         }
     }
 
