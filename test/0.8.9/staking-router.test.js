@@ -199,6 +199,19 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       await snapshot.revert()
     })
 
+    it('reverts if module address exists', async () => {
+      await assert.revertsWithCustomError(
+        app.addStakingModule(
+          'Test',
+          stakingModule.address,
+          100,
+          1000,
+          2000,
+          { from: appManager}),
+          'StakingModuleAddressExists()'
+      )
+    })
+
     it('set withdrawal credentials does not allowed without role', async () => {
       const newWC = '0x'.padEnd(66, '5678')
       await assert.reverts(
@@ -265,12 +278,14 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       await snapshot.revert()
     })
     it('staking modules limit is 32', async () => {
-      const stakingModule = await StakingModuleMock.new({ from: deployer })
       for (var i = 0; i < 32; i++) {
-        await app.addStakingModule('Test module', stakingModule.address, 100, 100, 100, { from: appManager })
+        const stakingModule = await StakingModuleMock.new({ from: deployer })
+        let tx = await app.addStakingModule('Test module', stakingModule.address, 100, 100, 100, { from: appManager })
       }
+
+      const oneMoreStakingModule = await StakingModuleMock.new({ from: deployer })
       await assert.revertsWithCustomError(
-        app.addStakingModule('Test module', stakingModule.address, 100, 100, 100, { from: appManager }),
+        app.addStakingModule('Test module', oneMoreStakingModule.address, 100, 100, 100, { from: appManager }),
         `StakingModulesLimitExceeded()`
       )
     })
