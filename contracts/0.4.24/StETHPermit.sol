@@ -7,7 +7,7 @@ pragma solidity 0.4.24;
 import {UnstructuredStorage} from "@aragon/os/contracts/common/UnstructuredStorage.sol";
 
 import {ECDSA} from "../common/lib/ECDSA.sol";
-import {IEIP712} from "../common/interfaces/IEIP712.sol";
+import {IEIP712StETH} from "../common/interfaces/IEIP712StETH.sol";
 
 import {StETH} from "./StETH.sol";
 
@@ -100,7 +100,7 @@ contract StETHPermit is IERC2612, StETH {
             abi.encode(PERMIT_TYPEHASH, _owner, _spender, _value, _useNonce(_owner), _deadline)
         );
 
-        bytes32 hash = IEIP712(getEIP712StETH()).hashTypedDataV4(address(this), structHash);
+        bytes32 hash = IEIP712StETH(getEIP712StETH()).hashTypedDataV4(address(this), structHash);
 
         address signer = ECDSA.recover(hash, _v, _r, _s);
         require(signer == _owner, "ERC20Permit: invalid signature");
@@ -124,7 +124,7 @@ contract StETHPermit is IERC2612, StETH {
      */
     // solhint-disable-next-line func-name-mixedcase
     function DOMAIN_SEPARATOR() external view returns (bytes32) {
-        return IEIP712(getEIP712StETH()).domainSeparatorV4(address(this));
+        return IEIP712StETH(getEIP712StETH()).domainSeparatorV4(address(this));
     }
 
     /**

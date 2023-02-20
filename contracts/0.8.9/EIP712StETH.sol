@@ -6,7 +6,7 @@ pragma solidity 0.8.9;
 
 import {ECDSA} from "@openzeppelin/contracts-v4.4/utils/cryptography/ECDSA.sol";
 
-import {IEIP712} from "../common/interfaces/IEIP712.sol";
+import {IEIP712StETH} from "../common/interfaces/IEIP712StETH.sol";
 
 /**
  * NOTE: The code below is taken from "@openzeppelin/contracts-v4.4/utils/cryptography/draft-EIP712.sol"
@@ -31,7 +31,7 @@ import {IEIP712} from "../common/interfaces/IEIP712.sol";
  * https://docs.metamask.io/guide/signing-data.html[`eth_signTypedDataV4` in MetaMask].
  *
  */
-contract EIP712StETH is IEIP712 {
+contract EIP712StETH is IEIP712StETH {
     /* solhint-disable var-name-mixedcase */
     // Cache the domain separator as an immutable value, but also store the chain id that it corresponds to, in order to
     // invalidate the cached domain separator if the chain id changes.

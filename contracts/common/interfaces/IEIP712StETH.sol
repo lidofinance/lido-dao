@@ -6,12 +6,12 @@
 pragma solidity >=0.4.24 <0.9.0;
 
 /**
- * @dev Helper interface of EIP712.
+ * @dev Helper interface of EIP712 StETH-dedicated helper.
  *
  * Has an access to the CHAIN_ID opcode and relies on immutables internally
  * Both are unavailable for Solidity 0.4.24.
  */
-interface IEIP712 {
+interface IEIP712StETH {
     /**
      * @dev Returns the domain separator for the current chain.
      */
