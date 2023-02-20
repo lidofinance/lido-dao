@@ -84,7 +84,7 @@ module.exports = {
 async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
   const maxValidatorExitRequestsPerReport = 2000
   const limitsList = [0, 0, 0, 0, maxValidatorExitRequestsPerReport, 0, 0, 0, 0]
-  const managersRoster = [[admin], [], [], [], [], [], [], [], [], []]
+  const managersRoster = [[admin], [admin], [admin], [admin], [admin], [admin], [admin], [admin], [admin], [admin]]
 
   const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
 
@@ -97,7 +97,7 @@ async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
       from: admin
     }
   )
-  return oracleReportSanityChecker.address
+  return oracleReportSanityChecker
 }
 
 async function deployExitBusOracle(admin, {
@@ -119,7 +119,7 @@ async function deployExitBusOracle(admin, {
   const oracleReportSanityChecker = await deployOracleReportSanityCheckerForExitBus(locator, admin)
   await updateLocatorImplementation(locator, admin, {
     validatorsExitBusOracle: oracle.address,
-    oracleReportSanityChecker: oracleReportSanityChecker
+    oracleReportSanityChecker: oracleReportSanityChecker.address
   })
 
   const initTx = await oracle.initialize(
@@ -162,7 +162,7 @@ async function deployExitBusOracle(admin, {
     await oracle.resume({ from: admin })
   }
 
-  return { consensus, oracle, locator, initTx }
+  return { consensus, oracle, oracleReportSanityChecker, locator, initTx }
 }
 contract('ValidatorsExitBusOracle', ([admin, member1]) => {
   let consensus

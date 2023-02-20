@@ -23,6 +23,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
 
     let consensus
     let oracle
+    let oracleReportSanityChecker
     let oracleVersion
 
     async function setup() {
@@ -33,6 +34,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
 
       consensus = deployed.consensus
       oracle = deployed.oracle
+      oracleReportSanityChecker = deployed.oracleReportSanityChecker
 
       oracleVersion = +(await oracle.getContractVersion())
 
@@ -163,6 +165,30 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         it('pass if there is exact amount of data', async () => {
           const report = await prepareReportAndSubmitHash([
             { moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }
+          ])
+          await oracle.submitReportData(report, oracleVersion, { from: member1 })
+        })
+      })
+
+      context('invokes sanity check', () => {
+        it('reverts if request limit is reached', async () => {
+          const exitRequestsLimit = 1
+          await oracleReportSanityChecker.setMaxExitRequestsPerOracleReport(exitRequestsLimit)
+          const report = await prepareReportAndSubmitHash([
+            { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[2] },
+            { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[3] }
+          ])
+          await assert.reverts(
+            oracle.submitReportData(report, oracleVersion, { from: member1 }),
+            `IncorrectNumberOfExitRequestsPerReport(${exitRequestsLimit})`
+          )
+        })
+
+        it('pass if requests amount equals to limit', async () => {
+          const exitRequestsLimit = 1
+          await oracleReportSanityChecker.setMaxExitRequestsPerOracleReport(exitRequestsLimit)
+          const report = await prepareReportAndSubmitHash([
+            { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[2] }
           ])
           await oracle.submitReportData(report, oracleVersion, { from: member1 })
         })
