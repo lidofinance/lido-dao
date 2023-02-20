@@ -29,6 +29,12 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     error UnexpectedRequestsDataLength();
     error InvalidRequestsDataSortOrder();
     error ArgumentOutOfBounds();
+    error NodeOpValidatorIndexMustIncrease(
+        uint256 moduleId,
+        uint256 nodeOpId,
+        uint256 prevRequestedValidatorIndex,
+        uint256 requestedValidatorIndex
+    );
 
     event ValidatorExitRequest(
         uint256 indexed stakingModuleId,
@@ -153,9 +159,8 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         /// @dev Total number of validator exit requests in this report. Must not be greater
         /// than limit checked in OracleReportSanityChecker.checkExitBusOracleReport.
         ///
-        /// Cannot be zero: in the case there's no newly exited or stuck validators at the moment
-        /// of the reference slot that staking module contracts are not aware of at the same moment,
-        /// oracles should skip submitting the report.
+        /// Cannot be zero: in the case there's no validator exit requests to submit, oracles
+        /// should skip submitting the report for the current reporting frame.
         uint256 requestsCount;
 
         /// @dev Format of the validator exit requests data. Currently, only the
@@ -362,12 +367,9 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             offsetPastEnd := add(offset, data.length)
         }
 
-        mapping(uint256 => RequestedValidator) storage _lastReqValidatorIndices =
-            _storageLastRequestedValidatorIndices();
-
         uint256 lastDataWithoutPubkey = 0;
         uint256 lastNodeOpKey = 0;
-        uint256 lastValIndex;
+        RequestedValidator memory lastRequestedVal;
         bytes calldata pubkey;
 
         assembly {
@@ -394,7 +396,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
                 revert InvalidRequestsDataSortOrder();
             }
 
-            uint256 valIndex = uint64(dataWithoutPubkey);
+            uint64 valIndex = uint64(dataWithoutPubkey);
             uint256 nodeOpId = uint40(dataWithoutPubkey >> 64);
             uint256 moduleId = uint24(dataWithoutPubkey >> (64 + 40));
 
@@ -405,20 +407,29 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             uint256 nodeOpKey = _computeNodeOpKey(moduleId, nodeOpId);
             if (nodeOpKey != lastNodeOpKey) {
                 if (lastNodeOpKey != 0) {
-                    _lastReqValidatorIndices[lastNodeOpKey] =
-                        RequestedValidator(true, uint64(lastValIndex));
+                    _storageLastRequestedValidatorIndices()[lastNodeOpKey] = lastRequestedVal;
                 }
+                lastRequestedVal = _storageLastRequestedValidatorIndices()[nodeOpKey];
                 lastNodeOpKey = nodeOpKey;
             }
 
-            lastValIndex = valIndex;
+            if (lastRequestedVal.requested && valIndex <= lastRequestedVal.index) {
+                revert NodeOpValidatorIndexMustIncrease(
+                    moduleId,
+                    nodeOpId,
+                    lastRequestedVal.index,
+                    valIndex
+                );
+            }
+
+            lastRequestedVal = RequestedValidator(true, valIndex);
             lastDataWithoutPubkey = dataWithoutPubkey;
 
             emit ValidatorExitRequest(moduleId, nodeOpId, valIndex, pubkey, timestamp);
         }
 
         if (lastNodeOpKey != 0) {
-            _lastReqValidatorIndices[lastNodeOpKey] = RequestedValidator(true, uint64(lastValIndex));
+            _storageLastRequestedValidatorIndices()[lastNodeOpKey] = lastRequestedVal;
         }
 
         return lastDataWithoutPubkey;

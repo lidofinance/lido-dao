@@ -50,6 +50,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint256 currentNodeOpStuckValidatorsCount
     );
     error InvalidDepositsValue(uint256 etherValue);
+    error StakingModuleAddressExists();
 
     enum StakingModuleStatus {
         Active, // deposits and rewards allowed
@@ -180,6 +181,14 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint256 newStakingModuleIndex = getStakingModulesCount();
 
         if (newStakingModuleIndex >= 32) revert StakingModulesLimitExceeded();
+
+        for (uint256 i; i < newStakingModuleIndex; ) {
+            if (_stakingModuleAddress == _getStakingModuleByIndex(i).stakingModuleAddress) revert StakingModuleAddressExists();
+            unchecked {
+                ++i;
+            }
+        }
+
         StakingModule storage newStakingModule = _getStakingModuleByIndex(newStakingModuleIndex);
         uint24 newStakingModuleId = uint24(LAST_STAKING_MODULE_ID_POSITION.getStorageUint256()) + 1;
 

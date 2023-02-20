@@ -100,7 +100,7 @@ contract StETHPermit is IERC2612, StETH {
             abi.encode(PERMIT_TYPEHASH, _owner, _spender, _value, _useNonce(_owner), _deadline)
         );
 
-        bytes32 hash = IEIP712(getEIP712StETH()).hashTypedDataV4(structHash);
+        bytes32 hash = IEIP712(getEIP712StETH()).hashTypedDataV4(address(this), structHash);
 
         address signer = ECDSA.recover(hash, _v, _r, _s);
         require(signer == _owner, "ERC20Permit: invalid signature");
@@ -124,7 +124,7 @@ contract StETHPermit is IERC2612, StETH {
      */
     // solhint-disable-next-line func-name-mixedcase
     function DOMAIN_SEPARATOR() external view returns (bytes32) {
-        return IEIP712(getEIP712StETH()).domainSeparatorV4();
+        return IEIP712(getEIP712StETH()).domainSeparatorV4(address(this));
     }
 
     /**

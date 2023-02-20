@@ -1,14 +1,12 @@
 const hre = require('hardhat')
-const { assert } = require('../helpers/assert')
-const { assertRevert } = require('../helpers/assertThrow')
-const { padRight, ETH } = require('../helpers/utils')
+const { web3 } = require('hardhat')
+const { bn } = require('@aragon/contract-helpers-test')
 const { BN } = require('bn.js')
+
+const { assert } = require('../helpers/assert')
+const { padRight, ETH, prepIdsCountsPayload } = require('../helpers/utils')
 const { AragonDAO } = require('./helpers/dao')
 const { EvmSnapshot, advanceChainTime } = require('../helpers/blockchain')
-const { ZERO_ADDRESS, getEventAt, bn } = require('@aragon/contract-helpers-test')
-const nodeOperators = require('../helpers/node-operators')
-const signingKeys = require('../helpers/signing-keys')
-const { web3 } = require('hardhat')
 const { getRandomLocatorConfig } = require('../helpers/locator')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistryMock')
@@ -118,7 +116,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
     // Implementation initializer reverts because initialization block was set to max(uint256)
     // in the Autopetrified base contract
     // await assert.reverts(appBase.initialize(steth.address, CURATED_TYPE), 'INIT_ALREADY_INITIALIZED')
-    await assertRevert(appBase.initialize(locator.address, CURATED_TYPE), 'INIT_ALREADY_INITIALIZED')
+    await assert.reverts(appBase.initialize(locator.address, CURATED_TYPE), 'INIT_ALREADY_INITIALIZED')
 
     const moduleType = await app.getType()
     assert.emits(tx, 'ContractVersionSet', { version: 2 })
@@ -413,7 +411,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       //increase _newActiveValidatorsCount by add new depositedKeys
       await app.increaseNodeOperatorDepositedSigningKeysCount(3, 2)
 
-      await app.updateExitedValidatorsCount(3, 1, { from: voting })
+      const { operatorIds, keysCounts } = prepIdsCountsPayload(3, 1)
+      await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
 
     })
 
@@ -447,18 +446,18 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await app.updateTargetValidatorsLimits(0, true, 10, { from: voting })
 
       let keysStatTotal = await app.getStakingModuleSummary()
-      assert.equal(keysStatTotal.totalExitedValidators, 2)
-      assert.equal(keysStatTotal.totalDepositedValidators, 25)
-      assert.equal(keysStatTotal.depositableValidatorsCount, 17)
+      assert.equal(+keysStatTotal.totalExitedValidators, 2)
+      assert.equal(+keysStatTotal.totalDepositedValidators, 25)
+      assert.equal(+keysStatTotal.depositableValidatorsCount, 17)
 
       let limitStatOp = await app.getNodeOperatorSummary(0)
       assert.equal(limitStatOp.isTargetLimitActive, true)
-      assert.equal(limitStatOp.targetValidatorsCount, 10)
+      assert.equal(+limitStatOp.targetValidatorsCount, 10)
 
       let keysStatOp = await app.getNodeOperatorSummary(0)
-      assert.equal(keysStatOp.totalExitedValidators, 2)
+      assert.equal(+keysStatOp.totalExitedValidators, 2)
       assert.equal(keysStatOp.totalDepositedValidators.toNumber()-keysStatOp.totalExitedValidators.toNumber(), 8)
-      assert.equal(keysStatOp.depositableValidatorsCount, 2)
+      assert.equal(+keysStatOp.depositableValidatorsCount, 2)
 
       await app.updateTargetValidatorsLimits(0, false, 10, { from: voting })
 
@@ -508,8 +507,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       assert.equal(keysStatOp.depositableValidatorsCount, 0)
 
       // console.log(o2n(limitStatOp))
-      await app.updateExitedValidatorsCount(0, 3, { from: voting })
-      await app.updateExitedValidatorsCount(1, 1, { from: voting })
+      const { operatorIds: operatorIds1, keysCounts: keysCounts1 } = prepIdsCountsPayload(0, 3)
+      const { operatorIds: operatorIds2, keysCounts: keysCounts2 } = prepIdsCountsPayload(1, 1)
+      await app.updateExitedValidatorsCount(operatorIds1, keysCounts1, { from: voting })
+      await app.updateExitedValidatorsCount(operatorIds2, keysCounts2, { from: voting })
 
       keysStatTotal = await app.getStakingModuleSummary()
       // console.log(o2n(keysStatTotal))
@@ -576,7 +577,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
 
 function o2n(o = {}) {
   for (const k of Object.keys(o)) {
-    if (BN.isBN(o[k])) {
+    if (bn.isBN(o[k])) {
       o[k] = o[k].toString()
     }
   }

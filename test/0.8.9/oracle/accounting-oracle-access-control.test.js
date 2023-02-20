@@ -1,5 +1,4 @@
 const { assert } = require('../../helpers/assert')
-const { assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
 const { e9, e18, e27 } = require('../../helpers/utils')
 
 const {
@@ -84,7 +83,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     beforeEach(deploy)
 
     context('submitReportData', () => {
-      it('should revert from not consensus member without SUBMIT_DATA_ROLE role ', async () => {
+      it('should revert from not consensus member without SUBMIT_DATA_ROLE role', async () => {
         await assert.reverts(
           oracle.submitReportData(reportItems, CONSENSUS_VERSION, { from: stranger }),
           'SenderNotAllowed()'
@@ -97,14 +96,14 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         await consensus.setTime(deadline)
 
         const tx = await oracle.submitReportData(reportItems, CONSENSUS_VERSION, { from: account2 })
-        assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
+        assert.emits(tx, 'ProcessingStarted', { refSlot: reportFields.refSlot })
       })
 
       it('should allow calling from a member', async () => {
         await consensus.addMember(member2, 2)
 
         const tx = await oracle.submitReportData(reportItems, CONSENSUS_VERSION, { from: member2 })
-        assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
+        assert.emits(tx, 'ProcessingStarted', { refSlot: reportFields.refSlot })
       })
     })
 
@@ -123,7 +122,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         await oracle.submitReportData(reportItems, CONSENSUS_VERSION, { from: account2 })
         const tx = await oracle.submitReportExtraDataList(extraDataList, { from: account2 })
 
-        assertEvent(tx, 'ExtraDataSubmitted', { expectedArgs: { refSlot: reportFields.refSlot } })
+        assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
       })
 
       it('should allow calling from a member', async () => {
@@ -134,7 +133,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         await oracle.submitReportData(reportItems, CONSENSUS_VERSION, { from: member2 })
         const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member2 })
 
-        assertEvent(tx, 'ExtraDataSubmitted', { expectedArgs: { refSlot: reportFields.refSlot } })
+        assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
       })
     })
   })

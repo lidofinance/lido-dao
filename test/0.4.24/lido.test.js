@@ -18,7 +18,8 @@ const {
   assertNoEvent,
   StETH,
   shares,
-  setBalance
+  setBalance,
+  prepIdsCountsPayload
 } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 const nodeOperators = require('../helpers/node-operators')
@@ -1291,7 +1292,8 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // #1 goes below the limit
-    await operators.updateExitedValidatorsCount(1, 1, { from: voting })
+    const { operatorIds, keysCounts } = prepIdsCountsPayload(1, 1)
+    await operators.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
     await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
@@ -1417,7 +1419,8 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
     assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // #1 goes below the limit (doesn't change situation. validator stop decreases limit)
-    await operators.updateExitedValidatorsCount(1, 1, { from: voting })
+    const { operatorIds, keysCounts } = prepIdsCountsPayload(1, 1)
+    await operators.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
     await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 3, beaconValidators: 0, beaconBalance: ETH(0) })
