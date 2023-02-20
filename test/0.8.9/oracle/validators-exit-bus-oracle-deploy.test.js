@@ -31,9 +31,6 @@ function getReportDataItems(r) {
 
 function calcReportDataHash(reportItems) {
   const data = web3.eth.abi.encodeParameters(['(uint256,uint256,uint256,uint256,bytes)'], [reportItems])
-  // const toS = x => Array.isArray(x) ? `[${x.map(toS)}]` : `${x}`
-  // console.log(toS(reportItems))
-  // console.log(data)
   return web3.utils.keccak256(data)
 }
 
@@ -100,13 +97,16 @@ async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
   return oracleReportSanityChecker
 }
 
-async function deployExitBusOracle(admin, {
-  dataSubmitter = null,
-  lastProcessingRefSlot = 0,
-  resumeAfterDeploy = false,
-  pauser = ZERO_ADDRESS,
-  resumer = ZERO_ADDRESS,
-} = {}) {
+async function deployExitBusOracle(
+  admin,
+  {
+    dataSubmitter = null,
+    lastProcessingRefSlot = 0,
+    resumeAfterDeploy = false,
+    pauser = ZERO_ADDRESS,
+    resumer = ZERO_ADDRESS
+  } = {}
+) {
   const locator = (await deployLocatorWithDummyAddressesImplementation(admin)).address
 
   const oracle = await ValidatorsExitBusOracle.new(SECONDS_PER_SLOT, GENESIS_TIME, locator, { from: admin })
@@ -129,7 +129,7 @@ async function deployExitBusOracle(admin, {
     consensus.address,
     CONSENSUS_VERSION,
     lastProcessingRefSlot,
-    {from: admin}
+    { from: admin }
   )
 
   assert.emits(initTx, 'ContractVersionSet', { version: 1 })
@@ -164,6 +164,7 @@ async function deployExitBusOracle(admin, {
 
   return { consensus, oracle, oracleReportSanityChecker, locator, initTx }
 }
+
 contract('ValidatorsExitBusOracle', ([admin, member1]) => {
   let consensus
   let oracle
@@ -180,7 +181,6 @@ contract('ValidatorsExitBusOracle', ([admin, member1]) => {
       assert.equal(+(await oracle.getTime()), time1)
 
       await consensus.advanceTimeBy(SECONDS_PER_SLOT)
-
       const time2 = +(await consensus.getTime())
       assert.equal(time2, time1 + SECONDS_PER_SLOT)
       assert.equal(+(await oracle.getTime()), time2)
@@ -190,6 +190,14 @@ contract('ValidatorsExitBusOracle', ([admin, member1]) => {
       assert.equal(await oracle.getConsensusContract(), consensus.address)
       assert.equal(+(await oracle.getConsensusVersion()), CONSENSUS_VERSION)
       assert.equal(+(await oracle.SECONDS_PER_SLOT()), SECONDS_PER_SLOT)
+      assert.equal(await oracle.isPaused(), true)
+    })
+
+    it('pause/resume operations work', async () => {
+      assert.equal(await oracle.isPaused(), true)
+      await oracle.resume()
+      assert.equal(await oracle.isPaused(), false)
+      await oracle.pause(123)
       assert.equal(await oracle.isPaused(), true)
     })
   })
