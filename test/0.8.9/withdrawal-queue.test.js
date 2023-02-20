@@ -524,8 +524,15 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     })
 
     it('reverts if request is not finalized', async () => {
-      await assert.reverts(withdrawalQueue.findCheckpointHint(11, 1, 10), "RequestNotFinalized(11)")
-      await assert.reverts(withdrawalQueue.findCheckpointHintUnbounded(11), "RequestNotFinalized(11)")
+      await withdrawalQueue.requestWithdrawals([ETH(1)], owner, { from: user })
+      await assert.reverts(withdrawalQueue.findCheckpointHint(11, 1, 10), "RequestNotFoundOrNotFinalized(11)")
+      await assert.reverts(withdrawalQueue.findCheckpointHintUnbounded(11), "RequestNotFoundOrNotFinalized(11)")
+
+    })
+
+    it('reverts if there is no such a request', async () => {
+      await assert.reverts(withdrawalQueue.findCheckpointHint(12, 1, 10), "RequestNotFoundOrNotFinalized(12)")
+      await assert.reverts(withdrawalQueue.findCheckpointHintUnbounded(12), "RequestNotFoundOrNotFinalized(12)")
     })
 
     it('range search (found)', async () => {
