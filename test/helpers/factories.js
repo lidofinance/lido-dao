@@ -281,8 +281,8 @@ async function withdrawalVaultFactory({ pool, treasury }) {
   return await WithdrawalVault.new(pool.address, treasury.address)
 }
 
-async function eip712StETHFactory({ appManager }) {
-  return await EIP712StETH.new({ from: appManager.address })
+async function eip712StETHFactory({ pool, appManager }) {
+  return await EIP712StETH.new(pool.address, { from: appManager.address })
 }
 
 async function stakingModulesFactory(_) {
