@@ -12,6 +12,8 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2]) => {
   let consensus = null
   let reportProcessor = null
   let snapshot = null
+  let reportProcessor2 = null
+
   const manageMembersAndQuorumRoleKeccak156 = web3.utils.keccak256('MANAGE_MEMBERS_AND_QUORUM_ROLE')
   const disableConsensusRoleKeccak156 = web3.utils.keccak256('DISABLE_CONSENSUS_ROLE')
   const manageFrameConfigRoleKeccak156 = web3.utils.keccak256('MANAGE_FRAME_CONFIG_ROLE')
@@ -22,6 +24,8 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2]) => {
     const deployed = await deployHashConsensus(admin, options)
     consensus = deployed.consensus
     reportProcessor = deployed.reportProcessor
+
+    reportProcessor2 = await MockReportProcessor.new(CONSENSUS_VERSION, { from: admin })
 
     snapshot = new EvmSnapshot(hre.ethers.provider)
     await snapshot.make()
@@ -174,8 +178,6 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2]) => {
 
   context('MANAGE_REPORT_PROCESSOR_ROLE', () => {
     context('setReportProcessor', async () => {
-      const reportProcessor2 = await MockReportProcessor.new(CONSENSUS_VERSION, { from: admin })
-
       it('should revert without MANAGE_REPORT_PROCESSOR_ROLE role', async () => {
         await assert.revertsOZAccessControl(
           consensus.setReportProcessor(reportProcessor2.address, { from: account1 }),
