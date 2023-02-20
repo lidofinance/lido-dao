@@ -282,7 +282,7 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
 
     // Adding a key & setting staking limit will help
     await operators.addSigningKeys(0, 1, pad('0x0003', 48), pad('0x01', 96), { from: voting })
-    operators.setNodeOperatorStakingLimit(0, 3, { from: voting })
+    await operators.setNodeOperatorStakingLimit(0, 3, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
@@ -414,7 +414,7 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
 
     // Adding a key & setting staking limit will help
     await operators.addSigningKeys(0, 1, pad('0x0003', 48), pad('0x01', 96), { from: voting })
-    operators.setNodeOperatorStakingLimit(0, 3, { from: voting })
+    await operators.setNodeOperatorStakingLimit(0, 3, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(1) })
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })

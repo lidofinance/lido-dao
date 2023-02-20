@@ -1338,7 +1338,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         { stoppedValidators: exitedValidatorsKeysCountBefore },
         { exitedSigningKeysCount: exitedSigningKeysCountBefore }
       ] = await Promise.all([
-        await app.getNodeOperator(firstNodeOperatorId, false),
+        app.getNodeOperator(firstNodeOperatorId, false),
         app.testing_getTotalSigningKeysStats()
       ])
       assert(newExitedValidatorsCount < exitedValidatorsKeysCountBefore.toNumber())
@@ -1357,7 +1357,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         { stoppedValidators: exitedValidatorsKeysCountBefore },
         { exitedSigningKeysCount: exitedSigningKeysCountBefore }
       ] = await Promise.all([
-        await app.getNodeOperator(firstNodeOperatorId, false),
+        app.getNodeOperator(firstNodeOperatorId, false),
         app.testing_getTotalSigningKeysStats()
       ])
       assert(newExitedValidatorsCount > exitedValidatorsKeysCountBefore.toNumber())
@@ -1507,7 +1507,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       // invalidated all keys before the test to remove all unused keys of node operators
       await app.onWithdrawalCredentialsChanged({ from: voting })
       // the second invalidation must not invalidate keys
-      const receipt = app.onWithdrawalCredentialsChanged({ from: voting })
+      const receipt = await app.onWithdrawalCredentialsChanged({ from: voting })
       const nonceBefore = await app.getNonce()
       assert.notEmits(receipt, 'NodeOperatorTotalKeysTrimmed')
       const nonceAfter = await app.getNonce()

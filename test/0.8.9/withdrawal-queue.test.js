@@ -31,9 +31,8 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     await steth.mintShares(user, shares(1))
     await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
 
-    impersonate(ethers.provider, steth.address)
-
-    snapshot.make();
+    await impersonate(ethers.provider, steth.address)
+    await snapshot.make();
   })
 
   afterEach(async () => {
