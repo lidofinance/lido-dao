@@ -346,5 +346,43 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         )
       })
     })
+
+    context('getTotalRequestsProcessed reflects report history', () => {
+      before(setup)
+
+      let requestCount
+
+      it('should be zero at init', async () => {
+        requestCount = 0
+        assert.equals(await oracle.getTotalRequestsProcessed(), requestCount)
+      })
+
+      it('should increase after report', async () => {
+        const report = await prepareReportAndSubmitHash([
+          { moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }
+        ])
+        await oracle.submitReportData(report, oracleVersion, { from: member1 })
+        requestCount += 1
+        assert.equals(await oracle.getTotalRequestsProcessed(), requestCount)
+      })
+
+      it('should double increase for two exits', async () => {
+        await consensus.advanceTimeToNextFrameStart()
+        const report = await prepareReportAndSubmitHash([
+          { moduleId: 5, nodeOpId: 1, valIndex: 10, valPubkey: PUBKEYS[0] },
+          { moduleId: 5, nodeOpId: 3, valIndex: 1, valPubkey: PUBKEYS[0] }
+        ])
+        await oracle.submitReportData(report, oracleVersion, { from: member1 })
+        requestCount += 2
+        assert.equals(await oracle.getTotalRequestsProcessed(), requestCount)
+      })
+
+      it('should not change on empty report', async () => {
+        await consensus.advanceTimeToNextFrameStart()
+        const report = await prepareReportAndSubmitHash([])
+        await oracle.submitReportData(report, oracleVersion, { from: member1 })
+        assert.equals(await oracle.getTotalRequestsProcessed(), requestCount)
+      })
+    })
   })
 })
