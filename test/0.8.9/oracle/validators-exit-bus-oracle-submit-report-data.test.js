@@ -241,6 +241,41 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         assert.equals(+storageAfter.requestsProcessed, requests.length)
         assert.equals(+storageAfter.dataFormat, DATA_FORMAT_LIST)
       })
+
+      it('updates total requests processed count', async () => {
+        let currentCount = 0
+        const countStep0 = await oracle.getTotalRequestsProcessed()
+        assert.equals(+countStep0, currentCount)
+
+        // Step 1 — process 1 item
+        const requestsStep1 = [{ moduleId: 3, nodeOpId: 1, valIndex: 2, valPubkey: PUBKEYS[1] }]
+        const reportStep1 = await prepareReportAndSubmitHash(requestsStep1)
+        await oracle.submitReportData(reportStep1, oracleVersion, { from: member1 })
+        const countStep1 = await oracle.getTotalRequestsProcessed()
+        currentCount += requestsStep1.length
+        assert.equals(+countStep1, currentCount)
+
+        // Step 2 — process 2 items
+        await consensus.advanceTimeToNextFrameStart()
+        const requestsStep2 = [
+          { moduleId: 4, nodeOpId: 2, valIndex: 2, valPubkey: PUBKEYS[2] },
+          { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[3] }
+        ]
+        const reportStep2 = await prepareReportAndSubmitHash(requestsStep2)
+        await oracle.submitReportData(reportStep2, oracleVersion, { from: member1 })
+        const countStep2 = await oracle.getTotalRequestsProcessed()
+        currentCount += requestsStep2.length
+        assert.equals(+countStep2, currentCount)
+
+        // Step 3 — process no items
+        await consensus.advanceTimeToNextFrameStart()
+        const requestsStep3 = []
+        const reportStep3 = await prepareReportAndSubmitHash(requestsStep3)
+        await oracle.submitReportData(reportStep3, oracleVersion, { from: member1 })
+        const countStep3 = await oracle.getTotalRequestsProcessed()
+        currentCount += requestsStep3.length
+        assert.equals(+countStep3, currentCount)
+      })
     })
 
     context(`requires validator indices for the same node operator to increase`, () => {
