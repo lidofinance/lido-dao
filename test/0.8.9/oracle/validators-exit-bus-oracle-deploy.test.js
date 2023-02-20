@@ -83,8 +83,8 @@ module.exports = {
 }
 async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
   const maxValidatorExitRequestsPerReport = 2000
-  const limitsList = [0, 0, 0, 0, 0, 0, maxValidatorExitRequestsPerReport, 0]
-  const managersRoster = [[admin], [], [], [], [], [], [], [], []]
+  const limitsList = [0, 0, 0, 0, maxValidatorExitRequestsPerReport, 0, 0, 0, 0]
+  const managersRoster = [[admin], [], [], [], [], [], [], [], [], []]
 
   const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
 
@@ -100,10 +100,13 @@ async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
   return oracleReportSanityChecker.address
 }
 
-async function deployExitBusOracle(
-  admin,
-  { dataSubmitter = null, lastProcessingRefSlot = 0, resumeAfterDeploy = false } = {}
-) {
+async function deployExitBusOracle(admin, {
+  dataSubmitter = null,
+  lastProcessingRefSlot = 0,
+  resumeAfterDeploy = false,
+  pauser = ZERO_ADDRESS,
+  resumer = ZERO_ADDRESS,
+} = {}) {
   const locator = (await deployLocatorWithDummyAddressesImplementation(admin)).address
 
   const oracle = await ValidatorsExitBusOracle.new(SECONDS_PER_SLOT, GENESIS_TIME, locator, { from: admin })
@@ -119,9 +122,15 @@ async function deployExitBusOracle(
     oracleReportSanityChecker: oracleReportSanityChecker
   })
 
-  const initTx = await oracle.initialize(admin, consensus.address, CONSENSUS_VERSION, lastProcessingRefSlot, {
-    from: admin
-  })
+  const initTx = await oracle.initialize(
+    admin,
+    pauser,
+    resumer,
+    consensus.address,
+    CONSENSUS_VERSION,
+    lastProcessingRefSlot,
+    {from: admin}
+  )
 
   assert.emits(initTx, 'ContractVersionSet', { version: 1 })
 

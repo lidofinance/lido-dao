@@ -83,7 +83,7 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
   it('a user submits 25 * 32 ETH', async () => {
     const depositAmount = 25 * 32
     const referral = ZERO_ADDRESS
-    await pool.submit(referral, { from: user1, value: ETH(depositAmount) })
+    await pool.submit(referral, { from: user1, value: ETH(depositAmount - 1) })
     assertBn(await pool.getTotalPooledEther(), ETH(depositAmount), 'total controlled ether')
 
     // at this point, no deposit assignments were made and all ether is buffered
