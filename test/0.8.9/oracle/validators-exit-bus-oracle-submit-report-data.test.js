@@ -206,6 +206,28 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           )
         })
       })
+
+      it('updates processing state', async () => {
+        const storageBefore = await oracle.getDataProcessingState()
+        assert.equals(+storageBefore.refSlot, 0)
+        assert.equals(+storageBefore.requestsCount, 0)
+        assert.equals(+storageBefore.requestsProcessed, 0)
+        assert.equals(+storageBefore.dataFormat, 0)
+
+        const { refSlot } = await consensus.getCurrentFrame()
+        const requests = [
+          { moduleId: 4, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[2] },
+          { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[3] }
+        ]
+        const report = await prepareReportAndSubmitHash(requests)
+        await oracle.submitReportData(report, oracleVersion, { from: member1 })
+
+        const storageAfter = await oracle.getDataProcessingState()
+        assert.equals(+storageAfter.refSlot, +refSlot)
+        assert.equals(+storageAfter.requestsCount, requests.length)
+        assert.equals(+storageAfter.requestsProcessed, requests.length)
+        assert.equals(+storageAfter.dataFormat, DATA_FORMAT_LIST)
+      })
     })
 
     context(`requires validator indices for the same node operator to increase`, () => {
