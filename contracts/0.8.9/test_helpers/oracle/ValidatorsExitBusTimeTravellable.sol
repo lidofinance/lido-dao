@@ -30,4 +30,8 @@ contract ValidatorsExitBusTimeTravellable is ValidatorsExitBusOracle, ITimeProvi
         address consensus = CONSENSUS_CONTRACT_POSITION.getStorageAddress();
         return ITimeProvider(consensus).getTime();
     }
+
+    function getDataProcessingState() external view returns (DataProcessingState memory) {
+        return _storageDataProcessingState().value;
+    }
 }
