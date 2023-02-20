@@ -65,7 +65,7 @@ abstract contract WithdrawalQueueBase {
         uint96 discountFactor;
     }
 
-    /// @notice output format struct for `_getWithdrawalRequestStatus()`
+    /// @notice output format struct for `_getWithdrawalStatus()` method
     struct WithdrawalRequestStatus {
         /// @notice stETH token amount that was locked on withdrawal queue for this request
         uint256 amountOfStETH;
