@@ -103,4 +103,22 @@ contract EIP712StETH is IEIP712StETH {
     function hashTypedDataV4(address _stETH, bytes32 _structHash) external view override returns (bytes32) {
         return ECDSA.toTypedDataHash(domainSeparatorV4(_stETH), _structHash);
     }
+
+    /**
+     * @dev returns the fields and values that describe the domain separator
+     * used by stETH for EIP-712 signature.
+     */
+    function eip712Domain(address _stETH) external view returns (
+        string memory name,
+        string memory version,
+        uint256 chainId,
+        address verifyingContract
+    ) {
+        return (
+            "Liquid staked Ether 2.0",
+            "2",
+            block.chainid,
+            _stETH
+        );
+    }
 }

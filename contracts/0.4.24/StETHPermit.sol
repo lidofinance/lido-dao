@@ -128,6 +128,25 @@ contract StETHPermit is IERC2612, StETH {
     }
 
     /**
+     * @dev returns the fields and values that describe the domain separator used by this contract for EIP-712
+     * signature.
+     *
+     * NB: compairing to the full-fledged ERC-5267 version:
+     * - `salt` and `extensions` are unused
+     * - `flags` is hex"0f" or 01111b
+     *
+     * @dev using shortened returns to reduce a bytecode size
+     */
+    function eip712Domain() external view returns (
+        string memory name,
+        string memory version,
+        uint256 chainId,
+        address verifyingContract
+    ) {
+        return IEIP712StETH(getEIP712StETH()).eip712Domain(address(this));
+    }
+
+    /**
      * @dev "Consume a nonce": return the current value and increment.
      */
     function _useNonce(address _owner) internal returns (uint256 current) {

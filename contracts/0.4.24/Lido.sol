@@ -1097,7 +1097,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 clValidators = CL_VALIDATORS_POSITION.getStorageUint256();
         // clValidators can never be less than deposited ones.
         assert(depositedValidators >= clValidators);
-        return depositedValidators.sub(clValidators).mul(DEPOSIT_SIZE);
+        return (depositedValidators - clValidators).mul(DEPOSIT_SIZE);
     }
 
     /**

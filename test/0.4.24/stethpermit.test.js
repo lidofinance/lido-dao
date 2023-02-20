@@ -60,6 +60,20 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       assert.equals(await stEthPermit.getEIP712StETH(), eip712StETH.address)
     })
 
+    it('eip712Domain() is correct', async () => {
+      const { name, version, chainId, verifyingContract } = await stEthPermit.eip712Domain()
+
+      assert.equals(name, 'Liquid staked Ether 2.0')
+      assert.equals(version, '2')
+      assert.equals(chainId, await web3.eth.net.getId())
+      assert.equals(verifyingContract, stEthPermit.address)
+
+      assert.equals(
+        makeDomainSeparator(name, version, chainId, verifyingContract),
+        domainSeparator
+      )
+    })
+
     it('grants allowance when a valid permit is given', async () => {
       const { owner, spender, deadline } = permitParams
       let { value } = permitParams

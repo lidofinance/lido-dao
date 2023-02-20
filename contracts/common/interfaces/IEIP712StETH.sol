@@ -33,4 +33,15 @@ interface IEIP712StETH {
      * ```
      */
     function hashTypedDataV4(address _stETH, bytes32 _structHash) external view returns (bytes32);
+
+    /**
+     * @dev returns the fields and values that describe the domain separator
+     * used by stETH for EIP-712 signature.
+     */
+    function eip712Domain(address _stETH) external view returns (
+        string memory name,
+        string memory version,
+        uint256 chainId,
+        address verifyingContract
+    );
 }
