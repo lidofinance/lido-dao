@@ -263,6 +263,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
 
     it('return 0 for non-finalized request', async () => {
       assert.equals(await withdrawalQueue.getClaimableEther([1], [1]), ETH(0))
+      assert.equals(await withdrawalQueue.getClaimableEther([1], [51]), ETH(0))
     })
 
     it('return 0 for claimed request', async () => {
@@ -270,15 +271,16 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await withdrawalQueue.claimWithdrawals([1], [1], { from: owner })
 
       assert.equals(await withdrawalQueue.getClaimableEther([1], [1]), ETH(0))
+      assert.equals(await withdrawalQueue.getClaimableEther([1], [51]), ETH(0))
     })
 
     it('reverts on invalid params', async () => {
       await assert.reverts(withdrawalQueue.getClaimableEther([0], [1]), 'InvalidRequestId(0)')
       await assert.reverts(withdrawalQueue.getClaimableEther([2], [1]), 'InvalidRequestId(2)')
-      await assert.reverts(withdrawalQueue.getClaimableEther([1], [0]), 'InvalidHint(0)')
 
       await withdrawalQueue.finalize(1, { from: steth.address, value: ETH(1) })
       await assert.reverts(withdrawalQueue.getClaimableEther([1], [2]), 'InvalidHint(2)')
+      await assert.reverts(withdrawalQueue.getClaimableEther([1], [0]), 'InvalidHint(0)')
 
       await withdrawalQueue.requestWithdrawals([ETH(1)], owner, { from: user })
       await assert.reverts(withdrawalQueue.getClaimableEther([1], [2]), 'InvalidHint(2)')
@@ -311,8 +313,9 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       assert.equals(await ethers.provider.getBalance(owner), balanceBefore.add(bn(amount)))
     })
 
-    it('One cant claim not finalized request', async () => {
-      await assert.reverts(withdrawalQueue.claimWithdrawals([1], [1], { from: owner }), `RequestNotFinalized(1)`)
+    it('One cant claim not finalized or not existed request', async () => {
+      await assert.reverts(withdrawalQueue.claimWithdrawals([1], [1], { from: owner }), `RequestNotFoundOrNotFinalized(1)`)
+      await assert.reverts(withdrawalQueue.claimWithdrawals([2], [1], { from: owner }), `RequestNotFoundOrNotFinalized(2)`)
     })
 
     it('Cant claim request with a wrong hint', async () => {

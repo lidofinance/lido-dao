@@ -209,7 +209,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     {
         claimableEthValues = new uint256[](_requestIds.length);
         for (uint256 i = 0; i < _requestIds.length; ++i) {
-            (, claimableEthValues[i]) = _calculateClaimableEth(_requestIds[i], _hints[i]);
+            claimableEthValues[i] = _getClaimableEther(_requestIds[i], _hints[i]);
         }
     }
 
@@ -394,5 +394,17 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         if (_amountOfStETH > MAX_STETH_WITHDRAWAL_AMOUNT) {
             revert RequestAmountTooLarge(_amountOfStETH);
         }
+    }
+
+    /// @notice returns claimable ether under the request with _requestId.
+    function _getClaimableEther(uint256 _requestId, uint256 _hint) internal view returns (uint256) {
+        if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
+
+        if (_requestId > getLastFinalizedRequestId()) return 0;
+
+        WithdrawalRequest storage request = _getQueue()[_requestId];
+        if (request.claimed) return 0;
+
+        return _calculateClaimableEther(request, _requestId, _hint);
     }
 }
