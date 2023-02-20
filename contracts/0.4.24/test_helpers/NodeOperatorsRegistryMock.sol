@@ -94,6 +94,10 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
 
         operator.signingKeysStats = signingKeysStats;
 
+        Packed64x4.Packed memory operatorTargetStats;
+        operatorTargetStats.set(MAX_VALIDATORS_COUNT_OFFSET, vettedSigningKeysCount);
+        operator.targetValidatorsStats = operatorTargetStats;
+
         emit NodeOperatorAdded(id, _name, _rewardAddress, 0);
 
         Packed64x4.Packed memory totalSigningKeysStats = _loadTotalSigningKeysStats();
@@ -115,7 +119,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         stuckPenaltyStats.set(REFUNDED_VALIDATORS_COUNT_OFFSET, refundedValidatorsCount);
         stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, stuckPenaltyEndAt);
         _nodeOperators[_nodeOperatorId].stuckPenaltyStats = stuckPenaltyStats;
-          _updateTotalMaxValidatorsCount(_nodeOperatorId);
+        _updateTotalMaxValidatorsCount(_nodeOperatorId);
     }
 
     function testing_getTotalSigningKeysStats()
