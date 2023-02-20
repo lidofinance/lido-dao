@@ -1,4 +1,4 @@
-const { assert } = require('chai')
+const { assert } = require('../../helpers/assert')
 
 const {
   CONSENSUS_VERSION,
@@ -48,7 +48,9 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       assert.equal((await consensus.getConsensusState()).consensusReport, hash)
     }
 
-    async function prepareReportAndSubmitHash(exitRequests) {
+    async function prepareReportAndSubmitHash(
+      exitRequests = [{ moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }] // default
+    ) {
       const { refSlot } = await consensus.getCurrentFrame()
 
       const reportFields = {
@@ -159,6 +161,63 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         await assert.reverts(
           oracle.submitReportData(report, oracleVersion, { from: member1 }),
           'InvalidRequestsDataSortOrder()'
+        )
+      })
+    })
+
+    context(`only consensus member or SUBMIT_DATA_ROLE can submit report`, () => {
+      beforeEach(setup)
+
+      it('reverts on stranger', async () => {
+        const report = await prepareReportAndSubmitHash()
+        await assert.reverts(oracle.submitReportData(report, oracleVersion, { from: stranger }), 'SenderNotAllowed()')
+      })
+
+      it('SUBMIT_DATA_ROLE is allowed', async () => {
+        oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), stranger, { from: admin })
+        await consensus.advanceTimeToNextFrameStart()
+        const report = await prepareReportAndSubmitHash()
+        await oracle.submitReportData(report, oracleVersion, { from: stranger })
+      })
+
+      it('consensus member is allowed', async () => {
+        assert(await consensus.getIsMember(member1))
+        await consensus.advanceTimeToNextFrameStart()
+        const report = await prepareReportAndSubmitHash()
+        await oracle.submitReportData(report, oracleVersion, { from: member1 })
+      })
+    })
+
+    context('invokes internal baseOracle checks', () => {
+      beforeEach(setup)
+
+      it(`reverts on contract version mismatch`, async () => {
+        const report = await prepareReportAndSubmitHash()
+        await assert.reverts(
+          oracle.submitReportData(report, oracleVersion + 1, { from: member1 }),
+          `UnexpectedContractVersion(${oracleVersion}, ${oracleVersion + 1})`
+        )
+      })
+
+      it('reverts on hash mismatch', async () => {
+        const report = await prepareReportAndSubmitHash()
+        const actualReportHash = calcReportDataHash(report)
+        // mess with data field to change hash
+        report[report.length - 1] = report[report.length - 1] + 'ff'
+        const changedReportHash = calcReportDataHash(report)
+        await assert.reverts(
+          oracle.submitReportData(report, oracleVersion, { from: member1 }),
+          `UnexpectedDataHash("${actualReportHash}", "${changedReportHash}")`
+        )
+      })
+
+      it('reverts on processing deadline miss', async () => {
+        const report = await prepareReportAndSubmitHash()
+        const deadline = (await oracle.getConsensusReport()).processingDeadlineTime.toString(10)
+        await consensus.advanceTimeToNextFrameStart()
+        await assert.reverts(
+          oracle.submitReportData(report, oracleVersion, { from: member1 }),
+          `ProcessingDeadlineMissed(${deadline})`
         )
       })
     })
