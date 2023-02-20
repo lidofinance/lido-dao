@@ -15,7 +15,7 @@ interface IEIP712 {
     /**
      * @dev Returns the domain separator for the current chain.
      */
-    function domainSeparatorV4() external view returns (bytes32);
+    function domainSeparatorV4(address _stETH) external view returns (bytes32);
 
     /**
      * @dev Given an already https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct[hashed struct], this
@@ -32,5 +32,5 @@ interface IEIP712 {
      * address signer = ECDSA.recover(digest, signature);
      * ```
      */
-    function hashTypedDataV4(bytes32 _structHash) external view returns (bytes32);
+    function hashTypedDataV4(address _stETH, bytes32 _structHash) external view returns (bytes32);
 }
