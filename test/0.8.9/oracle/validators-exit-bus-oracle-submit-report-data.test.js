@@ -309,23 +309,6 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         currentCount += requestsStep3.length
         assert.equals(+countStep3, currentCount)
       })
-
-      // TODO: check why it reverts
-      // it('', async () => {
-      //   // Step 1
-      //   const requestsStep1 = [{ moduleId: 3, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[1] }]
-      //   const reportStep1 = await prepareReportAndSubmitHash(requestsStep1)
-      //   await oracle.submitReportData(reportStep1, oracleVersion, { from: member1 })
-
-      //   // Step 2
-      //   // no await consensus.advanceTimeToNextFrameStart()
-      //   const requestsStep2 = [
-      //     { moduleId: 4, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[2] },
-      //     { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[3] }
-      //   ]
-      //   const reportStep2 = await prepareReportAndSubmitHash(requestsStep2)
-      //   await oracle.submitReportData(reportStep2, oracleVersion, { from: member1 })
-      // })
     })
 
     context(`requires validator indices for the same node operator to increase`, () => {
