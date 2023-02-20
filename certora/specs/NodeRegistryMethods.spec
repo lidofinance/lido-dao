@@ -1,4 +1,9 @@
+using NodeOperatorsRegistry as nos
+
 methods {
+    // Node
+    nos.getStakingModuleSummary() 
+
     // LidoLocator
     lido() => NONDET
     burner() => NONDET

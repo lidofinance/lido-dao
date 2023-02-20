@@ -43,7 +43,6 @@ use invariant StakingModuleAddressIsNeverZero
 use invariant StakingModuleTotalFeeLEMAX
 use invariant StakingModuleTargetShareLEMAX
 
-
 /**************************************************
  *                 MISC Rules                     *
  **************************************************/
@@ -78,6 +77,23 @@ filtered{f-> !isDeposit(f)} {
         f(e, args);
     uint256 count2 = getStakingModulesCount();
     assert count1 == count2 || count2 == count1 + 1;
+}
+
+rule viewFunctionsThatNeverRevert(method f, method g) 
+filtered{f -> f.isView && !harnessGetters(f), g -> isAddModule(g)} {
+    env ef;
+    env eg;
+    calldataarg args_f;
+    calldataarg args_g;
+
+    f(ef, args_f);
+    require getStakingModulesCount() <=1 ;
+    safeAssumptions(getStakingModulesCount());
+
+    g(eg, args_g);
+
+    f@withrevert(ef, args_f);
+    assert !lastReverted;
 }
 
 /**************************************************
@@ -140,6 +156,10 @@ filtered{f -> !f.isView && !isDeposit(f)} {
     assert (statusMain_Before != statusMain_After && statusOther_Before != statusOther_After)
     => moduleId == otherModule;
 }
+
+invariant statusAtConstructor(uint256 id)
+    id != 0 => getStakingModuleIsActive(id)
+filtered{f -> f.isView}
 
 /**************************************************
  *          Staking module parameters             *
@@ -266,7 +286,8 @@ rule canAlwaysAddAnotherStakingModule() {
     addStakingModule(e, name2, Address2, targetShare2, ModuleFee2, TreasuryFee2) at initState;
     
     // This function fetches the `name` attribute of the next struct in the mapping
-    // to make sure there was a valid storage state before calling the addStakingModule function.
+    // to make sure there was a valid storage state before calling the addStakingModule function
+    // and writing to that storage slot.
     getStakingModuleNameLengthByIndex(getStakingModulesCount());
 
     addStakingModule@withrevert(e, name1, Address1, targetShare1, ModuleFee1, TreasuryFee1);
@@ -281,4 +302,58 @@ rule cannotInitializeTwice() {
     initialize(e, args1);
     initialize@withrevert(e, args2);
     assert lastReverted;
+}
+
+rule canAlwaysGetAddedStakingModule() {
+    env e;
+    calldataarg args;
+    uint256 id = getStakingModulesCount() + 1;
+    requireInvariant modulesCountIsLastIndex();
+    addStakingModule(e, args);
+
+    getStakingModuleIndexById@withrevert(id);
+    assert !lastReverted;
+    getStakingModuleIdById@withrevert(id);
+    assert !lastReverted;
+}
+
+rule getMaxDepositsCountReverts_init(uint256 id) {
+    env e;
+
+    requireInvariant modulesCountIsLastIndex();
+    // Post contructor state
+    require getStakingModuleIndexOneBased(id) == 0;
+    getStakingModuleMaxDepositsCount@withrevert(e, id);
+    assert lastReverted;
+}
+
+rule getMaxDepositsCountReverts_preserve(method f, uint256 id) 
+filtered{f -> !f.isView && !isDeposit(f)} {
+    env e;
+    calldataarg args;
+
+    requireInvariant modulesCountIsLastIndex();
+    getStakingModuleMaxDepositsCount@withrevert(e, id);
+    bool reverted_A = lastReverted;
+    require reverted_A <=> (id > getStakingModulesCount() || id == 0);
+
+    f(e, args);
+
+    getStakingModuleMaxDepositsCount@withrevert(e, id);
+    bool reverted_B = lastReverted;
+    assert reverted_B <=> (id > getStakingModulesCount() || id == 0);
+}
+
+rule depositRevertsForInvalidModuleId(uint256 id) {
+    env e;
+    uint256 maxDepositsCount;
+    bytes calldata; require calldata.length == 0;
+
+    getStakingModuleMaxDepositsCount@withrevert(e, id);
+    require lastReverted;
+
+    deposit@withrevert(e, maxDepositsCount, id, calldata);
+    bool deposit_reverted = lastReverted;
+
+    assert (id > getStakingModulesCount() || id == 0) => deposit_reverted;
 }

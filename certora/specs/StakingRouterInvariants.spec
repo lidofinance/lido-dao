@@ -76,9 +76,10 @@ invariant StakingModuleTotalFeeLEMAX(uint256 moduleId)
     getStakingModuleFeeById(moduleId) + getStakingModuleTreasuryFeeById(moduleId) <= TOTAL_BASIS_POINTS()
     filtered{f -> !isDeposit(f)}
 
-//invariant StakingModulesDistributionTotalFeeIsBounded()
-//    getStakingRewardsDistributionTotalFee() <= TOTAL_BASIS_POINTS()
-//    filtered{f -> !isDeposit(f)}
+invariant UnRegisteredStakingModuleIsActive(uint256 id)
+    id > getStakingModulesCount() => getStakingModuleIsActive(id)
+    filtered{f -> !isDeposit(f)}
+
 
 function differentOrEqualToZero_Address(address a, address b) returns bool {
     return a != b || (a == 0 || b == 0);
@@ -86,16 +87,28 @@ function differentOrEqualToZero_Address(address a, address b) returns bool {
 
 function safeAssumptions(uint256 moduleId) {
     requireInvariant modulesCountIsLastIndex();
-    requireInvariant StakingModuleIdLELast(moduleId);
-    requireInvariant StakingModuleIndexIsIdMinus1(moduleId);
-    requireInvariant StakingModuleId(moduleId);
-    requireInvariant StakingModuleIdLECount(moduleId);
-    requireInvariant StakingModuleAddressIsNeverZero(moduleId);
-    requireInvariant StakingModuleTotalFeeLEMAX(moduleId);
-    requireInvariant StakingModuleTargetShareLEMAX(moduleId);
+    if(moduleId > 0) {
+        requireInvariant StakingModuleIdLELast(moduleId);
+        requireInvariant StakingModuleIndexIsIdMinus1(moduleId);
+        requireInvariant StakingModuleId(moduleId);
+        requireInvariant StakingModuleIdLECount(moduleId);
+        requireInvariant StakingModuleAddressIsNeverZero(moduleId);
+        requireInvariant StakingModuleTotalFeeLEMAX(moduleId);
+        requireInvariant StakingModuleTargetShareLEMAX(moduleId);
+    }
+}
+
+/*
+invariant StakingModulesDistributionTotalFeeIsBounded()
+    getStakingRewardsDistributionTotalFee() <= TOTAL_BASIS_POINTS()
+    filtered{f -> !isDeposit(f) && isAddModule(f)}
+
+function getStakingRewardsDistributionTotalFee() returns uint256 {
+    uint256 modulesFee; uint256 treasuryFee; uint256 precision;
+    modulesFee, treasuryFee, precision = getStakingFeeAggregateDistribution();
+    return to_uint256(modulesFee + treasuryFee);
 }
     
-/*
 preserved addStakingModule(
             string name, 
             address Address,

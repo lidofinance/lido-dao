@@ -32,6 +32,7 @@ methods {
      getStakingModuleIsDepositsPaused(uint256) returns (bool) envfree
      getStakingModuleIsActive(uint256) returns (bool) envfree
      getStakingFeeAggregateDistribution() returns (uint96,uint96,uint256) envfree
+     getStakingModuleMaxDepositsCount(uint256) returns (uint256)
      FEE_PRECISION_POINTS() returns (uint256) envfree
      TOTAL_BASIS_POINTS() returns (uint256) envfree
 
@@ -46,6 +47,7 @@ methods {
      getStakingModuleTreasuryFeeById(uint256) returns (uint16) envfree
      getStakingModuleTargetShareById(uint256) returns (uint16) envfree
      getStakingModuleNameLengthByIndex(uint256) returns (uint256) envfree
+     getStakingModuleIndexOneBased(uint256) returns (uint256) envfree
 }
 
 /**************************************************
@@ -62,6 +64,19 @@ definition isAddModule(method f) returns bool =
 definition ACTIVE() returns uint8 = 0; 
 definition PAUSED() returns uint8 = 1; 
 definition STOPPED() returns uint8 = 2; 
+
+definition harnessGetters(method f) returns bool =
+    f.selector == getStakingModuleAddressByIndex(uint256).selector ||
+    f.selector == getStakingModuleAddressById(uint256).selector ||
+    f.selector == getStakingModuleExitedValidatorsById(uint256).selector ||
+    f.selector == getStakingModuleIdById(uint256).selector ||
+    f.selector == getStakingModuleIndexById(uint256).selector ||
+    f.selector == getLastStakingModuleId().selector ||
+    f.selector == getStakingModuleFeeById(uint256).selector ||
+    f.selector == getStakingModuleTreasuryFeeById(uint256).selector  ||
+    f.selector == getStakingModuleTargetShareById(uint256).selector ||
+    f.selector == getStakingModuleNameLengthByIndex(uint256).selector ||
+    f.selector == getStakingModuleIndexOneBased(uint256).selector;
 
 // Signature and public key batch count
 definition keyCount() returns uint256 = 4;
