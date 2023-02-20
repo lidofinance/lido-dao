@@ -23,7 +23,7 @@ const DEFAULT_DEPLOY_PARAMS = {
       churnValidatorsPerDayLimit: 255,
       oneOffCLBalanceDecreaseBPLimit: 10000,
       annualBalanceIncreaseBPLimit: 10000,
-      shareRateDeviationBPLimit: 10000,
+      simulatedShareRateDeviationBPLimit: 10000,
       maxValidatorExitRequestsPerReport: 10000,
       maxAccountingExtraDataListItemsCount: 100,
       maxNodeOperatorsPerExtraDataItemCount: 100,

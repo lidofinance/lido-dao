@@ -38,7 +38,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     churnValidatorsPerDayLimit: 55,
     oneOffCLBalanceDecreaseBPLimit: 5_00, // 5%
     annualBalanceIncreaseBPLimit: 10_00, // 10%
-    shareRateDeviationBPLimit: 2_50, // 2.5%
+    simulatedShareRateDeviationBPLimit: 2_50, // 2.5%
     maxValidatorExitRequestsPerReport: 2000,
     maxAccountingExtraDataListItemsCount: 15,
     maxNodeOperatorsPerExtraDataItemCount: 16,
@@ -82,7 +82,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
         churnValidatorsPerDayLimit: 50,
         oneOffCLBalanceDecreaseBPLimit: 10_00,
         annualBalanceIncreaseBPLimit: 15_00,
-        shareRateDeviationBPLimit: 1_50, // 1.5%
+        simulatedShareRateDeviationBPLimit: 1_50, // 1.5%
         maxValidatorExitRequestsPerReport: 3000,
         maxAccountingExtraDataListItemsCount: 15 + 1,
         maxNodeOperatorsPerExtraDataItemCount: 16 + 1,
@@ -93,7 +93,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       assert.notEquals(limitsBefore.churnValidatorsPerDayLimit, newLimitsList.churnValidatorsPerDayLimit)
       assert.notEquals(limitsBefore.oneOffCLBalanceDecreaseBPLimit, newLimitsList.oneOffCLBalanceDecreaseBPLimit)
       assert.notEquals(limitsBefore.annualBalanceIncreaseBPLimit, newLimitsList.annualBalanceIncreaseBPLimit)
-      assert.notEquals(limitsBefore.shareRateDeviationBPLimit, newLimitsList.shareRateDeviationBPLimit)
+      assert.notEquals(limitsBefore.simulatedShareRateDeviationBPLimit, newLimitsList.simulatedShareRateDeviationBPLimit)
       assert.notEquals(limitsBefore.maxValidatorExitRequestsPerReport, newLimitsList.maxValidatorExitRequestsPerReport)
       assert.notEquals(limitsBefore.maxAccountingExtraDataListItemsCount, newLimitsList.maxAccountingExtraDataListItemsCount)
       assert.notEquals(limitsBefore.maxNodeOperatorsPerExtraDataItemCount, newLimitsList.maxNodeOperatorsPerExtraDataItemCount)
@@ -108,7 +108,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       assert.equals(limitsAfter.churnValidatorsPerDayLimit, newLimitsList.churnValidatorsPerDayLimit)
       assert.equals(limitsAfter.oneOffCLBalanceDecreaseBPLimit, newLimitsList.oneOffCLBalanceDecreaseBPLimit)
       assert.equals(limitsAfter.annualBalanceIncreaseBPLimit, newLimitsList.annualBalanceIncreaseBPLimit)
-      assert.equals(limitsAfter.shareRateDeviationBPLimit, newLimitsList.shareRateDeviationBPLimit)
+      assert.equals(limitsAfter.simulatedShareRateDeviationBPLimit, newLimitsList.simulatedShareRateDeviationBPLimit)
       assert.equals(limitsAfter.maxValidatorExitRequestsPerReport, newLimitsList.maxValidatorExitRequestsPerReport)
       assert.equals(limitsAfter.maxAccountingExtraDataListItemsCount, newLimitsList.maxAccountingExtraDataListItemsCount)
       assert.equals(limitsAfter.maxNodeOperatorsPerExtraDataItemCount, newLimitsList.maxNodeOperatorsPerExtraDataItemCount)
@@ -260,22 +260,22 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       simulatedShareRate: (BigInt(2) * 10n ** 27n).toString()
     }
 
-    it('reverts with error IncorrectFinalizationShareRate() when reported and onchain share rate differs', async () => {
-      const finalizationShareRate = BigInt(ETH(2.10)) * 10n ** 9n
+    it('reverts with error IncorrectSimulatedShareRate() when reported and onchain share rate differs', async () => {
+      const simulatedShareRate = BigInt(ETH(2.10)) * 10n ** 9n
       const actualShareRate = BigInt(2) * 10n ** 27n
-      const deviation = (100_00n * (finalizationShareRate - actualShareRate)) / actualShareRate
+      const deviation = (100_00n * (simulatedShareRate - actualShareRate)) / actualShareRate
       await assert.revertsWithCustomError(
         oracleReportSanityChecker.checkSimulatedShareRate(
           ...Object.values({
             ...correctSimulatedShareRate,
-            simulatedShareRate: finalizationShareRate.toString()
+            simulatedShareRate: simulatedShareRate.toString()
           })
         ),
-        `IncorrectFinalizationShareRate(${deviation.toString()})`
+        `IncorrectSimulatedShareRate(${deviation.toString()})`
       )
     })
 
-    it('reverts with error IncorrectFinalizationShareRate() when actual share rate is zero', async () => {
+    it('reverts with error IncorrectSimulatedShareRate() when actual share rate is zero', async () => {
       const deviation = 100_00n
       await assert.revertsWithCustomError(
         oracleReportSanityChecker.checkSimulatedShareRate(
@@ -285,7 +285,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
             postTotalPooledEther: ETH(0)
           })
         ),
-        `IncorrectFinalizationShareRate(${deviation.toString()})`
+        `IncorrectSimulatedShareRate(${deviation.toString()})`
       )
     })
 

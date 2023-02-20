@@ -12,7 +12,7 @@ const ORACLE_REPORT_LIMITS_BOILERPLATE = {
   churnValidatorsPerDayLimit: 255,
   oneOffCLBalanceDecreaseBPLimit: 100,
   annualBalanceIncreaseBPLimit: 10000,
-  shareRateDeviationBPLimit: 10000,
+  simulatedShareRateDeviationBPLimit: 10000,
   maxValidatorExitRequestsPerReport: 10000,
   maxAccountingExtraDataListItemsCount: 10000,
   maxNodeOperatorsPerExtraDataItemCount: 10000,
