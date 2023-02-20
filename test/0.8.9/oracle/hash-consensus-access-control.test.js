@@ -11,6 +11,7 @@ const MockReportProcessor = artifacts.require('MockReportProcessor')
 contract('HashConsensus', ([admin, account1, account2, member1, member2]) => {
   let consensus = null
   let reportProcessor = null
+  let snapshot = null
   const manageMembersAndQuorumRoleKeccak156 = web3.utils.keccak256('MANAGE_MEMBERS_AND_QUORUM_ROLE')
   const disableConsensusRoleKeccak156 = web3.utils.keccak256('DISABLE_CONSENSUS_ROLE')
   const manageFrameConfigRoleKeccak156 = web3.utils.keccak256('MANAGE_FRAME_CONFIG_ROLE')
