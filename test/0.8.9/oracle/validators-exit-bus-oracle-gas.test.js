@@ -53,34 +53,41 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       assert.equal((await consensus.getConsensusState()).consensusReport, hash)
     }
 
+    const NUM_MODULES = 5
+    const NODE_OPS_PER_MODULE = 100
+
+    let nextValIndex = 1
+
     function generateExitRequests(totalRequests) {
-      const requestsByModule = Math.max(3, Math.floor(totalRequests / 3))
-      const requestsByNodeOp = Math.max(1, Math.floor(requestsByModule / 3))
+      const requestsPerModule = Math.max(1, Math.floor(totalRequests / NUM_MODULES))
+      const requestsPerNodeOp = Math.max(1, Math.floor(requestsPerModule / NODE_OPS_PER_MODULE))
 
       const requests = []
 
       for (let i = 0; i < totalRequests; ++i) {
-        const moduleId = Math.floor(i / requestsByModule)
-        const nodeOpId = Math.floor((i - moduleId * requestsByModule) / requestsByNodeOp)
-        const valIndex = i - moduleId * requestsByModule - nodeOpId * requestsByNodeOp
+        const moduleId = Math.floor(i / requestsPerModule)
+        const nodeOpId = Math.floor((i - moduleId * requestsPerModule) / requestsPerNodeOp)
+        const valIndex = nextValIndex++
         const valPubkey = PUBKEYS[valIndex % PUBKEYS.length]
-        requests.push({moduleId: moduleId + 1, nodeOpId, valIndex, valPubkey })
+        requests.push({moduleId: moduleId + 1, nodeOpId, valIndex, valPubkey})
       }
 
-      return requests
+      return {requests, requestsPerModule, requestsPerNodeOp}
     }
 
     // pre-heating
-    testGas(10, () => {})
+    testGas(NUM_MODULES * NODE_OPS_PER_MODULE, () => {})
 
     const gasUsages = [];
     [10, 50, 100, 1000, 2000].forEach(n => testGas(n, r => gasUsages.push(r)))
 
     after(async () => {
-      gasUsages.forEach(({totalRequests, gasUsed}) => console.log(
-        `${totalRequests} requests: total gas ${ gasUsed }, ` +
-        `gas per request: ${ Math.round(gasUsed / totalRequests )}`
-      ))
+      gasUsages.forEach(({totalRequests, requestsPerModule, requestsPerNodeOp, gasUsed}) =>
+        console.log(
+          `${totalRequests} requests (per module ${requestsPerModule}, ` +
+          `per node op ${requestsPerNodeOp}): total gas ${gasUsed}, ` +
+          `gas per request: ${Math.round(gasUsed / totalRequests)}`
+        ))
     })
 
     function testGas(totalRequests, reportGas) {
@@ -110,9 +117,9 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           reportFields = {
             consensusVersion: CONSENSUS_VERSION,
             refSlot: +refSlot,
-            requestsCount: exitRequests.length,
+            requestsCount: exitRequests.requests.length,
             dataFormat: DATA_FORMAT_LIST,
-            data: encodeExitRequestsDataList(exitRequests),
+            data: encodeExitRequestsDataList(exitRequests.requests),
           }
 
           reportItems = getReportDataItems(reportFields)
@@ -149,19 +156,20 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           assert.isTrue((await oracle.getConsensusReport()).processingStarted)
 
           const timestamp = await oracle.getTime()
+          const {requests, requestsPerModule, requestsPerNodeOp} = exitRequests
 
-          for (let i = 0; i < exitRequests.length; ++i) {
+          for (let i = 0; i < requests.length; ++i) {
             assertEvent(tx, 'ValidatorExitRequest', {index: i, expectedArgs: {
-              stakingModuleId: exitRequests[i].moduleId,
-              nodeOperatorId: exitRequests[i].nodeOpId,
-              validatorIndex: exitRequests[i].valIndex,
-              validatorPubkey: exitRequests[i].valPubkey,
+              stakingModuleId: requests[i].moduleId,
+              nodeOperatorId: requests[i].nodeOpId,
+              validatorIndex: requests[i].valIndex,
+              validatorPubkey: requests[i].valPubkey,
               timestamp
             }})
           }
 
           const {gasUsed} = tx.receipt
-          reportGas({totalRequests, gasUsed})
+          reportGas({totalRequests, requestsPerModule, requestsPerNodeOp, gasUsed})
         })
 
         it(`reports are marked as processed`, async () => {
@@ -169,8 +177,8 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           assert.equal(procState.dataHash, reportHash)
           assert.isTrue(procState.dataSubmitted)
           assert.equal(+procState.dataFormat, DATA_FORMAT_LIST)
-          assert.equal(+procState.requestsCount, exitRequests.length)
-          assert.equal(+procState.requestsSubmitted, exitRequests.length)
+          assert.equal(+procState.requestsCount, exitRequests.requests.length)
+          assert.equal(+procState.requestsSubmitted, exitRequests.requests.length)
         })
 
         it('some time passes', async () => {

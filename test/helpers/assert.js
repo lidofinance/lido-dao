@@ -44,8 +44,8 @@ chai.util.addMethod(chai.assert, 'notEmits', function (receipt, eventName, args 
   this.isUndefined(event, `Expected that event "${eventName}" with args ${args}  wouldn't be emitted, but it was.`)
 })
 
-chai.util.addMethod(chai.assert, 'reverts', async function (receipt, reason) {
-  await assertRevert(receipt, reason)
+chai.util.addMethod(chai.assert, 'reverts', async function (receipt, reason, customErrorArgs) {
+  await assertRevert(receipt, customErrorArgs !== undefined ? `${reason}(${customErrorArgs.join(', ')})` : reason)
 })
 
 chai.util.addMethod(chai.assert, 'equals', function (actual, expected, errorMsg) {

@@ -81,7 +81,7 @@ interface IStakingRouter {
         uint256 _maxDepositsCount,
         uint256 _stakingModuleId,
         bytes _depositCalldata
-    ) external payable returns (uint256);
+    ) external payable;
 
     function getStakingRewardsDistribution()
         external
@@ -101,6 +101,11 @@ interface IStakingRouter {
     function getTotalFeeE4Precision() external view returns (uint16 totalFee);
 
     function getStakingFeeAggregateDistributionE4Precision() external view returns (uint16 modulesFee, uint16 treasuryFee);
+
+    function getStakingModuleMaxDepositsCount(uint256 _stakingModuleId, uint256 _depositableEther)
+        external
+        view
+        returns (uint256);
 }
 
 interface IWithdrawalQueue {
@@ -160,7 +165,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
-    /// @dev special value for the last finalizable withdrawal request id
+    /// @dev special value to not finalize withdrawal requests
+    /// see the `_lastFinalizableRequestId` arg for `handleOracleReport()`
     uint256 private constant DONT_FINALIZE_WITHDRAWALS = 0;
 
     /// @dev storage slot position for the Lido protocol contracts locator
@@ -244,18 +250,25 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     // The `amount` of ether was sent to the deposit_contract.deposit function
     event Unbuffered(uint256 amount);
 
-    // The amount of ETH sent from StakingRouter contract to Lido contract when deposit called
-    event StakingRouterDepositRemainderReceived(uint256 amount);
-
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
     *      NB: by default, staking and the whole Lido pool are in paused state
+    *
+    * The contract's balance must be non-zero to allow initial holder bootstrap.
+    *
     * @param _lidoLocator lido locator contract
     * @param _eip712StETH eip712 helper contract for StETH
     */
     function initialize(address _lidoLocator, address _eip712StETH)
-        public onlyInit
+        public
+        payable
+        onlyInit
     {
+        uint256 amount = _bootstrapInitialHolder();
+        BUFFERED_ETHER_POSITION.setStorageUint256(amount);
+
+        emit Submitted(INITIAL_TOKEN_HOLDER, amount, 0);
+
         _initialize_v2(_lidoLocator, _eip712StETH);
         initialized();
     }
@@ -284,14 +297,18 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * @notice A function to finalize upgrade to v2 (from v1). Can be called only once
      * @dev Value "1" in CONTRACT_VERSION_POSITION is skipped due to change in numbering
      *
+     * The initial protocol token holder must exist.
+     *
      * For more details see https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-10.md
      */
     function finalizeUpgrade_v2(address _lidoLocator, address _eip712StETH) external {
-        require(hasInitialized(), "NOT_INITIALIZED");
         _checkContractVersion(0);
+        require(hasInitialized(), "NOT_INITIALIZED");
 
         require(_lidoLocator != address(0), "LIDO_LOCATOR_ZERO_ADDRESS");
         require(_eip712StETH != address(0), "EIP712_STETH_ZERO_ADDRESS");
+
+        require(_sharesOf(INITIAL_TOKEN_HOLDER) != 0, "INITIAL_HOLDER_EXISTS");
 
         _initialize_v2(_lidoLocator, _eip712StETH);
     }
@@ -432,7 +449,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     * accepts payments of any size. Submitted Ethers are stored in Buffer until someone calls
     * deposit() and pushes them to the Ethereum Deposit contract.
     */
-    // solhint-disable-next-line
+    // solhint-disable-next-line no-complex-fallback
     function() external payable {
         // protection against accidental submissions by calling non-existent function
         require(msg.data.length == 0, "NON_EMPTY_DATA");
@@ -470,17 +487,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         require(msg.sender == getLidoLocator().withdrawalVault());
 
         emit WithdrawalsReceived(msg.value);
-    }
-
-    /**
-     * @notice A payable function for staking router deposits remainder. Can be called only by `StakingRouter`
-     * @dev We need a dedicated function because funds received by the default payable function
-     * are treated as a user deposit
-     */
-    function receiveStakingRouterDepositRemainder() external payable {
-        require(msg.sender == getLidoLocator().stakingRouter());
-
-        emit StakingRouterDepositRemainderReceived(msg.value);
     }
 
     /**
@@ -550,10 +556,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     * @param _lastFinalizableRequestId right boundary of requestId range if equals 0, no requests should be finalized
     * @param _simulatedShareRate share rate that was simulated by oracle when the report data created (1e27 precision)
     *
-    * NB: `_simulatedShareRate` should be calculated by the Oracle daemon
-    * invoking the method with static call and passing `_lastFinalizableRequestId` == `_simulatedShareRate` == 0
-    * plugging the returned values to the following formula:
-    * `_simulatedShareRate = (postTotalPooledEther * 1e27) / postTotalShares`
+    * NB: `_simulatedShareRate` should be calculated off-chain by calling the method with `eth_call` JSON-RPC API
+    * while passing `_lastFinalizableRequestId` == `_simulatedShareRate` == 0, and plugging the returned values
+    * to the following formula: `_simulatedShareRate = (postTotalPooledEther * 1e27) / postTotalShares`
     *
     * @return postTotalPooledEther amount of ether in the protocol after report
     * @return postTotalShares amount of shares in the protocol after report
@@ -677,14 +682,10 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * @dev Returns depositable ether amount.
      * Takes into account unfinalized stETH required by WithdrawalQueue
      */
-    function getDepositableEther() public view returns (uint256 depositableEth) {
-        uint256 bufferedEth = _getBufferedEther();
+    function getDepositableEther() public view returns (uint256) {
+        uint256 bufferedEther = _getBufferedEther();
         uint256 withdrawalReserve = IWithdrawalQueue(getLidoLocator().withdrawalQueue()).unfinalizedStETH();
-
-        if (bufferedEth > withdrawalReserve) {
-            bufferedEth -= withdrawalReserve;
-            depositableEth = bufferedEth.div(DEPOSIT_SIZE).mul(DEPOSIT_SIZE);
-        }
+        return bufferedEther > withdrawalReserve ? bufferedEther - withdrawalReserve : 0;
     }
 
     /**
@@ -697,36 +698,29 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         ILidoLocator locator = getLidoLocator();
 
         require(msg.sender == locator.depositSecurityModule(), "APP_AUTH_DSM_FAILED");
-        require(_stakingModuleId <= uint24(-1), "STAKING_MODULE_ID_TOO_LARGE");
         require(canDeposit(), "CAN_NOT_DEPOSIT");
 
-        uint256 depositableEth = getDepositableEther();
+        IStakingRouter stakingRouter = IStakingRouter(locator.stakingRouter());
+        uint256 depositsCount = Math256.min(
+            _maxDepositsCount,
+            stakingRouter.getStakingModuleMaxDepositsCount(_stakingModuleId, getDepositableEther())
+        );
+        if (depositsCount == 0) return;
 
-        if (depositableEth > 0) {
-            /// available ether amount for deposits (multiple of 32eth)
-            depositableEth = Math256.min(depositableEth, _maxDepositsCount.mul(DEPOSIT_SIZE));
+        uint256 depositsValue = depositsCount.mul(DEPOSIT_SIZE);
+        /// @dev firstly update the local state of the contract to prevent a reentrancy attack,
+        ///     even if the StakingRouter is a trusted contract.
+        BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().sub(depositsValue));
+        emit Unbuffered(depositsValue);
 
-            uint256 unaccountedEth = _getUnaccountedEther();
-            /// @dev transfer ether to SR and make deposit at the same time
-            /// @notice allow zero value of depositableEth, in this case SR will simply transfer the unaccounted ether to Lido contract
-            uint256 depositsCount = IStakingRouter(locator.stakingRouter()).deposit.value(depositableEth)(
-                _maxDepositsCount,
-                _stakingModuleId,
-                _depositCalldata
-            );
+        uint256 newDepositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(depositsCount);
+        DEPOSITED_VALIDATORS_POSITION.setStorageUint256(newDepositedValidators);
+        emit DepositedValidatorsChanged(newDepositedValidators);
 
-            uint256 depositedAmount = depositsCount.mul(DEPOSIT_SIZE);
-            assert(depositedAmount <= depositableEth);
-
-            if (depositsCount > 0) {
-                uint256 newDepositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(depositsCount);
-                DEPOSITED_VALIDATORS_POSITION.setStorageUint256(newDepositedValidators);
-                emit DepositedValidatorsChanged(newDepositedValidators);
-
-                _markAsUnbuffered(depositedAmount);
-                assert(_getUnaccountedEther() == unaccountedEth);
-            }
-        }
+        /// @dev transfer ether to StakingRouter and make a deposit at the same time. All the ether
+        ///     sent to StakingRouter is counted as deposited. If StakingRouter can't deposit all
+        ///     passed ether it MUST revert the whole transaction (never happens in normal circumstances)
+        stakingRouter.deposit.value(depositsValue)(depositsCount, _stakingModuleId, _depositCalldata);
     }
 
     /// DEPRECATED PUBLIC METHODS
@@ -937,14 +931,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             STAKING_STATE_POSITION.setStorageStakeLimitStruct(stakeLimitData.updatePrevStakeLimit(currentStakeLimit - msg.value));
         }
 
-        uint256 sharesAmount;
-        if (_getTotalPooledEther() != 0 && _getTotalShares() != 0) {
-            sharesAmount = getSharesByPooledEth(msg.value);
-        } else {
-            // totalPooledEther is 0: for first-ever deposit
-            // assume that shares correspond to Ether 1-to-1
-            sharesAmount = msg.value;
-        }
+        uint256 sharesAmount = getSharesByPooledEth(msg.value);
 
         _mintShares(msg.sender, sharesAmount);
 
@@ -1096,27 +1083,10 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-    * @dev Records a deposit to the deposit_contract.deposit function
-    * @param _amount Total amount deposited to the Consensus Layer side
-    */
-    function _markAsUnbuffered(uint256 _amount) internal {
-        BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().sub(_amount));
-
-        emit Unbuffered(_amount);
-    }
-
-    /**
      * @dev Gets the amount of Ether temporary buffered on this contract balance
      */
     function _getBufferedEther() internal view returns (uint256) {
         return BUFFERED_ETHER_POSITION.getStorageUint256();
-    }
-
-    /**
-     * @dev Gets unaccounted (excess) Ether on this contract balance
-     */
-    function _getUnaccountedEther() internal view returns (uint256) {
-        return address(this).balance.sub(_getBufferedEther());
     }
 
     /// @dev Calculates and returns the total base balance (multiple of 32) of validators in transient state,
@@ -1203,7 +1173,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      *    (i.e., postpone the extra rewards to be applied during the next rounds)
      * 5. Invoke finalization of the withdrawal requests
      * 6. Distribute protocol fee (treasury & node operators)
-     * 7. Burn excess shares (withdrawn stETH at least)
+     * 7. Burn excess shares within the allowed limit (can postpone some shares to be burnt later)
      * 8. Complete token rebase by informing observers (emit an event and call the external receivers if any)
      * 9. Sanity check for the provided simulated share rate
      */
@@ -1288,8 +1258,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         );
 
         // Step 7.
-        // Burn excess shares (withdrawn stETH at least)
-        uint256 burntWithdrawalQueueShares = _burnSharesLimited(
+        // Burn excess shares within the allowed limit (can postpone some shares to be burnt later)
+        // Return actually burnt shares of the current report's finalized withdrawal requests to use in sanity checks
+        uint256 burntCurrentWithdrawalShares = _burnSharesLimited(
             IBurner(_contracts.burner),
             _contracts.withdrawalQueue,
             reportContext.sharesToBurnFromWithdrawalQueue,
@@ -1313,7 +1284,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
                 postTotalPooledEther,
                 postTotalShares,
                 reportContext.etherToLockOnWithdrawalQueue,
-                burntWithdrawalQueueShares,
+                burntCurrentWithdrawalShares,
                 _reportedData.simulatedShareRate
             );
         }
@@ -1377,17 +1348,20 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     /*
      * @dev Perform burning of `stETH` shares via the dedicated `Burner` contract.
      *
-     * NB: some of the burning amount can be postponed for the next reports
-     * if positive token rebase smoothened.
+     * NB: some of the burning amount can be postponed for the next reports if positive token rebase smoothened.
+     * It's possible that underlying shares of the current oracle report's finalized withdrawals won't be burnt
+     * completely in a single oracle report round due to the provided `_sharesToBurnLimit` limit
      *
-     * @return burnt shares from withdrawals queue (when some requests finalized)
+     * @return shares actually burnt for the current oracle report's finalized withdrawals
+     * these shares are assigned to be burnt most recently, so the amount can be calculated deducting
+     * `postponedSharesToBurn` shares (if any) after the burn commitment & execution
      */
     function _burnSharesLimited(
         IBurner _burner,
         address _withdrawalQueue,
         uint256 _sharesToBurnFromWithdrawalQueue,
         uint256 _sharesToBurnLimit
-    ) internal returns (uint256 burntWithdrawalsShares) {
+    ) internal returns (uint256 burntCurrentWithdrawalShares) {
         if (_sharesToBurnFromWithdrawalQueue > 0) {
             _burner.requestBurnShares(_withdrawalQueue, _sharesToBurnFromWithdrawalQueue);
         }
@@ -1403,7 +1377,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         (uint256 coverShares, uint256 nonCoverShares) = _burner.getSharesRequestedToBurn();
         uint256 postponedSharesToBurn = coverShares.add(nonCoverShares);
 
-        burntWithdrawalsShares =
+        burntCurrentWithdrawalShares =
             postponedSharesToBurn < _sharesToBurnFromWithdrawalQueue ?
             _sharesToBurnFromWithdrawalQueue - postponedSharesToBurn : 0;
     }

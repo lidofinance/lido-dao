@@ -15,11 +15,6 @@ import {MinFirstAllocationStrategy} from "../common/lib/MinFirstAllocationStrate
 import {BeaconChainDepositor} from "./BeaconChainDepositor.sol";
 import {Versioned} from "./utils/Versioned.sol";
 
-interface ILido {
-    function getDepositableEther() external view returns (uint256);
-    function receiveStakingRouterDepositRemainder() external payable;
-}
-
 contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Versioned {
     using UnstructuredStorage for bytes32;
 
@@ -54,6 +49,8 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint256 currentNodeOpExitedValidatorsCount,
         uint256 currentNodeOpStuckValidatorsCount
     );
+    error InvalidDepositsValue(uint256 etherValue);
+    error StakingModuleAddressExists();
 
     enum StakingModuleStatus {
         Active, // deposits and rewards allowed
@@ -157,8 +154,8 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     /**
      * @notice Return the Lido contract address
      */
-    function getLido() public view returns (ILido) {
-        return ILido(LIDO_POSITION.getStorageAddress());
+    function getLido() public view returns (address) {
+        return LIDO_POSITION.getStorageAddress();
     }
 
     /**
@@ -184,6 +181,14 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint256 newStakingModuleIndex = getStakingModulesCount();
 
         if (newStakingModuleIndex >= 32) revert StakingModulesLimitExceeded();
+
+        for (uint256 i; i < newStakingModuleIndex; ) {
+            if (_stakingModuleAddress == _getStakingModuleByIndex(i).stakingModuleAddress) revert StakingModuleAddressExists();
+            unchecked {
+                ++i;
+            }
+        }
+
         StakingModule storage newStakingModule = _getStakingModuleByIndex(newStakingModuleIndex);
         uint24 newStakingModuleId = uint24(LAST_STAKING_MODULE_ID_POSITION.getStorageUint256()) + 1;
 
@@ -303,15 +308,6 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         external
         onlyRole(REPORT_EXITED_VALIDATORS_ROLE)
     {
-        if (_nodeOperatorIds.length % 8 != 0 || _exitedValidatorsCounts.length % 16 != 0) {
-            revert InvalidReportData();
-        }
-
-        uint256 totalNodeOps = _nodeOperatorIds.length / 8;
-        if (_exitedValidatorsCounts.length / 16 != totalNodeOps) {
-            revert InvalidReportData();
-        }
-
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         IStakingModule moduleContract = IStakingModule(stakingModule.stakingModuleAddress);
         (
@@ -320,17 +316,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             /* uint256 depositableValidatorsCount */
         ) = moduleContract.getStakingModuleSummary();
 
-        for (uint256 i = 0; i < totalNodeOps; ) {
-            uint256 nodeOpId;
-            uint256 validatorsCount;
-            /// @solidity memory-safe-assembly
-            assembly {
-                nodeOpId := shr(192, calldataload(add(_nodeOperatorIds.offset, mul(i, 8))))
-                validatorsCount := shr(128, calldataload(add(_exitedValidatorsCounts.offset, mul(i, 16))))
-                i := add(i, 1)
-            }
-            moduleContract.updateExitedValidatorsCount(nodeOpId, validatorsCount);
-        }
+        moduleContract.updateExitedValidatorsCount(_nodeOperatorIds, _exitedValidatorsCounts);
 
         uint256 prevReportedExitedValidatorsCount = stakingModule.exitedValidatorsCount;
         (
@@ -444,28 +430,8 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         external
         onlyRole(REPORT_EXITED_VALIDATORS_ROLE)
     {
-        if (_nodeOperatorIds.length % 8 != 0 || _stuckValidatorsCounts.length % 16 != 0) {
-            revert InvalidReportData();
-        }
-
-        uint256 totalNodeOps = _nodeOperatorIds.length / 8;
-        if (_stuckValidatorsCounts.length / 16 != totalNodeOps) {
-            revert InvalidReportData();
-        }
-
         address moduleAddr = _getStakingModuleById(_stakingModuleId).stakingModuleAddress;
-
-        for (uint256 i = 0; i < totalNodeOps; ) {
-            uint256 nodeOpId;
-            uint256 validatorsCount;
-            /// @solidity memory-safe-assembly
-            assembly {
-                nodeOpId := shr(192, calldataload(add(_nodeOperatorIds.offset, mul(i, 8))))
-                validatorsCount := shr(128, calldataload(add(_stuckValidatorsCounts.offset, mul(i, 16))))
-                i := add(i, 1)
-            }
-            IStakingModule(moduleAddr).updateStuckValidatorsCount(nodeOpId, validatorsCount);
-        }
+        IStakingModule(moduleAddr).updateStuckValidatorsCount(_nodeOperatorIds, _stuckValidatorsCounts);
     }
 
     function getExitedValidatorsCountAcrossAllModules() external view returns (uint256) {
@@ -827,22 +793,25 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         activeValidatorsCount = totalDepositedValidatorsCount - totalExitedValidatorsCount;
     }
 
-    /**
-     * @dev calculate max count of deposits which staking module can provide data for based on the
-     *      current Staking Router balance and buffered Ether amount
-     *
-     * @param _stakingModuleId id of the staking module to be deposited
-     * @return max number of deposits might be done using given staking module
-     */
-    function getStakingModuleMaxDepositsCount(uint256 _stakingModuleId) public view
+    /// @dev calculate the max count of deposits which the staking module can provide data for based
+    ///     on the passed `_maxDepositsValue` amount
+    /// @param _stakingModuleId id of the staking module to be deposited
+    /// @param _maxDepositsValue max amount of ether that might be used for deposits count calculation
+    /// @return max number of deposits might be done using the given staking module
+    function getStakingModuleMaxDepositsCount(uint256 _stakingModuleId, uint256 _maxDepositsValue)
+        public
+        view
         validStakingModuleId(_stakingModuleId)
         returns (uint256)
     {
+        (
+            /* uint256 allocated */,
+            uint256[] memory newDepositsAllocation,
+            StakingModuleCache[] memory stakingModulesCache
+        ) = _getDepositsAllocation(_maxDepositsValue / DEPOSIT_SIZE);
         uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
-        uint256 depositsToAllocate = getLido().getDepositableEther() / DEPOSIT_SIZE;
-        (, uint256[] memory newDepositsAllocation, StakingModuleCache[] memory stakingModulesCache)
-            = _getDepositsAllocation(depositsToAllocate);
-        return newDepositsAllocation[stakingModuleIndex] - stakingModulesCache[stakingModuleIndex].activeValidatorsCount;
+        return
+            newDepositsAllocation[stakingModuleIndex] - stakingModulesCache[stakingModuleIndex].activeValidatorsCount;
     }
 
     /**
@@ -981,59 +950,49 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
     /**
      * @dev Invokes a deposit call to the official Deposit contract
-     * @param _maxDepositsCount max deposits count
+     * @param _depositsCount number of deposits to make
      * @param _stakingModuleId id of the staking module to be deposited
      * @param _depositCalldata staking module calldata
      */
     function deposit(
-        uint256 _maxDepositsCount,
+        uint256 _depositsCount,
         uint256 _stakingModuleId,
         bytes calldata _depositCalldata
-    ) external payable validStakingModuleId(_stakingModuleId)  returns (uint256 depositsCount) {
+    ) external payable validStakingModuleId(_stakingModuleId) {
         if (msg.sender != LIDO_POSITION.getStorageAddress()) revert AppAuthLidoFailed();
 
-        uint256 depositableEth = msg.value;
-        if (depositableEth == 0) {
-            _transferBalanceEthToLido();
-            return 0;
+        uint256 depositsValue = msg.value;
+        if (depositsValue == 0 || depositsValue != _depositsCount * DEPOSIT_SIZE) {
+            revert InvalidDepositsValue(depositsValue);
         }
 
         bytes32 withdrawalCredentials = getWithdrawalCredentials();
         if (withdrawalCredentials == 0) revert EmptyWithdrawalsCredentials();
 
-        uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
-        StakingModule storage stakingModule = _getStakingModuleByIndex(stakingModuleIndex);
-        if (StakingModuleStatus(stakingModule.status) != StakingModuleStatus.Active) revert StakingModuleNotActive();
+        StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
+        if (StakingModuleStatus(stakingModule.status) != StakingModuleStatus.Active) {
+            revert StakingModuleNotActive();
+        }
 
-        uint256 maxDepositsCount = Math256.min(
-            _maxDepositsCount,
-            getStakingModuleMaxDepositsCount(_stakingModuleId)
+        (bytes memory publicKeysBatch, bytes memory signaturesBatch) =
+            IStakingModule(stakingModule.stakingModuleAddress)
+                .obtainDepositData(_depositsCount, _depositCalldata);
+
+        uint256 etherBalanceBeforeDeposits = address(this).balance;
+        _makeBeaconChainDeposits32ETH(
+            _depositsCount,
+            abi.encodePacked(withdrawalCredentials),
+            publicKeysBatch,
+            signaturesBatch
         );
+        uint256 etherBalanceAfterDeposits = address(this).balance;
 
-        if (maxDepositsCount > 0) {
-            bytes memory publicKeysBatch;
-            bytes memory signaturesBatch;
-            (depositsCount, publicKeysBatch, signaturesBatch) = IStakingModule(stakingModule.stakingModuleAddress)
-                .obtainDepositData(maxDepositsCount, _depositCalldata);
+        /// @dev all sent ETH must be deposited and self balance stay the same
+        assert(etherBalanceBeforeDeposits - etherBalanceAfterDeposits == depositsValue);
 
-            if (depositsCount > 0) {
-                _makeBeaconChainDeposits32ETH(depositsCount, abi.encodePacked(withdrawalCredentials), publicKeysBatch, signaturesBatch);
-
-                stakingModule.lastDepositAt = uint64(block.timestamp);
-                stakingModule.lastDepositBlock = block.number;
-
-                emit StakingRouterETHDeposited(_stakingModuleId, depositsCount * DEPOSIT_SIZE);
-            }
-        }
-        _transferBalanceEthToLido();
-    }
-
-    /// @dev transfer all remaining balance to Lido contract
-    function _transferBalanceEthToLido() internal {
-        uint256 balance = address(this).balance;
-        if (balance > 0) {
-            getLido().receiveStakingRouterDepositRemainder{value: balance}();
-        }
+        stakingModule.lastDepositAt = uint64(block.timestamp);
+        stakingModule.lastDepositBlock = block.number;
+        emit StakingRouterETHDeposited(_stakingModuleId, depositsValue);
     }
 
     /**

@@ -83,19 +83,19 @@ interface IStakingModule {
 
     /// @notice Updates the number of the validators of the given node operator that were requested
     ///         to exit but failed to do so in the max allowed time
-    /// @param _nodeOperatorId Id of the node operator
-    /// @param _stuckValidatorsCount New number of stuck validators of the node operator
+    /// @param _nodeOperatorIds bytes packed array of the node operators id
+    /// @param _stuckValidatorsCounts bytes packed array of the new number of STUCK validators for the node operators
     function updateStuckValidatorsCount(
-        uint256 _nodeOperatorId,
-        uint256 _stuckValidatorsCount
+        bytes calldata _nodeOperatorIds,
+        bytes calldata _stuckValidatorsCounts
     ) external;
 
     /// @notice Updates the number of the validators in the EXITED state for node operator with given id
-    /// @param _nodeOperatorId Id of the node operator
-    /// @param _exitedValidatorsCount New number of EXITED validators of the node operator
+    /// @param _nodeOperatorIds bytes packed array of the node operators id
+        /// @param _stuckValidatorsCounts bytes packed array of the new number of EXITED validators for the node operators
     function updateExitedValidatorsCount(
-        uint256 _nodeOperatorId,
-        uint256 _exitedValidatorsCount
+        bytes calldata _nodeOperatorIds,
+        bytes calldata _stuckValidatorsCounts
     ) external;
 
     /// @notice Updates the number of the refunded validators for node operator with the given id
@@ -114,18 +114,16 @@ interface IStakingModule {
         uint256 _stuckValidatorsCount
     ) external;
 
-    /// @notice Obtains up to _depositsCount deposit data to be used by StakingRouter
-    ///     to deposit to the Ethereum Deposit contract
-    /// @param _depositsCount Desireable number of deposits to be done
+    /// @notice Obtains deposit data to be used by StakingRouter to deposit to the Ethereum Deposit
+    ///     contract
+    /// @dev The method MUST revert when the staking module has not enough deposit data items
+    /// @param _depositsCount Number of deposits to be done
     /// @param _calldata Staking module defined data encoded as bytes
-    /// @return depositsCount Actual deposits count might be done with returned data
     /// @return publicKeys Batch of the concatenated public validators keys
     /// @return signatures Batch of the concatenated deposit signatures for returned public keys
-    function obtainDepositData(uint256 _depositsCount, bytes calldata _calldata) external returns (
-        uint256 depositsCount,
-        bytes memory publicKeys,
-        bytes memory signatures
-    );
+    function obtainDepositData(uint256 _depositsCount, bytes calldata _calldata)
+        external
+        returns (bytes memory publicKeys, bytes memory signatures);
 
     /// @notice Called by StakingRouter after oracle finishes updating validators counters for all node operators
     function onAllValidatorCountersUpdated() external;

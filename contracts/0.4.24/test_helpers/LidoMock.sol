@@ -18,6 +18,7 @@ contract LidoMock is Lido {
         address _eip712StETH
     )
         public
+        payable
     {
         super.initialize(
             _lidoLocator,
@@ -33,13 +34,6 @@ contract LidoMock is Lido {
     function resumeProtocolAndStaking() public {
         _resume();
         _resumeStaking();
-    }
-
-    /**
-     * @dev Gets unaccounted (excess) Ether on this contract balance
-     */
-    function getUnaccountedEther() public view returns (uint256) {
-        return _getUnaccountedEther();
     }
 
     /**

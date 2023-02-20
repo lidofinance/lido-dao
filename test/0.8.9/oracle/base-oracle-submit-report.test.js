@@ -158,7 +158,7 @@ contract('BaseOracle', ([admin]) => {
   describe('_startProcessing safely advances processing state', () => {
     before(deployContract)
 
-    it('initial contract state,no reports, can not startProcessing', async () => {
+    it('initial contract state, no reports, cannot startProcessing', async () => {
       await assert.revertsWithCustomError(baseOracle.startProcessing(), 'ProcessingDeadlineMissed(0)')
     })
 
@@ -169,12 +169,8 @@ contract('BaseOracle', ([admin]) => {
       assert.emits(tx, 'MockStartProcessingResult', { prevProcessingRefSlot: '0' })
     })
 
-    it('no next report, processing same slot again, state is not changed', async () => {
-      const tx = await baseOracle.startProcessing()
-      assert.emits(tx, 'ProcessingStarted', { refSlot: initialRefSlot, hash: HASH_1 })
-      assert.emits(tx, 'MockStartProcessingResult', { prevProcessingRefSlot: String(initialRefSlot) })
-      const processingSlot = await baseOracle.getLastProcessingRefSlot()
-      assert.equals(processingSlot, initialRefSlot)
+    it('trying to start processing the same slot again reverts', async () => {
+      await assert.reverts(baseOracle.startProcessing(), 'RefSlotAlreadyProcessing()')
     })
 
     it('next report comes in, start processing, state advances', async () => {
