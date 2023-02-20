@@ -258,39 +258,37 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await withdrawalQueue.requestWithdrawals([ETH(1)], owner, { from: user })
       await withdrawalQueue.finalize(1, { from: steth.address, value: ETH(1) })
 
-      assert.equals(await withdrawalQueue.getClaimableEther([[1, 1]]), ETH(1))
+      assert.equals(await withdrawalQueue.getClaimableEther([1], [1]), ETH(1))
     })
 
     it('return 0 for non-finalized request', async () => {
-      assert.equals(await withdrawalQueue.getClaimableEther([[1, 1]]), ETH(0))
+      assert.equals(await withdrawalQueue.getClaimableEther([1], [1]), ETH(0))
     })
 
     it('return 0 for claimed request', async () => {
       await withdrawalQueue.finalize(1, { from: steth.address, value: ETH(1) })
-      await withdrawalQueue.claimWithdrawalTo(1, 1, user, { from: owner })
+      await withdrawalQueue.claimWithdrawals([1], [1], { from: owner })
 
-      assert.equals(await withdrawalQueue.getClaimableEther([[1, 1]]), ETH(0))
+      assert.equals(await withdrawalQueue.getClaimableEther([1], [1]), ETH(0))
     })
 
     it('reverts on invalid params', async () => {
-      await assert.reverts(withdrawalQueue.getClaimableEther([[0, 1]]), 'InvalidRequestId(0)')
-      await assert.reverts(withdrawalQueue.getClaimableEther([[2, 1]]), 'InvalidRequestId(2)')
-      await assert.reverts(withdrawalQueue.getClaimableEther([[1, 0]]), 'InvalidHint(0)')
+      await assert.reverts(withdrawalQueue.getClaimableEther([0], [1]), 'InvalidRequestId(0)')
+      await assert.reverts(withdrawalQueue.getClaimableEther([2], [1]), 'InvalidRequestId(2)')
+      await assert.reverts(withdrawalQueue.getClaimableEther([1], [0]), 'InvalidHint(0)')
 
       await withdrawalQueue.finalize(1, { from: steth.address, value: ETH(1) })
-      await assert.reverts(withdrawalQueue.getClaimableEther([[1, 2]]), 'InvalidHint(2)')
+      await assert.reverts(withdrawalQueue.getClaimableEther([1], [2]), 'InvalidHint(2)')
 
       await withdrawalQueue.requestWithdrawals([ETH(1)], owner, { from: user })
-      await assert.reverts(withdrawalQueue.getClaimableEther([[1, 2]]), 'InvalidHint(2)')
+      await assert.reverts(withdrawalQueue.getClaimableEther([1], [2]), 'InvalidHint(2)')
     })
   })
 
   context('claimWithdrawal()', async () => {
-    let requestId
     const amount = ETH(300)
     beforeEach('Enqueue a request', async () => {
-      const receipt = await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
-      requestId = getEventArgument(receipt, "WithdrawalRequested", "requestId")
+      await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
     })
 
     it('Owner can claim a finalized request to recipient address', async () => {
@@ -298,7 +296,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
 
       const balanceBefore = bn(await ethers.provider.getBalance(user))
 
-      await withdrawalQueue.claimWithdrawalTo(requestId, 1, user, { from: owner })
+      await withdrawalQueue.claimWithdrawalsTo([1], [1], user, { from: owner })
 
       assert.equals(await ethers.provider.getBalance(user), balanceBefore.add(bn(amount)))
     })
@@ -308,14 +306,13 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
 
       const balanceBefore = bn(await ethers.provider.getBalance(owner))
 
-      await withdrawalQueue.claimWithdrawal(requestId, { from: owner })
+      await withdrawalQueue.claimWithdrawal(1, { from: owner })
 
       assert.equals(await ethers.provider.getBalance(owner), balanceBefore.add(bn(amount)))
     })
 
     it('One cant claim not finalized request', async () => {
-      await assert.reverts(withdrawalQueue.claimWithdrawalTo(requestId, 1, owner, { from: owner }),
-        `RequestNotFinalized(${requestId})`)
+      await assert.reverts(withdrawalQueue.claimWithdrawals([1], [1], { from: owner }), `RequestNotFinalized(1)`)
     })
 
     it('Cant claim request with a wrong hint', async () => {
@@ -326,26 +323,25 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
 
       await withdrawalQueue.finalize(2, { from: steth.address, value: amount })
-      await assert.reverts(withdrawalQueue.claimWithdrawalTo(requestId, 0, owner, { from: owner }), 'InvalidHint(0)')
-      await assert.reverts(withdrawalQueue.claimWithdrawalTo(requestId, 2, owner, { from: owner }), 'InvalidHint(2)')
+      await assert.reverts(withdrawalQueue.claimWithdrawals([1], [0], { from: owner }), 'InvalidHint(0)')
+      await assert.reverts(withdrawalQueue.claimWithdrawals([1], [2], { from: owner }), 'InvalidHint(2)')
     })
 
     it('Cant withdraw token two times', async () => {
       await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
-      await withdrawalQueue.claimWithdrawal(requestId, { from: owner })
+      await withdrawalQueue.claimWithdrawal(1, { from: owner })
 
-      await assert.reverts(withdrawalQueue.claimWithdrawalTo(requestId, 1, owner, { from: owner }),
+      await assert.reverts(withdrawalQueue.claimWithdrawal(1, { from: owner }),
         'RequestAlreadyClaimed(1)')
     })
 
     it('Discounted withdrawals produce less eth', async () => {
       await withdrawalQueue.finalize(1, { from: steth.address, value: ETH(150) })
 
-      const hint = await withdrawalQueue.findCheckpointHintUnbounded(requestId)
       const balanceBefore = bn(await ethers.provider.getBalance(owner))
       assert.equals(await withdrawalQueue.getLockedEtherAmount(), ETH(150))
 
-      await withdrawalQueue.claimWithdrawalTo(requestId, hint, owner, { from: owner })
+      await withdrawalQueue.claimWithdrawal(1, { from: owner })
       assert.equals(await withdrawalQueue.getLockedEtherAmount(), ETH(0))
 
       assert.equals(bn(await ethers.provider.getBalance(owner)).sub(balanceBefore), ETH(150))
@@ -690,13 +686,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await withdrawalQueue.finalize(secondRequestId, { from: steth.address, value: ETH(30) })
 
       const balanceBefore = bn(await ethers.provider.getBalance(owner))
-      await withdrawalQueue.claimWithdrawals(
-        [
-          [requestId, 1],
-          [secondRequestId, 1]
-        ],
-        { from: owner }
-      )
+      await withdrawalQueue.claimWithdrawals([1, 2], [1, 1], { from: owner })
       assert.equals(await ethers.provider.getBalance(owner), balanceBefore.add(bn(ETH(30))))
     })
   })

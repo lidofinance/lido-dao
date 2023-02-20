@@ -423,14 +423,11 @@ abstract contract WithdrawalQueueBase {
         emit WithdrawalRequested(requestId, msg.sender, _owner, _amountOfStETH, _amountOfShares);
     }
 
-    /// @notice Claim `_requestId` request and transfer related ether to the `_recipient`. Emits WithdrawalClaimed event
-    /// @dev Reverts if request is not finalized
-    ///  Reverts if request is claimed
+    /// @notice Claim `_requestId` request and transfer locked ether to `_recipient`. Emits WithdrawalClaimed event
     /// @param _requestId request id to claim
     /// @param _hint hint for discount checkpoint index to avoid extensive search over the checkpoints.
-    ///  Can be found with `findCheckpointHint()` or `findCheckpointHintUnbounded()`
-    /// @param _recipient address to send ether to. If `==address(0)` then will send to the owner.
-    function _claimWithdrawalTo(uint256 _requestId, uint256 _hint, address _recipient) internal {
+    /// @param _recipient address to send ether to
+    function _claim(uint256 _requestId, uint256 _hint, address _recipient) internal {
         if (_requestId > getLastFinalizedRequestId()) revert RequestNotFinalized(_requestId);
 
         (WithdrawalRequest storage request, uint256 ethWithDiscount) = _calculateClaimableEth(_requestId, _hint);
@@ -438,13 +435,10 @@ abstract contract WithdrawalQueueBase {
         if (request.claimed) revert RequestAlreadyClaimed(_requestId);
         if (msg.sender != request.owner) revert NotOwner(msg.sender, request.owner);
 
-        if (_recipient == address(0)) _recipient = request.owner;
-
         request.claimed = true;
         assert(_getRequestsByOwner()[request.owner].remove(_requestId));
 
         _setLockedEtherAmount(getLockedEtherAmount() - ethWithDiscount);
-
         _sendValue(payable(_recipient), ethWithDiscount);
 
         emit WithdrawalClaimed(_requestId, msg.sender, _recipient, ethWithDiscount);
