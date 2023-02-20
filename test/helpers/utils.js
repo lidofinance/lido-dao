@@ -154,6 +154,18 @@ const prepIdsCountsPayload = (ids, counts) => {
   }
 }
 
+const calcSharesMintedAsFees = (rewards, fee, feePoints, prevTotalShares, newTotalEther) => {
+  return toBN(rewards)
+    .mul(toBN(fee))
+    .mul(toBN(prevTotalShares))
+    .div(
+      toBN(newTotalEther)
+        .mul(toBN(feePoints))
+        .sub(toBN(rewards).mul(toBN(fee)))
+    )
+}
+
+
 module.exports = {
   ZERO_HASH,
   pad,
@@ -188,5 +200,6 @@ module.exports = {
   toNum,
   toStr,
   setBalance,
-  prepIdsCountsPayload
+  prepIdsCountsPayload,
+  calcSharesMintedAsFees
 }

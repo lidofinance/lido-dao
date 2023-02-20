@@ -221,6 +221,9 @@ async function stakingRouterFactory({ depositContract, dao, appManager, voting, 
   await stakingRouter.grantRole(await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(), pool.address, {
     from: appManager.address
   })
+  await stakingRouter.grantRole(await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(), voting.address, {
+    from: appManager.address
+  })
   await stakingRouter.grantRole(await stakingRouter.UNSAFE_SET_EXITED_VALIDATORS_ROLE(), voting.address, {
     from: appManager.address
   })

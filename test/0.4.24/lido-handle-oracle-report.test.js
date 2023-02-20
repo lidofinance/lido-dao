@@ -1,6 +1,6 @@
 const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
-const { ETH, toBN, genKeys, setBalance, StETH } = require('../helpers/utils')
+const { ETH, toBN, genKeys, setBalance, StETH, calcSharesMintedAsFees } = require('../helpers/utils')
 const { deployProtocol } = require('../helpers/protocol')
 const { EvmSnapshot } = require('../helpers/blockchain')
 const { ZERO_ADDRESS, INITIAL_HOLDER } = require('../helpers/constants')
@@ -81,17 +81,6 @@ const checkEvents = async ({
       abi: Lido.abi
     }
   )
-}
-
-const calcSharesMintedAsFees = (rewards, fee, feePoints, prevTotalShares, newTotalEther) => {
-  return toBN(rewards)
-    .mul(toBN(fee))
-    .mul(toBN(prevTotalShares))
-    .div(
-      toBN(newTotalEther)
-        .mul(toBN(feePoints))
-        .sub(toBN(rewards).mul(toBN(fee)))
-    )
 }
 
 contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, anotherStranger, depositor, operator]) => {
