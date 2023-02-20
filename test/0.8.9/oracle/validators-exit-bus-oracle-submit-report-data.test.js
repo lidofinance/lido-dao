@@ -48,7 +48,8 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       assert.equal((await consensus.getConsensusState()).consensusReport, hash)
     }
 
-    async function prepareReportAndSubmitHash(exitRequests) {
+    async function prepareReportAndSubmitHash(exitRequests, options = {}) {
+      const { reportFields: reportFieldsArg = {} } = options
       const { refSlot } = await consensus.getCurrentFrame()
 
       const reportFields = {
@@ -56,7 +57,8 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         refSlot: +refSlot,
         requestsCount: exitRequests.length,
         dataFormat: DATA_FORMAT_LIST,
-        data: encodeExitRequestsDataList(exitRequests)
+        data: encodeExitRequestsDataList(exitRequests),
+        ...reportFieldsArg
       }
 
       const reportItems = getReportDataItems(reportFields)
@@ -70,6 +72,46 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     async function getLastRequestedValidatorIndex(moduleId, nodeOpId) {
       return +(await oracle.getLastRequestedValidatorIndices(moduleId, [nodeOpId]))[0]
     }
+
+    context('_handleConsensusReportData', () => {
+      beforeEach(async () => {
+        await setup()
+        await consensus.advanceTimeToNextFrameStart()
+      })
+
+      context('enforces data format', () => {
+        it('dataFormat = 0 reverts', async () => {
+          const dataFormatUnsupported = 0
+          const report = await prepareReportAndSubmitHash(
+            [{ moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }],
+            { reportFields: { dataFormat: dataFormatUnsupported } }
+          )
+          await assert.reverts(
+            oracle.submitReportData(report, oracleVersion, { from: member1 }),
+            `UnsupportedRequestsDataFormat(${dataFormatUnsupported})`
+          )
+        })
+
+        it('dataFormat = 2 reverts', async () => {
+          const dataFormatUnsupported = 2
+          const report = await prepareReportAndSubmitHash(
+            [{ moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }],
+            { reportFields: { dataFormat: dataFormatUnsupported } }
+          )
+          await assert.reverts(
+            oracle.submitReportData(report, oracleVersion, { from: member1 }),
+            `UnsupportedRequestsDataFormat(${dataFormatUnsupported})`
+          )
+        })
+
+        it('dataFormat = 1 pass', async () => {
+          const report = await prepareReportAndSubmitHash([
+            { moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }
+          ])
+          await oracle.submitReportData(report, oracleVersion, { from: member1 })
+        })
+      })
+    })
 
     context(`requires validator indices for the same node operator to increase`, () => {
       before(setup)
