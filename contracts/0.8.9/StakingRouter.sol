@@ -332,18 +332,28 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         }
     }
 
-    struct ValidatorsCountCorrection {
+    struct ValidatorsCountsCorrection {
+        /// @notice The expected current number of exited validators of the module that is
+        /// being corrected.
         uint256 currentModuleExitedValidatorsCount;
+        /// @notice The expected current number of exited validators of the node operator
+        /// that is being corrected.
         uint256 currentNodeOperatorExitedValidatorsCount;
+        /// @notice The expected current number of stuck validators of the node operator
+        /// that is being corrected.
         uint256 currentNodeOperatorStuckValidatorsCount;
+        /// @notice The corrected number of exited validators of the module.
         uint256 newModuleExitedValidatorsCount;
+        /// @notice The corrected number of exited validators of the node operator.
         uint256 newNodeOperatorExitedValidatorsCount;
+        /// @notice The corrected number of stuck validators of the node operator.
         uint256 newNodeOperatorStuckValidatorsCount;
     }
 
     /**
-     * @notice Sets exited validators count for the given module and given node operator in that module
-     * without performing critical safety checks, e.g. that exited validators count cannot decrease.
+     * @notice Sets exited validators count for the given module and given node operator in that
+     * module without performing critical safety checks, e.g. that exited validators count cannot
+     * decrease.
      *
      * Should only be used by the DAO in extreme cases and with sufficient precautions to correct
      * invalid data reported by the oracle committee due to a bug in the oracle daemon.
@@ -355,31 +365,16 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
      * @param _triggerUpdateFinish Whether to call `onAllValidatorCountersUpdated` on
      *        the module after applying the corrections.
      *
-     * @param _correction.currentModuleExitedValidatorsCount The expected current number of exited
-     *       validators of the module that is being corrected.
+     * @param _correction See the docs for the `ValidatorsCountsCorrection` struct.
      *
-     * @param _correction.currentNodeOperatorExitedValidatorsCount The expected current number of exited
-     *        validators of the node operator that is being corrected.
-     *
-     * @param _correction.currentNodeOperatorStuckValidatorsCount The expected current number of stuck
-     *        validators of the node operator that is being corrected.
-     *
-     * @param _correction.newModuleExitedValidatorsCount The corrected number of exited validators of the module.
-     *
-     * @param _correction.newNodeOperatorExitedValidatorsCount The corrected number of exited validators of the
-     *        node operator.
-     *
-     * @param _correction.newNodeOperatorStuckValidatorsCount The corrected number of stuck validators of the
-     *        node operator.
-     *
-     * Reverts if the current numbers of exited and stuck validators of the module and node operator don't
-     * match the supplied expected current values.
+     * Reverts if the current numbers of exited and stuck validators of the module and node operator
+     * don't match the supplied expected current values.
      */
     function unsafeSetExitedValidatorsCount(
         uint256 _stakingModuleId,
         uint256 _nodeOperatorId,
         bool _triggerUpdateFinish,
-        ValidatorsCountCorrection memory _correction
+        ValidatorsCountsCorrection memory _correction
     )
         external
         onlyRole(UNSAFE_SET_EXITED_VALIDATORS_ROLE)
