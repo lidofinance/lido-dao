@@ -220,6 +220,13 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         })
       })
 
+      it('reverts if moduleId equals zero', async () => {
+        const report = await prepareReportAndSubmitHash([
+          { moduleId: 0, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }
+        ])
+        await assert.reverts(oracle.submitReportData(report, oracleVersion, { from: member1 }), 'InvalidRequestsData()')
+      })
+
       it('updates processing state', async () => {
         const storageBefore = await oracle.getDataProcessingState()
         assert.equals(+storageBefore.refSlot, 0)
