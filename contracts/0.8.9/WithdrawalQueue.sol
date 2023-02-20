@@ -8,6 +8,7 @@ import {WithdrawalQueueBase} from "./WithdrawalQueueBase.sol";
 
 import {IERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts-v4.4/token/ERC20/extensions/draft-IERC20Permit.sol";
+import {EnumerableSet} from "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
 import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 import {PausableUntil} from "./utils/PausableUntil.sol";
@@ -32,6 +33,7 @@ interface IWstETH is IERC20, IERC20Permit {
 /// @author folkyatina
 abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, WithdrawalQueueBase, Versioned {
     using UnstructuredStorage for bytes32;
+    using EnumerableSet for EnumerableSet.UintSet;
 
     /// Bunker mode activation timestamp
     bytes32 internal constant BUNKER_MODE_SINCE_TIMESTAMP_POSITION =
@@ -69,6 +71,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     error RequestAmountTooLarge(uint256 _amountOfStETH);
     error InvalidReportTimestamp();
     error RequestIdsNotSorted();
+    error ZeroRecipient();
 
     /// @param _wstETH address of WstETH contract
     constructor(IWstETH _wstETH) {
@@ -184,56 +187,94 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         return requestWithdrawalsWstETH(_amounts, _owner);
     }
 
-    /// @notice return statuses for the bunch of requests
-    /// @param _requestIds list of withdrawal request ids and hints to claim
-    function getWithdrawalRequestStatuses(uint256[] calldata _requestIds)
+    /// @notice Returns all withdrawal requests that belongs to the `_owner` address
+    ///
+    /// WARNING: This operation will copy the entire storage to memory, which can be quite expensive. This is designed
+    /// to mostly be used by view accessors that are queried without any gas fees. Developers should keep in mind that
+    /// this function has an unbounded cost, and using it as part of a state-changing function may render the function
+    /// uncallable if the set grows to a point where copying to memory consumes too much gas to fit in a block.
+    function getWithdrawalRequests(address _owner) external view returns (uint256[] memory requestsIds) {
+        return _getRequestsByOwner()[_owner].values();
+    }
+
+    /// @notice Returns statuses for the array of request ids
+    /// @param _requestIds array of withdrawal request ids
+    function getWithdrawalStatus(uint256[] calldata _requestIds)
         external
         view
         returns (WithdrawalRequestStatus[] memory statuses)
     {
         statuses = new WithdrawalRequestStatus[](_requestIds.length);
         for (uint256 i = 0; i < _requestIds.length; ++i) {
-            statuses[i] = getWithdrawalRequestStatus(_requestIds[i]);
+            statuses[i] = _getStatus(_requestIds[i]);
         }
     }
 
-    struct ClaimWithdrawalInput {
-        /// @notice id of the finalized requests to claim
-        uint256 requestId;
-        /// @notice rate index that should be used for claiming
-        uint256 hint;
-    }
-
-    /// @notice Claim withdrawals batch once finalized (claimable).
-    /// @param _claimWithdrawalInputs list of withdrawal request ids and hints to claim
-    function claimWithdrawals(ClaimWithdrawalInput[] calldata _claimWithdrawalInputs) external {
-        for (uint256 i = 0; i < _claimWithdrawalInputs.length; ++i) {
-            _claimWithdrawalTo(_claimWithdrawalInputs[i].requestId, _claimWithdrawalInputs[i].hint, msg.sender);
-            _emitTransfer(msg.sender, address(0), _claimWithdrawalInputs[i].requestId);
+    /// @notice Returns array of claimable eth amounts that is locked for each request
+    /// @param _requestIds array of request ids to find claimable ether for
+    /// @param _hints checkpoint hint for each id.
+    ///   Can be retrieved with `findCheckpointHints()` or `findCheckpointHintsUnbounded()`
+    function getClaimableEther(uint256[] calldata _requestIds, uint256[] calldata _hints)
+        external
+        view
+        returns (uint256[] memory claimableEthValues)
+    {
+        claimableEthValues = new uint256[](_requestIds.length);
+        for (uint256 i = 0; i < _requestIds.length; ++i) {
+            claimableEthValues[i] = _getClaimableEther(_requestIds[i], _hints[i]);
         }
     }
 
-    ///  @notice Claim `_requestId` request and transfer locked ether to the owner
-    ///  @param _requestId request id to claim
-    ///  @param _hint hint for checkpoint index to avoid extensive search over the checkpointHistory.
-    ///   Can be retrieved with `findCheckpointHint()` or `findCheckpointHintUnbounded()`
+    /// @notice Claim a batch of withdrawal requests once finalized (claimable) sending ether to `_recipient`
+    /// @param _requestIds array of request ids to claim
+    /// @param _hints checkpoint hint for each id.
+    ///   Can be retrieved with `findCheckpointHints()` or `findCheckpointHintsUnbounded()`
     /// @param _recipient address where claimed ether will be sent to
-    function claimWithdrawalTo(uint256 _requestId, uint256 _hint, address _recipient) external {
-        _claimWithdrawalTo(_requestId, _hint, _recipient);
-        _emitTransfer(msg.sender, address(0), _requestId);
+    /// @dev
+    ///  Reverts if recipient is equal to zero
+    ///  Reverts if any requestId or hint in arguments are not valid
+    ///  Reverts if any request is not finalized or already claimed
+    ///  Reverts if msg sender is not an owner of the requests
+    function claimWithdrawalsTo(uint256[] calldata _requestIds, uint256[] calldata _hints, address _recipient)
+        external
+    {
+        if (_recipient == address(0)) revert ZeroRecipient();
+
+        for (uint256 i = 0; i < _requestIds.length; ++i) {
+            _claim(_requestIds[i], _hints[i], _recipient);
+            _emitTransfer(msg.sender, address(0), _requestIds[i]);
+        }
     }
 
-    /// @notice Claim `_requestId` request and transfer locked ether to the owner
+    /// @notice Claim a batch of withdrawal requests once finalized (claimable) sending locked ether to the owner
+    /// @param _requestIds array of request ids to claim
+    /// @param _hints checkpoint hint for each id.
+    ///   Can be retrieved with `findCheckpointHints()` or `findCheckpointHintsUnbounded()`
+    /// @dev
+    ///  Reverts if any requestId or hint in arguments are not valid
+    ///  Reverts if any request is not finalized or already claimed
+    ///  Reverts if msg sender is not an owner of the requests
+    function claimWithdrawals(uint256[] calldata _requestIds, uint256[] calldata _hints) external {
+        for (uint256 i = 0; i < _requestIds.length; ++i) {
+            _claim(_requestIds[i], _hints[i], msg.sender);
+            _emitTransfer(msg.sender, address(0), _requestIds[i]);
+        }
+    }
+
+    /// @notice Claim one`_requestId` request once finalized sending locked ether to the owner
     /// @param _requestId request id to claim
-    /// @dev will use `findCheckpointHintUnbounded()` to find a hint, what can lead to OOG
-    /// Prefer `claimWithdrawal(uint256 _requestId, uint256 _hint)` to save gas
+    /// @dev use unbounded loop to find a hint, which can lead to OOG
+    /// @dev
+    ///  Reverts if requestId or hint are not valid
+    ///  Reverts if request is not finalized or already claimed
+    ///  Reverts if msg sender is not an owner of request
     function claimWithdrawal(uint256 _requestId) external {
-        _claimWithdrawalTo(_requestId, findCheckpointHintUnbounded(_requestId), msg.sender);
+        _claim(_requestId, _findCheckpointHint(_requestId, 1, getLastCheckpointIndex()), msg.sender);
         _emitTransfer(msg.sender, address(0), _requestId);
     }
 
     /// @notice Finds the list of hints for the given `_requestIds` searching among the checkpoints with indices
-    ///  in the range  `[_firstIndex, _lastIndex]`
+    ///  in the range  `[_firstIndex, _lastIndex]`. NB! Array of request ids should be sorted
     /// @param _requestIds ids of the requests sorted in the ascending order to get hints for
     /// @param _firstIndex left boundary of the search range
     /// @param _lastIndex right boundary of the search range
@@ -247,16 +288,15 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         uint256 prevRequestId = 0;
         for (uint256 i = 0; i < _requestIds.length; ++i) {
             if (_requestIds[i] < prevRequestId) revert RequestIdsNotSorted();
-            hintIds[i] = findCheckpointHint(_requestIds[i], _firstIndex, _lastIndex);
+            hintIds[i] = _findCheckpointHint(_requestIds[i], _firstIndex, _lastIndex);
             _firstIndex = hintIds[i];
             prevRequestId = _requestIds[i];
         }
     }
 
     /// @notice Finds the list of hints for the given `_requestIds` searching among the checkpoints with indices
-    ///  in the range `[1, lastCheckpointIndex]`
+    ///  in the range `[1, lastCheckpointIndex]`. NB! Array of request ids should be sorted
     /// @dev WARNING! OOG is possible if used onchain.
-    ///  See `findCheckpointHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)` for onchain use
     /// @param _requestIds ids of the requests sorted in the ascending order to get hints for
     function findCheckpointHintsUnbounded(uint256[] calldata _requestIds)
         public
@@ -365,5 +405,17 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         if (_amountOfStETH > MAX_STETH_WITHDRAWAL_AMOUNT) {
             revert RequestAmountTooLarge(_amountOfStETH);
         }
+    }
+
+    /// @notice returns claimable ether under the request with _requestId.
+    function _getClaimableEther(uint256 _requestId, uint256 _hint) internal view returns (uint256) {
+        if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
+
+        if (_requestId > getLastFinalizedRequestId()) return 0;
+
+        WithdrawalRequest storage request = _getQueue()[_requestId];
+        if (request.claimed) return 0;
+
+        return _calculateClaimableEther(request, _requestId, _hint);
     }
 }
