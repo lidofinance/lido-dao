@@ -92,15 +92,19 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
 
     function initialize(
         address admin,
+        address pauser,
+        address resumer,
         address consensusContract,
         uint256 consensusVersion,
         uint256 lastProcessingRefSlot
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
-        _initializePausable();
+        if (pauser != address(0)) _grantRole(PAUSE_ROLE, pauser);
+        if (resumer != address(0)) _grantRole(RESUME_ROLE, resumer);
+
+        _pause(PAUSE_INFINITELY);
         _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
-        RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(PAUSE_INFINITELY); // pause it explicitly
     }
 
     /// @notice Resume accepting validator exit requests
@@ -147,11 +151,14 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         ///
 
         /// @dev Total number of validator exit requests in this report. Must not be greater
-        /// than limit checked in OracleReportSanityChecker.checkExitBusOracleReport
+        /// than limit checked in OracleReportSanityChecker.checkExitBusOracleReport.
+        ///
+        /// Cannot be zero: in the case there's no validator exit requests to submit, oracles
+        /// should skip submitting the report for the current reporting frame.
         uint256 requestsCount;
 
         /// @dev Format of the validator exit requests data. Currently, only the
-        /// DATA_FORMAT_LIST=0 is supported.
+        /// DATA_FORMAT_LIST=1 is supported.
         uint256 dataFormat;
 
         /// @dev Validator exit requests data. Can differ based on the data format,

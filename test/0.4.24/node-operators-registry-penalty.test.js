@@ -4,7 +4,7 @@ const { assertRevert } = require('../helpers/assertThrow')
 const { padRight, ETH } = require('../helpers/utils')
 const { BN } = require('bn.js')
 const { AragonDAO } = require('./helpers/dao')
-const { EvmSnapshot } = require('../helpers/blockchain')
+const { EvmSnapshot, advanceChainTime } = require('../helpers/blockchain')
 const { ZERO_ADDRESS, getEventAt, bn } = require('@aragon/contract-helpers-test')
 const nodeOperators = require('../helpers/node-operators')
 const signingKeys = require('../helpers/signing-keys')
@@ -334,8 +334,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await app.updateRefundedValidatorsCount(firstNodeOperator, 1, { from: voting })
       assert.isTrue(await app.testing_isNodeOperatorPenalized(firstNodeOperator))
 
-      await hre.network.provider.send('evm_increaseTime', [2 * 24 * 60 * 60 + 10])
-      await hre.network.provider.send('evm_mine')
+      await advanceChainTime(2 * 24 * 60 * 60 + 10)
 
       assert.isFalse(await app.testing_isNodeOperatorPenalized(firstNodeOperator))
 

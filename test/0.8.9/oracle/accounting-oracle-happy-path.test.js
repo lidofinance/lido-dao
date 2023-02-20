@@ -258,6 +258,13 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assert.equal(+lastLegacyOracleCall.clValidators, reportFields.numValidators)
     })
 
+    it(`no data can be submitted for the same reference slot again`, async () => {
+      await assert.reverts(
+        oracle.submitReportData(reportItems, oracleVersion, {from: member2}),
+        'RefSlotAlreadyProcessing()'
+      )
+    })
+
     it('some time passes', async () => {
       const deadline = (await oracle.getConsensusReport()).processingDeadlineTime
       await consensus.setTime(deadline)
@@ -282,7 +289,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       const invalidExtraDataHash = calcExtraDataListHash(invalidExtraDataList)
       await assertRevert(
         oracle.submitReportExtraDataList(invalidExtraDataList, {from: member2}),
-        `UnexpectedDataHash("${extraDataHash}", "${invalidExtraDataHash}")`
+        `UnexpectedExtraDataHash("${extraDataHash}", "${invalidExtraDataHash}")`
       )
     })
 
@@ -344,6 +351,13 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assert.equal(+call3.stakingModuleId, 3)
       assert.equal(call3.nodeOperatorIds, '0x' + [2].map(i => hex(i, 8)).join(''))
       assert.equal(call3.keysCounts, '0x' + [3].map(i => hex(i, 16)).join(''))
+    })
+
+    it(`extra data for the same reference slot cannot be re-submitted`, async () => {
+      await assert.reverts(
+        oracle.submitReportExtraDataList(extraDataList, {from: member1}),
+        'ExtraDataAlreadyProcessed()'
+      )
     })
   })
 })

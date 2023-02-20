@@ -303,15 +303,6 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         external
         onlyRole(REPORT_EXITED_VALIDATORS_ROLE)
     {
-        if (_nodeOperatorIds.length % 8 != 0 || _exitedValidatorsCounts.length % 16 != 0) {
-            revert InvalidReportData();
-        }
-
-        uint256 totalNodeOps = _nodeOperatorIds.length / 8;
-        if (_exitedValidatorsCounts.length / 16 != totalNodeOps) {
-            revert InvalidReportData();
-        }
-
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         IStakingModule moduleContract = IStakingModule(stakingModule.stakingModuleAddress);
         (
@@ -320,17 +311,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             /* uint256 depositableValidatorsCount */
         ) = moduleContract.getStakingModuleSummary();
 
-        for (uint256 i = 0; i < totalNodeOps; ) {
-            uint256 nodeOpId;
-            uint256 validatorsCount;
-            /// @solidity memory-safe-assembly
-            assembly {
-                nodeOpId := shr(192, calldataload(add(_nodeOperatorIds.offset, mul(i, 8))))
-                validatorsCount := shr(128, calldataload(add(_exitedValidatorsCounts.offset, mul(i, 16))))
-                i := add(i, 1)
-            }
-            moduleContract.updateExitedValidatorsCount(nodeOpId, validatorsCount);
-        }
+        moduleContract.updateExitedValidatorsCount(_nodeOperatorIds, _exitedValidatorsCounts);
 
         uint256 prevReportedExitedValidatorsCount = stakingModule.exitedValidatorsCount;
         (
@@ -444,28 +425,8 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         external
         onlyRole(REPORT_EXITED_VALIDATORS_ROLE)
     {
-        if (_nodeOperatorIds.length % 8 != 0 || _stuckValidatorsCounts.length % 16 != 0) {
-            revert InvalidReportData();
-        }
-
-        uint256 totalNodeOps = _nodeOperatorIds.length / 8;
-        if (_stuckValidatorsCounts.length / 16 != totalNodeOps) {
-            revert InvalidReportData();
-        }
-
         address moduleAddr = _getStakingModuleById(_stakingModuleId).stakingModuleAddress;
-
-        for (uint256 i = 0; i < totalNodeOps; ) {
-            uint256 nodeOpId;
-            uint256 validatorsCount;
-            /// @solidity memory-safe-assembly
-            assembly {
-                nodeOpId := shr(192, calldataload(add(_nodeOperatorIds.offset, mul(i, 8))))
-                validatorsCount := shr(128, calldataload(add(_stuckValidatorsCounts.offset, mul(i, 16))))
-                i := add(i, 1)
-            }
-            IStakingModule(moduleAddr).updateStuckValidatorsCount(nodeOpId, validatorsCount);
-        }
+        IStakingModule(moduleAddr).updateStuckValidatorsCount(_nodeOperatorIds, _stuckValidatorsCounts);
     }
 
     function getExitedValidatorsCountAcrossAllModules() external view returns (uint256) {

@@ -503,17 +503,21 @@ contract StETH is IERC20, Pausable {
     }
 
     /**
-     * @notice Mints amount of shares equal to contract balance to 0xdead address
-     *  It allows to get rid of zero checks and corner cases
-     * @dev should be invoked before using the token
+     * @notice Mints shares on behalf of 0xdead address,
+     * the shares amount is equal to the contract's balance.     *
+     *
+     * Allows to get rid of zero checks for `totalShares` and `totalPooledEther`
+     * and overcome corner cases.
+     *
+     * @dev must be invoked before using the token
      */
     function _bootstrapInitialHolder() internal returns (uint256) {
         uint256 balance = address(this).balance;
         require(balance != 0, "EMPTY_INIT_BALANCE");
 
         if (_getTotalShares() == 0) {
-             // if protocol is empty bootstrap it with the contract's balance
-            // 0xdead is a holder for initial shares
+            // if protocol is empty bootstrap it with the contract's balance
+            // address(0xdead) is a holder for initial shares
             _mintShares(INITIAL_TOKEN_HOLDER, balance);
 
             emit Transfer(0x0, INITIAL_TOKEN_HOLDER, balance);
