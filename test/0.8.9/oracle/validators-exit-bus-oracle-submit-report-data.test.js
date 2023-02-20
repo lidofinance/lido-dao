@@ -193,6 +193,19 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           await oracle.submitReportData(report, oracleVersion, { from: member1 })
         })
       })
+
+      context('validates data.requestsCount field with given data', () => {
+        it('reverts if requestsCount does not match with encoded data size', async () => {
+          const report = await prepareReportAndSubmitHash(
+            [{ moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }],
+            { reportFields: { requestsCount: 2 } }
+          )
+          await assert.reverts(
+            oracle.submitReportData(report, oracleVersion, { from: member1 }),
+            'UnexpectedRequestsDataLength()'
+          )
+        })
+      })
     })
 
     context(`requires validator indices for the same node operator to increase`, () => {
