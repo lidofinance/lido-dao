@@ -5,7 +5,7 @@ const { EvmSnapshot } = require('../helpers/blockchain')
 const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 
-contract('StakingRouter', ([depositor, stranger1, dsm, address1, address2]) => {
+contract('StakingRouter', ([depositor, stranger1, address1, address2]) => {
   const snapshot = new EvmSnapshot(hre.ethers.provider)
   let depositContract, stakingRouter
   let lido, curated, anotherCurated, voting
@@ -68,12 +68,12 @@ contract('StakingRouter', ([depositor, stranger1, dsm, address1, address2]) => {
       await curated.setNodeOperatorStakingLimit(0, 100000, { from: voting, gasPrice: 10 })
       await anotherCurated.setNodeOperatorStakingLimit(0, 100000, { from: voting, gasPrice: 10 })
 
-      // balance are 0
-      assert.equals(await web3.eth.getBalance(lido.address), 0)
+      // balance are initial
+      assert.equals(await web3.eth.getBalance(lido.address), ETH(1))
       assert.equals(await web3.eth.getBalance(stakingRouter.address), 0)
 
       await web3.eth.sendTransaction({ value: sendEthForKeys, to: lido.address, from: stranger1 })
-      assert.equals(await lido.getBufferedEther(), sendEthForKeys)
+      assert.equals(await lido.getBufferedEther(), ETH(200 * 32 + 1))
 
       const keysAllocation = await stakingRouter.getDepositsAllocation(200)
 
@@ -87,10 +87,10 @@ contract('StakingRouter', ([depositor, stranger1, dsm, address1, address2]) => {
       assert.equals(await depositContract.totalCalls(), 100, 'invalid deposits count')
 
       // on deposit we return balance to Lido
-      assert.equals(await web3.eth.getBalance(lido.address), ETH(100 * 32), 'invalid lido balance')
+      assert.equals(await web3.eth.getBalance(lido.address), ETH(100 * 32 + 1), 'invalid lido balance')
       assert.equals(await web3.eth.getBalance(stakingRouter.address), 0, 'invalid staking_router balance')
 
-      assert.equals(await lido.getBufferedEther(), ETH(100 * 32), 'invalid total buffer')
+      assert.equals(await lido.getBufferedEther(), ETH(100 * 32 + 1), 'invalid total buffer')
     })
   })
 })

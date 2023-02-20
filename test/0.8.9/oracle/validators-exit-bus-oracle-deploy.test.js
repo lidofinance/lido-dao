@@ -83,8 +83,8 @@ module.exports = {
 }
 async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
   const maxValidatorExitRequestsPerReport = 2000
-  const limitsList = [0, 0, 0, 0, 0, 0, maxValidatorExitRequestsPerReport, 0]
-  const managersRoster = [[admin], [], [], [], [], [], [], [], []]
+  const limitsList = [0, 0, 0, 0, maxValidatorExitRequestsPerReport, 0, 0, 0, 0]
+  const managersRoster = [[admin], [admin], [admin], [admin], [admin], [admin], [admin], [admin], [admin], [admin]]
 
   const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
 
@@ -97,13 +97,16 @@ async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
       from: admin
     }
   )
-  return oracleReportSanityChecker.address
+  return oracleReportSanityChecker
 }
 
-async function deployExitBusOracle(
-  admin,
-  { dataSubmitter = null, lastProcessingRefSlot = 0, resumeAfterDeploy = false } = {}
-) {
+async function deployExitBusOracle(admin, {
+  dataSubmitter = null,
+  lastProcessingRefSlot = 0,
+  resumeAfterDeploy = false,
+  pauser = ZERO_ADDRESS,
+  resumer = ZERO_ADDRESS,
+} = {}) {
   const locator = (await deployLocatorWithDummyAddressesImplementation(admin)).address
 
   const oracle = await ValidatorsExitBusOracle.new(SECONDS_PER_SLOT, GENESIS_TIME, locator, { from: admin })
@@ -116,12 +119,18 @@ async function deployExitBusOracle(
   const oracleReportSanityChecker = await deployOracleReportSanityCheckerForExitBus(locator, admin)
   await updateLocatorImplementation(locator, admin, {
     validatorsExitBusOracle: oracle.address,
-    oracleReportSanityChecker: oracleReportSanityChecker
+    oracleReportSanityChecker: oracleReportSanityChecker.address
   })
 
-  const initTx = await oracle.initialize(admin, consensus.address, CONSENSUS_VERSION, lastProcessingRefSlot, {
-    from: admin
-  })
+  const initTx = await oracle.initialize(
+    admin,
+    pauser,
+    resumer,
+    consensus.address,
+    CONSENSUS_VERSION,
+    lastProcessingRefSlot,
+    {from: admin}
+  )
 
   assert.emits(initTx, 'ContractVersionSet', { version: 1 })
 
@@ -153,7 +162,7 @@ async function deployExitBusOracle(
     await oracle.resume({ from: admin })
   }
 
-  return { consensus, oracle, locator, initTx }
+  return { consensus, oracle, oracleReportSanityChecker, locator, initTx }
 }
 contract('ValidatorsExitBusOracle', ([admin, member1]) => {
   let consensus

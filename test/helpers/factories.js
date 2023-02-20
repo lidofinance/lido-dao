@@ -2,6 +2,7 @@ const withdrawals = require('./withdrawals')
 const { newApp } = require('./dao')
 const { artifacts } = require('hardhat')
 const { deployLocatorWithDummyAddressesImplementation } = require('./locator-deploy')
+const { ETH } = require("./utils")
 
 const {
   SLOTS_PER_EPOCH,
@@ -352,7 +353,7 @@ async function postSetup({
   legacyOracle,
   consensusContract
 }) {
-  await pool.initialize(lidoLocator.address, eip712StETH.address)
+  await pool.initialize(lidoLocator.address, eip712StETH.address, { value: ETH(1) })
 
   await legacyOracle.initialize(lidoLocator.address, consensusContract.address)
 

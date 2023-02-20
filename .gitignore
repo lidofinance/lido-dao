@@ -43,3 +43,7 @@ cli/vendor
 
 # OS relative
 .DS_Store
+
+# foundry artifacts
+foundry/cache
+foundry/out

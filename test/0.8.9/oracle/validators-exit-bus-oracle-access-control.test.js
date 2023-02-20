@@ -12,9 +12,7 @@ const {
 const PUBKEYS = [
   '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-  '0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
-  '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
-  '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+  '0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'
 ]
 
 contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, account1, stranger]) => {
@@ -86,15 +84,17 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, account1
     context('DEFAULT_ADMIN_ROLE', () => {
       beforeEach(deploy)
 
-      context('Admin is set at initialise', () => {
-        it('should set admin at initialise', async () => {
+      context('Admin is set at initialize', () => {
+        it('should set admin at initialize', async () => {
           const DEFAULT_ADMIN_ROLE = await oracle.DEFAULT_ADMIN_ROLE()
           await assert.emits(initTx, 'RoleGranted', { role: DEFAULT_ADMIN_ROLE, account: admin, sender: admin })
         })
 
         it('should revert without admin address', async () => {
+          const pauser = ZERO_ADDRESS
+          const resumer = ZERO_ADDRESS
           await assert.reverts(
-            oracle.initialize(ZERO_ADDRESS, consensus.address, CONSENSUS_VERSION, 0, {
+            oracle.initialize(ZERO_ADDRESS, pauser, resumer, consensus.address, CONSENSUS_VERSION, 0, {
               from: admin
             }),
             'AdminCannotBeZero()'

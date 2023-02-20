@@ -1,6 +1,7 @@
 const hre = require('hardhat')
 const { ETH } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
+const { getCurrentBlockTimestamp } = require('../helpers/blockchain')
 
 const mocksFilePath = 'contracts/0.8.9/test_helpers/OracleReportSanityCheckerMocks.sol'
 const LidoStub = hre.artifacts.require(`${mocksFilePath}:LidoStub`)
@@ -27,20 +28,22 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     oneOffCLBalanceDecreaseLimitManagers: accounts.slice(4, 6),
     annualBalanceIncreaseLimitManagers: accounts.slice(6, 8),
     shareRateDeviationLimitManagers: accounts.slice(8, 10),
-    requestCreationBlockMarginManagers: accounts.slice(10, 12),
-    maxPositiveTokenRebaseManagers: accounts.slice(12, 14),
-    maxValidatorExitRequestsPerReportManagers: accounts.slice(14, 16),
-    maxAccountingExtraDataListItemsCountManagers: accounts.slice(16, 18),
+    maxValidatorExitRequestsPerReportManagers: accounts.slice(10, 12),
+    maxAccountingExtraDataListItemsCountManagers: accounts.slice(12, 14),
+    maxNodeOperatorsPerExtraDataItemCountManagers: accounts.slice(14, 16),
+    requestTimestampMarginManagers: accounts.slice(16, 18),
+    maxPositiveTokenRebaseManagers: accounts.slice(18, 20),
   }
   const defaultLimitsList = {
     churnValidatorsPerDayLimit: 55,
     oneOffCLBalanceDecreaseBPLimit: 5_00, // 5%
     annualBalanceIncreaseBPLimit: 10_00, // 10%
     shareRateDeviationBPLimit: 2_50, // 2.5%
-    requestTimestampMargin: 128,
-    maxPositiveTokenRebase: 5_000_000, // 0.05%
     maxValidatorExitRequestsPerReport: 2000,
     maxAccountingExtraDataListItemsCount: 15,
+    maxNodeOperatorsPerExtraDataItemCount: 16,
+    requestTimestampMargin: 128,
+    maxPositiveTokenRebase: 5_000_000, // 0.05%
   }
   const correctLidoOracleReport = {
     timeElapsed: 24 * 60 * 60,
@@ -80,20 +83,22 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
         oneOffCLBalanceDecreaseBPLimit: 10_00,
         annualBalanceIncreaseBPLimit: 15_00,
         shareRateDeviationBPLimit: 1_50, // 1.5%
-        requestTimestampMargin: 2048,
-        maxPositiveTokenRebase: 10_000_000,
         maxValidatorExitRequestsPerReport: 3000,
         maxAccountingExtraDataListItemsCount: 15 + 1,
+        maxNodeOperatorsPerExtraDataItemCount: 16 + 1,
+        requestTimestampMargin: 2048,
+        maxPositiveTokenRebase: 10_000_000,
       }
       const limitsBefore = await oracleReportSanityChecker.getOracleReportLimits()
       assert.notEquals(limitsBefore.churnValidatorsPerDayLimit, newLimitsList.churnValidatorsPerDayLimit)
       assert.notEquals(limitsBefore.oneOffCLBalanceDecreaseBPLimit, newLimitsList.oneOffCLBalanceDecreaseBPLimit)
       assert.notEquals(limitsBefore.annualBalanceIncreaseBPLimit, newLimitsList.annualBalanceIncreaseBPLimit)
       assert.notEquals(limitsBefore.shareRateDeviationBPLimit, newLimitsList.shareRateDeviationBPLimit)
-      assert.notEquals(limitsBefore.requestTimestampMargin, newLimitsList.requestTimestampMargin)
-      assert.notEquals(limitsBefore.maxPositiveTokenRebase, newLimitsList.maxPositiveTokenRebase)
       assert.notEquals(limitsBefore.maxValidatorExitRequestsPerReport, newLimitsList.maxValidatorExitRequestsPerReport)
       assert.notEquals(limitsBefore.maxAccountingExtraDataListItemsCount, newLimitsList.maxAccountingExtraDataListItemsCount)
+      assert.notEquals(limitsBefore.maxNodeOperatorsPerExtraDataItemCount, newLimitsList.maxNodeOperatorsPerExtraDataItemCount)
+      assert.notEquals(limitsBefore.requestTimestampMargin, newLimitsList.requestTimestampMargin)
+      assert.notEquals(limitsBefore.maxPositiveTokenRebase, newLimitsList.maxPositiveTokenRebase)
 
       await oracleReportSanityChecker.setOracleReportLimits(Object.values(newLimitsList), {
         from: managersRoster.allLimitsManagers[0]
@@ -104,10 +109,11 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       assert.equals(limitsAfter.oneOffCLBalanceDecreaseBPLimit, newLimitsList.oneOffCLBalanceDecreaseBPLimit)
       assert.equals(limitsAfter.annualBalanceIncreaseBPLimit, newLimitsList.annualBalanceIncreaseBPLimit)
       assert.equals(limitsAfter.shareRateDeviationBPLimit, newLimitsList.shareRateDeviationBPLimit)
-      assert.equals(limitsAfter.requestTimestampMargin, newLimitsList.requestTimestampMargin)
-      assert.equals(limitsAfter.maxPositiveTokenRebase, newLimitsList.maxPositiveTokenRebase)
       assert.equals(limitsAfter.maxValidatorExitRequestsPerReport, newLimitsList.maxValidatorExitRequestsPerReport)
       assert.equals(limitsAfter.maxAccountingExtraDataListItemsCount, newLimitsList.maxAccountingExtraDataListItemsCount)
+      assert.equals(limitsAfter.maxNodeOperatorsPerExtraDataItemCount, newLimitsList.maxNodeOperatorsPerExtraDataItemCount)
+      assert.equals(limitsAfter.requestTimestampMargin, newLimitsList.requestTimestampMargin)
+      assert.equals(limitsAfter.maxPositiveTokenRebase, newLimitsList.maxPositiveTokenRebase)
     })
   })
 
@@ -180,6 +186,31 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     it('passes all checks with correct oracle report data', async () => {
       await oracleReportSanityChecker.checkAccountingOracleReport(...Object.values(correctLidoOracleReport))
     })
+
+    it('set maxAccountingExtraDataListItemsCount', async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount
+      const newValue = 31
+      assert.notEquals(newValue, previousValue)
+      await oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(newValue,
+        { from: managersRoster.maxAccountingExtraDataListItemsCountManagers[0] })
+      assert.equals(
+        (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount,
+        newValue
+      )
+    })
+
+    it('set maxNodeOperatorsPerExtraDataItemCount', async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItemCount
+      const newValue = 33
+      assert.notEquals(newValue, previousValue)
+      await oracleReportSanityChecker.setMaxNodeOperatorsPerExtraDataItemCount(newValue,
+        { from: managersRoster.maxNodeOperatorsPerExtraDataItemCountManagers[0] })
+      assert.equals(
+        (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItemCount,
+        newValue
+      )
+    })
+
   })
 
   describe('checkWithdrawalQueueOracleReport()', async () => {
@@ -192,13 +223,12 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     }
 
     before(async () => {
-      const currentBlockNumber = await hre.ethers.provider.getBlockNumber()
-      const currentBlock = await hre.ethers.provider.getBlock(currentBlockNumber)
-      correctWithdrawalQueueOracleReport.refReportTimestamp = currentBlock.timestamp
-      oldRequestCreationTimestamp = currentBlock.timestamp - defaultLimitsList.requestTimestampMargin
+      const currentBlockTimestamp = await getCurrentBlockTimestamp()
+      correctWithdrawalQueueOracleReport.refReportTimestamp = currentBlockTimestamp
+      oldRequestCreationTimestamp = currentBlockTimestamp - defaultLimitsList.requestTimestampMargin
       correctWithdrawalQueueOracleReport.requestIdToFinalizeUpTo = oldRequestCreationTimestamp
       await withdrawalQueueMock.setRequestBlockNumber(oldRequestId, oldRequestCreationTimestamp)
-      newRequestCreationTimestamp = currentBlock.timestamp - Math.floor(defaultLimitsList.requestTimestampMargin / 2)
+      newRequestCreationTimestamp = currentBlockTimestamp - Math.floor(defaultLimitsList.requestTimestampMargin / 2)
       await withdrawalQueueMock.setRequestBlockNumber(newRequestId, newRequestCreationTimestamp)
     })
 
