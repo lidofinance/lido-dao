@@ -43,9 +43,9 @@ const V1_ORACLE_LAST_REPORT_SLOT = V1_ORACLE_LAST_COMPLETED_EPOCH * SLOTS_PER_EP
 const EXTRA_DATA_FORMAT_EMPTY = 0
 const EXTRA_DATA_FORMAT_LIST = 1
 
-
 const EXTRA_DATA_TYPE_STUCK_VALIDATORS = 1
 const EXTRA_DATA_TYPE_EXITED_VALIDATORS = 2
+
 function getReportDataItems(r) {
   return [
     r.consensusVersion,
@@ -269,6 +269,7 @@ async function deployAndConfigureAccountingOracle(admin) {
   const initTx = await initAccountingOracle({ admin, ...deployed })
   return { ...deployed, initTx }
 }
+
 contract('AccountingOracle', ([admin, member1]) => {
   let consensus
   let oracle

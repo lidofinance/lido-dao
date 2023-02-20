@@ -277,6 +277,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     {
         for (uint256 i = 0; i < _stakingModuleIds.length; ) {
             StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleIds[i]);
+
             uint256 prevReportedExitedValidatorsCount = stakingModule.exitedValidatorsCount;
             if (_exitedValidatorsCounts[i] < prevReportedExitedValidatorsCount) {
                 revert ExitedValidatorsCountCannotDecrease();
@@ -295,6 +296,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
                     prevReportedExitedValidatorsCount - totalExitedValidatorsCount
                 );
             }
+
             stakingModule.exitedValidatorsCount = _exitedValidatorsCounts[i];
             unchecked { ++i; }
         }
@@ -308,28 +310,11 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         external
         onlyRole(REPORT_EXITED_VALIDATORS_ROLE)
     {
-        StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
-        IStakingModule moduleContract = IStakingModule(stakingModule.stakingModuleAddress);
-        (
-            uint256 prevExitedValidatorsCount,
-            /* uint256 totalDepositedValidators */,
-            /* uint256 depositableValidatorsCount */
-        ) = moduleContract.getStakingModuleSummary();
-
-        moduleContract.updateExitedValidatorsCount(_nodeOperatorIds, _exitedValidatorsCounts);
-
-        uint256 prevReportedExitedValidatorsCount = stakingModule.exitedValidatorsCount;
-        (
-            uint256 newExitedValidatorsCount,
-            /* uint256 totalDepositedValidators */,
-            /* uint256 depositableValidatorsCount */
-        ) =  moduleContract.getStakingModuleSummary();
-        if (prevExitedValidatorsCount < prevReportedExitedValidatorsCount &&
-            newExitedValidatorsCount >= prevReportedExitedValidatorsCount
-        ) {
-            // oracle finished updating exited validators for all node ops
-            moduleContract.onExitedAndStuckValidatorsCountsUpdated();
-        }
+        address moduleAddr = _getStakingModuleById(_stakingModuleId).stakingModuleAddress;
+        IStakingModule(moduleAddr).updateExitedValidatorsCount(
+            _nodeOperatorIds,
+            _exitedValidatorsCounts
+        );
     }
 
     struct ValidatorsCountsCorrection {
@@ -427,6 +412,26 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     {
         address moduleAddr = _getStakingModuleById(_stakingModuleId).stakingModuleAddress;
         IStakingModule(moduleAddr).updateStuckValidatorsCount(_nodeOperatorIds, _stuckValidatorsCounts);
+    }
+
+    function onValidatorsCountsByNodeOperatorReportingFinished()
+        external
+        onlyRole(REPORT_EXITED_VALIDATORS_ROLE)
+    {
+        uint256 stakingModulesCount = getStakingModulesCount();
+
+        for (uint256 i; i < stakingModulesCount; ) {
+            StakingModule storage stakingModule = _getStakingModuleByIndex(i);
+            IStakingModule moduleContract = IStakingModule(stakingModule.stakingModuleAddress);
+
+            (uint256 exitedValidatorsCount, , ) = moduleContract.getStakingModuleSummary();
+            if (exitedValidatorsCount == stakingModule.exitedValidatorsCount) {
+                // oracle finished updating exited validators for all node ops
+                moduleContract.onExitedAndStuckValidatorsCountsUpdated();
+            }
+
+            unchecked { ++i; }
+        }
     }
 
     function getExitedValidatorsCountAcrossAllModules() external view returns (uint256) {

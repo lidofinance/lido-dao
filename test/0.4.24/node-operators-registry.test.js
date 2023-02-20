@@ -3325,7 +3325,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await steth.mintShares(app.address, ETH(10))
 
       // calls distributeRewards() inside
-      const tx = await app.onAllValidatorCountersUpdated({ from: voting })
+      const tx = await app.onExitedAndStuckValidatorsCountsUpdated({ from: voting })
 
       // just show the used gas
       console.log(`gas used to distribute rewards for ${maxNodeOperatorsCount} NOs:`, +tx.receipt.gasUsed)

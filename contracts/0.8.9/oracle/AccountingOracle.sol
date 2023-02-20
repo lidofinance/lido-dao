@@ -74,6 +74,8 @@ interface IStakingRouter {
         bytes calldata nodeOperatorIds,
         bytes calldata stuckValidatorsCounts
     ) external;
+
+    function onValidatorsCountsByNodeOperatorReportingFinished() external;
 }
 
 
@@ -118,6 +120,7 @@ contract AccountingOracle is BaseOracle {
     struct ExtraDataProcessingState {
         uint64 refSlot;
         uint16 dataFormat;
+        bool submitted;
         uint64 itemsCount;
         uint64 itemsProcessed;
         uint256 lastSortingKey;
@@ -139,7 +142,13 @@ contract AccountingOracle is BaseOracle {
     /// Initialization & admin functions
     ///
 
-    constructor(address lidoLocator, address lido, address legacyOracle, uint256 secondsPerSlot, uint256 genesisTime)
+    constructor(
+        address lidoLocator,
+        address lido,
+        address legacyOracle,
+        uint256 secondsPerSlot,
+        uint256 genesisTime
+    )
         BaseOracle(secondsPerSlot, genesisTime)
     {
         if (lidoLocator == address(0)) revert LidoLocatorCannotBeZero();
@@ -376,6 +385,13 @@ contract AccountingOracle is BaseOracle {
         _handleConsensusReportData(data, prevRefSlot);
     }
 
+    /// @notice Triggers the processing required when no extra data is present in the report,
+    /// i.e. when extra data format equals EXTRA_DATA_FORMAT_EMPTY.
+    ///
+    function submitReportExtraDataEmpty() external {
+        _submitReportExtraDataEmpty();
+    }
+
     /// @notice Submits report extra data in the EXTRA_DATA_FORMAT_LIST format for processing.
     ///
     /// @param items The extra data items list. See docs for the `EXTRA_DATA_FORMAT_LIST`
@@ -393,17 +409,19 @@ contract AccountingOracle is BaseOracle {
         /// @notice Hash of the main report data. Zero bytes if consensus on the hash hasn't been
         /// reached yet for the current reporting frame.
         bytes32 mainDataHash;
-        /// @notice Whether main report data for the for the current reporting frame has been
-        /// already submitted.
+        /// @notice Whether the main report data for the current reporting frame has already been
+        /// submitted.
         bool mainDataSubmitted;
-        /// @notice Hash of the extra report data. Zero bytes if consensus on the main data hash
-        /// hasn't been reached yet, or if the main report data hasn't been submitted yet, for the
-        /// current reporting frame. Also zero bytes if the current reporting frame's data doesn't
-        /// contain any extra data.
+        /// @notice Hash of the extra report data. Should be ignored unless `mainDataSubmitted`
+        /// is true.
         bytes32 extraDataHash;
-        /// @notice Format of the extra report data for the current reporting frame.
+        /// @notice Format of the extra report data for the current reporting frame. Should be
+        /// ignored unless `mainDataSubmitted` is true.
         uint256 extraDataFormat;
+        /// @notice Whether any extra report data for the current reporting frame has been submitted.
+        bool extraDataSubmitted;
         /// @notice Total number of extra report data items for the current reporting frame.
+        /// Should be ignored unless `mainDataSubmitted` is true.
         uint256 extraDataItemsCount;
         /// @notice How many extra report data items are already submitted for the current
         /// reporting frame.
@@ -431,12 +449,9 @@ contract AccountingOracle is BaseOracle {
         }
 
         ExtraDataProcessingState memory extraState = _storageExtraDataProcessingState().value;
-        if (extraState.dataHash == bytes32(0) || extraState.refSlot != processingRefSlot) {
-            return result;
-        }
-
         result.extraDataHash = extraState.dataHash;
         result.extraDataFormat = extraState.dataFormat;
+        result.extraDataSubmitted = extraState.submitted;
         result.extraDataItemsCount = extraState.itemsCount;
         result.extraDataItemsSubmitted = extraState.itemsProcessed;
     }
@@ -462,7 +477,8 @@ contract AccountingOracle is BaseOracle {
     ///
     /// 0. last reference slot of legacy oracle
     /// 1. last legacy oracle's consensus report arrives
-    /// 2. new oracle is deployed and enabled, legacy oracle is disabled and upgraded to compatibility code
+    /// 2. new oracle is deployed and enabled, legacy oracle is disabled and upgraded to
+    ///    the compatibility implementation
     /// 3. first reference slot of the new oracle
     /// 4. first new oracle's consensus report arrives
     ///
@@ -523,7 +539,9 @@ contract AccountingOracle is BaseOracle {
         uint256 prevProcessingRefSlot
     ) internal override {
         ExtraDataProcessingState memory state = _storageExtraDataProcessingState().value;
-        if (state.refSlot == prevProcessingRefSlot && state.itemsProcessed < state.itemsCount) {
+        if (state.refSlot == prevProcessingRefSlot && (
+            !state.submitted || state.itemsProcessed < state.itemsCount
+        )) {
             emit WarnExtraDataIncompleteProcessing(
                 prevProcessingRefSlot,
                 state.itemsProcessed,
@@ -599,6 +617,7 @@ contract AccountingOracle is BaseOracle {
         _storageExtraDataProcessingState().value = ExtraDataProcessingState({
             refSlot: data.refSlot.toUint64(),
             dataFormat: data.extraDataFormat.toUint16(),
+            submitted: false,
             dataHash: data.extraDataHash,
             itemsCount: data.extraDataItemsCount.toUint16(),
             itemsProcessed: 0,
@@ -655,6 +674,30 @@ contract AccountingOracle is BaseOracle {
         );
     }
 
+    function _submitReportExtraDataEmpty() internal {
+        ExtraDataProcessingState memory procState = _storageExtraDataProcessingState().value;
+        _checkCanSubmitExtraData(procState, EXTRA_DATA_FORMAT_EMPTY);
+        if (procState.submitted) revert ExtraDataAlreadyProcessed();
+        IStakingRouter(LOCATOR.stakingRouter()).onValidatorsCountsByNodeOperatorReportingFinished();
+        _storageExtraDataProcessingState().value.submitted = true;
+        emit ExtraDataSubmitted(procState.refSlot, 0, 0);
+    }
+
+    function _checkCanSubmitExtraData(ExtraDataProcessingState memory procState, uint256 format)
+        internal
+    {
+        _checkMsgSenderIsAllowedToSubmitData();
+        _checkProcessingDeadline();
+
+        if (procState.refSlot != LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256()) {
+            revert CannotSubmitExtraDataBeforeMainData();
+        }
+
+        if (procState.dataFormat != format) {
+            revert UnexpectedExtraDataFormat(procState.dataFormat, format);
+        }
+    }
+
     struct ExtraDataIterState {
         // volatile
         uint256 index;
@@ -666,18 +709,8 @@ contract AccountingOracle is BaseOracle {
     }
 
     function _submitReportExtraDataList(bytes calldata items) internal {
-        _checkMsgSenderIsAllowedToSubmitData();
-        _checkProcessingDeadline();
-
         ExtraDataProcessingState memory procState = _storageExtraDataProcessingState().value;
-
-        if (procState.refSlot != LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256()) {
-            revert CannotSubmitExtraDataBeforeMainData();
-        }
-
-        if (procState.dataFormat != EXTRA_DATA_FORMAT_LIST) {
-            revert UnexpectedExtraDataFormat(procState.dataFormat, EXTRA_DATA_FORMAT_LIST);
-        }
+        _checkCanSubmitExtraData(procState, EXTRA_DATA_FORMAT_LIST);
 
         if (procState.itemsProcessed == procState.itemsCount) {
             revert ExtraDataAlreadyProcessed();
@@ -707,10 +740,12 @@ contract AccountingOracle is BaseOracle {
             revert UnexpectedExtraDataItemsCount(procState.itemsCount, itemsProcessed);
         }
 
-        ExtraDataProcessingState storage _procState = _storageExtraDataProcessingState().value;
-        _procState.itemsProcessed = uint64(itemsProcessed);
-        _procState.lastSortingKey = iter.lastSortingKey;
+        procState.submitted = true;
+        procState.itemsProcessed = uint64(itemsProcessed);
+        procState.lastSortingKey = iter.lastSortingKey;
+        _storageExtraDataProcessingState().value = procState;
 
+        IStakingRouter(iter.stakingRouter).onValidatorsCountsByNodeOperatorReportingFinished();
         emit ExtraDataSubmitted(procState.refSlot, itemsProcessed, itemsProcessed);
     }
 

@@ -528,6 +528,11 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     /// @notice Called by StakingRouter after it finishes updating exited and stuck validators
     /// counts for this module's node operators.
+    ///
+    /// Guaranteed to be called after an oracle report is applied, regardless of whether any node
+    /// operator in this module has actually received any updated counts as a result of the report
+    /// but given that the total number of exited validators returned from getStakingModuleSummary
+    /// is the same as StakingRouter expects based on the total count received from the oracle.
     function onExitedAndStuckValidatorsCountsUpdated() external {
         _auth(STAKING_ROUTER_ROLE);
         // for the permissioned module, we're distributing rewards within oracle operation
