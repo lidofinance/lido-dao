@@ -37,13 +37,6 @@ contract LidoMock is Lido {
     }
 
     /**
-     * @dev Gets unaccounted (excess) Ether on this contract balance
-     */
-    function getUnaccountedEther() public view returns (uint256) {
-        return _getUnaccountedEther();
-    }
-
-    /**
      * @dev Only for testing recovery vault
      */
     function makeUnaccountedEther() public payable {}

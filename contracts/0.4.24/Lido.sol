@@ -81,7 +81,7 @@ interface IStakingRouter {
         uint256 _maxDepositsCount,
         uint256 _stakingModuleId,
         bytes _depositCalldata
-    ) external payable returns (uint256);
+    ) external payable;
 
     function getStakingRewardsDistribution()
         external
@@ -101,6 +101,11 @@ interface IStakingRouter {
     function getTotalFeeE4Precision() external view returns (uint16 totalFee);
 
     function getStakingFeeAggregateDistributionE4Precision() external view returns (uint16 modulesFee, uint16 treasuryFee);
+
+    function getStakingModuleMaxDepositsCount(uint256 _stakingModuleId, uint256 _depositableEther)
+        external
+        view
+        returns (uint256);
 }
 
 interface IWithdrawalQueue {
@@ -244,9 +249,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
     // The `amount` of ether was sent to the deposit_contract.deposit function
     event Unbuffered(uint256 amount);
-
-    // The amount of ETH sent from StakingRouter contract to Lido contract when deposit called
-    event StakingRouterDepositRemainderReceived(uint256 amount);
 
     /**
     * @dev As AragonApp, Lido contract must be initialized with following variables:
@@ -488,17 +490,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @notice A payable function for staking router deposits remainder. Can be called only by `StakingRouter`
-     * @dev We need a dedicated function because funds received by the default payable function
-     * are treated as a user deposit
-     */
-    function receiveStakingRouterDepositRemainder() external payable {
-        require(msg.sender == getLidoLocator().stakingRouter());
-
-        emit StakingRouterDepositRemainderReceived(msg.value);
-    }
-
-    /**
      * @notice Stop pool routine operations
      */
     function stop() external {
@@ -691,14 +682,10 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * @dev Returns depositable ether amount.
      * Takes into account unfinalized stETH required by WithdrawalQueue
      */
-    function getDepositableEther() public view returns (uint256 depositableEth) {
-        uint256 bufferedEth = _getBufferedEther();
+    function getDepositableEther() public view returns (uint256) {
+        uint256 bufferedEther = _getBufferedEther();
         uint256 withdrawalReserve = IWithdrawalQueue(getLidoLocator().withdrawalQueue()).unfinalizedStETH();
-
-        if (bufferedEth > withdrawalReserve) {
-            bufferedEth -= withdrawalReserve;
-            depositableEth = bufferedEth.div(DEPOSIT_SIZE).mul(DEPOSIT_SIZE);
-        }
+        return bufferedEther > withdrawalReserve ? bufferedEther - withdrawalReserve : 0;
     }
 
     /**
@@ -711,36 +698,29 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         ILidoLocator locator = getLidoLocator();
 
         require(msg.sender == locator.depositSecurityModule(), "APP_AUTH_DSM_FAILED");
-        require(_stakingModuleId <= uint24(-1), "STAKING_MODULE_ID_TOO_LARGE");
         require(canDeposit(), "CAN_NOT_DEPOSIT");
 
-        uint256 depositableEth = getDepositableEther();
+        IStakingRouter stakingRouter = IStakingRouter(locator.stakingRouter());
+        uint256 depositsCount = Math256.min(
+            _maxDepositsCount,
+            stakingRouter.getStakingModuleMaxDepositsCount(_stakingModuleId, getDepositableEther())
+        );
+        if (depositsCount == 0) return;
 
-        if (depositableEth > 0) {
-            /// available ether amount for deposits (multiple of 32eth)
-            depositableEth = Math256.min(depositableEth, _maxDepositsCount.mul(DEPOSIT_SIZE));
+        uint256 depositsValue = depositsCount.mul(DEPOSIT_SIZE);
+        /// @dev firstly update the local state of the contract to prevent a reentrancy attack,
+        ///     even if the StakingRouter is a trusted contract.
+        BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().sub(depositsValue));
+        emit Unbuffered(depositsValue);
 
-            uint256 unaccountedEth = _getUnaccountedEther();
-            /// @dev transfer ether to SR and make deposit at the same time
-            /// @notice allow zero value of depositableEth, in this case SR will simply transfer the unaccounted ether to Lido contract
-            uint256 depositsCount = IStakingRouter(locator.stakingRouter()).deposit.value(depositableEth)(
-                _maxDepositsCount,
-                _stakingModuleId,
-                _depositCalldata
-            );
+        uint256 newDepositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(depositsCount);
+        DEPOSITED_VALIDATORS_POSITION.setStorageUint256(newDepositedValidators);
+        emit DepositedValidatorsChanged(newDepositedValidators);
 
-            uint256 depositedAmount = depositsCount.mul(DEPOSIT_SIZE);
-            assert(depositedAmount <= depositableEth);
-
-            if (depositsCount > 0) {
-                uint256 newDepositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(depositsCount);
-                DEPOSITED_VALIDATORS_POSITION.setStorageUint256(newDepositedValidators);
-                emit DepositedValidatorsChanged(newDepositedValidators);
-
-                _markAsUnbuffered(depositedAmount);
-                assert(_getUnaccountedEther() == unaccountedEth);
-            }
-        }
+        /// @dev transfer ether to StakingRouter and make a deposit at the same time. All the ether
+        ///     sent to StakingRouter is counted as deposited. If StakingRouter can't deposit all
+        ///     passed ether it MUST revert the whole transaction (never happens in normal circumstances)
+        stakingRouter.deposit.value(depositsValue)(depositsCount, _stakingModuleId, _depositCalldata);
     }
 
     /// DEPRECATED PUBLIC METHODS
@@ -1103,27 +1083,10 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-    * @dev Records a deposit to the deposit_contract.deposit function
-    * @param _amount Total amount deposited to the Consensus Layer side
-    */
-    function _markAsUnbuffered(uint256 _amount) internal {
-        BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().sub(_amount));
-
-        emit Unbuffered(_amount);
-    }
-
-    /**
      * @dev Gets the amount of Ether temporary buffered on this contract balance
      */
     function _getBufferedEther() internal view returns (uint256) {
         return BUFFERED_ETHER_POSITION.getStorageUint256();
-    }
-
-    /**
-     * @dev Gets unaccounted (excess) Ether on this contract balance
-     */
-    function _getUnaccountedEther() internal view returns (uint256) {
-        return address(this).balance.sub(_getBufferedEther());
     }
 
     /// @dev Calculates and returns the total base balance (multiple of 32) of validators in transient state,

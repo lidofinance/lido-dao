@@ -1,7 +1,10 @@
+const hre = require('hardhat')
+const { wei } = require('./wei')
+
 async function waitBlocks(numBlocksToMine) {
   let block
   for (let i = 0; i < numBlocksToMine; ++i) {
-    await network.provider.send('evm_mine')
+    await hre.network.provider.send('evm_mine')
     block = await web3.eth.getBlock('latest')
   }
   return block
@@ -13,9 +16,9 @@ async function advanceChainTime(seconds) {
 }
 
 async function getCurrentBlockTimestamp() {
-  const blockNum = await ethers.provider.getBlockNumber();
-  const block = await ethers.provider.getBlock(blockNum);
-  return block.timestamp;
+  const blockNum = await hre.ethers.provider.getBlockNumber()
+  const block = await hre.ethers.provider.getBlock(blockNum)
+  return block.timestamp
 }
 
 /**
@@ -49,6 +52,16 @@ function impersonate(provider, address) {
   return provider.send('hardhat_impersonateAccount', [address])
 }
 
+async function getBalance(addressOrContract) {
+  const address = addressOrContract.address || addressOrContract
+  return wei.int(await hre.ethers.provider.getBalance(address))
+}
+
+async function setBalance(addressOrContract, value) {
+  const address = addressOrContract.address || addressOrContract
+  const hexValue = hre.web3.utils.numberToHex(wei.str(value))
+  await hre.network.provider.send('hardhat_setBalance', [address, hexValue])
+}
 
 module.exports = {
   EvmSnapshot,
@@ -56,4 +69,6 @@ module.exports = {
   advanceChainTime,
   getCurrentBlockTimestamp,
   impersonate,
+  getBalance,
+  setBalance
 }

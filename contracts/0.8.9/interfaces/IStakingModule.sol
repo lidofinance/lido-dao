@@ -114,18 +114,16 @@ interface IStakingModule {
         uint256 _stuckValidatorsCount
     ) external;
 
-    /// @notice Obtains up to _depositsCount deposit data to be used by StakingRouter
-    ///     to deposit to the Ethereum Deposit contract
-    /// @param _depositsCount Desireable number of deposits to be done
+    /// @notice Obtains deposit data to be used by StakingRouter to deposit to the Ethereum Deposit
+    ///     contract
+    /// @dev The method MUST revert when the staking module has not enough deposit data items
+    /// @param _depositsCount Number of deposits to be done
     /// @param _calldata Staking module defined data encoded as bytes
-    /// @return depositsCount Actual deposits count might be done with returned data
     /// @return publicKeys Batch of the concatenated public validators keys
     /// @return signatures Batch of the concatenated deposit signatures for returned public keys
-    function obtainDepositData(uint256 _depositsCount, bytes calldata _calldata) external returns (
-        uint256 depositsCount,
-        bytes memory publicKeys,
-        bytes memory signatures
-    );
+    function obtainDepositData(uint256 _depositsCount, bytes calldata _calldata)
+        external
+        returns (bytes memory publicKeys, bytes memory signatures);
 
     /// @notice Called by StakingRouter after oracle finishes updating validators counters for all node operators
     function onAllValidatorCountersUpdated() external;

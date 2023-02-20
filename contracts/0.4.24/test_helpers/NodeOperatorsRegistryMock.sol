@@ -149,6 +149,10 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(0);
         KEYS_OP_INDEX_POSITION.setStorageUint256(0);
 
+        _nodeOperatorTotals = NodeOperatorTotals({
+            signingKeysStats: Packed64x4.Packed(0)
+        });
+
         Packed64x4.Packed memory tmp;
         for (uint256 i = 0; i < totalOperatorsCount; ++i) {
             _nodeOperators[i] = NodeOperator(false, address(0), new string(0), tmp, tmp, tmp);
@@ -171,8 +175,8 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         external
         returns (uint256 loadedValidatorsKeysCount, bytes memory publicKeys, bytes memory signatures)
     {
-        (loadedValidatorsKeysCount, publicKeys, signatures) = this.obtainDepositData(_keysToAllocate, new bytes(0));
-        emit ValidatorsKeysLoaded(loadedValidatorsKeysCount, publicKeys, signatures);
+        (publicKeys, signatures) = this.obtainDepositData(_keysToAllocate, new bytes(0));
+        emit ValidatorsKeysLoaded(publicKeys, signatures);
     }
 
     function testing_isNodeOperatorPenalized(uint256 operatorId) external view returns (bool) {
@@ -192,7 +196,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         return _getNodeOperatorWithLimitApplied(operatorId);
     }
 
-    event ValidatorsKeysLoaded(uint256 count, bytes publicKeys, bytes signatures);
+    event ValidatorsKeysLoaded(bytes publicKeys, bytes signatures);
 
     function testing__distributeRewards() external returns (uint256) {
         return _distributeRewards();

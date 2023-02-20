@@ -6,6 +6,7 @@ const { assert } = require('../helpers/assert')
 const { EvmSnapshot } = require('../helpers/blockchain')
 const { newDao, newApp } = require('../helpers/dao')
 const { artifacts } = require('hardhat')
+const { ETH } = require('../helpers/utils')
 
 const DepositContractMock = artifacts.require('DepositContractMock')
 const StakingRouterMock = artifacts.require('StakingRouterMock.sol')
@@ -733,7 +734,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('deposit fails', async () => {
       await assert.revertsWithCustomError(
-        app.deposit(100, stakingModulesParams[0].expectedModuleId, '0x00', { value: 100, from: lido }),
+        app.deposit(100, stakingModulesParams[0].expectedModuleId, '0x00', { value: ETH(32 * 100), from: lido }),
         'StakingModuleNotActive()'
       )
     })
