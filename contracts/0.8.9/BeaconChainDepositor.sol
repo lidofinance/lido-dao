@@ -44,10 +44,12 @@ contract BeaconChainDepositor {
         bytes memory _publicKeysBatch,
         bytes memory _signaturesBatch
     ) internal {
-        require(_publicKeysBatch.length == PUBLIC_KEY_LENGTH * _keysCount, "INVALID_PUBLIC_KEYS_BATCH_LENGTH");
-        require(_signaturesBatch.length == SIGNATURE_LENGTH * _keysCount, "INVALID_SIGNATURES_BATCH_LENGTH");
-
-        uint256 targetBalance = address(this).balance - (_keysCount * DEPOSIT_SIZE);
+        if (_publicKeysBatch.length != PUBLIC_KEY_LENGTH * _keysCount) {
+            revert InvalidPublicKeysBatchLength(_publicKeysBatch.length, PUBLIC_KEY_LENGTH * _keysCount);
+        }
+        if (_signaturesBatch.length != SIGNATURE_LENGTH * _keysCount) {
+            revert InvalidSignaturesBatchLength(_signaturesBatch.length, SIGNATURE_LENGTH * _keysCount);
+        }
 
         bytes memory publicKey = MemUtils.unsafeAllocateBytes(PUBLIC_KEY_LENGTH);
         bytes memory signature = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH);
@@ -64,8 +66,6 @@ contract BeaconChainDepositor {
                 ++i;
             }
         }
-
-        if (address(this).balance != targetBalance) revert NotExpectedBalance();
     }
 
     /// @dev computes the deposit_root_hash required by official Beacon Deposit contract
@@ -80,19 +80,20 @@ contract BeaconChainDepositor {
         bytes memory sigPart1 = MemUtils.unsafeAllocateBytes(64);
         bytes memory sigPart2 = MemUtils.unsafeAllocateBytes(SIGNATURE_LENGTH - 64);
         MemUtils.copyBytes(_signature, sigPart1, 0, 0, 64);
-        MemUtils.copyBytes(_signature, sigPart2, 64, 0,SIGNATURE_LENGTH - 64);
+        MemUtils.copyBytes(_signature, sigPart2, 64, 0, SIGNATURE_LENGTH - 64);
 
         bytes32 publicKeyRoot = sha256(abi.encodePacked(_publicKey, bytes16(0)));
         bytes32 signatureRoot = sha256(abi.encodePacked(sha256(abi.encodePacked(sigPart1)), sha256(abi.encodePacked(sigPart2, bytes32(0)))));
 
         return sha256(
-            abi.encodePacked(
-                sha256(abi.encodePacked(publicKeyRoot, _withdrawalCredentials)),
-                sha256(abi.encodePacked(DEPOSIT_SIZE_IN_GWEI_LE64, bytes24(0), signatureRoot))
-            )
-        );
+                abi.encodePacked(
+                    sha256(abi.encodePacked(publicKeyRoot, _withdrawalCredentials)),
+                    sha256(abi.encodePacked(DEPOSIT_SIZE_IN_GWEI_LE64, bytes24(0), signatureRoot))
+                )
+            );
     }
 
     error DepositContractZeroAddress();
-    error NotExpectedBalance();
+    error InvalidPublicKeysBatchLength(uint256 actual, uint256 expected);
+    error InvalidSignaturesBatchLength(uint256 actual, uint256 expected);
 }
