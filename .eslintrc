@@ -17,14 +17,12 @@
 
   "rules": {
     "prettier/prettier": "error",
-    "max-len": ["warn", { "code": 140, "ignoreComments": true, "ignoreUrls": true }],
     "no-undef": "warn",
     "no-unused-vars": "warn",
     "prefer-const": "warn",
     "camelcase": "off",
     "eol-last": "warn",
     "no-multiple-empty-lines": "warn",
-    "comma-dangle": "warn",
     "quotes": ["error", "single", { "avoidEscape": true, "allowTemplateLiterals": true }],
     "jsx-quotes": ["error", "prefer-single"],
     "no-useless-escape": "off",
