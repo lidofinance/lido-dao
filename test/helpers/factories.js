@@ -196,7 +196,7 @@ async function withdrawalCredentialsFactory() {
   return '0x'.padEnd(66, '1234')
 }
 
-async function stakingRouterFactory({ depositContract, dao, appManager, voting, pool, withdrawalCredentials }) {
+async function stakingRouterFactory({ depositContract, dao, appManager, voting, pool, oracle, withdrawalCredentials }) {
   const base = await StakingRouter.new(depositContract.address)
 
   const proxyAddress = await newApp(dao, 'lido-oracle', base.address, appManager.address)
@@ -218,10 +218,10 @@ async function stakingRouterFactory({ depositContract, dao, appManager, voting, 
   await stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_MANAGE_ROLE(), voting.address, {
     from: appManager.address
   })
-  await stakingRouter.grantRole(await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(), pool.address, {
+  await stakingRouter.grantRole(await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(), voting.address, {
     from: appManager.address
   })
-  await stakingRouter.grantRole(await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(), voting.address, {
+  await stakingRouter.grantRole(await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(), oracle.address, {
     from: appManager.address
   })
   await stakingRouter.grantRole(await stakingRouter.UNSAFE_SET_EXITED_VALIDATORS_ROLE(), voting.address, {

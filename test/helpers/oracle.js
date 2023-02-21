@@ -66,7 +66,10 @@ async function pushOracleReport(consensus, oracle, numValidators, clBalance, elR
 
   const oracleVersion = await oracle.getContractVersion()
 
-  return await oracle.submitReportData(reportItems, oracleVersion, { from: members.addresses[0] })
+  const submitDataTx = await oracle.submitReportData(reportItems, oracleVersion, { from: members.addresses[0] })
+  const submitExtraDataTx = await oracle.submitReportExtraDataEmpty({ from: members.addresses[0] })
+
+  return { submitDataTx, submitExtraDataTx }
 }
 
 module.exports = { getReportDataItems, calcReportDataHash, pushOracleReport }

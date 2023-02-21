@@ -9,7 +9,9 @@ const {
   packExtraDataList,
   calcExtraDataListHash,
   calcReportDataHash,
-  EXTRA_DATA_FORMAT_LIST
+  EXTRA_DATA_FORMAT_EMPTY,
+  EXTRA_DATA_FORMAT_LIST,
+  ZERO_HASH
 } = require('./accounting-oracle-deploy.test')
 
 contract('AccountingOracle', ([admin, account1, account2, member1, member2, stranger]) => {
@@ -22,7 +24,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
   const submitDataRoleKeccak156 = web3.utils.keccak256('SUBMIT_DATA_ROLE')
 
-  const deploy = async (options = undefined) => {
+  const deploy = async ({emptyExtraData = false} = {}) => {
     const deployed = await deployAndConfigureAccountingOracle(admin)
     const { refSlot } = await deployed.consensus.getCurrentFrame()
 
@@ -41,6 +43,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     const extraDataItems = encodeExtraDataItems(extraData)
     extraDataList = packExtraDataList(extraDataItems)
     const extraDataHash = calcExtraDataListHash(extraDataList)
+
     reportFields = {
       consensusVersion: CONSENSUS_VERSION,
       refSlot: +refSlot,
@@ -53,9 +56,9 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       lastWithdrawalRequestIdToFinalize: 1,
       finalizationShareRate: e27(1),
       isBunkerMode: true,
-      extraDataFormat: EXTRA_DATA_FORMAT_LIST,
-      extraDataHash: extraDataHash,
-      extraDataItemsCount: extraDataItems.length
+      extraDataFormat: emptyExtraData ? EXTRA_DATA_FORMAT_EMPTY : EXTRA_DATA_FORMAT_LIST,
+      extraDataHash: emptyExtraData ? ZERO_HASH : extraDataHash,
+      extraDataItemsCount: emptyExtraData ? 0 : extraDataItems.length
     }
     reportItems = getReportDataItems(reportFields)
     const reportHash = calcReportDataHash(reportItems)
@@ -132,6 +135,36 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
         await oracle.submitReportData(reportItems, CONSENSUS_VERSION, { from: member2 })
         const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member2 })
+
+        assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
+      })
+    })
+
+    context('submitReportExtraDataEmpty', () => {
+      beforeEach(() => deploy({emptyExtraData: true}))
+
+      it('should revert from not consensus member without SUBMIT_DATA_ROLE role ', async () => {
+        await assert.reverts(oracle.submitReportExtraDataEmpty({ from: account1 }), 'SenderNotAllowed()')
+      })
+
+      it('should allow calling from a possessor of SUBMIT_DATA_ROLE role', async () => {
+        await oracle.grantRole(submitDataRoleKeccak156, account2)
+        const deadline = (await oracle.getConsensusReport()).processingDeadlineTime
+        await consensus.setTime(deadline)
+
+        await oracle.submitReportData(reportItems, CONSENSUS_VERSION, { from: account2 })
+        const tx = await oracle.submitReportExtraDataEmpty({ from: account2 })
+
+        assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
+      })
+
+      it('should allow calling from a member', async () => {
+        await consensus.addMember(member2, 2)
+        const deadline = (await oracle.getConsensusReport()).processingDeadlineTime
+        await consensus.setTime(deadline)
+
+        await oracle.submitReportData(reportItems, CONSENSUS_VERSION, { from: member2 })
+        const tx = await oracle.submitReportExtraDataEmpty({ from: member2 })
 
         assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
       })

@@ -413,14 +413,8 @@ contract('Lido: happy path', (addresses) => {
     // Fee, in the form of minted tokens, was distributed between treasury, insurance fund
     // and node operators
     // treasuryTokenBalance ~= mintedAmount * treasuryFeePoints / 10000
-    // insuranceTokenBalance ~= mintedAmount * insuranceFeePoints / 10000
     assert.equalsDelta(await token.balanceOf(treasuryAddr), '16000000000000000', 1, 'treasury tokens')
-    assert.equalsDelta(
-      await token.balanceOf(nodeOperatorsRegistry.address),
-      '16000000000000000',
-      1,
-      'insurance tokens'
-    )
+    assert.equalsDelta(await token.balanceOf(nodeOperatorsRegistry.address), 0, 1, 'staking module tokens')
 
     // The node operators' fee is distributed between all active node operators,
     // proportional to their effective stake (the amount of Ether staked by the operator's
@@ -429,13 +423,18 @@ contract('Lido: happy path', (addresses) => {
     // In our case, both node operators received the same fee since they have the same
     // effective stake (one signing key used from each operator, staking 32 ETH)
 
-    assertBn(await token.balanceOf(nodeOperator1.address), 0, 'operator_1 tokens')
-    assertBn(await token.balanceOf(nodeOperator2.address), 0, 'operator_2 tokens')
+    assert.equalsDelta(await token.balanceOf(nodeOperator1.address), '8000000000000000', 1, 'operator_1 tokens')
+    assert.equalsDelta(await token.balanceOf(nodeOperator2.address), '8000000000000000', 1, 'operator_2 tokens')
 
     // Real minted amount should be a bit less than calculated caused by round errors on mint and transfer operations
     assert(
       mintedAmount
-        .sub(new BN(0).add(await token.balanceOf(treasuryAddr)).add(await token.balanceOf(nodeOperatorsRegistry.address)))
+        .sub(
+          new BN(0)
+            .add(await token.balanceOf(treasuryAddr))
+            .add(await token.balanceOf(nodeOperator1.address))
+            .add(await token.balanceOf(nodeOperator2.address))
+        )
         .lt(mintedAmount.divn(100))
     )
   })
