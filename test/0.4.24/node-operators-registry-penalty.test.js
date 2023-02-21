@@ -63,6 +63,7 @@ const NODE_OPERATORS = [
 
 // bytes32 0x63757261746564
 const CURATED_TYPE = padRight(web3.utils.fromAscii('curated'), 32)
+const PENALTY_DELAY = 2 * 24 * 60 * 60 // 2 days
 
 const pad = (hex, bytesLength) => {
   const absentZeroes = bytesLength * 2 + 2 - hex.length
@@ -124,15 +125,15 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
     // app = await NodeOperatorsRegistry.at(proxyAddress)
 
     // Initialize the app's proxy.
-    const tx = await app.initialize(locator.address, CURATED_TYPE)
+    const tx = await app.initialize(locator.address, CURATED_TYPE, PENALTY_DELAY)
 
     //set stuck penalty voting
-    await app.setStuckPenaltyDelay(60*60*24*2, { from: voting })
+    // await app.setStuckPenaltyDelay(PENALTY_DELAY, { from: voting })
 
     // Implementation initializer reverts because initialization block was set to max(uint256)
     // in the Autopetrified base contract
     // await assert.reverts(appBase.initialize(steth.address, CURATED_TYPE), 'INIT_ALREADY_INITIALIZED')
-    await assert.reverts(appBase.initialize(locator.address, CURATED_TYPE), 'INIT_ALREADY_INITIALIZED')
+    await assert.reverts(appBase.initialize(locator.address, CURATED_TYPE, PENALTY_DELAY), 'INIT_ALREADY_INITIALIZED')
 
     const moduleType = await app.getType()
     assert.emits(tx, 'ContractVersionSet', { version: 2 })
