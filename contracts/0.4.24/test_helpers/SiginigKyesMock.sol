@@ -33,13 +33,11 @@ contract SigningKeysMock {
         return KEYSSIGS_POSITION.saveKeysSigs(_nodeOperatorId, _startIndex, _keysCount, _publicKeys, _signatures);
     }
 
-    function removeKeysSigs(
-        uint256 _nodeOperatorId,
-        uint256 _startIndex,
-        uint256 _keysCount,
-        uint256 _lastIndex
-    ) external {
-        KEYSSIGS_POSITION.removeKeysSigs(_nodeOperatorId, _startIndex, _keysCount, _lastIndex);
+    function removeKeysSigs(uint256 _nodeOperatorId, uint256 _startIndex, uint256 _keysCount, uint256 _lastIndex)
+        external
+        returns (uint256)
+    {
+        return KEYSSIGS_POSITION.removeKeysSigs(_nodeOperatorId, _startIndex, _keysCount, _lastIndex);
     }
 
     function loadKeysSigs(uint256 _nodeOperatorId, uint256 _startIndex, uint256 _keysCount)
@@ -56,5 +54,31 @@ contract SigningKeysMock {
             signatures,
             0 // key offset inside _pubkeys/_signatures buffers
         );
+    }
+
+    function loadKeysSigsBatch(uint256[] _nodeOpIds, uint256[] _startIndexes, uint256[] _keysCounts)
+        external
+        view
+        returns (bytes memory pubkeys, bytes memory signatures)
+    {
+        require(_nodeOpIds.length == _startIndexes.length && _startIndexes.length == _keysCounts.length, "LENGTH_MISMATCH");
+        uint256 totalKeysCount;
+        uint256 i;
+        for (i = 0; i < _nodeOpIds.length; ++i) {
+            totalKeysCount += _keysCounts[i];
+        }
+        (pubkeys, signatures) = SigningKeys.initKeysSigsBuf(totalKeysCount);
+        uint256 loadedKeysCount;
+        for (i = 0; i < _nodeOpIds.length; ++i) {
+            KEYSSIGS_POSITION.loadKeysSigs(
+                _nodeOpIds[i],
+                _startIndexes[i],
+                _keysCounts[i],
+                pubkeys,
+                signatures,
+                loadedKeysCount // key offset inside _pubkeys/_signatures buffers
+            );
+            loadedKeysCount += _keysCounts[i];
+        }
     }
 }
