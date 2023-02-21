@@ -305,7 +305,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      //update [operator, exited, stuck]
+      // update [operator, exited, stuck]
       await app.unsafeUpdateValidatorsCount(firstNodeOperator, 1, 1, { from: voting })
       await app.unsafeUpdateValidatorsCount(secondNodeOperator, 1, 0, { from: voting })
 
@@ -316,9 +316,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.setTotalPooledEther(ETH(100))
       await steth.mintShares(app.address, ETH(10))
 
-      //update [operator, exited, stuck]
-      await app.unsafeUpdateValidatorsCount(firstNodeOperator, 2, 2 , { from: voting })
-      await app.unsafeUpdateValidatorsCount(secondNodeOperator, 3, 0 , { from: voting })
+      // update [operator, exited, stuck]
+      await app.unsafeUpdateValidatorsCount(firstNodeOperator, 2, 1, { from: voting })
+      await app.unsafeUpdateValidatorsCount(secondNodeOperator, 3, 0, { from: voting })
 
       // perValidator = ETH(10) / 5 = 2 eth
 
