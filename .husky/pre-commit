@@ -2,6 +2,7 @@
 . "$(dirname -- "$0")/_/husky.sh"
 
 yarn compile
+git diff --quiet lib/abi
 yarn lint:sol
 
 yarn lint:js:fix
