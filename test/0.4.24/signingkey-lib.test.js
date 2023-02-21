@@ -168,6 +168,49 @@ contract('SigningKeys', ([appManager, voting, user1, user2, user3, nobody]) => {
         assert.equal(signatures, expectedSignature)
       }
     })
+
+    it('read keys batch correctly', async () => {
+      await app.saveKeysSigs(
+        firstNodeOperatorId,
+        firstNodeOperatorStartIndex,
+        firstNodeOperatorKeys.count,
+        ...firstNodeOperatorKeys.slice()
+      )
+
+      await app.saveKeysSigs(
+        secondNodeOperatorId,
+        secondNodeOperatorStartIndex,
+        secondNodeOperatorKeys.count,
+        ...secondNodeOperatorKeys.slice()
+      )
+
+      const { pubkeys, signatures } = await app.loadKeysSigsBatch(
+        [secondNodeOperatorId, firstNodeOperatorId],
+        [secondNodeOperatorStartIndex + 2, firstNodeOperatorStartIndex + 1],
+        [secondNodeOperatorKeys.count - 4, firstNodeOperatorKeys.count - 2]
+      )
+
+      let expectedPublicKeys = ''
+      let expectedSignatures = ''
+      let startIndex = secondNodeOperatorStartIndex + 2
+      let endIndex = startIndex + secondNodeOperatorKeys.count - 4
+      for (let i = startIndex; i < endIndex; ++i) {
+        const [key, sig] = secondNodeOperatorKeys.get(i)
+        expectedPublicKeys += key.substring(2)
+        expectedSignatures += sig.substring(2)
+      }
+
+      startIndex = firstNodeOperatorStartIndex + 1
+      endIndex = startIndex + firstNodeOperatorKeys.count - 2
+      for (let i = startIndex; i < endIndex; ++i) {
+        const [key, sig] = firstNodeOperatorKeys.get(i)
+        expectedPublicKeys += key.substring(2)
+        expectedSignatures += sig.substring(2)
+      }
+
+      assert.equal(pubkeys, '0x' + expectedPublicKeys)
+      assert.equal(signatures, '0x' + expectedSignatures)
+    })
   })
 
   describe('removeKeysSigs()', async () => {
@@ -211,12 +254,12 @@ contract('SigningKeys', ([appManager, voting, user1, user2, user3, nobody]) => {
       )
     })
 
-    it.only('emits SigningKeyAdded with correct params for every added key', async () => {
+    it('emits SigningKeyAdded with correct params for every added key', async () => {
       const receipt = await app.removeKeysSigs(
         firstNodeOperatorId,
         firstNodeOperatorStartIndex,
         firstNodeOperatorKeys.count,
-        firstNodeOperatorLastIndex
+        firstNodeOperatorKeys.count
       )
 
       for (let i = firstNodeOperatorStartIndex; i < firstNodeOperatorKeys.count; ++i) {
@@ -229,12 +272,12 @@ contract('SigningKeys', ([appManager, voting, user1, user2, user3, nobody]) => {
       }
     })
 
-    it.only('removes keys correctly (clear storage)', async () => {
+    it('removes keys correctly (clear storage)', async () => {
       await app.removeKeysSigs(
         firstNodeOperatorId,
         firstNodeOperatorStartIndex,
         firstNodeOperatorKeys.count,
-        firstNodeOperatorLastIndex
+        firstNodeOperatorKeys.count
       )
 
       for (let i = firstNodeOperatorStartIndex; i < firstNodeOperatorKeys.count; ++i) {
@@ -244,9 +287,10 @@ contract('SigningKeys', ([appManager, voting, user1, user2, user3, nobody]) => {
       }
     })
 
-    it.only('removes keys correctly (move last to deleted position)', async () => {
-      await app.removeKeysSigs(firstNodeOperatorId, 0, 1, firstNodeOperatorLastIndex)
-      const { pubkeys, signatures } = await app.loadKeysSigs(firstNodeOperatorId, 0, 1)
+    it('removes keys correctly (move last to deleted position)', async () => {
+      const keyIndex = 0
+      await app.removeKeysSigs(firstNodeOperatorId, keyIndex, 1, firstNodeOperatorKeys.count)
+      const { pubkeys, signatures } = await app.loadKeysSigs(firstNodeOperatorId, keyIndex, 1)
       const [expectedPublicKey, expectedSignature] = firstNodeOperatorKeys.get(firstNodeOperatorLastIndex)
       assert.equal(pubkeys, expectedPublicKey)
       assert.equal(signatures, expectedSignature)

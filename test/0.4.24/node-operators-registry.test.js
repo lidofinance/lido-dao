@@ -2464,7 +2464,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
   })
 
-  describe.only('removeSigningKey()', async () => {
+  describe('removeSigningKey()', async () => {
     const firstNodeOperatorId = 0
     const secondNodeOperatorId = 1
     const nonExistentNodeOperatorId = 3
@@ -2768,14 +2768,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       )
     })
 
-    it.only('emits SigningKeyRemoved event with correct params', async () => {
+    it('emits SigningKeyRemoved event with correct params', async () => {
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount
-      assert.isTrue(keyIndex <= NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount)
+      assert.isTrue(keyIndex < NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount)
       const receipt = await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: voting })
-      console.log('AAAA', {
-        keyIndex,
-        kkk: firstNodeOperatorKeys.slice()
-      });
       assert.emits(
         receipt,
         'SigningKeyRemoved',
