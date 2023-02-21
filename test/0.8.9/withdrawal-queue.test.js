@@ -1,16 +1,14 @@
 const hre = require('hardhat')
-const { artifacts, contract, ethers } = require('hardhat')
+const { contract, ethers } = require('hardhat')
 const { bn, getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
 const { ETH, StETH, shareRate, shares, setBalance } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
-const withdrawals = require('../helpers/withdrawals')
 const { signPermit, makeDomainSeparator } = require('../0.6.12/helpers/permit_helpers')
 const { MAX_UINT256, ACCOUNTS_AND_KEYS } = require('../0.6.12/helpers/constants')
 const { impersonate, EvmSnapshot } = require('../helpers/blockchain')
 
-const StETHMock = artifacts.require('StETHMock.sol')
-const WstETH = artifacts.require('WstETHMock.sol')
+const { deployWithdrawalQueue } = require('./withdrawal-queue-deploy.test')
 
 contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
   let withdrawalQueue, steth, wsteth
@@ -18,13 +16,16 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
   const snapshot = new EvmSnapshot(ethers.provider)
 
   before('Deploy', async () => {
-    steth = await StETHMock.new({ value: ETH(1) })
-    wsteth = await WstETH.new(steth.address)
+    const deployed = await deployWithdrawalQueue({
+      stethOwner: owner,
+      queueOwner: daoAgent,
+      queuePauser: daoAgent,
+      queueResumer: daoAgent
+    })
 
-    withdrawalQueue = (await withdrawals.deploy(daoAgent, wsteth.address)).queue
-
-    await withdrawalQueue.initialize(daoAgent, daoAgent, daoAgent, steth.address, steth.address)
-    await withdrawalQueue.resume({ from: daoAgent })
+    steth = deployed.steth
+    wsteth = deployed.wsteth
+    withdrawalQueue = deployed.withdrawalQueue
 
     await steth.setTotalPooledEther(ETH(600))
     await setBalance(steth.address, ETH(600))
@@ -32,7 +33,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
 
     await impersonate(ethers.provider, steth.address)
-    await snapshot.make();
+    await snapshot.make()
   })
 
   afterEach(async () => {

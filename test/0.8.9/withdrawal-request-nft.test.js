@@ -2,11 +2,10 @@ const hre = require('hardhat')
 const { assert } = require('../helpers/assert')
 const { EvmSnapshot } = require('../helpers/blockchain')
 const { shares, ETH, shareRate, setBalance } = require('../helpers/utils')
-const withdrawals = require('../helpers/withdrawals')
 
-const StETH = hre.artifacts.require('StETHMock')
-const WstETH = hre.artifacts.require('WstETHMock')
 const ERC721ReceiverMock = hre.artifacts.require('ERC721ReceiverMock')
+
+const { deployWithdrawalQueue } = require('./withdrawal-queue-deploy.test')
 
 hre.contract(
   'WithdrawalNFT',
@@ -16,20 +15,24 @@ hre.contract(
     const snapshot = new EvmSnapshot(hre.ethers.provider)
 
     before(async () => {
-      stETH = await StETH.new({ value: ETH(1), from: deployer })
-      await setBalance(stETH.address, ETH(100))
-
-      wstETH = await WstETH.new(stETH.address, { from: deployer })
       erc721ReceiverMock = await ERC721ReceiverMock.new({ from: deployer })
-      withdrawalQueueERC721 = (await withdrawals.deploy(deployer, wstETH.address, "Lido TEST Request", "unstEsT")).queue
-      await withdrawalQueueERC721.initialize(
-        deployer, // owner
-        deployer, // pauser
-        deployer, // resumer
-        deployer, // finalizer
-        deployer
-      )
-      await withdrawalQueueERC721.resume({ from: deployer })
+
+      const deployed = await deployWithdrawalQueue({
+        stethOwner: deployer,
+        queueOwner: deployer,
+        queuePauser: deployer,
+        queueResumer: deployer,
+        queueFinalizer: deployer,
+        queueBunkerReporter: deployer,
+        queueName: 'Lido TEST Request',
+        symbol: 'unstEsT'
+      })
+
+      stETH = deployed.steth
+      wstETH = deployed.wsteth
+      withdrawalQueueERC721 = deployed.withdrawalQueue
+
+      await setBalance(stETH.address, ETH(100))
 
       await stETH.setTotalPooledEther(ETH(101))
       await stETH.mintShares(stEthHolder, shares(50))
