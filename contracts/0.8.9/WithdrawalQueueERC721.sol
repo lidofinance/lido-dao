@@ -72,7 +72,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
         public
         view
         virtual
-        override (IERC165, AccessControlEnumerable)
+        override(IERC165, AccessControlEnumerable)
         returns (bool)
     {
         return interfaceId == type(IERC721).interfaceId || interfaceId == type(IERC721Metadata).interfaceId
@@ -188,7 +188,9 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
         if (_from != request.owner) revert TransferFromIncorrectOwner(_from, request.owner);
         // here and below we are sure that `_from` is the owner of the request
         address msgSender = msg.sender;
-        if (!(_from == msgSender || isApprovedForAll(_from, msgSender) || _getTokenApprovals()[_requestId] == msgSender)) revert NotOwnerOrApproved(msgSender);
+        if (
+            !(_from == msgSender || isApprovedForAll(_from, msgSender) || _getTokenApprovals()[_requestId] == msgSender)
+        ) revert NotOwnerOrApproved(msgSender);
 
         delete _getTokenApprovals()[_requestId];
         request.owner = payable(_to);
