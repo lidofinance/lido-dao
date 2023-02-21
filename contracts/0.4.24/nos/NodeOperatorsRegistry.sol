@@ -54,7 +54,12 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     event NonceChanged(uint256 nonce);
     event StuckPenaltyDelayChanged(uint256 stuckPenaltyDelay);
-    event StuckPenaltyStateChanged(uint256 indexed nodeOperatorId, uint256 stuckValidatorsCount, uint256 refundedValidatorsCount, uint256 stuckPenaltyEndTimestamp);
+    event StuckPenaltyStateChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 stuckValidatorsCount,
+        uint256 refundedValidatorsCount,
+        uint256 stuckPenaltyEndTimestamp
+    );
     event TargetValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 targetValidatorsCount);
     event NodeOperatorPenalized(address indexed recipientAddress, uint256 sharesPenalizedAmount);
 
@@ -432,7 +437,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         // see `onAllValidatorCountersUpdated()`
     }
 
-
     function _checkReportPayload(uint256 idsLength, uint256 countsLength) internal pure returns (uint256 count) {
         count = idsLength / 8;
         require(countsLength / 16 == count && idsLength % 8 == 0 && countsLength % 16 == 0, "INVALID_REPORT_DATA");
@@ -523,8 +527,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     }
 
     /// @notice Called by StakingRouter after oracle finishes updating validators counters for all node operators
-    function onAllValidatorCountersUpdated() external
-    {
+    function onAllValidatorCountersUpdated() external {
         _auth(STAKING_ROUTER_ROLE);
         // for the permissioned module, we're distributing rewards within oracle operation
         // since the number of node ops won't be high and thus gas costs are limited
@@ -603,7 +606,10 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         if (_stuckValidatorsCount == stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)) return;
 
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
-        _requireValidRange(_stuckValidatorsCount <= signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET) - signingKeysStats.get(EXITED_KEYS_COUNT_OFFSET));
+        _requireValidRange(
+            _stuckValidatorsCount
+                <= signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET) - signingKeysStats.get(EXITED_KEYS_COUNT_OFFSET)
+        );
 
         stuckPenaltyStats.set(STUCK_VALIDATORS_COUNT_OFFSET, _stuckValidatorsCount);
         if (_stuckValidatorsCount <= stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET)) {
@@ -822,12 +828,12 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         uint256[] memory _nodeOperatorIds,
         uint256[] memory _activeKeyCountsAfterAllocation
     ) internal returns (bytes memory pubkeys, bytes memory signatures) {
-        (pubkeys, signatures) = SigningKeys.initKeySig(_keysCountToLoad);
+        (pubkeys, signatures) = SigningKeys.initKeysSigsBuf(_keysCountToLoad);
 
         uint256 loadedKeysCount = 0;
         uint64 depositedSigningKeysCountBefore;
         uint64 depositedSigningKeysCountAfter;
-        uint256 keyIndex;
+        uint256 keysCount;
         Packed64x4.Packed memory signingKeysStats;
         for (uint256 i; i < _nodeOperatorIds.length; ++i) {
             signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorIds[i]);
@@ -835,14 +841,14 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
             depositedSigningKeysCountAfter =
                 signingKeysStats.get(EXITED_KEYS_COUNT_OFFSET) + uint64(_activeKeyCountsAfterAllocation[i]);
 
-            if (depositedSigningKeysCountBefore == depositedSigningKeysCountAfter) continue;
+            keysCount = depositedSigningKeysCountAfter.sub(depositedSigningKeysCountBefore);
+            if (keysCount == 0) continue;
 
-            for (keyIndex = depositedSigningKeysCountBefore; keyIndex < depositedSigningKeysCountAfter; ++keyIndex) {
-                SIGNING_KEYS_MAPPING_NAME.loadKeySigAndAppend(
-                    _nodeOperatorIds[i], keyIndex, loadedKeysCount, pubkeys, signatures
-                );
-                ++loadedKeysCount;
-            }
+            SIGNING_KEYS_MAPPING_NAME.loadKeysSigs(
+                _nodeOperatorIds[i], depositedSigningKeysCountBefore, keysCount, pubkeys, signatures, loadedKeysCount
+            );
+            loadedKeysCount += keysCount;
+
             emit DepositedSigningKeysCountChanged(_nodeOperatorIds[i], depositedSigningKeysCountAfter);
             signingKeysStats.set(DEPOSITED_KEYS_COUNT_OFFSET, depositedSigningKeysCountAfter);
             _saveOperatorSigningKeysStats(_nodeOperatorIds[i], signingKeysStats);
@@ -975,7 +981,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _requireValidRange(totalSigningKeysCount.add(_keysCount) <= UINT64_MAX);
 
         totalSigningKeysCount =
-            SIGNING_KEYS_MAPPING_NAME.addKeysSigs(_nodeOperatorId, _keysCount, totalSigningKeysCount, _publicKeys, _signatures);
+            SIGNING_KEYS_MAPPING_NAME.saveKeysSigs(_nodeOperatorId, totalSigningKeysCount, _keysCount, _publicKeys, _signatures);
 
         emit TotalSigningKeysCountChanged(_nodeOperatorId, totalSigningKeysCount);
 
@@ -1034,15 +1040,13 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
         uint256 totalSigningKeysCount = signingKeysStats.get(TOTAL_KEYS_COUNT_OFFSET);
-        uint256 _toIndex = _fromIndex.add(_keysCount);
-        // comapring _toIndex <= totalSigningKeysCount is enough as totalSigningKeysCount is always less than MAX_UINT64
-        _requireValidRange(_fromIndex >= signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET) && _toIndex <= totalSigningKeysCount);
+        _requireValidRange(
+            _fromIndex >= signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET)
+                && _fromIndex.add(_keysCount) <= totalSigningKeysCount
+        );
 
-        // removing from the last index to the highest one, so we won't get outside the array
-        for (uint256 i = _toIndex; i > _fromIndex; --i) {
-            totalSigningKeysCount =
-                SIGNING_KEYS_MAPPING_NAME.removeUnusedKeySig(_nodeOperatorId, i - 1, totalSigningKeysCount.sub(1));
-        }
+        totalSigningKeysCount =
+            SIGNING_KEYS_MAPPING_NAME.removeKeysSigs(_nodeOperatorId, _fromIndex, _keysCount, totalSigningKeysCount);
         signingKeysStats.set(TOTAL_KEYS_COUNT_OFFSET, uint64(totalSigningKeysCount));
         emit TotalSigningKeysCountChanged(_nodeOperatorId, totalSigningKeysCount);
 
@@ -1115,11 +1119,11 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _requireValidRange(_offset.add(_limit) <= signingKeysStats.get(TOTAL_KEYS_COUNT_OFFSET));
 
         uint256 depositedSigningKeysCount = signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET);
-        (pubkeys, signatures) = SigningKeys.initKeySig(_limit);
+        (pubkeys, signatures) = SigningKeys.initKeysSigsBuf(_limit);
         used = new bool[](_limit);
 
+        SIGNING_KEYS_MAPPING_NAME.loadKeysSigs(_nodeOperatorId, _offset, _limit, pubkeys, signatures, 0);
         for (uint256 i; i < _limit; ++i) {
-            SIGNING_KEYS_MAPPING_NAME.loadKeySigAndAppend(_nodeOperatorId, _offset + i, i, pubkeys, signatures);
             used[i] = (_offset + i) < depositedSigningKeysCount;
         }
     }

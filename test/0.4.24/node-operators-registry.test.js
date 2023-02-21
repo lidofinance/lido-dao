@@ -2235,31 +2235,31 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       )
     })
 
-    it('reverts with "INVALID_LENGTH" error when public keys batch has invalid length', async () => {
+    it('reverts with "LENGTH_MISMATCH" error when public keys batch has invalid length', async () => {
       const keysCount = 2
       const [publicKeys, signatures] = secondNodeOperatorKeys.slice(0, keysCount)
       await assert.reverts(
         app.addSigningKeys(firstNodeOperatorId, keysCount, publicKeys + 'deadbeaf', signatures, { from: voting }),
-        'INVALID_LENGTH'
+        'LENGTH_MISMATCH'
       )
     })
 
-    it('reverts with "INVALID_LENGTH" error when signatures batch has invalid length', async () => {
+    it('reverts with "LENGTH_MISMATCH" error when signatures batch has invalid length', async () => {
       const keysCount = 2
       const [publicKeys, signatures] = secondNodeOperatorKeys.slice(0, keysCount)
       await assert.reverts(
         app.addSigningKeys(firstNodeOperatorId, keysCount, publicKeys, signatures.slice(0, -2), { from: voting }),
-        'INVALID_LENGTH'
+        'LENGTH_MISMATCH'
       )
     })
 
-    it('reverts with "INVALID_LENGTH" error when public keys and signatures length mismatch', async () => {
+    it('reverts with "LENGTH_MISMATCH" error when public keys and signatures length mismatch', async () => {
       const keysCount = 2
       const [publicKeys] = secondNodeOperatorKeys.slice(0, keysCount)
       const [, signatures] = secondNodeOperatorKeys.slice(0, keysCount + 1)
       await assert.reverts(
         app.addSigningKeys(firstNodeOperatorId, keysCount, publicKeys, signatures.slice(0, -2), { from: voting }),
-        'INVALID_LENGTH'
+        'LENGTH_MISMATCH'
       )
     })
 
@@ -2770,7 +2770,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('emits SigningKeyRemoved event with correct params', async () => {
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount
-      assert.isTrue(keyIndex <= NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount)
+      assert.isTrue(keyIndex < NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount)
       const receipt = await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: voting })
       assert.emits(
         receipt,
