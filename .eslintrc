@@ -3,8 +3,8 @@
     "node": true,
     "es2020": true
   },
-  "extends": ["standard", "plugin:prettier/recommended", "prettier", "prettier/standard"],
-  "parser": "babel-eslint",
+  "extends": ["standard", "plugin:prettier/recommended"],
+  "parser": "@babel/eslint-parser",
   "parserOptions": {
     "ecmaVersion": 8,
     "sourceType": "module",
