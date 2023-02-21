@@ -1197,23 +1197,23 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const firstNodeOperatorId = 0
     const secondNodeOperatorId = 1
     const notExistedNodeOperatorId = 2
-    const exitedValidatorsCount = 4
+    const exitedSigningKeysCount = 3
     const stuckValidatorsCount = 2
 
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[0], exitedSigningKeysCount: 4 }, { from: voting })
+      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[0], exitedSigningKeysCount }, { from: voting })
       await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: voting })
     })
 
     it('decreases the stuck validators count when new value is less then previous one', async () => {
       const newStuckValidatorsCount = 1
-      await app.unsafeUpdateValidatorsCount(firstNodeOperatorId, exitedValidatorsCount, stuckValidatorsCount, {
+      await app.unsafeUpdateValidatorsCount(firstNodeOperatorId, exitedSigningKeysCount, stuckValidatorsCount, {
         from: voting
       })
 
       const { stuckValidatorsCount: stuckValidatorsCountBefore } = await app.getNodeOperatorSummary(firstNodeOperatorId)
       assert(newStuckValidatorsCount < stuckValidatorsCountBefore)
-      await app.unsafeUpdateValidatorsCount(firstNodeOperatorId, exitedValidatorsCount, newStuckValidatorsCount, {
+      await app.unsafeUpdateValidatorsCount(firstNodeOperatorId, exitedSigningKeysCount, newStuckValidatorsCount, {
         from: voting
       })
       const { stuckValidatorsCount: stuckValidatorsCountAfter } = await app.getNodeOperatorSummary(firstNodeOperatorId)
@@ -1226,22 +1226,22 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         secondNodeOperatorId
       )
       assert(newStuckValidatorsCount > stuckValidatorsCountBefore)
-      await app.unsafeUpdateValidatorsCount(secondNodeOperatorId, exitedValidatorsCount, newStuckValidatorsCount, {
+      await app.unsafeUpdateValidatorsCount(secondNodeOperatorId, exitedSigningKeysCount, newStuckValidatorsCount, {
         from: voting
       })
       const { stuckValidatorsCount: stuckValidatorsCountAfter } = await app.getNodeOperatorSummary(secondNodeOperatorId)
       assert.equals(stuckValidatorsCountAfter, newStuckValidatorsCount)
     })
 
-    it('emits StuckValidatorsCountChanged event with correct params', async () => {
-      const newStuckValidatorsCount = 3
+    it('emits StuckPenaltyStateChanged event with correct params', async () => {
+      const newStuckValidatorsCount = 2
       const receipt = await app.unsafeUpdateValidatorsCount(
         firstNodeOperatorId,
-        exitedValidatorsCount,
+        exitedSigningKeysCount,
         newStuckValidatorsCount,
         { from: voting }
       )
-      assert.emits(receipt, 'StuckValidatorsCountChanged', {
+      assert.emits(receipt, 'StuckPenaltyStateChanged', {
         nodeOperatorId: firstNodeOperatorId,
         stuckValidatorsCount: newStuckValidatorsCount
       })
@@ -1249,7 +1249,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it("doesn't change the state when new stuck validators value is equal to the previous one", async () => {
       const { stuckValidatorsCount: stuckValidatorsCountBefore } = await app.getNodeOperatorSummary(firstNodeOperatorId)
-      await app.unsafeUpdateValidatorsCount(firstNodeOperatorId, exitedValidatorsCount, stuckValidatorsCountBefore, {
+      await app.unsafeUpdateValidatorsCount(firstNodeOperatorId, exitedSigningKeysCount, stuckValidatorsCountBefore, {
         from: voting
       })
 
@@ -1257,17 +1257,17 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(stuckValidatorsCountBefore, stuckValidatorsCountAfter)
     })
 
-    it("doesn't emit StuckValidatorsCountChanged event when new value is equal to the previous one", async () => {
+    it("doesn't emit StuckPenaltyStateChanged event when new value is equal to the previous one", async () => {
       const { stuckValidatorsCount: stuckValidatorsCountBefore } = await app.getNodeOperatorSummary(firstNodeOperatorId)
       const receipt = await app.unsafeUpdateValidatorsCount(
         firstNodeOperatorId,
-        exitedValidatorsCount,
+        exitedSigningKeysCount,
         stuckValidatorsCountBefore,
         {
           from: voting
         }
       )
-      assert.notEmits(receipt, 'StuckValidatorsCountChanged')
+      assert.notEmits(receipt, 'StuckPenaltyStateChanged')
     })
 
     it("doesn't change the stuck validators count of other node operators", async () => {
@@ -1275,7 +1275,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const { stuckValidatorsCount: secondNodeOperatorStuckValidatorsCountBefore } = await app.getNodeOperatorSummary(
         firstNodeOperatorId
       )
-      await app.unsafeUpdateValidatorsCount(secondNodeOperatorId, exitedValidatorsCount, newStuckValidatorsCount, {
+      await app.unsafeUpdateValidatorsCount(secondNodeOperatorId, exitedSigningKeysCount, newStuckValidatorsCount, {
         from: voting
       })
       const { stuckValidatorsCount: secondNodeOperatorStuckValidatorsCountAfter } = await app.getNodeOperatorSummary(
@@ -1284,12 +1284,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(secondNodeOperatorStuckValidatorsCountAfter, secondNodeOperatorStuckValidatorsCountBefore)
     })
 
-    it('reverts with "OUT_OF_RANGE" error when new exitedValidatorsKeysCount < stuckValidatorsCount', async () => {
+    it('reverts with "OUT_OF_RANGE" error when new stuckValidatorsCount > depositedValidatorsKeysCount - exitedValidatorsKeysCount', async () => {
       const newStuckValidatorsCount = 1000
       const { stuckValidatorsCount } = await app.getNodeOperatorSummary(firstNodeOperatorId)
       assert(newStuckValidatorsCount > stuckValidatorsCount)
       await assert.reverts(
-        app.unsafeUpdateValidatorsCount(firstNodeOperatorId, exitedValidatorsCount, newStuckValidatorsCount, {
+        app.unsafeUpdateValidatorsCount(firstNodeOperatorId, exitedSigningKeysCount, newStuckValidatorsCount, {
           from: voting
         }),
         'OUT_OF_RANGE'
@@ -1361,13 +1361,14 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('decreases the exited validators count when new value is less then previous one', async () => {
-      const newExitedValidatorsCount = 2
+      const newExitedValidatorsCount = 1
+      const newStuckValidatorsCount = 0
       const { stoppedValidators: exitedValidatorsKeysCountBefore } = await app.getNodeOperator(
         firstNodeOperatorId,
         false
       )
       assert(newExitedValidatorsCount < exitedValidatorsKeysCountBefore.toNumber())
-      await app.unsafeUpdateValidatorsCount(firstNodeOperatorId, newExitedValidatorsCount, stuckValidatorsCount, {
+      await app.unsafeUpdateValidatorsCount(firstNodeOperatorId, newExitedValidatorsCount, newStuckValidatorsCount, {
         from: voting
       })
       const { stoppedValidators: exitedValidatorsKeysCountAfter } = await app.getNodeOperator(
@@ -1395,7 +1396,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('decreases the total exited signing keys count when new value is less then previous one', async () => {
-      const newExitedValidatorsCount = 3
+      const newExitedValidatorsCount = 1
       const [
         { stoppedValidators: exitedValidatorsKeysCountBefore },
         { exitedSigningKeysCount: exitedSigningKeysCountBefore }
@@ -1417,6 +1418,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('increases the total exited signing keys count when new value is greater then previous one', async () => {
       const newExitedValidatorsCount = 5
+      const newStuckValidatorsCount = 0
       const [
         { stoppedValidators: exitedValidatorsKeysCountBefore },
         { exitedSigningKeysCount: exitedSigningKeysCountBefore }
@@ -1425,7 +1427,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         app.testing_getTotalSigningKeysStats()
       ])
       assert(newExitedValidatorsCount > exitedValidatorsKeysCountBefore.toNumber())
-      await app.unsafeUpdateValidatorsCount(firstNodeOperatorId, newExitedValidatorsCount, stuckValidatorsCount, {
+      await app.unsafeUpdateValidatorsCount(firstNodeOperatorId, newExitedValidatorsCount, newStuckValidatorsCount, {
         from: voting
       })
       const exitedSigningKeysCountIncrement = newExitedValidatorsCount - exitedValidatorsKeysCountBefore.toNumber()
@@ -1439,13 +1441,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('emits ExitedSigningKeysCountChanged event with correct params', async () => {
       const newExitedValidatorsCount = 2
       const receipt = await app.unsafeUpdateValidatorsCount(
-        firstNodeOperatorId,
+        secondNodeOperatorId,
         newExitedValidatorsCount,
         stuckValidatorsCount,
         { from: voting }
       )
       assert.emits(receipt, 'ExitedSigningKeysCountChanged', {
-        nodeOperatorId: firstNodeOperatorId,
+        nodeOperatorId: secondNodeOperatorId,
         exitedValidatorsCount: newExitedValidatorsCount
       })
     })
