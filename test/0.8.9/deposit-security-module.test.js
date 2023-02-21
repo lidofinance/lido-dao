@@ -86,7 +86,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     for (let i = 0; i < numBlocksToMine; ++i) {
       await network.provider.send('evm_mine')
     }
-    return web3.eth.getBlock('latest')
+    return await web3.eth.getBlock('latest')
   }
 
   describe('depositBufferedEther', () => {
@@ -970,7 +970,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       assert.isTrue((await depositSecurityModule.getGuardianQuorum()) > 0, 'invariant failed: quorum > 0')
 
       const lastDepositBlockNumber = await web3.eth.getBlockNumber()
-      stakingRouterMock.setStakingModuleLastDepositBlock(lastDepositBlockNumber)
+      await stakingRouterMock.setStakingModuleLastDepositBlock(lastDepositBlockNumber)
       await waitBlocks(2 * MIN_DEPOSIT_BLOCK_DISTANCE)
 
       const currentBlockNumber = await web3.eth.getBlockNumber()
@@ -984,7 +984,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       assert.isTrue((await depositSecurityModule.getGuardianQuorum()) > 0, 'invariant failed: quorum > 0')
 
       const lastDepositBlockNumber = await web3.eth.getBlockNumber()
-      stakingRouterMock.setStakingModuleLastDepositBlock(lastDepositBlockNumber)
+      await stakingRouterMock.setStakingModuleLastDepositBlock(lastDepositBlockNumber)
       const latestBlock = await waitBlocks(2 * MIN_DEPOSIT_BLOCK_DISTANCE)
 
       const minDepositBlockDistance = await depositSecurityModule.getMinDepositBlockDistance()
@@ -1003,7 +1003,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       assert.equal(await stakingRouterMock.getStakingModuleIsDepositsPaused(STAKING_MODULE), false, 'invariant failed: isPaused')
 
       const lastDepositBlockNumber = await web3.eth.getBlockNumber()
-      stakingRouterMock.setStakingModuleLastDepositBlock(lastDepositBlockNumber)
+      await stakingRouterMock.setStakingModuleLastDepositBlock(lastDepositBlockNumber)
       await waitBlocks(2 * MIN_DEPOSIT_BLOCK_DISTANCE)
 
       const currentBlockNumber = await web3.eth.getBlockNumber()
@@ -1021,7 +1021,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       assert.equal(await stakingRouterMock.getStakingModuleIsDepositsPaused(STAKING_MODULE), false, 'invariant failed: isPaused')
 
       const lastDepositBlockNumber = await web3.eth.getBlockNumber()
-      stakingRouterMock.setStakingModuleLastDepositBlock(lastDepositBlockNumber)
+      await stakingRouterMock.setStakingModuleLastDepositBlock(lastDepositBlockNumber)
       await waitBlocks(Math.floor(MIN_DEPOSIT_BLOCK_DISTANCE / 2))
 
       const currentBlockNumber = await web3.eth.getBlockNumber()
@@ -1036,7 +1036,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
       assert.isTrue((await depositSecurityModule.getGuardianQuorum()) > 0, 'invariant failed: quorum > 0')
 
       const lastDepositBlockNumber = await web3.eth.getBlockNumber()
-      stakingRouterMock.setStakingModuleLastDepositBlock(lastDepositBlockNumber)
+      await stakingRouterMock.setStakingModuleLastDepositBlock(lastDepositBlockNumber)
       await waitBlocks(2 * MIN_DEPOSIT_BLOCK_DISTANCE)
 
       const currentBlockNumber = await web3.eth.getBlockNumber()

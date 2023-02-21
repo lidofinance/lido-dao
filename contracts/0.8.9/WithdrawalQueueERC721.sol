@@ -16,22 +16,36 @@ import {Strings} from "@openzeppelin/contracts-v4.4/utils/Strings.sol";
 import {IWstETH, WithdrawalQueue} from "./WithdrawalQueue.sol";
 import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
 import {UnstructuredRefStorage} from "./lib/UnstructuredRefStorage.sol";
+import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
+
+/**
+  * @title Interface defining INFTDescriptor to generate ERC721 tokenURI
+  */
+interface INFTDescriptor {
+    /**
+      * @notice Returns ERC721 tokenURI content
+      * @param _requestId is an id for particular withdrawal request
+      */
+    function constructTokenURI(uint256 _requestId) external view returns (string memory);
+}
 
 /// @title NFT implementation on top of {WithdrawalQueue}
 /// NFT is minted on every request and burned on claim
 ///
 /// @author psirex, folkyatina
-contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
+contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
     using Address for address;
     using Strings for uint256;
     using EnumerableSet for EnumerableSet.UintSet;
     using UnstructuredRefStorage for bytes32;
+    using UnstructuredStorage for bytes32;
 
-    bytes32 internal constant TOKEN_APPROVALS_POSITION = keccak256("lido.WithdrawalRequestNFT.tokenApprovals");
-    bytes32 internal constant OPERATOR_APPROVALS_POSITION = keccak256("lido.WithdrawalRequestNFT.operatorApprovals");
-    bytes32 internal constant BASE_URI_POSITION = keccak256("lido.WithdrawalRequestNFT.baseUri");
+    bytes32 internal constant TOKEN_APPROVALS_POSITION = keccak256("lido.WithdrawalQueueERC721.tokenApprovals");
+    bytes32 internal constant OPERATOR_APPROVALS_POSITION = keccak256("lido.WithdrawalQueueERC721.operatorApprovals");
+    bytes32 internal constant BASE_URI_POSITION = keccak256("lido.WithdrawalQueueERC721.baseUri");
+    bytes32 internal constant NFT_DESCRIPTOR_ADDRESS_POSITION = keccak256("lido.WithdrawalQueueERC721.nftDescriptorAddress");
 
-    bytes32 public constant SET_BASE_URI_ROLE = keccak256("SET_BASE_URI_ROLE");
+    bytes32 public constant MANAGE_TOKEN_URI_ROLE = keccak256("MANAGE_TOKEN_URI_ROLE");
 
     // @notion simple wrapper for base URI string
     //  Solidity does not allow to store string in UnstructuredStorage
@@ -40,6 +54,7 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
     }
 
     event BaseURISet(string baseURI);
+    event NftDescriptorAddressSet(address nftDescriptorAddress);
 
     error ApprovalToOwner();
     error ApproveToCaller();
@@ -48,6 +63,7 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
     error TransferFromIncorrectOwner(address from, address realOwner);
     error TransferToZeroAddress();
     error TransferFromZeroAddress();
+    error TransferToThemselves();
     error TransferToNonIERC721Receiver(address);
     error InvalidOwnerAddress(address);
     error StringTooLong(string str);
@@ -71,7 +87,7 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
         public
         view
         virtual
-        override (IERC165, AccessControlEnumerable)
+        override(IERC165, AccessControlEnumerable)
         returns (bool)
     {
         return interfaceId == type(IERC721).interfaceId || interfaceId == type(IERC721Metadata).interfaceId
@@ -89,11 +105,18 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
     }
 
     /// @dev See {IERC721Metadata-tokenURI}.
+    /// @dev If NFTDescriptor address isn't set the `baseURI` would be used for generating erc721 tokenURI. In case
+    ///  NFTDescriptor address is set it would be used as a first-priority method.
     function tokenURI(uint256 _requestId) public view virtual override returns (string memory) {
         if (!_existsAndNotClaimed(_requestId)) revert InvalidRequestId(_requestId);
 
-        string memory baseURI = _getBaseURI().value;
-        return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, _requestId.toString())) : "";
+        address nftDescriptorAddress = NFT_DESCRIPTOR_ADDRESS_POSITION.getStorageAddress();
+        if (nftDescriptorAddress != address(0)) {
+            return INFTDescriptor(nftDescriptorAddress).constructTokenURI(_requestId);
+        } else {
+            string memory baseURI = _getBaseURI().value;
+            return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, _requestId.toString())) : "";
+        }
     }
 
     /// @notice Base URI for computing {tokenURI}. If set, the resulting URI for each
@@ -103,9 +126,24 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
     }
 
     /// @notice Sets the Base URI for computing {tokenURI}
-    function setBaseURI(string calldata _baseURI) external onlyRole(SET_BASE_URI_ROLE) {
+    /// @dev If NFTDescriptor address isn't set the `baseURI` would be used for generating erc721 tokenURI. In case
+    ///  NFTDescriptor address is set it would be used as a first-priority method.
+    function setBaseURI(string calldata _baseURI) external onlyRole(MANAGE_TOKEN_URI_ROLE) {
         _getBaseURI().value = _baseURI;
         emit BaseURISet(_baseURI);
+    }
+
+    /// @notice Address of NFTDescriptor contract that is responsible for tokenURI generation.
+    function getNFTDescriptorAddress() external view returns (address) {
+        return NFT_DESCRIPTOR_ADDRESS_POSITION.getStorageAddress();
+    }
+
+    /// @notice Sets the address of NFTDescriptor contract that is responsible for tokenURI generation.
+    /// @dev If NFTDescriptor address isn't set the `baseURI` would be used for generating erc721 tokenURI. In case
+    ///  NFTDescriptor address is set it would be used as a first-priority method.
+    function setNFTDescriptorAddress(address _nftDescriptorAddress) external onlyRole(MANAGE_TOKEN_URI_ROLE) {
+        NFT_DESCRIPTOR_ADDRESS_POSITION.setStorageAddress(_nftDescriptorAddress);
+        emit NftDescriptorAddressSet(_nftDescriptorAddress);
     }
 
     /// @dev See {IERC721-balanceOf}.
@@ -178,6 +216,7 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
     /// - `msg.sender` should be approved, or approved for all, or owner
     function _transfer(address _from, address _to, uint256 _requestId) internal {
         if (_to == address(0)) revert TransferToZeroAddress();
+        if (_to == _from) revert TransferToThemselves();
         if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
         WithdrawalRequest storage request = _getQueue()[_requestId];
@@ -186,13 +225,15 @@ contract WithdrawalRequestNFT is IERC721Metadata, WithdrawalQueue {
         if (_from != request.owner) revert TransferFromIncorrectOwner(_from, request.owner);
         // here and below we are sure that `_from` is the owner of the request
         address msgSender = msg.sender;
-        if (!(_from == msgSender || isApprovedForAll(_from, msgSender) || _getTokenApprovals()[_requestId] == msgSender)) revert NotOwnerOrApproved(msgSender);
+        if (
+            !(_from == msgSender || isApprovedForAll(_from, msgSender) || _getTokenApprovals()[_requestId] == msgSender)
+        ) revert NotOwnerOrApproved(msgSender);
 
         delete _getTokenApprovals()[_requestId];
         request.owner = payable(_to);
 
-        _getRequestsByOwner()[_to].add(_requestId);
-        _getRequestsByOwner()[_from].remove(_requestId);
+        assert(_getRequestsByOwner()[_from].remove(_requestId));
+        assert(_getRequestsByOwner()[_to].add(_requestId));
 
         _emitTransfer(_from, _to, _requestId);
     }

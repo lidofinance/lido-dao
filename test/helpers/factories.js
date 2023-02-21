@@ -2,6 +2,7 @@ const withdrawals = require('./withdrawals')
 const { newApp } = require('./dao')
 const { artifacts } = require('hardhat')
 const { deployLocatorWithDummyAddressesImplementation } = require('./locator-deploy')
+const { ETH } = require("./utils")
 
 const {
   SLOTS_PER_EPOCH,
@@ -195,7 +196,7 @@ async function withdrawalCredentialsFactory() {
   return '0x'.padEnd(66, '1234')
 }
 
-async function stakingRouterFactory({ depositContract, dao, appManager, voting, pool, withdrawalCredentials }) {
+async function stakingRouterFactory({ depositContract, dao, appManager, voting, pool, oracle, withdrawalCredentials }) {
   const base = await StakingRouter.new(depositContract.address)
 
   const proxyAddress = await newApp(dao, 'lido-oracle', base.address, appManager.address)
@@ -217,7 +218,10 @@ async function stakingRouterFactory({ depositContract, dao, appManager, voting, 
   await stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_MANAGE_ROLE(), voting.address, {
     from: appManager.address
   })
-  await stakingRouter.grantRole(await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(), pool.address, {
+  await stakingRouter.grantRole(await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(), voting.address, {
+    from: appManager.address
+  })
+  await stakingRouter.grantRole(await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(), oracle.address, {
     from: appManager.address
   })
   await stakingRouter.grantRole(await stakingRouter.UNSAFE_SET_EXITED_VALIDATORS_ROLE(), voting.address, {
@@ -280,8 +284,8 @@ async function withdrawalVaultFactory({ pool, treasury }) {
   return await WithdrawalVault.new(pool.address, treasury.address)
 }
 
-async function eip712StETHFactory({ appManager }) {
-  return await EIP712StETH.new({ from: appManager.address })
+async function eip712StETHFactory({ pool, appManager }) {
+  return await EIP712StETH.new(pool.address, { from: appManager.address })
 }
 
 async function stakingModulesFactory(_) {
@@ -352,7 +356,7 @@ async function postSetup({
   legacyOracle,
   consensusContract
 }) {
-  await pool.initialize(lidoLocator.address, eip712StETH.address)
+  await pool.initialize(lidoLocator.address, eip712StETH.address, { value: ETH(1) })
 
   await legacyOracle.initialize(lidoLocator.address, consensusContract.address)
 

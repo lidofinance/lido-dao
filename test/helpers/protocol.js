@@ -30,10 +30,15 @@ async function deployProtocol(factories = {}, deployParams = {}) {
 
   protocol.burner = await protocol.factories.burnerFactory(protocol)
   protocol.lidoLocator = await protocol.factories.lidoLocatorFactory(protocol)
+
   await updateLocatorImplementation(protocol.lidoLocator.address, protocol.appManager.address, {
     lido: protocol.pool.address,
     burner: protocol.burner.address
   })
+
+  protocol.validatorExitBus = await protocol.factories.validatorExitBusFactory(protocol)
+  protocol.oracleReportSanityChecker = await protocol.factories.oracleReportSanityCheckerFactory(protocol)
+  protocol.oracle = await protocol.factories.accountingOracleFactory(protocol)
 
   protocol.withdrawalCredentials = await protocol.factories.withdrawalCredentialsFactory(protocol)
   protocol.stakingRouter = await protocol.factories.stakingRouterFactory(protocol)
@@ -51,14 +56,7 @@ async function deployProtocol(factories = {}, deployParams = {}) {
     stakingRouter: protocol.stakingRouter.address,
     treasury: protocol.treasury.address,
     withdrawalVault: protocol.withdrawalVault.address,
-    postTokenRebaseReceiver: protocol.legacyOracle.address
-  })
-
-  protocol.validatorExitBus = await protocol.factories.validatorExitBusFactory(protocol)
-  protocol.oracleReportSanityChecker = await protocol.factories.oracleReportSanityCheckerFactory(protocol)
-  protocol.oracle = await protocol.factories.accountingOracleFactory(protocol)
-
-  await updateLocatorImplementation(protocol.lidoLocator.address, protocol.appManager.address, {
+    postTokenRebaseReceiver: protocol.legacyOracle.address,
     accountingOracle: protocol.oracle.address,
     oracleReportSanityChecker: protocol.oracleReportSanityChecker.address,
     validatorsExitBusOracle: protocol.validatorExitBus.address

@@ -3,14 +3,23 @@ const { expect } = require('chai')
 const { ZERO_ADDRESS } = constants
 
 const { shouldBehaveLikeERC20 } = require('./helpers/ERC20.behavior')
+const { EvmSnapshot } = require('../helpers/blockchain')
 
 const WstETH = artifacts.require('WstETHMock')
 const StETH = artifacts.require('StETHMockERC20')
 
 contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount, ...otherAccounts]) {
-  beforeEach(async function () {
+  const snapshot = new EvmSnapshot(hre.ethers.provider)
+
+  before(async function () {
     this.steth = await StETH.new({ from: deployer })
     this.wsteth = await WstETH.new(this.steth.address, { from: deployer })
+
+    await snapshot.make()
+  })
+
+  afterEach(async () => {
+    await snapshot.rollback()
   })
 
   describe(`Wrapping / Unwrapping`, function () {

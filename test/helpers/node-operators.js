@@ -1,7 +1,7 @@
 const hre = require('hardhat')
-const { assert } = require('chai')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { FakeValidatorKeys } = require('./signing-keys')
+const { prepIdsCountsPayload } = require('./utils')
 
 /***
  * Adds new Node Operator to the registry and configures it
@@ -44,8 +44,8 @@ async function addNodeOperator(registry, config, txOptions) {
     throw new Error('Invalid keys config: depositedSigningKeysCount < exitedSigningKeysCount')
   }
 
-  if (exitedSigningKeysCount < stuckValidatorsCount) {
-    throw new Error('Invalid keys config: exitedSigningKeysCount < stuckValidatorsCount')
+  if (stuckValidatorsCount > depositedSigningKeysCount - exitedSigningKeysCount) {
+    throw new Error('Invalid keys config: stuckValidatorsCount > depositedSigningKeysCount - exitedSigningKeysCount')
   }
 
   if (totalSigningKeysCount < exitedSigningKeysCount + depositedSigningKeysCount) {
@@ -58,20 +58,17 @@ async function addNodeOperator(registry, config, txOptions) {
     await registry.addSigningKeys(newOperatorId, totalSigningKeysCount, ...validatorKeys.slice(), txOptions)
   }
 
-  if (depositedSigningKeysCount > 0) {
-    await registry.increaseNodeOperatorDepositedSigningKeysCount(newOperatorId, depositedSigningKeysCount, txOptions)
-  }
-
   if (vettedSigningKeysCount > 0) {
     await registry.setNodeOperatorStakingLimit(newOperatorId, vettedSigningKeysCount, txOptions)
   }
 
-  if (exitedSigningKeysCount > 0) {
-    await registry.updateExitedValidatorsCount(newOperatorId, exitedSigningKeysCount, txOptions)
+  if (depositedSigningKeysCount > 0) {
+    await registry.increaseNodeOperatorDepositedSigningKeysCount(newOperatorId, depositedSigningKeysCount, txOptions)
   }
 
   if (exitedSigningKeysCount > 0) {
-    await registry.updateExitedValidatorsCount(newOperatorId, exitedSigningKeysCount, txOptions)
+    const { operatorIds, keysCounts } = prepIdsCountsPayload(newOperatorId, exitedSigningKeysCount)
+    await registry.updateExitedValidatorsCount(operatorIds, keysCounts, txOptions)
   }
 
   if (!isActive) {

@@ -42,6 +42,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     error RefSlotMustBeGreaterThanProcessingOne(uint256 refSlot, uint256 processingRefSlot);
     error RefSlotCannotDecrease(uint256 refSlot, uint256 prevRefSlot);
     error ProcessingDeadlineMissed(uint256 deadline);
+    error RefSlotAlreadyProcessing();
     error UnexpectedRefSlot(uint256 consensusRefSlot, uint256 dataRefSlot);
     error UnexpectedConsensusVersion(uint256 expectedVersion, uint256 receivedVersion);
     error UnexpectedDataHash(bytes32 consensusHash, bytes32 receivedHash);
@@ -267,9 +268,16 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     ///
     function _startProcessing() internal returns (uint256) {
         _checkProcessingDeadline();
+
         ConsensusReport memory report = _storageConsensusReport().value;
+
         uint256 prevProcessingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
+        if (prevProcessingRefSlot == report.refSlot) {
+            revert RefSlotAlreadyProcessing();
+        }
+
         LAST_PROCESSING_REF_SLOT_POSITION.setStorageUint256(report.refSlot);
+
         emit ProcessingStarted(report.refSlot, report.hash);
         return prevProcessingRefSlot;
     }

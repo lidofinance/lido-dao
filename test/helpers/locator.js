@@ -14,7 +14,8 @@ const locatorServices = [
   'validatorsExitBusOracle',
   'withdrawalQueue',
   'withdrawalVault',
-  'postTokenRebaseReceiver'
+  'postTokenRebaseReceiver',
+  'oracleDaemonConfig'
 ]
 
 function getRandomLocatorConfig(overrides = {}) {

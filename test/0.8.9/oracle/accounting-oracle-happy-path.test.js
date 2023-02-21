@@ -1,20 +1,26 @@
-const { BN } = require('bn.js')
 const { assert } = require('../../helpers/assert')
-const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
-const { assertRevert } = require('../../helpers/assertThrow')
-const { e9, e18, e27, hex, printEvents } = require('../../helpers/utils')
-const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
+const { e9, e18, e27, hex } = require('../../helpers/utils')
 
 const {
-  SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, SECONDS_PER_EPOCH,
-  EPOCHS_PER_FRAME, SLOTS_PER_FRAME, SECONDS_PER_FRAME,
-  computeSlotAt, computeEpochAt, computeEpochFirstSlotAt,
-  computeEpochFirstSlot, computeTimestampAtSlot, computeTimestampAtEpoch,
-  ZERO_HASH, CONSENSUS_VERSION,
+  SECONDS_PER_SLOT,
+  GENESIS_TIME,
+  SECONDS_PER_EPOCH,
+  SLOTS_PER_FRAME,
+  SECONDS_PER_FRAME,
+  computeTimestampAtSlot,
+  ZERO_HASH,
+  CONSENSUS_VERSION,
   V1_ORACLE_LAST_REPORT_SLOT,
-  EXTRA_DATA_FORMAT_LIST, EXTRA_DATA_TYPE_STUCK_VALIDATORS, EXTRA_DATA_TYPE_EXITED_VALIDATORS,
-  deployAndConfigureAccountingOracle, getReportDataItems, calcReportDataHash, encodeExtraDataItems,
-  packExtraDataList, calcExtraDataListHash} = require('./accounting-oracle-deploy.test')
+  EXTRA_DATA_FORMAT_EMPTY,
+  EXTRA_DATA_FORMAT_LIST,
+  deployAndConfigureAccountingOracle,
+  getReportDataItems,
+  calcReportDataHash,
+  encodeExtraDataItems,
+  packExtraDataList,
+  calcExtraDataListHash
+} = require('./accounting-oracle-deploy.test')
 
 
 contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
@@ -77,6 +83,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assert.isFalse(procState.mainDataSubmitted)
       assert.equal(procState.extraDataHash, ZERO_HASH)
       assert.equal(+procState.extraDataFormat, 0)
+      assert.isFalse(procState.extraDataSubmitted)
       assert.equal(+procState.extraDataItemsCount, 0)
       assert.equal(+procState.extraDataItemsSubmitted, 0)
     })
@@ -152,6 +159,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assert.isFalse(procState.mainDataSubmitted)
       assert.equal(procState.extraDataHash, ZERO_HASH)
       assert.equal(+procState.extraDataFormat, 0)
+      assert.isFalse(procState.extraDataSubmitted)
       assert.equal(+procState.extraDataItemsCount, 0)
       assert.equal(+procState.extraDataItemsSubmitted, 0)
     })
@@ -161,14 +169,14 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
     })
 
     it('non-member cannot submit the data', async () => {
-      await assertRevert(
+      await assert.reverts(
         oracle.submitReportData(reportItems, oracleVersion, {from: stranger}),
         'SenderNotAllowed()'
       )
     })
 
     it('the data cannot be submitted passing a different contract version', async () => {
-      await assertRevert(
+      await assert.reverts(
         oracle.submitReportData(reportItems, oracleVersion - 1, {from: member1}),
         `UnexpectedContractVersion(${oracleVersion}, ${oracleVersion - 1})`
       )
@@ -178,7 +186,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       const invalidReport = { ...reportFields, numValidators: reportFields.numValidators + 1 }
       const invalidReportItems = getReportDataItems(invalidReport)
       const invalidReportHash = calcReportDataHash(invalidReportItems)
-      await assertRevert(
+      await assert.reverts(
         oracle.submitReportData(invalidReportItems, oracleVersion, {from: member1}),
         `UnexpectedDataHash("${reportHash}", "${invalidReportHash}")`
       )
@@ -189,7 +197,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
     it(`a committee member submits the rebase data`, async () => {
       prevProcessingRefSlot = +await oracle.getLastProcessingRefSlot()
       const tx = await oracle.submitReportData(reportItems, oracleVersion, {from: member1})
-      assertEvent(tx, 'ProcessingStarted', {expectedArgs: {refSlot: reportFields.refSlot}})
+      assert.emits(tx, 'ProcessingStarted', {refSlot: reportFields.refSlot})
       assert.isTrue((await oracle.getConsensusReport()).processingStarted)
       assert.isAbove(+await oracle.getLastProcessingRefSlot(), prevProcessingRefSlot)
     })
@@ -207,6 +215,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assert.isTrue(procState.mainDataSubmitted)
       assert.equal(procState.extraDataHash, reportFields.extraDataHash)
       assert.equal(+procState.extraDataFormat, reportFields.extraDataFormat)
+      assert.isFalse(procState.extraDataSubmitted)
       assert.equal(+procState.extraDataItemsCount, reportFields.extraDataItemsCount)
       assert.equal(+procState.extraDataItemsSubmitted, 0)
     })
@@ -224,7 +233,6 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assertBn(lastOracleReportCall.elRewardsVaultBalance, reportFields.elRewardsVaultBalance)
       assertBn(lastOracleReportCall.lastWithdrawalRequestIdToFinalize, reportFields.lastWithdrawalRequestIdToFinalize)
       assertBn(lastOracleReportCall.finalizationShareRate, reportFields.finalizationShareRate)
-      // assert.equal(lastOracleReportCall.isBunkerMode, reportFields.isBunkerMode)
     })
 
     it(`withdrawal queue got bunker mode report`, async () => {
@@ -258,13 +266,20 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assert.equal(+lastLegacyOracleCall.clValidators, reportFields.numValidators)
     })
 
+    it(`no data can be submitted for the same reference slot again`, async () => {
+      await assert.reverts(
+        oracle.submitReportData(reportItems, oracleVersion, {from: member2}),
+        'RefSlotAlreadyProcessing()'
+      )
+    })
+
     it('some time passes', async () => {
       const deadline = (await oracle.getConsensusReport()).processingDeadlineTime
       await consensus.setTime(deadline)
     })
 
     it('a non-member cannot submit extra data', async () => {
-      await assertRevert(
+      await assert.reverts(
         oracle.submitReportExtraDataList(extraDataList, {from: stranger}),
         'SenderNotAllowed()'
       )
@@ -280,20 +295,27 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       const invalidExtraDataItems = encodeExtraDataItems(invalidExtraData)
       const invalidExtraDataList = packExtraDataList(invalidExtraDataItems)
       const invalidExtraDataHash = calcExtraDataListHash(invalidExtraDataList)
-      await assertRevert(
+      await assert.reverts(
         oracle.submitReportExtraDataList(invalidExtraDataList, {from: member2}),
-        `UnexpectedDataHash("${extraDataHash}", "${invalidExtraDataHash}")`
+        `UnexpectedExtraDataHash("${extraDataHash}", "${invalidExtraDataHash}")`
+      )
+    })
+
+    it(`an empty extra data cannot be submitted`, async () => {
+      await assert.reverts(
+        oracle.submitReportExtraDataEmpty({from: member2}),
+        `UnexpectedExtraDataFormat(${EXTRA_DATA_FORMAT_LIST}, ${EXTRA_DATA_FORMAT_EMPTY})`
       )
     })
 
     it('a committee member submits extra data', async () => {
       const tx = await oracle.submitReportExtraDataList(extraDataList, {from: member2})
 
-      assertEvent(tx, 'ExtraDataSubmitted', {expectedArgs: {
+      assert.emits(tx, 'ExtraDataSubmitted', {
         refSlot: reportFields.refSlot,
         itemsProcessed: extraDataItems.length,
         itemsCount: extraDataItems.length,
-      }})
+      })
 
       const frame = await consensus.getCurrentFrame()
       const procState = await oracle.getProcessingState()
@@ -307,6 +329,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assert.isTrue(procState.mainDataSubmitted)
       assert.equal(procState.extraDataHash, reportFields.extraDataHash)
       assert.equal(+procState.extraDataFormat, reportFields.extraDataFormat)
+      assert.isTrue(procState.extraDataSubmitted)
       assert.equal(+procState.extraDataItemsCount, reportFields.extraDataItemsCount)
       assert.equal(+procState.extraDataItemsSubmitted, extraDataItems.length)
     })
@@ -344,6 +367,124 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assert.equal(+call3.stakingModuleId, 3)
       assert.equal(call3.nodeOperatorIds, '0x' + [2].map(i => hex(i, 8)).join(''))
       assert.equal(call3.keysCounts, '0x' + [3].map(i => hex(i, 16)).join(''))
+    })
+
+    it('Staking router was told that stuck and exited keys updating is finished', async () => {
+      const totalFinishedCalls = +await mockStakingRouter.totalCalls_onValidatorsCountsByNodeOperatorReportingFinished()
+      assert.equal(totalFinishedCalls, 1)
+    })
+
+    it(`extra data for the same reference slot cannot be re-submitted`, async () => {
+      await assert.reverts(
+        oracle.submitReportExtraDataList(extraDataList, {from: member1}),
+        'ExtraDataAlreadyProcessed()'
+      )
+    })
+
+    it('some time passes, a new reporting frame starts', async () => {
+      await consensus.advanceTimeToNextFrameStart()
+
+      const frame = await consensus.getCurrentFrame()
+      const procState = await oracle.getProcessingState()
+
+      assert.equal(+procState.currentFrameRefSlot, +frame.refSlot)
+      assert.equal(+procState.processingDeadlineTime, 0)
+      assert.equal(procState.mainDataHash, ZERO_HASH)
+      assert.isFalse(procState.mainDataSubmitted)
+      assert.equal(procState.extraDataHash, ZERO_HASH)
+      assert.equal(+procState.extraDataFormat, 0)
+      assert.isFalse(procState.extraDataSubmitted)
+      assert.equal(+procState.extraDataItemsCount, 0)
+      assert.equal(+procState.extraDataItemsSubmitted, 0)
+    })
+
+    it('new data report with empty extra data is agreed upon and submitted', async () => {
+      const {refSlot} = await consensus.getCurrentFrame()
+
+      reportFields = {
+        ...reportFields,
+        refSlot: +refSlot,
+        extraDataFormat: EXTRA_DATA_FORMAT_EMPTY,
+        extraDataHash: ZERO_HASH,
+        extraDataItemsCount: 0,
+      }
+      reportItems = getReportDataItems(reportFields)
+      reportHash = calcReportDataHash(reportItems)
+
+      await triggerConsensusOnHash(reportHash)
+
+      const tx = await oracle.submitReportData(reportItems, oracleVersion, {from: member2})
+      assert.emits(tx, 'ProcessingStarted', {refSlot: reportFields.refSlot})
+    })
+
+    it(`Lido got the oracle report`, async () => {
+      const lastOracleReportCall = await mockLido.getLastCall_handleOracleReport()
+      assert.equal(lastOracleReportCall.callCount, 2)
+    })
+
+    it(`withdrawal queue got bunker mode report`, async () => {
+      const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
+      assert.equal(+updateBunkerModeLastCall.callCount, 2)
+    })
+
+    it(`Staking router got the exited keys report`, async () => {
+      const lastExitedKeysByModuleCall = await mockStakingRouter.lastCall_updateExitedKeysByModule()
+      assert.equal(lastExitedKeysByModuleCall.callCount, 2)
+    })
+
+    it(`a non-empty extra data cannot be submitted`, async () => {
+      await assert.reverts(
+        oracle.submitReportExtraDataList(extraDataList, {from: member2}),
+        `UnexpectedExtraDataFormat(${EXTRA_DATA_FORMAT_EMPTY}, ${EXTRA_DATA_FORMAT_LIST})`
+      )
+    })
+
+    it('a committee member submits empty extra data', async () => {
+      const tx = await oracle.submitReportExtraDataEmpty({from: member3})
+
+      assert.emits(tx, 'ExtraDataSubmitted', {
+        refSlot: reportFields.refSlot,
+        itemsProcessed: 0,
+        itemsCount: 0,
+      })
+
+      const frame = await consensus.getCurrentFrame()
+      const procState = await oracle.getProcessingState()
+
+      assert.equal(+procState.currentFrameRefSlot, +frame.refSlot)
+      assert.equal(
+        +procState.processingDeadlineTime,
+        computeTimestampAtSlot(+frame.reportProcessingDeadlineSlot)
+      )
+      assert.equal(procState.mainDataHash, reportHash)
+      assert.isTrue(procState.mainDataSubmitted)
+      assert.equal(procState.extraDataHash, ZERO_HASH)
+      assert.equal(+procState.extraDataFormat, EXTRA_DATA_FORMAT_EMPTY)
+      assert.isTrue(procState.extraDataSubmitted)
+      assert.equal(+procState.extraDataItemsCount, 0)
+      assert.equal(+procState.extraDataItemsSubmitted, 0)
+    })
+
+    it(`Staking router didn't get the exited keys by node op report`, async () => {
+      const totalReportCalls = +await mockStakingRouter.totalCalls_reportExitedKeysByNodeOperator()
+      assert.equal(totalReportCalls, 2)
+    })
+
+    it(`Staking router didn't get the stuck keys by node op report`, async () => {
+      const totalReportCalls = +await mockStakingRouter.totalCalls_reportStuckKeysByNodeOperator()
+      assert.equal(totalReportCalls, 3)
+    })
+
+    it('Staking router was told that stuck and exited keys updating is finished', async () => {
+      const totalFinishedCalls = +await mockStakingRouter.totalCalls_onValidatorsCountsByNodeOperatorReportingFinished()
+      assert.equal(totalFinishedCalls, 2)
+    })
+
+    it(`extra data for the same reference slot cannot be re-submitted`, async () => {
+      await assert.reverts(
+        oracle.submitReportExtraDataEmpty({from: member1}),
+        'ExtraDataAlreadyProcessed()'
+      )
     })
   })
 })

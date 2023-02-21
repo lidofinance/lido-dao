@@ -49,7 +49,7 @@ abstract contract WithdrawalQueueBase {
         /// @notice sum of the all shares locked for withdrawal up to this request
         uint128 cumulativeShares;
         /// @notice address that can claim or transfer the request
-        address payable owner;
+        address owner;
         /// @notice block.timestamp when the request was created
         uint64 timestamp;
         /// @notice flag if the request was claimed
@@ -63,6 +63,22 @@ abstract contract WithdrawalQueueBase {
         uint160 fromRequestId;
         /// @notice discount factor with 1e27 precision (0 - 100% discount, 1e27 - means no discount)
         uint96 discountFactor;
+    }
+
+    /// @notice output format struct for `_getWithdrawalStatus()` method
+    struct WithdrawalRequestStatus {
+        /// @notice stETH token amount that was locked on withdrawal queue for this request
+        uint256 amountOfStETH;
+        /// @notice amount of stETH shares locked on withdrawal queue for this request
+        uint256 amountOfShares;
+        /// @notice address that can claim or transfer this request
+        address owner;
+        /// @notice timestamp of when the request was created, in seconds
+        uint256 timestamp;
+        /// @notice true, if request is finalized
+        bool isFinalized;
+        /// @notice true, if request is claimed. Request is claimable if (isFinalized && !isClaimed)
+        bool isClaimed;
     }
 
     /// @dev Contains both stETH token amount and its corresponding shares amount
@@ -87,8 +103,8 @@ abstract contract WithdrawalQueueBase {
     error NotOwner(address _sender, address _owner);
     error InvalidRequestId(uint256 _requestId);
     error InvalidRequestIdRange(uint256 startId, uint256 endId);
+    error RequestNotFoundOrNotFinalized(uint256 _requestId);
     error NotEnoughEther();
-    error RequestNotFinalized(uint256 _requestId);
     error RequestAlreadyClaimed(uint256 _requestId);
     error InvalidHint(uint256 _hint);
     error CantSendValueRecipientMayHaveReverted();
@@ -122,113 +138,6 @@ abstract contract WithdrawalQueueBase {
     function unfinalizedStETH() external view returns (uint256) {
         return
             _getQueue()[getLastRequestId()].cumulativeStETH - _getQueue()[getLastFinalizedRequestId()].cumulativeStETH;
-    }
-
-    /// @notice Returns all withdrawal requests that belongs to the `_owner` address
-    ///
-    /// WARNING: This operation will copy the entire storage to memory, which can be quite expensive. This is designed
-    /// to mostly be used by view accessors that are queried without any gas fees. Developers should keep in mind that
-    /// this function has an unbounded cost, and using it as part of a state-changing function may render the function
-    /// uncallable if the set grows to a point where copying to memory consumes too much gas to fit in a block.
-    function getWithdrawalRequests(address _owner) external view returns (uint256[] memory requestsIds) {
-        return _getRequestsByOwner()[_owner].values();
-    }
-
-    /// @notice output format struct for `getWithdrawalRequestStatus()`
-    struct WithdrawalRequestStatus {
-        /// @notice stETH token amount that was locked on withdrawal queue for this request
-        uint256 amountOfStETH;
-        /// @notice amount of stETH shares locked on withdrawal queue for this request
-        uint256 amountOfShares;
-        /// @notice address that can claim or transfer this request
-        address owner;
-        /// @notice timestamp of when the request was created, in seconds
-        uint256 timestamp;
-        /// @notice true, if request is finalized
-        bool isFinalized;
-        /// @notice true, if request is claimed. Request is claimable if (isFinalized && !isClaimed)
-        bool isClaimed;
-    }
-
-    /// @notice Returns status of the withdrawal request with `_requestId` id
-    function getWithdrawalRequestStatus(uint256 _requestId)
-        public
-        view
-        returns (WithdrawalRequestStatus memory status)
-    {
-        if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
-
-        WithdrawalRequest memory request = _getQueue()[_requestId];
-        WithdrawalRequest memory previousRequest = _getQueue()[_requestId - 1];
-
-        status = WithdrawalRequestStatus(
-            request.cumulativeStETH - previousRequest.cumulativeStETH,
-            request.cumulativeShares - previousRequest.cumulativeShares,
-            request.owner,
-            request.timestamp,
-            _requestId <= getLastFinalizedRequestId(),
-            request.claimed
-        );
-    }
-
-    /// @notice View function to find a hint to pass it to `claimWithdrawal()`.
-    /// @dev WARNING! OOG is possible if used onchain, contains unbounded loop inside
-    /// See `findCheckpointHint(uint256 _requestId, uint256 _firstIndex, uint256 _lastIndex)` for onchain use
-    /// @param _requestId request id to be claimed with this hint
-    function findCheckpointHintUnbounded(uint256 _requestId) public view returns (uint256) {
-        return findCheckpointHint(_requestId, 1, getLastCheckpointIndex());
-    }
-
-    /// @notice View function to find a checkpoint hint for `claimWithdrawal()`
-    ///  Search will be performed in the range of `[_firstIndex, _lastIndex]`
-    ///
-    /// NB!: Range search ought to be used to optimize gas cost.
-    /// You can utilize the following invariant:
-    /// `if (requestId2 > requestId1) than hint2 >= hint1`,
-    /// so you can search for `hint2` in the range starting from `hint1`
-    ///
-    /// @param _requestId request id we are searching the checkpoint for
-    /// @param _start index of the left boundary of the search range
-    /// @param _end index of the right boundary of the search range
-    ///
-    /// @return value that hints `claimWithdrawal` to find the discount for the request,
-    ///  or 0 if hint not found in the range
-    function findCheckpointHint(uint256 _requestId, uint256 _start, uint256 _end) public view returns (uint256) {
-        if (_requestId == 0) revert InvalidRequestId(_requestId);
-        if (_start == 0) revert InvalidRequestIdRange(_start, _end);
-        uint256 lastCheckpointIndex = getLastCheckpointIndex();
-        if (_end > lastCheckpointIndex) revert InvalidRequestIdRange(_start, _end);
-        if (_requestId > getLastFinalizedRequestId()) revert RequestNotFinalized(_requestId);
-
-        if (_start > _end) return NOT_FOUND; // we have an empty range to search in, so return NOT_FOUND
-
-        // Right boundary
-        if (_requestId >= _getCheckpoints()[_end].fromRequestId) {
-            // it's the last checkpoint, so it's valid
-            if (_end == lastCheckpointIndex) return _end;
-            // it fits right before the next checkpoint
-            if (_requestId < _getCheckpoints()[_end + 1].fromRequestId) return _end;
-
-            return NOT_FOUND;
-        }
-        // Left boundary
-        if (_requestId < _getCheckpoints()[_start].fromRequestId) {
-            return NOT_FOUND;
-        }
-
-        // Binary search
-        uint256 min = _start;
-        uint256 max = _end;
-
-        while (max > min) {
-            uint256 mid = (max + min + 1) / 2;
-            if (_getCheckpoints()[mid].fromRequestId <= _requestId) {
-                min = mid;
-            } else {
-                max = mid - 1;
-            }
-        }
-        return min;
     }
 
     /// @notice Search for the latest request in the queue in the range of `[startId, endId]`,
@@ -397,7 +306,7 @@ abstract contract WithdrawalQueueBase {
             _amountOfETH,
             requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares,
             block.timestamp
-        );
+            );
     }
 
     /// @dev creates a new `WithdrawalRequest` in the queue
@@ -417,38 +326,123 @@ abstract contract WithdrawalQueueBase {
 
         _setLastRequestId(requestId);
         _getQueue()[requestId] =
-            WithdrawalRequest(cumulativeStETH, cumulativeShares, payable(_owner), uint64(block.timestamp), false);
-        _getRequestsByOwner()[_owner].add(requestId);
+            WithdrawalRequest(cumulativeStETH, cumulativeShares, _owner, uint64(block.timestamp), false);
+        assert(_getRequestsByOwner()[_owner].add(requestId));
 
         emit WithdrawalRequested(requestId, msg.sender, _owner, _amountOfStETH, _amountOfShares);
     }
 
-    /// @notice Claim `_requestId` request and transfer related ether to the `_recipient`. Emits WithdrawalClaimed event
+    /// @notice Returns status of the withdrawal request with `_requestId` id
+    function _getStatus(uint256 _requestId) internal view returns (WithdrawalRequestStatus memory status) {
+        if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
+
+        WithdrawalRequest memory request = _getQueue()[_requestId];
+        WithdrawalRequest memory previousRequest = _getQueue()[_requestId - 1];
+
+        status = WithdrawalRequestStatus(
+            request.cumulativeStETH - previousRequest.cumulativeStETH,
+            request.cumulativeShares - previousRequest.cumulativeShares,
+            request.owner,
+            request.timestamp,
+            _requestId <= getLastFinalizedRequestId(),
+            request.claimed
+        );
+    }
+
+    /// @notice View function to find a checkpoint hint for `claimWithdrawal()`
+    ///  Search will be performed in the range of `[_firstIndex, _lastIndex]`
+    ///
+    /// NB!: Range search ought to be used to optimize gas cost.
+    /// You can utilize the following invariant:
+    /// `if (requestId2 > requestId1) than hint2 >= hint1`,
+    /// so you can search for `hint2` in the range starting from `hint1`
+    ///
+    /// @param _requestId request id we are searching the checkpoint for
+    /// @param _start index of the left boundary of the search range
+    /// @param _end index of the right boundary of the search range
+    ///
+    /// @return value that hints `claimWithdrawal` to find the discount for the request,
+    ///  or 0 if hint not found in the range
+    function _findCheckpointHint(uint256 _requestId, uint256 _start, uint256 _end) internal view returns (uint256) {
+        if (_requestId == 0) revert InvalidRequestId(_requestId);
+        if (_start == 0) revert InvalidRequestIdRange(_start, _end);
+        uint256 lastCheckpointIndex = getLastCheckpointIndex();
+        if (_end > lastCheckpointIndex) revert InvalidRequestIdRange(_start, _end);
+        if (_requestId > getLastFinalizedRequestId()) revert RequestNotFoundOrNotFinalized(_requestId);
+
+        if (_start > _end) return NOT_FOUND; // we have an empty range to search in, so return NOT_FOUND
+
+        // Right boundary
+        if (_requestId >= _getCheckpoints()[_end].fromRequestId) {
+            // it's the last checkpoint, so it's valid
+            if (_end == lastCheckpointIndex) return _end;
+            // it fits right before the next checkpoint
+            if (_requestId < _getCheckpoints()[_end + 1].fromRequestId) return _end;
+
+            return NOT_FOUND;
+        }
+        // Left boundary
+        if (_requestId < _getCheckpoints()[_start].fromRequestId) {
+            return NOT_FOUND;
+        }
+
+        // Binary search
+        uint256 min = _start;
+        uint256 max = _end - 1;
+
+        while (max > min) {
+            uint256 mid = (max + min + 1) / 2;
+            if (_getCheckpoints()[mid].fromRequestId <= _requestId) {
+                min = mid;
+            } else {
+                max = mid - 1;
+            }
+        }
+        return min;
+    }
+
+    /// @notice Claim `_requestId` request and transfer locked ether to `_recipient`. Emits WithdrawalClaimed event
     /// @param _requestId request id to claim
     /// @param _hint hint for discount checkpoint index to avoid extensive search over the checkpoints.
-    ///  Can be found with `findCheckpointHint()` or `findCheckpointHintUnbounded()`
-    /// @param _recipient address to send ether to. If `==address(0)` then will send to the owner.
-    function _claimWithdrawalTo(uint256 _requestId, uint256 _hint, address _recipient) internal {
+    /// @param _recipient address to send ether to
+    function _claim(uint256 _requestId, uint256 _hint, address _recipient) internal {
+        if (_requestId == 0) revert InvalidRequestId(_requestId);
+        if (_requestId > getLastFinalizedRequestId()) revert RequestNotFoundOrNotFinalized(_requestId);
+
+        WithdrawalRequest storage request = _getQueue()[_requestId];
+
+        if (request.claimed) revert RequestAlreadyClaimed(_requestId);
+        if (request.owner != msg.sender) revert NotOwner(msg.sender, request.owner);
+
+        request.claimed = true;
+        assert(_getRequestsByOwner()[request.owner].remove(_requestId));
+
+        uint256 ethWithDiscount = _calculateClaimableEther(request, _requestId, _hint);
+
+        _setLockedEtherAmount(getLockedEtherAmount() - ethWithDiscount);
+        _sendValue(payable(_recipient), ethWithDiscount);
+
+        emit WithdrawalClaimed(_requestId, msg.sender, _recipient, ethWithDiscount);
+    }
+
+    /// @notice Calculates discounted ether value for `_requestId` using a provided `_hint`. Checks if hint is valid
+    /// @return claimableEther discounted eth for `_requestId`. Returns 0 if request is not claimable
+    function _calculateClaimableEther(WithdrawalRequest storage _request, uint256 _requestId, uint256 _hint)
+        internal
+        view
+        returns (uint256 claimableEther)
+    {
         if (_hint == 0) revert InvalidHint(_hint);
 
-        if (_requestId == 0) revert InvalidRequestId(0);
-        if (_requestId > getLastFinalizedRequestId()) revert RequestNotFinalized(_requestId);
         uint256 lastCheckpointIndex = getLastCheckpointIndex();
         if (_hint > lastCheckpointIndex) revert InvalidHint(_hint);
 
-        WithdrawalRequest storage request = _getQueue()[_requestId];
-        if (request.claimed) revert RequestAlreadyClaimed(_requestId);
-        if (msg.sender != request.owner) revert NotOwner(msg.sender, request.owner);
-        if (_recipient == address(0)) _recipient = request.owner;
-
-        request.claimed = true;
-
         DiscountCheckpoint memory hintCheckpoint = _getCheckpoints()[_hint];
-        // ______(_______
+        // ______(>______
         //    ^  hint
         if (_requestId < hintCheckpoint.fromRequestId) revert InvalidHint(_hint);
         if (_hint < lastCheckpointIndex) {
-            // ______(_______(_________
+            // ______(>______(>________
             //       hint    hint+1  ^
             DiscountCheckpoint memory nextCheckpoint = _getCheckpoints()[_hint + 1];
             if (nextCheckpoint.fromRequestId <= _requestId) {
@@ -456,14 +450,8 @@ abstract contract WithdrawalQueueBase {
             }
         }
 
-        uint256 ethRequested = request.cumulativeStETH - _getQueue()[_requestId - 1].cumulativeStETH;
-        uint256 ethWithDiscount = ethRequested * hintCheckpoint.discountFactor / E27_PRECISION_BASE;
-
-        _setLockedEtherAmount(getLockedEtherAmount() - ethWithDiscount);
-
-        _sendValue(payable(_recipient), ethWithDiscount);
-
-        emit WithdrawalClaimed(_requestId, msg.sender, _recipient, ethWithDiscount);
+        uint256 ethRequested = _request.cumulativeStETH - _getQueue()[_requestId - 1].cumulativeStETH;
+        return ethRequested * hintCheckpoint.discountFactor / E27_PRECISION_BASE;
     }
 
     // quazi-constructor
@@ -471,11 +459,11 @@ abstract contract WithdrawalQueueBase {
         // setting dummy zero structs in checkpoints and queue beginning
         // to avoid uint underflows and related if-branches
         // 0-index is reserved as 'not_found' response in the interface everywhere
-        _getQueue()[0] = WithdrawalRequest(0, 0, payable(0), uint64(block.number), true);
+        _getQueue()[0] = WithdrawalRequest(0, 0, address(0), uint64(block.number), true);
         _getCheckpoints()[getLastCheckpointIndex()] = DiscountCheckpoint(0, 0);
     }
 
-    function _sendValue(address payable _recipient, uint256 _amount) internal {
+    function _sendValue(address _recipient, uint256 _amount) internal {
         if (address(this).balance < _amount) revert NotEnoughEther();
 
         // solhint-disable-next-line
