@@ -1,8 +1,7 @@
 const hre = require('hardhat')
-const { assert } = require('chai')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { FakeValidatorKeys } = require('./signing-keys')
-const { hex } = require('./utils')
+const { prepIdsCountsPayload } = require('./utils')
 
 /***
  * Adds new Node Operator to the registry and configures it
@@ -45,8 +44,8 @@ async function addNodeOperator(registry, config, txOptions) {
     throw new Error('Invalid keys config: depositedSigningKeysCount < exitedSigningKeysCount')
   }
 
-  if (exitedSigningKeysCount < stuckValidatorsCount) {
-    throw new Error('Invalid keys config: exitedSigningKeysCount < stuckValidatorsCount')
+  if (stuckValidatorsCount > depositedSigningKeysCount - exitedSigningKeysCount) {
+    throw new Error('Invalid keys config: stuckValidatorsCount > depositedSigningKeysCount - exitedSigningKeysCount')
   }
 
   if (totalSigningKeysCount < exitedSigningKeysCount + depositedSigningKeysCount) {
@@ -68,9 +67,8 @@ async function addNodeOperator(registry, config, txOptions) {
   }
 
   if (exitedSigningKeysCount > 0) {
-    const operatorIdsPayload = '0x' + [newOperatorId].map((id) => hex(id, 8)).join('')
-    const keysCountsPayload = '0x' + [exitedSigningKeysCount].map((count) => hex(count, 16)).join('')
-    await registry.updateExitedValidatorsCount(operatorIdsPayload, keysCountsPayload, txOptions)
+    const { operatorIds, keysCounts } = prepIdsCountsPayload(newOperatorId, exitedSigningKeysCount)
+    await registry.updateExitedValidatorsCount(operatorIds, keysCounts, txOptions)
   }
 
   if (!isActive) {
