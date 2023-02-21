@@ -309,7 +309,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
 
       // calls distributeRewards() inside
       receipt = await app.testing__distributeRewards({ from: voting })
-
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(1) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(4*2) })
       assert.notEmits(receipt, 'RewardsDistributed', { rewardAddress: user3, sharesAmount: 0 })
