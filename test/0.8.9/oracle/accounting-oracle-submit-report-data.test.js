@@ -17,7 +17,7 @@ const {
   SECONDS_PER_SLOT,
   GENESIS_TIME,
   ZERO_HASH,
-  HASH_1
+  HASH_1,
 } = require('./accounting-oracle-deploy.test')
 
 contract('AccountingOracle', ([admin, account1, account2, member1, member2, stranger]) => {
@@ -49,9 +49,9 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     finalizationShareRate: e27(1),
     isBunkerMode: true,
     extraDataFormat: EXTRA_DATA_FORMAT_LIST,
-    extraDataHash: extraDataHash,
+    extraDataHash,
     extraDataItemsCount: extraDataItems.length,
-    ...override
+    ...override,
   })
 
   const deploy = async (options = undefined) => {
@@ -62,19 +62,19 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       stuckKeys: [
         { moduleId: 1, nodeOpIds: [0], keysCounts: [1] },
         { moduleId: 2, nodeOpIds: [0], keysCounts: [2] },
-        { moduleId: 3, nodeOpIds: [2], keysCounts: [3] }
+        { moduleId: 3, nodeOpIds: [2], keysCounts: [3] },
       ],
       exitedKeys: [
         { moduleId: 2, nodeOpIds: [1, 2], keysCounts: [1, 3] },
-        { moduleId: 3, nodeOpIds: [1], keysCounts: [2] }
-      ]
+        { moduleId: 3, nodeOpIds: [1], keysCounts: [2] },
+      ],
     }
 
     extraDataItems = encodeExtraDataItems(extraData)
     extraDataList = packExtraDataList(extraDataItems)
     extraDataHash = calcExtraDataListHash(extraDataList)
     reportFields = getReportFields({
-      refSlot: +refSlot
+      refSlot: +refSlot,
     })
     reportItems = getReportDataItems(reportFields)
     const reportHash = calcReportDataHash(reportItems)
@@ -105,7 +105,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     return {
       newReportFields,
       newReportItems,
-      reportHash
+      reportHash,
     }
   }
 
@@ -113,7 +113,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     const { refSlot } = await consensus.getCurrentFrame()
     const next = await prepareNextReport({
       ...newReportFields,
-      refSlot: +refSlot + SLOTS_PER_FRAME
+      refSlot: +refSlot + SLOTS_PER_FRAME,
     })
     return next
   }
@@ -174,7 +174,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
         const newReportFields = {
           ...reportFields,
-          refSlot: incorrectRefSlot
+          refSlot: incorrectRefSlot,
         }
         const reportItems = getReportDataItems(newReportFields)
 
@@ -213,7 +213,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
         const newReportFields = {
           ...reportFields,
-          consensusVersion: incorrectNextVersion
+          consensusVersion: incorrectNextVersion,
         }
         const reportItems = getReportDataItems(newReportFields)
 
@@ -243,7 +243,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const newReportFields = {
           ...reportFields,
           refSlot: nextRefSlot,
-          consensusVersion: newConsensusVersion
+          consensusVersion: newConsensusVersion,
         }
         const newReportItems = getReportDataItems(newReportFields)
         const newReportHash = calcReportDataHash(newReportItems)
@@ -264,7 +264,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const { newReportItems } = await prepareNextReportInNextFrame({
           ...reportFields,
           stakingModuleIdsWithNewlyExitedValidators: [2, 1],
-          numExitedValidatorsByStakingModule: [3, 4]
+          numExitedValidatorsByStakingModule: [3, 4],
         })
 
         await assert.reverts(
@@ -277,7 +277,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const { newReportItems } = await prepareNextReportInNextFrame({
           ...reportFields,
           stakingModuleIdsWithNewlyExitedValidators: [1, 1],
-          numExitedValidatorsByStakingModule: [3, 4]
+          numExitedValidatorsByStakingModule: [3, 4],
         })
 
         await assert.reverts(
@@ -290,7 +290,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const { newReportFields, newReportItems } = await prepareNextReportInNextFrame({
           ...reportFields,
           stakingModuleIdsWithNewlyExitedValidators: [1, 2],
-          numExitedValidatorsByStakingModule: [3, 4]
+          numExitedValidatorsByStakingModule: [3, 4],
         })
 
         const tx = await oracle.submitReportData(newReportItems, oracleVersion, { from: member1 })
@@ -302,7 +302,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       it('reverts with UnexpectedDataHash', async () => {
         const incorrectReportItems = getReportDataItems({
           ...reportFields,
-          numValidators: reportFields.numValidators - 1
+          numValidators: reportFields.numValidators - 1,
         })
 
         const correctDataHash = calcReportDataHash(reportItems)
@@ -324,7 +324,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       it('reverts with MaxAccountingExtraDataItemsCountExceeded if data limit exceeds', async () => {
         const MAX_ACCOUNTING_EXTRA_DATA_LIMIT = 1
         await oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(MAX_ACCOUNTING_EXTRA_DATA_LIMIT, {
-          from: admin
+          from: admin,
         })
 
         assert.equals(
@@ -342,7 +342,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const MAX_ACCOUNTING_EXTRA_DATA_LIMIT = reportFields.extraDataItemsCount
 
         await oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(MAX_ACCOUNTING_EXTRA_DATA_LIMIT, {
-          from: admin
+          from: admin,
         })
 
         assert.equals(
@@ -357,7 +357,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const { newReportItems } = await prepareNextReportInNextFrame({
           ...reportFields,
           stakingModuleIdsWithNewlyExitedValidators: [1, 2],
-          numExitedValidatorsByStakingModule: [3]
+          numExitedValidatorsByStakingModule: [3],
         })
         await assert.reverts(
           oracle.submitReportData(newReportItems, oracleVersion, { from: member1 }),
@@ -369,7 +369,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const { newReportItems } = await prepareNextReportInNextFrame({
           ...reportFields,
           stakingModuleIdsWithNewlyExitedValidators: [1, 2],
-          numExitedValidatorsByStakingModule: [3, 0]
+          numExitedValidatorsByStakingModule: [3, 0],
         })
         await assert.reverts(
           oracle.submitReportData(newReportItems, oracleVersion, { from: member1 }),
@@ -461,7 +461,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const { newReportItems, newReportFields } = await prepareNextReportInNextFrame({
           ...reportFields,
           stakingModuleIdsWithNewlyExitedValidators: [],
-          numExitedValidatorsByStakingModule: []
+          numExitedValidatorsByStakingModule: [],
         })
         const tx = await oracle.submitReportData(newReportItems, oracleVersion, { from: member1 })
         assert.emits(tx, 'ProcessingStarted', { refSlot: newReportFields.refSlot })
@@ -502,7 +502,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           {
             refSlot: prevRefSlot,
             processedItemsCount: 0,
-            itemsCount: extraDataItems.length
+            itemsCount: extraDataItems.length,
           },
           { abi: AccountingOracleAbi }
         )
@@ -518,13 +518,13 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const changedReportItems = getReportDataItems({
           ...reportFields,
           refSlot: nextRefSlot,
-          extraDataFormat: EXTRA_DATA_FORMAT_LIST + 1
+          extraDataFormat: EXTRA_DATA_FORMAT_LIST + 1,
         })
 
         const changedReportHash = calcReportDataHash(changedReportItems)
         await consensus.advanceTimeToNextFrameStart()
         await consensus.submitReport(nextRefSlot, changedReportHash, CONSENSUS_VERSION, {
-          from: member1
+          from: member1,
         })
 
         await assert.revertsWithCustomError(
@@ -538,7 +538,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const { refSlot } = await consensus.getCurrentFrame()
         const reportFields = getReportFields({
           refSlot: +refSlot,
-          extraDataItemsCount: 0
+          extraDataItemsCount: 0,
         })
         const reportItems = getReportDataItems(reportFields)
         const reportHash = calcReportDataHash(reportItems)
@@ -554,7 +554,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const { refSlot } = await consensus.getCurrentFrame()
         const reportFields = getReportFields({
           refSlot: +refSlot,
-          extraDataHash: ZERO_HASH
+          extraDataHash: ZERO_HASH,
         })
         const reportItems = getReportDataItems(reportFields)
         const reportHash = calcReportDataHash(reportItems)
@@ -576,7 +576,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           isBunkerMode: false,
           extraDataFormat: EXTRA_DATA_FORMAT_EMPTY,
           extraDataHash: nonZeroHash,
-          extraDataItemsCount: 0
+          extraDataItemsCount: 0,
         })
         const reportItems = getReportDataItems(reportFields)
         const reportHash = calcReportDataHash(reportItems)
@@ -595,7 +595,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           isBunkerMode: false,
           extraDataFormat: EXTRA_DATA_FORMAT_EMPTY,
           extraDataHash: ZERO_HASH,
-          extraDataItemsCount: 10
+          extraDataItemsCount: 10,
         })
         const reportItems = getReportDataItems(reportFields)
         const reportHash = calcReportDataHash(reportItems)

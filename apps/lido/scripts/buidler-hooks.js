@@ -53,5 +53,5 @@ module.exports = {
   },
 
   // Called after the app's proxy is updated with a new implementation.
-  postUpdate: async ({ proxy, log }, { web3, artifacts }) => {}
+  postUpdate: async ({ proxy, log }, { web3, artifacts }) => {},
 }

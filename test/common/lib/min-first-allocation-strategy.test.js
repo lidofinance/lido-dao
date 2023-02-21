@@ -8,10 +8,10 @@ const MinFirstAlgorithmModernConsumer = hre.artifacts.require('MinFirstAllocatio
 contract('MinFirstAllocationStrategy', (accounts) => {
   for (const [consumerVersion, consumerFactory] of [
     ['Legacy (Solidity 0.4.24)', MinFirstAlgorithmLegacyConsumer],
-    ['Modern (Solidity 0.8.9)', MinFirstAlgorithmModernConsumer]
+    ['Modern (Solidity 0.8.9)', MinFirstAlgorithmModernConsumer],
   ]) {
     describe(consumerVersion, async function () {
-      this.timeout(0, 'Test suite takes too long') //it takes even longer in coverage tests, so disable timeout here 
+      this.timeout(0, 'Test suite takes too long') // it takes even longer in coverage tests, so disable timeout here
       let minFirstAllocationStrategy
       const [deployer] = accounts
       let evmSnapshotId
@@ -113,20 +113,20 @@ contract('MinFirstAllocationStrategy', (accounts) => {
           const edgeCases = [
             {
               input: [[0, 0, 0, 0], [0, 0, 0, 0], 100],
-              output: [0, [0, 0, 0, 0]]
+              output: [0, [0, 0, 0, 0]],
             },
             {
               input: [[100, 100, 100], [200, 300, 600], 600],
-              output: [100, [200, 100, 100]]
+              output: [100, [200, 100, 100]],
             },
             {
               input: [[0, 0], [10, 20], 100],
-              output: [10, [10, 0]]
+              output: [10, [10, 0]],
             },
             {
               input: [[9998, 70, 0], [10099, 101, 100], 101],
-              output: [70, [9998, 70, 70]]
-            }
+              output: [70, [9998, 70, 70]],
+            },
           ]
 
           // covering multiple cases in a single unit test to prevent terminal output flooding
@@ -248,24 +248,24 @@ contract('MinFirstAllocationStrategy', (accounts) => {
           const edgeCases = [
             {
               input: [[0, 0, 0, 0], [0, 0, 0, 0], 100],
-              output: [0, [0, 0, 0, 0]]
+              output: [0, [0, 0, 0, 0]],
             },
             {
               input: [[100, 100, 100], [200, 300, 600], 600],
-              output: [600, [200, 300, 400]]
+              output: [600, [200, 300, 400]],
             },
             {
               input: [[0, 0], [10, 20], 100],
-              output: [30, [10, 20]]
+              output: [30, [10, 20]],
             },
             {
               input: [[9998, 70, 0], [10099, 101, 100], 101],
-              output: [101, [9998, 86, 85]]
+              output: [101, [9998, 86, 85]],
             },
             {
               input: [[3379, 495, 5572], [7185, 1061, 3265], 1007],
-              output: [1007, [3820, 1061, 5572]]
-            }
+              output: [1007, [3820, 1061, 5572]],
+            },
           ]
           // covering multiple cases in a single unit test to prevent terminal output flooding
           // if this test fails, try zeroing in on the specific case by moving `it()` function inside of the deepest loop
@@ -305,7 +305,7 @@ function getAssertMessage(allocations, capacities, maxAllocationSize, expectedNe
   return [
     `Allocations mismatch: [${allocations}] [${capacities}] ${maxAllocationSize}.`,
     `Expected: [${expectedNewAllocations}]`,
-    `Actual [${actualAllocations}]`
+    `Actual [${actualAllocations}]`,
   ].join(' ')
 }
 

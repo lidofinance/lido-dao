@@ -11,7 +11,7 @@ const {
   HASH_1,
   HASH_2,
   CONSENSUS_VERSION,
-  deployBaseOracle
+  deployBaseOracle,
 } = require('./base-oracle-deploy.test')
 
 contract('BaseOracle', ([admin, member, notMember]) => {

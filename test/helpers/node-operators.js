@@ -120,5 +120,5 @@ module.exports = {
   addNodeOperator,
   findNodeOperatorId,
   getAllNodeOperators,
-  filterNodeOperators
+  filterNodeOperators,
 }

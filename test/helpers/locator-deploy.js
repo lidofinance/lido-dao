@@ -16,15 +16,14 @@ const invalidButNonZeroLocatorConfig = {
   validatorsExitBusOracle: DUMMY_ADDRESS,
   withdrawalQueue: DUMMY_ADDRESS,
   withdrawalVault: DUMMY_ADDRESS,
-  oracleDaemonConfig: DUMMY_ADDRESS
+  oracleDaemonConfig: DUMMY_ADDRESS,
 }
 
-
-async function deployBehindOssifiableProxy(artifactName, proxyOwner, constructorArgs=[]) {
+async function deployBehindOssifiableProxy(artifactName, proxyOwner, constructorArgs = []) {
   const Contract = await artifacts.require(artifactName)
   const implementation = (await Contract.new(...constructorArgs, { from: proxyOwner })).address
 
-  const OssifiableProxy = await artifacts.require("OssifiableProxy")
+  const OssifiableProxy = await artifacts.require('OssifiableProxy')
   const proxy = await OssifiableProxy.new(implementation, proxyOwner, [], { from: proxyOwner })
 
   return proxy
@@ -41,7 +40,6 @@ async function updateProxyImplementation(proxyAddress, artifactName, proxyOwner,
 }
 
 async function getLocatorConfig(locatorAddress) {
-
   const locator = await LidoLocator.at(locatorAddress)
   const config = {
     accountingOracle: await locator.accountingOracle(),
@@ -57,7 +55,7 @@ async function getLocatorConfig(locatorAddress) {
     validatorsExitBusOracle: await locator.validatorsExitBusOracle(),
     withdrawalQueue: await locator.withdrawalQueue(),
     withdrawalVault: await locator.withdrawalVault(),
-    oracleDaemonConfig: await locator.oracleDaemonConfig()
+    oracleDaemonConfig: await locator.oracleDaemonConfig(),
   }
   return config
 }
@@ -71,9 +69,9 @@ async function deployLocatorWithDummyAddressesImplementation(admin) {
   return await LidoLocator.at(proxy.address)
 }
 
-///! Not specified in configUpdate values are set to dummy non zero addresses
-async function updateLocatorImplementation(locatorAddress, admin, configUpdate={}) {
-  let config = await getLocatorConfig(locatorAddress)
+/// ! Not specified in configUpdate values are set to dummy non zero addresses
+async function updateLocatorImplementation(locatorAddress, admin, configUpdate = {}) {
+  const config = await getLocatorConfig(locatorAddress)
   Object.assign(config, configUpdate)
   await updateProxyImplementation(locatorAddress, 'LidoLocator', admin, [config])
 }

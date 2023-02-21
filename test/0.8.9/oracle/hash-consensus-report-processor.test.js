@@ -1,11 +1,7 @@
 const { assert } = require('../../helpers/assert')
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
-const {
-  HASH_1,
-  CONSENSUS_VERSION,
-  deployHashConsensus,
-} = require('./hash-consensus-deploy.test')
+const { HASH_1, CONSENSUS_VERSION, deployHashConsensus } = require('./hash-consensus-deploy.test')
 const { toNum } = require('../../helpers/utils')
 
 const HashConsensus = artifacts.require('HashConsensusTimeTravellable')
@@ -55,7 +51,7 @@ contract('HashConsensus', ([admin, member1, member2, stranger]) => {
         const tx = await consensus.setReportProcessor(reportProcessor2.address)
         assert.emits(tx, 'ReportProcessorSet', {
           processor: reportProcessor2.address,
-          prevProcessor: reportProcessor1.address
+          prevProcessor: reportProcessor1.address,
         })
       })
 

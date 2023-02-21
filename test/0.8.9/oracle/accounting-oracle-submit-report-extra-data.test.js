@@ -13,19 +13,19 @@ const {
   ZERO_HASH,
   EXTRA_DATA_FORMAT_EMPTY,
   EXTRA_DATA_FORMAT_LIST,
-  EXTRA_DATA_TYPE_STUCK_VALIDATORS
+  EXTRA_DATA_TYPE_STUCK_VALIDATORS,
 } = require('./accounting-oracle-deploy.test')
 
 const getDefaultExtraData = () => ({
   stuckKeys: [
     { moduleId: 1, nodeOpIds: [0], keysCounts: [1] },
     { moduleId: 2, nodeOpIds: [0], keysCounts: [2] },
-    { moduleId: 3, nodeOpIds: [2], keysCounts: [3] }
+    { moduleId: 3, nodeOpIds: [2], keysCounts: [3] },
   ],
   exitedKeys: [
     { moduleId: 2, nodeOpIds: [1, 2], keysCounts: [1, 3] },
-    { moduleId: 3, nodeOpIds: [1], keysCounts: [2] }
-  ]
+    { moduleId: 3, nodeOpIds: [1], keysCounts: [2] },
+  ],
 })
 
 const getDefaultReportFields = (overrides) => ({
@@ -43,7 +43,7 @@ const getDefaultReportFields = (overrides) => ({
   // required override: refSlot,
   // required override: extraDataHash,
   // required override: extraDataItemsCount
-  ...overrides
+  ...overrides,
 })
 
 contract('AccountingOracle', ([admin, account1, account2, member1, member2, stranger]) => {
@@ -67,7 +67,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
   function getReportData({
     extraData: extraDataArg,
     extraDataItems: extraDataItemsArgs,
-    reportFields: reportFieldsArg
+    reportFields: reportFieldsArg,
   } = {}) {
     const extraData = extraDataArg || getDefaultExtraData()
     const extraDataItems = extraDataItemsArgs || encodeExtraDataItems(extraData)
@@ -77,7 +77,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     const reportFields = getDefaultReportFields({
       extraDataHash,
       extraDataItemsCount: extraDataItems.length,
-      ...reportFieldsArg
+      ...reportFieldsArg,
     })
 
     const reportItems = getReportDataItems(reportFields)
@@ -90,7 +90,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       extraDataHash,
       reportFields,
       reportItems,
-      reportHash
+      reportHash,
     }
   }
 
@@ -104,7 +104,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
     return {
       ...data,
-      deadline
+      deadline,
     }
   }
 
@@ -115,8 +115,8 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       ...prepareArgs,
       reportFields: {
         ...reportFields,
-        refSlot
-      }
+        refSlot,
+      },
     })
     return next
   }
@@ -200,7 +200,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       it('reverts with UnexpectedExtraDataItemsCount if there was wrong amount of items', async () => {
         const wrongItemsCount = 1
         const reportFields = {
-          extraDataItemsCount: wrongItemsCount
+          extraDataItemsCount: wrongItemsCount,
         }
         const { extraDataList, extraDataItems } = await prepareNextReportInNextFrame({ reportFields })
         await assert.reverts(
@@ -215,7 +215,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const reportFields = {
           extraDataHash: ZERO_HASH,
           extraDataFormat: EXTRA_DATA_FORMAT_EMPTY,
-          extraDataItemsCount: 0
+          extraDataItemsCount: 0,
         }
         const { extraDataList } = await prepareNextReportInNextFrame({ reportFields })
         await assert.reverts(
@@ -235,15 +235,15 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           stuckKeys: [
             ...extraDataDefault.stuckKeys,
             { moduleId: 4, nodeOpIds: [1], keysCounts: [2] },
-            { moduleId: 4, nodeOpIds: [1], keysCounts: [2] }
-          ]
+            { moduleId: 4, nodeOpIds: [1], keysCounts: [2] },
+          ],
         }
 
         const { extraDataList } = await prepareNextReportInNextFrame({ extraData: invalidExtraData })
 
         await assert.reverts(
           oracle.submitReportExtraDataList(extraDataList, {
-            from: member1
+            from: member1,
           }),
           'InvalidExtraDataSortOrder(4)'
         )
@@ -256,15 +256,15 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           exitedKeys: [
             ...extraDataDefault.exitedKeys,
             { moduleId: 4, nodeOpIds: [1], keysCounts: [2] },
-            { moduleId: 4, nodeOpIds: [1], keysCounts: [2] }
-          ]
+            { moduleId: 4, nodeOpIds: [1], keysCounts: [2] },
+          ],
         }
 
         const { extraDataList } = await prepareNextReportInNextFrame({ extraData: invalidExtraData })
 
         await assert.reverts(
           oracle.submitReportExtraDataList(extraDataList, {
-            from: member1
+            from: member1,
           }),
           'InvalidExtraDataSortOrder(6)'
         )
@@ -276,13 +276,13 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           stuckKeys: [
             ...extraDataDefault.stuckKeys,
             { moduleId: 4, nodeOpIds: [1], keysCounts: [2] },
-            { moduleId: 5, nodeOpIds: [1], keysCounts: [2] }
+            { moduleId: 5, nodeOpIds: [1], keysCounts: [2] },
           ],
           exitedKeys: [
             ...extraDataDefault.exitedKeys,
             { moduleId: 4, nodeOpIds: [1], keysCounts: [2] },
-            { moduleId: 5, nodeOpIds: [1], keysCounts: [2] }
-          ]
+            { moduleId: 5, nodeOpIds: [1], keysCounts: [2] },
+          ],
         }
 
         const { extraDataList, reportFields } = await prepareNextReportInNextFrame({ extraData: invalidExtraData })
@@ -310,7 +310,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
             extraData,
             extraDataItems,
             lastIndexDefault: itemsCount - 1,
-            lastIndexCustom
+            lastIndexCustom,
           }
         }
 
@@ -363,7 +363,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const getExtraWithCustomType = (typeCustom) => {
           const extraData = {
             stuckKeys: [{ moduleId: 1, nodeOpIds: [1], keysCounts: [2] }],
-            exitedKeys: []
+            exitedKeys: [],
           }
           const item = extraData.stuckKeys[0]
           const extraDataItems = []
@@ -372,7 +372,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
             extraData,
             extraDataItems,
             wrongTypedIndex: 0,
-            typeCustom
+            typeCustom,
           }
         }
 
@@ -414,7 +414,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           const problematicItemIdx = 0
           const extraData = {
             stuckKeys: [{ moduleId: 1, nodeOpIds: [1, 2], keysCounts: [2, 3] }],
-            exitedKeys: []
+            exitedKeys: [],
           }
           const problematicItemsCount = extraData.stuckKeys[problematicItemIdx].nodeOpIds.length
           const { extraDataList } = await prepareNextReportInNextFrame({ extraData })
@@ -429,7 +429,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           const problematicItemIdx = 0
           const extraData = {
             stuckKeys: [{ moduleId: 1, nodeOpIds: [1, 2], keysCounts: [2, 3] }],
-            exitedKeys: []
+            exitedKeys: [],
           }
           const problematicItemsCount = extraData.stuckKeys[problematicItemIdx].nodeOpIds.length
           const { extraDataList, reportFields } = await prepareNextReportInNextFrame({ extraData })
@@ -445,9 +445,9 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           const extraData = {
             stuckKeys: [
               { moduleId: 1, nodeOpIds: [1], keysCounts: [2] },
-              { moduleId: 2, nodeOpIds: [1], keysCounts: [2] }
+              { moduleId: 2, nodeOpIds: [1], keysCounts: [2] },
             ],
-            exitedKeys: []
+            exitedKeys: [],
           }
           const extraDataItems = encodeExtraDataItems(extraData)
           // Cutting item to provoke error on early stage
@@ -466,9 +466,9 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           const extraData = {
             stuckKeys: [
               { moduleId: 1, nodeOpIds: [1], keysCounts: [2] },
-              { moduleId: 2, nodeOpIds: [1, 2, 3, 4], keysCounts: [2] }
+              { moduleId: 2, nodeOpIds: [1, 2, 3, 4], keysCounts: [2] },
             ],
-            exitedKeys: []
+            exitedKeys: [],
           }
           const extraDataItems = encodeExtraDataItems(extraData)
           // Providing long items and cutting them from end to provoke error on late stage
@@ -487,9 +487,9 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           const extraData = {
             stuckKeys: [
               { moduleId: 1, nodeOpIds: [1], keysCounts: [2] },
-              { moduleId: 0, nodeOpIds: [1], keysCounts: [2] }
+              { moduleId: 0, nodeOpIds: [1], keysCounts: [2] },
             ],
-            exitedKeys: []
+            exitedKeys: [],
           }
           const { extraDataList } = await prepareNextReportInNextFrame({ extraData })
           await assert.reverts(
@@ -505,9 +505,9 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           const extraData = {
             stuckKeys: [
               { moduleId: 1, nodeOpIds: [], keysCounts: [2] },
-              { moduleId: 2, nodeOpIds: [1], keysCounts: [2] }
+              { moduleId: 2, nodeOpIds: [1], keysCounts: [2] },
             ],
-            exitedKeys: []
+            exitedKeys: [],
           }
           const extraDataItems = encodeExtraDataItems(extraData)
           const { extraDataList } = await prepareNextReportInNextFrame({ extraData, extraDataItems })
@@ -529,14 +529,14 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         const reportFields = getDefaultReportFields({
           extraDataHash,
           extraDataItemsCount: extraDataItems.length,
-          refSlot
+          refSlot,
         })
 
         const reportItems = getReportDataItems(reportFields)
         const reportHash = calcReportDataHash(reportItems)
 
         await consensus.submitReport(reportFields.refSlot, reportHash, CONSENSUS_VERSION, {
-          from: member1
+          from: member1,
         })
         await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
 

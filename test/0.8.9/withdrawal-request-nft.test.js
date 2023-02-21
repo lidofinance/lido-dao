@@ -21,7 +21,7 @@ hre.contract(
 
       wstETH = await WstETH.new(stETH.address, { from: deployer })
       erc721ReceiverMock = await ERC721ReceiverMock.new({ from: deployer })
-      withdrawalQueueERC721 = (await withdrawals.deploy(deployer, wstETH.address, "Lido TEST Request", "unstEsT")).queue
+      withdrawalQueueERC721 = (await withdrawals.deploy(deployer, wstETH.address, 'Lido TEST Request', 'unstEsT')).queue
       await withdrawalQueueERC721.initialize(
         deployer, // owner
         deployer, // pauser
@@ -52,8 +52,8 @@ hre.contract(
 
     describe('ERC721Metadata', () => {
       it('Initial properties', async () => {
-        assert.equals(await withdrawalQueueERC721.symbol(), "unstEsT")
-        assert.equals(await withdrawalQueueERC721.name(), "Lido TEST Request")
+        assert.equals(await withdrawalQueueERC721.symbol(), 'unstEsT')
+        assert.equals(await withdrawalQueueERC721.name(), 'Lido TEST Request')
       })
     })
 
@@ -145,7 +145,7 @@ hre.contract(
       it('reverts with message "NotOwnerOrApproved()" when approvalNotSet and not owner', async () => {
         await assert.reverts(
           withdrawalQueueERC721.safeTransferFrom(nftHolderStETH, recipient, nftHolderStETHTokenIds[0], {
-            from: stranger
+            from: stranger,
           }),
           `NotOwnerOrApproved("${stranger}")`
         )
@@ -154,7 +154,7 @@ hre.contract(
       it('transfers if called by owner', async () => {
         assert.notEqual(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), recipient)
         await withdrawalQueueERC721.safeTransferFrom(nftHolderStETH, recipient, nftHolderStETHTokenIds[0], {
-          from: nftHolderStETH
+          from: nftHolderStETH,
         })
         assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), recipient)
       })
@@ -163,7 +163,7 @@ hre.contract(
         await withdrawalQueueERC721.approve(recipient, nftHolderStETHTokenIds[0], { from: nftHolderStETH })
         assert.notEqual(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), recipient)
         await withdrawalQueueERC721.safeTransferFrom(nftHolderStETH, recipient, nftHolderStETHTokenIds[0], {
-          from: recipient
+          from: recipient,
         })
         assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), recipient)
       })
@@ -173,10 +173,10 @@ hre.contract(
         assert.notEqual(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), recipient)
         assert.notEqual(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[1]), recipient)
         await withdrawalQueueERC721.safeTransferFrom(nftHolderStETH, recipient, nftHolderStETHTokenIds[0], {
-          from: recipient
+          from: recipient,
         })
         await withdrawalQueueERC721.safeTransferFrom(nftHolderStETH, recipient, nftHolderStETHTokenIds[1], {
-          from: recipient
+          from: recipient,
         })
         assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), recipient)
         assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[1]), recipient)
@@ -185,7 +185,7 @@ hre.contract(
       it('reverts with message "TransferToNonIERC721Receiver()" when transfer to contract that not implements IERC721Receiver interface', async () => {
         await assert.reverts(
           withdrawalQueueERC721.safeTransferFrom(nftHolderWstETH, stETH.address, nftHolderWstETHTokenIds[0], {
-            from: nftHolderWstETH
+            from: nftHolderWstETH,
           }),
           `TransferToNonIERC721Receiver("${stETH.address}")`
         )
@@ -194,9 +194,14 @@ hre.contract(
       it('reverts with propagated error message when recipient contract implements ERC721Receiver and reverts on onERC721Received call', async () => {
         await erc721ReceiverMock.setDoesAcceptTokens(false, { from: deployer })
         await assert.reverts(
-          withdrawalQueueERC721.safeTransferFrom(nftHolderStETH, erc721ReceiverMock.address, nftHolderStETHTokenIds[0], {
-            from: nftHolderStETH
-          }),
+          withdrawalQueueERC721.safeTransferFrom(
+            nftHolderStETH,
+            erc721ReceiverMock.address,
+            nftHolderStETHTokenIds[0],
+            {
+              from: nftHolderStETH,
+            }
+          ),
           'ERC721_NOT_ACCEPT_TOKENS'
         )
       })
@@ -209,7 +214,7 @@ hre.contract(
           erc721ReceiverMock.address,
           nftHolderStETHTokenIds[0],
           {
-            from: nftHolderStETH
+            from: nftHolderStETH,
           }
         )
         assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), erc721ReceiverMock.address)
@@ -226,10 +231,9 @@ hre.contract(
 
       it('reverts when transfer to the same address', async () => {
         await assert.reverts(
-          withdrawalQueueERC721.transferFrom(
-            nftHolderWstETH, nftHolderWstETH, nftHolderWstETHTokenIds[0],
-            {from: nftHolderWstETH }
-          ),
+          withdrawalQueueERC721.transferFrom(nftHolderWstETH, nftHolderWstETH, nftHolderWstETHTokenIds[0], {
+            from: nftHolderWstETH,
+          }),
           'TransferToThemselves()'
         )
       })
@@ -239,7 +243,7 @@ hre.contract(
         await withdrawalQueueERC721.finalize(3, { from: deployer, value: batch.ethToLock })
         const ownerETHBefore = await hre.ethers.provider.getBalance(nftHolderStETH)
         const tx = await withdrawalQueueERC721.methods['claimWithdrawal(uint256)'](nftHolderStETHTokenIds[0], {
-          from: nftHolderStETH
+          from: nftHolderStETH,
         })
         const ownerETHAfter = await hre.ethers.provider.getBalance(nftHolderStETH)
         // adhoc fix for solidity-coverage that ignores gasPrice = 0
@@ -247,7 +251,7 @@ hre.contract(
 
         await assert.reverts(
           withdrawalQueueERC721.transferFrom(nftHolderStETH, recipient, nftHolderStETHTokenIds[0], {
-            from: nftHolderStETH
+            from: nftHolderStETH,
           }),
           `RequestAlreadyClaimed(${nftHolderStETHTokenIds[0]})`
         )
@@ -256,7 +260,7 @@ hre.contract(
       it('transfers if called by owner', async () => {
         assert.notEqual(await withdrawalQueueERC721.ownerOf(nftHolderWstETHTokenIds[0]), recipient)
         await withdrawalQueueERC721.transferFrom(nftHolderWstETH, recipient, nftHolderWstETHTokenIds[0], {
-          from: nftHolderWstETH
+          from: nftHolderWstETH,
         })
         assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderWstETHTokenIds[0]), recipient)
       })
@@ -265,7 +269,7 @@ hre.contract(
         await withdrawalQueueERC721.approve(recipient, nftHolderStETHTokenIds[0], { from: nftHolderStETH })
         assert.notEqual(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), recipient)
         await withdrawalQueueERC721.transferFrom(nftHolderStETH, recipient, nftHolderStETHTokenIds[0], {
-          from: recipient
+          from: recipient,
         })
         assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), recipient)
       })
@@ -275,10 +279,10 @@ hre.contract(
         assert.notEqual(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), recipient)
         assert.notEqual(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[1]), recipient)
         await withdrawalQueueERC721.transferFrom(nftHolderStETH, recipient, nftHolderStETHTokenIds[0], {
-          from: recipient
+          from: recipient,
         })
         await withdrawalQueueERC721.transferFrom(nftHolderStETH, recipient, nftHolderStETHTokenIds[1], {
-          from: recipient
+          from: recipient,
         })
         assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), recipient)
         assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[1]), recipient)
@@ -286,7 +290,7 @@ hre.contract(
 
       it('can claim request after transfer', async () => {
         await withdrawalQueueERC721.transferFrom(nftHolderStETH, recipient, nftHolderStETHTokenIds[0], {
-          from: nftHolderStETH
+          from: nftHolderStETH,
         })
         assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), recipient)
 
@@ -295,7 +299,7 @@ hre.contract(
 
         const recipientETHBefore = await hre.ethers.provider.getBalance(recipient)
         const tx = await withdrawalQueueERC721.methods['claimWithdrawal(uint256)'](nftHolderStETHTokenIds[0], {
-          from: recipient
+          from: recipient,
         })
         const recipientETHAfter = await hre.ethers.provider.getBalance(recipient)
         // adhoc fix for solidity-coverage that ignores gasPrice = 0
@@ -305,7 +309,7 @@ hre.contract(
       it("doesn't reverts when transfer to contract that not implements IERC721Receiver interface", async () => {
         assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderWstETHTokenIds[0]), nftHolderWstETH)
         await withdrawalQueueERC721.transferFrom(nftHolderWstETH, stETH.address, nftHolderWstETHTokenIds[0], {
-          from: nftHolderWstETH
+          from: nftHolderWstETH,
         })
         assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderWstETHTokenIds[0]), stETH.address)
       })
@@ -313,16 +317,16 @@ hre.contract(
 
     describe('Burn', () => {
       it('balanceOf decreases after claim', async () => {
-        const balanceBefore = await withdrawalQueueERC721.balanceOf(nftHolderStETH);
+        const balanceBefore = await withdrawalQueueERC721.balanceOf(nftHolderStETH)
 
         const batch = await withdrawalQueueERC721.finalizationBatch(3, shareRate(1))
         await withdrawalQueueERC721.finalize(3, { from: deployer, value: batch.ethToLock })
 
         await withdrawalQueueERC721.methods['claimWithdrawal(uint256)'](nftHolderStETHTokenIds[0], {
-          from: nftHolderStETH
+          from: nftHolderStETH,
         })
 
-        assert.equals(balanceBefore - await withdrawalQueueERC721.balanceOf(nftHolderStETH), 1)
+        assert.equals(balanceBefore - (await withdrawalQueueERC721.balanceOf(nftHolderStETH)), 1)
       })
     })
   }

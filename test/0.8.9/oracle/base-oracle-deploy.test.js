@@ -43,7 +43,7 @@ async function deployBaseOracle(
     epochsPerFrame = EPOCHS_PER_FRAME,
     fastLaneLengthSlots = INITIAL_FAST_LANE_LENGTH_SLOTS,
     initialEpoch = INITIAL_EPOCH,
-    mockMember = admin
+    mockMember = admin,
   } = {}
 ) {
   if (!consensusContract) {
@@ -92,7 +92,7 @@ module.exports = {
   HASH_5,
   CONSENSUS_VERSION,
   UNREACHABLE_QUORUM,
-  deployBaseOracle
+  deployBaseOracle,
 }
 
 contract('BaseOracle', ([admin, member1]) => {

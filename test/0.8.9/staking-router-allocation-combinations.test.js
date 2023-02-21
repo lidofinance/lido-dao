@@ -19,7 +19,7 @@ contract('StakingRouter', (accounts) => {
     stakingRouter = await StakingRouter.new(depositContract.address, { from: deployer })
     const mocks = await Promise.all([
       StakingModuleMock.new({ from: deployer }),
-      StakingModuleMock.new({ from: deployer })
+      StakingModuleMock.new({ from: deployer }),
     ])
 
     StakingModule1 = mocks[0]
@@ -33,7 +33,7 @@ contract('StakingRouter', (accounts) => {
       await Promise.all([
         stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(),
         stakingRouter.STAKING_MODULE_PAUSE_ROLE(),
-        stakingRouter.STAKING_MODULE_MANAGE_ROLE()
+        stakingRouter.STAKING_MODULE_MANAGE_ROLE(),
       ])
 
     await stakingRouter.grantRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, admin, { from: admin })
@@ -51,7 +51,7 @@ contract('StakingRouter', (accounts) => {
   const TWO_MODULES_TARGET_SHARES_CASES = [
     [100_00, 0],
     [50_00, 50_00],
-    [99_99, 1]
+    [99_99, 1],
   ]
   const MAX_DEPOSITABLE_KEYS_CASES = [0, 1, 10_000]
   const MODULE_AVAILABLE_KEYS_CASES = [0, 1, 10_000]
@@ -99,8 +99,12 @@ contract('StakingRouter', (accounts) => {
       describe(`Target shares: ${module1TargetShare} and ${module2TargetShare}`, async () => {
         beforeEach(async () => {
           await Promise.all([
-            await stakingRouter.addStakingModule('Module1', StakingModule1.address, module1TargetShare, 5_000, 5_000, { from: admin }),
-            await stakingRouter.addStakingModule('Module2', StakingModule2.address, module2TargetShare, 5_000, 5_000, { from: admin })
+            await stakingRouter.addStakingModule('Module1', StakingModule1.address, module1TargetShare, 5_000, 5_000, {
+              from: admin,
+            }),
+            await stakingRouter.addStakingModule('Module2', StakingModule2.address, module2TargetShare, 5_000, 5_000, {
+              from: admin,
+            }),
           ])
         })
 

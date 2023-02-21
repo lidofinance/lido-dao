@@ -188,6 +188,6 @@ contract('PositiveTokenRebaseLimiter', ([account1]) => {
     assert.emits(ethTx, 'ReturnValue', { retValue: ETH(2) })
 
     const maxSharesToBurn = await limiter.getSharesToBurnLimit()
-    assert.equals(maxSharesToBurn, 0);
+    assert.equals(maxSharesToBurn, 0)
   })
 })

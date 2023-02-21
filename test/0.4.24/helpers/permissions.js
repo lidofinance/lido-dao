@@ -13,5 +13,5 @@ const setOpenPermission = async (acl, appAddress, role, rootAddress) => {
 }
 
 module.exports = {
-  setOpenPermission
+  setOpenPermission,
 }

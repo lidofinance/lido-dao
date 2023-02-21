@@ -22,7 +22,7 @@ const GUARDIAN3 = '0xdaEAd0E0194abd565d28c1013399801d79627c14'
 const GUARDIAN_PRIVATE_KEYS = {
   [GUARDIAN1]: '0x3578665169e03e05a26bd5c565ffd12c81a1e0df7d0679f8aee4153110a83c8c',
   [GUARDIAN2]: '0x88868f0fb667cfe50261bb385be8987e0ce62faee934af33c3026cf65f25f09e',
-  [GUARDIAN3]: '0x75e6f508b637327debc90962cd38943ddb9cfc1fc4a8572fc5e3d0984e1261de'
+  [GUARDIAN3]: '0x75e6f508b637327debc90962cd38943ddb9cfc1fc4a8572fc5e3d0984e1261de',
 }
 const DEPOSIT_ROOT = '0xd151867719c94ad8458feaf491809f9bc8096c702a72747403ecaac30c179137'
 
@@ -43,7 +43,7 @@ async function deployDaoAndPool(appManager, voting) {
   const [{ dao, acl }, depositContractMock, poolBase] = await Promise.all([
     newDao(appManager),
     DepositContractMock.new(),
-    Lido.new()
+    Lido.new(),
   ])
 
   const stakingRouter = await StakingRouter.new(depositContractMock.address)
@@ -74,7 +74,7 @@ async function deployDaoAndPool(appManager, voting) {
       pool.RESUME_ROLE(),
       pool.STAKING_PAUSE_ROLE(),
       pool.STAKING_CONTROL_ROLE(),
-      pool.MANAGE_PROTOCOL_CONTRACTS_ROLE()
+      pool.MANAGE_PROTOCOL_CONTRACTS_ROLE(),
     ])
 
   await Promise.all([
@@ -83,7 +83,7 @@ async function deployDaoAndPool(appManager, voting) {
     acl.createPermission(voting, pool.address, POOL_RESUME_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, STAKING_PAUSE_ROLE, appManager, { from: appManager }),
     acl.createPermission(voting, pool.address, STAKING_CONTROL_ROLE, appManager, { from: appManager }),
-    acl.createPermission(voting, pool.address, MANAGE_PROTOCOL_CONTRACTS_ROLE, appManager, { from: appManager })
+    acl.createPermission(voting, pool.address, MANAGE_PROTOCOL_CONTRACTS_ROLE, appManager, { from: appManager }),
   ])
 
   const elRewardsVault = await LidoELRewardsVault.new(pool.address, treasury.address)
@@ -104,12 +104,12 @@ async function deployDaoAndPool(appManager, voting) {
     MANAGE_WITHDRAWAL_CREDENTIALS_ROLE,
     STAKING_MODULE_PAUSE_ROLE,
     STAKING_MODULE_MANAGE_ROLE,
-    REPORT_REWARDS_MINTED_ROLE
+    REPORT_REWARDS_MINTED_ROLE,
   ] = await Promise.all([
     stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(),
     stakingRouter.STAKING_MODULE_PAUSE_ROLE(),
     stakingRouter.STAKING_MODULE_MANAGE_ROLE(),
-    stakingRouter.REPORT_REWARDS_MINTED_ROLE()
+    stakingRouter.REPORT_REWARDS_MINTED_ROLE(),
   ])
   await stakingRouter.grantRole(REPORT_REWARDS_MINTED_ROLE, pool.address, { from: appManager })
 
@@ -162,9 +162,9 @@ async function deployDaoAndPool(appManager, voting) {
     depositSecurityModule,
     guardians: {
       privateKeys: GUARDIAN_PRIVATE_KEYS,
-      addresses: [GUARDIAN1, GUARDIAN2, GUARDIAN3]
+      addresses: [GUARDIAN1, GUARDIAN2, GUARDIAN3],
     },
-    stakingRouter
+    stakingRouter,
   }
 }
 
@@ -181,12 +181,12 @@ async function setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, s
     NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS,
     NODE_OPERATOR_REGISTRY_MANAGE_NODE_OPERATOR_ROLE,
     NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE,
-    NODE_OPERATOR_REGISTRY_STAKING_ROUTER_ROLE
+    NODE_OPERATOR_REGISTRY_STAKING_ROUTER_ROLE,
   ] = await Promise.all([
     nodeOperatorsRegistry.MANAGE_SIGNING_KEYS(),
     nodeOperatorsRegistry.MANAGE_NODE_OPERATOR_ROLE(),
     nodeOperatorsRegistry.SET_NODE_OPERATOR_LIMIT_ROLE(),
-    nodeOperatorsRegistry.STAKING_ROUTER_ROLE()
+    nodeOperatorsRegistry.STAKING_ROUTER_ROLE(),
   ])
   await Promise.all([
     // Allow voting to manage node operators registry
@@ -196,7 +196,7 @@ async function setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, s
       NODE_OPERATOR_REGISTRY_MANAGE_SIGNING_KEYS,
       appManager,
       {
-        from: appManager
+        from: appManager,
       }
     ),
     acl.createPermission(
@@ -205,7 +205,7 @@ async function setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, s
       NODE_OPERATOR_REGISTRY_MANAGE_NODE_OPERATOR_ROLE,
       appManager,
       {
-        from: appManager
+        from: appManager,
       }
     ),
     acl.createPermission(
@@ -214,7 +214,7 @@ async function setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, s
       NODE_OPERATOR_REGISTRY_SET_NODE_OPERATOR_LIMIT_ROLE,
       appManager,
       {
-        from: appManager
+        from: appManager,
       }
     ),
     acl.createPermission(
@@ -223,7 +223,7 @@ async function setupNodeOperatorsRegistry(dao, acl, voting, token, appManager, s
       NODE_OPERATOR_REGISTRY_STAKING_ROUTER_ROLE,
       appManager,
       { from: appManager }
-    )
+    ),
   ])
 
   await acl.grantPermission(
@@ -244,5 +244,5 @@ module.exports = {
   GENESIS_TIME,
   EPOCHS_PER_FRAME,
   SLOTS_PER_FRAME,
-  SECONDS_PER_FRAME
+  SECONDS_PER_FRAME,
 }

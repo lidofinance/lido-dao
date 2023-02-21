@@ -14,7 +14,7 @@ const {
   HASH_1,
   HASH_3,
   CONSENSUS_VERSION,
-  deployHashConsensus
+  deployHashConsensus,
 } = require('./hash-consensus-deploy.test')
 
 contract('HashConsensus', ([admin, member1, member2, member3]) => {
@@ -96,7 +96,7 @@ contract('HashConsensus', ([admin, member1, member2, member3]) => {
       it('disableConsensus updated quorum value and emits events', async () => {
         const tx = await consensus.disableConsensus()
         assertEvent(tx, 'QuorumSet', {
-          expectedArgs: { newQuorum: UNREACHABLE_QUORUM.toString(10), totalMembers: 0, prevQuorum: 0 }
+          expectedArgs: { newQuorum: UNREACHABLE_QUORUM.toString(10), totalMembers: 0, prevQuorum: 0 },
         })
         assertBn(await consensus.getQuorum(), UNREACHABLE_QUORUM)
       })
@@ -126,12 +126,12 @@ contract('HashConsensus', ([admin, member1, member2, member3]) => {
         await consensus.setQuorum(2)
         const tx1 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
         assertEvent(tx1, 'ReportReceived', {
-          expectedArgs: { refSlot: frame.refSlot, member: member1, report: HASH_1 }
+          expectedArgs: { refSlot: frame.refSlot, member: member1, report: HASH_1 },
         })
         assertAmountOfEvents(tx1, 'ConsensusReached', { expectedAmount: 0 })
         const tx2 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
         assertEvent(tx2, 'ReportReceived', {
-          expectedArgs: { refSlot: frame.refSlot, member: member2, report: HASH_1 }
+          expectedArgs: { refSlot: frame.refSlot, member: member2, report: HASH_1 },
         })
         assertAmountOfEvents(tx2, 'ConsensusReached', { expectedAmount: 1 })
         assert.equal(+(await reportProcessor.getLastCall_submitReport()).callCount, 1)
@@ -159,13 +159,13 @@ contract('HashConsensus', ([admin, member1, member2, member3]) => {
       it('2/3 reports come in', async () => {
         const tx1 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
         assertEvent(tx1, 'ReportReceived', {
-          expectedArgs: { refSlot: frame.refSlot, member: member1, report: HASH_1 }
+          expectedArgs: { refSlot: frame.refSlot, member: member1, report: HASH_1 },
         })
         assertAmountOfEvents(tx1, 'ConsensusReached', { expectedAmount: 0 })
 
         const tx2 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
         assertEvent(tx2, 'ReportReceived', {
-          expectedArgs: { refSlot: frame.refSlot, member: member2, report: HASH_1 }
+          expectedArgs: { refSlot: frame.refSlot, member: member2, report: HASH_1 },
         })
         assertAmountOfEvents(tx2, 'ConsensusReached', { expectedAmount: 0 })
       })
@@ -185,13 +185,13 @@ contract('HashConsensus', ([admin, member1, member2, member3]) => {
         await consensus.setQuorum(2)
         const tx1 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
         assertEvent(tx1, 'ReportReceived', {
-          expectedArgs: { refSlot: frame.refSlot, member: member1, report: HASH_1 }
+          expectedArgs: { refSlot: frame.refSlot, member: member1, report: HASH_1 },
         })
         assertAmountOfEvents(tx1, 'ConsensusReached', { expectedAmount: 0 })
 
         const tx2 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
         assertEvent(tx2, 'ReportReceived', {
-          expectedArgs: { refSlot: frame.refSlot, member: member2, report: HASH_1 }
+          expectedArgs: { refSlot: frame.refSlot, member: member2, report: HASH_1 },
         })
         assertAmountOfEvents(tx2, 'ConsensusReached', { expectedAmount: 1 })
         assert.equal(+(await reportProcessor.getLastCall_submitReport()).callCount, 1)
@@ -223,13 +223,13 @@ contract('HashConsensus', ([admin, member1, member2, member3]) => {
         await consensus.setQuorum(2)
         const tx1 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
         assertEvent(tx1, 'ReportReceived', {
-          expectedArgs: { refSlot: frame.refSlot, member: member1, report: HASH_1 }
+          expectedArgs: { refSlot: frame.refSlot, member: member1, report: HASH_1 },
         })
         assertAmountOfEvents(tx1, 'ConsensusReached', { expectedAmount: 0 })
 
         const tx2 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
         assertEvent(tx2, 'ReportReceived', {
-          expectedArgs: { refSlot: frame.refSlot, member: member2, report: HASH_1 }
+          expectedArgs: { refSlot: frame.refSlot, member: member2, report: HASH_1 },
         })
         assertAmountOfEvents(tx2, 'ConsensusReached', { expectedAmount: 1 })
       })

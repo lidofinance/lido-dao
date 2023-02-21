@@ -20,7 +20,7 @@ contract('StakingRouter', ([depositor, stranger]) => {
     const deployed = await deployProtocol({
       depositSecurityModuleFactory: async () => {
         return { address: depositor }
-      }
+      },
     })
 
     lido = deployed.pool
@@ -98,7 +98,7 @@ contract('StakingRouter', ([depositor, stranger]) => {
       await operators.setNodeOperatorStakingLimit(1, 100000, { from: voting })
 
       const receipt = await lido.methods[`deposit(uint256,uint256,bytes)`](maxDepositsCount, curated.id, '0x', {
-        from: depositor
+        from: depositor,
       })
 
       assert.equals(await depositContract.totalCalls(), 100, 'invalid deposits count')

@@ -8,7 +8,7 @@ const {
   encodeExitRequestsDataList,
   deployExitBusOracle,
   computeTimestampAtSlot,
-  ZERO_HASH
+  ZERO_HASH,
 } = require('./validators-exit-bus-oracle-deploy.test')
 
 const PUBKEYS = [
@@ -16,7 +16,7 @@ const PUBKEYS = [
   '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
   '0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
   '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
-  '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+  '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
 ]
 
 function assertEqualsObject(state, desired) {
@@ -39,7 +39,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     async function setup() {
       const deployed = await deployExitBusOracle(admin, {
         lastProcessingRefSlot: LAST_PROCESSING_REF_SLOT,
-        resumeAfterDeploy: true
+        resumeAfterDeploy: true,
       })
 
       consensus = deployed.consensus
@@ -66,7 +66,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       // required override: refSlot
       // required override: requestsCount
       // required override: data
-      ...overrides
+      ...overrides,
     })
 
     async function prepareReportAndSubmitHash(
@@ -80,7 +80,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         refSlot: +refSlot,
         requestsCount: exitRequests.length,
         data: encodeExitRequestsDataList(exitRequests),
-        ...reportFieldsArg
+        ...reportFieldsArg,
       })
 
       const reportItems = getReportDataItems(reportFields)
@@ -128,7 +128,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
 
         it('dataFormat = 1 pass', async () => {
           const report = await prepareReportAndSubmitHash([
-            { moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }
+            { moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] },
           ])
           await oracle.submitReportData(report, oracleVersion, { from: member1 })
         })
@@ -141,7 +141,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           const reportFields = getDefaultReportFields({
             refSlot: +refSlot,
             requestsCount: exitRequests.length,
-            data: encodeExitRequestsDataList(exitRequests)
+            data: encodeExitRequestsDataList(exitRequests),
           })
 
           reportFields.data += 'aaaaaaaaaaaaaaaaaa'
@@ -161,7 +161,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           const reportFields = getDefaultReportFields({
             refSlot: +refSlot,
             requestsCount: exitRequests.length,
-            data: encodeExitRequestsDataList(exitRequests)
+            data: encodeExitRequestsDataList(exitRequests),
           })
 
           reportFields.data = reportFields.data.slice(0, reportFields.data.length - 18)
@@ -177,7 +177,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
 
         it('pass if there is exact amount of data', async () => {
           const report = await prepareReportAndSubmitHash([
-            { moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }
+            { moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] },
           ])
           await oracle.submitReportData(report, oracleVersion, { from: member1 })
         })
@@ -189,7 +189,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           await oracleReportSanityChecker.setMaxExitRequestsPerOracleReport(exitRequestsLimit)
           const report = await prepareReportAndSubmitHash([
             { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[2] },
-            { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[3] }
+            { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[3] },
           ])
           await assert.reverts(
             oracle.submitReportData(report, oracleVersion, { from: member1 }),
@@ -201,7 +201,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           const exitRequestsLimit = 1
           await oracleReportSanityChecker.setMaxExitRequestsPerOracleReport(exitRequestsLimit)
           const report = await prepareReportAndSubmitHash([
-            { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[2] }
+            { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[2] },
           ])
           await oracle.submitReportData(report, oracleVersion, { from: member1 })
         })
@@ -222,7 +222,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
 
       it('reverts if moduleId equals zero', async () => {
         const report = await prepareReportAndSubmitHash([
-          { moduleId: 0, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }
+          { moduleId: 0, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] },
         ])
         await assert.reverts(oracle.submitReportData(report, oracleVersion, { from: member1 }), 'InvalidRequestsData()')
       })
@@ -230,7 +230,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       it('emits ValidatorExitRequest events', async () => {
         const requests = [
           { moduleId: 4, nodeOpId: 2, valIndex: 2, valPubkey: PUBKEYS[2] },
-          { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[3] }
+          { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[3] },
         ]
         const report = await prepareReportAndSubmitHash(requests)
         const tx = await oracle.submitReportData(report, oracleVersion, { from: member1 })
@@ -241,7 +241,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           nodeOperatorId: requests[0].nodeOpId,
           validatorIndex: requests[0].valIndex,
           validatorPubkey: requests[0].valPubkey,
-          timestamp
+          timestamp,
         })
 
         assert.emits(tx, 'ValidatorExitRequest', {
@@ -249,7 +249,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           nodeOperatorId: requests[1].nodeOpId,
           validatorIndex: requests[1].valIndex,
           validatorPubkey: requests[1].valPubkey,
-          timestamp
+          timestamp,
         })
       })
 
@@ -263,7 +263,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         const { refSlot } = await consensus.getCurrentFrame()
         const requests = [
           { moduleId: 4, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[2] },
-          { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[3] }
+          { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[3] },
         ]
         const report = await prepareReportAndSubmitHash(requests)
         await oracle.submitReportData(report, oracleVersion, { from: member1 })
@@ -292,7 +292,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         await consensus.advanceTimeToNextFrameStart()
         const requestsStep2 = [
           { moduleId: 4, nodeOpId: 2, valIndex: 2, valPubkey: PUBKEYS[2] },
-          { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[3] }
+          { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[3] },
         ]
         const reportStep2 = await prepareReportAndSubmitHash(requestsStep2)
         await oracle.submitReportData(reportStep2, oracleVersion, { from: member1 })
@@ -317,7 +317,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       it(`requesting NO 5-3 to exit validator 0`, async () => {
         await consensus.advanceTimeToNextFrameStart()
         const report = await prepareReportAndSubmitHash([
-          { moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }
+          { moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] },
         ])
         await oracle.submitReportData(report, oracleVersion, { from: member1 })
         assert.equal(await getLastRequestedValidatorIndex(5, 3), 0)
@@ -326,7 +326,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       it(`cannot request NO 5-3 to exit validator 0 again`, async () => {
         await consensus.advanceTimeToNextFrameStart()
         const report = await prepareReportAndSubmitHash([
-          { moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }
+          { moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] },
         ])
         await assert.reverts(
           oracle.submitReportData(report, oracleVersion, { from: member1 }),
@@ -337,7 +337,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       it(`requesting NO 5-3 to exit validator 1`, async () => {
         await consensus.advanceTimeToNextFrameStart()
         const report = await prepareReportAndSubmitHash([
-          { moduleId: 5, nodeOpId: 3, valIndex: 1, valPubkey: PUBKEYS[1] }
+          { moduleId: 5, nodeOpId: 3, valIndex: 1, valPubkey: PUBKEYS[1] },
         ])
         await oracle.submitReportData(report, oracleVersion, { from: member1 })
         assert.equal(await getLastRequestedValidatorIndex(5, 3), 1)
@@ -346,7 +346,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       it(`cannot request NO 5-3 to exit validator 1 again`, async () => {
         await consensus.advanceTimeToNextFrameStart()
         const report = await prepareReportAndSubmitHash([
-          { moduleId: 5, nodeOpId: 3, valIndex: 1, valPubkey: PUBKEYS[1] }
+          { moduleId: 5, nodeOpId: 3, valIndex: 1, valPubkey: PUBKEYS[1] },
         ])
         await assert.reverts(
           oracle.submitReportData(report, oracleVersion, { from: member1 }),
@@ -357,7 +357,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       it(`cannot request NO 5-3 to exit validator 0 again`, async () => {
         await consensus.advanceTimeToNextFrameStart()
         const report = await prepareReportAndSubmitHash([
-          { moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }
+          { moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] },
         ])
         await assert.reverts(
           oracle.submitReportData(report, oracleVersion, { from: member1 }),
@@ -369,7 +369,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         await consensus.advanceTimeToNextFrameStart()
         const report = await prepareReportAndSubmitHash([
           { moduleId: 5, nodeOpId: 1, valIndex: 10, valPubkey: PUBKEYS[0] },
-          { moduleId: 5, nodeOpId: 3, valIndex: 1, valPubkey: PUBKEYS[0] }
+          { moduleId: 5, nodeOpId: 3, valIndex: 1, valPubkey: PUBKEYS[0] },
         ])
         await assert.reverts(
           oracle.submitReportData(report, oracleVersion, { from: member1 }),
@@ -382,7 +382,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         const report = await prepareReportAndSubmitHash([
           { moduleId: 5, nodeOpId: 1, valIndex: 10, valPubkey: PUBKEYS[2] },
           { moduleId: 5, nodeOpId: 3, valIndex: 1, valPubkey: PUBKEYS[3] },
-          { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[4] }
+          { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[4] },
         ])
         await assert.reverts(
           oracle.submitReportData(report, oracleVersion, { from: member1 }),
@@ -394,7 +394,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         await consensus.advanceTimeToNextFrameStart()
         const report = await prepareReportAndSubmitHash([
           { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[2] },
-          { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[3] }
+          { moduleId: 5, nodeOpId: 3, valIndex: 2, valPubkey: PUBKEYS[3] },
         ])
         await assert.reverts(
           oracle.submitReportData(report, oracleVersion, { from: member1 }),
@@ -480,7 +480,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
 
       it('should increase after report', async () => {
         const report = await prepareReportAndSubmitHash([
-          { moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] }
+          { moduleId: 5, nodeOpId: 3, valIndex: 0, valPubkey: PUBKEYS[0] },
         ])
         await oracle.submitReportData(report, oracleVersion, { from: member1 })
         requestCount += 1
@@ -491,7 +491,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         await consensus.advanceTimeToNextFrameStart()
         const report = await prepareReportAndSubmitHash([
           { moduleId: 5, nodeOpId: 1, valIndex: 10, valPubkey: PUBKEYS[0] },
-          { moduleId: 5, nodeOpId: 3, valIndex: 1, valPubkey: PUBKEYS[0] }
+          { moduleId: 5, nodeOpId: 3, valIndex: 1, valPubkey: PUBKEYS[0] },
         ])
         await oracle.submitReportData(report, oracleVersion, { from: member1 })
         requestCount += 2
@@ -521,14 +521,14 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           dataSubmitted: false,
           dataFormat: 0,
           requestsCount: 0,
-          requestsSubmitted: 0
+          requestsSubmitted: 0,
         })
       })
 
       it('consensus report submitted', async () => {
         report = await prepareReportAndSubmitHash([
           { moduleId: 5, nodeOpId: 1, valIndex: 10, valPubkey: PUBKEYS[2] },
-          { moduleId: 5, nodeOpId: 3, valIndex: 1, valPubkey: PUBKEYS[3] }
+          { moduleId: 5, nodeOpId: 3, valIndex: 1, valPubkey: PUBKEYS[3] },
         ])
         hash = calcReportDataHash(report)
         const state = await oracle.getProcessingState()
@@ -541,7 +541,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           dataSubmitted: false,
           dataFormat: 0,
           requestsCount: 0,
-          requestsSubmitted: 0
+          requestsSubmitted: 0,
         })
       })
 
@@ -557,7 +557,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           dataSubmitted: true,
           dataFormat: DATA_FORMAT_LIST,
           requestsCount: 2,
-          requestsSubmitted: 2
+          requestsSubmitted: 2,
         })
       })
 
@@ -571,7 +571,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           dataSubmitted: false,
           dataFormat: 0,
           requestsCount: 0,
-          requestsSubmitted: 0
+          requestsSubmitted: 0,
         })
       })
     })

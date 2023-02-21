@@ -17,18 +17,19 @@ contract('StakingRouter', (accounts) => {
     ;[curatedStakingModuleMock, soloStakingModuleMock] = await Promise.all([
       StakingModuleMock.new({ from: deployer }),
       StakingModuleMock.new({ from: deployer }),
-      StakingModuleMock.new({ from: deployer })
+      StakingModuleMock.new({ from: deployer }),
     ])
 
     const wc = '0x'.padEnd(66, '1234')
     await stakingRouter.initialize(admin, lido, wc, { from: deployer })
 
     // Set up the staking router permissions.
-    const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, STAKING_MODULE_PAUSE_ROLE, STAKING_MODULE_MANAGE_ROLE] = await Promise.all([
-      stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(),
-      stakingRouter.STAKING_MODULE_PAUSE_ROLE(),
-      stakingRouter.STAKING_MODULE_MANAGE_ROLE()
-    ])
+    const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, STAKING_MODULE_PAUSE_ROLE, STAKING_MODULE_MANAGE_ROLE] =
+      await Promise.all([
+        stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(),
+        stakingRouter.STAKING_MODULE_PAUSE_ROLE(),
+        stakingRouter.STAKING_MODULE_MANAGE_ROLE(),
+      ])
 
     await stakingRouter.grantRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, admin, { from: admin })
     await stakingRouter.grantRole(STAKING_MODULE_PAUSE_ROLE, admin, { from: admin })

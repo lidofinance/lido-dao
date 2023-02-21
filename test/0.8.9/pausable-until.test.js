@@ -7,15 +7,12 @@ const { assert } = require('../helpers/assert')
 
 const PausableUntil = artifacts.require('PausableUntilPrivateExposed')
 
-
-
-
 contract('PausableUntil', ([deployer, _, anotherAccount]) => {
   let pausable
   let PAUSE_INFINITELY
 
   before('deploy lido with dao', async () => {
-    pausable = await PausableUntil.new( { from: deployer })
+    pausable = await PausableUntil.new({ from: deployer })
     PAUSE_INFINITELY = await pausable.PAUSE_INFINITELY()
 
     snapshot = new EvmSnapshot(hre.ethers.provider)
@@ -29,7 +26,7 @@ contract('PausableUntil', ([deployer, _, anotherAccount]) => {
   /// Check views, modifiers and capability to pause/resume
   async function assertPausedState(resumeSinceTimestamp = undefined) {
     assert.isTrue(await pausable.isPaused())
-    assert.isTrue(await pausable.getResumeSinceTimestamp() > await getCurrentBlockTimestamp())
+    assert.isTrue((await pausable.getResumeSinceTimestamp()) > (await getCurrentBlockTimestamp()))
     assert.equals(await pausable.stubUnderModifierWhenPaused(), bn(42))
     if (resumeSinceTimestamp !== undefined) {
       assert.equals(await pausable.getResumeSinceTimestamp(), resumeSinceTimestamp)
@@ -42,7 +39,7 @@ contract('PausableUntil', ([deployer, _, anotherAccount]) => {
   /// Check views, modifiers and capability to pause/resume
   async function assertResumedState() {
     assert.isFalse(await pausable.isPaused())
-    assert.isTrue(await pausable.getResumeSinceTimestamp() <= await getCurrentBlockTimestamp())
+    assert.isTrue((await pausable.getResumeSinceTimestamp()) <= (await getCurrentBlockTimestamp()))
     assert.equals(await pausable.stubUnderModifierWhenResumed(), bn(42))
     await assert.revertsWithCustomError(pausable.stubUnderModifierWhenPaused(), `PausedExpected()`)
     await assert.revertsWithCustomError(pausable.resume(), `PausedExpected()`)
@@ -77,7 +74,7 @@ contract('PausableUntil', ([deployer, _, anotherAccount]) => {
       const pauseDuration = 3 * 60
 
       await pausable.pause(pauseDuration)
-      const resumeSinceTimestamp = await getCurrentBlockTimestamp() + pauseDuration
+      const resumeSinceTimestamp = (await getCurrentBlockTimestamp()) + pauseDuration
       await assertPausedState(resumeSinceTimestamp)
 
       await advanceChainTime(Math.floor(pauseDuration / 2))

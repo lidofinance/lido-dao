@@ -19,7 +19,7 @@ const initialHolderBalanceETH = 1
 const StakingModuleStatus = {
   Active: 0, // deposits and rewards allowed
   DepositsPaused: 1, // deposits NOT allowed, rewards allowed
-  Stopped: 2 // deposits and rewards NOT allowed
+  Stopped: 2, // deposits and rewards NOT allowed
 }
 
 contract('Lido: rewards distribution math', (addresses) => {
@@ -40,13 +40,13 @@ contract('Lido: rewards distribution math', (addresses) => {
     validators: [
       {
         key: pad('0x010101', 48),
-        sig: pad('0x01', 96)
+        sig: pad('0x01', 96),
       },
       {
         key: pad('0x030303', 48),
-        sig: pad('0x03', 96)
-      }
-    ]
+        sig: pad('0x03', 96),
+      },
+    ],
   }
 
   const nodeOperator2 = {
@@ -55,9 +55,9 @@ contract('Lido: rewards distribution math', (addresses) => {
     validators: [
       {
         key: pad('0x020202', 48),
-        sig: pad('0x02', 96)
-      }
-    ]
+        sig: pad('0x02', 96),
+      },
+    ],
   }
 
   const nodeOperator3 = {
@@ -65,8 +65,8 @@ contract('Lido: rewards distribution math', (addresses) => {
     address: operator_3,
     validators: [...Array(10).keys()].map((i) => ({
       key: pad('0xaa01' + i.toString(16), 48),
-      sig: pad('0x' + i.toString(16), 96)
-    }))
+      sig: pad('0x' + i.toString(16), 96),
+    })),
   }
 
   async function reportBeacon(validatorsCount, balance) {
@@ -88,10 +88,10 @@ contract('Lido: rewards distribution math', (addresses) => {
             name: 'curated',
             targetShares: 10000,
             moduleFee: 500,
-            treasuryFee: 500
-          }
+            treasuryFee: 500,
+          },
         ]
-      }
+      },
     })
 
     // contracts/StETH.sol
@@ -139,7 +139,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       nodeOperator1.validators[0].key,
       nodeOperator1.validators[0].sig,
       {
-        from: nodeOperator1.address
+        from: nodeOperator1.address,
       }
     )
 
@@ -184,13 +184,12 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     assertBn(await token.balanceOf(treasuryAddr), new BN(0), 'treasury balance is zero')
     assertBn(await token.balanceOf(nodeOperator1.address), new BN(0), 'nodeOperator1 balance is zero')
-
   })
 
   it(`the first deposit gets deployed`, async () => {
     const [curated] = await stakingRouter.getStakingModules()
 
-    await ethers.provider.send('evm_increaseTime', [SECONDS_PER_FRAME *2])
+    await ethers.provider.send('evm_increaseTime', [SECONDS_PER_FRAME * 2])
     await ethers.provider.send('evm_mine')
     const block = await ethers.provider.getBlock('latest')
 
@@ -203,7 +202,7 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
-      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]]),
     ]
 
     await depositSecurityModule.depositBufferedEther(
@@ -288,7 +287,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       'Transfer',
       {
         to: nodeOperatorsRegistry.address,
-        value: nodeOperatorsFeeToMint
+        value: nodeOperatorsFeeToMint,
       },
       { abi: Lido.abi }
     )
@@ -297,7 +296,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       'Transfer',
       {
         to: treasuryAddr,
-        value: treasuryFeeMint
+        value: treasuryFeeMint,
       },
       { abi: Lido.abi }
     )
@@ -306,7 +305,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       'TransferShares',
       {
         to: nodeOperatorsRegistry.address,
-        sharesValue: nodeOperatorsSharesToMint
+        sharesValue: nodeOperatorsSharesToMint,
       },
       { abi: Lido.abi }
     )
@@ -315,7 +314,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       'TransferShares',
       {
         to: treasuryAddr,
-        sharesValue: treasurySharesToMint
+        sharesValue: treasurySharesToMint,
       },
       { abi: Lido.abi }
     )
@@ -325,7 +324,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       {
         from: nodeOperatorsRegistry.address,
         to: nodeOperator1.address,
-        value: nodeOperatorsFeeToMint
+        value: nodeOperatorsFeeToMint,
       },
       { abi: Lido.abi }
     )
@@ -335,7 +334,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       {
         from: nodeOperatorsRegistry.address,
         to: nodeOperator1.address,
-        sharesValue: nodeOperatorsSharesToMint.toString()
+        sharesValue: nodeOperatorsSharesToMint.toString(),
       },
       { abi: Lido.abi }
     )
@@ -364,7 +363,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       nodeOperator2.validators[0].key,
       nodeOperator2.validators[0].sig,
       {
-        from: nodeOperator2.address
+        from: nodeOperator2.address,
       }
     )
     await nodeOperatorsRegistry.setNodeOperatorStakingLimit(nodeOperator2.id, 1, { from: voting })
@@ -421,7 +420,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       nodeOperator2.validators[0].key,
       nodeOperator2.validators[0].sig,
       {
-        from: nodeOperator2.address
+        from: nodeOperator2.address,
       }
     )
     const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
@@ -446,7 +445,7 @@ contract('Lido: rewards distribution math', (addresses) => {
         keysOpIndex,
         '0x00',
         guardians.privateKeys[guardians.addresses[1]]
-      )
+      ),
     ]
 
     const [_, deltas] = await getSharesTokenDeltas(
@@ -559,7 +558,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       'Transfer',
       {
         to: nodeOperatorsRegistry.address,
-        value: nodeOperatorsFeeToMint
+        value: nodeOperatorsFeeToMint,
       },
       { abi: Lido.abi }
     )
@@ -568,7 +567,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       'Transfer',
       {
         to: treasuryAddr,
-        value: treasuryFeeMint
+        value: treasuryFeeMint,
       },
       { abi: Lido.abi }
     )
@@ -577,7 +576,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       'TransferShares',
       {
         to: nodeOperatorsRegistry.address,
-        sharesValue: nodeOperatorsSharesToMint
+        sharesValue: nodeOperatorsSharesToMint,
       },
       { abi: Lido.abi }
     )
@@ -586,7 +585,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       'TransferShares',
       {
         to: treasuryAddr,
-        sharesValue: treasurySharesToMint
+        sharesValue: treasurySharesToMint,
       },
       { abi: Lido.abi }
     )
@@ -596,7 +595,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       {
         from: nodeOperatorsRegistry.address,
         to: nodeOperator1.address,
-        value: nodeOperatorFeeToMint
+        value: nodeOperatorFeeToMint,
       },
       { abi: Lido.abi }
     )
@@ -606,7 +605,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       {
         from: nodeOperatorsRegistry.address,
         to: nodeOperator1.address,
-        sharesValue: nodeOperatorSharesToMint
+        sharesValue: nodeOperatorSharesToMint,
       },
       { abi: Lido.abi }
     )
@@ -616,7 +615,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       {
         from: nodeOperatorsRegistry.address,
         to: nodeOperator2.address,
-        value: nodeOperatorFeeToMint
+        value: nodeOperatorFeeToMint,
       },
       { abi: Lido.abi }
     )
@@ -626,7 +625,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       {
         from: nodeOperatorsRegistry.address,
         to: nodeOperator2.address,
-        sharesValue: nodeOperatorSharesToMint
+        sharesValue: nodeOperatorSharesToMint,
       },
       { abi: Lido.abi }
     )
@@ -666,7 +665,7 @@ contract('Lido: rewards distribution math', (addresses) => {
       hexConcat(...nodeOperator3.validators.map((v) => v.key)),
       hexConcat(...nodeOperator3.validators.map((v) => v.sig)),
       {
-        from: nodeOperator3.address
+        from: nodeOperator3.address,
       }
     )
     await anotherCuratedModule.setNodeOperatorStakingLimit(0, validatorsCount, { from: voting })
@@ -695,7 +694,7 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
-      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]]),
     ]
 
     const user1BalanceBefore = await token.balanceOf(user1)
@@ -862,5 +861,4 @@ contract('Lido: rewards distribution math', (addresses) => {
     const valuesAfter = await Promise.all(addresses.flatMap((addr) => [token.balanceOf(addr), token.sharesOf(addr)]))
     return [{ receipt, valuesBefore, valuesAfter }, valuesAfter.map((val, i) => val.sub(valuesBefore[i]))]
   }
-
 })

@@ -21,20 +21,20 @@ contract('StakingRouter', ([depositor, stranger1, address1, address2]) => {
             name: 'curated',
             targetShares: 10000,
             moduleFee: 1000,
-            treasuryFee: 5000
+            treasuryFee: 5000,
           },
           {
             module: anotherCuratedModule,
             name: 'another curated',
             targetShares: 10000,
             moduleFee: 1000,
-            treasuryFee: 5000
-          }
+            treasuryFee: 5000,
+          },
         ]
       },
       depositSecurityModuleFactory: async () => {
         return { address: depositor }
-      }
+      },
     })
 
     depositContract = deployed.depositContract

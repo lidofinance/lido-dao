@@ -65,21 +65,25 @@ function hex(n, byteLen) {
 }
 
 function strip0x(s) {
-  return s.substr(0, 2) == '0x' ? s.substr(2) : s
+  return s.substr(0, 2) === '0x' ? s.substr(2) : s
 }
 
 // transforms all object entries
-const transformEntries = (obj, tr) => Object.fromEntries(
-  Object.entries(obj).map(tr).filter(x => x !== undefined)
-)
+const transformEntries = (obj, tr) =>
+  Object.fromEntries(
+    Object.entries(obj)
+      .map(tr)
+      .filter((x) => x !== undefined)
+  )
 
 // converts all object BN keys to strings, drops numeric keys and the __length__ key
-const processNamedTuple = (obj) => transformEntries(obj, ([k, v]) => {
-  return /^(\d+|__length__)$/.test(k) ? undefined : [k, BN.isBN(v) ? v.toString() : v]
-})
+const processNamedTuple = (obj) =>
+  transformEntries(obj, ([k, v]) => {
+    return /^(\d+|__length__)$/.test(k) ? undefined : [k, BN.isBN(v) ? v.toString() : v]
+  })
 
 const printEvents = (tx) => {
-  console.log(tx.receipt.logs.map(({event, args}) => ({event, args: processNamedTuple(args)})))
+  console.log(tx.receipt.logs.map(({ event, args }) => ({ event, args: processNamedTuple(args) })))
 }
 
 // Divides a BN by 1e15
@@ -95,7 +99,7 @@ const shares = e18
 const shareRate = e27
 
 const bnE9 = new BN(10).pow(new BN(9))
-const ethToGwei = valueEth => toBN(valueEth).div(bnE9).toString()
+const ethToGwei = (valueEth) => toBN(valueEth).div(bnE9).toString()
 
 function formatWei(weiString) {
   return ethers.utils.formatEther(ethers.utils.parseUnits(weiString, 'wei'), { commify: true }) + ' ETH'
@@ -123,7 +127,7 @@ function assertBnClose(x, y, maxDiff, msg = undefined) {
   assert(
     diff.lte(new BN(maxDiff)),
     () => `Expected ${x} to be close to ${y} with max diff ${maxDiff}, actual diff ${diff}`,
-    () => `Expected ${x} not to be close to ${y} with min diff ${maxDiff}, actual diff ${diff}`,
+    () => `Expected ${x} not to be close to ${y} with min diff ${maxDiff}, actual diff ${diff}`
   )
 }
 
@@ -138,8 +142,8 @@ const changeEndianness = (string) => {
   return '0x' + result.join('')
 }
 
-const toNum = (x) => Array.isArray(x) ? x.map(toNum) : +x
-const toStr = (x) => Array.isArray(x) ? x.map(toStr) : `${x}`
+const toNum = (x) => (Array.isArray(x) ? x.map(toNum) : +x)
+const toStr = (x) => (Array.isArray(x) ? x.map(toStr) : `${x}`)
 
 const setBalance = async (address, value) => {
   await hre.network.provider.send('hardhat_setBalance', [address, web3.utils.numberToHex(value)])
@@ -150,7 +154,7 @@ const prepIdsCountsPayload = (ids, counts) => {
   if (!Array.isArray(counts)) counts = [counts]
   return {
     operatorIds: '0x' + ids.map((id) => hex(id, 8)).join(''),
-    keysCounts: '0x' + counts.map((count) => hex(count, 16)).join('')
+    keysCounts: '0x' + counts.map((count) => hex(count, 16)).join(''),
   }
 }
 
@@ -164,7 +168,6 @@ const calcSharesMintedAsFees = (rewards, fee, feePoints, prevTotalShares, newTot
         .sub(toBN(rewards).mul(toBN(fee)))
     )
 }
-
 
 module.exports = {
   ZERO_HASH,
@@ -201,5 +204,5 @@ module.exports = {
   toStr,
   setBalance,
   prepIdsCountsPayload,
-  calcSharesMintedAsFees
+  calcSharesMintedAsFees,
 }

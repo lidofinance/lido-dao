@@ -26,7 +26,7 @@ contract('Lido: happy path', (addresses) => {
     user2,
     user3,
     // unrelated address
-    nobody
+    nobody,
   ] = addresses
 
   let pool, nodeOperatorsRegistry, token
@@ -36,7 +36,9 @@ contract('Lido: happy path', (addresses) => {
   let withdrawalCredentials, stakingRouter
   let consensus
 
-  before('DAO, node operators registry, token, pool and deposit security module are deployed and initialized', async () => {
+  before(
+    'DAO, node operators registry, token, pool and deposit security module are deployed and initialized',
+    async () => {
       const deployed = await deployProtocol({
         stakingModulesFactory: async (protocol) => {
           const curatedModule = await setupNodeOperatorsRegistry(protocol)
@@ -46,10 +48,10 @@ contract('Lido: happy path', (addresses) => {
               name: 'Curated',
               targetShares: 10000,
               moduleFee: 500,
-              treasuryFee: 500
-            }
+              treasuryFee: 500,
+            },
           ]
-        }
+        },
       })
 
       // contracts/StETH.sol
@@ -105,7 +107,11 @@ contract('Lido: happy path', (addresses) => {
 
     // Withdrawal credentials were set
 
-    assert.equal(await stakingRouter.getWithdrawalCredentials({ from: nobody }), withdrawalCredentials, 'withdrawal credentials')
+    assert.equal(
+      await stakingRouter.getWithdrawalCredentials({ from: nobody }),
+      withdrawalCredentials,
+      'withdrawal credentials'
+    )
   })
 
   // Each node operator has its Ethereum 1 address, a name and a set of registered
@@ -116,16 +122,18 @@ contract('Lido: happy path', (addresses) => {
     validators: [
       {
         key: pad('0x010101', 48),
-        sig: pad('0x01', 96)
-      }
-    ]
+        sig: pad('0x01', 96),
+      },
+    ],
   }
 
   it('voting adds the first node operator', async () => {
     const txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', {
+      decodeForAbi: NodeOperatorsRegistry._json.abi,
+    })
     assertBn(nodeOperator1.id, 0, 'operator id')
 
     assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 1, 'total node operators')
@@ -142,7 +150,7 @@ contract('Lido: happy path', (addresses) => {
       nodeOperator1.validators[0].key,
       nodeOperator1.validators[0].sig,
       {
-        from: nodeOperator1.address
+        from: nodeOperator1.address,
       }
     )
 
@@ -167,10 +175,16 @@ contract('Lido: happy path', (addresses) => {
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
 
-    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, CURATED_MODULE_ID, keysOpIndex)
+    const validAttestMessage = new DSMAttestMessage(
+      block.number,
+      block.hash,
+      depositRoot,
+      CURATED_MODULE_ID,
+      keysOpIndex
+    )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
-      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]]),
     ]
     await depositSecurityModule.depositBufferedEther(
       block.number,
@@ -210,10 +224,16 @@ contract('Lido: happy path', (addresses) => {
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
 
-    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, CURATED_MODULE_ID, keysOpIndex)
+    const validAttestMessage = new DSMAttestMessage(
+      block.number,
+      block.hash,
+      depositRoot,
+      CURATED_MODULE_ID,
+      keysOpIndex
+    )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
-      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]]),
     ]
     await depositSecurityModule.depositBufferedEther(
       block.number,
@@ -264,9 +284,9 @@ contract('Lido: happy path', (addresses) => {
     validators: [
       {
         key: pad('0x020202', 48),
-        sig: pad('0x02', 96)
-      }
-    ]
+        sig: pad('0x02', 96),
+      },
+    ],
   }
 
   it('voting adds the second node operator who registers one validator', async () => {
@@ -276,7 +296,9 @@ contract('Lido: happy path', (addresses) => {
     const txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', {
+      decodeForAbi: NodeOperatorsRegistry._json.abi,
+    })
     assertBn(nodeOperator2.id, 1, 'operator id')
 
     assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 2, 'total node operators')
@@ -289,7 +311,7 @@ contract('Lido: happy path', (addresses) => {
       nodeOperator2.validators[0].key,
       nodeOperator2.validators[0].sig,
       {
-        from: nodeOperator2.address
+        from: nodeOperator2.address,
       }
     )
 
@@ -315,10 +337,16 @@ contract('Lido: happy path', (addresses) => {
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
 
-    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, CURATED_MODULE_ID, keysOpIndex)
+    const validAttestMessage = new DSMAttestMessage(
+      block.number,
+      block.hash,
+      depositRoot,
+      CURATED_MODULE_ID,
+      keysOpIndex
+    )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
-      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]]),
     ]
     await depositSecurityModule.depositBufferedEther(
       block.number,
@@ -361,7 +389,6 @@ contract('Lido: happy path', (addresses) => {
   })
 
   it('the oracle reports balance increase on Ethereum2 side', async () => {
-
     // Total shares are equal to deposited eth before ratio change and fee mint
 
     const oldTotalShares = await token.getTotalShares()
@@ -446,8 +473,8 @@ contract('Lido: happy path', (addresses) => {
     address: operator_3,
     validators: [...Array(10).keys()].map((i) => ({
       key: pad('0xaa01' + i.toString(16), 48),
-      sig: pad('0x' + i.toString(16), 96)
-    }))
+      sig: pad('0x' + i.toString(16), 96),
+    })),
   }
 
   it('nodeOperator3 registered in NodeOperatorsRegistry and adds 10 signing keys', async () => {
@@ -459,7 +486,7 @@ contract('Lido: happy path', (addresses) => {
       hexConcat(...nodeOperator3.validators.map((v) => v.key)),
       hexConcat(...nodeOperator3.validators.map((v) => v.sig)),
       {
-        from: nodeOperator3.address
+        from: nodeOperator3.address,
       }
     )
     await nodeOperatorsRegistry.setNodeOperatorStakingLimit(nodeOperator3.id, validatorsCount, { from: voting })
@@ -467,7 +494,9 @@ contract('Lido: happy path', (addresses) => {
 
   it('nodeOperator3 removes signing key with id 5', async () => {
     const signingKeyIndexToRemove = 5
-    await nodeOperatorsRegistry.removeSigningKeyOperatorBH(nodeOperator3.id, signingKeyIndexToRemove, { from: nodeOperator3.address })
+    await nodeOperatorsRegistry.removeSigningKeyOperatorBH(nodeOperator3.id, signingKeyIndexToRemove, {
+      from: nodeOperator3.address,
+    })
     const nodeOperatorInfo = await nodeOperatorsRegistry.getNodeOperator(nodeOperator3.id, false)
     assertBn(nodeOperatorInfo.stakingLimit, 5)
   })
@@ -482,10 +511,16 @@ contract('Lido: happy path', (addresses) => {
     DSMAttestMessage.setMessagePrefix(await depositSecurityModule.ATTEST_MESSAGE_PREFIX())
     DSMPauseMessage.setMessagePrefix(await depositSecurityModule.PAUSE_MESSAGE_PREFIX())
 
-    const validAttestMessage = new DSMAttestMessage(block.number, block.hash, depositRoot, CURATED_MODULE_ID, keysOpIndex)
+    const validAttestMessage = new DSMAttestMessage(
+      block.number,
+      block.hash,
+      depositRoot,
+      CURATED_MODULE_ID,
+      keysOpIndex
+    )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
-      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]]),
     ]
     await depositSecurityModule.depositBufferedEther(
       block.number,

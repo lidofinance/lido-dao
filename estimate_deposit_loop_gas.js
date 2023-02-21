@@ -18,7 +18,7 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
     user1,
     user2,
     // an unrelated address
-    nobody
+    nobody,
   ] = addresses
 
   let pool, nodeOperatorsRegistry, depositContractMock
@@ -50,16 +50,23 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
     const numKeys = 3
 
     for (let iOperator = 0; iOperator < numOperators; ++iOperator) {
-      const txn = await nodeOperatorsRegistry.addNodeOperator(`operator-${iOperator}`, nodeOperator, operatorValidatorsLimit, {
-        from: voting
+      const txn = await nodeOperatorsRegistry.addNodeOperator(
+        `operator-${iOperator}`,
+        nodeOperator,
+        operatorValidatorsLimit,
+        {
+          from: voting,
+        }
+      )
+      const nodeOperatorId = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', {
+        decodeForAbi: NodeOperatorsRegistry._json.abi,
       })
-      const nodeOperatorId = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', { decodeForAbi: NodeOperatorsRegistry._json.abi })
 
       const data = Array.from({ length: numKeys }, (_, iKey) => {
         const n = arbitraryN.clone().addn(10 * iKey + 1000 * iOperator)
         return {
           key: pad(`0x${n.toString(16)}`, 48, 'd'),
-          sig: pad(`0x${n.toString(16)}`, 96, 'e')
+          sig: pad(`0x${n.toString(16)}`, 96, 'e'),
         }
       })
 
@@ -85,7 +92,10 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
   it('calling DepositContractMock.deposit multiple times', async () => {
     const results = await Promise.all(
       validatorData.map(({ key, sig }, i) =>
-        depositContractMock.deposit(key, withdrawalCredentials, sig, `0x${arbitraryN.toString(16)}`, { from: user1, value: ETH(32) })
+        depositContractMock.deposit(key, withdrawalCredentials, sig, `0x${arbitraryN.toString(16)}`, {
+          from: user1,
+          value: ETH(32),
+        })
       )
     )
 
@@ -200,8 +210,12 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
     const diff5 = Math.floor(Math.abs(predictedGasPer5 - gasPerNValidators['5']) / 5)
     const diff30 = Math.floor(Math.abs(predictedGasPer30 - gasPerNValidators['30']) / 30)
 
-    console.log(`predicted gas per 5 val, w/mock: ${predictedGasPer5}, actual: ${gasPerNValidators['5']}, diff/iter: ${diff5}`)
-    console.log(`predicted gas per 30 val, w/mock: ${predictedGasPer30}, actual: ${gasPerNValidators['30']}, diff/iter: ${diff30}\n`)
+    console.log(
+      `predicted gas per 5 val, w/mock: ${predictedGasPer5}, actual: ${gasPerNValidators['5']}, diff/iter: ${diff5}`
+    )
+    console.log(
+      `predicted gas per 30 val, w/mock: ${predictedGasPer30}, actual: ${gasPerNValidators['30']}, diff/iter: ${diff30}\n`
+    )
 
     const blockGasLimit = 12000000
     const targetBlockFraction = 0.2

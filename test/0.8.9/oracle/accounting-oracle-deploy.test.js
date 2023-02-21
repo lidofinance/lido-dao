@@ -3,7 +3,7 @@ const { assert } = require('../../helpers/assert')
 const { hex } = require('../../helpers/utils')
 const {
   updateLocatorImplementation,
-  deployLocatorWithDummyAddressesImplementation
+  deployLocatorWithDummyAddressesImplementation,
 } = require('../../helpers/locator-deploy')
 
 const {
@@ -27,7 +27,7 @@ const {
   HASH_4,
   HASH_5,
   CONSENSUS_VERSION,
-  deployHashConsensus
+  deployHashConsensus,
 } = require('./hash-consensus-deploy.test')
 
 const AccountingOracle = artifacts.require('AccountingOracleTimeTravellable')
@@ -61,14 +61,14 @@ function getReportDataItems(r) {
     r.isBunkerMode,
     r.extraDataFormat,
     r.extraDataHash,
-    r.extraDataItemsCount
+    r.extraDataItemsCount,
   ]
 }
 
 function calcReportDataHash(reportItems) {
   const data = web3.eth.abi.encodeParameters(
     [
-      '(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256)'
+      '(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256)',
     ],
     [reportItems]
   )
@@ -112,7 +112,7 @@ async function deployOracleReportSanityCheckerForAccounting(lidoLocator, admin) 
     limitsList,
     managersRoster,
     {
-      from: admin
+      from: admin,
     }
   )
   return oracleReportSanityChecker
@@ -155,14 +155,14 @@ module.exports = {
   encodeExtraDataItem,
   encodeExtraDataItems,
   packExtraDataList,
-  calcExtraDataListHash
+  calcExtraDataListHash,
 }
 async function deployMockLegacyOracle({
   epochsPerFrame = EPOCHS_PER_FRAME,
   slotsPerEpoch = SLOTS_PER_EPOCH,
   secondsPerSlot = SECONDS_PER_SLOT,
   genesisTime = GENESIS_TIME,
-  lastCompletedEpochId = V1_ORACLE_LAST_COMPLETED_EPOCH
+  lastCompletedEpochId = V1_ORACLE_LAST_COMPLETED_EPOCH,
 } = {}) {
   const legacyOracle = await MockLegacyOracle.new()
   await legacyOracle.setParams(epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime, lastCompletedEpochId)
@@ -187,7 +187,7 @@ async function deployAccountingOracleSetup(
     getLidoAndStakingRouter = deployMockLidoAndStakingRouter,
     getLegacyOracle = deployMockLegacyOracle,
     lidoLocatorAddr: lidoLocatorAddrArg,
-    legacyOracleAddr: legacyOracleAddrArg
+    legacyOracleAddr: legacyOracleAddrArg,
   } = {}
 ) {
   const locatorAddr = (await deployLocatorWithDummyAddressesImplementation(admin)).address
@@ -198,7 +198,7 @@ async function deployAccountingOracleSetup(
     lido: lido.address,
     stakingRouter: stakingRouter.address,
     withdrawalQueue: withdrawalQueue.address,
-    oracleReportSanityChecker: oracleReportSanityChecker.address
+    oracleReportSanityChecker: oracleReportSanityChecker.address,
   })
 
   const legacyOracle = await getLegacyOracle()
@@ -222,7 +222,7 @@ async function deployAccountingOracleSetup(
     slotsPerEpoch,
     secondsPerSlot,
     genesisTime,
-    initialEpoch
+    initialEpoch,
   })
 
   // pretend we're at the first slot of the initial frame's epoch
@@ -236,7 +236,7 @@ async function deployAccountingOracleSetup(
     legacyOracle,
     oracle,
     consensus,
-    oracleReportSanityChecker
+    oracleReportSanityChecker,
   }
 }
 
@@ -245,7 +245,7 @@ async function initAccountingOracle({
   oracle,
   consensus,
   dataSubmitter = null,
-  consensusVersion = CONSENSUS_VERSION
+  consensusVersion = CONSENSUS_VERSION,
 }) {
   const initTx = await oracle.initialize(admin, consensus.address, consensusVersion, { from: admin })
 
@@ -281,24 +281,24 @@ contract('AccountingOracle', ([admin, member1]) => {
   context('Deployment and initial configuration', () => {
     it('init fails if the chain config is different from the one of the legacy oracle', async () => {
       let deployed = await deployAccountingOracleSetup(admin, {
-        getLegacyOracle: () => deployMockLegacyOracle({ slotsPerEpoch: SLOTS_PER_EPOCH + 1 })
+        getLegacyOracle: () => deployMockLegacyOracle({ slotsPerEpoch: SLOTS_PER_EPOCH + 1 }),
       })
       await assert.reverts(initAccountingOracle({ admin, ...deployed }), 'IncorrectOracleMigration(0)')
 
       deployed = await deployAccountingOracleSetup(admin, {
-        getLegacyOracle: () => deployMockLegacyOracle({ secondsPerSlot: SECONDS_PER_SLOT + 1 })
+        getLegacyOracle: () => deployMockLegacyOracle({ secondsPerSlot: SECONDS_PER_SLOT + 1 }),
       })
       await assert.reverts(initAccountingOracle({ admin, ...deployed }), 'IncorrectOracleMigration(0)')
 
       deployed = await deployAccountingOracleSetup(admin, {
-        getLegacyOracle: () => deployMockLegacyOracle({ genesisTime: GENESIS_TIME + 1 })
+        getLegacyOracle: () => deployMockLegacyOracle({ genesisTime: GENESIS_TIME + 1 }),
       })
       await assert.reverts(initAccountingOracle({ admin, ...deployed }), 'IncorrectOracleMigration(0)')
     })
 
     it('init fails if the frame size is different from the one of the legacy oracle', async () => {
       const deployed = await deployAccountingOracleSetup(admin, {
-        getLegacyOracle: () => deployMockLegacyOracle({ epochsPerFrame: EPOCHS_PER_FRAME - 1 })
+        getLegacyOracle: () => deployMockLegacyOracle({ epochsPerFrame: EPOCHS_PER_FRAME - 1 }),
       })
       await assert.reverts(initAccountingOracle({ admin, ...deployed }), 'IncorrectOracleMigration(1)')
     })
@@ -405,7 +405,9 @@ contract('AccountingOracle', ([admin, member1]) => {
     it('initializeWithoutMigration succeeds', async () => {
       const deployed = await deployAccountingOracleSetup(admin)
       const { refSlot } = await deployed.consensus.getCurrentFrame()
-      await deployed.oracle.initializeWithoutMigration(admin, deployed.consensus.address, CONSENSUS_VERSION, refSlot, { from: admin })
+      await deployed.oracle.initializeWithoutMigration(admin, deployed.consensus.address, CONSENSUS_VERSION, refSlot, {
+        from: admin,
+      })
     })
   })
 })

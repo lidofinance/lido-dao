@@ -45,18 +45,18 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
             targetShares: 10000,
             moduleFee: 500,
             treasuryFee: 500,
-          }
+          },
         ]
       },
       depositSecurityModuleFactory: async () => {
         return { address: depositor }
       },
-      depositContractFactory: depositContractFactory,
+      depositContractFactory,
       postSetup: async ({ pool, lidoLocator, eip712StETH, withdrawalQueue, appManager, voting }) => {
         await pool.initialize(lidoLocator.address, eip712StETH.address, { value: ETH(1) })
         await withdrawalQueue.updateBunkerMode(false, 0, { from: appManager.address })
         await pool.resumeProtocolAndStaking({ from: voting.address })
-      }
+      },
     })
 
     app = deployed.pool
@@ -209,16 +209,28 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     // id: 2
     await nodeOperators.addNodeOperator(
       operators,
-      { name: 'deactivated', rewardAddress: ADDRESS_3, totalSigningKeysCount: 2, vettedSigningKeysCount: 2, isActive: false },
+      {
+        name: 'deactivated',
+        rewardAddress: ADDRESS_3,
+        totalSigningKeysCount: 2,
+        vettedSigningKeysCount: 2,
+        isActive: false,
+      },
       { from: voting }
     )
 
     // id: 3
-    await nodeOperators.addNodeOperator(operators, { name: 'short on keys', rewardAddress: ADDRESS_4 }, { from: voting })
+    await nodeOperators.addNodeOperator(
+      operators,
+      { name: 'short on keys', rewardAddress: ADDRESS_4 },
+      { from: voting }
+    )
 
     // Deposit huge chunk
-    await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(32 * 3 + 50 - 1/* initial */) })
-    tx = await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(32 * 3 + 50 - 1 /* initial */) })
+    tx = await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, {
+      from: depositor,
+    })
 
     // assertEvent(tx, 'StakingRouterTransferReceived')
 
@@ -343,12 +355,22 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     // id: 2
     await nodeOperators.addNodeOperator(
       operators,
-      { name: 'deactivated', rewardAddress: ADDRESS_3, totalSigningKeysCount: 2, vettedSigningKeysCount: 2, isActive: false },
+      {
+        name: 'deactivated',
+        rewardAddress: ADDRESS_3,
+        totalSigningKeysCount: 2,
+        vettedSigningKeysCount: 2,
+        isActive: false,
+      },
       { from: voting }
     )
 
     // id: 3
-    await nodeOperators.addNodeOperator(operators, { name: 'short on keys', rewardAddress: ADDRESS_4 }, { from: voting })
+    await nodeOperators.addNodeOperator(
+      operators,
+      { name: 'short on keys', rewardAddress: ADDRESS_4 },
+      { from: voting }
+    )
 
     // Small deposits
     for (let i = 0; i < 14; i++) await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(10) })
@@ -459,21 +481,39 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     await stakingRouter.setWithdrawalCredentials(pad('0x0202', 32), { from: voting })
 
     await operators.addNodeOperator('good', ADDRESS_1, { from: voting }) // 0
-    await operators.addSigningKeys(0, 2, hexConcat(pad('0x0001', 48), pad('0x0002', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
-      from: voting
-    })
+    await operators.addSigningKeys(
+      0,
+      2,
+      hexConcat(pad('0x0001', 48), pad('0x0002', 48)),
+      hexConcat(pad('0x01', 96), pad('0x01', 96)),
+      {
+        from: voting,
+      }
+    )
     await operators.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting })
 
     await operators.addNodeOperator('2nd good', ADDRESS_2, { from: voting }) // 1
-    await operators.addSigningKeys(1, 2, hexConcat(pad('0x0101', 48), pad('0x0102', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
-      from: voting
-    })
+    await operators.addSigningKeys(
+      1,
+      2,
+      hexConcat(pad('0x0101', 48), pad('0x0102', 48)),
+      hexConcat(pad('0x01', 96), pad('0x01', 96)),
+      {
+        from: voting,
+      }
+    )
     await operators.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting })
 
     await operators.addNodeOperator('deactivated', ADDRESS_3, { from: voting }) // 2
-    await operators.addSigningKeys(2, 2, hexConcat(pad('0x0201', 48), pad('0x0202', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
-      from: voting
-    })
+    await operators.addSigningKeys(
+      2,
+      2,
+      hexConcat(pad('0x0201', 48), pad('0x0202', 48)),
+      hexConcat(pad('0x01', 96), pad('0x01', 96)),
+      {
+        from: voting,
+      }
+    )
     await operators.setNodeOperatorStakingLimit(2, UNLIMITED, { from: voting })
     await operators.deactivateNodeOperator(2, { from: voting })
 
@@ -496,9 +536,15 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
 
     // Reactivation of #2 - has the smallest stake
     await operators.activateNodeOperator(2, { from: voting })
-    await operators.addSigningKeys(2, 2, hexConcat(pad('0x0201', 48), pad('0x0202', 48)), hexConcat(pad('0x01', 96), pad('0x01', 96)), {
-      from: voting
-    })
+    await operators.addSigningKeys(
+      2,
+      2,
+      hexConcat(pad('0x0201', 48), pad('0x0202', 48)),
+      hexConcat(pad('0x01', 96), pad('0x01', 96)),
+      {
+        from: voting,
+      }
+    )
     await operators.setNodeOperatorStakingLimit(2, UNLIMITED, { from: voting })
 
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(36) })
@@ -527,11 +573,11 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     const keysCount = 100
     const keys1 = {
       keys: [...Array(keysCount)].map((v, i) => pad('0xaa01' + i.toString(16), 48)),
-      sigs: [...Array(keysCount)].map((v, i) => pad('0x' + i.toString(16), 96))
+      sigs: [...Array(keysCount)].map((v, i) => pad('0x' + i.toString(16), 96)),
     }
     const keys2 = {
       keys: [...Array(keysCount)].map((v, i) => pad('0xaa02' + i.toString(16), 48)),
-      sigs: [...Array(keysCount)].map((v, i) => pad('0x' + i.toString(16), 96))
+      sigs: [...Array(keysCount)].map((v, i) => pad('0x' + i.toString(16), 96)),
     }
     await operators.addSigningKeys(0, keysCount, hexConcat(...keys1.keys), hexConcat(...keys1.sigs), { from: voting })
     await operators.addSigningKeys(1, keysCount, hexConcat(...keys2.keys), hexConcat(...keys2.sigs), { from: voting })
@@ -541,7 +587,10 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
 
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(amountToDeposit - 1) })
 
-    await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor, gas: 20000000 })
+    await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, {
+      from: depositor,
+      gas: 20000000,
+    })
 
     assertBn(await app.getTotalPooledEther(), ETH(amountToDeposit))
     assertBn(await app.getBufferedEther(), ETH(31))
@@ -559,11 +608,11 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     const keysCount = 100
     const keys1 = {
       keys: [...Array(keysCount)].map((v, i) => pad('0xaa01' + i.toString(16), 48)),
-      sigs: [...Array(keysCount)].map((v, i) => pad('0x' + i.toString(16), 96))
+      sigs: [...Array(keysCount)].map((v, i) => pad('0x' + i.toString(16), 96)),
     }
     const keys2 = {
       keys: [...Array(keysCount)].map((v, i) => pad('0xaa02' + i.toString(16), 48)),
-      sigs: [...Array(keysCount)].map((v, i) => pad('0x' + i.toString(16), 96))
+      sigs: [...Array(keysCount)].map((v, i) => pad('0x' + i.toString(16), 96)),
     }
     await operators.addSigningKeys(0, keysCount, hexConcat(...keys1.keys), hexConcat(...keys1.sigs), { from: voting })
     await operators.addSigningKeys(1, keysCount, hexConcat(...keys2.keys), hexConcat(...keys2.sigs), { from: voting })
@@ -575,7 +624,10 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     await web3.eth.sendTransaction({ to: user1, from: user2, value: ETH(2000) })
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(amountToDeposit - 1 /* initial */) })
 
-    await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor, gas: 20000000 })
+    await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, {
+      from: depositor,
+      gas: 20000000,
+    })
 
     assertBn(await app.getTotalPooledEther(), ETH(amountToDeposit))
     assertBn(await app.getBufferedEther(), ETH(33))

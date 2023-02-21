@@ -70,5 +70,5 @@ module.exports = {
   getCurrentBlockTimestamp,
   impersonate,
   getBalance,
-  setBalance
+  setBalance,
 }

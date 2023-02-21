@@ -4,11 +4,27 @@ const { assertRevert } = require('../../helpers/assertThrow')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
 const {
-  SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, EPOCHS_PER_FRAME, SECONDS_PER_EPOCH,
-  SECONDS_PER_FRAME, SLOTS_PER_FRAME, computeSlotAt, computeEpochAt, computeEpochFirstSlotAt,
-  computeTimestampAtEpoch, computeTimestampAtSlot,
-  ZERO_HASH, HASH_1, HASH_2, HASH_3, HASH_4, HASH_5, CONSENSUS_VERSION,
-  deployHashConsensus } = require('./hash-consensus-deploy.test')
+  SLOTS_PER_EPOCH,
+  SECONDS_PER_SLOT,
+  GENESIS_TIME,
+  EPOCHS_PER_FRAME,
+  SECONDS_PER_EPOCH,
+  SECONDS_PER_FRAME,
+  SLOTS_PER_FRAME,
+  computeSlotAt,
+  computeEpochAt,
+  computeEpochFirstSlotAt,
+  computeTimestampAtEpoch,
+  computeTimestampAtSlot,
+  ZERO_HASH,
+  HASH_1,
+  HASH_2,
+  HASH_3,
+  HASH_4,
+  HASH_5,
+  CONSENSUS_VERSION,
+  deployHashConsensus,
+} = require('./hash-consensus-deploy.test')
 
 const HashConsensus = artifacts.require('HashConsensusTimeTravellable')
 const MockReportProcessor = artifacts.require('MockReportProcessor')
@@ -21,7 +37,7 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
     const INITIAL_EPOCH = 3
 
     it('deploying hash consensus', async () => {
-      const deployed = await deployHashConsensus(admin, {initialEpoch: INITIAL_EPOCH})
+      const deployed = await deployHashConsensus(admin, { initialEpoch: INITIAL_EPOCH })
       consensus = deployed.consensus
       reportProcessor = deployed.reportProcessor
     })
@@ -29,28 +45,28 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
     it('adding members', async () => {
       await consensus.addMember(member1, 1, { from: admin })
       assert.equal(await consensus.getIsMember(member1), true)
-      assert.equal(+await consensus.getQuorum(), 1)
+      assert.equal(+(await consensus.getQuorum()), 1)
 
       await consensus.addMember(member2, 2, { from: admin })
       assert.equal(await consensus.getIsMember(member2), true)
-      assert.equal(+await consensus.getQuorum(), 2)
+      assert.equal(+(await consensus.getQuorum()), 2)
 
       await consensus.addMember(member3, 2, { from: admin })
       assert.equal(await consensus.getIsMember(member3), true)
-      assert.equal(+await consensus.getQuorum(), 2)
+      assert.equal(+(await consensus.getQuorum()), 2)
     })
 
     it('some fraction of the reporting frame passes', async () => {
-      assert.equal(+await consensus.getTime(), computeTimestampAtEpoch(INITIAL_EPOCH))
+      assert.equal(+(await consensus.getTime()), computeTimestampAtEpoch(INITIAL_EPOCH))
       await consensus.advanceTimeBySlots(3)
-      assert.equal(+await consensus.getTime(), computeTimestampAtEpoch(INITIAL_EPOCH) + 3 * SECONDS_PER_SLOT)
+      assert.equal(+(await consensus.getTime()), computeTimestampAtEpoch(INITIAL_EPOCH) + 3 * SECONDS_PER_SLOT)
     })
 
     let frame
 
     it('reporting frame changes as more time passes', async () => {
       const frame1 = await consensus.getCurrentFrame()
-      const time = +await consensus.getTime()
+      const time = +(await consensus.getTime())
       const expectedRefSlot = computeEpochFirstSlotAt(time) - 1
       const expectedDeadlineSlot = expectedRefSlot + EPOCHS_PER_FRAME * SLOTS_PER_EPOCH
 
@@ -221,7 +237,7 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
       assert.equal(consensusState.consensusReport, ZERO_HASH)
       assert.isFalse(consensusState.isReportProcessing)
 
-      let checkMember = async (member) => {
+      const checkMember = async (member) => {
         const memberInfo = await consensus.getConsensusStateForMember(member)
         assert.equal(+memberInfo.currentFrameRefSlot, +newFrame.refSlot)
         assert.equal(memberInfo.currentFrameConsensusReport, ZERO_HASH)
@@ -259,7 +275,9 @@ contract('HashConsensus', ([admin, member1, member2, member3, stranger]) => {
     it('first member votes for hash 2', async () => {
       const tx = await consensus.submitReport(newFrame.refSlot, HASH_2, CONSENSUS_VERSION, { from: member1 })
 
-      assertEvent(tx, 'ReportReceived', { expectedArgs: { refSlot: newFrame.refSlot, member: member1, report: HASH_2 } })
+      assertEvent(tx, 'ReportReceived', {
+        expectedArgs: { refSlot: newFrame.refSlot, member: member1, report: HASH_2 },
+      })
       assertAmountOfEvents(tx, 'ConsensusReached', { expectedAmount: 0 })
 
       const memberInfo = await consensus.getConsensusStateForMember(member1)

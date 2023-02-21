@@ -36,7 +36,7 @@ contract('BaseOracle', ([admin]) => {
           {
             refSlot: initialRefSlot,
             hash: HASH_1,
-            processingDeadlineTime: initialRefSlot + SLOTS_PER_FRAME
+            processingDeadlineTime: initialRefSlot + SLOTS_PER_FRAME,
           },
           { abi: baseOracleAbi }
         )
@@ -84,7 +84,7 @@ contract('BaseOracle', ([admin]) => {
           'WarnProcessingMissed',
           { refSlot: initialRefSlot + 10 },
           {
-            abi: baseOracleAbi
+            abi: baseOracleAbi,
           }
         )
         assert.equal(+(await baseOracle.getConsensusReportLastCall()).callCount, 3)
@@ -119,7 +119,7 @@ contract('BaseOracle', ([admin]) => {
           tx,
           'WarnProcessingMissed',
           {
-            refSlot: initialRefSlot
+            refSlot: initialRefSlot,
           },
           { abi: baseOracleAbi }
         )
@@ -134,7 +134,7 @@ contract('BaseOracle', ([admin]) => {
         const nextRefSlot = initialRefSlot + 1
         const tx = await consensus.submitReportAsConsensus(HASH_3, nextRefSlot, nextRefSlot + SLOTS_PER_FRAME + 10)
         assert.emitsNumberOfEvents(tx, 'WarnProcessingMissed', 0, {
-          abi: baseOracleAbi
+          abi: baseOracleAbi,
         })
         const report = await baseOracle.getConsensusReport()
         assert.equal(report.hash, HASH_3)

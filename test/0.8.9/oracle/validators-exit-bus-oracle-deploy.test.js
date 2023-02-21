@@ -3,7 +3,7 @@ const { hex, strip0x } = require('../../helpers/utils')
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const {
   updateLocatorImplementation,
-  deployLocatorWithDummyAddressesImplementation
+  deployLocatorWithDummyAddressesImplementation,
 } = require('../../helpers/locator-deploy')
 
 const {
@@ -19,7 +19,7 @@ const {
   computeTimestampAtEpoch,
   ZERO_HASH,
   CONSENSUS_VERSION,
-  deployHashConsensus
+  deployHashConsensus,
 } = require('./hash-consensus-deploy.test')
 
 const ValidatorsExitBusOracle = artifacts.require('ValidatorsExitBusTimeTravellable')
@@ -76,7 +76,7 @@ module.exports = {
   encodeExitRequestHex,
   encodeExitRequestsDataList,
   deployExitBusOracle,
-  deployOracleReportSanityCheckerForExitBus
+  deployOracleReportSanityCheckerForExitBus,
 }
 async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
   const maxValidatorExitRequestsPerReport = 2000
@@ -91,7 +91,7 @@ async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
     limitsList,
     managersRoster,
     {
-      from: admin
+      from: admin,
     }
   )
   return oracleReportSanityChecker
@@ -104,7 +104,7 @@ async function deployExitBusOracle(
     lastProcessingRefSlot = 0,
     resumeAfterDeploy = false,
     pauser = ZERO_ADDRESS,
-    resumer = ZERO_ADDRESS
+    resumer = ZERO_ADDRESS,
   } = {}
 ) {
   const locator = (await deployLocatorWithDummyAddressesImplementation(admin)).address
@@ -113,13 +113,13 @@ async function deployExitBusOracle(
 
   const { consensus } = await deployHashConsensus(admin, {
     epochsPerFrame: EPOCHS_PER_FRAME,
-    reportProcessor: oracle
+    reportProcessor: oracle,
   })
 
   const oracleReportSanityChecker = await deployOracleReportSanityCheckerForExitBus(locator, admin)
   await updateLocatorImplementation(locator, admin, {
     validatorsExitBusOracle: oracle.address,
-    oracleReportSanityChecker: oracleReportSanityChecker.address
+    oracleReportSanityChecker: oracleReportSanityChecker.address,
   })
 
   const initTx = await oracle.initialize(
@@ -137,12 +137,12 @@ async function deployExitBusOracle(
   assert.emits(initTx, 'RoleGranted', {
     role: await consensus.DEFAULT_ADMIN_ROLE(),
     account: admin,
-    sender: admin
+    sender: admin,
   })
 
   assert.emits(initTx, 'ConsensusHashContractSet', {
     addr: consensus.address,
-    prevAddr: ZERO_ADDRESS
+    prevAddr: ZERO_ADDRESS,
   })
 
   assert.emits(initTx, 'ConsensusVersionSet', { version: CONSENSUS_VERSION, prevVersion: 0 })

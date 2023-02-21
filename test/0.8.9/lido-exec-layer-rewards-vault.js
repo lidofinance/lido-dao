@@ -47,7 +47,12 @@ contract('LidoExecutionLayerRewardsVault', ([deployer, anotherAccount]) => {
   it('Execution layer rewards vault refuses to receive Ether by transfers with call data', async () => {
     const amount = 0.02
     await assertRevert(
-      web3.eth.sendTransaction({ to: elRewardsVault.address, from: anotherAccount, value: ETH(amount), data: '0x12345678' })
+      web3.eth.sendTransaction({
+        to: elRewardsVault.address,
+        from: anotherAccount,
+        value: ETH(amount),
+        data: '0x12345678',
+      })
     )
   })
 
@@ -117,12 +122,14 @@ contract('LidoExecutionLayerRewardsVault', ([deployer, anotherAccount]) => {
       // recover ERC20
       const firstReceipt = await elRewardsVault.recoverERC20(mockERC20Token.address, bn(100000), { from: deployer })
       assertEvent(firstReceipt, `ERC20Recovered`, {
-        expectedArgs: { requestedBy: deployer, token: mockERC20Token.address, amount: bn(100000) }
+        expectedArgs: { requestedBy: deployer, token: mockERC20Token.address, amount: bn(100000) },
       })
 
-      const secondReceipt = await elRewardsVault.recoverERC20(mockERC20Token.address, bn(400000), { from: anotherAccount })
+      const secondReceipt = await elRewardsVault.recoverERC20(mockERC20Token.address, bn(400000), {
+        from: anotherAccount,
+      })
       assertEvent(secondReceipt, `ERC20Recovered`, {
-        expectedArgs: { requestedBy: anotherAccount, token: mockERC20Token.address, amount: bn(400000) }
+        expectedArgs: { requestedBy: anotherAccount, token: mockERC20Token.address, amount: bn(400000) },
       })
 
       // check balances again
@@ -132,13 +139,18 @@ contract('LidoExecutionLayerRewardsVault', ([deployer, anotherAccount]) => {
       assertBn(await mockERC20Token.balanceOf(anotherAccount), bn(400000))
 
       // recover last portion
-      const lastReceipt = await elRewardsVault.recoverERC20(mockERC20Token.address, bn(100000), { from: anotherAccount })
+      const lastReceipt = await elRewardsVault.recoverERC20(mockERC20Token.address, bn(100000), {
+        from: anotherAccount,
+      })
       assertEvent(lastReceipt, `ERC20Recovered`, {
-        expectedArgs: { requestedBy: anotherAccount, token: mockERC20Token.address, amount: bn(100000) }
+        expectedArgs: { requestedBy: anotherAccount, token: mockERC20Token.address, amount: bn(100000) },
       })
 
       // balance is zero already, have to be reverted
-      await assertRevert(elRewardsVault.recoverERC20(mockERC20Token.address, bn(1), { from: deployer }), `ERC20: transfer amount exceeds balance`)
+      await assertRevert(
+        elRewardsVault.recoverERC20(mockERC20Token.address, bn(1), { from: deployer }),
+        `ERC20: transfer amount exceeds balance`
+      )
     })
 
     it(`can't recover zero-address ERC721(NFT)`, async () => {
@@ -157,16 +169,23 @@ contract('LidoExecutionLayerRewardsVault', ([deployer, anotherAccount]) => {
 
       // recover nft2 should work
       const receiptNfc2 = await elRewardsVault.recoverERC721(mockNFT.address, nft2, { from: anotherAccount })
-      assertEvent(receiptNfc2, `ERC721Recovered`, { expectedArgs: { requestedBy: anotherAccount, token: mockNFT.address, tokenId: nft2 } })
+      assertEvent(receiptNfc2, `ERC721Recovered`, {
+        expectedArgs: { requestedBy: anotherAccount, token: mockNFT.address, tokenId: nft2 },
+      })
 
       // but nft1 recovery should revert
-      await assertRevert(elRewardsVault.recoverERC721(mockNFT.address, nft1), `ERC721: transfer caller is not owner nor approved`)
+      await assertRevert(
+        elRewardsVault.recoverERC721(mockNFT.address, nft1),
+        `ERC721: transfer caller is not owner nor approved`
+      )
 
       // send nft1 to elRewardsVault and recover it
       await mockNFT.transferFrom(anotherAccount, elRewardsVault.address, nft1, { from: anotherAccount })
       const receiptNft1 = await elRewardsVault.recoverERC721(mockNFT.address, nft1, { from: deployer })
 
-      assertEvent(receiptNft1, `ERC721Recovered`, { expectedArgs: { requestedBy: deployer, token: mockNFT.address, tokenId: nft1 } })
+      assertEvent(receiptNft1, `ERC721Recovered`, {
+        expectedArgs: { requestedBy: deployer, token: mockNFT.address, tokenId: nft1 },
+      })
 
       // check final NFT ownership state
       assertBn(await mockNFT.balanceOf(treasury), bn(2))

@@ -9,14 +9,14 @@ const DEFAULT_DEPLOY_PARAMS = {
   guardians: {
     '0x5fc0e75bf6502009943590492b02a1d08eac9c43': '0x3578665169e03e05a26bd5c565ffd12c81a1e0df7d0679f8aee4153110a83c8c',
     '0x8516cbb5abe73d775bfc0d21af226e229f7181a3': '0x88868f0fb667cfe50261bb385be8987e0ce62faee934af33c3026cf65f25f09e',
-    '0xdaead0e0194abd565d28c1013399801d79627c14': '0x75e6f508b637327debc90962cd38943ddb9cfc1fc4a8572fc5e3d0984e1261de'
+    '0xdaead0e0194abd565d28c1013399801d79627c14': '0x75e6f508b637327debc90962cd38943ddb9cfc1fc4a8572fc5e3d0984e1261de',
   },
   depositRoot: '0xd151867719c94ad8458feaf491809f9bc8096c702a72747403ecaac30c179137',
   genesisTime: ~~(+new Date() / 1000) - SECONDS_PER_EPOCH * 675,
   lastCompletedEpoch: 1,
   v1OracleLastCompletedEpoch: 1,
   hashConsensus: {
-    fastLaneLengthSlots: 0
+    fastLaneLengthSlots: 0,
   },
   oracleReportSanityChecker: {
     limitsList: {
@@ -41,8 +41,8 @@ const DEFAULT_DEPLOY_PARAMS = {
       maxNodeOperatorsPerExtraDataItemCountManagers: [],
       requestTimestampMarginManagers: [],
       maxPositiveTokenRebaseManagers: [],
-    }
-  }
+    },
+  },
 }
 
 const DEFAULT_FACTORIES = {
@@ -74,5 +74,5 @@ const DEFAULT_FACTORIES = {
 
 module.exports = {
   DEFAULT_FACTORIES,
-  DEFAULT_DEPLOY_PARAMS
+  DEFAULT_DEPLOY_PARAMS,
 }

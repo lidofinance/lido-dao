@@ -108,18 +108,27 @@ contract('StakingLimits', ([account1]) => {
 
     maxStakeLimit = 5
     maxStakeLimitGrowthBlocks = 6
-    await assertRevert(limits.setStakingLimit(slot, maxStakeLimit, maxStakeLimitGrowthBlocks), 'TOO_LARGE_LIMIT_INCREASE')
+    await assertRevert(
+      limits.setStakingLimit(slot, maxStakeLimit, maxStakeLimitGrowthBlocks),
+      'TOO_LARGE_LIMIT_INCREASE'
+    )
   })
 
   it('stake limit reverts on large values', async () => {
     let maxStakeLimit = toBN(2).pow(toBN(96))
     let maxStakeLimitIncreasePerBlock = 1
     const slot = await limits.setStorageStakeLimitStruct(0, 0, 0, 0)
-    await assertRevert(limits.setStakingLimit(slot, maxStakeLimit, maxStakeLimitIncreasePerBlock), 'TOO_LARGE_MAX_STAKE_LIMIT')
+    await assertRevert(
+      limits.setStakingLimit(slot, maxStakeLimit, maxStakeLimitIncreasePerBlock),
+      'TOO_LARGE_MAX_STAKE_LIMIT'
+    )
 
     maxStakeLimit = toBN(2).mul(toBN(10).pow(toBN(18)))
     maxStakeLimitIncreasePerBlock = toBN(10)
-    await assertRevert(limits.setStakingLimit(slot, maxStakeLimit, maxStakeLimitIncreasePerBlock), `TOO_SMALL_LIMIT_INCREASE`)
+    await assertRevert(
+      limits.setStakingLimit(slot, maxStakeLimit, maxStakeLimitIncreasePerBlock),
+      `TOO_SMALL_LIMIT_INCREASE`
+    )
   })
 
   it('check update calculate stake limit with different blocks', async () => {
@@ -192,7 +201,12 @@ contract('StakingLimits', ([account1]) => {
 
     // check that we CAN set max value
 
-    const maxSlot = await limits.setStorageStakeLimitStruct(maxBlock, maxPrevStakeLimit, maxStakeLimitGrowthBlocks, maxStakeLimit)
+    const maxSlot = await limits.setStorageStakeLimitStruct(
+      maxBlock,
+      maxPrevStakeLimit,
+      maxStakeLimitGrowthBlocks,
+      maxStakeLimit
+    )
     const maxUint256 = toBN(2).pow(toBN(256)).sub(toBN(1))
     assertBn(maxSlot, maxUint256)
 
@@ -215,12 +229,7 @@ contract('StakingLimits', ([account1]) => {
     const maxStakeLimit = ETH(150000)
     const maxStakeLimitGrowthBlocks = 12
 
-    const slot = await limits.setStorageStakeLimitStruct(
-      block.number,
-      ETH(0),
-      maxStakeLimitGrowthBlocks,
-      maxStakeLimit
-    )
+    const slot = await limits.setStorageStakeLimitStruct(block.number, ETH(0), maxStakeLimitGrowthBlocks, maxStakeLimit)
     // dry run to init the storage
     await limits.emitCurrentStakeLimit(slot)
 
@@ -229,7 +238,7 @@ contract('StakingLimits', ([account1]) => {
     const referenceBlock = (await web3.eth.getBlock('latest')).number
 
     // spin up the loop to hit the max and impose saturation
-    for(i=0; i<maxStakeLimitGrowthBlocks+1; ++i) {
+    for (let i = 0; i < maxStakeLimitGrowthBlocks + 1; ++i) {
       const currentGas = (await limits.emitCurrentStakeLimit(slot)).receipt.gasUsed
       const currentBlock = (await web3.eth.getBlock('latest')).number
 

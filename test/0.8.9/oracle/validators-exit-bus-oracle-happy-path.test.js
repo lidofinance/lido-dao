@@ -6,16 +6,33 @@ const { toNum } = require('../../helpers/utils')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
 const {
-  SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME, SECONDS_PER_EPOCH,
-  EPOCHS_PER_FRAME, SLOTS_PER_FRAME, SECONDS_PER_FRAME,
-  MAX_REQUESTS_PER_REPORT, MAX_REQUESTS_LIST_LENGTH,
-  MAX_REQUESTS_PER_DAY, RATE_LIMIT_WINDOW_SLOTS, RATE_LIMIT_THROUGHPUT,
-  computeSlotAt, computeEpochAt, computeEpochFirstSlotAt,
-  computeEpochFirstSlot, computeTimestampAtSlot, computeTimestampAtEpoch,
-  ZERO_HASH, CONSENSUS_VERSION, DATA_FORMAT_LIST, getReportDataItems, calcReportDataHash,
-  encodeExitRequestHex, encodeExitRequestsDataList, deployExitBusOracle,
+  SLOTS_PER_EPOCH,
+  SECONDS_PER_SLOT,
+  GENESIS_TIME,
+  SECONDS_PER_EPOCH,
+  EPOCHS_PER_FRAME,
+  SLOTS_PER_FRAME,
+  SECONDS_PER_FRAME,
+  MAX_REQUESTS_PER_REPORT,
+  MAX_REQUESTS_LIST_LENGTH,
+  MAX_REQUESTS_PER_DAY,
+  RATE_LIMIT_WINDOW_SLOTS,
+  RATE_LIMIT_THROUGHPUT,
+  computeSlotAt,
+  computeEpochAt,
+  computeEpochFirstSlotAt,
+  computeEpochFirstSlot,
+  computeTimestampAtSlot,
+  computeTimestampAtEpoch,
+  ZERO_HASH,
+  CONSENSUS_VERSION,
+  DATA_FORMAT_LIST,
+  getReportDataItems,
+  calcReportDataHash,
+  encodeExitRequestHex,
+  encodeExitRequestsDataList,
+  deployExitBusOracle,
 } = require('./validators-exit-bus-oracle-deploy.test')
-
 
 const PUBKEYS = [
   '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
@@ -26,7 +43,6 @@ const PUBKEYS = [
 ]
 
 contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger]) => {
-
   context('Happy path', () => {
     const LAST_PROCESSING_REF_SLOT = 1
 
@@ -42,21 +58,21 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     before(async () => {
       const deployed = await deployExitBusOracle(admin, {
         lastProcessingRefSlot: LAST_PROCESSING_REF_SLOT,
-        resumeAfterDeploy: true
+        resumeAfterDeploy: true,
       })
 
       consensus = deployed.consensus
       oracle = deployed.oracle
 
-      oracleVersion = +await oracle.getContractVersion()
+      oracleVersion = +(await oracle.getContractVersion())
 
-      await consensus.addMember(member1, 1, {from: admin})
-      await consensus.addMember(member2, 2, {from: admin})
-      await consensus.addMember(member3, 2, {from: admin})
+      await consensus.addMember(member1, 1, { from: admin })
+      await consensus.addMember(member2, 2, { from: admin })
+      await consensus.addMember(member3, 2, { from: admin })
     })
 
     async function triggerConsensusOnHash(hash) {
-      const {refSlot} = await consensus.getCurrentFrame()
+      const { refSlot } = await consensus.getCurrentFrame()
       await consensus.submitReport(refSlot, hash, CONSENSUS_VERSION, { from: member1 })
       await consensus.submitReport(refSlot, hash, CONSENSUS_VERSION, { from: member3 })
       assert.equal((await consensus.getConsensusState()).consensusReport, hash)
@@ -81,20 +97,22 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       assert.equal(+procState.requestsSubmitted, 0)
     })
 
-    it(`reference slot of the empty initial consensus report is set to the last processing slot ` +
-       `passed to the initialize function`, async () =>
-    {
-      const report = await oracle.getConsensusReport()
-      assert.equal(+report.refSlot, LAST_PROCESSING_REF_SLOT)
-    })
+    it(
+      `reference slot of the empty initial consensus report is set to the last processing slot ` +
+        `passed to the initialize function`,
+      async () => {
+        const report = await oracle.getConsensusReport()
+        assert.equal(+report.refSlot, LAST_PROCESSING_REF_SLOT)
+      }
+    )
 
     it('committee reaches consensus on a report hash', async () => {
-      const {refSlot} = await consensus.getCurrentFrame()
+      const { refSlot } = await consensus.getCurrentFrame()
 
       exitRequests = [
-        {moduleId: 1, nodeOpId: 0, valIndex: 0, valPubkey: PUBKEYS[0] },
-        {moduleId: 1, nodeOpId: 0, valIndex: 2, valPubkey: PUBKEYS[1] },
-        {moduleId: 2, nodeOpId: 0, valIndex: 1, valPubkey: PUBKEYS[2] },
+        { moduleId: 1, nodeOpId: 0, valIndex: 0, valPubkey: PUBKEYS[0] },
+        { moduleId: 1, nodeOpId: 0, valIndex: 2, valPubkey: PUBKEYS[1] },
+        { moduleId: 2, nodeOpId: 0, valIndex: 1, valPubkey: PUBKEYS[2] },
       ]
 
       reportFields = {
@@ -115,10 +133,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       const report = await oracle.getConsensusReport()
       assert.equal(report.hash, reportHash)
       assert.equal(+report.refSlot, +reportFields.refSlot)
-      assert.equal(
-        +report.processingDeadlineTime,
-        computeTimestampAtSlot(+report.refSlot + SLOTS_PER_FRAME)
-      )
+      assert.equal(+report.processingDeadlineTime, computeTimestampAtSlot(+report.refSlot + SLOTS_PER_FRAME))
       assert.isFalse(report.processingStarted)
 
       const frame = await consensus.getCurrentFrame()
@@ -126,10 +141,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
 
       assert.equal(procState.currentFrameRefSlot, +frame.refSlot)
       assert.equal(procState.dataHash, reportHash)
-      assert.equal(
-        procState.processingDeadlineTime,
-        computeTimestampAtSlot(+frame.reportProcessingDeadlineSlot)
-      )
+      assert.equal(procState.processingDeadlineTime, computeTimestampAtSlot(+frame.reportProcessingDeadlineSlot))
       assert.isFalse(procState.dataSubmitted)
       assert.equal(+procState.dataFormat, 0)
       assert.equal(+procState.requestsCount, 0)
@@ -141,15 +153,12 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     })
 
     it('non-member cannot submit the data', async () => {
-      await assertRevert(
-        oracle.submitReportData(reportItems, oracleVersion, {from: stranger}),
-        'SenderNotAllowed()'
-      )
+      await assertRevert(oracle.submitReportData(reportItems, oracleVersion, { from: stranger }), 'SenderNotAllowed()')
     })
 
     it('the data cannot be submitted passing a different contract version', async () => {
       await assertRevert(
-        oracle.submitReportData(reportItems, oracleVersion - 1, {from: member1}),
+        oracle.submitReportData(reportItems, oracleVersion - 1, { from: member1 }),
         `UnexpectedContractVersion(${oracleVersion}, ${oracleVersion - 1})`
       )
     })
@@ -158,7 +167,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       const invalidReport = { ...reportFields, consensusVersion: CONSENSUS_VERSION + 1 }
       const invalidReportItems = getReportDataItems(invalidReport)
       await assertRevert(
-        oracle.submitReportData(invalidReport, oracleVersion, {from: member1}),
+        oracle.submitReportData(invalidReport, oracleVersion, { from: member1 }),
         `UnexpectedConsensusVersion(${CONSENSUS_VERSION}, ${CONSENSUS_VERSION + 1})`
       )
     })
@@ -168,26 +177,29 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       const invalidReportItems = getReportDataItems(invalidReport)
       const invalidReportHash = calcReportDataHash(invalidReportItems)
       await assertRevert(
-        oracle.submitReportData(invalidReportItems, oracleVersion, {from: member1}),
+        oracle.submitReportData(invalidReportItems, oracleVersion, { from: member1 }),
         `UnexpectedDataHash("${reportHash}", "${invalidReportHash}")`
       )
     })
 
     it(`a committee member submits the report data, exit requests are emitted`, async () => {
-      const tx = await oracle.submitReportData(reportItems, oracleVersion, {from: member1})
-      assertEvent(tx, 'ProcessingStarted', {expectedArgs: {refSlot: reportFields.refSlot}})
+      const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
+      assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
       assert.isTrue((await oracle.getConsensusReport()).processingStarted)
 
       const timestamp = await oracle.getTime()
 
       for (let i = 0; i < exitRequests.length; ++i) {
-        assertEvent(tx, 'ValidatorExitRequest', {index: i, expectedArgs: {
-          stakingModuleId: exitRequests[i].moduleId,
-          nodeOperatorId: exitRequests[i].nodeOpId,
-          validatorIndex: exitRequests[i].valIndex,
-          validatorPubkey: exitRequests[i].valPubkey,
-          timestamp
-        }})
+        assertEvent(tx, 'ValidatorExitRequest', {
+          index: i,
+          expectedArgs: {
+            stakingModuleId: exitRequests[i].moduleId,
+            nodeOperatorId: exitRequests[i].nodeOpId,
+            validatorIndex: exitRequests[i].valIndex,
+            validatorPubkey: exitRequests[i].valPubkey,
+            timestamp,
+          },
+        })
       }
     })
 
@@ -197,10 +209,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
 
       assert.equal(procState.currentFrameRefSlot, +frame.refSlot)
       assert.equal(procState.dataHash, reportHash)
-      assert.equal(
-        procState.processingDeadlineTime,
-        computeTimestampAtSlot(+frame.reportProcessingDeadlineSlot)
-      )
+      assert.equal(procState.processingDeadlineTime, computeTimestampAtSlot(+frame.reportProcessingDeadlineSlot))
       assert.isTrue(procState.dataSubmitted)
       assert.equal(+procState.dataFormat, DATA_FORMAT_LIST)
       assert.equal(+procState.requestsCount, exitRequests.length)
@@ -216,7 +225,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
 
     it(`no data can be submitted for the same reference slot again`, async () => {
       await assert.reverts(
-        oracle.submitReportData(reportItems, oracleVersion, {from: member2}),
+        oracle.submitReportData(reportItems, oracleVersion, { from: member2 }),
         'RefSlotAlreadyProcessing()'
       )
     })

@@ -29,10 +29,10 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
             name: 'Curated',
             targetShares: 10000,
             moduleFee: 500,
-            treasuryFee: 500
-          }
+            treasuryFee: 500,
+          },
         ]
-      }
+      },
     })
 
     pool = deployed.pool
@@ -56,7 +56,7 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     const nodeOperatorId = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', {
-      decodeForAbi: NodeOperatorsRegistry._json.abi
+      decodeForAbi: NodeOperatorsRegistry._json.abi,
     })
 
     assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 1, 'total node operators')
@@ -65,7 +65,7 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
       const n = 1 + 10 * i
       return {
         key: pad(`0x${n.toString(16)}`, 48),
-        sig: pad(`0x${n.toString(16)}`, 96)
+        sig: pad(`0x${n.toString(16)}`, 96),
       }
     })
 
@@ -109,7 +109,7 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
     )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
-      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]]),
     ]
     await depositSecurityModule.depositBufferedEther(
       block.number,
@@ -147,7 +147,7 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
     )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
-      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]]),
     ]
     await depositSecurityModule.depositBufferedEther(
       block.number,
@@ -182,7 +182,7 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
     )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
-      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]]),
     ]
     await depositSecurityModule.depositBufferedEther(
       block.number,
@@ -227,7 +227,7 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
     )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
-      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]]),
     ]
     await depositSecurityModule.depositBufferedEther(
       block.number,
@@ -264,7 +264,7 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
     )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
-      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]]),
     ]
     await depositSecurityModule.depositBufferedEther(
       block.number,

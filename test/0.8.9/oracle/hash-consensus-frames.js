@@ -16,7 +16,7 @@ const {
   ZERO_HASH,
   HASH_1,
   CONSENSUS_VERSION,
-  deployHashConsensus
+  deployHashConsensus,
 } = require('./hash-consensus-deploy.test')
 
 const getFrameIndex = (time, epochsPerFrame, initialEpoch) =>

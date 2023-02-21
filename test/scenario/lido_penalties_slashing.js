@@ -22,7 +22,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     // users who deposit Ether to the pool
     user1,
     // unrelated address
-    nobody
+    nobody,
   ] = addresses
 
   let pool, nodeOperatorsRegistry, token
@@ -33,51 +33,54 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   let stakingRouter, consensus
   let elRewardsVault
 
-  before('DAO, node operators registry, token, pool and deposit security module are deployed and initialized', async () => {
-    const deployed = await deployProtocol({
-      oracleReportSanityCheckerFactory: oracleReportSanityCheckerStubFactory,
-      stakingModulesFactory: async (protocol) => {
-        const curatedModule = await setupNodeOperatorsRegistry(protocol)
-        return [
-          {
-            module: curatedModule,
-            name: 'Curated',
-            targetShares: 10000,
-            moduleFee: 500,
-            treasuryFee: 500
-          }
-        ]
-      }
-    })
+  before(
+    'DAO, node operators registry, token, pool and deposit security module are deployed and initialized',
+    async () => {
+      const deployed = await deployProtocol({
+        oracleReportSanityCheckerFactory: oracleReportSanityCheckerStubFactory,
+        stakingModulesFactory: async (protocol) => {
+          const curatedModule = await setupNodeOperatorsRegistry(protocol)
+          return [
+            {
+              module: curatedModule,
+              name: 'Curated',
+              targetShares: 10000,
+              moduleFee: 500,
+              treasuryFee: 500,
+            },
+          ]
+        },
+      })
 
-    // contracts/StETH.sol
-    token = deployed.pool
+      // contracts/StETH.sol
+      token = deployed.pool
 
-    // contracts/Lido.sol
-    pool = deployed.pool
+      // contracts/Lido.sol
+      pool = deployed.pool
 
-    // contracts/nos/NodeOperatorsRegistry.sol
-    nodeOperatorsRegistry = deployed.stakingModules[0]
+      // contracts/nos/NodeOperatorsRegistry.sol
+      nodeOperatorsRegistry = deployed.stakingModules[0]
 
-    // mocks
-    oracle = deployed.oracle
-    consensus = deployed.consensusContract
-    depositContractMock = deployed.depositContract
+      // mocks
+      oracle = deployed.oracle
+      consensus = deployed.consensusContract
+      depositContractMock = deployed.depositContract
 
-    stakingRouter = deployed.stakingRouter
+      stakingRouter = deployed.stakingRouter
 
-    // addresses
-    treasuryAddr = deployed.treasury.address
-    depositSecurityModule = deployed.depositSecurityModule
-    guardians = deployed.guardians
-    voting = deployed.voting.address
-    elRewardsVault = deployed.elRewardsVault
+      // addresses
+      treasuryAddr = deployed.treasury.address
+      depositSecurityModule = deployed.depositSecurityModule
+      guardians = deployed.guardians
+      voting = deployed.voting.address
+      elRewardsVault = deployed.elRewardsVault
 
-    depositRoot = await depositContractMock.get_deposit_root()
-    withdrawalCredentials = pad('0x0202', 32)
+      depositRoot = await depositContractMock.get_deposit_root()
+      withdrawalCredentials = pad('0x0202', 32)
 
-    await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
-  })
+      await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
+    }
+  )
 
   const pushReport = async (clValidators, clBalance) => {
     const elRewards = await web3.eth.getBalance(elRewardsVault.address)
@@ -87,7 +90,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   }
 
   // storing incremental calculated values that changes all across the test suite
-  let expectedTotalShares = shares(0)
+  const expectedTotalShares = shares(0)
   let expectedUser1Balance = StETH(0)
   let expectedUser1Shares = shares(0)
 
@@ -99,20 +102,22 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     validators: [
       {
         key: pad('0x010101', 48),
-        sig: pad('0x01', 96)
+        sig: pad('0x01', 96),
       },
       {
         key: pad('0x030303', 48),
-        sig: pad('0x03', 96)
-      }
-    ]
+        sig: pad('0x03', 96),
+      },
+    ],
   }
 
   it('voting adds the first node operator', async () => {
     const txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator1.name, nodeOperator1.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    nodeOperator1.id = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', {
+      decodeForAbi: NodeOperatorsRegistry._json.abi,
+    })
     assertBn(nodeOperator1.id, 0, 'operator id')
 
     assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 1, 'total node operators')
@@ -127,7 +132,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
       nodeOperator1.validators[0].key,
       nodeOperator1.validators[0].sig,
       {
-        from: nodeOperator1.address
+        from: nodeOperator1.address,
       }
     )
 
@@ -168,9 +173,17 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
         keysOpIndex,
         '0x00',
         guardians.privateKeys[guardians.addresses[1]]
-      )
+      ),
     ]
-    await depositSecurityModule.depositBufferedEther(block.number, block.hash, depositRoot, 1, keysOpIndex, '0x00', signatures)
+    await depositSecurityModule.depositBufferedEther(
+      block.number,
+      block.hash,
+      depositRoot,
+      1,
+      keysOpIndex,
+      '0x00',
+      signatures
+    )
 
     // No Ether was deposited yet to the validator contract
 
@@ -186,13 +199,19 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     expectedUser1Balance = StETH(32)
     expectedUser1Shares = shares(32)
 
-    assertBn(await token.sharesOf(user1), shares(32), "User1 holds 32 shares")
-    assertBn(await token.balanceOf(user1), expectedUser1Balance,
-      'The amount of tokens corresponding to the deposited ETH value was minted to the user')
+    assertBn(await token.sharesOf(user1), shares(32), 'User1 holds 32 shares')
+    assertBn(
+      await token.balanceOf(user1),
+      expectedUser1Balance,
+      'The amount of tokens corresponding to the deposited ETH value was minted to the user'
+    )
     assertBn(await token.totalSupply(), StETH(33), 'token total supply')
 
-    assertBn(await token.getTotalShares(), shares(33),
-      'Total shares are equal to deposited eth before ratio change and fee mint')
+    assertBn(
+      await token.getTotalShares(),
+      shares(33),
+      'Total shares are equal to deposited eth before ratio change and fee mint'
+    )
   })
 
   it(`voting grants first operator right to have one validator`, async () => {
@@ -228,15 +247,27 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
         keysOpIndex,
         '0x00',
         guardians.privateKeys[guardians.addresses[1]]
-      )
+      ),
     ]
-    await depositSecurityModule.depositBufferedEther(block.number, block.hash, depositRoot, 1, keysOpIndex, '0x00', signatures)
+    await depositSecurityModule.depositBufferedEther(
+      block.number,
+      block.hash,
+      depositRoot,
+      1,
+      keysOpIndex,
+      '0x00',
+      signatures
+    )
   })
 
   it('new validator gets the 32 ETH deposit from the pool', async () => {
     assertBn(await pool.getBufferedEther(), ETH(1), `only initial eth is left`)
     assertBn(await pool.getTotalPooledEther(), ETH(33), 'total pooled ether')
-    assertBn(await nodeOperatorsRegistry.getUnusedSigningKeyCount(0), 0, 'no more available keys for the first validator')
+    assertBn(
+      await nodeOperatorsRegistry.getUnusedSigningKeyCount(0),
+      0,
+      'no more available keys for the first validator'
+    )
   })
 
   it('first oracle report is taken as-is for Lido', async () => {
@@ -245,8 +276,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     // Reporting 1 ETH balance loss (32 => 31)
     await pushReport(1, ETH(31))
 
-    assertBn(await token.getTotalShares(), shares(33),
-      'Total shares stay the same because no fee shares are added')
+    assertBn(await token.getTotalShares(), shares(33), 'Total shares stay the same because no fee shares are added')
 
     assertBn(await pool.getTotalPooledEther(), ETH(32), 'Total pooled Ether decreased')
 
@@ -257,7 +287,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     assertBn(await pool.getBufferedEther(), ETH(1), 'Initial stake remains in the buffer')
     assertBn(await token.totalSupply(), StETH(32), 'Token total supply penalized')
 
-    assertBn(await token.sharesOf(user1), shares(32), "User1 still holds 32 shares")
+    assertBn(await token.sharesOf(user1), shares(32), 'User1 still holds 32 shares')
     expectedUser1Balance = bn(shares(32)).muln(32).divn(33) // 32/33 ETH/share is a new price
     assertBn(await token.balanceOf(user1), expectedUser1Balance, `Token user balances decreased`)
 
@@ -266,16 +296,21 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
   })
 
   it('the oracle reports balance loss on CL side', async () => {
-    assertBn(await token.getTotalShares(), shares(33),
-      'Total shares are equal to deposited eth before ratio change and fee mint')
-    assertBn(await pool.getTotalPooledEther(), ETH(32),
-      'Old total pooled Ether 31 ETH od previous report + 1 ETH initial')
+    assertBn(
+      await token.getTotalShares(),
+      shares(33),
+      'Total shares are equal to deposited eth before ratio change and fee mint'
+    )
+    assertBn(
+      await pool.getTotalPooledEther(),
+      ETH(32),
+      'Old total pooled Ether 31 ETH od previous report + 1 ETH initial'
+    )
 
     // Reporting 2 ETH balance loss (31 => 29)
     await pushReport(1, ETH(29))
 
-    assertBn(await token.getTotalShares(), shares(33),
-      `Total shares stay the same because no fee shares are added`)
+    assertBn(await token.getTotalShares(), shares(33), `Total shares stay the same because no fee shares are added`)
     assertBn(await pool.getTotalPooledEther(), ETH(30), 'Total pooled Ether decreased')
 
     const ether2Stat = await pool.getBeaconStat()
@@ -298,9 +333,9 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     validators: [
       {
         key: pad('0x020202', 48),
-        sig: pad('0x02', 96)
-      }
-    ]
+        sig: pad('0x02', 96),
+      },
+    ],
   }
 
   it('voting adds the second node operator who registers one validator', async () => {
@@ -309,7 +344,9 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const txn = await nodeOperatorsRegistry.addNodeOperator(nodeOperator2.name, nodeOperator2.address, { from: voting })
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
-    nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    nodeOperator2.id = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', {
+      decodeForAbi: NodeOperatorsRegistry._json.abi,
+    })
     assertBn(nodeOperator2.id, 1, 'correct operator id added')
 
     assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 2, 'total node operators updated')
@@ -322,7 +359,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
       nodeOperator2.validators[0].key,
       nodeOperator2.validators[0].sig,
       {
-        from: nodeOperator2.address
+        from: nodeOperator2.address,
       }
     )
 
@@ -366,9 +403,17 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
         keysOpIndex,
         '0x00',
         guardians.privateKeys[guardians.addresses[1]]
-      )
+      ),
     ]
-    await depositSecurityModule.depositBufferedEther(block.number, block.hash, depositRoot, 1, keysOpIndex, '0x00', signatures)
+    await depositSecurityModule.depositBufferedEther(
+      block.number,
+      block.hash,
+      depositRoot,
+      1,
+      keysOpIndex,
+      '0x00',
+      signatures
+    )
 
     assertBn(await depositContractMock.totalCalls(), 2)
 
@@ -381,10 +426,16 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     assertBn(await token.totalSupply(), StETH(62), 'token total supply')
 
     // 32 ETH deposit to shares if price is 30/33 ETH/shares
-    const sharesAdded = bn(ETH(32)).mul(bn(ETH(33))).div(bn(shares(30)))
+    const sharesAdded = bn(ETH(32))
+      .mul(bn(ETH(33)))
+      .div(bn(shares(30)))
     expectedUser1Shares = bn(expectedUser1Shares).add(sharesAdded)
-    assertBn(await token.sharesOf(user1), expectedUser1Shares, "User1 acquires new shares by new share price")
-    assertBn(await token.getTotalShares(), bn(shares(1)).add(expectedUser1Shares), 'total shares are changed proportionally')
+    assertBn(await token.sharesOf(user1), expectedUser1Shares, 'User1 acquires new shares by new share price')
+    assertBn(
+      await token.getTotalShares(),
+      bn(shares(1)).add(expectedUser1Shares),
+      'total shares are changed proportionally'
+    )
 
     expectedUser1Balance = bn(expectedUser1Balance).add(bn(StETH(32)))
     assertBn(await token.balanceOf(user1), expectedUser1Balance, 'user1 tokens')
@@ -398,8 +449,11 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     // Reporting 1 ETH balance loss ( total pooled 61 => 60)
     await pushReport(1, ETH(28))
 
-    assertBn(await token.getTotalShares(), bn(shares(1)).add(expectedUser1Shares),
-      'Total shares stay the same because no fee shares are added')
+    assertBn(
+      await token.getTotalShares(),
+      bn(shares(1)).add(expectedUser1Shares),
+      'Total shares stay the same because no fee shares are added'
+    )
     assertBn(await pool.getTotalPooledEther(), ETH(61), 'Total pooled Ether decreased')
 
     const ether2Stat = await pool.getBeaconStat()
@@ -432,7 +486,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     await web3.eth.sendTransaction({ to: pool.address, from: user1, value: ETH(32) })
 
-    await hre.network.provider.send("hardhat_mine", ['0x100'])
+    await hre.network.provider.send('hardhat_mine', ['0x100'])
 
     const block = await web3.eth.getBlock('latest')
     const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
@@ -444,7 +498,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
-      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]]),
     ]
 
     await depositSecurityModule.depositBufferedEther(
@@ -464,15 +518,23 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     assertBn(await pool.getTotalPooledEther(), ETH(93), 'Total pooled Ether')
     assertBn(await token.totalSupply(), StETH(93), 'token total supply')
 
-    const sharesAdded = bn(ETH(32)).mul(oldTotalShares).div(bn(ETH(61)))
-    assertBn(await token.getTotalShares(), oldTotalShares.add(sharesAdded),
-      'Total shares are equal to deposited eth before ratio change and fee mint')
+    const sharesAdded = bn(ETH(32))
+      .mul(oldTotalShares)
+      .div(bn(ETH(61)))
+    assertBn(
+      await token.getTotalShares(),
+      oldTotalShares.add(sharesAdded),
+      'Total shares are equal to deposited eth before ratio change and fee mint'
+    )
 
     expectedUser1Shares = bn(expectedUser1Shares).add(sharesAdded)
-    assertBn(await token.sharesOf(user1), expectedUser1Shares, "User1 bought shares on 32 ETH")
+    assertBn(await token.sharesOf(user1), expectedUser1Shares, 'User1 bought shares on 32 ETH')
     expectedUser1Balance = expectedUser1Balance.add(bn(StETH(32)))
-    assertBn(await token.balanceOf(user1), expectedUser1Balance,
-      'The amount of tokens corresponding to the deposited ETH value was minted to the user')
+    assertBn(
+      await token.balanceOf(user1),
+      expectedUser1Balance,
+      'The amount of tokens corresponding to the deposited ETH value was minted to the user'
+    )
   })
 
   it(`voting stops the staking module`, async () => {
@@ -489,13 +551,15 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
       nodeOperator1.validators[1].key,
       nodeOperator1.validators[1].sig,
       {
-        from: nodeOperator1.address
+        from: nodeOperator1.address,
       }
     )
 
     // The key was added
 
-    const totalFirstOperatorKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperator1.id, { from: nobody })
+    const totalFirstOperatorKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperator1.id, {
+      from: nobody,
+    })
     assertBn(totalFirstOperatorKeys, 2, 'added one signing key to total')
 
     const unusedKeys = await nodeOperatorsRegistry.getUnusedSigningKeyCount(nodeOperator1.id, { from: nobody })
@@ -548,11 +612,7 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
     const totalFeeToDistribute = bn(beaconBalanceIncrement.toString()).mul(bn(totalFeePoints)).div(tenKBN)
 
     const totalPooledEther = await pool.getTotalPooledEther()
-    let sharesToMint = totalFeeToDistribute
-      .mul(prevTotalShares)
-      .div(
-        totalPooledEther.sub(totalFeeToDistribute)
-      )
+    const sharesToMint = totalFeeToDistribute.mul(prevTotalShares).div(totalPooledEther.sub(totalFeeToDistribute))
 
     assertBn(treasurySharesAfter.sub(treasurySharesBefore), sharesToMint, 'treasury got the total fee')
   })

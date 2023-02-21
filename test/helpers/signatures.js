@@ -70,7 +70,9 @@ class DSMPauseMessage extends DSMMessage {
   }
 
   get hash() {
-    return keccak256(hexToBytes(strip0x(this.messagePrefix) + encodeBN(this.blockNumber) + encodeBN(this.stakingModule)))
+    return keccak256(
+      hexToBytes(strip0x(this.messagePrefix) + encodeBN(this.blockNumber) + encodeBN(this.stakingModule))
+    )
   }
 }
 
@@ -81,7 +83,9 @@ function signPauseData(pauseMessagePrefix, pauseMessage, guardianPrivateKey) {
 
 function encodePauseData(pauseMessagePrefix, pauseMessage) {
   const uint256Size = 64
-  return hexToBytes(strip0x(pauseMessagePrefix) + encodeBN(pauseMessage.blockNumber) + encodeBN(pauseMessage.stakingModule))
+  return hexToBytes(
+    strip0x(pauseMessagePrefix) + encodeBN(pauseMessage.blockNumber) + encodeBN(pauseMessage.stakingModule)
+  )
 }
 
 function encodeBN(value) {
@@ -101,7 +105,9 @@ function signDepositData(
   calldata,
   guardianPrivateKey
 ) {
-  const hash = keccak256(encodeAttestMessage(attestMessagePrefix, blockNumber, blockHash, depositRoot, StakingModuleId, keysOpIndex))
+  const hash = keccak256(
+    encodeAttestMessage(attestMessagePrefix, blockNumber, blockHash, depositRoot, StakingModuleId, keysOpIndex)
+  )
   return toEip2098(ecSign(hash, guardianPrivateKey))
 }
 
@@ -128,5 +134,5 @@ module.exports = {
   signDepositData,
   signPauseData,
   DSMPauseMessage,
-  DSMAttestMessage
+  DSMAttestMessage,
 }

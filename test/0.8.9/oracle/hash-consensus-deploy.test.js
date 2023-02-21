@@ -43,7 +43,7 @@ async function deployHashConsensus(
     genesisTime = GENESIS_TIME,
     epochsPerFrame = EPOCHS_PER_FRAME,
     fastLaneLengthSlots = INITIAL_FAST_LANE_LENGTH_SLOTS,
-    initialEpoch = INITIAL_EPOCH
+    initialEpoch = INITIAL_EPOCH,
   } = {}
 ) {
   if (!reportProcessor) {
@@ -97,7 +97,7 @@ module.exports = {
   HASH_5,
   CONSENSUS_VERSION,
   UNREACHABLE_QUORUM,
-  deployHashConsensus
+  deployHashConsensus,
 }
 
 contract('HashConsensus', ([admin, member1]) => {
@@ -127,7 +127,8 @@ contract('HashConsensus', ([admin, member1]) => {
     })
 
     it('reverts if report processor address is zero', async () => {
-      await assert.revertsWithCustomError(HashConsensus.new(
+      await assert.revertsWithCustomError(
+        HashConsensus.new(
           SLOTS_PER_EPOCH,
           SECONDS_PER_SLOT,
           GENESIS_TIME,
@@ -144,7 +145,8 @@ contract('HashConsensus', ([admin, member1]) => {
 
     it('reverts if admin address is zero', async () => {
       const reportProcessor = await MockReportProcessor.new(CONSENSUS_VERSION, { from: admin })
-      await assert.revertsWithCustomError(HashConsensus.new(
+      await assert.revertsWithCustomError(
+        HashConsensus.new(
           SLOTS_PER_EPOCH,
           SECONDS_PER_SLOT,
           GENESIS_TIME,

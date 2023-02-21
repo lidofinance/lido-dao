@@ -103,7 +103,9 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
           assertAmountOfEvents(receipt, 'Transfer', { expectedAmount: 1 })
           assertAmountOfEvents(receipt, 'TransferShares', { expectedAmount: 1 })
           assertEvent(receipt, 'Transfer', { expectedArgs: { from: user1, to: user2, value: amount } })
-          assertEvent(receipt, 'TransferShares', { expectedArgs: { from: user1, to: user2, sharesValue: sharesAmount } })
+          assertEvent(receipt, 'TransferShares', {
+            expectedArgs: { from: user1, to: user2, sharesValue: sharesAmount },
+          })
           assertBn(await stEth.balanceOf(user1), tokens(0))
           assertBn(await stEth.balanceOf(user2), tokens(99))
         })
@@ -115,7 +117,9 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
           assertAmountOfEvents(receipt, 'Transfer', { expectedAmount: 1 })
           assertAmountOfEvents(receipt, 'TransferShares', { expectedAmount: 1 })
           assertEvent(receipt, 'Transfer', { expectedArgs: { from: user1, to: user2, value: amount } })
-          assertEvent(receipt, 'TransferShares', { expectedArgs: { from: user1, to: user2, sharesValue: sharesAmount } })
+          assertEvent(receipt, 'TransferShares', {
+            expectedArgs: { from: user1, to: user2, sharesValue: sharesAmount },
+          })
           assertBn(await stEth.balanceOf(user1), tokens(99))
           assertBn(await stEth.balanceOf(user2), tokens(0))
         })
@@ -159,11 +163,17 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
         })
 
         it('reverts when recipient is zero address', async () => {
-          await assertRevert(stEth.transferFrom(user1, ZERO_ADDRESS, tokens(1), { from: user2 }), 'TRANSFER_TO_THE_ZERO_ADDRESS')
+          await assertRevert(
+            stEth.transferFrom(user1, ZERO_ADDRESS, tokens(1), { from: user2 }),
+            'TRANSFER_TO_THE_ZERO_ADDRESS'
+          )
         })
 
         it('reverts when sender is zero address', async () => {
-          await assertRevert(stEth.transferFrom(ZERO_ADDRESS, user3, tokens(0), { from: user2 }), 'TRANSFER_FROM_THE_ZERO_ADDRESS')
+          await assertRevert(
+            stEth.transferFrom(ZERO_ADDRESS, user3, tokens(0), { from: user2 }),
+            'TRANSFER_FROM_THE_ZERO_ADDRESS'
+          )
         })
 
         it('reverts when amount exceeds allowance', async () => {
@@ -183,7 +193,9 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
           assertAmountOfEvents(receipt, 'Approval', { expectedAmount: 1 })
           assertEvent(receipt, 'Approval', { expectedArgs: { owner: user1, spender: user2, value: bn(0) } })
           assertEvent(receipt, 'Transfer', { expectedArgs: { from: user1, to: user3, value: amount } })
-          assertEvent(receipt, 'TransferShares', { expectedArgs: { from: user1, to: user3, sharesValue: sharesAmount } })
+          assertEvent(receipt, 'TransferShares', {
+            expectedArgs: { from: user1, to: user3, sharesValue: sharesAmount },
+          })
           assertBn(await stEth.allowance(user2, user1), bn(0))
           assertBn(await stEth.balanceOf(user1), tokens(49))
           assertBn(await stEth.balanceOf(user3), tokens(50))
@@ -220,7 +232,9 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
             const increase_amount = tokens(50)
             const increased_amount = tokens(100)
             const receipt = await stEth.increaseAllowance(user2, increase_amount, { from: user1 })
-            assertEvent(receipt, 'Approval', { expectedArgs: { owner: user1, spender: user2, value: increased_amount } })
+            assertEvent(receipt, 'Approval', {
+              expectedArgs: { owner: user1, spender: user2, value: increased_amount },
+            })
             assertBn(await stEth.allowance(user1, user2), increased_amount)
           })
         })
@@ -285,10 +299,10 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
       assert(await stEth.isStopped())
 
       await assertRevert(stEth.transfer(user2, tokens(2), { from: user1 }), 'CONTRACT_IS_STOPPED')
-      //NB: can approve if stopped
+      // NB: can approve if stopped
       await stEth.approve(user2, tokens(2), { from: user1 })
       await assertRevert(stEth.transferFrom(user2, user3, tokens(2), { from: user1 }), 'CONTRACT_IS_STOPPED')
-      //NB: can change allowance if stopped
+      // NB: can change allowance if stopped
       await stEth.increaseAllowance(user2, tokens(2), { from: user1 })
       await stEth.decreaseAllowance(user2, tokens(2), { from: user1 })
 
@@ -377,8 +391,8 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
             account: user1,
             preRebaseTokenAmount: tokens(0),
             postRebaseTokenAmount: tokens(0),
-            sharesAmount: tokens(0)
-          }
+            sharesAmount: tokens(0),
+          },
         })
 
         assertBn(await stEth.totalSupply(), tokens(300))
@@ -398,9 +412,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
         const user2Shares = await stEth.sharesOf(user2)
 
         const sharesToBurn = totalShares.sub(
-          totalSupply
-            .mul(totalShares.sub(user2Shares))
-            .div(totalSupply.sub(user2Balance).add(bn(tokens(10))))
+          totalSupply.mul(totalShares.sub(user2Shares)).div(totalSupply.sub(user2Balance).add(bn(tokens(10))))
         )
 
         const expectedPreTokenAmount = await stEth.getPooledEthByShares(sharesToBurn)
@@ -411,8 +423,8 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
             account: user2,
             preRebaseTokenAmount: expectedPreTokenAmount,
             postRebaseTokenAmount: expectedPostTokenAmount,
-            sharesAmount: sharesToBurn
-          }
+            sharesAmount: sharesToBurn,
+          },
         })
 
         assertBn(await stEth.totalSupply(), tokens(300))
@@ -435,8 +447,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
         const user2Shares = await stEth.sharesOf(user2)
 
         const sharesToBurn = totalShares.sub(
-          totalSupply.mul(totalShares.sub(user2Shares))
-            .div(totalSupply.sub(user2Balance).add(bn(tokens(50))))
+          totalSupply.mul(totalShares.sub(user2Shares)).div(totalSupply.sub(user2Balance).add(bn(tokens(50))))
         )
 
         const expectedPreTokenAmount = await stEth.getPooledEthByShares(sharesToBurn)
@@ -447,8 +458,8 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
             account: user2,
             preRebaseTokenAmount: expectedPreTokenAmount,
             postRebaseTokenAmount: expectedPostTokenAmount,
-            sharesAmount: sharesToBurn
-          }
+            sharesAmount: sharesToBurn,
+          },
         })
 
         assertBn(await stEth.balanceOf(user2), tokens(50))
@@ -582,7 +593,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
 
         await stEth.setTotalPooledEther(tokens(120))
 
-        const tokensToTransfer = tokens(120 * 69 / 100)
+        const tokensToTransfer = tokens((120 * 69) / 100)
 
         receipt = await stEth.transferShares(nobody, tokens(69), { from: user1 })
         assertAmountOfEvents(receipt, 'Transfer', { expectedAmount: 1 })
@@ -621,13 +632,22 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
         assertBn(await stEth.balanceOf(user1), tokens(69))
         assertBn(await stEth.balanceOf(nobody), tokens(30))
 
-        await assertRevert(stEth.transferSharesFrom(user1, nobody, tokens(75), { from: user2 }), 'TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE')
+        await assertRevert(
+          stEth.transferSharesFrom(user1, nobody, tokens(75), { from: user2 }),
+          'TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE'
+        )
         await stEth.approve(user2, tokens(75), { from: user1 })
-        await assertRevert(stEth.transferSharesFrom(user1, nobody, tokens(75), { from: user2 }), 'TRANSFER_AMOUNT_EXCEEDS_BALANCE')
+        await assertRevert(
+          stEth.transferSharesFrom(user1, nobody, tokens(75), { from: user2 }),
+          'TRANSFER_AMOUNT_EXCEEDS_BALANCE'
+        )
 
         await stEth.setTotalPooledEther(tokens(120))
 
-        await assertRevert(stEth.transferSharesFrom(user1, nobody, tokens(70), { from: user2 }), 'TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE')
+        await assertRevert(
+          stEth.transferSharesFrom(user1, nobody, tokens(70), { from: user2 }),
+          'TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE'
+        )
 
         await stEth.approve(user2, tokens(84), { from: user1 })
         receipt = await stEth.transferSharesFrom(user1, nobody, tokens(69), { from: user2 })

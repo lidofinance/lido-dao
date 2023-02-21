@@ -43,7 +43,7 @@ contract('LidoLocator', ([deployer, agent]) => {
         initialConfig.stakingRouter,
         initialConfig.treasury,
         initialConfig.withdrawalQueue,
-        initialConfig.withdrawalVault
+        initialConfig.withdrawalVault,
       ]
 
       for (let i = 0; i < actualCoreComponents.length; i++) {
@@ -64,7 +64,7 @@ contract('LidoLocator', ([deployer, agent]) => {
         initialConfig.burner,
         initialConfig.withdrawalQueue,
         initialConfig.withdrawalVault,
-        initialConfig.postTokenRebaseReceiver
+        initialConfig.postTokenRebaseReceiver,
       ]
 
       for (let i = 0; i < actualReportComponents.length; i++) {
@@ -118,7 +118,7 @@ contract('LidoLocator', ([deployer, agent]) => {
           updatedConfig.stakingRouter,
           updatedConfig.treasury,
           updatedConfig.withdrawalQueue,
-          updatedConfig.withdrawalVault
+          updatedConfig.withdrawalVault,
         ]
 
         for (let i = 0; i < actualCoreComponents.length; i++) {
@@ -139,7 +139,7 @@ contract('LidoLocator', ([deployer, agent]) => {
           initialConfig.burner,
           initialConfig.withdrawalQueue,
           initialConfig.withdrawalVault,
-          initialConfig.postTokenRebaseReceiver
+          initialConfig.postTokenRebaseReceiver,
         ]
 
         for (let i = 0; i < actualReportComponents.length; i++) {

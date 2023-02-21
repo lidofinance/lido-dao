@@ -7,12 +7,12 @@ const {
   getReportDataItems,
   calcReportDataHash,
   encodeExitRequestsDataList,
-  deployExitBusOracle
+  deployExitBusOracle,
 } = require('./validators-exit-bus-oracle-deploy.test')
 const PUBKEYS = [
   '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-  '0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'
+  '0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
 ]
 
 contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, account1, stranger]) => {
@@ -32,7 +32,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, account1
   const getReportFields = (override = {}) => ({
     consensusVersion: CONSENSUS_VERSION,
     dataFormat: DATA_FORMAT_LIST,
-    ...override
+    ...override,
   })
   const deploy = async () => {
     const deployed = await deployExitBusOracle(admin, { resumeAfterDeploy: true })
@@ -50,13 +50,13 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, account1
     exitRequests = [
       { moduleId: 1, nodeOpId: 0, valIndex: 0, valPubkey: PUBKEYS[0] },
       { moduleId: 1, nodeOpId: 0, valIndex: 2, valPubkey: PUBKEYS[1] },
-      { moduleId: 2, nodeOpId: 0, valIndex: 1, valPubkey: PUBKEYS[2] }
+      { moduleId: 2, nodeOpId: 0, valIndex: 1, valPubkey: PUBKEYS[2] },
     ]
 
     reportFields = getReportFields({
       refSlot: +refSlot,
       requestsCount: exitRequests.length,
-      data: encodeExitRequestsDataList(exitRequests)
+      data: encodeExitRequestsDataList(exitRequests),
     })
 
     reportItems = getReportDataItems(reportFields)
@@ -95,7 +95,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, account1
           const resumer = ZERO_ADDRESS
           await assert.reverts(
             oracle.initialize(ZERO_ADDRESS, pauser, resumer, consensus.address, CONSENSUS_VERSION, 0, {
-              from: admin
+              from: admin,
             }),
             'AdminCannotBeZero()'
           )

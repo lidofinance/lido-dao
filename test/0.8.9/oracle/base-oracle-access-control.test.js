@@ -10,7 +10,7 @@ const {
   INITIAL_EPOCH,
   CONSENSUS_VERSION,
   HASH_1,
-  SLOTS_PER_FRAME
+  SLOTS_PER_FRAME,
 } = require('./base-oracle-deploy.test')
 
 const MockConsensusContract = artifacts.require('MockConsensusContract')
