@@ -27,7 +27,8 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     await withdrawalQueue.resume({ from: daoAgent })
 
     await steth.setTotalPooledEther(ETH(600))
-    await setBalance(steth.address, ETH(600))
+    // we need 1 ETH additionally to pay gas on finalization because coverage ingnores gasPrice=0
+    await setBalance(steth.address, ETH(600 + 1))
     await steth.mintShares(user, shares(1))
     await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
 
@@ -310,9 +311,10 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
 
       const balanceBefore = bn(await ethers.provider.getBalance(owner))
 
-      await withdrawalQueue.claimWithdrawal(1, { from: owner })
+      const tx = await withdrawalQueue.claimWithdrawal(1, { from: owner })
 
-      assert.equals(await ethers.provider.getBalance(owner), balanceBefore.add(bn(amount)))
+      // tx.receipt.gasUsed is a workaround for coverage, because it ignores gasPrice=0
+      assert.almostEqual(await ethers.provider.getBalance(owner), balanceBefore.add(bn(amount)), tx.receipt.gasUsed)
     })
 
     it('One cant claim not finalized or not existed request', async () => {
@@ -346,10 +348,11 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       const balanceBefore = bn(await ethers.provider.getBalance(owner))
       assert.equals(await withdrawalQueue.getLockedEtherAmount(), ETH(150))
 
-      await withdrawalQueue.claimWithdrawal(1, { from: owner })
+      const tx = await withdrawalQueue.claimWithdrawal(1, { from: owner })
       assert.equals(await withdrawalQueue.getLockedEtherAmount(), ETH(0))
 
-      assert.equals(bn(await ethers.provider.getBalance(owner)).sub(balanceBefore), ETH(150))
+      // tx.receipt.gasUsed is a workaround for coverage, because it ignores gasPrice=0
+      assert.almostEqual(bn(await ethers.provider.getBalance(owner)).sub(balanceBefore), ETH(150), tx.receipt.gasUsed)
     })
 
     it('One can claim a lot of withdrawals with different discounts', async () => {
@@ -698,8 +701,9 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await withdrawalQueue.finalize(secondRequestId, { from: steth.address, value: ETH(30) })
 
       const balanceBefore = bn(await ethers.provider.getBalance(owner))
-      await withdrawalQueue.claimWithdrawals([1, 2], [1, 1], { from: owner })
-      assert.equals(await ethers.provider.getBalance(owner), balanceBefore.add(bn(ETH(30))))
+      const tx = await withdrawalQueue.claimWithdrawals([1, 2], [1, 1], { from: owner })
+      // tx.receipt.gasUsed is a workaround for coverage, because it ignores gasPrice=0
+      assert.almostEqual(await ethers.provider.getBalance(owner), balanceBefore.add(bn(ETH(30))), tx.receipt.gasUsed)
     })
   })
 
