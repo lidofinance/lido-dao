@@ -36,7 +36,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     error StakingModuleNotPaused();
     error EmptyWithdrawalsCredentials();
     error DirectETHTransfer();
-    error InvalidReportData();
+    error InvalidReportData(uint256 code);
     error ExitedValidatorsCountCannotDecrease();
     error StakingModulesLimitExceeded();
     error StakingModuleIdTooLarge();
@@ -311,6 +311,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         onlyRole(REPORT_EXITED_VALIDATORS_ROLE)
     {
         address moduleAddr = _getStakingModuleById(_stakingModuleId).stakingModuleAddress;
+        _checkValidatorsByNodeOperatorReportData(_nodeOperatorIds, _exitedValidatorsCounts);
         IStakingModule(moduleAddr).updateExitedValidatorsCount(
             _nodeOperatorIds,
             _exitedValidatorsCounts
@@ -411,6 +412,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         onlyRole(REPORT_EXITED_VALIDATORS_ROLE)
     {
         address moduleAddr = _getStakingModuleById(_stakingModuleId).stakingModuleAddress;
+        _checkValidatorsByNodeOperatorReportData(_nodeOperatorIds, _stuckValidatorsCounts);
         IStakingModule(moduleAddr).updateStuckValidatorsCount(_nodeOperatorIds, _stuckValidatorsCounts);
     }
 
@@ -1019,6 +1021,22 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
      */
     function getWithdrawalCredentials() public view returns (bytes32) {
         return WITHDRAWAL_CREDENTIALS_POSITION.getStorageBytes32();
+    }
+
+    function _checkValidatorsByNodeOperatorReportData(
+        bytes calldata _nodeOperatorIds,
+        bytes calldata _validatorsCounts
+    ) internal {
+        if (_nodeOperatorIds.length % 8 != 0 || _validatorsCounts.length % 16 != 0) {
+            revert InvalidReportData(3);
+        }
+        uint256 nodeOperatorsCount = _nodeOperatorIds.length / 8;
+        if (_validatorsCounts.length / 16 != nodeOperatorsCount) {
+            revert InvalidReportData(2);
+        }
+        if (nodeOperatorsCount == 0) {
+            revert InvalidReportData(1);
+        }
     }
 
     /**
