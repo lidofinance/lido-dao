@@ -59,6 +59,7 @@ rule depositSanity() {
     require e.msg.value > 0;
     uint256 _maxDepositsCount;
     require _maxDepositsCount > 0;
+    require getStakingModulesCount() == 1;
     uint256 _stakingModuleId;
     bytes _depositCalldata;
     uint256 keysCount = deposit(e, _maxDepositsCount, _stakingModuleId, _depositCalldata);
@@ -157,9 +158,30 @@ filtered{f -> !f.isView && !isDeposit(f)} {
     => moduleId == otherModule;
 }
 
-invariant statusAtConstructor(uint256 id)
-    id != 0 => getStakingModuleIsActive(id)
-filtered{f -> f.isView}
+rule canAddModuleIfNotActive() {
+    storage initState = lastStorage;
+
+    env e1; env e2;
+    string name;
+    address stakingModuleAddress;
+    uint256 targetShare;
+    uint256 stakingModuleFee;
+    uint256 treasuryFee;
+    uint256 id = getStakingModulesCount() + 1;
+
+    addStakingModule(e1, name, stakingModuleAddress, targetShare, stakingModuleFee, treasuryFee);
+
+    uint8 status; 
+    require status == PAUSED() || status == STOPPED();
+    setStakingModuleStatus(e2, id, status) at initState;
+
+    addStakingModule@withrevert(e1, name, stakingModuleAddress, targetShare, stakingModuleFee, treasuryFee);
+    assert !lastReverted;
+}
+
+invariant NullStakingModuleStatusIsActive(uint256 id)
+    id > getStakingModulesCount() => getStakingModuleIsActive(id)
+filtered{f -> !isDeposit(f)}
 
 /**************************************************
  *          Staking module parameters             *
@@ -356,4 +378,34 @@ rule depositRevertsForInvalidModuleId(uint256 id) {
     bool deposit_reverted = lastReverted;
 
     assert (id > getStakingModulesCount() || id == 0) => deposit_reverted;
+}
+
+rule whatRevertsIfStatusIsNotActive(method f, uint256 id)
+filtered{f -> !isDeposit(f) && !f.isView} {
+    storage initState = lastStorage;
+
+    env e1; env e2;
+    calldataarg args;
+
+    f(e1, args);
+
+    uint8 status; 
+    require status == PAUSED() || status == STOPPED();
+    setStakingModuleStatus(e2, id, status) at initState;
+
+    f@withrevert(e1, args);
+    assert !lastReverted;
+}
+
+/**************************************************
+ *        NodeOperatorsRegistry (NOS) Rules       *
+ **************************************************/
+ rule cannotFinalizeUpgradeTwice() {
+    env e1;
+    env e2;
+    calldataarg args1;
+    calldataarg args2;
+    nos.finalizeUpgrade_v2(e1, args1);
+    nos.finalizeUpgrade_v2@withrevert(e2, args2);
+    assert lastReverted;
 }
