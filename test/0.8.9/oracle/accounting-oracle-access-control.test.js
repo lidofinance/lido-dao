@@ -1,3 +1,4 @@
+const { contract, web3 } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 const { e9, e18, e27 } = require('../../helpers/utils')
 

@@ -1,5 +1,6 @@
-const { assert } = require('chai')
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { contract, web3 } = require('hardhat')
+const { assert } = require('../../helpers/assert')
+const { ZERO_ADDRESS } = require('../../helpers/constants')
 
 const {
   CONSENSUS_VERSION,

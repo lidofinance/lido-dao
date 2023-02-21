@@ -33,11 +33,6 @@
       "files": ["./scripts/{**/,}*.js", "./test/{**/,}*.js", "./e2e/test/{**/,}*.js"],
       "env": {
         "mocha": true
-      },
-      "globals": {
-        "artifacts": "readonly",
-        "contract": "readonly",
-        "web3": "readonly"
       }
     }
   ]

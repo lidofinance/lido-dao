@@ -1,14 +1,14 @@
-const hre = require('hardhat')
+const { contract, ethers } = require('hardhat')
 const { deployProtocol } = require('../helpers/protocol')
 const { EvmSnapshot, setBalance, getBalance } = require('../helpers/blockchain')
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { ZERO_ADDRESS } = require('../helpers/constants')
 const { assert } = require('../helpers/assert')
 const { wei } = require('../helpers/wei')
 const { StakingModuleStub } = require('../helpers/stubs/staking-module.stub')
 const { PUBKEY_LENGTH, FakeValidatorKeys, SIGNATURE_LENGTH } = require('../helpers/signing-keys')
 const { GenericStub } = require('../helpers/stubs/generic.stub')
 
-hre.contract('Lido deposit scenarios', ([staker, depositor]) => {
+contract('Lido deposit scenarios', ([staker, depositor]) => {
   const CURATED_MODULE_ID = 1
   const DEPOSIT_CALLDATA = '0x0'
   let lido, stakingRouter
@@ -41,7 +41,7 @@ hre.contract('Lido deposit scenarios', ([staker, depositor]) => {
     })
     lido = protocol.pool
     stakingRouter = protocol.stakingRouter
-    snapshot = new EvmSnapshot(hre.ethers.provider)
+    snapshot = new EvmSnapshot(ethers.provider)
     await snapshot.make()
   })
 

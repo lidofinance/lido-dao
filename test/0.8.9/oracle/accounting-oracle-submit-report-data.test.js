@@ -1,3 +1,4 @@
+const { contract, web3 } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 const { e9, e18, e27 } = require('../../helpers/utils')
 
@@ -20,7 +21,7 @@ const {
   HASH_1,
 } = require('./accounting-oracle-deploy.test')
 
-contract('AccountingOracle', ([admin, account1, account2, member1, member2, stranger]) => {
+contract('AccountingOracle', ([admin, member1]) => {
   let consensus = null
   let oracle = null
   let reportItems = null
@@ -472,19 +473,19 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       it('should call handleConsensusLayerReport on legacyOracle', async () => {
         await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
         const lastCall = await mockLegacyOracle.lastCall__handleConsensusLayerReport()
-        assert.equal(+lastCall.totalCalls, 1)
-        assert.equal(+lastCall.refSlot, reportFields.refSlot)
-        assert.equal(+lastCall.clBalance, e9(reportFields.clBalanceGwei))
-        assert.equal(+lastCall.clValidators, reportFields.numValidators)
+        assert.equals(lastCall.totalCalls, 1)
+        assert.equals(lastCall.refSlot, reportFields.refSlot)
+        assert.equals(lastCall.clBalance, e9(reportFields.clBalanceGwei))
+        assert.equals(lastCall.clValidators, reportFields.numValidators)
       })
 
       it('should call updateBunkerMode on WithdrawalQueue', async () => {
         const prevProcessingRefSlot = +(await oracle.getLastProcessingRefSlot())
         await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
         const lastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
-        assert.equal(+lastCall.callCount, 1)
-        assert.equal(+lastCall.isBunkerMode, reportFields.isBunkerMode)
-        assert.equal(+lastCall.prevReportTimestamp, GENESIS_TIME + prevProcessingRefSlot * SECONDS_PER_SLOT)
+        assert.equals(lastCall.callCount, 1)
+        assert.equals(lastCall.isBunkerMode, reportFields.isBunkerMode)
+        assert.equals(lastCall.prevReportTimestamp, GENESIS_TIME + prevProcessingRefSlot * SECONDS_PER_SLOT)
       })
     })
 

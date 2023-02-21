@@ -1,4 +1,5 @@
 const chai = require('chai')
+const { web3 } = require('hardhat')
 const { getEvents, isBn } = require('@aragon/contract-helpers-test')
 const { assertRevert } = require('./assertThrow')
 const { toChecksumAddress } = require('ethereumjs-util')
@@ -8,6 +9,11 @@ const { toBN } = require('./utils')
 chai.util.addMethod(chai.assert, 'emits', function (receipt, eventName, args = {}, options = {}) {
   const event = getEvent(receipt, eventName, args, options.abi)
   this.isTrue(event !== undefined, `Event ${eventName} with args ${JSON.stringify(args)} wasn't found`)
+})
+
+chai.util.addMethod(chai.assert, 'emitsAt', function (receipt, eventName, index, args = {}, options = {}) {
+  const event = getEventAt(receipt, eventName, index, args, options.abi)
+  this.isTrue(event !== undefined, `Event ${eventName} at ${index} with args ${JSON.stringify(args)}  wasn't found`)
 })
 
 chai.util.addMethod(
@@ -80,7 +86,7 @@ chai.util.addMethod(chai.assert, 'notEquals', function (actual, expected, errorM
 })
 
 chai.util.addMethod(chai.assert, 'addressEqual', function (actual, expected, errorMsg) {
-  assert.equal(toChecksumAddress(actual), toChecksumAddress(expected), errorMsg)
+  chai.assert.equal(toChecksumAddress(actual), toChecksumAddress(expected), errorMsg)
 })
 
 chai.util.addMethod(chai.assert, 'revertsWithCustomError', async function (receipt, reason) {
@@ -111,6 +117,18 @@ chai.util.addMethod(chai.assert, 'almostEqual', function (actual, expected, epsi
     )
   }
 })
+
+function getEventAt(receipt, eventName, index, args, abi) {
+  const e = getEvents(receipt, eventName, { decodeForAbi: abi })[index]
+
+  if (
+    Object.entries(args).every(
+      ([argName, argValue]) => e.args[argName] !== undefined && normalizeArg(e.args[argName]) === normalizeArg(argValue)
+    )
+  )
+    return e
+  else return undefined
+}
 
 function getEvent(receipt, eventName, args, abi) {
   return getEvents(receipt, eventName, { decodeForAbi: abi }).find((e) =>

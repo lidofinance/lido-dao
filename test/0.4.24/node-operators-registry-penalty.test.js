@@ -1,7 +1,5 @@
-const hre = require('hardhat')
-const { web3 } = require('hardhat')
+const { artifacts, contract, ethers, web3 } = require('hardhat')
 const { bn } = require('@aragon/contract-helpers-test')
-const { BN } = require('bn.js')
 
 const { assert } = require('../helpers/assert')
 const { padRight, ETH, prepIdsCountsPayload } = require('../helpers/utils')
@@ -13,54 +11,6 @@ const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistryMock')
 const LidoLocator = artifacts.require('LidoLocator')
 const Burner = artifacts.require('Burner.sol')
 
-const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
-const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
-const ADDRESS_3 = '0x0000000000000000000000000000000000000003'
-const ADDRESS_4 = '0x0000000000000000000000000000000000000005'
-
-const NODE_OPERATORS = [
-  {
-    name: 'fo o',
-    rewardAddress: ADDRESS_1,
-    totalSigningKeysCount: 10,
-    depositedSigningKeysCount: 5,
-    exitedSigningKeysCount: 1,
-    vettedSigningKeysCount: 6,
-    targetValidatorsLimitActive: false,
-    targetValidatorsKeysCount: 1,
-    unavaliableKeysCount: 2,
-    stuckSigningKeysCount: 3,
-    refundedSigningKeysCount: 4,
-  },
-  {
-    name: ' bar',
-    rewardAddress: ADDRESS_2,
-    totalSigningKeysCount: 15,
-    depositedSigningKeysCount: 7,
-    exitedSigningKeysCount: 0,
-    vettedSigningKeysCount: 10,
-    targetValidatorsLimitActive: false,
-    targetValidatorsKeysCount: 1,
-    unavaliableKeysCount: 2,
-    stuckSigningKeysCount: 3,
-    refundedSigningKeysCount: 4,
-  },
-  {
-    name: 'deactivated',
-    isActive: false,
-    rewardAddress: ADDRESS_3,
-    totalSigningKeysCount: 10,
-    depositedSigningKeysCount: 0,
-    exitedSigningKeysCount: 0,
-    vettedSigningKeysCount: 5,
-    targetValidatorsLimitActive: false,
-    targetValidatorsKeysCount: 1,
-    unavaliableKeysCount: 2,
-    stuckSigningKeysCount: 3,
-    refundedSigningKeysCount: 4,
-  },
-]
-
 // bytes32 0x63757261746564
 const CURATED_TYPE = padRight(web3.utils.fromAscii('curated'), 32)
 const PENALTY_DELAY = 2 * 24 * 60 * 60 // 2 days
@@ -68,8 +18,8 @@ const PENALTY_DELAY = 2 * 24 * 60 * 60 // 2 days
 const StETH = artifacts.require('StETHMock')
 
 contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, user4, no1, treasury]) => {
-  let appBase, app, pool, steth, dao, locator, burner
-  const snapshot = new EvmSnapshot(hre.ethers.provider)
+  let appBase, app, steth, dao, locator, burner
+  const snapshot = new EvmSnapshot(ethers.provider)
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
@@ -179,7 +129,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.mintShares(app.address, ETH(10))
 
       // calls distributeRewards() inside
-      receipt = await app.testing__distributeRewards({ from: voting })
+      const receipt = await app.testing__distributeRewards({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(3) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(7) })
@@ -217,7 +167,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       // perValidatorShare 10*10^18 / 8 = 1250000000000000000 == 1.25 * 10^18
 
       // calls distributeRewards() inside
-      receipt = await app.testing__distributeRewards({ from: voting })
+      const receipt = await app.testing__distributeRewards({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(2 * 1.25) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(6 * 1.25) })
@@ -257,7 +207,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       // but half goes to burner
 
       // calls distributeRewards() inside
-      receipt = await app.testing__distributeRewards({ from: voting })
+      const receipt = await app.testing__distributeRewards({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(1.25) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(6 * 1.25) })
@@ -276,7 +226,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await app.updateRefundedValidatorsCount(firstNodeOperator, 1, { from: voting })
 
       // calls distributeRewards() inside
-      receipt = await app.testing__distributeRewards({ from: voting })
+      const receipt = await app.testing__distributeRewards({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(1.25) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(6 * 1.25) })
@@ -308,7 +258,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await app.updateRefundedValidatorsCount(firstNodeOperator, 1, { from: voting })
 
       // calls distributeRewards() inside
-      receipt = await app.testing__distributeRewards({ from: voting })
+      const receipt = await app.testing__distributeRewards({ from: voting })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(1) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(4 * 2) })
       assert.notEmits(receipt, 'RewardsDistributed', { rewardAddress: user3, sharesAmount: 0 })
@@ -334,7 +284,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       assert.isFalse(await app.testing_isNodeOperatorPenalized(firstNodeOperator))
 
       // calls distributeRewards() inside
-      receipt = await app.testing__distributeRewards({ from: voting })
+      const receipt = await app.testing__distributeRewards({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(2.5) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(7.5) })
@@ -359,42 +309,42 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
 
     it('updateTargetValidatorsLimits() - target <= deposited', async () => {
       let keyStats = await app.getNodeOperatorSummary(3)
-      assert.equal(+keyStats.isTargetLimitActive, false)
-      assert.equal(+keyStats.targetValidatorsCount, 0)
+      assert.equals(keyStats.isTargetLimitActive, false)
+      assert.equals(keyStats.targetValidatorsCount, 0)
 
       await app.updateTargetValidatorsLimits(3, true, 3, { from: voting })
       keyStats = await app.getNodeOperatorSummary(3)
 
-      assert.equal(+keyStats.isTargetLimitActive, true)
-      assert.equal(+keyStats.targetValidatorsCount, 3)
+      assert.equals(keyStats.isTargetLimitActive, true)
+      assert.equals(keyStats.targetValidatorsCount, 3)
     })
 
     it('updateTargetValidatorsLimits() - deposited < target < vetted', async () => {
       let keyStats = await app.getNodeOperatorSummary(3)
-      assert.equal(+keyStats.isTargetLimitActive, false)
-      assert.equal(+keyStats.targetValidatorsCount, 0)
-      assert.equal(+keyStats.depositableValidatorsCount, 5)
+      assert.equals(keyStats.isTargetLimitActive, false)
+      assert.equals(keyStats.targetValidatorsCount, 0)
+      assert.equals(keyStats.depositableValidatorsCount, 5)
 
       await app.updateTargetValidatorsLimits(3, true, 11, { from: voting })
       keyStats = await app.getNodeOperatorSummary(3)
 
-      assert.equal(+keyStats.isTargetLimitActive, true)
-      assert.equal(+keyStats.targetValidatorsCount, 11)
-      assert.equal(+keyStats.depositableValidatorsCount, 1)
+      assert.equals(keyStats.isTargetLimitActive, true)
+      assert.equals(keyStats.targetValidatorsCount, 11)
+      assert.equals(keyStats.depositableValidatorsCount, 1)
     })
 
     it('updateTargetValidatorsLimits() - vetted <= target', async () => {
       let keyStats = await app.getNodeOperatorSummary(3)
-      assert.equal(+keyStats.isTargetLimitActive, false)
-      assert.equal(+keyStats.targetValidatorsCount, 0)
-      assert.equal(+keyStats.depositableValidatorsCount, 5)
+      assert.equals(keyStats.isTargetLimitActive, false)
+      assert.equals(keyStats.targetValidatorsCount, 0)
+      assert.equals(keyStats.depositableValidatorsCount, 5)
 
       await app.updateTargetValidatorsLimits(3, true, 18, { from: voting })
       keyStats = await app.getNodeOperatorSummary(3)
 
-      assert.equal(+keyStats.isTargetLimitActive, true)
-      assert.equal(+keyStats.targetValidatorsCount, 18)
-      assert.equal(+keyStats.depositableValidatorsCount, 5)
+      assert.equals(keyStats.isTargetLimitActive, true)
+      assert.equals(keyStats.targetValidatorsCount, 18)
+      assert.equals(keyStats.depositableValidatorsCount, 5)
     })
 
     it('updateExitedValidatorsCount() - check if appeared a new deposited keys', async () => {
@@ -402,7 +352,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       const keyStats = await app.getNodeOperatorSummary(3)
 
       // excess = deposited - stopped - targetLimit
-      assert.equal(+keyStats.targetValidatorsCount, 5)
+      assert.equals(keyStats.targetValidatorsCount, 5)
 
       // increase _newActiveValidatorsCount by add new depositedKeys
       await app.increaseNodeOperatorDepositedSigningKeysCount(3, 2)
@@ -413,15 +363,15 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
 
     it('updateTargetValidatorsLimits() - try to update to the same active flag', async () => {
       let keyStats = await app.getNodeOperatorSummary(0)
-      targetValidatorsCountBefore = keyStats.targetValidatorsCount
+      let targetValidatorsCountBefore = keyStats.targetValidatorsCount
       assert.equal(keyStats.isTargetLimitActive, false)
-      assert.equal(+keyStats.targetValidatorsCount, 0)
+      assert.equals(keyStats.targetValidatorsCount, 0)
 
       await app.updateTargetValidatorsLimits(0, false, 10, { from: voting })
       keyStats = await app.getNodeOperatorSummary(0)
-      targetValidatorsCountAfter = keyStats.targetValidatorsCount
+      let targetValidatorsCountAfter = keyStats.targetValidatorsCount
       assert.equal(keyStats.isTargetLimitActive, false)
-      assert.equal(+targetValidatorsCountBefore, +targetValidatorsCountAfter)
+      assert.equals(targetValidatorsCountBefore, +targetValidatorsCountAfter)
 
       targetValidatorsCountBefore = keyStats.targetValidatorsCount
       await app.updateTargetValidatorsLimits(0, true, 20, { from: voting })
@@ -434,41 +384,41 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       keyStats = await app.getNodeOperatorSummary(0)
       targetValidatorsCountAfter = keyStats.targetValidatorsCount
       assert.equal(keyStats.isTargetLimitActive, true)
-      assert.equal(+targetValidatorsCountAfter, 30)
+      assert.equals(targetValidatorsCountAfter, 30)
     })
 
     it('updateTargetValidatorsLimits()', async () => {
       await app.updateTargetValidatorsLimits(0, true, 10, { from: voting })
 
       let keysStatTotal = await app.getStakingModuleSummary()
-      assert.equal(+keysStatTotal.totalExitedValidators, 2)
-      assert.equal(+keysStatTotal.totalDepositedValidators, 25)
-      assert.equal(+keysStatTotal.depositableValidatorsCount, 17)
+      assert.equals(keysStatTotal.totalExitedValidators, 2)
+      assert.equals(keysStatTotal.totalDepositedValidators, 25)
+      assert.equals(keysStatTotal.depositableValidatorsCount, 17)
 
       let limitStatOp = await app.getNodeOperatorSummary(0)
       assert.equal(limitStatOp.isTargetLimitActive, true)
-      assert.equal(+limitStatOp.targetValidatorsCount, 10)
+      assert.equals(limitStatOp.targetValidatorsCount, 10)
 
       let keysStatOp = await app.getNodeOperatorSummary(0)
-      assert.equal(+keysStatOp.totalExitedValidators, 2)
+      assert.equals(keysStatOp.totalExitedValidators, 2)
       assert.equal(keysStatOp.totalDepositedValidators.toNumber() - keysStatOp.totalExitedValidators.toNumber(), 8)
-      assert.equal(+keysStatOp.depositableValidatorsCount, 2)
+      assert.equals(keysStatOp.depositableValidatorsCount, 2)
 
       await app.updateTargetValidatorsLimits(0, false, 10, { from: voting })
 
       keysStatTotal = await app.getStakingModuleSummary()
-      assert.equal(+keysStatTotal.totalExitedValidators, 2)
-      assert.equal(+keysStatTotal.totalDepositedValidators, 25)
-      assert.equal(+keysStatTotal.depositableValidatorsCount, 20)
+      assert.equals(keysStatTotal.totalExitedValidators, 2)
+      assert.equals(keysStatTotal.totalDepositedValidators, 25)
+      assert.equals(keysStatTotal.depositableValidatorsCount, 20)
 
       limitStatOp = await app.getNodeOperatorSummary(0)
       assert.equal(limitStatOp.isTargetLimitActive, false)
-      assert.equal(+limitStatOp.targetValidatorsCount, 0)
+      assert.equals(limitStatOp.targetValidatorsCount, 0)
 
       keysStatOp = await app.getNodeOperatorSummary(0)
-      assert.equal(+keysStatOp.totalExitedValidators, 2)
+      assert.equals(keysStatOp.totalExitedValidators, 2)
       assert.equal(keysStatOp.totalDepositedValidators.toNumber() - keysStatOp.totalExitedValidators.toNumber(), 8)
-      assert.equal(+keysStatOp.depositableValidatorsCount, 5)
+      assert.equals(keysStatOp.depositableValidatorsCount, 5)
     })
 
     it('updateExitedValidatorsCount()', async () => {
@@ -477,9 +427,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
 
       let keysStatTotal = await app.getStakingModuleSummary()
       // console.log(o2n(keysStatTotal))
-      assert.equal(+keysStatTotal.totalExitedValidators, 2)
-      assert.equal(+keysStatTotal.totalDepositedValidators, 25)
-      assert.equal(+keysStatTotal.depositableValidatorsCount, 10)
+      assert.equals(keysStatTotal.totalExitedValidators, 2)
+      assert.equals(keysStatTotal.totalDepositedValidators, 25)
+      assert.equals(keysStatTotal.depositableValidatorsCount, 10)
 
       // op 0
       let limitStatOp = await app.getNodeOperatorSummary(0)
@@ -509,12 +459,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
 
       keysStatTotal = await app.getStakingModuleSummary()
       // console.log(o2n(keysStatTotal))
-      assert.equal(+keysStatTotal.totalExitedValidators, 4)
+      assert.equals(keysStatTotal.totalExitedValidators, 4)
       assert.equal(
         keysStatTotal.totalDepositedValidators.toNumber() - keysStatTotal.totalExitedValidators.toNumber(),
         25 - (3 + 1)
       )
-      assert.equal(+keysStatTotal.depositableValidatorsCount, 11)
+      assert.equals(keysStatTotal.depositableValidatorsCount, 11)
 
       // op 0
       limitStatOp = await app.getNodeOperatorSummary(0)
@@ -546,19 +496,19 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
 
       const keysStatTotal = await app.getStakingModuleSummary()
       // console.log(o2n(keysStatTotal))
-      assert.equal(+keysStatTotal.totalExitedValidators, 2)
-      assert.equal(+keysStatTotal.totalDepositedValidators, 25)
-      assert.equal(+keysStatTotal.depositableValidatorsCount, 20)
+      assert.equals(keysStatTotal.totalExitedValidators, 2)
+      assert.equals(keysStatTotal.totalDepositedValidators, 25)
+      assert.equals(keysStatTotal.depositableValidatorsCount, 20)
 
       // op 0
       let limitStatOp = await app.getNodeOperatorSummary(0)
       assert.equal(limitStatOp.isTargetLimitActive, true)
-      assert.equal(+limitStatOp.targetValidatorsCount, 10)
+      assert.equals(limitStatOp.targetValidatorsCount, 10)
 
       let keysStatOp = await app.getNodeOperatorSummary(0)
-      assert.equal(+keysStatOp.totalExitedValidators, 2)
+      assert.equals(keysStatOp.totalExitedValidators, 2)
       assert.equal(keysStatOp.totalDepositedValidators.toNumber() - keysStatOp.totalExitedValidators.toNumber(), 8)
-      assert.equal(+keysStatOp.depositableValidatorsCount, 0)
+      assert.equals(keysStatOp.depositableValidatorsCount, 0)
 
       // op 1
       limitStatOp = await app.getNodeOperatorSummary(1)
@@ -572,12 +522,3 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
     })
   })
 })
-
-function o2n(o = {}) {
-  for (const k of Object.keys(o)) {
-    if (bn.isBN(o[k])) {
-      o[k] = o[k].toString()
-    }
-  }
-  return o
-}

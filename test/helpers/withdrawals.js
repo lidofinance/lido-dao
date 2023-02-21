@@ -1,4 +1,4 @@
-const { utils } = require('ethers')
+const { artifacts } = require('hardhat')
 
 const OssifiableProxy = artifacts.require('OssifiableProxy.sol')
 const WithdrawalQueueERC721 = artifacts.require('WithdrawalQueueERC721.sol')

@@ -1,6 +1,7 @@
+const { contract, artifacts, web3 } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 const { hex, strip0x } = require('../../helpers/utils')
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { ZERO_ADDRESS } = require('../../helpers/constants')
 const {
   updateLocatorImplementation,
   deployLocatorWithDummyAddressesImplementation,
@@ -156,7 +157,7 @@ async function deployExitBusOracle(
     await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), dataSubmitter, { from: admin })
   }
 
-  assert.equal(+(await oracle.DATA_FORMAT_LIST()), DATA_FORMAT_LIST)
+  assert.equals(await oracle.DATA_FORMAT_LIST(), DATA_FORMAT_LIST)
 
   if (resumeAfterDeploy) {
     await oracle.resume({ from: admin })
@@ -178,18 +179,18 @@ contract('ValidatorsExitBusOracle', ([admin, member1]) => {
 
     it('mock time-travellable setup is correct', async () => {
       const time1 = +(await consensus.getTime())
-      assert.equal(+(await oracle.getTime()), time1)
+      assert.equals(await oracle.getTime(), time1)
 
       await consensus.advanceTimeBy(SECONDS_PER_SLOT)
       const time2 = +(await consensus.getTime())
       assert.equal(time2, time1 + SECONDS_PER_SLOT)
-      assert.equal(+(await oracle.getTime()), time2)
+      assert.equals(await oracle.getTime(), time2)
     })
 
     it('initial configuration is correct', async () => {
       assert.equal(await oracle.getConsensusContract(), consensus.address)
-      assert.equal(+(await oracle.getConsensusVersion()), CONSENSUS_VERSION)
-      assert.equal(+(await oracle.SECONDS_PER_SLOT()), SECONDS_PER_SLOT)
+      assert.equals(await oracle.getConsensusVersion(), CONSENSUS_VERSION)
+      assert.equals(await oracle.SECONDS_PER_SLOT(), SECONDS_PER_SLOT)
       assert.equal(await oracle.isPaused(), true)
     })
 

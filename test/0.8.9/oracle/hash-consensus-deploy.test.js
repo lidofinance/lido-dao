@@ -1,3 +1,4 @@
+const { contract, artifacts } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 const { bn, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
@@ -105,25 +106,23 @@ contract('HashConsensus', ([admin, member1]) => {
     const INITIAL_EPOCH = 3
 
     let consensus
-    let reportProcessor
 
     it('deploying hash consensus', async () => {
       const deployed = await deployHashConsensus(admin, { initialEpoch: INITIAL_EPOCH })
       consensus = deployed.consensus
-      reportProcessor = deployed.reportProcessor
     })
 
     it('chain config is correct', async () => {
       const config = await consensus.getChainConfig()
-      assert.equal(+config.slotsPerEpoch, SLOTS_PER_EPOCH)
-      assert.equal(+config.secondsPerSlot, SECONDS_PER_SLOT)
-      assert.equal(+config.genesisTime, GENESIS_TIME)
+      assert.equals(config.slotsPerEpoch, SLOTS_PER_EPOCH)
+      assert.equals(config.secondsPerSlot, SECONDS_PER_SLOT)
+      assert.equals(config.genesisTime, GENESIS_TIME)
     })
 
     it('frame config is correct', async () => {
       const config = await consensus.getFrameConfig()
-      assert.equal(+config.initialEpoch, INITIAL_EPOCH)
-      assert.equal(+config.epochsPerFrame, EPOCHS_PER_FRAME)
+      assert.equals(config.initialEpoch, INITIAL_EPOCH)
+      assert.equals(config.epochsPerFrame, EPOCHS_PER_FRAME)
     })
 
     it('reverts if report processor address is zero', async () => {

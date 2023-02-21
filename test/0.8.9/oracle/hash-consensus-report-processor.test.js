@@ -1,10 +1,10 @@
+const { contract, artifacts } = require('hardhat')
 const { assert } = require('../../helpers/assert')
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { ZERO_ADDRESS } = require('../../helpers/constants')
 
 const { HASH_1, CONSENSUS_VERSION, deployHashConsensus } = require('./hash-consensus-deploy.test')
 const { toNum } = require('../../helpers/utils')
 
-const HashConsensus = artifacts.require('HashConsensusTimeTravellable')
 const MockReportProcessor = artifacts.require('MockReportProcessor')
 
 contract('HashConsensus', ([admin, member1, member2, stranger]) => {
@@ -65,7 +65,7 @@ contract('HashConsensus', ([admin, member1, member2, stranger]) => {
         // to simulate situation when processing still in progress
 
         await consensus.setReportProcessor(reportProcessor2.address, { from: admin })
-        assert.equal(+(await reportProcessor2.getLastCall_submitReport()).callCount, 1)
+        assert.equals((await reportProcessor2.getLastCall_submitReport()).callCount, 1)
       })
 
       it('prev did processed current frame report — do not submit report to next', async () => {
@@ -77,7 +77,7 @@ contract('HashConsensus', ([admin, member1, member2, stranger]) => {
         await reportProcessor1.startReportProcessing()
 
         await consensus.setReportProcessor(reportProcessor2.address, { from: admin })
-        assert.equal(+(await reportProcessor2.getLastCall_submitReport()).callCount, 0)
+        assert.equals((await reportProcessor2.getLastCall_submitReport()).callCount, 0)
       })
 
       it('next processor already have processed report for current frame', async () => {
@@ -92,7 +92,7 @@ contract('HashConsensus', ([admin, member1, member2, stranger]) => {
 
         // 3 — Check call count of report submits
         await consensus.setReportProcessor(reportProcessor2.address, { from: admin })
-        assert.equal(+(await reportProcessor2.getLastCall_submitReport()).callCount, 0)
+        assert.equals((await reportProcessor2.getLastCall_submitReport()).callCount, 0)
       })
 
       it('do not submit report to next processor if there was no conensus', async () => {

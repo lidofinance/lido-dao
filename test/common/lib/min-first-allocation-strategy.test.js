@@ -1,9 +1,8 @@
-const hre = require('hardhat')
-const { assert } = require('chai')
-const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
+const { artifacts, contract, ethers } = require('hardhat')
+const { assert } = require('../../helpers/assert')
 
-const MinFirstAlgorithmLegacyConsumer = hre.artifacts.require('MinFirstAllocationStrategyConsumerMockLegacyVersion')
-const MinFirstAlgorithmModernConsumer = hre.artifacts.require('MinFirstAllocationStrategyConsumerMockModernVersion')
+const MinFirstAlgorithmLegacyConsumer = artifacts.require('MinFirstAllocationStrategyConsumerMockLegacyVersion')
+const MinFirstAlgorithmModernConsumer = artifacts.require('MinFirstAllocationStrategyConsumerMockModernVersion')
 
 contract('MinFirstAllocationStrategy', (accounts) => {
   for (const [consumerVersion, consumerFactory] of [
@@ -18,12 +17,12 @@ contract('MinFirstAllocationStrategy', (accounts) => {
 
       before(async () => {
         minFirstAllocationStrategy = await consumerFactory.new({ from: deployer })
-        evmSnapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+        evmSnapshotId = await ethers.provider.send('evm_snapshot', [])
       })
 
       afterEach(async () => {
-        await hre.ethers.provider.send('evm_revert', [evmSnapshotId])
-        evmSnapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+        await ethers.provider.send('evm_revert', [evmSnapshotId])
+        evmSnapshotId = await ethers.provider.send('evm_snapshot', [])
       })
 
       describe('allocateToBestCandidate()', () => {
@@ -35,7 +34,7 @@ contract('MinFirstAllocationStrategy', (accounts) => {
                 [],
                 maxAllocationSize
               )
-              assertBn(allocated, 0)
+              assert.equals(allocated, 0)
               assert.equal(newAllocations.length, 0)
             }
           })
@@ -58,9 +57,9 @@ contract('MinFirstAllocationStrategy', (accounts) => {
                     maxAllocationSize
                   )
                   const expectedAllocated = Math.min(Math.max(0, capacity - allocation), maxAllocationSize)
-                  assertBn(allocated, expectedAllocated)
+                  assert.equals(allocated, expectedAllocated)
                   assert.equal(newAllocations.length, 1)
-                  assertBn(newAllocations[0], allocation + expectedAllocated)
+                  assert.equals(newAllocations[0], allocation + expectedAllocated)
                 }
               }
             }
@@ -100,9 +99,9 @@ contract('MinFirstAllocationStrategy', (accounts) => {
                   newAllocations
                 )
                 assert.equal(expectedNewAllocations.length, newAllocations.length, assertMessage)
-                assertBn(allocated, expectedAllocated, assertMessage)
+                assert.equals(allocated, expectedAllocated, assertMessage)
                 for (let i = 0; i < newAllocations.length; ++i) {
-                  assertBn(newAllocations[i], expectedNewAllocations[i], assertMessage)
+                  assert.equals(newAllocations[i], expectedNewAllocations[i], assertMessage)
                 }
               }
             }
@@ -149,9 +148,9 @@ contract('MinFirstAllocationStrategy', (accounts) => {
                 newAllocations
               )
               assert.equal(expectedNewAllocations.length, newAllocations.length, assertMessage)
-              assertBn(allocated, expectedAllocated, assertMessage)
+              assert.equals(allocated, expectedAllocated, assertMessage)
               for (let i = 0; i < newAllocations.length; ++i) {
-                assertBn(newAllocations[i], expectedNewAllocations[i], assertMessage)
+                assert.equals(newAllocations[i], expectedNewAllocations[i], assertMessage)
               }
             }
           })
@@ -165,7 +164,7 @@ contract('MinFirstAllocationStrategy', (accounts) => {
           it('should not allocate for various allocation sizes', async () => {
             for (const maxAllocationSize of [0, 4, 8, 15, 16, 23, 42]) {
               const { allocated, newAllocations } = await minFirstAllocationStrategy.allocate([], [], maxAllocationSize)
-              assertBn(allocated, 0)
+              assert.equals(allocated, 0)
               assert.equal(newAllocations.length, 0)
             }
           })
@@ -190,9 +189,9 @@ contract('MinFirstAllocationStrategy', (accounts) => {
                   assertAllocationAssumptions([allocation], [capacity], maxAllocationSize, allocated, newAllocations)
 
                   const expectedAllocated = Math.min(Math.max(0, capacity - allocation), maxAllocationSize)
-                  assertBn(allocated, expectedAllocated)
+                  assert.equals(allocated, expectedAllocated)
                   assert.equal(newAllocations.length, 1)
-                  assertBn(newAllocations[0], allocation + expectedAllocated)
+                  assert.equals(newAllocations[0], allocation + expectedAllocated)
                 }
               }
             }
@@ -235,9 +234,9 @@ contract('MinFirstAllocationStrategy', (accounts) => {
                   newAllocations
                 )
                 assert.equal(expectedNewAllocations.length, newAllocations.length, assertMessage)
-                assertBn(allocated, expectedAllocated, assertMessage)
+                assert.equals(allocated, expectedAllocated, assertMessage)
                 for (let i = 0; i < newAllocations.length; ++i) {
-                  assertBn(newAllocations[i], expectedNewAllocations[i], assertMessage)
+                  assert.equals(newAllocations[i], expectedNewAllocations[i], assertMessage)
                 }
               }
             }
@@ -289,9 +288,9 @@ contract('MinFirstAllocationStrategy', (accounts) => {
                 newAllocations
               )
               assert.equal(expectedNewAllocations.length, newAllocations.length, assertMessage)
-              assertBn(allocated, expectedAllocated, assertMessage)
+              assert.equals(allocated, expectedAllocated, assertMessage)
               for (let i = 0; i < newAllocations.length; ++i) {
-                assertBn(newAllocations[i], expectedNewAllocations[i], assertMessage)
+                assert.equals(newAllocations[i], expectedNewAllocations[i], assertMessage)
               }
             }
           })
@@ -345,7 +344,7 @@ function assertAllocationAssumptions(allocations, capacities, maxAllocationSize,
   // assumption 4: if new allocation item exceeds capacity it must be equal to value in prev allocation
   for (let i = 0; i < newAllocations.length; ++i) {
     if (allocations[i] >= capacities[i]) {
-      assertBn(newAllocations[i], allocations[i], assertMessage)
+      assert.equals(newAllocations[i], allocations[i], assertMessage)
     }
   }
 

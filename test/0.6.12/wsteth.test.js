@@ -1,6 +1,8 @@
-const { BN, constants, expectEvent, expectRevert } = require('@openzeppelin/test-helpers')
+const { artifacts, contract, ethers, web3 } = require('hardhat')
+const { BN, expectEvent, expectRevert } = require('@openzeppelin/test-helpers')
 const { expect } = require('chai')
-const { ZERO_ADDRESS } = constants
+const { assert } = require('../helpers/assert')
+const { ZERO_ADDRESS } = require('../helpers/constants')
 
 const { shouldBehaveLikeERC20 } = require('./helpers/ERC20.behavior')
 const { EvmSnapshot } = require('../helpers/blockchain')
@@ -9,7 +11,7 @@ const WstETH = artifacts.require('WstETHMock')
 const StETH = artifacts.require('StETHMockERC20')
 
 contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount, ...otherAccounts]) {
-  const snapshot = new EvmSnapshot(hre.ethers.provider)
+  const snapshot = new EvmSnapshot(ethers.provider)
 
   before(async function () {
     this.steth = await StETH.new({ from: deployer })

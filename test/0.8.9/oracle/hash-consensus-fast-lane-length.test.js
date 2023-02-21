@@ -1,9 +1,7 @@
+const { contract } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 
 const { deployHashConsensus } = require('./hash-consensus-deploy.test')
-
-const HashConsensus = artifacts.require('HashConsensusTimeTravellable')
-const MockReportProcessor = artifacts.require('MockReportProcessor')
 
 contract('HashConsensus', ([admin, member1, member2, stranger]) => {
   context('Fast Lane Length', () => {
@@ -17,9 +15,9 @@ contract('HashConsensus', ([admin, member1, member2, stranger]) => {
     context('initial data', () => {
       it('sets properly', async () => {
         await deploy({ fastLaneLengthSlots: 0 })
-        assert.equal(+(await consensus.getFrameConfig()).fastLaneLengthSlots, 0)
+        assert.equals((await consensus.getFrameConfig()).fastLaneLengthSlots, 0)
         await deploy({ fastLaneLengthSlots: 4 })
-        assert.equal(+(await consensus.getFrameConfig()).fastLaneLengthSlots, 4)
+        assert.equals((await consensus.getFrameConfig()).fastLaneLengthSlots, 4)
       })
     })
 
@@ -43,7 +41,7 @@ contract('HashConsensus', ([admin, member1, member2, stranger]) => {
       it('sets new value properly', async () => {
         const fastLaneLengthSlots = await getFastLaneLengthSlotsLimit()
         await consensus.setFastLaneLengthSlots(fastLaneLengthSlots, { from: admin })
-        assert.equal(+(await consensus.getFrameConfig()).fastLaneLengthSlots, fastLaneLengthSlots)
+        assert.equals((await consensus.getFrameConfig()).fastLaneLengthSlots, fastLaneLengthSlots)
       })
 
       it('emits FastLaneConfigSet event', async () => {

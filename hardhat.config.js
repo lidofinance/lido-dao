@@ -16,6 +16,7 @@ require('./foundry/skip-sol-tests-compilation')
 const NETWORK_NAME = getNetworkName()
 const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
 
+// eslint-disable-next-line no-undef
 task('accounts', 'Prints the list of accounts', async (taskArgs, hre) => {
   const accounts = await hre.ethers.getSigners()
 

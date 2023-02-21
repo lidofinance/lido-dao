@@ -1,38 +1,17 @@
-const { BN } = require('bn.js')
-const { assert } = require('chai')
-const { assertBn, assertEvent, assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
-const { assertRevert } = require('../../helpers/assertThrow')
-const { toNum, processNamedTuple } = require('../../helpers/utils')
-const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { contract } = require('hardhat')
+const { assert } = require('../../helpers/assert')
 
 const {
-  SLOTS_PER_EPOCH,
-  SECONDS_PER_SLOT,
-  GENESIS_TIME,
-  SECONDS_PER_EPOCH,
-  EPOCHS_PER_FRAME,
   SLOTS_PER_FRAME,
   SECONDS_PER_FRAME,
-  MAX_REQUESTS_PER_REPORT,
-  MAX_REQUESTS_LIST_LENGTH,
-  MAX_REQUESTS_PER_DAY,
-  RATE_LIMIT_WINDOW_SLOTS,
-  RATE_LIMIT_THROUGHPUT,
-  computeSlotAt,
-  computeEpochAt,
-  computeEpochFirstSlotAt,
-  computeEpochFirstSlot,
   computeTimestampAtSlot,
-  computeTimestampAtEpoch,
   ZERO_HASH,
   CONSENSUS_VERSION,
   DATA_FORMAT_LIST,
   getReportDataItems,
   calcReportDataHash,
-  encodeExitRequestHex,
   encodeExitRequestsDataList,
   deployExitBusOracle,
-  deployOracleReportSanityCheckerForExitBus,
 } = require('./validators-exit-bus-oracle-deploy.test')
 
 const PUBKEYS = [
@@ -146,16 +125,16 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         it('oracle gets the report hash', async () => {
           const report = await oracle.getConsensusReport()
           assert.equal(report.hash, reportHash)
-          assert.equal(+report.refSlot, +reportFields.refSlot)
-          assert.equal(+report.processingDeadlineTime, computeTimestampAtSlot(+report.refSlot + SLOTS_PER_FRAME))
+          assert.equals(report.refSlot, +reportFields.refSlot)
+          assert.equals(report.processingDeadlineTime, computeTimestampAtSlot(+report.refSlot + SLOTS_PER_FRAME))
           assert.isFalse(report.processingStarted)
 
           const procState = await oracle.getProcessingState()
           assert.equal(procState.dataHash, reportHash)
           assert.isFalse(procState.dataSubmitted)
-          assert.equal(+procState.dataFormat, 0)
-          assert.equal(+procState.requestsCount, 0)
-          assert.equal(+procState.requestsSubmitted, 0)
+          assert.equals(procState.dataFormat, 0)
+          assert.equals(procState.requestsCount, 0)
+          assert.equals(procState.requestsSubmitted, 0)
         })
 
         it('some time passes', async () => {
@@ -164,22 +143,19 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
 
         it(`a committee member submits the report data, exit requests are emitted`, async () => {
           const tx = await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
-          assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: reportFields.refSlot } })
+          assert.emits(tx, 'ProcessingStarted', { refSlot: reportFields.refSlot })
           assert.isTrue((await oracle.getConsensusReport()).processingStarted)
 
           const timestamp = await oracle.getTime()
           const { requests, requestsPerModule, requestsPerNodeOp } = exitRequests
 
           for (let i = 0; i < requests.length; ++i) {
-            assertEvent(tx, 'ValidatorExitRequest', {
-              index: i,
-              expectedArgs: {
-                stakingModuleId: requests[i].moduleId,
-                nodeOperatorId: requests[i].nodeOpId,
-                validatorIndex: requests[i].valIndex,
-                validatorPubkey: requests[i].valPubkey,
-                timestamp,
-              },
+            assert.emitsAt(tx, 'ValidatorExitRequest', i, {
+              stakingModuleId: requests[i].moduleId,
+              nodeOperatorId: requests[i].nodeOpId,
+              validatorIndex: requests[i].valIndex,
+              validatorPubkey: requests[i].valPubkey,
+              timestamp,
             })
           }
 
@@ -191,9 +167,9 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           const procState = await oracle.getProcessingState()
           assert.equal(procState.dataHash, reportHash)
           assert.isTrue(procState.dataSubmitted)
-          assert.equal(+procState.dataFormat, DATA_FORMAT_LIST)
-          assert.equal(+procState.requestsCount, exitRequests.requests.length)
-          assert.equal(+procState.requestsSubmitted, exitRequests.requests.length)
+          assert.equals(procState.dataFormat, DATA_FORMAT_LIST)
+          assert.equals(procState.requestsCount, exitRequests.requests.length)
+          assert.equals(procState.requestsSubmitted, exitRequests.requests.length)
         })
 
         it('some time passes', async () => {

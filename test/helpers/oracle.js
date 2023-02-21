@@ -1,3 +1,5 @@
+const { web3 } = require('hardhat')
+
 const { CONSENSUS_VERSION, ZERO_BYTES32 } = require('./constants')
 const { assert } = require('./assert')
 

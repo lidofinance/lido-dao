@@ -1,13 +1,12 @@
-const hre = require('hardhat')
-const { artifacts, contract, ethers } = require('hardhat')
+const { artifacts, contract, ethers, web3 } = require('hardhat')
 const { bn, getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
-const { ETH, StETH, shareRate, shares, setBalance } = require('../helpers/utils')
+const { ETH, StETH, shareRate, shares } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 const withdrawals = require('../helpers/withdrawals')
 const { signPermit, makeDomainSeparator } = require('../0.6.12/helpers/permit_helpers')
 const { MAX_UINT256, ACCOUNTS_AND_KEYS } = require('../0.6.12/helpers/constants')
-const { impersonate, EvmSnapshot } = require('../helpers/blockchain')
+const { impersonate, EvmSnapshot, setBalance } = require('../helpers/blockchain')
 
 const StETHMock = artifacts.require('StETHMock.sol')
 const WstETH = artifacts.require('WstETHMock.sol')
@@ -603,7 +602,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     })
 
     it('sequential search', async () => {
-      for ([idToFind, searchLength] of [
+      for (const [idToFind, searchLength] of [
         [1, 3],
         [1, 10],
         [10, 2],
@@ -737,12 +736,10 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
   })
 
   context('claimWithdrawals()', () => {
-    let requestId
     const amount = ETH(20)
 
     beforeEach('Enqueue a request', async () => {
       await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
-      requestId = await withdrawalQueue.getLastRequestId()
     })
 
     it('claims correct requests', async () => {
@@ -802,7 +799,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await steth.mintShares(wsteth.address, shares(100))
       await steth.mintShares(user, shares(100))
       await wsteth.approve(withdrawalQueue.address, ETH(300), { from: user })
-      await impersonate(hre.ethers.provider, alice.address)
+      await impersonate(ethers.provider, alice.address)
       await web3.eth.sendTransaction({ to: alice.address, from: user, value: ETH(1) })
       await wsteth.transfer(alice.address, ETH(100), { from: user })
 

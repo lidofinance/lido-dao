@@ -1,7 +1,9 @@
+const { artifacts, contract, ethers, web3 } = require('hardhat')
+const { assert } = require('../helpers/assert')
+
 const crypto = require('crypto')
 const { ACCOUNTS_AND_KEYS, MAX_UINT256, ZERO_ADDRESS } = require('./helpers/constants')
 const { bn } = require('@aragon/contract-helpers-test')
-const { assert } = require('../helpers/assert')
 const { signPermit, signTransferAuthorization, makeDomainSeparator } = require('./helpers/permit_helpers')
 const { hexStringFromBuffer } = require('./helpers/sign_utils')
 const { ETH } = require('../helpers/utils')
@@ -12,7 +14,7 @@ const StETHPermit = artifacts.require('StETHPermitMock')
 
 contract('StETHPermit', ([deployer, ...accounts]) => {
   let stEthPermit, eip712StETH, chainId, domainSeparator
-  const snapshot = new EvmSnapshot(hre.ethers.provider)
+  const snapshot = new EvmSnapshot(ethers.provider)
 
   before('deploy mock token', async () => {
     stEthPermit = await StETHPermit.new({ from: deployer, value: ETH(1) })

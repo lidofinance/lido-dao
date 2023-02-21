@@ -1,3 +1,4 @@
+const { contract } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 
 const baseOracleAbi = require('../../../lib/abi/BaseOracle.json')
@@ -28,7 +29,7 @@ contract('BaseOracle', ([admin]) => {
       })
 
       it('initial report is submitted and _handleConsensusReport is called', async () => {
-        assert.equal(+(await baseOracle.getConsensusReportLastCall()).callCount, 0)
+        assert.equals((await baseOracle.getConsensusReportLastCall()).callCount, 0)
         const tx = await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, initialRefSlot + SLOTS_PER_FRAME)
         assert.emits(
           tx,
@@ -41,10 +42,10 @@ contract('BaseOracle', ([admin]) => {
           { abi: baseOracleAbi }
         )
         const { report, callCount } = await baseOracle.getConsensusReportLastCall()
-        assert.equal(+callCount, 1)
+        assert.equals(callCount, 1)
         assert.equal(report.hash, HASH_1)
-        assert.equal(+report.refSlot, initialRefSlot)
-        assert.equal(+report.processingDeadlineTime, initialRefSlot + SLOTS_PER_FRAME)
+        assert.equals(report.refSlot, initialRefSlot)
+        assert.equals(report.processingDeadlineTime, initialRefSlot + SLOTS_PER_FRAME)
       })
 
       it('older report cannot be submitted', async () => {
@@ -71,7 +72,7 @@ contract('BaseOracle', ([admin]) => {
           initialRefSlot + 10,
           initialRefSlot + SLOTS_PER_FRAME
         )
-        assert.equal(+(await baseOracle.getConsensusReportLastCall()).callCount, 2)
+        assert.equals((await baseOracle.getConsensusReportLastCall()).callCount, 2)
         assert.emits(tx1, 'ReportSubmitted', {}, { abi: baseOracleAbi })
 
         const tx2 = await consensus.submitReportAsConsensus(
@@ -87,7 +88,7 @@ contract('BaseOracle', ([admin]) => {
             abi: baseOracleAbi,
           }
         )
-        assert.equal(+(await baseOracle.getConsensusReportLastCall()).callCount, 3)
+        assert.equals((await baseOracle.getConsensusReportLastCall()).callCount, 3)
         assert.emits(tx2, 'ReportSubmitted', {}, { abi: baseOracleAbi })
       })
     })

@@ -1,3 +1,4 @@
+const { contract, artifacts } = require('hardhat')
 const { bn } = require('@aragon/contract-helpers-test')
 
 const BaseOracle = artifacts.require('BaseOracleTimeTravellable')
@@ -95,7 +96,7 @@ module.exports = {
   deployBaseOracle,
 }
 
-contract('BaseOracle', ([admin, member1]) => {
+contract('BaseOracle', ([admin]) => {
   context('Deployment and initial configuration', () => {
     let oracle
 

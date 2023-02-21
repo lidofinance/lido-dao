@@ -1,4 +1,4 @@
-const hre = require('hardhat')
+const { artifacts, contract, ethers } = require('hardhat')
 const { EvmSnapshot } = require('../helpers/blockchain')
 const { assert } = require('../helpers/assert')
 const { hex, hexConcat, toNum } = require('../helpers/utils')
@@ -8,7 +8,7 @@ const StakingModuleMock = artifacts.require('StakingModuleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 
 contract('StakingRouter', ([deployer, lido, admin]) => {
-  const evmSnapshot = new EvmSnapshot(hre.ethers.provider)
+  const evmSnapshot = new EvmSnapshot(ethers.provider)
 
   let depositContract, router
   let module1, module2
@@ -44,7 +44,7 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
   }
 
   before(async () => {
-    for await (moduleI of [module1, module2]) {
+    for (const moduleI of [module1, module2]) {
       const callInfo = await getCallInfo(moduleI)
       assert.equal(callInfo.updateStuckValidatorsCount.callCount, 0)
       assert.equal(callInfo.updateExitedValidatorsCount.callCount, 0)
@@ -76,10 +76,10 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
 
       it('initially, router assumes no staking modules have exited validators', async () => {
         const info = await router.getStakingModule(module1Id)
-        assert.equal(+info.exitedValidatorsCount, 0)
+        assert.equals(info.exitedValidatorsCount, 0)
 
         const totalExited = await router.getExitedValidatorsCountAcrossAllModules()
-        assert.equal(+totalExited, 0)
+        assert.equals(totalExited, 0)
       })
 
       it('reporting total exited validators of a non-existent module reverts', async () => {
@@ -99,12 +99,12 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
 
       it('staking module info gets updated', async () => {
         const info = await router.getStakingModule(module1Id)
-        assert.equal(+info.exitedValidatorsCount, 3)
+        assert.equals(info.exitedValidatorsCount, 3)
       })
 
       it('exited validators count accross all modules gets updated', async () => {
         const totalExited = await router.getExitedValidatorsCountAcrossAllModules()
-        assert.equal(+totalExited, 3)
+        assert.equals(totalExited, 3)
       })
 
       it('no functions were called on the module', async () => {
@@ -114,17 +114,14 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
         assert.equal(callInfo.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
       })
 
-      it(
-        `calling onValidatorsCountsByNodeOperatorReportingFinished doesn't call ` + `anything on the module`,
-        async () => {
-          await router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin })
+      it(`calling onValidatorsCountsByNodeOperatorReportingFinished doesn't call anything on the module`, async () => {
+        await router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin })
 
-          const callInfo = await getCallInfo(module1)
-          assert.equal(callInfo.updateStuckValidatorsCount.callCount, 0)
-          assert.equal(callInfo.updateExitedValidatorsCount.callCount, 0)
-          assert.equal(callInfo.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
-        }
-      )
+        const callInfo = await getCallInfo(module1)
+        assert.equal(callInfo.updateStuckValidatorsCount.callCount, 0)
+        assert.equal(callInfo.updateExitedValidatorsCount.callCount, 0)
+        assert.equal(callInfo.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
+      })
 
       it('reporting stuck validators by node op of a non-existent module reverts', async () => {
         const nonExistentModuleId = module1Id + 1
@@ -167,24 +164,21 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
         },
       ]
 
-      it(
-        'passing data with mismatched length while reporting stuck validators by node operator ' + 'reverts',
-        async () => {
-          await Promise.all(
-            mismatchedLengthData.map((data) =>
-              assert.reverts(
-                router.reportStakingModuleStuckValidatorsCountByNodeOperator(
-                  module1Id,
-                  data.nodeOpIds,
-                  data.validatorsCounts,
-                  { from: admin }
-                ),
-                'InvalidReportData(2)'
-              )
+      it('passing data with mismatched length while reporting stuck validators by node operator reverts', async () => {
+        await Promise.all(
+          mismatchedLengthData.map((data) =>
+            assert.reverts(
+              router.reportStakingModuleStuckValidatorsCountByNodeOperator(
+                module1Id,
+                data.nodeOpIds,
+                data.validatorsCounts,
+                { from: admin }
+              ),
+              'InvalidReportData(2)'
             )
           )
-        }
-      )
+        )
+      })
 
       const invalidLengthData = [
         {
@@ -229,24 +223,21 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
         },
       ]
 
-      it(
-        'passing data with invalid length while reporting stuck validators by node operator ' + 'reverts',
-        async () => {
-          await Promise.all(
-            invalidLengthData.map((data) =>
-              assert.reverts(
-                router.reportStakingModuleStuckValidatorsCountByNodeOperator(
-                  module1Id,
-                  data.nodeOpIds,
-                  data.validatorsCounts,
-                  { from: admin }
-                ),
-                'InvalidReportData(3)'
-              )
+      it('passing data with invalid length while reporting stuck validators by node operator reverts', async () => {
+        await Promise.all(
+          invalidLengthData.map((data) =>
+            assert.reverts(
+              router.reportStakingModuleStuckValidatorsCountByNodeOperator(
+                module1Id,
+                data.nodeOpIds,
+                data.validatorsCounts,
+                { from: admin }
+              ),
+              'InvalidReportData(3)'
             )
           )
-        }
-      )
+        )
+      })
 
       it('reporting stuck validators by node operator passes the info to the module', async () => {
         const nodeOpIds = [3, 5]
@@ -271,18 +262,15 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
         assert.equal(callInfo.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
       })
 
-      it(
-        `calling onValidatorsCountsByNodeOperatorReportingFinished still doesn't call ` + `anything on the module`,
-        async () => {
-          await router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin })
+      it(`calling onValidatorsCountsByNodeOperatorReportingFinished still doesn't call anything on the module`, async () => {
+        await router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin })
 
-          const callInfo = await getCallInfo(module1)
-          assert.equal(callInfo.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
+        const callInfo = await getCallInfo(module1)
+        assert.equal(callInfo.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
 
-          assert.equal(callInfo.updateStuckValidatorsCount.callCount, 1)
-          assert.equal(callInfo.updateExitedValidatorsCount.callCount, 0)
-        }
-      )
+        assert.equal(callInfo.updateStuckValidatorsCount.callCount, 1)
+        assert.equal(callInfo.updateExitedValidatorsCount.callCount, 0)
+      })
 
       it('reporting exited validators by node op of a non-existent module reverts', async () => {
         const nonExistentModuleId = module1Id + 1
@@ -306,43 +294,37 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
         )
       })
 
-      it(
-        'passing data with mismatched length while reporting exited validators by node operator ' + 'reverts',
-        async () => {
-          await Promise.all(
-            mismatchedLengthData.map((data) =>
-              assert.reverts(
-                router.reportStakingModuleExitedValidatorsCountByNodeOperator(
-                  module1Id,
-                  data.nodeOpIds,
-                  data.validatorsCounts,
-                  { from: admin }
-                ),
-                'InvalidReportData(2)'
-              )
+      it('passing data with mismatched length while reporting exited validators by node operator reverts', async () => {
+        await Promise.all(
+          mismatchedLengthData.map((data) =>
+            assert.reverts(
+              router.reportStakingModuleExitedValidatorsCountByNodeOperator(
+                module1Id,
+                data.nodeOpIds,
+                data.validatorsCounts,
+                { from: admin }
+              ),
+              'InvalidReportData(2)'
             )
           )
-        }
-      )
+        )
+      })
 
-      it(
-        'passing data with invalid length while reporting exited validators by node operator ' + 'reverts',
-        async () => {
-          await Promise.all(
-            invalidLengthData.map((data) =>
-              assert.reverts(
-                router.reportStakingModuleExitedValidatorsCountByNodeOperator(
-                  module1Id,
-                  data.nodeOpIds,
-                  data.validatorsCounts,
-                  { from: admin }
-                ),
-                'InvalidReportData(3)'
-              )
+      it('passing data with invalid length while reporting exited validators by node operator reverts', async () => {
+        await Promise.all(
+          invalidLengthData.map((data) =>
+            assert.reverts(
+              router.reportStakingModuleExitedValidatorsCountByNodeOperator(
+                module1Id,
+                data.nodeOpIds,
+                data.validatorsCounts,
+                { from: admin }
+              ),
+              'InvalidReportData(3)'
             )
           )
-        }
-      )
+        )
+      })
 
       it('reporting exited validators by node operator (total 2) passes the info to the module', async () => {
         const nodeOpIds = [1, 2]
@@ -374,21 +356,18 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
 
       it(`router's view on exited validators count accross all modules stays the same`, async () => {
         const totalExited = await router.getExitedValidatorsCountAcrossAllModules()
-        assert.equal(+totalExited, 3)
+        assert.equals(totalExited, 3)
       })
 
-      it(
-        `calling onValidatorsCountsByNodeOperatorReportingFinished still doesn't call ` + `anything on the module`,
-        async () => {
-          await router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin })
+      it(`calling onValidatorsCountsByNodeOperatorReportingFinished still doesn't call anything on the module`, async () => {
+        await router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin })
 
-          const callInfo = await getCallInfo(module1)
-          assert.equal(callInfo.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
+        const callInfo = await getCallInfo(module1)
+        assert.equal(callInfo.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
 
-          assert.equal(callInfo.updateStuckValidatorsCount.callCount, 1)
-          assert.equal(callInfo.updateExitedValidatorsCount.callCount, 1)
-        }
-      )
+        assert.equal(callInfo.updateStuckValidatorsCount.callCount, 1)
+        assert.equal(callInfo.updateExitedValidatorsCount.callCount, 1)
+      })
 
       it('reporting one more exited validator by node operator passes the info to the module', async () => {
         const nodeOpIds = [3]
@@ -418,8 +397,8 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
         await module1.setTotalExitedValidatorsCount(3)
       })
 
-      it(
-        `now that exited validators totals in the router and in the module match, calling` +
+      // eslint-disable-next-line prettier/prettier
+      it(`now that exited validators totals in the router and in the module match, calling` +
           `onValidatorsCountsByNodeOperatorReportingFinished calls ` +
           `onExitedAndStuckValidatorsCountsUpdated on the module`,
         async () => {
@@ -433,8 +412,8 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
         }
       )
 
-      it(
-        `calling onValidatorsCountsByNodeOperatorReportingFinished one more time calls ` +
+      // eslint-disable-next-line prettier/prettier
+      it(`calling onValidatorsCountsByNodeOperatorReportingFinished one more time calls ` +
           `onExitedAndStuckValidatorsCountsUpdated on the module again`,
         async () => {
           await router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin })
@@ -476,13 +455,13 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
 
       it('initially, router assumes no staking modules have exited validators', async () => {
         const info1 = await router.getStakingModule(moduleIds[0])
-        assert.equal(+info1.exitedValidatorsCount, 0)
+        assert.equals(info1.exitedValidatorsCount, 0)
 
         const info2 = await router.getStakingModule(moduleIds[1])
-        assert.equal(+info2.exitedValidatorsCount, 0)
+        assert.equals(info2.exitedValidatorsCount, 0)
 
         const totalExited = await router.getExitedValidatorsCountAcrossAllModules()
-        assert.equal(+totalExited, 0)
+        assert.equals(totalExited, 0)
       })
 
       it('reporting 3 exited keys total for module 1 and 2 exited keys total for module 2', async () => {
@@ -491,15 +470,15 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
 
       it('staking modules info gets updated', async () => {
         const info1 = await router.getStakingModule(moduleIds[0])
-        assert.equal(+info1.exitedValidatorsCount, 3)
+        assert.equals(info1.exitedValidatorsCount, 3)
 
         const info2 = await router.getStakingModule(moduleIds[1])
-        assert.equal(+info2.exitedValidatorsCount, 2)
+        assert.equals(info2.exitedValidatorsCount, 2)
       })
 
       it('exited validators count accross all modules gets updated', async () => {
         const totalExited = await router.getExitedValidatorsCountAcrossAllModules()
-        assert.equal(+totalExited, 5)
+        assert.equals(totalExited, 5)
       })
 
       it('no functions were called on any module', async () => {
@@ -514,22 +493,19 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
         assert.equal(callInfo2.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
       })
 
-      it(
-        `calling onValidatorsCountsByNodeOperatorReportingFinished doesn't call ` + `anything on any module`,
-        async () => {
-          await router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin })
+      it(`calling onValidatorsCountsByNodeOperatorReportingFinished doesn't call anything on any module`, async () => {
+        await router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin })
 
-          const callInfo1 = await getCallInfo(module1)
-          assert.equal(callInfo1.updateStuckValidatorsCount.callCount, 0)
-          assert.equal(callInfo1.updateExitedValidatorsCount.callCount, 0)
-          assert.equal(callInfo1.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
+        const callInfo1 = await getCallInfo(module1)
+        assert.equal(callInfo1.updateStuckValidatorsCount.callCount, 0)
+        assert.equal(callInfo1.updateExitedValidatorsCount.callCount, 0)
+        assert.equal(callInfo1.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
 
-          const callInfo2 = await getCallInfo(module2)
-          assert.equal(callInfo2.updateStuckValidatorsCount.callCount, 0)
-          assert.equal(callInfo2.updateExitedValidatorsCount.callCount, 0)
-          assert.equal(callInfo2.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
-        }
-      )
+        const callInfo2 = await getCallInfo(module2)
+        assert.equal(callInfo2.updateStuckValidatorsCount.callCount, 0)
+        assert.equal(callInfo2.updateExitedValidatorsCount.callCount, 0)
+        assert.equal(callInfo2.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
+      })
 
       it('reporting stuck validators by node operator passes the info to the module 1', async () => {
         const nodeOpIds = [1]
@@ -587,22 +563,19 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
         assert.equal(callInfo1.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
       })
 
-      it(
-        `calling onValidatorsCountsByNodeOperatorReportingFinished still doesn't call ` + `anything on any module`,
-        async () => {
-          await router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin })
+      it(`calling onValidatorsCountsByNodeOperatorReportingFinished still doesn't call anything on any module`, async () => {
+        await router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin })
 
-          const callInfo1 = await getCallInfo(module1)
-          assert.equal(callInfo1.updateStuckValidatorsCount.callCount, 1)
-          assert.equal(callInfo1.updateExitedValidatorsCount.callCount, 0)
-          assert.equal(callInfo1.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
+        const callInfo1 = await getCallInfo(module1)
+        assert.equal(callInfo1.updateStuckValidatorsCount.callCount, 1)
+        assert.equal(callInfo1.updateExitedValidatorsCount.callCount, 0)
+        assert.equal(callInfo1.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
 
-          const callInfo2 = await getCallInfo(module2)
-          assert.equal(callInfo2.updateStuckValidatorsCount.callCount, 1)
-          assert.equal(callInfo2.updateExitedValidatorsCount.callCount, 0)
-          assert.equal(callInfo2.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
-        }
-      )
+        const callInfo2 = await getCallInfo(module2)
+        assert.equal(callInfo2.updateStuckValidatorsCount.callCount, 1)
+        assert.equal(callInfo2.updateExitedValidatorsCount.callCount, 0)
+        assert.equal(callInfo2.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
+      })
 
       it('reporting exited validators by node operator passes the info to the module 1', async () => {
         const nodeOpIds = [3, 4]
@@ -636,22 +609,19 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
         await module1.setTotalExitedValidatorsCount(2)
       })
 
-      it(
-        `calling onValidatorsCountsByNodeOperatorReportingFinished still doesn't call ` + `anything on any module`,
-        async () => {
-          await router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin })
+      it(`calling onValidatorsCountsByNodeOperatorReportingFinished still doesn't call anything on any module`, async () => {
+        await router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin })
 
-          const callInfo1 = await getCallInfo(module1)
-          assert.equal(callInfo1.updateStuckValidatorsCount.callCount, 1)
-          assert.equal(callInfo1.updateExitedValidatorsCount.callCount, 1)
-          assert.equal(callInfo1.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
+        const callInfo1 = await getCallInfo(module1)
+        assert.equal(callInfo1.updateStuckValidatorsCount.callCount, 1)
+        assert.equal(callInfo1.updateExitedValidatorsCount.callCount, 1)
+        assert.equal(callInfo1.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
 
-          const callInfo2 = await getCallInfo(module2)
-          assert.equal(callInfo2.updateStuckValidatorsCount.callCount, 1)
-          assert.equal(callInfo2.updateExitedValidatorsCount.callCount, 0)
-          assert.equal(callInfo2.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
-        }
-      )
+        const callInfo2 = await getCallInfo(module2)
+        assert.equal(callInfo2.updateStuckValidatorsCount.callCount, 1)
+        assert.equal(callInfo2.updateExitedValidatorsCount.callCount, 0)
+        assert.equal(callInfo2.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
+      })
 
       it('reporting exited validators by node operator passes the info to the module 2', async () => {
         const nodeOpIds = [20]
@@ -685,8 +655,8 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
         await module2.setTotalExitedValidatorsCount(2)
       })
 
-      it(
-        `now that router's view on exited validators total match the module 2's view,` +
+      // eslint-disable-next-line prettier/prettier
+      it(`now that router's view on exited validators total match the module 2's view,` +
           `calling onValidatorsCountsByNodeOperatorReportingFinished calls ` +
           `onExitedAndStuckValidatorsCountsUpdated on the module 2`,
         async () => {
@@ -738,8 +708,8 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
         await module1.setTotalExitedValidatorsCount(3)
       })
 
-      it(
-        `now that router's view on exited validators total match the both modules' view,` +
+      // eslint-disable-next-line prettier/prettier
+      it(`now that router's view on exited validators total match the both modules' view,` +
           `calling onValidatorsCountsByNodeOperatorReportingFinished calls ` +
           `onExitedAndStuckValidatorsCountsUpdated on both modules`,
         async () => {

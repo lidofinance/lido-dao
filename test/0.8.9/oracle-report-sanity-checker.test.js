@@ -1,13 +1,13 @@
-const hre = require('hardhat')
+const { artifacts, contract, ethers } = require('hardhat')
 const { ETH } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 const { getCurrentBlockTimestamp } = require('../helpers/blockchain')
 
 const mocksFilePath = 'contracts/0.8.9/test_helpers/OracleReportSanityCheckerMocks.sol'
-const LidoStub = hre.artifacts.require(`${mocksFilePath}:LidoStub`)
-const OracleReportSanityChecker = hre.artifacts.require('OracleReportSanityChecker')
-const LidoLocatorStub = hre.artifacts.require(`${mocksFilePath}:LidoLocatorStub`)
-const WithdrawalQueueStub = hre.artifacts.require(`${mocksFilePath}:WithdrawalQueueStub`)
+const LidoStub = artifacts.require(`${mocksFilePath}:LidoStub`)
+const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
+const LidoLocatorStub = artifacts.require(`${mocksFilePath}:LidoLocatorStub`)
+const WithdrawalQueueStub = artifacts.require(`${mocksFilePath}:WithdrawalQueueStub`)
 
 function wei(number, units = 'wei') {
   switch (units.toLowerCase()) {
@@ -57,7 +57,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
 
   before(async () => {
     // mine 1024 blocks with block duration 12 seconds
-    await hre.ethers.provider.send('hardhat_mine', ['0x' + Number(1024).toString(16), '0x' + Number(12).toString(16)])
+    await ethers.provider.send('hardhat_mine', ['0x' + Number(1024).toString(16), '0x' + Number(12).toString(16)])
     lidoMock = await LidoStub.new({ from: deployer })
     withdrawalQueueMock = await WithdrawalQueueStub.new({ from: deployer })
     lidoLocatorMock = await LidoLocatorStub.new(
@@ -143,7 +143,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     })
 
     it('reverts with error IncorrectWithdrawalsVaultBalance() when actual withdrawal vault balance is less than passed', async () => {
-      const currentWithdrawalVaultBalance = await hre.ethers.provider.getBalance(withdrawalVault)
+      const currentWithdrawalVaultBalance = await ethers.provider.getBalance(withdrawalVault)
       await assert.revertsWithCustomError(
         oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({ ...correctLidoOracleReport, withdrawalVaultBalance: currentWithdrawalVaultBalance.add(1) })
@@ -153,7 +153,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     })
 
     it('reverts with error IncorrectELRewardsVaultBalance() when actual el rewards vault balance is less than passed', async () => {
-      const currentELRewardsVaultBalance = await hre.ethers.provider.getBalance(elRewardsVault)
+      const currentELRewardsVaultBalance = await ethers.provider.getBalance(elRewardsVault)
       await assert.revertsWithCustomError(
         oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({ ...correctLidoOracleReport, elRewardsVaultBalance: currentELRewardsVaultBalance.add(1) })

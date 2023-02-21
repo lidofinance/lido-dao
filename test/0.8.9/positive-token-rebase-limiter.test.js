@@ -1,6 +1,6 @@
-const hre = require('hardhat')
+const { artifacts, contract, ethers } = require('hardhat')
 
-const { bn, MAX_UINT64, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { bn, MAX_UINT64 } = require('@aragon/contract-helpers-test')
 const { EvmSnapshot } = require('../helpers/blockchain')
 const { ETH } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
@@ -8,13 +8,13 @@ const { assert } = require('../helpers/assert')
 const PositiveTokenRebaseLimiter = artifacts.require('PositiveTokenRebaseLimiterMock.sol')
 const UNLIMITED_REBASE = bn(MAX_UINT64)
 
-contract('PositiveTokenRebaseLimiter', ([account1]) => {
+contract('PositiveTokenRebaseLimiter', () => {
   let limiter, snapshot
 
   before('deploy mock', async () => {
     limiter = await PositiveTokenRebaseLimiter.new()
 
-    snapshot = new EvmSnapshot(hre.ethers.provider)
+    snapshot = new EvmSnapshot(ethers.provider)
     await snapshot.make()
   })
 

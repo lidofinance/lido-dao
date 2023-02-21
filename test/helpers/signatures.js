@@ -82,7 +82,6 @@ function signPauseData(pauseMessagePrefix, pauseMessage, guardianPrivateKey) {
 }
 
 function encodePauseData(pauseMessagePrefix, pauseMessage) {
-  const uint256Size = 64
   return hexToBytes(
     strip0x(pauseMessagePrefix) + encodeBN(pauseMessage.blockNumber) + encodeBN(pauseMessage.stakingModule)
   )
@@ -90,9 +89,6 @@ function encodePauseData(pauseMessagePrefix, pauseMessage) {
 
 function encodeBN(value) {
   return new BN(value).toString('hex', UINT256_SIZE) // 32bytes
-}
-function encodeBNuint24(value) {
-  return new BN(value).toString('hex', 6) // 3bytes
 }
 
 function signDepositData(
@@ -113,7 +109,6 @@ function signDepositData(
 
 function encodeAttestMessage(attestMessagePrefix, blockNumber, blockHash, depositRoot, StakingModuleId, keysOpIndex) {
   const uint256Size = 64
-  const uint24Size = 6
 
   return hexToBytes(
     strip0x(attestMessagePrefix) +
@@ -126,7 +121,8 @@ function encodeAttestMessage(attestMessagePrefix, blockNumber, blockHash, deposi
 }
 
 function hexToBytes(hex) {
-  for (var bytes = [], c = 0; c < hex.length; c += 2) bytes.push(parseInt(hex.substr(c, 2), 16))
+  const bytes = []
+  for (let c = 0; c < hex.length; c += 2) bytes.push(parseInt(hex.substr(c, 2), 16))
   return bytes
 }
 

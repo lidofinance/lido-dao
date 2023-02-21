@@ -1,3 +1,5 @@
+const { artifacts } = require('hardhat')
+
 const LidoLocator = artifacts.require('LidoLocator')
 
 const DUMMY_ADDRESS = '0x' + 'f'.repeat(40)

@@ -1,7 +1,6 @@
-const { newDao, newApp } = require('../0.4.24/helpers/dao')
-const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
-const { assertRevert } = require('../helpers/assertThrow')
+const { contract } = require('hardhat')
+
+const { assert } = require('../helpers/assert')
 const { e9 } = require('../helpers/utils')
 
 const {
@@ -23,9 +22,7 @@ const EPOCHS_PER_FRAME = 225
 const SLOTS_PER_FRAME = EPOCHS_PER_FRAME * SLOTS_PER_EPOCH
 const SECONDS_PER_FRAME = SLOTS_PER_FRAME * SECONDS_PER_SLOT
 
-// const EPOCH_LENGTH = 32 * 12
-
-contract('AccountingOracle', ([appManager, voting, malicious1, malicious2, member1, member2, member3]) => {
+contract('AccountingOracle', ([voting, malicious1, malicious2, member1, member2, member3]) => {
   let lido, consensus, oracle
 
   const GOOD_DATA = {
@@ -69,15 +66,15 @@ contract('AccountingOracle', ([appManager, voting, malicious1, malicious2, membe
 
     await initAccountingOracle({ ...deployed, admin: voting })
 
-    assert.equal(+(await oracle.getTime()), GENESIS_TIME + SECONDS_PER_FRAME)
+    assert.equals((await oracle.getTime()), GENESIS_TIME + SECONDS_PER_FRAME)
 
     await consensus.addMember(member1, 4, { from: voting })
     await consensus.addMember(member2, 4, { from: voting })
   })
 
   it('reverts with zero ref. slot', async () => {
-    assertBn((await consensus.getCurrentFrame()).refSlot, 1 * SLOTS_PER_FRAME - 1)
-    await assertRevert(consensus.submitReport(0, HASH_1, CONSENSUS_VERSION, { from: member1 }), 'InvalidSlot()')
+    assert.equals((await consensus.getCurrentFrame()).refSlot, 1 * SLOTS_PER_FRAME - 1)
+    await assert.reverts(consensus.submitReport(0, HASH_1, CONSENSUS_VERSION, { from: member1 }), 'InvalidSlot()')
   })
 
   it('oracle conract handles changing the oracles during epoch', async () => {
@@ -100,16 +97,18 @@ contract('AccountingOracle', ([appManager, voting, malicious1, malicious2, membe
 
     let tx = await consensus.submitReport(SLOTS_PER_FRAME - 1, goodDataHash, CONSENSUS_VERSION, { from: member3 })
 
-    assertEvent(tx, 'ConsensusReached', {
-      expectedArgs: { refSlot: SLOTS_PER_FRAME - 1, report: goodDataHash, support: 3 },
+    assert.emits(tx, 'ConsensusReached', {
+      refSlot: SLOTS_PER_FRAME - 1,
+      report: goodDataHash,
+      support: 3,
     })
 
     tx = await oracle.submitReportData(goodDataItems, await oracle.getContractVersion(), { from: member3 })
 
-    assertEvent(tx, 'ProcessingStarted', { expectedArgs: { refSlot: SLOTS_PER_FRAME - 1 } })
+    assert.emits(tx, 'ProcessingStarted', { refSlot: SLOTS_PER_FRAME - 1 })
 
     const lastHandleOracleReportCall = await lido.getLastCall_handleOracleReport()
-    assertBn(lastHandleOracleReportCall.clBalance, e9(GOOD_DATA.clBalanceGwei))
-    assertBn(lastHandleOracleReportCall.numValidators, GOOD_DATA.numValidators)
+    assert.equals(lastHandleOracleReportCall.clBalance, e9(GOOD_DATA.clBalanceGwei))
+    assert.equals(lastHandleOracleReportCall.numValidators, GOOD_DATA.numValidators)
   })
 })

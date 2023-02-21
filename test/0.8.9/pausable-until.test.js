@@ -1,21 +1,21 @@
-const hre = require('hardhat')
+const { artifacts, contract, ethers } = require('hardhat')
 
-const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { bn } = require('@aragon/contract-helpers-test')
 const { EvmSnapshot, advanceChainTime, getCurrentBlockTimestamp } = require('../helpers/blockchain')
-const { ETH, StETH } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 
 const PausableUntil = artifacts.require('PausableUntilPrivateExposed')
 
-contract('PausableUntil', ([deployer, _, anotherAccount]) => {
+contract('PausableUntil', ([deployer]) => {
   let pausable
   let PAUSE_INFINITELY
+  let snapshot
 
   before('deploy lido with dao', async () => {
     pausable = await PausableUntil.new({ from: deployer })
     PAUSE_INFINITELY = await pausable.PAUSE_INFINITELY()
 
-    snapshot = new EvmSnapshot(hre.ethers.provider)
+    snapshot = new EvmSnapshot(ethers.provider)
     await snapshot.make()
   })
 

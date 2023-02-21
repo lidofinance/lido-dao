@@ -1,3 +1,4 @@
+const { contract } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 const { e9, e18, e27, hex } = require('../../helpers/utils')
 
@@ -558,7 +559,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         for (let i = 0; i < callsCount; i++) {
           const call = await stakingRouter.calls_reportStuckKeysByNodeOperator(i)
           const item = extraData.stuckKeys[i]
-          assert.equals(+call.stakingModuleId, item.moduleId)
+          assert.equals(call.stakingModuleId, item.moduleId)
           assert.equals(call.nodeOperatorIds, '0x' + item.nodeOpIds.map((id) => hex(id, 8)).join(''))
           assert.equals(call.keysCounts, '0x' + item.keysCounts.map((count) => hex(count, 16)).join(''))
         }
@@ -574,14 +575,14 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         for (let i = 0; i < callsCount; i++) {
           const call = await stakingRouter.calls_reportExitedKeysByNodeOperator(i)
           const item = extraData.exitedKeys[i]
-          assert.equals(+call.stakingModuleId, item.moduleId)
+          assert.equals(call.stakingModuleId, item.moduleId)
           assert.equals(call.nodeOperatorIds, '0x' + item.nodeOpIds.map((id) => hex(id, 8)).join(''))
           assert.equals(call.keysCounts, '0x' + item.keysCounts.map((count) => hex(count, 16)).join(''))
         }
       })
 
       it('calls onValidatorsCountsByNodeOperatorReportingFinished on StakingRouter', async () => {
-        const { extraData, extraDataList } = await prepareNextReportInNextFrame()
+        const { extraDataList } = await prepareNextReportInNextFrame()
         await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
         const callsCount = await stakingRouter.totalCalls_onValidatorsCountsByNodeOperatorReportingFinished()
         assert.equals(callsCount, 1)
@@ -592,8 +593,8 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       const { extraDataItems, extraDataList } = await prepareNextReportInNextFrame()
       await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
       const state = await oracle.getExtraDataProcessingState()
-      assert.equals(+state.itemsCount, extraDataItems.length)
-      assert.equals(+state.itemsCount, state.itemsProcessed)
+      assert.equals(state.itemsCount, extraDataItems.length)
+      assert.equals(state.itemsCount, state.itemsProcessed)
       await assert.revertsWithCustomError(
         oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
         `ExtraDataAlreadyProcessed()`
@@ -616,22 +617,22 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
       const stateBefore = await oracle.getExtraDataProcessingState()
 
-      assert.equals(+stateBefore.refSlot, reportFields.refSlot)
-      assert.equals(+stateBefore.dataFormat, EXTRA_DATA_FORMAT_LIST)
+      assert.equals(stateBefore.refSlot, reportFields.refSlot)
+      assert.equals(stateBefore.dataFormat, EXTRA_DATA_FORMAT_LIST)
       assert.isFalse(stateBefore.submitted)
-      assert.equals(+stateBefore.itemsCount, extraDataItems.length)
-      assert.equals(+stateBefore.itemsProcessed, 0)
-      assert.equals(+stateBefore.lastSortingKey, '0')
+      assert.equals(stateBefore.itemsCount, extraDataItems.length)
+      assert.equals(stateBefore.itemsProcessed, 0)
+      assert.equals(stateBefore.lastSortingKey, '0')
       assert.equals(stateBefore.dataHash, extraDataHash)
 
       await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
 
       const stateAfter = await oracle.getExtraDataProcessingState()
 
-      assert.equals(+stateAfter.refSlot, reportFields.refSlot)
-      assert.equals(+stateAfter.dataFormat, EXTRA_DATA_FORMAT_LIST)
+      assert.equals(stateAfter.refSlot, reportFields.refSlot)
+      assert.equals(stateAfter.dataFormat, EXTRA_DATA_FORMAT_LIST)
       assert.isTrue(stateAfter.submitted)
-      assert.equals(+stateAfter.itemsCount, extraDataItems.length)
+      assert.equals(stateAfter.itemsCount, extraDataItems.length)
       assert.equals(stateAfter.itemsProcessed, extraDataItems.length)
       // TODO: figure out how to build this value and test it properly
       assert.equals(

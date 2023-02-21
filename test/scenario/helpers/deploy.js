@@ -1,4 +1,4 @@
-const { artifacts } = require('hardhat')
+const { artifacts, web3 } = require('hardhat')
 const withdrawals = require('../../helpers/withdrawals')
 
 const { newDao, newApp } = require('../../0.4.24/helpers/dao')

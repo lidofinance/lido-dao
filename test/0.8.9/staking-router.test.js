@@ -1,15 +1,13 @@
-const hre = require('hardhat')
+const { artifacts, contract, ethers } = require('hardhat')
 const { MaxUint256 } = require('@ethersproject/constants')
 const { utils } = require('web3')
 const { BN } = require('bn.js')
 const { assert } = require('../helpers/assert')
 const { EvmSnapshot } = require('../helpers/blockchain')
 const { newDao, newApp } = require('../helpers/dao')
-const { artifacts } = require('hardhat')
 const { ETH } = require('../helpers/utils')
 
 const DepositContractMock = artifacts.require('DepositContractMock')
-const StakingRouterMock = artifacts.require('StakingRouterMock.sol')
 const StakingRouter = artifacts.require('StakingRouter.sol')
 const StakingModuleMock = artifacts.require('StakingModuleMock.sol')
 
@@ -32,7 +30,7 @@ const StakingModuleStatus = {
 contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
   let depositContract, app
   const wc = '0x'.padEnd(66, '1234')
-  const snapshot = new EvmSnapshot(hre.ethers.provider)
+  const snapshot = new EvmSnapshot(ethers.provider)
 
   describe('setup env', async () => {
     before(async () => {
@@ -288,7 +286,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     it('staking modules limit is 32', async () => {
       for (let i = 0; i < 32; i++) {
         const stakingModule = await StakingModuleMock.new({ from: deployer })
-        const tx = await app.addStakingModule('Test module', stakingModule.address, 100, 100, 100, { from: appManager })
+        await app.addStakingModule('Test module', stakingModule.address, 100, 100, 100, { from: appManager })
       }
 
       const oneMoreStakingModule = await StakingModuleMock.new({ from: deployer })

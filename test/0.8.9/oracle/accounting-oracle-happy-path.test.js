@@ -1,5 +1,5 @@
+const { contract } = require('hardhat')
 const { assert } = require('../../helpers/assert')
-const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { e9, e18, e27, hex } = require('../../helpers/utils')
 
 const {
@@ -69,31 +69,27 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       const report = await oracle.getConsensusReport()
       assert.equal(report.hash, ZERO_HASH)
       // see the next test for refSlot
-      assert.equal(+report.processingDeadlineTime, 0)
+      assert.equals(report.processingDeadlineTime, 0)
       assert.isFalse(report.processingStarted)
 
       const frame = await consensus.getCurrentFrame()
       const procState = await oracle.getProcessingState()
 
-      assert.equal(+procState.currentFrameRefSlot, +frame.refSlot)
-      assert.equal(+procState.processingDeadlineTime, 0)
+      assert.equals(procState.currentFrameRefSlot, +frame.refSlot)
+      assert.equals(procState.processingDeadlineTime, 0)
       assert.equal(procState.mainDataHash, ZERO_HASH)
       assert.isFalse(procState.mainDataSubmitted)
       assert.equal(procState.extraDataHash, ZERO_HASH)
-      assert.equal(+procState.extraDataFormat, 0)
+      assert.equals(procState.extraDataFormat, 0)
       assert.isFalse(procState.extraDataSubmitted)
-      assert.equal(+procState.extraDataItemsCount, 0)
-      assert.equal(+procState.extraDataItemsSubmitted, 0)
+      assert.equals(procState.extraDataItemsCount, 0)
+      assert.equals(procState.extraDataItemsSubmitted, 0)
     })
 
-    it(
-      `reference slot of the empty initial consensus report is set to the last processed slot ` +
-        `of the legacy oracle`,
-      async () => {
-        const report = await oracle.getConsensusReport()
-        assert.equal(+report.refSlot, V1_ORACLE_LAST_REPORT_SLOT)
-      }
-    )
+    it(`reference slot of the empty initial consensus report is set to the last processed slot of the legacy oracle`, async () => {
+      const report = await oracle.getConsensusReport()
+      assert.equals(report.refSlot, V1_ORACLE_LAST_REPORT_SLOT)
+    })
 
     it('committee reaches consensus on a report hash', async () => {
       const { refSlot } = await consensus.getCurrentFrame()
@@ -140,22 +136,22 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
     it('oracle gets the report hash', async () => {
       const report = await oracle.getConsensusReport()
       assert.equal(report.hash, reportHash)
-      assert.equal(+report.refSlot, +reportFields.refSlot)
-      assert.equal(+report.processingDeadlineTime, computeTimestampAtSlot(+report.refSlot + SLOTS_PER_FRAME))
+      assert.equals(report.refSlot, +reportFields.refSlot)
+      assert.equals(report.processingDeadlineTime, computeTimestampAtSlot(+report.refSlot + SLOTS_PER_FRAME))
       assert.isFalse(report.processingStarted)
 
       const frame = await consensus.getCurrentFrame()
       const procState = await oracle.getProcessingState()
 
-      assert.equal(+procState.currentFrameRefSlot, +frame.refSlot)
-      assert.equal(+procState.processingDeadlineTime, computeTimestampAtSlot(+frame.reportProcessingDeadlineSlot))
+      assert.equals(procState.currentFrameRefSlot, +frame.refSlot)
+      assert.equals(procState.processingDeadlineTime, computeTimestampAtSlot(+frame.reportProcessingDeadlineSlot))
       assert.equal(procState.mainDataHash, reportHash)
       assert.isFalse(procState.mainDataSubmitted)
       assert.equal(procState.extraDataHash, ZERO_HASH)
-      assert.equal(+procState.extraDataFormat, 0)
+      assert.equals(procState.extraDataFormat, 0)
       assert.isFalse(procState.extraDataSubmitted)
-      assert.equal(+procState.extraDataItemsCount, 0)
-      assert.equal(+procState.extraDataItemsSubmitted, 0)
+      assert.equals(procState.extraDataItemsCount, 0)
+      assert.equals(procState.extraDataItemsSubmitted, 0)
     })
 
     it('some time passes', async () => {
@@ -200,15 +196,15 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       const frame = await consensus.getCurrentFrame()
       const procState = await oracle.getProcessingState()
 
-      assert.equal(+procState.currentFrameRefSlot, +frame.refSlot)
-      assert.equal(+procState.processingDeadlineTime, computeTimestampAtSlot(+frame.reportProcessingDeadlineSlot))
+      assert.equals(procState.currentFrameRefSlot, +frame.refSlot)
+      assert.equals(procState.processingDeadlineTime, computeTimestampAtSlot(+frame.reportProcessingDeadlineSlot))
       assert.equal(procState.mainDataHash, reportHash)
       assert.isTrue(procState.mainDataSubmitted)
       assert.equal(procState.extraDataHash, reportFields.extraDataHash)
-      assert.equal(+procState.extraDataFormat, reportFields.extraDataFormat)
+      assert.equals(procState.extraDataFormat, reportFields.extraDataFormat)
       assert.isFalse(procState.extraDataSubmitted)
-      assert.equal(+procState.extraDataItemsCount, reportFields.extraDataItemsCount)
-      assert.equal(+procState.extraDataItemsSubmitted, 0)
+      assert.equals(procState.extraDataItemsCount, reportFields.extraDataItemsCount)
+      assert.equals(procState.extraDataItemsSubmitted, 0)
     })
 
     it(`Lido got the oracle report`, async () => {
@@ -218,18 +214,21 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
         +lastOracleReportCall.secondsElapsedSinceLastReport,
         (reportFields.refSlot - V1_ORACLE_LAST_REPORT_SLOT) * SECONDS_PER_SLOT
       )
-      assert.equal(+lastOracleReportCall.numValidators, reportFields.numValidators)
-      assertBn(lastOracleReportCall.clBalance, e9(reportFields.clBalanceGwei))
-      assertBn(lastOracleReportCall.withdrawalVaultBalance, reportFields.withdrawalVaultBalance)
-      assertBn(lastOracleReportCall.elRewardsVaultBalance, reportFields.elRewardsVaultBalance)
-      assertBn(lastOracleReportCall.lastWithdrawalRequestIdToFinalize, reportFields.lastWithdrawalRequestIdToFinalize)
-      assertBn(lastOracleReportCall.finalizationShareRate, reportFields.finalizationShareRate)
+      assert.equals(lastOracleReportCall.numValidators, reportFields.numValidators)
+      assert.equals(lastOracleReportCall.clBalance, e9(reportFields.clBalanceGwei))
+      assert.equals(lastOracleReportCall.withdrawalVaultBalance, reportFields.withdrawalVaultBalance)
+      assert.equals(lastOracleReportCall.elRewardsVaultBalance, reportFields.elRewardsVaultBalance)
+      assert.equals(
+        lastOracleReportCall.lastWithdrawalRequestIdToFinalize,
+        reportFields.lastWithdrawalRequestIdToFinalize
+      )
+      assert.equals(lastOracleReportCall.finalizationShareRate, reportFields.finalizationShareRate)
     })
 
     it(`withdrawal queue got bunker mode report`, async () => {
       const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
-      assert.equal(+updateBunkerModeLastCall.callCount, 1)
-      assert.equal(+updateBunkerModeLastCall.isBunkerMode, reportFields.isBunkerMode)
+      assert.equals(updateBunkerModeLastCall.callCount, 1)
+      assert.equals(updateBunkerModeLastCall.isBunkerMode, reportFields.isBunkerMode)
       assert.equal(
         +updateBunkerModeLastCall.prevReportTimestamp,
         GENESIS_TIME + prevProcessingRefSlot * SECONDS_PER_SLOT
@@ -251,10 +250,10 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
 
     it(`legacy oracle got CL data report`, async () => {
       const lastLegacyOracleCall = await mockLegacyOracle.lastCall__handleConsensusLayerReport()
-      assert.equal(+lastLegacyOracleCall.totalCalls, 1)
-      assert.equal(+lastLegacyOracleCall.refSlot, reportFields.refSlot)
-      assert.equal(+lastLegacyOracleCall.clBalance, e9(reportFields.clBalanceGwei))
-      assert.equal(+lastLegacyOracleCall.clValidators, reportFields.numValidators)
+      assert.equals(lastLegacyOracleCall.totalCalls, 1)
+      assert.equals(lastLegacyOracleCall.refSlot, reportFields.refSlot)
+      assert.equals(lastLegacyOracleCall.clBalance, e9(reportFields.clBalanceGwei))
+      assert.equals(lastLegacyOracleCall.clValidators, reportFields.numValidators)
     })
 
     it(`no data can be submitted for the same reference slot again`, async () => {
@@ -308,15 +307,15 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       const frame = await consensus.getCurrentFrame()
       const procState = await oracle.getProcessingState()
 
-      assert.equal(+procState.currentFrameRefSlot, +frame.refSlot)
-      assert.equal(+procState.processingDeadlineTime, computeTimestampAtSlot(+frame.reportProcessingDeadlineSlot))
+      assert.equals(procState.currentFrameRefSlot, +frame.refSlot)
+      assert.equals(procState.processingDeadlineTime, computeTimestampAtSlot(+frame.reportProcessingDeadlineSlot))
       assert.equal(procState.mainDataHash, reportHash)
       assert.isTrue(procState.mainDataSubmitted)
       assert.equal(procState.extraDataHash, reportFields.extraDataHash)
-      assert.equal(+procState.extraDataFormat, reportFields.extraDataFormat)
+      assert.equals(procState.extraDataFormat, reportFields.extraDataFormat)
       assert.isTrue(procState.extraDataSubmitted)
-      assert.equal(+procState.extraDataItemsCount, reportFields.extraDataItemsCount)
-      assert.equal(+procState.extraDataItemsSubmitted, extraDataItems.length)
+      assert.equals(procState.extraDataItemsCount, reportFields.extraDataItemsCount)
+      assert.equals(procState.extraDataItemsSubmitted, extraDataItems.length)
     })
 
     it('Staking router got the exited keys by node op report', async () => {
@@ -324,12 +323,12 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assert.equal(totalReportCalls, 2)
 
       const call1 = await mockStakingRouter.calls_reportExitedKeysByNodeOperator(0)
-      assert.equal(+call1.stakingModuleId, 2)
+      assert.equals(call1.stakingModuleId, 2)
       assert.equal(call1.nodeOperatorIds, '0x' + [1, 2].map((i) => hex(i, 8)).join(''))
       assert.equal(call1.keysCounts, '0x' + [1, 3].map((i) => hex(i, 16)).join(''))
 
       const call2 = await mockStakingRouter.calls_reportExitedKeysByNodeOperator(1)
-      assert.equal(+call2.stakingModuleId, 3)
+      assert.equals(call2.stakingModuleId, 3)
       assert.equal(call2.nodeOperatorIds, '0x' + [1].map((i) => hex(i, 8)).join(''))
       assert.equal(call2.keysCounts, '0x' + [2].map((i) => hex(i, 16)).join(''))
     })
@@ -339,17 +338,17 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assert.equal(totalReportCalls, 3)
 
       const call1 = await mockStakingRouter.calls_reportStuckKeysByNodeOperator(0)
-      assert.equal(+call1.stakingModuleId, 1)
+      assert.equals(call1.stakingModuleId, 1)
       assert.equal(call1.nodeOperatorIds, '0x' + [0].map((i) => hex(i, 8)).join(''))
       assert.equal(call1.keysCounts, '0x' + [1].map((i) => hex(i, 16)).join(''))
 
       const call2 = await mockStakingRouter.calls_reportStuckKeysByNodeOperator(1)
-      assert.equal(+call2.stakingModuleId, 2)
+      assert.equals(call2.stakingModuleId, 2)
       assert.equal(call2.nodeOperatorIds, '0x' + [0].map((i) => hex(i, 8)).join(''))
       assert.equal(call2.keysCounts, '0x' + [2].map((i) => hex(i, 16)).join(''))
 
       const call3 = await mockStakingRouter.calls_reportStuckKeysByNodeOperator(2)
-      assert.equal(+call3.stakingModuleId, 3)
+      assert.equals(call3.stakingModuleId, 3)
       assert.equal(call3.nodeOperatorIds, '0x' + [2].map((i) => hex(i, 8)).join(''))
       assert.equal(call3.keysCounts, '0x' + [3].map((i) => hex(i, 16)).join(''))
     })
@@ -373,15 +372,15 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       const frame = await consensus.getCurrentFrame()
       const procState = await oracle.getProcessingState()
 
-      assert.equal(+procState.currentFrameRefSlot, +frame.refSlot)
-      assert.equal(+procState.processingDeadlineTime, 0)
+      assert.equals(procState.currentFrameRefSlot, +frame.refSlot)
+      assert.equals(procState.processingDeadlineTime, 0)
       assert.equal(procState.mainDataHash, ZERO_HASH)
       assert.isFalse(procState.mainDataSubmitted)
       assert.equal(procState.extraDataHash, ZERO_HASH)
-      assert.equal(+procState.extraDataFormat, 0)
+      assert.equals(procState.extraDataFormat, 0)
       assert.isFalse(procState.extraDataSubmitted)
-      assert.equal(+procState.extraDataItemsCount, 0)
-      assert.equal(+procState.extraDataItemsSubmitted, 0)
+      assert.equals(procState.extraDataItemsCount, 0)
+      assert.equals(procState.extraDataItemsSubmitted, 0)
     })
 
     it('new data report with empty extra data is agreed upon and submitted', async () => {
@@ -410,7 +409,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
 
     it(`withdrawal queue got bunker mode report`, async () => {
       const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
-      assert.equal(+updateBunkerModeLastCall.callCount, 2)
+      assert.equals(updateBunkerModeLastCall.callCount, 2)
     })
 
     it(`Staking router got the exited keys report`, async () => {
@@ -437,15 +436,15 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       const frame = await consensus.getCurrentFrame()
       const procState = await oracle.getProcessingState()
 
-      assert.equal(+procState.currentFrameRefSlot, +frame.refSlot)
-      assert.equal(+procState.processingDeadlineTime, computeTimestampAtSlot(+frame.reportProcessingDeadlineSlot))
+      assert.equals(procState.currentFrameRefSlot, +frame.refSlot)
+      assert.equals(procState.processingDeadlineTime, computeTimestampAtSlot(+frame.reportProcessingDeadlineSlot))
       assert.equal(procState.mainDataHash, reportHash)
       assert.isTrue(procState.mainDataSubmitted)
       assert.equal(procState.extraDataHash, ZERO_HASH)
-      assert.equal(+procState.extraDataFormat, EXTRA_DATA_FORMAT_EMPTY)
+      assert.equals(procState.extraDataFormat, EXTRA_DATA_FORMAT_EMPTY)
       assert.isTrue(procState.extraDataSubmitted)
-      assert.equal(+procState.extraDataItemsCount, 0)
-      assert.equal(+procState.extraDataItemsSubmitted, 0)
+      assert.equals(procState.extraDataItemsCount, 0)
+      assert.equals(procState.extraDataItemsSubmitted, 0)
     })
 
     it(`Staking router didn't get the exited keys by node op report`, async () => {

@@ -1,10 +1,10 @@
-const hre = require('hardhat')
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { ethers, artifacts, contract } = require('hardhat')
+const { ZERO_ADDRESS } = require('../helpers/constants')
 
 const { assert } = require('../helpers/assert')
 const { EvmSnapshot } = require('../helpers/blockchain')
 
-const OracleDaemonConfig = hre.artifacts.require('OracleDaemonConfig.sol')
+const OracleDaemonConfig = artifacts.require('OracleDaemonConfig.sol')
 
 contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
   let config, snapshot
@@ -14,7 +14,7 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
 
   before(async () => {
     config = await OracleDaemonConfig.new(deployer, [manager], { from: deployer })
-    snapshot = new EvmSnapshot(hre.ethers.provider)
+    snapshot = new EvmSnapshot(ethers.provider)
 
     await snapshot.make()
   })

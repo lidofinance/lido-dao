@@ -1,3 +1,4 @@
+const { web3 } = require('hardhat')
 const { ecSign, strip0x } = require('./index')
 
 const transferWithAuthorizationTypeHash = web3.utils.keccak256(

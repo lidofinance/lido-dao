@@ -1,10 +1,12 @@
-const hre = require('hardhat')
+const { artifacts, contract, ethers } = require('hardhat')
+
 const { assert } = require('../helpers/assert')
-const { ETH, toBN, genKeys, setBalance, StETH, calcSharesMintedAsFees } = require('../helpers/utils')
+const { ETH, toBN, genKeys, StETH, calcSharesMintedAsFees } = require('../helpers/utils')
 const { deployProtocol } = require('../helpers/protocol')
-const { EvmSnapshot } = require('../helpers/blockchain')
+const { EvmSnapshot, setBalance } = require('../helpers/blockchain')
 const { ZERO_ADDRESS, INITIAL_HOLDER } = require('../helpers/constants')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
+
 const Lido = artifacts.require('Lido')
 
 const ONE_YEAR = 3600 * 24 * 365
@@ -114,7 +116,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     })
 
     await setBalance(deployed.oracle.address, ETH(1))
-    await hre.ethers.getImpersonatedSigner(deployed.oracle.address)
+    await ethers.getImpersonatedSigner(deployed.oracle.address)
 
     await curatedModule.addNodeOperator('1', operator, { from: deployed.voting.address })
     const keysAmount = 120
@@ -136,7 +138,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
 
     await checkStat({ depositedValidators: 0, beaconValidators: 0, beaconBalance: 0 })
 
-    snapshot = new EvmSnapshot(hre.ethers.provider)
+    snapshot = new EvmSnapshot(ethers.provider)
     await snapshot.make()
   })
 

@@ -1,5 +1,8 @@
+const { artifacts } = require('hardhat')
+
 const { hash } = require('eth-ens-namehash')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
+
 const Kernel = artifacts.require('@aragon/os/build/contracts/kernel/Kernel')
 const ACL = artifacts.require('@aragon/os/build/contracts/acl/ACL')
 const EVMScriptRegistryFactory = artifacts.require('@aragon/os/build/contracts/factory/EVMScriptRegistryFactory')

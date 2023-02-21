@@ -1,5 +1,7 @@
+const { contract, artifacts, web3 } = require('hardhat')
 const { assert } = require('../../helpers/assert')
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { ZERO_ADDRESS } = require('../../helpers/constants')
+
 const MockConsensusContract = artifacts.require('MockConsensusContract')
 
 const {

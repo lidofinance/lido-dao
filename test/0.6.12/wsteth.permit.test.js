@@ -1,12 +1,9 @@
+const { artifacts, contract } = require('hardhat')
 const crypto = require('crypto')
+const { expect } = require('chai')
 const { ACCOUNTS_AND_KEYS, MAX_UINT256, ZERO_ADDRESS } = require('./helpers/constants')
 const { expectRevert, hexStringFromBuffer } = require('./helpers')
-const {
-  signPermit,
-  signTransferAuthorization,
-  permitTypeHash,
-  makeDomainSeparator,
-} = require('./helpers/permit_helpers')
+const { signPermit, signTransferAuthorization, makeDomainSeparator } = require('./helpers/permit_helpers')
 
 const WstETH = artifacts.require('WstETHMock')
 const StETH = artifacts.require('StETHMockERC20')

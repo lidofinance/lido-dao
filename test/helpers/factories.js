@@ -1,3 +1,4 @@
+const { web3 } = require('hardhat')
 const withdrawals = require('./withdrawals')
 const { newApp } = require('./dao')
 const { artifacts } = require('hardhat')
@@ -8,8 +9,6 @@ const { SLOTS_PER_EPOCH, SECONDS_PER_SLOT, EPOCHS_PER_FRAME, CONSENSUS_VERSION }
 
 const OssifiableProxy = artifacts.require('OssifiableProxy')
 const LidoMock = artifacts.require('LidoMock')
-const Lido = artifacts.require('Lido')
-const WstETHMock = artifacts.require('WstETHMock')
 const WstETH = artifacts.require('WstETH')
 const LegacyOracle = artifacts.require('LegacyOracle')
 const MockLegacyOracle = artifacts.require('MockLegacyOracle')

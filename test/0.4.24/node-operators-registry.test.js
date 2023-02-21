@@ -1,17 +1,17 @@
-const hre = require('hardhat')
+const { artifacts, contract, ethers, web3 } = require('hardhat')
 const { assert } = require('../helpers/assert')
-const { assertRevert } = require('../helpers/assertThrow')
-const { toBN, padRight } = require('../helpers/utils')
-const { AragonDAO } = require('./helpers/dao')
-const { EvmSnapshot } = require('../helpers/blockchain')
-const { ZERO_ADDRESS, getEventAt } = require('@aragon/contract-helpers-test')
-const nodeOperators = require('../helpers/node-operators')
-const signingKeys = require('../helpers/signing-keys')
-const { prepIdsCountsPayload } = require('../helpers/utils')
-const { web3, artifacts } = require('hardhat')
-const { getRandomLocatorConfig } = require('../helpers/locator')
+
 const { randomBytes } = require('crypto')
 const { toChecksumAddress } = require('ethereumjs-util')
+const { getEventAt } = require('@aragon/contract-helpers-test')
+
+const { AragonDAO } = require('./helpers/dao')
+const { EvmSnapshot } = require('../helpers/blockchain')
+const nodeOperators = require('../helpers/node-operators')
+const signingKeys = require('../helpers/signing-keys')
+const { prepIdsCountsPayload, ETH, pad, hexConcat, toBN, padRight } = require('../helpers/utils')
+const { getRandomLocatorConfig } = require('../helpers/locator')
+const { ZERO_ADDRESS } = require('../helpers/constants')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistryMock')
 const SigningKeys = artifacts.require('SigningKeys')
@@ -63,26 +63,11 @@ const NODE_OPERATORS = [
 const CURATED_TYPE = padRight(web3.utils.fromAscii('curated'), 32)
 const PENALTY_DELAY = 2 * 24 * 60 * 60 // 2 days
 
-const pad = (hex, bytesLength) => {
-  const absentZeroes = bytesLength * 2 + 2 - hex.length
-  if (absentZeroes > 0) hex = '0x' + '0'.repeat(absentZeroes) + hex.substr(2)
-  return hex
-}
-
-const hexConcat = (first, ...rest) => {
-  let result = first.startsWith('0x') ? first : '0x' + first
-  rest.forEach((item) => {
-    result += item.startsWith('0x') ? item.substr(2) : item
-  })
-  return result
-}
-
-const ETH = (value) => web3.utils.toWei(value + '', 'ether')
 const StETH = artifacts.require('StETHMock')
 
 contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nobody]) => {
   let appBase, app, locator, steth, dao
-  const snapshot = new EvmSnapshot(hre.ethers.provider)
+  const snapshot = new EvmSnapshot(ethers.provider)
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
@@ -123,7 +108,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     // Implementation initializer reverts because initialization block was set to max(uint256)
     // in the Autopetrified base contract
-    await assertRevert(appBase.initialize(locator.address, CURATED_TYPE, PENALTY_DELAY), 'INIT_ALREADY_INITIALIZED')
+    await assert.reverts(appBase.initialize(locator.address, CURATED_TYPE, PENALTY_DELAY), 'INIT_ALREADY_INITIALIZED')
 
     const moduleType = await app.getType()
     assert.emits(tx, 'ContractVersionSet', { version: 2 })
@@ -2586,19 +2571,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         excessValidatorsCount: excessValidatorsCountAfter,
       } = await app.testing_getTotalTargetStats()
 
-      console.log({
-        targetValidatorsCountBefore: targetValidatorsCountBefore.toNumber(),
-        targetValidatorsCountAfter: targetValidatorsCountAfter.toNumber(),
-        vettedSigningKeysCountBefore: vettedSigningKeysCountBefore.toNumber(),
-        vettedSigningKeysDecrement,
-      })
-
-      assertBn(isTargetLimitActiveAfter, isTargetLimitActiveBefore)
-      assertBn(
+      assert.equals(isTargetLimitActiveAfter, isTargetLimitActiveBefore)
+      assert.equals(
         targetValidatorsCountAfter,
         targetValidatorsCountBefore.toNumber() - vettedSigningKeysCountBefore.toNumber() - vettedSigningKeysDecrement
       )
-      assertBn(excessValidatorsCountAfter, excessValidatorsCountBefore)
+      assert.equals(excessValidatorsCountAfter, excessValidatorsCountBefore)
     })
 
     it("doesn't modify global vetted signing keys count if key index is equal to vettedSigningKeysCount", async () => {
@@ -3295,7 +3273,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await steth.mintShares(app.address, ETH(10))
 
       // calls distributeRewards() inside
-      receipt = await app.onExitedAndStuckValidatorsCountsUpdated({ from: voting })
+      const receipt = await app.onExitedAndStuckValidatorsCountsUpdated({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(3) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(7) })

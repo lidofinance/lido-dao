@@ -1,15 +1,15 @@
-const hre = require('hardhat')
+const { contract, ethers, web3 } = require('hardhat')
+const { assert } = require('../helpers/assert')
 
-const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
-const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { bn } = require('@aragon/contract-helpers-test')
 
-const { EvmSnapshot } = require('./helpers/blockchain')
-const { setupNodeOperatorsRegistry } = require('./helpers/staking-modules')
-const { deployProtocol } = require('./helpers/protocol')
-const { ETH, pad, hexConcat, changeEndianness, prepIdsCountsPayload } = require('./helpers/utils')
-const nodeOperators = require('./helpers/node-operators')
-const { assert } = require('./helpers/assert')
-const { depositContractFactory } = require('./helpers/factories')
+const { EvmSnapshot } = require('../helpers/blockchain')
+const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
+const { deployProtocol } = require('../helpers/protocol')
+const { ETH, pad, hexConcat, changeEndianness, prepIdsCountsPayload, tokens } = require('../helpers/utils')
+const nodeOperators = require('../helpers/node-operators')
+const { depositContractFactory } = require('../helpers/factories')
+const { ZERO_ADDRESS } = require('../helpers/constants')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -20,8 +20,6 @@ const UNLIMITED = 1000000000
 const MAX_DEPOSITS = 150
 const CURATED_MODULE_ID = 1
 const CALLDATA = '0x0'
-
-const tokens = ETH
 
 contract('Lido with official deposit contract', ([user1, user2, user3, nobody, depositor]) => {
   let app, token, depositContract, operators, stakingRouter
@@ -66,7 +64,7 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     voting = deployed.voting.address
     depositContract = deployed.depositContract
 
-    snapshot = new EvmSnapshot(hre.ethers.provider)
+    snapshot = new EvmSnapshot(ethers.provider)
     await snapshot.make()
   })
 
@@ -76,8 +74,8 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
 
   const checkStat = async ({ depositedValidators, beaconBalance }) => {
     const stat = await app.getBeaconStat()
-    assertBn(stat.depositedValidators, depositedValidators, 'deposited ether check')
-    assertBn(stat.beaconBalance, beaconBalance, 'remote ether check')
+    assert.equals(stat.depositedValidators, depositedValidators, 'deposited ether check')
+    assert.equals(stat.beaconBalance, beaconBalance, 'remote ether check')
   }
 
   it('deposit works', async () => {
@@ -102,47 +100,47 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     await checkStat({ depositedValidators: 0, beaconBalance: 0 })
-    assertBn(await app.getTotalPooledEther(), ETH(2))
-    assertBn(await app.getBufferedEther(), ETH(2))
-    assertBn(await token.balanceOf(user1), tokens(1))
-    assertBn(await token.totalSupply(), tokens(2))
+    assert.equals(await app.getTotalPooledEther(), ETH(2))
+    assert.equals(await app.getBufferedEther(), ETH(2))
+    assert.equals(await token.balanceOf(user1), tokens(1))
+    assert.equals(await token.totalSupply(), tokens(2))
 
     // +2 ETH
     await app.submit(ZERO_ADDRESS, { from: user2, value: ETH(2) }) // another form of a deposit call
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 0, beaconBalance: 0 })
-    assertBn(bn(await depositContract.get_deposit_count()), 0)
-    assertBn(await app.getTotalPooledEther(), ETH(4))
-    assertBn(await app.getBufferedEther(), ETH(4))
-    assertBn(await token.balanceOf(user2), tokens(2))
-    assertBn(await token.totalSupply(), tokens(4))
+    assert.equals(bn(await depositContract.get_deposit_count()), 0)
+    assert.equals(await app.getTotalPooledEther(), ETH(4))
+    assert.equals(await app.getBufferedEther(), ETH(4))
+    assert.equals(await token.balanceOf(user2), tokens(2))
+    assert.equals(await token.totalSupply(), tokens(4))
 
     // +30 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(30) })
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
     await checkStat({ depositedValidators: 1, beaconBalance: 0 })
-    assertBn(await app.getTotalPooledEther(), ETH(34))
-    assertBn(await app.getBufferedEther(), ETH(2))
-    assertBn(await token.balanceOf(user1), tokens(1))
-    assertBn(await token.balanceOf(user2), tokens(2))
-    assertBn(await token.balanceOf(user3), tokens(30))
-    assertBn(await token.totalSupply(), tokens(34))
+    assert.equals(await app.getTotalPooledEther(), ETH(34))
+    assert.equals(await app.getBufferedEther(), ETH(2))
+    assert.equals(await token.balanceOf(user1), tokens(1))
+    assert.equals(await token.balanceOf(user2), tokens(2))
+    assert.equals(await token.balanceOf(user3), tokens(30))
+    assert.equals(await token.totalSupply(), tokens(34))
 
-    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 1)
+    assert.equals(bn(changeEndianness(await depositContract.get_deposit_count())), 1)
 
     // +100 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(100) })
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     await checkStat({ depositedValidators: 4, beaconBalance: 0 })
-    assertBn(await app.getTotalPooledEther(), ETH(134))
-    assertBn(await app.getBufferedEther(), ETH(6))
-    assertBn(await token.balanceOf(user1), tokens(101))
-    assertBn(await token.balanceOf(user2), tokens(2))
-    assertBn(await token.balanceOf(user3), tokens(30))
-    assertBn(await token.totalSupply(), tokens(134))
+    assert.equals(await app.getTotalPooledEther(), ETH(134))
+    assert.equals(await app.getBufferedEther(), ETH(6))
+    assert.equals(await token.balanceOf(user1), tokens(101))
+    assert.equals(await token.balanceOf(user2), tokens(2))
+    assert.equals(await token.balanceOf(user3), tokens(30))
+    assert.equals(await token.totalSupply(), tokens(134))
 
-    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 4)
+    assert.equals(bn(changeEndianness(await depositContract.get_deposit_count())), 4)
   })
 
   it('key removal is taken into account during deposit', async () => {
@@ -173,7 +171,7 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     await web3.eth.sendTransaction({ to: app.address, from: user3, value: ETH(32) })
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
-    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 1)
+    assert.equals(bn(changeEndianness(await depositContract.get_deposit_count())), 1)
     await assert.reverts(operators.removeSigningKey(0, 0, { from: voting }), 'OUT_OF_RANGE')
 
     await operators.removeSigningKey(0, 1, { from: voting })
@@ -184,9 +182,9 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     // deposit should go to second operator, as the first one got their key limits set to 1
     await assert.reverts(operators.removeSigningKey(1, 0, { from: voting }), 'OUT_OF_RANGE')
     await assert.reverts(operators.removeSigningKey(1, 1, { from: voting }), 'OUT_OF_RANGE')
-    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 4)
-    assertBn(await app.getTotalPooledEther(), ETH(133))
-    assertBn(await app.getBufferedEther(), ETH(5))
+    assert.equals(bn(changeEndianness(await depositContract.get_deposit_count())), 4)
+    assert.equals(await app.getTotalPooledEther(), ETH(133))
+    assert.equals(await app.getBufferedEther(), ETH(5))
   })
 
   it('Node Operators filtering during deposit works when doing a huge deposit', async () => {
@@ -228,48 +226,48 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
 
     // Deposit huge chunk
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(32 * 3 + 50 - 1 /* initial */) })
-    tx = await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, {
+    await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, {
       from: depositor,
     })
 
     // assertEvent(tx, 'StakingRouterTransferReceived')
 
     await checkStat({ depositedValidators: 3, beaconBalance: 0 })
-    assertBn(await app.getTotalPooledEther(), ETH(146))
-    assertBn(await app.getBufferedEther(), ETH(50))
-    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
+    assert.equals(await app.getTotalPooledEther(), ETH(146))
+    assert.equals(await app.getBufferedEther(), ETH(50))
+    assert.equals(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
 
-    assertBn(await web3.eth.getBalance(app.address), ETH(50), 'Lido balance')
-    assertBn(await web3.eth.getBalance(stakingRouter.address), 0, 'StakingRouter balance')
+    assert.equals(await web3.eth.getBalance(app.address), ETH(50), 'Lido balance')
+    assert.equals(await web3.eth.getBalance(stakingRouter.address), 0, 'StakingRouter balance')
 
-    assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
-    assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
-    assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
+    assert.equals(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // Next deposit changes nothing
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(32) })
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     await checkStat({ depositedValidators: 3, beaconBalance: 0 })
-    assertBn(await app.getTotalPooledEther(), ETH(178))
-    assertBn(await app.getBufferedEther(), ETH(82))
-    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
+    assert.equals(await app.getTotalPooledEther(), ETH(178))
+    assert.equals(await app.getBufferedEther(), ETH(82))
+    assert.equals(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
 
-    assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
-    assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
-    assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
+    assert.equals(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // #1 goes below the limit (nothing changed cause staking limit decreases)
     const { operatorIds, keysCounts } = prepIdsCountsPayload(1, 1)
@@ -278,19 +276,19 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     await checkStat({ depositedValidators: 3, beaconBalance: 0 })
-    assertBn(await app.getTotalPooledEther(), ETH(179))
-    assertBn(await app.getBufferedEther(), ETH(83))
-    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
+    assert.equals(await app.getTotalPooledEther(), ETH(179))
+    assert.equals(await app.getBufferedEther(), ETH(83))
+    assert.equals(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
 
-    assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
-    assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
-    assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
+    assert.equals(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // Adding a key & setting staking limit will help
     await operators.addSigningKeys(0, 1, pad('0x0003', 48), pad('0x01', 96), { from: voting })
@@ -300,19 +298,19 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     await checkStat({ depositedValidators: 4, beaconBalance: 0 })
-    assertBn(await app.getTotalPooledEther(), ETH(180))
-    assertBn(await app.getBufferedEther(), ETH(52))
-    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 4)
+    assert.equals(await app.getTotalPooledEther(), ETH(180))
+    assert.equals(await app.getBufferedEther(), ETH(52))
+    assert.equals(bn(changeEndianness(await depositContract.get_deposit_count())), 4)
 
-    assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 3)
-    assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getTotalSigningKeyCount(0, { from: nobody }), 3)
+    assert.equals(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
-    assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
-    assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
+    assert.equals(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // Reactivation of #2 (doesn't change anything cause staking limit was trimmed on deactivation)
     await operators.activateNodeOperator(2, { from: voting })
@@ -320,19 +318,19 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     await checkStat({ depositedValidators: 4, beaconBalance: 0 })
-    assertBn(await app.getTotalPooledEther(), ETH(192))
-    assertBn(await app.getBufferedEther(), ETH(64))
-    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 4)
+    assert.equals(await app.getTotalPooledEther(), ETH(192))
+    assert.equals(await app.getBufferedEther(), ETH(64))
+    assert.equals(bn(changeEndianness(await depositContract.get_deposit_count())), 4)
 
-    assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 3)
-    assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getTotalSigningKeyCount(0, { from: nobody }), 3)
+    assert.equals(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
-    assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
-    assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
+    assert.equals(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
   })
 
   it('Node Operators filtering during deposit works when doing small deposits', async () => {
@@ -380,38 +378,38 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     await checkStat({ depositedValidators: 3, beaconBalance: 0 })
-    assertBn(await app.getTotalPooledEther(), ETH(146))
-    assertBn(await app.getBufferedEther(), ETH(50))
-    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
+    assert.equals(await app.getTotalPooledEther(), ETH(146))
+    assert.equals(await app.getBufferedEther(), ETH(50))
+    assert.equals(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
 
-    assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
-    assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
-    assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
+    assert.equals(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // Next deposit changes nothing
     await web3.eth.sendTransaction({ to: app.address, from: user2, value: ETH(32) })
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     await checkStat({ depositedValidators: 3, beaconBalance: 0 })
-    assertBn(await app.getTotalPooledEther(), ETH(178))
-    assertBn(await app.getBufferedEther(), ETH(82))
-    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
+    assert.equals(await app.getTotalPooledEther(), ETH(178))
+    assert.equals(await app.getBufferedEther(), ETH(82))
+    assert.equals(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
 
-    assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
-    assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
-    assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
+    assert.equals(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // #1 goes below the limit (nothing changed cause staking limit decreases)
     const { operatorIds, keysCounts } = prepIdsCountsPayload(1, 1)
@@ -420,19 +418,19 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     await checkStat({ depositedValidators: 3, beaconBalance: 0 })
-    assertBn(await app.getTotalPooledEther(), ETH(179))
-    assertBn(await app.getBufferedEther(), ETH(83))
-    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
+    assert.equals(await app.getTotalPooledEther(), ETH(179))
+    assert.equals(await app.getBufferedEther(), ETH(83))
+    assert.equals(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
 
-    assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getTotalSigningKeyCount(0, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
-    assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
-    assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
+    assert.equals(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // Adding a key & setting staking limit will help
     await operators.addSigningKeys(0, 1, pad('0x0003', 48), pad('0x01', 96), { from: voting })
@@ -442,19 +440,19 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     await checkStat({ depositedValidators: 4, beaconBalance: 0 })
-    assertBn(await app.getTotalPooledEther(), ETH(180))
-    assertBn(await app.getBufferedEther(), ETH(52))
-    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 4)
+    assert.equals(await app.getTotalPooledEther(), ETH(180))
+    assert.equals(await app.getBufferedEther(), ETH(52))
+    assert.equals(bn(changeEndianness(await depositContract.get_deposit_count())), 4)
 
-    assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 3)
-    assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getTotalSigningKeyCount(0, { from: nobody }), 3)
+    assert.equals(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
-    assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
-    assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
+    assert.equals(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // Reactivation of #2 (doesn't change anything cause staking limit was trimmed on deactivation)
     await operators.activateNodeOperator(2, { from: voting })
@@ -462,19 +460,19 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     await checkStat({ depositedValidators: 4, beaconBalance: 0 })
-    assertBn(await app.getTotalPooledEther(), ETH(192))
-    assertBn(await app.getBufferedEther(), ETH(64))
-    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 4)
+    assert.equals(await app.getTotalPooledEther(), ETH(192))
+    assert.equals(await app.getBufferedEther(), ETH(64))
+    assert.equals(bn(changeEndianness(await depositContract.get_deposit_count())), 4)
 
-    assertBn(await operators.getTotalSigningKeyCount(0, { from: nobody }), 3)
-    assertBn(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getTotalSigningKeyCount(0, { from: nobody }), 3)
+    assert.equals(await operators.getTotalSigningKeyCount(1, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getTotalSigningKeyCount(3, { from: nobody }), 0)
 
-    assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
-    assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
+    assert.equals(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
   })
 
   it('Deposit finds the right operator', async () => {
@@ -525,14 +523,14 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     await checkStat({ depositedValidators: 2, beaconBalance: 0 })
-    assertBn(await app.getTotalPooledEther(), ETH(64))
-    assertBn(await app.getBufferedEther(), ETH(0))
-    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 2)
+    assert.equals(await app.getTotalPooledEther(), ETH(64))
+    assert.equals(await app.getBufferedEther(), ETH(0))
+    assert.equals(bn(changeEndianness(await depositContract.get_deposit_count())), 2)
 
-    assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
-    assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 1)
+    assert.equals(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
+    assert.equals(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 2)
+    assert.equals(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
 
     // Reactivation of #2 - has the smallest stake
     await operators.activateNodeOperator(2, { from: voting })
@@ -551,14 +549,14 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
     await app.methods[`deposit(uint256,uint256,bytes)`](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
 
     await checkStat({ depositedValidators: 3, beaconBalance: 0 })
-    assertBn(await app.getTotalPooledEther(), ETH(100))
-    assertBn(await app.getBufferedEther(), ETH(4))
-    assertBn(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
+    assert.equals(await app.getTotalPooledEther(), ETH(100))
+    assert.equals(await app.getBufferedEther(), ETH(4))
+    assert.equals(bn(changeEndianness(await depositContract.get_deposit_count())), 3)
 
-    assertBn(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
-    assertBn(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 3)
-    assertBn(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
+    assert.equals(await operators.getUnusedSigningKeyCount(0, { from: nobody }), 1)
+    assert.equals(await operators.getUnusedSigningKeyCount(1, { from: nobody }), 1)
+    assert.equals(await operators.getUnusedSigningKeyCount(2, { from: nobody }), 3)
+    assert.equals(await operators.getUnusedSigningKeyCount(3, { from: nobody }), 0)
   })
 
   it('depositBufferedEther() deposits less then DEFAULT_MAX_DEPOSITS_PER_CALL', async () => {
@@ -592,8 +590,8 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
       gas: 20000000,
     })
 
-    assertBn(await app.getTotalPooledEther(), ETH(amountToDeposit))
-    assertBn(await app.getBufferedEther(), ETH(31))
+    assert.equals(await app.getTotalPooledEther(), ETH(amountToDeposit))
+    assert.equals(await app.getBufferedEther(), ETH(31))
   })
 
   it('depositBufferedEther() deposits equal to DEFAULT_MAX_DEPOSITS_PER_CALL', async () => {
@@ -629,7 +627,7 @@ contract('Lido with official deposit contract', ([user1, user2, user3, nobody, d
       gas: 20000000,
     })
 
-    assertBn(await app.getTotalPooledEther(), ETH(amountToDeposit))
-    assertBn(await app.getBufferedEther(), ETH(33))
+    assert.equals(await app.getTotalPooledEther(), ETH(amountToDeposit))
+    assert.equals(await app.getBufferedEther(), ETH(33))
   })
 })

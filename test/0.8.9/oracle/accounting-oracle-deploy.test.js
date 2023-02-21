@@ -1,4 +1,5 @@
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { artifacts, contract, web3 } = require('hardhat')
+const { ZERO_ADDRESS } = require('../../helpers/constants')
 const { assert } = require('../../helpers/assert')
 const { hex } = require('../../helpers/utils')
 const {
@@ -31,7 +32,6 @@ const {
 } = require('./hash-consensus-deploy.test')
 
 const AccountingOracle = artifacts.require('AccountingOracleTimeTravellable')
-const LidoLocator = artifacts.require('LidoLocator')
 const MockLido = artifacts.require('MockLidoForAccountingOracle')
 const MockStakingRouter = artifacts.require('MockStakingRouterForAccountingOracle')
 const MockWithdrawalQueue = artifacts.require('MockWithdrawalQueueForAccountingOracle')
@@ -256,10 +256,10 @@ async function initAccountingOracle({
     await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), dataSubmitter, { from: admin })
   }
 
-  assert.equal(+(await oracle.EXTRA_DATA_FORMAT_EMPTY()), EXTRA_DATA_FORMAT_EMPTY)
-  assert.equal(+(await oracle.EXTRA_DATA_FORMAT_LIST()), EXTRA_DATA_FORMAT_LIST)
-  assert.equal(+(await oracle.EXTRA_DATA_TYPE_STUCK_VALIDATORS()), EXTRA_DATA_TYPE_STUCK_VALIDATORS)
-  assert.equal(+(await oracle.EXTRA_DATA_TYPE_EXITED_VALIDATORS()), EXTRA_DATA_TYPE_EXITED_VALIDATORS)
+  assert.equals((await oracle.EXTRA_DATA_FORMAT_EMPTY()), EXTRA_DATA_FORMAT_EMPTY)
+  assert.equals((await oracle.EXTRA_DATA_FORMAT_LIST()), EXTRA_DATA_FORMAT_LIST)
+  assert.equals((await oracle.EXTRA_DATA_TYPE_STUCK_VALIDATORS()), EXTRA_DATA_TYPE_STUCK_VALIDATORS)
+  assert.equals((await oracle.EXTRA_DATA_TYPE_EXITED_VALIDATORS()), EXTRA_DATA_TYPE_EXITED_VALIDATORS)
 
   return initTx
 }
@@ -338,25 +338,25 @@ contract('AccountingOracle', ([admin, member1]) => {
     it('mock setup is correct', async () => {
       // check the mock time-travellable setup
       const time1 = +(await consensus.getTime())
-      assert.equal(+(await oracle.getTime()), time1)
+      assert.equals((await oracle.getTime()), time1)
 
       await consensus.advanceTimeBy(SECONDS_PER_SLOT)
 
       const time2 = +(await consensus.getTime())
       assert.equal(time2, time1 + SECONDS_PER_SLOT)
-      assert.equal(+(await oracle.getTime()), time2)
+      assert.equals((await oracle.getTime()), time2)
 
       const handleOracleReportCallData = await mockLido.getLastCall_handleOracleReport()
-      assert.equal(+handleOracleReportCallData.callCount, 0)
+      assert.equals(handleOracleReportCallData.callCount, 0)
 
       const updateExitedKeysByModuleCallData = await mockStakingRouter.lastCall_updateExitedKeysByModule()
-      assert.equal(+updateExitedKeysByModuleCallData.callCount, 0)
+      assert.equals(updateExitedKeysByModuleCallData.callCount, 0)
 
-      assert.equal(+(await mockStakingRouter.totalCalls_reportExitedKeysByNodeOperator()), 0)
-      assert.equal(+(await mockStakingRouter.totalCalls_reportStuckKeysByNodeOperator()), 0)
+      assert.equals((await mockStakingRouter.totalCalls_reportExitedKeysByNodeOperator()), 0)
+      assert.equals((await mockStakingRouter.totalCalls_reportStuckKeysByNodeOperator()), 0)
 
       const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
-      assert.equal(+updateBunkerModeLastCall.callCount, 0)
+      assert.equals(updateBunkerModeLastCall.callCount, 0)
     })
 
     it('the initial reference slot is greater than the last one of the legacy oracle', async () => {
@@ -366,9 +366,9 @@ contract('AccountingOracle', ([admin, member1]) => {
 
     it('initial configuration is correct', async () => {
       assert.equal(await oracle.getConsensusContract(), consensus.address)
-      assert.equal(+(await oracle.getConsensusVersion()), CONSENSUS_VERSION)
+      assert.equals((await oracle.getConsensusVersion()), CONSENSUS_VERSION)
       assert.equal(await oracle.LIDO(), mockLido.address)
-      assert.equal(+(await oracle.SECONDS_PER_SLOT()), SECONDS_PER_SLOT)
+      assert.equals((await oracle.SECONDS_PER_SLOT()), SECONDS_PER_SLOT)
     })
 
     it('reverts if lido locator address is zero', async () => {

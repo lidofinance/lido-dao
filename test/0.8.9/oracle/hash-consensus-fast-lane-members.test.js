@@ -1,30 +1,8 @@
+const { contract } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 const { toNum } = require('../../helpers/utils')
-const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
-const {
-  SLOTS_PER_EPOCH,
-  SECONDS_PER_SLOT,
-  GENESIS_TIME,
-  EPOCHS_PER_FRAME,
-  SECONDS_PER_EPOCH,
-  SECONDS_PER_FRAME,
-  SLOTS_PER_FRAME,
-  computeSlotAt,
-  computeEpochAt,
-  computeEpochFirstSlot,
-  computeEpochFirstSlotAt,
-  computeTimestampAtSlot,
-  computeTimestampAtEpoch,
-  ZERO_HASH,
-  HASH_1,
-  HASH_2,
-  HASH_3,
-  HASH_4,
-  HASH_5,
-  CONSENSUS_VERSION,
-  deployHashConsensus,
-} = require('./hash-consensus-deploy.test')
+const { HASH_1, CONSENSUS_VERSION, deployHashConsensus } = require('./hash-consensus-deploy.test')
 
 contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, stranger]) => {
   context('Fast-lane members', async () => {
@@ -37,7 +15,7 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
 
     const setTimeToFrame0 = async () => {
       await consensus.setTimeInEpochs((await consensus.getFrameConfig()).initialEpoch)
-      assert.equal(+(await consensus.getTimeInSlots()), +(await consensus.getCurrentFrame()).refSlot + 1)
+      assert.equals((await consensus.getTimeInSlots()), +(await consensus.getCurrentFrame()).refSlot + 1)
     }
 
     context('State after initialization', () => {

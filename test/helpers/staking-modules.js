@@ -1,4 +1,6 @@
+const { artifacts } = require('hardhat')
 const { newApp } = require('./dao')
+
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const NodeOperatorsRegistryMock = artifacts.require('NodeOperatorsRegistryMock')
 

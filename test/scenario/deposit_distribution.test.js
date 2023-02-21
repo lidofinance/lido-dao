@@ -1,12 +1,13 @@
-const hre = require('hardhat')
-const { ETH, genKeys } = require('../helpers/utils')
+const { contract, ethers, web3 } = require('hardhat')
 const { assert } = require('../helpers/assert')
+
+const { ETH, genKeys } = require('../helpers/utils')
 const { EvmSnapshot } = require('../helpers/blockchain')
 const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 
 contract('StakingRouter', ([depositor, stranger1, address1, address2]) => {
-  const snapshot = new EvmSnapshot(hre.ethers.provider)
+  const snapshot = new EvmSnapshot(ethers.provider)
   let depositContract, stakingRouter
   let lido, curated, anotherCurated, voting
 

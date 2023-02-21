@@ -1,11 +1,11 @@
-const hre = require('hardhat')
+const { artifacts, contract, ethers, web3 } = require('hardhat')
 
-const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { bn } = require('@aragon/contract-helpers-test')
 const { EvmSnapshot } = require('../helpers/blockchain')
 const { ETH, StETH } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 const { deployProtocol } = require('../helpers/protocol')
-const { INITIAL_HOLDER } = require('../helpers/constants')
+const { INITIAL_HOLDER, ZERO_ADDRESS } = require('../helpers/constants')
 
 const Burner = artifacts.require('Burner.sol')
 
@@ -24,7 +24,6 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
 
     lido = deployed.pool
     burner = deployed.burner
-    acl = deployed.acl
     voting = deployed.voting.address
     appManager = deployed.appManager.address
     treasury = deployed.treasury.address
@@ -33,7 +32,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
     await ethers.provider.send('hardhat_impersonateAccount', [lido.address])
     await ethers.provider.send('hardhat_impersonateAccount', [burner.address])
 
-    snapshot = new EvmSnapshot(hre.ethers.provider)
+    snapshot = new EvmSnapshot(ethers.provider)
     await snapshot.make()
   })
 
