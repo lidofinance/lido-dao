@@ -18,7 +18,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         );
         _saveSummarySigningKeysStats(totalSigningKeysStats);
 
-        _updateTotalMaxValidatorsCount(_nodeOperatorId);
+        _updateSummaryMaxValidatorsCount(_nodeOperatorId);
     }
 
     function testing_markAllKeysDeposited() external {
@@ -119,7 +119,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         stuckPenaltyStats.set(REFUNDED_VALIDATORS_COUNT_OFFSET, refundedValidatorsCount);
         stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, stuckPenaltyEndAt);
         _nodeOperators[_nodeOperatorId].stuckPenaltyStats = stuckPenaltyStats;
-        _updateTotalMaxValidatorsCount(_nodeOperatorId);
+        _updateSummaryMaxValidatorsCount(_nodeOperatorId);
     }
 
     function testing_getTotalSigningKeysStats()
