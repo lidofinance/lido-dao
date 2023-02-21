@@ -79,6 +79,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     uint256 internal constant UINT64_MAX = 0xFFFFFFFFFFFFFFFF;
 
     // SigningKeysStats
+    /// @dev Operator's max validator keys count approved for deposit by the DAO
     uint8 internal constant VETTED_KEYS_COUNT_OFFSET = 0;
     /// @dev Number of keys in the EXITED state for this operator for all time
     uint8 internal constant EXITED_KEYS_COUNT_OFFSET = 1;
@@ -88,15 +89,10 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     uint8 internal constant DEPOSITED_KEYS_COUNT_OFFSET = 3;
 
     // TargetValidatorsStats
-    /// @dev DAO target limit, used to check how many keys should go to exit
-    ///      UINT64_MAX - unlimited
-    ///      0 - all deposited keys
-    ///      N < deposited keys - (deposited-N) keys
-    ///      deposited < N < vetted - use (N-deposited) as available
+    /// @dev Flag enable/disable limiting target active validators count for operator
     uint8 internal constant IS_TARGET_LIMIT_ACTIVE_OFFSET = 0;
-    /// @dev relative target active validators limit for operator, set by DAO, UINT64_MAX === 'no limit'
-    /// @notice stores value +1 based, so 0 is means target count is unlimited (i.e. = -1),
-    ///         and 1 is means target count = 0 (i.e. all validators should be exited)
+    /// @dev relative target active validators limit for operator, set by DAO
+    /// @notice used to check how many keys should go to exit, 0 - means all deposited keys would be exited
     uint8 internal constant TARGET_VALIDATORS_COUNT_OFFSET = 1;
     /// @dev actual operators's number of keys which could be deposited
     uint8 internal constant MAX_VALIDATORS_COUNT_OFFSET = 2;
@@ -1179,11 +1175,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         depositableValidatorsCount = totalMaxValidators - totalDepositedValidators;
     }
-
-    // добавить в distributerewards вызов
-
-    // комент по чтению calldata и смещениям
-    // передавать параметром penalty delay и эмитить событие
 
     function _isOperatorPenalized(Packed64x4.Packed memory stuckPenaltyStats) internal view returns (bool) {
         return stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET) < stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)
