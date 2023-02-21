@@ -13,8 +13,8 @@ async function deployWithdrawalQueue({
   queueResumer,
   queueFinalizer,
   queueBunkerReporter,
-  queueName,
-  symbol
+  queueName = 'Unsteth nft',
+  symbol = 'UNSTETH'
 }) {
   const steth = await StETHMock.new({ value: ETH(1), from: stethOwner })
   const wsteth = await WstETH.new(steth.address, { from: stethOwner })
