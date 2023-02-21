@@ -15,7 +15,7 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
 
     const setTimeToFrame0 = async () => {
       await consensus.setTimeInEpochs((await consensus.getFrameConfig()).initialEpoch)
-      assert.equals((await consensus.getTimeInSlots()), +(await consensus.getCurrentFrame()).refSlot + 1)
+      assert.equals(await consensus.getTimeInSlots(), +(await consensus.getCurrentFrame()).refSlot + 1)
     }
 
     context('State after initialization', () => {

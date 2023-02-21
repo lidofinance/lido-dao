@@ -256,10 +256,10 @@ async function initAccountingOracle({
     await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), dataSubmitter, { from: admin })
   }
 
-  assert.equals((await oracle.EXTRA_DATA_FORMAT_EMPTY()), EXTRA_DATA_FORMAT_EMPTY)
-  assert.equals((await oracle.EXTRA_DATA_FORMAT_LIST()), EXTRA_DATA_FORMAT_LIST)
-  assert.equals((await oracle.EXTRA_DATA_TYPE_STUCK_VALIDATORS()), EXTRA_DATA_TYPE_STUCK_VALIDATORS)
-  assert.equals((await oracle.EXTRA_DATA_TYPE_EXITED_VALIDATORS()), EXTRA_DATA_TYPE_EXITED_VALIDATORS)
+  assert.equals(await oracle.EXTRA_DATA_FORMAT_EMPTY(), EXTRA_DATA_FORMAT_EMPTY)
+  assert.equals(await oracle.EXTRA_DATA_FORMAT_LIST(), EXTRA_DATA_FORMAT_LIST)
+  assert.equals(await oracle.EXTRA_DATA_TYPE_STUCK_VALIDATORS(), EXTRA_DATA_TYPE_STUCK_VALIDATORS)
+  assert.equals(await oracle.EXTRA_DATA_TYPE_EXITED_VALIDATORS(), EXTRA_DATA_TYPE_EXITED_VALIDATORS)
 
   return initTx
 }
@@ -338,13 +338,13 @@ contract('AccountingOracle', ([admin, member1]) => {
     it('mock setup is correct', async () => {
       // check the mock time-travellable setup
       const time1 = +(await consensus.getTime())
-      assert.equals((await oracle.getTime()), time1)
+      assert.equals(await oracle.getTime(), time1)
 
       await consensus.advanceTimeBy(SECONDS_PER_SLOT)
 
       const time2 = +(await consensus.getTime())
       assert.equal(time2, time1 + SECONDS_PER_SLOT)
-      assert.equals((await oracle.getTime()), time2)
+      assert.equals(await oracle.getTime(), time2)
 
       const handleOracleReportCallData = await mockLido.getLastCall_handleOracleReport()
       assert.equals(handleOracleReportCallData.callCount, 0)
@@ -352,8 +352,8 @@ contract('AccountingOracle', ([admin, member1]) => {
       const updateExitedKeysByModuleCallData = await mockStakingRouter.lastCall_updateExitedKeysByModule()
       assert.equals(updateExitedKeysByModuleCallData.callCount, 0)
 
-      assert.equals((await mockStakingRouter.totalCalls_reportExitedKeysByNodeOperator()), 0)
-      assert.equals((await mockStakingRouter.totalCalls_reportStuckKeysByNodeOperator()), 0)
+      assert.equals(await mockStakingRouter.totalCalls_reportExitedKeysByNodeOperator(), 0)
+      assert.equals(await mockStakingRouter.totalCalls_reportStuckKeysByNodeOperator(), 0)
 
       const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
       assert.equals(updateBunkerModeLastCall.callCount, 0)
@@ -366,9 +366,9 @@ contract('AccountingOracle', ([admin, member1]) => {
 
     it('initial configuration is correct', async () => {
       assert.equal(await oracle.getConsensusContract(), consensus.address)
-      assert.equals((await oracle.getConsensusVersion()), CONSENSUS_VERSION)
+      assert.equals(await oracle.getConsensusVersion(), CONSENSUS_VERSION)
       assert.equal(await oracle.LIDO(), mockLido.address)
-      assert.equals((await oracle.SECONDS_PER_SLOT()), SECONDS_PER_SLOT)
+      assert.equals(await oracle.SECONDS_PER_SLOT(), SECONDS_PER_SLOT)
     })
 
     it('reverts if lido locator address is zero', async () => {

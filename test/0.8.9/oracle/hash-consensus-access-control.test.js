@@ -53,7 +53,7 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2]) => {
           'MANAGE_MEMBERS_AND_QUORUM_ROLE'
         )
         assert.equal(await consensus.getIsMember(member1), false)
-        assert.equals((await consensus.getQuorum()), 0)
+        assert.equals(await consensus.getQuorum(), 0)
       })
 
       it('should allow calling from a possessor of MANAGE_MEMBERS_AND_QUORUM_ROLE role', async () => {
@@ -61,7 +61,7 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2]) => {
         await consensus.addMember(member2, 1, { from: account2 })
 
         assert.equal(await consensus.getIsMember(member2), true)
-        assert.equals((await consensus.getQuorum()), 1)
+        assert.equals(await consensus.getQuorum(), 1)
       })
     })
 
@@ -73,7 +73,7 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2]) => {
           'MANAGE_MEMBERS_AND_QUORUM_ROLE'
         )
         assert.equal(await consensus.getIsMember(member1), false)
-        assert.equals((await consensus.getQuorum()), 0)
+        assert.equals(await consensus.getQuorum(), 0)
       })
 
       it('should allow calling from a possessor of MANAGE_MEMBERS_AND_QUORUM_ROLE role', async () => {
@@ -84,7 +84,7 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2]) => {
         await consensus.removeMember(member2, 1, { from: account2 })
         assert.equal(await consensus.getIsMember(member2), false)
 
-        assert.equals((await consensus.getQuorum()), 1)
+        assert.equals(await consensus.getQuorum(), 1)
       })
     })
 
@@ -95,14 +95,14 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2]) => {
           account1,
           'MANAGE_MEMBERS_AND_QUORUM_ROLE'
         )
-        assert.equals((await consensus.getQuorum()), 0)
+        assert.equals(await consensus.getQuorum(), 0)
       })
 
       it('should allow calling from a possessor of MANAGE_MEMBERS_AND_QUORUM_ROLE role', async () => {
         await consensus.grantRole(manageMembersAndQuorumRoleKeccak156, account2)
         await consensus.setQuorum(1, { from: account2 })
 
-        assert.equals((await consensus.getQuorum()), 1)
+        assert.equals(await consensus.getQuorum(), 1)
       })
     })
 
@@ -113,7 +113,7 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2]) => {
           account1,
           'DISABLE_CONSENSUS_ROLE'
         )
-        assert.equals((await consensus.getQuorum()), 0)
+        assert.equals(await consensus.getQuorum(), 0)
       })
     })
   })
@@ -126,14 +126,14 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2]) => {
           account1,
           'DISABLE_CONSENSUS_ROLE'
         )
-        assert.equals((await consensus.getQuorum()), 0)
+        assert.equals(await consensus.getQuorum(), 0)
       })
 
       it('should allow calling from a possessor of DISABLE_CONSENSUS_ROLE role', async () => {
         await consensus.grantRole(disableConsensusRoleKeccak156, account2)
         await consensus.setQuorum(MaxUint256, { from: account2 })
 
-        assert.equals((await consensus.getQuorum()), MaxUint256)
+        assert.equals(await consensus.getQuorum(), MaxUint256)
       })
     })
 
@@ -144,14 +144,14 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2]) => {
           account1,
           'DISABLE_CONSENSUS_ROLE'
         )
-        assert.equals((await consensus.getQuorum()), 0)
+        assert.equals(await consensus.getQuorum(), 0)
       })
 
       it('should allow calling from a possessor of DISABLE_CONSENSUS_ROLE role', async () => {
         await consensus.grantRole(disableConsensusRoleKeccak156, account2)
         await consensus.disableConsensus({ from: account2 })
 
-        assert.equals((await consensus.getQuorum()), MaxUint256)
+        assert.equals(await consensus.getQuorum(), MaxUint256)
       })
     })
   })
@@ -190,7 +190,7 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2]) => {
         await consensus.grantRole(manageReportProcessorRoleKeccak156, account2)
         await consensus.setReportProcessor(reportProcessor2.address, { from: account2 })
 
-        assert.equals((await consensus.getReportProcessor()), reportProcessor2.address)
+        assert.equals(await consensus.getReportProcessor(), reportProcessor2.address)
       })
     })
   })

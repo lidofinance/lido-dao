@@ -66,7 +66,7 @@ contract('AccountingOracle', ([voting, malicious1, malicious2, member1, member2,
 
     await initAccountingOracle({ ...deployed, admin: voting })
 
-    assert.equals((await oracle.getTime()), GENESIS_TIME + SECONDS_PER_FRAME)
+    assert.equals(await oracle.getTime(), GENESIS_TIME + SECONDS_PER_FRAME)
 
     await consensus.addMember(member1, 4, { from: voting })
     await consensus.addMember(member2, 4, { from: voting })
