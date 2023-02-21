@@ -110,7 +110,6 @@
     "lerna": "^3.22.1",
     "lint-staged": ">=10",
     "prettier": "^2.8.1",
-    "prettier-plugin-solidity": "^1.1.0",
     "solhint": "^3.3.7",
     "solhint-plugin-lido": "^0.0.4",
     "solidity-coverage": "^0.8.2",
