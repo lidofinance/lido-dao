@@ -19,11 +19,11 @@ import {UnstructuredRefStorage} from "./lib/UnstructuredRefStorage.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 
 /**
-  * @title Interface defining INFTDescriptor to generate ERC721 metadata
+  * @title Interface defining INFTDescriptor to generate ERC721 tokenURI
   */
 interface INFTDescriptor {
     /**
-      * @notice Returns ERC721 metadata
+      * @notice Returns ERC721 tokenURI content
       * @param _requestId is an id for particular withdrawal request
       */
     function constructTokenURI(uint256 _requestId) external view returns (string memory);
@@ -105,8 +105,8 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
     }
 
     /// @dev See {IERC721Metadata-tokenURI}.
-    /// @dev If NFTDescriptor address isn't set the `baseURI` would be used for generating erc721 metadata. In case
-    ///  NFTDescriptor address is set it would be used as a priority method.
+    /// @dev If NFTDescriptor address isn't set the `baseURI` would be used for generating erc721 tokenURI. In case
+    ///  NFTDescriptor address is set it would be used as a first-priority method.
     function tokenURI(uint256 _requestId) public view virtual override returns (string memory) {
         if (!_existsAndNotClaimed(_requestId)) revert InvalidRequestId(_requestId);
 
@@ -126,21 +126,21 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
     }
 
     /// @notice Sets the Base URI for computing {tokenURI}
-    /// @dev If NFTDescriptor address isn't set the `baseURI` would be used for generating erc721 metadata. In case
-    ///  NFTDescriptor address is set it would be used as a priority method.
+    /// @dev If NFTDescriptor address isn't set the `baseURI` would be used for generating erc721 tokenURI. In case
+    ///  NFTDescriptor address is set it would be used as a first-priority method.
     function setBaseURI(string calldata _baseURI) external onlyRole(MANAGE_TOKEN_URI_ROLE) {
         _getBaseURI().value = _baseURI;
         emit BaseURISet(_baseURI);
     }
 
-    /// @notice Address of NFTDescriptor contract that is responsible for metadata generation.
+    /// @notice Address of NFTDescriptor contract that is responsible for tokenURI generation.
     function getNFTDescriptorAddress() external view returns (address) {
         return NFT_DESCRIPTOR_ADDRESS_POSITION.getStorageAddress();
     }
 
-    /// @notice Sets the address of NFTDescriptor contract that is responsible for metadata generation.
-    /// @dev If NFTDescriptor address isn't set the `baseURI` would be used for generating erc721 metadata. In case
-    ///  NFTDescriptor address is set it would be used as a priority method.
+    /// @notice Sets the address of NFTDescriptor contract that is responsible for tokenURI generation.
+    /// @dev If NFTDescriptor address isn't set the `baseURI` would be used for generating erc721 tokenURI. In case
+    ///  NFTDescriptor address is set it would be used as a first-priority method.
     function setNFTDescriptorAddress(address _nftDescriptorAddress) external onlyRole(MANAGE_TOKEN_URI_ROLE) {
         NFT_DESCRIPTOR_ADDRESS_POSITION.setStorageAddress(_nftDescriptorAddress);
         emit NftDescriptorAddressSet(_nftDescriptorAddress);
