@@ -19,7 +19,7 @@ hre.contract(
 
       const deployed = await deployWithdrawalQueue({
         stethOwner: deployer,
-        queueOwner: deployer,
+        queueAdmin: deployer,
         queuePauser: deployer,
         queueResumer: deployer,
         queueFinalizer: deployer,
