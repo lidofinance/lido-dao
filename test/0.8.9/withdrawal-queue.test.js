@@ -263,6 +263,36 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         'ResumedExpected()'
       )
     })
+
+    it('data is being accumulated properly', async () => {
+      const queueItemStep0 = await withdrawalQueue.getQueueItem(await withdrawalQueue.getLastRequestId())
+
+      const amountStep1 = StETH(50)
+      const sharesStep1 = await steth.getSharesByPooledEth(amountStep1)
+      await withdrawalQueue.requestWithdrawals([amountStep1], owner, { from: user })
+      const queueItemStep1 = await withdrawalQueue.getQueueItem(await withdrawalQueue.getLastRequestId())
+
+      assert.equals(+queueItemStep1.cumulativeStETH, +amountStep1 + +queueItemStep0.cumulativeStETH)
+      assert.equals(+queueItemStep1.cumulativeShares, +sharesStep1 + +queueItemStep0.cumulativeShares)
+      assert.equals(queueItemStep1.owner, owner)
+      assert.equals(queueItemStep1.claimed, false)
+
+      const amountStep2 = StETH(100)
+      const sharesStep2 = await steth.getSharesByPooledEth(amountStep2)
+      await withdrawalQueue.requestWithdrawals([amountStep2], owner, { from: user })
+      const queueItemStep2 = await withdrawalQueue.getQueueItem(await withdrawalQueue.getLastRequestId())
+
+      assert.equals(
+        +queueItemStep2.cumulativeStETH,
+        +amountStep2 + +queueItemStep1.cumulativeStETH + +queueItemStep0.cumulativeStETH
+      )
+      assert.equals(
+        +queueItemStep2.cumulativeShares,
+        +sharesStep2 + +queueItemStep1.cumulativeShares + +queueItemStep0.cumulativeShares
+      )
+      assert.equals(queueItemStep2.owner, owner)
+      assert.equals(queueItemStep2.claimed, false)
+    })
   })
 
   context('Finalization', async () => {

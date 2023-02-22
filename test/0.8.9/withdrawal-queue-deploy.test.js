@@ -104,21 +104,22 @@ contract(
           stethOwner,
           queueAdmin,
           queuePauser,
-          queueResumer
+          queueResumer,
         })
-        const initialQueueItem = await withdrawalQueue.getQueueItem(0)
 
-        const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
-        const initialCheckpointItem = await withdrawalQueue.getCheckpointItem(lastCheckpointIndex)
+        const queueId = await withdrawalQueue.getLastRequestId()
+        const queueItem = await withdrawalQueue.getQueueItem(queueId)
 
-        assert.equals(+initialQueueItem.cumulativeStETH, 0)
-        assert.equals(+initialQueueItem.cumulativeShares, 0)
-        assert.equals(initialQueueItem.owner, ZERO_ADDRESS)
-        // assert.equals(initialQueueItem.timestamp, (block.number))
-        assert.equals(initialQueueItem.claimed, true)
+        const checkpointIndex = await withdrawalQueue.getLastCheckpointIndex()
+        const checkpointItem = await withdrawalQueue.getCheckpointItem(checkpointIndex)
 
-        assert.equals(+initialCheckpointItem.fromRequestId, 0)
-        assert.equals(+initialCheckpointItem.discountFactor, 0)
+        assert.equals(+queueItem.cumulativeStETH, 0)
+        assert.equals(+queueItem.cumulativeShares, 0)
+        assert.equals(queueItem.owner, ZERO_ADDRESS)
+        assert.equals(queueItem.claimed, true)
+
+        assert.equals(+checkpointItem.fromRequestId, 0)
+        assert.equals(+checkpointItem.discountFactor, 0)
       })
 
       context('no roles for zero addresses', () => {
