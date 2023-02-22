@@ -36,7 +36,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     error StakingModuleNotPaused();
     error EmptyWithdrawalsCredentials();
     error DirectETHTransfer();
-    error InvalidReportData();
+    error InvalidReportData(uint256 code);
     error ExitedValidatorsCountCannotDecrease();
     error StakingModulesLimitExceeded();
     error StakingModuleIdTooLarge();
@@ -263,7 +263,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     {
         for (uint256 i = 0; i < _stakingModuleIds.length; ) {
             address moduleAddr = _getStakingModuleById(_stakingModuleIds[i]).stakingModuleAddress;
-            IStakingModule(moduleAddr).handleRewardsMinted(_totalShares[i]);
+            IStakingModule(moduleAddr).onRewardsMinted(_totalShares[i]);
             unchecked { ++i; }
         }
     }
@@ -277,6 +277,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     {
         for (uint256 i = 0; i < _stakingModuleIds.length; ) {
             StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleIds[i]);
+
             uint256 prevReportedExitedValidatorsCount = stakingModule.exitedValidatorsCount;
             if (_exitedValidatorsCounts[i] < prevReportedExitedValidatorsCount) {
                 revert ExitedValidatorsCountCannotDecrease();
@@ -295,6 +296,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
                     prevReportedExitedValidatorsCount - totalExitedValidatorsCount
                 );
             }
+
             stakingModule.exitedValidatorsCount = _exitedValidatorsCounts[i];
             unchecked { ++i; }
         }
@@ -308,42 +310,36 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         external
         onlyRole(REPORT_EXITED_VALIDATORS_ROLE)
     {
-        StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
-        IStakingModule moduleContract = IStakingModule(stakingModule.stakingModuleAddress);
-        (
-            uint256 prevExitedValidatorsCount,
-            /* uint256 totalDepositedValidators */,
-            /* uint256 depositableValidatorsCount */
-        ) = moduleContract.getStakingModuleSummary();
-
-        moduleContract.updateExitedValidatorsCount(_nodeOperatorIds, _exitedValidatorsCounts);
-
-        uint256 prevReportedExitedValidatorsCount = stakingModule.exitedValidatorsCount;
-        (
-            uint256 newExitedValidatorsCount,
-            /* uint256 totalDepositedValidators */,
-            /* uint256 depositableValidatorsCount */
-        ) =  moduleContract.getStakingModuleSummary();
-        if (prevExitedValidatorsCount < prevReportedExitedValidatorsCount &&
-            newExitedValidatorsCount >= prevReportedExitedValidatorsCount
-        ) {
-            // oracle finished updating exited validators for all node ops
-            moduleContract.onAllValidatorCountersUpdated();
-        }
+        address moduleAddr = _getStakingModuleById(_stakingModuleId).stakingModuleAddress;
+        _checkValidatorsByNodeOperatorReportData(_nodeOperatorIds, _exitedValidatorsCounts);
+        IStakingModule(moduleAddr).updateExitedValidatorsCount(
+            _nodeOperatorIds,
+            _exitedValidatorsCounts
+        );
     }
 
-    struct ValidatorsCountCorrection {
+    struct ValidatorsCountsCorrection {
+        /// @notice The expected current number of exited validators of the module that is
+        /// being corrected.
         uint256 currentModuleExitedValidatorsCount;
+        /// @notice The expected current number of exited validators of the node operator
+        /// that is being corrected.
         uint256 currentNodeOperatorExitedValidatorsCount;
+        /// @notice The expected current number of stuck validators of the node operator
+        /// that is being corrected.
         uint256 currentNodeOperatorStuckValidatorsCount;
+        /// @notice The corrected number of exited validators of the module.
         uint256 newModuleExitedValidatorsCount;
+        /// @notice The corrected number of exited validators of the node operator.
         uint256 newNodeOperatorExitedValidatorsCount;
+        /// @notice The corrected number of stuck validators of the node operator.
         uint256 newNodeOperatorStuckValidatorsCount;
     }
 
     /**
-     * @notice Sets exited validators count for the given module and given node operator in that module
-     * without performing critical safety checks, e.g. that exited validators count cannot decrease.
+     * @notice Sets exited validators count for the given module and given node operator in that
+     * module without performing critical safety checks, e.g. that exited validators count cannot
+     * decrease.
      *
      * Should only be used by the DAO in extreme cases and with sufficient precautions to correct
      * invalid data reported by the oracle committee due to a bug in the oracle daemon.
@@ -352,34 +348,19 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
      *
      * @param _nodeOperatorId ID of the node operator.
      *
-     * @param _triggerUpdateFinish Whether to call `onAllValidatorCountersUpdated` on
+     * @param _triggerUpdateFinish Whether to call `onExitedAndStuckValidatorsCountsUpdated` on
      *        the module after applying the corrections.
      *
-     * @param _correction.currentModuleExitedValidatorsCount The expected current number of exited
-     *       validators of the module that is being corrected.
+     * @param _correction See the docs for the `ValidatorsCountsCorrection` struct.
      *
-     * @param _correction.currentNodeOperatorExitedValidatorsCount The expected current number of exited
-     *        validators of the node operator that is being corrected.
-     *
-     * @param _correction.currentNodeOperatorStuckValidatorsCount The expected current number of stuck
-     *        validators of the node operator that is being corrected.
-     *
-     * @param _correction.newModuleExitedValidatorsCount The corrected number of exited validators of the module.
-     *
-     * @param _correction.newNodeOperatorExitedValidatorsCount The corrected number of exited validators of the
-     *        node operator.
-     *
-     * @param _correction.newNodeOperatorStuckValidatorsCount The corrected number of stuck validators of the
-     *        node operator.
-     *
-     * Reverts if the current numbers of exited and stuck validators of the module and node operator don't
-     * match the supplied expected current values.
+     * Reverts if the current numbers of exited and stuck validators of the module and node operator
+     * don't match the supplied expected current values.
      */
     function unsafeSetExitedValidatorsCount(
         uint256 _stakingModuleId,
         uint256 _nodeOperatorId,
         bool _triggerUpdateFinish,
-        ValidatorsCountCorrection memory _correction
+        ValidatorsCountsCorrection memory _correction
     )
         external
         onlyRole(UNSAFE_SET_EXITED_VALIDATORS_ROLE)
@@ -418,7 +399,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         );
 
         if (_triggerUpdateFinish) {
-            IStakingModule(moduleAddr).onAllValidatorCountersUpdated();
+            IStakingModule(moduleAddr).onExitedAndStuckValidatorsCountsUpdated();
         }
     }
 
@@ -431,7 +412,28 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         onlyRole(REPORT_EXITED_VALIDATORS_ROLE)
     {
         address moduleAddr = _getStakingModuleById(_stakingModuleId).stakingModuleAddress;
+        _checkValidatorsByNodeOperatorReportData(_nodeOperatorIds, _stuckValidatorsCounts);
         IStakingModule(moduleAddr).updateStuckValidatorsCount(_nodeOperatorIds, _stuckValidatorsCounts);
+    }
+
+    function onValidatorsCountsByNodeOperatorReportingFinished()
+        external
+        onlyRole(REPORT_EXITED_VALIDATORS_ROLE)
+    {
+        uint256 stakingModulesCount = getStakingModulesCount();
+
+        for (uint256 i; i < stakingModulesCount; ) {
+            StakingModule storage stakingModule = _getStakingModuleByIndex(i);
+            IStakingModule moduleContract = IStakingModule(stakingModule.stakingModuleAddress);
+
+            (uint256 exitedValidatorsCount, , ) = moduleContract.getStakingModuleSummary();
+            if (exitedValidatorsCount == stakingModule.exitedValidatorsCount) {
+                // oracle finished updating exited validators for all node ops
+                moduleContract.onExitedAndStuckValidatorsCountsUpdated();
+            }
+
+            unchecked { ++i; }
+        }
     }
 
     function getExitedValidatorsCountAcrossAllModules() external view returns (uint256) {
@@ -1019,6 +1021,22 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
      */
     function getWithdrawalCredentials() public view returns (bytes32) {
         return WITHDRAWAL_CREDENTIALS_POSITION.getStorageBytes32();
+    }
+
+    function _checkValidatorsByNodeOperatorReportData(
+        bytes calldata _nodeOperatorIds,
+        bytes calldata _validatorsCounts
+    ) internal {
+        if (_nodeOperatorIds.length % 8 != 0 || _validatorsCounts.length % 16 != 0) {
+            revert InvalidReportData(3);
+        }
+        uint256 nodeOperatorsCount = _nodeOperatorIds.length / 8;
+        if (_validatorsCounts.length / 16 != nodeOperatorsCount) {
+            revert InvalidReportData(2);
+        }
+        if (nodeOperatorsCount == 0) {
+            revert InvalidReportData(1);
+        }
     }
 
     /**

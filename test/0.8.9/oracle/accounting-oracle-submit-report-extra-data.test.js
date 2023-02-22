@@ -548,7 +548,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     })
 
     context('delivers the data to staking router', () => {
-      it('calling reportStakingModuleStuckValidatorsCountByNodeOperator on StakingRouter', async () => {
+      it('calls reportStakingModuleStuckValidatorsCountByNodeOperator on StakingRouter', async () => {
         const { extraData, extraDataList } = await prepareNextReportInNextFrame()
         await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
 
@@ -564,7 +564,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
         }
       })
 
-      it('calling reportStakingModuleExitedValidatorsCountByNodeOperator on StakingRouter', async () => {
+      it('calls reportStakingModuleExitedValidatorsCountByNodeOperator on StakingRouter', async () => {
         const { extraData, extraDataList } = await prepareNextReportInNextFrame()
         await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
 
@@ -578,6 +578,13 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           assert.equals(call.nodeOperatorIds, '0x' + item.nodeOpIds.map((id) => hex(id, 8)).join(''))
           assert.equals(call.keysCounts, '0x' + item.keysCounts.map((count) => hex(count, 16)).join(''))
         }
+      })
+
+      it('calls onValidatorsCountsByNodeOperatorReportingFinished on StakingRouter', async () => {
+        const { extraData, extraDataList } = await prepareNextReportInNextFrame()
+        await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
+        const callsCount = await stakingRouter.totalCalls_onValidatorsCountsByNodeOperatorReportingFinished()
+        assert.equals(callsCount, 1)
       })
     })
 
@@ -611,6 +618,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
       assert.equals(+stateBefore.refSlot, reportFields.refSlot)
       assert.equals(+stateBefore.dataFormat, EXTRA_DATA_FORMAT_LIST)
+      assert.isFalse(stateBefore.submitted)
       assert.equals(+stateBefore.itemsCount, extraDataItems.length)
       assert.equals(+stateBefore.itemsProcessed, 0)
       assert.equals(+stateBefore.lastSortingKey, '0')
@@ -622,6 +630,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
       assert.equals(+stateAfter.refSlot, reportFields.refSlot)
       assert.equals(+stateAfter.dataFormat, EXTRA_DATA_FORMAT_LIST)
+      assert.isTrue(stateAfter.submitted)
       assert.equals(+stateAfter.itemsCount, extraDataItems.length)
       assert.equals(stateAfter.itemsProcessed, extraDataItems.length)
       // TODO: figure out how to build this value and test it properly

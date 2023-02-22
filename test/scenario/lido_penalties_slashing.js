@@ -588,13 +588,11 @@ contract('Lido: penalties, slashing, operator stops', (addresses) => {
 
     const nodeOperator1TokenSharesAfter = await token.sharesOf(nodeOperator1.address)
     const nodeOperator2TokenSharesAfter = await token.sharesOf(nodeOperator2.address)
-    console.log({
-      nodeOperator1TokenSharesBefore: nodeOperator1TokenSharesBefore.toString(),
-      nodeOperator1TokenSharesAfter: nodeOperator1TokenSharesAfter.toString(),
-      nodeOperator2TokenSharesBefore: nodeOperator2TokenSharesBefore.toString(),
-      nodeOperator2TokenSharesAfter: nodeOperator2TokenSharesAfter.toString(),
-    })
-    assertBn(nodeOperator1TokenSharesAfter, nodeOperator1TokenSharesBefore, `first node operator balance hasn't changed`)
+    assertBn(
+      nodeOperator1TokenSharesAfter,
+      nodeOperator1TokenSharesBefore,
+      `first node operator balance hasn't changed`
+    )
     assert(
       !nodeOperator2TokenSharesBefore.sub(nodeOperator2TokenSharesAfter).positive,
       `second node operator gained shares under fee distribution`
