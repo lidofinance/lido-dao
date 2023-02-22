@@ -393,6 +393,52 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         await ethers.provider.getBalance(withdrawalQueue.address)
       )
     })
+
+    it('batch reverts if share rate is zero', async () => {
+      await assert.reverts(
+        withdrawalQueue.finalizationBatch(1, shareRate(0)),
+        'ZeroShareRate()'
+      )
+    })
+
+    it('reverts if request with given id did not even created', async () => {
+      const idAhead = +(await withdrawalQueue.getLastRequestId()) + 1
+
+      await assert.reverts(
+        withdrawalQueue.finalize(idAhead, { from: steth.address, value: amount }),
+        `InvalidRequestId(${idAhead})`
+      )
+
+      await assert.reverts(
+        withdrawalQueue.finalizationBatch(idAhead, shareRate(300)),
+        `InvalidRequestId(${idAhead})`
+      )
+    })
+
+    it('reverts if request with given id was finalized already', async () => {
+      const id = +(await withdrawalQueue.getLastRequestId())
+      await withdrawalQueue.finalize(id, { from: steth.address, value: amount })
+
+      await assert.reverts(
+        withdrawalQueue.finalize(id, { from: steth.address, value: amount }),
+        `InvalidRequestId(${id})`
+      )
+
+      await assert.reverts(
+        withdrawalQueue.finalizationBatch(id, shareRate(300)),
+        `InvalidRequestId(${id})`
+      )
+    })
+
+    it('reverts if given amount to finalize exceeds requested', async () => {
+      const id = +(await withdrawalQueue.getLastRequestId())
+      const amountExceeded = bn(ETH(400))
+
+      await assert.reverts(
+        withdrawalQueue.finalize(id, { from: steth.address, value: amountExceeded }),
+        `TooMuchEtherToFinalize(${+amountExceeded}, ${+amount})`
+      )
+    })
   })
 
   context('getClaimableEth()', () => {
