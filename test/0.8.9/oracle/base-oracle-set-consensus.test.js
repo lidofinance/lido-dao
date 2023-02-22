@@ -1,5 +1,7 @@
+const { contract, artifacts, web3 } = require('hardhat')
 const { assert } = require('../../helpers/assert')
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { ZERO_ADDRESS } = require('../../helpers/constants')
+
 const MockConsensusContract = artifacts.require('MockConsensusContract')
 
 const {
@@ -11,7 +13,7 @@ const {
   HASH_1,
   HASH_2,
   CONSENSUS_VERSION,
-  deployBaseOracle
+  deployBaseOracle,
 } = require('./base-oracle-deploy.test')
 
 contract('BaseOracle', ([admin, member, notMember]) => {

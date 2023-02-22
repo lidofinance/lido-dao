@@ -13,8 +13,8 @@ class StakingModuleStub extends GenericStub {
     await GenericStub.stub(stakingModuleStub, 'getStakingModuleSummary', {
       return: {
         type: ['uint256', 'uint256', 'uint256'],
-        value: [totalExitedValidators, totalDepositedValidators, availableValidatorsCount]
-      }
+        value: [totalExitedValidators, totalDepositedValidators, availableValidatorsCount],
+      },
     })
   }
 
@@ -47,13 +47,13 @@ class StakingModuleStub extends GenericStub {
         type: ['bytes', 'bytes'],
         value: [
           config.return.publicKeysBatch || defaultPublicKeysBatch,
-          config.return.signaturesBatch || defaultSignaturesBatch
-        ]
-      }
+          config.return.signaturesBatch || defaultSignaturesBatch,
+        ],
+      },
     })
   }
 }
 
 module.exports = {
-  StakingModuleStub
+  StakingModuleStub,
 }

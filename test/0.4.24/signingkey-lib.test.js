@@ -1,19 +1,19 @@
+const { artifacts, contract, ethers } = require('hardhat')
 const { assert } = require('../helpers/assert')
-const { assertRevert } = require('../helpers/assertThrow')
+
 const { EvmSnapshot } = require('../helpers/blockchain')
-const { ZERO_ADDRESS, getEventAt } = require('@aragon/contract-helpers-test')
-const { toBN, padRight } = require('../helpers/utils')
+const { toBN } = require('../helpers/utils')
 const signingKeys = require('../helpers/signing-keys')
-const { prepIdsCountsPayload } = require('../helpers/utils')
+
 const SigningKeysMock = artifacts.require('SigningKeysMock')
 const SigningKeys = artifacts.require('SigningKeys')
 
 const nodeOpId1 = 1
 const nodeOpId2 = 2
 
-contract('SigningKeys', ([appManager, voting, user1, user2, user3, nobody]) => {
+contract('SigningKeys', () => {
   let app
-  const snapshot = new EvmSnapshot(hre.ethers.provider)
+  const snapshot = new EvmSnapshot(ethers.provider)
 
   const firstNodeOperatorId = 0
   const firstNodeOperatorStartIndex = 0
@@ -22,7 +22,6 @@ contract('SigningKeys', ([appManager, voting, user1, user2, user3, nobody]) => {
   const secondNodeOperatorId = 1
   const secondNodeOperatorStartIndex = 0
   const secondNodeOperatorKeys = new signingKeys.FakeValidatorKeys(7, { kFill: 'c', sFill: 'd' })
-  const secondNodeOperatorLastIndex = secondNodeOperatorKeys.count - 1
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.

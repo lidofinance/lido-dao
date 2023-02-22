@@ -1,12 +1,11 @@
-const hre = require('hardhat')
-const { contract, ethers } = require('hardhat')
+const { artifacts, contract, ethers, web3 } = require('hardhat')
 const { bn, getEventArgument, ZERO_ADDRESS, ZERO_BYTES32 } = require('@aragon/contract-helpers-test')
 
-const { ETH, StETH, shareRate, shares, setBalance } = require('../helpers/utils')
+const { ETH, StETH, shareRate, shares } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 const { signPermit, makeDomainSeparator } = require('../0.6.12/helpers/permit_helpers')
 const { MAX_UINT256, ACCOUNTS_AND_KEYS } = require('../0.6.12/helpers/constants')
-const { impersonate, EvmSnapshot, getCurrentBlockTimestamp } = require('../helpers/blockchain')
+const { impersonate, EvmSnapshot, getCurrentBlockTimestamp, setBalance } = require('../helpers/blockchain')
 
 const { deployWithdrawalQueue } = require('./withdrawal-queue-deploy.test')
 
@@ -20,7 +19,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       stethOwner: owner,
       queueAdmin: daoAgent,
       queuePauser: daoAgent,
-      queueResumer: daoAgent
+      queueResumer: daoAgent,
     })
 
     steth = deployed.steth
@@ -139,7 +138,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         requestor: user.toLowerCase(),
         owner: owner.toLowerCase(),
         amountOfStETH: StETH(300),
-        amountOfShares: shares(1)
+        amountOfShares: shares(1),
       })
 
       assert.equals(await withdrawalQueue.getLastRequestId(), requestId)
@@ -184,7 +183,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         requestor: user.toLowerCase(),
         owner: owner.toLowerCase(),
         amountOfStETH: min,
-        amountOfShares: shares
+        amountOfShares: shares,
       })
 
       assert.equals(await withdrawalQueue.getLastRequestId(), requestId)
@@ -224,7 +223,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         requestor: user.toLowerCase(),
         owner: owner.toLowerCase(),
         amountOfStETH: max,
-        amountOfShares: shares(1)
+        amountOfShares: shares(1),
       })
 
       assert.equals(await withdrawalQueue.getLastRequestId(), requestId)
@@ -702,26 +701,26 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     })
 
     it('sequential search', async () => {
-      for ([idToFind, searchLength] of [
+      for (const [idToFind, searchLength] of [
         [1, 3],
         [1, 10],
         [10, 2],
         [10, 3],
         [8, 2],
-        [9, 3]
+        [9, 3],
       ]) {
         assert.equals(await sequentialSearch(idToFind, searchLength), idToFind)
       }
     })
 
     const sequentialSearch = async (requestId, searchLength) => {
-      let lastIndex = await withdrawalQueue.getLastCheckpointIndex()
+      const lastIndex = await withdrawalQueue.getLastCheckpointIndex()
 
       for (let i = 1; i <= lastIndex; i += searchLength) {
         let end = i + searchLength - 1
         if (end > lastIndex) end = lastIndex
-        let foundIndex = await withdrawalQueue.findCheckpointHints([requestId], i, end)
-        if (foundIndex != 0) return foundIndex
+        const foundIndex = await withdrawalQueue.findCheckpointHints([requestId], i, end)
+        if (+foundIndex !== 0) return foundIndex
       }
     }
   })
@@ -849,12 +848,10 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
   })
 
   context('claimWithdrawals()', () => {
-    let requestId
     const amount = ETH(20)
 
     beforeEach('Enqueue a request', async () => {
       await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
-      requestId = await withdrawalQueue.getLastRequestId()
     })
 
     it('claims correct requests', async () => {
@@ -914,7 +911,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       await steth.mintShares(wsteth.address, shares(100))
       await steth.mintShares(user, shares(100))
       await wsteth.approve(withdrawalQueue.address, ETH(300), { from: user })
-      await impersonate(hre.ethers.provider, alice.address)
+      await impersonate(ethers.provider, alice.address)
       await web3.eth.sendTransaction({ to: alice.address, from: user, value: ETH(1) })
       await wsteth.transfer(alice.address, ETH(100), { from: user })
 
@@ -943,7 +940,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         deadline, // deadline
         v,
         r,
-        s
+        s,
       ]
 
       const aliceBalancesBefore = await wsteth.balanceOf(alice.address)
@@ -981,7 +978,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         deadline, // deadline
         v,
         r,
-        s
+        s,
       ]
 
       const aliceBalancesBefore = await steth.balanceOf(alice.address)

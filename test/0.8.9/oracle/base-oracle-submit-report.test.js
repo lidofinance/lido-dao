@@ -1,3 +1,4 @@
+const { contract } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 
 const baseOracleAbi = require('../../../lib/abi/BaseOracle.json')
@@ -28,7 +29,7 @@ contract('BaseOracle', ([admin]) => {
       })
 
       it('initial report is submitted and _handleConsensusReport is called', async () => {
-        assert.equal(+(await baseOracle.getConsensusReportLastCall()).callCount, 0)
+        assert.equals((await baseOracle.getConsensusReportLastCall()).callCount, 0)
         const tx = await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, initialRefSlot + SLOTS_PER_FRAME)
         assert.emits(
           tx,
@@ -36,15 +37,15 @@ contract('BaseOracle', ([admin]) => {
           {
             refSlot: initialRefSlot,
             hash: HASH_1,
-            processingDeadlineTime: initialRefSlot + SLOTS_PER_FRAME
+            processingDeadlineTime: initialRefSlot + SLOTS_PER_FRAME,
           },
           { abi: baseOracleAbi }
         )
         const { report, callCount } = await baseOracle.getConsensusReportLastCall()
-        assert.equal(+callCount, 1)
+        assert.equals(callCount, 1)
         assert.equal(report.hash, HASH_1)
-        assert.equal(+report.refSlot, initialRefSlot)
-        assert.equal(+report.processingDeadlineTime, initialRefSlot + SLOTS_PER_FRAME)
+        assert.equals(report.refSlot, initialRefSlot)
+        assert.equals(report.processingDeadlineTime, initialRefSlot + SLOTS_PER_FRAME)
       })
 
       it('older report cannot be submitted', async () => {
@@ -71,7 +72,7 @@ contract('BaseOracle', ([admin]) => {
           initialRefSlot + 10,
           initialRefSlot + SLOTS_PER_FRAME
         )
-        assert.equal(+(await baseOracle.getConsensusReportLastCall()).callCount, 2)
+        assert.equals((await baseOracle.getConsensusReportLastCall()).callCount, 2)
         assert.emits(tx1, 'ReportSubmitted', {}, { abi: baseOracleAbi })
 
         const tx2 = await consensus.submitReportAsConsensus(
@@ -84,10 +85,10 @@ contract('BaseOracle', ([admin]) => {
           'WarnProcessingMissed',
           { refSlot: initialRefSlot + 10 },
           {
-            abi: baseOracleAbi
+            abi: baseOracleAbi,
           }
         )
-        assert.equal(+(await baseOracle.getConsensusReportLastCall()).callCount, 3)
+        assert.equals((await baseOracle.getConsensusReportLastCall()).callCount, 3)
         assert.emits(tx2, 'ReportSubmitted', {}, { abi: baseOracleAbi })
       })
     })
@@ -119,7 +120,7 @@ contract('BaseOracle', ([admin]) => {
           tx,
           'WarnProcessingMissed',
           {
-            refSlot: initialRefSlot
+            refSlot: initialRefSlot,
           },
           { abi: baseOracleAbi }
         )
@@ -134,7 +135,7 @@ contract('BaseOracle', ([admin]) => {
         const nextRefSlot = initialRefSlot + 1
         const tx = await consensus.submitReportAsConsensus(HASH_3, nextRefSlot, nextRefSlot + SLOTS_PER_FRAME + 10)
         assert.emitsNumberOfEvents(tx, 'WarnProcessingMissed', 0, {
-          abi: baseOracleAbi
+          abi: baseOracleAbi,
         })
         const report = await baseOracle.getConsensusReport()
         assert.equal(report.hash, HASH_3)

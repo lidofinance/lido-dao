@@ -1,6 +1,8 @@
-const { BN, constants, expectEvent, expectRevert } = require('@openzeppelin/test-helpers')
+const { artifacts, contract, ethers, web3 } = require('hardhat')
+const { BN, expectEvent, expectRevert } = require('@openzeppelin/test-helpers')
 const { expect } = require('chai')
-const { ZERO_ADDRESS } = constants
+const { assert } = require('../helpers/assert')
+const { ZERO_ADDRESS } = require('../helpers/constants')
 
 const { shouldBehaveLikeERC20 } = require('./helpers/ERC20.behavior')
 const { EvmSnapshot } = require('../helpers/blockchain')
@@ -9,7 +11,7 @@ const WstETH = artifacts.require('WstETHMock')
 const StETH = artifacts.require('StETHMockERC20')
 
 contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount, ...otherAccounts]) {
-  const snapshot = new EvmSnapshot(hre.ethers.provider)
+  const snapshot = new EvmSnapshot(ethers.provider)
 
   before(async function () {
     this.steth = await StETH.new({ from: deployer })
@@ -65,7 +67,10 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
 
         await this.wsteth.wrap(50, { from: user1 })
 
-        expect(await this.wsteth.balanceOf(user1)).to.be.bignumber.equal(shouldMintWstETHAmount, 'returns correct amount of wstETH')
+        expect(await this.wsteth.balanceOf(user1)).to.be.bignumber.equal(
+          shouldMintWstETHAmount,
+          'returns correct amount of wstETH'
+        )
 
         await this.wsteth.approve(any_contract, 25, { from: user1 })
         expect(await this.wsteth.allowance(user1, any_contract)).to.be.bignumber.equal('25')
@@ -105,7 +110,9 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
           const shouldGetStETHAmount = await this.wsteth.unwrap.call(50, { from: user1 })
           await this.wsteth.unwrap(50, { from: user1 })
 
-          expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal(user1StETHBalanceBefore.add(shouldGetStETHAmount))
+          expect(await this.steth.balanceOf(user1)).to.be.bignumber.equal(
+            user1StETHBalanceBefore.add(shouldGetStETHAmount)
+          )
           expect(await this.steth.balanceOf(this.wsteth.address)).to.be.bignumber.equal('0')
           expect(await this.wsteth.balanceOf(user1)).to.be.bignumber.equal('0')
         })
@@ -283,8 +290,14 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
         const recipientBalanceAfter = await this.wsteth.balanceOf(recipient)
         const wstETHBalanceAfter = await this.steth.balanceOf(this.wsteth.address)
 
-        expect(wstETHBalanceAfter.sub(wstETHBalanceBefore)).to.be.bignumber.equal(value, 'wstETH has got some stETH on balance')
-        expect(recipientBalanceAfter.sub(recipientBalanceBefore)).to.be.bignumber.equal(value, 'recepient has got wrapped stETH')
+        expect(wstETHBalanceAfter.sub(wstETHBalanceBefore)).to.be.bignumber.equal(
+          value,
+          'wstETH has got some stETH on balance'
+        )
+        expect(recipientBalanceAfter.sub(recipientBalanceBefore)).to.be.bignumber.equal(
+          value,
+          'recepient has got wrapped stETH'
+        )
       })
 
       it(`can unwrap stETH received with direct transfer`, async function () {
@@ -300,7 +313,10 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
         await this.wsteth.unwrap(recepientWstETHBalance, { from: recipient })
 
         expect(await this.wsteth.balanceOf(recipient)).to.be.bignumber.equal('0', 'funds unwrapped')
-        expect(await this.steth.balanceOf(recipient)).to.be.bignumber.equal(recepientStETHToUnwrap, 'received corrrect amount')
+        expect(await this.steth.balanceOf(recipient)).to.be.bignumber.equal(
+          recepientStETHToUnwrap,
+          'received corrrect amount'
+        )
       })
     })
 
@@ -371,8 +387,8 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
 
               expectEvent.inLogs(logs, 'Approval', {
                 owner: initialHolder,
-                spender: spender,
-                value: new BN(0)
+                spender,
+                value: new BN(0),
               })
             })
 
@@ -434,8 +450,8 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
 
             expectEvent.inLogs(logs, 'Approval', {
               owner: initialHolder,
-              spender: spender,
-              value: amount
+              spender,
+              value: amount,
             })
           })
 
@@ -468,8 +484,8 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
 
             expectEvent.inLogs(logs, 'Approval', {
               owner: initialHolder,
-              spender: spender,
-              value: amount
+              spender,
+              value: amount,
             })
           })
 
@@ -499,7 +515,10 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
         const spender = ZERO_ADDRESS
 
         it(`reverts`, async function () {
-          await expectRevert(this.token.increaseAllowance(spender, amount, { from: initialHolder }), 'ERC20: approve to the zero address')
+          await expectRevert(
+            this.token.increaseAllowance(spender, amount, { from: initialHolder }),
+            'ERC20: approve to the zero address'
+          )
         })
       })
     })
@@ -528,7 +547,7 @@ contract('WstETH', function ([deployer, initialHolder, recipient, anotherAccount
         it(`emits Transfer event`, async function () {
           const event = expectEvent.inLogs(this.logs, 'Transfer', {
             from: ZERO_ADDRESS,
-            to: recipient
+            to: recipient,
           })
 
           expect(event.args.value).to.be.bignumber.equal(amount)

@@ -1,9 +1,7 @@
+const { contract } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 
 const { deployHashConsensus, CONSENSUS_VERSION, ZERO_HASH, HASH_1 } = require('./hash-consensus-deploy.test')
-
-const HashConsensus = artifacts.require('HashConsensusTimeTravellable')
-const MockReportProcessor = artifacts.require('MockReportProcessor')
 
 const CONSENSUS_VERSION_2 = 2
 
@@ -11,6 +9,7 @@ contract('HashConsensus', ([admin, member1, member2, stranger]) => {
   context('Report Submitting', () => {
     let consensus
     let frame
+    let reportProcessor
 
     const deploy = async (options = { epochsPerFrame: 200 }) => {
       const deployed = await deployHashConsensus(admin, options)

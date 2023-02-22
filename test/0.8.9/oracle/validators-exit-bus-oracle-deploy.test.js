@@ -1,9 +1,10 @@
+const { contract, artifacts, web3 } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 const { hex, strip0x } = require('../../helpers/utils')
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { ZERO_ADDRESS } = require('../../helpers/constants')
 const {
   updateLocatorImplementation,
-  deployLocatorWithDummyAddressesImplementation
+  deployLocatorWithDummyAddressesImplementation,
 } = require('../../helpers/locator-deploy')
 
 const {
@@ -19,7 +20,7 @@ const {
   computeTimestampAtEpoch,
   ZERO_HASH,
   CONSENSUS_VERSION,
-  deployHashConsensus
+  deployHashConsensus,
 } = require('./hash-consensus-deploy.test')
 
 const ValidatorsExitBusOracle = artifacts.require('ValidatorsExitBusTimeTravellable')
@@ -76,7 +77,7 @@ module.exports = {
   encodeExitRequestHex,
   encodeExitRequestsDataList,
   deployExitBusOracle,
-  deployOracleReportSanityCheckerForExitBus
+  deployOracleReportSanityCheckerForExitBus,
 }
 async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
   const maxValidatorExitRequestsPerReport = 2000
@@ -91,7 +92,7 @@ async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
     limitsList,
     managersRoster,
     {
-      from: admin
+      from: admin,
     }
   )
   return oracleReportSanityChecker
@@ -104,7 +105,7 @@ async function deployExitBusOracle(
     lastProcessingRefSlot = 0,
     resumeAfterDeploy = false,
     pauser = ZERO_ADDRESS,
-    resumer = ZERO_ADDRESS
+    resumer = ZERO_ADDRESS,
   } = {}
 ) {
   const locator = (await deployLocatorWithDummyAddressesImplementation(admin)).address
@@ -113,13 +114,13 @@ async function deployExitBusOracle(
 
   const { consensus } = await deployHashConsensus(admin, {
     epochsPerFrame: EPOCHS_PER_FRAME,
-    reportProcessor: oracle
+    reportProcessor: oracle,
   })
 
   const oracleReportSanityChecker = await deployOracleReportSanityCheckerForExitBus(locator, admin)
   await updateLocatorImplementation(locator, admin, {
     validatorsExitBusOracle: oracle.address,
-    oracleReportSanityChecker: oracleReportSanityChecker.address
+    oracleReportSanityChecker: oracleReportSanityChecker.address,
   })
 
   const initTx = await oracle.initialize(
@@ -137,12 +138,12 @@ async function deployExitBusOracle(
   assert.emits(initTx, 'RoleGranted', {
     role: await consensus.DEFAULT_ADMIN_ROLE(),
     account: admin,
-    sender: admin
+    sender: admin,
   })
 
   assert.emits(initTx, 'ConsensusHashContractSet', {
     addr: consensus.address,
-    prevAddr: ZERO_ADDRESS
+    prevAddr: ZERO_ADDRESS,
   })
 
   assert.emits(initTx, 'ConsensusVersionSet', { version: CONSENSUS_VERSION, prevVersion: 0 })
@@ -156,7 +157,7 @@ async function deployExitBusOracle(
     await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), dataSubmitter, { from: admin })
   }
 
-  assert.equal(+(await oracle.DATA_FORMAT_LIST()), DATA_FORMAT_LIST)
+  assert.equals(await oracle.DATA_FORMAT_LIST(), DATA_FORMAT_LIST)
 
   if (resumeAfterDeploy) {
     await oracle.resume({ from: admin })
@@ -178,18 +179,18 @@ contract('ValidatorsExitBusOracle', ([admin, member1]) => {
 
     it('mock time-travellable setup is correct', async () => {
       const time1 = +(await consensus.getTime())
-      assert.equal(+(await oracle.getTime()), time1)
+      assert.equals(await oracle.getTime(), time1)
 
       await consensus.advanceTimeBy(SECONDS_PER_SLOT)
       const time2 = +(await consensus.getTime())
       assert.equal(time2, time1 + SECONDS_PER_SLOT)
-      assert.equal(+(await oracle.getTime()), time2)
+      assert.equals(await oracle.getTime(), time2)
     })
 
     it('initial configuration is correct', async () => {
       assert.equal(await oracle.getConsensusContract(), consensus.address)
-      assert.equal(+(await oracle.getConsensusVersion()), CONSENSUS_VERSION)
-      assert.equal(+(await oracle.SECONDS_PER_SLOT()), SECONDS_PER_SLOT)
+      assert.equals(await oracle.getConsensusVersion(), CONSENSUS_VERSION)
+      assert.equals(await oracle.SECONDS_PER_SLOT(), SECONDS_PER_SLOT)
       assert.equal(await oracle.isPaused(), true)
     })
 

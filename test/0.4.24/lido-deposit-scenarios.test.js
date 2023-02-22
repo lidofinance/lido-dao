@@ -1,14 +1,14 @@
-const hre = require('hardhat')
+const { contract, ethers } = require('hardhat')
 const { deployProtocol } = require('../helpers/protocol')
 const { EvmSnapshot, setBalance, getBalance } = require('../helpers/blockchain')
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { ZERO_ADDRESS } = require('../helpers/constants')
 const { assert } = require('../helpers/assert')
 const { wei } = require('../helpers/wei')
 const { StakingModuleStub } = require('../helpers/stubs/staking-module.stub')
 const { PUBKEY_LENGTH, FakeValidatorKeys, SIGNATURE_LENGTH } = require('../helpers/signing-keys')
 const { GenericStub } = require('../helpers/stubs/generic.stub')
 
-hre.contract('Lido deposit scenarios', ([staker, depositor]) => {
+contract('Lido deposit scenarios', ([staker, depositor]) => {
   const CURATED_MODULE_ID = 1
   const DEPOSIT_CALLDATA = '0x0'
   let lido, stakingRouter
@@ -28,8 +28,8 @@ hre.contract('Lido deposit scenarios', ([staker, depositor]) => {
             name: 'stubbed staking module',
             targetShares: 100_00,
             moduleFee: 5_00,
-            treasuryFee: 5_00
-          }
+            treasuryFee: 5_00,
+          },
         ]
       },
       depositSecurityModuleFactory: async () => ({ address: depositor }),
@@ -37,11 +37,11 @@ hre.contract('Lido deposit scenarios', ([staker, depositor]) => {
       postSetup: async ({ pool, lidoLocator, eip712StETH, voting }) => {
         await pool.initialize(lidoLocator.address, eip712StETH.address, { value: wei.str`1 ether` })
         await pool.resumeProtocolAndStaking({ from: voting.address })
-      }
+      },
     })
     lido = protocol.pool
     stakingRouter = protocol.stakingRouter
-    snapshot = new EvmSnapshot(hre.ethers.provider)
+    snapshot = new EvmSnapshot(ethers.provider)
     await snapshot.make()
   })
 
@@ -63,12 +63,12 @@ hre.contract('Lido deposit scenarios', ([staker, depositor]) => {
     await StakingModuleStub.stubGetStakingModuleSummary(stakingModuleStub, {
       totalExitedValidators: 5,
       totalDepositedValidators: 16,
-      availableValidatorsCount
+      availableValidatorsCount,
     })
 
     const depositDataLength = availableValidatorsCount
     await StakingModuleStub.stubObtainDepositData(stakingModuleStub, {
-      return: { depositDataLength }
+      return: { depositDataLength },
     })
 
     const submitAmount = wei`320 ether`
@@ -97,12 +97,12 @@ hre.contract('Lido deposit scenarios', ([staker, depositor]) => {
       await StakingModuleStub.stubGetStakingModuleSummary(stakingModuleStub, {
         totalExitedValidators: 5,
         totalDepositedValidators: 16,
-        availableValidatorsCount
+        availableValidatorsCount,
       })
 
       const depositDataLength = availableValidatorsCount + 2
       await StakingModuleStub.stubObtainDepositData(stakingModuleStub, {
-        return: { depositDataLength }
+        return: { depositDataLength },
       })
 
       const initialLidETHBalance = await getBalance(lido)
@@ -129,7 +129,7 @@ hre.contract('Lido deposit scenarios', ([staker, depositor]) => {
       await StakingModuleStub.stubGetStakingModuleSummary(stakingModuleStub, {
         totalExitedValidators: 5,
         totalDepositedValidators: 16,
-        availableValidatorsCount
+        availableValidatorsCount,
       })
 
       const depositDataLength = availableValidatorsCount + 2
@@ -137,8 +137,8 @@ hre.contract('Lido deposit scenarios', ([staker, depositor]) => {
       await StakingModuleStub.stubObtainDepositData(stakingModuleStub, {
         return: {
           publicKeysBatch: depositData.slice()[0], // two extra signatures returned
-          signaturesBatch: depositData.slice(0, availableValidatorsCount)[1]
-        }
+          signaturesBatch: depositData.slice(0, availableValidatorsCount)[1],
+        },
       })
 
       const initialLidETHBalance = await getBalance(lido)
@@ -165,7 +165,7 @@ hre.contract('Lido deposit scenarios', ([staker, depositor]) => {
       await StakingModuleStub.stubGetStakingModuleSummary(stakingModuleStub, {
         totalExitedValidators: 5,
         totalDepositedValidators: 16,
-        availableValidatorsCount
+        availableValidatorsCount,
       })
 
       const depositDataLength = availableValidatorsCount + 2
@@ -173,8 +173,8 @@ hre.contract('Lido deposit scenarios', ([staker, depositor]) => {
       await StakingModuleStub.stubObtainDepositData(stakingModuleStub, {
         return: {
           publicKeysBatch: depositData.slice(0, availableValidatorsCount)[0],
-          signaturesBatch: depositData.slice()[1] // two extra signatures returned
-        }
+          signaturesBatch: depositData.slice()[1], // two extra signatures returned
+        },
       })
 
       const initialLidETHBalance = await getBalance(lido)
@@ -195,7 +195,7 @@ hre.contract('Lido deposit scenarios', ([staker, depositor]) => {
     it('invalid ETH value was used for deposits in StakingRouter', async () => {
       // on each deposit call forward back 1 ether to the staking router
       await GenericStub.stub(depositContractStub, 'deposit', {
-        forwardETH: { value: wei.str`1 ether`, recipient: stakingRouter.address }
+        forwardETH: { value: wei.str`1 ether`, recipient: stakingRouter.address },
       })
 
       const submitAmount = wei`320 ether`
@@ -208,12 +208,12 @@ hre.contract('Lido deposit scenarios', ([staker, depositor]) => {
       await StakingModuleStub.stubGetStakingModuleSummary(stakingModuleStub, {
         totalExitedValidators: 5,
         totalDepositedValidators: 16,
-        availableValidatorsCount
+        availableValidatorsCount,
       })
 
       const depositDataLength = availableValidatorsCount
       await StakingModuleStub.stubObtainDepositData(stakingModuleStub, {
-        return: { depositDataLength }
+        return: { depositDataLength },
       })
       const maxDepositsCount = 10
       await assert.reverts(lido.deposit(maxDepositsCount, CURATED_MODULE_ID, DEPOSIT_CALLDATA, { from: depositor }))
@@ -230,11 +230,11 @@ hre.contract('Lido deposit scenarios', ([staker, depositor]) => {
       await StakingModuleStub.stubGetStakingModuleSummary(stakingModuleStub, {
         totalExitedValidators: 5,
         totalDepositedValidators: 16,
-        availableValidatorsCount
+        availableValidatorsCount,
       })
 
       await StakingModuleStub.stub(stakingModuleStub, 'obtainDepositData', {
-        revert: { reason: 'INVALID_ALLOCATED_KEYS_COUNT' }
+        revert: { reason: 'INVALID_ALLOCATED_KEYS_COUNT' },
       })
 
       const maxDepositsCount = 10

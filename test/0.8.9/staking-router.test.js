@@ -1,15 +1,13 @@
-const hre = require('hardhat')
+const { artifacts, contract, ethers } = require('hardhat')
 const { MaxUint256 } = require('@ethersproject/constants')
 const { utils } = require('web3')
 const { BN } = require('bn.js')
 const { assert } = require('../helpers/assert')
 const { EvmSnapshot } = require('../helpers/blockchain')
 const { newDao, newApp } = require('../helpers/dao')
-const { artifacts } = require('hardhat')
 const { ETH } = require('../helpers/utils')
 
 const DepositContractMock = artifacts.require('DepositContractMock')
-const StakingRouterMock = artifacts.require('StakingRouterMock.sol')
 const StakingRouter = artifacts.require('StakingRouter.sol')
 const StakingModuleMock = artifacts.require('StakingModuleMock.sol')
 
@@ -26,13 +24,13 @@ const UINT24_MAX = new BN(2).pow(new BN(24))
 const StakingModuleStatus = {
   Active: 0, // deposits and rewards allowed
   DepositsPaused: 1, // deposits NOT allowed, rewards allowed
-  Stopped: 2 // deposits and rewards NOT allowed
+  Stopped: 2, // deposits and rewards NOT allowed
 }
 
 contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
   let depositContract, app
   const wc = '0x'.padEnd(66, '1234')
-  const snapshot = new EvmSnapshot(hre.ethers.provider)
+  const snapshot = new EvmSnapshot(ethers.provider)
 
   describe('setup env', async () => {
     before(async () => {
@@ -44,8 +42,14 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
 
     it('init fails on wrong input', async () => {
-      await assert.revertsWithCustomError(app.initialize(ZERO_ADDRESS, lido, wc, { from: deployer }), 'ZeroAddress("_admin")')
-      await assert.revertsWithCustomError(app.initialize(admin, ZERO_ADDRESS, wc, { from: deployer }), 'ZeroAddress("_lido")')
+      await assert.revertsWithCustomError(
+        app.initialize(ZERO_ADDRESS, lido, wc, { from: deployer }),
+        'ZeroAddress("_admin")'
+      )
+      await assert.revertsWithCustomError(
+        app.initialize(admin, ZERO_ADDRESS, wc, { from: deployer }),
+        'ZeroAddress("_lido")'
+      )
     })
 
     it('initialized correctly', async () => {
@@ -86,7 +90,11 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       assert.equals(await app.hasRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, appManager), true)
 
       assert.equals(tx.logs.length, 1)
-      await assert.emits(tx, 'RoleGranted', { role: MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, account: appManager, sender: admin })
+      await assert.emits(tx, 'RoleGranted', {
+        role: MANAGE_WITHDRAWAL_CREDENTIALS_ROLE,
+        account: appManager,
+        sender: admin,
+      })
     })
 
     it('grant role STAKING_MODULE_PAUSE_ROLE', async () => {
@@ -188,7 +196,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       stakingModule = await StakingModuleMock.new({ from: deployer })
 
       await app.addStakingModule('Test module', stakingModule.address, 100, 1000, 2000, {
-        from: appManager
+        from: appManager,
       })
 
       await stakingModule.setAvailableKeysCount(100, { from: deployer })
@@ -202,14 +210,8 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('reverts if module address exists', async () => {
       await assert.revertsWithCustomError(
-        app.addStakingModule(
-          'Test',
-          stakingModule.address,
-          100,
-          1000,
-          2000,
-          { from: appManager}),
-          'StakingModuleAddressExists()'
+        app.addStakingModule('Test', stakingModule.address, 100, 1000, 2000, { from: appManager }),
+        'StakingModuleAddressExists()'
       )
     })
 
@@ -250,7 +252,10 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
 
     it('getStakingModuleActiveValidatorsCount reverts when staking module id too large', async () => {
-      await assert.revertsWithCustomError(app.getStakingModuleActiveValidatorsCount(UINT24_MAX), 'StakingModuleIdTooLarge()')
+      await assert.revertsWithCustomError(
+        app.getStakingModuleActiveValidatorsCount(UINT24_MAX),
+        'StakingModuleIdTooLarge()'
+      )
     })
 
     it('getStakingModuleActiveValidatorsCount', async () => {
@@ -263,7 +268,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       const anotherStakingModule = await StakingModuleMock.new({ from: deployer })
 
       await app.addStakingModule('Test module 2', anotherStakingModule.address, 100, 1000, 2000, {
-        from: appManager
+        from: appManager,
       })
 
       await app.getStakingRewardsDistribution()
@@ -279,9 +284,9 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       await snapshot.revert()
     })
     it('staking modules limit is 32', async () => {
-      for (var i = 0; i < 32; i++) {
+      for (let i = 0; i < 32; i++) {
         const stakingModule = await StakingModuleMock.new({ from: deployer })
-        let tx = await app.addStakingModule('Test module', stakingModule.address, 100, 100, 100, { from: appManager })
+        await app.addStakingModule('Test module', stakingModule.address, 100, 100, 100, { from: appManager })
       }
 
       const oneMoreStakingModule = await StakingModuleMock.new({ from: deployer })
@@ -302,7 +307,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         stakingModuleFee: 2000,
         treasuryFee: 200,
         expectedModuleId: 1,
-        address: null
+        address: null,
       },
       {
         name: 'Test module 1',
@@ -310,8 +315,8 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         stakingModuleFee: 2000,
         treasuryFee: 200,
         expectedModuleId: 2,
-        address: null
-      }
+        address: null,
+      },
     ]
 
     before(async () => {
@@ -358,9 +363,16 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('addStakingModule fails on fees > 100%', async () => {
       await assert.revertsWithCustomError(
-        app.addStakingModule(stakingModulesParams[0].name, stakingModule1.address, stakingModulesParams[0].targetShare, 5000, 5001, {
-          from: appManager
-        }),
+        app.addStakingModule(
+          stakingModulesParams[0].name,
+          stakingModule1.address,
+          stakingModulesParams[0].targetShare,
+          5000,
+          5001,
+          {
+            from: appManager,
+          }
+        ),
         `ValueOver100Percent("_stakingModuleFee + _treasuryFee")`
       )
     })
@@ -374,7 +386,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
           stakingModulesParams[0].stakingModuleFee,
           stakingModulesParams[0].treasuryFee,
           {
-            from: appManager
+            from: appManager,
           }
         ),
         `ZeroAddress("_stakingModuleAddress")`
@@ -391,7 +403,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
           stakingModulesParams[0].stakingModuleFee,
           stakingModulesParams[0].treasuryFee,
           {
-            from: appManager
+            from: appManager,
           }
         ),
         `StakingModuleWrongName()`
@@ -406,7 +418,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
           stakingModulesParams[0].stakingModuleFee,
           stakingModulesParams[0].treasuryFee,
           {
-            from: appManager
+            from: appManager,
           }
         ),
         `StakingModuleWrongName()`
@@ -421,7 +433,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         stakingModulesParams[0].stakingModuleFee,
         stakingModulesParams[0].treasuryFee,
         {
-          from: appManager
+          from: appManager,
         }
       )
       assert.equals(tx.logs.length, 3)
@@ -429,22 +441,25 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         stakingModuleId: stakingModulesParams[0].expectedModuleId,
         stakingModule: stakingModule1.address,
         name: stakingModulesParams[0].name,
-        createdBy: appManager
+        createdBy: appManager,
       })
       await assert.emits(tx, 'StakingModuleTargetShareSet', {
         stakingModuleId: stakingModulesParams[0].expectedModuleId,
         targetShare: stakingModulesParams[0].targetShare,
-        setBy: appManager
+        setBy: appManager,
       })
       await assert.emits(tx, 'StakingModuleFeesSet', {
         stakingModuleId: stakingModulesParams[0].expectedModuleId,
         stakingModuleFee: stakingModulesParams[0].stakingModuleFee,
         treasuryFee: stakingModulesParams[0].treasuryFee,
-        setBy: appManager
+        setBy: appManager,
       })
 
       assert.equals(await app.getStakingModulesCount(), 1)
-      assert.equals(await app.getStakingModuleStatus(stakingModulesParams[0].expectedModuleId), StakingModuleStatus.Active)
+      assert.equals(
+        await app.getStakingModuleStatus(stakingModulesParams[0].expectedModuleId),
+        StakingModuleStatus.Active
+      )
       assert.equals(await app.getStakingModuleIsStopped(stakingModulesParams[0].expectedModuleId), false)
       assert.equals(await app.getStakingModuleIsDepositsPaused(stakingModulesParams[0].expectedModuleId), false)
       assert.equals(await app.getStakingModuleIsActive(stakingModulesParams[0].expectedModuleId), true)
@@ -475,7 +490,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         stakingModulesParams[1].stakingModuleFee,
         stakingModulesParams[1].treasuryFee,
         {
-          from: appManager
+          from: appManager,
         }
       )
 
@@ -484,22 +499,25 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         stakingModuleId: stakingModulesParams[1].expectedModuleId,
         stakingModule: stakingModule2.address,
         name: stakingModulesParams[1].name,
-        createdBy: appManager
+        createdBy: appManager,
       })
       await assert.emits(tx, 'StakingModuleTargetShareSet', {
         stakingModuleId: stakingModulesParams[1].expectedModuleId,
         targetShare: stakingModulesParams[1].targetShare,
-        setBy: appManager
+        setBy: appManager,
       })
       await assert.emits(tx, 'StakingModuleFeesSet', {
         stakingModuleId: stakingModulesParams[1].expectedModuleId,
         stakingModuleFee: stakingModulesParams[1].stakingModuleFee,
         treasuryFee: stakingModulesParams[1].treasuryFee,
-        setBy: appManager
+        setBy: appManager,
       })
 
       assert.equals(await app.getStakingModulesCount(), 2)
-      assert.equals(await app.getStakingModuleStatus(stakingModulesParams[1].expectedModuleId), StakingModuleStatus.Active)
+      assert.equals(
+        await app.getStakingModuleStatus(stakingModulesParams[1].expectedModuleId),
+        StakingModuleStatus.Active
+      )
       assert.equals(await app.getStakingModuleIsStopped(stakingModulesParams[1].expectedModuleId), false)
       assert.equals(await app.getStakingModuleIsDepositsPaused(stakingModulesParams[1].expectedModuleId), false)
       assert.equals(await app.getStakingModuleIsActive(stakingModulesParams[1].expectedModuleId), true)
@@ -548,7 +566,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
           stakingModulesParams[0].stakingModuleFee + 1,
           stakingModulesParams[0].treasuryFee + 1,
           {
-            from: stranger
+            from: stranger,
           }
         ),
         `AccessControl: account ${stranger.toLowerCase()} is missing role ${STAKING_MODULE_MANAGE_ROLE}`
@@ -563,7 +581,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
           stakingModulesParams[0].stakingModuleFee + 1,
           stakingModulesParams[0].treasuryFee + 1,
           {
-            from: appManager
+            from: appManager,
           }
         ),
         `StakingModuleIdTooLarge()`
@@ -578,7 +596,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
           stakingModulesParams[0].stakingModuleFee + 1,
           stakingModulesParams[0].treasuryFee + 1,
           {
-            from: appManager
+            from: appManager,
           }
         ),
         `ValueOver100Percent("_targetShare")`
@@ -587,9 +605,15 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('update staking module fails on fees > 100%', async () => {
       await assert.revertsWithCustomError(
-        app.updateStakingModule(stakingModulesParams[0].expectedModuleId, stakingModulesParams[0].targetShare + 1, 5000, 5001, {
-          from: appManager
-        }),
+        app.updateStakingModule(
+          stakingModulesParams[0].expectedModuleId,
+          stakingModulesParams[0].targetShare + 1,
+          5000,
+          5001,
+          {
+            from: appManager,
+          }
+        ),
         `ValueOver100Percent("_stakingModuleFee + _treasuryFee")`
       )
     })
@@ -599,7 +623,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         id: stakingModulesParams[0].expectedModuleId,
         targetShare: stakingModulesParams[0].targetShare + 1,
         stakingModuleFee: stakingModulesParams[0].stakingModuleFee + 1,
-        treasuryFee: stakingModulesParams[0].treasuryFee + 1
+        treasuryFee: stakingModulesParams[0].treasuryFee + 1,
       }
 
       const tx = await app.updateStakingModule(
@@ -608,7 +632,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         stakingModuleNewParams.stakingModuleFee,
         stakingModuleNewParams.treasuryFee,
         {
-          from: appManager
+          from: appManager,
         }
       )
 
@@ -617,20 +641,20 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       await assert.emits(tx, 'StakingModuleTargetShareSet', {
         stakingModuleId: stakingModuleNewParams.id,
         targetShare: stakingModuleNewParams.targetShare,
-        setBy: appManager
+        setBy: appManager,
       })
       await assert.emits(tx, 'StakingModuleFeesSet', {
         stakingModuleId: stakingModuleNewParams.id,
         stakingModuleFee: stakingModuleNewParams.stakingModuleFee,
         treasuryFee: stakingModuleNewParams.treasuryFee,
-        setBy: appManager
+        setBy: appManager,
       })
     })
 
     it('set staking module status does not allowed without role', async () => {
       await assert.reverts(
         app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Stopped, {
-          from: stranger
+          from: stranger,
         }),
         `AccessControl: account ${stranger.toLowerCase()} is missing role ${STAKING_MODULE_MANAGE_ROLE}`
       )
@@ -639,7 +663,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     it('set staking module status reverts if staking module id too large', async () => {
       await assert.revertsWithCustomError(
         app.setStakingModuleStatus(UINT24_MAX, StakingModuleStatus.Stopped, {
-          from: appManager
+          from: appManager,
         }),
         `StakingModuleIdTooLarge()`
       )
@@ -649,28 +673,32 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       const module = await app.getStakingModule(stakingModulesParams[0].expectedModuleId)
       await assert.revertsWithCustomError(
         app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, module.status, {
-          from: appManager
+          from: appManager,
         }),
         `StakingModuleStatusTheSame()`
       )
     })
 
     it('set staking module status', async () => {
-      const tx = await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Stopped, {
-        from: appManager
-      })
+      const tx = await app.setStakingModuleStatus(
+        stakingModulesParams[0].expectedModuleId,
+        StakingModuleStatus.Stopped,
+        {
+          from: appManager,
+        }
+      )
 
       await assert.emits(tx, 'StakingModuleStatusSet', {
         stakingModuleId: stakingModulesParams[0].expectedModuleId,
         status: StakingModuleStatus.Stopped,
-        setBy: appManager
+        setBy: appManager,
       })
     })
 
     it('pause staking module does not allowed without role', async () => {
       await assert.reverts(
         app.pauseStakingModule(stakingModulesParams[0].expectedModuleId, {
-          from: stranger
+          from: stranger,
         }),
         `AccessControl: account ${stranger.toLowerCase()} is missing role ${STAKING_MODULE_PAUSE_ROLE}`
       )
@@ -679,7 +707,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     it('pause staking module reverts when staking module too large', async () => {
       await assert.revertsWithCustomError(
         app.pauseStakingModule(UINT24_MAX, {
-          from: appManager
+          from: appManager,
         }),
         `StakingModuleIdTooLarge()`
       )
@@ -687,24 +715,24 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('pause staking module does not allowed at not active staking module', async () => {
       await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Active, {
-        from: appManager
+        from: appManager,
       })
 
       await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Stopped, {
-        from: appManager
+        from: appManager,
       })
       await assert.revertsWithCustomError(
         app.pauseStakingModule(stakingModulesParams[0].expectedModuleId, {
-          from: appManager
+          from: appManager,
         }),
         `StakingModuleNotActive()`
       )
       await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.DepositsPaused, {
-        from: appManager
+        from: appManager,
       })
       await assert.revertsWithCustomError(
         app.pauseStakingModule(stakingModulesParams[0].expectedModuleId, {
-          from: appManager
+          from: appManager,
         }),
         `StakingModuleNotActive()`
       )
@@ -712,16 +740,16 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('pause staking module', async () => {
       await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Active, {
-        from: appManager
+        from: appManager,
       })
       const tx = await app.pauseStakingModule(stakingModulesParams[0].expectedModuleId, {
-        from: appManager
+        from: appManager,
       })
 
       await assert.emits(tx, 'StakingModuleStatusSet', {
         stakingModuleId: stakingModulesParams[0].expectedModuleId,
         status: StakingModuleStatus.DepositsPaused,
-        setBy: appManager
+        setBy: appManager,
       })
     })
 
@@ -749,7 +777,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     it('resume staking module does not allowed without role', async () => {
       await assert.reverts(
         app.resumeStakingModule(stakingModulesParams[0].expectedModuleId, {
-          from: stranger
+          from: stranger,
         }),
         `AccessControl: account ${stranger.toLowerCase()} is missing role ${STAKING_MODULE_RESUME_ROLE}`
       )
@@ -758,7 +786,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     it('resume staking module reverts when staking module id too large', async () => {
       await assert.revertsWithCustomError(
         app.resumeStakingModule(UINT24_MAX, {
-          from: appManager
+          from: appManager,
         }),
         `StakingModuleIdTooLarge()`
       )
@@ -766,20 +794,20 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('resume staking module does not allowed at not paused staking module', async () => {
       await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Stopped, {
-        from: appManager
+        from: appManager,
       })
       await assert.revertsWithCustomError(
         app.resumeStakingModule(stakingModulesParams[0].expectedModuleId, {
-          from: appManager
+          from: appManager,
         }),
         `StakingModuleNotPaused()`
       )
       await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Active, {
-        from: appManager
+        from: appManager,
       })
       await assert.revertsWithCustomError(
         app.resumeStakingModule(stakingModulesParams[0].expectedModuleId, {
-          from: appManager
+          from: appManager,
         }),
         `StakingModuleNotPaused()`
       )
@@ -787,16 +815,16 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('resume staking module', async () => {
       await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.DepositsPaused, {
-        from: appManager
+        from: appManager,
       })
       const tx = await app.resumeStakingModule(stakingModulesParams[0].expectedModuleId, {
-        from: appManager
+        from: appManager,
       })
 
       await assert.emits(tx, 'StakingModuleStatusSet', {
         stakingModuleId: stakingModulesParams[0].expectedModuleId,
         status: StakingModuleStatus.Active,
-        setBy: appManager
+        setBy: appManager,
       })
     })
   })

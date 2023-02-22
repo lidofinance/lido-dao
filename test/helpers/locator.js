@@ -15,7 +15,7 @@ const locatorServices = [
   'withdrawalQueue',
   'withdrawalVault',
   'postTokenRebaseReceiver',
-  'oracleDaemonConfig'
+  'oracleDaemonConfig',
 ]
 
 function getRandomLocatorConfig(overrides = {}) {
@@ -31,5 +31,5 @@ function generateRandomAddress() {
 
 module.exports = {
   getRandomLocatorConfig,
-  locatorServices
+  locatorServices,
 }
