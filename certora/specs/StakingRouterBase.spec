@@ -7,14 +7,14 @@ methods {
     getStakingModuleSummary() returns(uint256, uint256, uint256) => DISPATCHER(true)
     getNodeOperatorSummary(uint256) => DISPATCHER(true)
     getNonce() returns (uint256) => DISPATCHER(true)
-    updateStuckValidatorsCount(uint256, uint256) => DISPATCHER(true)
-    updateExitedValidatorsCount(uint256, uint256) => DISPATCHER(true) 
+    onRewardsMinted(uint256) => DISPATCHER(true)
+    onExitedAndStuckValidatorsCountsUpdated() => DISPATCHER(true)
+    updateStuckValidatorsCount(bytes, bytes) => DISPATCHER(true)
+    updateExitedValidatorsCount(bytes, bytes) => DISPATCHER(true) 
     updateRefundedValidatorsCount(uint256, uint256) => DISPATCHER(true)
     // Will be set back to dispatcher once the implementation of loadKeys is replaced.
     obtainDepositData(uint256, bytes) returns (uint256, bytes, bytes) => NONDET // DISPATCHER(true)
-    handleRewardsMinted(uint256) => DISPATCHER(true)
     onWithdrawalCredentialsChanged() => DISPATCHER(true)
-    onAllValidatorCountersUpdated() => DISPATCHER(true)
     unsafeUpdateValidatorsCount(uint256,uint256,uint256) => DISPATCHER(true)
     getNodeOperatorsCount() returns (uint256) => DISPATCHER(true)
     getActiveNodeOperatorsCount() returns (uint256) => DISPATCHER(true)
@@ -22,8 +22,7 @@ methods {
     getNodeOperatorIds(uint256, uint256) returns (uint256[]) => DISPATCHER(true)
 
     // Lido
-    getDepositableEther() returns (uint256) => DISPATCHER(true)
-    receiveStakingRouterDepositRemainder() => DISPATCHER(true)
+    //getDepositableEther() returns (uint256) => DISPATCHER(true)
 
     // StakingRouter
      getStakingModulesCount() returns (uint256) envfree

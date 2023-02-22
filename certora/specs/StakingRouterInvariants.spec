@@ -1,12 +1,6 @@
 import "./StakingRouterBase.spec"
 import "./NodeRegistryMethods.spec"
 
-/*
-    Staking Modules Invariants
-    1. Any module address cannot be registered twice.
-    2. Different modules cannot have same IDs.
-*/
-
 invariant modulesCountIsLastIndex()
     getLastStakingModuleId() == getStakingModulesCount()
     filtered{f -> !isDeposit(f)}
@@ -56,6 +50,17 @@ invariant StakingModuleAddressIsNeverZero(uint256 moduleId)
         }
     }
 
+invariant zeroAddressForUnRegisteredModule(uint256 moduleId)
+    moduleId > getStakingModulesCount() => getStakingModuleAddressById(moduleId) == 0
+    filtered{f -> !isDeposit(f)}
+    {
+        preserved {
+            requireInvariant modulesCountIsLastIndex();
+            requireInvariant StakingModuleIndexIsIdMinus1(moduleId);
+            requireInvariant StakingModuleIdLECount(moduleId);
+        }
+    }
+
 invariant StakingModuleAddressIsUnique(uint256 moduleId1, uint256 moduleId2)
     moduleId1 != moduleId2 =>
     differentOrEqualToZero_Address(getStakingModuleAddressById(moduleId1),getStakingModuleAddressById(moduleId2))
@@ -65,6 +70,10 @@ invariant StakingModuleAddressIsUnique(uint256 moduleId1, uint256 moduleId2)
             requireInvariant StakingModuleIdLECount(moduleId1); 
             requireInvariant StakingModuleIdLECount(moduleId2); 
             requireInvariant modulesCountIsLastIndex();
+            requireInvariant StakingModuleIndexIsIdMinus1(moduleId1);
+            requireInvariant StakingModuleIndexIsIdMinus1(moduleId2);
+            requireInvariant zeroAddressForUnRegisteredModule(moduleId1);
+            requireInvariant zeroAddressForUnRegisteredModule(moduleId2);
         }
     }
 
@@ -88,6 +97,7 @@ function differentOrEqualToZero_Address(address a, address b) returns bool {
 function safeAssumptions(uint256 moduleId) {
     requireInvariant modulesCountIsLastIndex();
     if(moduleId > 0) {
+        requireInvariant zeroAddressForUnRegisteredModule(moduleId);
         requireInvariant StakingModuleIdLELast(moduleId);
         requireInvariant StakingModuleIndexIsIdMinus1(moduleId);
         requireInvariant StakingModuleId(moduleId);

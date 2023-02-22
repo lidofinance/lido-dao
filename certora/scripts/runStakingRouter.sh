@@ -17,8 +17,9 @@ LidoLocator:lido=LidoMockStEth \
 DepositContract=solc6.11,\
 NodeOperatorsRegistry=solc4.24,LidoMockStEth=solc4.24 \
 --loop_iter 2 \
---staging master \
+--staging yuvalbd/correct_param_count \
 --optimistic_loop \
 --send_only \
---settings -t=1000,-mediumTimeout=50,-copyLoopUnroll=5,-optimisticUnboundedHashing=true \
---msg "Staking Router"
+--rule depositSanity \
+--settings -t=500,-mediumTimeout=50,-copyLoopUnroll=5,-optimisticUnboundedHashing=true \
+--msg "Staking Router depositSanity new BeaconChainDepositor"

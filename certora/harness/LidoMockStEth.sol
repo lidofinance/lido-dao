@@ -7,12 +7,7 @@ pragma solidity 0.4.24;
 import "../../contracts/0.4.24/StETHPermit.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 
-interface LidoMockInterface {
-    function receiveStakingRouterDepositRemainder() external payable;
-    function getDepositableEther() external view returns(uint256);
-}
-
-contract LidoMockStEth is StETHPermit, LidoMockInterface {
+contract LidoMockStEth is StETHPermit {
     using SafeMath for uint256;
 
     /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
@@ -36,33 +31,9 @@ contract LidoMockStEth is StETHPermit, LidoMockInterface {
     address public stakingRouter;
     uint256 internal _DepositableEther;
     uint256 private constant DEPOSIT_SIZE = 32 ether;
-    
-    // The amount of ETH sent from StakingRouter contract to Lido contract when deposit called
-    event StakingRouterDepositRemainderReceived(uint256 amount);
-    
+        
     constructor(address _stakingRouter) public {
         stakingRouter = _stakingRouter;
-    }
-
-    /**
-     * @notice A payable function for staking router deposits remainder. Can be called only by StakingRouter
-     * @dev We need a dedicated function because funds received by the default payable function
-     * are treated as a user deposit
-     */
-    function receiveStakingRouterDepositRemainder() external payable {
-        require(msg.sender == stakingRouter);
-
-        emit StakingRouterDepositRemainderReceived(msg.value);
-    }
-
-    /**
-    * @notice Get the amount of Ether temporary buffered on this contract balance
-    * @dev Buffered balance is kept on the contract from the moment the funds are received from user
-    * until the moment they are actually sent to the official Deposit contract.
-    * @return amount of buffered funds in wei
-    */
-    function getDepositableEther() external view returns (uint256) {
-        return _DepositableEther;
     }
 
     /**
@@ -74,6 +45,7 @@ contract LidoMockStEth is StETHPermit, LidoMockInterface {
             .add(CL_BALANCE_POSITION.getStorageUint256())
             .add(_getTransientBalance());
     }
+    
 
     /**
      * @dev Gets the amount of Ether temporary buffered on this contract balance
@@ -90,6 +62,6 @@ contract LidoMockStEth is StETHPermit, LidoMockInterface {
         uint256 clValidators = CL_VALIDATORS_POSITION.getStorageUint256();
         // clValidators can never be less than deposited ones.
         assert(depositedValidators >= clValidators);
-        return depositedValidators.sub(clValidators).mul(DEPOSIT_SIZE);
+        return (depositedValidators - clValidators).mul(DEPOSIT_SIZE);
     }
 }

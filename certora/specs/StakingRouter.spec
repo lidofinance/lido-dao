@@ -42,6 +42,7 @@ use invariant StakingModuleIdLECount
 use invariant StakingModuleAddressIsNeverZero
 use invariant StakingModuleTotalFeeLEMAX
 use invariant StakingModuleTargetShareLEMAX
+use invariant zeroAddressForUnRegisteredModule
 
 /**************************************************
  *                 MISC Rules                     *
@@ -60,12 +61,12 @@ rule depositSanity() {
     uint256 _maxDepositsCount;
     require _maxDepositsCount > 0;
     require getStakingModulesCount() == 1;
+    safeAssumptions(1);
     uint256 _stakingModuleId;
     bytes _depositCalldata;
-    uint256 keysCount = deposit(e, _maxDepositsCount, _stakingModuleId, _depositCalldata);
+    deposit(e, _maxDepositsCount, _stakingModuleId, _depositCalldata);
     
     // Force at least one call to deposit in the deposit contract.
-    require(keysCount > 0);
     assert false;
 }
 
@@ -381,7 +382,7 @@ rule depositRevertsForInvalidModuleId(uint256 id) {
 }
 
 rule whatRevertsIfStatusIsNotActive(method f, uint256 id)
-filtered{f -> !isDeposit(f) && !f.isView} {
+filtered{f-> !isDeposit(f) && !f.isView} {
     storage initState = lastStorage;
 
     env e1; env e2;
@@ -395,17 +396,4 @@ filtered{f -> !isDeposit(f) && !f.isView} {
 
     f@withrevert(e1, args);
     assert !lastReverted;
-}
-
-/**************************************************
- *        NodeOperatorsRegistry (NOS) Rules       *
- **************************************************/
- rule cannotFinalizeUpgradeTwice() {
-    env e1;
-    env e2;
-    calldataarg args1;
-    calldataarg args2;
-    nos.finalizeUpgrade_v2(e1, args1);
-    nos.finalizeUpgrade_v2@withrevert(e2, args2);
-    assert lastReverted;
 }

@@ -19,5 +19,5 @@ NodeOperatorsRegistry=solc4.24,LidoMockStEth=solc4.24,DepositContractMock=solc4.
 --staging master \
 --optimistic_loop \
 --send_only \
---settings -t=1200,-mediumTimeout=50,-copyLoopUnroll=5,-optimisticUnboundedHashing=true \
+--settings -t=600,-mediumTimeout=50,-copyLoopUnroll=5,-optimisticUnboundedHashing=true \
 --msg "Staking Router"

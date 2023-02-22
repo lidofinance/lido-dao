@@ -1,6 +1,6 @@
---- ../contracts/0.8.9/StakingRouter.sol	2023-02-14 08:59:54.251839900 +0200
-+++ 	2023-02-19 15:53:46.200051800 +0200
-@@ -4,23 +4,23 @@
+--- ../contracts/0.8.9/StakingRouter.sol	2023-02-21 19:22:19.765997500 +0200
++++ 	2023-02-22 09:45:59.772086200 +0200
+@@ -4,18 +4,18 @@
  /* See contracts/COMPILERS.md */
  pragma solidity 0.8.9;
  
@@ -22,17 +22,12 @@
 +import {BeaconChainDepositorHarness} from "../helpers/BeaconChainDepositor.sol";
 +import {Versioned} from "../../contracts/0.8.9/utils/Versioned.sol";
  
- interface ILido {
-     function getDepositableEther() external view returns (uint256);
-     function receiveStakingRouterDepositRemainder() external payable;
- }
- 
 -contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Versioned {
 +contract StakingRouter is AccessControlEnumerable, BeaconChainDepositorHarness, Versioned {
      using UnstructuredStorage for bytes32;
  
      /// @dev events
-@@ -128,7 +128,7 @@
+@@ -125,7 +125,7 @@
          _;
      }
  
@@ -41,7 +36,7 @@
  
      /**
       * @dev proxy initialization
-@@ -136,7 +136,7 @@
+@@ -133,7 +133,7 @@
       * @param _lido Lido address
       * @param _withdrawalCredentials Lido withdrawal vault contract address
       */
@@ -50,7 +45,7 @@
          if (_admin == address(0)) revert ZeroAddress("_admin");
          if (_lido == address(0)) revert ZeroAddress("_lido");
  
-@@ -932,7 +932,10 @@
+@@ -903,7 +903,10 @@
          // sanity check
          if (totalFee >= precisionPoints) revert ValueOver100Percent("totalFee");
  
@@ -61,7 +56,7 @@
          if (rewardedStakingModulesCount < stakingModulesCount) {
              uint256 trim = stakingModulesCount - rewardedStakingModulesCount;
              assembly {
-@@ -940,6 +943,7 @@
+@@ -911,6 +914,7 @@
                  mstore(stakingModuleFees, sub(mload(stakingModuleFees), trim))
              }
          }
@@ -69,8 +64,8 @@
      }
  
      /// @notice Helper for Lido contract (DEPRECATED)
---- ../contracts/0.8.9/BeaconChainDepositor.sol	2023-02-14 08:59:54.247838500 +0200
-+++ 	2023-02-19 15:53:46.210509200 +0200
+--- ../contracts/0.8.9/BeaconChainDepositor.sol	2023-02-21 19:22:19.762969600 +0200
++++ 	2023-02-21 19:59:28.209410200 +0200
 @@ -4,7 +4,7 @@
  // See contracts/COMPILERS.md
  pragma solidity 0.8.9;
@@ -87,35 +82,31 @@
 -    ) internal {
 +    ) internal virtual {
 +        /*
-         require(_publicKeysBatch.length == PUBLIC_KEY_LENGTH * _keysCount, "INVALID_PUBLIC_KEYS_BATCH_LENGTH");
-         require(_signaturesBatch.length == SIGNATURE_LENGTH * _keysCount, "INVALID_SIGNATURES_BATCH_LENGTH");
- 
-@@ -66,6 +67,7 @@
+         if (_publicKeysBatch.length != PUBLIC_KEY_LENGTH * _keysCount) {
+             revert InvalidPublicKeysBatchLength(_publicKeysBatch.length, PUBLIC_KEY_LENGTH * _keysCount);
          }
- 
-         if (address(this).balance != targetBalance) revert NotExpectedBalance();
+@@ -66,6 +67,7 @@
+                 ++i;
+             }
+         }
 +        */
      }
  
      /// @dev computes the deposit_root_hash required by official Beacon Deposit contract
---- ../contracts/0.4.24/nos/NodeOperatorsRegistry.sol	2023-02-14 15:15:48.017349700 +0200
-+++ 	2023-02-19 15:54:10.383922900 +0200
-@@ -9,15 +9,15 @@
+--- ../contracts/0.4.24/nos/NodeOperatorsRegistry.sol	2023-02-21 19:22:19.750923800 +0200
++++ 	2023-02-22 20:39:55.224205000 +0200
+@@ -9,13 +9,13 @@
  import {SafeMath64} from "@aragon/os/contracts/lib/math/SafeMath64.sol";
  import {UnstructuredStorage} from "@aragon/os/contracts/common/UnstructuredStorage.sol";
  
--import {Math64} from "../lib/Math64.sol";
 -import {Math256} from "../../common/lib/Math256.sol";
--import {MemUtils} from "../../common/lib/MemUtils.sol";
 -import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
 -import {ILidoLocator} from "../../common/interfaces/ILidoLocator.sol";
 -import {IBurner} from "../../common/interfaces/IBurner.sol";
 -import {SigningKeys} from "../lib/SigningKeys.sol";
 -import {Packed64x4} from "../lib/Packed64x4.sol";
 -import {Versioned} from "../utils/Versioned.sol";
-+import {Math64} from "../../contracts/0.4.24/lib/Math64.sol";
 +import {Math256} from "../../contracts/common/lib/Math256.sol";
-+import {MemUtils} from "../../contracts/common/lib/MemUtils.sol";
 +import {MinFirstAllocationStrategy} from "../../contracts/common/lib/MinFirstAllocationStrategy.sol";
 +import {ILidoLocator} from "../../contracts/common/interfaces/ILidoLocator.sol";
 +import {IBurner} from "../../contracts/common/interfaces/IBurner.sol";
@@ -125,7 +116,7 @@
  
  interface IStETH {
      function sharesOf(address _account) external view returns (uint256);
-@@ -639,6 +639,9 @@
+@@ -811,6 +811,9 @@
          if (activeNodeOperatorIndex == 0) return (0, new uint256[](0), new uint256[](0));
  
          /// @dev shrink the length of the resulting arrays if some active node operators have no available keys to be deposited
@@ -135,7 +126,7 @@
          if (activeNodeOperatorIndex < activeNodeOperatorsCount) {
              assembly {
                  mstore(nodeOperatorIds, activeNodeOperatorIndex)
-@@ -646,6 +649,7 @@
+@@ -818,6 +821,7 @@
                  mstore(activeKeysCapacities, activeNodeOperatorIndex)
              }
          }
@@ -143,7 +134,7 @@
  
          allocatedKeysCount =
              MinFirstAllocationStrategy.allocate(activeKeyCountsAfterAllocation, activeKeysCapacities, uint64(_keysCount));
-@@ -904,23 +908,26 @@
+@@ -1097,23 +1101,26 @@
          view
          returns (bytes key, bytes depositSignature, bool used)
      {
@@ -172,41 +163,29 @@
          _onlyExistedNodeOperator(_nodeOperatorId);
  
          Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
-@@ -934,6 +941,7 @@
-             SIGNING_KEYS_MAPPING_NAME.loadKeySigAndAppend(_nodeOperatorId, _offset + i, i, pubkeys, signatures);
+@@ -1127,6 +1134,7 @@
+         for (uint256 i; i < _limit; ++i) {
              used[i] = (_offset + i) < depositedSigningKeysCount;
          }
 +        */
      }
  
      /// @notice Returns the type of the staking module
---- ../contracts/0.4.24/lib/SigningKeys.sol	2023-02-15 09:44:24.460316000 +0200
-+++ 	2023-02-19 15:53:46.216528600 +0200
-@@ -6,7 +6,7 @@
- 
- import {SafeMath} from "@aragon/os/contracts/lib/math/SafeMath.sol";
- import {SafeMath64} from "@aragon/os/contracts/lib/math/SafeMath64.sol";
--import {MemUtils} from "../../common/lib/MemUtils.sol";
-+import {MemUtils} from "../../contracts/common/lib/MemUtils.sol";
- 
- library SigningKeys {
-     using SafeMath for uint256;
-@@ -126,13 +126,15 @@
-         bytes32 _position,
-         uint256 _nodeOperatorId,
-         uint256 _keyIndex,
--        uint256 _offset,
-+        uint256 offset,
-         bytes memory _pubkeys,
-         bytes memory _signatures
-     ) internal view {
-+        /*
-         (bytes memory pubkey, bytes memory signature) = _position.loadKeySig(_nodeOperatorId, _keyIndex);
--        MemUtils.copyBytes(pubkey, _pubkeys, _offset.mul(PUBKEY_LENGTH));
--        MemUtils.copyBytes(signature, _signatures, _offset.mul(SIGNATURE_LENGTH));
-+        MemUtils.copyBytes(pubkey, _pubkeys, offset.mul(PUBKEY_LENGTH));
-+        MemUtils.copyBytes(signature, _signatures, offset.mul(SIGNATURE_LENGTH));
-+        */
+@@ -1135,7 +1143,7 @@
      }
  
-     function loadKeySig(bytes32 _position, uint256 _nodeOperatorId, uint256 _keyIndex)
+     function getStakingModuleSummary()
+-        external
++        public
+         view
+         returns (uint256 totalExitedValidators, uint256 totalDepositedValidators, uint256 depositableValidatorsCount)
+     {
+@@ -1146,7 +1154,7 @@
+     }
+ 
+     function getNodeOperatorSummary(uint256 _nodeOperatorId)
+-        external
++        public
+         view
+         returns (
+             bool isTargetLimitActive,

@@ -28,30 +28,26 @@ contract BeaconChainDepositorHarness is BeaconChainDepositor {
         bytes memory _publicKeysBatch,
         bytes memory _signaturesBatch
     ) internal override {
-        require(_publicKeysBatch.length == PUBLIC_KEY_LENGTH * _keysCount, "INVALID_PUBLIC_KEYS_BATCH_LENGTH");
-        require(_signaturesBatch.length == SIGNATURE_LENGTH * _keysCount, "INVALID_SIGNATURES_BATCH_LENGTH");
-        uint256 targetBalance = address(this).balance - (_keysCount * DEPOSIT_SIZE);
-
-        bytes memory publicKey;
-        bytes memory signature;
+        if (_publicKeysBatch.length != PUBLIC_KEY_LENGTH * _keysCount) {
+            revert InvalidPublicKeysBatchLength(_publicKeysBatch.length, PUBLIC_KEY_LENGTH * _keysCount);
+        }
+        if (_signaturesBatch.length != SIGNATURE_LENGTH * _keysCount) {
+            revert InvalidSignaturesBatchLength(_signaturesBatch.length, SIGNATURE_LENGTH * _keysCount);
+        }
 
         for (uint256 i; i < _keysCount;) {
-            publicKey = _publicKeyMap[_publicKeysBatch][i];
-            signature = _signatureMap[_signaturesBatch][i];
-            require(publicKey.length == PUBLIC_KEY_LENGTH);
-            require(signature.length == SIGNATURE_LENGTH);
+            require(_publicKeyMap[_publicKeysBatch][i].length == PUBLIC_KEY_LENGTH);
+            require(_signatureMap[_signaturesBatch][i].length == SIGNATURE_LENGTH);
             
             DEPOSIT_CONTRACT.deposit{value: DEPOSIT_SIZE}(
-                _publicKeysBatch, _withdrawalCredentials, signature,
-                _computeDepositDataRootCertora(_withdrawalCredentials, publicKey, signature)
+                _publicKeysBatch, _withdrawalCredentials, _signatureMap[_signaturesBatch][i],
+                _computeDepositDataRootCertora(_withdrawalCredentials, _publicKeyMap[_publicKeysBatch][i], _signatureMap[_signaturesBatch][i])
             );
-
+            
             unchecked {
                 ++i;
             }
         }
-
-        if (address(this).balance != targetBalance) revert NotExpectedBalance();
     }
 
     /// @notice Certora: change root-hashing functions to simple mappings.
@@ -66,10 +62,10 @@ contract BeaconChainDepositorHarness is BeaconChainDepositor {
         bytes32 publicKeyRoot = _publicKeyRoot[_publicKey];
         bytes32 signatureRoot = _signatureRoot[_signature];
 
-        return sha256(
+        return keccak256(
             abi.encodePacked(
-                sha256(abi.encodePacked(publicKeyRoot, _withdrawalCredentials)),
-                sha256(abi.encodePacked(DEPOSIT_SIZE_IN_GWEI_LE64, bytes24(0), signatureRoot))
+                keccak256(abi.encodePacked(publicKeyRoot, _withdrawalCredentials)),
+                keccak256(abi.encodePacked(DEPOSIT_SIZE_IN_GWEI_LE64, bytes24(0), signatureRoot))
             )
         );
     }
