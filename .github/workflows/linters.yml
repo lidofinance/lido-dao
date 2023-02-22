@@ -51,7 +51,6 @@ jobs:
 
       - name: Run JS linters
         run: yarn lint:js
-        continue-on-error: true
 
   coverage:
     name: Solidity coverage
