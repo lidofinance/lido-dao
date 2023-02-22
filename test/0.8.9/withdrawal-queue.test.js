@@ -253,6 +253,16 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         'TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE'
       )
     })
+
+    it('One cant request while is paused', async () => {
+      const PAUSE_INFINITELY = await withdrawalQueue.PAUSE_INFINITELY()
+      await withdrawalQueue.pause(PAUSE_INFINITELY, { from: daoAgent })
+      await assert.reverts(withdrawalQueue.requestWithdrawals([StETH(300)], owner, { from: user }), 'ResumedExpected()')
+      await assert.reverts(
+        withdrawalQueue.requestWithdrawalsWstETH([ETH(300)], owner, { from: user }),
+        'ResumedExpected()'
+      )
+    })
   })
 
   context('Finalization', async () => {
