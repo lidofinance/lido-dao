@@ -3725,6 +3725,7 @@ __metadata:
     ava: ^3.13.0
     ava-spec: ^1.1.1
     babel-plugin-istanbul: ^6.0.0
+    bn.js: ^5.2.1
     chai: ^4.2.0
     concurrently: ^6.4.0
     dotenv: ^8.2.0
@@ -3736,7 +3737,6 @@ __metadata:
     eslint-plugin-n: ^15.6.1
     eslint-plugin-prettier: ^4.2.1
     eslint-plugin-promise: ^6.1.1
-    eslint-plugin-standard: ^5.0.0
     eth-ens-namehash: ^2.0.8
     ethereumjs-testrpc-sc: ^6.5.1-sc.1
     ethereumjs-util: ^7.0.8
@@ -3747,6 +3747,7 @@ __metadata:
     hardhat-ignore-warnings: "skozin/hardhat-ignore-warnings#0ecf2ae85bddb83594193ee5c463cb4ae54cde7d"
     husky: ^8.0.2
     ipfs-http-client: ^55.0.0
+    js-sha3: ^0.8.0
     lerna: ^3.22.1
     lint-staged: ">=10"
     minimatch: ^6.2.0

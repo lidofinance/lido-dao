@@ -1,4 +1,5 @@
 {
+  "plugins": ["prettier", "standard"],
   "env": {
     "node": true,
     "es2022": true
@@ -6,13 +7,11 @@
   "extends": ["standard", "plugin:prettier/recommended"],
   "parserOptions": {
     "ecmaVersion": 2022,
-    "sourceType": "module",
+    "sourceType": "script",
     "ecmaFeatures": {
       "jsx": true
     }
   },
-  "plugins": ["node", "prettier", "standard"],
-
   "rules": {
     "prettier/prettier": "error",
     "no-undef": "warn",
