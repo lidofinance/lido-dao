@@ -98,11 +98,8 @@ module.exports = {
 
 contract('BaseOracle', ([admin]) => {
   context('Deployment and initial configuration', () => {
-    let oracle
-
     it('deploying base oracle ', async () => {
-      const deployed = await deployBaseOracle(admin)
-      oracle = deployed.oracle
+      await deployBaseOracle(admin)
     })
 
     // TODO: add more base tests
