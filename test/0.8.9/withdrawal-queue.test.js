@@ -880,17 +880,15 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
   context('requestWithdrawalsWithPermit()', () => {
     const [alice] = ACCOUNTS_AND_KEYS
     it('works correctly with non empty payload', async () => {
+      await web3.eth.sendTransaction({ to: alice.address, from: user, value: ETH(1) })
       await steth.mintShares(alice.address, shares(100))
       const withdrawalRequestsCount = 5
       const requests = Array(withdrawalRequestsCount).fill(ETH(10))
 
       const amount = bn(ETH(10)).mul(bn(withdrawalRequestsCount))
-      const chainId = await wsteth.getChainId()
       const deadline = MAX_UINT256
       await impersonate(hre.ethers.provider, alice.address)
-      const dom = await steth.DOMAIN_SEPARATOR()
-      console.log(dom)
-      const domainSeparator = makeDomainSeparator('Liquid staked Ether 2.0', '2', chainId, steth.address)
+      const domainSeparator = await steth.DOMAIN_SEPARATOR()
       const { v, r, s } = signPermit(
         alice.address,
         withdrawalQueue.address,
