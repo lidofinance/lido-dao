@@ -1,6 +1,8 @@
 const { web3 } = require('hardhat')
 const assert = require('node:assert')
+const chai = require('chai')
 const { BN } = require('bn.js')
+const { getEvents } = require('@aragon/contract-helpers-test')
 
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000'
 
@@ -117,6 +119,12 @@ const calcSharesMintedAsFees = (rewards, fee, feePoints, prevTotalShares, newTot
     )
 }
 
+function getFirstEventArgs(receipt, eventName, abi = undefined) {
+  const events = getEvents(receipt, eventName, { decodeForAbi: abi })
+  chai.assert(events.length !== 0, () => `Expected event ${eventName} wasn't emitted`)
+  return events[0].args
+}
+
 module.exports = {
   ZERO_HASH,
   pad,
@@ -143,4 +151,5 @@ module.exports = {
   toStr,
   prepIdsCountsPayload,
   calcSharesMintedAsFees,
+  getFirstEventArgs,
 }

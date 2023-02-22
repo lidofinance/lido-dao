@@ -29,14 +29,14 @@ async function deployWithdrawalQueue({
 
   const initTx = await withdrawalQueue.initialize(
     queueAdmin,
-    queuePauser,
-    queueResumer,
+    queuePauser || queueAdmin,
+    queueResumer || queueAdmin,
     queueFinalizer || steth.address,
     queueBunkerReporter || steth.address
   )
 
   if (doResume) {
-    await withdrawalQueue.resume({ from: queueResumer })
+    await withdrawalQueue.resume({ from: queueResumer || queueAdmin })
   }
 
   return {
