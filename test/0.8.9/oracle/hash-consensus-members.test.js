@@ -1,7 +1,6 @@
 const { contract } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 const { toNum } = require('../../helpers/utils')
-const { assertAmountOfEvents } = require('@aragon/contract-helpers-test/src/asserts')
 const { ZERO_ADDRESS } = require('../../helpers/constants')
 
 const { HASH_1, HASH_2, CONSENSUS_VERSION, deployHashConsensus, ZERO_HASH } = require('./hash-consensus-deploy.test')
@@ -238,11 +237,11 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
 
         tx = await consensus.addMember(member3, 3, { from: admin })
-        assertAmountOfEvents(tx, 'ConsensusReached', { expectedAmount: 0 })
+        assert.notEmits(tx, 'ConsensusReached')
         assert.equal((await consensus.getConsensusState()).consensusReport, ZERO_HASH)
 
         tx = await consensus.removeMember(member3, 2, { from: admin })
-        assertAmountOfEvents(tx, 'ConsensusReached', { expectedAmount: 0 })
+        assert.notEmits(tx, 'ConsensusReached')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
       })
 
@@ -258,11 +257,11 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
 
         tx = await consensus.addMember(member3, 2, { from: admin })
-        assertAmountOfEvents(tx, 'ConsensusReached', { expectedAmount: 0 })
+        assert.notEmits(tx, 'ConsensusReached')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
 
         tx = await consensus.removeMember(member3, 2, { from: admin })
-        assertAmountOfEvents(tx, 'ConsensusReached', { expectedAmount: 0 })
+        assert.notEmits(tx, 'ConsensusReached')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
       })
 
@@ -278,16 +277,16 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
 
         tx = await consensus.addMember(member3, 3, { from: admin })
-        assertAmountOfEvents(tx, 'ConsensusReached', { expectedAmount: 0 })
+        assert.notEmits(tx, 'ConsensusReached')
         // TODO: is this really ok?
         assert.equal((await consensus.getConsensusState()).consensusReport, ZERO_HASH)
 
         tx = await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member3 })
-        assertAmountOfEvents(tx, 'ConsensusReached', { expectedAmount: 0 })
+        assert.notEmits(tx, 'ConsensusReached')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
 
         tx = await consensus.removeMember(member3, 2, { from: admin })
-        assertAmountOfEvents(tx, 'ConsensusReached', { expectedAmount: 0 })
+        assert.notEmits(tx, 'ConsensusReached')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
       })
 
@@ -305,7 +304,7 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
 
         tx = await consensus.submitReport(refSlot, HASH_2, CONSENSUS_VERSION, { from: member3 })
-        assertAmountOfEvents(tx, 'ConsensusReached', { expectedAmount: 0 })
+        assert.notEmits(tx, 'ConsensusReached')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
 
         await consensus.addMember(member4, 3, { from: admin })
@@ -336,7 +335,7 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
 
         tx = await consensus.submitReport(refSlot, HASH_2, CONSENSUS_VERSION, { from: member3 })
-        assertAmountOfEvents(tx, 'ConsensusReached', { expectedAmount: 0 })
+        assert.notEmits(tx, 'ConsensusReached')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
 
         await consensus.addMember(member4, 3, { from: admin })

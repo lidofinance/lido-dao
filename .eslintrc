@@ -26,7 +26,11 @@
     "quotes": ["error", "single", { "avoidEscape": true, "allowTemplateLiterals": true }],
     "jsx-quotes": ["error", "prefer-single"],
     "no-useless-escape": "off",
-    "linebreak-style": ["error", "unix"]
+    "linebreak-style": ["error", "unix"],
+    "no-restricted-modules": ["error", {
+        "name": "@aragon/contract-helpers-test/src/asserts",
+        "message": "Please use helpers/assert instead."
+    }]
   },
   "overrides": [
     {
