@@ -314,7 +314,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
       await withdrawalQueue.requestWithdrawals([ETH(1)], owner, { from: user })
       await assert.reverts(withdrawalQueue.getClaimableEther([1], [2]), 'InvalidHint(2)')
 
-      await withdrawalQueue.requestWithdrawals([ETH(1), [ETH(1)]], owner, { from: user })
+      await withdrawalQueue.requestWithdrawals([ETH(1), ETH(1)], owner, { from: user })
       await withdrawalQueue.finalize(2, { from: steth.address, value: ETH(0.99) })
       await withdrawalQueue.finalize(3, { from: steth.address, value: ETH(0.98) })
 
@@ -877,6 +877,45 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     })
   })
 
+  context('requestWithdrawalsWithPermit()', () => {
+    const [alice] = ACCOUNTS_AND_KEYS
+    it('works correctly with non empty payload', async () => {
+      await steth.mintShares(alice.address, shares(100))
+      const withdrawalRequestsCount = 5
+      const requests = Array(withdrawalRequestsCount).fill(ETH(10))
+
+      const amount = bn(ETH(10)).mul(bn(withdrawalRequestsCount))
+      const chainId = await wsteth.getChainId()
+      const deadline = MAX_UINT256
+      await impersonate(hre.ethers.provider, alice.address)
+      const dom = await steth.DOMAIN_SEPARATOR()
+      console.log(dom)
+      const domainSeparator = makeDomainSeparator('Liquid staked Ether 2.0', '2', chainId, steth.address)
+      const { v, r, s } = signPermit(
+        alice.address,
+        withdrawalQueue.address,
+        amount, // amount
+        0, // nonce
+        deadline,
+        domainSeparator,
+        alice.key
+      )
+      const permission = [
+        amount,
+        deadline, // deadline
+        v,
+        r,
+        s
+      ]
+
+      const aliceBalancesBefore = await steth.balanceOf(alice.address)
+      const lastRequestIdBefore = await withdrawalQueue.getLastRequestId()
+      await withdrawalQueue.requestWithdrawalsWithPermit(requests, owner, permission, { from: alice.address })
+      assert.equals(await withdrawalQueue.getLastRequestId(), lastRequestIdBefore.add(bn(requests.length)))
+      const aliceBalancesAfter = await steth.balanceOf(alice.address)
+      assert.equals(aliceBalancesAfter, aliceBalancesBefore.sub(bn(ETH(10)).mul(bn(withdrawalRequestsCount))))
+    })
+  })
   context('Transfer request', async () => {
     const amount = ETH(300)
     let requestId
