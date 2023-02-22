@@ -14,16 +14,9 @@
   },
   "rules": {
     "prettier/prettier": "error",
-    "no-undef": "warn",
-    "no-unused-vars": "warn",
-    "prefer-const": "warn",
     "camelcase": "off",
-    "eol-last": "warn",
-    "no-multiple-empty-lines": "warn",
     "quotes": ["error", "single", { "avoidEscape": true, "allowTemplateLiterals": true }],
     "jsx-quotes": ["error", "prefer-single"],
-    "no-useless-escape": "off",
-    "linebreak-style": ["error", "unix"],
     "no-restricted-modules": ["error", {
         "name": "@aragon/contract-helpers-test/src/asserts",
         "message": "Please use helpers/assert instead."
