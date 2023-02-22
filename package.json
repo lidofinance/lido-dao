@@ -76,7 +76,6 @@
     "@aragon/minime": "1.0.0",
     "@aragon/test-helpers": "^2.1.0",
     "@babel/core": "^7.21.0",
-    "@babel/eslint-parser": "^7.19.1",
     "@babel/node": "^7.12.1",
     "@babel/preset-env": "^7.11.5",
     "@babel/register": "^7.12.1",
