@@ -1,6 +1,6 @@
 const hre = require('hardhat')
 const { contract, ethers } = require('hardhat')
-const { bn, getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { bn, getEventArgument, ZERO_ADDRESS, ZERO_BYTES32 } = require('@aragon/contract-helpers-test')
 
 const { ETH, StETH, shareRate, shares, setBalance } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
@@ -10,7 +10,7 @@ const { impersonate, EvmSnapshot } = require('../helpers/blockchain')
 
 const { deployWithdrawalQueue } = require('./withdrawal-queue-deploy.test')
 
-contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
+contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer]) => {
   let withdrawalQueue, steth, wsteth
 
   const snapshot = new EvmSnapshot(ethers.provider)
@@ -49,6 +49,43 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user]) => {
     assert.equals(await withdrawalQueue.unfinalizedStETH(), StETH(0))
     assert.equals(await withdrawalQueue.unfinalizedRequestNumber(), 0)
     assert.equals(await withdrawalQueue.getLockedEtherAmount(), ETH(0))
+  })
+
+  context('Pause/Resume', async () => {
+    it('only correct roles can alter pause state', async () => {
+      const [PAUSE_ROLE, RESUME_ROLE] = await Promise.all([withdrawalQueue.PAUSE_ROLE(), withdrawalQueue.RESUME_ROLE()])
+      await withdrawalQueue.grantRole(PAUSE_ROLE, pauser, { from: daoAgent })
+      await withdrawalQueue.grantRole(RESUME_ROLE, resumer, { from: daoAgent })
+      await withdrawalQueue.pause(100000000, { from: pauser })
+      assert(await withdrawalQueue.isPaused())
+      await withdrawalQueue.resume({ from: resumer })
+      assert(!(await withdrawalQueue.isPaused()))
+      await assert.revertsOZAccessControl(withdrawalQueue.pause(100000000, { from: resumer }), resumer, 'PAUSE_ROLE')
+      await assert.revertsOZAccessControl(withdrawalQueue.pause(100000000, { from: stranger }), stranger, 'PAUSE_ROLE')
+      await withdrawalQueue.pause(100000000, { from: pauser })
+      await assert.revertsOZAccessControl(withdrawalQueue.resume({ from: pauser }), pauser, 'RESUME_ROLE')
+      await assert.revertsOZAccessControl(withdrawalQueue.resume({ from: stranger }), stranger, 'RESUME_ROLE')
+    })
+
+    it('withdraw/finalize only allowed when at resumed state', async () => {
+      await withdrawalQueue.pause(100000000, { from: daoAgent })
+      assert(await withdrawalQueue.isPaused())
+      await assert.reverts(withdrawalQueue.requestWithdrawals([ETH(1)], owner, { from: user }), 'ResumedExpected()')
+      await assert.reverts(
+        withdrawalQueue.requestWithdrawalsWstETH([ETH(1)], owner, { from: user }),
+        'ResumedExpected()'
+      )
+      const stubPermit = [0, 0, ZERO_BYTES32, ZERO_BYTES32, ZERO_BYTES32]
+      await assert.reverts(
+        withdrawalQueue.requestWithdrawalsWithPermit([ETH(1)], owner, stubPermit, { from: user }),
+        'ResumedExpected()'
+      )
+      await assert.reverts(
+        withdrawalQueue.requestWithdrawalsWstETHWithPermit([ETH(1)], owner, stubPermit, { from: user }),
+        'ResumedExpected()'
+      )
+      await assert.reverts(withdrawalQueue.finalize(1, { from: owner }), 'ResumedExpected()')
+    })
   })
 
   context('Request', async () => {
