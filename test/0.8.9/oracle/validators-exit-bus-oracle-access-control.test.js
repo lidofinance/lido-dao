@@ -88,7 +88,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, account1
       context('Admin is set at initialize', () => {
         it('should set admin at initialize', async () => {
           const DEFAULT_ADMIN_ROLE = await oracle.DEFAULT_ADMIN_ROLE()
-          await assert.emits(initTx, 'RoleGranted', { role: DEFAULT_ADMIN_ROLE, account: admin, sender: admin })
+          assert.emits(initTx, 'RoleGranted', { role: DEFAULT_ADMIN_ROLE, account: admin, sender: admin })
         })
 
         it('should revert without admin address', async () => {

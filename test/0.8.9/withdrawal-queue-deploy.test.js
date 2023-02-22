@@ -18,7 +18,7 @@ async function deployWithdrawalQueue({
   queueBunkerReporter,
   queueName = 'Unsteth nft',
   symbol = 'UNSTETH',
-  doResume = true
+  doResume = true,
 }) {
   const steth = await StETHMock.new({ value: ETH(1), from: stethOwner })
   const wsteth = await WstETH.new(steth.address, { from: stethOwner })
@@ -43,12 +43,12 @@ async function deployWithdrawalQueue({
     initTx,
     steth,
     wsteth,
-    withdrawalQueue
+    withdrawalQueue,
   }
 }
 
 module.exports = {
-  deployWithdrawalQueue
+  deployWithdrawalQueue,
 }
 
 contract(
@@ -61,7 +61,7 @@ contract(
           queueAdmin,
           queuePauser,
           queueResumer,
-          doResume: false
+          doResume: false,
         })
         assert.equals(await withdrawalQueue.isPaused(), true)
       })
@@ -71,7 +71,7 @@ contract(
           stethOwner,
           queueAdmin,
           queuePauser,
-          queueResumer
+          queueResumer,
         })
         const BUNKER_MODE_DISABLED_TIMESTAMP = await withdrawalQueue.BUNKER_MODE_DISABLED_TIMESTAMP()
         const isBunkerModeActive = await withdrawalQueue.isBunkerModeActive()
@@ -88,14 +88,14 @@ contract(
           queuePauser,
           queueResumer,
           queueFinalizer,
-          queueBunkerReporter
+          queueBunkerReporter,
         })
-        await assert.emits(initTx, 'InitializedV1', {
+        assert.emits(initTx, 'InitializedV1', {
           _admin: queueAdmin,
           _pauser: queuePauser,
           _resumer: queueResumer,
           _finalizer: queueFinalizer,
-          _bunkerReporter: queueBunkerReporter
+          _bunkerReporter: queueBunkerReporter,
         })
       })
 
@@ -105,7 +105,7 @@ contract(
             stethOwner,
             queueAdmin,
             queuePauser: ZERO_ADDRESS,
-            queueResumer
+            queueResumer,
           })
           const role = await withdrawalQueue.PAUSE_ROLE()
           const memberCount = await withdrawalQueue.getRoleMemberCount(role)
@@ -118,7 +118,7 @@ contract(
             queueAdmin,
             queuePauser,
             queueResumer: ZERO_ADDRESS,
-            doResume: false
+            doResume: false,
           })
           const role = await withdrawalQueue.RESUME_ROLE()
           const memberCount = await withdrawalQueue.getRoleMemberCount(role)
@@ -131,7 +131,7 @@ contract(
             queueAdmin,
             queuePauser,
             queueResumer,
-            queueFinalizer: ZERO_ADDRESS
+            queueFinalizer: ZERO_ADDRESS,
           })
           const role = await withdrawalQueue.FINALIZE_ROLE()
           const memberCount = await withdrawalQueue.getRoleMemberCount(role)
@@ -144,7 +144,7 @@ contract(
             queueAdmin,
             queuePauser,
             queueResumer,
-            queueBunkerReporter: ZERO_ADDRESS
+            queueBunkerReporter: ZERO_ADDRESS,
           })
           const role = await withdrawalQueue.BUNKER_MODE_REPORT_ROLE()
           const memberCount = await withdrawalQueue.getRoleMemberCount(role)
