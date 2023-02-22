@@ -6,11 +6,11 @@ const { ETH, StETH, shareRate, shares, setBalance } = require('../helpers/utils'
 const { assert } = require('../helpers/assert')
 const { signPermit, makeDomainSeparator } = require('../0.6.12/helpers/permit_helpers')
 const { MAX_UINT256, ACCOUNTS_AND_KEYS } = require('../0.6.12/helpers/constants')
-const { impersonate, EvmSnapshot } = require('../helpers/blockchain')
+const { impersonate, EvmSnapshot, getCurrentBlockTimestamp } = require('../helpers/blockchain')
 
 const { deployWithdrawalQueue } = require('./withdrawal-queue-deploy.test')
 
-contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer]) => {
+contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, bunkerReporter]) => {
   let withdrawalQueue, steth, wsteth
 
   const snapshot = new EvmSnapshot(ethers.provider)
@@ -85,6 +85,47 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer])
         'ResumedExpected()'
       )
       await assert.reverts(withdrawalQueue.finalize(1, { from: owner }), 'ResumedExpected()')
+    })
+  })
+
+  context('BunkerMode', async () => {
+    it('init config', async () => {
+      assert(!(await withdrawalQueue.isBunkerModeActive()))
+      assert.equals(ethers.constants.MaxUint256, await withdrawalQueue.bunkerModeSinceTimestamp())
+    })
+
+    it('access control', async () => {
+      assert(!(await withdrawalQueue.isBunkerModeActive()))
+      const BUNKER_MODE_REPORT_ROLE = await withdrawalQueue.BUNKER_MODE_REPORT_ROLE()
+      await withdrawalQueue.grantRole(BUNKER_MODE_REPORT_ROLE, bunkerReporter, { from: daoAgent })
+      await assert.revertsOZAccessControl(
+        withdrawalQueue.updateBunkerMode(true, 0, { from: stranger }),
+        stranger,
+        'BUNKER_MODE_REPORT_ROLE'
+      )
+      await withdrawalQueue.updateBunkerMode(true, 0, { from: bunkerReporter })
+    })
+
+    it('state and events', async () => {
+      assert(!(await withdrawalQueue.isBunkerModeActive()))
+      assert.equals(ethers.constants.MaxUint256, await withdrawalQueue.bunkerModeSinceTimestamp())
+      let timestamp = await getCurrentBlockTimestamp()
+      await assert.reverts(
+        withdrawalQueue.updateBunkerMode(true, +timestamp + 1000000, { from: steth.address }),
+        'InvalidReportTimestamp()'
+      )
+      // enable
+      timestamp = await getCurrentBlockTimestamp()
+      const tx1 = await withdrawalQueue.updateBunkerMode(true, timestamp, { from: steth.address })
+      assert.emits(tx1, 'BunkerModeEnabled', { _sinceTimestamp: timestamp })
+      assert(await withdrawalQueue.isBunkerModeActive())
+      assert.equals(timestamp, await withdrawalQueue.bunkerModeSinceTimestamp())
+      // disable
+      timestamp = await getCurrentBlockTimestamp()
+      const tx2 = await withdrawalQueue.updateBunkerMode(false, timestamp, { from: steth.address })
+      assert.emits(tx2, 'BunkerModeDisabled')
+      assert(!(await withdrawalQueue.isBunkerModeActive()))
+      assert.equals(ethers.constants.MaxUint256, await withdrawalQueue.bunkerModeSinceTimestamp())
     })
   })
 
@@ -951,6 +992,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer])
       assert.equals(aliceBalancesAfter, aliceBalancesBefore.sub(bn(ETH(10)).mul(bn(withdrawalRequestsCount))))
     })
   })
+
   context('Transfer request', async () => {
     const amount = ETH(300)
     let requestId
