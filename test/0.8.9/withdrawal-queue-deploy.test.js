@@ -99,6 +99,28 @@ contract(
         })
       })
 
+      it('initial queue and checkpoint items', async () => {
+        const { withdrawalQueue } = await deployWithdrawalQueue({
+          stethOwner,
+          queueAdmin,
+          queuePauser,
+          queueResumer
+        })
+        const initialQueueItem = await withdrawalQueue.getQueueItem(0)
+
+        const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
+        const initialCheckpointItem = await withdrawalQueue.getCheckpointItem(lastCheckpointIndex)
+
+        assert.equals(+initialQueueItem.cumulativeStETH, 0)
+        assert.equals(+initialQueueItem.cumulativeShares, 0)
+        assert.equals(initialQueueItem.owner, ZERO_ADDRESS)
+        // assert.equals(initialQueueItem.timestamp, (block.number))
+        assert.equals(initialQueueItem.claimed, true)
+
+        assert.equals(+initialCheckpointItem.fromRequestId, 0)
+        assert.equals(+initialCheckpointItem.discountFactor, 0)
+      })
+
       context('no roles for zero addresses', () => {
         it('check if pauser is zero', async () => {
           const { withdrawalQueue } = await deployWithdrawalQueue({
