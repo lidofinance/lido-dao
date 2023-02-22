@@ -2,7 +2,6 @@
 . "$(dirname -- "$0")/_/husky.sh"
 
 yarn compile
-yarn lint:sol
+git diff --quiet lib/abi
 
-# TODO: uncomment. it's temporarily disabled on staking_router + withdrawals-poc merge
-# yarn lint:js:fix
+yarn lint

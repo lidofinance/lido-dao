@@ -1,11 +1,13 @@
-const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
-const { getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { contract, artifacts, web3 } = require('hardhat')
+const { getEventArgument } = require('@aragon/contract-helpers-test')
+const { assert } = require('../helpers/assert')
 
 const { pad, ETH, hexConcat } = require('../helpers/utils')
 const { waitBlocks } = require('../helpers/blockchain')
 const { DSMAttestMessage, DSMPauseMessage } = require('../helpers/signatures')
 const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
+const { ZERO_ADDRESS } = require('../helpers/constants')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const CURATED_MODULE_ID = 1
@@ -29,10 +31,10 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
             name: 'Curated',
             targetShares: 10000,
             moduleFee: 500,
-            treasuryFee: 500
-          }
+            treasuryFee: 500,
+          },
         ]
-      }
+      },
     })
 
     pool = deployed.pool
@@ -45,7 +47,7 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
     voting = deployed.voting.address
 
     await depositSecurityModule.setMaxDeposits(10, { from: appManager })
-    assertBn(await depositSecurityModule.getMaxDeposits(), 10, 'invariant failed: max deposits')
+    assert.equals(await depositSecurityModule.getMaxDeposits(), 10, 'invariant failed: max deposits')
   })
 
   it('voting adds a node operator with 26 signing keys', async () => {
@@ -56,16 +58,16 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
 
     // Some Truffle versions fail to decode logs here, so we're decoding them explicitly using a helper
     const nodeOperatorId = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', {
-      decodeForAbi: NodeOperatorsRegistry._json.abi
+      decodeForAbi: NodeOperatorsRegistry._json.abi,
     })
 
-    assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), 1, 'total node operators')
+    assert.equals(await nodeOperatorsRegistry.getNodeOperatorsCount(), 1, 'total node operators')
 
     const data = Array.from({ length: numKeys }, (_, i) => {
       const n = 1 + 10 * i
       return {
         key: pad(`0x${n.toString(16)}`, 48),
-        sig: pad(`0x${n.toString(16)}`, 96)
+        sig: pad(`0x${n.toString(16)}`, 96),
       }
     })
 
@@ -77,20 +79,20 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
     await nodeOperatorsRegistry.setNodeOperatorStakingLimit(0, validatorsLimit, { from: voting })
 
     const totalKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperatorId, { from: nobody })
-    assertBn(totalKeys, numKeys, 'total signing keys')
+    assert.equals(totalKeys, numKeys, 'total signing keys')
   })
 
   it('a user submits 25 * 32 ETH', async () => {
     const depositAmount = 25 * 32
     const referral = ZERO_ADDRESS
     await pool.submit(referral, { from: user1, value: ETH(depositAmount - 1) })
-    assertBn(await pool.getTotalPooledEther(), ETH(depositAmount), 'total controlled ether')
+    assert.equals(await pool.getTotalPooledEther(), ETH(depositAmount), 'total controlled ether')
 
     // at this point, no deposit assignments were made and all ether is buffered
-    assertBn(await pool.getBufferedEther(), ETH(depositAmount), 'buffered ether')
+    assert.equals(await pool.getBufferedEther(), ETH(depositAmount), 'buffered ether')
 
     const ether2Stat = await pool.getBeaconStat()
-    assertBn(ether2Stat.depositedValidators, 0, 'deposited validators')
+    assert.equals(ether2Stat.depositedValidators, 0, 'deposited validators')
   })
 
   it('guardians can assign the buffered ether to validators by calling depositBufferedEther()', async () => {
@@ -109,7 +111,7 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
     )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
-      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]]),
     ]
     await depositSecurityModule.depositBufferedEther(
       block.number,
@@ -122,13 +124,13 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
     )
 
     // no more than depositIterationLimit validators are assigned in a single transaction
-    assertBn(await depositContractMock.totalCalls(), 10, 'total validators assigned')
+    assert.equals(await depositContractMock.totalCalls(), 10, 'total validators assigned')
 
     const ether2Stat = await pool.getBeaconStat()
-    assertBn(ether2Stat.depositedValidators, 10, 'deposited validators')
+    assert.equals(ether2Stat.depositedValidators, 10, 'deposited validators')
 
     // the rest of the received Ether is still buffered in the pool
-    assertBn(await pool.getBufferedEther(), ETH(15 * 32), 'buffered ether')
+    assert.equals(await pool.getBufferedEther(), ETH(15 * 32), 'buffered ether')
   })
 
   it('guardians can advance the deposit loop further by calling depositBufferedEther() once again', async () => {
@@ -147,7 +149,7 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
     )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
-      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]]),
     ]
     await depositSecurityModule.depositBufferedEther(
       block.number,
@@ -159,11 +161,11 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
       signatures
     )
 
-    assertBn(await depositContractMock.totalCalls(), 20, 'total validators assigned')
+    assert.equals(await depositContractMock.totalCalls(), 20, 'total validators assigned')
 
     const ether2Stat = await pool.getBeaconStat()
-    assertBn(ether2Stat.depositedValidators, 20, 'deposited validators')
-    assertBn(await pool.getBufferedEther(), ETH(5 * 32), 'buffered ether')
+    assert.equals(ether2Stat.depositedValidators, 20, 'deposited validators')
+    assert.equals(await pool.getBufferedEther(), ETH(5 * 32), 'buffered ether')
   })
 
   it('the number of assigned validators is limited by the remaining ether', async () => {
@@ -182,7 +184,7 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
     )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
-      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]]),
     ]
     await depositSecurityModule.depositBufferedEther(
       block.number,
@@ -194,21 +196,21 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
       signatures
     )
 
-    assertBn(await depositContractMock.totalCalls(), 25)
+    assert.equals(await depositContractMock.totalCalls(), 25)
 
     const ether2Stat = await pool.getBeaconStat()
-    assertBn(ether2Stat.depositedValidators, 25, 'deposited validators')
+    assert.equals(ether2Stat.depositedValidators, 25, 'deposited validators')
 
     // the is no ether left buffered in the pool
-    assertBn(await pool.getBufferedEther(), ETH(0), 'buffered ether')
+    assert.equals(await pool.getBufferedEther(), ETH(0), 'buffered ether')
   })
 
   it('a user submits 2 * 32 ETH', async () => {
     const referral = ZERO_ADDRESS
     await pool.submit(referral, { from: user1, value: ETH(2 * 32) })
 
-    assertBn(await pool.getTotalPooledEther(), ETH(27 * 32), 'total controlled ether')
-    assertBn(await pool.getBufferedEther(), ETH(2 * 32), 'buffered ether')
+    assert.equals(await pool.getTotalPooledEther(), ETH(27 * 32), 'total controlled ether')
+    assert.equals(await pool.getBufferedEther(), ETH(2 * 32), 'buffered ether')
   })
 
   it('the number of assigned validators is still limited by the number of available validator keys', async () => {
@@ -227,7 +229,7 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
     )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
-      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]]),
     ]
     await depositSecurityModule.depositBufferedEther(
       block.number,
@@ -239,13 +241,13 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
       signatures
     )
 
-    assertBn(await depositContractMock.totalCalls(), 26)
+    assert.equals(await depositContractMock.totalCalls(), 26)
 
     const ether2Stat = await pool.getBeaconStat()
-    assertBn(ether2Stat.depositedValidators, 26, 'deposited validators')
+    assert.equals(ether2Stat.depositedValidators, 26, 'deposited validators')
 
     // the rest of the received Ether is still buffered in the pool
-    assertBn(await pool.getBufferedEther(), ETH(1 * 32), 'buffered ether')
+    assert.equals(await pool.getBufferedEther(), ETH(1 * 32), 'buffered ether')
   })
 
   it('depositBufferedEther is a nop if there are no signing keys available', async () => {
@@ -264,7 +266,7 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
     )
     const signatures = [
       validAttestMessage.sign(guardians.privateKeys[guardians.addresses[0]]),
-      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]])
+      validAttestMessage.sign(guardians.privateKeys[guardians.addresses[1]]),
     ]
     await depositSecurityModule.depositBufferedEther(
       block.number,
@@ -276,9 +278,9 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
       signatures
     )
 
-    assertBn(await depositContractMock.totalCalls(), 26, 'total validators assigned')
+    assert.equals(await depositContractMock.totalCalls(), 26, 'total validators assigned')
 
     // the rest of the received Ether is still buffered in the pool
-    assertBn(await pool.getBufferedEther(), ETH(1 * 32), 'buffered ether')
+    assert.equals(await pool.getBufferedEther(), ETH(1 * 32), 'buffered ether')
   })
 })

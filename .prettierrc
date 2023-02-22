@@ -1,20 +1,9 @@
 {
   "singleQuote": true,
   "semi": false,
-  "trailingComma": "none",
   "bracketSpacing": true,
   "jsxBracketSameLine": false,
-  "printWidth": 120,
-  "overrides": [
-    {
-      "files": "*.sol",
-      "options": {
-        "printWidth": 120,
-        "tabWidth": 4,
-        "useTabs": false,
-        "singleQuote": false,
-        "bracketSpacing": false
-      }
-    }
-  ]
+  "options": {
+    "editorconfig": true
+  }
 }

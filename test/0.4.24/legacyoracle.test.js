@@ -1,12 +1,5 @@
-const { assert } = require('chai')
-const { newDao, newApp } = require('./helpers/dao')
-const { assertBn, assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
-const { assertRevert } = require('../helpers/assertThrow')
+const { contract } = require('hardhat')
 
-const { toBN } = require('../helpers/utils')
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
-
-
-contract('LegacyOracle', ([admin, stranger]) => {
+contract('LegacyOracle', () => {
   it.skip('TODO: legacy compat tests', async () => {})
 })

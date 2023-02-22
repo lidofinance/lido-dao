@@ -1,4 +1,5 @@
 const chai = require('chai')
+const { web3 } = require('hardhat')
 const { getEvents, isBn } = require('@aragon/contract-helpers-test')
 const { assertRevert } = require('./assertThrow')
 const { toChecksumAddress } = require('ethereumjs-util')
@@ -10,33 +11,42 @@ chai.util.addMethod(chai.assert, 'emits', function (receipt, eventName, args = {
   this.isTrue(event !== undefined, `Event ${eventName} with args ${JSON.stringify(args)} wasn't found`)
 })
 
-chai.util.addMethod(
-  chai.assert, 'emitsNumberOfEvents', function (receipt, eventName, numberOfEvents = {}, options = {}
-) {
-  const events = getEvents(receipt, eventName, options.abi)
-  this.equal(
-    events.length,
-    numberOfEvents,
-    `${eventName}: ${numberOfEvents} events expected, but found ${events.length}`
-  )
+chai.util.addMethod(chai.assert, 'emitsAt', function (receipt, eventName, index, args = {}, options = {}) {
+  const event = getEventAt(receipt, eventName, index, args, options.abi)
+  this.isTrue(event !== undefined, `Event ${eventName} at ${index} with args ${JSON.stringify(args)}  wasn't found`)
 })
 
 chai.util.addMethod(
-  chai.assert, 'revertsOZAccessControl', async function (receipt, address, role) {
-    try {
-      await receipt
-    } catch (error) {
-      const msg = error.message.toUpperCase()
-      const reason = `AccessControl: account ${web3.utils.toChecksumAddress(address)} is missing role ${web3.utils.keccak256(role)}`
-
-      chai.expect(msg).to.equal(`VM Exception while processing transaction: reverted with reason string '${reason}'`.toUpperCase())
-      return
-    }
-    throw new Error(
-      `Transaction has been executed without revert. Expected access control error for ${address} without role: ${role}`
+  chai.assert,
+  'emitsNumberOfEvents',
+  function (receipt, eventName, numberOfEvents = {}, options = {}) {
+    const events = getEvents(receipt, eventName, options.abi)
+    this.equal(
+      events.length,
+      numberOfEvents,
+      `${eventName}: ${numberOfEvents} events expected, but found ${events.length}`
     )
   }
 )
+
+chai.util.addMethod(chai.assert, 'revertsOZAccessControl', async function (receipt, address, role) {
+  try {
+    await receipt
+  } catch (error) {
+    const msg = error.message.toUpperCase()
+    const reason = `AccessControl: account ${web3.utils.toChecksumAddress(
+      address
+    )} is missing role ${web3.utils.keccak256(role)}`
+
+    chai
+      .expect(msg)
+      .to.equal(`VM Exception while processing transaction: reverted with reason string '${reason}'`.toUpperCase())
+    return
+  }
+  throw new Error(
+    `Transaction has been executed without revert. Expected access control error for ${address} without role: ${role}`
+  )
+})
 
 chai.util.addMethod(chai.assert, 'notEmits', function (receipt, eventName, args = {}, options = {}) {
   const { abi } = options
@@ -56,24 +66,36 @@ chai.util.addMethod(chai.assert, 'equalsDelta', function (actual, expected, delt
   const diff = toBN(actual).sub(toBN(expected)).abs()
   chai.assert(
     diff.lte(toBN(delta)),
-    () => `${errorMsg ? `${errorMsg}: ` : ''}Expected ${actual} to be close to ${expected} with max diff ${delta}, actual diff ${diff}`,
-    () => `${errorMsg ? `${errorMsg}: ` : ''}Expected ${actual} not to be close to ${expected} with min diff ${delta}, actual diff ${diff}`,
+    () =>
+      `${
+        errorMsg ? `${errorMsg}: ` : ''
+      }Expected ${actual} to be close to ${expected} with max diff ${delta}, actual diff ${diff}`,
+    () =>
+      `${
+        errorMsg ? `${errorMsg}: ` : ''
+      }Expected ${actual} not to be close to ${expected} with min diff ${delta}, actual diff ${diff}`
   )
 })
 
 chai.util.addMethod(chai.assert, 'notEquals', function (actual, expected, errorMsg) {
-  this.notEqual(actual.toString(), expected.toString(), `${errorMsg || ""} expected ${expected.toString()} to not equal ${actual.toString()}`)
+  this.notEqual(
+    actual.toString(),
+    expected.toString(),
+    `${errorMsg || ''} expected ${expected.toString()} to not equal ${actual.toString()}`
+  )
 })
 
 chai.util.addMethod(chai.assert, 'addressEqual', function (actual, expected, errorMsg) {
-  assert.equal(toChecksumAddress(actual), toChecksumAddress(expected), errorMsg)
+  chai.assert.equal(toChecksumAddress(actual), toChecksumAddress(expected), errorMsg)
 })
 
 chai.util.addMethod(chai.assert, 'revertsWithCustomError', async function (receipt, reason) {
   try {
     await receipt
   } catch (error) {
-    chai.expect(error.message).to.equal(`VM Exception while processing transaction: reverted with custom error '${reason}'`)
+    chai
+      .expect(error.message)
+      .to.equal(`VM Exception while processing transaction: reverted with custom error '${reason}'`)
     return
   }
   throw new Error(`Transaction has been executed without revert. Expected revert reason ${reason}`)
@@ -95,6 +117,18 @@ chai.util.addMethod(chai.assert, 'almostEqual', function (actual, expected, epsi
     )
   }
 })
+
+function getEventAt(receipt, eventName, index, args, abi) {
+  const e = getEvents(receipt, eventName, { decodeForAbi: abi })[index]
+
+  if (
+    Object.entries(args).every(
+      ([argName, argValue]) => e.args[argName] !== undefined && normalizeArg(e.args[argName]) === normalizeArg(argValue)
+    )
+  )
+    return e
+  else return undefined
+}
 
 function getEvent(receipt, eventName, args, abi) {
   return getEvents(receipt, eventName, { decodeForAbi: abi }).find((e) =>

@@ -1,10 +1,10 @@
-const hre = require('hardhat')
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { ethers, artifacts, contract } = require('hardhat')
+const { ZERO_ADDRESS } = require('../helpers/constants')
 
 const { assert } = require('../helpers/assert')
 const { EvmSnapshot } = require('../helpers/blockchain')
 
-const OracleDaemonConfig = hre.artifacts.require('OracleDaemonConfig.sol')
+const OracleDaemonConfig = artifacts.require('OracleDaemonConfig.sol')
 
 contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
   let config, snapshot
@@ -14,7 +14,7 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
 
   before(async () => {
     config = await OracleDaemonConfig.new(deployer, [manager], { from: deployer })
-    snapshot = new EvmSnapshot(hre.ethers.provider)
+    snapshot = new EvmSnapshot(ethers.provider)
 
     await snapshot.make()
   })
@@ -47,10 +47,7 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
       const values = await config.getList([defaultKey])
 
       assert.equal(values.length, 1)
-      assert.deepEqual(
-        values,
-        [updatedDefaultValue]
-      )
+      assert.deepEqual(values, [updatedDefaultValue])
     })
 
     it('removes a value', async () => {
@@ -99,7 +96,10 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
     })
 
     it('reverts when one of managers is zero address', async () => {
-      await assert.revertsWithCustomError(OracleDaemonConfig.new(deployer, [manager, ZERO_ADDRESS], { from: deployer }), 'ZeroAddress()')
+      await assert.revertsWithCustomError(
+        OracleDaemonConfig.new(deployer, [manager, ZERO_ADDRESS], { from: deployer }),
+        'ZeroAddress()'
+      )
     })
 
     it('revers when empty value passed to set', async () => {
@@ -159,20 +159,12 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
 
     it('deployer cannot unset a defaultValue', async () => {
       await config.set(defaultKey, defaultValue, { from: manager })
-      await assert.revertsOZAccessControl(
-        config.unset(defaultKey, { from: deployer }),
-        deployer,
-        `CONFIG_MANAGER_ROLE`
-      )
+      await assert.revertsOZAccessControl(config.unset(defaultKey, { from: deployer }), deployer, `CONFIG_MANAGER_ROLE`)
     })
 
     it('deployer cannot unset a defaultValue', async () => {
       await config.set(defaultKey, defaultValue, { from: manager })
-      await assert.revertsOZAccessControl(
-        config.unset(defaultKey, { from: deployer }),
-        deployer,
-        `CONFIG_MANAGER_ROLE`
-      )
+      await assert.revertsOZAccessControl(config.unset(defaultKey, { from: deployer }), deployer, `CONFIG_MANAGER_ROLE`)
     })
   })
 })

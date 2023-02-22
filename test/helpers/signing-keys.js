@@ -75,5 +75,5 @@ module.exports = {
   EMPTY_SIGNATURE,
   FakeValidatorKeys,
   splitPublicKeysBatch,
-  splitSignaturesBatch
+  splitSignaturesBatch,
 }
