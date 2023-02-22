@@ -18,7 +18,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
   before('Deploy', async () => {
     const deployed = await deployWithdrawalQueue({
       stethOwner: owner,
-      queueOwner: daoAgent,
+      queueAdmin: daoAgent,
       queuePauser: daoAgent,
       queueResumer: daoAgent
     })
