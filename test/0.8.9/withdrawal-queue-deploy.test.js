@@ -66,6 +66,21 @@ contract(
         assert.equals(await withdrawalQueue.isPaused(), true)
       })
 
+      it('bunker mode is disabled by default', async () => {
+        const { withdrawalQueue } = await deployWithdrawalQueue({
+          stethOwner,
+          queueAdmin,
+          queuePauser,
+          queueResumer
+        })
+        const BUNKER_MODE_DISABLED_TIMESTAMP = await withdrawalQueue.BUNKER_MODE_DISABLED_TIMESTAMP()
+        const isBunkerModeActive = await withdrawalQueue.isBunkerModeActive()
+        const bunkerModeSinceTimestamp = await withdrawalQueue.bunkerModeSinceTimestamp()
+
+        assert.equals(isBunkerModeActive, false)
+        assert.equals(+bunkerModeSinceTimestamp, +BUNKER_MODE_DISABLED_TIMESTAMP)
+      })
+
       it('emits InitializedV1', async () => {
         const { initTx } = await deployWithdrawalQueue({
           stethOwner,
