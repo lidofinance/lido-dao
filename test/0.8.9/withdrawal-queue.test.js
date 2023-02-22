@@ -395,10 +395,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     })
 
     it('batch reverts if share rate is zero', async () => {
-      await assert.reverts(
-        withdrawalQueue.finalizationBatch(1, shareRate(0)),
-        'ZeroShareRate()'
-      )
+      await assert.reverts(withdrawalQueue.finalizationBatch(1, shareRate(0)), 'ZeroShareRate()')
     })
 
     it('reverts if request with given id did not even created', async () => {
@@ -409,10 +406,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         `InvalidRequestId(${idAhead})`
       )
 
-      await assert.reverts(
-        withdrawalQueue.finalizationBatch(idAhead, shareRate(300)),
-        `InvalidRequestId(${idAhead})`
-      )
+      await assert.reverts(withdrawalQueue.finalizationBatch(idAhead, shareRate(300)), `InvalidRequestId(${idAhead})`)
     })
 
     it('reverts if request with given id was finalized already', async () => {
@@ -424,10 +418,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         `InvalidRequestId(${id})`
       )
 
-      await assert.reverts(
-        withdrawalQueue.finalizationBatch(id, shareRate(300)),
-        `InvalidRequestId(${id})`
-      )
+      await assert.reverts(withdrawalQueue.finalizationBatch(id, shareRate(300)), `InvalidRequestId(${id})`)
     })
 
     it('reverts if given amount to finalize exceeds requested', async () => {
