@@ -1,16 +1,14 @@
 {
   "env": {
     "node": true,
-    "es2020": true
+    "es2022": true
   },
   "extends": ["standard", "plugin:prettier/recommended"],
-  "parser": "@babel/eslint-parser",
   "parserOptions": {
-    "ecmaVersion": 8,
+    "ecmaVersion": 2022,
     "sourceType": "module",
     "ecmaFeatures": {
-      "jsx": true,
-      "modules": true
+      "jsx": true
     }
   },
   "plugins": ["node", "prettier", "standard"],
