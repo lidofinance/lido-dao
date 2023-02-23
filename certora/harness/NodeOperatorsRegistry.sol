@@ -10,6 +10,20 @@ import {Packed64x4} from "../../contracts/0.4.24/lib/Packed64x4.sol";
 contract NodeOperatorsRegistryHarness is NodeOperatorsRegistry {
     using Packed64x4 for Packed64x4.Packed;
 
+    //uint256[] public rewardDistributionShares;
+
+    /// @dev DEPRECATED use addSigningKeys instead
+    function addSigningKeysOperatorBH(uint256, uint256, bytes, bytes) external {}
+
+    /// @dev DEPRECATED use removeSigningKeys instead
+    function removeSigningKey(uint256, uint256) external {}
+
+    /// @dev DEPRECATED use removeSigningKeys instead
+    function removeSigningKeyOperatorBH(uint256, uint256) external {}
+
+    /// @dev DEPRECATED use removeSigningKeys instead
+    function removeSigningKeysOperatorBH(uint256 _nodeOperatorId, uint256 _fromIndex, uint256 _keysCount) external {}
+    
     function _auth(bytes32 _role) internal view {
         _requireAuth(_canPerformNoParams(msg.sender, _role));
     }
@@ -20,6 +34,16 @@ contract NodeOperatorsRegistryHarness is NodeOperatorsRegistry {
 
     function _canPerformNoParams(address, bytes32 ) private view returns (bool) {
         return true;
+    }
+
+    function getRewardsDistributionShare(uint256 _totalRewardShares, uint256 _nodeOperatorId) 
+    public view returns (uint256 sumOfShares, uint256 shareOfId) {
+        (, uint256[] memory shares, ) = getRewardsDistribution(_totalRewardShares);
+
+        for (uint256 idx; idx < shares.length; ++idx) {
+            sumOfShares += shares[idx];
+        }
+        shareOfId = shares[_nodeOperatorId];
     }
 
     function getSummaryTotalExitedValidators() public view returns (uint256) {

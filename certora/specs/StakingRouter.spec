@@ -319,11 +319,12 @@ rule canAlwaysAddAnotherStakingModule() {
 }
  
 rule cannotInitializeTwice() {
-    env e;
+    env e1;
+    env e2;
     calldataarg args1;
     calldataarg args2;
-    initialize(e, args1);
-    initialize@withrevert(e, args2);
+    initialize(e1, args1);
+    initialize@withrevert(e2, args2);
     assert lastReverted;
 }
 

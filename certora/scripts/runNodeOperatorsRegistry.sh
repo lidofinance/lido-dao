@@ -12,5 +12,5 @@ certoraRun \
 --optimistic_loop \
 --send_only \
 --rule_sanity \
---settings -t=600,-mediumTimeout=50,-copyLoopUnroll=5,-optimisticUnboundedHashing=true \
+--settings -t=300,-mediumTimeout=30,-copyLoopUnroll=5,-optimisticUnboundedHashing=true \
 --msg "NodeOperatorsRegistry"
