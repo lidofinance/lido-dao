@@ -1,4 +1,4 @@
-const { artifacts, contract, ethers, web3 } = require('hardhat')
+const { contract, ethers, web3 } = require('hardhat')
 const { bn, getEventArgument, ZERO_ADDRESS, ZERO_BYTES32 } = require('@aragon/contract-helpers-test')
 
 const { ETH, StETH, shareRate, shares } = require('../helpers/utils')
@@ -572,6 +572,57 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     })
   })
 
+  context('claim scenarios', async () => {
+    const requestCount = 5
+    const requestsAmounts = Array(requestCount).fill(StETH(1))
+    const total = StETH(requestCount)
+    let requestIds
+
+    beforeEach(async () => {
+      await withdrawalQueue.requestWithdrawals(requestsAmounts, user, { from: user })
+      requestIds = await withdrawalQueue.getWithdrawalRequests(user, { from: user })
+    })
+
+    it('direct', async () => {
+      const balanceBefore = bn(await ethers.provider.getBalance(user))
+      const id = await withdrawalQueue.getLastRequestId()
+      withdrawalQueue.finalize(id, { from: steth.address, value: total })
+      for (let index = 0; index < requestIds.length; index++) {
+        const requestId = requestIds[index]
+        await withdrawalQueue.claimWithdrawal(requestId, { from: user })
+      }
+      const balanceAfter = bn(await ethers.provider.getBalance(user))
+      assert.equals(balanceBefore.add(bn(total)), balanceAfter)
+    })
+
+    it('reverse', async () => {
+      const balanceBefore = bn(await ethers.provider.getBalance(user))
+      const id = await withdrawalQueue.getLastRequestId()
+      withdrawalQueue.finalize(id, { from: steth.address, value: total })
+
+      for (let index = requestIds.length - 1; index >= 0; index--) {
+        const requestId = requestIds[index]
+        await withdrawalQueue.claimWithdrawal(requestId, { from: user })
+      }
+      const balanceAfter = bn(await ethers.provider.getBalance(user))
+      assert.equals(balanceBefore.add(bn(total)), balanceAfter)
+    })
+
+    it('random', async () => {
+      const randomIds = [...requestIds].sort(() => 0.5 - Math.random())
+      const balanceBefore = bn(await ethers.provider.getBalance(user))
+      const id = await withdrawalQueue.getLastRequestId()
+      withdrawalQueue.finalize(id, { from: steth.address, value: total })
+
+      for (let index = 0; index < randomIds.length; index++) {
+        const requestId = randomIds[index]
+        await withdrawalQueue.claimWithdrawal(requestId, { from: user })
+      }
+      const balanceAfter = bn(await ethers.provider.getBalance(user))
+      assert.equals(balanceBefore.add(bn(total)), balanceAfter)
+    })
+  })
+
   context('findLastFinalizableRequestIdByTimestamp()', async () => {
     const numOfRequests = 10
 
@@ -1039,7 +1090,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
 
       const amount = bn(ETH(10)).mul(bn(withdrawalRequestsCount))
       const deadline = MAX_UINT256
-      await impersonate(hre.ethers.provider, alice.address)
+      await impersonate(ethers.provider, alice.address)
       const domainSeparator = await steth.DOMAIN_SEPARATOR()
       const { v, r, s } = signPermit(
         alice.address,
