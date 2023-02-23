@@ -492,11 +492,25 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       assert.equals(await ethers.provider.getBalance(user), balanceBefore.add(bn(amount)))
     })
 
-    it('claimWithdrawalsTo reverts for zero recipient', async () => {
-      await assert.reverts(
-        withdrawalQueue.claimWithdrawalsTo([1], [1], ZERO_ADDRESS, { from: owner }),
-        'ZeroRecipient()'
-      )
+    context('claimWithdrawalsTo', () => {
+      it('reverts for zero recipient', async () => {
+        await assert.reverts(
+          withdrawalQueue.claimWithdrawalsTo([1], [1], ZERO_ADDRESS, { from: owner }),
+          'ZeroRecipient()'
+        )
+      })
+
+      it('reverts with zero _requestId', async () => {
+        await assert.reverts(withdrawalQueue.claimWithdrawalsTo([0], [1], user, { from: owner }), 'InvalidRequestId(0)')
+      })
+
+      it('reverts if sender is not owner', async () => {
+        await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
+        await assert.reverts(
+          withdrawalQueue.claimWithdrawalsTo([1], [1], owner, { from: stranger }),
+          `NotOwner("${stranger}", "${owner}")`
+        )
+      })
     })
 
     it('Owner can claim a finalized request without hint', async () => {
