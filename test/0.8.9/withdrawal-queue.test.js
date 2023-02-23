@@ -621,6 +621,24 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       const balanceAfter = bn(await ethers.provider.getBalance(user))
       assert.equals(balanceBefore.add(bn(total)), balanceAfter)
     })
+
+    it('different rates', async () => {
+      const balanceBefore = bn(await ethers.provider.getBalance(user))
+      const totalDistributedEth = bn(0)
+      for (let index = 0; index < requestIds.length; index++) {
+        const requestId = requestIds[index]
+        await withdrawalQueue.finalize(requestId, { from: steth.address, value: ETH(1 / (index + 1)) })
+        totalDistributedEth.iadd(bn(ETH(1 / (index + 1))))
+      }
+      const id = await withdrawalQueue.getLastRequestId()
+      withdrawalQueue.finalize(id, { from: steth.address, value: total })
+      for (let index = 0; index < requestIds.length; index++) {
+        const requestId = requestIds[index]
+        await withdrawalQueue.claimWithdrawal(requestId, { from: user })
+      }
+      const balanceAfter = bn(await ethers.provider.getBalance(user))
+      assert.equals(balanceBefore.add(totalDistributedEth), balanceAfter)
+    })
   })
 
   context('findLastFinalizableRequestIdByTimestamp()', async () => {
