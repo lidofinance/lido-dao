@@ -901,6 +901,27 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       requestId = await withdrawalQueue.getLastRequestId()
     })
 
+    it('reverts if requestId is zero', async () => {
+      const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
+      await assert.reverts(withdrawalQueue.findCheckpointHints([0], 1, lastCheckpointIndex), 'InvalidRequestId(0)')
+    })
+
+    it('reverts if first index is zero', async () => {
+      const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
+      await assert.reverts(
+        withdrawalQueue.findCheckpointHints([1], 0, lastCheckpointIndex),
+        `InvalidRequestIdRange(0, ${+lastCheckpointIndex})`
+      )
+    })
+
+    it('reverts if last index is larger than in store', async () => {
+      const lastCheckpointWrong = (await withdrawalQueue.getLastCheckpointIndex()) + 1
+      await assert.reverts(
+        withdrawalQueue.findCheckpointHints([1], 1, lastCheckpointWrong),
+        `InvalidRequestIdRange(0, ${+lastCheckpointWrong})`
+      )
+    })
+
     it('returns empty list when passed empty request ids list', async () => {
       const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
       const hints = await withdrawalQueue.findCheckpointHints([], 1, lastCheckpointIndex)
