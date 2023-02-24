@@ -57,6 +57,7 @@ contract Burner is IBurner, AccessControlEnumerable {
     error ZeroRecoveryAmount();
     error StETHRecoveryWrongFunc();
     error ZeroBurnAmount();
+    error BurnAmountExceedsActual(uint256 requestedAmount, uint256 actualAmount);
     error ZeroAddress(string field);
 
     bytes32 public constant REQUEST_BURN_MY_STETH_ROLE = keccak256("REQUEST_BURN_MY_STETH_ROLE");
@@ -278,19 +279,16 @@ contract Burner is IBurner, AccessControlEnumerable {
      * NB: The real burn enactment to be invoked after the call (via internal Lido._burnShares())
      *
      * Increments `totalCoverSharesBurnt` and `totalNonCoverSharesBurnt` counters.
-     * Resets `coverSharesBurnRequested` and `nonCoverSharesBurnRequested` counters to zero.
-     * Does nothing if there are no pending burning requests.
+     * Decrements `coverSharesBurnRequested` and `nonCoverSharesBurnRequested` counters.
+     * Does nothing if zero amount passed.
      *
-     * @param _sharesToBurnLimit limit of the shares to be burnt
-     * @return sharesToBurnNow the actual value that can be burnt
+     * @param _sharesToBurn amount of shares to be burnt
      */
-    function commitSharesToBurn(
-        uint256 _sharesToBurnLimit
-    ) external virtual override returns (uint256 sharesToBurnNow) {
+    function commitSharesToBurn(uint256 _sharesToBurn) external virtual override {
         if (msg.sender != STETH) revert AppAuthLidoFailed();
 
-        if (_sharesToBurnLimit == 0) {
-            return 0;
+        if (_sharesToBurn == 0) {
+            return;
         }
 
         uint256 memCoverSharesBurnRequested = coverSharesBurnRequested;
@@ -298,12 +296,13 @@ contract Burner is IBurner, AccessControlEnumerable {
 
         uint256 burnAmount = memCoverSharesBurnRequested + memNonCoverSharesBurnRequested;
 
-        if (burnAmount == 0) {
-            return 0;
+        if (_sharesToBurn > burnAmount) {
+            revert BurnAmountExceedsActual(_sharesToBurn, burnAmount);
         }
 
+        uint256 sharesToBurnNow;
         if (memCoverSharesBurnRequested > 0) {
-            uint256 sharesToBurnNowForCover = Math.min(_sharesToBurnLimit, memCoverSharesBurnRequested);
+            uint256 sharesToBurnNowForCover = Math.min(_sharesToBurn, memCoverSharesBurnRequested);
 
             totalCoverSharesBurnt += sharesToBurnNowForCover;
             uint256 stETHToBurnNowForCover = IStETH(STETH).getPooledEthByShares(sharesToBurnNowForCover);
@@ -312,9 +311,9 @@ contract Burner is IBurner, AccessControlEnumerable {
             coverSharesBurnRequested -= sharesToBurnNowForCover;
             sharesToBurnNow += sharesToBurnNowForCover;
         }
-        if ((memNonCoverSharesBurnRequested > 0) && (sharesToBurnNow < _sharesToBurnLimit)) {
+        if ((memNonCoverSharesBurnRequested > 0) && (sharesToBurnNow < _sharesToBurn)) {
             uint256 sharesToBurnNowForNonCover = Math.min(
-                _sharesToBurnLimit - sharesToBurnNow,
+                _sharesToBurn - sharesToBurnNow,
                 memNonCoverSharesBurnRequested
             );
 
@@ -325,6 +324,7 @@ contract Burner is IBurner, AccessControlEnumerable {
             nonCoverSharesBurnRequested -= sharesToBurnNowForNonCover;
             sharesToBurnNow += sharesToBurnNowForNonCover;
         }
+        assert(sharesToBurnNow == _sharesToBurn);
     }
 
     /**

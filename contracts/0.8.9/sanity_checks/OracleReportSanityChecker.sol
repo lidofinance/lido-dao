@@ -10,6 +10,7 @@ import {Math256} from "../../common/lib/Math256.sol";
 import {AccessControlEnumerable} from "../utils/access/AccessControlEnumerable.sol";
 import {PositiveTokenRebaseLimiter, TokenRebaseLimiterData} from "../lib/PositiveTokenRebaseLimiter.sol";
 import {ILidoLocator} from "../../common/interfaces/ILidoLocator.sol";
+import {IBurner} from "../../common/interfaces/IBurner.sol";
 
 interface IWithdrawalQueue {
     function getWithdrawalRequestStatus(uint256 _requestId)
@@ -327,12 +328,15 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     ///     current oracle report
     /// @param _postCLBalance sum of all Lido validators' balances on the Consensus Layer after the
     ///     current oracle report
-    /// @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
-    /// @param _elRewardsVaultBalance elRewards vault balance on Execution Layer for report block
+    /// @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for the report calculation moment
+    /// @param _elRewardsVaultBalance elRewards vault balance on Execution Layer for the report calculation moment
+    /// @param _sharesRequestedToBurn shares requested to burn through Burner for the report calculation moment
     /// @param _etherToLockForWithdrawals ether to lock on withdrawals queue contract
+    /// @param _newSharesToBurnForWithdrawals new shares to burn due to withdrawal request finalization
     /// @return withdrawals ETH amount allowed to be taken from the withdrawals vault
     /// @return elRewards ETH amount allowed to be taken from the EL rewards vault
-    /// @return sharesToBurnLimit amount allowed to be burnt as part of the current token rebase
+    /// @return simulatedSharesToBurn simulated amount to be burnt (if no ether locked on withdrawals)
+    /// @return sharesToBurn amount to be burnt (accounting for withdrawals finalization)
     function smoothenTokenRebase(
         uint256 _preTotalPooledEther,
         uint256 _preTotalShares,
@@ -340,8 +344,15 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _postCLBalance,
         uint256 _withdrawalVaultBalance,
         uint256 _elRewardsVaultBalance,
-        uint256 _etherToLockForWithdrawals
-    ) external view returns (uint256 withdrawals, uint256 elRewards, uint256 sharesToBurnLimit) {
+        uint256 _sharesRequestedToBurn,
+        uint256 _etherToLockForWithdrawals,
+        uint256 _newSharesToBurnForWithdrawals
+    ) external view returns (
+        uint256 withdrawals,
+        uint256 elRewards,
+        uint256 simulatedSharesToBurn,
+        uint256 sharesToBurn
+    ) {
         TokenRebaseLimiterData memory tokenRebaseLimiter = PositiveTokenRebaseLimiter.initLimiterState(
             getMaxPositiveTokenRebase(),
             _preTotalPooledEther,
@@ -356,9 +367,10 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
         withdrawals = tokenRebaseLimiter.consumeLimit(_withdrawalVaultBalance);
         elRewards = tokenRebaseLimiter.consumeLimit(_elRewardsVaultBalance);
-        tokenRebaseLimiter.raiseLimit(_etherToLockForWithdrawals);
 
-        sharesToBurnLimit = tokenRebaseLimiter.getSharesToBurnLimit();
+        simulatedSharesToBurn = Math256.min(tokenRebaseLimiter.getSharesToBurnLimit(), _sharesRequestedToBurn);
+        tokenRebaseLimiter.raiseLimit(_etherToLockForWithdrawals);
+        sharesToBurn = Math256.min(tokenRebaseLimiter.getSharesToBurnLimit(), _newSharesToBurnForWithdrawals + _sharesRequestedToBurn);
     }
 
     /// @notice Applies sanity checks to the accounting params of Lido's oracle report
@@ -367,8 +379,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     ///     current oracle report (NB: also include the initial balance of newly appeared validators)
     /// @param _postCLBalance sum of all Lido validators' balances on the Consensus Layer after the
     ///     current oracle report
-    /// @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
-    /// @param _elRewardsVaultBalance el rewards vault balance on Execution Layer for report block
+    /// @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for the report reference slot
+    /// @param _elRewardsVaultBalance el rewards vault balance on Execution Layer for the report reference slot
+    /// @param _sharesRequestedToBurn shares requested to burn for the report reference slot
     /// @param _preCLValidators Lido-participating validators on the CL side before the current oracle report
     /// @param _postCLValidators Lido-participating validators on the CL side after the current oracle report
     function checkAccountingOracleReport(
@@ -377,6 +390,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _postCLBalance,
         uint256 _withdrawalVaultBalance,
         uint256 _elRewardsVaultBalance,
+        uint256 _sharesRequestedToBurn,
         uint256 _preCLValidators,
         uint256 _postCLValidators
     ) external view {
@@ -390,13 +404,16 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         // 2. EL rewards vault reported balance
         _checkELRewardsVaultBalance(elRewardsVault.balance, _elRewardsVaultBalance);
 
-        // 3. Consensus Layer one-off balance decrease
+        // 3. Burn requests
+        _checkSharesRequestedToBurn(_sharesRequestedToBurn);
+
+        // 4. Consensus Layer one-off balance decrease
         _checkOneOffCLBalanceDecrease(limitsList, _preCLBalance, _postCLBalance + _withdrawalVaultBalance);
 
-        // 4. Consensus Layer annual balances increase
+        // 5. Consensus Layer annual balances increase
         _checkAnnualBalancesIncrease(limitsList, _preCLBalance, _postCLBalance, _timeElapsed);
 
-        // 5. Appeared validators increase
+        // 6. Appeared validators increase
         if (_postCLValidators > _preCLValidators) {
             _checkValidatorsChurnLimit(limitsList, (_postCLValidators - _preCLValidators), _timeElapsed);
         }
@@ -473,13 +490,13 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     /// @param _postTotalPooledEther total pooled ether after report applied
     /// @param _postTotalShares total shares after report applied
     /// @param _etherLockedOnWithdrawalQueue ether locked on withdrawal queue for the current oracle report
-    /// @param _sharesBurntFromWithdrawalQueue shares burnt from withdrawal queue for the current oracle report
+    /// @param _sharesBurntDueToWithdrawals shares burnt due to withdrawals finalization
     /// @param _simulatedShareRate share rate provided with the oracle report (simulated via off-chain "eth_call")
     function checkSimulatedShareRate(
         uint256 _postTotalPooledEther,
         uint256 _postTotalShares,
         uint256 _etherLockedOnWithdrawalQueue,
-        uint256 _sharesBurntFromWithdrawalQueue,
+        uint256 _sharesBurntDueToWithdrawals,
         uint256 _simulatedShareRate
     ) external view {
         LimitsList memory limitsList = _limits.unpack();
@@ -490,7 +507,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _checkSimulatedShareRate(
             limitsList,
             _postTotalPooledEther + _etherLockedOnWithdrawalQueue,
-            _postTotalShares + _sharesBurntFromWithdrawalQueue,
+            _postTotalShares + _sharesBurntDueToWithdrawals,
             _simulatedShareRate
         );
     }
@@ -510,6 +527,14 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     ) internal pure {
         if (_reportedELRewardsVaultBalance > _actualELRewardsVaultBalance) {
             revert IncorrectELRewardsVaultBalance(_actualELRewardsVaultBalance);
+        }
+    }
+
+    function _checkSharesRequestedToBurn(uint256 _sharesRequestedToBurn) internal view {
+        (uint256 coverShares, uint256 nonCoverShares) = IBurner(LIDO_LOCATOR.burner()).getSharesRequestedToBurn();
+        uint256 actualBurnerRequests = coverShares + nonCoverShares;
+        if (_sharesRequestedToBurn > actualBurnerRequests) {
+            revert IncorrectBurnerRequests(actualBurnerRequests);
         }
     }
 
@@ -671,6 +696,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     error IncorrectLimitValue(uint256 value, uint256 maxAllowedValue);
     error IncorrectWithdrawalsVaultBalance(uint256 actualWithdrawalVaultBalance);
     error IncorrectELRewardsVaultBalance(uint256 actualELRewardsVaultBalance);
+    error IncorrectBurnerRequests(uint256 actualBurnerRequests);
     error IncorrectCLBalanceDecrease(uint256 oneOffCLBalanceDecreaseBP);
     error IncorrectCLBalanceIncrease(uint256 annualBalanceDiff);
     error IncorrectAppearedValidators(uint256 churnLimit);
