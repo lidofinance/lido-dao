@@ -918,7 +918,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       const lastCheckpointWrong = (await withdrawalQueue.getLastCheckpointIndex()) + 1
       await assert.reverts(
         withdrawalQueue.findCheckpointHints([1], 1, lastCheckpointWrong),
-        `InvalidRequestIdRange(0, ${+lastCheckpointWrong})`
+        `InvalidRequestIdRange(1, ${+lastCheckpointWrong})`
       )
     })
 
@@ -1260,6 +1260,17 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         .receipt.gasUsed
 
       assert.isTrue(firstGasUsed >= secondGasUsed)
+    })
+  })
+
+  context('getWithdrawalStatus', () => {
+    it('reverts if requestId is zero', async () => {
+      await assert.reverts(withdrawalQueue.getWithdrawalStatus([0]), `InvalidRequestId(0)`)
+    })
+
+    it('reverts if requestId is zero', async () => {
+      const idAhead = +(await withdrawalQueue.getLastRequestId()) + 1
+      await assert.reverts(withdrawalQueue.getWithdrawalStatus([idAhead]), `InvalidRequestId(${idAhead})`)
     })
   })
 })
