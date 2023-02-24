@@ -444,6 +444,15 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       assert.equals(await withdrawalQueue.getClaimableEther([1], [1]), ETH(1))
     })
 
+    it('reverts if last hint checkpoint is ahead of requestId', async () => {
+      await withdrawalQueue.finalize(1, { from: steth.address, value: ETH(0.5) })
+
+      await withdrawalQueue.requestWithdrawals([ETH(2)], owner, { from: user })
+      await withdrawalQueue.finalize(2, { from: steth.address, value: ETH(0.5) })
+
+      await assert.reverts(withdrawalQueue.getClaimableEther([1], [2]), 'InvalidHint(2)')
+    })
+
     it('return 0 for non-finalized request', async () => {
       assert.equals(await withdrawalQueue.getClaimableEther([1], [1]), ETH(0))
       assert.equals(await withdrawalQueue.getClaimableEther([1], [51]), ETH(0))
