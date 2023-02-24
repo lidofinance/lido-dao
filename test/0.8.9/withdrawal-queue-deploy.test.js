@@ -122,6 +122,25 @@ contract(
         assert.equals(+checkpointItem.discountFactor, 0)
       })
 
+      it('check if pauser is zero', async () => {
+        await assert.reverts(
+          deployWithdrawalQueue({
+            stethOwner,
+            queueAdmin,
+            queueName: '',
+          }),
+          'ZeroMetadata()'
+        )
+        await assert.reverts(
+          deployWithdrawalQueue({
+            stethOwner,
+            queueAdmin,
+            symbol: '',
+          }),
+          'ZeroMetadata()'
+        )
+      })
+
       context('no roles for zero addresses', () => {
         it('check if pauser is zero', async () => {
           const { withdrawalQueue } = await deployWithdrawalQueue({
