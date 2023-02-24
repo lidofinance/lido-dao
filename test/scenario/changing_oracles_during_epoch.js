@@ -35,6 +35,7 @@ contract('AccountingOracle', ([appManager, voting, malicious1, malicious2, membe
     numExitedValidatorsByStakingModule: [],
     withdrawalVaultBalance: 0,
     elRewardsVaultBalance: 0,
+    sharesRequestedToBurn: 0,
     lastWithdrawalRequestIdToFinalize: 0,
     finalizationShareRate: 0,
     isBunkerMode: false,

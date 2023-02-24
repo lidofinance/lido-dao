@@ -53,6 +53,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       numExitedValidatorsByStakingModule: [3],
       withdrawalVaultBalance: e18(1),
       elRewardsVaultBalance: e18(2),
+      sharesRequestedToBurn: e18(3),
       lastWithdrawalRequestIdToFinalize: 1,
       finalizationShareRate: e27(1),
       isBunkerMode: true,

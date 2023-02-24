@@ -56,6 +56,7 @@ function getReportDataItems(r) {
     r.numExitedValidatorsByStakingModule,
     r.withdrawalVaultBalance,
     r.elRewardsVaultBalance,
+    r.sharesRequestedToBurn,
     r.lastWithdrawalRequestIdToFinalize,
     r.finalizationShareRate,
     r.isBunkerMode,
@@ -68,7 +69,7 @@ function getReportDataItems(r) {
 function calcReportDataHash(reportItems) {
   const data = web3.eth.abi.encodeParameters(
     [
-      '(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256)'
+      '(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256)'
     ],
     [reportItems]
   )
