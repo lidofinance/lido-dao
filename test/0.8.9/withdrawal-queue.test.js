@@ -85,6 +85,10 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       )
       await assert.reverts(withdrawalQueue.finalize(1, { from: owner }), 'ResumedExpected()')
     })
+
+    it('cant resume if not paused', async () => {
+      await assert.reverts(withdrawalQueue.resume(), 'PausedExpected()')
+    })
   })
 
   context('BunkerMode', async () => {
@@ -519,6 +523,12 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
           withdrawalQueue.claimWithdrawalsTo([1], [1], owner, { from: stranger }),
           `NotOwner("${stranger}", "${owner}")`
         )
+      })
+
+      it('reverts if there is not enough balance', async () => {
+        await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
+        await setBalance(withdrawalQueue.address, ETH(200))
+        await assert.reverts(withdrawalQueue.claimWithdrawalsTo([1], [1], owner, { from: owner }), 'NotEnoughEther()')
       })
     })
 
@@ -1099,6 +1109,23 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       const wstETHBalanceAfter = await wsteth.balanceOf(user)
       assert.equals(wstETHBalanceAfter, wstETHBalanceBefore.sub(bn(requests[0])).sub(bn(requests[1])))
     })
+
+    it('uses sender address as owner if zero passed', async () => {
+      await wsteth.mint(user, ETH(1))
+      await steth.mintShares(wsteth.address, shares(1))
+      await steth.mintShares(user, shares(1))
+      await wsteth.approve(withdrawalQueue.address, ETH(1), { from: user })
+
+      const tx = await withdrawalQueue.requestWithdrawalsWstETH([ETH(1)], ZERO_ADDRESS, { from: user })
+
+      assert.emits(tx, 'WithdrawalRequested', {
+        requestId: 1,
+        requestor: user.toLowerCase(),
+        owner: user.toLowerCase(),
+        amountOfStETH: await steth.getPooledEthByShares(ETH(1)),
+        amountOfShares: shares(1),
+      })
+    })
   })
 
   context('requestWithdrawalsWstETHWithPermit()', () => {
@@ -1277,7 +1304,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       await assert.reverts(withdrawalQueue.getWithdrawalStatus([0]), `InvalidRequestId(0)`)
     })
 
-    it('reverts if requestId is zero', async () => {
+    it('reverts if requestId is ahead of currently stored', async () => {
       const idAhead = +(await withdrawalQueue.getLastRequestId()) + 1
       await assert.reverts(withdrawalQueue.getWithdrawalStatus([idAhead]), `InvalidRequestId(${idAhead})`)
     })
