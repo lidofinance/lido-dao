@@ -1,6 +1,6 @@
 const { contract, web3 } = require('hardhat')
 const { assert } = require('../../helpers/assert')
-const { e9, e18, e27 } = require('../../helpers/utils')
+const { e9, e18, e27, toNum } = require('../../helpers/utils')
 
 const AccountingOracleAbi = require('../../../lib/abi/AccountingOracle.json')
 
@@ -47,8 +47,8 @@ contract('AccountingOracle', ([admin, member1]) => {
     withdrawalVaultBalance: e18(1),
     elRewardsVaultBalance: e18(2),
     sharesRequestedToBurn: e18(3),
-    lastWithdrawalRequestIdToFinalize: 1,
-    finalizationShareRate: e27(1),
+    withdrawalFinalizationBatches: [1],
+    simulatedShareRate: e27(1),
     isBunkerMode: true,
     extraDataFormat: EXTRA_DATA_FORMAT_LIST,
     extraDataHash,
@@ -439,11 +439,11 @@ contract('AccountingOracle', ([admin, member1]) => {
         assert.equals(lastOracleReportToLido.clBalance, reportFields.clBalanceGwei + '000000000')
         assert.equals(lastOracleReportToLido.withdrawalVaultBalance, reportFields.withdrawalVaultBalance)
         assert.equals(lastOracleReportToLido.elRewardsVaultBalance, reportFields.elRewardsVaultBalance)
-        assert.equals(
-          lastOracleReportToLido.lastWithdrawalRequestIdToFinalize,
-          reportFields.lastWithdrawalRequestIdToFinalize
+        assert.sameOrderedMembers(
+          toNum(lastOracleReportToLido.withdrawalFinalizationBatches),
+          toNum(reportFields.withdrawalFinalizationBatches)
         )
-        assert.equals(lastOracleReportToLido.finalizationShareRate, reportFields.finalizationShareRate)
+        assert.equals(lastOracleReportToLido.simulatedShareRate, reportFields.simulatedShareRate)
       })
 
       it('should call updateExitedValidatorsCountByStakingModule on StakingRouter', async () => {

@@ -23,7 +23,7 @@ interface ILido {
         uint256 _elRewardsVaultBalance,
         uint256 _sharesRequestedToBurn,
         // Decision about withdrawals processing
-        uint256 _lastFinalizableRequestId,
+        uint256[] calldata _withdrawalFinalizationBatches,
         uint256 _simulatedShareRate
     ) external;
 }
@@ -243,15 +243,15 @@ contract AccountingOracle is BaseOracle {
         /// Decision
         ///
 
-        /// @dev The id of the last withdrawal request that should be finalized as the result
-        /// of applying this oracle report. The zero value means that no requests should be
-        /// finalized.
-        uint256 lastFinalizableWithdrawalRequestId;
+        /// @dev The ascendingly-sorted array of withdrawal request IDs obtained by calling
+        /// WithdrawalQueue.calculateFinalizationBatches. Empty array means that no withdrawal
+        /// requests should be finalized.
+        uint256[] withdrawalFinalizationBatches;
 
         /// @dev The share/ETH rate with the 10^27 precision (i.e. the price of one stETH share
-        /// in ETH where one ETH is denominated as 10^27) used for finalizing withdrawal requests
-        /// up to (and including) the one passed in the lastWithdrawalRequestIdToFinalize field.
-        /// Must be set to zero if lastWithdrawalRequestIdToFinalize is zero.
+        /// in ETH where one ETH is denominated as 10^27) that would be effective as the result of
+        /// applying this oracle report at the reference slot, with withdrawalFinalizationBatches
+        /// set to empty array and simulatedShareRate set to 0.
         uint256 simulatedShareRate;
 
         /// @dev Whether, based on the state observed at the reference slot, the protocol should
@@ -618,7 +618,7 @@ contract AccountingOracle is BaseOracle {
             data.withdrawalVaultBalance,
             data.elRewardsVaultBalance,
             data.sharesRequestedToBurn,
-            data.lastFinalizableWithdrawalRequestId,
+            data.withdrawalFinalizationBatches,
             data.simulatedShareRate
         );
 

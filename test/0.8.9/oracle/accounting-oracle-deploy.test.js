@@ -57,8 +57,8 @@ function getReportDataItems(r) {
     r.withdrawalVaultBalance,
     r.elRewardsVaultBalance,
     r.sharesRequestedToBurn,
-    r.lastWithdrawalRequestIdToFinalize,
-    r.finalizationShareRate,
+    r.withdrawalFinalizationBatches,
+    r.simulatedShareRate,
     r.isBunkerMode,
     r.extraDataFormat,
     r.extraDataHash,
@@ -69,7 +69,7 @@ function getReportDataItems(r) {
 function calcReportDataHash(reportItems) {
   const data = web3.eth.abi.encodeParameters(
     [
-      '(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256)',
+      '(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256[],uint256,bool,uint256,bytes32,uint256)',
     ],
     [reportItems]
   )
@@ -100,6 +100,7 @@ function packExtraDataList(extraDataItems) {
 function calcExtraDataListHash(packedExtraDataList) {
   return web3.utils.keccak256(packedExtraDataList)
 }
+
 async function deployOracleReportSanityCheckerForAccounting(lidoLocator, admin) {
   const churnValidatorsPerDayLimit = 100
   const limitsList = [churnValidatorsPerDayLimit, 0, 0, 0, 32 * 12, 15, 16, 0, 0]
@@ -158,6 +159,7 @@ module.exports = {
   packExtraDataList,
   calcExtraDataListHash,
 }
+
 async function deployMockLegacyOracle({
   epochsPerFrame = EPOCHS_PER_FRAME,
   slotsPerEpoch = SLOTS_PER_EPOCH,

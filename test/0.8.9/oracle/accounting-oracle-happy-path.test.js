@@ -1,6 +1,6 @@
 const { contract } = require('hardhat')
 const { assert } = require('../../helpers/assert')
-const { e9, e18, e27, hex } = require('../../helpers/utils')
+const { e9, e18, e27, hex, toNum } = require('../../helpers/utils')
 
 const {
   SECONDS_PER_SLOT,
@@ -120,8 +120,8 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
         withdrawalVaultBalance: e18(1),
         elRewardsVaultBalance: e18(2),
         sharesRequestedToBurn: e18(3),
-        lastWithdrawalRequestIdToFinalize: 1,
-        finalizationShareRate: e27(1),
+        withdrawalFinalizationBatches: [1],
+        simulatedShareRate: e27(1),
         isBunkerMode: true,
         extraDataFormat: EXTRA_DATA_FORMAT_LIST,
         extraDataHash,
@@ -219,11 +219,11 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assert.equals(lastOracleReportCall.clBalance, e9(reportFields.clBalanceGwei))
       assert.equals(lastOracleReportCall.withdrawalVaultBalance, reportFields.withdrawalVaultBalance)
       assert.equals(lastOracleReportCall.elRewardsVaultBalance, reportFields.elRewardsVaultBalance)
-      assert.equals(
-        lastOracleReportCall.lastWithdrawalRequestIdToFinalize,
-        reportFields.lastWithdrawalRequestIdToFinalize
+      assert.sameOrderedMembers(
+        toNum(lastOracleReportCall.withdrawalFinalizationBatches),
+        toNum(reportFields.withdrawalFinalizationBatches)
       )
-      assert.equals(lastOracleReportCall.finalizationShareRate, reportFields.finalizationShareRate)
+      assert.equals(lastOracleReportCall.simulatedShareRate, reportFields.simulatedShareRate)
     })
 
     it(`withdrawal queue got bunker mode report`, async () => {
