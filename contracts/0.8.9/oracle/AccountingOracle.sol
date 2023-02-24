@@ -234,7 +234,9 @@ contract AccountingOracle is BaseOracle {
         uint256 elRewardsVaultBalance;
 
         /// @dev The shares amount requested to burn through Burner as observed
-        /// at the reference slot.
+        /// at the reference slot. The value can be obtained in the following way:
+        /// `(coverSharesToBurn, nonCoverSharesToBurn) = IBurner(burner).getSharesRequestedToBurn()
+        /// sharesRequestedToBurn = coverSharesToBurn + nonCoverSharesToBurn`
         uint256 sharesRequestedToBurn;
 
         ///

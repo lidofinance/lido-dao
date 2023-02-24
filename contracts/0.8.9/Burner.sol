@@ -311,7 +311,7 @@ contract Burner is IBurner, AccessControlEnumerable {
             coverSharesBurnRequested -= sharesToBurnNowForCover;
             sharesToBurnNow += sharesToBurnNowForCover;
         }
-        if ((memNonCoverSharesBurnRequested > 0) && (sharesToBurnNow < _sharesToBurn)) {
+        if (memNonCoverSharesBurnRequested > 0 && sharesToBurnNow < _sharesToBurn) {
             uint256 sharesToBurnNowForNonCover = Math.min(
                 _sharesToBurn - sharesToBurnNow,
                 memNonCoverSharesBurnRequested
