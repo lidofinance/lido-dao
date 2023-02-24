@@ -37,6 +37,7 @@ const getDefaultReportFields = (overrides) => ({
   numExitedValidatorsByStakingModule: [3],
   withdrawalVaultBalance: e18(1),
   elRewardsVaultBalance: e18(2),
+  sharesRequestedToBurn: e18(3),
   lastWithdrawalRequestIdToFinalize: 1,
   finalizationShareRate: e27(1),
   isBunkerMode: true,

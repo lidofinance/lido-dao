@@ -21,6 +21,7 @@ interface ILido {
         // EL values
         uint256 _withdrawalVaultBalance,
         uint256 _elRewardsVaultBalance,
+        uint256 _sharesRequestedToBurn,
         // Decision about withdrawals processing
         uint256 _lastFinalizableRequestId,
         uint256 _simulatedShareRate
@@ -231,6 +232,12 @@ contract AccountingOracle is BaseOracle {
         /// @dev The ETH balance of the Lido execution layer rewards vault as observed
         /// at the reference slot.
         uint256 elRewardsVaultBalance;
+
+        /// @dev The shares amount requested to burn through Burner as observed
+        /// at the reference slot. The value can be obtained in the following way:
+        /// `(coverSharesToBurn, nonCoverSharesToBurn) = IBurner(burner).getSharesRequestedToBurn()
+        /// sharesRequestedToBurn = coverSharesToBurn + nonCoverSharesToBurn`
+        uint256 sharesRequestedToBurn;
 
         ///
         /// Decision
@@ -610,6 +617,7 @@ contract AccountingOracle is BaseOracle {
             data.clBalanceGwei * 1e9,
             data.withdrawalVaultBalance,
             data.elRewardsVaultBalance,
+            data.sharesRequestedToBurn,
             data.lastFinalizableWithdrawalRequestId,
             data.simulatedShareRate
         );

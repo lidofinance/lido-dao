@@ -14,6 +14,7 @@ contract MockLidoForAccountingOracle is ILido {
         uint256 clBalance;
         uint256 withdrawalVaultBalance;
         uint256 elRewardsVaultBalance;
+        uint256 sharesRequestedToBurn;
         uint256 lastWithdrawalRequestIdToFinalize;
         uint256 finalizationShareRate;
         uint256 callCount;
@@ -36,6 +37,7 @@ contract MockLidoForAccountingOracle is ILido {
         uint256 clBalance,
         uint256 withdrawalVaultBalance,
         uint256 elRewardsVaultBalance,
+        uint256 sharesRequestedToBurn,
         uint256 lastWithdrawalRequestIdToFinalize,
         uint256 finalizationShareRate
     ) external {
@@ -45,6 +47,7 @@ contract MockLidoForAccountingOracle is ILido {
         _handleOracleReportLastCall.clBalance = clBalance;
         _handleOracleReportLastCall.withdrawalVaultBalance = withdrawalVaultBalance;
         _handleOracleReportLastCall.elRewardsVaultBalance = elRewardsVaultBalance;
+        _handleOracleReportLastCall.sharesRequestedToBurn = sharesRequestedToBurn;
         _handleOracleReportLastCall.lastWithdrawalRequestIdToFinalize = lastWithdrawalRequestIdToFinalize;
         _handleOracleReportLastCall.finalizationShareRate = finalizationShareRate;
         ++_handleOracleReportLastCall.callCount;
