@@ -33,7 +33,7 @@ async function deployProtocol(factories = {}, deployParams = {}) {
 
   await updateLocatorImplementation(protocol.lidoLocator.address, protocol.appManager.address, {
     lido: protocol.pool.address,
-    burner: protocol.burner.address
+    burner: protocol.burner.address,
   })
 
   protocol.validatorExitBus = await protocol.factories.validatorExitBusFactory(protocol)
@@ -59,7 +59,7 @@ async function deployProtocol(factories = {}, deployParams = {}) {
     postTokenRebaseReceiver: protocol.legacyOracle.address,
     accountingOracle: protocol.oracle.address,
     oracleReportSanityChecker: protocol.oracleReportSanityChecker.address,
-    validatorsExitBusOracle: protocol.validatorExitBus.address
+    validatorsExitBusOracle: protocol.validatorExitBus.address,
   })
 
   protocol.consensusContract = await protocol.factories.hashConsensusFactory(protocol)
@@ -67,7 +67,7 @@ async function deployProtocol(factories = {}, deployParams = {}) {
   protocol.withdrawalQueue = await protocol.factories.withdrawalQueueFactory(protocol)
 
   await updateLocatorImplementation(protocol.lidoLocator.address, protocol.appManager.address, {
-    withdrawalQueue: protocol.withdrawalQueue.address
+    withdrawalQueue: protocol.withdrawalQueue.address,
   })
 
   await protocol.factories.postSetup(protocol)
@@ -93,5 +93,5 @@ async function addStakingModules(stakingModulesFactory, protocol) {
 }
 
 module.exports = {
-  deployProtocol
+  deployProtocol,
 }

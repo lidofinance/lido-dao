@@ -94,5 +94,5 @@ function parseWeiExpression(expression) {
 }
 
 module.exports = {
-  wei
+  wei,
 }

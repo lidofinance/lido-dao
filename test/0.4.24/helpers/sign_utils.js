@@ -22,5 +22,5 @@ module.exports = {
   hexStringFromBuffer,
   strip0x,
   ecSign,
-  bufferFromHexString
+  bufferFromHexString,
 }

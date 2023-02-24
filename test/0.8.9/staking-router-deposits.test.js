@@ -1,5 +1,4 @@
-const hre = require('hardhat')
-const { assertEvent } = require('@aragon/contract-helpers-test/src/asserts')
+const { contract, ethers, web3 } = require('hardhat')
 
 const { EvmSnapshot } = require('../helpers/blockchain')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
@@ -20,7 +19,7 @@ contract('StakingRouter', ([depositor, stranger]) => {
     const deployed = await deployProtocol({
       depositSecurityModuleFactory: async () => {
         return { address: depositor }
-      }
+      },
     })
 
     lido = deployed.pool
@@ -28,7 +27,7 @@ contract('StakingRouter', ([depositor, stranger]) => {
     operators = await setupNodeOperatorsRegistry(deployed, true)
     voting = deployed.voting.address
     depositContract = deployed.depositContract
-    snapshot = new EvmSnapshot(hre.ethers.provider)
+    snapshot = new EvmSnapshot(ethers.provider)
     await snapshot.make()
   })
 
@@ -59,7 +58,7 @@ contract('StakingRouter', ([depositor, stranger]) => {
       await assert.reverts(lido.deposit(maxDepositsCount, curated.id, '0x', { from: stranger }), 'APP_AUTH_DSM_FAILED')
       await assert.reverts(lido.deposit(maxDepositsCount, curated.id, '0x', { from: voting }), 'APP_AUTH_DSM_FAILED')
 
-      await assert.revertsWithCustomError(
+      await assert.reverts(
         stakingRouter.deposit(maxDepositsCount, curated.id, '0x', { from: voting }),
         'AppAuthLidoFailed()'
       )
@@ -98,7 +97,7 @@ contract('StakingRouter', ([depositor, stranger]) => {
       await operators.setNodeOperatorStakingLimit(1, 100000, { from: voting })
 
       const receipt = await lido.methods[`deposit(uint256,uint256,bytes)`](maxDepositsCount, curated.id, '0x', {
-        from: depositor
+        from: depositor,
       })
 
       assert.equals(await depositContract.totalCalls(), 100, 'invalid deposits count')
@@ -109,7 +108,7 @@ contract('StakingRouter', ([depositor, stranger]) => {
 
       assert.equals(await lido.getBufferedEther(), ETH(32), 'invalid total buffer')
 
-      assertEvent(receipt, 'Unbuffered', { expectedArgs: { amount: ETH(maxDepositsCount * 32) } })
+      assert.emits(receipt, 'Unbuffered', { amount: ETH(maxDepositsCount * 32) })
     })
 
     it('Lido.deposit() :: revert if stakingModuleId more than uint24', async () => {

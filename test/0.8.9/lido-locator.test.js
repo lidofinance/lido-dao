@@ -1,7 +1,9 @@
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
-const hre = require('hardhat')
+const { ethers, contract, artifacts } = require('hardhat')
+
+const { ZERO_ADDRESS } = require('../helpers/constants')
 const { assert } = require('../helpers/assert')
 const { locatorServices, getRandomLocatorConfig } = require('../helpers/locator')
+
 const Proxy = artifacts.require('OssifiableProxy.sol')
 const LidoLocator = artifacts.require('LidoLocator.sol')
 
@@ -16,12 +18,12 @@ contract('LidoLocator', ([deployer, agent]) => {
     proxy = await Proxy.new(implementation.address, agent, '0x', { from: deployer })
     lidoLocatorProxy = await LidoLocator.at(proxy.address)
 
-    evmSnapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+    evmSnapshotId = await ethers.provider.send('evm_snapshot', [])
   })
 
   afterEach(async () => {
-    await hre.ethers.provider.send('evm_revert', [evmSnapshotId])
-    evmSnapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+    await ethers.provider.send('evm_revert', [evmSnapshotId])
+    evmSnapshotId = await ethers.provider.send('evm_snapshot', [])
   })
 
   describe('checking initial implementation', () => {
@@ -43,7 +45,7 @@ contract('LidoLocator', ([deployer, agent]) => {
         initialConfig.stakingRouter,
         initialConfig.treasury,
         initialConfig.withdrawalQueue,
-        initialConfig.withdrawalVault
+        initialConfig.withdrawalVault,
       ]
 
       for (let i = 0; i < actualCoreComponents.length; i++) {
@@ -64,7 +66,7 @@ contract('LidoLocator', ([deployer, agent]) => {
         initialConfig.burner,
         initialConfig.withdrawalQueue,
         initialConfig.withdrawalVault,
-        initialConfig.postTokenRebaseReceiver
+        initialConfig.postTokenRebaseReceiver,
       ]
 
       for (let i = 0; i < actualReportComponents.length; i++) {
@@ -118,7 +120,7 @@ contract('LidoLocator', ([deployer, agent]) => {
           updatedConfig.stakingRouter,
           updatedConfig.treasury,
           updatedConfig.withdrawalQueue,
-          updatedConfig.withdrawalVault
+          updatedConfig.withdrawalVault,
         ]
 
         for (let i = 0; i < actualCoreComponents.length; i++) {
@@ -139,7 +141,7 @@ contract('LidoLocator', ([deployer, agent]) => {
           initialConfig.burner,
           initialConfig.withdrawalQueue,
           initialConfig.withdrawalVault,
-          initialConfig.postTokenRebaseReceiver
+          initialConfig.postTokenRebaseReceiver,
         ]
 
         for (let i = 0; i < actualReportComponents.length; i++) {

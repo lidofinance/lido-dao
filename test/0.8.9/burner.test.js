@@ -1,11 +1,11 @@
-const hre = require('hardhat')
+const { artifacts, contract, ethers, web3 } = require('hardhat')
 
-const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { bn } = require('@aragon/contract-helpers-test')
 const { EvmSnapshot } = require('../helpers/blockchain')
 const { ETH, StETH } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 const { deployProtocol } = require('../helpers/protocol')
-const { INITIAL_HOLDER } = require('../helpers/constants')
+const { INITIAL_HOLDER, ZERO_ADDRESS } = require('../helpers/constants')
 
 const Burner = artifacts.require('Burner.sol')
 
@@ -24,7 +24,6 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
 
     lido = deployed.pool
     burner = deployed.burner
-    acl = deployed.acl
     voting = deployed.voting.address
     appManager = deployed.appManager.address
     treasury = deployed.treasury.address
@@ -33,7 +32,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
     await ethers.provider.send('hardhat_impersonateAccount', [lido.address])
     await ethers.provider.send('hardhat_impersonateAccount', [burner.address])
 
-    snapshot = new EvmSnapshot(hre.ethers.provider)
+    snapshot = new EvmSnapshot(ethers.provider)
     await snapshot.make()
   })
 
@@ -61,16 +60,12 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
     })
 
     it(`init with already burnt counters works`, async () => {
-      let newBurner = await Burner.new(
-        voting, treasury, lido.address, bn(0), bn(0), { from: deployer }
-      )
+      let newBurner = await Burner.new(voting, treasury, lido.address, bn(0), bn(0), { from: deployer })
 
       assert.equals(await newBurner.getCoverSharesBurnt(), bn(0))
       assert.equals(await newBurner.getNonCoverSharesBurnt(), bn(0))
 
-      newBurner = await Burner.new(
-        voting, treasury, lido.address, bn(123), bn(456), { from: deployer }
-      )
+      newBurner = await Burner.new(voting, treasury, lido.address, bn(123), bn(456), { from: deployer })
 
       assert.equals(await newBurner.getCoverSharesBurnt(), bn(123))
       assert.equals(await newBurner.getNonCoverSharesBurnt(), bn(456))
@@ -104,10 +99,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       )
 
       // and zero request on non-cover
-      await assert.revertsWithCustomError(
-        burner.requestBurnMyStETH(StETH(0), { from: voting }),
-        `ZeroBurnAmount()`
-      )
+      await assert.revertsWithCustomError(burner.requestBurnMyStETH(StETH(0), { from: voting }), `ZeroBurnAmount()`)
     })
 
     it(`reverts on burn request without assigned role`, async () => {
@@ -153,7 +145,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
         isCover: true,
         requestedBy: voting,
         amountOfStETH: StETH(8),
-        amountOfShares: sharesAmount8StETH
+        amountOfShares: sharesAmount8StETH,
       })
 
       // check stETH balances
@@ -168,7 +160,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
         isCover: false,
         requestedBy: voting,
         amountOfStETH: StETH(12),
-        amountOfShares: sharesAmount12
+        amountOfShares: sharesAmount12,
       })
 
       // check stETH balances again, we didn't execute the actual burn
@@ -197,7 +189,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
         isCover: true,
         requestedBy: voting,
         amountOfStETH: StETH(8),
-        amountOfShares: sharesAmount8StETH
+        amountOfShares: sharesAmount8StETH,
       })
 
       // check stETH balances
@@ -212,7 +204,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
         isCover: false,
         requestedBy: voting,
         amountOfStETH: StETH(12),
-        amountOfShares: sharesAmount12
+        amountOfShares: sharesAmount12,
       })
 
       // check stETH balances again, we didn't execute the actual burn
@@ -227,10 +219,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
 
       assert.equals(await lido.balanceOf(burner.address), StETH(9.7))
 
-      await assert.revertsWithCustomError(
-        burner.commitSharesToBurn(ETH(10)),
-        `AppAuthLidoFailed()`
-      )
+      await assert.revertsWithCustomError(burner.commitSharesToBurn(ETH(10)), `AppAuthLidoFailed()`)
 
       // mimic the Lido for the callback invocation
       const receipt = await burner.commitSharesToBurn(ETH(0), { from: lido.address })
@@ -294,7 +283,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
         isCover: true,
         requestedBy: voting,
         amountOfStETH: StETH(1.5),
-        amountOfShares: sharesAmount1_5StETH
+        amountOfShares: sharesAmount1_5StETH,
       })
 
       const receiptNonCover = await burner.requestBurnMyStETH(StETH(0.5), { from: voting })
@@ -303,7 +292,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
         isCover: false,
         requestedBy: voting,
         amountOfStETH: StETH(0.5),
-        amountOfShares: sharesAmount0_5StETH
+        amountOfShares: sharesAmount0_5StETH,
       })
 
       const burnerShares = await lido.sharesOf(burner.address)
@@ -311,10 +300,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
 
       assert.equals(await lido.balanceOf(burner.address), StETH(7.2))
 
-      await assert.revertsWithCustomError(
-        burner.commitSharesToBurn(bn(500), { from: deployer }),
-        `AppAuthLidoFailed()`
-      )
+      await assert.revertsWithCustomError(burner.commitSharesToBurn(bn(500), { from: deployer }), `AppAuthLidoFailed()`)
 
       await assert.revertsWithCustomError(
         // even
@@ -325,11 +311,15 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       const receipt = await burner.commitSharesToBurn(ETH(2), { from: lido.address })
 
       assert.emits(receipt, `StETHBurnt`, {
-        isCover: true, amountOfStETH: StETH(1.5), amountOfShares: sharesAmount1_5StETH
+        isCover: true,
+        amountOfStETH: StETH(1.5),
+        amountOfShares: sharesAmount1_5StETH,
       })
 
       assert.emits(receipt, `StETHBurnt`, 1, {
-        isCover: false, amountOfStETH: StETH(0.5), amountOfShares: sharesAmount0_5StETH
+        isCover: false,
+        amountOfStETH: StETH(0.5),
+        amountOfShares: sharesAmount0_5StETH,
       })
 
       // cover + non-cover events
@@ -371,7 +361,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
         await burner.requestBurnMyStETHForCover(coverStETHAmountToBurn, { from: voting })
         await burner.requestBurnMyStETH(nonCoverStETHAmountToBurn, { from: voting })
 
-        let { coverShares, nonCoverShares } = await burner.getSharesRequestedToBurn()
+        const { coverShares, nonCoverShares } = await burner.getSharesRequestedToBurn()
         await burner.commitSharesToBurn(coverShares.add(nonCoverShares), { from: lido.address })
 
         // accumulate burnt shares
@@ -418,20 +408,20 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       assert.equals(await lido.sharesOf(burner.address), stETHShares(0.9))
       const receipt = await burner.commitSharesToBurn(StETH(0.9), { from: lido.address })
 
-      assert.emits(
-        receipt, `StETHBurnt`, {
-        isCover: true, amountOfStETH: StETH(0.9), amountOfShares: stETHShares(0.9)
+      assert.emits(receipt, `StETHBurnt`, {
+        isCover: true,
+        amountOfStETH: StETH(0.9),
+        amountOfShares: stETHShares(0.9),
       })
       assert.emitsNumberOfEvents(receipt, `StETHBurnt`, 1)
       await lido.burnShares(burner.address, stETHShares(0.9))
 
       assert.equals(await lido.sharesOf(burner.address), stETHShares(0))
 
-
       await burner.requestBurnMyStETHForCover(await lido.getPooledEthByShares(stETHShares(0.1)), { from: voting })
       assert.equals(bnRound10(await lido.sharesOf(burner.address)), bnRound10(stETHShares(0.1)))
 
-      let {coverShares, nonCoverShares} = await burner.getSharesRequestedToBurn()
+      const { coverShares, nonCoverShares } = await burner.getSharesRequestedToBurn()
       await burner.commitSharesToBurn(coverShares.add(nonCoverShares), { from: lido.address })
       await lido.burnShares(burner.address, await lido.sharesOf(burner.address))
 
@@ -450,9 +440,10 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       const afterCoverSharesBurnt = await burner.getCoverSharesBurnt()
       const burnt = bn(afterCoverSharesBurnt).sub(beforeCoverSharesBurnt)
 
-      assert.emits(
-        receiptN, `StETHBurnt`, {
-        isCover: true, amountOfStETH: await lido.getPooledEthByShares(burnt), amountOfShares: burnt
+      assert.emits(receiptN, `StETHBurnt`, {
+        isCover: true,
+        amountOfStETH: await lido.getPooledEthByShares(burnt),
+        amountOfShares: burnt,
       })
 
       await lido.burnShares(burner.address, burnt)
@@ -466,7 +457,6 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
     })
 
     it(`limit burn shares per run works (noncover)`, async () => {
-
       assert.equals(await lido.getTotalShares(), stETHShares(75))
 
       // so the max amount to burn per single run is 75*10^18 * 0.012 = 0.9*10^18
@@ -476,14 +466,14 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       assert.equals(await lido.sharesOf(burner.address), stETHShares(0.9))
       const receipt = await burner.commitSharesToBurn(ETH(0.9), { from: lido.address })
 
-      assert.emits(
-        receipt, `StETHBurnt`, {
-        isCover: false, amountOfStETH: StETH(0.9), amountOfShares: stETHShares(0.9)
+      assert.emits(receipt, `StETHBurnt`, {
+        isCover: false,
+        amountOfStETH: StETH(0.9),
+        amountOfShares: stETHShares(0.9),
       })
       assert.emitsNumberOfEvents(receipt, `StETHBurnt`, 1)
       await lido.burnShares(burner.address, stETHShares(0.9))
       assert.equals(await lido.sharesOf(burner.address), stETHShares(0))
-
 
       await burner.requestBurnMyStETH(await lido.getPooledEthByShares(stETHShares(0.1)), { from: voting })
       assert.equals(bnRound10(await lido.sharesOf(burner.address)), bnRound10(stETHShares(0.1)))
@@ -507,8 +497,16 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       assert.equals(await lido.sharesOf(burner.address), stETHShares(0.9))
       const receipt = await burner.commitSharesToBurn(ETH(0.5), { from: lido.address })
 
-      assert.emits(receipt, `StETHBurnt`, { isCover: true, amountOfStETH: StETH(0.1), amountOfShares: stETHShares(0.1) })
-      assert.emits(receipt, `StETHBurnt`, { isCover: false, amountOfStETH: StETH(0.4), amountOfShares: stETHShares(0.4) })
+      assert.emits(receipt, `StETHBurnt`, {
+        isCover: true,
+        amountOfStETH: StETH(0.1),
+        amountOfShares: stETHShares(0.1),
+      })
+      assert.emits(receipt, `StETHBurnt`, {
+        isCover: false,
+        amountOfStETH: StETH(0.4),
+        amountOfShares: stETHShares(0.4),
+      })
 
       assert.emitsNumberOfEvents(receipt, `StETHBurnt`, 2)
       assert.equals(await burner.getCoverSharesBurnt(), stETHShares(0.1))
@@ -516,7 +514,11 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
 
       const receipt2 = await burner.commitSharesToBurn(ETH(0.4), { from: lido.address })
 
-      assert.emits(receipt2, `StETHBurnt`, { isCover: false, amountOfStETH: StETH(0.4), amountOfShares: stETHShares(0.4) })
+      assert.emits(receipt2, `StETHBurnt`, {
+        isCover: false,
+        amountOfStETH: StETH(0.4),
+        amountOfShares: stETHShares(0.4),
+      })
 
       assert.emitsNumberOfEvents(receipt2, `StETHBurnt`, 1)
       assert.equals(await burner.getCoverSharesBurnt(), stETHShares(0.1))
@@ -535,8 +537,16 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       assert.equals(await lido.sharesOf(burner.address), stETHShares(0.9))
       const receipt = await burner.commitSharesToBurn(ETH(0.5), { from: lido.address })
 
-      assert.emits(receipt, `StETHBurnt`, { isCover: true, amountOfStETH: StETH(0.1), amountOfShares: stETHShares(0.1) })
-      assert.emits(receipt, `StETHBurnt`, { isCover: false, amountOfStETH: StETH(0.4), amountOfShares: stETHShares(0.4) })
+      assert.emits(receipt, `StETHBurnt`, {
+        isCover: true,
+        amountOfStETH: StETH(0.1),
+        amountOfShares: stETHShares(0.1),
+      })
+      assert.emits(receipt, `StETHBurnt`, {
+        isCover: false,
+        amountOfStETH: StETH(0.4),
+        amountOfShares: stETHShares(0.4),
+      })
 
       assert.emitsNumberOfEvents(receipt, `StETHBurnt`, 2)
       assert.equals(await burner.getCoverSharesBurnt(), stETHShares(0.1))
@@ -544,7 +554,11 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
 
       const receipt2 = await burner.commitSharesToBurn(ETH(0.4), { from: lido.address })
 
-      assert.emits(receipt2, `StETHBurnt`, { isCover: false, amountOfStETH: StETH(0.4), amountOfShares: stETHShares(0.4) })
+      assert.emits(receipt2, `StETHBurnt`, {
+        isCover: false,
+        amountOfStETH: StETH(0.4),
+        amountOfShares: stETHShares(0.4),
+      })
 
       assert.emitsNumberOfEvents(receipt2, `StETHBurnt`, 1)
       assert.equals(await burner.getCoverSharesBurnt(), stETHShares(0.1))
@@ -594,11 +608,11 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
 
       const sharesAmount2_3StETH = await lido.sharesOf(burner.address)
       const receipt = await burner.recoverExcessStETH({ from: voting })
-      assert.emits(
-        receipt,
-        `ExcessStETHRecovered`,
-        { requestedBy: voting, amountOfStETH: StETH(2.3), amountOfShares: sharesAmount2_3StETH }
-      )
+      assert.emits(receipt, `ExcessStETHRecovered`, {
+        requestedBy: voting,
+        amountOfStETH: StETH(2.3),
+        amountOfShares: sharesAmount2_3StETH,
+      })
 
       // check burner and treasury balances after recovery
       assert.equals(await lido.balanceOf(burner.address), StETH(0))
@@ -641,11 +655,11 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       // should be transferred to the treasury
       const sharesAmount5stETH = await lido.getSharesByPooledEth(StETH(5))
       const receipt = await burner.recoverExcessStETH({ from: voting })
-      assert.emits(
-        receipt,
-        `ExcessStETHRecovered`,
-        { requestedBy: voting, amountOfStETH: StETH(5), amountOfShares: sharesAmount5stETH }
-      )
+      assert.emits(receipt, `ExcessStETHRecovered`, {
+        requestedBy: voting,
+        amountOfStETH: StETH(5),
+        amountOfShares: sharesAmount5stETH,
+      })
 
       assert.equals(await burner.getExcessStETH(), StETH(0))
 
@@ -687,14 +701,13 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
 
     it(`can't recover zero ERC20 amount`, async () => {
       await assert.revertsWithCustomError(
-        burner.recoverERC20(mockERC20Token.address, bn(0), { from: voting }), `ZeroRecoveryAmount()`
+        burner.recoverERC20(mockERC20Token.address, bn(0), { from: voting }),
+        `ZeroRecoveryAmount()`
       )
     })
 
     it(`can't recover zero-address ERC20`, async () => {
-      await assert.reverts(
-        burner.recoverERC20(ZERO_ADDRESS, bn(10), { from: voting })
-      )
+      await assert.reverts(burner.recoverERC20(ZERO_ADDRESS, bn(10), { from: voting }))
     })
 
     it(`can't recover stETH by recoverERC20`, async () => {
@@ -737,7 +750,11 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
 
       // recover ERC20
       const firstReceipt = await burner.recoverERC20(mockERC20Token.address, bn(100000), { from: voting })
-      assert.emits(firstReceipt, `ERC20Recovered`, { requestedBy: voting, token: mockERC20Token.address, amount: bn(100000) })
+      assert.emits(firstReceipt, `ERC20Recovered`, {
+        requestedBy: voting,
+        token: mockERC20Token.address,
+        amount: bn(100000),
+      })
 
       // check balances again
       assert.equals(await mockERC20Token.balanceOf(burner.address), bn(500000))
@@ -753,7 +770,11 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
 
       // recover last portion
       const lastReceipt = await burner.recoverERC20(mockERC20Token.address, bn(500000), { from: voting })
-      assert.emits(lastReceipt, `ERC20Recovered`, { requestedBy: voting, token: mockERC20Token.address, amount: bn(500000) })
+      assert.emits(lastReceipt, `ERC20Recovered`, {
+        requestedBy: voting,
+        token: mockERC20Token.address,
+        amount: bn(500000),
+      })
 
       // balance is zero already, have to be reverted
       await assert.reverts(
@@ -858,7 +879,8 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
 
     // try to send 1 ETH, should be reverted with fallback defined reason
     await assert.revertsWithCustomError(
-      web3.eth.sendTransaction({ from: anotherAccount, to: burner_addr, value: ETH(1) }), `DirectETHTransfer()`
+      web3.eth.sendTransaction({ from: anotherAccount, to: burner_addr, value: ETH(1) }),
+      `DirectETHTransfer()`
     )
   })
 })

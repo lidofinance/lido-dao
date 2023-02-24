@@ -1,3 +1,5 @@
+const { web3 } = require('hardhat')
+
 const { CONSENSUS_VERSION, ZERO_BYTES32 } = require('./constants')
 const { assert } = require('./assert')
 
@@ -17,14 +19,14 @@ function getReportDataItems(r) {
     r.isBunkerMode,
     r.extraDataFormat,
     r.extraDataHash,
-    r.extraDataItemsCount
+    r.extraDataItemsCount,
   ]
 }
 
 function calcReportDataHash(reportItems) {
   const data = web3.eth.abi.encodeParameters(
     [
-      '(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256)'
+      '(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256)',
     ],
     [reportItems]
   )
@@ -44,8 +46,8 @@ async function pushOracleReport(consensus, oracle, numValidators, clBalance, elR
   const { refSlot } = await consensus.getCurrentFrame()
   const reportFields = {
     consensusVersion: 1,
-    refSlot: refSlot,
-    numValidators: numValidators,
+    refSlot,
+    numValidators,
     clBalanceGwei: clBalance / 1e9,
     stakingModuleIdsWithNewlyExitedValidators: [],
     numExitedValidatorsByStakingModule: [],
@@ -57,7 +59,7 @@ async function pushOracleReport(consensus, oracle, numValidators, clBalance, elR
     isBunkerMode: false,
     extraDataFormat: 0,
     extraDataHash: ZERO_BYTES32,
-    extraDataItemsCount: 0
+    extraDataItemsCount: 0,
   }
   const reportItems = getReportDataItems(reportFields)
   const reportHash = calcReportDataHash(reportItems)

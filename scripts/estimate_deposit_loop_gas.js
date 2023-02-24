@@ -1,8 +1,8 @@
-const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { assert } = require('../test/helpers/assert')
 
-const { pad, ETH, hexConcat, toBN } = require('./test/helpers/utils')
-const { deployDaoAndPool } = require('./test/scenario/helpers/deploy')
+const { pad, ETH, hexConcat, toBN } = require('../test/helpers/utils')
+const { deployDaoAndPool } = require('../test/scenario/helpers/deploy')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
@@ -18,7 +18,7 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
     user1,
     user2,
     // an unrelated address
-    nobody
+    nobody,
   ] = addresses
 
   let pool, nodeOperatorsRegistry, depositContractMock
@@ -50,16 +50,23 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
     const numKeys = 3
 
     for (let iOperator = 0; iOperator < numOperators; ++iOperator) {
-      const txn = await nodeOperatorsRegistry.addNodeOperator(`operator-${iOperator}`, nodeOperator, operatorValidatorsLimit, {
-        from: voting
+      const txn = await nodeOperatorsRegistry.addNodeOperator(
+        `operator-${iOperator}`,
+        nodeOperator,
+        operatorValidatorsLimit,
+        {
+          from: voting,
+        }
+      )
+      const nodeOperatorId = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', {
+        decodeForAbi: NodeOperatorsRegistry._json.abi,
       })
-      const nodeOperatorId = getEventArgument(txn, 'NodeOperatorAdded', 'nodeOperatorId', { decodeForAbi: NodeOperatorsRegistry._json.abi })
 
       const data = Array.from({ length: numKeys }, (_, iKey) => {
         const n = arbitraryN.clone().addn(10 * iKey + 1000 * iOperator)
         return {
           key: pad(`0x${n.toString(16)}`, 48, 'd'),
-          sig: pad(`0x${n.toString(16)}`, 96, 'e')
+          sig: pad(`0x${n.toString(16)}`, 96, 'e'),
         }
       })
 
@@ -69,12 +76,12 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
       await nodeOperatorsRegistry.addSigningKeys(nodeOperatorId, numKeys, keys, sigs, { from: voting })
 
       const totalKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperatorId, { from: nobody })
-      assertBn(totalKeys, numKeys, 'total signing keys')
+      assert.equals(totalKeys, numKeys, 'total signing keys')
 
       validatorData.push.apply(validatorData, data)
     }
 
-    assertBn(await nodeOperatorsRegistry.getNodeOperatorsCount(), numOperators, 'total operators')
+    assert.equals(await nodeOperatorsRegistry.getNodeOperatorsCount(), numOperators, 'total operators')
   })
 
   let gasPerMockDeposit
@@ -85,11 +92,14 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
   it('calling DepositContractMock.deposit multiple times', async () => {
     const results = await Promise.all(
       validatorData.map(({ key, sig }, i) =>
-        depositContractMock.deposit(key, withdrawalCredentials, sig, `0x${arbitraryN.toString(16)}`, { from: user1, value: ETH(32) })
+        depositContractMock.deposit(key, withdrawalCredentials, sig, `0x${arbitraryN.toString(16)}`, {
+          from: user1,
+          value: ETH(32),
+        })
       )
     )
 
-    assertBn(await depositContractMock.totalCalls(), validatorData.length)
+    assert.equals(await depositContractMock.totalCalls(), validatorData.length)
 
     const gasUsed = results.map((r) => +r.receipt.gasUsed)
     console.log('mock deposits gas:', gasUsed.join(', '))
@@ -103,8 +113,8 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
   it('a user sends 33 ETH', async () => {
     const result = await pool.submit(ZERO_ADDRESS, { from: user1, value: ETH(33) })
 
-    assertBn(await pool.getTotalPooledEther(), ETH(33), 'total pooled ether')
-    assertBn((await depositContractMock.totalCalls()) - validatorData.length, 1, 'validators registered')
+    assert.equals(await pool.getTotalPooledEther(), ETH(33), 'total pooled ether')
+    assert.equals((await depositContractMock.totalCalls()) - validatorData.length, 1, 'validators registered')
 
     console.log('1 validator (initial), gas:', result.receipt.gasUsed)
   })
@@ -112,8 +122,8 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
   it('a user submits 32 ETH', async () => {
     const result = await pool.submit(ZERO_ADDRESS, { from: user2, value: ETH(32) })
 
-    assertBn(await pool.getTotalPooledEther(), ETH(33 + 32), 'total pooled ether')
-    assertBn((await depositContractMock.totalCalls()) - validatorData.length, 2, 'validators registered')
+    assert.equals(await pool.getTotalPooledEther(), ETH(33 + 32), 'total pooled ether')
+    assert.equals((await depositContractMock.totalCalls()) - validatorData.length, 2, 'validators registered')
 
     console.log('1 validator, gas:', result.receipt.gasUsed)
 
@@ -123,8 +133,8 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
   it('a, 1 validator user submits 5 * 32 ETH', async () => {
     const result = await pool.submit(ZERO_ADDRESS, { from: user2, value: ETH(5 * 32) })
 
-    assertBn(await pool.getTotalPooledEther(), ETH(33 + 32 + 5 * 32), 'total pooled ether')
-    assertBn((await depositContractMock.totalCalls()) - validatorData.length, 2 + 5, 'validators registered')
+    assert.equals(await pool.getTotalPooledEther(), ETH(33 + 32 + 5 * 32), 'total pooled ether')
+    assert.equals((await depositContractMock.totalCalls()) - validatorData.length, 2 + 5, 'validators registered')
 
     const gasPerIter = result.receipt.gasUsed / 5
 
@@ -137,8 +147,8 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
   it('a user submits 10 * 32 ETH', async () => {
     const result = await pool.submit(ZERO_ADDRESS, { from: user2, value: ETH(10 * 32) })
 
-    assertBn(await pool.getTotalPooledEther(), ETH(33 + 32 + 5 * 32 + 10 * 32), 'total pooled ether')
-    assertBn((await depositContractMock.totalCalls()) - validatorData.length, 2 + 5 + 10, 'validators registered')
+    assert.equals(await pool.getTotalPooledEther(), ETH(33 + 32 + 5 * 32 + 10 * 32), 'total pooled ether')
+    assert.equals((await depositContractMock.totalCalls()) - validatorData.length, 2 + 5 + 10, 'validators registered')
 
     const gasPerIter = result.receipt.gasUsed / 10
 
@@ -151,8 +161,12 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
   it('a user submits 30 * 32 ETH', async () => {
     const result = await pool.submit(ZERO_ADDRESS, { from: user2, value: ETH(30 * 32) })
 
-    assertBn(await pool.getTotalPooledEther(), ETH(33 + 32 + 5 * 32 + 10 * 32 + 30 * 32), 'total pooled ether')
-    assertBn((await depositContractMock.totalCalls()) - validatorData.length, 2 + 5 + 10 + 30, 'validators registered')
+    assert.equals(await pool.getTotalPooledEther(), ETH(33 + 32 + 5 * 32 + 10 * 32 + 30 * 32), 'total pooled ether')
+    assert.equals(
+      (await depositContractMock.totalCalls()) - validatorData.length,
+      2 + 5 + 10 + 30,
+      'validators registered'
+    )
 
     const gasPerIter = result.receipt.gasUsed / 30
 
@@ -200,8 +214,12 @@ contract('Lido: deposit loop gas estimate', (addresses) => {
     const diff5 = Math.floor(Math.abs(predictedGasPer5 - gasPerNValidators['5']) / 5)
     const diff30 = Math.floor(Math.abs(predictedGasPer30 - gasPerNValidators['30']) / 30)
 
-    console.log(`predicted gas per 5 val, w/mock: ${predictedGasPer5}, actual: ${gasPerNValidators['5']}, diff/iter: ${diff5}`)
-    console.log(`predicted gas per 30 val, w/mock: ${predictedGasPer30}, actual: ${gasPerNValidators['30']}, diff/iter: ${diff30}\n`)
+    console.log(
+      `predicted gas per 5 val, w/mock: ${predictedGasPer5}, actual: ${gasPerNValidators['5']}, diff/iter: ${diff5}`
+    )
+    console.log(
+      `predicted gas per 30 val, w/mock: ${predictedGasPer30}, actual: ${gasPerNValidators['30']}, diff/iter: ${diff30}\n`
+    )
 
     const blockGasLimit = 12000000
     const targetBlockFraction = 0.2

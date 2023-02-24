@@ -8,5 +8,6 @@ charset = utf-8
 indent_style = space
 indent_size = 4
 
-[*.{js,yml}]
+[*.{js,yml,json,cjs}]
 indent_size = 2
+max_line_length = 120

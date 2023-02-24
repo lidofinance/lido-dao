@@ -7,7 +7,7 @@ class GenericStub {
     LOG1: 1,
     LOG2: 2,
     LOG3: 3,
-    LOG4: 4
+    LOG4: 4,
   })
 
   static GenericStubContract = hre.artifacts.require('GenericStub')
@@ -73,7 +73,7 @@ class GenericStub {
 }
 
 module.exports = {
-  GenericStub
+  GenericStub,
 }
 
 class GenericStubConfigParser {
@@ -84,7 +84,7 @@ class GenericStubConfigParser {
       logs: this._parseLogs(config),
       forwardETH: this._parseForwardETH(config),
       isRevert: this._parseIsRevert(config),
-      nextState: this._parseNextState(config)
+      nextState: this._parseNextState(config),
     }
   }
 
@@ -127,7 +127,7 @@ class GenericStubConfigParser {
         .map((i) => [args.type[i], args.value[i]])
         .reduce((args, [type, value]) => ({ type: [...args.type, type], value: [...args.value, value] }), {
           type: [],
-          value: []
+          value: [],
         })
 
       const logType = topics.length + 1 // first topic is event signature
@@ -137,7 +137,7 @@ class GenericStubConfigParser {
         signature,
         logType >= 2 ? topics[0] : '0x0',
         logType >= 3 ? topics[1] : '0x0',
-        logType === 4 ? topics[2] : '0x0'
+        logType === 4 ? topics[2] : '0x0',
       ]
     })
   }

@@ -10,27 +10,16 @@ const THROW_PREFIX = 'VM Exception while processing transaction: revert'
 const THROW_PREFIX_V2 = 'VM Exception while processing transaction: reverted with reason string'
 const THROW_PREFIX_CUSTOM = 'VM Exception while processing transaction: reverted with custom error'
 
-async function assertThrows(
-  blockOrPromise,
-  expectedErrorCode,
-  expectedReason,
-  ctx
-) {
+async function assertThrows(blockOrPromise, expectedErrorCode, expectedReason, ctx) {
   try {
-    typeof blockOrPromise === 'function'
-      ? await blockOrPromise()
-      : await blockOrPromise
+    typeof blockOrPromise === 'function' ? await blockOrPromise() : await blockOrPromise
   } catch (error) {
     if (await isGeth(ctx)) {
       // With geth, we are only provided the transaction receipt and have to decode the failure
       // ourselves.
       const status = error.receipt.status
 
-      assert.equal(
-        status,
-        '0x0',
-        `Expected transaction to revert but it executed with status ${status}`
-      )
+      assert.equal(status, '0x0', `Expected transaction to revert but it executed with status ${status}`)
       if (!expectedReason.length) {
         // Note that it is difficult to ascertain invalid jumps or out of gas scenarios
         // and so we simply pass if no revert message is given
@@ -48,18 +37,14 @@ async function assertThrows(
       return error
     } else {
       const errorMatchesExpected = error.message.search(expectedErrorCode) > -1
-      assert(
-        errorMatchesExpected,
-        `Expected error code "${expectedErrorCode}" but failed with "${error}" instead.`
-      )
+      assert(errorMatchesExpected, `Expected error code "${expectedErrorCode}" but failed with "${error}" instead.`)
       return error
     }
   }
   // assert.fail() for some reason does not have its error string printed 🤷
   assert(
     false,
-    `Expected "${expectedErrorCode}"${expectedReason ? ` (with reason: "${expectedReason}")` : ''
-    } but it did not fail`
+    `Expected "${expectedErrorCode}"${expectedReason ? ` (with reason: "${expectedReason}")` : ''} but it did not fail`
   )
 }
 
@@ -77,12 +62,7 @@ async function assertOutOfGas(blockOrPromise, ctx) {
 
 // version of @aragon/contract-helpers-test assertRevert, but with custom errors support
 async function assertRevert(blockOrPromise, expectedReason, ctx) {
-  const error = await assertThrows(
-    blockOrPromise,
-    'revert',
-    expectedReason,
-    ctx
-  )
+  const error = await assertThrows(blockOrPromise, 'revert', expectedReason, ctx)
 
   if (!expectedReason) {
     return
@@ -96,19 +76,16 @@ async function assertRevert(blockOrPromise, expectedReason, ctx) {
       .replace(THROW_PREFIX_V2, '')
       .replace(THROW_PREFIX, '')
       .trim()
-      .replace(/^'|'$/g, "")
+      .replace(/^'|'$/g, '')
   }
 
   // Truffle v5 sometimes adds an extra ' -- Reason given: reason.' to the error message 🤷
-  error.reason = error.reason
-    .replace(` -- Reason given: ${expectedReason}.`, '')
-    .trim()
+  error.reason = error.reason.replace(` -- Reason given: ${expectedReason}.`, '').trim()
 
   assert.equal(
     error.reason,
     expectedReason,
-    `Expected revert reason "${expectedReason}" but failed with "${error.reason || 'no reason'
-    }" instead.`
+    `Expected revert reason "${expectedReason}" but failed with "${error.reason || 'no reason'}" instead.`
   )
 }
 

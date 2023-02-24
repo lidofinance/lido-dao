@@ -1,23 +1,23 @@
-const hre = require('hardhat')
+const { network, web3, ethers } = require('hardhat')
 const { wei } = require('./wei')
 
 async function waitBlocks(numBlocksToMine) {
   let block
   for (let i = 0; i < numBlocksToMine; ++i) {
-    await hre.network.provider.send('evm_mine')
+    await network.provider.send('evm_mine')
     block = await web3.eth.getBlock('latest')
   }
   return block
 }
 
 async function advanceChainTime(seconds) {
-  await hre.network.provider.send('evm_increaseTime', [seconds])
-  await hre.network.provider.send('evm_mine')
+  await network.provider.send('evm_increaseTime', [seconds])
+  await network.provider.send('evm_mine')
 }
 
 async function getCurrentBlockTimestamp() {
-  const blockNum = await hre.ethers.provider.getBlockNumber()
-  const block = await hre.ethers.provider.getBlock(blockNum)
+  const blockNum = await ethers.provider.getBlockNumber()
+  const block = await ethers.provider.getBlock(blockNum)
   return block.timestamp
 }
 
@@ -54,13 +54,13 @@ function impersonate(provider, address) {
 
 async function getBalance(addressOrContract) {
   const address = addressOrContract.address || addressOrContract
-  return wei.int(await hre.ethers.provider.getBalance(address))
+  return wei.int(await ethers.provider.getBalance(address))
 }
 
 async function setBalance(addressOrContract, value) {
   const address = addressOrContract.address || addressOrContract
-  const hexValue = hre.web3.utils.numberToHex(wei.str(value))
-  await hre.network.provider.send('hardhat_setBalance', [address, hexValue])
+  const hexValue = web3.utils.numberToHex(wei.str(value))
+  await network.provider.send('hardhat_setBalance', [address, hexValue])
 }
 
 module.exports = {
@@ -70,5 +70,5 @@ module.exports = {
   getCurrentBlockTimestamp,
   impersonate,
   getBalance,
-  setBalance
+  setBalance,
 }
