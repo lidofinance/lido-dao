@@ -215,6 +215,7 @@ rule aggregatedFeeLT100Percent_init() {
     env e;
 
     require getStakingModulesCount() == 0;
+    //ND: so is this rule checking first call to addStakingModule ?
 
     string name;
     address Address;
@@ -305,6 +306,7 @@ rule canAlwaysAddAnotherStakingModule() {
     storage initState = lastStorage;
 
     addStakingModule(e, name1, Address1, targetShare1, ModuleFee1, TreasuryFee1);
+    // ND: why do you need adding name1 ? 
 
     addStakingModule(e, name2, Address2, targetShare2, ModuleFee2, TreasuryFee2) at initState;
     
@@ -339,6 +341,7 @@ rule canAlwaysGetAddedStakingModule() {
     assert !lastReverted;
     getStakingModuleIdById@withrevert(id);
     assert !lastReverted;
+    // ND: so this rule only check that the last added one can be fetched, right?  
 }
 
 rule getMaxDepositsCountReverts_init(uint256 id) {

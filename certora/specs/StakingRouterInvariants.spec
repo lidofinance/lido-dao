@@ -11,6 +11,7 @@ invariant StakingModuleIdLELast(uint256 moduleId)
 
 invariant StakingModuleIndexIsIdMinus1(uint256 moduleId)
     getStakingModuleIndexById(moduleId)+1 == getStakingModuleIdById(moduleId)
+    //ND : what about moduleIds that are not in the system? Is there some array reference here? looks like a limited-scope rule 
     filtered{f -> !isDeposit(f)}
     {
         preserved{
@@ -21,6 +22,7 @@ invariant StakingModuleIndexIsIdMinus1(uint256 moduleId)
 
 invariant StakingModuleId(uint256 moduleId)
     getStakingModuleIdById(moduleId) == moduleId
+    //same comment - is rule sanity passing on the insertion function ?
     filtered{f -> !isDeposit(f)}
     {
         preserved{
@@ -96,7 +98,7 @@ function differentOrEqualToZero_Address(address a, address b) returns bool {
 
 function safeAssumptions(uint256 moduleId) {
     requireInvariant modulesCountIsLastIndex();
-    if(moduleId > 0) {
+    if(moduleId > 0) { //this is strange if you invariants are prove - you can safely assume them 
         requireInvariant zeroAddressForUnRegisteredModule(moduleId);
         requireInvariant StakingModuleIdLELast(moduleId);
         requireInvariant StakingModuleIndexIsIdMinus1(moduleId);

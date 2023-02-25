@@ -60,6 +60,7 @@ definition isAddModule(method f) returns bool =
     f.selector == addStakingModule(string,address,uint256,uint256,uint256).selector;
 
 // Staking module status:
+//constants are based on the code StakingModuleStatus, right? nice to have getters and check in a rule that the values are correct, this will support code changes also 
 definition ACTIVE() returns uint8 = 0; 
 definition PAUSED() returns uint8 = 1; 
 definition STOPPED() returns uint8 = 2; 
