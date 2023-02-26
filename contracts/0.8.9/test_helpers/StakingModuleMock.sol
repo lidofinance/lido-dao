@@ -110,6 +110,7 @@ contract StakingModuleMock is IStakingModule {
     }
 
     /// @dev onRewardsMinted mock
+    // solhint-disable-next-line
     struct Call_onRewardsMinted {
         uint256 callCount;
         uint256 totalShares;
@@ -120,6 +121,7 @@ contract StakingModuleMock is IStakingModule {
         ++lastCall_onRewardsMinted.callCount;
     }
 
+    // solhint-disable-next-line
     struct Call_updateValidatorsCount {
         bytes nodeOperatorIds;
         bytes validatorsCounts;
@@ -147,6 +149,7 @@ contract StakingModuleMock is IStakingModule {
         ++lastCall_updateExitedValidatorsCount.callCount;
     }
 
+    // solhint-disable-next-line
     struct Call_updateRefundedValidatorsCount {
         uint256 nodeOperatorId;
         uint256 refundedValidatorsCount;
@@ -165,6 +168,7 @@ contract StakingModuleMock is IStakingModule {
         ++callCount_onExitedAndStuckValidatorsCountsUpdated;
     }
 
+    // solhint-disable-next-line
     struct Call_unsafeUpdateValidatorsCount {
         uint256 nodeOperatorId;
         uint256 exitedValidatorsKeysCount;

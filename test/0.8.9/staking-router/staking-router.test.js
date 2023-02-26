@@ -4,7 +4,7 @@ const { utils } = require('web3')
 const { BN } = require('bn.js')
 const { assert } = require('../../helpers/assert')
 const { EvmSnapshot } = require('../../helpers/blockchain')
-const { ETH } = require('../../helpers/utils')
+const { ETH, toBN } = require('../../helpers/utils')
 
 const OssifiableProxy = artifacts.require('OssifiableProxy.sol')
 const DepositContractMock = artifacts.require('DepositContractMock')
@@ -279,18 +279,48 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('getStakingModuleActiveValidatorsCount', async () => {
       await stakingModule.setActiveValidatorsCount(200, { from: deployer })
-
       assert.equals(await router.getStakingModuleActiveValidatorsCount(1), 200)
     })
 
-    it('getStakingRewardsDistribution', async () => {
-      const anotherStakingModule = await StakingModuleMock.new({ from: deployer })
+    it('getStakingRewardsDistribution - only one module has active keys', async () => {
+      await stakingModule.setActiveValidatorsCount(40, { from: deployer })
 
+      // no active keys for second module
+      const anotherStakingModule = await StakingModuleMock.new({ from: deployer })
       await router.addStakingModule('Test module 2', anotherStakingModule.address, 100, 1000, 2000, {
         from: appManager,
       })
+      await anotherStakingModule.setAvailableKeysCount(50, { from: deployer })
 
-      // await router.getStakingRewardsDistribution()
+      const stakingModuleIds = await router.getStakingModuleIds()
+      let rewardDistribution = await router.getStakingRewardsDistribution()
+
+      assert.equal(stakingModuleIds.length, 2)
+      // only one module in distribution
+      assert.equal(rewardDistribution.stakingModuleIds.length, 1)
+      assert.deepEqual(rewardDistribution.stakingModuleIds, [stakingModuleIds[0]])
+      // expect(rewardDistribution.stakingModuleIds).to.deep.equal([stakingModuleIds[0]])
+      const percentPoints = toBN(100)
+      // 10% = 10% from (100% of active validator)
+      assert.equal(
+        rewardDistribution.stakingModuleFees[0].mul(percentPoints).div(rewardDistribution.precisionPoints).toNumber(),
+        10
+      )
+
+      // 2nd module has active keys
+      await anotherStakingModule.setActiveValidatorsCount(10, { from: deployer })
+      rewardDistribution = await router.getStakingRewardsDistribution()
+      assert.deepEqual(rewardDistribution.stakingModuleIds, stakingModuleIds)
+      // 8% = 10% from (80% of active validator)
+      assert.equal(
+        rewardDistribution.stakingModuleFees[0].mul(percentPoints).div(rewardDistribution.precisionPoints).toNumber(),
+        8
+      )
+      // 2% = 10% from (20% of active validator)
+      assert.equal(
+        rewardDistribution.stakingModuleFees[1].mul(percentPoints).div(rewardDistribution.precisionPoints).toNumber(),
+        2
+      )
     })
   })
 

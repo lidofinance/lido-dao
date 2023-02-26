@@ -20,7 +20,7 @@ const StakingModuleStatus = {
 
 let router
 let operators, solo1, solo2, solo3
-let module1Id, module2Id, module3Id, module4Id
+let module1Id, module3Id, module4Id
 let config
 
 contract('StakingRouter', ([deployer, admin, depositor, stranger]) => {
@@ -119,13 +119,17 @@ contract('StakingRouter', ([deployer, admin, depositor, stranger]) => {
       assert.equal(distribution.stakingModuleIds.length, lengthShouldBe)
       assert.equal(distribution.stakingModuleFees.length, lengthShouldBe)
 
+      // share = active 2 / totalActive = 2 == 1
+      // moduleFee = share * moduleFee = 1 * 5 = 5 * 10^18
+
       assert.deepEqual(distribution.recipients, [operators.address])
       assert.deepEqual(toNum(distribution.stakingModuleIds), [1])
       assert.deepEqual(toNum(distribution.stakingModuleFees), [5 * 10 ** 18])
       assert.equal(toNum(distribution.totalFee), 10 * 10 ** 18)
     })
 
-    it('add 2 modules', async () => {
+    it('add 3 modules', async () => {
+      // add module withoud node operators
       await router.addStakingModule(
         'Solo1',
         solo1.address,
@@ -134,8 +138,8 @@ contract('StakingRouter', ([deployer, admin, depositor, stranger]) => {
         500, // 50 % _treasuryFee
         { from: admin }
       )
-      module2Id = +(await router.getStakingModuleIds())[1]
 
+      // add solo2 with node operators
       await router.addStakingModule(
         'Solo2',
         solo2.address,
@@ -146,20 +150,8 @@ contract('StakingRouter', ([deployer, admin, depositor, stranger]) => {
       )
       module3Id = +(await router.getStakingModuleIds())[2]
 
-      await router.addStakingModule(
-        'Solo3',
-        solo3.address,
-        2000, // 20 % _targetShare
-        700, // 40 % _moduleFee
-        300, // 40 % _treasuryFee
-        { from: admin }
-      )
-      module4Id = +(await router.getStakingModuleIds())[3]
-    })
-
-    it('prepare node operators for 3d module', async () => {
       config = {
-        name: 'test3',
+        name: 'Solo2',
         rewardAddress: ADDRESS_2,
         totalSigningKeysCount: 10,
         vettedSigningKeysCount: 10,
@@ -175,9 +167,21 @@ contract('StakingRouter', ([deployer, admin, depositor, stranger]) => {
         config.depositedSigningKeysCount,
         config.exitedSigningKeysCount
       )
+      ///
+
+      // add solo3 with node operators, but stop this module
+      await router.addStakingModule(
+        'Solo3',
+        solo3.address,
+        2000, // 20 % _targetShare
+        700, // 40 % _moduleFee
+        300, // 40 % _treasuryFee
+        { from: admin }
+      )
+      module4Id = +(await router.getStakingModuleIds())[3]
 
       config = {
-        name: 'test4',
+        name: 'Solo3',
         rewardAddress: ADDRESS_3,
         totalSigningKeysCount: 13,
         vettedSigningKeysCount: 4,
@@ -201,12 +205,21 @@ contract('StakingRouter', ([deployer, admin, depositor, stranger]) => {
       const distribution = await router.getStakingRewardsDistribution()
 
       const lengthShouldBe = distribution.stakingModuleFees.length
+      assert.equal(lengthShouldBe, 3)
       assert.equal(distribution.recipients.length, lengthShouldBe)
       assert.equal(distribution.stakingModuleIds.length, lengthShouldBe)
       assert.equal(distribution.stakingModuleFees.length, lengthShouldBe)
 
+      // totalActiveVal = 2 + 6 + 2 + 0 = 10
+      //
+      // share1 = 2/10 = 0.2, fee1 = share1 * moduleFee1 = 0.2 * 0.05 = 0.01
+      // share2 = 6/10 = 0.6, fee2 = share2 * moduleFee2 = 0.6 * 0.05 = 0.03
+      // share3 = 0, fee3 = 0
+      // share4 = 0, fee4 = 0 //module not active
+      // moduleFee = share * moduleFee = 1 * 5 = 5 * 10^18
+
       assert.deepEqual(distribution.recipients, [operators.address, solo2.address, solo3.address])
-      assert.deepEqual(toNum(distribution.stakingModuleIds), [module1Id, module2Id, module3Id])
+      assert.deepEqual(toNum(distribution.stakingModuleIds), [module1Id, module3Id, module4Id])
       assert.deepEqual(toNum(distribution.stakingModuleFees), [1 * 10 ** 18, 3 * 10 ** 18, 0])
       assert.equal(toNum(distribution.totalFee), 10 * 10 ** 18)
     })
@@ -273,25 +286,6 @@ contract('StakingRouter', ([deployer, admin, depositor, stranger]) => {
         500, // 50 % _treasuryFee
         { from: admin }
       )
-      module2Id = +(await router.getStakingModuleIds())[1]
-
-      const config = {
-        name: 'test',
-        rewardAddress: ADDRESS_1,
-        totalSigningKeysCount: 13,
-        vettedSigningKeysCount: 4,
-        depositedSigningKeysCount: 7,
-        exitedSigningKeysCount: 5,
-      }
-
-      await operators.testing_addNodeOperator(
-        config.name,
-        config.rewardAddress,
-        config.totalSigningKeysCount,
-        config.vettedSigningKeysCount,
-        config.depositedSigningKeysCount,
-        config.exitedSigningKeysCount
-      )
     })
 
     it('works 2 active modules', async () => {
@@ -303,6 +297,7 @@ contract('StakingRouter', ([deployer, admin, depositor, stranger]) => {
     })
 
     it('add next module', async () => {
+      // add solo2 with node operators
       await router.addStakingModule(
         'Solo2',
         solo2.address,
@@ -313,25 +308,13 @@ contract('StakingRouter', ([deployer, admin, depositor, stranger]) => {
       )
       module3Id = +(await router.getStakingModuleIds())[2]
 
-      await router.addStakingModule(
-        'Solo3',
-        solo3.address,
-        2000, // 20 % _targetShare
-        500, // 40 % _moduleFee
-        500, // 40 % _treasuryFee
-        { from: admin }
-      )
-      module4Id = +(await router.getStakingModuleIds())[3]
-    })
-
-    it('prepare node operators for 3d module', async () => {
       config = {
-        name: 'test3',
-        rewardAddress: ADDRESS_3,
+        name: 'Solo2',
+        rewardAddress: ADDRESS_2,
         totalSigningKeysCount: 10,
         vettedSigningKeysCount: 10,
         depositedSigningKeysCount: 7,
-        exitedSigningKeysCount: 5,
+        exitedSigningKeysCount: 1,
       }
 
       await solo2.testing_addNodeOperator(
@@ -342,9 +325,21 @@ contract('StakingRouter', ([deployer, admin, depositor, stranger]) => {
         config.depositedSigningKeysCount,
         config.exitedSigningKeysCount
       )
+      ///
+
+      // add solo3 with node operators, but stop this module
+      await router.addStakingModule(
+        'Solo3',
+        solo3.address,
+        2000, // 20 % _targetShare
+        700, // 40 % _moduleFee
+        300, // 40 % _treasuryFee
+        { from: admin }
+      )
+      module4Id = +(await router.getStakingModuleIds())[3]
 
       config = {
-        name: 'test4',
+        name: 'Solo3',
         rewardAddress: ADDRESS_3,
         totalSigningKeysCount: 13,
         vettedSigningKeysCount: 4,
@@ -367,18 +362,24 @@ contract('StakingRouter', ([deployer, admin, depositor, stranger]) => {
       let distribution = await router.getStakingRewardsDistribution()
 
       const lengthShouldBe = distribution.stakingModuleFees.length
+      assert.equal(lengthShouldBe, 3)
       assert.equal(distribution.recipients.length, lengthShouldBe)
       assert.equal(distribution.stakingModuleIds.length, lengthShouldBe)
       assert.equal(distribution.stakingModuleFees.length, lengthShouldBe)
 
+      // m1 - 2 active, 5%
+      // m2 - 0 active, 5%
+      // m3 - 6 active, 5%
+      // m4 - 2 active, 7% stopped
+
       assert.deepEqual(distribution.recipients, [operators.address, solo2.address, solo3.address])
-      assert.deepEqual(toNum(distribution.stakingModuleIds), [module1Id, module2Id, module3Id])
-      assert.deepEqual(toNum(distribution.stakingModuleFees), [2.5 * 10 ** 18, 1.25 * 10 ** 18, 0])
+      assert.deepEqual(toNum(distribution.stakingModuleIds), [module1Id, module3Id, module4Id])
+      assert.deepEqual(toNum(distribution.stakingModuleFees), [1 * 10 ** 18, 3 * 10 ** 18, 0])
       assert.equal(toNum(distribution.totalFee), 10 * 10 ** 18)
 
       distribution = await router.getStakingFeeAggregateDistribution()
-      assert.equal(+distribution.modulesFee, 3.75 * 10 ** 18)
-      assert.equal(+distribution.treasuryFee, 6.25 * 10 ** 18)
+      assert.equal(+distribution.modulesFee, (1 + 3) * 10 ** 18)
+      assert.equal(+distribution.treasuryFee, 6 * 10 ** 18)
       assert.equal(+distribution.basePrecision, new BN(10).pow(new BN(20)))
     })
 
