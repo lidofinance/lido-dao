@@ -940,27 +940,5 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
       await router.unsafeSetExitedValidatorsCount(module1Id, 0, true, ValidatorsCountsCorrection, { from: admin })
       assert.equal(+(await module1.callCount_onExitedAndStuckValidatorsCountsUpdated()), 1)
     })
-
-    // it('reverts UnexpectedCurrentValidatorsCount()', async () => {
-    //   let currentModuleExitedValidatorsCount=0
-    //   let currentNodeOperatorExitedValidatorsCount=0
-    //   let currentNodeOperatorStuckValidatorsCount=0
-    //   let newModuleExitedValidatorsCount=0
-    //   let newNodeOperatorExitedValidatorsCount=0
-    //   let newNodeOperatorStuckValidatorsCount=0
-
-    //   let ValidatorsCountsCorrection = [
-    //     currentModuleExitedValidatorsCount,
-    //     currentNodeOperatorExitedValidatorsCount,
-    //     currentNodeOperatorStuckValidatorsCount,
-    //     newModuleExitedValidatorsCount,
-    //     newNodeOperatorExitedValidatorsCount,
-    //     newNodeOperatorStuckValidatorsCount,
-    //   ]
-
-    //   await router.grantRole(await router.UNSAFE_SET_EXITED_VALIDATORS_ROLE(), admin, { from: admin })
-
-    //   await router.unsafeSetExitedValidatorsCount(module1Id,0,false,ValidatorsCountsCorrection, {from: admin})
-    // })
   })
 })
