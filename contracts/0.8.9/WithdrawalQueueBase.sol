@@ -212,18 +212,16 @@ abstract contract WithdrawalQueueBase {
             }
 
             prevRequestShareRate = requestShareRate;
-            ++requestId;
+            unchecked{ ++requestId; }
         }
 
         _state.finished = requestId < postFinalId || requestId == lastRequestId + 1;
 
         if (_state.finished) {
-            // TODO: trim array in memory
-            uint256[] memory result = new uint256[](length);
-            for (uint256 i = 0; i < length; ++i) {
-                result[i] = _state.batches[i];
+            uint256[] memory batches = _state.batches;
+            assembly {
+                mstore(batches, length)
             }
-             _state.batches = result;
         } else {
             _state.batches[MAX_NUMBER_OF_BATCHES] = length;
         }
@@ -307,7 +305,7 @@ abstract contract WithdrawalQueueBase {
             sharesToBurn += shares;
 
             preBatchStartId = _batches[batchIndex];
-            ++batchIndex;
+            unchecked{ ++batchIndex; }
         } while (batchIndex < _batches.length);
     }
 
