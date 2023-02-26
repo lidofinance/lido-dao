@@ -60,6 +60,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
     })
 
     it(`protocol receives rewards, changing share rate to 2.0`, async () => {
+      await queue.onPreRebase()
       await setShareRate(2)
     })
 
@@ -70,6 +71,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
     })
 
     it(`protocol receives slashing, changing share rate to 1.0`, async () => {
+      await queue.onPreRebase()
       await setShareRate(1)
     })
 

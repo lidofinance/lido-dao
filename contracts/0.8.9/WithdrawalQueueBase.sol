@@ -107,6 +107,7 @@ abstract contract WithdrawalQueueBase {
     error InvalidRequestId(uint256 _requestId);
     error InvalidRequestIdRange(uint256 startId, uint256 endId);
     error InvalidState();
+    error InvalidBatches();
     error EmptyBatches();
     error RequestNotFoundOrNotFinalized(uint256 _requestId);
     error NotEnoughEther();
@@ -201,8 +202,8 @@ abstract contract WithdrawalQueueBase {
             _state.ethBudget -= etherRequested;
 
             if (length != 0 && (
-                prevRequestShareRate < _maxShareRate && requestShareRate < _maxShareRate ||
-                prevRequestShareRate >= _maxShareRate && requestShareRate >= _maxShareRate
+                prevRequestShareRate <= _maxShareRate && requestShareRate <= _maxShareRate ||
+                prevRequestShareRate > _maxShareRate && requestShareRate > _maxShareRate
             )) {
                 _state.batches[length - 1] = requestId;
             } else {
@@ -218,6 +219,7 @@ abstract contract WithdrawalQueueBase {
         _state.finished = requestId < postFinalId || requestId == lastRequestId + 1;
 
         if (_state.finished) {
+            assert(length <= MAX_NUMBER_OF_BATCHES);
             uint256[] memory batches = _state.batches;
             assembly {
                 mstore(batches, length)
@@ -230,50 +232,49 @@ abstract contract WithdrawalQueueBase {
     }
 
     function onPreRebase() external {
-        // Populate shareRate extrema array
-        // Invariants:
-        // • shareRate(extrema[0]) == shareRate(queue[1])
-        // • shareRate(extrema[n]) != shareRate(extrema[n+1])
-        // • extrema[last] is minimum => shareRate(lastRequestId) <= shareRate(lastRequestId)
-        // • extrema[last] is maximum => shareRate(lastRequestId) >= shareRate(lastRequestId)
+        // Populate shareRate extrema list
         uint256 lastRequestId = getLastRequestId();
         uint256[] storage extrema = _getExtrema();
-        // first request is an extremum
+        // first request is an extremum by default
         if (extrema.length == 0 && lastRequestId > 0) {
             extrema.push(lastRequestId);
         }
 
         uint256 lastExtremumId = extrema[extrema.length - 1];
+        // no new requests => no new exrema
+        if (lastExtremumId == lastRequestId) return;
 
-        if (lastRequestId > lastExtremumId) {
-            uint256 lastRequestShareRate = _calcShareRate(lastRequestId);
-            uint256 lastExtremumShareRate = _calcShareRate(lastExtremumId);
+        uint256 lastRequestShareRate = _calcShareRate(lastRequestId);
+        uint256 lastExtremumShareRate = _calcShareRate(lastExtremumId);
 
-            if (lastRequestShareRate == lastExtremumShareRate) return;
-            // first met request in a sequence with equal shareRate is an extremum
+        if (lastRequestShareRate == lastExtremumShareRate) return;
+        // first met request in a sequence with equal shareRate is an extremum
 
-            if (extrema.length == 1) {
-                // first two different rates are always extrema
+        if (extrema.length == 1) {
+            // first two different rates are always extrema
+            extrema.push(lastRequestId);
+        } else {
+            uint256 prevExtremumShareRate = _calcShareRate(lastExtremumId - 1);
+
+            bool wasGrowing = lastExtremumShareRate > prevExtremumShareRate;
+            // |  •
+            // |•   *
+            // +------->
+            if (wasGrowing && lastRequestShareRate < lastExtremumShareRate) {
                 extrema.push(lastRequestId);
-            } else {
-                uint256 prevExtremumShareRate = _calcShareRate(lastExtremumId - 1);
-
-                bool wasGrowing = lastExtremumShareRate > prevExtremumShareRate;
-                // |  •
-                // |•   *
-                // +------->
-                if (wasGrowing && lastRequestShareRate < lastExtremumShareRate) {
-                    extrema.push(lastRequestId);
-                    return;
-                }
-                // |•   *
-                // |  •
-                // +------->
-                if (!wasGrowing && lastRequestShareRate > lastExtremumShareRate) {
-                    extrema.push(lastRequestId);
-                    return;
-                }
+                return;
             }
+            //  |•   *
+            //  |  •
+            //  +------->
+            if (!wasGrowing && lastRequestShareRate > lastExtremumShareRate) {
+                extrema.push(lastRequestId);
+                return;
+            }
+            //  |•        |  *
+            //  |  *   OR |•
+            //  +---->    +---->
+            extrema[extrema.length - 1] = lastRequestId;
         }
     }
 
@@ -311,13 +312,36 @@ abstract contract WithdrawalQueueBase {
 
     function _checkFinalizationBatchesIntegrity(uint256[] memory _batches) internal view {
         if (_batches.length == 0) revert EmptyBatches();
+
         uint256 lastIdInBatch = _batches[_batches.length - 1];
         if (lastIdInBatch > getLastRequestId()) revert InvalidRequestId(lastIdInBatch);
+
         uint256 lastFinalizedRequestId = getLastFinalizedRequestId();
         uint256 firstIdInBatch = _batches[0];
         if (firstIdInBatch <= lastFinalizedRequestId) revert InvalidRequestId(firstIdInBatch);
 
-        // TODO: check extrema and crossing points
+        // checking that between first and pre-last x-points we have odd number of extremums
+        uint256 index = _batches.length - 1;
+        uint256 currentExtrema = _getExtrema().length - 1;
+
+        uint256 extremaCounter = 0;
+
+        while (index > 0) {
+            uint256 extremumId = _getExtrema()[currentExtrema];
+
+            if (extremumId > _batches[index - 1]) {
+                --currentExtrema;
+                if (extremumId != _batches[index - 1] && extremumId < _batches[index]) {
+                    // we are skipping extrema that are x-points in the same time
+                    // and skipping extrema that are greater than the rightmost batchId
+                    ++extremaCounter;
+                }
+            } else {
+                if (extremaCounter % 2 == 0) revert InvalidBatches();
+                extremaCounter = 0;
+                --index;
+            }
+        }
     }
 
     /// @dev Finalize requests from last finalized one up to `_nextFinalizedRequestId`
@@ -334,6 +358,7 @@ abstract contract WithdrawalQueueBase {
         uint128 stETHToFinalize = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH;
         if (_amountOfETH > stETHToFinalize) revert TooMuchEtherToFinalize(_amountOfETH, stETHToFinalize);
 
+        // TODO: Incorrect
         uint256 maxShareRate = SHARE_RATE_UNLIMITED;
         if (stETHToFinalize > _amountOfETH) {
             maxShareRate = _maxShareRate;
@@ -520,6 +545,7 @@ abstract contract WithdrawalQueueBase {
         // 0-index is reserved as 'not_found' response in the interface everywhere
         _getQueue()[0] = WithdrawalRequest(0, 0, address(0), uint64(block.number), true);
         _getCheckpoints()[getLastCheckpointIndex()] = Checkpoint(0, 0);
+        _getExtrema().push(0);
     }
 
     function _sendValue(address _recipient, uint256 _amount) internal {
