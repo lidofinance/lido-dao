@@ -18,7 +18,7 @@ contract WithdrawalQueueERC721Mock is WithdrawalQueueERC721 {
         return _getQueue()[id];
     }
 
-    function getCheckpointItem(uint256 id) external view returns (DiscountCheckpoint memory) {
+    function getCheckpointItem(uint256 id) external view returns (Checkpoint memory) {
         return _getCheckpoints()[id];
     }
 }
