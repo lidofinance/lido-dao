@@ -470,11 +470,11 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     }
 
     /// @notice Applies sanity checks to the withdrawal requests finalization
-    /// @param _lastFinalizableRequestId right boundary of requestId range if equals 0, no requests
-    ///     should be finalized
+    /// @param _withdrawalFinalizationBatches the ascendingly-sorted array of withdrawal request IDs obtained by calling
+    /// WithdrawalQueue.calculateFinalizationBatches. Empty array means that no withdrawal requests should be finalized
     /// @param _reportTimestamp timestamp when the originated oracle report was submitted
     function checkWithdrawalQueueOracleReport(
-        uint256 _lastFinalizableRequestId,
+        uint256[] calldata _withdrawalFinalizationBatches,
         uint256 _reportTimestamp
     )
         external
@@ -483,7 +483,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         LimitsList memory limitsList = _limits.unpack();
         address withdrawalQueue = LIDO_LOCATOR.withdrawalQueue();
 
-        _checkRequestIdToFinalizeUpTo(limitsList, withdrawalQueue, _lastFinalizableRequestId, _reportTimestamp);
+        _checkFinalizationBatches(limitsList, withdrawalQueue, _withdrawalFinalizationBatches, _reportTimestamp);
     }
 
     /// @notice Applies sanity checks to the simulated share rate for withdrawal requests finalization
@@ -593,14 +593,15 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         if (_appearedValidators > churnLimit) revert IncorrectAppearedValidators(_appearedValidators);
     }
 
-    function _checkRequestIdToFinalizeUpTo(
+    function _checkFinalizationBatches(
         LimitsList memory _limitsList,
         address _withdrawalQueue,
-        uint256 _requestIdToFinalizeUpTo,
+        uint256[] calldata _withdrawalFinalizationBatches,
         uint256 _reportTimestamp
     ) internal view {
+        //TODO: update sanity check
         (, , , uint256 requestTimestampToFinalizeUpTo, , ) = IWithdrawalQueue(_withdrawalQueue)
-            .getWithdrawalRequestStatus(_requestIdToFinalizeUpTo);
+            .getWithdrawalRequestStatus(_withdrawalFinalizationBatches[_withdrawalFinalizationBatches.length - 1]);
         if (_reportTimestamp < requestTimestampToFinalizeUpTo + _limitsList.requestTimestampMargin)
             revert IncorrectRequestFinalization(requestTimestampToFinalizeUpTo);
     }

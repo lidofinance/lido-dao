@@ -115,8 +115,7 @@ contract OracleReportSanityCheckerStub {
     ) external view {}
 
     function checkWithdrawalQueueOracleReport(
-        uint256 _lastFinalizableRequestId,
-        uint256 _simulatedShareRate,
+        uint256[] calldata _withdrawalFinalizationBatches,
         uint256 _reportTimestamp
     ) external view {}
 
