@@ -285,8 +285,6 @@ abstract contract WithdrawalQueueBase {
         returns (uint256 ethToLock, uint256 sharesToBurn)
     {
         if (_maxShareRate == 0) revert ZeroShareRate();
-        if (_batches.length == 0) revert EmptyBatches();
-
         _checkFinalizationBatchesIntegrity(_batches);
 
         uint256 preBatchStartId = getLastFinalizedRequestId();
@@ -314,7 +312,14 @@ abstract contract WithdrawalQueueBase {
     }
 
     function _checkFinalizationBatchesIntegrity(uint256[] memory _batches) internal view {
+        if (_batches.length == 0) revert EmptyBatches();
+        uint256 lastIdInBatch = _batches[_batches.length - 1];
+        if (lastIdInBatch > getLastRequestId()) revert InvalidRequestId(lastIdInBatch);
+        uint256 lastFinalizedRequestId = getLastFinalizedRequestId();
+        uint256 firstIdInBatch = _batches[0];
+        if (firstIdInBatch <= lastFinalizedRequestId) revert InvalidRequestId(firstIdInBatch);
 
+        // TODO: check extrema and crossing points
     }
 
     /// @dev Finalize requests from last finalized one up to `_nextFinalizedRequestId`
@@ -331,17 +336,17 @@ abstract contract WithdrawalQueueBase {
         uint128 stETHToFinalize = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH;
         if (_amountOfETH > stETHToFinalize) revert TooMuchEtherToFinalize(_amountOfETH, stETHToFinalize);
 
-        uint256 shareRate = SHARE_RATE_UNLIMITED;
+        uint256 maxShareRate = SHARE_RATE_UNLIMITED;
         if (stETHToFinalize > _amountOfETH) {
-            shareRate = _maxShareRate;
+            maxShareRate = _maxShareRate;
         }
 
         uint256 lastCheckpointIndex = getLastCheckpointIndex();
         Checkpoint storage lastCheckpoint = _getCheckpoints()[lastCheckpointIndex];
 
-        if (shareRate != lastCheckpoint.maxShareRate) {
+        if (maxShareRate != lastCheckpoint.maxShareRate) {
             // add a new discount if it differs from the previous
-            _getCheckpoints()[lastCheckpointIndex + 1] = Checkpoint(firstUnfinalizedRequestId, shareRate);
+            _getCheckpoints()[lastCheckpointIndex + 1] = Checkpoint(firstUnfinalizedRequestId, maxShareRate);
             _setLastCheckpointIndex(lastCheckpointIndex + 1);
         }
 

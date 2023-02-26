@@ -2,7 +2,7 @@ const { contract, ethers } = require('hardhat')
 
 const { assert } = require('../helpers/assert')
 const { e18, e27, toBN, getFirstEventArgs } = require('../helpers/utils')
-const { MAX_UINT256 } = require('../0.6.12/helpers/constants')
+const { MAX_UINT256 } = require('../helpers/constants')
 const { EvmSnapshot } = require('../helpers/blockchain')
 
 const { deployWithdrawalQueue } = require('./withdrawal-queue-deploy.test')
@@ -74,7 +74,10 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
     })
 
     it(`both requests can be finalized with 2 ETH`, async () => {
-      const batch = await queue.finalizationBatch(requestIds[1], e27(1))
+      const result = await queue.calculateFinalizationBatches(e27(1), MAX_UINT256, [e18(2), false, []])
+      assert.isTrue(result.finished)
+
+      const batch = await queue.finalizationValue(result.batches, e27(1))
       assert.equals(batch.ethToLock, e18(2))
       assert.equals(batch.sharesToBurn, e18(2))
     })
@@ -82,7 +85,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
     let claimableEther
 
     it(`requests get finalized`, async () => {
-      await queue.finalize(requestIds[1], { from: finalizer, value: e18(2) })
+      await queue.finalize(requestIds[1], e27(1), { from: finalizer, value: e18(2) })
       assert.equals(await queue.getLastFinalizedRequestId(), requestIds[1])
 
       const hints = await queue.findCheckpointHintsUnbounded(requestIds)
