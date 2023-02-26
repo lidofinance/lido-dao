@@ -212,16 +212,16 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
   }
 
   it('handleOracleReport access control', async () => {
-    await assert.reverts(lido.handleOracleReport(0, 0, 0, 0, 0, 0, 0, 0, 0, { from: stranger }), 'APP_AUTH_FAILED')
+    await assert.reverts(lido.handleOracleReport(0, 0, 0, 0, 0, 0, 0, [], 0, { from: stranger }), 'APP_AUTH_FAILED')
   })
 
   it('handleOracleReport reverts whe protocol stopped', async () => {
     await lido.stop({ from: deployed.voting.address })
-    await assert.reverts(lido.handleOracleReport(0, 0, 0, 0, 0, 0, 0, 0, 0, { from: stranger }), 'CONTRACT_IS_STOPPED')
+    await assert.reverts(lido.handleOracleReport(0, 0, 0, 0, 0, 0, 0, [], 0, { from: stranger }), 'CONTRACT_IS_STOPPED')
   })
 
   it('zero report should do nothing', async () => {
-    const tx = await lido.handleOracleReport(0, 0, 0, 0, 0, 0, 0, 0, 0, { from: oracle })
+    const tx = await lido.handleOracleReport(0, 0, 0, 0, 0, 0, 0, [], 0, { from: oracle })
     await checkEvents({
       tx,
       preCLValidators: 0,
@@ -265,7 +265,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     })
 
     it('first report after deposit without rewards', async () => {
-      const tx = await lido.handleOracleReport(0, 0, 1, ETH(32), 0, 0, 0, 0, 0, { from: oracle })
+      const tx = await lido.handleOracleReport(0, 0, 1, ETH(32), 0, 0, 0, [], 0, { from: oracle })
       await checkEvents({
         tx,
         preCLValidators: 0,
@@ -295,7 +295,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     })
 
     it('first report after deposit with rewards', async () => {
-      const tx = await lido.handleOracleReport(0, ONE_YEAR, 1, ETH(33), 0, 0, 0, 0, 0, { from: oracle })
+      const tx = await lido.handleOracleReport(0, ONE_YEAR, 1, ETH(33), 0, 0, 0, [], 0, { from: oracle })
       const sharesMintedAsFees = calcSharesMintedAsFees(ETH(1), 10, 100, ETH(100), ETH(101))
       await checkEvents({
         tx,
@@ -334,36 +334,36 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
 
     it('reverts on reported more than deposited', async () => {
       await assert.reverts(
-        lido.handleOracleReport(0, 0, 4, 0, 0, 0, 0, 0, 0, { from: oracle }),
+        lido.handleOracleReport(0, 0, 4, 0, 0, 0, 0, [], 0, { from: oracle }),
         'REPORTED_MORE_DEPOSITED'
       )
     })
 
     it('reverts on reported less than reported previously', async () => {
-      await lido.handleOracleReport(0, 0, 3, ETH(96), 0, 0, 0, 0, 0, { from: oracle })
+      await lido.handleOracleReport(0, 0, 3, ETH(96), 0, 0, 0, [], 0, { from: oracle })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
       await assert.reverts(
-        lido.handleOracleReport(0, 0, 2, 0, 0, 0, 0, 0, 0, { from: oracle }),
+        lido.handleOracleReport(0, 0, 2, 0, 0, 0, 0, [], 0, { from: oracle }),
         'REPORTED_LESS_VALIDATORS'
       )
     })
 
     it('withdrawal vault balance check', async () => {
       await assert.reverts(
-        lido.handleOracleReport(0, 0, 0, 0, 1, 0, 0, 0, 0, { from: oracle }),
+        lido.handleOracleReport(0, 0, 0, 0, 1, 0, 0, [], 0, { from: oracle }),
         'IncorrectWithdrawalsVaultBalance(0)'
       )
     })
 
     it('withdrawal vault balance check 2', async () => {
       await assert.reverts(
-        lido.handleOracleReport(0, 0, 0, 0, 1, 0, 0, 0, 0, { from: oracle }),
+        lido.handleOracleReport(0, 0, 0, 0, 1, 0, 0, [], 0, { from: oracle }),
         'IncorrectWithdrawalsVaultBalance(0)'
       )
     })
 
     it('does not revert on new total balance stay the same', async () => {
-      let tx = await lido.handleOracleReport(0, 0, 3, ETH(96), 0, 0, 0, 0, 0, { from: oracle })
+      let tx = await lido.handleOracleReport(0, 0, 3, ETH(96), 0, 0, 0, [], 0, { from: oracle })
       await checkEvents({
         tx,
         preCLValidators: 0,
@@ -389,7 +389,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         curatedModuleBalanceDiff: 0,
         initialHolderBalanceDiff: 0,
       })
-      tx = await lido.handleOracleReport(0, 0, 3, ETH(96), 0, 0, 0, 0, 0, { from: oracle })
+      tx = await lido.handleOracleReport(0, 0, 3, ETH(96), 0, 0, 0, [], 0, { from: oracle })
       await checkEvents({
         tx,
         preCLValidators: 3,
@@ -421,7 +421,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
       // set oneOffCLBalanceDecreaseBPLimit = 1%
       await oracleReportSanityChecker.setOracleReportLimits(ORACLE_REPORT_LIMITS_BOILERPLATE, { from: voting })
 
-      let tx = await lido.handleOracleReport(0, 0, 3, ETH(96), 0, 0, 0, 0, 0, { from: oracle })
+      let tx = await lido.handleOracleReport(0, 0, 3, ETH(96), 0, 0, 0, [], 0, { from: oracle })
       await checkEvents({
         tx,
         preCLValidators: 0,
@@ -447,7 +447,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         curatedModuleBalanceDiff: 0,
         initialHolderBalanceDiff: 0,
       })
-      tx = await lido.handleOracleReport(0, 0, 3, ETH(95.04), 0, 0, 0, 0, 0, { from: oracle })
+      tx = await lido.handleOracleReport(0, 0, 3, ETH(95.04), 0, 0, 0, [], 0, { from: oracle })
       await checkEvents({
         tx,
         preCLValidators: 3,
@@ -480,7 +480,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
       // set oneOffCLBalanceDecreaseBPLimit = 1%
       await oracleReportSanityChecker.setOracleReportLimits(ORACLE_REPORT_LIMITS_BOILERPLATE, { from: voting })
 
-      await lido.handleOracleReport(0, 0, 3, ETH(96), 0, 0, 0, 0, 0, { from: oracle })
+      await lido.handleOracleReport(0, 0, 3, ETH(96), 0, 0, 0, [], 0, { from: oracle })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
       await checkBalanceDeltas({
         totalPooledEtherDiff: 0,
@@ -491,7 +491,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         initialHolderBalanceDiff: 0,
       })
       await assert.reverts(
-        lido.handleOracleReport(0, 0, 3, ETH(95.03), 0, 0, 0, 0, 0, { from: oracle }),
+        lido.handleOracleReport(0, 0, 3, ETH(95.03), 0, 0, 0, [], 0, { from: oracle }),
         'IncorrectCLBalanceDecrease(101)'
       )
     })
@@ -506,7 +506,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         { from: voting }
       )
 
-      await lido.handleOracleReport(0, 0, 3, ETH(96), 0, 0, 0, 0, 0, { from: oracle })
+      await lido.handleOracleReport(0, 0, 3, ETH(96), 0, 0, 0, [], 0, { from: oracle })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
       await checkBalanceDeltas({
         totalPooledEtherDiff: 0,
@@ -516,7 +516,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         curatedModuleBalanceDiff: 0,
         initialHolderBalanceDiff: 0,
       })
-      const tx = await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96.96), 0, 0, 0, 0, 0, { from: oracle })
+      const tx = await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96.96), 0, 0, 0, [], 0, { from: oracle })
       const sharesMintedAsFees = calcSharesMintedAsFees(ETH(0.96), 10, 100, ETH(100), ETH(100.96))
       await checkEvents({
         tx,
@@ -556,7 +556,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         { from: voting }
       )
 
-      await lido.handleOracleReport(0, 0, 3, ETH(96), 0, 0, 0, 0, 0, { from: oracle })
+      await lido.handleOracleReport(0, 0, 3, ETH(96), 0, 0, 0, [], 0, { from: oracle })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
       await checkBalanceDeltas({
         totalPooledEtherDiff: 0,
@@ -567,7 +567,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         initialHolderBalanceDiff: 0,
       })
       await assert.reverts(
-        lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96.97), 0, 0, 0, 0, 0, { from: oracle }),
+        lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96.97), 0, 0, 0, [], 0, { from: oracle }),
         'IncorrectCLBalanceIncrease(101)'
       )
     })
@@ -584,7 +584,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         { from: voting, gasPrice: 1 }
       )
 
-      await lido.handleOracleReport(0, ONE_DAY, 100, ETH(3200), 0, 0, 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_DAY, 100, ETH(3200), 0, 0, 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 100, beaconValidators: 100, beaconBalance: ETH(3200) })
     })
 
@@ -600,7 +600,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         { from: voting, gasPrice: 1 }
       )
       await assert.reverts(
-        lido.handleOracleReport(0, ONE_DAY, 101, ETH(3200), 0, 0, 0, 0, 0, { from: oracle, gasPrice: 1 }),
+        lido.handleOracleReport(0, ONE_DAY, 101, ETH(3200), 0, 0, 0, [], 0, { from: oracle, gasPrice: 1 }),
         'IncorrectAppearedValidators(101)'
       )
     })
@@ -628,7 +628,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         },
         { from: voting, gasPrice: 1 }
       )
-      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(97), 0, 0, 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(97), 0, 0, 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(97) })
     })
 
@@ -640,7 +640,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         },
         { from: voting, gasPrice: 1 }
       )
-      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(100), 0, 0, 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(100), 0, 0, 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(100) })
       await checkBalanceDeltas({
         totalPooledEtherDiff: ETH(4),
@@ -663,7 +663,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         },
         { from: voting, gasPrice: 1 }
       )
-      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96), ETH(1), 0, 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96), ETH(1), 0, 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
       await checkBalanceDeltas({
         totalPooledEtherDiff: ETH(1),
@@ -687,7 +687,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         },
         { from: voting, gasPrice: 1 }
       )
-      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96), ETH(1.1), 0, 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96), ETH(1.1), 0, 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
       await checkBalanceDeltas({
         totalPooledEtherDiff: ETH(1),
@@ -712,7 +712,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         },
         { from: voting, gasPrice: 1 }
       )
-      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96), 0, ETH(1), 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96), 0, ETH(1), 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
 
       await checkBalanceDeltas({
@@ -738,7 +738,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         },
         { from: voting, gasPrice: 1 }
       )
-      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(95.5), 0, ETH(1.5), 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(95.5), 0, ETH(1.5), 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(95.5) })
       await checkBalanceDeltas({
         totalPooledEtherDiff: ETH(1),
@@ -763,7 +763,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         },
         { from: voting, gasPrice: 1 }
       )
-      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96), 0, ETH(1.1), 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96), 0, ETH(1.1), 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
       await checkBalanceDeltas({
         totalPooledEtherDiff: ETH(1),
@@ -787,7 +787,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         },
         { from: voting, gasPrice: 1 }
       )
-      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96.1), 0, ETH(0.9), 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96.1), 0, ETH(0.9), 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96.1) })
 
       await checkBalanceDeltas({
@@ -813,7 +813,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         },
         { from: voting, gasPrice: 1 }
       )
-      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96.1), 0, ETH(1.1), 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96.1), 0, ETH(1.1), 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96.1) })
       await checkBalanceDeltas({
         totalPooledEtherDiff: ETH(1),
@@ -851,7 +851,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         },
         { from: voting, gasPrice: 1 }
       )
-      await lido.handleOracleReport(0, ONE_DAY, 3, ETH(96.1), 0, ETH(1.1), 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_DAY, 3, ETH(96.1), 0, ETH(1.1), 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96.1) })
       await checkBalanceDeltas({
         totalPooledEtherDiff: ETH(1),
@@ -872,7 +872,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         },
         { from: voting, gasPrice: 1 }
       )
-      await lido.handleOracleReport(0, ONE_DAY, 3, ETH(96.0027), 0, 0, 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_DAY, 3, ETH(96.0027), 0, 0, 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96.0027) })
     })
 
@@ -885,7 +885,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         },
         { from: voting, gasPrice: 1 }
       )
-      await lido.handleOracleReport(0, ONE_DAY, 3, ETH(96 + 0.0028), 0, 0, 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_DAY, 3, ETH(96 + 0.0028), 0, 0, 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96 + clIncrease) })
       assert(
         0.00014 + 0.0028 * 0.9 * 0.3 + 0.0028 * 0.9 * 0.69 + 0.0028 * 0.01 * 0.9 + 0.00014 === clIncrease,
@@ -912,7 +912,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         },
         { from: voting, gasPrice: 1 }
       )
-      await lido.handleOracleReport(0, ONE_DAY, 3, ETH(96), ETH(1), 0, 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_DAY, 3, ETH(96), ETH(1), 0, 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
       await checkBalanceDeltas({
         totalPooledEtherDiff: ETH(1),
@@ -936,7 +936,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         },
         { from: voting, gasPrice: 1 }
       )
-      await lido.handleOracleReport(0, ONE_DAY, 3, ETH(96), ETH(1.1), 0, 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_DAY, 3, ETH(96), ETH(1.1), 0, 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
       await checkBalanceDeltas({
         totalPooledEtherDiff: ETH(1),
@@ -961,7 +961,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         },
         { from: voting, gasPrice: 1 }
       )
-      await lido.handleOracleReport(0, ONE_DAY, 3, ETH(96), 0, ETH(1), 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_DAY, 3, ETH(96), 0, ETH(1), 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
 
       await checkBalanceDeltas({
@@ -987,7 +987,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         },
         { from: voting, gasPrice: 1 }
       )
-      await lido.handleOracleReport(0, ONE_DAY, 3, ETH(95.5), 0, ETH(1.5), 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_DAY, 3, ETH(95.5), 0, ETH(1.5), 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(95.5) })
       await checkBalanceDeltas({
         totalPooledEtherDiff: ETH(1),
@@ -1012,7 +1012,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         },
         { from: voting, gasPrice: 1 }
       )
-      await lido.handleOracleReport(0, ONE_DAY, 3, ETH(96), 0, ETH(1.1), 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_DAY, 3, ETH(96), 0, ETH(1.1), 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
       await checkBalanceDeltas({
         totalPooledEtherDiff: ETH(1),
@@ -1036,7 +1036,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         },
         { from: voting, gasPrice: 1 }
       )
-      await lido.handleOracleReport(0, ONE_DAY, 3, ETH(96.1), 0, ETH(0.9), 0, 0, 0, { from: oracle, gasPrice: 1 })
+      await lido.handleOracleReport(0, ONE_DAY, 3, ETH(96.1), 0, ETH(0.9), 0, [], 0, { from: oracle, gasPrice: 1 })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96.1) })
 
       await checkBalanceDeltas({

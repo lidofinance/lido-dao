@@ -381,14 +381,14 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
         await app.setELRewardsWithdrawalLimit(initialValue, { from: voting })
 
         // unable to receive execution layer rewards from arbitrary account
-        await assert.reverts(app.receiveELRewards({ from: user1, value: ETH(1) }), 'EXECUTION_LAYER_REWARDS_VAULT_ONLY')
+        await assert.reverts(app.receiveELRewards({ from: user1, value: ETH(1) }))
       })
     })
   })
 
   describe('receiveELRewards()', async () => {
     it('unable to receive eth from arbitrary account', async () => {
-      await assert.reverts(app.receiveELRewards({ from: nobody, value: ETH(1) }), 'EXECUTION_LAYER_REWARDS_VAULT_ONLY')
+      await assert.reverts(app.receiveELRewards({ from: nobody, value: ETH(1) }))
     })
 
     it('event work', async () => {
@@ -984,7 +984,7 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
     await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
 
     await assert.reverts(
-      app.handleOracleReport(await getCurrentBlockTimestamp(), 1, ETH(30), 0, 0, 0, 0, 0, 0, { from: appManager }),
+      app.handleOracleReport(await getCurrentBlockTimestamp(), 1, ETH(30), 0, 0, 0, 0, [], 0, { from: appManager }),
       'APP_AUTH_FAILED'
     )
 
@@ -992,7 +992,7 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(30) })
 
     await assert.reverts(
-      app.handleOracleReport(await getCurrentBlockTimestamp(), 1, ETH(29), 0, 0, 0, 0, 0, 0, { from: nobody }),
+      app.handleOracleReport(await getCurrentBlockTimestamp(), 1, ETH(29), 0, 0, 0, 0, [], 0, { from: nobody }),
       'APP_AUTH_FAILED'
     )
 

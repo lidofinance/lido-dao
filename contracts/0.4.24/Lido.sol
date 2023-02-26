@@ -59,7 +59,7 @@ interface IOracleReportSanityChecker {
     );
 
     function checkWithdrawalQueueOracleReport(
-        uint256 _lastFinalizableRequestId,
+        uint256[] _withdrawalFinalizationBatches,
         uint256 _reportTimestamp
     ) external view;
 
@@ -113,18 +113,20 @@ interface IStakingRouter {
 }
 
 interface IWithdrawalQueue {
-    function finalizationBatch(uint256 _newLastFinalizedRequestId, uint256 _shareRate)
+    function finalizationValue(uint256[] _batches, uint256 _maxShareRate)
         external
         view
         returns (uint128 eth, uint128 shares);
 
-    function finalize(uint256 _lastIdToFinalize) external payable;
+    function finalize(uint256 _nextFinalizedRequestId, uint256 _maxShareRate) external payable;
 
     function isPaused() external view returns (bool);
 
     function unfinalizedStETH() external view returns (uint256);
 
     function isBunkerModeActive() external view returns (bool);
+
+    function onPreRebase() external;
 }
 
 /**
@@ -168,10 +170,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         0xe6dc5d79630c61871e99d341ad72c5a052bed2fc8c79e5a4480a7cd31117576c; // keccak256("UNSAFE_CHANGE_DEPOSITED_VALIDATORS_ROLE")
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
-    uint256 public constant TOTAL_BASIS_POINTS = 10000;
-    /// @dev special value to not finalize withdrawal requests
-    /// see the `_lastFinalizableRequestId` arg for `handleOracleReport()`
-    uint256 private constant DONT_FINALIZE_WITHDRAWALS = 0;
 
     /// @dev storage slot position for the Lido protocol contracts locator
     bytes32 internal constant LIDO_LOCATOR_POSITION =
@@ -269,7 +267,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         onlyInit
     {
         uint256 amount = _bootstrapInitialHolder();
-        BUFFERED_ETHER_POSITION.setStorageUint256(amount);
+        _setBufferedEther(amount);
 
         emit Submitted(INITIAL_TOKEN_HOLDER, amount, 0);
 
@@ -475,7 +473,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * are treated as a user deposit
      */
     function receiveELRewards() external payable {
-        require(msg.sender == getLidoLocator().elRewardsVault(), "EXECUTION_LAYER_REWARDS_VAULT_ONLY");
+        require(msg.sender == getLidoLocator().elRewardsVault());
 
         TOTAL_EL_REWARDS_COLLECTED_POSITION.setStorageUint256(getTotalELRewardsCollected().add(msg.value));
 
@@ -530,7 +528,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 elRewardsVaultBalance;
         uint256 sharesRequestedToBurn;
         // Decision about withdrawals processing
-        uint256 lastFinalizableRequestId;
+        uint256[] withdrawalFinalizationBatches;
         uint256 simulatedShareRate;
     }
 
@@ -559,17 +557,18 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     * @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer at `_reportTimestamp`
     * @param _elRewardsVaultBalance elRewards vault balance on Execution Layer at `_reportTimestamp`
     * @param _sharesRequestedToBurn shares requested to burn through Burner at `_reportTimestamp`
-    * @param _lastFinalizableRequestId right boundary of requestId range if equals 0, no requests should be finalized
+    * @param _withdrawalFinalizationBatches the ascendingly-sorted array of withdrawal request IDs obtained by calling
+    * WithdrawalQueue.calculateFinalizationBatches. Empty array means that no withdrawal requests should be finalized
     * @param _simulatedShareRate share rate that was simulated by oracle when the report data created (1e27 precision)
     *
     * NB: `_simulatedShareRate` should be calculated off-chain by calling the method with `eth_call` JSON-RPC API
-    * while passing `_lastFinalizableRequestId` == `_simulatedShareRate` == 0, and plugging the returned values
+    * while passing empty `_withdrawalFinalizationBatches` and `_simulatedShareRate` == 0, plugging the returned values
     * to the following formula: `_simulatedShareRate = (postTotalPooledEther * 1e27) / postTotalShares`
     *
-    * @return postTotalPooledEther amount of ether in the protocol after report
-    * @return postTotalShares amount of shares in the protocol after report
-    * @return withdrawals withdrawn from the withdrawals vault
-    * @return elRewards withdrawn from the execution layer rewards vault
+    * @return postRebaseAmounts[0]: `postTotalPooledEther` amount of ether in the protocol after report
+    * @return postRebaseAmounts[1]: `postTotalShares` amount of shares in the protocol after report
+    * @return postRebaseAmounts[2]: `withdrawals` withdrawn from the withdrawals vault
+    * @return postRebaseAmounts[3]: `elRewards` withdrawn from the execution layer rewards vault
     */
     function handleOracleReport(
         // Oracle timings
@@ -583,14 +582,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 _elRewardsVaultBalance,
         uint256 _sharesRequestedToBurn,
         // Decision about withdrawals processing
-        uint256 _lastFinalizableRequestId,
+        uint256[] _withdrawalFinalizationBatches,
         uint256 _simulatedShareRate
-    ) external returns (
-        uint256 postTotalPooledEther,
-        uint256 postTotalShares,
-        uint256 withdrawals,
-        uint256 elRewards
-    ) {
+    ) external returns (uint256[4] postRebaseAmounts) {
         _whenNotStopped();
 
         return _handleOracleReport(
@@ -602,7 +596,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
                 _withdrawalVaultBalance,
                 _elRewardsVaultBalance,
                 _sharesRequestedToBurn,
-                _lastFinalizableRequestId,
+                _withdrawalFinalizationBatches,
                 _simulatedShareRate
             )
         );
@@ -714,7 +708,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 depositsValue = depositsCount.mul(DEPOSIT_SIZE);
         /// @dev firstly update the local state of the contract to prevent a reentrancy attack,
         ///     even if the StakingRouter is a trusted contract.
-        BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().sub(depositsValue));
+        _setBufferedEther(_getBufferedEther().sub(depositsValue));
         emit Unbuffered(depositsValue);
 
         uint256 newDepositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(depositsCount);
@@ -832,7 +826,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         OracleReportContracts memory _contracts,
         uint256 _withdrawalsToWithdraw,
         uint256 _elRewardsToWithdraw,
-        uint256 _lastFinalizableRequestId,
+        uint256[] _withdrawalFinalizationBatches,
+        uint256 _simulatedShareRate,
         uint256 _etherToLockOnWithdrawalQueue
     ) internal {
         // withdraw execution layer rewards and put them to the buffer
@@ -848,19 +843,18 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // finalize withdrawals (send ether, assign shares for burning)
         if (_etherToLockOnWithdrawalQueue > 0) {
             IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_contracts.withdrawalQueue);
-            withdrawalQueue.finalize.value(_etherToLockOnWithdrawalQueue)(_lastFinalizableRequestId);
+            withdrawalQueue.finalize.value(_etherToLockOnWithdrawalQueue)(
+                _withdrawalFinalizationBatches[_withdrawalFinalizationBatches.length - 1],
+                _simulatedShareRate
+            );
         }
 
-        uint256 preBufferedEther = _getBufferedEther();
-        uint256 postBufferedEther = preBufferedEther
+        uint256 postBufferedEther = _getBufferedEther()
             .add(_elRewardsToWithdraw) // Collected from ELVault
             .add(_withdrawalsToWithdraw) // Collected from WithdrawalVault
             .sub(_etherToLockOnWithdrawalQueue); // Sent to WithdrawalQueue
 
-        // Storing even the same value costs gas, so just avoid it
-        if (preBufferedEther != postBufferedEther) {
-            BUFFERED_ETHER_POSITION.setStorageUint256(postBufferedEther);
-        }
+        _setBufferedEther(postBufferedEther);
     }
 
     /**
@@ -877,12 +871,12 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         if (!withdrawalQueue.isPaused()) {
             IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).checkWithdrawalQueueOracleReport(
-                _reportedData.lastFinalizableRequestId,
+                _reportedData.withdrawalFinalizationBatches,
                 _reportedData.reportTimestamp
             );
 
-            (etherToLock, sharesToBurn) = withdrawalQueue.finalizationBatch(
-                _reportedData.lastFinalizableRequestId,
+            (etherToLock, sharesToBurn) = withdrawalQueue.finalizationValue(
+                _reportedData.withdrawalFinalizationBatches,
                 _reportedData.simulatedShareRate
             );
         }
@@ -903,13 +897,12 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // See LIP-12 for details:
         // https://research.lido.fi/t/lip-12-on-chain-part-of-the-rewards-distribution-after-the-merge/1625
         if (postCLTotalBalance > _reportContext.preCLBalance) {
-            uint256 consensusLayerRewards = postCLTotalBalance.sub(_reportContext.preCLBalance);
-            uint256 totalRewards = consensusLayerRewards.add(_withdrawnElRewards);
+            uint256 consensusLayerRewards = postCLTotalBalance - _reportContext.preCLBalance;
 
             sharesMintedAsFees = _distributeFee(
                 _reportContext.preTotalPooledEther,
                 _reportContext.preTotalShares,
-                totalRewards
+                consensusLayerRewards.add(_withdrawnElRewards)
             );
         }
     }
@@ -939,7 +932,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         _mintShares(msg.sender, sharesAmount);
 
-        BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(msg.value));
+        _setBufferedEther(_getBufferedEther().add(msg.value));
         emit Submitted(msg.sender, msg.value, _referral);
 
         _emitTransferAfterMintingShares(msg.sender, sharesAmount);
@@ -1066,10 +1059,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 totalFee,
         uint256 totalRewards
     ) internal returns (uint256[] memory moduleRewards, uint256 totalModuleRewards) {
-        totalModuleRewards = 0;
         moduleRewards = new uint256[](recipients.length);
 
-        for (uint256 i = 0; i < recipients.length; i++) {
+        for (uint256 i; i < recipients.length; ++i) {
             if (modulesFees[i] > 0) {
                 uint256 iModuleRewards = totalRewards.mul(modulesFees[i]).div(totalFee);
                 moduleRewards[i] = iModuleRewards;
@@ -1091,6 +1083,10 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      */
     function _getBufferedEther() internal view returns (uint256) {
         return BUFFERED_ETHER_POSITION.getStorageUint256();
+    }
+
+    function _setBufferedEther(uint256 _newBufferedEther) internal {
+        BUFFERED_ETHER_POSITION.setStorageUint256(_newBufferedEther);
     }
 
     /// @dev Calculates and returns the total base balance (multiple of 32) of validators in transient state,
@@ -1145,8 +1141,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * @dev Size-efficient analog of the `auth(_role)` modifier
      * @param _role Permission name
      */
-    function _auth(bytes32 _role) internal view auth(_role) {
-        // no-op
+    function _auth(bytes32 _role) internal view {
+        require(canPerform(msg.sender, _role, new uint256[](0)), "APP_AUTH_FAILED");
     }
 
     /**
@@ -1182,14 +1178,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * 8. Complete token rebase by informing observers (emit an event and call the external receivers if any)
      * 9. Sanity check for the provided simulated share rate
      */
-    function _handleOracleReport(
-        OracleReportedData memory _reportedData
-    ) internal returns (
-        uint256 postTotalPooledEther,
-        uint256 postTotalShares,
-        uint256 withdrawals,
-        uint256 elRewards
-    ) {
+    function _handleOracleReport(OracleReportedData memory _reportedData) internal returns (uint256[4]) {
         OracleReportContracts memory contracts = _loadOracleReportContracts();
 
         require(msg.sender == contracts.accountingOracle, "APP_AUTH_FAILED");
@@ -1216,7 +1205,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // Step 3.
         // Pre-calculate the ether to lock for withdrawal queue and shares to be burnt
         // due to withdrawal requests to finalize
-        if (_reportedData.lastFinalizableRequestId != DONT_FINALIZE_WITHDRAWALS) {
+        if (_reportedData.withdrawalFinalizationBatches.length != 0) {
+            IWithdrawalQueue(contracts.withdrawalQueue).onPreRebase();
+
             (
                 reportContext.etherToLockOnWithdrawalQueue,
                 reportContext.sharesToBurnFromWithdrawalQueue
@@ -1229,6 +1220,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
                 );
             }
         }
+
+        uint256 withdrawals;
+        uint256 elRewards;
 
         // Step 4.
         // Pass the accounting values to sanity checker to smoothen positive token rebase
@@ -1252,7 +1246,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             contracts,
             withdrawals,
             elRewards,
-            _reportedData.lastFinalizableRequestId,
+            _reportedData.withdrawalFinalizationBatches,
+            _reportedData.simulatedShareRate,
             reportContext.etherToLockOnWithdrawalQueue
         );
 
@@ -1281,6 +1276,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             _burnShares(contracts.burner, reportContext.sharesToBurn);
         }
 
+        uint256 postTotalShares;
+        uint256 postTotalPooledEther;
+
         // Step 8.
         // Complete token rebase by informing observers (emit an event and call the external receivers if any)
         (
@@ -1293,7 +1291,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         );
 
         // Step 9. Sanity check for the provided simulated share rate
-        if (_reportedData.lastFinalizableRequestId != DONT_FINALIZE_WITHDRAWALS) {
+        if (_reportedData.withdrawalFinalizationBatches.length != 0) {
             IOracleReportSanityChecker(contracts.oracleReportSanityChecker).checkSimulatedShareRate(
                 postTotalPooledEther,
                 postTotalShares,
@@ -1302,6 +1300,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
                 _reportedData.simulatedShareRate
             );
         }
+
+        return [postTotalPooledEther, postTotalShares, withdrawals, elRewards];
     }
 
     /**
