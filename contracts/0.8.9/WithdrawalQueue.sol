@@ -98,13 +98,16 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     }
 
     /// @notice Resume withdrawal requests placement and finalization
-    function resume() external whenPaused onlyRole(RESUME_ROLE) {
+    function resume() external {
+        _checkPaused();
+        _checkRole(RESUME_ROLE, msg.sender);
         _resume();
     }
 
     /// @notice Pause withdrawal requests placement and finalization. Claiming finalized requests will still be available
     /// @param _duration pause duration, seconds (use `PAUSE_INFINITELY` for unlimited)
-    function pause(uint256 _duration) external onlyRole(PAUSE_ROLE) {
+    function pause(uint256 _duration) external {
+        _checkRole(PAUSE_ROLE, msg.sender);
         _pause(_duration);
     }
 
@@ -116,9 +119,9 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @return requestIds an array of the created withdrawal requests
     function requestWithdrawals(uint256[] calldata amounts, address _owner)
         public
-        whenResumed
         returns (uint256[] memory requestIds)
     {
+        _checkResumed();
         if (_owner == address(0)) _owner = msg.sender;
         requestIds = new uint256[](amounts.length);
         for (uint256 i = 0; i < amounts.length; ++i) {
@@ -135,9 +138,9 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @return requestIds an array of the created withdrawal requests
     function requestWithdrawalsWstETH(uint256[] calldata amounts, address _owner)
         public
-        whenResumed
         returns (uint256[] memory requestIds)
     {
+        _checkResumed();
         if (_owner == address(0)) _owner = msg.sender;
         requestIds = new uint256[](amounts.length);
         for (uint256 i = 0; i < amounts.length; ++i) {
@@ -163,7 +166,6 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @return requestIds an array of the created withdrawal requests
     function requestWithdrawalsWithPermit(uint256[] calldata _amounts, address _owner, PermitInput calldata _permit)
         external
-        whenResumed
         returns (uint256[] memory requestIds)
     {
         STETH.permit(msg.sender, address(this), _permit.value, _permit.deadline, _permit.v, _permit.r, _permit.s);
@@ -182,7 +184,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         uint256[] calldata _amounts,
         address _owner,
         PermitInput calldata _permit
-    ) external whenResumed returns (uint256[] memory requestIds) {
+    ) external returns (uint256[] memory requestIds) {
         WSTETH.permit(msg.sender, address(this), _permit.value, _permit.deadline, _permit.v, _permit.r, _permit.s);
         return requestWithdrawalsWstETH(_amounts, _owner);
     }
@@ -308,10 +310,14 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
 
     /// @notice Finalize requests from last finalized one up to `_lastRequestIdToFinalize`
     /// @dev ether to finalize all the requests should be calculated using `finalizationValue()` and sent along
-    ///
-    /// @param _nextFinalizedRequestId request index in the queue that will be last finalized request in a batch
-    function finalize(uint256 _nextFinalizedRequestId, uint256 _shareRate) external payable whenResumed onlyRole(FINALIZE_ROLE) {
-        _finalize(_nextFinalizedRequestId, msg.value, _shareRate);
+    function finalize(uint256[] calldata _batches, uint256 _maxShareRate)
+        external
+        payable
+    {
+        _checkResumed();
+        _checkRole(FINALIZE_ROLE, msg.sender);
+
+        _finalize(_batches, msg.value, _maxShareRate);
     }
 
     /// @notice Update bunker mode state
@@ -319,10 +325,8 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     ///
     /// @param _isBunkerModeNow oracle report
     /// @param _sinceTimestamp timestamp of start of the bunker mode
-    function updateBunkerMode(bool _isBunkerModeNow, uint256 _sinceTimestamp)
-        external
-        onlyRole(BUNKER_MODE_REPORT_ROLE)
-    {
+    function updateBunkerMode(bool _isBunkerModeNow, uint256 _sinceTimestamp) external {
+        _checkRole(BUNKER_MODE_REPORT_ROLE, msg.sender);
         if (_sinceTimestamp >= block.timestamp) revert InvalidReportTimestamp();
 
         bool isBunkerModeWasSetBefore = isBunkerModeActive();
