@@ -287,7 +287,7 @@ abstract contract WithdrawalQueueBase {
         returns (uint256 ethToLock, uint256 sharesToBurn)
     {
         if (_maxShareRate == 0) revert ZeroShareRate();
-        _checkFinalizationBatchesIntegrity(_batches);
+        _checkFinalizationBatchesIntegrity(_batches, _maxShareRate);
 
         uint256 preBatchStartId = getLastFinalizedRequestId();
         uint256 batchIndex;
@@ -313,7 +313,7 @@ abstract contract WithdrawalQueueBase {
         } while (batchIndex < _batches.length);
     }
 
-    function _checkFinalizationBatchesIntegrity(uint256[] memory _batches) internal view {
+    function _checkFinalizationBatchesIntegrity(uint256[] memory _batches, uint256 _maxShareRate) internal view {
         if (_batches.length == 0) revert EmptyBatches();
 
         uint256 lastIdInBatch = _batches[_batches.length - 1];
@@ -327,6 +327,15 @@ abstract contract WithdrawalQueueBase {
         uint256 index = _batches.length - 1;
         uint256 currentExtrema = _getExtrema().length - 1;
 
+        uint256 batchShareRate;
+        if (index > 0) {
+            (batchShareRate,) = _calcShareRateAndEth(
+                _getQueue()[_batches[index - 1]],
+                _getQueue()[_batches[index]],
+                SHARE_RATE_UNLIMITED
+            );
+        }
+
         uint256 extremaCounter = 0;
 
         while (index > 0) {
@@ -338,13 +347,33 @@ abstract contract WithdrawalQueueBase {
                     // we are skipping extrema that are x-points in the same time
                     // and skipping extrema that are greater than the rightmost batchId
                     ++extremaCounter;
-                    // TODO: check that extremum is above or below the line
+
+                    uint256 extremumShareRate = _calcShareRate(extremumId);
+                    if (extremumShareRate > _maxShareRate && batchShareRate <= _maxShareRate) revert InvalidBatches();
+                    if (extremumShareRate <= _maxShareRate && batchShareRate > _maxShareRate) revert InvalidBatches();
                 }
             } else {
                 if (extremaCounter % 2 == 0) revert InvalidBatches();
                 extremaCounter = 0;
-                 // TODO: check that batch[index] is really crossing point
                 --index;
+                if (index > 0) {
+                    (uint256 nextBatchShareRate,) = _calcShareRateAndEth(
+                        _getQueue()[_batches[index - 1]],
+                        _getQueue()[_batches[index]],
+                        SHARE_RATE_UNLIMITED
+                    );
+                    if (batchShareRate <= _maxShareRate && nextBatchShareRate <= _maxShareRate) revert InvalidBatches();
+
+                    // touching from above is valid, though.
+                    // | •   •
+                    // |---*----  maxShareRate
+                    // +-------->
+                    if (_calcShareRate(_batches[index]) != _maxShareRate) {
+                        if (batchShareRate > _maxShareRate && nextBatchShareRate > _maxShareRate) revert InvalidBatches();
+                    }
+
+                    batchShareRate = nextBatchShareRate;
+                }
             }
         }
     }
