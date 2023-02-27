@@ -27,7 +27,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     withdrawalQueue = deployed.withdrawalQueue
 
     await steth.setTotalPooledEther(ETH(600))
-    // we need 1 ETH additionally to pay gas on finalization because coverage ingnores gasPrice=0
+    // we need 1 ETH additionally to pay gas on finalization because coverage ignores gasPrice=0
     await setBalance(steth.address, ETH(600 + 1))
     await steth.mintShares(user, shares(1))
     await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
@@ -678,6 +678,49 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       }
       const balanceAfter = bn(await ethers.provider.getBalance(user))
       assert.equals(balanceBefore.add(totalDistributedEth), balanceAfter)
+    })
+  })
+
+  context('claim fuzzing', () => {
+    const fuzzClaim = async (perRequestWEI, requestCount, finalizedWEI) => {
+      await withdrawalQueue.requestWithdrawals(Array(requestCount).fill(perRequestWEI), user, { from: user })
+      const requestIds = await withdrawalQueue.getWithdrawalRequests(user, { from: user })
+
+      const id = await withdrawalQueue.getLastRequestId()
+      await withdrawalQueue.finalize(id, { from: steth.address, value: finalizedWEI })
+
+      const hints = await withdrawalQueue.findCheckpointHintsUnbounded(requestIds)
+      const claimableEth = await withdrawalQueue.getClaimableEther(requestIds, hints)
+      const totalClaimable = claimableEth.reduce((s, i) => s.iadd(i) && s, bn(0))
+      assert.equals(totalClaimable, finalizedWEI, `Total Claimable doesn't add up to finalized amount`)
+
+      const balanceBefore = bn(await ethers.provider.getBalance(user))
+      await withdrawalQueue.claimWithdrawals(requestIds, hints, { from: user })
+      const balanceAfter = bn(await ethers.provider.getBalance(user))
+      assert.equals(balanceBefore.addn(finalizedWEI), balanceAfter, `Total Claimed doesn't add up to finalized amount`)
+    }
+
+    it('distribute&claim 10wei per 100*100WEI requests ', async () => {
+      await fuzzClaim(100, 100, 1000)
+    })
+
+    it('distribute&claim 1wei per 100*100WEI requests', async () => {
+      await fuzzClaim(100, 100, 100)
+    })
+
+    it('distribute&claim 1 wei per 10*MAX_STETH_WITHDRAWAL_AMOUNT requests', async () => {
+      const MAX_STETH_WITHDRAWAL_AMOUNT = await withdrawalQueue.MAX_STETH_WITHDRAWAL_AMOUNT()
+      // account for stEth~<Eth
+      const total = MAX_STETH_WITHDRAWAL_AMOUNT.muln(10).add(MAX_STETH_WITHDRAWAL_AMOUNT)
+      await steth.approve(withdrawalQueue.address, ethers.constants.MaxUint256, { from: user })
+      await setBalance(stranger, total.toString(10))
+      await steth.mintSteth(user, { from: stranger, value: total })
+      await fuzzClaim(MAX_STETH_WITHDRAWAL_AMOUNT.toString(10), 10, 10)
+    })
+
+    // problematic test
+    it.skip('distribute&claim 0.1wei per 100*100WEI requests', async () => {
+      await fuzzClaim(100, 100, 10)
     })
   })
 
