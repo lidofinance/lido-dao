@@ -6,7 +6,6 @@ const withdrawals = require('../helpers/withdrawals')
 const { assert } = require('../helpers/assert')
 
 const StETHMock = artifacts.require('StETHPermitMock.sol')
-const WstETH = artifacts.require('WstETHMock.sol')
 const EIP712StETH = artifacts.require('EIP712StETH')
 const NFTDescriptorMock = artifacts.require('NFTDescriptorMock.sol')
 
@@ -27,11 +26,10 @@ async function deployWithdrawalQueue({
 }) {
   const nftDescriptor = await NFTDescriptorMock.new(NFT_DESCRIPTOR_BASE_URI)
   const steth = await StETHMock.new({ value: ETH(1), from: stethOwner })
-  const wsteth = await WstETH.new(steth.address, { from: stethOwner })
   const eip712StETH = await EIP712StETH.new(steth.address, { from: stethOwner })
   await steth.initializeEIP712StETH(eip712StETH.address)
 
-  const { queue: withdrawalQueue } = await withdrawals.deploy(queueAdmin, wsteth.address, queueName, symbol)
+  const { queue: withdrawalQueue } = await withdrawals.deploy(queueAdmin, steth.address, queueName, symbol)
 
   const initTx = await withdrawalQueue.initialize(
     queueAdmin,
@@ -48,7 +46,6 @@ async function deployWithdrawalQueue({
   return {
     initTx,
     steth,
-    wsteth,
     withdrawalQueue,
     nftDescriptor,
   }

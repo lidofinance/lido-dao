@@ -7,7 +7,6 @@ const { shares, ETH, shareRate } = require('../helpers/utils')
 const withdrawals = require('../helpers/withdrawals')
 
 const StETH = artifacts.require('StETHMock')
-const WstETH = artifacts.require('WstETHMock')
 const ERC721ReceiverMock = artifacts.require('ERC721ReceiverMock')
 
 contract('WithdrawalNFT', (addresses) => {
@@ -20,9 +19,8 @@ contract('WithdrawalNFT', (addresses) => {
     stETH = await StETH.new({ value: ETH(1), from: deployer })
     await setBalance(stETH.address, ETH(100))
 
-    wstETH = await WstETH.new(stETH.address, { from: deployer })
     erc721ReceiverMock = await ERC721ReceiverMock.new({ from: deployer })
-    withdrawalQueueERC721 = (await withdrawals.deploy(deployer, wstETH.address, 'Lido TEST Request', 'unstEsT')).queue
+    withdrawalQueueERC721 = (await withdrawals.deploy(deployer, stETH.address, 'Lido TEST Request', 'unstEsT')).queue
     await withdrawalQueueERC721.initialize(
       deployer, // owner
       deployer, // pauser

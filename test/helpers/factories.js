@@ -260,8 +260,8 @@ async function elRewardsVaultFactory({ pool, treasury }) {
   return await LidoExecutionLayerRewardsVault.new(pool.address, treasury.address)
 }
 
-async function withdrawalQueueFactory({ appManager, oracle, wsteth }) {
-  const withdrawalQueue = (await withdrawals.deploy(appManager.address, wsteth.address)).queue
+async function withdrawalQueueFactory({ appManager, oracle, pool }) {
+  const withdrawalQueue = (await withdrawals.deploy(appManager.address, pool.address)).queue
 
   await withdrawalQueue.initialize(
     appManager.address,
