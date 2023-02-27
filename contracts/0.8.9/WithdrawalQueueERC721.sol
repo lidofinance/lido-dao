@@ -13,7 +13,7 @@ import {EnumerableSet} from "@openzeppelin/contracts-v4.4/utils/structs/Enumerab
 import {Address} from "@openzeppelin/contracts-v4.4/utils/Address.sol";
 import {Strings} from "@openzeppelin/contracts-v4.4/utils/Strings.sol";
 
-import {IWstETH, WithdrawalQueue} from "./WithdrawalQueue.sol";
+import {WithdrawalQueue} from "./WithdrawalQueue.sol";
 import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
 import {UnstructuredRefStorage} from "./lib/UnstructuredRefStorage.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
@@ -73,10 +73,10 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
     bytes32 private immutable NAME;
     bytes32 private immutable SYMBOL;
 
-    /// @param _wstETH address of WstETH contract
+    /// @param _stETH address of WstETH contract
     /// @param _name IERC721Metadata name string. Should be shorter than 32 bytes
     /// @param _symbol IERC721Metadata symbol string. Should be shorter than 32 bytes
-    constructor(address _wstETH, string memory _name, string memory _symbol) WithdrawalQueue(IWstETH(_wstETH)) {
+    constructor(address _stETH, string memory _name, string memory _symbol) WithdrawalQueue(_stETH) {
         if (bytes(_name).length == 0 || bytes(_symbol).length == 0) revert ZeroMetadata();
         NAME = _toBytes32(_name);
         SYMBOL = _toBytes32(_symbol);
