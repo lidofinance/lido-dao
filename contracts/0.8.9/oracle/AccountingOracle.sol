@@ -82,6 +82,7 @@ interface IStakingRouter {
 
 interface IWithdrawalQueue {
     function updateBunkerMode(bool isBunkerMode, uint256 prevReportTimestamp) external;
+    function onPreRebase() external;
 }
 
 
@@ -609,6 +610,8 @@ contract AccountingOracle is BaseOracle {
             data.isBunkerMode,
             GENESIS_TIME + prevRefSlot * SECONDS_PER_SLOT
         );
+
+        withdrawalQueue.onPreRebase();
 
         ILido(LIDO).handleOracleReport(
             GENESIS_TIME + data.refSlot * SECONDS_PER_SLOT,

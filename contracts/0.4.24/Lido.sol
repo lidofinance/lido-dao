@@ -59,7 +59,7 @@ interface IOracleReportSanityChecker {
     );
 
     function checkWithdrawalQueueOracleReport(
-        uint256[] _withdrawalFinalizationBatches,
+        uint256 _lastFinalizableRequestId,
         uint256 _reportTimestamp
     ) external view;
 
@@ -118,15 +118,13 @@ interface IWithdrawalQueue {
         view
         returns (uint128 eth, uint128 shares);
 
-    function finalize(uint256 _nextFinalizedRequestId, uint256 _maxShareRate) external payable;
+    function finalize(uint256[] _batches, uint256 _maxShareRate) external payable;
 
     function isPaused() external view returns (bool);
 
     function unfinalizedStETH() external view returns (uint256);
 
     function isBunkerModeActive() external view returns (bool);
-
-    function onPreRebase() external;
 }
 
 /**
@@ -844,7 +842,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         if (_etherToLockOnWithdrawalQueue > 0) {
             IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_contracts.withdrawalQueue);
             withdrawalQueue.finalize.value(_etherToLockOnWithdrawalQueue)(
-                _withdrawalFinalizationBatches[_withdrawalFinalizationBatches.length - 1],
+                _withdrawalFinalizationBatches,
                 _simulatedShareRate
             );
         }
@@ -871,7 +869,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         if (!withdrawalQueue.isPaused()) {
             IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).checkWithdrawalQueueOracleReport(
-                _reportedData.withdrawalFinalizationBatches,
+                _reportedData.withdrawalFinalizationBatches[_reportedData.withdrawalFinalizationBatches.length - 1],
                 _reportedData.reportTimestamp
             );
 
@@ -1206,8 +1204,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // Pre-calculate the ether to lock for withdrawal queue and shares to be burnt
         // due to withdrawal requests to finalize
         if (_reportedData.withdrawalFinalizationBatches.length != 0) {
-            IWithdrawalQueue(contracts.withdrawalQueue).onPreRebase();
-
             (
                 reportContext.etherToLockOnWithdrawalQueue,
                 reportContext.sharesToBurnFromWithdrawalQueue
