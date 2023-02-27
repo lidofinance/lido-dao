@@ -243,7 +243,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     const newRequestId = 2
     let oldRequestCreationTimestamp, newRequestCreationTimestamp
     const correctWithdrawalQueueOracleReport = {
-      withdrawalFinalizationBatches: [oldRequestId],
+      lastFinalizableRequestId: oldRequestId,
       refReportTimestamp: -1,
     }
 
@@ -251,7 +251,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       const currentBlockTimestamp = await getCurrentBlockTimestamp()
       correctWithdrawalQueueOracleReport.refReportTimestamp = currentBlockTimestamp
       oldRequestCreationTimestamp = currentBlockTimestamp - defaultLimitsList.requestTimestampMargin
-      correctWithdrawalQueueOracleReport.withdrawalFinalizationBatches[0] = oldRequestCreationTimestamp
+      correctWithdrawalQueueOracleReport.lastFinalizableRequestId = oldRequestCreationTimestamp
       await withdrawalQueueMock.setRequestBlockNumber(oldRequestId, oldRequestCreationTimestamp)
       newRequestCreationTimestamp = currentBlockTimestamp - Math.floor(defaultLimitsList.requestTimestampMargin / 2)
       await withdrawalQueueMock.setRequestBlockNumber(newRequestId, newRequestCreationTimestamp)
@@ -262,7 +262,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
         oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
           ...Object.values({
             ...correctWithdrawalQueueOracleReport,
-            withdrawalFinalizationBatches: [newRequestId],
+            lastFinalizableRequestId: newRequestId,
           })
         ),
         `IncorrectRequestFinalization(${newRequestCreationTimestamp})`
