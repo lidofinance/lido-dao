@@ -338,10 +338,12 @@ abstract contract WithdrawalQueueBase {
                     // we are skipping extrema that are x-points in the same time
                     // and skipping extrema that are greater than the rightmost batchId
                     ++extremaCounter;
+                    // TODO: check that extremum is above or below the line
                 }
             } else {
                 if (extremaCounter % 2 == 0) revert InvalidBatches();
                 extremaCounter = 0;
+                 // TODO: check that batch[index] is really crossing point
                 --index;
             }
         }
@@ -363,7 +365,8 @@ abstract contract WithdrawalQueueBase {
         if (_amountOfETH > stETHToFinalize) revert TooMuchEtherToFinalize(_amountOfETH, stETHToFinalize);
 
         uint256 maxShareRate = SHARE_RATE_UNLIMITED;
-        if (_batches.length > 1) {
+        // if we have a crossing point or avg batch share rate is more than `_maxShareRate`
+        if (_batches.length > 1 || stETHToFinalize > _amountOfETH) {
             maxShareRate = _maxShareRate;
         }
 
