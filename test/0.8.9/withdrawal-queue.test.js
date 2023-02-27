@@ -314,10 +314,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     })
 
     it('Finalizer can finalize a request', async () => {
-      await assert.reverts(
-        withdrawalQueue.finalize(1, { from: stranger }),
-        `AccessControl: account ${stranger.toLowerCase()} is missing role ${await withdrawalQueue.FINALIZE_ROLE()}`
-      )
+      await assert.revertsOZAccessControl(withdrawalQueue.finalize(1, { from: stranger }), stranger, 'FINALIZE_ROLE')
       await withdrawalQueue.finalize(1, { from: steth.address, value: amount })
 
       assert.equals(await withdrawalQueue.getLockedEtherAmount(), amount)
