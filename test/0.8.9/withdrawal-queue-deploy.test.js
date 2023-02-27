@@ -8,6 +8,11 @@ const { assert } = require('../helpers/assert')
 const StETHMock = artifacts.require('StETHPermitMock.sol')
 const WstETH = artifacts.require('WstETHMock.sol')
 const EIP712StETH = artifacts.require('EIP712StETH')
+const NFTDescriptorMock = artifacts.require('NFTDescriptorMock.sol')
+
+const QUEUE_NAME = 'Unsteth nft'
+const QUEUE_SYMBOL = 'UNSTETH'
+const NFT_DESCRIPTOR_BASE_URI = 'https://exampleDescriptor.com/'
 
 async function deployWithdrawalQueue({
   stethOwner,
@@ -16,10 +21,11 @@ async function deployWithdrawalQueue({
   queueResumer,
   queueFinalizer,
   queueBunkerReporter,
-  queueName = 'Unsteth nft',
-  symbol = 'UNSTETH',
+  queueName = QUEUE_NAME,
+  symbol = QUEUE_SYMBOL,
   doResume = true,
 }) {
+  const nftDescriptor = await NFTDescriptorMock.new(NFT_DESCRIPTOR_BASE_URI)
   const steth = await StETHMock.new({ value: ETH(1), from: stethOwner })
   const wsteth = await WstETH.new(steth.address, { from: stethOwner })
   const eip712StETH = await EIP712StETH.new(steth.address, { from: stethOwner })
@@ -44,11 +50,15 @@ async function deployWithdrawalQueue({
     steth,
     wsteth,
     withdrawalQueue,
+    nftDescriptor,
   }
 }
 
 module.exports = {
   deployWithdrawalQueue,
+  QUEUE_NAME,
+  QUEUE_SYMBOL,
+  NFT_DESCRIPTOR_BASE_URI,
 }
 
 contract(
