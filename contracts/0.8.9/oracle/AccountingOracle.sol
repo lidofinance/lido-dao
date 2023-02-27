@@ -692,7 +692,7 @@ contract AccountingOracle is BaseOracle {
     }
 
     function _checkCanSubmitExtraData(ExtraDataProcessingState memory procState, uint256 format)
-        internal
+        internal view
     {
         _checkMsgSenderIsAllowedToSubmitData();
         _checkProcessingDeadline();

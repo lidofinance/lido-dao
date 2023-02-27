@@ -1026,7 +1026,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     function _checkValidatorsByNodeOperatorReportData(
         bytes calldata _nodeOperatorIds,
         bytes calldata _validatorsCounts
-    ) internal {
+    ) internal pure {
         if (_nodeOperatorIds.length % 8 != 0 || _validatorsCounts.length % 16 != 0) {
             revert InvalidReportData(3);
         }
