@@ -272,7 +272,7 @@ async function withdrawalQueueFactory({ appManager, oracle, pool }) {
     by: appManager.address,
     on: withdrawalQueue,
     to: appManager.address,
-    roles: ['PAUSE_ROLE', 'RESUME_ROLE', 'FINALIZE_ROLE', 'BUNKER_MODE_REPORT_ROLE']
+    roles: ['PAUSE_ROLE', 'RESUME_ROLE', 'FINALIZE_ROLE', 'BUNKER_MODE_REPORT_ROLE'],
   })
 
   return withdrawalQueue
@@ -364,10 +364,12 @@ async function postSetup({
   await pool.resumeProtocolAndStaking({ from: voting.address })
 }
 
-async function grantRoles({by, on, to, roles}) {
-  await Promise.all(roles.map(async (role) => {
-    await on.grantRole(await on[role](), to, { from: by })
-  }))
+async function grantRoles({ by, on, to, roles }) {
+  await Promise.all(
+    roles.map(async (role) => {
+      await on.grantRole(await on[role](), to, { from: by })
+    })
+  )
 }
 
 module.exports = {
