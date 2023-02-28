@@ -75,22 +75,26 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
       await setShareRate(1)
     })
 
+    let batches
+
     it(`both requests can be finalized with 2 ETH`, async () => {
       const result = await queue.calculateFinalizationBatches(e27(1), MAX_UINT256, [e18(2), false, []])
       assert.isTrue(result.finished)
 
-      const batch = await queue.finalizationValue(result.batches, e27(1))
+      const batch = await queue.prefinalize.call(result.batches, e27(1))
       assert.equals(batch.ethToLock, e18(2))
       assert.equals(batch.sharesToBurn, e18(2))
+
+      batches = result.batches
     })
 
     let claimableEther
 
     it(`requests get finalized`, async () => {
-      await queue.finalize(requestIds[1], e27(1), { from: finalizer, value: e18(2) })
+      await queue.finalize(batches, e27(1), { from: finalizer, value: e18(2) })
       assert.equals(await queue.getLastFinalizedRequestId(), requestIds[1])
 
-      const hints = await queue.findCheckpointHintsUnbounded(requestIds)
+      const hints = await queue.findCheckpointHints(requestIds, 1, await queue.getLastCheckpointIndex())
       claimableEther = await queue.getClaimableEther(requestIds, hints)
     })
 
