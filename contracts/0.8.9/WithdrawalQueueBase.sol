@@ -206,7 +206,6 @@ abstract contract WithdrawalQueueBase {
 
             if (requestShareRate > _maxShareRate) {
                 etherRequested = shareRequested * _maxShareRate / E27_PRECISION_BASE;
-                requestShareRate = _maxShareRate;
             }
 
             if (etherRequested > _state.ethBudget) break;
