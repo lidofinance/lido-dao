@@ -1,9 +1,11 @@
 const { contract } = require('hardhat')
 const { assert } = require('../../helpers/assert')
+const { toBN } = require('../../helpers/utils')
 
 const {
   INITIAL_FAST_LANE_LENGTH_SLOTS,
   INITIAL_EPOCH,
+  GENESIS_TIME,
   EPOCHS_PER_FRAME,
   SLOTS_PER_EPOCH,
   SECONDS_PER_SLOT,
@@ -96,8 +98,38 @@ contract('HashConsensus', ([admin, member1, member2]) => {
     let consensus
 
     before(async () => {
-      const deployed = await deployHashConsensus(admin, { initialEpoch: TEST_INITIAL_EPOCH })
+      const deployed = await deployHashConsensus(admin, { initialEpoch: null })
       consensus = deployed.consensus
+    })
+
+    it(`after deploy, the initial epoch is far in the future`, async () => {
+      const maxTimestamp = toBN(2).pow(toBN(64)).subn(1)
+      const maxEpoch = maxTimestamp.subn(GENESIS_TIME).divn(SECONDS_PER_SLOT).divn(SLOTS_PER_EPOCH)
+      assert.equals((await consensus.getFrameConfig()).initialEpoch, maxEpoch)
+    })
+
+    it(`after deploy, one can update initial epoch`, async () => {
+      const tx = await consensus.updateInitialEpoch(TEST_INITIAL_EPOCH, { from: admin })
+
+      assert.emits(tx, 'FrameConfigSet', {
+        newEpochsPerFrame: EPOCHS_PER_FRAME,
+        newInitialEpoch: TEST_INITIAL_EPOCH,
+      })
+
+      const frameConfig = await consensus.getFrameConfig()
+      assert.equals(frameConfig.initialEpoch, TEST_INITIAL_EPOCH)
+      assert.equals(frameConfig.epochsPerFrame, EPOCHS_PER_FRAME)
+      assert.equals(frameConfig.fastLaneLengthSlots, INITIAL_FAST_LANE_LENGTH_SLOTS)
+    })
+
+    it(`before the initial epoch arrives, one can update it freely`, async () => {
+      await consensus.setTimeInEpochs(TEST_INITIAL_EPOCH - 2)
+
+      await consensus.updateInitialEpoch(TEST_INITIAL_EPOCH - 1, { from: admin })
+      assert.equals((await consensus.getFrameConfig()).initialEpoch, TEST_INITIAL_EPOCH - 1)
+
+      await consensus.updateInitialEpoch(TEST_INITIAL_EPOCH, { from: admin })
+      assert.equals((await consensus.getFrameConfig()).initialEpoch, TEST_INITIAL_EPOCH)
     })
 
     it('before the initial epoch arrives, members can be added and queried, and quorum increased', async () => {
@@ -157,6 +189,17 @@ contract('HashConsensus', ([admin, member1, member2]) => {
 
       const tx = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
       assert.emits(tx, 'ReportReceived', { refSlot: frame.refSlot, member: member1, report: HASH_1 })
+    })
+
+    it('after the initial epoch comes, updating it via updateInitialEpoch is not possible anymore', async () => {
+      await assert.reverts(
+        consensus.updateInitialEpoch(TEST_INITIAL_EPOCH + 1, { from: admin }),
+        'InitialEpochAlreadyArrived()'
+      )
+      await assert.reverts(
+        consensus.updateInitialEpoch(TEST_INITIAL_EPOCH - 1, { from: admin }),
+        'InitialEpochAlreadyArrived()'
+      )
     })
   })
 
