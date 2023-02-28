@@ -378,16 +378,7 @@ abstract contract WithdrawalQueueBase {
 
                 // avg batch rate before crossing point and after crossing point
                 // can't be both above `_maxShareRate`
-                // except the case when crossing point is extremum and touching `_maxShareRate` from above
-                // | •   •
-                // |---*----  maxShareRate
-                // +-------->
-                if (batchShareRate > _maxShareRate && nextBatchShareRate > _maxShareRate) {
-                    // TODO: get rid of this corner case
-                    if (!(extremumId == batchEndId && _calcShareRate(_batches[batchIndex]) != _maxShareRate)) {
-                        revert InvalidBatches();
-                    }
-                }
+                if (batchShareRate > _maxShareRate && nextBatchShareRate > _maxShareRate) revert InvalidBatches();
 
                 batchShareRate = nextBatchShareRate;
                 batchPreStartId = batchEndId;
