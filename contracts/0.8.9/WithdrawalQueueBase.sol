@@ -344,36 +344,33 @@ abstract contract WithdrawalQueueBase {
         view
         returns (uint256 lastCheckedExtremum)
     {
-        uint256 index = 0;
+        uint256 batchIndex = 0;
         uint256 batchPreStartId = getLastFinalizedRequestId();
-        uint256 batchEndId = _batches[index];
+        uint256 batchEndId = _batches[batchIndex];
 
-        uint256 extremumIndex = _getLastCheckedExtremum();
+        uint256 extremumIndex = _getLastCheckedExtremum() + 1;
         uint256 extremumId;
 
-        uint256 batchShareRate;
-        if (index < _batches.length - 1) {
-            batchShareRate = _calcShareRate(
-                _getQueue()[_batches[index]],
-                _getQueue()[_batches[index + 1]],
+        uint256 batchShareRate= _calcShareRate(
+                _getQueue()[batchPreStartId],
+                _getQueue()[batchEndId],
                 SHARE_RATE_UNLIMITED
             );
-        }
 
-        while (index < _batches.length - 1) {
-            if (extremumId < _batches[batchEndId]) {
-                unchecked { ++extremumIndex; }
+        while (batchIndex < _batches.length - 1) {
+            if (extremumId < batchEndId) {
                 extremumId = _getExtrema()[extremumIndex];
                 // check extremum
                 uint256 extremumShareRate = _calcShareRate(extremumId);
+
                 if (extremumShareRate > _maxShareRate && batchShareRate <= _maxShareRate) revert InvalidBatches();
                 if (extremumShareRate <= _maxShareRate && batchShareRate > _maxShareRate) revert InvalidBatches();
-
+                unchecked { ++extremumIndex; }
             } else {
                 // check crossing point
                 uint256 nextBatchShareRate = _calcShareRate(
                     _getQueue()[batchEndId],
-                    _getQueue()[_batches[index + 1]],
+                    _getQueue()[_batches[batchIndex + 1]],
                     SHARE_RATE_UNLIMITED
                 );
                 // avg batch rate before crossing point and after crossing point
@@ -388,14 +385,14 @@ abstract contract WithdrawalQueueBase {
                 // +-------->
                 if (batchShareRate > _maxShareRate && nextBatchShareRate > _maxShareRate) {
                     // TODO: get rid of this corner case
-                    if (!(extremumId == batchEndId && _calcShareRate(_batches[index]) != _maxShareRate)) {
+                    if (!(extremumId == batchEndId && _calcShareRate(_batches[batchIndex]) != _maxShareRate)) {
                         revert InvalidBatches();
                     }
                 }
 
                 batchShareRate = nextBatchShareRate;
                 batchPreStartId = batchEndId;
-                unchecked { ++index; }
+                unchecked { ++batchIndex; }
             }
         }
 
