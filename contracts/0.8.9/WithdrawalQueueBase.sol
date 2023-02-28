@@ -168,7 +168,6 @@ abstract contract WithdrawalQueueBase {
     }
 
     // TODO: 1-2 wei corner case use rebaseTimestamp
-    // TODO: [10, 10] batches (when last id is also a crossing point)
     function calculateFinalizationBatches(uint256 _maxShareRate, uint256 _maxTimestamp, CalcState memory _state)
         external
         view
@@ -188,12 +187,21 @@ abstract contract WithdrawalQueueBase {
             prevRequestShareRate = _calcShareRate(_state.batches[_state.batches[0]], _maxShareRate);
         }
         uint256 lastRequestId = getLastRequestId();
-        uint256 maxPossibleRequstId = requestId + MAX_REQUESTS_PER_CALL;
+        uint256 maxPossibleRequestId = requestId + MAX_REQUESTS_PER_CALL;
 
+        uint256 extemumStartIndex = _getLastCheckedExtremum() + 1;
         uint256 extremaCounter;
 
-        while (requestId < maxPossibleRequstId) {
+        while (requestId < maxPossibleRequestId) {
             if (requestId > lastRequestId) break; // if end of the queue
+
+            if (requestId == _getExtrema()[extemumStartIndex + extremaCounter]) {
+                unchecked{
+                    ++extremaCounter;
+                }
+                if (extremaCounter > MAX_EXTREMA_PER_CALL) break;
+            }
+
             WithdrawalRequest memory request = _getQueue()[requestId];
 
             if (request.timestamp > _maxTimestamp) break;
@@ -212,13 +220,6 @@ abstract contract WithdrawalQueueBase {
 
             _state.ethBudget -= etherRequested;
 
-            if (prevRequestShareRate != requestShareRate) {
-                ++extremaCounter;
-                // finalization batch is 36 days max
-                // todo: extrema counts
-                if (extremaCounter > MAX_EXTREMA_PER_CALL) break;
-            }
-
             if (_state.batches[MAX_EXTREMA_PER_CALL] != 0 && (
                 // todo: check if we can omit `touching from above` case
                 prevRequestShareRate <= _maxShareRate && requestShareRate <= _maxShareRate ||
@@ -234,7 +235,7 @@ abstract contract WithdrawalQueueBase {
             unchecked{ ++requestId; }
         }
 
-        _state.finished = requestId < maxPossibleRequstId || requestId == lastRequestId + 1;
+        _state.finished = requestId < maxPossibleRequestId || requestId == lastRequestId + 1;
 
         if (_state.finished) {
             assert(_state.batches[MAX_EXTREMA_PER_CALL] <= MAX_EXTREMA_PER_CALL);
@@ -249,8 +250,6 @@ abstract contract WithdrawalQueueBase {
         return _state;
     }
 
-    // todo: move to finalizationValue or to requestWithdrawal
-    // read both request at once
     function onPreRebase() external {
         // Populate shareRate extrema list
         uint256 lastRequestId = getLastRequestId();
@@ -396,7 +395,7 @@ abstract contract WithdrawalQueueBase {
             }
         }
 
-        return extremumIndex;
+        return extremumIndex - 1;
     }
 
     /// @dev Finalize requests from last finalized one up to `_nextFinalizedRequestId`
