@@ -421,10 +421,14 @@ contract('StakingRouter', ([admin, depositor]) => {
       assert.deepEqual([+distribution.shares[1], distribution.penalized[1]], [op2shareAfter * sharesDistribute, false])
     })
 
-    it.skip('report stuck keys should not affect stake allocation', async () => {
+    it('report stuck keys should not affect stake allocation', async () => {
       // get max allocation before
       const maxDepositsPerModuleBefore = await maxDepositsPerModule()
       assert.deepEqual([20, 5], maxDepositsPerModuleBefore)
+
+      const moduleSummary1Before = await router.getNodeOperatorSummary(module1Id, 0)
+      assert.equal(moduleSummary1Before.stuckValidatorsCount, 0)
+      assert.equal(moduleSummary1Before.depositableValidatorsCount, 10)
 
       // update stuck validators
       const stuckValidatorsCount = 20
@@ -440,8 +444,13 @@ contract('StakingRouter', ([admin, depositor]) => {
         from: admin,
       })
 
+      // we remove allocation from operator, if he has stuck keys
       const maxDepositsPerModuleAfter = await maxDepositsPerModule()
-      assert.deepEqual(maxDepositsPerModuleBefore, maxDepositsPerModuleAfter)
+      assert.deepEqual([10, 5], maxDepositsPerModuleAfter)
+
+      const moduleSummary1After = await router.getNodeOperatorSummary(module1Id, 0)
+      assert.equal(moduleSummary1After.stuckValidatorsCount, 20)
+      assert.equal(moduleSummary1After.depositableValidatorsCount, 0)
     })
   })
 })
