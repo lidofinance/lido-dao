@@ -25,12 +25,17 @@ async function deployWithdrawalQueue({
 
   const { queue: withdrawalQueue } = await withdrawals.deploy(queueAdmin, steth.address, queueName, symbol)
 
-  const initTx = await withdrawalQueue.initialize(
-    queueAdmin,
-    queuePauser || queueAdmin,
-    queueResumer || queueAdmin,
-    queueFinalizer || steth.address,
-    queueBunkerReporter || steth.address
+  const initTx = await withdrawalQueue.initialize(queueAdmin)
+
+  await withdrawalQueue.grantRole(await withdrawalQueue.FINALIZE_ROLE(), queueFinalizer || steth.address, {
+    from: queueAdmin,
+  })
+  await withdrawalQueue.grantRole(await withdrawalQueue.PAUSE_ROLE(), queuePauser || queueAdmin, { from: queueAdmin })
+  await withdrawalQueue.grantRole(await withdrawalQueue.RESUME_ROLE(), queueResumer || queueAdmin, { from: queueAdmin })
+  await withdrawalQueue.grantRole(
+    await withdrawalQueue.BUNKER_MODE_REPORT_ROLE(),
+    queueBunkerReporter || steth.address,
+    { from: queueAdmin }
   )
 
   if (doResume) {
@@ -89,10 +94,6 @@ contract(
         })
         assert.emits(initTx, 'InitializedV1', {
           _admin: queueAdmin,
-          _pauser: queuePauser,
-          _resumer: queueResumer,
-          _finalizer: queueFinalizer,
-          _bunkerReporter: queueBunkerReporter,
         })
       })
 
@@ -136,59 +137,6 @@ contract(
           }),
           'ZeroMetadata()'
         )
-      })
-
-      context('no roles for zero addresses', () => {
-        it('check if pauser is zero', async () => {
-          const { withdrawalQueue } = await deployWithdrawalQueue({
-            stethOwner,
-            queueAdmin,
-            queuePauser: ZERO_ADDRESS,
-            queueResumer,
-          })
-          const role = await withdrawalQueue.PAUSE_ROLE()
-          const memberCount = await withdrawalQueue.getRoleMemberCount(role)
-          assert.equals(memberCount, 0)
-        })
-
-        it('check if pauser is zero', async () => {
-          const { withdrawalQueue } = await deployWithdrawalQueue({
-            stethOwner,
-            queueAdmin,
-            queuePauser,
-            queueResumer: ZERO_ADDRESS,
-            doResume: false,
-          })
-          const role = await withdrawalQueue.RESUME_ROLE()
-          const memberCount = await withdrawalQueue.getRoleMemberCount(role)
-          assert.equals(memberCount, 0)
-        })
-
-        it('check if finalizer is zero', async () => {
-          const { withdrawalQueue } = await deployWithdrawalQueue({
-            stethOwner,
-            queueAdmin,
-            queuePauser,
-            queueResumer,
-            queueFinalizer: ZERO_ADDRESS,
-          })
-          const role = await withdrawalQueue.FINALIZE_ROLE()
-          const memberCount = await withdrawalQueue.getRoleMemberCount(role)
-          assert.equals(memberCount, 0)
-        })
-
-        it('check if bunker reporter is zero', async () => {
-          const { withdrawalQueue } = await deployWithdrawalQueue({
-            stethOwner,
-            queueAdmin,
-            queuePauser,
-            queueResumer,
-            queueBunkerReporter: ZERO_ADDRESS,
-          })
-          const role = await withdrawalQueue.BUNKER_MODE_REPORT_ROLE()
-          const memberCount = await withdrawalQueue.getRoleMemberCount(role)
-          assert.equals(memberCount, 0)
-        })
       })
     })
   }
