@@ -243,8 +243,8 @@ contract AccountingOracle is BaseOracle {
 
         /// @dev The share/ETH rate with the 10^27 precision (i.e. the price of one stETH share
         /// in ETH where one ETH is denominated as 10^27) used for finalizing withdrawal requests
-        /// up to (and including) the one passed in the lastWithdrawalRequestIdToFinalize field.
-        /// Must be set to zero if lastWithdrawalRequestIdToFinalize is zero.
+        /// up to (and including) the one passed in the lastFinalizableWithdrawalRequestId field.
+        /// Must be set to zero if lastFinalizableWithdrawalRequestId is zero.
         uint256 simulatedShareRate;
 
         /// @dev Whether, based on the state observed at the reference slot, the protocol should
