@@ -49,7 +49,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint256 currentNodeOpExitedValidatorsCount,
         uint256 currentNodeOpStuckValidatorsCount
     );
-    error InvalidDepositsValue(uint256 etherValue);
+    error InvalidDepositsValue(uint256 etherValue, uint256 depositsCount);
     error StakingModuleAddressExists();
 
     enum StakingModuleStatus {
@@ -969,7 +969,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
         if (depositsValue > 0) {
             if (depositsValue != _depositsCount * DEPOSIT_SIZE) {
-                revert InvalidDepositsValue(depositsValue);
+                revert InvalidDepositsValue(depositsValue, _depositsCount);
             }
 
             bytes32 withdrawalCredentials = getWithdrawalCredentials();

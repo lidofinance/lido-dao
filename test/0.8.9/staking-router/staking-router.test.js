@@ -2,11 +2,11 @@ const { artifacts, contract, ethers } = require('hardhat')
 const { MaxUint256 } = require('@ethersproject/constants')
 const { utils } = require('web3')
 const { BN } = require('bn.js')
-const { assert } = require('../helpers/assert')
-const { EvmSnapshot } = require('../helpers/blockchain')
-const { newDao, newApp } = require('../helpers/dao')
-const { ETH, toBN } = require('../helpers/utils')
+const { assert } = require('../../helpers/assert')
+const { EvmSnapshot } = require('../../helpers/blockchain')
+const { ETH, toBN } = require('../../helpers/utils')
 
+const OssifiableProxy = artifacts.require('OssifiableProxy.sol')
 const DepositContractMock = artifacts.require('DepositContractMock')
 const StakingRouter = artifacts.require('StakingRouter.sol')
 const StakingModuleMock = artifacts.require('StakingModuleMock.sol')
@@ -28,66 +28,82 @@ const StakingModuleStatus = {
 }
 
 contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
-  let depositContract, app
+  const evmSnapshot = new EvmSnapshot(ethers.provider)
+
+  const snapshot = () => evmSnapshot.make()
+  const revert = () => evmSnapshot.revert()
+
+  let depositContract, router
+  let initialTx
+  let module1, module2
   const wc = '0x'.padEnd(66, '1234')
-  const snapshot = new EvmSnapshot(ethers.provider)
+
+  before(async () => {
+    depositContract = await DepositContractMock.new({ from: deployer })
+
+    const impl = await StakingRouter.new(depositContract.address, { from: deployer })
+    const proxy = await OssifiableProxy.new(impl.address, deployer, '0x')
+    router = await StakingRouter.at(proxy.address)
+    ;[module1, module2] = await Promise.all([
+      StakingModuleMock.new({ from: deployer }),
+      StakingModuleMock.new({ from: deployer }),
+    ])
+
+    const wc = '0x'.padEnd(66, '1234')
+    initialTx = await router.initialize(admin, lido, wc, { from: deployer })
+
+    // await router.grantRole(await router.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(), admin, { from: admin })
+    // await router.grantRole(await router.STAKING_MODULE_PAUSE_ROLE(), admin, { from: admin })
+    // await router.grantRole(await router.STAKING_MODULE_MANAGE_ROLE(), admin, { from: admin })
+    // await router.grantRole(await router.REPORT_EXITED_VALIDATORS_ROLE(), admin, { from: admin })
+  })
 
   describe('setup env', async () => {
-    before(async () => {
-      const { dao } = await newDao(appManager)
-      depositContract = await DepositContractMock.new()
-      const appBase = await StakingRouter.new(depositContract.address)
-      const proxyAddress = await newApp(dao, 'lido-pool', appBase.address, appManager)
-      app = await StakingRouter.at(proxyAddress)
+    it('initialized correctly', async () => {
+      assert.equals(await router.getContractVersion(), 1)
+      assert.equals(await router.getWithdrawalCredentials(), wc)
+      assert.equals(await router.getLido(), lido)
+      assert.equals(await router.getStakingModulesCount(), 0)
+
+      assert.equals(await router.getRoleMemberCount(DEFAULT_ADMIN_ROLE), 1)
+      assert.equals(await router.hasRole(DEFAULT_ADMIN_ROLE, admin), true)
+
+      assert.equals(initialTx.logs.length, 3)
+
+      await assert.emits(initialTx, 'ContractVersionSet', { version: 1 })
+      await assert.emits(initialTx, 'RoleGranted', { role: DEFAULT_ADMIN_ROLE, account: admin, sender: deployer })
+      await assert.emits(initialTx, 'WithdrawalCredentialsSet', { withdrawalCredentials: wc })
     })
 
     it('init fails on wrong input', async () => {
       await assert.revertsWithCustomError(
-        app.initialize(ZERO_ADDRESS, lido, wc, { from: deployer }),
+        router.initialize(ZERO_ADDRESS, lido, wc, { from: deployer }),
         'ZeroAddress("_admin")'
       )
       await assert.revertsWithCustomError(
-        app.initialize(admin, ZERO_ADDRESS, wc, { from: deployer }),
+        router.initialize(admin, ZERO_ADDRESS, wc, { from: deployer }),
         'ZeroAddress("_lido")'
       )
     })
 
-    it('initialized correctly', async () => {
-      const tx = await app.initialize(admin, lido, wc, { from: deployer })
-
-      assert.equals(await app.getContractVersion(), 1)
-      assert.equals(await app.getWithdrawalCredentials(), wc)
-      assert.equals(await app.getLido(), lido)
-      assert.equals(await app.getStakingModulesCount(), 0)
-
-      assert.equals(await app.getRoleMemberCount(DEFAULT_ADMIN_ROLE), 1)
-      assert.equals(await app.hasRole(DEFAULT_ADMIN_ROLE, admin), true)
-
-      assert.equals(tx.logs.length, 3)
-
-      await assert.emits(tx, 'ContractVersionSet', { version: 1 })
-      await assert.emits(tx, 'RoleGranted', { role: DEFAULT_ADMIN_ROLE, account: admin, sender: deployer })
-      await assert.emits(tx, 'WithdrawalCredentialsSet', { withdrawalCredentials: wc })
-    })
-
     it('second initialize reverts', async () => {
       await assert.revertsWithCustomError(
-        app.initialize(admin, lido, wc, { from: deployer }),
+        router.initialize(admin, lido, wc, { from: deployer }),
         'NonZeroContractVersionOnInit()'
       )
     })
 
     it('stranger is not allowed to grant roles', async () => {
       await assert.reverts(
-        app.grantRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, appManager, { from: stranger }),
+        router.grantRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, appManager, { from: stranger }),
         `AccessControl: account ${stranger.toLowerCase()} is missing role ${DEFAULT_ADMIN_ROLE}`
       )
     })
 
     it('grant role MANAGE_WITHDRAWAL_CREDENTIALS_ROLE', async () => {
-      const tx = await app.grantRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, appManager, { from: admin })
-      assert.equals(await app.getRoleMemberCount(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE), 1)
-      assert.equals(await app.hasRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, appManager), true)
+      const tx = await router.grantRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, appManager, { from: admin })
+      assert.equals(await router.getRoleMemberCount(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE), 1)
+      assert.equals(await router.hasRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, appManager), true)
 
       assert.equals(tx.logs.length, 1)
       await assert.emits(tx, 'RoleGranted', {
@@ -98,45 +114,45 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
 
     it('grant role STAKING_MODULE_PAUSE_ROLE', async () => {
-      const tx = await app.grantRole(STAKING_MODULE_PAUSE_ROLE, appManager, { from: admin })
-      assert.equals(await app.getRoleMemberCount(STAKING_MODULE_PAUSE_ROLE), 1)
-      assert.equals(await app.hasRole(STAKING_MODULE_PAUSE_ROLE, appManager), true)
+      const tx = await router.grantRole(STAKING_MODULE_PAUSE_ROLE, appManager, { from: admin })
+      assert.equals(await router.getRoleMemberCount(STAKING_MODULE_PAUSE_ROLE), 1)
+      assert.equals(await router.hasRole(STAKING_MODULE_PAUSE_ROLE, appManager), true)
 
       assert.equals(tx.logs.length, 1)
       await assert.emits(tx, 'RoleGranted', { role: STAKING_MODULE_PAUSE_ROLE, account: appManager, sender: admin })
     })
 
     it('grant role STAKING_MODULE_RESUME_ROLE', async () => {
-      const tx = await app.grantRole(STAKING_MODULE_RESUME_ROLE, appManager, { from: admin })
-      assert.equals(await app.getRoleMemberCount(STAKING_MODULE_RESUME_ROLE), 1)
-      assert.equals(await app.hasRole(STAKING_MODULE_RESUME_ROLE, appManager), true)
+      const tx = await router.grantRole(STAKING_MODULE_RESUME_ROLE, appManager, { from: admin })
+      assert.equals(await router.getRoleMemberCount(STAKING_MODULE_RESUME_ROLE), 1)
+      assert.equals(await router.hasRole(STAKING_MODULE_RESUME_ROLE, appManager), true)
 
       assert.equals(tx.logs.length, 1)
       await assert.emits(tx, 'RoleGranted', { role: STAKING_MODULE_RESUME_ROLE, account: appManager, sender: admin })
     })
 
     it('grant role STAKING_MODULE_MANAGE_ROLE', async () => {
-      const tx = await app.grantRole(STAKING_MODULE_MANAGE_ROLE, appManager, { from: admin })
-      assert.equals(await app.getRoleMemberCount(STAKING_MODULE_MANAGE_ROLE), 1)
-      assert.equals(await app.hasRole(STAKING_MODULE_MANAGE_ROLE, appManager), true)
+      const tx = await router.grantRole(STAKING_MODULE_MANAGE_ROLE, appManager, { from: admin })
+      assert.equals(await router.getRoleMemberCount(STAKING_MODULE_MANAGE_ROLE), 1)
+      assert.equals(await router.hasRole(STAKING_MODULE_MANAGE_ROLE, appManager), true)
 
       assert.equals(tx.logs.length, 1)
       await assert.emits(tx, 'RoleGranted', { role: STAKING_MODULE_MANAGE_ROLE, account: appManager, sender: admin })
     })
 
     it('public constants', async () => {
-      assert.equals(await app.FEE_PRECISION_POINTS(), new BN('100000000000000000000'))
-      assert.equals(await app.TOTAL_BASIS_POINTS(), 10000)
-      assert.equals(await app.DEPOSIT_CONTRACT(), depositContract.address)
-      assert.equals(await app.DEFAULT_ADMIN_ROLE(), DEFAULT_ADMIN_ROLE)
-      assert.equals(await app.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(), MANAGE_WITHDRAWAL_CREDENTIALS_ROLE)
-      assert.equals(await app.STAKING_MODULE_PAUSE_ROLE(), STAKING_MODULE_PAUSE_ROLE)
-      assert.equals(await app.STAKING_MODULE_RESUME_ROLE(), STAKING_MODULE_RESUME_ROLE)
-      assert.equals(await app.STAKING_MODULE_MANAGE_ROLE(), STAKING_MODULE_MANAGE_ROLE)
+      assert.equals(await router.FEE_PRECISION_POINTS(), new BN('100000000000000000000'))
+      assert.equals(await router.TOTAL_BASIS_POINTS(), 10000)
+      assert.equals(await router.DEPOSIT_CONTRACT(), depositContract.address)
+      assert.equals(await router.DEFAULT_ADMIN_ROLE(), DEFAULT_ADMIN_ROLE)
+      assert.equals(await router.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(), MANAGE_WITHDRAWAL_CREDENTIALS_ROLE)
+      assert.equals(await router.STAKING_MODULE_PAUSE_ROLE(), STAKING_MODULE_PAUSE_ROLE)
+      assert.equals(await router.STAKING_MODULE_RESUME_ROLE(), STAKING_MODULE_RESUME_ROLE)
+      assert.equals(await router.STAKING_MODULE_MANAGE_ROLE(), STAKING_MODULE_MANAGE_ROLE)
     })
 
     it('getDepositsAllocation', async () => {
-      const keysAllocation = await app.getDepositsAllocation(1000)
+      const keysAllocation = await router.getDepositsAllocation(1000)
 
       assert.equals(keysAllocation.allocated, 0)
       assert.equals(keysAllocation.allocations, [])
@@ -147,12 +163,12 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     let stakingRouterImplementation
 
     before(async () => {
-      await snapshot.make()
+      await snapshot()
       stakingRouterImplementation = await StakingRouter.new(depositContract.address, { from: deployer })
     })
 
     after(async () => {
-      await snapshot.revert()
+      await revert()
     })
 
     it('contract version is max uint256', async () => {
@@ -180,7 +196,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       assert.equals(await stakingRouterImplementation.getStakingModulesCount(), 0)
     })
 
-    it('deposit fails', async () => {
+    it('deposit fails without role', async () => {
       await assert.revertsWithCustomError(
         stakingRouterImplementation.deposit(100, 0, '0x00', { from: stranger }),
         `AppAuthLidoFailed()`
@@ -191,11 +207,11 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
   describe('staking router', async () => {
     let stakingModule
     before(async () => {
-      await snapshot.make()
+      await snapshot()
 
       stakingModule = await StakingModuleMock.new({ from: deployer })
 
-      await app.addStakingModule('Test module', stakingModule.address, 100, 1000, 2000, {
+      await router.addStakingModule('Test module', stakingModule.address, 100, 1000, 2000, {
         from: appManager,
       })
 
@@ -205,12 +221,12 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
 
     after(async () => {
-      await snapshot.revert()
+      await revert()
     })
 
     it('reverts if module address exists', async () => {
       await assert.revertsWithCustomError(
-        app.addStakingModule('Test', stakingModule.address, 100, 1000, 2000, { from: appManager }),
+        router.addStakingModule('Test', stakingModule.address, 100, 1000, 2000, { from: appManager }),
         'StakingModuleAddressExists()'
       )
     })
@@ -218,14 +234,14 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     it('set withdrawal credentials does not allowed without role', async () => {
       const newWC = '0x'.padEnd(66, '5678')
       await assert.reverts(
-        app.setWithdrawalCredentials(newWC, { from: stranger }),
+        router.setWithdrawalCredentials(newWC, { from: stranger }),
         `AccessControl: account ${stranger.toLowerCase()} is missing role ${MANAGE_WITHDRAWAL_CREDENTIALS_ROLE}`
       )
     })
 
     it('set withdrawal credentials', async () => {
       const newWC = '0x'.padEnd(66, '5678')
-      const tx = await app.setWithdrawalCredentials(newWC, { from: appManager })
+      const tx = await router.setWithdrawalCredentials(newWC, { from: appManager })
 
       await assert.emits(tx, 'WithdrawalCredentialsSet', { withdrawalCredentials: newWC })
 
@@ -234,28 +250,36 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('direct transfer fails', async () => {
       const value = 100
-      await assert.revertsWithCustomError(app.sendTransaction({ value, from: deployer }), `DirectETHTransfer()`)
+      await assert.revertsWithCustomError(router.sendTransaction({ value, from: deployer }), `DirectETHTransfer()`)
     })
 
     it('getStakingModuleNonce', async () => {
       await stakingModule.setNonce(100, { from: deployer })
 
-      assert.equals(await app.getStakingModuleNonce(1), 100)
+      assert.equals(await router.getStakingModuleNonce(1), 100)
     })
 
     it('getStakingModuleNonce reverts when staking module id too large', async () => {
-      await assert.revertsWithCustomError(app.getStakingModuleNonce(UINT24_MAX), 'StakingModuleIdTooLarge()')
+      await assert.revertsWithCustomError(router.getStakingModuleNonce(UINT24_MAX), 'StakingModuleIdTooLarge()')
     })
 
     it('getStakingModuleLastDepositBlock reverts when staking module id too large', async () => {
-      await assert.revertsWithCustomError(app.getStakingModuleLastDepositBlock(UINT24_MAX), 'StakingModuleIdTooLarge()')
+      await assert.revertsWithCustomError(
+        router.getStakingModuleLastDepositBlock(UINT24_MAX),
+        'StakingModuleIdTooLarge()'
+      )
     })
 
     it('getStakingModuleActiveValidatorsCount reverts when staking module id too large', async () => {
       await assert.revertsWithCustomError(
-        app.getStakingModuleActiveValidatorsCount(UINT24_MAX),
+        router.getStakingModuleActiveValidatorsCount(UINT24_MAX),
         'StakingModuleIdTooLarge()'
       )
+    })
+
+    it('getStakingModuleActiveValidatorsCount', async () => {
+      await stakingModule.setActiveValidatorsCount(200, { from: deployer })
+      assert.equals(await router.getStakingModuleActiveValidatorsCount(1), 200)
     })
 
     it('getStakingRewardsDistribution - only one module has active keys', async () => {
@@ -263,13 +287,13 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
       // no active keys for second module
       const anotherStakingModule = await StakingModuleMock.new({ from: deployer })
-      await app.addStakingModule('Test module 2', anotherStakingModule.address, 100, 1000, 2000, {
+      await router.addStakingModule('Test module 2', anotherStakingModule.address, 100, 1000, 2000, {
         from: appManager,
       })
       await anotherStakingModule.setAvailableKeysCount(50, { from: deployer })
 
-      const stakingModuleIds = await app.getStakingModuleIds()
-      let rewardDistribution = await app.getStakingRewardsDistribution()
+      const stakingModuleIds = await router.getStakingModuleIds()
+      let rewardDistribution = await router.getStakingRewardsDistribution()
 
       assert.equal(stakingModuleIds.length, 2)
       // only one module in distribution
@@ -285,7 +309,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
       // 2nd module has active keys
       await anotherStakingModule.setActiveValidatorsCount(10, { from: deployer })
-      rewardDistribution = await app.getStakingRewardsDistribution()
+      rewardDistribution = await router.getStakingRewardsDistribution()
       assert.deepEqual(rewardDistribution.stakingModuleIds, stakingModuleIds)
       // 8% = 10% from (80% of active validator)
       assert.equal(
@@ -301,22 +325,18 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
   })
 
   describe('staking modules limit', async () => {
-    before(async () => {
-      await snapshot.make()
-    })
+    before(snapshot)
+    after(revert)
 
-    after(async () => {
-      await snapshot.revert()
-    })
     it('staking modules limit is 32', async () => {
       for (let i = 0; i < 32; i++) {
         const stakingModule = await StakingModuleMock.new({ from: deployer })
-        await app.addStakingModule('Test module', stakingModule.address, 100, 100, 100, { from: appManager })
+        await router.addStakingModule('Test module', stakingModule.address, 100, 100, 100, { from: appManager })
       }
 
       const oneMoreStakingModule = await StakingModuleMock.new({ from: deployer })
       await assert.revertsWithCustomError(
-        app.addStakingModule('Test module', oneMoreStakingModule.address, 100, 100, 100, { from: appManager }),
+        router.addStakingModule('Test module', oneMoreStakingModule.address, 100, 100, 100, { from: appManager }),
         `StakingModulesLimitExceeded()`
       )
     })
@@ -345,7 +365,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     ]
 
     before(async () => {
-      await snapshot.make()
+      await snapshot()
 
       stakingModule1 = await StakingModuleMock.new({ from: deployer })
       stakingModule2 = await StakingModuleMock.new({ from: deployer })
@@ -354,13 +374,11 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       stakingModulesParams[1].address = stakingModule2.address
     })
 
-    after(async () => {
-      await snapshot.revert()
-    })
+    after(revert)
 
     it('addStakingModule call is not allowed from stranger', async () => {
       await assert.reverts(
-        app.addStakingModule(
+        router.addStakingModule(
           stakingModulesParams[0].name,
           stakingModule1.address,
           stakingModulesParams[0].targetShare,
@@ -374,7 +392,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('addStakingModule fails on share > 100%', async () => {
       await assert.revertsWithCustomError(
-        app.addStakingModule(
+        router.addStakingModule(
           stakingModulesParams[0].name,
           stakingModule1.address,
           10001,
@@ -388,7 +406,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('addStakingModule fails on fees > 100%', async () => {
       await assert.revertsWithCustomError(
-        app.addStakingModule(
+        router.addStakingModule(
           stakingModulesParams[0].name,
           stakingModule1.address,
           stakingModulesParams[0].targetShare,
@@ -404,7 +422,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('addStakingModule fails on zero address', async () => {
       await assert.revertsWithCustomError(
-        app.addStakingModule(
+        router.addStakingModule(
           stakingModulesParams[0].name,
           ZERO_ADDRESS,
           stakingModulesParams[0].targetShare,
@@ -421,7 +439,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     it('addStakingModule fails on incorrect module name', async () => {
       // check zero length
       await assert.revertsWithCustomError(
-        app.addStakingModule(
+        router.addStakingModule(
           '',
           stakingModule1.address,
           stakingModulesParams[0].targetShare,
@@ -436,7 +454,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
       // check length > 32 symbols
       await assert.revertsWithCustomError(
-        app.addStakingModule(
+        router.addStakingModule(
           '#'.repeat(33),
           stakingModule1.address,
           stakingModulesParams[0].targetShare,
@@ -451,7 +469,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
 
     it('add staking module', async () => {
-      const tx = await app.addStakingModule(
+      const tx = await router.addStakingModule(
         stakingModulesParams[0].name,
         stakingModule1.address,
         stakingModulesParams[0].targetShare,
@@ -480,22 +498,25 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         setBy: appManager,
       })
 
-      assert.equals(await app.getStakingModulesCount(), 1)
+      assert.equals(await router.getStakingModulesCount(), 1)
       assert.equals(
-        await app.getStakingModuleStatus(stakingModulesParams[0].expectedModuleId),
+        await router.getStakingModuleStatus(stakingModulesParams[0].expectedModuleId),
         StakingModuleStatus.Active
       )
-      assert.equals(await app.getStakingModuleIsStopped(stakingModulesParams[0].expectedModuleId), false)
-      assert.equals(await app.getStakingModuleIsDepositsPaused(stakingModulesParams[0].expectedModuleId), false)
-      assert.equals(await app.getStakingModuleIsActive(stakingModulesParams[0].expectedModuleId), true)
+      assert.equals(await router.getStakingModuleIsStopped(stakingModulesParams[0].expectedModuleId), false)
+      assert.equals(await router.getStakingModuleIsDepositsPaused(stakingModulesParams[0].expectedModuleId), false)
+      assert.equals(await router.getStakingModuleIsActive(stakingModulesParams[0].expectedModuleId), true)
 
-      await assert.revertsWithCustomError(app.getStakingModule(UINT24_MAX), 'StakingModuleIdTooLarge()')
-      await assert.revertsWithCustomError(app.getStakingModuleStatus(UINT24_MAX), 'StakingModuleIdTooLarge()')
-      await assert.revertsWithCustomError(app.getStakingModuleIsStopped(UINT24_MAX), 'StakingModuleIdTooLarge()')
-      await assert.revertsWithCustomError(app.getStakingModuleIsDepositsPaused(UINT24_MAX), 'StakingModuleIdTooLarge()')
-      await assert.revertsWithCustomError(app.getStakingModuleIsActive(UINT24_MAX), 'StakingModuleIdTooLarge()')
+      await assert.revertsWithCustomError(router.getStakingModule(UINT24_MAX), 'StakingModuleIdTooLarge()')
+      await assert.revertsWithCustomError(router.getStakingModuleStatus(UINT24_MAX), 'StakingModuleIdTooLarge()')
+      await assert.revertsWithCustomError(router.getStakingModuleIsStopped(UINT24_MAX), 'StakingModuleIdTooLarge()')
+      await assert.revertsWithCustomError(
+        router.getStakingModuleIsDepositsPaused(UINT24_MAX),
+        'StakingModuleIdTooLarge()'
+      )
+      await assert.revertsWithCustomError(router.getStakingModuleIsActive(UINT24_MAX), 'StakingModuleIdTooLarge()')
 
-      const module = await app.getStakingModule(stakingModulesParams[0].expectedModuleId)
+      const module = await router.getStakingModule(stakingModulesParams[0].expectedModuleId)
 
       assert.equals(module.name, stakingModulesParams[0].name)
       assert.equals(module.stakingModuleAddress, stakingModule1.address)
@@ -508,7 +529,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
 
     it('add another staking module', async () => {
-      const tx = await app.addStakingModule(
+      const tx = await router.addStakingModule(
         stakingModulesParams[1].name,
         stakingModule2.address,
         stakingModulesParams[1].targetShare,
@@ -538,16 +559,16 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         setBy: appManager,
       })
 
-      assert.equals(await app.getStakingModulesCount(), 2)
+      assert.equals(await router.getStakingModulesCount(), 2)
       assert.equals(
-        await app.getStakingModuleStatus(stakingModulesParams[1].expectedModuleId),
+        await router.getStakingModuleStatus(stakingModulesParams[1].expectedModuleId),
         StakingModuleStatus.Active
       )
-      assert.equals(await app.getStakingModuleIsStopped(stakingModulesParams[1].expectedModuleId), false)
-      assert.equals(await app.getStakingModuleIsDepositsPaused(stakingModulesParams[1].expectedModuleId), false)
-      assert.equals(await app.getStakingModuleIsActive(stakingModulesParams[1].expectedModuleId), true)
+      assert.equals(await router.getStakingModuleIsStopped(stakingModulesParams[1].expectedModuleId), false)
+      assert.equals(await router.getStakingModuleIsDepositsPaused(stakingModulesParams[1].expectedModuleId), false)
+      assert.equals(await router.getStakingModuleIsActive(stakingModulesParams[1].expectedModuleId), true)
 
-      const module = await app.getStakingModule(stakingModulesParams[1].expectedModuleId)
+      const module = await router.getStakingModule(stakingModulesParams[1].expectedModuleId)
 
       assert.equals(module.name, stakingModulesParams[1].name)
       assert.equals(module.stakingModuleAddress, stakingModule2.address)
@@ -560,7 +581,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
 
     it('get staking modules list', async () => {
-      const stakingModules = await app.getStakingModules()
+      const stakingModules = await router.getStakingModules()
 
       for (let i = 0; i < 2; i++) {
         assert.equals(stakingModules[i].name, stakingModulesParams[i].name)
@@ -575,8 +596,8 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
 
     it('get staking module ids', async () => {
-      const stakingModules = await app.getStakingModules()
-      const stakingModuleIds = await app.getStakingModuleIds()
+      const stakingModules = await router.getStakingModules()
+      const stakingModuleIds = await router.getStakingModuleIds()
 
       for (let i = 0; i < stakingModules.length; i++) {
         assert.equals(stakingModules[i].id, stakingModuleIds[i])
@@ -585,7 +606,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('update staking module does not allowed without role', async () => {
       await assert.reverts(
-        app.updateStakingModule(
+        router.updateStakingModule(
           stakingModulesParams[0].expectedModuleId,
           stakingModulesParams[0].targetShare + 1,
           stakingModulesParams[0].stakingModuleFee + 1,
@@ -600,7 +621,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('update staking module reverts on large module id', async () => {
       await assert.revertsWithCustomError(
-        app.updateStakingModule(
+        router.updateStakingModule(
           UINT24_MAX,
           stakingModulesParams[0].targetShare + 1,
           stakingModulesParams[0].stakingModuleFee + 1,
@@ -615,7 +636,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('update staking module fails on target share > 100%', async () => {
       await assert.revertsWithCustomError(
-        app.updateStakingModule(
+        router.updateStakingModule(
           stakingModulesParams[0].expectedModuleId,
           10001,
           stakingModulesParams[0].stakingModuleFee + 1,
@@ -630,7 +651,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('update staking module fails on fees > 100%', async () => {
       await assert.revertsWithCustomError(
-        app.updateStakingModule(
+        router.updateStakingModule(
           stakingModulesParams[0].expectedModuleId,
           stakingModulesParams[0].targetShare + 1,
           5000,
@@ -651,7 +672,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         treasuryFee: stakingModulesParams[0].treasuryFee + 1,
       }
 
-      const tx = await app.updateStakingModule(
+      const tx = await router.updateStakingModule(
         stakingModuleNewParams.id,
         stakingModuleNewParams.targetShare,
         stakingModuleNewParams.stakingModuleFee,
@@ -678,7 +699,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('set staking module status does not allowed without role', async () => {
       await assert.reverts(
-        app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Stopped, {
+        router.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Stopped, {
           from: stranger,
         }),
         `AccessControl: account ${stranger.toLowerCase()} is missing role ${STAKING_MODULE_MANAGE_ROLE}`
@@ -687,7 +708,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('set staking module status reverts if staking module id too large', async () => {
       await assert.revertsWithCustomError(
-        app.setStakingModuleStatus(UINT24_MAX, StakingModuleStatus.Stopped, {
+        router.setStakingModuleStatus(UINT24_MAX, StakingModuleStatus.Stopped, {
           from: appManager,
         }),
         `StakingModuleIdTooLarge()`
@@ -695,9 +716,9 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
 
     it('set staking module status reverts if status is the same', async () => {
-      const module = await app.getStakingModule(stakingModulesParams[0].expectedModuleId)
+      const module = await router.getStakingModule(stakingModulesParams[0].expectedModuleId)
       await assert.revertsWithCustomError(
-        app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, module.status, {
+        router.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, module.status, {
           from: appManager,
         }),
         `StakingModuleStatusTheSame()`
@@ -705,7 +726,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
 
     it('set staking module status', async () => {
-      const tx = await app.setStakingModuleStatus(
+      const tx = await router.setStakingModuleStatus(
         stakingModulesParams[0].expectedModuleId,
         StakingModuleStatus.Stopped,
         {
@@ -722,7 +743,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('pause staking module does not allowed without role', async () => {
       await assert.reverts(
-        app.pauseStakingModule(stakingModulesParams[0].expectedModuleId, {
+        router.pauseStakingModule(stakingModulesParams[0].expectedModuleId, {
           from: stranger,
         }),
         `AccessControl: account ${stranger.toLowerCase()} is missing role ${STAKING_MODULE_PAUSE_ROLE}`
@@ -731,7 +752,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('pause staking module reverts when staking module too large', async () => {
       await assert.revertsWithCustomError(
-        app.pauseStakingModule(UINT24_MAX, {
+        router.pauseStakingModule(UINT24_MAX, {
           from: appManager,
         }),
         `StakingModuleIdTooLarge()`
@@ -739,24 +760,28 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
 
     it('pause staking module does not allowed at not active staking module', async () => {
-      await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Active, {
+      await router.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Active, {
         from: appManager,
       })
 
-      await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Stopped, {
+      await router.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Stopped, {
         from: appManager,
       })
       await assert.revertsWithCustomError(
-        app.pauseStakingModule(stakingModulesParams[0].expectedModuleId, {
+        router.pauseStakingModule(stakingModulesParams[0].expectedModuleId, {
           from: appManager,
         }),
         `StakingModuleNotActive()`
       )
-      await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.DepositsPaused, {
-        from: appManager,
-      })
+      await router.setStakingModuleStatus(
+        stakingModulesParams[0].expectedModuleId,
+        StakingModuleStatus.DepositsPaused,
+        {
+          from: appManager,
+        }
+      )
       await assert.revertsWithCustomError(
-        app.pauseStakingModule(stakingModulesParams[0].expectedModuleId, {
+        router.pauseStakingModule(stakingModulesParams[0].expectedModuleId, {
           from: appManager,
         }),
         `StakingModuleNotActive()`
@@ -764,10 +789,10 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
 
     it('pause staking module', async () => {
-      await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Active, {
+      await router.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Active, {
         from: appManager,
       })
-      const tx = await app.pauseStakingModule(stakingModulesParams[0].expectedModuleId, {
+      const tx = await router.pauseStakingModule(stakingModulesParams[0].expectedModuleId, {
         from: appManager,
       })
 
@@ -778,22 +803,22 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       })
     })
 
-    it('deposit fails', async () => {
+    it('deposit fails on too large module id', async () => {
       await assert.revertsWithCustomError(
-        app.deposit(100, UINT24_MAX, '0x00', { value: 100, from: lido }),
+        router.deposit(100, UINT24_MAX, '0x00', { value: 100, from: lido }),
         'StakingModuleIdTooLarge()'
       )
     })
 
-    it('deposit fails', async () => {
+    it('deposit fails when module is not active', async () => {
       await assert.revertsWithCustomError(
-        app.deposit(100, stakingModulesParams[0].expectedModuleId, '0x00', { value: ETH(32 * 100), from: lido }),
+        router.deposit(100, stakingModulesParams[0].expectedModuleId, '0x00', { value: ETH(32 * 100), from: lido }),
         'StakingModuleNotActive()'
       )
     })
 
     it('getDepositsAllocation', async () => {
-      const keysAllocation = await app.getDepositsAllocation(1000)
+      const keysAllocation = await router.getDepositsAllocation(1000)
 
       assert.equals(keysAllocation.allocated, 0)
       assert.equals(keysAllocation.allocations, [0, 0])
@@ -801,7 +826,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('resume staking module does not allowed without role', async () => {
       await assert.reverts(
-        app.resumeStakingModule(stakingModulesParams[0].expectedModuleId, {
+        router.resumeStakingModule(stakingModulesParams[0].expectedModuleId, {
           from: stranger,
         }),
         `AccessControl: account ${stranger.toLowerCase()} is missing role ${STAKING_MODULE_RESUME_ROLE}`
@@ -810,7 +835,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     it('resume staking module reverts when staking module id too large', async () => {
       await assert.revertsWithCustomError(
-        app.resumeStakingModule(UINT24_MAX, {
+        router.resumeStakingModule(UINT24_MAX, {
           from: appManager,
         }),
         `StakingModuleIdTooLarge()`
@@ -818,20 +843,20 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
 
     it('resume staking module does not allowed at not paused staking module', async () => {
-      await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Stopped, {
+      await router.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Stopped, {
         from: appManager,
       })
       await assert.revertsWithCustomError(
-        app.resumeStakingModule(stakingModulesParams[0].expectedModuleId, {
+        router.resumeStakingModule(stakingModulesParams[0].expectedModuleId, {
           from: appManager,
         }),
         `StakingModuleNotPaused()`
       )
-      await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Active, {
+      await router.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.Active, {
         from: appManager,
       })
       await assert.revertsWithCustomError(
-        app.resumeStakingModule(stakingModulesParams[0].expectedModuleId, {
+        router.resumeStakingModule(stakingModulesParams[0].expectedModuleId, {
           from: appManager,
         }),
         `StakingModuleNotPaused()`
@@ -839,10 +864,14 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
 
     it('resume staking module', async () => {
-      await app.setStakingModuleStatus(stakingModulesParams[0].expectedModuleId, StakingModuleStatus.DepositsPaused, {
-        from: appManager,
-      })
-      const tx = await app.resumeStakingModule(stakingModulesParams[0].expectedModuleId, {
+      await router.setStakingModuleStatus(
+        stakingModulesParams[0].expectedModuleId,
+        StakingModuleStatus.DepositsPaused,
+        {
+          from: appManager,
+        }
+      )
+      const tx = await router.resumeStakingModule(stakingModulesParams[0].expectedModuleId, {
         from: appManager,
       })
 
@@ -851,6 +880,215 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         status: StakingModuleStatus.Active,
         setBy: appManager,
       })
+    })
+  })
+
+  describe('report rewards minted', async () => {
+    before(snapshot)
+    after(revert)
+
+    it('reverts if no REPORT_REWARDS_MINTED_ROLE role', async () => {
+      const stakingModuleIds = [1, 2]
+      const totalShares = [300, 400]
+
+      await assert.revertsOZAccessControl(
+        router.reportRewardsMinted(stakingModuleIds, totalShares, { from: stranger }),
+        stranger,
+        'REPORT_REWARDS_MINTED_ROLE'
+      )
+    })
+
+    it('reverts if modules are not registered', async () => {
+      const stakingModuleIds = [1, 2]
+      const totalShares = [300, 400]
+
+      await router.grantRole(await router.REPORT_REWARDS_MINTED_ROLE(), admin, { from: admin })
+      await assert.reverts(
+        router.reportRewardsMinted(stakingModuleIds, totalShares, { from: admin }),
+        `StakingModuleUnregistered()`
+      )
+    })
+
+    it('reverts if modules are not registered', async () => {
+      await router.grantRole(await router.STAKING_MODULE_MANAGE_ROLE(), admin, { from: admin })
+      await router.addStakingModule(
+        'module 1',
+        module1.address,
+        10_000, // 100 % _targetShare
+        1_000, // 10 % _moduleFee
+        5_000, // 50 % _treasuryFee
+        { from: admin }
+      )
+      await router.addStakingModule(
+        'module 2',
+        module2.address,
+        200, // 2 % _targetShare
+        5_000, // 50 % _moduleFee
+        0, // 0 % _treasuryFee
+        { from: admin }
+      )
+
+      const stakingModuleIds = [1, 2]
+      const totalShares = [300, 400]
+
+      await router.grantRole(await router.REPORT_REWARDS_MINTED_ROLE(), admin, { from: admin })
+      await router.reportRewardsMinted(stakingModuleIds, totalShares, { from: admin })
+
+      const module1lastcall = await module1.lastCall_onRewardsMinted()
+      assert.equal(+module1lastcall.callCount, 1)
+      assert.equal(+module1lastcall.totalShares, 300)
+
+      const module2lastcall = await module2.lastCall_onRewardsMinted()
+      assert.equal(+module2lastcall.callCount, 1)
+      assert.equal(+module2lastcall.totalShares, 400)
+    })
+  })
+
+  describe('updateRefundedValidatorsCount()', async () => {
+    before(snapshot)
+    after(revert)
+
+    it('reverts if no stakingModuleId too large role', async () => {
+      const moduleId = new BN(2).pow(new BN(24))
+      const nodeOperatorId = 1
+      const refundedValidatorsCount = 3
+
+      await assert.reverts(
+        router.updateRefundedValidatorsCount(moduleId, nodeOperatorId, refundedValidatorsCount, { from: stranger }),
+        'StakingModuleIdTooLarge()'
+      )
+    })
+
+    it('reverts if no STAKING_MODULE_MANAGE_ROLE role', async () => {
+      const moduleId = 1
+      const nodeOperatorId = 1
+      const refundedValidatorsCount = 3
+
+      await assert.revertsOZAccessControl(
+        router.updateRefundedValidatorsCount(moduleId, nodeOperatorId, refundedValidatorsCount, { from: stranger }),
+        stranger,
+        'STAKING_MODULE_MANAGE_ROLE'
+      )
+    })
+
+    it('reverts if module not register', async () => {
+      const moduleId = 1
+      const nodeOperatorId = 1
+      const refundedValidatorsCount = 3
+
+      await router.grantRole(await router.STAKING_MODULE_MANAGE_ROLE(), admin, { from: admin })
+      await assert.reverts(
+        router.updateRefundedValidatorsCount(moduleId, nodeOperatorId, refundedValidatorsCount, { from: admin }),
+        'StakingModuleUnregistered()'
+      )
+    })
+
+    it('update refunded validators works', async () => {
+      const moduleId = 1
+      const nodeOperatorId = 1
+      const refundedValidatorsCount = 3
+
+      await router.grantRole(await router.STAKING_MODULE_MANAGE_ROLE(), admin, { from: admin })
+      await router.addStakingModule(
+        'module 1',
+        module1.address,
+        10_000, // 100 % _targetShare
+        1_000, // 10 % _moduleFee
+        5_000, // 50 % _treasuryFee
+        { from: admin }
+      )
+
+      let lastCall = await module1.lastCall_updateRefundedValidatorsCount()
+      assert.equal(+lastCall.nodeOperatorId, 0)
+      assert.equal(+lastCall.refundedValidatorsCount, 0)
+      assert.equal(+lastCall.callCount, 0)
+
+      await router.updateRefundedValidatorsCount(moduleId, nodeOperatorId, refundedValidatorsCount, { from: admin })
+
+      lastCall = await module1.lastCall_updateRefundedValidatorsCount()
+      assert.equal(+lastCall.nodeOperatorId, nodeOperatorId)
+      assert.equal(+lastCall.refundedValidatorsCount, refundedValidatorsCount)
+      assert.equal(+lastCall.callCount, 1)
+    })
+  })
+
+  describe('getStakingModuleSummary()', async () => {
+    before(snapshot)
+    after(revert)
+
+    let module1Id
+
+    it('reverts if moduleId does not exists', async () => {
+      await assert.reverts(router.getStakingModuleSummary(0), 'StakingModuleUnregistered()')
+    })
+
+    it('module id summary works', async () => {
+      await router.grantRole(await router.STAKING_MODULE_MANAGE_ROLE(), admin, { from: admin })
+      await router.addStakingModule(
+        'module 1',
+        module1.address,
+        10_000, // 100 % _targetShare
+        1_000, // 10 % _moduleFee
+        5_000, // 50 % _treasuryFee
+        { from: admin }
+      )
+      module1Id = +(await router.getStakingModuleIds())[0]
+
+      await module1.setTotalExitedValidatorsCount(11)
+      await module1.setActiveValidatorsCount(22)
+      await module1.setAvailableKeysCount(33)
+
+      const summary = await router.getStakingModuleSummary(module1Id)
+      assert.equal(summary.totalExitedValidators, 11)
+      assert.equal(summary.totalDepositedValidators, 22)
+      assert.equal(summary.depositableValidatorsCount, 33)
+    })
+  })
+
+  describe('getNodeOperatorSummary()', async () => {
+    before(snapshot)
+    after(revert)
+
+    let module1Id
+
+    it('reverts if moduleId does not exists', async () => {
+      await assert.reverts(router.getNodeOperatorSummary(0, 0), 'StakingModuleUnregistered()')
+    })
+
+    it('node operator summary by moduleId works', async () => {
+      await router.grantRole(await router.STAKING_MODULE_MANAGE_ROLE(), admin, { from: admin })
+      await router.addStakingModule(
+        'module 1',
+        module1.address,
+        10_000, // 100 % _targetShare
+        1_000, // 10 % _moduleFee
+        5_000, // 50 % _treasuryFee
+        { from: admin }
+      )
+      module1Id = +(await router.getStakingModuleIds())[0]
+
+      const summary = {
+        isTargetLimitActive: true,
+        targetValidatorsCount: 1,
+        stuckValidatorsCount: 2,
+        refundedValidatorsCount: 3,
+        stuckPenaltyEndTimestamp: 4,
+        totalExitedValidators: 5,
+        totalDepositedValidators: 6,
+        depositableValidatorsCount: 7,
+      }
+      const nodeOperatorId = 0
+      await module1.setNodeOperatorSummary(nodeOperatorId, summary)
+
+      const moduleSummary = await router.getNodeOperatorSummary(module1Id, nodeOperatorId)
+      assert.equal(moduleSummary.isTargetLimitActive, true)
+      assert.equal(moduleSummary.targetValidatorsCount, 1)
+      assert.equal(moduleSummary.stuckValidatorsCount, 2)
+      assert.equal(moduleSummary.refundedValidatorsCount, 3)
+      assert.equal(moduleSummary.stuckPenaltyEndTimestamp, 4)
+      assert.equal(moduleSummary.totalExitedValidators, 5)
+      assert.equal(moduleSummary.totalDepositedValidators, 6)
+      assert.equal(moduleSummary.depositableValidatorsCount, 7)
     })
   })
 })

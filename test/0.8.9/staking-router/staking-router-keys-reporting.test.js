@@ -1,13 +1,13 @@
 const { artifacts, contract, ethers } = require('hardhat')
-const { EvmSnapshot } = require('../helpers/blockchain')
-const { assert } = require('../helpers/assert')
-const { hex, hexConcat, toNum } = require('../helpers/utils')
+const { EvmSnapshot } = require('../../helpers/blockchain')
+const { assert } = require('../../helpers/assert')
+const { hex, hexConcat, toNum } = require('../../helpers/utils')
 
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const StakingModuleMock = artifacts.require('StakingModuleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
 
-contract('StakingRouter', ([deployer, lido, admin]) => {
+contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
   const evmSnapshot = new EvmSnapshot(ethers.provider)
 
   let depositContract, router
@@ -82,6 +82,14 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
         assert.equals(totalExited, 0)
       })
 
+      it('reverts total exited validators without REPORT_EXITED_VALIDATORS_ROLE', async () => {
+        await assert.revertsOZAccessControl(
+          router.updateExitedValidatorsCountByStakingModule([module1Id + 1], [1], { from: stranger }),
+          stranger,
+          'REPORT_EXITED_VALIDATORS_ROLE'
+        )
+      })
+
       it('reporting total exited validators of a non-existent module reverts', async () => {
         await assert.reverts(
           router.updateExitedValidatorsCountByStakingModule([module1Id + 1], [1], { from: admin }),
@@ -114,6 +122,14 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
         assert.equal(callInfo.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
       })
 
+      it('reverts without role onValidatorsCountsByNodeOperatorReportingFinished', async () => {
+        await assert.revertsOZAccessControl(
+          router.onValidatorsCountsByNodeOperatorReportingFinished({ from: stranger }),
+          stranger,
+          'REPORT_EXITED_VALIDATORS_ROLE'
+        )
+      })
+
       it(`calling onValidatorsCountsByNodeOperatorReportingFinished doesn't call anything on the module`, async () => {
         await router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin })
 
@@ -121,6 +137,22 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
         assert.equal(callInfo.updateStuckValidatorsCount.callCount, 0)
         assert.equal(callInfo.updateExitedValidatorsCount.callCount, 0)
         assert.equal(callInfo.onExitedAndStuckValidatorsCountsUpdated.callCount, 0)
+      })
+
+      it('reverts without role reportStakingModuleStuckValidatorsCountByNodeOperator()', async () => {
+        const nonExistentModuleId = module1Id + 1
+        const nodeOpIdsData = hexConcat(hex(1, 8))
+        const validatorsCountsData = hexConcat(hex(1, 16))
+        await assert.revertsOZAccessControl(
+          router.reportStakingModuleStuckValidatorsCountByNodeOperator(
+            nonExistentModuleId,
+            nodeOpIdsData,
+            validatorsCountsData,
+            { from: stranger }
+          ),
+          stranger,
+          'REPORT_EXITED_VALIDATORS_ROLE'
+        )
       })
 
       it('reporting stuck validators by node op of a non-existent module reverts', async () => {
@@ -284,6 +316,14 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
             { from: admin }
           ),
           'StakingModuleUnregistered()'
+        )
+      })
+
+      it('reverts reportStakingModuleExitedValidatorsCountByNodeOperator() without REPORT_EXITED_VALIDATORS_ROLE', async () => {
+        await assert.revertsOZAccessControl(
+          router.reportStakingModuleExitedValidatorsCountByNodeOperator(module1Id, '0x', '0x', { from: stranger }),
+          stranger,
+          'REPORT_EXITED_VALIDATORS_ROLE'
         )
       })
 
@@ -479,6 +519,38 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
       it('exited validators count accross all modules gets updated', async () => {
         const totalExited = await router.getExitedValidatorsCountAcrossAllModules()
         assert.equals(totalExited, 5)
+      })
+
+      it('revert on decreased exited keys for modules', async () => {
+        await assert.reverts(
+          router.updateExitedValidatorsCountByStakingModule(moduleIds, [2, 1], { from: admin }),
+          `ExitedValidatorsCountCannotDecrease()`
+        )
+      })
+
+      it('emit StakingModuleExitedValidatorsIncompleteReporting() if module not update', async () => {
+        const { exitedValidatorsCount: prevReportedExitedValidatorsCount1 } = await router.getStakingModule(
+          moduleIds[0]
+        )
+        const { exitedValidatorsCount: prevReportedExitedValidatorsCount2 } = await router.getStakingModule(
+          moduleIds[1]
+        )
+
+        assert.equal(prevReportedExitedValidatorsCount1, 3)
+        assert.equal(prevReportedExitedValidatorsCount2, 2)
+
+        const { totalExitedValidators: totalExitedValidators1 } = await module1.getStakingModuleSummary()
+        const { totalExitedValidators: totalExitedValidators2 } = await module2.getStakingModuleSummary()
+
+        const tx = await router.updateExitedValidatorsCountByStakingModule(moduleIds, [3, 2], { from: admin })
+        assert.emits(tx, 'StakingModuleExitedValidatorsIncompleteReporting', {
+          stakingModuleId: moduleIds[0],
+          unreportedExitedValidatorsCount: prevReportedExitedValidatorsCount1 - totalExitedValidators1,
+        })
+        assert.emits(tx, 'StakingModuleExitedValidatorsIncompleteReporting', {
+          stakingModuleId: moduleIds[1],
+          unreportedExitedValidatorsCount: prevReportedExitedValidatorsCount2 - totalExitedValidators2,
+        })
       })
 
       it('no functions were called on any module', async () => {
@@ -728,6 +800,145 @@ contract('StakingRouter', ([deployer, lido, admin]) => {
           assert.equal(callInfo2.updateStuckValidatorsCount.callCount, 1)
         }
       )
+    })
+  })
+
+  describe('unsafeSetExitedValidatorsCount()', async () => {
+    before(snapshot)
+    after(revert)
+
+    let module1Id
+
+    it('adding the only module', async () => {
+      await router.addStakingModule(
+        'module 1',
+        module1.address,
+        10_000, // target share 100 %
+        1_000, // module fee 10 %
+        5_000, // treasury fee 5 %
+        { from: admin }
+      )
+      module1Id = +(await router.getStakingModuleIds())[0]
+    })
+
+    it('reverts without UNSAFE_SET_EXITED_VALIDATORS_ROLE role', async () => {
+      await assert.revertsOZAccessControl(
+        router.unsafeSetExitedValidatorsCount(0, 0, 0, [0, 0, 0, 0, 0, 0], { from: stranger }),
+        stranger,
+        'UNSAFE_SET_EXITED_VALIDATORS_ROLE'
+      )
+    })
+
+    it('reverts if module not exists', async () => {
+      await router.grantRole(await router.UNSAFE_SET_EXITED_VALIDATORS_ROLE(), admin, { from: admin })
+      await assert.reverts(
+        router.unsafeSetExitedValidatorsCount(0, 0, 0, [0, 0, 0, 0, 0, 0], { from: admin }),
+        'StakingModuleUnregistered()'
+      )
+    })
+
+    it('reverts with UnexpectedCurrentValidatorsCount(0, 0, 0)', async () => {
+      await router.grantRole(await router.UNSAFE_SET_EXITED_VALIDATORS_ROLE(), admin, { from: admin })
+
+      const nodeOperatorId = 0
+      const ValidatorsCountsCorrection = {
+        currentModuleExitedValidatorsCount: 0,
+        currentNodeOperatorExitedValidatorsCount: 0,
+        currentNodeOperatorStuckValidatorsCount: 0,
+        newModuleExitedValidatorsCount: 0,
+        newNodeOperatorExitedValidatorsCount: 0,
+        newNodeOperatorStuckValidatorsCount: 0,
+      }
+
+      const summary = {
+        isTargetLimitActive: false,
+        targetValidatorsCount: 0,
+        stuckValidatorsCount: 0,
+        refundedValidatorsCount: 0,
+        stuckPenaltyEndTimestamp: 0,
+        totalExitedValidators: 0,
+        totalDepositedValidators: 0,
+        depositableValidatorsCount: 0,
+      }
+
+      // first correction
+      await router.updateExitedValidatorsCountByStakingModule([module1Id], [10], { from: admin })
+      await assert.reverts(
+        router.unsafeSetExitedValidatorsCount(module1Id, nodeOperatorId, false, ValidatorsCountsCorrection, {
+          from: admin,
+        }),
+        `UnexpectedCurrentValidatorsCount(10, 0, 0)`
+      )
+
+      ValidatorsCountsCorrection.currentModuleExitedValidatorsCount = 10
+      ValidatorsCountsCorrection.newModuleExitedValidatorsCount = 11
+      await router.unsafeSetExitedValidatorsCount(module1Id, 0, false, ValidatorsCountsCorrection, { from: admin })
+
+      let lastCall = await module1.lastCall_unsafeUpdateValidatorsCount()
+      assert.equal(+lastCall.callCount, 1)
+      assert.equal(+lastCall.nodeOperatorId, 0)
+      assert.equal(+lastCall.exitedValidatorsKeysCount, 0)
+      assert.equal(+lastCall.stuckValidatorsKeysCount, 0)
+
+      let stats1 = await router.getStakingModule(module1Id)
+      assert.equal(+stats1.exitedValidatorsCount, 11)
+
+      // second correction
+      ValidatorsCountsCorrection.currentModuleExitedValidatorsCount = 11
+      ValidatorsCountsCorrection.newModuleExitedValidatorsCount = 11
+
+      ValidatorsCountsCorrection.currentNodeOperatorExitedValidatorsCount = 20
+      summary.totalExitedValidators = 21
+      await module1.setNodeOperatorSummary(nodeOperatorId, summary)
+      await assert.reverts(
+        router.unsafeSetExitedValidatorsCount(module1Id, 0, false, ValidatorsCountsCorrection, { from: admin }),
+        `UnexpectedCurrentValidatorsCount(11, 21, 0)`
+      )
+
+      ValidatorsCountsCorrection.currentModuleExitedValidatorsCount = 11
+      ValidatorsCountsCorrection.newModuleExitedValidatorsCount = 11
+
+      ValidatorsCountsCorrection.currentNodeOperatorExitedValidatorsCount = 21
+      ValidatorsCountsCorrection.newNodeOperatorExitedValidatorsCount = 22
+
+      await router.unsafeSetExitedValidatorsCount(module1Id, 0, false, ValidatorsCountsCorrection, { from: admin })
+      lastCall = await module1.lastCall_unsafeUpdateValidatorsCount()
+      assert.equal(+lastCall.callCount, 2)
+      assert.equal(+lastCall.nodeOperatorId, 0)
+      assert.equal(+lastCall.exitedValidatorsKeysCount, 22)
+      assert.equal(+lastCall.stuckValidatorsKeysCount, 0)
+
+      stats1 = await router.getStakingModule(module1Id)
+      assert.equal(+stats1.exitedValidatorsCount, 11)
+
+      // // //check 3d condition
+      ValidatorsCountsCorrection.currentNodeOperatorExitedValidatorsCount = 22
+      ValidatorsCountsCorrection.newNodeOperatorExitedValidatorsCount = 22
+
+      ValidatorsCountsCorrection.currentNodeOperatorStuckValidatorsCount = 30
+      ValidatorsCountsCorrection.newNodeOperatorStuckValidatorsCount = 32
+
+      summary.totalExitedValidators = 22
+      summary.stuckValidatorsCount = 31
+      await module1.setNodeOperatorSummary(nodeOperatorId, summary)
+      await assert.reverts(
+        router.unsafeSetExitedValidatorsCount(module1Id, 0, false, ValidatorsCountsCorrection, { from: admin }),
+        `UnexpectedCurrentValidatorsCount(11, 22, 31)`
+      )
+
+      ValidatorsCountsCorrection.currentNodeOperatorStuckValidatorsCount = 31
+      ValidatorsCountsCorrection.newNodeOperatorStuckValidatorsCount = 32
+
+      await router.unsafeSetExitedValidatorsCount(module1Id, 0, false, ValidatorsCountsCorrection, { from: admin })
+      lastCall = await module1.lastCall_unsafeUpdateValidatorsCount()
+      assert.equal(+lastCall.callCount, 3)
+      assert.equal(+lastCall.nodeOperatorId, 0)
+      assert.equal(+lastCall.exitedValidatorsKeysCount, 22)
+      assert.equal(+lastCall.stuckValidatorsKeysCount, 32)
+
+      assert.equal(+(await module1.callCount_onExitedAndStuckValidatorsCountsUpdated()), 0)
+      await router.unsafeSetExitedValidatorsCount(module1Id, 0, true, ValidatorsCountsCorrection, { from: admin })
+      assert.equal(+(await module1.callCount_onExitedAndStuckValidatorsCountsUpdated()), 1)
     })
   })
 })

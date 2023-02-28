@@ -98,6 +98,7 @@ contract GenericStub {
         _currentStateIndexOneBased = _stateIndex;
     }
 
+    // solhint-disable-next-line
     fallback() external payable {
         MethodStub memory stub = _getMethodStub();
         _forwardETH(stub.forwardETH);
@@ -165,6 +166,7 @@ contract GenericStub {
         return _states[_stateIndex];
     }
 
+    // solhint-disable-next-line
     event GenericStub__ethSent(address recipient, uint256 value);
 
     error GenericStub__StateIndexOutOfBounds(uint256 index, uint256 length);

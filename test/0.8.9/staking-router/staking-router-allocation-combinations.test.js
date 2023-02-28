@@ -1,5 +1,5 @@
 const { artifacts, contract, ethers } = require('hardhat')
-const { assert } = require('../helpers/assert')
+const { assert } = require('../../helpers/assert')
 const { BigNumber } = require('ethers')
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const StakingModuleMock = artifacts.require('StakingModuleMock.sol')
