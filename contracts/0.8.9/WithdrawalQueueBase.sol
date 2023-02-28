@@ -200,8 +200,14 @@ abstract contract WithdrawalQueueBase {
 
             WithdrawalRequest memory prevRequest = _getQueue()[requestId - 1];
 
-            uint256 requestShareRate = _calcShareRate(prevRequest, request, _maxShareRate);
             uint256 etherRequested = request.cumulativeStETH - prevRequest.cumulativeStETH;
+            uint256 shareRequested = request.cumulativeShares - prevRequest.cumulativeShares;
+            uint256 requestShareRate = etherRequested * E27_PRECISION_BASE / shareRequested;
+
+            if (requestShareRate > _maxShareRate) {
+                etherRequested = shareRequested * _maxShareRate / E27_PRECISION_BASE;
+                requestShareRate = _maxShareRate;
+            }
 
             if (etherRequested > _state.ethBudget) break;
 
@@ -251,8 +257,9 @@ abstract contract WithdrawalQueueBase {
         uint256 lastRequestId = getLastRequestId();
         uint256[] storage extrema = _getExtrema();
         // first request is an extremum by default
-        if (extrema.length == 0 && lastRequestId > 0) {
+        if (extrema.length == 1 && lastRequestId > 0) {
             extrema.push(lastRequestId);
+            return;
         }
 
         uint256 lastExtremumId = extrema[extrema.length - 1];
@@ -265,7 +272,7 @@ abstract contract WithdrawalQueueBase {
         if (lastRequestShareRate == lastExtremumShareRate) return; // todo: 1-2 wei corner case
         // first met request in a sequence with equal shareRate is an extremum
 
-        if (extrema.length == 1) {
+        if (extrema.length == 2) {
             // first two different rates are always extrema
             extrema.push(lastRequestId);
         } else {
