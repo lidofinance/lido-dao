@@ -1232,6 +1232,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         // Step 4.
         // Pass the accounting values to sanity checker to smoothen positive token rebase
+
+        uint256 withdrawals;
+        uint256 elRewards;
         (
             withdrawals, elRewards, reportContext.simulatedSharesToBurn, reportContext.sharesToBurn
         ) = IOracleReportSanityChecker(contracts.oracleReportSanityChecker).smoothenTokenRebase(
@@ -1284,8 +1287,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // Step 8.
         // Complete token rebase by informing observers (emit an event and call the external receivers if any)
         (
-            postTotalShares,
-            postTotalPooledEther
+            uint256 postTotalShares,
+            uint256 postTotalPooledEther
         ) = _completeTokenRebase(
             _reportedData,
             reportContext,
