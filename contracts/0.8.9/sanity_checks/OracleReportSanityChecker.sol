@@ -531,9 +531,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
     function _checkSharesRequestedToBurn(uint256 _sharesRequestedToBurn) internal view {
         (uint256 coverShares, uint256 nonCoverShares) = IBurner(LIDO_LOCATOR.burner()).getSharesRequestedToBurn();
-        uint256 actualBurnerRequests = coverShares + nonCoverShares;
-        if (_sharesRequestedToBurn > actualBurnerRequests) {
-            revert IncorrectBurnerRequests(actualBurnerRequests);
+        uint256 actualSharesToBurn = coverShares + nonCoverShares;
+        if (_sharesRequestedToBurn > actualSharesToBurn) {
+            revert IncorrectSharesRequestedToBurn(actualSharesToBurn);
         }
     }
 
@@ -695,7 +695,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     error IncorrectLimitValue(uint256 value, uint256 maxAllowedValue);
     error IncorrectWithdrawalsVaultBalance(uint256 actualWithdrawalVaultBalance);
     error IncorrectELRewardsVaultBalance(uint256 actualELRewardsVaultBalance);
-    error IncorrectBurnerRequests(uint256 actualBurnerRequests);
+    error IncorrectSharesRequestedToBurn(uint256 actualSharesToBurn);
     error IncorrectCLBalanceDecrease(uint256 oneOffCLBalanceDecreaseBP);
     error IncorrectCLBalanceIncrease(uint256 annualBalanceDiff);
     error IncorrectAppearedValidators(uint256 churnLimit);
