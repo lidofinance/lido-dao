@@ -76,6 +76,7 @@ contract HashConsensus is AccessControlEnumerable {
     error DuplicateMember();
     error AddressCannotBeZero();
     error InitialEpochIsYetToArrive();
+    error InitialEpochAlreadyArrived();
     error EpochsPerFrameCannotBeZero();
     error NonMember();
     error UnexpectedConsensusVersion(uint256 expected, uint256 received);
@@ -205,7 +206,6 @@ contract HashConsensus is AccessControlEnumerable {
         uint256 secondsPerSlot,
         uint256 genesisTime,
         uint256 epochsPerFrame,
-        uint256 initialEpoch,
         uint256 fastLaneLengthSlots,
         address admin,
         address reportProcessor
@@ -216,8 +216,12 @@ contract HashConsensus is AccessControlEnumerable {
 
         if (admin == address(0)) revert AdminCannotBeZero();
         if (reportProcessor == address(0)) revert ReportProcessorCannotBeZero();
+
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
-        _setFrameConfig(initialEpoch, epochsPerFrame, fastLaneLengthSlots, FrameConfig(0, 0, 0));
+
+        uint256 farFutureEpoch = _computeEpochAtTimestamp(type(uint64).max);
+        _setFrameConfig(farFutureEpoch, epochsPerFrame, fastLaneLengthSlots, FrameConfig(0, 0, 0));
+
         _reportProcessor = reportProcessor;
     }
 
@@ -250,6 +254,25 @@ contract HashConsensus is AccessControlEnumerable {
     ) {
         ConsensusFrame memory frame = _getCurrentFrame();
         return (frame.refSlot, frame.reportProcessingDeadlineSlot);
+    }
+
+    /// @notice Sets initial epoch given that the current initial epoch is in the future.
+    ///
+    /// @param initialEpoch The new initial epoch.
+    ///
+    function updateInitialEpoch(uint256 initialEpoch) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        FrameConfig memory frameConfig = _frameConfig;
+
+        if (_computeEpochAtTimestamp(_getTime()) >= frameConfig.initialEpoch) {
+            revert InitialEpochAlreadyArrived();
+        }
+
+        _setFrameConfig(
+            initialEpoch,
+            frameConfig.epochsPerFrame,
+            frameConfig.fastLaneLengthSlots,
+            frameConfig
+        );
     }
 
     function setFrameConfig(uint256 epochsPerFrame, uint256 fastLaneLengthSlots)
