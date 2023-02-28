@@ -100,13 +100,7 @@ async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
 
 async function deployExitBusOracle(
   admin,
-  {
-    dataSubmitter = null,
-    lastProcessingRefSlot = 0,
-    resumeAfterDeploy = false,
-    pauser = ZERO_ADDRESS,
-    resumer = ZERO_ADDRESS,
-  } = {}
+  { dataSubmitter = null, lastProcessingRefSlot = 0, resumeAfterDeploy = false } = {}
 ) {
   const locator = (await deployLocatorWithDummyAddressesImplementation(admin)).address
 
@@ -123,15 +117,9 @@ async function deployExitBusOracle(
     oracleReportSanityChecker: oracleReportSanityChecker.address,
   })
 
-  const initTx = await oracle.initialize(
-    admin,
-    pauser,
-    resumer,
-    consensus.address,
-    CONSENSUS_VERSION,
-    lastProcessingRefSlot,
-    { from: admin }
-  )
+  const initTx = await oracle.initialize(admin, consensus.address, CONSENSUS_VERSION, lastProcessingRefSlot, {
+    from: admin,
+  })
 
   assert.emits(initTx, 'ContractVersionSet', { version: 1 })
 

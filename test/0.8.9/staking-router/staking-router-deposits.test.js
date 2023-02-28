@@ -226,17 +226,18 @@ contract('StakingRouter', ([depositor, stranger]) => {
       await operators.setNodeOperatorStakingLimit(1, 100000, { from: voting })
     })
 
-    it('deposits not work if depositValue == 0', async () => {
-      const depositsCount = 100
-
+    it('zero deposits just updates module lastDepositBlock', async () => {
+      const depositsCount = 1
       // allow tx `StakingRouter.deposit()` from the Lido contract addr
       await ethers.provider.send('hardhat_impersonateAccount', [lido.address])
-
       const value = ETH(0)
-      await assert.reverts(
-        router.deposit(depositsCount, curatedModuleId, '0x', { from: lido.address, value }),
-        `InvalidDepositsValue(${value}, ${depositsCount})`
-      )
+      const receipt = await router.deposit(depositsCount, curatedModuleId, '0x', { from: lido.address, value })
+
+      assert.emits(receipt, 'StakingRouterETHDeposited', { stakingModuleId: curatedModuleId, amount: value })
+
+      const lastModuleBlock = await router.getStakingModuleLastDepositBlock(curatedModuleId)
+      const currentBlockNumber = await web3.eth.getBlockNumber()
+      assert.equal(currentBlockNumber, +lastModuleBlock)
     })
 
     it('deposits not work if depositValue != depositsCount * 32 ', async () => {

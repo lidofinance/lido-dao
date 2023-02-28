@@ -92,10 +92,8 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, account1
         })
 
         it('should revert without admin address', async () => {
-          const pauser = ZERO_ADDRESS
-          const resumer = ZERO_ADDRESS
           await assert.reverts(
-            oracle.initialize(ZERO_ADDRESS, pauser, resumer, consensus.address, CONSENSUS_VERSION, 0, {
+            oracle.initialize(ZERO_ADDRESS, consensus.address, CONSENSUS_VERSION, 0, {
               from: admin,
             }),
             'AdminCannotBeZero()'
