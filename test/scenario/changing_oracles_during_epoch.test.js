@@ -10,8 +10,8 @@ const {
   CONSENSUS_VERSION,
   HASH_1,
   ZERO_HASH,
-  getReportDataItems,
-  calcReportDataHash,
+  getAccountingReportDataItems,
+  calcAccountingReportDataHash,
 } = require('../0.8.9/oracle/accounting-oracle-deploy.test')
 
 const SLOTS_PER_EPOCH = 32
@@ -81,10 +81,10 @@ contract('AccountingOracle', ([voting, malicious1, malicious2, member1, member2,
     await consensus.addMember(malicious1, 4, { from: voting })
     await consensus.addMember(malicious2, 4, { from: voting })
 
-    const goodDataItems = getReportDataItems({ ...GOOD_DATA, refSlot: SLOTS_PER_FRAME - 1 })
-    const badDataItems = getReportDataItems({ ...BAD_DATA, refSlot: SLOTS_PER_FRAME - 1 })
-    const goodDataHash = calcReportDataHash(goodDataItems)
-    const badDataHash = calcReportDataHash(badDataItems)
+    const goodDataItems = getAccountingReportDataItems({ ...GOOD_DATA, refSlot: SLOTS_PER_FRAME - 1 })
+    const badDataItems = getAccountingReportDataItems({ ...BAD_DATA, refSlot: SLOTS_PER_FRAME - 1 })
+    const goodDataHash = calcAccountingReportDataHash(goodDataItems)
+    const badDataHash = calcAccountingReportDataHash(badDataItems)
 
     await consensus.submitReport(SLOTS_PER_FRAME - 1, badDataHash, CONSENSUS_VERSION, { from: malicious1 })
     await consensus.submitReport(SLOTS_PER_FRAME - 1, badDataHash, CONSENSUS_VERSION, { from: malicious2 })

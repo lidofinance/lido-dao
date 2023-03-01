@@ -15,8 +15,8 @@ const {
   EXTRA_DATA_FORMAT_EMPTY,
   EXTRA_DATA_FORMAT_LIST,
   deployAndConfigureAccountingOracle,
-  getReportDataItems,
-  calcReportDataHash,
+  getAccountingReportDataItems,
+  calcAccountingReportDataHash,
   encodeExtraDataItems,
   packExtraDataList,
   calcExtraDataListHash,
@@ -127,8 +127,8 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
         extraDataItemsCount: extraDataItems.length,
       }
 
-      reportItems = getReportDataItems(reportFields)
-      reportHash = calcReportDataHash(reportItems)
+      reportItems = getAccountingReportDataItems(reportFields)
+      reportHash = calcAccountingReportDataHash(reportItems)
 
       await triggerConsensusOnHash(reportHash)
     })
@@ -174,8 +174,8 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
 
     it(`a data not matching the consensus hash cannot be submitted`, async () => {
       const invalidReport = { ...reportFields, numValidators: reportFields.numValidators + 1 }
-      const invalidReportItems = getReportDataItems(invalidReport)
-      const invalidReportHash = calcReportDataHash(invalidReportItems)
+      const invalidReportItems = getAccountingReportDataItems(invalidReport)
+      const invalidReportHash = calcAccountingReportDataHash(invalidReportItems)
       await assert.reverts(
         oracle.submitReportData(invalidReportItems, oracleVersion, { from: member1 }),
         `UnexpectedDataHash("${reportHash}", "${invalidReportHash}")`
@@ -393,8 +393,8 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
         extraDataHash: ZERO_HASH,
         extraDataItemsCount: 0,
       }
-      reportItems = getReportDataItems(reportFields)
-      reportHash = calcReportDataHash(reportItems)
+      reportItems = getAccountingReportDataItems(reportFields)
+      reportHash = calcAccountingReportDataHash(reportItems)
 
       await triggerConsensusOnHash(reportHash)
 
