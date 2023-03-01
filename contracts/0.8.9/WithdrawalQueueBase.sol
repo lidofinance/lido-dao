@@ -50,6 +50,9 @@ abstract contract WithdrawalQueueBase {
     /// last extreum index that was already checked for finalization
     bytes32 internal constant LAST_CHECKED_EXTREMUM_POSITION = keccak256("lido.WithdrawalQueue.lastCheckedExtremum");
 
+    bytes32 internal constant LAST_REPORT_TIMESTAMP_POSITION = keccak256("lido.WithdrawalQueue.lastReportTimestamp");
+
+
     /// @notice structure representing a request for withdrawal.
     struct WithdrawalRequest {
         /// @notice sum of the all stETH submitted for withdrawals up to this request
@@ -63,7 +66,7 @@ abstract contract WithdrawalQueueBase {
         /// @notice flag if the request was claimed
         bool claimed;
 
-        //reportTimestamp;
+        uint64 reportTimestamp;
     }
 
     /// @notice structure to store discounts for requests that are affected by negative rebase
@@ -167,7 +170,6 @@ abstract contract WithdrawalQueueBase {
         uint256[] batches;
     }
 
-    // TODO: 1-2 wei corner case use rebaseTimestamp
     function calculateFinalizationBatches(uint256 _maxShareRate, uint256 _maxTimestamp, CalcState memory _state)
         external
         view
@@ -208,20 +210,20 @@ abstract contract WithdrawalQueueBase {
 
             WithdrawalRequest memory prevRequest = _getQueue()[requestId - 1];
 
-            uint256 etherRequested = request.cumulativeStETH - prevRequest.cumulativeStETH;
+            uint256 ethToFinalize = request.cumulativeStETH - prevRequest.cumulativeStETH;
             uint256 shareRequested = request.cumulativeShares - prevRequest.cumulativeShares;
-            uint256 requestShareRate = etherRequested * E27_PRECISION_BASE / shareRequested;
+            uint256 requestShareRate = ethToFinalize * E27_PRECISION_BASE / shareRequested;
 
             if (requestShareRate > _maxShareRate) {
-                etherRequested = shareRequested * _maxShareRate / E27_PRECISION_BASE;
+                ethToFinalize = shareRequested * _maxShareRate / E27_PRECISION_BASE;
             }
 
-            if (etherRequested > _state.ethBudget) break;
+            if (ethToFinalize > _state.ethBudget) break;
 
-            _state.ethBudget -= etherRequested;
+            _state.ethBudget -= ethToFinalize;
 
             if (_state.batches[MAX_EXTREMA_PER_CALL] != 0 && (
-                // todo: check if we can omit `touching from above` case
+                prevRequest.reportTimestamp == request.reportTimestamp ||
                 prevRequestShareRate <= _maxShareRate && requestShareRate <= _maxShareRate ||
                 prevRequestShareRate > _maxShareRate && requestShareRate > _maxShareRate
             )) {
@@ -250,8 +252,11 @@ abstract contract WithdrawalQueueBase {
         return _state;
     }
 
-    function onPreRebase() external {
+    function onPreRebase(uint256 reportTimestamp) external {
+        _setLastReportTimestamp(reportTimestamp);
+
         // Populate shareRate extrema list
+        // TODO: move it to withdrawal request creation moment
         uint256 lastRequestId = getLastRequestId();
         uint256[] storage extrema = _getExtrema();
         // first request is an extremum by default
@@ -264,17 +269,22 @@ abstract contract WithdrawalQueueBase {
         // no new requests => no new exrema
         if (lastExtremumId == lastRequestId) return;
 
-        uint256 lastRequestShareRate = _calcShareRate(lastRequestId);
-        uint256 lastExtremumShareRate = _calcShareRate(lastExtremumId);
+        WithdrawalRequest memory lastRequest = _getQueue()[lastRequestId];
+        WithdrawalRequest memory lastExtremum = _getQueue()[lastExtremumId];
 
-        if (lastRequestShareRate == lastExtremumShareRate) return; // todo: 1-2 wei corner case
+        if (lastRequest.reportTimestamp == lastExtremum.reportTimestamp) return;
+
+        uint256 lastRequestShareRate = _calcShareRate(lastRequestId, lastRequest);
+        uint256 lastExtremumShareRate = _calcShareRate(lastExtremumId, lastExtremum);
+
+        if (lastRequestShareRate == lastExtremumShareRate) return;
         // first met request in a sequence with equal shareRate is an extremum
 
         if (extrema.length == 2) {
             // first two different rates are always extrema
             extrema.push(lastRequestId);
         } else {
-            uint256 prevExtremumShareRate = _calcShareRate(lastExtremumId - 1);
+            uint256 prevExtremumShareRate = _calcShareRate(lastExtremumId - 1, SHARE_RATE_UNLIMITED);
 
             bool wasGrowing = lastExtremumShareRate > prevExtremumShareRate;
             // |  •
@@ -360,7 +370,7 @@ abstract contract WithdrawalQueueBase {
             if (extremumId < batchEndId) {
                 extremumId = _getExtrema()[extremumIndex];
                 // check extremum
-                uint256 extremumShareRate = _calcShareRate(extremumId);
+                uint256 extremumShareRate = _calcShareRate(extremumId, SHARE_RATE_UNLIMITED);
 
                 if (extremumShareRate > _maxShareRate && batchShareRate <= _maxShareRate) revert InvalidBatches();
                 if (extremumShareRate <= _maxShareRate && batchShareRate > _maxShareRate) revert InvalidBatches();
@@ -448,7 +458,8 @@ abstract contract WithdrawalQueueBase {
 
         _setLastRequestId(requestId);
         _getQueue()[requestId] =
-            WithdrawalRequest(cumulativeStETH, cumulativeShares, _owner, uint64(block.timestamp), false);
+            WithdrawalRequest(cumulativeStETH, cumulativeShares, _owner, uint64(block.timestamp), false,
+            uint64(_getLastReportTimestamp()));
         assert(_getRequestsByOwner()[_owner].add(requestId));
 
         emit WithdrawalRequested(requestId, msg.sender, _owner, _amountOfStETH, _amountOfShares);
@@ -589,7 +600,7 @@ abstract contract WithdrawalQueueBase {
         // setting dummy zero structs in checkpoints and queue beginning
         // to avoid uint underflows and related if-branches
         // 0-index is reserved as 'not_found' response in the interface everywhere
-        _getQueue()[0] = WithdrawalRequest(0, 0, address(0), uint64(block.number), true);
+        _getQueue()[0] = WithdrawalRequest(0, 0, address(0), uint64(block.number), true, 0);
         _getCheckpoints()[getLastCheckpointIndex()] = Checkpoint(0, 0);
         _getExtrema().push(0);
     }
@@ -621,8 +632,14 @@ abstract contract WithdrawalQueueBase {
         return _calcShareRate(prevRequest, lastRequest, _maxShareRate);
     }
 
-    function _calcShareRate(uint256 _requestId) internal view returns (uint256) {
-        return _calcShareRate(_requestId, SHARE_RATE_UNLIMITED);
+    function _calcShareRate(uint256 _requestId, WithdrawalRequest memory request)
+        internal
+        view
+        returns (uint256)
+    {
+        WithdrawalRequest memory prevRequest = _getQueue()[_requestId - 1];
+
+        return _calcShareRate(prevRequest, request, SHARE_RATE_UNLIMITED);
     }
 
     //
@@ -661,6 +678,10 @@ abstract contract WithdrawalQueueBase {
         return LAST_CHECKED_EXTREMUM_POSITION.getStorageUint256();
     }
 
+    function _getLastReportTimestamp() internal view returns (uint256) {
+        return LAST_REPORT_TIMESTAMP_POSITION.getStorageUint256();
+    }
+
     function _setLastRequestId(uint256 _lastRequestId) internal {
         LAST_REQUEST_ID_POSITION.setStorageUint256(_lastRequestId);
     }
@@ -679,5 +700,9 @@ abstract contract WithdrawalQueueBase {
 
     function _setLastCheckedExtremum(uint256 _lastCheckedExtremum) internal {
         LAST_CHECKED_EXTREMUM_POSITION.setStorageUint256(_lastCheckedExtremum);
+    }
+
+    function _setLastReportTimestamp(uint256 _lastReportTimestamp) internal {
+        LAST_REPORT_TIMESTAMP_POSITION.setStorageUint256(_lastReportTimestamp);
     }
 }
