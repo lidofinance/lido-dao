@@ -2,6 +2,7 @@ const { artifacts, contract, ethers } = require('hardhat')
 const { EvmSnapshot } = require('../../helpers/blockchain')
 const { assert } = require('../../helpers/assert')
 const { hex, hexConcat, toNum } = require('../../helpers/utils')
+const { StakingModuleStub } = require('../../helpers/stubs/staking-module.stub')
 
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const StakingModuleMock = artifacts.require('StakingModuleMock.sol')
@@ -465,6 +466,30 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
           assert.equal(callInfo.updateExitedValidatorsCount.callCount, 2)
         }
       )
+
+      it("doesn't revert when onExitedAndStuckValidatorsCountsUpdated reverted", async () => {
+        const stakingModuleWithBug = await StakingModuleStub.new()
+        // staking module will revert with panic exit code
+        await StakingModuleStub.stub(stakingModuleWithBug, 'onExitedAndStuckValidatorsCountsUpdated', {
+          revert: { error: 'Panic', args: { type: ['uint256'], value: [0x01] } },
+        })
+        await StakingModuleStub.stubGetStakingModuleSummary(stakingModuleWithBug, {
+          totalExitedValidators: 0,
+          totalDepositedValidators: 0,
+          availableValidatorsCount: 0,
+        })
+        await router.addStakingModule('Staking Module With Bug', stakingModuleWithBug.address, 100, 1000, 2000, {
+          from: admin,
+        })
+        const stakingModuleId = await router.getStakingModulesCount()
+
+        const tx = await router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin })
+
+        assert.emits(tx, 'ExitedAndStuckValidatorsCountsUpdateFailed', {
+          stakingModuleId,
+          lowLevelRevertData: '0x4e487b710000000000000000000000000000000000000000000000000000000000000001',
+        })
+      })
     })
 
     describe('two staking modules', async () => {

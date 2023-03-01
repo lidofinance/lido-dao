@@ -26,6 +26,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     event StakingModuleExitedValidatorsIncompleteReporting(uint256 indexed stakingModuleId, uint256 unreportedExitedValidatorsCount);
     event WithdrawalCredentialsSet(bytes32 withdrawalCredentials, address setBy);
     event WithdrawalsCredentialsChangeFailed(uint256 indexed stakingModuleId, bytes lowLevelRevertData);
+    event ExitedAndStuckValidatorsCountsUpdateFailed(uint256 indexed stakingModuleId, bytes lowLevelRevertData);
 
     /// Emitted when the StakingRouter received ETH
     event StakingRouterETHDeposited(uint256 indexed stakingModuleId, uint256 amount);
@@ -430,7 +431,13 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             (uint256 exitedValidatorsCount, , ) = moduleContract.getStakingModuleSummary();
             if (exitedValidatorsCount == stakingModule.exitedValidatorsCount) {
                 // oracle finished updating exited validators for all node ops
-                moduleContract.onExitedAndStuckValidatorsCountsUpdated();
+                try moduleContract.onExitedAndStuckValidatorsCountsUpdated() {}
+                catch (bytes memory lowLevelRevertData) {
+                    emit ExitedAndStuckValidatorsCountsUpdateFailed(
+                        stakingModule.id,
+                        lowLevelRevertData
+                    );
+                }
             }
 
             unchecked { ++i; }
