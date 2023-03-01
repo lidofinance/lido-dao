@@ -26,6 +26,8 @@ interface IConsensusContract {
     );
 
     function getFrameConfig() external view returns (uint256 initialEpoch, uint256 epochsPerFrame);
+
+    function getInitialRefSlot() external view returns (uint256);
 }
 
 
@@ -38,7 +40,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     error VersionCannotBeSame();
     error UnexpectedChainConfig();
     error OnlyConsensusContractCanSubmitReport();
-    error RefSlotCannotBeLessThanProcessingOne(uint256 refSlot, uint256 processingRefSlot);
+    error InitialRefSlotCannotBeLessThanProcessingOne(uint256 initialRefSlot, uint256 processingRefSlot);
     error RefSlotMustBeGreaterThanProcessingOne(uint256 refSlot, uint256 processingRefSlot);
     error RefSlotCannotDecrease(uint256 refSlot, uint256 prevRefSlot);
     error ProcessingDeadlineMissed(uint256 deadline);
@@ -319,9 +321,9 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
             revert UnexpectedChainConfig();
         }
 
-        (uint256 refSlot, ) = IConsensusContract(addr).getCurrentFrame();
-        if (refSlot < lastProcessingRefSlot) {
-            revert RefSlotCannotBeLessThanProcessingOne(refSlot, lastProcessingRefSlot);
+        uint256 initialRefSlot = IConsensusContract(addr).getInitialRefSlot();
+        if (initialRefSlot < lastProcessingRefSlot) {
+            revert InitialRefSlotCannotBeLessThanProcessingOne(initialRefSlot, lastProcessingRefSlot);
         }
 
         CONSENSUS_CONTRACT_POSITION.setStorageAddress(addr);
