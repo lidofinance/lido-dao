@@ -341,7 +341,7 @@ contract LidoTemplate is IsContract {
             _installNonDefaultApp(state.dao, _getAppId(ORACLE_APP_NAME, state.lidoRegistryEnsNode), noInit)
         );
 
-        // state.operators.initialize(state.lido, bytes32(0x1));
+        // state.operators.initialize(state.lido, bytes32(0x1), 2 days);
 
         // used for issuing vested tokens in the next step
         _createTokenManagerPermissionsForTemplate(state.acl, state.tokenManager);
@@ -601,7 +601,7 @@ contract LidoTemplate is IsContract {
         perms[0] = _state.operators.MANAGE_SIGNING_KEYS();
         perms[1] = _state.operators.MANAGE_NODE_OPERATOR_ROLE();
         perms[2] = _state.operators.SET_NODE_OPERATOR_LIMIT_ROLE();
-        for (i = 0; i < 4; ++i) {
+        for (i = 0; i < 3; ++i) {
             _createPermissionForVoting(acl, _state.operators, perms[i], voting);
         }
         acl.createPermission(_state.stakingRouter, _state.operators, _state.operators.STAKING_ROUTER_ROLE(), voting);

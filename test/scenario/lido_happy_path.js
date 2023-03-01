@@ -9,28 +9,11 @@ const { DSMAttestMessage, DSMPauseMessage } = require('../helpers/signatures')
 const { waitBlocks } = require('../helpers/blockchain')
 const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
-const { gwei, ZERO_HASH } = require('../helpers/utils')
 const { pushOracleReport } = require('../helpers/oracle')
+const { INITIAL_HOLDER } = require('../helpers/constants')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const CURATED_MODULE_ID = 1
-
-const makeAccountingReport = ({refSlot, numValidators, clBalanceGwei}) => ({
-  refSlot,
-  consensusVersion: 1,
-  numValidators: numValidators,
-  clBalanceGwei: clBalanceGwei,
-  stakingModuleIdsWithNewlyExitedValidators: [],
-  numExitedValidatorsByStakingModule: [],
-  withdrawalVaultBalance: 0,
-  elRewardsVaultBalance: 0,
-  lastWithdrawalRequestIdToFinalize: 0,
-  finalizationShareRate: 0,
-  isBunkerMode: false,
-  extraDataFormat: 0,
-  extraDataHash: ZERO_HASH,
-  extraDataItemsCount: 0,
-})
 
 contract('Lido: happy path', (addresses) => {
   const [
@@ -177,7 +160,7 @@ contract('Lido: happy path', (addresses) => {
   })
 
   it('the first user deposits 3 ETH to the pool', async () => {
-    await web3.eth.sendTransaction({ to: pool.address, from: user1, value: ETH(3) })
+    await web3.eth.sendTransaction({ to: pool.address, from: user1, value: ETH(2) })
     const block = await web3.eth.getBlock('latest')
     const keysOpIndex = await nodeOperatorsRegistry.getKeysOpIndex()
 
@@ -214,7 +197,7 @@ contract('Lido: happy path', (addresses) => {
 
     // The amount of tokens corresponding to the deposited ETH value was minted to the user
 
-    assertBn(await token.balanceOf(user1), tokens(3), 'user1 tokens')
+    assertBn(await token.balanceOf(user1), tokens(2), 'user1 tokens')
 
     assertBn(await token.totalSupply(), tokens(3), 'token total supply')
   })
@@ -264,7 +247,7 @@ contract('Lido: happy path', (addresses) => {
 
     // The amount of tokens corresponding to the deposited ETH value was minted to the users
 
-    assertBn(await token.balanceOf(user1), tokens(3), 'user1 tokens')
+    assertBn(await token.balanceOf(user1), tokens(2), 'user1 tokens')
     assertBn(await token.balanceOf(user2), tokens(30), 'user2 tokens')
 
     assertBn(await token.totalSupply(), tokens(3 + 30), 'token total supply')
@@ -370,7 +353,7 @@ contract('Lido: happy path', (addresses) => {
 
     // The amount of tokens corresponding to the deposited ETH value was minted to the users
 
-    assertBn(await token.balanceOf(user1), tokens(3), 'user1 tokens')
+    assertBn(await token.balanceOf(user1), tokens(2), 'user1 tokens')
     assertBn(await token.balanceOf(user2), tokens(30), 'user2 tokens')
     assertBn(await token.balanceOf(user3), tokens(64), 'user3 tokens')
 
@@ -422,21 +405,16 @@ contract('Lido: happy path', (addresses) => {
 
     // Token user balances increased
 
-    assertBn(await token.balanceOf(user1), new BN('3008907216494845360'), 'user1 tokens')
-    assertBn(await token.balanceOf(user2), new BN('30089072164948453608'), 'user2 tokens')
-    assertBn(await token.balanceOf(user3), new BN('64190020618556701031'), 'user3 tokens')
+    assertBn(await token.balanceOf(INITIAL_HOLDER), '1002969072164948453', 'initial holder tokens')
+    assertBn(await token.balanceOf(user1), '2005938144329896907', 'user1 tokens')
+    assertBn(await token.balanceOf(user2), '30089072164948453608', 'user2 tokens')
+    assertBn(await token.balanceOf(user3), '64190020618556701031', 'user3 tokens')
 
     // Fee, in the form of minted tokens, was distributed between treasury, insurance fund
     // and node operators
     // treasuryTokenBalance ~= mintedAmount * treasuryFeePoints / 10000
-    // insuranceTokenBalance ~= mintedAmount * insuranceFeePoints / 10000
-    assert.equalsDelta(await token.balanceOf(treasuryAddr), new BN('16000000000000000'), 1, 'treasury tokens')
-    assert.equalsDelta(
-      await token.balanceOf(nodeOperatorsRegistry.address),
-      new BN('16000000000000000'),
-      1,
-      'insurance tokens'
-    )
+    assert.equalsDelta(await token.balanceOf(treasuryAddr), '16000000000000000', 1, 'treasury tokens')
+    assert.equalsDelta(await token.balanceOf(nodeOperatorsRegistry.address), 0, 1, 'staking module tokens')
 
     // The node operators' fee is distributed between all active node operators,
     // proportional to their effective stake (the amount of Ether staked by the operator's
@@ -445,13 +423,18 @@ contract('Lido: happy path', (addresses) => {
     // In our case, both node operators received the same fee since they have the same
     // effective stake (one signing key used from each operator, staking 32 ETH)
 
-    assertBn(await token.balanceOf(nodeOperator1.address), 0, 'operator_1 tokens')
-    assertBn(await token.balanceOf(nodeOperator2.address), 0, 'operator_2 tokens')
+    assert.equalsDelta(await token.balanceOf(nodeOperator1.address), '8000000000000000', 1, 'operator_1 tokens')
+    assert.equalsDelta(await token.balanceOf(nodeOperator2.address), '8000000000000000', 1, 'operator_2 tokens')
 
     // Real minted amount should be a bit less than calculated caused by round errors on mint and transfer operations
     assert(
       mintedAmount
-        .sub(new BN(0).add(await token.balanceOf(treasuryAddr)).add(await token.balanceOf(nodeOperatorsRegistry.address)))
+        .sub(
+          new BN(0)
+            .add(await token.balanceOf(treasuryAddr))
+            .add(await token.balanceOf(nodeOperator1.address))
+            .add(await token.balanceOf(nodeOperator2.address))
+        )
         .lt(mintedAmount.divn(100))
     )
   })

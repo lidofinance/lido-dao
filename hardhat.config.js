@@ -10,7 +10,8 @@ require('@nomiclabs/hardhat-etherscan')
 require('hardhat-gas-reporter')
 require('solidity-coverage')
 require('hardhat-contract-sizer')
-// require('hardhat-ignore-warnings')
+require('hardhat-ignore-warnings')
+require('./foundry/skip-sol-tests-compilation')
 
 const NETWORK_NAME = getNetworkName()
 const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
@@ -60,6 +61,12 @@ const getNetConfig = (networkName, ethAccountName) => {
     localhost,
     mainnetfork,
     zhejiang,
+    'mainnet-fork-shapella-upgrade': {
+      ...base,
+      url: 'http://localhost:7777',
+      chainId: 1337,
+      gas: 80000000 // the same as in Görli
+    },
     local: {
       ...base,
       accounts: {
@@ -74,7 +81,8 @@ const getNetConfig = (networkName, ethAccountName) => {
       initialBaseFeePerGas: 0,
       allowUnlimitedContractSize: true,
       accounts: {
-        mnemonic: 'hardhat',
+        // default hardhat's node mnemonic
+        mnemonic: 'test test test test test test test test test test test junk',
         count: 20,
         accountsBalance: '100000000000000000000000',
         gasPrice: 0

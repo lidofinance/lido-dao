@@ -44,8 +44,8 @@ chai.util.addMethod(chai.assert, 'notEmits', function (receipt, eventName, args 
   this.isUndefined(event, `Expected that event "${eventName}" with args ${args}  wouldn't be emitted, but it was.`)
 })
 
-chai.util.addMethod(chai.assert, 'reverts', async function (receipt, reason) {
-  await assertRevert(receipt, reason)
+chai.util.addMethod(chai.assert, 'reverts', async function (receipt, reason, customErrorArgs) {
+  await assertRevert(receipt, customErrorArgs !== undefined ? `${reason}(${customErrorArgs.join(', ')})` : reason)
 })
 
 chai.util.addMethod(chai.assert, 'equals', function (actual, expected, errorMsg) {
@@ -53,7 +53,12 @@ chai.util.addMethod(chai.assert, 'equals', function (actual, expected, errorMsg)
 })
 
 chai.util.addMethod(chai.assert, 'equalsDelta', function (actual, expected, delta, errorMsg) {
-  this.isAtMost(+toBN(actual.toString()).sub(toBN(expected.toString())).abs().toString(), delta, errorMsg)
+  const diff = toBN(actual).sub(toBN(expected)).abs()
+  chai.assert(
+    diff.lte(toBN(delta)),
+    () => `${errorMsg ? `${errorMsg}: ` : ''}Expected ${actual} to be close to ${expected} with max diff ${delta}, actual diff ${diff}`,
+    () => `${errorMsg ? `${errorMsg}: ` : ''}Expected ${actual} not to be close to ${expected} with min diff ${delta}, actual diff ${diff}`,
+  )
 })
 
 chai.util.addMethod(chai.assert, 'notEquals', function (actual, expected, errorMsg) {

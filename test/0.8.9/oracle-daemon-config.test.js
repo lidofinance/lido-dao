@@ -168,7 +168,7 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
 
     it('deployer cannot unset a defaultValue', async () => {
       await config.set(defaultKey, defaultValue, { from: manager })
-      assert.revertsOZAccessControl(
+      await assert.revertsOZAccessControl(
         config.unset(defaultKey, { from: deployer }),
         deployer,
         `CONFIG_MANAGER_ROLE`

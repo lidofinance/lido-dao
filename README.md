@@ -105,6 +105,7 @@ The contract also works as a wrapper that accepts stETH tokens and mints wstETH 
 * docker
 * node.js v12
 * (optional) Lerna
+* (optional) Foundry
 
 ### Installing Aragon & other deps
 
@@ -238,6 +239,14 @@ so full branch coverage will never be reported until
 [solidity-coverage#219] is implemented.
 
 [solidity-coverage#219]: https://github.com/sc-forks/solidity-coverage/issues/269
+
+Run fuzzing tests with foundry:
+
+```bash
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+forge test
+```
 
 ## Deploying
 

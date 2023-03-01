@@ -1,16 +1,15 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
-/* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
+import "forge-std/Test.sol";
 
-import { MemUtils } from "../../common/lib/MemUtils.sol";
+import { MemUtils } from "contracts/common/lib/MemUtils.sol";
+import "contracts/common/test_helpers/Assertions.sol";
 
-import "./Assertions.sol";
 
-
-contract MemUtilsTest {
+contract MemUtilsTest is Test {
     function getDataPtr(bytes memory arr) internal pure returns (uint256 dataPtr) {
         assembly {
             dataPtr := add(arr, 32)
@@ -28,7 +27,7 @@ contract MemUtilsTest {
     /// unsafeAllocateBytes
     ///
 
-    function unsafeAlloc_allocates_empty_byte_array() external pure {
+    function test_unsafeAlloc_allocates_empty_byte_array() external pure {
         // disable all compiler optimizations by including an assembly block not marked as mem-safe
         assembly {
             mstore(0x00, 0x1)
@@ -47,7 +46,7 @@ contract MemUtilsTest {
         Assert.equal(freeMemPtr, preAllocFreeMemPtr + 32);
     }
 
-    function unsafeAlloc_allocates_memory_and_advances_free_mem_pointer() external pure {
+    function test_unsafeAlloc_allocates_memory_and_advances_free_mem_pointer() external pure {
         // disable all compiler optimizations by including an assembly block not marked as mem-safe
         assembly {
             mstore(0x00, 0x1)
@@ -115,7 +114,7 @@ contract MemUtilsTest {
         ));
     }
 
-    function unsafeAlloc_pads_free_mem_pointer_to_32_bytes() external pure {
+    function test_unsafeAlloc_pads_free_mem_pointer_to_32_bytes() external pure {
         // disable all compiler optimizations by including an assembly block not marked as mem-safe
         assembly {
             mstore(0x00, 0x1)
@@ -166,7 +165,7 @@ contract MemUtilsTest {
         Assert.equal(freeMemPtr, preAllocFreeMemPtr + 32 + 32 * 101);
     }
 
-    function unsafeAlloc_handles_misaligned_free_mem_pointer_and_pads_to_32_bytes() external pure {
+    function test_unsafeAlloc_handles_misaligned_free_mem_pointer_and_pads_to_32_bytes() external pure {
         uint256 freeMemPtr = getFreeMemPtr();
 
         // assert free mem pointer is 32-byte aligned initially
@@ -217,7 +216,7 @@ contract MemUtilsTest {
     /// memcpy
     ///
 
-    function memcpy_copies_mem_chunks_that_are_multiples_of_32_bytes() external pure {
+    function test_memcpy_copies_mem_chunks_that_are_multiples_of_32_bytes() external pure {
         bytes memory src = abi.encodePacked(
             bytes32(0x1111111111111111111111111111111111111111111111111111111111111111),
             bytes32(0x2222222222222222222222222222222222222222222222222222222222222222)
@@ -238,7 +237,7 @@ contract MemUtilsTest {
         ));
     }
 
-    function memcpy_copies_mem_chunks_that_are_multiples_of_32_bytes_from_a_non_32b_offset() external pure {
+    function test_memcpy_copies_mem_chunks_that_are_multiples_of_32_bytes_from_a_non_32b_offset() external pure {
         bytes memory src = abi.encodePacked(
             bytes32(0x1111111111111111111111111111111111111111111111111111111111111111),
             bytes32(0x2222222222222222222222222222222222222222222222222222222222222222),
@@ -260,7 +259,7 @@ contract MemUtilsTest {
         ));
     }
 
-    function memcpy_copies_mem_chunks_that_are_multiples_of_32b_to_a_non_32b_offset() external pure {
+    function test_memcpy_copies_mem_chunks_that_are_multiples_of_32b_to_a_non_32b_offset() external pure {
         bytes memory src = abi.encodePacked(
             bytes32(0x1111111111111111111111111111111111111111111111111111111111111111),
             bytes32(0x2222222222222222222222222222222222222222222222222222222222222222)
@@ -281,7 +280,7 @@ contract MemUtilsTest {
         ));
     }
 
-    function memcpy_copies_mem_chunks_that_are_multiples_of_32_bytes_from_and_to_a_non_32b_offset() external pure {
+    function test_memcpy_copies_mem_chunks_that_are_multiples_of_32_bytes_from_and_to_a_non_32b_offset() external pure {
         bytes memory src = abi.encodePacked(
             bytes32(0x1111111111111111111111111111111111111111111111111111111111111111),
             bytes32(0x2222222222222222222222222222222222222222222222222222222222222222),
@@ -303,7 +302,7 @@ contract MemUtilsTest {
         ));
     }
 
-    function memcpy_copies_mem_chunks_that_are_not_multiples_of_32_bytes() external pure {
+    function test_memcpy_copies_mem_chunks_that_are_not_multiples_of_32_bytes() external pure {
         bytes memory src = abi.encodePacked(
             bytes32(0x1111111111111111111111111111111111111111111111111111111111111111),
             bytes32(0x2222222222222222222222222222222222222222222222222222222222222222)
@@ -322,7 +321,7 @@ contract MemUtilsTest {
         ));
     }
 
-    function memcpy_copies_mem_chunks_that_are_not_multiples_of_32_bytes_from_a_non_32b_offset() external pure {
+    function test_memcpy_copies_mem_chunks_that_are_not_multiples_of_32_bytes_from_a_non_32b_offset() external pure {
         bytes memory src = abi.encodePacked(
             bytes32(0x1111111111111111111111111111111111111111111111111111111111111111),
             bytes32(0x2222222222222222222222222222222222222222222222222222222222222222)
@@ -341,7 +340,7 @@ contract MemUtilsTest {
         ));
     }
 
-    function memcpy_copies_mem_chunks_that_are_not_multiples_of_32_bytes_to_a_non_32b_offset() external pure {
+    function test_memcpy_copies_mem_chunks_that_are_not_multiples_of_32_bytes_to_a_non_32b_offset() external pure {
         bytes memory src = abi.encodePacked(
             bytes32(0x1111111111111111111111111111111111111111111111111111111111111111),
             bytes32(0x2222222222222222222222222222222222222222222222222222222222222222)
@@ -360,7 +359,7 @@ contract MemUtilsTest {
         ));
     }
 
-    function memcpy_copies_mem_chunks_that_are_not_multiples_of_32_bytes_from_and_to_a_non_32b_offset() external pure {
+    function test_memcpy_copies_mem_chunks_that_are_not_multiples_of_32_bytes_from_and_to_a_non_32b_offset() external pure {
         bytes memory src = abi.encodePacked(
             bytes32(0x1111111111111111111111111111111111111111111111111111111111111111),
             bytes32(0x2222222222222222222222222222222222222222222222222222222222222222)
@@ -379,7 +378,7 @@ contract MemUtilsTest {
         ));
     }
 
-    function memcpy_copies_mem_chunks_shorter_than_32_bytes() external pure {
+    function test_memcpy_copies_mem_chunks_shorter_than_32_bytes() external pure {
         bytes memory src = abi.encodePacked(
             bytes32(0x1111111111111111111111111111111111111111111111111111111111111111)
         );
@@ -395,7 +394,7 @@ contract MemUtilsTest {
         ));
     }
 
-    function memcpy_copies_mem_chunks_shorter_than_32_bytes_from_a_non_32b_offset() external pure {
+    function test_memcpy_copies_mem_chunks_shorter_than_32_bytes_from_a_non_32b_offset() external pure {
         bytes memory src = abi.encodePacked(
             bytes32(0xcccccccccccccccccccccccccccccccccc8badf00d1234eeeeeeeeeeeeeeeeee)
         );
@@ -411,7 +410,7 @@ contract MemUtilsTest {
         ));
     }
 
-    function memcpy_copies_mem_chunks_shorter_than_32_bytes_to_a_non_32b_offset() external pure {
+    function test_memcpy_copies_mem_chunks_shorter_than_32_bytes_to_a_non_32b_offset() external pure {
         bytes memory src = abi.encodePacked(
             bytes32(0x1111111111111111111111111111111111111111111111111111111111111111)
         );
@@ -427,7 +426,7 @@ contract MemUtilsTest {
         ));
     }
 
-    function memcpy_copies_mem_chunks_shorter_than_32_bytes_from_and_to_a_non_32b_offset() external pure {
+    function test_memcpy_copies_mem_chunks_shorter_than_32_bytes_from_and_to_a_non_32b_offset() external pure {
         bytes memory src = abi.encodePacked(
             bytes32(0xcccccccccccccccccccccccccccccccccc8badf00d1234eeeeeeeeeeeeeeeeee)
         );
@@ -443,7 +442,7 @@ contract MemUtilsTest {
         ));
     }
 
-    function memcpy_zero_length_is_handled_correctly() external pure {
+    function test_memcpy_zero_length_is_handled_correctly() external pure {
         bytes memory src = abi.encodePacked(
             bytes32(0x1111111111111111111111111111111111111111111111111111111111111111)
         );
@@ -463,7 +462,7 @@ contract MemUtilsTest {
     /// keccakUint256Array
     ///
 
-    function keccakUint256Array_calcs_keccak_over_a_uint_array() external pure {
+    function test_keccakUint256Array_calcs_keccak_over_a_uint_array() external pure {
         uint256[] memory array = new uint256[](5);
         array[0] = uint256(0x1111111111111111111111111111111111111111111111111111111111111111);
         array[1] = uint256(0x2222222222222222222222222222222222222222222222222222222222222222);
@@ -477,7 +476,7 @@ contract MemUtilsTest {
         Assert.equal(actual, expected);
     }
 
-    function keccakUint256Array_calcs_keccak_over_an_empty_array() external pure {
+    function test_keccakUint256Array_calcs_keccak_over_an_empty_array() external pure {
         uint256[] memory array = new uint256[](0);
 
         bytes32 expected = keccak256(abi.encodePacked(array));
@@ -490,7 +489,7 @@ contract MemUtilsTest {
     /// trimUint256Array
     ///
 
-    function trimUint256Array_decreases_length_of_a_uint_array() external pure {
+    function test_trimUint256Array_decreases_length_of_a_uint_array() external pure {
         uint256[] memory array = new uint256[](5);
         array[0] = uint256(0x1111111111111111111111111111111111111111111111111111111111111111);
         array[1] = uint256(0x2222222222222222222222222222222222222222222222222222222222222222);
@@ -512,7 +511,7 @@ contract MemUtilsTest {
         ));
     }
 
-    function trimUint256Array_allows_trimming_to_zero_length() external pure {
+    function test_trimUint256Array_allows_trimming_to_zero_length() external pure {
         uint256[] memory array = new uint256[](3);
         array[0] = uint256(0x1111111111111111111111111111111111111111111111111111111111111111);
         array[1] = uint256(0x2222222222222222222222222222222222222222222222222222222222222222);
@@ -523,13 +522,13 @@ contract MemUtilsTest {
         Assert.empty(array);
     }
 
-    function trimUint256Array_reverts_on_trying_to_trim_by_more_than_length() external pure {
+    function test_trimUint256Array_reverts_on_trying_to_trim_by_more_than_length() external {
         uint256[] memory array = new uint256[](3);
         array[0] = uint256(0x1111111111111111111111111111111111111111111111111111111111111111);
         array[1] = uint256(0x2222222222222222222222222222222222222222222222222222222222222222);
         array[2] = uint256(0x3333333333333333333333333333333333333333333333333333333333333333);
 
+        vm.expectRevert();
         MemUtils.trimUint256Array(array, 4);
-        revert Assert.RevertExpected();
     }
 }

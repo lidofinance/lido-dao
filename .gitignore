@@ -46,3 +46,7 @@ cli/vendor
 
 # Local, debug related configs
 /deployed-mainnetfork.json
+
+# foundry artifacts
+foundry/cache
+foundry/out

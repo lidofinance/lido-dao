@@ -213,5 +213,12 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       assert.sameOrderedMembers(toNum(indices1), [2, -1, -1])
       assert.sameOrderedMembers(toNum(indices2), [1, -1, -1])
     })
+
+    it(`no data can be submitted for the same reference slot again`, async () => {
+      await assert.reverts(
+        oracle.submitReportData(reportItems, oracleVersion, {from: member2}),
+        'RefSlotAlreadyProcessing()'
+      )
+    })
   })
 })

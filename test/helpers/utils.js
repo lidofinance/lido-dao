@@ -145,6 +145,27 @@ const setBalance = async (address, value) => {
   await hre.network.provider.send('hardhat_setBalance', [address, web3.utils.numberToHex(value)])
 }
 
+const prepIdsCountsPayload = (ids, counts) => {
+  if (!Array.isArray(ids)) ids = [ids]
+  if (!Array.isArray(counts)) counts = [counts]
+  return {
+    operatorIds: '0x' + ids.map((id) => hex(id, 8)).join(''),
+    keysCounts: '0x' + counts.map((count) => hex(count, 16)).join('')
+  }
+}
+
+const calcSharesMintedAsFees = (rewards, fee, feePoints, prevTotalShares, newTotalEther) => {
+  return toBN(rewards)
+    .mul(toBN(fee))
+    .mul(toBN(prevTotalShares))
+    .div(
+      toBN(newTotalEther)
+        .mul(toBN(feePoints))
+        .sub(toBN(rewards).mul(toBN(fee)))
+    )
+}
+
+
 module.exports = {
   ZERO_HASH,
   pad,
@@ -178,5 +199,7 @@ module.exports = {
   padRight,
   toNum,
   toStr,
-  setBalance
+  setBalance,
+  prepIdsCountsPayload,
+  calcSharesMintedAsFees
 }
