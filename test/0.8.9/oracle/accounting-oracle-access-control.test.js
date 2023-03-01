@@ -5,11 +5,11 @@ const { e9, e18, e27 } = require('../../helpers/utils')
 const {
   CONSENSUS_VERSION,
   deployAndConfigureAccountingOracle,
-  getReportDataItems,
+  getAccountingReportDataItems,
   encodeExtraDataItems,
   packExtraDataList,
   calcExtraDataListHash,
-  calcReportDataHash,
+  calcAccountingReportDataHash,
   EXTRA_DATA_FORMAT_EMPTY,
   EXTRA_DATA_FORMAT_LIST,
   ZERO_HASH,
@@ -61,8 +61,8 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       extraDataHash: emptyExtraData ? ZERO_HASH : extraDataHash,
       extraDataItemsCount: emptyExtraData ? 0 : extraDataItems.length,
     }
-    reportItems = getReportDataItems(reportFields)
-    const reportHash = calcReportDataHash(reportItems)
+    reportItems = getAccountingReportDataItems(reportFields)
+    const reportHash = calcAccountingReportDataHash(reportItems)
     await deployed.consensus.addMember(member1, 1, { from: admin })
     await deployed.consensus.submitReport(refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
 

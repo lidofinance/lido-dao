@@ -10,8 +10,8 @@ const {
   deployMockLegacyOracle,
   CONSENSUS_VERSION,
   ZERO_HASH,
-  getReportDataItems,
-  calcReportDataHash,
+  getAccountingReportDataItems,
+  calcAccountingReportDataHash,
 } = require('../0.8.9/oracle/accounting-oracle-deploy.test')
 
 const SLOTS_PER_EPOCH = 32
@@ -74,10 +74,10 @@ contract('AccountingOracle', ([voting, malicious1, malicious2, member1, member2,
     await consensus.addMember(malicious1, 4, { from: voting })
     await consensus.addMember(malicious2, 4, { from: voting })
 
-    const goodDataItems = getReportDataItems({ ...GOOD_DATA, refSlot })
-    const badDataItems = getReportDataItems({ ...BAD_DATA, refSlot })
-    const goodDataHash = calcReportDataHash(goodDataItems)
-    const badDataHash = calcReportDataHash(badDataItems)
+    const goodDataItems = getAccountingReportDataItems({ ...GOOD_DATA, refSlot })
+    const badDataItems = getAccountingReportDataItems({ ...BAD_DATA, refSlot })
+    const goodDataHash = calcAccountingReportDataHash(goodDataItems)
+    const badDataHash = calcAccountingReportDataHash(badDataItems)
 
     await consensus.submitReport(refSlot, badDataHash, CONSENSUS_VERSION, { from: malicious1 })
     await consensus.submitReport(refSlot, badDataHash, CONSENSUS_VERSION, { from: malicious2 })
