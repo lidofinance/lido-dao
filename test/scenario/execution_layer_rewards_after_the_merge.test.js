@@ -1,22 +1,33 @@
-const { contract, artifacts, web3, ethers } = require('hardhat')
+const { contract, artifacts, web3 } = require('hardhat')
 const { assert } = require('../helpers/assert')
 
 const { BN } = require('bn.js')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
-const { gwei, ZERO_HASH, ethToGwei, pad, toBN, ETH, tokens } = require('../helpers/utils')
+const { gwei, ZERO_HASH, ethToGwei, pad, toBN, ETH, tokens, limitRebase } = require('../helpers/utils')
 const { DSMAttestMessage, DSMPauseMessage } = require('../helpers/signatures')
-const { waitBlocks, setBalance } = require('../helpers/blockchain')
+const { waitBlocks, setBalance, advanceChainTime } = require('../helpers/blockchain')
 const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
-const { SLOTS_PER_FRAME } = require('../helpers/constants')
 const { calcAccountingReportDataHash, getAccountingReportDataItems } = require('../helpers/reportData')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
 const TOTAL_BASIS_POINTS = 10 ** 4
-const MAX_POSITIVE_REBASE_PRECISION_POINTS = 10 ** 9
 const CURATED_MODULE_ID = 1
 const LIDO_INIT_BALANCE_ETH = 1
+const ONE_DAY = 1 * 24 * 60 * 60
+
+const ORACLE_REPORT_LIMITS_BOILERPLATE = {
+  churnValidatorsPerDayLimit: 255,
+  oneOffCLBalanceDecreaseBPLimit: 100,
+  annualBalanceIncreaseBPLimit: 10000,
+  simulatedShareRateDeviationBPLimit: 10000,
+  maxValidatorExitRequestsPerReport: 10000,
+  maxAccountingExtraDataListItemsCount: 10000,
+  maxNodeOperatorsPerExtraDataItemCount: 10000,
+  requestTimestampMargin: 0,
+  maxPositiveTokenRebase: 1000000000,
+}
 
 const makeAccountingReport = ({ refSlot, numValidators, clBalanceGwei, elRewardsVaultBalance }) => ({
   refSlot,
@@ -48,7 +59,7 @@ contract('Lido: merge acceptance', (addresses) => {
     nobody,
   ] = addresses
 
-  let pool, nodeOperatorsRegistry, token
+  let pool, nodeOperatorsRegistry, token, oracleReportSanityChecker
   let oracleMock, depositContractMock
   let treasuryAddr, guardians, stakingRouter
   let depositSecurityModule, depositRoot
@@ -107,6 +118,9 @@ contract('Lido: merge acceptance', (addresses) => {
 
     // contracts/Lido.sol
     pool = deployed.pool
+
+    // contracts/OracleReportSanityChecker.sol
+    oracleReportSanityChecker = deployed.oracleReportSanityChecker
 
     // contracts/nos/NodeOperatorsRegistry.sol
     nodeOperatorsRegistry = deployed.stakingModules[0]
@@ -510,11 +524,8 @@ contract('Lido: merge acceptance', (addresses) => {
     assert.equals(oldTotalPooledEther, ETH(107.35), 'total pooled ether')
 
     // Reporting the same balance as it was before (64.35ETH => 64.35ETH)
+    await advanceChainTime(ONE_DAY)
 
-    const oneDay = 1 * 24 * 60 * 60
-    await ethers.provider.send('evm_increaseTime', [oneDay])
-
-    await consensus.setQuorum(2)
     const { refSlot } = await consensus.getCurrentFrame()
 
     const reportItems = getAccountingReportDataItems(
@@ -609,11 +620,8 @@ contract('Lido: merge acceptance', (addresses) => {
     assert.equals(oldTotalPooledEther, ETH(114.35), 'total pooled ether')
 
     // Reporting balance decrease (64.35ETH => 62.35ETH)
+    await advanceChainTime(ONE_DAY)
 
-    const oneDay = 1 * 24 * 60 * 60
-    await ethers.provider.send('evm_increaseTime', [oneDay])
-
-    await consensus.setQuorum(2)
     const { refSlot } = await consensus.getCurrentFrame()
 
     const reportItems = getAccountingReportDataItems(
@@ -700,10 +708,8 @@ contract('Lido: merge acceptance', (addresses) => {
     assert.equals(oldTotalPooledEther, ETH(117.35), 'total pooled ether')
 
     // Reporting balance decrease (62.35ETH => 59.35ETH)
-    const oneDay = 1 * 24 * 60 * 60
-    await ethers.provider.send('evm_increaseTime', [oneDay])
+    await advanceChainTime(ONE_DAY)
 
-    await consensus.setQuorum(2)
     const { refSlot } = await consensus.getCurrentFrame()
 
     const reportItems = getAccountingReportDataItems(
@@ -772,10 +778,8 @@ contract('Lido: merge acceptance', (addresses) => {
     assert.equals(oldTotalPooledEther, ETH(117.35), 'total pooled ether')
 
     // Reporting balance decrease (59.35ETH => 51.35ETH)
-    const oneDay = 1 * 24 * 60 * 60
-    await ethers.provider.send('evm_increaseTime', [oneDay])
+    await advanceChainTime(ONE_DAY)
 
-    await consensus.setQuorum(2)
     const { refSlot } = await consensus.getCurrentFrame()
 
     const reportItems = getAccountingReportDataItems(
@@ -865,10 +869,8 @@ contract('Lido: merge acceptance', (addresses) => {
     assert.equals(oldTotalPooledEther, ETH(111.35), 'total pooled ether')
 
     // Reporting balance increase (51.35ETH => 51.49ETH)
-    const oneDay = 1 * 24 * 60 * 60
-    await ethers.provider.send('evm_increaseTime', [oneDay])
+    await advanceChainTime(ONE_DAY)
 
-    await consensus.setQuorum(2)
     const { refSlot } = await consensus.getCurrentFrame()
 
     const reportItems = getAccountingReportDataItems(
@@ -947,92 +949,89 @@ contract('Lido: merge acceptance', (addresses) => {
     )
   })
 
-  // TODO: Revive
-  it.skip('collect 0.1 ETH execution layer rewards to elRewardsVault and withdraw it entirely by means of multiple oracle reports (+1 ETH)', async () => {
-    // Specify different withdrawal limits for a few epochs to test different values
-    const getMaxPositiveRebaseForFrame = (_frame) => {
-      let ret = 0
+  it('collect execution layer rewards to elRewardsVault and withdraw it entirely by means of multiple oracle reports', async () => {
+    const tokenRebaseLimit = toBN(10000000)
 
-      if (_frame === 7) {
-        ret = toBN(2)
-      } else if (_frame === 8) {
-        ret = toBN(1)
-      } else {
-        ret = toBN(3)
-      }
+    await oracleReportSanityChecker.setOracleReportLimits(
+      {
+        ...ORACLE_REPORT_LIMITS_BOILERPLATE,
+        maxPositiveTokenRebase: tokenRebaseLimit.toString(), // 1%
+      },
+      { from: voting, gasPrice: 1 }
+    )
 
-      return ret.mul(toBN(MAX_POSITIVE_REBASE_PRECISION_POINTS / TOTAL_BASIS_POINTS))
-    }
-
-    const elRewards = ETH(0.1)
+    const elRewards = ETH(5)
     await setBalance(elRewardsVault.address, elRewards)
     assert.equals(await web3.eth.getBalance(elRewardsVault.address), elRewards, 'Execution layer rewards vault balance')
 
     let frame = 7
-    let lastBeaconBalance = toBN(ETH(51.45))
-    await pool.setMaxPositiveTokenRebase(getMaxPositiveRebaseForFrame(frame), { from: voting })
+    let lastBeaconBalance = toBN(ETH(51.49))
 
-    let maxPositiveRebase = await pool.getMaxPositiveTokenRebase()
-    let elRewardsVaultBalance = toBN(await web3.eth.getBalance(elRewardsVault.address))
+    let elRewardsVaultBalance = toBN(elRewards)
     let totalPooledEther = await pool.getTotalPooledEther()
+    let totalShares = await pool.getTotalShares()
     let bufferedEther = await pool.getBufferedEther()
-    let totalSupply = await pool.totalSupply()
-    const beaconBalanceInc = toBN(ETH(0.001))
     let elRewardsWithdrawn = toBN(0)
+    const beaconBalanceInc = toBN(ETH(0.001))
 
     // Do multiple oracle reports to withdraw all ETH from execution layer rewards vault
     while (elRewardsVaultBalance > 0) {
-      const maxPositiveRebaseCalculated = getMaxPositiveRebaseForFrame(frame)
-      await pool.setMaxPositiveTokenRebase(maxPositiveRebaseCalculated, { from: voting })
-      maxPositiveRebase = await pool.getMaxPositiveTokenRebase()
-      const clIncurredRebase = beaconBalanceInc.mul(toBN(MAX_POSITIVE_REBASE_PRECISION_POINTS)).div(totalPooledEther)
+      await advanceChainTime(ONE_DAY)
 
-      const maxELRewardsAmountPerWithdrawal = totalPooledEther
-        .mul(maxPositiveRebase.sub(clIncurredRebase))
-        .div(toBN(MAX_POSITIVE_REBASE_PRECISION_POINTS))
+      const currentELBalance = await web3.eth.getBalance(elRewardsVault.address)
 
-      const elRewardsToWithdraw = BN.min(maxELRewardsAmountPerWithdrawal, elRewardsVaultBalance)
-
-      // Reporting balance increase
-      await oracleMock.submitReportData(
+      const { refSlot } = await consensus.getCurrentFrame()
+      const reportItems = getAccountingReportDataItems(
         makeAccountingReport({
-          refSlot: frame * SLOTS_PER_FRAME - 1,
+          refSlot,
           numValidators: 2,
           clBalanceGwei: ethToGwei(lastBeaconBalance.add(beaconBalanceInc)),
-          elRewardsVaultBalance: await web3.eth.getBalance(elRewardsVault.address),
-        }),
-        1
+          elRewardsVaultBalance: currentELBalance,
+        })
+      )
+      const reportHash = calcAccountingReportDataHash(reportItems)
+
+      await consensus.submitReport(refSlot, reportHash, 1, { from: signers[2].address })
+      await consensus.submitReport(refSlot, reportHash, 1, { from: signers[3].address })
+
+      await oracleMock.submitReportData(reportItems, 1, { from: signers[4].address })
+
+      const { elBalanceUpdate } = limitRebase(
+        toBN(tokenRebaseLimit),
+        totalPooledEther,
+        totalShares,
+        beaconBalanceInc,
+        toBN(currentELBalance),
+        toBN(0)
       )
 
       assert.equals(
         await web3.eth.getBalance(elRewardsVault.address),
-        elRewardsVaultBalance.sub(elRewardsToWithdraw),
+        elRewardsVaultBalance.sub(toBN(elBalanceUpdate)),
         'Execution layer rewards vault balance'
       )
 
       assert.equals(
         await pool.getTotalPooledEther(),
-        totalPooledEther.add(beaconBalanceInc).add(elRewardsToWithdraw),
+        totalPooledEther.add(beaconBalanceInc).add(elBalanceUpdate),
         'total pooled ether'
       )
-      assert.equals(
-        await pool.totalSupply(),
-        totalSupply.add(beaconBalanceInc).add(elRewardsToWithdraw),
-        'token total supply'
-      )
-      assert.equals(await pool.getBufferedEther(), bufferedEther.add(elRewardsToWithdraw), 'buffered ether')
+
+      assert.equals(await pool.getBufferedEther(), bufferedEther.add(elBalanceUpdate), 'buffered ether')
 
       elRewardsVaultBalance = toBN(await web3.eth.getBalance(elRewardsVault.address))
       totalPooledEther = await pool.getTotalPooledEther()
+      totalShares = await pool.getTotalShares()
       bufferedEther = await pool.getBufferedEther()
-      totalSupply = await pool.totalSupply()
 
       lastBeaconBalance = lastBeaconBalance.add(beaconBalanceInc)
-      elRewardsWithdrawn = elRewardsWithdrawn.add(elRewardsToWithdraw)
+      elRewardsWithdrawn = elRewardsWithdrawn.add(elBalanceUpdate)
 
       frame += 1
     }
 
     assert.equals(elRewardsWithdrawn, elRewards)
+    assert.equals(elRewardsVaultBalance, toBN(0))
+    assert.isTrue(frame > 10)
   })
 })
