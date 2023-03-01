@@ -6,7 +6,7 @@ const {
   updateLocatorImplementation,
   deployLocatorWithDummyAddressesImplementation,
 } = require('../../helpers/locator-deploy')
-const { calcReportDataHash, getReportDataItems } = require('../../helpers/reportData')
+const { calcAccountingReportDataHash, getAccountingReportDataItems } = require('../../helpers/reportData')
 
 const {
   SLOTS_PER_EPOCH,
@@ -122,8 +122,8 @@ module.exports = {
   initAccountingOracle,
   deployMockLegacyOracle,
   deployMockLidoAndStakingRouter,
-  getReportDataItems,
-  calcReportDataHash,
+  getAccountingReportDataItems,
+  calcAccountingReportDataHash,
   encodeExtraDataItem,
   encodeExtraDataItems,
   packExtraDataList,

@@ -9,7 +9,7 @@ const { waitBlocks, setBalance } = require('../helpers/blockchain')
 const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 const { SLOTS_PER_FRAME } = require('../helpers/constants')
-const { calcReportDataHash, getReportDataItems } = require('../helpers/reportData')
+const { calcAccountingReportDataHash, getAccountingReportDataItems } = require('../helpers/reportData')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 
@@ -401,7 +401,7 @@ contract('Lido: merge acceptance', (addresses) => {
 
     const { refSlot } = await consensus.getCurrentFrame()
 
-    const reportItems = getReportDataItems(
+    const reportItems = getAccountingReportDataItems(
       makeAccountingReport({
         refSlot: +refSlot,
         numValidators: 2,
@@ -409,7 +409,7 @@ contract('Lido: merge acceptance', (addresses) => {
         elRewardsVaultBalance: await web3.eth.getBalance(elRewardsVault.address),
       })
     )
-    const reportHash = calcReportDataHash(reportItems)
+    const reportHash = calcAccountingReportDataHash(reportItems)
 
     await consensus.submitReport(refSlot, reportHash, 1, { from: signers[2].address })
     await consensus.submitReport(refSlot, reportHash, 1, { from: signers[3].address })
@@ -517,7 +517,7 @@ contract('Lido: merge acceptance', (addresses) => {
     await consensus.setQuorum(2)
     const { refSlot } = await consensus.getCurrentFrame()
 
-    const reportItems = getReportDataItems(
+    const reportItems = getAccountingReportDataItems(
       makeAccountingReport({
         refSlot: +refSlot,
         numValidators: 2,
@@ -525,7 +525,7 @@ contract('Lido: merge acceptance', (addresses) => {
         elRewardsVaultBalance: await web3.eth.getBalance(elRewardsVault.address),
       })
     )
-    const reportHash = calcReportDataHash(reportItems)
+    const reportHash = calcAccountingReportDataHash(reportItems)
     await consensus.submitReport(refSlot, reportHash, 1, { from: signers[2].address })
     await consensus.submitReport(refSlot, reportHash, 1, { from: signers[3].address })
 
@@ -616,7 +616,7 @@ contract('Lido: merge acceptance', (addresses) => {
     await consensus.setQuorum(2)
     const { refSlot } = await consensus.getCurrentFrame()
 
-    const reportItems = getReportDataItems(
+    const reportItems = getAccountingReportDataItems(
       makeAccountingReport({
         refSlot: +refSlot,
         numValidators: 2,
@@ -624,7 +624,7 @@ contract('Lido: merge acceptance', (addresses) => {
         elRewardsVaultBalance: await web3.eth.getBalance(elRewardsVault.address),
       })
     )
-    const reportHash = calcReportDataHash(reportItems)
+    const reportHash = calcAccountingReportDataHash(reportItems)
     await consensus.submitReport(refSlot, reportHash, 1, { from: signers[2].address })
     await consensus.submitReport(refSlot, reportHash, 1, { from: signers[3].address })
 
@@ -706,7 +706,7 @@ contract('Lido: merge acceptance', (addresses) => {
     await consensus.setQuorum(2)
     const { refSlot } = await consensus.getCurrentFrame()
 
-    const reportItems = getReportDataItems(
+    const reportItems = getAccountingReportDataItems(
       makeAccountingReport({
         refSlot: +refSlot,
         numValidators: 2,
@@ -714,7 +714,7 @@ contract('Lido: merge acceptance', (addresses) => {
         elRewardsVaultBalance: await web3.eth.getBalance(elRewardsVault.address),
       })
     )
-    const reportHash = calcReportDataHash(reportItems)
+    const reportHash = calcAccountingReportDataHash(reportItems)
     await consensus.submitReport(refSlot, reportHash, 1, { from: signers[2].address })
     await consensus.submitReport(refSlot, reportHash, 1, { from: signers[3].address })
 
@@ -778,7 +778,7 @@ contract('Lido: merge acceptance', (addresses) => {
     await consensus.setQuorum(2)
     const { refSlot } = await consensus.getCurrentFrame()
 
-    const reportItems = getReportDataItems(
+    const reportItems = getAccountingReportDataItems(
       makeAccountingReport({
         refSlot: +refSlot,
         numValidators: 2,
@@ -786,7 +786,7 @@ contract('Lido: merge acceptance', (addresses) => {
         elRewardsVaultBalance: await web3.eth.getBalance(elRewardsVault.address),
       })
     )
-    const reportHash = calcReportDataHash(reportItems)
+    const reportHash = calcAccountingReportDataHash(reportItems)
     await consensus.submitReport(refSlot, reportHash, 1, { from: signers[2].address })
     await consensus.submitReport(refSlot, reportHash, 1, { from: signers[3].address })
 
@@ -871,7 +871,7 @@ contract('Lido: merge acceptance', (addresses) => {
     await consensus.setQuorum(2)
     const { refSlot } = await consensus.getCurrentFrame()
 
-    const reportItems = getReportDataItems(
+    const reportItems = getAccountingReportDataItems(
       makeAccountingReport({
         refSlot: +refSlot,
         numValidators: 2,
@@ -879,7 +879,7 @@ contract('Lido: merge acceptance', (addresses) => {
         elRewardsVaultBalance: await web3.eth.getBalance(elRewardsVault.address),
       })
     )
-    const reportHash = calcReportDataHash(reportItems)
+    const reportHash = calcAccountingReportDataHash(reportItems)
     await consensus.submitReport(refSlot, reportHash, 1, { from: signers[2].address })
     await consensus.submitReport(refSlot, reportHash, 1, { from: signers[3].address })
 

@@ -1,6 +1,15 @@
 const { web3 } = require('hardhat')
 
-function calcReportDataHash(reportItems) {
+function calcValidatorsExitBusReportDataHash(reportItems) {
+  const data = web3.eth.abi.encodeParameters(['(uint256,uint256,uint256,uint256,bytes)'], [reportItems])
+  return web3.utils.keccak256(data)
+}
+
+function getValidatorsExitBusReportDataItems(r) {
+  return [r.consensusVersion, r.refSlot, r.requestsCount, r.dataFormat, r.data]
+}
+
+function calcAccountingReportDataHash(reportItems) {
   const data = web3.eth.abi.encodeParameters(
     [
       '(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256)',
@@ -9,7 +18,7 @@ function calcReportDataHash(reportItems) {
   )
   return web3.utils.keccak256(data)
 }
-function getReportDataItems(r) {
+function getAccountingReportDataItems(r) {
   return [
     r.consensusVersion,
     +r.refSlot,
@@ -29,6 +38,8 @@ function getReportDataItems(r) {
 }
 
 module.exports = {
-  calcReportDataHash,
-  getReportDataItems,
+  calcAccountingReportDataHash,
+  getAccountingReportDataItems,
+  getValidatorsExitBusReportDataItems,
+  calcValidatorsExitBusReportDataHash,
 }

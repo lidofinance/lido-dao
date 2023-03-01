@@ -8,8 +8,8 @@ const {
   ZERO_HASH,
   CONSENSUS_VERSION,
   DATA_FORMAT_LIST,
-  getReportDataItems,
-  calcReportDataHash,
+  getValidatorsExitBusReportDataItems,
+  calcValidatorsExitBusReportDataHash,
   encodeExitRequestsDataList,
   deployExitBusOracle,
 } = require('./validators-exit-bus-oracle-deploy.test')
@@ -116,8 +116,8 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
             data: encodeExitRequestsDataList(exitRequests.requests),
           }
 
-          reportItems = getReportDataItems(reportFields)
-          reportHash = calcReportDataHash(reportItems)
+          reportItems = getValidatorsExitBusReportDataItems(reportFields)
+          reportHash = calcValidatorsExitBusReportDataHash(reportItems)
 
           await triggerConsensusOnHash(reportHash)
         })
