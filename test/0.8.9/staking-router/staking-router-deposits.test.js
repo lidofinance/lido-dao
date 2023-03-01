@@ -4,7 +4,7 @@ const { EvmSnapshot } = require('../../helpers/blockchain')
 const { setupNodeOperatorsRegistry } = require('../../helpers/staking-modules')
 const { deployProtocol } = require('../../helpers/protocol')
 
-const { ETH, genKeys, toBN } = require('../../helpers/utils')
+const { ETH, genKeys } = require('../../helpers/utils')
 const { assert } = require('../../helpers/assert')
 const { ZERO_BYTES32 } = require('../../helpers/constants')
 
@@ -68,16 +68,6 @@ contract('StakingRouter', ([depositor, stranger]) => {
       await assert.reverts(
         router.deposit(depositsCount, curatedModuleId, '0x', { from: voting }),
         'AppAuthLidoFailed()'
-      )
-    })
-
-    it('reverts if stakingModuleId more than uint24', async () => {
-      const depositsCount = 100
-      const maxModuleId = toBN(2).pow(toBN(24))
-
-      await assert.reverts(
-        lido.methods[`deposit(uint256,uint256,bytes)`](depositsCount, maxModuleId, '0x', { from: depositor }),
-        'StakingModuleIdTooLarge()'
       )
     })
 

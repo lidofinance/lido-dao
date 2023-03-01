@@ -20,8 +20,6 @@ const STAKING_MODULE_PAUSE_ROLE = utils.soliditySha3('STAKING_MODULE_PAUSE_ROLE'
 const STAKING_MODULE_RESUME_ROLE = utils.soliditySha3('STAKING_MODULE_RESUME_ROLE')
 const STAKING_MODULE_MANAGE_ROLE = utils.soliditySha3('STAKING_MODULE_MANAGE_ROLE')
 
-const UINT24_MAX = new BN(2).pow(new BN(24))
-
 const StakingModuleStatus = {
   Active: 0, // deposits and rewards allowed
   DepositsPaused: 1, // deposits NOT allowed, rewards allowed
@@ -258,24 +256,6 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       await stakingModule.setNonce(100, { from: deployer })
 
       assert.equals(await router.getStakingModuleNonce(1), 100)
-    })
-
-    it('getStakingModuleNonce reverts when staking module id too large', async () => {
-      await assert.revertsWithCustomError(router.getStakingModuleNonce(UINT24_MAX), 'StakingModuleIdTooLarge()')
-    })
-
-    it('getStakingModuleLastDepositBlock reverts when staking module id too large', async () => {
-      await assert.revertsWithCustomError(
-        router.getStakingModuleLastDepositBlock(UINT24_MAX),
-        'StakingModuleIdTooLarge()'
-      )
-    })
-
-    it('getStakingModuleActiveValidatorsCount reverts when staking module id too large', async () => {
-      await assert.revertsWithCustomError(
-        router.getStakingModuleActiveValidatorsCount(UINT24_MAX),
-        'StakingModuleIdTooLarge()'
-      )
     })
 
     it('getStakingModuleActiveValidatorsCount', async () => {
@@ -542,15 +522,6 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       assert.equals(await router.getStakingModuleIsDepositsPaused(stakingModulesParams[0].expectedModuleId), false)
       assert.equals(await router.getStakingModuleIsActive(stakingModulesParams[0].expectedModuleId), true)
 
-      await assert.revertsWithCustomError(router.getStakingModule(UINT24_MAX), 'StakingModuleIdTooLarge()')
-      await assert.revertsWithCustomError(router.getStakingModuleStatus(UINT24_MAX), 'StakingModuleIdTooLarge()')
-      await assert.revertsWithCustomError(router.getStakingModuleIsStopped(UINT24_MAX), 'StakingModuleIdTooLarge()')
-      await assert.revertsWithCustomError(
-        router.getStakingModuleIsDepositsPaused(UINT24_MAX),
-        'StakingModuleIdTooLarge()'
-      )
-      await assert.revertsWithCustomError(router.getStakingModuleIsActive(UINT24_MAX), 'StakingModuleIdTooLarge()')
-
       const module = await router.getStakingModule(stakingModulesParams[0].expectedModuleId)
 
       assert.equals(module.name, stakingModulesParams[0].name)
@@ -654,21 +625,6 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       )
     })
 
-    it('update staking module reverts on large module id', async () => {
-      await assert.revertsWithCustomError(
-        router.updateStakingModule(
-          UINT24_MAX,
-          stakingModulesParams[0].targetShare + 1,
-          stakingModulesParams[0].stakingModuleFee + 1,
-          stakingModulesParams[0].treasuryFee + 1,
-          {
-            from: appManager,
-          }
-        ),
-        `StakingModuleIdTooLarge()`
-      )
-    })
-
     it('update staking module fails on target share > 100%', async () => {
       await assert.revertsWithCustomError(
         router.updateStakingModule(
@@ -741,15 +697,6 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       )
     })
 
-    it('set staking module status reverts if staking module id too large', async () => {
-      await assert.revertsWithCustomError(
-        router.setStakingModuleStatus(UINT24_MAX, StakingModuleStatus.Stopped, {
-          from: appManager,
-        }),
-        `StakingModuleIdTooLarge()`
-      )
-    })
-
     it('set staking module status reverts if status is the same', async () => {
       const module = await router.getStakingModule(stakingModulesParams[0].expectedModuleId)
       await assert.revertsWithCustomError(
@@ -782,15 +729,6 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
           from: stranger,
         }),
         `AccessControl: account ${stranger.toLowerCase()} is missing role ${STAKING_MODULE_PAUSE_ROLE}`
-      )
-    })
-
-    it('pause staking module reverts when staking module too large', async () => {
-      await assert.revertsWithCustomError(
-        router.pauseStakingModule(UINT24_MAX, {
-          from: appManager,
-        }),
-        `StakingModuleIdTooLarge()`
       )
     })
 
@@ -838,13 +776,6 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       })
     })
 
-    it('deposit fails on too large module id', async () => {
-      await assert.revertsWithCustomError(
-        router.deposit(100, UINT24_MAX, '0x00', { value: 100, from: lido }),
-        'StakingModuleIdTooLarge()'
-      )
-    })
-
     it('deposit fails when module is not active', async () => {
       await assert.revertsWithCustomError(
         router.deposit(100, stakingModulesParams[0].expectedModuleId, '0x00', { value: ETH(32 * 100), from: lido }),
@@ -865,15 +796,6 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
           from: stranger,
         }),
         `AccessControl: account ${stranger.toLowerCase()} is missing role ${STAKING_MODULE_RESUME_ROLE}`
-      )
-    })
-
-    it('resume staking module reverts when staking module id too large', async () => {
-      await assert.revertsWithCustomError(
-        router.resumeStakingModule(UINT24_MAX, {
-          from: appManager,
-        }),
-        `StakingModuleIdTooLarge()`
       )
     })
 
@@ -982,17 +904,6 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
   describe('updateRefundedValidatorsCount()', async () => {
     before(snapshot)
     after(revert)
-
-    it('reverts if no stakingModuleId too large role', async () => {
-      const moduleId = new BN(2).pow(new BN(24))
-      const nodeOperatorId = 1
-      const refundedValidatorsCount = 3
-
-      await assert.reverts(
-        router.updateRefundedValidatorsCount(moduleId, nodeOperatorId, refundedValidatorsCount, { from: stranger }),
-        'StakingModuleIdTooLarge()'
-      )
-    })
 
     it('reverts if no STAKING_MODULE_MANAGE_ROLE role', async () => {
       const moduleId = 1
