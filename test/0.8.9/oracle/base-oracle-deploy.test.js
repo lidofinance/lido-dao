@@ -53,8 +53,8 @@ async function deployBaseOracle(
       secondsPerSlot,
       genesisTime,
       epochsPerFrame,
-      fastLaneLengthSlots,
       initialEpoch,
+      fastLaneLengthSlots,
       mockMember,
       { from: admin }
     )

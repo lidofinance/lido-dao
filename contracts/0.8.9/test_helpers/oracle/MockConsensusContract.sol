@@ -23,13 +23,16 @@ contract MockConsensusContract is IConsensusContract {
         uint256 refSlot;
         uint256 reportProcessingDeadlineSlot;
     }
+
     struct FrameConfig {
         uint64 initialEpoch;
         uint64 epochsPerFrame;
         uint64 fastLaneLengthSlots;
     }
+
     FrameConfig internal _frameConfig;
     ConsensusFrame internal _consensusFrame;
+    uint256 internal _initialRefSlot;
 
     constructor(
         uint256 slotsPerEpoch,
@@ -50,6 +53,8 @@ contract MockConsensusContract is IConsensusContract {
         _consensusFrame.index = 10;
         _consensusFrame.refSlot = 1;
         _consensusFrame.reportProcessingDeadlineSlot = 7001;
+
+        _initialRefSlot = initialEpoch * slotsPerEpoch - 1;
     }
 
     function getIsMember(address addr) external view returns (bool) {
@@ -66,6 +71,10 @@ contract MockConsensusContract is IConsensusContract {
         _consensusFrame.reportProcessingDeadlineSlot = reportProcessingDeadlineSlot;
     }
 
+    function setInitialRefSlot(uint256 initialRefSlot) external {
+        _initialRefSlot = initialRefSlot;
+    }
+
     function getChainConfig()
         external
         view
@@ -76,6 +85,10 @@ contract MockConsensusContract is IConsensusContract {
 
     function getFrameConfig() external view returns (uint256 initialEpoch, uint256 epochsPerFrame) {
         return (_frameConfig.initialEpoch, _frameConfig.epochsPerFrame);
+    }
+
+    function getInitialRefSlot() external view returns (uint256) {
+        return _initialRefSlot;
     }
 
     function _setFrameConfig(uint256 initialEpoch, uint256 epochsPerFrame, uint256 fastLaneLengthSlots) internal {
