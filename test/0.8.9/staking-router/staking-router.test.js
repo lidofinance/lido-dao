@@ -5,6 +5,7 @@ const { BN } = require('bn.js')
 const { assert } = require('../../helpers/assert')
 const { EvmSnapshot } = require('../../helpers/blockchain')
 const { ETH, toBN } = require('../../helpers/utils')
+const { StakingModuleStub } = require('../../helpers/stubs/staking-module.stub')
 
 const OssifiableProxy = artifacts.require('OssifiableProxy.sol')
 const DepositContractMock = artifacts.require('DepositContractMock')
@@ -321,6 +322,40 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         rewardDistribution.stakingModuleFees[1].mul(percentPoints).div(rewardDistribution.precisionPoints).toNumber(),
         2
       )
+    })
+
+    it('set withdrawal credentials works when staking module reverts', async () => {
+      const stakingModuleWithBug = await StakingModuleStub.new()
+      // staking module will revert with panic exit code
+      await StakingModuleStub.stub(stakingModuleWithBug, 'onWithdrawalCredentialsChanged', {
+        revert: { error: 'Panic', args: { type: ['uint256'], value: [0x01] } },
+      })
+      await router.addStakingModule('Staking Module With Bug', stakingModuleWithBug.address, 100, 1000, 2000, {
+        from: appManager,
+      })
+      const stakingModuleId = await router.getStakingModulesCount()
+      assert.isFalse(await router.getStakingModuleIsDepositsPaused(stakingModuleId))
+
+      const newWC = '0x'.padEnd(66, '5678')
+      const tx = await router.setWithdrawalCredentials(newWC, { from: appManager })
+
+      assert.emits(tx, 'WithdrawalsCredentialsChangeFailed', {
+        stakingModuleId,
+        lowLevelRevertData: '0x4e487b710000000000000000000000000000000000000000000000000000000000000001',
+      })
+
+      assert.emits(
+        tx,
+        'StakingModuleStatusSet',
+        {
+          status: 1,
+          stakingModuleId,
+          setBy: appManager,
+        },
+        { abi: StakingRouter._json.abi }
+      )
+
+      assert.isTrue(await router.getStakingModuleIsDepositsPaused(stakingModuleId))
     })
   })
 

@@ -98,7 +98,7 @@ class GenericStubConfigParser {
     }
     if (config.revert) {
       return config.revert.error
-        ? this._encodeError(config.revert.error)
+        ? this._encodeError(config.revert)
         : this._encodeError({ error: 'Error', args: { type: ['string'], value: [config.revert.reason || ''] } })
     }
     return this._encode({ type: [], value: [] })
