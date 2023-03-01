@@ -856,7 +856,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             uint256 precisionPoints
         )
     {
-        (uint256 totalActiveValidators, StakingModuleCache[] memory stakingModulesCache) = _loadStakingModulesCache(false);
+        (uint256 totalActiveValidators, StakingModuleCache[] memory stakingModulesCache) = _loadStakingModulesCache();
         uint256 stakingModulesCount = stakingModulesCache.length;
 
         /// @dev return empty response if there are no staking modules or active validators yet
@@ -1043,24 +1043,18 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         }
     }
 
-    /**
-     * @dev load modules into a memory cache
-     *
-     * @param _zeroValidatorsCountsOfInactiveModules if true, active and available validators for
-     *        inactive modules are set to zero
-     *
-     * @return totalActiveValidators total active validators across all modules (excluding inactive
-     *         if _zeroValidatorsCountsOfInactiveModules is true)
-     * @return stakingModulesCache array of StakingModuleCache structs
-     */
-    function _loadStakingModulesCache(bool _zeroValidatorsCountsOfInactiveModules) internal view returns (
+    /// @dev load modules into a memory cache
+    ///
+    /// @return totalActiveValidators total active validators across all modules
+    /// @return stakingModulesCache array of StakingModuleCache structs
+    function _loadStakingModulesCache() internal view returns (
         uint256 totalActiveValidators,
         StakingModuleCache[] memory stakingModulesCache
     ) {
         uint256 stakingModulesCount = getStakingModulesCount();
         stakingModulesCache = new StakingModuleCache[](stakingModulesCount);
         for (uint256 i; i < stakingModulesCount; ) {
-            stakingModulesCache[i] = _loadStakingModulesCacheItem(i, _zeroValidatorsCountsOfInactiveModules);
+            stakingModulesCache[i] = _loadStakingModulesCacheItem(i);
             totalActiveValidators += stakingModulesCache[i].activeValidatorsCount;
             unchecked {
                 ++i;
@@ -1068,10 +1062,11 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         }
     }
 
-    function _loadStakingModulesCacheItem(
-        uint256 _stakingModuleIndex,
-        bool _zeroValidatorsCountsIfInactive
-    ) internal view returns (StakingModuleCache memory cacheItem) {
+    function _loadStakingModulesCacheItem(uint256 _stakingModuleIndex)
+        internal
+        view
+        returns (StakingModuleCache memory cacheItem)
+    {
         StakingModule storage stakingModuleData = _getStakingModuleByIndex(_stakingModuleIndex);
 
         cacheItem.stakingModuleAddress = stakingModuleData.stakingModuleAddress;
@@ -1081,18 +1076,21 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         cacheItem.targetShare = stakingModuleData.targetShare;
         cacheItem.status = StakingModuleStatus(stakingModuleData.status);
 
-        if (!_zeroValidatorsCountsIfInactive || cacheItem.status == StakingModuleStatus.Active) {
-            uint256 totalExitedValidators;
-            uint256 totalDepositedValidators;
-            (totalExitedValidators, totalDepositedValidators, cacheItem.availableValidatorsCount)
-                = IStakingModule(cacheItem.stakingModuleAddress).getStakingModuleSummary();
+        (
+            uint256 totalExitedValidators,
+            uint256 totalDepositedValidators,
+            uint256 depositableValidatorsCount
+        ) = IStakingModule(cacheItem.stakingModuleAddress).getStakingModuleSummary();
 
-            // the module might not receive all exited validators data yet => we need to replacing
-            // the exitedValidatorsCount with the one that the staking router is aware of
-            cacheItem.activeValidatorsCount =
-                totalDepositedValidators -
-                Math256.max(totalExitedValidators, stakingModuleData.exitedValidatorsCount);
-        }
+        cacheItem.availableValidatorsCount = cacheItem.status == StakingModuleStatus.Active
+            ? depositableValidatorsCount
+            : 0;
+
+        // the module might not receive all exited validators data yet => we need to replacing
+        // the exitedValidatorsCount with the one that the staking router is aware of
+        cacheItem.activeValidatorsCount =
+            totalDepositedValidators -
+            Math256.max(totalExitedValidators, stakingModuleData.exitedValidatorsCount);
     }
 
     function _getDepositsAllocation(
@@ -1101,7 +1099,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         // calculate total used validators for operators
         uint256 totalActiveValidators;
 
-        (totalActiveValidators, stakingModulesCache) = _loadStakingModulesCache(true);
+        (totalActiveValidators, stakingModulesCache) = _loadStakingModulesCache();
 
         uint256 stakingModulesCount = stakingModulesCache.length;
         allocations = new uint256[](stakingModulesCount);
