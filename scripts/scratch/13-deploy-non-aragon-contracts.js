@@ -1,8 +1,7 @@
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, yl, gr } = require('../helpers/log')
-const { saveDeployTx } = require('../helpers/deploy')
 const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
-const { deployWithoutProxy, deployBehindOssifiableProxy, updateProxyImplementation } = require('../helpers/deploy-shapella')
+const { deployWithoutProxy, deployBehindOssifiableProxy, updateProxyImplementation } = require('../helpers/deploy')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
 const { APP_NAMES } = require('../constants')
@@ -17,8 +16,8 @@ const REQUIRED_NET_STATE = [
   "oracleReportSanityChecker",
   "burner",
   "hashConsensusForAccounting",
-  "hashConsensusForExitBus",
-  "withdrawalRequestNFT",
+  "hashConsensusForValidatorsExitBus",
+  "withdrawalQueueERC721",
 ]
 
 async function deployNewContracts({ web3, artifacts }) {
@@ -36,8 +35,8 @@ async function deployNewContracts({ web3, artifacts }) {
   const depositSecurityModuleParams = state["depositSecurityModule"].parameters
   const burnerParams = state["burner"].parameters
   const hashConsensusForAccountingParams = state["hashConsensusForAccounting"].parameters
-  const hashConsensusForExitBusParams = state["hashConsensusForExitBus"].parameters
-  const withdrawalRequestNFTParams = state["withdrawalRequestNFT"].parameters
+  const hashConsensusForExitBusParams = state["hashConsensusForValidatorsExitBus"].parameters
+  const withdrawalQueueERC721Params = state["withdrawalQueueERC721"].parameters
 
   if (!DEPLOYER) {
     throw new Error('Deployer is not specified')
@@ -67,7 +66,8 @@ async function deployNewContracts({ web3, artifacts }) {
     admin,
     [admin],
   ]
-  await deployWithoutProxy('oracleDaemonConfig', 'OracleDaemonConfig', deployer, oracleDaemonConfigArgs)
+  const oracleDaemonConfigAddress = await deployWithoutProxy(
+    'oracleDaemonConfig', 'OracleDaemonConfig', deployer, oracleDaemonConfigArgs)
   logWideSplitter()
 
   //
@@ -86,15 +86,16 @@ async function deployNewContracts({ web3, artifacts }) {
       sanityChecks.churnValidatorsPerDayLimit,
       sanityChecks.oneOffCLBalanceDecreaseBPLimit,
       sanityChecks.annualBalanceIncreaseBPLimit,
-      sanityChecks.shareRateDeviationBPLimit,
-      sanityChecks.requestTimestampMargin,
-      sanityChecks.maxPositiveTokenRebase,
+      sanityChecks.simulatedShareRateDeviationBPLimit,
       sanityChecks.maxValidatorExitRequestsPerReport,
       sanityChecks.maxAccountingExtraDataListItemsCount,
+      sanityChecks.maxNodeOperatorsPerExtraDataItemCount,
+      sanityChecks.requestTimestampMargin,
+      sanityChecks.maxPositiveTokenRebase,
     ],
     [
       [admin],
-      [], [], [], [], [], [], [], []
+      [], [], [], [], [], [], [], [], []
     ]
   ]
   const oracleReportSanityCheckerAddress = await deployWithoutProxy(
@@ -104,7 +105,7 @@ async function deployNewContracts({ web3, artifacts }) {
   //
   // === EIP712StETH ===
   //
-  await deployWithoutProxy("eip712StETH", "EIP712StETH", deployer)
+  await deployWithoutProxy("eip712StETH", "EIP712StETH", deployer, [lidoAddress])
   logWideSplitter()
 
   //
@@ -114,15 +115,15 @@ async function deployNewContracts({ web3, artifacts }) {
   logWideSplitter()
 
   //
-  // === WithdrawalRequestNFT ===
+  // === WithdrawalQueueERC721 ===
   //
-  const withdrawalRequestNFTArgs = [
+  const withdrawalQueueERC721Args = [
     wstETHAddress,
-    withdrawalRequestNFTParams.name,
-    withdrawalRequestNFTParams.symbol,
+    withdrawalQueueERC721Params.name,
+    withdrawalQueueERC721Params.symbol,
   ]
-  const withdrawalRequestNFTAddress = await deployBehindOssifiableProxy(
-    "withdrawalRequestNFT", "WithdrawalRequestNFT", proxyContractsOwner, deployer, withdrawalRequestNFTArgs)
+  const withdrawalQueueERC721Address = await deployBehindOssifiableProxy(
+    "withdrawalQueueERC721", "WithdrawalQueueERC721", proxyContractsOwner, deployer, withdrawalQueueERC721Args)
   logWideSplitter()
 
 
@@ -190,7 +191,6 @@ async function deployNewContracts({ web3, artifacts }) {
     beaconSpec.secondsPerSlot,
     beaconSpec.genesisTime,
     hashConsensusForAccountingParams.epochsPerFrame,
-    0 + hashConsensusForAccountingParams.epochsPerFrame, // initialEpoch: must be legacyOracle last processed epoch + epochsPerFrame to pass AccountingOracle._checkOracleMigration
     hashConsensusForAccountingParams.fastLaneLengthSlots,
     admin, // admin
     accountingOracleAddress,  // reportProcessor
@@ -218,7 +218,6 @@ async function deployNewContracts({ web3, artifacts }) {
     beaconSpec.secondsPerSlot,
     beaconSpec.genesisTime,
     hashConsensusForExitBusParams.epochsPerFrame,
-    0 + hashConsensusForExitBusParams.epochsPerFrame, // initialEpoch: must be legacyOracle last processed epoch + epochsPerFrame to pass AccountingOracle._checkOracleMigration
     hashConsensusForExitBusParams.fastLaneLengthSlots,
     admin, // admin
     validatorsExitBusOracleAddress,  // reportProcessor
@@ -256,10 +255,11 @@ async function deployNewContracts({ web3, artifacts }) {
     stakingRouterAddress,
     treasuryAddress,
     validatorsExitBusOracleAddress,
-    withdrawalRequestNFTAddress,
+    withdrawalQueueERC721Address,
     withdrawalVaultAddress,
+    oracleDaemonConfigAddress,
   ]
-  await updateProxyImplementation(locatorAddress, "LidoLocator", proxyContractsOwner, [locatorConfig])
+  await updateProxyImplementation("lidoLocator", "LidoLocator", locatorAddress, proxyContractsOwner, [locatorConfig])
 }
 
 module.exports = runOrWrapScript(deployNewContracts, module)

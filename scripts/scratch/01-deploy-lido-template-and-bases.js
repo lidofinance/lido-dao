@@ -3,7 +3,7 @@ const chalk = require('chalk')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, yl, gr } = require('../helpers/log')
 const { saveDeployTx } = require('../helpers/deploy')
-const { deployWithoutProxy } = require('../helpers/deploy-shapella')
+const { deployWithoutProxy } = require('../helpers/deploy')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 const { APP_NAMES } = require('../constants')
 

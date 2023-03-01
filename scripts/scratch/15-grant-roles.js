@@ -22,7 +22,7 @@ const REQUIRED_NET_STATE = [
   "hashConsensusForAccounting",
   "validatorsExitBusOracle",
   "hashConsensusForValidatorsExitBus",
-  "withdrawalRequestNFT",
+  "withdrawalQueueERC721",
   "withdrawalVault",
 ]
 
@@ -44,7 +44,7 @@ async function deployNewContracts({ web3, artifacts }) {
   const accountingOracleParams = state["accountingOracle"].parameters
 
   const stakingRouterAddress = state["stakingRouter"].address
-  const withdrawalQueueAddress = state["withdrawalRequestNFT"].address
+  const withdrawalQueueAddress = state["withdrawalQueueERC721"].address
   const lidoLocatorAddress = state["lidoLocator"].address
   const accountingOracleAddress = state["accountingOracle"].address
   const hashConsensusForAccountingAddress = state["hashConsensusForAccounting"].address

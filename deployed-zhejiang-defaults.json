@@ -98,14 +98,15 @@
       "churnValidatorsPerDayLimit": 1500,
       "oneOffCLBalanceDecreaseBPLimit": 500,
       "annualBalanceIncreaseBPLimit": 1000,
-      "shareRateDeviationBPLimit": 250,
-      "requestTimestampMargin": 128,
-      "maxPositiveTokenRebase": 5000000,
+      "simulatedShareRateDeviationBPLimit": 250,
       "maxValidatorExitRequestsPerReport": 2000,
-      "maxAccountingExtraDataListItemsCount": 100
+      "maxAccountingExtraDataListItemsCount": 100,
+      "maxNodeOperatorsPerExtraDataItemCount": 100,
+      "requestTimestampMargin": 128,
+      "maxPositiveTokenRebase": 5000000
     }
   },
-  "withdrawalRequestNFT": {
+  "withdrawalQueueERC721": {
     "parameters": {
       "name": "stETH Withdrawal NFT",
       "symbol": "unstETH"

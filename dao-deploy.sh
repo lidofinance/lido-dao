@@ -25,14 +25,7 @@ function msg() {
   fi
 }
 
-function pause() {
-  MSG=$1
-  msg "$1"
-  read -s -n 1 -p "Press any key to continue . . ."
-  echo ""
-}
-
-yarn install --immutable
+# yarn install --immutable
 yarn compile
 
 rm -f deployed-$NETWORK.json
@@ -57,8 +50,10 @@ for ff in $(find contracts/0.8.9 -iname '*.sol'); do mv "$ff" "$ff.tmp" ; done
 for ff in $(grep -l -R "${MULTI_VERSION_PRAGMA}" contracts/common); do
     sed -i '' "s/${MULTI_VERSION_PRAGMA}/${SINGLE_VERSION_PRAGMA}/g" "$ff" ; done
 
+mv contracts/0.4.24/template/LidoTemplate.sol contracts/0.4.24/template/LidoTemplate.sol.bkp
 yarn deploy:$NETWORK:aragon-std-apps
 msg "Aragon STD apps deployed."
+mv contracts/0.4.24/template/LidoTemplate.sol.bkp contracts/0.4.24/template/LidoTemplate.sol
 
 yarn hardhat --network $NETWORK run ./scripts/scratch/01-deploy-lido-template-and-bases.js
 
@@ -106,7 +101,6 @@ msg "Tokens issued"
 # Deploy the contracts before finalizing DAO, because the template might set permissions on some of them
 yarn hardhat --network $NETWORK run ./scripts/scratch/13-deploy-non-aragon-contracts.js
 
-
 yarn hardhat --network $NETWORK run ./scripts/scratch/11-finalize-dao.js
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-11-finalize-dao.json
 msg "DAO deploy finalized"
@@ -117,4 +111,4 @@ yarn hardhat --network $NETWORK run ./scripts/scratch/14-initialize-non-aragon-c
 
 yarn hardhat --network $NETWORK run ./scripts/scratch/15-grant-roles.js
 
-# TODO: check DAO
+# TODO: save commit of the latest deploy

@@ -22,7 +22,7 @@ const REQUIRED_NET_STATE = [
   "hashConsensusForAccounting",
   "validatorsExitBusOracle",
   "hashConsensusForValidatorsExitBus",
-  "withdrawalRequestNFT",
+  "withdrawalQueueERC721",
   "withdrawalVault",
 ]
 
@@ -45,7 +45,7 @@ async function deployNewContracts({ web3, artifacts }) {
   const accountingOracleParams = state["accountingOracle"].parameters
 
   const stakingRouterAddress = state["stakingRouter"].address
-  const withdrawalQueueAddress = state["withdrawalRequestNFT"].address
+  const withdrawalQueueAddress = state["withdrawalQueueERC721"].address
   const lidoLocatorAddress = state["lidoLocator"].address
   const accountingOracleAddress = state["accountingOracle"].address
   const hashConsensusForAccountingAddress = state["hashConsensusForAccounting"].address
@@ -64,9 +64,11 @@ async function deployNewContracts({ web3, artifacts }) {
   //
   // === NodeOperatorsRegistry: initialize ===
   //
+  const stuckPenaltyDelay = 2 * 24 * 60 * 60  // 2 days
   const nodeOperatorsRegistryArgs = [
     lidoLocatorAddress,
     "0x01",  // _type
+    stuckPenaltyDelay,
   ]
   const nodeOperatorsRegistry = await artifacts.require('NodeOperatorsRegistry').at(nodeOperatorsRegistryAddress)
   await nodeOperatorsRegistry.initialize(
@@ -82,8 +84,9 @@ async function deployNewContracts({ web3, artifacts }) {
     eip712StETHAddress,
   ]
   console.log({ lidoInitArgs })
+  const bootstrapInitBalance = 10 // wei
   const lido = await artifacts.require('Lido').at(lidoAddress)
-  await lido.initialize(...lidoInitArgs, { from: DEPLOYER })
+  await lido.initialize(...lidoInitArgs, { value: bootstrapInitBalance, from: DEPLOYER })
   logWideSplitter()
 
   //
@@ -117,7 +120,9 @@ async function deployNewContracts({ web3, artifacts }) {
   //
   const ValidatorsExitBusOracle = await artifacts.require('ValidatorsExitBusOracle').at(ValidatorsExitBusOracleAddress)
   const ValidatorsExitBusOracleArgs = [
-    exitBusOracleAdmin,
+    exitBusOracleAdmin,  // admin
+    exitBusOracleAdmin,  // pauser
+    exitBusOracleAdmin,  // resumer
     hashConsensusForValidatorsExitBusOracleAddress,
     validatorsExitBusOracleParams.consensusVersion,
     0, // lastProcessingRefSlot
@@ -135,7 +140,7 @@ async function deployNewContracts({ web3, artifacts }) {
     accountingOracleAddress,  // _bunkerReporter
   ]
   console.log({ withdrawalQueueArgs })
-  const withdrawalQueue = await artifacts.require('WithdrawalRequestNFT').at(withdrawalQueueAddress)
+  const withdrawalQueue = await artifacts.require('WithdrawalQueueERC721').at(withdrawalQueueAddress)
   await withdrawalQueue.initialize(
     ...withdrawalQueueArgs,
     { from: DEPLOYER },
