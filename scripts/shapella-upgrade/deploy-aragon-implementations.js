@@ -12,6 +12,8 @@ const REQUIRED_NET_STATE = [
   `app:${APP_NAMES.LIDO}`,
   `app:${APP_NAMES.ORACLE}`,
   `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`,
+  // not used, but just to get sure the Merge was undergone
+  `executionLayerRewardsVaultAddress`,
 ]
 
 async function deployNewContracts({ web3, artifacts }) {

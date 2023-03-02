@@ -19,6 +19,7 @@ const REQUIRED_NET_STATE = [
   "hashConsensusForAccounting",
   "hashConsensusForValidatorsExitBus",
   "withdrawalQueueERC721",
+  "wstETH",
 ]
 
 async function deployNewContracts({ web3, artifacts }) {
@@ -38,6 +39,7 @@ async function deployNewContracts({ web3, artifacts }) {
   const hashConsensusForAccountingParams = state["hashConsensusForAccounting"].parameters
   const hashConsensusForExitBusParams = state["hashConsensusForValidatorsExitBus"].parameters
   const withdrawalQueueERC721Params = state["withdrawalQueueERC721"].parameters
+  const wstETHAddress = state["wstETH"].address
 
   if (!DEPLOYER) {
     throw new Error('DEPLOYER env variable is not specified')
@@ -114,12 +116,6 @@ async function deployNewContracts({ web3, artifacts }) {
   // === EIP712StETH ===
   //
   await deployWithoutProxy("eip712StETH", "EIP712StETH", deployer, [lidoAddress])
-  logWideSplitter()
-
-  //
-  // === WstETH ===
-  //
-  const wstETHAddress = await deployWithoutProxy("wstETH", "WstETH", deployer, [lidoAddress])
   logWideSplitter()
 
   //
