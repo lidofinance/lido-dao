@@ -8,6 +8,7 @@ import "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 import {UnstructuredRefStorage} from "./lib/UnstructuredRefStorage.sol";
 import {Math} from "./lib/Math.sol";
+import {MemUtils} from "../common/lib/MemUtils.sol";
 
 /// @title Queue to store and manage WithdrawalRequests.
 /// @dev Use an optimizations to store discounts heavily inspired
@@ -239,13 +240,7 @@ abstract contract WithdrawalQueueBase {
         _state.finished = requestId < maxPossibleRequestId || requestId == lastRequestId + 1;
 
         if (_state.finished) {
-            assert(_state.batches[MAX_EXTREMA_PER_CALL] <= MAX_EXTREMA_PER_CALL);
-            uint256[] memory batches = _state.batches;
-            uint256 length = _state.batches[MAX_EXTREMA_PER_CALL];
-            // todo: use MemUtils
-            assembly {
-                mstore(batches, length)
-            }
+            MemUtils.trimUint256Array(_state.batches, _state.batches.length - _state.batches[MAX_EXTREMA_PER_CALL]);
         }
 
         return _state;
