@@ -358,8 +358,8 @@ contract('AccountingOracle', ([admin, member1]) => {
       assert.equals(await mockStakingRouter.totalCalls_reportExitedKeysByNodeOperator(), 0)
       assert.equals(await mockStakingRouter.totalCalls_reportStuckKeysByNodeOperator(), 0)
 
-      const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__onOracleReport()
-      assert.equals(updateBunkerModeLastCall.callCount, 0)
+      const onOracleReportLastCall = await mockWithdrawalQueue.lastCall__onOracleReport()
+      assert.equals(onOracleReportLastCall.callCount, 0)
     })
 
     it('the initial reference slot is greater than the last one of the legacy oracle', async () => {

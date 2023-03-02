@@ -9,7 +9,7 @@ const { impersonate, EvmSnapshot, getCurrentBlockTimestamp, setBalance } = requi
 
 const { deployWithdrawalQueue } = require('./withdrawal-queue-deploy.test')
 
-contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, bunkerReporter]) => {
+contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, oracle]) => {
   let withdrawalQueue, steth
 
   const snapshot = new EvmSnapshot(ethers.provider)
@@ -96,13 +96,13 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     it('access control', async () => {
       assert(!(await withdrawalQueue.isBunkerModeActive()))
       const ORACLE_ROLE = await withdrawalQueue.ORACLE_ROLE()
-      await withdrawalQueue.grantRole(ORACLE_ROLE, bunkerReporter, { from: daoAgent })
+      await withdrawalQueue.grantRole(ORACLE_ROLE, oracle, { from: daoAgent })
       await assert.revertsOZAccessControl(
-        withdrawalQueue.updateBunkerMode(true, 0, { from: stranger }),
+        withdrawalQueue.onOracleReport(true, 0, 0, { from: stranger }),
         stranger,
         'ORACLE_ROLE'
       )
-      await withdrawalQueue.updateBunkerMode(true, 0, { from: bunkerReporter })
+      await withdrawalQueue.onOracleReport(true, 0, 0, { from: oracle })
     })
 
     it('state and events', async () => {
@@ -110,18 +110,18 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       assert.equals(ethers.constants.MaxUint256, await withdrawalQueue.bunkerModeSinceTimestamp())
       let timestamp = await getCurrentBlockTimestamp()
       await assert.reverts(
-        withdrawalQueue.updateBunkerMode(true, +timestamp + 1000000, { from: steth.address }),
+        withdrawalQueue.onOracleReport(true, +timestamp + 1000000, +timestamp + 1100000, { from: steth.address }),
         'InvalidReportTimestamp()'
       )
       // enable
       timestamp = await getCurrentBlockTimestamp()
-      const tx1 = await withdrawalQueue.updateBunkerMode(true, timestamp, { from: steth.address })
+      const tx1 = await withdrawalQueue.onOracleReport(true, timestamp, timestamp, { from: steth.address })
       assert.emits(tx1, 'BunkerModeEnabled', { _sinceTimestamp: timestamp })
       assert(await withdrawalQueue.isBunkerModeActive())
       assert.equals(timestamp, await withdrawalQueue.bunkerModeSinceTimestamp())
       // disable
       timestamp = await getCurrentBlockTimestamp()
-      const tx2 = await withdrawalQueue.updateBunkerMode(false, timestamp, { from: steth.address })
+      const tx2 = await withdrawalQueue.onOracleReport(false, timestamp, timestamp, { from: steth.address })
       assert.emits(tx2, 'BunkerModeDisabled')
       assert(!(await withdrawalQueue.isBunkerModeActive()))
       assert.equals(ethers.constants.MaxUint256, await withdrawalQueue.bunkerModeSinceTimestamp())

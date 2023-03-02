@@ -227,13 +227,10 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
     })
 
     it(`withdrawal queue got bunker mode report`, async () => {
-      const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__onOracleReport()
-      assert.equals(updateBunkerModeLastCall.callCount, 1)
-      assert.equals(updateBunkerModeLastCall.isBunkerMode, reportFields.isBunkerMode)
-      assert.equal(
-        +updateBunkerModeLastCall.prevReportTimestamp,
-        GENESIS_TIME + prevProcessingRefSlot * SECONDS_PER_SLOT
-      )
+      const onOracleReportLastCall = await mockWithdrawalQueue.lastCall__onOracleReport()
+      assert.equals(onOracleReportLastCall.callCount, 1)
+      assert.equals(onOracleReportLastCall.isBunkerMode, reportFields.isBunkerMode)
+      assert.equal(+onOracleReportLastCall.prevReportTimestamp, GENESIS_TIME + prevProcessingRefSlot * SECONDS_PER_SLOT)
     })
 
     it(`Staking router got the exited keys report`, async () => {
@@ -408,9 +405,9 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assert.equal(lastOracleReportCall.callCount, 2)
     })
 
-    it(`withdrawal queue got bunker mode report`, async () => {
-      const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__onOracleReport()
-      assert.equals(updateBunkerModeLastCall.callCount, 2)
+    it(`withdrawal queue got their part of report`, async () => {
+      const onOracleReportLastCall = await mockWithdrawalQueue.lastCall__onOracleReport()
+      assert.equals(onOracleReportLastCall.callCount, 2)
     })
 
     it(`Staking router got the exited keys report`, async () => {

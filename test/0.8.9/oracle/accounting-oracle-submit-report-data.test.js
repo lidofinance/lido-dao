@@ -480,7 +480,7 @@ contract('AccountingOracle', ([admin, member1]) => {
         assert.equals(lastCall.clValidators, reportFields.numValidators)
       })
 
-      it('should call updateBunkerMode on WithdrawalQueue', async () => {
+      it('should call onOracleReport on WithdrawalQueue', async () => {
         const prevProcessingRefSlot = +(await oracle.getLastProcessingRefSlot())
         await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
         const currentProcessingRefSlot = +(await oracle.getLastProcessingRefSlot())

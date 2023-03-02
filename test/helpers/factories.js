@@ -359,7 +359,6 @@ async function postSetup({
 
   await depositContract.reset()
   await depositContract.set_deposit_root(deployParams.depositRoot)
-  await withdrawalQueue.updateBunkerMode(false, 0, { from: appManager.address })
   await pool.resumeProtocolAndStaking({ from: voting.address })
 }
 
