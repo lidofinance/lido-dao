@@ -7,7 +7,7 @@ const { EvmSnapshot } = require('../helpers/blockchain')
 
 const { deployWithdrawalQueue } = require('./withdrawal-queue-deploy.test')
 
-contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
+contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user, oracle]) => {
   const evmSnapshot = new EvmSnapshot(ethers.provider)
   const snapshot = () => evmSnapshot.make()
   const rollback = () => evmSnapshot.rollback()
@@ -18,7 +18,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
 
   let rebaseCounter = 0
   const setShareRate = async (rate) => {
-    await queue.onPreRebase(rebaseCounter++)
+    await queue.onOracleReport(false, rebaseCounter, ++rebaseCounter, { from: oracle })
     await steth.setTotalPooledEther(TOTAL_SHARES.mul(toBN(rate)))
   }
 
@@ -27,6 +27,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
       stethOwner: owner,
       queueAdmin: daoAgent,
       queueFinalizer: finalizer,
+      queueOracle: oracle,
     })
 
     steth = deployed.steth
@@ -127,7 +128,6 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
     })
 
     it(`protocol receives rewards, changing share rate to 2.0`, async () => {
-      await queue.onPreRebase(e27(2))
       await setShareRate(2)
     })
 
@@ -138,7 +138,6 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
     })
 
     it(`protocol receives slashing, changing share rate to 1.0`, async () => {
-      await queue.onPreRebase(e27(1))
       await setShareRate(1)
     })
 
