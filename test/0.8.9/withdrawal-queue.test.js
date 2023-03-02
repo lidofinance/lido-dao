@@ -95,12 +95,12 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
 
     it('access control', async () => {
       assert(!(await withdrawalQueue.isBunkerModeActive()))
-      const BUNKER_MODE_REPORT_ROLE = await withdrawalQueue.BUNKER_MODE_REPORT_ROLE()
-      await withdrawalQueue.grantRole(BUNKER_MODE_REPORT_ROLE, bunkerReporter, { from: daoAgent })
+      const ORACLE_ROLE = await withdrawalQueue.ORACLE_ROLE()
+      await withdrawalQueue.grantRole(ORACLE_ROLE, bunkerReporter, { from: daoAgent })
       await assert.revertsOZAccessControl(
         withdrawalQueue.updateBunkerMode(true, 0, { from: stranger }),
         stranger,
-        'BUNKER_MODE_REPORT_ROLE'
+        'ORACLE_ROLE'
       )
       await withdrawalQueue.updateBunkerMode(true, 0, { from: bunkerReporter })
     })

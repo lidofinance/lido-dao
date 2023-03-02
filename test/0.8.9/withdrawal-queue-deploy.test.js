@@ -32,11 +32,9 @@ async function deployWithdrawalQueue({
   })
   await withdrawalQueue.grantRole(await withdrawalQueue.PAUSE_ROLE(), queuePauser || queueAdmin, { from: queueAdmin })
   await withdrawalQueue.grantRole(await withdrawalQueue.RESUME_ROLE(), queueResumer || queueAdmin, { from: queueAdmin })
-  await withdrawalQueue.grantRole(
-    await withdrawalQueue.BUNKER_MODE_REPORT_ROLE(),
-    queueBunkerReporter || steth.address,
-    { from: queueAdmin }
-  )
+  await withdrawalQueue.grantRole(await withdrawalQueue.ORACLE_ROLE(), queueBunkerReporter || steth.address, {
+    from: queueAdmin,
+  })
 
   if (doResume) {
     await withdrawalQueue.resume({ from: queueResumer || queueAdmin })
