@@ -132,12 +132,6 @@ async function hashConsensusFactory({ voting, oracle, signers, legacyOracle, dep
   await consensus.addMember(signers[3].address, 2, { from: voting.address })
   await consensus.addMember(signers[4].address, 2, { from: voting.address })
 
-  await oracle.initialize(voting.address, consensus.address, CONSENSUS_VERSION)
-
-  await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), voting.address, { from: voting.address })
-  await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), voting.address, { from: voting.address })
-  await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), voting.address, { from: voting.address })
-
   return consensus
 }
 
@@ -169,6 +163,7 @@ async function hashConsensusTimeTravellableFactory({
   await consensus.addMember(signers[2].address, 1, { from: voting.address })
   await consensus.addMember(signers[3].address, 2, { from: voting.address })
   await consensus.addMember(signers[4].address, 2, { from: voting.address })
+
   await consensus.setTime(deployParams.genesisTime + initialEpoch * SLOTS_PER_EPOCH * SECONDS_PER_SLOT)
 
   return consensus
@@ -322,7 +317,23 @@ async function oracleReportSanityCheckerFactory({ lidoLocator, voting, appManage
     deployParams.oracleReportSanityChecker.managersRoster
   )
 
-  await checker.grantRole(await checker.ALL_LIMITS_MANAGER_ROLE(), voting.address, { from: appManager.address })
+  await grantRoles({
+    by: appManager.address,
+    on: checker,
+    to: voting.address,
+    roles: [
+      'ALL_LIMITS_MANAGER_ROLE',
+      'CHURN_VALIDATORS_PER_DAY_LIMIT_MANGER_ROLE',
+      'ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE',
+      'ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE',
+      'SHARE_RATE_DEVIATION_LIMIT_MANAGER_ROLE',
+      'MAX_VALIDATOR_EXIT_REQUESTS_PER_REPORT_ROLE',
+      'MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE',
+      'MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_COUNT_ROLE',
+      'REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE',
+      'MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE',
+    ]
+  })
 
   return checker
 }
@@ -350,10 +361,16 @@ async function postSetup({
   appManager,
   voting,
   deployParams,
+  oracle,
   legacyOracle,
   consensusContract,
 }) {
   await pool.initialize(lidoLocator.address, eip712StETH.address, { value: ETH(1) })
+
+  await oracle.initialize(voting.address, consensusContract.address, CONSENSUS_VERSION)
+  await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), voting.address, { from: voting.address })
+  await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), voting.address, { from: voting.address })
+  await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), voting.address, { from: voting.address })
 
   await legacyOracle.initialize(lidoLocator.address, consensusContract.address)
 

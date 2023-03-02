@@ -115,7 +115,10 @@ contract StakingModuleMock is IStakingModule {
             bytes memory publicKeys,
             bytes memory signatures
         )
-    {}
+    {
+        publicKeys = new bytes(48 * _depositsCount);
+        signatures = new bytes(96 * _depositsCount);
+    }
 
     function setTotalExitedValidatorsCount(uint256 newExitedValidatorsCount) external {
         _exitedValidatorsCount = newExitedValidatorsCount;

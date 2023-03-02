@@ -4,6 +4,7 @@ const chai = require('chai')
 const { BN } = require('bn.js')
 const { getEvents } = require('@aragon/contract-helpers-test')
 
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000'
 
 const pad = (hex, bytesLength, fill = '0') => {
@@ -161,6 +162,7 @@ function getFirstEventArgs(receipt, eventName, abi = undefined) {
 }
 
 module.exports = {
+  ZERO_ADDRESS,
   ZERO_HASH,
   pad,
   hexConcat,
