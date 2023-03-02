@@ -9,8 +9,8 @@ const {
   ZERO_HASH,
   CONSENSUS_VERSION,
   DATA_FORMAT_LIST,
-  getReportDataItems,
-  calcReportDataHash,
+  getValidatorsExitBusReportDataItems,
+  calcValidatorsExitBusReportDataHash,
   encodeExitRequestsDataList,
   deployExitBusOracle,
 } = require('./validators-exit-bus-oracle-deploy.test')
@@ -100,8 +100,8 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         data: encodeExitRequestsDataList(exitRequests),
       }
 
-      reportItems = getReportDataItems(reportFields)
-      reportHash = calcReportDataHash(reportItems)
+      reportItems = getValidatorsExitBusReportDataItems(reportFields)
+      reportHash = calcValidatorsExitBusReportDataHash(reportItems)
 
       await triggerConsensusOnHash(reportHash)
     })
@@ -153,8 +153,8 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
 
     it(`a data not matching the consensus hash cannot be submitted`, async () => {
       const invalidReport = { ...reportFields, requestsCount: reportFields.requestsCount + 1 }
-      const invalidReportItems = getReportDataItems(invalidReport)
-      const invalidReportHash = calcReportDataHash(invalidReportItems)
+      const invalidReportItems = getValidatorsExitBusReportDataItems(invalidReport)
+      const invalidReportHash = calcValidatorsExitBusReportDataHash(invalidReportItems)
       await assert.reverts(
         oracle.submitReportData(invalidReportItems, oracleVersion, { from: member1 }),
         `UnexpectedDataHash("${reportHash}", "${invalidReportHash}")`

@@ -76,6 +76,8 @@ contract HashConsensus is AccessControlEnumerable {
     error DuplicateMember();
     error AddressCannotBeZero();
     error InitialEpochIsYetToArrive();
+    error InitialEpochAlreadyArrived();
+    error InitialEpochRefSlotCannotBeEarlierThanProcessingSlot();
     error EpochsPerFrameCannotBeZero();
     error NonMember();
     error UnexpectedConsensusVersion(uint256 expected, uint256 received);
@@ -205,7 +207,6 @@ contract HashConsensus is AccessControlEnumerable {
         uint256 secondsPerSlot,
         uint256 genesisTime,
         uint256 epochsPerFrame,
-        uint256 initialEpoch,
         uint256 fastLaneLengthSlots,
         address admin,
         address reportProcessor
@@ -216,8 +217,12 @@ contract HashConsensus is AccessControlEnumerable {
 
         if (admin == address(0)) revert AdminCannotBeZero();
         if (reportProcessor == address(0)) revert ReportProcessorCannotBeZero();
+
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
-        _setFrameConfig(initialEpoch, epochsPerFrame, fastLaneLengthSlots, FrameConfig(0, 0, 0));
+
+        uint256 farFutureEpoch = _computeEpochAtTimestamp(type(uint64).max);
+        _setFrameConfig(farFutureEpoch, epochsPerFrame, fastLaneLengthSlots, FrameConfig(0, 0, 0));
+
         _reportProcessor = reportProcessor;
     }
 
@@ -250,6 +255,35 @@ contract HashConsensus is AccessControlEnumerable {
     ) {
         ConsensusFrame memory frame = _getCurrentFrame();
         return (frame.refSlot, frame.reportProcessingDeadlineSlot);
+    }
+
+    /// @notice Returns the earliest possible reference slot.
+    ///
+    function getInitialRefSlot() external view returns (uint256) {
+        return _getInitialFrame().refSlot;
+    }
+
+    /// @notice Sets initial epoch given that the current initial epoch is in the future.
+    ///
+    /// @param initialEpoch The new initial epoch.
+    ///
+    function updateInitialEpoch(uint256 initialEpoch) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        FrameConfig memory prevConfig = _frameConfig;
+
+        if (_computeEpochAtTimestamp(_getTime()) >= prevConfig.initialEpoch) {
+            revert InitialEpochAlreadyArrived();
+        }
+
+        _setFrameConfig(
+            initialEpoch,
+            prevConfig.epochsPerFrame,
+            prevConfig.fastLaneLengthSlots,
+            prevConfig
+        );
+
+        if (_getInitialFrame().refSlot < _getLastProcessingRefSlot()) {
+            revert InitialEpochRefSlotCannotBeEarlierThanProcessingSlot();
+        }
     }
 
     function setFrameConfig(uint256 epochsPerFrame, uint256 fastLaneLengthSlots)
@@ -532,10 +566,19 @@ contract HashConsensus is AccessControlEnumerable {
         return _getFrameAtTimestamp(_getTime(), config);
     }
 
+    function _getInitialFrame() internal view returns (ConsensusFrame memory) {
+        return _getFrameAtIndex(0, _frameConfig);
+    }
+
     function _getFrameAtTimestamp(uint256 timestamp, FrameConfig memory config)
         internal view returns (ConsensusFrame memory)
     {
-        uint256 frameIndex = _computeFrameIndex(timestamp, config);
+        return _getFrameAtIndex(_computeFrameIndex(timestamp, config), config);
+    }
+
+    function _getFrameAtIndex(uint256 frameIndex, FrameConfig memory config)
+        internal view returns (ConsensusFrame memory)
+    {
         uint256 frameStartEpoch = _computeStartEpochOfFrameWithIndex(frameIndex, config);
         uint256 frameStartSlot = _computeStartSlotAtEpoch(frameStartEpoch);
         uint256 nextFrameStartSlot = frameStartSlot + config.epochsPerFrame * SLOTS_PER_EPOCH;

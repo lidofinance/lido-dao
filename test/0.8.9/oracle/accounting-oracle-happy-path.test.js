@@ -15,8 +15,8 @@ const {
   EXTRA_DATA_FORMAT_EMPTY,
   EXTRA_DATA_FORMAT_LIST,
   deployAndConfigureAccountingOracle,
-  getReportDataItems,
-  calcReportDataHash,
+  getAccountingReportDataItems,
+  calcAccountingReportDataHash,
   encodeExtraDataItems,
   packExtraDataList,
   calcExtraDataListHash,
@@ -120,16 +120,16 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
         withdrawalVaultBalance: e18(1),
         elRewardsVaultBalance: e18(2),
         sharesRequestedToBurn: e18(3),
-        lastWithdrawalRequestIdToFinalize: 1,
-        finalizationShareRate: e27(1),
+        lastFinalizableWithdrawalRequestId: 1,
+        simulatedShareRate: e27(1),
         isBunkerMode: true,
         extraDataFormat: EXTRA_DATA_FORMAT_LIST,
         extraDataHash,
         extraDataItemsCount: extraDataItems.length,
       }
 
-      reportItems = getReportDataItems(reportFields)
-      reportHash = calcReportDataHash(reportItems)
+      reportItems = getAccountingReportDataItems(reportFields)
+      reportHash = calcAccountingReportDataHash(reportItems)
 
       await triggerConsensusOnHash(reportHash)
     })
@@ -175,8 +175,8 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
 
     it(`a data not matching the consensus hash cannot be submitted`, async () => {
       const invalidReport = { ...reportFields, numValidators: reportFields.numValidators + 1 }
-      const invalidReportItems = getReportDataItems(invalidReport)
-      const invalidReportHash = calcReportDataHash(invalidReportItems)
+      const invalidReportItems = getAccountingReportDataItems(invalidReport)
+      const invalidReportHash = calcAccountingReportDataHash(invalidReportItems)
       await assert.reverts(
         oracle.submitReportData(invalidReportItems, oracleVersion, { from: member1 }),
         `UnexpectedDataHash("${reportHash}", "${invalidReportHash}")`
@@ -220,10 +220,10 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assert.equals(lastOracleReportCall.withdrawalVaultBalance, reportFields.withdrawalVaultBalance)
       assert.equals(lastOracleReportCall.elRewardsVaultBalance, reportFields.elRewardsVaultBalance)
       assert.equals(
-        lastOracleReportCall.lastWithdrawalRequestIdToFinalize,
-        reportFields.lastWithdrawalRequestIdToFinalize
+        lastOracleReportCall.lastFinalizableWithdrawalRequestId,
+        reportFields.lastFinalizableWithdrawalRequestId
       )
-      assert.equals(lastOracleReportCall.finalizationShareRate, reportFields.finalizationShareRate)
+      assert.equals(lastOracleReportCall.simulatedShareRate, reportFields.simulatedShareRate)
     })
 
     it(`withdrawal queue got bunker mode report`, async () => {
@@ -394,8 +394,8 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
         extraDataHash: ZERO_HASH,
         extraDataItemsCount: 0,
       }
-      reportItems = getReportDataItems(reportFields)
-      reportHash = calcReportDataHash(reportItems)
+      reportItems = getAccountingReportDataItems(reportFields)
+      reportHash = calcAccountingReportDataHash(reportItems)
 
       await triggerConsensusOnHash(reportHash)
 

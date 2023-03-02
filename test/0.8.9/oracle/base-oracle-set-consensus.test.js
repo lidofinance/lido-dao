@@ -9,7 +9,6 @@ const {
   SECONDS_PER_SLOT,
   GENESIS_TIME,
   EPOCHS_PER_FRAME,
-  SLOTS_PER_FRAME,
   HASH_1,
   HASH_2,
   CONSENSUS_VERSION,
@@ -52,7 +51,7 @@ contract('BaseOracle', ([admin, member, notMember]) => {
         SECONDS_PER_SLOT + 1,
         GENESIS_TIME + 1,
         EPOCHS_PER_FRAME,
-        0,
+        1,
         0,
         admin,
         { from: admin }
@@ -63,24 +62,28 @@ contract('BaseOracle', ([admin, member, notMember]) => {
       )
     })
 
-    it('reverts on consensus current frame behind current processing', async () => {
+    it('reverts on consensus initial ref slot behind currently processing', async () => {
+      const processingRefSlot = 100
+
+      await consensus.submitReportAsConsensus(HASH_1, processingRefSlot, +(await baseOracle.getTime()) + 1)
+      await baseOracle.startProcessing()
+
       const wrongConsensusContract = await MockConsensusContract.new(
         SLOTS_PER_EPOCH,
         SECONDS_PER_SLOT,
         GENESIS_TIME,
         EPOCHS_PER_FRAME,
-        0,
+        1,
         0,
         admin,
         { from: admin }
       )
-      await wrongConsensusContract.setCurrentFrame(10, 1, 2000)
-      await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, initialRefSlot + SLOTS_PER_FRAME)
-      await baseOracle.startProcessing()
+
+      await wrongConsensusContract.setInitialRefSlot(processingRefSlot - 1)
 
       await assert.revertsWithCustomError(
         baseOracle.setConsensusContract(wrongConsensusContract.address),
-        `RefSlotCannotBeLessThanProcessingOne(1, ${initialRefSlot})`
+        `InitialRefSlotCannotBeLessThanProcessingOne(${processingRefSlot - 1}, ${processingRefSlot})`
       )
     })
 
@@ -90,12 +93,12 @@ contract('BaseOracle', ([admin, member, notMember]) => {
         SECONDS_PER_SLOT,
         GENESIS_TIME,
         EPOCHS_PER_FRAME,
-        0,
+        1,
         0,
         admin,
         { from: admin }
       )
-      await newConsensusContract.setCurrentFrame(10, initialRefSlot + 1, initialRefSlot + SLOTS_PER_FRAME)
+      await newConsensusContract.setInitialRefSlot(initialRefSlot)
       const tx = await baseOracle.setConsensusContract(newConsensusContract.address)
       assert.emits(tx, 'ConsensusHashContractSet', { addr: newConsensusContract.address, prevAddr: consensus.address })
       const addressAtStorage = await baseOracle.getConsensusContract()
