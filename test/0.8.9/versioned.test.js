@@ -46,6 +46,7 @@ contract('Versioned', ([admin, proxyOwner, account2, member1, member2]) => {
     it('default version is zero', async () => {
       const version = await versionedProxied.getContractVersion()
       assert.equals(version, VERSION_ZERO)
+      await versionedProxied.checkContractVersion(VERSION_ZERO)
       await assert.reverts(
         versionedProxied.checkContractVersion(VERSION_INIT),
         `UnexpectedContractVersion(${VERSION_ZERO}, ${VERSION_INIT})`
@@ -56,6 +57,7 @@ contract('Versioned', ([admin, proxyOwner, account2, member1, member2]) => {
       const tx = await versionedProxied.initializeContractVersionTo(VERSION_INIT)
       assert.emits(tx, 'ContractVersionSet', { version: VERSION_INIT })
       assert.equals(await versionedProxied.getContractVersion(), VERSION_INIT)
+      await versionedProxied.checkContractVersion(VERSION_INIT)
       await assert.reverts(
         versionedProxied.checkContractVersion(VERSION_ZERO),
         `UnexpectedContractVersion(${VERSION_INIT}, ${VERSION_ZERO})`
@@ -71,6 +73,7 @@ contract('Versioned', ([admin, proxyOwner, account2, member1, member2]) => {
       const nextVersion = prevVersion + 1
       const tx = await versionedProxied.updateContractVersion(nextVersion)
       assert.emits(tx, 'ContractVersionSet', { version: nextVersion })
+      await versionedProxied.checkContractVersion(nextVersion)
       await assert.reverts(
         versionedProxied.checkContractVersion(prevVersion),
         `UnexpectedContractVersion(${nextVersion}, ${prevVersion})`

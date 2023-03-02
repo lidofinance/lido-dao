@@ -30,6 +30,7 @@ contract('Versioned', ([admin, proxyOwner, account2, member1, member2]) => {
     it('default version is petrified', async () => {
       const versionPetrified = await versionedImpl.getPetrifiedVersionMark()
       assert.equals(await versionedImpl.getContractVersion(), versionPetrified)
+      await versionedImpl.checkContractVersion(versionPetrified)
       await assert.reverts(versionedImpl.checkContractVersion(VERSION_ZERO), `UNEXPECTED_CONTRACT_VERSION`)
     })
   })
@@ -37,8 +38,8 @@ contract('Versioned', ([admin, proxyOwner, account2, member1, member2]) => {
   describe('behind proxy', () => {
     it('default version is zero', async () => {
       const version = await versionedProxied.getContractVersion()
-      console.log(+version)
       assert.equals(version, VERSION_ZERO)
+      await versionedProxied.checkContractVersion(VERSION_ZERO)
       await assert.reverts(versionedProxied.checkContractVersion(VERSION_INIT), `UNEXPECTED_CONTRACT_VERSION`)
     })
 
@@ -47,6 +48,7 @@ contract('Versioned', ([admin, proxyOwner, account2, member1, member2]) => {
       const nextVersion = prevVersion + 1
       const tx = await versionedProxied.setContractVersion(nextVersion)
       assert.emits(tx, 'ContractVersionSet', { version: nextVersion })
+      await versionedProxied.checkContractVersion(nextVersion)
       await assert.reverts(versionedProxied.checkContractVersion(prevVersion), `UNEXPECTED_CONTRACT_VERSION`)
       const newVersion = +(await versionedProxied.getContractVersion())
       assert.equals(newVersion, nextVersion)
