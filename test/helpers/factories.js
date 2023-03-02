@@ -116,11 +116,12 @@ async function hashConsensusFactory({ voting, oracle, signers, legacyOracle, dep
     SECONDS_PER_SLOT,
     deployParams.genesisTime,
     EPOCHS_PER_FRAME,
-    initialEpoch,
     deployParams.hashConsensus.fastLaneLengthSlots,
     voting.address,
     oracle.address
   )
+
+  await consensus.updateInitialEpoch(initialEpoch, { from: voting.address })
 
   await consensus.grantRole(await consensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(), voting.address, { from: voting.address })
   await consensus.grantRole(await consensus.DISABLE_CONSENSUS_ROLE(), voting.address, { from: voting.address })
@@ -160,6 +161,8 @@ async function hashConsensusTimeTravellableFactory({
     voting.address,
     oracle.address
   )
+
+  await consensus.updateInitialEpoch(initialEpoch, { from: voting.address })
 
   await consensus.grantRole(await consensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(), voting.address, { from: voting.address })
   await consensus.grantRole(await consensus.DISABLE_CONSENSUS_ROLE(), voting.address, { from: voting.address })

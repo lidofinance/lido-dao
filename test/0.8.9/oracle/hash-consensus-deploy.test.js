@@ -56,14 +56,16 @@ async function deployHashConsensus(
     secondsPerSlot,
     genesisTime,
     epochsPerFrame,
-    initialEpoch,
     fastLaneLengthSlots,
     admin,
     reportProcessor.address,
     { from: admin }
   )
 
-  await consensus.setTime(genesisTime + initialEpoch * slotsPerEpoch * secondsPerSlot)
+  if (initialEpoch !== null) {
+    await consensus.updateInitialEpoch(initialEpoch, { from: admin })
+    await consensus.setTime(genesisTime + initialEpoch * slotsPerEpoch * secondsPerSlot)
+  }
 
   await consensus.grantRole(await consensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(), admin, { from: admin })
   await consensus.grantRole(await consensus.DISABLE_CONSENSUS_ROLE(), admin, { from: admin })
@@ -132,7 +134,6 @@ contract('HashConsensus', ([admin, member1]) => {
           SECONDS_PER_SLOT,
           GENESIS_TIME,
           EPOCHS_PER_FRAME,
-          INITIAL_EPOCH,
           INITIAL_FAST_LANE_LENGTH_SLOTS,
           admin,
           ZERO_ADDRESS,
@@ -150,7 +151,6 @@ contract('HashConsensus', ([admin, member1]) => {
           SECONDS_PER_SLOT,
           GENESIS_TIME,
           EPOCHS_PER_FRAME,
-          INITIAL_EPOCH,
           INITIAL_FAST_LANE_LENGTH_SLOTS,
           ZERO_ADDRESS,
           reportProcessor.address,
