@@ -1,14 +1,14 @@
-const { hre, contract, ethers } = require('hardhat')
+const { artifacts, contract, ethers } = require('hardhat')
 const { ETH } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 const { getCurrentBlockTimestamp } = require('../helpers/blockchain')
 
 const mocksFilePath = 'contracts/0.8.9/test_helpers/OracleReportSanityCheckerMocks.sol'
-const LidoStub = hre.artifacts.require(`${mocksFilePath}:LidoStub`)
-const OracleReportSanityChecker = hre.artifacts.require('OracleReportSanityChecker')
-const LidoLocatorStub = hre.artifacts.require(`${mocksFilePath}:LidoLocatorStub`)
-const WithdrawalQueueStub = hre.artifacts.require(`${mocksFilePath}:WithdrawalQueueStub`)
-const BurnerStub = hre.artifacts.require(`${mocksFilePath}:BurnerStub`)
+const LidoStub = artifacts.require(`${mocksFilePath}:LidoStub`)
+const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
+const LidoLocatorStub = artifacts.require(`${mocksFilePath}:LidoLocatorStub`)
+const WithdrawalQueueStub = artifacts.require(`${mocksFilePath}:WithdrawalQueueStub`)
+const BurnerStub = artifacts.require(`${mocksFilePath}:BurnerStub`)
 
 function wei(number, units = 'wei') {
   switch (units.toLowerCase()) {

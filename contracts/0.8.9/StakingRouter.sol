@@ -874,7 +874,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint96 stakingModuleFee;
 
         for (uint256 i; i < stakingModulesCount; ) {
-            stakingModuleIds[i] = stakingModulesCache[i].stakingModuleId;
+            stakingModuleIds[rewardedStakingModulesCount] = stakingModulesCache[i].stakingModuleId;
             /// @dev skip staking modules which have no active validators
             if (stakingModulesCache[i].activeValidatorsCount > 0) {
                 stakingModuleValidatorsShare = ((stakingModulesCache[i].activeValidatorsCount * precisionPoints) / totalActiveValidators);
@@ -907,6 +907,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         if (rewardedStakingModulesCount < stakingModulesCount) {
             uint256 trim = stakingModulesCount - rewardedStakingModulesCount;
             assembly {
+                mstore(stakingModuleIds, sub(mload(stakingModuleIds), trim))
                 mstore(recipients, sub(mload(recipients), trim))
                 mstore(stakingModuleFees, sub(mload(stakingModuleFees), trim))
             }
