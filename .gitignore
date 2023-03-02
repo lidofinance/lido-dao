@@ -44,9 +44,6 @@ cli/vendor
 # OS relative
 .DS_Store
 
-# Local, debug related configs
-/deployed-mainnetfork.json
-
 # foundry artifacts
 foundry/cache
 foundry/out

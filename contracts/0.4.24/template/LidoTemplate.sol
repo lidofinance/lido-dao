@@ -341,8 +341,6 @@ contract LidoTemplate is IsContract {
             _installNonDefaultApp(state.dao, _getAppId(ORACLE_APP_NAME, state.lidoRegistryEnsNode), noInit)
         );
 
-        // state.operators.initialize(state.lido, bytes32(0x1), 2 days);
-
         // used for issuing vested tokens in the next step
         _createTokenManagerPermissionsForTemplate(state.acl, state.tokenManager);
 

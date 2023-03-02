@@ -1,7 +1,9 @@
+const { artifacts, contract, ethers, web3 } = require('hardhat')
+const { assert } = require('../helpers/assert')
+
 const crypto = require('crypto')
 const { ACCOUNTS_AND_KEYS, MAX_UINT256, ZERO_ADDRESS } = require('./helpers/constants')
 const { bn } = require('@aragon/contract-helpers-test')
-const { assert } = require('../helpers/assert')
 const { signPermit, signTransferAuthorization, makeDomainSeparator } = require('./helpers/permit_helpers')
 const { hexStringFromBuffer } = require('./helpers/sign_utils')
 const { ETH } = require('../helpers/utils')
@@ -12,14 +14,14 @@ const StETHPermit = artifacts.require('StETHPermitMock')
 
 contract('StETHPermit', ([deployer, ...accounts]) => {
   let stEthPermit, eip712StETH, chainId, domainSeparator
-  const snapshot = new EvmSnapshot(hre.ethers.provider)
+  const snapshot = new EvmSnapshot(ethers.provider)
 
   before('deploy mock token', async () => {
     stEthPermit = await StETHPermit.new({ from: deployer, value: ETH(1) })
     eip712StETH = await EIP712StETH.new(stEthPermit.address, { from: deployer })
     await stEthPermit.initializeEIP712StETH(eip712StETH.address)
 
-    chainId = await web3.eth.net.getId();
+    chainId = await web3.eth.net.getId()
 
     domainSeparator = makeDomainSeparator('Liquid staked Ether 2.0', '2', chainId, stEthPermit.address)
     await snapshot.make()
@@ -41,7 +43,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       spender: bob.address,
       value: 6e6,
       nonce: 0,
-      deadline: MAX_UINT256
+      deadline: MAX_UINT256,
     }
 
     beforeEach(async () => {
@@ -50,10 +52,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
     })
 
     it('EIP-712 signature helper reverts when zero stETH address passed', async () => {
-      await assert.revertsWithCustomError(
-        EIP712StETH.new(ZERO_ADDRESS, { from: deployer }),
-        `ZeroStETHAddress()`
-      )
+      await assert.revertsWithCustomError(EIP712StETH.new(ZERO_ADDRESS, { from: deployer }), `ZeroStETHAddress()`)
     })
 
     it('EIP-712 signature helper contract matches the stored one', async () => {
@@ -68,10 +67,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       assert.equals(chainId, await web3.eth.net.getId())
       assert.equals(verifyingContract, stEthPermit.address)
 
-      assert.equals(
-        makeDomainSeparator(name, version, chainId, verifyingContract),
-        domainSeparator
-      )
+      assert.equals(makeDomainSeparator(name, version, chainId, verifyingContract), domainSeparator)
     })
 
     it('grants allowance when a valid permit is given', async () => {
@@ -88,32 +84,22 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       // check that the next nonce expected is zero
       assert.equals(await stEthPermit.nonces(owner), bn(0))
       // check domain separator
-      assert.equals(
-        await stEthPermit.DOMAIN_SEPARATOR(),
-        domainSeparator
-      )
+      assert.equals(await stEthPermit.DOMAIN_SEPARATOR(), domainSeparator)
 
       // a third-party, Charlie (not Alice) submits the permit
-      const receipt = await stEthPermit.permit(
-        owner, spender, value, deadline, v, r, s, { from: charlie }
-      )
+      const receipt = await stEthPermit.permit(owner, spender, value, deadline, v, r, s, { from: charlie })
 
       // check that allowance is updated
       assert.equals(await stEthPermit.allowance(owner, spender), bn(value))
 
-      assert.emits(
-        receipt,
-        'Approval',
-        { owner: owner, spender: spender, value: bn(value) }
-      )
+      assert.emits(receipt, 'Approval', { owner, spender, value: bn(value) })
 
       assert.equals(await stEthPermit.nonces(owner), bn(1))
 
       // increment nonce
       nonce = 1
       value = 4e5
-
-        ; ({ v, r, s } = signPermit(owner, spender, value, nonce, deadline, domainSeparator, alice.key))
+      ;({ v, r, s } = signPermit(owner, spender, value, nonce, deadline, domainSeparator, alice.key))
 
       // submit the permit
       const receipt2 = await stEthPermit.permit(owner, spender, value, deadline, v, r, s, { from: charlie })
@@ -121,11 +107,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       // check that allowance is updated
       assert.equals(await stEthPermit.allowance(owner, spender), bn(value))
 
-      assert.emits(
-        receipt2,
-        'Approval',
-        { owner: owner, spender: spender, value: bn(value) }
-      )
+      assert.emits(receipt2, 'Approval', { owner, spender, value: bn(value) })
 
       assert.equals(await stEthPermit.nonces(owner), bn(2))
     })
@@ -176,7 +158,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       // wrong person
       await assert.reverts(
         stEthPermit.permit(owner, spender, value, deadline, v, r, s, {
-          from: charlie
+          from: charlie,
         }),
         'ERC20Permit: invalid signature'
       )
@@ -188,7 +170,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       // even Bob himself can't call permit with the invalid sig
       await assert.reverts(
         stEthPermit.permit(owner, spender, value, deadline, v, r, s, {
-          from: bob.address
+          from: bob.address,
         }),
         'ERC20Permit: invalid signature'
       )
@@ -203,7 +185,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       // try to submit the permit that is expired
       await assert.reverts(
         stEthPermit.permit(owner, spender, value, deadline, v, r, s, {
-          from: charlie
+          from: charlie,
         }),
         'ERC20Permit: expired deadline'
       )
@@ -215,11 +197,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
         const receipt = await stEthPermit.permit(owner, spender, value, deadline1min, v, r, s, { from: charlie })
 
         assert.equals(await stEthPermit.nonces(owner), bn(1))
-        assert.emits(
-          receipt,
-          'Approval',
-          { owner: owner, spender: spender, value: bn(value) }
-        )
+        assert.emits(receipt, 'Approval', { owner, spender, value: bn(value) })
       }
     })
 
@@ -234,7 +212,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       // try to submit the permit
       await assert.reverts(
         stEthPermit.permit(owner, spender, value, deadline, v, r, s, {
-          from: charlie
+          from: charlie,
         }),
         'ERC20Permit: invalid signature'
       )
@@ -251,7 +229,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       // try to submit the permit again
       await assert.reverts(
         stEthPermit.permit(owner, spender, value, deadline, v, r, s, {
-          from: charlie
+          from: charlie,
         }),
         'ERC20Permit: invalid signature'
       )
@@ -263,7 +241,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       // try to submit the permit again from Alice herself
       await assert.reverts(
         stEthPermit.permit(owner, spender, value, deadline, v, r, s, {
-          from: alice.address
+          from: alice.address,
         }),
         'ERC20Permit: invalid signature'
       )
@@ -298,7 +276,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       // try to submit the permit with invalid approval parameters
       await assert.reverts(
         stEthPermit.permit(owner, spender, value, deadline, v, r, s, {
-          from: charlie
+          from: charlie,
         }),
         'APPROVE_TO_ZERO_ADDRESS'
       )
@@ -309,12 +287,21 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       // create a signed permit for a transfer
       const validAfter = 0
       const nonce = hexStringFromBuffer(crypto.randomBytes(32))
-      const { v, r, s } = signTransferAuthorization(from, to, value, validAfter, validBefore, nonce, domainSeparator, alice.key)
+      const { v, r, s } = signTransferAuthorization(
+        from,
+        to,
+        value,
+        validAfter,
+        validBefore,
+        nonce,
+        domainSeparator,
+        alice.key
+      )
 
       // try to submit the transfer permit
       await assert.reverts(
         stEthPermit.permit(from, to, value, validBefore, v, r, s, {
-          from: charlie
+          from: charlie,
         }),
         'ERC20Permit: invalid signature'
       )

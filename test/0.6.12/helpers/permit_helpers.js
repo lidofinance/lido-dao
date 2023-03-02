@@ -1,10 +1,13 @@
+const { web3 } = require('hardhat')
 const { ecSign, strip0x } = require('./index')
 
 const transferWithAuthorizationTypeHash = web3.utils.keccak256(
   'TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)'
 )
 
-const permitTypeHash = web3.utils.keccak256('Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)')
+const permitTypeHash = web3.utils.keccak256(
+  'Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)'
+)
 
 function signTransferAuthorization(from, to, value, validAfter, validBefore, nonce, domainSeparator, privateKey) {
   return signEIP712(
@@ -45,7 +48,7 @@ function makeDomainSeparator(name, version, chainId, verifyingContract) {
         web3.utils.keccak256(name),
         web3.utils.keccak256(version),
         chainId,
-        verifyingContract
+        verifyingContract,
       ]
     )
   )
@@ -55,5 +58,5 @@ module.exports = {
   signPermit,
   permitTypeHash,
   signTransferAuthorization,
-  makeDomainSeparator
+  makeDomainSeparator,
 }

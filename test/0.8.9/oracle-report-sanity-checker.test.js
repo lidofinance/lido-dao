@@ -1,13 +1,13 @@
-const hre = require('hardhat')
+const { artifacts, contract, ethers } = require('hardhat')
 const { ETH } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 const { getCurrentBlockTimestamp } = require('../helpers/blockchain')
 
 const mocksFilePath = 'contracts/0.8.9/test_helpers/OracleReportSanityCheckerMocks.sol'
-const LidoStub = hre.artifacts.require(`${mocksFilePath}:LidoStub`)
-const OracleReportSanityChecker = hre.artifacts.require('OracleReportSanityChecker')
-const LidoLocatorStub = hre.artifacts.require(`${mocksFilePath}:LidoLocatorStub`)
-const WithdrawalQueueStub = hre.artifacts.require(`${mocksFilePath}:WithdrawalQueueStub`)
+const LidoStub = artifacts.require(`${mocksFilePath}:LidoStub`)
+const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
+const LidoLocatorStub = artifacts.require(`${mocksFilePath}:LidoLocatorStub`)
+const WithdrawalQueueStub = artifacts.require(`${mocksFilePath}:WithdrawalQueueStub`)
 
 function wei(number, units = 'wei') {
   switch (units.toLowerCase()) {
@@ -57,11 +57,14 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
 
   before(async () => {
     // mine 1024 blocks with block duration 12 seconds
-    await hre.ethers.provider.send('hardhat_mine', ['0x' + Number(1024).toString(16), '0x' + Number(12).toString(16)])
+    await ethers.provider.send('hardhat_mine', ['0x' + Number(1024).toString(16), '0x' + Number(12).toString(16)])
     lidoMock = await LidoStub.new({ from: deployer })
     withdrawalQueueMock = await WithdrawalQueueStub.new({ from: deployer })
     lidoLocatorMock = await LidoLocatorStub.new(
-      lidoMock.address, withdrawalVault, withdrawalQueueMock.address, elRewardsVault,
+      lidoMock.address,
+      withdrawalVault,
+      withdrawalQueueMock.address,
+      elRewardsVault,
       { from: deployer }
     )
 
@@ -71,7 +74,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       Object.values(defaultLimitsList),
       Object.values(managersRoster),
       {
-        from: deployer
+        from: deployer,
       }
     )
   })
@@ -93,15 +96,24 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       assert.notEquals(limitsBefore.churnValidatorsPerDayLimit, newLimitsList.churnValidatorsPerDayLimit)
       assert.notEquals(limitsBefore.oneOffCLBalanceDecreaseBPLimit, newLimitsList.oneOffCLBalanceDecreaseBPLimit)
       assert.notEquals(limitsBefore.annualBalanceIncreaseBPLimit, newLimitsList.annualBalanceIncreaseBPLimit)
-      assert.notEquals(limitsBefore.simulatedShareRateDeviationBPLimit, newLimitsList.simulatedShareRateDeviationBPLimit)
+      assert.notEquals(
+        limitsBefore.simulatedShareRateDeviationBPLimit,
+        newLimitsList.simulatedShareRateDeviationBPLimit
+      )
       assert.notEquals(limitsBefore.maxValidatorExitRequestsPerReport, newLimitsList.maxValidatorExitRequestsPerReport)
-      assert.notEquals(limitsBefore.maxAccountingExtraDataListItemsCount, newLimitsList.maxAccountingExtraDataListItemsCount)
-      assert.notEquals(limitsBefore.maxNodeOperatorsPerExtraDataItemCount, newLimitsList.maxNodeOperatorsPerExtraDataItemCount)
+      assert.notEquals(
+        limitsBefore.maxAccountingExtraDataListItemsCount,
+        newLimitsList.maxAccountingExtraDataListItemsCount
+      )
+      assert.notEquals(
+        limitsBefore.maxNodeOperatorsPerExtraDataItemCount,
+        newLimitsList.maxNodeOperatorsPerExtraDataItemCount
+      )
       assert.notEquals(limitsBefore.requestTimestampMargin, newLimitsList.requestTimestampMargin)
       assert.notEquals(limitsBefore.maxPositiveTokenRebase, newLimitsList.maxPositiveTokenRebase)
 
       await oracleReportSanityChecker.setOracleReportLimits(Object.values(newLimitsList), {
-        from: managersRoster.allLimitsManagers[0]
+        from: managersRoster.allLimitsManagers[0],
       })
 
       const limitsAfter = await oracleReportSanityChecker.getOracleReportLimits()
@@ -110,8 +122,14 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       assert.equals(limitsAfter.annualBalanceIncreaseBPLimit, newLimitsList.annualBalanceIncreaseBPLimit)
       assert.equals(limitsAfter.simulatedShareRateDeviationBPLimit, newLimitsList.simulatedShareRateDeviationBPLimit)
       assert.equals(limitsAfter.maxValidatorExitRequestsPerReport, newLimitsList.maxValidatorExitRequestsPerReport)
-      assert.equals(limitsAfter.maxAccountingExtraDataListItemsCount, newLimitsList.maxAccountingExtraDataListItemsCount)
-      assert.equals(limitsAfter.maxNodeOperatorsPerExtraDataItemCount, newLimitsList.maxNodeOperatorsPerExtraDataItemCount)
+      assert.equals(
+        limitsAfter.maxAccountingExtraDataListItemsCount,
+        newLimitsList.maxAccountingExtraDataListItemsCount
+      )
+      assert.equals(
+        limitsAfter.maxNodeOperatorsPerExtraDataItemCount,
+        newLimitsList.maxNodeOperatorsPerExtraDataItemCount
+      )
       assert.equals(limitsAfter.requestTimestampMargin, newLimitsList.requestTimestampMargin)
       assert.equals(limitsAfter.maxPositiveTokenRebase, newLimitsList.maxPositiveTokenRebase)
     })
@@ -120,12 +138,12 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
   describe('checkAccountingOracleReport()', () => {
     beforeEach(async () => {
       await oracleReportSanityChecker.setOracleReportLimits(Object.values(defaultLimitsList), {
-        from: managersRoster.allLimitsManagers[0]
+        from: managersRoster.allLimitsManagers[0],
       })
     })
 
     it('reverts with error IncorrectWithdrawalsVaultBalance() when actual withdrawal vault balance is less than passed', async () => {
-      const currentWithdrawalVaultBalance = await hre.ethers.provider.getBalance(withdrawalVault)
+      const currentWithdrawalVaultBalance = await ethers.provider.getBalance(withdrawalVault)
       await assert.revertsWithCustomError(
         oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({ ...correctLidoOracleReport, withdrawalVaultBalance: currentWithdrawalVaultBalance.add(1) })
@@ -135,7 +153,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     })
 
     it('reverts with error IncorrectELRewardsVaultBalance() when actual el rewards vault balance is less than passed', async () => {
-      const currentELRewardsVaultBalance = await hre.ethers.provider.getBalance(elRewardsVault)
+      const currentELRewardsVaultBalance = await ethers.provider.getBalance(elRewardsVault)
       await assert.revertsWithCustomError(
         oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({ ...correctLidoOracleReport, elRewardsVaultBalance: currentELRewardsVaultBalance.add(1) })
@@ -157,7 +175,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
             ...correctLidoOracleReport,
             preCLBalance: preCLBalance.toString(),
             postCLBalance: postCLBalance.toString(),
-            withdrawalVaultBalance: withdrawalVaultBalance.toString()
+            withdrawalVaultBalance: withdrawalVaultBalance.toString(),
           })
         ),
         `IncorrectCLBalanceDecrease(${oneOffCLBalanceDecreaseBP.toString()})`
@@ -176,7 +194,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
         oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({
             ...correctLidoOracleReport,
-            postCLBalance: postCLBalance.toString()
+            postCLBalance: postCLBalance.toString(),
           })
         ),
         `IncorrectCLBalanceIncrease(${annualBalanceIncrease.toString()})`
@@ -188,11 +206,13 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     })
 
     it('set maxAccountingExtraDataListItemsCount', async () => {
-      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits())
+        .maxAccountingExtraDataListItemsCount
       const newValue = 31
       assert.notEquals(newValue, previousValue)
-      await oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(newValue,
-        { from: managersRoster.maxAccountingExtraDataListItemsCountManagers[0] })
+      await oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(newValue, {
+        from: managersRoster.maxAccountingExtraDataListItemsCountManagers[0],
+      })
       assert.equals(
         (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount,
         newValue
@@ -200,17 +220,18 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     })
 
     it('set maxNodeOperatorsPerExtraDataItemCount', async () => {
-      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItemCount
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits())
+        .maxNodeOperatorsPerExtraDataItemCount
       const newValue = 33
       assert.notEquals(newValue, previousValue)
-      await oracleReportSanityChecker.setMaxNodeOperatorsPerExtraDataItemCount(newValue,
-        { from: managersRoster.maxNodeOperatorsPerExtraDataItemCountManagers[0] })
+      await oracleReportSanityChecker.setMaxNodeOperatorsPerExtraDataItemCount(newValue, {
+        from: managersRoster.maxNodeOperatorsPerExtraDataItemCountManagers[0],
+      })
       assert.equals(
         (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItemCount,
         newValue
       )
     })
-
   })
 
   describe('checkWithdrawalQueueOracleReport()', async () => {
@@ -219,7 +240,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     let oldRequestCreationTimestamp, newRequestCreationTimestamp
     const correctWithdrawalQueueOracleReport = {
       requestIdToFinalizeUpTo: oldRequestId,
-      refReportTimestamp: -1
+      refReportTimestamp: -1,
     }
 
     before(async () => {
@@ -237,7 +258,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
         oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
           ...Object.values({
             ...correctWithdrawalQueueOracleReport,
-            requestIdToFinalizeUpTo: newRequestId
+            requestIdToFinalizeUpTo: newRequestId,
           })
         ),
         `IncorrectRequestFinalization(${newRequestCreationTimestamp})`
@@ -257,18 +278,18 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       postTotalShares: ETH(4),
       etherLockedOnWithdrawalQueue: ETH(1),
       sharesBurntFromWithdrawalQueue: ETH(1),
-      simulatedShareRate: (BigInt(2) * 10n ** 27n).toString()
+      simulatedShareRate: (BigInt(2) * 10n ** 27n).toString(),
     }
 
     it('reverts with error IncorrectSimulatedShareRate() when reported and onchain share rate differs', async () => {
-      const simulatedShareRate = BigInt(ETH(2.10)) * 10n ** 9n
+      const simulatedShareRate = BigInt(ETH(2.1)) * 10n ** 9n
       const actualShareRate = BigInt(2) * 10n ** 27n
       const deviation = (100_00n * (simulatedShareRate - actualShareRate)) / actualShareRate
       await assert.revertsWithCustomError(
         oracleReportSanityChecker.checkSimulatedShareRate(
           ...Object.values({
             ...correctSimulatedShareRate,
-            simulatedShareRate: simulatedShareRate.toString()
+            simulatedShareRate: simulatedShareRate.toString(),
           })
         ),
         `IncorrectSimulatedShareRate(${deviation.toString()})`
@@ -282,7 +303,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
           ...Object.values({
             ...correctSimulatedShareRate,
             etherLockedOnWithdrawalQueue: ETH(0),
-            postTotalPooledEther: ETH(0)
+            postTotalPooledEther: ETH(0),
           })
         ),
         `IncorrectSimulatedShareRate(${deviation.toString()})`
@@ -290,9 +311,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     })
 
     it('passes all checks with correct share rate', async () => {
-      await oracleReportSanityChecker.checkSimulatedShareRate(
-        ...Object.values(correctSimulatedShareRate)
-      )
+      await oracleReportSanityChecker.checkSimulatedShareRate(...Object.values(correctSimulatedShareRate))
     })
   })
 })

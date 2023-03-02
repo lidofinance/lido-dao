@@ -16,11 +16,12 @@ async function expectRevert(promise, reason) {
   const errMsg = err.hijackedMessage || err.message
   assert.match(errMsg, /revert/i)
 
-  if (!reason) {
-  } else if (reason instanceof RegExp) {
-    assert.match(errMsg, reason)
-  } else {
-    assert.include(errMsg, reason)
+  if (reason) {
+    if (reason instanceof RegExp) {
+      assert.match(errMsg, reason)
+    } else {
+      assert.include(errMsg, reason)
+    }
   }
 }
 
@@ -47,5 +48,5 @@ module.exports = {
   hexStringFromBuffer,
   strip0x,
   ecSign,
-  bufferFromHexString
+  bufferFromHexString,
 }

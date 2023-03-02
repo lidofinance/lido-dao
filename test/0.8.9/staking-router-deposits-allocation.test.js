@@ -1,6 +1,6 @@
-const hre = require('hardhat')
-const { assert } = require('chai')
-const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
+const { artifacts, contract, ethers } = require('hardhat')
+const { assert } = require('../helpers/assert')
+
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const StakingModuleMock = artifacts.require('StakingModuleMock.sol')
 const DepositContractMock = artifacts.require('DepositContractMock.sol')
@@ -17,29 +17,30 @@ contract('StakingRouter', (accounts) => {
     ;[curatedStakingModuleMock, soloStakingModuleMock] = await Promise.all([
       StakingModuleMock.new({ from: deployer }),
       StakingModuleMock.new({ from: deployer }),
-      StakingModuleMock.new({ from: deployer })
+      StakingModuleMock.new({ from: deployer }),
     ])
 
     const wc = '0x'.padEnd(66, '1234')
     await stakingRouter.initialize(admin, lido, wc, { from: deployer })
 
     // Set up the staking router permissions.
-    const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, STAKING_MODULE_PAUSE_ROLE, STAKING_MODULE_MANAGE_ROLE] = await Promise.all([
-      stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(),
-      stakingRouter.STAKING_MODULE_PAUSE_ROLE(),
-      stakingRouter.STAKING_MODULE_MANAGE_ROLE()
-    ])
+    const [MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, STAKING_MODULE_PAUSE_ROLE, STAKING_MODULE_MANAGE_ROLE] =
+      await Promise.all([
+        stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(),
+        stakingRouter.STAKING_MODULE_PAUSE_ROLE(),
+        stakingRouter.STAKING_MODULE_MANAGE_ROLE(),
+      ])
 
     await stakingRouter.grantRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, admin, { from: admin })
     await stakingRouter.grantRole(STAKING_MODULE_PAUSE_ROLE, admin, { from: admin })
     await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, admin, { from: admin })
 
-    evmSnapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+    evmSnapshotId = await ethers.provider.send('evm_snapshot', [])
   })
 
   afterEach(async () => {
-    await hre.ethers.provider.send('evm_revert', [evmSnapshotId])
-    evmSnapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+    await ethers.provider.send('evm_revert', [evmSnapshotId])
+    evmSnapshotId = await ethers.provider.send('evm_snapshot', [])
   })
 
   describe('One staking module', () => {
@@ -57,34 +58,34 @@ contract('StakingRouter', (accounts) => {
     it('getDepositsAllocation :: staking module without keys', async () => {
       const { allocated, allocations } = await stakingRouter.getDepositsAllocation(0)
 
-      assertBn(allocated, 0)
-      assert.equal(allocations.length, 1)
-      assertBn(allocations[0], 0)
+      assert.equals(allocated, 0)
+      assert.equals(allocations.length, 1)
+      assert.equals(allocations[0], 0)
     })
 
     it('getDepositsAllocation :: staking module with zero used keys', async () => {
       await curatedStakingModuleMock.setAvailableKeysCount(500)
-      assertBn(await curatedStakingModuleMock.getAvailableValidatorsCount(), 500)
+      assert.equals(await curatedStakingModuleMock.getAvailableValidatorsCount(), 500)
 
       const { allocated, allocations } = await stakingRouter.getDepositsAllocation(1000)
 
-      assertBn(allocated, 500)
+      assert.equals(allocated, 500)
       assert.equal(allocations.length, 1)
-      assertBn(allocations[0], 500)
+      assert.equals(allocations[0], 500)
     })
 
     it('getDepositsAllocation :: staking module with non zero used keys', async () => {
       await curatedStakingModuleMock.setActiveValidatorsCount(250)
-      assertBn(await curatedStakingModuleMock.getActiveValidatorsCount(), 250)
+      assert.equals(await curatedStakingModuleMock.getActiveValidatorsCount(), 250)
 
       await curatedStakingModuleMock.setAvailableKeysCount(250)
-      assertBn(await curatedStakingModuleMock.getAvailableValidatorsCount(), 250)
+      assert.equals(await curatedStakingModuleMock.getAvailableValidatorsCount(), 250)
 
       const { allocated, allocations } = await stakingRouter.getDepositsAllocation(250)
 
-      assertBn(allocated, 250)
+      assert.equals(allocated, 250)
       assert.equal(allocations.length, 1)
-      assertBn(allocations[0], 500)
+      assert.equals(allocations[0], 500)
     })
   })
 
@@ -110,25 +111,25 @@ contract('StakingRouter', (accounts) => {
 
     it('getDepositsAllocation :: equal available keys', async () => {
       await curatedStakingModuleMock.setActiveValidatorsCount(4500)
-      assertBn(await curatedStakingModuleMock.getActiveValidatorsCount(), 4500)
+      assert.equals(await curatedStakingModuleMock.getActiveValidatorsCount(), 4500)
 
       await curatedStakingModuleMock.setAvailableKeysCount(500)
-      assertBn(await curatedStakingModuleMock.getAvailableValidatorsCount(), 500)
+      assert.equals(await curatedStakingModuleMock.getAvailableValidatorsCount(), 500)
 
       await soloStakingModuleMock.setActiveValidatorsCount(50)
-      assertBn(await soloStakingModuleMock.getActiveValidatorsCount(), 50)
+      assert.equals(await soloStakingModuleMock.getActiveValidatorsCount(), 50)
 
       await soloStakingModuleMock.setAvailableKeysCount(250)
-      assertBn(await soloStakingModuleMock.getAvailableValidatorsCount(), 250)
+      assert.equals(await soloStakingModuleMock.getAvailableValidatorsCount(), 250)
 
       const { allocated, allocations } = await stakingRouter.getDepositsAllocation(333)
 
-      assertBn(allocated, 333)
+      assert.equals(allocated, 333)
       assert.equal(allocations.length, 2)
 
-      assertBn(allocations[0], 4786)
+      assert.equals(allocations[0], 4786)
       // newTotalKeysCount: 4883 -> 0.02 * 4883 = 97
-      assertBn(allocations[1], 97)
+      assert.equals(allocations[1], 97)
     })
   })
 

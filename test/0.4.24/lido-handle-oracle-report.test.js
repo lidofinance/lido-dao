@@ -1,8 +1,9 @@
-const hre = require('hardhat')
+const { artifacts, contract, ethers } = require('hardhat')
+
 const { assert } = require('../helpers/assert')
-const { ETH, toBN, genKeys, setBalance, StETH, calcSharesMintedAsFees } = require('../helpers/utils')
+const { ETH, toBN, genKeys, StETH, calcSharesMintedAsFees } = require('../helpers/utils')
 const { deployProtocol } = require('../helpers/protocol')
-const { EvmSnapshot } = require('../helpers/blockchain')
+const { EvmSnapshot, setBalance } = require('../helpers/blockchain')
 const { ZERO_ADDRESS, INITIAL_HOLDER } = require('../helpers/constants')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 const Lido = artifacts.require('Lido')
@@ -36,7 +37,7 @@ const checkEvents = async ({
   preTotalEther,
   postTotalShares,
   postTotalEther,
-  sharesMintedAsFees
+  sharesMintedAsFees,
 }) => {
   assert.emits(
     tx,
@@ -44,10 +45,10 @@ const checkEvents = async ({
     {
       reportTimestamp: 0,
       preCLValidators,
-      postCLValidators
+      postCLValidators,
     },
     {
-      abi: Lido.abi
+      abi: Lido.abi,
     }
   )
   assert.emits(
@@ -59,10 +60,10 @@ const checkEvents = async ({
       postCLBalance,
       withdrawalsWithdrawn,
       executionLayerRewardsWithdrawn,
-      postBufferedEther
+      postBufferedEther,
     },
     {
-      abi: Lido.abi
+      abi: Lido.abi,
     }
   )
   assert.emits(
@@ -75,10 +76,10 @@ const checkEvents = async ({
       preTotalEther,
       postTotalShares,
       postTotalEther,
-      sharesMintedAsFees
+      sharesMintedAsFees,
     },
     {
-      abi: Lido.abi
+      abi: Lido.abi,
     }
   )
 }
@@ -104,17 +105,17 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
             name: 'Curated',
             targetShares: 10000,
             moduleFee: 500,
-            treasuryFee: 500
-          }
+            treasuryFee: 500,
+          },
         ]
       },
       depositSecurityModuleFactory: async (protocol) => {
         return { address: depositor }
-      }
+      },
     })
 
     await setBalance(deployed.oracle.address, ETH(1))
-    await hre.ethers.getImpersonatedSigner(deployed.oracle.address)
+    await ethers.getImpersonatedSigner(deployed.oracle.address)
 
     await curatedModule.addNodeOperator('1', operator, { from: deployed.voting.address })
     const keysAmount = 120
@@ -136,7 +137,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
 
     await checkStat({ depositedValidators: 0, beaconValidators: 0, beaconBalance: 0 })
 
-    snapshot = new EvmSnapshot(hre.ethers.provider)
+    snapshot = new EvmSnapshot(ethers.provider)
     await snapshot.make()
   })
 
@@ -170,7 +171,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     strangerBalanceDiff,
     anotherStrangerBalanceDiff,
     curatedModuleBalanceDiff,
-    initialHolderBalanceDiff
+    initialHolderBalanceDiff,
   }) => {
     assert.equals(
       await lido.getTotalPooledEther(),
@@ -234,7 +235,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
       preTotalEther: ETH(100),
       postTotalShares: ETH(100),
       postTotalEther: ETH(100),
-      sharesMintedAsFees: 0
+      sharesMintedAsFees: 0,
     })
 
     await checkStat({ depositedValidators: 0, beaconValidators: 0, beaconBalance: 0 })
@@ -244,7 +245,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
       strangerBalanceDiff: 0,
       anotherStrangerBalanceDiff: 0,
       curatedModuleBalanceDiff: 0,
-      initialHolderBalanceDiff: 0
+      initialHolderBalanceDiff: 0,
     })
   })
 
@@ -258,7 +259,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: 0,
         anotherStrangerBalanceDiff: 0,
         curatedModuleBalanceDiff: 0,
-        initialHolderBalanceDiff: 0
+        initialHolderBalanceDiff: 0,
       })
     })
 
@@ -278,7 +279,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         preTotalEther: ETH(100),
         postTotalShares: ETH(100),
         postTotalEther: ETH(100),
-        sharesMintedAsFees: 0
+        sharesMintedAsFees: 0,
       })
 
       await checkStat({ depositedValidators: 3, beaconValidators: 1, beaconBalance: ETH(32) })
@@ -288,7 +289,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: 0,
         anotherStrangerBalanceDiff: 0,
         curatedModuleBalanceDiff: 0,
-        initialHolderBalanceDiff: 0
+        initialHolderBalanceDiff: 0,
       })
     })
 
@@ -309,7 +310,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         preTotalEther: ETH(100),
         postTotalShares: toBN(ETH(100)).add(sharesMintedAsFees).toString(),
         postTotalEther: ETH(101),
-        sharesMintedAsFees: sharesMintedAsFees
+        sharesMintedAsFees,
       })
 
       await checkStat({ depositedValidators: 3, beaconValidators: 1, beaconBalance: ETH(33) })
@@ -320,7 +321,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(0.3 * 0.9),
         anotherStrangerBalanceDiff: ETH(0.69 * 0.9),
         curatedModuleBalanceDiff: ETH(0.05),
-        initialHolderBalanceDiff: ETH(0.01 * 0.9)
+        initialHolderBalanceDiff: ETH(0.01 * 0.9),
       })
     })
   })
@@ -373,7 +374,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         preTotalEther: ETH(100),
         postTotalShares: ETH(100),
         postTotalEther: ETH(100),
-        sharesMintedAsFees: 0
+        sharesMintedAsFees: 0,
       })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
       await checkBalanceDeltas({
@@ -382,7 +383,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: 0,
         anotherStrangerBalanceDiff: 0,
         curatedModuleBalanceDiff: 0,
-        initialHolderBalanceDiff: 0
+        initialHolderBalanceDiff: 0,
       })
       tx = await lido.handleOracleReport(0, 0, 3, ETH(96), 0, 0, 0, 0, { from: oracle })
       await checkEvents({
@@ -399,7 +400,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         preTotalEther: ETH(100),
         postTotalShares: ETH(100),
         postTotalEther: ETH(100),
-        sharesMintedAsFees: 0
+        sharesMintedAsFees: 0,
       })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
       await checkBalanceDeltas({
@@ -408,16 +409,13 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: 0,
         anotherStrangerBalanceDiff: 0,
         curatedModuleBalanceDiff: 0,
-        initialHolderBalanceDiff: 0
+        initialHolderBalanceDiff: 0,
       })
     })
 
     it('does not revert on new total balance decrease under the limit', async () => {
       // set oneOffCLBalanceDecreaseBPLimit = 1%
-      await oracleReportSanityChecker.setOracleReportLimits(
-        ORACLE_REPORT_LIMITS_BOILERPLATE,
-        { from: voting }
-      )
+      await oracleReportSanityChecker.setOracleReportLimits(ORACLE_REPORT_LIMITS_BOILERPLATE, { from: voting })
 
       let tx = await lido.handleOracleReport(0, 0, 3, ETH(96), 0, 0, 0, 0, { from: oracle })
       await checkEvents({
@@ -434,7 +432,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         preTotalEther: ETH(100),
         postTotalShares: ETH(100),
         postTotalEther: ETH(100),
-        sharesMintedAsFees: 0
+        sharesMintedAsFees: 0,
       })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
       await checkBalanceDeltas({
@@ -443,7 +441,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: 0,
         anotherStrangerBalanceDiff: 0,
         curatedModuleBalanceDiff: 0,
-        initialHolderBalanceDiff: 0
+        initialHolderBalanceDiff: 0,
       })
       tx = await lido.handleOracleReport(0, 0, 3, ETH(95.04), 0, 0, 0, 0, { from: oracle })
       await checkEvents({
@@ -460,7 +458,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         preTotalEther: ETH(100),
         postTotalShares: ETH(100),
         postTotalEther: ETH(99.04),
-        sharesMintedAsFees: 0
+        sharesMintedAsFees: 0,
       })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(95.04) })
 
@@ -470,16 +468,13 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(-30 * 0.0096),
         anotherStrangerBalanceDiff: toBN(ETH(0.0096)).mul(toBN(-69)).toString(),
         curatedModuleBalanceDiff: ETH(0),
-        initialHolderBalanceDiff: ETH(-1 * 0.0096)
+        initialHolderBalanceDiff: ETH(-1 * 0.0096),
       })
     })
 
     it('reverts on new total balance decrease over the limit', async () => {
       // set oneOffCLBalanceDecreaseBPLimit = 1%
-      await oracleReportSanityChecker.setOracleReportLimits(
-        ORACLE_REPORT_LIMITS_BOILERPLATE,
-        { from: voting }
-      )
+      await oracleReportSanityChecker.setOracleReportLimits(ORACLE_REPORT_LIMITS_BOILERPLATE, { from: voting })
 
       await lido.handleOracleReport(0, 0, 3, ETH(96), 0, 0, 0, 0, { from: oracle })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
@@ -489,7 +484,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: 0,
         anotherStrangerBalanceDiff: 0,
         curatedModuleBalanceDiff: 0,
-        initialHolderBalanceDiff: 0
+        initialHolderBalanceDiff: 0,
       })
       await assert.reverts(
         lido.handleOracleReport(0, 0, 3, ETH(95.03), 0, 0, 0, 0, { from: oracle }),
@@ -499,7 +494,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
 
     it('does not revert on new total balance increase under the limit', async () => {
       // set annualBalanceIncreaseBPLimit = 1%
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           annualBalanceIncreaseBPLimit: 100,
         },
@@ -514,7 +510,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: 0,
         anotherStrangerBalanceDiff: 0,
         curatedModuleBalanceDiff: 0,
-        initialHolderBalanceDiff: 0
+        initialHolderBalanceDiff: 0,
       })
       const tx = await lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96.96), 0, 0, 0, 0, { from: oracle })
       const sharesMintedAsFees = calcSharesMintedAsFees(ETH(0.96), 10, 100, ETH(100), ETH(100.96))
@@ -532,7 +528,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         preTotalEther: ETH(100),
         postTotalShares: toBN(ETH(100)).add(sharesMintedAsFees).toString(),
         postTotalEther: ETH(100.96),
-        sharesMintedAsFees: sharesMintedAsFees.toString()
+        sharesMintedAsFees: sharesMintedAsFees.toString(),
       })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96.96) })
 
@@ -542,13 +538,14 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(30 * 0.0096 * 0.9),
         anotherStrangerBalanceDiff: ETH(69 * 0.0096 * 0.9),
         curatedModuleBalanceDiff: ETH(0.96 * 0.05),
-        initialHolderBalanceDiff: ETH(0.96 * 0.01 * 0.9)
+        initialHolderBalanceDiff: ETH(0.96 * 0.01 * 0.9),
       })
     })
 
     it('reverts on new total balance increase over the limit', async () => {
       // set annualBalanceIncreaseBPLimit = 1%
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           annualBalanceIncreaseBPLimit: 100,
         },
@@ -563,7 +560,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: 0,
         anotherStrangerBalanceDiff: 0,
         curatedModuleBalanceDiff: 0,
-        initialHolderBalanceDiff: 0
+        initialHolderBalanceDiff: 0,
       })
       await assert.reverts(
         lido.handleOracleReport(0, ONE_YEAR, 3, ETH(96.97), 0, 0, 0, 0, { from: oracle }),
@@ -574,7 +571,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('does not revert on validators reported under limit', async () => {
       await lido.submit(ZERO_ADDRESS, { from: stranger, value: ETH(3100), gasPrice: 1 })
       await lido.deposit(100, 1, '0x', { from: depositor })
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
           annualBalanceIncreaseBPLimit: 100,
@@ -589,7 +587,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('reverts on validators reported when over limit', async () => {
       await lido.submit(ZERO_ADDRESS, { from: stranger, value: ETH(3200), gasPrice: 1 })
       await lido.deposit(101, 1, '0x', { from: depositor })
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
           annualBalanceIncreaseBPLimit: 100,
@@ -613,12 +612,13 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: 0,
         anotherStrangerBalanceDiff: 0,
         curatedModuleBalanceDiff: 0,
-        initialHolderBalanceDiff: 0
+        initialHolderBalanceDiff: 0,
       })
     })
 
     it('does not smooth if report in limits', async () => {
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
         },
@@ -629,7 +629,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     })
 
     it('does not smooth if cl balance report over limit', async () => {
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
         },
@@ -643,14 +644,15 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(4 * 0.3 * 0.9),
         anotherStrangerBalanceDiff: ETH(4 * 0.69 * 0.9),
         curatedModuleBalanceDiff: ETH(4 * 0.05),
-        initialHolderBalanceDiff: ETH(0.036)
+        initialHolderBalanceDiff: ETH(0.036),
       })
     })
 
     it('does not smooth withdrawals if report in limits', async () => {
       await setBalance(withdrawalVault, ETH(1))
 
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
           annualBalanceIncreaseBPLimit: 100,
@@ -665,7 +667,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(0.3 * 0.9),
         anotherStrangerBalanceDiff: ETH(0.69 * 0.9),
         curatedModuleBalanceDiff: ETH(0.05),
-        initialHolderBalanceDiff: ETH(0.01 * 0.9)
+        initialHolderBalanceDiff: ETH(0.01 * 0.9),
       })
       assert.equals(await ethers.provider.getBalance(withdrawalVault), 0)
     })
@@ -673,7 +675,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('smooths withdrawals if report out of limit', async () => {
       await setBalance(withdrawalVault, ETH(1.1))
 
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
@@ -688,7 +691,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(0.3 * 0.9),
         anotherStrangerBalanceDiff: ETH(0.69 * 0.9),
         curatedModuleBalanceDiff: ETH(0.05),
-        initialHolderBalanceDiff: ETH(0.01 * 0.9)
+        initialHolderBalanceDiff: ETH(0.01 * 0.9),
       })
 
       assert.equals(await ethers.provider.getBalance(withdrawalVault), ETH(0.1))
@@ -697,7 +700,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('does not smooth el rewards if report in limit without lido fee', async () => {
       await setBalance(elRewardsVault, ETH(1))
 
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
@@ -713,7 +717,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(0.3),
         anotherStrangerBalanceDiff: ETH(0.69),
         curatedModuleBalanceDiff: 0,
-        initialHolderBalanceDiff: ETH(0.01)
+        initialHolderBalanceDiff: ETH(0.01),
       })
 
       assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0))
@@ -722,7 +726,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('does not smooth el rewards if report in limit without lido fee 2', async () => {
       await setBalance(elRewardsVault, ETH(1.5))
 
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
@@ -737,7 +742,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(0.3),
         anotherStrangerBalanceDiff: ETH(0.69),
         curatedModuleBalanceDiff: 0,
-        initialHolderBalanceDiff: ETH(0.01)
+        initialHolderBalanceDiff: ETH(0.01),
       })
 
       assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0))
@@ -746,7 +751,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('smooths el rewards if report out of limit without lido fee', async () => {
       await setBalance(elRewardsVault, ETH(1.1))
 
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
@@ -761,7 +767,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(0.3),
         anotherStrangerBalanceDiff: ETH(0.69),
         curatedModuleBalanceDiff: 0,
-        initialHolderBalanceDiff: ETH(0.01)
+        initialHolderBalanceDiff: ETH(0.01),
       })
 
       assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0.1))
@@ -770,7 +776,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('does not smooth el rewards if report in limit', async () => {
       await setBalance(elRewardsVault, ETH(1))
 
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
         },
@@ -785,7 +792,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(0.3 * 0.9),
         anotherStrangerBalanceDiff: ETH(0.69 * 0.9),
         curatedModuleBalanceDiff: ETH(0.05),
-        initialHolderBalanceDiff: ETH(0.01 * 0.9)
+        initialHolderBalanceDiff: ETH(0.01 * 0.9),
       })
 
       assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0.1))
@@ -794,7 +801,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('smooths el rewards if report out of limit', async () => {
       await setBalance(elRewardsVault, ETH(1.1))
 
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
@@ -809,7 +817,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(0.3 * 0.9),
         anotherStrangerBalanceDiff: ETH(0.69 * 0.9),
         curatedModuleBalanceDiff: ETH(0.05),
-        initialHolderBalanceDiff: ETH(0.01 * 0.9)
+        initialHolderBalanceDiff: ETH(0.01 * 0.9),
       })
 
       assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0.2))
@@ -825,13 +833,14 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: 0,
         anotherStrangerBalanceDiff: 0,
         curatedModuleBalanceDiff: 0,
-        initialHolderBalanceDiff: 0
+        initialHolderBalanceDiff: 0,
       })
     })
     it('smooths el rewards if report out of limit', async () => {
       await setBalance(elRewardsVault, ETH(1.1))
 
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
@@ -846,13 +855,14 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(0.3 * 0.9),
         anotherStrangerBalanceDiff: ETH(0.69 * 0.9),
         curatedModuleBalanceDiff: ETH(0.05),
-        initialHolderBalanceDiff: ETH(0.01 * 0.9)
+        initialHolderBalanceDiff: ETH(0.01 * 0.9),
       })
 
       assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0.2))
     })
     it('does not smooth if report in limits', async () => {
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
         },
@@ -864,7 +874,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
 
     it('does not smooth if cl balance report over limit', async () => {
       const clIncrease = 0.0028
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
         },
@@ -882,14 +893,15 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(0.0028 * 0.9 * 0.3),
         anotherStrangerBalanceDiff: ETH(0.0028 * 0.9 * 0.69),
         curatedModuleBalanceDiff: ETH(0.00014),
-        initialHolderBalanceDiff: ETH(0.0028 * 0.01 * 0.9)
+        initialHolderBalanceDiff: ETH(0.0028 * 0.01 * 0.9),
       })
     })
 
     it('does not smooth withdrawals if report in limits', async () => {
       await setBalance(withdrawalVault, ETH(1))
 
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
           annualBalanceIncreaseBPLimit: 100,
@@ -904,7 +916,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(0.3 * 0.9),
         anotherStrangerBalanceDiff: ETH(0.69 * 0.9),
         curatedModuleBalanceDiff: ETH(0.05),
-        initialHolderBalanceDiff: ETH(0.01 * 0.9)
+        initialHolderBalanceDiff: ETH(0.01 * 0.9),
       })
       assert.equals(await ethers.provider.getBalance(withdrawalVault), 0)
     })
@@ -912,7 +924,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('smooths withdrawals if report out of limit', async () => {
       await setBalance(withdrawalVault, ETH(1.1))
 
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
@@ -927,7 +940,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(0.3 * 0.9),
         anotherStrangerBalanceDiff: ETH(0.69 * 0.9),
         curatedModuleBalanceDiff: ETH(0.05),
-        initialHolderBalanceDiff: ETH(0.01 * 0.9)
+        initialHolderBalanceDiff: ETH(0.01 * 0.9),
       })
 
       assert.equals(await ethers.provider.getBalance(withdrawalVault), ETH(0.1))
@@ -936,7 +949,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('does not smooth el rewards if report in limit without lido fee', async () => {
       await setBalance(elRewardsVault, ETH(1))
 
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
@@ -952,7 +966,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(0.3),
         anotherStrangerBalanceDiff: ETH(0.69),
         curatedModuleBalanceDiff: 0,
-        initialHolderBalanceDiff: ETH(0.01)
+        initialHolderBalanceDiff: ETH(0.01),
       })
 
       assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0))
@@ -961,7 +975,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('does not smooth el rewards if report in limit without lido fee 2', async () => {
       await setBalance(elRewardsVault, ETH(1.5))
 
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
@@ -976,7 +991,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(0.3),
         anotherStrangerBalanceDiff: ETH(0.69),
         curatedModuleBalanceDiff: 0,
-        initialHolderBalanceDiff: ETH(0.01)
+        initialHolderBalanceDiff: ETH(0.01),
       })
 
       assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0))
@@ -985,7 +1000,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('smooths el rewards if report out of limit without lido fee', async () => {
       await setBalance(elRewardsVault, ETH(1.1))
 
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
@@ -1000,7 +1016,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(0.3),
         anotherStrangerBalanceDiff: ETH(0.69),
         curatedModuleBalanceDiff: 0,
-        initialHolderBalanceDiff: ETH(0.01)
+        initialHolderBalanceDiff: ETH(0.01),
       })
 
       assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0.1))
@@ -1009,7 +1025,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
     it('does not smooth el rewards if report in limit', async () => {
       await setBalance(elRewardsVault, ETH(1))
 
-      await oracleReportSanityChecker.setOracleReportLimits({
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
           churnValidatorsPerDayLimit: 100,
         },
@@ -1024,7 +1041,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , , stranger, another
         strangerBalanceDiff: ETH(0.3 * 0.9),
         anotherStrangerBalanceDiff: ETH(0.69 * 0.9),
         curatedModuleBalanceDiff: ETH(0.05),
-        initialHolderBalanceDiff: ETH(0.01 * 0.9)
+        initialHolderBalanceDiff: ETH(0.01 * 0.9),
       })
 
       assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0.1))

@@ -1,5 +1,7 @@
+const { artifacts } = require('hardhat')
 const { hash } = require('eth-ens-namehash')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
+
 const Kernel = artifacts.require('@aragon/os/build/contracts/kernel/Kernel')
 const ACL = artifacts.require('@aragon/os/build/contracts/acl/ACL')
 const EVMScriptRegistryFactory = artifacts.require('@aragon/os/build/contracts/factory/EVMScriptRegistryFactory')
@@ -62,7 +64,7 @@ class AragonDAO {
     const initPayload = config.initPayload || '0x'
 
     const receipt = await this.kernel.newAppInstance(hash(`${name}.aragonpm.test`), base.address, initPayload, false, {
-      from: this.appManager
+      from: this.appManager,
     })
     const logs = receipt.logs
     const log = logs.find((l) => l.event === 'NewAppProxy')
@@ -82,7 +84,7 @@ class AragonDAO {
   async createPermission(entityAddress, app, permissionName) {
     const permission = await app[permissionName]()
     return await this.acl.createPermission(entityAddress, app.address, permission, this.appManager, {
-      from: this.appManager
+      from: this.appManager,
     })
   }
 
@@ -136,5 +138,5 @@ const newApp = async (dao, appName, baseAppAddress, rootAccount) => {
 module.exports = {
   AragonDAO,
   newDao,
-  newApp
+  newApp,
 }
