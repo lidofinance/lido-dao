@@ -5,13 +5,13 @@ const { EvmSnapshot } = require('../../helpers/blockchain')
 const baseOracleAbi = require('../../../lib/abi/BaseOracle.json')
 
 const {
-  SLOTS_PER_FRAME,
   ZERO_HASH,
   HASH_1,
   HASH_2,
   HASH_3,
   deployBaseOracle,
-  computeTimestampAtSlot,
+  computeDeadlineFromRefSlot,
+  computeNextRefSlotFromRefSlot,
   computeEpochFirstSlotAt,
   SECONDS_PER_SLOT,
 } = require('./base-oracle-deploy.test')
@@ -31,9 +31,6 @@ contract('BaseOracle', ([admin]) => {
     await evmSnapshot.make()
   }
 
-  const getDeadlineFromRefSlot = (slot) => computeTimestampAtSlot(+slot + SLOTS_PER_FRAME)
-  const getNextRefSlot = (slot) => +slot + SLOTS_PER_FRAME
-
   before(deployContract)
 
   describe('submitConsensusReport is called and changes the contract state', () => {
@@ -44,7 +41,7 @@ contract('BaseOracle', ([admin]) => {
 
       it('only setConsensus contract can call submitConsensusReport', async () => {
         await assert.revertsWithCustomError(
-          baseOracle.submitConsensusReport(HASH_1, initialRefSlot, getDeadlineFromRefSlot(initialRefSlot)),
+          baseOracle.submitConsensusReport(HASH_1, initialRefSlot, computeDeadlineFromRefSlot(initialRefSlot)),
           'OnlyConsensusContractCanSubmitReport()'
         )
       })
@@ -54,7 +51,7 @@ contract('BaseOracle', ([admin]) => {
         const tx = await consensus.submitReportAsConsensus(
           HASH_1,
           initialRefSlot,
-          getDeadlineFromRefSlot(initialRefSlot)
+          computeDeadlineFromRefSlot(initialRefSlot)
         )
         assert.emits(
           tx,
@@ -62,7 +59,7 @@ contract('BaseOracle', ([admin]) => {
           {
             refSlot: initialRefSlot,
             hash: HASH_1,
-            processingDeadlineTime: getDeadlineFromRefSlot(initialRefSlot),
+            processingDeadlineTime: computeDeadlineFromRefSlot(initialRefSlot),
           },
           { abi: baseOracleAbi }
         )
@@ -70,12 +67,12 @@ contract('BaseOracle', ([admin]) => {
         assert.equals(callCount, 1)
         assert.equal(report.hash, HASH_1)
         assert.equals(report.refSlot, initialRefSlot)
-        assert.equals(report.processingDeadlineTime, getDeadlineFromRefSlot(initialRefSlot))
+        assert.equals(report.processingDeadlineTime, computeDeadlineFromRefSlot(initialRefSlot))
       })
 
       it('older report cannot be submitted', async () => {
         await assert.revertsWithCustomError(
-          consensus.submitReportAsConsensus(HASH_1, initialRefSlot - 1, getDeadlineFromRefSlot(initialRefSlot)),
+          consensus.submitReportAsConsensus(HASH_1, initialRefSlot - 1, computeDeadlineFromRefSlot(initialRefSlot)),
           `RefSlotCannotDecrease(${initialRefSlot - 1}, ${initialRefSlot})`
         )
       })
@@ -86,20 +83,20 @@ contract('BaseOracle', ([admin]) => {
 
       it('consensus cannot resubmit already processing report', async () => {
         await assert.revertsWithCustomError(
-          consensus.submitReportAsConsensus(HASH_1, initialRefSlot, getDeadlineFromRefSlot(initialRefSlot)),
+          consensus.submitReportAsConsensus(HASH_1, initialRefSlot, computeDeadlineFromRefSlot(initialRefSlot)),
           `RefSlotMustBeGreaterThanProcessingOne(${initialRefSlot}, ${initialRefSlot})`
         )
       })
 
       it('warning event is emitted when newer report is submitted and prev has not started processing yet', async () => {
-        const RefSlot2 = getNextRefSlot(initialRefSlot)
-        const RefSlot3 = getNextRefSlot(RefSlot2)
+        const RefSlot2 = computeNextRefSlotFromRefSlot(initialRefSlot)
+        const RefSlot3 = computeNextRefSlotFromRefSlot(RefSlot2)
 
-        const tx1 = await consensus.submitReportAsConsensus(HASH_1, RefSlot2, getDeadlineFromRefSlot(RefSlot2))
+        const tx1 = await consensus.submitReportAsConsensus(HASH_1, RefSlot2, computeDeadlineFromRefSlot(RefSlot2))
         assert.equals((await baseOracle.getConsensusReportLastCall()).callCount, 2)
         assert.emits(tx1, 'ReportSubmitted', {}, { abi: baseOracleAbi })
 
-        const tx2 = await consensus.submitReportAsConsensus(HASH_1, RefSlot3, getDeadlineFromRefSlot(RefSlot3))
+        const tx2 = await consensus.submitReportAsConsensus(HASH_1, RefSlot3, computeDeadlineFromRefSlot(RefSlot3))
         assert.emits(
           tx2,
           'WarnProcessingMissed',
@@ -116,8 +113,8 @@ contract('BaseOracle', ([admin]) => {
     context('submitConsensusReport updates getConsensusReport', () => {
       let nextRefSlot, nextRefSlotDeadline
       before(async () => {
-        nextRefSlot = getNextRefSlot(initialRefSlot)
-        nextRefSlotDeadline = getDeadlineFromRefSlot(nextRefSlot)
+        nextRefSlot = computeNextRefSlotFromRefSlot(initialRefSlot)
+        nextRefSlotDeadline = computeDeadlineFromRefSlot(nextRefSlot)
         await evmSnapshot.rollback()
       })
 
@@ -130,11 +127,11 @@ contract('BaseOracle', ([admin]) => {
       })
 
       it('initial report is submitted', async () => {
-        await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, getDeadlineFromRefSlot(initialRefSlot))
+        await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, computeDeadlineFromRefSlot(initialRefSlot))
         const report = await baseOracle.getConsensusReport()
         assert.equal(report.hash, HASH_1)
         assert.equals(report.refSlot, initialRefSlot)
-        assert.equals(report.processingDeadlineTime, getDeadlineFromRefSlot(initialRefSlot))
+        assert.equals(report.processingDeadlineTime, computeDeadlineFromRefSlot(initialRefSlot))
         assert(!report.processingStarted)
       })
 
@@ -183,11 +180,11 @@ contract('BaseOracle', ([admin]) => {
     let refSlot1Deadline, refSlot2Deadline
     before(async () => {
       await evmSnapshot.rollback()
-      refSlot1 = getNextRefSlot(initialRefSlot)
-      refSlot1Deadline = getDeadlineFromRefSlot(refSlot1)
+      refSlot1 = computeNextRefSlotFromRefSlot(initialRefSlot)
+      refSlot1Deadline = computeDeadlineFromRefSlot(refSlot1)
 
-      refSlot2 = getNextRefSlot(refSlot1)
-      refSlot2Deadline = getDeadlineFromRefSlot(refSlot2)
+      refSlot2 = computeNextRefSlotFromRefSlot(refSlot1)
+      refSlot2Deadline = computeDeadlineFromRefSlot(refSlot2)
     })
 
     it('initial contract state, no reports, cannot startProcessing', async () => {
@@ -195,7 +192,7 @@ contract('BaseOracle', ([admin]) => {
     })
 
     it('submit first report for initial slot', async () => {
-      await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, getDeadlineFromRefSlot(initialRefSlot))
+      await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, computeDeadlineFromRefSlot(initialRefSlot))
       const tx = await baseOracle.startProcessing()
       assert.emits(tx, 'ProcessingStarted', { refSlot: initialRefSlot, hash: HASH_1 })
       assert.emits(tx, 'MockStartProcessingResult', { prevProcessingRefSlot: '0' })
