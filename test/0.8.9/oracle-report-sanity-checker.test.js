@@ -251,10 +251,10 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       const currentBlockTimestamp = await getCurrentBlockTimestamp()
       correctWithdrawalQueueOracleReport.refReportTimestamp = currentBlockTimestamp
       oldRequestCreationTimestamp = currentBlockTimestamp - defaultLimitsList.requestTimestampMargin
-      correctWithdrawalQueueOracleReport.requestIdToFinalizeUpTo = oldRequestCreationTimestamp
-      await withdrawalQueueMock.setRequestBlockNumber(oldRequestId, oldRequestCreationTimestamp)
+      correctWithdrawalQueueOracleReport.lastFinalizableRequestId = oldRequestCreationTimestamp
+      await withdrawalQueueMock.setRequestTimestamp(oldRequestId, oldRequestCreationTimestamp)
       newRequestCreationTimestamp = currentBlockTimestamp - Math.floor(defaultLimitsList.requestTimestampMargin / 2)
-      await withdrawalQueueMock.setRequestBlockNumber(newRequestId, newRequestCreationTimestamp)
+      await withdrawalQueueMock.setRequestTimestamp(newRequestId, newRequestCreationTimestamp)
     })
 
     it('reverts with the error IncorrectRequestFinalization() when the creation timestamp of requestIdToFinalizeUpTo is too close to report timestamp', async () => {
