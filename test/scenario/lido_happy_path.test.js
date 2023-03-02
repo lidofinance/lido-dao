@@ -94,6 +94,8 @@ contract('Lido: happy path', (addresses) => {
     assert.equals(await pool.getFee({ from: nobody }), totalFeePoints, 'total fee')
     const distribution = await pool.getFeeDistribution({ from: nobody })
     console.log('distribution', distribution)
+    const treasuryFeePoints = 0 // TODO
+    const nodeOperatorsFeePoints = 0 // TODO
     assert.equals(distribution.treasuryFeeBasisPoints, treasuryFeePoints, 'treasury fee')
     assert.equals(distribution.operatorsFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
   })

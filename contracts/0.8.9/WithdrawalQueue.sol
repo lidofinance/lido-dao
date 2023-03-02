@@ -165,7 +165,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @notice Returns array of claimable eth amounts that is locked for each request
     /// @param _requestIds array of request ids to find claimable ether for
     /// @param _hints checkpoint hint for each id.
-    ///   Can be retrieved with `findCheckpointHints()` or `findCheckpointHintsUnbounded()`
+    ///   Can be retrieved with `findCheckpointHints()`
     function getClaimableEther(uint256[] calldata _requestIds, uint256[] calldata _hints)
         external
         view
@@ -180,7 +180,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @notice Claim a batch of withdrawal requests once finalized (claimable) sending ether to `_recipient`
     /// @param _requestIds array of request ids to claim
     /// @param _hints checkpoint hint for each id.
-    ///   Can be retrieved with `findCheckpointHints()` or `findCheckpointHintsUnbounded()`
+    ///   Can be retrieved with `findCheckpointHints()`
     /// @param _recipient address where claimed ether will be sent to
     /// @dev
     ///  Reverts if recipient is equal to zero
@@ -201,7 +201,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @notice Claim a batch of withdrawal requests once finalized (claimable) sending locked ether to the owner
     /// @param _requestIds array of request ids to claim
     /// @param _hints checkpoint hint for each id.
-    ///   Can be retrieved with `findCheckpointHints()` or `findCheckpointHintsUnbounded()`
+    ///   Can be retrieved with `findCheckpointHints()`
     /// @dev
     ///  Reverts if any requestId or hint in arguments are not valid
     ///  Reverts if any request is not finalized or already claimed

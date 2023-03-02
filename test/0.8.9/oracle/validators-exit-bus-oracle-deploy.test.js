@@ -1,4 +1,4 @@
-const { contract, artifacts, web3 } = require('hardhat')
+const { contract, artifacts } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 const { hex, strip0x } = require('../../helpers/utils')
 const { ZERO_ADDRESS } = require('../../helpers/constants')
@@ -23,17 +23,11 @@ const {
   deployHashConsensus,
 } = require('./hash-consensus-deploy.test')
 
+const { calcValidatorsExitBusReportDataHash, getValidatorsExitBusReportDataItems } = require('../../helpers/reportData')
+
 const ValidatorsExitBusOracle = artifacts.require('ValidatorsExitBusTimeTravellable')
 
 const DATA_FORMAT_LIST = 1
-function getReportDataItems(r) {
-  return [r.consensusVersion, r.refSlot, r.requestsCount, r.dataFormat, r.data]
-}
-
-function calcReportDataHash(reportItems) {
-  const data = web3.eth.abi.encodeParameters(['(uint256,uint256,uint256,uint256,bytes)'], [reportItems])
-  return web3.utils.keccak256(data)
-}
 
 function encodeExitRequestHex({ moduleId, nodeOpId, valIndex, valPubkey }) {
   const pubkeyHex = strip0x(valPubkey)
@@ -72,8 +66,8 @@ module.exports = {
   ZERO_HASH,
   CONSENSUS_VERSION,
   DATA_FORMAT_LIST,
-  getReportDataItems,
-  calcReportDataHash,
+  getValidatorsExitBusReportDataItems,
+  calcValidatorsExitBusReportDataHash,
   encodeExitRequestHex,
   encodeExitRequestsDataList,
   deployExitBusOracle,
@@ -100,13 +94,7 @@ async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
 
 async function deployExitBusOracle(
   admin,
-  {
-    dataSubmitter = null,
-    lastProcessingRefSlot = 0,
-    resumeAfterDeploy = false,
-    pauser = ZERO_ADDRESS,
-    resumer = ZERO_ADDRESS,
-  } = {}
+  { dataSubmitter = null, lastProcessingRefSlot = 0, resumeAfterDeploy = false } = {}
 ) {
   const locator = (await deployLocatorWithDummyAddressesImplementation(admin)).address
 
@@ -123,15 +111,9 @@ async function deployExitBusOracle(
     oracleReportSanityChecker: oracleReportSanityChecker.address,
   })
 
-  const initTx = await oracle.initialize(
-    admin,
-    pauser,
-    resumer,
-    consensus.address,
-    CONSENSUS_VERSION,
-    lastProcessingRefSlot,
-    { from: admin }
-  )
+  const initTx = await oracle.initialize(admin, consensus.address, CONSENSUS_VERSION, lastProcessingRefSlot, {
+    from: admin,
+  })
 
   assert.emits(initTx, 'ContractVersionSet', { version: 1 })
 

@@ -1,6 +1,7 @@
-const { contract, artifacts, web3 } = require('hardhat')
+const { contract, artifacts, web3, ethers } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 const { ZERO_ADDRESS } = require('../../helpers/constants')
+const { EvmSnapshot } = require('../../helpers/blockchain')
 
 const MockConsensusContract = artifacts.require('MockConsensusContract')
 
@@ -9,14 +10,16 @@ const {
   SECONDS_PER_SLOT,
   GENESIS_TIME,
   EPOCHS_PER_FRAME,
-  SLOTS_PER_FRAME,
   HASH_1,
   HASH_2,
   CONSENSUS_VERSION,
+  computeEpochFirstSlotAt,
+  computeDeadlineFromRefSlot,
   deployBaseOracle,
 } = require('./base-oracle-deploy.test')
 
 contract('BaseOracle', ([admin, member, notMember]) => {
+  const evmSnapshot = new EvmSnapshot(ethers.provider)
   let consensus
   let baseOracle
   let initialRefSlot
@@ -27,11 +30,16 @@ contract('BaseOracle', ([admin, member, notMember]) => {
     baseOracle = deployed.oracle
     await baseOracle.grantRole(web3.utils.keccak256('MANAGE_CONSENSUS_CONTRACT_ROLE'), admin, { from: admin })
     await baseOracle.grantRole(web3.utils.keccak256('MANAGE_CONSENSUS_VERSION_ROLE'), admin, { from: admin })
-    initialRefSlot = +(await baseOracle.getTime())
+    const time = (await baseOracle.getTime()).toNumber()
+    initialRefSlot = computeEpochFirstSlotAt(time)
+    await evmSnapshot.make()
   }
+  const rollback = async () => evmSnapshot.rollback()
+
+  before(deployContract)
 
   describe('setConsensusContract safely changes used consensus contract', () => {
-    before(deployContract)
+    before(rollback)
 
     it('reverts on zero address', async () => {
       await assert.revertsWithCustomError(baseOracle.setConsensusContract(ZERO_ADDRESS), 'AddressCannotBeZero()')
@@ -52,7 +60,7 @@ contract('BaseOracle', ([admin, member, notMember]) => {
         SECONDS_PER_SLOT + 1,
         GENESIS_TIME + 1,
         EPOCHS_PER_FRAME,
-        0,
+        1,
         0,
         admin,
         { from: admin }
@@ -63,24 +71,28 @@ contract('BaseOracle', ([admin, member, notMember]) => {
       )
     })
 
-    it('reverts on consensus current frame behind current processing', async () => {
+    it('reverts on consensus initial ref slot behind currently processing', async () => {
+      const processingRefSlot = 100
+
+      await consensus.submitReportAsConsensus(HASH_1, processingRefSlot, +(await baseOracle.getTime()) + 1)
+      await baseOracle.startProcessing()
+
       const wrongConsensusContract = await MockConsensusContract.new(
         SLOTS_PER_EPOCH,
         SECONDS_PER_SLOT,
         GENESIS_TIME,
         EPOCHS_PER_FRAME,
-        0,
+        1,
         0,
         admin,
         { from: admin }
       )
-      await wrongConsensusContract.setCurrentFrame(10, 1, 2000)
-      await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, initialRefSlot + SLOTS_PER_FRAME)
-      await baseOracle.startProcessing()
+
+      await wrongConsensusContract.setInitialRefSlot(processingRefSlot - 1)
 
       await assert.revertsWithCustomError(
         baseOracle.setConsensusContract(wrongConsensusContract.address),
-        `RefSlotCannotBeLessThanProcessingOne(1, ${initialRefSlot})`
+        `InitialRefSlotCannotBeLessThanProcessingOne(${processingRefSlot - 1}, ${processingRefSlot})`
       )
     })
 
@@ -90,12 +102,12 @@ contract('BaseOracle', ([admin, member, notMember]) => {
         SECONDS_PER_SLOT,
         GENESIS_TIME,
         EPOCHS_PER_FRAME,
-        0,
+        1,
         0,
         admin,
         { from: admin }
       )
-      await newConsensusContract.setCurrentFrame(10, initialRefSlot + 1, initialRefSlot + SLOTS_PER_FRAME)
+      await newConsensusContract.setInitialRefSlot(initialRefSlot)
       const tx = await baseOracle.setConsensusContract(newConsensusContract.address)
       assert.emits(tx, 'ConsensusHashContractSet', { addr: newConsensusContract.address, prevAddr: consensus.address })
       const addressAtStorage = await baseOracle.getConsensusContract()
@@ -104,7 +116,7 @@ contract('BaseOracle', ([admin, member, notMember]) => {
   })
 
   describe('setConsensusVersion updates contract state', () => {
-    before(deployContract)
+    before(rollback)
 
     it('reverts on same version', async () => {
       await assert.revertsWithCustomError(baseOracle.setConsensusVersion(CONSENSUS_VERSION), 'VersionCannotBeSame()')
@@ -119,19 +131,22 @@ contract('BaseOracle', ([admin, member, notMember]) => {
   })
 
   describe('_checkConsensusData checks provided data against internal state', () => {
-    before(deployContract)
+    before(rollback)
+    let deadline
 
     it('report is submitted', async () => {
-      await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, initialRefSlot + 10)
+      deadline = computeDeadlineFromRefSlot(initialRefSlot)
+      await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, deadline)
     })
 
     it('deadline missed on current ref slot, reverts on any arguments', async () => {
-      await baseOracle.advanceTimeBy(11)
+      const oldTime = await baseOracle.getTime()
+      await baseOracle.setTime(deadline + 10)
       await assert.revertsWithCustomError(
         baseOracle.checkConsensusData(initialRefSlot, CONSENSUS_VERSION, HASH_1),
-        `ProcessingDeadlineMissed(${initialRefSlot + 10})`
+        `ProcessingDeadlineMissed(${deadline})`
       )
-      await baseOracle.setTime(initialRefSlot)
+      await baseOracle.setTime(oldTime)
     })
 
     it('reverts on mismatched slot', async () => {
@@ -161,7 +176,7 @@ contract('BaseOracle', ([admin, member, notMember]) => {
   })
 
   describe('_isConsensusMember correctly check address for consensus membership trough consensus contract', () => {
-    before(deployContract)
+    before(rollback)
 
     it('returns false on non member', async () => {
       const r = await baseOracle.isConsensusMember(notMember)
@@ -175,7 +190,7 @@ contract('BaseOracle', ([admin, member, notMember]) => {
   })
 
   describe('_getCurrentRefSlot correctly gets refSlot trough consensus contract', () => {
-    before(deployContract)
+    before(rollback)
 
     it('refSlot matches', async () => {
       const oracle_slot = await baseOracle.getCurrentRefSlot()

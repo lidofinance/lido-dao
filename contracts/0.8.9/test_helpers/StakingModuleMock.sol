@@ -109,7 +109,7 @@ contract StakingModuleMock is IStakingModule {
         _availableValidatorsCount = _activeValidatorsCount;
     }
 
-    function obtainDepositData(uint256 _depositsCount, bytes calldata _calldata)
+    function obtainDepositData(uint256 _depositsCount, bytes calldata)
         external
         returns (
             bytes memory publicKeys,

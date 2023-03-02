@@ -42,11 +42,7 @@ async function triggerConsensusOnHash(hash, consensus) {
   assert.equal((await consensus.getConsensusState()).consensusReport, hash)
 }
 
-async function reportOracle(consensus, oracle, {
-  numValidators,
-  clBalance,
-  elRewards = 0
-}) {
+async function reportOracle(consensus, oracle, { numValidators, clBalance, elRewards = 0 }) {
   const { refSlot } = await consensus.getCurrentFrame()
   const reportFields = {
     consensusVersion: 1,
@@ -93,11 +89,8 @@ function pushOracleReport(consensus, oracle, numValidators, clBalance, elRewards
 // const computeTimestampAtSlot = (slot, c) => +c.genesisTime + slot * +c.secondsPerSlot
 
 async function getSecondsPerFrame(consensus) {
-  const [chainConfig, frameConfig] = await Promise.all([
-    consensus.getChainConfig(),
-    consensus.getFrameConfig()
-  ])
-  return (+chainConfig.secondsPerSlot) * (+chainConfig.slotsPerEpoch) * (+frameConfig.epochsPerFrame)
+  const [chainConfig, frameConfig] = await Promise.all([consensus.getChainConfig(), consensus.getFrameConfig()])
+  return +chainConfig.secondsPerSlot * +chainConfig.slotsPerEpoch * +frameConfig.epochsPerFrame
 }
 
 module.exports = { getReportDataItems, calcReportDataHash, reportOracle, pushOracleReport, getSecondsPerFrame }
