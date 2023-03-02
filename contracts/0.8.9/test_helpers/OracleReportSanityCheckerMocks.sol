@@ -19,25 +19,36 @@ contract LidoStub {
 }
 
 contract WithdrawalQueueStub {
-    mapping(uint256 => uint256) private _blockNumbers;
-
-    function setRequestBlockNumber(uint256 _requestId, uint256 _blockNumber) external {
-        _blockNumbers[_requestId] = _blockNumber;
+    struct WithdrawalRequestStatus {
+        /// @notice stETH token amount that was locked on withdrawal queue for this request
+        uint256 amountOfStETH;
+        /// @notice amount of stETH shares locked on withdrawal queue for this request
+        uint256 amountOfShares;
+        /// @notice address that can claim or transfer this request
+        address owner;
+        /// @notice timestamp of when the request was created, in seconds
+        uint256 timestamp;
+        /// @notice true, if request is finalized
+        bool isFinalized;
+        /// @notice true, if request is claimed. Request is claimable if (isFinalized && !isClaimed)
+        bool isClaimed;
     }
 
-    function getWithdrawalRequestStatus(uint256 _requestId)
-        external
-        view
-        returns (
-            uint256,
-            uint256,
-            address,
-            uint256 blockNumber,
-            bool,
-            bool
-        )
-    {
-        blockNumber = _blockNumbers[_requestId];
+    mapping(uint256 => uint256) private _timestamps;
+
+    function setRequestTimestamp(uint256 _requestId, uint256 _timestamp) external {
+        _timestamps[_requestId] = _timestamp;
+    }
+
+    function getWithdrawalStatus(
+        uint256[] calldata _requestIds
+    ) external view returns (
+        WithdrawalRequestStatus[] memory statuses
+    ) {
+        statuses = new WithdrawalRequestStatus[](_requestIds.length);
+        for (uint256 i; i < _requestIds.length; ++i) {
+            statuses[i].timestamp = _timestamps[_requestIds[i]];
+        }
     }
 }
 
