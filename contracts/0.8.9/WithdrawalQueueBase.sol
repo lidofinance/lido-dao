@@ -62,11 +62,11 @@ abstract contract WithdrawalQueueBase {
         /// @notice address that can claim or transfer the request
         address owner;
         /// @notice block.timestamp when the request was created
-        uint64 timestamp;
+        uint40 timestamp;
         /// @notice flag if the request was claimed
         bool claimed;
-
-        uint64 reportTimestamp;
+        /// @notice timestamp of lastReport
+        uint40 reportTimestamp;
     }
 
     /// @notice structure to store discounts for requests that are affected by negative rebase
@@ -412,9 +412,9 @@ abstract contract WithdrawalQueueBase {
             cumulativeStETH,
             cumulativeShares,
             _owner,
-            uint64(block.timestamp),
+            uint40(block.timestamp),
             false,
-            uint64(_getLastReportTimestamp())
+            uint40(_getLastReportTimestamp())
         );
         _getQueue()[requestId] = newRequest;
         assert(_getRequestsByOwner()[_owner].add(requestId));
@@ -612,7 +612,7 @@ abstract contract WithdrawalQueueBase {
         // setting dummy zero structs in checkpoints and queue beginning
         // to avoid uint underflows and related if-branches
         // 0-index is reserved as 'not_found' response in the interface everywhere
-        _getQueue()[0] = WithdrawalRequest(0, 0, address(0), uint64(block.number), true, 0);
+        _getQueue()[0] = WithdrawalRequest(0, 0, address(0), uint40(block.timestamp), true, 0);
         _getCheckpoints()[getLastCheckpointIndex()] = Checkpoint(0, 0);
         _getExtrema().push(0);
     }
