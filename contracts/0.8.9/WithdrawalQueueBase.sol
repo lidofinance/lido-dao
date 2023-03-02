@@ -251,13 +251,8 @@ abstract contract WithdrawalQueueBase {
         return _state;
     }
 
-    function onPreRebase(uint256 reportTimestamp) external {
-        // TODO: auth and sanity checks
-        _setLastReportTimestamp(reportTimestamp);
-    }
-
     function prefinalize(uint256[] calldata _batches, uint256 _maxShareRate)
-        public
+        external
         returns (uint256 ethToLock, uint256 sharesToBurn)
     {
         if (_maxShareRate == 0) revert ZeroShareRate();

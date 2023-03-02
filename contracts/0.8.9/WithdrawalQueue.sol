@@ -38,7 +38,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant FINALIZE_ROLE = keccak256("FINALIZE_ROLE");
-    bytes32 public constant BUNKER_MODE_REPORT_ROLE = keccak256("BUNKER_MODE_REPORT_ROLE");
+    bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
 
     /// @notice minimal possible sum that is possible to withdraw
     uint256 public constant MIN_STETH_WITHDRAWAL_AMOUNT = 100;
@@ -258,14 +258,18 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         _finalize(_batches, msg.value, _maxShareRate);
     }
 
-    /// @notice Update bunker mode state
+    /// @notice Update bunker mode state and last report timestamp
     /// @dev should be called by oracle
     ///
-    /// @param _isBunkerModeNow oracle report
+    /// @param _isBunkerModeNow is bunker mode reported by oracle
     /// @param _sinceTimestamp timestamp of start of the bunker mode
-    function updateBunkerMode(bool _isBunkerModeNow, uint256 _sinceTimestamp) external {
-        _checkRole(BUNKER_MODE_REPORT_ROLE, msg.sender);
+    /// @param _currentReportTimestamp timestamp of the current report ref slot
+    function onOracleReport(bool _isBunkerModeNow, uint256 _sinceTimestamp, uint256 _currentReportTimestamp) external {
+        _checkRole(ORACLE_ROLE, msg.sender);
         if (_sinceTimestamp >= block.timestamp) revert InvalidReportTimestamp();
+        if (_currentReportTimestamp >= block.timestamp) revert InvalidReportTimestamp();
+
+        _setLastReportTimestamp(_currentReportTimestamp);
 
         bool isBunkerModeWasSetBefore = isBunkerModeActive();
 

@@ -227,7 +227,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
     })
 
     it(`withdrawal queue got bunker mode report`, async () => {
-      const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
+      const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__onOracleReport()
       assert.equals(updateBunkerModeLastCall.callCount, 1)
       assert.equals(updateBunkerModeLastCall.isBunkerMode, reportFields.isBunkerMode)
       assert.equal(
@@ -409,7 +409,7 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
     })
 
     it(`withdrawal queue got bunker mode report`, async () => {
-      const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
+      const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__onOracleReport()
       assert.equals(updateBunkerModeLastCall.callCount, 2)
     })
 

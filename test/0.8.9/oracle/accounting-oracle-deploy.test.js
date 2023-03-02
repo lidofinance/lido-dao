@@ -358,7 +358,7 @@ contract('AccountingOracle', ([admin, member1]) => {
       assert.equals(await mockStakingRouter.totalCalls_reportExitedKeysByNodeOperator(), 0)
       assert.equals(await mockStakingRouter.totalCalls_reportStuckKeysByNodeOperator(), 0)
 
-      const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
+      const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__onOracleReport()
       assert.equals(updateBunkerModeLastCall.callCount, 0)
     })
 

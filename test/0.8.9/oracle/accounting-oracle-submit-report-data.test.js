@@ -483,10 +483,12 @@ contract('AccountingOracle', ([admin, member1]) => {
       it('should call updateBunkerMode on WithdrawalQueue', async () => {
         const prevProcessingRefSlot = +(await oracle.getLastProcessingRefSlot())
         await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
-        const lastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
+        const currentProcessingRefSlot = +(await oracle.getLastProcessingRefSlot())
+        const lastCall = await mockWithdrawalQueue.lastCall__onOracleReport()
         assert.equals(lastCall.callCount, 1)
         assert.equals(lastCall.isBunkerMode, reportFields.isBunkerMode)
         assert.equals(lastCall.prevReportTimestamp, GENESIS_TIME + prevProcessingRefSlot * SECONDS_PER_SLOT)
+        assert.equals(lastCall.currentReportTimestamp, GENESIS_TIME + currentProcessingRefSlot * SECONDS_PER_SLOT)
       })
     })
 
