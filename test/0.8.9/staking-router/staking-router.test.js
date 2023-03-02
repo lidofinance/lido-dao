@@ -855,6 +855,18 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       )
     })
 
+    it('reverts if stakingModuleIds and totalShares lengths mismatch', async () => {
+      const stakingModuleIds = [1, 2, 3]
+      const totalShares = [300, 400]
+
+      await router.grantRole(await router.REPORT_REWARDS_MINTED_ROLE(), admin, { from: admin })
+      await assert.reverts(
+        router.reportRewardsMinted(stakingModuleIds, totalShares, { from: admin }),
+        `ArraysLengthMismatch`,
+        [stakingModuleIds.length, totalShares.length]
+      )
+    })
+
     it('reverts if modules are not registered', async () => {
       const stakingModuleIds = [1, 2]
       const totalShares = [300, 400]

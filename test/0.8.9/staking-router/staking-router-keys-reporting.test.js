@@ -91,6 +91,16 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
         )
       })
 
+      it('reverts when stakingModuleIds and exitedValidatorsCounts lengths mismatch', async () => {
+        const stakingModuleIds = [1, 2]
+        const exitedValidatorsCounts = [1, 2, 3]
+        await assert.reverts(
+          router.updateExitedValidatorsCountByStakingModule(stakingModuleIds, exitedValidatorsCounts, { from: admin }),
+          `ArraysLengthMismatch`,
+          [stakingModuleIds.length, exitedValidatorsCounts.length]
+        )
+      })
+
       it('reporting total exited validators of a non-existent module reverts', async () => {
         await assert.reverts(
           router.updateExitedValidatorsCountByStakingModule([module1Id + 1], [1], { from: admin }),
@@ -439,7 +449,8 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
       })
 
       // eslint-disable-next-line prettier/prettier
-      it(`now that exited validators totals in the router and in the module match, calling` +
+      it(
+        `now that exited validators totals in the router and in the module match, calling` +
           `onValidatorsCountsByNodeOperatorReportingFinished calls ` +
           `onExitedAndStuckValidatorsCountsUpdated on the module`,
         async () => {
@@ -454,7 +465,8 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
       )
 
       // eslint-disable-next-line prettier/prettier
-      it(`calling onValidatorsCountsByNodeOperatorReportingFinished one more time calls ` +
+      it(
+        `calling onValidatorsCountsByNodeOperatorReportingFinished one more time calls ` +
           `onExitedAndStuckValidatorsCountsUpdated on the module again`,
         async () => {
           await router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin })
@@ -753,7 +765,8 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
       })
 
       // eslint-disable-next-line prettier/prettier
-      it(`now that router's view on exited validators total match the module 2's view,` +
+      it(
+        `now that router's view on exited validators total match the module 2's view,` +
           `calling onValidatorsCountsByNodeOperatorReportingFinished calls ` +
           `onExitedAndStuckValidatorsCountsUpdated on the module 2`,
         async () => {
@@ -806,7 +819,8 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
       })
 
       // eslint-disable-next-line prettier/prettier
-      it(`now that router's view on exited validators total match the both modules' view,` +
+      it(
+        `now that router's view on exited validators total match the both modules' view,` +
           `calling onValidatorsCountsByNodeOperatorReportingFinished calls ` +
           `onExitedAndStuckValidatorsCountsUpdated on both modules`,
         async () => {

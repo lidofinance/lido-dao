@@ -52,6 +52,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     );
     error InvalidDepositsValue(uint256 etherValue, uint256 depositsCount);
     error StakingModuleAddressExists();
+    error ArraysLengthMismatch(uint256 firstArrayLength, uint256 secondArrayLength);
 
     enum StakingModuleStatus {
         Active, // deposits and rewards allowed
@@ -252,6 +253,10 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         external
         onlyRole(REPORT_REWARDS_MINTED_ROLE)
     {
+        if (_stakingModuleIds.length != _totalShares.length) {
+            revert ArraysLengthMismatch(_stakingModuleIds.length, _totalShares.length);
+        }
+
         for (uint256 i = 0; i < _stakingModuleIds.length; ) {
             address moduleAddr = _getStakingModuleById(_stakingModuleIds[i]).stakingModuleAddress;
             IStakingModule(moduleAddr).onRewardsMinted(_totalShares[i]);
@@ -266,6 +271,10 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         external
         onlyRole(REPORT_EXITED_VALIDATORS_ROLE)
     {
+        if (_stakingModuleIds.length != _exitedValidatorsCounts.length) {
+            revert ArraysLengthMismatch(_stakingModuleIds.length, _exitedValidatorsCounts.length);
+        }
+
         for (uint256 i = 0; i < _stakingModuleIds.length; ) {
             StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleIds[i]);
 
