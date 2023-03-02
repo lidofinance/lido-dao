@@ -188,6 +188,7 @@ abstract contract WithdrawalQueueBase {
             requestId = _state.batches[_state.batches[0]] + 1;
             prevRequestShareRate = _calcShareRate(_state.batches[_state.batches[0]], _maxShareRate);
         }
+
         uint256 lastRequestId = getLastRequestId();
         uint256 maxPossibleRequestId = requestId + MAX_REQUESTS_PER_CALL;
 
@@ -198,9 +199,7 @@ abstract contract WithdrawalQueueBase {
             if (requestId > lastRequestId) break; // if end of the queue
 
             if (requestId == _getExtrema()[extemumStartIndex + extremaCounter]) {
-                unchecked{
-                    ++extremaCounter;
-                }
+                unchecked { ++extremaCounter; }
                 if (extremaCounter > MAX_EXTREMA_PER_CALL) break;
             }
 
@@ -253,59 +252,8 @@ abstract contract WithdrawalQueueBase {
     }
 
     function onPreRebase(uint256 reportTimestamp) external {
+        // TODO: auth and sanity checks
         _setLastReportTimestamp(reportTimestamp);
-
-        // Populate shareRate extrema list
-        // TODO: move it to withdrawal request creation moment
-        uint256 lastRequestId = getLastRequestId();
-        uint256[] storage extrema = _getExtrema();
-        // first request is an extremum by default
-        if (extrema.length == 1 && lastRequestId > 0) {
-            extrema.push(lastRequestId);
-            return;
-        }
-
-        uint256 lastExtremumId = extrema[extrema.length - 1];
-        // no new requests => no new exrema
-        if (lastExtremumId == lastRequestId) return;
-
-        WithdrawalRequest memory lastRequest = _getQueue()[lastRequestId];
-        WithdrawalRequest memory lastExtremum = _getQueue()[lastExtremumId];
-
-        if (lastRequest.reportTimestamp == lastExtremum.reportTimestamp) return;
-
-        uint256 lastRequestShareRate = _calcShareRate(lastRequestId, lastRequest);
-        uint256 lastExtremumShareRate = _calcShareRate(lastExtremumId, lastExtremum);
-
-        if (lastRequestShareRate == lastExtremumShareRate) return;
-        // first met request in a sequence with equal shareRate is an extremum
-
-        if (extrema.length == 2) {
-            // first two different rates are always extrema
-            extrema.push(lastRequestId);
-        } else {
-            uint256 prevExtremumShareRate = _calcShareRate(lastExtremumId - 1, SHARE_RATE_UNLIMITED);
-
-            bool wasGrowing = lastExtremumShareRate > prevExtremumShareRate;
-            // |  •
-            // |•   *
-            // +------->
-            if (wasGrowing && lastRequestShareRate < lastExtremumShareRate) {
-                extrema.push(lastRequestId);
-                return;
-            }
-            //  |•   *
-            //  |  •
-            //  +------->
-            if (!wasGrowing && lastRequestShareRate > lastExtremumShareRate) {
-                extrema.push(lastRequestId);
-                return;
-            }
-            //  |•        |  *
-            //  |  *   OR |•
-            //  +---->    +---->
-            extrema[extrema.length - 1] = lastRequestId;
-        }
     }
 
     function prefinalize(uint256[] calldata _batches, uint256 _maxShareRate)
@@ -357,8 +305,9 @@ abstract contract WithdrawalQueueBase {
         uint256 batchPreStartId = getLastFinalizedRequestId();
         uint256 batchEndId = _batches[batchIndex];
 
-        uint256 extremumIndex = _getLastCheckedExtremum() + 1;
-        uint256 extremumId;
+        uint256 extremumIndex = _getLastCheckedExtremum();
+        uint256 extremumLength = _getExtrema().length;
+        uint256 extremumId = _getExtrema()[extremumIndex];
 
         uint256 batchShareRate= _calcShareRate(
                 _getQueue()[batchPreStartId],
@@ -367,13 +316,14 @@ abstract contract WithdrawalQueueBase {
             );
 
         while (batchIndex < _batches.length - 1) {
-            if (extremumId < batchEndId) {
-                extremumId = _getExtrema()[extremumIndex];
-                // check extremum
-                uint256 extremumShareRate = _calcShareRate(extremumId, SHARE_RATE_UNLIMITED);
+            if (extremumId <= batchEndId && extremumIndex < extremumLength - 1) {
+                if (extremumId > batchPreStartId) {
+                    // check extremum
+                    uint256 extremumShareRate = _calcShareRate(extremumId, SHARE_RATE_UNLIMITED);
 
-                if (extremumShareRate > _maxShareRate && batchShareRate <= _maxShareRate) revert InvalidBatches();
-                if (extremumShareRate <= _maxShareRate && batchShareRate > _maxShareRate) revert InvalidBatches();
+                    if (extremumShareRate > _maxShareRate && batchShareRate <= _maxShareRate) revert InvalidBatches();
+                    if (extremumShareRate <= _maxShareRate && batchShareRate > _maxShareRate) revert InvalidBatches();
+                }
                 unchecked { ++extremumIndex; }
             } else {
                 // check crossing point
@@ -396,7 +346,7 @@ abstract contract WithdrawalQueueBase {
             }
         }
 
-        return extremumIndex - 1;
+        return extremumIndex;
     }
 
     /// @dev Finalize requests from last finalized one up to `_nextFinalizedRequestId`
@@ -457,12 +407,74 @@ abstract contract WithdrawalQueueBase {
         requestId = lastRequestId + 1;
 
         _setLastRequestId(requestId);
-        _getQueue()[requestId] =
-            WithdrawalRequest(cumulativeStETH, cumulativeShares, _owner, uint64(block.timestamp), false,
-            uint64(_getLastReportTimestamp()));
+
+        WithdrawalRequest memory newRequest =  WithdrawalRequest(
+            cumulativeStETH,
+            cumulativeShares,
+            _owner,
+            uint64(block.timestamp),
+            false,
+            uint64(_getLastReportTimestamp())
+        );
+        _getQueue()[requestId] = newRequest;
         assert(_getRequestsByOwner()[_owner].add(requestId));
 
+        _populateExtrema(lastRequest, newRequest, requestId);
+
         emit WithdrawalRequested(requestId, msg.sender, _owner, _amountOfStETH, _amountOfShares);
+    }
+
+    /// @dev storing extrema of shareRate(requestId) function using three points:
+    ///  newRequestId, prevRequestId and last known extremum id
+    ///  - first request is always included as an extremum
+    ///  - last request is not added by default to avoid storage write on each request
+    ///     but speaking strictly last request is also an extremum
+    ///  - if a lot of requests in a row have the same shareRate, the last one
+    ///    will become an exremum as shareRate changes
+    function _populateExtrema(
+        WithdrawalRequest memory prevRequest,
+        WithdrawalRequest memory newRequest,
+        uint256 newRequestId
+    ) internal {
+        // shortcut for the same shareRate batches
+        // requests is guaranteed to be the same shareRate if they belong to
+        // the same oracle report period
+        if (prevRequest.reportTimestamp == newRequest.reportTimestamp) return;
+
+        uint256[] storage extrema = _getExtrema();
+        // bootstrap the algo adding thee first request as an extrema by default
+        if (extrema.length == 1 && newRequestId > 0) {
+            extrema.push(newRequestId);
+            return;
+        }
+
+        uint256 lastExtremumId = extrema[extrema.length - 1];
+        WithdrawalRequest memory lastExtremumRequest = _getQueue()[lastExtremumId];
+
+        uint256 newRequestShareRate = _calcShareRate(prevRequest, newRequest, SHARE_RATE_UNLIMITED);
+        uint256 prevRequestShareRate = _calcShareRate(newRequestId - 1, SHARE_RATE_UNLIMITED);
+
+        // we can get a new extremum only when shareRate changes
+        // there can't be rounding jitter because we skipped on the same report requests in the beginning
+        if (newRequestShareRate == prevRequestShareRate) return;
+
+        uint256 lastExtremumShareRate = _calcShareRate(lastExtremumId, lastExtremumRequest);
+
+        bool wasGrowing =  lastExtremumShareRate < prevRequestShareRate;
+        // |  *
+        // |•   •
+        // +------->
+        if (wasGrowing && prevRequestShareRate > newRequestShareRate) {
+            extrema.push(newRequestId - 1);
+            return;
+        }
+        //  |•   •
+        //  |  *
+        //  +------->
+        if (!wasGrowing && prevRequestShareRate < newRequestShareRate) {
+            extrema.push(newRequestId - 1);
+            return;
+        }
     }
 
     /// @notice Returns status of the withdrawal request with `_requestId` id

@@ -16,7 +16,9 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
 
   let queue, steth
 
+  let rebaseCounter = 0
   const setShareRate = async (rate) => {
+    await queue.onPreRebase(rebaseCounter++)
     await steth.setTotalPooledEther(TOTAL_SHARES.mul(toBN(rate)))
   }
 
@@ -60,7 +62,6 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
     })
 
     it(`protocol receives rewards, changing share rate to 2.0`, async () => {
-      await queue.onPreRebase()
       await setShareRate(2)
     })
 
@@ -71,7 +72,6 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
     })
 
     it(`protocol receives slashing, changing share rate to 1.0`, async () => {
-      await queue.onPreRebase()
       await setShareRate(1)
     })
 
@@ -80,6 +80,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
     it(`both requests can be finalized with 2 ETH`, async () => {
       const result = await queue.calculateFinalizationBatches(e27(1), MAX_UINT256, [e18(2), false, []])
       assert.isTrue(result.finished)
+      assert.equals(result.batches, [1, 2])
 
       const batch = await queue.prefinalize.call(result.batches, e27(1))
       assert.equals(batch.ethToLock, e18(2))
@@ -126,7 +127,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
     })
 
     it(`protocol receives rewards, changing share rate to 2.0`, async () => {
-      await queue.onPreRebase()
+      await queue.onPreRebase(e27(2))
       await setShareRate(2)
     })
 
@@ -137,7 +138,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
     })
 
     it(`protocol receives slashing, changing share rate to 1.0`, async () => {
-      await queue.onPreRebase()
+      await queue.onPreRebase(e27(1))
       await setShareRate(1)
     })
 
@@ -147,8 +148,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
     it(`both requests can be finalized with 2 ETH`, async () => {
       const result = await queue.calculateFinalizationBatches(maxShareRate, MAX_UINT256, [e18(2.5), false, []])
       assert.isTrue(result.finished)
-
-      console.log(result)
+      assert.equals(result.batches, [1, 2])
 
       const batch = await queue.prefinalize.call(result.batches, maxShareRate)
       assert.equals(batch.ethToLock, e18(2.5))
