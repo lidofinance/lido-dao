@@ -585,12 +585,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // Decision about withdrawals processing
         uint256 _lastFinalizableRequestId,
         uint256 _simulatedShareRate
-    ) external returns (
-        uint256 postTotalPooledEther,
-        uint256 postTotalShares,
-        uint256 withdrawals,
-        uint256 elRewards
-    ) {
+    ) external returns (uint256[4] postRebaseAmounts) {
         _whenNotStopped();
 
         return _handleOracleReport(
@@ -1182,14 +1177,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * 8. Complete token rebase by informing observers (emit an event and call the external receivers if any)
      * 9. Sanity check for the provided simulated share rate
      */
-    function _handleOracleReport(
-        OracleReportedData memory _reportedData
-    ) internal returns (
-        uint256 postTotalPooledEther,
-        uint256 postTotalShares,
-        uint256 withdrawals,
-        uint256 elRewards
-    ) {
+    function _handleOracleReport(OracleReportedData memory _reportedData) internal returns (uint256[4]) {
         OracleReportContracts memory contracts = _loadOracleReportContracts();
 
         require(msg.sender == contracts.accountingOracle, "APP_AUTH_FAILED");
@@ -1305,6 +1293,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
                 _reportedData.simulatedShareRate
             );
         }
+
+        return [postTotalPooledEther, postTotalShares, withdrawals, elRewards];
     }
 
     /**
