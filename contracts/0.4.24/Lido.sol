@@ -104,7 +104,9 @@ interface IStakingRouter {
 
     function getTotalFeeE4Precision() external view returns (uint16 totalFee);
 
-    function getStakingFeeAggregateDistributionE4Precision() external view returns (uint16 modulesFee, uint16 treasuryFee);
+    function getStakingFeeAggregateDistributionE4Precision() external view returns (
+        uint16 modulesFee, uint16 treasuryFee
+    );
 
     function getStakingModuleMaxDepositsCount(uint256 _stakingModuleId, uint256 _depositableEther)
         external
@@ -113,10 +115,9 @@ interface IStakingRouter {
 }
 
 interface IWithdrawalQueue {
-    function finalizationValue(uint256[] _batches, uint256 _maxShareRate)
+    function prefinalize(uint256[] _batches, uint256 _maxShareRate)
         external
-        view
-        returns (uint128 eth, uint128 shares);
+        returns (uint256 ethToLock, uint256 sharesToBurn);
 
     function finalize(uint256[] _batches, uint256 _maxShareRate) external payable;
 
@@ -862,7 +863,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     function _calculateWithdrawals(
         OracleReportContracts memory _contracts,
         OracleReportedData memory _reportedData
-    ) internal view returns (
+    ) internal returns (
         uint256 etherToLock, uint256 sharesToBurn
     ) {
         IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_contracts.withdrawalQueue);
@@ -873,7 +874,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
                 _reportedData.reportTimestamp
             );
 
-            (etherToLock, sharesToBurn) = withdrawalQueue.finalizationValue(
+            (etherToLock, sharesToBurn) = withdrawalQueue.prefinalize(
                 _reportedData.withdrawalFinalizationBatches,
                 _reportedData.simulatedShareRate
             );

@@ -160,10 +160,10 @@ abstract contract WithdrawalQueueBase {
     // Right now finalization consists of several steps:
     // 1. Oracle daemon precalculates finalization batches' boundaries that is valid on oracle report refSlot
     //  and post it with the report - `calculateFinalizationBatches()`
-    // 2. Lido contract invokes `onPreRebase()` handler to update ShareRate extremum list
+    // 2. AccountingOracle contract invokes `onOracleReport()` handler to update ShareRate extremum list
     // 3. Lido contract, during the report handling, calculates the value of finalization batchs in eth and shares
-    //  and checks its correctness - `finalizationValue()`
-    // 4. Lido contract finalize the requests pasing the required ether along with `finalize()` method
+    //  and checks its correctness - `prefinalize()`
+    // 4. Lido contract finalize the requests passing the required ether along with `finalize()` method
 
     struct CalcState {
         uint256 ethBudget;
