@@ -23,7 +23,7 @@ abstract contract WithdrawalQueueBase {
     /// @notice precision base for share rate and discounting factor values in the contract
     uint256 internal constant E27_PRECISION_BASE = 1e27;
 
-    uint256 internal constant MAX_EXTREMA_PER_CALL = 36;
+    uint256 internal constant MAX_BATCHES_LENGTH = 36;
     uint256 internal constant MAX_REQUESTS_PER_CALL = 1000;
 
     uint256 internal constant SHARE_RATE_UNLIMITED = type(uint256).max;
@@ -178,38 +178,45 @@ abstract contract WithdrawalQueueBase {
     {
         if (_state.finished) revert InvalidState();
 
+        uint256 batchesLength;
         uint256 requestId;
         uint256 prevRequestShareRate;
 
         if (_state.batches.length == 0) {
             requestId = getLastFinalizedRequestId() + 1;
             // we'll store batches as a array where [MAX_REBASE_NUMBER] element is the array's length
-            _state.batches = new uint256[](MAX_EXTREMA_PER_CALL + 1);
+            _state.batches = new uint256[](MAX_BATCHES_LENGTH + 1);
         } else {
-            requestId = _state.batches[_state.batches[0]] + 1;
-            prevRequestShareRate = _calcShareRate(_state.batches[_state.batches[0]], _maxShareRate);
+            batchesLength = _state.batches[MAX_BATCHES_LENGTH];
+            requestId = _state.batches[batchesLength] + 1;
+            prevRequestShareRate = _calcShareRate(_state.batches[batchesLength], _maxShareRate);
         }
 
         uint256 lastRequestId = getLastRequestId();
-        uint256 maxPossibleRequestId = requestId + MAX_REQUESTS_PER_CALL;
 
         uint256 extemumStartIndex = _getLastCheckedExtremum() + 1;
         uint256 extremaCounter;
 
-        while (requestId < maxPossibleRequestId) {
-            if (requestId > lastRequestId) break; // if end of the queue
+        while (requestId < requestId + MAX_REQUESTS_PER_CALL) {
+            // end of the queue break
+            if (requestId > lastRequestId) break;
 
-            if (requestId == _getExtrema()[extemumStartIndex + extremaCounter]) {
+            if (
+                extemumStartIndex + extremaCounter < _getExtrema().length &&
+                requestId == _getExtrema()[extemumStartIndex + extremaCounter]
+            ) {
+                // max extrema counter break
+                // we can't allow that batches covers unbounded number of extrema
+                // it'll require an unbounded loop to check them onchain
                 unchecked { ++extremaCounter; }
-                if (extremaCounter > MAX_EXTREMA_PER_CALL) break;
+                if (extremaCounter > MAX_BATCHES_LENGTH) break;
             }
 
             WithdrawalRequest memory request = _getQueue()[requestId];
-
+            // max timestamp break
             if (request.timestamp > _maxTimestamp) break;
 
             WithdrawalRequest memory prevRequest = _getQueue()[requestId - 1];
-
             uint256 ethToFinalize = request.cumulativeStETH - prevRequest.cumulativeStETH;
             uint256 shareRequested = request.cumulativeShares - prevRequest.cumulativeShares;
             uint256 requestShareRate = ethToFinalize * E27_PRECISION_BASE / shareRequested;
@@ -222,25 +229,25 @@ abstract contract WithdrawalQueueBase {
 
             _state.ethBudget -= ethToFinalize;
 
-            if (_state.batches[MAX_EXTREMA_PER_CALL] != 0 && (
+            if (batchesLength != 0 && (
                 prevRequest.reportTimestamp == request.reportTimestamp ||
                 prevRequestShareRate <= _maxShareRate && requestShareRate <= _maxShareRate ||
                 prevRequestShareRate > _maxShareRate && requestShareRate > _maxShareRate
             )) {
-                _state.batches[_state.batches[MAX_EXTREMA_PER_CALL] - 1] = requestId;
+                _state.batches[batchesLength - 1] = requestId;
             } else {
-                _state.batches[_state.batches[MAX_EXTREMA_PER_CALL]] = requestId;
-                ++_state.batches[MAX_EXTREMA_PER_CALL];
+                _state.batches[batchesLength] = requestId;
+                batchesLength = ++_state.batches[MAX_BATCHES_LENGTH];
             }
 
             prevRequestShareRate = requestShareRate;
             unchecked{ ++requestId; }
         }
 
-        _state.finished = requestId < maxPossibleRequestId || requestId == lastRequestId + 1;
+        _state.finished = requestId < requestId + MAX_REQUESTS_PER_CALL || requestId == lastRequestId + 1;
 
         if (_state.finished) {
-            MemUtils.trimUint256Array(_state.batches, _state.batches.length - _state.batches[MAX_EXTREMA_PER_CALL]);
+            MemUtils.trimUint256Array(_state.batches, _state.batches.length - batchesLength);
         }
 
         return _state;
@@ -432,14 +439,10 @@ abstract contract WithdrawalQueueBase {
         if (prevRequest.reportTimestamp == newRequest.reportTimestamp) return;
 
         uint256[] storage extrema = _getExtrema();
-        // bootstrap the algo adding thee first request as an extrema by default
-        if (extrema.length == 1 && newRequestId > 0) {
-            extrema.push(newRequestId);
+        if (extrema.length == 1) {
+            extrema.push(newRequestId); // first request is always an extremum
             return;
         }
-
-        uint256 lastExtremumId = extrema[extrema.length - 1];
-        WithdrawalRequest memory lastExtremumRequest = _getQueue()[lastExtremumId];
 
         uint256 newRequestShareRate = _calcShareRate(prevRequest, newRequest, SHARE_RATE_UNLIMITED);
         uint256 prevRequestShareRate = _calcShareRate(newRequestId - 1, SHARE_RATE_UNLIMITED);
@@ -447,6 +450,9 @@ abstract contract WithdrawalQueueBase {
         // we can get a new extremum only when shareRate changes
         // there can't be rounding jitter because we skipped on the same report requests in the beginning
         if (newRequestShareRate == prevRequestShareRate) return;
+
+        uint256 lastExtremumId = extrema[extrema.length - 1];
+        WithdrawalRequest memory lastExtremumRequest = _getQueue()[lastExtremumId];
 
         uint256 lastExtremumShareRate = _calcShareRate(lastExtremumId, lastExtremumRequest);
 
