@@ -1,8 +1,13 @@
-const { contract, ethers } = require('hardhat')
+const { contract, ethers, artifacts } = require('hardhat')
 const { assert } = require('../helpers/assert')
 const { impersonate } = require('../helpers/blockchain')
 
 const { legacyOracleFactory } = require('../helpers/factories')
+
+const OssifiableProxy = artifacts.require('OssifiableProxy')
+
+const LegacyOracle = artifacts.require('LegacyOracle')
+const MockLegacyOracle = artifacts.require('MockLegacyOracle')
 
 const {
   deployAccountingOracleSetup,
@@ -13,7 +18,7 @@ const {
   GENESIS_TIME,
 } = require('../0.8.9/oracle/accounting-oracle-deploy.test')
 
-async function deployLegacyOracle({ admin, initialEpoch = 1, lastProcessingRefSlot = 31 }) {
+async function deployLegacyOracleWithAccountingOracle({ admin, initialEpoch = 1, lastProcessingRefSlot = 31 }) {
   const legacyOracle = await legacyOracleFactory({ appManager: { address: admin } })
   const { locatorAddr, consensus, oracle, lido } = await deployAccountingOracleSetup(admin, {
     initialEpoch,
@@ -28,7 +33,7 @@ async function deployLegacyOracle({ admin, initialEpoch = 1, lastProcessingRefSl
 }
 
 module.exports = {
-  deployLegacyOracle,
+  deployLegacyOracleWithAccountingOracle,
 }
 
 contract('LegacyOracle', ([admin, stranger]) => {
@@ -36,7 +41,7 @@ contract('LegacyOracle', ([admin, stranger]) => {
 
   context('Fresh deploy and puppet methods checks', () => {
     before('deploy', async () => {
-      const deployed = await deployLegacyOracle({ admin })
+      const deployed = await deployLegacyOracleWithAccountingOracle({ admin })
       legacyOracle = deployed.legacyOracle
       accountingOracle = deployed.accountingOracle
       lido = deployed.lido
@@ -97,6 +102,54 @@ contract('LegacyOracle', ([admin, stranger]) => {
   })
 
   context('Migration from old contract', () => {
-    it.skip('deploy')
+    const lastCompletedEpoch = 10
+    let oldImplementation
+    let newImplementation
+    let proxy
+    let proxyAsOldImplementation
+    let proxyAsNewImplementation
+    let deployedInfra
+
+    before('deploy old implementation and set as proxy', async () => {
+      oldImplementation = await MockLegacyOracle.new({ from: admin })
+      newImplementation = await LegacyOracle.new({ from: admin })
+      proxy = await OssifiableProxy.new(oldImplementation.address, admin, '0x')
+      proxyAsOldImplementation = await MockLegacyOracle.at(proxy.address)
+    })
+
+    it('implementations are petrified', async () => {
+      await assert.reverts(oldImplementation.initialize(stranger, stranger), 'INIT_ALREADY_INITIALIZED')
+      await assert.reverts(newImplementation.initialize(stranger, stranger), 'INIT_ALREADY_INITIALIZED')
+    })
+
+    it('set state to mimic legacy oracle', async () => {
+      await proxyAsOldImplementation.initializeAsV3()
+      await proxyAsOldImplementation.setParams(
+        EPOCHS_PER_FRAME,
+        SLOTS_PER_EPOCH,
+        SECONDS_PER_SLOT,
+        GENESIS_TIME,
+        lastCompletedEpoch
+      )
+    })
+
+    it('deploy&initialize all contracts', async () => {
+      deployedInfra = await deployAccountingOracleSetup(admin, {
+        legacyOracleAddrArg: proxy.address,
+        getLegacyOracle: () => {
+          return proxyAsOldImplementation
+        },
+      })
+      const { consensus, oracle } = deployedInfra
+      await initAccountingOracle({ admin, oracle, consensus, shouldMigrateLegacyOracle: true })
+    })
+
+    it('upgrade implementation', async () => {
+      await proxy.proxy__upgradeTo(newImplementation.address)
+      proxyAsNewImplementation = await LegacyOracle.at(proxy.address)
+      await proxyAsNewImplementation.finalizeUpgrade_v4(deployedInfra.oracle.address)
+    })
+
+    it.skip('lifecycle tests')
   })
 })

@@ -75,5 +75,8 @@ contract MockLegacyOracle is ILegacyOracle, LegacyOracle {
          LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(lastCompletedEpochId);
     }
 
+    function initializeAsV3() external {
+        CONTRACT_VERSION_POSITION_DEPRECATED.setStorageUint256(3);
+    }
 
 }
