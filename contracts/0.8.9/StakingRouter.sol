@@ -119,6 +119,8 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
     uint256 public constant FEE_PRECISION_POINTS = 10 ** 20; // 100 * 10 ** 18
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
+    uint256 public constant MAX_STAKING_MODULES_COUNT = 32;
+    uint256 public constant MAX_STAKING_MODULE_NAME_LENGTH = 32;
 
     constructor(address _depositContract) BeaconChainDepositor(_depositContract) {}
 
@@ -168,17 +170,23 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint256 _stakingModuleFee,
         uint256 _treasuryFee
     ) external onlyRole(STAKING_MODULE_MANAGE_ROLE) {
-        if (_targetShare > TOTAL_BASIS_POINTS) revert ValueOver100Percent("_targetShare");
-        if (_stakingModuleFee + _treasuryFee > TOTAL_BASIS_POINTS) revert ValueOver100Percent("_stakingModuleFee + _treasuryFee");
-        if (_stakingModuleAddress == address(0)) revert ZeroAddress("_stakingModuleAddress");
-        if (bytes(_name).length == 0 || bytes(_name).length > 32) revert StakingModuleWrongName();
+        if (_targetShare > TOTAL_BASIS_POINTS)
+            revert ValueOver100Percent("_targetShare");
+        if (_stakingModuleFee + _treasuryFee > TOTAL_BASIS_POINTS)
+            revert ValueOver100Percent("_stakingModuleFee + _treasuryFee");
+        if (_stakingModuleAddress == address(0))
+            revert ZeroAddress("_stakingModuleAddress");
+        if (bytes(_name).length == 0 || bytes(_name).length > MAX_STAKING_MODULE_NAME_LENGTH)
+            revert StakingModuleWrongName();
 
         uint256 newStakingModuleIndex = getStakingModulesCount();
 
-        if (newStakingModuleIndex >= 32) revert StakingModulesLimitExceeded();
+        if (newStakingModuleIndex >= MAX_STAKING_MODULES_COUNT)
+            revert StakingModulesLimitExceeded();
 
         for (uint256 i; i < newStakingModuleIndex; ) {
-            if (_stakingModuleAddress == _getStakingModuleByIndex(i).stakingModuleAddress) revert StakingModuleAddressExists();
+            if (_stakingModuleAddress == _getStakingModuleByIndex(i).stakingModuleAddress)
+                revert StakingModuleAddressExists();
             unchecked {
                 ++i;
             }
@@ -193,9 +201,10 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         newStakingModule.targetShare = uint16(_targetShare);
         newStakingModule.stakingModuleFee = uint16(_stakingModuleFee);
         newStakingModule.treasuryFee = uint16(_treasuryFee);
-        /// @dev since `enum` is `uint8` by nature, so the `status` is stored as `uint8` to avoid possible problems when upgrading.
-        ///      But for human readability, we use `enum` as function parameter type.
-        ///      More about conversion in the docs https://docs.soliditylang.org/en/v0.8.17/types.html#enums
+        /// @dev since `enum` is `uint8` by nature, so the `status` is stored as `uint8` to avoid
+        ///      possible problems when upgrading. But for human readability, we use `enum` as
+        ///      function parameter type. More about conversion in the docs
+        ///      https://docs.soliditylang.org/en/v0.8.17/types.html#enums
         newStakingModule.status = uint8(StakingModuleStatus.Active);
 
         _setStakingModuleIndexById(newStakingModuleId, newStakingModuleIndex);
