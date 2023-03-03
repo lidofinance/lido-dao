@@ -609,7 +609,8 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
      */
     function _updateStuckValidatorsCount(uint256 _nodeOperatorId, uint64 _stuckValidatorsCount) internal {
         Packed64x4.Packed memory stuckPenaltyStats = _loadOperatorStuckPenaltyStats(_nodeOperatorId);
-        if (_stuckValidatorsCount == stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)) return;
+        uint64 curStuckValidatorsCount = stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET);
+        if (_stuckValidatorsCount == curStuckValidatorsCount) return;
 
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
         _requireValidRange(
@@ -617,15 +618,17 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
                 <= signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET) - signingKeysStats.get(EXITED_KEYS_COUNT_OFFSET)
         );
 
-        stuckPenaltyStats.set(STUCK_VALIDATORS_COUNT_OFFSET, _stuckValidatorsCount);
-        if (_stuckValidatorsCount <= stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET)) {
+        uint64 curRefundedValidatorsCount = stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET);
+        if (_stuckValidatorsCount<= curRefundedValidatorsCount && curStuckValidatorsCount > curRefundedValidatorsCount) {
             stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, uint64(block.timestamp + getStuckPenaltyDelay()));
         }
+
+        stuckPenaltyStats.set(STUCK_VALIDATORS_COUNT_OFFSET, _stuckValidatorsCount);
         _saveOperatorStuckPenaltyStats(_nodeOperatorId, stuckPenaltyStats);
         emit StuckPenaltyStateChanged(
             _nodeOperatorId,
             _stuckValidatorsCount,
-            stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET),
+            curRefundedValidatorsCount,
             stuckPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET)
             );
 
@@ -634,19 +637,22 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     function _updateRefundValidatorsKeysCount(uint256 _nodeOperatorId, uint64 _refundedValidatorsCount) internal {
         Packed64x4.Packed memory stuckPenaltyStats = _loadOperatorStuckPenaltyStats(_nodeOperatorId);
-        if (_refundedValidatorsCount == stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET)) return;
+        uint64 curRefundedValidatorsCount = stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET);
+        if (_refundedValidatorsCount == curRefundedValidatorsCount) return;
 
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
         _requireValidRange(_refundedValidatorsCount <= signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET));
 
-        stuckPenaltyStats.set(REFUNDED_VALIDATORS_COUNT_OFFSET, _refundedValidatorsCount);
-        if (stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET) <= _refundedValidatorsCount) {
+        uint64 curStuckValidatorsCount = stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET);
+        if (_refundedValidatorsCount >= curStuckValidatorsCount && curRefundedValidatorsCount < curStuckValidatorsCount) {
             stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, uint64(block.timestamp + getStuckPenaltyDelay()));
         }
+
+        stuckPenaltyStats.set(REFUNDED_VALIDATORS_COUNT_OFFSET, _refundedValidatorsCount);
         _saveOperatorStuckPenaltyStats(_nodeOperatorId, stuckPenaltyStats);
         emit StuckPenaltyStateChanged(
             _nodeOperatorId,
-            stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET),
+            curStuckValidatorsCount,
             _refundedValidatorsCount,
             stuckPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET)
             );
