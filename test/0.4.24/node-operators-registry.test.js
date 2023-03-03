@@ -1630,6 +1630,17 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(+firstNodeOperatorKeysStats.exitedSigningKeysCount, 1)
     })
 
+    it.only('allow set large targetLimit (=UINT64_MAX)', async () => {
+      let firstNodeOperatorKeysStats = await app.testing_getNodeOperator(firstNodeOperatorId)
+      assert.equals(+firstNodeOperatorKeysStats.maxSigningKeysCount, 8)
+
+      const targetLimit = toBN('0x1FFFFFFFFFFFFFFFF') // UINT64_MAX
+      await app.updateTargetValidatorsLimits(firstNodeOperatorId, true, targetLimit, { from: voting })
+
+      firstNodeOperatorKeysStats = await app.testing_getNodeOperator(firstNodeOperatorId)
+      assert.equals(+firstNodeOperatorKeysStats.maxSigningKeysCount, 8)
+    })
+
     it.skip('respects staking limit', async () => {
       const [firstNodeOperatorKeysStats, secondNodeOperatorKeysStats] = await Promise.all([
         app.getNodeOperatorSummary(firstNodeOperatorId),
