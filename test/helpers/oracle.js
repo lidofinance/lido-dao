@@ -34,6 +34,39 @@ function calcReportDataHash(reportItems) {
   return web3.utils.keccak256(data)
 }
 
+const DEFAULT_REPORT_FIELDS = {
+  consensusVersion: 1,
+  refSlot: 0,
+  numValidators: 0,
+  clBalanceGwei: 0,
+  stakingModuleIdsWithNewlyExitedValidators: [],
+  numExitedValidatorsByStakingModule: [],
+  withdrawalVaultBalance: 0,
+  elRewardsVaultBalance: 0,
+  sharesRequestedToBurn: 0,
+  withdrawalFinalizationBatches: [],
+  simulatedShareRate: 0,
+  isBunkerMode: false,
+  extraDataFormat: 0,
+  extraDataHash: ZERO_BYTES32,
+  extraDataItemsCount: 0,
+}
+
+const E9 = toBN(10).pow(toBN(9))
+
+async function prepareOracleReport({ clBalance, ...restFields }) {
+  const fields = {
+    ...DEFAULT_REPORT_FIELDS,
+    ...restFields,
+    clBalanceGwei: toBN(clBalance).div(E9),
+  }
+
+  const items = getReportDataItems(fields)
+  const hash = calcReportDataHash(items)
+
+  return { fields, items, hash }
+}
+
 async function triggerConsensusOnHash(hash, consensus) {
   const members = await consensus.getMembers()
   const { refSlot } = await consensus.getCurrentFrame()
@@ -42,55 +75,48 @@ async function triggerConsensusOnHash(hash, consensus) {
   assert.equal((await consensus.getConsensusState()).consensusReport, hash)
 }
 
-async function reportOracle(consensus, oracle, { numValidators, clBalance, elRewards = 0 }) {
+async function reportOracle(consensus, oracle, reportFields) {
   const { refSlot } = await consensus.getCurrentFrame()
-  const reportFields = {
-    consensusVersion: 1,
-    refSlot,
-    numValidators,
-    clBalanceGwei: toBN(clBalance).div(toBN(10).pow(toBN(9))),
-    stakingModuleIdsWithNewlyExitedValidators: [],
-    numExitedValidatorsByStakingModule: [],
-    withdrawalVaultBalance: 0,
-    elRewardsVaultBalance: elRewards,
-    sharesRequestedToBurn: 0,
-    withdrawalFinalizationBatches: [],
-    simulatedShareRate: 0,
-    isBunkerMode: false,
-    extraDataFormat: 0,
-    extraDataHash: ZERO_BYTES32,
-    extraDataItemsCount: 0,
-  }
+  const report = await prepareOracleReport({ ...reportFields, refSlot })
 
-  const reportItems = getReportDataItems(reportFields)
-  const reportHash = calcReportDataHash(reportItems)
+  // non-empty extra data is not supported here yet
+  assert.equals(report.fields.extraDataFormat, 0)
+  assert.equals(report.fields.extraDataHash, ZERO_BYTES32)
+  assert.equals(report.fields.extraDataItemsCount, 0)
 
   const members = await consensus.getMembers()
-
-  await triggerConsensusOnHash(reportHash, consensus)
+  await triggerConsensusOnHash(report.hash, consensus)
 
   const oracleVersion = await oracle.getContractVersion()
-
-  const submitDataTx = await oracle.submitReportData(reportItems, oracleVersion, { from: members.addresses[0] })
+  const submitDataTx = await oracle.submitReportData(report.items, oracleVersion, { from: members.addresses[0] })
   const submitExtraDataTx = await oracle.submitReportExtraDataEmpty({ from: members.addresses[0] })
 
-  return { submitDataTx, submitExtraDataTx }
+  return { report, submitDataTx, submitExtraDataTx }
 }
 
+// FIXME: kept for compat, remove after refactoring tests
 function pushOracleReport(consensus, oracle, numValidators, clBalance, elRewards) {
   return reportOracle(consensus, oracle, { numValidators, clBalance, elRewards })
 }
-
-// const computeSlotAt = (time, c) => Math.floor((time - (+c.genesisTime)) / (+c.secondsPerSlot))
-// const computeEpochAt = (time, c) => Math.floor(computeSlotAt(time, c) / (+c.slotsPerEpoch))
-// const computeEpochFirstSlot = (epoch, c) => epoch * (+c.slotsPerEpoch)
-// const computeEpochFirstSlotAt = (time, c) => computeEpochFirstSlot(computeEpochAt(time, c), c)
-// const computeTimestampAtEpoch = (epoch, c) => +c.genesisTime + epoch * ((+c.secondsPerSlot) * (+c.slotsPerEpoch))
-// const computeTimestampAtSlot = (slot, c) => +c.genesisTime + slot * +c.secondsPerSlot
 
 async function getSecondsPerFrame(consensus) {
   const [chainConfig, frameConfig] = await Promise.all([consensus.getChainConfig(), consensus.getFrameConfig()])
   return +chainConfig.secondsPerSlot * +chainConfig.slotsPerEpoch * +frameConfig.epochsPerFrame
 }
 
-module.exports = { getReportDataItems, calcReportDataHash, reportOracle, pushOracleReport, getSecondsPerFrame }
+async function getSlotTimestamp(slot, consensus) {
+  const chainConfig = await consensus.getChainConfig()
+  return +chainConfig.genesisTime + +chainConfig.secondsPerSlot * slot
+}
+
+module.exports = {
+  DEFAULT_REPORT_FIELDS,
+  getReportDataItems,
+  calcReportDataHash,
+  prepareOracleReport,
+  triggerConsensusOnHash,
+  reportOracle,
+  pushOracleReport,
+  getSecondsPerFrame,
+  getSlotTimestamp,
+}

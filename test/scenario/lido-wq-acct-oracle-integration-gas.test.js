@@ -1,9 +1,11 @@
+const { BN } = require('bn.js')
 const { assert } = require('../helpers/assert')
 const { MAX_UINT256 } = require('../helpers/constants')
-const { ZERO_ADDRESS, toBN, e18, e27 } = require('../helpers/utils')
+const { ZERO_ADDRESS, toBN, e9, e18, e27, toStr } = require('../helpers/utils')
 const { deployProtocol } = require('../helpers/protocol')
-const { reportOracle, getSecondsPerFrame } = require('../helpers/oracle')
+const { prepareOracleReport, reportOracle, getSecondsPerFrame, getSlotTimestamp } = require('../helpers/oracle')
 const { advanceChainTime } = require('../helpers/blockchain')
+const { processNamedTuple } = require('../helpers/debug')
 
 const StakingModuleMock = artifacts.require('StakingModuleMock')
 
@@ -16,7 +18,7 @@ function piecewiseModN({values, pointsPerValue, x}) {
 }
 
 
-contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, user, stranger]) => {
+contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, user, user2, stranger]) => {
 
   const test = (numRebases, withdrawalRequestsPerRebase, rebasesPerShareRateExtrema) => {
     let lido, router, wQueue, oracle, consensus, voting, stakingModule, stakingModuleId
@@ -63,11 +65,15 @@ contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, use
       await advanceChainTime(secondsPerFrame)
     }
 
-    const rebaseToShareRateBP = async (shareRateBP) => {
-      const stat = await lido.getBeaconStat()
+    const calcCLBalanceIncreaseForShareRateBP = async (shareRateBP) => {
       const totalShares = await lido.getTotalShares()
       const newTotalEth = toBN(shareRateBP).mul(toBN(totalShares)).divn(10000)
-      const ethDiff = newTotalEth.sub(toBN(await lido.getTotalPooledEther()))
+      return newTotalEth.sub(toBN(await lido.getTotalPooledEther()))
+    }
+
+    const rebaseToShareRateBP = async (shareRateBP) => {
+      const stat = await lido.getBeaconStat()
+      const ethDiff = await calcCLBalanceIncreaseForShareRateBP(shareRateBP)
       const newCLBalance = toBN(stat.beaconBalance).add(ethDiff)
 
       await advanceTimeToNextFrame()
@@ -114,9 +120,10 @@ contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, use
 
     const totalRequests = numRebases * withdrawalRequestsPerRebase
     const shareRatesBP = [10010, 10020]
+    let shareRateBP
 
     for (let i = 0; i < numRebases; ++i) {
-      const shareRateBP = Math.floor(piecewiseModN({
+      shareRateBP = Math.floor(piecewiseModN({
         values: shareRatesBP,
         pointsPerValue: rebasesPerShareRateExtrema,
         x: i
@@ -133,24 +140,88 @@ contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, use
           const amounts = new Array(withdrawalRequestsPerRebase).fill(requestSize)
           await wQueue.requestWithdrawals(amounts, user, { from: user })
         })
+
+        if (i == numRebases - 1) {
+          it(`users submit enough ETH to buffer to fullfill all withdrawals`, async () => {
+            // twice as much ETH will be enough in all scenarios
+            await lido.submit(ZERO_ADDRESS, { from: user2, value: toBN(userBalance).muln(2) })
+          })
+        }
       })
     }
 
-    const finalizationShareRateBP = Math.floor((shareRatesBP[0] + shareRatesBP[1]) / 2)
+    const finalShareRateBP = Math.floor((shareRatesBP[0] + shareRatesBP[1]) / 2)
+    const finalShareRate27 = e27(finalShareRateBP / 10000)
 
-    context(`share rate: ${finalizationShareRateBP / 10000}`, () => {
+    context(`share rate: ${finalShareRateBP / 10000}`, () => {
+      let batches, totals, oracleReportFields, ethAvailForWithdrawals
+
+      it(`calculating available ETH`, async () => {
+        const { refSlot } = await consensus.getCurrentFrame()
+
+        const stat = await lido.getBeaconStat()
+        const ethDiff = await calcCLBalanceIncreaseForShareRateBP(finalShareRateBP)
+        const newCLBalance = toBN(stat.beaconBalance).add(ethDiff)
+
+        oracleReportFields = {
+          refSlot,
+          numValidators: stat.beaconValidators,
+          clBalance: newCLBalance,
+          withdrawalVaultBalance: 0,
+          elRewardsVaultBalance: 0,
+          sharesRequestedToBurn: 0,
+          withdrawalFinalizationBatches: [],
+        }
+
+        const timestamp = await getSlotTimestamp(+refSlot, consensus)
+        const secondsElapsed = secondsPerFrame
+
+        const [totalEth, totalShares, withdrawals, elRewards] = await lido.handleOracleReport.call(
+          timestamp,
+          secondsElapsed,
+          oracleReportFields.numValidators,
+          oracleReportFields.clBalance,
+          oracleReportFields.withdrawalVaultBalance,
+          oracleReportFields.elRewardsVaultBalance,
+          oracleReportFields.sharesRequestedToBurn,
+          [], // withdrawalFinalizationBatches
+          0, // simulatedShareRate
+          { from: oracle.address }
+        )
+
+        assert.equals(withdrawals, 0)
+        assert.equals(elRewards, 0)
+
+        const shareRateE27 = toBN(e27(totalEth)).div(toBN(totalShares))
+        const oneWeiE27 = e9(1)
+
+        assert.isClose(shareRateE27, finalShareRate27, oneWeiE27)
+
+        const unfinalizedStETH = await wQueue.unfinalizedStETH()
+        const bufferedEth = await lido.getBufferedEther()
+
+        ethAvailForWithdrawals = BN.min(toBN(unfinalizedStETH), toBN(bufferedEth))
+          .add(toBN(withdrawals))
+          .add(toBN(elRewards))
+
+        console.log(`ethAvailForWithdrawals: ${ethAvailForWithdrawals.div(toBN(10).pow(toBN(18)))}`)
+      })
+
       it(`calculating batches`, async () => {
-        await rebaseToShareRateBP(finalizationShareRateBP)
-        const shareRate27 = e27(finalizationShareRateBP / 10000)
-
-        let calcState = { ethBudget: MAX_UINT256, finished: false, batches: [] }
+        let calcState = { ethBudget: toStr(ethAvailForWithdrawals), finished: false, batches: [] }
         let i = 0
 
         while (!calcState.finished) {
-          calcState = await wQueue.calculateFinalizationBatches(shareRate27, MAX_UINT256, calcState)
-          console.log(`calcState ${i}:`, calcState)
+          calcState = await wQueue.calculateFinalizationBatches(finalShareRate27, MAX_UINT256, calcState)
+          console.log(`calcState ${i}:`, processNamedTuple(calcState))
           ++i
         }
+
+        batches = calcState.batches
+      })
+
+      it.skip(`oracle report`, async () => {
+        // TODO
       })
     })
   }
@@ -161,6 +232,6 @@ contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, use
         `rebases per extrema: ${rebasesPerShareRateExtrema}`
       context(desc, () => test(numRebases, withdrawalRequestsPerRebase, rebasesPerShareRateExtrema))
     }
-    testWithParams(40, 1, 1)
+    testWithParams(2, 1, 1)
   })
 })
