@@ -65,9 +65,10 @@ async function deployNewContracts({ web3, artifacts }) {
   // === NodeOperatorsRegistry: initialize ===
   //
   const stuckPenaltyDelay = 2 * 24 * 60 * 60  // 2 days
+  const stakingModuleTypeId = "curated-onchain-v1"
   const nodeOperatorsRegistryArgs = [
     lidoLocatorAddress,
-    "0x01",  // _type
+    stakingModuleTypeId,
     stuckPenaltyDelay,
   ]
   const nodeOperatorsRegistry = await artifacts.require('NodeOperatorsRegistry').at(nodeOperatorsRegistryAddress)

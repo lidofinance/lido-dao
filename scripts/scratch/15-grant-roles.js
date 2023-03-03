@@ -13,15 +13,16 @@ const REQUIRED_NET_STATE = [
   "app:aragon-agent",
   "app:aragon-voting",
   "app:node-operators-registry",
-  "lidoLocator",
-  "stakingRouter",
+  "accountingOracle",
+  "burner",
   "daoInitialSettings",
   "eip712StETH",
-  "accountingOracle",
-  "legacyOracle",
   "hashConsensusForAccounting",
-  "validatorsExitBusOracle",
   "hashConsensusForValidatorsExitBus",
+  "lidoLocator",
+  "legacyOracle",
+  "stakingRouter",
+  "validatorsExitBusOracle",
   "withdrawalQueueERC721",
   "withdrawalVault",
 ]
@@ -43,6 +44,7 @@ async function deployNewContracts({ web3, artifacts }) {
   const validatorsExitBusOracleParams = state["validatorsExitBusOracle"].parameters
   const accountingOracleParams = state["accountingOracle"].parameters
 
+  const burnerAddress = state["burner"].address
   const stakingRouterAddress = state["stakingRouter"].address
   const withdrawalQueueAddress = state["withdrawalQueueERC721"].address
   const lidoLocatorAddress = state["lidoLocator"].address
@@ -70,9 +72,7 @@ async function deployNewContracts({ web3, artifacts }) {
   await stakingRouter.grantRole(await stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(), votingAddress, { from: stakingRouterAdmin })
   await stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_PAUSE_ROLE(), depositSecurityModuleAddress, { from: stakingRouterAdmin })
   await stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_RESUME_ROLE(), depositSecurityModuleAddress, { from: stakingRouterAdmin })
-  await stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_MANAGE_ROLE(), votingAddress, { from: stakingRouterAdmin })
   await stakingRouter.grantRole(await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(), accountingOracleAddress, { from: stakingRouterAdmin })
-  await stakingRouter.grantRole(await stakingRouter.UNSAFE_SET_EXITED_VALIDATORS_ROLE(), votingAddress, { from: stakingRouterAdmin })
   await stakingRouter.grantRole(await stakingRouter.REPORT_REWARDS_MINTED_ROLE(), lidoAddress, { from: stakingRouterAdmin })
   logWideSplitter()
 
@@ -80,31 +80,32 @@ async function deployNewContracts({ web3, artifacts }) {
   // === AccountingOracle
   //
   const accountingOracle = await artifacts.require('AccountingOracle').at(accountingOracleAddress)
-  // TODO
-  // await accountingOracle.grantRole(await accountingOracle.SUBMIT_DATA_ROLE(), undefined, { from: accountingOracleAdmin })
-  await accountingOracle.grantRole(await accountingOracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), votingAddress, { from: accountingOracleAdmin })
-  await accountingOracle.grantRole(await accountingOracle.MANAGE_CONSENSUS_VERSION_ROLE(), votingAddress, { from: accountingOracleAdmin })
+  // TODO: roles from the removed initialize()
   logWideSplitter()
 
   //
   // === HashConsensus for AccountingOracle
   //
-  /// NB: Skip because all roles are supposed to be set to the contract admin
+  /// NB: Skip because all roles are supposed to be set by the contract admin
 
   //
   // === ValidatorsExitBusOracle
   //
   const validatorsExitBusOracle = await artifacts.require('ValidatorsExitBusOracle').at(validatorsExitBusOracleAddress)
-  // TODO
-  // await validatorExitBusOracle.grantRole(await validatorExitBusOracle.SUBMIT_DATA_ROLE(), undefined, { from: exitBusOracleAdmin })
-  await validatorsExitBusOracle.grantRole(await validatorsExitBusOracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), votingAddress, { from: exitBusOracleAdmin })
-  await validatorsExitBusOracle.grantRole(await validatorsExitBusOracle.MANAGE_CONSENSUS_VERSION_ROLE(), votingAddress, { from: exitBusOracleAdmin })
+  // TODO: roles from the removed initialize()
   logWideSplitter()
 
   //
   // === HashConsensus for ValidatorExitBusOracle
   //
-  /// NB: Skip because all roles are supposed to be set to the contract admin
+  /// NB: Skip because all roles are supposed to be set by the contract admin
+
+  //
+  // === Burner
+  //
+  const burner = await artifacts.require('Burner').at(burnerAddress)
+  // REQUEST_BURN_SHARES_ROLE is already granted to Lido in Burner constructor
+  await burner.grantRole(await burner.REQUEST_BURN_SHARES_ROLE(), nodeOperatorsRegistryAddress, { from: testnetAdmin })
 
 }
 
