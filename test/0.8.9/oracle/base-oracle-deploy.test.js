@@ -21,6 +21,8 @@ const computeEpochFirstSlot = (epoch) => epoch * SLOTS_PER_EPOCH
 const computeEpochFirstSlotAt = (time) => computeEpochFirstSlot(computeEpochAt(time))
 const computeTimestampAtEpoch = (epoch) => GENESIS_TIME + epoch * SECONDS_PER_EPOCH
 const computeTimestampAtSlot = (slot) => GENESIS_TIME + slot * SECONDS_PER_SLOT
+const computeDeadlineFromRefSlot = (slot) => computeTimestampAtSlot(+slot + SLOTS_PER_FRAME)
+const computeNextRefSlotFromRefSlot = (slot) => +slot + SLOTS_PER_FRAME
 
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000'
 
@@ -85,6 +87,8 @@ module.exports = {
   computeEpochFirstSlotAt,
   computeTimestampAtSlot,
   computeTimestampAtEpoch,
+  computeNextRefSlotFromRefSlot,
+  computeDeadlineFromRefSlot,
   ZERO_HASH,
   HASH_1,
   HASH_2,

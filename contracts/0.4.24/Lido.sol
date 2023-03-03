@@ -36,6 +36,7 @@ interface IOracleReportSanityChecker {
         uint256 _postCLBalance,
         uint256 _withdrawalVaultBalance,
         uint256 _elRewardsVaultBalance,
+        uint256 _sharesRequestedToBurn,
         uint256 _preCLValidators,
         uint256 _postCLValidators
     ) external view;
@@ -47,11 +48,14 @@ interface IOracleReportSanityChecker {
         uint256 _postCLBalance,
         uint256 _withdrawalVaultBalance,
         uint256 _elRewardsVaultBalance,
-        uint256 _etherToLockForWithdrawals
+        uint256 _sharesRequestedToBurn,
+        uint256 _etherToLockForWithdrawals,
+        uint256 _newSharesToBurnForWithdrawals
     ) external view returns (
         uint256 withdrawals,
         uint256 elRewards,
-        uint256 sharesToBurnLimit
+        uint256 simulatedSharesToBurn,
+        uint256 sharesToBurn
     );
 
     function checkWithdrawalQueueOracleReport(
@@ -524,6 +528,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // EL values
         uint256 withdrawalVaultBalance;
         uint256 elRewardsVaultBalance;
+        uint256 sharesRequestedToBurn;
         // Decision about withdrawals processing
         uint256 lastFinalizableRequestId;
         uint256 simulatedShareRate;
@@ -544,15 +549,16 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
     /**
     * @notice Updates accounting stats, collects EL rewards and distributes collected rewards
-    *         if beacon balance increased
-    * @dev periodically called by the Oracle contract
+    *         if beacon balance increased, performs withdrawal requests finalization
+    * @dev periodically called by the AccountingOracle contract
     *
     * @param _reportTimestamp the moment of the oracle report calculation
     * @param _timeElapsed seconds elapsed since the previous report calculation
     * @param _clValidators number of Lido validators on Consensus Layer
     * @param _clBalance sum of all Lido validators' balances on Consensus Layer
-    * @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
-    * @param _elRewardsVaultBalance elRewards vault balance on Execution Layer for report block
+    * @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer at `_reportTimestamp`
+    * @param _elRewardsVaultBalance elRewards vault balance on Execution Layer at `_reportTimestamp`
+    * @param _sharesRequestedToBurn shares requested to burn through Burner at `_reportTimestamp`
     * @param _lastFinalizableRequestId right boundary of requestId range if equals 0, no requests should be finalized
     * @param _simulatedShareRate share rate that was simulated by oracle when the report data created (1e27 precision)
     *
@@ -575,6 +581,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // EL values
         uint256 _withdrawalVaultBalance,
         uint256 _elRewardsVaultBalance,
+        uint256 _sharesRequestedToBurn,
         // Decision about withdrawals processing
         uint256 _lastFinalizableRequestId,
         uint256 _simulatedShareRate
@@ -586,9 +593,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     ) {
         _whenNotStopped();
 
-        OracleReportContracts memory contracts = _loadOracleReportContracts();
-        require(msg.sender == contracts.accountingOracle, "APP_AUTH_FAILED");
-
         return _handleOracleReport(
             OracleReportedData(
                 _reportTimestamp,
@@ -597,10 +601,10 @@ contract Lido is Versioned, StETHPermit, AragonApp {
                 _clBalance,
                 _withdrawalVaultBalance,
                 _elRewardsVaultBalance,
+                _sharesRequestedToBurn,
                 _lastFinalizableRequestId,
                 _simulatedShareRate
-            ),
-            contracts
+            )
         );
     }
 
@@ -1149,15 +1153,16 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * @dev Intermediate data structure for `_handleOracleReport`
      * Helps to overcome `stack too deep` issue.
      */
-    struct OracleReportContext{
+    struct OracleReportContext {
         uint256 preCLValidators;
         uint256 preCLBalance;
         uint256 preTotalPooledEther;
         uint256 preTotalShares;
-        uint256 sharesToBurnLimit;
-        uint256 sharesMintedAsFees;
         uint256 etherToLockOnWithdrawalQueue;
         uint256 sharesToBurnFromWithdrawalQueue;
+        uint256 simulatedSharesToBurn;
+        uint256 sharesToBurn;
+        uint256 sharesMintedAsFees;
     }
 
     /**
@@ -1178,14 +1183,16 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * 9. Sanity check for the provided simulated share rate
      */
     function _handleOracleReport(
-        OracleReportedData memory _reportedData,
-        OracleReportContracts memory _contracts
+        OracleReportedData memory _reportedData
     ) internal returns (
         uint256 postTotalPooledEther,
         uint256 postTotalShares,
         uint256 withdrawals,
         uint256 elRewards
     ) {
+        OracleReportContracts memory contracts = _loadOracleReportContracts();
+
+        require(msg.sender == contracts.accountingOracle, "APP_AUTH_FAILED");
         require(_reportedData.reportTimestamp <= block.timestamp, "INVALID_REPORT_TIMESTAMP");
 
         OracleReportContext memory reportContext;
@@ -1204,35 +1211,45 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         // Step 2.
         // Pass the report data to sanity checker (reverts if malformed)
-        _checkAccountingOracleReport(_contracts, _reportedData, reportContext);
+        _checkAccountingOracleReport(contracts, _reportedData, reportContext);
 
         // Step 3.
         // Pre-calculate the ether to lock for withdrawal queue and shares to be burnt
+        // due to withdrawal requests to finalize
         if (_reportedData.lastFinalizableRequestId != DONT_FINALIZE_WITHDRAWALS) {
             (
                 reportContext.etherToLockOnWithdrawalQueue,
                 reportContext.sharesToBurnFromWithdrawalQueue
-            ) = _calculateWithdrawals(_contracts, _reportedData);
+            ) = _calculateWithdrawals(contracts, _reportedData);
+
+            if (reportContext.sharesToBurnFromWithdrawalQueue > 0) {
+                IBurner(contracts.burner).requestBurnShares(
+                    contracts.withdrawalQueue,
+                    reportContext.sharesToBurnFromWithdrawalQueue
+                );
+            }
         }
 
         // Step 4.
         // Pass the accounting values to sanity checker to smoothen positive token rebase
         (
-            withdrawals, elRewards, reportContext.sharesToBurnLimit
-        ) = IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).smoothenTokenRebase(
+            withdrawals, elRewards, reportContext.simulatedSharesToBurn, reportContext.sharesToBurn
+        ) = IOracleReportSanityChecker(contracts.oracleReportSanityChecker).smoothenTokenRebase(
             reportContext.preTotalPooledEther,
             reportContext.preTotalShares,
             reportContext.preCLBalance,
             _reportedData.postCLBalance,
             _reportedData.withdrawalVaultBalance,
             _reportedData.elRewardsVaultBalance,
-            reportContext.etherToLockOnWithdrawalQueue
+            _reportedData.sharesRequestedToBurn,
+            reportContext.etherToLockOnWithdrawalQueue,
+            reportContext.sharesToBurnFromWithdrawalQueue
         );
 
         // Step 5.
         // Invoke finalization of the withdrawal requests (send ether to withdrawal queue, assign shares to be burnt)
         _collectRewardsAndProcessWithdrawals(
-            _contracts,
+            contracts,
             withdrawals,
             elRewards,
             _reportedData.lastFinalizableRequestId,
@@ -1258,14 +1275,11 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         );
 
         // Step 7.
-        // Burn excess shares within the allowed limit (can postpone some shares to be burnt later)
-        // Return actually burnt shares of the current report's finalized withdrawal requests to use in sanity checks
-        uint256 burntCurrentWithdrawalShares = _burnSharesLimited(
-            IBurner(_contracts.burner),
-            _contracts.withdrawalQueue,
-            reportContext.sharesToBurnFromWithdrawalQueue,
-            reportContext.sharesToBurnLimit
-        );
+        // Burn the previously requested shares
+        if (reportContext.sharesToBurn > 0) {
+            IBurner(contracts.burner).commitSharesToBurn(reportContext.sharesToBurn);
+            _burnShares(contracts.burner, reportContext.sharesToBurn);
+        }
 
         // Step 8.
         // Complete token rebase by informing observers (emit an event and call the external receivers if any)
@@ -1275,16 +1289,16 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         ) = _completeTokenRebase(
             _reportedData,
             reportContext,
-            IPostTokenRebaseReceiver(_contracts.postTokenRebaseReceiver)
+            IPostTokenRebaseReceiver(contracts.postTokenRebaseReceiver)
         );
 
         // Step 9. Sanity check for the provided simulated share rate
         if (_reportedData.lastFinalizableRequestId != DONT_FINALIZE_WITHDRAWALS) {
-            IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).checkSimulatedShareRate(
+            IOracleReportSanityChecker(contracts.oracleReportSanityChecker).checkSimulatedShareRate(
                 postTotalPooledEther,
                 postTotalShares,
                 reportContext.etherToLockOnWithdrawalQueue,
-                burntCurrentWithdrawalShares,
+                reportContext.sharesToBurn.sub(reportContext.simulatedSharesToBurn),
                 _reportedData.simulatedShareRate
             );
         }
@@ -1305,6 +1319,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             _reportedData.postCLBalance,
             _reportedData.withdrawalVaultBalance,
             _reportedData.elRewardsVaultBalance,
+            _reportedData.sharesRequestedToBurn,
             _reportContext.preCLValidators,
             _reportedData.clValidators
         );
@@ -1343,43 +1358,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             postTotalPooledEther,
             _reportContext.sharesMintedAsFees
         );
-    }
-
-    /*
-     * @dev Perform burning of `stETH` shares via the dedicated `Burner` contract.
-     *
-     * NB: some of the burning amount can be postponed for the next reports if positive token rebase smoothened.
-     * It's possible that underlying shares of the current oracle report's finalized withdrawals won't be burnt
-     * completely in a single oracle report round due to the provided `_sharesToBurnLimit` limit
-     *
-     * @return shares actually burnt for the current oracle report's finalized withdrawals
-     * these shares are assigned to be burnt most recently, so the amount can be calculated deducting
-     * `postponedSharesToBurn` shares (if any) after the burn commitment & execution
-     */
-    function _burnSharesLimited(
-        IBurner _burner,
-        address _withdrawalQueue,
-        uint256 _sharesToBurnFromWithdrawalQueue,
-        uint256 _sharesToBurnLimit
-    ) internal returns (uint256 burntCurrentWithdrawalShares) {
-        if (_sharesToBurnFromWithdrawalQueue > 0) {
-            _burner.requestBurnShares(_withdrawalQueue, _sharesToBurnFromWithdrawalQueue);
-        }
-
-        if (_sharesToBurnLimit > 0) {
-            uint256 sharesCommittedToBurnNow = _burner.commitSharesToBurn(_sharesToBurnLimit);
-
-            if (sharesCommittedToBurnNow > 0) {
-                _burnShares(address(_burner), sharesCommittedToBurnNow);
-            }
-        }
-
-        (uint256 coverShares, uint256 nonCoverShares) = _burner.getSharesRequestedToBurn();
-        uint256 postponedSharesToBurn = coverShares.add(nonCoverShares);
-
-        burntCurrentWithdrawalShares =
-            postponedSharesToBurn < _sharesToBurnFromWithdrawalQueue ?
-            _sharesToBurnFromWithdrawalQueue - postponedSharesToBurn : 0;
     }
 
     /**

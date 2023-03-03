@@ -65,9 +65,9 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
       assert.equals(tx.logs.length, 3)
 
-      await assert.emits(tx, 'ContractVersionSet', { version: 1 })
-      await assert.emits(tx, 'RoleGranted', { role: DEFAULT_ADMIN_ROLE, account: admin, sender: deployer })
-      await assert.emits(tx, 'WithdrawalCredentialsSet', { withdrawalCredentials: wc })
+      assert.emits(tx, 'ContractVersionSet', { version: 1 })
+      assert.emits(tx, 'RoleGranted', { role: DEFAULT_ADMIN_ROLE, account: admin, sender: deployer })
+      assert.emits(tx, 'WithdrawalCredentialsSet', { withdrawalCredentials: wc })
     })
 
     it('second initialize reverts', async () => {
@@ -90,7 +90,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       assert.equals(await app.hasRole(MANAGE_WITHDRAWAL_CREDENTIALS_ROLE, appManager), true)
 
       assert.equals(tx.logs.length, 1)
-      await assert.emits(tx, 'RoleGranted', {
+      assert.emits(tx, 'RoleGranted', {
         role: MANAGE_WITHDRAWAL_CREDENTIALS_ROLE,
         account: appManager,
         sender: admin,
@@ -103,7 +103,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       assert.equals(await app.hasRole(STAKING_MODULE_PAUSE_ROLE, appManager), true)
 
       assert.equals(tx.logs.length, 1)
-      await assert.emits(tx, 'RoleGranted', { role: STAKING_MODULE_PAUSE_ROLE, account: appManager, sender: admin })
+      assert.emits(tx, 'RoleGranted', { role: STAKING_MODULE_PAUSE_ROLE, account: appManager, sender: admin })
     })
 
     it('grant role STAKING_MODULE_RESUME_ROLE', async () => {
@@ -112,7 +112,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       assert.equals(await app.hasRole(STAKING_MODULE_RESUME_ROLE, appManager), true)
 
       assert.equals(tx.logs.length, 1)
-      await assert.emits(tx, 'RoleGranted', { role: STAKING_MODULE_RESUME_ROLE, account: appManager, sender: admin })
+      assert.emits(tx, 'RoleGranted', { role: STAKING_MODULE_RESUME_ROLE, account: appManager, sender: admin })
     })
 
     it('grant role STAKING_MODULE_MANAGE_ROLE', async () => {
@@ -121,7 +121,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       assert.equals(await app.hasRole(STAKING_MODULE_MANAGE_ROLE, appManager), true)
 
       assert.equals(tx.logs.length, 1)
-      await assert.emits(tx, 'RoleGranted', { role: STAKING_MODULE_MANAGE_ROLE, account: appManager, sender: admin })
+      assert.emits(tx, 'RoleGranted', { role: STAKING_MODULE_MANAGE_ROLE, account: appManager, sender: admin })
     })
 
     it('public constants', async () => {
@@ -227,7 +227,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       const newWC = '0x'.padEnd(66, '5678')
       const tx = await app.setWithdrawalCredentials(newWC, { from: appManager })
 
-      await assert.emits(tx, 'WithdrawalCredentialsSet', { withdrawalCredentials: newWC })
+      assert.emits(tx, 'WithdrawalCredentialsSet', { withdrawalCredentials: newWC })
 
       assert.equals(await stakingModule.getAvailableValidatorsCount(), 0)
     })
@@ -462,18 +462,18 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         }
       )
       assert.equals(tx.logs.length, 3)
-      await assert.emits(tx, 'StakingModuleAdded', {
+      assert.emits(tx, 'StakingModuleAdded', {
         stakingModuleId: stakingModulesParams[0].expectedModuleId,
         stakingModule: stakingModule1.address,
         name: stakingModulesParams[0].name,
         createdBy: appManager,
       })
-      await assert.emits(tx, 'StakingModuleTargetShareSet', {
+      assert.emits(tx, 'StakingModuleTargetShareSet', {
         stakingModuleId: stakingModulesParams[0].expectedModuleId,
         targetShare: stakingModulesParams[0].targetShare,
         setBy: appManager,
       })
-      await assert.emits(tx, 'StakingModuleFeesSet', {
+      assert.emits(tx, 'StakingModuleFeesSet', {
         stakingModuleId: stakingModulesParams[0].expectedModuleId,
         stakingModuleFee: stakingModulesParams[0].stakingModuleFee,
         treasuryFee: stakingModulesParams[0].treasuryFee,
@@ -520,18 +520,18 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       )
 
       assert.equals(tx.logs.length, 3)
-      await assert.emits(tx, 'StakingModuleAdded', {
+      assert.emits(tx, 'StakingModuleAdded', {
         stakingModuleId: stakingModulesParams[1].expectedModuleId,
         stakingModule: stakingModule2.address,
         name: stakingModulesParams[1].name,
         createdBy: appManager,
       })
-      await assert.emits(tx, 'StakingModuleTargetShareSet', {
+      assert.emits(tx, 'StakingModuleTargetShareSet', {
         stakingModuleId: stakingModulesParams[1].expectedModuleId,
         targetShare: stakingModulesParams[1].targetShare,
         setBy: appManager,
       })
-      await assert.emits(tx, 'StakingModuleFeesSet', {
+      assert.emits(tx, 'StakingModuleFeesSet', {
         stakingModuleId: stakingModulesParams[1].expectedModuleId,
         stakingModuleFee: stakingModulesParams[1].stakingModuleFee,
         treasuryFee: stakingModulesParams[1].treasuryFee,
@@ -663,12 +663,12 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
       assert.equals(tx.logs.length, 2)
 
-      await assert.emits(tx, 'StakingModuleTargetShareSet', {
+      assert.emits(tx, 'StakingModuleTargetShareSet', {
         stakingModuleId: stakingModuleNewParams.id,
         targetShare: stakingModuleNewParams.targetShare,
         setBy: appManager,
       })
-      await assert.emits(tx, 'StakingModuleFeesSet', {
+      assert.emits(tx, 'StakingModuleFeesSet', {
         stakingModuleId: stakingModuleNewParams.id,
         stakingModuleFee: stakingModuleNewParams.stakingModuleFee,
         treasuryFee: stakingModuleNewParams.treasuryFee,
@@ -713,7 +713,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         }
       )
 
-      await assert.emits(tx, 'StakingModuleStatusSet', {
+      assert.emits(tx, 'StakingModuleStatusSet', {
         stakingModuleId: stakingModulesParams[0].expectedModuleId,
         status: StakingModuleStatus.Stopped,
         setBy: appManager,
@@ -771,7 +771,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         from: appManager,
       })
 
-      await assert.emits(tx, 'StakingModuleStatusSet', {
+      assert.emits(tx, 'StakingModuleStatusSet', {
         stakingModuleId: stakingModulesParams[0].expectedModuleId,
         status: StakingModuleStatus.DepositsPaused,
         setBy: appManager,
@@ -846,7 +846,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         from: appManager,
       })
 
-      await assert.emits(tx, 'StakingModuleStatusSet', {
+      assert.emits(tx, 'StakingModuleStatusSet', {
         stakingModuleId: stakingModulesParams[0].expectedModuleId,
         status: StakingModuleStatus.Active,
         setBy: appManager,

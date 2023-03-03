@@ -38,6 +38,12 @@ contract StETHMock is StETH {
         _emitTransferAfterMintingShares(_to, _sharesAmount);
     }
 
+    function mintSteth(address _to) public payable  {
+        uint256 sharesAmount = getSharesByPooledEth(msg.value);
+        mintShares(_to, sharesAmount);
+        setTotalPooledEther(_getTotalPooledEther().add(msg.value));
+    }
+
     function burnShares(address _account, uint256 _sharesAmount) public returns (uint256 newTotalShares) {
         return _burnShares(_account, _sharesAmount);
     }

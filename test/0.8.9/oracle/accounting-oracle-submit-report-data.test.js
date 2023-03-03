@@ -46,8 +46,9 @@ contract('AccountingOracle', ([admin, member1]) => {
     numExitedValidatorsByStakingModule: [3],
     withdrawalVaultBalance: e18(1),
     elRewardsVaultBalance: e18(2),
-    lastWithdrawalRequestIdToFinalize: 1,
-    finalizationShareRate: e27(1),
+    sharesRequestedToBurn: e18(3),
+    lastFinalizableWithdrawalRequestId: 1,
+    simulatedShareRate: e27(1),
     isBunkerMode: true,
     extraDataFormat: EXTRA_DATA_FORMAT_LIST,
     extraDataHash,
@@ -438,11 +439,12 @@ contract('AccountingOracle', ([admin, member1]) => {
         assert.equals(lastOracleReportToLido.clBalance, reportFields.clBalanceGwei + '000000000')
         assert.equals(lastOracleReportToLido.withdrawalVaultBalance, reportFields.withdrawalVaultBalance)
         assert.equals(lastOracleReportToLido.elRewardsVaultBalance, reportFields.elRewardsVaultBalance)
+        assert.equals(lastOracleReportToLido.sharesRequestedToBurn, reportFields.sharesRequestedToBurn)
         assert.equals(
-          lastOracleReportToLido.lastWithdrawalRequestIdToFinalize,
-          reportFields.lastWithdrawalRequestIdToFinalize
+          lastOracleReportToLido.lastFinalizableWithdrawalRequestId,
+          reportFields.lastFinalizableWithdrawalRequestId
         )
-        assert.equals(lastOracleReportToLido.finalizationShareRate, reportFields.finalizationShareRate)
+        assert.equals(lastOracleReportToLido.simulatedShareRate, reportFields.simulatedShareRate)
       })
 
       it('should call updateExitedValidatorsCountByStakingModule on StakingRouter', async () => {

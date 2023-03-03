@@ -13,6 +13,7 @@ function getReportDataItems(r) {
     r.numExitedValidatorsByStakingModule,
     r.withdrawalVaultBalance,
     r.elRewardsVaultBalance,
+    r.requestedToBurnShares,
     r.lastWithdrawalRequestIdToFinalize,
     r.finalizationShareRate,
     r.isBunkerMode,
@@ -25,7 +26,7 @@ function getReportDataItems(r) {
 function calcReportDataHash(reportItems) {
   const data = web3.eth.abi.encodeParameters(
     [
-      '(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256)',
+      '(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256)',
     ],
     [reportItems]
   )
@@ -52,6 +53,7 @@ async function pushOracleReport(consensus, oracle, numValidators, clBalance, elR
     numExitedValidatorsByStakingModule: [],
     withdrawalVaultBalance: 0,
     elRewardsVaultBalance: elRewards || 0,
+    requestedToBurnShares: 0,
     lastWithdrawalRequestIdToFinalize: 0,
     finalizationShareRate: 0,
     isBunkerMode: false,

@@ -119,8 +119,9 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
         numExitedValidatorsByStakingModule: [3],
         withdrawalVaultBalance: e18(1),
         elRewardsVaultBalance: e18(2),
-        lastWithdrawalRequestIdToFinalize: 1,
-        finalizationShareRate: e27(1),
+        sharesRequestedToBurn: e18(3),
+        lastFinalizableWithdrawalRequestId: 1,
+        simulatedShareRate: e27(1),
         isBunkerMode: true,
         extraDataFormat: EXTRA_DATA_FORMAT_LIST,
         extraDataHash,
@@ -219,10 +220,10 @@ contract('AccountingOracle', ([admin, member1, member2, member3, stranger]) => {
       assert.equals(lastOracleReportCall.withdrawalVaultBalance, reportFields.withdrawalVaultBalance)
       assert.equals(lastOracleReportCall.elRewardsVaultBalance, reportFields.elRewardsVaultBalance)
       assert.equals(
-        lastOracleReportCall.lastWithdrawalRequestIdToFinalize,
-        reportFields.lastWithdrawalRequestIdToFinalize
+        lastOracleReportCall.lastFinalizableWithdrawalRequestId,
+        reportFields.lastFinalizableWithdrawalRequestId
       )
-      assert.equals(lastOracleReportCall.finalizationShareRate, reportFields.finalizationShareRate)
+      assert.equals(lastOracleReportCall.simulatedShareRate, reportFields.simulatedShareRate)
     })
 
     it(`withdrawal queue got bunker mode report`, async () => {
