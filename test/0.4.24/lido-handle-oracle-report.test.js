@@ -1153,7 +1153,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       )
     })
 
-    it('smooth shares to burn if report in limit without shares and fees', async () => {
+    it('smooth shares to burn if report in limit without shares and some fees', async () => {
       await lido.submit(ZERO_ADDRESS, { from: bob, value: ETH(1) })
       await setBalance(elRewardsVault, ETH(0.4))
 
@@ -1210,7 +1210,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
         preTotalEther: ETH(101),
         postTotalShares: postTotalShares.toString(),
         postTotalEther: postTotalEther.toString(),
-        sharesMintedAsFees: sharesMintedAsFees.toString(), // no rewards on CL side => no minted fee
+        sharesMintedAsFees: sharesMintedAsFees.toString(),
       })
       await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96.1) })
       const shareRateDeltaE27 = calcShareRateDeltaE27(ETH(101), postTotalEther, ETH(101), postTotalShares)
@@ -1619,16 +1619,285 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0.1))
     })
 
-    it.skip('does not smooth shares to burn if report in limit with shares', async () => {
-      // TODO
+    it('does not smooth shares to burn if report in limit with shares', async () => {
+      await lido.submit(ZERO_ADDRESS, { from: bob, value: ETH(1) })
+
+      const sharesToBurn = await lido.sharesOf(bob)
+      await lido.approve(burner.address, await lido.balanceOf(bob), { from: bob })
+      await burner.requestBurnShares(bob, sharesToBurn, { from: voting })
+      let { coverShares, nonCoverShares } = await burner.getSharesRequestedToBurn()
+      assert.equals(coverShares.add(nonCoverShares), sharesToBurn)
+
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
+          maxPositiveTokenRebase: 10000000,
+        },
+        { from: voting, gasPrice: 1 }
+      )
+
+      await lido.handleOracleReport(
+        ...Object.values({
+          ...DEFAULT_LIDO_ORACLE_REPORT,
+          timeElapsed: ONE_DAY,
+          clValidators: 3,
+          postCLBalance: ETH(96),
+          sharesRequestedToBurn: sharesToBurn,
+        }),
+        { from: oracle, gasPrice: 1 }
+      )
+      await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
+      await checkBalanceDeltas({
+        totalPooledEtherDiff: ETH(1),
+        treasuryBalanceDiff: 0,
+        strangerBalanceDiff: ETH(0.3),
+        anotherStrangerBalanceDiff: ETH(0.69),
+        curatedModuleBalanceDiff: 0,
+        initialHolderBalanceDiff: ETH(0.01),
+      })
+      ;({ coverShares, nonCoverShares } = await burner.getSharesRequestedToBurn())
+      assert.equals(coverShares.add(nonCoverShares), StETH(0))
+      assert.equals(await lido.balanceOf(burner.address), StETH(0))
     })
 
-    it.skip('smooth shares to burn if report in limit without shares', async () => {
-      // TODO
+    it('smooth shares to burn if report in limit without shares and no fees', async () => {
+      await lido.submit(ZERO_ADDRESS, { from: bob, value: ETH(1) })
+      await setBalance(elRewardsVault, ETH(0.5))
+
+      const sharesRequestedToBurn = await lido.sharesOf(bob)
+      await lido.approve(burner.address, await lido.balanceOf(bob), { from: bob })
+      await burner.requestBurnShares(bob, sharesRequestedToBurn, { from: voting })
+      let { coverShares, nonCoverShares } = await burner.getSharesRequestedToBurn()
+      assert.equals(coverShares.add(nonCoverShares), sharesRequestedToBurn)
+
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
+          maxPositiveTokenRebase: 10000000,
+        },
+        { from: voting, gasPrice: 1 }
+      )
+      const tx = await lido.handleOracleReport(
+        ...Object.values({
+          ...DEFAULT_LIDO_ORACLE_REPORT,
+          timeElapsed: ONE_DAY,
+          clValidators: 3,
+          postCLBalance: ETH(96),
+          elRewardsVaultBalance: ETH(0.5),
+          sharesRequestedToBurn: sharesRequestedToBurn.toString(),
+        }),
+        { from: oracle, gasPrice: 1 }
+      )
+      await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
+
+      const { elBalanceUpdate, sharesToBurn } = limitRebase(
+        toBN(10000000),
+        ETH(101),
+        ETH(101),
+        ETH(0),
+        ETH(0.5),
+        sharesRequestedToBurn
+      )
+
+      const postTotalShares = toBN(ETH(101)).sub(toBN(sharesToBurn))
+      const postTotalEther = toBN(ETH(101)).add(toBN(elBalanceUpdate))
+
+      await checkEvents({
+        tx,
+        preCLValidators: 0,
+        postCLValidators: 3,
+        preCLBalance: ETH(96),
+        postCLBalance: ETH(96),
+        withdrawalsWithdrawn: 0,
+        executionLayerRewardsWithdrawn: ETH(0.5),
+        postBufferedEther: ETH(5.5),
+        timeElapsed: ONE_DAY, // NB: day-long
+        preTotalShares: ETH(101),
+        preTotalEther: ETH(101),
+        postTotalShares: postTotalShares.toString(),
+        postTotalEther: postTotalEther.toString(),
+        sharesMintedAsFees: 0, // no rewards on CL side => no minted fee
+      })
+      await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96) })
+      const shareRateDeltaE27 = calcShareRateDeltaE27(ETH(101), postTotalEther, ETH(101), postTotalShares)
+
+      await checkBalanceDeltas({
+        totalPooledEtherDiff: ETH(1.5),
+        treasuryBalanceDiff: ETH(0), // no fee minted
+        strangerBalanceDiff: shareRateDeltaE27.mul(toBN(30)).div(toBN(e9(1))), // though, bob has sacrificed stETH shares for all users
+        anotherStrangerBalanceDiff: shareRateDeltaE27.mul(toBN(69)).div(toBN(e9(1))),
+        curatedModuleBalanceDiff: ETH(0), // no fee minted
+        initialHolderBalanceDiff: shareRateDeltaE27.mul(toBN(1)).div(toBN(e9(1))),
+      })
+      assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0))
+      ;({ coverShares, nonCoverShares } = await burner.getSharesRequestedToBurn())
+      assert.equals(sharesRequestedToBurn.sub(coverShares.add(nonCoverShares)), sharesToBurn)
+      assert.equals(
+        await lido.balanceOf(burner.address),
+        await lido.getPooledEthByShares(toBN(sharesRequestedToBurn).sub(sharesToBurn))
+      )
     })
 
-    it.skip('postpone all shares to burn if report out of limit without shares', async () => {
-      // TODO
+    it('smooth shares to burn if report in limit without shares and some fees', async () => {
+      await lido.submit(ZERO_ADDRESS, { from: bob, value: ETH(1) })
+      await setBalance(elRewardsVault, ETH(0.4))
+
+      const sharesRequestedToBurn = await lido.sharesOf(bob)
+      await lido.approve(burner.address, await lido.balanceOf(bob), { from: bob })
+      await burner.requestBurnShares(bob, sharesRequestedToBurn, { from: voting })
+      let { coverShares, nonCoverShares } = await burner.getSharesRequestedToBurn()
+      assert.equals(coverShares.add(nonCoverShares), sharesRequestedToBurn)
+
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
+          maxPositiveTokenRebase: 10000000, // 1%
+        },
+        { from: voting, gasPrice: 1 }
+      )
+
+      const tx = await lido.handleOracleReport(
+        ...Object.values({
+          ...DEFAULT_LIDO_ORACLE_REPORT,
+          timeElapsed: ONE_DAY,
+          clValidators: 3,
+          postCLBalance: ETH(96.1),
+          elRewardsVaultBalance: ETH(0.4),
+          sharesRequestedToBurn: sharesRequestedToBurn.toString(),
+        }),
+        { from: oracle, gasPrice: 1 }
+      )
+
+      const { elBalanceUpdate, sharesToBurn } = limitRebase(
+        toBN(10000000),
+        ETH(101),
+        ETH(101),
+        ETH(0.1),
+        ETH(0.4),
+        sharesRequestedToBurn
+      )
+
+      const postTotalEther = toBN(ETH(101.1)).add(toBN(elBalanceUpdate))
+      const sharesMintedAsFees = calcSharesMintedAsFees(ETH(0.5), 10, 100, ETH(101), postTotalEther)
+      const postTotalShares = toBN(ETH(101)).add(sharesMintedAsFees).sub(toBN(sharesToBurn))
+
+      await checkEvents({
+        tx,
+        preCLValidators: 0,
+        postCLValidators: 3,
+        preCLBalance: ETH(96),
+        postCLBalance: ETH(96.1),
+        withdrawalsWithdrawn: 0,
+        executionLayerRewardsWithdrawn: ETH(0.4),
+        postBufferedEther: ETH(5.4),
+        timeElapsed: ONE_DAY,
+        preTotalShares: ETH(101),
+        preTotalEther: ETH(101),
+        postTotalShares: postTotalShares.toString(),
+        postTotalEther: postTotalEther.toString(),
+        sharesMintedAsFees: sharesMintedAsFees.toString(),
+      })
+      await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96.1) })
+      const shareRateDeltaE27 = calcShareRateDeltaE27(ETH(101), postTotalEther, ETH(101), postTotalShares)
+
+      await checkBalanceDeltas({
+        totalPooledEtherDiff: ETH(1.5),
+        treasuryBalanceDiff: await lido.getPooledEthByShares(sharesMintedAsFees.div(toBN(2))),
+        strangerBalanceDiff: shareRateDeltaE27.mul(toBN(30)).div(toBN(e9(1))),
+        anotherStrangerBalanceDiff: shareRateDeltaE27.mul(toBN(69)).div(toBN(e9(1))),
+        curatedModuleBalanceDiff: await lido.getPooledEthByShares(sharesMintedAsFees.div(toBN(2))),
+        initialHolderBalanceDiff: shareRateDeltaE27.mul(toBN(1)).div(toBN(e9(1))),
+      })
+      assert.equals(await ethers.provider.getBalance(elRewardsVault), ETH(0))
+      ;({ coverShares, nonCoverShares } = await burner.getSharesRequestedToBurn())
+      assert.equals(sharesRequestedToBurn.sub(coverShares.add(nonCoverShares)), sharesToBurn)
+      assert.equals(
+        await lido.balanceOf(burner.address),
+        await lido.getPooledEthByShares(toBN(sharesRequestedToBurn).sub(sharesToBurn))
+      )
+    })
+
+    it('postpone all shares to burn if report out of limit without shares', async () => {
+      await lido.submit(ZERO_ADDRESS, { from: bob, value: ETH(1) })
+      await setBalance(elRewardsVault, ETH(4.9))
+
+      const sharesRequestedToBurn = await lido.sharesOf(bob)
+      await lido.approve(burner.address, await lido.balanceOf(bob), { from: bob })
+      await burner.requestBurnShares(bob, sharesRequestedToBurn, { from: voting })
+      let { coverShares, nonCoverShares } = await burner.getSharesRequestedToBurn()
+      assert.equals(coverShares.add(nonCoverShares), sharesRequestedToBurn)
+
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
+          maxPositiveTokenRebase: 10000000, // 1%
+        },
+        { from: voting, gasPrice: 1 }
+      )
+
+      const tx = await lido.handleOracleReport(
+        ...Object.values({
+          ...DEFAULT_LIDO_ORACLE_REPORT,
+          timeElapsed: ONE_DAY,
+          clValidators: 3,
+          postCLBalance: ETH(96.1),
+          elRewardsVaultBalance: ETH(4.9),
+          sharesRequestedToBurn: sharesRequestedToBurn.toString(),
+        }),
+        { from: oracle, gasPrice: 1 }
+      )
+
+      const { elBalanceUpdate, sharesToBurn } = limitRebase(
+        toBN(10000000),
+        ETH(101),
+        ETH(101),
+        ETH(0.1),
+        ETH(4.9),
+        sharesRequestedToBurn
+      )
+
+      const postTotalEther = toBN(ETH(101.1)).add(toBN(elBalanceUpdate))
+      const sharesMintedAsFees = calcSharesMintedAsFees(
+        toBN(ETH(0.1)).add(elBalanceUpdate),
+        10,
+        100,
+        ETH(101),
+        postTotalEther
+      )
+      const postTotalShares = toBN(ETH(101)).add(sharesMintedAsFees).sub(toBN(sharesToBurn))
+
+      await checkEvents({
+        tx,
+        preCLValidators: 0,
+        postCLValidators: 3,
+        preCLBalance: ETH(96),
+        postCLBalance: ETH(96.1),
+        withdrawalsWithdrawn: 0,
+        executionLayerRewardsWithdrawn: elBalanceUpdate.toString(),
+        postBufferedEther: toBN(ETH(5)).add(elBalanceUpdate).toString(),
+        timeElapsed: ONE_DAY,
+        preTotalShares: ETH(101),
+        preTotalEther: ETH(101),
+        postTotalShares: postTotalShares.toString(),
+        postTotalEther: postTotalEther.toString(),
+        sharesMintedAsFees: sharesMintedAsFees.toString(),
+      })
+      await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96.1) })
+      const shareRateDeltaE27 = calcShareRateDeltaE27(ETH(101), postTotalEther, ETH(101), postTotalShares)
+
+      await checkBalanceDeltas({
+        totalPooledEtherDiff: toBN(ETH(1.1)).add(elBalanceUpdate),
+        treasuryBalanceDiff: await lido.getPooledEthByShares(sharesMintedAsFees.div(toBN(2))),
+        strangerBalanceDiff: shareRateDeltaE27.mul(toBN(30)).div(toBN(e9(1))),
+        anotherStrangerBalanceDiff: shareRateDeltaE27.mul(toBN(69)).div(toBN(e9(1))),
+        curatedModuleBalanceDiff: await lido.getPooledEthByShares(sharesMintedAsFees.div(toBN(2))),
+        initialHolderBalanceDiff: shareRateDeltaE27.mul(toBN(1)).div(toBN(e9(1))),
+      })
+      assert.equals(await ethers.provider.getBalance(elRewardsVault), toBN(ETH(4.9)).sub(elBalanceUpdate))
+      ;({ coverShares, nonCoverShares } = await burner.getSharesRequestedToBurn())
+      assert.equals(sharesToBurn, 0)
+      assert.equals(coverShares.add(nonCoverShares), sharesRequestedToBurn)
+      assert.equals(await lido.balanceOf(burner.address), await lido.getPooledEthByShares(sharesRequestedToBurn))
     })
   })
 
