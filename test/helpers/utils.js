@@ -119,6 +119,41 @@ const calcSharesMintedAsFees = (rewards, fee, feePoints, prevTotalShares, newTot
     )
 }
 
+const limitRebase = (limitE9, preTotalPooledEther, preTotalShares, clBalanceUpdate, elBalanceUpdate, sharesToBurn) => {
+  const bnE9 = toBN(e9(1))
+
+  let accumulatedRebase = toBN(0)
+  const clRebase = toBN(clBalanceUpdate).mul(bnE9).div(toBN(preTotalPooledEther))
+  accumulatedRebase = accumulatedRebase.add(clRebase)
+  if (limitE9.lte(accumulatedRebase)) {
+    return { elBalanceUpdate: 0, sharesToBurn: 0 }
+  }
+
+  let remainLimit = limitE9.sub(accumulatedRebase)
+  const remainEther = remainLimit.mul(toBN(preTotalPooledEther)).div(bnE9)
+  if (remainEther.lte(toBN(elBalanceUpdate))) {
+    return { elBalanceUpdate: remainEther, sharesToBurn: 0 }
+  }
+
+  const elRebase = toBN(elBalanceUpdate).mul(bnE9).div(toBN(preTotalPooledEther))
+  accumulatedRebase = accumulatedRebase.add(elRebase)
+  remainLimit = toBN(limitE9).sub(accumulatedRebase)
+
+  const remainShares = remainLimit.mul(toBN(preTotalShares)).div(bnE9.add(remainLimit))
+
+  if (remainShares.lte(toBN(sharesToBurn))) {
+    return { elBalanceUpdate, sharesToBurn: remainShares }
+  }
+
+  return { elBalanceUpdate, sharesToBurn }
+}
+
+const calcShareRateDeltaE27 = (preTotalPooledEther, postTotalPooledEther, preTotalShares, postTotalShares) => {
+  const oldShareRateE27 = toBN(e27(1)).mul(toBN(preTotalPooledEther)).div(toBN(preTotalShares))
+  const newShareRatesE27 = toBN(e27(1)).mul(toBN(postTotalPooledEther)).div(toBN(postTotalShares))
+  return newShareRatesE27.sub(oldShareRateE27)
+}
+
 function getFirstEventArgs(receipt, eventName, abi = undefined) {
   const events = getEvents(receipt, eventName, { decodeForAbi: abi })
   chai.assert(events.length !== 0, () => `Expected event ${eventName} wasn't emitted`)
@@ -152,4 +187,6 @@ module.exports = {
   prepIdsCountsPayload,
   calcSharesMintedAsFees,
   getFirstEventArgs,
+  calcShareRateDeltaE27,
+  limitRebase,
 }

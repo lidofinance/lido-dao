@@ -1,6 +1,7 @@
 const { ethers, contract, web3, artifacts } = require('hardhat')
 
 const { MaxUint256 } = require('@ethersproject/constants')
+const { ZERO_BYTES32 } = require('../../helpers/constants')
 const { assert } = require('../../helpers/assert')
 const { EvmSnapshot } = require('../../helpers/blockchain')
 
@@ -30,6 +31,42 @@ contract('HashConsensus', ([admin, account1, account2, member1, member2]) => {
     snapshot = new EvmSnapshot(ethers.provider)
     await snapshot.make()
   }
+
+  context('DEFAULT_ADMIN_ROLE', () => {
+    const DEFAULT_ADMIN_ROLE = ZERO_BYTES32
+
+    before(async () => {
+      await deploy({ initialEpoch: null })
+    })
+
+    afterEach(async () => {
+      await snapshot.rollback()
+    })
+
+    context('updateInitialEpoch', () => {
+      it('reverts when called without DEFAULT_ADMIN_ROLE', async () => {
+        assert.revertsOZAccessControl(
+          consensus.updateInitialEpoch(10, { from: account1 }),
+          account1,
+          'DEFAULT_ADMIN_ROLE'
+        )
+
+        await consensus.grantRole(manageFrameConfigRoleKeccak156, account2)
+
+        assert.revertsOZAccessControl(
+          consensus.updateInitialEpoch(10, { from: account2 }),
+          account2,
+          'DEFAULT_ADMIN_ROLE'
+        )
+      })
+
+      it('allows calling from a possessor of DEFAULT_ADMIN_ROLE role', async () => {
+        await consensus.grantRole(DEFAULT_ADMIN_ROLE, account2, { from: admin })
+        await consensus.updateInitialEpoch(10, { from: account2 })
+        assert.equals((await consensus.getFrameConfig()).initialEpoch, 10)
+      })
+    })
+  })
 
   context('deploying', () => {
     before(deploy)
