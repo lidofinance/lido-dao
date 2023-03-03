@@ -119,6 +119,131 @@ async function deployOracleReportSanityCheckerForAccounting(lidoLocator, admin) 
   return oracleReportSanityChecker
 }
 
+async function deployMockLegacyOracle({
+  epochsPerFrame = EPOCHS_PER_FRAME,
+  slotsPerEpoch = SLOTS_PER_EPOCH,
+  secondsPerSlot = SECONDS_PER_SLOT,
+  genesisTime = GENESIS_TIME,
+  lastCompletedEpochId = V1_ORACLE_LAST_COMPLETED_EPOCH,
+} = {}) {
+  const legacyOracle = await MockLegacyOracle.new()
+  await legacyOracle.setParams(epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime, lastCompletedEpochId)
+  return legacyOracle
+}
+
+async function deployMockLidoAndStakingRouter() {
+  const stakingRouter = await MockStakingRouter.new()
+  const withdrawalQueue = await MockWithdrawalQueue.new()
+  const lido = await MockLido.new()
+  return { lido, stakingRouter, withdrawalQueue }
+}
+
+async function deployAccountingOracleSetup(
+  admin,
+  {
+    initialEpoch = null,
+    epochsPerFrame = EPOCHS_PER_FRAME,
+    slotsPerEpoch = SLOTS_PER_EPOCH,
+    secondsPerSlot = SECONDS_PER_SLOT,
+    genesisTime = GENESIS_TIME,
+    getLidoAndStakingRouter = deployMockLidoAndStakingRouter,
+    getLegacyOracle = deployMockLegacyOracle,
+    lidoLocatorAddr: lidoLocatorAddrArg,
+    legacyOracleAddr: legacyOracleAddrArg,
+  } = {}
+) {
+  const locatorAddr = (await deployLocatorWithDummyAddressesImplementation(admin)).address
+  const { lido, stakingRouter, withdrawalQueue } = await getLidoAndStakingRouter()
+  const oracleReportSanityChecker = await deployOracleReportSanityCheckerForAccounting(locatorAddr, admin)
+
+  const legacyOracle = await getLegacyOracle()
+
+  if (initialEpoch == null) {
+    initialEpoch = +(await legacyOracle.getLastCompletedEpochId()) + epochsPerFrame
+  }
+
+  const oracle = await AccountingOracle.new(
+    lidoLocatorAddrArg || locatorAddr,
+    lido.address,
+    legacyOracleAddrArg || legacyOracle.address,
+    secondsPerSlot,
+    genesisTime,
+    { from: admin }
+  )
+
+  const { consensus } = await deployHashConsensus(admin, {
+    reportProcessor: oracle,
+    epochsPerFrame,
+    slotsPerEpoch,
+    secondsPerSlot,
+    genesisTime,
+    initialEpoch,
+  })
+  await updateLocatorImplementation(locatorAddr, admin, {
+    lido: lido.address,
+    stakingRouter: stakingRouter.address,
+    withdrawalQueue: withdrawalQueue.address,
+    oracleReportSanityChecker: oracleReportSanityChecker.address,
+    accountingOracle: oracle.address,
+  })
+
+  // pretend we're at the first slot of the initial frame's epoch
+  await consensus.setTime(genesisTime + initialEpoch * slotsPerEpoch * secondsPerSlot)
+
+  return {
+    lido,
+    stakingRouter,
+    withdrawalQueue,
+    locatorAddr,
+    legacyOracle,
+    oracle,
+    consensus,
+    oracleReportSanityChecker,
+  }
+}
+
+async function initAccountingOracle({
+  admin,
+  oracle,
+  consensus,
+  dataSubmitter = null,
+  consensusVersion = CONSENSUS_VERSION,
+  shouldMigrateLegacyOracle = true,
+  lastProcessingRefSlot,
+}) {
+  let initTx
+  if (shouldMigrateLegacyOracle)
+    initTx = await oracle.initialize(admin, consensus.address, consensusVersion, { from: admin })
+  else
+    initTx = await oracle.initializeWithoutMigration(
+      admin,
+      consensus.address,
+      consensusVersion,
+      lastProcessingRefSlot,
+      { from: admin }
+    )
+
+  await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), admin, { from: admin })
+  await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), admin, { from: admin })
+
+  if (dataSubmitter != null) {
+    await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), dataSubmitter, { from: admin })
+  }
+
+  assert.equals(await oracle.EXTRA_DATA_FORMAT_EMPTY(), EXTRA_DATA_FORMAT_EMPTY)
+  assert.equals(await oracle.EXTRA_DATA_FORMAT_LIST(), EXTRA_DATA_FORMAT_LIST)
+  assert.equals(await oracle.EXTRA_DATA_TYPE_STUCK_VALIDATORS(), EXTRA_DATA_TYPE_STUCK_VALIDATORS)
+  assert.equals(await oracle.EXTRA_DATA_TYPE_EXITED_VALIDATORS(), EXTRA_DATA_TYPE_EXITED_VALIDATORS)
+
+  return initTx
+}
+
+async function deployAndConfigureAccountingOracle(admin) {
+  const deployed = await deployAccountingOracleSetup(admin)
+  const initTx = await initAccountingOracle({ admin, ...deployed })
+  return { ...deployed, initTx }
+}
+
 module.exports = {
   SLOTS_PER_EPOCH,
   SECONDS_PER_SLOT,
@@ -157,118 +282,6 @@ module.exports = {
   encodeExtraDataItems,
   packExtraDataList,
   calcExtraDataListHash,
-}
-async function deployMockLegacyOracle({
-  epochsPerFrame = EPOCHS_PER_FRAME,
-  slotsPerEpoch = SLOTS_PER_EPOCH,
-  secondsPerSlot = SECONDS_PER_SLOT,
-  genesisTime = GENESIS_TIME,
-  lastCompletedEpochId = V1_ORACLE_LAST_COMPLETED_EPOCH,
-} = {}) {
-  const legacyOracle = await MockLegacyOracle.new()
-  await legacyOracle.setParams(epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime, lastCompletedEpochId)
-  return legacyOracle
-}
-
-async function deployMockLidoAndStakingRouter() {
-  const stakingRouter = await MockStakingRouter.new()
-  const withdrawalQueue = await MockWithdrawalQueue.new()
-  const lido = await MockLido.new()
-  return { lido, stakingRouter, withdrawalQueue }
-}
-
-async function deployAccountingOracleSetup(
-  admin,
-  {
-    initialEpoch = null,
-    epochsPerFrame = EPOCHS_PER_FRAME,
-    slotsPerEpoch = SLOTS_PER_EPOCH,
-    secondsPerSlot = SECONDS_PER_SLOT,
-    genesisTime = GENESIS_TIME,
-    getLidoAndStakingRouter = deployMockLidoAndStakingRouter,
-    getLegacyOracle = deployMockLegacyOracle,
-    lidoLocatorAddr: lidoLocatorAddrArg,
-    legacyOracleAddr: legacyOracleAddrArg,
-  } = {}
-) {
-  const locatorAddr = (await deployLocatorWithDummyAddressesImplementation(admin)).address
-  const { lido, stakingRouter, withdrawalQueue } = await getLidoAndStakingRouter()
-  const oracleReportSanityChecker = await deployOracleReportSanityCheckerForAccounting(locatorAddr, admin)
-
-  await updateLocatorImplementation(locatorAddr, admin, {
-    lido: lido.address,
-    stakingRouter: stakingRouter.address,
-    withdrawalQueue: withdrawalQueue.address,
-    oracleReportSanityChecker: oracleReportSanityChecker.address,
-  })
-
-  const legacyOracle = await getLegacyOracle()
-
-  if (initialEpoch == null) {
-    initialEpoch = +(await legacyOracle.getLastCompletedEpochId()) + epochsPerFrame
-  }
-
-  const oracle = await AccountingOracle.new(
-    lidoLocatorAddrArg || locatorAddr,
-    lido.address,
-    legacyOracleAddrArg || legacyOracle.address,
-    secondsPerSlot,
-    genesisTime,
-    { from: admin }
-  )
-
-  const { consensus } = await deployHashConsensus(admin, {
-    reportProcessor: oracle,
-    epochsPerFrame,
-    slotsPerEpoch,
-    secondsPerSlot,
-    genesisTime,
-    initialEpoch,
-  })
-
-  // pretend we're at the first slot of the initial frame's epoch
-  await consensus.setTime(genesisTime + initialEpoch * slotsPerEpoch * secondsPerSlot)
-
-  return {
-    lido,
-    stakingRouter,
-    withdrawalQueue,
-    locatorAddr,
-    legacyOracle,
-    oracle,
-    consensus,
-    oracleReportSanityChecker,
-  }
-}
-
-async function initAccountingOracle({
-  admin,
-  oracle,
-  consensus,
-  dataSubmitter = null,
-  consensusVersion = CONSENSUS_VERSION,
-}) {
-  const initTx = await oracle.initialize(admin, consensus.address, consensusVersion, { from: admin })
-
-  await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), admin, { from: admin })
-  await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), admin, { from: admin })
-
-  if (dataSubmitter != null) {
-    await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), dataSubmitter, { from: admin })
-  }
-
-  assert.equals(await oracle.EXTRA_DATA_FORMAT_EMPTY(), EXTRA_DATA_FORMAT_EMPTY)
-  assert.equals(await oracle.EXTRA_DATA_FORMAT_LIST(), EXTRA_DATA_FORMAT_LIST)
-  assert.equals(await oracle.EXTRA_DATA_TYPE_STUCK_VALIDATORS(), EXTRA_DATA_TYPE_STUCK_VALIDATORS)
-  assert.equals(await oracle.EXTRA_DATA_TYPE_EXITED_VALIDATORS(), EXTRA_DATA_TYPE_EXITED_VALIDATORS)
-
-  return initTx
-}
-
-async function deployAndConfigureAccountingOracle(admin) {
-  const deployed = await deployAccountingOracleSetup(admin)
-  const initTx = await initAccountingOracle({ admin, ...deployed })
-  return { ...deployed, initTx }
 }
 
 contract('AccountingOracle', ([admin, member1]) => {
