@@ -9,7 +9,7 @@ const { PUBKEY_LENGTH, FakeValidatorKeys, SIGNATURE_LENGTH } = require('../helpe
 const { GenericStub } = require('../helpers/stubs/generic.stub')
 
 contract('Lido deposit scenarios', ([staker, depositor]) => {
-  const CURATED_MODULE_ID = 1
+  const STAKING_MODULE_ID = 1
   const DEPOSIT_CALLDATA = '0x0'
   let lido, stakingRouter
   let stakingModuleStub, depositContractStub
@@ -77,7 +77,7 @@ contract('Lido deposit scenarios', ([staker, depositor]) => {
     assert.equal(await getBalance(lido), initialLidoETHBalance + unaccountedLidoETHBalance + submitAmount)
 
     const maxDepositsCount = 10
-    await lido.deposit(maxDepositsCount, CURATED_MODULE_ID, DEPOSIT_CALLDATA, { from: depositor })
+    await lido.deposit(maxDepositsCount, STAKING_MODULE_ID, DEPOSIT_CALLDATA, { from: depositor })
 
     assert.equals(await getBalance(stakingRouter), initialStakingRouterBalance)
     const depositedEther = wei`32 ether` * wei.min(maxDepositsCount, availableValidatorsCount)
@@ -114,7 +114,7 @@ contract('Lido deposit scenarios', ([staker, depositor]) => {
 
       const maxDepositsCount = 10
       await assert.reverts(
-        lido.deposit(maxDepositsCount, CURATED_MODULE_ID, DEPOSIT_CALLDATA, { from: depositor }),
+        lido.deposit(maxDepositsCount, STAKING_MODULE_ID, DEPOSIT_CALLDATA, { from: depositor }),
         'InvalidPublicKeysBatchLength',
         [PUBKEY_LENGTH * depositDataLength, PUBKEY_LENGTH * availableValidatorsCount]
       )
@@ -150,7 +150,7 @@ contract('Lido deposit scenarios', ([staker, depositor]) => {
 
       const maxDepositsCount = 10
       await assert.reverts(
-        lido.deposit(maxDepositsCount, CURATED_MODULE_ID, DEPOSIT_CALLDATA, { from: depositor }),
+        lido.deposit(maxDepositsCount, STAKING_MODULE_ID, DEPOSIT_CALLDATA, { from: depositor }),
         'InvalidPublicKeysBatchLength',
         [PUBKEY_LENGTH * depositDataLength, PUBKEY_LENGTH * availableValidatorsCount]
       )
@@ -186,7 +186,7 @@ contract('Lido deposit scenarios', ([staker, depositor]) => {
 
       const maxDepositsCount = 10
       await assert.reverts(
-        lido.deposit(maxDepositsCount, CURATED_MODULE_ID, DEPOSIT_CALLDATA, { from: depositor }),
+        lido.deposit(maxDepositsCount, STAKING_MODULE_ID, DEPOSIT_CALLDATA, { from: depositor }),
         'InvalidSignaturesBatchLength',
         [SIGNATURE_LENGTH * depositDataLength, SIGNATURE_LENGTH * availableValidatorsCount]
       )
@@ -216,7 +216,7 @@ contract('Lido deposit scenarios', ([staker, depositor]) => {
         return: { depositDataLength },
       })
       const maxDepositsCount = 10
-      await assert.reverts(lido.deposit(maxDepositsCount, CURATED_MODULE_ID, DEPOSIT_CALLDATA, { from: depositor }))
+      await assert.reverts(lido.deposit(maxDepositsCount, STAKING_MODULE_ID, DEPOSIT_CALLDATA, { from: depositor }))
     })
 
     it('StakingModule reverted on obtainData', async () => {
@@ -239,9 +239,31 @@ contract('Lido deposit scenarios', ([staker, depositor]) => {
 
       const maxDepositsCount = 10
       await assert.reverts(
-        lido.deposit(maxDepositsCount, CURATED_MODULE_ID, DEPOSIT_CALLDATA, { from: depositor }),
+        lido.deposit(maxDepositsCount, STAKING_MODULE_ID, DEPOSIT_CALLDATA, { from: depositor }),
         'INVALID_ALLOCATED_KEYS_COUNT'
       )
+    })
+
+    it('Zero deposit updates lastDepositAt and lastDepositBlock fields', async () => {
+      const submitAmount = wei`100 ether`
+      await lido.submit(ZERO_ADDRESS, { from: staker, value: wei.str(submitAmount) })
+
+      const availableValidatorsCount = 2
+      await StakingModuleStub.stubGetStakingModuleSummary(stakingModuleStub, {
+        totalExitedValidators: 5,
+        totalDepositedValidators: 16,
+        availableValidatorsCount,
+      })
+
+      const stakingModuleStateBefore = await stakingRouter.getStakingModule(STAKING_MODULE_ID)
+
+      const maxDepositsCount = 0
+      await lido.deposit(maxDepositsCount, STAKING_MODULE_ID, DEPOSIT_CALLDATA, { from: depositor })
+
+      const stakingModuleStateAfter = await stakingRouter.getStakingModule(STAKING_MODULE_ID)
+
+      assert.notEquals(stakingModuleStateBefore.lastDepositAt, stakingModuleStateAfter.lastDepositAt)
+      assert.notEquals(stakingModuleStateBefore.lastDepositBlock, stakingModuleStateAfter.lastDepositBlock)
     })
   })
 })
