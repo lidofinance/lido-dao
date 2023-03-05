@@ -1448,6 +1448,59 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
   })
 
+  describe('updateTargetValidatorsLimit()', () => {
+    const firstNodeOperatorId = 0
+    const secondNodeOperatorId = 1
+
+    beforeEach(async () => {
+      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[firstNodeOperatorId] }, { from: voting })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[secondNodeOperatorId], { from: voting })
+    })
+
+    it('reverts with "APP_AUTH_FAILED" error when called by sender without MANAGE_NODE_OPERATOR_ROLE', async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'MANAGE_NODE_OPERATOR_ROLE')
+      assert.isFalse(hasPermission)
+      const isTargetLimitSet = false
+      const targetLimit = 0
+      await assert.reverts(
+        app.updateTargetValidatorsLimits(firstNodeOperatorId, isTargetLimitSet, targetLimit, { from: nobody }),
+        'APP_AUTH_FAILED'
+      )
+    })
+
+    it('updates node operator target limit if called by sender with MANAGE_NODE_OPERATOR_ROLE', async () => {
+      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
+      assert.isTrue(hasPermission)
+
+      const targetLimit = 10
+      const isTargetLimitSet = true
+      await app.updateTargetValidatorsLimits(firstNodeOperatorId, isTargetLimitSet, targetLimit, { from: voting })
+
+      const keysStatTotal = await app.getStakingModuleSummary()
+      const expectedExitedValidatorsCount =
+        NODE_OPERATORS[firstNodeOperatorId].exitedSigningKeysCount +
+        NODE_OPERATORS[secondNodeOperatorId].exitedSigningKeysCount
+      assert.equals(keysStatTotal.totalExitedValidators, expectedExitedValidatorsCount)
+
+      const expectedDepositedValidatorsCount =
+        NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount +
+        NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount
+      assert.equals(keysStatTotal.totalDepositedValidators, expectedDepositedValidatorsCount)
+
+      const firstNodeOperatorDepositableValidators =
+        NODE_OPERATORS[firstNodeOperatorId].vettedSigningKeysCount -
+        NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount
+
+      const secondNodeOperatorDepositableValidators =
+        NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount -
+        NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount
+
+      const expectedDepositableValidatorsCount =
+        Math.min(targetLimit, firstNodeOperatorDepositableValidators) + secondNodeOperatorDepositableValidators
+      assert.equals(keysStatTotal.depositableValidatorsCount, expectedDepositableValidatorsCount)
+    })
+  })
+
   describe('onWithdrawalCredentialsChanged()', () => {
     beforeEach(async () => {
       await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: voting })
@@ -1630,7 +1683,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(+firstNodeOperatorKeysStats.exitedSigningKeysCount, 1)
     })
 
-    it.only('allow set large targetLimit (=UINT64_MAX)', async () => {
+    it('allow set large targetLimit (=UINT64_MAX)', async () => {
       let firstNodeOperatorKeysStats = await app.testing_getNodeOperator(firstNodeOperatorId)
       assert.equals(+firstNodeOperatorKeysStats.maxSigningKeysCount, 8)
 
