@@ -168,8 +168,6 @@ contract('StakingRouter', ([depositor, stranger]) => {
     })
   })
 
-  // the check for depositsValue == 0 occurs above in Lido.deposit(), so perhaps this check is redundant in SR.
-  // But if we untie the Lido contract from the StarkingRouter, we will need this check
   describe('test deposit from staking router directly', async () => {
     before(snapshot)
     after(revert)
