@@ -269,7 +269,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         onlyInit
     {
         uint256 amount = _bootstrapInitialHolder();
-        BUFFERED_ETHER_POSITION.setStorageUint256(amount);
+        _setBufferedEther(amount);
 
         emit Submitted(INITIAL_TOKEN_HOLDER, amount, 0);
 
@@ -475,7 +475,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * are treated as a user deposit
      */
     function receiveELRewards() external payable {
-        require(msg.sender == getLidoLocator().elRewardsVault(), "EXECUTION_LAYER_REWARDS_VAULT_ONLY");
+        require(msg.sender == getLidoLocator().elRewardsVault());
 
         TOTAL_EL_REWARDS_COLLECTED_POSITION.setStorageUint256(getTotalELRewardsCollected().add(msg.value));
 
@@ -709,7 +709,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 depositsValue = depositsCount.mul(DEPOSIT_SIZE);
         /// @dev firstly update the local state of the contract to prevent a reentrancy attack,
         ///     even if the StakingRouter is a trusted contract.
-        BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().sub(depositsValue));
+        _setBufferedEther(_getBufferedEther().sub(depositsValue));
         emit Unbuffered(depositsValue);
 
         uint256 newDepositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(depositsCount);
@@ -847,16 +847,12 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             withdrawalQueue.finalize.value(_etherToLockOnWithdrawalQueue)(_lastFinalizableRequestId, _simulatedShareRate);
         }
 
-        uint256 preBufferedEther = _getBufferedEther();
-        uint256 postBufferedEther = preBufferedEther
+        uint256 postBufferedEther = _getBufferedEther()
             .add(_elRewardsToWithdraw) // Collected from ELVault
             .add(_withdrawalsToWithdraw) // Collected from WithdrawalVault
             .sub(_etherToLockOnWithdrawalQueue); // Sent to WithdrawalQueue
 
-        // Storing even the same value costs gas, so just avoid it
-        if (preBufferedEther != postBufferedEther) {
-            BUFFERED_ETHER_POSITION.setStorageUint256(postBufferedEther);
-        }
+        _setBufferedEther(postBufferedEther);
     }
 
     /**
@@ -899,13 +895,12 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // See LIP-12 for details:
         // https://research.lido.fi/t/lip-12-on-chain-part-of-the-rewards-distribution-after-the-merge/1625
         if (postCLTotalBalance > _reportContext.preCLBalance) {
-            uint256 consensusLayerRewards = postCLTotalBalance.sub(_reportContext.preCLBalance);
-            uint256 totalRewards = consensusLayerRewards.add(_withdrawnElRewards);
+            uint256 consensusLayerRewards = postCLTotalBalance - _reportContext.preCLBalance;
 
             sharesMintedAsFees = _distributeFee(
                 _reportContext.preTotalPooledEther,
                 _reportContext.preTotalShares,
-                totalRewards
+                consensusLayerRewards.add(_withdrawnElRewards)
             );
         }
     }
@@ -935,7 +930,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         _mintShares(msg.sender, sharesAmount);
 
-        BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().add(msg.value));
+        _setBufferedEther(_getBufferedEther().add(msg.value));
         emit Submitted(msg.sender, msg.value, _referral);
 
         _emitTransferAfterMintingShares(msg.sender, sharesAmount);
@@ -1062,10 +1057,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 totalFee,
         uint256 totalRewards
     ) internal returns (uint256[] memory moduleRewards, uint256 totalModuleRewards) {
-        totalModuleRewards = 0;
         moduleRewards = new uint256[](recipients.length);
 
-        for (uint256 i = 0; i < recipients.length; i++) {
+        for (uint256 i; i < recipients.length; ++i) {
             if (modulesFees[i] > 0) {
                 uint256 iModuleRewards = totalRewards.mul(modulesFees[i]).div(totalFee);
                 moduleRewards[i] = iModuleRewards;
@@ -1087,6 +1081,13 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      */
     function _getBufferedEther() internal view returns (uint256) {
         return BUFFERED_ETHER_POSITION.getStorageUint256();
+    }
+
+    /**
+     * @dev Sets the amount of Ether temporary buffered on this contract balance
+     */
+    function _setBufferedEther(uint256 _newBufferedEther) internal {
+        BUFFERED_ETHER_POSITION.setStorageUint256(_newBufferedEther);
     }
 
     /// @dev Calculates and returns the total base balance (multiple of 32) of validators in transient state,
@@ -1142,7 +1143,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * @param _role Permission name
      */
     function _auth(bytes32 _role) internal view auth(_role) {
-        // no-op
+        require(canPerform(msg.sender, _role, new uint256[](0)), "APP_AUTH_FAILED");
     }
 
     /**
