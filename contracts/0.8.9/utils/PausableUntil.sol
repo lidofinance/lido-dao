@@ -24,18 +24,26 @@ contract PausableUntil {
 
     /// @notice Reverts when resumed
     modifier whenPaused() {
-        if (!isPaused()) {
-            revert PausedExpected();
-        }
+        _checkPaused();
         _;
     }
 
     /// @notice Reverts when paused
     modifier whenResumed() {
+        _checkResumed();
+        _;
+    }
+
+    function _checkPaused() internal view {
+        if (!isPaused()) {
+            revert PausedExpected();
+        }
+    }
+
+    function _checkResumed() internal view {
         if (isPaused()) {
             revert ResumedExpected();
         }
-        _;
     }
 
     /// @notice Returns whether the contract is paused
