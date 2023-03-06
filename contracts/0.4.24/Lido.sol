@@ -67,7 +67,7 @@ interface IOracleReportSanityChecker {
         uint256 _postTotalPooledEther,
         uint256 _postTotalShares,
         uint256 _etherLockedOnWithdrawalQueue,
-        uint256 _sharesBurntFromWithdrawalQueue,
+        uint256 _sharesBurntDueToWithdrawals,
         uint256 _simulatedShareRate
     ) external view;
 }
@@ -113,12 +113,12 @@ interface IStakingRouter {
 }
 
 interface IWithdrawalQueue {
-    function finalizationBatch(uint256 _newLastFinalizedRequestId, uint256 _shareRate)
+    function finalizationBatch(uint256 _nextFinalizedRequestId, uint256 _shareRate)
         external
         view
-        returns (uint128 eth, uint128 shares);
+        returns (uint256 ethToLock, uint256 sharesToBurn);
 
-    function finalize(uint256 _lastIdToFinalize, uint256 _currentShareRate) external payable;
+    function finalize(uint256 _nextFinalizedRequestId, uint256 _shareRate) external payable;
 
     function isPaused() external view returns (bool);
 
