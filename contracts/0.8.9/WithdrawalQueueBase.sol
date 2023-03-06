@@ -459,7 +459,7 @@ abstract contract WithdrawalQueueBase {
         // to avoid uint underflows and related if-branches
         // 0-index is reserved as 'not_found' response in the interface everywhere
         _getQueue()[0] = WithdrawalRequest(0, 0, address(0), uint64(block.number), true);
-        _getCheckpoints()[getLastCheckpointIndex()] = Checkpoint(0, 0);
+        _getCheckpoints()[getLastCheckpointIndex()] = Checkpoint(0, type(uint256).max);
     }
 
     function _sendValue(address _recipient, uint256 _amount) internal {

@@ -1,5 +1,5 @@
 const { artifacts, contract } = require('hardhat')
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { ZERO_ADDRESS, MAX_UINT256 } = require('@aragon/contract-helpers-test')
 
 const { ETH } = require('../helpers/utils')
 const withdrawals = require('../helpers/withdrawals')
@@ -126,8 +126,8 @@ contract(
         assert.equals(queueItem.owner, ZERO_ADDRESS)
         assert.equals(queueItem.claimed, true)
 
-        assert.equals(+checkpointItem.fromRequestId, 0)
-        assert.equals(+checkpointItem.discountFactor, 0)
+        assert.equals(checkpointItem.fromRequestId, 0)
+        assert.equals(checkpointItem.maxShareRate, MAX_UINT256)
       })
 
       it('check if pauser is zero', async () => {
