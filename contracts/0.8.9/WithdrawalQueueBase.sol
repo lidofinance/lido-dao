@@ -6,7 +6,6 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
-import {UnstructuredRefStorage} from "./lib/UnstructuredRefStorage.sol";
 import {Math} from "./lib/Math.sol";
 import {MemUtils} from "../common/lib/MemUtils.sol";
 
@@ -18,7 +17,6 @@ import {MemUtils} from "../common/lib/MemUtils.sol";
 abstract contract WithdrawalQueueBase {
     using EnumerableSet for EnumerableSet.UintSet;
     using UnstructuredStorage for bytes32;
-    using UnstructuredRefStorage for bytes32;
 
     /// @notice precision base for share rate and discounting factor values in the contract
     uint256 internal constant E27_PRECISION_BASE = 1e27;
@@ -46,10 +44,6 @@ abstract contract WithdrawalQueueBase {
     bytes32 internal constant LOCKED_ETHER_AMOUNT_POSITION = keccak256("lido.WithdrawalQueue.lockedEtherAmount");
     /// @dev withdrawal requests mapped to the owners
     bytes32 internal constant REQUEST_BY_OWNER_POSITION = keccak256("lido.WithdrawalQueue.requestsByOwner");
-    /// @dev list of extremum requests for shareRate(request_id) function
-    bytes32 internal constant EXTREMA_POSITION = keccak256("lido.WithdrawalQueue.extrema");
-    /// @dev last extreum index that was already checked for finalization
-    bytes32 internal constant LAST_CHECKED_EXTREMUM_POSITION = keccak256("lido.WithdrawalQueue.lastCheckedExtremum");
     /// @dev timestamp of the last oracle report
     bytes32 internal constant LAST_REPORT_TIMESTAMP_POSITION = keccak256("lido.WithdrawalQueue.lastReportTimestamp");
 
@@ -213,55 +207,40 @@ abstract contract WithdrawalQueueBase {
     {
         if (_state.finished || _state.ethBudget == 0) revert InvalidState();
 
-        uint256 batchesLength;
+        uint256 lastRequestId = getLastRequestId();
+
         uint256 requestId;
         uint256 prevShareRate;
 
+        uint256 batchesLength;
         if (_state.batches.length == 0) {
             requestId = getLastFinalizedRequestId() + 1;
             // we'll store batches as a array where [MAX_BATCHES_LENGTH] element is the array's length
             _state.batches = new uint256[](MAX_BATCHES_LENGTH + 1);
         } else {
             batchesLength = _state.batches[MAX_BATCHES_LENGTH];
-            requestId = _state.batches[batchesLength] + 1;
-            prevShareRate = _calcShareRate(_state.batches[batchesLength], _maxShareRate);
+            uint256 lastHandledRequestId = _state.batches[batchesLength - 1];
+            (prevShareRate,,) = _calcBatch(_getQueue()[lastHandledRequestId - 1], _getQueue()[lastHandledRequestId]);
+
+            requestId = lastHandledRequestId + 1;
         }
 
-        uint256 lastRequestId = getLastRequestId();
-
-        uint256 firstUncheckedExtremum = _getLastCheckedExtremum() + 1;
-        uint256 extremaCounter;
-
         while (requestId < requestId + MAX_REQUESTS_PER_CALL) {
-            // end of the queue break
-            if (requestId > lastRequestId) break;
-
-            if (
-                firstUncheckedExtremum + extremaCounter < _getExtrema().length &&
-                requestId == _getExtrema()[firstUncheckedExtremum + extremaCounter]
-            ) {
-                // max extrema counter break
-                // we can't allow that batches covers unbounded number of extrema
-                // it'll require an unbounded loop to check them onchain
-                unchecked { ++extremaCounter; }
-                if (extremaCounter > MAX_BATCHES_LENGTH) break;
-            }
+            if (requestId > lastRequestId) break;  // end of the queue break
 
             WithdrawalRequest memory request = _getQueue()[requestId];
             // max timestamp break
             if (request.timestamp > _maxTimestamp) break;
 
             WithdrawalRequest memory prevRequest = _getQueue()[requestId - 1];
-            uint256 ethToFinalize = request.cumulativeStETH - prevRequest.cumulativeStETH;
-            uint256 shareRequested = request.cumulativeShares - prevRequest.cumulativeShares;
-            uint256 requestShareRate = ethToFinalize * E27_PRECISION_BASE / shareRequested;
+            (uint256 requestShareRate, uint256 ethToFinalize, uint256 shares) = _calcBatch(prevRequest, request);
 
             if (requestShareRate > _maxShareRate) {
-                ethToFinalize = shareRequested * _maxShareRate / E27_PRECISION_BASE;
+                ethToFinalize = (shares * _maxShareRate) / E27_PRECISION_BASE;
             }
 
-            // budget break
-            if (ethToFinalize > _state.ethBudget) break;
+            if (ethToFinalize > _state.ethBudget) break; // budget break
+
             _state.ethBudget -= ethToFinalize;
 
             if (batchesLength != 0 && (
@@ -271,6 +250,8 @@ abstract contract WithdrawalQueueBase {
             )) {
                 _state.batches[batchesLength - 1] = requestId;
             } else {
+                if (batchesLength == MAX_BATCHES_LENGTH) break; // gas limit break
+
                 _state.batches[batchesLength] = requestId;
                 batchesLength = ++_state.batches[MAX_BATCHES_LENGTH];
             }
@@ -294,100 +275,41 @@ abstract contract WithdrawalQueueBase {
     /// @return sharesToBurn amount of shares that belongs tho finalizable requests
     function prefinalize(uint256[] calldata _batches, uint256 _maxShareRate)
         external
+        view
         returns (uint256 ethToLock, uint256 sharesToBurn)
     {
         if (_maxShareRate == 0) revert ZeroShareRate();
         if (_batches.length == 0) revert EmptyBatches();
 
-        uint256 lastIdInBatch = _batches[_batches.length - 1];
-        if (lastIdInBatch > getLastRequestId()) revert InvalidRequestId(lastIdInBatch);
+        if (_batches[0] <= getLastFinalizedRequestId()) revert InvalidRequestId(_batches[0]);
+        if (_batches[_batches.length - 1] > getLastRequestId()) revert InvalidRequestId(_batches[_batches.length - 1]);
 
-        uint256 firstIdInBatch = _batches[0];
-        if (firstIdInBatch <= getLastFinalizedRequestId()) revert InvalidRequestId(firstIdInBatch);
+        WithdrawalRequest memory prevBatchEnd = _getQueue()[getLastFinalizedRequestId()];
+        uint256 prevBatchShareRate;
 
-        _setLastCheckedExtremum(_checkFinalizationBatchesIntegrity(_batches, _maxShareRate));
-
-        uint256 preBatchStartId = getLastFinalizedRequestId();
         uint256 batchIndex;
-
         do {
-            WithdrawalRequest memory batchStart = _getQueue()[preBatchStartId];
             WithdrawalRequest memory batchEnd = _getQueue()[_batches[batchIndex]];
 
-            uint256 shares = batchEnd.cumulativeShares - batchStart.cumulativeShares;
-            uint256 eth = batchEnd.cumulativeStETH - batchStart.cumulativeStETH;
+            (uint256 batchShareRate, uint256 stETH, uint256 shares) = _calcBatch(prevBatchEnd, batchEnd);
 
-            uint256 batchShareRate = (eth * E27_PRECISION_BASE) / shares;
-            // todo: check equality
+            if (batchIndex > 0) {
+                // - if shareRate(batch[i]) is below _maxShareRate => shareRate(batch[i+1]) is above and vice versa
+                if (batchShareRate <= _maxShareRate && prevBatchShareRate <= _maxShareRate) revert InvalidBatch(batchIndex);
+                if (batchShareRate > _maxShareRate && prevBatchShareRate > _maxShareRate) revert InvalidBatch(batchIndex);
+            }
+
             if (batchShareRate > _maxShareRate) {
                 ethToLock += shares * _maxShareRate / E27_PRECISION_BASE;
             } else {
-                ethToLock += eth;
+                ethToLock += stETH;
             }
-
             sharesToBurn += shares;
 
-            preBatchStartId = _batches[batchIndex];
+            prevBatchShareRate = batchShareRate;
+            prevBatchEnd = batchEnd;
             unchecked{ ++batchIndex; }
         } while (batchIndex < _batches.length);
-    }
-    /// @dev checks batches integrity across extrema list and `_maxShareRate` value and reverts if something is wrong
-    /// Invariants checked
-    ///  - if shareRate(batch[i]) is below _maxShareRate => shareRate(batch[i+1]) is above and vice versa
-    ///  - if batch includes an extremum:
-    ///      shareRate(extremum) is above the _maxShareRate if shareRate(batch) is above it
-    ///      shareRate(extremum) is below the _maxShareRate if shareRate(batch) is below it
-    function _checkFinalizationBatchesIntegrity(uint256[] memory _batches, uint256 _maxShareRate)
-        internal
-        view
-        returns (uint256 lastCheckedExtremum)
-    {
-        uint256 batchIndex = 0;
-        uint256 batchPreStartId = getLastFinalizedRequestId();
-        uint256 batchEndId = _batches[batchIndex];
-
-        uint256 extremumIndex = _getLastCheckedExtremum();
-        uint256 extremumLength = _getExtrema().length;
-        uint256 extremumId = _getExtrema()[extremumIndex];
-
-        uint256 batchShareRate= _calcShareRate(
-                _getQueue()[batchPreStartId],
-                _getQueue()[batchEndId],
-                SHARE_RATE_UNLIMITED
-            );
-
-        while (batchIndex < _batches.length - 1) {
-            if (extremumId <= batchEndId && extremumIndex < extremumLength - 1) {
-                if (extremumId > batchPreStartId) {
-                    // check extremum
-                    uint256 extremumShareRate = _calcShareRate(extremumId, SHARE_RATE_UNLIMITED);
-
-                    if (extremumShareRate > _maxShareRate && batchShareRate <= _maxShareRate) revert InvalidBatch(batchIndex);
-                    if (extremumShareRate <= _maxShareRate && batchShareRate > _maxShareRate) revert InvalidBatch(batchIndex);
-                }
-                unchecked { ++extremumIndex; }
-            } else {
-                // check crossing point
-                uint256 nextBatchShareRate = _calcShareRate(
-                    _getQueue()[batchEndId],
-                    _getQueue()[_batches[batchIndex + 1]],
-                    SHARE_RATE_UNLIMITED
-                );
-                // avg batch rate before crossing point and after crossing point
-                // can't be both below `_maxShareRate`
-                if (batchShareRate <= _maxShareRate && nextBatchShareRate <= _maxShareRate) revert InvalidBatch(batchIndex);
-
-                // avg batch rate before crossing point and after crossing point
-                // can't be both above `_maxShareRate`
-                if (batchShareRate > _maxShareRate && nextBatchShareRate > _maxShareRate) revert InvalidBatch(batchIndex);
-
-                batchShareRate = nextBatchShareRate;
-                batchPreStartId = batchEndId;
-                unchecked { ++batchIndex; }
-            }
-        }
-
-        return extremumIndex;
     }
 
     /// @dev Finalize requests from last finalized one up to `_nextFinalizedRequestId`
@@ -460,61 +382,7 @@ abstract contract WithdrawalQueueBase {
         _getQueue()[requestId] = newRequest;
         assert(_getRequestsByOwner()[_owner].add(requestId));
 
-        _populateExtrema(lastRequest, newRequest, requestId);
-
         emit WithdrawalRequested(requestId, msg.sender, _owner, _amountOfStETH, _amountOfShares);
-    }
-
-    /// @dev storing extrema of shareRate(requestId) function using three points:
-    ///  newRequestId, prevRequestId and last known extremum id
-    ///  - first request is always included as an extremum
-    ///  - last request is not added by default to avoid storage write on each request
-    ///     but speaking strictly last request is also an extremum
-    ///  - if a lot of requests in a row have the same shareRate, the last one
-    ///    will become an exremum as shareRate changes
-    function _populateExtrema(
-        WithdrawalRequest memory prevRequest,
-        WithdrawalRequest memory newRequest,
-        uint256 newRequestId
-    ) internal {
-        // shortcut for the same shareRate batches
-        // requests is guaranteed to be the same shareRate if they belong to
-        // the same oracle report period
-        if (prevRequest.reportTimestamp == newRequest.reportTimestamp) return;
-
-        uint256[] storage extrema = _getExtrema();
-        if (extrema.length == 1) {
-            extrema.push(newRequestId); // first request is always an extremum
-            return;
-        }
-
-        uint256 newRequestShareRate = _calcShareRate(prevRequest, newRequest, SHARE_RATE_UNLIMITED);
-        uint256 prevRequestShareRate = _calcShareRate(newRequestId - 1, SHARE_RATE_UNLIMITED);
-
-        // we can get a new extremum only when shareRate changes
-        // there can't be rounding jitter because we skipped on the same report requests in the beginning
-        if (newRequestShareRate == prevRequestShareRate) return;
-
-        uint256 lastExtremumId = extrema[extrema.length - 1];
-        WithdrawalRequest memory lastExtremumRequest = _getQueue()[lastExtremumId];
-
-        uint256 lastExtremumShareRate = _calcShareRate(lastExtremumId, lastExtremumRequest);
-
-        bool wasGrowing =  lastExtremumShareRate < prevRequestShareRate;
-        // |  *
-        // |•   •
-        // +------->
-        if (wasGrowing && prevRequestShareRate > newRequestShareRate) {
-            extrema.push(newRequestId - 1);
-            return;
-        }
-        //  |•   •
-        //  |  *
-        //  +------->
-        if (!wasGrowing && prevRequestShareRate < newRequestShareRate) {
-            extrema.push(newRequestId - 1);
-            return;
-        }
     }
 
     /// @notice Returns status of the withdrawal request with `_requestId` id
@@ -636,15 +504,13 @@ abstract contract WithdrawalQueueBase {
         }
 
         WithdrawalRequest memory prevRequest = _getQueue()[_requestId - 1];
+        (uint256 batchShareRate, uint256 stETH, uint256 shares) = _calcBatch(prevRequest, _request);
 
-        uint256 ethRequested = _request.cumulativeStETH - prevRequest.cumulativeStETH;
-        uint256 shareRequested = _request.cumulativeShares - prevRequest.cumulativeShares;
-
-        if (ethRequested * E27_PRECISION_BASE / shareRequested <= checkpoint.maxShareRate) {
-            return ethRequested;
+        if (batchShareRate <= checkpoint.maxShareRate) {
+            return stETH;
         }
 
-        return shareRequested * checkpoint.maxShareRate / E27_PRECISION_BASE;
+        return shares * checkpoint.maxShareRate / E27_PRECISION_BASE;
     }
 
     // quazi-constructor
@@ -654,7 +520,6 @@ abstract contract WithdrawalQueueBase {
         // 0-index is reserved as 'not_found' response in the interface everywhere
         _getQueue()[0] = WithdrawalRequest(0, 0, address(0), uint40(block.timestamp), true, 0);
         _getCheckpoints()[getLastCheckpointIndex()] = Checkpoint(0, 0);
-        _getExtrema().push(0);
     }
 
     function _sendValue(address _recipient, uint256 _amount) internal {
@@ -665,33 +530,15 @@ abstract contract WithdrawalQueueBase {
         if (!success) revert CantSendValueRecipientMayHaveReverted();
     }
 
-    /// calculate avg share rate for the batch of (_preStartRequest, _endRequest]
-    function _calcShareRate(
+    /// @dev calculate batch stats for the batch of `(_preStartRequest, _endRequest]`
+    function _calcBatch(
         WithdrawalRequest memory _preStartRequest,
-        WithdrawalRequest memory _endRequest,
-        uint256 _maxShareRate
-    ) internal pure returns (uint256 shareRate) {
-        uint256 ethRequested = _endRequest.cumulativeStETH - _preStartRequest.cumulativeStETH;
-        uint256 shareRequested = _endRequest.cumulativeShares - _preStartRequest.cumulativeShares;
+        WithdrawalRequest memory _endRequest
+    ) internal pure returns (uint256 shareRate, uint256 stETH, uint256 shares) {
+        stETH = _endRequest.cumulativeStETH - _preStartRequest.cumulativeStETH;
+        shares = _endRequest.cumulativeShares - _preStartRequest.cumulativeShares;
 
-        return Math.min(ethRequested * E27_PRECISION_BASE / shareRequested, _maxShareRate);
-    }
-
-    function _calcShareRate(uint256 _requestId, uint256 _maxShareRate) internal view returns (uint256) {
-        WithdrawalRequest memory prevRequest = _getQueue()[_requestId - 1];
-        WithdrawalRequest memory lastRequest = _getQueue()[_requestId];
-
-        return _calcShareRate(prevRequest, lastRequest, _maxShareRate);
-    }
-
-    function _calcShareRate(uint256 _requestId, WithdrawalRequest memory request)
-        internal
-        view
-        returns (uint256)
-    {
-        WithdrawalRequest memory prevRequest = _getQueue()[_requestId - 1];
-
-        return _calcShareRate(prevRequest, request, SHARE_RATE_UNLIMITED);
+        shareRate = stETH * E27_PRECISION_BASE / shares;
     }
 
     //
@@ -722,14 +569,6 @@ abstract contract WithdrawalQueueBase {
         }
     }
 
-    function _getExtrema() internal pure returns (uint256[] storage) {
-        return EXTREMA_POSITION.storageUint256Array();
-    }
-
-    function _getLastCheckedExtremum() internal view returns (uint256) {
-        return LAST_CHECKED_EXTREMUM_POSITION.getStorageUint256();
-    }
-
     function _getLastReportTimestamp() internal view returns (uint256) {
         return LAST_REPORT_TIMESTAMP_POSITION.getStorageUint256();
     }
@@ -748,10 +587,6 @@ abstract contract WithdrawalQueueBase {
 
     function _setLockedEtherAmount(uint256 _lockedEtherAmount) internal {
         LOCKED_ETHER_AMOUNT_POSITION.setStorageUint256(_lockedEtherAmount);
-    }
-
-    function _setLastCheckedExtremum(uint256 _lastCheckedExtremum) internal {
-        LAST_CHECKED_EXTREMUM_POSITION.setStorageUint256(_lastCheckedExtremum);
     }
 
     function _setLastReportTimestamp(uint256 _lastReportTimestamp) internal {
