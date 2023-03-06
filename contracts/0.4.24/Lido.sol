@@ -559,7 +559,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     * @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer at `_reportTimestamp`
     * @param _elRewardsVaultBalance elRewards vault balance on Execution Layer at `_reportTimestamp`
     * @param _sharesRequestedToBurn shares requested to burn through Burner at `_reportTimestamp`
-    * @param _lastFinalizableRequestId last withdrawal request id to finalize up to
+    * @param _lastFinalizableRequestId last withdrawal request id to finalize up to, pass 0 to not finalize requests
     * @param _simulatedShareRate share rate that was simulated by oracle when the report data created (1e27 precision)
     *
     * NB: `_simulatedShareRate` should be calculated off-chain by calling the method with `eth_call` JSON-RPC API
