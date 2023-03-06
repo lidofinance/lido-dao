@@ -22,7 +22,7 @@ const {
   computeTimestampAtSlot,
   ZERO_HASH,
   CONSENSUS_VERSION,
-  SLOTS_PER_FRAME,
+  computeTimestampAtEpoch,
 } = require('../0.8.9/oracle/accounting-oracle-deploy.test')
 
 const getReportFields = (override = {}) => ({
@@ -212,7 +212,7 @@ contract('LegacyOracle', ([admin, stranger]) => {
       const refSlot = consensusFrame.refSlot.toNumber()
       assert.equals(epochId, Math.floor((refSlot + 1) / SLOTS_PER_EPOCH))
       assert.equals(frameStartTime, computeTimestampAtSlot(refSlot + 1))
-      assert.equals(frameEndTime, computeTimestampAtSlot(refSlot + 1 + SLOTS_PER_FRAME) - 1)
+      assert.equals(frameEndTime, computeTimestampAtEpoch(+epochId + EPOCHS_PER_FRAME) - 1)
     })
 
     it.skip('handlePostTokenRebase from lido')

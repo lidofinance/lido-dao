@@ -162,7 +162,11 @@ contract LegacyOracle is Versioned, AragonApp {
      * Returns the epoch calculated from current timestamp
      */
     function getCurrentEpochId() external view returns (uint256 epochId) {
-        (epochId, ,) = _getCurrentFrameFromAccountingOracle();
+        ChainSpec memory spec = _getChainSpec();
+        IHashConsensus consensus = _getAccountingConsensusContract();
+        uint256 refSlot;
+        (refSlot,) =  consensus.getCurrentFrame();
+        epochId = (refSlot + 1) / spec.slotsPerEpoch;
     }
 
     /**
@@ -369,12 +373,13 @@ contract LegacyOracle is Versioned, AragonApp {
         ChainSpec memory spec = _getChainSpec();
         IHashConsensus consensus = _getAccountingConsensusContract();
         uint256 refSlot;
-        (refSlot, frameEndTime) =  consensus.getCurrentFrame();
-        // new accounting oracle's frame ends at the timestamp of the frame's last slot; old oracle's frame
-        // ended a second before the timestamp of the first slot of the next frame
-        frameEndTime += spec.secondsPerSlot - 1;
+        (refSlot,) =  consensus.getCurrentFrame();
+    
         // new accounting oracle's ref. slot is the last slot of the epoch preceding the one the frame starts at
         frameStartTime = spec.genesisTime + (refSlot + 1) * spec.secondsPerSlot;
+        // new accounting oracle's frame ends at the timestamp of the frame's last slot; old oracle's frame
+        // ended a second before the timestamp of the first slot of the next frame
+        frameEndTime = frameStartTime + spec.secondsPerSlot*spec.slotsPerEpoch*spec.epochsPerFrame - 1;
         frameEpochId = (refSlot + 1) / spec.slotsPerEpoch;
     }
 

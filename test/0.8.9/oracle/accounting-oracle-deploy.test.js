@@ -246,7 +246,7 @@ async function deployAndConfigureAccountingOracle(admin) {
   ///   2. set HashConsensus initial epoch
   ///   3. deploy AccountingOracle proxy (skipped in these tests as they're not testing the proxy setup)
   ///   4. initialize AccountingOracle
-  const finalizeResult = await configureAccountingOracleSetup(deployed)
+  const finalizeResult = await configureAccountingOracleSetup({ admin, ...deployed })
 
   // pretend we're at the first slot of the new oracle's initial epoch
   const initialEpoch = V1_ORACLE_LAST_COMPLETED_EPOCH + EPOCHS_PER_FRAME
