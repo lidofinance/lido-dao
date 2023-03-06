@@ -1,13 +1,14 @@
-const { contract, ethers, artifacts } = require('hardhat')
+const { contract, ethers, artifacts, web3 } = require('hardhat')
 const { assert } = require('../helpers/assert')
 const { impersonate } = require('../helpers/blockchain')
-
+const { e9, e18, e27 } = require('../helpers/utils')
 const { legacyOracleFactory } = require('../helpers/factories')
 
 const OssifiableProxy = artifacts.require('OssifiableProxy')
-
 const LegacyOracle = artifacts.require('LegacyOracle')
 const MockLegacyOracle = artifacts.require('MockLegacyOracle')
+
+const LegacyOracleAbi = require('../../lib/abi/LegacyOracle.json')
 
 const {
   deployAccountingOracleSetup,
@@ -16,7 +17,31 @@ const {
   SLOTS_PER_EPOCH,
   SECONDS_PER_SLOT,
   GENESIS_TIME,
+  calcAccountingReportDataHash,
+  getAccountingReportDataItems,
+  computeTimestampAtSlot,
+  ZERO_HASH,
+  CONSENSUS_VERSION,
+  SLOTS_PER_FRAME,
 } = require('../0.8.9/oracle/accounting-oracle-deploy.test')
+
+const getReportFields = (override = {}) => ({
+  consensusVersion: CONSENSUS_VERSION,
+  numValidators: 10,
+  clBalanceGwei: e9(320),
+  stakingModuleIdsWithNewlyExitedValidators: [1],
+  numExitedValidatorsByStakingModule: [3],
+  withdrawalVaultBalance: e18(1),
+  elRewardsVaultBalance: e18(2),
+  sharesRequestedToBurn: e18(3),
+  lastFinalizableWithdrawalRequestId: 1,
+  simulatedShareRate: e27(1),
+  isBunkerMode: true,
+  extraDataFormat: 0,
+  extraDataHash: ZERO_HASH,
+  extraDataItemsCount: 0,
+  ...override,
+})
 
 async function deployLegacyOracleWithAccountingOracle({ admin, initialEpoch = 1, lastProcessingRefSlot = 31 }) {
   const legacyOracle = await legacyOracleFactory({ appManager: { address: admin } })
@@ -37,9 +62,8 @@ module.exports = {
 }
 
 contract('LegacyOracle', ([admin, stranger]) => {
-  let legacyOracle, accountingOracle, lido, consensus
-
   context('Fresh deploy and puppet methods checks', () => {
+    let legacyOracle, accountingOracle, lido, consensus
     before('deploy', async () => {
       const deployed = await deployLegacyOracleWithAccountingOracle({ admin })
       legacyOracle = deployed.legacyOracle
@@ -139,6 +163,7 @@ contract('LegacyOracle', ([admin, stranger]) => {
         getLegacyOracle: () => {
           return proxyAsOldImplementation
         },
+        dataSubmitter: admin,
       })
       const { consensus, oracle } = deployedInfra
       await initAccountingOracle({ admin, oracle, consensus, shouldMigrateLegacyOracle: true })
@@ -150,6 +175,46 @@ contract('LegacyOracle', ([admin, stranger]) => {
       await proxyAsNewImplementation.finalizeUpgrade_v4(deployedInfra.oracle.address)
     })
 
-    it.skip('lifecycle tests')
+    it('submit report', async () => {
+      await deployedInfra.consensus.advanceTimeToNextFrameStart()
+      const { refSlot } = await deployedInfra.consensus.getCurrentFrame()
+      const reportFields = getReportFields({
+        refSlot: +refSlot,
+      })
+      const reportItems = getAccountingReportDataItems(reportFields)
+      const reportHash = calcAccountingReportDataHash(reportItems)
+      await deployedInfra.consensus.addMember(admin, 1, { from: admin })
+      await deployedInfra.consensus.submitReport(refSlot, reportHash, CONSENSUS_VERSION, { from: admin })
+      const oracleVersion = +(await deployedInfra.oracle.getContractVersion())
+      const tx = await deployedInfra.oracle.submitReportData(reportItems, oracleVersion, { from: admin })
+
+      const epochId = Math.floor((+refSlot + 1) / SLOTS_PER_EPOCH)
+      assert.emits(
+        tx,
+        'Completed',
+        {
+          epochId,
+          beaconBalance: web3.utils.toWei(reportFields.clBalanceGwei, 'gwei'),
+          beaconValidators: reportFields.numValidators,
+        },
+        { abi: LegacyOracleAbi }
+      )
+      const completedEpoch = await proxyAsNewImplementation.getLastCompletedEpochId()
+      assert.equals(completedEpoch, epochId)
+    })
+
+    it('time in sync with consensus', async () => {
+      await deployedInfra.consensus.advanceTimeToNextFrameStart()
+      const epochId = await proxyAsNewImplementation.getCurrentEpochId()
+      const { frameEpochId, frameStartTime, frameEndTime } = await proxyAsNewImplementation.getCurrentFrame()
+      assert.equals(epochId, frameEpochId)
+      const consensusFrame = await deployedInfra.consensus.getCurrentFrame()
+      const refSlot = consensusFrame.refSlot.toNumber()
+      assert.equals(epochId, Math.floor((refSlot + 1) / SLOTS_PER_EPOCH))
+      assert.equals(frameStartTime, computeTimestampAtSlot(refSlot + 1))
+      assert.equals(frameEndTime, computeTimestampAtSlot(refSlot + 1 + SLOTS_PER_FRAME) - 1)
+    })
+
+    it.skip('handlePostTokenRebase from lido')
   })
 })
