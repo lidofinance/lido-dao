@@ -248,8 +248,8 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @dev ether to finalize all the requests should be calculated using `finalizationBatch()` and sent along
     ///
     /// @param _nextFinalizedRequestId request index in the queue that will be last finalized request in a batch
-    function finalize(uint256 _nextFinalizedRequestId) external payable whenResumed onlyRole(FINALIZE_ROLE) {
-        _finalize(_nextFinalizedRequestId, msg.value);
+    function finalize(uint256 _nextFinalizedRequestId, uint256 _shareRate) external payable whenResumed onlyRole(FINALIZE_ROLE) {
+        _finalize(_nextFinalizedRequestId, msg.value, _shareRate);
     }
 
     /// @notice Update bunker mode state

@@ -7,6 +7,7 @@ pragma solidity 0.8.9;
 import "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 import {UnstructuredRefStorage} from "./lib/UnstructuredRefStorage.sol";
+import {Math} from "./lib/Math.sol";
 
 /// @title Queue to store and manage WithdrawalRequests.
 /// @dev Use an optimizations to store discounts heavily inspired
@@ -20,8 +21,6 @@ abstract contract WithdrawalQueueBase {
     /// @notice precision base for share rate and discounting factor values in the contract
     uint256 public constant E27_PRECISION_BASE = 1e27;
 
-    /// @dev discount factor value that means no discount applying
-    uint96 internal constant NO_DISCOUNT = uint96(E27_PRECISION_BASE);
 
     /// @dev return value for the `find...` methods in case of no result
     uint256 internal constant NOT_FOUND = 0;
@@ -56,13 +55,10 @@ abstract contract WithdrawalQueueBase {
         bool claimed;
     }
 
-    /// @notice structure to store discount factors for requests in the queue
-    struct DiscountCheckpoint {
-        /// @notice first `_requestId` the discount is valid for
-        /// @dev storing in uint160 to pack into one slot. Overflowing here is unlikely
-        uint160 fromRequestId;
-        /// @notice discount factor with 1e27 precision (0 - 100% discount, 1e27 - means no discount)
-        uint96 discountFactor;
+    /// @notice structure to store discounts for requests that are affected by negative rebase
+    struct Checkpoint {
+        uint256 fromRequestId;
+        uint256 maxShareRate;
     }
 
     /// @notice output format struct for `_getWithdrawalStatus()` method
@@ -270,7 +266,7 @@ abstract contract WithdrawalQueueBase {
 
     /// @dev Finalize requests from last finalized one up to `_nextFinalizedRequestId`
     ///  Emits WithdrawalBatchFinalized event.
-    function _finalize(uint256 _nextFinalizedRequestId, uint256 _amountOfETH) internal {
+    function _finalize(uint256 _nextFinalizedRequestId, uint256 _amountOfETH, uint256 _maxShareRate) internal {
         if (_nextFinalizedRequestId > getLastRequestId()) revert InvalidRequestId(_nextFinalizedRequestId);
         uint256 lastFinalizedRequestId = getLastFinalizedRequestId();
         uint256 firstUnfinalizedRequestId = lastFinalizedRequestId + 1;
@@ -282,18 +278,13 @@ abstract contract WithdrawalQueueBase {
         uint128 stETHToFinalize = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH;
         if (_amountOfETH > stETHToFinalize) revert TooMuchEtherToFinalize(_amountOfETH, stETHToFinalize);
 
-        uint256 discountFactor = NO_DISCOUNT;
-        if (stETHToFinalize > _amountOfETH) {
-            discountFactor = _amountOfETH * E27_PRECISION_BASE / stETHToFinalize;
-        }
 
         uint256 lastCheckpointIndex = getLastCheckpointIndex();
-        DiscountCheckpoint storage lastCheckpoint = _getCheckpoints()[lastCheckpointIndex];
+        Checkpoint storage lastCheckpoint = _getCheckpoints()[lastCheckpointIndex];
 
-        if (discountFactor != lastCheckpoint.discountFactor) {
+        if (_maxShareRate != lastCheckpoint.maxShareRate) {
             // add a new discount if it differs from the previous
-            _getCheckpoints()[lastCheckpointIndex + 1] =
-                DiscountCheckpoint(uint160(firstUnfinalizedRequestId), uint96(discountFactor));
+            _getCheckpoints()[lastCheckpointIndex + 1] = Checkpoint(firstUnfinalizedRequestId, _maxShareRate);
             _setLastCheckpointIndex(lastCheckpointIndex + 1);
         }
 
@@ -437,21 +428,29 @@ abstract contract WithdrawalQueueBase {
         uint256 lastCheckpointIndex = getLastCheckpointIndex();
         if (_hint > lastCheckpointIndex) revert InvalidHint(_hint);
 
-        DiscountCheckpoint memory hintCheckpoint = _getCheckpoints()[_hint];
+        Checkpoint memory checkpoint = _getCheckpoints()[_hint];
         // ______(>______
         //    ^  hint
-        if (_requestId < hintCheckpoint.fromRequestId) revert InvalidHint(_hint);
+        if (_requestId < checkpoint.fromRequestId) revert InvalidHint(_hint);
         if (_hint < lastCheckpointIndex) {
             // ______(>______(>________
             //       hint    hint+1  ^
-            DiscountCheckpoint memory nextCheckpoint = _getCheckpoints()[_hint + 1];
+            Checkpoint memory nextCheckpoint = _getCheckpoints()[_hint + 1];
             if (nextCheckpoint.fromRequestId <= _requestId) {
                 revert InvalidHint(_hint);
             }
         }
 
-        uint256 ethRequested = _request.cumulativeStETH - _getQueue()[_requestId - 1].cumulativeStETH;
-        return ethRequested * hintCheckpoint.discountFactor / E27_PRECISION_BASE;
+        WithdrawalRequest memory prevRequest = _getQueue()[_requestId - 1];
+
+        uint256 ethRequested = _request.cumulativeStETH - prevRequest.cumulativeStETH;
+        uint256 shareRequested = _request.cumulativeShares - prevRequest.cumulativeShares;
+
+        if (ethRequested * E27_PRECISION_BASE / shareRequested <= checkpoint.maxShareRate) {
+            return ethRequested;
+        }
+
+        return shareRequested * checkpoint.maxShareRate / E27_PRECISION_BASE;
     }
 
     // quazi-constructor
@@ -460,7 +459,7 @@ abstract contract WithdrawalQueueBase {
         // to avoid uint underflows and related if-branches
         // 0-index is reserved as 'not_found' response in the interface everywhere
         _getQueue()[0] = WithdrawalRequest(0, 0, address(0), uint64(block.number), true);
-        _getCheckpoints()[getLastCheckpointIndex()] = DiscountCheckpoint(0, 0);
+        _getCheckpoints()[getLastCheckpointIndex()] = Checkpoint(0, 0);
     }
 
     function _sendValue(address _recipient, uint256 _amount) internal {
@@ -481,7 +480,7 @@ abstract contract WithdrawalQueueBase {
         }
     }
 
-    function _getCheckpoints() internal pure returns (mapping(uint256 => DiscountCheckpoint) storage checkpoints) {
+    function _getCheckpoints() internal pure returns (mapping(uint256 => Checkpoint) storage checkpoints) {
         bytes32 position = CHECKPOINTS_POSITION;
         assembly {
             checkpoints.slot := position

@@ -118,7 +118,7 @@ interface IWithdrawalQueue {
         view
         returns (uint128 eth, uint128 shares);
 
-    function finalize(uint256 _lastIdToFinalize) external payable;
+    function finalize(uint256 _lastIdToFinalize, uint256 _currentShareRate) external payable;
 
     function isPaused() external view returns (bool);
 
@@ -828,7 +828,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 _withdrawalsToWithdraw,
         uint256 _elRewardsToWithdraw,
         uint256 _lastFinalizableRequestId,
-        uint256 _etherToLockOnWithdrawalQueue
+        uint256 _etherToLockOnWithdrawalQueue,
+        uint256 _simulatedShareRate
     ) internal {
         // withdraw execution layer rewards and put them to the buffer
         if (_elRewardsToWithdraw > 0) {
@@ -843,7 +844,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // finalize withdrawals (send ether, assign shares for burning)
         if (_etherToLockOnWithdrawalQueue > 0) {
             IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_contracts.withdrawalQueue);
-            withdrawalQueue.finalize.value(_etherToLockOnWithdrawalQueue)(_lastFinalizableRequestId);
+            withdrawalQueue.finalize.value(_etherToLockOnWithdrawalQueue)(_lastFinalizableRequestId, _simulatedShareRate);
         }
 
         uint256 preBufferedEther = _getBufferedEther();
@@ -1244,7 +1245,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             withdrawals,
             elRewards,
             _reportedData.lastFinalizableRequestId,
-            reportContext.etherToLockOnWithdrawalQueue
+            reportContext.etherToLockOnWithdrawalQueue,
+            _reportedData.simulatedShareRate
         );
 
         emit ETHDistributed(
