@@ -1,32 +1,30 @@
+const { contract, artifacts } = require('hardhat')
 const { BN } = require('bn.js')
 const { assert } = require('../helpers/assert')
 const { MAX_UINT256 } = require('../helpers/constants')
 const { ZERO_ADDRESS, toBN, e9, e18, e27, toStr } = require('../helpers/utils')
 const { deployProtocol } = require('../helpers/protocol')
-const { prepareOracleReport, reportOracle, getSecondsPerFrame, getSlotTimestamp } = require('../helpers/oracle')
+const { reportOracle, getSecondsPerFrame, getSlotTimestamp } = require('../helpers/oracle')
 const { advanceChainTime } = require('../helpers/blockchain')
 const { processNamedTuple } = require('../helpers/debug')
 
 const StakingModuleMock = artifacts.require('StakingModuleMock')
 
-
-function piecewiseModN({values, pointsPerValue, x}) {
+function piecewiseModN({ values, pointsPerValue, x }) {
   const iValue = Math.floor(x / pointsPerValue)
   const leftValue = values[iValue % values.length]
   const rightValue = values[(iValue + 1) % values.length]
-  return leftValue + (rightValue - leftValue) * (x % pointsPerValue) / pointsPerValue
+  return leftValue + ((rightValue - leftValue) * (x % pointsPerValue)) / pointsPerValue
 }
 
-
-contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, user, user2, stranger]) => {
-
+contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, user, user2]) => {
   const test = (numRebases, withdrawalRequestsPerRebase, rebasesPerShareRateExtrema) => {
     let lido, router, wQueue, oracle, consensus, voting, stakingModule, stakingModuleId
     let secondsPerFrame
 
     before('deploy contracts', async () => {
       const deployed = await deployProtocol({
-        stakingModulesFactory: async (protocol) => {
+        stakingModulesFactory: async () => {
           stakingModule = await StakingModuleMock.new()
           return [
             {
@@ -123,11 +121,13 @@ contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, use
     let shareRateBP
 
     for (let i = 0; i < numRebases; ++i) {
-      shareRateBP = Math.floor(piecewiseModN({
-        values: shareRatesBP,
-        pointsPerValue: rebasesPerShareRateExtrema,
-        x: i
-      }))
+      shareRateBP = Math.floor(
+        piecewiseModN({
+          values: shareRatesBP,
+          pointsPerValue: rebasesPerShareRateExtrema,
+          x: i,
+        })
+      )
 
       context(`rebase ${i}, share rate: ${shareRateBP / 10000}`, () => {
         before(async () => {
@@ -141,7 +141,7 @@ contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, use
           await wQueue.requestWithdrawals(amounts, user, { from: user })
         })
 
-        if (i == numRebases - 1) {
+        if (i === numRebases - 1) {
           it(`users submit enough ETH to buffer to fullfill all withdrawals`, async () => {
             // twice as much ETH will be enough in all scenarios
             await lido.submit(ZERO_ADDRESS, { from: user2, value: toBN(userBalance).muln(2) })
@@ -154,7 +154,7 @@ contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, use
     const finalShareRate27 = e27(finalShareRateBP / 10000)
 
     context(`share rate: ${finalShareRateBP / 10000}`, () => {
-      let batches, totals, oracleReportFields, ethAvailForWithdrawals
+      let oracleReportFields, ethAvailForWithdrawals
 
       it(`calculating available ETH`, async () => {
         const { refSlot } = await consensus.getCurrentFrame()
@@ -216,8 +216,6 @@ contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, use
           console.log(`calcState ${i}:`, processNamedTuple(calcState))
           ++i
         }
-
-        batches = calcState.batches
       })
 
       it.skip(`oracle report`, async () => {
@@ -228,7 +226,8 @@ contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, use
 
   context('handleOracleReport gas consumption', () => {
     const testWithParams = (numRebases, withdrawalRequestsPerRebase, rebasesPerShareRateExtrema) => {
-      const desc = `rebases: ${numRebases}, requests per rebase: ${withdrawalRequestsPerRebase}, ` +
+      const desc =
+        `rebases: ${numRebases}, requests per rebase: ${withdrawalRequestsPerRebase}, ` +
         `rebases per extrema: ${rebasesPerShareRateExtrema}`
       context(desc, () => test(numRebases, withdrawalRequestsPerRebase, rebasesPerShareRateExtrema))
     }
