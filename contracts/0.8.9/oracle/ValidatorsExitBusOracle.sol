@@ -105,7 +105,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
 
-        _pause(PAUSE_INFINITELY);
+        _pauseFor(PAUSE_INFINITELY);
         _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
     }
 
@@ -126,7 +126,14 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     /// @dev Reverts with `ZeroPauseDuration()` if zero duration is passed
     ///
     function pause(uint256 _duration) external onlyRole(PAUSE_ROLE) {
-        _pause(_duration);
+        _pauseFor(_duration);
+    }
+
+    /// @notice Pause withdrawal requests placement and finalization. Claiming finalized requests will still be available
+    /// @param _resumeSince the first second to resume since
+    /// @dev Reverts with `ResumeSinceInPast()` if the timestamp is in the past
+    function pauseUntil(uint256 _resumeSince) external onlyRole(PAUSE_ROLE) {
+        _pauseUntil(_resumeSince);
     }
 
     ///

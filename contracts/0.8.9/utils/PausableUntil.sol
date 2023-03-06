@@ -21,6 +21,7 @@ contract PausableUntil {
     error ZeroPauseDuration();
     error PausedExpected();
     error ResumedExpected();
+    error ResumeSinceInPast();
 
     /// @notice Reverts when resumed
     modifier whenPaused() {
@@ -57,18 +58,26 @@ contract PausableUntil {
         emit Resumed();
     }
 
-    function _pause(uint256 _duration) internal whenResumed {
+    function _pauseFor(uint256 _duration) internal whenResumed {
         if (_duration == 0) revert ZeroPauseDuration();
 
-        uint256 pausedUntil;
+        uint256 resumeSince;
         if (_duration == PAUSE_INFINITELY) {
-            pausedUntil = PAUSE_INFINITELY;
+            resumeSince = PAUSE_INFINITELY;
         } else {
-            pausedUntil = block.timestamp + _duration;
+            resumeSince = block.timestamp + _duration;
         }
 
-        RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(pausedUntil);
+        RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(resumeSince);
 
         emit Paused(_duration);
+    }
+
+    function _pauseUntil(uint256 _resumeSince) internal whenResumed {
+        if (_resumeSince < block.timestamp) revert ResumeSinceInPast();
+
+        RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(_resumeSince);
+
+        emit Paused(_resumeSince - block.timestamp);
     }
 }

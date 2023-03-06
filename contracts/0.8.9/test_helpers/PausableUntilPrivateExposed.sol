@@ -21,7 +21,7 @@ contract PausableUntilPrivateExposed is PausableUntil {
     }
 
     function pause(uint256 _duration) external {
-        _pause(_duration);
+        _pauseFor(_duration);
     }
 
 }

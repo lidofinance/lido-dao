@@ -104,8 +104,18 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
 
     /// @notice Pause withdrawal requests placement and finalization. Claiming finalized requests will still be available
     /// @param _duration pause duration, seconds (use `PAUSE_INFINITELY` for unlimited)
+    /// @dev Reverts with `ResumedExpected()` if contract is already paused
+    /// @dev Reverts with `AccessControl:...` reason if sender has no `PAUSE_ROLE`
+    /// @dev Reverts with `ZeroPauseDuration()` if zero duration is passed
     function pause(uint256 _duration) external onlyRole(PAUSE_ROLE) {
-        _pause(_duration);
+        _pauseFor(_duration);
+    }
+
+    /// @notice Pause withdrawal requests placement and finalization. Claiming finalized requests will still be available
+    /// @param _resumeSince the first second to resume since
+    /// @dev Reverts with `ResumeSinceInPast()` if the timestamp is in the past
+    function pauseUntil(uint256 _resumeSince) external onlyRole(PAUSE_ROLE) {
+        _pauseUntil(_resumeSince);
     }
 
     /// @notice Request the sequence of stETH withdrawals according to passed `withdrawalRequestInputs` data
@@ -361,7 +371,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         internal
     {
         _initializeQueue();
-        _pause(PAUSE_INFINITELY);
+        _pauseFor(PAUSE_INFINITELY);
 
         _initializeContractVersionTo(1);
 
