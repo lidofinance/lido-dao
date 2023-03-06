@@ -1142,7 +1142,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * @dev Size-efficient analog of the `auth(_role)` modifier
      * @param _role Permission name
      */
-    function _auth(bytes32 _role) internal view auth(_role) {
+    function _auth(bytes32 _role) internal view {
         require(canPerform(msg.sender, _role, new uint256[](0)), "APP_AUTH_FAILED");
     }
 
