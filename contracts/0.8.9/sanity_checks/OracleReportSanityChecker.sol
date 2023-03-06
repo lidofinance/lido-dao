@@ -478,8 +478,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     }
 
     /// @notice Applies sanity checks to the withdrawal requests finalization
-    /// @param _lastFinalizableRequestId right boundary of requestId range if equals 0, no requests
-    ///     should be finalized
+    /// @param _lastFinalizableRequestId last finalizable withdrawal request id
     /// @param _reportTimestamp timestamp when the originated oracle report was submitted
     function checkWithdrawalQueueOracleReport(
         uint256 _lastFinalizableRequestId,
@@ -491,7 +490,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         LimitsList memory limitsList = _limits.unpack();
         address withdrawalQueue = LIDO_LOCATOR.withdrawalQueue();
 
-        _checkRequestIdToFinalizeUpTo(limitsList, withdrawalQueue, _lastFinalizableRequestId, _reportTimestamp);
+        _checkLastFinalizableId(limitsList, withdrawalQueue, _lastFinalizableRequestId, _reportTimestamp);
     }
 
     /// @notice Applies sanity checks to the simulated share rate for withdrawal requests finalization
@@ -601,7 +600,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         if (_appearedValidators > churnLimit) revert IncorrectAppearedValidators(_appearedValidators);
     }
 
-    function _checkRequestIdToFinalizeUpTo(
+    function _checkLastFinalizableId(
         LimitsList memory _limitsList,
         address _withdrawalQueue,
         uint256 _lastFinalizableId,
