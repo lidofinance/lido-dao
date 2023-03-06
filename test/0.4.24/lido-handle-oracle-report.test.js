@@ -13,7 +13,7 @@ const {
   limitRebase,
 } = require('../helpers/utils')
 const { deployProtocol } = require('../helpers/protocol')
-const { EvmSnapshot, setBalance } = require('../helpers/blockchain')
+const { EvmSnapshot, setBalance, advanceChainTime, getCurrentBlockTimestamp } = require('../helpers/blockchain')
 const { ZERO_ADDRESS, INITIAL_HOLDER } = require('../helpers/constants')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 
@@ -25,11 +25,11 @@ const ORACLE_REPORT_LIMITS_BOILERPLATE = {
   churnValidatorsPerDayLimit: 255,
   oneOffCLBalanceDecreaseBPLimit: 100,
   annualBalanceIncreaseBPLimit: 10000,
-  simulatedShareRateDeviationBPLimit: 10000,
+  simulatedShareRateDeviationBPLimit: 1,
   maxValidatorExitRequestsPerReport: 10000,
   maxAccountingExtraDataListItemsCount: 10000,
   maxNodeOperatorsPerExtraDataItemCount: 10000,
-  requestTimestampMargin: 0,
+  requestTimestampMargin: 24,
   maxPositiveTokenRebase: 1000000000,
 }
 
@@ -41,7 +41,7 @@ const DEFAULT_LIDO_ORACLE_REPORT = {
   withdrawalVaultBalance: ETH(0), // uint256, wei
   elRewardsVaultBalance: ETH(0), // uint256, wei
   sharesRequestedToBurn: StETH(0), // uint256, wad
-  withdrawalFinalizationBatches: [], // uint256[], indexes
+  lastFinalizableWithdrawalRequestId: 0, // uint256, index
   simulatedShareRate: shareRate(0), // uint256, 10e27
 }
 
@@ -108,7 +108,7 @@ const checkEvents = async ({
 }
 
 contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anotherStranger, depositor, operator]) => {
-  let deployed, snapshot, lido, treasury, voting, oracle, burner
+  let deployed, snapshot, lido, treasury, voting, oracle, burner, withdrawalQueue
   let curatedModule, oracleReportSanityChecker, elRewardsVault
   let withdrawalVault
   let strangerBalanceBefore,
@@ -154,6 +154,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
     oracleReportSanityChecker = deployed.oracleReportSanityChecker
     withdrawalVault = deployed.withdrawalVault.address
     elRewardsVault = deployed.elRewardsVault.address
+    withdrawalQueue = deployed.withdrawalQueue
 
     assert.equals(await lido.balanceOf(INITIAL_HOLDER), StETH(1))
     await lido.submit(ZERO_ADDRESS, { from: stranger, value: ETH(30) })
@@ -1960,8 +1961,63 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       assert.equals(elRewards, ETH(0.4))
     })
 
-    it.skip('withdrawal finalization works after dry-run call', async () => {
-      // TODO
+    it('withdrawal finalization works after dry-run call', async () => {
+      await setBalance(elRewardsVault, ETH(0.5))
+      await setBalance(withdrawalVault, ETH(0.5))
+
+      assert.equals(await withdrawalQueue.getLastFinalizedRequestId(), toBN(0))
+      await withdrawalQueue.resume({ from: appManager })
+      assert.isFalse(await withdrawalQueue.isPaused())
+
+      await lido.approve(withdrawalQueue.address, StETH(1), { from: stranger })
+      await withdrawalQueue.requestWithdrawals([StETH(1)], stranger, { from: stranger })
+      assert.equals(await withdrawalQueue.unfinalizedStETH(), StETH(1))
+      assert.equals(await withdrawalQueue.unfinalizedRequestNumber(), 1)
+
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
+          churnValidatorsPerDayLimit: 100,
+          maxPositiveTokenRebase: 10000000,
+        },
+        { from: voting, gasPrice: 1 }
+      )
+
+      await advanceChainTime(30)
+
+      const [postTotalPooledEther, postTotalShares, ,] = await lido.handleOracleReport.call(
+        ...Object.values({
+          ...DEFAULT_LIDO_ORACLE_REPORT,
+          timeElapsed: ONE_DAY,
+          clValidators: 3,
+          postCLBalance: ETH(96.1),
+          elRewardsVaultBalance: ETH(0.5),
+          withdrawalVaultBalance: ETH(0.5),
+        }),
+        { from: oracle, gasPrice: 1 }
+      )
+
+      await advanceChainTime(30)
+
+      const simulatedShareRate = postTotalPooledEther.mul(toBN(shareRate(1))).div(postTotalShares)
+
+      await lido.handleOracleReport(
+        ...Object.values({
+          ...DEFAULT_LIDO_ORACLE_REPORT,
+          reportTimestamp: await getCurrentBlockTimestamp(),
+          timeElapsed: ONE_DAY,
+          clValidators: 3,
+          postCLBalance: ETH(96.1),
+          elRewardsVaultBalance: ETH(0.5),
+          withdrawalVaultBalance: ETH(0.5),
+          lastFinalizableWithdrawalRequestId: 1,
+          simulatedShareRate,
+        }),
+        { from: oracle, gasPrice: 1 }
+      )
+
+      assert.equals(await withdrawalQueue.getLastFinalizedRequestId(), toBN(1))
+      await withdrawalQueue.claimWithdrawal(1, { from: stranger })
     })
 
     it.skip('check simulated share rate correctness when limit is higher due to withdrawals', async () => {
