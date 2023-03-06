@@ -215,7 +215,7 @@ contract('StakingRouter', ([depositor, stranger]) => {
     })
 
     it('zero deposits just updates module lastDepositBlock', async () => {
-      const depositsCount = 1
+      const depositsCount = 0
       // allow tx `StakingRouter.deposit()` from the Lido contract addr
       await ethers.provider.send('hardhat_impersonateAccount', [lido.address])
       const value = ETH(0)

@@ -965,40 +965,41 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     ) external payable {
         if (msg.sender != LIDO_POSITION.getStorageAddress()) revert AppAuthLidoFailed();
 
-        StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
-
-        uint256 depositsValue = msg.value;
-        /// @dev at first, modify the local state to prevent reentrancy
-        ///     even though the staking modules are trusted contracts
-        stakingModule.lastDepositAt = uint64(block.timestamp);
-        stakingModule.lastDepositBlock = block.number;
-        emit StakingRouterETHDeposited(_stakingModuleId, depositsValue);
-
-        if (depositsValue == 0) return;
-        if (depositsValue != _depositsCount * DEPOSIT_SIZE)
-            revert InvalidDepositsValue(depositsValue, _depositsCount);
-
         bytes32 withdrawalCredentials = getWithdrawalCredentials();
         if (withdrawalCredentials == 0) revert EmptyWithdrawalsCredentials();
 
+        StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         if (StakingModuleStatus(stakingModule.status) != StakingModuleStatus.Active)
             revert StakingModuleNotActive();
 
-        (bytes memory publicKeysBatch, bytes memory signaturesBatch) =
-            IStakingModule(stakingModule.stakingModuleAddress)
-                .obtainDepositData(_depositsCount, _depositCalldata);
+        /// @dev firstly update the local state of the contract to prevent a reentrancy attack
+        ///     even though the staking modules are trusted contracts
+        stakingModule.lastDepositAt = uint64(block.timestamp);
+        stakingModule.lastDepositBlock = block.number;
 
-        uint256 etherBalanceBeforeDeposits = address(this).balance;
-        _makeBeaconChainDeposits32ETH(
-            _depositsCount,
-            abi.encodePacked(withdrawalCredentials),
-            publicKeysBatch,
-            signaturesBatch
-        );
-        uint256 etherBalanceAfterDeposits = address(this).balance;
+        uint256 depositsValue = msg.value;
+        emit StakingRouterETHDeposited(_stakingModuleId, depositsValue);
 
-        /// @dev all sent ETH must be deposited and self balance stay the same
-        assert(etherBalanceBeforeDeposits - etherBalanceAfterDeposits == depositsValue);
+        if (depositsValue != _depositsCount * DEPOSIT_SIZE)
+            revert InvalidDepositsValue(depositsValue, _depositsCount);
+
+        if (_depositsCount > 0) {
+            (bytes memory publicKeysBatch, bytes memory signaturesBatch) =
+                IStakingModule(stakingModule.stakingModuleAddress)
+                    .obtainDepositData(_depositsCount, _depositCalldata);
+
+            uint256 etherBalanceBeforeDeposits = address(this).balance;
+            _makeBeaconChainDeposits32ETH(
+                _depositsCount,
+                abi.encodePacked(withdrawalCredentials),
+                publicKeysBatch,
+                signaturesBatch
+            );
+            uint256 etherBalanceAfterDeposits = address(this).balance;
+
+            /// @dev all sent ETH must be deposited and self balance stay the same
+            assert(etherBalanceBeforeDeposits - etherBalanceAfterDeposits == depositsValue);
+        }
     }
 
     /**
