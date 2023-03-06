@@ -230,8 +230,8 @@ contract('WithdrawalNFT', (addresses) => {
     })
 
     it('reverts with error "RequestAlreadyClaimed()" when called on claimed request', async () => {
-      const batch = await withdrawalQueueERC721.finalizationBatch(3, shareRate(1))
-      await withdrawalQueueERC721.finalize(3, { from: deployer, value: batch.ethToLock })
+      const batch = await withdrawalQueueERC721.finalizationBatch(2, shareRate(1))
+      await withdrawalQueueERC721.finalize(2, shareRate(1), { from: deployer, value: batch.ethToLock })
       const ownerETHBefore = await ethers.provider.getBalance(nftHolderStETH)
       const tx = await withdrawalQueueERC721.methods['claimWithdrawal(uint256)'](nftHolderStETHTokenIds[0], {
         from: nftHolderStETH,
@@ -285,8 +285,8 @@ contract('WithdrawalNFT', (addresses) => {
       })
       assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), recipient)
 
-      const batch = await withdrawalQueueERC721.finalizationBatch(3, shareRate(1))
-      await withdrawalQueueERC721.finalize(3, { from: deployer, value: batch.ethToLock })
+      const batch = await withdrawalQueueERC721.finalizationBatch(2, shareRate(1))
+      await withdrawalQueueERC721.finalize(2, shareRate(1), { from: deployer, value: batch.ethToLock })
 
       const recipientETHBefore = await ethers.provider.getBalance(recipient)
       const tx = await withdrawalQueueERC721.methods['claimWithdrawal(uint256)'](nftHolderStETHTokenIds[0], {
@@ -310,8 +310,8 @@ contract('WithdrawalNFT', (addresses) => {
     it('balanceOf decreases after claim', async () => {
       const balanceBefore = await withdrawalQueueERC721.balanceOf(nftHolderStETH)
 
-      const batch = await withdrawalQueueERC721.finalizationBatch(3, shareRate(1))
-      await withdrawalQueueERC721.finalize(3, { from: deployer, value: batch.ethToLock })
+      const batch = await withdrawalQueueERC721.finalizationBatch(2, shareRate(1))
+      await withdrawalQueueERC721.finalize(2, shareRate(1), { from: deployer, value: batch.ethToLock })
 
       await withdrawalQueueERC721.methods['claimWithdrawal(uint256)'](nftHolderStETHTokenIds[0], {
         from: nftHolderStETH,
