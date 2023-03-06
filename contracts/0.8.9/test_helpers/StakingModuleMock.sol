@@ -87,7 +87,7 @@ contract StakingModuleMock is IStakingModule {
 
     function getNodeOperatorsCount() public view returns (uint256) { return nodeOperatorsCount; }
 
-    function testing__setNodeOperatorsCount(uint256 _count) external {
+    function testing_setNodeOperatorsCount(uint256 _count) external {
         nodeOperatorsCount = _count;
     }
 

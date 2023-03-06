@@ -88,7 +88,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       }
       await module1.setNodeOperatorSummary(nodeOperator1, summary)
 
-      await module1.testing__setNodeOperatorsCount(1)
+      await module1.testing_setNodeOperatorsCount(1)
     })
 
     it('get digest with one nodeOperator', async () => {

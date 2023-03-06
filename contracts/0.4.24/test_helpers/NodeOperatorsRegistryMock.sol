@@ -202,7 +202,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
 
     event ValidatorsKeysLoaded(bytes publicKeys, bytes signatures);
 
-    function testing__distributeRewards() external returns (uint256) {
+    function testing_distributeRewards() external returns (uint256) {
         return _distributeRewards();
     }
 }

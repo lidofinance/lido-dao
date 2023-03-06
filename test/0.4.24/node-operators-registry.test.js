@@ -1694,22 +1694,26 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(+firstNodeOperatorKeysStats.maxSigningKeysCount, 8)
     })
 
-    it.skip('respects staking limit', async () => {
+    it('_getSigningKeysAllocationData respects staking limit', async () => {
       const [firstNodeOperatorKeysStats, secondNodeOperatorKeysStats] = await Promise.all([
         app.getNodeOperatorSummary(firstNodeOperatorId),
-        app.getValidatorsKeysStats(secondNodeOperatorId),
+        app.getNodeOperatorSummary(secondNodeOperatorId),
       ])
 
-      assert.isTrue(firstNodeOperatorKeysStats.readyToDepositValidatorsKeysCount.toNumber() > 0)
-      assert.isTrue(secondNodeOperatorKeysStats.readyToDepositValidatorsKeysCount.toNumber() > 0)
+      assert.isTrue(firstNodeOperatorKeysStats.depositableValidatorsCount.toNumber() > 0)
+      assert.isTrue(secondNodeOperatorKeysStats.depositableValidatorsCount.toNumber() > 0)
 
-      assert.equals(firstNodeOperatorKeysStats.exitedValidatorsCount, 1)
-      assert.equals(firstNodeOperatorKeysStats.activeValidatorsKeysCount, 4)
-      assert.equals(firstNodeOperatorKeysStats.readyToDepositValidatorsKeysCount, 3)
+      const firstNodeOperatorActiveKeysCount =
+        firstNodeOperatorKeysStats.totalDepositedValidators.toNumber() -
+        firstNodeOperatorKeysStats.totalExitedValidators.toNumber()
+      assert.equals(firstNodeOperatorActiveKeysCount, 4)
+      assert.equals(firstNodeOperatorKeysStats.depositableValidatorsCount, 3)
 
-      assert.equals(secondNodeOperatorKeysStats.exitedValidatorsCount, 0)
-      assert.equals(secondNodeOperatorKeysStats.activeValidatorsKeysCount, 5)
-      assert.equals(secondNodeOperatorKeysStats.readyToDepositValidatorsKeysCount, 5)
+      const secondNodeOperatorActiveKeysCount =
+        secondNodeOperatorKeysStats.totalDepositedValidators.toNumber() -
+        secondNodeOperatorKeysStats.totalExitedValidators.toNumber()
+      assert.equals(secondNodeOperatorActiveKeysCount, 5)
+      assert.equals(secondNodeOperatorKeysStats.depositableValidatorsCount, 5)
 
       const keysToAllocate = 7
       const { allocatedKeysCount, nodeOperatorIds, activeKeyCountsAfterAllocation } =
@@ -1722,15 +1726,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
       assert.equals(activeKeyCountsAfterAllocation.length, 2)
       // the first node operator has to receive 3 deposits cause reached limit
-      assert.equals(
-        activeKeyCountsAfterAllocation[0],
-        firstNodeOperatorKeysStats.activeValidatorsKeysCount.toNumber() + 3
-      )
+      assert.equals(activeKeyCountsAfterAllocation[0], firstNodeOperatorActiveKeysCount + 3)
       // the second receives 4 deposits
-      assert.equals(
-        activeKeyCountsAfterAllocation[1],
-        secondNodeOperatorKeysStats.activeValidatorsKeysCount.toNumber() + 4
-      )
+      assert.equals(activeKeyCountsAfterAllocation[1], secondNodeOperatorActiveKeysCount + 4)
     })
   })
 

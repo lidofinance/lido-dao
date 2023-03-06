@@ -99,7 +99,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       ])
 
       // calls distributeRewards() inside
-      await app.testing__distributeRewards({ from: voting })
+      await app.testing_distributeRewards({ from: voting })
 
       const recipientsSharesAfter = await Promise.all([
         steth.sharesOf(user1),
@@ -117,7 +117,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.mintShares(app.address, ETH(10))
 
       // calls distributeRewards() inside
-      await app.testing__distributeRewards({ from: voting })
+      await app.testing_distributeRewards({ from: voting })
 
       assert.equals(await steth.sharesOf(user1), ETH(3))
       assert.equals(await steth.sharesOf(user2), ETH(7))
@@ -129,7 +129,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await steth.mintShares(app.address, ETH(10))
 
       // calls distributeRewards() inside
-      const receipt = await app.testing__distributeRewards({ from: voting })
+      const receipt = await app.testing_distributeRewards({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(3) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(7) })
@@ -167,7 +167,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       // perValidatorShare 10*10^18 / 8 = 1250000000000000000 == 1.25 * 10^18
 
       // calls distributeRewards() inside
-      const receipt = await app.testing__distributeRewards({ from: voting })
+      const receipt = await app.testing_distributeRewards({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(2 * 1.25) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(6 * 1.25) })
@@ -207,7 +207,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       // but half goes to burner
 
       // calls distributeRewards() inside
-      const receipt = await app.testing__distributeRewards({ from: voting })
+      const receipt = await app.testing_distributeRewards({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(1.25) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(6 * 1.25) })
@@ -226,7 +226,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await app.updateRefundedValidatorsCount(firstNodeOperator, 1, { from: voting })
 
       // calls distributeRewards() inside
-      const receipt = await app.testing__distributeRewards({ from: voting })
+      const receipt = await app.testing_distributeRewards({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(1.25) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(6 * 1.25) })
@@ -258,7 +258,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       await app.updateRefundedValidatorsCount(firstNodeOperator, 1, { from: voting })
 
       // calls distributeRewards() inside
-      const receipt = await app.testing__distributeRewards({ from: voting })
+      const receipt = await app.testing_distributeRewards({ from: voting })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(1) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(4 * 2) })
       assert.notEmits(receipt, 'RewardsDistributed', { rewardAddress: user3, sharesAmount: 0 })
@@ -284,7 +284,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       assert.isFalse(await app.testing_isNodeOperatorPenalized(firstNodeOperator))
 
       // calls distributeRewards() inside
-      const receipt = await app.testing__distributeRewards({ from: voting })
+      const receipt = await app.testing_distributeRewards({ from: voting })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(2.5) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(7.5) })
