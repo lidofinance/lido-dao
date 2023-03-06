@@ -677,7 +677,11 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       const id = await withdrawalQueue.getLastRequestId()
       await withdrawalQueue.finalize(id, shareRate(300), { from: steth.address, value: finalizedWEI })
 
-      const hints = await withdrawalQueue.findCheckpointHintsUnbounded(requestIds)
+      const hints = await withdrawalQueue.findCheckpointHints(
+        requestIds,
+        1,
+        await withdrawalQueue.getLastCheckpointIndex()
+      )
       const claimableEth = await withdrawalQueue.getClaimableEther(requestIds, hints)
       const totalClaimable = claimableEth.reduce((s, i) => s.iadd(i) && s, bn(0))
       assert.equals(totalClaimable, finalizedWEI, `Total Claimable doesn't add up to finalized amount`)
@@ -880,14 +884,11 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       }
       assert.equals(await withdrawalQueue.getLastCheckpointIndex(), numOfRequests)
       assert.equals(
-        await withdrawalQueue.findCheckpointHintsUnbounded([await withdrawalQueue.getLastFinalizedRequestId()]),
-        await withdrawalQueue.getLastCheckpointIndex()
-      )
-    })
-
-    it('works unbounded', async () => {
-      assert.equals(
-        await withdrawalQueue.findCheckpointHintsUnbounded([10]),
+        await withdrawalQueue.findCheckpointHints(
+          [await withdrawalQueue.getLastFinalizedRequestId()],
+          1,
+          await withdrawalQueue.getLastCheckpointIndex()
+        ),
         await withdrawalQueue.getLastCheckpointIndex()
       )
     })
@@ -895,12 +896,10 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     it('reverts if request is not finalized', async () => {
       await withdrawalQueue.requestWithdrawals([ETH(1)], owner, { from: user })
       await assert.reverts(withdrawalQueue.findCheckpointHints([11], 1, 10), 'RequestNotFoundOrNotFinalized(11)')
-      await assert.reverts(withdrawalQueue.findCheckpointHintsUnbounded([11]), 'RequestNotFoundOrNotFinalized(11)')
     })
 
     it('reverts if there is no such a request', async () => {
       await assert.reverts(withdrawalQueue.findCheckpointHints([12], 1, 10), 'RequestNotFoundOrNotFinalized(12)')
-      await assert.reverts(withdrawalQueue.findCheckpointHintsUnbounded([12]), 'RequestNotFoundOrNotFinalized(12)')
     })
 
     it('range search (found)', async () => {
