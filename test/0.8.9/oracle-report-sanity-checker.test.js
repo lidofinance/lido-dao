@@ -243,7 +243,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     const newRequestId = 2
     let oldRequestCreationTimestamp, newRequestCreationTimestamp
     const correctWithdrawalQueueOracleReport = {
-      requestIdToFinalizeUpTo: oldRequestId,
+      lastFinalizableRequestId: oldRequestId,
       refReportTimestamp: -1,
     }
 
@@ -262,7 +262,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
         oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
           ...Object.values({
             ...correctWithdrawalQueueOracleReport,
-            requestIdToFinalizeUpTo: newRequestId,
+            lastFinalizableRequestId: newRequestId,
           })
         ),
         `IncorrectRequestFinalization(${newRequestCreationTimestamp})`
