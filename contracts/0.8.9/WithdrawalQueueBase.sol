@@ -257,6 +257,10 @@ abstract contract WithdrawalQueueBase {
             _state.ethBudget -= ethToFinalize;
 
             if (batchesLength != 0 && (
+                // share rate of requests in the same batch can differ by 1-2 wei because of the rounding error
+                // (issue: https://github.com/lidofinance/lido-dao/issues/442 )
+                // so we're counting requests that are placed during the same report day
+                // as equal even if their actual share rate are different
                 prevRequest.reportTimestamp == request.reportTimestamp ||
                 prevShareRate <= _maxShareRate && requestShareRate <= _maxShareRate ||
                 prevShareRate > _maxShareRate && requestShareRate > _maxShareRate
