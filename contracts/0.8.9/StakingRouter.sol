@@ -812,13 +812,16 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         view
         returns (uint256 activeValidatorsCount)
     {
+        StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         (
             uint256 totalExitedValidatorsCount,
             uint256 totalDepositedValidatorsCount,
             /* uint256 depositableValidatorsCount */
-        ) = IStakingModule(_getStakingModuleAddressById(_stakingModuleId)).getStakingModuleSummary();
+        ) = IStakingModule(stakingModule.stakingModuleAddress).getStakingModuleSummary();
 
-        activeValidatorsCount = totalDepositedValidatorsCount - totalExitedValidatorsCount;
+        activeValidatorsCount = totalDepositedValidatorsCount - Math256.max(
+            stakingModule.exitedValidatorsCount, totalExitedValidatorsCount
+        );
     }
 
     /// @dev calculate the max count of deposits which the staking module can provide data for based
