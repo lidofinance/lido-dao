@@ -911,6 +911,35 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       assert.equal(+module2lastcall.callCount, 1)
       assert.equal(+module2lastcall.totalShares, 400)
     })
+
+    it('handles reverted staking modules correctly', async () => {
+      const stakingModuleWithBug = await StakingModuleStub.new()
+      // staking module will revert with message "UNHANDLED_ERROR"
+      await StakingModuleStub.stub(stakingModuleWithBug, 'onRewardsMinted', {
+        revert: { reason: 'UNHANDLED_ERROR' },
+      })
+      await router.addStakingModule('Staking Module With Bug', stakingModuleWithBug.address, 100, 1000, 2000, {
+        from: admin,
+      })
+      const stakingModuleWithBugId = await router.getStakingModulesCount()
+
+      const stakingModuleIds = [1, 2, stakingModuleWithBugId]
+      const totalShares = [300, 400, 500]
+      await router.grantRole(await router.REPORT_REWARDS_MINTED_ROLE(), admin, { from: admin })
+      const tx = await router.reportRewardsMinted(stakingModuleIds, totalShares, { from: admin })
+
+      const errorMethodId = '0x08c379a0'
+      const errorMessageEncoded = [
+        '0000000000000000000000000000000000000000000000000000000000000020',
+        '000000000000000000000000000000000000000000000000000000000000000f',
+        '554e48414e444c45445f4552524f520000000000000000000000000000000000',
+      ]
+
+      assert.emits(tx, 'RewardsMintedReportFailed', {
+        stakingModuleId: stakingModuleWithBugId,
+        lowLevelRevertData: [errorMethodId, ...errorMessageEncoded].join(''),
+      })
+    })
   })
 
   describe('updateRefundedValidatorsCount()', async () => {

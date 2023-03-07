@@ -27,6 +27,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     event WithdrawalCredentialsSet(bytes32 withdrawalCredentials, address setBy);
     event WithdrawalsCredentialsChangeFailed(uint256 indexed stakingModuleId, bytes lowLevelRevertData);
     event ExitedAndStuckValidatorsCountsUpdateFailed(uint256 indexed stakingModuleId, bytes lowLevelRevertData);
+    event RewardsMintedReportFailed(uint256 indexed stakingModuleId, bytes lowLevelRevertData);
 
     /// Emitted when the StakingRouter received ETH
     event StakingRouterETHDeposited(uint256 indexed stakingModuleId, uint256 amount);
@@ -268,7 +269,13 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
         for (uint256 i = 0; i < _stakingModuleIds.length; ) {
             address moduleAddr = _getStakingModuleById(_stakingModuleIds[i]).stakingModuleAddress;
-            IStakingModule(moduleAddr).onRewardsMinted(_totalShares[i]);
+            try IStakingModule(moduleAddr).onRewardsMinted(_totalShares[i]) {}
+            catch (bytes memory lowLevelRevertData) {
+                emit RewardsMintedReportFailed(
+                    _stakingModuleIds[i],
+                    lowLevelRevertData
+                );
+            }
             unchecked { ++i; }
         }
     }
