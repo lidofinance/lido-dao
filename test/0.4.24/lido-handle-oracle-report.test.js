@@ -2000,6 +2000,45 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await advanceChainTime(30)
 
       const simulatedShareRate = postTotalPooledEther.mul(toBN(shareRate(1))).div(postTotalShares)
+      const tooLowSimulatedShareRate = simulatedShareRate.mul(toBN(3)).div(toBN(4))
+
+      await assert.reverts(
+        lido.handleOracleReport(
+          ...Object.values({
+            ...DEFAULT_LIDO_ORACLE_REPORT,
+            reportTimestamp: await getCurrentBlockTimestamp(),
+            timeElapsed: ONE_DAY,
+            clValidators: 3,
+            postCLBalance: ETH(96.1),
+            elRewardsVaultBalance: ETH(0.5),
+            withdrawalVaultBalance: ETH(0.5),
+            lastFinalizableWithdrawalRequestId: 1,
+            simulatedShareRate: tooLowSimulatedShareRate,
+          }),
+          { from: oracle, gasPrice: 1 }
+        ),
+        `TooLowSimulatedShareRate(${tooLowSimulatedShareRate.toString()}, ${simulatedShareRate.toString()})`
+      )
+
+      const tooHighSimulatedShareRate = simulatedShareRate.mul(toBN(3)).div(toBN(2))
+
+      await assert.reverts(
+        lido.handleOracleReport(
+          ...Object.values({
+            ...DEFAULT_LIDO_ORACLE_REPORT,
+            reportTimestamp: await getCurrentBlockTimestamp(),
+            timeElapsed: ONE_DAY,
+            clValidators: 3,
+            postCLBalance: ETH(96.1),
+            elRewardsVaultBalance: ETH(0.5),
+            withdrawalVaultBalance: ETH(0.5),
+            lastFinalizableWithdrawalRequestId: 1,
+            simulatedShareRate: tooHighSimulatedShareRate,
+          }),
+          { from: oracle, gasPrice: 1 }
+        ),
+        `TooHighSimulatedShareRate(${tooHighSimulatedShareRate.toString()}, ${simulatedShareRate.toString()})`
+      )
 
       await lido.handleOracleReport(
         ...Object.values({
