@@ -233,8 +233,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         if (_targetShare > TOTAL_BASIS_POINTS) revert ValueOver100Percent("_targetShare");
         if (_stakingModuleFee + _treasuryFee > TOTAL_BASIS_POINTS) revert ValueOver100Percent("_stakingModuleFee + _treasuryFee");
 
-        uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
-        StakingModule storage stakingModule = _getStakingModuleByIndex(stakingModuleIndex);
+        StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
 
         stakingModule.targetShare = uint16(_targetShare);
         stakingModule.treasuryFee = uint16(_treasuryFee);
@@ -1167,11 +1166,6 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     function _getStakingModuleAddressById(uint256 _stakingModuleId) internal view returns (address) {
         return _getStakingModuleById(_stakingModuleId).stakingModuleAddress;
     }
-
-    function _getStakingModuleAddressByIndex(uint256 _stakingModuleIndex) internal view returns (address) {
-        return _getStakingModuleByIndex(_stakingModuleIndex).stakingModuleAddress;
-    }
-
 
     function _getStorageStakingModulesMapping() internal pure returns (mapping(uint256 => StakingModule) storage result) {
         bytes32 position = STAKING_MODULES_MAPPING_POSITION;
