@@ -634,7 +634,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         assert.emits(tx, 'WithdrawalClaimed', { requestId, owner: user, receiver: user, amountOfETH: ETH(1) })
       }
       const balanceAfter = bn(await ethers.provider.getBalance(user))
-      assert.equals(balanceBefore.add(bn(total)), balanceAfter)
+      assert.equals(balanceAfter, balanceBefore.add(bn(total)))
     })
 
     it('random', async () => {
@@ -649,7 +649,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         assert.emits(tx, 'WithdrawalClaimed', { requestId, owner: user, receiver: user, amountOfETH: ETH(1) })
       }
       const balanceAfter = bn(await ethers.provider.getBalance(user))
-      assert.equals(balanceBefore.add(bn(total)), balanceAfter)
+      assert.equals(balanceAfter, balanceBefore.add(bn(total)))
     })
 
     it('different rates', async () => {
@@ -671,7 +671,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         await withdrawalQueue.claimWithdrawal(requestId, { from: user })
       }
       const balanceAfter = bn(await ethers.provider.getBalance(user))
-      assert.equals(balanceBefore.add(totalDistributedEth), balanceAfter)
+      assert.equals(balanceAfter, balanceBefore.add(totalDistributedEth))
     })
   })
 
