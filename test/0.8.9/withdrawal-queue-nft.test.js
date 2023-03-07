@@ -1,9 +1,11 @@
-const { contract, ethers, web3 } = require('hardhat')
+const { contract, ethers, web3, artifacts } = require('hardhat')
 const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
 const { ETH, StETH, shareRate, shares } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
-const { impersonate, EvmSnapshot, setBalance } = require('../helpers/blockchain')
+const { EvmSnapshot, setBalance } = require('../helpers/blockchain')
+
+const ERC721ReceiverMock = artifacts.require('ERC721ReceiverMock')
 
 const {
   deployWithdrawalQueue,
@@ -12,8 +14,8 @@ const {
   NFT_DESCRIPTOR_BASE_URI,
 } = require('./withdrawal-queue-deploy.test')
 
-contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager]) => {
-  let withdrawalQueue, steth, nftDescriptor
+contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, recipient]) => {
+  let withdrawalQueue, steth, nftDescriptor, erc721ReceiverMock
 
   const manageTokenUriRoleKeccak156 = web3.utils.keccak256('MANAGE_TOKEN_URI_ROLE')
   const snapshot = new EvmSnapshot(ethers.provider)
@@ -30,6 +32,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager])
     steth = deployed.steth
     withdrawalQueue = deployed.withdrawalQueue
     nftDescriptor = deployed.nftDescriptor
+    erc721ReceiverMock = await ERC721ReceiverMock.new({ from: owner })
 
     await steth.setTotalPooledEther(ETH(600))
     // we need 1 ETH additionally to pay gas on finalization because coverage ingnores gasPrice=0
@@ -38,7 +41,6 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager])
     await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
     await withdrawalQueue.grantRole(manageTokenUriRoleKeccak156, tokenUriManager, { from: daoAgent })
 
-    await impersonate(ethers.provider, steth.address)
     await snapshot.make()
   })
 
@@ -150,8 +152,8 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager])
       await withdrawalQueue.requestWithdrawals([ETH(25)], user, { from: user })
       assert.equals(await withdrawalQueue.balanceOf(user), 1)
 
-      const batch = await withdrawalQueue.finalizationBatch(1, shareRate(1))
-      await withdrawalQueue.finalize(1, shareRate(1), { from: daoAgent, value: batch.ethToLock })
+      const batch = await withdrawalQueue.prefinalize.call([1], shareRate(1))
+      await withdrawalQueue.finalize([1], shareRate(1), { from: daoAgent, value: batch.ethToLock })
       await withdrawalQueue.claimWithdrawal(1, { from: user })
 
       assert.equals(await withdrawalQueue.balanceOf(user), 0)
@@ -163,6 +165,10 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager])
   })
 
   context('ownerOf', () => {
+    it('should revert when token id is 0', async () => {
+      await assert.reverts(withdrawalQueue.ownerOf(0), `InvalidRequestId(0)`)
+    })
+
     it('should revert with not existing', async () => {
       await assert.reverts(withdrawalQueue.ownerOf(1), 'InvalidRequestId(1)')
     })
@@ -175,11 +181,42 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager])
       await withdrawalQueue.requestWithdrawals([ETH(25)], user, { from: user })
       assert.equals(await withdrawalQueue.ownerOf(1), user)
 
-      const batch = await withdrawalQueue.finalizationBatch(1, shareRate(1))
-      await withdrawalQueue.finalize(1, shareRate(1), { from: daoAgent, value: batch.ethToLock })
+      const batch = await withdrawalQueue.prefinalize.call([1], shareRate(1))
+      await withdrawalQueue.finalize([1], shareRate(1), { from: daoAgent, value: batch.ethToLock })
       await withdrawalQueue.claimWithdrawal(1, { from: user })
 
       await assert.reverts(withdrawalQueue.ownerOf(1), 'RequestAlreadyClaimed(1)')
+    })
+  })
+
+  context('approve()', async () => {
+    let tokenId1
+    beforeEach(async () => {
+      await snapshot.rollback()
+      const requestIds = await withdrawalQueue.requestWithdrawals.call([ETH(25), ETH(25)], user, { from: user })
+      await withdrawalQueue.requestWithdrawals([ETH(25), ETH(25)], user, { from: user })
+      tokenId1 = requestIds[0]
+    })
+
+    it('reverts with message "ApprovalToOwner()" when approval for owner address', async () => {
+      await assert.reverts(withdrawalQueue.approve(user, tokenId1, { from: user }), 'ApprovalToOwner()')
+    })
+
+    it('reverts with message "NotOwnerOrApprovedForAll()" when called noy by owner', async () => {
+      await assert.reverts(
+        withdrawalQueue.approve(recipient, tokenId1, { from: stranger }),
+        `NotOwnerOrApprovedForAll("${stranger}")`
+      )
+    })
+
+    it('sets approval for address and transfer by approved', async () => {
+      const tx = await withdrawalQueue.approve(recipient, tokenId1, { from: user })
+      assert.equal(await withdrawalQueue.getApproved(tokenId1), recipient)
+
+      assert.emits(tx, 'Approval', { owner: user, approved: recipient, tokenId: tokenId1 })
+
+      await withdrawalQueue.transferFrom(user, recipient, tokenId1, { from: recipient })
+      assert.equals(await withdrawalQueue.ownerOf(tokenId1), recipient)
     })
   })
 
@@ -200,6 +237,35 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager])
     })
   })
 
+  context('setApprovalForAll()', async () => {
+    let tokenId1, tokenId2
+    beforeEach(async () => {
+      await snapshot.rollback()
+      const requestIds = await withdrawalQueue.requestWithdrawals.call([ETH(25), ETH(25)], user, {
+        from: user,
+      })
+      tokenId1 = requestIds[0]
+      tokenId2 = requestIds[1]
+      await withdrawalQueue.requestWithdrawals([ETH(25), ETH(25)], user, { from: user })
+    })
+
+    it('reverts with message "ApproveToCaller()" when owner equal to operator', async () => {
+      await assert.reverts(withdrawalQueue.setApprovalForAll(user, true, { from: user }), 'ApproveToCaller()')
+    })
+
+    it('approvalForAll allows transfer', async () => {
+      const tx = await withdrawalQueue.setApprovalForAll(recipient, true, { from: user })
+      assert.emits(tx, 'ApprovalForAll', { owner: user, operator: recipient, approved: true })
+      assert.isTrue(await withdrawalQueue.isApprovedForAll(user, recipient))
+
+      await withdrawalQueue.transferFrom(user, recipient, tokenId1, { from: recipient })
+      await withdrawalQueue.transferFrom(user, recipient, tokenId2, { from: recipient })
+
+      assert.equals(await withdrawalQueue.ownerOf(tokenId1), recipient)
+      assert.equals(await withdrawalQueue.ownerOf(tokenId2), recipient)
+    })
+  })
+
   context('isApprovedForAll', () => {
     it('should return false for not approved', async () => {
       assert.isFalse(await withdrawalQueue.isApprovedForAll(user, stranger))
@@ -208,6 +274,180 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager])
     it('should return true for approved', async () => {
       await withdrawalQueue.setApprovalForAll(stranger, true, { from: user })
       assert.isTrue(await withdrawalQueue.isApprovedForAll(user, stranger))
+    })
+  })
+
+  context('safeTransferFrom(address,address,uint256)', async () => {
+    let requestIds
+    beforeEach(async () => {
+      requestIds = await withdrawalQueue.requestWithdrawals.call([ETH(25), ETH(25)], user, {
+        from: user,
+      })
+      await withdrawalQueue.requestWithdrawals([ETH(25), ETH(25)], user, { from: user })
+    })
+
+    it('reverts with message "NotOwnerOrApproved()" when approvalNotSet and not owner', async () => {
+      await assert.reverts(
+        withdrawalQueue.safeTransferFrom(user, recipient, requestIds[0], {
+          from: stranger,
+        }),
+        `NotOwnerOrApproved("${stranger}")`
+      )
+    })
+
+    it('transfers if called by owner', async () => {
+      assert.notEqual(await withdrawalQueue.ownerOf(requestIds[0]), recipient)
+      await withdrawalQueue.safeTransferFrom(user, recipient, requestIds[0], {
+        from: user,
+      })
+      assert.equal(await withdrawalQueue.ownerOf(requestIds[0]), recipient)
+    })
+
+    it('transfers if token approval set', async () => {
+      await withdrawalQueue.approve(recipient, requestIds[0], { from: user })
+      assert.notEqual(await withdrawalQueue.ownerOf(requestIds[0]), recipient)
+      await withdrawalQueue.safeTransferFrom(user, recipient, requestIds[0], {
+        from: recipient,
+      })
+      assert.equal(await withdrawalQueue.ownerOf(requestIds[0]), recipient)
+    })
+
+    it('transfers if operator approval set', async () => {
+      await withdrawalQueue.setApprovalForAll(recipient, true, { from: user })
+      assert.notEqual(await withdrawalQueue.ownerOf(requestIds[0]), recipient)
+      assert.notEqual(await withdrawalQueue.ownerOf(requestIds[1]), recipient)
+      await withdrawalQueue.safeTransferFrom(user, recipient, requestIds[0], {
+        from: recipient,
+      })
+      await withdrawalQueue.safeTransferFrom(user, recipient, requestIds[1], {
+        from: recipient,
+      })
+      assert.equal(await withdrawalQueue.ownerOf(requestIds[0]), recipient)
+      assert.equal(await withdrawalQueue.ownerOf(requestIds[1]), recipient)
+    })
+
+    it('reverts with message "TransferToNonIERC721Receiver()" when transfer to contract that not implements IERC721Receiver interface', async () => {
+      await assert.reverts(
+        withdrawalQueue.safeTransferFrom(user, steth.address, requestIds[0], {
+          from: user,
+        }),
+        `TransferToNonIERC721Receiver("${steth.address}")`
+      )
+    })
+
+    it('reverts with propagated error message when recipient contract implements ERC721Receiver and reverts on onERC721Received call', async () => {
+      await erc721ReceiverMock.setDoesAcceptTokens(false, { from: owner })
+      await assert.reverts(
+        withdrawalQueue.safeTransferFrom(user, erc721ReceiverMock.address, requestIds[0], {
+          from: user,
+        }),
+        'ERC721_NOT_ACCEPT_TOKENS'
+      )
+    })
+
+    it("doesn't revert when recipient contract implements ERC721Receiver interface and accepts tokens", async () => {
+      await erc721ReceiverMock.setDoesAcceptTokens(true, { from: owner })
+      assert.notEqual(await withdrawalQueue.ownerOf(requestIds[0]), erc721ReceiverMock.address)
+      await withdrawalQueue.safeTransferFrom(user, erc721ReceiverMock.address, requestIds[0], {
+        from: user,
+      })
+      assert.equal(await withdrawalQueue.ownerOf(requestIds[0]), erc721ReceiverMock.address)
+    })
+  })
+
+  describe('transferFrom()', async () => {
+    let requestIds
+
+    beforeEach(async () => {
+      requestIds = await withdrawalQueue.requestWithdrawals.call([ETH(25), ETH(25)], user, {
+        from: user,
+      })
+      await withdrawalQueue.requestWithdrawals([ETH(25), ETH(25)], user, { from: user })
+    })
+
+    it('reverts with message "NotOwnerOrApproved()" when approvalNotSet and not owner', async () => {
+      await assert.reverts(
+        withdrawalQueue.transferFrom(user, recipient, requestIds[0], { from: stranger }),
+        `NotOwnerOrApproved("${stranger}")`
+      )
+    })
+
+    it('reverts when transfer to the same address', async () => {
+      await assert.reverts(
+        withdrawalQueue.transferFrom(user, user, requestIds[0], {
+          from: user,
+        }),
+        'TransferToThemselves()'
+      )
+    })
+
+    it('reverts with error "RequestAlreadyClaimed()" when called on claimed request', async () => {
+      const batch = await withdrawalQueue.prefinalize.call([2], shareRate(1))
+      await withdrawalQueue.finalize([2], shareRate(1), { from: daoAgent, value: batch.ethToLock })
+
+      await withdrawalQueue.methods['claimWithdrawal(uint256)'](requestIds[0], {
+        from: user,
+      })
+
+      await assert.reverts(
+        withdrawalQueue.transferFrom(user, recipient, requestIds[0], {
+          from: user,
+        }),
+        `RequestAlreadyClaimed(${requestIds[0]})`
+      )
+    })
+
+    it('transfers if called by owner', async () => {
+      assert.notEqual(await withdrawalQueue.ownerOf(requestIds[0]), recipient)
+      await withdrawalQueue.transferFrom(user, recipient, requestIds[0], {
+        from: user,
+      })
+      assert.equal(await withdrawalQueue.ownerOf(requestIds[0]), recipient)
+    })
+
+    it('transfers if token approval set', async () => {
+      await withdrawalQueue.approve(recipient, requestIds[0], { from: user })
+      assert.notEqual(await withdrawalQueue.ownerOf(requestIds[0]), recipient)
+      await withdrawalQueue.transferFrom(user, recipient, requestIds[0], {
+        from: recipient,
+      })
+      assert.equal(await withdrawalQueue.ownerOf(requestIds[0]), recipient)
+    })
+
+    it('transfers if operator approval set', async () => {
+      await withdrawalQueue.setApprovalForAll(recipient, true, { from: user })
+      assert.notEqual(await withdrawalQueue.ownerOf(requestIds[0]), recipient)
+      assert.notEqual(await withdrawalQueue.ownerOf(requestIds[1]), recipient)
+      await withdrawalQueue.transferFrom(user, recipient, requestIds[0], {
+        from: recipient,
+      })
+      await withdrawalQueue.transferFrom(user, recipient, requestIds[1], {
+        from: recipient,
+      })
+      assert.equal(await withdrawalQueue.ownerOf(requestIds[0]), recipient)
+      assert.equal(await withdrawalQueue.ownerOf(requestIds[1]), recipient)
+    })
+
+    it('can claim request after transfer', async () => {
+      await withdrawalQueue.transferFrom(user, recipient, requestIds[0], {
+        from: user,
+      })
+      assert.equal(await withdrawalQueue.ownerOf(requestIds[0]), recipient)
+
+      const batch = await withdrawalQueue.prefinalize.call([2], shareRate(1))
+      await withdrawalQueue.finalize([2], shareRate(1), { from: daoAgent, value: batch.ethToLock })
+
+      await withdrawalQueue.methods['claimWithdrawal(uint256)'](requestIds[0], {
+        from: recipient,
+      })
+    })
+
+    it("doesn't reverts when transfer to contract that not implements IERC721Receiver interface", async () => {
+      assert.equal(await withdrawalQueue.ownerOf(requestIds[0]), user)
+      await withdrawalQueue.transferFrom(user, steth.address, requestIds[0], {
+        from: user,
+      })
+      assert.equal(await withdrawalQueue.ownerOf(requestIds[0]), steth.address)
     })
   })
 
@@ -261,8 +501,8 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager])
       assert.equals(await withdrawalQueue.ownerOf(1), user)
       assert.equals(await withdrawalQueue.ownerOf(2), user)
 
-      const batch = await withdrawalQueue.finalizationBatch(1, shareRate(1))
-      await withdrawalQueue.finalize(1, shareRate(1), { from: daoAgent, value: batch.ethToLock })
+      const batch = await withdrawalQueue.prefinalize.call([1], shareRate(1))
+      await withdrawalQueue.finalize([1], shareRate(1), { from: daoAgent, value: batch.ethToLock })
       await withdrawalQueue.claimWithdrawal(1, { from: user })
 
       assert.equals(await withdrawalQueue.balanceOf(user), 1)
@@ -277,8 +517,8 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager])
       assert.equals(await withdrawalQueue.ownerOf(1), user)
       assert.equals(await withdrawalQueue.ownerOf(2), user)
 
-      const batch = await withdrawalQueue.finalizationBatch(1, shareRate(1))
-      await withdrawalQueue.finalize(1, shareRate(1), { from: daoAgent, value: batch.ethToLock })
+      const batch = await withdrawalQueue.prefinalize.call([1], shareRate(1))
+      await withdrawalQueue.finalize([1], shareRate(1), { from: daoAgent, value: batch.ethToLock })
 
       await assert.reverts(withdrawalQueue.claimWithdrawal(1, { from: stranger }), `NotOwner("${stranger}", "${user}")`)
 
@@ -299,8 +539,8 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager])
       assert.equals(await withdrawalQueue.ownerOf(1), user)
       assert.equals(await withdrawalQueue.ownerOf(2), user)
 
-      const batch = await withdrawalQueue.finalizationBatch(2, shareRate(1))
-      await withdrawalQueue.finalize(2, shareRate(1), { from: daoAgent, value: batch.ethToLock })
+      const batch = await withdrawalQueue.prefinalize.call([2], shareRate(1))
+      await withdrawalQueue.finalize([2], shareRate(1), { from: daoAgent, value: batch.ethToLock })
       await withdrawalQueue.claimWithdrawal(1, { from: user })
 
       assert.equals(await withdrawalQueue.balanceOf(user), 1)
@@ -324,8 +564,8 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager])
       assert.equals(await withdrawalQueue.ownerOf(2), user)
       assert.equals(await withdrawalQueue.ownerOf(1), stranger)
 
-      const batch = await withdrawalQueue.finalizationBatch(2, shareRate(1))
-      await withdrawalQueue.finalize(2, shareRate(1), { from: daoAgent, value: batch.ethToLock })
+      const batch = await withdrawalQueue.prefinalize.call([2], shareRate(1))
+      await withdrawalQueue.finalize([2], shareRate(1), { from: daoAgent, value: batch.ethToLock })
       await withdrawalQueue.claimWithdrawal(2, { from: user })
 
       assert.equals(await withdrawalQueue.balanceOf(user), 0)
@@ -375,8 +615,8 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager])
       assert.equals(await withdrawalQueue.ownerOf(2), user)
       assert.equals(await withdrawalQueue.ownerOf(3), stranger)
 
-      const batch = await withdrawalQueue.finalizationBatch(3, shareRate(1))
-      await withdrawalQueue.finalize(3, shareRate(1), { from: daoAgent, value: batch.ethToLock })
+      const batch = await withdrawalQueue.prefinalize.call([3], shareRate(1))
+      await withdrawalQueue.finalize([3], shareRate(1), { from: daoAgent, value: batch.ethToLock })
       await withdrawalQueue.claimWithdrawal(1, { from: user })
       await withdrawalQueue.claimWithdrawal(3, { from: stranger })
 
