@@ -488,7 +488,7 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
         await StakingModuleStub.stubGetStakingModuleSummary(stakingModuleWithBug, {
           totalExitedValidators: 0,
           totalDepositedValidators: 0,
-          availableValidatorsCount: 0,
+          depositableValidatorsCount: 0,
         })
         await router.addStakingModule('Staking Module With Bug', stakingModuleWithBug.address, 100, 1000, 2000, {
           from: admin,
