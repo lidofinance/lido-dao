@@ -13,7 +13,13 @@ const {
   limitRebase,
 } = require('../helpers/utils')
 const { deployProtocol } = require('../helpers/protocol')
-const { EvmSnapshot, setBalance, advanceChainTime, getCurrentBlockTimestamp } = require('../helpers/blockchain')
+const {
+  EvmSnapshot,
+  setBalance,
+  advanceChainTime,
+  getCurrentBlockTimestamp,
+  getBalance,
+} = require('../helpers/blockchain')
 const { ZERO_ADDRESS, INITIAL_HOLDER } = require('../helpers/constants')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 
@@ -2059,8 +2065,112 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await withdrawalQueue.claimWithdrawal(1, { from: stranger })
     })
 
-    it.skip('check simulated share rate correctness when limit is higher due to withdrawals', async () => {
-      // TODO
+    it('check simulated share rate correctness when limit is higher due to withdrawals', async () => {
+      // Execution layer rewards and withdrawal vault balance to report
+      // NB: both don't exceed daily rebase by themselves
+      await setBalance(elRewardsVault, ETH(0.25))
+      await setBalance(withdrawalVault, ETH(0.5))
+
+      // Bob decides to burn stETH amount corresponding to ETH(1)
+      await lido.submit(ZERO_ADDRESS, { from: bob, value: ETH(1) })
+      const sharesRequestedToBurn = await lido.sharesOf(bob)
+      await lido.approve(burner.address, await lido.balanceOf(bob), { from: bob })
+      await burner.requestBurnShares(bob, sharesRequestedToBurn, { from: voting })
+
+      // Check that we haven't finalized anything yet
+      assert.equals(await withdrawalQueue.getLastFinalizedRequestId(), toBN(0))
+      await withdrawalQueue.resume({ from: appManager })
+      assert.isFalse(await withdrawalQueue.isPaused())
+
+      // Stranger decides to withdraw his stETH(1)
+      await lido.approve(withdrawalQueue.address, StETH(1), { from: stranger })
+      await withdrawalQueue.requestWithdrawals([StETH(1)], stranger, { from: stranger })
+      assert.equals(await withdrawalQueue.unfinalizedStETH(), StETH(1))
+      assert.equals(await withdrawalQueue.unfinalizedRequestNumber(), 1)
+
+      // Setting daily positive rebase as 1%
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
+          churnValidatorsPerDayLimit: 100,
+          maxPositiveTokenRebase: 10000000,
+        },
+        { from: voting, gasPrice: 1 }
+      )
+
+      await advanceChainTime(30)
+
+      // Performing dry-run to estimate simulated share rate
+      const [postTotalPooledEther, postTotalShares, withdrawals, elRewards] = await lido.handleOracleReport.call(
+        ...Object.values({
+          ...DEFAULT_LIDO_ORACLE_REPORT,
+          timeElapsed: ONE_DAY,
+          clValidators: 3,
+          postCLBalance: ETH(96.1),
+          elRewardsVaultBalance: ETH(0.25),
+          withdrawalVaultBalance: ETH(0.5),
+          sharesRequestedToBurn: sharesRequestedToBurn.toString(),
+        }),
+        { from: oracle, gasPrice: 1 }
+      )
+      // Ensuring that vaults don't hit the positive rebase limit
+      assert.equals(await getBalance(elRewardsVault), elRewards)
+      assert.equals(await getBalance(withdrawalVault), withdrawals)
+      const simulatedShareRate = postTotalPooledEther.mul(toBN(shareRate(1))).div(postTotalShares)
+
+      await advanceChainTime(30)
+
+      // Bob decides to stake in between reference slot and real report submission
+      await lido.submit(ZERO_ADDRESS, { from: bob, value: ETH(1.137) })
+      await lido.submit(ZERO_ADDRESS, { from: bob, value: ETH(0.17) })
+      await lido.submit(ZERO_ADDRESS, { from: bob, value: ETH(0.839) })
+
+      // Sending the real report with finalization attempts
+      await lido.handleOracleReport(
+        ...Object.values({
+          ...DEFAULT_LIDO_ORACLE_REPORT,
+          reportTimestamp: await getCurrentBlockTimestamp(),
+          timeElapsed: ONE_DAY,
+          clValidators: 3,
+          postCLBalance: ETH(96.1),
+          elRewardsVaultBalance: ETH(0.25),
+          withdrawalVaultBalance: ETH(0.5),
+          sharesRequestedToBurn: sharesRequestedToBurn.toString(),
+          lastFinalizableWithdrawalRequestId: 1,
+          simulatedShareRate: simulatedShareRate.toString(),
+        }),
+        { from: oracle, gasPrice: 1 }
+      )
+      // Checking that both vaults are withdrawn
+      assert.equals(await getBalance(elRewardsVault), toBN(0))
+      assert.equals(await getBalance(withdrawalVault), toBN(0))
+      // But have excess shares to burn later
+      let { coverShares, nonCoverShares } = await burner.getSharesRequestedToBurn()
+      assert.isTrue(sharesRequestedToBurn.gt(coverShares.add(nonCoverShares)))
+      assert.isTrue(coverShares.add(nonCoverShares).gt(toBN(0)))
+
+      // Checking that finalization of the previously placed withdrawal request completed
+      assert.equals(await withdrawalQueue.getLastFinalizedRequestId(), toBN(1))
+      await withdrawalQueue.claimWithdrawal(1, { from: stranger })
+
+      // Reporting once again allowing shares to be burnt completely
+      await lido.handleOracleReport(
+        ...Object.values({
+          ...DEFAULT_LIDO_ORACLE_REPORT,
+          reportTimestamp: await getCurrentBlockTimestamp(),
+          timeElapsed: ONE_DAY,
+          clValidators: 3,
+          postCLBalance: ETH(96.1),
+          elRewardsVaultBalance: ETH(0),
+          withdrawalVaultBalance: ETH(0),
+          sharesRequestedToBurn: coverShares.add(nonCoverShares).toString(),
+        }),
+        { from: oracle, gasPrice: 1 }
+      )
+      // Checking that no shares to burn remain
+      ;({ coverShares, nonCoverShares } = await burner.getSharesRequestedToBurn())
+      assert.equals(coverShares, toBN(0))
+      assert.equals(nonCoverShares, toBN(0))
     })
   })
 })
