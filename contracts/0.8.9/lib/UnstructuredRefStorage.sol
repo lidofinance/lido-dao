@@ -4,12 +4,6 @@ pragma solidity 0.8.9;
 
 
 library UnstructuredRefStorage {
-    function storageUint256Array(bytes32 _position) internal pure returns (
-        uint256[] storage result
-    ) {
-        assembly { result.slot := _position }
-    }
-
     function storageAddressArray(bytes32 _position) internal pure returns (
         address[] storage result
     ) {
