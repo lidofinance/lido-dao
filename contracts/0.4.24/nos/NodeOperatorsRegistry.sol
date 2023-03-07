@@ -592,7 +592,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     /// @param _isTargetLimitActive active flag
     function updateTargetValidatorsLimits(uint256 _nodeOperatorId, bool _isTargetLimitActive, uint256 _targetLimit) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
-        _auth(MANAGE_NODE_OPERATOR_ROLE);
+        _auth(STAKING_ROUTER_ROLE);
         _requireValidRange(_targetLimit <= UINT64_MAX);
 
         Packed64x4.Packed memory operatorTargetStats = _loadOperatorTargetValidatorsStats(_nodeOperatorId);
@@ -676,15 +676,20 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     /// @notice Invalidates all unused deposit data for all node operators
     function onWithdrawalCredentialsChanged() external {
+        _auth(STAKING_ROUTER_ROLE);
         uint256 operatorsCount = getNodeOperatorsCount();
         if (operatorsCount > 0) {
-            invalidateReadyToDepositKeysRange(0, operatorsCount - 1);
+            _invalidateReadyToDepositKeysRange(0, operatorsCount - 1);
         }
     }
 
     /// @notice Invalidates all unused validators keys for all node operators
-    function invalidateReadyToDepositKeysRange(uint256 _indexFrom, uint256 _indexTo) public {
+    function invalidateReadyToDepositKeysRange(uint256 _indexFrom, uint256 _indexTo) external {
         _auth(MANAGE_NODE_OPERATOR_ROLE);
+        _invalidateReadyToDepositKeysRange(_indexFrom, _indexTo);
+    }
+
+    function _invalidateReadyToDepositKeysRange(uint256 _indexFrom, uint256 _indexTo) internal {
         _requireValidRange(_indexFrom <= _indexTo && _indexTo < getNodeOperatorsCount());
 
         uint64 trimmedKeysCount;
