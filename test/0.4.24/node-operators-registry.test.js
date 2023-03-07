@@ -2269,9 +2269,11 @@ contract('NodeOperatorsRegistry', (addresses) => {
         0n
       )
 
-      const perValidatorReward = totalRewardsShare / totalActiveNodeOperators
       const expectedRewardsDistribution = NODE_OPERATORS.filter((n) => n.isActive !== false).map((n) =>
-        n.isActive === false ? 0n : perValidatorReward * BigInt(n.depositedSigningKeysCount - n.exitedSigningKeysCount)
+        n.isActive === false
+          ? 0n
+          : (totalRewardsShare * BigInt(n.depositedSigningKeysCount - n.exitedSigningKeysCount)) /
+            totalActiveNodeOperators
       )
       assert.equals(shares.length, expectedRewardsDistribution.length)
       for (let i = 0; i < shares.length; ++i) {

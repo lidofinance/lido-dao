@@ -947,10 +947,11 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         if (totalActiveValidatorsCount == 0) return (recipients, shares, penalized);
 
-        uint256 perValidatorReward = _totalRewardShares.div(totalActiveValidatorsCount);
-
         for (idx = 0; idx < activeCount; ++idx) {
-            shares[idx] = shares[idx].mul(perValidatorReward);
+            /// @dev unsafe division used below for gas savings. It's safe in the current case
+            ///     because SafeMath.div() only validates that the divider isn't equal to zero.
+            ///     totalActiveValidatorsCount guaranteed greater than zero.
+            shares[idx] = shares[idx].mul(_totalRewardShares) / totalActiveValidatorsCount;
         }
 
         return (recipients, shares, penalized);
