@@ -942,6 +942,74 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
   })
 
+  describe('updateTargetValidatorsLimits()', () => {
+    before(snapshot)
+    after(revert)
+
+    it('reverts if no STAKING_MODULE_MANAGE_ROLE role', async () => {
+      const moduleId = 1
+      const nodeOperatorId = 1
+      const isTargetLimitActive = true
+      const targetLimit = 3
+
+      await assert.revertsOZAccessControl(
+        router.updateTargetValidatorsLimits(moduleId, nodeOperatorId, isTargetLimitActive, targetLimit, {
+          from: stranger,
+        }),
+        stranger,
+        'STAKING_MODULE_MANAGE_ROLE'
+      )
+    })
+
+    it('reverts if module not register', async () => {
+      const moduleId = 1
+      const nodeOperatorId = 1
+      const isTargetLimitActive = true
+      const targetLimit = 3
+
+      await router.grantRole(await router.STAKING_MODULE_MANAGE_ROLE(), admin, { from: admin })
+      await assert.reverts(
+        router.updateTargetValidatorsLimits(moduleId, nodeOperatorId, isTargetLimitActive, targetLimit, {
+          from: admin,
+        }),
+        'StakingModuleUnregistered()'
+      )
+    })
+
+    it('update target validators limits works', async () => {
+      const moduleId = 1
+      const nodeOperatorId = 1
+      const isTargetLimitActive = true
+      const targetLimit = 3
+
+      await router.grantRole(await router.STAKING_MODULE_MANAGE_ROLE(), admin, { from: admin })
+      await router.addStakingModule(
+        'module 1',
+        module1.address,
+        10_000, // 100 % _targetShare
+        1_000, // 10 % _moduleFee
+        5_000, // 50 % _treasuryFee
+        { from: admin }
+      )
+
+      let lastCall = await module1.lastCall_updateTargetValidatorsLimits()
+      assert.equals(lastCall.nodeOperatorId, 0)
+      assert.equals(lastCall.isTargetLimitActive, false)
+      assert.equals(lastCall.targetLimit, 0)
+      assert.equals(lastCall.callCount, 0)
+
+      await router.updateTargetValidatorsLimits(moduleId, nodeOperatorId, isTargetLimitActive, targetLimit, {
+        from: admin,
+      })
+
+      lastCall = await module1.lastCall_updateTargetValidatorsLimits()
+      assert.equals(lastCall.nodeOperatorId, 1)
+      assert.equals(lastCall.isTargetLimitActive, true)
+      assert.equals(lastCall.targetLimit, targetLimit)
+      assert.equals(lastCall.callCount, 1)
+    })
+  })
+
   describe('updateRefundedValidatorsCount()', async () => {
     before(snapshot)
     after(revert)

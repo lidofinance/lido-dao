@@ -162,6 +162,26 @@ contract StakingModuleMock is IStakingModule {
         ++lastCall_updateRefundedValidatorsCount.callCount;
     }
 
+    // solhint-disable-next-line
+    struct Call_updateTargetValidatorsLimits {
+        uint256 nodeOperatorId;
+        bool isTargetLimitActive;
+        uint64 targetLimit;
+        uint256 callCount;
+    }
+
+    Call_updateTargetValidatorsLimits public lastCall_updateTargetValidatorsLimits;
+    function updateTargetValidatorsLimits(
+        uint256 _nodeOperatorId,
+        bool _isTargetLimitActive,
+        uint64 _targetLimit
+    ) external {
+        lastCall_updateTargetValidatorsLimits.nodeOperatorId = _nodeOperatorId;
+        lastCall_updateTargetValidatorsLimits.isTargetLimitActive = _isTargetLimitActive;
+        lastCall_updateTargetValidatorsLimits.targetLimit = _targetLimit;
+        ++lastCall_updateTargetValidatorsLimits.callCount;
+    }
+
     uint256 public callCount_onExitedAndStuckValidatorsCountsUpdated;
 
     function onExitedAndStuckValidatorsCountsUpdated() external {

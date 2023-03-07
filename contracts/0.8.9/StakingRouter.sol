@@ -243,6 +243,22 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         emit StakingModuleFeesSet(_stakingModuleId, _stakingModuleFee, _treasuryFee, msg.sender);
     }
 
+    /// @notice  Updates the limit of the validators that can be used for deposit
+    /// @param _stakingModuleId Id of the staking module
+    /// @param _nodeOperatorId Id of the node operator
+    /// @param _isTargetLimitActive Active flag
+    /// @param _targetLimit Target limit of the node operator
+    function updateTargetValidatorsLimits(
+        uint256 _stakingModuleId,
+        uint256 _nodeOperatorId,
+        bool _isTargetLimitActive,
+        uint64 _targetLimit
+    ) external onlyRole(STAKING_MODULE_MANAGE_ROLE) {
+        address moduleAddr = _getStakingModuleById(_stakingModuleId).stakingModuleAddress;
+        IStakingModule(moduleAddr)
+            .updateTargetValidatorsLimits(_nodeOperatorId, _isTargetLimitActive, _targetLimit);
+    }
+
     /// @notice Updates the number of the refunded validators in the staking module with the given
     ///     node operator id
     /// @param _stakingModuleId Id of the staking module
