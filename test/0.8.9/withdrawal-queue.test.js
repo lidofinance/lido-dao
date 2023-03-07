@@ -616,10 +616,11 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       withdrawalQueue.finalize(id, shareRate(300), { from: steth.address, value: batch.ethToLock })
       for (let index = 0; index < requestIds.length; index++) {
         const requestId = requestIds[index]
-        await withdrawalQueue.claimWithdrawal(requestId, { from: user })
+        const tx = await withdrawalQueue.claimWithdrawal(requestId, { from: user })
+        assert.emits(tx, 'WithdrawalClaimed', { requestId, owner: user, receiver: user, amountOfETH: ETH(1) })
       }
       const balanceAfter = bn(await ethers.provider.getBalance(user))
-      assert.equals(balanceBefore.add(bn(total)), balanceAfter)
+      assert.equals(balanceAfter, balanceBefore.add(bn(total)))
     })
 
     it('reverse', async () => {
@@ -629,7 +630,8 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
 
       for (let index = requestIds.length - 1; index >= 0; index--) {
         const requestId = requestIds[index]
-        await withdrawalQueue.claimWithdrawal(requestId, { from: user })
+        const tx = await withdrawalQueue.claimWithdrawal(requestId, { from: user })
+        assert.emits(tx, 'WithdrawalClaimed', { requestId, owner: user, receiver: user, amountOfETH: ETH(1) })
       }
       const balanceAfter = bn(await ethers.provider.getBalance(user))
       assert.equals(balanceBefore.add(bn(total)), balanceAfter)
@@ -643,7 +645,8 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
 
       for (let index = 0; index < randomIds.length; index++) {
         const requestId = randomIds[index]
-        await withdrawalQueue.claimWithdrawal(requestId, { from: user })
+        const tx = await withdrawalQueue.claimWithdrawal(requestId, { from: user })
+        assert.emits(tx, 'WithdrawalClaimed', { requestId, owner: user, receiver: user, amountOfETH: ETH(1) })
       }
       const balanceAfter = bn(await ethers.provider.getBalance(user))
       assert.equals(balanceBefore.add(bn(total)), balanceAfter)
