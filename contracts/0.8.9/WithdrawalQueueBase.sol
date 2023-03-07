@@ -10,7 +10,7 @@ import {Math} from "./lib/Math.sol";
 import {MemUtils} from "../common/lib/MemUtils.sol";
 
 /// @title Queue to store and manage WithdrawalRequests.
-/// @dev Use an optimizations to store discounts heavily inspired
+/// @dev Use an optimizations to store max share rates for finalized requests heavily inspired
 /// by Aragon MiniMe token https://github.com/aragon/aragon-minime/blob/master/contracts/MiniMeToken.sol
 ///
 /// @author folkyatina
@@ -250,6 +250,7 @@ abstract contract WithdrawalQueueBase {
             (uint256 requestShareRate, uint256 ethToFinalize, uint256 shares) = _calcBatch(prevRequest, request);
 
             if (requestShareRate > _maxShareRate) {
+                // discounted
                 ethToFinalize = (shares * _maxShareRate) / E27_PRECISION_BASE;
             }
 
@@ -263,14 +264,16 @@ abstract contract WithdrawalQueueBase {
                 // so we're counting requests that are placed during the same report day
                 // as equal even if their actual share rate are different
                 prevRequest.reportTimestamp == request.reportTimestamp ||
+                // both requests are below or
                 prevShareRate <= _maxShareRate && requestShareRate <= _maxShareRate ||
+                // both are above the line
                 prevShareRate > _maxShareRate && requestShareRate > _maxShareRate
             )) {
                 _state.batches[batchesLength - 1] = requestId;
             } else {
-                if (batchesLength == MAX_BATCHES_LENGTH) break; // gas limit break
+                // to be able to check batches on-chain we need it to have fixed max length
 
-                _state.batches[batchesLength] = requestId;
+                // create a new batch
                 batchesLength = ++_state.batches[MAX_BATCHES_LENGTH];
             }
 
@@ -313,13 +316,15 @@ abstract contract WithdrawalQueueBase {
 
             if (batchIndex > 0) {
                 // - if shareRate(batch[i]) is below _maxShareRate => shareRate(batch[i+1]) is above and vice versa
-                if (batchShareRate <= _maxShareRate && prevBatchShareRate <= _maxShareRate) revert InvalidBatch(batchIndex);
-                if (batchShareRate > _maxShareRate && prevBatchShareRate > _maxShareRate) revert InvalidBatch(batchIndex);
+                // so, we can't have two batches in a row that is below...
+                // .. or above the line
             }
 
             if (batchShareRate > _maxShareRate) {
+                // discounted
                 ethToLock += shares * _maxShareRate / E27_PRECISION_BASE;
             } else {
+                // nominal
                 ethToLock += stETH;
             }
             sharesToBurn += shares;
@@ -332,6 +337,8 @@ abstract contract WithdrawalQueueBase {
 
     /// @dev Finalize requests from last finalized one up to `_nextFinalizedRequestId`
     ///  Emits WithdrawalBatchFinalized event.
+    /// Checks that:
+    /// - _amountOfETH is less or equal to the nominal value of all requests to be finalized
     function _finalize(uint256[] memory _batches, uint256 _amountOfETH, uint256 _maxShareRate) internal {
         uint256 nextFinalizedRequestId = _batches[_batches.length - 1];
         if (nextFinalizedRequestId > getLastRequestId()) revert InvalidRequestId(nextFinalizedRequestId);
@@ -345,8 +352,13 @@ abstract contract WithdrawalQueueBase {
         uint128 stETHToFinalize = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH;
         if (_amountOfETH > stETHToFinalize) revert TooMuchEtherToFinalize(_amountOfETH, stETHToFinalize);
 
+        // if `_maxShareRate` is effectively above all of finalizing requests' share rates
+        // we can effectively say that there is no limit because all the request
+        // will be fullfilled by their nominal value
         uint256 maxShareRate = SHARE_RATE_UNLIMITED;
         // if we have a crossing point or avg batch share rate is more than `_maxShareRate`
+        // then there are some requests that will be discounted and we should store
+        // `_maxShareRate` to apply this discount on claim
         if (_batches.length > 1 || stETHToFinalize > _amountOfETH) {
             maxShareRate = _maxShareRate;
         }
@@ -354,6 +366,8 @@ abstract contract WithdrawalQueueBase {
         uint256 lastCheckpointIndex = getLastCheckpointIndex();
         Checkpoint storage lastCheckpoint = _getCheckpoints()[lastCheckpointIndex];
 
+        // In the most common scenario (no slashings) maxShareRate will be SHARE_RATE_UNLIMITED all the time
+        // and we'll save gas on report and integrations will save gas on hint calculations
         if (maxShareRate != lastCheckpoint.maxShareRate) {
             // add a new discount if it differs from the previous
             _getCheckpoints()[lastCheckpointIndex + 1] = Checkpoint(firstUnfinalizedRequestId, maxShareRate);
@@ -489,7 +503,9 @@ abstract contract WithdrawalQueueBase {
         assert(_getRequestsByOwner()[request.owner].remove(_requestId));
 
         uint256 ethWithDiscount = _calculateClaimableEther(request, _requestId, _hint);
-
+        // because of the stETH rounding issue
+        // (issue: https://github.com/lidofinance/lido-dao/issues/442 )
+        // some dust (1-2 wei per request) will be accumulated upon claiming
         _setLockedEtherAmount(getLockedEtherAmount() - ethWithDiscount);
         _sendValue(payable(_recipient), ethWithDiscount);
 
@@ -509,6 +525,7 @@ abstract contract WithdrawalQueueBase {
         if (_hint > lastCheckpointIndex) revert InvalidHint(_hint);
 
         Checkpoint memory checkpoint = _getCheckpoints()[_hint];
+        // Reverts if requestId is not in range [checkpoint[hint], checkpoint[hint+1])
         // ______(>______
         //    ^  hint
         if (_requestId < checkpoint.fromRequestId) revert InvalidHint(_hint);
