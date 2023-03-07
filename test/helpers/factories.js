@@ -262,6 +262,8 @@ async function withdrawalQueueFactory({ appManager, oracle, pool }) {
 
   const ORACLE_ROLE = await withdrawalQueue.ORACLE_ROLE()
   await withdrawalQueue.grantRole(ORACLE_ROLE, oracle.address, { from: appManager.address })
+  const FINALIZE_ROLE = await withdrawalQueue.FINALIZE_ROLE()
+  await withdrawalQueue.grantRole(FINALIZE_ROLE, pool.address, { from: appManager.address })
 
   await grantRoles({
     by: appManager.address,

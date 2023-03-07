@@ -627,16 +627,23 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
         if (actualShareRate == 0) {
             // can't finalize anything if the actual share rate is zero
-            revert IncorrectSimulatedShareRate(MAX_BASIS_POINTS);
+            revert ActualShareRateIsZero();
         }
 
-        uint256 simulatedShareDiff = Math256.abs(
-            SafeCast.toInt256(_simulatedShareRate) - SafeCast.toInt256(actualShareRate)
-        );
+        if (_simulatedShareRate > actualShareRate) {
+            // the simulated share rate can't be higher than the actual one
+            // invariant: rounding only can lower the simulated share rate
+            revert TooHighSimulatedShareRate(_simulatedShareRate, actualShareRate);
+        }
+
+        uint256 simulatedShareDiff = actualShareRate - _simulatedShareRate;
         uint256 simulatedShareDeviation = (MAX_BASIS_POINTS * simulatedShareDiff) / actualShareRate;
 
         if (simulatedShareDeviation > _limitsList.simulatedShareRateDeviationBPLimit) {
-            revert IncorrectSimulatedShareRate(simulatedShareDeviation);
+            // the simulated share rate can be lower than the actual one due to rounding
+            // e.g., new user-submitted ether & minted `stETH`
+            // between an oracle reference slot and an actual accounting report delivery
+            revert TooLowSimulatedShareRate(_simulatedShareRate, actualShareRate);
         }
     }
 
@@ -713,7 +720,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     error IncorrectNumberOfExitRequestsPerReport(uint256 maxRequestsCount);
     error IncorrectExitedValidators(uint256 churnLimit);
     error IncorrectRequestFinalization(uint256 requestCreationBlock);
-    error IncorrectSimulatedShareRate(uint256 simulatedShareDeviation);
+    error ActualShareRateIsZero();
+    error TooHighSimulatedShareRate(uint256 simulatedShareRate, uint256 actualShareRate);
+    error TooLowSimulatedShareRate(uint256 simulatedShareRate, uint256 actualShareRate);
     error MaxAccountingExtraDataItemsCountExceeded(uint256 maxItemsCount, uint256 receivedItemsCount);
     error ExitedValidatorsLimitExceeded(uint256 limitPerDay, uint256 exitedPerDay);
     error TooManyNodeOpsPerExtraDataItem(uint256 itemIndex, uint256 nodeOpsCount);
