@@ -136,132 +136,103 @@ abstract contract WithdrawalQueueBase {
             _getQueue()[getLastRequestId()].cumulativeStETH - _getQueue()[getLastFinalizedRequestId()].cumulativeStETH;
     }
 
-    /// @notice Search for the latest request in the queue in the range of `[startId, endId]`,
-    ///  that has `request.timestamp <= maxTimestamp`
+    /// @notice Returns the last `requestId` finalizable under given conditions
     ///
-    /// @return finalizableRequestId or 0, if there are no requests in a range with requested timestamp
-    function findLastFinalizableRequestIdByTimestamp(uint256 _maxTimestamp, uint256 _startId, uint256 _endId)
-        public
-        view
-        returns (uint256 finalizableRequestId)
-    {
-        if (_maxTimestamp == 0) revert ZeroTimestamp();
-        if (_startId <= getLastFinalizedRequestId() || _endId > getLastRequestId()) {
-            revert InvalidRequestIdRange(_startId, _endId);
-        }
-
-        if (_startId > _endId) return NOT_FOUND; // we have an empty range to search in
-
-        uint256 min = _startId;
-        uint256 max = _endId;
-
-        finalizableRequestId = NOT_FOUND;
-
-        while (min <= max) {
-            uint256 mid = (max + min) / 2;
-            if (_getQueue()[mid].timestamp <= _maxTimestamp) {
-                finalizableRequestId = mid;
-
-                // Ignore left half
-                min = mid + 1;
-            } else {
-                // Ignore right half
-                max = mid - 1;
-            }
-        }
-    }
-
-    /// @notice Search for the latest request in the queue in the range of `[startId, endId]`,
-    ///  that can be finalized within the given `_ethBudget` by `_shareRate`
-    /// @param _ethBudget amount of ether available for withdrawal fulfillment
-    /// @param _shareRate share/ETH rate that will be used for fulfillment
-    /// @param _startId requestId to start search from. Should be > lastFinalizedRequestId
-    /// @param _endId requestId to search upon to. Should be <= lastRequestId
+    /// @param _ethBudget max amount of ETH to be used for finalization
+    /// @param _maxShareRate max possible share rate to be used for finalization
+    /// @param _maxTimestamp max timestamp of finalized requests
     ///
-    /// @return finalizableRequestId or 0, if there are no requests finalizable within the given `_ethBudget`
-    function findLastFinalizableRequestIdByBudget(
+    /// @param _maxRequestsPerCall How many requests to check per call. See: `_lastFinalizedRequestId`, `finished`
+    /// @param _lastFinalizedRequestId Which request is to assume as the last finalized one. If zero is passed,
+    ///        the last finalized ID will be obtained from the contract state. See: `finished`
+    ///
+    /// @return requestId last finalizable req id or 0 if there are no requests finalizable
+    ///         under given conditions
+    ///
+    /// @return ethBudgetLeft How much ETH is left after finalizing the requests
+    ///
+    /// @return finished false if the fn completed early due to iteration limit (see `_maxRequestsPerCall`).
+    ///         In this case, one needs to call this function once again, passing the returned `requestId`
+    ///         value as the `_lastFinalizedRequestId` argument and the returned `ethBudgetLeft` value as
+    ///         the `_ethBudget` argument.
+    function findLastFinalizableRequestId(
         uint256 _ethBudget,
-        uint256 _shareRate,
-        uint256 _startId,
-        uint256 _endId
-    ) public view returns (uint256 finalizableRequestId) {
-        if (_ethBudget == 0) revert ZeroAmountOfETH();
-        if (_shareRate == 0) revert ZeroShareRate();
-        if (_startId <= getLastFinalizedRequestId() || _endId > getLastRequestId()) {
-            revert InvalidRequestIdRange(_startId, _endId);
-        }
-
-        if (_startId > _endId) return NOT_FOUND; // we have an empty range to search in
-
-        uint256 min = _startId;
-        uint256 max = _endId;
-
-        finalizableRequestId = NOT_FOUND;
-
-        while (min <= max) {
-            uint256 mid = (max + min) / 2;
-            (uint256 requiredEth,) = finalizationBatch(mid, _shareRate);
-
-            if (requiredEth <= _ethBudget) {
-                finalizableRequestId = mid;
-
-                // Ignore left half
-                min = mid + 1;
-            } else {
-                // Ignore right half
-                max = mid - 1;
-            }
-        }
-    }
-
-    /// @notice Returns last `requestId` finalizable under given conditions
-    /// @param _ethBudget max amount of eth to be used for finalization
-    /// @param _shareRate share rate that will be applied to requests
-    /// @param _maxTimestamp timestamp that requests should be created before
-    ///
-    /// @dev WARNING! OOG is possible if used onchain, contains unbounded loop inside
-    /// @return finalizableRequestId or 0, if there are no requests finalizable under given conditions
-    function findLastFinalizableRequestId(uint256 _ethBudget, uint256 _shareRate, uint256 _maxTimestamp)
+        uint256 _maxShareRate,
+        uint256 _maxTimestamp,
+        uint256 _maxRequestsPerCall,
+        uint256 _lastFinalizedRequestId
+    )
         external
         view
-        returns (uint256 finalizableRequestId)
+        returns (
+            uint256 requestId,
+            uint256 ethBudgetLeft,
+            bool finished
+        )
     {
-        uint256 firstUnfinalizedRequestId = getLastFinalizedRequestId() + 1;
-        finalizableRequestId =
-            findLastFinalizableRequestIdByBudget(_ethBudget, _shareRate, firstUnfinalizedRequestId, getLastRequestId());
-        return findLastFinalizableRequestIdByTimestamp(_maxTimestamp, firstUnfinalizedRequestId, finalizableRequestId);
+        ethBudgetLeft = _ethBudget;
+        uint256 lastRequestId = getLastRequestId();
+
+        if (_lastFinalizedRequestId == 0) {
+            _lastFinalizedRequestId = getLastFinalizedRequestId();
+        } else if (
+            _lastFinalizedRequestId < getLastFinalizedRequestId() ||
+            _lastFinalizedRequestId > lastRequestId
+        ) {
+            revert InvalidRequestId(_lastFinalizedRequestId);
+        }
+
+        WithdrawalRequest memory preStartRequest = _getQueue()[_lastFinalizedRequestId];
+        requestId = _lastFinalizedRequestId + 1;
+
+        while (requestId < _lastFinalizedRequestId + _maxRequestsPerCall) {
+            if (requestId > lastRequestId) {
+                break;
+            }
+
+            WithdrawalRequest memory request = _getQueue()[requestId + 1];
+            if (request.timestamp > _maxTimestamp) {
+                break;
+            }
+
+            uint256 stETH = request.cumulativeStETH - preStartRequest.cumulativeStETH;
+            uint256 shares = request.cumulativeShares - preStartRequest.cumulativeShares;
+
+            uint256 ethToLock = stETH * E27_PRECISION_BASE / shares > _maxShareRate
+                ? shares * _maxShareRate / E27_PRECISION_BASE
+                : stETH;
+
+            if (ethToLock <= ethBudgetLeft) {
+                ethBudgetLeft -= ethToLock;
+            } else {
+                break;
+            }
+
+            ++requestId;
+        }
+
+        finished = (
+            requestId < _lastFinalizedRequestId + _maxRequestsPerCall ||
+            requestId == lastRequestId + 1
+        );
     }
 
-    /// @notice Calculates the amount of ETH required to finalize the batch of requests in the queue up to
-    /// `_nextFinalizedRequestId` with given `_shareRate` and the amount of shares that should be burned after
-    /// @param _nextFinalizedRequestId id of the ending request in the finalization batch (>0 and <=lastRequestId)
-    /// @param _shareRate share rate that will be used to calculate the batch (1e27 precision, >0)
+    /// @notice Calculates the amount of shares that should be burned in order to finalize requests in the queue up
+    /// to the `_nextFinalizedRequestId`.
     ///
-    /// @return ethToLock amount of ETH required to finalize the batch
-    /// @return sharesToBurn amount of shares that should be burned after the finalization
-    function finalizationBatch(uint256 _nextFinalizedRequestId, uint256 _shareRate)
-        public
-        view
-        returns (uint256 ethToLock, uint256 sharesToBurn)
-    {
-        if (_shareRate == 0) revert ZeroShareRate();
+    /// @param _nextFinalizedRequestId id of the ending request in the finalization batch (>0 and <=lastRequestId)
+    ///
+    /// @return amount of shares to burn
+    function getFinalizationSharesAmount(uint256 _nextFinalizedRequestId) external view returns (uint256) {
         if (_nextFinalizedRequestId > getLastRequestId()) revert InvalidRequestId(_nextFinalizedRequestId);
+
         uint256 lastFinalizedRequestId = getLastFinalizedRequestId();
         if (_nextFinalizedRequestId <= lastFinalizedRequestId) revert InvalidRequestId(_nextFinalizedRequestId);
 
-        WithdrawalRequest memory requestToFinalize = _getQueue()[_nextFinalizedRequestId];
         WithdrawalRequest memory lastFinalizedRequest = _getQueue()[lastFinalizedRequestId];
+        WithdrawalRequest memory requestToFinalize = _getQueue()[_nextFinalizedRequestId];
 
-        uint256 amountOfETHRequested = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH;
-        uint256 amountOfShares = requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares;
-
-        ethToLock = amountOfETHRequested;
-        sharesToBurn = amountOfShares;
-
-        uint256 currentValueInETH = (amountOfShares * _shareRate) / E27_PRECISION_BASE;
-        if (currentValueInETH < amountOfETHRequested) {
-            ethToLock = currentValueInETH;
-        }
+        return requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares;
     }
 
     /// @dev Finalize requests from last finalized one up to `_nextFinalizedRequestId`

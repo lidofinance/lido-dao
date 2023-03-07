@@ -113,10 +113,7 @@ interface IStakingRouter {
 }
 
 interface IWithdrawalQueue {
-    function finalizationBatch(uint256 _nextFinalizedRequestId, uint256 _shareRate)
-        external
-        view
-        returns (uint256 ethToLock, uint256 sharesToBurn);
+    function getFinalizationSharesAmount(uint256 _nextFinalizedRequestId) external view returns (uint256);
 
     function finalize(uint256 _nextFinalizedRequestId, uint256 _shareRate) external payable;
 
@@ -531,6 +528,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 sharesRequestedToBurn;
         // Decision about withdrawals processing
         uint256 lastFinalizableRequestId;
+        uint256 etherToLockOnWithdrawalQueue;
         uint256 simulatedShareRate;
     }
 
@@ -584,6 +582,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 _sharesRequestedToBurn,
         // Decision about withdrawals processing
         uint256 _lastFinalizableRequestId,
+        uint256 _etherToLockOnWithdrawalQueue,
         uint256 _simulatedShareRate
     ) external returns (uint256[4] postRebaseAmounts) {
         _whenNotStopped();
@@ -598,6 +597,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
                 _elRewardsVaultBalance,
                 _sharesRequestedToBurn,
                 _lastFinalizableRequestId,
+                _etherToLockOnWithdrawalQueue,
                 _simulatedShareRate
             )
         );
@@ -856,28 +856,26 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @dev return amount to lock on withdrawal queue and shares to burn
-     * depending on the finalization batch parameters
+     * @dev return amount of shares to burn depending on the finalization parameters
      */
     function _calculateWithdrawals(
         OracleReportContracts memory _contracts,
         OracleReportedData memory _reportedData
     ) internal view returns (
-        uint256 etherToLock, uint256 sharesToBurn
+        uint256 sharesToBurn
     ) {
         IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_contracts.withdrawalQueue);
 
-        if (!withdrawalQueue.isPaused()) {
-            IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).checkWithdrawalQueueOracleReport(
-                _reportedData.lastFinalizableRequestId,
-                _reportedData.reportTimestamp
-            );
-
-            (etherToLock, sharesToBurn) = withdrawalQueue.finalizationBatch(
-                _reportedData.lastFinalizableRequestId,
-                _reportedData.simulatedShareRate
-            );
+        if (withdrawalQueue.isPaused()) {
+            return 0;
         }
+
+        IOracleReportSanityChecker(_contracts.oracleReportSanityChecker).checkWithdrawalQueueOracleReport(
+            _reportedData.lastFinalizableRequestId,
+            _reportedData.reportTimestamp
+        );
+
+        return withdrawalQueue.getFinalizationSharesAmount(_reportedData.lastFinalizableRequestId);
     }
 
     /**
@@ -1155,8 +1153,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 preCLBalance;
         uint256 preTotalPooledEther;
         uint256 preTotalShares;
-        uint256 etherToLockOnWithdrawalQueue;
         uint256 sharesToBurnFromWithdrawalQueue;
+        uint256 ethToMoveFromWithdrawalsVault;
+        uint256 ethToMoveFromELRewardsVault;
         uint256 simulatedSharesToBurn;
         uint256 sharesToBurn;
         uint256 sharesMintedAsFees;
@@ -1204,13 +1203,10 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         _checkAccountingOracleReport(contracts, _reportedData, reportContext);
 
         // Step 3.
-        // Pre-calculate the ether to lock for withdrawal queue and shares to be burnt
-        // due to withdrawal requests to finalize
+        // Pre-calculate the shares to be burnt on withdrawal queue
+        // for withdrawal requests to finalize
         if (_reportedData.lastFinalizableRequestId != DONT_FINALIZE_WITHDRAWALS) {
-            (
-                reportContext.etherToLockOnWithdrawalQueue,
-                reportContext.sharesToBurnFromWithdrawalQueue
-            ) = _calculateWithdrawals(contracts, _reportedData);
+            reportContext.sharesToBurnFromWithdrawalQueue = _calculateWithdrawals(contracts, _reportedData);
 
             if (reportContext.sharesToBurnFromWithdrawalQueue > 0) {
                 IBurner(contracts.burner).requestBurnShares(
@@ -1223,10 +1219,11 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // Step 4.
         // Pass the accounting values to sanity checker to smoothen positive token rebase
 
-        uint256 withdrawals;
-        uint256 elRewards;
         (
-            withdrawals, elRewards, reportContext.simulatedSharesToBurn, reportContext.sharesToBurn
+            reportContext.ethToMoveFromWithdrawalsVault,
+            reportContext.ethToMoveFromELRewardsVault,
+            reportContext.simulatedSharesToBurn,
+            reportContext.sharesToBurn
         ) = IOracleReportSanityChecker(contracts.oracleReportSanityChecker).smoothenTokenRebase(
             reportContext.preTotalPooledEther,
             reportContext.preTotalShares,
@@ -1235,7 +1232,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             _reportedData.withdrawalVaultBalance,
             _reportedData.elRewardsVaultBalance,
             _reportedData.sharesRequestedToBurn,
-            reportContext.etherToLockOnWithdrawalQueue,
+            _reportedData.etherToLockOnWithdrawalQueue,
             reportContext.sharesToBurnFromWithdrawalQueue
         );
 
@@ -1243,10 +1240,10 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // Invoke finalization of the withdrawal requests (send ether to withdrawal queue, assign shares to be burnt)
         _collectRewardsAndProcessWithdrawals(
             contracts,
-            withdrawals,
-            elRewards,
+            reportContext.ethToMoveFromWithdrawalsVault,
+            reportContext.ethToMoveFromELRewardsVault,
             _reportedData.lastFinalizableRequestId,
-            reportContext.etherToLockOnWithdrawalQueue,
+            _reportedData.etherToLockOnWithdrawalQueue,
             _reportedData.simulatedShareRate
         );
 
@@ -1254,8 +1251,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             _reportedData.reportTimestamp,
             reportContext.preCLBalance,
             _reportedData.postCLBalance,
-            withdrawals,
-            elRewards,
+            reportContext.ethToMoveFromWithdrawalsVault,
+            reportContext.ethToMoveFromELRewardsVault,
             _getBufferedEther()
         );
 
@@ -1264,8 +1261,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         reportContext.sharesMintedAsFees = _processRewards(
             reportContext,
             _reportedData.postCLBalance,
-            withdrawals,
-            elRewards
+            reportContext.ethToMoveFromWithdrawalsVault,
+            reportContext.ethToMoveFromELRewardsVault
         );
 
         // Step 7.
@@ -1291,13 +1288,18 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             IOracleReportSanityChecker(contracts.oracleReportSanityChecker).checkSimulatedShareRate(
                 postTotalPooledEther,
                 postTotalShares,
-                reportContext.etherToLockOnWithdrawalQueue,
+                _reportedData.etherToLockOnWithdrawalQueue,
                 reportContext.sharesToBurn.sub(reportContext.simulatedSharesToBurn),
                 _reportedData.simulatedShareRate
             );
         }
 
-        return [postTotalPooledEther, postTotalShares, withdrawals, elRewards];
+        return [
+            postTotalPooledEther,
+            postTotalShares,
+            reportContext.ethToMoveFromWithdrawalsVault,
+            reportContext.ethToMoveFromELRewardsVault
+        ];
     }
 
     /**
