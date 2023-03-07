@@ -222,12 +222,12 @@ abstract contract WithdrawalQueueBase {
 
         uint256 lastRequestId = getLastRequestId();
 
-        uint256 requestId;
+        uint256 start;
         uint256 prevShareRate;
 
         uint256 batchesLength;
         if (_state.batches.length == 0) {
-            requestId = getLastFinalizedRequestId() + 1;
+            start = getLastFinalizedRequestId() + 1;
             // we'll store batches as a array where [MAX_BATCHES_LENGTH] element is the array's length
             _state.batches = new uint256[](MAX_BATCHES_LENGTH + 1);
         } else {
@@ -235,10 +235,11 @@ abstract contract WithdrawalQueueBase {
             uint256 lastHandledRequestId = _state.batches[batchesLength - 1];
             (prevShareRate,,) = _calcBatch(_getQueue()[lastHandledRequestId - 1], _getQueue()[lastHandledRequestId]);
 
-            requestId = lastHandledRequestId + 1;
+            start = lastHandledRequestId + 1;
         }
 
-        while (requestId < requestId + MAX_REQUESTS_PER_CALL) {
+        uint256 requestId = start;
+        while (requestId < start + MAX_REQUESTS_PER_CALL) {
             if (requestId > lastRequestId) break;  // end of the queue break
 
             WithdrawalRequest memory request = _getQueue()[requestId];
@@ -277,7 +278,7 @@ abstract contract WithdrawalQueueBase {
             unchecked{ ++requestId; }
         }
 
-        _state.finished = requestId < requestId + MAX_REQUESTS_PER_CALL || requestId == lastRequestId + 1;
+        _state.finished = requestId < start + MAX_REQUESTS_PER_CALL || requestId == lastRequestId + 1;
 
         if (_state.finished) {
             MemUtils.trimUint256Array(_state.batches, _state.batches.length - batchesLength);
