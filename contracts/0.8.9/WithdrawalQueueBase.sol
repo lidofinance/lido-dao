@@ -233,20 +233,18 @@ abstract contract WithdrawalQueueBase {
         } else {
             batchesLength = _state.batches[MAX_BATCHES_LENGTH];
             uint256 lastHandledRequestId = _state.batches[batchesLength - 1];
-            (prevShareRate,,) = _calcBatch(_getQueue()[lastHandledRequestId - 1], _getQueue()[lastHandledRequestId]);
 
             start = lastHandledRequestId + 1;
+            (prevShareRate,,) = _calcBatch(_getQueue()[lastHandledRequestId - 1], _getQueue()[lastHandledRequestId]);
         }
 
-        uint256 requestId = start;
-        while (requestId < start + MAX_REQUESTS_PER_CALL) {
-            if (requestId > lastRequestId) break;  // end of the queue break
+        uint256 currentId = start;
+        WithdrawalRequest memory prevRequest = _getQueue()[currentId - 1];
+        while (currentId <= lastRequestId && currentId < start + MAX_REQUESTS_PER_CALL) {
+            WithdrawalRequest memory request = _getQueue()[currentId];
 
-            WithdrawalRequest memory request = _getQueue()[requestId];
-            // max timestamp break
-            if (request.timestamp > _maxTimestamp) break;
+            if (request.timestamp > _maxTimestamp) break;  // max timestamp break
 
-            WithdrawalRequest memory prevRequest = _getQueue()[requestId - 1];
             (uint256 requestShareRate, uint256 ethToFinalize, uint256 shares) = _calcBatch(prevRequest, request);
 
             if (requestShareRate > _maxShareRate) {
@@ -255,7 +253,6 @@ abstract contract WithdrawalQueueBase {
             }
 
             if (ethToFinalize > _state.ethBudget) break; // budget break
-
             _state.ethBudget -= ethToFinalize;
 
             if (batchesLength != 0 && (
@@ -269,19 +266,22 @@ abstract contract WithdrawalQueueBase {
                 // both are above the line
                 prevShareRate > _maxShareRate && requestShareRate > _maxShareRate
             )) {
-                _state.batches[batchesLength - 1] = requestId;
+                _state.batches[batchesLength - 1] = currentId; // extend the last batch
             } else {
                 // to be able to check batches on-chain we need it to have fixed max length
+                if (batchesLength == MAX_BATCHES_LENGTH) break;
 
                 // create a new batch
+                _state.batches[batchesLength] = currentId;
                 batchesLength = ++_state.batches[MAX_BATCHES_LENGTH];
             }
 
             prevShareRate = requestShareRate;
-            unchecked{ ++requestId; }
+            prevRequest = request;
+            unchecked{ ++currentId; }
         }
 
-        _state.finished = requestId < start + MAX_REQUESTS_PER_CALL || requestId == lastRequestId + 1;
+        _state.finished = currentId < start + MAX_REQUESTS_PER_CALL || currentId == lastRequestId + 1;
 
         if (_state.finished) {
             MemUtils.trimUint256Array(_state.batches, _state.batches.length - batchesLength);
@@ -305,19 +305,24 @@ abstract contract WithdrawalQueueBase {
         if (_batches[0] <= getLastFinalizedRequestId()) revert InvalidRequestId(_batches[0]);
         if (_batches[_batches.length - 1] > getLastRequestId()) revert InvalidRequestId(_batches[_batches.length - 1]);
 
-        WithdrawalRequest memory prevBatchEnd = _getQueue()[getLastFinalizedRequestId()];
+        uint256 currentBatchIndex;
+        uint256 prevBatchEndRequestId = getLastFinalizedRequestId();
+        WithdrawalRequest memory prevBatchEnd = _getQueue()[prevBatchEndRequestId];
         uint256 prevBatchShareRate;
+        while (currentBatchIndex < _batches.length) {
+            uint256 batchEndRequestId = _batches[currentBatchIndex];
+            if (batchEndRequestId <= prevBatchEndRequestId) revert InvalidBatch(currentBatchIndex);
 
-        uint256 batchIndex;
-        do {
-            WithdrawalRequest memory batchEnd = _getQueue()[_batches[batchIndex]];
+            WithdrawalRequest memory batchEnd = _getQueue()[batchEndRequestId];
 
             (uint256 batchShareRate, uint256 stETH, uint256 shares) = _calcBatch(prevBatchEnd, batchEnd);
 
-            if (batchIndex > 0) {
+            if (currentBatchIndex > 0) {
                 // - if shareRate(batch[i]) is below _maxShareRate => shareRate(batch[i+1]) is above and vice versa
                 // so, we can't have two batches in a row that is below...
+                if (prevBatchShareRate <= _maxShareRate && batchShareRate <= _maxShareRate) revert InvalidBatch(currentBatchIndex);
                 // .. or above the line
+                if (prevBatchShareRate > _maxShareRate && batchShareRate > _maxShareRate) revert InvalidBatch(currentBatchIndex);
             }
 
             if (batchShareRate > _maxShareRate) {
@@ -330,9 +335,10 @@ abstract contract WithdrawalQueueBase {
             sharesToBurn += shares;
 
             prevBatchShareRate = batchShareRate;
+            prevBatchEndRequestId = batchEndRequestId;
             prevBatchEnd = batchEnd;
-            unchecked{ ++batchIndex; }
-        } while (batchIndex < _batches.length);
+            unchecked{ ++currentBatchIndex; }
+        }
     }
 
     /// @dev Finalize requests from last finalized one up to `_nextFinalizedRequestId`
@@ -340,14 +346,14 @@ abstract contract WithdrawalQueueBase {
     /// Checks that:
     /// - _amountOfETH is less or equal to the nominal value of all requests to be finalized
     function _finalize(uint256[] memory _batches, uint256 _amountOfETH, uint256 _maxShareRate) internal {
-        uint256 nextFinalizedRequestId = _batches[_batches.length - 1];
-        if (nextFinalizedRequestId > getLastRequestId()) revert InvalidRequestId(nextFinalizedRequestId);
+        if (_batches.length == 0) revert EmptyBatches();
+        uint256 lastRequestIdToBeFinalized = _batches[_batches.length - 1];
+        if (lastRequestIdToBeFinalized > getLastRequestId()) revert InvalidRequestId(lastRequestIdToBeFinalized);
         uint256 lastFinalizedRequestId = getLastFinalizedRequestId();
-        uint256 firstUnfinalizedRequestId = lastFinalizedRequestId + 1;
-        if (nextFinalizedRequestId <= lastFinalizedRequestId) revert InvalidRequestId(nextFinalizedRequestId);
+        if (lastRequestIdToBeFinalized <= lastFinalizedRequestId) revert InvalidRequestId(lastRequestIdToBeFinalized);
 
         WithdrawalRequest memory lastFinalizedRequest = _getQueue()[lastFinalizedRequestId];
-        WithdrawalRequest memory requestToFinalize = _getQueue()[nextFinalizedRequestId];
+        WithdrawalRequest memory requestToFinalize = _getQueue()[lastRequestIdToBeFinalized];
 
         uint128 stETHToFinalize = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH;
         if (_amountOfETH > stETHToFinalize) revert TooMuchEtherToFinalize(_amountOfETH, stETHToFinalize);
@@ -363,6 +369,7 @@ abstract contract WithdrawalQueueBase {
             maxShareRate = _maxShareRate;
         }
 
+        uint256 firstRequestIdToFinalize = lastFinalizedRequestId + 1;
         uint256 lastCheckpointIndex = getLastCheckpointIndex();
         Checkpoint storage lastCheckpoint = _getCheckpoints()[lastCheckpointIndex];
 
@@ -370,16 +377,16 @@ abstract contract WithdrawalQueueBase {
         // and we'll save gas on report and integrations will save gas on hint calculations
         if (maxShareRate != lastCheckpoint.maxShareRate) {
             // add a new discount if it differs from the previous
-            _getCheckpoints()[lastCheckpointIndex + 1] = Checkpoint(firstUnfinalizedRequestId, maxShareRate);
+            _getCheckpoints()[lastCheckpointIndex + 1] = Checkpoint(firstRequestIdToFinalize, maxShareRate);
             _setLastCheckpointIndex(lastCheckpointIndex + 1);
         }
 
         _setLockedEtherAmount(getLockedEtherAmount() + _amountOfETH);
-        _setLastFinalizedRequestId(nextFinalizedRequestId);
+        _setLastFinalizedRequestId(lastRequestIdToBeFinalized);
 
         emit WithdrawalBatchFinalized(
-            firstUnfinalizedRequestId,
-            nextFinalizedRequestId,
+            firstRequestIdToFinalize,
+            lastRequestIdToBeFinalized,
             _amountOfETH,
             requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares,
             block.timestamp
@@ -533,19 +540,17 @@ abstract contract WithdrawalQueueBase {
             // ______(>______(>________
             //       hint    hint+1  ^
             Checkpoint memory nextCheckpoint = _getCheckpoints()[_hint + 1];
-            if (nextCheckpoint.fromRequestId <= _requestId) {
-                revert InvalidHint(_hint);
-            }
+            if (nextCheckpoint.fromRequestId <= _requestId) revert InvalidHint(_hint);
         }
 
         WithdrawalRequest memory prevRequest = _getQueue()[_requestId - 1];
-        (uint256 batchShareRate, uint256 stETH, uint256 shares) = _calcBatch(prevRequest, _request);
+        (uint256 batchShareRate, uint256 eth, uint256 shares) = _calcBatch(prevRequest, _request);
 
-        if (batchShareRate <= checkpoint.maxShareRate) {
-            return stETH;
+        if (batchShareRate > checkpoint.maxShareRate) {
+            eth = shares * checkpoint.maxShareRate / E27_PRECISION_BASE;
         }
 
-        return shares * checkpoint.maxShareRate / E27_PRECISION_BASE;
+        return eth;
     }
 
     // quazi-constructor
