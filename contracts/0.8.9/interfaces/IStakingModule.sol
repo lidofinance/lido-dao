@@ -110,7 +110,7 @@ interface IStakingModule {
     function updateTargetValidatorsLimits(
         uint256 _nodeOperatorId,
         bool _isTargetLimitActive,
-        uint64 _targetLimit
+        uint256 _targetLimit
     ) external;
 
     /// @notice Unsafely updates the number of validators in the EXITED/STUCK states for node operator with given id

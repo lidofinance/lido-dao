@@ -93,7 +93,7 @@ contract ModuleSolo is IStakingModule {
     function updateTargetValidatorsLimits(
         uint256 _nodeOperatorId,
         bool _isTargetLimitActive,
-        uint64 _targetLimit
+        uint256 _targetLimit
     ) external {}
 
     function onExitedAndStuckValidatorsCountsUpdated() external {}

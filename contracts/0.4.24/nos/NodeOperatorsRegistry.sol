@@ -590,13 +590,14 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     /// @param _nodeOperatorId Id of the node operator
     /// @param _targetLimit Target limit of the node operator
     /// @param _isTargetLimitActive active flag
-    function updateTargetValidatorsLimits(uint256 _nodeOperatorId, bool _isTargetLimitActive, uint64 _targetLimit) external {
+    function updateTargetValidatorsLimits(uint256 _nodeOperatorId, bool _isTargetLimitActive, uint256 _targetLimit) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(MANAGE_NODE_OPERATOR_ROLE);
+        _requireValidRange(_targetLimit <= UINT64_MAX);
 
         Packed64x4.Packed memory operatorTargetStats = _loadOperatorTargetValidatorsStats(_nodeOperatorId);
         operatorTargetStats.set(IS_TARGET_LIMIT_ACTIVE_OFFSET, _isTargetLimitActive ? 1 : 0);
-        operatorTargetStats.set(TARGET_VALIDATORS_COUNT_OFFSET, _isTargetLimitActive ? _targetLimit : 0);
+        operatorTargetStats.set(TARGET_VALIDATORS_COUNT_OFFSET, _isTargetLimitActive ? uint64(_targetLimit) : 0);
         _saveOperatorTargetValidatorsStats(_nodeOperatorId, operatorTargetStats);
 
         emit TargetValidatorsCountChanged(_nodeOperatorId, _targetLimit);

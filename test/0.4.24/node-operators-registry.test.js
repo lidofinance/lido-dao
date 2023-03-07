@@ -1448,7 +1448,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
   })
 
-  describe('updateTargetValidatorsLimit()', () => {
+  describe('updateTargetValidatorsLimits()', () => {
     const firstNodeOperatorId = 0
     const secondNodeOperatorId = 1
 
@@ -1465,6 +1465,15 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await assert.reverts(
         app.updateTargetValidatorsLimits(firstNodeOperatorId, isTargetLimitSet, targetLimit, { from: nobody }),
         'APP_AUTH_FAILED'
+      )
+    })
+
+    it('reverts with "OUT_OF_RANGE" error when called with targetLimit > UINT64_MAX', async () => {
+      const isTargetLimitSet = true
+      const targetLimit = toBN('0x10000000000000000')
+      await assert.reverts(
+        app.updateTargetValidatorsLimits(firstNodeOperatorId, isTargetLimitSet, targetLimit, { from: voting }),
+        'OUT_OF_RANGE'
       )
     })
 
@@ -1687,7 +1696,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       let firstNodeOperatorKeysStats = await app.testing_getNodeOperator(firstNodeOperatorId)
       assert.equals(+firstNodeOperatorKeysStats.maxSigningKeysCount, 8)
 
-      const targetLimit = toBN('0x1FFFFFFFFFFFFFFFF') // UINT64_MAX
+      const targetLimit = toBN('0xFFFFFFFFFFFFFFFF') // UINT64_MAX
       await app.updateTargetValidatorsLimits(firstNodeOperatorId, true, targetLimit, { from: voting })
 
       firstNodeOperatorKeysStats = await app.testing_getNodeOperator(firstNodeOperatorId)

@@ -166,7 +166,7 @@ contract StakingModuleMock is IStakingModule {
     struct Call_updateTargetValidatorsLimits {
         uint256 nodeOperatorId;
         bool isTargetLimitActive;
-        uint64 targetLimit;
+        uint256 targetLimit;
         uint256 callCount;
     }
 
@@ -174,7 +174,7 @@ contract StakingModuleMock is IStakingModule {
     function updateTargetValidatorsLimits(
         uint256 _nodeOperatorId,
         bool _isTargetLimitActive,
-        uint64 _targetLimit
+        uint256 _targetLimit
     ) external {
         lastCall_updateTargetValidatorsLimits.nodeOperatorId = _nodeOperatorId;
         lastCall_updateTargetValidatorsLimits.isTargetLimitActive = _isTargetLimitActive;

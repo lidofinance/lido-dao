@@ -252,7 +252,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint256 _stakingModuleId,
         uint256 _nodeOperatorId,
         bool _isTargetLimitActive,
-        uint64 _targetLimit
+        uint256 _targetLimit
     ) external onlyRole(STAKING_MODULE_MANAGE_ROLE) {
         address moduleAddr = _getStakingModuleById(_stakingModuleId).stakingModuleAddress;
         IStakingModule(moduleAddr)
