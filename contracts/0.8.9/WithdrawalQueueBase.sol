@@ -96,6 +96,7 @@ abstract contract WithdrawalQueueBase {
     error ZeroShareRate();
     error ZeroTimestamp();
     error TooMuchEtherToFinalize(uint256 sent, uint256 maxExpected);
+    error TooLittleEtherToFinalize(uint256 sent, uint256 minExpected);
     error NotOwner(address _sender, address _owner);
     error InvalidRequestId(uint256 _requestId);
     error InvalidRequestIdRange(uint256 startId, uint256 endId);
@@ -237,7 +238,10 @@ abstract contract WithdrawalQueueBase {
 
     /// @dev Finalize requests from last finalized one up to `_nextFinalizedRequestId`
     ///  Emits WithdrawalBatchFinalized event.
-    function _finalize(uint256 _nextFinalizedRequestId, uint256 _amountOfETH, uint256 _maxShareRate) internal {
+    function _finalize(uint256 _nextFinalizedRequestId, uint256 _amountOfETH, uint256 _maxShareRate, uint256 _minShareRateRequestId)
+        internal
+        returns (uint256 provedMinShareRate)
+    {
         if (_nextFinalizedRequestId > getLastRequestId()) revert InvalidRequestId(_nextFinalizedRequestId);
         uint256 lastFinalizedRequestId = getLastFinalizedRequestId();
         uint256 firstUnfinalizedRequestId = lastFinalizedRequestId + 1;
@@ -247,8 +251,9 @@ abstract contract WithdrawalQueueBase {
         WithdrawalRequest memory requestToFinalize = _getQueue()[_nextFinalizedRequestId];
 
         uint128 stETHToFinalize = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH;
-        if (_amountOfETH > stETHToFinalize) revert TooMuchEtherToFinalize(_amountOfETH, stETHToFinalize);
+        uint128 sharesToBurn = requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares;
 
+        provedMinShareRate = _sanityCheckAmountOfETHForFinalization(_amountOfETH, _minShareRateRequestId, stETHToFinalize, sharesToBurn);
 
         uint256 lastCheckpointIndex = getLastCheckpointIndex();
         Checkpoint storage lastCheckpoint = _getCheckpoints()[lastCheckpointIndex];
@@ -266,9 +271,32 @@ abstract contract WithdrawalQueueBase {
             firstUnfinalizedRequestId,
             _nextFinalizedRequestId,
             _amountOfETH,
-            requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares,
+            sharesToBurn,
             block.timestamp
             );
+    }
+
+    function _sanityCheckAmountOfETHForFinalization(
+        uint256 _amountOfETH,
+        uint256 _minShareRateRequestId,
+        uint256 _maxStETHToFinalize,
+        uint256 _sharesToBurn
+    )
+        internal
+        view
+        returns (uint256 provedMinShareRate)
+    {
+        if (_amountOfETH > _maxStETHToFinalize) revert TooMuchEtherToFinalize(_amountOfETH, _maxStETHToFinalize);
+
+        WithdrawalRequest memory proofRequest = _getQueue()[_minShareRateRequestId];
+        WithdrawalRequest memory proofPrevRequest = _getQueue()[_minShareRateRequestId - 1];
+
+        // shareRate at the index given by the Oracle as request with minimal share rate within this finalization batch
+        provedMinShareRate = (1e9 * (proofRequest.cumulativeStETH - proofPrevRequest.cumulativeStETH))
+            / (proofRequest.cumulativeShares - proofPrevRequest.cumulativeShares);
+        uint256 minAmountOfETH = _sharesToBurn * provedMinShareRate;
+
+        if (_amountOfETH < minAmountOfETH) revert TooLittleEtherToFinalize(_amountOfETH, minAmountOfETH);
     }
 
     /// @dev creates a new `WithdrawalRequest` in the queue

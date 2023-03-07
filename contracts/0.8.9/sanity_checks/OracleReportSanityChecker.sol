@@ -504,7 +504,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _postTotalShares,
         uint256 _etherLockedOnWithdrawalQueue,
         uint256 _sharesBurntDueToWithdrawals,
-        uint256 _simulatedShareRate
+        uint256 _simulatedShareRate,
+        uint256 _provedMinShareRate
     ) external view {
         LimitsList memory limitsList = _limits.unpack();
 
@@ -515,7 +516,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             limitsList,
             _postTotalPooledEther + _etherLockedOnWithdrawalQueue,
             _postTotalShares + _sharesBurntDueToWithdrawals,
-            _simulatedShareRate
+            _simulatedShareRate,
+            _provedMinShareRate
         );
     }
 
@@ -619,7 +621,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         LimitsList memory _limitsList,
         uint256 _noWithdrawalsPostTotalPooledEther,
         uint256 _noWithdrawalsPostTotalShares,
-        uint256 _simulatedShareRate
+        uint256 _simulatedShareRate,
+        uint256 _provedMinShareRate
     ) internal pure {
         uint256 actualShareRate = (
             _noWithdrawalsPostTotalPooledEther * SHARE_RATE_PRECISION_E27
@@ -634,6 +637,14 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             // the simulated share rate can't be higher than the actual one
             // invariant: rounding only can lower the simulated share rate
             revert TooHighSimulatedShareRate(_simulatedShareRate, actualShareRate);
+        }
+
+        if (_simulatedShareRate >= _provedMinShareRate) {
+            // no need to check deviation because it is fine to allow larger
+            // deviations if the oracle proved that _simulatedShareRate is correct
+            // by providing id of the withdrawal request in the finalization batch
+            // with such share rate
+            return;
         }
 
         uint256 simulatedShareDiff = actualShareRate - _simulatedShareRate;

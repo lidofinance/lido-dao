@@ -68,7 +68,8 @@ interface IOracleReportSanityChecker {
         uint256 _postTotalShares,
         uint256 _etherLockedOnWithdrawalQueue,
         uint256 _sharesBurntDueToWithdrawals,
-        uint256 _simulatedShareRate
+        uint256 _simulatedShareRate,
+        uint256 _provedMinFinalizationShareRate
     ) external view;
 }
 
@@ -115,7 +116,7 @@ interface IStakingRouter {
 interface IWithdrawalQueue {
     function getFinalizationSharesAmount(uint256 _nextFinalizedRequestId) external view returns (uint256);
 
-    function finalize(uint256 _nextFinalizedRequestId, uint256 _shareRate) external payable;
+    function finalize(uint256 _nextFinalizedRequestId, uint256 _shareRate, uint256 _minShareRateRequestId) external payable returns (uint256 provedMinFinalizationShareRate);
 
     function isPaused() external view returns (bool);
 
@@ -530,6 +531,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 lastFinalizableRequestId;
         uint256 etherToLockOnWithdrawalQueue;
         uint256 simulatedShareRate;
+        uint256 minShareRateRequestId;
     }
 
     /**
@@ -583,7 +585,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         // Decision about withdrawals processing
         uint256 _lastFinalizableRequestId,
         uint256 _etherToLockOnWithdrawalQueue,
-        uint256 _simulatedShareRate
+        uint256 _simulatedShareRate,
+        uint256 _minWithdrawalRequestId
     ) external returns (uint256[4] postRebaseAmounts) {
         _whenNotStopped();
 
@@ -598,7 +601,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
                 _sharesRequestedToBurn,
                 _lastFinalizableRequestId,
                 _etherToLockOnWithdrawalQueue,
-                _simulatedShareRate
+                _simulatedShareRate,
+                _minWithdrawalRequestId
             )
         );
     }
@@ -829,8 +833,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 _elRewardsToWithdraw,
         uint256 _lastFinalizableRequestId,
         uint256 _etherToLockOnWithdrawalQueue,
-        uint256 _simulatedShareRate
-    ) internal {
+        uint256 _simulatedShareRate,
+        uint256 _minShareRateRequestId
+    ) internal returns (uint256 provedMinFinalizationShareRate) {
         // withdraw execution layer rewards and put them to the buffer
         if (_elRewardsToWithdraw > 0) {
             ILidoExecutionLayerRewardsVault(_contracts.elRewardsVault).withdrawRewards(_elRewardsToWithdraw);
@@ -843,8 +848,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         // finalize withdrawals (send ether, assign shares for burning)
         if (_etherToLockOnWithdrawalQueue > 0) {
-            IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_contracts.withdrawalQueue);
-            withdrawalQueue.finalize.value(_etherToLockOnWithdrawalQueue)(_lastFinalizableRequestId, _simulatedShareRate);
+            provedMinFinalizationShareRate = IWithdrawalQueue(_contracts.withdrawalQueue).finalize
+                .value(_etherToLockOnWithdrawalQueue)
+                (_lastFinalizableRequestId, _simulatedShareRate, _minShareRateRequestId);
         }
 
         uint256 postBufferedEther = _getBufferedEther()
@@ -1218,7 +1224,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         // Step 4.
         // Pass the accounting values to sanity checker to smoothen positive token rebase
-
         (
             reportContext.ethToMoveFromWithdrawalsVault,
             reportContext.ethToMoveFromELRewardsVault,
@@ -1238,13 +1243,14 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         // Step 5.
         // Invoke finalization of the withdrawal requests (send ether to withdrawal queue, assign shares to be burnt)
-        _collectRewardsAndProcessWithdrawals(
+        uint256 provedMinFinalizationShareRate = _collectRewardsAndProcessWithdrawals(
             contracts,
             reportContext.ethToMoveFromWithdrawalsVault,
             reportContext.ethToMoveFromELRewardsVault,
             _reportedData.lastFinalizableRequestId,
             _reportedData.etherToLockOnWithdrawalQueue,
-            _reportedData.simulatedShareRate
+            _reportedData.simulatedShareRate,
+            _reportedData.minShareRateRequestId
         );
 
         emit ETHDistributed(
@@ -1290,7 +1296,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
                 postTotalShares,
                 _reportedData.etherToLockOnWithdrawalQueue,
                 reportContext.sharesToBurn.sub(reportContext.simulatedSharesToBurn),
-                _reportedData.simulatedShareRate
+                _reportedData.simulatedShareRate,
+                provedMinFinalizationShareRate
             );
         }
 
