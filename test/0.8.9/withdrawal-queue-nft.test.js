@@ -151,8 +151,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
     it('should return 0 after claim', async () => {
       await withdrawalQueue.requestWithdrawals([ETH(25)], user, { from: user })
       assert.equals(await withdrawalQueue.balanceOf(user), 1)
-
-      const batch = await withdrawalQueue.prefinalize.call([1], shareRate(1))
+      const batch = await withdrawalQueue.finalizationBatch([1], shareRate(1))
       await withdrawalQueue.finalize([1], shareRate(1), { from: daoAgent, value: batch.ethToLock })
       await withdrawalQueue.claimWithdrawal(1, { from: user })
 
@@ -181,7 +180,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
       await withdrawalQueue.requestWithdrawals([ETH(25)], user, { from: user })
       assert.equals(await withdrawalQueue.ownerOf(1), user)
 
-      const batch = await withdrawalQueue.prefinalize.call([1], shareRate(1))
+      const batch = await withdrawalQueue.finalizationBatch([1], shareRate(1))
       await withdrawalQueue.finalize([1], shareRate(1), { from: daoAgent, value: batch.ethToLock })
       await withdrawalQueue.claimWithdrawal(1, { from: user })
 
@@ -382,7 +381,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
     })
 
     it('reverts with error "RequestAlreadyClaimed()" when called on claimed request', async () => {
-      const batch = await withdrawalQueue.prefinalize.call([2], shareRate(1))
+      const batch = await withdrawalQueue.finalizationBatch([2], shareRate(1))
       await withdrawalQueue.finalize([2], shareRate(1), { from: daoAgent, value: batch.ethToLock })
 
       await withdrawalQueue.methods['claimWithdrawal(uint256)'](requestIds[0], {
@@ -434,7 +433,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
       })
       assert.equal(await withdrawalQueue.ownerOf(requestIds[0]), recipient)
 
-      const batch = await withdrawalQueue.prefinalize.call([2], shareRate(1))
+      const batch = await withdrawalQueue.finalizationBatch([2], shareRate(1))
       await withdrawalQueue.finalize([2], shareRate(1), { from: daoAgent, value: batch.ethToLock })
 
       await withdrawalQueue.methods['claimWithdrawal(uint256)'](requestIds[0], {
@@ -501,7 +500,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
       assert.equals(await withdrawalQueue.ownerOf(1), user)
       assert.equals(await withdrawalQueue.ownerOf(2), user)
 
-      const batch = await withdrawalQueue.prefinalize.call([1], shareRate(1))
+      const batch = await withdrawalQueue.finalizationBatch([1], shareRate(1))
       await withdrawalQueue.finalize([1], shareRate(1), { from: daoAgent, value: batch.ethToLock })
       await withdrawalQueue.claimWithdrawal(1, { from: user })
 
@@ -517,7 +516,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
       assert.equals(await withdrawalQueue.ownerOf(1), user)
       assert.equals(await withdrawalQueue.ownerOf(2), user)
 
-      const batch = await withdrawalQueue.prefinalize.call([1], shareRate(1))
+      const batch = await withdrawalQueue.finalizationBatch([1], shareRate(1))
       await withdrawalQueue.finalize([1], shareRate(1), { from: daoAgent, value: batch.ethToLock })
 
       await assert.reverts(withdrawalQueue.claimWithdrawal(1, { from: stranger }), `NotOwner("${stranger}", "${user}")`)
@@ -539,7 +538,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
       assert.equals(await withdrawalQueue.ownerOf(1), user)
       assert.equals(await withdrawalQueue.ownerOf(2), user)
 
-      const batch = await withdrawalQueue.prefinalize.call([2], shareRate(1))
+      const batch = await withdrawalQueue.finalizationBatch([2], shareRate(1))
       await withdrawalQueue.finalize([2], shareRate(1), { from: daoAgent, value: batch.ethToLock })
       await withdrawalQueue.claimWithdrawal(1, { from: user })
 
@@ -564,7 +563,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
       assert.equals(await withdrawalQueue.ownerOf(2), user)
       assert.equals(await withdrawalQueue.ownerOf(1), stranger)
 
-      const batch = await withdrawalQueue.prefinalize.call([2], shareRate(1))
+      const batch = await withdrawalQueue.finalizationBatch([2], shareRate(1))
       await withdrawalQueue.finalize([2], shareRate(1), { from: daoAgent, value: batch.ethToLock })
       await withdrawalQueue.claimWithdrawal(2, { from: user })
 
@@ -615,7 +614,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
       assert.equals(await withdrawalQueue.ownerOf(2), user)
       assert.equals(await withdrawalQueue.ownerOf(3), stranger)
 
-      const batch = await withdrawalQueue.prefinalize.call([3], shareRate(1))
+      const batch = await withdrawalQueue.finalizationBatch([3], shareRate(1))
       await withdrawalQueue.finalize([3], shareRate(1), { from: daoAgent, value: batch.ethToLock })
       await withdrawalQueue.claimWithdrawal(1, { from: user })
       await withdrawalQueue.claimWithdrawal(3, { from: stranger })
