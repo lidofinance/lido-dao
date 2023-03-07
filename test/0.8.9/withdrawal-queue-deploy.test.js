@@ -1,7 +1,7 @@
 const { artifacts, contract } = require('hardhat')
-const { ZERO_ADDRESS } = require('../helpers/constants')
+const { ZERO_ADDRESS, MAX_UINT256 } = require('../helpers/constants')
 
-const { ETH } = require('../helpers/utils')
+const { ETH, toBN } = require('../helpers/utils')
 const withdrawals = require('../helpers/withdrawals')
 const { assert } = require('../helpers/assert')
 
@@ -29,7 +29,12 @@ async function deployWithdrawalQueue({
   const eip712StETH = await EIP712StETH.new(steth.address, { from: stethOwner })
   await steth.initializeEIP712StETH(eip712StETH.address)
 
-  const { queue: withdrawalQueue } = await withdrawals.deploy(queueAdmin, steth.address, queueName, symbol)
+  const { queue: withdrawalQueue, impl: withdrawalQueueImplementation } = await withdrawals.deploy(
+    queueAdmin,
+    steth.address,
+    queueName,
+    symbol
+  )
 
   const initTx = await withdrawalQueue.initialize(queueAdmin)
 
@@ -51,6 +56,7 @@ async function deployWithdrawalQueue({
     steth,
     withdrawalQueue,
     nftDescriptor,
+    withdrawalQueueImplementation,
   }
 }
 
@@ -145,6 +151,20 @@ contract(
           }),
           'ZeroMetadata()'
         )
+      })
+
+      it('implementation is petrified', async () => {
+        const { withdrawalQueueImplementation } = await deployWithdrawalQueue({
+          stethOwner,
+          queueAdmin,
+          queuePauser,
+          queueResumer,
+          doResume: false,
+        })
+
+        assert.equals(await withdrawalQueueImplementation.getContractVersion(), toBN(MAX_UINT256))
+
+        await assert.reverts(withdrawalQueueImplementation.initialize(queueAdmin), 'NonZeroContractVersionOnInit()')
       })
     })
   }

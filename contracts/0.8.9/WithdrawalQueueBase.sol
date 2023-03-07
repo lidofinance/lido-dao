@@ -288,7 +288,7 @@ abstract contract WithdrawalQueueBase {
     }
     /// @notice Checks the finalization batches, calculates required ether and the amount of shares to burn and
     /// @param _batches finalization batches calculated offchain using `calculateFinalizationBatches`
-    /// @param _maxShareRate max possible share rate that will be used for request finalization
+    /// @param _maxShareRate max possible share rate that will be used for request finalization with 1e27 precision
     /// @return ethToLock amount of ether that should be sent with `finalize()` method later
     /// @return sharesToBurn amount of shares that belongs tho finalizable requests
     function prefinalize(uint256[] calldata _batches, uint256 _maxShareRate)
