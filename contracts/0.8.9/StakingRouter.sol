@@ -306,8 +306,10 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             revert ArraysLengthMismatch(_stakingModuleIds.length, _exitedValidatorsCounts.length);
         }
 
+        uint256 stakingModuleId;
         for (uint256 i = 0; i < _stakingModuleIds.length; ) {
-            StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleIds[i]);
+            stakingModuleId = _stakingModuleIds[i];
+            StakingModule storage stakingModule = _getStakingModuleById(stakingModuleId);
 
             uint256 prevReportedExitedValidatorsCount = stakingModule.exitedValidatorsCount;
             if (_exitedValidatorsCounts[i] < prevReportedExitedValidatorsCount) {
@@ -323,7 +325,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             if (totalExitedValidatorsCount < prevReportedExitedValidatorsCount) {
                 // not all of the exited validators were async reported to the module
                 emit StakingModuleExitedValidatorsIncompleteReporting(
-                    stakingModule.id,
+                    stakingModuleId,
                     prevReportedExitedValidatorsCount - totalExitedValidatorsCount
                 );
             }
