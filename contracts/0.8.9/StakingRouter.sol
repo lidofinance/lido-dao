@@ -283,13 +283,15 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         }
 
         for (uint256 i = 0; i < _stakingModuleIds.length; ) {
-            address moduleAddr = _getStakingModuleById(_stakingModuleIds[i]).stakingModuleAddress;
-            try IStakingModule(moduleAddr).onRewardsMinted(_totalShares[i]) {}
-            catch (bytes memory lowLevelRevertData) {
-                emit RewardsMintedReportFailed(
-                    _stakingModuleIds[i],
-                    lowLevelRevertData
-                );
+            if (_totalShares[i] > 0) {
+                address moduleAddr = _getStakingModuleById(_stakingModuleIds[i]).stakingModuleAddress;
+                try IStakingModule(moduleAddr).onRewardsMinted(_totalShares[i]) {}
+                catch (bytes memory lowLevelRevertData) {
+                    emit RewardsMintedReportFailed(
+                        _stakingModuleIds[i],
+                        lowLevelRevertData
+                    );
+                }
             }
             unchecked { ++i; }
         }

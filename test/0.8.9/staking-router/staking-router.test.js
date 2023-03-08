@@ -912,6 +912,21 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       assert.equal(+module2lastcall.totalShares, 400)
     })
 
+    it("doesn't call onRewardsMinted() on staking module when its share is equal to zero", async () => {
+      const stakingModuleIds = [1, 2]
+      const totalShares = [500, 0]
+
+      await router.reportRewardsMinted(stakingModuleIds, totalShares, { from: admin })
+
+      const module1lastcall = await module1.lastCall_onRewardsMinted()
+      assert.equal(+module1lastcall.callCount, 2)
+      assert.equal(+module1lastcall.totalShares, 800)
+
+      const module2lastcall = await module2.lastCall_onRewardsMinted()
+      assert.equal(+module2lastcall.callCount, 1)
+      assert.equal(+module2lastcall.totalShares, 400)
+    })
+
     it('handles reverted staking modules correctly', async () => {
       const stakingModuleWithBug = await StakingModuleStub.new()
       // staking module will revert with message "UNHANDLED_ERROR"
