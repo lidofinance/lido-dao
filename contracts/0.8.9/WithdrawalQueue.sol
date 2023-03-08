@@ -252,12 +252,11 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @param _nextFinalizedRequestId request index in the queue that will be last finalized request in a batch
     function finalize(uint256 _nextFinalizedRequestId, uint256 _shareRate, uint256 _minShareRateRequestId)
         external payable
-        returns (uint256 provedMinShareRate)
     {
         _checkResumed();
         _checkRole(FINALIZE_ROLE, msg.sender);
 
-        provedMinShareRate = _finalize(_nextFinalizedRequestId, msg.value, _shareRate, _minShareRateRequestId);
+        _finalize(_nextFinalizedRequestId, msg.value, _shareRate, _minShareRateRequestId);
     }
 
     /// @notice Update bunker mode state

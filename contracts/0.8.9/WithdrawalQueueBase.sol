@@ -21,6 +21,12 @@ abstract contract WithdrawalQueueBase {
     /// @notice precision base for share rate and discounting factor values in the contract
     uint256 public constant E27_PRECISION_BASE = 1e27;
 
+    /// @dev Purpose of the constant is only to handle deviation of calculated sane minimal amount
+    /// of ETH passed for batch finalization. The deviation arises due StETH balance rounding issue
+    /// which is described at https://github.com/lidofinance/lido-dao/issues/442
+    /// Because this constant is used only for sane min boundary check it is fine for it not
+    /// to be accurate and lay in a range of several wei.
+    uint256 public constant MIN_TOLERABLE_SHARE_RATE_DEVIATION_DUE_STETH_ROUNDING_ERROR = 10 * 1e9;
 
     /// @dev return value for the `find...` methods in case of no result
     uint256 internal constant NOT_FOUND = 0;
@@ -240,7 +246,6 @@ abstract contract WithdrawalQueueBase {
     ///  Emits WithdrawalBatchFinalized event.
     function _finalize(uint256 _nextFinalizedRequestId, uint256 _amountOfETH, uint256 _maxShareRate, uint256 _minShareRateRequestId)
         internal
-        returns (uint256 provedMinShareRate)
     {
         if (_nextFinalizedRequestId > getLastRequestId()) revert InvalidRequestId(_nextFinalizedRequestId);
         uint256 lastFinalizedRequestId = getLastFinalizedRequestId();
@@ -253,7 +258,7 @@ abstract contract WithdrawalQueueBase {
         uint128 stETHToFinalize = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH;
         uint128 sharesToBurn = requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares;
 
-        provedMinShareRate = _sanityCheckAmountOfETHForFinalization(_amountOfETH, _minShareRateRequestId, stETHToFinalize, sharesToBurn);
+        _sanityCheckAmountOfETHForFinalization(_amountOfETH, _minShareRateRequestId, _maxShareRate, stETHToFinalize, sharesToBurn);
 
         uint256 lastCheckpointIndex = getLastCheckpointIndex();
         Checkpoint storage lastCheckpoint = _getCheckpoints()[lastCheckpointIndex];
@@ -279,12 +284,12 @@ abstract contract WithdrawalQueueBase {
     function _sanityCheckAmountOfETHForFinalization(
         uint256 _amountOfETH,
         uint256 _minShareRateRequestId,
+        uint256 _maxShareRate,
         uint256 _maxStETHToFinalize,
         uint256 _sharesToBurn
     )
         internal
         view
-        returns (uint256 provedMinShareRate)
     {
         if (_amountOfETH > _maxStETHToFinalize) revert TooMuchEtherToFinalize(_amountOfETH, _maxStETHToFinalize);
 
@@ -292,11 +297,13 @@ abstract contract WithdrawalQueueBase {
         WithdrawalRequest memory proofPrevRequest = _getQueue()[_minShareRateRequestId - 1];
 
         // shareRate at the index given by the Oracle as request with minimal share rate within this finalization batch
-        provedMinShareRate = (1e9 * (proofRequest.cumulativeStETH - proofPrevRequest.cumulativeStETH))
+        uint256 provedMinShareRate = (1e9 * (proofRequest.cumulativeStETH - proofPrevRequest.cumulativeStETH))
             / (proofRequest.cumulativeShares - proofPrevRequest.cumulativeShares);
-        uint256 minAmountOfETH = _sharesToBurn * provedMinShareRate;
+        uint256 minPossibleFinalizationShareRate = Math.min(_maxShareRate, provedMinShareRate)
+            - MIN_TOLERABLE_SHARE_RATE_DEVIATION_DUE_STETH_ROUNDING_ERROR;
+        uint256 minSaneAmountOfETH = _sharesToBurn * minPossibleFinalizationShareRate;
 
-        if (_amountOfETH < minAmountOfETH) revert TooLittleEtherToFinalize(_amountOfETH, minAmountOfETH);
+        if (_amountOfETH < minSaneAmountOfETH) revert TooLittleEtherToFinalize(_amountOfETH, minSaneAmountOfETH);
     }
 
     /// @dev creates a new `WithdrawalRequest` in the queue
