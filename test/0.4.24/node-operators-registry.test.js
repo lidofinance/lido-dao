@@ -12,6 +12,7 @@ const signingKeys = require('../helpers/signing-keys')
 const { prepIdsCountsPayload, ETH, pad, hexConcat, toBN, padRight } = require('../helpers/utils')
 const { getRandomLocatorConfig } = require('../helpers/locator')
 const { ZERO_ADDRESS } = require('../helpers/constants')
+const { wei } = require('../helpers/wei')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistryMock')
 const SigningKeys = artifacts.require('SigningKeys')
@@ -3618,6 +3619,36 @@ contract('NodeOperatorsRegistry', (addresses) => {
       const hasPermission = await dao.hasPermission(stakingRouter, app, 'STAKING_ROUTER_ROLE')
       assert.isTrue(hasPermission)
       await app.onRewardsMinted(123, { from: stakingRouter })
+    })
+  })
+
+  describe('setStuckPenaltyDelay()', () => {
+    it('reverts with error "APP_AUTH_FAILED" when called by sender without MANAGE_NODE_OPERATOR_ROLE', async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'MANAGE_NODE_OPERATOR_ROLE')
+      assert.isFalse(hasPermission)
+      const maxStuckPenaltyDelay = await app.MAX_STUCK_PENALTY_DELAY()
+      await assert.reverts(app.setStuckPenaltyDelay(maxStuckPenaltyDelay, { from: nobody }), 'APP_AUTH_FAILED')
+    })
+
+    it('reverts with error "OUT_OF_RANGE" when new value exceeds MAX_PENALTY_DELAY', async () => {
+      const maxStuckPenaltyDelay = wei.int(await app.MAX_STUCK_PENALTY_DELAY())
+      await assert.reverts(
+        app.setStuckPenaltyDelay(wei.str(maxStuckPenaltyDelay + 1n), { from: nodeOperatorsManager }),
+        'OUT_OF_RANGE'
+      )
+    })
+
+    it('sets stuck penalty delay correctly', async () => {
+      const newStuckPenaltyDelay = await app.MAX_STUCK_PENALTY_DELAY()
+      assert.notEquals(await app.getStuckPenaltyDelay(), newStuckPenaltyDelay)
+      await app.setStuckPenaltyDelay(newStuckPenaltyDelay, { from: nodeOperatorsManager })
+      assert.equals(await app.getStuckPenaltyDelay(), newStuckPenaltyDelay)
+    })
+
+    it('emits event StuckPenaltyDelayChanged() when setStuckPenaltyDelay is called', async () => {
+      const sameStackPenaltyDelay = await app.getStuckPenaltyDelay()
+      const tx = await app.setStuckPenaltyDelay(sameStackPenaltyDelay, { from: nodeOperatorsManager })
+      assert.emits(tx, 'StuckPenaltyDelayChanged', { stuckPenaltyDelay: sameStackPenaltyDelay })
     })
   })
 })

@@ -80,6 +80,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     //
     uint256 public constant MAX_NODE_OPERATORS_COUNT = 200;
     uint256 public constant MAX_NODE_OPERATOR_NAME_LENGTH = 255;
+    uint256 public constant MAX_STUCK_PENALTY_DELAY = 365 days;
 
     uint256 internal constant UINT64_MAX = 0xFFFFFFFFFFFFFFFF;
 
@@ -1322,6 +1323,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     /// @dev set new stuck penalty delay, duration in sec
     function _setStuckPenaltyDelay(uint256 _delay) internal {
+        _requireValidRange(_delay <= MAX_STUCK_PENALTY_DELAY);
         STUCK_PENALTY_DELAY_POSITION.setStorageUint256(_delay);
         emit StuckPenaltyDelayChanged(_delay);
     }
