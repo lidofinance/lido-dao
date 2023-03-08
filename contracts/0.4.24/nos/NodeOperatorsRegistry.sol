@@ -1009,7 +1009,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         // upd totals
         Packed64x4.Packed memory summarySigningKeysStats = _loadSummarySigningKeysStats();
         summarySigningKeysStats.set(
-            TOTAL_KEYS_COUNT_OFFSET, summarySigningKeysStats.get(SUMMARY_TOTAL_KEYS_COUNT_OFFSET).add(uint64(_keysCount))
+            SUMMARY_TOTAL_KEYS_COUNT_OFFSET, summarySigningKeysStats.get(SUMMARY_TOTAL_KEYS_COUNT_OFFSET).add(uint64(_keysCount))
         );
         _saveSummarySigningKeysStats(summarySigningKeysStats);
 
