@@ -323,7 +323,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     }
 
     /// @notice Activates deactivated node operator with given id
-    /// @param _nodeOperatorId Node operator id to deactivate
+    /// @param _nodeOperatorId Node operator id to activate
     function activateNodeOperator(uint256 _nodeOperatorId) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(MANAGE_NODE_OPERATOR_ROLE);
