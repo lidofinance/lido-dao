@@ -1,17 +1,17 @@
 const { contract, web3 } = require('hardhat')
 const { assert } = require('../../helpers/assert')
-const { e9, e18, e27 } = require('../../helpers/utils')
+const { e9, e18, e27, toNum } = require('../../helpers/utils')
 
 const AccountingOracleAbi = require('../../../lib/abi/AccountingOracle.json')
 
 const {
   CONSENSUS_VERSION,
   deployAndConfigureAccountingOracle,
-  getReportDataItems,
+  getAccountingReportDataItems,
   encodeExtraDataItems,
   packExtraDataList,
   calcExtraDataListHash,
-  calcReportDataHash,
+  calcAccountingReportDataHash,
   EXTRA_DATA_FORMAT_LIST,
   EXTRA_DATA_FORMAT_EMPTY,
   SLOTS_PER_FRAME,
@@ -46,8 +46,9 @@ contract('AccountingOracle', ([admin, member1]) => {
     numExitedValidatorsByStakingModule: [3],
     withdrawalVaultBalance: e18(1),
     elRewardsVaultBalance: e18(2),
-    lastWithdrawalRequestIdToFinalize: 1,
-    finalizationShareRate: e27(1),
+    sharesRequestedToBurn: e18(3),
+    withdrawalFinalizationBatches: [1],
+    simulatedShareRate: e27(1),
     isBunkerMode: true,
     extraDataFormat: EXTRA_DATA_FORMAT_LIST,
     extraDataHash,
@@ -77,8 +78,8 @@ contract('AccountingOracle', ([admin, member1]) => {
     reportFields = getReportFields({
       refSlot: +refSlot,
     })
-    reportItems = getReportDataItems(reportFields)
-    const reportHash = calcReportDataHash(reportItems)
+    reportItems = getAccountingReportDataItems(reportFields)
+    const reportHash = calcAccountingReportDataHash(reportItems)
     await deployed.consensus.addMember(member1, 1, { from: admin })
     await deployed.consensus.submitReport(refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
 
@@ -97,8 +98,8 @@ contract('AccountingOracle', ([admin, member1]) => {
   async function prepareNextReport(newReportFields) {
     await consensus.setTime(deadline)
 
-    const newReportItems = getReportDataItems(newReportFields)
-    const reportHash = calcReportDataHash(newReportItems)
+    const newReportItems = getAccountingReportDataItems(newReportFields)
+    const reportHash = calcAccountingReportDataHash(newReportItems)
 
     await consensus.advanceTimeToNextFrameStart()
     await consensus.submitReport(newReportFields.refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
@@ -177,7 +178,7 @@ contract('AccountingOracle', ([admin, member1]) => {
           ...reportFields,
           refSlot: incorrectRefSlot,
         }
-        const reportItems = getReportDataItems(newReportFields)
+        const reportItems = getAccountingReportDataItems(newReportFields)
 
         await assert.reverts(
           oracle.submitReportData(reportItems, oracleVersion, { from: member1 }),
@@ -216,10 +217,10 @@ contract('AccountingOracle', ([admin, member1]) => {
           ...reportFields,
           consensusVersion: incorrectNextVersion,
         }
-        const reportItems = getReportDataItems(newReportFields)
+        const reportItems = getAccountingReportDataItems(newReportFields)
 
         const reportFieldsPrevVersion = { ...reportFields, consensusVersion: incorrectPrevVersion }
-        const reportItemsPrevVersion = getReportDataItems(reportFieldsPrevVersion)
+        const reportItemsPrevVersion = getAccountingReportDataItems(reportFieldsPrevVersion)
 
         await assert.reverts(
           oracle.submitReportData(reportItems, oracleVersion, { from: member1 }),
@@ -246,8 +247,8 @@ contract('AccountingOracle', ([admin, member1]) => {
           refSlot: nextRefSlot,
           consensusVersion: newConsensusVersion,
         }
-        const newReportItems = getReportDataItems(newReportFields)
-        const newReportHash = calcReportDataHash(newReportItems)
+        const newReportItems = getAccountingReportDataItems(newReportFields)
+        const newReportHash = calcAccountingReportDataHash(newReportItems)
 
         await oracle.setConsensusVersion(newConsensusVersion, { from: admin })
         await consensus.advanceTimeToNextFrameStart()
@@ -301,13 +302,13 @@ contract('AccountingOracle', ([admin, member1]) => {
 
     context('checks data hash', () => {
       it('reverts with UnexpectedDataHash', async () => {
-        const incorrectReportItems = getReportDataItems({
+        const incorrectReportItems = getAccountingReportDataItems({
           ...reportFields,
           numValidators: reportFields.numValidators - 1,
         })
 
-        const correctDataHash = calcReportDataHash(reportItems)
-        const incorrectDataHash = calcReportDataHash(incorrectReportItems)
+        const correctDataHash = calcAccountingReportDataHash(reportItems)
+        const incorrectDataHash = calcAccountingReportDataHash(incorrectReportItems)
 
         await assert.reverts(
           oracle.submitReportData(incorrectReportItems, oracleVersion, { from: member1 }),
@@ -438,11 +439,11 @@ contract('AccountingOracle', ([admin, member1]) => {
         assert.equals(lastOracleReportToLido.clBalance, reportFields.clBalanceGwei + '000000000')
         assert.equals(lastOracleReportToLido.withdrawalVaultBalance, reportFields.withdrawalVaultBalance)
         assert.equals(lastOracleReportToLido.elRewardsVaultBalance, reportFields.elRewardsVaultBalance)
-        assert.equals(
-          lastOracleReportToLido.lastWithdrawalRequestIdToFinalize,
-          reportFields.lastWithdrawalRequestIdToFinalize
+        assert.sameOrderedMembers(
+          toNum(lastOracleReportToLido.withdrawalFinalizationBatches),
+          toNum(reportFields.withdrawalFinalizationBatches)
         )
-        assert.equals(lastOracleReportToLido.finalizationShareRate, reportFields.finalizationShareRate)
+        assert.equals(lastOracleReportToLido.simulatedShareRate, reportFields.simulatedShareRate)
       })
 
       it('should call updateExitedValidatorsCountByStakingModule on StakingRouter', async () => {
@@ -479,13 +480,15 @@ contract('AccountingOracle', ([admin, member1]) => {
         assert.equals(lastCall.clValidators, reportFields.numValidators)
       })
 
-      it('should call updateBunkerMode on WithdrawalQueue', async () => {
+      it('should call onOracleReport on WithdrawalQueue', async () => {
         const prevProcessingRefSlot = +(await oracle.getLastProcessingRefSlot())
         await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
-        const lastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
+        const currentProcessingRefSlot = +(await oracle.getLastProcessingRefSlot())
+        const lastCall = await mockWithdrawalQueue.lastCall__onOracleReport()
         assert.equals(lastCall.callCount, 1)
         assert.equals(lastCall.isBunkerMode, reportFields.isBunkerMode)
         assert.equals(lastCall.prevReportTimestamp, GENESIS_TIME + prevProcessingRefSlot * SECONDS_PER_SLOT)
+        assert.equals(lastCall.currentReportTimestamp, GENESIS_TIME + currentProcessingRefSlot * SECONDS_PER_SLOT)
       })
     })
 
@@ -516,13 +519,13 @@ contract('AccountingOracle', ([admin, member1]) => {
         await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
 
         const nextRefSlot = reportFields.refSlot + SLOTS_PER_FRAME
-        const changedReportItems = getReportDataItems({
+        const changedReportItems = getAccountingReportDataItems({
           ...reportFields,
           refSlot: nextRefSlot,
           extraDataFormat: EXTRA_DATA_FORMAT_LIST + 1,
         })
 
-        const changedReportHash = calcReportDataHash(changedReportItems)
+        const changedReportHash = calcAccountingReportDataHash(changedReportItems)
         await consensus.advanceTimeToNextFrameStart()
         await consensus.submitReport(nextRefSlot, changedReportHash, CONSENSUS_VERSION, {
           from: member1,
@@ -541,8 +544,8 @@ contract('AccountingOracle', ([admin, member1]) => {
           refSlot: +refSlot,
           extraDataItemsCount: 0,
         })
-        const reportItems = getReportDataItems(reportFields)
-        const reportHash = calcReportDataHash(reportItems)
+        const reportItems = getAccountingReportDataItems(reportFields)
+        const reportHash = calcAccountingReportDataHash(reportItems)
         await consensus.submitReport(refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
         await assert.revertsWithCustomError(
           oracle.submitReportData(reportItems, oracleVersion, { from: member1 }),
@@ -557,8 +560,8 @@ contract('AccountingOracle', ([admin, member1]) => {
           refSlot: +refSlot,
           extraDataHash: ZERO_HASH,
         })
-        const reportItems = getReportDataItems(reportFields)
-        const reportHash = calcReportDataHash(reportItems)
+        const reportItems = getAccountingReportDataItems(reportFields)
+        const reportHash = calcAccountingReportDataHash(reportItems)
         await consensus.submitReport(refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
         await assert.revertsWithCustomError(
           oracle.submitReportData(reportItems, oracleVersion, { from: member1 }),
@@ -579,8 +582,8 @@ contract('AccountingOracle', ([admin, member1]) => {
           extraDataHash: nonZeroHash,
           extraDataItemsCount: 0,
         })
-        const reportItems = getReportDataItems(reportFields)
-        const reportHash = calcReportDataHash(reportItems)
+        const reportItems = getAccountingReportDataItems(reportFields)
+        const reportHash = calcAccountingReportDataHash(reportItems)
         await consensus.submitReport(refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
         await assert.revertsWithCustomError(
           oracle.submitReportData(reportItems, oracleVersion, { from: member1 }),
@@ -598,8 +601,8 @@ contract('AccountingOracle', ([admin, member1]) => {
           extraDataHash: ZERO_HASH,
           extraDataItemsCount: 10,
         })
-        const reportItems = getReportDataItems(reportFields)
-        const reportHash = calcReportDataHash(reportItems)
+        const reportItems = getAccountingReportDataItems(reportFields)
+        const reportHash = calcAccountingReportDataHash(reportItems)
         await consensus.submitReport(refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
         await assert.revertsWithCustomError(
           oracle.submitReportData(reportItems, oracleVersion, { from: member1 }),

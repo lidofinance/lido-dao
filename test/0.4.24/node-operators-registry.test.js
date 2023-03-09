@@ -12,6 +12,7 @@ const signingKeys = require('../helpers/signing-keys')
 const { prepIdsCountsPayload, ETH, pad, hexConcat, toBN, padRight } = require('../helpers/utils')
 const { getRandomLocatorConfig } = require('../helpers/locator')
 const { ZERO_ADDRESS } = require('../helpers/constants')
+const { wei } = require('../helpers/wei')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistryMock')
 const SigningKeys = artifacts.require('SigningKeys')
@@ -65,9 +66,11 @@ const PENALTY_DELAY = 2 * 24 * 60 * 60 // 2 days
 
 const StETH = artifacts.require('StETHMock')
 
-contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nobody]) => {
+contract('NodeOperatorsRegistry', (addresses) => {
   let appBase, app, locator, steth, dao
   const snapshot = new EvmSnapshot(ethers.provider)
+  const [admin, limitsManager, nodeOperatorsManager, signingKeysManager, stakingRouter, user1, user2, user3, nobody] =
+    addresses
 
   before('deploy base app', async () => {
     // Deploy the app's base contract.
@@ -78,15 +81,15 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
     locator = await LidoLocator.new(locatorConfig)
 
-    dao = await AragonDAO.create(appManager)
+    dao = await AragonDAO.create(admin)
     app = await dao.newAppInstance({
       name: 'node-operators-registry',
       base: appBase,
       permissions: {
-        MANAGE_SIGNING_KEYS: voting,
-        MANAGE_NODE_OPERATOR_ROLE: voting,
-        SET_NODE_OPERATOR_LIMIT_ROLE: voting,
-        STAKING_ROUTER_ROLE: voting,
+        MANAGE_SIGNING_KEYS: [admin, signingKeysManager],
+        MANAGE_NODE_OPERATOR_ROLE: [admin, nodeOperatorsManager],
+        SET_NODE_OPERATOR_LIMIT_ROLE: [admin, limitsManager],
+        STAKING_ROUTER_ROLE: [admin, stakingRouter],
       },
     })
 
@@ -234,7 +237,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const exitedSigningKeysCount = NODE_OPERATORS.reduce((sum, c) => sum + c.exitedSigningKeysCount, 0)
 
       assert.equals(totalSigningKeysStatsAfter.totalSigningKeysCount.toNumber(), totalSigningKeysCount)
-      assert.equals(totalSigningKeysStatsAfter.vettedSigningKeysCount.toNumber(), vettedSigningKeysCount)
+      assert.equals(totalSigningKeysStatsAfter.maxValidatorsCount.toNumber(), vettedSigningKeysCount)
       assert.equals(totalSigningKeysStatsAfter.depositedSigningKeysCount.toNumber(), depositedSigningKeysCount)
       assert.equals(totalSigningKeysStatsAfter.exitedSigningKeysCount.toNumber(), exitedSigningKeysCount)
     })
@@ -361,51 +364,57 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('reverts with error "WRONG_NAME_LENGTH" when called with empty name', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(nodeOperatorsManager, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
-      await assert.reverts(app.addNodeOperator('', ADDRESS_1, { from: voting }), 'WRONG_NAME_LENGTH')
+      await assert.reverts(app.addNodeOperator('', ADDRESS_1, { from: nodeOperatorsManager }), 'WRONG_NAME_LENGTH')
     })
 
     it('reverts with error "WRONG_NAME_LENGTH" when called with name length > MAX_NODE_OPERATOR_NAME_LENGTH', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(nodeOperatorsManager, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
       const maxNameLength = await app.MAX_NODE_OPERATOR_NAME_LENGTH()
       const tooLongName = '&'.repeat(maxNameLength.toNumber() + 1)
 
-      await assert.reverts(app.addNodeOperator(tooLongName, ADDRESS_1, { from: voting }), 'WRONG_NAME_LENGTH')
+      await assert.reverts(
+        app.addNodeOperator(tooLongName, ADDRESS_1, { from: nodeOperatorsManager }),
+        'WRONG_NAME_LENGTH'
+      )
     })
 
     it('reverts with error "ZERO_ADDRESS" when called with zero reward address', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(nodeOperatorsManager, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
       const name = 'Node Operator #1'
 
-      await assert.reverts(app.addNodeOperator(name, ZERO_ADDRESS, { from: voting }), 'ZERO_ADDRESS')
+      await assert.reverts(app.addNodeOperator(name, ZERO_ADDRESS, { from: nodeOperatorsManager }), 'ZERO_ADDRESS')
     })
 
     it('reverts with error "MAX_COUNT_EXCEEDED" when total count of node operators = MAX_COUNT_EXCEEDED', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(nodeOperatorsManager, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
       const maxNodeOperatorsCount = await app.MAX_NODE_OPERATORS_COUNT()
 
       for (let i = 0; i < maxNodeOperatorsCount; ++i) {
-        await app.addNodeOperator(`Node Operator #${i}`, ADDRESS_1, { from: voting })
+        await app.addNodeOperator(`Node Operator #${i}`, ADDRESS_1, { from: nodeOperatorsManager })
       }
       assert.equals(await app.getNodeOperatorsCount(), maxNodeOperatorsCount)
 
-      await assert.reverts(app.addNodeOperator(`exceeded`, ADDRESS_2, { from: voting }), 'MAX_OPERATORS_COUNT_EXCEEDED')
+      await assert.reverts(
+        app.addNodeOperator(`exceeded`, ADDRESS_2, { from: nodeOperatorsManager }),
+        'MAX_OPERATORS_COUNT_EXCEEDED'
+      )
     })
 
     it('creates node operator with correct state', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(nodeOperatorsManager, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
       const name = `Node Operator #1`
-      await app.addNodeOperator(name, ADDRESS_1, { from: voting })
+      await app.addNodeOperator(name, ADDRESS_1, { from: nodeOperatorsManager })
 
       const expectedNodeOperatorId = 0
 
@@ -421,45 +430,49 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('returns correct node operator id', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(nodeOperatorsManager, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
       assert.equals(await app.getNodeOperatorsCount(), 0)
 
       const name = `Node Operator #1`
-      let expectedId = await app.methods['addNodeOperator(string,address)'].call(name, ADDRESS_1, { from: voting })
+      let expectedId = await app.methods['addNodeOperator(string,address)'].call(name, ADDRESS_1, {
+        from: nodeOperatorsManager,
+      })
 
       assert.equals(expectedId, 0)
 
       // create node operator to check that next id is correct
-      await app.addNodeOperator(name, ADDRESS_1, { from: voting })
+      await app.addNodeOperator(name, ADDRESS_1, { from: nodeOperatorsManager })
 
-      expectedId = await app.methods['addNodeOperator(string,address)'].call(name, ADDRESS_1, { from: voting })
+      expectedId = await app.methods['addNodeOperator(string,address)'].call(name, ADDRESS_1, {
+        from: nodeOperatorsManager,
+      })
       assert.equals(expectedId, 1)
     })
 
     it('active & total operators count update correctly', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(nodeOperatorsManager, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
       assert.equals(await app.getNodeOperatorsCount(), 0)
       assert.equals(await app.getActiveNodeOperatorsCount(), 0)
 
-      await app.addNodeOperator(`Node Operator 1`, ADDRESS_1, { from: voting })
+      await app.addNodeOperator(`Node Operator 1`, ADDRESS_1, { from: nodeOperatorsManager })
 
       assert.equals(await app.getNodeOperatorsCount(), 1)
       assert.equals(await app.getActiveNodeOperatorsCount(), 1)
     })
 
     it('emits NodeOperatorAdded events with correct params', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(nodeOperatorsManager, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
       assert.equals(await app.getNodeOperatorsCount(), 0)
 
       const name = `Node Operator 1`
 
-      const tx = await app.addNodeOperator(name, ADDRESS_1, { from: voting })
+      const tx = await app.addNodeOperator(name, ADDRESS_1, { from: nodeOperatorsManager })
 
       assert.emits(
         tx,
@@ -472,9 +485,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
   describe('activateNodeOperator()', () => {
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: voting })
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: voting })
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[2], { from: voting })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[2], { from: admin })
 
       const stakingModuleSummary = await app.getStakingModuleSummary()
       assert.equals(stakingModuleSummary.totalExitedValidators, 1)
@@ -490,10 +503,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('reverts when called with non-existent operator id', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(nodeOperatorsManager, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
       const nodeOperatorId = Number.MAX_SAFE_INTEGER
-      await assert.reverts(app.activateNodeOperator(nodeOperatorId, { from: voting }), 'OUT_OF_RANGE')
+      await assert.reverts(app.activateNodeOperator(nodeOperatorId, { from: nodeOperatorsManager }), 'OUT_OF_RANGE')
     })
 
     it('reverts with WRONG_OPERATOR_ACTIVE_STATE when called on active node operator', async () => {
@@ -503,7 +516,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.isTrue(activeNodeOperator.active)
 
       await assert.reverts(
-        app.activateNodeOperator(activeNodeOperatorId, { from: voting }),
+        app.activateNodeOperator(activeNodeOperatorId, { from: nodeOperatorsManager }),
         'WRONG_OPERATOR_ACTIVE_STATE'
       )
     })
@@ -516,7 +529,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         app.getNonce(),
       ])
       assert.isFalse(nodeOperator.active)
-      await app.activateNodeOperator(nodeOperatorId, { from: voting })
+      await app.activateNodeOperator(nodeOperatorId, { from: nodeOperatorsManager })
       const [keysOpIndexAfter, nonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
       assert.notEquals(nonceAfter, nonceBefore)
@@ -527,7 +540,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const nodeOperator = await app.getNodeOperator(nodeOperatorId, false)
       const keysOpIndexBefore = await app.getKeysOpIndex()
       assert.isFalse(nodeOperator.active)
-      const receipt = await app.activateNodeOperator(nodeOperatorId, { from: voting })
+      const receipt = await app.activateNodeOperator(nodeOperatorId, { from: nodeOperatorsManager })
       const nonceAfter = await app.getNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
       assert.emits(receipt, 'NonceChanged', { nonce: nonceAfter })
@@ -539,7 +552,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
       assert.isFalse(notActiveNodeOperator.active)
 
-      await app.activateNodeOperator(notActiveNodeOperatorId, { from: voting })
+      await app.activateNodeOperator(notActiveNodeOperatorId, { from: nodeOperatorsManager })
 
       const nodeOperator = await app.getNodeOperator(notActiveNodeOperatorId, false)
       assert.isTrue(nodeOperator.active)
@@ -551,7 +564,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
       const activeNodeOperatorsCountBefore = await app.getActiveNodeOperatorsCount()
       assert.isFalse(notActiveNodeOperator.active)
-      await app.activateNodeOperator(notActiveNodeOperatorId, { from: voting })
+      await app.activateNodeOperator(notActiveNodeOperatorId, { from: nodeOperatorsManager })
 
       const activeNodeOperatorsCountAfter = await app.getActiveNodeOperatorsCount()
       assert.equals(activeNodeOperatorsCountAfter.toNumber(), activeNodeOperatorsCountBefore.toNumber() + 1)
@@ -560,7 +573,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('emits NodeOperatorActiveSet(activate) event', async () => {
       const nodeOperatorId = await nodeOperators.findNodeOperatorId(app, (operator) => !operator.active)
       assert.notEqual(nodeOperatorId, -1, `Invariant: not active node operator not found`)
-      const tx = await app.activateNodeOperator(nodeOperatorId, { from: voting })
+      const tx = await app.activateNodeOperator(nodeOperatorId, { from: nodeOperatorsManager })
       assert.emits(
         tx,
         'NodeOperatorActiveSet',
@@ -574,7 +587,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const nodeOperatorId = nodeOperatorsBefore.findIndex((operator) => !operator.active)
       assert.notEqual(nodeOperatorId, -1, `Invariant: not active node operator not found`)
 
-      await app.activateNodeOperator(nodeOperatorId, { from: voting })
+      await app.activateNodeOperator(nodeOperatorId, { from: nodeOperatorsManager })
 
       const nodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
 
@@ -586,7 +599,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const nodeOperatorId = nodeOperatorsBefore.findIndex((operator) => !operator.active)
       assert.notEqual(nodeOperatorId, -1, `Invariant: not active node operator not found`)
 
-      await app.activateNodeOperator(nodeOperatorId, { from: voting })
+      await app.activateNodeOperator(nodeOperatorId, { from: nodeOperatorsManager })
 
       const nodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
 
@@ -602,9 +615,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
   describe('deactivateNodeOperator()', async () => {
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: voting })
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: voting })
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[2], { from: voting })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[2], { from: admin })
 
       const stakingModuleSummary = await app.getStakingModuleSummary()
       assert.equals(stakingModuleSummary.totalExitedValidators, 1)
@@ -623,12 +636,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('reverts with "OUT_OF_RANGE" error when called with non-existent operator id', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'MANAGE_NODE_OPERATOR_ROLE')
+      const hasPermission = await dao.hasPermission(nodeOperatorsManager, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
 
       const nodeOperatorId = Number.MAX_SAFE_INTEGER
 
-      await assert.reverts(app.deactivateNodeOperator(nodeOperatorId, { from: voting }), 'OUT_OF_RANGE')
+      await assert.reverts(app.deactivateNodeOperator(nodeOperatorId, { from: nodeOperatorsManager }), 'OUT_OF_RANGE')
     })
 
     it('reverts with "WRONG_OPERATOR_ACTIVE_STATE" when called on not active node operator', async () => {
@@ -639,7 +652,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.isFalse(activeNodeOperator.active)
 
       await assert.reverts(
-        app.deactivateNodeOperator(activeNodeOperatorId, { from: voting }),
+        app.deactivateNodeOperator(activeNodeOperatorId, { from: nodeOperatorsManager }),
         'WRONG_OPERATOR_ACTIVE_STATE'
       )
     })
@@ -648,7 +661,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const activeNodeOperatorId = await nodeOperators.findNodeOperatorId(app, (operator) => operator.active)
       assert.notEqual(activeNodeOperatorId, -1, `Invariant: active node operator not found`)
 
-      await app.deactivateNodeOperator(activeNodeOperatorId, { from: voting })
+      await app.deactivateNodeOperator(activeNodeOperatorId, { from: nodeOperatorsManager })
 
       const nodeOperator = await app.getNodeOperator(activeNodeOperatorId, false)
       assert.isFalse(nodeOperator.active)
@@ -660,7 +673,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
       const activeNodeOperatorsCountBefore = await app.getActiveNodeOperatorsCount()
 
-      await app.deactivateNodeOperator(activeNodeOperatorId, { from: voting })
+      await app.deactivateNodeOperator(activeNodeOperatorId, { from: nodeOperatorsManager })
 
       const activeNodeOperatorsCountAfter = await app.getActiveNodeOperatorsCount()
       assert.equals(activeNodeOperatorsCountAfter.toNumber(), activeNodeOperatorsCountBefore.toNumber() - 1)
@@ -685,7 +698,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         +operatorReportBefore.totalDepositedValidators > 0,
         'Invariant Failed: vettedSigningKeysCount === 0'
       )
-      await app.deactivateNodeOperator(activeNodeOperatorId, { from: voting })
+      await app.deactivateNodeOperator(activeNodeOperatorId, { from: nodeOperatorsManager })
 
       const [operatorReportAfter, allValidatorsReportAfter] = await Promise.all([
         app.getNodeOperatorSummary(activeNodeOperatorId),
@@ -712,7 +725,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         'invariant failed: readyToDepositValidatorsKeysCountBefore <= depositedSigningKeysCount'
       )
 
-      const receipt = await app.deactivateNodeOperator(activeNodeOperatorId, { from: voting })
+      const receipt = await app.deactivateNodeOperator(activeNodeOperatorId, { from: nodeOperatorsManager })
       assert.emits(receipt, 'VettedSigningKeysCountChanged', {
         nodeOperatorId: activeNodeOperatorId,
         approvedValidatorsCount: usedSigningKeys,
@@ -730,7 +743,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       ])
 
       assert.isTrue(nodeOperator.active, 'Invariant Failed: not active')
-      await app.deactivateNodeOperator(activeNodeOperatorId, { from: voting })
+      await app.deactivateNodeOperator(activeNodeOperatorId, { from: nodeOperatorsManager })
 
       const [operatorReportAfter, allValidatorsReportAfter] = await Promise.all([
         app.getNodeOperatorSummary(activeNodeOperatorId),
@@ -748,7 +761,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const activeNodeOperatorId = await nodeOperators.findNodeOperatorId(app, (operator) => operator.active)
       assert.notEqual(activeNodeOperatorId, -1, `Invariant: active node operator not found`)
 
-      const receipt = await app.deactivateNodeOperator(activeNodeOperatorId, { from: voting })
+      const receipt = await app.deactivateNodeOperator(activeNodeOperatorId, { from: nodeOperatorsManager })
 
       assert.emits(receipt, 'NodeOperatorActiveSet', { nodeOperatorId: activeNodeOperatorId, active: false })
     })
@@ -757,7 +770,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const activeNodeOperatorId = await nodeOperators.findNodeOperatorId(app, (operator) => operator.active)
       assert.notEqual(activeNodeOperatorId, -1, `Invariant: active node operator not found`)
       const [keysOpIndexBefore, nonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getNonce()])
-      await app.deactivateNodeOperator(activeNodeOperatorId, { from: voting })
+      await app.deactivateNodeOperator(activeNodeOperatorId, { from: nodeOperatorsManager })
       const [keysOpIndexAfter, nonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
       assert.notEquals(nonceAfter, nonceBefore)
@@ -767,7 +780,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const activeNodeOperatorId = await nodeOperators.findNodeOperatorId(app, (operator) => operator.active)
       assert.notEqual(activeNodeOperatorId, -1, `Invariant: active node operator not found`)
       const keysOpIndexBefore = await app.getKeysOpIndex()
-      const receipt = await app.deactivateNodeOperator(activeNodeOperatorId, { from: voting })
+      const receipt = await app.deactivateNodeOperator(activeNodeOperatorId, { from: nodeOperatorsManager })
       const nonceAfter = await app.getNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
       assert.emits(receipt, 'NonceChanged', { nonce: nonceAfter })
@@ -776,21 +789,24 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
   describe('setNodeOperatorName()', async () => {
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: voting })
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[2], { from: voting })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[2], { from: admin })
     })
 
     it('reverts with "OUT_OF_RANGE" error when called on non existent node operator', async () => {
       const notExitedNodeOperatorId = await app.getNodeOperatorsCount()
       await assert.reverts(
-        app.setNodeOperatorName(notExitedNodeOperatorId, 'new name', { from: voting }),
+        app.setNodeOperatorName(notExitedNodeOperatorId, 'new name', { from: nodeOperatorsManager }),
         'OUT_OF_RANGE'
       )
     })
 
     it('reverts with "WRONG_NAME_LENGTH" error when called with empty name', async () => {
       const nodeOperatorId = 0
-      await assert.reverts(app.setNodeOperatorName(nodeOperatorId, '', { from: voting }), 'WRONG_NAME_LENGTH')
+      await assert.reverts(
+        app.setNodeOperatorName(nodeOperatorId, '', { from: nodeOperatorsManager }),
+        'WRONG_NAME_LENGTH'
+      )
     })
 
     it('reverts with "WRONG_NAME_LENGTH" error when name exceeds MAX_NODE_OPERATOR_NAME_LENGTH', async () => {
@@ -798,7 +814,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const maxNameLength = await app.MAX_NODE_OPERATOR_NAME_LENGTH()
       const tooLongName = '#'.repeat(maxNameLength.toNumber() + 1)
       assert(tooLongName.length > maxNameLength.toNumber())
-      await assert.reverts(app.setNodeOperatorName(nodeOperatorId, tooLongName, { from: voting }), 'WRONG_NAME_LENGTH')
+      await assert.reverts(
+        app.setNodeOperatorName(nodeOperatorId, tooLongName, { from: nodeOperatorsManager }),
+        'WRONG_NAME_LENGTH'
+      )
     })
 
     it('reverts with "APP_AUTH_FAILED" error when called by address without MANAGE_NODE_OPERATOR_ROLE', async () => {
@@ -810,13 +829,16 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('reverts with "VALUE_IS_THE_SAME" error when called with the same name', async () => {
       const nodeOperatorId = 0
       const { name: currentName } = await app.getNodeOperator(nodeOperatorId, true)
-      await assert.reverts(app.setNodeOperatorName(nodeOperatorId, currentName, { from: voting }), 'VALUE_IS_THE_SAME')
+      await assert.reverts(
+        app.setNodeOperatorName(nodeOperatorId, currentName, { from: nodeOperatorsManager }),
+        'VALUE_IS_THE_SAME'
+      )
     })
 
     it('updates the node operator name', async () => {
       const nodeOperatorId = 0
       const newName = 'new name'
-      await app.setNodeOperatorName(nodeOperatorId, newName, { from: voting })
+      await app.setNodeOperatorName(nodeOperatorId, newName, { from: nodeOperatorsManager })
       const { name: nameAfter } = await app.getNodeOperator(nodeOperatorId, true)
       assert(nameAfter === newName)
     })
@@ -824,7 +846,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('emits NodeOperatorNameSet event with correct params', async () => {
       const nodeOperatorId = 0
       const newName = 'new name'
-      const receipt = await app.setNodeOperatorName(nodeOperatorId, newName, { from: voting })
+      const receipt = await app.setNodeOperatorName(nodeOperatorId, newName, { from: nodeOperatorsManager })
       assert.emits(
         receipt,
         'NodeOperatorNameSet',
@@ -837,7 +859,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const anotherNodeOperatorId = 1
       const newName = 'new name'
       const { name: anotherNodeOperatorNameBefore } = await app.getNodeOperator(anotherNodeOperatorId, true)
-      await app.setNodeOperatorName(nodeOperatorId, newName, { from: voting })
+      await app.setNodeOperatorName(nodeOperatorId, newName, { from: nodeOperatorsManager })
       const { name: anotherNodeOperatorNameAfter } = await app.getNodeOperator(anotherNodeOperatorId, true)
       assert.equals(anotherNodeOperatorNameBefore, anotherNodeOperatorNameAfter)
     })
@@ -849,20 +871,20 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const notExistedNodeOperatorId = 2
 
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: voting })
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: voting })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: admin })
     })
 
     it('reverts with "OUT_OF_RANGE" error when called on non existent node operator', async () => {
       await assert.reverts(
-        app.setNodeOperatorRewardAddress(notExistedNodeOperatorId, ADDRESS_4, { from: voting }),
+        app.setNodeOperatorRewardAddress(notExistedNodeOperatorId, ADDRESS_4, { from: nodeOperatorsManager }),
         'OUT_OF_RANGE'
       )
     })
 
     it('reverts with "ZERO_ADDRESS" error when new address is zero', async () => {
       await assert.reverts(
-        app.setNodeOperatorRewardAddress(firstNodeOperatorId, ZERO_ADDRESS, { from: voting }),
+        app.setNodeOperatorRewardAddress(firstNodeOperatorId, ZERO_ADDRESS, { from: nodeOperatorsManager }),
         'ZERO_ADDRESS'
       )
     })
@@ -879,7 +901,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it(`reverts with "VALUE_IS_THE_SAME" error when new reward address is the same`, async () => {
       const nodeOperator = await app.getNodeOperator(firstNodeOperatorId, false)
       await assert.reverts(
-        app.setNodeOperatorRewardAddress(firstNodeOperatorId, nodeOperator.rewardAddress, { from: voting }),
+        app.setNodeOperatorRewardAddress(firstNodeOperatorId, nodeOperator.rewardAddress, {
+          from: nodeOperatorsManager,
+        }),
         'VALUE_IS_THE_SAME'
       )
     })
@@ -887,13 +911,15 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('updates the reward address of the node operator', async () => {
       const { rewardAddress: rewardAddressBefore } = await app.getNodeOperator(firstNodeOperatorId, false)
       assert.notEqual(rewardAddressBefore, ADDRESS_4)
-      await app.setNodeOperatorRewardAddress(firstNodeOperatorId, ADDRESS_4, { from: voting })
+      await app.setNodeOperatorRewardAddress(firstNodeOperatorId, ADDRESS_4, { from: nodeOperatorsManager })
       const { rewardAddress: rewardAddressAfter } = await app.getNodeOperator(firstNodeOperatorId, false)
       assert.equals(rewardAddressAfter, ADDRESS_4)
     })
 
     it('emits "NodeOperatorRewardAddressSet" event with correct params', async () => {
-      const receipt = await app.setNodeOperatorRewardAddress(firstNodeOperatorId, ADDRESS_4, { from: voting })
+      const receipt = await app.setNodeOperatorRewardAddress(firstNodeOperatorId, ADDRESS_4, {
+        from: nodeOperatorsManager,
+      })
       assert.emits(receipt, 'NodeOperatorRewardAddressSet', {
         nodeOperatorId: firstNodeOperatorId,
         rewardAddress: ADDRESS_4,
@@ -905,7 +931,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         secondNodeOperatorId,
         true
       )
-      await app.setNodeOperatorRewardAddress(firstNodeOperatorId, ADDRESS_4, { from: voting })
+      await app.setNodeOperatorRewardAddress(firstNodeOperatorId, ADDRESS_4, { from: nodeOperatorsManager })
       const { rewardAddress: secondNodeOperatorRewardAddressAfter } = await app.getNodeOperator(
         secondNodeOperatorId,
         true
@@ -923,12 +949,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await nodeOperators.addNodeOperator(
         app,
         { ...NODE_OPERATORS[0], totalSigningKeysCount: 100, vettedSigningKeysCount: 50, depositedSigningKeysCount: 20 },
-        { from: voting }
+        { from: admin }
       )
       await nodeOperators.addNodeOperator(
         app,
         { ...NODE_OPERATORS[1], totalSigningKeysCount: 50, vettedSigningKeysCount: 45, depositedSigningKeysCount: 30 },
-        { from: voting }
+        { from: admin }
       )
     })
 
@@ -942,39 +968,39 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('reverts with "OUT_OF_RANGE" error when called on non existent validator', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'SET_NODE_OPERATOR_LIMIT_ROLE')
+      const hasPermission = await dao.hasPermission(limitsManager, app, 'SET_NODE_OPERATOR_LIMIT_ROLE')
       assert.isTrue(hasPermission)
       await assert.reverts(
-        app.setNodeOperatorStakingLimit(notExistedNodeOperatorId, 40, { from: voting }),
+        app.setNodeOperatorStakingLimit(notExistedNodeOperatorId, 40, { from: limitsManager }),
         'OUT_OF_RANGE'
       )
     })
 
     it('reverts with "WRONG_OPERATOR_ACTIVE_STATE" error when node operator deactivated', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'SET_NODE_OPERATOR_LIMIT_ROLE')
+      const hasPermission = await dao.hasPermission(limitsManager, app, 'SET_NODE_OPERATOR_LIMIT_ROLE')
       assert.isTrue(hasPermission)
-      await app.deactivateNodeOperator(secondNodeOperatorId, { from: voting })
+      await app.deactivateNodeOperator(secondNodeOperatorId, { from: nodeOperatorsManager })
       assert.isFalse(await app.getNodeOperatorIsActive(secondNodeOperatorId))
       await assert.reverts(
-        app.setNodeOperatorStakingLimit(secondNodeOperatorId, 40, { from: voting }),
+        app.setNodeOperatorStakingLimit(secondNodeOperatorId, 40, { from: limitsManager }),
         'WRONG_OPERATOR_ACTIVE_STATE'
       )
     })
 
     it('newStakingLimit < depositedSigningKeys :: sets staking limit to deposited signing keys count', async () => {
-      await app.setNodeOperatorStakingLimit(firstNodeOperatorId, 10, { from: voting })
+      await app.setNodeOperatorStakingLimit(firstNodeOperatorId, 10, { from: limitsManager })
       const nodeOperator = await app.getNodeOperator(firstNodeOperatorId, false)
       assert.equals(nodeOperator.stakingLimit, 20)
     })
 
     it('newStakingLimit > totalSigningKeysCount :: sets staking limit to total signing keys count', async () => {
-      await app.setNodeOperatorStakingLimit(secondNodeOperatorId, 1000, { from: voting })
+      await app.setNodeOperatorStakingLimit(secondNodeOperatorId, 1000, { from: limitsManager })
       const nodeOperator = await app.getNodeOperator(secondNodeOperatorId, false)
       assert.equals(nodeOperator.stakingLimit, 50)
     })
 
     it('depositedSigningKeys <= newStakingLimit <= totalSigningKeysCount :: sets staking limit to passed value', async () => {
-      await app.setNodeOperatorStakingLimit(firstNodeOperatorId, 75, { from: voting })
+      await app.setNodeOperatorStakingLimit(firstNodeOperatorId, 75, { from: limitsManager })
       const nodeOperator = await app.getNodeOperator(firstNodeOperatorId, false)
       assert.equals(nodeOperator.stakingLimit, 75)
     })
@@ -985,7 +1011,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         app.getNonce(),
         app.getKeysOpIndex(),
       ])
-      const receipt = await app.setNodeOperatorStakingLimit(firstNodeOperatorId, stakingLimitBefore, { from: voting })
+      const receipt = await app.setNodeOperatorStakingLimit(firstNodeOperatorId, stakingLimitBefore, {
+        from: limitsManager,
+      })
       assert.notEmits(receipt, 'VettedSigningKeysCountChanged')
       const [{ stakingLimit: stakingLimitAfter }, nonceAfter, keysOpIndexAfter] = await Promise.all([
         app.getNodeOperator(firstNodeOperatorId, false),
@@ -998,22 +1026,24 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('reduces total vetted validator keys count correctly if new value less than previous', async () => {
-      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
-      await app.setNodeOperatorStakingLimit(firstNodeOperatorId, 30, { from: voting })
-      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+      await app.setNodeOperatorStakingLimit(firstNodeOperatorId, 30, { from: limitsManager })
+      const { maxValidatorsCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       assert.equals(vettedSigningKeysCountBefore.toNumber() - vettedSigningKeysCountAfter.toNumber(), 20)
     })
 
     it('increases total vetted validator keys count correctly if new value greater than previous', async () => {
-      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
-      await app.setNodeOperatorStakingLimit(firstNodeOperatorId, 100, { from: voting })
-      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+      await app.setNodeOperatorStakingLimit(firstNodeOperatorId, 100, { from: limitsManager })
+      const { maxValidatorsCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       assert.equals(vettedSigningKeysCountAfter.toNumber() - vettedSigningKeysCountBefore.toNumber(), 50)
     })
 
     it('emits VettedSigningKeysCountChanged event with correct params', async () => {
       const newStakingLimit = 75
-      const receipt = await app.setNodeOperatorStakingLimit(firstNodeOperatorId, newStakingLimit, { from: voting })
+      const receipt = await app.setNodeOperatorStakingLimit(firstNodeOperatorId, newStakingLimit, {
+        from: limitsManager,
+      })
       assert.emits(receipt, 'VettedSigningKeysCountChanged', {
         nodeOperatorId: firstNodeOperatorId,
         approvedValidatorsCount: newStakingLimit,
@@ -1022,7 +1052,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('increases keysOpIndex & changes nonce on vettedSigningKeysCount change', async () => {
       const [keysOpIndexBefore, nonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getNonce()])
-      await app.setNodeOperatorStakingLimit(0, 40, { from: voting })
+      await app.setNodeOperatorStakingLimit(0, 40, { from: limitsManager })
       const [keysOpIndexAfter, nonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
       assert.equals(nonceAfter, nonceBefore.toNumber() + 1)
@@ -1030,7 +1060,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('emits KeysOpIndexSet & NonceChanged on vettedSigningKeysCount change', async () => {
       const keysOpIndexBefore = await app.getKeysOpIndex()
-      const receipt = await app.setNodeOperatorStakingLimit(0, 40, { from: voting })
+      const receipt = await app.setNodeOperatorStakingLimit(0, 40, { from: limitsManager })
       const nonceAfter = await app.getNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
       assert.emits(receipt, 'NonceChanged', { nonce: nonceAfter })
@@ -1041,7 +1071,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         secondNodeOperatorId,
         true
       )
-      await app.setNodeOperatorRewardAddress(firstNodeOperatorId, ADDRESS_4, { from: voting })
+      await app.setNodeOperatorRewardAddress(firstNodeOperatorId, ADDRESS_4, { from: nodeOperatorsManager })
       const { stakingLimit: secondNodeOperatorStakingLimitAfter } = await app.getNodeOperator(
         secondNodeOperatorId,
         true
@@ -1056,15 +1086,18 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const notExistedNodeOperatorId = 2
 
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[0], exitedSigningKeysCount: 3 }, { from: voting })
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: voting })
+      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[0], exitedSigningKeysCount: 3 }, { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: admin })
     })
 
     it('reverts with "OUT_OF_RANGE" error when called on non existent validator', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'STAKING_ROUTER_ROLE')
+      const hasPermission = await dao.hasPermission(stakingRouter, app, 'STAKING_ROUTER_ROLE')
       assert.isTrue(hasPermission)
       const { operatorIds, keysCounts } = prepIdsCountsPayload(notExistedNodeOperatorId, 40)
-      await assert.reverts(app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting }), 'OUT_OF_RANGE')
+      await assert.reverts(
+        app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: stakingRouter }),
+        'OUT_OF_RANGE'
+      )
     })
 
     it('reverts with "APP_AUTH_FAILED" error when called by sender without STAKING_ROUTER_ROLE', async () => {
@@ -1083,7 +1116,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         false
       )
       const { operatorIds, keysCounts } = prepIdsCountsPayload(firstNodeOperatorId, exitedValidatorsKeysCountBefore)
-      await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
+      await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: stakingRouter })
       const { stoppedValidators: exitedValidatorsKeysCountAfter } = await app.getNodeOperator(
         firstNodeOperatorId,
         false
@@ -1097,7 +1130,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         false
       )
       const { operatorIds, keysCounts } = prepIdsCountsPayload(firstNodeOperatorId, exitedValidatorsKeysCountBefore)
-      const receipt = await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
+      const receipt = await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: stakingRouter })
       assert.notEmits(receipt, 'ExitedSigningKeysCountChanged')
     })
 
@@ -1106,7 +1139,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const nodeOperator = await app.getNodeOperator(firstNodeOperatorId, false)
       assert(newExitedValidatorsCount > nodeOperator.usedSigningKeys.toNumber())
       const { operatorIds, keysCounts } = prepIdsCountsPayload(firstNodeOperatorId, newExitedValidatorsCount)
-      await assert.reverts(app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting }), 'OUT_OF_RANGE')
+      await assert.reverts(
+        app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: stakingRouter }),
+        'OUT_OF_RANGE'
+      )
     })
 
     it('reverts with "EXITED_VALIDATORS_COUNT_DECREASED" error when new exitedValidatorsKeysCount less then current one', async () => {
@@ -1115,7 +1151,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const newExitedValidatorsKeysCount = nodeOperator.stoppedValidators.toNumber() - 1
       const { operatorIds, keysCounts } = prepIdsCountsPayload(firstNodeOperatorId, newExitedValidatorsKeysCount)
       await assert.reverts(
-        app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting }),
+        app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: stakingRouter }),
         'EXITED_VALIDATORS_COUNT_DECREASED'
       )
     })
@@ -1128,7 +1164,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       )
       assert.notEquals(exitedValidatorsKeysCountBefore, newExitedValidatorsCount)
       const { operatorIds, keysCounts } = prepIdsCountsPayload(secondNodeOperatorId, newExitedValidatorsCount)
-      await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
+      await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: stakingRouter })
       const { stoppedValidators: exitedValidatorsKeysCountAfter } = await app.getNodeOperator(
         secondNodeOperatorId,
         false
@@ -1146,7 +1182,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         app.testing_getTotalSigningKeysStats(),
       ])
       const { operatorIds, keysCounts } = prepIdsCountsPayload(firstNodeOperatorId, newExitedValidatorsCount)
-      await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
+      await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: stakingRouter })
       const exitedSigningKeysCountIncrement = newExitedValidatorsCount - exitedValidatorsKeysCountBefore.toNumber()
       const { exitedSigningKeysCount: exitedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       assert.equals(
@@ -1158,7 +1194,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('emits ExitedSigningKeysCountChanged event with correct params', async () => {
       const newExitedValidatorsCount = 4
       const { operatorIds, keysCounts } = prepIdsCountsPayload(firstNodeOperatorId, newExitedValidatorsCount)
-      const receipt = await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
+      const receipt = await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: stakingRouter })
       assert.emits(receipt, 'ExitedSigningKeysCountChanged', {
         nodeOperatorId: firstNodeOperatorId,
         exitedValidatorsCount: newExitedValidatorsCount,
@@ -1172,7 +1208,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         true
       )
       const { operatorIds, keysCounts } = prepIdsCountsPayload(secondNodeOperatorId, newExitedValidatorsCount)
-      await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
+      await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: stakingRouter })
       const { stakingLimit: secondNodeOperatorStakingLimitAfter } = await app.getNodeOperator(firstNodeOperatorId, true)
       assert.equals(secondNodeOperatorStakingLimitAfter, secondNodeOperatorStakingLimitBefore)
     })
@@ -1186,20 +1222,20 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const stuckValidatorsCount = 2
 
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[0], exitedSigningKeysCount }, { from: voting })
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: voting })
+      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[0], exitedSigningKeysCount }, { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: admin })
     })
 
     it('decreases the stuck validators count when new value is less then previous one', async () => {
       const newStuckValidatorsCount = 1
       await app.unsafeUpdateValidatorsCount(firstNodeOperatorId, exitedSigningKeysCount, stuckValidatorsCount, {
-        from: voting,
+        from: stakingRouter,
       })
 
       const { stuckValidatorsCount: stuckValidatorsCountBefore } = await app.getNodeOperatorSummary(firstNodeOperatorId)
       assert(newStuckValidatorsCount < stuckValidatorsCountBefore)
       await app.unsafeUpdateValidatorsCount(firstNodeOperatorId, exitedSigningKeysCount, newStuckValidatorsCount, {
-        from: voting,
+        from: stakingRouter,
       })
       const { stuckValidatorsCount: stuckValidatorsCountAfter } = await app.getNodeOperatorSummary(firstNodeOperatorId)
       assert.equals(stuckValidatorsCountAfter, newStuckValidatorsCount)
@@ -1212,7 +1248,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       )
       assert(newStuckValidatorsCount > stuckValidatorsCountBefore)
       await app.unsafeUpdateValidatorsCount(secondNodeOperatorId, exitedSigningKeysCount, newStuckValidatorsCount, {
-        from: voting,
+        from: stakingRouter,
       })
       const { stuckValidatorsCount: stuckValidatorsCountAfter } = await app.getNodeOperatorSummary(secondNodeOperatorId)
       assert.equals(stuckValidatorsCountAfter, newStuckValidatorsCount)
@@ -1224,7 +1260,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         firstNodeOperatorId,
         exitedSigningKeysCount,
         newStuckValidatorsCount,
-        { from: voting }
+        { from: stakingRouter }
       )
       assert.emits(receipt, 'StuckPenaltyStateChanged', {
         nodeOperatorId: firstNodeOperatorId,
@@ -1235,7 +1271,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it("doesn't change the state when new stuck validators value is equal to the previous one", async () => {
       const { stuckValidatorsCount: stuckValidatorsCountBefore } = await app.getNodeOperatorSummary(firstNodeOperatorId)
       await app.unsafeUpdateValidatorsCount(firstNodeOperatorId, exitedSigningKeysCount, stuckValidatorsCountBefore, {
-        from: voting,
+        from: stakingRouter,
       })
 
       const { stuckValidatorsCount: stuckValidatorsCountAfter } = await app.getNodeOperatorSummary(firstNodeOperatorId)
@@ -1249,7 +1285,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         exitedSigningKeysCount,
         stuckValidatorsCountBefore,
         {
-          from: voting,
+          from: stakingRouter,
         }
       )
       assert.notEmits(receipt, 'StuckPenaltyStateChanged')
@@ -1261,7 +1297,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         firstNodeOperatorId
       )
       await app.unsafeUpdateValidatorsCount(secondNodeOperatorId, exitedSigningKeysCount, newStuckValidatorsCount, {
-        from: voting,
+        from: stakingRouter,
       })
       const { stuckValidatorsCount: secondNodeOperatorStuckValidatorsCountAfter } = await app.getNodeOperatorSummary(
         firstNodeOperatorId
@@ -1275,17 +1311,17 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert(newStuckValidatorsCount > stuckValidatorsCount)
       await assert.reverts(
         app.unsafeUpdateValidatorsCount(firstNodeOperatorId, exitedSigningKeysCount, newStuckValidatorsCount, {
-          from: voting,
+          from: stakingRouter,
         }),
         'OUT_OF_RANGE'
       )
     })
 
     it('reverts with "OUT_OF_RANGE" error when called on non existent validator', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'STAKING_ROUTER_ROLE')
+      const hasPermission = await dao.hasPermission(stakingRouter, app, 'STAKING_ROUTER_ROLE')
       assert.isTrue(hasPermission)
       await assert.reverts(
-        app.unsafeUpdateValidatorsCount(notExistedNodeOperatorId, 40, stuckValidatorsCount, { from: voting }),
+        app.unsafeUpdateValidatorsCount(notExistedNodeOperatorId, 40, stuckValidatorsCount, { from: stakingRouter }),
         'OUT_OF_RANGE'
       )
     })
@@ -1308,7 +1344,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         firstNodeOperatorId,
         exitedValidatorsKeysCountBefore,
         stuckValidatorsCount,
-        { from: voting }
+        { from: stakingRouter }
       )
       const { stoppedValidators: exitedValidatorsKeysCountAfter } = await app.getNodeOperator(
         firstNodeOperatorId,
@@ -1327,7 +1363,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         exitedValidatorsKeysCountBefore,
         stuckValidatorsCount,
         {
-          from: voting,
+          from: stakingRouter,
         }
       )
       assert.notEmits(receipt, 'ExitedSigningKeysCountChanged')
@@ -1339,7 +1375,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert(newExitedValidatorsCount > nodeOperator.usedSigningKeys.toNumber())
       await assert.reverts(
         app.unsafeUpdateValidatorsCount(firstNodeOperatorId, newExitedValidatorsCount, stuckValidatorsCount, {
-          from: voting,
+          from: stakingRouter,
         }),
         'OUT_OF_RANGE'
       )
@@ -1354,7 +1390,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       )
       assert(newExitedValidatorsCount < exitedValidatorsKeysCountBefore.toNumber())
       await app.unsafeUpdateValidatorsCount(firstNodeOperatorId, newExitedValidatorsCount, newStuckValidatorsCount, {
-        from: voting,
+        from: stakingRouter,
       })
       const { stoppedValidators: exitedValidatorsKeysCountAfter } = await app.getNodeOperator(
         firstNodeOperatorId,
@@ -1371,7 +1407,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       )
       assert(newExitedValidatorsCount > exitedValidatorsKeysCountBefore.toNumber())
       await app.unsafeUpdateValidatorsCount(secondNodeOperatorId, newExitedValidatorsCount, stuckValidatorsCount, {
-        from: voting,
+        from: stakingRouter,
       })
       const { stoppedValidators: exitedValidatorsKeysCountAfter } = await app.getNodeOperator(
         secondNodeOperatorId,
@@ -1388,7 +1424,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       ] = await Promise.all([app.getNodeOperator(firstNodeOperatorId, false), app.testing_getTotalSigningKeysStats()])
       assert(newExitedValidatorsCount < exitedValidatorsKeysCountBefore.toNumber())
       await app.unsafeUpdateValidatorsCount(firstNodeOperatorId, newExitedValidatorsCount, stuckValidatorsCount, {
-        from: voting,
+        from: stakingRouter,
       })
       const exitedSigningKeysCountIncrement = exitedValidatorsKeysCountBefore.toNumber() - newExitedValidatorsCount
       const { exitedSigningKeysCount: exitedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
@@ -1407,7 +1443,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       ] = await Promise.all([app.getNodeOperator(firstNodeOperatorId, false), app.testing_getTotalSigningKeysStats()])
       assert(newExitedValidatorsCount > exitedValidatorsKeysCountBefore.toNumber())
       await app.unsafeUpdateValidatorsCount(firstNodeOperatorId, newExitedValidatorsCount, newStuckValidatorsCount, {
-        from: voting,
+        from: stakingRouter,
       })
       const exitedSigningKeysCountIncrement = newExitedValidatorsCount - exitedValidatorsKeysCountBefore.toNumber()
       const { exitedSigningKeysCount: exitedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
@@ -1423,7 +1459,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         secondNodeOperatorId,
         newExitedValidatorsCount,
         stuckValidatorsCount,
-        { from: voting }
+        { from: stakingRouter }
       )
       assert.emits(receipt, 'ExitedSigningKeysCountChanged', {
         nodeOperatorId: secondNodeOperatorId,
@@ -1438,17 +1474,81 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         true
       )
       await app.unsafeUpdateValidatorsCount(secondNodeOperatorId, newExitedValidatorsCount, stuckValidatorsCount, {
-        from: voting,
+        from: stakingRouter,
       })
       const { stakingLimit: secondNodeOperatorStakingLimitAfter } = await app.getNodeOperator(firstNodeOperatorId, true)
       assert.equals(secondNodeOperatorStakingLimitAfter, secondNodeOperatorStakingLimitBefore)
     })
   })
 
+  describe('updateTargetValidatorsLimits()', () => {
+    const firstNodeOperatorId = 0
+    const secondNodeOperatorId = 1
+
+    beforeEach(async () => {
+      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[firstNodeOperatorId] }, { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[secondNodeOperatorId], { from: admin })
+    })
+
+    it('reverts with "APP_AUTH_FAILED" error when called by sender without STAKING_ROUTER_ROLE', async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'STAKING_ROUTER_ROLE')
+      assert.isFalse(hasPermission)
+      const isTargetLimitSet = false
+      const targetLimit = 0
+      await assert.reverts(
+        app.updateTargetValidatorsLimits(firstNodeOperatorId, isTargetLimitSet, targetLimit, { from: nobody }),
+        'APP_AUTH_FAILED'
+      )
+    })
+
+    it('reverts with "OUT_OF_RANGE" error when called with targetLimit > UINT64_MAX', async () => {
+      const isTargetLimitSet = true
+      const targetLimit = toBN('0x10000000000000000')
+      await assert.reverts(
+        app.updateTargetValidatorsLimits(firstNodeOperatorId, isTargetLimitSet, targetLimit, { from: stakingRouter }),
+        'OUT_OF_RANGE'
+      )
+    })
+
+    it('updates node operator target limit if called by sender with STAKING_ROUTER_ROLE', async () => {
+      const hasPermission = await dao.hasPermission(stakingRouter, app, 'STAKING_ROUTER_ROLE')
+      assert.isTrue(hasPermission)
+
+      const targetLimit = 10
+      const isTargetLimitSet = true
+      await app.updateTargetValidatorsLimits(firstNodeOperatorId, isTargetLimitSet, targetLimit, {
+        from: stakingRouter,
+      })
+
+      const keysStatTotal = await app.getStakingModuleSummary()
+      const expectedExitedValidatorsCount =
+        NODE_OPERATORS[firstNodeOperatorId].exitedSigningKeysCount +
+        NODE_OPERATORS[secondNodeOperatorId].exitedSigningKeysCount
+      assert.equals(keysStatTotal.totalExitedValidators, expectedExitedValidatorsCount)
+
+      const expectedDepositedValidatorsCount =
+        NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount +
+        NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount
+      assert.equals(keysStatTotal.totalDepositedValidators, expectedDepositedValidatorsCount)
+
+      const firstNodeOperatorDepositableValidators =
+        NODE_OPERATORS[firstNodeOperatorId].vettedSigningKeysCount -
+        NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount
+
+      const secondNodeOperatorDepositableValidators =
+        NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount -
+        NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount
+
+      const expectedDepositableValidatorsCount =
+        Math.min(targetLimit, firstNodeOperatorDepositableValidators) + secondNodeOperatorDepositableValidators
+      assert.equals(keysStatTotal.depositableValidatorsCount, expectedDepositableValidatorsCount)
+    })
+  })
+
   describe('onWithdrawalCredentialsChanged()', () => {
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: voting })
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: voting })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: admin })
       // node operator without unused keys
       await nodeOperators.addNodeOperator(
         app,
@@ -1457,19 +1557,19 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
           vettedSigningKeysCount: NODE_OPERATORS[2].totalSigningKeysCount,
           depositedSigningKeysCount: NODE_OPERATORS[2].totalSigningKeysCount,
         },
-        { from: voting }
+        { from: admin }
       )
     })
 
-    it('reverts with "APP_AUTH_FAILED" error when called by sender without MANAGE_NODE_OPERATOR_ROLE role', async () => {
-      const hasPermission = await dao.hasPermission(nobody, app, 'MANAGE_NODE_OPERATOR_ROLE')
+    it('reverts with "APP_AUTH_FAILED" error when called by sender without STAKING_ROUTER_ROLE role', async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'STAKING_ROUTER_ROLE')
       assert.isFalse(hasPermission)
-      await assert.reverts(app.onWithdrawalCredentialsChanged(), 'APP_AUTH_FAILED')
+      await assert.reverts(app.onWithdrawalCredentialsChanged({ from: nobody }), 'APP_AUTH_FAILED')
     })
 
     it('sets totalSigningKeysCount and vettedSigningKeysCount equal to depositedSigningKeys for all node operators', async () => {
       const allNodeOperatorsBefore = await nodeOperators.getAllNodeOperators(app)
-      await app.onWithdrawalCredentialsChanged({ from: voting })
+      await app.onWithdrawalCredentialsChanged({ from: stakingRouter })
       const allNodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
       for (let i = 0; i < allNodeOperatorsBefore.length; ++i) {
         const nodeOperatorBefore = allNodeOperatorsBefore[i]
@@ -1481,7 +1581,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('emits TotalSigningKeysCountChanged & VettedSigningKeysCountChanged events for node operator only if it had unused keys', async () => {
       const allNodeOperatorsBefore = await nodeOperators.getAllNodeOperators(app)
-      const receipt = await app.onWithdrawalCredentialsChanged({ from: voting })
+      const receipt = await app.onWithdrawalCredentialsChanged({ from: stakingRouter })
       const allNodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
       for (let i = 0; i < allNodeOperatorsBefore.length; ++i) {
         const nodeOperatorBefore = allNodeOperatorsBefore[i]
@@ -1504,7 +1604,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('emits NodeOperatorTotalKeysTrimmed event for node operator only if it had unused keys', async () => {
       const allNodeOperatorsBefore = await nodeOperators.getAllNodeOperators(app)
-      const receipt = await app.onWithdrawalCredentialsChanged({ from: voting })
+      const receipt = await app.onWithdrawalCredentialsChanged({ from: stakingRouter })
       const allNodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
       for (let i = 0; i < allNodeOperatorsBefore.length; ++i) {
         const nodeOperatorBefore = allNodeOperatorsBefore[i]
@@ -1521,20 +1621,20 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       }
     })
 
-    it('sets total vetted signing keys count & total signing keys count values to deposited signing keys count', async () => {
+    it('sets total max validators count & total validators count values to deposited validators count', async () => {
       const totalSigningKeysStatsBefore = await app.testing_getTotalSigningKeysStats()
       assert.notEquals(
-        totalSigningKeysStatsBefore.vettedSigningKeysCount,
+        totalSigningKeysStatsBefore.maxValidatorsCount,
         totalSigningKeysStatsBefore.depositedSigningKeysCount
       )
       assert.notEquals(
         totalSigningKeysStatsBefore.totalSigningKeysCount,
         totalSigningKeysStatsBefore.depositedSigningKeysCount
       )
-      await app.onWithdrawalCredentialsChanged({ from: voting })
+      await app.onWithdrawalCredentialsChanged({ from: stakingRouter })
       const totalSigningKeysStatsAfter = await app.testing_getTotalSigningKeysStats()
       assert.equals(
-        totalSigningKeysStatsAfter.vettedSigningKeysCount,
+        totalSigningKeysStatsAfter.maxValidatorsCount,
         totalSigningKeysStatsBefore.depositedSigningKeysCount
       )
       assert.equals(
@@ -1545,7 +1645,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('increases keysOpIndex & changes nonce', async () => {
       const [keysOpIndexBefore, nonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getNonce()])
-      await app.onWithdrawalCredentialsChanged({ from: voting })
+      await app.onWithdrawalCredentialsChanged({ from: stakingRouter })
       const [keysOpIndexAfter, nonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
       assert.notEquals(nonceAfter, nonceBefore)
@@ -1553,7 +1653,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('emits KeysOpIndexSet & NonceChanged', async () => {
       const keysOpIndexBefore = await app.getKeysOpIndex()
-      const receipt = await app.onWithdrawalCredentialsChanged({ from: voting })
+      const receipt = await app.onWithdrawalCredentialsChanged({ from: stakingRouter })
       const nonceAfter = await app.getNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
       assert.emits(receipt, 'NonceChanged', { nonce: nonceAfter })
@@ -1561,9 +1661,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it("doesn't change validators keys nonce if keys weren't invalidated", async () => {
       // invalidated all keys before the test to remove all unused keys of node operators
-      await app.onWithdrawalCredentialsChanged({ from: voting })
+      await app.onWithdrawalCredentialsChanged({ from: stakingRouter })
       // the second invalidation must not invalidate keys
-      const receipt = await app.onWithdrawalCredentialsChanged({ from: voting })
+      const receipt = await app.onWithdrawalCredentialsChanged({ from: stakingRouter })
       const nonceBefore = await app.getNonce()
       assert.notEmits(receipt, 'NodeOperatorTotalKeysTrimmed')
       const nonceAfter = await app.getNonce()
@@ -1571,12 +1671,102 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
   })
 
+  describe('invalidateReadyToDepositKeysRange()', () => {
+    beforeEach(async () => {
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: admin })
+      // node operator without unused keys
+      await nodeOperators.addNodeOperator(
+        app,
+        {
+          ...NODE_OPERATORS[2],
+          vettedSigningKeysCount: NODE_OPERATORS[2].totalSigningKeysCount,
+          depositedSigningKeysCount: NODE_OPERATORS[2].totalSigningKeysCount,
+        },
+        { from: admin }
+      )
+    })
+
+    it('reverts with "APP_AUTH_FAILED" error when called by sender without MANAGE_NODE_OPERATOR_ROLE role', async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'MANAGE_NODE_OPERATOR_ROLE')
+      assert.isFalse(hasPermission)
+      const indexFrom = 0
+      const indexTo = NODE_OPERATORS.length - 1
+      await assert.reverts(
+        app.invalidateReadyToDepositKeysRange(indexFrom, indexTo, { from: nobody }),
+        'APP_AUTH_FAILED'
+      )
+    })
+
+    it('reverts with "OUT_OF_RANGE" error when called with indexFrom > indexTo', async () => {
+      const indexFrom = NODE_OPERATORS.length - 1
+      const indexTo = 0
+      await assert.reverts(
+        app.invalidateReadyToDepositKeysRange(indexFrom, indexTo, { from: nodeOperatorsManager }),
+        'OUT_OF_RANGE'
+      )
+    })
+
+    it('reverts with "OUT_OF_RANGE" error when called with indexTo >= node operators count', async () => {
+      const indexFrom = 0
+      const indexTo = wei.int(await app.getNodeOperatorsCount())
+      await assert.reverts(
+        app.invalidateReadyToDepositKeysRange(indexFrom, wei.str(indexTo), { from: nodeOperatorsManager }),
+        'OUT_OF_RANGE'
+      )
+      await assert.reverts(
+        app.invalidateReadyToDepositKeysRange(indexFrom, wei.str(indexTo + 1n), { from: nodeOperatorsManager }),
+        'OUT_OF_RANGE'
+      )
+    })
+
+    it('allows invalidate keys for one node operator', async () => {
+      const nodeOperatorIndex = 1
+      const allNodeOperatorsBefore = await nodeOperators.getAllNodeOperators(app)
+      await app.invalidateReadyToDepositKeysRange(nodeOperatorIndex, nodeOperatorIndex, { from: nodeOperatorsManager })
+      const allNodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
+      const nodeOperatorBefore = allNodeOperatorsBefore[nodeOperatorIndex]
+      const nodeOperatorAfter = allNodeOperatorsAfter[nodeOperatorIndex]
+      assert.equals(nodeOperatorAfter.stakingLimit, nodeOperatorBefore.usedSigningKeys)
+      assert.equals(nodeOperatorAfter.totalSigningKeys, nodeOperatorBefore.usedSigningKeys)
+    })
+
+    it('sets totalSigningKeysCount and vettedSigningKeysCount equal to depositedSigningKeys for each node operator in range', async () => {
+      const indexFrom = 1
+      const indexTo = NODE_OPERATORS.length - 1
+      const allNodeOperatorsBefore = await nodeOperators.getAllNodeOperators(app)
+      await app.invalidateReadyToDepositKeysRange(indexFrom, indexTo, { from: nodeOperatorsManager })
+      const allNodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
+      for (let i = indexFrom; i <= indexTo; ++i) {
+        const nodeOperatorBefore = allNodeOperatorsBefore[i]
+        const nodeOperatorAfter = allNodeOperatorsAfter[i]
+        assert.equals(nodeOperatorAfter.stakingLimit, nodeOperatorBefore.usedSigningKeys)
+        assert.equals(nodeOperatorAfter.totalSigningKeys, nodeOperatorBefore.usedSigningKeys)
+      }
+    })
+
+    it("doesn't modify totalSigningKeysCount and vettedSigningKeysCount for all node operators not in range", async () => {
+      const indexFrom = 2
+      const indexTo = NODE_OPERATORS.length - 1
+      const allNodeOperatorsBefore = await nodeOperators.getAllNodeOperators(app)
+      await app.invalidateReadyToDepositKeysRange(indexFrom, indexTo, { from: nodeOperatorsManager })
+      const allNodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
+      for (let i = 0; i < indexTo; ++i) {
+        const nodeOperatorBefore = allNodeOperatorsBefore[i]
+        const nodeOperatorAfter = allNodeOperatorsAfter[i]
+        assert.equals(nodeOperatorAfter.stakingLimit, nodeOperatorBefore.stakingLimit)
+        assert.equals(nodeOperatorAfter.usedSigningKeys, nodeOperatorBefore.usedSigningKeys)
+        assert.equals(nodeOperatorAfter.totalSigningKeys, nodeOperatorBefore.totalSigningKeys)
+      }
+    })
+  })
+
   describe('getSigningKeysAllocationData() with target limit', async () => {
     const firstNodeOperatorId = 0
     const secondNodeOperatorId = 1
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[0], vettedSigningKeysCount: 8 }, { from: voting })
-      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[1], depositedSigningKeysCount: 5 }, { from: voting })
+      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[0], vettedSigningKeysCount: 8 }, { from: admin })
+      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[1], depositedSigningKeysCount: 5 }, { from: admin })
     })
 
     it('_getCorrectedNodeOperator() - deposited < exited+target < vetted', async () => {
@@ -1586,7 +1776,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(+firstNodeOperatorKeysStats.depositedSigningKeysCount, 5)
       assert.equals(+firstNodeOperatorKeysStats.exitedSigningKeysCount, 1)
 
-      await app.updateTargetValidatorsLimits(firstNodeOperatorId, true, 6, { from: voting })
+      await app.updateTargetValidatorsLimits(firstNodeOperatorId, true, 6, { from: stakingRouter })
 
       firstNodeOperatorKeysStats = await app.testing_getNodeOperator(firstNodeOperatorId)
       assert.equals(+firstNodeOperatorKeysStats.maxSigningKeysCount, 7)
@@ -1601,7 +1791,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(+firstNodeOperatorKeysStats.depositedSigningKeysCount, 5)
       assert.equals(+firstNodeOperatorKeysStats.exitedSigningKeysCount, 1)
 
-      await app.updateTargetValidatorsLimits(firstNodeOperatorId, true, 1000, { from: voting })
+      await app.updateTargetValidatorsLimits(firstNodeOperatorId, true, 1000, { from: stakingRouter })
 
       firstNodeOperatorKeysStats = await app.testing_getNodeOperator(firstNodeOperatorId)
       assert.equals(+firstNodeOperatorKeysStats.maxSigningKeysCount, 8)
@@ -1616,7 +1806,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(+firstNodeOperatorKeysStats.depositedSigningKeysCount, 5)
       assert.equals(+firstNodeOperatorKeysStats.exitedSigningKeysCount, 1)
 
-      await app.updateTargetValidatorsLimits(firstNodeOperatorId, true, 4, { from: voting })
+      await app.updateTargetValidatorsLimits(firstNodeOperatorId, true, 4, { from: stakingRouter })
 
       firstNodeOperatorKeysStats = await app.testing_getNodeOperator(firstNodeOperatorId)
       assert.equals(
@@ -1627,22 +1817,37 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       assert.equals(+firstNodeOperatorKeysStats.exitedSigningKeysCount, 1)
     })
 
-    it.skip('respects staking limit', async () => {
+    it('allow set large targetLimit (=UINT64_MAX)', async () => {
+      let firstNodeOperatorKeysStats = await app.testing_getNodeOperator(firstNodeOperatorId)
+      assert.equals(+firstNodeOperatorKeysStats.maxSigningKeysCount, 8)
+
+      const targetLimit = toBN('0xFFFFFFFFFFFFFFFF') // UINT64_MAX
+      await app.updateTargetValidatorsLimits(firstNodeOperatorId, true, targetLimit, { from: stakingRouter })
+
+      firstNodeOperatorKeysStats = await app.testing_getNodeOperator(firstNodeOperatorId)
+      assert.equals(+firstNodeOperatorKeysStats.maxSigningKeysCount, 8)
+    })
+
+    it('_getSigningKeysAllocationData respects staking limit', async () => {
       const [firstNodeOperatorKeysStats, secondNodeOperatorKeysStats] = await Promise.all([
         app.getNodeOperatorSummary(firstNodeOperatorId),
-        app.getValidatorsKeysStats(secondNodeOperatorId),
+        app.getNodeOperatorSummary(secondNodeOperatorId),
       ])
 
-      assert.isTrue(firstNodeOperatorKeysStats.readyToDepositValidatorsKeysCount.toNumber() > 0)
-      assert.isTrue(secondNodeOperatorKeysStats.readyToDepositValidatorsKeysCount.toNumber() > 0)
+      assert.isTrue(firstNodeOperatorKeysStats.depositableValidatorsCount.toNumber() > 0)
+      assert.isTrue(secondNodeOperatorKeysStats.depositableValidatorsCount.toNumber() > 0)
 
-      assert.equals(firstNodeOperatorKeysStats.exitedValidatorsCount, 1)
-      assert.equals(firstNodeOperatorKeysStats.activeValidatorsKeysCount, 4)
-      assert.equals(firstNodeOperatorKeysStats.readyToDepositValidatorsKeysCount, 3)
+      const firstNodeOperatorActiveKeysCount =
+        firstNodeOperatorKeysStats.totalDepositedValidators.toNumber() -
+        firstNodeOperatorKeysStats.totalExitedValidators.toNumber()
+      assert.equals(firstNodeOperatorActiveKeysCount, 4)
+      assert.equals(firstNodeOperatorKeysStats.depositableValidatorsCount, 3)
 
-      assert.equals(secondNodeOperatorKeysStats.exitedValidatorsCount, 0)
-      assert.equals(secondNodeOperatorKeysStats.activeValidatorsKeysCount, 5)
-      assert.equals(secondNodeOperatorKeysStats.readyToDepositValidatorsKeysCount, 5)
+      const secondNodeOperatorActiveKeysCount =
+        secondNodeOperatorKeysStats.totalDepositedValidators.toNumber() -
+        secondNodeOperatorKeysStats.totalExitedValidators.toNumber()
+      assert.equals(secondNodeOperatorActiveKeysCount, 5)
+      assert.equals(secondNodeOperatorKeysStats.depositableValidatorsCount, 5)
 
       const keysToAllocate = 7
       const { allocatedKeysCount, nodeOperatorIds, activeKeyCountsAfterAllocation } =
@@ -1655,15 +1860,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
       assert.equals(activeKeyCountsAfterAllocation.length, 2)
       // the first node operator has to receive 3 deposits cause reached limit
-      assert.equals(
-        activeKeyCountsAfterAllocation[0],
-        firstNodeOperatorKeysStats.activeValidatorsKeysCount.toNumber() + 3
-      )
+      assert.equals(activeKeyCountsAfterAllocation[0], firstNodeOperatorActiveKeysCount + 3)
       // the second receives 4 deposits
-      assert.equals(
-        activeKeyCountsAfterAllocation[1],
-        secondNodeOperatorKeysStats.activeValidatorsKeysCount.toNumber() + 4
-      )
+      assert.equals(activeKeyCountsAfterAllocation[1], secondNodeOperatorActiveKeysCount + 4)
     })
   })
 
@@ -1671,8 +1870,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const firstNodeOperatorId = 0
     const secondNodeOperatorId = 1
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[0], vettedSigningKeysCount: 8 }, { from: voting })
-      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[1], depositedSigningKeysCount: 5 }, { from: voting })
+      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[0], vettedSigningKeysCount: 8 }, { from: admin })
+      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[1], depositedSigningKeysCount: 5 }, { from: admin })
     })
 
     it('returns empty result when registry has no node operators', async () => {
@@ -1689,8 +1888,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('returns empty result when registry has no active node operators', async () => {
       // deactivate node operators before testing
-      await app.deactivateNodeOperator(firstNodeOperatorId, { from: voting })
-      await app.deactivateNodeOperator(secondNodeOperatorId, { from: voting })
+      await app.deactivateNodeOperator(firstNodeOperatorId, { from: nodeOperatorsManager })
+      await app.deactivateNodeOperator(secondNodeOperatorId, { from: nodeOperatorsManager })
       const [firstNodeOperator, secondNodeOperator] = await Promise.all([
         app.getNodeOperator(firstNodeOperatorId, false),
         app.getNodeOperator(secondNodeOperatorId, false),
@@ -1708,7 +1907,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('returns empty result when registry has no unused keys', async () => {
       // remove unused keys
-      await app.onWithdrawalCredentialsChanged({ from: voting })
+      await app.onWithdrawalCredentialsChanged({ from: stakingRouter })
       const [firstNodeOperator, secondNodeOperator] = await Promise.all([
         app.getNodeOperator(firstNodeOperatorId, false),
         app.getNodeOperator(secondNodeOperatorId, false),
@@ -1811,7 +2010,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it("doesn't allocates keys to deactivated node operators", async () => {
-      await app.deactivateNodeOperator(firstNodeOperatorId, { from: voting })
+      await app.deactivateNodeOperator(firstNodeOperatorId, { from: nodeOperatorsManager })
 
       const [firstNodeOperatorReport, secondNodeOperatorReport] = await Promise.all([
         app.getNodeOperatorSummary(firstNodeOperatorId),
@@ -1893,8 +2092,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const secondNodeOperatorId = 1
 
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: voting })
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: voting })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: admin })
     })
 
     it('reverts with error "APP_AUTH_FAILED" when called by sender without STAKING_ROUTER_ROLE', async () => {
@@ -1914,17 +2113,17 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('reverts with error "INVALID_ALLOCATED_KEYS_COUNT" when module has not enough keys', async () => {
       await app.testing_resetRegistry()
 
-      await app.addNodeOperator('fo o', ADDRESS_1, { from: voting })
-      await app.addNodeOperator(' bar', ADDRESS_2, { from: voting })
+      await app.addNodeOperator('fo o', ADDRESS_1, { from: nodeOperatorsManager })
+      await app.addNodeOperator(' bar', ADDRESS_2, { from: nodeOperatorsManager })
 
       const firstOperatorKeys = new signingKeys.FakeValidatorKeys(3)
       const secondOperatorKeys = new signingKeys.FakeValidatorKeys(3)
 
-      await app.addSigningKeys(0, 3, ...firstOperatorKeys.slice(), { from: voting })
-      await app.addSigningKeys(1, 3, ...secondOperatorKeys.slice(), { from: voting })
+      await app.addSigningKeys(0, 3, ...firstOperatorKeys.slice(), { from: signingKeysManager })
+      await app.addSigningKeys(1, 3, ...secondOperatorKeys.slice(), { from: signingKeysManager })
 
-      await app.setNodeOperatorStakingLimit(0, 10, { from: voting })
-      await app.setNodeOperatorStakingLimit(1, 10, { from: voting })
+      await app.setNodeOperatorStakingLimit(0, 10, { from: limitsManager })
+      await app.setNodeOperatorStakingLimit(1, 10, { from: limitsManager })
 
       const stakingModuleSummary = await app.getStakingModuleSummary()
       assert.equals(stakingModuleSummary.depositableValidatorsCount, 6)
@@ -1937,17 +2136,17 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       // clear the registry to remove all unused keys with node operators
       await app.testing_resetRegistry()
 
-      await app.addNodeOperator('fo o', ADDRESS_1, { from: voting })
-      await app.addNodeOperator(' bar', ADDRESS_2, { from: voting })
+      await app.addNodeOperator('fo o', ADDRESS_1, { from: nodeOperatorsManager })
+      await app.addNodeOperator(' bar', ADDRESS_2, { from: nodeOperatorsManager })
 
       const firstOperatorKeys = new signingKeys.FakeValidatorKeys(3)
       const secondOperatorKeys = new signingKeys.FakeValidatorKeys(3)
 
-      await app.addSigningKeys(0, 3, ...firstOperatorKeys.slice(), { from: voting })
-      await app.addSigningKeys(1, 3, ...secondOperatorKeys.slice(), { from: voting })
+      await app.addSigningKeys(0, 3, ...firstOperatorKeys.slice(), { from: signingKeysManager })
+      await app.addSigningKeys(1, 3, ...secondOperatorKeys.slice(), { from: signingKeysManager })
 
-      await app.setNodeOperatorStakingLimit(0, 10, { from: voting })
-      await app.setNodeOperatorStakingLimit(1, 10, { from: voting })
+      await app.setNodeOperatorStakingLimit(0, 10, { from: limitsManager })
+      await app.setNodeOperatorStakingLimit(1, 10, { from: limitsManager })
 
       let stakingModuleSummary = await app.getStakingModuleSummary()
       assert.equals(stakingModuleSummary.depositableValidatorsCount, 6)
@@ -2066,14 +2265,17 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const secondNodeOperatorId = 1
     const notExistedNodeOperatorId = 2
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: voting })
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: voting })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: admin })
     })
 
     it('reverts with "OUT_OF_RANGE" error when called on non existent validator', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'STAKING_ROUTER_ROLE')
+      const hasPermission = await dao.hasPermission(stakingRouter, app, 'STAKING_ROUTER_ROLE')
       assert.isTrue(hasPermission)
-      await assert.reverts(app.getNodeOperator(notExistedNodeOperatorId, false, { from: voting }), 'OUT_OF_RANGE')
+      await assert.reverts(
+        app.getNodeOperator(notExistedNodeOperatorId, false, { from: stakingRouter }),
+        'OUT_OF_RANGE'
+      )
     })
 
     it('returns correct node operator info', async () => {
@@ -2100,9 +2302,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const secondNodeOperatorId = 1
 
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: voting })
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: voting })
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[2], { from: voting })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[2], { from: admin })
     })
 
     it('returns empty data when no node operators', async () => {
@@ -2115,8 +2317,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('returns empty data when all node operators are deactivated', async () => {
-      await app.deactivateNodeOperator(firstNodeOperatorId, { from: voting })
-      await app.deactivateNodeOperator(secondNodeOperatorId, { from: voting })
+      await app.deactivateNodeOperator(firstNodeOperatorId, { from: nodeOperatorsManager })
+      await app.deactivateNodeOperator(secondNodeOperatorId, { from: nodeOperatorsManager })
 
       const totalRewardsShare = web3.utils.toWei('10')
       const { recipients, shares } = await app.getRewardsDistribution(totalRewardsShare)
@@ -2132,7 +2334,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
           NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount,
         ]
       )
-      await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: voting })
+      await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: stakingRouter })
       const activeNodeOperators = await nodeOperators.filterNodeOperators(app, (nodeOperator) => nodeOperator.active)
       const totalRewardsShare = web3.utils.toWei('10')
       const { recipients, shares } = await app.getRewardsDistribution(totalRewardsShare)
@@ -2155,9 +2357,11 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         0n
       )
 
-      const perValidatorReward = totalRewardsShare / totalActiveNodeOperators
       const expectedRewardsDistribution = NODE_OPERATORS.filter((n) => n.isActive !== false).map((n) =>
-        n.isActive === false ? 0n : perValidatorReward * BigInt(n.depositedSigningKeysCount - n.exitedSigningKeysCount)
+        n.isActive === false
+          ? 0n
+          : (totalRewardsShare * BigInt(n.depositedSigningKeysCount - n.exitedSigningKeysCount)) /
+            totalActiveNodeOperators
       )
       assert.equals(shares.length, expectedRewardsDistribution.length)
       for (let i = 0; i < shares.length; ++i) {
@@ -2174,8 +2378,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const nonExistentNodeOperatorId = 3
 
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, { name: '1', rewardAddress: ADDRESS_1 }, { from: voting })
-      await nodeOperators.addNodeOperator(app, { name: '2', rewardAddress: ADDRESS_2 }, { from: voting })
+      await nodeOperators.addNodeOperator(app, { name: '1', rewardAddress: ADDRESS_1 }, { from: admin })
+      await nodeOperators.addNodeOperator(app, { name: '2', rewardAddress: ADDRESS_2 }, { from: admin })
     })
 
     it('reverts with APP_AUTH_FAILED error when called by sender without MANAGE_SIGNING_KEYS role', async () => {
@@ -2192,7 +2396,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('reverts with OUT_OF_RANGE error when keys count > UINT64_MAX', async () => {
       const keysCount = toBN('0x10000000000000000')
       await assert.reverts(
-        app.addSigningKeys(secondNodeOperatorId, keysCount, '0x', '0x', { from: voting }),
+        app.addSigningKeys(secondNodeOperatorId, keysCount, '0x', '0x', { from: signingKeysManager }),
         'OUT_OF_RANGE'
       )
     })
@@ -2201,7 +2405,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keysCount = firstNodeOperatorKeys.count
       const [publicKeys, signatures] = firstNodeOperatorKeys.slice()
       await assert.reverts(
-        app.addSigningKeys(nonExistentNodeOperatorId, keysCount, publicKeys, signatures, { from: voting }),
+        app.addSigningKeys(nonExistentNodeOperatorId, keysCount, publicKeys, signatures, { from: signingKeysManager }),
         'OUT_OF_RANGE'
       )
     })
@@ -2209,7 +2413,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('reverts with "OUT_OF_RANGE" error when keys count is 0', async () => {
       const keysCount = 0
       await assert.reverts(
-        app.addSigningKeys(firstNodeOperatorId, keysCount, '0x', '0x', { from: voting }),
+        app.addSigningKeys(firstNodeOperatorId, keysCount, '0x', '0x', { from: signingKeysManager }),
         'OUT_OF_RANGE'
       )
     })
@@ -2218,7 +2422,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keysCount = 2
       const [publicKeys, signatures] = secondNodeOperatorKeys.slice(0, keysCount)
       await assert.reverts(
-        app.addSigningKeys(firstNodeOperatorId, keysCount, publicKeys + 'deadbeaf', signatures, { from: voting }),
+        app.addSigningKeys(firstNodeOperatorId, keysCount, publicKeys + 'deadbeaf', signatures, {
+          from: signingKeysManager,
+        }),
         'LENGTH_MISMATCH'
       )
     })
@@ -2227,7 +2433,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keysCount = 2
       const [publicKeys, signatures] = secondNodeOperatorKeys.slice(0, keysCount)
       await assert.reverts(
-        app.addSigningKeys(firstNodeOperatorId, keysCount, publicKeys, signatures.slice(0, -2), { from: voting }),
+        app.addSigningKeys(firstNodeOperatorId, keysCount, publicKeys, signatures.slice(0, -2), {
+          from: signingKeysManager,
+        }),
         'LENGTH_MISMATCH'
       )
     })
@@ -2237,7 +2445,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const [publicKeys] = secondNodeOperatorKeys.slice(0, keysCount)
       const [, signatures] = secondNodeOperatorKeys.slice(0, keysCount + 1)
       await assert.reverts(
-        app.addSigningKeys(firstNodeOperatorId, keysCount, publicKeys, signatures.slice(0, -2), { from: voting }),
+        app.addSigningKeys(firstNodeOperatorId, keysCount, publicKeys, signatures.slice(0, -2), {
+          from: signingKeysManager,
+        }),
         'LENGTH_MISMATCH'
       )
     })
@@ -2246,7 +2456,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keysCount = 1
       const [, signature] = firstNodeOperatorKeys.get(0)
       await assert.reverts(
-        app.addSigningKeys(firstNodeOperatorId, keysCount, signingKeys.EMPTY_PUBLIC_KEY, signature, { from: voting }),
+        app.addSigningKeys(firstNodeOperatorId, keysCount, signingKeys.EMPTY_PUBLIC_KEY, signature, {
+          from: signingKeysManager,
+        }),
         'EMPTY_KEY'
       )
     })
@@ -2254,7 +2466,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('increases node operator total signing keys counter correctly', async () => {
       const { totalSigningKeys: totalSigningKeysCountBefore } = await app.getNodeOperator(firstNodeOperatorId, false)
       await app.addSigningKeys(firstNodeOperatorId, firstNodeOperatorKeys.count, ...firstNodeOperatorKeys.slice(), {
-        from: voting,
+        from: signingKeysManager,
       })
       const { totalSigningKeys: totalSigningKeysCountAfter } = await app.getNodeOperator(firstNodeOperatorId, false)
       assert.equals(
@@ -2266,7 +2478,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it("doesn't modify total signing keys counter of other node operators", async () => {
       const { totalSigningKeys: totalSigningKeysCountBefore } = await app.getNodeOperator(secondNodeOperatorId, false)
       await app.addSigningKeys(firstNodeOperatorId, firstNodeOperatorKeys.count, ...firstNodeOperatorKeys.slice(), {
-        from: voting,
+        from: signingKeysManager,
       })
       const { totalSigningKeys: totalSigningKeysCountAfter } = await app.getNodeOperator(secondNodeOperatorId, false)
       assert.equals(totalSigningKeysCountBefore, totalSigningKeysCountAfter)
@@ -2274,7 +2486,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('stores keys correctly for node operator without keys', async () => {
       await app.addSigningKeys(secondNodeOperatorId, secondNodeOperatorKeys.count, ...secondNodeOperatorKeys.slice(), {
-        from: voting,
+        from: signingKeysManager,
       })
       for (let i = 0; i < secondNodeOperatorKeys.count; ++i) {
         const { key, depositSignature } = await app.getSigningKey(secondNodeOperatorId, i)
@@ -2290,14 +2502,14 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         firstNodeOperatorId,
         initialKeysCount,
         ...firstNodeOperatorKeys.slice(0, initialKeysCount),
-        { from: voting }
+        { from: signingKeysManager }
       )
       await app.addSigningKeys(
         firstNodeOperatorId,
         firstNodeOperatorKeys.count - initialKeysCount,
         ...firstNodeOperatorKeys.slice(2),
         {
-          from: voting,
+          from: signingKeysManager,
         }
       )
       for (let i = initialKeysCount; i < firstNodeOperatorKeys.count; ++i) {
@@ -2310,10 +2522,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it("doesn't modify the keys of other node operators", async () => {
       await app.addSigningKeys(firstNodeOperatorId, firstNodeOperatorKeys.count, ...firstNodeOperatorKeys.slice(), {
-        from: voting,
+        from: signingKeysManager,
       })
       await app.addSigningKeys(secondNodeOperatorId, secondNodeOperatorKeys.count, ...secondNodeOperatorKeys.slice(), {
-        from: voting,
+        from: signingKeysManager,
       })
       for (let i = 0; i < firstNodeOperatorKeys.count; ++i) {
         const { key, depositSignature } = await app.getSigningKey(firstNodeOperatorId, i)
@@ -2325,11 +2537,11 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('increases global total signing keys counter correctly', async () => {
       await app.addSigningKeys(secondNodeOperatorId, secondNodeOperatorKeys.count, ...secondNodeOperatorKeys.slice(), {
-        from: voting,
+        from: signingKeysManager,
       })
       const { totalSigningKeysCount: totalSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
       await app.addSigningKeys(firstNodeOperatorId, firstNodeOperatorKeys.count, ...firstNodeOperatorKeys.slice(), {
-        from: voting,
+        from: signingKeysManager,
       })
       const { totalSigningKeysCount: totalSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       assert.equals(totalSigningKeysCountAfter, totalSigningKeysCountBefore.toNumber() + firstNodeOperatorKeys.count)
@@ -2338,7 +2550,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('increases keysOpIndex & changes nonce', async () => {
       const [keysOpIndexBefore, nonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getNonce()])
       await app.addSigningKeys(firstNodeOperatorId, firstNodeOperatorKeys.count, ...firstNodeOperatorKeys.slice(), {
-        from: voting,
+        from: signingKeysManager,
       })
       const [keysOpIndexAfter, nonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
@@ -2352,7 +2564,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         firstNodeOperatorKeys.count,
         ...firstNodeOperatorKeys.slice(),
         {
-          from: voting,
+          from: signingKeysManager,
         }
       )
       const nonceAfter = await app.getNonce()
@@ -2366,7 +2578,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         firstNodeOperatorKeys.count,
         ...firstNodeOperatorKeys.slice(),
         {
-          from: voting,
+          from: signingKeysManager,
         }
       )
       for (let i = 0; i < firstNodeOperatorKeys.count; ++i) {
@@ -2385,7 +2597,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         secondNodeOperatorKeys.count,
         ...secondNodeOperatorKeys.slice(),
         {
-          from: voting,
+          from: signingKeysManager,
         }
       )
       assert.emits(receipt, 'TotalSigningKeysCountChanged', {
@@ -2400,7 +2612,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const firstNodeOperatorKeys = new signingKeys.FakeValidatorKeys(1)
 
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, { name: '1', rewardAddress: user1 }, { from: voting })
+      await nodeOperators.addNodeOperator(app, { name: '1', rewardAddress: user1 }, { from: admin })
     })
 
     it('reverts with APP_AUTH_FAILED error when called not by reward address', async () => {
@@ -2451,15 +2663,18 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     beforeEach(async () => {
       await nodeOperators
-        .addNodeOperator(app, NODE_OPERATORS[0], { from: voting })
+        .addNodeOperator(app, NODE_OPERATORS[0], { from: admin })
         .then((r) => (firstNodeOperatorKeys = r.validatorKeys))
       await nodeOperators
-        .addNodeOperator(app, NODE_OPERATORS[1], { from: voting })
+        .addNodeOperator(app, NODE_OPERATORS[1], { from: admin })
         .then((r) => (secondNodeOperatorKeys = r.validatorKeys))
     })
 
     it('reverts with "OUT_OF_RANGE" error when called on non existent validator', async () => {
-      await assert.reverts(app.removeSigningKey(nonExistentNodeOperatorId, 0, { from: voting }), 'OUT_OF_RANGE')
+      await assert.reverts(
+        app.removeSigningKey(nonExistentNodeOperatorId, 0, { from: signingKeysManager }),
+        'OUT_OF_RANGE'
+      )
     })
 
     it('reverts with APP_AUTH_FAILED error when called by sender without MANAGE_SIGNING_KEYS role', async () => {
@@ -2471,25 +2686,34 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('reverts with OUT_OF_RANGE error when index greater than UINT64_MAX', async () => {
       const keyIndex = toBN('0x10000000000000000')
-      await assert.reverts(app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: voting }), 'OUT_OF_RANGE')
+      await assert.reverts(
+        app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: signingKeysManager }),
+        'OUT_OF_RANGE'
+      )
     })
 
     it('reverts with OUT_OF_RANGE error when index is greater than total signing keys count', async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount
-      await assert.reverts(app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: voting }), 'OUT_OF_RANGE')
+      await assert.reverts(
+        app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: signingKeysManager }),
+        'OUT_OF_RANGE'
+      )
     })
 
     it('reverts with OUT_OF_RANGE error when key with passed index was deposited', async () => {
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount - 1
       assert(keyIndex >= 0)
-      await assert.reverts(app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: voting }), 'OUT_OF_RANGE')
+      await assert.reverts(
+        app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: signingKeysManager }),
+        'OUT_OF_RANGE'
+      )
     })
 
     it('decreases total signing keys counter for node operator', async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount
       assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
       const { totalSigningKeys: totalSigningKeysBefore } = await app.getNodeOperator(secondNodeOperatorId, false)
-      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: voting })
+      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: signingKeysManager })
       const { totalSigningKeys: totalSigningKeysAfter } = await app.getNodeOperator(secondNodeOperatorId, false)
       assert.equals(totalSigningKeysAfter.toNumber(), totalSigningKeysBefore.toNumber() - 1)
     })
@@ -2498,7 +2722,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount + 1
       assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
       const { totalSigningKeysCount: totalSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
-      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: voting })
+      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: signingKeysManager })
       const { totalSigningKeysCount: totalSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       assert.equals(totalSigningKeysCountAfter.toNumber(), totalSigningKeysCountBefore.toNumber() - 1)
     })
@@ -2507,7 +2731,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].vettedSigningKeysCount + 1
       assert.isTrue(keyIndex <= NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount)
       const { stakingLimit: stakingLimitBefore } = await app.getNodeOperator(firstNodeOperatorId, false)
-      await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: voting })
+      await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: signingKeysManager })
       const { stakingLimit: stakingLimitAfter } = await app.getNodeOperator(firstNodeOperatorId, false)
       assert.equals(stakingLimitBefore, stakingLimitAfter)
     })
@@ -2516,7 +2740,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].vettedSigningKeysCount
       assert.isTrue(keyIndex <= NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount)
       const { stakingLimit: stakingLimitBefore } = await app.getNodeOperator(firstNodeOperatorId, false)
-      await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: voting })
+      await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: signingKeysManager })
       const { stakingLimit: stakingLimitAfter } = await app.getNodeOperator(firstNodeOperatorId, false)
       assert.equals(stakingLimitBefore, stakingLimitAfter)
     })
@@ -2524,7 +2748,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('sets vetted signing keys counter equal to passed key index if it less than vetted keys counter', async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - 1
       assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
-      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: voting })
+      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: signingKeysManager })
       const { stakingLimit: stakingLimitAfter } = await app.getNodeOperator(secondNodeOperatorId, false)
       assert.equals(stakingLimitAfter.toNumber(), keyIndex)
     })
@@ -2532,9 +2756,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('correctly decreases global vetted signing keys count if key index is less then vetted keys counter of node operator', async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - 1
       assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
-      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
-      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: voting })
-      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: signingKeysManager })
+      const { maxValidatorsCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       const vettedSigningKeysDecrement = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - keyIndex
       assert.equals(
         vettedSigningKeysCountAfter.toNumber(),
@@ -2542,62 +2766,43 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       )
     })
 
-    it.skip('correctly decreases global vetted signing keys and totalTargetStats count if key index is less then vetted keys counter of node operator', async () => {
+    it('correctly decreases global vetted signing keys and totalTargetStats count if key index is less then vetted keys counter of node operator', async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - 1
       assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
-      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
 
-      const {
-        isTargetLimitActive: isTargetLimitActiveBefore,
-        targetValidatorsCount: targetValidatorsCountBefore,
-        excessValidatorsCount: excessValidatorsCountBefore,
-      } = await app.testing_getTotalTargetStats()
+      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: signingKeysManager })
 
-      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: voting })
-
-      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       const vettedSigningKeysDecrement = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - keyIndex
       assert.equals(
         vettedSigningKeysCountAfter.toNumber(),
         vettedSigningKeysCountBefore.toNumber() - vettedSigningKeysDecrement
       )
-
-      const {
-        isTargetLimitActive: isTargetLimitActiveAfter,
-        targetValidatorsCount: targetValidatorsCountAfter,
-        excessValidatorsCount: excessValidatorsCountAfter,
-      } = await app.testing_getTotalTargetStats()
-
-      assert.equals(isTargetLimitActiveAfter, isTargetLimitActiveBefore)
-      assert.equals(
-        targetValidatorsCountAfter,
-        targetValidatorsCountBefore.toNumber() - vettedSigningKeysCountBefore.toNumber() - vettedSigningKeysDecrement
-      )
-      assert.equals(excessValidatorsCountAfter, excessValidatorsCountBefore)
     })
 
     it("doesn't modify global vetted signing keys count if key index is equal to vettedSigningKeysCount", async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount
       assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
-      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
-      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: voting })
-      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: signingKeysManager })
+      const { maxValidatorsCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       assert.equals(vettedSigningKeysCountAfter, vettedSigningKeysCountBefore)
     })
 
     it("doesn't modify global vetted signing keys count if key index is greater than vettedSigningKeysCount", async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount + 1
       assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
-      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
-      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: voting })
-      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: signingKeysManager })
+      const { maxValidatorsCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       assert.equals(vettedSigningKeysCountAfter, vettedSigningKeysCountBefore)
     })
 
     it('increases keysOpIndex & changes nonce', async () => {
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount + 1
       const [keysOpIndexBefore, nonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getNonce()])
-      await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: voting })
+      await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: signingKeysManager })
       const [keysOpIndexAfter, nonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
       assert.notEquals(nonceAfter, nonceBefore)
@@ -2606,7 +2811,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('emits KeysOpIndexSet & NonceChanged', async () => {
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount + 1
       const keysOpIndexBefore = await app.getKeysOpIndex()
-      const receipt = await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: voting })
+      const receipt = await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: signingKeysManager })
       const nonceAfter = await app.getNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
       assert.emits(receipt, 'NonceChanged', { nonce: nonceAfter })
@@ -2614,7 +2819,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('correctly removes the last unused signing key', async () => {
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount - 1
-      await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: voting })
+      await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: signingKeysManager })
       const { totalSigningKeys } = await app.getNodeOperator(firstNodeOperatorId, false)
       for (let i = 0; i < totalSigningKeys.toNumber(); ++i) {
         const { key, depositSignature } = await app.getSigningKey(firstNodeOperatorId, i)
@@ -2627,7 +2832,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('correctly removes unused signing key from the middle', async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - 1
       assert.notEqual(NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount - 1, keyIndex)
-      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: voting })
+      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: signingKeysManager })
       for (let i = 0; i < keyIndex; ++i) {
         const { key, depositSignature } = await app.getSigningKey(secondNodeOperatorId, i)
         const [expectedPublicKey, expectedSignature] = secondNodeOperatorKeys.get(i)
@@ -2655,7 +2860,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       for (let i = 0; i < unusedKeysCount; ++i) {
         // always remove the first signing key
         await app.removeSigningKey(firstNodeOperatorId, NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount, {
-          from: voting,
+          from: signingKeysManager,
         })
       }
       const { totalSigningKeys, stakingLimit, usedSigningKeys } = await app.getNodeOperator(firstNodeOperatorId, false)
@@ -2677,7 +2882,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       // remove all unused signing keys of first node operator
       for (let i = 0; i < unusedKeysCount; ++i) {
         await app.removeSigningKey(firstNodeOperatorId, NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount, {
-          from: voting,
+          from: signingKeysManager,
         })
       }
 
@@ -2692,10 +2897,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('after key removal new key adding works correctly', async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - 1
       assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
-      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: voting })
+      await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: signingKeysManager })
       const { totalSigningKeys } = await app.getNodeOperator(secondNodeOperatorId, false)
       const keysToAdd = new signingKeys.FakeValidatorKeys(1)
-      await app.addSigningKeys(secondNodeOperatorId, keysToAdd.count, ...keysToAdd.slice(), { from: voting })
+      await app.addSigningKeys(secondNodeOperatorId, keysToAdd.count, ...keysToAdd.slice(), {
+        from: signingKeysManager,
+      })
       const { key, depositSignature } = await app.getSigningKey(secondNodeOperatorId, totalSigningKeys.toNumber())
       assert.equals(key, keysToAdd.get(0)[0])
       assert.equals(depositSignature, keysToAdd.get(0)[1])
@@ -2704,7 +2911,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('emits VettedSigningKeysCountChanged event with correct params if passed index is less then current vetted signing keys count', async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - 1
       assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
-      const receipt = await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: voting })
+      const receipt = await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: signingKeysManager })
       assert.emits(receipt, 'VettedSigningKeysCountChanged', {
         nodeOperatorId: secondNodeOperatorId,
         approvedValidatorsCount: keyIndex,
@@ -2714,21 +2921,21 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it("doesn't emit VettedSigningKeysCountChanged event if passed index is equal to the current vetted signing keys count", async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount
       assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
-      const receipt = await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: voting })
+      const receipt = await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: signingKeysManager })
       assert.notEmits(receipt, 'VettedSigningKeysCountChanged', { nodeOperatorId: secondNodeOperatorId })
     })
 
     it("doesn't emit VettedSigningKeysCountChanged event if passed index is greater than current vetted signing keys count", async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount + 1
       assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
-      const receipt = await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: voting })
+      const receipt = await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: signingKeysManager })
       assert.notEmits(receipt, 'VettedSigningKeysCountChanged', { nodeOperatorId: secondNodeOperatorId })
     })
 
     it('emits TotalSigningKeysCountChanged event with correct params', async () => {
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount - 1
       assert.isTrue(keyIndex <= NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount)
-      const receipt = await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: voting })
+      const receipt = await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: signingKeysManager })
       assert.emits(
         receipt,
         'TotalSigningKeysCountChanged',
@@ -2743,7 +2950,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('emits SigningKeyRemoved event with correct params', async () => {
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount
       assert.isTrue(keyIndex < NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount)
-      const receipt = await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: voting })
+      const receipt = await app.removeSigningKey(firstNodeOperatorId, keyIndex, { from: signingKeysManager })
       assert.emits(
         receipt,
         'SigningKeyRemoved',
@@ -2764,10 +2971,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     beforeEach(async () => {
       await nodeOperators
-        .addNodeOperator(app, NODE_OPERATORS[0], { from: voting })
+        .addNodeOperator(app, NODE_OPERATORS[0], { from: admin })
         .then((r) => (firstNodeOperatorKeys = r.validatorKeys))
       await nodeOperators
-        .addNodeOperator(app, NODE_OPERATORS[1], { from: voting })
+        .addNodeOperator(app, NODE_OPERATORS[1], { from: admin })
         .then((r) => (secondNodeOperatorKeys = r.validatorKeys))
     })
 
@@ -2781,7 +2988,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     it('returns earlier if keys count is 0', async () => {
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount
-      await app.removeSigningKeys(firstNodeOperatorId, keyIndex, 0, { from: voting })
+      await app.removeSigningKeys(firstNodeOperatorId, keyIndex, 0, { from: signingKeysManager })
       const { totalSigningKeys } = await app.getNodeOperator(firstNodeOperatorId, false)
       assert.equals(totalSigningKeys, NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount)
     })
@@ -2790,7 +2997,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = 0
       const keysCount = 10
       await assert.reverts(
-        app.removeSigningKeys(nonExistentNodeOperatorId, keyIndex, keysCount, { from: voting }),
+        app.removeSigningKeys(nonExistentNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager }),
         'OUT_OF_RANGE'
       )
     })
@@ -2799,7 +3006,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = toBN('0x10000000000000000')
       const keysCount = 10
       await assert.reverts(
-        app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: voting }),
+        app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager }),
         'OUT_OF_RANGE'
       )
     })
@@ -2808,7 +3015,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount
       const keysCount = toBN('0x10000000000000000')
       await assert.reverts(
-        app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: voting }),
+        app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager }),
         'OUT_OF_RANGE'
       )
     })
@@ -2817,7 +3024,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = toBN('0x8000000000000000')
       const keysCount = toBN('0x8000000000000000')
       await assert.reverts(
-        app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: voting }),
+        app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager }),
         'OUT_OF_RANGE'
       )
     })
@@ -2827,7 +3034,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keysCount = NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount - keyIndex + 1
       assert(keyIndex + keysCount > NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
       await assert.reverts(
-        app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: voting }),
+        app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager }),
         'OUT_OF_RANGE'
       )
     })
@@ -2838,7 +3045,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keysCount = NODE_OPERATORS[firstNodeOperatorId].vettedSigningKeysCount - keyIndex
       assert(keysCount > 0)
       await assert.reverts(
-        app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: voting }),
+        app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager }),
         'OUT_OF_RANGE'
       )
     })
@@ -2848,7 +3055,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keysCount = NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount - keyIndex
       assert(keysCount > 0)
       const { totalSigningKeys: totalSigningKeysBefore } = await app.getNodeOperator(secondNodeOperatorId, false)
-      await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: voting })
+      await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager })
       const { totalSigningKeys: totalSigningKeysAfter } = await app.getNodeOperator(secondNodeOperatorId, false)
       assert.equals(totalSigningKeysAfter.toNumber(), totalSigningKeysBefore.toNumber() - keysCount)
     })
@@ -2858,7 +3065,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keysCount = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - keyIndex
       assert(keysCount > 0)
       const { totalSigningKeysCount: totalSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
-      await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: voting })
+      await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager })
       const { totalSigningKeysCount: totalSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       assert.equals(totalSigningKeysCountAfter.toNumber(), totalSigningKeysCountBefore.toNumber() - keysCount)
     })
@@ -2868,7 +3075,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keysCount = NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount - keyIndex
       assert(keysCount > 0)
       const { stakingLimit: stakingLimitBefore } = await app.getNodeOperator(firstNodeOperatorId, false)
-      await app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: voting })
+      await app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager })
       const { stakingLimit: stakingLimitAfter } = await app.getNodeOperator(firstNodeOperatorId, false)
       assert.equals(stakingLimitBefore, stakingLimitAfter)
     })
@@ -2877,7 +3084,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].vettedSigningKeysCount
       const keysCount = 1
       const { stakingLimit: stakingLimitBefore } = await app.getNodeOperator(firstNodeOperatorId, false)
-      await app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: voting })
+      await app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager })
       const { stakingLimit: stakingLimitAfter } = await app.getNodeOperator(firstNodeOperatorId, false)
       assert.equals(stakingLimitBefore, stakingLimitAfter)
     })
@@ -2886,7 +3093,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - 1
       const keysCount = NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount - keyIndex
       assert(keysCount > 0)
-      await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: voting })
+      await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager })
       const { stakingLimit: stakingLimitAfter } = await app.getNodeOperator(secondNodeOperatorId, false)
       assert.equals(stakingLimitAfter.toNumber(), keyIndex)
     })
@@ -2894,9 +3101,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('correctly decreases global vetted signing keys count if fromIndex is less then vetted keys counter of node operator', async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - 1
       const keysCount = 2
-      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
-      await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: voting })
-      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+      await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager })
+      const { maxValidatorsCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       const vettedSigningKeysDecrement = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - keyIndex
       assert.equals(
         vettedSigningKeysCountAfter.toNumber(),
@@ -2907,18 +3114,18 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it("doesn't modify global vetted signing keys count if fromIndex is equal to vettedSigningKeysCount", async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount
       const keysCount = NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount - keyIndex - 1
-      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
-      await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: voting })
-      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+      await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager })
+      const { maxValidatorsCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       assert.equals(vettedSigningKeysCountAfter, vettedSigningKeysCountBefore)
     })
 
     it("doesn't modify global vetted signing keys count if fromIndex is greater than vettedSigningKeysCount", async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount + 1
       const keysCount = 1
-      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
-      await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: voting })
-      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+      await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager })
+      const { maxValidatorsCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       assert.equals(vettedSigningKeysCountAfter, vettedSigningKeysCountBefore)
     })
 
@@ -2927,7 +3134,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keysCount = NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount - keyIndex
       assert(keysCount > 0)
       const [keysOpIndexBefore, nonceBefore] = await Promise.all([app.getKeysOpIndex(), app.getNonce()])
-      await app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: voting })
+      await app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager })
       const [keysOpIndexAfter, nonceAfter] = await Promise.all([app.getKeysOpIndex(), app.getNonce()])
       assert.equals(keysOpIndexAfter, keysOpIndexBefore.toNumber() + 1)
       assert.notEquals(nonceAfter, nonceBefore)
@@ -2938,7 +3145,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keysCount = NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount - keyIndex
       assert(keysCount > 0)
       const keysOpIndexBefore = await app.getKeysOpIndex()
-      const receipt = await app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: voting })
+      const receipt = await app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, {
+        from: signingKeysManager,
+      })
       const nonceAfter = await app.getNonce()
       assert.emits(receipt, 'KeysOpIndexSet', { keysOpIndex: keysOpIndexBefore.toNumber() + 1 })
       assert.emits(receipt, 'NonceChanged', { nonce: nonceAfter })
@@ -2948,7 +3157,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount
       const keysCount = NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount - keyIndex
       assert(keysCount > 0)
-      await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: voting })
+      await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager })
       const { totalSigningKeys, stakingLimit } = await app.getNodeOperator(secondNodeOperatorId, false)
       assert.equals(totalSigningKeys, NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount)
       assert.equals(stakingLimit, NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount)
@@ -2964,7 +3173,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount
       const keysCount = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - keyIndex
       assert(keysCount > 0)
-      await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: voting })
+      await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager })
       const { totalSigningKeys, stakingLimit } = await app.getNodeOperator(secondNodeOperatorId, false)
       assert.equals(
         totalSigningKeys,
@@ -3003,7 +3212,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount + 1
       const keysCount = NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount - keyIndex - 1
       assert(keysCount > 0)
-      await app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: voting })
+      await app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager })
       const { totalSigningKeys, stakingLimit } = await app.getNodeOperator(firstNodeOperatorId, false)
       assert.equals(totalSigningKeys, NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount - keysCount)
       assert.equals(stakingLimit, keyIndex)
@@ -3036,7 +3245,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount -
         NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount
       assert(unusedKeysCount > 0)
-      await app.removeSigningKeys(firstNodeOperatorId, keyIndex, unusedKeysCount, { from: voting })
+      await app.removeSigningKeys(firstNodeOperatorId, keyIndex, unusedKeysCount, { from: signingKeysManager })
       const { totalSigningKeys, stakingLimit, usedSigningKeys } = await app.getNodeOperator(firstNodeOperatorId, false)
       for (let i = 0; i < totalSigningKeys.toNumber(); ++i) {
         const { key, depositSignature } = await app.getSigningKey(firstNodeOperatorId, i)
@@ -3055,7 +3264,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount -
         NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount
       assert(unusedKeysCount > 0)
-      await app.removeSigningKeys(firstNodeOperatorId, keyIndex, unusedKeysCount, { from: voting })
+      await app.removeSigningKeys(firstNodeOperatorId, keyIndex, unusedKeysCount, { from: signingKeysManager })
 
       for (let i = 0; i < secondNodeOperatorKeys.count; ++i) {
         const { key, depositSignature } = await app.getSigningKey(secondNodeOperatorId, i)
@@ -3068,10 +3277,12 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     it('after keys removal new key adding works correctly', async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - 1
       const keysCount = 2
-      await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: voting })
+      await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager })
       const { totalSigningKeys } = await app.getNodeOperator(secondNodeOperatorId, false)
       const keysToAdd = new signingKeys.FakeValidatorKeys(1)
-      await app.addSigningKeys(secondNodeOperatorId, keysToAdd.count, ...keysToAdd.slice(), { from: voting })
+      await app.addSigningKeys(secondNodeOperatorId, keysToAdd.count, ...keysToAdd.slice(), {
+        from: signingKeysManager,
+      })
       const { key, depositSignature } = await app.getSigningKey(secondNodeOperatorId, totalSigningKeys.toNumber())
       assert.equals(key, keysToAdd.get(0)[0])
       assert.equals(depositSignature, keysToAdd.get(0)[1])
@@ -3081,7 +3292,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - 1
       const keysCount = NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount - keyIndex
       assert(keysCount > 0)
-      const receipt = await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: voting })
+      const receipt = await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, {
+        from: signingKeysManager,
+      })
       assert.emits(receipt, 'VettedSigningKeysCountChanged', {
         nodeOperatorId: secondNodeOperatorId,
         approvedValidatorsCount: keyIndex,
@@ -3092,7 +3305,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount
       const keysCount = 3
       assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
-      const receipt = await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: voting })
+      const receipt = await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, {
+        from: signingKeysManager,
+      })
       assert.notEmits(receipt, 'VettedSigningKeysCountChanged', { nodeOperatorId: secondNodeOperatorId })
     })
 
@@ -3100,7 +3315,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount + 1
       const keysCount = NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount - keyIndex
       assert(keysCount > 0)
-      const receipt = await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: voting })
+      const receipt = await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, {
+        from: signingKeysManager,
+      })
       assert.notEmits(receipt, 'VettedSigningKeysCountChanged', { nodeOperatorId: secondNodeOperatorId })
     })
 
@@ -3108,7 +3325,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount
       const keysCount = NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount - keyIndex
       assert(keysCount > 0)
-      const receipt = await app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: voting })
+      const receipt = await app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, {
+        from: signingKeysManager,
+      })
       assert.emits(receipt, 'TotalSigningKeysCountChanged', {
         nodeOperatorId: firstNodeOperatorId,
         totalValidatorsCount: NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount,
@@ -3119,7 +3338,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].vettedSigningKeysCount
       const keysCount = NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount - keyIndex
       assert(keysCount > 0)
-      const receipt = await app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, { from: voting })
+      const receipt = await app.removeSigningKeys(firstNodeOperatorId, keyIndex, keysCount, {
+        from: signingKeysManager,
+      })
       for (let i = keyIndex; i < keyIndex + keysCount; ++i) {
         assert.emits(
           receipt,
@@ -3139,13 +3360,13 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const rewardAddress = user1
 
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[0], rewardAddress }, { from: voting })
+      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[0], rewardAddress }, { from: admin })
     })
 
     it('reverts with OUT_OF_RANGE error when index greater than UINT64_MAX', async () => {
       const keyIndex = toBN('0x10000000000000000')
       await assert.reverts(
-        app.removeSigningKeyOperatorBH(firstNodeOperatorId, keyIndex, { from: voting }),
+        app.removeSigningKeyOperatorBH(firstNodeOperatorId, keyIndex, { from: rewardAddress }),
         'OUT_OF_RANGE'
       )
     })
@@ -3172,14 +3393,14 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const rewardAddress = user1
 
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[0], rewardAddress }, { from: voting })
+      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[0], rewardAddress }, { from: admin })
     })
 
     it('reverts with OUT_OF_RANGE error when index greater than UINT64_MAX', async () => {
       const keyIndex = toBN('0x10000000000000000')
       const keysCount = 1
       await assert.reverts(
-        app.removeSigningKeysOperatorBH(firstNodeOperatorId, keyIndex, keysCount, { from: voting }),
+        app.removeSigningKeysOperatorBH(firstNodeOperatorId, keyIndex, keysCount, { from: rewardAddress }),
         'OUT_OF_RANGE'
       )
     })
@@ -3188,7 +3409,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = NODE_OPERATORS[firstNodeOperatorId].vettedSigningKeysCount
       const keysCount = toBN('0x10000000000000000')
       await assert.reverts(
-        app.removeSigningKeysOperatorBH(firstNodeOperatorId, keyIndex, keysCount, { from: voting }),
+        app.removeSigningKeysOperatorBH(firstNodeOperatorId, keyIndex, keysCount, { from: rewardAddress }),
         'OUT_OF_RANGE'
       )
     })
@@ -3197,7 +3418,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       const keyIndex = toBN('0x8000000000000000')
       const keysCount = toBN('0x8000000000000000')
       await assert.reverts(
-        app.removeSigningKeysOperatorBH(firstNodeOperatorId, keyIndex, keysCount, { from: voting }),
+        app.removeSigningKeysOperatorBH(firstNodeOperatorId, keyIndex, keysCount, { from: rewardAddress }),
         'OUT_OF_RANGE'
       )
     })
@@ -3241,7 +3462,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
         steth.sharesOf(user3),
       ])
       // calls distributeRewards() inside
-      await app.onExitedAndStuckValidatorsCountsUpdated({ from: voting })
+      await app.onExitedAndStuckValidatorsCountsUpdated({ from: stakingRouter })
       const recipientsSharesAfter = await Promise.all([
         steth.sharesOf(user1),
         steth.sharesOf(user2),
@@ -3258,7 +3479,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await steth.mintShares(app.address, ETH(10))
 
       // calls distributeRewards() inside
-      await app.onExitedAndStuckValidatorsCountsUpdated({ from: voting })
+      await app.onExitedAndStuckValidatorsCountsUpdated({ from: stakingRouter })
 
       assert.equals(await steth.sharesOf(user1), ETH(3))
       assert.equals(await steth.sharesOf(user2), ETH(7))
@@ -3270,7 +3491,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await steth.mintShares(app.address, ETH(10))
 
       // calls distributeRewards() inside
-      const receipt = await app.onExitedAndStuckValidatorsCountsUpdated({ from: voting })
+      const receipt = await app.onExitedAndStuckValidatorsCountsUpdated({ from: stakingRouter })
 
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user1, sharesAmount: ETH(3) })
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(7) })
@@ -3286,7 +3507,9 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
       // already have three operators added
       for (let i = 3; i < maxNodeOperatorsCount; ++i) {
-        await app.testing_addNodeOperator(`Node Operator #${i}`, generateRandomAddress(), 5, 5, 5, 0, { from: voting })
+        await app.testing_addNodeOperator(`Node Operator #${i}`, generateRandomAddress(), 5, 5, 5, 0, {
+          from: limitsManager,
+        })
       }
       assert.equals(await app.getNodeOperatorsCount(), maxNodeOperatorsCount)
 
@@ -3294,7 +3517,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await steth.mintShares(app.address, ETH(10))
 
       // calls distributeRewards() inside
-      const tx = await app.onExitedAndStuckValidatorsCountsUpdated({ from: voting })
+      const tx = await app.onExitedAndStuckValidatorsCountsUpdated({ from: stakingRouter })
 
       // just show the used gas
       console.log(`gas used to distribute rewards for ${maxNodeOperatorsCount} NOs:`, +tx.receipt.gasUsed)
@@ -3310,8 +3533,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const notExistedNodeOperatorId = 3
 
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: voting })
-      await app.addNodeOperator('empty', ADDRESS_2, { from: voting })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: admin })
+      await app.addNodeOperator('empty', ADDRESS_2, { from: nodeOperatorsManager })
     })
 
     it('reverts with OUT_OF_RANGE error when called with not existed node operator id', async () => {
@@ -3336,8 +3559,8 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     const notExistedNodeOperatorId = 3
 
     beforeEach(async () => {
-      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: voting })
-      await app.addNodeOperator('empty', ADDRESS_2, { from: voting })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: admin })
+      await app.addNodeOperator('empty', ADDRESS_2, { from: nodeOperatorsManager })
     })
 
     it('reverts with OUT_OF_RANGE error when called with not existed node operator id', async () => {
@@ -3365,10 +3588,10 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
 
     beforeEach(async () => {
       await nodeOperators
-        .addNodeOperator(app, NODE_OPERATORS[0], { from: voting })
+        .addNodeOperator(app, NODE_OPERATORS[0], { from: admin })
         .then((r) => (firstNodeOperatorKeys = r.validatorKeys))
       await nodeOperators
-        .addNodeOperator(app, NODE_OPERATORS[1], { from: voting })
+        .addNodeOperator(app, NODE_OPERATORS[1], { from: admin })
         .then((r) => (secondNodeOperatorKeys = r.validatorKeys))
     })
 
@@ -3433,18 +3656,18 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
     })
 
     it('reverts with OUT_OF_RANGE', async () => {
-      await app.addNodeOperator('0', user1, { from: voting })
+      await app.addNodeOperator('0', user1, { from: nodeOperatorsManager })
 
       await assert.reverts(app.getSigningKeys(0, 0, 10), 'OUT_OF_RANGE')
     })
 
     it('returns specified signing keys', async () => {
-      await app.addNodeOperator('0', user1, { from: voting })
+      await app.addNodeOperator('0', user1, { from: nodeOperatorsManager })
 
       const keys = [pad('0xaa0101', 48), pad('0xaa0202', 48), pad('0xaa0303', 48)]
       const sigs = [pad('0xa1', 96), pad('0xa2', 96), pad('0xa3', 96)]
 
-      await app.addSigningKeys(0, 3, hexConcat(...keys), hexConcat(...sigs), { from: voting })
+      await app.addSigningKeys(0, 3, hexConcat(...keys), hexConcat(...sigs), { from: signingKeysManager })
 
       const { pubkeys, signatures, used } = await app.getSigningKeys(0, 1, 2)
 
@@ -3461,9 +3684,39 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, nob
       await assert.reverts(app.onRewardsMinted(123, { from: user1 }))
     })
     it('no reverts with STAKING_ROUTER_ROLE', async () => {
-      const hasPermission = await dao.hasPermission(voting, app, 'STAKING_ROUTER_ROLE')
+      const hasPermission = await dao.hasPermission(stakingRouter, app, 'STAKING_ROUTER_ROLE')
       assert.isTrue(hasPermission)
-      await app.onRewardsMinted(123, { from: voting })
+      await app.onRewardsMinted(123, { from: stakingRouter })
+    })
+  })
+
+  describe('setStuckPenaltyDelay()', () => {
+    it('reverts with error "APP_AUTH_FAILED" when called by sender without MANAGE_NODE_OPERATOR_ROLE', async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'MANAGE_NODE_OPERATOR_ROLE')
+      assert.isFalse(hasPermission)
+      const maxStuckPenaltyDelay = await app.MAX_STUCK_PENALTY_DELAY()
+      await assert.reverts(app.setStuckPenaltyDelay(maxStuckPenaltyDelay, { from: nobody }), 'APP_AUTH_FAILED')
+    })
+
+    it('reverts with error "OUT_OF_RANGE" when new value exceeds MAX_PENALTY_DELAY', async () => {
+      const maxStuckPenaltyDelay = wei.int(await app.MAX_STUCK_PENALTY_DELAY())
+      await assert.reverts(
+        app.setStuckPenaltyDelay(wei.str(maxStuckPenaltyDelay + 1n), { from: nodeOperatorsManager }),
+        'OUT_OF_RANGE'
+      )
+    })
+
+    it('sets stuck penalty delay correctly', async () => {
+      const newStuckPenaltyDelay = await app.MAX_STUCK_PENALTY_DELAY()
+      assert.notEquals(await app.getStuckPenaltyDelay(), newStuckPenaltyDelay)
+      await app.setStuckPenaltyDelay(newStuckPenaltyDelay, { from: nodeOperatorsManager })
+      assert.equals(await app.getStuckPenaltyDelay(), newStuckPenaltyDelay)
+    })
+
+    it('emits event StuckPenaltyDelayChanged() when setStuckPenaltyDelay is called', async () => {
+      const sameStackPenaltyDelay = await app.getStuckPenaltyDelay()
+      const tx = await app.setStuckPenaltyDelay(sameStackPenaltyDelay, { from: nodeOperatorsManager })
+      assert.emits(tx, 'StuckPenaltyDelayChanged', { stuckPenaltyDelay: sameStackPenaltyDelay })
     })
   })
 })

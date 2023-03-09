@@ -11,7 +11,7 @@ interface IBurner {
      *
      * NB: The real burn enactment to be invoked after the call (via internal Lido._burnShares())
      */
-    function commitSharesToBurn(uint256 _stETHSharesToBurnLimit) external returns (uint256 stETHsharesToBurnNow);
+    function commitSharesToBurn(uint256 _stETHSharesToBurn) external;
 
     /**
      * Request burn shares
@@ -21,9 +21,7 @@ interface IBurner {
     /**
       * Returns the current amount of shares locked on the contract to be burnt.
       */
-    function getSharesRequestedToBurn() external view returns (
-        uint256 coverShares, uint256 nonCoverShares
-    );
+    function getSharesRequestedToBurn() external view returns (uint256 coverShares, uint256 nonCoverShares);
 
     /**
       * Returns the total cover shares ever burnt.

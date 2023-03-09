@@ -1,5 +1,5 @@
 const { artifacts, contract, ethers } = require('hardhat')
-const { assert } = require('../helpers/assert')
+const { assert } = require('../../helpers/assert')
 const { BigNumber } = require('ethers')
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const StakingModuleMock = artifacts.require('StakingModuleMock.sol')
@@ -10,7 +10,7 @@ const BASIS_POINTS_BASE = 100_00
 contract('StakingRouter', (accounts) => {
   let evmSnapshotId
   let depositContract, stakingRouter
-  let StakingModule1, StakingModule2
+  let StakingModule1, StakingModule2, StakingModule3
   const [deployer, lido, admin] = accounts
 
   before(async () => {
@@ -19,10 +19,12 @@ contract('StakingRouter', (accounts) => {
     const mocks = await Promise.all([
       StakingModuleMock.new({ from: deployer }),
       StakingModuleMock.new({ from: deployer }),
+      StakingModuleMock.new({ from: deployer }),
     ])
 
     StakingModule1 = mocks[0]
     StakingModule2 = mocks[1]
+    StakingModule3 = mocks[2]
 
     const wc = '0x'.padEnd(66, '1234')
     await stakingRouter.initialize(admin, lido, wc, { from: deployer })
@@ -55,6 +57,85 @@ contract('StakingRouter', (accounts) => {
   const MAX_DEPOSITABLE_KEYS_CASES = [0, 1, 10_000]
   const MODULE_AVAILABLE_KEYS_CASES = [0, 1, 10_000]
   const MODULE_ACTIVE_KEYS_CASES = [0, 1, 10_000]
+
+  describe('Deposits allocation with paused modules', () => {
+    it('allocates correctly if some staking modules are paused', async () => {
+      // add staking module 1
+      await stakingRouter.addStakingModule(
+        'Module 1',
+        StakingModule1.address,
+        100_00, // target share BP
+        10_00, // staking module fee BP
+        50_00, // treasury fee BP
+        { from: admin }
+      )
+
+      const sm1AvailableKeysCount = 100
+      await StakingModule1.setAvailableKeysCount(sm1AvailableKeysCount)
+      assert.equals(await StakingModule1.getAvailableValidatorsCount(), sm1AvailableKeysCount)
+
+      const sm1ActiveKeysCount = 15000
+      await StakingModule1.setActiveValidatorsCount(sm1ActiveKeysCount)
+      assert.equals(await StakingModule1.getActiveValidatorsCount(), sm1ActiveKeysCount)
+
+      // add staking module 2
+      await stakingRouter.addStakingModule(
+        'Module 2',
+        StakingModule2.address,
+        10_00, // target share BP
+        10_00, // staking module fee BP
+        50_00, // treasury fee BP
+        { from: admin }
+      )
+
+      const sm2AvailableKeysCount = 500
+      await StakingModule2.setAvailableKeysCount(sm2AvailableKeysCount)
+      assert.equals(await StakingModule2.getAvailableValidatorsCount(), sm2AvailableKeysCount)
+
+      const sm2ActiveKeysCount = 100
+      await StakingModule2.setActiveValidatorsCount(sm2ActiveKeysCount)
+      assert.equals(await StakingModule2.getActiveValidatorsCount(), sm2ActiveKeysCount)
+      // add staking module 3
+      await stakingRouter.addStakingModule(
+        'Module 3',
+        StakingModule3.address,
+        7_00, // target share BP
+        5_00, // staking module fee BP
+        0, // treasury fee BP
+        { from: admin }
+      )
+
+      const sm3AvailableKeysCount = 300
+      await StakingModule3.setAvailableKeysCount(sm3AvailableKeysCount)
+      assert.equals(await StakingModule3.getAvailableValidatorsCount(), sm3AvailableKeysCount)
+
+      const sm3ActiveKeysCount = 150
+      await StakingModule3.setActiveValidatorsCount(sm3ActiveKeysCount)
+      assert.equals(await StakingModule3.getActiveValidatorsCount(), sm3ActiveKeysCount)
+
+      const { allocated: allocated1, allocations: allocations1 } = await stakingRouter.getDepositsAllocation(100)
+      assert.equals(allocated1, 100)
+      assert.equals(allocations1[0], 15000)
+      assert.equals(allocations1[1], 175)
+      assert.equals(allocations1[2], 175)
+
+      await stakingRouter.pauseStakingModule(1, { from: admin })
+      const { allocated: allocated2, allocations: allocations2 } = await stakingRouter.getDepositsAllocation(100)
+
+      assert.equals(allocated2, 100)
+      assert.equals(allocations2[0], 15000)
+      assert.equals(allocations2[1], 175)
+      assert.equals(allocations2[2], 175)
+
+      await stakingRouter.pauseStakingModule(2, { from: admin })
+      const { allocated: allocated3, allocations: allocations3 } = await stakingRouter.getDepositsAllocation(100)
+
+      assert.equals(allocated3, 100)
+      assert.equals(allocations3[0], 15000)
+      assert.equals(allocations3[1], 100)
+      assert.equals(allocations3[2], 250)
+    })
+  })
 
   describe('Single staking module', function () {
     this.timeout(30_000, 'Test suite took too long')

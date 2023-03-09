@@ -10,19 +10,28 @@ import {Math256} from "../../common/lib/Math256.sol";
 import {AccessControlEnumerable} from "../utils/access/AccessControlEnumerable.sol";
 import {PositiveTokenRebaseLimiter, TokenRebaseLimiterData} from "../lib/PositiveTokenRebaseLimiter.sol";
 import {ILidoLocator} from "../../common/interfaces/ILidoLocator.sol";
+import {IBurner} from "../../common/interfaces/IBurner.sol";
 
 interface IWithdrawalQueue {
-    function getWithdrawalRequestStatus(uint256 _requestId)
+    struct WithdrawalRequestStatus {
+        /// @notice stETH token amount that was locked on withdrawal queue for this request
+        uint256 amountOfStETH;
+        /// @notice amount of stETH shares locked on withdrawal queue for this request
+        uint256 amountOfShares;
+        /// @notice address that can claim or transfer this request
+        address owner;
+        /// @notice timestamp of when the request was created, in seconds
+        uint256 timestamp;
+        /// @notice true, if request is finalized
+        bool isFinalized;
+        /// @notice true, if request is claimed. Request is claimable if (isFinalized && !isClaimed)
+        bool isClaimed;
+    }
+
+    function getWithdrawalStatus(uint256[] calldata _requestIds)
         external
         view
-        returns (
-            uint256 amountOfStETH,
-            uint256 amountOfShares,
-            address recipient,
-            uint256 timestamp,
-            bool isFinalized,
-            bool isClaimed
-        );
+        returns (WithdrawalRequestStatus[] memory statuses);
 }
 
 /// @notice The set of restrictions used in the sanity checks of the oracle report
@@ -327,12 +336,15 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     ///     current oracle report
     /// @param _postCLBalance sum of all Lido validators' balances on the Consensus Layer after the
     ///     current oracle report
-    /// @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
-    /// @param _elRewardsVaultBalance elRewards vault balance on Execution Layer for report block
+    /// @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for the report calculation moment
+    /// @param _elRewardsVaultBalance elRewards vault balance on Execution Layer for the report calculation moment
+    /// @param _sharesRequestedToBurn shares requested to burn through Burner for the report calculation moment
     /// @param _etherToLockForWithdrawals ether to lock on withdrawals queue contract
+    /// @param _newSharesToBurnForWithdrawals new shares to burn due to withdrawal request finalization
     /// @return withdrawals ETH amount allowed to be taken from the withdrawals vault
     /// @return elRewards ETH amount allowed to be taken from the EL rewards vault
-    /// @return sharesToBurnLimit amount allowed to be burnt as part of the current token rebase
+    /// @return simulatedSharesToBurn simulated amount to be burnt (if no ether locked on withdrawals)
+    /// @return sharesToBurn amount to be burnt (accounting for withdrawals finalization)
     function smoothenTokenRebase(
         uint256 _preTotalPooledEther,
         uint256 _preTotalShares,
@@ -340,8 +352,15 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _postCLBalance,
         uint256 _withdrawalVaultBalance,
         uint256 _elRewardsVaultBalance,
-        uint256 _etherToLockForWithdrawals
-    ) external view returns (uint256 withdrawals, uint256 elRewards, uint256 sharesToBurnLimit) {
+        uint256 _sharesRequestedToBurn,
+        uint256 _etherToLockForWithdrawals,
+        uint256 _newSharesToBurnForWithdrawals
+    ) external view returns (
+        uint256 withdrawals,
+        uint256 elRewards,
+        uint256 simulatedSharesToBurn,
+        uint256 sharesToBurn
+    ) {
         TokenRebaseLimiterData memory tokenRebaseLimiter = PositiveTokenRebaseLimiter.initLimiterState(
             getMaxPositiveTokenRebase(),
             _preTotalPooledEther,
@@ -356,9 +375,10 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
         withdrawals = tokenRebaseLimiter.consumeLimit(_withdrawalVaultBalance);
         elRewards = tokenRebaseLimiter.consumeLimit(_elRewardsVaultBalance);
-        tokenRebaseLimiter.raiseLimit(_etherToLockForWithdrawals);
 
-        sharesToBurnLimit = tokenRebaseLimiter.getSharesToBurnLimit();
+        simulatedSharesToBurn = Math256.min(tokenRebaseLimiter.getSharesToBurnLimit(), _sharesRequestedToBurn);
+        tokenRebaseLimiter.raiseLimit(_etherToLockForWithdrawals);
+        sharesToBurn = Math256.min(tokenRebaseLimiter.getSharesToBurnLimit(), _newSharesToBurnForWithdrawals + _sharesRequestedToBurn);
     }
 
     /// @notice Applies sanity checks to the accounting params of Lido's oracle report
@@ -367,8 +387,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     ///     current oracle report (NB: also include the initial balance of newly appeared validators)
     /// @param _postCLBalance sum of all Lido validators' balances on the Consensus Layer after the
     ///     current oracle report
-    /// @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for report block
-    /// @param _elRewardsVaultBalance el rewards vault balance on Execution Layer for report block
+    /// @param _withdrawalVaultBalance withdrawal vault balance on Execution Layer for the report reference slot
+    /// @param _elRewardsVaultBalance el rewards vault balance on Execution Layer for the report reference slot
+    /// @param _sharesRequestedToBurn shares requested to burn for the report reference slot
     /// @param _preCLValidators Lido-participating validators on the CL side before the current oracle report
     /// @param _postCLValidators Lido-participating validators on the CL side after the current oracle report
     function checkAccountingOracleReport(
@@ -377,6 +398,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _postCLBalance,
         uint256 _withdrawalVaultBalance,
         uint256 _elRewardsVaultBalance,
+        uint256 _sharesRequestedToBurn,
         uint256 _preCLValidators,
         uint256 _postCLValidators
     ) external view {
@@ -390,13 +412,16 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         // 2. EL rewards vault reported balance
         _checkELRewardsVaultBalance(elRewardsVault.balance, _elRewardsVaultBalance);
 
-        // 3. Consensus Layer one-off balance decrease
+        // 3. Burn requests
+        _checkSharesRequestedToBurn(_sharesRequestedToBurn);
+
+        // 4. Consensus Layer one-off balance decrease
         _checkOneOffCLBalanceDecrease(limitsList, _preCLBalance, _postCLBalance + _withdrawalVaultBalance);
 
-        // 4. Consensus Layer annual balances increase
+        // 5. Consensus Layer annual balances increase
         _checkAnnualBalancesIncrease(limitsList, _preCLBalance, _postCLBalance, _timeElapsed);
 
-        // 5. Appeared validators increase
+        // 6. Appeared validators increase
         if (_postCLValidators > _preCLValidators) {
             _checkValidatorsChurnLimit(limitsList, (_postCLValidators - _preCLValidators), _timeElapsed);
         }
@@ -453,8 +478,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     }
 
     /// @notice Applies sanity checks to the withdrawal requests finalization
-    /// @param _lastFinalizableRequestId right boundary of requestId range if equals 0, no requests
-    ///     should be finalized
+    /// @param _lastFinalizableRequestId last finalizable withdrawal request id
     /// @param _reportTimestamp timestamp when the originated oracle report was submitted
     function checkWithdrawalQueueOracleReport(
         uint256 _lastFinalizableRequestId,
@@ -466,20 +490,20 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         LimitsList memory limitsList = _limits.unpack();
         address withdrawalQueue = LIDO_LOCATOR.withdrawalQueue();
 
-        _checkRequestIdToFinalizeUpTo(limitsList, withdrawalQueue, _lastFinalizableRequestId, _reportTimestamp);
+        _checkLastFinalizableId(limitsList, withdrawalQueue, _lastFinalizableRequestId, _reportTimestamp);
     }
 
     /// @notice Applies sanity checks to the simulated share rate for withdrawal requests finalization
     /// @param _postTotalPooledEther total pooled ether after report applied
     /// @param _postTotalShares total shares after report applied
     /// @param _etherLockedOnWithdrawalQueue ether locked on withdrawal queue for the current oracle report
-    /// @param _sharesBurntFromWithdrawalQueue shares burnt from withdrawal queue for the current oracle report
+    /// @param _sharesBurntDueToWithdrawals shares burnt due to withdrawals finalization
     /// @param _simulatedShareRate share rate provided with the oracle report (simulated via off-chain "eth_call")
     function checkSimulatedShareRate(
         uint256 _postTotalPooledEther,
         uint256 _postTotalShares,
         uint256 _etherLockedOnWithdrawalQueue,
-        uint256 _sharesBurntFromWithdrawalQueue,
+        uint256 _sharesBurntDueToWithdrawals,
         uint256 _simulatedShareRate
     ) external view {
         LimitsList memory limitsList = _limits.unpack();
@@ -490,7 +514,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _checkSimulatedShareRate(
             limitsList,
             _postTotalPooledEther + _etherLockedOnWithdrawalQueue,
-            _postTotalShares + _sharesBurntFromWithdrawalQueue,
+            _postTotalShares + _sharesBurntDueToWithdrawals,
             _simulatedShareRate
         );
     }
@@ -510,6 +534,14 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     ) internal pure {
         if (_reportedELRewardsVaultBalance > _actualELRewardsVaultBalance) {
             revert IncorrectELRewardsVaultBalance(_actualELRewardsVaultBalance);
+        }
+    }
+
+    function _checkSharesRequestedToBurn(uint256 _sharesRequestedToBurn) internal view {
+        (uint256 coverShares, uint256 nonCoverShares) = IBurner(LIDO_LOCATOR.burner()).getSharesRequestedToBurn();
+        uint256 actualSharesToBurn = coverShares + nonCoverShares;
+        if (_sharesRequestedToBurn > actualSharesToBurn) {
+            revert IncorrectSharesRequestedToBurn(actualSharesToBurn);
         }
     }
 
@@ -568,16 +600,19 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         if (_appearedValidators > churnLimit) revert IncorrectAppearedValidators(_appearedValidators);
     }
 
-    function _checkRequestIdToFinalizeUpTo(
+    function _checkLastFinalizableId(
         LimitsList memory _limitsList,
         address _withdrawalQueue,
-        uint256 _requestIdToFinalizeUpTo,
+        uint256 _lastFinalizableId,
         uint256 _reportTimestamp
     ) internal view {
-        (, , , uint256 requestTimestampToFinalizeUpTo, , ) = IWithdrawalQueue(_withdrawalQueue)
-            .getWithdrawalRequestStatus(_requestIdToFinalizeUpTo);
-        if (_reportTimestamp < requestTimestampToFinalizeUpTo + _limitsList.requestTimestampMargin)
-            revert IncorrectRequestFinalization(requestTimestampToFinalizeUpTo);
+        uint256[] memory requestIds = new uint256[](1);
+        requestIds[0] = _lastFinalizableId;
+
+        IWithdrawalQueue.WithdrawalRequestStatus[] memory statuses = IWithdrawalQueue(_withdrawalQueue)
+            .getWithdrawalStatus(requestIds);
+        if (_reportTimestamp < statuses[0].timestamp + _limitsList.requestTimestampMargin)
+            revert IncorrectRequestFinalization(statuses[0].timestamp);
     }
 
     function _checkSimulatedShareRate(
@@ -592,16 +627,23 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
         if (actualShareRate == 0) {
             // can't finalize anything if the actual share rate is zero
-            revert IncorrectSimulatedShareRate(MAX_BASIS_POINTS);
+            revert ActualShareRateIsZero();
         }
 
-        uint256 simulatedShareDiff = Math256.abs(
-            SafeCast.toInt256(_simulatedShareRate) - SafeCast.toInt256(actualShareRate)
-        );
+        if (_simulatedShareRate > actualShareRate) {
+            // the simulated share rate can't be higher than the actual one
+            // invariant: rounding only can lower the simulated share rate
+            revert TooHighSimulatedShareRate(_simulatedShareRate, actualShareRate);
+        }
+
+        uint256 simulatedShareDiff = actualShareRate - _simulatedShareRate;
         uint256 simulatedShareDeviation = (MAX_BASIS_POINTS * simulatedShareDiff) / actualShareRate;
 
         if (simulatedShareDeviation > _limitsList.simulatedShareRateDeviationBPLimit) {
-            revert IncorrectSimulatedShareRate(simulatedShareDeviation);
+            // the simulated share rate can be lower than the actual one due to rounding
+            // e.g., new user-submitted ether & minted `stETH`
+            // between an oracle reference slot and an actual accounting report delivery
+            revert TooLowSimulatedShareRate(_simulatedShareRate, actualShareRate);
         }
     }
 
@@ -671,13 +713,16 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     error IncorrectLimitValue(uint256 value, uint256 maxAllowedValue);
     error IncorrectWithdrawalsVaultBalance(uint256 actualWithdrawalVaultBalance);
     error IncorrectELRewardsVaultBalance(uint256 actualELRewardsVaultBalance);
+    error IncorrectSharesRequestedToBurn(uint256 actualSharesToBurn);
     error IncorrectCLBalanceDecrease(uint256 oneOffCLBalanceDecreaseBP);
     error IncorrectCLBalanceIncrease(uint256 annualBalanceDiff);
     error IncorrectAppearedValidators(uint256 churnLimit);
     error IncorrectNumberOfExitRequestsPerReport(uint256 maxRequestsCount);
     error IncorrectExitedValidators(uint256 churnLimit);
     error IncorrectRequestFinalization(uint256 requestCreationBlock);
-    error IncorrectSimulatedShareRate(uint256 simulatedShareDeviation);
+    error ActualShareRateIsZero();
+    error TooHighSimulatedShareRate(uint256 simulatedShareRate, uint256 actualShareRate);
+    error TooLowSimulatedShareRate(uint256 simulatedShareRate, uint256 actualShareRate);
     error MaxAccountingExtraDataItemsCountExceeded(uint256 maxItemsCount, uint256 receivedItemsCount);
     error ExitedValidatorsLimitExceeded(uint256 limitPerDay, uint256 exitedPerDay);
     error TooManyNodeOpsPerExtraDataItem(uint256 itemIndex, uint256 nodeOpsCount);
