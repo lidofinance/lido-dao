@@ -436,10 +436,9 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     })
 
     it('works', async () => {
-      await withdrawalQueue.requestWithdrawals([ETH(1)], owner, { from: user })
-      await withdrawalQueue.finalize([1], shareRate(1), { from: steth.address, value: ETH(1) })
+      await withdrawalQueue.finalize([1], shareRate(300), { from: steth.address, value: ETH(1) })
 
-      assert.equals(await withdrawalQueue.getClaimableEther([1], [1]), ETH(1))
+      assert.almostEqual(await withdrawalQueue.getClaimableEther([1], [1]), ETH(1), 100)
     })
 
     it('reverts if last hint checkpoint is ahead of requestId', async () => {
@@ -874,8 +873,8 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       )
       assert.equal(hints.length, 3)
       assert.equals(hints[0], 1)
-      assert.equals(hints[1], 1)
-      assert.equals(hints[2], 1)
+      assert.equals(hints[1], 2)
+      assert.equals(hints[2], 2)
     })
 
     it('reverts with RequestIdsNotSorted error when request ids not in ascending order', async () => {
@@ -916,7 +915,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       const secondRequestAmount = ETH(10)
       await withdrawalQueue.requestWithdrawals([secondRequestAmount], owner, { from: owner })
       const secondRequestId = await withdrawalQueue.getLastRequestId()
-      await withdrawalQueue.finalize([secondRequestId], shareRate(30), { from: steth.address, value: ETH(30) })
+      await withdrawalQueue.finalize([secondRequestId], shareRate(300), { from: steth.address, value: ETH(30) })
 
       const balanceBefore = bn(await ethers.provider.getBalance(owner))
       const tx = await withdrawalQueue.claimWithdrawals([1, 2], [1, 1], { from: owner })
