@@ -80,6 +80,20 @@ async function setupNodeOperatorsRegistry({ dao, acl, lidoLocator, stakingRouter
     { from: appManager.address }
   )
 
+  await acl.grantPermission(
+    stakingRouter.address,
+    nodeOperatorsRegistry.address,
+    NODE_OPERATOR_REGISTRY_MANAGE_NODE_OPERATOR_ROLE,
+    { from: appManager.address }
+  )
+
+  await acl.grantPermission(
+    stakingRouter.address,
+    nodeOperatorsRegistry.address,
+    NODE_OPERATOR_REGISTRY_MANAGE_NODE_OPERATOR_ROLE,
+    { from: appManager.address }
+  )
+
   return nodeOperatorsRegistry
 }
 
