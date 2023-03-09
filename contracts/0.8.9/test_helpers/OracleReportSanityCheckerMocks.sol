@@ -41,8 +41,17 @@ contract WithdrawalQueueStub {
     }
 }
 
+contract BurnerStub {
+    function getSharesRequestedToBurn() external view returns (
+        uint256 coverShares, uint256 nonCoverShares
+    ) {
+        return (0, 0);
+    }
+}
+
 interface ILidoLocator {
     function lido() external view returns (address);
+    function burner() external view returns (address);
     function withdrawalVault() external view returns (address);
     function withdrawalQueue() external view returns (address);
 }
@@ -52,17 +61,20 @@ contract LidoLocatorStub is ILidoLocator {
     address private immutable WITHDRAWAL_VAULT;
     address private immutable WITHDRAWAL_QUEUE;
     address private immutable EL_REWARDS_VAULT;
+    address private immutable BURNER;
 
     constructor(
         address _lido,
         address _withdrawalVault,
         address _withdrawalQueue,
-        address _elRewardsVault
+        address _elRewardsVault,
+        address _burner
     ) {
         LIDO = _lido;
         WITHDRAWAL_VAULT = _withdrawalVault;
         WITHDRAWAL_QUEUE = _withdrawalQueue;
         EL_REWARDS_VAULT = _elRewardsVault;
+        BURNER = _burner;
     }
 
     function lido() external view returns (address) {
@@ -80,6 +92,10 @@ contract LidoLocatorStub is ILidoLocator {
     function elRewardsVault() external view returns (address) {
         return EL_REWARDS_VAULT;
     }
+
+    function burner() external view returns (address) {
+        return BURNER;
+    }
 }
 
 contract OracleReportSanityCheckerStub {
@@ -93,6 +109,7 @@ contract OracleReportSanityCheckerStub {
         uint256 _postCLBalance,
         uint256 _withdrawalVaultBalance,
         uint256 _elRewardsVaultBalance,
+        uint256 _sharesRequestedToBurn,
         uint256 _preCLValidators,
         uint256 _postCLValidators
     ) external view {}
@@ -107,7 +124,7 @@ contract OracleReportSanityCheckerStub {
         uint256 _postTotalPooledEther,
         uint256 _postTotalShares,
         uint256 _etherLockedOnWithdrawalQueue,
-        uint256 _sharesBurntFromWithdrawalQueue,
+        uint256 _sharesBurntDueToWithdrawals,
         uint256 _simulatedShareRate
     ) external view {}
 
@@ -118,11 +135,20 @@ contract OracleReportSanityCheckerStub {
         uint256,
         uint256 _withdrawalVaultBalance,
         uint256 _elRewardsVaultBalance,
-        uint256 _etherToLockForWithdrawals
-    ) external view returns (uint256 withdrawals, uint256 elRewards, uint256 sharesToBurnLimit) {
+        uint256,
+        uint256 _etherToLockForWithdrawals,
+        uint256
+    ) external view returns (
+        uint256 withdrawals,
+        uint256 elRewards,
+        uint256 simulatedSharesToBurn,
+        uint256 sharesToBurn
+    ) {
         withdrawals = _withdrawalVaultBalance;
         elRewards = _elRewardsVaultBalance;
-        sharesToBurnLimit = _etherToLockForWithdrawals;
+
+        simulatedSharesToBurn = 0;
+        sharesToBurn = _etherToLockForWithdrawals;
     }
 
     function checkAccountingExtraDataListItemsCount(uint256 _extraDataListItemsCount) external view {}

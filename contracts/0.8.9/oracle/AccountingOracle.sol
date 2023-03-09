@@ -21,6 +21,7 @@ interface ILido {
         // EL values
         uint256 _withdrawalVaultBalance,
         uint256 _elRewardsVaultBalance,
+        uint256 _sharesRequestedToBurn,
         // Decision about withdrawals processing
         uint256 _lastFinalizableRequestId,
         uint256 _simulatedShareRate
@@ -232,6 +233,12 @@ contract AccountingOracle is BaseOracle {
         /// at the reference slot.
         uint256 elRewardsVaultBalance;
 
+        /// @dev The shares amount requested to burn through Burner as observed
+        /// at the reference slot. The value can be obtained in the following way:
+        /// `(coverSharesToBurn, nonCoverSharesToBurn) = IBurner(burner).getSharesRequestedToBurn()
+        /// sharesRequestedToBurn = coverSharesToBurn + nonCoverSharesToBurn`
+        uint256 sharesRequestedToBurn;
+
         ///
         /// Decision
         ///
@@ -243,8 +250,8 @@ contract AccountingOracle is BaseOracle {
 
         /// @dev The share/ETH rate with the 10^27 precision (i.e. the price of one stETH share
         /// in ETH where one ETH is denominated as 10^27) used for finalizing withdrawal requests
-        /// up to (and including) the one passed in the lastWithdrawalRequestIdToFinalize field.
-        /// Must be set to zero if lastWithdrawalRequestIdToFinalize is zero.
+        /// up to (and including) the one passed in the lastFinalizableWithdrawalRequestId field.
+        /// Must be set to zero if lastFinalizableWithdrawalRequestId is zero.
         uint256 simulatedShareRate;
 
         /// @dev Whether, based on the state observed at the reference slot, the protocol should
@@ -610,6 +617,7 @@ contract AccountingOracle is BaseOracle {
             data.clBalanceGwei * 1e9,
             data.withdrawalVaultBalance,
             data.elRewardsVaultBalance,
+            data.sharesRequestedToBurn,
             data.lastFinalizableWithdrawalRequestId,
             data.simulatedShareRate
         );

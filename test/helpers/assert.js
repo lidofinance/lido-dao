@@ -6,14 +6,23 @@ const { toChecksumAddress } = require('ethereumjs-util')
 const { isAddress } = require('ethers/lib/utils')
 const { toBN } = require('./utils')
 
-chai.util.addMethod(chai.assert, 'emits', function (receipt, eventName, args = {}, options = {}) {
-  const event = getEvent(receipt, eventName, args, options.abi)
-  this.isTrue(event !== undefined, `Event ${eventName} with args ${JSON.stringify(args)} wasn't found`)
+chai.util.addMethod(chai.assert, 'emits', function (receipt, eventName, args = undefined, options = {}) {
+  const events = getEvents(receipt, eventName, { decodeForAbi: options.abi })
+  chai.assert(events.length !== 0, () => `Expected event '${eventName}' wasn't emitted`)
+  if (args !== undefined) {
+    chai.assert(
+      findEventWithArgs(args, events) !== undefined,
+      () => `No '${eventName}' event was emitted with expected args ${JSON.stringify(args)}`
+    )
+  }
 })
 
 chai.util.addMethod(chai.assert, 'emitsAt', function (receipt, eventName, index, args = {}, options = {}) {
   const event = getEventAt(receipt, eventName, index, args, options.abi)
-  this.isTrue(event !== undefined, `Event ${eventName} at ${index} with args ${JSON.stringify(args)}  wasn't found`)
+  chai.assert(
+    event !== undefined,
+    () => `Event '${eventName}' at index ${index} with args ${JSON.stringify(args)} wasn't found`
+  )
 })
 
 chai.util.addMethod(
@@ -63,17 +72,25 @@ chai.util.addMethod(chai.assert, 'equals', function (actual, expected, errorMsg)
 })
 
 chai.util.addMethod(chai.assert, 'equalsDelta', function (actual, expected, delta, errorMsg) {
+  this.isClose(actual, expected, delta, errorMsg)
+})
+
+const msg = (errorMsg, str) => `${errorMsg ? `${errorMsg}: ` : ''}${str}`
+
+chai.util.addMethod(chai.assert, 'isClose', function (actual, expected, delta, errorMsg) {
   const diff = toBN(actual).sub(toBN(expected)).abs()
   chai.assert(
     diff.lte(toBN(delta)),
-    () =>
-      `${
-        errorMsg ? `${errorMsg}: ` : ''
-      }Expected ${actual} to be close to ${expected} with max diff ${delta}, actual diff ${diff}`,
-    () =>
-      `${
-        errorMsg ? `${errorMsg}: ` : ''
-      }Expected ${actual} not to be close to ${expected} with min diff ${delta}, actual diff ${diff}`
+    () => msg(errorMsg, `Expected ${actual} to be close to ${expected} with max diff ${delta}, actual diff ${diff}`),
+    () => msg(errorMsg, `Expected ${actual} not to be close to ${expected} with min diff ${delta}, actual diff ${diff}`)
+  )
+})
+
+chai.util.addMethod(chai.assert, 'bnAbove', function (nAbove, nBelow, errorMsg) {
+  chai.assert(
+    toBN(nAbove).gt(toBN(nBelow)),
+    () => msg(errorMsg, `Expected ${nAbove} to be above ${nBelow}`),
+    () => msg(errorMsg, `Expected ${nAbove} not to be above ${nBelow}`)
   )
 })
 
@@ -131,8 +148,13 @@ function getEventAt(receipt, eventName, index, args, abi) {
 }
 
 function getEvent(receipt, eventName, args, abi) {
-  return getEvents(receipt, eventName, { decodeForAbi: abi }).find((e) =>
-    // find the first index where every event argument matches the expected one
+  const events = getEvents(receipt, eventName, { decodeForAbi: abi })
+  return findEventWithArgs(args, events)
+}
+
+function findEventWithArgs(args, events) {
+  // find the first index where every event argument matches the expected one
+  return events.find((e) =>
     Object.entries(args).every(
       ([argName, argValue]) => e.args[argName] !== undefined && normalizeArg(e.args[argName]) === normalizeArg(argValue)
     )

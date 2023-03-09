@@ -1,3 +1,4 @@
+const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const { contract, artifacts, ethers } = require('hardhat')
 const { assert } = require('../helpers/assert')
 
@@ -58,11 +59,14 @@ contract('WithdrawalNFT', (addresses) => {
   })
 
   describe('supportsInterface()', () => {
-    it('returns true for IERC165 interfaceiId (0x01ffc9a7)', async () => {
+    it('returns true for IERC165 interface id (0x01ffc9a7)', async () => {
       assert.isTrue(await withdrawalQueueERC721.supportsInterface('0x01ffc9a7'))
     })
     it('returns true for IERC721 interface id (0x80ac58cd)', async () => {
       assert.isTrue(await withdrawalQueueERC721.supportsInterface('0x80ac58cd'))
+    })
+    it('returns true for IERC721Metadata interface id (0x5b5e139f)', async () => {
+      assert.isTrue(await withdrawalQueueERC721.supportsInterface('0x5b5e139f'))
     })
     it('returns true for AccessControlEnumerable interface id (0x5a05180f)', async () => {
       assert.isTrue(await withdrawalQueueERC721.supportsInterface('0x5a05180f'))
@@ -83,6 +87,10 @@ contract('WithdrawalNFT', (addresses) => {
     it('return correct withdrawal requests count', async () => {
       assert.equals(await withdrawalQueueERC721.balanceOf(nftHolderStETH), 2)
       assert.equals(await withdrawalQueueERC721.balanceOf(nftHolderWstETH), 1)
+    })
+
+    it('reverts for zero address', async () => {
+      await assert.reverts(withdrawalQueueERC721.balanceOf(ZERO_ADDRESS), `InvalidOwnerAddress("${ZERO_ADDRESS}")`)
     })
   })
 

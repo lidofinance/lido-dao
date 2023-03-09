@@ -16,6 +16,7 @@ interface ILidoTemporary {
         // EL values
         uint256 _withdrawalVaultBalance,
         uint256 _elRewardsVaultBalance,
+        uint256 _sharesRequestedToBurn,
         // decision
         uint256 _requestIdToFinalizeUpTo,
         uint256 _finalizationShareRate
@@ -60,6 +61,7 @@ contract AccountingOracleMock {
             data.clBalanceGwei * 1e9,
             data.withdrawalVaultBalance,
             data.elRewardsVaultBalance,
+            data.sharesRequestedToBurn,
             data.lastFinalizableWithdrawalRequestId,
             data.simulatedShareRate
         );

@@ -8,6 +8,7 @@ const LidoStub = artifacts.require(`${mocksFilePath}:LidoStub`)
 const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
 const LidoLocatorStub = artifacts.require(`${mocksFilePath}:LidoLocatorStub`)
 const WithdrawalQueueStub = artifacts.require(`${mocksFilePath}:WithdrawalQueueStub`)
+const BurnerStub = artifacts.require(`${mocksFilePath}:BurnerStub`)
 
 function wei(number, units = 'wei') {
   switch (units.toLowerCase()) {
@@ -21,7 +22,7 @@ function wei(number, units = 'wei') {
 }
 
 contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewardsVault, ...accounts]) => {
-  let oracleReportSanityChecker, lidoLocatorMock, lidoMock, withdrawalQueueMock
+  let oracleReportSanityChecker, lidoLocatorMock, lidoMock, withdrawalQueueMock, burnerMock
   const managersRoster = {
     allLimitsManagers: accounts.slice(0, 2),
     churnValidatorsPerDayLimitManagers: accounts.slice(2, 4),
@@ -51,6 +52,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     postCLBalance: ETH(100_001),
     withdrawalVaultBalance: 0,
     elRewardsVaultBalance: 0,
+    sharesRequestedToBurn: 0,
     preCLValidators: 0,
     postCLValidators: 0,
   }
@@ -60,11 +62,13 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     await ethers.provider.send('hardhat_mine', ['0x' + Number(1024).toString(16), '0x' + Number(12).toString(16)])
     lidoMock = await LidoStub.new({ from: deployer })
     withdrawalQueueMock = await WithdrawalQueueStub.new({ from: deployer })
+    burnerMock = await BurnerStub.new({ from: deployer })
     lidoLocatorMock = await LidoLocatorStub.new(
       lidoMock.address,
       withdrawalVault,
       withdrawalQueueMock.address,
       elRewardsVault,
+      burnerMock.address,
       { from: deployer }
     )
 

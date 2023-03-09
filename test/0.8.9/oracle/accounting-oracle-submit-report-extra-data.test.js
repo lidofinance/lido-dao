@@ -5,12 +5,12 @@ const { e9, e18, e27, hex } = require('../../helpers/utils')
 const {
   CONSENSUS_VERSION,
   deployAndConfigureAccountingOracle,
-  getReportDataItems,
+  getAccountingReportDataItems,
   encodeExtraDataItem,
   encodeExtraDataItems,
   packExtraDataList,
   calcExtraDataListHash,
-  calcReportDataHash,
+  calcAccountingReportDataHash,
   ZERO_HASH,
   EXTRA_DATA_FORMAT_EMPTY,
   EXTRA_DATA_FORMAT_LIST,
@@ -37,8 +37,9 @@ const getDefaultReportFields = (overrides) => ({
   numExitedValidatorsByStakingModule: [3],
   withdrawalVaultBalance: e18(1),
   elRewardsVaultBalance: e18(2),
-  lastWithdrawalRequestIdToFinalize: 1,
-  finalizationShareRate: e27(1),
+  sharesRequestedToBurn: e18(3),
+  lastFinalizableWithdrawalRequestId: 1,
+  simulatedShareRate: e27(1),
   isBunkerMode: true,
   extraDataFormat: EXTRA_DATA_FORMAT_LIST,
   // required override: refSlot,
@@ -81,8 +82,8 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       ...reportFieldsArg,
     })
 
-    const reportItems = getReportDataItems(reportFields)
-    const reportHash = calcReportDataHash(reportItems)
+    const reportItems = getAccountingReportDataItems(reportFields)
+    const reportHash = calcAccountingReportDataHash(reportItems)
 
     return {
       extraData,
@@ -533,8 +534,8 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
           refSlot,
         })
 
-        const reportItems = getReportDataItems(reportFields)
-        const reportHash = calcReportDataHash(reportItems)
+        const reportItems = getAccountingReportDataItems(reportFields)
+        const reportHash = calcAccountingReportDataHash(reportItems)
 
         await consensus.submitReport(reportFields.refSlot, reportHash, CONSENSUS_VERSION, {
           from: member1,
