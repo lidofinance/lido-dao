@@ -59,7 +59,6 @@ const getNetConfig = (networkName, ethAccountName) => {
     ...base,
     url: 'http://35.228.211.212:8545',
     chainId: 1337803,
-    gas: 25000000,
   }
   const byNetName = {
     localhost,

@@ -3,6 +3,7 @@
   "ipfsAPI": "http://127.0.0.1:5001/api/v0",
   "multisigAddress": "0xa5F1d7D49F581136Cf6e58B32cBE9a2039C48bA1",
   "owner": "0xa5F1d7D49F581136Cf6e58B32cBE9a2039C48bA1",
+  "gateSealAddress": "0xa5F1d7D49F581136Cf6e58B32cBE9a2039C48bA1",
   "lidoApmEnsName": "lidopm.eth",
   "lidoApmEnsRegDurationSec": 94608000,
   "daoAragonId": "lido-dao",
@@ -75,7 +76,7 @@
       "consensusVersion": 1
     }
   },
-  "hashConsensusForExitBus": {
+  "hashConsensusForValidatorsExitBus": {
     "parameters": {
       "fastLaneLengthSlots": 10,
       "epochsPerFrame": 4
@@ -91,6 +92,12 @@
       "maxDepositsPerBlock": 150,
       "minDepositBlockDistance": 5,
       "pauseIntentValidityPeriodBlocks": 6646
+    }
+  },
+  "nodeOperatorsRegistry": {
+    "parameters": {
+      "stakingModuleTypeId": "curated-onchain-v1",
+      "stuckPenaltyDelay": "172800"
     }
   },
   "oracleReportSanityChecker": {

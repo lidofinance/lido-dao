@@ -2,6 +2,7 @@ const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, yl, gr } = require('../helpers/log')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { web3 } = require('hardhat')
 
 const { APP_NAMES } = require('../constants')
 
@@ -24,6 +25,7 @@ const REQUIRED_NET_STATE = [
   "hashConsensusForValidatorsExitBus",
   "withdrawalQueueERC721",
   "withdrawalVault",
+  "nodeOperatorsRegistry",
 ]
 
 
@@ -40,6 +42,7 @@ async function deployNewContracts({ web3, artifacts }) {
   const lidoAddress = state["app:lido"].proxyAddress
   const legacyOracleAddress = state["app:oracle"].proxyAddress
   const nodeOperatorsRegistryAddress = state["app:node-operators-registry"].proxyAddress
+  const nodeOperatorsRegistryParams = state["nodeOperatorsRegistry"].parameters
 
   const validatorsExitBusOracleParams = state["validatorsExitBusOracle"].parameters
   const accountingOracleParams = state["accountingOracle"].parameters
@@ -60,16 +63,18 @@ async function deployNewContracts({ web3, artifacts }) {
   const stakingRouterAdmin = testnetAdmin
   const withdrawalQueueAdmin = testnetAdmin
 
-
   //
   // === NodeOperatorsRegistry: initialize ===
   //
   const stuckPenaltyDelay = 2 * 24 * 60 * 60  // 2 days
-  const stakingModuleTypeId = "curated-onchain-v1"
+  // https://github.com/ethereum/solidity-examples/blob/master/docs/bytes/Bytes.md#description
+  const stakingModuleTypeId = web3.utils.padRight(web3.utils.stringToHex(
+    nodeOperatorsRegistryParams.stakingModuleTypeId
+  ), 64)
   const nodeOperatorsRegistryArgs = [
     lidoLocatorAddress,
     stakingModuleTypeId,
-    stuckPenaltyDelay,
+    nodeOperatorsRegistryParams.stuckPenaltyDelay,
   ]
   const nodeOperatorsRegistry = await artifacts.require('NodeOperatorsRegistry').at(nodeOperatorsRegistryAddress)
   await nodeOperatorsRegistry.initialize(
@@ -122,8 +127,6 @@ async function deployNewContracts({ web3, artifacts }) {
   const ValidatorsExitBusOracle = await artifacts.require('ValidatorsExitBusOracle').at(ValidatorsExitBusOracleAddress)
   const ValidatorsExitBusOracleArgs = [
     exitBusOracleAdmin,  // admin
-    exitBusOracleAdmin,  // pauser
-    exitBusOracleAdmin,  // resumer
     hashConsensusForValidatorsExitBusOracleAddress,
     validatorsExitBusOracleParams.consensusVersion,
     0, // lastProcessingRefSlot
@@ -135,10 +138,6 @@ async function deployNewContracts({ web3, artifacts }) {
   //
   const withdrawalQueueArgs = [
     withdrawalQueueAdmin,  // _admin
-    withdrawalQueueAdmin,  // _pauser
-    withdrawalQueueAdmin,  // _resumer
-    lidoAddress,  // _finalizer
-    accountingOracleAddress,  // _bunkerReporter
   ]
   console.log({ withdrawalQueueArgs })
   const withdrawalQueue = await artifacts.require('WithdrawalQueueERC721').at(withdrawalQueueAddress)

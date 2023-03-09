@@ -25,6 +25,7 @@ const REQUIRED_NET_STATE = [
   "validatorsExitBusOracle",
   "withdrawalQueueERC721",
   "withdrawalVault",
+  "gateSealAddress",
 ]
 
 
@@ -40,6 +41,7 @@ async function deployNewContracts({ web3, artifacts }) {
   const lidoAddress = state["app:lido"].proxyAddress
   const legacyOracleAddress = state["app:oracle"].proxyAddress
   const nodeOperatorsRegistryAddress = state["app:node-operators-registry"].proxyAddress
+  const gateSealAddress = state["gateSealAddress"]
 
   const validatorsExitBusOracleParams = state["validatorsExitBusOracle"].parameters
   const accountingOracleParams = state["accountingOracle"].parameters
@@ -80,7 +82,7 @@ async function deployNewContracts({ web3, artifacts }) {
   // === AccountingOracle
   //
   const accountingOracle = await artifacts.require('AccountingOracle').at(accountingOracleAddress)
-  // TODO: roles from the removed initialize()
+  /// NB: Skip because all roles are supposed to be set by the contract admin later
   logWideSplitter()
 
   //
@@ -92,19 +94,30 @@ async function deployNewContracts({ web3, artifacts }) {
   // === ValidatorsExitBusOracle
   //
   const validatorsExitBusOracle = await artifacts.require('ValidatorsExitBusOracle').at(validatorsExitBusOracleAddress)
-  // TODO: roles from the removed initialize()
+  await validatorsExitBusOracle.grantRole(await validatorsExitBusOracle.PAUSE_ROLE(), gateSealAddress, { from: testnetAdmin })
+  await validatorsExitBusOracle.grantRole(await validatorsExitBusOracle.RESUME_ROLE(), votingAddress, { from: testnetAdmin })
+  logWideSplitter()
+
+  //
+  // === WithdrawalQueue
+  //
+  const withdrawalQueue = await artifacts.require('WithdrawalQueueERC721').at(withdrawalQueueAddress)
+  await withdrawalQueue.grantRole(await withdrawalQueue.PAUSE_ROLE(), gateSealAddress, { from: testnetAdmin })
+  await withdrawalQueue.grantRole(await withdrawalQueue.RESUME_ROLE(), votingAddress, { from: testnetAdmin })
+  await withdrawalQueue.grantRole(await withdrawalQueue.FINALIZE_ROLE(), lidoAddress, { from: testnetAdmin })
+  await withdrawalQueue.grantRole(await withdrawalQueue.ORACLE_ROLE(), accountingOracleAddress, { from: testnetAdmin })
   logWideSplitter()
 
   //
   // === HashConsensus for ValidatorExitBusOracle
   //
-  /// NB: Skip because all roles are supposed to be set by the contract admin
+  /// NB: Skip because all roles are supposed to be set by the contract admin later
 
   //
   // === Burner
   //
   const burner = await artifacts.require('Burner').at(burnerAddress)
-  // REQUEST_BURN_SHARES_ROLE is already granted to Lido in Burner constructor
+  // NB: REQUEST_BURN_SHARES_ROLE is already granted to Lido in Burner constructor
   await burner.grantRole(await burner.REQUEST_BURN_SHARES_ROLE(), nodeOperatorsRegistryAddress, { from: testnetAdmin })
 
 }
