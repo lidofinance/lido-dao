@@ -684,7 +684,9 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         }
     }
 
-    /// @notice Invalidates all unused validators keys for all node operators
+    /// @notice Invalidates all unused validators keys for node operators in the given range
+    /// @param _indexFrom the first index (inclusive) of the node operator to invalidate keys for
+    /// @param _indexTo the last index (inclusive) of the node operator to invalidate keys for
     function invalidateReadyToDepositKeysRange(uint256 _indexFrom, uint256 _indexTo) external {
         _auth(MANAGE_NODE_OPERATOR_ROLE);
         _invalidateReadyToDepositKeysRange(_indexFrom, _indexTo);

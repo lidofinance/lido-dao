@@ -1674,6 +1674,96 @@ contract('NodeOperatorsRegistry', (addresses) => {
     })
   })
 
+  describe('invalidateReadyToDepositKeysRange()', () => {
+    beforeEach(async () => {
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: admin })
+      // node operator without unused keys
+      await nodeOperators.addNodeOperator(
+        app,
+        {
+          ...NODE_OPERATORS[2],
+          vettedSigningKeysCount: NODE_OPERATORS[2].totalSigningKeysCount,
+          depositedSigningKeysCount: NODE_OPERATORS[2].totalSigningKeysCount,
+        },
+        { from: admin }
+      )
+    })
+
+    it('reverts with "APP_AUTH_FAILED" error when called by sender without MANAGE_NODE_OPERATOR_ROLE role', async () => {
+      const hasPermission = await dao.hasPermission(nobody, app, 'MANAGE_NODE_OPERATOR_ROLE')
+      assert.isFalse(hasPermission)
+      const indexFrom = 0
+      const indexTo = NODE_OPERATORS.length - 1
+      await assert.reverts(
+        app.invalidateReadyToDepositKeysRange(indexFrom, indexTo, { from: nobody }),
+        'APP_AUTH_FAILED'
+      )
+    })
+
+    it('reverts with "OUT_OF_RANGE" error when called with indexFrom > indexTo', async () => {
+      const indexFrom = NODE_OPERATORS.length - 1
+      const indexTo = 0
+      await assert.reverts(
+        app.invalidateReadyToDepositKeysRange(indexFrom, indexTo, { from: nodeOperatorsManager }),
+        'OUT_OF_RANGE'
+      )
+    })
+
+    it('reverts with "OUT_OF_RANGE" error when called with indexTo >= node operators count', async () => {
+      const indexFrom = 0
+      const indexTo = wei.int(await app.getNodeOperatorsCount())
+      await assert.reverts(
+        app.invalidateReadyToDepositKeysRange(indexFrom, wei.str(indexTo), { from: nodeOperatorsManager }),
+        'OUT_OF_RANGE'
+      )
+      await assert.reverts(
+        app.invalidateReadyToDepositKeysRange(indexFrom, wei.str(indexTo + 1n), { from: nodeOperatorsManager }),
+        'OUT_OF_RANGE'
+      )
+    })
+
+    it('allows invalidate keys for one node operator', async () => {
+      const nodeOperatorIndex = 1
+      const allNodeOperatorsBefore = await nodeOperators.getAllNodeOperators(app)
+      await app.invalidateReadyToDepositKeysRange(nodeOperatorIndex, nodeOperatorIndex, { from: nodeOperatorsManager })
+      const allNodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
+      const nodeOperatorBefore = allNodeOperatorsBefore[nodeOperatorIndex]
+      const nodeOperatorAfter = allNodeOperatorsAfter[nodeOperatorIndex]
+      assert.equals(nodeOperatorAfter.stakingLimit, nodeOperatorBefore.usedSigningKeys)
+      assert.equals(nodeOperatorAfter.totalSigningKeys, nodeOperatorBefore.usedSigningKeys)
+    })
+
+    it('sets totalSigningKeysCount and vettedSigningKeysCount equal to depositedSigningKeys for each node operator in range', async () => {
+      const indexFrom = 1
+      const indexTo = NODE_OPERATORS.length - 1
+      const allNodeOperatorsBefore = await nodeOperators.getAllNodeOperators(app)
+      await app.invalidateReadyToDepositKeysRange(indexFrom, indexTo, { from: nodeOperatorsManager })
+      const allNodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
+      for (let i = indexFrom; i <= indexTo; ++i) {
+        const nodeOperatorBefore = allNodeOperatorsBefore[i]
+        const nodeOperatorAfter = allNodeOperatorsAfter[i]
+        assert.equals(nodeOperatorAfter.stakingLimit, nodeOperatorBefore.usedSigningKeys)
+        assert.equals(nodeOperatorAfter.totalSigningKeys, nodeOperatorBefore.usedSigningKeys)
+      }
+    })
+
+    it("doesn't modify totalSigningKeysCount and vettedSigningKeysCount for all node operators not in range", async () => {
+      const indexFrom = 2
+      const indexTo = NODE_OPERATORS.length - 1
+      const allNodeOperatorsBefore = await nodeOperators.getAllNodeOperators(app)
+      await app.invalidateReadyToDepositKeysRange(indexFrom, indexTo, { from: nodeOperatorsManager })
+      const allNodeOperatorsAfter = await nodeOperators.getAllNodeOperators(app)
+      for (let i = 0; i < indexTo; ++i) {
+        const nodeOperatorBefore = allNodeOperatorsBefore[i]
+        const nodeOperatorAfter = allNodeOperatorsAfter[i]
+        assert.equals(nodeOperatorAfter.stakingLimit, nodeOperatorBefore.stakingLimit)
+        assert.equals(nodeOperatorAfter.usedSigningKeys, nodeOperatorBefore.usedSigningKeys)
+        assert.equals(nodeOperatorAfter.totalSigningKeys, nodeOperatorBefore.totalSigningKeys)
+      }
+    })
+  })
+
   describe('getSigningKeysAllocationData() with target limit', async () => {
     const firstNodeOperatorId = 0
     const secondNodeOperatorId = 1
