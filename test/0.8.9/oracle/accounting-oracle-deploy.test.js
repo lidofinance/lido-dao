@@ -222,6 +222,9 @@ async function configureAccountingOracleSetup({
   // this is done as a part of the protocol upgrade voting execution
 
   const frameConfig = await consensus.getFrameConfig()
+  // TODO: Double check it
+  await consensus.setTimeInEpochs(await legacyOracle.getLastCompletedEpochId())
+
   const initialEpoch = +(await legacyOracle.getLastCompletedEpochId()) + +frameConfig.epochsPerFrame
 
   const updateInitialEpochIx = await consensus.updateInitialEpoch(initialEpoch, { from: admin })

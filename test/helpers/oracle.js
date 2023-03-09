@@ -95,8 +95,8 @@ async function reportOracle(consensus, oracle, reportFields) {
 }
 
 // FIXME: kept for compat, remove after refactoring tests
-function pushOracleReport(consensus, oracle, numValidators, clBalance, elRewards) {
-  return reportOracle(consensus, oracle, { numValidators, clBalance, elRewards })
+function pushOracleReport(consensus, oracle, numValidators, clBalance, elRewardsVaultBalance) {
+  return reportOracle(consensus, oracle, { numValidators, clBalance, elRewardsVaultBalance })
 }
 
 async function getSecondsPerFrame(consensus) {

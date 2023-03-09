@@ -111,8 +111,8 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
   })
 
   const pushReport = async (clValidators, clBalance) => {
-    const elRewards = await web3.eth.getBalance(elRewardsVault.address)
-    await pushOracleReport(consensus, oracle, clValidators, clBalance, elRewards)
+    const elRewardsVaultBalance = await web3.eth.getBalance(elRewardsVault.address)
+    await pushOracleReport(consensus, oracle, clValidators, clBalance, elRewardsVaultBalance)
     await advanceChainTime(SECONDS_PER_FRAME + 1000)
   }
 
