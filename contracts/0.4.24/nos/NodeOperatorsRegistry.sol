@@ -621,7 +621,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         );
 
         uint64 curRefundedValidatorsCount = stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET);
-        if (_stuckValidatorsCount<= curRefundedValidatorsCount && curStuckValidatorsCount > curRefundedValidatorsCount) {
+        if (_stuckValidatorsCount <= curRefundedValidatorsCount && curStuckValidatorsCount > curRefundedValidatorsCount) {
             stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, uint64(block.timestamp + getStuckPenaltyDelay()));
         }
 
@@ -1289,7 +1289,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         (address[] memory recipients, uint256[] memory shares, bool[] memory penalized) =
             getRewardsDistribution(sharesToDistribute);
 
-        uint256 burned;
+        uint256 toBurn;
         for (uint256 idx; idx < recipients.length; ++idx) {
             /// @dev skip ultra-low amounts processing to avoid transfer zero amount in case of a penalty
             if (shares[idx] < 2) continue;
@@ -1297,15 +1297,15 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
                 /// @dev half reward punishment
                 /// @dev ignore remainder since it accumulated on contract balance
                 shares[idx] >>= 1;
-                burned = burned.add(shares[idx]);
+                toBurn = toBurn.add(shares[idx]);
                 emit NodeOperatorPenalized(recipients[idx], shares[idx]);
             }
             stETH.transferShares(recipients[idx], shares[idx]);
             distributed = distributed.add(shares[idx]);
             emit RewardsDistributed(recipients[idx], shares[idx]);
         }
-        if (burned > 0) {
-            IBurner(getLocator().burner()).requestBurnShares(address(this), burned);
+        if (toBurn > 0) {
+            IBurner(getLocator().burner()).requestBurnShares(address(this), toBurn);
         }
     }
 
