@@ -339,7 +339,7 @@ abstract contract WithdrawalQueueBase {
         }
     }
 
-    /// @dev Finalize requests from last finalized one up to `_nextFinalizedRequestId`
+    /// @dev Finalize requests in the queue
     ///  Emits WithdrawalBatchFinalized event.
     /// Checks that:
     /// - _amountOfETH is less or equal to the nominal value of all requests to be finalized
@@ -406,7 +406,7 @@ abstract contract WithdrawalQueueBase {
         emit WithdrawalRequested(requestId, msg.sender, _owner, _amountOfStETH, _amountOfShares);
     }
 
-    /// @notice Returns status of the withdrawal request with `_requestId` id
+    /// @dev Returns status of the withdrawal request with `_requestId` id
     function _getStatus(uint256 _requestId) internal view returns (WithdrawalRequestStatus memory status) {
         if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
@@ -423,7 +423,7 @@ abstract contract WithdrawalQueueBase {
         );
     }
 
-    /// @notice View function to find a checkpoint hint for `claimWithdrawal()`
+    /// @dev View function to find a checkpoint hint for `claimWithdrawal()`
     ///  Search will be performed in the range of `[_firstIndex, _lastIndex]`
     ///
     /// NB!: Range search ought to be used to optimize gas cost.
@@ -475,7 +475,7 @@ abstract contract WithdrawalQueueBase {
         return min;
     }
 
-    /// @notice Claim `_requestId` request and transfer locked ether to `_recipient`. Emits WithdrawalClaimed event
+    /// @dev Claim `_requestId` request and transfer locked ether to `_recipient`. Emits WithdrawalClaimed event
     /// @param _requestId request id to claim
     /// @param _hint hint for discount checkpoint index to avoid extensive search over the checkpoints.
     /// @param _recipient address to send ether to
@@ -501,7 +501,7 @@ abstract contract WithdrawalQueueBase {
         emit WithdrawalClaimed(_requestId, msg.sender, _recipient, ethWithDiscount);
     }
 
-    /// @notice Calculates discounted ether value for `_requestId` using a provided `_hint`. Checks if hint is valid
+    /// @dev Calculates discounted ether value for `_requestId` using a provided `_hint`. Checks if hint is valid
     /// @return claimableEther discounted eth for `_requestId`. Returns 0 if request is not claimable
     function _calculateClaimableEther(WithdrawalRequest storage _request, uint256 _requestId, uint256 _hint)
         internal
@@ -535,7 +535,7 @@ abstract contract WithdrawalQueueBase {
         return eth;
     }
 
-    // quazi-constructor
+    /// @dev quazi-constructor
     function _initializeQueue() internal {
         // setting dummy zero structs in checkpoints and queue beginning
         // to avoid uint underflows and related if-branches
@@ -564,7 +564,7 @@ abstract contract WithdrawalQueueBase {
     }
 
     //
-    // Internal getters and setters
+    // Internal getters and setters for unstructured storage
     //
     function _getQueue() internal pure returns (mapping(uint256 => WithdrawalRequest) storage queue) {
         bytes32 position = QUEUE_POSITION;
