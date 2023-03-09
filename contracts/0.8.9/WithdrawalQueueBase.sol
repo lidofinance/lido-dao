@@ -105,7 +105,7 @@ abstract contract WithdrawalQueueBase {
     error InvalidRequestId(uint256 _requestId);
     error InvalidRequestIdRange(uint256 startId, uint256 endId);
     error InvalidState();
-    error InvalidBatch(uint256 index);
+    error BatchesAreNotSorted();
     error EmptyBatches();
     error RequestNotFoundOrNotFinalized(uint256 _requestId);
     error NotEnoughEther();
@@ -310,22 +310,13 @@ abstract contract WithdrawalQueueBase {
         uint256 currentBatchIndex;
         uint256 prevBatchEndRequestId = getLastFinalizedRequestId();
         WithdrawalRequest memory prevBatchEnd = _getQueue()[prevBatchEndRequestId];
-        uint256 prevBatchShareRate;
         while (currentBatchIndex < _batches.length) {
             uint256 batchEndRequestId = _batches[currentBatchIndex];
-            if (batchEndRequestId <= prevBatchEndRequestId) revert InvalidBatch(currentBatchIndex);
+            if (batchEndRequestId <= prevBatchEndRequestId) revert BatchesAreNotSorted();
 
             WithdrawalRequest memory batchEnd = _getQueue()[batchEndRequestId];
 
             (uint256 batchShareRate, uint256 stETH, uint256 shares) = _calcBatch(prevBatchEnd, batchEnd);
-
-            if (currentBatchIndex > 0) {
-                // - if shareRate(batch[i]) is below _maxShareRate => shareRate(batch[i+1]) is above and vice versa
-                // so, we can't have two batches in a row that is below...
-                if (prevBatchShareRate <= _maxShareRate && batchShareRate <= _maxShareRate) revert InvalidBatch(currentBatchIndex);
-                // .. or above the line
-                if (prevBatchShareRate > _maxShareRate && batchShareRate > _maxShareRate) revert InvalidBatch(currentBatchIndex);
-            }
 
             if (batchShareRate > _maxShareRate) {
                 // discounted
@@ -336,7 +327,6 @@ abstract contract WithdrawalQueueBase {
             }
             sharesToBurn += shares;
 
-            prevBatchShareRate = batchShareRate;
             prevBatchEndRequestId = batchEndRequestId;
             prevBatchEnd = batchEnd;
             unchecked{ ++currentBatchIndex; }
