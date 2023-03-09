@@ -2,12 +2,12 @@ const { contract, ethers } = require('hardhat')
 
 const { assert } = require('../helpers/assert')
 const { e18, e27, toBN, getFirstEventArgs } = require('../helpers/utils')
-const { MAX_UINT256 } = require('../0.6.12/helpers/constants')
+const { MAX_UINT256 } = require('../helpers/constants')
 const { EvmSnapshot } = require('../helpers/blockchain')
 
 const { deployWithdrawalQueue } = require('./withdrawal-queue-deploy.test')
 
-contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
+contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user, oracle]) => {
   const evmSnapshot = new EvmSnapshot(ethers.provider)
   const snapshot = () => evmSnapshot.make()
   const rollback = () => evmSnapshot.rollback()
@@ -16,7 +16,9 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
 
   let queue, steth
 
+  let rebaseCounter = 0
   const setShareRate = async (rate) => {
+    await queue.onOracleReport(false, rebaseCounter, ++rebaseCounter, { from: oracle })
     await steth.setTotalPooledEther(TOTAL_SHARES.mul(toBN(rate)))
   }
 
@@ -25,6 +27,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
       stethOwner: owner,
       queueAdmin: daoAgent,
       queueFinalizer: finalizer,
+      queueOracle: oracle,
     })
 
     steth = deployed.steth
@@ -73,8 +76,21 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
       await setShareRate(1)
     })
 
+    let batches
+
     it(`both requests can be finalized with 2 ETH`, async () => {
-      const batch = await queue.finalizationBatch(requestIds[1], e27(1))
+      const result = await queue.calculateFinalizationBatches(e27(1), MAX_UINT256, 1000, [
+        e18(2),
+        false,
+        Array(36).fill(0),
+        0,
+      ])
+      assert.isTrue(result.finished)
+      assert.equals(result.batchesLength, 2)
+      batches = result.batches.slice(0, result.batchesLength)
+      assert.equals(batches, [1, 2])
+
+      const batch = await queue.prefinalize.call(batches, e27(1))
       assert.equals(batch.ethToLock, e18(2))
       assert.equals(batch.sharesToBurn, e18(2))
     })
@@ -82,7 +98,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
     let claimableEther
 
     it(`requests get finalized`, async () => {
-      await queue.finalize(requestIds[1], e27(1), { from: finalizer, value: e18(2) })
+      await queue.finalize(batches, e27(1), { from: finalizer, value: e18(2) })
       assert.equals(await queue.getLastFinalizedRequestId(), requestIds[1])
 
       const hints = await queue.findCheckpointHints(requestIds, 1, await queue.getLastCheckpointIndex())
@@ -130,8 +146,22 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
       await setShareRate(1)
     })
 
-    it(`both requests can be finalized with 2.5 ETH`, async () => {
-      const batch = await queue.finalizationBatch(requestIds[1], e27(1.5))
+    let batches
+    const maxShareRate = e27(1.5)
+
+    it(`both requests can be finalized with 2 ETH`, async () => {
+      const result = await queue.calculateFinalizationBatches(maxShareRate, MAX_UINT256, 1000, [
+        e18(2.5),
+        false,
+        Array(36).fill(0),
+        0,
+      ])
+      assert.isTrue(result.finished)
+      assert.equals(result.batchesLength, 2)
+      batches = result.batches.slice(0, result.batchesLength)
+      assert.equals(batches, [1, 2])
+
+      const batch = await queue.prefinalize.call(batches, maxShareRate)
       assert.equals(batch.ethToLock, e18(2.5))
       assert.equals(batch.sharesToBurn, e18(2))
     })
@@ -139,7 +169,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user]) => {
     let claimableEther
 
     it(`requests get finalized`, async () => {
-      await queue.finalize(requestIds[1], e27(1.5), { from: finalizer, value: e18(2.5) })
+      await queue.finalize(batches, maxShareRate, { from: finalizer, value: e18(2.5) })
       assert.equals(await queue.getLastFinalizedRequestId(), requestIds[1])
 
       const hints = await queue.findCheckpointHints(requestIds, 1, await queue.getLastCheckpointIndex())

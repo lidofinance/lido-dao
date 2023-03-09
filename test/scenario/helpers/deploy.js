@@ -4,6 +4,7 @@ const withdrawals = require('../../helpers/withdrawals')
 const { newDao, newApp } = require('../../0.4.24/helpers/dao')
 
 const Lido = artifacts.require('LidoMock.sol')
+const WstETH = artifacts.require('WstETH.sol')
 const LidoELRewardsVault = artifacts.require('LidoExecutionLayerRewardsVault.sol')
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const OracleMock = artifacts.require('AccountingOracleMock.sol')
@@ -131,7 +132,8 @@ async function deployDaoAndPool(appManager, voting) {
 
   const eip712StETH = await EIP712StETH.new({ from: appManager })
 
-  const withdrawalQueue = (await withdrawals.deploy(appManager, pool.address)).queue
+  const wsteth = await WstETH.new(pool.address)
+  const withdrawalQueue = (await withdrawals.deploy(appManager, wsteth.address)).queue
 
   await pool.initialize(
     oracleMock.address,

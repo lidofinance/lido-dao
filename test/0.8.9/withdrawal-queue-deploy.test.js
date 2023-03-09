@@ -1,11 +1,12 @@
 const { artifacts, contract } = require('hardhat')
-const { ZERO_ADDRESS, MAX_UINT256 } = require('@aragon/contract-helpers-test')
+const { ZERO_ADDRESS, MAX_UINT256 } = require('../helpers/constants')
 
-const { ETH } = require('../helpers/utils')
+const { ETH, toBN } = require('../helpers/utils')
 const withdrawals = require('../helpers/withdrawals')
 const { assert } = require('../helpers/assert')
 
 const StETHMock = artifacts.require('StETHPermitMock.sol')
+const WstETH = artifacts.require('WstETHMock.sol')
 const EIP712StETH = artifacts.require('EIP712StETH')
 const NFTDescriptorMock = artifacts.require('NFTDescriptorMock.sol')
 
@@ -19,17 +20,23 @@ async function deployWithdrawalQueue({
   queuePauser,
   queueResumer,
   queueFinalizer,
-  queueBunkerReporter,
+  queueOracle,
   queueName = QUEUE_NAME,
   symbol = QUEUE_SYMBOL,
   doResume = true,
 }) {
   const nftDescriptor = await NFTDescriptorMock.new(NFT_DESCRIPTOR_BASE_URI)
   const steth = await StETHMock.new({ value: ETH(1), from: stethOwner })
+  const wsteth = await WstETH.new(steth.address, { from: stethOwner })
   const eip712StETH = await EIP712StETH.new(steth.address, { from: stethOwner })
   await steth.initializeEIP712StETH(eip712StETH.address)
 
-  const { queue: withdrawalQueue } = await withdrawals.deploy(queueAdmin, steth.address, queueName, symbol)
+  const { queue: withdrawalQueue, impl: withdrawalQueueImplementation } = await withdrawals.deploy(
+    queueAdmin,
+    wsteth.address,
+    queueName,
+    symbol
+  )
 
   const initTx = await withdrawalQueue.initialize(queueAdmin)
 
@@ -38,11 +45,9 @@ async function deployWithdrawalQueue({
   })
   await withdrawalQueue.grantRole(await withdrawalQueue.PAUSE_ROLE(), queuePauser || queueAdmin, { from: queueAdmin })
   await withdrawalQueue.grantRole(await withdrawalQueue.RESUME_ROLE(), queueResumer || queueAdmin, { from: queueAdmin })
-  await withdrawalQueue.grantRole(
-    await withdrawalQueue.BUNKER_MODE_REPORT_ROLE(),
-    queueBunkerReporter || steth.address,
-    { from: queueAdmin }
-  )
+  await withdrawalQueue.grantRole(await withdrawalQueue.ORACLE_ROLE(), queueOracle || steth.address, {
+    from: queueAdmin,
+  })
 
   if (doResume) {
     await withdrawalQueue.resume({ from: queueResumer || queueAdmin })
@@ -51,8 +56,10 @@ async function deployWithdrawalQueue({
   return {
     initTx,
     steth,
+    wsteth,
     withdrawalQueue,
     nftDescriptor,
+    withdrawalQueueImplementation,
   }
 }
 
@@ -121,13 +128,13 @@ contract(
         const checkpointIndex = await withdrawalQueue.getLastCheckpointIndex()
         const checkpointItem = await withdrawalQueue.getCheckpointItem(checkpointIndex)
 
-        assert.equals(+queueItem.cumulativeStETH, 0)
-        assert.equals(+queueItem.cumulativeShares, 0)
+        assert.equals(queueItem.cumulativeStETH, 0)
+        assert.equals(queueItem.cumulativeShares, 0)
         assert.equals(queueItem.owner, ZERO_ADDRESS)
         assert.equals(queueItem.claimed, true)
 
         assert.equals(checkpointItem.fromRequestId, 0)
-        assert.equals(checkpointItem.maxShareRate, MAX_UINT256)
+        assert.equals(checkpointItem.maxShareRate, 0)
       })
 
       it('check if pauser is zero', async () => {
@@ -147,6 +154,20 @@ contract(
           }),
           'ZeroMetadata()'
         )
+      })
+
+      it('implementation is petrified', async () => {
+        const { withdrawalQueueImplementation } = await deployWithdrawalQueue({
+          stethOwner,
+          queueAdmin,
+          queuePauser,
+          queueResumer,
+          doResume: false,
+        })
+
+        assert.equals(await withdrawalQueueImplementation.getContractVersion(), toBN(MAX_UINT256))
+
+        await assert.reverts(withdrawalQueueImplementation.initialize(queueAdmin), 'NonZeroContractVersionOnInit()')
       })
     })
   }

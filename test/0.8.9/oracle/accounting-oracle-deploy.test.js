@@ -222,6 +222,9 @@ async function configureAccountingOracleSetup({
   // this is done as a part of the protocol upgrade voting execution
 
   const frameConfig = await consensus.getFrameConfig()
+  // TODO: Double check it
+  await consensus.setTimeInEpochs(await legacyOracle.getLastCompletedEpochId())
+
   const initialEpoch = +(await legacyOracle.getLastCompletedEpochId()) + +frameConfig.epochsPerFrame
 
   const updateInitialEpochIx = await consensus.updateInitialEpoch(initialEpoch, { from: admin })
@@ -416,8 +419,8 @@ contract('AccountingOracle', ([admin, member1]) => {
       assert.equals(await mockStakingRouter.totalCalls_reportExitedKeysByNodeOperator(), 0)
       assert.equals(await mockStakingRouter.totalCalls_reportStuckKeysByNodeOperator(), 0)
 
-      const updateBunkerModeLastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
-      assert.equals(updateBunkerModeLastCall.callCount, 0)
+      const onOracleReportLastCall = await mockWithdrawalQueue.lastCall__onOracleReport()
+      assert.equals(onOracleReportLastCall.callCount, 0)
     })
 
     it('the initial reference slot is greater than the last one of the legacy oracle', async () => {

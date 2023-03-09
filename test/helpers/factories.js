@@ -255,13 +255,13 @@ async function elRewardsVaultFactory({ pool, treasury }) {
   return await LidoExecutionLayerRewardsVault.new(pool.address, treasury.address)
 }
 
-async function withdrawalQueueFactory({ appManager, oracle, pool }) {
-  const withdrawalQueue = (await withdrawals.deploy(appManager.address, pool.address)).queue
+async function withdrawalQueueFactory({ appManager, pool, oracle, wsteth }) {
+  const withdrawalQueue = (await withdrawals.deploy(appManager.address, wsteth.address)).queue
 
   await withdrawalQueue.initialize(appManager.address)
 
-  const BUNKER_MODE_REPORT_ROLE = await withdrawalQueue.BUNKER_MODE_REPORT_ROLE()
-  await withdrawalQueue.grantRole(BUNKER_MODE_REPORT_ROLE, oracle.address, { from: appManager.address })
+  const ORACLE_ROLE = await withdrawalQueue.ORACLE_ROLE()
+  await withdrawalQueue.grantRole(ORACLE_ROLE, oracle.address, { from: appManager.address })
   const FINALIZE_ROLE = await withdrawalQueue.FINALIZE_ROLE()
   await withdrawalQueue.grantRole(FINALIZE_ROLE, pool.address, { from: appManager.address })
 
@@ -269,7 +269,7 @@ async function withdrawalQueueFactory({ appManager, oracle, pool }) {
     by: appManager.address,
     on: withdrawalQueue,
     to: appManager.address,
-    roles: ['PAUSE_ROLE', 'RESUME_ROLE', 'FINALIZE_ROLE', 'BUNKER_MODE_REPORT_ROLE'],
+    roles: ['PAUSE_ROLE', 'RESUME_ROLE', 'FINALIZE_ROLE', 'ORACLE_ROLE'],
   })
 
   return withdrawalQueue
@@ -381,7 +381,6 @@ async function postSetup({
 
   await depositContract.reset()
   await depositContract.set_deposit_root(deployParams.depositRoot)
-  await withdrawalQueue.updateBunkerMode(false, 0, { from: appManager.address })
   await pool.resumeProtocolAndStaking({ from: voting.address })
 }
 

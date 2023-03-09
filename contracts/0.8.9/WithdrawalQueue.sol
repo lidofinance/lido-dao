@@ -21,6 +21,14 @@ interface IStETH is IERC20, IERC20Permit {
     function getSharesByPooledEth(uint256 _pooledEthAmount) external view returns (uint256);
 }
 
+/// @notice Interface defining a Lido liquid staking pool wrapper
+/// @dev see WstETH.sol for full docs
+interface IWstETH is IERC20, IERC20Permit {
+    function unwrap(uint256 _wstETHAmount) external returns (uint256);
+    function getStETHByWstETH(uint256 _wstETHAmount) external view returns (uint256);
+    function stETH() external view returns (IStETH);
+}
+
 /// @title A contract for handling stETH withdrawal request queue within the Lido protocol
 /// @author folkyatina
 abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, WithdrawalQueueBase, Versioned {
@@ -38,7 +46,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant FINALIZE_ROLE = keccak256("FINALIZE_ROLE");
-    bytes32 public constant BUNKER_MODE_REPORT_ROLE = keccak256("BUNKER_MODE_REPORT_ROLE");
+    bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
 
     /// @notice minimal possible sum that is possible to withdraw
     uint256 public constant MIN_STETH_WITHDRAWAL_AMOUNT = 100;
@@ -49,7 +57,9 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     uint256 public constant MAX_STETH_WITHDRAWAL_AMOUNT = 1000 * 1e18;
 
     /// @notice Lido stETH token address to be set upon construction
-    IStETH internal immutable STETH;
+    IStETH public immutable STETH;
+    /// @notice Lido wstETH token address to be set upon construction
+    IWstETH public immutable WSTETH;
 
     /// @notice Emitted when the contract initialized
     event InitializedV1(address _admin);
@@ -63,10 +73,11 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     error RequestIdsNotSorted();
     error ZeroRecipient();
 
-    /// @param _stETH address of stETH contract
-    constructor(address _stETH) {
+    /// @param _wstETH address of WstETH contract
+    constructor(IWstETH _wstETH) {
         // init immutables
-        STETH = IStETH(_stETH);
+        WSTETH = _wstETH;
+        STETH = WSTETH.stETH();
     }
 
     /// @notice Initialize the contract storage explicitly.
@@ -126,6 +137,24 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         }
     }
 
+    /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data
+    /// @param amounts an array of stETH amount values. The standalone withdrawal request will
+    ///  be created for each item in the passed list.
+    /// @param _owner address that will be able to transfer or claim the request.
+    ///  If `owner` is set to `address(0)`, `msg.sender` will be used as owner.
+    /// @return requestIds an array of the created withdrawal requests
+    function requestWithdrawalsWstETH(uint256[] calldata amounts, address _owner)
+        public
+        returns (uint256[] memory requestIds)
+    {
+        _checkResumed();
+        if (_owner == address(0)) _owner = msg.sender;
+        requestIds = new uint256[](amounts.length);
+        for (uint256 i = 0; i < amounts.length; ++i) {
+            requestIds[i] = _requestWithdrawalWstETH(amounts[i], _owner);
+        }
+    }
+
     struct PermitInput {
         uint256 value;
         uint256 deadline;
@@ -148,6 +177,23 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     {
         STETH.permit(msg.sender, address(this), _permit.value, _permit.deadline, _permit.v, _permit.r, _permit.s);
         return requestWithdrawals(_amounts, _owner);
+    }
+
+    /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data
+    ///  using EIP-2612 Permit
+    /// @param _amounts an array of stETH amount values. The standalone withdrawal request will
+    ///  be created for each item in the passed list.
+    /// @param _owner address that will be able to transfer or claim the request.
+    ///  If `owner` is set to `address(0)`, `msg.sender` will be used as owner.
+    /// @param _permit data required for the wstETH.permit() method to set the allowance
+    /// @return requestIds an array of the created withdrawal requests
+    function requestWithdrawalsWstETHWithPermit(
+        uint256[] calldata _amounts,
+        address _owner,
+        PermitInput calldata _permit
+    ) external returns (uint256[] memory requestIds) {
+        WSTETH.permit(msg.sender, address(this), _permit.value, _permit.deadline, _permit.v, _permit.r, _permit.s);
+        return requestWithdrawalsWstETH(_amounts, _owner);
     }
 
     /// @notice Returns all withdrawal requests that belongs to the `_owner` address
@@ -176,7 +222,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @notice Returns array of claimable eth amounts that is locked for each request
     /// @param _requestIds array of request ids to find claimable ether for
     /// @param _hints checkpoint hint for each id.
-    ///   Can be retrieved with `findCheckpointHints()` or `findCheckpointHintsUnbounded()`
+    ///   Can be retrieved with `findCheckpointHints()`
     function getClaimableEther(uint256[] calldata _requestIds, uint256[] calldata _hints)
         external
         view
@@ -191,7 +237,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @notice Claim a batch of withdrawal requests once finalized (claimable) sending ether to `_recipient`
     /// @param _requestIds array of request ids to claim
     /// @param _hints checkpoint hint for each id.
-    ///   Can be retrieved with `findCheckpointHints()` or `findCheckpointHintsUnbounded()`
+    ///   Can be retrieved with `findCheckpointHints()`
     /// @param _recipient address where claimed ether will be sent to
     /// @dev
     ///  Reverts if recipient is equal to zero
@@ -212,7 +258,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @notice Claim a batch of withdrawal requests once finalized (claimable) sending locked ether to the owner
     /// @param _requestIds array of request ids to claim
     /// @param _hints checkpoint hint for each id.
-    ///   Can be retrieved with `findCheckpointHints()` or `findCheckpointHintsUnbounded()`
+    ///   Can be retrieved with `findCheckpointHints()`
     /// @dev
     ///  Reverts if any requestId or hint in arguments are not valid
     ///  Reverts if any request is not finalized or already claimed
@@ -258,24 +304,29 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     }
 
     /// @notice Finalize requests from last finalized one up to `_lastRequestIdToFinalize`
-    /// @dev ether to finalize all the requests should be calculated using `finalizationBatch()` and sent along
-    ///
-    /// @param _nextFinalizedRequestId request index in the queue that will be last finalized request in a batch
-    function finalize(uint256 _nextFinalizedRequestId, uint256 _shareRate) external payable {
+    /// @dev ether to finalize all the requests should be calculated using `finalizationValue()` and sent along
+    function finalize(uint256[] calldata _batches, uint256 _maxShareRate)
+        external
+        payable
+    {
         _checkResumed();
         _checkRole(FINALIZE_ROLE, msg.sender);
 
-        _finalize(_nextFinalizedRequestId, msg.value, _shareRate);
+        _finalize(_batches, msg.value, _maxShareRate);
     }
 
-    /// @notice Update bunker mode state
+    /// @notice Update bunker mode state and last report timestamp
     /// @dev should be called by oracle
     ///
-    /// @param _isBunkerModeNow oracle report
+    /// @param _isBunkerModeNow is bunker mode reported by oracle
     /// @param _sinceTimestamp timestamp of start of the bunker mode
-    function updateBunkerMode(bool _isBunkerModeNow, uint256 _sinceTimestamp) external {
-        _checkRole(BUNKER_MODE_REPORT_ROLE, msg.sender);
+    /// @param _currentReportTimestamp timestamp of the current report ref slot
+    function onOracleReport(bool _isBunkerModeNow, uint256 _sinceTimestamp, uint256 _currentReportTimestamp) external {
+        _checkRole(ORACLE_ROLE, msg.sender);
         if (_sinceTimestamp >= block.timestamp) revert InvalidReportTimestamp();
+        if (_currentReportTimestamp >= block.timestamp) revert InvalidReportTimestamp();
+
+        _setLastReportTimestamp(_currentReportTimestamp);
 
         bool isBunkerModeWasSetBefore = isBunkerModeActive();
 
@@ -330,6 +381,18 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         uint256 amountOfShares = STETH.getSharesByPooledEth(_amountOfStETH);
 
         requestId = _enqueue(uint128(_amountOfStETH), uint128(amountOfShares), _owner);
+
+        _emitTransfer(address(0), _owner, requestId);
+    }
+
+    function _requestWithdrawalWstETH(uint256 _amountOfWstETH, address _owner) internal returns (uint256 requestId) {
+        WSTETH.transferFrom(msg.sender, address(this), _amountOfWstETH);
+        uint256 amountOfStETH = WSTETH.unwrap(_amountOfWstETH);
+        _checkWithdrawalRequestAmount(amountOfStETH);
+
+        uint256 amountOfShares = STETH.getSharesByPooledEth(amountOfStETH);
+
+        requestId = _enqueue(uint128(amountOfStETH), uint128(amountOfShares), _owner);
 
         _emitTransfer(address(0), _owner, requestId);
     }

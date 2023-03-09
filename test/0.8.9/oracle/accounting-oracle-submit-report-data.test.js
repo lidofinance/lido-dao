@@ -1,6 +1,6 @@
 const { contract, web3 } = require('hardhat')
 const { assert } = require('../../helpers/assert')
-const { e9, e18, e27 } = require('../../helpers/utils')
+const { e9, e18, e27, toNum } = require('../../helpers/utils')
 
 const AccountingOracleAbi = require('../../../lib/abi/AccountingOracle.json')
 
@@ -47,7 +47,7 @@ contract('AccountingOracle', ([admin, member1]) => {
     withdrawalVaultBalance: e18(1),
     elRewardsVaultBalance: e18(2),
     sharesRequestedToBurn: e18(3),
-    lastFinalizableWithdrawalRequestId: 1,
+    withdrawalFinalizationBatches: [1],
     simulatedShareRate: e27(1),
     isBunkerMode: true,
     extraDataFormat: EXTRA_DATA_FORMAT_LIST,
@@ -439,10 +439,9 @@ contract('AccountingOracle', ([admin, member1]) => {
         assert.equals(lastOracleReportToLido.clBalance, reportFields.clBalanceGwei + '000000000')
         assert.equals(lastOracleReportToLido.withdrawalVaultBalance, reportFields.withdrawalVaultBalance)
         assert.equals(lastOracleReportToLido.elRewardsVaultBalance, reportFields.elRewardsVaultBalance)
-        assert.equals(lastOracleReportToLido.sharesRequestedToBurn, reportFields.sharesRequestedToBurn)
-        assert.equals(
-          lastOracleReportToLido.lastFinalizableWithdrawalRequestId,
-          reportFields.lastFinalizableWithdrawalRequestId
+        assert.sameOrderedMembers(
+          toNum(lastOracleReportToLido.withdrawalFinalizationBatches),
+          toNum(reportFields.withdrawalFinalizationBatches)
         )
         assert.equals(lastOracleReportToLido.simulatedShareRate, reportFields.simulatedShareRate)
       })
@@ -481,13 +480,15 @@ contract('AccountingOracle', ([admin, member1]) => {
         assert.equals(lastCall.clValidators, reportFields.numValidators)
       })
 
-      it('should call updateBunkerMode on WithdrawalQueue', async () => {
+      it('should call onOracleReport on WithdrawalQueue', async () => {
         const prevProcessingRefSlot = +(await oracle.getLastProcessingRefSlot())
         await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
-        const lastCall = await mockWithdrawalQueue.lastCall__updateBunkerMode()
+        const currentProcessingRefSlot = +(await oracle.getLastProcessingRefSlot())
+        const lastCall = await mockWithdrawalQueue.lastCall__onOracleReport()
         assert.equals(lastCall.callCount, 1)
         assert.equals(lastCall.isBunkerMode, reportFields.isBunkerMode)
         assert.equals(lastCall.prevReportTimestamp, GENESIS_TIME + prevProcessingRefSlot * SECONDS_PER_SLOT)
+        assert.equals(lastCall.currentReportTimestamp, GENESIS_TIME + currentProcessingRefSlot * SECONDS_PER_SLOT)
       })
     })
 

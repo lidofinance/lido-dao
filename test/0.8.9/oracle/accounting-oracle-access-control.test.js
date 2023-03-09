@@ -55,7 +55,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       withdrawalVaultBalance: e18(1),
       elRewardsVaultBalance: e18(2),
       sharesRequestedToBurn: e18(3),
-      lastFinalizableWithdrawalRequestId: 1,
+      withdrawalFinalizationBatches: [1],
       simulatedShareRate: e27(1),
       isBunkerMode: true,
       extraDataFormat: emptyExtraData ? EXTRA_DATA_FORMAT_EMPTY : EXTRA_DATA_FORMAT_LIST,

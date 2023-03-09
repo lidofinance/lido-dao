@@ -39,7 +39,7 @@ const makeAccountingReport = ({ refSlot, numValidators, clBalanceGwei, elRewards
   withdrawalVaultBalance: 0,
   elRewardsVaultBalance,
   sharesRequestedToBurn: 0,
-  lastFinalizableWithdrawalRequestId: 0,
+  withdrawalFinalizationBatches: [],
   simulatedShareRate: 0,
   isBunkerMode: false,
   extraDataFormat: 0,

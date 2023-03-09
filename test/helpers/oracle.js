@@ -15,11 +15,11 @@ function getReportDataItems(r) {
     String(r.withdrawalVaultBalance),
     String(r.elRewardsVaultBalance),
     String(r.sharesRequestedToBurn),
-    String(r.lastFinalizableWithdrawalRequestId),
+    r.withdrawalFinalizationBatches.map(String),
     String(r.simulatedShareRate),
     r.isBunkerMode,
     String(r.extraDataFormat),
-    String(r.extraDataHash),
+    r.extraDataHash,
     String(r.extraDataItemsCount),
   ]
 }
@@ -27,11 +27,10 @@ function getReportDataItems(r) {
 function calcReportDataHash(reportItems) {
   const data = web3.eth.abi.encodeParameters(
     [
-      '(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256)',
+      '(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256[],uint256,bool,uint256,bytes32,uint256)',
     ],
     [reportItems]
   )
-
   return web3.utils.keccak256(data)
 }
 
@@ -45,7 +44,7 @@ const DEFAULT_REPORT_FIELDS = {
   withdrawalVaultBalance: 0,
   elRewardsVaultBalance: 0,
   sharesRequestedToBurn: 0,
-  lastFinalizableWithdrawalRequestId: 0,
+  withdrawalFinalizationBatches: [],
   simulatedShareRate: 0,
   isBunkerMode: false,
   extraDataFormat: 0,
@@ -96,8 +95,8 @@ async function reportOracle(consensus, oracle, reportFields) {
 }
 
 // FIXME: kept for compat, remove after refactoring tests
-function pushOracleReport(consensus, oracle, numValidators, clBalance, elRewards) {
-  return reportOracle(consensus, oracle, { numValidators, clBalance, elRewards })
+function pushOracleReport(consensus, oracle, numValidators, clBalance, elRewardsVaultBalance) {
+  return reportOracle(consensus, oracle, { numValidators, clBalance, elRewardsVaultBalance })
 }
 
 async function getSecondsPerFrame(consensus) {

@@ -12,7 +12,7 @@ function getValidatorsExitBusReportDataItems(r) {
 function calcAccountingReportDataHash(reportItems) {
   const data = web3.eth.abi.encodeParameters(
     [
-      '(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256,uint256,bool,uint256,bytes32,uint256)',
+      '(uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256[],uint256,bool,uint256,bytes32,uint256)',
     ],
     [reportItems]
   )
@@ -29,7 +29,7 @@ function getAccountingReportDataItems(r) {
     String(r.withdrawalVaultBalance),
     String(r.elRewardsVaultBalance),
     String(r.sharesRequestedToBurn),
-    String(r.lastFinalizableWithdrawalRequestId),
+    r.withdrawalFinalizationBatches.map(String),
     String(r.simulatedShareRate),
     r.isBunkerMode,
     String(r.extraDataFormat),

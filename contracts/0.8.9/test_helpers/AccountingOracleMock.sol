@@ -33,7 +33,7 @@ contract AccountingOracleMock {
             data.withdrawalVaultBalance,
             data.elRewardsVaultBalance,
             data.sharesRequestedToBurn,
-            data.lastFinalizableWithdrawalRequestId,
+            data.withdrawalFinalizationBatches,
             data.simulatedShareRate
         );
     }
