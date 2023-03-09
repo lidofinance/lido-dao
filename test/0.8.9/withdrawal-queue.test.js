@@ -566,8 +566,8 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       for (let i = 1; i <= 20; i++) {
         assert.equals(await withdrawalQueue.getLastCheckpointIndex(), i)
         await withdrawalQueue.requestWithdrawals([StETH(1)], ZERO_ADDRESS, { from: user })
-        const batch = await withdrawalQueue.prefinalize(i + 1, shareRate(i + 1))
-        await withdrawalQueue.finalize(i + 1, shareRate(i + 1), {
+        const batch = await withdrawalQueue.prefinalize([i + 1], shareRate(i + 1))
+        await withdrawalQueue.finalize([i + 1], shareRate(i + 1), {
           from: steth.address,
           value: batch.ethToLock,
         })
