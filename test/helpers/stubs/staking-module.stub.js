@@ -8,13 +8,15 @@ class StakingModuleStub extends GenericStub {
 
   static async stubGetStakingModuleSummary(
     stakingModuleStub,
-    { totalExitedValidators, totalDepositedValidators, availableValidatorsCount }
+    { totalExitedValidators, totalDepositedValidators, depositableValidatorsCount },
+    configOverrides = {}
   ) {
     await GenericStub.stub(stakingModuleStub, 'getStakingModuleSummary', {
       return: {
         type: ['uint256', 'uint256', 'uint256'],
-        value: [totalExitedValidators, totalDepositedValidators, availableValidatorsCount],
+        value: [totalExitedValidators, totalDepositedValidators, depositableValidatorsCount],
       },
+      ...configOverrides,
     })
   }
 
