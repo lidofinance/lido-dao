@@ -69,7 +69,7 @@ contract('Lido: rewards distribution math', (addresses) => {
   }
 
   async function reportBeacon(validatorsCount, balance) {
-    const receipts = await pushOracleReport(consensus, oracle, validatorsCount, balance)
+    const receipts = await pushOracleReport(consensus, oracle, validatorsCount, balance, 0)
     await ethers.provider.send('evm_increaseTime', [SECONDS_PER_FRAME + 1000])
     await ethers.provider.send('evm_mine')
 
