@@ -59,7 +59,9 @@ contract('PausableUntil', ([deployer]) => {
       await assertResumedState()
       const MONTH_IN_SECS = 30 * 24 * 60 * 60
 
-      await pausable.pauseFor(PAUSE_INFINITELY)
+      const tx = await pausable.pauseFor(PAUSE_INFINITELY)
+      assert.emits(tx, 'Paused', { duration: PAUSE_INFINITELY })
+
       await assertPausedState(PAUSE_INFINITELY)
 
       await advanceChainTime(MONTH_IN_SECS)
@@ -73,7 +75,9 @@ contract('PausableUntil', ([deployer]) => {
       assert.isFalse(await pausable.isPaused())
       const pauseDuration = 3 * 60
 
-      await pausable.pauseFor(pauseDuration)
+      const tx = await pausable.pauseFor(pauseDuration)
+      assert.emits(tx, 'Paused', { duration: pauseDuration })
+
       const resumeSinceTimestamp = (await getCurrentBlockTimestamp()) + pauseDuration
       await assertPausedState(resumeSinceTimestamp)
 
@@ -94,10 +98,6 @@ contract('PausableUntil', ([deployer]) => {
         return (await getCurrentBlockTimestamp()) + 1
       }
       await assert.revertsWithCustomError(
-        pausable.pauseUntil(await getNextTxBlockTimestamp()),
-        `PauseUntilMustBeInFuture()`
-      )
-      await assert.revertsWithCustomError(
         pausable.pauseUntil((await getNextTxBlockTimestamp()) - 1),
         `PauseUntilMustBeInFuture()`
       )
@@ -107,15 +107,18 @@ contract('PausableUntil', ([deployer]) => {
       )
       await assert.revertsWithCustomError(pausable.pauseUntil(0), `PauseUntilMustBeInFuture()`)
 
-      // But do not revert for timestamp 1 second after now
-      await pausable.pauseUntil((await getNextTxBlockTimestamp()) + 1)
+      // But do not revert for the next tx timestamp (i.e., pause lasts for the one block)
+      const tx = await pausable.pauseUntil(await getNextTxBlockTimestamp())
+      assert.emits(tx, 'Paused', { duration: 1 })
     })
 
     it(`pause until infinity`, async () => {
       await assertResumedState()
       const MONTH_IN_SECS = 30 * 24 * 60 * 60
 
-      await pausable.pauseUntil(PAUSE_INFINITELY)
+      const tx = await pausable.pauseUntil(PAUSE_INFINITELY)
+      assert.emits(tx, 'Paused', { duration: PAUSE_INFINITELY })
+
       await assertPausedState(PAUSE_INFINITELY)
 
       await advanceChainTime(MONTH_IN_SECS)
@@ -128,10 +131,12 @@ contract('PausableUntil', ([deployer]) => {
     it(`pause until`, async () => {
       assert.isFalse(await pausable.isPaused())
       const pauseDuration = 3 * 60
-      const pauseUntilInclusive = (await getCurrentBlockTimestamp()) + pauseDuration - 1
+      const pauseUntilInclusive = (await getCurrentBlockTimestamp()) + pauseDuration
       const resumeSinceTimestamp = pauseUntilInclusive + 1
 
-      await pausable.pauseUntil(pauseUntilInclusive)
+      const tx = await pausable.pauseUntil(pauseUntilInclusive)
+      assert.emits(tx, 'Paused', { duration: pauseDuration })
+
       await assertPausedState(resumeSinceTimestamp)
 
       await advanceChainTime(Math.floor(pauseDuration / 2))
@@ -147,12 +152,20 @@ contract('PausableUntil', ([deployer]) => {
     })
 
     it(`resume`, async () => {
-      await pausable.pauseFor(PAUSE_INFINITELY)
-      await pausable.resume()
+      let tx = await pausable.pauseFor(PAUSE_INFINITELY)
+      assert.emits(tx, 'Paused', { duration: PAUSE_INFINITELY })
+
+      tx = await pausable.resume()
+      assert.emits(tx, 'Resumed')
+
       await assertResumedState()
 
-      await pausable.pauseFor(123)
-      await pausable.resume()
+      tx = await pausable.pauseFor(123)
+      assert.emits(tx, 'Paused', { duration: 123 })
+
+      tx = await pausable.resume()
+      assert.emits(tx, 'Resumed')
+
       await assertResumedState()
     })
   })

@@ -63,7 +63,6 @@ contract PausableUntil {
     function _resume() internal {
         _checkPaused();
         RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(block.timestamp);
-
         emit Resumed();
     }
 
@@ -82,7 +81,7 @@ contract PausableUntil {
 
     function _pauseUntil(uint256 _pauseUntilInclusive) internal {
         _checkResumed();
-        if (_pauseUntilInclusive <= block.timestamp) revert PauseUntilMustBeInFuture();
+        if (_pauseUntilInclusive < block.timestamp) revert PauseUntilMustBeInFuture();
 
         uint256 resumeSince;
         if (_pauseUntilInclusive != PAUSE_INFINITELY) {
@@ -91,11 +90,14 @@ contract PausableUntil {
             resumeSince = PAUSE_INFINITELY;
         }
         _setPausedState(resumeSince);
-
     }
 
     function _setPausedState(uint256 _resumeSince) internal {
         RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(_resumeSince);
-        emit Paused(_resumeSince - block.timestamp);
+        if (_resumeSince == PAUSE_INFINITELY) {
+            emit Paused(PAUSE_INFINITELY);
+        } else {
+            emit Paused(_resumeSince - block.timestamp);
+        }
     }
 }
