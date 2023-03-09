@@ -24,8 +24,6 @@ abstract contract WithdrawalQueueBase {
     uint256 internal constant MAX_BATCHES_LENGTH = 36;
     uint256 internal constant MAX_REQUESTS_PER_CALL = 1000;
 
-    uint256 internal constant SHARE_RATE_UNLIMITED = type(uint256).max;
-
     /// @dev return value for the `find...` methods in case of no result
     uint256 internal constant NOT_FOUND = 0;
 
@@ -358,28 +356,12 @@ abstract contract WithdrawalQueueBase {
         uint128 stETHToFinalize = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH;
         if (_amountOfETH > stETHToFinalize) revert TooMuchEtherToFinalize(_amountOfETH, stETHToFinalize);
 
-        // if `_maxShareRate` is effectively above all of finalizing requests' share rates
-        // we can effectively say that there is no limit because all the request
-        // will be fullfilled by their nominal value
-        uint256 maxShareRate = SHARE_RATE_UNLIMITED;
-        // if we have a crossing point or avg batch share rate is more than `_maxShareRate`
-        // then there are some requests that will be discounted and we should store
-        // `_maxShareRate` to apply this discount on claim
-        if (_batches.length > 1 || stETHToFinalize > _amountOfETH) {
-            maxShareRate = _maxShareRate;
-        }
-
         uint256 firstRequestIdToFinalize = lastFinalizedRequestId + 1;
         uint256 lastCheckpointIndex = getLastCheckpointIndex();
-        Checkpoint storage lastCheckpoint = _getCheckpoints()[lastCheckpointIndex];
 
-        // In the most common scenario (no slashings) maxShareRate will be SHARE_RATE_UNLIMITED all the time
-        // and we'll save gas on report and integrations will save gas on hint calculations
-        if (maxShareRate != lastCheckpoint.maxShareRate) {
-            // add a new discount if it differs from the previous
-            _getCheckpoints()[lastCheckpointIndex + 1] = Checkpoint(firstRequestIdToFinalize, maxShareRate);
-            _setLastCheckpointIndex(lastCheckpointIndex + 1);
-        }
+        // add a new checkpoint with current finalization max share rate
+        _getCheckpoints()[lastCheckpointIndex + 1] = Checkpoint(firstRequestIdToFinalize, _maxShareRate);
+        _setLastCheckpointIndex(lastCheckpointIndex + 1);
 
         _setLockedEtherAmount(getLockedEtherAmount() + _amountOfETH);
         _setLastFinalizedRequestId(lastRequestIdToBeFinalized);
