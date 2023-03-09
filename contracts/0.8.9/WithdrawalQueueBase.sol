@@ -6,6 +6,7 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
+import "hardhat/console.sol";
 
 /// @title Queue to store and manage WithdrawalRequests.
 /// @dev Use an optimizations to store max share rates for finalized requests heavily inspired
@@ -243,7 +244,7 @@ abstract contract WithdrawalQueueBase {
         uint256 nextCallRequestId = currentId + _maxRequestsPerCall;
         uint256 queueLength = getLastRequestId() + 1;
 
-        while (currentId < queueLength || currentId < nextCallRequestId) {
+        while (currentId < queueLength && currentId < nextCallRequestId) {
             WithdrawalRequest memory request = _getQueue()[currentId];
 
             if (request.timestamp > _maxTimestamp) break;  // max timestamp break
