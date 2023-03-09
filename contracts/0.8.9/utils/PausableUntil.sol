@@ -13,7 +13,7 @@ contract PausableUntil {
     /// Special value for the infinite pause
     uint256 public constant PAUSE_INFINITELY = type(uint256).max;
 
-    /// @notice Emitted when paused by the `pauseFor(duration)` call
+    /// @notice Emitted when paused by the `pauseFor` or `pauseUntil` call
     event Paused(uint256 duration);
     /// @notice Emitted when resumed by the `resume` call
     event Resumed();
@@ -21,7 +21,7 @@ contract PausableUntil {
     error ZeroPauseDuration();
     error PausedExpected();
     error ResumedExpected();
-    error ResumeSinceInPast();
+    error PauseUntilMustBeInFuture();
 
     /// @notice Reverts when resumed
     modifier whenPaused() {
@@ -82,7 +82,7 @@ contract PausableUntil {
 
     function _pauseUntil(uint256 _pauseUntilInclusive) internal {
         _checkResumed();
-        if (_pauseUntilInclusive <= block.timestamp) revert ResumeSinceInPast();
+        if (_pauseUntilInclusive <= block.timestamp) revert PauseUntilMustBeInFuture();
 
         uint256 resumeSince;
         if (_pauseUntilInclusive != PAUSE_INFINITELY) {

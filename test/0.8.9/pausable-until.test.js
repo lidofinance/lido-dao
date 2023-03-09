@@ -89,6 +89,28 @@ contract('PausableUntil', ([deployer]) => {
       await assertResumedState()
     })
 
+    it(`revert if pause until timestamp in past`, async () => {
+      const getNextTxBlockTimestamp = async () => {
+        return (await getCurrentBlockTimestamp()) + 1
+      }
+      await assert.revertsWithCustomError(
+        pausable.pauseUntil(await getNextTxBlockTimestamp()),
+        `PauseUntilMustBeInFuture()`
+      )
+      await assert.revertsWithCustomError(
+        pausable.pauseUntil((await getNextTxBlockTimestamp()) - 1),
+        `PauseUntilMustBeInFuture()`
+      )
+      await assert.revertsWithCustomError(
+        pausable.pauseUntil(Math.floor((await getNextTxBlockTimestamp()) / 2)),
+        `PauseUntilMustBeInFuture()`
+      )
+      await assert.revertsWithCustomError(pausable.pauseUntil(0), `PauseUntilMustBeInFuture()`)
+
+      // But do not revert for timestamp 1 second after now
+      await pausable.pauseUntil((await getNextTxBlockTimestamp()) + 1)
+    })
+
     it(`pause until infinity`, async () => {
       await assertResumedState()
       const MONTH_IN_SECS = 30 * 24 * 60 * 60
