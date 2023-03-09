@@ -243,7 +243,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     const newRequestId = 2
     let oldRequestCreationTimestamp, newRequestCreationTimestamp
     const correctWithdrawalQueueOracleReport = {
-      requestIdToFinalizeUpTo: oldRequestId,
+      lastFinalizableRequestId: oldRequestId,
       refReportTimestamp: -1,
     }
 
@@ -251,10 +251,10 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       const currentBlockTimestamp = await getCurrentBlockTimestamp()
       correctWithdrawalQueueOracleReport.refReportTimestamp = currentBlockTimestamp
       oldRequestCreationTimestamp = currentBlockTimestamp - defaultLimitsList.requestTimestampMargin
-      correctWithdrawalQueueOracleReport.requestIdToFinalizeUpTo = oldRequestCreationTimestamp
-      await withdrawalQueueMock.setRequestBlockNumber(oldRequestId, oldRequestCreationTimestamp)
+      correctWithdrawalQueueOracleReport.lastFinalizableRequestId = oldRequestCreationTimestamp
+      await withdrawalQueueMock.setRequestTimestamp(oldRequestId, oldRequestCreationTimestamp)
       newRequestCreationTimestamp = currentBlockTimestamp - Math.floor(defaultLimitsList.requestTimestampMargin / 2)
-      await withdrawalQueueMock.setRequestBlockNumber(newRequestId, newRequestCreationTimestamp)
+      await withdrawalQueueMock.setRequestTimestamp(newRequestId, newRequestCreationTimestamp)
     })
 
     it('reverts with the error IncorrectRequestFinalization() when the creation timestamp of requestIdToFinalizeUpTo is too close to report timestamp', async () => {
@@ -262,7 +262,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
         oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
           ...Object.values({
             ...correctWithdrawalQueueOracleReport,
-            requestIdToFinalizeUpTo: newRequestId,
+            lastFinalizableRequestId: newRequestId,
           })
         ),
         `IncorrectRequestFinalization(${newRequestCreationTimestamp})`
@@ -285,10 +285,9 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       simulatedShareRate: (BigInt(2) * 10n ** 27n).toString(),
     }
 
-    it('reverts with error IncorrectSimulatedShareRate() when reported and onchain share rate differs', async () => {
+    it('reverts with error TooHighSimulatedShareRate() when reported and onchain share rate differs', async () => {
       const simulatedShareRate = BigInt(ETH(2.1)) * 10n ** 9n
       const actualShareRate = BigInt(2) * 10n ** 27n
-      const deviation = (100_00n * (simulatedShareRate - actualShareRate)) / actualShareRate
       await assert.revertsWithCustomError(
         oracleReportSanityChecker.checkSimulatedShareRate(
           ...Object.values({
@@ -296,12 +295,25 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
             simulatedShareRate: simulatedShareRate.toString(),
           })
         ),
-        `IncorrectSimulatedShareRate(${deviation.toString()})`
+        `TooHighSimulatedShareRate(${simulatedShareRate.toString()}, ${actualShareRate.toString()})`
       )
     })
 
-    it('reverts with error IncorrectSimulatedShareRate() when actual share rate is zero', async () => {
-      const deviation = 100_00n
+    it('reverts with error TooLowSimulatedShareRate() when reported and onchain share rate differs', async () => {
+      const simulatedShareRate = BigInt(ETH(1.9)) * 10n ** 9n
+      const actualShareRate = BigInt(2) * 10n ** 27n
+      await assert.revertsWithCustomError(
+        oracleReportSanityChecker.checkSimulatedShareRate(
+          ...Object.values({
+            ...correctSimulatedShareRate,
+            simulatedShareRate: simulatedShareRate.toString(),
+          })
+        ),
+        `TooLowSimulatedShareRate(${simulatedShareRate.toString()}, ${actualShareRate.toString()})`
+      )
+    })
+
+    it('reverts with error ActualShareRateIsZero() when actual share rate is zero', async () => {
       await assert.revertsWithCustomError(
         oracleReportSanityChecker.checkSimulatedShareRate(
           ...Object.values({
@@ -310,7 +322,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
             postTotalPooledEther: ETH(0),
           })
         ),
-        `IncorrectSimulatedShareRate(${deviation.toString()})`
+        `ActualShareRateIsZero()`
       )
     })
 

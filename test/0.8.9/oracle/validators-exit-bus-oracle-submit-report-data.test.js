@@ -429,7 +429,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       it('reverts on paused contract', async () => {
         await consensus.advanceTimeToNextFrameStart()
         const PAUSE_INFINITELY = await oracle.PAUSE_INFINITELY()
-        await oracle.pause(PAUSE_INFINITELY, { from: admin })
+        await oracle.pauseFor(PAUSE_INFINITELY, { from: admin })
         const report = await prepareReportAndSubmitHash()
         assert.reverts(oracle.submitReportData(report, oracleVersion, { from: member1 }), 'ResumedExpected()')
       })

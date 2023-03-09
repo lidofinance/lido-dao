@@ -1,12 +1,11 @@
 const { artifacts, contract } = require('hardhat')
-const { ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
+const { ZERO_ADDRESS, MAX_UINT256 } = require('@aragon/contract-helpers-test')
 
 const { ETH } = require('../helpers/utils')
 const withdrawals = require('../helpers/withdrawals')
 const { assert } = require('../helpers/assert')
 
 const StETHMock = artifacts.require('StETHPermitMock.sol')
-const WstETH = artifacts.require('WstETHMock.sol')
 const EIP712StETH = artifacts.require('EIP712StETH')
 const NFTDescriptorMock = artifacts.require('NFTDescriptorMock.sol')
 
@@ -27,18 +26,22 @@ async function deployWithdrawalQueue({
 }) {
   const nftDescriptor = await NFTDescriptorMock.new(NFT_DESCRIPTOR_BASE_URI)
   const steth = await StETHMock.new({ value: ETH(1), from: stethOwner })
-  const wsteth = await WstETH.new(steth.address, { from: stethOwner })
   const eip712StETH = await EIP712StETH.new(steth.address, { from: stethOwner })
   await steth.initializeEIP712StETH(eip712StETH.address)
 
-  const { queue: withdrawalQueue } = await withdrawals.deploy(queueAdmin, wsteth.address, queueName, symbol)
+  const { queue: withdrawalQueue } = await withdrawals.deploy(queueAdmin, steth.address, queueName, symbol)
 
-  const initTx = await withdrawalQueue.initialize(
-    queueAdmin,
-    queuePauser || queueAdmin,
-    queueResumer || queueAdmin,
-    queueFinalizer || steth.address,
-    queueBunkerReporter || steth.address
+  const initTx = await withdrawalQueue.initialize(queueAdmin)
+
+  await withdrawalQueue.grantRole(await withdrawalQueue.FINALIZE_ROLE(), queueFinalizer || steth.address, {
+    from: queueAdmin,
+  })
+  await withdrawalQueue.grantRole(await withdrawalQueue.PAUSE_ROLE(), queuePauser || queueAdmin, { from: queueAdmin })
+  await withdrawalQueue.grantRole(await withdrawalQueue.RESUME_ROLE(), queueResumer || queueAdmin, { from: queueAdmin })
+  await withdrawalQueue.grantRole(
+    await withdrawalQueue.BUNKER_MODE_REPORT_ROLE(),
+    queueBunkerReporter || steth.address,
+    { from: queueAdmin }
   )
 
   if (doResume) {
@@ -48,7 +51,6 @@ async function deployWithdrawalQueue({
   return {
     initTx,
     steth,
-    wsteth,
     withdrawalQueue,
     nftDescriptor,
   }
@@ -102,10 +104,6 @@ contract(
         })
         assert.emits(initTx, 'InitializedV1', {
           _admin: queueAdmin,
-          _pauser: queuePauser,
-          _resumer: queueResumer,
-          _finalizer: queueFinalizer,
-          _bunkerReporter: queueBunkerReporter,
         })
       })
 
@@ -128,8 +126,8 @@ contract(
         assert.equals(queueItem.owner, ZERO_ADDRESS)
         assert.equals(queueItem.claimed, true)
 
-        assert.equals(+checkpointItem.fromRequestId, 0)
-        assert.equals(+checkpointItem.discountFactor, 0)
+        assert.equals(checkpointItem.fromRequestId, 0)
+        assert.equals(checkpointItem.maxShareRate, MAX_UINT256)
       })
 
       it('check if pauser is zero', async () => {
@@ -149,59 +147,6 @@ contract(
           }),
           'ZeroMetadata()'
         )
-      })
-
-      context('no roles for zero addresses', () => {
-        it('check if pauser is zero', async () => {
-          const { withdrawalQueue } = await deployWithdrawalQueue({
-            stethOwner,
-            queueAdmin,
-            queuePauser: ZERO_ADDRESS,
-            queueResumer,
-          })
-          const role = await withdrawalQueue.PAUSE_ROLE()
-          const memberCount = await withdrawalQueue.getRoleMemberCount(role)
-          assert.equals(memberCount, 0)
-        })
-
-        it('check if pauser is zero', async () => {
-          const { withdrawalQueue } = await deployWithdrawalQueue({
-            stethOwner,
-            queueAdmin,
-            queuePauser,
-            queueResumer: ZERO_ADDRESS,
-            doResume: false,
-          })
-          const role = await withdrawalQueue.RESUME_ROLE()
-          const memberCount = await withdrawalQueue.getRoleMemberCount(role)
-          assert.equals(memberCount, 0)
-        })
-
-        it('check if finalizer is zero', async () => {
-          const { withdrawalQueue } = await deployWithdrawalQueue({
-            stethOwner,
-            queueAdmin,
-            queuePauser,
-            queueResumer,
-            queueFinalizer: ZERO_ADDRESS,
-          })
-          const role = await withdrawalQueue.FINALIZE_ROLE()
-          const memberCount = await withdrawalQueue.getRoleMemberCount(role)
-          assert.equals(memberCount, 0)
-        })
-
-        it('check if bunker reporter is zero', async () => {
-          const { withdrawalQueue } = await deployWithdrawalQueue({
-            stethOwner,
-            queueAdmin,
-            queuePauser,
-            queueResumer,
-            queueBunkerReporter: ZERO_ADDRESS,
-          })
-          const role = await withdrawalQueue.BUNKER_MODE_REPORT_ROLE()
-          const memberCount = await withdrawalQueue.getRoleMemberCount(role)
-          assert.equals(memberCount, 0)
-        })
       })
     })
   }

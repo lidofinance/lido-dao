@@ -211,13 +211,16 @@ contract StakingModuleMock is IStakingModule {
         _availableValidatorsCount = _activeValidatorsCount;
     }
 
-    function obtainDepositData(uint256 _depositsCount, bytes calldata _calldata)
+    function obtainDepositData(uint256 _depositsCount, bytes calldata)
         external
         returns (
             bytes memory publicKeys,
             bytes memory signatures
         )
-    {}
+    {
+        publicKeys = new bytes(48 * _depositsCount);
+        signatures = new bytes(96 * _depositsCount);
+    }
 
     function setTotalExitedValidatorsCount(uint256 newExitedValidatorsCount) external {
         _exitedValidatorsCount = newExitedValidatorsCount;

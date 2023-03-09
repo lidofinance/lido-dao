@@ -180,7 +180,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1]) => {
       assert.equal(await oracle.isPaused(), true)
       await oracle.resume()
       assert.equal(await oracle.isPaused(), false)
-      await oracle.pause(123)
+      await oracle.pauseFor(123)
       assert.equal(await oracle.isPaused(), true)
     })
   })
