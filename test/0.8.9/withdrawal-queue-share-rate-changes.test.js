@@ -79,15 +79,20 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user, oracle]) => {
     let batches
 
     it(`both requests can be finalized with 2 ETH`, async () => {
-      const result = await queue.calculateFinalizationBatches(e27(1), MAX_UINT256, [e18(2), false, []])
+      const result = await queue.calculateFinalizationBatches(e27(1), MAX_UINT256, 1000, [
+        e18(2),
+        false,
+        Array(36).fill(0),
+        0,
+      ])
       assert.isTrue(result.finished)
-      assert.equals(result.batches, [1, 2])
+      assert.equals(result.batchesLength, 2)
+      batches = result.batches.slice(0, result.batchesLength)
+      assert.equals(batches, [1, 2])
 
-      const batch = await queue.prefinalize.call(result.batches, e27(1))
+      const batch = await queue.prefinalize.call(batches, e27(1))
       assert.equals(batch.ethToLock, e18(2))
       assert.equals(batch.sharesToBurn, e18(2))
-
-      batches = result.batches
     })
 
     let claimableEther
@@ -145,15 +150,20 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user, oracle]) => {
     const maxShareRate = e27(1.5)
 
     it(`both requests can be finalized with 2 ETH`, async () => {
-      const result = await queue.calculateFinalizationBatches(maxShareRate, MAX_UINT256, [e18(2.5), false, []])
+      const result = await queue.calculateFinalizationBatches(maxShareRate, MAX_UINT256, 1000, [
+        e18(2.5),
+        false,
+        Array(36).fill(0),
+        0,
+      ])
       assert.isTrue(result.finished)
-      assert.equals(result.batches, [1, 2])
+      assert.equals(result.batchesLength, 2)
+      batches = result.batches.slice(0, result.batchesLength)
+      assert.equals(batches, [1, 2])
 
-      const batch = await queue.prefinalize.call(result.batches, maxShareRate)
+      const batch = await queue.prefinalize.call(batches, maxShareRate)
       assert.equals(batch.ethToLock, e18(2.5))
       assert.equals(batch.sharesToBurn, e18(2))
-
-      batches = result.batches
     })
 
     let claimableEther

@@ -21,21 +21,23 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
   }
 
   const finalizeRequests = async ({ finalizationShareRate, maxTimeStamp, budget, expectedBatches }) => {
-    const calculatedBatches = await withdrawalQueue.calculateFinalizationBatches(finalizationShareRate, maxTimeStamp, [
-      budget,
-      false,
-      [],
-    ])
+    const calculatedBatches = await withdrawalQueue.calculateFinalizationBatches(
+      finalizationShareRate,
+      maxTimeStamp,
+      1000,
+      [budget, false, Array(36).fill(0), 0]
+    )
 
     assert.isTrue(calculatedBatches.finished)
-    assert.equalsDelta(calculatedBatches.ethBudget, 0, 2)
-    assert.equals(calculatedBatches.batches, expectedBatches)
+    assert.equalsDelta(calculatedBatches.remainingEthBudget, 0, 2)
+    const batches = calculatedBatches.batches.slice(0, calculatedBatches.batchesLength)
+    assert.equals(batches, expectedBatches)
 
-    const batch = await withdrawalQueue.prefinalize.call(calculatedBatches.batches, finalizationShareRate)
+    const batch = await withdrawalQueue.prefinalize.call(batches, finalizationShareRate)
 
     assert.equalsDelta(batch.ethToLock, budget, 2)
 
-    await withdrawalQueue.finalize(calculatedBatches.batches, finalizationShareRate, {
+    await withdrawalQueue.finalize(batches, finalizationShareRate, {
       from: daoAgent,
       value: batch.ethToLock,
     })
