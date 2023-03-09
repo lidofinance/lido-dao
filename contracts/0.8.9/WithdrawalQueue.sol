@@ -94,17 +94,17 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @dev Reverts with `ResumedExpected()` if contract is already paused
     /// @dev Reverts with `AccessControl:...` reason if sender has no `PAUSE_ROLE`
     /// @dev Reverts with `ZeroPauseDuration()` if zero duration is passed
-    function pause(uint256 _duration) external onlyRole(PAUSE_ROLE) {
+    function pauseFor(uint256 _duration) external onlyRole(PAUSE_ROLE) {
         _pauseFor(_duration);
     }
 
     /// @notice Pause withdrawal requests placement and finalization. Claiming finalized requests will still be available
-    /// @param _resumeSince the first second to resume since
+    /// @param _pauseUntilInclusive the last second to pause until inclusive
     /// @dev Reverts with `ResumeSinceInPast()` if the timestamp is in the past
     /// @dev Reverts with `AccessControl:...` reason if sender has no `PAUSE_ROLE`
     /// @dev Reverts with `ResumedExpected()` if contract is already paused
-    function pauseUntil(uint256 _resumeSince) external onlyRole(PAUSE_ROLE) {
-        _pauseUntil(_resumeSince);
+    function pauseUntil(uint256 _pauseUntilInclusive) external onlyRole(PAUSE_ROLE) {
+        _pauseUntil(_pauseUntilInclusive);
     }
 
     /// @notice Request the sequence of stETH withdrawals according to passed `withdrawalRequestInputs` data

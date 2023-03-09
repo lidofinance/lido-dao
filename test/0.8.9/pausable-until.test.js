@@ -32,7 +32,7 @@ contract('PausableUntil', ([deployer]) => {
       assert.equals(await pausable.getResumeSinceTimestamp(), resumeSinceTimestamp)
     }
 
-    await assert.revertsWithCustomError(pausable.pause(12345), `ResumedExpected()`)
+    await assert.revertsWithCustomError(pausable.pauseFor(12345), `ResumedExpected()`)
     await assert.revertsWithCustomError(pausable.stubUnderModifierWhenResumed(), `ResumedExpected()`)
   }
 
@@ -52,14 +52,14 @@ contract('PausableUntil', ([deployer]) => {
     })
 
     it(`revert if pause for zero duration`, async () => {
-      await assert.revertsWithCustomError(pausable.pause(0), `ZeroPauseDuration()`)
+      await assert.revertsWithCustomError(pausable.pauseFor(0), `ZeroPauseDuration()`)
     })
 
     it(`pause infinitely`, async () => {
       await assertResumedState()
       const MONTH_IN_SECS = 30 * 24 * 60 * 60
 
-      await pausable.pause(PAUSE_INFINITELY)
+      await pausable.pauseFor(PAUSE_INFINITELY)
       await assertPausedState(PAUSE_INFINITELY)
 
       await advanceChainTime(MONTH_IN_SECS)
@@ -69,11 +69,11 @@ contract('PausableUntil', ([deployer]) => {
       await assertPausedState(PAUSE_INFINITELY)
     })
 
-    it(`pause on specific pauseDuration`, async () => {
+    it(`pause for specific duration`, async () => {
       assert.isFalse(await pausable.isPaused())
       const pauseDuration = 3 * 60
 
-      await pausable.pause(pauseDuration)
+      await pausable.pauseFor(pauseDuration)
       const resumeSinceTimestamp = (await getCurrentBlockTimestamp()) + pauseDuration
       await assertPausedState(resumeSinceTimestamp)
 
@@ -81,7 +81,42 @@ contract('PausableUntil', ([deployer]) => {
       assert.isTrue(await pausable.isPaused())
       await advanceChainTime(resumeSinceTimestamp - 1 - (await getCurrentBlockTimestamp()))
       assert.equals(await getCurrentBlockTimestamp(), resumeSinceTimestamp - 1)
-      // Check only view here because with revert transactions chain can pass more than 1 seconds
+      // Check only view here because with reverted transactions chain can pass more than 1 seconds
+      assert.isTrue(await pausable.isPaused())
+
+      await advanceChainTime(1)
+      assert.equals(await getCurrentBlockTimestamp(), resumeSinceTimestamp)
+      await assertResumedState()
+    })
+
+    it(`pause until infinity`, async () => {
+      await assertResumedState()
+      const MONTH_IN_SECS = 30 * 24 * 60 * 60
+
+      await pausable.pauseUntil(PAUSE_INFINITELY)
+      await assertPausedState(PAUSE_INFINITELY)
+
+      await advanceChainTime(MONTH_IN_SECS)
+      await assertPausedState(PAUSE_INFINITELY)
+
+      await advanceChainTime(12 * MONTH_IN_SECS)
+      await assertPausedState(PAUSE_INFINITELY)
+    })
+
+    it(`pause until`, async () => {
+      assert.isFalse(await pausable.isPaused())
+      const pauseDuration = 3 * 60
+      const pauseUntilInclusive = (await getCurrentBlockTimestamp()) + pauseDuration - 1
+      const resumeSinceTimestamp = pauseUntilInclusive + 1
+
+      await pausable.pauseUntil(pauseUntilInclusive)
+      await assertPausedState(resumeSinceTimestamp)
+
+      await advanceChainTime(Math.floor(pauseDuration / 2))
+      assert.isTrue(await pausable.isPaused())
+      await advanceChainTime(resumeSinceTimestamp - 1 - (await getCurrentBlockTimestamp()))
+      assert.equals(await getCurrentBlockTimestamp(), resumeSinceTimestamp - 1)
+      // Check only view here because with reverted transactions chain can pass more than 1 seconds
       assert.isTrue(await pausable.isPaused())
 
       await advanceChainTime(1)
@@ -90,11 +125,11 @@ contract('PausableUntil', ([deployer]) => {
     })
 
     it(`resume`, async () => {
-      await pausable.pause(PAUSE_INFINITELY)
+      await pausable.pauseFor(PAUSE_INFINITELY)
       await pausable.resume()
       await assertResumedState()
 
-      await pausable.pause(123)
+      await pausable.pauseFor(123)
       await pausable.resume()
       await assertResumedState()
     })

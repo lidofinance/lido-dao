@@ -13,7 +13,7 @@ contract PausableUntil {
     /// Special value for the infinite pause
     uint256 public constant PAUSE_INFINITELY = type(uint256).max;
 
-    /// @notice Emitted when paused by the `pause(duration)` call
+    /// @notice Emitted when paused by the `pauseFor(duration)` call
     event Paused(uint256 duration);
     /// @notice Emitted when resumed by the `resume` call
     event Resumed();
@@ -60,13 +60,15 @@ contract PausableUntil {
         return RESUME_SINCE_TIMESTAMP_POSITION.getStorageUint256();
     }
 
-    function _resume() internal whenPaused {
+    function _resume() internal {
+        _checkPaused();
         RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(block.timestamp);
 
         emit Resumed();
     }
 
-    function _pauseFor(uint256 _duration) internal whenResumed {
+    function _pauseFor(uint256 _duration) internal {
+        _checkResumed();
         if (_duration == 0) revert ZeroPauseDuration();
 
         uint256 resumeSince;
@@ -75,17 +77,25 @@ contract PausableUntil {
         } else {
             resumeSince = block.timestamp + _duration;
         }
-
-        RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(resumeSince);
-
-        emit Paused(_duration);
+        _setPausedState(resumeSince);
     }
 
-    function _pauseUntil(uint256 _resumeSince) internal whenResumed {
-        if (_resumeSince < block.timestamp) revert ResumeSinceInPast();
+    function _pauseUntil(uint256 _pauseUntilInclusive) internal {
+        _checkResumed();
+        if (_pauseUntilInclusive <= block.timestamp) revert ResumeSinceInPast();
 
+        uint256 resumeSince;
+        if (_pauseUntilInclusive != PAUSE_INFINITELY) {
+            resumeSince = _pauseUntilInclusive + 1;
+        } else {
+            resumeSince = PAUSE_INFINITELY;
+        }
+        _setPausedState(resumeSince);
+
+    }
+
+    function _setPausedState(uint256 _resumeSince) internal {
         RESUME_SINCE_TIMESTAMP_POSITION.setStorageUint256(_resumeSince);
-
         emit Paused(_resumeSince - block.timestamp);
     }
 }
