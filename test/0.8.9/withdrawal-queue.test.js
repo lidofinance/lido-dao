@@ -54,19 +54,23 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       const [PAUSE_ROLE, RESUME_ROLE] = await Promise.all([withdrawalQueue.PAUSE_ROLE(), withdrawalQueue.RESUME_ROLE()])
       await withdrawalQueue.grantRole(PAUSE_ROLE, pauser, { from: daoAgent })
       await withdrawalQueue.grantRole(RESUME_ROLE, resumer, { from: daoAgent })
-      await withdrawalQueue.pause(100000000, { from: pauser })
+      await withdrawalQueue.pauseFor(100000000, { from: pauser })
       assert(await withdrawalQueue.isPaused())
       await withdrawalQueue.resume({ from: resumer })
       assert(!(await withdrawalQueue.isPaused()))
-      await assert.revertsOZAccessControl(withdrawalQueue.pause(100000000, { from: resumer }), resumer, 'PAUSE_ROLE')
-      await assert.revertsOZAccessControl(withdrawalQueue.pause(100000000, { from: stranger }), stranger, 'PAUSE_ROLE')
-      await withdrawalQueue.pause(100000000, { from: pauser })
+      await assert.revertsOZAccessControl(withdrawalQueue.pauseFor(100000000, { from: resumer }), resumer, 'PAUSE_ROLE')
+      await assert.revertsOZAccessControl(
+        withdrawalQueue.pauseFor(100000000, { from: stranger }),
+        stranger,
+        'PAUSE_ROLE'
+      )
+      await withdrawalQueue.pauseFor(100000000, { from: pauser })
       await assert.revertsOZAccessControl(withdrawalQueue.resume({ from: pauser }), pauser, 'RESUME_ROLE')
       await assert.revertsOZAccessControl(withdrawalQueue.resume({ from: stranger }), stranger, 'RESUME_ROLE')
     })
 
     it('withdraw/finalize only allowed when at resumed state', async () => {
-      await withdrawalQueue.pause(100000000, { from: daoAgent })
+      await withdrawalQueue.pauseFor(100000000, { from: daoAgent })
       assert(await withdrawalQueue.isPaused())
       await assert.reverts(withdrawalQueue.requestWithdrawals([ETH(1)], owner, { from: user }), 'ResumedExpected()')
       await assert.reverts(withdrawalQueue.finalize(1, 0, { from: owner }), 'ResumedExpected()')
@@ -246,7 +250,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
 
     it('One cant request while is paused', async () => {
       const PAUSE_INFINITELY = await withdrawalQueue.PAUSE_INFINITELY()
-      await withdrawalQueue.pause(PAUSE_INFINITELY, { from: daoAgent })
+      await withdrawalQueue.pauseFor(PAUSE_INFINITELY, { from: daoAgent })
       await assert.reverts(withdrawalQueue.requestWithdrawals([StETH(300)], owner, { from: user }), 'ResumedExpected()')
     })
 
