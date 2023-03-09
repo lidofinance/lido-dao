@@ -106,7 +106,6 @@ module.exports = {
 contract('HashConsensus', ([admin, member1]) => {
   context('Deployment and initial configuration', () => {
     const INITIAL_EPOCH = 3
-
     let consensus
 
     it('deploying hash consensus', async () => {

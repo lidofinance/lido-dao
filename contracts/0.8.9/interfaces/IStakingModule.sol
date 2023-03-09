@@ -103,6 +103,16 @@ interface IStakingModule {
     /// @param _refundedValidatorsCount New number of refunded validators of the node operator
     function updateRefundedValidatorsCount(uint256 _nodeOperatorId, uint256 _refundedValidatorsCount) external;
 
+    /// @notice Updates the limit of the validators that can be used for deposit
+    /// @param _nodeOperatorId Id of the node operator
+    /// @param _isTargetLimitActive Active flag
+    /// @param _targetLimit Target limit of the node operator
+    function updateTargetValidatorsLimits(
+        uint256 _nodeOperatorId,
+        bool _isTargetLimitActive,
+        uint256 _targetLimit
+    ) external;
+
     /// @notice Unsafely updates the number of validators in the EXITED/STUCK states for node operator with given id
     ///      'unsafely' means that this method can both increase and decrease exited and stuck counters
     /// @param _nodeOperatorId Id of the node operator

@@ -127,20 +127,16 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         view
         returns (
             uint256 totalSigningKeysCount,
-            uint256 vettedSigningKeysCount,
+            uint256 maxValidatorsCount,
             uint256 depositedSigningKeysCount,
             uint256 exitedSigningKeysCount
         )
     {
-        uint256 nodeOperatorsCount = getNodeOperatorsCount();
-        Packed64x4.Packed memory signingKeysStats;
-        for (uint i; i < nodeOperatorsCount; i++) {
-            signingKeysStats = _loadOperatorSigningKeysStats(i);
-            totalSigningKeysCount += signingKeysStats.get(TOTAL_KEYS_COUNT_OFFSET);
-            vettedSigningKeysCount += signingKeysStats.get(VETTED_KEYS_COUNT_OFFSET);
-            depositedSigningKeysCount += signingKeysStats.get(DEPOSITED_KEYS_COUNT_OFFSET);
-            exitedSigningKeysCount += signingKeysStats.get(EXITED_KEYS_COUNT_OFFSET);
-        }
+        Packed64x4.Packed memory summarySigningKeysStats = _loadSummarySigningKeysStats();
+        totalSigningKeysCount = summarySigningKeysStats.get(SUMMARY_TOTAL_KEYS_COUNT_OFFSET);
+        maxValidatorsCount = summarySigningKeysStats.get(SUMMARY_MAX_VALIDATORS_COUNT_OFFSET);
+        depositedSigningKeysCount = summarySigningKeysStats.get(SUMMARY_DEPOSITED_KEYS_COUNT_OFFSET);
+        exitedSigningKeysCount = summarySigningKeysStats.get(SUMMARY_EXITED_KEYS_COUNT_OFFSET);
     }
 
     function testing_setBaseVersion(uint256 _newBaseVersion) external {
@@ -202,7 +198,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
 
     event ValidatorsKeysLoaded(bytes publicKeys, bytes signatures);
 
-    function testing__distributeRewards() external returns (uint256) {
+    function testing_distributeRewards() external returns (uint256) {
         return _distributeRewards();
     }
 }

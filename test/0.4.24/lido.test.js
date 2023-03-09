@@ -486,7 +486,11 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
 
     // +1 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
-    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    // can not deposit with unset withdrawalCredentials even with O ETH deposit
+    await assert.reverts(
+      app.deposit(MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor }),
+      'EmptyWithdrawalsCredentials()'
+    )
     await checkStat({ depositedValidators: 0, beaconValidators: 0, beaconBalance: ETH(0) })
     assert.equals(await depositContract.totalCalls(), 0)
     assert.equals(await app.getTotalPooledEther(), ETH(2))

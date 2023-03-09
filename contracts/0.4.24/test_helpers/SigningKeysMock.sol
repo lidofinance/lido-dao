@@ -6,8 +6,6 @@ pragma solidity 0.4.24;
 
 import {SigningKeys} from "../lib/SigningKeys.sol";
 
-import "hardhat/console.sol";
-
 contract SigningKeysMock {
     using SigningKeys for bytes32;
 

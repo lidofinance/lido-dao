@@ -15,6 +15,10 @@ interface ILegacyOracle {
     function getLastCompletedEpochId() external view returns (uint256);
 }
 
+interface ITimeProvider {
+    function getTime() external view returns (uint256);
+}
+
 
 contract MockLegacyOracle is ILegacyOracle, LegacyOracle {
 
@@ -27,12 +31,6 @@ contract MockLegacyOracle is ILegacyOracle, LegacyOracle {
 
     HandleConsensusLayerReportCallData public lastCall__handleConsensusLayerReport;
 
-    uint64 internal _epochsPerFrame;
-    uint64 internal _slotsPerEpoch;
-    uint64 internal _secondsPerSlot;
-    uint64 internal _genesisTime;
-    uint256 internal _lastCompletedEpochId;
-
 
     function getBeaconSpec() external view returns (
         uint64 epochsPerFrame,
@@ -40,13 +38,32 @@ contract MockLegacyOracle is ILegacyOracle, LegacyOracle {
         uint64 secondsPerSlot,
         uint64 genesisTime
     ) {
-        return (
-            _epochsPerFrame,
-            _slotsPerEpoch,
-            _secondsPerSlot,
-            _genesisTime
-        );
+
+        ChainSpec memory spec =  _getChainSpec();
+        epochsPerFrame = spec.epochsPerFrame;
+        slotsPerEpoch = spec.slotsPerEpoch;
+        secondsPerSlot = spec.secondsPerSlot;
+        genesisTime = spec.genesisTime;
     }
+
+    function setBeaconSpec( uint64 epochsPerFrame,
+        uint64 slotsPerEpoch,
+        uint64 secondsPerSlot,
+        uint64 genesisTime) external {
+            _setChainSpec(ChainSpec(epochsPerFrame,slotsPerEpoch,secondsPerSlot,genesisTime));
+    }
+
+    
+     function _getTime() internal view returns (uint256) {
+        address accountingOracle = ACCOUNTING_ORACLE_POSITION.getStorageAddress();
+        return ITimeProvider(accountingOracle).getTime();
+    }
+
+     function getTime() external view returns (uint256) {
+        return _getTime();
+    }
+
+   
 
     function handleConsensusLayerReport(uint256 refSlot, uint256 clBalance, uint256 clValidators)
         external
@@ -65,18 +82,16 @@ contract MockLegacyOracle is ILegacyOracle, LegacyOracle {
         uint64 genesisTime,
         uint256 lastCompletedEpochId
     ) external {
-        _epochsPerFrame = epochsPerFrame;
-        _slotsPerEpoch = slotsPerEpoch;
-        _secondsPerSlot = secondsPerSlot;
-        _genesisTime = genesisTime;
-        _lastCompletedEpochId = lastCompletedEpochId;
-
+          _setChainSpec(ChainSpec(epochsPerFrame,slotsPerEpoch,secondsPerSlot,genesisTime));
+        LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(lastCompletedEpochId);
     }
-    function getLastCompletedEpochId() external view returns (uint256) {
-        return _lastCompletedEpochId;
-    }
-
+ 
     function setLastCompletedEpochId(uint256 lastCompletedEpochId) external {
-        _lastCompletedEpochId = lastCompletedEpochId;
+         LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(lastCompletedEpochId);
     }
+
+    function initializeAsV3() external {
+        CONTRACT_VERSION_POSITION_DEPRECATED.setStorageUint256(3);
+    }
+
 }

@@ -6,8 +6,7 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
-import {Math} from "./lib/Math.sol";
-import {MemUtils} from "../common/lib/MemUtils.sol";
+import "hardhat/console.sol";
 
 /// @title Queue to store and manage WithdrawalRequests.
 /// @dev Use an optimizations to store max share rates for finalized requests heavily inspired
@@ -20,10 +19,8 @@ abstract contract WithdrawalQueueBase {
 
     /// @notice precision base for share rate and discounting factor values in the contract
     uint256 internal constant E27_PRECISION_BASE = 1e27;
-
+    /// @dev maximal length of the batches array that oracle should deliver on finalization
     uint256 internal constant MAX_BATCHES_LENGTH = 36;
-    uint256 internal constant MAX_REQUESTS_PER_CALL = 1000;
-
     /// @dev return value for the `find...` methods in case of no result
     uint256 internal constant NOT_FOUND = 0;
 
@@ -107,7 +104,7 @@ abstract contract WithdrawalQueueBase {
     error InvalidRequestId(uint256 _requestId);
     error InvalidRequestIdRange(uint256 startId, uint256 endId);
     error InvalidState();
-    error InvalidBatch(uint256 index);
+    error BatchesAreNotSorted();
     error EmptyBatches();
     error RequestNotFoundOrNotFinalized(uint256 _requestId);
     error NotEnoughEther();
@@ -177,19 +174,21 @@ abstract contract WithdrawalQueueBase {
 
     /// @notice transient state that is used to pass intemediate results between several `calculateFinalizationBatches`
     //   invokations
-    struct CalcState {
+    struct BatchesCalculationState {
         /// @notice amount of ether available in the protocol that can be used to finalize withdrawal requests
         ///  Will decrease on each invokation and will be equal to the remainder when calculation is finished
         ///  Should be set before the first invokation
-        uint256 ethBudget;
+        uint256 remainingEthBudget;
         /// @notice flag that is `true` if returned state is final and `false` if more invokations required
         bool finished;
-        /// @notice contains finalization batches once calculation is finished. Can't be used if finished is false.
-        uint256[] batches;
+        /// @notice static array to store all the batches ending request id
+        uint256[MAX_BATCHES_LENGTH] batches;
+        /// @notice length of the filled part of `batches` array
+        uint256 batchesLength;
     }
 
-    /// Offchain view for the oracle daemon that calculates how many requests can be finalized within the given budget
-    /// and timestamp and share rate limits. Returned requests are split into the batches.
+    /// @notice Offchain view for the oracle daemon that calculates how many requests can be finalized within
+    /// the given budget and timestamp and share rate limits. Returned requests are split into the batches.
     /// Each batch consist of the requests that all have the share rate below the `_maxShareRate` or above it.
     /// Below you can see an example how 14 requests with different share rates will be split into 5 batches by
     /// this algorithm
@@ -206,39 +205,46 @@ abstract contract WithdrawalQueueBase {
     ///
     /// @param _maxShareRate current share rate of the protocol with 1e27 precision
     /// @param _maxTimestamp max timestamp of the request that can be finalized
+    /// @param _maxRequestsPerCall max request number that can be processed by the call. Better to me max possible
+    ///  number for EL node to handle before hitting `out of gas`. More this number is less calls it will require to
+    ///  calculate the result
     /// @param _state structure that accumulates the state across multiple invokations to overcome gas limits.
-    ///  To start calculation you should pass `state.ethBudget` and `state.finished == false` and then invoke
+    ///  To start calculation you should pass `state.remainingEthBudget` and `state.finished == false` and then invoke
     ///  the function with returned `state` until it returns a state with `finished` flag set
-    /// @return state state that was changed dring this function invokation.
-    ///  If (state.finished) than calculation is finished and you can use state.batches is ready to be used
-    function calculateFinalizationBatches(uint256 _maxShareRate, uint256 _maxTimestamp, CalcState memory _state)
+    /// @return state that was changed during this function invokation.
+    ///  If (state.finished) than calculation is finished and returned `state` is ready to be used
+    function calculateFinalizationBatches(
+        uint256 _maxShareRate,
+        uint256 _maxTimestamp,
+        uint256 _maxRequestsPerCall,
+        BatchesCalculationState memory _state
+    )
         external
         view
-        returns (CalcState memory state)
+        returns (BatchesCalculationState memory)
     {
-        if (_state.finished || _state.ethBudget == 0) revert InvalidState();
+        if (_state.finished || _state.remainingEthBudget == 0) revert InvalidState();
 
-        uint256 lastRequestId = getLastRequestId();
+        uint256 currentId;
+        WithdrawalRequest memory prevRequest;
+        uint256 prevRequestShareRate;
 
-        uint256 start;
-        uint256 prevShareRate;
+        if (_state.batchesLength == 0) {
+            currentId = getLastFinalizedRequestId() + 1;
 
-        uint256 batchesLength;
-        if (_state.batches.length == 0) {
-            start = getLastFinalizedRequestId() + 1;
-            // we'll store batches as a array where [MAX_BATCHES_LENGTH] element is the array's length
-            _state.batches = new uint256[](MAX_BATCHES_LENGTH + 1);
+            prevRequest = _getQueue()[currentId - 1];
         } else {
-            batchesLength = _state.batches[MAX_BATCHES_LENGTH];
-            uint256 lastHandledRequestId = _state.batches[batchesLength - 1];
+            uint256 lastHandledRequestId = _state.batches[_state.batchesLength - 1];
+            currentId = lastHandledRequestId + 1;
 
-            start = lastHandledRequestId + 1;
-            (prevShareRate,,) = _calcBatch(_getQueue()[lastHandledRequestId - 1], _getQueue()[lastHandledRequestId]);
+            prevRequest = _getQueue()[lastHandledRequestId];
+            (prevRequestShareRate,,) = _calcBatch(_getQueue()[lastHandledRequestId - 1], prevRequest);
         }
 
-        uint256 currentId = start;
-        WithdrawalRequest memory prevRequest = _getQueue()[currentId - 1];
-        while (currentId <= lastRequestId && currentId < start + MAX_REQUESTS_PER_CALL) {
+        uint256 nextCallRequestId = currentId + _maxRequestsPerCall;
+        uint256 queueLength = getLastRequestId() + 1;
+
+        while (currentId < queueLength && currentId < nextCallRequestId) {
             WithdrawalRequest memory request = _getQueue()[currentId];
 
             if (request.timestamp > _maxTimestamp) break;  // max timestamp break
@@ -250,43 +256,40 @@ abstract contract WithdrawalQueueBase {
                 ethToFinalize = (shares * _maxShareRate) / E27_PRECISION_BASE;
             }
 
-            if (ethToFinalize > _state.ethBudget) break; // budget break
-            _state.ethBudget -= ethToFinalize;
+            if (ethToFinalize > _state.remainingEthBudget) break; // budget break
+            _state.remainingEthBudget -= ethToFinalize;
 
-            if (batchesLength != 0 && (
+            if (_state.batchesLength != 0 && (
                 // share rate of requests in the same batch can differ by 1-2 wei because of the rounding error
                 // (issue: https://github.com/lidofinance/lido-dao/issues/442 )
                 // so we're counting requests that are placed during the same report day
                 // as equal even if their actual share rate are different
                 prevRequest.reportTimestamp == request.reportTimestamp ||
                 // both requests are below or
-                prevShareRate <= _maxShareRate && requestShareRate <= _maxShareRate ||
+                prevRequestShareRate <= _maxShareRate && requestShareRate <= _maxShareRate ||
                 // both are above the line
-                prevShareRate > _maxShareRate && requestShareRate > _maxShareRate
+                prevRequestShareRate > _maxShareRate && requestShareRate > _maxShareRate
             )) {
-                _state.batches[batchesLength - 1] = currentId; // extend the last batch
+                _state.batches[_state.batchesLength - 1] = currentId; // extend the last batch
             } else {
                 // to be able to check batches on-chain we need it to have fixed max length
-                if (batchesLength == MAX_BATCHES_LENGTH) break;
+                if (_state.batchesLength == MAX_BATCHES_LENGTH) break;
 
                 // create a new batch
-                _state.batches[batchesLength] = currentId;
-                batchesLength = ++_state.batches[MAX_BATCHES_LENGTH];
+                _state.batches[_state.batchesLength] = currentId;
+                ++_state.batchesLength;
             }
 
-            prevShareRate = requestShareRate;
+            prevRequestShareRate = requestShareRate;
             prevRequest = request;
             unchecked{ ++currentId; }
         }
 
-        _state.finished = currentId < start + MAX_REQUESTS_PER_CALL || currentId == lastRequestId + 1;
-
-        if (_state.finished) {
-            MemUtils.trimUint256Array(_state.batches, _state.batches.length - batchesLength);
-        }
+        _state.finished = currentId == queueLength || currentId < nextCallRequestId;
 
         return _state;
     }
+
     /// @notice Checks the finalization batches, calculates required ether and the amount of shares to burn and
     /// @param _batches finalization batches calculated offchain using `calculateFinalizationBatches`
     /// @param _maxShareRate max possible share rate that will be used for request finalization with 1e27 precision
@@ -306,22 +309,13 @@ abstract contract WithdrawalQueueBase {
         uint256 currentBatchIndex;
         uint256 prevBatchEndRequestId = getLastFinalizedRequestId();
         WithdrawalRequest memory prevBatchEnd = _getQueue()[prevBatchEndRequestId];
-        uint256 prevBatchShareRate;
         while (currentBatchIndex < _batches.length) {
             uint256 batchEndRequestId = _batches[currentBatchIndex];
-            if (batchEndRequestId <= prevBatchEndRequestId) revert InvalidBatch(currentBatchIndex);
+            if (batchEndRequestId <= prevBatchEndRequestId) revert BatchesAreNotSorted();
 
             WithdrawalRequest memory batchEnd = _getQueue()[batchEndRequestId];
 
             (uint256 batchShareRate, uint256 stETH, uint256 shares) = _calcBatch(prevBatchEnd, batchEnd);
-
-            if (currentBatchIndex > 0) {
-                // - if shareRate(batch[i]) is below _maxShareRate => shareRate(batch[i+1]) is above and vice versa
-                // so, we can't have two batches in a row that is below...
-                if (prevBatchShareRate <= _maxShareRate && batchShareRate <= _maxShareRate) revert InvalidBatch(currentBatchIndex);
-                // .. or above the line
-                if (prevBatchShareRate > _maxShareRate && batchShareRate > _maxShareRate) revert InvalidBatch(currentBatchIndex);
-            }
 
             if (batchShareRate > _maxShareRate) {
                 // discounted
@@ -332,7 +326,6 @@ abstract contract WithdrawalQueueBase {
             }
             sharesToBurn += shares;
 
-            prevBatchShareRate = batchShareRate;
             prevBatchEndRequestId = batchEndRequestId;
             prevBatchEnd = batchEnd;
             unchecked{ ++currentBatchIndex; }
