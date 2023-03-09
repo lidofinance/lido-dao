@@ -156,8 +156,6 @@ contract LegacyOracle is Versioned, AragonApp {
         genesisTime = spec.genesisTime;
     }
 
-    
-
     /**
      * @notice DEPRECATED, kept for compatibility purposes only.
      *
@@ -165,7 +163,8 @@ contract LegacyOracle is Versioned, AragonApp {
      */
     function getCurrentEpochId() external view returns (uint256) {
         ChainSpec memory spec = _getChainSpec();
-        return (_getTime() - spec.genesisTime) / (spec.slotsPerEpoch * spec.secondsPerSlot);// solhint-disable-line not-rely-on-time
+        // solhint-disable-line not-rely-on-time
+        return (_getTime() - spec.genesisTime) / (spec.slotsPerEpoch * spec.secondsPerSlot);
     }
 
     /**
@@ -378,12 +377,12 @@ contract LegacyOracle is Versioned, AragonApp {
         IHashConsensus consensus = _getAccountingConsensusContract();
         uint256 refSlot;
         (refSlot,) =  consensus.getCurrentFrame();
-    
+
         // new accounting oracle's ref. slot is the last slot of the epoch preceding the one the frame starts at
         frameStartTime = spec.genesisTime + (refSlot + 1) * spec.secondsPerSlot;
         // new accounting oracle's frame ends at the timestamp of the frame's last slot; old oracle's frame
         // ended a second before the timestamp of the first slot of the next frame
-        frameEndTime = frameStartTime + spec.secondsPerSlot*spec.slotsPerEpoch*spec.epochsPerFrame - 1;
+        frameEndTime = frameStartTime + spec.secondsPerSlot * spec.slotsPerEpoch * spec.epochsPerFrame - 1;
         frameEpochId = (refSlot + 1) / spec.slotsPerEpoch;
     }
 
