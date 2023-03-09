@@ -20,21 +20,21 @@ function calcAccountingReportDataHash(reportItems) {
 }
 function getAccountingReportDataItems(r) {
   return [
-    r.consensusVersion,
-    +r.refSlot,
-    r.numValidators,
-    r.clBalanceGwei,
-    r.stakingModuleIdsWithNewlyExitedValidators,
-    r.numExitedValidatorsByStakingModule,
-    r.withdrawalVaultBalance,
-    r.elRewardsVaultBalance,
-    r.sharesRequestedToBurn,
-    r.withdrawalFinalizationBatches,
-    r.simulatedShareRate,
+    String(r.consensusVersion),
+    String(r.refSlot),
+    String(r.numValidators),
+    String(r.clBalanceGwei),
+    r.stakingModuleIdsWithNewlyExitedValidators.map(String),
+    r.numExitedValidatorsByStakingModule.map(String),
+    String(r.withdrawalVaultBalance),
+    String(r.elRewardsVaultBalance),
+    String(r.sharesRequestedToBurn),
+    String(r.withdrawalFinalizationBatches),
+    String(r.simulatedShareRate),
     r.isBunkerMode,
-    r.extraDataFormat,
-    r.extraDataHash,
-    r.extraDataItemsCount,
+    String(r.extraDataFormat),
+    String(r.extraDataHash),
+    String(r.extraDataItemsCount),
   ]
 }
 

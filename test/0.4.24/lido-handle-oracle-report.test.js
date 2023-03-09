@@ -2113,6 +2113,15 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
         }),
         { from: oracle, gasPrice: 1 }
       )
+      const { elBalanceUpdate } = limitRebase(
+        toBN(10000000),
+        ETH(101),
+        ETH(101),
+        ETH(0.1),
+        ETH(0.5 + 0.25),
+        sharesRequestedToBurn
+      )
+      assert.equals(withdrawals.add(elRewards), elBalanceUpdate)
       // Ensuring that vaults don't hit the positive rebase limit
       assert.equals(await getBalance(elRewardsVault), elRewards)
       assert.equals(await getBalance(withdrawalVault), withdrawals)
@@ -2141,6 +2150,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
         }),
         { from: oracle, gasPrice: 1 }
       )
+      await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96.1) })
+
       // Checking that both vaults are withdrawn
       assert.equals(await getBalance(elRewardsVault), toBN(0))
       assert.equals(await getBalance(withdrawalVault), toBN(0))
@@ -2148,10 +2159,18 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       let { coverShares, nonCoverShares } = await burner.getSharesRequestedToBurn()
       assert.isTrue(sharesRequestedToBurn.gt(coverShares.add(nonCoverShares)))
       assert.isTrue(coverShares.add(nonCoverShares).gt(toBN(0)))
+      // Check total pooled ether
+      const totalPooledEtherAfterFinalization = await lido.getTotalPooledEther()
+      // Add Bob's recently staked funds, deduct finalized with 1:1 stranger's StETH(1)
+      assert.equals(totalPooledEtherAfterFinalization, postTotalPooledEther.add(toBN(ETH(1.137 + 0.17 + 0.839 - 1))))
 
       // Checking that finalization of the previously placed withdrawal request completed
       assert.equals(await withdrawalQueue.getLastFinalizedRequestId(), toBN(1))
+      const strangerBalanceBeforeClaim = await getBalance(stranger)
       await withdrawalQueue.claimWithdrawal(1, { from: stranger })
+      const strangerBalanceAfterClaim = await getBalance(stranger)
+      // Happy-path: user receive ETH corresponding to the requested StETH amount
+      assert.equals(strangerBalanceAfterClaim - strangerBalanceBeforeClaim, StETH(1))
 
       // Reporting once again allowing shares to be burnt completely
       await lido.handleOracleReport(
@@ -2167,6 +2186,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
         }),
         { from: oracle, gasPrice: 1 }
       )
+      await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96.1) })
       // Checking that no shares to burn remain
       ;({ coverShares, nonCoverShares } = await burner.getSharesRequestedToBurn())
       assert.equals(coverShares, toBN(0))

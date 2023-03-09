@@ -1,12 +1,12 @@
 const { contract, artifacts } = require('hardhat')
 const { BN } = require('bn.js')
 const { assert } = require('../helpers/assert')
-const { MAX_UINT256 } = require('../helpers/constants')
-const { ZERO_ADDRESS, toBN, e9, e18, e27, toStr } = require('../helpers/utils')
+const { ZERO_ADDRESS } = require('../helpers/constants')
+const { toBN, e9, e18, e27 } = require('../helpers/utils')
 const { deployProtocol } = require('../helpers/protocol')
 const { reportOracle, getSecondsPerFrame, getSlotTimestamp } = require('../helpers/oracle')
 const { advanceChainTime } = require('../helpers/blockchain')
-const { processNamedTuple } = require('../helpers/debug')
+// const { processNamedTuple } = require('../helpers/debug')
 
 const StakingModuleMock = artifacts.require('StakingModuleMock')
 
@@ -170,7 +170,7 @@ contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, use
           withdrawalVaultBalance: 0,
           elRewardsVaultBalance: 0,
           sharesRequestedToBurn: 0,
-          withdrawalFinalizationBatches: [],
+          lastFinalizableRequestId: 0,
         }
 
         const timestamp = await getSlotTimestamp(+refSlot, consensus)
@@ -184,7 +184,7 @@ contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, use
           oracleReportFields.withdrawalVaultBalance,
           oracleReportFields.elRewardsVaultBalance,
           oracleReportFields.sharesRequestedToBurn,
-          [], // withdrawalFinalizationBatches
+          0, // lastFinalizableRequestId
           0, // simulatedShareRate
           { from: oracle.address }
         )
@@ -207,20 +207,7 @@ contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, use
         console.log(`ethAvailForWithdrawals: ${ethAvailForWithdrawals.div(toBN(10).pow(toBN(18)))}`)
       })
 
-      it(`calculating batches`, async () => {
-        let calcState = { ethBudget: toStr(ethAvailForWithdrawals), finished: false, batches: [] }
-        let i = 0
-
-        while (!calcState.finished) {
-          calcState = await wQueue.calculateFinalizationBatches(finalShareRate27, MAX_UINT256, calcState)
-          console.log(`calcState ${i}:`, processNamedTuple(calcState))
-          ++i
-        }
-      })
-
-      it.skip(`oracle report`, async () => {
-        // TODO
-      })
+      it.skip('TODO: oracle report')
     })
   }
 

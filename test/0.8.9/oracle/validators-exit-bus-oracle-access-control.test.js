@@ -133,13 +133,13 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, account1
 
       context('pause', () => {
         it('should revert without PAUSE_ROLE role', async () => {
-          await assert.revertsOZAccessControl(oracle.pause(0, { from: stranger }), stranger, 'PAUSE_ROLE')
+          await assert.revertsOZAccessControl(oracle.pauseFor(0, { from: stranger }), stranger, 'PAUSE_ROLE')
         })
 
         it('should allow calling from a possessor of PAUSE_ROLE role', async () => {
           await oracle.grantRole(pauseRoleKeccak156, account1)
 
-          const tx = await oracle.pause(9999, { from: account1 })
+          const tx = await oracle.pauseFor(9999, { from: account1 })
           assert.emits(tx, 'Paused', { duration: 9999 })
         })
       })
@@ -150,13 +150,13 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, account1
 
       context('resume', () => {
         it('should revert without RESUME_ROLE role', async () => {
-          await oracle.pause(9999, { from: admin })
+          await oracle.pauseFor(9999, { from: admin })
 
           await assert.revertsOZAccessControl(oracle.resume({ from: stranger }), stranger, 'RESUME_ROLE')
         })
 
         it('should allow calling from a possessor of RESUME_ROLE role', async () => {
-          await oracle.pause(9999, { from: admin })
+          await oracle.pauseFor(9999, { from: admin })
           await oracle.grantRole(resumeRoleKeccak156, account1)
 
           const tx = await oracle.resume({ from: account1 })
