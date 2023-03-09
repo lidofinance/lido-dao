@@ -7,11 +7,12 @@ const { shares, ETH, shareRate } = require('../helpers/utils')
 const withdrawals = require('../helpers/withdrawals')
 
 const StETH = artifacts.require('StETHMock')
+const WstETH = artifacts.require('WstETHMock')
 const ERC721ReceiverMock = artifacts.require('ERC721ReceiverMock')
 
 contract('WithdrawalNFT', (addresses) => {
   const [deployer, stEthHolder, nftHolderStETH, recipient, stranger] = addresses
-  let withdrawalQueueERC721, stETH, erc721ReceiverMock
+  let withdrawalQueueERC721, stETH, wstETH, erc721ReceiverMock
   let nftHolderStETHTokenIds, nonExistedTokenId
   const snapshot = new EvmSnapshot(ethers.provider)
 
@@ -19,11 +20,14 @@ contract('WithdrawalNFT', (addresses) => {
     stETH = await StETH.new({ value: ETH(1), from: deployer })
     await setBalance(stETH.address, ETH(100))
 
+    wstETH = await WstETH.new(stETH.address, { from: deployer })
     erc721ReceiverMock = await ERC721ReceiverMock.new({ from: deployer })
-    withdrawalQueueERC721 = (await withdrawals.deploy(deployer, stETH.address, 'Lido TEST Request', 'unstEsT')).queue
+    withdrawalQueueERC721 = (await withdrawals.deploy(deployer, wstETH.address, 'Lido TEST Request', 'unstEsT')).queue
     await withdrawalQueueERC721.initialize(deployer)
+    await withdrawalQueueERC721.grantRole(await withdrawalQueueERC721.PAUSE_ROLE(), deployer)
     await withdrawalQueueERC721.grantRole(await withdrawalQueueERC721.RESUME_ROLE(), deployer)
     await withdrawalQueueERC721.grantRole(await withdrawalQueueERC721.FINALIZE_ROLE(), deployer)
+    await withdrawalQueueERC721.grantRole(await withdrawalQueueERC721.ORACLE_ROLE(), deployer)
     await withdrawalQueueERC721.resume({ from: deployer })
 
     await stETH.setTotalPooledEther(ETH(101))
