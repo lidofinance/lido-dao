@@ -403,7 +403,7 @@ contract('Lido: happy path', (addresses) => {
 
     // Reporting 1.005-fold balance increase (64 => 64.32) to stay in limits
 
-    await pushOracleReport(consensus, oracle, 2, ETH(64.32))
+    await pushOracleReport(consensus, oracle, 2, ETH(64.32), ETH(0))
 
     // Total shares increased because fee minted (fee shares added)
     // shares = oldTotalShares + reward * totalFee * oldTotalShares / (newTotalPooledEther - reward * totalFee)
