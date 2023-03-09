@@ -130,10 +130,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
     })
 
     it(`only Lido can commit shares to burn`, async () => {
-      assert.revertsWithCustomError(
-        burner.commitSharesToBurn(0, { from: anotherAccount }),
-        `AppAuthLidoFailed('${anotherAccount}')`
-      )
+      assert.revertsWithCustomError(burner.commitSharesToBurn(0, { from: anotherAccount }), `AppAuthLidoFailed()`)
 
       await burner.commitSharesToBurn(0, { from: lido.address })
     })

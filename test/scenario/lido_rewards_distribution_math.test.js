@@ -729,10 +729,10 @@ contract('Lido: rewards distribution math', (addresses) => {
     const rewardsAmount = ETH(1)
     const newBeaconBalance = totalPooledEtherBefore.sub(bufferedBefore).add(toBN(rewardsAmount))
 
-    const treasurySharesBefore = await await token.sharesOf(treasuryAddr)
-    const nodeOperator1SharesBefore = await await token.sharesOf(nodeOperator1.address)
-    const nodeOperator2SharesBefore = await await token.sharesOf(nodeOperator2.address)
-    const nodeOperator3SharesBefore = await await token.sharesOf(nodeOperator3.address)
+    const treasurySharesBefore = await token.sharesOf(treasuryAddr)
+    const nodeOperator1SharesBefore = await token.sharesOf(nodeOperator1.address)
+    const nodeOperator2SharesBefore = await token.sharesOf(nodeOperator2.address)
+    const nodeOperator3SharesBefore = await token.sharesOf(nodeOperator3.address)
 
     await reportBeacon(3, newBeaconBalance)
 
@@ -786,10 +786,10 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     await stakingRouter.setStakingModuleStatus(firstModule.id, StakingModuleStatus.Stopped, { from: voting })
 
-    const treasurySharesBefore = await await token.sharesOf(treasuryAddr)
-    const nodeOperator1SharesBefore = await await token.sharesOf(nodeOperator1.address)
-    const nodeOperator2SharesBefore = await await token.sharesOf(nodeOperator2.address)
-    const nodeOperator3SharesBefore = await await token.sharesOf(nodeOperator3.address)
+    const treasurySharesBefore = await token.sharesOf(treasuryAddr)
+    const nodeOperator1SharesBefore = await token.sharesOf(nodeOperator1.address)
+    const nodeOperator2SharesBefore = await token.sharesOf(nodeOperator2.address)
+    const nodeOperator3SharesBefore = await token.sharesOf(nodeOperator3.address)
 
     await reportBeacon(3, newBeaconBalance)
 
@@ -828,10 +828,10 @@ contract('Lido: rewards distribution math', (addresses) => {
 
     await stakingRouter.setStakingModuleStatus(secondModule.id, StakingModuleStatus.Stopped, { from: voting })
 
-    const treasurySharesBefore = await await token.sharesOf(treasuryAddr)
-    const nodeOperator1SharesBefore = await await token.sharesOf(nodeOperator1.address)
-    const nodeOperator2SharesBefore = await await token.sharesOf(nodeOperator2.address)
-    const nodeOperator3SharesBefore = await await token.sharesOf(nodeOperator3.address)
+    const treasurySharesBefore = await token.sharesOf(treasuryAddr)
+    const nodeOperator1SharesBefore = await token.sharesOf(nodeOperator1.address)
+    const nodeOperator2SharesBefore = await token.sharesOf(nodeOperator2.address)
+    const nodeOperator3SharesBefore = await token.sharesOf(nodeOperator3.address)
 
     await reportBeacon(3, newBeaconBalance)
 

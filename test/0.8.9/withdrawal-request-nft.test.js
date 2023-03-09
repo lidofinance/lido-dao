@@ -7,42 +7,32 @@ const { shares, ETH, shareRate } = require('../helpers/utils')
 const withdrawals = require('../helpers/withdrawals')
 
 const StETH = artifacts.require('StETHMock')
-const WstETH = artifacts.require('WstETHMock')
 const ERC721ReceiverMock = artifacts.require('ERC721ReceiverMock')
 
 contract('WithdrawalNFT', (addresses) => {
-  const [deployer, stEthHolder, wstEthHolder, nftHolderStETH, nftHolderWstETH, recipient, stranger] = addresses
-  let withdrawalQueueERC721, stETH, wstETH, erc721ReceiverMock
-  let nftHolderStETHTokenIds, nftHolderWstETHTokenIds, nonExistedTokenId
+  const [deployer, stEthHolder, nftHolderStETH, recipient, stranger] = addresses
+  let withdrawalQueueERC721, stETH, erc721ReceiverMock
+  let nftHolderStETHTokenIds, nonExistedTokenId
   const snapshot = new EvmSnapshot(ethers.provider)
 
   before(async () => {
     stETH = await StETH.new({ value: ETH(1), from: deployer })
     await setBalance(stETH.address, ETH(100))
 
-    wstETH = await WstETH.new(stETH.address, { from: deployer })
     erc721ReceiverMock = await ERC721ReceiverMock.new({ from: deployer })
-    withdrawalQueueERC721 = (await withdrawals.deploy(deployer, wstETH.address, 'Lido TEST Request', 'unstEsT')).queue
-    await withdrawalQueueERC721.initialize(
-      deployer, // owner
-      deployer, // pauser
-      deployer, // resumer
-      deployer, // finalizer
-      deployer
-    )
+    withdrawalQueueERC721 = (await withdrawals.deploy(deployer, stETH.address, 'Lido TEST Request', 'unstEsT')).queue
+    await withdrawalQueueERC721.initialize(deployer)
+    await withdrawalQueueERC721.grantRole(await withdrawalQueueERC721.RESUME_ROLE(), deployer)
+    await withdrawalQueueERC721.grantRole(await withdrawalQueueERC721.FINALIZE_ROLE(), deployer)
     await withdrawalQueueERC721.resume({ from: deployer })
 
     await stETH.setTotalPooledEther(ETH(101))
-    await stETH.mintShares(stEthHolder, shares(50))
-    await stETH.mintShares(wstETH.address, shares(50))
-    await wstETH.mint(wstEthHolder, ETH(25))
+    await stETH.mintShares(stEthHolder, shares(100))
 
     await stETH.approve(withdrawalQueueERC721.address, ETH(50), { from: stEthHolder })
-    await wstETH.approve(withdrawalQueueERC721.address, ETH(25), { from: wstEthHolder })
+
     await withdrawalQueueERC721.requestWithdrawals([ETH(25), ETH(25)], nftHolderStETH, { from: stEthHolder })
     nftHolderStETHTokenIds = [1, 2]
-    await withdrawalQueueERC721.requestWithdrawalsWstETH([ETH(25)], nftHolderWstETH, { from: wstEthHolder })
-    nftHolderWstETHTokenIds = [3]
     nonExistedTokenId = 4
     await snapshot.make()
   })
@@ -86,7 +76,6 @@ contract('WithdrawalNFT', (addresses) => {
 
     it('return correct withdrawal requests count', async () => {
       assert.equals(await withdrawalQueueERC721.balanceOf(nftHolderStETH), 2)
-      assert.equals(await withdrawalQueueERC721.balanceOf(nftHolderWstETH), 1)
     })
 
     it('reverts for zero address', async () => {
@@ -106,7 +95,6 @@ contract('WithdrawalNFT', (addresses) => {
     it('reverts correct owner', async () => {
       assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), nftHolderStETH)
       assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[1]), nftHolderStETH)
-      assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderWstETHTokenIds[0]), nftHolderWstETH)
     })
   })
 
@@ -192,8 +180,8 @@ contract('WithdrawalNFT', (addresses) => {
 
     it('reverts with message "TransferToNonIERC721Receiver()" when transfer to contract that not implements IERC721Receiver interface', async () => {
       await assert.reverts(
-        withdrawalQueueERC721.safeTransferFrom(nftHolderWstETH, stETH.address, nftHolderWstETHTokenIds[0], {
-          from: nftHolderWstETH,
+        withdrawalQueueERC721.safeTransferFrom(nftHolderStETH, stETH.address, nftHolderStETHTokenIds[0], {
+          from: nftHolderStETH,
         }),
         `TransferToNonIERC721Receiver("${stETH.address}")`
       )
@@ -234,16 +222,16 @@ contract('WithdrawalNFT', (addresses) => {
 
     it('reverts when transfer to the same address', async () => {
       await assert.reverts(
-        withdrawalQueueERC721.transferFrom(nftHolderWstETH, nftHolderWstETH, nftHolderWstETHTokenIds[0], {
-          from: nftHolderWstETH,
+        withdrawalQueueERC721.transferFrom(nftHolderStETH, nftHolderStETH, nftHolderStETHTokenIds[0], {
+          from: nftHolderStETH,
         }),
         'TransferToThemselves()'
       )
     })
 
     it('reverts with error "RequestAlreadyClaimed()" when called on claimed request', async () => {
-      const batch = await withdrawalQueueERC721.finalizationBatch(3, shareRate(1))
-      await withdrawalQueueERC721.finalize(3, { from: deployer, value: batch.ethToLock })
+      const batch = await withdrawalQueueERC721.finalizationBatch(2, shareRate(1))
+      await withdrawalQueueERC721.finalize(2, shareRate(1), { from: deployer, value: batch.ethToLock })
       const ownerETHBefore = await ethers.provider.getBalance(nftHolderStETH)
       const tx = await withdrawalQueueERC721.methods['claimWithdrawal(uint256)'](nftHolderStETHTokenIds[0], {
         from: nftHolderStETH,
@@ -261,11 +249,11 @@ contract('WithdrawalNFT', (addresses) => {
     })
 
     it('transfers if called by owner', async () => {
-      assert.notEqual(await withdrawalQueueERC721.ownerOf(nftHolderWstETHTokenIds[0]), recipient)
-      await withdrawalQueueERC721.transferFrom(nftHolderWstETH, recipient, nftHolderWstETHTokenIds[0], {
-        from: nftHolderWstETH,
+      assert.notEqual(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), recipient)
+      await withdrawalQueueERC721.transferFrom(nftHolderStETH, recipient, nftHolderStETHTokenIds[0], {
+        from: nftHolderStETH,
       })
-      assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderWstETHTokenIds[0]), recipient)
+      assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), recipient)
     })
 
     it('transfers if token approval set', async () => {
@@ -297,8 +285,8 @@ contract('WithdrawalNFT', (addresses) => {
       })
       assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), recipient)
 
-      const batch = await withdrawalQueueERC721.finalizationBatch(3, shareRate(1))
-      await withdrawalQueueERC721.finalize(3, { from: deployer, value: batch.ethToLock })
+      const batch = await withdrawalQueueERC721.finalizationBatch(2, shareRate(1))
+      await withdrawalQueueERC721.finalize(2, shareRate(1), { from: deployer, value: batch.ethToLock })
 
       const recipientETHBefore = await ethers.provider.getBalance(recipient)
       const tx = await withdrawalQueueERC721.methods['claimWithdrawal(uint256)'](nftHolderStETHTokenIds[0], {
@@ -310,11 +298,11 @@ contract('WithdrawalNFT', (addresses) => {
     })
 
     it("doesn't reverts when transfer to contract that not implements IERC721Receiver interface", async () => {
-      assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderWstETHTokenIds[0]), nftHolderWstETH)
-      await withdrawalQueueERC721.transferFrom(nftHolderWstETH, stETH.address, nftHolderWstETHTokenIds[0], {
-        from: nftHolderWstETH,
+      assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), nftHolderStETH)
+      await withdrawalQueueERC721.transferFrom(nftHolderStETH, stETH.address, nftHolderStETHTokenIds[0], {
+        from: nftHolderStETH,
       })
-      assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderWstETHTokenIds[0]), stETH.address)
+      assert.equal(await withdrawalQueueERC721.ownerOf(nftHolderStETHTokenIds[0]), stETH.address)
     })
   })
 
@@ -322,8 +310,8 @@ contract('WithdrawalNFT', (addresses) => {
     it('balanceOf decreases after claim', async () => {
       const balanceBefore = await withdrawalQueueERC721.balanceOf(nftHolderStETH)
 
-      const batch = await withdrawalQueueERC721.finalizationBatch(3, shareRate(1))
-      await withdrawalQueueERC721.finalize(3, { from: deployer, value: batch.ethToLock })
+      const batch = await withdrawalQueueERC721.finalizationBatch(2, shareRate(1))
+      await withdrawalQueueERC721.finalize(2, shareRate(1), { from: deployer, value: batch.ethToLock })
 
       await withdrawalQueueERC721.methods['claimWithdrawal(uint256)'](nftHolderStETHTokenIds[0], {
         from: nftHolderStETH,

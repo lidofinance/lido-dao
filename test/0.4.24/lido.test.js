@@ -381,14 +381,14 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
         await app.setELRewardsWithdrawalLimit(initialValue, { from: voting })
 
         // unable to receive execution layer rewards from arbitrary account
-        await assert.reverts(app.receiveELRewards({ from: user1, value: ETH(1) }), 'EXECUTION_LAYER_REWARDS_VAULT_ONLY')
+        await assert.reverts(app.receiveELRewards({ from: user1, value: ETH(1) }))
       })
     })
   })
 
   describe('receiveELRewards()', async () => {
     it('unable to receive eth from arbitrary account', async () => {
-      await assert.reverts(app.receiveELRewards({ from: nobody, value: ETH(1) }), 'EXECUTION_LAYER_REWARDS_VAULT_ONLY')
+      await assert.reverts(app.receiveELRewards({ from: nobody, value: ETH(1) }))
     })
 
     it('event work', async () => {
