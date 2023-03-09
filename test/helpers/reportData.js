@@ -29,7 +29,7 @@ function getAccountingReportDataItems(r) {
     String(r.withdrawalVaultBalance),
     String(r.elRewardsVaultBalance),
     String(r.sharesRequestedToBurn),
-    String(r.withdrawalFinalizationBatches),
+    r.withdrawalFinalizationBatches.map(String),
     String(r.simulatedShareRate),
     r.isBunkerMode,
     String(r.extraDataFormat),

@@ -47,7 +47,7 @@ const DEFAULT_LIDO_ORACLE_REPORT = {
   withdrawalVaultBalance: ETH(0), // uint256, wei
   elRewardsVaultBalance: ETH(0), // uint256, wei
   sharesRequestedToBurn: StETH(0), // uint256, wad
-  lastFinalizableWithdrawalRequestId: 0, // uint256, index
+  withdrawalFinalizationBatches: [], // uint256, index
   simulatedShareRate: shareRate(0), // uint256, 10e27
 }
 
@@ -2018,7 +2018,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
             postCLBalance: ETH(96.1),
             elRewardsVaultBalance: ETH(0.5),
             withdrawalVaultBalance: ETH(0.5),
-            lastFinalizableWithdrawalRequestId: 1,
+            withdrawalFinalizationBatches: [1],
             simulatedShareRate: tooLowSimulatedShareRate,
           }),
           { from: oracle, gasPrice: 1 }
@@ -2038,7 +2038,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
             postCLBalance: ETH(96.1),
             elRewardsVaultBalance: ETH(0.5),
             withdrawalVaultBalance: ETH(0.5),
-            lastFinalizableWithdrawalRequestId: 1,
+            withdrawalFinalizationBatches: [1],
             simulatedShareRate: tooHighSimulatedShareRate,
           }),
           { from: oracle, gasPrice: 1 }
@@ -2055,7 +2055,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
           postCLBalance: ETH(96.1),
           elRewardsVaultBalance: ETH(0.5),
           withdrawalVaultBalance: ETH(0.5),
-          lastFinalizableWithdrawalRequestId: 1,
+          withdrawalFinalizationBatches: [1],
           simulatedShareRate,
         }),
         { from: oracle, gasPrice: 1 }
@@ -2145,7 +2145,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
           elRewardsVaultBalance: ETH(0.25),
           withdrawalVaultBalance: ETH(0.5),
           sharesRequestedToBurn: sharesRequestedToBurn.toString(),
-          lastFinalizableWithdrawalRequestId: 1,
+          withdrawalFinalizationBatches: [1],
           simulatedShareRate: simulatedShareRate.toString(),
         }),
         { from: oracle, gasPrice: 1 }

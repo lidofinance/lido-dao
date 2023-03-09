@@ -34,7 +34,7 @@ const getReportFields = (override = {}) => ({
   withdrawalVaultBalance: e18(1),
   elRewardsVaultBalance: e18(2),
   sharesRequestedToBurn: e18(3),
-  lastFinalizableWithdrawalRequestId: 1,
+  withdrawalFinalizationBatches: [1],
   simulatedShareRate: e27(1),
   isBunkerMode: true,
   extraDataFormat: 0,

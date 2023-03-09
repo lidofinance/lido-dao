@@ -170,7 +170,6 @@ contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, use
           withdrawalVaultBalance: 0,
           elRewardsVaultBalance: 0,
           sharesRequestedToBurn: 0,
-          lastFinalizableRequestId: 0,
         }
 
         const timestamp = await getSlotTimestamp(+refSlot, consensus)
@@ -184,7 +183,7 @@ contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, use
           oracleReportFields.withdrawalVaultBalance,
           oracleReportFields.elRewardsVaultBalance,
           oracleReportFields.sharesRequestedToBurn,
-          0, // lastFinalizableRequestId
+          [],
           0, // simulatedShareRate
           { from: oracle.address }
         )

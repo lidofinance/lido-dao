@@ -8,7 +8,7 @@ const { EvmSnapshot } = require('../helpers/blockchain')
 
 const { deployWithdrawalQueue } = require('./withdrawal-queue-deploy.test')
 
-contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, oracle, anotherUser]) => {
+contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
   let withdrawalQueue, steth
 
   const snapshot = new EvmSnapshot(ethers.provider)
@@ -33,7 +33,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     const batches = calculatedBatches.batches.slice(0, calculatedBatches.batchesLength)
     assert.equals(batches, expectedBatches)
 
-    const batch = await withdrawalQueue.prefinalize.call(batches, finalizationShareRate)
+    const batch = await withdrawalQueue.prefinalize(batches, finalizationShareRate)
 
     assert.equalsDelta(batch.ethToLock, budget, 2)
 

@@ -78,7 +78,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       await withdrawalQueue.pauseFor(100000000, { from: daoAgent })
       assert(await withdrawalQueue.isPaused())
       await assert.reverts(withdrawalQueue.requestWithdrawals([ETH(1)], owner, { from: user }), 'ResumedExpected()')
-      await assert.reverts(withdrawalQueue.finalize(1, 0, { from: owner }), 'ResumedExpected()')
+      await assert.reverts(withdrawalQueue.finalize([1], 0, { from: owner }), 'ResumedExpected()')
     })
 
     it('cant resume if not paused', async () => {
