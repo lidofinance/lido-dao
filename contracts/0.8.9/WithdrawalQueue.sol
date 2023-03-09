@@ -21,6 +21,14 @@ interface IStETH is IERC20, IERC20Permit {
     function getSharesByPooledEth(uint256 _pooledEthAmount) external view returns (uint256);
 }
 
+/// @notice Interface defining a Lido liquid staking pool wrapper
+/// @dev see WstETH.sol for full docs
+interface IWstETH is IERC20, IERC20Permit {
+    function unwrap(uint256 _wstETHAmount) external returns (uint256);
+    function getStETHByWstETH(uint256 _wstETHAmount) external view returns (uint256);
+    function stETH() external view returns (IStETH);
+}
+
 /// @title A contract for handling stETH withdrawal request queue within the Lido protocol
 /// @author folkyatina
 abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, WithdrawalQueueBase, Versioned {
@@ -49,7 +57,9 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     uint256 public constant MAX_STETH_WITHDRAWAL_AMOUNT = 1000 * 1e18;
 
     /// @notice Lido stETH token address to be set upon construction
-    IStETH internal immutable STETH;
+    IStETH public immutable STETH;
+    /// @notice Lido wstETH token address to be set upon construction
+    IWstETH public immutable WSTETH;
 
     /// @notice Emitted when the contract initialized
     event InitializedV1(address _admin);
@@ -63,10 +73,11 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     error RequestIdsNotSorted();
     error ZeroRecipient();
 
-    /// @param _stETH address of stETH contract
-    constructor(address _stETH) {
+    /// @param _wstETH address of WstETH contract
+    constructor(IWstETH _wstETH) {
         // init immutables
-        STETH = IStETH(_stETH);
+        WSTETH = _wstETH;
+        STETH = WSTETH.stETH();
     }
 
     /// @notice Initialize the contract storage explicitly.
@@ -126,6 +137,24 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         }
     }
 
+    /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data
+    /// @param amounts an array of stETH amount values. The standalone withdrawal request will
+    ///  be created for each item in the passed list.
+    /// @param _owner address that will be able to transfer or claim the request.
+    ///  If `owner` is set to `address(0)`, `msg.sender` will be used as owner.
+    /// @return requestIds an array of the created withdrawal requests
+    function requestWithdrawalsWstETH(uint256[] calldata amounts, address _owner)
+        public
+        returns (uint256[] memory requestIds)
+    {
+        _checkResumed();
+        if (_owner == address(0)) _owner = msg.sender;
+        requestIds = new uint256[](amounts.length);
+        for (uint256 i = 0; i < amounts.length; ++i) {
+            requestIds[i] = _requestWithdrawalWstETH(amounts[i], _owner);
+        }
+    }
+
     struct PermitInput {
         uint256 value;
         uint256 deadline;
@@ -148,6 +177,23 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     {
         STETH.permit(msg.sender, address(this), _permit.value, _permit.deadline, _permit.v, _permit.r, _permit.s);
         return requestWithdrawals(_amounts, _owner);
+    }
+
+    /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data
+    ///  using EIP-2612 Permit
+    /// @param _amounts an array of stETH amount values. The standalone withdrawal request will
+    ///  be created for each item in the passed list.
+    /// @param _owner address that will be able to transfer or claim the request.
+    ///  If `owner` is set to `address(0)`, `msg.sender` will be used as owner.
+    /// @param _permit data required for the wstETH.permit() method to set the allowance
+    /// @return requestIds an array of the created withdrawal requests
+    function requestWithdrawalsWstETHWithPermit(
+        uint256[] calldata _amounts,
+        address _owner,
+        PermitInput calldata _permit
+    ) external returns (uint256[] memory requestIds) {
+        WSTETH.permit(msg.sender, address(this), _permit.value, _permit.deadline, _permit.v, _permit.r, _permit.s);
+        return requestWithdrawalsWstETH(_amounts, _owner);
     }
 
     /// @notice Returns all withdrawal requests that belongs to the `_owner` address
@@ -335,6 +381,18 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         uint256 amountOfShares = STETH.getSharesByPooledEth(_amountOfStETH);
 
         requestId = _enqueue(uint128(_amountOfStETH), uint128(amountOfShares), _owner);
+
+        _emitTransfer(address(0), _owner, requestId);
+    }
+
+    function _requestWithdrawalWstETH(uint256 _amountOfWstETH, address _owner) internal returns (uint256 requestId) {
+        WSTETH.transferFrom(msg.sender, address(this), _amountOfWstETH);
+        uint256 amountOfStETH = WSTETH.unwrap(_amountOfWstETH);
+        _checkWithdrawalRequestAmount(amountOfStETH);
+
+        uint256 amountOfShares = STETH.getSharesByPooledEth(amountOfStETH);
+
+        requestId = _enqueue(uint128(amountOfStETH), uint128(amountOfShares), _owner);
 
         _emitTransfer(address(0), _owner, requestId);
     }

@@ -3,14 +3,14 @@ const { bn, getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers
 
 const { ETH, StETH, shareRate, shares } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
-const { signPermit } = require('../0.6.12/helpers/permit_helpers')
+const { signPermit, makeDomainSeparator } = require('../0.6.12/helpers/permit_helpers')
 const { MAX_UINT256, ACCOUNTS_AND_KEYS } = require('../0.6.12/helpers/constants')
 const { impersonate, EvmSnapshot, getCurrentBlockTimestamp, setBalance } = require('../helpers/blockchain')
 
 const { deployWithdrawalQueue } = require('./withdrawal-queue-deploy.test')
 
 contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, oracle]) => {
-  let withdrawalQueue, steth
+  let withdrawalQueue, steth, wsteth
 
   const snapshot = new EvmSnapshot(ethers.provider)
 
@@ -28,6 +28,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     })
 
     steth = deployed.steth
+    wsteth = deployed.wsteth
     withdrawalQueue = deployed.withdrawalQueue
 
     await steth.setTotalPooledEther(ETH(600))
@@ -78,6 +79,63 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       await withdrawalQueue.pauseFor(100000000, { from: daoAgent })
       assert(await withdrawalQueue.isPaused())
       await assert.reverts(withdrawalQueue.requestWithdrawals([ETH(1)], owner, { from: user }), 'ResumedExpected()')
+
+      await assert.reverts(
+        withdrawalQueue.requestWithdrawalsWstETH([ETH(1)], owner, { from: user }),
+        'ResumedExpected()'
+      )
+
+      const [alice] = ACCOUNTS_AND_KEYS
+      const amount = ETH(1)
+      const deadline = MAX_UINT256
+      await impersonate(ethers.provider, alice.address)
+      const stETHDomainSeparator = await steth.DOMAIN_SEPARATOR()
+      const wstETHDomainSeparator = await wsteth.DOMAIN_SEPARATOR()
+
+      let { v, r, s } = signPermit(
+        alice.address,
+        withdrawalQueue.address,
+        amount, // amount
+        0, // nonce
+        deadline,
+        wstETHDomainSeparator,
+        alice.key
+      )
+
+      const wstETHPermission = {
+        value: amount,
+        deadline, // deadline
+        v,
+        r,
+        s,
+      }
+
+      await assert.reverts(
+        withdrawalQueue.requestWithdrawalsWstETHWithPermit([ETH(1)], owner, wstETHPermission, { from: alice.address }),
+        'ResumedExpected()'
+      )
+      ;({ v, r, s } = signPermit(
+        alice.address,
+        withdrawalQueue.address,
+        amount, // amount
+        0, // nonce
+        deadline,
+        stETHDomainSeparator,
+        alice.key
+      ))
+
+      const stETHPermission = {
+        value: amount,
+        deadline, // deadline
+        v,
+        r,
+        s,
+      }
+
+      await assert.reverts(
+        withdrawalQueue.requestWithdrawalsWithPermit([ETH(1)], owner, stETHPermission, { from: alice.address }),
+        'ResumedExpected()'
+      )
       await assert.reverts(withdrawalQueue.finalize([1], 0, { from: owner }), 'ResumedExpected()')
     })
 
@@ -257,6 +315,10 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       const PAUSE_INFINITELY = await withdrawalQueue.PAUSE_INFINITELY()
       await withdrawalQueue.pauseFor(PAUSE_INFINITELY, { from: daoAgent })
       await assert.reverts(withdrawalQueue.requestWithdrawals([StETH(300)], owner, { from: user }), 'ResumedExpected()')
+      await assert.reverts(
+        withdrawalQueue.requestWithdrawalsWstETH([ETH(300)], owner, { from: user }),
+        'ResumedExpected()'
+      )
     })
 
     it('data is being accumulated properly', async () => {
@@ -931,6 +993,89 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       assert.equals(await withdrawalQueue.getLastRequestId(), lastRequestIdBefore.add(bn(requests.length)))
       const stETHBalanceAfter = await steth.balanceOf(user)
       assert.almostEqual(stETHBalanceAfter, stETHBalanceBefore.sub(bn(requests[0])).sub(bn(requests[1])), 30)
+    })
+  })
+
+  context('requestWithdrawalsWstETH()', () => {
+    it('works correctly with non empty payload and different tokens', async () => {
+      await wsteth.mint(user, ETH(100))
+      await steth.mintShares(wsteth.address, shares(100))
+      await steth.mintShares(user, shares(100))
+      await wsteth.approve(withdrawalQueue.address, ETH(300), { from: user })
+      const requests = [ETH(10), ETH(20)]
+      const wstETHBalanceBefore = await wsteth.balanceOf(user)
+      const lastRequestIdBefore = await withdrawalQueue.getLastRequestId()
+
+      await withdrawalQueue.requestWithdrawalsWstETH(requests, stranger, { from: user })
+
+      assert.equals(await withdrawalQueue.getLastRequestId(), lastRequestIdBefore.add(bn(requests.length)))
+      const wstETHBalanceAfter = await wsteth.balanceOf(user)
+      assert.equals(wstETHBalanceAfter, wstETHBalanceBefore.sub(bn(requests[0])).sub(bn(requests[1])))
+    })
+
+    it('uses sender address as owner if zero passed', async () => {
+      await wsteth.mint(user, ETH(1))
+      await steth.mintShares(wsteth.address, shares(1))
+      await steth.mintShares(user, shares(1))
+      await wsteth.approve(withdrawalQueue.address, ETH(1), { from: user })
+
+      const tx = await withdrawalQueue.requestWithdrawalsWstETH([ETH(1)], ZERO_ADDRESS, { from: user })
+
+      assert.emits(tx, 'WithdrawalRequested', {
+        requestId: 1,
+        requestor: user.toLowerCase(),
+        owner: user.toLowerCase(),
+        amountOfStETH: await steth.getPooledEthByShares(ETH(1)),
+        amountOfShares: shares(1),
+      })
+    })
+  })
+
+  context('requestWithdrawalsWstETHWithPermit()', () => {
+    const [alice] = ACCOUNTS_AND_KEYS
+    it('works correctly with non empty payload', async () => {
+      await wsteth.mint(user, ETH(100))
+      await steth.mintShares(wsteth.address, shares(100))
+      await steth.mintShares(user, shares(100))
+      await wsteth.approve(withdrawalQueue.address, ETH(300), { from: user })
+      await impersonate(ethers.provider, alice.address)
+      await web3.eth.sendTransaction({ to: alice.address, from: user, value: ETH(1) })
+      await wsteth.transfer(alice.address, ETH(100), { from: user })
+
+      const requests = []
+
+      const withdrawalRequestsCount = 5
+      for (let i = 0; i < withdrawalRequestsCount; ++i) {
+        requests.push(ETH(10))
+      }
+
+      const amount = bn(ETH(10)).mul(bn(withdrawalRequestsCount))
+      const chainId = await wsteth.getChainId()
+      const deadline = MAX_UINT256
+      const domainSeparator = makeDomainSeparator('Wrapped liquid staked Ether 2.0', '1', chainId, wsteth.address)
+      const { v, r, s } = signPermit(
+        alice.address,
+        withdrawalQueue.address,
+        amount, // amount
+        0, // nonce
+        deadline,
+        domainSeparator,
+        alice.key
+      )
+      const permission = [
+        amount,
+        deadline, // deadline
+        v,
+        r,
+        s,
+      ]
+
+      const aliceBalancesBefore = await wsteth.balanceOf(alice.address)
+      const lastRequestIdBefore = await withdrawalQueue.getLastRequestId()
+      await withdrawalQueue.requestWithdrawalsWstETHWithPermit(requests, owner, permission, { from: alice.address })
+      assert.equals(await withdrawalQueue.getLastRequestId(), lastRequestIdBefore.add(bn(requests.length)))
+      const aliceBalancesAfter = await wsteth.balanceOf(alice.address)
+      assert.equals(aliceBalancesAfter, aliceBalancesBefore.sub(bn(ETH(10)).mul(bn(withdrawalRequestsCount))))
     })
   })
 
