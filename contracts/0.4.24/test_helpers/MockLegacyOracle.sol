@@ -15,6 +15,10 @@ interface ILegacyOracle {
     function getLastCompletedEpochId() external view returns (uint256);
 }
 
+interface ITimeProvider {
+    function getTime() external view returns (uint256);
+}
+
 
 contract MockLegacyOracle is ILegacyOracle, LegacyOracle {
 
@@ -49,6 +53,17 @@ contract MockLegacyOracle is ILegacyOracle, LegacyOracle {
             _setChainSpec(ChainSpec(epochsPerFrame,slotsPerEpoch,secondsPerSlot,genesisTime));
     }
 
+    
+     function _getTime() internal view returns (uint256) {
+        address accountingOracle = ACCOUNTING_ORACLE_POSITION.getStorageAddress();
+        return ITimeProvider(accountingOracle).getTime();
+    }
+
+     function getTime() external view returns (uint256) {
+        return _getTime();
+    }
+
+   
 
     function handleConsensusLayerReport(uint256 refSlot, uint256 clBalance, uint256 clValidators)
         external

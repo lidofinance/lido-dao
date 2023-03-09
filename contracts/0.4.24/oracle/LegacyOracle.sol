@@ -156,17 +156,16 @@ contract LegacyOracle is Versioned, AragonApp {
         genesisTime = spec.genesisTime;
     }
 
+    
+
     /**
      * @notice DEPRECATED, kept for compatibility purposes only.
      *
      * Returns the epoch calculated from current timestamp
      */
-    function getCurrentEpochId() external view returns (uint256 epochId) {
+    function getCurrentEpochId() external view returns (uint256) {
         ChainSpec memory spec = _getChainSpec();
-        IHashConsensus consensus = _getAccountingConsensusContract();
-        uint256 refSlot;
-        (refSlot,) =  consensus.getCurrentFrame();
-        epochId = (refSlot + 1) / spec.slotsPerEpoch;
+        return (_getTime() - spec.genesisTime) / (spec.slotsPerEpoch * spec.secondsPerSlot);// solhint-disable-line not-rely-on-time
     }
 
     /**
@@ -318,6 +317,10 @@ contract LegacyOracle is Versioned, AragonApp {
         _setContractVersion(4);
     }
 
+    function _getTime() internal view returns (uint256) {
+        return block.timestamp; // solhint-disable-line not-rely-on-time
+    }
+
     function _getChainSpec()
         internal
         view
@@ -335,6 +338,7 @@ contract LegacyOracle is Versioned, AragonApp {
         require(_chainSpec.slotsPerEpoch > 0, "BAD_SLOTS_PER_EPOCH");
         require(_chainSpec.secondsPerSlot > 0, "BAD_SECONDS_PER_SLOT");
         require(_chainSpec.genesisTime > 0, "BAD_GENESIS_TIME");
+        require(_chainSpec.epochsPerFrame > 0, "BAD_EPOCHS_PER_FRAME");
 
         uint256 data = (
             uint256(_chainSpec.epochsPerFrame) << 192 |

@@ -1,7 +1,7 @@
 const { contract, ethers, artifacts, web3 } = require('hardhat')
 const { assert } = require('../helpers/assert')
 const { impersonate } = require('../helpers/blockchain')
-const { e9, e18, e27 } = require('../helpers/utils')
+const { e9, e18, e27, toBN } = require('../helpers/utils')
 const { legacyOracleFactory } = require('../helpers/factories')
 
 const OssifiableProxy = artifacts.require('OssifiableProxy')
@@ -43,6 +43,12 @@ const getReportFields = (override = {}) => ({
   ...override,
 })
 
+const oldGetCurrentEpochId = (timestamp) => {
+  return toBN(timestamp)
+    .sub(toBN(GENESIS_TIME))
+    .div(toBN(SLOTS_PER_EPOCH).mul(toBN(SECONDS_PER_SLOT)))
+}
+
 async function deployLegacyOracleWithAccountingOracle({ admin, initialEpoch = 1, lastProcessingRefSlot = 31 }) {
   const legacyOracle = await legacyOracleFactory({ appManager: { address: admin } })
   const { locatorAddr, consensus, oracle, lido } = await deployAccountingOracleSetup(admin, {
@@ -63,13 +69,12 @@ module.exports = {
 
 contract('LegacyOracle', ([admin, stranger]) => {
   context('Fresh deploy and puppet methods checks', () => {
-    let legacyOracle, accountingOracle, lido, consensus
+    let legacyOracle, accountingOracle, lido
     before('deploy', async () => {
       const deployed = await deployLegacyOracleWithAccountingOracle({ admin })
       legacyOracle = deployed.legacyOracle
       accountingOracle = deployed.accountingOracle
       lido = deployed.lido
-      consensus = deployed.consensus
     })
 
     it('initial state is correct', async () => {
@@ -81,9 +86,6 @@ contract('LegacyOracle', ([admin, stranger]) => {
       assert.equals(spec.slotsPerEpoch, SLOTS_PER_EPOCH)
       assert.equals(spec.secondsPerSlot, SECONDS_PER_SLOT)
       assert.equals(spec.genesisTime, GENESIS_TIME)
-      const frame = await consensus.getCurrentFrame()
-      const epochId = frame.refSlot.addn(1).divn(SLOTS_PER_EPOCH)
-      assert.equals(await legacyOracle.getCurrentEpochId(), epochId)
       assert.equals(await legacyOracle.getLastCompletedEpochId(), 0)
     })
 
@@ -122,6 +124,38 @@ contract('LegacyOracle', ([admin, stranger]) => {
       })
       const completedEpoch = await legacyOracle.getLastCompletedEpochId()
       assert.equals(completedEpoch, epochId)
+    })
+  })
+
+  context('getCurrentEpochId implementation is correct', () => {
+    let legacyOracle, consensus, oracle, locatorAddr
+
+    before('deploy time-travelable mock', async () => {
+      const implementation = await MockLegacyOracle.new({ from: admin })
+      const proxy = await OssifiableProxy.new(implementation.address, admin, '0x')
+      legacyOracle = await MockLegacyOracle.at(proxy.address)
+      ;({ consensus, oracle, locatorAddr } = await deployAccountingOracleSetup(admin, {
+        legacyOracleAddrArg: legacyOracle.address,
+        getLegacyOracle: () => {
+          return legacyOracle
+        },
+        dataSubmitter: admin,
+      }))
+      await legacyOracle.initialize(locatorAddr, consensus.address)
+      await initAccountingOracle({
+        admin,
+        oracle,
+        consensus,
+        shouldMigrateLegacyOracle: false,
+        lastProcessingRefSlot: 0,
+      })
+    })
+
+    it('test', async () => {
+      for (let index = 0; index < 20; index++) {
+        assert.equals(await legacyOracle.getCurrentEpochId(), oldGetCurrentEpochId(await consensus.getTime()))
+        await consensus.advanceTimeByEpochs(1)
+      }
     })
   })
 
@@ -205,14 +239,12 @@ contract('LegacyOracle', ([admin, stranger]) => {
 
     it('time in sync with consensus', async () => {
       await deployedInfra.consensus.advanceTimeToNextFrameStart()
-      const epochId = await proxyAsNewImplementation.getCurrentEpochId()
       const { frameEpochId, frameStartTime, frameEndTime } = await proxyAsNewImplementation.getCurrentFrame()
-      assert.equals(epochId, frameEpochId)
       const consensusFrame = await deployedInfra.consensus.getCurrentFrame()
       const refSlot = consensusFrame.refSlot.toNumber()
-      assert.equals(epochId, Math.floor((refSlot + 1) / SLOTS_PER_EPOCH))
+      assert.equals(frameEpochId, Math.floor((refSlot + 1) / SLOTS_PER_EPOCH))
       assert.equals(frameStartTime, computeTimestampAtSlot(refSlot + 1))
-      assert.equals(frameEndTime, computeTimestampAtEpoch(+epochId + EPOCHS_PER_FRAME) - 1)
+      assert.equals(frameEndTime, computeTimestampAtEpoch(+frameEpochId + EPOCHS_PER_FRAME) - 1)
     })
 
     it.skip('handlePostTokenRebase from lido')
