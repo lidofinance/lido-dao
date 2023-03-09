@@ -237,7 +237,7 @@ contract('NodeOperatorsRegistry', (addresses) => {
       const exitedSigningKeysCount = NODE_OPERATORS.reduce((sum, c) => sum + c.exitedSigningKeysCount, 0)
 
       assert.equals(totalSigningKeysStatsAfter.totalSigningKeysCount.toNumber(), totalSigningKeysCount)
-      assert.equals(totalSigningKeysStatsAfter.vettedSigningKeysCount.toNumber(), vettedSigningKeysCount)
+      assert.equals(totalSigningKeysStatsAfter.maxValidatorsCount.toNumber(), vettedSigningKeysCount)
       assert.equals(totalSigningKeysStatsAfter.depositedSigningKeysCount.toNumber(), depositedSigningKeysCount)
       assert.equals(totalSigningKeysStatsAfter.exitedSigningKeysCount.toNumber(), exitedSigningKeysCount)
     })
@@ -1026,16 +1026,16 @@ contract('NodeOperatorsRegistry', (addresses) => {
     })
 
     it('reduces total vetted validator keys count correctly if new value less than previous', async () => {
-      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
       await app.setNodeOperatorStakingLimit(firstNodeOperatorId, 30, { from: limitsManager })
-      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       assert.equals(vettedSigningKeysCountBefore.toNumber() - vettedSigningKeysCountAfter.toNumber(), 20)
     })
 
     it('increases total vetted validator keys count correctly if new value greater than previous', async () => {
-      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
       await app.setNodeOperatorStakingLimit(firstNodeOperatorId, 100, { from: limitsManager })
-      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       assert.equals(vettedSigningKeysCountAfter.toNumber() - vettedSigningKeysCountBefore.toNumber(), 50)
     })
 
@@ -1624,10 +1624,10 @@ contract('NodeOperatorsRegistry', (addresses) => {
       }
     })
 
-    it('sets total vetted signing keys count & total signing keys count values to deposited signing keys count', async () => {
+    it('sets total max validators count & total validators count values to deposited validators count', async () => {
       const totalSigningKeysStatsBefore = await app.testing_getTotalSigningKeysStats()
       assert.notEquals(
-        totalSigningKeysStatsBefore.vettedSigningKeysCount,
+        totalSigningKeysStatsBefore.maxValidatorsCount,
         totalSigningKeysStatsBefore.depositedSigningKeysCount
       )
       assert.notEquals(
@@ -1637,7 +1637,7 @@ contract('NodeOperatorsRegistry', (addresses) => {
       await app.onWithdrawalCredentialsChanged({ from: stakingRouter })
       const totalSigningKeysStatsAfter = await app.testing_getTotalSigningKeysStats()
       assert.equals(
-        totalSigningKeysStatsAfter.vettedSigningKeysCount,
+        totalSigningKeysStatsAfter.maxValidatorsCount,
         totalSigningKeysStatsBefore.depositedSigningKeysCount
       )
       assert.equals(
@@ -2669,9 +2669,9 @@ contract('NodeOperatorsRegistry', (addresses) => {
     it('correctly decreases global vetted signing keys count if key index is less then vetted keys counter of node operator', async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - 1
       assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
-      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
       await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: signingKeysManager })
-      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       const vettedSigningKeysDecrement = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - keyIndex
       assert.equals(
         vettedSigningKeysCountAfter.toNumber(),
@@ -2679,55 +2679,36 @@ contract('NodeOperatorsRegistry', (addresses) => {
       )
     })
 
-    it.skip('correctly decreases global vetted signing keys and totalTargetStats count if key index is less then vetted keys counter of node operator', async () => {
+    it('correctly decreases global vetted signing keys and totalTargetStats count if key index is less then vetted keys counter of node operator', async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - 1
       assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
-      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
-
-      const {
-        isTargetLimitActive: isTargetLimitActiveBefore,
-        targetValidatorsCount: targetValidatorsCountBefore,
-        excessValidatorsCount: excessValidatorsCountBefore,
-      } = await app.testing_getTotalTargetStats()
+      const { maxValidatorsCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
 
       await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: signingKeysManager })
 
-      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       const vettedSigningKeysDecrement = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - keyIndex
       assert.equals(
         vettedSigningKeysCountAfter.toNumber(),
         vettedSigningKeysCountBefore.toNumber() - vettedSigningKeysDecrement
       )
-
-      const {
-        isTargetLimitActive: isTargetLimitActiveAfter,
-        targetValidatorsCount: targetValidatorsCountAfter,
-        excessValidatorsCount: excessValidatorsCountAfter,
-      } = await app.testing_getTotalTargetStats()
-
-      assert.equals(isTargetLimitActiveAfter, isTargetLimitActiveBefore)
-      assert.equals(
-        targetValidatorsCountAfter,
-        targetValidatorsCountBefore.toNumber() - vettedSigningKeysCountBefore.toNumber() - vettedSigningKeysDecrement
-      )
-      assert.equals(excessValidatorsCountAfter, excessValidatorsCountBefore)
     })
 
     it("doesn't modify global vetted signing keys count if key index is equal to vettedSigningKeysCount", async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount
       assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
-      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
       await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: signingKeysManager })
-      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       assert.equals(vettedSigningKeysCountAfter, vettedSigningKeysCountBefore)
     })
 
     it("doesn't modify global vetted signing keys count if key index is greater than vettedSigningKeysCount", async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount + 1
       assert.isTrue(keyIndex <= NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount)
-      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
       await app.removeSigningKey(secondNodeOperatorId, keyIndex, { from: signingKeysManager })
-      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       assert.equals(vettedSigningKeysCountAfter, vettedSigningKeysCountBefore)
     })
 
@@ -3033,9 +3014,9 @@ contract('NodeOperatorsRegistry', (addresses) => {
     it('correctly decreases global vetted signing keys count if fromIndex is less then vetted keys counter of node operator', async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - 1
       const keysCount = 2
-      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
       await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager })
-      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       const vettedSigningKeysDecrement = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount - keyIndex
       assert.equals(
         vettedSigningKeysCountAfter.toNumber(),
@@ -3046,18 +3027,18 @@ contract('NodeOperatorsRegistry', (addresses) => {
     it("doesn't modify global vetted signing keys count if fromIndex is equal to vettedSigningKeysCount", async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount
       const keysCount = NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount - keyIndex - 1
-      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
       await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager })
-      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       assert.equals(vettedSigningKeysCountAfter, vettedSigningKeysCountBefore)
     })
 
     it("doesn't modify global vetted signing keys count if fromIndex is greater than vettedSigningKeysCount", async () => {
       const keyIndex = NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount + 1
       const keysCount = 1
-      const { vettedSigningKeysCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountBefore } = await app.testing_getTotalSigningKeysStats()
       await app.removeSigningKeys(secondNodeOperatorId, keyIndex, keysCount, { from: signingKeysManager })
-      const { vettedSigningKeysCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
+      const { maxValidatorsCount: vettedSigningKeysCountAfter } = await app.testing_getTotalSigningKeysStats()
       assert.equals(vettedSigningKeysCountAfter, vettedSigningKeysCountBefore)
     })
 
