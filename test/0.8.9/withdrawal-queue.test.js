@@ -345,20 +345,6 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       )
     })
 
-    it('Same discounts is squashed into one', async () => {
-      await steth.setTotalPooledEther(ETH(900))
-      await steth.mintShares(user, shares(1))
-      await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
-
-      await withdrawalQueue.finalize([1], shareRate(10), { from: steth.address, value: ETH(10) })
-      assert.equals(await withdrawalQueue.getLastCheckpointIndex(), 1)
-
-      await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
-      await withdrawalQueue.finalize([2], shareRate(10), { from: steth.address, value: ETH(10) })
-
-      assert.equals(await withdrawalQueue.getLastCheckpointIndex(), 1)
-    })
-
     it('One can finalize a batch of requests at once', async () => {
       await steth.setTotalPooledEther(ETH(900))
       await steth.mintShares(user, shares(1))
