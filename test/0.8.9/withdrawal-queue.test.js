@@ -88,6 +88,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       const [alice] = ACCOUNTS_AND_KEYS
       const amount = ETH(1)
       const deadline = MAX_UINT256
+      await setBalance(alice, ETH(10))
       await impersonate(ethers.provider, alice.address)
       const stETHDomainSeparator = await steth.DOMAIN_SEPARATOR()
       const wstETHDomainSeparator = await wsteth.DOMAIN_SEPARATOR()
@@ -974,7 +975,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       await withdrawalQueue.finalize([secondRequestId], shareRate(300), { from: steth.address, value: ETH(30) })
 
       const balanceBefore = bn(await ethers.provider.getBalance(owner))
-      const tx = await withdrawalQueue.claimWithdrawals([1, 2], [1, 1], { from: owner })
+      const tx = await withdrawalQueue.claimWithdrawals([1, 2], [1, 1], { from: owner, gasPrice: 0 })
       // tx.receipt.gasUsed is a workaround for coverage, because it ignores gasPrice=0
       assert.almostEqual(await ethers.provider.getBalance(owner), balanceBefore.add(bn(ETH(30))), tx.receipt.gasUsed)
     })

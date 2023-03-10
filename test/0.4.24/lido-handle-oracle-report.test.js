@@ -2167,7 +2167,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       // Checking that finalization of the previously placed withdrawal request completed
       assert.equals(await withdrawalQueue.getLastFinalizedRequestId(), toBN(1))
       const strangerBalanceBeforeClaim = await getBalance(stranger)
-      await withdrawalQueue.claimWithdrawal(1, { from: stranger })
+      await withdrawalQueue.claimWithdrawal(1, { from: stranger, gasPrice: 0 })
       const strangerBalanceAfterClaim = await getBalance(stranger)
       // Happy-path: user receive ETH corresponding to the requested StETH amount
       assert.equals(strangerBalanceAfterClaim - strangerBalanceBeforeClaim, StETH(1))
