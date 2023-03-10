@@ -1,6 +1,13 @@
 const BN = require('bn.js')
+const { ecsign: ecSignBuf } = require('ethereumjs-util')
 const { keccak256 } = require('js-sha3')
-const { ecSign, strip0x, bufferFromHexString, hexStringFromBuffer } = require('../0.6.12/helpers')
+
+const { strip0x, bufferFromHexString, hexStringFromBuffer } = require('./utils')
+
+function ecSign(digest, privateKey) {
+  const { v, r, s } = ecSignBuf(bufferFromHexString(digest), bufferFromHexString(privateKey))
+  return { v, r: hexStringFromBuffer(r), s: hexStringFromBuffer(s) }
+}
 
 // Converts a ECDSA signature to the format provided in https://eips.ethereum.org/EIPS/eip-2098.
 function toEip2098({ v, r, s }) {
@@ -127,6 +134,9 @@ function hexToBytes(hex) {
 }
 
 module.exports = {
+  ecSign,
+  toEip2098,
+  keccak256,
   signDepositData,
   signPauseData,
   DSMPauseMessage,

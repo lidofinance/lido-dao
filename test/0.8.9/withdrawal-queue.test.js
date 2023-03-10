@@ -3,8 +3,8 @@ const { bn, getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers
 
 const { ETH, StETH, shareRate, shares } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
+const { MAX_UINT256, ACCOUNTS_AND_KEYS } = require('../helpers/constants')
 const { signPermit, makeDomainSeparator } = require('../0.6.12/helpers/permit_helpers')
-const { MAX_UINT256, ACCOUNTS_AND_KEYS } = require('../0.6.12/helpers/constants')
 const { impersonate, EvmSnapshot, getCurrentBlockTimestamp, setBalance } = require('../helpers/blockchain')
 
 const { deployWithdrawalQueue } = require('./withdrawal-queue-deploy.test')
