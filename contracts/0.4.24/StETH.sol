@@ -235,7 +235,7 @@ contract StETH is IERC20, Pausable {
      */
     function transferFrom(address _sender, address _recipient, uint256 _amount) external returns (bool) {
         uint256 currentAllowance = allowances[_sender][msg.sender];
-        require(currentAllowance >= _amount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
+        require(currentAllowance >= _amount, "ALLOWANCE_EXCEEDED");
 
         _transfer(_sender, _recipient, _amount);
         _approve(_sender, msg.sender, currentAllowance.sub(_amount));
@@ -274,7 +274,7 @@ contract StETH is IERC20, Pausable {
      */
     function decreaseAllowance(address _spender, uint256 _subtractedValue) external returns (bool) {
         uint256 currentAllowance = allowances[msg.sender][_spender];
-        require(currentAllowance >= _subtractedValue, "DECREASED_ALLOWANCE_BELOW_ZERO");
+        require(currentAllowance >= _subtractedValue, "ALLOWANCE_BELOW_ZERO");
         _approve(msg.sender, _spender, currentAllowance.sub(_subtractedValue));
         return true;
     }
@@ -358,7 +358,7 @@ contract StETH is IERC20, Pausable {
     ) external returns (uint256) {
         uint256 currentAllowance = allowances[_sender][msg.sender];
         uint256 tokensAmount = getPooledEthByShares(_sharesAmount);
-        require(currentAllowance >= tokensAmount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
+        require(currentAllowance >= tokensAmount, "ALLOWANCE_EXCEEDED");
 
         _transferShares(_sender, _recipient, _sharesAmount);
         _approve(_sender, msg.sender, currentAllowance.sub(tokensAmount));
@@ -399,8 +399,8 @@ contract StETH is IERC20, Pausable {
      * - `_spender` cannot be the zero address.
      */
     function _approve(address _owner, address _spender, uint256 _amount) internal {
-        require(_owner != address(0), "APPROVE_FROM_ZERO_ADDRESS");
-        require(_spender != address(0), "APPROVE_TO_ZERO_ADDRESS");
+        require(_owner != address(0), "APPROVE_FROM_ZERO_ADDR");
+        require(_spender != address(0), "APPROVE_TO_ZERO_ADDR");
 
         allowances[_owner][_spender] = _amount;
         emit Approval(_owner, _spender, _amount);
@@ -431,12 +431,12 @@ contract StETH is IERC20, Pausable {
      * - the contract must not be paused.
      */
     function _transferShares(address _sender, address _recipient, uint256 _sharesAmount) internal {
-        require(_sender != address(0), "TRANSFER_FROM_THE_ZERO_ADDRESS");
-        require(_recipient != address(0), "TRANSFER_TO_THE_ZERO_ADDRESS");
+        require(_sender != address(0), "TRANSFER_FROM_ZERO_ADDR");
+        require(_recipient != address(0), "TRANSFER_TO_ZERO_ADDR");
         _whenNotStopped();
 
         uint256 currentSenderShares = shares[_sender];
-        require(_sharesAmount <= currentSenderShares, "TRANSFER_AMOUNT_EXCEEDS_BALANCE");
+        require(_sharesAmount <= currentSenderShares, "BALANCE_EXCEEDED");
 
         shares[_sender] = currentSenderShares.sub(_sharesAmount);
         shares[_recipient] = shares[_recipient].add(_sharesAmount);
@@ -454,7 +454,7 @@ contract StETH is IERC20, Pausable {
      * - the contract must not be paused.
      */
     function _mintShares(address _recipient, uint256 _sharesAmount) internal returns (uint256 newTotalShares) {
-        require(_recipient != address(0), "MINT_TO_THE_ZERO_ADDRESS");
+        require(_recipient != address(0), "MINT_TO_ZERO_ADDR");
 
         newTotalShares = _getTotalShares().add(_sharesAmount);
         TOTAL_SHARES_POSITION.setStorageUint256(newTotalShares);
@@ -480,10 +480,10 @@ contract StETH is IERC20, Pausable {
      * - the contract must not be paused.
      */
     function _burnShares(address _account, uint256 _sharesAmount) internal returns (uint256 newTotalShares) {
-        require(_account != address(0), "BURN_FROM_THE_ZERO_ADDRESS");
+        require(_account != address(0), "BURN_FROM_ZERO_ADDR");
 
         uint256 accountShares = shares[_account];
-        require(_sharesAmount <= accountShares, "BURN_AMOUNT_EXCEEDS_BALANCE");
+        require(_sharesAmount <= accountShares, "BALANCE_EXCEEDED");
 
         uint256 preRebaseTokenAmount = getPooledEthByShares(_sharesAmount);
 
