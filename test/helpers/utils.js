@@ -71,6 +71,14 @@ function strip0x(s) {
   return s.substr(0, 2) === '0x' ? s.substr(2) : s
 }
 
+function bufferFromHexString(hex) {
+  return Buffer.from(strip0x(hex), 'hex')
+}
+
+function hexStringFromBuffer(buf) {
+  return '0x' + buf.toString('hex')
+}
+
 // Divides a BN by 1e15
 const div15 = (bn) => bn.div(new BN(1000000)).div(new BN(1000000)).div(new BN(1000))
 
@@ -170,6 +178,8 @@ module.exports = {
   toBN,
   hex,
   strip0x,
+  bufferFromHexString,
+  hexStringFromBuffer,
   div15,
   e9,
   e18,
