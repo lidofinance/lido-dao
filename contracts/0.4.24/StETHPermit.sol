@@ -5,9 +5,8 @@
 pragma solidity 0.4.24;
 
 import {UnstructuredStorage} from "@aragon/os/contracts/common/UnstructuredStorage.sol";
-import {Address} from "openzeppelin-solidity/contracts/utils/Address.sol";
 
-import {ECDSA} from "../common/lib/ECDSA.sol";
+import {SignatureUtils} from "../common/lib/SignatureUtils.sol";
 import {IEIP712StETH} from "../common/interfaces/IEIP712StETH.sol";
 
 import {StETH} from "./StETH.sol";
@@ -52,25 +51,6 @@ interface IERC2612 {
      */
     // solhint-disable-next-line func-name-mixedcase
     function DOMAIN_SEPARATOR() external view returns (bytes32);
-}
-
-
-/**
- * @dev Standard Signature Validation Method for Contracts, as defined in https://eips.ethereum.org/EIPS/eip-1271.
- */
-interface IERC1271 {
-  /**
-   * @dev Should return whether the signature provided is valid for the provided hash.
-   *
-   * @param _hash Hash of the data to be signed.
-   * @param _signature Signature byte array associated with `_hash`.
-   *
-   * - MUST return the bytes4 magic value `0x1626ba7e` which is the function's selector,
-   *   `bytes4(keccak256("isValidSignature(bytes32,bytes)")`, when function passes.
-   * - MUST NOT modify state (using STATICCALL for solc < 0.5, view modifier for solc > 0.5).
-   * - MUST allow external calls.
-   */
-  function isValidSignature(bytes32 _hash, bytes _signature) external view returns (bytes4);
 }
 
 
@@ -127,7 +107,7 @@ contract StETHPermit is IERC2612, StETH {
 
         bytes32 hash = IEIP712StETH(getEIP712StETH()).hashTypedDataV4(address(this), structHash);
 
-        require(_isValidSignature(_owner, hash, _v, _r, _s), "INVALID_SIGNATURE");
+        require(SignatureUtils.isValidSignature(_owner, hash, _v, _r, _s), "INVALID_SIGNATURE");
         _approve(_owner, _spender, _value);
     }
 
@@ -194,41 +174,5 @@ contract StETHPermit is IERC2612, StETH {
      */
     function getEIP712StETH() public view returns (address) {
         return EIP712_STETH_POSITION.getStorageAddress();
-    }
-
-    /**
-     * @dev Checks signature validity.
-     *
-     * If the signer address doesn't contain any code, assumes that the address is externally owned
-     * and the signature is a ECDSA signature generated using its private key. Otherwise, issues a
-     * static call to the signer address to check the signature validity using the ERC-1271 standard.
-     */
-    function _isValidSignature(
-        address _signer,
-        bytes32 _msgHash,
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s
-    ) internal returns (bool) {
-        if (Address.isContract(_signer)) {
-            bytes memory sig = abi.encodePacked(_r, _s, _v);
-            // Solidity <0.5 generates a regular CALL instruction even if the function being called
-            // is marked as `view`, and the only way to perform a STATICCALL is to use assembly
-            bytes memory data = abi.encodeWithSelector(IERC1271(0).isValidSignature.selector, _msgHash, sig);
-            bytes4 retval;
-            assembly {
-                // allocate memory for storing the return value
-                let outDataOffset := mload(0x40)
-                mstore(0x40, add(outDataOffset, 32))
-                // issue a static call and load the result if the call succeeded
-                let success := staticcall(gas(), _signer, add(data, 32), mload(data), outDataOffset, 4)
-                if eq(success, 1) {
-                    retval := mload(outDataOffset)
-                }
-            }
-            return retval == IERC1271(0).isValidSignature.selector;
-        } else {
-            return ECDSA.recover(_msgHash, _v, _r, _s) == _signer;
-        }
     }
 }
