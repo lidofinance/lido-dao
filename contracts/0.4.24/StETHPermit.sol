@@ -119,7 +119,7 @@ contract StETHPermit is IERC2612, StETH {
     function permit(
         address _owner, address _spender, uint256 _value, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s
     ) external {
-        require(block.timestamp <= _deadline, "ERC20Permit: expired deadline");
+        require(block.timestamp <= _deadline, "DEADLINE_EXPIRED");
 
         bytes32 structHash = keccak256(
             abi.encode(PERMIT_TYPEHASH, _owner, _spender, _value, _useNonce(_owner), _deadline)
@@ -127,7 +127,7 @@ contract StETHPermit is IERC2612, StETH {
 
         bytes32 hash = IEIP712StETH(getEIP712StETH()).hashTypedDataV4(address(this), structHash);
 
-        require(_isValidSignature(_owner, hash, _v, _r, _s), "invalid signature");
+        require(_isValidSignature(_owner, hash, _v, _r, _s), "INVALID_SIGNATURE");
         _approve(_owner, _spender, _value);
     }
 
@@ -181,8 +181,8 @@ contract StETHPermit is IERC2612, StETH {
      * @dev Initialize EIP712 message utils contract for stETH
      */
     function _initializeEIP712StETH(address _eip712StETH) internal {
-        require(_eip712StETH != address(0), "StETHPermit: zero eip712StETH");
-        require(getEIP712StETH() == address(0), "StETHPermit: eip712StETH already set");
+        require(_eip712StETH != address(0), "ZERO_EIP712STETH");
+        require(getEIP712StETH() == address(0), "EIP712STETH_ALREADY_SET");
 
         EIP712_STETH_POSITION.setStorageAddress(_eip712StETH);
 

@@ -1638,7 +1638,7 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
     assert.equals(await app.sharesOf(user1), shares(0))
 
     // voting can't continue burning if user already has no shares
-    await assert.reverts(app.burnShares(user1, 1, { from: voting }), 'BURN_AMOUNT_EXCEEDS_BALANCE')
+    await assert.reverts(app.burnShares(user1, 1, { from: voting }), 'BALANCE_EXCEEDED')
   })
 
   context('treasury', () => {

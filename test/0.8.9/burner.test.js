@@ -278,10 +278,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
 
     it(`request shares burn for cover works`, async () => {
       // allowance should be set explicitly to request burning
-      await assert.reverts(
-        burner.requestBurnMyStETHForCover(StETH(8), { from: voting }),
-        `TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE`
-      )
+      await assert.reverts(burner.requestBurnMyStETHForCover(StETH(8), { from: voting }), `ALLOWANCE_EXCEEDED`)
 
       // provide allowance and request burn for cover
       const sharesAmount8StETH = await lido.getSharesByPooledEth(StETH(8))

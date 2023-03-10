@@ -299,7 +299,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     it('One cant request more than they have', async () => {
       await assert.reverts(
         withdrawalQueue.requestWithdrawals([StETH(400)], owner, { from: user }),
-        'TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE'
+        'ALLOWANCE_EXCEEDED'
       )
     })
 
@@ -308,7 +308,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
 
       await assert.reverts(
         withdrawalQueue.requestWithdrawals([StETH(300)], owner, { from: user }),
-        'TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE'
+        'ALLOWANCE_EXCEEDED'
       )
     })
 

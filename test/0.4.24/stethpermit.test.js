@@ -129,7 +129,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
           s,
           { from: charlie }
         ),
-        'ERC20Permit: invalid signature'
+        'INVALID_SIGNATURE'
       )
 
       // check that msg is incorrect even if claim the approved amount - 1
@@ -144,7 +144,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
           s,
           { from: charlie }
         ),
-        'ERC20Permit: invalid signature'
+        'INVALID_SIGNATURE'
       )
     })
 
@@ -160,7 +160,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
         stEthPermit.permit(owner, spender, value, deadline, v, r, s, {
           from: charlie,
         }),
-        'ERC20Permit: invalid signature'
+        'INVALID_SIGNATURE'
       )
 
       // unlock bob account (allow transactions originated from bob.address)
@@ -172,7 +172,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
         stEthPermit.permit(owner, spender, value, deadline, v, r, s, {
           from: bob.address,
         }),
-        'ERC20Permit: invalid signature'
+        'INVALID_SIGNATURE'
       )
     })
 
@@ -187,7 +187,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
         stEthPermit.permit(owner, spender, value, deadline, v, r, s, {
           from: charlie,
         }),
-        'ERC20Permit: expired deadline'
+        'DEADLINE_EXPIRED'
       )
 
       {
@@ -214,7 +214,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
         stEthPermit.permit(owner, spender, value, deadline, v, r, s, {
           from: charlie,
         }),
-        'ERC20Permit: invalid signature'
+        'INVALID_SIGNATURE'
       )
     })
 
@@ -231,7 +231,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
         stEthPermit.permit(owner, spender, value, deadline, v, r, s, {
           from: charlie,
         }),
-        'ERC20Permit: invalid signature'
+        'INVALID_SIGNATURE'
       )
 
       // unlock bob account (allow transactions originated from bob.address)
@@ -243,7 +243,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
         stEthPermit.permit(owner, spender, value, deadline, v, r, s, {
           from: alice.address,
         }),
-        'ERC20Permit: invalid signature'
+        'INVALID_SIGNATURE'
       )
     })
 
@@ -262,7 +262,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
       // try to submit the permit again
       await assert.reverts(
         stEthPermit.permit(owner, spender, 1e6, deadline, permit2.v, permit2.r, permit2.s, { from: charlie }),
-        'ERC20Permit: invalid signature'
+        'INVALID_SIGNATURE'
       )
     })
 
@@ -278,7 +278,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
         stEthPermit.permit(owner, spender, value, deadline, v, r, s, {
           from: charlie,
         }),
-        'APPROVE_TO_ZERO_ADDRESS'
+        'APPROVE_TO_ZERO_ADDR'
       )
     })
 
@@ -303,7 +303,7 @@ contract('StETHPermit', ([deployer, ...accounts]) => {
         stEthPermit.permit(from, to, value, validBefore, v, r, s, {
           from: charlie,
         }),
-        'ERC20Permit: invalid signature'
+        'INVALID_SIGNATURE'
       )
     })
   })
