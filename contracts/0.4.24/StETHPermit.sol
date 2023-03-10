@@ -89,14 +89,19 @@ contract StETHPermit is IERC2612, StETH {
 
     /**
      * @dev Storage position used for the EIP712 message utils contract
+     *
+     * keccak256("lido.StETHPermit.eip712StETH")
      */
-    bytes32 internal constant EIP712_STETH_POSITION = keccak256("lido.StETHPermit.eip712StETH");
+    bytes32 internal constant EIP712_STETH_POSITION =
+        0x42b2d95e1ce15ce63bf9a8d9f6312cf44b23415c977ffa3b884333422af8941c;
 
     /**
      * @dev Typehash constant for ERC-2612 (Permit)
+     *
+     * keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
      */
     bytes32 internal constant PERMIT_TYPEHASH =
-        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+        0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
 
     /**
      * @dev Sets `value` as the allowance of `spender` over ``owner``'s tokens,

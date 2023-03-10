@@ -79,8 +79,11 @@ contract StETH is IERC20, Pausable {
      * For reference types, conventional storage variables are used since it's non-trivial
      * and error-prone to implement reference-type unstructured storage using Solidity v0.4;
      * see https://github.com/lidofinance/lido-dao/issues/181#issuecomment-736098834
+     *
+     * keccak256("lido.StETH.totalShares")
      */
-    bytes32 internal constant TOTAL_SHARES_POSITION = keccak256("lido.StETH.totalShares");
+    bytes32 internal constant TOTAL_SHARES_POSITION =
+        0xe3b4b636e601189b5f4c6742edf2538ac12bb61ed03e6da26949d69838fa447e;
 
     /**
       * @notice An executed shares transfer from `sender` to `recipient`.
