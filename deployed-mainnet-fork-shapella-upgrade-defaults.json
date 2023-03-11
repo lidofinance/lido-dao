@@ -1,8 +1,7 @@
 {
   "networkId": 1,
   "ipfsAPI": "http://127.0.0.1:5001/api/v0",
-  "multisigAddress": "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1",
-  "owner": "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1",
+  "temporaryAdmin": "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1",
   "daoInitialSettings": {
     "beaconSpec": {
       "depositContractAddress": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
@@ -19,8 +18,11 @@
   },
   "app:node-operators-registry": {
     "proxyAddress": "0x55032650b14df07b85bF18A3a3eC8E0Af2e028d5",
+  },
+  "nodeOperatorsRegistry": {
     "parameters": {
-      "stuckPenaltyDelay": 172800
+      "stakingModuleTypeId": "curated-onchain-v1",
+      "stuckPenaltyDelay": "172800"
     }
   },
   "app:aragon-agent": {
@@ -91,7 +93,5 @@
       "symbol": "unstETH"
     }
   },
-  "wstETH": {
-    "address": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0"
-  }
+  "wstethContractAddress": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0"
 }

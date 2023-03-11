@@ -13,7 +13,7 @@ const REQUIRED_NET_STATE = [
   `app:${APP_NAMES.ORACLE}`,
   `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`,
   // not used, but just to get sure the Merge was undergone
-  `executionLayerRewardsVaultAddress`,
+  // `executionLayerRewardsVaultAddress`,
 ]
 
 async function deployNewContracts({ web3, artifacts }) {
@@ -26,7 +26,6 @@ async function deployNewContracts({ web3, artifacts }) {
   if (!DEPLOYER) {
     throw new Error('Deployer is not specified')
   }
-
   const deployer = DEPLOYER
 
   await deployWithoutProxy(`app:${APP_NAMES.LIDO}`, 'Lido', deployer, [], 'implementation')

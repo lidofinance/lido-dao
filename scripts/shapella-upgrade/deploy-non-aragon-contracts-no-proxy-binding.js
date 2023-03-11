@@ -7,7 +7,7 @@ const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 const { APP_NAMES } = require('../constants')
 
 const DEPLOYER = process.env.DEPLOYER || ''
-const TEMPLATE_PROXY_ADMIN = process.env.TEMPLATE_PROXY_ADMIN || ''
+const GAS_PRICE = process.env.GAS_PRICE || 0
 const REQUIRED_NET_STATE = [
   `app:${APP_NAMES.LIDO}`,
   `app:${APP_NAMES.ORACLE}`,
@@ -19,7 +19,8 @@ const REQUIRED_NET_STATE = [
   "hashConsensusForAccounting",
   "hashConsensusForValidatorsExitBus",
   "withdrawalQueueERC721",
-  "wstETH",
+  "wstethContractAddress",
+  "temporaryAdmin",
 ]
 
 async function deployNewContracts({ web3, artifacts }) {
@@ -31,7 +32,6 @@ async function deployNewContracts({ web3, artifacts }) {
   const lidoAddress = state["app:lido"].proxyAddress
   const legacyOracleAddress = state["app:oracle"].proxyAddress
   const agentAddress = state["app:aragon-agent"].proxyAddress
-  const votingAddress = state["app:aragon-voting"].proxyAddress
   const treasuryAddress = agentAddress
   const beaconSpec = state["daoInitialSettings"]["beaconSpec"]
   const depositSecurityModuleParams = state["depositSecurityModule"].parameters
@@ -39,11 +39,8 @@ async function deployNewContracts({ web3, artifacts }) {
   const hashConsensusForAccountingParams = state["hashConsensusForAccounting"].parameters
   const hashConsensusForExitBusParams = state["hashConsensusForValidatorsExitBus"].parameters
   const withdrawalQueueERC721Params = state["withdrawalQueueERC721"].parameters
-  const wstETHAddress = state["wstETH"].address
+  const wstETHAddress = state["wstethContractAddress"]
 
-  if (!DEPLOYER) {
-    throw new Error('DEPLOYER env variable is not specified')
-  }
   if (!DEPLOYER) {
     throw new Error('DEPLOYER env variable is not specified')
   }
@@ -57,33 +54,38 @@ async function deployNewContracts({ web3, artifacts }) {
   const depositContract = state.depositContractAddress || state.daoInitialSettings.beaconSpec.depositContractAddress
 
 
-  // TODO
-  const admin = DEPLOYER
+  // Deployer and admins
   const deployer = DEPLOYER
-  const lidoLocatorProxyOwner = deployer
-
-  //
-  // === Proxy for ShapellaUpgradeTemplate ===
-  //
-  const shapellaUpgradeTemplateAddress = await deployBehindOssifiableProxy('shapellaUpgradeTemplate', 'DummyEmptyContract', votingAddress, deployer)
-
-  const proxyContractsOwner = shapellaUpgradeTemplateAddress
+  const temporaryAdmin = state["temporaryAdmin"]
+  // const votingAddress = temporaryAdmin // might want to set to debug on testnets
+  const votingAddress = state["app:aragon-voting"].proxyAddress
+  const proxyContractsOwner = temporaryAdmin
+  const lidoLocatorProxyTemporaryOwner = deployer
 
   //
   // === OracleDaemonConfig ===
   //
   const oracleDaemonConfigArgs = [
-    admin,
-    [admin],
+    votingAddress,
+    [votingAddress],
   ]
   const oracleDaemonConfigAddress = await deployWithoutProxy(
     'oracleDaemonConfig', 'OracleDaemonConfig', deployer, oracleDaemonConfigArgs)
   logWideSplitter()
 
+
+  //
+  // DummyContract (for initial proxy deployment)
+  //
+  console.log("Deploying DummyEmptyContract...")
+  const DummyEmptyContract = await artifacts.require('DummyEmptyContract')
+  const dummyContractAddress = (await DummyEmptyContract.new({ from: deployer, gasPrice: GAS_PRICE })).address
+  console.log("Done")
+
   //
   // === LidoLocator: dummy invalid implementation ===
   //
-  const locatorAddress = await deployBehindOssifiableProxy('lidoLocator', 'DummyEmptyContract', lidoLocatorProxyOwner, deployer)
+  const locatorAddress = await deployBehindOssifiableProxy('lidoLocator', 'DummyEmptyContract', lidoLocatorProxyTemporaryOwner, deployer, [], implementation=dummyContractAddress)
   logWideSplitter()
 
   //
@@ -91,7 +93,7 @@ async function deployNewContracts({ web3, artifacts }) {
   //
   const oracleReportSanityCheckerArgs = [
     locatorAddress,
-    admin,
+    votingAddress,
     [
       sanityChecks.churnValidatorsPerDayLimit,
       sanityChecks.oneOffCLBalanceDecreaseBPLimit,
@@ -104,7 +106,7 @@ async function deployNewContracts({ web3, artifacts }) {
       sanityChecks.maxPositiveTokenRebase,
     ],
     [
-      [admin],
+      [votingAddress],
       [], [], [], [], [], [], [], [], []
     ]
   ]
@@ -118,6 +120,7 @@ async function deployNewContracts({ web3, artifacts }) {
   await deployWithoutProxy("eip712StETH", "EIP712StETH", deployer, [lidoAddress])
   logWideSplitter()
 
+
   //
   // === WithdrawalQueueERC721 ===
   //
@@ -126,11 +129,11 @@ async function deployNewContracts({ web3, artifacts }) {
     withdrawalQueueERC721Params.name,
     withdrawalQueueERC721Params.symbol,
   ]
+  console.log({withdrawalQueueERC721Args})
   const withdrawalQueueERC721Address = await deployBehindOssifiableProxy(
-    "withdrawalQueueERC721", "DummyEmptyContract", proxyContractsOwner, deployer)
+    "withdrawalQueueERC721", "DummyEmptyContract", proxyContractsOwner, deployer, [], implementation=dummyContractAddress)
   await deployWithoutProxy("withdrawalQueueERC721", "WithdrawalQueueERC721", deployer, withdrawalQueueERC721Args, "implementation")
   logWideSplitter()
-
 
   //
   // === WithdrawalVault ===
@@ -155,7 +158,7 @@ async function deployNewContracts({ web3, artifacts }) {
   //
   // === StakingRouter ===
   //
-  const stakingRouterAddress = await deployBehindOssifiableProxy("stakingRouter", "DummyEmptyContract", proxyContractsOwner, deployer)
+  const stakingRouterAddress = await deployBehindOssifiableProxy("stakingRouter", "DummyEmptyContract", proxyContractsOwner, deployer, [], implementation=dummyContractAddress)
   await deployWithoutProxy("stakingRouter", "StakingRouter", deployer, [depositContract], "implementation")
   logWideSplitter()
 
@@ -185,7 +188,7 @@ async function deployNewContracts({ web3, artifacts }) {
     beaconSpec.secondsPerSlot,
     beaconSpec.genesisTime,
   ]
-  const accountingOracleAddress = await deployBehindOssifiableProxy("accountingOracle", "DummyEmptyContract", proxyContractsOwner, deployer)
+  const accountingOracleAddress = await deployBehindOssifiableProxy("accountingOracle", "DummyEmptyContract", proxyContractsOwner, deployer, [], implementation=dummyContractAddress)
   await deployWithoutProxy("accountingOracle", "AccountingOracle", deployer, accountingOracleArgs, "implementation")
   logWideSplitter()
 
@@ -198,7 +201,7 @@ async function deployNewContracts({ web3, artifacts }) {
     beaconSpec.genesisTime,
     hashConsensusForAccountingParams.epochsPerFrame,
     hashConsensusForAccountingParams.fastLaneLengthSlots,
-    shapellaUpgradeTemplateAddress, // admin
+    temporaryAdmin, // admin
     accountingOracleAddress,  // reportProcessor
   ]
   await deployWithoutProxy("hashConsensusForAccounting", "HashConsensus", deployer, hashConsensusForAccountingArgs)
@@ -212,7 +215,7 @@ async function deployNewContracts({ web3, artifacts }) {
     beaconSpec.genesisTime,
     locatorAddress,
   ]
-  const validatorsExitBusOracleAddress = await deployBehindOssifiableProxy("validatorsExitBusOracle", "DummyEmptyContract", proxyContractsOwner, deployer)
+  const validatorsExitBusOracleAddress = await deployBehindOssifiableProxy("validatorsExitBusOracle", "DummyEmptyContract", proxyContractsOwner, deployer, [], implementation=dummyContractAddress)
   await deployWithoutProxy("validatorsExitBusOracle", "ValidatorsExitBusOracle", deployer, validatorsExitBusOracleArgs, "implementation")
   logWideSplitter()
 
@@ -225,7 +228,7 @@ async function deployNewContracts({ web3, artifacts }) {
     beaconSpec.genesisTime,
     hashConsensusForExitBusParams.epochsPerFrame,
     hashConsensusForExitBusParams.fastLaneLengthSlots,
-    shapellaUpgradeTemplateAddress, // admin
+    temporaryAdmin, // admin
     validatorsExitBusOracleAddress,  // reportProcessor
   ]
   await deployWithoutProxy("hashConsensusForValidatorsExitBus", "HashConsensus", deployer, hashConsensusForExitBusArgs)
@@ -236,7 +239,7 @@ async function deployNewContracts({ web3, artifacts }) {
   // === Burner ===
   //
   const burnerArgs = [
-    shapellaUpgradeTemplateAddress,
+    temporaryAdmin,
     treasuryAddress,
     lidoAddress,
     burnerParams.totalCoverSharesBurnt,
@@ -244,6 +247,7 @@ async function deployNewContracts({ web3, artifacts }) {
   ]
   const burnerAddress = await deployWithoutProxy("burner", "Burner", deployer, burnerArgs)
   logWideSplitter()
+
 
   //
   // === LidoLocator: update to valid implementation ===
@@ -265,13 +269,13 @@ async function deployNewContracts({ web3, artifacts }) {
     withdrawalVaultAddress,
     oracleDaemonConfigAddress,
   ]
-  await updateProxyImplementation("lidoLocator", "LidoLocator", locatorAddress, lidoLocatorProxyOwner, [locatorConfig])
+  await updateProxyImplementation("lidoLocator", "LidoLocator", locatorAddress, lidoLocatorProxyTemporaryOwner, [locatorConfig])
 
-  // TODO: pass locator admin to template (or voting). Or just update it in the template
   const locator = await artifacts.require("OssifiableProxy").at(locatorAddress)
-  await locator.proxy__changeAdmin(votingAddress, {from: lidoLocatorProxyOwner})
-
-  // TODO: don't deploy the same dummy empty implementation contract for multiple proxies
+  await locator.proxy__changeAdmin(votingAddress, {
+    from: lidoLocatorProxyTemporaryOwner,
+    gasPrice: GAS_PRICE,
+  })
 }
 
 module.exports = runOrWrapScript(deployNewContracts, module)

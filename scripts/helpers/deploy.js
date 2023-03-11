@@ -8,6 +8,9 @@ const { log, logDeploy, logDeployTxData } = require('./log')
 const { getTxData } = require('./tx-data')
 
 
+const GAS_PRICE = process.env.GAS_PRICE || 0
+
+
 async function printDeployTx(artifactName, opts = {}) {
   const txData = await getDeployTx(artifactName, opts)
   logDeployTxData(artifactName, txData)
@@ -130,7 +133,11 @@ async function deployWithoutProxy(nameInState, artifactName, deployer, construct
   }
 
   const Contract = await artifacts.require(artifactName)
-  const contract = await Contract.new(...constructorArgs, { from: deployer })
+  const contract = await Contract.new(...constructorArgs,
+    {
+      from: deployer,
+      gasPrice: GAS_PRICE,
+    })
 
   console.log(`${artifactName} (NO proxy): ${contract.address}`)
 
@@ -147,27 +154,39 @@ async function deployWithoutProxy(nameInState, artifactName, deployer, construct
   return contract.address
 }
 
-async function deployBehindOssifiableProxy(nameInState, artifactName, proxyOwner, deployer, constructorArgs=[]) {
+
+
+async function deployBehindOssifiableProxy(nameInState, artifactName, proxyOwner, deployer, constructorArgs=[], implementation=null) {
   const netId = await web3.eth.net.getId()
   const state = readNetworkState(network.name, netId)
 
-  const Contract = await artifacts.require(artifactName)
-  const implementation = await Contract.new(...constructorArgs, { from: deployer })
-  console.log(`${artifactName} implementation: ${implementation.address}`)
+  if (implementation === null) {
+    const Contract = await artifacts.require(artifactName)
+    implementation = (await Contract.new(...constructorArgs, {
+      from: deployer,
+      gasPrice: GAS_PRICE,
+    })).address
+    console.log(`${artifactName} implementation: ${implementation}`)
+  } else {
+    console.log(`Using pre-deployed implementation ${implementation}`)
+  }
 
   const OssifiableProxy = await artifacts.require("OssifiableProxy")
   const proxy = await OssifiableProxy.new(
-    implementation.address,
+    implementation,
     proxyOwner,
     [],
-    { from: deployer },
+    {
+      from: deployer,
+      gasPrice: GAS_PRICE,
+    },
   )
   console.log(`${artifactName} proxy: ${proxy.address} (owner is ${proxyOwner})`)
 
   persistNetworkState2(network.name, netId, state, {
     [nameInState]: {
       "contract": artifactName,
-      "implementation": implementation.address,
+      "implementation": implementation,
       "address": proxy.address,
       "constructorArgs": constructorArgs,
     }
@@ -184,9 +203,15 @@ async function updateProxyImplementation(nameInState, artifactName, proxyAddress
   const proxy = await OssifiableProxy.at(proxyAddress)
 
   const Contract = await artifacts.require(artifactName)
-  const implementation = await Contract.new(...constructorArgs, { from: proxyOwner })
+  const implementation = await Contract.new(...constructorArgs, {
+    from: proxyOwner,
+    gasPrice: GAS_PRICE,
+  })
 
-  await proxy.proxy__upgradeTo(implementation.address, { from: proxyOwner })
+  await proxy.proxy__upgradeTo(implementation.address, {
+    from: proxyOwner,
+    gasPrice: GAS_PRICE,
+  })
 
   persistNetworkState2(network.name, netId, state, {
     [nameInState]: {
