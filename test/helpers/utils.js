@@ -63,8 +63,9 @@ const toBN = (obj) => {
   return str.startsWith('0x') ? new BN(str.substring(2), 16) : new BN(str, 10)
 }
 
-function hex(n, byteLen) {
-  return n.toString(16).padStart(byteLen * 2, '0')
+function hex(n, byteLen = undefined) {
+  const s = n.toString(16)
+  return byteLen === undefined ? s : s.padStart(byteLen * 2, '0')
 }
 
 function strip0x(s) {
