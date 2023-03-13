@@ -1,8 +1,9 @@
 const { artifacts, contract } = require('hardhat')
 const crypto = require('crypto')
 const { expect } = require('chai')
-const { ACCOUNTS_AND_KEYS, MAX_UINT256, ZERO_ADDRESS } = require('./helpers/constants')
-const { expectRevert, hexStringFromBuffer } = require('./helpers')
+const { expectRevert } = require('@openzeppelin/test-helpers')
+const { ACCOUNTS_AND_KEYS, MAX_UINT256, ZERO_ADDRESS } = require('../helpers/constants')
+const { hexStringFromBuffer } = require('../helpers/utils')
 const { signPermit, signTransferAuthorization, makeDomainSeparator } = require('./helpers/permit_helpers')
 
 const WstETH = artifacts.require('WstETHMock')

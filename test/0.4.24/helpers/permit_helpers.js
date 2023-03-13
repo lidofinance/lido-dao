@@ -1,5 +1,6 @@
 const { web3 } = require('hardhat')
-const { ecSign, strip0x } = require('./sign_utils')
+const { strip0x } = require('../../helpers/utils')
+const { ecSign } = require('../../helpers/signatures')
 
 const transferWithAuthorizationTypeHash = web3.utils.keccak256(
   'TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)'
@@ -10,33 +11,39 @@ const permitTypeHash = web3.utils.keccak256(
 )
 
 function signTransferAuthorization(from, to, value, validAfter, validBefore, nonce, domainSeparator, privateKey) {
-  return signEIP712(
-    domainSeparator,
-    transferWithAuthorizationTypeHash,
-    ['address', 'address', 'uint256', 'uint256', 'uint256', 'bytes32'],
-    [from, to, value, validAfter, validBefore, nonce],
-    privateKey
-  )
+  const digest = calculateTransferAuthorizationDigest(from, to, value, validAfter, validBefore, nonce, domainSeparator)
+  return ecSign(digest, privateKey)
 }
 
 function signPermit(owner, spender, value, nonce, deadline, domainSeparator, privateKey) {
-  return signEIP712(
+  const digest = calculatePermitDigest(owner, spender, value, nonce, deadline, domainSeparator)
+  return ecSign(digest, privateKey)
+}
+
+function calculatePermitDigest(owner, spender, value, nonce, deadline, domainSeparator) {
+  return calculateEIP712Digest(
     domainSeparator,
     permitTypeHash,
     ['address', 'address', 'uint256', 'uint256', 'uint256'],
-    [owner, spender, value, nonce, deadline],
-    privateKey
+    [owner, spender, value, nonce, deadline]
   )
 }
 
-function signEIP712(domainSeparator, typeHash, types, parameters, privateKey) {
-  const digest = web3.utils.keccak256(
+function calculateTransferAuthorizationDigest(from, to, value, validAfter, validBefore, nonce, domainSeparator) {
+  return calculateEIP712Digest(
+    domainSeparator,
+    transferWithAuthorizationTypeHash,
+    ['address', 'address', 'uint256', 'uint256', 'uint256', 'bytes32'],
+    [from, to, value, validAfter, validBefore, nonce]
+  )
+}
+
+function calculateEIP712Digest(domainSeparator, typeHash, types, parameters) {
+  return web3.utils.keccak256(
     '0x1901' +
       strip0x(domainSeparator) +
       strip0x(web3.utils.keccak256(web3.eth.abi.encodeParameters(['bytes32', ...types], [typeHash, ...parameters])))
   )
-
-  return ecSign(digest, privateKey)
 }
 
 function makeDomainSeparator(name, version, chainId, verifyingContract) {
@@ -59,4 +66,6 @@ module.exports = {
   permitTypeHash,
   signTransferAuthorization,
   makeDomainSeparator,
+  calculatePermitDigest,
+  calculateTransferAuthorizationDigest,
 }
