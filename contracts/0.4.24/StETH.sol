@@ -512,11 +512,13 @@ contract StETH is IERC20, Pausable {
      * Allows to get rid of zero checks for `totalShares` and `totalPooledEther`
      * and overcome corner cases.
      *
+     * NB: reverts if the current contract's balance is zero.
+     *
      * @dev must be invoked before using the token
      */
     function _bootstrapInitialHolder() internal returns (uint256) {
         uint256 balance = address(this).balance;
-        require(balance != 0, "EMPTY_INIT_BALANCE");
+        assert(balance != 0);
 
         if (_getTotalShares() == 0) {
             // if protocol is empty bootstrap it with the contract's balance
