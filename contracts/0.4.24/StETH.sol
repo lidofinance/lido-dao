@@ -426,13 +426,14 @@ contract StETH is IERC20, Pausable {
      * Requirements:
      *
      * - `_sender` cannot be the zero address.
-     * - `_recipient` cannot be the zero address.
+     * - `_recipient` cannot be the zero address or the `stETH` token contract itself
      * - `_sender` must hold at least `_sharesAmount` shares.
      * - the contract must not be paused.
      */
     function _transferShares(address _sender, address _recipient, uint256 _sharesAmount) internal {
         require(_sender != address(0), "TRANSFER_FROM_ZERO_ADDR");
         require(_recipient != address(0), "TRANSFER_TO_ZERO_ADDR");
+        require(_recipient != address(this), "TRANSFER_TO_STETH_CONTRACT");
         _whenNotStopped();
 
         uint256 currentSenderShares = shares[_sender];
