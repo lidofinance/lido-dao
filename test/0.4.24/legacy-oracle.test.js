@@ -95,7 +95,7 @@ contract('LegacyOracle', ([admin, stranger]) => {
         legacyOracle.handlePostTokenRebase(1, 2, 3, 4, 5, 6, 7, { from: stranger }),
         'SENDER_NOT_ALLOWED'
       )
-      const tx = await legacyOracle.handlePostTokenRebase(1, 2, 3, 4, 5, 6, 7, { from: lido.address })
+      const tx = await legacyOracle.handlePostTokenRebase(1, 2, 3, 4, 5, 6, 7, { from: lido.address, gasPrice: 0 })
       assert.emits(tx, 'PostTotalShares', {
         postTotalPooledEther: 6,
         preTotalPooledEther: 4,
@@ -115,7 +115,10 @@ contract('LegacyOracle', ([admin, stranger]) => {
         legacyOracle.handleConsensusLayerReport(refSlot, 2, 3, { from: stranger }),
         'SENDER_NOT_ALLOWED'
       )
-      const tx = await legacyOracle.handleConsensusLayerReport(refSlot, 2, 3, { from: accountingOracle.address })
+      const tx = await legacyOracle.handleConsensusLayerReport(refSlot, 2, 3, {
+        from: accountingOracle.address,
+        gasPrice: 0,
+      })
       const epochId = Math.floor((refSlot + 1) / SLOTS_PER_EPOCH)
       assert.emits(tx, 'Completed', {
         epochId,

@@ -93,7 +93,8 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
       await setShareRate(postFinalizationRate)
 
       const userBalanceBefore = await ethers.provider.getBalance(user)
-      await withdrawalQueue.claimWithdrawal(1, { from: user })
+      // gasPrice:0 hack for coverage
+      await withdrawalQueue.claimWithdrawal(1, { from: user, gasPrice: 0 })
       assert.equals(await ethers.provider.getBalance(user), userBalanceBefore.add(userRequestAmount))
 
       assert.equals(await ethers.provider.getBalance(withdrawalQueue.address), 0)
@@ -123,7 +124,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
       await setShareRate(postFinalizationRate)
 
       const userBalanceBefore = await ethers.provider.getBalance(user)
-      await withdrawalQueue.claimWithdrawal(1, { from: user })
+      await withdrawalQueue.claimWithdrawal(1, { from: user, gasPrice: 0 })
       assert.equals(await ethers.provider.getBalance(user), userBalanceBefore.add(e18(0.5)))
 
       assert.equals(await ethers.provider.getBalance(withdrawalQueue.address), 0)
@@ -152,7 +153,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
       await setShareRate(postFinalizationRate)
 
       const userBalanceBefore = await ethers.provider.getBalance(user)
-      await withdrawalQueue.claimWithdrawal(1, { from: user })
+      await withdrawalQueue.claimWithdrawal(1, { from: user, gasPrice: 0 })
       assert.equals(await ethers.provider.getBalance(user), userBalanceBefore.add(e18(1)))
 
       assert.equals(await ethers.provider.getBalance(withdrawalQueue.address), 0)
@@ -184,7 +185,9 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
 
                 await setShareRate(secondRequestRate)
                 const anotherUserRequestAmount = e18(2)
-                await withdrawalQueue.requestWithdrawals([anotherUserRequestAmount], anotherUser, { from: anotherUser })
+                await withdrawalQueue.requestWithdrawals([anotherUserRequestAmount], anotherUser, {
+                  from: anotherUser,
+                })
 
                 const userExpectedEthAmount =
                   finalizationRate >= firstRequestRate
@@ -237,7 +240,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
                 await setShareRate(postFinalizationRate)
 
                 const userBalanceBefore = await ethers.provider.getBalance(user)
-                await withdrawalQueue.claimWithdrawal(1, { from: user })
+                await withdrawalQueue.claimWithdrawal(1, { from: user, gasPrice: 0 })
                 assert.equalsDelta(
                   await ethers.provider.getBalance(user),
                   toBN(userBalanceBefore).add(userExpectedEthAmount),
@@ -245,7 +248,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
                 )
 
                 const anotherUserBalanceBefore = await ethers.provider.getBalance(anotherUser)
-                await withdrawalQueue.claimWithdrawal(2, { from: anotherUser })
+                await withdrawalQueue.claimWithdrawal(2, { from: anotherUser, gasPrice: 0 })
                 assert.equalsDelta(
                   await ethers.provider.getBalance(anotherUser),
                   toBN(anotherUserBalanceBefore).add(anotherUserExpectedEthAmount),
@@ -341,7 +344,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
                     await setShareRate(postFinalizationRate)
 
                     const userBalanceBefore = await ethers.provider.getBalance(user)
-                    await withdrawalQueue.claimWithdrawal(1, { from: user })
+                    await withdrawalQueue.claimWithdrawal(1, { from: user, gasPrice: 0 })
                     assert.equalsDelta(
                       await ethers.provider.getBalance(user),
                       toBN(userBalanceBefore).add(userExpectedEthAmount),
@@ -349,7 +352,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
                     )
 
                     const anotherUserBalanceBefore = await ethers.provider.getBalance(anotherUser)
-                    await withdrawalQueue.claimWithdrawal(2, { from: anotherUser })
+                    await withdrawalQueue.claimWithdrawal(2, { from: anotherUser, gasPrice: 0 })
                     assert.equalsDelta(
                       await ethers.provider.getBalance(anotherUser),
                       toBN(anotherUserBalanceBefore).add(anotherUserExpectedEthAmount),
