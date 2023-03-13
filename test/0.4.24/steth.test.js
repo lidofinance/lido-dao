@@ -91,6 +91,10 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
           await assert.reverts(stEth.transfer(ZERO_ADDRESS, tokens(1), { from: user1 }), 'TRANSFER_TO_ZERO_ADDR')
         })
 
+        it('reverts when recipient is the `stETH` contract itself', async () => {
+          await assert.reverts(stEth.transfer(stEth.address, tokens(1), { from: user1 }), 'TRANSFER_TO_STETH_CONTRACT')
+        })
+
         it('reverts when the sender does not have enough balance', async () => {
           await assert.reverts(stEth.transfer(user2, tokens(101), { from: user1 }), 'BALANCE_EXCEEDED')
           await assert.reverts(stEth.transfer(user1, bn('1'), { from: user2 }), 'BALANCE_EXCEEDED')
@@ -170,6 +174,13 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
           await assert.reverts(
             stEth.transferFrom(user1, ZERO_ADDRESS, tokens(1), { from: user2 }),
             'TRANSFER_TO_ZERO_ADDR'
+          )
+        })
+
+        it('reverts when recipient is the `stETH` contract itself', async () => {
+          await assert.reverts(
+            stEth.transferFrom(user1, stEth.address, tokens(1), { from: user2 }),
+            'TRANSFER_TO_STETH_CONTRACT'
           )
         })
 
