@@ -1,4 +1,4 @@
-const { artifacts, ethers } = require('hardhat')
+const { artifacts, ethers, contract } = require('hardhat')
 
 const { assert } = require('../../helpers/assert')
 const { toBN, hex, hexConcat } = require('../../helpers/utils')
