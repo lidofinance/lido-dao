@@ -171,6 +171,10 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         withdrawalQueue.onOracleReport(true, +timestamp + 1000000, +timestamp + 1100000, { from: steth.address }),
         'InvalidReportTimestamp()'
       )
+      await assert.reverts(
+        withdrawalQueue.onOracleReport(true, +timestamp - 100, +timestamp + 1100000, { from: steth.address }),
+        'InvalidReportTimestamp()'
+      )
       // enable
       timestamp = await getCurrentBlockTimestamp()
       const tx1 = await withdrawalQueue.onOracleReport(true, timestamp, timestamp, { from: steth.address })
@@ -357,6 +361,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     const amount = bn(ETH(300))
 
     beforeEach('Enqueue a request', async () => {
+      await snapshot.rollback()
       await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
     })
 
@@ -434,6 +439,23 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
 
     it('batch reverts if share rate is zero', async () => {
       await assert.reverts(withdrawalQueue.prefinalize([1], shareRate(0)), 'ZeroShareRate()')
+    })
+
+    it('batch reverts if share rate is zero', async () => {
+      await steth.setTotalPooledEther(ETH(900))
+      await steth.mintShares(user, shares(1))
+      await steth.approve(withdrawalQueue.address, StETH(600), { from: user })
+
+      await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
+      await assert.reverts(withdrawalQueue.prefinalize([2, 1], shareRate(1)), 'BatchesAreNotSorted()')
+    })
+
+    it('reverts in batches are empty', async () => {
+      await assert.reverts(withdrawalQueue.prefinalize([], shareRate(1.5)), 'EmptyBatches()')
+      await assert.reverts(
+        withdrawalQueue.finalize([], shareRate(300), { from: steth.address, value: amount }),
+        'EmptyBatches()'
+      )
     })
 
     it('reverts if request with given id did not even created', async () => {
@@ -648,88 +670,6 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     })
   })
 
-  context('claim scenarios', async () => {
-    const requestCount = 5
-    const requestsAmounts = Array(requestCount).fill(StETH(1))
-    const total = StETH(requestCount)
-    const normalizedShareRate = shareRate(+total / +(await steth.getSharesByPooledEth(total)))
-    let requestIds
-
-    beforeEach(async () => {
-      await snapshot.rollback()
-      await withdrawalQueue.requestWithdrawals(requestsAmounts, user, { from: user })
-      requestIds = await withdrawalQueue.getWithdrawalRequests(user, { from: user })
-    })
-
-    it('direct', async () => {
-      const balanceBefore = bn(await ethers.provider.getBalance(user))
-      const id = await withdrawalQueue.getLastRequestId()
-      const batch = await withdrawalQueue.prefinalize([id], normalizedShareRate)
-      assert.equals(total, batch.ethToLock)
-      withdrawalQueue.finalize([id], normalizedShareRate, { from: steth.address, value: batch.ethToLock })
-      for (let index = 0; index < requestIds.length; index++) {
-        const requestId = requestIds[index]
-        const tx = await withdrawalQueue.claimWithdrawal(requestId, { from: user })
-        assert.emits(tx, 'WithdrawalClaimed', { requestId, owner: user, receiver: user, amountOfETH: ETH(1) })
-      }
-      const balanceAfter = bn(await ethers.provider.getBalance(user))
-      assert.equals(balanceAfter, balanceBefore.add(bn(total)))
-    })
-
-    it('reverse', async () => {
-      const balanceBefore = bn(await ethers.provider.getBalance(user))
-      const id = await withdrawalQueue.getLastRequestId()
-      const batch = await withdrawalQueue.prefinalize([id], normalizedShareRate)
-      assert.equals(total, batch.ethToLock)
-      withdrawalQueue.finalize([id], normalizedShareRate, { from: steth.address, value: batch.ethToLock })
-      for (let index = requestIds.length - 1; index >= 0; index--) {
-        const requestId = requestIds[index]
-        const tx = await withdrawalQueue.claimWithdrawal(requestId, { from: user })
-        assert.emits(tx, 'WithdrawalClaimed', { requestId, owner: user, receiver: user, amountOfETH: ETH(1) })
-      }
-      const balanceAfter = bn(await ethers.provider.getBalance(user))
-      assert.equals(balanceAfter, balanceBefore.add(bn(total)))
-    })
-
-    it('random', async () => {
-      const randomIds = [...requestIds].sort(() => 0.5 - Math.random())
-      const balanceBefore = bn(await ethers.provider.getBalance(user))
-      const id = await withdrawalQueue.getLastRequestId()
-      const batch = await withdrawalQueue.prefinalize([id], normalizedShareRate)
-      assert.equals(total, batch.ethToLock)
-      withdrawalQueue.finalize([id], normalizedShareRate, { from: steth.address, value: batch.ethToLock })
-      for (let index = 0; index < randomIds.length; index++) {
-        const requestId = randomIds[index]
-        const tx = await withdrawalQueue.claimWithdrawal(requestId, { from: user })
-        assert.emits(tx, 'WithdrawalClaimed', { requestId, owner: user, receiver: user, amountOfETH: ETH(1) })
-      }
-      const balanceAfter = bn(await ethers.provider.getBalance(user))
-      assert.equals(balanceAfter, balanceBefore.add(bn(total)))
-    })
-
-    it('different rates', async () => {
-      const balanceBefore = bn(await ethers.provider.getBalance(user))
-      const totalDistributedEth = bn(0)
-      for (let index = 0; index < requestIds.length; index++) {
-        const requestId = requestIds[index]
-        const batch = await withdrawalQueue.prefinalize([requestId], shareRate(300 / (index + 1)))
-        await withdrawalQueue.finalize([requestId], shareRate(300 / (index + 1)), {
-          from: steth.address,
-          value: batch.ethToLock,
-        })
-        totalDistributedEth.iadd(bn(batch.ethToLock))
-      }
-      const id = await withdrawalQueue.getLastRequestId()
-      await withdrawalQueue.finalize([id], await currentRate(), { from: steth.address, value: total })
-      for (let index = 0; index < requestIds.length; index++) {
-        const requestId = requestIds[index]
-        await withdrawalQueue.claimWithdrawal(requestId, { from: user })
-      }
-      const balanceAfter = bn(await ethers.provider.getBalance(user))
-      assert.equals(balanceAfter, balanceBefore.add(totalDistributedEth))
-    })
-  })
-
   context.skip('claim fuzzing', () => {
     const fuzzClaim = async (perRequestWEI, requestCount, finalizedWEI) => {
       await withdrawalQueue.requestWithdrawals(Array(requestCount).fill(perRequestWEI), user, { from: user })
@@ -777,6 +717,96 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       await setBalance(stranger, total.toString(10))
       await steth.mintSteth(user, { from: stranger, value: total })
       await fuzzClaim(MAX_STETH_WITHDRAWAL_AMOUNT.toString(10), 10, 10)
+    })
+  })
+
+  context('claim scenarios', () => {
+    const requestCount = 5
+    const requestsAmounts = Array(requestCount).fill(StETH(1))
+
+    let requestIds
+
+    beforeEach(async () => {
+      await snapshot.rollback()
+      await withdrawalQueue.requestWithdrawals(requestsAmounts, user, { from: user })
+      requestIds = await withdrawalQueue.getWithdrawalRequests(user, { from: user })
+    })
+
+    it('direct', async () => {
+      const normalizedShareRate = await currentRate()
+      const balanceBefore = bn(await ethers.provider.getBalance(user))
+      const id = await withdrawalQueue.getLastRequestId()
+      const batch = await withdrawalQueue.prefinalize([id], normalizedShareRate)
+
+      withdrawalQueue.finalize([id], normalizedShareRate, { from: steth.address, value: batch.ethToLock })
+      for (let index = 0; index < requestIds.length; index++) {
+        const requestId = requestIds[index]
+        await withdrawalQueue.claimWithdrawal(requestId, { from: user, gasPrice: 0 })
+      }
+      const balanceAfter = bn(await ethers.provider.getBalance(user))
+      assert.equals(balanceAfter, balanceBefore.add(bn(batch.ethToLock)))
+    })
+
+    it('reverse', async () => {
+      const normalizedShareRate = await currentRate()
+      const balanceBefore = bn(await ethers.provider.getBalance(user))
+      const id = await withdrawalQueue.getLastRequestId()
+      const batch = await withdrawalQueue.prefinalize([id], normalizedShareRate)
+      withdrawalQueue.finalize([id], normalizedShareRate, { from: steth.address, value: batch.ethToLock })
+      for (let index = requestIds.length - 1; index >= 0; index--) {
+        const requestId = requestIds[index]
+        await withdrawalQueue.claimWithdrawal(requestId, { from: user, gasPrice: 0 })
+      }
+      const balanceAfter = bn(await ethers.provider.getBalance(user))
+      assert.equals(balanceAfter, balanceBefore.add(bn(batch.ethToLock)))
+    })
+
+    it('random', async () => {
+      const normalizedShareRate = await currentRate()
+      const randomIds = [...requestIds].sort(() => 0.5 - Math.random())
+      const balanceBefore = bn(await ethers.provider.getBalance(user))
+      const id = await withdrawalQueue.getLastRequestId()
+      const batch = await withdrawalQueue.prefinalize([id], normalizedShareRate)
+      withdrawalQueue.finalize([id], normalizedShareRate, { from: steth.address, value: batch.ethToLock })
+      for (let index = 0; index < randomIds.length; index++) {
+        const requestId = randomIds[index]
+        await withdrawalQueue.claimWithdrawal(requestId, { from: user, gasPrice: 0 })
+      }
+      const balanceAfter = bn(await ethers.provider.getBalance(user))
+      assert.equals(balanceAfter, balanceBefore.add(bn(batch.ethToLock)))
+    })
+
+    it('different rates', async () => {
+      const balanceBefore = bn(await ethers.provider.getBalance(user))
+      const totalDistributedEth = bn(0)
+      for (let index = 0; index < requestIds.length; index++) {
+        const requestId = requestIds[index]
+        const batch = await withdrawalQueue.prefinalize([requestId], shareRate(300 / (index + 1)))
+        await withdrawalQueue.finalize([requestId], shareRate(300 / (index + 1)), {
+          from: steth.address,
+          value: batch.ethToLock,
+        })
+        totalDistributedEth.iadd(bn(batch.ethToLock))
+      }
+      for (let index = 0; index < requestIds.length; index++) {
+        const requestId = requestIds[index]
+        await withdrawalQueue.claimWithdrawal(requestId, { from: user, gasPrice: 0 })
+      }
+      const balanceAfter = bn(await ethers.provider.getBalance(user))
+      assert.equals(balanceAfter, balanceBefore.add(totalDistributedEth))
+    })
+
+    it('100% discount', async () => {
+      const balanceBefore = bn(await ethers.provider.getBalance(user))
+      const id = await withdrawalQueue.getLastRequestId()
+      withdrawalQueue.finalize([id], 0, { from: steth.address, value: 0 })
+      for (let index = 0; index < requestIds.length; index++) {
+        const requestId = requestIds[index]
+        const tx = await withdrawalQueue.claimWithdrawal(requestId, { from: user, gasPrice: 0 })
+        assert.emits(tx, 'WithdrawalClaimed', { requestId, owner: user, receiver: user, amountOfETH: 0 })
+      }
+      const balanceAfter = bn(await ethers.provider.getBalance(user))
+      assert.equals(balanceAfter, balanceBefore)
     })
   })
 
