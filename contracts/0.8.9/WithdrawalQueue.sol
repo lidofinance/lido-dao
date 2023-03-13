@@ -319,11 +319,11 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @dev should be called by oracle
     ///
     /// @param _isBunkerModeNow is bunker mode reported by oracle
-    /// @param _sinceTimestamp timestamp of start of the bunker mode
+    /// @param _bunkerStartTimestamp timestamp of start of the bunker mode
     /// @param _currentReportTimestamp timestamp of the current report ref slot
-    function onOracleReport(bool _isBunkerModeNow, uint256 _sinceTimestamp, uint256 _currentReportTimestamp) external {
+    function onOracleReport(bool _isBunkerModeNow, uint256 _bunkerStartTimestamp, uint256 _currentReportTimestamp) external {
         _checkRole(ORACLE_ROLE, msg.sender);
-        if (_sinceTimestamp >= block.timestamp) revert InvalidReportTimestamp();
+        if (_bunkerStartTimestamp >= block.timestamp) revert InvalidReportTimestamp();
         if (_currentReportTimestamp >= block.timestamp) revert InvalidReportTimestamp();
 
         _setLastReportTimestamp(_currentReportTimestamp);
@@ -334,9 +334,9 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         if (_isBunkerModeNow != isBunkerModeWasSetBefore) {
             // write previous timestamp to enable bunker or max uint to disable
             if (_isBunkerModeNow) {
-                BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(_sinceTimestamp);
+                BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(_bunkerStartTimestamp);
 
-                emit BunkerModeEnabled(_sinceTimestamp);
+                emit BunkerModeEnabled(_bunkerStartTimestamp);
             } else {
                 BUNKER_MODE_SINCE_TIMESTAMP_POSITION.setStorageUint256(BUNKER_MODE_DISABLED_TIMESTAMP);
 
