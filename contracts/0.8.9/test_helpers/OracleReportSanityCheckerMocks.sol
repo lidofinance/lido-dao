@@ -18,31 +18,36 @@ contract LidoStub {
     }
 }
 
-contract WithdrawalQueueStub {
-    mapping(uint256 => uint256) private _blockNumbers;
+contract WithdrawalQueueStub is IWithdrawalQueue {
+    mapping(uint256 => uint256) private _timestamps;
 
-    function setRequestBlockNumber(uint256 _requestId, uint256 _blockNumber) external {
-        _blockNumbers[_requestId] = _blockNumber;
+    function setRequestTimestamp(uint256 _requestId, uint256 _timestamp) external {
+        _timestamps[_requestId] = _timestamp;
     }
 
-    function getWithdrawalRequestStatus(uint256 _requestId)
-        external
-        view
-        returns (
-            uint256,
-            uint256,
-            address,
-            uint256 blockNumber,
-            bool,
-            bool
-        )
-    {
-        blockNumber = _blockNumbers[_requestId];
+    function getWithdrawalStatus(
+        uint256[] calldata _requestIds
+    ) external view returns (
+        WithdrawalRequestStatus[] memory statuses
+    ) {
+        statuses = new WithdrawalRequestStatus[](_requestIds.length);
+        for (uint256 i; i < _requestIds.length; ++i) {
+            statuses[i].timestamp = _timestamps[_requestIds[i]];
+        }
+    }
+}
+
+contract BurnerStub {
+    function getSharesRequestedToBurn() external view returns (
+        uint256 coverShares, uint256 nonCoverShares
+    ) {
+        return (0, 0);
     }
 }
 
 interface ILidoLocator {
     function lido() external view returns (address);
+    function burner() external view returns (address);
     function withdrawalVault() external view returns (address);
     function withdrawalQueue() external view returns (address);
 }
@@ -52,17 +57,20 @@ contract LidoLocatorStub is ILidoLocator {
     address private immutable WITHDRAWAL_VAULT;
     address private immutable WITHDRAWAL_QUEUE;
     address private immutable EL_REWARDS_VAULT;
+    address private immutable BURNER;
 
     constructor(
         address _lido,
         address _withdrawalVault,
         address _withdrawalQueue,
-        address _elRewardsVault
+        address _elRewardsVault,
+        address _burner
     ) {
         LIDO = _lido;
         WITHDRAWAL_VAULT = _withdrawalVault;
         WITHDRAWAL_QUEUE = _withdrawalQueue;
         EL_REWARDS_VAULT = _elRewardsVault;
+        BURNER = _burner;
     }
 
     function lido() external view returns (address) {
@@ -80,6 +88,10 @@ contract LidoLocatorStub is ILidoLocator {
     function elRewardsVault() external view returns (address) {
         return EL_REWARDS_VAULT;
     }
+
+    function burner() external view returns (address) {
+        return BURNER;
+    }
 }
 
 contract OracleReportSanityCheckerStub {
@@ -93,13 +105,13 @@ contract OracleReportSanityCheckerStub {
         uint256 _postCLBalance,
         uint256 _withdrawalVaultBalance,
         uint256 _elRewardsVaultBalance,
+        uint256 _sharesRequestedToBurn,
         uint256 _preCLValidators,
         uint256 _postCLValidators
     ) external view {}
 
     function checkWithdrawalQueueOracleReport(
-        uint256 _lastFinalizableRequestId,
-        uint256 _simulatedShareRate,
+        uint256[] calldata _withdrawalFinalizationBatches,
         uint256 _reportTimestamp
     ) external view {}
 
@@ -107,7 +119,7 @@ contract OracleReportSanityCheckerStub {
         uint256 _postTotalPooledEther,
         uint256 _postTotalShares,
         uint256 _etherLockedOnWithdrawalQueue,
-        uint256 _sharesBurntFromWithdrawalQueue,
+        uint256 _sharesBurntDueToWithdrawals,
         uint256 _simulatedShareRate
     ) external view {}
 
@@ -118,11 +130,20 @@ contract OracleReportSanityCheckerStub {
         uint256,
         uint256 _withdrawalVaultBalance,
         uint256 _elRewardsVaultBalance,
-        uint256 _etherToLockForWithdrawals
-    ) external view returns (uint256 withdrawals, uint256 elRewards, uint256 sharesToBurnLimit) {
+        uint256,
+        uint256 _etherToLockForWithdrawals,
+        uint256
+    ) external view returns (
+        uint256 withdrawals,
+        uint256 elRewards,
+        uint256 simulatedSharesToBurn,
+        uint256 sharesToBurn
+    ) {
         withdrawals = _withdrawalVaultBalance;
         elRewards = _elRewardsVaultBalance;
-        sharesToBurnLimit = _etherToLockForWithdrawals;
+
+        simulatedSharesToBurn = 0;
+        sharesToBurn = _etherToLockForWithdrawals;
     }
 
     function checkAccountingExtraDataListItemsCount(uint256 _extraDataListItemsCount) external view {}

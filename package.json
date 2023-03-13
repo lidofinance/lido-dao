@@ -29,6 +29,7 @@
     "test:e2e": "npm run compile && ava -T 1000000 -v",
     "estimate-deposit-loop-gas": "yarn run test:unit ./estimate_deposit_loop_gas.js",
     "compile": "hardhat compile && yarn extract-abi",
+    "clean": "hardhat clean",
     "extract-abi": "node ./scripts/extract-abi.js",
     "size-contracts": "yarn run hardhat size-contracts",
     "deploy": "yarn run deploy:all",
@@ -132,6 +133,7 @@
     "@aragon/os": "^4.4.0",
     "@openzeppelin/contracts": "3.4.0",
     "@openzeppelin/contracts-v4.4": "npm:@openzeppelin/contracts@4.4.1",
+    "mocha-param": "^2.0.1",
     "openzeppelin-solidity": "2.0.0"
   },
   "overrides": {

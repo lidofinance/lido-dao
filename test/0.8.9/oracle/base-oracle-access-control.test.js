@@ -57,8 +57,8 @@ contract('BaseOracle', ([admin, account1, account2, member1, member2]) => {
           SECONDS_PER_SLOT,
           GENESIS_TIME,
           EPOCHS_PER_FRAME,
-          INITIAL_FAST_LANE_LENGTH_SLOTS,
           INITIAL_EPOCH,
+          INITIAL_FAST_LANE_LENGTH_SLOTS,
           admin,
           { from: admin }
         )

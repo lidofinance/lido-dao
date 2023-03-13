@@ -3751,6 +3751,7 @@ __metadata:
     lerna: ^3.22.1
     lint-staged: ">=10"
     minimatch: ^6.2.0
+    mocha-param: ^2.0.1
     node-gyp: ^8.4.1
     openzeppelin-solidity: 2.0.0
     prettier: ^2.8.4
@@ -19571,6 +19572,13 @@ fsevents@~2.3.2:
   dependencies:
     obliterator: ^2.0.0
   checksum: d45ad89c80b4874695e3595265191c9327977754dd0b10de5fae65b62ba0754cf19286f135c9999df52aad14df0016a313b87882f133d519fbc0914ebd9ea676
+  languageName: node
+  linkType: hard
+
+"mocha-param@npm:^2.0.1":
+  version: 2.0.1
+  resolution: "mocha-param@npm:2.0.1"
+  checksum: a4dee1c32fdee27c6fd83c13a41a01148e2d5f2fd7440a29fc8d817027afde11ded3017556a2492485f611d64d738065c5e5d2cb5a49891d97872c2a9433724f
   languageName: node
   linkType: hard
 

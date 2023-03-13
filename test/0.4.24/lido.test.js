@@ -111,8 +111,8 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
   })
 
   const pushReport = async (clValidators, clBalance) => {
-    const elRewards = await web3.eth.getBalance(elRewardsVault.address)
-    await pushOracleReport(consensus, oracle, clValidators, clBalance, elRewards)
+    const elRewardsVaultBalance = await web3.eth.getBalance(elRewardsVault.address)
+    await pushOracleReport(consensus, oracle, clValidators, clBalance, elRewardsVaultBalance)
     await advanceChainTime(SECONDS_PER_FRAME + 1000)
   }
 
@@ -381,14 +381,14 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
         await app.setELRewardsWithdrawalLimit(initialValue, { from: voting })
 
         // unable to receive execution layer rewards from arbitrary account
-        await assert.reverts(app.receiveELRewards({ from: user1, value: ETH(1) }), 'EXECUTION_LAYER_REWARDS_VAULT_ONLY')
+        await assert.reverts(app.receiveELRewards({ from: user1, value: ETH(1) }))
       })
     })
   })
 
   describe('receiveELRewards()', async () => {
     it('unable to receive eth from arbitrary account', async () => {
-      await assert.reverts(app.receiveELRewards({ from: nobody, value: ETH(1) }), 'EXECUTION_LAYER_REWARDS_VAULT_ONLY')
+      await assert.reverts(app.receiveELRewards({ from: nobody, value: ETH(1) }))
     })
 
     it('event work', async () => {
@@ -486,7 +486,11 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
 
     // +1 ETH
     await web3.eth.sendTransaction({ to: app.address, from: user1, value: ETH(1) })
-    await app.methods['deposit(uint256,uint256,bytes)'](MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor })
+    // can not deposit with unset withdrawalCredentials even with O ETH deposit
+    await assert.reverts(
+      app.deposit(MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositor }),
+      'EmptyWithdrawalsCredentials()'
+    )
     await checkStat({ depositedValidators: 0, beaconValidators: 0, beaconBalance: ETH(0) })
     assert.equals(await depositContract.totalCalls(), 0)
     assert.equals(await app.getTotalPooledEther(), ETH(2))
@@ -984,7 +988,7 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
     await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
 
     await assert.reverts(
-      app.handleOracleReport(await getCurrentBlockTimestamp(), 1, ETH(30), 0, 0, 0, 0, 0, { from: appManager }),
+      app.handleOracleReport(await getCurrentBlockTimestamp(), 1, ETH(30), 0, 0, 0, 0, [], 0, { from: appManager }),
       'APP_AUTH_FAILED'
     )
 
@@ -992,7 +996,7 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(30) })
 
     await assert.reverts(
-      app.handleOracleReport(await getCurrentBlockTimestamp(), 1, ETH(29), 0, 0, 0, 0, 0, { from: nobody }),
+      app.handleOracleReport(await getCurrentBlockTimestamp(), 1, ETH(29), 0, 0, 0, 0, [], 0, { from: nobody }),
       'APP_AUTH_FAILED'
     )
 
@@ -1634,7 +1638,7 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
     assert.equals(await app.sharesOf(user1), shares(0))
 
     // voting can't continue burning if user already has no shares
-    await assert.reverts(app.burnShares(user1, 1, { from: voting }), 'BURN_AMOUNT_EXCEEDS_BALANCE')
+    await assert.reverts(app.burnShares(user1, 1, { from: voting }), 'BALANCE_EXCEEDED')
   })
 
   context('treasury', () => {

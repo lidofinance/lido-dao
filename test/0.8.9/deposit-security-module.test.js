@@ -1,6 +1,5 @@
 const { artifacts, contract, ethers, network, web3 } = require('hardhat')
 const { assert } = require('../helpers/assert')
-const { BN } = require('bn.js')
 const { DSMAttestMessage, DSMPauseMessage } = require('../helpers/signatures')
 const { ZERO_ADDRESS } = require('../helpers/constants')
 
@@ -16,7 +15,6 @@ const MIN_DEPOSIT_BLOCK_DISTANCE = 14
 const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 10
 
 const STAKING_MODULE = 123
-const UINT24_MAX = new BN(2).pow(new BN(24))
 const DEPOSIT_CALLDATA = '0x000000000000000000000000000000000000000000000000000000000000002a'
 
 const GUARDIAN1 = '0x5Fc0E75BF6502009943590492B02A1d08EAc9C43'
@@ -623,18 +621,6 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
           { from: stranger }
         ),
         'PauseIntentExpired()'
-      )
-    })
-
-    it('reverts when staking module too large', async () => {
-      await assert.revertsWithCustomError(
-        depositSecurityModule.pauseDeposits(
-          stalePauseMessage.blockNumber,
-          UINT24_MAX,
-          stalePauseMessage.sign(GUARDIAN_PRIVATE_KEYS[GUARDIAN2]),
-          { from: stranger }
-        ),
-        'StakingModuleIdTooLarge()'
       )
     })
 

@@ -49,7 +49,6 @@ contract DepositSecurityModule {
     event DepositsPaused(address indexed guardian, uint24 indexed stakingModuleId);
     event DepositsUnpaused(uint24 indexed stakingModuleId);
 
-    error StakingModuleIdTooLarge();
     error ZeroAddress(string field);
     error DuplicateAddress(address addr);
     error NotAnOwner(address caller);
@@ -131,11 +130,6 @@ contract DepositSecurityModule {
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotAnOwner(msg.sender);
-        _;
-    }
-
-    modifier validStakingModuleId(uint256 _stakingModuleId) {
-        if (_stakingModuleId > type(uint24).max) revert StakingModuleIdTooLarge();
         _;
     }
 
@@ -337,7 +331,7 @@ contract DepositSecurityModule {
         uint256 blockNumber,
         uint256 stakingModuleId,
         Signature memory sig
-    ) external validStakingModuleId(stakingModuleId) {
+    ) external {
         // In case of an emergency function `pauseDeposits` is supposed to be called
         // by all guardians. Thus only the first call will do the actual change. But
         // the other calls would be OK operations from the point of view of protocol’s logic.
@@ -369,7 +363,7 @@ contract DepositSecurityModule {
      *
      * Only callable by the owner.
      */
-    function unpauseDeposits(uint256 stakingModuleId) external validStakingModuleId(stakingModuleId) onlyOwner {
+    function unpauseDeposits(uint256 stakingModuleId) external onlyOwner {
          /// @dev unpause only paused modules (skip stopped)
         if (STAKING_ROUTER.getStakingModuleIsDepositsPaused(stakingModuleId)) {
             STAKING_ROUTER.resumeStakingModule(stakingModuleId);
@@ -382,7 +376,7 @@ contract DepositSecurityModule {
      * guardian attestations of non-stale deposit root and `nonce`, and the number of
      * such attestations will be enough to reach quorum.
      */
-    function canDeposit(uint256 stakingModuleId) external view validStakingModuleId(stakingModuleId) returns (bool) {
+    function canDeposit(uint256 stakingModuleId) external view returns (bool) {
         bool isModuleActive = STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId);
         uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
         bool isLidoCanDeposit = LIDO.canDeposit();
@@ -418,7 +412,7 @@ contract DepositSecurityModule {
         uint256 nonce,
         bytes calldata depositCalldata,
         Signature[] calldata sortedGuardianSignatures
-    ) external validStakingModuleId(stakingModuleId) {
+    ) external {
         if (quorum == 0 || sortedGuardianSignatures.length < quorum) revert DepositNoQuorum();
 
         bytes32 onchainDepositRoot = IDepositContract(DEPOSIT_CONTRACT).get_deposit_root();

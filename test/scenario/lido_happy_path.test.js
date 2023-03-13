@@ -89,13 +89,15 @@ contract('Lido: happy path', (addresses) => {
   // Total fee is 10%
   const totalFeePoints = 0.1 * 10000
 
-  it('voting sets fee and its distribution', async () => {
+  it.skip('voting sets fee and its distribution', async () => {
     // Fee and distribution were set
-    // assert.equals(await pool.getFee({ from: nobody }), totalFeePoints, 'total fee')
-    // const distribution = await pool.getFeeDistribution({ from: nobody })
-    // console.log('distribution', distribution)
-    // assert.equals(distribution.treasuryFeeBasisPoints, treasuryFeePoints, 'treasury fee')
-    // assert.equals(distribution.operatorsFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
+    assert.equals(await pool.getFee({ from: nobody }), totalFeePoints, 'total fee')
+    const distribution = await pool.getFeeDistribution({ from: nobody })
+    console.log('distribution', distribution)
+    const treasuryFeePoints = 0 // TODO
+    const nodeOperatorsFeePoints = 0 // TODO
+    assert.equals(distribution.treasuryFeeBasisPoints, treasuryFeePoints, 'treasury fee')
+    assert.equals(distribution.operatorsFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
   })
 
   it('voting sets withdrawal credentials', async () => {
@@ -401,7 +403,7 @@ contract('Lido: happy path', (addresses) => {
 
     // Reporting 1.005-fold balance increase (64 => 64.32) to stay in limits
 
-    await pushOracleReport(consensus, oracle, 2, ETH(64.32))
+    await pushOracleReport(consensus, oracle, 2, ETH(64.32), ETH(0))
 
     // Total shares increased because fee minted (fee shares added)
     // shares = oldTotalShares + reward * totalFee * oldTotalShares / (newTotalPooledEther - reward * totalFee)

@@ -5,8 +5,8 @@ const { ZERO_ADDRESS } = require('../../helpers/constants')
 const {
   CONSENSUS_VERSION,
   DATA_FORMAT_LIST,
-  getReportDataItems,
-  calcReportDataHash,
+  getValidatorsExitBusReportDataItems,
+  calcValidatorsExitBusReportDataHash,
   encodeExitRequestsDataList,
   deployExitBusOracle,
 } = require('./validators-exit-bus-oracle-deploy.test')
@@ -60,8 +60,8 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, account1
       data: encodeExitRequestsDataList(exitRequests),
     })
 
-    reportItems = getReportDataItems(reportFields)
-    reportHash = calcReportDataHash(reportItems)
+    reportItems = getValidatorsExitBusReportDataItems(reportFields)
+    reportHash = calcValidatorsExitBusReportDataHash(reportItems)
 
     await deployed.consensus.submitReport(refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
     await deployed.consensus.submitReport(refSlot, reportHash, CONSENSUS_VERSION, { from: member3 })
@@ -88,14 +88,12 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, account1
       context('Admin is set at initialize', () => {
         it('should set admin at initialize', async () => {
           const DEFAULT_ADMIN_ROLE = await oracle.DEFAULT_ADMIN_ROLE()
-          await assert.emits(initTx, 'RoleGranted', { role: DEFAULT_ADMIN_ROLE, account: admin, sender: admin })
+          assert.emits(initTx, 'RoleGranted', { role: DEFAULT_ADMIN_ROLE, account: admin, sender: admin })
         })
 
         it('should revert without admin address', async () => {
-          const pauser = ZERO_ADDRESS
-          const resumer = ZERO_ADDRESS
           await assert.reverts(
-            oracle.initialize(ZERO_ADDRESS, pauser, resumer, consensus.address, CONSENSUS_VERSION, 0, {
+            oracle.initialize(ZERO_ADDRESS, consensus.address, CONSENSUS_VERSION, 0, {
               from: admin,
             }),
             'AdminCannotBeZero()'
@@ -135,13 +133,13 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, account1
 
       context('pause', () => {
         it('should revert without PAUSE_ROLE role', async () => {
-          await assert.revertsOZAccessControl(oracle.pause(0, { from: stranger }), stranger, 'PAUSE_ROLE')
+          await assert.revertsOZAccessControl(oracle.pauseFor(0, { from: stranger }), stranger, 'PAUSE_ROLE')
         })
 
         it('should allow calling from a possessor of PAUSE_ROLE role', async () => {
           await oracle.grantRole(pauseRoleKeccak156, account1)
 
-          const tx = await oracle.pause(9999, { from: account1 })
+          const tx = await oracle.pauseFor(9999, { from: account1 })
           assert.emits(tx, 'Paused', { duration: 9999 })
         })
       })
@@ -152,13 +150,13 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, account1
 
       context('resume', () => {
         it('should revert without RESUME_ROLE role', async () => {
-          await oracle.pause(9999, { from: admin })
+          await oracle.pauseFor(9999, { from: admin })
 
           await assert.revertsOZAccessControl(oracle.resume({ from: stranger }), stranger, 'RESUME_ROLE')
         })
 
         it('should allow calling from a possessor of RESUME_ROLE role', async () => {
-          await oracle.pause(9999, { from: admin })
+          await oracle.pauseFor(9999, { from: admin })
           await oracle.grantRole(resumeRoleKeccak156, account1)
 
           const tx = await oracle.resume({ from: account1 })

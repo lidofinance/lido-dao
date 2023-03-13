@@ -38,6 +38,9 @@ class GenericStub {
    * @param {string} methodName name of the method to stub
    *
    * @param {object} config stubbed method params
+   * @param {object} state describes the state were stub declared and next transition
+   * @param {number} state.current index of the state where stub will be added
+   * @param {number} state.next index of the state which will be activated after the stub called
    * @param {TypedTuple} [config.input] the input value to trigger the stub
    * @param {TypedTuple} [config.return] the output value to return or revert from stub
    * @param {object} [config.revert] the revert info when stub must finish with error
@@ -47,7 +50,6 @@ class GenericStub {
    * @param {object} [config.forwardETH] amount and recipient where to send ETH
    * @param {string} config.forwardETH.recipient recipient address of the ETH
    * @param {object} config.forwardETH.value amount of ETH to send
-   * @param {number} [config.nextState] one based state index to set after stub call
    * @param {object[]} [config.emit] events to emit when stub called
    * @param {string} config.emit.name name of the event to emit
    * @param {object} [config.emit.args] arguments of the event
@@ -67,8 +69,13 @@ class GenericStub {
     const [methodAbi] = methodAbis
 
     const configParser = new GenericStubConfigParser()
-    const parsedConfig = configParser.parse(methodAbi.signature, config)
-    await stubInstance.GenericStub__addStub(Object.values(parsedConfig))
+    const { currentState, ...parsedConfig } = configParser.parse(methodAbi.signature, config)
+
+    if (currentState === undefined) {
+      await stubInstance.GenericStub__addStub(Object.values(parsedConfig))
+    } else {
+      await stubInstance.GenericStub__addStub(currentState, Object.values(parsedConfig))
+    }
   }
 }
 
@@ -84,6 +91,7 @@ class GenericStubConfigParser {
       logs: this._parseLogs(config),
       forwardETH: this._parseForwardETH(config),
       isRevert: this._parseIsRevert(config),
+      currentState: this._parseCurrentState(config),
       nextState: this._parseNextState(config),
     }
   }
@@ -98,7 +106,7 @@ class GenericStubConfigParser {
     }
     if (config.revert) {
       return config.revert.error
-        ? this._encodeError(config.revert.error)
+        ? this._encodeError(config.revert)
         : this._encodeError({ error: 'Error', args: { type: ['string'], value: [config.revert.reason || ''] } })
     }
     return this._encode({ type: [], value: [] })
@@ -152,7 +160,13 @@ class GenericStubConfigParser {
   }
 
   _parseNextState(config) {
-    return config.nextState || 0
+    if (!config.state || !config.state.next) return 0
+    return config.state.next + 1
+  }
+
+  _parseCurrentState(config) {
+    if (!config.state || !config.state.current) return undefined
+    return config.state.current
   }
 
   _encode({ type, value }) {

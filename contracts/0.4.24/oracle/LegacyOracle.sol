@@ -161,8 +161,10 @@ contract LegacyOracle is Versioned, AragonApp {
      *
      * Returns the epoch calculated from current timestamp
      */
-    function getCurrentEpochId() external view returns (uint256 epochId) {
-        (epochId, ,) = _getCurrentFrameFromAccountingOracle();
+    function getCurrentEpochId() external view returns (uint256) {
+        ChainSpec memory spec = _getChainSpec();
+        // solhint-disable-line not-rely-on-time
+        return (_getTime() - spec.genesisTime) / (spec.slotsPerEpoch * spec.secondsPerSlot);
     }
 
     /**
@@ -314,6 +316,10 @@ contract LegacyOracle is Versioned, AragonApp {
         _setContractVersion(4);
     }
 
+    function _getTime() internal view returns (uint256) {
+        return block.timestamp; // solhint-disable-line not-rely-on-time
+    }
+
     function _getChainSpec()
         internal
         view
@@ -331,6 +337,7 @@ contract LegacyOracle is Versioned, AragonApp {
         require(_chainSpec.slotsPerEpoch > 0, "BAD_SLOTS_PER_EPOCH");
         require(_chainSpec.secondsPerSlot > 0, "BAD_SECONDS_PER_SLOT");
         require(_chainSpec.genesisTime > 0, "BAD_GENESIS_TIME");
+        require(_chainSpec.epochsPerFrame > 0, "BAD_EPOCHS_PER_FRAME");
 
         uint256 data = (
             uint256(_chainSpec.epochsPerFrame) << 192 |
@@ -369,12 +376,13 @@ contract LegacyOracle is Versioned, AragonApp {
         ChainSpec memory spec = _getChainSpec();
         IHashConsensus consensus = _getAccountingConsensusContract();
         uint256 refSlot;
-        (refSlot, frameEndTime) =  consensus.getCurrentFrame();
-        // new accounting oracle's frame ends at the timestamp of the frame's last slot; old oracle's frame
-        // ended a second before the timestamp of the first slot of the next frame
-        frameEndTime += spec.secondsPerSlot - 1;
+        (refSlot,) =  consensus.getCurrentFrame();
+
         // new accounting oracle's ref. slot is the last slot of the epoch preceding the one the frame starts at
         frameStartTime = spec.genesisTime + (refSlot + 1) * spec.secondsPerSlot;
+        // new accounting oracle's frame ends at the timestamp of the frame's last slot; old oracle's frame
+        // ended a second before the timestamp of the first slot of the next frame
+        frameEndTime = frameStartTime + spec.secondsPerSlot * spec.slotsPerEpoch * spec.epochsPerFrame - 1;
         frameEpochId = (refSlot + 1) / spec.slotsPerEpoch;
     }
 

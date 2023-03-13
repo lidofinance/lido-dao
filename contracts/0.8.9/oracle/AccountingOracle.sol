@@ -21,8 +21,9 @@ interface ILido {
         // EL values
         uint256 _withdrawalVaultBalance,
         uint256 _elRewardsVaultBalance,
+        uint256 _sharesRequestedToBurn,
         // Decision about withdrawals processing
-        uint256 _lastFinalizableRequestId,
+        uint256[] calldata _withdrawalFinalizationBatches,
         uint256 _simulatedShareRate
     ) external;
 }
@@ -80,7 +81,7 @@ interface IStakingRouter {
 
 
 interface IWithdrawalQueue {
-    function updateBunkerMode(bool isBunkerMode, uint256 prevReportTimestamp) external;
+    function onOracleReport(bool isBunkerMode, uint256 prevReportTimestamp, uint256 currentReportTimestamp) external;
 }
 
 
@@ -232,19 +233,25 @@ contract AccountingOracle is BaseOracle {
         /// at the reference slot.
         uint256 elRewardsVaultBalance;
 
+        /// @dev The shares amount requested to burn through Burner as observed
+        /// at the reference slot. The value can be obtained in the following way:
+        /// `(coverSharesToBurn, nonCoverSharesToBurn) = IBurner(burner).getSharesRequestedToBurn()
+        /// sharesRequestedToBurn = coverSharesToBurn + nonCoverSharesToBurn`
+        uint256 sharesRequestedToBurn;
+
         ///
         /// Decision
         ///
 
-        /// @dev The id of the last withdrawal request that should be finalized as the result
-        /// of applying this oracle report. The zero value means that no requests should be
-        /// finalized.
-        uint256 lastFinalizableWithdrawalRequestId;
+        /// @dev The ascendingly-sorted array of withdrawal request IDs obtained by calling
+        /// WithdrawalQueue.calculateFinalizationBatches. Empty array means that no withdrawal
+        /// requests should be finalized.
+        uint256[] withdrawalFinalizationBatches;
 
         /// @dev The share/ETH rate with the 10^27 precision (i.e. the price of one stETH share
-        /// in ETH where one ETH is denominated as 10^27) used for finalizing withdrawal requests
-        /// up to (and including) the one passed in the lastWithdrawalRequestIdToFinalize field.
-        /// Must be set to zero if lastWithdrawalRequestIdToFinalize is zero.
+        /// in ETH where one ETH is denominated as 10^27) that would be effective as the result of
+        /// applying this oracle report at the reference slot, with withdrawalFinalizationBatches
+        /// set to empty array and simulatedShareRate set to 0.
         uint256 simulatedShareRate;
 
         /// @dev Whether, based on the state observed at the reference slot, the protocol should
@@ -598,9 +605,10 @@ contract AccountingOracle is BaseOracle {
             slotsElapsed
         );
 
-        withdrawalQueue.updateBunkerMode(
+        withdrawalQueue.onOracleReport(
             data.isBunkerMode,
-            GENESIS_TIME + prevRefSlot * SECONDS_PER_SLOT
+            GENESIS_TIME + prevRefSlot * SECONDS_PER_SLOT,
+            GENESIS_TIME + data.refSlot * SECONDS_PER_SLOT
         );
 
         ILido(LIDO).handleOracleReport(
@@ -610,7 +618,8 @@ contract AccountingOracle is BaseOracle {
             data.clBalanceGwei * 1e9,
             data.withdrawalVaultBalance,
             data.elRewardsVaultBalance,
-            data.lastFinalizableWithdrawalRequestId,
+            data.sharesRequestedToBurn,
+            data.withdrawalFinalizationBatches,
             data.simulatedShareRate
         );
 
@@ -684,7 +693,7 @@ contract AccountingOracle is BaseOracle {
     }
 
     function _checkCanSubmitExtraData(ExtraDataProcessingState memory procState, uint256 format)
-        internal
+        internal view
     {
         _checkMsgSenderIsAllowedToSubmitData();
         _checkProcessingDeadline();

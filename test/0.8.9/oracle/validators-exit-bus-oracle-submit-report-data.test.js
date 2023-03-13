@@ -4,8 +4,8 @@ const { assert } = require('../../helpers/assert')
 const {
   CONSENSUS_VERSION,
   DATA_FORMAT_LIST,
-  getReportDataItems,
-  calcReportDataHash,
+  getValidatorsExitBusReportDataItems,
+  calcValidatorsExitBusReportDataHash,
   encodeExitRequestsDataList,
   deployExitBusOracle,
   computeTimestampAtSlot,
@@ -84,8 +84,8 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
         ...reportFieldsArg,
       })
 
-      const reportItems = getReportDataItems(reportFields)
-      const reportHash = calcReportDataHash(reportItems)
+      const reportItems = getValidatorsExitBusReportDataItems(reportFields)
+      const reportHash = calcValidatorsExitBusReportDataHash(reportItems)
 
       await triggerConsensusOnHash(reportHash)
 
@@ -146,8 +146,8 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           })
 
           reportFields.data += 'aaaaaaaaaaaaaaaaaa'
-          const reportItems = getReportDataItems(reportFields)
-          const reportHash = calcReportDataHash(reportItems)
+          const reportItems = getValidatorsExitBusReportDataItems(reportFields)
+          const reportHash = calcValidatorsExitBusReportDataHash(reportItems)
           await triggerConsensusOnHash(reportHash)
 
           await assert.reverts(
@@ -166,8 +166,8 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           })
 
           reportFields.data = reportFields.data.slice(0, reportFields.data.length - 18)
-          const reportItems = getReportDataItems(reportFields)
-          const reportHash = calcReportDataHash(reportItems)
+          const reportItems = getValidatorsExitBusReportDataItems(reportFields)
+          const reportHash = calcValidatorsExitBusReportDataHash(reportItems)
           await triggerConsensusOnHash(reportHash)
 
           await assert.reverts(
@@ -429,7 +429,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       it('reverts on paused contract', async () => {
         await consensus.advanceTimeToNextFrameStart()
         const PAUSE_INFINITELY = await oracle.PAUSE_INFINITELY()
-        await oracle.pause(PAUSE_INFINITELY, { from: admin })
+        await oracle.pauseFor(PAUSE_INFINITELY, { from: admin })
         const report = await prepareReportAndSubmitHash()
         assert.reverts(oracle.submitReportData(report, oracleVersion, { from: member1 }), 'ResumedExpected()')
       })
@@ -448,10 +448,10 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
 
       it('reverts on hash mismatch', async () => {
         const report = await prepareReportAndSubmitHash()
-        const actualReportHash = calcReportDataHash(report)
+        const actualReportHash = calcValidatorsExitBusReportDataHash(report)
         // mess with data field to change hash
         report[report.length - 1] = report[report.length - 1] + 'ff'
-        const changedReportHash = calcReportDataHash(report)
+        const changedReportHash = calcValidatorsExitBusReportDataHash(report)
         await assert.reverts(
           oracle.submitReportData(report, oracleVersion, { from: member1 }),
           `UnexpectedDataHash("${actualReportHash}", "${changedReportHash}")`
@@ -531,7 +531,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
           { moduleId: 5, nodeOpId: 1, valIndex: 10, valPubkey: PUBKEYS[2] },
           { moduleId: 5, nodeOpId: 3, valIndex: 1, valPubkey: PUBKEYS[3] },
         ])
-        hash = calcReportDataHash(report)
+        hash = calcValidatorsExitBusReportDataHash(report)
         const state = await oracle.getProcessingState()
         assertEqualsObject(state, {
           currentFrameRefSlot: (await consensus.getCurrentFrame()).refSlot,

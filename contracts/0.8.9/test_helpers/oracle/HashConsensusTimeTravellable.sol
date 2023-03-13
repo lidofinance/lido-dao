@@ -14,7 +14,6 @@ contract HashConsensusTimeTravellable is HashConsensus {
         uint256 secondsPerSlot,
         uint256 genesisTime,
         uint256 epochsPerFrame,
-        uint256 startEpoch,
         uint256 fastLaneLengthSlots,
         address admin,
         address reportProcessor
@@ -23,7 +22,6 @@ contract HashConsensusTimeTravellable is HashConsensus {
         secondsPerSlot,
         genesisTime,
         epochsPerFrame,
-        startEpoch,
         fastLaneLengthSlots,
         admin,
         reportProcessor
