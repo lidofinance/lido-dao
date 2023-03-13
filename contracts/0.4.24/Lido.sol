@@ -82,7 +82,7 @@ interface IWithdrawalVault {
 
 interface IStakingRouter {
     function deposit(
-        uint256 _maxDepositsCount,
+        uint256 _depositsCount,
         uint256 _stakingModuleId,
         bytes _depositCalldata
     ) external payable;
@@ -108,7 +108,7 @@ interface IStakingRouter {
         uint16 modulesFee, uint16 treasuryFee
     );
 
-    function getStakingModuleMaxDepositsCount(uint256 _stakingModuleId, uint256 _depositableEther)
+    function getStakingModuleMaxDepositsCount(uint256 _stakingModuleId, uint256 _maxDepositsValue)
         external
         view
         returns (uint256);
@@ -117,6 +117,7 @@ interface IStakingRouter {
 interface IWithdrawalQueue {
     function prefinalize(uint256[] _batches, uint256 _maxShareRate)
         external
+        view
         returns (uint256 ethToLock, uint256 sharesToBurn);
 
     function finalize(uint256[] _batches, uint256 _maxShareRate) external payable;
@@ -865,7 +866,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     function _calculateWithdrawals(
         OracleReportContracts memory _contracts,
         OracleReportedData memory _reportedData
-    ) internal returns (
+    ) internal view returns (
         uint256 etherToLock, uint256 sharesToBurn
     ) {
         IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_contracts.withdrawalQueue);
