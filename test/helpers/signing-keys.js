@@ -3,8 +3,7 @@ const SIGNATURE_LENGTH = 96
 const EMPTY_PUBLIC_KEY = '0x' + '0'.repeat(2 * PUBKEY_LENGTH)
 const EMPTY_SIGNATURE = '0x' + '0'.repeat(2 * SIGNATURE_LENGTH)
 
-const { pad, hexConcat, hexSplit } = require('./utils')
-const { strip0x } = require('../0.6.12/helpers')
+const { strip0x, pad, hexConcat, hexSplit } = require('./utils')
 
 class ValidatorKeys {
   constructor(publicKeys, signatures) {
