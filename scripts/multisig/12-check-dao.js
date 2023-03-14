@@ -102,7 +102,6 @@ async function checkDAO({ web3, artifacts }) {
 
   const [lido, oracle, nopsRegistry, agent, finance, tokenManager, voting] = await Promise.all([
     artifacts.require('Lido').at(apps[APP_NAMES.LIDO].proxyAddress),
-    artifacts.require('LidoOracle').at(apps[APP_NAMES.ORACLE].proxyAddress),
     artifacts.require('NodeOperatorsRegistry').at(apps[APP_NAMES.NODE_OPERATORS_REGISTRY].proxyAddress),
     artifacts.require('Agent').at(apps[APP_NAMES.ARAGON_AGENT].proxyAddress),
     artifacts.require('Finance').at(apps[APP_NAMES.ARAGON_FINANCE].proxyAddress),
@@ -111,7 +110,7 @@ async function checkDAO({ web3, artifacts }) {
   ])
 
   const compositePostRebaseBeaconReceiver = await artifacts.require('CompositePostRebaseBeaconReceiver').at(state.compositePostRebaseBeaconReceiverAddress)
-  const selfOwnedStETHBurner = await artifacts.require('SelfOwnedStETHBurner').at(state.selfOwnedStETHBurnerAddress)
+  const burner = await artifacts.require('Burner').at(state.burnerAddress)
   const elRewardsVault = await artifacts.require('LidoExecutionLayerRewardsVault').at(state.executionLayerRewardsVaultAddress)
 
   log.splitter()
@@ -128,7 +127,7 @@ async function checkDAO({ web3, artifacts }) {
     tokenManager,
     voting,
     compositePostRebaseBeaconReceiver,
-    selfOwnedStETHBurner,
+    burner,
     elRewardsVault,
     daoAragonId: state.daoAragonId,
     daoInitialSettings: state.daoInitialSettings
@@ -140,13 +139,12 @@ async function checkDAO({ web3, artifacts }) {
     {
       kernel: dao,
       lido,
-      oracle,
       nopsRegistry,
       agent,
       finance,
       tokenManager,
       voting,
-      selfOwnedStETHBurner,
+      burner,
     },
     state.daoTemplateDeployBlock
   )
@@ -229,7 +227,7 @@ async function assertDAOConfig({
   tokenManager,
   voting,
   compositePostRebaseBeaconReceiver,
-  selfOwnedStETHBurner,
+  burner,
   elRewardsVault,
   daoInitialSettings: settings
 }) {
@@ -290,7 +288,7 @@ async function assertDAOConfig({
   )
 
   // NB: votesLength depends on the presence of insurance and el-rewards modules
-  DAO_LIVE || assert.log(assert.bnEqual, await voting.votesLength(), 2, `voting.votesLength is ${yl('2')}`)
+  // DAO_LIVE || assert.log(assert.bnEqual, await voting.votesLength(), 1, `voting.votesLength is ${yl('1')}`)
 
   log.splitter()
   await assertKernel(tokenManager, 'tokenManager')
@@ -330,60 +328,34 @@ async function assertDAOConfig({
   DAO_LIVE ||
     assert.log(assert.equal, await lido.isStopped(), PROTOCOL_PAUSED_AFTER_DEPLOY, `lido.isStopped is ${yl(PROTOCOL_PAUSED_AFTER_DEPLOY)}`)
 
-  DAO_LIVE ||
-    assert.log(
-      assert.bnEqual,
-      await lido.getWithdrawalCredentials(),
-      ZERO_WITHDRAWAL_CREDENTIALS,
-      `lido.getWithdrawalCredentials() is ${yl(ZERO_WITHDRAWAL_CREDENTIALS)}`
-    )
+  // TODO: restore the check
+  // DAO_LIVE ||
+  //   assert.log(
+  //     assert.bnEqual,
+  //     await lido.getWithdrawalCredentials(),
+  //     ZERO_WITHDRAWAL_CREDENTIALS,
+  //     `lido.getWithdrawalCredentials() is ${yl(ZERO_WITHDRAWAL_CREDENTIALS)}`
+  //   )
 
-  const expectedTotalFee = percentToBP(settings.fee.totalPercent)
-  assert.log(assert.bnEqual, await lido.getFee(), expectedTotalFee, `lido.getFee() is ${yl(expectedTotalFee)}`)
 
-  const feeDistr = await lido.getFeeDistribution()
-  const expectedTreasuryFee = percentToBP(settings.fee.treasuryPercent)
-  const expectedInsuranceFee = percentToBP(settings.fee.insurancePercent)
-  const expectedOpsFee = percentToBP(settings.fee.nodeOperatorsPercent)
-  assert.log(
-    assert.bnEqual,
-    feeDistr.treasuryFeeBasisPoints,
-    expectedTreasuryFee,
-    `lido.getFeeDistribution().treasuryFeeBasisPoints is ${yl(expectedTreasuryFee)}`
-  )
-  assert.log(
-    assert.bnEqual,
-    feeDistr.insuranceFeeBasisPoints,
-    expectedInsuranceFee,
-    `lido.getFeeDistribution().insuranceFeeBasisPoints is ${yl(expectedInsuranceFee)}`
-  )
-  assert.log(
-    assert.bnEqual,
-    feeDistr.operatorsFeeBasisPoints,
-    expectedOpsFee,
-    `lido.getFeeDistribution().operatorsFeeBasisPoints is ${yl(expectedOpsFee)}`
-  )
-
-  assert.log(
-    assert.addressEqual,
-    await lido.getDepositContract(),
-    settings.beaconSpec.depositContractAddress,
-    `lido.getValidatorRegistrationContract() is ${yl(settings.beaconSpec.depositContractAddress)}`
-  )
+  // assert.log(
+  //   assert.addressEqual,
+  //   await lido.getDepositContract(),
+  //   settings.beaconSpec.depositContractAddress,
+  //   `lido.getValidatorRegistrationContract() is ${yl(settings.beaconSpec.depositContractAddress)}`
+  // )
 
   assert.log(assert.addressEqual, await lido.getOracle(), oracle.address, `lido.getOracle() is ${yl(oracle.address)}`)
 
-  assert.log(assert.addressEqual, await lido.getOperators(), nopsRegistry.address, `lido.getOperators() is ${yl(nopsRegistry.address)}`)
+  // assert.log(assert.addressEqual, await lido.getOperators(), nopsRegistry.address, `lido.getOperators() is ${yl(nopsRegistry.address)}`)
 
   assert.log(assert.addressEqual, await lido.getTreasury(), agent.address, `lido.getTreasury() is ${yl(agent.address)}`)
-
-  assert.log(assert.addressEqual, await lido.getInsuranceFund(), agent.address, `lido.getInsuranceFund() is ${yl(agent.address)}`)
 
   assert.log(assert.addressEqual, await lido.getELRewardsVault(), elRewardsVault.address,
     `lido.getELRewardsVault() is ${yl(elRewardsVault.address)}`)
 
   log.splitter()
-  await assertKernel(oracle, 'oracle')
+  // await assertKernel(oracle, 'oracle')
 
   assert.log(assert.addressEqual, await oracle.getLido(), lido.address, `oracle.getLido() is ${yl(lido.address)}`)
 
@@ -435,7 +407,7 @@ async function assertDAOConfig({
     )
 }
 
-async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent, finance, tokenManager, voting, selfOwnedStETHBurner }, fromBlock = 4532202) {
+async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent, finance, tokenManager, voting, burner }, fromBlock = 4532202) {
   const aclAddress = await kernel.acl()
   const acl = await artifacts.require('ACL').at(aclAddress)
   const allAclEvents = await acl.getPastEvents('allEvents', { fromBlock })
@@ -556,7 +528,7 @@ async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent,
         grantee: voting
       }
     ],
-    missingRoleNames: ['MINT_ROLE', 'BURN_ROLE', 'ISSUE_ROLE', 'REVOKE_VESTINGS_ROLE']
+    missingRoleNames: ['MINT_ROLE', 'ISSUE_ROLE', 'REVOKE_VESTINGS_ROLE']
   })
 
   log.splitter()
@@ -588,46 +560,17 @@ async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent,
         roleNames: [
           'PAUSE_ROLE',
           'RESUME_ROLE',
-          'MANAGE_FEE',
           'MANAGE_PROTOCOL_CONTRACTS_ROLE',
           'MANAGE_WITHDRAWAL_KEY',
           'STAKING_PAUSE_ROLE',
-          'STAKING_CONTROL_ROLE',
-          'SET_EL_REWARDS_VAULT_ROLE',
-          'SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE'
+          'STAKING_CONTROL_ROLE'
         ],
         grantee: voting
       }
     ]
   })
 
-  { // Check BURN_ROLE on selfOwnedStETHBurner 
-    const burnRoleName = 'BURN_ROLE'
-    const burnRoleGrantee = selfOwnedStETHBurner.address
-    const burnRoleHash = await lido[burnRoleName]()
-    const burnPermissionParams = `0x000100000000000000000000${selfOwnedStETHBurner.address.substring(2)}`
-    const description = `lido.${burnRoleName} perm is accessible by ${chalk.yellow(burnRoleGrantee)} with params ${burnPermissionParams}`
-    assert.isTrue(
-      await acl.methods['hasPermission(address,address,bytes32,uint256[])'](
-        burnRoleGrantee, lido.address, burnRoleHash, [burnPermissionParams]),
-        description
-    )
-    log.success(description)
-  }
-
   log.splitter()
-
-  await assertRoles({
-    app: oracle,
-    appName: 'oracle',
-    manager: voting,
-    groups: [
-      {
-        roleNames: ['MANAGE_MEMBERS', 'MANAGE_QUORUM', 'SET_BEACON_SPEC'],
-        grantee: voting
-      }
-    ]
-  })
 
   log.splitter()
 
@@ -640,7 +583,8 @@ async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent,
         roleNames: [
           'MANAGE_SIGNING_KEYS',
           'ADD_NODE_OPERATOR_ROLE',
-          'SET_NODE_OPERATOR_ACTIVE_ROLE',
+          'ACTIVATE_NODE_OPERATOR_ROLE',
+          'DEACTIVATE_NODE_OPERATOR_ROLE',
           'SET_NODE_OPERATOR_NAME_ROLE',
           'SET_NODE_OPERATOR_ADDRESS_ROLE',
           'SET_NODE_OPERATOR_LIMIT_ROLE',

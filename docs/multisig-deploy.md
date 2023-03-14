@@ -144,7 +144,7 @@ Reading network state from /Users/me/lido-dao/deployed-mainnet.json...
 ====================
 Saving deploy TX data for LidoTemplate to tx-01-1-deploy-template.json
 Saving deploy TX data for Lido to tx-01-2-deploy-lido-base.json
-Saving deploy TX data for LidoOracle to tx-01-3-deploy-oracle-base.json
+Saving deploy TX data for LegacyOracle to tx-01-3-deploy-oracle-base.json
 Saving deploy TX data for NodeOperatorsRegistry to tx-01-4-deploy-nops-base.json
 ====================
 Before continuing the deployment, please send all contract creation transactions
@@ -203,7 +203,7 @@ This step will verify the deployed contracts and add the following fields to the
 
 * `daoTemplateAddress` address of the `LidoTemplate` contract
 * `app:lido.baseAddress` address of the `Lido` implementation contract
-* `app:oracle.baseAddress` address of the `LidoOracle` implementation contract
+* `app:oracle.baseAddress` address of the `LegacyOracle` implementation contract
 * `app:node-operators-registry.baseAddress` address of the `NodeOperatorsRegistry` implementation contract
 
 
@@ -312,7 +312,7 @@ Run the following:
 yarn hardhat --network mainnet run ./scripts/multisig/07-create-app-repos.js
 ...
 ====================
-Saving data for createRepos transaction to tx-04-create-app-repos.json (projected gas usage is 7160587)
+Saving data for createRepos transaction to tx-07-create-app-repos.json (projected gas usage is 7160587)
 ====================
 ```
 

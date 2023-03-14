@@ -1,59 +1,32 @@
 {
+  "plugins": ["prettier", "standard"],
   "env": {
     "node": true,
-    "es2020": true
+    "es2022": true
   },
-    "extends": [
-    "standard",
-    "plugin:prettier/recommended",
-    "prettier",
-    "prettier/standard"
-  ],
-"parser": "babel-eslint",
+  "extends": ["standard", "plugin:prettier/recommended"],
   "parserOptions": {
-    "ecmaVersion": 8,
-    "sourceType": "module",
+    "ecmaVersion": 2022,
+    "sourceType": "script",
     "ecmaFeatures": {
-      "jsx": true,
-      "modules": true
+      "jsx": true
     }
   },
-    "plugins": [
-    "node",
-    "prettier",
-    "standard"
-  ],
-
   "rules": {
     "prettier/prettier": "error",
-    "max-len": ["warn", { "code": 140, "ignoreComments": true, "ignoreUrls": true }],
-    "no-undef": "warn",
-    "no-unused-vars": "warn",
-    "prefer-const": "warn",
     "camelcase": "off",
-    "eol-last": "warn",
-    "no-multiple-empty-lines": "warn",
-    "comma-dangle": "warn",
     "quotes": ["error", "single", { "avoidEscape": true, "allowTemplateLiterals": true }],
     "jsx-quotes": ["error", "prefer-single"],
-    "no-useless-escape": "off",
-    "valid-jsdoc": "error",
-    "linebreak-style": ["error", "unix"]
+    "no-restricted-modules": ["error", {
+        "name": "@aragon/contract-helpers-test/src/asserts",
+        "message": "Please use helpers/assert instead."
+    }]
   },
   "overrides": [
     {
-      "files": [
-        "./scripts/{**/,}*.js",
-        "./test/{**/,}*.js",
-        "./e2e/test/{**/,}*.js"
-      ],
+      "files": ["./scripts/{**/,}*.js", "./test/{**/,}*.js", "./e2e/test/{**/,}*.js"],
       "env": {
         "mocha": true
-      },
-      "globals": {
-        "artifacts": "readonly",
-        "contract": "readonly",
-        "web3": "readonly"
       }
     }
   ]

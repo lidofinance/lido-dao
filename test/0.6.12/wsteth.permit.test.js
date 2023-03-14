@@ -1,7 +1,10 @@
+const { artifacts, contract } = require('hardhat')
 const crypto = require('crypto')
-const { ACCOUNTS_AND_KEYS, MAX_UINT256, ZERO_ADDRESS } = require('./helpers/constants')
-const { expectRevert, hexStringFromBuffer } = require('./helpers')
-const { signPermit, signTransferAuthorization, permitTypeHash, makeDomainSeparator } = require('./helpers/permit_helpers')
+const { expect } = require('chai')
+const { expectRevert } = require('@openzeppelin/test-helpers')
+const { ACCOUNTS_AND_KEYS, MAX_UINT256, ZERO_ADDRESS } = require('../helpers/constants')
+const { hexStringFromBuffer } = require('../helpers/utils')
+const { signPermit, signTransferAuthorization, makeDomainSeparator } = require('./helpers/permit_helpers')
 
 const WstETH = artifacts.require('WstETHMock')
 const StETH = artifacts.require('StETHMockERC20')
@@ -29,12 +32,12 @@ contract('WstETH.permit', function ([deployer, ...accounts]) {
       spender: bob.address,
       value: 7e6,
       nonce: 0,
-      deadline: MAX_UINT256
+      deadline: MAX_UINT256,
     }
 
     beforeEach(async () => {
       await wsteth.mint(permitParams.owner, initialBalance, {
-        from: deployer
+        from: deployer,
       })
     })
 
@@ -118,7 +121,7 @@ contract('WstETH.permit', function ([deployer, ...accounts]) {
       // wrong person
       await expectRevert(
         wsteth.permit(owner, spender, value, deadline, v, r, s, {
-          from: charlie
+          from: charlie,
         }),
         'ERC20Permit: invalid signature'
       )
@@ -134,7 +137,7 @@ contract('WstETH.permit', function ([deployer, ...accounts]) {
       // try to submit the permit that is expired
       await expectRevert(
         wsteth.permit(owner, spender, value, deadline, v, r, s, {
-          from: charlie
+          from: charlie,
         }),
         'ERC20Permit: expired deadline'
       )
@@ -151,7 +154,7 @@ contract('WstETH.permit', function ([deployer, ...accounts]) {
       // try to submit the permit
       await expectRevert(
         wsteth.permit(owner, spender, value, deadline, v, r, s, {
-          from: charlie
+          from: charlie,
         }),
         'ERC20Permit: invalid signature'
       )
@@ -168,7 +171,7 @@ contract('WstETH.permit', function ([deployer, ...accounts]) {
       // try to submit the permit again
       await expectRevert(
         wsteth.permit(owner, spender, value, deadline, v, r, s, {
-          from: charlie
+          from: charlie,
         }),
         'ERC20Permit: invalid signature'
       )
@@ -203,7 +206,7 @@ contract('WstETH.permit', function ([deployer, ...accounts]) {
       // try to submit the permit with invalid approval parameters
       await expectRevert(
         wsteth.permit(owner, spender, value, deadline, v, r, s, {
-          from: charlie
+          from: charlie,
         }),
         'approve to the zero address'
       )
@@ -214,12 +217,21 @@ contract('WstETH.permit', function ([deployer, ...accounts]) {
       // create a signed permit for a transfer
       const validAfter = 0
       const nonce = hexStringFromBuffer(crypto.randomBytes(32))
-      const { v, r, s } = signTransferAuthorization(from, to, value, validAfter, validBefore, nonce, domainSeparator, alice.key)
+      const { v, r, s } = signTransferAuthorization(
+        from,
+        to,
+        value,
+        validAfter,
+        validBefore,
+        nonce,
+        domainSeparator,
+        alice.key
+      )
 
       // try to submit the transfer permit
       await expectRevert(
         wsteth.permit(from, to, value, validBefore, v, r, s, {
-          from: charlie
+          from: charlie,
         }),
         'ERC20Permit: invalid signature'
       )

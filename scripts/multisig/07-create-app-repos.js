@@ -13,7 +13,6 @@ const REQUIRED_NET_STATE = [
   'multisigAddress',
   'daoTemplateAddress',
   `app:${APP_NAMES.LIDO}`,
-  `app:${APP_NAMES.ORACLE}`,
   `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`
 ]
 
@@ -37,10 +36,9 @@ async function createAppRepos({ web3, artifacts }) {
   logSplitter()
 
   const lidoAppState = state[`app:${APP_NAMES.LIDO}`]
-  const oracleAppState = state[`app:${APP_NAMES.ORACLE}`]
   const nodeOperatorsAppState = state[`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`]
 
-  await saveCallTxData(`createRepos`, template, 'createRepos', `tx-04-create-app-repos.json`, {
+  await saveCallTxData(`createRepos`, template, 'createRepos', `tx-07-create-app-repos.json`, {
     arguments: [
       [1, 0, 0],
       // Lido app
@@ -49,9 +47,6 @@ async function createAppRepos({ web3, artifacts }) {
       // NodeOperatorsRegistry app
       nodeOperatorsAppState.baseAddress,
       nodeOperatorsAppState.contentURI,
-      // LidoOracle app
-      oracleAppState.baseAddress,
-      oracleAppState.contentURI
     ],
     from: state.multisigAddress
   })
