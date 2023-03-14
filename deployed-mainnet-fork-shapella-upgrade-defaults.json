@@ -17,7 +17,7 @@
     "proxyAddress": "0x442af784A788A5bd6F42A01Ebe9F287a871243fb"
   },
   "app:node-operators-registry": {
-    "proxyAddress": "0x55032650b14df07b85bF18A3a3eC8E0Af2e028d5",
+    "proxyAddress": "0x55032650b14df07b85bF18A3a3eC8E0Af2e028d5"
   },
   "nodeOperatorsRegistry": {
     "parameters": {
