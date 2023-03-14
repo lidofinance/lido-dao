@@ -24,4 +24,10 @@ contract ERC721ReceiverMock is IERC721Receiver  {
         }
         return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
     }
+
+      receive() external payable {
+    if (!doesAcceptTokens) {
+            revert(ERROR_MSG);
+        }
+        }
 }
