@@ -19,7 +19,7 @@ abstract contract WithdrawalQueueBase {
     /// @notice precision base for share rate and discounting factor values in the contract
     uint256 internal constant E27_PRECISION_BASE = 1e27;
     /// @dev maximal length of the batches array that oracle should deliver on finalization
-    uint256 internal constant MAX_BATCHES_LENGTH = 36;
+    uint256 public constant MAX_BATCHES_LENGTH = 36;
     /// @dev return value for the `find...` methods in case of no result
     uint256 internal constant NOT_FOUND = 0;
 

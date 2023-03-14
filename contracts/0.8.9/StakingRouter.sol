@@ -77,8 +77,10 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         /// @notice name of staking module
         string name;
         /// @notice block.timestamp of the last deposit of the staking module
+        /// @dev NB: lastDepositAt gets updated even if the deposit value was 0 and no actual deposit happened
         uint64 lastDepositAt;
         /// @notice block.number of the last deposit of the staking module
+        /// @dev NB: lastDepositBlock gets updated even if the deposit value was 0 and no actual deposit happened
         uint256 lastDepositBlock;
         /// @notice number of exited validators
         uint256 exitedValidatorsCount;
