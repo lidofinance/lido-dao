@@ -205,6 +205,17 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
       assert.equals(stakingModuleSummary.depositableValidatorsCount, stateTotalVetted)
     })
 
+    it('TargetLimit', async () => {
+      // affects on obtain deposit data
+      // should be called with StakingRouter.updateTargetValidatorsLimits() -> NOR.updateTargetValidatorsLimits()
+      // todo:
+      // nor.getNodeOperatorSummary(Operator1.id)
+      // — check default is zero
+      // — set
+      // — check it was setted
+      // — check depositable keys changed
+    })
+
     it('Obtain deposit data', async () => {
       const [curated] = await stakingRouter.getStakingModules()
 
@@ -261,6 +272,8 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
         assert.equals(regCall.value, ETH(32))
       }
 
+      // TODO: check that TargetLimit affected deposited value
+
       const stakingModuleSummary = await nor.getStakingModuleSummary()
       assert.equals(stakingModuleSummary.totalDepositedValidators, stateTotaldeposited)
       assert.equals(stakingModuleSummary.depositableValidatorsCount, stateTotalVetted - stateTotaldeposited)
@@ -282,5 +295,66 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
       assert.equal(distribution.recipients[0], rewards1)
       assert.equal(distribution.recipients[1], rewards2)
     })
+
+    // TODO: Exited validators
+    //       AccountingOracle.submitReport() -> StakingRouter...() — only for memory
+    //                 [optional — if can be mocked] assert ... -> Lido...() -> NOR.onRewardsMinted() was called
+    //
+    //       AccountingOracle.submitReportExtraDataList()
+    //           -> StakingRouter.reportStakingModuleExitedValidatorsCountByNodeOperator()
+    //           -> StakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator()
+    //           -> NOR.updateExitedValidatorsCount()
+    //                 assert exited validators count
+    //                 assert rewards was transfered with NOR._distributeRewards()
+    //                 assert rewards was transfered to operators for his exited validators
+    //                 assert TargetLimit was changed to zero if any key stucked. ... -> NOR._updateSummaryMaxValidatorsCount()
+
+    // TODO: ... -> StakingRouter.onValidatorsCountsByNodeOperatorReportingFinished() -> NOR.onExitedAndStuckValidatorsCountsUpdated()
+    //              assert rewards was transfered to exited validators
+
+    // TODO: StakingRouter.unsafeSetExitedValidatorsCount() -> NOR.onExitedAndStuckValidatorsCountsUpdated()
+
+    // TODO: TargetLimit allows to deposit after exit
+
+    // TODO: disable TargetLimit and try to deposit again
+
+    // TODO: NOR.removeSigningKey()
+    //       NOR.removeSigningKeys()
+    //           assert that staking limit was changed
+    //           check if we need to assert target limit
+
+    // TODO: NOR....()
+    //       Deactivate Operator that was in use before
+    //       Make another deposit to check that deactivated node operator will not get deposit
+    //       Assert rewards not distributed to disabled operator
+
+    // TODO: NOR.activateNodeOperator()
+    //           Activate Operator again and it will be used in deposit flow
+
+    // TODO: StakingRouter.setWithdrawalCredentials() -> NOR.onWithdrawalCredentialsChanged()
+    //          assert depositable of all operators should be zero
+    //          assert totalValidatorsCount of all operators == deposited validators
+    //          assert NOR.getStakingModuleSummary() — depositable = 0, exited = same, deposited = same
+
+    // TODO: manipulate with stuck validators
+    //       this value can come from from two sources:
+    //            AccountingOracle.submitReportExtraDataList()
+    //            NOR.unsafeUpdateValidatorsCount()
+    //       assert that NOR.onExitedAndStuckValidatorsCountsUpdated() should be called
+
+    // TODO: [optional] unsafeUpdateValidatorsCount
+
+    // TODO: [do more research] Refuneded keys
+    //           1. Operator already have stucked keys
+    //           2. Set refunded via StakingRouter...() -> NOR.updateRefundedValidatorsCount() with refunded == stuckKeys
+    //           3. Wait for half of penalty delay and check that penalty still with NOR.getRewardsDistribution() and Oracle report and obtain deposit data
+    //           4. Wait for end of penalty delay and check that it is gone
+    //         assert NOR.getStuckPenaltyDelay()
+    //         assert NOR.setStuckPenaltyDelay()
+    //         assert penalty affects on TargetLimit
+
+    // TODO: [optional] add NOR.getNonce() somewhere
+
+    // TODO: [optional] assert NOR._getSigningKeysAllocationData() if it is possible
   })
 })
