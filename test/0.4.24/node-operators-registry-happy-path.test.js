@@ -17,7 +17,6 @@ const NODE_OPERATORS = [
     name: 'Node operator #1',
     rewardAddressInitial: ADDRESS_1,
     totalSigningKeysCount: 10,
-    depositedSigningKeysCount: 5,
     exitedSigningKeysCount: 1,
     vettedSigningKeysCount: 6,
     stuckValidatorsCount: 0,
@@ -30,7 +29,6 @@ const NODE_OPERATORS = [
     name: 'Node operator #2',
     rewardAddressInitial: ADDRESS_2,
     totalSigningKeysCount: 15,
-    depositedSigningKeysCount: 7,
     exitedSigningKeysCount: 0,
     vettedSigningKeysCount: 10,
     stuckValidatorsCount: 0,
@@ -43,7 +41,6 @@ const NODE_OPERATORS = [
     name: 'Node operator #3',
     rewardAddressInitial: ADDRESS_3,
     totalSigningKeysCount: 10,
-    depositedSigningKeysCount: 0,
     exitedSigningKeysCount: 0,
     vettedSigningKeysCount: 5,
     stuckValidatorsCount: 0,
@@ -53,7 +50,7 @@ const NODE_OPERATORS = [
 ]
 
 const Operator1 = NODE_OPERATORS[0]
-// const Operator2 = NODE_OPERATORS[1]
+const Operator2 = NODE_OPERATORS[1]
 const Operator3 = NODE_OPERATORS[2]
 
 const forEachSync = async (arr, cb) => {
@@ -211,7 +208,8 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
     it('Obtain deposit data', async () => {
       const [curated] = await stakingRouter.getStakingModules()
 
-      await web3.eth.sendTransaction({ to: lido.address, from: user1, value: ETH(32) })
+      const stakesDeposited = 3
+      await web3.eth.sendTransaction({ to: lido.address, from: user1, value: ETH(32 * stakesDeposited) })
 
       const block = await web3.eth.getBlock('latest')
       const keysOpIndex = await nor.getKeysOpIndex()
@@ -228,21 +226,61 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
       // DSM.depositBufferedEther() -> Lido.deposit() -> StakingRouter.deposit() -> Module.obtainDepositData()
       await dsm.depositBufferedEther(block.number, block.hash, depositRoot, curated.id, keysOpIndex, '0x', signatures)
 
-      stateTotaldeposited += 1
+      stateTotaldeposited += stakesDeposited
 
       const depositCallCount = await depositContract.totalCalls()
-      assert.equals(depositCallCount, 1)
+      assert.equals(depositCallCount, stakesDeposited)
 
-      const regCall = await depositContract.calls.call(0)
-      const { key, depositSignature } = await nor.getSigningKey(Operator1.id, 0)
-      assert.equal(regCall.pubkey, key)
-      assert.equal(regCall.signature, depositSignature)
-      assert.equal(regCall.withdrawal_credentials, withdrawalCredentials)
-      assert.equals(regCall.value, ETH(32))
+      {
+        // Deposit call #1
+        const regCall = await depositContract.calls.call(0)
+        const { key, depositSignature } = await nor.getSigningKey(Operator1.id, 0)
+        assert.equal(regCall.pubkey, key)
+        assert.equal(regCall.signature, depositSignature)
+        assert.equal(regCall.withdrawal_credentials, withdrawalCredentials)
+        assert.equals(regCall.value, ETH(32))
+      }
+
+      {
+        // Deposit call #2
+        const regCall = await depositContract.calls.call(1)
+        const { key, depositSignature } = await nor.getSigningKey(Operator1.id, 1)
+        assert.equal(regCall.pubkey, key)
+        assert.equal(regCall.signature, depositSignature)
+        assert.equal(regCall.withdrawal_credentials, withdrawalCredentials)
+        assert.equals(regCall.value, ETH(32))
+      }
+
+      {
+        // Deposit call #3
+        const regCall = await depositContract.calls.call(2)
+        const { key, depositSignature } = await nor.getSigningKey(Operator2.id, 0)
+        assert.equal(regCall.pubkey, key)
+        assert.equal(regCall.signature, depositSignature)
+        assert.equal(regCall.withdrawal_credentials, withdrawalCredentials)
+        assert.equals(regCall.value, ETH(32))
+      }
 
       const stakingModuleSummary = await nor.getStakingModuleSummary()
       assert.equals(stakingModuleSummary.totalDepositedValidators, stateTotaldeposited)
       assert.equals(stakingModuleSummary.depositableValidatorsCount, stateTotalVetted - stateTotaldeposited)
+
+      const summaryOperator1 = await nor.getNodeOperatorSummary(Operator1.id)
+      assert.equals(summaryOperator1.totalDepositedValidators, 2)
+      assert.equals(summaryOperator1.depositableValidatorsCount, Operator1.vettedSigningKeysCount - 2)
+
+      const summaryOperator2 = await nor.getNodeOperatorSummary(Operator2.id)
+      assert.equals(summaryOperator2.totalDepositedValidators, 1)
+      assert.equals(summaryOperator2.depositableValidatorsCount, Operator2.vettedSigningKeysCount - 1)
+    })
+
+    it('Rewards distribution', async () => {
+      const totalRewardsShare = web3.utils.toWei('15')
+      const distribution = await nor.getRewardsDistribution(totalRewardsShare)
+      assert.equal(distribution.shares[0], web3.utils.toWei('10'))
+      assert.equal(distribution.shares[1], web3.utils.toWei('5'))
+      assert.equal(distribution.recipients[0], rewards1)
+      assert.equal(distribution.recipients[1], rewards2)
     })
   })
 })
