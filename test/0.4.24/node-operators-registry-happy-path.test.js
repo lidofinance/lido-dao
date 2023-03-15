@@ -5,7 +5,7 @@ const signingKeys = require('../helpers/signing-keys')
 const { ETH } = require('../helpers/utils')
 const { DSMAttestMessage } = require('../helpers/signatures')
 const { deployProtocol } = require('../helpers/protocol')
-const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
+const { setupNodeOperatorsRegistry, NodeOperatorsRegistry } = require('../helpers/staking-modules')
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -205,21 +205,44 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
       assert.equals(stakingModuleSummary.depositableValidatorsCount, stateTotalVetted)
     })
 
-    it('TargetLimit', async () => {
-      // affects on obtain deposit data
-      // should be called with StakingRouter.updateTargetValidatorsLimits() -> NOR.updateTargetValidatorsLimits()
-      // todo:
-      // nor.getNodeOperatorSummary(Operator1.id)
-      // — check default is zero
-      // — set
-      // — check it was setted
-      // — check depositable keys changed
+    it('Set target limit', async () => {
+      const [curated] = await stakingRouter.getStakingModules()
+      const operatorId = Operator2.id
+
+      let summary = await nor.getNodeOperatorSummary(operatorId)
+      assert.equals(summary.isTargetLimitActive, false)
+      assert.equals(summary.targetValidatorsCount, 0)
+      assert.equals(summary.depositableValidatorsCount, 10)
+
+      // StakingRouter.updateTargetValidatorsLimits() -> NOR.updateTargetValidatorsLimits()
+      const tx = await stakingRouter.updateTargetValidatorsLimits(curated.id, operatorId, true, 1, { from: voting })
+
+      summary = await nor.getNodeOperatorSummary(operatorId)
+      assert.equals(summary.isTargetLimitActive, true)
+      assert.equals(summary.targetValidatorsCount, 1)
+      assert.equals(summary.depositableValidatorsCount, 1)
+
+      assert.emits(
+        tx,
+        'TargetValidatorsCountChanged',
+        { nodeOperatorId: operatorId, targetValidatorsCount: 1 },
+        { abi: NodeOperatorsRegistry._json.abi }
+      )
     })
+
+    async function assertDepositCall(operatorId, callIdx, keyIdx) {
+      const regCall = await depositContract.calls.call(callIdx)
+      const { key, depositSignature } = await nor.getSigningKey(operatorId, keyIdx)
+      assert.equal(regCall.pubkey, key)
+      assert.equal(regCall.signature, depositSignature)
+      assert.equal(regCall.withdrawal_credentials, withdrawalCredentials)
+      assert.equals(regCall.value, ETH(32))
+    }
 
     it('Obtain deposit data', async () => {
       const [curated] = await stakingRouter.getStakingModules()
 
-      const stakesDeposited = 3
+      const stakesDeposited = 4
       await web3.eth.sendTransaction({ to: lido.address, from: user1, value: ETH(32 * stakesDeposited) })
 
       const block = await web3.eth.getBlock('latest')
@@ -242,55 +265,29 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
       const depositCallCount = await depositContract.totalCalls()
       assert.equals(depositCallCount, stakesDeposited)
 
-      {
-        // Deposit call #1
-        const regCall = await depositContract.calls.call(0)
-        const { key, depositSignature } = await nor.getSigningKey(Operator1.id, 0)
-        assert.equal(regCall.pubkey, key)
-        assert.equal(regCall.signature, depositSignature)
-        assert.equal(regCall.withdrawal_credentials, withdrawalCredentials)
-        assert.equals(regCall.value, ETH(32))
-      }
-
-      {
-        // Deposit call #2
-        const regCall = await depositContract.calls.call(1)
-        const { key, depositSignature } = await nor.getSigningKey(Operator1.id, 1)
-        assert.equal(regCall.pubkey, key)
-        assert.equal(regCall.signature, depositSignature)
-        assert.equal(regCall.withdrawal_credentials, withdrawalCredentials)
-        assert.equals(regCall.value, ETH(32))
-      }
-
-      {
-        // Deposit call #3
-        const regCall = await depositContract.calls.call(2)
-        const { key, depositSignature } = await nor.getSigningKey(Operator2.id, 0)
-        assert.equal(regCall.pubkey, key)
-        assert.equal(regCall.signature, depositSignature)
-        assert.equal(regCall.withdrawal_credentials, withdrawalCredentials)
-        assert.equals(regCall.value, ETH(32))
-      }
-
-      // TODO: check that TargetLimit affected deposited value
+      // Target Limit affects here, that's why operator 1 receives 3 deposits, while operator 2 got only 1
+      await assertDepositCall(Operator1.id, 0, 0)
+      await assertDepositCall(Operator1.id, 1, 1)
+      await assertDepositCall(Operator1.id, 2, 2)
+      await assertDepositCall(Operator2.id, 3, 0)
 
       const stakingModuleSummary = await nor.getStakingModuleSummary()
       assert.equals(stakingModuleSummary.totalDepositedValidators, stateTotaldeposited)
-      assert.equals(stakingModuleSummary.depositableValidatorsCount, stateTotalVetted - stateTotaldeposited)
+      assert.equals(stakingModuleSummary.depositableValidatorsCount, 3)
 
       const summaryOperator1 = await nor.getNodeOperatorSummary(Operator1.id)
-      assert.equals(summaryOperator1.totalDepositedValidators, 2)
-      assert.equals(summaryOperator1.depositableValidatorsCount, Operator1.vettedSigningKeysCount - 2)
+      assert.equals(summaryOperator1.totalDepositedValidators, 3)
+      assert.equals(summaryOperator1.depositableValidatorsCount, 3)
 
       const summaryOperator2 = await nor.getNodeOperatorSummary(Operator2.id)
       assert.equals(summaryOperator2.totalDepositedValidators, 1)
-      assert.equals(summaryOperator2.depositableValidatorsCount, Operator2.vettedSigningKeysCount - 1)
+      assert.equals(summaryOperator2.depositableValidatorsCount, 0)
     })
 
     it('Rewards distribution', async () => {
-      const totalRewardsShare = web3.utils.toWei('15')
+      const totalRewardsShare = web3.utils.toWei('20')
       const distribution = await nor.getRewardsDistribution(totalRewardsShare)
-      assert.equal(distribution.shares[0], web3.utils.toWei('10'))
+      assert.equal(distribution.shares[0], web3.utils.toWei('15'))
       assert.equal(distribution.shares[1], web3.utils.toWei('5'))
       assert.equal(distribution.recipients[0], rewards1)
       assert.equal(distribution.recipients[1], rewards2)
