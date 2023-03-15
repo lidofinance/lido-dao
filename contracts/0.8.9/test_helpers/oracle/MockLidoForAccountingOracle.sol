@@ -4,8 +4,21 @@ pragma solidity 0.8.9;
 
 import { ILido } from "../../oracle/AccountingOracle.sol";
 
+interface IPostTokenRebaseReceiver {
+    function handlePostTokenRebase(
+        uint256 _reportTimestamp,
+        uint256 _timeElapsed,
+        uint256 _preTotalShares,
+        uint256 _preTotalEther,
+        uint256 _postTotalShares,
+        uint256 _postTotalEther,
+        uint256 _sharesMintedAsFees
+    ) external;
+}
 
 contract MockLidoForAccountingOracle is ILido {
+
+    address legacyOracle;
 
     struct HandleOracleReportLastCall {
         uint256 currentReportTimestamp;
@@ -24,6 +37,10 @@ contract MockLidoForAccountingOracle is ILido {
 
     function getLastCall_handleOracleReport() external view returns (HandleOracleReportLastCall memory) {
         return _handleOracleReportLastCall;
+    }
+
+    function setLegacyOracle(address addr) external {
+        legacyOracle = addr;
     }
 
     ///
@@ -51,5 +68,9 @@ contract MockLidoForAccountingOracle is ILido {
         _handleOracleReportLastCall.withdrawalFinalizationBatches = withdrawalFinalizationBatches;
         _handleOracleReportLastCall.simulatedShareRate = simulatedShareRate;
         ++_handleOracleReportLastCall.callCount;
+
+        if(legacyOracle != address(0)){
+            IPostTokenRebaseReceiver(legacyOracle).handlePostTokenRebase(currentReportTimestamp,secondsElapsedSinceLastReport,0,0,1,1,1);
+        }
     }
 }

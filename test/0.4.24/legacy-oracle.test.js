@@ -23,6 +23,7 @@ const {
   ZERO_HASH,
   CONSENSUS_VERSION,
   computeTimestampAtEpoch,
+  SECONDS_PER_FRAME,
 } = require('../0.8.9/oracle/accounting-oracle-deploy.test')
 
 const getReportFields = (override = {}) => ({
@@ -204,6 +205,8 @@ contract('LegacyOracle', ([admin, stranger]) => {
       })
       const { consensus, oracle } = deployedInfra
       await initAccountingOracle({ admin, oracle, consensus, shouldMigrateLegacyOracle: true })
+      await deployedInfra.lido.setLegacyOracle(proxy.address)
+      await proxyAsOldImplementation.setLido(deployedInfra.lido.address)
     })
 
     it('upgrade implementation', async () => {
@@ -212,17 +215,21 @@ contract('LegacyOracle', ([admin, stranger]) => {
       await proxyAsNewImplementation.finalizeUpgrade_v4(deployedInfra.oracle.address)
     })
 
-    it('submit report', async () => {
-      await deployedInfra.consensus.advanceTimeToNextFrameStart()
+    it('first report since migration', async () => {
       const { refSlot } = await deployedInfra.consensus.getCurrentFrame()
       const reportFields = getReportFields({
         refSlot: +refSlot,
       })
+
       const reportItems = getAccountingReportDataItems(reportFields)
       const reportHash = calcAccountingReportDataHash(reportItems)
       await deployedInfra.consensus.addMember(admin, 1, { from: admin })
       await deployedInfra.consensus.submitReport(refSlot, reportHash, CONSENSUS_VERSION, { from: admin })
       const oracleVersion = +(await deployedInfra.oracle.getContractVersion())
+
+      // first report since migration has off timeElapsed because lastProcessingRefSlot is calculated per legacy frame ref
+      const timeElapsed = (+refSlot - +(await deployedInfra.oracle.getLastProcessingRefSlot())) * SECONDS_PER_SLOT
+
       const tx = await deployedInfra.oracle.submitReportData(reportItems, oracleVersion, { from: admin })
 
       const epochId = Math.floor((+refSlot + 1) / SLOTS_PER_EPOCH)
@@ -236,12 +243,29 @@ contract('LegacyOracle', ([admin, stranger]) => {
         },
         { abi: LegacyOracleAbi }
       )
+      assert.emits(
+        tx,
+        'PostTotalShares',
+        {
+          postTotalPooledEther: 1,
+          preTotalPooledEther: 0,
+          timeElapsed,
+          totalShares: 1,
+        },
+        { abi: LegacyOracleAbi }
+      )
+
+      const lastCompletedReportDelta = await proxyAsNewImplementation.getLastCompletedReportDelta()
+      assert.equals(lastCompletedReportDelta.postTotalPooledEther, 1)
+      assert.equals(lastCompletedReportDelta.preTotalPooledEther, 0)
+      assert.equals(lastCompletedReportDelta.timeElapsed, timeElapsed)
       const completedEpoch = await proxyAsNewImplementation.getLastCompletedEpochId()
       assert.equals(completedEpoch, epochId)
     })
 
     it('time in sync with consensus', async () => {
       await deployedInfra.consensus.advanceTimeToNextFrameStart()
+
       const { frameEpochId, frameStartTime, frameEndTime } = await proxyAsNewImplementation.getCurrentFrame()
       const consensusFrame = await deployedInfra.consensus.getCurrentFrame()
       const refSlot = consensusFrame.refSlot.toNumber()
@@ -250,6 +274,38 @@ contract('LegacyOracle', ([admin, stranger]) => {
       assert.equals(frameEndTime, computeTimestampAtEpoch(+frameEpochId + EPOCHS_PER_FRAME) - 1)
     })
 
-    it.skip('handlePostTokenRebase from lido')
+    it('second report', async () => {
+      const { refSlot } = await deployedInfra.consensus.getCurrentFrame()
+      const reportFields = getReportFields({
+        refSlot: +refSlot,
+      })
+      const reportItems = getAccountingReportDataItems(reportFields)
+      const reportHash = calcAccountingReportDataHash(reportItems)
+      await deployedInfra.consensus.submitReport(refSlot, reportHash, CONSENSUS_VERSION, { from: admin })
+      const oracleVersion = +(await deployedInfra.oracle.getContractVersion())
+      const tx = await deployedInfra.oracle.submitReportData(reportItems, oracleVersion, { from: admin })
+      const epochId = Math.floor((+refSlot + 1) / SLOTS_PER_EPOCH)
+      assert.emits(
+        tx,
+        'Completed',
+        {
+          epochId,
+          beaconBalance: web3.utils.toWei(reportFields.clBalanceGwei, 'gwei'),
+          beaconValidators: reportFields.numValidators,
+        },
+        { abi: LegacyOracleAbi }
+      )
+      assert.emits(
+        tx,
+        'PostTotalShares',
+        {
+          postTotalPooledEther: 1,
+          preTotalPooledEther: 0,
+          timeElapsed: SECONDS_PER_FRAME,
+          totalShares: 1,
+        },
+        { abi: LegacyOracleAbi }
+      )
+    })
   })
 })
