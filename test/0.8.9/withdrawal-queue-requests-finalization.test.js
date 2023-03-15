@@ -57,6 +57,11 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
 
     steth = deployed.steth
     withdrawalQueue = deployed.withdrawalQueue
+    withdrawalQueue.requestWithdrawalsWithResults = async (...args) => {
+      const result = await withdrawalQueue.requestWithdrawals.call(...args)
+      await withdrawalQueue.requestWithdrawals(...args)
+      return result
+    }
 
     await steth.mintShares(user, e18(10))
     await steth.approve(withdrawalQueue.address, StETH(10), { from: user })
@@ -72,9 +77,6 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
   })
 
   context('calculateFinalizationBatches', () => {
-    afterEach(async () => {
-      await snapshot.rollback()
-    })
     it('reverts on invalid state', async () => {
       await assert.reverts(
         withdrawalQueue.calculateFinalizationBatches(shareRate(300), 100000, 1000, [
@@ -92,10 +94,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
     })
 
     it('works correctly on multiple calls', async () => {
-      const [requestId1, requestId2] = await withdrawalQueue.requestWithdrawals.call([ETH(1), ETH(1)], user, {
-        from: user,
-      })
-      await withdrawalQueue.requestWithdrawals([ETH(1), ETH(1)], user, {
+      const [requestId1, requestId2] = await withdrawalQueue.requestWithdrawalsWithResults([ETH(1), ETH(1)], user, {
         from: user,
       })
       const calculatedBatches1 = await withdrawalQueue.calculateFinalizationBatches(shareRate(1), 10000000000, 1, [
@@ -122,10 +121,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
     })
 
     it('stops on maxTimestamp', async () => {
-      const [requestId1] = await withdrawalQueue.requestWithdrawals.call([ETH(1)], user, {
-        from: user,
-      })
-      await withdrawalQueue.requestWithdrawals([ETH(1)], user, {
+      const [requestId1] = await withdrawalQueue.requestWithdrawalsWithResults([ETH(1)], user, {
         from: user,
       })
       const [status] = await withdrawalQueue.getWithdrawalStatus([requestId1])

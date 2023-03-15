@@ -13,7 +13,7 @@ const { deployWithdrawalQueue } = require('./withdrawal-queue-deploy.test')
 
 contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, oracle]) => {
   let withdrawalQueue, steth, wsteth, normalizedShareRate
-
+  const ALLOWED_ERROR_WEI = 100
   const snapshot = new EvmSnapshot(ethers.provider)
 
   const currentRate = async () =>
@@ -34,7 +34,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     withdrawalQueue = deployed.withdrawalQueue
 
     await steth.setTotalPooledEther(ETH(600))
-    // we need 1 ETH additionally to pay gas on finalization because coverage ignores gasPrice=0
+    // we need 1 ETH additionally to pay gas on finalization because solidity-coverage ignores gasPrice=0
     await setBalance(steth.address, ETH(600 + 1))
     await steth.mintShares(user, shares(1))
     await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
@@ -365,7 +365,6 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     const amount = bn(ETH(300))
 
     beforeEach('Enqueue a request', async () => {
-      await snapshot.rollback()
       await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
     })
 
@@ -626,10 +625,9 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
 
       const balanceBefore = bn(await ethers.provider.getBalance(owner))
 
-      const tx = await withdrawalQueue.claimWithdrawal(1, { from: owner })
+      await withdrawalQueue.claimWithdrawal(1, { from: owner, gasPrice: 0 })
 
-      // tx.receipt.gasUsed is a workaround for coverage, because it ignores gasPrice=0
-      assert.almostEqual(await ethers.provider.getBalance(owner), balanceBefore.add(bn(amount)), tx.receipt.gasUsed)
+      assert.equals(await ethers.provider.getBalance(owner), balanceBefore.add(bn(amount)))
     })
 
     it('One cant claim not finalized or not existed request', async () => {
@@ -669,12 +667,11 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       const balanceBefore = bn(await ethers.provider.getBalance(owner))
       assert.equals(await withdrawalQueue.getLockedEtherAmount(), batch.ethToLock)
 
-      const tx = await withdrawalQueue.claimWithdrawal(1, { from: owner }).catch()
+      await withdrawalQueue.claimWithdrawal(1, { from: owner, gasPrice: 0 })
 
       assert.equals(await withdrawalQueue.getLockedEtherAmount(), ETH(0))
 
-      // tx.receipt.gasUsed is a workaround for coverage, because it ignores gasPrice=0
-      assert.almostEqual(bn(await ethers.provider.getBalance(owner)).sub(balanceBefore), ETH(150), tx.receipt.gasUsed)
+      assert.almostEqual(bn(await ethers.provider.getBalance(owner)).sub(balanceBefore), ETH(150), ALLOWED_ERROR_WEI)
     })
 
     it('One can claim a lot of withdrawals with different discounts', async () => {
@@ -723,9 +720,8 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       await withdrawalQueue.finalize([secondRequestId], normalizedShareRate, { from: steth.address, value: ETH(30) })
 
       const balanceBefore = bn(await ethers.provider.getBalance(owner))
-      const tx = await withdrawalQueue.claimWithdrawals([1, 2], [1, 1], { from: owner, gasPrice: 0 })
-      // tx.receipt.gasUsed is a workaround for coverage, because it ignores gasPrice=0
-      assert.almostEqual(await ethers.provider.getBalance(owner), balanceBefore.add(bn(ETH(30))), tx.receipt.gasUsed)
+      await withdrawalQueue.claimWithdrawals([1, 2], [1, 1], { from: owner, gasPrice: 0 })
+      assert.almostEqual(await ethers.provider.getBalance(owner), balanceBefore.add(bn(ETH(30))), ALLOWED_ERROR_WEI * 2)
     })
   })
 
@@ -736,7 +732,6 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     let requestIds
 
     beforeEach(async () => {
-      await snapshot.rollback()
       await withdrawalQueue.requestWithdrawals(requestsAmounts, user, { from: user })
       requestIds = await withdrawalQueue.getWithdrawalRequests(user, { from: user })
     })
