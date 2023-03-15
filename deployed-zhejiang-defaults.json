@@ -18,7 +18,7 @@
       "depositContractAddress": "0x4242424242424242424242424242424242424242",
       "slotsPerEpoch": 32,
       "secondsPerSlot": 12,
-      "genesisTime": 1675263480
+      "genesisTime": 1675263600
     },
     "fee": {
       "totalPercent": 10,

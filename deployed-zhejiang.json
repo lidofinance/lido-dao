@@ -19,7 +19,7 @@
       "depositContractAddress": "0x4242424242424242424242424242424242424242",
       "slotsPerEpoch": 32,
       "secondsPerSlot": 12,
-      "genesisTime": 1675263480
+      "genesisTime": 1675263600
     },
     "fee": {
       "totalPercent": 10,
@@ -79,15 +79,15 @@
       "epochsPerFrame": 12
     },
     "contract": "HashConsensus",
-    "address": "0x9ECCba8125B9145E6e5a8E2C757907BA75946A0F",
+    "address": "0xA15B17AAc61173FC6372490e19f66bd76751D1D9",
     "constructorArgs": [
       32,
       12,
-      1675263480,
+      1675263600,
       12,
       10,
       "0xa5F1d7D49F581136Cf6e58B32cBE9a2039C48bA1",
-      "0x3FD30E8360e2E637be3428fB78A3d8D0ad157197"
+      "0xE5C709772a7E05E74bE2Db3C4Af024F329539604"
     ]
   },
   "accountingOracle": {
@@ -97,14 +97,14 @@
       "consensusVersion": 1
     },
     "contract": "AccountingOracle",
-    "implementation": "0x206356166D8b3939bc6bcb5b23BAA95Fee181b67",
+    "implementation": "0x6ebA1f9F44D279bfBdE2F0190303e771c4Db7192",
     "address": "0x3FD30E8360e2E637be3428fB78A3d8D0ad157197",
     "constructorArgs": [
       "0x548C1ED5C83Bdf19e567F4cd7Dd9AC4097088589",
       "0xDe82ADEd58dA35add75Ea4676239Ca169c8dCD15",
       "0x6F624478DD1F171bDC2892DF5bBc2703975CB839",
       12,
-      1675263480
+      1675263600
     ]
   },
   "hashConsensusForValidatorsExitBus": {
@@ -113,15 +113,15 @@
       "epochsPerFrame": 4
     },
     "contract": "HashConsensus",
-    "address": "0x215276833ED27A2F8Ec589Ea1EdcDe1448a2Cfe2",
+    "address": "0xD4EBb1181a6b78E7A24dbe80062571E961E0De62",
     "constructorArgs": [
       32,
       12,
-      1675263480,
+      1675263600,
       4,
       10,
       "0xa5F1d7D49F581136Cf6e58B32cBE9a2039C48bA1",
-      "0x64E79C2E3A112e9CDc055e64afba9f1a8f0aB1Ef"
+      "0x8CA37502Ae491038a8EB12b039c00E6c5770Ac2e"
     ]
   },
   "validatorsExitBusOracle": {
@@ -129,11 +129,11 @@
       "consensusVersion": 1
     },
     "contract": "ValidatorsExitBusOracle",
-    "implementation": "0xeBBD513381cD5c40CcdEC52Cb093255de48002eB",
+    "implementation": "0x3Bf8f841B3Ed98F88b10A61e5407d0b269d844a6",
     "address": "0x64E79C2E3A112e9CDc055e64afba9f1a8f0aB1Ef",
     "constructorArgs": [
       12,
-      1675263480,
+      1675263600,
       "0x548C1ED5C83Bdf19e567F4cd7Dd9AC4097088589"
     ]
   },
