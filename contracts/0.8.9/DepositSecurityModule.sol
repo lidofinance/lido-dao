@@ -378,13 +378,13 @@ contract DepositSecurityModule {
      * such attestations will be enough to reach quorum.
      */
     function canDeposit(uint256 stakingModuleId) external view returns (bool) {
-        bool isModuleRegistered = STAKING_ROUTER.hasStakingModule(stakingModuleId);
+        if (!STAKING_ROUTER.hasStakingModule(stakingModuleId)) return false;
+
         bool isModuleActive = STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId);
         uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
         bool isLidoCanDeposit = LIDO.canDeposit();
         return (
-            isModuleRegistered
-            && isModuleActive
+            isModuleActive
             && quorum > 0
             && block.number - lastDepositBlock >= minDepositBlockDistance
             && isLidoCanDeposit
