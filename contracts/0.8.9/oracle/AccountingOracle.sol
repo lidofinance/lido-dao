@@ -92,6 +92,7 @@ contract AccountingOracle is BaseOracle {
     error LidoLocatorCannotBeZero();
     error AdminCannotBeZero();
     error LegacyOracleCannotBeZero();
+    error LidoCannotBeZero();
     error IncorrectOracleMigration(uint256 code);
     error SenderNotAllowed();
     error InvalidExitedValidatorsData();
@@ -154,6 +155,7 @@ contract AccountingOracle is BaseOracle {
     {
         if (lidoLocator == address(0)) revert LidoLocatorCannotBeZero();
         if (legacyOracle == address(0)) revert LegacyOracleCannotBeZero();
+        if (lido == address(0)) revert LidoCannotBeZero();
         LOCATOR = ILidoLocator(lidoLocator);
         LIDO = lido;
         LEGACY_ORACLE = legacyOracle;
