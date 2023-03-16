@@ -30,9 +30,8 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
         return maxDepositsCount;
     }
 
-    function getStakingModuleIds() external view returns (uint256[] memory stakingModuleIds) {
-        stakingModuleIds = new uint256[](1);
-        stakingModuleIds[0] = registeredStakingModuleId;
+    function hasStakingModule(uint256 _stakingModuleId) external view returns (bool) {
+        return _stakingModuleId == registeredStakingModuleId;
     }
 
     function getStakingModuleStatus(uint256) external view returns (StakingRouter.StakingModuleStatus) {

@@ -63,9 +63,11 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       assert.equals(await router.getWithdrawalCredentials(), wc)
       assert.equals(await router.getLido(), lido)
       assert.equals(await router.getStakingModulesCount(), 0)
+      assert.equals(await router.hasStakingModule(0), false)
+      assert.equals(await router.hasStakingModule(1), false)
 
       assert.equals(await router.getRoleMemberCount(DEFAULT_ADMIN_ROLE), 1)
-      assert.equals(await router.hasRole(DEFAULT_ADMIN_ROLE, admin), true)
+      assert.isTrue(await router.hasRole(DEFAULT_ADMIN_ROLE, admin))
 
       assert.equals(initialTx.logs.length, 3)
 
@@ -210,9 +212,11 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
       stakingModule = await StakingModuleMock.new({ from: deployer })
 
+      assert.equals(await router.hasStakingModule(1), false)
       await router.addStakingModule('Test module', stakingModule.address, 100, 1000, 2000, {
         from: appManager,
       })
+      assert.equals(await router.hasStakingModule(1), true)
 
       await stakingModule.setAvailableKeysCount(100, { from: deployer })
 
@@ -346,7 +350,9 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     it('staking modules limit is 32', async () => {
       for (let i = 0; i < 32; i++) {
         const stakingModule = await StakingModuleMock.new({ from: deployer })
+        assert.equals(await router.hasStakingModule(i + 1), false)
         await router.addStakingModule('Test module', stakingModule.address, 100, 100, 100, { from: appManager })
+        assert.equals(await router.hasStakingModule(i + 1), true)
       }
 
       const oneMoreStakingModule = await StakingModuleMock.new({ from: deployer })
