@@ -67,7 +67,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       assert.equals(await router.hasStakingModule(1), false)
 
       assert.equals(await router.getRoleMemberCount(DEFAULT_ADMIN_ROLE), 1)
-      assert.isTrue(await router.hasRole(DEFAULT_ADMIN_ROLE, admin))
+      assert.equals(await router.hasRole(DEFAULT_ADMIN_ROLE, admin), true)
 
       assert.equals(initialTx.logs.length, 3)
 
