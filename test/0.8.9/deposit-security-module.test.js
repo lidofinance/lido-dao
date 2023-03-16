@@ -48,7 +48,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
 
   before('deploy mock contracts', async () => {
     lidoMock = await LidoMockForDepositSecurityModule.new()
-    stakingRouterMock = await StakingRouterMockForDepositSecurityModule.new()
+    stakingRouterMock = await StakingRouterMockForDepositSecurityModule.new(STAKING_MODULE)
     depositContractMock = await DepositContractMockForDepositSecurityModule.new()
 
     depositSecurityModule = await DepositSecurityModule.new(
@@ -1041,6 +1041,26 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
 
       assert.isTrue(currentBlockNumber - lastDepositBlockNumber >= minDepositBlockDistance)
       assert.isTrue(await depositSecurityModule.canDeposit(STAKING_MODULE))
+    })
+    it('false if unknown staking module id', async () => {
+      await depositSecurityModule.addGuardian(GUARDIAN1, 1, { from: owner })
+
+      assert.equal(
+        await stakingRouterMock.getStakingModuleIsDepositsPaused(STAKING_MODULE + 1),
+        false,
+        'invariant failed: isPaused'
+      )
+      assert.isTrue((await depositSecurityModule.getGuardianQuorum()) > 0, 'invariant failed: quorum > 0')
+
+      const lastDepositBlockNumber = await web3.eth.getBlockNumber()
+      await stakingRouterMock.setStakingModuleLastDepositBlock(lastDepositBlockNumber)
+      await waitBlocks(2 * MIN_DEPOSIT_BLOCK_DISTANCE)
+
+      const currentBlockNumber = await web3.eth.getBlockNumber()
+      const minDepositBlockDistance = await depositSecurityModule.getMinDepositBlockDistance()
+
+      assert.isTrue(currentBlockNumber - lastDepositBlockNumber >= minDepositBlockDistance)
+      assert.isFalse(await depositSecurityModule.canDeposit(STAKING_MODULE + 1))
     })
     it('false if paused and quorum > 0 and currentBlock - lastDepositBlock >= minDepositBlockDistance', async () => {
       await depositSecurityModule.addGuardians([GUARDIAN1, guardian], 1, { from: owner })

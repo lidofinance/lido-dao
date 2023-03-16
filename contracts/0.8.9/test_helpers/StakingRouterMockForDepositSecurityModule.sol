@@ -15,6 +15,11 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
     StakingRouter.StakingModuleStatus private status;
     uint256 private stakingModuleNonce;
     uint256 private stakingModuleLastDepositBlock;
+    uint256 private registeredStakingModuleId;
+
+    constructor(uint256 stakingModuleId) {
+        registeredStakingModuleId = stakingModuleId;
+    }
 
     function deposit(
         uint256 maxDepositsCount,
@@ -23,6 +28,11 @@ contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
     ) external payable returns (uint256 keysCount) {
         emit StakingModuleDeposited(maxDepositsCount, uint24(stakingModuleId), depositCalldata);
         return maxDepositsCount;
+    }
+
+    function getStakingModuleIds() external view returns (uint256[] memory stakingModuleIds) {
+        stakingModuleIds = new uint256[](1);
+        stakingModuleIds[0] = registeredStakingModuleId;
     }
 
     function getStakingModuleStatus(uint256) external view returns (StakingRouter.StakingModuleStatus) {
