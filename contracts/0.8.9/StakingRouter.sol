@@ -536,6 +536,13 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     }
 
     /**
+     * @dev Returns true if staking module with the given id was registered via `addStakingModule`, false otherwise
+     */
+    function hasStakingModule(uint256 _stakingModuleId) external view returns (bool) {
+        return _getStorageStakingIndicesMapping()[_stakingModuleId] != 0;
+    }
+
+    /**
      * @dev Returns status of staking module
      */
     function getStakingModuleStatus(uint256 _stakingModuleId)

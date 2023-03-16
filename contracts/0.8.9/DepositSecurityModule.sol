@@ -26,6 +26,7 @@ interface IStakingRouter {
     function getStakingModuleIsActive(uint256 _stakingModuleId) external view returns (bool);
     function getStakingModuleNonce(uint256 _stakingModuleId) external view returns (uint256);
     function getStakingModuleLastDepositBlock(uint256 _stakingModuleId) external view returns (uint256);
+    function hasStakingModule(uint256 _stakingModuleId) external view returns (bool);
 }
 
 
@@ -377,6 +378,8 @@ contract DepositSecurityModule {
      * such attestations will be enough to reach quorum.
      */
     function canDeposit(uint256 stakingModuleId) external view returns (bool) {
+        if (!STAKING_ROUTER.hasStakingModule(stakingModuleId)) return false;
+
         bool isModuleActive = STAKING_ROUTER.getStakingModuleIsActive(stakingModuleId);
         uint256 lastDepositBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
         bool isLidoCanDeposit = LIDO.canDeposit();
