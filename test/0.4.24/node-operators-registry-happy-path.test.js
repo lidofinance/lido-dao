@@ -2,10 +2,19 @@ const { contract, web3 } = require('hardhat')
 const { assert } = require('../helpers/assert')
 
 const signingKeys = require('../helpers/signing-keys')
-const { ETH } = require('../helpers/utils')
 const { DSMAttestMessage } = require('../helpers/signatures')
 const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry, NodeOperatorsRegistry } = require('../helpers/staking-modules')
+const { e18, e27, toBN, ETH } = require('../helpers/utils')
+const {
+  getAccountingReportDataItems,
+  encodeExtraDataItems,
+  packExtraDataList,
+  calcExtraDataListHash,
+  calcAccountingReportDataHash,
+} = require('../0.8.9/oracle/accounting-oracle-deploy.test')
+
+const E9 = toBN(10).pow(toBN(9))
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -17,11 +26,7 @@ const NODE_OPERATORS = [
     name: 'Node operator #1',
     rewardAddressInitial: ADDRESS_1,
     totalSigningKeysCount: 10,
-    exitedSigningKeysCount: 1,
     vettedSigningKeysCount: 6,
-    stuckValidatorsCount: 0,
-    refundedValidatorsCount: 0,
-    stuckPenaltyEndAt: 0,
   },
   {
     id: 1,
@@ -29,11 +34,7 @@ const NODE_OPERATORS = [
     name: 'Node operator #2',
     rewardAddressInitial: ADDRESS_2,
     totalSigningKeysCount: 15,
-    exitedSigningKeysCount: 0,
     vettedSigningKeysCount: 10,
-    stuckValidatorsCount: 0,
-    refundedValidatorsCount: 0,
-    stuckPenaltyEndAt: 0,
   },
   {
     id: 2,
@@ -41,11 +42,7 @@ const NODE_OPERATORS = [
     name: 'Node operator #3',
     rewardAddressInitial: ADDRESS_3,
     totalSigningKeysCount: 10,
-    exitedSigningKeysCount: 0,
     vettedSigningKeysCount: 5,
-    stuckValidatorsCount: 0,
-    refundedValidatorsCount: 0,
-    stuckPenaltyEndAt: 0,
   },
 ]
 
@@ -60,10 +57,6 @@ const forEachSync = async (arr, cb) => {
 }
 
 contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, user1, nobody]) => {
-  // let app
-  // let locator
-  // let steth
-  // let dao
   let dsm
   let lido
   let nor
@@ -74,6 +67,20 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
   let rewardAddresses
   let guardians
   let withdrawalCredentials
+  let consensus
+  let oracle
+  let consensusVersion
+  let signers
+  let consensusMember
+
+  async function assertDepositCall(operatorId, callIdx, keyIdx) {
+    const regCall = await depositContract.calls.call(callIdx)
+    const { key, depositSignature } = await nor.getSigningKey(operatorId, keyIdx)
+    assert.equal(regCall.pubkey, key)
+    assert.equal(regCall.signature, depositSignature)
+    assert.equal(regCall.withdrawal_credentials, withdrawalCredentials)
+    assert.equals(regCall.value, ETH(32))
+  }
 
   before('deploy base app', async () => {
     const deployed = await deployProtocol({
@@ -93,28 +100,32 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
 
     rewardAddresses = [rewards1, rewards2, rewards3]
 
-    // app = deployed.dao
     lido = deployed.pool
     nor = deployed.stakingModules[0]
-    // steth = deployed.token
-    // locator = deployed.lidoLocator
     stakingRouter = deployed.stakingRouter
     depositContract = deployed.depositContract
     depositRoot = await depositContract.get_deposit_root()
     dsm = deployed.depositSecurityModule
     guardians = deployed.guardians
-    voting = deployed.voting.address
-    // treasuryAddr = deployed.treasury.address
+    voting = deployed.voting
+    consensus = deployed.consensusContract
+    oracle = deployed.oracle
+    signers = deployed.signers
+    consensusMember = signers[2].address
+
+    consensusVersion = await oracle.getConsensusVersion()
+    await consensus.removeMember(signers[4].address, 2, { from: voting.address })
+    await consensus.removeMember(signers[3].address, 1, { from: voting.address })
 
     withdrawalCredentials = '0x'.padEnd(66, '1234')
-    await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
+    await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting.address })
   })
 
   describe('Happy path', () => {
     it('Add node operator', async () => {
       await forEachSync(NODE_OPERATORS, async (operatorData, i) => {
         const initialName = `operator ${i + 1}`
-        const tx = await nor.addNodeOperator(initialName, operatorData.rewardAddressInitial, { from: voting })
+        const tx = await nor.addNodeOperator(initialName, operatorData.rewardAddressInitial, { from: voting.address })
         const expectedStakingLimit = 0
 
         assert.emits(tx, 'NodeOperatorAdded', {
@@ -141,7 +152,7 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
     // TODO: Move this block after keys manipulations to check how it will affect them
     it('Deactivate node operator 3', async () => {
       const activeOperatorsBefore = await nor.getActiveNodeOperatorsCount()
-      const tx = await nor.deactivateNodeOperator(Operator3.id, { from: voting })
+      const tx = await nor.deactivateNodeOperator(Operator3.id, { from: voting.address })
       const operator = await nor.getNodeOperator(Operator3.id, true)
       const activeOperatorsAfter = await nor.getActiveNodeOperatorsCount()
 
@@ -153,7 +164,7 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
 
     it('Set name', async () => {
       await forEachSync(NODE_OPERATORS, async (operatorData, i) => {
-        await nor.setNodeOperatorName(operatorData.id, operatorData.name, { from: voting })
+        await nor.setNodeOperatorName(operatorData.id, operatorData.name, { from: voting.address })
         const operator = await nor.getNodeOperator(operatorData.id, true)
         assert.equals(operator.name, operatorData.name)
       })
@@ -162,7 +173,7 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
     it('Set reward address', async () => {
       await forEachSync(NODE_OPERATORS, async (operatorData, i) => {
         const rewardAddress = rewardAddresses[i]
-        await nor.setNodeOperatorRewardAddress(operatorData.id, rewardAddress, { from: voting })
+        await nor.setNodeOperatorRewardAddress(operatorData.id, rewardAddress, { from: voting.address })
         const operator = await nor.getNodeOperator(operatorData.id, true)
         assert.equals(operator.rewardAddress, rewardAddress)
       })
@@ -171,7 +182,7 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
     it('Add signing keys', async () => {
       await forEachSync(NODE_OPERATORS, async (operatorData, i) => {
         const keys = new signingKeys.FakeValidatorKeys(operatorData.totalSigningKeysCount)
-        await nor.addSigningKeys(operatorData.id, keys.count, ...keys.slice(), { from: voting })
+        await nor.addSigningKeys(operatorData.id, keys.count, ...keys.slice(), { from: voting.address })
 
         const operator = await nor.getNodeOperator(operatorData.id, true)
         const keysCount = await nor.getTotalSigningKeyCount(operatorData.id)
@@ -196,7 +207,9 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
       await forEachSync(NODE_OPERATORS, async (operatorData, i) => {
         if (!(await nor.getNodeOperatorIsActive(operatorData.id))) return
         stateTotalVetted += operatorData.vettedSigningKeysCount
-        await nor.setNodeOperatorStakingLimit(operatorData.id, operatorData.vettedSigningKeysCount, { from: voting })
+        await nor.setNodeOperatorStakingLimit(operatorData.id, operatorData.vettedSigningKeysCount, {
+          from: voting.address,
+        })
         const operator = await nor.getNodeOperator(operatorData.id, true)
         assert.equals(operator.stakingLimit, operatorData.vettedSigningKeysCount)
       })
@@ -215,7 +228,9 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
       assert.equals(summary.depositableValidatorsCount, 10)
 
       // StakingRouter.updateTargetValidatorsLimits() -> NOR.updateTargetValidatorsLimits()
-      const tx = await stakingRouter.updateTargetValidatorsLimits(curated.id, operatorId, true, 1, { from: voting })
+      const tx = await stakingRouter.updateTargetValidatorsLimits(curated.id, operatorId, true, 1, {
+        from: voting.address,
+      })
 
       summary = await nor.getNodeOperatorSummary(operatorId)
       assert.equals(summary.isTargetLimitActive, true)
@@ -229,15 +244,6 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
         { abi: NodeOperatorsRegistry._json.abi }
       )
     })
-
-    async function assertDepositCall(operatorId, callIdx, keyIdx) {
-      const regCall = await depositContract.calls.call(callIdx)
-      const { key, depositSignature } = await nor.getSigningKey(operatorId, keyIdx)
-      assert.equal(regCall.pubkey, key)
-      assert.equal(regCall.signature, depositSignature)
-      assert.equal(regCall.withdrawal_credentials, withdrawalCredentials)
-      assert.equals(regCall.value, ETH(32))
-    }
 
     it('Obtain deposit data', async () => {
       const [curated] = await stakingRouter.getStakingModules()
@@ -293,23 +299,128 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
       assert.equal(distribution.recipients[1], rewards2)
     })
 
-    // TODO: Exited validators
-    //       AccountingOracle.submitReport() -> StakingRouter...() — only for memory
-    //                 [optional — if can be mocked] assert ... -> Lido...() -> NOR.onRewardsMinted() was called
-    //
-    //       AccountingOracle.submitReportExtraDataList()
-    //           -> StakingRouter.reportStakingModuleExitedValidatorsCountByNodeOperator()
-    //           -> StakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator()
-    //           -> NOR.updateExitedValidatorsCount()
-    //                 assert exited validators count
-    //                 assert rewards was transfered with NOR._distributeRewards()
-    //                 assert rewards was transfered to operators for his exited validators
-    //                 assert TargetLimit was changed to zero if any key stucked. ... -> NOR._updateSummaryMaxValidatorsCount()
+    it('Validators exiting and stuck', async () => {
+      const { refSlot } = await consensus.getCurrentFrame()
+      const [curated] = await stakingRouter.getStakingModules()
 
-    // TODO: ... -> StakingRouter.onValidatorsCountsByNodeOperatorReportingFinished() -> NOR.onExitedAndStuckValidatorsCountsUpdated()
-    //              assert rewards was transfered to exited validators
+      const extraData = {
+        exitedKeys: [{ moduleId: 1, nodeOpIds: [0], keysCounts: [2] }],
+        stuckKeys: [{ moduleId: 1, nodeOpIds: [1], keysCounts: [1] }],
+      }
 
-    // TODO: StakingRouter.unsafeSetExitedValidatorsCount() -> NOR.onExitedAndStuckValidatorsCountsUpdated()
+      const extraDataItems = encodeExtraDataItems(extraData)
+      const extraDataList = packExtraDataList(extraDataItems)
+      const extraDataHash = calcExtraDataListHash(extraDataList)
+
+      const reportFields = {
+        consensusVersion,
+        numValidators: 4,
+        clBalanceGwei: toBN(ETH(32 * 4)).div(E9),
+        stakingModuleIdsWithNewlyExitedValidators: [curated.id],
+        numExitedValidatorsByStakingModule: [1],
+        withdrawalVaultBalance: e18(0),
+        elRewardsVaultBalance: e18(0),
+        sharesRequestedToBurn: e18(0),
+        withdrawalFinalizationBatches: [],
+        simulatedShareRate: e27(1),
+        isBunkerMode: false,
+        extraDataFormat: 1,
+        refSlot: +refSlot,
+        extraDataHash,
+        extraDataItemsCount: 2,
+      }
+
+      const reportItems = getAccountingReportDataItems(reportFields)
+      const reportHash = calcAccountingReportDataHash(reportItems)
+
+      await consensus.submitReport(+refSlot, reportHash, consensusVersion, { from: consensusMember })
+
+      // Mentionable internal calls
+      // AccountingOracle.submitReportData()
+      //      -> Lido.handleOracleReport()._processRewards()._distributeFee()
+      //                                                         -> StakingRouter.reportRewardsMinted() -> NOR.onRewardsMinted()
+      //                                                         ._transferModuleRewards()._transferShares()
+      //      -> StakingRouter.updateExitedValidatorsCountByStakingModule() -> StakingRouter.stakingModule[id].exitedValidatorsCount = exitedCount
+      // TODO: [optional] assert those tied calls
+      await oracle.submitReportData(reportItems, consensusVersion, { from: consensusMember })
+
+      // Mentionable internal calls
+      // AccountingOracle.submitReportExtraDataList()
+      //      -> StakingRouter.onValidatorsCountsByNodeOperatorReportingFinished() -> NOR.onExitedAndStuckValidatorsCountsUpdated()._distributeRewards()
+      //                                                                                                                             emits NOR.NodeOperatorPenalized
+      //                                                                                                                             emits NOR.RewardsDistributed
+      //                                                                                                                             -> stETH.transferShares()
+      //                                                                                                                             -> Burner.requestBurnShares()
+      //      -> StakingRouter.reportStakingModuleExitedValidatorsCountByNodeOperator() -> NOR.updateExitedValidatorsCount() ->
+      //                                                                                       emits NOR.ExitedSigningKeysCountChanged
+      //                                                                                       ._saveSummarySigningKeysStats()
+      //                                                                                       ._updateSummaryMaxValidatorsCount()
+      //      -> StakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator() -> NOR.updateStuckValidatorsCount() ->
+      //                                                                                      emits NOR.StuckPenaltyStateChanged
+      //                                                                                      ._saveOperatorStuckPenaltyStats()
+      //                                                                                      ._updateSummaryMaxValidatorsCount()
+      const tx = await oracle.submitReportExtraDataList(extraDataList, { from: voting.address })
+
+      assert.emits(
+        tx,
+        'ExitedSigningKeysCountChanged',
+        { nodeOperatorId: Operator1.id, exitedValidatorsCount: 2 },
+        { abi: NodeOperatorsRegistry._json.abi }
+      )
+
+      assert.emits(
+        tx,
+        'StuckPenaltyStateChanged',
+        {
+          nodeOperatorId: Operator2.id,
+          stuckValidatorsCount: 1,
+          refundedValidatorsCount: 0,
+          stuckPenaltyEndTimestamp: 0,
+        },
+        { abi: NodeOperatorsRegistry._json.abi }
+      )
+
+      const summaryOperator1 = await nor.getNodeOperatorSummary(Operator1.id)
+      assert.equals(summaryOperator1.totalExitedValidators, 2)
+
+      const summaryOperator2 = await nor.getNodeOperatorSummary(Operator2.id)
+      assert.equals(summaryOperator2.stuckValidatorsCount, 1)
+
+      // TODO: assert emits NodeOperatorPenalized
+      // TODO: assert emits RewardsDistributed
+      // TODO: assert rewards was transfered with NOR._distributeRewards()
+      // TODO: assert rewards was transfered to operators for his exited validators
+      // TODO: assert TargetLimit was changed to zero if any key stucked. ... -> NOR._updateSummaryMaxValidatorsCount()
+    })
+
+    it('unsafeSetExitedValidatorsCount', async () => {
+      const [curated] = await stakingRouter.getStakingModules()
+      const correction = {
+        currentModuleExitedValidatorsCount: 1,
+        currentNodeOperatorExitedValidatorsCount: 2,
+        currentNodeOperatorStuckValidatorsCount: 0,
+        newModuleExitedValidatorsCount: 1,
+        newNodeOperatorExitedValidatorsCount: 3,
+        newNodeOperatorStuckValidatorsCount: 0,
+      }
+
+      // StakingRouter.unsafeSetExitedValidatorsCount() -> NOR.onExitedAndStuckValidatorsCountsUpdated()._distributeRewards()
+      //                                                                                                     emits NOR.NodeOperatorPenalized
+      //                                                                                                     emits NOR.RewardsDistributed
+      //                                                                                                     -> stETH.transferShares()
+      //                                                                                                     -> Burner.requestBurnShares()
+      await stakingRouter.unsafeSetExitedValidatorsCount(curated.id, Operator1.id, true, correction, {
+        from: voting.address,
+      })
+
+      const summaryOperator1 = await nor.getNodeOperatorSummary(Operator1.id)
+      assert.equals(summaryOperator1.totalExitedValidators, 3)
+
+      // TODO: assert emits NOR.NodeOperatorPenalized
+      // TODO: assert emits NOR.RewardsDistributed
+      // TODO: assert rewards was transfered with NOR._distributeRewards()
+      // TODO: assert rewards was transfered to operators for his exited validators
+    })
 
     // TODO: TargetLimit allows to deposit after exit
 
