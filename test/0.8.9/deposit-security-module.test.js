@@ -1045,10 +1045,17 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
     it('false if unknown staking module id', async () => {
       await depositSecurityModule.addGuardian(GUARDIAN1, 1, { from: owner })
 
-      assert.equal(
-        await stakingRouterMock.getStakingModuleIsDepositsPaused(STAKING_MODULE + 1),
-        false,
-        'invariant failed: isPaused'
+      await assert.reverts(
+        stakingRouterMock.getStakingModuleIsDepositsPaused(STAKING_MODULE + 1),
+        `StakingModuleUnregistered()`
+      )
+      await assert.reverts(
+        stakingRouterMock.getStakingModuleIsActive(STAKING_MODULE + 1),
+        `StakingModuleUnregistered()`
+      )
+      await assert.reverts(
+        stakingRouterMock.getStakingModuleLastDepositBlock(STAKING_MODULE + 1),
+        `StakingModuleUnregistered()`
       )
       assert.isTrue((await depositSecurityModule.getGuardianQuorum()) > 0, 'invariant failed: quorum > 0')
 

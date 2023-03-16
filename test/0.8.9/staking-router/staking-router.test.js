@@ -227,6 +227,15 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       await revert()
     })
 
+    it('reverts if module is unregistered', async () => {
+      await assert.reverts(router.getStakingModuleIsActive(123), `StakingModuleUnregistered()`)
+      await assert.reverts(router.getStakingModuleLastDepositBlock(123), `StakingModuleUnregistered()`)
+      await assert.reverts(router.getStakingModuleIsDepositsPaused(123), `StakingModuleUnregistered()`)
+      await assert.reverts(router.getStakingModuleNonce(123), `StakingModuleUnregistered()`)
+      await assert.reverts(router.getStakingModuleIsStopped(123), `StakingModuleUnregistered()`)
+      await assert.reverts(router.getStakingModuleStatus(123), `StakingModuleUnregistered()`)
+    })
+
     it('reverts if module address exists', async () => {
       await assert.revertsWithCustomError(
         router.addStakingModule('Test', stakingModule.address, 100, 1000, 2000, { from: appManager }),
