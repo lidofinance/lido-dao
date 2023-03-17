@@ -227,8 +227,10 @@ contract('LegacyOracle', ([admin, stranger]) => {
       await deployedInfra.consensus.submitReport(refSlot, reportHash, CONSENSUS_VERSION, { from: admin })
       const oracleVersion = +(await deployedInfra.oracle.getContractVersion())
 
-      // first report since migration has off timeElapsed because lastProcessingRefSlot is calculated per legacy frame ref
+      // first report since migration has timeElapsed 1 slot off because lastProcessingRefSlot is calculated per legacy frame ref
+      // calculated as in code
       const timeElapsed = (+refSlot - +(await deployedInfra.oracle.getLastProcessingRefSlot())) * SECONDS_PER_SLOT
+      assert.equals(timeElapsed, SECONDS_PER_FRAME - SECONDS_PER_SLOT)
 
       const tx = await deployedInfra.oracle.submitReportData(reportItems, oracleVersion, { from: admin })
 
