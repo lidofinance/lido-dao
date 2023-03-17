@@ -249,7 +249,9 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
       const [curated] = await stakingRouter.getStakingModules()
 
       const stakesDeposited = 4
-      await web3.eth.sendTransaction({ to: lido.address, from: user1, value: ETH(32 * stakesDeposited) })
+      const depositedValue = ETH(32 * stakesDeposited)
+
+      await web3.eth.sendTransaction({ to: lido.address, from: user1, value: depositedValue })
 
       const block = await web3.eth.getBlock('latest')
       const keysOpIndex = await nor.getKeysOpIndex()
@@ -281,11 +283,15 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
       assert.equals(stakingModuleSummary.totalDepositedValidators, stateTotaldeposited)
       assert.equals(stakingModuleSummary.depositableValidatorsCount, 3)
 
+      const operator1 = await nor.getNodeOperator(Operator1.id, true)
       const summaryOperator1 = await nor.getNodeOperatorSummary(Operator1.id)
+      assert.equals(operator1.usedSigningKeys, 3)
       assert.equals(summaryOperator1.totalDepositedValidators, 3)
       assert.equals(summaryOperator1.depositableValidatorsCount, 3)
 
+      const operator2 = await nor.getNodeOperator(Operator2.id, true)
       const summaryOperator2 = await nor.getNodeOperatorSummary(Operator2.id)
+      assert.equals(operator2.usedSigningKeys, 1)
       assert.equals(summaryOperator2.totalDepositedValidators, 1)
       assert.equals(summaryOperator2.depositableValidatorsCount, 0)
     })
@@ -380,7 +386,9 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
         { abi: NodeOperatorsRegistry._json.abi }
       )
 
+      const operator1 = await nor.getNodeOperator(Operator1.id, true)
       const summaryOperator1 = await nor.getNodeOperatorSummary(Operator1.id)
+      assert.equals(operator1.stoppedValidators, 2)
       assert.equals(summaryOperator1.totalExitedValidators, 2)
 
       const summaryOperator2 = await nor.getNodeOperatorSummary(Operator2.id)
@@ -390,7 +398,9 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
       // TODO: assert emits RewardsDistributed
       // TODO: assert rewards was transfered with NOR._distributeRewards()
       // TODO: assert rewards was transfered to operators for his exited validators
-      // TODO: assert TargetLimit was changed to zero if any key stucked. ... -> NOR._updateSummaryMaxValidatorsCount()
+
+      // TODO: assert TargetLimit changes to zero if any key stucked. ... -> NOR._updateSummaryMaxValidatorsCount()
+      // assert.equals(summaryOperator2.targetValidatorsCount, 0)
     })
 
     it('unsafeSetExitedValidatorsCount', async () => {
@@ -422,14 +432,75 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
       // TODO: assert rewards was transfered to operators for his exited validators
     })
 
-    // TODO: TargetLimit allows to deposit after exit
+    /**
+     * TODO: TargetLimit allows to deposit after exit
+     */
 
-    // TODO: disable TargetLimit and try to deposit again
+    it('Disable TargetLimit', async () => {
+      const [curated] = await stakingRouter.getStakingModules()
+      const operatorId = Operator2.id
 
-    // TODO: NOR.removeSigningKey()
-    //       NOR.removeSigningKeys()
-    //           assert that staking limit was changed
-    //           check if we need to assert target limit
+      let summary = await nor.getNodeOperatorSummary(operatorId)
+      assert.equals(summary.isTargetLimitActive, true)
+      assert.equals(summary.targetValidatorsCount, 1)
+      assert.equals(summary.depositableValidatorsCount, 0)
+
+      // StakingRouter.updateTargetValidatorsLimits() -> NOR.updateTargetValidatorsLimits()
+      const tx = await stakingRouter.updateTargetValidatorsLimits(curated.id, operatorId, false, 0, {
+        from: voting.address,
+      })
+
+      summary = await nor.getNodeOperatorSummary(operatorId)
+      assert.equals(summary.isTargetLimitActive, false)
+      assert.equals(summary.targetValidatorsCount, 0)
+      // TODO: assert.equals(summary.depositableValidatorsCount, ?)
+
+      assert.emits(
+        tx,
+        'TargetValidatorsCountChanged',
+        { nodeOperatorId: operatorId, targetValidatorsCount: 0 },
+        { abi: NodeOperatorsRegistry._json.abi }
+      )
+    })
+
+    /**
+     *  Deposit again after disabling TargetLimit
+     */
+
+    it('Remove one signing key', async () => {
+      const operatorId = Operator1.id
+
+      const operatorBefore = await nor.getNodeOperator(operatorId, true)
+      const keysCountBefore = await nor.getTotalSigningKeyCount(operatorId)
+      const unusedKeysCountBefore = await nor.getUnusedSigningKeyCount(operatorId)
+
+      const keyIdxToRemove = +operatorBefore.usedSigningKeys
+      const keyBefore = await nor.getSigningKey(operatorId, keyIdxToRemove)
+
+      await nor.removeSigningKey(operatorId, keyIdxToRemove, { from: voting.address })
+
+      const operatorAfter = await nor.getNodeOperator(operatorId, true)
+      const keysCountAfter = await nor.getTotalSigningKeyCount(operatorId)
+      const unusedKeysCountAfter = await nor.getUnusedSigningKeyCount(operatorId)
+      const keyAfter = await nor.getSigningKey(operatorId, keyIdxToRemove)
+
+      assert.equals(+operatorBefore.totalSigningKeys - 1, +operatorAfter.totalSigningKeys)
+      assert.equals(+keysCountBefore - 1, +keysCountAfter)
+      assert.equals(+unusedKeysCountBefore - 1, +unusedKeysCountAfter)
+      assert.notEqual(keyBefore.key, keyAfter.key)
+      assert.notEqual(keyBefore.depositSignature, keyAfter.depositSignature)
+
+      // TODO: Why operatorBefore is 6 here??
+      // console.log(+operatorBefore.stakingLimit)
+      // console.log(+operatorAfter.stakingLimit)
+
+      // TODO: assert that staking limit was changed
+      // TODO: check if we need to assert target limit
+    })
+
+    // TODO:
+    // it('Remove multiple signing keys', async () => {
+    // })
 
     // TODO: NOR....()
     //       Deactivate Operator that was in use before
