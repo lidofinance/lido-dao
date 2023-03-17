@@ -19,6 +19,8 @@ contract MockStakingRouterForAccountingOracle is IStakingRouter {
         bytes keysCounts;
     }
 
+    mapping(uint256 => uint256) internal _exitedKeysCountsByModuleId;
+
     uint256 internal _exitedKeysCountAcrossAllModules;
     UpdateExitedKeysByModuleCallData internal _lastCall_updateExitedKeysByModule;
 
@@ -57,10 +59,20 @@ contract MockStakingRouterForAccountingOracle is IStakingRouter {
     function updateExitedValidatorsCountByStakingModule(
         uint256[] calldata moduleIds,
         uint256[] calldata exitedKeysCounts
-    ) external {
+    ) external returns (uint256) {
         _lastCall_updateExitedKeysByModule.moduleIds = moduleIds;
         _lastCall_updateExitedKeysByModule.exitedKeysCounts = exitedKeysCounts;
         ++_lastCall_updateExitedKeysByModule.callCount;
+
+        uint256 newlyExitedValidatorsCount;
+
+        for (uint256 i = 0; i < moduleIds.length; ++i) {
+            uint256 moduleId = moduleIds[i];
+            newlyExitedValidatorsCount += exitedKeysCounts[i] - _exitedKeysCountsByModuleId[moduleId];
+            _exitedKeysCountsByModuleId[moduleId] = exitedKeysCounts[i];
+        }
+
+        return newlyExitedValidatorsCount;
     }
 
     function reportStakingModuleExitedValidatorsCountByNodeOperator(
