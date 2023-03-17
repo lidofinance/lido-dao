@@ -78,9 +78,6 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
       it('initially, router assumes no staking modules have exited validators', async () => {
         const info = await router.getStakingModule(module1Id)
         assert.equals(info.exitedValidatorsCount, 0)
-
-        const totalExited = await router.getExitedValidatorsCountAcrossAllModules()
-        assert.equals(totalExited, 0)
       })
 
       it('reverts total exited validators without REPORT_EXITED_VALIDATORS_ROLE', async () => {
@@ -119,11 +116,6 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
       it('staking module info gets updated', async () => {
         const info = await router.getStakingModule(module1Id)
         assert.equals(info.exitedValidatorsCount, 3)
-      })
-
-      it('exited validators count accross all modules gets updated', async () => {
-        const totalExited = await router.getExitedValidatorsCountAcrossAllModules()
-        assert.equals(totalExited, 3)
       })
 
       it('no functions were called on the module', async () => {
@@ -405,9 +397,9 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
         await module1.setTotalExitedValidatorsCount(2)
       })
 
-      it(`router's view on exited validators count accross all modules stays the same`, async () => {
-        const totalExited = await router.getExitedValidatorsCountAcrossAllModules()
-        assert.equals(totalExited, 3)
+      it(`router's view on exited validators count stays the same`, async () => {
+        const info = await router.getStakingModule(module1Id)
+        assert.equals(info.exitedValidatorsCount, 3)
       })
 
       it(`calling onValidatorsCountsByNodeOperatorReportingFinished still doesn't call anything on the module`, async () => {
@@ -536,9 +528,6 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
 
         const info2 = await router.getStakingModule(moduleIds[1])
         assert.equals(info2.exitedValidatorsCount, 0)
-
-        const totalExited = await router.getExitedValidatorsCountAcrossAllModules()
-        assert.equals(totalExited, 0)
       })
 
       it('reporting 3 exited keys total for module 1 and 2 exited keys total for module 2', async () => {
@@ -551,11 +540,6 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
 
         const info2 = await router.getStakingModule(moduleIds[1])
         assert.equals(info2.exitedValidatorsCount, 2)
-      })
-
-      it('exited validators count accross all modules gets updated', async () => {
-        const totalExited = await router.getExitedValidatorsCountAcrossAllModules()
-        assert.equals(totalExited, 5)
       })
 
       it('revert on decreased exited keys for modules', async () => {

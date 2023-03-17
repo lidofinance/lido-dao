@@ -553,16 +553,6 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         }
     }
 
-    function getExitedValidatorsCountAcrossAllModules() external view returns (uint256) {
-        uint256 stakingModulesCount = getStakingModulesCount();
-        uint256 exitedValidatorsCount = 0;
-        for (uint256 i; i < stakingModulesCount; ) {
-            exitedValidatorsCount += _getStakingModuleByIndex(i).exitedValidatorsCount;
-            unchecked { ++i; }
-        }
-        return exitedValidatorsCount;
-    }
-
     /**
      * @notice Returns all registered staking modules
      */
