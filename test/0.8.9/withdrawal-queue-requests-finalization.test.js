@@ -1,7 +1,7 @@
 const { contract, ethers } = require('hardhat')
 const { itParam } = require('mocha-param')
 
-const { StETH, shareRate, e18, e27, toBN, ETH } = require('../helpers/utils')
+const { StETH, shareRate, e18, e27, toBN, ETH, contractMethodWithResult } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 const { MAX_UINT256 } = require('../helpers/constants')
 const { EvmSnapshot } = require('../helpers/blockchain')
@@ -57,11 +57,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
 
     steth = deployed.steth
     withdrawalQueue = deployed.withdrawalQueue
-    withdrawalQueue.requestWithdrawalsWithResults = async (...args) => {
-      const result = await withdrawalQueue.requestWithdrawals.call(...args)
-      await withdrawalQueue.requestWithdrawals(...args)
-      return result
-    }
+    withdrawalQueue.requestWithdrawalsWithResults = contractMethodWithResult(withdrawalQueue.requestWithdrawals)
 
     await steth.mintShares(user, e18(10))
     await steth.approve(withdrawalQueue.address, StETH(10), { from: user })
