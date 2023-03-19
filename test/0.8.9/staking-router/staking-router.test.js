@@ -5,7 +5,7 @@ const { BN } = require('bn.js')
 const { assert } = require('../../helpers/assert')
 const { EvmSnapshot } = require('../../helpers/blockchain')
 const { ETH, toBN } = require('../../helpers/utils')
-const { StakingModuleStub } = require('../../helpers/stubs/staking-module.stub')
+const { ContractStub } = require('../../helpers/contract-stub')
 
 const OssifiableProxy = artifacts.require('OssifiableProxy.sol')
 const DepositContractMock = artifacts.require('DepositContractMock')
@@ -318,12 +318,14 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
 
     it('set withdrawal credentials works when staking module reverts', async () => {
-      const stakingModuleWithBug = await StakingModuleStub.new()
       // staking module will revert with panic exit code
-      await StakingModuleStub.stub(stakingModuleWithBug, 'onWithdrawalCredentialsChanged', {
-        revert: { error: 'Panic', args: { type: ['uint256'], value: [0x01] } },
-      })
-      await router.addStakingModule('Staking Module With Bug', stakingModuleWithBug.address, 100, 1000, 2000, {
+      const buggedStakingModule = await ContractStub('IStakingModule')
+        .on('onWithdrawalCredentialsChanged', {
+          revert: { error: { name: 'Panic', args: { type: ['uint256'], value: [0x01] } } },
+        })
+        .create({ from: deployer })
+
+      await router.addStakingModule('Staking Module With Bug', buggedStakingModule.address, 100, 1000, 2000, {
         from: appManager,
       })
       const stakingModuleId = await router.getStakingModulesCount()
@@ -943,12 +945,12 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
 
     it('handles reverted staking modules correctly', async () => {
-      const stakingModuleWithBug = await StakingModuleStub.new()
       // staking module will revert with message "UNHANDLED_ERROR"
-      await StakingModuleStub.stub(stakingModuleWithBug, 'onRewardsMinted', {
-        revert: { reason: 'UNHANDLED_ERROR' },
-      })
-      await router.addStakingModule('Staking Module With Bug', stakingModuleWithBug.address, 100, 1000, 2000, {
+      const buggedStakingModule = await ContractStub('IStakingModule')
+        .on('onRewardsMinted', { revert: { reason: 'UNHANDLED_ERROR' } })
+        .create({ from: deployer })
+
+      await router.addStakingModule('Staking Module With Bug', buggedStakingModule.address, 100, 1000, 2000, {
         from: admin,
       })
       const stakingModuleWithBugId = await router.getStakingModulesCount()
