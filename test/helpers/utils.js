@@ -170,8 +170,8 @@ function getFirstEventArgs(receipt, eventName, abi = undefined) {
   return events[0].args
 }
 
-function contractMethodWithResult(method) {
-  return async (...args) => {
+function addSendWithResult(method) {
+  method.sendWithResult = async (...args) => {
     const result = await method.call(...args)
     await method(...args)
     return result
@@ -209,6 +209,6 @@ module.exports = {
   calcSharesMintedAsFees,
   getFirstEventArgs,
   calcShareRateDeltaE27,
-  contractMethodWithResult,
+  addSendWithResult,
   limitRebase,
 }

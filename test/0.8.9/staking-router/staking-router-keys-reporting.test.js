@@ -1,7 +1,7 @@
 const { artifacts, contract, ethers } = require('hardhat')
 const { EvmSnapshot } = require('../../helpers/blockchain')
 const { assert } = require('../../helpers/assert')
-const { hex, hexConcat, toNum, contractMethodWithResult } = require('../../helpers/utils')
+const { hex, hexConcat, toNum, addSendWithResult } = require('../../helpers/utils')
 const { StakingModuleStub } = require('../../helpers/stubs/staking-module.stub')
 
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
@@ -17,9 +17,7 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
   before(async () => {
     depositContract = await DepositContractMock.new({ from: deployer })
     router = await StakingRouter.new(depositContract.address, { from: deployer })
-    router.updateExitedValidatorsCountByStakingModuleWithResult = contractMethodWithResult(
-      router.updateExitedValidatorsCountByStakingModule
-    )
+    addSendWithResult(router.updateExitedValidatorsCountByStakingModule)
     ;[module1, module2] = await Promise.all([
       StakingModuleMock.new({ from: deployer }),
       StakingModuleMock.new({ from: deployer }),
@@ -113,9 +111,13 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
       })
 
       it('reporting module 1 to have total 3 exited validators', async () => {
-        const newlyExitedCount = await router.updateExitedValidatorsCountByStakingModuleWithResult([module1Id], [3], {
-          from: admin,
-        })
+        const newlyExitedCount = await router.updateExitedValidatorsCountByStakingModule.sendWithResult(
+          [module1Id],
+          [3],
+          {
+            from: admin,
+          }
+        )
         assert.equals(newlyExitedCount, 3)
       })
 
@@ -537,7 +539,7 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
       })
 
       it('reporting 3 exited keys total for module 1 and 2 exited keys total for module 2', async () => {
-        const newlyExited = await router.updateExitedValidatorsCountByStakingModuleWithResult(moduleIds, [3, 2], {
+        const newlyExited = await router.updateExitedValidatorsCountByStakingModule.sendWithResult(moduleIds, [3, 2], {
           from: admin,
         })
         assert.equals(newlyExited, 5)
@@ -898,7 +900,7 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
       }
 
       // first correction
-      const newlyExited = await router.updateExitedValidatorsCountByStakingModuleWithResult([module1Id], [10], {
+      const newlyExited = await router.updateExitedValidatorsCountByStakingModule.sendWithResult([module1Id], [10], {
         from: admin,
       })
       assert.equals(newlyExited, 10)

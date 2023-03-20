@@ -1,7 +1,7 @@
 const { contract, ethers } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 const { EvmSnapshot } = require('../../helpers/blockchain')
-const { hexConcat, hex, ETH, contractMethodWithResult } = require('../../helpers/utils')
+const { hexConcat, hex, ETH, addSendWithResult } = require('../../helpers/utils')
 const { deployProtocol } = require('../../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../../helpers/staking-modules')
 
@@ -26,9 +26,7 @@ contract('StakingRouter', ([admin, depositor]) => {
     })
 
     router = deployed.stakingRouter
-    router.updateExitedValidatorsCountByStakingModuleWithResult = contractMethodWithResult(
-      router.updateExitedValidatorsCountByStakingModule
-    )
+    addSendWithResult(router.updateExitedValidatorsCountByStakingModule)
     voting = deployed.voting.address
     operators = await setupNodeOperatorsRegistry(deployed, true)
     module2 = await setupNodeOperatorsRegistry(deployed, true)
@@ -159,7 +157,7 @@ contract('StakingRouter', ([admin, depositor]) => {
 
       // update exited validators
       const exitValidatorsCount = 20
-      const newlyExitedValidatorsCount = await router.updateExitedValidatorsCountByStakingModuleWithResult(
+      const newlyExitedValidatorsCount = await router.updateExitedValidatorsCountByStakingModule.sendWithResult(
         [module1Id],
         [exitValidatorsCount],
         {
@@ -229,7 +227,7 @@ contract('StakingRouter', ([admin, depositor]) => {
 
       // //update exited validators
       const exitValidatorsCount = 20
-      const newlyExitedCount = await router.updateExitedValidatorsCountByStakingModuleWithResult(
+      const newlyExitedCount = await router.updateExitedValidatorsCountByStakingModule.sendWithResult(
         [module1Id],
         [exitValidatorsCount],
         { from: admin }
@@ -305,7 +303,7 @@ contract('StakingRouter', ([admin, depositor]) => {
 
       // update exited validators
       const exitValidatorsCount = 1
-      const exitedCount = await router.updateExitedValidatorsCountByStakingModuleWithResult(
+      const exitedCount = await router.updateExitedValidatorsCountByStakingModule.sendWithResult(
         [module1Id],
         [exitValidatorsCount],
         { from: admin }
@@ -337,7 +335,7 @@ contract('StakingRouter', ([admin, depositor]) => {
       exitedValidatorsCounts = [nextExitValidatorsCount]
       keysData = hexConcat(...exitedValidatorsCounts.map((c) => hex(c, 16)))
 
-      const newlyExitedCount = await router.updateExitedValidatorsCountByStakingModuleWithResult(
+      const newlyExitedCount = await router.updateExitedValidatorsCountByStakingModule.sendWithResult(
         [module1Id],
         [nextExitValidatorsCount],
         { from: admin }
