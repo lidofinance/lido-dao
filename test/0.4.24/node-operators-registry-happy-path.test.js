@@ -20,6 +20,10 @@ const E9 = toBN(10).pow(toBN(9))
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
 const ADDRESS_3 = '0x0000000000000000000000000000000000000003'
+const ADDRESS_4 = '0x0000000000000000000000000000000000000004'
+
+const NOR_ABI_GET_EV = { decodeForAbi: NodeOperatorsRegistry._json.abi }
+const NOR_ABI_ASSERT_EV = { abi: NodeOperatorsRegistry._json.abi }
 
 const NODE_OPERATORS = [
   {
@@ -31,7 +35,6 @@ const NODE_OPERATORS = [
   },
   {
     id: 1,
-    isActive: false,
     name: 'Node operator #2',
     rewardAddressInitial: ADDRESS_2,
     totalSigningKeysCount: 15,
@@ -39,9 +42,15 @@ const NODE_OPERATORS = [
   },
   {
     id: 2,
-    isActive: false,
     name: 'Node operator #3',
     rewardAddressInitial: ADDRESS_3,
+    totalSigningKeysCount: 10,
+    vettedSigningKeysCount: 5,
+  },
+  {
+    id: 3,
+    name: 'Node operator #4',
+    rewardAddressInitial: ADDRESS_4,
     totalSigningKeysCount: 10,
     vettedSigningKeysCount: 5,
   },
@@ -50,6 +59,7 @@ const NODE_OPERATORS = [
 const Operator1 = NODE_OPERATORS[0]
 const Operator2 = NODE_OPERATORS[1]
 const Operator3 = NODE_OPERATORS[2]
+const Operator4 = NODE_OPERATORS[3]
 
 const forEachSync = async (arr, cb) => {
   for (let i = 0; i < arr.length; ++i) {
@@ -57,7 +67,7 @@ const forEachSync = async (arr, cb) => {
   }
 }
 
-contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, user1, nobody]) => {
+contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, rewards4, user1, nobody]) => {
   let dsm
   let lido
   let nor
@@ -74,13 +84,52 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
   let signers
   let consensusMember
 
-  async function assertDepositCall(operatorId, callIdx, keyIdx) {
+  let stateTotalVetted = 0
+  let stateTotalDepositable = 0
+  let stateTotalDeposited = 0
+
+  async function assertDepositCall(callIdx, operatorId, keyIdx) {
     const regCall = await depositContract.calls.call(callIdx)
     const { key, depositSignature } = await nor.getSigningKey(operatorId, keyIdx)
     assert.equal(regCall.pubkey, key)
     assert.equal(regCall.signature, depositSignature)
     assert.equal(regCall.withdrawal_credentials, withdrawalCredentials)
     assert.equals(regCall.value, ETH(32))
+  }
+
+  async function assertOperatorDeposits(operatorData, deposited, keysLeft) {
+    const operator = await nor.getNodeOperator(operatorData.id, true)
+    const summary = await nor.getNodeOperatorSummary(operatorData.id)
+    assert.equals(operator.usedSigningKeys, deposited, `${operatorData.name} usedSigningKeys should be ${deposited}`)
+    assert.equals(
+      summary.totalDepositedValidators,
+      deposited,
+      `${operatorData.name} totalDepositedValidators should be ${deposited}`
+    )
+    assert.equals(
+      summary.depositableValidatorsCount,
+      keysLeft,
+      `${operatorData.name} totalDepositedValidators should be ${keysLeft}`
+    )
+  }
+
+  async function assertTargetLimit(operatorData, isActive, limit, depositable) {
+    const summary = await nor.getNodeOperatorSummary(operatorData.id)
+    assert.equals(
+      summary.isTargetLimitActive,
+      isActive,
+      `${operatorData.name} isTargetLimitActive limit should be set to ${isActive}`
+    )
+    assert.equals(
+      summary.targetValidatorsCount,
+      limit,
+      `${operatorData.name} targetValidatorsCount should be set to ${limit}`
+    )
+    assert.equals(
+      summary.depositableValidatorsCount,
+      depositable,
+      `${operatorData.name} depositableValidatorsCount should be set to ${depositable}`
+    )
   }
 
   before('deploy base app', async () => {
@@ -99,7 +148,7 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
       },
     })
 
-    rewardAddresses = [rewards1, rewards2, rewards3]
+    rewardAddresses = [rewards1, rewards2, rewards3, rewards4]
 
     lido = deployed.pool
     nor = deployed.stakingModules[0]
@@ -124,418 +173,508 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
   })
 
   describe('Happy path', () => {
-    it('Add node operator', async () => {
-      await forEachSync(NODE_OPERATORS, async (operatorData, i) => {
-        const initialName = `operator ${i + 1}`
-        const tx = await nor.addNodeOperator(initialName, operatorData.rewardAddressInitial, { from: voting.address })
-        const expectedStakingLimit = 0
+    context('Initial setup', () => {
+      it('Add node operator', async () => {
+        await forEachSync(NODE_OPERATORS, async (operatorData, i) => {
+          const initialName = `operator ${i + 1}`
+          const tx = await nor.addNodeOperator(initialName, operatorData.rewardAddressInitial, { from: voting.address })
+          const expectedStakingLimit = 0
 
-        assert.emits(tx, 'NodeOperatorAdded', {
-          nodeOperatorId: operatorData.id,
-          name: initialName,
-          rewardAddress: operatorData.rewardAddressInitial,
-          stakingLimit: expectedStakingLimit,
+          assert.emits(tx, 'NodeOperatorAdded', {
+            nodeOperatorId: operatorData.id,
+            name: initialName,
+            rewardAddress: operatorData.rewardAddressInitial,
+            stakingLimit: expectedStakingLimit,
+          })
+
+          assert.isTrue(await nor.getNodeOperatorIsActive(operatorData.id))
+          const operator = await nor.getNodeOperator(operatorData.id, true)
+          assert.isTrue(operator.active)
+          assert.equals(operator.name, initialName)
+          assert.equals(operator.rewardAddress, operatorData.rewardAddressInitial)
+          assert.equals(operator.stakingLimit, 0)
+          assert.equals(operator.stoppedValidators, 0)
+          assert.equals(operator.totalSigningKeys, 0)
+          assert.equals(operator.usedSigningKeys, 0)
         })
 
-        assert.isTrue(await nor.getNodeOperatorIsActive(operatorData.id))
-        const operator = await nor.getNodeOperator(operatorData.id, true)
-        assert.isTrue(operator.active)
-        assert.equals(operator.name, initialName)
-        assert.equals(operator.rewardAddress, operatorData.rewardAddressInitial)
-        assert.equals(operator.stakingLimit, 0)
-        assert.equals(operator.stoppedValidators, 0)
-        assert.equals(operator.totalSigningKeys, 0)
-        assert.equals(operator.usedSigningKeys, 0)
+        assert.equals(await nor.getNodeOperatorsCount(), NODE_OPERATORS.length)
       })
 
-      assert.equals(await nor.getNodeOperatorsCount(), NODE_OPERATORS.length)
-    })
+      // TODO: Move this block after keys manipulations to check how it will affect them
+      it('Deactivate node operator 4', async () => {
+        const operatorId = Operator4.id
+        const activeOperatorsBefore = await nor.getActiveNodeOperatorsCount()
+        const tx = await nor.deactivateNodeOperator(operatorId, { from: voting.address })
+        const operator = await nor.getNodeOperator(operatorId, true)
+        const activeOperatorsAfter = await nor.getActiveNodeOperatorsCount()
 
-    // TODO: Move this block after keys manipulations to check how it will affect them
-    it('Deactivate node operator 3', async () => {
-      const activeOperatorsBefore = await nor.getActiveNodeOperatorsCount()
-      const tx = await nor.deactivateNodeOperator(Operator3.id, { from: voting.address })
-      const operator = await nor.getNodeOperator(Operator3.id, true)
-      const activeOperatorsAfter = await nor.getActiveNodeOperatorsCount()
-
-      assert.isFalse(await nor.getNodeOperatorIsActive(Operator3.id))
-      assert.isFalse(operator.active)
-      assert.equals(Number(activeOperatorsBefore) - 1, Number(activeOperatorsAfter))
-      assert.emits(tx, 'NodeOperatorActiveSet', { nodeOperatorId: Operator3.id, active: false })
-    })
-
-    it('Set name', async () => {
-      await forEachSync(NODE_OPERATORS, async (operatorData, i) => {
-        await nor.setNodeOperatorName(operatorData.id, operatorData.name, { from: voting.address })
-        const operator = await nor.getNodeOperator(operatorData.id, true)
-        assert.equals(operator.name, operatorData.name)
+        assert.isFalse(await nor.getNodeOperatorIsActive(operatorId))
+        assert.isFalse(operator.active)
+        assert.equals(Number(activeOperatorsBefore) - 1, Number(activeOperatorsAfter))
+        assert.emits(tx, 'NodeOperatorActiveSet', { nodeOperatorId: operatorId, active: false })
       })
-    })
 
-    it('Set reward address', async () => {
-      await forEachSync(NODE_OPERATORS, async (operatorData, i) => {
-        const rewardAddress = rewardAddresses[i]
-        await nor.setNodeOperatorRewardAddress(operatorData.id, rewardAddress, { from: voting.address })
-        const operator = await nor.getNodeOperator(operatorData.id, true)
-        assert.equals(operator.rewardAddress, rewardAddress)
+      it('Set name', async () => {
+        await forEachSync(NODE_OPERATORS, async (operatorData, i) => {
+          await nor.setNodeOperatorName(operatorData.id, operatorData.name, { from: voting.address })
+          const operator = await nor.getNodeOperator(operatorData.id, true)
+          assert.equals(operator.name, operatorData.name)
+        })
       })
-    })
 
-    it('Add signing keys', async () => {
-      await forEachSync(NODE_OPERATORS, async (operatorData, i) => {
-        const keys = new signingKeys.FakeValidatorKeys(operatorData.totalSigningKeysCount)
-        await nor.addSigningKeys(operatorData.id, keys.count, ...keys.slice(), { from: voting.address })
-
-        const operator = await nor.getNodeOperator(operatorData.id, true)
-        const keysCount = await nor.getTotalSigningKeyCount(operatorData.id)
-        const unusedKeysCount = await nor.getUnusedSigningKeyCount(operatorData.id)
-        assert.equals(keys.count, operator.totalSigningKeys.toNumber())
-        assert.equals(keys.count, keysCount)
-        assert.equals(keys.count, unusedKeysCount)
-
-        for (let i = 0; i < keys.count; ++i) {
-          const { key, depositSignature } = await nor.getSigningKey(operatorData.id, i)
-          const [expectedPublicKey, expectedSignature] = keys.get(i)
-          assert.equals(key, expectedPublicKey)
-          assert.equals(depositSignature, expectedSignature)
-        }
+      it('Set reward address', async () => {
+        await forEachSync(NODE_OPERATORS, async (operatorData, i) => {
+          const rewardAddress = rewardAddresses[i]
+          await nor.setNodeOperatorRewardAddress(operatorData.id, rewardAddress, { from: voting.address })
+          const operator = await nor.getNodeOperator(operatorData.id, true)
+          assert.equals(operator.rewardAddress, rewardAddress)
+        })
       })
-    })
 
-    let stateTotalVetted = 0
-    let stateTotaldeposited = 0
+      it('Add signing keys', async () => {
+        await forEachSync(NODE_OPERATORS, async (operatorData, i) => {
+          const keys = new signingKeys.FakeValidatorKeys(operatorData.totalSigningKeysCount)
+          await nor.addSigningKeys(operatorData.id, keys.count, ...keys.slice(), { from: voting.address })
 
-    it('Set staking limit', async () => {
-      await forEachSync(NODE_OPERATORS, async (operatorData, i) => {
-        if (!(await nor.getNodeOperatorIsActive(operatorData.id))) return
+          const operator = await nor.getNodeOperator(operatorData.id, true)
+          const keysCount = await nor.getTotalSigningKeyCount(operatorData.id)
+          const unusedKeysCount = await nor.getUnusedSigningKeyCount(operatorData.id)
+          assert.equals(keys.count, operator.totalSigningKeys.toNumber())
+          assert.equals(keys.count, keysCount)
+          assert.equals(keys.count, unusedKeysCount)
+
+          for (let i = 0; i < keys.count; ++i) {
+            const { key, depositSignature } = await nor.getSigningKey(operatorData.id, i)
+            const [expectedPublicKey, expectedSignature] = keys.get(i)
+            assert.equals(key, expectedPublicKey)
+            assert.equals(depositSignature, expectedSignature)
+          }
+        })
+      })
+
+      it('Set staking limit', async () => {
+        await forEachSync(NODE_OPERATORS, async (operatorData, i) => {
+          if (!(await nor.getNodeOperatorIsActive(operatorData.id))) return
+          stateTotalVetted += operatorData.vettedSigningKeysCount
+          await nor.setNodeOperatorStakingLimit(operatorData.id, operatorData.vettedSigningKeysCount, {
+            from: voting.address,
+          })
+          const summary = await nor.getNodeOperatorSummary(operatorData.id)
+          const operator = await nor.getNodeOperator(operatorData.id, true)
+          assert.equals(operator.stakingLimit, operatorData.vettedSigningKeysCount)
+          assert.equals(summary.depositableValidatorsCount, operatorData.vettedSigningKeysCount)
+        })
+
+        const stakingModuleSummary = await nor.getStakingModuleSummary()
+        assert.equals(stakingModuleSummary.depositableValidatorsCount, stateTotalVetted)
+        stateTotalDepositable = stateTotalVetted
+      })
+
+      it('Removing key with index less then stakingLimit will trim stakingLimit value to this border', async () => {
+        const operatorData = Operator1
+
+        const operatorBefore = await nor.getNodeOperator(operatorData.id, true)
+        const summaryBefore = await nor.getNodeOperatorSummary(operatorData.id)
+        const keysCountBefore = await nor.getTotalSigningKeyCount(operatorData.id)
+        const unusedKeysCountBefore = await nor.getUnusedSigningKeyCount(operatorData.id)
+        const keyIdxToRemove = 1
+        const keyBefore = await nor.getSigningKey(operatorData.id, keyIdxToRemove)
+        assert.equals(operatorBefore.stakingLimit, operatorData.vettedSigningKeysCount)
+
+        await nor.removeSigningKey(operatorData.id, keyIdxToRemove, { from: voting.address })
+
+        const operatorAfter = await nor.getNodeOperator(operatorData.id, true)
+        const summaryAfter = await nor.getNodeOperatorSummary(operatorData.id)
+        const keysCountAfter = await nor.getTotalSigningKeyCount(operatorData.id)
+        const unusedKeysCountAfter = await nor.getUnusedSigningKeyCount(operatorData.id)
+        const keyAfter = await nor.getSigningKey(operatorData.id, keyIdxToRemove)
+
+        assert.equals(operatorAfter.stakingLimit, keyIdxToRemove)
+        assert.equals(+operatorBefore.totalSigningKeys - 1, +operatorAfter.totalSigningKeys)
+        assert.equals(+keysCountBefore - 1, +keysCountAfter)
+        assert.equals(+unusedKeysCountBefore - 1, +unusedKeysCountAfter)
+        assert.equals(summaryBefore.depositableValidatorsCount, operatorData.vettedSigningKeysCount)
+        assert.equals(summaryAfter.depositableValidatorsCount, keyIdxToRemove)
+        assert.notEqual(keyBefore.key, keyAfter.key)
+        assert.notEqual(keyBefore.depositSignature, keyAfter.depositSignature)
+      })
+
+      it('Set stakingLimit back after key removement', async () => {
+        const operatorData = Operator1
         stateTotalVetted += operatorData.vettedSigningKeysCount
         await nor.setNodeOperatorStakingLimit(operatorData.id, operatorData.vettedSigningKeysCount, {
           from: voting.address,
         })
+        const summary = await nor.getNodeOperatorSummary(operatorData.id)
         const operator = await nor.getNodeOperator(operatorData.id, true)
         assert.equals(operator.stakingLimit, operatorData.vettedSigningKeysCount)
+        assert.equals(summary.depositableValidatorsCount, operatorData.vettedSigningKeysCount)
       })
 
-      const stakingModuleSummary = await nor.getStakingModuleSummary()
-      assert.equals(stakingModuleSummary.depositableValidatorsCount, stateTotalVetted)
-    })
+      it('Set target limit to Operator 2', async () => {
+        const [curated] = await stakingRouter.getStakingModules()
+        const operatorData = Operator2
+        const operatorId = operatorData.id
+        const targetLimitCount = 1
 
-    it('Set target limit', async () => {
-      const [curated] = await stakingRouter.getStakingModules()
-      const operatorId = Operator2.id
+        await assertTargetLimit(operatorData, false, 0, operatorData.vettedSigningKeysCount)
 
-      let summary = await nor.getNodeOperatorSummary(operatorId)
-      assert.equals(summary.isTargetLimitActive, false)
-      assert.equals(summary.targetValidatorsCount, 0)
-      assert.equals(summary.depositableValidatorsCount, 10)
+        // StakingRouter.updateTargetValidatorsLimits() -> NOR.updateTargetValidatorsLimits()
+        const tx = await stakingRouter.updateTargetValidatorsLimits(curated.id, operatorId, true, targetLimitCount, {
+          from: voting.address,
+        })
 
-      // StakingRouter.updateTargetValidatorsLimits() -> NOR.updateTargetValidatorsLimits()
-      const tx = await stakingRouter.updateTargetValidatorsLimits(curated.id, operatorId, true, 1, {
-        from: voting.address,
+        await assertTargetLimit(operatorData, true, targetLimitCount, targetLimitCount)
+
+        assert.emits(
+          tx,
+          'TargetValidatorsCountChanged',
+          { nodeOperatorId: operatorId, targetValidatorsCount: 1 },
+          NOR_ABI_ASSERT_EV
+        )
+
+        stateTotalDepositable -= operatorData.vettedSigningKeysCount - targetLimitCount
       })
 
-      summary = await nor.getNodeOperatorSummary(operatorId)
-      assert.equals(summary.isTargetLimitActive, true)
-      assert.equals(summary.targetValidatorsCount, 1)
-      assert.equals(summary.depositableValidatorsCount, 1)
-
-      assert.emits(
-        tx,
-        'TargetValidatorsCountChanged',
-        { nodeOperatorId: operatorId, targetValidatorsCount: 1 },
-        { abi: NodeOperatorsRegistry._json.abi }
-      )
+      it('Initial general summary values', async () => {
+        const summary = await nor.getStakingModuleSummary()
+        assert.equals(summary.totalExitedValidators, 0)
+        assert.equals(summary.totalDepositedValidators, 0)
+        assert.equals(summary.depositableValidatorsCount, stateTotalDepositable)
+      })
     })
 
-    it('Obtain deposit data', async () => {
-      const [curated] = await stakingRouter.getStakingModules()
+    context('Deposits distribution', () => {
+      it('Obtain deposit data', async () => {
+        const [curated] = await stakingRouter.getStakingModules()
 
-      const stakesDeposited = 4
-      const depositedValue = ETH(32 * stakesDeposited)
+        const stakesDeposited = 6
+        const depositedValue = ETH(32 * stakesDeposited)
 
-      await web3.eth.sendTransaction({ to: lido.address, from: user1, value: depositedValue })
+        await web3.eth.sendTransaction({ to: lido.address, from: user1, value: depositedValue })
 
-      const block = await web3.eth.getBlock('latest')
-      const keysOpIndex = await nor.getKeysOpIndex()
+        const block = await web3.eth.getBlock('latest')
+        const keysOpIndex = await nor.getKeysOpIndex()
 
-      DSMAttestMessage.setMessagePrefix(await dsm.ATTEST_MESSAGE_PREFIX())
+        DSMAttestMessage.setMessagePrefix(await dsm.ATTEST_MESSAGE_PREFIX())
 
-      const attest = new DSMAttestMessage(block.number, block.hash, depositRoot, curated.id, keysOpIndex)
-      const signatures = [
-        attest.sign(guardians.privateKeys[guardians.addresses[0]]),
-        attest.sign(guardians.privateKeys[guardians.addresses[1]]),
-      ]
+        const attest = new DSMAttestMessage(block.number, block.hash, depositRoot, curated.id, keysOpIndex)
+        const signatures = [
+          attest.sign(guardians.privateKeys[guardians.addresses[0]]),
+          attest.sign(guardians.privateKeys[guardians.addresses[1]]),
+        ]
 
-      // triggers flow:
-      // DSM.depositBufferedEther() -> Lido.deposit() -> StakingRouter.deposit() -> Module.obtainDepositData()
-      await dsm.depositBufferedEther(block.number, block.hash, depositRoot, curated.id, keysOpIndex, '0x', signatures)
+        /**
+         * Expected deposits fill   1 2 3 4 5 6
+         * Operator 1             [ x x x       ]
+         * Operator 2 (limit = 1) [       x     ]
+         * Operator 3             [         x x ]
+         */
 
-      stateTotaldeposited += stakesDeposited
+        // triggers flow:
+        // DSM.depositBufferedEther() -> Lido.deposit() -> StakingRouter.deposit() -> Module.obtainDepositData()
+        await dsm.depositBufferedEther(block.number, block.hash, depositRoot, curated.id, keysOpIndex, '0x', signatures)
 
-      const depositCallCount = await depositContract.totalCalls()
-      assert.equals(depositCallCount, stakesDeposited)
+        stateTotalDeposited += stakesDeposited
 
-      // Target Limit affects here, that's why operator 1 receives 3 deposits, while operator 2 got only 1
-      await assertDepositCall(Operator1.id, 0, 0)
-      await assertDepositCall(Operator1.id, 1, 1)
-      await assertDepositCall(Operator1.id, 2, 2)
-      await assertDepositCall(Operator2.id, 3, 0)
+        const depositCallCount = await depositContract.totalCalls()
+        assert.equals(depositCallCount, stakesDeposited)
 
-      const stakingModuleSummary = await nor.getStakingModuleSummary()
-      assert.equals(stakingModuleSummary.totalDepositedValidators, stateTotaldeposited)
-      assert.equals(stakingModuleSummary.depositableValidatorsCount, 3)
+        // Target Limit affects here, that's why operator 2 receives only 1 deposit
+        await assertDepositCall(0, Operator1.id, 0)
+        await assertDepositCall(1, Operator1.id, 1)
+        await assertDepositCall(2, Operator1.id, 2)
+        await assertDepositCall(3, Operator2.id, 0)
+        await assertDepositCall(4, Operator3.id, 0)
+        await assertDepositCall(5, Operator3.id, 1)
 
-      const operator1 = await nor.getNodeOperator(Operator1.id, true)
-      const summaryOperator1 = await nor.getNodeOperatorSummary(Operator1.id)
-      assert.equals(operator1.usedSigningKeys, 3)
-      assert.equals(summaryOperator1.totalDepositedValidators, 3)
-      assert.equals(summaryOperator1.depositableValidatorsCount, 3)
+        const stakingModuleSummaryAfter = await nor.getStakingModuleSummary()
+        assert.equals(stakingModuleSummaryAfter.totalDepositedValidators, stateTotalDeposited)
+        assert.equals(stakingModuleSummaryAfter.depositableValidatorsCount, stateTotalDepositable - stateTotalDeposited)
 
-      const operator2 = await nor.getNodeOperator(Operator2.id, true)
-      const summaryOperator2 = await nor.getNodeOperatorSummary(Operator2.id)
-      assert.equals(operator2.usedSigningKeys, 1)
-      assert.equals(summaryOperator2.totalDepositedValidators, 1)
-      assert.equals(summaryOperator2.depositableValidatorsCount, 0)
+        await assertOperatorDeposits(Operator1, 3, 3)
+        await assertOperatorDeposits(Operator2, 1, 0)
+        await assertOperatorDeposits(Operator3, 2, 3)
+
+        // TODO: assert disabled Operator 4 should not be called while depositing
+      })
+
+      it('Rewards distribution', async () => {
+        const distribution = await nor.getRewardsDistribution(web3.utils.toWei('30'))
+        assert.equal(distribution.shares[0], web3.utils.toWei('15'))
+        assert.equal(distribution.shares[1], web3.utils.toWei('5'))
+        assert.equal(distribution.shares[2], web3.utils.toWei('10'))
+        assert.equal(distribution.recipients[0], rewards1)
+        assert.equal(distribution.recipients[1], rewards2)
+        assert.equal(distribution.recipients[2], rewards3)
+      })
     })
 
-    it('Rewards distribution', async () => {
-      const distribution = await nor.getRewardsDistribution(web3.utils.toWei('20'))
-      assert.equal(distribution.shares[0], web3.utils.toWei('15'))
-      assert.equal(distribution.shares[1], web3.utils.toWei('5'))
-      assert.equal(distribution.recipients[0], rewards1)
-      assert.equal(distribution.recipients[1], rewards2)
-    })
+    context('Validators exiting and stuck', () => {
+      it('Initial rewards state', async () => {
+        const sharesNOR = +(await lido.sharesOf(nor.address))
+        const sharesRewards1 = +(await lido.sharesOf(rewards1))
+        const sharesRewards2 = +(await lido.sharesOf(rewards2))
+        const sharesRewards3 = +(await lido.sharesOf(rewards3))
+        assert.equals(sharesNOR, 0)
+        assert.equals(sharesRewards1, 0)
+        assert.equals(sharesRewards2, 0)
+        assert.equals(sharesRewards3, 0)
+      })
 
-    it('Validators exiting and stuck', async () => {
-      const { refSlot } = await consensus.getCurrentFrame()
-      const [curated] = await stakingRouter.getStakingModules()
+      let reportTx
 
-      const sharesNORBefore = +(await lido.sharesOf(nor.address))
-      const sharesRewards1Before = +(await lido.sharesOf(rewards1))
-      const sharesRewards2Before = +(await lido.sharesOf(rewards2))
-      assert.equals(sharesNORBefore, 0)
-      assert.equals(sharesRewards1Before, 0)
-      assert.equals(sharesRewards2Before, 0)
+      it('Consensus+oracle report', async () => {
+        const { refSlot } = await consensus.getCurrentFrame()
+        const [curated] = await stakingRouter.getStakingModules()
 
-      const extraData = {
-        exitedKeys: [{ moduleId: 1, nodeOpIds: [0], keysCounts: [2] }],
-        stuckKeys: [{ moduleId: 1, nodeOpIds: [1], keysCounts: [1] }],
-      }
+        const extraData = {
+          exitedKeys: [{ moduleId: 1, nodeOpIds: [0], keysCounts: [2] }],
+          stuckKeys: [{ moduleId: 1, nodeOpIds: [1, 2], keysCounts: [1, 1] }],
+        }
 
-      const extraDataItems = encodeExtraDataItems(extraData)
-      const extraDataList = packExtraDataList(extraDataItems)
-      const extraDataHash = calcExtraDataListHash(extraDataList)
+        const extraDataItems = encodeExtraDataItems(extraData)
+        const extraDataList = packExtraDataList(extraDataItems)
+        const extraDataHash = calcExtraDataListHash(extraDataList)
 
-      const reportFields = {
-        consensusVersion,
-        numValidators: 4,
-        clBalanceGwei: toBN(ETH(32 * 4 + 1)).div(E9),
-        stakingModuleIdsWithNewlyExitedValidators: [curated.id],
-        numExitedValidatorsByStakingModule: [2],
-        withdrawalVaultBalance: e18(0),
-        elRewardsVaultBalance: e18(0),
-        sharesRequestedToBurn: e18(0),
-        withdrawalFinalizationBatches: [],
-        simulatedShareRate: e27(1),
-        isBunkerMode: false,
-        extraDataFormat: 1,
-        refSlot: +refSlot,
-        extraDataHash,
-        extraDataItemsCount: 2,
-      }
+        const reportFields = {
+          consensusVersion,
+          numValidators: 6,
+          clBalanceGwei: toBN(ETH(32 * stateTotalDeposited + 1)).div(E9),
+          stakingModuleIdsWithNewlyExitedValidators: [curated.id],
+          numExitedValidatorsByStakingModule: [2],
+          withdrawalVaultBalance: e18(0),
+          elRewardsVaultBalance: e18(0),
+          sharesRequestedToBurn: e18(0),
+          withdrawalFinalizationBatches: [],
+          simulatedShareRate: e27(1),
+          isBunkerMode: false,
+          extraDataFormat: 1,
+          refSlot: +refSlot,
+          extraDataHash,
+          extraDataItemsCount: 2,
+        }
 
-      const reportItems = getAccountingReportDataItems(reportFields)
-      const reportHash = calcAccountingReportDataHash(reportItems)
+        const reportItems = getAccountingReportDataItems(reportFields)
+        const reportHash = calcAccountingReportDataHash(reportItems)
 
-      await consensus.submitReport(+refSlot, reportHash, consensusVersion, { from: consensusMember })
+        await consensus.submitReport(+refSlot, reportHash, consensusVersion, { from: consensusMember })
 
-      // Mentionable internal calls
-      // AccountingOracle.submitReportData()
-      //      -> Lido.handleOracleReport()._processRewards()._distributeFee()
-      //                                                         -> StakingRouter.reportRewardsMinted() -> NOR.onRewardsMinted()
-      //                                                         ._transferModuleRewards()._transferShares()
-      //      -> StakingRouter.updateExitedValidatorsCountByStakingModule() -> StakingRouter.stakingModule[id].exitedValidatorsCount = exitedCount
-      // TODO: [optional] assert those tied calls
-      await oracle.submitReportData(reportItems, consensusVersion, { from: consensusMember })
+        // Mentionable internal calls
+        // AccountingOracle.submitReportData()
+        //      -> Lido.handleOracleReport()._processRewards()._distributeFee()
+        //                                                         -> StakingRouter.reportRewardsMinted() -> NOR.onRewardsMinted()
+        //                                                         ._transferModuleRewards()._transferShares()
+        //      -> StakingRouter.updateExitedValidatorsCountByStakingModule() -> StakingRouter.stakingModule[id].exitedValidatorsCount = exitedCount
+        // TODO: [optional] assert those tied calls
+        await oracle.submitReportData(reportItems, consensusVersion, { from: consensusMember })
 
-      const sharesNORInMiddle = await lido.sharesOf(nor.address)
-      // TODO: Calculate this assert value
-      assert.isClose(sharesNORInMiddle, '49653579676674370', 10)
+        const sharesNORInMiddle = await lido.sharesOf(nor.address)
+        // TODO: Calculate this assert value
+        assert.isClose(sharesNORInMiddle, '49767921609076843', 10)
 
-      // Mentionable internal calls
-      // AccountingOracle.submitReportExtraDataList()
-      //      -> StakingRouter.onValidatorsCountsByNodeOperatorReportingFinished() -> NOR.onExitedAndStuckValidatorsCountsUpdated()._distributeRewards()
-      //                                                                                                                             emits NOR.NodeOperatorPenalized
-      //                                                                                                                             emits NOR.RewardsDistributed
-      //                                                                                                                             -> stETH.transferShares()
-      //                                                                                                                             -> Burner.requestBurnShares()
-      //      -> StakingRouter.reportStakingModuleExitedValidatorsCountByNodeOperator() -> NOR.updateExitedValidatorsCount() ->
-      //                                                                                       emits NOR.ExitedSigningKeysCountChanged
-      //                                                                                       ._saveSummarySigningKeysStats()
-      //                                                                                       ._updateSummaryMaxValidatorsCount()
-      //      -> StakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator() -> NOR.updateStuckValidatorsCount() ->
-      //                                                                                      emits NOR.StuckPenaltyStateChanged
-      //                                                                                      ._saveOperatorStuckPenaltyStats()
-      //                                                                                      ._updateSummaryMaxValidatorsCount()
-      const tx = await oracle.submitReportExtraDataList(extraDataList, { from: voting.address })
-
-      assert.emits(
-        tx,
-        'ExitedSigningKeysCountChanged',
-        { nodeOperatorId: Operator1.id, exitedValidatorsCount: 2 },
-        { abi: NodeOperatorsRegistry._json.abi }
-      )
-
-      assert.emits(
-        tx,
-        'StuckPenaltyStateChanged',
-        {
-          nodeOperatorId: Operator2.id,
-          stuckValidatorsCount: 1,
-          refundedValidatorsCount: 0,
-          stuckPenaltyEndTimestamp: 0,
-        },
-        { abi: NodeOperatorsRegistry._json.abi }
-      )
+        // Mentionable internal calls
+        // AccountingOracle.submitReportExtraDataList()
+        //      -> StakingRouter.onValidatorsCountsByNodeOperatorReportingFinished() -> NOR.onExitedAndStuckValidatorsCountsUpdated()._distributeRewards()
+        //                                                                                                                             emits NOR.NodeOperatorPenalized
+        //                                                                                                                             emits NOR.RewardsDistributed
+        //                                                                                                                             -> stETH.transferShares()
+        //                                                                                                                             -> Burner.requestBurnShares()
+        //      -> StakingRouter.reportStakingModuleExitedValidatorsCountByNodeOperator() -> NOR.updateExitedValidatorsCount() ->
+        //                                                                                       emits NOR.ExitedSigningKeysCountChanged
+        //                                                                                       ._saveSummarySigningKeysStats()
+        //                                                                                       ._updateSummaryMaxValidatorsCount()
+        //      -> StakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator() -> NOR.updateStuckValidatorsCount() ->
+        //                                                                                      emits NOR.StuckPenaltyStateChanged
+        //                                                                                      ._saveOperatorStuckPenaltyStats()
+        //                                                                                      ._updateSummaryMaxValidatorsCount()
+        reportTx = await oracle.submitReportExtraDataList(extraDataList, { from: voting.address })
+      })
 
       // TODO: calculate those assert values
-      const rewardAmountForOperator1 = '24826789838337182'
-      const rewardAmountForOperator2 = '12413394919168591'
+      const rewardAmountForOperator1 = '12441980402269210'
+      const rewardAmountForOperator2 = '6220990201134605'
+      const rewardAmountForOperator3 = '12441980402269210'
       const penaltyAmountForOperator2 = rewardAmountForOperator2
+      const penaltyAmountForOperator3 = rewardAmountForOperator3
 
-      const eventRewardsDistributed1 = getEvents(tx, 'RewardsDistributed', {
-        decodeForAbi: NodeOperatorsRegistry._json.abi,
-      })[0]
-      const eventRewardsDistributed2 = getEvents(tx, 'RewardsDistributed', {
-        decodeForAbi: NodeOperatorsRegistry._json.abi,
-      })[1]
-      const eventNodeOperatorPenalized = getEvents(tx, 'NodeOperatorPenalized', {
-        decodeForAbi: NodeOperatorsRegistry._json.abi,
-      })[0]
-      assert.addressEqual(eventRewardsDistributed1.args.rewardAddress, rewards1)
-      assert.addressEqual(eventRewardsDistributed2.args.rewardAddress, rewards2)
-      assert.addressEqual(eventNodeOperatorPenalized.args.recipientAddress, rewards2)
-      assert.isClose(eventRewardsDistributed1.args.sharesAmount, rewardAmountForOperator1, 10)
-      assert.isClose(eventRewardsDistributed2.args.sharesAmount, rewardAmountForOperator2, 10)
-      assert.isClose(eventNodeOperatorPenalized.args.sharesPenalizedAmount, penaltyAmountForOperator2, 10)
+      it('Events should be emitted after exit/stuck report', async () => {
+        const tx = reportTx
 
-      const operator1 = await nor.getNodeOperator(Operator1.id, true)
-      const summaryOperator1 = await nor.getNodeOperatorSummary(Operator1.id)
-      assert.equals(operator1.stoppedValidators, 2)
-      assert.equals(summaryOperator1.totalExitedValidators, 2)
-      assert.equals(summaryOperator1.depositableValidatorsCount, 3)
+        assert.emits(
+          tx,
+          'ExitedSigningKeysCountChanged',
+          { nodeOperatorId: Operator1.id, exitedValidatorsCount: 2 },
+          NOR_ABI_ASSERT_EV
+        )
 
-      const summaryOperator2 = await nor.getNodeOperatorSummary(Operator2.id)
-      assert.equals(summaryOperator2.stuckValidatorsCount, 1)
-      assert.equals(summaryOperator2.depositableValidatorsCount, 0)
+        assert.emits(
+          tx,
+          'StuckPenaltyStateChanged',
+          {
+            nodeOperatorId: Operator2.id,
+            stuckValidatorsCount: 1,
+            refundedValidatorsCount: 0,
+            stuckPenaltyEndTimestamp: 0,
+          },
+          NOR_ABI_ASSERT_EV
+        )
 
-      const sharesNORAfter = await lido.sharesOf(nor.address)
-      const sharesRewards1After = await lido.sharesOf(rewards1)
-      const sharesRewards2After = await lido.sharesOf(rewards2)
-
-      assert.equals(sharesNORAfter, 0)
-      assert.isClose(sharesRewards1After, rewardAmountForOperator1, 10)
-      assert.isClose(sharesRewards2After, rewardAmountForOperator2, 10)
-    })
-
-    it('unsafeSetExitedValidatorsCount', async () => {
-      const [curated] = await stakingRouter.getStakingModules()
-      const correction = {
-        currentModuleExitedValidatorsCount: 2,
-        currentNodeOperatorExitedValidatorsCount: 2,
-        currentNodeOperatorStuckValidatorsCount: 0,
-        newModuleExitedValidatorsCount: 2,
-        newNodeOperatorExitedValidatorsCount: 3,
-        newNodeOperatorStuckValidatorsCount: 0,
-      }
-
-      // StakingRouter.unsafeSetExitedValidatorsCount() -> NOR.onExitedAndStuckValidatorsCountsUpdated()._distributeRewards()
-      //                                                                                                     emits NOR.NodeOperatorPenalized
-      //                                                                                                     emits NOR.RewardsDistributed
-      //                                                                                                     -> stETH.transferShares()
-      //                                                                                                     -> Burner.requestBurnShares()
-      await stakingRouter.unsafeSetExitedValidatorsCount(curated.id, Operator1.id, true, correction, {
-        from: voting.address,
+        const eventRewardsDistributed1 = getEvents(tx, 'RewardsDistributed', NOR_ABI_GET_EV)[0]
+        const eventRewardsDistributed2 = getEvents(tx, 'RewardsDistributed', NOR_ABI_GET_EV)[1]
+        const eventRewardsDistributed3 = getEvents(tx, 'RewardsDistributed', NOR_ABI_GET_EV)[2]
+        const eventOperator2Penalized = getEvents(tx, 'NodeOperatorPenalized', NOR_ABI_GET_EV)[0]
+        const eventOperator3Penalized = getEvents(tx, 'NodeOperatorPenalized', NOR_ABI_GET_EV)[1]
+        assert.addressEqual(eventRewardsDistributed1.args.rewardAddress, rewards1)
+        assert.addressEqual(eventRewardsDistributed2.args.rewardAddress, rewards2)
+        assert.addressEqual(eventRewardsDistributed3.args.rewardAddress, rewards3)
+        assert.addressEqual(eventOperator2Penalized.args.recipientAddress, rewards2)
+        assert.addressEqual(eventOperator3Penalized.args.recipientAddress, rewards3)
+        assert.isClose(eventRewardsDistributed1.args.sharesAmount, rewardAmountForOperator1, 10)
+        assert.isClose(eventRewardsDistributed2.args.sharesAmount, rewardAmountForOperator2, 10)
+        assert.isClose(eventRewardsDistributed3.args.sharesAmount, rewardAmountForOperator3, 10)
+        assert.isClose(eventOperator2Penalized.args.sharesPenalizedAmount, penaltyAmountForOperator2, 10)
+        assert.isClose(eventOperator3Penalized.args.sharesPenalizedAmount, penaltyAmountForOperator3, 10)
       })
 
-      const summaryOperator1 = await nor.getNodeOperatorSummary(Operator1.id)
-      assert.equals(summaryOperator1.totalExitedValidators, 3)
+      it('Operator summaries after exit/stuck report', async () => {
+        const operator1 = await nor.getNodeOperator(Operator1.id, true)
+        const summaryOperator1 = await nor.getNodeOperatorSummary(Operator1.id)
+        assert.equals(operator1.stoppedValidators, 2)
+        assert.equals(summaryOperator1.totalExitedValidators, 2)
+        assert.equals(summaryOperator1.depositableValidatorsCount, 3)
 
-      // TODO: assert emits NOR.NodeOperatorPenalized
-      // TODO: assert emits NOR.RewardsDistributed
-      // TODO: assert rewards was transfered with NOR._distributeRewards()
-      // TODO: assert rewards was transfered to operators for his exited validators
+        const summaryOperator2 = await nor.getNodeOperatorSummary(Operator2.id)
+        assert.equals(summaryOperator2.stuckValidatorsCount, 1)
+        assert.equals(summaryOperator2.depositableValidatorsCount, 0)
+
+        const summaryOperator3 = await nor.getNodeOperatorSummary(Operator3.id)
+        assert.equals(summaryOperator3.stuckValidatorsCount, 1)
+        assert.equals(summaryOperator3.depositableValidatorsCount, 0)
+
+        const sharesNORAfter = await lido.sharesOf(nor.address)
+        const sharesRewards1After = await lido.sharesOf(rewards1)
+        const sharesRewards2After = await lido.sharesOf(rewards2)
+        const sharesRewards3After = await lido.sharesOf(rewards3)
+
+        assert.isClose(sharesNORAfter, 0, 10)
+        assert.isClose(sharesRewards1After, rewardAmountForOperator1, 10)
+        assert.isClose(sharesRewards2After, rewardAmountForOperator2, 10)
+        assert.isClose(sharesRewards3After, rewardAmountForOperator3, 10)
+
+        // TODO: Assert disabled Operator 4 to be untouched
+      })
     })
 
-    /**
-     * TODO: TargetLimit allows to deposit after exit
-     */
+    context('Updating state unsafely', () => {
+      it('unsafeSetExitedValidatorsCount', async () => {
+        // const stakesDeposited = 6
+        // const depositedValue = ETH(32 * stakesDeposited)
+        // await web3.eth.sendTransaction({ to: lido.address, from: user1, value: depositedValue })
 
-    it('Disable TargetLimit', async () => {
-      const [curated] = await stakingRouter.getStakingModules()
-      const operatorId = Operator2.id
+        const [curated] = await stakingRouter.getStakingModules()
+        const correction = {
+          currentModuleExitedValidatorsCount: 2,
+          currentNodeOperatorExitedValidatorsCount: 2,
+          currentNodeOperatorStuckValidatorsCount: 0,
+          newModuleExitedValidatorsCount: 3,
+          newNodeOperatorExitedValidatorsCount: 3,
+          newNodeOperatorStuckValidatorsCount: 0,
+        }
 
-      let summary = await nor.getNodeOperatorSummary(operatorId)
-      assert.equals(summary.isTargetLimitActive, true)
-      assert.equals(summary.targetValidatorsCount, 1)
-      assert.equals(summary.depositableValidatorsCount, 0)
+        // StakingRouter.unsafeSetExitedValidatorsCount() -> NOR.onExitedAndStuckValidatorsCountsUpdated()._distributeRewards()
+        //                                                                                                     emits NOR.NodeOperatorPenalized
+        //                                                                                                     emits NOR.RewardsDistributed
+        //                                                                                                     -> stETH.transferShares()
+        //                                                                                                     -> Burner.requestBurnShares()
+        const tx = await stakingRouter.unsafeSetExitedValidatorsCount(curated.id, Operator1.id, true, correction, {
+          from: voting.address,
+        })
 
-      // StakingRouter.updateTargetValidatorsLimits() -> NOR.updateTargetValidatorsLimits()
-      const tx = await stakingRouter.updateTargetValidatorsLimits(curated.id, operatorId, false, 0, {
-        from: voting.address,
+        const summaryOperator1 = await nor.getNodeOperatorSummary(Operator1.id)
+        assert.equals(summaryOperator1.totalExitedValidators, 3)
+
+        const events = getEvents(tx, 'RewardsDistributed', NOR_ABI_GET_EV)
+        console.log(events)
+        // const eventRewardsDistributed1 = getEvents(tx, 'RewardsDistributed', NOR_ABI_GET_EV)
+        // const eventOperator2Penalized = getEvents(tx, 'NodeOperatorPenalized', NOR_ABI_GET_EV)
+
+        // TODO: assert emits NOR.NodeOperatorPenalized
+        // TODO: assert emits NOR.RewardsDistributed
+        // TODO: assert rewards was transfered with NOR._distributeRewards()
+        // TODO: assert rewards was transfered to operators for his exited validators
+      })
+    })
+
+    context('Keys and limits settings tweaks', () => {
+      /**
+       * TODO: TargetLimit allows to deposit after exit
+       */
+
+      it('Disable TargetLimit', async () => {
+        const [curated] = await stakingRouter.getStakingModules()
+        const operatorData = Operator2
+
+        await assertTargetLimit(operatorData, true, 1, 0)
+
+        // StakingRouter.updateTargetValidatorsLimits() -> NOR.updateTargetValidatorsLimits()
+        const tx = await stakingRouter.updateTargetValidatorsLimits(curated.id, operatorData.id, false, 0, {
+          from: voting.address,
+        })
+
+        // keysLeft still zero because of stucked key
+        await assertTargetLimit(operatorData, false, 0, 0)
+
+        assert.emits(
+          tx,
+          'TargetValidatorsCountChanged',
+          { nodeOperatorId: operatorData.id, targetValidatorsCount: 0 },
+          NOR_ABI_ASSERT_EV
+        )
       })
 
-      summary = await nor.getNodeOperatorSummary(operatorId)
-      assert.equals(summary.isTargetLimitActive, false)
-      assert.equals(summary.targetValidatorsCount, 0)
-      // TODO: assert.equals(summary.depositableValidatorsCount, ?)
+      /**
+       * TODO: Deposit again after disabling TargetLimit
+       */
 
-      assert.emits(
-        tx,
-        'TargetValidatorsCountChanged',
-        { nodeOperatorId: operatorId, targetValidatorsCount: 0 },
-        { abi: NodeOperatorsRegistry._json.abi }
-      )
+      it('Remove multiple signing keys', async () => {
+        const operatorData = Operator1
+
+        const operatorBefore = await nor.getNodeOperator(operatorData.id, true)
+        const summaryBefore = await nor.getNodeOperatorSummary(operatorData.id)
+        const keysCountBefore = await nor.getTotalSigningKeyCount(operatorData.id)
+        const unusedKeysCountBefore = await nor.getUnusedSigningKeyCount(operatorData.id)
+        const keyIdxToRemove = +operatorBefore.usedSigningKeys + 1
+        const keysCountToRemove = 2
+        const key1Before = await nor.getSigningKey(operatorData.id, keyIdxToRemove)
+        const key2Before = await nor.getSigningKey(operatorData.id, keyIdxToRemove + 1)
+
+        assert.equals(operatorBefore.stakingLimit, operatorData.vettedSigningKeysCount)
+
+        await nor.removeSigningKeys(operatorData.id, keyIdxToRemove, keysCountToRemove, { from: voting.address })
+
+        const operatorAfter = await nor.getNodeOperator(operatorData.id, true)
+        const summaryAfter = await nor.getNodeOperatorSummary(operatorData.id)
+        const keysCountAfter = await nor.getTotalSigningKeyCount(operatorData.id)
+        const unusedKeysCountAfter = await nor.getUnusedSigningKeyCount(operatorData.id)
+        const key1After = await nor.getSigningKey(operatorData.id, keyIdxToRemove)
+        const key2After = await nor.getSigningKey(operatorData.id, keyIdxToRemove + 1)
+
+        assert.equals(operatorAfter.stakingLimit, keyIdxToRemove)
+        assert.equals(+operatorBefore.totalSigningKeys - keysCountToRemove, +operatorAfter.totalSigningKeys)
+        assert.equals(+keysCountBefore - keysCountToRemove, +keysCountAfter)
+        assert.equals(+unusedKeysCountBefore - keysCountToRemove, +unusedKeysCountAfter)
+        assert.equals(
+          +summaryBefore.depositableValidatorsCount - keysCountToRemove,
+          +summaryAfter.depositableValidatorsCount
+        )
+        assert.notEqual(key1Before.key, key1After.key)
+        assert.notEqual(key2Before.key, key2After.key)
+        assert.notEqual(key1Before.depositSignature, key1After.depositSignature)
+        assert.notEqual(key2Before.depositSignature, key2After.depositSignature)
+      })
     })
-
-    /**
-     *  Deposit again after disabling TargetLimit
-     */
-
-    it('Remove one signing key', async () => {
-      const operatorId = Operator1.id
-
-      const operatorBefore = await nor.getNodeOperator(operatorId, true)
-      const keysCountBefore = await nor.getTotalSigningKeyCount(operatorId)
-      const unusedKeysCountBefore = await nor.getUnusedSigningKeyCount(operatorId)
-
-      const keyIdxToRemove = +operatorBefore.usedSigningKeys
-      const keyBefore = await nor.getSigningKey(operatorId, keyIdxToRemove)
-
-      await nor.removeSigningKey(operatorId, keyIdxToRemove, { from: voting.address })
-
-      const operatorAfter = await nor.getNodeOperator(operatorId, true)
-      const keysCountAfter = await nor.getTotalSigningKeyCount(operatorId)
-      const unusedKeysCountAfter = await nor.getUnusedSigningKeyCount(operatorId)
-      const keyAfter = await nor.getSigningKey(operatorId, keyIdxToRemove)
-
-      assert.equals(+operatorBefore.totalSigningKeys - 1, +operatorAfter.totalSigningKeys)
-      assert.equals(+keysCountBefore - 1, +keysCountAfter)
-      assert.equals(+unusedKeysCountBefore - 1, +unusedKeysCountAfter)
-      assert.notEqual(keyBefore.key, keyAfter.key)
-      assert.notEqual(keyBefore.depositSignature, keyAfter.depositSignature)
-
-      // TODO: Why operatorBefore is 6 here??
-      // console.log(+operatorBefore.stakingLimit)
-      // console.log(+operatorAfter.stakingLimit)
-
-      // TODO: assert that staking limit was changed
-      // TODO: check if we need to assert target limit
-    })
-
-    // TODO:
-    // it('Remove multiple signing keys', async () => {
-    // })
 
     // TODO: NOR....()
     //       Deactivate Operator that was in use before
