@@ -1,4 +1,5 @@
 const { contract, web3 } = require('hardhat')
+const { getEvents } = require('@aragon/contract-helpers-test')
 const { assert } = require('../helpers/assert')
 
 const signingKeys = require('../helpers/signing-keys')
@@ -112,6 +113,7 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
     oracle = deployed.oracle
     signers = deployed.signers
     consensusMember = signers[2].address
+    appManager = deployed.appManager
 
     consensusVersion = await oracle.getConsensusVersion()
     await consensus.removeMember(signers[4].address, 2, { from: voting.address })
@@ -297,8 +299,7 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
     })
 
     it('Rewards distribution', async () => {
-      const totalRewardsShare = web3.utils.toWei('20')
-      const distribution = await nor.getRewardsDistribution(totalRewardsShare)
+      const distribution = await nor.getRewardsDistribution(web3.utils.toWei('20'))
       assert.equal(distribution.shares[0], web3.utils.toWei('15'))
       assert.equal(distribution.shares[1], web3.utils.toWei('5'))
       assert.equal(distribution.recipients[0], rewards1)
@@ -308,6 +309,13 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
     it('Validators exiting and stuck', async () => {
       const { refSlot } = await consensus.getCurrentFrame()
       const [curated] = await stakingRouter.getStakingModules()
+
+      const sharesNORBefore = +(await lido.sharesOf(nor.address))
+      const sharesRewards1Before = +(await lido.sharesOf(rewards1))
+      const sharesRewards2Before = +(await lido.sharesOf(rewards2))
+      assert.equals(sharesNORBefore, 0)
+      assert.equals(sharesRewards1Before, 0)
+      assert.equals(sharesRewards2Before, 0)
 
       const extraData = {
         exitedKeys: [{ moduleId: 1, nodeOpIds: [0], keysCounts: [2] }],
@@ -321,9 +329,9 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
       const reportFields = {
         consensusVersion,
         numValidators: 4,
-        clBalanceGwei: toBN(ETH(32 * 4)).div(E9),
+        clBalanceGwei: toBN(ETH(32 * 4 + 1)).div(E9),
         stakingModuleIdsWithNewlyExitedValidators: [curated.id],
-        numExitedValidatorsByStakingModule: [1],
+        numExitedValidatorsByStakingModule: [2],
         withdrawalVaultBalance: e18(0),
         elRewardsVaultBalance: e18(0),
         sharesRequestedToBurn: e18(0),
@@ -349,6 +357,10 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
       //      -> StakingRouter.updateExitedValidatorsCountByStakingModule() -> StakingRouter.stakingModule[id].exitedValidatorsCount = exitedCount
       // TODO: [optional] assert those tied calls
       await oracle.submitReportData(reportItems, consensusVersion, { from: consensusMember })
+
+      const sharesNORInMiddle = await lido.sharesOf(nor.address)
+      // TODO: Calculate this assert value
+      assert.isClose(sharesNORInMiddle, '49653579676674370', 10)
 
       // Mentionable internal calls
       // AccountingOracle.submitReportExtraDataList()
@@ -386,30 +398,53 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, us
         { abi: NodeOperatorsRegistry._json.abi }
       )
 
+      // TODO: calculate those assert values
+      const rewardAmountForOperator1 = '24826789838337182'
+      const rewardAmountForOperator2 = '12413394919168591'
+      const penaltyAmountForOperator2 = rewardAmountForOperator2
+
+      const eventRewardsDistributed1 = getEvents(tx, 'RewardsDistributed', {
+        decodeForAbi: NodeOperatorsRegistry._json.abi,
+      })[0]
+      const eventRewardsDistributed2 = getEvents(tx, 'RewardsDistributed', {
+        decodeForAbi: NodeOperatorsRegistry._json.abi,
+      })[1]
+      const eventNodeOperatorPenalized = getEvents(tx, 'NodeOperatorPenalized', {
+        decodeForAbi: NodeOperatorsRegistry._json.abi,
+      })[0]
+      assert.addressEqual(eventRewardsDistributed1.args.rewardAddress, rewards1)
+      assert.addressEqual(eventRewardsDistributed2.args.rewardAddress, rewards2)
+      assert.addressEqual(eventNodeOperatorPenalized.args.recipientAddress, rewards2)
+      assert.isClose(eventRewardsDistributed1.args.sharesAmount, rewardAmountForOperator1, 10)
+      assert.isClose(eventRewardsDistributed2.args.sharesAmount, rewardAmountForOperator2, 10)
+      assert.isClose(eventNodeOperatorPenalized.args.sharesPenalizedAmount, penaltyAmountForOperator2, 10)
+
       const operator1 = await nor.getNodeOperator(Operator1.id, true)
       const summaryOperator1 = await nor.getNodeOperatorSummary(Operator1.id)
       assert.equals(operator1.stoppedValidators, 2)
       assert.equals(summaryOperator1.totalExitedValidators, 2)
+      assert.equals(summaryOperator1.depositableValidatorsCount, 3)
 
       const summaryOperator2 = await nor.getNodeOperatorSummary(Operator2.id)
       assert.equals(summaryOperator2.stuckValidatorsCount, 1)
+      assert.equals(summaryOperator2.depositableValidatorsCount, 0)
 
-      // TODO: assert emits NodeOperatorPenalized
-      // TODO: assert emits RewardsDistributed
-      // TODO: assert rewards was transfered with NOR._distributeRewards()
-      // TODO: assert rewards was transfered to operators for his exited validators
+      const sharesNORAfter = await lido.sharesOf(nor.address)
+      const sharesRewards1After = await lido.sharesOf(rewards1)
+      const sharesRewards2After = await lido.sharesOf(rewards2)
 
-      // TODO: assert TargetLimit changes to zero if any key stucked. ... -> NOR._updateSummaryMaxValidatorsCount()
-      // assert.equals(summaryOperator2.targetValidatorsCount, 0)
+      assert.equals(sharesNORAfter, 0)
+      assert.isClose(sharesRewards1After, rewardAmountForOperator1, 10)
+      assert.isClose(sharesRewards2After, rewardAmountForOperator2, 10)
     })
 
     it('unsafeSetExitedValidatorsCount', async () => {
       const [curated] = await stakingRouter.getStakingModules()
       const correction = {
-        currentModuleExitedValidatorsCount: 1,
+        currentModuleExitedValidatorsCount: 2,
         currentNodeOperatorExitedValidatorsCount: 2,
         currentNodeOperatorStuckValidatorsCount: 0,
-        newModuleExitedValidatorsCount: 1,
+        newModuleExitedValidatorsCount: 2,
         newNodeOperatorExitedValidatorsCount: 3,
         newNodeOperatorStuckValidatorsCount: 0,
       }
