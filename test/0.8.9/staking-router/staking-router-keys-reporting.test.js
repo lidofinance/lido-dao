@@ -2,7 +2,7 @@ const { artifacts, contract, ethers } = require('hardhat')
 const { EvmSnapshot } = require('../../helpers/blockchain')
 const { assert } = require('../../helpers/assert')
 const { hex, hexConcat, toNum, addSendWithResult } = require('../../helpers/utils')
-const { StakingModuleStub } = require('../../helpers/stubs/staking-module.stub')
+const { ContractStub } = require('../../helpers/contract-stub')
 
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const StakingModuleMock = artifacts.require('StakingModuleMock.sol')
@@ -480,17 +480,20 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
       )
 
       it("doesn't revert when onExitedAndStuckValidatorsCountsUpdated reverted", async () => {
-        const stakingModuleWithBug = await StakingModuleStub.new()
         // staking module will revert with panic exit code
-        await StakingModuleStub.stub(stakingModuleWithBug, 'onExitedAndStuckValidatorsCountsUpdated', {
-          revert: { error: 'Panic', args: { type: ['uint256'], value: [0x01] } },
-        })
-        await StakingModuleStub.stubGetStakingModuleSummary(stakingModuleWithBug, {
-          totalExitedValidators: 0,
-          totalDepositedValidators: 0,
-          depositableValidatorsCount: 0,
-        })
-        await router.addStakingModule('Staking Module With Bug', stakingModuleWithBug.address, 100, 1000, 2000, {
+        const buggedStakingModule = await ContractStub('IStakingModule')
+          .on('onExitedAndStuckValidatorsCountsUpdated', {
+            revert: { error: { name: 'Panic', args: { type: ['uint256'], value: [0x01] } } },
+          })
+          .on('getStakingModuleSummary', {
+            return: {
+              type: ['uint256', 'uint256', 'uint256'],
+              value: [0, 0, 0],
+            },
+          })
+          .create({ from: deployer })
+
+        await router.addStakingModule('Staking Module With Bug', buggedStakingModule.address, 100, 1000, 2000, {
           from: admin,
         })
         const stakingModuleId = await router.getStakingModulesCount()
