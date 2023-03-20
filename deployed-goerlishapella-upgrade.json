@@ -380,7 +380,7 @@
   },
   "lidoLocator": {
     "contract": "LidoLocator",
-    "implementation": "0x4D2C33595e82d9eE44B653D6632BAd2b3fC9aF9c",
+    "implementation": "0xf47F64a3B2AA52A77dC080D50927Af378d7dA7B8",
     "address": "0x1eDf09b5023DC86737b59dE68a8130De878984f5",
     "constructorArgs": [
       [
@@ -396,7 +396,7 @@
         "0x4333218072D5d7008546737786663c38B4D561A4",
         "0xb75A55EFab5A8f5224Ae93B34B25741EDd3da98b",
         "0xCF117961421cA9e546cD7f50bC73abCdB3039533",
-        "0xAD9928A0863964a901f49e290a2AeAE68bE6EAFb",
+        "0x70760635A8862c562C5Ad0374D7f9CEA4A7193D2",
         "0x081f55c1Eb944E868e8bA48FC9DF701945FE65b3"
       ]
     ]
@@ -410,7 +410,8 @@
   },
   "withdrawalVault": {
     "contract": "WithdrawalVault",
-    "address": "0xAD9928A0863964a901f49e290a2AeAE68bE6EAFb",
+    "implementation": "0x26852993A6420dDa2692b033b5AF3b0846c15d5B",
+    "address": "0x70760635A8862c562C5Ad0374D7f9CEA4A7193D2",
     "constructorArgs": [
       "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F",
       "0x4333218072D5d7008546737786663c38B4D561A4"

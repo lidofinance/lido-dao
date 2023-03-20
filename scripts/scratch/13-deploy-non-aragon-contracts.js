@@ -130,7 +130,7 @@ async function deployNewContracts({ web3, artifacts }) {
   //
   // === WithdrawalVault ===
   //
-  const withdrawalVaultAddress = await deployWithoutProxy("withdrawalVault", "WithdrawalVault", deployer, [lidoAddress, treasuryAddress])
+  const withdrawalVaultAddress = await deployBehindOssifiableProxy("withdrawalVault", "WithdrawalVault", proxyContractsOwner, deployer, [lidoAddress, treasuryAddress])
   logWideSplitter()
 
   //
