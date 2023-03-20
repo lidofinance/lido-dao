@@ -297,7 +297,7 @@
       "pauseIntentValidityPeriodBlocks": 6646
     },
     "contract": "DepositSecurityModule",
-    "address": "0x262C73ac3f0B72919Fa9a1143c6fF09915c9e249",
+    "address": "0x07c1e7eDC8a19c9A9b936DecDd531a6365D2a434",
     "constructorArgs": [
       "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F",
       "0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b",
@@ -380,12 +380,12 @@
   },
   "lidoLocator": {
     "contract": "LidoLocator",
-    "implementation": "0xD245B3Ca1FFaCb81604A8DFC913162D4261ac566",
+    "implementation": "0x4D2C33595e82d9eE44B653D6632BAd2b3fC9aF9c",
     "address": "0x1eDf09b5023DC86737b59dE68a8130De878984f5",
     "constructorArgs": [
       [
         "0x5864490e56B6f013Bc702Cf137Ed32Dc2C86F818",
-        "0x262C73ac3f0B72919Fa9a1143c6fF09915c9e249",
+        "0x07c1e7eDC8a19c9A9b936DecDd531a6365D2a434",
         "0x27Dec30CC9EfDDDAF04C7CA2737759CBf6405ecb",
         "0x24d8451BC07e7aF4Ba94F69aCDD9ad3c6579D9FB",
         "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F",
