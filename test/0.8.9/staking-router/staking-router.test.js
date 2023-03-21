@@ -357,7 +357,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         .on('onWithdrawalCredentialsChanged', { revert: { reason: 'outOfGas' } })
         .update({ from: deployer })
 
-      await assert.reverts(router.setWithdrawalCredentials(newWC, { from: appManager }), 'OutOfGas()')
+      await assert.reverts(router.setWithdrawalCredentials(newWC, { from: appManager }), 'ModuleOutOfGas()')
     })
   })
 
@@ -984,7 +984,10 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         .on('onRewardsMinted', { revert: { reason: 'outOfGas' } })
         .update({ from: deployer })
 
-      await assert.reverts(router.reportRewardsMinted(stakingModuleIds, totalShares, { from: admin }), 'OutOfGas()')
+      await assert.reverts(
+        router.reportRewardsMinted(stakingModuleIds, totalShares, { from: admin }),
+        'ModuleOutOfGas()'
+      )
     })
   })
 

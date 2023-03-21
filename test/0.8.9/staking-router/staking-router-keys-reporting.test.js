@@ -510,7 +510,10 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
           .on('onExitedAndStuckValidatorsCountsUpdated', { revert: { reason: 'outOfGas' } })
           .update({ from: deployer })
 
-        await assert.reverts(router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin }), 'OutOfGas()')
+        await assert.reverts(
+          router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin }),
+          'ModuleOutOfGas()'
+        )
       })
     })
 
