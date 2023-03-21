@@ -9,21 +9,24 @@ const { deployWithdrawalQueue } = require('./withdrawal-queue-deploy.test')
 
 contract('WithdrawalQueue', ([owner, user]) => {
   let wq, steth, defaultShareRate, belowShareRate, aboveShareRate
-
+  let gasPrice = 1
   const currentRate = async () =>
     bn(await steth.getTotalPooledEther())
       .mul(bn(10).pow(bn(27)))
       .div(await steth.getTotalShares())
 
   const MAX_BATCH_SIZE = 280
-  const batchIncrement = (i) => i + 10
+  const batchIncrement = (i) => i * 2
   const REQ_AMOUNT = ETH(0.00001)
   const batchSizes = []
   for (let batch_size = 1; batch_size <= MAX_BATCH_SIZE; batch_size = batchIncrement(batch_size)) {
     batchSizes.push(batch_size)
   }
 
-  before('Deploy', async () => {
+  before('Deploy', async function () {
+    if (!process.env.REPORT_GAS) {
+      this.skip()
+    }
     const deployed = await deployWithdrawalQueue({
       stethOwner: owner,
       queueAdmin: owner,
@@ -62,7 +65,7 @@ contract('WithdrawalQueue', ([owner, user]) => {
         user,
         {
           from: user,
-          gasPrice: batch_size * 10,
+          gasPrice: gasPrice++,
           gasLimit: 1000000000,
         },
       ]
@@ -113,7 +116,7 @@ contract('WithdrawalQueue', ([owner, user]) => {
       const finalization_args = [
         [batchEnd],
         slash ? aboveShareRate : belowShareRate,
-        { from: owner, value: prefinalize_res.ethToLock, gasPrice: 10 },
+        { from: owner, value: prefinalize_res.ethToLock, gasPrice: gasPrice++ },
       ]
       const estimated = await wq.finalize.estimateGas(...finalization_args)
       finalization_args[finalization_args.length - 1].gasLimit = estimated
@@ -162,7 +165,7 @@ contract('WithdrawalQueue', ([owner, user]) => {
       })
 
       /// Claiming
-      const claiming_args = [requestIds, findHints_res, { from: user, gasPrice: 10 }]
+      const claiming_args = [requestIds, findHints_res, { from: user, gasPrice: gasPrice++ }]
       const estimated = await wq.claimWithdrawals.estimateGas(...claiming_args)
       claiming_args[claiming_args.length - 1].gasLimit = estimated
       const tx = await wq.claimWithdrawals(...claiming_args)
