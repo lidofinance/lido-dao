@@ -1,17 +1,22 @@
 import { useAppState } from '@aragon/api-react'
-import { Box } from '@aragon/ui'
 import React from 'react'
-import { ListItem, LoadableElement, RestorationRate, Tooltip } from './shared'
+import {
+  BoxUnpadded,
+  ListItem,
+  LoadableElement,
+  RestorationRate,
+  Tooltip,
+} from './shared'
 import { Ether } from './shared/Ether'
 
 export const StakingLimitState = () => {
-  const { stakingLimitInfo } = useAppState()
+  const { stakeLimitFullInfo } = useAppState()
 
   return (
-    <Box heading="Staking status">
+    <BoxUnpadded heading="Staking status">
       <ListItem label="Paused">
-        <LoadableElement value={stakingLimitInfo?.isStakingPaused}>
-          {stakingLimitInfo?.isStakingPaused ? 'Yes' : 'No'}
+        <LoadableElement value={stakeLimitFullInfo?.isStakingPaused}>
+          {stakeLimitFullInfo?.isStakingPaused ? 'Yes' : 'No'}
         </LoadableElement>
       </ListItem>
       <ListItem
@@ -21,8 +26,8 @@ export const StakingLimitState = () => {
           </Tooltip>
         }
       >
-        <LoadableElement value={stakingLimitInfo?.isStakingLimitSet}>
-          {stakingLimitInfo?.isStakingLimitSet ? 'Yes' : 'No'}
+        <LoadableElement value={stakeLimitFullInfo?.isStakingLimitSet}>
+          {stakeLimitFullInfo?.isStakingLimitSet ? 'Yes' : 'No'}
         </LoadableElement>
       </ListItem>
       <ListItem
@@ -32,7 +37,7 @@ export const StakingLimitState = () => {
           </Tooltip>
         }
       >
-        <Ether ether={stakingLimitInfo?.maxStakeLimit} />
+        <Ether ether={stakeLimitFullInfo?.maxStakeLimit} />
       </ListItem>
       <ListItem
         label={
@@ -42,10 +47,10 @@ export const StakingLimitState = () => {
         }
       >
         <RestorationRate
-          maxLimit={stakingLimitInfo?.maxStakeLimit}
-          blocks={stakingLimitInfo?.maxStakeLimitGrowthBlocks}
+          maxLimit={stakeLimitFullInfo?.maxStakeLimit}
+          blocks={stakeLimitFullInfo?.maxStakeLimitGrowthBlocks}
         />
       </ListItem>
-    </Box>
+    </BoxUnpadded>
   )
 }

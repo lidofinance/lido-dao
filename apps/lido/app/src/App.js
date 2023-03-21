@@ -2,10 +2,11 @@ import { useAragonApi } from '@aragon/api-react'
 import { Header, Main, SyncIndicator, useTheme } from '@aragon/ui'
 import React from 'react'
 import { ThemeProvider } from 'styled-components'
-import { BeaconStats } from './components/BeaconStats'
+import { Meta } from './components/Meta'
 import { Split } from './components/shared'
 import { StakingLimitState } from './components/StakingLimitState'
 import { State } from './components/state'
+import { StETH } from './components/StETH'
 
 export default function App() {
   const { appState, currentApp, guiStyle } = useAragonApi()
@@ -24,8 +25,9 @@ export default function App() {
           primary={<State />}
           secondary={
             <>
-              <BeaconStats />
+              <StETH />
               <StakingLimitState />
+              <Meta />
             </>
           }
         />
