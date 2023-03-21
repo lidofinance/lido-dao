@@ -129,6 +129,13 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       assert.notEquals(limitsBefore.requestTimestampMargin, newLimitsList.requestTimestampMargin)
       assert.notEquals(limitsBefore.maxPositiveTokenRebase, newLimitsList.maxPositiveTokenRebase)
 
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setOracleReportLimits(Object.values(newLimitsList), {
+          from: deployer,
+        }),
+        deployer,
+        'ALL_LIMITS_MANAGER_ROLE'
+      )
       await oracleReportSanityChecker.setOracleReportLimits(Object.values(newLimitsList), {
         from: managersRoster.allLimitsManagers[0],
       })
@@ -161,7 +168,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
 
     it('reverts with error IncorrectWithdrawalsVaultBalance() when actual withdrawal vault balance is less than passed', async () => {
       const currentWithdrawalVaultBalance = await ethers.provider.getBalance(withdrawalVault)
-      await assert.revertsWithCustomError(
+      await assert.reverts(
         oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({ ...correctLidoOracleReport, withdrawalVaultBalance: currentWithdrawalVaultBalance.add(1) })
         ),
@@ -171,7 +178,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
 
     it('reverts with error IncorrectELRewardsVaultBalance() when actual el rewards vault balance is less than passed', async () => {
       const currentELRewardsVaultBalance = await ethers.provider.getBalance(elRewardsVault)
-      await assert.revertsWithCustomError(
+      await assert.reverts(
         oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({ ...correctLidoOracleReport, elRewardsVaultBalance: currentELRewardsVaultBalance.add(1) })
         ),
@@ -186,7 +193,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       const withdrawalVaultBalance = wei(500, 'eth')
       const unifiedPostCLBalance = postCLBalance + withdrawalVaultBalance
       const oneOffCLBalanceDecreaseBP = (maxBasisPoints * (preCLBalance - unifiedPostCLBalance)) / preCLBalance
-      await assert.revertsWithCustomError(
+      await assert.reverts(
         oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({
             ...correctLidoOracleReport,
@@ -207,7 +214,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       const timeElapsed = BigInt(correctLidoOracleReport.timeElapsed)
       const annualBalanceIncrease =
         (secondsInOneYear * maxBasisPoints * (postCLBalance - preCLBalance)) / preCLBalance / timeElapsed
-      await assert.revertsWithCustomError(
+      await assert.reverts(
         oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({
             ...correctLidoOracleReport,
@@ -220,36 +227,6 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
 
     it('passes all checks with correct oracle report data', async () => {
       await oracleReportSanityChecker.checkAccountingOracleReport(...Object.values(correctLidoOracleReport))
-    })
-
-    it('set maxAccountingExtraDataListItemsCount', async () => {
-      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits())
-        .maxAccountingExtraDataListItemsCount
-      const newValue = 31
-      assert.notEquals(newValue, previousValue)
-      const tx = await oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(newValue, {
-        from: managersRoster.maxAccountingExtraDataListItemsCountManagers[0],
-      })
-      assert.equals(
-        (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount,
-        newValue
-      )
-      assert.emits(tx, 'MaxAccountingExtraDataListItemsCountSet', { maxAccountingExtraDataListItemsCount: newValue })
-    })
-
-    it('set maxNodeOperatorsPerExtraDataItemCount', async () => {
-      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits())
-        .maxNodeOperatorsPerExtraDataItemCount
-      const newValue = 33
-      assert.notEquals(newValue, previousValue)
-      const tx = await oracleReportSanityChecker.setMaxNodeOperatorsPerExtraDataItemCount(newValue, {
-        from: managersRoster.maxNodeOperatorsPerExtraDataItemCountManagers[0],
-      })
-      assert.equals(
-        (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItemCount,
-        newValue
-      )
-      assert.emits(tx, 'MaxNodeOperatorsPerExtraDataItemCountSet', { maxNodeOperatorsPerExtraDataItemCount: newValue })
     })
 
     it('set one-off CL balance decrease', async () => {
@@ -310,7 +287,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     })
   })
 
-  describe('checkWithdrawalQueueOracleReport()', async () => {
+  describe('checkWithdrawalQueueOracleReport()', () => {
     const oldRequestId = 1
     const newRequestId = 2
     let oldRequestCreationTimestamp, newRequestCreationTimestamp
@@ -330,7 +307,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     })
 
     it('reverts with the error IncorrectRequestFinalization() when the creation timestamp of requestIdToFinalizeUpTo is too close to report timestamp', async () => {
-      await assert.revertsWithCustomError(
+      await assert.reverts(
         oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
           ...Object.values({
             ...correctWithdrawalQueueOracleReport,
@@ -346,9 +323,27 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
         ...Object.values(correctWithdrawalQueueOracleReport)
       )
     })
+
+    it('set timestamp margin for finalization', async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).requestTimestampMargin
+      const newValue = 3302
+      assert.notEquals(newValue, previousValue)
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setRequestTimestampMargin(newValue, {
+          from: deployer,
+        }),
+        deployer,
+        'REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE'
+      )
+      const tx = await oracleReportSanityChecker.setRequestTimestampMargin(newValue, {
+        from: managersRoster.requestTimestampMarginManagers[0],
+      })
+      assert.equals((await oracleReportSanityChecker.getOracleReportLimits()).requestTimestampMargin, newValue)
+      assert.emits(tx, 'RequestTimestampMarginSet', { requestTimestampMargin: newValue })
+    })
   })
 
-  describe('checkSimulatedShareRate', async () => {
+  describe('checkSimulatedShareRate', () => {
     const correctSimulatedShareRate = {
       postTotalPooledEther: ETH(9),
       postTotalShares: ETH(4),
@@ -360,7 +355,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     it('reverts with error TooHighSimulatedShareRate() when reported and onchain share rate differs', async () => {
       const simulatedShareRate = BigInt(ETH(2.1)) * 10n ** 9n
       const actualShareRate = BigInt(2) * 10n ** 27n
-      await assert.revertsWithCustomError(
+      await assert.reverts(
         oracleReportSanityChecker.checkSimulatedShareRate(
           ...Object.values({
             ...correctSimulatedShareRate,
@@ -374,7 +369,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     it('reverts with error TooLowSimulatedShareRate() when reported and onchain share rate differs', async () => {
       const simulatedShareRate = BigInt(ETH(1.9)) * 10n ** 9n
       const actualShareRate = BigInt(2) * 10n ** 27n
-      await assert.revertsWithCustomError(
+      await assert.reverts(
         oracleReportSanityChecker.checkSimulatedShareRate(
           ...Object.values({
             ...correctSimulatedShareRate,
@@ -386,7 +381,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     })
 
     it('reverts with error ActualShareRateIsZero() when actual share rate is zero', async () => {
-      await assert.revertsWithCustomError(
+      await assert.reverts(
         oracleReportSanityChecker.checkSimulatedShareRate(
           ...Object.values({
             ...correctSimulatedShareRate,
@@ -923,6 +918,140 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
           })
         ),
         `IncorrectAppearedValidators(${churnLimit + 1})`
+      )
+    })
+  })
+
+  describe('checkExitBusOracleReport', () => {
+    beforeEach(async () => {
+      await oracleReportSanityChecker.setOracleReportLimits(Object.values(defaultLimitsList), {
+        from: managersRoster.allLimitsManagers[0],
+      })
+    })
+
+    it('checkExitBusOracleReport works', async () => {
+      const maxRequests = defaultLimitsList.maxValidatorExitRequestsPerReport
+      assert.equals(
+        (await oracleReportSanityChecker.getOracleReportLimits()).maxValidatorExitRequestsPerReport,
+        maxRequests
+      )
+
+      await oracleReportSanityChecker.checkExitBusOracleReport(maxRequests)
+      await assert.reverts(
+        oracleReportSanityChecker.checkExitBusOracleReport(maxRequests + 1),
+        `IncorrectNumberOfExitRequestsPerReport(${maxRequests})`
+      )
+    })
+
+    it('setMaxExitRequestsPerOracleReport', async () => {
+      const oldMaxRequests = defaultLimitsList.maxValidatorExitRequestsPerReport
+      await oracleReportSanityChecker.checkExitBusOracleReport(oldMaxRequests)
+      await assert.reverts(
+        oracleReportSanityChecker.checkExitBusOracleReport(oldMaxRequests + 1),
+        `IncorrectNumberOfExitRequestsPerReport(${oldMaxRequests})`
+      )
+      assert.equals(
+        (await oracleReportSanityChecker.getOracleReportLimits()).maxValidatorExitRequestsPerReport,
+        oldMaxRequests
+      )
+
+      const newMaxRequests = 306
+      assert.notEquals(newMaxRequests, oldMaxRequests)
+
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setMaxExitRequestsPerOracleReport(newMaxRequests, { from: deployer }),
+        deployer,
+        'MAX_VALIDATOR_EXIT_REQUESTS_PER_REPORT_ROLE'
+      )
+
+      const tx = await oracleReportSanityChecker.setMaxExitRequestsPerOracleReport(newMaxRequests, {
+        from: managersRoster.maxValidatorExitRequestsPerReportManagers[0],
+      })
+
+      assert.emits(tx, 'MaxValidatorExitRequestsPerReportSet', { maxValidatorExitRequestsPerReport: newMaxRequests })
+      assert.equals(
+        (await oracleReportSanityChecker.getOracleReportLimits()).maxValidatorExitRequestsPerReport,
+        newMaxRequests
+      )
+
+      await oracleReportSanityChecker.checkExitBusOracleReport(newMaxRequests)
+      await assert.reverts(
+        oracleReportSanityChecker.checkExitBusOracleReport(newMaxRequests + 1),
+        `IncorrectNumberOfExitRequestsPerReport(${newMaxRequests})`
+      )
+    })
+  })
+
+  describe('extra data reporting', () => {
+    beforeEach(async () => {
+      await oracleReportSanityChecker.setOracleReportLimits(Object.values(defaultLimitsList), {
+        from: managersRoster.allLimitsManagers[0],
+      })
+    })
+
+    it('set maxNodeOperatorsPerExtraDataItemCount', async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits())
+        .maxNodeOperatorsPerExtraDataItemCount
+      const newValue = 33
+      assert.notEquals(newValue, previousValue)
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setMaxNodeOperatorsPerExtraDataItemCount(newValue, {
+          from: deployer,
+        }),
+        deployer,
+        'MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_COUNT_ROLE'
+      )
+      const tx = await oracleReportSanityChecker.setMaxNodeOperatorsPerExtraDataItemCount(newValue, {
+        from: managersRoster.maxNodeOperatorsPerExtraDataItemCountManagers[0],
+      })
+      assert.equals(
+        (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItemCount,
+        newValue
+      )
+      assert.emits(tx, 'MaxNodeOperatorsPerExtraDataItemCountSet', { maxNodeOperatorsPerExtraDataItemCount: newValue })
+    })
+
+    it('set maxAccountingExtraDataListItemsCount', async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits())
+        .maxAccountingExtraDataListItemsCount
+      const newValue = 31
+      assert.notEquals(newValue, previousValue)
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(newValue, {
+          from: deployer,
+        }),
+        deployer,
+        'MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE'
+      )
+      const tx = await oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(newValue, {
+        from: managersRoster.maxAccountingExtraDataListItemsCountManagers[0],
+      })
+      assert.equals(
+        (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount,
+        newValue
+      )
+      assert.emits(tx, 'MaxAccountingExtraDataListItemsCountSet', { maxAccountingExtraDataListItemsCount: newValue })
+    })
+
+    it('checkNodeOperatorsPerExtraDataItemCount', async () => {
+      const maxCount = (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItemCount
+
+      await oracleReportSanityChecker.checkNodeOperatorsPerExtraDataItemCount(12, maxCount)
+
+      await assert.reverts(
+        oracleReportSanityChecker.checkNodeOperatorsPerExtraDataItemCount(12, +maxCount + 1),
+        `TooManyNodeOpsPerExtraDataItem(12, ${+maxCount + 1})`
+      )
+    })
+
+    it('checkAccountingExtraDataListItemsCount', async () => {
+      const maxCount = (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount
+
+      await oracleReportSanityChecker.checkAccountingExtraDataListItemsCount(maxCount)
+
+      await assert.reverts(
+        oracleReportSanityChecker.checkAccountingExtraDataListItemsCount(maxCount + 1),
+        `MaxAccountingExtraDataItemsCountExceeded(${maxCount}, ${maxCount + 1})`
       )
     })
   })
