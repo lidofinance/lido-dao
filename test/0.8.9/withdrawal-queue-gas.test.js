@@ -1,14 +1,14 @@
 /* eslint-disable no-template-curly-in-string */
-const { contract } = require('hardhat')
+const { contract, ethers } = require('hardhat')
 const { bn } = require('@aragon/contract-helpers-test')
 const { itParam } = require('mocha-param')
 
 const { ETH, StETH, shares } = require('../helpers/utils')
-const { setBalance } = require('../helpers/blockchain')
+const { setBalance, EvmSnapshot } = require('../helpers/blockchain')
 const { deployWithdrawalQueue } = require('./withdrawal-queue-deploy.test')
 
 contract('WithdrawalQueue', ([owner, user]) => {
-  let wq, steth, defaultShareRate, belowShareRate, aboveShareRate
+  let wq, steth, defaultShareRate, belowShareRate, aboveShareRate, snapshot
   let gasPrice = 1
   const currentRate = async () =>
     bn(await steth.getTotalPooledEther())
@@ -27,6 +27,8 @@ contract('WithdrawalQueue', ([owner, user]) => {
     if (!process.env.REPORT_GAS) {
       this.skip()
     }
+    snapshot = new EvmSnapshot(ethers.provider)
+
     const deployed = await deployWithdrawalQueue({
       stethOwner: owner,
       queueAdmin: owner,
@@ -45,6 +47,11 @@ contract('WithdrawalQueue', ([owner, user]) => {
     defaultShareRate = await currentRate()
     belowShareRate = defaultShareRate.divn(2)
     aboveShareRate = defaultShareRate.muln(2)
+    await snapshot.make()
+  })
+
+  after('clean up', async () => {
+    await snapshot.rollback()
   })
 
   context('requestWithdrawal', () => {
