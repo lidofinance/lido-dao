@@ -1,0 +1,150 @@
+const { contract } = require('hardhat')
+const { bn } = require('@aragon/contract-helpers-test')
+
+const { ETH, StETH, shares } = require('../helpers/utils')
+const { setBalance } = require('../helpers/blockchain')
+const { deployWithdrawalQueue } = require('./withdrawal-queue-deploy.test')
+
+contract('WithdrawalQueue', ([owner, user]) => {
+  let wq, steth, defaultShareRate, belowShareRate, aboveShareRate
+
+  const currentRate = async () =>
+    bn(await steth.getTotalPooledEther())
+      .mul(bn(10).pow(bn(27)))
+      .div(await steth.getTotalShares())
+
+  before('Deploy', async () => {
+    const deployed = await deployWithdrawalQueue({
+      stethOwner: owner,
+      queueAdmin: owner,
+      queuePauser: owner,
+      queueResumer: owner,
+      queueFinalizer: owner,
+    })
+
+    steth = deployed.steth
+    wq = deployed.withdrawalQueue
+
+    await steth.setTotalPooledEther(ETH(600))
+    await setBalance(steth.address, ETH(600))
+    await steth.mintShares(user, shares(300))
+    await steth.approve(wq.address, StETH(300), { from: user })
+    defaultShareRate = await currentRate()
+    belowShareRate = defaultShareRate.divn(2)
+    aboveShareRate = defaultShareRate.muln(2)
+  })
+
+  const MAX_BATCH_SIZE = 256
+  const REQ_AMOUNT = ETH(0.00001)
+  const batchIncrement = (i) => i * 2
+
+  it('requestWithdrawal', async () => {
+    const results = []
+    for (let batch_size = 1; batch_size <= MAX_BATCH_SIZE; batch_size = batchIncrement(batch_size)) {
+      const args = [
+        Array(batch_size).fill(REQ_AMOUNT),
+        user,
+        {
+          from: user,
+          gasPrice: 10,
+        },
+      ]
+      const estimated = await wq.requestWithdrawals.estimateGas(...args)
+      args[args.length - 1].gasLimit = estimated
+      const tx = await wq.requestWithdrawals(...args)
+      results.push({
+        'batch size': batch_size,
+        estimated,
+        used: tx.receipt.gasUsed,
+        'diff%': parseFloat((((estimated - tx.receipt.gasUsed) / estimated) * 100).toFixed(3)),
+        'gas/req': Math.ceil(tx.receipt.gasUsed / batch_size),
+      })
+    }
+    console.log('requestWithdrawals')
+    console.table(results)
+  })
+
+  it('pre/finalize', async () => {
+    const prefinalize_results = []
+    const finalization_results = []
+    let slash = false
+    for (let batch_size = 1; batch_size <= MAX_BATCH_SIZE; batch_size = batchIncrement(batch_size)) {
+      const batchStart = await wq.getLastFinalizedRequestId()
+      const batchEnd = batchStart.addn(batch_size)
+      const prefinalize_args = [[batchEnd], slash ? aboveShareRate : belowShareRate]
+      const [prefinalize_gas, prefinalize_res] = await Promise.all([
+        wq.prefinalize.estimateGas(...prefinalize_args),
+        wq.prefinalize.call(...prefinalize_args),
+      ])
+      prefinalize_results.push({
+        'batch size': batch_size,
+        gas: prefinalize_gas,
+        slash,
+        'gas/req': Math.ceil(prefinalize_gas / batch_size),
+      })
+
+      const finalization_args = [
+        [batchEnd],
+        slash ? aboveShareRate : belowShareRate,
+        { from: owner, value: prefinalize_res.ethToLock, gasPrice: 10 },
+      ]
+      const estimated = await wq.finalize.estimateGas(...finalization_args)
+      finalization_args[finalization_args.length - 1].gasLimit = estimated
+      const tx = await wq.finalize(...finalization_args)
+      finalization_results.push({
+        'batch size': batch_size,
+        estimated,
+        used: tx.receipt.gasUsed,
+        'diff%': parseFloat((((estimated - tx.receipt.gasUsed) / estimated) * 100).toFixed(3)),
+        'gas/req': Math.ceil(tx.receipt.gasUsed / batch_size),
+        slash,
+      })
+
+      slash = !slash
+    }
+    console.log('Prefinalize')
+    console.table(prefinalize_results)
+    console.log('Finalize')
+    console.table(finalization_results)
+  })
+
+  it('claim', async () => {
+    const findHints_results = []
+    const claim_results = []
+    const lastCheckpointIndex = await wq.getLastCheckpointIndex()
+    let batchStart = 1
+    for (let batch_size = 1; batch_size <= MAX_BATCH_SIZE; batch_size = batchIncrement(batch_size)) {
+      const requestIds = Array(batch_size)
+        .fill(0)
+        .map((_, i) => batchStart + i)
+      const findHintsArgs = [requestIds, 1, lastCheckpointIndex]
+      const [findHints_gas, findHints_res] = await Promise.all([
+        wq.findCheckpointHints.estimateGas(...findHintsArgs),
+        wq.findCheckpointHints.call(...findHintsArgs),
+      ])
+      findHints_results.push({
+        'batch size': batch_size,
+        gas: findHints_gas,
+        'gas/req': Math.ceil(findHints_gas / batch_size),
+      })
+
+      /// Claiming
+      const claiming_args = [requestIds, findHints_res, { from: user, gasPrice: 10 }]
+      const estimated = await wq.claimWithdrawals.estimateGas(...claiming_args)
+      claiming_args[claiming_args.length - 1].gasLimit = estimated
+      const tx = await wq.claimWithdrawals(...claiming_args)
+      claim_results.push({
+        'batch size': batch_size,
+        estimated,
+        used: tx.receipt.gasUsed,
+        'diff%': parseFloat((((estimated - tx.receipt.gasUsed) / estimated) * 100).toFixed(3)),
+        'gas/req': Math.ceil(tx.receipt.gasUsed / batch_size),
+      })
+      batchStart += batch_size
+    }
+    console.log('FindCheckpointsHints')
+    console.table(findHints_results)
+    console.log('claimWithdrawals')
+    console.table(claim_results)
+  })
+})
