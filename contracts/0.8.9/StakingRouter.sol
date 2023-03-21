@@ -306,26 +306,71 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         }
     }
 
+    /// @notice Updates total numbers of exited validators for staking modules with the specified
+    /// module ids.
+    ///
+    /// @param _stakingModuleIds Ids of the staking modules to be updated.
+    /// @param _exitedValidatorsCounts New counts of exited validators for the specified staking modules.
+    ///
+    /// @return The total increase in the aggregate number of exited validators accross all updated modules.
+    ///
+    /// The total numbers are stored in the staking router and can differ from the totals obtained by calling
+    /// `IStakingModule.getStakingModuleSummary()`. The overall process of updating validator counts is the following:
+    ///
+    /// 1. In the first data submission phase, the oracle calls `updateExitedValidatorsCountByStakingModule` on the
+    ///    staking router, passing the totals by module. The staking router stores these totals and uses them to
+    ///    distribute new stake and staking fees between the modules. There can only be single call of this function
+    ///    per oracle reporting frame.
+    ///
+    /// 2. In the first part of the second data submittion phase, the oracle calls
+    ///    `StakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator` on the staking router which passes the
+    ///    counts by node operator to the staking module by calling `IStakingModule.updateStuckValidatorsCount`.
+    ///    This can be done multiple times for the same module, passing data for different subsets of node operators.
+    ///
+    /// 3. In the second part of the second data submittion phase, the oracle calls
+    ///    `StakingRouter.reportStakingModuleExitedValidatorsCountByNodeOperator` on the staking router which passes
+    ///    the counts by node operator to the staking module by calling `IStakingModule.updateExitedValidatorsCount`.
+    ///    This can be done multiple times for the same module, passing data for different subsets of node
+    ///    operators.
+    ///
+    /// 4. At the end of the second data submission phase, it's expected for the aggragate exited validators count
+    ///    accross all module's node operators (stored in the module) to match the total count for this module
+    ///    (stored in the staking router). However, it might happen that the second phase of data submission doesn't
+    ///    finish until the new oracle reporting frame is started, in which case staking router will emit a warning
+    ///    event `StakingModuleExitedValidatorsIncompleteReporting` when the first data submission phase is performed
+    ///    for a new reporting frame. This condition will result in the staking module having an incomplete data about
+    ///    the exited and maybe stuck validator counts during the whole reporting frame. Handling this condition is
+    ///    the responsibility of each staking module.
+    ///
+    /// 5. When the second reporting phase is finshed, i.e. when the oracle submitted the complete data on the stuck
+    ///    and exited validator counts per node operator for the current reporting frame, the oracle calls
+    ///    `StakingRouter.onValidatorsCountsByNodeOperatorReportingFinished` which, in turn, calls
+    ///    `IStakingModule.onExitedAndStuckValidatorsCountsUpdated` on all modules.
+    ///
     function updateExitedValidatorsCountByStakingModule(
         uint256[] calldata _stakingModuleIds,
         uint256[] calldata _exitedValidatorsCounts
     )
         external
         onlyRole(REPORT_EXITED_VALIDATORS_ROLE)
+        returns (uint256)
     {
         if (_stakingModuleIds.length != _exitedValidatorsCounts.length) {
             revert ArraysLengthMismatch(_stakingModuleIds.length, _exitedValidatorsCounts.length);
         }
 
-        uint256 stakingModuleId;
+        uint256 newlyExitedValidatorsCount;
+
         for (uint256 i = 0; i < _stakingModuleIds.length; ) {
-            stakingModuleId = _stakingModuleIds[i];
+            uint256 stakingModuleId = _stakingModuleIds[i];
             StakingModule storage stakingModule = _getStakingModuleById(stakingModuleId);
 
             uint256 prevReportedExitedValidatorsCount = stakingModule.exitedValidatorsCount;
             if (_exitedValidatorsCounts[i] < prevReportedExitedValidatorsCount) {
                 revert ExitedValidatorsCountCannotDecrease();
             }
+
+            newlyExitedValidatorsCount += _exitedValidatorsCounts[i] - prevReportedExitedValidatorsCount;
 
             (
                 uint256 totalExitedValidatorsCount,
@@ -344,8 +389,20 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             stakingModule.exitedValidatorsCount = _exitedValidatorsCounts[i];
             unchecked { ++i; }
         }
+
+        return newlyExitedValidatorsCount;
     }
 
+    /// @notice Updates exited validators counts per node operator for the staking module with
+    /// the specified id.
+    ///
+    /// See the docs for `updateExitedValidatorsCountByStakingModule` for the description of the
+    /// overall update process.
+    ///
+    /// @param _stakingModuleId The id of the staking modules to be updated.
+    /// @param _nodeOperatorIds Ids of the node operators to be updated.
+    /// @param _exitedValidatorsCounts New counts of exited validators for the specified node operators.
+    ///
     function reportStakingModuleExitedValidatorsCountByNodeOperator(
         uint256 _stakingModuleId,
         bytes calldata _nodeOperatorIds,
@@ -447,6 +504,16 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         }
     }
 
+    /// @notice Updates stuck validators counts per node operator for the staking module with
+    /// the specified id.
+    ///
+    /// See the docs for `updateExitedValidatorsCountByStakingModule` for the description of the
+    /// overall update process.
+    ///
+    /// @param _stakingModuleId The id of the staking modules to be updated.
+    /// @param _nodeOperatorIds Ids of the node operators to be updated.
+    /// @param _stuckValidatorsCounts New counts of stuck validators for the specified node operators.
+    ///
     function reportStakingModuleStuckValidatorsCountByNodeOperator(
         uint256 _stakingModuleId,
         bytes calldata _nodeOperatorIds,
@@ -460,6 +527,13 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         IStakingModule(moduleAddr).updateStuckValidatorsCount(_nodeOperatorIds, _stuckValidatorsCounts);
     }
 
+    /// @notice Called by the oracle when the second phase of data reporting finishes, i.e. when the
+    /// oracle submitted the complete data on the stuck and exited validator counts per node operator
+    /// for the current reporting frame.
+    ///
+    /// See the docs for `updateExitedValidatorsCountByStakingModule` for the description of the
+    /// overall update process.
+    ///
     function onValidatorsCountsByNodeOperatorReportingFinished()
         external
         onlyRole(REPORT_EXITED_VALIDATORS_ROLE)
@@ -491,16 +565,6 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
             unchecked { ++i; }
         }
-    }
-
-    function getExitedValidatorsCountAcrossAllModules() external view returns (uint256) {
-        uint256 stakingModulesCount = getStakingModulesCount();
-        uint256 exitedValidatorsCount = 0;
-        for (uint256 i; i < stakingModulesCount; ) {
-            exitedValidatorsCount += _getStakingModuleByIndex(i).exitedValidatorsCount;
-            unchecked { ++i; }
-        }
-        return exitedValidatorsCount;
     }
 
     /**
