@@ -50,8 +50,11 @@ contract('WithdrawalQueue', ([owner, user]) => {
     await snapshot.make()
   })
 
-  after('clean up', async () => {
-    await snapshot.rollback()
+  after('clean up', async function () {
+    // only rollback if not skipped
+    if (process.env.REPORT_GAS) {
+      await snapshot.rollback()
+    }
   })
 
   context('requestWithdrawal', () => {
