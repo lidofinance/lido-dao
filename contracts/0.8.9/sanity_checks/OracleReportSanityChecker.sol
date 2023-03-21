@@ -101,7 +101,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     using LimitsListUnpacker for LimitsListPacked;
     using PositiveTokenRebaseLimiter for TokenRebaseLimiterData;
 
-    bytes32 public constant ALL_LIMITS_MANAGER_ROLE = keccak256("LIMITS_MANAGER_ROLE");
+    bytes32 public constant ALL_LIMITS_MANAGER_ROLE = keccak256("ALL_LIMITS_MANAGER_ROLE");
     bytes32 public constant CHURN_VALIDATORS_PER_DAY_LIMIT_MANGER_ROLE =
         keccak256("CHURN_VALIDATORS_PER_DAY_LIMIT_MANGER_ROLE");
     bytes32 public constant ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE =

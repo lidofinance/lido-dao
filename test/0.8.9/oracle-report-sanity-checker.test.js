@@ -186,6 +186,17 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       )
     })
 
+    it('reverts with error IncorrectSharesRequestedToBurn() when actual shares to burn is less than passed', async () => {
+      await burnerMock.setSharesRequestedToBurn(10, 21)
+
+      await assert.reverts(
+        oracleReportSanityChecker.checkAccountingOracleReport(
+          ...Object.values({ ...correctLidoOracleReport, sharesRequestedToBurn: 32 })
+        ),
+        `IncorrectSharesRequestedToBurn(31)`
+      )
+    })
+
     it('reverts with error IncorrectCLBalanceDecrease() when one off CL balance decrease more than limit', async () => {
       const maxBasisPoints = 10_000n
       const preCLBalance = wei(100_000, 'eth')
@@ -203,6 +214,16 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
           })
         ),
         `IncorrectCLBalanceDecrease(${oneOffCLBalanceDecreaseBP.toString()})`
+      )
+
+      const postCLBalanceCorrect = wei(99_000, 'eth')
+      await oracleReportSanityChecker.checkAccountingOracleReport(
+        ...Object.values({
+          ...correctLidoOracleReport,
+          preCLBalance: preCLBalance.toString(),
+          postCLBalance: postCLBalanceCorrect.toString(),
+          withdrawalVaultBalance: withdrawalVaultBalance.toString(),
+        })
       )
     })
 
