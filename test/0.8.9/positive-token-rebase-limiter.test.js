@@ -2,7 +2,7 @@ const { artifacts, contract, ethers } = require('hardhat')
 
 const { bn, MAX_UINT64 } = require('@aragon/contract-helpers-test')
 const { EvmSnapshot } = require('../helpers/blockchain')
-const { ETH } = require('../helpers/utils')
+const { ETH, addSendWithResult } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 
 const PositiveTokenRebaseLimiter = artifacts.require('PositiveTokenRebaseLimiterMock.sol')
@@ -17,6 +17,8 @@ contract('PositiveTokenRebaseLimiter', () => {
 
     snapshot = new EvmSnapshot(ethers.provider)
     await snapshot.make()
+
+    addSendWithResult(limiter.consumeLimit)
   })
 
   afterEach(async () => {
@@ -99,16 +101,13 @@ contract('PositiveTokenRebaseLimiter', () => {
     assert.equals(limiterValues.rebaseLimit, rebaseLimit)
     assert.isFalse(await limiter.isLimitReached())
 
-    const tx = await limiter.consumeLimit(ETH(2))
-    assert.emits(tx, 'ReturnValue', { retValue: ETH(2) })
+    assert.equals(await limiter.consumeLimit.sendWithResult(ETH(2)), ETH(2))
     assert.isFalse(await limiter.isLimitReached())
 
-    const tx2 = await limiter.consumeLimit(ETH(4))
-    assert.emits(tx2, 'ReturnValue', { retValue: ETH(4) })
+    assert.equals(await limiter.consumeLimit.sendWithResult(ETH(4)), ETH(4))
     assert.isFalse(await limiter.isLimitReached())
 
-    const tx3 = await limiter.consumeLimit(ETH(1))
-    assert.emits(tx3, 'ReturnValue', { retValue: ETH(0.5) })
+    assert.equals(await limiter.consumeLimit.sendWithResult(ETH(1)), ETH(0.5))
     assert.isTrue(await limiter.isLimitReached())
     assert.equals(await limiter.getSharesToBurnLimit(), 0)
   })
@@ -122,8 +121,7 @@ contract('PositiveTokenRebaseLimiter', () => {
     await limiter.raiseLimit(ETH(1))
     assert.isFalse(await limiter.isLimitReached())
 
-    const tx = await limiter.consumeLimit(ETH(2))
-    assert.emits(tx, 'ReturnValue', { retValue: ETH(2) })
+    assert.equals(await limiter.consumeLimit.sendWithResult(ETH(2)), ETH(2))
 
     assert.isFalse(await limiter.isLimitReached())
     const limiterValues = await limiter.getLimiterValues()
@@ -153,8 +151,7 @@ contract('PositiveTokenRebaseLimiter', () => {
     await limiter.raiseLimit(ETH(1))
     assert.isFalse(await limiter.isLimitReached())
 
-    const tx = await limiter.consumeLimit(ETH(2))
-    assert.emits(tx, 'ReturnValue', { retValue: ETH(2) })
+    assert.equals(await limiter.consumeLimit.sendWithResult(ETH(2)), ETH(2))
 
     assert.isFalse(await limiter.isLimitReached())
     let limiterValues = await limiter.getLimiterValues()
@@ -194,9 +191,8 @@ contract('PositiveTokenRebaseLimiter', () => {
     await limiter.consumeLimit(ETH(1))
     assert.isFalse(await limiter.isLimitReached())
 
-    const ethTx = await limiter.consumeLimit(ETH(2))
+    assert.equals(await limiter.consumeLimit.sendWithResult(ETH(2)), ETH(2))
     assert.isFalse(await limiter.isLimitReached())
-    assert.emits(ethTx, 'ReturnValue', { retValue: ETH(2) })
 
     const maxSharesToBurn = await limiter.getSharesToBurnLimit()
     assert.equals(maxSharesToBurn, 0)

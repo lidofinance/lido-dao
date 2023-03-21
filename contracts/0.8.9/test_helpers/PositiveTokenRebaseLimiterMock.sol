@@ -10,10 +10,6 @@ contract PositiveTokenRebaseLimiterMock {
 
     TokenRebaseLimiterData public limiter;
 
-    event ReturnValue (
-        uint256 retValue
-    );
-
     function getLimiterValues()
         external
         view
@@ -48,12 +44,10 @@ contract PositiveTokenRebaseLimiterMock {
         limiter = limiterMemory;
     }
 
-    function consumeLimit(uint256 _etherAmount) external {
+    function consumeLimit(uint256 _etherAmount) external returns (uint256 consumedEther) {
         TokenRebaseLimiterData memory limiterMemory = limiter;
-        uint256 consumedEther = limiterMemory.consumeLimit(_etherAmount);
+        consumedEther = limiterMemory.consumeLimit(_etherAmount);
         limiter = limiterMemory;
-
-        emit ReturnValue(consumedEther);
     }
 
     function getSharesToBurnLimit() external view returns (uint256) {
