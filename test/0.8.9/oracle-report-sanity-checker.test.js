@@ -1,7 +1,7 @@
 const { artifacts, contract, ethers } = require('hardhat')
 const { ETH } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
-const { getCurrentBlockTimestamp } = require('../helpers/blockchain')
+const { getCurrentBlockTimestamp, EvmSnapshot } = require('../helpers/blockchain')
 
 const mocksFilePath = 'contracts/0.8.9/test_helpers/OracleReportSanityCheckerMocks.sol'
 const LidoStub = artifacts.require(`${mocksFilePath}:LidoStub`)
@@ -22,7 +22,7 @@ function wei(number, units = 'wei') {
 }
 
 contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewardsVault, ...accounts]) => {
-  let oracleReportSanityChecker, lidoLocatorMock, lidoMock, withdrawalQueueMock, burnerMock
+  let oracleReportSanityChecker, lidoLocatorMock, lidoMock, withdrawalQueueMock, burnerMock, snapshot
   const managersRoster = {
     allLimitsManagers: accounts.slice(0, 2),
     churnValidatorsPerDayLimitManagers: accounts.slice(2, 4),
@@ -81,6 +81,13 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
         from: deployer,
       }
     )
+
+    snapshot = new EvmSnapshot(ethers.provider)
+    await snapshot.make()
+  })
+
+  afterEach(async () => {
+    await snapshot.rollback()
   })
 
   describe('getLidoLocator()', () => {
@@ -220,13 +227,14 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
         .maxAccountingExtraDataListItemsCount
       const newValue = 31
       assert.notEquals(newValue, previousValue)
-      await oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(newValue, {
+      const tx = await oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(newValue, {
         from: managersRoster.maxAccountingExtraDataListItemsCountManagers[0],
       })
       assert.equals(
         (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount,
         newValue
       )
+      assert.emits(tx, 'MaxAccountingExtraDataListItemsCountSet', { maxAccountingExtraDataListItemsCount: newValue })
     })
 
     it('set maxNodeOperatorsPerExtraDataItemCount', async () => {
@@ -234,13 +242,71 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
         .maxNodeOperatorsPerExtraDataItemCount
       const newValue = 33
       assert.notEquals(newValue, previousValue)
-      await oracleReportSanityChecker.setMaxNodeOperatorsPerExtraDataItemCount(newValue, {
+      const tx = await oracleReportSanityChecker.setMaxNodeOperatorsPerExtraDataItemCount(newValue, {
         from: managersRoster.maxNodeOperatorsPerExtraDataItemCountManagers[0],
       })
       assert.equals(
         (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItemCount,
         newValue
       )
+      assert.emits(tx, 'MaxNodeOperatorsPerExtraDataItemCountSet', { maxNodeOperatorsPerExtraDataItemCount: newValue })
+    })
+
+    it('set one-off CL balance decrease', async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).oneOffCLBalanceDecreaseBPLimit
+      const newValue = 3
+      assert.notEquals(newValue, previousValue)
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setOneOffCLBalanceDecreaseBPLimit(newValue, {
+          from: deployer,
+        }),
+        deployer,
+        'ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE'
+      )
+      const tx = await oracleReportSanityChecker.setOneOffCLBalanceDecreaseBPLimit(newValue, {
+        from: managersRoster.oneOffCLBalanceDecreaseLimitManagers[0],
+      })
+      assert.equals((await oracleReportSanityChecker.getOracleReportLimits()).oneOffCLBalanceDecreaseBPLimit, newValue)
+      assert.emits(tx, 'OneOffCLBalanceDecreaseBPLimitSet', { oneOffCLBalanceDecreaseBPLimit: newValue })
+    })
+
+    it('set annual balance increase', async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).annualBalanceIncreaseBPLimit
+      const newValue = 9
+      assert.notEquals(newValue, previousValue)
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setAnnualBalanceIncreaseBPLimit(newValue, {
+          from: deployer,
+        }),
+        deployer,
+        'ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE'
+      )
+      const tx = await oracleReportSanityChecker.setAnnualBalanceIncreaseBPLimit(newValue, {
+        from: managersRoster.annualBalanceIncreaseLimitManagers[0],
+      })
+      assert.equals((await oracleReportSanityChecker.getOracleReportLimits()).annualBalanceIncreaseBPLimit, newValue)
+      assert.emits(tx, 'AnnualBalanceIncreaseBPLimitSet', { annualBalanceIncreaseBPLimit: newValue })
+    })
+
+    it('set simulated share rate deviation', async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).simulatedShareRateDeviationBPLimit
+      const newValue = 7
+      assert.notEquals(newValue, previousValue)
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setSimulatedShareRateDeviationBPLimit(newValue, {
+          from: deployer,
+        }),
+        deployer,
+        'SHARE_RATE_DEVIATION_LIMIT_MANAGER_ROLE'
+      )
+      const tx = await oracleReportSanityChecker.setSimulatedShareRateDeviationBPLimit(newValue, {
+        from: managersRoster.shareRateDeviationLimitManagers[0],
+      })
+      assert.equals(
+        (await oracleReportSanityChecker.getOracleReportLimits()).simulatedShareRateDeviationBPLimit,
+        newValue
+      )
+      assert.emits(tx, 'SimulatedShareRateDeviationBPLimitSet', { simulatedShareRateDeviationBPLimit: newValue })
     })
   })
 
@@ -806,6 +872,58 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       assert.equals(elRewards, ETH(500))
       assert.equals(simulatedSharesToBurn, ETH(0))
       assert.equals(sharesToBurn, '39960039960039960039960') // ETH(1000000 - 961000. / 1.001)
+    })
+  })
+
+  describe('churn limit', () => {
+    it('setChurnValidatorsPerDayLimit works', async () => {
+      const oldChurnLimit = defaultLimitsList.churnValidatorsPerDayLimit
+      await oracleReportSanityChecker.checkExitedValidatorsRatePerDay(oldChurnLimit)
+      await assert.reverts(
+        oracleReportSanityChecker.checkExitedValidatorsRatePerDay(oldChurnLimit + 1),
+        `ExitedValidatorsLimitExceeded(${oldChurnLimit}, ${oldChurnLimit + 1})`
+      )
+      assert.equals((await oracleReportSanityChecker.getOracleReportLimits()).churnValidatorsPerDayLimit, oldChurnLimit)
+
+      const newChurnLimit = 30
+      assert.notEquals(newChurnLimit, oldChurnLimit)
+
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setChurnValidatorsPerDayLimit(newChurnLimit, { from: deployer }),
+        deployer,
+        'CHURN_VALIDATORS_PER_DAY_LIMIT_MANGER_ROLE'
+      )
+
+      const tx = await oracleReportSanityChecker.setChurnValidatorsPerDayLimit(newChurnLimit, {
+        from: managersRoster.churnValidatorsPerDayLimitManagers[0],
+      })
+
+      assert.emits(tx, 'ChurnValidatorsPerDayLimitSet', { churnValidatorsPerDayLimit: newChurnLimit })
+      assert.equals((await oracleReportSanityChecker.getOracleReportLimits()).churnValidatorsPerDayLimit, newChurnLimit)
+
+      await oracleReportSanityChecker.checkExitedValidatorsRatePerDay(newChurnLimit)
+      await assert.reverts(
+        oracleReportSanityChecker.checkExitedValidatorsRatePerDay(newChurnLimit + 1),
+        `ExitedValidatorsLimitExceeded(${newChurnLimit}, ${newChurnLimit + 1})`
+      )
+    })
+
+    it('checkAccountingOracleReport: churnLimit works', async () => {
+      const churnLimit = defaultLimitsList.churnValidatorsPerDayLimit
+      assert.equals((await oracleReportSanityChecker.getOracleReportLimits()).churnValidatorsPerDayLimit, churnLimit)
+
+      await oracleReportSanityChecker.checkAccountingOracleReport(
+        ...Object.values({ ...correctLidoOracleReport, postCLValidators: churnLimit })
+      )
+      await assert.reverts(
+        oracleReportSanityChecker.checkAccountingOracleReport(
+          ...Object.values({
+            ...correctLidoOracleReport,
+            postCLValidators: churnLimit + 1,
+          })
+        ),
+        `IncorrectAppearedValidators(${churnLimit + 1})`
+      )
     })
   })
 })
