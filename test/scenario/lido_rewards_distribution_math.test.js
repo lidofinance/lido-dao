@@ -652,6 +652,8 @@ contract('Lido: rewards distribution math', (addresses) => {
       { from: voting }
     )
 
+    await waitBlocks(+(await depositSecurityModule.getMaxDeposits()))
+
     const modulesList = await stakingRouter.getStakingModules()
 
     assert(modulesList.length, 2, 'module added')

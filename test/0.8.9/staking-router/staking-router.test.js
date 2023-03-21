@@ -385,6 +385,8 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         treasuryFee: 200,
         expectedModuleId: 1,
         address: null,
+        lastDepositAt: null,
+        lastDepositBlock: null,
       },
       {
         name: 'Test module 1',
@@ -393,6 +395,8 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         treasuryFee: 200,
         expectedModuleId: 2,
         address: null,
+        lastDepositAt: null,
+        lastDepositBlock: null,
       },
     ]
 
@@ -511,7 +515,11 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
           from: appManager,
         }
       )
-      assert.equals(tx.logs.length, 3)
+      const latestBlock = await ethers.provider.getBlock()
+      stakingModulesParams[0].lastDepositAt = latestBlock.timestamp
+      stakingModulesParams[0].lastDepositBlock = latestBlock.number
+
+      assert.equals(tx.logs.length, 4)
       await assert.emits(tx, 'StakingModuleAdded', {
         stakingModuleId: stakingModulesParams[0].expectedModuleId,
         stakingModule: stakingModule1.address,
@@ -528,6 +536,10 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         stakingModuleFee: stakingModulesParams[0].stakingModuleFee,
         treasuryFee: stakingModulesParams[0].treasuryFee,
         setBy: appManager,
+      })
+      await assert.emits(tx, 'StakingRouterETHDeposited', {
+        stakingModuleId: stakingModulesParams[0].expectedModuleId,
+        amount: 0,
       })
 
       assert.equals(await router.getStakingModulesCount(), 1)
@@ -547,8 +559,8 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       assert.equals(module.treasuryFee, stakingModulesParams[0].treasuryFee)
       assert.equals(module.targetShare, stakingModulesParams[0].targetShare)
       assert.equals(module.status, StakingModuleStatus.Active)
-      assert.equals(module.lastDepositAt, 0)
-      assert.equals(module.lastDepositBlock, 0)
+      assert.equals(module.lastDepositAt, stakingModulesParams[0].lastDepositAt)
+      assert.equals(module.lastDepositBlock, stakingModulesParams[0].lastDepositBlock)
     })
 
     it('add another staking module', async () => {
@@ -562,8 +574,11 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
           from: appManager,
         }
       )
+      const latestBlock = await ethers.provider.getBlock()
+      stakingModulesParams[1].lastDepositAt = latestBlock.timestamp
+      stakingModulesParams[1].lastDepositBlock = latestBlock.number
 
-      assert.equals(tx.logs.length, 3)
+      assert.equals(tx.logs.length, 4)
       await assert.emits(tx, 'StakingModuleAdded', {
         stakingModuleId: stakingModulesParams[1].expectedModuleId,
         stakingModule: stakingModule2.address,
@@ -580,6 +595,10 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         stakingModuleFee: stakingModulesParams[1].stakingModuleFee,
         treasuryFee: stakingModulesParams[1].treasuryFee,
         setBy: appManager,
+      })
+      await assert.emits(tx, 'StakingRouterETHDeposited', {
+        stakingModuleId: stakingModulesParams[1].expectedModuleId,
+        amount: 0,
       })
 
       assert.equals(await router.getStakingModulesCount(), 2)
@@ -599,8 +618,8 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       assert.equals(module.treasuryFee, stakingModulesParams[1].treasuryFee)
       assert.equals(module.targetShare, stakingModulesParams[1].targetShare)
       assert.equals(module.status, StakingModuleStatus.Active)
-      assert.equals(module.lastDepositAt, 0)
-      assert.equals(module.lastDepositBlock, 0)
+      assert.equals(module.lastDepositAt, stakingModulesParams[1].lastDepositAt)
+      assert.equals(module.lastDepositBlock, stakingModulesParams[1].lastDepositBlock)
     })
 
     it('get staking modules list', async () => {
@@ -613,8 +632,8 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         assert.equals(stakingModules[i].treasuryFee, stakingModulesParams[i].treasuryFee)
         assert.equals(stakingModules[i].targetShare, stakingModulesParams[i].targetShare)
         assert.equals(stakingModules[i].status, StakingModuleStatus.Active)
-        assert.equals(stakingModules[i].lastDepositAt, 0)
-        assert.equals(stakingModules[i].lastDepositBlock, 0)
+        assert.equals(stakingModules[i].lastDepositAt, stakingModulesParams[i].lastDepositAt)
+        assert.equals(stakingModules[i].lastDepositBlock, stakingModulesParams[i].lastDepositBlock)
       }
     })
 
