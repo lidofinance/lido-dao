@@ -241,14 +241,11 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     ) internal virtual;
 
     /// @notice May be called by a descendant contract to check if the received data matches
-    /// the currently submitted consensus report, and that processing deadline is not missed.
-    /// Reverts otherwise.
+    /// the currently submitted consensus report. Reverts otherwise.
     ///
     function _checkConsensusData(uint256 refSlot, uint256 consensusVersion, bytes32 hash)
         internal view
     {
-        _checkProcessingDeadline();
-
         ConsensusReport memory report = _storageConsensusReport().value;
         if (refSlot != report.refSlot) {
             revert UnexpectedRefSlot(report.refSlot, refSlot);
