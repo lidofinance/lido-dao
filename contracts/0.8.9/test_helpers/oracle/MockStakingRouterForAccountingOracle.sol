@@ -19,7 +19,8 @@ contract MockStakingRouterForAccountingOracle is IStakingRouter {
         bytes keysCounts;
     }
 
-    uint256 internal _exitedKeysCountAcrossAllModules;
+    mapping(uint256 => uint256) internal _exitedKeysCountsByModuleId;
+
     UpdateExitedKeysByModuleCallData internal _lastCall_updateExitedKeysByModule;
 
     ReportKeysByNodeOperatorCallData[] public calls_reportExitedKeysByNodeOperator;
@@ -27,10 +28,6 @@ contract MockStakingRouterForAccountingOracle is IStakingRouter {
 
     uint256 public totalCalls_onValidatorsCountsByNodeOperatorReportingFinished;
 
-
-    function setExitedKeysCountAcrossAllModules(uint256 count) external {
-        _exitedKeysCountAcrossAllModules = count;
-    }
 
     function lastCall_updateExitedKeysByModule()
         external view returns (UpdateExitedKeysByModuleCallData memory)
@@ -50,17 +47,23 @@ contract MockStakingRouterForAccountingOracle is IStakingRouter {
     /// IStakingRouter
     ///
 
-    function getExitedValidatorsCountAcrossAllModules() external view returns (uint256) {
-        return _exitedKeysCountAcrossAllModules;
-    }
-
     function updateExitedValidatorsCountByStakingModule(
         uint256[] calldata moduleIds,
         uint256[] calldata exitedKeysCounts
-    ) external {
+    ) external returns (uint256) {
         _lastCall_updateExitedKeysByModule.moduleIds = moduleIds;
         _lastCall_updateExitedKeysByModule.exitedKeysCounts = exitedKeysCounts;
         ++_lastCall_updateExitedKeysByModule.callCount;
+
+        uint256 newlyExitedValidatorsCount;
+
+        for (uint256 i = 0; i < moduleIds.length; ++i) {
+            uint256 moduleId = moduleIds[i];
+            newlyExitedValidatorsCount += exitedKeysCounts[i] - _exitedKeysCountsByModuleId[moduleId];
+            _exitedKeysCountsByModuleId[moduleId] = exitedKeysCounts[i];
+        }
+
+        return newlyExitedValidatorsCount;
     }
 
     function reportStakingModuleExitedValidatorsCountByNodeOperator(

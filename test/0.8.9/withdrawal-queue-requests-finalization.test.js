@@ -1,7 +1,7 @@
 const { contract, ethers } = require('hardhat')
 const { itParam } = require('mocha-param')
 
-const { StETH, shareRate, e18, e27, toBN, ETH } = require('../helpers/utils')
+const { StETH, shareRate, e18, e27, toBN, ETH, addSendWithResult } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 const { MAX_UINT256 } = require('../helpers/constants')
 const { EvmSnapshot } = require('../helpers/blockchain')
@@ -57,11 +57,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
 
     steth = deployed.steth
     withdrawalQueue = deployed.withdrawalQueue
-    withdrawalQueue.requestWithdrawalsWithResults = async (...args) => {
-      const result = await withdrawalQueue.requestWithdrawals.call(...args)
-      await withdrawalQueue.requestWithdrawals(...args)
-      return result
-    }
+    addSendWithResult(withdrawalQueue.requestWithdrawals)
 
     await steth.mintShares(user, e18(10))
     await steth.approve(withdrawalQueue.address, StETH(10), { from: user })
@@ -94,7 +90,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
     })
 
     it('works correctly on multiple calls', async () => {
-      const [requestId1, requestId2] = await withdrawalQueue.requestWithdrawalsWithResults([ETH(1), ETH(1)], user, {
+      const [requestId1, requestId2] = await withdrawalQueue.requestWithdrawals.sendWithResult([ETH(1), ETH(1)], user, {
         from: user,
       })
       const calculatedBatches1 = await withdrawalQueue.calculateFinalizationBatches(shareRate(1), 10000000000, 1, [
@@ -121,7 +117,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
     })
 
     it('stops on maxTimestamp', async () => {
-      const [requestId1] = await withdrawalQueue.requestWithdrawalsWithResults([ETH(1)], user, {
+      const [requestId1] = await withdrawalQueue.requestWithdrawals.sendWithResult([ETH(1)], user, {
         from: user,
       })
       const [status] = await withdrawalQueue.getWithdrawalStatus([requestId1])

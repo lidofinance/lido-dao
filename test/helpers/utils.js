@@ -169,6 +169,14 @@ function getFirstEventArgs(receipt, eventName, abi = undefined) {
   return events[0].args
 }
 
+function addSendWithResult(method) {
+  method.sendWithResult = async (...args) => {
+    const result = await method.call(...args)
+    await method(...args)
+    return result
+  }
+}
+
 module.exports = {
   ZERO_ADDRESS,
   ZERO_HASH,
@@ -200,5 +208,6 @@ module.exports = {
   calcSharesMintedAsFees,
   getFirstEventArgs,
   calcShareRateDeltaE27,
+  addSendWithResult,
   limitRebase,
 }
