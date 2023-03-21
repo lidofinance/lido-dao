@@ -213,11 +213,12 @@ class ContractStubConfigParser {
   _parseOutput(config) {
     if (config.return) {
       return this._encode(config.return)
-    }
-    if (config.revert) {
-      return config.revert.error
-        ? this._encodeError(config.revert.error)
-        : this._encodeError({ name: 'Error', args: TypedTuple.create(['string'], [config.revert.reason || '']) })
+    } else if (config.revert && config.revert.reason === 'outOfGas') {
+      return this._encode(EMPTY_TYPED_TUPLE)
+    } else if (config.revert && config.revert.reason !== undefined) {
+      return this._encodeError({ name: 'Error', args: TypedTuple.create(['string'], [config.revert.reason]) })
+    } else if (config.revert && config.revert.error) {
+      return this._encodeError(config.revert.error)
     }
     return this._encode(EMPTY_TYPED_TUPLE)
   }
