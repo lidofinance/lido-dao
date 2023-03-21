@@ -109,11 +109,11 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     /// @dev refunded keys count from dao
     uint8 internal constant REFUNDED_VALIDATORS_COUNT_OFFSET = 1;
     /// @dev extra penalty time after stuck keys resolved (refunded and/or exited)
-    /// @notice field is also used as flag for "half-cleaned" panlty status
+    /// @notice field is also used as flag for "half-cleaned" penalty status
     ///         Operator is PENALIZED if `STUCK_VALIDATORS_COUNT > REFUNDED_VALIDATORS_COUNT` or
-    ///         `STUCK_VALIDATORS_COUNT <= REFUNDED_VALIDATORS_COUNT && STUCK_PENALTY_END_TIMESTAMP <= refund timastamp + STUCK_PENALTY_DELAY`
+    ///         `STUCK_VALIDATORS_COUNT <= REFUNDED_VALIDATORS_COUNT && STUCK_PENALTY_END_TIMESTAMP <= refund timestamp + STUCK_PENALTY_DELAY`
     ///         When operator refund all stuck validators and time has pass STUCK_PENALTY_DELAY, but STUCK_PENALTY_END_TIMESTAMP not zeroed,
-    ///         then Operator can receive reawards but can't get new deposits until the new Oracle report or `clearNodeOperatorPenalty` is called.
+    ///         then Operator can receive rewards but can't get new deposits until the new Oracle report or `clearNodeOperatorPenalty` is called.
     uint8 internal constant STUCK_PENALTY_END_TIMESTAMP_OFFSET = 2;
 
     // Summary SigningKeysStats
@@ -661,7 +661,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _updateSummaryMaxValidatorsCount(_nodeOperatorId);
     }
 
-    // @dev Recalculate and update the max validoator count for operator and summary stats
+    // @dev Recalculate and update the max validator count for operator and summary stats
     function _updateSummaryMaxValidatorsCount(uint256 _nodeOperatorId) internal returns (int64 maxSigningKeysDelta) {
         maxSigningKeysDelta = _applyNodeOperatorLimits(_nodeOperatorId);
         if (maxSigningKeysDelta != 0) {
