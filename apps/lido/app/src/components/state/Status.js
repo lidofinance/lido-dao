@@ -24,9 +24,11 @@ export const Status = () => {
   const { isStopped } = useAppState()
 
   const { api } = useAragonApi()
+
   const stop = () => {
     api.stop().toPromise()
   }
+
   const resume = () => {
     api.resume().toPromise()
   }

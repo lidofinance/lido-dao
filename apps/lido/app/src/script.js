@@ -4,6 +4,117 @@ import Aragon, { events } from '@aragon/api'
 
 const app = new Aragon()
 
+const createFetcher = (functionName) => () => app.call(functionName).toPromise()
+
+const protocolVariables = [
+  {
+    stateKey: 'isStopped',
+    updateEvents: ['Resumed', 'Stopped'],
+    fetch: createFetcher('isStopped'),
+  },
+  {
+    stateKey: 'canDeposit',
+    updateEvents: [],
+    fetch: createFetcher('canDeposit'),
+  },
+  {
+    stateKey: 'bufferedEther',
+    updateEvents: ['Unbuffered'],
+    fetch: createFetcher('getBufferedEther'),
+  },
+  {
+    stateKey: 'depositableEther',
+    updateEvents: [],
+    fetch: createFetcher('getDepositableEther'),
+  },
+  {
+    stateKey: 'totalPooledEther',
+    updateEvents: [],
+    fetch: createFetcher('getTotalPooledEther'),
+  },
+  {
+    stateKey: 'totalELRewardsCollected',
+    updateEvents: ['ELRewardsReceived'],
+    fetch: createFetcher('getTotalELRewardsCollected'),
+  },
+  { stateKey: 'fee', updateEvents: [], fetch: createFetcher('getFee') },
+  {
+    stateKey: 'feeDistribution',
+    updateEvents: [],
+    fetch: createFetcher('getFeeDistribution'),
+  },
+  {
+    stateKey: 'withdrawalCredentials',
+    updateEvents: [],
+    fetch: createFetcher('getWithdrawalCredentials'),
+  },
+  {
+    stateKey: 'beaconStat',
+    updateEvents: ['CLValidatorsUpdated', 'DepositedValidatorsChanged'],
+    fetch: createFetcher('getBeaconStat'),
+  },
+  {
+    stateKey: 'treasury',
+    updateEvents: [],
+    fetch: createFetcher('getTreasury'),
+  },
+  {
+    stateKey: 'legacyOracle',
+    updateEvents: [],
+    fetch: createFetcher('getOracle'),
+  },
+  {
+    stateKey: 'recoveryVault',
+    updateEvents: [],
+    fetch: createFetcher('getRecoveryVault'),
+  },
+  {
+    stateKey: 'lidoLocator',
+    updateEvents: ['LidoLocatorSet'],
+    fetch: createFetcher('getLidoLocator'),
+  },
+  {
+    stateKey: 'symbol',
+    updateEvents: [],
+    fetch: createFetcher('symbol'),
+  },
+  {
+    stateKey: 'decimals',
+    updateEvents: [],
+    fetch: createFetcher('decimals'),
+  },
+  {
+    stateKey: 'totalSupply',
+    updateEvents: [],
+    fetch: createFetcher('totalSupply'),
+  },
+  {
+    stateKey: 'stakeLimitFullInfo',
+    updateEvents: [
+      'StakingPaused',
+      'StakingResumed',
+      'StakingLimitSet',
+      'StakingLimitRemoved',
+    ],
+    fetch: createFetcher('getStakeLimitFullInfo'),
+  },
+  {
+    stateKey: 'contractVersion',
+    updateEvents: ['ContractVersionSet'],
+    fetch: createFetcher('getContractVersion'),
+  },
+  {
+    stateKey: 'hasInitialized',
+    updateEvents: [],
+    fetch: createFetcher('hasInitialized'),
+  },
+  {
+    stateKey: 'initializationBlock',
+    updateEvents: [],
+    fetch: createFetcher('getInitializationBlock'),
+  },
+]
+
 app.store(
   async (state, { event }) => {
     const nextState = {
@@ -11,47 +122,26 @@ app.store(
     }
 
     try {
-      switch (event) {
-        case 'Stopped':
-          return { ...nextState, isStopped: await getIsStopped() }
-        case 'Resumed':
-          return { ...nextState, isStopped: await getIsStopped() }
-        case 'FeeSet':
-          return { ...nextState, fee: await getFee() }
-        case 'FeeDistributionSet':
-          return { ...nextState, feeDistribution: await getFeeDistribution() }
-        case 'WithdrawalCredentialsSet':
-          return {
-            ...nextState,
-            withdrawalCredentials: await getWithdrawalCredentials(),
-          }
-        case 'ELRewardsWithdrawalLimitSet':
-          return {
-            ...nextState,
-            elRewardsWithdrawalLimit: await getElRewardsWithdrawalLimit(),
-          }
-        case 'ELRewardsVaultSet':
-          return {
-            ...nextState,
-            elRewardsVault: await getElRewardsVault(),
-          }
-        case 'Unbuffered':
-          return { ...nextState, bufferedEther: await getBufferedEther() }
-        case 'StakingPaused':
-          return { ...nextState, stakingLimitInfo: await getStakingLimitInfo() }
-        case 'StakingResumed':
-          return { ...nextState, stakingLimitInfo: await getStakingLimitInfo() }
-        case 'StakingLimitSet':
-          return { ...nextState, stakingLimitInfo: await getStakingLimitInfo() }
-        case 'StakingLimitRemoved':
-          return { ...nextState, stakingLimitInfo: await getStakingLimitInfo() }
-        case events.SYNC_STATUS_SYNCING:
-          return { ...nextState, isSyncing: true }
-        case events.SYNC_STATUS_SYNCED:
-          return { ...nextState, isSyncing: false }
-        default:
-          return state
+      if (event === events.SYNC_STATUS_SYNCING) {
+        return { ...nextState, isSyncing: true }
       }
+
+      if (event === events.SYNC_STATUS_SYNCED) {
+        return { ...nextState, isSyncing: false }
+      }
+
+      const variable = protocolVariables.find(({ updateEvents }) =>
+        updateEvents.includes(event)
+      )
+
+      if (variable) {
+        return {
+          ...nextState,
+          [variable.stateKey]: await variable.fetch(),
+        }
+      }
+
+      return nextState
     } catch (err) {
       console.log(err)
     }
@@ -69,128 +159,18 @@ app.store(
 
 function initializeState() {
   return async (cachedState) => {
-    // fetch in parallel
-    const allSettled = await Promise.allSettled([
-      getIsStopped(),
-      getFee(),
-      getFeeDistribution(),
-      getWithdrawalCredentials(),
-      getElRewardsWithdrawalLimit(),
-      getElRewardsVault(),
-      getBufferedEther(),
-      getTotalPooledEther(),
-      getNodeOperatorsRegistry(),
-      getDepositContract(),
-      getOracle(),
-      getOperators(),
-      getTreasury(),
-      getInsuranceFund(),
-      getBeaconStat(),
-      getStakingLimitInfo(),
-    ])
+    const promises = protocolVariables.map((v) => v.fetch())
 
-    const [
-      isStopped,
-      fee,
-      feeDistribution,
-      withdrawalCredentials,
-      elRewardsWithdrawalLimit,
-      elRewardsVault,
-      bufferedEther,
-      totalPooledEther,
-      nodeOperatorsRegistry,
-      depositContract,
-      oracle,
-      operators,
-      treasury,
-      insuranceFund,
-      beaconStat,
-      stakingLimitInfo,
-    ] = allSettled.map((settled) => settled.value)
+    const settledPromises = await Promise.allSettled(promises)
+
+    const updatedState = settledPromises.reduce((stateObject, cur, index) => {
+      stateObject[protocolVariables[index].stateKey] = cur.value
+      return stateObject
+    }, {})
 
     return {
       ...cachedState,
-      isStopped,
-      fee,
-      feeDistribution,
-      withdrawalCredentials,
-      elRewardsWithdrawalLimit,
-      elRewardsVault,
-      bufferedEther,
-      totalPooledEther,
-      nodeOperatorsRegistry,
-      depositContract,
-      oracle,
-      operators,
-      treasury,
-      insuranceFund,
-      beaconStat,
-      stakingLimitInfo,
+      ...updatedState,
     }
   }
-}
-
-// API
-function getIsStopped() {
-  return app.call('isStopped').toPromise()
-}
-
-function getFee() {
-  return app.call('getFee').toPromise()
-}
-
-function getFeeDistribution() {
-  return app.call('getFeeDistribution').toPromise()
-}
-
-function getWithdrawalCredentials() {
-  return app.call('getWithdrawalCredentials').toPromise()
-}
-
-function getElRewardsWithdrawalLimit() {
-  return app.call('getELRewardsWithdrawalLimit').toPromise()
-}
-
-function getElRewardsVault() {
-  return app.call('getELRewardsVault').toPromise()
-}
-
-function getBufferedEther() {
-  return app.call('getBufferedEther').toPromise()
-}
-
-function getTotalPooledEther() {
-  return app.call('getTotalPooledEther').toPromise()
-}
-
-function getNodeOperatorsRegistry() {
-  return app.call('getOperators').toPromise()
-}
-
-function getDepositContract() {
-  return app.call('getDepositContract').toPromise()
-}
-
-function getOracle() {
-  return app.call('getOracle').toPromise()
-}
-
-function getOperators() {
-  return app.call('getOperators').toPromise()
-}
-
-function getTreasury() {
-  return app.call('getTreasury').toPromise()
-}
-
-function getInsuranceFund() {
-  return app.call('getInsuranceFund').toPromise()
-}
-
-function getBeaconStat() {
-  return app.call('getBeaconStat').toPromise()
-}
-
-function getStakingLimitInfo() {
-  return app.call('getStakeLimitFullInfo').toPromise()
 }

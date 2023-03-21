@@ -6,11 +6,15 @@ const ListItemStyle = styled.li`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: ${GU * 3}px 0 0 ${(props) => (props.nested ? GU * 4 : 0)}px;
+  padding: ${GU}px ${GU * 3}px ${GU}px
+    ${(props) => (props.nested ? GU * 6 : GU * 3)}px;
   line-height: 40px;
+  border-top: 1px solid
+    ${(props) => (props.isDark ? '#2C3A58' : props.theme.border)};
 
   & :first-of-type {
     margin-top: 0;
+    border-top: none;
   }
 `
 
@@ -26,9 +30,11 @@ const ListItemValue = styled.strong`
 export const ListItem = ({ label, children, nested }) => {
   const theme = useTheme()
 
+  const themeDark = theme?._name === 'dark'
+
   return (
-    <ListItemStyle nested={nested}>
-      <ListItemLabel isDark={theme?._name === 'dark'}>{label}</ListItemLabel>
+    <ListItemStyle nested={nested} isDark={themeDark}>
+      <ListItemLabel isDark={themeDark}>{label}</ListItemLabel>
       <ListItemValue>{children}</ListItemValue>
     </ListItemStyle>
   )
