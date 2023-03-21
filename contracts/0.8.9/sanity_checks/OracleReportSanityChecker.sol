@@ -368,16 +368,16 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         );
 
         if (_postCLBalance < _preCLBalance) {
-            tokenRebaseLimiter.raiseLimit(_preCLBalance - _postCLBalance);
+            tokenRebaseLimiter.decreaseEther(_preCLBalance - _postCLBalance);
         } else {
-            tokenRebaseLimiter.consumeLimit(_postCLBalance - _preCLBalance);
+            tokenRebaseLimiter.increaseEther(_postCLBalance - _preCLBalance);
         }
 
-        withdrawals = tokenRebaseLimiter.consumeLimit(_withdrawalVaultBalance);
-        elRewards = tokenRebaseLimiter.consumeLimit(_elRewardsVaultBalance);
+        withdrawals = tokenRebaseLimiter.increaseEther(_withdrawalVaultBalance);
+        elRewards = tokenRebaseLimiter.increaseEther(_elRewardsVaultBalance);
 
         simulatedSharesToBurn = Math256.min(tokenRebaseLimiter.getSharesToBurnLimit(), _sharesRequestedToBurn);
-        tokenRebaseLimiter.raiseLimit(_etherToLockForWithdrawals);
+        tokenRebaseLimiter.decreaseEther(_etherToLockForWithdrawals);
         sharesToBurn = Math256.min(tokenRebaseLimiter.getSharesToBurnLimit(), _newSharesToBurnForWithdrawals + _sharesRequestedToBurn);
     }
 

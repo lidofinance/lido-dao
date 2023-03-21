@@ -38,15 +38,15 @@ contract PositiveTokenRebaseLimiterMock {
         return limiter.isLimitReached();
     }
 
-    function raiseLimit(uint256 _etherAmount) external {
+    function decreaseEther(uint256 _etherAmount) external {
         TokenRebaseLimiterData memory limiterMemory = limiter;
-        limiterMemory.raiseLimit(_etherAmount);
+        limiterMemory.decreaseEther(_etherAmount);
         limiter = limiterMemory;
     }
 
-    function consumeLimit(uint256 _etherAmount) external returns (uint256 consumedEther) {
+    function increaseEther(uint256 _etherAmount) external returns (uint256 consumedEther) {
         TokenRebaseLimiterData memory limiterMemory = limiter;
-        consumedEther = limiterMemory.consumeLimit(_etherAmount);
+        consumedEther = limiterMemory.increaseEther(_etherAmount);
         limiter = limiterMemory;
     }
 

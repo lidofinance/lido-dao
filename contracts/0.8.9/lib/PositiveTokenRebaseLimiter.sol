@@ -25,8 +25,8 @@ import {Math256} from "../../common/lib/Math256.sol";
 struct TokenRebaseLimiterData {
     uint256 preTotalPooledEther;  // pre-rebase total pooled ether
     uint256 preTotalShares;       // pre-rebase total shares
-    uint256 postTotalPooledEther; // accumulated post-rebase total pooled ether
-    uint256 rebaseLimit;          // positive rebase limit (target value)
+    uint256 postTotalPooledEther; // accumulated total pooled ether when token rebase components applied
+    uint256 rebaseLimit;          // positive rebase limit (target value) with 1e9 precision (`LIMITER_PRECISION_BASE`)
 }
 
 /**
@@ -115,22 +115,29 @@ library PositiveTokenRebaseLimiter {
     }
 
     /**
-     * @notice raise limit using the given amount of ether
+     * @notice decrease total pooled ether by the given amount of ether
      * @param _limiterState limit repr struct
+     * @param _etherAmount amount of ether to decrease
      */
-    function raiseLimit(TokenRebaseLimiterData memory _limiterState, uint256 _etherAmount) internal pure {
+    function decreaseEther(
+        TokenRebaseLimiterData memory _limiterState, uint256 _etherAmount
+    ) internal pure {
         if (_limiterState.rebaseLimit == UNLIMITED_REBASE) return;
+
+        if (_etherAmount > _limiterState.postTotalPooledEther) revert NegativeTotalPooledEther();
 
         _limiterState.postTotalPooledEther -= _etherAmount;
     }
 
     /**
-     * @dev append ether and return the consumed value not exceeding the limit
+     * @dev increase total pooled ether up to the limit and return the consumed value (not exceeding the limit)
      * @param _limiterState limit repr struct
      * @param _etherAmount desired ether addition
-     * @return consumedEther allowed to add ether to not exceed the limit
+     * @return consumedEther appended ether still not exceeding the limit
      */
-    function consumeLimit(TokenRebaseLimiterData memory _limiterState, uint256 _etherAmount)
+    function increaseEther(
+        TokenRebaseLimiterData memory _limiterState, uint256 _etherAmount
+    )
         internal
         pure
         returns (uint256 consumedEther)
@@ -140,13 +147,10 @@ library PositiveTokenRebaseLimiter {
         uint256 prevPooledEther = _limiterState.postTotalPooledEther;
         _limiterState.postTotalPooledEther += _etherAmount;
 
-        uint256 rebaseEtherLimit =
+        uint256 maxTotalPooledEther = _limiterState.preTotalPooledEther +
             (_limiterState.rebaseLimit * _limiterState.preTotalPooledEther) / LIMITER_PRECISION_BASE;
 
-        _limiterState.postTotalPooledEther = Math256.min(
-            _limiterState.postTotalPooledEther,
-            _limiterState.preTotalPooledEther + rebaseEtherLimit
-        );
+        _limiterState.postTotalPooledEther = Math256.min(_limiterState.postTotalPooledEther, maxTotalPooledEther);
 
         assert(_limiterState.postTotalPooledEther >= prevPooledEther);
 
@@ -176,4 +180,5 @@ library PositiveTokenRebaseLimiter {
 
     error TooLowTokenRebaseLimit();
     error TooHighTokenRebaseLimit();
+    error NegativeTotalPooledEther();
 }
