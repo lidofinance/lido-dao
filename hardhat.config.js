@@ -70,6 +70,7 @@ const getNetConfig = (networkName, ethAccountName) => {
       ...base,
       accounts: {
         mnemonic: 'explain tackle mirror kit van hammer degree position ginger unfair soup bonus',
+        count: 30,
       },
       url: 'http://localhost:8545',
       chainId: 1337,
@@ -82,7 +83,7 @@ const getNetConfig = (networkName, ethAccountName) => {
       accounts: {
         // default hardhat's node mnemonic
         mnemonic: 'test test test test test test test test test test test junk',
-        count: 20,
+        count: 30,
         accountsBalance: '100000000000000000000000',
         gasPrice: 0,
       },

@@ -42,6 +42,8 @@ struct TokenRebaseLimiterData {
  *     Used for `PositiveTokenRebaseLimiter.consumeLimit()`, `PositiveTokenRebaseLimiter.raiseLimit()`.
  *
  * R = ((preTotalPooledEther + inc) / preTotalShares) / (preTotalPooledEther / preTotalShares) - 1
+ * R = ((preTotalPooledEther + inc) / preTotalShares) * (preTotalShares / preTotalPooledEther) - 1
+ * R = (preTotalPooledEther + inc) / preTotalPooledEther) - 1
  * R = inc/preTotalPooledEther
  *
  * isolating inc:

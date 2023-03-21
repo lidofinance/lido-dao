@@ -83,6 +83,12 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     )
   })
 
+  describe('getLidoLocator()', () => {
+    it('retrieves correct locator address', async () => {
+      assert.equals(await oracleReportSanityChecker.getLidoLocator(), lidoLocatorMock.address)
+    })
+  })
+
   describe('setOracleReportLimits()', () => {
     it('sets limits correctly', async () => {
       const newLimitsList = {
@@ -328,6 +334,478 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
 
     it('passes all checks with correct share rate', async () => {
       await oracleReportSanityChecker.checkSimulatedShareRate(...Object.values(correctSimulatedShareRate))
+    })
+  })
+
+  describe('max positive rebase', () => {
+    const defaultSmoothenTokenRebaseParams = {
+      preTotalPooledEther: ETH(100),
+      preTotalShares: ETH(100),
+      preCLBalance: ETH(100),
+      postCLBalance: ETH(100),
+      withdrawalVaultBalance: 0,
+      elRewardsVaultBalance: 0,
+      sharesRequestedToBurn: 0,
+      etherToLockForWithdrawals: 0,
+      newSharesToBurnForWithdrawals: 0,
+    }
+
+    it('getMaxPositiveTokenRebase works', async () => {
+      assert.equals(
+        await oracleReportSanityChecker.getMaxPositiveTokenRebase(),
+        defaultLimitsList.maxPositiveTokenRebase
+      )
+    })
+
+    it('setMaxPositiveTokenRebase works', async () => {
+      const newRebaseLimit = 1_000_000
+      assert.notEquals(newRebaseLimit, defaultLimitsList.maxPositiveTokenRebase)
+
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, { from: deployer }),
+        deployer,
+        'MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE'
+      )
+
+      const tx = await oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, {
+        from: managersRoster.maxPositiveTokenRebaseManagers[0],
+      })
+
+      assert.equals(await oracleReportSanityChecker.getMaxPositiveTokenRebase(), newRebaseLimit)
+      assert.emits(tx, 'MaxPositiveTokenRebaseSet', { maxPositiveTokenRebase: newRebaseLimit })
+    })
+
+    it('all zero data works', async () => {
+      const { withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            preTotalPooledEther: 0,
+            preTotalShares: 0,
+            preCLBalance: 0,
+            postCLBalance: 0,
+          })
+        )
+
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+    })
+
+    it('trivial smoothen rebase works when post CL < pre CL and no withdrawals', async () => {
+      const newRebaseLimit = 100_000 // 0.01%
+      await oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, {
+        from: managersRoster.maxPositiveTokenRebaseManagers[0],
+      })
+
+      let { withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({ ...defaultSmoothenTokenRebaseParams, postCLBalance: ETH(99) })
+        )
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(99),
+            elRewardsVaultBalance: ETH(0.1),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, ETH(0.1))
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // withdrawals
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(99),
+            withdrawalVaultBalance: ETH(0.1),
+          })
+        ))
+      assert.equals(withdrawals, ETH(0.1))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // shares requested to burn
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(99),
+            sharesRequestedToBurn: ETH(0.1),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, ETH(0.1))
+      assert.equals(sharesToBurn, ETH(0.1))
+    })
+
+    it('trivial smoothen rebase works when post CL > pre CL and no withdrawals', async () => {
+      const newRebaseLimit = 100_000_000 // 10%
+      await oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, {
+        from: managersRoster.maxPositiveTokenRebaseManagers[0],
+      })
+
+      let { withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({ ...defaultSmoothenTokenRebaseParams, postCLBalance: ETH(100.01) })
+        )
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(100.01),
+            elRewardsVaultBalance: ETH(0.1),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, ETH(0.1))
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // withdrawals
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(100.01),
+            withdrawalVaultBalance: ETH(0.1),
+          })
+        ))
+      assert.equals(withdrawals, ETH(0.1))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // shares requested to burn
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(100.01),
+            sharesRequestedToBurn: ETH(0.1),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, ETH(0.1))
+      assert.equals(sharesToBurn, ETH(0.1))
+    })
+
+    it('non-trivial smoothen rebase works when post CL < pre CL and no withdrawals', async () => {
+      const newRebaseLimit = 10_000_000 // 1%
+      await oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, {
+        from: managersRoster.maxPositiveTokenRebaseManagers[0],
+      })
+
+      let { withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({ ...defaultSmoothenTokenRebaseParams, postCLBalance: ETH(99) })
+        )
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(99),
+            elRewardsVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, ETH(2))
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // withdrawals
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(99),
+            withdrawalVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, ETH(2))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // withdrawals + el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(99),
+            withdrawalVaultBalance: ETH(5),
+            elRewardsVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, ETH(2))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // shares requested to burn
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(99),
+            sharesRequestedToBurn: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, '1980198019801980198') // ETH(100. - (99. / 1.01))
+      assert.equals(sharesToBurn, '1980198019801980198') // the same as above since no withdrawals
+    })
+
+    it('non-trivial smoothen rebase works when post CL > pre CL and no withdrawals', async () => {
+      const newRebaseLimit = 20_000_000 // 2%
+      await oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, {
+        from: managersRoster.maxPositiveTokenRebaseManagers[0],
+      })
+
+      let { withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({ ...defaultSmoothenTokenRebaseParams, postCLBalance: ETH(101) })
+        )
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(101),
+            elRewardsVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, ETH(1))
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // withdrawals
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(101),
+            withdrawalVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, ETH(1))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // withdrawals + el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(101),
+            elRewardsVaultBalance: ETH(5),
+            withdrawalVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, ETH(1))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // shares requested to burn
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(101),
+            sharesRequestedToBurn: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, '980392156862745098') // ETH(100. - (101. / 1.02))
+      assert.equals(sharesToBurn, '980392156862745098') // the same as above since no withdrawals
+    })
+
+    it('non-trivial smoothen rebase works when post CL < pre CL and withdrawals', async () => {
+      const newRebaseLimit = 5_000_000 // 0.5%
+      await oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, {
+        from: managersRoster.maxPositiveTokenRebaseManagers[0],
+      })
+
+      const defaultRebaseParams = {
+        ...defaultSmoothenTokenRebaseParams,
+        postCLBalance: ETH(99),
+        etherToLockForWithdrawals: ETH(10),
+        newSharesToBurnForWithdrawals: ETH(10),
+      }
+
+      let { withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(...Object.values(defaultRebaseParams))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, ETH(10))
+      // el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultRebaseParams,
+            elRewardsVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, ETH(1.5))
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, '9950248756218905472') // 100. - 90.5 / 1.005
+      // withdrawals
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultRebaseParams,
+            withdrawalVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, ETH(1.5))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, '9950248756218905472') // 100. - 90.5 / 1.005
+      // withdrawals + el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultRebaseParams,
+            withdrawalVaultBalance: ETH(5),
+            elRewardsVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, ETH(1.5))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, '9950248756218905472') // 100. - 90.5 / 1.005
+      // shares requested to burn
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultRebaseParams,
+            sharesRequestedToBurn: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, '1492537313432835820') // ETH(100. - (99. / 1.005))
+      assert.equals(sharesToBurn, '11442786069651741293') // ETH(100. - (89. / 1.005))
+    })
+
+    it('non-trivial smoothen rebase works when post CL > pre CL and withdrawals', async () => {
+      const newRebaseLimit = 40_000_000 // 4%
+      await oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, {
+        from: managersRoster.maxPositiveTokenRebaseManagers[0],
+      })
+
+      const defaultRebaseParams = {
+        ...defaultSmoothenTokenRebaseParams,
+        postCLBalance: ETH(102),
+        etherToLockForWithdrawals: ETH(10),
+        newSharesToBurnForWithdrawals: ETH(10),
+      }
+
+      let { withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(...Object.values(defaultRebaseParams))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, ETH(10))
+      // el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultRebaseParams,
+            elRewardsVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, ETH(2))
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, '9615384615384615384') // 100. - 94. / 1.04
+      // withdrawals
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultRebaseParams,
+            withdrawalVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, ETH(2))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, '9615384615384615384') // 100. - 94. / 1.04
+      // withdrawals + el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultRebaseParams,
+            withdrawalVaultBalance: ETH(5),
+            elRewardsVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, ETH(2))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, '9615384615384615384') // 100. - 94. / 1.04
+      // shares requested to burn
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultRebaseParams,
+            sharesRequestedToBurn: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, '1923076923076923076') // ETH(100. - (102. / 1.04))
+      assert.equals(sharesToBurn, '11538461538461538461') // ETH(100. - (92. / 1.04))
+    })
+
+    it('share rate ~1 case with huge withdrawal', async () => {
+      const newRebaseLimit = 1_000_000 // 0.1%
+      await oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, {
+        from: managersRoster.maxPositiveTokenRebaseManagers[0],
+      })
+
+      const rebaseParams = {
+        preTotalPooledEther: ETH('1000000'),
+        preTotalShares: ETH('1000000'),
+        preCLBalance: ETH('1000000'),
+        postCLBalance: ETH('1000000'),
+        elRewardsVaultBalance: ETH(500),
+        withdrawalVaultBalance: ETH(500),
+        sharesRequestedToBurn: ETH(0),
+        etherToLockForWithdrawals: ETH(40000),
+        newSharesToBurnForWithdrawals: ETH(40000),
+      }
+
+      const { withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(...Object.values(rebaseParams))
+
+      assert.equals(withdrawals, ETH(500))
+      assert.equals(elRewards, ETH(500))
+      assert.equals(simulatedSharesToBurn, ETH(0))
+      assert.equals(sharesToBurn, '39960039960039960039960') // ETH(1000000 - 961000. / 1.001)
     })
   })
 })
