@@ -41,7 +41,7 @@ struct TokenRebaseLimiterData {
  * ### Step 1. Calculating the allowed total pooled ether changes (preTotalShares === postTotalShares)
  *     Used for `PositiveTokenRebaseLimiter.consumeLimit()`, `PositiveTokenRebaseLimiter.raiseLimit()`.
  *
- * R = ((preTotalPooledEther + inc) / preTotalShares) / ((preTotalPooledEther / preTotalShares)) - 1
+ * R = ((preTotalPooledEther + inc) / preTotalShares) / (preTotalPooledEther / preTotalShares) - 1
  * R = inc/preTotalPooledEther
  *
  * isolating inc:
