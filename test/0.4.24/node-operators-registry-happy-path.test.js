@@ -7,6 +7,7 @@ const { DSMAttestMessage } = require('../helpers/signatures')
 const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry, NodeOperatorsRegistry } = require('../helpers/staking-modules')
 const { e18, e27, toBN, ETH } = require('../helpers/utils')
+const { getCurrentBlockTimestamp, advanceChainTime, waitBlocks } = require('../helpers/blockchain')
 const {
   getAccountingReportDataItems,
   encodeExtraDataItems,
@@ -15,6 +16,7 @@ const {
   calcAccountingReportDataHash,
 } = require('../0.8.9/oracle/accounting-oracle-deploy.test')
 
+const PENALTY_DELAY = 24 * 60 * 60 // 1 days
 const E9 = toBN(10).pow(toBN(9))
 
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
@@ -87,7 +89,64 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
 
   let stateTotalVetted = 0
   let stateTotalDepositable = 0
-  let stateTotalDeposited = 0
+
+  /**
+   * Helpers
+   */
+
+  async function addKeysToOperator(operatorId, keysToAdd) {
+    const keys = new signingKeys.FakeValidatorKeys(keysToAdd)
+    const operatorBefore = await nor.getNodeOperator(operatorId, true)
+    const keysCountBefore = +(await nor.getTotalSigningKeyCount(operatorId))
+    const unusedKeysCountBefore = +(await nor.getUnusedSigningKeyCount(operatorId))
+
+    await nor.addSigningKeys(operatorId, keys.count, ...keys.slice(), { from: voting.address })
+
+    const operator = await nor.getNodeOperator(operatorId, true)
+    const keysCount = +(await nor.getTotalSigningKeyCount(operatorId))
+    const unusedKeysCount = +(await nor.getUnusedSigningKeyCount(operatorId))
+
+    assert.equals(+operatorBefore.totalSigningKeys + keys.count, operator.totalSigningKeys)
+    assert.equals(keysCountBefore + keys.count, keysCount)
+    assert.equals(unusedKeysCountBefore + keys.count, unusedKeysCount)
+
+    for (let i = 0; i < keys.count; ++i) {
+      const { key, depositSignature } = await nor.getSigningKey(operatorId, i + keysCountBefore)
+      const [expectedPublicKey, expectedSignature] = keys.get(i)
+      assert.equals(key, expectedPublicKey)
+      assert.equals(depositSignature, expectedSignature)
+    }
+  }
+
+  async function setNodeOperatorStakingLimit(operatorId, stakingLimit) {
+    const operatorBefore = await nor.getNodeOperator(operatorId, true)
+    const summaryBefore = await nor.getNodeOperatorSummary(operatorId)
+    const stakingModuleSummaryBefore = await nor.getStakingModuleSummary()
+
+    const tx = await nor.setNodeOperatorStakingLimit(operatorId, stakingLimit, { from: voting.address })
+
+    const operator = await nor.getNodeOperator(operatorId, true)
+    const summary = await nor.getNodeOperatorSummary(operatorId)
+    const stakingModuleSummary = await nor.getStakingModuleSummary()
+    const expectedLimit = +operatorBefore.stakingLimit + stakingLimit
+    const expectedDepositable = +summaryBefore.depositableValidatorsCount + stakingLimit
+
+    assert.equals(operator.stakingLimit, expectedLimit)
+    assert.equals(summary.depositableValidatorsCount, expectedDepositable)
+    assert.equals(
+      +stakingModuleSummaryBefore.depositableValidatorsCount + stakingLimit,
+      stakingModuleSummary.depositableValidatorsCount
+    )
+    assert.emits(
+      tx,
+      'VettedSigningKeysCountChanged',
+      {
+        nodeOperatorId: operatorId,
+        approvedValidatorsCount: expectedLimit,
+      },
+      NOR_ABI_ASSERT_EV
+    )
+  }
 
   async function assertDepositCall(callIdx, operatorId, keyIdx) {
     const regCall = await depositContract.calls.call(callIdx)
@@ -101,16 +160,16 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
   async function assertOperatorDeposits(operatorData, deposited, keysLeft) {
     const operator = await nor.getNodeOperator(operatorData.id, true)
     const summary = await nor.getNodeOperatorSummary(operatorData.id)
-    assert.equals(operator.usedSigningKeys, deposited, `${operatorData.name} usedSigningKeys should be ${deposited}`)
+    assert.equals(operator.usedSigningKeys, deposited, `${operatorData.name} usedSigningKeys asserting to ${deposited}`)
     assert.equals(
       summary.totalDepositedValidators,
       deposited,
-      `${operatorData.name} totalDepositedValidators should be ${deposited}`
+      `${operatorData.name} totalDepositedValidators asserting to ${deposited}`
     )
     assert.equals(
       summary.depositableValidatorsCount,
       keysLeft,
-      `${operatorData.name} totalDepositedValidators should be ${keysLeft}`
+      `${operatorData.name} depositableValidatorsCount asserting to ${keysLeft}`
     )
   }
 
@@ -119,17 +178,17 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
     assert.equals(
       summary.isTargetLimitActive,
       isActive,
-      `${operatorData.name} isTargetLimitActive limit should be set to ${isActive}`
+      `${operatorData.name} isTargetLimitActive limit asserting to ${isActive}`
     )
     assert.equals(
       summary.targetValidatorsCount,
       limit,
-      `${operatorData.name} targetValidatorsCount should be set to ${limit}`
+      `${operatorData.name} targetValidatorsCount asserting to ${limit}`
     )
     assert.equals(
       summary.depositableValidatorsCount,
       depositable,
-      `${operatorData.name} depositableValidatorsCount should be set to ${depositable}`
+      `${operatorData.name} depositableValidatorsCount asserting to ${depositable}`
     )
   }
 
@@ -144,6 +203,74 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
     assert.addressEqual(event.args.recipientAddress, rewardsAddress)
     assert.isClose(event.args.sharesPenalizedAmount, amount, 10)
   }
+
+  async function makeDeposit(stakesDeposited) {
+    const depositedValue = ETH(32 * stakesDeposited)
+    const depositCallCountBefore = +(await depositContract.totalCalls())
+    const stakingModuleSummaryBefore = await nor.getStakingModuleSummary()
+
+    await web3.eth.sendTransaction({ to: lido.address, from: user1, value: depositedValue })
+
+    const block = await web3.eth.getBlock('latest')
+    const keysOpIndex = await nor.getKeysOpIndex()
+
+    DSMAttestMessage.setMessagePrefix(await dsm.ATTEST_MESSAGE_PREFIX())
+
+    const attest = new DSMAttestMessage(block.number, block.hash, depositRoot, curatedId, keysOpIndex)
+    const signatures = [
+      attest.sign(guardians.privateKeys[guardians.addresses[0]]),
+      attest.sign(guardians.privateKeys[guardians.addresses[1]]),
+    ]
+
+    // triggers flow:
+    // DSM.depositBufferedEther() -> Lido.deposit() -> StakingRouter.deposit() -> Module.obtainDepositData()
+    await dsm.depositBufferedEther(block.number, block.hash, depositRoot, curatedId, keysOpIndex, '0x', signatures)
+
+    const depositCallCount = +(await depositContract.totalCalls())
+    const stakingModuleSummary = await nor.getStakingModuleSummary()
+
+    assert.equals(depositCallCount - depositCallCountBefore, stakesDeposited)
+    assert.equals(
+      +stakingModuleSummaryBefore.depositableValidatorsCount - +stakingModuleSummary.depositableValidatorsCount,
+      stakesDeposited
+    )
+  }
+
+  async function deactivateNodeOperator(operatorId) {
+    const operatorBefore = await nor.getNodeOperator(operatorId, true)
+    const summaryBefore = await nor.getNodeOperatorSummary(operatorId)
+    const activeOperatorsBefore = await nor.getActiveNodeOperatorsCount()
+    const stakingModuleSummaryBefore = await nor.getStakingModuleSummary()
+    const keysToCut = +summaryBefore.depositableValidatorsCount
+
+    const tx = await nor.deactivateNodeOperator(operatorId, { from: voting.address })
+
+    const operator = await nor.getNodeOperator(operatorId, true)
+    const summary = await nor.getNodeOperatorSummary(operatorId)
+    const activeOperatorsAfter = await nor.getActiveNodeOperatorsCount()
+    const stakingModuleSummary = await nor.getStakingModuleSummary()
+
+    assert.isFalse(operator.active)
+    assert.isFalse(await nor.getNodeOperatorIsActive(operatorId))
+    assert.equals(+activeOperatorsBefore - 1, +activeOperatorsAfter)
+    assert.emits(tx, 'NodeOperatorActiveSet', { nodeOperatorId: operatorId, active: false })
+    if (+operatorBefore.stakingLimit - +operatorBefore.usedSigningKeys > 0) {
+      assert.emits(tx, 'VettedSigningKeysCountChanged', {
+        nodeOperatorId: operatorId,
+        approvedValidatorsCount: operator.usedSigningKeys,
+      })
+    }
+    assert.equals(summary.depositableValidatorsCount, 0)
+    assert.equals(operator.stakingLimit, operator.usedSigningKeys)
+    assert.equals(
+      +stakingModuleSummaryBefore.depositableValidatorsCount - keysToCut,
+      stakingModuleSummary.depositableValidatorsCount
+    )
+  }
+
+  /**
+   * Deploy
+   */
 
   before('deploy base app', async () => {
     const deployed = await deployProtocol({
@@ -188,6 +315,10 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
     curatedId = curated.id
   })
 
+  /**
+   * Actual flow
+   */
+
   describe('Happy path', () => {
     context('Initial setup', () => {
       it('Add node operator', async () => {
@@ -218,16 +349,7 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
       })
 
       it('Deactivate node operator 4', async () => {
-        const operatorId = Operator4.id
-        const activeOperatorsBefore = await nor.getActiveNodeOperatorsCount()
-        const tx = await nor.deactivateNodeOperator(operatorId, { from: voting.address })
-        const operator = await nor.getNodeOperator(operatorId, true)
-        const activeOperatorsAfter = await nor.getActiveNodeOperatorsCount()
-
-        assert.isFalse(await nor.getNodeOperatorIsActive(operatorId))
-        assert.isFalse(operator.active)
-        assert.equals(Number(activeOperatorsBefore) - 1, Number(activeOperatorsAfter))
-        assert.emits(tx, 'NodeOperatorActiveSet', { nodeOperatorId: operatorId, active: false })
+        await deactivateNodeOperator(Operator4.id)
       })
 
       it('Set name', async () => {
@@ -249,22 +371,7 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
 
       it('Add signing keys', async () => {
         await forEachSync(NODE_OPERATORS, async (operatorData, i) => {
-          const keys = new signingKeys.FakeValidatorKeys(operatorData.totalSigningKeysCount)
-          await nor.addSigningKeys(operatorData.id, keys.count, ...keys.slice(), { from: voting.address })
-
-          const operator = await nor.getNodeOperator(operatorData.id, true)
-          const keysCount = await nor.getTotalSigningKeyCount(operatorData.id)
-          const unusedKeysCount = await nor.getUnusedSigningKeyCount(operatorData.id)
-          assert.equals(keys.count, operator.totalSigningKeys.toNumber())
-          assert.equals(keys.count, keysCount)
-          assert.equals(keys.count, unusedKeysCount)
-
-          for (let i = 0; i < keys.count; ++i) {
-            const { key, depositSignature } = await nor.getSigningKey(operatorData.id, i)
-            const [expectedPublicKey, expectedSignature] = keys.get(i)
-            assert.equals(key, expectedPublicKey)
-            assert.equals(depositSignature, expectedSignature)
-          }
+          await addKeysToOperator(operatorData.id, operatorData.totalSigningKeysCount)
         })
       })
 
@@ -272,13 +379,7 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
         await forEachSync(NODE_OPERATORS, async (operatorData, i) => {
           if (!(await nor.getNodeOperatorIsActive(operatorData.id))) return
           stateTotalVetted += operatorData.vettedSigningKeysCount
-          await nor.setNodeOperatorStakingLimit(operatorData.id, operatorData.vettedSigningKeysCount, {
-            from: voting.address,
-          })
-          const summary = await nor.getNodeOperatorSummary(operatorData.id)
-          const operator = await nor.getNodeOperator(operatorData.id, true)
-          assert.equals(operator.stakingLimit, operatorData.vettedSigningKeysCount)
-          assert.equals(summary.depositableValidatorsCount, operatorData.vettedSigningKeysCount)
+          await setNodeOperatorStakingLimit(operatorData.id, operatorData.vettedSigningKeysCount)
         })
 
         const stakingModuleSummary = await nor.getStakingModuleSummary()
@@ -357,43 +458,26 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
         assert.equals(summary.totalDepositedValidators, 0)
         assert.equals(summary.depositableValidatorsCount, stateTotalDepositable)
       })
+
+      it('Modify penalty delay', async () => {
+        const tx = await nor.setStuckPenaltyDelay(PENALTY_DELAY, { from: voting.address })
+        assert.emits(tx, 'StuckPenaltyDelayChanged', { stuckPenaltyDelay: PENALTY_DELAY }, NOR_ABI_ASSERT_EV)
+        assert.equals(await nor.getStuckPenaltyDelay(), PENALTY_DELAY)
+      })
     })
 
     context('Deposits distribution', () => {
       it('Obtain deposit data', async () => {
-        const stakesDeposited = 6
-        const depositedValue = ETH(32 * stakesDeposited)
-
-        await web3.eth.sendTransaction({ to: lido.address, from: user1, value: depositedValue })
-
-        const block = await web3.eth.getBlock('latest')
-        const keysOpIndex = await nor.getKeysOpIndex()
-
-        DSMAttestMessage.setMessagePrefix(await dsm.ATTEST_MESSAGE_PREFIX())
-
-        const attest = new DSMAttestMessage(block.number, block.hash, depositRoot, curatedId, keysOpIndex)
-        const signatures = [
-          attest.sign(guardians.privateKeys[guardians.addresses[0]]),
-          attest.sign(guardians.privateKeys[guardians.addresses[1]]),
-        ]
-
         /**
          * Expected deposits fill   1 2 3 4 5 6
          * Operator 1             [ x x x       ]
          * Operator 2 (limit = 1) [       x     ]
          * Operator 3             [         x x ]
+         * Operator 4 (inactive)  [             ]
          */
 
-        // triggers flow:
-        // DSM.depositBufferedEther() -> Lido.deposit() -> StakingRouter.deposit() -> Module.obtainDepositData()
-        await dsm.depositBufferedEther(block.number, block.hash, depositRoot, curatedId, keysOpIndex, '0x', signatures)
+        await makeDeposit(6)
 
-        stateTotalDeposited += stakesDeposited
-
-        const depositCallCount = await depositContract.totalCalls()
-        assert.equals(depositCallCount, stakesDeposited)
-
-        // Target Limit affects here, that's why operator 2 receives only 1 deposit
         await assertDepositCall(0, Operator1.id, 0)
         await assertDepositCall(1, Operator1.id, 1)
         await assertDepositCall(2, Operator1.id, 2)
@@ -401,15 +485,9 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
         await assertDepositCall(4, Operator3.id, 0)
         await assertDepositCall(5, Operator3.id, 1)
 
-        const stakingModuleSummaryAfter = await nor.getStakingModuleSummary()
-        assert.equals(stakingModuleSummaryAfter.totalDepositedValidators, stateTotalDeposited)
-        assert.equals(stakingModuleSummaryAfter.depositableValidatorsCount, stateTotalDepositable - stateTotalDeposited)
-
         await assertOperatorDeposits(Operator1, 3, 4)
         await assertOperatorDeposits(Operator2, 1, 0)
         await assertOperatorDeposits(Operator3, 2, 3)
-
-        // TODO: assert disabled Operator 4 should not be called while depositing
       })
 
       it('Rewards distribution', async () => {
@@ -452,7 +530,7 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
         const reportFields = {
           consensusVersion,
           numValidators: 6,
-          clBalanceGwei: toBN(ETH(32 * stateTotalDeposited + 1)).div(E9),
+          clBalanceGwei: toBN(ETH(32 * 6 + 1)).div(E9),
           stakingModuleIdsWithNewlyExitedValidators: [curatedId],
           numExitedValidatorsByStakingModule: [2],
           withdrawalVaultBalance: e18(0),
@@ -562,8 +640,6 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
         assert.isClose(sharesRewards1After, rewardAmountForOperator1, 10)
         assert.isClose(sharesRewards2After, rewardAmountForOperator2, 10)
         assert.isClose(sharesRewards3After, rewardAmountForOperator3, 10)
-
-        // TODO: Assert disabled Operator 4 to be untouched
       })
     })
 
@@ -611,10 +687,6 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
     })
 
     context('Keys and limits settings tweaks', () => {
-      /**
-       * TODO: TargetLimit allows to deposit after exit
-       */
-
       it('Disable TargetLimit', async () => {
         const operatorData = Operator2
 
@@ -677,50 +749,125 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
       })
 
       it('Refund stucked keys for Operator 2', async () => {
-        // TODO: [do more research] Refuneded keys
-        //           1. Operator already have stucked keys
-        //           2. Set refunded via StakingRouter.updateRefundedValidatorsCount() -> NOR.updateRefundedValidatorsCount() with refunded == stuckKeys
-        //           3. Wait for half of penalty delay and check that penalty still with NOR.getRewardsDistribution() and Oracle report and obtain deposit data
-        //           4. Wait for end of penalty delay and check that it is gone
-        //         assert NOR.getStuckPenaltyDelay()
-        //         assert NOR.setStuckPenaltyDelay()
-        //         assert penalty affects on TargetLimit
+        const operatorData = Operator2
+        const penaltyDelay = await nor.getStuckPenaltyDelay()
+
+        // StakingRouter.updateRefundedValidatorsCount() -> NOR.updateRefundedValidatorsCount()
+        const tx = await stakingRouter.updateRefundedValidatorsCount(curatedId, operatorData.id, 1, {
+          from: voting.address,
+        })
+
+        const timestamp = await getCurrentBlockTimestamp()
+        const expectedPenaltyEnd = +timestamp + +penaltyDelay
+        const summary = await nor.getNodeOperatorSummary(operatorData.id)
+
+        assert.equals(summary.stuckPenaltyEndTimestamp, expectedPenaltyEnd)
+        assert.equals(summary.depositableValidatorsCount, 0)
+        assert.equals(summary.refundedValidatorsCount, 1)
+
+        assert.emits(
+          tx,
+          'StuckPenaltyStateChanged',
+          {
+            nodeOperatorId: operatorData.id,
+            stuckValidatorsCount: 1,
+            refundedValidatorsCount: 1,
+            stuckPenaltyEndTimestamp: expectedPenaltyEnd,
+          },
+          NOR_ABI_ASSERT_EV
+        )
+      })
+
+      it('Wait for half of penalty delay and check that penalty still applies', async () => {
+        const operatorData = Operator2
+        const penaltyDelay = await nor.getStuckPenaltyDelay()
+
+        await advanceChainTime(penaltyDelay / 2)
+        await assert.reverts(nor.clearNodeOperatorPenalty(operatorData.id), 'CANT_CLEAR_PENALTY')
+
+        const summary = await nor.getNodeOperatorSummary(operatorData.id)
+        assert.equals(summary.depositableValidatorsCount, 0)
+        assert.equals(summary.refundedValidatorsCount, 1)
+      })
+
+      it('Wait for end of penalty delay and check that it is gone', async () => {
+        const operatorData = Operator2
+        const penaltyDelay = await nor.getStuckPenaltyDelay()
+
+        await advanceChainTime(penaltyDelay / 2 + 100)
+        await nor.clearNodeOperatorPenalty(operatorData.id)
+
+        const summary = await nor.getNodeOperatorSummary(operatorData.id)
+        assert.equals(summary.depositableValidatorsCount, 9)
       })
     })
 
     context('Activation/deactivation', () => {
       it('Deactivate operator 1', async () => {
-        // TODO: NOR....()
-        //       Deactivate Operator that was in use before
+        await deactivateNodeOperator(Operator1.id)
       })
 
       it('Activate operator 4', async () => {
-        // Activate previously disabled Operator and check it will be used in deposit flow
+        const operatorData = Operator4
+        const activeOperatorsBefore = await nor.getActiveNodeOperatorsCount()
+
+        const tx = await nor.activateNodeOperator(operatorData.id, { from: voting.address })
+
+        const operator = await nor.getNodeOperator(operatorData.id, true)
+        const activeOperatorsAfter = await nor.getActiveNodeOperatorsCount()
+
+        assert.isTrue(operator.active)
+        assert.isTrue(await nor.getNodeOperatorIsActive(operatorData.id))
+        assert.equals(+activeOperatorsBefore + 1, +activeOperatorsAfter)
+        assert.emits(tx, 'NodeOperatorActiveSet', { nodeOperatorId: operatorData.id, active: true })
+        assert.equals(operator.stakingLimit, operator.usedSigningKeys)
       })
 
-      it('Add keys to operator 4', async () => {})
-
-      it('Set operator 4 staking limit', async () => {})
+      it('Set operator 4 staking limit', async () => {
+        await setNodeOperatorStakingLimit(Operator4.id, Operator4.vettedSigningKeysCount)
+      })
 
       it('Make another deposit', async () => {
-        // Make another deposit to check:
-        //  — deactivated node operator will not get deposit
-        //  — target limit was disabled properly before
-        //  — operator with refunded keys gets deposits
+        /**
+         * Expected deposits fill   1 2 3 4 5
+         * Operator 1 (inactive)  [           ]
+         * Operator 2 (refunded)  [ x x       ]
+         * Operator 3 (stuck)     [           ]
+         * Operator 4 (activated) [     x x x ]
+         */
+
+        await waitBlocks(+(await dsm.getMinDepositBlockDistance()))
+        await makeDeposit(5)
+
+        // Continuing numbers from previous deposit
+        await assertDepositCall(6, Operator2.id, 1)
+        await assertDepositCall(7, Operator2.id, 2)
+        await assertDepositCall(8, Operator4.id, 0)
+        await assertDepositCall(9, Operator4.id, 1)
+        await assertDepositCall(10, Operator4.id, 2)
+
+        await assertOperatorDeposits(Operator2, 3, 7)
+        await assertOperatorDeposits(Operator4, 3, 2)
       })
 
-      it('Make a report for rewards distribution', async () => {
-        // Assert rewards not distributed to disabled operator
+      // TODO: [optional] Make a report again if needed
+    })
+
+    context('Withdrawal credentials modifying', () => {
+      it('setWithdrawalCredentials', async () => {
+        const summaryBefore = await nor.getStakingModuleSummary()
+        withdrawalCredentials = '0x'.padEnd(66, '5678')
+        await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting.address })
+        const summary = await nor.getStakingModuleSummary()
+        console.log(summary, summaryBefore)
+
+        assert.equals(summaryBefore.totalExitedValidators, summary.totalExitedValidators)
+        assert.equals(summaryBefore.totalDepositedValidators, summary.totalDepositedValidators)
+        assert.notEqual(summary.depositableValidatorsCount, summaryBefore.depositableValidatorsCount)
+        assert.equals(summary.depositableValidatorsCount, 0)
       })
     })
 
-    // TODO: StakingRouter.setWithdrawalCredentials() -> NOR.onWithdrawalCredentialsChanged()
-    //          assert depositable of all operators should be zero
-    //          assert totalValidatorsCount of all operators == deposited validators
-    //          assert NOR.getStakingModuleSummary() — depositable = 0, exited = same, deposited = same
-
-    // TODO: [optional] add NOR.getNonce() somewhere
-
-    // TODO: [optional] assert NOR._getSigningKeysAllocationData() if it is possible
+    // TODO: [optional] assert NOR.getNonce() and NonceChanged event if needed
   })
 })
