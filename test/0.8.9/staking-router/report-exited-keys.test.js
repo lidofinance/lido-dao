@@ -1,7 +1,7 @@
 const { contract, ethers } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 const { EvmSnapshot } = require('../../helpers/blockchain')
-const { hexConcat, hex, ETH } = require('../../helpers/utils')
+const { hexConcat, hex, ETH, addSendWithResult } = require('../../helpers/utils')
 const { deployProtocol } = require('../../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../../helpers/staking-modules')
 
@@ -26,6 +26,7 @@ contract('StakingRouter', ([admin, depositor]) => {
     })
 
     router = deployed.stakingRouter
+    addSendWithResult(router.updateExitedValidatorsCountByStakingModule)
     voting = deployed.voting.address
     operators = await setupNodeOperatorsRegistry(deployed, true)
     module2 = await setupNodeOperatorsRegistry(deployed, true)
@@ -154,9 +155,16 @@ contract('StakingRouter', ([admin, depositor]) => {
       assert.equal(+distribution.shares[0], op1shareBefore * sharesDistribute)
       assert.equal(+distribution.shares[1], op2shareBefore * sharesDistribute)
 
-      // //update exited validators
+      // update exited validators
       const exitValidatorsCount = 20
-      await router.updateExitedValidatorsCountByStakingModule([module1Id], [exitValidatorsCount], { from: admin })
+      const newlyExitedValidatorsCount = await router.updateExitedValidatorsCountByStakingModule.sendWithResult(
+        [module1Id],
+        [exitValidatorsCount],
+        {
+          from: admin,
+        }
+      )
+      assert.equals(newlyExitedValidatorsCount, exitValidatorsCount)
 
       const nodeOpIds = [0]
       const exitedValidatorsCounts = [exitValidatorsCount]
@@ -219,7 +227,12 @@ contract('StakingRouter', ([admin, depositor]) => {
 
       // //update exited validators
       const exitValidatorsCount = 20
-      await router.updateExitedValidatorsCountByStakingModule([module1Id], [exitValidatorsCount], { from: admin })
+      const newlyExitedCount = await router.updateExitedValidatorsCountByStakingModule.sendWithResult(
+        [module1Id],
+        [exitValidatorsCount],
+        { from: admin }
+      )
+      assert.equals(newlyExitedCount, exitValidatorsCount)
 
       const nodeOpIds = [0]
       const exitedValidatorsCounts = [exitValidatorsCount]
@@ -289,9 +302,13 @@ contract('StakingRouter', ([admin, depositor]) => {
       assert.deepEqual([15, 5], await maxDepositsPerModule())
 
       // update exited validators
-      let exitValidatorsCount = 1
-      await router.updateExitedValidatorsCountByStakingModule([module1Id], [exitValidatorsCount], { from: admin })
-
+      const exitValidatorsCount = 1
+      const exitedCount = await router.updateExitedValidatorsCountByStakingModule.sendWithResult(
+        [module1Id],
+        [exitValidatorsCount],
+        { from: admin }
+      )
+      assert.equals(exitValidatorsCount, exitedCount)
       const nodeOpIds = [0]
       let exitedValidatorsCounts = [exitValidatorsCount]
 
@@ -314,11 +331,16 @@ contract('StakingRouter', ([admin, depositor]) => {
       assert.deepEqual([16, 5], maxDepositsPerModuleAfterAlloc)
 
       // update next exited validators
-      exitValidatorsCount = 30
-      exitedValidatorsCounts = [exitValidatorsCount]
+      const nextExitValidatorsCount = 30
+      exitedValidatorsCounts = [nextExitValidatorsCount]
       keysData = hexConcat(...exitedValidatorsCounts.map((c) => hex(c, 16)))
 
-      await router.updateExitedValidatorsCountByStakingModule([module1Id], [exitValidatorsCount], { from: admin })
+      const newlyExitedCount = await router.updateExitedValidatorsCountByStakingModule.sendWithResult(
+        [module1Id],
+        [nextExitValidatorsCount],
+        { from: admin }
+      )
+      assert.equals(newlyExitedCount, nextExitValidatorsCount - exitValidatorsCount)
       // report exited by module and node operator
       await router.reportStakingModuleExitedValidatorsCountByNodeOperator(module1Id, nodeOpIdsData, keysData, {
         from: admin,

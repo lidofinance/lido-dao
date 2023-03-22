@@ -5,7 +5,7 @@ const { BN } = require('bn.js')
 const { assert } = require('../../helpers/assert')
 const { EvmSnapshot } = require('../../helpers/blockchain')
 const { ETH, toBN } = require('../../helpers/utils')
-const { StakingModuleStub } = require('../../helpers/stubs/staking-module.stub')
+const { ContractStub } = require('../../helpers/contract-stub')
 
 const OssifiableProxy = artifacts.require('OssifiableProxy.sol')
 const DepositContractMock = artifacts.require('DepositContractMock')
@@ -63,6 +63,8 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       assert.equals(await router.getWithdrawalCredentials(), wc)
       assert.equals(await router.getLido(), lido)
       assert.equals(await router.getStakingModulesCount(), 0)
+      assert.equals(await router.hasStakingModule(0), false)
+      assert.equals(await router.hasStakingModule(1), false)
 
       assert.equals(await router.getRoleMemberCount(DEFAULT_ADMIN_ROLE), 1)
       assert.equals(await router.hasRole(DEFAULT_ADMIN_ROLE, admin), true)
@@ -210,9 +212,11 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
       stakingModule = await StakingModuleMock.new({ from: deployer })
 
+      assert.equals(await router.hasStakingModule(1), false)
       await router.addStakingModule('Test module', stakingModule.address, 100, 1000, 2000, {
         from: appManager,
       })
+      assert.equals(await router.hasStakingModule(1), true)
 
       await stakingModule.setAvailableKeysCount(100, { from: deployer })
 
@@ -221,6 +225,15 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
     after(async () => {
       await revert()
+    })
+
+    it('reverts if module is unregistered', async () => {
+      await assert.reverts(router.getStakingModuleIsActive(123), `StakingModuleUnregistered()`)
+      await assert.reverts(router.getStakingModuleLastDepositBlock(123), `StakingModuleUnregistered()`)
+      await assert.reverts(router.getStakingModuleIsDepositsPaused(123), `StakingModuleUnregistered()`)
+      await assert.reverts(router.getStakingModuleNonce(123), `StakingModuleUnregistered()`)
+      await assert.reverts(router.getStakingModuleIsStopped(123), `StakingModuleUnregistered()`)
+      await assert.reverts(router.getStakingModuleStatus(123), `StakingModuleUnregistered()`)
     })
 
     it('reverts if module address exists', async () => {
@@ -305,12 +318,14 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
 
     it('set withdrawal credentials works when staking module reverts', async () => {
-      const stakingModuleWithBug = await StakingModuleStub.new()
       // staking module will revert with panic exit code
-      await StakingModuleStub.stub(stakingModuleWithBug, 'onWithdrawalCredentialsChanged', {
-        revert: { error: 'Panic', args: { type: ['uint256'], value: [0x01] } },
-      })
-      await router.addStakingModule('Staking Module With Bug', stakingModuleWithBug.address, 100, 1000, 2000, {
+      const buggedStakingModule = await ContractStub('IStakingModule')
+        .on('onWithdrawalCredentialsChanged', {
+          revert: { error: { name: 'Panic', args: { type: ['uint256'], value: [0x01] } } },
+        })
+        .create({ from: deployer })
+
+      await router.addStakingModule('Staking Module With Bug', buggedStakingModule.address, 100, 1000, 2000, {
         from: appManager,
       })
       const stakingModuleId = await router.getStakingModulesCount()
@@ -336,6 +351,13 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       )
 
       assert.isTrue(await router.getStakingModuleIsDepositsPaused(stakingModuleId))
+
+      // staking module will revert with out of gas error (revert data is empty bytes)
+      await ContractStub(buggedStakingModule)
+        .on('onWithdrawalCredentialsChanged', { revert: { reason: 'outOfGas' } })
+        .update({ from: deployer })
+
+      await assert.reverts(router.setWithdrawalCredentials(newWC, { from: appManager }), 'UnrecoverableModuleError()')
     })
   })
 
@@ -346,7 +368,9 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     it('staking modules limit is 32', async () => {
       for (let i = 0; i < 32; i++) {
         const stakingModule = await StakingModuleMock.new({ from: deployer })
+        assert.equals(await router.hasStakingModule(i + 1), false)
         await router.addStakingModule('Test module', stakingModule.address, 100, 100, 100, { from: appManager })
+        assert.equals(await router.hasStakingModule(i + 1), true)
       }
 
       const oneMoreStakingModule = await StakingModuleMock.new({ from: deployer })
@@ -368,6 +392,8 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         treasuryFee: 200,
         expectedModuleId: 1,
         address: null,
+        lastDepositAt: null,
+        lastDepositBlock: null,
       },
       {
         name: 'Test module 1',
@@ -376,6 +402,8 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         treasuryFee: 200,
         expectedModuleId: 2,
         address: null,
+        lastDepositAt: null,
+        lastDepositBlock: null,
       },
     ]
 
@@ -494,7 +522,11 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
           from: appManager,
         }
       )
-      assert.equals(tx.logs.length, 3)
+      const latestBlock = await ethers.provider.getBlock()
+      stakingModulesParams[0].lastDepositAt = latestBlock.timestamp
+      stakingModulesParams[0].lastDepositBlock = latestBlock.number
+
+      assert.equals(tx.logs.length, 4)
       await assert.emits(tx, 'StakingModuleAdded', {
         stakingModuleId: stakingModulesParams[0].expectedModuleId,
         stakingModule: stakingModule1.address,
@@ -511,6 +543,10 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         stakingModuleFee: stakingModulesParams[0].stakingModuleFee,
         treasuryFee: stakingModulesParams[0].treasuryFee,
         setBy: appManager,
+      })
+      await assert.emits(tx, 'StakingRouterETHDeposited', {
+        stakingModuleId: stakingModulesParams[0].expectedModuleId,
+        amount: 0,
       })
 
       assert.equals(await router.getStakingModulesCount(), 1)
@@ -530,8 +566,8 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       assert.equals(module.treasuryFee, stakingModulesParams[0].treasuryFee)
       assert.equals(module.targetShare, stakingModulesParams[0].targetShare)
       assert.equals(module.status, StakingModuleStatus.Active)
-      assert.equals(module.lastDepositAt, 0)
-      assert.equals(module.lastDepositBlock, 0)
+      assert.equals(module.lastDepositAt, stakingModulesParams[0].lastDepositAt)
+      assert.equals(module.lastDepositBlock, stakingModulesParams[0].lastDepositBlock)
     })
 
     it('add another staking module', async () => {
@@ -545,8 +581,11 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
           from: appManager,
         }
       )
+      const latestBlock = await ethers.provider.getBlock()
+      stakingModulesParams[1].lastDepositAt = latestBlock.timestamp
+      stakingModulesParams[1].lastDepositBlock = latestBlock.number
 
-      assert.equals(tx.logs.length, 3)
+      assert.equals(tx.logs.length, 4)
       await assert.emits(tx, 'StakingModuleAdded', {
         stakingModuleId: stakingModulesParams[1].expectedModuleId,
         stakingModule: stakingModule2.address,
@@ -563,6 +602,10 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         stakingModuleFee: stakingModulesParams[1].stakingModuleFee,
         treasuryFee: stakingModulesParams[1].treasuryFee,
         setBy: appManager,
+      })
+      await assert.emits(tx, 'StakingRouterETHDeposited', {
+        stakingModuleId: stakingModulesParams[1].expectedModuleId,
+        amount: 0,
       })
 
       assert.equals(await router.getStakingModulesCount(), 2)
@@ -582,8 +625,8 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       assert.equals(module.treasuryFee, stakingModulesParams[1].treasuryFee)
       assert.equals(module.targetShare, stakingModulesParams[1].targetShare)
       assert.equals(module.status, StakingModuleStatus.Active)
-      assert.equals(module.lastDepositAt, 0)
-      assert.equals(module.lastDepositBlock, 0)
+      assert.equals(module.lastDepositAt, stakingModulesParams[1].lastDepositAt)
+      assert.equals(module.lastDepositBlock, stakingModulesParams[1].lastDepositBlock)
     })
 
     it('get staking modules list', async () => {
@@ -596,8 +639,8 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         assert.equals(stakingModules[i].treasuryFee, stakingModulesParams[i].treasuryFee)
         assert.equals(stakingModules[i].targetShare, stakingModulesParams[i].targetShare)
         assert.equals(stakingModules[i].status, StakingModuleStatus.Active)
-        assert.equals(stakingModules[i].lastDepositAt, 0)
-        assert.equals(stakingModules[i].lastDepositBlock, 0)
+        assert.equals(stakingModules[i].lastDepositAt, stakingModulesParams[i].lastDepositAt)
+        assert.equals(stakingModules[i].lastDepositBlock, stakingModulesParams[i].lastDepositBlock)
       }
     })
 
@@ -928,12 +971,12 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
 
     it('handles reverted staking modules correctly', async () => {
-      const stakingModuleWithBug = await StakingModuleStub.new()
       // staking module will revert with message "UNHANDLED_ERROR"
-      await StakingModuleStub.stub(stakingModuleWithBug, 'onRewardsMinted', {
-        revert: { reason: 'UNHANDLED_ERROR' },
-      })
-      await router.addStakingModule('Staking Module With Bug', stakingModuleWithBug.address, 100, 1000, 2000, {
+      const buggedStakingModule = await ContractStub('IStakingModule')
+        .on('onRewardsMinted', { revert: { reason: 'UNHANDLED_ERROR' } })
+        .create({ from: deployer })
+
+      await router.addStakingModule('Staking Module With Bug', buggedStakingModule.address, 100, 1000, 2000, {
         from: admin,
       })
       const stakingModuleWithBugId = await router.getStakingModulesCount()
@@ -954,6 +997,16 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         stakingModuleId: stakingModuleWithBugId,
         lowLevelRevertData: [errorMethodId, ...errorMessageEncoded].join(''),
       })
+
+      // staking module will revert with out of gas error (revert data is empty bytes)
+      await ContractStub(buggedStakingModule)
+        .on('onRewardsMinted', { revert: { reason: 'outOfGas' } })
+        .update({ from: deployer })
+
+      await assert.reverts(
+        router.reportRewardsMinted(stakingModuleIds, totalShares, { from: admin }),
+        'UnrecoverableModuleError()'
+      )
     })
   })
 

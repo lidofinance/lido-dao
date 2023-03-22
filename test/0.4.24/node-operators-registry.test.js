@@ -1516,8 +1516,13 @@ contract('NodeOperatorsRegistry', (addresses) => {
 
       const targetLimit = 10
       const isTargetLimitSet = true
-      await app.updateTargetValidatorsLimits(firstNodeOperatorId, isTargetLimitSet, targetLimit, {
+      const tx = await app.updateTargetValidatorsLimits(firstNodeOperatorId, isTargetLimitSet, targetLimit, {
         from: stakingRouter,
+      })
+
+      assert.emits(tx, 'TargetValidatorsCountChanged', {
+        nodeOperatorId: firstNodeOperatorId,
+        targetValidatorsCount: targetLimit,
       })
 
       const keysStatTotal = await app.getStakingModuleSummary()

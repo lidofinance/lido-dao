@@ -1,4 +1,4 @@
-const { contract, ethers, web3 } = require('hardhat')
+const { contract, ethers, web3, artifacts } = require('hardhat')
 const { bn, getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
 const { ETH, StETH, shareRate, shares } = require('../helpers/utils')
@@ -7,11 +7,13 @@ const { MAX_UINT256, ACCOUNTS_AND_KEYS } = require('../helpers/constants')
 const { signPermit, makeDomainSeparator } = require('../0.6.12/helpers/permit_helpers')
 const { impersonate, EvmSnapshot, getCurrentBlockTimestamp, setBalance } = require('../helpers/blockchain')
 
+const ERC721ReceiverMock = artifacts.require('ERC721ReceiverMock')
+
 const { deployWithdrawalQueue } = require('./withdrawal-queue-deploy.test')
 
 contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, oracle]) => {
-  let withdrawalQueue, steth, wsteth
-
+  let withdrawalQueue, steth, wsteth, defaultShareRate
+  const ALLOWED_ERROR_WEI = 100
   const snapshot = new EvmSnapshot(ethers.provider)
 
   const currentRate = async () =>
@@ -32,10 +34,12 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     withdrawalQueue = deployed.withdrawalQueue
 
     await steth.setTotalPooledEther(ETH(600))
-    // we need 1 ETH additionally to pay gas on finalization because coverage ignores gasPrice=0
+    // we need 1 ETH additionally to pay gas on finalization because solidity-coverage ignores gasPrice=0
     await setBalance(steth.address, ETH(600 + 1))
     await steth.mintShares(user, shares(1))
     await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
+
+    defaultShareRate = (await currentRate()).toString(10)
 
     await impersonate(ethers.provider, steth.address)
     await snapshot.make()
@@ -55,7 +59,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     assert.equals(await withdrawalQueue.getLockedEtherAmount(), ETH(0))
   })
 
-  context('Pause/Resume', async () => {
+  context('Pause/Resume', () => {
     it('only correct roles can alter pause state', async () => {
       const [PAUSE_ROLE, RESUME_ROLE] = await Promise.all([withdrawalQueue.PAUSE_ROLE(), withdrawalQueue.RESUME_ROLE()])
       await withdrawalQueue.grantRole(PAUSE_ROLE, pauser, { from: daoAgent })
@@ -145,7 +149,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     })
   })
 
-  context('BunkerMode', async () => {
+  context('BunkerMode', () => {
     it('init config', async () => {
       assert(!(await withdrawalQueue.isBunkerModeActive()))
       assert.equals(ethers.constants.MaxUint256, await withdrawalQueue.bunkerModeSinceTimestamp())
@@ -171,6 +175,10 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         withdrawalQueue.onOracleReport(true, +timestamp + 1000000, +timestamp + 1100000, { from: steth.address }),
         'InvalidReportTimestamp()'
       )
+      await assert.reverts(
+        withdrawalQueue.onOracleReport(true, +timestamp - 100, +timestamp + 1100000, { from: steth.address }),
+        'InvalidReportTimestamp()'
+      )
       // enable
       timestamp = await getCurrentBlockTimestamp()
       const tx1 = await withdrawalQueue.onOracleReport(true, timestamp, timestamp, { from: steth.address })
@@ -186,7 +194,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     })
   })
 
-  context('Request', async () => {
+  context('Request', () => {
     it('One can request a withdrawal', async () => {
       const receipt = await withdrawalQueue.requestWithdrawals([StETH(300)], owner, { from: user })
       const requestId = getEventArgument(receipt, 'WithdrawalRequested', 'requestId')
@@ -353,7 +361,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     })
   })
 
-  context('Finalization', async () => {
+  context('Finalization', () => {
     const amount = bn(ETH(300))
 
     beforeEach('Enqueue a request', async () => {
@@ -391,8 +399,8 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
 
       await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
-      const batch = await withdrawalQueue.prefinalize.call([2], shareRate(300))
-      await withdrawalQueue.finalize([2], shareRate(300), { from: steth.address, value: batch.ethToLock })
+      const batch = await withdrawalQueue.prefinalize.call([2], defaultShareRate)
+      await withdrawalQueue.finalize([2], defaultShareRate, { from: steth.address, value: batch.ethToLock })
 
       assert.equals(batch.sharesToBurn, shares(2))
       assert.equals(await withdrawalQueue.getLastRequestId(), 2)
@@ -411,7 +419,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
 
       await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
 
-      await withdrawalQueue.finalize([1], shareRate(300), { from: steth.address, value: amount })
+      await withdrawalQueue.finalize([1], defaultShareRate, { from: steth.address, value: amount })
 
       assert.equals(await withdrawalQueue.getLastRequestId(), 2)
       assert.equals(await withdrawalQueue.getLastFinalizedRequestId(), 1)
@@ -421,7 +429,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         await ethers.provider.getBalance(withdrawalQueue.address)
       )
 
-      await withdrawalQueue.finalize([2], shareRate(300), { from: steth.address, value: amount })
+      await withdrawalQueue.finalize([2], defaultShareRate, { from: steth.address, value: amount })
 
       assert.equals(await withdrawalQueue.getLastRequestId(), 2)
       assert.equals(await withdrawalQueue.getLastFinalizedRequestId(), 2)
@@ -436,27 +444,44 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       await assert.reverts(withdrawalQueue.prefinalize([1], shareRate(0)), 'ZeroShareRate()')
     })
 
+    it('batch reverts if share rate is zero', async () => {
+      await steth.setTotalPooledEther(ETH(900))
+      await steth.mintShares(user, shares(1))
+      await steth.approve(withdrawalQueue.address, StETH(600), { from: user })
+
+      await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
+      await assert.reverts(withdrawalQueue.prefinalize([2, 1], shareRate(1)), 'BatchesAreNotSorted()')
+    })
+
+    it('reverts if batches are empty', async () => {
+      await assert.reverts(withdrawalQueue.prefinalize([], shareRate(1.5)), 'EmptyBatches()')
+      await assert.reverts(
+        withdrawalQueue.finalize([], defaultShareRate, { from: steth.address, value: amount }),
+        'EmptyBatches()'
+      )
+    })
+
     it('reverts if request with given id did not even created', async () => {
       const idAhead = +(await withdrawalQueue.getLastRequestId()) + 1
 
       await assert.reverts(
-        withdrawalQueue.finalize([idAhead], shareRate(300), { from: steth.address, value: amount }),
+        withdrawalQueue.finalize([idAhead], defaultShareRate, { from: steth.address, value: amount }),
         `InvalidRequestId(${idAhead})`
       )
 
-      await assert.reverts(withdrawalQueue.prefinalize([idAhead], shareRate(300)), `InvalidRequestId(${idAhead})`)
+      await assert.reverts(withdrawalQueue.prefinalize([idAhead], defaultShareRate), `InvalidRequestId(${idAhead})`)
     })
 
     it('reverts if request with given id was finalized already', async () => {
       const id = +(await withdrawalQueue.getLastRequestId())
-      await withdrawalQueue.finalize([id], shareRate(300), { from: steth.address, value: amount })
+      await withdrawalQueue.finalize([id], defaultShareRate, { from: steth.address, value: amount })
 
       await assert.reverts(
-        withdrawalQueue.finalize([id], shareRate(300), { from: steth.address, value: amount }),
+        withdrawalQueue.finalize([id], defaultShareRate, { from: steth.address, value: amount }),
         `InvalidRequestId(${id})`
       )
 
-      await assert.reverts(withdrawalQueue.prefinalize([id], shareRate(300)), `InvalidRequestId(${id})`)
+      await assert.reverts(withdrawalQueue.prefinalize([id], defaultShareRate), `InvalidRequestId(${id})`)
     })
 
     it('reverts if given amount to finalize exceeds requested', async () => {
@@ -464,7 +489,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       const amountExceeded = bn(ETH(400))
 
       await assert.reverts(
-        withdrawalQueue.finalize([id], shareRate(300), { from: steth.address, value: amountExceeded }),
+        withdrawalQueue.finalize([id], defaultShareRate, { from: steth.address, value: amountExceeded }),
         `TooMuchEtherToFinalize(${+amountExceeded}, ${+amount})`
       )
     })
@@ -476,8 +501,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     })
 
     it('works', async () => {
-      await withdrawalQueue.finalize([1], shareRate(300), { from: steth.address, value: ETH(1) })
-
+      await withdrawalQueue.finalize([1], defaultShareRate, { from: steth.address, value: ETH(1) })
       assert.almostEqual(await withdrawalQueue.getClaimableEther([1], [1]), ETH(1), 100)
     })
 
@@ -520,16 +544,37 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
 
       await assert.reverts(withdrawalQueue.getClaimableEther([3], [1]), 'InvalidHint(1)')
     })
+
+    it('works on multiple checkpoints, no discount', async () => {
+      const requestCount = 5
+      const shareRate = await currentRate()
+      await withdrawalQueue.finalize([1], shareRate, { from: steth.address, value: ETH(1) })
+      for (let index = 0; index < requestCount; index++) {
+        await withdrawalQueue.requestWithdrawals([ETH(1)], owner, { from: user })
+        await withdrawalQueue.finalize([index + 2], shareRate, { from: steth.address, value: ETH(1) })
+      }
+      const requestIds = Array(requestCount + 1)
+        .fill(0)
+        .map((_, i) => i + 1)
+
+      const hints = await withdrawalQueue.findCheckpointHints(
+        requestIds,
+        1,
+        await withdrawalQueue.getLastCheckpointIndex()
+      )
+      const claimableEth = await withdrawalQueue.getClaimableEther(requestIds, hints)
+      claimableEth.forEach((eth) => assert.almostEqual(eth, ETH(1), 100))
+    })
   })
 
-  context('claimWithdrawal()', async () => {
+  context('claimWithdrawal()', () => {
     const amount = ETH(300)
     beforeEach('Enqueue a request', async () => {
       await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
     })
 
     it('Owner can claim a finalized request to recipient address', async () => {
-      await withdrawalQueue.finalize([1], shareRate(300), { from: steth.address, value: amount })
+      await withdrawalQueue.finalize([1], defaultShareRate, { from: steth.address, value: amount })
 
       const balanceBefore = bn(await ethers.provider.getBalance(user))
 
@@ -551,7 +596,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       })
 
       it('reverts if sender is not owner', async () => {
-        await withdrawalQueue.finalize([1], shareRate(300), { from: steth.address, value: amount })
+        await withdrawalQueue.finalize([1], defaultShareRate, { from: steth.address, value: amount })
         await assert.reverts(
           withdrawalQueue.claimWithdrawalsTo([1], [1], owner, { from: stranger }),
           `NotOwner("${stranger}", "${owner}")`
@@ -559,21 +604,30 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       })
 
       it('reverts if there is not enough balance', async () => {
-        await withdrawalQueue.finalize([1], shareRate(300), { from: steth.address, value: amount })
+        await withdrawalQueue.finalize([1], defaultShareRate, { from: steth.address, value: amount })
         await setBalance(withdrawalQueue.address, ETH(200))
         await assert.reverts(withdrawalQueue.claimWithdrawalsTo([1], [1], owner, { from: owner }), 'NotEnoughEther()')
+      })
+
+      it('reverts if receiver declines', async () => {
+        const receiver = await ERC721ReceiverMock.new({ from: owner })
+        await receiver.setDoesAcceptTokens(false, { from: owner })
+        await withdrawalQueue.finalize([1], defaultShareRate, { from: steth.address, value: amount })
+        await assert.reverts(
+          withdrawalQueue.claimWithdrawalsTo([1], [1], receiver.address, { from: owner }),
+          'CantSendValueRecipientMayHaveReverted()'
+        )
       })
     })
 
     it('Owner can claim a finalized request without hint', async () => {
-      await withdrawalQueue.finalize([1], shareRate(300), { from: steth.address, value: amount })
+      await withdrawalQueue.finalize([1], defaultShareRate, { from: steth.address, value: amount })
 
       const balanceBefore = bn(await ethers.provider.getBalance(owner))
 
-      const tx = await withdrawalQueue.claimWithdrawal(1, { from: owner })
+      await withdrawalQueue.claimWithdrawal(1, { from: owner, gasPrice: 0 })
 
-      // tx.receipt.gasUsed is a workaround for coverage, because it ignores gasPrice=0
-      assert.almostEqual(await ethers.provider.getBalance(owner), balanceBefore.add(bn(amount)), tx.receipt.gasUsed)
+      assert.equals(await ethers.provider.getBalance(owner), balanceBefore.add(bn(amount)))
     })
 
     it('One cant claim not finalized or not existed request', async () => {
@@ -594,29 +648,30 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
 
       await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
 
-      await withdrawalQueue.finalize([2], shareRate(300), { from: steth.address, value: amount })
+      await withdrawalQueue.finalize([2], defaultShareRate, { from: steth.address, value: amount })
       await assert.reverts(withdrawalQueue.claimWithdrawals([1], [0], { from: owner }), 'InvalidHint(0)')
       await assert.reverts(withdrawalQueue.claimWithdrawals([1], [2], { from: owner }), 'InvalidHint(2)')
     })
 
     it('Cant withdraw token two times', async () => {
-      await withdrawalQueue.finalize([1], shareRate(300), { from: steth.address, value: amount })
+      await withdrawalQueue.finalize([1], defaultShareRate, { from: steth.address, value: amount })
       await withdrawalQueue.claimWithdrawal(1, { from: owner })
 
       await assert.reverts(withdrawalQueue.claimWithdrawal(1, { from: owner }), 'RequestAlreadyClaimed(1)')
     })
 
     it('Discounted withdrawals produce less eth', async () => {
-      await withdrawalQueue.finalize([1], shareRate(150), { from: steth.address, value: ETH(150) })
+      const batch = await withdrawalQueue.prefinalize([1], shareRate(150))
+      await withdrawalQueue.finalize([1], shareRate(150), { from: steth.address, value: batch.ethToLock })
 
       const balanceBefore = bn(await ethers.provider.getBalance(owner))
-      assert.equals(await withdrawalQueue.getLockedEtherAmount(), ETH(150))
+      assert.equals(await withdrawalQueue.getLockedEtherAmount(), batch.ethToLock)
 
-      const tx = await withdrawalQueue.claimWithdrawal(1, { from: owner })
+      await withdrawalQueue.claimWithdrawal(1, { from: owner, gasPrice: 0 })
+
       assert.equals(await withdrawalQueue.getLockedEtherAmount(), ETH(0))
 
-      // tx.receipt.gasUsed is a workaround for coverage, because it ignores gasPrice=0
-      assert.almostEqual(bn(await ethers.provider.getBalance(owner)).sub(balanceBefore), ETH(150), tx.receipt.gasUsed)
+      assert.almostEqual(bn(await ethers.provider.getBalance(owner)).sub(balanceBefore), ETH(150), ALLOWED_ERROR_WEI)
     })
 
     it('One can claim a lot of withdrawals with different discounts', async () => {
@@ -648,63 +703,81 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     })
   })
 
-  context('claim scenarios', async () => {
+  context('claimWithdrawals()', () => {
+    const amount = ETH(20)
+
+    beforeEach('Enqueue a request', async () => {
+      await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
+    })
+
+    it('claims correct requests', async () => {
+      await steth.mintShares(owner, shares(300)) // 1 share to user and 299 shares to owner total = 300 ETH
+      await steth.approve(withdrawalQueue.address, StETH(300), { from: owner })
+
+      const secondRequestAmount = ETH(10)
+      await withdrawalQueue.requestWithdrawals([secondRequestAmount], owner, { from: owner })
+      const secondRequestId = await withdrawalQueue.getLastRequestId()
+      await withdrawalQueue.finalize([secondRequestId], defaultShareRate, { from: steth.address, value: ETH(30) })
+
+      const balanceBefore = bn(await ethers.provider.getBalance(owner))
+      await withdrawalQueue.claimWithdrawals([1, 2], [1, 1], { from: owner, gasPrice: 0 })
+      assert.almostEqual(await ethers.provider.getBalance(owner), balanceBefore.add(bn(ETH(30))), ALLOWED_ERROR_WEI * 2)
+    })
+  })
+
+  context('claim scenarios', () => {
     const requestCount = 5
     const requestsAmounts = Array(requestCount).fill(StETH(1))
-    const total = StETH(requestCount)
-    const normalizedShareRate = shareRate(+total / +(await steth.getSharesByPooledEth(total)))
+
     let requestIds
 
     beforeEach(async () => {
-      await snapshot.rollback()
       await withdrawalQueue.requestWithdrawals(requestsAmounts, user, { from: user })
       requestIds = await withdrawalQueue.getWithdrawalRequests(user, { from: user })
     })
 
     it('direct', async () => {
+      const normalizedShareRate = await currentRate()
       const balanceBefore = bn(await ethers.provider.getBalance(user))
       const id = await withdrawalQueue.getLastRequestId()
       const batch = await withdrawalQueue.prefinalize([id], normalizedShareRate)
-      assert.equals(total, batch.ethToLock)
+
       withdrawalQueue.finalize([id], normalizedShareRate, { from: steth.address, value: batch.ethToLock })
       for (let index = 0; index < requestIds.length; index++) {
         const requestId = requestIds[index]
-        const tx = await withdrawalQueue.claimWithdrawal(requestId, { from: user })
-        assert.emits(tx, 'WithdrawalClaimed', { requestId, owner: user, receiver: user, amountOfETH: ETH(1) })
+        await withdrawalQueue.claimWithdrawal(requestId, { from: user, gasPrice: 0 })
       }
       const balanceAfter = bn(await ethers.provider.getBalance(user))
-      assert.equals(balanceAfter, balanceBefore.add(bn(total)))
+      assert.equals(balanceAfter, balanceBefore.add(bn(batch.ethToLock)))
     })
 
     it('reverse', async () => {
+      const normalizedShareRate = await currentRate()
       const balanceBefore = bn(await ethers.provider.getBalance(user))
       const id = await withdrawalQueue.getLastRequestId()
       const batch = await withdrawalQueue.prefinalize([id], normalizedShareRate)
-      assert.equals(total, batch.ethToLock)
       withdrawalQueue.finalize([id], normalizedShareRate, { from: steth.address, value: batch.ethToLock })
       for (let index = requestIds.length - 1; index >= 0; index--) {
         const requestId = requestIds[index]
-        const tx = await withdrawalQueue.claimWithdrawal(requestId, { from: user })
-        assert.emits(tx, 'WithdrawalClaimed', { requestId, owner: user, receiver: user, amountOfETH: ETH(1) })
+        await withdrawalQueue.claimWithdrawal(requestId, { from: user, gasPrice: 0 })
       }
       const balanceAfter = bn(await ethers.provider.getBalance(user))
-      assert.equals(balanceAfter, balanceBefore.add(bn(total)))
+      assert.equals(balanceAfter, balanceBefore.add(bn(batch.ethToLock)))
     })
 
     it('random', async () => {
+      const normalizedShareRate = await currentRate()
       const randomIds = [...requestIds].sort(() => 0.5 - Math.random())
       const balanceBefore = bn(await ethers.provider.getBalance(user))
       const id = await withdrawalQueue.getLastRequestId()
       const batch = await withdrawalQueue.prefinalize([id], normalizedShareRate)
-      assert.equals(total, batch.ethToLock)
       withdrawalQueue.finalize([id], normalizedShareRate, { from: steth.address, value: batch.ethToLock })
       for (let index = 0; index < randomIds.length; index++) {
         const requestId = randomIds[index]
-        const tx = await withdrawalQueue.claimWithdrawal(requestId, { from: user })
-        assert.emits(tx, 'WithdrawalClaimed', { requestId, owner: user, receiver: user, amountOfETH: ETH(1) })
+        await withdrawalQueue.claimWithdrawal(requestId, { from: user, gasPrice: 0 })
       }
       const balanceAfter = bn(await ethers.provider.getBalance(user))
-      assert.equals(balanceAfter, balanceBefore.add(bn(total)))
+      assert.equals(balanceAfter, balanceBefore.add(bn(batch.ethToLock)))
     })
 
     it('different rates', async () => {
@@ -719,77 +792,40 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         })
         totalDistributedEth.iadd(bn(batch.ethToLock))
       }
-      const id = await withdrawalQueue.getLastRequestId()
-      await withdrawalQueue.finalize([id], await currentRate(), { from: steth.address, value: total })
       for (let index = 0; index < requestIds.length; index++) {
         const requestId = requestIds[index]
-        await withdrawalQueue.claimWithdrawal(requestId, { from: user })
+        await withdrawalQueue.claimWithdrawal(requestId, { from: user, gasPrice: 0 })
       }
       const balanceAfter = bn(await ethers.provider.getBalance(user))
       assert.equals(balanceAfter, balanceBefore.add(totalDistributedEth))
     })
-  })
 
-  context.skip('claim fuzzing', () => {
-    const fuzzClaim = async (perRequestWEI, requestCount, finalizedWEI) => {
-      await withdrawalQueue.requestWithdrawals(Array(requestCount).fill(perRequestWEI), user, { from: user })
-      const requestIds = await withdrawalQueue.getWithdrawalRequests(user, { from: user })
-
-      const id = await withdrawalQueue.getLastRequestId()
-      await withdrawalQueue.finalize([id], shareRate(1), { from: steth.address, value: finalizedWEI })
-
-      const hints = await withdrawalQueue.findCheckpointHints(
-        requestIds,
-        1,
-        await withdrawalQueue.getLastCheckpointIndex()
-      )
-
-      // this causes division by zero
-      const claimableEth = await withdrawalQueue.getClaimableEther(requestIds, hints).catch((e) => {
-        throw new Error(
-          // hack to fix error objects with bigInit causing `can't serialise bigInt` with wrong trace
-          JSON.parse(JSON.stringify(e, (_, value) => (typeof value === 'bigint' ? value.toString() : value)))
-        )
-      })
-
-      const totalClaimable = claimableEth.reduce((s, i) => s.iadd(i) && s, bn(0))
-      assert.equals(totalClaimable, finalizedWEI, `Total Claimable doesn't add up to finalized amount`)
-
+    it('100% discount', async () => {
       const balanceBefore = bn(await ethers.provider.getBalance(user))
-      await withdrawalQueue.claimWithdrawals(requestIds, hints, { from: user })
+      const id = await withdrawalQueue.getLastRequestId()
+      const batches = await withdrawalQueue.prefinalize([id], 1)
+      assert.equals(batches.ethToLock, 0)
+      withdrawalQueue.finalize([id], 1, { from: steth.address, value: batches.ethToLock })
+      for (let index = 0; index < requestIds.length; index++) {
+        const requestId = requestIds[index]
+        const tx = await withdrawalQueue.claimWithdrawal(requestId, { from: user, gasPrice: 0 })
+        assert.emits(tx, 'WithdrawalClaimed', { requestId, owner: user, receiver: user, amountOfETH: 0 })
+      }
       const balanceAfter = bn(await ethers.provider.getBalance(user))
-      assert.equals(balanceBefore.addn(finalizedWEI), balanceAfter, `Total Claimed doesn't add up to finalized amount`)
-    }
-
-    it('distribute&claim 10wei per 100*100WEI requests ', async () => {
-      await fuzzClaim(100, 100, 1000)
-    })
-
-    it('distribute&claim 1wei per 100*100WEI requests', async () => {
-      await fuzzClaim(100, 100, 100)
-    })
-
-    it('distribute&claim 1 wei per 10*MAX_STETH_WITHDRAWAL_AMOUNT requests', async () => {
-      const MAX_STETH_WITHDRAWAL_AMOUNT = await withdrawalQueue.MAX_STETH_WITHDRAWAL_AMOUNT()
-      // account for stEth~<Eth
-      const total = MAX_STETH_WITHDRAWAL_AMOUNT.muln(10).add(MAX_STETH_WITHDRAWAL_AMOUNT)
-      await steth.approve(withdrawalQueue.address, ethers.constants.MaxUint256, { from: user })
-      await setBalance(stranger, total.toString(10))
-      await steth.mintSteth(user, { from: stranger, value: total })
-      await fuzzClaim(MAX_STETH_WITHDRAWAL_AMOUNT.toString(10), 10, 10)
+      assert.equals(balanceAfter, balanceBefore)
     })
   })
 
-  context('findCheckpointHints()', async () => {
-    const numOfRequests = 10
-    const requests = Array(numOfRequests).fill(ETH(20))
-    const discountedPrices = Array(numOfRequests)
-      .fill()
-      .map((_, i) => ETH(i))
-    const sharesPerRequest = await steth.getSharesByPooledEth(ETH(20))
-    const discountShareRates = discountedPrices.map((p) => shareRate(+p / +sharesPerRequest))
-
+  context('findCheckpointHints()', () => {
     beforeEach(async () => {
+      const numOfRequests = 10
+      const requests = Array(numOfRequests).fill(ETH(20))
+      const discountedPrices = Array(numOfRequests)
+        .fill()
+        .map((_, i) => ETH(i))
+      const sharesPerRequest = await steth.getSharesByPooledEth(ETH(20))
+      const discountShareRates = discountedPrices.map((p) => shareRate(+p / +sharesPerRequest))
+
       await withdrawalQueue.requestWithdrawals(requests, owner, { from: user })
       for (let i = 1; i <= numOfRequests; i++) {
         await withdrawalQueue.finalize([i], discountShareRates[i - 1], {
@@ -885,8 +921,8 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     })
 
     it('returns not found when indexes have negative overlap', async () => {
-      const batch = await withdrawalQueue.prefinalize.call([requestId], shareRate(300))
-      await withdrawalQueue.finalize([requestId], shareRate(300), { from: steth.address, value: batch.ethToLock })
+      const batch = await withdrawalQueue.prefinalize.call([requestId], defaultShareRate)
+      await withdrawalQueue.finalize([requestId], defaultShareRate, { from: steth.address, value: batch.ethToLock })
       const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
       const hints = await withdrawalQueue.findCheckpointHints(
         [requestId],
@@ -898,8 +934,8 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     })
 
     it('returns hints array with one item for list from single request id', async () => {
-      const batch = await withdrawalQueue.prefinalize.call([requestId], shareRate(300))
-      await withdrawalQueue.finalize([requestId], shareRate(300), { from: steth.address, value: batch.ethToLock })
+      const batch = await withdrawalQueue.prefinalize.call([requestId], defaultShareRate)
+      await withdrawalQueue.finalize([requestId], defaultShareRate, { from: steth.address, value: batch.ethToLock })
       const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
       const hints = await withdrawalQueue.findCheckpointHints([requestId], 1, lastCheckpointIndex)
       assert.equal(hints.length, 1)
@@ -955,29 +991,6 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         withdrawalQueue.findCheckpointHints([requestId, thirdRequestId, secondRequestId], 1, lastCheckpointIndex),
         'RequestIdsNotSorted()'
       )
-    })
-  })
-
-  context('claimWithdrawals()', () => {
-    const amount = ETH(20)
-
-    beforeEach('Enqueue a request', async () => {
-      await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
-    })
-
-    it('claims correct requests', async () => {
-      await steth.mintShares(owner, shares(300)) // 1 share to user and 299 shares to owner total = 300 ETH
-      await steth.approve(withdrawalQueue.address, StETH(300), { from: owner })
-
-      const secondRequestAmount = ETH(10)
-      await withdrawalQueue.requestWithdrawals([secondRequestAmount], owner, { from: owner })
-      const secondRequestId = await withdrawalQueue.getLastRequestId()
-      await withdrawalQueue.finalize([secondRequestId], shareRate(300), { from: steth.address, value: ETH(30) })
-
-      const balanceBefore = bn(await ethers.provider.getBalance(owner))
-      const tx = await withdrawalQueue.claimWithdrawals([1, 2], [1, 1], { from: owner, gasPrice: 0 })
-      // tx.receipt.gasUsed is a workaround for coverage, because it ignores gasPrice=0
-      assert.almostEqual(await ethers.provider.getBalance(owner), balanceBefore.add(bn(ETH(30))), tx.receipt.gasUsed)
     })
   })
 
@@ -1118,7 +1131,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     })
   })
 
-  context('Transfer request', async () => {
+  context('Transfer request', () => {
     const amount = ETH(300)
     let requestId
 
@@ -1162,7 +1175,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     })
 
     it("One can't change claimed request", async () => {
-      await withdrawalQueue.finalize([requestId], shareRate(300), { from: steth.address, value: amount })
+      await withdrawalQueue.finalize([requestId], defaultShareRate, { from: steth.address, value: amount })
       await withdrawalQueue.claimWithdrawal(requestId, { from: user })
 
       await assert.reverts(

@@ -379,27 +379,6 @@ contract('AccountingOracle', ([admin, member1]) => {
         )
       })
 
-      it('reverts with NumExitedValidatorsCannotDecrease if total count of exited validators less then previous exited number', async () => {
-        const totalExitedValidators = reportFields.numExitedValidatorsByStakingModule.reduce(
-          (sum, curr) => sum + curr,
-          0
-        )
-        await mockStakingRouter.setExitedKeysCountAcrossAllModules(totalExitedValidators + 1)
-        await assert.reverts(
-          oracle.submitReportData(reportItems, oracleVersion, { from: member1 }),
-          'NumExitedValidatorsCannotDecrease()'
-        )
-      })
-
-      it('does not reverts with NumExitedValidatorsCannotDecrease if total count of exited validators equals to previous exited number', async () => {
-        const totalExitedValidators = reportFields.numExitedValidatorsByStakingModule.reduce(
-          (sum, curr) => sum + curr,
-          0
-        )
-        await mockStakingRouter.setExitedKeysCountAcrossAllModules(totalExitedValidators)
-        await oracle.submitReportData(reportItems, oracleVersion, { from: member1 })
-      })
-
       it('reverts with ExitedValidatorsLimitExceeded if exited validators rate limit will be reached', async () => {
         // Really simple test here for now
         // TODO: Come up with more tests for better coverage of edge-case scenarios that can be accrued

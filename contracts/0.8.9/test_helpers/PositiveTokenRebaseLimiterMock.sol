@@ -10,50 +10,44 @@ contract PositiveTokenRebaseLimiterMock {
 
     TokenRebaseLimiterData public limiter;
 
-    event ReturnValue (
-        uint256 retValue
-    );
-
     function getLimiterValues()
         external
         view
         returns (
-            uint256 totalPooledEther,
-            uint256 totalShares,
-            uint256 rebaseLimit,
-            uint256 accumulatedRebase
+            uint256 preTotalPooledEther,
+            uint256 preTotalShares,
+            uint256 currentTotalPooledEther,
+            uint256 positiveRebaseLimit
         )
     {
-        totalPooledEther = limiter.totalPooledEther;
-        totalShares = limiter.totalShares;
-        rebaseLimit = limiter.rebaseLimit;
-        accumulatedRebase = limiter.accumulatedRebase;
+        preTotalPooledEther = limiter.preTotalPooledEther;
+        preTotalShares = limiter.preTotalShares;
+        currentTotalPooledEther = limiter.currentTotalPooledEther;
+        positiveRebaseLimit = limiter.positiveRebaseLimit;
     }
 
     function initLimiterState(
         uint256 _rebaseLimit,
-        uint256 _totalPooledEther,
-        uint256 _totalShares
+        uint256 _preTotalPooledEther,
+        uint256 _preTotalShares
     ) external {
-        limiter = PositiveTokenRebaseLimiter.initLimiterState(_rebaseLimit, _totalPooledEther, _totalShares);
+        limiter = PositiveTokenRebaseLimiter.initLimiterState(_rebaseLimit, _preTotalPooledEther, _preTotalShares);
     }
 
     function isLimitReached() external view returns (bool) {
         return limiter.isLimitReached();
     }
 
-    function raiseLimit(uint256 _etherAmount) external {
+    function decreaseEther(uint256 _etherAmount) external {
         TokenRebaseLimiterData memory limiterMemory = limiter;
-        limiterMemory.raiseLimit(_etherAmount);
+        limiterMemory.decreaseEther(_etherAmount);
         limiter = limiterMemory;
     }
 
-    function consumeLimit(uint256 _etherAmount) external {
+    function increaseEther(uint256 _etherAmount) external returns (uint256 consumedEther) {
         TokenRebaseLimiterData memory limiterMemory = limiter;
-        uint256 consumedEther = limiterMemory.consumeLimit(_etherAmount);
+        consumedEther = limiterMemory.increaseEther(_etherAmount);
         limiter = limiterMemory;
-
-        emit ReturnValue(consumedEther);
     }
 
     function getSharesToBurnLimit() external view returns (uint256) {

@@ -57,12 +57,10 @@ interface IOracleReportSanityChecker {
 }
 
 interface IStakingRouter {
-    function getExitedValidatorsCountAcrossAllModules() external view returns (uint256);
-
     function updateExitedValidatorsCountByStakingModule(
         uint256[] calldata moduleIds,
         uint256[] calldata exitedValidatorsCounts
-    ) external;
+    ) external returns (uint256);
 
     function reportStakingModuleExitedValidatorsCountByNodeOperator(
         uint256 stakingModuleId,
@@ -92,10 +90,10 @@ contract AccountingOracle is BaseOracle {
     error LidoLocatorCannotBeZero();
     error AdminCannotBeZero();
     error LegacyOracleCannotBeZero();
+    error LidoCannotBeZero();
     error IncorrectOracleMigration(uint256 code);
     error SenderNotAllowed();
     error InvalidExitedValidatorsData();
-    error NumExitedValidatorsCannotDecrease();
     error UnsupportedExtraDataFormat(uint256 format);
     error UnsupportedExtraDataType(uint256 itemIndex, uint256 dataType);
     error CannotSubmitExtraDataBeforeMainData();
@@ -154,6 +152,7 @@ contract AccountingOracle is BaseOracle {
     {
         if (lidoLocator == address(0)) revert LidoLocatorCannotBeZero();
         if (legacyOracle == address(0)) revert LegacyOracleCannotBeZero();
+        if (lido == address(0)) revert LidoCannotBeZero();
         LOCATOR = ILidoLocator(lidoLocator);
         LIDO = lido;
         LEGACY_ORACLE = legacyOracle;
@@ -655,32 +654,24 @@ contract AccountingOracle is BaseOracle {
             unchecked { ++i; }
         }
 
-        uint256 exitedValidators = 0;
         for (uint256 i = 0; i < stakingModuleIds.length;) {
             if (numExitedValidatorsByStakingModule[i] == 0) {
                 revert InvalidExitedValidatorsData();
-            } else {
-                exitedValidators += numExitedValidatorsByStakingModule[i];
             }
             unchecked { ++i; }
         }
 
-        uint256 prevExitedValidators = stakingRouter.getExitedValidatorsCountAcrossAllModules();
-        if (exitedValidators < prevExitedValidators) {
-            revert NumExitedValidatorsCannotDecrease();
-        }
-
-        uint256 exitedValidatorsPerDay =
-            (exitedValidators - prevExitedValidators) * (1 days) /
-            (SECONDS_PER_SLOT * slotsElapsed);
-
-        IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
-            .checkExitedValidatorsRatePerDay(exitedValidatorsPerDay);
-
-        stakingRouter.updateExitedValidatorsCountByStakingModule(
+        uint256 newlyExitedValidatorsCount = stakingRouter.updateExitedValidatorsCountByStakingModule(
             stakingModuleIds,
             numExitedValidatorsByStakingModule
         );
+
+        uint256 exitedValidatorsRatePerDay =
+            newlyExitedValidatorsCount * (1 days) /
+            (SECONDS_PER_SLOT * slotsElapsed);
+
+        IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
+            .checkExitedValidatorsRatePerDay(exitedValidatorsRatePerDay);
     }
 
     function _submitReportExtraDataEmpty() internal {

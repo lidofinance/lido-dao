@@ -98,5 +98,7 @@ async function setupNodeOperatorsRegistry({ dao, acl, lidoLocator, stakingRouter
 }
 
 module.exports = {
+  NodeOperatorsRegistry,
+  NodeOperatorsRegistryMock,
   setupNodeOperatorsRegistry,
 }
