@@ -386,7 +386,10 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         // remove ether to lock for withdrawals from total pooled ether
         tokenRebaseLimiter.decreaseEther(_etherToLockForWithdrawals);
         // re-evaluate shares to burn after TVL was updated due to withdrawals finalization
-        sharesToBurn = Math256.min(tokenRebaseLimiter.getSharesToBurnLimit(), _newSharesToBurnForWithdrawals + _sharesRequestedToBurn);
+        sharesToBurn = Math256.min(
+            tokenRebaseLimiter.getSharesToBurnLimit(),
+            _newSharesToBurnForWithdrawals + _sharesRequestedToBurn
+        );
     }
 
     /// @notice Applies sanity checks to the accounting params of Lido's oracle report
