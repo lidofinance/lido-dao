@@ -210,6 +210,13 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         ///      https://docs.soliditylang.org/en/v0.8.17/types.html#enums
         newStakingModule.status = uint8(StakingModuleStatus.Active);
 
+        /// @dev  Simulate zero value deposit to prevent real deposits into the new StakingModule via
+        ///       DepositSecurityModule just after the addition.
+        ///       See DepositSecurityModule.getMaxDeposits() for details
+        newStakingModule.lastDepositAt = uint64(block.timestamp);
+        newStakingModule.lastDepositBlock = block.number;
+        emit StakingRouterETHDeposited(newStakingModuleId, 0);
+
         _setStakingModuleIndexById(newStakingModuleId, newStakingModuleIndex);
         LAST_STAKING_MODULE_ID_POSITION.setStorageUint256(newStakingModuleId);
         STAKING_MODULES_COUNT_POSITION.setStorageUint256(newStakingModuleIndex + 1);
