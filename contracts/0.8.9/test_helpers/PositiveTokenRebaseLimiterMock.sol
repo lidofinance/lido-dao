@@ -16,13 +16,13 @@ contract PositiveTokenRebaseLimiterMock {
         returns (
             uint256 preTotalPooledEther,
             uint256 preTotalShares,
-            uint256 postTotalPooledEther,
+            uint256 currentTotalPooledEther,
             uint256 rebaseLimit
         )
     {
         preTotalPooledEther = limiter.preTotalPooledEther;
         preTotalShares = limiter.preTotalShares;
-        postTotalPooledEther = limiter.postTotalPooledEther;
+        currentTotalPooledEther = limiter.currentTotalPooledEther;
         rebaseLimit = limiter.rebaseLimit;
     }
 

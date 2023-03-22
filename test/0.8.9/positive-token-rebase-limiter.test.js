@@ -30,7 +30,7 @@ contract('PositiveTokenRebaseLimiter', () => {
 
     assert.equals(limiterValues.preTotalPooledEther, 0)
     assert.equals(limiterValues.preTotalShares, 0)
-    assert.equals(limiterValues.postTotalPooledEther, 0)
+    assert.equals(limiterValues.currentTotalPooledEther, 0)
     assert.equals(limiterValues.rebaseLimit, 0)
 
     assert.isTrue(await limiter.isLimitReached())
@@ -46,7 +46,7 @@ contract('PositiveTokenRebaseLimiter', () => {
 
     assert.equals(limiterValues.preTotalPooledEther, preTotalPooledEther)
     assert.equals(limiterValues.preTotalShares, preTotalShares)
-    assert.equals(limiterValues.postTotalPooledEther, preTotalPooledEther)
+    assert.equals(limiterValues.currentTotalPooledEther, preTotalPooledEther)
     assert.equals(limiterValues.rebaseLimit, rebaseLimit)
     assert.isFalse(await limiter.isLimitReached())
 
@@ -72,7 +72,7 @@ contract('PositiveTokenRebaseLimiter', () => {
     const limiterValues0 = await limiter.getLimiterValues()
     assert.equals(limiterValues0.preTotalPooledEther, preTotalPooledEther)
     assert.equals(limiterValues0.preTotalShares, preTotalShares)
-    assert.equals(limiterValues0.postTotalPooledEther, preTotalPooledEther)
+    assert.equals(limiterValues0.currentTotalPooledEther, preTotalPooledEther)
     assert.equals(limiterValues0.rebaseLimit, rebaseLimit)
     assert.isFalse(await limiter.isLimitReached())
 
@@ -81,7 +81,7 @@ contract('PositiveTokenRebaseLimiter', () => {
     assert.equals(limiterValuesNeg.preTotalPooledEther, preTotalPooledEther)
     assert.equals(limiterValuesNeg.preTotalShares, preTotalShares)
     assert.equals(limiterValuesNeg.rebaseLimit, rebaseLimit)
-    assert.equals(limiterValuesNeg.postTotalPooledEther, bn(preTotalPooledEther).sub(bn(ETH(1))))
+    assert.equals(limiterValuesNeg.currentTotalPooledEther, bn(preTotalPooledEther).sub(bn(ETH(1))))
     assert.isFalse(await limiter.isLimitReached())
   })
 
@@ -97,7 +97,7 @@ contract('PositiveTokenRebaseLimiter', () => {
     const limiterValues = await limiter.getLimiterValues()
     assert.equals(limiterValues.preTotalPooledEther, preTotalPooledEther)
     assert.equals(limiterValues.preTotalShares, preTotalShares)
-    assert.equals(limiterValues.postTotalPooledEther, bn(preTotalPooledEther).add(bn(ETH(1))))
+    assert.equals(limiterValues.currentTotalPooledEther, bn(preTotalPooledEther).add(bn(ETH(1))))
     assert.equals(limiterValues.rebaseLimit, rebaseLimit)
     assert.isFalse(await limiter.isLimitReached())
 
@@ -128,13 +128,13 @@ contract('PositiveTokenRebaseLimiter', () => {
 
     assert.equals(limiterValues.preTotalPooledEther, preTotalPooledEther)
     assert.equals(limiterValues.preTotalShares, preTotalShares)
-    assert.equals(limiterValues.postTotalPooledEther, bn(preTotalPooledEther).add(bn(ETH(2 - 1))))
+    assert.equals(limiterValues.currentTotalPooledEther, bn(preTotalPooledEther).add(bn(ETH(2 - 1))))
     assert.equals(limiterValues.rebaseLimit, rebaseLimit)
 
     assert.equals(await limiter.getSharesToBurnLimit(), bn('4499977500112499437'))
 
     const preShareRate = bn(preTotalPooledEther).mul(e9).div(bn(preTotalShares))
-    const postShareRate = bn(limiterValues.postTotalPooledEther)
+    const postShareRate = bn(limiterValues.currentTotalPooledEther)
       .mul(e9)
       .div(bn(preTotalShares).sub(await limiter.getSharesToBurnLimit()))
 
@@ -158,7 +158,7 @@ contract('PositiveTokenRebaseLimiter', () => {
 
     assert.equals(limiterValues.preTotalPooledEther, preTotalPooledEther)
     assert.equals(limiterValues.preTotalShares, preTotalShares)
-    assert.equals(limiterValues.postTotalPooledEther, bn(preTotalPooledEther).add(bn(ETH(2 - 1))))
+    assert.equals(limiterValues.currentTotalPooledEther, bn(preTotalPooledEther).add(bn(ETH(2 - 1))))
     assert.equals(limiterValues.rebaseLimit, rebaseLimit)
 
     await limiter.decreaseEther(ETH(1))
@@ -167,7 +167,7 @@ contract('PositiveTokenRebaseLimiter', () => {
 
     assert.equals(limiterValues.preTotalPooledEther, preTotalPooledEther)
     assert.equals(limiterValues.preTotalShares, preTotalShares)
-    assert.equals(limiterValues.postTotalPooledEther, preTotalPooledEther)
+    assert.equals(limiterValues.currentTotalPooledEther, preTotalPooledEther)
     assert.equals(limiterValues.rebaseLimit, rebaseLimit)
 
     assert.equals(await limiter.getSharesToBurnLimit(), bn('4999975000124999375'))
@@ -212,13 +212,13 @@ contract('PositiveTokenRebaseLimiter', () => {
 
     assert.equals(limiterValues.preTotalPooledEther, preTotalPooledEther)
     assert.equals(limiterValues.preTotalShares, preTotalShares)
-    assert.equals(limiterValues.postTotalPooledEther, bn(preTotalPooledEther).sub(bn(ETH(39000))))
+    assert.equals(limiterValues.currentTotalPooledEther, bn(preTotalPooledEther).sub(bn(ETH(39000))))
     assert.equals(limiterValues.rebaseLimit, rebaseLimit)
 
     assert.equals(await limiter.getSharesToBurnLimit(), bn('39960039960039960039960'))
 
     const preShareRate = bn(preTotalPooledEther).mul(e9).div(bn(preTotalShares))
-    const postShareRate = bn(limiterValues.postTotalPooledEther)
+    const postShareRate = bn(limiterValues.currentTotalPooledEther)
       .mul(e9)
       .div(bn(preTotalShares).sub(await limiter.getSharesToBurnLimit()))
 

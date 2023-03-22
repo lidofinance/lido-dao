@@ -23,10 +23,10 @@ import {Math256} from "../../common/lib/Math256.sol";
  * @dev Internal limiter representation struct (storing in memory)
  */
 struct TokenRebaseLimiterData {
-    uint256 preTotalPooledEther;  // pre-rebase total pooled ether
-    uint256 preTotalShares;       // pre-rebase total shares
-    uint256 postTotalPooledEther; // accumulated total pooled ether when token rebase components applied
-    uint256 rebaseLimit;          // positive rebase limit (target value) with 1e9 precision (`LIMITER_PRECISION_BASE`)
+    uint256 preTotalPooledEther;     // pre-rebase total pooled ether
+    uint256 preTotalShares;          // pre-rebase total shares
+    uint256 currentTotalPooledEther; // intermediate total pooled ether amount while token rebase is in progress
+    uint256 rebaseLimit;             // positive rebase limit (target value) with 1e9 precision (`LIMITER_PRECISION_BASE`)
 }
 
 /**
@@ -90,7 +90,7 @@ library PositiveTokenRebaseLimiter {
         // special case
         if (_preTotalPooledEther == 0) { _rebaseLimit = UNLIMITED_REBASE; }
 
-        limiterState.postTotalPooledEther = limiterState.preTotalPooledEther = _preTotalPooledEther;
+        limiterState.currentTotalPooledEther = limiterState.preTotalPooledEther = _preTotalPooledEther;
         limiterState.preTotalShares = _preTotalShares;
         limiterState.rebaseLimit = _rebaseLimit;
     }
@@ -102,9 +102,9 @@ library PositiveTokenRebaseLimiter {
      */
     function isLimitReached(TokenRebaseLimiterData memory _limiterState) internal pure returns (bool) {
         if (_limiterState.rebaseLimit == UNLIMITED_REBASE) return false;
-        if (_limiterState.postTotalPooledEther < _limiterState.preTotalPooledEther) return false;
+        if (_limiterState.currentTotalPooledEther < _limiterState.preTotalPooledEther) return false;
 
-        uint256 accumulatedEther = _limiterState.postTotalPooledEther - _limiterState.preTotalPooledEther;
+        uint256 accumulatedEther = _limiterState.currentTotalPooledEther - _limiterState.preTotalPooledEther;
         uint256 accumulatedRebase;
 
         if (_limiterState.preTotalPooledEther > 0) {
@@ -124,9 +124,9 @@ library PositiveTokenRebaseLimiter {
     ) internal pure {
         if (_limiterState.rebaseLimit == UNLIMITED_REBASE) return;
 
-        if (_etherAmount > _limiterState.postTotalPooledEther) revert NegativeTotalPooledEther();
+        if (_etherAmount > _limiterState.currentTotalPooledEther) revert NegativeTotalPooledEther();
 
-        _limiterState.postTotalPooledEther -= _etherAmount;
+        _limiterState.currentTotalPooledEther -= _etherAmount;
     }
 
     /**
@@ -144,17 +144,18 @@ library PositiveTokenRebaseLimiter {
     {
         if (_limiterState.rebaseLimit == UNLIMITED_REBASE) return _etherAmount;
 
-        uint256 prevPooledEther = _limiterState.postTotalPooledEther;
-        _limiterState.postTotalPooledEther += _etherAmount;
+        uint256 prevPooledEther = _limiterState.currentTotalPooledEther;
+        _limiterState.currentTotalPooledEther += _etherAmount;
 
         uint256 maxTotalPooledEther = _limiterState.preTotalPooledEther +
             (_limiterState.rebaseLimit * _limiterState.preTotalPooledEther) / LIMITER_PRECISION_BASE;
 
-        _limiterState.postTotalPooledEther = Math256.min(_limiterState.postTotalPooledEther, maxTotalPooledEther);
+        _limiterState.currentTotalPooledEther
+            = Math256.min(_limiterState.currentTotalPooledEther, maxTotalPooledEther);
 
-        assert(_limiterState.postTotalPooledEther >= prevPooledEther);
+        assert(_limiterState.currentTotalPooledEther >= prevPooledEther);
 
-        return _limiterState.postTotalPooledEther - prevPooledEther;
+        return _limiterState.currentTotalPooledEther - prevPooledEther;
     }
 
     /**
@@ -173,7 +174,7 @@ library PositiveTokenRebaseLimiter {
 
         uint256 rebaseLimitPlus1 = _limiterState.rebaseLimit + LIMITER_PRECISION_BASE;
         uint256 pooledEtherRate =
-            (_limiterState.postTotalPooledEther * LIMITER_PRECISION_BASE) / _limiterState.preTotalPooledEther;
+            (_limiterState.currentTotalPooledEther * LIMITER_PRECISION_BASE) / _limiterState.preTotalPooledEther;
 
         maxSharesToBurn = (_limiterState.preTotalShares * (rebaseLimitPlus1 - pooledEtherRate)) / rebaseLimitPlus1;
     }
