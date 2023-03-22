@@ -564,13 +564,13 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _postCLBalance,
         uint256 _timeElapsed
     ) internal pure {
-        if (_preCLBalance >= _postCLBalance) return;
-
         // allow zero values for scratch deploy
         // NB: annual increase have to be large enough for scratch deploy
         if (_preCLBalance == 0) {
             _preCLBalance = DEFAULT_CL_BALANCE;
         }
+
+        if (_preCLBalance >= _postCLBalance) return;
 
         if (_timeElapsed == 0) {
             _timeElapsed = DEFAULT_TIME_ELAPSED;
@@ -660,15 +660,15 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             emit ChurnValidatorsPerDayLimitSet(_newLimitsList.churnValidatorsPerDayLimit);
         }
         if (_oldLimitsList.oneOffCLBalanceDecreaseBPLimit != _newLimitsList.oneOffCLBalanceDecreaseBPLimit) {
-            _checkLimitValue(_newLimitsList.oneOffCLBalanceDecreaseBPLimit, type(uint16).max);
+            _checkLimitValue(_newLimitsList.oneOffCLBalanceDecreaseBPLimit, MAX_BASIS_POINTS);
             emit OneOffCLBalanceDecreaseBPLimitSet(_newLimitsList.oneOffCLBalanceDecreaseBPLimit);
         }
         if (_oldLimitsList.annualBalanceIncreaseBPLimit != _newLimitsList.annualBalanceIncreaseBPLimit) {
-            _checkLimitValue(_newLimitsList.annualBalanceIncreaseBPLimit, type(uint16).max);
+            _checkLimitValue(_newLimitsList.annualBalanceIncreaseBPLimit, MAX_BASIS_POINTS);
             emit AnnualBalanceIncreaseBPLimitSet(_newLimitsList.annualBalanceIncreaseBPLimit);
         }
         if (_oldLimitsList.simulatedShareRateDeviationBPLimit != _newLimitsList.simulatedShareRateDeviationBPLimit) {
-            _checkLimitValue(_newLimitsList.simulatedShareRateDeviationBPLimit, type(uint16).max);
+            _checkLimitValue(_newLimitsList.simulatedShareRateDeviationBPLimit, MAX_BASIS_POINTS);
             emit SimulatedShareRateDeviationBPLimitSet(_newLimitsList.simulatedShareRateDeviationBPLimit);
         }
         if (_oldLimitsList.maxValidatorExitRequestsPerReport != _newLimitsList.maxValidatorExitRequestsPerReport) {

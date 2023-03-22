@@ -286,6 +286,46 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       assert.emits(tx, 'AnnualBalanceIncreaseBPLimitSet', { annualBalanceIncreaseBPLimit: newValue })
     })
 
+    it('handles zero time passed for annual balance increase', async () => {
+      const preCLBalance = BigInt(correctLidoOracleReport.preCLBalance)
+      const postCLBalance = preCLBalance + 1000n
+
+      await oracleReportSanityChecker.checkAccountingOracleReport(
+        ...Object.values({
+          ...correctLidoOracleReport,
+          postCLBalance: postCLBalance.toString(),
+          timeElapsed: 0,
+        })
+      )
+    })
+
+    it('handles zero pre CL balance estimating balance increase', async () => {
+      const preCLBalance = BigInt(0)
+      const postCLBalance = preCLBalance + 1000n
+
+      await oracleReportSanityChecker.checkAccountingOracleReport(
+        ...Object.values({
+          ...correctLidoOracleReport,
+          preCLBalance: preCLBalance.toString(),
+          postCLBalance: postCLBalance.toString(),
+        })
+      )
+    })
+
+    it('handles zero time passed for appeared validators', async () => {
+      const preCLValidators = BigInt(correctLidoOracleReport.preCLValidators)
+      const postCLValidators = preCLValidators + 2n
+
+      await oracleReportSanityChecker.checkAccountingOracleReport(
+        ...Object.values({
+          ...correctLidoOracleReport,
+          preCLValidators: preCLValidators.toString(),
+          postCLValidators: postCLValidators.toString(),
+          timeElapsed: 0,
+        })
+      )
+    })
+
     it('set simulated share rate deviation', async () => {
       const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).simulatedShareRateDeviationBPLimit
       const newValue = 7
@@ -1073,6 +1113,113 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       await assert.reverts(
         oracleReportSanityChecker.checkAccountingExtraDataListItemsCount(maxCount + 1),
         `MaxAccountingExtraDataItemsCountExceeded(${maxCount}, ${maxCount + 1})`
+      )
+    })
+  })
+
+  describe('check limit boundaries', () => {
+    it('values must be less or equal to MAX_BASIS_POINTS', async () => {
+      const MAX_BASIS_POINTS = 10000
+      const INVALID_BASIS_POINTS = MAX_BASIS_POINTS + 1
+
+      await assert.reverts(
+        oracleReportSanityChecker.setOracleReportLimits(
+          Object.values({ ...defaultLimitsList, oneOffCLBalanceDecreaseBPLimit: INVALID_BASIS_POINTS }),
+          {
+            from: managersRoster.allLimitsManagers[0],
+          }
+        ),
+        `IncorrectLimitValue(${INVALID_BASIS_POINTS}, ${MAX_BASIS_POINTS})`
+      )
+
+      await assert.reverts(
+        oracleReportSanityChecker.setOracleReportLimits(
+          Object.values({ ...defaultLimitsList, annualBalanceIncreaseBPLimit: 10001 }),
+          {
+            from: managersRoster.allLimitsManagers[0],
+          }
+        ),
+        `IncorrectLimitValue(${INVALID_BASIS_POINTS}, ${MAX_BASIS_POINTS})`
+      )
+
+      await assert.reverts(
+        oracleReportSanityChecker.setOracleReportLimits(
+          Object.values({ ...defaultLimitsList, simulatedShareRateDeviationBPLimit: 10001 }),
+          {
+            from: managersRoster.allLimitsManagers[0],
+          }
+        ),
+        `IncorrectLimitValue(${INVALID_BASIS_POINTS}, ${MAX_BASIS_POINTS})`
+      )
+    })
+
+    it('values must be less or equal to type(uint16).max', async () => {
+      const MAX_UINT_16 = 65535
+      const INVALID_VALUE = MAX_UINT_16 + 1
+
+      await assert.reverts(
+        oracleReportSanityChecker.setOracleReportLimits(
+          Object.values({ ...defaultLimitsList, churnValidatorsPerDayLimit: INVALID_VALUE }),
+          {
+            from: managersRoster.allLimitsManagers[0],
+          }
+        ),
+        `IncorrectLimitValue(${INVALID_VALUE}, ${MAX_UINT_16})`
+      )
+
+      await assert.reverts(
+        oracleReportSanityChecker.setOracleReportLimits(
+          Object.values({ ...defaultLimitsList, maxValidatorExitRequestsPerReport: INVALID_VALUE }),
+          {
+            from: managersRoster.allLimitsManagers[0],
+          }
+        ),
+        `IncorrectLimitValue(${INVALID_VALUE}, ${MAX_UINT_16})`
+      )
+
+      await assert.reverts(
+        oracleReportSanityChecker.setOracleReportLimits(
+          Object.values({ ...defaultLimitsList, maxAccountingExtraDataListItemsCount: INVALID_VALUE }),
+          {
+            from: managersRoster.allLimitsManagers[0],
+          }
+        ),
+        `IncorrectLimitValue(${INVALID_VALUE}, ${MAX_UINT_16})`
+      )
+
+      await assert.reverts(
+        oracleReportSanityChecker.setOracleReportLimits(
+          Object.values({ ...defaultLimitsList, maxNodeOperatorsPerExtraDataItemCount: INVALID_VALUE }),
+          {
+            from: managersRoster.allLimitsManagers[0],
+          }
+        ),
+        `IncorrectLimitValue(${INVALID_VALUE}, ${MAX_UINT_16})`
+      )
+    })
+
+    it('values must be less or equals to type(uint64).max', async () => {
+      const MAX_UINT_64 = BigInt(2) ** 64n - 1n
+      const INVALID_VALUE = MAX_UINT_64 + 1n
+
+      await assert.reverts(
+        oracleReportSanityChecker.setOracleReportLimits(
+          Object.values({ ...defaultLimitsList, requestTimestampMargin: INVALID_VALUE.toString() }),
+          {
+            from: managersRoster.allLimitsManagers[0],
+          }
+        ),
+        `IncorrectLimitValue(${INVALID_VALUE.toString()}, ${MAX_UINT_64.toString()})`
+      )
+
+      await assert.reverts(
+        oracleReportSanityChecker.setOracleReportLimits(
+          Object.values({ ...defaultLimitsList, maxPositiveTokenRebase: INVALID_VALUE.toString() }),
+          {
+            from: managersRoster.allLimitsManagers[0],
+          }
+        ),
+        `IncorrectLimitValue(${INVALID_VALUE.toString()}, ${MAX_UINT_64.toString()})`
       )
     })
   })
