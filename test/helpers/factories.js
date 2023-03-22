@@ -369,6 +369,8 @@ async function postSetup({
   oracle,
   legacyOracle,
   consensusContract,
+  stakingModules,
+  burner,
 }) {
   await pool.initialize(lidoLocator.address, eip712StETH.address, { value: ETH(1) })
 
@@ -376,6 +378,9 @@ async function postSetup({
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), voting.address, { from: voting.address })
   await oracle.grantRole(await oracle.MANAGE_CONSENSUS_VERSION_ROLE(), voting.address, { from: voting.address })
   await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), voting.address, { from: voting.address })
+  for (const stakingModule of stakingModules) {
+    await burner.grantRole(await burner.REQUEST_BURN_SHARES_ROLE(), stakingModule.address, { from: appManager.address })
+  }
 
   await legacyOracle.initialize(lidoLocator.address, consensusContract.address)
 

@@ -117,6 +117,7 @@
     "lerna": "^3.22.1",
     "lint-staged": ">=10",
     "minimatch": "^6.2.0",
+    "mocha-param": "^2.0.1",
     "node-gyp": "^8.4.1",
     "prettier": "^2.8.4",
     "solhint": "^3.3.7",
@@ -133,7 +134,6 @@
     "@aragon/os": "^4.4.0",
     "@openzeppelin/contracts": "3.4.0",
     "@openzeppelin/contracts-v4.4": "npm:@openzeppelin/contracts@4.4.1",
-    "mocha-param": "^2.0.1",
     "openzeppelin-solidity": "2.0.0"
   },
   "overrides": {

@@ -35,7 +35,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
     erc721ReceiverMock = await ERC721ReceiverMock.new({ from: owner })
 
     await steth.setTotalPooledEther(ETH(600))
-    // we need 1 ETH additionally to pay gas on finalization because coverage ingnores gasPrice=0
+    // we need 1 ETH additionally to pay gas on finalization because coverage ignores gasPrice=0
     await setBalance(steth.address, ETH(600 + 1))
     await steth.mintShares(user, shares(1))
     await steth.approve(withdrawalQueue.address, StETH(300), { from: user })
