@@ -78,6 +78,81 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
   afterEach(async () => {
     await snapshot.rollback()
   })
+  describe('updateRefundedValidatorsCount()', () => {
+    const firstNodeOperator = 0
+
+    beforeEach(async () => {
+      await app.testing_addNodeOperator('0', user1, 10, 10, 10, 0)
+    })
+
+    it('reverts when refund more than DEPOSITED_KEYS_COUNT_OFFSET', async () => {
+      await assert.reverts(app.updateRefundedValidatorsCount(firstNodeOperator, 1000, { from: voting }), 'OUT_OF_RANGE')
+    })
+
+    it('set correct values and timestamp not changed', async () => {
+      let keyStats = await app.getNodeOperatorSummary(firstNodeOperator)
+      assert.equals(keyStats.stuckValidatorsCount, 0)
+      assert.equals(keyStats.refundedValidatorsCount, 0)
+      assert.equals(keyStats.stuckPenaltyEndTimestamp, 0)
+
+      // refund validators = 9
+      await app.updateRefundedValidatorsCount(firstNodeOperator, 9, { from: voting })
+      // stuck validators = 7
+      await app.unsafeUpdateValidatorsCount(firstNodeOperator, 0, 7, { from: voting })
+
+      keyStats = await app.getNodeOperatorSummary(firstNodeOperator)
+      assert.equals(keyStats.stuckValidatorsCount, 7)
+      assert.equals(keyStats.refundedValidatorsCount, 9)
+      assert.equals(keyStats.stuckPenaltyEndTimestamp, 0)
+
+      // refund validators = 7
+      await app.updateRefundedValidatorsCount(firstNodeOperator, 7, { from: voting })
+
+      keyStats = await app.getNodeOperatorSummary(firstNodeOperator)
+      assert.equals(keyStats.stuckValidatorsCount, 7)
+      assert.equals(keyStats.refundedValidatorsCount, 7)
+      assert.equals(keyStats.stuckPenaltyEndTimestamp, 0)
+    })
+  })
+
+  describe('updateStuckValidatorsCount()', () => {
+    const firstNodeOperator = 0
+
+    beforeEach(async () => {
+      await app.testing_addNodeOperator('0', user1, 10, 10, 10, 0)
+    })
+
+    it('reverts when refund more than DEPOSITED_KEYS_COUNT_OFFSET', async () => {
+      await assert.reverts(
+        app.unsafeUpdateValidatorsCount(firstNodeOperator, 0, 1000, { from: voting }),
+        'OUT_OF_RANGE'
+      )
+    })
+
+    it('set correct values and timestamp not changed', async () => {
+      let keyStats = await app.getNodeOperatorSummary(firstNodeOperator)
+      assert.equals(keyStats.stuckValidatorsCount, 0)
+      assert.equals(keyStats.refundedValidatorsCount, 0)
+      assert.equals(keyStats.stuckPenaltyEndTimestamp, 0)
+
+      // refund validators = 9
+      await app.updateRefundedValidatorsCount(firstNodeOperator, 9, { from: voting })
+      // stuck validators = 7
+      await app.unsafeUpdateValidatorsCount(firstNodeOperator, 0, 7, { from: voting })
+      keyStats = await app.getNodeOperatorSummary(firstNodeOperator)
+      assert.equals(keyStats.stuckValidatorsCount, 7)
+      assert.equals(keyStats.refundedValidatorsCount, 9)
+      assert.equals(keyStats.stuckPenaltyEndTimestamp, 0)
+
+      // stuck validators = 5
+      await app.unsafeUpdateValidatorsCount(firstNodeOperator, 0, 5, { from: voting })
+
+      keyStats = await app.getNodeOperatorSummary(firstNodeOperator)
+      assert.equals(keyStats.stuckValidatorsCount, 5)
+      assert.equals(keyStats.refundedValidatorsCount, 9)
+      assert.equals(keyStats.stuckPenaltyEndTimestamp, 0)
+    })
+  })
 
   describe('distributeRewards()', () => {
     const firstNodeOperator = 0
@@ -232,17 +307,6 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
       assert.emits(receipt, 'RewardsDistributed', { rewardAddress: user2, sharesAmount: ETH(6 * 1.25) })
       assert.notEmits(receipt, 'RewardsDistributed', { rewardAddress: user3, sharesAmount: 0 })
       assert.emits(receipt, 'NodeOperatorPenalized', { recipientAddress: user1, sharesPenalizedAmount: ETH(1.25) })
-    })
-
-    it('reverts when refund more than DEPOSITED_KEYS_COUNT_OFFSET', async () => {
-      await steth.setTotalPooledEther(ETH(100))
-      await steth.mintShares(app.address, ETH(10))
-
-      // update [operator, exited, stuck]
-      await app.unsafeUpdateValidatorsCount(firstNodeOperator, 1, 1, { from: voting })
-      await app.unsafeUpdateValidatorsCount(secondNodeOperator, 1, 0, { from: voting })
-
-      await assert.reverts(app.updateRefundedValidatorsCount(firstNodeOperator, 1000, { from: voting }), 'OUT_OF_RANGE')
     })
 
     it('penalized firstOperator, add refund less than stuck validators', async () => {
