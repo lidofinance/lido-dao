@@ -504,6 +504,16 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
           stakingModuleId,
           lowLevelRevertData: '0x4e487b710000000000000000000000000000000000000000000000000000000000000001',
         })
+
+        // staking module will revert with out of gas error (revert data is empty bytes)
+        await ContractStub(buggedStakingModule)
+          .on('onExitedAndStuckValidatorsCountsUpdated', { revert: { reason: 'outOfGas' } })
+          .update({ from: deployer })
+
+        await assert.reverts(
+          router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin }),
+          'UnrecoverableModuleError()'
+        )
       })
     })
 

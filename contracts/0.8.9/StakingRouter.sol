@@ -54,6 +54,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     error InvalidDepositsValue(uint256 etherValue, uint256 depositsCount);
     error StakingModuleAddressExists();
     error ArraysLengthMismatch(uint256 firstArrayLength, uint256 secondArrayLength);
+    error UnrecoverableModuleError();
 
     enum StakingModuleStatus {
         Active, // deposits and rewards allowed
@@ -296,6 +297,12 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
                 address moduleAddr = _getStakingModuleById(_stakingModuleIds[i]).stakingModuleAddress;
                 try IStakingModule(moduleAddr).onRewardsMinted(_totalShares[i]) {}
                 catch (bytes memory lowLevelRevertData) {
+                    /// @dev This check is required to prevent incorrect gas estimation of the method.
+                    ///      Without it, Ethereum nodes that use binary search for gas estimation may
+                    ///      return an invalid value when the onRewardsMinted() reverts because of the
+                    ///      "out of gas" error. Here we assume that the onRewardsMinted() method doesn't
+                    ///      have reverts with empty error data except "out of gas".
+                    if (lowLevelRevertData.length == 0) revert UnrecoverableModuleError();
                     emit RewardsMintedReportFailed(
                         _stakingModuleIds[i],
                         lowLevelRevertData
@@ -549,6 +556,13 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
                 // oracle finished updating exited validators for all node ops
                 try moduleContract.onExitedAndStuckValidatorsCountsUpdated() {}
                 catch (bytes memory lowLevelRevertData) {
+                    /// @dev This check is required to prevent incorrect gas estimation of the method.
+                    ///      Without it, Ethereum nodes that use binary search for gas estimation may
+                    ///      return an invalid value when the onExitedAndStuckValidatorsCountsUpdated()
+                    ///      reverts because of the "out of gas" error. Here we assume that the
+                    ///      onExitedAndStuckValidatorsCountsUpdated() method doesn't have reverts with
+                    ///      empty error data except "out of gas".
+                    if (lowLevelRevertData.length == 0) revert UnrecoverableModuleError();
                     emit ExitedAndStuckValidatorsCountsUpdateFailed(
                         stakingModule.id,
                         lowLevelRevertData
@@ -1127,6 +1141,13 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             try IStakingModule(stakingModule.stakingModuleAddress)
                 .onWithdrawalCredentialsChanged() {}
             catch (bytes memory lowLevelRevertData) {
+                /// @dev This check is required to prevent incorrect gas estimation of the method.
+                ///      Without it, Ethereum nodes that use binary search for gas estimation may
+                ///      return an invalid value when the onWithdrawalCredentialsChanged()
+                ///      reverts because of the "out of gas" error. Here we assume that the
+                ///      onWithdrawalCredentialsChanged() method doesn't have reverts with
+                ///      empty error data except "out of gas".
+                if (lowLevelRevertData.length == 0) revert UnrecoverableModuleError();
                 _setStakingModuleStatus(stakingModule, StakingModuleStatus.DepositsPaused);
                 emit WithdrawalsCredentialsChangeFailed(stakingModule.id, lowLevelRevertData);
             }

@@ -351,6 +351,13 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       )
 
       assert.isTrue(await router.getStakingModuleIsDepositsPaused(stakingModuleId))
+
+      // staking module will revert with out of gas error (revert data is empty bytes)
+      await ContractStub(buggedStakingModule)
+        .on('onWithdrawalCredentialsChanged', { revert: { reason: 'outOfGas' } })
+        .update({ from: deployer })
+
+      await assert.reverts(router.setWithdrawalCredentials(newWC, { from: appManager }), 'UnrecoverableModuleError()')
     })
   })
 
@@ -990,6 +997,16 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         stakingModuleId: stakingModuleWithBugId,
         lowLevelRevertData: [errorMethodId, ...errorMessageEncoded].join(''),
       })
+
+      // staking module will revert with out of gas error (revert data is empty bytes)
+      await ContractStub(buggedStakingModule)
+        .on('onRewardsMinted', { revert: { reason: 'outOfGas' } })
+        .update({ from: deployer })
+
+      await assert.reverts(
+        router.reportRewardsMinted(stakingModuleIds, totalShares, { from: admin }),
+        'UnrecoverableModuleError()'
+      )
     })
   })
 
