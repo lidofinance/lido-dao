@@ -17,13 +17,13 @@ contract PositiveTokenRebaseLimiterMock {
             uint256 preTotalPooledEther,
             uint256 preTotalShares,
             uint256 currentTotalPooledEther,
-            uint256 rebaseLimit
+            uint256 positiveRebaseLimit
         )
     {
         preTotalPooledEther = limiter.preTotalPooledEther;
         preTotalShares = limiter.preTotalShares;
         currentTotalPooledEther = limiter.currentTotalPooledEther;
-        rebaseLimit = limiter.rebaseLimit;
+        positiveRebaseLimit = limiter.positiveRebaseLimit;
     }
 
     function initLimiterState(

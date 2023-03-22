@@ -376,8 +376,16 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         withdrawals = tokenRebaseLimiter.increaseEther(_withdrawalVaultBalance);
         elRewards = tokenRebaseLimiter.increaseEther(_elRewardsVaultBalance);
 
+        // determining the shares to burn limit that would have been
+        // in no withdrawals finalized during the report
+        // it's used to check later the provided `simulatedShareRate` value
+        // after the off-chain calculation via `eth_call` of `Lido.handleOracleReport()`
+        // see the step 9 of the `Lido._handleOracleReport()`
         simulatedSharesToBurn = Math256.min(tokenRebaseLimiter.getSharesToBurnLimit(), _sharesRequestedToBurn);
+
+        // remove ether to lock for withdrawals from total pooled ether
         tokenRebaseLimiter.decreaseEther(_etherToLockForWithdrawals);
+        // re-evaluate shares to burn after TVL was updated due to withdrawals finalization
         sharesToBurn = Math256.min(tokenRebaseLimiter.getSharesToBurnLimit(), _newSharesToBurnForWithdrawals + _sharesRequestedToBurn);
     }
 

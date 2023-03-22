@@ -26,7 +26,7 @@ struct TokenRebaseLimiterData {
     uint256 preTotalPooledEther;     // pre-rebase total pooled ether
     uint256 preTotalShares;          // pre-rebase total shares
     uint256 currentTotalPooledEther; // intermediate total pooled ether amount while token rebase is in progress
-    uint256 rebaseLimit;             // positive rebase limit (target value) with 1e9 precision (`LIMITER_PRECISION_BASE`)
+    uint256 positiveRebaseLimit;     // positive rebase limit (target value) with 1e9 precision (`LIMITER_PRECISION_BASE`)
 }
 
 /**
@@ -39,31 +39,31 @@ struct TokenRebaseLimiterData {
  *   dec - total shares decrease.
  *
  * ### Step 1. Calculating the allowed total pooled ether changes (preTotalShares === postTotalShares)
- *     Used for `PositiveTokenRebaseLimiter.consumeLimit()`, `PositiveTokenRebaseLimiter.raiseLimit()`.
+ *     Used for `PositiveTokenRebaseLimiter.increaseEther()`, `PositiveTokenRebaseLimiter.decreaseEther()`.
  *
  * R = ((preTotalPooledEther + inc) / preTotalShares) / (preTotalPooledEther / preTotalShares) - 1
- * R = ((preTotalPooledEther + inc) / preTotalShares) * (preTotalShares / preTotalPooledEther) - 1
- * R = (preTotalPooledEther + inc) / preTotalPooledEther) - 1
- * R = inc/preTotalPooledEther
+ * = ((preTotalPooledEther + inc) / preTotalShares) * (preTotalShares / preTotalPooledEther) - 1
+ * = (preTotalPooledEther + inc) / preTotalPooledEther) - 1
+ * = inc/preTotalPooledEther
  *
  * isolating inc:
  *
  * ``` inc = R * preTotalPooledEther ```
  *
- * ### Step 2. Calculating the allowed to burn shares (preTotalPooledEther != postTotalPooledEther)
+ * ### Step 2. Calculating the allowed to burn shares (preTotalPooledEther != currentTotalPooledEther)
  *     Used for `PositiveTokenRebaseLimiter.getSharesToBurnLimit()`.
  *
- * R = (postTotalPooledEther / (preTotalShares - dec)) / (preTotalPooledEther / preTotalShares) - 1,
- * let X = postTotalPooledEther / preTotalPooledEther
+ * R = (currentTotalPooledEther / (preTotalShares - dec)) / (preTotalPooledEther / preTotalShares) - 1,
+ * let X = currentTotalPooledEther / preTotalPooledEther
  *
  * then:
- * R = X * (preTotalShares / (preTotalShares - dec)) - 1
+ * R = X * (preTotalShares / (preTotalShares - dec)) - 1, or
  * (R+1) * (preTotalShares - dec) = X * preTotalShares
  *
  * isolating dec:
  * dec * (R + 1) = (R + 1 - X) * preTotalShares =>
  *
- * ``` dec = preTotalShares * (R + 1 - postTotalPooledEther/preTotalPooledEther) / (R + 1) ```
+ * ``` dec = preTotalShares * (R + 1 - currentTotalPooledEther/preTotalPooledEther) / (R + 1) ```
  *
  */
 library PositiveTokenRebaseLimiter {
@@ -92,7 +92,7 @@ library PositiveTokenRebaseLimiter {
 
         limiterState.currentTotalPooledEther = limiterState.preTotalPooledEther = _preTotalPooledEther;
         limiterState.preTotalShares = _preTotalShares;
-        limiterState.rebaseLimit = _rebaseLimit;
+        limiterState.positiveRebaseLimit = _rebaseLimit;
     }
 
     /**
@@ -101,7 +101,7 @@ library PositiveTokenRebaseLimiter {
      * @return true if limit is reached
      */
     function isLimitReached(TokenRebaseLimiterData memory _limiterState) internal pure returns (bool) {
-        if (_limiterState.rebaseLimit == UNLIMITED_REBASE) return false;
+        if (_limiterState.positiveRebaseLimit == UNLIMITED_REBASE) return false;
         if (_limiterState.currentTotalPooledEther < _limiterState.preTotalPooledEther) return false;
 
         uint256 accumulatedEther = _limiterState.currentTotalPooledEther - _limiterState.preTotalPooledEther;
@@ -111,7 +111,7 @@ library PositiveTokenRebaseLimiter {
             accumulatedRebase = accumulatedEther * LIMITER_PRECISION_BASE / _limiterState.preTotalPooledEther;
         }
 
-        return accumulatedRebase >= _limiterState.rebaseLimit;
+        return accumulatedRebase >= _limiterState.positiveRebaseLimit;
     }
 
     /**
@@ -122,7 +122,7 @@ library PositiveTokenRebaseLimiter {
     function decreaseEther(
         TokenRebaseLimiterData memory _limiterState, uint256 _etherAmount
     ) internal pure {
-        if (_limiterState.rebaseLimit == UNLIMITED_REBASE) return;
+        if (_limiterState.positiveRebaseLimit == UNLIMITED_REBASE) return;
 
         if (_etherAmount > _limiterState.currentTotalPooledEther) revert NegativeTotalPooledEther();
 
@@ -142,13 +142,13 @@ library PositiveTokenRebaseLimiter {
         pure
         returns (uint256 consumedEther)
     {
-        if (_limiterState.rebaseLimit == UNLIMITED_REBASE) return _etherAmount;
+        if (_limiterState.positiveRebaseLimit == UNLIMITED_REBASE) return _etherAmount;
 
         uint256 prevPooledEther = _limiterState.currentTotalPooledEther;
         _limiterState.currentTotalPooledEther += _etherAmount;
 
         uint256 maxTotalPooledEther = _limiterState.preTotalPooledEther +
-            (_limiterState.rebaseLimit * _limiterState.preTotalPooledEther) / LIMITER_PRECISION_BASE;
+            (_limiterState.positiveRebaseLimit * _limiterState.preTotalPooledEther) / LIMITER_PRECISION_BASE;
 
         _limiterState.currentTotalPooledEther
             = Math256.min(_limiterState.currentTotalPooledEther, maxTotalPooledEther);
@@ -168,11 +168,11 @@ library PositiveTokenRebaseLimiter {
         pure
         returns (uint256 maxSharesToBurn)
     {
-        if (_limiterState.rebaseLimit == UNLIMITED_REBASE) return _limiterState.preTotalShares;
+        if (_limiterState.positiveRebaseLimit == UNLIMITED_REBASE) return _limiterState.preTotalShares;
 
         if (isLimitReached(_limiterState)) return 0;
 
-        uint256 rebaseLimitPlus1 = _limiterState.rebaseLimit + LIMITER_PRECISION_BASE;
+        uint256 rebaseLimitPlus1 = _limiterState.positiveRebaseLimit + LIMITER_PRECISION_BASE;
         uint256 pooledEtherRate =
             (_limiterState.currentTotalPooledEther * LIMITER_PRECISION_BASE) / _limiterState.preTotalPooledEther;
 
