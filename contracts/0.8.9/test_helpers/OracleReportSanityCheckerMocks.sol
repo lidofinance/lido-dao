@@ -38,10 +38,19 @@ contract WithdrawalQueueStub is IWithdrawalQueue {
 }
 
 contract BurnerStub {
+    uint256 private nonCover;
+    uint256 private cover;
+
     function getSharesRequestedToBurn() external view returns (
         uint256 coverShares, uint256 nonCoverShares
     ) {
-        return (0, 0);
+        coverShares = cover;
+        nonCoverShares = nonCover;
+    }
+
+    function setSharesRequestedToBurn(uint256 _cover, uint256 _nonCover) external {
+        cover = _cover;
+        nonCover = _nonCover;
     }
 }
 

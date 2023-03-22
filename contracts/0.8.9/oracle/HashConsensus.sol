@@ -339,7 +339,7 @@ contract HashConsensus is AccessControlEnumerable {
     }
 
     /// @notice Sets the duration of the interval starting at the beginning of the frame during
-    /// which only the selected "fast lane" subset of oracle committee memebrs can (and expected
+    /// which only the selected "fast lane" subset of oracle committee members can (and expected
     /// to) submit a report.
     ///
     /// The fast lane subset is a subset consisting of `quorum` oracles that changes on each frame.

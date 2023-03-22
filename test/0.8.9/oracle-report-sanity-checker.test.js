@@ -1,7 +1,7 @@
 const { artifacts, contract, ethers } = require('hardhat')
 const { ETH } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
-const { getCurrentBlockTimestamp } = require('../helpers/blockchain')
+const { getCurrentBlockTimestamp, EvmSnapshot } = require('../helpers/blockchain')
 
 const mocksFilePath = 'contracts/0.8.9/test_helpers/OracleReportSanityCheckerMocks.sol'
 const LidoStub = artifacts.require(`${mocksFilePath}:LidoStub`)
@@ -22,7 +22,7 @@ function wei(number, units = 'wei') {
 }
 
 contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewardsVault, ...accounts]) => {
-  let oracleReportSanityChecker, lidoLocatorMock, lidoMock, withdrawalQueueMock, burnerMock
+  let oracleReportSanityChecker, lidoLocatorMock, lidoMock, withdrawalQueueMock, burnerMock, snapshot
   const managersRoster = {
     allLimitsManagers: accounts.slice(0, 2),
     churnValidatorsPerDayLimitManagers: accounts.slice(2, 4),
@@ -81,6 +81,19 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
         from: deployer,
       }
     )
+
+    snapshot = new EvmSnapshot(ethers.provider)
+    await snapshot.make()
+  })
+
+  afterEach(async () => {
+    await snapshot.rollback()
+  })
+
+  describe('getLidoLocator()', () => {
+    it('retrieves correct locator address', async () => {
+      assert.equals(await oracleReportSanityChecker.getLidoLocator(), lidoLocatorMock.address)
+    })
   })
 
   describe('setOracleReportLimits()', () => {
@@ -116,6 +129,13 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       assert.notEquals(limitsBefore.requestTimestampMargin, newLimitsList.requestTimestampMargin)
       assert.notEquals(limitsBefore.maxPositiveTokenRebase, newLimitsList.maxPositiveTokenRebase)
 
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setOracleReportLimits(Object.values(newLimitsList), {
+          from: deployer,
+        }),
+        deployer,
+        'ALL_LIMITS_MANAGER_ROLE'
+      )
       await oracleReportSanityChecker.setOracleReportLimits(Object.values(newLimitsList), {
         from: managersRoster.allLimitsManagers[0],
       })
@@ -148,7 +168,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
 
     it('reverts with error IncorrectWithdrawalsVaultBalance() when actual withdrawal vault balance is less than passed', async () => {
       const currentWithdrawalVaultBalance = await ethers.provider.getBalance(withdrawalVault)
-      await assert.revertsWithCustomError(
+      await assert.reverts(
         oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({ ...correctLidoOracleReport, withdrawalVaultBalance: currentWithdrawalVaultBalance.add(1) })
         ),
@@ -158,11 +178,22 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
 
     it('reverts with error IncorrectELRewardsVaultBalance() when actual el rewards vault balance is less than passed', async () => {
       const currentELRewardsVaultBalance = await ethers.provider.getBalance(elRewardsVault)
-      await assert.revertsWithCustomError(
+      await assert.reverts(
         oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({ ...correctLidoOracleReport, elRewardsVaultBalance: currentELRewardsVaultBalance.add(1) })
         ),
         `IncorrectELRewardsVaultBalance(${currentELRewardsVaultBalance.toString()})`
+      )
+    })
+
+    it('reverts with error IncorrectSharesRequestedToBurn() when actual shares to burn is less than passed', async () => {
+      await burnerMock.setSharesRequestedToBurn(10, 21)
+
+      await assert.reverts(
+        oracleReportSanityChecker.checkAccountingOracleReport(
+          ...Object.values({ ...correctLidoOracleReport, sharesRequestedToBurn: 32 })
+        ),
+        `IncorrectSharesRequestedToBurn(31)`
       )
     })
 
@@ -173,7 +204,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       const withdrawalVaultBalance = wei(500, 'eth')
       const unifiedPostCLBalance = postCLBalance + withdrawalVaultBalance
       const oneOffCLBalanceDecreaseBP = (maxBasisPoints * (preCLBalance - unifiedPostCLBalance)) / preCLBalance
-      await assert.revertsWithCustomError(
+      await assert.reverts(
         oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({
             ...correctLidoOracleReport,
@@ -183,6 +214,16 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
           })
         ),
         `IncorrectCLBalanceDecrease(${oneOffCLBalanceDecreaseBP.toString()})`
+      )
+
+      const postCLBalanceCorrect = wei(99_000, 'eth')
+      await oracleReportSanityChecker.checkAccountingOracleReport(
+        ...Object.values({
+          ...correctLidoOracleReport,
+          preCLBalance: preCLBalance.toString(),
+          postCLBalance: postCLBalanceCorrect.toString(),
+          withdrawalVaultBalance: withdrawalVaultBalance.toString(),
+        })
       )
     })
 
@@ -194,7 +235,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       const timeElapsed = BigInt(correctLidoOracleReport.timeElapsed)
       const annualBalanceIncrease =
         (secondsInOneYear * maxBasisPoints * (postCLBalance - preCLBalance)) / preCLBalance / timeElapsed
-      await assert.revertsWithCustomError(
+      await assert.reverts(
         oracleReportSanityChecker.checkAccountingOracleReport(
           ...Object.values({
             ...correctLidoOracleReport,
@@ -209,36 +250,105 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       await oracleReportSanityChecker.checkAccountingOracleReport(...Object.values(correctLidoOracleReport))
     })
 
-    it('set maxAccountingExtraDataListItemsCount', async () => {
-      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits())
-        .maxAccountingExtraDataListItemsCount
-      const newValue = 31
+    it('set one-off CL balance decrease', async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).oneOffCLBalanceDecreaseBPLimit
+      const newValue = 3
       assert.notEquals(newValue, previousValue)
-      await oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(newValue, {
-        from: managersRoster.maxAccountingExtraDataListItemsCountManagers[0],
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setOneOffCLBalanceDecreaseBPLimit(newValue, {
+          from: deployer,
+        }),
+        deployer,
+        'ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE'
+      )
+      const tx = await oracleReportSanityChecker.setOneOffCLBalanceDecreaseBPLimit(newValue, {
+        from: managersRoster.oneOffCLBalanceDecreaseLimitManagers[0],
       })
-      assert.equals(
-        (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount,
-        newValue
+      assert.equals((await oracleReportSanityChecker.getOracleReportLimits()).oneOffCLBalanceDecreaseBPLimit, newValue)
+      assert.emits(tx, 'OneOffCLBalanceDecreaseBPLimitSet', { oneOffCLBalanceDecreaseBPLimit: newValue })
+    })
+
+    it('set annual balance increase', async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).annualBalanceIncreaseBPLimit
+      const newValue = 9
+      assert.notEquals(newValue, previousValue)
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setAnnualBalanceIncreaseBPLimit(newValue, {
+          from: deployer,
+        }),
+        deployer,
+        'ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE'
+      )
+      const tx = await oracleReportSanityChecker.setAnnualBalanceIncreaseBPLimit(newValue, {
+        from: managersRoster.annualBalanceIncreaseLimitManagers[0],
+      })
+      assert.equals((await oracleReportSanityChecker.getOracleReportLimits()).annualBalanceIncreaseBPLimit, newValue)
+      assert.emits(tx, 'AnnualBalanceIncreaseBPLimitSet', { annualBalanceIncreaseBPLimit: newValue })
+    })
+
+    it('handles zero time passed for annual balance increase', async () => {
+      const preCLBalance = BigInt(correctLidoOracleReport.preCLBalance)
+      const postCLBalance = preCLBalance + 1000n
+
+      await oracleReportSanityChecker.checkAccountingOracleReport(
+        ...Object.values({
+          ...correctLidoOracleReport,
+          postCLBalance: postCLBalance.toString(),
+          timeElapsed: 0,
+        })
       )
     })
 
-    it('set maxNodeOperatorsPerExtraDataItemCount', async () => {
-      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits())
-        .maxNodeOperatorsPerExtraDataItemCount
-      const newValue = 33
+    it('handles zero pre CL balance estimating balance increase', async () => {
+      const preCLBalance = BigInt(0)
+      const postCLBalance = preCLBalance + 1000n
+
+      await oracleReportSanityChecker.checkAccountingOracleReport(
+        ...Object.values({
+          ...correctLidoOracleReport,
+          preCLBalance: preCLBalance.toString(),
+          postCLBalance: postCLBalance.toString(),
+        })
+      )
+    })
+
+    it('handles zero time passed for appeared validators', async () => {
+      const preCLValidators = BigInt(correctLidoOracleReport.preCLValidators)
+      const postCLValidators = preCLValidators + 2n
+
+      await oracleReportSanityChecker.checkAccountingOracleReport(
+        ...Object.values({
+          ...correctLidoOracleReport,
+          preCLValidators: preCLValidators.toString(),
+          postCLValidators: postCLValidators.toString(),
+          timeElapsed: 0,
+        })
+      )
+    })
+
+    it('set simulated share rate deviation', async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).simulatedShareRateDeviationBPLimit
+      const newValue = 7
       assert.notEquals(newValue, previousValue)
-      await oracleReportSanityChecker.setMaxNodeOperatorsPerExtraDataItemCount(newValue, {
-        from: managersRoster.maxNodeOperatorsPerExtraDataItemCountManagers[0],
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setSimulatedShareRateDeviationBPLimit(newValue, {
+          from: deployer,
+        }),
+        deployer,
+        'SHARE_RATE_DEVIATION_LIMIT_MANAGER_ROLE'
+      )
+      const tx = await oracleReportSanityChecker.setSimulatedShareRateDeviationBPLimit(newValue, {
+        from: managersRoster.shareRateDeviationLimitManagers[0],
       })
       assert.equals(
-        (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItemCount,
+        (await oracleReportSanityChecker.getOracleReportLimits()).simulatedShareRateDeviationBPLimit,
         newValue
       )
+      assert.emits(tx, 'SimulatedShareRateDeviationBPLimitSet', { simulatedShareRateDeviationBPLimit: newValue })
     })
   })
 
-  describe('checkWithdrawalQueueOracleReport()', async () => {
+  describe('checkWithdrawalQueueOracleReport()', () => {
     const oldRequestId = 1
     const newRequestId = 2
     let oldRequestCreationTimestamp, newRequestCreationTimestamp
@@ -258,7 +368,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     })
 
     it('reverts with the error IncorrectRequestFinalization() when the creation timestamp of requestIdToFinalizeUpTo is too close to report timestamp', async () => {
-      await assert.revertsWithCustomError(
+      await assert.reverts(
         oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
           ...Object.values({
             ...correctWithdrawalQueueOracleReport,
@@ -274,9 +384,27 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
         ...Object.values(correctWithdrawalQueueOracleReport)
       )
     })
+
+    it('set timestamp margin for finalization', async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).requestTimestampMargin
+      const newValue = 3302
+      assert.notEquals(newValue, previousValue)
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setRequestTimestampMargin(newValue, {
+          from: deployer,
+        }),
+        deployer,
+        'REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE'
+      )
+      const tx = await oracleReportSanityChecker.setRequestTimestampMargin(newValue, {
+        from: managersRoster.requestTimestampMarginManagers[0],
+      })
+      assert.equals((await oracleReportSanityChecker.getOracleReportLimits()).requestTimestampMargin, newValue)
+      assert.emits(tx, 'RequestTimestampMarginSet', { requestTimestampMargin: newValue })
+    })
   })
 
-  describe('checkSimulatedShareRate', async () => {
+  describe('checkSimulatedShareRate', () => {
     const correctSimulatedShareRate = {
       postTotalPooledEther: ETH(9),
       postTotalShares: ETH(4),
@@ -288,7 +416,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     it('reverts with error TooHighSimulatedShareRate() when reported and onchain share rate differs', async () => {
       const simulatedShareRate = BigInt(ETH(2.1)) * 10n ** 9n
       const actualShareRate = BigInt(2) * 10n ** 27n
-      await assert.revertsWithCustomError(
+      await assert.reverts(
         oracleReportSanityChecker.checkSimulatedShareRate(
           ...Object.values({
             ...correctSimulatedShareRate,
@@ -302,7 +430,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     it('reverts with error TooLowSimulatedShareRate() when reported and onchain share rate differs', async () => {
       const simulatedShareRate = BigInt(ETH(1.9)) * 10n ** 9n
       const actualShareRate = BigInt(2) * 10n ** 27n
-      await assert.revertsWithCustomError(
+      await assert.reverts(
         oracleReportSanityChecker.checkSimulatedShareRate(
           ...Object.values({
             ...correctSimulatedShareRate,
@@ -314,7 +442,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
     })
 
     it('reverts with error ActualShareRateIsZero() when actual share rate is zero', async () => {
-      await assert.revertsWithCustomError(
+      await assert.reverts(
         oracleReportSanityChecker.checkSimulatedShareRate(
           ...Object.values({
             ...correctSimulatedShareRate,
@@ -328,6 +456,771 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
 
     it('passes all checks with correct share rate', async () => {
       await oracleReportSanityChecker.checkSimulatedShareRate(...Object.values(correctSimulatedShareRate))
+    })
+  })
+
+  describe('max positive rebase', () => {
+    const defaultSmoothenTokenRebaseParams = {
+      preTotalPooledEther: ETH(100),
+      preTotalShares: ETH(100),
+      preCLBalance: ETH(100),
+      postCLBalance: ETH(100),
+      withdrawalVaultBalance: 0,
+      elRewardsVaultBalance: 0,
+      sharesRequestedToBurn: 0,
+      etherToLockForWithdrawals: 0,
+      newSharesToBurnForWithdrawals: 0,
+    }
+
+    it('getMaxPositiveTokenRebase works', async () => {
+      assert.equals(
+        await oracleReportSanityChecker.getMaxPositiveTokenRebase(),
+        defaultLimitsList.maxPositiveTokenRebase
+      )
+    })
+
+    it('setMaxPositiveTokenRebase works', async () => {
+      const newRebaseLimit = 1_000_000
+      assert.notEquals(newRebaseLimit, defaultLimitsList.maxPositiveTokenRebase)
+
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, { from: deployer }),
+        deployer,
+        'MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE'
+      )
+
+      const tx = await oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, {
+        from: managersRoster.maxPositiveTokenRebaseManagers[0],
+      })
+
+      assert.equals(await oracleReportSanityChecker.getMaxPositiveTokenRebase(), newRebaseLimit)
+      assert.emits(tx, 'MaxPositiveTokenRebaseSet', { maxPositiveTokenRebase: newRebaseLimit })
+    })
+
+    it('all zero data works', async () => {
+      const { withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            preTotalPooledEther: 0,
+            preTotalShares: 0,
+            preCLBalance: 0,
+            postCLBalance: 0,
+          })
+        )
+
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+    })
+
+    it('trivial smoothen rebase works when post CL < pre CL and no withdrawals', async () => {
+      const newRebaseLimit = 100_000 // 0.01%
+      await oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, {
+        from: managersRoster.maxPositiveTokenRebaseManagers[0],
+      })
+
+      let { withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({ ...defaultSmoothenTokenRebaseParams, postCLBalance: ETH(99) })
+        )
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(99),
+            elRewardsVaultBalance: ETH(0.1),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, ETH(0.1))
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // withdrawals
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(99),
+            withdrawalVaultBalance: ETH(0.1),
+          })
+        ))
+      assert.equals(withdrawals, ETH(0.1))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // shares requested to burn
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(99),
+            sharesRequestedToBurn: ETH(0.1),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, ETH(0.1))
+      assert.equals(sharesToBurn, ETH(0.1))
+    })
+
+    it('trivial smoothen rebase works when post CL > pre CL and no withdrawals', async () => {
+      const newRebaseLimit = 100_000_000 // 10%
+      await oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, {
+        from: managersRoster.maxPositiveTokenRebaseManagers[0],
+      })
+
+      let { withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({ ...defaultSmoothenTokenRebaseParams, postCLBalance: ETH(100.01) })
+        )
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(100.01),
+            elRewardsVaultBalance: ETH(0.1),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, ETH(0.1))
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // withdrawals
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(100.01),
+            withdrawalVaultBalance: ETH(0.1),
+          })
+        ))
+      assert.equals(withdrawals, ETH(0.1))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // shares requested to burn
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(100.01),
+            sharesRequestedToBurn: ETH(0.1),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, ETH(0.1))
+      assert.equals(sharesToBurn, ETH(0.1))
+    })
+
+    it('non-trivial smoothen rebase works when post CL < pre CL and no withdrawals', async () => {
+      const newRebaseLimit = 10_000_000 // 1%
+      await oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, {
+        from: managersRoster.maxPositiveTokenRebaseManagers[0],
+      })
+
+      let { withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({ ...defaultSmoothenTokenRebaseParams, postCLBalance: ETH(99) })
+        )
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(99),
+            elRewardsVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, ETH(2))
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // withdrawals
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(99),
+            withdrawalVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, ETH(2))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // withdrawals + el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(99),
+            withdrawalVaultBalance: ETH(5),
+            elRewardsVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, ETH(2))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // shares requested to burn
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(99),
+            sharesRequestedToBurn: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, '1980198019801980198') // ETH(100. - (99. / 1.01))
+      assert.equals(sharesToBurn, '1980198019801980198') // the same as above since no withdrawals
+    })
+
+    it('non-trivial smoothen rebase works when post CL > pre CL and no withdrawals', async () => {
+      const newRebaseLimit = 20_000_000 // 2%
+      await oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, {
+        from: managersRoster.maxPositiveTokenRebaseManagers[0],
+      })
+
+      let { withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({ ...defaultSmoothenTokenRebaseParams, postCLBalance: ETH(101) })
+        )
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(101),
+            elRewardsVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, ETH(1))
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // withdrawals
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(101),
+            withdrawalVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, ETH(1))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // withdrawals + el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(101),
+            elRewardsVaultBalance: ETH(5),
+            withdrawalVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, ETH(1))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, 0)
+      // shares requested to burn
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultSmoothenTokenRebaseParams,
+            postCLBalance: ETH(101),
+            sharesRequestedToBurn: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, '980392156862745098') // ETH(100. - (101. / 1.02))
+      assert.equals(sharesToBurn, '980392156862745098') // the same as above since no withdrawals
+    })
+
+    it('non-trivial smoothen rebase works when post CL < pre CL and withdrawals', async () => {
+      const newRebaseLimit = 5_000_000 // 0.5%
+      await oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, {
+        from: managersRoster.maxPositiveTokenRebaseManagers[0],
+      })
+
+      const defaultRebaseParams = {
+        ...defaultSmoothenTokenRebaseParams,
+        postCLBalance: ETH(99),
+        etherToLockForWithdrawals: ETH(10),
+        newSharesToBurnForWithdrawals: ETH(10),
+      }
+
+      let { withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(...Object.values(defaultRebaseParams))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, ETH(10))
+      // el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultRebaseParams,
+            elRewardsVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, ETH(1.5))
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, '9950248756218905472') // 100. - 90.5 / 1.005
+      // withdrawals
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultRebaseParams,
+            withdrawalVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, ETH(1.5))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, '9950248756218905472') // 100. - 90.5 / 1.005
+      // withdrawals + el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultRebaseParams,
+            withdrawalVaultBalance: ETH(5),
+            elRewardsVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, ETH(1.5))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, '9950248756218905472') // 100. - 90.5 / 1.005
+      // shares requested to burn
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultRebaseParams,
+            sharesRequestedToBurn: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, '1492537313432835820') // ETH(100. - (99. / 1.005))
+      assert.equals(sharesToBurn, '11442786069651741293') // ETH(100. - (89. / 1.005))
+    })
+
+    it('non-trivial smoothen rebase works when post CL > pre CL and withdrawals', async () => {
+      const newRebaseLimit = 40_000_000 // 4%
+      await oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, {
+        from: managersRoster.maxPositiveTokenRebaseManagers[0],
+      })
+
+      const defaultRebaseParams = {
+        ...defaultSmoothenTokenRebaseParams,
+        postCLBalance: ETH(102),
+        etherToLockForWithdrawals: ETH(10),
+        newSharesToBurnForWithdrawals: ETH(10),
+      }
+
+      let { withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(...Object.values(defaultRebaseParams))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, ETH(10))
+      // el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultRebaseParams,
+            elRewardsVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, ETH(2))
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, '9615384615384615384') // 100. - 94. / 1.04
+      // withdrawals
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultRebaseParams,
+            withdrawalVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, ETH(2))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, '9615384615384615384') // 100. - 94. / 1.04
+      // withdrawals + el rewards
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultRebaseParams,
+            withdrawalVaultBalance: ETH(5),
+            elRewardsVaultBalance: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, ETH(2))
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, 0)
+      assert.equals(sharesToBurn, '9615384615384615384') // 100. - 94. / 1.04
+      // shares requested to burn
+      ;({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(
+          ...Object.values({
+            ...defaultRebaseParams,
+            sharesRequestedToBurn: ETH(5),
+          })
+        ))
+      assert.equals(withdrawals, 0)
+      assert.equals(elRewards, 0)
+      assert.equals(simulatedSharesToBurn, '1923076923076923076') // ETH(100. - (102. / 1.04))
+      assert.equals(sharesToBurn, '11538461538461538461') // ETH(100. - (92. / 1.04))
+    })
+
+    it('share rate ~1 case with huge withdrawal', async () => {
+      const newRebaseLimit = 1_000_000 // 0.1%
+      await oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, {
+        from: managersRoster.maxPositiveTokenRebaseManagers[0],
+      })
+
+      const rebaseParams = {
+        preTotalPooledEther: ETH('1000000'),
+        preTotalShares: ETH('1000000'),
+        preCLBalance: ETH('1000000'),
+        postCLBalance: ETH('1000000'),
+        elRewardsVaultBalance: ETH(500),
+        withdrawalVaultBalance: ETH(500),
+        sharesRequestedToBurn: ETH(0),
+        etherToLockForWithdrawals: ETH(40000),
+        newSharesToBurnForWithdrawals: ETH(40000),
+      }
+
+      const { withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(...Object.values(rebaseParams))
+
+      assert.equals(withdrawals, ETH(500))
+      assert.equals(elRewards, ETH(500))
+      assert.equals(simulatedSharesToBurn, ETH(0))
+      assert.equals(sharesToBurn, '39960039960039960039960') // ETH(1000000 - 961000. / 1.001)
+    })
+  })
+
+  describe('churn limit', () => {
+    it('setChurnValidatorsPerDayLimit works', async () => {
+      const oldChurnLimit = defaultLimitsList.churnValidatorsPerDayLimit
+      await oracleReportSanityChecker.checkExitedValidatorsRatePerDay(oldChurnLimit)
+      await assert.reverts(
+        oracleReportSanityChecker.checkExitedValidatorsRatePerDay(oldChurnLimit + 1),
+        `ExitedValidatorsLimitExceeded(${oldChurnLimit}, ${oldChurnLimit + 1})`
+      )
+      assert.equals((await oracleReportSanityChecker.getOracleReportLimits()).churnValidatorsPerDayLimit, oldChurnLimit)
+
+      const newChurnLimit = 30
+      assert.notEquals(newChurnLimit, oldChurnLimit)
+
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setChurnValidatorsPerDayLimit(newChurnLimit, { from: deployer }),
+        deployer,
+        'CHURN_VALIDATORS_PER_DAY_LIMIT_MANGER_ROLE'
+      )
+
+      const tx = await oracleReportSanityChecker.setChurnValidatorsPerDayLimit(newChurnLimit, {
+        from: managersRoster.churnValidatorsPerDayLimitManagers[0],
+      })
+
+      assert.emits(tx, 'ChurnValidatorsPerDayLimitSet', { churnValidatorsPerDayLimit: newChurnLimit })
+      assert.equals((await oracleReportSanityChecker.getOracleReportLimits()).churnValidatorsPerDayLimit, newChurnLimit)
+
+      await oracleReportSanityChecker.checkExitedValidatorsRatePerDay(newChurnLimit)
+      await assert.reverts(
+        oracleReportSanityChecker.checkExitedValidatorsRatePerDay(newChurnLimit + 1),
+        `ExitedValidatorsLimitExceeded(${newChurnLimit}, ${newChurnLimit + 1})`
+      )
+    })
+
+    it('checkAccountingOracleReport: churnLimit works', async () => {
+      const churnLimit = defaultLimitsList.churnValidatorsPerDayLimit
+      assert.equals((await oracleReportSanityChecker.getOracleReportLimits()).churnValidatorsPerDayLimit, churnLimit)
+
+      await oracleReportSanityChecker.checkAccountingOracleReport(
+        ...Object.values({ ...correctLidoOracleReport, postCLValidators: churnLimit })
+      )
+      await assert.reverts(
+        oracleReportSanityChecker.checkAccountingOracleReport(
+          ...Object.values({
+            ...correctLidoOracleReport,
+            postCLValidators: churnLimit + 1,
+          })
+        ),
+        `IncorrectAppearedValidators(${churnLimit + 1})`
+      )
+    })
+  })
+
+  describe('checkExitBusOracleReport', () => {
+    beforeEach(async () => {
+      await oracleReportSanityChecker.setOracleReportLimits(Object.values(defaultLimitsList), {
+        from: managersRoster.allLimitsManagers[0],
+      })
+    })
+
+    it('checkExitBusOracleReport works', async () => {
+      const maxRequests = defaultLimitsList.maxValidatorExitRequestsPerReport
+      assert.equals(
+        (await oracleReportSanityChecker.getOracleReportLimits()).maxValidatorExitRequestsPerReport,
+        maxRequests
+      )
+
+      await oracleReportSanityChecker.checkExitBusOracleReport(maxRequests)
+      await assert.reverts(
+        oracleReportSanityChecker.checkExitBusOracleReport(maxRequests + 1),
+        `IncorrectNumberOfExitRequestsPerReport(${maxRequests})`
+      )
+    })
+
+    it('setMaxExitRequestsPerOracleReport', async () => {
+      const oldMaxRequests = defaultLimitsList.maxValidatorExitRequestsPerReport
+      await oracleReportSanityChecker.checkExitBusOracleReport(oldMaxRequests)
+      await assert.reverts(
+        oracleReportSanityChecker.checkExitBusOracleReport(oldMaxRequests + 1),
+        `IncorrectNumberOfExitRequestsPerReport(${oldMaxRequests})`
+      )
+      assert.equals(
+        (await oracleReportSanityChecker.getOracleReportLimits()).maxValidatorExitRequestsPerReport,
+        oldMaxRequests
+      )
+
+      const newMaxRequests = 306
+      assert.notEquals(newMaxRequests, oldMaxRequests)
+
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setMaxExitRequestsPerOracleReport(newMaxRequests, { from: deployer }),
+        deployer,
+        'MAX_VALIDATOR_EXIT_REQUESTS_PER_REPORT_ROLE'
+      )
+
+      const tx = await oracleReportSanityChecker.setMaxExitRequestsPerOracleReport(newMaxRequests, {
+        from: managersRoster.maxValidatorExitRequestsPerReportManagers[0],
+      })
+
+      assert.emits(tx, 'MaxValidatorExitRequestsPerReportSet', { maxValidatorExitRequestsPerReport: newMaxRequests })
+      assert.equals(
+        (await oracleReportSanityChecker.getOracleReportLimits()).maxValidatorExitRequestsPerReport,
+        newMaxRequests
+      )
+
+      await oracleReportSanityChecker.checkExitBusOracleReport(newMaxRequests)
+      await assert.reverts(
+        oracleReportSanityChecker.checkExitBusOracleReport(newMaxRequests + 1),
+        `IncorrectNumberOfExitRequestsPerReport(${newMaxRequests})`
+      )
+    })
+  })
+
+  describe('extra data reporting', () => {
+    beforeEach(async () => {
+      await oracleReportSanityChecker.setOracleReportLimits(Object.values(defaultLimitsList), {
+        from: managersRoster.allLimitsManagers[0],
+      })
+    })
+
+    it('set maxNodeOperatorsPerExtraDataItemCount', async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits())
+        .maxNodeOperatorsPerExtraDataItemCount
+      const newValue = 33
+      assert.notEquals(newValue, previousValue)
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setMaxNodeOperatorsPerExtraDataItemCount(newValue, {
+          from: deployer,
+        }),
+        deployer,
+        'MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_COUNT_ROLE'
+      )
+      const tx = await oracleReportSanityChecker.setMaxNodeOperatorsPerExtraDataItemCount(newValue, {
+        from: managersRoster.maxNodeOperatorsPerExtraDataItemCountManagers[0],
+      })
+      assert.equals(
+        (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItemCount,
+        newValue
+      )
+      assert.emits(tx, 'MaxNodeOperatorsPerExtraDataItemCountSet', { maxNodeOperatorsPerExtraDataItemCount: newValue })
+    })
+
+    it('set maxAccountingExtraDataListItemsCount', async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits())
+        .maxAccountingExtraDataListItemsCount
+      const newValue = 31
+      assert.notEquals(newValue, previousValue)
+      await assert.revertsOZAccessControl(
+        oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(newValue, {
+          from: deployer,
+        }),
+        deployer,
+        'MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE'
+      )
+      const tx = await oracleReportSanityChecker.setMaxAccountingExtraDataListItemsCount(newValue, {
+        from: managersRoster.maxAccountingExtraDataListItemsCountManagers[0],
+      })
+      assert.equals(
+        (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount,
+        newValue
+      )
+      assert.emits(tx, 'MaxAccountingExtraDataListItemsCountSet', { maxAccountingExtraDataListItemsCount: newValue })
+    })
+
+    it('checkNodeOperatorsPerExtraDataItemCount', async () => {
+      const maxCount = (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItemCount
+
+      await oracleReportSanityChecker.checkNodeOperatorsPerExtraDataItemCount(12, maxCount)
+
+      await assert.reverts(
+        oracleReportSanityChecker.checkNodeOperatorsPerExtraDataItemCount(12, +maxCount + 1),
+        `TooManyNodeOpsPerExtraDataItem(12, ${+maxCount + 1})`
+      )
+    })
+
+    it('checkAccountingExtraDataListItemsCount', async () => {
+      const maxCount = (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount
+
+      await oracleReportSanityChecker.checkAccountingExtraDataListItemsCount(maxCount)
+
+      await assert.reverts(
+        oracleReportSanityChecker.checkAccountingExtraDataListItemsCount(maxCount + 1),
+        `MaxAccountingExtraDataItemsCountExceeded(${maxCount}, ${maxCount + 1})`
+      )
+    })
+  })
+
+  describe('check limit boundaries', () => {
+    it('values must be less or equal to MAX_BASIS_POINTS', async () => {
+      const MAX_BASIS_POINTS = 10000
+      const INVALID_BASIS_POINTS = MAX_BASIS_POINTS + 1
+
+      await assert.reverts(
+        oracleReportSanityChecker.setOracleReportLimits(
+          Object.values({ ...defaultLimitsList, oneOffCLBalanceDecreaseBPLimit: INVALID_BASIS_POINTS }),
+          {
+            from: managersRoster.allLimitsManagers[0],
+          }
+        ),
+        `IncorrectLimitValue(${INVALID_BASIS_POINTS}, ${MAX_BASIS_POINTS})`
+      )
+
+      await assert.reverts(
+        oracleReportSanityChecker.setOracleReportLimits(
+          Object.values({ ...defaultLimitsList, annualBalanceIncreaseBPLimit: 10001 }),
+          {
+            from: managersRoster.allLimitsManagers[0],
+          }
+        ),
+        `IncorrectLimitValue(${INVALID_BASIS_POINTS}, ${MAX_BASIS_POINTS})`
+      )
+
+      await assert.reverts(
+        oracleReportSanityChecker.setOracleReportLimits(
+          Object.values({ ...defaultLimitsList, simulatedShareRateDeviationBPLimit: 10001 }),
+          {
+            from: managersRoster.allLimitsManagers[0],
+          }
+        ),
+        `IncorrectLimitValue(${INVALID_BASIS_POINTS}, ${MAX_BASIS_POINTS})`
+      )
+    })
+
+    it('values must be less or equal to type(uint16).max', async () => {
+      const MAX_UINT_16 = 65535
+      const INVALID_VALUE = MAX_UINT_16 + 1
+
+      await assert.reverts(
+        oracleReportSanityChecker.setOracleReportLimits(
+          Object.values({ ...defaultLimitsList, churnValidatorsPerDayLimit: INVALID_VALUE }),
+          {
+            from: managersRoster.allLimitsManagers[0],
+          }
+        ),
+        `IncorrectLimitValue(${INVALID_VALUE}, ${MAX_UINT_16})`
+      )
+
+      await assert.reverts(
+        oracleReportSanityChecker.setOracleReportLimits(
+          Object.values({ ...defaultLimitsList, maxValidatorExitRequestsPerReport: INVALID_VALUE }),
+          {
+            from: managersRoster.allLimitsManagers[0],
+          }
+        ),
+        `IncorrectLimitValue(${INVALID_VALUE}, ${MAX_UINT_16})`
+      )
+
+      await assert.reverts(
+        oracleReportSanityChecker.setOracleReportLimits(
+          Object.values({ ...defaultLimitsList, maxAccountingExtraDataListItemsCount: INVALID_VALUE }),
+          {
+            from: managersRoster.allLimitsManagers[0],
+          }
+        ),
+        `IncorrectLimitValue(${INVALID_VALUE}, ${MAX_UINT_16})`
+      )
+
+      await assert.reverts(
+        oracleReportSanityChecker.setOracleReportLimits(
+          Object.values({ ...defaultLimitsList, maxNodeOperatorsPerExtraDataItemCount: INVALID_VALUE }),
+          {
+            from: managersRoster.allLimitsManagers[0],
+          }
+        ),
+        `IncorrectLimitValue(${INVALID_VALUE}, ${MAX_UINT_16})`
+      )
+    })
+
+    it('values must be less or equals to type(uint64).max', async () => {
+      const MAX_UINT_64 = BigInt(2) ** 64n - 1n
+      const INVALID_VALUE = MAX_UINT_64 + 1n
+
+      await assert.reverts(
+        oracleReportSanityChecker.setOracleReportLimits(
+          Object.values({ ...defaultLimitsList, requestTimestampMargin: INVALID_VALUE.toString() }),
+          {
+            from: managersRoster.allLimitsManagers[0],
+          }
+        ),
+        `IncorrectLimitValue(${INVALID_VALUE.toString()}, ${MAX_UINT_64.toString()})`
+      )
+
+      await assert.reverts(
+        oracleReportSanityChecker.setOracleReportLimits(
+          Object.values({ ...defaultLimitsList, maxPositiveTokenRebase: INVALID_VALUE.toString() }),
+          {
+            from: managersRoster.allLimitsManagers[0],
+          }
+        ),
+        `IncorrectLimitValue(${INVALID_VALUE.toString()}, ${MAX_UINT_64.toString()})`
+      )
     })
   })
 })

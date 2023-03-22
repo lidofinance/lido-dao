@@ -132,24 +132,23 @@ const calcSharesMintedAsFees = (rewards, fee, feePoints, prevTotalShares, newTot
 const limitRebase = (limitE9, preTotalPooledEther, preTotalShares, clBalanceUpdate, elBalanceUpdate, sharesToBurn) => {
   const bnE9 = toBN(e9(1))
 
-  let accumulatedRebase = toBN(0)
-  const clRebase = toBN(clBalanceUpdate).mul(bnE9).div(toBN(preTotalPooledEther))
-  accumulatedRebase = accumulatedRebase.add(clRebase)
-  if (limitE9.lte(accumulatedRebase)) {
+  const etherLimit = limitE9.mul(toBN(preTotalPooledEther)).div(bnE9).add(toBN(preTotalPooledEther))
+
+  const clRebase = toBN(preTotalPooledEther).add(toBN(clBalanceUpdate))
+  if (etherLimit.lte(clRebase)) {
     return { elBalanceUpdate: 0, sharesToBurn: 0 }
   }
 
-  let remainLimit = limitE9.sub(accumulatedRebase)
-  const remainEther = remainLimit.mul(toBN(preTotalPooledEther)).div(bnE9)
+  const remainEther = etherLimit.sub(clRebase)
   if (remainEther.lte(toBN(elBalanceUpdate))) {
     return { elBalanceUpdate: remainEther, sharesToBurn: 0 }
   }
 
-  const elRebase = toBN(elBalanceUpdate).mul(bnE9).div(toBN(preTotalPooledEther))
-  accumulatedRebase = accumulatedRebase.add(elRebase)
-  remainLimit = toBN(limitE9).sub(accumulatedRebase)
+  const postTotalPooledEther = clRebase.add(toBN(elBalanceUpdate))
+  const rebaseLimitPlus1 = toBN(limitE9).add(bnE9)
+  const tvlRate = toBN(postTotalPooledEther).mul(bnE9).div(toBN(preTotalPooledEther))
 
-  const remainShares = remainLimit.mul(toBN(preTotalShares)).div(bnE9.add(remainLimit))
+  const remainShares = toBN(preTotalShares).mul(rebaseLimitPlus1.sub(tvlRate)).div(rebaseLimitPlus1)
 
   if (remainShares.lte(toBN(sharesToBurn))) {
     return { elBalanceUpdate, sharesToBurn: remainShares }
