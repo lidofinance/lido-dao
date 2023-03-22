@@ -75,6 +75,8 @@ contract('WithdrawalQueue', ([owner, user]) => {
         user,
         {
           from: user,
+          // smap of large transactions causes local network baseFee rise in next blocks
+          // increase gasPrice a bit on every tx to make sure execute
           gasPrice: gasPrice++,
           gasLimit: 1000000000,
         },
