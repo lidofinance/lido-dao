@@ -15,7 +15,7 @@ const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const TOTAL_BASIS_POINTS = 10 ** 4
 const CURATED_MODULE_ID = 1
 const LIDO_INIT_BALANCE_ETH = 1
-const ONE_DAY = 1 * 24 * 60 * 60
+const ONE_DAY_WITH_MARGIN = 1 * 24 * 60 * 60 + 60 * 10 // one day and 10 minutes
 
 const ORACLE_REPORT_LIMITS_BOILERPLATE = {
   churnValidatorsPerDayLimit: 255,
@@ -525,7 +525,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assert.equals(oldTotalPooledEther, ETH(107.35), 'total pooled ether')
 
     // Reporting the same balance as it was before (64.35ETH => 64.35ETH)
-    await advanceChainTime(ONE_DAY)
+    await advanceChainTime(ONE_DAY_WITH_MARGIN)
 
     const { refSlot } = await consensus.getCurrentFrame()
 
@@ -621,7 +621,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assert.equals(oldTotalPooledEther, ETH(114.35), 'total pooled ether')
 
     // Reporting balance decrease (64.35ETH => 62.35ETH)
-    await advanceChainTime(ONE_DAY)
+    await advanceChainTime(ONE_DAY_WITH_MARGIN)
 
     const { refSlot } = await consensus.getCurrentFrame()
 
@@ -709,7 +709,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assert.equals(oldTotalPooledEther, ETH(117.35), 'total pooled ether')
 
     // Reporting balance decrease (62.35ETH => 59.35ETH)
-    await advanceChainTime(ONE_DAY)
+    await advanceChainTime(ONE_DAY_WITH_MARGIN)
 
     const { refSlot } = await consensus.getCurrentFrame()
 
@@ -779,7 +779,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assert.equals(oldTotalPooledEther, ETH(117.35), 'total pooled ether')
 
     // Reporting balance decrease (59.35ETH => 51.35ETH)
-    await advanceChainTime(ONE_DAY)
+    await advanceChainTime(ONE_DAY_WITH_MARGIN)
 
     const { refSlot } = await consensus.getCurrentFrame()
 
@@ -870,7 +870,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assert.equals(oldTotalPooledEther, ETH(111.35), 'total pooled ether')
 
     // Reporting balance increase (51.35ETH => 51.49ETH)
-    await advanceChainTime(ONE_DAY)
+    await advanceChainTime(ONE_DAY_WITH_MARGIN)
 
     const { refSlot } = await consensus.getCurrentFrame()
 
@@ -977,7 +977,7 @@ contract('Lido: merge acceptance', (addresses) => {
 
     // Do multiple oracle reports to withdraw all ETH from execution layer rewards vault
     while (elRewardsVaultBalance > 0) {
-      await advanceChainTime(ONE_DAY)
+      await advanceChainTime(ONE_DAY_WITH_MARGIN)
 
       const currentELBalance = await web3.eth.getBalance(elRewardsVault.address)
 

@@ -101,11 +101,11 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     using LimitsListUnpacker for LimitsListPacked;
     using PositiveTokenRebaseLimiter for TokenRebaseLimiterData;
 
-    bytes32 public constant ALL_LIMITS_MANAGER_ROLE = keccak256("LIMITS_MANAGER_ROLE");
+    bytes32 public constant ALL_LIMITS_MANAGER_ROLE = keccak256("ALL_LIMITS_MANAGER_ROLE");
     bytes32 public constant CHURN_VALIDATORS_PER_DAY_LIMIT_MANGER_ROLE =
         keccak256("CHURN_VALIDATORS_PER_DAY_LIMIT_MANGER_ROLE");
     bytes32 public constant ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE =
-        keccak256("ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE_ROLE");
+        keccak256("ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE");
     bytes32 public constant ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE =
         keccak256("ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE");
     bytes32 public constant SHARE_RATE_DEVIATION_LIMIT_MANAGER_ROLE =
@@ -368,17 +368,28 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         );
 
         if (_postCLBalance < _preCLBalance) {
-            tokenRebaseLimiter.raiseLimit(_preCLBalance - _postCLBalance);
+            tokenRebaseLimiter.decreaseEther(_preCLBalance - _postCLBalance);
         } else {
-            tokenRebaseLimiter.consumeLimit(_postCLBalance - _preCLBalance);
+            tokenRebaseLimiter.increaseEther(_postCLBalance - _preCLBalance);
         }
 
-        withdrawals = tokenRebaseLimiter.consumeLimit(_withdrawalVaultBalance);
-        elRewards = tokenRebaseLimiter.consumeLimit(_elRewardsVaultBalance);
+        withdrawals = tokenRebaseLimiter.increaseEther(_withdrawalVaultBalance);
+        elRewards = tokenRebaseLimiter.increaseEther(_elRewardsVaultBalance);
 
+        // determining the shares to burn limit that would have been
+        // if no withdrawals finalized during the report
+        // it's used to check later the provided `simulatedShareRate` value
+        // after the off-chain calculation via `eth_call` of `Lido.handleOracleReport()`
+        // see also step 9 of the `Lido._handleOracleReport()`
         simulatedSharesToBurn = Math256.min(tokenRebaseLimiter.getSharesToBurnLimit(), _sharesRequestedToBurn);
-        tokenRebaseLimiter.raiseLimit(_etherToLockForWithdrawals);
-        sharesToBurn = Math256.min(tokenRebaseLimiter.getSharesToBurnLimit(), _newSharesToBurnForWithdrawals + _sharesRequestedToBurn);
+
+        // remove ether to lock for withdrawals from total pooled ether
+        tokenRebaseLimiter.decreaseEther(_etherToLockForWithdrawals);
+        // re-evaluate shares to burn after TVL was updated due to withdrawals finalization
+        sharesToBurn = Math256.min(
+            tokenRebaseLimiter.getSharesToBurnLimit(),
+            _newSharesToBurnForWithdrawals + _sharesRequestedToBurn
+        );
     }
 
     /// @notice Applies sanity checks to the accounting params of Lido's oracle report
@@ -564,13 +575,13 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _postCLBalance,
         uint256 _timeElapsed
     ) internal pure {
-        if (_preCLBalance >= _postCLBalance) return;
-
         // allow zero values for scratch deploy
         // NB: annual increase have to be large enough for scratch deploy
         if (_preCLBalance == 0) {
             _preCLBalance = DEFAULT_CL_BALANCE;
         }
+
+        if (_preCLBalance >= _postCLBalance) return;
 
         if (_timeElapsed == 0) {
             _timeElapsed = DEFAULT_TIME_ELAPSED;
@@ -660,15 +671,15 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             emit ChurnValidatorsPerDayLimitSet(_newLimitsList.churnValidatorsPerDayLimit);
         }
         if (_oldLimitsList.oneOffCLBalanceDecreaseBPLimit != _newLimitsList.oneOffCLBalanceDecreaseBPLimit) {
-            _checkLimitValue(_newLimitsList.oneOffCLBalanceDecreaseBPLimit, type(uint16).max);
+            _checkLimitValue(_newLimitsList.oneOffCLBalanceDecreaseBPLimit, MAX_BASIS_POINTS);
             emit OneOffCLBalanceDecreaseBPLimitSet(_newLimitsList.oneOffCLBalanceDecreaseBPLimit);
         }
         if (_oldLimitsList.annualBalanceIncreaseBPLimit != _newLimitsList.annualBalanceIncreaseBPLimit) {
-            _checkLimitValue(_newLimitsList.annualBalanceIncreaseBPLimit, type(uint16).max);
+            _checkLimitValue(_newLimitsList.annualBalanceIncreaseBPLimit, MAX_BASIS_POINTS);
             emit AnnualBalanceIncreaseBPLimitSet(_newLimitsList.annualBalanceIncreaseBPLimit);
         }
         if (_oldLimitsList.simulatedShareRateDeviationBPLimit != _newLimitsList.simulatedShareRateDeviationBPLimit) {
-            _checkLimitValue(_newLimitsList.simulatedShareRateDeviationBPLimit, type(uint16).max);
+            _checkLimitValue(_newLimitsList.simulatedShareRateDeviationBPLimit, MAX_BASIS_POINTS);
             emit SimulatedShareRateDeviationBPLimitSet(_newLimitsList.simulatedShareRateDeviationBPLimit);
         }
         if (_oldLimitsList.maxValidatorExitRequestsPerReport != _newLimitsList.maxValidatorExitRequestsPerReport) {
