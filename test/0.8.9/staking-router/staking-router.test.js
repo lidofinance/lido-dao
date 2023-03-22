@@ -357,7 +357,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         .on('onWithdrawalCredentialsChanged', { revert: { reason: 'outOfGas' } })
         .update({ from: deployer })
 
-      await assert.reverts(router.setWithdrawalCredentials(newWC, { from: appManager }), 'ModuleOutOfGas()')
+      await assert.reverts(router.setWithdrawalCredentials(newWC, { from: appManager }), 'UnrecoverableModuleError()')
     })
   })
 
@@ -986,7 +986,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
 
       await assert.reverts(
         router.reportRewardsMinted(stakingModuleIds, totalShares, { from: admin }),
-        'ModuleOutOfGas()'
+        'UnrecoverableModuleError()'
       )
     })
   })

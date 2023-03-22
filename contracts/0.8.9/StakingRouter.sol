@@ -54,7 +54,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     error InvalidDepositsValue(uint256 etherValue, uint256 depositsCount);
     error StakingModuleAddressExists();
     error ArraysLengthMismatch(uint256 firstArrayLength, uint256 secondArrayLength);
-    error ModuleOutOfGas();
+    error UnrecoverableModuleError();
 
     enum StakingModuleStatus {
         Active, // deposits and rewards allowed
@@ -295,7 +295,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
                     ///      return an invalid value when the onRewardsMinted() reverts because of the
                     ///      "out of gas" error. Here we assume that the onRewardsMinted() method doesn't
                     ///      have reverts with empty error data except "out of gas".
-                    if (lowLevelRevertData.length == 0) revert ModuleOutOfGas();
+                    if (lowLevelRevertData.length == 0) revert UnrecoverableModuleError();
                     emit RewardsMintedReportFailed(
                         _stakingModuleIds[i],
                         lowLevelRevertData
@@ -555,7 +555,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
                     ///      reverts because of the "out of gas" error. Here we assume that the
                     ///      onExitedAndStuckValidatorsCountsUpdated() method doesn't have reverts with
                     ///      empty error data except "out of gas".
-                    if (lowLevelRevertData.length == 0) revert ModuleOutOfGas();
+                    if (lowLevelRevertData.length == 0) revert UnrecoverableModuleError();
                     emit ExitedAndStuckValidatorsCountsUpdateFailed(
                         stakingModule.id,
                         lowLevelRevertData
@@ -1140,7 +1140,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
                 ///      reverts because of the "out of gas" error. Here we assume that the
                 ///      onWithdrawalCredentialsChanged() method doesn't have reverts with
                 ///      empty error data except "out of gas".
-                if (lowLevelRevertData.length == 0) revert ModuleOutOfGas();
+                if (lowLevelRevertData.length == 0) revert UnrecoverableModuleError();
                 _setStakingModuleStatus(stakingModule, StakingModuleStatus.DepositsPaused);
                 emit WithdrawalsCredentialsChangeFailed(stakingModule.id, lowLevelRevertData);
             }

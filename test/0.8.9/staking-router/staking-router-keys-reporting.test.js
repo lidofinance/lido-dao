@@ -512,7 +512,7 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
 
         await assert.reverts(
           router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin }),
-          'ModuleOutOfGas()'
+          'UnrecoverableModuleError()'
         )
       })
     })
