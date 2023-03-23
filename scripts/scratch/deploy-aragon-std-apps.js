@@ -17,8 +17,8 @@ const { toContentUri } = require('@aragon/buidler-aragon/dist/src/utils/apm/util
 const APPS = ['agent', 'finance', 'token-manager', 'vault', 'voting']
 
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
-const ARAGON_APPS_REPO = process.env.ARAGON_APPS_REPO || 'https://github.com/aragon/aragon-apps.git'
-const ARAGON_APPS_REPO_REF = process.env.ARAGON_APPS_REPO_REF || 'master'
+const ARAGON_APPS_REPO = process.env.ARAGON_APPS_REPO || 'https://github.com/lidofinance/aragon-apps.git'
+const ARAGON_APPS_REPO_REF = process.env.ARAGON_APPS_REPO_REF || 'shapella-update'
 const RELEASE_TYPE = 'major'
 
 const SKIP_APPS_LONG_BUILD_STEPS = process.env.SKIP_APPS_LONG_BUILD_STEPS || false
