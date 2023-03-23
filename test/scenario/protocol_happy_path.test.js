@@ -7,7 +7,7 @@ const { pad, toBN, ETH, tokens, StETH, shareRate, shares, e27 } = require('../he
 const { deployProtocol } = require('../helpers/protocol')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
 const { DSMAttestMessage, DSMPauseMessage } = require('../helpers/signatures')
-const { waitBlocks, setBalance, advanceChainTime } = require('../helpers/blockchain')
+const { waitBlocks, advanceChainTime } = require('../helpers/blockchain')
 const { pushOracleReport } = require('../helpers/oracle')
 const { INITIAL_HOLDER, MAX_UINT256 } = require('../helpers/constants')
 const { signPermit, makeDomainSeparator } = require('../0.4.24/helpers/permit_helpers')
@@ -89,10 +89,11 @@ contract('Lido: protocol happy path', (addresses) => {
   let treasuryAddr, guardians, stakingRouter
   let depositSecurityModule, depositRoot
   let elRewardsVault, voting
-  let consensus
+  let consensus, withdrawalVault
   let nodeOperator1, nodeOperator2, nodeOperator3, nodeOperator4
-  let withdrawalQueue, burner, withdrawalVault
-  let withdrawalSHarePrice
+  let withdrawalQueue, burner
+
+  let withdrawalSharePrice
 
   // Total fee is 1%
   const totalFeePoints = 0.01 * TOTAL_BASIS_POINTS
@@ -153,6 +154,8 @@ contract('Lido: protocol happy path', (addresses) => {
     elRewardsVault = deployed.elRewardsVault
     voting = deployed.voting.address
     withdrawalVault = deployed.withdrawalVault.address
+
+    console.log('withdrawalVault.a', withdrawalVault.address)
 
     depositRoot = await depositContractMock.get_deposit_root()
 
@@ -491,8 +494,6 @@ contract('Lido: protocol happy path', (addresses) => {
     const balanceAliceBefore = await token.balanceOf(alice.address)
     const sharesAliceBefore = await token.sharesOf(alice.address)
 
-    console.log('balanceAliceBefore', +balanceAliceBefore, +(await token.sharesOf(alice.address)))
-
     const nonce = 0
     const { name, version, chainId, verifyingContract } = await token.eip712Domain()
     const domainSeparator = makeDomainSeparator(name, version, chainId, verifyingContract)
@@ -574,15 +575,13 @@ contract('Lido: protocol happy path', (addresses) => {
   })
 
   it('reports withdrawal', async () => {
-    await setBalance(withdrawalVault, ETH(32))
-
     await advanceChainTime(ONE_DAY)
 
     const elRewardsVaultBalance = await web3.eth.getBalance(elRewardsVault.address)
     const totalSharesBefore = await token.getTotalShares()
     const balanceBufferBefore = await token.getBufferedEther()
     const totalPooledBefore = await token.getTotalPooledEther()
-    withdrawalSHarePrice = await token.getPooledEthByShares(shares(1))
+    withdrawalSharePrice = await token.getPooledEthByShares(shares(1))
 
     const [postTotalPooledEther, postTotalShares, ,] = await token.handleOracleReport.call(
       ...Object.values({
@@ -600,7 +599,6 @@ contract('Lido: protocol happy path', (addresses) => {
 
     const { coverShares, nonCoverShares } = await burner.getSharesRequestedToBurn()
     const sharesRequestedToBurn = coverShares.add(nonCoverShares)
-    console.log('+sharesRequestedToBurn', +sharesRequestedToBurn)
 
     const reportAfterWithdrawal = {
       timeElapsed: ONE_DAY,
@@ -625,13 +623,13 @@ contract('Lido: protocol happy path', (addresses) => {
     )
     assert.almostEqual(
       balanceBufferAfter,
-      balanceBufferBefore.sub(toBN(6).mul(toBN(withdrawalSHarePrice))),
+      balanceBufferBefore.sub(toBN(6).mul(toBN(withdrawalSharePrice))),
       StETH('0.000000000000000001'),
       'buffer balance after request'
     )
     assert.almostEqual(
       totalPooledAfter,
-      totalPooledBefore.sub(toBN(6).mul(toBN(withdrawalSHarePrice))),
+      totalPooledBefore.sub(toBN(6).mul(toBN(withdrawalSharePrice))),
       StETH('0.000000000000000001'),
       'pool balance after request'
     )
@@ -656,10 +654,9 @@ contract('Lido: protocol happy path', (addresses) => {
     assert.equals(aliceRequest.owner, alice.address, 'request owner')
     assert.equals(aliceRequest.isFinalized, true, 'request not finalized')
     assert.equals(aliceRequest.isClaimed, false, 'request not claimed')
-    // TODO: why 0.000000000000000002
     assert.almostEqual(
       aliceRequest.amountOfStETH,
-      toBN(6).mul(toBN(withdrawalSHarePrice)),
+      toBN(6).mul(toBN(withdrawalSharePrice)),
       StETH('0.000000000000000002'),
       'request amountOfStETH'
     )
@@ -700,11 +697,9 @@ contract('Lido: protocol happy path', (addresses) => {
     // alice eth balance after ~(balance - gas cost)
     assert.almostEqual(
       aliceEthBalanceAfter,
-      toBN(aliceEthBalanceBefore).add(toBN(6).mul(toBN(withdrawalSHarePrice))),
+      toBN(aliceEthBalanceBefore).add(toBN(6).mul(toBN(withdrawalSharePrice))),
       tx.receipt.gasUsed
     )
-
-    console.log('pool.getBufferedEther()', +(await pool.getBufferedEther()), +(await token.getTotalShares()))
   })
 
   it('add 2 more operators', async () => {
@@ -795,7 +790,7 @@ contract('Lido: protocol happy path', (addresses) => {
     // ~= 1976.982891089108910893
     assert.almostEqual(
       await pool.getBufferedEther(),
-      toBN(ETH(1983)).sub(toBN(6).mul(toBN(withdrawalSHarePrice))),
+      toBN(ETH(1983)).sub(toBN(6).mul(toBN(withdrawalSharePrice))),
       StETH('0.000000000000000001'),
       'buffered ether'
     )
@@ -809,7 +804,7 @@ contract('Lido: protocol happy path', (addresses) => {
     const bobShares = await token.sharesOf(bob.address)
     const aliceShares = await token.sharesOf(alice.address)
 
-    // totalSHares before withdrawals = 101031909011926388121
+    // totalShares before withdrawals = 101031909011926388121
     assert.almostEqual(
       await pool.getTotalShares(),
       toBN('101031909011926388121')
@@ -831,8 +826,380 @@ contract('Lido: protocol happy path', (addresses) => {
 
     assert(
       await token.getTotalPooledEther(),
-      toBN(ETH(LIDO_INIT_BALANCE_ETH + 6 + 30 + 64 + 0.32 + 2000 + 10)).sub(toBN(6).mul(toBN(withdrawalSHarePrice))),
+      toBN(ETH(LIDO_INIT_BALANCE_ETH + 6 + 30 + 64 + 0.32 + 2000 + 10)).sub(toBN(6).mul(toBN(withdrawalSharePrice))),
       'total pooled ether'
+    )
+  })
+
+  it('report without withdrawal', async () => {
+    await advanceChainTime(ONE_DAY)
+
+    await pushOracleReport(consensus, oracle, 2, ETH(64.32), 0)
+  })
+
+  it('bob withdraws 1500 ETH', async () => {
+    await advanceChainTime(ONE_DAY)
+
+    assert.isFalse(await withdrawalQueue.isPaused())
+    assert.equals(await withdrawalQueue.unfinalizedRequestNumber(), 0)
+
+    withdrawalSharePrice = await token.getPooledEthByShares(shares(1))
+    console.log('withdrawalSharePrice on bob withdrawal', +withdrawalSharePrice)
+    const balanceBufferBefore = await pool.getBufferedEther()
+    const shareTotalBefore = await token.getTotalShares()
+    const totalPooledBefore = await token.getTotalPooledEther()
+
+    const balanceBobBefore = await token.balanceOf(bob.address)
+    const sharesBobBefore = await token.sharesOf(bob.address)
+
+    const nonce = 0
+    const { name, version, chainId, verifyingContract } = await token.eip712Domain()
+    const domainSeparator = makeDomainSeparator(name, version, chainId, verifyingContract)
+
+    const { v, r, s } = signPermit(
+      bob.address,
+      withdrawalQueue.address,
+      StETH(1500),
+      nonce,
+      MAX_UINT256,
+      domainSeparator,
+      bob.key
+    )
+
+    const receipt = await withdrawalQueue.requestWithdrawalsWithPermit(
+      [StETH(1000), StETH(500)],
+      bob.address,
+      { value: StETH(1500), deadline: MAX_UINT256, v, r, s },
+      {
+        from: bob.address,
+      }
+    )
+
+    const requestId1 = getEventArgument(receipt, 'WithdrawalRequested', 'requestId', { index: 0 })
+    const requestId2 = getEventArgument(receipt, 'WithdrawalRequested', 'requestId', { index: 1 })
+    const requestor1 = getEventArgument(receipt, 'WithdrawalRequested', 'requestor', { index: 0 })
+    const requestor2 = getEventArgument(receipt, 'WithdrawalRequested', 'requestor', { index: 1 })
+    const owner1 = getEventArgument(receipt, 'WithdrawalRequested', 'owner', { index: 0 })
+    const owner2 = getEventArgument(receipt, 'WithdrawalRequested', 'owner', { index: 1 })
+    const amountOfStETH1 = getEventArgument(receipt, 'WithdrawalRequested', 'amountOfStETH', { index: 0 })
+    const amountOfStETH2 = getEventArgument(receipt, 'WithdrawalRequested', 'amountOfStETH', { index: 1 })
+    const amountOfShares1 = getEventArgument(receipt, 'WithdrawalRequested', 'amountOfShares', { index: 0 })
+    const amountOfShares2 = getEventArgument(receipt, 'WithdrawalRequested', 'amountOfShares', { index: 1 })
+
+    assert.equals(requestId1, 2, 'request1 id')
+    assert.equals(requestId2, 3, 'request2 id')
+    assert.equals(requestor1, bob.address, 'request1 requestor')
+    assert.equals(requestor2, bob.address, 'request2 requestor')
+    assert.equals(owner1, bob.address, 'request1 owner')
+    assert.equals(owner2, bob.address, 'request2 owner')
+    assert.equals(amountOfStETH1, StETH(1000), 'request1 amountOfStETH')
+    assert.equals(amountOfStETH2, StETH(500), 'request2 amountOfStETH')
+
+    const expectedBobShares1 = toBN(e27(StETH(1000)))
+      .div(toBN(withdrawalSharePrice))
+      .div(toBN(1000000000))
+    assert.almostEqual(amountOfShares1, expectedBobShares1, StETH('0.000000000000001000'), 'request1 amountOfShares')
+
+    const expectedBobShares2 = toBN(e27(StETH(500)))
+      .div(toBN(withdrawalSharePrice))
+      .div(toBN(1000000000))
+    assert.almostEqual(amountOfShares2, expectedBobShares2, StETH('0.000000000000001000'), 'request2 amountOfShares')
+
+    assert.equals(await withdrawalQueue.unfinalizedStETH(), StETH(1500), 'unfinalized stETH')
+    assert.equals(await withdrawalQueue.unfinalizedRequestNumber(), 2)
+
+    assert.equals(await pool.getBufferedEther(), balanceBufferBefore, 'buffer balance after request')
+    assert.equals(await token.getTotalShares(), shareTotalBefore, 'total shares after request')
+    assert.equals(await token.getTotalPooledEther(), totalPooledBefore, 'pool balance after request')
+
+    assert.almostEqual(
+      balanceBobBefore.sub(toBN(StETH(1500))),
+      await token.balanceOf(bob.address),
+      StETH('0.000000000000000001'),
+      'bob balance after request'
+    )
+    assert.almostEqual(
+      sharesBobBefore.sub(expectedBobShares1.add(expectedBobShares2)),
+      await token.sharesOf(bob.address),
+      StETH('0.000000000000001000'),
+      'bob shares after request'
+    )
+  })
+
+  it('bob info after request withdrawal', async () => {
+    const balanceBobAfter = await token.balanceOf(bob.address)
+    const sharesBobAfter = await token.sharesOf(bob.address)
+    const bobRequests = await withdrawalQueue.getWithdrawalRequests(bob.address)
+    const requestsStatuses = await withdrawalQueue.getWithdrawalStatus(bobRequests)
+
+    const bobRequest1 = requestsStatuses[0]
+    const bobRequest2 = requestsStatuses[1]
+
+    // NFT owner
+    assert.equals(await withdrawalQueue.ownerOf(2), bob.address, 'owner of request1')
+    assert.equals(await withdrawalQueue.ownerOf(3), bob.address, 'owner of request1')
+    // infinalized request number
+    assert.equals(await withdrawalQueue.unfinalizedRequestNumber(), 2)
+    // count bob requests
+    assert.equals(bobRequests, [2, 3])
+
+    assert.equals(bobRequest1.owner, bob.address, 'request1 owner')
+    assert.equals(bobRequest2.owner, bob.address, 'request2 owner')
+
+    assert.equals(bobRequest1.isFinalized, false, 'request1 not finalized')
+    assert.equals(bobRequest2.isFinalized, false, 'request2 not finalized')
+
+    assert.equals(bobRequest1.isClaimed, false, 'request1 not claimed')
+    assert.equals(bobRequest2.isClaimed, false, 'request2 not claimed')
+
+    assert.equals(bobRequest1.amountOfStETH, StETH(1000), 'request1 amountOfStETH')
+    assert.equals(bobRequest2.amountOfStETH, StETH(500), 'request2 amountOfStETH')
+    const expectedRequestShares1 = toBN(e27(StETH(1000)))
+      .div(toBN(withdrawalSharePrice))
+      .div(toBN(1000000000))
+    assert.almostEqual(
+      bobRequest1.amountOfShares,
+      expectedRequestShares1,
+      StETH('0.000000000000001000'),
+      'request amountOfShares'
+    )
+    const expectedRequestShares2 = toBN(e27(StETH(500)))
+      .div(toBN(withdrawalSharePrice))
+      .div(toBN(1000000000))
+    assert.almostEqual(
+      bobRequest2.amountOfShares,
+      expectedRequestShares2,
+      StETH('0.000000000000001000'),
+      'request amountOfShares'
+    )
+
+    assert.almostEqual(balanceBobAfter, StETH(500), StETH('0.000000000000000001'), 'alice balance after request')
+    const expectedBobShares = toBN(e27(StETH(2000)))
+      .div(toBN(withdrawalSharePrice))
+      .div(toBN(1000000000))
+      .sub(expectedRequestShares1.add(expectedRequestShares2))
+    assert.almostEqual(sharesBobAfter, expectedBobShares, StETH('0.000000000000001000'), 'alice shares after request')
+  })
+
+  it('the oracle reports balance increase on Ethereum2 side 64.32 => 64.45', async () => {
+    withdrawalSharePrice = await token.getPooledEthByShares(shares(1))
+
+    // Total shares are equal to deposited eth before ratio change and fee mint
+
+    const oldTotalShares = await token.getTotalShares()
+    assert.equals(oldTotalShares, '2099316720638180238508', 'total shares')
+
+    // Old total pooled Ether
+
+    const oldTotalPooledEther = await pool.getTotalPooledEther()
+    assert.almostEqual(
+      oldTotalPooledEther,
+      toBN(ETH(LIDO_INIT_BALANCE_ETH + 6 + 30 + 64 + 0.32 + 2000 + 10)).sub(toBN(6).mul(toBN(withdrawalSharePrice))),
+      StETH('0.000000000000000001'),
+      'total pooled ether'
+    )
+
+    // Reporting balance increase (64.32 => 64.45) to stay in limits
+
+    await pushOracleReport(consensus, oracle, 4, ETH(64.45), ETH(0))
+    withdrawalSharePrice = await token.getPooledEthByShares(shares(1))
+
+    // Total shares increased because fee minted (fee shares added)
+    // shares = oldTotalShares + reward * totalFee * oldTotalShares / (newTotalPooledEther - reward * totalFee)
+
+    // totalFee = 1000 (10%)
+    // reward = 130000000000000000
+    // oldTotalShares = 2099316720638180238508
+    // newTotalPooledEther = 2105432891089108910893
+    // shares2mint = int(130000000000000000 * 1000 * 2099316720638180238508 / (2105432891089108910893 * 10000 - 1000 * 130000000000000000))
+    // shares2mint ~= 12962315727994272
+
+    const newTotalShares = await token.getTotalShares()
+    assert.equals(newTotalShares, '2099316720638180238508', 'total shares')
+
+    // Total pooled Ether increased
+
+    const newTotalPooledEther = await pool.getTotalPooledEther()
+    // 6.017108910891089 - alice withdrawal
+    assert.equals(newTotalPooledEther, '2041432891089108910893', 'total pooled ether')
+
+    // Ether2 stat reported by the pool changed correspondingly
+
+    const ether2Stat = await pool.getBeaconStat()
+    assert.equals(ether2Stat.depositedValidators, 4, 'deposited ether2')
+    assert.equals(ether2Stat.beaconBalance, ETH(64.45), 'remote ether2')
+
+    // Buffered Ether amount didn't change
+
+    assert.equals(await pool.getBufferedEther(), '1976982891089108910893', 'buffered ether')
+
+    // New tokens was minted to distribute fee
+    assert.equals(await token.totalSupply(), '2041432891089108910893', 'token total supply')
+
+    const reward = toBN(ETH(64.45 - 64.32))
+    const mintedAmount = new BN(totalFeePoints).mul(reward).divn(10000)
+
+    // Token user balances increased
+
+    // alice shares = 6
+    // user2 shares = 30
+    // user3 shares = 64
+    // sharePrice = 1002907217567949200
+
+    // INITIAL_HOLDER balance = sharePrice * shares = 1002907217567949200 * 1 = ~1002907217567949200
+    // alice balance = sharePrice * shares = 1002907217567949200 * ~9.97156622 = ~10000555739511379637
+    // user2 balance = sharePrice * shares = 1002907217567949200 * 30 = ~34647412260106650951
+    // user3 balance = sharePrice * shares = 1002907217567949200 * 64 = ~73914479488227522028
+    // bob balance = sharePrice * shares = 1002907217567949200 * ~498.578 = ~73914479488227522028
+
+    assert.equals(await token.balanceOf(INITIAL_HOLDER), '972427300282982085', 'initial holder tokens')
+    assert.equals(await token.balanceOf(alice.address), '9696623225710961878', 'alice tokens')
+    assert.equals(await token.balanceOf(user2), '29172819008489462578', 'user2 tokens')
+    assert.equals(await token.balanceOf(user3), '62235347218110853499', 'user3 tokens')
+    assert.equals(await token.balanceOf(bob.address), '484831161285548093944', 'user3 tokens')
+
+    // Fee, in the form of minted tokens, was distributed between treasury, insurance fund
+    // and node operators
+    // treasuryTokenBalance ~= mintedAmount * treasuryFeePoints / 10000
+    assert.equalsDelta(await token.balanceOf(treasuryAddr), '15514597161137539', 1, 'treasury tokens')
+    assert.equalsDelta(await token.balanceOf(nodeOperatorsRegistry.address), 0, 3, 'staking module tokens')
+
+    // The node operators' fee is distributed between all active node operators,
+    // proportional to their effective stake (the amount of Ether staked by the operator's
+    // used and non-stopped validators).
+    //
+    // In our case, both node operators received the same fee since they have the same
+    // effective stake (one signing key used from each operator, staking 32 ETH)
+
+    assert.equalsDelta(await token.balanceOf(nodeOperator1.address), '7757298580568769', 1, 'operator_1 tokens')
+    assert.equalsDelta(await token.balanceOf(nodeOperator2.address), '7757298580568769', 1, 'operator_2 tokens')
+    assert.equalsDelta(await token.balanceOf(nodeOperator3.address), '0', 1, 'operator_3 tokens')
+    assert.equalsDelta(await token.balanceOf(nodeOperator4.address), '0', 1, 'operator_4 tokens')
+
+    // Real minted amount should be a bit less than calculated caused by round errors on mint and transfer operations
+    assert(
+      mintedAmount
+        .sub(
+          new BN(0)
+            .add(await token.balanceOf(treasuryAddr))
+            .add(await token.balanceOf(nodeOperator1.address))
+            .add(await token.balanceOf(nodeOperator2.address))
+            .add(await token.balanceOf(nodeOperator3.address))
+            .add(await token.balanceOf(nodeOperator4.address))
+        )
+        .lt(mintedAmount.divn(100))
+    )
+  })
+
+  it('reports withdrawal', async () => {
+    await advanceChainTime(ONE_DAY)
+
+    const elRewardsVaultBalance = await web3.eth.getBalance(elRewardsVault.address)
+    const totalSharesBefore = await token.getTotalShares()
+    const balanceBufferBefore = await token.getBufferedEther()
+    const totalPooledBefore = await token.getTotalPooledEther()
+    withdrawalSharePrice = await token.getPooledEthByShares(shares(1))
+
+    console.log('totalShares before', +totalSharesBefore)
+    console.log('totalPooled before', +totalPooledBefore)
+    console.log('balanceBuffer before', +balanceBufferBefore)
+    console.log('shareRate before', +toBN(e27(1)).mul(toBN(totalPooledBefore)).div(toBN(totalSharesBefore)))
+    console.log('sharePrice before', +(await token.getPooledEthByShares(shares(1))))
+    console.log('---------------------')
+
+    const [postTotalPooledEther, postTotalShares, ,] = await token.handleOracleReport.call(
+      ...Object.values({
+        ...DEFAULT_LIDO_ORACLE_REPORT,
+        timeElapsed: ONE_DAY,
+        clValidators: 4,
+        postCLBalance: ETH(64.45),
+        elRewardsVaultBalance: ETH(0),
+        withdrawalVaultBalance: ETH(0),
+      }),
+      { from: oracle.address, gasPrice: 1 }
+    )
+
+    const simulatedShareRate = postTotalPooledEther.mul(toBN(shareRate(1))).div(postTotalShares)
+
+    const { coverShares, nonCoverShares } = await burner.getSharesRequestedToBurn()
+    const sharesRequestedToBurn = coverShares.add(nonCoverShares)
+
+    const reportAfterWithdrawal = {
+      timeElapsed: ONE_DAY,
+      postCLBalance: ETH(64.45),
+      sharesRequestedToBurn,
+      withdrawalFinalizationBatches: [2, 3],
+      elRewardsVaultBalance,
+      simulatedShareRate,
+    }
+
+    await pushOracleReport(consensus, oracle, 4, ETH(64.45), 0, reportAfterWithdrawal)
+
+    const totalSharesAfter = await token.getTotalShares()
+    const balanceBufferAfter = await token.getBufferedEther()
+    const totalPooledAfter = await token.getTotalPooledEther()
+
+    console.log('totalShares After', +totalSharesAfter)
+    console.log('totalPooled After', +totalPooledAfter)
+    console.log('balanceBuffer After', +balanceBufferAfter)
+    const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
+    const hints = await withdrawalQueue.findCheckpointHints([2, 3], 1, lastCheckpointIndex)
+    const reqs = await withdrawalQueue.getClaimableEther([2, 3], hints)
+    console.log('requests ETH', +reqs[0], +reqs[1])
+
+    console.log('shareRate after', +toBN(e27(1)).mul(toBN(totalPooledAfter)).div(toBN(totalSharesAfter)))
+    console.log('sharePrice after', +(await token.getPooledEthByShares(shares(1))))
+
+    assert.almostEqual(
+      totalSharesAfter,
+      totalSharesBefore.sub(toBN(StETH(1500))),
+      StETH('0.000000000000000001'),
+      'total shares after request'
+    )
+    assert.almostEqual(
+      balanceBufferAfter,
+      balanceBufferBefore.sub(toBN(6).mul(toBN(withdrawalSharePrice))),
+      StETH('0.000000000000000001'),
+      'buffer balance after request'
+    )
+    assert.almostEqual(
+      totalPooledAfter,
+      totalPooledBefore.sub(toBN(6).mul(toBN(withdrawalSharePrice))),
+      StETH('0.000000000000000001'),
+      'pool balance after request'
+    )
+    assert.equals(await withdrawalQueue.getLastFinalizedRequestId(), toBN(1))
+  })
+
+  it('bob claims 1500 withdrawal', async () => {
+    const bobEthBalanceBefore = await web3.eth.getBalance(bob.address)
+    const bobRequestsBefore = await withdrawalQueue.getWithdrawalRequests(bob.address)
+
+    // NFT owner before
+    assert.equals(await withdrawalQueue.ownerOf(2), bob.address, 'owner of request')
+    assert.equals(await withdrawalQueue.ownerOf(3), bob.address, 'owner of request')
+    // count alice requests
+    assert.equals(bobRequestsBefore, [2, 3], 'bob requests')
+    // alice eth balance before ~(balance - gas cost)
+    assert.equals(bobEthBalanceBefore, ETH(1000), 'bob eth balance before')
+
+    const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
+    const bobHints = await withdrawalQueue.findCheckpointHints([2, 3], 1, lastCheckpointIndex)
+
+    const tx = await withdrawalQueue.claimWithdrawals([2, 3], bobHints, { from: bob.address, gasPrice: 1 })
+    const aliceEthBalanceAfter = await web3.eth.getBalance(bob.address)
+    const aliceRequestsAfter = await withdrawalQueue.getWithdrawalRequests(bob.address)
+
+    // NFT owner after
+    await assert.reverts(withdrawalQueue.ownerOf(2), 'RequestAlreadyClaimed(2)')
+    await assert.reverts(withdrawalQueue.ownerOf(3), 'RequestAlreadyClaimed(3)')
+    // count alice requests
+    assert.equals(aliceRequestsAfter, [], 'bob requests')
+    // alice eth balance after ~(balance - gas cost)
+    assert.almostEqual(
+      aliceEthBalanceAfter,
+      toBN(bobEthBalanceBefore).add(toBN(1500).mul(toBN(withdrawalSharePrice))),
+      tx.receipt.gasUsed
     )
   })
 })
