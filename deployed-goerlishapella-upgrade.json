@@ -155,10 +155,6 @@
   "dummyImplementation": {
     "address": "0x6A03b1BbB79460169a205eFBCBc77ebE1011bCf8"
   },
-  "validatorExitBus": {
-    "implementation": "0xB08C2030324617DF133Bd2faC0f6723Cb2c5065C",
-    "proxy": "0x7282dCa8AB24531B0bE16Db9D74b924d0e444124"
-  },
   "burner": {
     "parameters": {
       "totalCoverSharesBurnt": "0",
