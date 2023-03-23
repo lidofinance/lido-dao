@@ -2,7 +2,6 @@
   "networkId": 5,
   "daoAragonId": "lido-testnet-prater",
   "ensAddress": "0x043e6DBC5CAd60874727d21ecC2aAeBf50A0de80",
-  "temporaryAdmin": "0xa5F1d7D49F581136Cf6e58B32cBE9a2039C48bA1",
   "daoFactoryAddress": "0x0B6769F500b293e3adacD97c3961189565069902",
   "apmRegistryFactoryAddress": "0x70B3284fD016a570146cE48fC54D7A81bCd94BBa",
   "miniMeTokenFactoryAddress": "0x92E2750729e04c9a5CF21A830Bd00cbd5139D992",
@@ -251,11 +250,27 @@
       "maxPositiveTokenRebase": 5000000
     }
   },
+  "oracleDaemonConfig": {
+    "parameters": {
+      "NORMALIZED_CL_REWARD_PER_EPOCH": 64,
+      "NORMALIZED_CL_REWARD_MISTAKE_RATE_BP": 1000,
+      "REBASE_CHECK_NEAREST_EPOCH_DISTANCE": 4,
+      "REBASE_CHECK_DISTANT_EPOCH_DISTANCE": 10,
+      "VALIDATOR_DELAYED_TIMEOUT_IN_SLOTS": 7200,
+      "VALIDATOR_DELINQUENT_TIMEOUT_IN_SLOTS": 21600,
+      "PREDICTION_DURATION_IN_SLOTS": 50400,
+      "FINALIZATION_MAX_NEGATIVE_REBASE_EPOCH_SHIFT": 1350,
+      "NODE_OPERATOR_NETWORK_PENETRATION_THRESHOLD_BP": 100
+    }
+  },
   "withdrawalQueueERC721": {
     "parameters": {
       "name": "stETH Withdrawal NFT",
       "symbol": "unstETH"
     }
+  },
+  "withdrawalVault": {
+    "address": "0xdc62f9e8C34be08501Cdef4EBDE0a280f576D762"
   },
   "wstETH": {
     "address": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0"
