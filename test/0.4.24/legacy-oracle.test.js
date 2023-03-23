@@ -177,6 +177,7 @@ contract('LegacyOracle', ([admin, stranger]) => {
       newImplementation = await LegacyOracle.new({ from: admin })
       proxy = await OssifiableProxy.new(oldImplementation.address, admin, '0x')
       proxyAsOldImplementation = await MockLegacyOracle.at(proxy.address)
+      proxyAsNewImplementation = await LegacyOracle.at(proxy.address)
     })
 
     it('implementations are petrified', async () => {
@@ -184,8 +185,12 @@ contract('LegacyOracle', ([admin, stranger]) => {
       await assert.reverts(newImplementation.initialize(stranger, stranger), 'INIT_ALREADY_INITIALIZED')
     })
 
+    it('implementation cant be upgraded', async () => {
+      await assert.reverts(newImplementation.finalizeUpgrade_v4(stranger), 'WRONG_BASE_VERSION')
+    })
+
     it('set state to mimic legacy oracle', async () => {
-      await proxyAsOldImplementation.initializeAsV3()
+      await proxyAsOldImplementation.initializeAsVersion(3)
       await proxyAsOldImplementation.setParams(
         EPOCHS_PER_FRAME,
         SLOTS_PER_EPOCH,
@@ -209,10 +214,67 @@ contract('LegacyOracle', ([admin, stranger]) => {
       await proxyAsOldImplementation.setLido(deployedInfra.lido.address)
     })
 
-    it('upgrade implementation', async () => {
+    it('cant upgrade from zero version', async () => {
+      await proxyAsOldImplementation.initializeAsVersion(0)
+      await proxy.proxy__upgradeTo(newImplementation.address)
+
+      await assert.reverts(
+        proxyAsNewImplementation.finalizeUpgrade_v4(deployedInfra.oracle.address),
+        'WRONG_BASE_VERSION'
+      )
+
+      await proxy.proxy__upgradeTo(oldImplementation.address)
+    })
+
+    it('cant upgrade from incorrect version', async () => {
+      await proxyAsOldImplementation.initializeAsVersion(4)
+      await proxy.proxy__upgradeTo(newImplementation.address)
+
+      await assert.reverts(
+        proxyAsNewImplementation.finalizeUpgrade_v4(deployedInfra.oracle.address),
+        'WRONG_BASE_VERSION'
+      )
+
+      await proxy.proxy__upgradeTo(oldImplementation.address)
+    })
+
+    it('cant initialize instead of upgrade from v3', async () => {
+      await proxyAsOldImplementation.initializeAsVersion(3)
+      await proxy.proxy__upgradeTo(newImplementation.address)
+
+      await assert.reverts(
+        proxyAsNewImplementation.initialize(deployedInfra.locatorAddr, deployedInfra.consensus.address),
+        'WRONG_BASE_VERSION'
+      )
+
+      await proxy.proxy__upgradeTo(oldImplementation.address)
+    })
+
+    it('upgrade implementation from v3 to v4', async () => {
+      assert.equals(await proxyAsOldImplementation.getVersion(), 3)
       await proxy.proxy__upgradeTo(newImplementation.address)
       proxyAsNewImplementation = await LegacyOracle.at(proxy.address)
+      assert.equals(await proxyAsNewImplementation.getContractVersion(), 0)
       await proxyAsNewImplementation.finalizeUpgrade_v4(deployedInfra.oracle.address)
+      assert.equals(await proxyAsNewImplementation.getContractVersion(), 4)
+      assert.equals(await proxyAsNewImplementation.getVersion(), 4)
+    })
+
+    it('cant upgrade v4 twice', async () => {
+      assert.equals(await proxyAsNewImplementation.getContractVersion(), 4)
+      assert.equals(await proxyAsNewImplementation.getVersion(), 4)
+
+      await assert.reverts(
+        proxyAsNewImplementation.finalizeUpgrade_v4(deployedInfra.oracle.address),
+        'WRONG_BASE_VERSION'
+      )
+    })
+
+    it('cant initialize v4 again', async () => {
+      await assert.reverts(
+        proxyAsNewImplementation.initialize(deployedInfra.locatorAddr, deployedInfra.consensus.address),
+        'UNEXPECTED_CONTRACT_VERSION'
+      )
     })
 
     it('first report since migration', async () => {
