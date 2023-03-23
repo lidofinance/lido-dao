@@ -43,7 +43,7 @@
     "id": "0xb2977cfc13b000b6807b9ae3cf4d938f4cc8ba98e1d68ad911c58924d6aa4f11",
     "proxyAddress": "0x24d8451BC07e7aF4Ba94F69aCDD9ad3c6579D9FB",
     "contract": "LegacyOracle",
-    "implementation": "0x7D505d1CCd49C64C2dc0b15acbAE235C4651F50B",
+    "implementation": "0xcF9d64942DC9096520a8962a2d4496e680c6403b",
     "constructorArgs": []
   },
   "app:node-operators-registry": {
