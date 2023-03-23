@@ -79,6 +79,8 @@ interface IStakingModule {
 
     /// @notice Called by StakingRouter to signal that stETH rewards were minted for this module.
     /// @param _totalShares Amount of stETH shares that were minted to reward all node operators.
+    /// @dev IMPORTANT: this method SHOULD revert with empty error data ONLY because of "out of gas".
+    ///      Details about error data: https://docs.soliditylang.org/en/v0.8.9/control-structures.html#error-handling-assert-require-revert-and-exceptions
     function onRewardsMinted(uint256 _totalShares) external;
 
     /// @notice Updates the number of the validators of the given node operator that were requested
@@ -142,11 +144,17 @@ interface IStakingModule {
     /// operator in this module has actually received any updated counts as a result of the report
     /// but given that the total number of exited validators returned from getStakingModuleSummary
     /// is the same as StakingRouter expects based on the total count received from the oracle.
+    ///
+    /// @dev IMPORTANT: this method SHOULD revert with empty error data ONLY because of "out of gas".
+    ///      Details about error data: https://docs.soliditylang.org/en/v0.8.9/control-structures.html#error-handling-assert-require-revert-and-exceptions
     function onExitedAndStuckValidatorsCountsUpdated() external;
 
     /// @notice Called by StakingRouter when withdrawal credentials are changed.
     /// @dev This method MUST discard all StakingModule's unused deposit data cause they become
-    ///     invalid after the withdrawal credentials are changed
+    ///      invalid after the withdrawal credentials are changed
+    ///
+    /// @dev IMPORTANT: this method SHOULD revert with empty error data ONLY because of "out of gas".
+    ///      Details about error data: https://docs.soliditylang.org/en/v0.8.9/control-structures.html#error-handling-assert-require-revert-and-exceptions
     function onWithdrawalCredentialsChanged() external;
 
     /// @dev Event to be emitted on StakingModule's nonce change

@@ -134,7 +134,9 @@ contract HashConsensus is AccessControlEnumerable {
     }
 
     struct ReportVariant {
+        // the reported hash
         bytes32 hash;
+        // how many unique members from the current set reported this hash in the current frame
         uint64 support;
     }
 
@@ -230,8 +232,8 @@ contract HashConsensus is AccessControlEnumerable {
     /// Time
     ///
 
-    /// @notice Returns the chain configuration required to calculate
-    /// epoch and slot given a timestamp.
+    /// @notice Returns the immutable chain parameters required to calculate epoch and slot
+    /// given a timestamp.
     ///
     function getChainConfig() external view returns (
         uint256 slotsPerEpoch,
@@ -241,13 +243,30 @@ contract HashConsensus is AccessControlEnumerable {
         return (SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME);
     }
 
-    /// @notice Returns the parameters required to calculate reporting frame given an epoch.
+    /// @notice Returns the time-related configuration.
     ///
-    function getFrameConfig() external view returns (uint256 initialEpoch, uint256 epochsPerFrame, uint256 fastLaneLengthSlots) {
-        return (_frameConfig.initialEpoch, _frameConfig.epochsPerFrame, _frameConfig.fastLaneLengthSlots);
+    /// @return initialEpoch Epoch of the frame with zero index.
+    /// @return epochsPerFrame Length of a frame in epochs.
+    /// @return fastLaneLengthSlots Length of the fast lane interval in slots; see `getIsFastLaneMember`.
+    ///
+    function getFrameConfig() external view returns (
+        uint256 initialEpoch,
+        uint256 epochsPerFrame,
+        uint256 fastLaneLengthSlots
+    ) {
+        FrameConfig memory config = _frameConfig;
+        return (config.initialEpoch, config.epochsPerFrame, config.fastLaneLengthSlots);
     }
 
     /// @notice Returns the current reporting frame.
+    ///
+    /// @return refSlot The frame's reference slot: if the data the consensus is being reached upon
+    ///         includes or depends on any onchain state, this state should be queried at the
+    ///         reference slot. If the slot contains a block, the state should include all changes
+    ///         from that block.
+    ///
+    /// @return reportProcessingDeadlineSlot The last slot at which the report can be processed by
+    ///         the report processor contract.
     ///
     function getCurrentFrame() external view returns (
         uint256 refSlot,
@@ -257,13 +276,14 @@ contract HashConsensus is AccessControlEnumerable {
         return (frame.refSlot, frame.reportProcessingDeadlineSlot);
     }
 
-    /// @notice Returns the earliest possible reference slot.
+    /// @notice Returns the earliest possible reference slot, i.e. the reference slot of the
+    /// reporting frame with zero index.
     ///
     function getInitialRefSlot() external view returns (uint256) {
         return _getInitialFrame().refSlot;
     }
 
-    /// @notice Sets initial epoch given that the current initial epoch is in the future.
+    /// @notice Sets a new initial epoch given that the current initial epoch is in the future.
     ///
     /// @param initialEpoch The new initial epoch.
     ///
@@ -286,6 +306,11 @@ contract HashConsensus is AccessControlEnumerable {
         }
     }
 
+    /// @notice Updates the time-related configuration.
+    ///
+    /// @param epochsPerFrame Length of a frame in epochs.
+    /// @param fastLaneLengthSlots Length of the fast lane interval in slots; see `getIsFastLaneMember`.
+    ///
     function setFrameConfig(uint256 epochsPerFrame, uint256 fastLaneLengthSlots)
         external onlyRole(MANAGE_FRAME_CONFIG_ROLE)
     {
@@ -300,6 +325,8 @@ contract HashConsensus is AccessControlEnumerable {
     /// Members
     ///
 
+    /// @notice Returns whether the given address is currently a member of the consensus.
+    ///
     function getIsMember(address addr) external view returns (bool) {
         return _isMember(addr);
     }
@@ -307,12 +334,30 @@ contract HashConsensus is AccessControlEnumerable {
     /// @notice Returns whether the given address is a fast lane member for the current reporting
     /// frame.
     ///
-    /// Fast lane members can, and expected to, submit a report during the first part of the frame
-    /// defined via `setFastLaneConfig`. Non-fast-lane members are only allowed to submit a report
-    /// after the "fast-lane" part of the frame passes.
+    /// Fast lane members is a subset of all members that changes each reporting frame. These
+    /// members can, and are expected to, submit a report during the first part of the frame called
+    /// the "fast lane interval" and defined via `setFrameConfig` or `setFastLaneLengthSlots`. Under
+    /// regular circumstances, all other members are only allowed to submit a report after the fast
+    /// lane interval passes.
     ///
-    /// This is done to encourage each oracle from the full set to participate in reporting on a
+    /// The fast lane subset consists of `quorum` members; selection is implemented as a sliding
+    /// window of the `quorum` width over member indices (mod total members). The window advances
+    /// by one index each reporting frame.
+    ///
+    /// This is done to encourage each member from the full set to participate in reporting on a
     /// regular basis, and identify any malfunctioning members.
+    ///
+    /// With the fast lane mechanism active, it's sufficient for the monitoring to check that
+    /// consensus is consistently reached during the fast lane part of each frame to conclude that
+    /// all members are active and share the same consensus rules.
+    ///
+    /// However, there is no guarantee that, at any given time, it holds true that only the current
+    /// fast lane members can or were able to report during the currently-configured fast lane
+    /// interval of the current frame. In particular, this assumption can be violated in any frame
+    /// during which the members set, initial epoch, or the quorum number was changed, or the fast
+    /// lane interval length was increased. Thus, the fast lane mechanism should not be used for any
+    /// purpose other than monitoring of the members liveness, and monitoring tools should take into
+    /// consideration the potential irregularities within frames with any configuration changes.
     ///
     function getIsFastLaneMember(address addr) external view returns (bool) {
         uint256 index1b = _memberIndices1b[addr];
@@ -321,6 +366,9 @@ contract HashConsensus is AccessControlEnumerable {
         }
     }
 
+    /// @notice Returns all current members, together with the last reference slot each member
+    /// submitted a report for.
+    ///
     function getMembers() external view returns (
         address[] memory addresses,
         uint256[] memory lastReportedRefSlots
@@ -328,8 +376,10 @@ contract HashConsensus is AccessControlEnumerable {
         return _getMembers(false);
     }
 
-    /// @notice Returns the subset of oracle committee members (consisting of `quorum` items) that
-    /// changes on each frame. See `getIsFastLaneMember`.
+    /// @notice Returns the subset of the oracle committee members (consisting of `quorum` items)
+    /// that changes each frame.
+    ///
+    /// See `getIsFastLaneMember`.
     ///
     function getFastLaneMembers() external view returns (
         address[] memory addresses,
@@ -338,16 +388,9 @@ contract HashConsensus is AccessControlEnumerable {
         return _getMembers(true);
     }
 
-    /// @notice Sets the duration of the interval starting at the beginning of the frame during
-    /// which only the selected "fast lane" subset of oracle committee memebrs can (and expected
-    /// to) submit a report.
+    /// @notice Sets the duration of the fast lane interval of the reporting frame.
     ///
-    /// The fast lane subset is a subset consisting of `quorum` oracles that changes on each frame.
-    /// This is done to encourage each oracle from the full set to participate in reporting on a
-    /// regular basis, and identify any malfunctioning members.
-    ///
-    /// The subset selection is implemented as a sliding window of the `quorum` width over member
-    /// indices (mod total members). The window advances by one index each reporting frame.
+    /// See `getIsFastLaneMember`.
     ///
     /// @param fastLaneLengthSlots The length of the fast lane reporting interval in slots. Setting
     ///        it to zero disables the fast lane subset, allowing any oracle to report starting from

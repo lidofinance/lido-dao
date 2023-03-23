@@ -91,7 +91,11 @@ contract MockLegacyOracle is ILegacyOracle, LegacyOracle {
     }
 
     function initializeAsV3() external {
-        CONTRACT_VERSION_POSITION_DEPRECATED.setStorageUint256(3);
+        CONTRACT_VERSION_POSITION_DEPRECATED.setStorageUint256(3);    
+    }
+
+    function setLido(address lido) external {
+        LIDO_POSITION.setStorageAddress(lido);
     }
 
 }

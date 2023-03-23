@@ -1,8 +1,8 @@
 const { artifacts, contract, ethers } = require('hardhat')
 const { EvmSnapshot } = require('../../helpers/blockchain')
 const { assert } = require('../../helpers/assert')
-const { hex, hexConcat, toNum } = require('../../helpers/utils')
-const { StakingModuleStub } = require('../../helpers/stubs/staking-module.stub')
+const { hex, hexConcat, toNum, addSendWithResult } = require('../../helpers/utils')
+const { ContractStub } = require('../../helpers/contract-stub')
 
 const StakingRouter = artifacts.require('StakingRouterMock.sol')
 const StakingModuleMock = artifacts.require('StakingModuleMock.sol')
@@ -17,6 +17,7 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
   before(async () => {
     depositContract = await DepositContractMock.new({ from: deployer })
     router = await StakingRouter.new(depositContract.address, { from: deployer })
+    addSendWithResult(router.updateExitedValidatorsCountByStakingModule)
     ;[module1, module2] = await Promise.all([
       StakingModuleMock.new({ from: deployer }),
       StakingModuleMock.new({ from: deployer }),
@@ -78,9 +79,6 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
       it('initially, router assumes no staking modules have exited validators', async () => {
         const info = await router.getStakingModule(module1Id)
         assert.equals(info.exitedValidatorsCount, 0)
-
-        const totalExited = await router.getExitedValidatorsCountAcrossAllModules()
-        assert.equals(totalExited, 0)
       })
 
       it('reverts total exited validators without REPORT_EXITED_VALIDATORS_ROLE', async () => {
@@ -113,17 +111,19 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
       })
 
       it('reporting module 1 to have total 3 exited validators', async () => {
-        await router.updateExitedValidatorsCountByStakingModule([module1Id], [3], { from: admin })
+        const newlyExitedCount = await router.updateExitedValidatorsCountByStakingModule.sendWithResult(
+          [module1Id],
+          [3],
+          {
+            from: admin,
+          }
+        )
+        assert.equals(newlyExitedCount, 3)
       })
 
       it('staking module info gets updated', async () => {
         const info = await router.getStakingModule(module1Id)
         assert.equals(info.exitedValidatorsCount, 3)
-      })
-
-      it('exited validators count accross all modules gets updated', async () => {
-        const totalExited = await router.getExitedValidatorsCountAcrossAllModules()
-        assert.equals(totalExited, 3)
       })
 
       it('no functions were called on the module', async () => {
@@ -405,9 +405,9 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
         await module1.setTotalExitedValidatorsCount(2)
       })
 
-      it(`router's view on exited validators count accross all modules stays the same`, async () => {
-        const totalExited = await router.getExitedValidatorsCountAcrossAllModules()
-        assert.equals(totalExited, 3)
+      it(`router's view on exited validators count stays the same`, async () => {
+        const info = await router.getStakingModule(module1Id)
+        assert.equals(info.exitedValidatorsCount, 3)
       })
 
       it(`calling onValidatorsCountsByNodeOperatorReportingFinished still doesn't call anything on the module`, async () => {
@@ -480,17 +480,20 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
       )
 
       it("doesn't revert when onExitedAndStuckValidatorsCountsUpdated reverted", async () => {
-        const stakingModuleWithBug = await StakingModuleStub.new()
         // staking module will revert with panic exit code
-        await StakingModuleStub.stub(stakingModuleWithBug, 'onExitedAndStuckValidatorsCountsUpdated', {
-          revert: { error: 'Panic', args: { type: ['uint256'], value: [0x01] } },
-        })
-        await StakingModuleStub.stubGetStakingModuleSummary(stakingModuleWithBug, {
-          totalExitedValidators: 0,
-          totalDepositedValidators: 0,
-          depositableValidatorsCount: 0,
-        })
-        await router.addStakingModule('Staking Module With Bug', stakingModuleWithBug.address, 100, 1000, 2000, {
+        const buggedStakingModule = await ContractStub('IStakingModule')
+          .on('onExitedAndStuckValidatorsCountsUpdated', {
+            revert: { error: { name: 'Panic', args: { type: ['uint256'], value: [0x01] } } },
+          })
+          .on('getStakingModuleSummary', {
+            return: {
+              type: ['uint256', 'uint256', 'uint256'],
+              value: [0, 0, 0],
+            },
+          })
+          .create({ from: deployer })
+
+        await router.addStakingModule('Staking Module With Bug', buggedStakingModule.address, 100, 1000, 2000, {
           from: admin,
         })
         const stakingModuleId = await router.getStakingModulesCount()
@@ -501,6 +504,16 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
           stakingModuleId,
           lowLevelRevertData: '0x4e487b710000000000000000000000000000000000000000000000000000000000000001',
         })
+
+        // staking module will revert with out of gas error (revert data is empty bytes)
+        await ContractStub(buggedStakingModule)
+          .on('onExitedAndStuckValidatorsCountsUpdated', { revert: { reason: 'outOfGas' } })
+          .update({ from: deployer })
+
+        await assert.reverts(
+          router.onValidatorsCountsByNodeOperatorReportingFinished({ from: admin }),
+          'UnrecoverableModuleError()'
+        )
       })
     })
 
@@ -536,13 +549,13 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
 
         const info2 = await router.getStakingModule(moduleIds[1])
         assert.equals(info2.exitedValidatorsCount, 0)
-
-        const totalExited = await router.getExitedValidatorsCountAcrossAllModules()
-        assert.equals(totalExited, 0)
       })
 
       it('reporting 3 exited keys total for module 1 and 2 exited keys total for module 2', async () => {
-        await router.updateExitedValidatorsCountByStakingModule(moduleIds, [3, 2], { from: admin })
+        const newlyExited = await router.updateExitedValidatorsCountByStakingModule.sendWithResult(moduleIds, [3, 2], {
+          from: admin,
+        })
+        assert.equals(newlyExited, 5)
       })
 
       it('staking modules info gets updated', async () => {
@@ -551,11 +564,6 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
 
         const info2 = await router.getStakingModule(moduleIds[1])
         assert.equals(info2.exitedValidatorsCount, 2)
-      })
-
-      it('exited validators count accross all modules gets updated', async () => {
-        const totalExited = await router.getExitedValidatorsCountAcrossAllModules()
-        assert.equals(totalExited, 5)
       })
 
       it('revert on decreased exited keys for modules', async () => {
@@ -579,7 +587,11 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
         const { totalExitedValidators: totalExitedValidators1 } = await module1.getStakingModuleSummary()
         const { totalExitedValidators: totalExitedValidators2 } = await module2.getStakingModuleSummary()
 
-        const tx = await router.updateExitedValidatorsCountByStakingModule(moduleIds, [3, 2], { from: admin })
+        const args = [moduleIds, [3, 2], { from: admin }]
+        const newlyExited = await router.updateExitedValidatorsCountByStakingModule.call(...args)
+        assert.equals(newlyExited, 0)
+        const tx = await router.updateExitedValidatorsCountByStakingModule(...args)
+
         assert.emits(tx, 'StakingModuleExitedValidatorsIncompleteReporting', {
           stakingModuleId: moduleIds[0],
           unreportedExitedValidatorsCount: prevReportedExitedValidatorsCount1 - totalExitedValidators1,
@@ -901,7 +913,10 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
       }
 
       // first correction
-      await router.updateExitedValidatorsCountByStakingModule([module1Id], [10], { from: admin })
+      const newlyExited = await router.updateExitedValidatorsCountByStakingModule.sendWithResult([module1Id], [10], {
+        from: admin,
+      })
+      assert.equals(newlyExited, 10)
       await assert.reverts(
         router.unsafeSetExitedValidatorsCount(module1Id, nodeOperatorId, false, ValidatorsCountsCorrection, {
           from: admin,
