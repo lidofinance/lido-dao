@@ -185,6 +185,10 @@ contract('LegacyOracle', ([admin, stranger]) => {
       await assert.reverts(newImplementation.initialize(stranger, stranger), 'INIT_ALREADY_INITIALIZED')
     })
 
+    it('implementation cant be upgraded', async () => {
+      await assert.reverts(newImplementation.finalizeUpgrade_v4(stranger), 'WRONG_BASE_VERSION')
+    })
+
     it('set state to mimic legacy oracle', async () => {
       await proxyAsOldImplementation.initializeAsVersion(3)
       await proxyAsOldImplementation.setParams(
@@ -211,7 +215,6 @@ contract('LegacyOracle', ([admin, stranger]) => {
     })
 
     it('cant upgrade from zero version', async () => {
-      // can't upgrade if old version is zero
       await proxyAsOldImplementation.initializeAsVersion(0)
       await proxy.proxy__upgradeTo(newImplementation.address)
 
@@ -224,7 +227,6 @@ contract('LegacyOracle', ([admin, stranger]) => {
     })
 
     it('cant upgrade from incorrect version', async () => {
-      // can't upgrade if old version is 4
       await proxyAsOldImplementation.initializeAsVersion(4)
       await proxy.proxy__upgradeTo(newImplementation.address)
 
@@ -237,7 +239,6 @@ contract('LegacyOracle', ([admin, stranger]) => {
     })
 
     it('cant initialize instead of upgrade from v3', async () => {
-      // can't initialize if old version is 3
       await proxyAsOldImplementation.initializeAsVersion(3)
       await proxy.proxy__upgradeTo(newImplementation.address)
 
@@ -263,7 +264,6 @@ contract('LegacyOracle', ([admin, stranger]) => {
       assert.equals(await proxyAsNewImplementation.getContractVersion(), 4)
       assert.equals(await proxyAsNewImplementation.getVersion(), 4)
 
-      // can't upgrade twice
       await assert.reverts(
         proxyAsNewImplementation.finalizeUpgrade_v4(deployedInfra.oracle.address),
         'WRONG_BASE_VERSION'
@@ -271,7 +271,6 @@ contract('LegacyOracle', ([admin, stranger]) => {
     })
 
     it('cant initialize v4 again', async () => {
-      // can't initialize
       await assert.reverts(
         proxyAsNewImplementation.initialize(deployedInfra.locatorAddr, deployedInfra.consensus.address),
         'UNEXPECTED_CONTRACT_VERSION'
