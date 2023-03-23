@@ -436,6 +436,10 @@ contract HashConsensus is AccessControlEnumerable {
     /// Report processor
     ///
 
+    function getReportProcessor() external view returns (address) {
+        return _reportProcessor;
+    }
+
     function setReportProcessor(address newProcessor)
         external
         onlyRole(MANAGE_REPORT_PROCESSOR_ROLE)
