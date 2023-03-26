@@ -47,3 +47,12 @@ cli/vendor
 # foundry artifacts
 foundry/cache
 foundry/out
+
+# certora
+certora/munged*
+.certora*.json
+**.last_conf*
+certora-logs
+certora_debug_log.txt
+resource_errors.json
+certora/conf*
