@@ -1175,8 +1175,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * 4. Pass the accounting values to sanity checker to smoothen positive token rebase
      *    (i.e., postpone the extra rewards to be applied during the next rounds)
      * 5. Invoke finalization of the withdrawal requests
-     * 6. Distribute protocol fee (treasury & node operators)
-     * 7. Burn excess shares within the allowed limit (can postpone some shares to be burnt later)
+     * 6. Burn excess shares within the allowed limit (can postpone some shares to be burnt later)
+     * 7. Distribute protocol fee (treasury & node operators)
      * 8. Complete token rebase by informing observers (emit an event and call the external receivers if any)
      * 9. Sanity check for the provided simulated share rate
      */
@@ -1261,6 +1261,13 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         );
 
         // Step 6.
+        // Burn the previously requested shares
+        if (reportContext.sharesToBurn > 0) {
+            IBurner(contracts.burner).commitSharesToBurn(reportContext.sharesToBurn);
+            _burnShares(contracts.burner, reportContext.sharesToBurn);
+        }
+
+        // Step 7.
         // Distribute protocol fee (treasury & node operators)
         reportContext.sharesMintedAsFees = _processRewards(
             reportContext,
@@ -1268,13 +1275,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             withdrawals,
             elRewards
         );
-
-        // Step 7.
-        // Burn the previously requested shares
-        if (reportContext.sharesToBurn > 0) {
-            IBurner(contracts.burner).commitSharesToBurn(reportContext.sharesToBurn);
-            _burnShares(contracts.burner, reportContext.sharesToBurn);
-        }
 
         // Step 8.
         // Complete token rebase by informing observers (emit an event and call the external receivers if any)

@@ -48,11 +48,15 @@ contract('HashConsensus', ([admin, member1, member2, stranger]) => {
       })
 
       it('emits ReportProcessorSet event', async () => {
+        const oldReportProcessor = await consensus.getReportProcessor()
         const tx = await consensus.setReportProcessor(reportProcessor2.address)
+        const newReportProcessor = await consensus.getReportProcessor()
         assert.emits(tx, 'ReportProcessorSet', {
           processor: reportProcessor2.address,
           prevProcessor: reportProcessor1.address,
         })
+        assert.equals(oldReportProcessor, reportProcessor1.address)
+        assert.equals(newReportProcessor, reportProcessor2.address)
       })
 
       it('prev did not processed last report yet — do submit report to next', async () => {

@@ -53,7 +53,7 @@ contract MockLegacyOracle is ILegacyOracle, LegacyOracle {
             _setChainSpec(ChainSpec(epochsPerFrame,slotsPerEpoch,secondsPerSlot,genesisTime));
     }
 
-    
+
      function _getTime() internal view returns (uint256) {
         address accountingOracle = ACCOUNTING_ORACLE_POSITION.getStorageAddress();
         return ITimeProvider(accountingOracle).getTime();
@@ -62,8 +62,6 @@ contract MockLegacyOracle is ILegacyOracle, LegacyOracle {
      function getTime() external view returns (uint256) {
         return _getTime();
     }
-
-   
 
     function handleConsensusLayerReport(uint256 refSlot, uint256 clBalance, uint256 clValidators)
         external
@@ -85,13 +83,22 @@ contract MockLegacyOracle is ILegacyOracle, LegacyOracle {
           _setChainSpec(ChainSpec(epochsPerFrame,slotsPerEpoch,secondsPerSlot,genesisTime));
         LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(lastCompletedEpochId);
     }
- 
+
     function setLastCompletedEpochId(uint256 lastCompletedEpochId) external {
          LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(lastCompletedEpochId);
     }
 
-    function initializeAsV3() external {
-        CONTRACT_VERSION_POSITION_DEPRECATED.setStorageUint256(3);
+    function initializeAsVersion(uint256 _version) external {
+        CONTRACT_VERSION_POSITION_DEPRECATED.setStorageUint256(_version);
+    }
+
+    // NB: overrides `getVersion()` to mimic the real legacy oracle
+    function getVersion() external view returns (uint256) {
+        return CONTRACT_VERSION_POSITION_DEPRECATED.getStorageUint256();
+    }
+
+    function setLido(address lido) external {
+        LIDO_POSITION.setStorageAddress(lido);
     }
 
 }
