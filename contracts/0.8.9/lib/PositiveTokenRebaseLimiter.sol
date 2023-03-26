@@ -102,16 +102,11 @@ library PositiveTokenRebaseLimiter {
      */
     function isLimitReached(TokenRebaseLimiterData memory _limiterState) internal pure returns (bool) {
         if (_limiterState.positiveRebaseLimit == UNLIMITED_REBASE) return false;
-        if (_limiterState.currentTotalPooledEther < _limiterState.preTotalPooledEther) return false;
 
-        uint256 accumulatedEther = _limiterState.currentTotalPooledEther - _limiterState.preTotalPooledEther;
-        uint256 accumulatedRebase;
+        uint256 maxTotalPooledEther = _limiterState.preTotalPooledEther +
+            (_limiterState.positiveRebaseLimit * _limiterState.preTotalPooledEther) / LIMITER_PRECISION_BASE;
 
-        if (_limiterState.preTotalPooledEther > 0) {
-            accumulatedRebase = accumulatedEther * LIMITER_PRECISION_BASE / _limiterState.preTotalPooledEther;
-        }
-
-        return accumulatedRebase >= _limiterState.positiveRebaseLimit;
+        return _limiterState.currentTotalPooledEther >= maxTotalPooledEther;
     }
 
     /**
