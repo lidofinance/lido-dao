@@ -2,11 +2,11 @@ import { useAragonApi } from '@aragon/api-react'
 import { Header, Main, SyncIndicator, useTheme } from '@aragon/ui'
 import React from 'react'
 import { ThemeProvider } from 'styled-components'
-import { Meta } from './components/Meta'
+
+import { Primary } from './components/Primary'
+import { Secondary } from './components/Secondary'
 import { Split } from './components/shared'
-import { StakingLimitState } from './components/StakingLimitState'
-import { State } from './components/state'
-import { StETH } from './components/StETH'
+
 
 export default function App() {
   const { appState, currentApp, guiStyle } = useAragonApi()
@@ -22,13 +22,9 @@ export default function App() {
         {isSyncing && <SyncIndicator />}
         <Header primary={appName} />
         <Split
-          primary={<State />}
+          primary={<Primary />}
           secondary={
-            <>
-              <StETH />
-              <StakingLimitState />
-              <Meta />
-            </>
+            <Secondary />
           }
         />
       </ThemeProvider>
