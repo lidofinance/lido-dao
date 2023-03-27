@@ -57,7 +57,14 @@ contract('BaseOracle', ([admin]) => {
       it('only setConsensus contract can call submitConsensusReport', async () => {
         await assert.revertsWithCustomError(
           baseOracle.submitConsensusReport(HASH_1, initialRefSlot, computeDeadlineFromRefSlot(initialRefSlot)),
-          'OnlyConsensusContractCanSubmitReport()'
+          'SenderIsNotTheConsensusContract()'
+        )
+      })
+
+      it('zero hash cannot be submitted as a report', async () => {
+        await assert.revertsWithCustomError(
+          consensus.submitReportAsConsensus(ZERO_HASH, initialRefSlot, computeDeadlineFromRefSlot(initialRefSlot)),
+          'HashCannotBeZero()'
         )
       })
 
@@ -203,7 +210,7 @@ contract('BaseOracle', ([admin]) => {
     })
 
     it('initial contract state, no reports, cannot startProcessing', async () => {
-      await assert.revertsWithCustomError(baseOracle.startProcessing(), 'ProcessingDeadlineMissed(0)')
+      await assert.revertsWithCustomError(baseOracle.startProcessing(), 'NoConsensusReportToProcess()')
     })
 
     it('submit first report for initial slot', async () => {

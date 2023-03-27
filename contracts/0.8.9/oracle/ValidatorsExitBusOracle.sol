@@ -285,7 +285,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         ConsensusReport memory report = _storageConsensusReport().value;
         result.currentFrameRefSlot = _getCurrentRefSlot();
 
-        if (result.currentFrameRefSlot != report.refSlot) {
+        if (report.hash == bytes32(0) || result.currentFrameRefSlot != report.refSlot) {
             return result;
         }
 

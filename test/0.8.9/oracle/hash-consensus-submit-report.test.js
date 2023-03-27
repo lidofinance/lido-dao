@@ -22,11 +22,15 @@ contract('HashConsensus', ([admin, member1, member2, stranger]) => {
     context('method sumbitReport', () => {
       beforeEach(deploy)
 
-      it('reverts with NumericOverflow', async () => {
+      it('reverts with NumericOverflow if slot is greater than max allowed', async () => {
         await assert.reverts(
           consensus.submitReport('20446744073709551615', HASH_1, CONSENSUS_VERSION, { from: member1 }),
           'NumericOverflow()'
         )
+      })
+
+      it('reverts with InvalidSlot if slot is zero', async () => {
+        await assert.reverts(consensus.submitReport(0, HASH_1, CONSENSUS_VERSION, { from: member1 }), 'InvalidSlot()')
       })
 
       it('reverts with UnexpectedConsensusVersion', async () => {

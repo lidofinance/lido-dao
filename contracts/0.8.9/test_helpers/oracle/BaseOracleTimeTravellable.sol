@@ -83,4 +83,8 @@ contract BaseOracleTimeTravellable is BaseOracle {
     function checkConsensusData(uint256 refSlot, uint256 consensusVersion, bytes32 hash) external view {
         _checkConsensusData(refSlot, consensusVersion, hash);
     }
+
+    function checkProcessingDeadline() external view {
+        _checkProcessingDeadline();
+    }
 }

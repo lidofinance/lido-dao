@@ -180,7 +180,7 @@ contract('HashConsensus', ([admin, member1, member2, member3]) => {
       })
     })
 
-    context('setQuorum does not re-trigger same consensus', () => {
+    context('setQuorum can lead to consensus loss on quorum increase', () => {
       before(deployContractWithMembers)
 
       it('2/3 members reach consensus with quorum of 2', async () => {
@@ -203,22 +203,26 @@ contract('HashConsensus', ([admin, member1, member2, member3]) => {
         assert.equals((await reportProcessor.getLastCall_submitReport()).callCount, 1)
       })
 
-      it('quorum goes up and effective consensus changes to none', async () => {
-        await consensus.setQuorum(3)
+      it('quorum goes up to 3 and consensus is lost', async () => {
+        const tx = await consensus.setQuorum(3)
+        assert.emits(tx, 'ConsensusLost', { refSlot: frame.refSlot })
+
         const consensusState = await consensus.getConsensusState()
         assert.equal(consensusState.consensusReport, ZERO_HASH)
         assert.isFalse(consensusState.isReportProcessing)
+
+        assert.equals((await reportProcessor.getLastCall_discardReport()).callCount, 1)
       })
 
-      it('quorum goes down but same consensus is not triggered and report is not submitted', async () => {
+      it('quorum goes down, the consensus is reached again', async () => {
         const tx = await consensus.setQuorum(2)
-        assert.notEmits(tx, 'ConsensusReached')
+        assert.emits(tx, 'ConsensusReached', { refSlot: frame.refSlot, report: HASH_1, support: 2 })
 
         const consensusState = await consensus.getConsensusState()
         assert.equal(consensusState.consensusReport, HASH_1)
         assert.isFalse(consensusState.isReportProcessing)
 
-        assert.equals((await reportProcessor.getLastCall_submitReport()).callCount, 1)
+        assert.equals((await reportProcessor.getLastCall_submitReport()).callCount, 2)
       })
     })
 
@@ -252,15 +256,22 @@ contract('HashConsensus', ([admin, member1, member2, member3]) => {
       })
 
       it('quorum increases while report is processing', async () => {
-        await consensus.setQuorum(3)
+        const tx = await consensus.setQuorum(3)
+        assert.notEmits(tx, 'ConsensusReached')
+        assert.notEmits(tx, 'ConsensusLost')
+
         const consensusState = await consensus.getConsensusState()
         assert.isTrue(consensusState.isReportProcessing)
+
+        assert.equals((await reportProcessor.getLastCall_discardReport()).callCount, 0)
       })
 
       it('quorum decreases but no consensus is triggered', async () => {
         const tx = await consensus.setQuorum(2)
         assert.notEmits(tx, 'ConsensusReached')
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equals((await reportProcessor.getLastCall_submitReport()).callCount, 1)
+        assert.equals((await reportProcessor.getLastCall_discardReport()).callCount, 0)
       })
     })
   })

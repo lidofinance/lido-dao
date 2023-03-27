@@ -103,7 +103,7 @@ contract('BaseOracle', ([admin, account1, account2, member1, member2]) => {
       it('should revert from not a consensus contract', async () => {
         await assert.revertsWithCustomError(
           oracle.submitConsensusReport(HASH_1, initialRefSlot, initialRefSlot, { from: account1 }),
-          'OnlyConsensusContractCanSubmitReport()'
+          'SenderIsNotTheConsensusContract()'
         )
 
         assert.equals((await oracle.getConsensusReportLastCall()).callCount, 0)
