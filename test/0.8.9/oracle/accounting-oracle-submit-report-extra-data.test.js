@@ -96,10 +96,13 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
     }
   }
 
+  async function prepareReport({ extraData, extraDataItems, reportFields = {} } = {}) {
+    const { refSlot } = await consensus.getCurrentFrame()
+    return getReportData({ extraData, extraDataItems, reportFields: { ...reportFields, refSlot } })
+  }
+
   async function submitReportHash({ extraData, extraDataItems, reportFields = {} } = {}) {
-    const frame = await consensus.getCurrentFrame()
-    const fieldsWithRefSlot = { ...reportFields, refSlot: frame.refSlot }
-    const data = getReportData({ extraData, extraDataItems, reportFields: fieldsWithRefSlot })
+    const data = await prepareReport({ extraData, extraDataItems, reportFields })
     await consensus.submitReport(data.reportFields.refSlot, data.reportHash, CONSENSUS_VERSION, { from: member1 })
     return data
   }
@@ -646,11 +649,34 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
 
     it('reverts if main data has not been processed yet', async () => {
       await consensus.advanceTimeToNextFrameStart()
-      const { refSlot } = await consensus.getCurrentFrame()
-      const { reportFields, reportHash, extraDataList } = getReportData({ reportFields: { refSlot } })
-      await consensus.submitReport(reportFields.refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
+      const report1 = await prepareReport()
+
       await assert.revertsWithCustomError(
-        oracle.submitReportExtraDataList(extraDataList, { from: member1 }),
+        oracle.submitReportExtraDataList(report1.extraDataList, { from: member1 }),
+        'CannotSubmitExtraDataBeforeMainData()'
+      )
+
+      await consensus.submitReport(report1.reportFields.refSlot, report1.reportHash, CONSENSUS_VERSION, {
+        from: member1,
+      })
+
+      await assert.revertsWithCustomError(
+        oracle.submitReportExtraDataList(report1.extraDataList, { from: member1 }),
+        'CannotSubmitExtraDataBeforeMainData()'
+      )
+
+      await oracle.submitReportData(report1.reportItems, oracleVersion, { from: member1 })
+
+      await consensus.advanceTimeToNextFrameStart()
+      const report2 = await submitReportHash()
+
+      await assert.revertsWithCustomError(
+        oracle.submitReportExtraDataList(report1.extraDataList, { from: member1 }),
+        'CannotSubmitExtraDataBeforeMainData()'
+      )
+
+      await assert.revertsWithCustomError(
+        oracle.submitReportExtraDataList(report2.extraDataList, { from: member1 }),
         'CannotSubmitExtraDataBeforeMainData()'
       )
     })
