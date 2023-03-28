@@ -1080,6 +1080,36 @@ contract('NodeOperatorsRegistry', (addresses) => {
     })
   })
 
+  describe('updateStuckValidatorsCount()', () => {
+    const firstNodeOperatorId = 0
+    const secondNodeOperatorId = 1
+
+    beforeEach(async () => {
+      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[0], exitedSigningKeysCount: 3 }, { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: admin })
+    })
+
+    it('updates nonce & keysOpIndex', async () => {
+      const { operatorIds, keysCounts } = prepIdsCountsPayload([firstNodeOperatorId, secondNodeOperatorId], [1, 2])
+      const [nonceBefore, keysOpIndexBefore] = await Promise.all([app.getNonce(), app.getKeysOpIndex()])
+      await app.updateStuckValidatorsCount(operatorIds, keysCounts, { from: stakingRouter })
+      const [nonceAfter, keysOpIndexAfter] = await Promise.all([app.getNonce(), app.getKeysOpIndex()])
+      assert.equals(nonceAfter, wei(nonceBefore) + 1n)
+      assert.equals(keysOpIndexAfter, wei(keysOpIndexBefore) + 1n)
+    })
+
+    it('emits KeysOpIndexSet & NonceChanged events', async () => {
+      const { operatorIds, keysCounts } = prepIdsCountsPayload([firstNodeOperatorId, secondNodeOperatorId], [1, 2])
+      const keysOpIndexBefore = await app.getKeysOpIndex()
+      const tx = await app.updateStuckValidatorsCount(operatorIds, keysCounts, {
+        from: stakingRouter,
+      })
+      const nonceAfter = await app.getNonce()
+      assert.emits(tx, 'KeysOpIndexSet', { keysOpIndex: wei(keysOpIndexBefore) + 1n })
+      assert.emits(tx, 'NonceChanged', { nonce: nonceAfter })
+    })
+  })
+
   describe('updateExitedValidatorsCount()', () => {
     const firstNodeOperatorId = 0
     const secondNodeOperatorId = 1
@@ -1211,6 +1241,36 @@ contract('NodeOperatorsRegistry', (addresses) => {
       await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: stakingRouter })
       const { stakingLimit: secondNodeOperatorStakingLimitAfter } = await app.getNodeOperator(firstNodeOperatorId, true)
       assert.equals(secondNodeOperatorStakingLimitAfter, secondNodeOperatorStakingLimitBefore)
+    })
+
+    it('updates nonce & keysOpIndex', async () => {
+      const { operatorIds, keysCounts } = prepIdsCountsPayload(
+        [firstNodeOperatorId, secondNodeOperatorId],
+        [
+          NODE_OPERATORS[firstNodeOperatorId].exitedSigningKeysCount + 4,
+          NODE_OPERATORS[secondNodeOperatorId].exitedSigningKeysCount + 2,
+        ]
+      )
+      const [nonceBefore, keysOpIndexBefore] = await Promise.all([app.getNonce(), app.getKeysOpIndex()])
+      await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: stakingRouter })
+      const [nonceAfter, keysOpIndexAfter] = await Promise.all([app.getNonce(), app.getKeysOpIndex()])
+      assert.equals(nonceAfter, wei(nonceBefore) + 1n)
+      assert.equals(keysOpIndexAfter, wei(keysOpIndexBefore) + 1n)
+    })
+
+    it('emits KeysOpIndexSet & NonceChanged events', async () => {
+      const { operatorIds, keysCounts } = prepIdsCountsPayload(
+        [firstNodeOperatorId, secondNodeOperatorId],
+        [
+          NODE_OPERATORS[firstNodeOperatorId].exitedSigningKeysCount + 4,
+          NODE_OPERATORS[secondNodeOperatorId].exitedSigningKeysCount + 2,
+        ]
+      )
+      const keysOpIndexBefore = await app.getKeysOpIndex()
+      const tx = await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: stakingRouter })
+      const nonceAfter = await app.getNonce()
+      assert.emits(tx, 'KeysOpIndexSet', { keysOpIndex: wei(keysOpIndexBefore) + 1n })
+      assert.emits(tx, 'NonceChanged', { nonce: nonceAfter })
     })
   })
 
@@ -1481,6 +1541,33 @@ contract('NodeOperatorsRegistry', (addresses) => {
       })
       const { stakingLimit: secondNodeOperatorStakingLimitAfter } = await app.getNodeOperator(firstNodeOperatorId, true)
       assert.equals(secondNodeOperatorStakingLimitAfter, secondNodeOperatorStakingLimitBefore)
+    })
+
+    it('updates nonce & keysOpIndex', async () => {
+      const newExitedValidatorsCount = 4
+      const [nonceBefore, keysOpIndexBefore] = await Promise.all([app.getNonce(), app.getKeysOpIndex()])
+      await app.unsafeUpdateValidatorsCount(secondNodeOperatorId, newExitedValidatorsCount, stuckValidatorsCount, {
+        from: stakingRouter,
+      })
+      const [nonceAfter, keysOpIndexAfter] = await Promise.all([app.getNonce(), app.getKeysOpIndex()])
+      assert.equals(nonceAfter, wei(nonceBefore) + 1n)
+      assert.equals(keysOpIndexAfter, wei(keysOpIndexBefore) + 1n)
+    })
+
+    it('emits KeysOpIndexSet & NonceChanged events', async () => {
+      const newExitedValidatorsCount = 4
+      const keysOpIndexBefore = await app.getKeysOpIndex()
+      const tx = await app.unsafeUpdateValidatorsCount(
+        secondNodeOperatorId,
+        newExitedValidatorsCount,
+        stuckValidatorsCount,
+        {
+          from: stakingRouter,
+        }
+      )
+      const nonceAfter = await app.getNonce()
+      assert.emits(tx, 'KeysOpIndexSet', { keysOpIndex: wei(keysOpIndexBefore) + 1n })
+      assert.emits(tx, 'NonceChanged', { nonce: nonceAfter })
     })
   })
 
@@ -1871,6 +1958,22 @@ contract('NodeOperatorsRegistry', (addresses) => {
       assert.equals(activeKeyCountsAfterAllocation[0], firstNodeOperatorActiveKeysCount + 3)
       // the second receives 4 deposits
       assert.equals(activeKeyCountsAfterAllocation[1], secondNodeOperatorActiveKeysCount + 4)
+    })
+
+    it('updates nonce & keysOpIndex', async () => {
+      const [nonceBefore, keysOpIndexBefore] = await Promise.all([app.getNonce(), app.getKeysOpIndex()])
+      await app.updateTargetValidatorsLimits(firstNodeOperatorId, true, 4, { from: stakingRouter })
+      const [nonceAfter, keysOpIndexAfter] = await Promise.all([app.getNonce(), app.getKeysOpIndex()])
+      assert.equals(nonceAfter, wei(nonceBefore) + 1n)
+      assert.equals(keysOpIndexAfter, wei(keysOpIndexBefore) + 1n)
+    })
+
+    it('emits KeysOpIndexSet & NonceChanged events', async () => {
+      const keysOpIndexBefore = await app.getKeysOpIndex()
+      const tx = await app.updateTargetValidatorsLimits(firstNodeOperatorId, true, 4, { from: stakingRouter })
+      const nonceAfter = await app.getNonce()
+      assert.emits(tx, 'KeysOpIndexSet', { keysOpIndex: wei(keysOpIndexBefore) + 1n })
+      assert.emits(tx, 'NonceChanged', { nonce: nonceAfter })
     })
   })
 
@@ -3695,6 +3798,47 @@ contract('NodeOperatorsRegistry', (addresses) => {
       const hasPermission = await dao.hasPermission(stakingRouter, app, 'STAKING_ROUTER_ROLE')
       assert.isTrue(hasPermission)
       await app.onRewardsMinted(123, { from: stakingRouter })
+    })
+  })
+
+  describe('clearNodeOperatorPenalty', () => {
+    const firstNodeOperatorId = 0
+    const nonExistentNodeOperatorId = 3
+
+    beforeEach(async () => {
+      await nodeOperators.addNodeOperator(app, { ...NODE_OPERATORS[0], exitedSigningKeysCount: 3 }, { from: admin })
+      const refundedValidatorsCount = 4
+      const stuckValidatorsCount = 3
+      const stuckPenaltyEndTimestamp = 1 // dumb data, we only need some time in past
+      await app.testing_setNodeOperatorPenalty(
+        firstNodeOperatorId,
+        refundedValidatorsCount,
+        stuckValidatorsCount,
+        stuckPenaltyEndTimestamp
+      )
+    })
+
+    it('reverts with message "CANT_CLEAR_PENALTY" called with non existed node operator id', async () => {
+      await assert.reverts(
+        app.clearNodeOperatorPenalty(nonExistentNodeOperatorId, { from: stakingRouter }),
+        'CANT_CLEAR_PENALTY'
+      )
+    })
+
+    it('updates nonce & keysOpIndex', async () => {
+      const [nonceBefore, keysOpIndexBefore] = await Promise.all([app.getNonce(), app.getKeysOpIndex()])
+      await app.clearNodeOperatorPenalty(firstNodeOperatorId, { from: stakingRouter })
+      const [nonceAfter, keysOpIndexAfter] = await Promise.all([app.getNonce(), app.getKeysOpIndex()])
+      assert.equals(nonceAfter, wei(nonceBefore) + 1n)
+      assert.equals(keysOpIndexAfter, wei(keysOpIndexBefore) + 1n)
+    })
+
+    it('emits KeysOpIndexSet & NonceChanged events', async () => {
+      const keysOpIndexBefore = await app.getKeysOpIndex()
+      const tx = await app.clearNodeOperatorPenalty(firstNodeOperatorId, { from: stakingRouter })
+      const nonceAfter = await app.getNonce()
+      assert.emits(tx, 'KeysOpIndexSet', { keysOpIndex: wei(keysOpIndexBefore) + 1n })
+      assert.emits(tx, 'NonceChanged', { nonce: nonceAfter })
     })
   })
 

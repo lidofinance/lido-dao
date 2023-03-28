@@ -479,6 +479,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
             _requireValidRange(nodeOperatorId < totalNodeOperatorsCount);
             _updateStuckValidatorsCount(nodeOperatorId, validatorsCount);
         }
+        _increaseValidatorsKeysNonce();
     }
 
     /// @notice Called by StakingRouter to update the number of the validators in the EXITED state
@@ -515,6 +516,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
             _requireValidRange(nodeOperatorId < totalNodeOperatorsCount);
             _updateExitedValidatorsCount(nodeOperatorId, validatorsCount, false);
         }
+        _increaseValidatorsKeysNonce();
     }
 
     /// @notice Updates the number of the refunded validators for node operator with the given id
@@ -556,6 +558,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         _updateExitedValidatorsCount(_nodeOperatorId, uint64(_exitedValidatorsCount), true /* _allowDecrease */ );
         _updateStuckValidatorsCount(_nodeOperatorId, uint64(_stuckValidatorsCount));
+        _increaseValidatorsKeysNonce();
     }
 
     function _updateExitedValidatorsCount(uint256 _nodeOperatorId, uint64 _exitedValidatorsKeysCount, bool _allowDecrease)
@@ -604,6 +607,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         emit TargetValidatorsCountChanged(_nodeOperatorId, _targetLimit);
 
         _updateSummaryMaxValidatorsCount(_nodeOperatorId);
+        _increaseValidatorsKeysNonce();
     }
 
     /**
@@ -1231,6 +1235,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, 0);
         _saveOperatorStuckPenaltyStats(_nodeOperatorId, stuckPenaltyStats);
         _updateSummaryMaxValidatorsCount(_nodeOperatorId);
+        _increaseValidatorsKeysNonce();
     }
 
     /// @notice Returns total number of node operators
