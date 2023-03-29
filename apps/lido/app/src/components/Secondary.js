@@ -12,8 +12,7 @@ import {
 } from './shared'
 
 export const Secondary = () => {
-    const { currentApp } = useAragonApi()
-    const { symbol, decimals, totalSupply, stakeLimitFullInfo, hasInitialized, initializationBlock, contractVersion } = useAppState()
+    const { lido, symbol, decimals, totalSupply, stakeLimitFullInfo, hasInitialized, initializationBlock, contractVersion } = useAppState()
 
     return (
         <>
@@ -26,7 +25,7 @@ export const Secondary = () => {
                     symbol={symbol}
                     symbolAfter
                 />
-                <ListItemAddress label="Address" value={currentApp?.appAddress} />
+                <ListItemAddress label="Address" value={lido} />
             </BoxUnpadded>
             <BoxUnpadded heading="Staking status">
                 <ListItem label="Paused">
@@ -52,7 +51,9 @@ export const Secondary = () => {
                         </Tooltip>
                     }
                 >
-                    <Ether ether={stakeLimitFullInfo?.maxStakeLimit} />
+                    <LoadableElement value={stakeLimitFullInfo?.maxStakeLimit}>
+                        <Ether ether={stakeLimitFullInfo?.maxStakeLimit} />
+                    </LoadableElement>
                 </ListItem>
                 <ListItem
                     label={
