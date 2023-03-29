@@ -1,7 +1,7 @@
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import Aragon, { events } from '@aragon/api'
-import LocatorABI from "./components/LidoLocator.abi.json"
+import LocatorABI from "./LidoLocator.abi.json"
 
 const app = new Aragon()
 
