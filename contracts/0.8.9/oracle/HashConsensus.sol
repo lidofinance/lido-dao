@@ -623,11 +623,7 @@ contract HashConsensus is AccessControlEnumerable {
     }
 
     function _getCurrentFrame() internal view returns (ConsensusFrame memory) {
-        return _getCurrentFrame(_frameConfig);
-    }
-
-    function _getCurrentFrame(FrameConfig memory config) internal view returns (ConsensusFrame memory) {
-        return _getFrameAtTimestamp(_getTime(), config);
+        return _getFrameAtTimestamp(_getTime(), _frameConfig);
     }
 
     function _getInitialFrame() internal view returns (ConsensusFrame memory) {
