@@ -833,6 +833,7 @@ contract HashConsensus is AccessControlEnumerable {
 
     function _submitReport(uint256 slot, bytes32 report, uint256 consensusVersion) internal {
         if (slot > type(uint64).max) revert NumericOverflow();
+        if (report == ZERO_HASH) revert EmptyReport();
 
         uint256 memberIndex = _getMemberIndex(_msgSender());
         MemberState memory memberState = _memberStates[memberIndex];
@@ -847,7 +848,6 @@ contract HashConsensus is AccessControlEnumerable {
         FrameConfig memory config = _frameConfig;
         ConsensusFrame memory frame = _getFrameAtTimestamp(timestamp, config);
 
-        if (report == ZERO_HASH) revert EmptyReport();
         if (slot != frame.refSlot) revert InvalidSlot();
         if (currentSlot > frame.reportProcessingDeadlineSlot) revert StaleReport();
 
@@ -992,12 +992,13 @@ contract HashConsensus is AccessControlEnumerable {
         report = ZERO_HASH;
         support = 0;
 
-        for (uint256 i = 0; i < variantsLength && report == ZERO_HASH; ++i) {
+        for (uint256 i = 0; i < variantsLength; ++i) {
             uint256 iSupport = _reportVariants[i].support;
             if (iSupport >= quorum) {
                 variantIndex = int256(i);
                 report = _reportVariants[i].hash;
                 support = iSupport;
+                break;
             }
         }
 
