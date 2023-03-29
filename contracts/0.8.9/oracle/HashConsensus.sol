@@ -70,6 +70,7 @@ interface IReportAsyncProcessor {
 contract HashConsensus is AccessControlEnumerable {
     using SafeCast for uint256;
 
+    error InvalidChainConfig();
     error NumericOverflow();
     error AdminCannotBeZero();
     error ReportProcessorCannotBeZero();
@@ -213,6 +214,9 @@ contract HashConsensus is AccessControlEnumerable {
         address admin,
         address reportProcessor
     ) {
+        if (slotsPerEpoch == 0) revert InvalidChainConfig();
+        if (secondsPerSlot == 0) revert InvalidChainConfig();
+
         SLOTS_PER_EPOCH = slotsPerEpoch.toUint64();
         SECONDS_PER_SLOT = secondsPerSlot.toUint64();
         GENESIS_TIME = genesisTime.toUint64();
