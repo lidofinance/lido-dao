@@ -1129,7 +1129,8 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
             from: managersRoster.allLimitsManagers[0],
           }
         ),
-        `IncorrectLimitValue(${INVALID_BASIS_POINTS}, ${MAX_BASIS_POINTS})`
+        'IncorrectLimitValue',
+        [INVALID_BASIS_POINTS, 0, MAX_BASIS_POINTS]
       )
 
       await assert.reverts(
@@ -1139,7 +1140,8 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
             from: managersRoster.allLimitsManagers[0],
           }
         ),
-        `IncorrectLimitValue(${INVALID_BASIS_POINTS}, ${MAX_BASIS_POINTS})`
+        'IncorrectLimitValue',
+        [INVALID_BASIS_POINTS, 0, MAX_BASIS_POINTS]
       )
 
       await assert.reverts(
@@ -1149,7 +1151,8 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
             from: managersRoster.allLimitsManagers[0],
           }
         ),
-        `IncorrectLimitValue(${INVALID_BASIS_POINTS}, ${MAX_BASIS_POINTS})`
+        'IncorrectLimitValue',
+        [INVALID_BASIS_POINTS, 0, MAX_BASIS_POINTS]
       )
     })
 
@@ -1164,7 +1167,8 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
             from: managersRoster.allLimitsManagers[0],
           }
         ),
-        `IncorrectLimitValue(${INVALID_VALUE}, ${MAX_UINT_16})`
+        'IncorrectLimitValue',
+        [INVALID_VALUE, 0, MAX_UINT_16]
       )
 
       await assert.reverts(
@@ -1174,7 +1178,8 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
             from: managersRoster.allLimitsManagers[0],
           }
         ),
-        `IncorrectLimitValue(${INVALID_VALUE}, ${MAX_UINT_16})`
+        'IncorrectLimitValue',
+        [INVALID_VALUE, 0, MAX_UINT_16]
       )
 
       await assert.reverts(
@@ -1184,7 +1189,8 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
             from: managersRoster.allLimitsManagers[0],
           }
         ),
-        `IncorrectLimitValue(${INVALID_VALUE}, ${MAX_UINT_16})`
+        'IncorrectLimitValue',
+        [INVALID_VALUE, 0, MAX_UINT_16]
       )
 
       await assert.reverts(
@@ -1194,7 +1200,8 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
             from: managersRoster.allLimitsManagers[0],
           }
         ),
-        `IncorrectLimitValue(${INVALID_VALUE}, ${MAX_UINT_16})`
+        'IncorrectLimitValue',
+        [INVALID_VALUE, 0, MAX_UINT_16]
       )
     })
 
@@ -1209,7 +1216,8 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
             from: managersRoster.allLimitsManagers[0],
           }
         ),
-        `IncorrectLimitValue(${INVALID_VALUE.toString()}, ${MAX_UINT_64.toString()})`
+        'IncorrectLimitValue',
+        [INVALID_VALUE.toString(), 0, MAX_UINT_64.toString()]
       )
 
       await assert.reverts(
@@ -1219,7 +1227,21 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
             from: managersRoster.allLimitsManagers[0],
           }
         ),
-        `IncorrectLimitValue(${INVALID_VALUE.toString()}, ${MAX_UINT_64.toString()})`
+        'IncorrectLimitValue',
+        [INVALID_VALUE.toString(), 1, MAX_UINT_64.toString()]
+      )
+    })
+
+    it('value must be greater than zero', async () => {
+      const MAX_UINT_64 = BigInt(2) ** 64n - 1n
+      const INVALID_VALUE = 0
+
+      await assert.reverts(
+        oracleReportSanityChecker.setMaxPositiveTokenRebase(0, {
+          from: managersRoster.maxPositiveTokenRebaseManagers[0],
+        }),
+        'IncorrectLimitValue',
+        [INVALID_VALUE, 1, MAX_UINT_64.toString()]
       )
     })
   })
