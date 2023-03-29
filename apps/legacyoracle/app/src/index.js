@@ -6,14 +6,13 @@ import ReactDOM from 'react-dom'
 import { AragonApi } from '@aragon/api-react'
 import App from './App'
 
+const defaultState = {
+  isSyncing: true,
+}
+
 const reducer = (state) => {
   if (state === null) {
-    return {
-      currentFrame: null,
-      lastCompletedReportDelta: null,
-      version: null,
-      isSyncing: true,
-    }
+    return defaultState
   }
   return state
 }
