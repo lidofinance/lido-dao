@@ -230,7 +230,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
         ) revert NotOwnerOrApproved(msgSender);
 
         delete _getTokenApprovals()[_requestId];
-        request.owner = payable(_to);
+        request.owner = _to;
 
         assert(_getRequestsByOwner()[_from].remove(_requestId));
         assert(_getRequestsByOwner()[_to].add(_requestId));
