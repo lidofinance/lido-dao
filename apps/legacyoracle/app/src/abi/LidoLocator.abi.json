@@ -1,0 +1,16 @@
+[
+    {
+        "constant": true,
+        "inputs": [],
+        "name": "accountingOracle",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    }
+]
