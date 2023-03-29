@@ -28,6 +28,18 @@ export const Primary = () => {
         legacyOracle,
         recoveryVault,
         lidoLocator,
+        lido,
+        accountingOracle,
+        burner,
+        depositSecurityModule,
+        elRewardsVault,
+        oracleDaemonConfig,
+        oracleReportSanityChecker,
+        postTokenRebaseReceiver,
+        stakingRouter,
+        validatorsExitBusOracle,
+        withdrawalQueue,
+        withdrawalVault,
     } = useAppState()
 
     return (
@@ -81,11 +93,23 @@ export const Primary = () => {
                     </LoadableElement>
                 </ListItem>
             </BoxUnpadded>
-            <BoxUnpadded heading="Locations">
+            <BoxUnpadded heading="Address book">
+                <ListItemAddress label="Lido" value={lido} />
                 <ListItemAddress label="Treasury" value={treasury} />
-                <ListItemAddress label="Oracle (legacy)" value={legacyOracle} />
-                <ListItemAddress label="Recovery vault" value={recoveryVault} />
+                <ListItemAddress label="LegacyOracle" value={legacyOracle} />
+                <ListItemAddress label="RecoveryVault" value={recoveryVault} />
                 <ListItemAddress label="Locator" value={lidoLocator} />
+                <ListItemAddress label="AccountingOracle" value={accountingOracle} />
+                <ListItemAddress label="Burner" value={burner} />
+                <ListItemAddress label="DepositSecurityModule" value={depositSecurityModule} />
+                <ListItemAddress label="ELRewardsVault" value={elRewardsVault} />
+                <ListItemAddress label="OracleDaemonConfig" value={oracleDaemonConfig} />
+                <ListItemAddress label="OracleReportSanityChecker" value={oracleReportSanityChecker} />
+                <ListItemAddress label="PostTokenRebaseReceiver" value={postTokenRebaseReceiver} />
+                <ListItemAddress label="StakingRouter" value={stakingRouter} />
+                <ListItemAddress label="ValidatorsExitBusOracle" value={validatorsExitBusOracle} />
+                <ListItemAddress label="WithdrawalQueue" value={withdrawalQueue} />
+                <ListItemAddress label="WithdrawalVault" value={withdrawalVault} />
             </BoxUnpadded>
         </>
     )
