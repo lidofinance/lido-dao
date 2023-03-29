@@ -8,6 +8,8 @@ const signingKeys = require('../helpers/signing-keys')
 const SigningKeysMock = artifacts.require('SigningKeysMock')
 const SigningKeys = artifacts.require('SigningKeys')
 
+const UINT64_MAX_BN = toBN('0xffffffffffffffff')
+
 const nodeOpId1 = 1
 const nodeOpId2 = 2
 
@@ -34,6 +36,40 @@ contract('SigningKeys', () => {
   })
 
   describe('saveKeysSigs()', () => {
+    it('reverts with INVALID_KEYS_COUNT error when start index == UINT64_MAX', async () => {
+      const keysCount = 1
+      const [publicKeys, signatures] = firstNodeOperatorKeys.slice(0, keysCount)
+      await assert.reverts(
+        app.saveKeysSigs(firstNodeOperatorId, UINT64_MAX_BN, keysCount, publicKeys, signatures),
+        'INVALID_KEYS_COUNT'
+      )
+    })
+
+    it('works correctly when when start index == UINT64_MAX - 1 and keys count == 1', async () => {
+      const keysCount = 1
+      const startIndex = UINT64_MAX_BN.sub(toBN(1))
+      const [publicKeys, signatures] = firstNodeOperatorKeys.slice(0, keysCount)
+      await app.saveKeysSigs(firstNodeOperatorId, startIndex, keysCount, publicKeys, signatures)
+
+      const { pubkeys: actualPublicKey, signatures: actualSignature } = await app.loadKeysSigs(
+        firstNodeOperatorId,
+        startIndex,
+        1
+      )
+      const [expectedPublicKey, expectedSignature] = firstNodeOperatorKeys.get(0)
+      assert.equal(actualPublicKey, expectedPublicKey)
+      assert.equal(actualSignature, expectedSignature)
+    })
+
+    it('reverts with INVALID_KEYS_COUNT error when start index == UINT64_MAX', async () => {
+      const keysCount = 1
+      const [publicKeys, signatures] = firstNodeOperatorKeys.slice(0, keysCount)
+      await assert.reverts(
+        app.saveKeysSigs(firstNodeOperatorId, UINT64_MAX_BN, keysCount, publicKeys, signatures),
+        'INVALID_KEYS_COUNT'
+      )
+    })
+
     it('reverts with INVALID_KEYS_COUNT error when keys count > UINT64_MAX', async () => {
       const keysCount = toBN('0x10000000000000001')
       await assert.reverts(
