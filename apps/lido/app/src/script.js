@@ -1,6 +1,7 @@
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import Aragon, { events } from '@aragon/api'
+import LocatorABI from "./components/LidoLocator.abi.json"
 
 const app = new Aragon()
 
@@ -115,6 +116,21 @@ const protocolVariables = [
   },
 ]
 
+const locatorVariables = [
+  "accountingOracle",
+  "burner",
+  "depositSecurityModule",
+  "elRewardsVault",
+  "lido",
+  "oracleDaemonConfig",
+  "oracleReportSanityChecker",
+  "postTokenRebaseReceiver",
+  "stakingRouter",
+  "validatorsExitBusOracle",
+  "withdrawalQueue",
+  "withdrawalVault"
+]
+
 app.store(
   async (state, { event }) => {
     const nextState = {
@@ -168,9 +184,25 @@ function initializeState() {
       return stateObject
     }, {})
 
+    // fetch addresses from LidoLocator
+
+    const { lidoLocator } = updatedState
+
+    const locator = app.external(lidoLocator, LocatorABI)
+    const locatorPromises = locatorVariables.map(f => locator[f]().toPromise())
+
+    const settledLocatorPromises = await Promise.allSettled(locatorPromises)
+
+    const locations = settledLocatorPromises.reduce((locationsObject, cur, index) => {
+      locationsObject[locatorVariables[index]] = cur.value
+      return locationsObject
+    }, {})
+
+
     return {
       ...cachedState,
       ...updatedState,
+      ...locations
     }
   }
 }
