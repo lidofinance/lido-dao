@@ -107,14 +107,21 @@ contract HashConsensus is AccessControlEnumerable {
         uint64 fastLaneLengthSlots;
     }
 
-    /// @dev Oracle reporting is divided into frames, each lasting the same number of slots
+    /// @dev Oracle reporting is divided into frames, each lasting the same number of slots.
+    ///
+    /// The start slot of the next frame is always the next slot after the end slot of the previous
+    /// frame.
+    ///
+    /// Each frame also has a reference slot: if the oracle report contains any data derived from
+    /// onchain data, the onchain data should be sampled at the reference slot.
+    ///
     struct ConsensusFrame {
         // frame index; increments by 1 with each frame but resets to zero on frame size change
         uint256 index;
         // the slot at which to read the state around which consensus is being reached;
         // if the slot contains a block, the state should include all changes from that block
         uint256 refSlot;
-        // the last slot at which a report can be processed
+        // the last slot at which a report can be reported and processed
         uint256 reportProcessingDeadlineSlot;
     }
 
@@ -171,6 +178,12 @@ contract HashConsensus is AccessControlEnumerable {
     /// @dev A quorum value that effectively disables the oracle.
     uint256 internal constant UNREACHABLE_QUORUM = type(uint256).max;
     bytes32 internal constant ZERO_HASH = bytes32(0);
+
+    /// @dev An offset from the processing deadline slot of the previous frame (i.e. the last slot
+    /// at which a report for the prev. frame can be submitted and its processing started) to the
+    /// reference slot of the next frame (equal to the last slot of the previous frame).
+    /// frame[i].reportProcessingDeadlineSlot := frame[i + 1].refSlot - DEADLINE_SLOT_OFFSET
+    uint256 internal constant DEADLINE_SLOT_OFFSET = 0;
 
     /// @dev Reporting frame configuration
     FrameConfig internal _frameConfig;
@@ -637,7 +650,7 @@ contract HashConsensus is AccessControlEnumerable {
         return ConsensusFrame({
             index: frameIndex,
             refSlot: uint64(frameStartSlot - 1),
-            reportProcessingDeadlineSlot: uint64(nextFrameStartSlot - 1)
+            reportProcessingDeadlineSlot: uint64(nextFrameStartSlot - 1 - DEADLINE_SLOT_OFFSET)
         });
     }
 
@@ -953,12 +966,12 @@ contract HashConsensus is AccessControlEnumerable {
         ConsensusFrame memory frame = _getFrameAtTimestamp(timestamp, _frameConfig);
 
         if (_computeSlotAtTimestamp(timestamp) > frame.reportProcessingDeadlineSlot) {
-            // reference slot is not reportable anymore
+            // a report for the current ref. slot cannot be processed anymore
             return;
         }
 
         if (_getLastProcessingRefSlot() >= frame.refSlot) {
-            // consensus report for the current ref. slot already processing
+            // a consensus report for the current ref. slot is already being processed
             return;
         }
 
