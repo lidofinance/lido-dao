@@ -34,7 +34,22 @@ contract('BaseOracle', ([admin]) => {
   before(deployContract)
 
   describe('submitConsensusReport is called and changes the contract state', () => {
-    context('submitConsensusReport passes pre-conditions', () => {
+    context('submitConsensusReport rejects a report whose deadline has already passed', () => {
+      before(async () => {
+        await evmSnapshot.rollback()
+      })
+
+      it('the report is rejected', async () => {
+        const deadline = computeDeadlineFromRefSlot(initialRefSlot)
+        await baseOracle.setTime(deadline + 1)
+        await assert.revertsWithCustomError(
+          consensus.submitReportAsConsensus(HASH_1, initialRefSlot, deadline),
+          `ProcessingDeadlineMissed(${deadline})`
+        )
+      })
+    })
+
+    context('submitConsensusReport checks pre-conditions', () => {
       before(async () => {
         await evmSnapshot.rollback()
       })

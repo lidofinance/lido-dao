@@ -479,7 +479,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             signatures,
             { from: stranger }
           ),
-          'SignatureNotSorted()'
+          'SignaturesNotSorted()'
         )
       })
 
@@ -500,7 +500,7 @@ contract('DepositSecurityModule', ([owner, stranger, guardian]) => {
             signatures,
             { from: stranger }
           ),
-          'SignatureNotSorted()'
+          'SignaturesNotSorted()'
         )
       })
 

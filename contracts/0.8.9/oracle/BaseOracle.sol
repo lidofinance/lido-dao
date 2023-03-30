@@ -176,6 +176,10 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
             revert RefSlotMustBeGreaterThanProcessingOne(refSlot, prevProcessingRefSlot);
         }
 
+        if (_getTime() > deadline) {
+            revert ProcessingDeadlineMissed(deadline);
+        }
+
         if (refSlot != prevSubmittedRefSlot && prevProcessingRefSlot != prevSubmittedRefSlot) {
             emit WarnProcessingMissed(prevSubmittedRefSlot);
         }
