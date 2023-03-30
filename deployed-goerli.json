@@ -184,5 +184,9 @@
   ],
   "selfOwnedStETHBurnerAddress": "0x6432756feF0fb527C06eFd4689A7CE0E195bD327",
   "executionLayerRewardsVaultAddress": "0x94750381bE1AbA0504C666ee1DB118F68f0780D4",
-  "depositorPreviousAddress": "0xEd23AD3EA5Fb9d10e7371Caef1b141AD1C23A80c"
+  "depositorPreviousAddress": "0xEd23AD3EA5Fb9d10e7371Caef1b141AD1C23A80c",
+  "validatorExitBus": {
+    "implementation": "0xB08C2030324617DF133Bd2faC0f6723Cb2c5065C",
+    "proxy": "0x7282dCa8AB24531B0bE16Db9D74b924d0e444124"
+  }
 }

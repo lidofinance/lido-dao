@@ -26,7 +26,7 @@ $ APP=oracle yarn hardhat --network mainnet run ./scripts/multisig/13-deploy-new
 Network ID: 1
 Reading network state from /Users/me/lido-e2e/oracle_upgrade1/lido-dao/deployed-mainnet.json...
 ====================
-Saving deploy TX data for LidoOracle to tx-13-1-deploy-oracle-base.json
+Saving deploy TX data for LegacyOracle to tx-13-1-deploy-oracle-base.json
 ====================
 Before continuing the deployment, please send all contract creation transactions
 that you can find in the files listed above. You may use a multisig address
@@ -62,7 +62,7 @@ $ APP=oracle yarn hardhat --network mainnet run ./scripts/multisig/14-obtain-dep
 
 This step will verify the deployed contract and update the following field to the network state file:
 
-* `app:oracle.baseAddress` address of the `LidoOracle` implementation contract
+* `app:oracle.baseAddress` address of the `LegacyOracle` implementation contract
 
 ## 3. Create new voting for upgrade
 

@@ -3,11 +3,13 @@
 **/build/
 **/node_modules/
 **/artifacts/
+**/artifacts-userdoc/
 .cache
 **/cache/
 dist/
 tmp/
 venv
+out
 
 /coverage/
 /coverage.json
@@ -38,3 +40,19 @@ cli/vendor
 /accounts.json
 # e2e temp data
 /deployed-e2e.json
+
+# OS relative
+.DS_Store
+
+# foundry artifacts
+foundry/cache
+foundry/out
+
+# certora
+certora/munged*
+.certora*.json
+**.last_conf*
+certora-logs
+certora_debug_log.txt
+resource_errors.json
+certora/conf*

@@ -10,6 +10,7 @@ const { deploy, useOrDeploy, withArgs } = require('./helpers/deploy')
 const { readNetworkState, persistNetworkState, updateNetworkState } = require('./helpers/persisted-network-state')
 
 const { resolveLatestVersion } = require('./components/apm')
+const { network } = require('hardhat')
 
 const DAO_NAME = process.env.DAO_NAME || 'lido-dao'
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
@@ -125,6 +126,15 @@ async function deployDao({
   updateNetworkState(state, depositContractResults)
   persistNetworkState(network.name, netId, state)
 
+  logHeader(`EIP712StETH`)
+  const eip712StETHResults = await useOrDeployEIP712StETH({
+    artifacts,
+    owner: state.owner,
+    eip712StETHAddress: state.eip712StETHAddress
+  })
+  updateNetworkState(state, eip712StETHResults)
+  persistNetworkState(network.name, netId, state)
+
   logHeader(`The DAO`)
 
   const apps = {}
@@ -192,6 +202,19 @@ async function useOrDeployDepositContract({ artifacts, owner, depositContractAdd
   log(chalk.red(`WARN deploying a new instance of DepositContract`))
   const depositContract = await deploy('DepositContract', artifacts, withArgs({ from: owner }))
   return { depositContract }
+}
+
+async function useOrDeployEIP712StETH({ artifacts, owner, eip712StETHAddress }) {
+  if (eip712StETHAddress) {
+    log(`Using EIP712StETH at: ${yl(eip712StETHAddress)}`)
+    const eip712StETH = await artifacts
+      .require('contracts/0.4.24/contracts/StETHPermit.sol:IEIP712')
+      .at(eip712StETHAddress)
+    return { eip712StETH }
+  }
+  log(chalk.red(`WARN deploying a new instance of EIP712StETH`))
+  const eip712StETH = await deploy('EIP712StETH', artifacts, withArgs({ from: owner }))
+  return { eip712StETH }
 }
 
 async function deployDAO({

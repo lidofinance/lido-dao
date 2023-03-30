@@ -1,5 +1,4 @@
-// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
-
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.4.24;
@@ -7,60 +6,62 @@ pragma solidity 0.4.24;
 import "../Lido.sol";
 import "./VaultMock.sol";
 
-
 /**
-  * @dev Only for testing purposes! Lido version with some functions exposed.
-  */
+ * @dev Only for testing purposes! Lido version with some functions exposed.
+ */
 contract LidoMock is Lido {
+    bytes32 internal constant ALLOW_TOKEN_POSITION = keccak256("lido.Lido.allowToken");
+    uint256 internal constant UNLIMITED_TOKEN_REBASE = uint256(-1);
+
     function initialize(
-        IDepositContract _depositContract,
-        address _oracle,
-        INodeOperatorsRegistry _operators
+        address _lidoLocator,
+        address _eip712StETH
     )
-    public
+        public
+        payable
     {
         super.initialize(
-          _depositContract,
-          _oracle,
-          _operators,
-          new VaultMock(),
-          new VaultMock()
+            _lidoLocator,
+            _eip712StETH
         );
+
+        setAllowRecoverability(true);
     }
 
     /**
-      * @dev For use in tests to make protocol operational after deployment
-      */
-    function resumeProtocolAndStaking() {
-      _resume();
-      _resumeStaking();
+     * @dev For use in tests to make protocol operational after deployment
+     */
+    function resumeProtocolAndStaking() public {
+        _resume();
+        _resumeStaking();
     }
 
     /**
-      * @dev Gets unaccounted (excess) Ether on this contract balance
-      */
-    function getUnaccountedEther() public view returns (uint256) {
-        return _getUnaccountedEther();
-    }
-
-    /**
-      * @dev Padding memory array with zeroes up to 64 bytes on the right
-      * @param _b Memory array of size 32 .. 64
-      */
-    function pad64(bytes memory _b) public pure returns (bytes memory) {
-        return _pad64(_b);
-    }
-
-    /**
-      * @dev Converting value to little endian bytes and padding up to 32 bytes on the right
-      * @param _value Number less than `2**64` for compatibility reasons
-      */
-    function toLittleEndian64(uint256 _value) public pure returns (uint256 result) {
-        return _toLittleEndian64(_value);
-    }
-
-    /**
-    * @dev Only for testing recovery vault
-    */
+     * @dev Only for testing recovery vault
+     */
     function makeUnaccountedEther() public payable {}
+
+    function setVersion(uint256 _version) external {
+        CONTRACT_VERSION_POSITION.setStorageUint256(_version);
+    }
+
+    function allowRecoverability(address /*token*/) public view returns (bool) {
+        return getAllowRecoverability();
+    }
+
+    function setAllowRecoverability(bool allow) public {
+        ALLOW_TOKEN_POSITION.setStorageBool(allow);
+    }
+
+    function getAllowRecoverability() public view returns (bool) {
+        return ALLOW_TOKEN_POSITION.getStorageBool();
+    }
+
+    function resetEip712StETH() external {
+        EIP712_STETH_POSITION.setStorageAddress(0);
+    }
+
+    function burnShares(address _account, uint256 _amount) external {
+        _burnShares(_account, _amount);
+    }
 }

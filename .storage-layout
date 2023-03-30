@@ -1,0 +1,114 @@
+👁👁 STORAGE LAYOUT snapshot 👁👁
+=======================
+
+=======================
+➡ CompositePostRebaseBeaconReceiver
+=======================
+
+| Name      | Type      | Slot | Offset | Bytes | Contract                                                                                |
+|-----------|-----------|------|--------|-------|-----------------------------------------------------------------------------------------|
+| callbacks | address[] | 0    | 0      | 32    | contracts/0.8.9/CompositePostRebaseBeaconReceiver.sol:CompositePostRebaseBeaconReceiver |
+
+=======================
+➡ DepositContract
+=======================
+
+| Name          | Type        | Slot | Offset | Bytes | Contract                                              |
+|---------------|-------------|------|--------|-------|-------------------------------------------------------|
+| branch        | bytes32[32] | 0    | 0      | 1024  | contracts/0.6.11/deposit_contract.sol:DepositContract |
+| deposit_count | uint256     | 32   | 0      | 32    | contracts/0.6.11/deposit_contract.sol:DepositContract |
+| zero_hashes   | bytes32[32] | 33   | 0      | 1024  | contracts/0.6.11/deposit_contract.sol:DepositContract |
+
+=======================
+➡ DepositSecurityModule
+=======================
+
+| Name                            | Type                        | Slot | Offset | Bytes | Contract                                                        |
+|---------------------------------|-----------------------------|------|--------|-------|-----------------------------------------------------------------|
+| nodeOperatorsRegistry           | address                     | 0    | 0      | 20    | contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule |
+| maxDepositsPerBlock             | uint256                     | 1    | 0      | 32    | contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule |
+| minDepositBlockDistance         | uint256                     | 2    | 0      | 32    | contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule |
+| pauseIntentValidityPeriodBlocks | uint256                     | 3    | 0      | 32    | contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule |
+| owner                           | address                     | 4    | 0      | 20    | contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule |
+| guardians                       | address[]                   | 5    | 0      | 32    | contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule |
+| guardianIndicesOneBased         | mapping(address => uint256) | 6    | 0      | 32    | contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule |
+| quorum                          | uint256                     | 7    | 0      | 32    | contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule |
+| paused                          | bool                        | 8    | 0      | 1     | contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule |
+| lastDepositBlock                | uint256                     | 9    | 0      | 32    | contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule |
+
+=======================
+➡ Lido
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ LidoExecutionLayerRewardsVault
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ LegacyOracle
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ NodeOperatorsRegistry
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ OrderedCallbacksArray
+=======================
+
+| Name      | Type      | Slot | Offset | Bytes | Contract                                                        |
+|-----------|-----------|------|--------|-------|-----------------------------------------------------------------|
+| callbacks | address[] | 0    | 0      | 32    | contracts/0.8.9/OrderedCallbacksArray.sol:OrderedCallbacksArray |
+
+=======================
+➡ Pausable
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ Burner
+=======================
+
+| Name                           | Type    | Slot | Offset | Bytes | Contract                                                      |
+|--------------------------------|---------|------|--------|-------|---------------------------------------------------------------|
+| coverSharesBurnRequested       | uint256 | 0    | 0      | 32    | contracts/0.8.9/Burner.sol:Burner |
+| nonCoverSharesBurnRequested    | uint256 | 1    | 0      | 32    | contracts/0.8.9/Burner.sol:Burner |
+| totalCoverSharesBurnt          | uint256 | 2    | 0      | 32    | contracts/0.8.9/Burner.sol:Burner |
+| totalNonCoverSharesBurnt       | uint256 | 3    | 0      | 32    | contracts/0.8.9/Burner.sol:Burner |
+| maxBurnAmountPerRunBasisPoints | uint256 | 4    | 0      | 32    | contracts/0.8.9/Burner.sol:Burner |
+
+=======================
+➡ StETH
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ WstETH
+=======================
+
+| Name         | Type                                            | Slot | Offset | Bytes | Contract                           |
+|--------------|-------------------------------------------------|------|--------|-------|------------------------------------|
+| _balances    | mapping(address => uint256)                     | 0    | 0      | 32    | contracts/0.6.12/WstETH.sol:WstETH |
+| _allowances  | mapping(address => mapping(address => uint256)) | 1    | 0      | 32    | contracts/0.6.12/WstETH.sol:WstETH |
+| _totalSupply | uint256                                         | 2    | 0      | 32    | contracts/0.6.12/WstETH.sol:WstETH |
+| _name        | string                                          | 3    | 0      | 32    | contracts/0.6.12/WstETH.sol:WstETH |
+| _symbol      | string                                          | 4    | 0      | 32    | contracts/0.6.12/WstETH.sol:WstETH |
+| _decimals    | uint8                                           | 5    | 0      | 1     | contracts/0.6.12/WstETH.sol:WstETH |
+| _nonces      | mapping(address => struct Counters.Counter)     | 6    | 0      | 32    | contracts/0.6.12/WstETH.sol:WstETH |
+| stETH        | contract IStETH                                 | 7    | 0      | 20    | contracts/0.6.12/WstETH.sol:WstETH |

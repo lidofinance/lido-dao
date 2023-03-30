@@ -13,6 +13,6 @@ module.exports = {
   ...baseConfig,
   aragon: {
     ...baseConfig.aragon,
-    ...aragonConfig
-  }
+    ...aragonConfig,
+  },
 }

@@ -6,7 +6,10 @@ const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = re
 const { APP_NAMES } = require('./constants')
 
 const DEPLOYER = process.env.DEPLOYER || ''
-const REQUIRED_NET_STATE = ['daoInitialSettings', `app:${APP_NAMES.LIDO}`]
+const REQUIRED_NET_STATE = [
+  'daoInitialSettings',
+  `app:${APP_NAMES.LIDO}`
+]
 
 async function deployELRewardsVault({ web3, artifacts }) {
   const appArtifact = 'LidoExecutionLayerRewardsVault'
@@ -30,9 +33,8 @@ async function deployELRewardsVault({ web3, artifacts }) {
     executionLayerRewardsVaultDeployTx: ''
   })
 
-  const args = [lidoAddress, treasuryAddr]
   await saveDeployTx(appArtifact, `tx-26-deploy-execution-layer-rewards-vault.json`, {
-    arguments: args,
+    arguments: [lidoAddress, treasuryAddr],
     from: DEPLOYER || state.multisigAddress
   })
 

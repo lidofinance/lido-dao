@@ -1,0 +1,1 @@
+[{"anonymous":false,"inputs":[{"indexed":true,"name":"nodeOperatorId","type":"uint256"},{"indexed":false,"name":"pubkey","type":"bytes"}],"name":"SigningKeyAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"nodeOperatorId","type":"uint256"},{"indexed":false,"name":"pubkey","type":"bytes"}],"name":"SigningKeyRemoved","type":"event"}]

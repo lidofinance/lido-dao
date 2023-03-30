@@ -12,7 +12,7 @@ const REQUIRED_NET_STATE = [
   'ensAddress',
   'daoAddress',
   `app:${APP_NAMES.ARAGON_VOTING}`,
-  `app:${APP_NAMES.ORACLE}`
+  `lidoOracle`
 ]
 
 async function upgradeApp({ web3, artifacts }) {
@@ -25,9 +25,9 @@ async function upgradeApp({ web3, artifacts }) {
   const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
   const votingAddress = state[`app:${APP_NAMES.ARAGON_VOTING}`].proxyAddress
-  const lidoOracleAddress = state[`app:${APP_NAMES.ORACLE}`].proxyAddress
+  const lidoOracleAddress = state['lidoOracle'].proxy
   log(`Using Voting address:`, yl(votingAddress))
-  log(`Using LidoOracle address:`, yl(lidoOracleAddress))
+  log(`Using LegacyOracle address:`, yl(lidoOracleAddress))
   logSplitter()
 
   const args = [ votingAddress, lidoOracleAddress ]

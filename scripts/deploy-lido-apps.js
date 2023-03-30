@@ -96,16 +96,16 @@ async function publishApp(appName, env, netName, appsDirPath, releaseType) {
   logSplitter(`Write state app ${appName}`)
   writeNetworkStateFile(arappFile, arapp)
 
-  log(`Installing frontend deps for app ${appName}`)
-  await execLive('yarn', {
-    cwd: appFrontendPath
-  })
+  // log(`Installing frontend deps for app ${appName}`)
+  // await execLive('yarn', {
+  //   cwd: appFrontendPath
+  // })
 
-  log(`Build app ${appName}`)
-  await execLive('yarn', {
-    args: ['build'],
-    cwd: appFrontendPath
-  })
+  // log(`Build app ${appName}`)
+  // await execLive('yarn', {
+  //   args: ['build'],
+  //   cwd: appFrontendPath
+  // })
 
   await execLive('hardhat', {
     args: [
