@@ -172,7 +172,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
     })
     it('getStakingModuleDigests([]uint256) - digests works', async () => {
       await module1.setTotalExitedValidatorsCount(11)
-      await module1.setActiveValidatorsCount(22)
+      await module1.setActiveValidatorsCount(21)
       await module1.setAvailableKeysCount(33)
 
       const digests = await router.getStakingModuleDigests([module1Id, module2Id])
@@ -195,7 +195,7 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         }),
         summary: Object.values({
           totalExitedValidators: '11',
-          totalDepositedValidators: '22',
+          totalDepositedValidators: '32', // 11 exited + 21 active
           depositableValidatorsCount: '33',
         }),
       }

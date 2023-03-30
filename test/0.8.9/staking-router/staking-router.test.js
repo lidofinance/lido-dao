@@ -1158,12 +1158,12 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
       module1Id = +(await router.getStakingModuleIds())[0]
 
       await module1.setTotalExitedValidatorsCount(11)
-      await module1.setActiveValidatorsCount(22)
+      await module1.setActiveValidatorsCount(12)
       await module1.setAvailableKeysCount(33)
 
       const summary = await router.getStakingModuleSummary(module1Id)
       assert.equal(summary.totalExitedValidators, 11)
-      assert.equal(summary.totalDepositedValidators, 22)
+      assert.equal(summary.totalDepositedValidators, 23) // 11 exited + 12 deposited
       assert.equal(summary.depositableValidatorsCount, 33)
     })
   })

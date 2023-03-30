@@ -74,6 +74,8 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
           { from: admin }
         )
         module1Id = +(await router.getStakingModuleIds())[0]
+
+        await module1.setActiveValidatorsCount(10)
       })
 
       it('initially, router assumes no staking modules have exited validators', async () => {
@@ -515,6 +517,20 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
           'UnrecoverableModuleError()'
         )
       })
+
+      it(
+        'updateExitedValidatorsCountByStakingModule reverts when reported ' +
+          'exitedValidatorsCount exceeds deposited validators count',
+        async () => {
+          const { totalDepositedValidators } = await module1.getStakingModuleSummary()
+          const invalidExitedValidatorsCount = +totalDepositedValidators + 1
+          await assert.reverts(
+            router.updateExitedValidatorsCountByStakingModule([1], [invalidExitedValidatorsCount], { from: admin }),
+            'ReportedExitedValidatorsExceedDeposited',
+            [invalidExitedValidatorsCount, totalDepositedValidators]
+          )
+        }
+      )
     })
 
     describe('two staking modules', async () => {
@@ -532,6 +548,8 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
           5_000, // 50 % _treasuryFee
           { from: admin }
         )
+        await module1.setActiveValidatorsCount(7)
+
         await router.addStakingModule(
           'module 2',
           module2.address,
@@ -540,6 +558,8 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
           0, // 0 % _treasuryFee
           { from: admin }
         )
+        await module2.setActiveValidatorsCount(11)
+
         moduleIds = toNum(await router.getStakingModuleIds())
       })
 
@@ -851,6 +871,26 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
           assert.equal(callInfo2.updateStuckValidatorsCount.callCount, 1)
         }
       )
+
+      it(
+        'updateExitedValidatorsCountByStakingModule reverts when reported ' +
+          'exitedValidatorsCount exceeds deposited validators count',
+        async () => {
+          const { totalDepositedValidators } = await module2.getStakingModuleSummary()
+          const invalidExitedValidatorsCount = +totalDepositedValidators + 1
+          await assert.reverts(
+            router.updateExitedValidatorsCountByStakingModule.sendWithResult(
+              moduleIds,
+              [3, invalidExitedValidatorsCount],
+              {
+                from: admin,
+              }
+            ),
+            'ReportedExitedValidatorsExceedDeposited',
+            [invalidExitedValidatorsCount, totalDepositedValidators]
+          )
+        }
+      )
     })
   })
 
@@ -911,6 +951,8 @@ contract('StakingRouter', ([deployer, lido, admin, stranger]) => {
         totalDepositedValidators: 0,
         depositableValidatorsCount: 0,
       }
+
+      await module1.setActiveValidatorsCount(10)
 
       // first correction
       const newlyExited = await router.updateExitedValidatorsCountByStakingModule.sendWithResult([module1Id], [10], {

@@ -41,6 +41,10 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     error DirectETHTransfer();
     error InvalidReportData(uint256 code);
     error ExitedValidatorsCountCannotDecrease();
+    error ReportedExitedValidatorsExceedDeposited(
+        uint256 reportedExitedValidatorsCount,
+        uint256 depositedValidatorsCount
+    );
     error StakingModulesLimitExceeded();
     error StakingModuleUnregistered();
     error AppAuthLidoFailed();
@@ -377,13 +381,20 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
                 revert ExitedValidatorsCountCannotDecrease();
             }
 
-            newlyExitedValidatorsCount += _exitedValidatorsCounts[i] - prevReportedExitedValidatorsCount;
-
             (
                 uint256 totalExitedValidatorsCount,
-                /* uint256 totalDepositedValidators */,
+                uint256 totalDepositedValidators,
                 /* uint256 depositableValidatorsCount */
             ) = IStakingModule(stakingModule.stakingModuleAddress).getStakingModuleSummary();
+
+            if (_exitedValidatorsCounts[i] > totalDepositedValidators) {
+                revert ReportedExitedValidatorsExceedDeposited(
+                    _exitedValidatorsCounts[i],
+                    totalDepositedValidators
+                );
+            }
+
+            newlyExitedValidatorsCount += _exitedValidatorsCounts[i] - prevReportedExitedValidatorsCount;
 
             if (totalExitedValidatorsCount < prevReportedExitedValidatorsCount) {
                 // not all of the exited validators were async reported to the module
