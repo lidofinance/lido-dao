@@ -768,9 +768,13 @@ contract HashConsensus is AccessControlEnumerable {
     function _getFastLaneSubset(uint256 frameIndex, uint256 totalMembers)
         internal view returns (uint256 startIndex, uint256 pastEndIndex)
     {
-        if (totalMembers != 0) {
+        uint256 quorum = _quorum;
+        if (quorum >= totalMembers) {
+            startIndex = 0;
+            pastEndIndex = totalMembers;
+        } else {
             startIndex = frameIndex % totalMembers;
-            pastEndIndex = startIndex + _quorum;
+            pastEndIndex = startIndex + quorum;
         }
     }
 
