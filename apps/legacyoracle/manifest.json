@@ -3,7 +3,7 @@
   "author": "Lido",
   "description": "Aragon frontend for Lido V2 Oracle",
   "details_url": "/meta/details.md",
-  "source_url": "https://github.com/lidofinance/lido-dao>",
+  "source_url": "https://github.com/lidofinance/lido-dao",
   "icons": [
     {
       "src": "/meta/icon.svg",
