@@ -4,6 +4,7 @@ import Aragon, { events } from '@aragon/api'
 import LidoABI from "./abi/Lido.abi.json"
 import LidoLocatorABI from "./abi/LidoLocator.abi.json"
 import AccountingOracleABI from "./abi/AccountingOracle.abi.json"
+import HashConsensusABI from "./abi/HashConsensus.abi.json"
 
 const app = new Aragon()
 
@@ -101,6 +102,50 @@ const accountingOracleState = [
   },
 ]
 
+
+const hashConsensusState = [
+  {
+    appStateKey: "chainConfig",
+    contractFunction: "getChainConfig"
+  },
+  {
+    appStateKey: "consensusState",
+    contractFunction: "getConsensusState"
+  },
+  {
+    appStateKey: "currentFrame",
+    contractFunction: "getCurrentFrame"
+  },
+  {
+    appStateKey: "fastLaneMembers",
+    contractFunction: "getFastLaneMembers"
+  },
+  {
+    appStateKey: "frameConfig",
+    contractFunction: "getFrameConfig"
+  },
+  {
+    appStateKey: "initialRefSlot",
+    contractFunction: "getInitialRefSlot"
+  },
+  {
+    appStateKey: "members",
+    contractFunction: "getMembers"
+  },
+  {
+    appStateKey: "quorum",
+    contractFunction: "getQuorum"
+  },
+  {
+    appStateKey: "reportProcessor",
+    contractFunction: "getReportProcessor"
+  },
+  {
+    appStateKey: "reportVariants",
+    contractFunction: "getReportVariants"
+  }
+]
+
 function initializeState() {
   return async (cachedState) => {
 
@@ -123,10 +168,32 @@ function initializeState() {
     }, {})
 
 
+    const { consensusContract } = aoState
+    const hashConsensusContract = app.external(consensusContract, HashConsensusABI)
+    const hcPromises = hashConsensusState.map(({ contractFunction }) => hashConsensusContract[contractFunction]().toPromise())
+    const settledHcPromises = await Promise.allSettled(hcPromises)
+    const hcState = settledHcPromises.reduce((stateObject, cur, index) => {
+      stateObject[hashConsensusState[index].appStateKey] = cur.value
+      return stateObject
+    }, {})
+
+    const memberPromises = hcState.members.addresses.map((memberAddress) => hashConsensusContract.getConsensusStateForMember(memberAddress).toPromise())
+    const settledMemberPromises = await Promise.allSettled(memberPromises)
+
+
+    hcState.memberDetails = settledMemberPromises.reduce((stateArray, cur, index) => {
+      stateArray.push({
+        ...cur.value,
+        address: hcState.members.addresses[index]
+      })
+      return stateArray
+    }, [])
+
     return {
       ...cachedState,
       lido,
-      ...aoState
+      ...aoState,
+      ...hcState
     }
   }
 }
