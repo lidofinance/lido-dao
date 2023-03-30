@@ -554,8 +554,8 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
 
-        _updateExitedValidatorsCount(_nodeOperatorId, uint64(_exitedValidatorsCount), true /* _allowDecrease */ );
         _updateStuckValidatorsCount(_nodeOperatorId, uint64(_stuckValidatorsCount));
+        _updateExitedValidatorsCount(_nodeOperatorId, uint64(_exitedValidatorsCount), true /* _allowDecrease */ );
     }
 
     function _updateExitedValidatorsCount(uint256 _nodeOperatorId, uint64 _exitedValidatorsKeysCount, bool _allowDecrease)
@@ -566,7 +566,11 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
             int64(_exitedValidatorsKeysCount) - int64(signingKeysStats.get(TOTAL_EXITED_KEYS_COUNT_OFFSET));
 
         if (totalExitedValidatorsDelta != 0) {
-            _requireValidRange(_exitedValidatorsKeysCount <= signingKeysStats.get(TOTAL_DEPOSITED_KEYS_COUNT_OFFSET));
+            _requireValidRange(
+                _exitedValidatorsKeysCount.add(
+                    _loadOperatorStuckPenaltyStats(_nodeOperatorId).get(STUCK_VALIDATORS_COUNT_OFFSET)
+                ) <= signingKeysStats.get(TOTAL_DEPOSITED_KEYS_COUNT_OFFSET)
+            );
             if (totalExitedValidatorsDelta < 0 && !_allowDecrease) {
                 revert("EXITED_VALIDATORS_COUNT_DECREASED");
             }
@@ -616,8 +620,8 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
         _requireValidRange(
-            _stuckValidatorsCount
-                <= signingKeysStats.get(TOTAL_DEPOSITED_KEYS_COUNT_OFFSET) - signingKeysStats.get(TOTAL_EXITED_KEYS_COUNT_OFFSET)
+            _stuckValidatorsCount.add(signingKeysStats.get(TOTAL_EXITED_KEYS_COUNT_OFFSET))
+                <= signingKeysStats.get(TOTAL_DEPOSITED_KEYS_COUNT_OFFSET)
         );
 
         uint64 curRefundedValidatorsCount = stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET);
