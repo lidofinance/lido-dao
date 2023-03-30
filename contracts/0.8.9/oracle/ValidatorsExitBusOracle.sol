@@ -364,7 +364,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         );
     }
 
-    function _processExitRequestsList(bytes calldata data) internal returns (uint256) {
+    function _processExitRequestsList(bytes calldata data) internal {
         uint256 offset;
         uint256 offsetPastEnd;
         assembly {
@@ -436,8 +436,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         if (lastNodeOpKey != 0) {
             _storageLastRequestedValidatorIndices()[lastNodeOpKey] = lastRequestedVal;
         }
-
-        return lastDataWithoutPubkey;
     }
 
     function _computeNodeOpKey(uint256 moduleId, uint256 nodeOpId) internal pure returns (uint256) {

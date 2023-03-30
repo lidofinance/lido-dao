@@ -54,7 +54,7 @@ contract DepositSecurityModule {
     error DuplicateAddress(address addr);
     error NotAnOwner(address caller);
     error InvalidSignature();
-    error SignatureNotSorted();
+    error SignaturesNotSorted();
     error DepositNoQuorum();
     error DepositRootChanged();
     error DepositInactiveModule();
@@ -402,8 +402,8 @@ contract DepositSecurityModule {
      *   5. block.number - StakingModule.getLastDepositBlock() < minDepositBlockDistance.
      *   6. blockhash(blockNumber) != blockHash.
      *
-     * Signatures must be sorted in ascending order by index of the guardian. Each signature must
-     * be produced for keccak256 hash of the following message (each component taking 32 bytes):
+     * Signatures must be sorted in ascending order by address of the guardian. Each signature must
+     * be produced for the keccak256 hash of the following message (each component taking 32 bytes):
      *
      * | ATTEST_MESSAGE_PREFIX | blockNumber | blockHash | depositRoot | stakingModuleId | nonce |
      */
@@ -452,7 +452,7 @@ contract DepositSecurityModule {
         for (uint256 i = 0; i < sigs.length; ++i) {
             address signerAddr = ECDSA.recover(msgHash, sigs[i].r, sigs[i].vs);
             if (!_isGuardian(signerAddr)) revert InvalidSignature();
-            if (signerAddr <= prevSignerAddr) revert SignatureNotSorted();
+            if (signerAddr <= prevSignerAddr) revert SignaturesNotSorted();
             prevSignerAddr = signerAddr;
         }
     }

@@ -12,7 +12,7 @@ chai.util.addMethod(chai.assert, 'emits', function (receipt, eventName, args = u
   if (args !== undefined) {
     chai.assert(
       findEventWithArgs(args, events) !== undefined,
-      () => `No '${eventName}' event was emitted with expected args ${JSON.stringify(args)}`
+      () => `No '${eventName}' event was emitted with expected args ${stringify(args)}`
     )
   }
 })
@@ -21,7 +21,7 @@ chai.util.addMethod(chai.assert, 'emitsAt', function (receipt, eventName, index,
   const event = getEventAt(receipt, eventName, index, args, options.abi)
   chai.assert(
     event !== undefined,
-    () => `Event '${eventName}' at index ${index} with args ${JSON.stringify(args)} wasn't found`
+    () => `Event '${eventName}' at index ${index} with args ${stringify(args)} wasn't found`
   )
 })
 
@@ -162,7 +162,7 @@ function findEventWithArgs(args, events) {
 }
 
 function normalizeArg(arg) {
-  if (isBn(arg) || Number.isFinite(arg)) {
+  if (isBn(arg) || Number.isFinite(arg) || typeof arg === 'bigint') {
     return arg.toString()
   } else if (isAddress(arg)) {
     return toChecksumAddress(arg)
@@ -172,6 +172,11 @@ function normalizeArg(arg) {
   }
 
   return arg
+}
+
+function stringify(obj) {
+  // Helps overcome the problem with BigInt serialization. Details: https://github.com/GoogleChromeLabs/jsbi/issues/30
+  return JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value))
 }
 
 module.exports = { assert: chai.assert }

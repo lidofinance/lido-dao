@@ -1,6 +1,7 @@
 const { contract } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 const { toNum } = require('../../helpers/utils')
+const { MAX_UINT256 } = require('../../helpers/constants')
 
 const { HASH_1, CONSENSUS_VERSION, deployHashConsensus } = require('./hash-consensus-deploy.test')
 
@@ -150,13 +151,13 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
       frames.forEach(testFrame)
     })
 
-    context('Quorum size equal to total members', () => {
+    const testAllInFastLane = ({ quorumSize }) => {
       before(async () => {
         await deploy({ fastLaneLengthSlots: 10 })
 
-        await consensus.addMember(member1, 3, { from: admin })
-        await consensus.addMember(member2, 3, { from: admin })
-        await consensus.addMember(member3, 3, { from: admin })
+        await consensus.addMember(member1, quorumSize, { from: admin })
+        await consensus.addMember(member2, quorumSize, { from: admin })
+        await consensus.addMember(member3, quorumSize, { from: admin })
       })
 
       before(setTimeToFrame0)
@@ -189,6 +190,10 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
         })
 
       Array.from({ length: 10 }, (_, i) => i).forEach(testFrame)
-    })
+    }
+
+    context('Quorum size equal to total members', () => testAllInFastLane({ quorumSize: 3 }))
+    context('Quorum size more than total members', () => testAllInFastLane({ quorumSize: 5 }))
+    context('Quorum is a max value', () => testAllInFastLane({ quorumSize: MAX_UINT256 }))
   })
 })
