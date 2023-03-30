@@ -554,6 +554,8 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
 
+        _requireValidRange(_stuckValidatorsCount <= UINT64_MAX && _exitedValidatorsCount <= UINT64_MAX);
+
         _updateStuckValidatorsCount(_nodeOperatorId, uint64(_stuckValidatorsCount));
         _updateExitedValidatorsCount(_nodeOperatorId, uint64(_exitedValidatorsCount), true /* _allowDecrease */ );
     }
@@ -1071,7 +1073,10 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
         uint256 totalSigningKeysCount = signingKeysStats.get(TOTAL_KEYS_COUNT_OFFSET);
         // comapring _fromIndex.add(_keysCount) <= totalSigningKeysCount is enough as totalSigningKeysCount is always less than MAX_UINT64
-        _requireValidRange(_fromIndex >= signingKeysStats.get(TOTAL_DEPOSITED_KEYS_COUNT_OFFSET) && _fromIndex.add(_keysCount) <= totalSigningKeysCount);
+        _requireValidRange(
+            _fromIndex >= signingKeysStats.get(TOTAL_DEPOSITED_KEYS_COUNT_OFFSET)
+                && _fromIndex.add(_keysCount) <= totalSigningKeysCount
+        );
 
         totalSigningKeysCount =
             SIGNING_KEYS_MAPPING_NAME.removeKeysSigs(_nodeOperatorId, _fromIndex, _keysCount, totalSigningKeysCount);
