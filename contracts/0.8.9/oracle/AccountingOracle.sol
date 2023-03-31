@@ -687,11 +687,14 @@ contract AccountingOracle is BaseOracle {
         internal view
     {
         _checkMsgSenderIsAllowedToSubmitData();
-        _checkProcessingDeadline();
 
-        if (procState.refSlot != LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256()) {
+        ConsensusReport memory report = _storageConsensusReport().value;
+
+        if (report.hash == bytes32(0) || procState.refSlot != report.refSlot) {
             revert CannotSubmitExtraDataBeforeMainData();
         }
+
+        _checkProcessingDeadline();
 
         if (procState.dataFormat != format) {
             revert UnexpectedExtraDataFormat(procState.dataFormat, format);
