@@ -40,7 +40,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         _onlyExistedNodeOperator(_nodeOperatorId);
         // NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
-        uint64 depositedSigningKeysCountBefore = signingKeysStats.get(TOTAL_DEPOSITED_KEYS_COUNT_OFFSET);
+        uint256 depositedSigningKeysCountBefore = signingKeysStats.get(TOTAL_DEPOSITED_KEYS_COUNT_OFFSET);
         if (_depositedSigningKeysCount == depositedSigningKeysCountBefore) {
             return;
         }
@@ -191,7 +191,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
     }
 
     function testing_getNodeOperator(uint256 operatorId) external view
-        returns (uint64 maxSigningKeysCount, uint64 exitedSigningKeysCount, uint64 depositedSigningKeysCount)
+        returns (uint256 maxSigningKeysCount, uint256 exitedSigningKeysCount, uint256 depositedSigningKeysCount)
     {
         return _getNodeOperator(operatorId);
     }
