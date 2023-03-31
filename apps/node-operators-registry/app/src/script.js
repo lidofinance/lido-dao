@@ -1,13 +1,15 @@
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import Aragon, { events } from '@aragon/api'
+import LocatorABI from "./abi/LidoLocator.abi.json"
+import StakingRouteABI from "./abi/StakingRouter.abi.json"
 
 const app = new Aragon()
 
 const createFetcher =
   (functionName, ...args) =>
-  () =>
-    app.call(functionName, ...args).toPromise()
+    () =>
+      app.call(functionName, ...args).toPromise()
 
 const offset = 0
 const MAX_OPERATORS = 200
@@ -93,6 +95,86 @@ const protocolVariables = [
     updateEvents: ['ContractVersionSet'],
     fetch: createFetcher('getContractVersion'),
   },
+  {
+    stateKey: 'locator',
+    updateEvents: [],
+    fetch: createFetcher('getLocator'),
+  },
+]
+
+const StakingRouterState = [
+  {
+    appStateKey: "depositContract",
+    contractFunction: "DEPOSIT_CONTRACT"
+  },
+  {
+    appStateKey: "feePrecisionPoints",
+    contractFunction: "FEE_PRECISION_POINTS"
+  },
+  {
+    appStateKey: "maxStakingModulesCount",
+    contractFunction: "MAX_STAKING_MODULES_COUNT"
+  },
+  {
+    appStateKey: "totalBasisPoints",
+    contractFunction: "TOTAL_BASIS_POINTS"
+  },
+  {
+    appStateKey: "allStakingModuleDigests",
+    contractFunction: "getAllStakingModuleDigests"
+  },
+  {
+    appStateKey: "contractVersion",
+    contractFunction: "getContractVersion"
+  },
+  {
+    appStateKey: "depositContract",
+    contractFunction: "DEPOSIT_CONTRACT"
+  },
+  {
+    appStateKey: "lido",
+    contractFunction: "getLido"
+  },
+  {
+    appStateKey: "stakingFeeAggregateDistribution",
+    contractFunction: "getStakingFeeAggregateDistribution"
+  },
+  {
+    appStateKey: "stakingModuleIds",
+    contractFunction: "getStakingModuleIds"
+  },
+  {
+    appStateKey: "stakingRewardsDistribution",
+    contractFunction: "getStakingRewardsDistribution"
+  },
+  {
+    appStateKey: "totalFeeE4Precision",
+    contractFunction: "getTotalFeeE4Precision"
+  },
+  {
+    appStateKey: "withdrawalCredentials",
+    contractFunction: "getWithdrawalCredentials"
+  },
+  {
+    appStateKey: "depositContract",
+    contractFunction: "DEPOSIT_CONTRACT"
+  },
+  {
+    appStateKey: "depositContract",
+    contractFunction: "DEPOSIT_CONTRACT"
+  },
+  {
+    appStateKey: "depositContract",
+    contractFunction: "DEPOSIT_CONTRACT"
+  },
+  {
+    appStateKey: "depositContract",
+    contractFunction: "DEPOSIT_CONTRACT"
+  },
+  {
+    appStateKey: "depositContract",
+    contractFunction: "DEPOSIT_CONTRACT"
+  },
 ]
 
 app.store(
@@ -148,29 +230,43 @@ function initializeState() {
       return stateObject
     }, {})
 
+    const { locator } = updatedState
+
+    const locatorContract = app.external(locator, LocatorABI)
+
+    const stakingRouter = await locatorContract.stakingRouter().toPromise()
+
+    const stakingRouterContract = app.external(stakingRouter, StakingRouteABI)
+    const srPromises = StakingRouterState.map(({ contractFunction }) => stakingRouterContract[contractFunction]().toPromise())
+    const settledSrPromises = await Promise.allSettled(srPromises)
+    const srState = settledSrPromises.reduce((stateObject, cur, index) => {
+      stateObject[StakingRouterState[index].appStateKey] = cur.value
+      return stateObject
+    }, {})
+
+    srState.globalDigest = srState.allStakingModuleDigests.reduce((obj, cur) => {
+      obj.stakingModulesCount += 1
+      obj.nodeOperatorsCount += +cur.nodeOperatorsCount
+      obj.activeNodeOperatorsCount += +cur.activeNodeOperatorsCount
+      obj.depositableValidatorsCount += +cur.summary.depositableValidatorsCount
+      obj.exitedValidatorsCount += +cur.state.exitedValidatorsCount
+      obj.totalDepositedValidators += +cur.summary.totalDepositedValidators
+
+      return obj
+    }, {
+      stakingModulesCount: 0,
+      nodeOperatorsCount: 0,
+      activeNodeOperatorsCount: 0,
+      depositableValidatorsCount: 0,
+      exitedValidatorsCount: 0,
+      totalDepositedValidators: 0,
+    })
+
+
     return {
       ...cachedState,
-      ...updatedState,
+      curated: updatedState,
+      stakingRouter: srState,
     }
   }
 }
-
-// addNodeOperator
-// activateNodeOperator
-// deactivateNodeOperator
-// setNodeOperatorName
-// setNodeOperatorRewardAddress
-// setNodeOperatorStakingLimit
-// updateStuckValidatorsCount
-// updateExitedValidatorsCount
-// updateRefundedValidatorsCount
-// unsafeUpdateValidatorsCount
-// updateTargetValidatorsLimits
-// invalidateReadyToDepositKeysRange
-// obtainDepositData
-// addSigningKeys
-// addSigningKeysOperatorBH
-// removeSigningKey
-// removeSigningKeyOperatorBH
-// removeSigningKeysOperatorBH
-// setStuckPenaltyDelay
