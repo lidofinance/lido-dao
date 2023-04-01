@@ -101,10 +101,10 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         emit NodeOperatorAdded(id, _name, _rewardAddress, 0);
 
         Packed64x4.Packed memory summarySigningKeysStats = _loadSummarySigningKeysStats();
-        summarySigningKeysStats.inc(SUMMARY_MAX_VALIDATORS_COUNT_OFFSET, vettedSigningKeysCount);
-        summarySigningKeysStats.inc(SUMMARY_EXITED_KEYS_COUNT_OFFSET, exitedSigningKeysCount);
-        summarySigningKeysStats.inc(SUMMARY_TOTAL_KEYS_COUNT_OFFSET, totalSigningKeysCount);
-        summarySigningKeysStats.inc(SUMMARY_DEPOSITED_KEYS_COUNT_OFFSET, depositedSigningKeysCount);
+        summarySigningKeysStats.add(SUMMARY_MAX_VALIDATORS_COUNT_OFFSET, vettedSigningKeysCount);
+        summarySigningKeysStats.add(SUMMARY_EXITED_KEYS_COUNT_OFFSET, exitedSigningKeysCount);
+        summarySigningKeysStats.add(SUMMARY_TOTAL_KEYS_COUNT_OFFSET, totalSigningKeysCount);
+        summarySigningKeysStats.add(SUMMARY_DEPOSITED_KEYS_COUNT_OFFSET, depositedSigningKeysCount);
         _saveSummarySigningKeysStats(summarySigningKeysStats);
     }
 

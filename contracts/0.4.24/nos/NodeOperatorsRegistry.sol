@@ -250,13 +250,13 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
             operatorTargetStats.set(MAX_VALIDATORS_COUNT_OFFSET, vettedSigningKeysCountAfter);
             _saveOperatorTargetValidatorsStats(nodeOperatorId, operatorTargetStats);
 
-            summarySigningKeysStats.inc(SUMMARY_MAX_VALIDATORS_COUNT_OFFSET, vettedSigningKeysCountAfter);
-            summarySigningKeysStats.inc(SUMMARY_DEPOSITED_KEYS_COUNT_OFFSET, depositedSigningKeysCount);
-            summarySigningKeysStats.inc(
+            summarySigningKeysStats.add(SUMMARY_MAX_VALIDATORS_COUNT_OFFSET, vettedSigningKeysCountAfter);
+            summarySigningKeysStats.add(SUMMARY_DEPOSITED_KEYS_COUNT_OFFSET, depositedSigningKeysCount);
+            summarySigningKeysStats.add(
                 SUMMARY_EXITED_KEYS_COUNT_OFFSET,
                 signingKeysStats.get(TOTAL_EXITED_KEYS_COUNT_OFFSET)
             );
-            summarySigningKeysStats.inc(SUMMARY_TOTAL_KEYS_COUNT_OFFSET, totalSigningKeysCount);
+            summarySigningKeysStats.add(SUMMARY_TOTAL_KEYS_COUNT_OFFSET, totalSigningKeysCount);
         }
 
         _saveSummarySigningKeysStats(summarySigningKeysStats);
@@ -561,9 +561,9 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         uint256 exitedValidatorsAbsDiff = Math256.absDiff(_exitedValidatorsCount, oldExitedValidatorsCount);
         if (_exitedValidatorsCount > oldExitedValidatorsCount) {
-            summarySigningKeysStats.inc(SUMMARY_EXITED_KEYS_COUNT_OFFSET, exitedValidatorsAbsDiff);
+            summarySigningKeysStats.add(SUMMARY_EXITED_KEYS_COUNT_OFFSET, exitedValidatorsAbsDiff);
         } else {
-            summarySigningKeysStats.dec(SUMMARY_EXITED_KEYS_COUNT_OFFSET, exitedValidatorsAbsDiff);
+            summarySigningKeysStats.sub(SUMMARY_EXITED_KEYS_COUNT_OFFSET, exitedValidatorsAbsDiff);
         }
         _saveSummarySigningKeysStats(summarySigningKeysStats);
         _updateSummaryMaxValidatorsCount(_nodeOperatorId);
@@ -655,9 +655,9 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         uint256 maxSigningKeysCountAbsDiff = Math256.absDiff(newMaxSigningKeysCount, oldMaxSigningKeysCount);
         if (newMaxSigningKeysCount > oldMaxSigningKeysCount) {
-            summarySigningKeysStats.inc(SUMMARY_MAX_VALIDATORS_COUNT_OFFSET, maxSigningKeysCountAbsDiff);
+            summarySigningKeysStats.add(SUMMARY_MAX_VALIDATORS_COUNT_OFFSET, maxSigningKeysCountAbsDiff);
         } else {
-            summarySigningKeysStats.dec(SUMMARY_MAX_VALIDATORS_COUNT_OFFSET, maxSigningKeysCountAbsDiff);
+            summarySigningKeysStats.sub(SUMMARY_MAX_VALIDATORS_COUNT_OFFSET, maxSigningKeysCountAbsDiff);
         }
         _saveSummarySigningKeysStats(summarySigningKeysStats);
     }
@@ -712,7 +712,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         if (totalTrimmedKeysCount > 0) {
             Packed64x4.Packed memory summarySigningKeysStats = _loadSummarySigningKeysStats();
-            summarySigningKeysStats.dec(SUMMARY_TOTAL_KEYS_COUNT_OFFSET, totalTrimmedKeysCount);
+            summarySigningKeysStats.sub(SUMMARY_TOTAL_KEYS_COUNT_OFFSET, totalTrimmedKeysCount);
             _saveSummarySigningKeysStats(summarySigningKeysStats);
             _increaseValidatorsKeysNonce();
         }
@@ -889,7 +889,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         assert(loadedKeysCount == _keysCountToLoad);
 
         Packed64x4.Packed memory summarySigningKeysStats = _loadSummarySigningKeysStats();
-        summarySigningKeysStats.inc(SUMMARY_DEPOSITED_KEYS_COUNT_OFFSET, loadedKeysCount);
+        summarySigningKeysStats.add(SUMMARY_DEPOSITED_KEYS_COUNT_OFFSET, loadedKeysCount);
         _saveSummarySigningKeysStats(summarySigningKeysStats);
     }
 
@@ -1027,7 +1027,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         // upd totals
         Packed64x4.Packed memory summarySigningKeysStats = _loadSummarySigningKeysStats();
-        summarySigningKeysStats.inc(SUMMARY_TOTAL_KEYS_COUNT_OFFSET, _keysCount);
+        summarySigningKeysStats.add(SUMMARY_TOTAL_KEYS_COUNT_OFFSET, _keysCount);
         _saveSummarySigningKeysStats(summarySigningKeysStats);
 
         _increaseValidatorsKeysNonce();
@@ -1093,7 +1093,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         // upd totals
         Packed64x4.Packed memory summarySigningKeysStats = _loadSummarySigningKeysStats();
-        summarySigningKeysStats.dec(SUMMARY_TOTAL_KEYS_COUNT_OFFSET, _keysCount);
+        summarySigningKeysStats.sub(SUMMARY_TOTAL_KEYS_COUNT_OFFSET, _keysCount);
         _saveSummarySigningKeysStats(summarySigningKeysStats);
         _updateSummaryMaxValidatorsCount(_nodeOperatorId);
 
