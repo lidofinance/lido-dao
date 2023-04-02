@@ -658,35 +658,35 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     function _updateLimits(LimitsList memory _newLimitsList) internal {
         LimitsList memory _oldLimitsList = _limits.unpack();
         if (_oldLimitsList.churnValidatorsPerDayLimit != _newLimitsList.churnValidatorsPerDayLimit) {
-            _checkLimitValue(_newLimitsList.churnValidatorsPerDayLimit, type(uint16).max);
+            _checkLimitValue(_newLimitsList.churnValidatorsPerDayLimit, 0, type(uint16).max);
             emit ChurnValidatorsPerDayLimitSet(_newLimitsList.churnValidatorsPerDayLimit);
         }
         if (_oldLimitsList.oneOffCLBalanceDecreaseBPLimit != _newLimitsList.oneOffCLBalanceDecreaseBPLimit) {
-            _checkLimitValue(_newLimitsList.oneOffCLBalanceDecreaseBPLimit, MAX_BASIS_POINTS);
+            _checkLimitValue(_newLimitsList.oneOffCLBalanceDecreaseBPLimit, 0, MAX_BASIS_POINTS);
             emit OneOffCLBalanceDecreaseBPLimitSet(_newLimitsList.oneOffCLBalanceDecreaseBPLimit);
         }
         if (_oldLimitsList.annualBalanceIncreaseBPLimit != _newLimitsList.annualBalanceIncreaseBPLimit) {
-            _checkLimitValue(_newLimitsList.annualBalanceIncreaseBPLimit, MAX_BASIS_POINTS);
+            _checkLimitValue(_newLimitsList.annualBalanceIncreaseBPLimit, 0, MAX_BASIS_POINTS);
             emit AnnualBalanceIncreaseBPLimitSet(_newLimitsList.annualBalanceIncreaseBPLimit);
         }
         if (_oldLimitsList.simulatedShareRateDeviationBPLimit != _newLimitsList.simulatedShareRateDeviationBPLimit) {
-            _checkLimitValue(_newLimitsList.simulatedShareRateDeviationBPLimit, MAX_BASIS_POINTS);
+            _checkLimitValue(_newLimitsList.simulatedShareRateDeviationBPLimit, 0, MAX_BASIS_POINTS);
             emit SimulatedShareRateDeviationBPLimitSet(_newLimitsList.simulatedShareRateDeviationBPLimit);
         }
         if (_oldLimitsList.maxValidatorExitRequestsPerReport != _newLimitsList.maxValidatorExitRequestsPerReport) {
-            _checkLimitValue(_newLimitsList.maxValidatorExitRequestsPerReport, type(uint16).max);
+            _checkLimitValue(_newLimitsList.maxValidatorExitRequestsPerReport, 0, type(uint16).max);
             emit MaxValidatorExitRequestsPerReportSet(_newLimitsList.maxValidatorExitRequestsPerReport);
         }
         if (_oldLimitsList.maxAccountingExtraDataListItemsCount != _newLimitsList.maxAccountingExtraDataListItemsCount) {
-            _checkLimitValue(_newLimitsList.maxAccountingExtraDataListItemsCount, type(uint16).max);
+            _checkLimitValue(_newLimitsList.maxAccountingExtraDataListItemsCount, 0, type(uint16).max);
             emit MaxAccountingExtraDataListItemsCountSet(_newLimitsList.maxAccountingExtraDataListItemsCount);
         }
         if (_oldLimitsList.maxNodeOperatorsPerExtraDataItemCount != _newLimitsList.maxNodeOperatorsPerExtraDataItemCount) {
-            _checkLimitValue(_newLimitsList.maxNodeOperatorsPerExtraDataItemCount, type(uint16).max);
+            _checkLimitValue(_newLimitsList.maxNodeOperatorsPerExtraDataItemCount, 0, type(uint16).max);
             emit MaxNodeOperatorsPerExtraDataItemCountSet(_newLimitsList.maxNodeOperatorsPerExtraDataItemCount);
         }
         if (_oldLimitsList.requestTimestampMargin != _newLimitsList.requestTimestampMargin) {
-            _checkLimitValue(_newLimitsList.requestTimestampMargin, type(uint64).max);
+            _checkLimitValue(_newLimitsList.requestTimestampMargin, 0, type(uint64).max);
             emit RequestTimestampMarginSet(_newLimitsList.requestTimestampMargin);
         }
         if (_oldLimitsList.maxPositiveTokenRebase != _newLimitsList.maxPositiveTokenRebase) {
@@ -694,12 +694,6 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             emit MaxPositiveTokenRebaseSet(_newLimitsList.maxPositiveTokenRebase);
         }
         _limits = _newLimitsList.pack();
-    }
-
-    function _checkLimitValue(uint256 _value, uint256 _maxAllowedValue) internal pure {
-        if (_value > _maxAllowedValue) {
-            revert IncorrectLimitValue(_value, 0, _maxAllowedValue);
-        }
     }
 
     function _checkLimitValue(uint256 _value, uint256 _minAllowedValue, uint256 _maxAllowedValue) internal pure {
