@@ -67,13 +67,16 @@ contract StakeLimitUtilsMock {
         return STAKING_STATE_POSITION.getStorageStakeLimitStruct().isStakingLimitSet();
     }
 
-    function setStakingLimit(uint256 _slotValue, uint256 _maxStakeLimit, uint256 _stakeLimitIncreasePerBlock) public view {
+    function setStakingLimit(
+        uint256 _slotValue, uint256 _maxStakeLimit, uint256 _stakeLimitIncreasePerBlock
+    ) public view returns (uint256) {
         STAKING_STATE_POSITION.setStorageUint256(_slotValue);
         STAKING_STATE_POSITION.setStorageStakeLimitStruct(
             STAKING_STATE_POSITION.getStorageStakeLimitStruct().setStakingLimit(
                 _maxStakeLimit, _stakeLimitIncreasePerBlock
             )
         );
+        return STAKING_STATE_POSITION.getStorageUint256();
     }
 
     function removeStakingLimit(uint256 _slotValue) public view returns(uint256) {
