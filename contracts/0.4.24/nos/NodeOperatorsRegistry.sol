@@ -537,7 +537,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     ) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);
-        _requireValidRange(_stuckValidatorsCount <= UINT64_MAX && _exitedValidatorsCount <= UINT64_MAX);
 
         _updateStuckValidatorsCount(_nodeOperatorId, _stuckValidatorsCount);
         _updateExitedValidatorsCount(_nodeOperatorId, _exitedValidatorsCount, true /* _allowDecrease */ );
@@ -607,12 +606,12 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         if (_stuckValidatorsCount == curStuckValidatorsCount) return;
 
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
-        uint256 totalExitedValidators = signingKeysStats.get(TOTAL_EXITED_KEYS_COUNT_OFFSET);
-        uint256 totalDepositedValidators = signingKeysStats.get(TOTAL_DEPOSITED_KEYS_COUNT_OFFSET);
+        uint256 exitedValidatorsCount = signingKeysStats.get(TOTAL_EXITED_KEYS_COUNT_OFFSET);
+        uint256 depositedValidatorsCount = signingKeysStats.get(TOTAL_DEPOSITED_KEYS_COUNT_OFFSET);
 
         // sustain invariant exited + stuck <= deposited
-        assert(totalDepositedValidators >= totalExitedValidators);
-        _requireValidRange(_stuckValidatorsCount <= totalDepositedValidators - totalExitedValidators);
+        assert(depositedValidatorsCount >= exitedValidatorsCount);
+        _requireValidRange(_stuckValidatorsCount <= depositedValidatorsCount - exitedValidatorsCount);
 
         uint256 curRefundedValidatorsCount = stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET);
         if (_stuckValidatorsCount <= curRefundedValidatorsCount && curStuckValidatorsCount > curRefundedValidatorsCount) {
