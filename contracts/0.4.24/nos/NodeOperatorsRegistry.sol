@@ -1236,7 +1236,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         return !_isOperatorPenalized(stuckPenaltyStats) && stuckPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET) == 0;
     }
 
-    function clearNodeOperatorPenalty(uint256 _nodeOperatorId) public returns (bool) {
+    function clearNodeOperatorPenalty(uint256 _nodeOperatorId) external returns (bool) {
         Packed64x4.Packed memory stuckPenaltyStats = _loadOperatorStuckPenaltyStats(_nodeOperatorId);
         require(
             !_isOperatorPenalized(stuckPenaltyStats) && stuckPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET) != 0,

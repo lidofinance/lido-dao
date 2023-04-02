@@ -41,6 +41,10 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     error DirectETHTransfer();
     error InvalidReportData(uint256 code);
     error ExitedValidatorsCountCannotDecrease();
+    error ReportedExitedValidatorsExceedDeposited(
+        uint256 reportedExitedValidatorsCount,
+        uint256 depositedValidatorsCount
+    );
     error StakingModulesLimitExceeded();
     error StakingModuleUnregistered();
     error AppAuthLidoFailed();
@@ -377,13 +381,20 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
                 revert ExitedValidatorsCountCannotDecrease();
             }
 
-            newlyExitedValidatorsCount += _exitedValidatorsCounts[i] - prevReportedExitedValidatorsCount;
-
             (
                 uint256 totalExitedValidatorsCount,
-                /* uint256 totalDepositedValidators */,
+                uint256 totalDepositedValidators,
                 /* uint256 depositableValidatorsCount */
             ) = IStakingModule(stakingModule.stakingModuleAddress).getStakingModuleSummary();
+
+            if (_exitedValidatorsCounts[i] > totalDepositedValidators) {
+                revert ReportedExitedValidatorsExceedDeposited(
+                    _exitedValidatorsCounts[i],
+                    totalDepositedValidators
+                );
+            }
+
+            newlyExitedValidatorsCount += _exitedValidatorsCounts[i] - prevReportedExitedValidatorsCount;
 
             if (totalExitedValidatorsCount < prevReportedExitedValidatorsCount) {
                 // not all of the exited validators were async reported to the module
@@ -1000,9 +1011,9 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint96 stakingModuleFee;
 
         for (uint256 i; i < stakingModulesCount; ) {
-            stakingModuleIds[rewardedStakingModulesCount] = stakingModulesCache[i].stakingModuleId;
             /// @dev skip staking modules which have no active validators
             if (stakingModulesCache[i].activeValidatorsCount > 0) {
+                stakingModuleIds[rewardedStakingModulesCount] = stakingModulesCache[i].stakingModuleId;
                 stakingModuleValidatorsShare = ((stakingModulesCache[i].activeValidatorsCount * precisionPoints) / totalActiveValidators);
 
                 recipients[rewardedStakingModulesCount] = address(stakingModulesCache[i].stakingModuleAddress);
@@ -1031,11 +1042,10 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
         /// @dev shrink arrays
         if (rewardedStakingModulesCount < stakingModulesCount) {
-            uint256 trim = stakingModulesCount - rewardedStakingModulesCount;
             assembly {
-                mstore(stakingModuleIds, sub(mload(stakingModuleIds), trim))
-                mstore(recipients, sub(mload(recipients), trim))
-                mstore(stakingModuleFees, sub(mload(stakingModuleFees), trim))
+                mstore(stakingModuleIds, rewardedStakingModulesCount)
+                mstore(recipients, rewardedStakingModulesCount)
+                mstore(stakingModuleFees, rewardedStakingModulesCount)
             }
         }
     }
