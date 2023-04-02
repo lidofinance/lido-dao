@@ -383,7 +383,7 @@ contract AccountingOracle is BaseOracle {
     ///   provided by the hash consensus contract.
     /// - The provided data doesn't meet safety checks.
     ///
-    function submitReportData(ReportData calldata data, uint256 contractVersion) external {
+    function submitReportData(ReportData memory data, uint256 contractVersion) public {  // Certora modify (calldata -> memory) + (external -> public)
         _checkMsgSenderIsAllowedToSubmitData();
         _checkContractVersion(contractVersion);
         _checkConsensusData(data.refSlot, data.consensusVersion, keccak256(abi.encode(data)));
@@ -563,7 +563,7 @@ contract AccountingOracle is BaseOracle {
         }
     }
 
-    function _handleConsensusReportData(ReportData calldata data, uint256 prevRefSlot) internal {
+    function _handleConsensusReportData(ReportData memory data, uint256 prevRefSlot) internal { // Certora modify calldata -> memory
         if (data.extraDataFormat == EXTRA_DATA_FORMAT_EMPTY) {
             if (data.extraDataHash != bytes32(0)) {
                 revert UnexpectedExtraDataHash(bytes32(0), data.extraDataHash);
@@ -635,8 +635,8 @@ contract AccountingOracle is BaseOracle {
 
     function _processStakingRouterExitedValidatorsByModule(
         IStakingRouter stakingRouter,
-        uint256[] calldata stakingModuleIds,
-        uint256[] calldata numExitedValidatorsByStakingModule,
+        uint256[] memory stakingModuleIds,                      // Certora modify calldata -> memory
+        uint256[] memory numExitedValidatorsByStakingModule,    // Certora modify calldata -> memory
         uint256 slotsElapsed
     ) internal {
         if (stakingModuleIds.length != numExitedValidatorsByStakingModule.length) {
@@ -876,5 +876,46 @@ contract AccountingOracle is BaseOracle {
     {
         bytes32 position = EXTRA_DATA_PROCESSING_STATE_POSITION;
         assembly { r.slot := position }
+    }
+
+    ///
+    /// Certora helpers
+    ///
+
+    ReportData public helperReportData;         // munging added by Certora
+
+    function helperCreateAndSubmitReportData(   // munging added by Certora
+        uint256 consensusVersion,
+        uint256 refSlot,
+        //uint256 numValidators,
+        //uint256 clBalanceGwei,
+        //uint256 stakingModuleIdsWithNewlyExitedValidators,
+        //uint256 numExitedValidatorsByStakingModule,
+        //uint256 withdrawalVaultBalance,
+        //uint256 elRewardsVaultBalance,
+        //uint256 lastFinalizableWithdrawalRequestId,
+        uint256 simulatedShareRate,
+        bool isBunkerMode,
+        uint256 extraDataFormat,
+        bytes32 extraDataHash,
+        uint256 extraDataItemsCount,
+        uint256 contractVersion)
+    public returns (bytes32) {
+        helperReportData.consensusVersion = consensusVersion;
+        helperReportData.refSlot = refSlot;
+        // helperReportData.lastFinalizableWithdrawalRequestId = lastFinalizableWithdrawalRequestId; //removed in this version
+        helperReportData.simulatedShareRate = simulatedShareRate;
+        helperReportData.isBunkerMode = isBunkerMode;
+        helperReportData.extraDataFormat = extraDataFormat;
+        helperReportData.extraDataHash = extraDataHash;
+        helperReportData.extraDataItemsCount = extraDataItemsCount;
+
+        submitReportData(helperReportData, contractVersion);
+
+        return keccak256(abi.encode(helperReportData));
+    }
+
+    function isConsensusMember(address addr) external view returns (bool) {
+        return _isConsensusMember(addr);
     }
 }
