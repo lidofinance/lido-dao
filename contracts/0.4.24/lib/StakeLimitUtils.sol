@@ -40,10 +40,10 @@ library StakeLimitState {
       * @dev Internal representation struct (slot-wide)
       */
     struct Data {
-        uint32 prevStakeBlockNumber;
-        uint96 prevStakeLimit;
-        uint32 maxStakeLimitGrowthBlocks;
-        uint96 maxStakeLimit;
+        uint32 prevStakeBlockNumber;      // block number of the previous stake submit
+        uint96 prevStakeLimit;            // limit value (<= `maxStakeLimit`) obtained on the previous stake submit
+        uint32 maxStakeLimitGrowthBlocks; // limit regeneration speed expressed in blocks
+        uint96 maxStakeLimit;             // maximum limit value
     }
 }
 
@@ -145,13 +145,19 @@ library StakeLimitUtils {
             "TOO_SMALL_LIMIT_INCREASE"
         );
 
-        // if staking was paused or unlimited previously,
-        // or new limit is lower than previous, then
-        // reset prev stake limit to the new max stake limit
-        if ((_data.maxStakeLimit == 0) || (_maxStakeLimit < _data.prevStakeLimit)) {
+        // reset prev stake limit to the new max stake limit if
+        if (
+            // staking was paused or
+            _data.prevStakeBlockNumber == 0 ||
+            // staking was unlimited or
+            _data.maxStakeLimit == 0 ||
+            // new maximum limit value is lower than the value obtained on the previous stake submit
+            _maxStakeLimit < _data.prevStakeLimit
+        ) {
             _data.prevStakeLimit = uint96(_maxStakeLimit);
         }
-        _data.maxStakeLimitGrowthBlocks = _stakeLimitIncreasePerBlock != 0 ? uint32(_maxStakeLimit / _stakeLimitIncreasePerBlock) : 0;
+        _data.maxStakeLimitGrowthBlocks =
+            _stakeLimitIncreasePerBlock != 0 ? uint32(_maxStakeLimit / _stakeLimitIncreasePerBlock) : 0;
 
         _data.maxStakeLimit = uint96(_maxStakeLimit);
 

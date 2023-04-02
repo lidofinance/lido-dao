@@ -51,8 +51,8 @@ contract EIP712StETH is IEIP712StETH {
     constructor(address _stETH) {
         if (_stETH == address(0)) { revert ZeroStETHAddress(); }
 
-        bytes32 hashedName = keccak256(bytes("Liquid staked Ether 2.0"));
-        bytes32 hashedVersion = keccak256(bytes("2"));
+        bytes32 hashedName = keccak256("Liquid staked Ether 2.0");
+        bytes32 hashedVersion = keccak256("2");
         bytes32 typeHash = keccak256(
             "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
         );

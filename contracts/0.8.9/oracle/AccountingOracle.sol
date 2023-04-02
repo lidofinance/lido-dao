@@ -258,11 +258,11 @@ contract AccountingOracle is BaseOracle {
         bool isBunkerMode;
 
         ///
-        /// Extra data — the oracle information that can be processed asynchronously in chunks
-        /// after the main data is processed. The oracle doesn't enforce that extra data attached
-        /// to some data report is processed in full before the processing deadline expires or a
-        /// new data report starts being processed, but enforces that no processing of extra data
-        /// for a report is possible after its processing deadline passes or a new data report
+        /// Extra data — the oracle information that allows asynchronous processing, potentially in
+        /// chunks, after the main data is processed. The oracle doesn't enforce that extra data
+        /// attached to some data report is processed in full before the processing deadline expires
+        /// or a new data report starts being processed, but enforces that no processing of extra
+        /// data for a report is possible after its processing deadline passes or a new data report
         /// arrives.
         ///
         /// Extra data is an array of items, each item being encoded as follows:
@@ -687,11 +687,14 @@ contract AccountingOracle is BaseOracle {
         internal view
     {
         _checkMsgSenderIsAllowedToSubmitData();
-        _checkProcessingDeadline();
 
-        if (procState.refSlot != LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256()) {
+        ConsensusReport memory report = _storageConsensusReport().value;
+
+        if (report.hash == bytes32(0) || procState.refSlot != report.refSlot) {
             revert CannotSubmitExtraDataBeforeMainData();
         }
+
+        _checkProcessingDeadline();
 
         if (procState.dataFormat != format) {
             revert UnexpectedExtraDataFormat(procState.dataFormat, format);

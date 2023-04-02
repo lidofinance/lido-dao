@@ -201,4 +201,24 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
     function testing_distributeRewards() external returns (uint256) {
         return _distributeRewards();
     }
+
+     function testing_setNodeOperatorPenalty(
+        uint256 _nodeOperatorId,
+        uint256 _refundedValidatorsCount,
+        uint256 _stuckValidatorsCount,
+        uint256 _stuckPenaltyEndTimestamp
+    ) external {
+        _requireValidRange(_refundedValidatorsCount <= UINT64_MAX);
+        _requireValidRange(_stuckValidatorsCount <= UINT64_MAX);
+        _requireValidRange(_stuckPenaltyEndTimestamp <= UINT64_MAX);
+        Packed64x4.Packed memory stuckPenaltyStats = _loadOperatorStuckPenaltyStats(
+            _nodeOperatorId
+        );
+
+        stuckPenaltyStats.set(REFUNDED_VALIDATORS_COUNT_OFFSET, uint64(_refundedValidatorsCount));
+        stuckPenaltyStats.set(STUCK_VALIDATORS_COUNT_OFFSET, uint64(_stuckValidatorsCount));
+        stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, uint64(_stuckPenaltyEndTimestamp));
+        _saveOperatorStuckPenaltyStats(_nodeOperatorId, stuckPenaltyStats);
+        _updateSummaryMaxValidatorsCount(_nodeOperatorId);
+    }
 }

@@ -8,7 +8,7 @@ contract ERC1271SignerDumbMock {
     error InvalidSignature();
 
     struct Config {
-        bytes4 retval;
+        bytes retval;
         bool reverts;
     }
 
@@ -20,6 +20,9 @@ contract ERC1271SignerDumbMock {
 
     function isValidSignature(bytes32 /* hash */, bytes memory /* sig */) external view returns (bytes4) {
         if (_config.reverts) revert InvalidSignature();
-        return _config.retval;
+        bytes memory retval = _config.retval;
+        assembly {
+            return(add(retval, 32), mload(retval))
+        }
     }
 }
