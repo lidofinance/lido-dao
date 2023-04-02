@@ -204,7 +204,8 @@ contract('PositiveTokenRebaseLimiter', () => {
     const preTotalShares = ETH('1000000')
 
     await limiter.initLimiterState(rebaseLimit, preTotalPooledEther, preTotalShares)
-    await limiter.increaseEther(ETH(1000))
+    const appendedEther = await limiter.increaseEther.sendWithResult(ETH(1000))
+    assert.equals(appendedEther, ETH(1000))
     await limiter.decreaseEther(ETH(40000)) // withdrawal fulfillment
 
     assert.isFalse(await limiter.isLimitReached())
@@ -224,5 +225,21 @@ contract('PositiveTokenRebaseLimiter', () => {
 
     const rebase = e9.mul(postShareRate).div(preShareRate).sub(e9)
     assert.almostEqual(rebase, rebaseLimit, 1)
+  })
+
+  it('limit is reachable when rounding happens', async () => {
+    const rebaseLimit = bn('750000') // 0.075% or 7.5 basis points
+
+    const preTotalPooledEther = bn('101000')
+    const preTotalShares = bn('101000')
+    const etherIncrease = bn('100000')
+
+    await limiter.initLimiterState(rebaseLimit, preTotalPooledEther, preTotalShares)
+    const appendedEther = await limiter.increaseEther.sendWithResult(etherIncrease)
+
+    assert.notEquals(etherIncrease, appendedEther)
+    assert.equals(appendedEther, bn('75'))
+    assert.isTrue(await limiter.isLimitReached())
+    assert.equals(await limiter.getSharesToBurnLimit(), bn(0))
   })
 })

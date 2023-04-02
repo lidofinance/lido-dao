@@ -914,8 +914,8 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
         preTotalShares: ETH('1000000'),
         preCLBalance: ETH('1000000'),
         postCLBalance: ETH('1000000'),
-        elRewardsVaultBalance: ETH(500),
         withdrawalVaultBalance: ETH(500),
+        elRewardsVaultBalance: ETH(500),
         sharesRequestedToBurn: ETH(0),
         etherToLockForWithdrawals: ETH(40000),
         newSharesToBurnForWithdrawals: ETH(40000),
@@ -928,6 +928,33 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       assert.equals(elRewards, ETH(500))
       assert.equals(simulatedSharesToBurn, ETH(0))
       assert.equals(sharesToBurn, '39960039960039960039960') // ETH(1000000 - 961000. / 1.001)
+    })
+
+    it('rounding case from Görli', async () => {
+      const newRebaseLimit = 750_000 // 0.075% or 7.5 basis points
+      await oracleReportSanityChecker.setMaxPositiveTokenRebase(newRebaseLimit, {
+        from: managersRoster.maxPositiveTokenRebaseManagers[0],
+      })
+
+      const rebaseParams = {
+        preTotalPooledEther: '125262263468962792235936',
+        preTotalShares: '120111767594397261197918',
+        preCLBalance: '113136253352529000000000',
+        postCLBalance: '113134996436274000000000',
+        withdrawalVaultBalance: '129959459000000000',
+        elRewardsVaultBalance: '6644376444653811679390',
+        sharesRequestedToBurn: '15713136097768852533',
+        etherToLockForWithdrawals: '0',
+        newSharesToBurnForWithdrawals: '0',
+      }
+
+      const { withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
+        await oracleReportSanityChecker.smoothenTokenRebase(...Object.values(rebaseParams))
+
+      assert.equals(withdrawals, '129959459000000000')
+      assert.equals(elRewards, '95073654397722094176')
+      assert.equals(simulatedSharesToBurn, '0')
+      assert.equals(sharesToBurn, '0')
     })
   })
 
