@@ -91,15 +91,18 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
   })
 
   it('constructor reverts if admin address is zero', async () => {
-    await assert.reverts(OracleReportSanityChecker.new(
-      lidoLocatorMock.address,
-      ZERO_ADDRESS,
-      Object.values(defaultLimitsList),
-      Object.values(managersRoster),
-      {
-        from: deployer,
-      }
-    ), 'AdminCannotBeZero()')
+    await assert.reverts(
+      OracleReportSanityChecker.new(
+        lidoLocatorMock.address,
+        ZERO_ADDRESS,
+        Object.values(defaultLimitsList),
+        Object.values(managersRoster),
+        {
+          from: deployer,
+        }
+      ),
+      'AdminCannotBeZero()'
+    )
   })
 
   describe('getLidoLocator()', () => {
