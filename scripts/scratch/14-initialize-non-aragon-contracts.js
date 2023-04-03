@@ -66,7 +66,6 @@ async function deployNewContracts({ web3, artifacts }) {
   //
   // === NodeOperatorsRegistry: initialize ===
   //
-  const stuckPenaltyDelay = 2 * 24 * 60 * 60  // 2 days
   // https://github.com/ethereum/solidity-examples/blob/master/docs/bytes/Bytes.md#description
   const stakingModuleTypeId = web3.utils.padRight(web3.utils.stringToHex(
     nodeOperatorsRegistryParams.stakingModuleTypeId
@@ -106,17 +105,18 @@ async function deployNewContracts({ web3, artifacts }) {
   const legacyOracle = await artifacts.require('LegacyOracle').at(legacyOracleAddress)
   await legacyOracle.initialize(...legacyOracleArgs, { from: DEPLOYER })
 
+  const zeroLastProcessingRefSlot = 0
+
   //
   // === AccountingOracle: initialize ===
   //
   //! NB: LegacyOracle must be initialized before
-  const lastProcessingRefSlot = 0
   const accountingOracle = await artifacts.require('AccountingOracle').at(accountingOracleAddress)
   const accountingOracleArgs = [
     accountingOracleAdmin,
     hashConsensusForAccountingAddress,
     accountingOracleParams.consensusVersion,
-    lastProcessingRefSlot,
+    zeroLastProcessingRefSlot,
   ]
   console.log({accountingOracleArgs})
   await accountingOracle.initializeWithoutMigration(...accountingOracleArgs, { from: DEPLOYER })
@@ -125,13 +125,13 @@ async function deployNewContracts({ web3, artifacts }) {
   // === ValidatorsExitBusOracle: initialize ===
   //
   const ValidatorsExitBusOracle = await artifacts.require('ValidatorsExitBusOracle').at(ValidatorsExitBusOracleAddress)
-  const ValidatorsExitBusOracleArgs = [
+  const validatorsExitBusOracleArgs = [
     exitBusOracleAdmin,  // admin
     hashConsensusForValidatorsExitBusOracleAddress,
     validatorsExitBusOracleParams.consensusVersion,
-    0, // lastProcessingRefSlot
+    zeroLastProcessingRefSlot,
   ]
-  await ValidatorsExitBusOracle.initialize(...ValidatorsExitBusOracleArgs, { from: DEPLOYER })
+  await ValidatorsExitBusOracle.initialize(...validatorsExitBusOracleArgs, { from: DEPLOYER })
 
   //
   // === WithdrawalQueue initialize ===

@@ -64,7 +64,7 @@ async function deployNewContracts({ web3, artifacts }) {
   //
   const oracleDaemonConfigArgs = [
     admin,
-    [admin],
+    [],
   ]
   const oracleDaemonConfigAddress = await deployWithoutProxy(
     'oracleDaemonConfig', 'OracleDaemonConfig', deployer, oracleDaemonConfigArgs)
@@ -94,7 +94,7 @@ async function deployNewContracts({ web3, artifacts }) {
       sanityChecks.maxPositiveTokenRebase,
     ],
     [
-      [admin],
+      [],
       [], [], [], [], [], [], [], [], []
     ]
   ]
@@ -139,12 +139,6 @@ async function deployNewContracts({ web3, artifacts }) {
   const elRewardsVaultAddress = await deployWithoutProxy(
     "executionLayerRewardsVault", "LidoExecutionLayerRewardsVault", deployer, [lidoAddress, treasuryAddress]
   )
-  logWideSplitter()
-
-  //
-  // === BeaconChainDepositor ===
-  //
-  await deployWithoutProxy("beaconChainDepositor", "BeaconChainDepositor", deployer, [depositContract])
   logWideSplitter()
 
   //
