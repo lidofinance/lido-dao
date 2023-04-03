@@ -506,8 +506,8 @@ contract StETH is IERC20, Pausable {
     /**
      * @dev Emits {Transfer} and {TransferShares} events
      */
-     function _emitTransferEvents(address _from, address _to, uint _amount, uint256 _sharesAmount) internal {
-        emit Transfer(_from, _to, _amount);
+    function _emitTransferEvents(address _from, address _to, uint _tokenAmount, uint256 _sharesAmount) internal {
+        emit Transfer(_from, _to, _tokenAmount);
         emit TransferShares(_from, _to, _sharesAmount);
     }
 
