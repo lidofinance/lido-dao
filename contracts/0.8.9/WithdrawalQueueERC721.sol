@@ -95,7 +95,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
     }
 
     /// @dev Se_toBytes321Metadata-name}.
-    function name() external view returns (string memory) {
+    function name() external view override returns (string memory) {
         return _toString(NAME);
     }
 
