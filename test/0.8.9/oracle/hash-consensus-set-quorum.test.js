@@ -1,6 +1,6 @@
-const { contract } = require('hardhat')
+const { contract, ethers } = require('hardhat')
 const { assert } = require('../../helpers/assert')
-
+const { EvmSnapshot } = require('../../helpers/blockchain')
 const {
   ZERO_HASH,
   UNREACHABLE_QUORUM,
@@ -12,15 +12,22 @@ const {
 contract('HashConsensus', ([admin, member1, member2, member3]) => {
   describe('setQuorum and addMember changes getQuorum', () => {
     let consensus
+    let snapshot
 
     const deployContract = async () => {
+      snapshot = new EvmSnapshot(ethers.provider)
       const deployed = await deployHashConsensus(admin, { initialEpoch: 1 })
       consensus = deployed.consensus
+      await snapshot.make()
     }
 
-    context('at deploy quorum is zero and can be set to any number while event is fired on every change', () => {
-      before(deployContract)
+    const rollback = async () => {
+      await snapshot.rollback()
+    }
 
+    before(deployContract)
+
+    context('at deploy quorum is zero and can be set to any number while event is fired on every change', () => {
       it('quorum is zero at deploy', async () => {
         assert.equals(await consensus.getQuorum(), 0)
       })
@@ -49,7 +56,7 @@ contract('HashConsensus', ([admin, member1, member2, member3]) => {
     })
 
     context('as new members are added quorum is updated and cannot be set lower than members/2', () => {
-      before(deployContract)
+      before(rollback)
 
       it('addMember adds member and updates quorum', async () => {
         assert.equals(await consensus.getQuorum(), 0)
@@ -83,7 +90,7 @@ contract('HashConsensus', ([admin, member1, member2, member3]) => {
     })
 
     context('disableConsensus sets unreachable quorum value', () => {
-      before(deployContract)
+      before(rollback)
 
       it('disableConsensus updated quorum value and emits events', async () => {
         const tx = await consensus.disableConsensus()
@@ -101,8 +108,10 @@ contract('HashConsensus', ([admin, member1, member2, member3]) => {
     let consensus
     let reportProcessor
     let frame
+    let snapshot
 
     const deployContractWithMembers = async () => {
+      snapshot = new EvmSnapshot(ethers.provider)
       const deployed = await deployHashConsensus(admin, { initialEpoch: 1 })
       consensus = deployed.consensus
       reportProcessor = deployed.reportProcessor
@@ -111,10 +120,17 @@ contract('HashConsensus', ([admin, member1, member2, member3]) => {
       await consensus.addMember(member2, 2, { from: admin })
       await consensus.addMember(member3, 3, { from: admin })
       frame = await consensus.getCurrentFrame()
+      await snapshot.make()
     }
 
+    const rollback = async () => {
+      await snapshot.rollback()
+    }
+
+    before(deployContractWithMembers)
+
     context('quorum increases and changes effective consensus', () => {
-      before(deployContractWithMembers)
+      after(rollback)
 
       it('consensus is reached at 2/3 for quorum of 2', async () => {
         await consensus.setQuorum(2)
@@ -152,7 +168,7 @@ contract('HashConsensus', ([admin, member1, member2, member3]) => {
     })
 
     context('setQuorum triggers consensus on decrease', () => {
-      before(deployContractWithMembers)
+      after(rollback)
 
       it('2/3 reports come in', async () => {
         const tx1 = await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
@@ -181,7 +197,7 @@ contract('HashConsensus', ([admin, member1, member2, member3]) => {
     })
 
     context('setQuorum can lead to consensus loss on quorum increase', () => {
-      before(deployContractWithMembers)
+      after(rollback)
 
       it('2/3 members reach consensus with quorum of 2', async () => {
         await consensus.setQuorum(2)
@@ -227,7 +243,7 @@ contract('HashConsensus', ([admin, member1, member2, member3]) => {
     })
 
     context('setQuorum does not re-trigger consensus if hash is already being processed', () => {
-      before(deployContractWithMembers)
+      after(rollback)
 
       it('2/3 members reach consensus with Quorum of 2', async () => {
         await consensus.setQuorum(2)
