@@ -974,7 +974,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       await assert.revertsOZAccessControl(
         oracleReportSanityChecker.setChurnValidatorsPerDayLimit(newChurnLimit, { from: deployer }),
         deployer,
-        'CHURN_VALIDATORS_PER_DAY_LIMIT_MANGER_ROLE'
+        'CHURN_VALIDATORS_PER_DAY_LIMIT_MANAGER_ROLE'
       )
 
       const tx = await oracleReportSanityChecker.setChurnValidatorsPerDayLimit(newChurnLimit, {

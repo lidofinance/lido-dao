@@ -102,8 +102,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     using PositiveTokenRebaseLimiter for TokenRebaseLimiterData;
 
     bytes32 public constant ALL_LIMITS_MANAGER_ROLE = keccak256("ALL_LIMITS_MANAGER_ROLE");
-    bytes32 public constant CHURN_VALIDATORS_PER_DAY_LIMIT_MANGER_ROLE =
-        keccak256("CHURN_VALIDATORS_PER_DAY_LIMIT_MANGER_ROLE");
+    bytes32 public constant CHURN_VALIDATORS_PER_DAY_LIMIT_MANAGER_ROLE =
+        keccak256("CHURN_VALIDATORS_PER_DAY_LIMIT_MANAGER_ROLE");
     bytes32 public constant ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE =
         keccak256("ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE");
     bytes32 public constant ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE =
@@ -157,7 +157,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(ALL_LIMITS_MANAGER_ROLE, _managersRoster.allLimitsManagers);
-        _grantRole(CHURN_VALIDATORS_PER_DAY_LIMIT_MANGER_ROLE, _managersRoster.churnValidatorsPerDayLimitManagers);
+        _grantRole(CHURN_VALIDATORS_PER_DAY_LIMIT_MANAGER_ROLE, _managersRoster.churnValidatorsPerDayLimitManagers);
         _grantRole(ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE,
                    _managersRoster.oneOffCLBalanceDecreaseLimitManagers);
         _grantRole(ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE, _managersRoster.annualBalanceIncreaseLimitManagers);
@@ -219,7 +219,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     /// @param _churnValidatorsPerDayLimit new churnValidatorsPerDayLimit value
     function setChurnValidatorsPerDayLimit(uint256 _churnValidatorsPerDayLimit)
         external
-        onlyRole(CHURN_VALIDATORS_PER_DAY_LIMIT_MANGER_ROLE)
+        onlyRole(CHURN_VALIDATORS_PER_DAY_LIMIT_MANAGER_ROLE)
     {
         LimitsList memory limitsList = _limits.unpack();
         limitsList.churnValidatorsPerDayLimit = _churnValidatorsPerDayLimit;

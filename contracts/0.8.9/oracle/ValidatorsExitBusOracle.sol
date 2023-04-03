@@ -163,9 +163,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
 
         /// @dev Total number of validator exit requests in this report. Must not be greater
         /// than limit checked in OracleReportSanityChecker.checkExitBusOracleReport.
-        ///
-        /// Cannot be zero: in the case there's no validator exit requests to submit, oracles
-        /// should skip submitting the report for the current reporting frame.
         uint256 requestsCount;
 
         /// @dev Format of the validator exit requests data. Currently, only the
