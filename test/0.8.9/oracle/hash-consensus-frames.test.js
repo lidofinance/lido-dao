@@ -18,7 +18,7 @@ const {
   deployHashConsensus,
 } = require('./hash-consensus-deploy.test')
 
-contract('HashConsensus', ([admin, member1, member2]) => {
+contract('HashConsensus', ([admin, member1, member2, member3]) => {
   const TEST_INITIAL_EPOCH = 3
 
   context('Frame methods', () => {
@@ -156,17 +156,35 @@ contract('HashConsensus', ([admin, member1, member2]) => {
       assert.equals(initialRefSlot, TEST_INITIAL_EPOCH * SLOTS_PER_EPOCH - 1)
     })
 
-    it('before the initial epoch arrives, members can be added and queried, and quorum increased', async () => {
+    it('before the initial epoch arrives, members can be added and queried, and quorum changed', async () => {
       await consensus.setTimeInEpochs(TEST_INITIAL_EPOCH - 1)
+
+      await consensus.addMember(member3, 1, { from: admin })
+      assert.isTrue(await consensus.getIsMember(member3))
+      assert.equals(await consensus.getQuorum(), 1)
+
+      await consensus.removeMember(member3, 2)
+      assert.isFalse(await consensus.getIsMember(member3))
+      assert.equals(await consensus.getQuorum(), 2)
 
       await consensus.addMember(member1, 1, { from: admin })
       await consensus.addMember(member2, 2, { from: admin })
-      await consensus.setQuorum(3, { from: admin })
+      await consensus.addMember(member3, 2, { from: admin })
+      assert.equals(await consensus.getQuorum(), 2)
 
+      await consensus.setQuorum(4, { from: admin })
+      assert.equals(await consensus.getQuorum(), 4)
+
+      await consensus.setQuorum(3, { from: admin })
       assert.equals(await consensus.getQuorum(), 3)
+
+      await consensus.removeMember(member3, 3)
 
       assert.isTrue(await consensus.getIsMember(member1))
       assert.isTrue(await consensus.getIsMember(member2))
+      assert.isFalse(await consensus.getIsMember(member3))
+      assert.equals(await consensus.getQuorum(), 3)
+
       assert.isFalse(await consensus.getIsMember(admin))
 
       const { addresses, lastReportedRefSlots } = await consensus.getMembers()
@@ -178,10 +196,6 @@ contract('HashConsensus', ([admin, member1, member2]) => {
     })
 
     it('but otherwise, the contract is dysfunctional', async () => {
-      await assert.reverts(consensus.removeMember(member2, 2), 'InitialEpochIsYetToArrive()')
-      await assert.reverts(consensus.removeMember(member2, 1), 'InitialEpochIsYetToArrive()')
-      await assert.reverts(consensus.setQuorum(2), 'InitialEpochIsYetToArrive()')
-
       await assert.reverts(consensus.getCurrentFrame(), 'InitialEpochIsYetToArrive()')
       await assert.reverts(consensus.getConsensusState(), 'InitialEpochIsYetToArrive()')
       await assert.reverts(consensus.getConsensusStateForMember(member1), 'InitialEpochIsYetToArrive()')
