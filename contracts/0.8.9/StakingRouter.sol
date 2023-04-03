@@ -1058,10 +1058,9 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     ///         reduced, 1e4 precision.
     function getTotalFeeE4Precision() external view returns (uint16 totalFee) {
         /// @dev The logic is placed here but in Lido contract to save Lido bytecode
-        uint256 E4_BASIS_POINTS = 10000;  // Corresponds to Lido.TOTAL_BASIS_POINTS
         (, , , uint96 totalFeeInHighPrecision, uint256 precision) = getStakingRewardsDistribution();
         // Here we rely on (totalFeeInHighPrecision <= precision)
-        totalFee = uint16((totalFeeInHighPrecision * E4_BASIS_POINTS) / precision);
+        totalFee = _toE4Precision(totalFeeInHighPrecision, precision);
     }
 
     /// @notice Helper for Lido contract (DEPRECATED)
@@ -1072,15 +1071,14 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         returns (uint16 modulesFee, uint16 treasuryFee)
     {
         /// @dev The logic is placed here but in Lido contract to save Lido bytecode
-        uint256 E4_BASIS_POINTS = 10000;  // Corresponds to Lido.TOTAL_BASIS_POINTS
         (
             uint256 modulesFeeHighPrecision,
             uint256 treasuryFeeHighPrecision,
             uint256 precision
         ) = getStakingFeeAggregateDistribution();
         // Here we rely on ({modules,treasury}FeeHighPrecision <= precision)
-        modulesFee = uint16((modulesFeeHighPrecision * E4_BASIS_POINTS) / precision);
-        treasuryFee = uint16((treasuryFeeHighPrecision * E4_BASIS_POINTS) / precision);
+        modulesFee = _toE4Precision(modulesFeeHighPrecision, precision);
+        treasuryFee = _toE4Precision(treasuryFeeHighPrecision, precision);
     }
 
     /// @notice returns new deposits allocation after the distribution of the `_depositsCount` deposits
@@ -1314,5 +1312,9 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         assembly {
             result.slot := position
         }
+    }
+
+    function _toE4Precision(uint256 _value, uint256 _precision) internal pure returns (uint16) {
+        return uint16((_value * TOTAL_BASIS_POINTS) / _precision);
     }
 }
