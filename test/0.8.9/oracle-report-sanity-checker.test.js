@@ -1,5 +1,5 @@
 const { artifacts, contract, ethers } = require('hardhat')
-const { ETH } = require('../helpers/utils')
+const { ETH, ZERO_ADDRESS } = require('../helpers/utils')
 const { assert } = require('../helpers/assert')
 const { getCurrentBlockTimestamp, EvmSnapshot } = require('../helpers/blockchain')
 
@@ -88,6 +88,18 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
 
   afterEach(async () => {
     await snapshot.rollback()
+  })
+
+  it('constructor reverts if admin address is zero', async () => {
+    await assert.reverts(OracleReportSanityChecker.new(
+      lidoLocatorMock.address,
+      ZERO_ADDRESS,
+      Object.values(defaultLimitsList),
+      Object.values(managersRoster),
+      {
+        from: deployer,
+      }
+    ), 'AdminCannotBeZero()')
   })
 
   describe('getLidoLocator()', () => {
