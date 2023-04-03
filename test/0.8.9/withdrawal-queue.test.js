@@ -144,8 +144,14 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       await assert.reverts(withdrawalQueue.finalize([1], 0, { from: owner }), 'ResumedExpected()')
     })
 
+    it('cant resume without resume role', async () => {
+      await assert.revertsOZAccessControl(withdrawalQueue.resume({ from: pauser }), pauser, 'RESUME_ROLE')
+    })
+
     it('cant resume if not paused', async () => {
-      await assert.reverts(withdrawalQueue.resume(), 'PausedExpected()')
+      const RESUME_ROLE = await withdrawalQueue.RESUME_ROLE()
+      await withdrawalQueue.grantRole(RESUME_ROLE, resumer, { from: daoAgent })
+      await assert.reverts(withdrawalQueue.resume({ from: resumer }), 'PausedExpected()')
     })
   })
 
