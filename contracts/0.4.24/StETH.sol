@@ -361,7 +361,7 @@ contract StETH is IERC20, Pausable {
 
         _transferShares(_sender, _recipient, _sharesAmount);
         _approve(_sender, msg.sender, currentAllowance.sub(tokensAmount));
-        _emitTransferEvents(_sender, _recipient, tokensAmount,  _sharesAmount);
+        _emitTransferEvents(_sender, _recipient, tokensAmount, _sharesAmount);
         return tokensAmount;
     }
 
@@ -503,7 +503,7 @@ contract StETH is IERC20, Pausable {
         // We're emitting `SharesBurnt` event to provide an explicit rebase log record nonetheless.
     }
 
-     /**
+    /**
      * @dev Emits {Transfer} and {TransferShares} events
      */
      function _emitTransferEvents(address _from, address _to, uint _amount, uint256 _sharesAmount) internal {
@@ -511,7 +511,7 @@ contract StETH is IERC20, Pausable {
         emit TransferShares(_from, _to, _sharesAmount);
     }
 
-     /**
+    /**
      * @dev Emits {Transfer} and {TransferShares} events where `from` is 0 address. Indicates mint events.
      */
     function _emitTransferAfterMintingShares(address _to, uint256 _sharesAmount) internal {

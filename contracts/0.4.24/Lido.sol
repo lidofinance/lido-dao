@@ -1381,8 +1381,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         return getLidoLocator().treasury();
     }
 
-
-     /**
+    /**
      * @notice Mints shares on behalf of 0xdead address,
      * the shares amount is equal to the contract's balance.     *
      *
