@@ -23,7 +23,7 @@ library Packed64x4 {
 
     /// @dev Returns uint64 variable stored on position `n` as uint256
     function get(Packed memory _self, uint8 n) internal pure returns (uint256 r) {
-        r = uint64((_self.v >> (64 * n)) & UINT64_MAX);
+        r = (_self.v >> (64 * n)) & UINT64_MAX;
     }
 
     /// @dev Writes value stored in passed `x` variable on position `n`.

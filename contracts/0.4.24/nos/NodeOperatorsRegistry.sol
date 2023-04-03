@@ -174,7 +174,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         ///                0             <=  exitedSigningKeysCount   <= depositedSigningKeysCount
         ///     exitedSigningKeysCount   <= depositedSigningKeysCount <=  vettedSigningKeysCount
         ///    depositedSigningKeysCount <=   vettedSigningKeysCount  <=   totalSigningKeysCount
-        ///    depositedSigningKeysCount <=   totalSigningKeysCount   <=        MAX_UINT64
+        ///    depositedSigningKeysCount <=   totalSigningKeysCount   <=        UINT64_MAX
         ///
         /// Additionally, the exitedSigningKeysCount and depositedSigningKeysCount values are monotonically increasing:
         /// :                              :         :         :         :
@@ -779,29 +779,33 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
         Packed64x4.Packed memory operatorTargetStats = _loadOperatorTargetValidatorsStats(_nodeOperatorId);
 
-        uint256 exitedSigningKeysCount = signingKeysStats.get(TOTAL_EXITED_KEYS_COUNT_OFFSET);
         uint256 depositedSigningKeysCount = signingKeysStats.get(TOTAL_DEPOSITED_KEYS_COUNT_OFFSET);
-        uint256 vettedSigningKeysCount = signingKeysStats.get(TOTAL_VETTED_KEYS_COUNT_OFFSET);
 
-        newMaxSigningKeysCount = depositedSigningKeysCount;
+        // It's expected that validators don't suffer from penalties most of the time,
+        // so optimistically, set the count of max validators equal to the vetted validators count.
+        newMaxSigningKeysCount = signingKeysStats.get(TOTAL_VETTED_KEYS_COUNT_OFFSET);
+
+        if (!isOperatorPenaltyCleared(_nodeOperatorId)) {
+            // when the node operator is penalized zeroing its depositable validators count
+            newMaxSigningKeysCount = depositedSigningKeysCount;
+        } else if (operatorTargetStats.get(IS_TARGET_LIMIT_ACTIVE_OFFSET) != 0) {
+            // apply target limit when it's active and the node operator is not penalized
+            newMaxSigningKeysCount = Math256.max(
+                // max validators count can't be less than the deposited validators count
+                // even when the target limit is less than the current active validators count
+                depositedSigningKeysCount,
+                Math256.min(
+                    // max validators count can't be greater than the vetted validators count
+                    newMaxSigningKeysCount,
+                    // SafeMath.add() isn't used below because the sum is always
+                    // less or equal to 2 * UINT64_MAX
+                    signingKeysStats.get(TOTAL_EXITED_KEYS_COUNT_OFFSET)
+                        + operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET)
+                )
+            );
+        }
+
         oldMaxSigningKeysCount = operatorTargetStats.get(MAX_VALIDATORS_COUNT_OFFSET);
-
-        if (isOperatorPenaltyCleared(_nodeOperatorId)) {
-            if (operatorTargetStats.get(IS_TARGET_LIMIT_ACTIVE_OFFSET) == 0) {
-                newMaxSigningKeysCount = vettedSigningKeysCount;
-            } else {
-                // correct max count according to target if target is enabled
-                // targetLimit is limited to UINT64_MAX
-                uint256 targetLimit = Math256.min(
-                    uint256(exitedSigningKeysCount).add(operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET)),
-                    UINT64_MAX
-                );
-                if (targetLimit > depositedSigningKeysCount) {
-                    newMaxSigningKeysCount = Math256.min(vettedSigningKeysCount, targetLimit);
-                }
-            }
-        } // else newMaxSigningKeysCount = depositedSigningKeysCount, so depositable keys count = 0
-
         if (oldMaxSigningKeysCount != newMaxSigningKeysCount) {
             operatorTargetStats.set(MAX_VALIDATORS_COUNT_OFFSET, newMaxSigningKeysCount);
             _saveOperatorTargetValidatorsStats(_nodeOperatorId, operatorTargetStats);
@@ -962,8 +966,8 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
             assert(totalDepositedValidators >= totalExitedValidators);
             uint256 activeValidatorsCount = totalDepositedValidators - totalExitedValidators;
 
-            // protect from math overflow here which should never happen
-            assert(totalActiveValidatorsCount + activeValidatorsCount >= totalActiveValidatorsCount);
+            // SafeMath.add() isn't used below because the following is always true:
+            // totalActiveValidatorsCount <= MAX_NODE_OPERATORS_COUNT * UINT64_MAX
             totalActiveValidatorsCount += activeValidatorsCount;
 
             recipients[idx] = _nodeOperators[operatorId].rewardAddress;
@@ -1084,7 +1088,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
         uint256 totalSigningKeysCount = signingKeysStats.get(TOTAL_KEYS_COUNT_OFFSET);
-        // comapring _fromIndex.add(_keysCount) <= totalSigningKeysCount is enough as totalSigningKeysCount is always less than MAX_UINT64
+        // comparing _fromIndex.add(_keysCount) <= totalSigningKeysCount is enough as totalSigningKeysCount is always less than UINT64_MAX
         _requireValidRange(
             _fromIndex >= signingKeysStats.get(TOTAL_DEPOSITED_KEYS_COUNT_OFFSET)
                 && _fromIndex.add(_keysCount) <= totalSigningKeysCount
