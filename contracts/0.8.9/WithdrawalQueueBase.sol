@@ -88,7 +88,7 @@ abstract contract WithdrawalQueueBase {
         uint256 amountOfStETH,
         uint256 amountOfShares
     );
-    event WithdrawalBatchFinalized(
+    event WithdrawalsFinalized(
         uint256 indexed from, uint256 indexed to, uint256 amountOfETHLocked, uint256 sharesToBurn, uint256 timestamp
     );
     event WithdrawalClaimed(
@@ -358,7 +358,7 @@ abstract contract WithdrawalQueueBase {
         _setLockedEtherAmount(getLockedEtherAmount() + _amountOfETH);
         _setLastFinalizedRequestId(lastRequestIdToBeFinalized);
 
-        emit WithdrawalBatchFinalized(
+        emit WithdrawalsFinalized(
             firstRequestIdToFinalize,
             lastRequestIdToBeFinalized,
             _amountOfETH,
