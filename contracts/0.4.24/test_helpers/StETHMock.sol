@@ -14,7 +14,14 @@ contract StETHMock is StETH {
 
     constructor() public payable{
         _resume();
-        _bootstrapInitialHolder();
+        // _bootstrapInitialHolder
+        uint256 balance = address(this).balance;
+        assert(balance != 0);
+
+        // address(0xdead) is a holder for initial shares
+        setTotalPooledEther(balance);
+        _mintShares(INITIAL_TOKEN_HOLDER, balance);
+        _emitTransferAfterMintingShares(INITIAL_TOKEN_HOLDER, balance);
     }
 
     function _getTotalPooledEther() internal view returns (uint256) {
@@ -46,10 +53,5 @@ contract StETHMock is StETH {
 
     function burnShares(address _account, uint256 _sharesAmount) public returns (uint256 newTotalShares) {
         return _burnShares(_account, _sharesAmount);
-    }
-
-    function _emitTransferAfterMintingShares(address _to, uint256 _sharesAmount) internal {
-        emit Transfer(address(0), _to, getPooledEthByShares(_sharesAmount));
-        emit TransferShares(address(0), _to, _sharesAmount);
     }
 }
