@@ -1,5 +1,6 @@
-const { contract } = require('hardhat')
+const { contract, ethers } = require('hardhat')
 const { assert } = require('../../helpers/assert')
+const { EvmSnapshot } = require('../../helpers/blockchain')
 
 const {
   CONSENSUS_VERSION,
@@ -11,6 +12,9 @@ const {
   computeTimestampAtSlot,
   ZERO_HASH,
 } = require('./validators-exit-bus-oracle-deploy.test')
+
+const ValidatorExitBusAbi = require('../../../lib/abi/ValidatorsExitBusOracle.json')
+const { HASH_1 } = require('./hash-consensus-deploy.test')
 
 const PUBKEYS = [
   '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
@@ -36,8 +40,10 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     let oracle
     let oracleReportSanityChecker
     let oracleVersion
+    let snapshot
 
-    async function setup() {
+    async function deployAndSetup() {
+      snapshot = new EvmSnapshot(ethers.provider)
       const deployed = await deployExitBusOracle(admin, {
         lastProcessingRefSlot: LAST_PROCESSING_REF_SLOT,
         resumeAfterDeploy: true,
@@ -52,6 +58,11 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       await consensus.addMember(member1, 1, { from: admin })
       await consensus.addMember(member2, 2, { from: admin })
       await consensus.addMember(member3, 2, { from: admin })
+      await snapshot.make()
+    }
+
+    async function rollback() {
+      await snapshot.rollback()
     }
 
     async function triggerConsensusOnHash(hash) {
@@ -96,11 +107,48 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
       return +(await oracle.getLastRequestedValidatorIndices(moduleId, [nodeOpId]))[0]
     }
 
+    before(deployAndSetup)
+
+    context('discarded report prevents data submit', () => {
+      let reportItems = null
+      let reportHash = null
+
+      after(rollback)
+
+      it('report is discarded', async () => {
+        reportItems = await prepareReportAndSubmitHash()
+        reportHash = calcValidatorsExitBusReportDataHash(reportItems)
+        const { refSlot } = await consensus.getCurrentFrame()
+
+        // change of mind
+        const tx = await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member3 })
+        assert.emits(tx, 'ReportDiscarded', { refSlot, hash: reportHash }, { abi: ValidatorExitBusAbi })
+      })
+
+      it('processing state reverts to pre-report state ', async () => {
+        const state = await oracle.getProcessingState()
+        assert.equals(state.dataHash, ZERO_HASH)
+        assert.equals(state.dataSubmitted, false)
+        assert.equals(state.dataFormat, 0)
+        assert.equals(state.requestsCount, 0)
+        assert.equals(state.requestsSubmitted, 0)
+      })
+
+      it('reverts on trying to submit the discarded report', async () => {
+        await assert.reverts(
+          oracle.submitReportData(reportItems, oracleVersion, { from: member1 }),
+          `UnexpectedDataHash`,
+          [`"${ZERO_HASH}"`, `"${reportHash}"`]
+        )
+      })
+    })
+
     context('_handleConsensusReportData', () => {
       beforeEach(async () => {
-        await setup()
         await consensus.advanceTimeToNextFrameStart()
       })
+
+      afterEach(rollback)
 
       context('enforces data format', () => {
         it('dataFormat = 0 reverts', async () => {
@@ -313,7 +361,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     })
 
     context(`requires validator indices for the same node operator to increase`, () => {
-      before(setup)
+      after(rollback)
 
       it(`requesting NO 5-3 to exit validator 0`, async () => {
         await consensus.advanceTimeToNextFrameStart()
@@ -405,7 +453,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     })
 
     context(`only consensus member or SUBMIT_DATA_ROLE can submit report on unpaused contract`, () => {
-      beforeEach(setup)
+      afterEach(rollback)
 
       it('reverts on stranger', async () => {
         const report = await prepareReportAndSubmitHash()
@@ -436,7 +484,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     })
 
     context('invokes internal baseOracle checks', () => {
-      beforeEach(setup)
+      afterEach(rollback)
 
       it(`reverts on contract version mismatch`, async () => {
         const report = await prepareReportAndSubmitHash()
@@ -470,7 +518,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     })
 
     context('getTotalRequestsProcessed reflects report history', () => {
-      before(setup)
+      after(rollback)
 
       let requestCount
 
@@ -508,7 +556,7 @@ contract('ValidatorsExitBusOracle', ([admin, member1, member2, member3, stranger
     })
 
     context('getProcessingState reflects state change', () => {
-      before(setup)
+      after(rollback)
 
       let report
       let hash
