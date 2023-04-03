@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.9;
 
-import { UnstructuredStorage } from '../../lib/UnstructuredStorage.sol';
-import { BaseOracle } from '../../oracle/BaseOracle.sol';
+import { UnstructuredStorage } from "../../lib/UnstructuredStorage.sol";
+import { BaseOracle } from "../../oracle/BaseOracle.sol";
 
 struct ConsensusReport {
     bytes32 hash;
@@ -35,7 +35,7 @@ contract BaseOracleTimeTravellable is BaseOracle {
         CONTRACT_VERSION_POSITION.setStorageUint256(0);
         require(
             genesisTime <= _time,
-            'GENESIS_TIME_CANNOT_BE_MORE_THAN_MOCK_TIME'
+            "GENESIS_TIME_CANNOT_BE_MORE_THAN_MOCK_TIME"
         );
     }
 
