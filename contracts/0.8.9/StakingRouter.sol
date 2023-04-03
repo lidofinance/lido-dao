@@ -128,7 +128,8 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     uint256 public constant FEE_PRECISION_POINTS = 10 ** 20; // 100 * 10 ** 18
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
     uint256 public constant MAX_STAKING_MODULES_COUNT = 32;
-    uint256 public constant MAX_STAKING_MODULE_NAME_LENGTH = 32;
+    /// @dev restrict the name size with 31 bytes to storage in a single slot
+    uint256 public constant MAX_STAKING_MODULE_NAME_LENGTH = 31;
 
     constructor(address _depositContract) BeaconChainDepositor(_depositContract) {}
 

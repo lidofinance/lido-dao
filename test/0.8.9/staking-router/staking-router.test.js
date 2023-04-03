@@ -495,10 +495,10 @@ contract('StakingRouter', ([deployer, lido, admin, appManager, stranger]) => {
         `StakingModuleWrongName()`
       )
 
-      // check length > 32 symbols
+      // check length > 31 symbols
       await assert.revertsWithCustomError(
         router.addStakingModule(
-          '#'.repeat(33),
+          '#'.repeat(32),
           stakingModule1.address,
           stakingModulesParams[0].targetShare,
           stakingModulesParams[0].stakingModuleFee,
