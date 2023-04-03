@@ -151,6 +151,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         LimitsList memory _limitsList,
         ManagersRoster memory _managersRoster
     ) {
+        if (_admin == address(0)) revert AdminCannotBeZero();
         LIDO_LOCATOR = ILidoLocator(_lidoLocator);
 
         _updateLimits(_limitsList);
@@ -728,6 +729,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     error MaxAccountingExtraDataItemsCountExceeded(uint256 maxItemsCount, uint256 receivedItemsCount);
     error ExitedValidatorsLimitExceeded(uint256 limitPerDay, uint256 exitedPerDay);
     error TooManyNodeOpsPerExtraDataItem(uint256 itemIndex, uint256 nodeOpsCount);
+    error AdminCannotBeZero();
 }
 
 library LimitsListPacker {
