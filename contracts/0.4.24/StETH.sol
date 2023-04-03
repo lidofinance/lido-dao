@@ -331,9 +331,8 @@ contract StETH is IERC20, Pausable {
      */
     function transferShares(address _recipient, uint256 _sharesAmount) external returns (uint256) {
         _transferShares(msg.sender, _recipient, _sharesAmount);
-        emit TransferShares(msg.sender, _recipient, _sharesAmount);
         uint256 tokensAmount = getPooledEthByShares(_sharesAmount);
-        emit Transfer(msg.sender, _recipient, tokensAmount);
+        _emitTransferEvents(msg.sender, _recipient, tokensAmount, _sharesAmount);
         return tokensAmount;
     }
 
@@ -362,8 +361,7 @@ contract StETH is IERC20, Pausable {
 
         _transferShares(_sender, _recipient, _sharesAmount);
         _approve(_sender, msg.sender, currentAllowance.sub(tokensAmount));
-        emit TransferShares(_sender, _recipient, _sharesAmount);
-        emit Transfer(_sender, _recipient, tokensAmount);
+        _emitTransferEvents(_sender, _recipient, tokensAmount,  _sharesAmount);
         return tokensAmount;
     }
 
@@ -382,8 +380,7 @@ contract StETH is IERC20, Pausable {
     function _transfer(address _sender, address _recipient, uint256 _amount) internal {
         uint256 _sharesToTransfer = getSharesByPooledEth(_amount);
         _transferShares(_sender, _recipient, _sharesToTransfer);
-        emit Transfer(_sender, _recipient, _amount);
-        emit TransferShares(_sender, _recipient, _sharesToTransfer);
+        _emitTransferEvents(_sender, _recipient, _amount, _sharesToTransfer);
     }
 
     /**
@@ -504,5 +501,20 @@ contract StETH is IERC20, Pausable {
         // but we cannot reflect this as it would require sending an unbounded number of events.
 
         // We're emitting `SharesBurnt` event to provide an explicit rebase log record nonetheless.
+    }
+
+     /**
+     * @dev Emits {Transfer} and {TransferShares} events
+     */
+     function _emitTransferEvents(address _from, address _to, uint _amount, uint256 _sharesAmount) internal {
+        emit Transfer(_from, _to, _amount);
+        emit TransferShares(_from, _to, _sharesAmount);
+    }
+
+     /**
+     * @dev Emits {Transfer} and {TransferShares} events where `from` is 0 address. Indicates mint events.
+     */
+    function _emitTransferAfterMintingShares(address _to, uint256 _sharesAmount) internal {
+        _emitTransferEvents(address(0), _to, getPooledEthByShares(_sharesAmount), _sharesAmount);
     }
 }

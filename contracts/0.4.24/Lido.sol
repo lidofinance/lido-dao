@@ -947,14 +947,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @dev Emits {Transfer} and {TransferShares} events where `from` is 0 address. Indicates mint events.
-     */
-    function _emitTransferAfterMintingShares(address _to, uint256 _sharesAmount) internal {
-        emit Transfer(address(0), _to, getPooledEthByShares(_sharesAmount));
-        emit TransferShares(address(0), _to, _sharesAmount);
-    }
-
-    /**
      * @dev Staking router rewards distribution.
      *
      * Corresponds to the return value of `IStakingRouter.newTotalPooledEtherForRewards()`
