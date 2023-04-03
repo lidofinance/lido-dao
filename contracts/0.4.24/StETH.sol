@@ -505,33 +505,4 @@ contract StETH is IERC20, Pausable {
 
         // We're emitting `SharesBurnt` event to provide an explicit rebase log record nonetheless.
     }
-
-    /**
-     * @notice Mints shares on behalf of 0xdead address,
-     * the shares amount is equal to the contract's balance.     *
-     *
-     * Allows to get rid of zero checks for `totalShares` and `totalPooledEther`
-     * and overcome corner cases.
-     *
-     * NB: reverts if the current contract's balance is zero.
-     *
-     * @dev must be invoked before using the token
-     */
-    function _bootstrapInitialHolder() internal returns (uint256) {
-        uint256 balance = address(this).balance;
-        assert(balance != 0);
-
-        if (_getTotalShares() == 0) {
-            // if protocol is empty bootstrap it with the contract's balance
-            // address(0xdead) is a holder for initial shares
-            _mintShares(INITIAL_TOKEN_HOLDER, balance);
-
-            emit Transfer(0x0, INITIAL_TOKEN_HOLDER, balance);
-            emit TransferShares(0x0, INITIAL_TOKEN_HOLDER, balance);
-
-            return balance;
-        }
-
-        return 0;
-    }
 }
