@@ -2718,7 +2718,7 @@ contract('NodeOperatorsRegistry', (addresses) => {
     })
   })
 
-  describe.only('addSigningKeysOperatorBH()', () => {
+  describe('addSigningKeysOperatorBH()', () => {
     const firstNodeOperatorId = 0
     const firstNodeOperatorKeys = new signingKeys.FakeValidatorKeys(1)
 
