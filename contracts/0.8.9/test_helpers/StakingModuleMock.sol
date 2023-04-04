@@ -30,7 +30,7 @@ contract StakingModuleMock is IStakingModule {
         uint256 depositableValidatorsCount
     ) {
         totalExitedValidators = _exitedValidatorsCount;
-        totalDepositedValidators = _activeValidatorsCount;
+        totalDepositedValidators = _exitedValidatorsCount + _activeValidatorsCount;
         depositableValidatorsCount = _availableValidatorsCount;
     }
 

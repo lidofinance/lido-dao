@@ -61,14 +61,26 @@ contract MockConsensusContract is IConsensusContract {
         return _memberIndices1b[addr] != 0;
     }
 
-    function getCurrentFrame() external view returns (uint256 refSlot, uint256 reportProcessingDeadlineSlot) {
-        return (_consensusFrame.refSlot, _consensusFrame.reportProcessingDeadlineSlot);
+    function getCurrentFrame()
+        external
+        view
+        returns (uint256 refSlot, uint256 reportProcessingDeadlineSlot)
+    {
+        return (
+            _consensusFrame.refSlot,
+            _consensusFrame.reportProcessingDeadlineSlot
+        );
     }
 
-    function setCurrentFrame(uint256 index, uint256 refSlot, uint256 reportProcessingDeadlineSlot) external {
+    function setCurrentFrame(
+        uint256 index,
+        uint256 refSlot,
+        uint256 reportProcessingDeadlineSlot
+    ) external {
         _consensusFrame.index = index;
         _consensusFrame.refSlot = refSlot;
-        _consensusFrame.reportProcessingDeadlineSlot = reportProcessingDeadlineSlot;
+        _consensusFrame
+            .reportProcessingDeadlineSlot = reportProcessingDeadlineSlot;
     }
 
     function setInitialRefSlot(uint256 initialRefSlot) external {
@@ -78,12 +90,20 @@ contract MockConsensusContract is IConsensusContract {
     function getChainConfig()
         external
         view
-        returns (uint256 slotsPerEpoch, uint256 secondsPerSlot, uint256 genesisTime)
+        returns (
+            uint256 slotsPerEpoch,
+            uint256 secondsPerSlot,
+            uint256 genesisTime
+        )
     {
         return (SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME);
     }
 
-    function getFrameConfig() external view returns (uint256 initialEpoch, uint256 epochsPerFrame) {
+    function getFrameConfig()
+        external
+        view
+        returns (uint256 initialEpoch, uint256 epochsPerFrame)
+    {
         return (_frameConfig.initialEpoch, _frameConfig.epochsPerFrame);
     }
 
@@ -91,8 +111,16 @@ contract MockConsensusContract is IConsensusContract {
         return _initialRefSlot;
     }
 
-    function _setFrameConfig(uint256 initialEpoch, uint256 epochsPerFrame, uint256 fastLaneLengthSlots) internal {
-        _frameConfig = FrameConfig(initialEpoch.toUint64(), epochsPerFrame.toUint64(), fastLaneLengthSlots.toUint64());
+    function _setFrameConfig(
+        uint256 initialEpoch,
+        uint256 epochsPerFrame,
+        uint256 fastLaneLengthSlots
+    ) internal {
+        _frameConfig = FrameConfig(
+            initialEpoch.toUint64(),
+            epochsPerFrame.toUint64(),
+            fastLaneLengthSlots.toUint64()
+        );
     }
 
     //
@@ -103,7 +131,19 @@ contract MockConsensusContract is IConsensusContract {
         _reportProcessor = reportProcessor;
     }
 
-    function submitReportAsConsensus(bytes32 reportHash, uint256 refSlot, uint256 deadline) external {
-        IReportAsyncProcessor(_reportProcessor).submitConsensusReport(reportHash, refSlot, deadline);
+    function submitReportAsConsensus(
+        bytes32 reportHash,
+        uint256 refSlot,
+        uint256 deadline
+    ) external {
+        IReportAsyncProcessor(_reportProcessor).submitConsensusReport(
+            reportHash,
+            refSlot,
+            deadline
+        );
+    }
+
+    function discardReportAsConsensus(uint256 refSlot) external {
+        IReportAsyncProcessor(_reportProcessor).discardConsensusReport(refSlot);
     }
 }

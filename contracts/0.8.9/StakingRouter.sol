@@ -41,6 +41,10 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     error DirectETHTransfer();
     error InvalidReportData(uint256 code);
     error ExitedValidatorsCountCannotDecrease();
+    error ReportedExitedValidatorsExceedDeposited(
+        uint256 reportedExitedValidatorsCount,
+        uint256 depositedValidatorsCount
+    );
     error StakingModulesLimitExceeded();
     error StakingModuleUnregistered();
     error AppAuthLidoFailed();
@@ -124,7 +128,8 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     uint256 public constant FEE_PRECISION_POINTS = 10 ** 20; // 100 * 10 ** 18
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
     uint256 public constant MAX_STAKING_MODULES_COUNT = 32;
-    uint256 public constant MAX_STAKING_MODULE_NAME_LENGTH = 32;
+    /// @dev restrict the name size with 31 bytes to storage in a single slot
+    uint256 public constant MAX_STAKING_MODULE_NAME_LENGTH = 31;
 
     constructor(address _depositContract) BeaconChainDepositor(_depositContract) {}
 
@@ -377,13 +382,20 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
                 revert ExitedValidatorsCountCannotDecrease();
             }
 
-            newlyExitedValidatorsCount += _exitedValidatorsCounts[i] - prevReportedExitedValidatorsCount;
-
             (
                 uint256 totalExitedValidators,
-                /* uint256 totalDepositedValidators */,
+                uint256 totalDepositedValidators,
                 /* uint256 depositableValidatorsCount */
             ) = IStakingModule(stakingModule.stakingModuleAddress).getStakingModuleSummary();
+
+            if (_exitedValidatorsCounts[i] > totalDepositedValidators) {
+                revert ReportedExitedValidatorsExceedDeposited(
+                    _exitedValidatorsCounts[i],
+                    totalDepositedValidators
+                );
+            }
+
+            newlyExitedValidatorsCount += _exitedValidatorsCounts[i] - prevReportedExitedValidatorsCount;
 
             if (totalExitedValidators < prevReportedExitedValidatorsCount) {
                 // not all of the exited validators were async reported to the module
@@ -1000,9 +1012,9 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint96 stakingModuleFee;
 
         for (uint256 i; i < stakingModulesCount; ) {
-            stakingModuleIds[rewardedStakingModulesCount] = stakingModulesCache[i].stakingModuleId;
             /// @dev skip staking modules which have no active validators
             if (stakingModulesCache[i].activeValidatorsCount > 0) {
+                stakingModuleIds[rewardedStakingModulesCount] = stakingModulesCache[i].stakingModuleId;
                 stakingModuleValidatorsShare = ((stakingModulesCache[i].activeValidatorsCount * precisionPoints) / totalActiveValidators);
 
                 recipients[rewardedStakingModulesCount] = address(stakingModulesCache[i].stakingModuleAddress);
@@ -1031,11 +1043,10 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
         /// @dev shrink arrays
         if (rewardedStakingModulesCount < stakingModulesCount) {
-            uint256 trim = stakingModulesCount - rewardedStakingModulesCount;
             assembly {
-                mstore(stakingModuleIds, sub(mload(stakingModuleIds), trim))
-                mstore(recipients, sub(mload(recipients), trim))
-                mstore(stakingModuleFees, sub(mload(stakingModuleFees), trim))
+                mstore(stakingModuleIds, rewardedStakingModulesCount)
+                mstore(recipients, rewardedStakingModulesCount)
+                mstore(stakingModuleFees, rewardedStakingModulesCount)
             }
         }
     }
@@ -1047,10 +1058,9 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     ///         reduced, 1e4 precision.
     function getTotalFeeE4Precision() external view returns (uint16 totalFee) {
         /// @dev The logic is placed here but in Lido contract to save Lido bytecode
-        uint256 E4_BASIS_POINTS = 10000;  // Corresponds to Lido.TOTAL_BASIS_POINTS
         (, , , uint96 totalFeeInHighPrecision, uint256 precision) = getStakingRewardsDistribution();
         // Here we rely on (totalFeeInHighPrecision <= precision)
-        totalFee = uint16((totalFeeInHighPrecision * E4_BASIS_POINTS) / precision);
+        totalFee = _toE4Precision(totalFeeInHighPrecision, precision);
     }
 
     /// @notice Helper for Lido contract (DEPRECATED)
@@ -1061,15 +1071,14 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         returns (uint16 modulesFee, uint16 treasuryFee)
     {
         /// @dev The logic is placed here but in Lido contract to save Lido bytecode
-        uint256 E4_BASIS_POINTS = 10000;  // Corresponds to Lido.TOTAL_BASIS_POINTS
         (
             uint256 modulesFeeHighPrecision,
             uint256 treasuryFeeHighPrecision,
             uint256 precision
         ) = getStakingFeeAggregateDistribution();
         // Here we rely on ({modules,treasury}FeeHighPrecision <= precision)
-        modulesFee = uint16((modulesFeeHighPrecision * E4_BASIS_POINTS) / precision);
-        treasuryFee = uint16((treasuryFeeHighPrecision * E4_BASIS_POINTS) / precision);
+        modulesFee = _toE4Precision(modulesFeeHighPrecision, precision);
+        treasuryFee = _toE4Precision(treasuryFeeHighPrecision, precision);
     }
 
     /// @notice returns new deposits allocation after the distribution of the `_depositsCount` deposits
@@ -1303,5 +1312,9 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         assembly {
             result.slot := position
         }
+    }
+
+    function _toE4Precision(uint256 _value, uint256 _precision) internal pure returns (uint16) {
+        return uint16((_value * TOTAL_BASIS_POINTS) / _precision);
     }
 }

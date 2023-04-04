@@ -14,8 +14,9 @@ import { AccessControlEnumerable } from "../utils/access/AccessControlEnumerable
 /// HashConsensus doesn't expect any specific behavior from a report processor, and guarantees
 /// the following:
 ///
-/// 1. HashConsensus won't submit reports via `IReportAsyncProcessor.submitConsensusReport` for the
-///    slot returned from `IReportAsyncProcessor.getLastProcessingRefSlot` and any slot preceding it.
+/// 1. HashConsensus won't submit reports via `IReportAsyncProcessor.submitConsensusReport` or ask
+///    to discard reports via `IReportAsyncProcessor.discardConsensusReport` for any slot up to (and
+///    including) the slot returned from `IReportAsyncProcessor.getLastProcessingRefSlot`.
 ///
 /// 2. HashConsensus won't accept member reports (and thus won't include such reports in calculating
 ///    the consensus) that have `consensusVersion` argument of the `HashConsensus.submitReport` call
@@ -25,12 +26,29 @@ import { AccessControlEnumerable } from "../utils/access/AccessControlEnumerable
 interface IReportAsyncProcessor {
     /// @notice Submits a consensus report for processing.
     ///
-    /// Note that submitting the report doesn't require the processor to start processing it
-    /// right away, this can happen later. Until the processing is started, HashConsensus is
-    /// free to reach consensus on another report for the same reporting frame and submit it
-    /// using this same function.
+    /// Note that submitting the report doesn't require the processor to start processing it right
+    /// away, this can happen later (see `getLastProcessingRefSlot`). Until processing is started,
+    /// HashConsensus is free to reach consensus on another report for the same reporting frame an
+    /// submit it using this same function, or to lose the consensus on the submitted report,
+    /// notifying the processor via `discardConsensusReport`.
     ///
     function submitConsensusReport(bytes32 report, uint256 refSlot, uint256 deadline) external;
+
+    /// @notice Notifies that the report for the given ref. slot is not a conensus report anymore
+    /// and should be discarded. This can happen when a member changes their report, is removed
+    /// from the set, or when the quorum value gets increased.
+    ///
+    /// Only called when, for the given reference slot:
+    ///
+    ///   1. there previously was a consensus report; AND
+    ///   1. processing of the consensus report hasn't started yet; AND
+    ///   2. report processing deadline is not expired yet; AND
+    ///   3. there's no consensus report now (otherwise, `submitConsensusReport` is called instead).
+    ///
+    /// Can be called even when there's no submitted non-discarded consensus report for the current
+    /// reference slot, i.e. can be called multiple times in succession.
+    ///
+    function discardConsensusReport(uint256 refSlot) external;
 
     /// @notice Returns the last reference slot for which processing of the report was started.
     ///
@@ -99,6 +117,7 @@ contract HashConsensus is AccessControlEnumerable {
     event QuorumSet(uint256 newQuorum, uint256 totalMembers, uint256 prevQuorum);
     event ReportReceived(uint256 indexed refSlot, address indexed member, bytes32 report);
     event ConsensusReached(uint256 indexed refSlot, bytes32 report, uint256 support);
+    event ConsensusLost(uint256 indexed refSlot);
     event ReportProcessorSet(address indexed processor, address indexed prevProcessor);
 
     struct FrameConfig {
@@ -752,14 +771,17 @@ contract HashConsensus is AccessControlEnumerable {
 
         emit MemberRemoved(addr, newTotalMembers, quorum);
 
-        ConsensusFrame memory frame = _getCurrentFrame();
+        if (memberState.lastReportRefSlot > 0) {
+            // member reported at least once
+            ConsensusFrame memory frame = _getCurrentFrame();
 
-        if (memberState.lastReportRefSlot == frame.refSlot &&
-            _getLastProcessingRefSlot() < frame.refSlot
-        ) {
-            // member reported for the current ref. slot and the consensus report
-            // is not processing yet => need to cancel the member's report
-            --_reportVariants[memberState.lastReportVariantIndex].support;
+            if (memberState.lastReportRefSlot == frame.refSlot &&
+                _getLastProcessingRefSlot() < frame.refSlot
+            ) {
+                // member reported for the current ref. slot and the consensus report
+                // is not processing yet => need to cancel the member's report
+                --_reportVariants[memberState.lastReportVariantIndex].support;
+            }
         }
 
         _setQuorumAndCheckConsensus(quorum, newTotalMembers);
@@ -836,6 +858,7 @@ contract HashConsensus is AccessControlEnumerable {
     ///
 
     function _submitReport(uint256 slot, bytes32 report, uint256 consensusVersion) internal {
+        if (slot == 0) revert InvalidSlot();
         if (slot > type(uint64).max) revert NumericOverflow();
         if (report == ZERO_HASH) revert EmptyReport();
 
@@ -883,7 +906,7 @@ contract HashConsensus is AccessControlEnumerable {
         }
 
         uint64 varIndex = 0;
-        uint64 support;
+        bool prevConsensusLost = false;
 
         while (varIndex < variantsLength && _reportVariants[varIndex].hash != report) {
             ++varIndex;
@@ -895,9 +918,14 @@ contract HashConsensus is AccessControlEnumerable {
             if (varIndex == prevVarIndex) {
                 revert DuplicateReport();
             } else {
-                --_reportVariants[prevVarIndex].support;
+                uint256 support = --_reportVariants[prevVarIndex].support;
+                if (support == _quorum - 1) {
+                    prevConsensusLost = true;
+                }
             }
         }
+
+        uint256 support;
 
         if (varIndex < variantsLength) {
             support = ++_reportVariants[varIndex].support;
@@ -916,6 +944,8 @@ contract HashConsensus is AccessControlEnumerable {
 
         if (support >= _quorum) {
             _consensusReached(frame, report, varIndex, support);
+        } else if (prevConsensusLost) {
+            _consensusNotReached(frame);
         }
     }
 
@@ -930,10 +960,16 @@ contract HashConsensus is AccessControlEnumerable {
         ) {
             _reportingState.lastConsensusRefSlot = uint64(frame.refSlot);
             _reportingState.lastConsensusVariantIndex = uint64(variantIndex);
-
-            _submitReportForProcessing(frame, report);
-
             emit ConsensusReached(frame.refSlot, report, support);
+            _submitReportForProcessing(frame, report);
+        }
+    }
+
+    function _consensusNotReached(ConsensusFrame memory frame) internal {
+        if (_reportingState.lastConsensusRefSlot == frame.refSlot) {
+            _reportingState.lastConsensusRefSlot = 0;
+            emit ConsensusLost(frame.refSlot);
+            _cancelReportProcessing(frame);
         }
     }
 
@@ -955,8 +991,7 @@ contract HashConsensus is AccessControlEnumerable {
             emit QuorumSet(quorum, totalMembers, prevQuorum);
         }
 
-        if (quorum < prevQuorum) {
-            // consensus can only change as the result of the quorum being decreased
+        if (_computeEpochAtTimestamp(_getTime()) >= _frameConfig.initialEpoch) {
             _checkConsensus(quorum);
         }
     }
@@ -980,6 +1015,8 @@ contract HashConsensus is AccessControlEnumerable {
 
         if (consensusVariantIndex >= 0) {
             _consensusReached(frame, consensusReport, uint256(consensusVariantIndex), support);
+        } else {
+            _consensusNotReached(frame);
         }
     }
 
@@ -1047,6 +1084,10 @@ contract HashConsensus is AccessControlEnumerable {
             frame.refSlot,
             _computeTimestampAtSlot(frame.reportProcessingDeadlineSlot)
         );
+    }
+
+    function _cancelReportProcessing(ConsensusFrame memory frame) internal {
+        IReportAsyncProcessor(_reportProcessor).discardConsensusReport(frame.refSlot);
     }
 
     function _getConsensusVersion() internal view returns (uint256) {

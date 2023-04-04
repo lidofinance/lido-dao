@@ -441,7 +441,7 @@ contract AccountingOracle is BaseOracle {
         ConsensusReport memory report = _storageConsensusReport().value;
         result.currentFrameRefSlot = _getCurrentRefSlot();
 
-        if (result.currentFrameRefSlot != report.refSlot) {
+        if (report.hash == bytes32(0) || result.currentFrameRefSlot != report.refSlot) {
             return result;
         }
 
@@ -449,7 +449,7 @@ contract AccountingOracle is BaseOracle {
         result.mainDataHash = report.hash;
 
         uint256 processingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
-        result.mainDataSubmitted = report.hash != bytes32(0) && report.refSlot == processingRefSlot;
+        result.mainDataSubmitted = report.refSlot == processingRefSlot;
         if (!result.mainDataSubmitted) {
             return result;
         }

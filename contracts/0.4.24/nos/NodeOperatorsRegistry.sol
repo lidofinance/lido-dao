@@ -1244,7 +1244,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         return !_isOperatorPenalized(stuckPenaltyStats) && stuckPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET) == 0;
     }
 
-    function clearNodeOperatorPenalty(uint256 _nodeOperatorId) public returns (bool) {
+    function clearNodeOperatorPenalty(uint256 _nodeOperatorId) external returns (bool) {
         Packed64x4.Packed memory stuckPenaltyStats = _loadOperatorStuckPenaltyStats(_nodeOperatorId);
         require(
             !_isOperatorPenalized(stuckPenaltyStats) && stuckPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET) != 0,
@@ -1427,7 +1427,8 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     function _onlyNodeOperatorManager(address _sender, uint256 _nodeOperatorId) internal view {
         bool isRewardAddress = _sender == _nodeOperators[_nodeOperatorId].rewardAddress;
-        _requireAuth(isRewardAddress || canPerform(_sender, MANAGE_SIGNING_KEYS, arr(_nodeOperatorId)));
+        bool isActive = _nodeOperators[_nodeOperatorId].active;
+        _requireAuth((isRewardAddress && isActive) || canPerform(_sender, MANAGE_SIGNING_KEYS, arr(_nodeOperatorId)));
     }
 
     function _onlyExistedNodeOperator(uint256 _nodeOperatorId) internal view {

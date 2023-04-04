@@ -2789,6 +2789,48 @@ contract('NodeOperatorsRegistry', (addresses) => {
         assert.equals(depositSignature, expectedSignature)
       }
     })
+
+    it('nonce should not change if operators are inactive', async () => {
+      const [nodeOperatorBefore, keysOpIndexBefore, nonceBefore] = await Promise.all([
+        app.getNodeOperator(firstNodeOperatorId, false),
+        app.getKeysOpIndex(),
+        app.getNonce(),
+      ])
+      assert.isTrue(nodeOperatorBefore.active)
+
+      // nonce is increased only here
+      await app.deactivateNodeOperator(firstNodeOperatorId, { from: nodeOperatorsManager })
+
+      let [nodeOperatorAfter, keysOpIndexAfter, nonceAfter] = await Promise.all([
+        app.getNodeOperator(firstNodeOperatorId, false),
+        app.getKeysOpIndex(),
+        app.getNonce(),
+      ])
+
+      assert.isFalse(nodeOperatorAfter.active)
+      assert.equals(+keysOpIndexBefore + 1, keysOpIndexAfter)
+      assert.equals(+nonceBefore + 1, nonceAfter)
+
+      await assert.reverts(
+        app.addSigningKeysOperatorBH(
+          firstNodeOperatorId,
+          firstNodeOperatorKeys.count,
+          ...firstNodeOperatorKeys.slice(),
+          {
+            from: user1,
+          }
+        ),
+        'APP_AUTH_FAILED'
+      )
+      ;[nodeOperatorAfter, keysOpIndexAfter, nonceAfter] = await Promise.all([
+        app.getNodeOperator(firstNodeOperatorId, false),
+        app.getKeysOpIndex(),
+        app.getNonce(),
+      ])
+
+      assert.equals(+keysOpIndexBefore + 1, keysOpIndexAfter)
+      assert.equals(+nonceBefore + 1, nonceAfter)
+    })
   })
 
   describe('removeSigningKey()', async () => {

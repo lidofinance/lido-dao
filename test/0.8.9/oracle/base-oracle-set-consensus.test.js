@@ -139,16 +139,6 @@ contract('BaseOracle', ([admin, member, notMember]) => {
       await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, deadline)
     })
 
-    it('deadline missed on current ref slot, reverts on any arguments', async () => {
-      const oldTime = await baseOracle.getTime()
-      await baseOracle.setTime(deadline + 10)
-      await assert.revertsWithCustomError(
-        baseOracle.checkConsensusData(initialRefSlot, CONSENSUS_VERSION, HASH_1),
-        `ProcessingDeadlineMissed(${deadline})`
-      )
-      await baseOracle.setTime(oldTime)
-    })
-
     it('reverts on mismatched slot', async () => {
       await assert.revertsWithCustomError(
         baseOracle.checkConsensusData(initialRefSlot + 1, CONSENSUS_VERSION, HASH_1),
@@ -172,6 +162,21 @@ contract('BaseOracle', ([admin, member, notMember]) => {
 
     it('check succeeds', async () => {
       await baseOracle.checkConsensusData(initialRefSlot, CONSENSUS_VERSION, HASH_1)
+    })
+  })
+
+  describe('_checkProcessingDeadline checks report processing deadline', () => {
+    before(rollback)
+    let deadline
+
+    it('report is submitted', async () => {
+      deadline = computeDeadlineFromRefSlot(initialRefSlot)
+      await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, deadline)
+    })
+
+    it('reverts if deadline is missed', async () => {
+      await baseOracle.setTime(deadline + 10)
+      await assert.revertsWithCustomError(baseOracle.checkProcessingDeadline(), `ProcessingDeadlineMissed(${deadline})`)
     })
   })
 
