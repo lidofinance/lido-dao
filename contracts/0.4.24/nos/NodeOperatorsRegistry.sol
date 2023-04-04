@@ -916,10 +916,10 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
             bool active,
             string name,
             address rewardAddress,
-            uint64 stakingLimit,
-            uint64 stoppedValidators,
-            uint64 totalSigningKeys,
-            uint64 usedSigningKeys
+            uint64 totalVettedValidators,
+            uint64 totalExitedValidators,
+            uint64 totalAddedValidators,
+            uint64 totalDepositedValidators
         )
     {
         _onlyExistedNodeOperator(_nodeOperatorId);
@@ -932,10 +932,10 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
 
-        stakingLimit = uint64(signingKeysStats.get(TOTAL_VETTED_KEYS_COUNT_OFFSET));
-        stoppedValidators = uint64(signingKeysStats.get(TOTAL_EXITED_KEYS_COUNT_OFFSET));
-        totalSigningKeys = uint64(signingKeysStats.get(TOTAL_KEYS_COUNT_OFFSET));
-        usedSigningKeys = uint64(signingKeysStats.get(TOTAL_DEPOSITED_KEYS_COUNT_OFFSET));
+        totalVettedValidators = uint64(signingKeysStats.get(TOTAL_VETTED_KEYS_COUNT_OFFSET));
+        totalExitedValidators = uint64(signingKeysStats.get(TOTAL_EXITED_KEYS_COUNT_OFFSET));
+        totalAddedValidators = uint64(signingKeysStats.get(TOTAL_KEYS_COUNT_OFFSET));
+        totalDepositedValidators = uint64(signingKeysStats.get(TOTAL_DEPOSITED_KEYS_COUNT_OFFSET));
     }
 
     /// @notice Returns the rewards distribution proportional to the effective stake for each node operator.
