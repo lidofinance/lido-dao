@@ -25,7 +25,7 @@
     "test:unit": "hardhat test --parallel --network hardhat",
     "test:unit-sequential": "hardhat test --network hardhat",
     "test:gas": "REPORT_GAS=true hardhat test --network hardhat",
-    "test:coverage": "hardhat coverage --testfiles test",
+    "test:coverage": "yarn compile && hardhat coverage --testfiles test",
     "test:e2e": "npm run compile && ava -T 1000000 -v",
     "estimate-deposit-loop-gas": "yarn run test:unit ./estimate_deposit_loop_gas.js",
     "compile": "hardhat compile && yarn extract-abi",
