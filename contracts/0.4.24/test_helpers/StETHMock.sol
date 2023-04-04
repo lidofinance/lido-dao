@@ -20,8 +20,7 @@ contract StETHMock is StETH {
 
         // address(0xdead) is a holder for initial shares
         setTotalPooledEther(balance);
-        _mintShares(INITIAL_TOKEN_HOLDER, balance);
-        _emitTransferAfterMintingShares(INITIAL_TOKEN_HOLDER, balance);
+        _mintInitialShares(balance);
     }
 
     function _getTotalPooledEther() internal view returns (uint256) {

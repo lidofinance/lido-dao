@@ -1400,9 +1400,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
             // if protocol is empty bootstrap it with the contract's balance
             // address(0xdead) is a holder for initial shares
             _setBufferedEther(balance);
-            _mintShares(INITIAL_TOKEN_HOLDER, balance);
+            // emitting `Submitted` before Transfer events to preserver events order in tx
             emit Submitted(INITIAL_TOKEN_HOLDER, balance, 0);
-            _emitTransferAfterMintingShares(INITIAL_TOKEN_HOLDER, balance);
+            _mintInitialShares(balance);
         }
     }
 }

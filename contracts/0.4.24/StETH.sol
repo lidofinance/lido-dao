@@ -517,4 +517,12 @@ contract StETH is IERC20, Pausable {
     function _emitTransferAfterMintingShares(address _to, uint256 _sharesAmount) internal {
         _emitTransferEvents(address(0), _to, getPooledEthByShares(_sharesAmount), _sharesAmount);
     }
+
+    /**
+     * @dev Mints shares to INITIAL_TOKEN_HOLDER
+     */
+    function _mintInitialShares(uint256 _sharesAmount) internal {
+        _mintShares(INITIAL_TOKEN_HOLDER, _sharesAmount);
+        _emitTransferAfterMintingShares(INITIAL_TOKEN_HOLDER, _sharesAmount);
+    }
 }
