@@ -55,6 +55,9 @@ interface IStakingModule {
     ///     4. a node operator was activated/deactivated
     ///     5. a node operator's deposit data is used for the deposit
     ///     Note: Depending on the StakingModule implementation above list might be extended
+    /// @dev In some scenarios, it's allowed to update nonce without actual change of the deposit
+    ///      data subset, but it MUST NOT lead to the DOS of the staking module via continuous
+    ///      update of the nonce by the malicious actor
     function getNonce() external view returns (uint256);
 
     /// @notice Returns total number of node operators
@@ -130,10 +133,11 @@ interface IStakingModule {
     ///     contract
     /// @dev The method MUST revert when the staking module has not enough deposit data items
     /// @param _depositsCount Number of deposits to be done
-    /// @param _calldata Staking module defined data encoded as bytes
+    /// @param _depositCalldata Staking module defined data encoded as bytes.
+    ///        IMPORTANT: _depositCalldata MUST NOT modify the deposit data set of the staking module
     /// @return publicKeys Batch of the concatenated public validators keys
     /// @return signatures Batch of the concatenated deposit signatures for returned public keys
-    function obtainDepositData(uint256 _depositsCount, bytes calldata _calldata)
+    function obtainDepositData(uint256 _depositsCount, bytes calldata _depositCalldata)
         external
         returns (bytes memory publicKeys, bytes memory signatures);
 
