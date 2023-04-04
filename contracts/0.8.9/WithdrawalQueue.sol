@@ -95,7 +95,6 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
 
     /// @notice Resume withdrawal requests placement and finalization
     function resume() external {
-        _checkPaused();
         _checkRole(RESUME_ROLE, msg.sender);
         _resume();
     }
