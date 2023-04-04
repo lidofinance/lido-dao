@@ -2765,7 +2765,7 @@ contract('NodeOperatorsRegistry', (addresses) => {
       }
     })
 
-    it('nonce should not changed if operators are inactive', async () => {
+    it('nonce should not change if operators are inactive', async () => {
       const [nodeOperatorBefore, keysOpIndexBefore, nonceBefore] = await Promise.all([
         app.getNodeOperator(firstNodeOperatorId, false),
         app.getKeysOpIndex(),
@@ -2773,7 +2773,7 @@ contract('NodeOperatorsRegistry', (addresses) => {
       ])
       assert.isTrue(nodeOperatorBefore.active)
 
-      // nonce is increased here
+      // nonce is increased only here
       await app.deactivateNodeOperator(firstNodeOperatorId, { from: nodeOperatorsManager })
 
       let [nodeOperatorAfter, keysOpIndexAfter, nonceAfter] = await Promise.all([
