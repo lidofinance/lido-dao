@@ -1,1 +1,0 @@
-[{"inputs":[{"internalType":"uint256","name":"_exitRequestsCount","type":"uint256"}],"name":"checkExitBusOracleReport","outputs":[],"stateMutability":"view","type":"function"}]

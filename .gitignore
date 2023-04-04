@@ -2,6 +2,7 @@
 .vscode
 **/build/
 **/node_modules/
+**/lib/abi/*.json
 **/artifacts/
 **/artifacts-userdoc/
 .cache
