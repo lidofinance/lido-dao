@@ -106,7 +106,7 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
     const keysCount = +(await nor.getTotalSigningKeyCount(operatorId))
     const unusedKeysCount = +(await nor.getUnusedSigningKeyCount(operatorId))
 
-    assert.equals(+operatorBefore.totalSigningKeys + keys.count, operator.totalSigningKeys)
+    assert.equals(+operatorBefore.totalAddedValidators + keys.count, operator.totalAddedValidators)
     assert.equals(keysCountBefore + keys.count, keysCount)
     assert.equals(unusedKeysCountBefore + keys.count, unusedKeysCount)
 
@@ -128,10 +128,10 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
     const operator = await nor.getNodeOperator(operatorId, true)
     const summary = await nor.getNodeOperatorSummary(operatorId)
     const stakingModuleSummary = await nor.getStakingModuleSummary()
-    const expectedLimit = +operatorBefore.stakingLimit + stakingLimit
+    const expectedLimit = +operatorBefore.totalVettedValidators + stakingLimit
     const expectedDepositable = +summaryBefore.depositableValidatorsCount + stakingLimit
 
-    assert.equals(operator.stakingLimit, expectedLimit)
+    assert.equals(operator.totalVettedValidators, expectedLimit)
     assert.equals(summary.depositableValidatorsCount, expectedDepositable)
     assert.equals(
       +stakingModuleSummaryBefore.depositableValidatorsCount + stakingLimit,
@@ -160,7 +160,11 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
   async function assertOperatorDeposits(operatorData, deposited, keysLeft) {
     const operator = await nor.getNodeOperator(operatorData.id, true)
     const summary = await nor.getNodeOperatorSummary(operatorData.id)
-    assert.equals(operator.usedSigningKeys, deposited, `${operatorData.name} usedSigningKeys asserting to ${deposited}`)
+    assert.equals(
+      operator.totalDepositedValidators,
+      deposited,
+      `${operatorData.name} totalDepositedValidators asserting to ${deposited}`
+    )
     assert.equals(
       summary.totalDepositedValidators,
       deposited,
@@ -254,14 +258,14 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
     assert.isFalse(await nor.getNodeOperatorIsActive(operatorId))
     assert.equals(+activeOperatorsBefore - 1, +activeOperatorsAfter)
     assert.emits(tx, 'NodeOperatorActiveSet', { nodeOperatorId: operatorId, active: false })
-    if (+operatorBefore.stakingLimit - +operatorBefore.usedSigningKeys > 0) {
+    if (+operatorBefore.totalVettedValidators - +operatorBefore.totalDepositedValidators > 0) {
       assert.emits(tx, 'VettedSigningKeysCountChanged', {
         nodeOperatorId: operatorId,
-        approvedValidatorsCount: operator.usedSigningKeys,
+        approvedValidatorsCount: operator.totalDepositedValidators,
       })
     }
     assert.equals(summary.depositableValidatorsCount, 0)
-    assert.equals(operator.stakingLimit, operator.usedSigningKeys)
+    assert.equals(operator.totalVettedValidators, operator.totalDepositedValidators)
     assert.equals(
       +stakingModuleSummaryBefore.depositableValidatorsCount - keysToCut,
       stakingModuleSummary.depositableValidatorsCount
@@ -339,10 +343,10 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
           assert.isTrue(operator.active)
           assert.equals(operator.name, initialName)
           assert.equals(operator.rewardAddress, operatorData.rewardAddressInitial)
-          assert.equals(operator.stakingLimit, 0)
-          assert.equals(operator.stoppedValidators, 0)
-          assert.equals(operator.totalSigningKeys, 0)
-          assert.equals(operator.usedSigningKeys, 0)
+          assert.equals(operator.totalVettedValidators, 0)
+          assert.equals(operator.totalExitedValidators, 0)
+          assert.equals(operator.totalAddedValidators, 0)
+          assert.equals(operator.totalDepositedValidators, 0)
         })
 
         assert.equals(await nor.getNodeOperatorsCount(), NODE_OPERATORS.length)
@@ -396,7 +400,7 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
         const unusedKeysCountBefore = await nor.getUnusedSigningKeyCount(operatorData.id)
         const keyIdxToRemove = 1
         const keyBefore = await nor.getSigningKey(operatorData.id, keyIdxToRemove)
-        assert.equals(operatorBefore.stakingLimit, operatorData.vettedSigningKeysCount)
+        assert.equals(operatorBefore.totalVettedValidators, operatorData.vettedSigningKeysCount)
 
         await nor.removeSigningKey(operatorData.id, keyIdxToRemove, { from: voting.address })
 
@@ -406,8 +410,8 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
         const unusedKeysCountAfter = await nor.getUnusedSigningKeyCount(operatorData.id)
         const keyAfter = await nor.getSigningKey(operatorData.id, keyIdxToRemove)
 
-        assert.equals(operatorAfter.stakingLimit, keyIdxToRemove)
-        assert.equals(+operatorBefore.totalSigningKeys - 1, +operatorAfter.totalSigningKeys)
+        assert.equals(operatorAfter.totalVettedValidators, keyIdxToRemove)
+        assert.equals(+operatorBefore.totalAddedValidators - 1, +operatorAfter.totalAddedValidators)
         assert.equals(+keysCountBefore - 1, +keysCountAfter)
         assert.equals(+unusedKeysCountBefore - 1, +unusedKeysCountAfter)
         assert.equals(summaryBefore.depositableValidatorsCount, operatorData.vettedSigningKeysCount)
@@ -424,7 +428,7 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
         })
         const summary = await nor.getNodeOperatorSummary(operatorData.id)
         const operator = await nor.getNodeOperator(operatorData.id, true)
-        assert.equals(operator.stakingLimit, operatorData.vettedSigningKeysCount)
+        assert.equals(operator.totalVettedValidators, operatorData.vettedSigningKeysCount)
         assert.equals(summary.depositableValidatorsCount, operatorData.vettedSigningKeysCount)
       })
 
@@ -619,7 +623,7 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
       it('Operator summaries after exit/stuck report', async () => {
         const operator1 = await nor.getNodeOperator(Operator1.id, true)
         const summaryOperator1 = await nor.getNodeOperatorSummary(Operator1.id)
-        assert.equals(operator1.stoppedValidators, 2)
+        assert.equals(operator1.totalExitedValidators, 2)
         assert.equals(summaryOperator1.totalExitedValidators, 2)
         assert.equals(summaryOperator1.depositableValidatorsCount, 4)
 
@@ -715,12 +719,12 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
         const summaryBefore = await nor.getNodeOperatorSummary(operatorData.id)
         const keysCountBefore = await nor.getTotalSigningKeyCount(operatorData.id)
         const unusedKeysCountBefore = await nor.getUnusedSigningKeyCount(operatorData.id)
-        const keyIdxToRemove = +operatorBefore.usedSigningKeys + 1
+        const keyIdxToRemove = +operatorBefore.totalDepositedValidators + 1
         const keysCountToRemove = 2
         const key1Before = await nor.getSigningKey(operatorData.id, keyIdxToRemove)
         const key2Before = await nor.getSigningKey(operatorData.id, keyIdxToRemove + 1)
 
-        assert.equals(operatorBefore.stakingLimit, operatorData.vettedSigningKeysCount)
+        assert.equals(operatorBefore.totalVettedValidators, operatorData.vettedSigningKeysCount)
 
         await nor.removeSigningKeys(operatorData.id, keyIdxToRemove, keysCountToRemove, { from: voting.address })
 
@@ -731,14 +735,14 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
         const key1After = await nor.getSigningKey(operatorData.id, keyIdxToRemove)
         const key2After = await nor.getSigningKey(operatorData.id, keyIdxToRemove + 1)
 
-        assert.equals(operatorAfter.stakingLimit, keyIdxToRemove)
-        assert.equals(+operatorBefore.totalSigningKeys - keysCountToRemove, +operatorAfter.totalSigningKeys)
+        assert.equals(operatorAfter.totalVettedValidators, keyIdxToRemove)
+        assert.equals(+operatorBefore.totalAddedValidators - keysCountToRemove, +operatorAfter.totalAddedValidators)
         assert.equals(+keysCountBefore - keysCountToRemove, +keysCountAfter)
         assert.equals(+unusedKeysCountBefore - keysCountToRemove, +unusedKeysCountAfter)
         assert.equals(
           Math.min(
             +summaryBefore.depositableValidatorsCount - keysCountToRemove,
-            +operatorAfter.stakingLimit - +operatorAfter.usedSigningKeys
+            +operatorAfter.totalVettedValidators - +operatorAfter.totalDepositedValidators
           ),
           +summaryAfter.depositableValidatorsCount
         )
@@ -820,7 +824,7 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
         assert.isTrue(await nor.getNodeOperatorIsActive(operatorData.id))
         assert.equals(+activeOperatorsBefore + 1, +activeOperatorsAfter)
         assert.emits(tx, 'NodeOperatorActiveSet', { nodeOperatorId: operatorData.id, active: true })
-        assert.equals(operator.stakingLimit, operator.usedSigningKeys)
+        assert.equals(operator.totalVettedValidators, operator.totalDepositedValidators)
       })
 
       it('Set operator 4 staking limit', async () => {
@@ -859,7 +863,6 @@ contract('NodeOperatorsRegistry', ([appManager, rewards1, rewards2, rewards3, re
         withdrawalCredentials = '0x'.padEnd(66, '5678')
         await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting.address })
         const summary = await nor.getStakingModuleSummary()
-        console.log(summary, summaryBefore)
 
         assert.equals(summaryBefore.totalExitedValidators, summary.totalExitedValidators)
         assert.equals(summaryBefore.totalDepositedValidators, summary.totalDepositedValidators)

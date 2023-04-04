@@ -8,11 +8,6 @@
 pragma solidity >=0.4.24 <0.9.0;
 
 library Math256 {
-    /// @dev Returns the absolute unsigned value of a signed value.
-    function abs(int256 n) internal pure returns (uint256) {
-        return uint256(n >= 0 ? n : -n);
-    }
-
     /// @dev Returns the largest of two numbers.
     function max(uint256 a, uint256 b) internal pure returns (uint256) {
         return a > b ? a : b;
@@ -40,5 +35,10 @@ library Math256 {
     function ceilDiv(uint256 a, uint256 b) internal pure returns (uint256) {
         // (a + b - 1) / b can overflow on addition, so we distribute.
         return a == 0 ? 0 : (a - 1) / b + 1;
+    }
+
+    /// @dev Returns absolute difference of two numbers.
+    function absDiff(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a > b ? a - b : b - a;
     }
 }

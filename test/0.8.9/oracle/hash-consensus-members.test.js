@@ -5,7 +5,7 @@ const { ZERO_ADDRESS } = require('../../helpers/constants')
 
 const { HASH_1, HASH_2, CONSENSUS_VERSION, deployHashConsensus, ZERO_HASH } = require('./hash-consensus-deploy.test')
 
-contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, stranger]) => {
+contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, member6, stranger]) => {
   context('Managing members and quorum', () => {
     let consensus
 
@@ -44,6 +44,10 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
           consensus.addMember(ZERO_ADDRESS, 1, { from: admin }),
           'AddressCannotBeZero()'
         )
+      })
+
+      it(`doesn't allow setting quorum to zero`, async () => {
+        await assert.reverts(consensus.addMember(member1, 0, { from: admin }), 'QuorumTooSmall(1, 0)')
       })
 
       it('allows to add a member, setting the new quorum', async () => {
@@ -96,6 +100,12 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
         assert.emits(tx, 'MemberAdded', { addr: member5, newTotalMembers: 5, newQuorum: 3 })
         assert.emits(tx, 'ConsensusReached', { refSlot, report: HASH_1, support: 3 })
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
+      })
+
+      it(`increasing the quorum might trigger consensus loss`, async () => {
+        const { refSlot } = await consensus.getCurrentFrame()
+        const tx = await consensus.addMember(member6, 4, { from: admin })
+        assert.emits(tx, 'ConsensusLost', { refSlot })
       })
     })
 
@@ -210,6 +220,29 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
         assert.equal((await consensus.getConsensusState()).consensusReport, ZERO_HASH)
       })
 
+      it(`removing a member who voted can trigger consensus loss`, async () => {
+        const { refSlot } = await consensus.getCurrentFrame()
+        await consensus.submitReport(refSlot, HASH_2, CONSENSUS_VERSION, { from: member1 })
+        await consensus.submitReport(refSlot, HASH_2, CONSENSUS_VERSION, { from: member2 })
+        await consensus.submitReport(refSlot, HASH_2, CONSENSUS_VERSION, { from: member4 })
+
+        let tx = await consensus.submitReport(refSlot, HASH_2, CONSENSUS_VERSION, { from: member5 })
+        assert.emits(tx, 'ConsensusReached', { refSlot, report: HASH_2, support: 4 })
+        assert.equal((await consensus.getConsensusState()).consensusReport, HASH_2)
+
+        let reportVariants = await consensus.getReportVariants()
+        assert.sameOrderedMembers(reportVariants.variants, [HASH_2])
+        assert.sameOrderedMembers(reportVariants.support.map(toNum), [4])
+
+        tx = await consensus.removeMember(member2, 4, { from: admin })
+        assert.emits(tx, 'ConsensusLost', { refSlot })
+        assert.equal((await consensus.getConsensusState()).consensusReport, ZERO_HASH)
+
+        reportVariants = await consensus.getReportVariants()
+        assert.sameOrderedMembers(reportVariants.variants, [HASH_2])
+        assert.sameOrderedMembers(reportVariants.support.map(toNum), [3])
+      })
+
       it(`allows to remove a member that's the only one who voted for a variant`, async () => {
         const { refSlot } = await consensus.getCurrentFrame()
         await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
@@ -230,18 +263,24 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
         await consensus.addMember(member2, 2, { from: admin })
 
         const { refSlot } = await consensus.getCurrentFrame()
-        await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
-        let tx = await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
 
+        let tx = await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
+        assert.notEmits(tx, 'ConsensusReached')
+        assert.notEmits(tx, 'ConsensusLost')
+
+        tx = await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
         assert.emits(tx, 'ConsensusReached', { refSlot, report: HASH_1, support: 2 })
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
 
         tx = await consensus.addMember(member3, 3, { from: admin })
+        assert.emits(tx, 'ConsensusLost', { refSlot })
         assert.notEmits(tx, 'ConsensusReached')
         assert.equal((await consensus.getConsensusState()).consensusReport, ZERO_HASH)
 
         tx = await consensus.removeMember(member3, 2, { from: admin })
-        assert.notEmits(tx, 'ConsensusReached')
+        assert.emits(tx, 'ConsensusReached', { refSlot, report: HASH_1, support: 2 })
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
       })
 
@@ -250,18 +289,24 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
         await consensus.addMember(member2, 2, { from: admin })
 
         const { refSlot } = await consensus.getCurrentFrame()
-        await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
-        let tx = await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
 
+        let tx = await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
+        assert.notEmits(tx, 'ConsensusReached')
+        assert.notEmits(tx, 'ConsensusLost')
+
+        tx = await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
         assert.emits(tx, 'ConsensusReached', { refSlot, report: HASH_1, support: 2 })
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
 
         tx = await consensus.addMember(member3, 2, { from: admin })
         assert.notEmits(tx, 'ConsensusReached')
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
 
         tx = await consensus.removeMember(member3, 2, { from: admin })
         assert.notEmits(tx, 'ConsensusReached')
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
       })
 
@@ -270,23 +315,28 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
         await consensus.addMember(member2, 2, { from: admin })
 
         const { refSlot } = await consensus.getCurrentFrame()
-        await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
-        let tx = await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
 
+        let tx = await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
+        assert.notEmits(tx, 'ConsensusReached')
+        assert.notEmits(tx, 'ConsensusLost')
+
+        tx = await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
         assert.emits(tx, 'ConsensusReached', { refSlot, report: HASH_1, support: 2 })
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
 
         tx = await consensus.addMember(member3, 3, { from: admin })
+        assert.emits(tx, 'ConsensusLost', { refSlot })
         assert.notEmits(tx, 'ConsensusReached')
-        // TODO: is this really ok?
         assert.equal((await consensus.getConsensusState()).consensusReport, ZERO_HASH)
 
         tx = await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member3 })
-        assert.notEmits(tx, 'ConsensusReached')
+        assert.emits(tx, 'ConsensusReached', { refSlot, report: HASH_1, support: 3 })
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
 
         tx = await consensus.removeMember(member3, 2, { from: admin })
         assert.notEmits(tx, 'ConsensusReached')
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
       })
 
@@ -297,27 +347,37 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
         await consensus.addMember(member2, 2, { from: admin })
         await consensus.addMember(member3, 2, { from: admin })
 
-        await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
-        let tx = await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
+        let tx = await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
+        assert.notEmits(tx, 'ConsensusReached')
+        assert.notEmits(tx, 'ConsensusLost')
 
+        tx = await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
         assert.emits(tx, 'ConsensusReached', { refSlot, report: HASH_1, support: 2 })
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
 
         tx = await consensus.submitReport(refSlot, HASH_2, CONSENSUS_VERSION, { from: member3 })
         assert.notEmits(tx, 'ConsensusReached')
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
 
-        await consensus.addMember(member4, 3, { from: admin })
+        tx = await consensus.addMember(member4, 3, { from: admin })
+        assert.emits(tx, 'ConsensusLost', { refSlot })
         assert.equal((await consensus.getConsensusState()).consensusReport, ZERO_HASH)
 
-        await consensus.addMember(member5, 3, { from: admin })
+        tx = await consensus.addMember(member5, 3, { from: admin })
+        assert.notEmits(tx, 'ConsensusReached')
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equal((await consensus.getConsensusState()).consensusReport, ZERO_HASH)
 
-        await consensus.submitReport(refSlot, HASH_2, CONSENSUS_VERSION, { from: member4 })
+        tx = await consensus.submitReport(refSlot, HASH_2, CONSENSUS_VERSION, { from: member4 })
+        assert.notEmits(tx, 'ConsensusReached')
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equal((await consensus.getConsensusState()).consensusReport, ZERO_HASH)
 
         tx = await consensus.submitReport(refSlot, HASH_2, CONSENSUS_VERSION, { from: member5 })
         assert.emits(tx, 'ConsensusReached', { refSlot, report: HASH_2, support: 3 })
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_2)
       })
 
@@ -328,30 +388,43 @@ contract('HashConsensus', ([admin, member1, member2, member3, member4, member5, 
         await consensus.addMember(member2, 2, { from: admin })
         await consensus.addMember(member3, 2, { from: admin })
 
-        await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
-        let tx = await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
+        let tx = await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
+        assert.notEmits(tx, 'ConsensusReached')
+        assert.notEmits(tx, 'ConsensusLost')
 
+        tx = await consensus.submitReport(refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
         assert.emits(tx, 'ConsensusReached', { refSlot, report: HASH_1, support: 2 })
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
 
         tx = await consensus.submitReport(refSlot, HASH_2, CONSENSUS_VERSION, { from: member3 })
         assert.notEmits(tx, 'ConsensusReached')
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_1)
 
-        await consensus.addMember(member4, 3, { from: admin })
+        tx = await consensus.addMember(member4, 3, { from: admin })
+        assert.emits(tx, 'ConsensusLost', { refSlot })
+        assert.notEmits(tx, 'ConsensusReached')
         assert.equal((await consensus.getConsensusState()).consensusReport, ZERO_HASH)
 
-        await consensus.addMember(member5, 4, { from: admin })
+        tx = await consensus.addMember(member5, 4, { from: admin })
+        assert.notEmits(tx, 'ConsensusReached')
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equal((await consensus.getConsensusState()).consensusReport, ZERO_HASH)
 
-        await consensus.submitReport(refSlot, HASH_2, CONSENSUS_VERSION, { from: member4 })
+        tx = await consensus.submitReport(refSlot, HASH_2, CONSENSUS_VERSION, { from: member4 })
+        assert.notEmits(tx, 'ConsensusReached')
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equal((await consensus.getConsensusState()).consensusReport, ZERO_HASH)
 
         tx = await consensus.submitReport(refSlot, HASH_2, CONSENSUS_VERSION, { from: member5 })
+        assert.notEmits(tx, 'ConsensusReached')
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equal((await consensus.getConsensusState()).consensusReport, ZERO_HASH)
 
         tx = await consensus.removeMember(member2, 3, { from: admin })
         assert.emits(tx, 'ConsensusReached', { refSlot, report: HASH_2, support: 3 })
+        assert.notEmits(tx, 'ConsensusLost')
         assert.equal((await consensus.getConsensusState()).consensusReport, HASH_2)
       })
     })

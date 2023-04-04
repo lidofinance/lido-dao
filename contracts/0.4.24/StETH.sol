@@ -331,9 +331,8 @@ contract StETH is IERC20, Pausable {
      */
     function transferShares(address _recipient, uint256 _sharesAmount) external returns (uint256) {
         _transferShares(msg.sender, _recipient, _sharesAmount);
-        emit TransferShares(msg.sender, _recipient, _sharesAmount);
         uint256 tokensAmount = getPooledEthByShares(_sharesAmount);
-        emit Transfer(msg.sender, _recipient, tokensAmount);
+        _emitTransferEvents(msg.sender, _recipient, tokensAmount, _sharesAmount);
         return tokensAmount;
     }
 
@@ -362,8 +361,7 @@ contract StETH is IERC20, Pausable {
 
         _transferShares(_sender, _recipient, _sharesAmount);
         _approve(_sender, msg.sender, currentAllowance.sub(tokensAmount));
-        emit TransferShares(_sender, _recipient, _sharesAmount);
-        emit Transfer(_sender, _recipient, tokensAmount);
+        _emitTransferEvents(_sender, _recipient, tokensAmount, _sharesAmount);
         return tokensAmount;
     }
 
@@ -382,8 +380,7 @@ contract StETH is IERC20, Pausable {
     function _transfer(address _sender, address _recipient, uint256 _amount) internal {
         uint256 _sharesToTransfer = getSharesByPooledEth(_amount);
         _transferShares(_sender, _recipient, _sharesToTransfer);
-        emit Transfer(_sender, _recipient, _amount);
-        emit TransferShares(_sender, _recipient, _sharesToTransfer);
+        _emitTransferEvents(_sender, _recipient, _amount, _sharesToTransfer);
     }
 
     /**
@@ -507,31 +504,25 @@ contract StETH is IERC20, Pausable {
     }
 
     /**
-     * @notice Mints shares on behalf of 0xdead address,
-     * the shares amount is equal to the contract's balance.     *
-     *
-     * Allows to get rid of zero checks for `totalShares` and `totalPooledEther`
-     * and overcome corner cases.
-     *
-     * NB: reverts if the current contract's balance is zero.
-     *
-     * @dev must be invoked before using the token
+     * @dev Emits {Transfer} and {TransferShares} events
      */
-    function _bootstrapInitialHolder() internal returns (uint256) {
-        uint256 balance = address(this).balance;
-        assert(balance != 0);
+    function _emitTransferEvents(address _from, address _to, uint _tokenAmount, uint256 _sharesAmount) internal {
+        emit Transfer(_from, _to, _tokenAmount);
+        emit TransferShares(_from, _to, _sharesAmount);
+    }
 
-        if (_getTotalShares() == 0) {
-            // if protocol is empty bootstrap it with the contract's balance
-            // address(0xdead) is a holder for initial shares
-            _mintShares(INITIAL_TOKEN_HOLDER, balance);
+    /**
+     * @dev Emits {Transfer} and {TransferShares} events where `from` is 0 address. Indicates mint events.
+     */
+    function _emitTransferAfterMintingShares(address _to, uint256 _sharesAmount) internal {
+        _emitTransferEvents(address(0), _to, getPooledEthByShares(_sharesAmount), _sharesAmount);
+    }
 
-            emit Transfer(0x0, INITIAL_TOKEN_HOLDER, balance);
-            emit TransferShares(0x0, INITIAL_TOKEN_HOLDER, balance);
-
-            return balance;
-        }
-
-        return 0;
+    /**
+     * @dev Mints shares to INITIAL_TOKEN_HOLDER
+     */
+    function _mintInitialShares(uint256 _sharesAmount) internal {
+        _mintShares(INITIAL_TOKEN_HOLDER, _sharesAmount);
+        _emitTransferAfterMintingShares(INITIAL_TOKEN_HOLDER, _sharesAmount);
     }
 }

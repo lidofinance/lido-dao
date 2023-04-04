@@ -7,14 +7,20 @@ import { IReportAsyncProcessor } from "../../oracle/HashConsensus.sol";
 contract MockReportProcessor is IReportAsyncProcessor {
     uint256 internal _consensusVersion;
 
-    struct SubmitReportLastCall {
+    struct SubmitReportCall {
         bytes32 report;
         uint256 refSlot;
         uint256 deadline;
         uint256 callCount;
     }
 
-    SubmitReportLastCall internal _submitReportLastCall;
+    struct DiscardReportCall {
+        uint256 refSlot;
+        uint256 callCount;
+    }
+
+    SubmitReportCall internal _submitReportLastCall;
+    DiscardReportCall internal _discardReportLastCall;
     uint256 internal _lastProcessingRefSlot;
 
     constructor(uint256 consensusVersion) {
@@ -29,8 +35,12 @@ contract MockReportProcessor is IReportAsyncProcessor {
         _lastProcessingRefSlot = refSlot;
     }
 
-    function getLastCall_submitReport() external view returns (SubmitReportLastCall memory) {
+    function getLastCall_submitReport() external view returns (SubmitReportCall memory) {
         return _submitReportLastCall;
+    }
+
+    function getLastCall_discardReport() external view returns (DiscardReportCall memory) {
+        return _discardReportLastCall;
     }
 
     function startReportProcessing() external {
@@ -50,6 +60,11 @@ contract MockReportProcessor is IReportAsyncProcessor {
         _submitReportLastCall.refSlot = refSlot;
         _submitReportLastCall.deadline = deadline;
         ++_submitReportLastCall.callCount;
+    }
+
+    function discardConsensusReport(uint256 refSlot) external {
+        _discardReportLastCall.refSlot = refSlot;
+        ++_discardReportLastCall.callCount;
     }
 
     function getLastProcessingRefSlot() external view returns (uint256) {

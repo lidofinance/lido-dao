@@ -163,9 +163,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
 
         /// @dev Total number of validator exit requests in this report. Must not be greater
         /// than limit checked in OracleReportSanityChecker.checkExitBusOracleReport.
-        ///
-        /// Cannot be zero: in the case there's no validator exit requests to submit, oracles
-        /// should skip submitting the report for the current reporting frame.
         uint256 requestsCount;
 
         /// @dev Format of the validator exit requests data. Currently, only the
@@ -285,7 +282,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         ConsensusReport memory report = _storageConsensusReport().value;
         result.currentFrameRefSlot = _getCurrentRefSlot();
 
-        if (result.currentFrameRefSlot != report.refSlot) {
+        if (report.hash == bytes32(0) || result.currentFrameRefSlot != report.refSlot) {
             return result;
         }
 
@@ -364,7 +361,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         );
     }
 
-    function _processExitRequestsList(bytes calldata data) internal returns (uint256) {
+    function _processExitRequestsList(bytes calldata data) internal {
         uint256 offset;
         uint256 offsetPastEnd;
         assembly {
@@ -436,8 +433,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         if (lastNodeOpKey != 0) {
             _storageLastRequestedValidatorIndices()[lastNodeOpKey] = lastRequestedVal;
         }
-
-        return lastDataWithoutPubkey;
     }
 
     function _computeNodeOpKey(uint256 moduleId, uint256 nodeOpId) internal pure returns (uint256) {

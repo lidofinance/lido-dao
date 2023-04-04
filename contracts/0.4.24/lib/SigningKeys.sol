@@ -41,7 +41,7 @@ library SigningKeys {
         bytes _pubkeys,
         bytes _signatures
     ) internal returns (uint256) {
-        require(_keysCount > 0 && _startIndex.add(_keysCount - 1) <= UINT64_MAX, "INVALID_KEYS_COUNT");
+        require(_keysCount > 0 && _startIndex.add(_keysCount) <= UINT64_MAX, "INVALID_KEYS_COUNT");
         require(
             _pubkeys.length == _keysCount.mul(PUBKEY_LENGTH) && _signatures.length == _keysCount.mul(SIGNATURE_LENGTH),
             "LENGTH_MISMATCH"

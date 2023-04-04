@@ -88,7 +88,7 @@ contract('StakingRouter', ([deployer, admin, depositor, stranger]) => {
         name: 'test',
         rewardAddress: ADDRESS_1,
         totalSigningKeysCount: 13,
-        vettedSigningKeysCount: 4,
+        vettedSigningKeysCount: 7,
         depositedSigningKeysCount: 7,
         exitedSigningKeysCount: 5,
       }
@@ -184,7 +184,7 @@ contract('StakingRouter', ([deployer, admin, depositor, stranger]) => {
         name: 'Solo3',
         rewardAddress: ADDRESS_3,
         totalSigningKeysCount: 13,
-        vettedSigningKeysCount: 4,
+        vettedSigningKeysCount: 12,
         depositedSigningKeysCount: 7,
         exitedSigningKeysCount: 5,
       }
@@ -254,7 +254,7 @@ contract('StakingRouter', ([deployer, admin, depositor, stranger]) => {
         name: 'test',
         rewardAddress: ADDRESS_1,
         totalSigningKeysCount: 13,
-        vettedSigningKeysCount: 4,
+        vettedSigningKeysCount: 8,
         depositedSigningKeysCount: 7,
         exitedSigningKeysCount: 5,
       }
@@ -342,7 +342,7 @@ contract('StakingRouter', ([deployer, admin, depositor, stranger]) => {
         name: 'Solo3',
         rewardAddress: ADDRESS_3,
         totalSigningKeysCount: 13,
-        vettedSigningKeysCount: 4,
+        vettedSigningKeysCount: 13,
         depositedSigningKeysCount: 7,
         exitedSigningKeysCount: 5,
       }
