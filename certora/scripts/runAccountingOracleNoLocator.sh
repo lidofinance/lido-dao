@@ -33,8 +33,8 @@ LegacyOracle=solc4.24 \
 --staging \
 --optimistic_loop \
 --send_only \
---settings -t=500,-mediumTimeout=50,-copyLoopUnroll=17,-optimisticUnboundedHashing=true \
---hashing_length_bound 544 \
+--settings -t=500,-mediumTimeout=50,-copyLoopUnroll=19,-optimisticUnboundedHashing=true \
+--hashing_length_bound 608 \
 --rule_sanity \
 --debug \
 $RULE  \

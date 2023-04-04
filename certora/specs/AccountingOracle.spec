@@ -24,6 +24,7 @@ methods {
     getCurrentFrame() returns (uint256, uint256) => DISPATCHER(true)
     getIsMember(address) returns (bool) => DISPATCHER(true)
     getFrameConfig() returns (uint256, uint256) => DISPATCHER(true)
+    getInitialRefSlot() returns (uint256) => DISPATCHER(true)
 
     // Locator = LidoLocator.sol
     stakingRouter() returns(address) => NONDET
@@ -35,7 +36,7 @@ methods {
     reportStakingModuleStuckValidatorsCountByNodeOperator(uint256, bytes, bytes) => DISPATCHER(true)
     onValidatorsCountsByNodeOperatorReportingFinished() => DISPATCHER(true)
     getExitedValidatorsCountAcrossAllModules() returns (uint256) => DISPATCHER(true)
-    updateExitedValidatorsCountByStakingModule(uint256[], uint256[]) => DISPATCHER(true)
+    updateExitedValidatorsCountByStakingModule(uint256[], uint256[]) returns (uint256) => DISPATCHER(true)
 
     // OracleReportSanityChecker = OracleReportSanityChecker.sol
     checkNodeOperatorsPerExtraDataItemCount(uint256, uint256) => DISPATCHER(true)
@@ -48,12 +49,14 @@ methods {
     handleConsensusLayerReport(uint256, uint256, uint256) => DISPATCHER(true)
     getConsensusContract() returns (address) => DISPATCHER(true) //getConsensusContractCVL()
     getAccountingOracle() returns (address) => DISPATCHER(true) //getAccountingOracleContractCVL()
+    handlePostTokenRebase(uint256,uint256,uint256,uint256,uint256,uint256,uint256) => DISPATCHER(true)
 
     // WithdrawalQueue = WithdrawalQueue.sol
-    updateBunkerMode(bool, uint256) => DISPATCHER(true)
+    //updateBunkerMode(bool, uint256) => DISPATCHER(true)
+    onOracleReport(bool, uint256, uint256) => DISPATCHER(true)
 
     // Lido = MockLidoForAccountingOracle.sol
-    handleOracleReport(uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256) => DISPATCHER(true)
+    handleOracleReport(uint256, uint256, uint256, uint256, uint256, uint256, uint256, uint256[], uint256) => DISPATCHER(true)
 
     // StakingModule = StakingModuleMock.sol
     getStakingModuleSummary() returns (uint256, uint256, uint256) => DISPATCHER(true)
@@ -765,7 +768,7 @@ rule nonInterferenceOfRolesAndAccounts(method f) {
 // Status: Fails (as expected, no issues)
 // https://vaas-stg.certora.com/output/80942/ea773d7513c64b3eb13469903a91dbbc/?anonymousKey=7c4acab781c5df59e5a45ffae8c7d442f3643323
 rule sanity(method f) 
-filtered { f -> !f.isView }
+//filtered { f -> !f.isView }
 {
     require contractAddressesLinked();
     env e; calldataarg args;
