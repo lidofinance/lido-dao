@@ -491,7 +491,7 @@ contract('Lido: happy path', (addresses) => {
       from: nodeOperator3.address,
     })
     const nodeOperatorInfo = await nodeOperatorsRegistry.getNodeOperator(nodeOperator3.id, false)
-    assert.equals(nodeOperatorInfo.stakingLimit, 5)
+    assert.equals(nodeOperatorInfo.totalVettedValidators, 5)
   })
 
   it('deposit to nodeOperator3 validators', async () => {
@@ -528,14 +528,14 @@ contract('Lido: happy path', (addresses) => {
     let nodeOperatorInfo = await nodeOperatorsRegistry.getNodeOperator(nodeOperator3.id, false)
 
     // validate that only 5 signing keys used after key removing
-    assert.equals(nodeOperatorInfo.stakingLimit, nodeOperatorInfo.usedSigningKeys)
-    assert.equals(nodeOperatorInfo.totalSigningKeys, 9)
+    assert.equals(nodeOperatorInfo.totalVettedValidators, nodeOperatorInfo.totalDepositedValidators)
+    assert.equals(nodeOperatorInfo.totalAddedValidators, 9)
 
     // validate that all other validators used and pool still has buffered ether
     nodeOperatorInfo = await nodeOperatorsRegistry.getNodeOperator(nodeOperator1.id, false)
-    assert.equals(nodeOperatorInfo.totalSigningKeys, nodeOperatorInfo.usedSigningKeys)
+    assert.equals(nodeOperatorInfo.totalAddedValidators, nodeOperatorInfo.totalDepositedValidators)
     nodeOperatorInfo = await nodeOperatorsRegistry.getNodeOperator(nodeOperator2.id, false)
-    assert.equals(nodeOperatorInfo.totalSigningKeys, nodeOperatorInfo.usedSigningKeys)
+    assert.equals(nodeOperatorInfo.totalAddedValidators, nodeOperatorInfo.totalDepositedValidators)
   })
 
   it('getFee and getFeeDistribution works as expected', async () => {

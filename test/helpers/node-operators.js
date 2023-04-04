@@ -83,8 +83,8 @@ async function addNodeOperator(registry, config, txOptions) {
   const nodeOperator = await registry.getNodeOperator(newOperatorId, true)
 
   if (isActive) {
-    assert.equals(nodeOperator.stakingLimit, vettedSigningKeysCount)
-    assert.equals(nodeOperator.totalSigningKeys, totalSigningKeysCount)
+    assert.equals(nodeOperator.totalVettedValidators, vettedSigningKeysCount)
+    assert.equals(nodeOperator.totalAddedValidators, totalSigningKeysCount)
     assert.equals(nodeOperatorsSummary.totalExitedValidators, exitedSigningKeysCount)
     assert.equals(nodeOperatorsSummary.totalDepositedValidators, depositedSigningKeysCount)
     assert.equals(nodeOperatorsSummary.depositableValidatorsCount, vettedSigningKeysCount - depositedSigningKeysCount)
