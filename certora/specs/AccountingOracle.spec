@@ -312,7 +312,7 @@ rule cannotSubmitTheSameReportDataTwice(method f)
 // Status: Pass without extra asserts
 // https://vaas-stg.certora.com/output/80942/3de063e6c4ef4386a703cc69b5193257/?anonymousKey=b886518a1ceaf175b1b3c553e2976d17ea1b6f77
 // Status of new code: Timeout!
-// https://vaas-stg.certora.com/output/80942/06ea4698bf6a463e801a45774375007d/?anonymousKey=f0bd8aae38c8529b79a60367f67214a7f6ce0c2a
+// https://vaas-stg.certora.com/output/80942/0810e672cd8c45f4bcd1b779dc49b6a8/?anonymousKey=dbd4dfb550b7691b19e524238e2a4fefe27def92
 // Status: Timeouts with extra asserts
 // https://vaas-stg.certora.com/output/80942/99847ff728e043d99e3c0f3186c07792/?anonymousKey=d0f44d018c52a17dc9111a28655b8174168d9e2d
 rule cannotSubmitReportExtraDataEmptyWhenExtraDataIsNotEmpty() {
