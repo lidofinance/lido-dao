@@ -1,7 +1,7 @@
 const { artifacts, ethers, contract } = require('hardhat')
 
 const { assert } = require('../../helpers/assert')
-const { toBN, hex, hexConcat } = require('../../helpers/utils')
+const { toBN, hex, hexConcat, strip0x } = require('../../helpers/utils')
 const { EvmSnapshot } = require('../../helpers/blockchain')
 const { ecSign } = require('../../helpers/signatures')
 const { ACCOUNTS_AND_KEYS } = require('../../helpers/constants')
@@ -17,6 +17,9 @@ testWithConsumer(SignatureUtilsConsumer_0_8_9, 'Solidity 0.8.9')
 
 function testWithConsumer(SignatureUtilsConsumer, desc) {
   const ERC1271_MAGIC_VALUE = '0x1626ba7e'
+  const ERC1271_MAGIC_VALUE_PLUS_1 = '0x1626ba7f'
+
+  const hexPadRight = (s, byteLen) => '0x' + strip0x(s).padEnd(byteLen * 2, '0')
 
   contract(`SignatureUtils.isValidSignature, ${desc}`, () => {
     const msgHash = `0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef`
@@ -78,19 +81,72 @@ function testWithConsumer(SignatureUtilsConsumer, desc) {
           await snapshot.make()
         })
 
-        it(`returns true when the call returns the magic value`, async () => {
-          await signerContract.configure({ reverts: false, retval: ERC1271_MAGIC_VALUE })
+        it(`returns true when the call returns the magic value right-padded to 32 bytes`, async () => {
+          await signerContract.configure({ reverts: false, retval: hexPadRight(ERC1271_MAGIC_VALUE, 32) })
           assert.isTrue(await sigUtils.isValidSignature(signerContract.address, msgHash, v, r, s))
         })
 
-        it(`returns false when the call returns any other value`, async () => {
-          await signerContract.configure({ reverts: false, retval: '0x' + hex(toBN(ERC1271_MAGIC_VALUE).addn(1), 4) })
+        it(`returns false when the call returns any other 4-byte value right-padded to 32 bytes`, async () => {
+          await signerContract.configure({ reverts: false, retval: hexPadRight(ERC1271_MAGIC_VALUE_PLUS_1, 32) })
           assert.isFalse(await sigUtils.isValidSignature(signerContract.address, msgHash, v, r, s))
 
-          await signerContract.configure({ reverts: false, retval: '0x00000000' })
+          await signerContract.configure({ reverts: false, retval: hexPadRight('0x12345678', 32) })
+          assert.isFalse(await sigUtils.isValidSignature(signerContract.address, msgHash, v, r, s))
+        })
+
+        it(`returns false when the returned value is shorter than 4 bytes (before padding)`, async () => {
+          await signerContract.configure({ reverts: false, retval: hexPadRight(ERC1271_MAGIC_VALUE.slice(0, -2), 32) })
           assert.isFalse(await sigUtils.isValidSignature(signerContract.address, msgHash, v, r, s))
 
-          await signerContract.configure({ reverts: false, retval: '0x12345678' })
+          await signerContract.configure({ reverts: false, retval: hexPadRight('0x00000000', 32) })
+          assert.isFalse(await sigUtils.isValidSignature(signerContract.address, msgHash, v, r, s))
+        })
+
+        it(`returns false when the returned value is longer than 4 bytes (before padding)`, async () => {
+          await signerContract.configure({
+            reverts: false,
+            retval: hexPadRight(hexConcat(ERC1271_MAGIC_VALUE, '0x01'), 32),
+          })
+          assert.isFalse(await sigUtils.isValidSignature(signerContract.address, msgHash, v, r, s))
+        })
+
+        it(`returns false when the returned value is shorter than 32 bytes (after padding)`, async () => {
+          await signerContract.configure({ reverts: false, retval: ERC1271_MAGIC_VALUE })
+          assert.isFalse(await sigUtils.isValidSignature(signerContract.address, msgHash, v, r, s))
+
+          await signerContract.configure({ reverts: false, retval: hexPadRight(ERC1271_MAGIC_VALUE, 31) })
+          assert.isFalse(await sigUtils.isValidSignature(signerContract.address, msgHash, v, r, s))
+        })
+
+        it(`returns false when the returned value is longer than 32 bytes (after padding)`, async () => {
+          await signerContract.configure({
+            reverts: false,
+            retval: hexConcat(hexPadRight(ERC1271_MAGIC_VALUE, 32), '0x00'),
+          })
+          assert.isFalse(await sigUtils.isValidSignature(signerContract.address, msgHash, v, r, s))
+
+          await signerContract.configure({
+            reverts: false,
+            retval: hexConcat(hexPadRight(ERC1271_MAGIC_VALUE, 32), '0x01'),
+          })
+          assert.isFalse(await sigUtils.isValidSignature(signerContract.address, msgHash, v, r, s))
+
+          await signerContract.configure({
+            reverts: false,
+            retval: hexConcat(hexPadRight(ERC1271_MAGIC_VALUE, 32), hexPadRight('0x00', 32)),
+          })
+          assert.isFalse(await sigUtils.isValidSignature(signerContract.address, msgHash, v, r, s))
+
+          await signerContract.configure({
+            reverts: false,
+            retval: hexConcat(hexPadRight(ERC1271_MAGIC_VALUE, 32), ERC1271_MAGIC_VALUE),
+          })
+          assert.isFalse(await sigUtils.isValidSignature(signerContract.address, msgHash, v, r, s))
+
+          await signerContract.configure({
+            reverts: false,
+            retval: hexConcat(hexPadRight(ERC1271_MAGIC_VALUE, 32), hexPadRight(ERC1271_MAGIC_VALUE, 32)),
+          })
           assert.isFalse(await sigUtils.isValidSignature(signerContract.address, msgHash, v, r, s))
         })
 

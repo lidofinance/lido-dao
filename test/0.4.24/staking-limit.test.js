@@ -50,29 +50,29 @@ contract('StakingLimits', ([account1]) => {
   it('check staking pause at start', async () => {
     const slot = await limits.setStorageStakeLimitStruct(0, 0, 0, 0)
     const paused = await limits.isStakingPaused(slot)
-    assert.equal(paused, true, 'staking not paused')
+    assert.equals(paused, true, 'staking not paused')
   })
 
   it('check staking pause with block number', async () => {
     const prevStakeBlockNumber = 10
     const slot2 = await limits.setStorageStakeLimitStruct(prevStakeBlockNumber, 0, 0, 0)
     const paused2 = await limits.isStakingPaused(slot2)
-    assert.equal(paused2, false, 'staking paused')
+    assert.equals(paused2, false, 'staking paused')
   })
 
   it('check staking pause/unpause', async () => {
     let paused
     const slot = await limits.setStorageStakeLimitStruct(1, 1, 1, 1)
     paused = await limits.isStakingPaused(slot)
-    assert.equal(paused, false, 'staking paused')
+    assert.equals(paused, false, 'staking paused')
 
     const slot2 = await limits.setStakeLimitPauseState(slot, true)
     paused = await limits.isStakingPaused(slot2)
-    assert.equal(paused, true, 'staking not paused')
+    assert.equals(paused, true, 'staking not paused')
 
     const slot3 = await limits.setStakeLimitPauseState(slot, false)
     paused = await limits.isStakingPaused(slot3)
-    assert.equal(paused, false, 'staking paused')
+    assert.equals(paused, false, 'staking paused')
   })
 
   it('check staking rate limit', async () => {
@@ -80,16 +80,16 @@ contract('StakingLimits', ([account1]) => {
     const slot = await limits.setStorageStakeLimitStruct(0, 0, 0, 0)
     limited = await limits.isStakingLimitSet(slot)
 
-    assert.equal(limited, false, 'limits are limited')
+    assert.equals(limited, false, 'limits are limited')
 
     const maxStakeLimit = 10
     const slot2 = await limits.setStorageStakeLimitStruct(0, 0, 0, maxStakeLimit)
     limited = await limits.isStakingLimitSet(slot2)
-    assert.equal(limited, true, 'limits are not limited')
+    assert.equals(limited, true, 'limits are not limited')
 
     const slot3 = await limits.removeStakingLimit(slot2)
     limited = await limits.isStakingLimitSet(slot3)
-    assert.equal(limited, false, 'limits are limited')
+    assert.equals(limited, false, 'limits are limited')
   })
 
   it('stake limit increase > max stake', async () => {
@@ -140,12 +140,12 @@ contract('StakingLimits', ([account1]) => {
     assert.equals(currentStakeLimit2, 0)
 
     const block2 = await waitBlocks(1)
-    assert.equal(block2.number, block.number + 1)
+    assert.equals(block2.number, block.number + 1)
     const currentStakeLimit3 = await limits.calculateCurrentStakeLimit(slot)
     assert.equals(currentStakeLimit3, 50)
 
     const block3 = await waitBlocks(3)
-    assert.equal(block3.number, block.number + 1 + 3)
+    assert.equals(block3.number, block.number + 1 + 3)
     const currentStakeLimit4 = await limits.calculateCurrentStakeLimit(slot)
     assert.equals(currentStakeLimit4, 100)
   })
@@ -159,11 +159,11 @@ contract('StakingLimits', ([account1]) => {
 
     const slot = await limits.setStorageStakeLimitStruct(block.number, 0, maxStakeLimitGrowthBlocks, maxStakeLimit)
     const decodedSlot = await limits.getStorageStakeLimit(slot)
-    assert.equal(decodedSlot.prevStakeBlockNumber, block.number)
-    assert.equal(decodedSlot.prevStakeLimit, 0)
+    assert.equals(decodedSlot.prevStakeBlockNumber, block.number)
+    assert.equals(decodedSlot.prevStakeLimit, 0)
 
     const block2 = await waitBlocks(3)
-    assert.equal(block2.number, block.number + 3)
+    assert.equals(block2.number, block.number + 3)
 
     const currentStakeLimit2 = await limits.calculateCurrentStakeLimit(slot)
     assert.equals(currentStakeLimit2, maxStakeLimit)
@@ -171,8 +171,8 @@ contract('StakingLimits', ([account1]) => {
     const deposit = 87
     const newSlot = await limits.updatePrevStakeLimit(slot, currentStakeLimit2 - deposit)
     const decodedNewSlot = await limits.getStorageStakeLimit(newSlot)
-    assert.equal(decodedNewSlot.prevStakeBlockNumber, block2.number)
-    assert.equal(decodedNewSlot.prevStakeLimit, 13)
+    assert.equals(decodedNewSlot.prevStakeBlockNumber, block2.number)
+    assert.equals(decodedNewSlot.prevStakeLimit, 13)
 
     // checking staking recovery
     await waitBlocks(1)
@@ -239,5 +239,49 @@ contract('StakingLimits', ([account1]) => {
       assert.equals(currentGas, referenceGas)
       assert.equals(currentBlock, referenceBlock + i + 1)
     }
+  })
+
+  it('setStakingLimit resets prev stake limit to the new max', async () => {
+    const block = await web3.eth.getBlock('latest')
+    const maxStakeLimit = 10000
+    const maxStakeLimitGrowthBlocks = 100
+    const prevStakeLimit = 5000
+
+    // set initial values
+    let slot = await limits.setStorageStakeLimitStruct(
+      block.number,
+      prevStakeLimit,
+      maxStakeLimitGrowthBlocks,
+      maxStakeLimit
+    )
+
+    // check their correctness
+    let decodedRaw = await limits.getStorageStakeLimit(slot)
+    assert.equals(decodedRaw.maxStakeLimit, maxStakeLimit)
+    assert.equals(decodedRaw.maxStakeLimitGrowthBlocks, maxStakeLimitGrowthBlocks)
+    assert.equals(decodedRaw.prevStakeLimit, prevStakeLimit)
+    assert.equals(decodedRaw.prevStakeBlockNumber, block.number)
+
+    // pause stake
+    slot = await limits.setStakeLimitPauseState(slot, true)
+    assert.isTrue(await limits.isStakingPaused(slot))
+
+    // setStakeLimit again
+    slot = await limits.setStakingLimit(slot, maxStakeLimit, maxStakeLimit / maxStakeLimitGrowthBlocks)
+    decodedRaw = await limits.getStorageStakeLimit(slot)
+    assert.equals(decodedRaw.prevStakeLimit, maxStakeLimit)
+
+    // set unlimited
+    slot = await limits.removeStakingLimit(slot)
+
+    // setStakeLimit again
+    slot = await limits.setStakingLimit(slot, maxStakeLimit * 2, 10)
+    decodedRaw = await limits.getStorageStakeLimit(slot)
+    assert.equals(decodedRaw.prevStakeLimit, maxStakeLimit * 2)
+
+    // set stake limit lower than before
+    slot = await limits.setStakingLimit(slot, maxStakeLimit / 2, 100)
+    decodedRaw = await limits.getStorageStakeLimit(slot)
+    assert.equals(decodedRaw.prevStakeLimit, maxStakeLimit / 2)
   })
 })

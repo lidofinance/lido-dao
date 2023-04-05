@@ -1,8 +1,9 @@
-const { contract, artifacts } = require('hardhat')
+const { contract, artifacts, ethers } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 const { ZERO_ADDRESS } = require('../../helpers/constants')
+const { EvmSnapshot } = require('../../helpers/blockchain')
 
-const { HASH_1, CONSENSUS_VERSION, deployHashConsensus } = require('./hash-consensus-deploy.test')
+const { HASH_1, HASH_2, CONSENSUS_VERSION, deployHashConsensus } = require('./hash-consensus-deploy.test')
 const { toNum } = require('../../helpers/utils')
 
 const MockReportProcessor = artifacts.require('MockReportProcessor')
@@ -12,16 +13,25 @@ contract('HashConsensus', ([admin, member1, member2, stranger]) => {
     let consensus
     let reportProcessor1
     let reportProcessor2
+    let snapshot
 
     const deploy = async (options = undefined) => {
+      snapshot = new EvmSnapshot(ethers.provider)
       const deployed = await deployHashConsensus(admin, options)
       consensus = deployed.consensus
       reportProcessor1 = deployed.reportProcessor
       reportProcessor2 = await MockReportProcessor.new(CONSENSUS_VERSION, { from: admin })
+      await snapshot.make()
     }
 
+    const rollback = async () => {
+      await snapshot.rollback()
+    }
+
+    before(deploy)
+
     context('initial setup', () => {
-      beforeEach(deploy)
+      afterEach(rollback)
 
       it('properly set initial report processor', async () => {
         assert.addressEqual(await consensus.getReportProcessor(), reportProcessor1.address, 'processor address differs')
@@ -29,7 +39,7 @@ contract('HashConsensus', ([admin, member1, member2, stranger]) => {
     })
 
     context('method setReportProcessor', () => {
-      beforeEach(deploy)
+      afterEach(rollback)
 
       it('checks next processor is not zero', async () => {
         await assert.reverts(consensus.setReportProcessor(ZERO_ADDRESS), 'ReportProcessorCannotBeZero()')
@@ -99,7 +109,7 @@ contract('HashConsensus', ([admin, member1, member2, stranger]) => {
         assert.equals((await reportProcessor2.getLastCall_submitReport()).callCount, 0)
       })
 
-      it('do not submit report to next processor if there was no conensus', async () => {
+      it('do not submit report to next processor if there was no consensus', async () => {
         const frame = await consensus.getCurrentFrame()
 
         await consensus.addMember(member1, 1, { from: admin })
@@ -115,10 +125,25 @@ contract('HashConsensus', ([admin, member1, member2, stranger]) => {
           'processor reported but there was no quorum'
         )
       })
+
+      it('do not submit report to next processor if consensus was lost', async () => {
+        const frame = await consensus.getCurrentFrame()
+
+        await consensus.addMember(member1, 1, { from: admin })
+        await consensus.addMember(member2, 2, { from: admin })
+
+        await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member1 })
+        await consensus.submitReport(frame.refSlot, HASH_1, CONSENSUS_VERSION, { from: member2 })
+        await consensus.submitReport(frame.refSlot, HASH_2, CONSENSUS_VERSION, { from: member2 })
+        assert.equals((await reportProcessor1.getLastCall_discardReport()).callCount, 1, 'report withdrawn')
+
+        await consensus.setReportProcessor(reportProcessor2.address, { from: admin })
+        assert.equals((await reportProcessor2.getLastCall_submitReport()).callCount, 0, 'no report submitted')
+      })
     })
 
     context('consensus version', () => {
-      beforeEach(deploy)
+      afterEach(rollback)
 
       it('equals to version of initial processor', async () => {
         assert.equal(await consensus.getConsensusVersion(), CONSENSUS_VERSION)
@@ -133,7 +158,7 @@ contract('HashConsensus', ([admin, member1, member2, stranger]) => {
     })
 
     context('method getReportVariants', () => {
-      beforeEach(deploy)
+      afterEach(rollback)
 
       it(`returns empty data if lastReportRefSlot != currentFrame.refSlot`, async () => {
         const { refSlot } = await consensus.getCurrentFrame()

@@ -268,11 +268,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         payable
         onlyInit
     {
-        uint256 amount = _bootstrapInitialHolder();
-        _setBufferedEther(amount);
-
-        emit Submitted(INITIAL_TOKEN_HOLDER, amount, 0);
-
+        _bootstrapInitialHolder();
         _initialize_v2(_lidoLocator, _eip712StETH);
         initialized();
     }
@@ -342,6 +338,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      */
     function resumeStaking() external {
         _auth(STAKING_CONTROL_ROLE);
+        require(hasInitialized(), "NOT_INITIALIZED");
 
         _resumeStaking();
     }
@@ -950,14 +947,6 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @dev Emits {Transfer} and {TransferShares} events where `from` is 0 address. Indicates mint events.
-     */
-    function _emitTransferAfterMintingShares(address _to, uint256 _sharesAmount) internal {
-        emit Transfer(address(0), _to, getPooledEthByShares(_sharesAmount));
-        emit TransferShares(address(0), _to, _sharesAmount);
-    }
-
-    /**
      * @dev Staking router rewards distribution.
      *
      * Corresponds to the return value of `IStakingRouter.newTotalPooledEtherForRewards()`
@@ -1390,5 +1379,30 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
     function _treasury() internal view returns (address) {
         return getLidoLocator().treasury();
+    }
+
+    /**
+     * @notice Mints shares on behalf of 0xdead address,
+     * the shares amount is equal to the contract's balance.     *
+     *
+     * Allows to get rid of zero checks for `totalShares` and `totalPooledEther`
+     * and overcome corner cases.
+     *
+     * NB: reverts if the current contract's balance is zero.
+     *
+     * @dev must be invoked before using the token
+     */
+    function _bootstrapInitialHolder() internal {
+        uint256 balance = address(this).balance;
+        assert(balance != 0);
+
+        if (_getTotalShares() == 0) {
+            // if protocol is empty bootstrap it with the contract's balance
+            // address(0xdead) is a holder for initial shares
+            _setBufferedEther(balance);
+            // emitting `Submitted` before Transfer events to preserver events order in tx
+            emit Submitted(INITIAL_TOKEN_HOLDER, balance, 0);
+            _mintInitialShares(balance);
+        }
     }
 }

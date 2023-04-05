@@ -5,6 +5,4 @@ RED_COLOR='\033[0;31m'
 NO_COLOR='\033[0m'
 
 yarn compile
-git diff --quiet lib/abi || (echo -e "${RED_COLOR}Unstaged ABIs detected${NO_COLOR}"; exit 1)
-
 yarn lint
