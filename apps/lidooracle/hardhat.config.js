@@ -1,7 +1,7 @@
 require('@aragon/buidler-aragon')
 
 const baseConfig = require('../../hardhat.config.js')
-const hooks = require('./scripts/buidler-hooks')
+const hooks = require('./scripts/buidler-hooks.js')
 
 module.exports = {
   ...baseConfig,
