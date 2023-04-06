@@ -57,7 +57,7 @@ const getNetConfig = (networkName, ethAccountName) => {
   }
   const zhejiang = {
     ...base,
-    url: 'http://35.228.211.212:8545',
+    url: accounts.zhejiang_url,
     chainId: 1337803,
   }
   const byNetName = {
