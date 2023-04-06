@@ -11,7 +11,6 @@ export default function App() {
   const { appState, currentApp, guiStyle } = useAragonApi()
   const appName = (currentApp && currentApp.name) || 'app'
   const { appearance } = guiStyle
-  console.log(appState)
   const { isSyncing } = appState
   const theme = useTheme()
 

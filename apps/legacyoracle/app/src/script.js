@@ -149,7 +149,6 @@ const hashConsensusState = [
 function initializeState() {
   return async (cachedState) => {
 
-    console.log("HELLO")
     const lido = await app.call("getLido").toPromise()
     const lidoContract = app.external(lido, LidoABI)
 
