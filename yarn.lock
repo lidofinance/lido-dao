@@ -18307,9 +18307,9 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
-"legacyoracle-frontend@workspace:apps/legacyoracle/app":
+"legacyoracle-frontend@workspace:apps/lidooracle/app":
   version: 0.0.0-use.local
-  resolution: "legacyoracle-frontend@workspace:apps/legacyoracle/app"
+  resolution: "legacyoracle-frontend@workspace:apps/lidooracle/app"
   dependencies:
     "@aragon/api": ^2.0.0
     "@aragon/api-react": ^2.0.0
