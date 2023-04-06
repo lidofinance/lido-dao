@@ -1,6 +1,6 @@
 import { IdentityBadge } from '@aragon/ui'
 import React from 'react'
-import { ListItem, LoadableElement } from '../shared'
+import { ListItem, LoadableElement } from '.'
 
 export const ListItemAddress = ({ label, value }) => {
   return (
