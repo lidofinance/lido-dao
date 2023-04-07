@@ -6,7 +6,7 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # This is a boilerplate script to simplify verification of the addresses after Shapella upgrade contracts deployment
 # NB: don't forget to call `yarn clean` in case of an error
 
-NETWORK=goerlishapella
+NETWORK=goerli
 TEMPORARY_ADMIN="0xa5F1d7D49F581136Cf6e58B32cBE9a2039C48bA1"
 
 SECONDS_PER_SLOT=12
