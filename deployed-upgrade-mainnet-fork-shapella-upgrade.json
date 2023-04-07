@@ -197,6 +197,12 @@
   ],
   "executionLayerRewardsVaultAddress": "0x388C818CA8B9251b393131C08a736A67ccB19297",
   "depositorPreviousAddress": "0x710B3303fB508a84F10793c1106e32bE873C24cd",
+  "executionLayerRewardsParams": {
+    "withdrawalLimit": "1"
+  },
+  "dummyImplementation": {
+    "address": "0xE2f969983c8859E986d6e19892EDBd1eea7371D2"
+  },
   "burner": {
     "parameters": {
       "totalCoverSharesBurnt": "0",
@@ -211,9 +217,6 @@
       "0",
       "0"
     ]
-  },
-  "executionLayerRewardsParams": {
-    "withdrawalLimit": "1"
   },
   "legacyOracle": {
     "parameters": {
