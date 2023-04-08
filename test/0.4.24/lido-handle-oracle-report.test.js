@@ -11,6 +11,7 @@ const {
   calcSharesMintedAsFees,
   calcShareRateDeltaE27,
   limitRebase,
+  addSendWithResult,
 } = require('../helpers/utils')
 const { deployProtocol } = require('../helpers/protocol')
 const {
@@ -31,7 +32,7 @@ const ORACLE_REPORT_LIMITS_BOILERPLATE = {
   churnValidatorsPerDayLimit: 255,
   oneOffCLBalanceDecreaseBPLimit: 100,
   annualBalanceIncreaseBPLimit: 10000,
-  simulatedShareRateDeviationBPLimit: 1,
+  simulatedShareRateDeviationBPLimit: 15,
   maxValidatorExitRequestsPerReport: 10000,
   maxAccountingExtraDataListItemsCount: 10000,
   maxNodeOperatorsPerExtraDataItemCount: 10000,
@@ -170,6 +171,8 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
 
     snapshot = new EvmSnapshot(ethers.provider)
     await snapshot.make()
+
+    addSendWithResult(lido.handleOracleReport)
   })
 
   beforeEach(async () => {
@@ -2023,7 +2026,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
           }),
           { from: oracle, gasPrice: 1 }
         ),
-        `TooLowSimulatedShareRate(${tooLowSimulatedShareRate.toString()}, ${simulatedShareRate.toString()})`
+        `IncorrectSimulatedShareRate(${tooLowSimulatedShareRate.toString()}, ${simulatedShareRate.toString()})`
       )
 
       const tooHighSimulatedShareRate = simulatedShareRate.mul(toBN(3)).div(toBN(2))
@@ -2043,7 +2046,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
           }),
           { from: oracle, gasPrice: 1 }
         ),
-        `TooHighSimulatedShareRate(${tooHighSimulatedShareRate.toString()}, ${simulatedShareRate.toString()})`
+        `IncorrectSimulatedShareRate(${tooHighSimulatedShareRate.toString()}, ${simulatedShareRate.toString()})`
       )
 
       await lido.handleOracleReport(
@@ -2191,6 +2194,165 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       ;({ coverShares, nonCoverShares } = await burner.getSharesRequestedToBurn())
       assert.equals(coverShares, toBN(0))
       assert.equals(nonCoverShares, toBN(0))
+    })
+
+    it('simulatedShareRate is higher due to outstanding submits if token rebase is positive', async () => {
+      //  Some EL rewards to report
+      await setBalance(elRewardsVault, ETH(1))
+
+      // Check that we haven't finalized anything yet
+      assert.equals(await withdrawalQueue.getLastFinalizedRequestId(), toBN(0))
+      await withdrawalQueue.resume({ from: appManager })
+      assert.isFalse(await withdrawalQueue.isPaused())
+
+      // Stranger decides to withdraw his stETH(1)
+      await lido.approve(withdrawalQueue.address, StETH(10), { from: stranger })
+      await withdrawalQueue.requestWithdrawals([StETH(10)], stranger, { from: stranger })
+      assert.equals(await withdrawalQueue.unfinalizedStETH(), StETH(10))
+      assert.equals(await withdrawalQueue.unfinalizedRequestNumber(), 1)
+
+      const maxPositiveTokenRebase = 1000000000 // Setting daily positive rebase as 100%
+      await oracleReportSanityChecker.setOracleReportLimits(
+        {
+          ...ORACLE_REPORT_LIMITS_BOILERPLATE,
+          churnValidatorsPerDayLimit: 100,
+          maxPositiveTokenRebase,
+        },
+        { from: voting, gasPrice: 1 }
+      )
+
+      await advanceChainTime(30)
+
+      // Performing dry-run to estimate simulated share rate
+      const [postTotalPooledEther, postTotalShares, withdrawals, elRewards] = await lido.handleOracleReport.call(
+        ...Object.values({
+          ...DEFAULT_LIDO_ORACLE_REPORT,
+          timeElapsed: ONE_DAY,
+          clValidators: 3,
+          postCLBalance: ETH(96.1),
+          elRewardsVaultBalance: ETH(1),
+        }),
+        { from: oracle, gasPrice: 1 }
+      )
+      const { elBalanceUpdate } = limitRebase(
+        toBN(maxPositiveTokenRebase),
+        ETH(101),
+        ETH(101),
+        ETH(0.1),
+        ETH(1),
+        StETH(0)
+      )
+      assert.equals(withdrawals.add(elRewards), elBalanceUpdate)
+      // Ensuring that the EL vault didn't hit the positive rebase limit
+      assert.equals(await getBalance(elRewardsVault), elRewards)
+      const simulatedShareRate = postTotalPooledEther.mul(toBN(shareRate(1))).div(postTotalShares)
+
+      await advanceChainTime(30)
+
+      // Bob decides to stake rather massive amount in between reference slot and real report submission
+      await lido.submit(ZERO_ADDRESS, { from: bob, value: ETH(10) })
+
+      // Sending the real report with finalization attempts
+      const [realPostTotalPooledEther, realPostTotalShares] = await lido.handleOracleReport.sendWithResult(
+        ...Object.values({
+          ...DEFAULT_LIDO_ORACLE_REPORT,
+          reportTimestamp: await getCurrentBlockTimestamp(),
+          timeElapsed: ONE_DAY,
+          clValidators: 3,
+          postCLBalance: ETH(96.1),
+          elRewardsVaultBalance: ETH(1),
+          withdrawalFinalizationBatches: [1],
+          simulatedShareRate: simulatedShareRate.toString(),
+        }),
+        { from: oracle, gasPrice: 1 }
+      )
+      const realShareRate = realPostTotalPooledEther.mul(toBN(shareRate(1))).div(realPostTotalShares)
+
+      // simulated share rate is greater than the really reported
+      assert.isTrue(simulatedShareRate.gt(realShareRate))
+
+      await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(96.1) })
+
+      // Checking that both vaults are withdrawn
+      assert.equals(await getBalance(elRewardsVault), toBN(0))
+      assert.equals(await getBalance(withdrawalVault), toBN(0))
+      // Check total pooled ether
+      const totalPooledEtherAfterFinalization = await lido.getTotalPooledEther()
+      // Add Bob's recently staked funds, deduct finalized with 1:1 stranger's StETH(10)
+      assert.equals(totalPooledEtherAfterFinalization, postTotalPooledEther.add(toBN(ETH(10 - 10))))
+
+      // Checking that finalization of the previously placed withdrawal request completed
+      assert.equals(await withdrawalQueue.getLastFinalizedRequestId(), toBN(1))
+      const strangerBalanceBeforeClaim = await getBalance(stranger)
+      await withdrawalQueue.claimWithdrawal(1, { from: stranger, gasPrice: 0 })
+      const strangerBalanceAfterClaim = await getBalance(stranger)
+      // Happy-path: user receive ETH corresponding to the requested StETH amount
+      assert.equals(strangerBalanceAfterClaim - strangerBalanceBeforeClaim, StETH(10))
+    })
+
+    it('simulatedShareRate is lower due to outstanding submits if token rebase is negative', async () => {
+      // Check that we haven't finalized anything yet
+      assert.equals(await withdrawalQueue.getLastFinalizedRequestId(), toBN(0))
+      await withdrawalQueue.resume({ from: appManager })
+      assert.isFalse(await withdrawalQueue.isPaused())
+
+      // Stranger decides to withdraw his stETH(1)
+      await lido.approve(withdrawalQueue.address, StETH(10), { from: stranger })
+      await withdrawalQueue.requestWithdrawals([StETH(10)], stranger, { from: stranger })
+      assert.equals(await withdrawalQueue.unfinalizedStETH(), StETH(10))
+      assert.equals(await withdrawalQueue.unfinalizedRequestNumber(), 1)
+
+      await advanceChainTime(30)
+
+      // Performing dry-run to estimate simulated share rate
+      const [postTotalPooledEther, postTotalShares] = await lido.handleOracleReport.call(
+        ...Object.values({
+          ...DEFAULT_LIDO_ORACLE_REPORT,
+          timeElapsed: ONE_DAY,
+          clValidators: 3,
+          postCLBalance: ETH(95), // CL rebase is negative (was 96 ETH before the report)
+        }),
+        { from: oracle, gasPrice: 1 }
+      )
+      const simulatedShareRate = postTotalPooledEther.mul(toBN(shareRate(1))).div(postTotalShares)
+
+      await advanceChainTime(30)
+
+      // Bob decides to stake rather massive amount in between reference slot and real report submission
+      await lido.submit(ZERO_ADDRESS, { from: bob, value: ETH(10) })
+
+      // Sending the real report with finalization attempts
+      const [realPostTotalPooledEther, realPostTotalShares] = await lido.handleOracleReport.sendWithResult(
+        ...Object.values({
+          ...DEFAULT_LIDO_ORACLE_REPORT,
+          reportTimestamp: await getCurrentBlockTimestamp(),
+          timeElapsed: ONE_DAY,
+          clValidators: 3,
+          postCLBalance: ETH(95),
+          withdrawalFinalizationBatches: [1],
+          simulatedShareRate: simulatedShareRate.toString(),
+        }),
+        { from: oracle, gasPrice: 1 }
+      )
+      const realShareRate = realPostTotalPooledEther.mul(toBN(shareRate(1))).div(realPostTotalShares)
+
+      // simulated share rate is lower than the really reported
+      assert.isTrue(simulatedShareRate.lt(realShareRate))
+
+      await checkStat({ depositedValidators: 3, beaconValidators: 3, beaconBalance: ETH(95) })
+
+      // Check total pooled ether
+      const totalPooledEtherAfterFinalization = await lido.getTotalPooledEther()
+      // Add Bob's recently staked funds, deduct finalized with 9:10 stranger's StETH(10)
+      assert.equals(totalPooledEtherAfterFinalization, postTotalPooledEther.add(toBN(ETH(0.1))))
+
+      // Checking that finalization of the previously placed withdrawal request completed
+      assert.equals(await withdrawalQueue.getLastFinalizedRequestId(), toBN(1))
+      const strangerBalanceBeforeClaim = await getBalance(stranger)
+      await withdrawalQueue.claimWithdrawal(1, { from: stranger, gasPrice: 0 })
+      const strangerBalanceAfterClaim = await getBalance(stranger)
+      // Losses-path: user receive ETH lower than the requested StETH amount
+      assert.equals(strangerBalanceAfterClaim - strangerBalanceBeforeClaim, StETH(9.9))
     })
   })
 })
