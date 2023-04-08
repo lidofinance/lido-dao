@@ -637,8 +637,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         // in case of new user-submitted ether & minted `stETH` between the oracle reference slot
         // and the actual report delivery slot
         //
-        // lower can be for a negative token rebase (token rebase >= one off CL balance decrease)
-        // higher can be for a positive token rebase (token rebase <= max positive token rebase)
+        // lower it can be for a negative token rebase (token rebase >= one off CL balance decrease)
+        // higher it can be for a positive token rebase (token rebase <= max positive token rebase)
         //
         // user-submitted ether & minted `stETH` don't exceed the current staking rate limit
         // (see Lido.getCurrentStakeLimit())
