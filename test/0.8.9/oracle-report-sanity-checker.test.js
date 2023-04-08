@@ -428,7 +428,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
       simulatedShareRate: (BigInt(2) * 10n ** 27n).toString(),
     }
 
-    it('reverts with error TooHighSimulatedShareRate() when reported and onchain share rate differs', async () => {
+    it('reverts with error IncorrectSimulatedShareRate() when simulated share rate is higher than expected', async () => {
       const simulatedShareRate = BigInt(ETH(2.1)) * 10n ** 9n
       const actualShareRate = BigInt(2) * 10n ** 27n
       await assert.reverts(
@@ -438,11 +438,11 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
             simulatedShareRate: simulatedShareRate.toString(),
           })
         ),
-        `TooHighSimulatedShareRate(${simulatedShareRate.toString()}, ${actualShareRate.toString()})`
+        `IncorrectSimulatedShareRate(${simulatedShareRate.toString()}, ${actualShareRate.toString()})`
       )
     })
 
-    it('reverts with error TooLowSimulatedShareRate() when reported and onchain share rate differs', async () => {
+    it('reverts with error IncorrectSimulatedShareRate() when simulated share rate is lower than expected', async () => {
       const simulatedShareRate = BigInt(ETH(1.9)) * 10n ** 9n
       const actualShareRate = BigInt(2) * 10n ** 27n
       await assert.reverts(
@@ -452,7 +452,7 @@ contract('OracleReportSanityChecker', ([deployer, admin, withdrawalVault, elRewa
             simulatedShareRate: simulatedShareRate.toString(),
           })
         ),
-        `TooLowSimulatedShareRate(${simulatedShareRate.toString()}, ${actualShareRate.toString()})`
+        `IncorrectSimulatedShareRate(${simulatedShareRate.toString()}, ${actualShareRate.toString()})`
       )
     })
 
