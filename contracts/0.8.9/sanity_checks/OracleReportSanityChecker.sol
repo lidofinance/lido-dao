@@ -644,7 +644,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         // (see Lido.getCurrentStakeLimit())
         //
         // thus, the `simulatedShareRateDeviationBPLimit` (L) should be set as follows:
-        // L = SRL * max(CLD, MPR),
+        // L = 2 * SRL * max(CLD, MPR),
         // where:
         // - CLD is one-off CL balance decrease (as BP),
         // - MPR is max positive token rebase (as BP),
