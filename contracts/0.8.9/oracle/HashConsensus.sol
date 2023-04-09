@@ -1034,4 +1034,11 @@ contract HashConsensus is AccessControlEnumerable {
     function _getConsensusVersion() internal view returns (uint256) {
         return IReportAsyncProcessor(_reportProcessor).getConsensusVersion();
     }
+
+    ///
+    /// Certora helper functions
+    ///
+    function computeEpochAtTimestamp(uint256 timestamp) public view returns (uint256) {
+        return _computeEpochAtTimestamp(timestamp);
+    }
 }

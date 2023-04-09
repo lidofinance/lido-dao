@@ -16,7 +16,7 @@ certoraRun \
 --solc solc8.9 \
 \
 --loop_iter 2 \
---staging \
+--cloud \
 --optimistic_loop \
 --send_only \
 --settings -t=500,-mediumTimeout=50,-copyLoopUnroll=17,-optimisticUnboundedHashing=true \
