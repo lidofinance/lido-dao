@@ -152,13 +152,12 @@ rule getCurrentFrameDoesNotRevert() {
 //      setReportProcessor() - MANAGE_REPORT_PROCESSOR_ROLE
 //      submitReport() - only if getIsMember(msg.sender) == true
 //      updateInitialEpoch() - DEFAULT_ADMIN_ROLE
-// Status: Fail, not clear why? probably because of line 934, the AccessControl is failing here
-// https://prover.certora.com/output/80942/499d1405898945f98e5273fb88ac1998/?anonymousKey=dd3a02234cb9cf8353cce5d67859cb538c8774db
-// https://vaas-stg.certora.com/output/80942/b0aebafd7b554b3882fe688da319b9ba/?anonymousKey=4361d0b5bbd895ea4d92beeb16e0deda7cd095c7
+// Status: Pass
+// https://prover.certora.com/output/80942/42f639882bbe4b94bf5b0126311013b2/?anonymousKey=8702698b3953d812f76b895bcc3878460864d7a6
 rule onlyAllowedRoleCanCallMethod(method f) 
     filtered { f -> !f.isView }
 {
-    env e; calldataarg args;
+    env e; calldataarg args; env e2;
 
     bool hasRole_MANAGE_FRAME_CONFIG_ROLE       = hasRole(e,MANAGE_FRAME_CONFIG_ROLE(),e.msg.sender);
     bool hasRole_MANAGE_FAST_LANE_CONFIG_ROLE   = hasRole(e,MANAGE_FAST_LANE_CONFIG_ROLE(),e.msg.sender);
@@ -169,37 +168,42 @@ rule onlyAllowedRoleCanCallMethod(method f)
 
     bool isMember = getIsMember(e,e.msg.sender);
 
+    uint256 quorumBefore = getQuorum(e);
+
     f@withrevert(e,args);
     bool callReverted = lastReverted;
 
+    uint256 quorumAfter = getQuorum(e2);
+
     assert ((f.selector == setFrameConfig(uint256,uint256).selector) &&
-            !hasRole_MANAGE_FRAME_CONFIG_ROLE) => lastReverted;
+            !hasRole_MANAGE_FRAME_CONFIG_ROLE) => callReverted;
     
     assert ((f.selector == setFastLaneLengthSlots(uint256).selector) &&
-            !hasRole_MANAGE_FAST_LANE_CONFIG_ROLE) => lastReverted;
+            !hasRole_MANAGE_FAST_LANE_CONFIG_ROLE) => callReverted;
     
     assert ((f.selector == addMember(address,uint256).selector) &&
-            !hasRole_MANAGE_MEMBERS_AND_QUORUM_ROLE) => lastReverted;
+            !hasRole_MANAGE_MEMBERS_AND_QUORUM_ROLE) => callReverted;
     
     assert ((f.selector == removeMember(address,uint256).selector) &&
-            !hasRole_MANAGE_MEMBERS_AND_QUORUM_ROLE) => lastReverted;
+            !hasRole_MANAGE_MEMBERS_AND_QUORUM_ROLE) => callReverted;
 
     assert ((f.selector == setQuorum(uint256).selector) &&
-            !hasRole_MANAGE_MEMBERS_AND_QUORUM_ROLE &&
-            !hasRole_DISABLE_CONSENSUS_ROLE) => lastReverted;
+            !hasRole_MANAGE_MEMBERS_AND_QUORUM_ROLE &&                          // without permissions, you
+            !hasRole_DISABLE_CONSENSUS_ROLE) => (quorumBefore == quorumAfter);  // cannot change the quorum
     
-    assert ((f.selector == disableConsensus().selector) &&
+    assert ((f.selector == disableConsensus().selector) && 
+            quorumBefore != UNREACHABLE_QUORUM() &&         // this ensures the quorum was not disabled already
             !hasRole_MANAGE_MEMBERS_AND_QUORUM_ROLE &&
-            !hasRole_DISABLE_CONSENSUS_ROLE) => lastReverted;
+            !hasRole_DISABLE_CONSENSUS_ROLE) => callReverted;
     
     assert ((f.selector == setReportProcessor(address).selector) &&
-            !hasRole_MANAGE_REPORT_PROCESSOR_ROLE) => lastReverted;
+            !hasRole_MANAGE_REPORT_PROCESSOR_ROLE) => callReverted;
     
     assert ((f.selector == submitReport(uint256,bytes32,uint256).selector) &&
-            !isMember) => lastReverted;
+            !isMember) => callReverted;
 
     assert ((f.selector == updateInitialEpoch(uint256).selector) &&
-            !hasRole_DEFAULT_ADMIN_ROLE) => lastReverted;
+            !hasRole_DEFAULT_ADMIN_ROLE) => callReverted;
 }
 
 
