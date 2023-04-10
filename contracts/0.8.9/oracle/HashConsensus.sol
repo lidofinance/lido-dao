@@ -1041,4 +1041,22 @@ contract HashConsensus is AccessControlEnumerable {
     function computeEpochAtTimestamp(uint256 timestamp) public view returns (uint256) {
         return _computeEpochAtTimestamp(timestamp);
     }
+
+    function getLengthOfArrays() public view returns (uint256 lengthOf_memberAddresses, uint256 lengthOf_memberStates) {
+        lengthOf_memberAddresses = _memberAddresses.length;
+        lengthOf_memberStates = _memberStates.length;
+    }
+
+    function get_memberIndices1b(address user) public view returns (uint256 index1b) {
+        index1b = _memberIndices1b[user];
+    }
+
+    function get_memberAddresses(uint256 index) public view returns (address user) {
+        if (index < _memberAddresses.length) {
+            user = _memberAddresses[index];
+        }
+        else {
+            user = address(0);
+        }
+    }
 }

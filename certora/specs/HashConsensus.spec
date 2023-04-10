@@ -43,9 +43,6 @@ definition DISABLE_CONSENSUS_ROLE() returns bytes32 = 0x10b016346186602d93fc7a27
 definition MANAGE_FRAME_CONFIG_ROLE() returns bytes32 = 0x921f40f434e049d23969cbe68d9cf3ac1013fbe8945da07963af6f3142de6afe; //keccak256("MANAGE_FRAME_CONFIG_ROLE");
 definition MANAGE_FAST_LANE_CONFIG_ROLE() returns bytes32 = 0x4af6faa30fabb2c4d8d567d06168f9be8adb583156c1ecb424b4832a7e4d6717; //keccak256("MANAGE_FAST_LANE_CONFIG_ROLE");
 definition MANAGE_REPORT_PROCESSOR_ROLE() returns bytes32 = 0xc5219a8d2d0107a57aad00b22081326d173df87bad251126f070df2659770c3e; //keccak256("MANAGE_REPORT_PROCESSOR_ROLE");
-// definition MANAGE_CONSENSUS_CONTRACT_ROLE() returns bytes32 = 0x04a0afbbd09d5ad397fc858789da4f8edd59f5ca5098d70faa490babee945c3b; //keccak256("MANAGE_CONSENSUS_CONTRACT_ROLE");
-// definition MANAGE_CONSENSUS_VERSION_ROLE() returns bytes32 = 0xc31b1e4b732c5173dc51d519dfa432bad95550ecc4b0f9a61c2a558a2a8e4341; //keccak256("MANAGE_CONSENSUS_VERSION_ROLE");
-// definition SUBMIT_DATA_ROLE() returns bytes32 = 0x65fa0c17458517c727737e4153dd477fa3e328cf706640b0f68b1a285c5990da; //keccak256("SUBMIT_DATA_ROLE");
 definition UNREACHABLE_QUORUM() returns uint256 = max_uint256; // type(uint256).max
 definition ZERO_HASH() returns bytes32 = 0; // bytes32(0)
 
@@ -84,10 +81,10 @@ definition ZERO_HASH() returns bytes32 = 0; // bytes32(0)
 //     verify with getFrameConfig() and check that fastLaneLengthSlots < frameConfig.epochsPerFrame * SLOTS_PER_EPOCH
 //  5. addMember() - cannot add an existing member
 //  6. addMember() - cannot add an empty address as a member
-//  7, addMember() - adding a member does not remove any other member
+//  7, addMember() - adding a member does not add/remove any other member
 //  8. addMember() - adding a member increases the total members by 1
 //  9. removeMember() - cannot remove a member that does not exists - reverts
-// 10. removeMember() - removing a member does not remove any other member
+// 10. removeMember() - removing a member does not add/remove any other member
 // 11. removeMember() - removing a member decreases the total members by 1
 // 12. setQuorum() - acts as expectedly, verified by getQuorum()
 // 13. disableConsensus() - acts as expectedly, verified by getQuorum()
@@ -107,6 +104,7 @@ definition ZERO_HASH() returns bytes32 = 0; // bytes32(0)
 // 24. updateInitialEpoch() - updates correctly the initialEpoch as returned by getFrameConfig()
 //                          - only ACL role can call it
 //                          - you cannot call it twice
+// 25. initialEpochSanity rule - once the system is initialized its initialEpoch setting is always sane
 
 
 //  1. All the external view functions cannot revert under any circumstance,
@@ -118,18 +116,14 @@ rule viewFunctionsDoNotRevert(method f)
 {
     env e; calldataarg args;
     require e.block.timestamp > saneTimeConfig();
-
     require e.msg.value == 0; // view functions revert is you send eth
 
     f@withrevert(e,args);
     assert !lastReverted;
 }
 
-/// POTENTIAL ISSUE (in previous version of the code):
-/// SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME can all be set to zero at constructor
-/// if the above are zero => getCurrentFrame() will revert
 // focus only on getCurrentFrame() and verify it does not revert
-// Status: Timeout! (without simplification)
+// Status: Timeout! (without the simplification, shown in saneTimeConfig())
 // https://vaas-stg.certora.com/output/80942/899cc6d765c7467c9e2af018ccca2ca5/?anonymousKey=ca1152175e66f3e61e7d2bffaded5098c62c3bbe
 // Status: Pass (with simplification)
 // https://prover.certora.com/output/80942/9b2a516088b94a73a8a955b2da4798fa/?anonymousKey=342b26e422f091488dcbedf415d9c128ae34d935
@@ -141,6 +135,7 @@ rule getCurrentFrameDoesNotRevert() {
     getCurrentFrame@withrevert(e);
     assert !lastReverted;
 }
+
 
 //  2. Only ACL roles can call the external non-view functions:
 //      setFrameConfig() - MANAGE_FRAME_CONFIG_ROLE 
@@ -206,7 +201,7 @@ rule onlyAllowedRoleCanCallMethod(method f)
             !hasRole_DEFAULT_ADMIN_ROLE) => callReverted;
 }
 
-
+/* Private case of the above:
 // 3a. setFrameConfig() ACL check
 // Status: Pass
 // https://vaas-stg.certora.com/output/80942/af309b535e244a3ca748f0b80f4f301c/?anonymousKey=a0280547905d76770006b8415c1340d089a21f75
@@ -225,6 +220,7 @@ rule setFrameConfigACL() {
 
     assert (!hasRoleR && !isAdmin) => callReverted;
 }
+*/
 
 //  3. setFrameConfig() updates epochsPerFrame in a way that either keeps the current reference slot
 //     the same or increases it by at least the minimum of old and new frame sizes
@@ -275,7 +271,7 @@ rule setFrameConfigCorrectness() {
 
 
 //  4. setFastLaneLengthSlots() works as expected, setting it to zero disables the fast lane subset
-//     verify with getFrameConfig() and check that fastLaneLengthSlots < frameConfig.epochsPerFrame * SLOTS_PER_EPOCH
+//     verify with getFrameConfig()
 // Status: Pass
 // https://prover.certora.com/output/80942/133f5763d704400b8bf17e08db8d01d6/?anonymousKey=c467fc94b9572fb48f8790f6c5ba5872f188ea1b
 rule setFastLaneLengthSlotsCorrectness() {
@@ -286,6 +282,150 @@ rule setFastLaneLengthSlotsCorrectness() {
     initialEpoch, epochsPerFrame, fastLaneLengthSlots = getFrameConfig(e);
 
     assert fastLaneLengthSlots == 0;  // this assert passes: https://prover.certora.com/output/80942/133f5763d704400b8bf17e08db8d01d6/?anonymousKey=c467fc94b9572fb48f8790f6c5ba5872f188ea1b
+}
+
+
+//  5. addMember() - cannot add an existing member
+//  6. addMember() - cannot add an empty address as a member
+// Status: Pass
+// https://prover.certora.com/output/80942/d9d92700466f42b9b284bb7c0664314e/?anonymousKey=dfbcd43aa6f2a327b2fbe32e2ed4b51a06f52f3e
+rule addMemberRevertsCorrectly() {
+    env e; env e2;
+    address userA; uint256 quorum;
+    bool isUserAMember = getIsMember(e,userA);
+
+    addMember@withrevert(e, userA, quorum);                 // call addMember to add user userA
+    bool callReverted = lastReverted;
+
+    assert isUserAMember => callReverted;                   // cannot add existing member, rule 5
+    assert (userA == 0) => callReverted;                    // cannot add empty address, rule 6
+}
+
+
+//  7, addMember() - adding a member does not add/remove any other member
+// Status: Pass
+// https://prover.certora.com/output/80942/c6333d3aad5f47a19a3c91bb05f04e72/?anonymousKey=8ee21a783e8c2bf20dec20e40174f309a5958098
+rule addMemberADoesNotModifyMemberB() {
+    env e; env e2;
+    address userA; uint256 quorum; address userB;
+    bool isUserAMemberBefore = getIsMember(e,userA);
+    bool isUserBMemberBefore = getIsMember(e,userB);
+
+    addMember(e, userA, quorum);                            // call addMember to add user userA
+
+    bool isUserAMemberAfter = getIsMember(e2,userA);
+    bool isUserBMemberAfter = getIsMember(e2,userB);
+
+    require userA != userB;                                 // userA and userB are different
+
+    assert isUserBMemberBefore => isUserBMemberAfter;       // adding userA does not remove userB
+    assert !isUserBMemberBefore => !isUserBMemberAfter;     // adding userA does not add userB
+}
+
+
+//  8. addMember() - adding a member increases the total members by 1
+// Status: Pass
+// https://prover.certora.com/output/80942/f7433cb747754da8a635632b6ae01a2d/?anonymousKey=47221c507f526d533d83e2347625027dfb485b9b
+rule addMemberCorrectness() {
+    env e; env e2;
+
+    uint256 lengthOf_memberAddressesBefore; uint256 lengthOf_memberStatesBefore;
+    lengthOf_memberAddressesBefore, lengthOf_memberStatesBefore = getLengthOfArrays(e);  // using helper
+
+    require lengthOf_memberAddressesBefore == lengthOf_memberStatesBefore;  // those arrays represent the same members
+    require lengthOf_memberAddressesBefore < max_uint256;                   // safe assumption
+
+    address userA; uint256 quorum;
+    bool isUserAMemberBefore = getIsMember(e,userA);
+
+    addMember(e, userA, quorum);                            // call addMember to add user userA
+
+    uint256 lengthOf_memberAddressesAfter; uint256 lengthOf_memberStatesAfter;
+    lengthOf_memberAddressesAfter, lengthOf_memberStatesAfter = getLengthOfArrays(e);  // using helper
+    bool isUserAMemberAfter = getIsMember(e2,userA);
+
+    assert !isUserAMemberBefore;                            // cannot add userA if he was a member before
+    assert isUserAMemberAfter;                              // adding userA correctly
+
+    assert lengthOf_memberAddressesAfter == lengthOf_memberAddressesBefore + 1; // total members increases correctly
+    assert lengthOf_memberStatesAfter == lengthOf_memberStatesBefore + 1;       // total members increases correctly
+}
+
+
+//  9. removeMember() - cannot remove a member that does not exists - reverts
+// Status: Pass
+// https://prover.certora.com/output/80942/81e58babe3e2440bb3831e79a2ec1a52/?anonymousKey=4c882f7a174da428d20939951e7e1855f7b9b46a
+rule removeMemberRevertsCorrectly() {
+    env e;
+    address userA; uint256 quorum;
+    bool isUserAMember = getIsMember(e,userA);
+
+    removeMember@withrevert(e, userA, quorum);              // call removeMember to remove user userA
+    bool callReverted = lastReverted;
+
+    assert !isUserAMember => callReverted;                  // cannot remove a non-existing member
+}
+
+
+// 10. removeMember() - removing a member does not add/remove any other member
+// Status: Pass
+// https://prover.certora.com/output/80942/0711dedd9b0847bd9e5ef3741e6f0017/?anonymousKey=28bc4551b778792663a295c140e8b0c60369ae38
+rule removeMemberADoesNotModifyMemberB() {
+    env e; env e2;
+    address userA; uint256 quorum; address userB;
+    bool isUserAMemberBefore = getIsMember(e,userA);
+    bool isUserBMemberBefore = getIsMember(e,userB);
+    uint256 index1bUserABefore = get_memberIndices1b(e,userA);
+    uint256 index1bUserBBefore = get_memberIndices1b(e,userB);
+
+    uint256 lengthOf_memberAddressesBefore; uint256 lengthOf_memberStatesBefore;
+    lengthOf_memberAddressesBefore, lengthOf_memberStatesBefore = getLengthOfArrays(e);  // using helper
+
+    if (!isUserBMemberBefore) {
+        address user = get_memberAddresses(e,lengthOf_memberAddressesBefore - 1);
+        require user != userB;      // safe assumption, if userB is not a member that must hold too (verify?)
+    }
+
+    require lengthOf_memberAddressesBefore == lengthOf_memberStatesBefore;  // those arrays represent the same members
+
+    removeMember(e, userA, quorum);                         // call removeMember to remove userA
+
+    bool isUserAMemberAfter = getIsMember(e2,userA);
+    bool isUserBMemberAfter = getIsMember(e2,userB);
+    uint256 index1bUserAAfter = get_memberIndices1b(e,userA);
+    uint256 index1bUserBAfter = get_memberIndices1b(e,userB);
+
+    require userA != userB;                                 // userA and userB are different
+
+    assert isUserBMemberBefore => isUserBMemberAfter;       // adding userA does not remove userB
+    assert !isUserBMemberBefore => !isUserBMemberAfter;     // adding userA does not add userB
+}
+
+// 11. removeMember() - removing a member decreases the total members by 1
+// Status: Pass
+// https://prover.certora.com/output/80942/3f82ae3e6cd044578656753520da3cec/?anonymousKey=0ed4f43d9f0ea4d0c923e368f8704f635d2559c0
+rule removeMemberCorrectness() {
+    env e; env e2;
+
+    uint256 lengthOf_memberAddressesBefore; uint256 lengthOf_memberStatesBefore;
+    lengthOf_memberAddressesBefore, lengthOf_memberStatesBefore = getLengthOfArrays(e);  // using helper
+
+    require lengthOf_memberAddressesBefore == lengthOf_memberStatesBefore;  // those arrays represent the same members
+
+    address userA; uint256 quorum;
+    bool isUserAMemberBefore = getIsMember(e,userA);
+
+    removeMember(e, userA, quorum);                            // call removeMember to remove user userA
+
+    uint256 lengthOf_memberAddressesAfter; uint256 lengthOf_memberStatesAfter;
+    lengthOf_memberAddressesAfter, lengthOf_memberStatesAfter = getLengthOfArrays(e);  // using helper
+    bool isUserAMemberAfter = getIsMember(e2,userA);
+
+    assert isUserAMemberBefore;                            // cannot remove userA if he was not a member before
+    assert !isUserAMemberAfter;                            // removing userA correctly
+
+    assert lengthOf_memberAddressesAfter == lengthOf_memberAddressesBefore - 1; // total members decreases correctly
+    assert lengthOf_memberStatesAfter == lengthOf_memberStatesBefore - 1;       // total members decreases correctly
 }
 
 
@@ -314,6 +454,42 @@ rule updateInitialEpochCorrectness() {
     assert (computeEpochAtTimestamp(e2, e2.block.timestamp) < initialEpoch1);  // initialEpoch1 still has not arrived: verifies error InitialEpochAlreadyArrived
 }
 
+
+// 25. initialEpochSanity rule - once the system is initialized its initialEpoch setting is always sane
+// Status: Pass
+// https://prover.certora.com/output/80942/0dec7449b4c049a4b6cca667f094aa91/?anonymousKey=fd75c248d93e5af85a046ca5b1c42723eea43d60
+rule initialEpochSanity(method f) 
+    filtered { f -> !f.isView && 
+                    f.selector != updateInitialEpoch(uint256).selector } // this should revert once initialized
+{
+    env e; calldataarg args; env e2;
+    require e.block.timestamp > saneTimeConfig();       // time moves forward (saneTimeConfig is for correct initializing)
+
+    f(e,args);                                          // can call any state changing method
+
+    require e2.block.timestamp >= e.block.timestamp;    // after the call above, verify that the initialEpoch is sane
+
+    uint256 slotsPerEpoch; uint256 secondsPerSlot; uint256 genesisTime;
+    slotsPerEpoch, secondsPerSlot, genesisTime = getChainConfig(e2);
+    
+    uint256 initialEpoch; uint256 epochsPerFrame; uint256 fastLaneLengthSlots;
+    initialEpoch, epochsPerFrame, fastLaneLengthSlots = getFrameConfig(e2);
+
+    assert initialEpoch <= ((e2.block.timestamp - genesisTime) / (secondsPerSlot * slotsPerEpoch)); // sane configuration of initialEpoch
+}
+
+
+// 26. updateInitialEpoch should revert once the system is initialized correctly and the initialEpoch passed
+// Status: - 
+// 
+rule updateInitialEpochRevertsCorrectly() {
+    env e; calldataarg args;
+    require e.block.timestamp > saneTimeConfig();       // time moves forward (saneTimeConfig is for correct initializing)
+
+    updateInitialEpoch@withrevert(e,args);
+
+    assert lastReverted;
+}
 
 
 
