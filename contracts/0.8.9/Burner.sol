@@ -164,7 +164,7 @@ contract Burner is IBurner, AccessControlEnumerable {
       *
       */
     function requestBurnMyStETHForCover(uint256 _stETHAmountToBurn) external onlyRole(REQUEST_BURN_MY_STETH_ROLE) {
-        require(IStETH(STETH).transferFrom(msg.sender, address(this), _stETHAmountToBurn));
+        IStETH(STETH).transferFrom(msg.sender, address(this), _stETHAmountToBurn);
         uint256 sharesAmount = IStETH(STETH).getSharesByPooledEth(_stETHAmountToBurn);
         _requestBurn(sharesAmount, _stETHAmountToBurn, true /* _isCover */);
     }
@@ -197,7 +197,7 @@ contract Burner is IBurner, AccessControlEnumerable {
       *
       */
     function requestBurnMyStETH(uint256 _stETHAmountToBurn) external onlyRole(REQUEST_BURN_MY_STETH_ROLE) {
-        require(IStETH(STETH).transferFrom(msg.sender, address(this), _stETHAmountToBurn));
+        IStETH(STETH).transferFrom(msg.sender, address(this), _stETHAmountToBurn);
         uint256 sharesAmount = IStETH(STETH).getSharesByPooledEth(_stETHAmountToBurn);
         _requestBurn(sharesAmount, _stETHAmountToBurn, false /* _isCover */);
     }
@@ -231,7 +231,7 @@ contract Burner is IBurner, AccessControlEnumerable {
 
             emit ExcessStETHRecovered(msg.sender, excessStETH, excessSharesAmount);
 
-            require(IStETH(STETH).transfer(TREASURY, excessStETH));
+            IStETH(STETH).transfer(TREASURY, excessStETH);
         }
     }
 
