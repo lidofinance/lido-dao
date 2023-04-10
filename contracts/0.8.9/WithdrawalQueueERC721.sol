@@ -19,14 +19,10 @@ import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.so
 import {UnstructuredRefStorage} from "./lib/UnstructuredRefStorage.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 
-/**
-  * @title Interface defining INFTDescriptor to generate ERC721 tokenURI
-  */
+/// @title Interface defining INFTDescriptor to generate ERC721 tokenURI
 interface INFTDescriptor {
-    /**
-      * @notice Returns ERC721 tokenURI content
-      * @param _requestId is an id for particular withdrawal request
-      */
+    /// @notice Returns ERC721 tokenURI content
+    /// @param _requestId is an id for particular withdrawal request
     function constructTokenURI(uint256 _requestId) external view returns (string memory);
 }
 
@@ -44,7 +40,8 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue, IERC4906 {
     bytes32 internal constant TOKEN_APPROVALS_POSITION = keccak256("lido.WithdrawalQueueERC721.tokenApprovals");
     bytes32 internal constant OPERATOR_APPROVALS_POSITION = keccak256("lido.WithdrawalQueueERC721.operatorApprovals");
     bytes32 internal constant BASE_URI_POSITION = keccak256("lido.WithdrawalQueueERC721.baseUri");
-    bytes32 internal constant NFT_DESCRIPTOR_ADDRESS_POSITION = keccak256("lido.WithdrawalQueueERC721.nftDescriptorAddress");
+    bytes32 internal constant NFT_DESCRIPTOR_ADDRESS_POSITION =
+        keccak256("lido.WithdrawalQueueERC721.nftDescriptorAddress");
 
     bytes32 public constant MANAGE_TOKEN_URI_ROLE = keccak256("MANAGE_TOKEN_URI_ROLE");
 
@@ -239,7 +236,9 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue, IERC4906 {
         address msgSender = msg.sender;
         if (
             !(_from == msgSender || isApprovedForAll(_from, msgSender) || _getTokenApprovals()[_requestId] == msgSender)
-        ) revert NotOwnerOrApproved(msgSender);
+        ) {
+            revert NotOwnerOrApproved(msgSender);
+        }
 
         delete _getTokenApprovals()[_requestId];
         request.owner = _to;

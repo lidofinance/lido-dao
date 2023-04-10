@@ -85,9 +85,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @dev Reverts if `_admin` equals to `address(0)`
     /// @dev NB! It's initialized in paused state by default and should be resumed explicitly to start
     /// @dev NB! Bunker mode is disabled by default
-    function initialize(address _admin)
-        external
-    {
+    function initialize(address _admin) external {
         if (_admin == address(0)) revert AdminZeroAddress();
 
         _initialize(_admin);
@@ -308,7 +306,9 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @param _isBunkerModeNow is bunker mode reported by oracle
     /// @param _bunkerStartTimestamp timestamp of start of the bunker mode
     /// @param _currentReportTimestamp timestamp of the current report ref slot
-    function onOracleReport(bool _isBunkerModeNow, uint256 _bunkerStartTimestamp, uint256 _currentReportTimestamp) external {
+    function onOracleReport(bool _isBunkerModeNow, uint256 _bunkerStartTimestamp, uint256 _currentReportTimestamp)
+        external
+    {
         _checkRole(ORACLE_ROLE, msg.sender);
         if (_bunkerStartTimestamp >= block.timestamp) revert InvalidReportTimestamp();
         if (_currentReportTimestamp >= block.timestamp) revert InvalidReportTimestamp();
@@ -347,9 +347,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     function _emitTransfer(address from, address to, uint256 _requestId) internal virtual;
 
     /// @dev internal initialization helper. Doesn't check provided addresses intentionally
-    function _initialize(address _admin)
-        internal
-    {
+    function _initialize(address _admin) internal {
         _initializeQueue();
         _pauseFor(PAUSE_INFINITELY);
 
