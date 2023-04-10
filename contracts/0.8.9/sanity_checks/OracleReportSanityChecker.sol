@@ -638,20 +638,21 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         // and the actual report delivery slot
         //
         // it happens because the oracle daemon snapshots rewards or losses at the reference slot,
-        // and when new ether was submitted together with minting new `stETH`, the oracle daemon still delivers
-        // the same amount of rewards or losses, which now is applicable to more 'shareholders',
-        // lowering the effect per a single share (i.e, changing share rate)
+        // and then calculates simulated share rate, but if new ether was submitted together with minting new `stETH`
+        // after the reference slot passed, the oracle daemon still submits the same amount of rewards or losses,
+        // which now is applicable to more 'shareholders', lowering the impact per a single share
+        // (i.e, changing the actual share rate)
         //
-        // lower simulated share can be for a negative token rebase (token rebase >= CL one-off balance decrease)
-        // higher simulated share can be for a positive token rebase (token rebase <= max positive token rebase)
+        // simulated share rate ≤ actual share rate can be for a negative token rebase
+        // simulated share rate ≥ actual share rate can be for a positive token rebase
         //
-        // choosing the margin:
-        //
-        // user-submitted ether & minted `stETH` don't exceed the current staking rate limit
+        // Given that:
+        // 1) CL one-off balance decrease ≤ token rebase ≤ max positive token rebase
+        // 2) user-submitted ether & minted `stETH` don't exceed the current staking rate limit
         // (see Lido.getCurrentStakeLimit())
         //
-        // thus, the `simulatedShareRateDeviationBPLimit` (L) should be set as follows:
-        // L = 2 * SRL * max(CLD, MPR),
+        // can conclude that `simulatedShareRateDeviationBPLimit` (L) should be set as follows:
+        // L = (2 * SRL) * max(CLD, MPR),
         // where:
         // - CLD is consensus layer one-off balance decrease (as BP),
         // - MPR is max positive token rebase (as BP),
