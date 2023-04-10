@@ -527,8 +527,14 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
 
     it('return 0 for claimed request', async () => {
       await withdrawalQueue.finalize([1], shareRate(1), { from: steth.address, value: ETH(1) })
-      await withdrawalQueue.claimWithdrawals([1], [1], { from: owner })
-
+      const amountOfETH = (await withdrawalQueue.getClaimableEther([1], [1]))[0]
+      const tx = await withdrawalQueue.claimWithdrawals([1], [1], { from: owner })
+      assert.emits(tx, 'WithdrawalClaimed', {
+        requestId: 1,
+        owner,
+        receiver: owner,
+        amountOfETH,
+      })
       assert.equals(await withdrawalQueue.getClaimableEther([1], [1]), ETH(0))
       assert.equals(await withdrawalQueue.getClaimableEther([1], [51]), ETH(0))
     })
@@ -584,7 +590,13 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
 
       const balanceBefore = bn(await ethers.provider.getBalance(user))
 
-      await withdrawalQueue.claimWithdrawalsTo([1], [1], user, { from: owner })
+      const tx = await withdrawalQueue.claimWithdrawalsTo([1], [1], user, { from: owner })
+      assert.emits(tx, 'WithdrawalClaimed', {
+        requestId: 1,
+        owner,
+        receiver: user,
+        amountOfETH: amount,
+      })
 
       assert.equals(await ethers.provider.getBalance(user), balanceBefore.add(bn(amount)))
     })
@@ -631,7 +643,13 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
 
       const balanceBefore = bn(await ethers.provider.getBalance(owner))
 
-      await withdrawalQueue.claimWithdrawal(1, { from: owner, gasPrice: 0 })
+      const tx = await withdrawalQueue.claimWithdrawal(1, { from: owner, gasPrice: 0 })
+      assert.emits(tx, 'WithdrawalClaimed', {
+        requestId: 1,
+        owner,
+        receiver: owner,
+        amountOfETH: amount,
+      })
 
       assert.equals(await ethers.provider.getBalance(owner), balanceBefore.add(bn(amount)))
     })
@@ -726,7 +744,17 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       await withdrawalQueue.finalize([secondRequestId], defaultShareRate, { from: steth.address, value: ETH(30) })
 
       const balanceBefore = bn(await ethers.provider.getBalance(owner))
-      await withdrawalQueue.claimWithdrawals([1, 2], [1, 1], { from: owner, gasPrice: 0 })
+      const tx = await withdrawalQueue.claimWithdrawals([1, 2], [1, 1], { from: owner, gasPrice: 0 })
+      assert.emits(tx, 'WithdrawalClaimed', {
+        requestId: 1,
+        owner,
+        receiver: owner,
+      })
+      assert.emits(tx, 'WithdrawalClaimed', {
+        requestId: 2,
+        owner,
+        receiver: owner,
+      })
       assert.almostEqual(await ethers.provider.getBalance(owner), balanceBefore.add(bn(ETH(30))), ALLOWED_ERROR_WEI * 2)
     })
   })
