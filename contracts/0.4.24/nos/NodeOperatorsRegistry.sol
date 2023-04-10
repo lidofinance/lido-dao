@@ -85,7 +85,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     // SigningKeysStats
     /// @dev Operator's max validator keys count approved for deposit by the DAO
     uint8 internal constant TOTAL_VETTED_KEYS_COUNT_OFFSET = 0;
-    /// @dev Number of keys in the EXITED state for all operator for all time
+    /// @dev Number of keys in the EXITED state of this operator for all time
     uint8 internal constant TOTAL_EXITED_KEYS_COUNT_OFFSET = 1;
     /// @dev Total number of keys of this operator for all time
     uint8 internal constant TOTAL_KEYS_COUNT_OFFSET = 2;
