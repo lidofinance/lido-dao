@@ -2205,7 +2205,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await withdrawalQueue.resume({ from: appManager })
       assert.isFalse(await withdrawalQueue.isPaused())
 
-      // Stranger decides to withdraw his stETH(1)
+      // Stranger decides to withdraw his stETH(10)
       await lido.approve(withdrawalQueue.address, StETH(10), { from: stranger })
       await withdrawalQueue.requestWithdrawals([StETH(10)], stranger, { from: stranger })
       assert.equals(await withdrawalQueue.unfinalizedStETH(), StETH(10))
@@ -2296,7 +2296,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await withdrawalQueue.resume({ from: appManager })
       assert.isFalse(await withdrawalQueue.isPaused())
 
-      // Stranger decides to withdraw his stETH(1)
+      // Stranger decides to withdraw his stETH(10)
       await lido.approve(withdrawalQueue.address, StETH(10), { from: stranger })
       await withdrawalQueue.requestWithdrawals([StETH(10)], stranger, { from: stranger })
       assert.equals(await withdrawalQueue.unfinalizedStETH(), StETH(10))
