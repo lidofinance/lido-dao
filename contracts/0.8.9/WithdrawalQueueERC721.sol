@@ -143,16 +143,16 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue, IERC4906 {
         emit NftDescriptorAddressSet(_nftDescriptorAddress);
     }
 
-    /// @notice Finalize requests from last finalized one up to `_lastRequestIdToFinalize`
-    /// @dev ether to finalize all the requests should be calculated using `finalizationValue()` and sent along
-    function finalize(uint256[] calldata _batches, uint256 _maxShareRate) external payable {
+    /// @notice Finalize requests from last finalized one up to `_lastRequestIdToBeFinalized`
+    /// @dev ether to finalize all the requests should be calculated using `prefinalize()` and sent along
+    function finalize(uint256 _lastRequestIdToBeFinalized, uint256 _maxShareRate) external payable {
         _checkResumed();
         _checkRole(FINALIZE_ROLE, msg.sender);
 
-        _finalize(_batches, msg.value, _maxShareRate);
+        _finalize(_lastRequestIdToBeFinalized, msg.value, _maxShareRate);
 
         // ERC4906 metadata update event
-        emit BatchMetadataUpdate(getLastFinalizedRequestId() + 1, _batches[_batches.length - 1]);
+        emit BatchMetadataUpdate(getLastFinalizedRequestId() + 1, _lastRequestIdToBeFinalized);
     }
 
     /// @dev See {IERC721-balanceOf}.

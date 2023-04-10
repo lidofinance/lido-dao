@@ -126,7 +126,7 @@ contract('WithdrawalQueue', ([owner, user]) => {
       })
 
       const finalization_args = [
-        [batchEnd],
+        batchEnd,
         slash ? aboveShareRate : belowShareRate,
         { from: owner, value: prefinalize_res.ethToLock, gasPrice: gasPrice++ },
       ]

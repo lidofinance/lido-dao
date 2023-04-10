@@ -37,7 +37,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
 
     assert.equalsDelta(batch.ethToLock, budget, 2)
 
-    await withdrawalQueue.finalize(batches, finalizationShareRate, {
+    await withdrawalQueue.finalize(batches[batches.length - 1], finalizationShareRate, {
       from: daoAgent,
       value: batch.ethToLock,
     })
