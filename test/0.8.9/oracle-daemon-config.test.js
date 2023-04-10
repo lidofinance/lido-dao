@@ -116,6 +116,14 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
         `EmptyValue("${defaultKey}")`
       )
     })
+
+    it('revers when set key with the same value', async () => {
+      await config.set(defaultKey, defaultValue, { from: manager })
+      await assert.revertsWithCustomError(
+        config.update(defaultKey, defaultValue, { from: manager }),
+        `ValueIsNotChanged("${defaultKey}", "${defaultValue}")`
+      )
+    })
   })
 
   describe('access control', async () => {
