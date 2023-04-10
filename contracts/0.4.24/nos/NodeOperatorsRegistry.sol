@@ -1441,6 +1441,8 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     function _onlyValidRewardAddress(address _rewardAddress) internal view {
         _onlyNonZeroAddress(_rewardAddress);
+        // The Lido address is forbidden explicitly because stETH transfers on this contract will revert
+        // See onExitedAndStuckValidatorsCountsUpdated() and StETH._transferShares() for details
         require(_rewardAddress != getLocator().lido(), "LIDO_REWARD_ADDRESS");
     }
 
