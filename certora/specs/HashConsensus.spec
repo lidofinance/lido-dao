@@ -88,7 +88,7 @@ definition ZERO_HASH() returns bytes32 = 0; // bytes32(0)
 // 11. removeMember() - removing a member decreases the total members by 1
 // 12. setQuorum() - acts as expectedly, verified by getQuorum()
 // 13. disableConsensus() - acts as expectedly, verified by getQuorum()
-// 14. setReportProcessor() - cannot set an empty address
+// 14. setReportProcessor() - acts as expectedly, verified by getReportProcessor(), also cannot set an empty address or the previous address
 // 15. submitReport() - slot > max_uint64 => revert
 // 16. submitReport() - slot < currentRefSlot => revert
 // 17. submitReport() - slot <= lastProcessingRefSlot => revert
@@ -401,6 +401,7 @@ rule removeMemberADoesNotModifyMemberB() {
     assert !isUserBMemberBefore => !isUserBMemberAfter;     // adding userA does not add userB
 }
 
+
 // 11. removeMember() - removing a member decreases the total members by 1
 // Status: Pass
 // https://prover.certora.com/output/80942/3f82ae3e6cd044578656753520da3cec/?anonymousKey=0ed4f43d9f0ea4d0c923e368f8704f635d2559c0
@@ -427,6 +428,56 @@ rule removeMemberCorrectness() {
     assert lengthOf_memberAddressesAfter == lengthOf_memberAddressesBefore - 1; // total members decreases correctly
     assert lengthOf_memberStatesAfter == lengthOf_memberStatesBefore - 1;       // total members decreases correctly
 }
+
+
+// 12. setQuorum() - acts as expectedly, verified by getQuorum()
+// Status: Pass
+// https://prover.certora.com/output/80942/87e87d0800a54cab8e65afa68a3817c7/?anonymousKey=b6d525a0007a9ffe891f56477378942c27f7bece
+rule setQuorumCorrectness() {
+    env e; env e2;
+
+    uint256 lengthOf_memberAddresses; uint256 lengthOf_memberStates;
+    lengthOf_memberAddresses, lengthOf_memberStates = getLengthOfArrays(e);  // using helper
+    require lengthOf_memberAddresses == lengthOf_memberStates;  // those arrays represent the same members
+
+    uint256 quorumBefore = getQuorum(e);
+    uint256 quorum;
+    setQuorum@withrevert(e,quorum);
+    bool callReverted = lastReverted;
+    uint256 quorumAfter = getQuorum(e2);
+
+    assert (quorum <= lengthOf_memberAddresses / 2) => callReverted;
+    assert (!callReverted)                          => quorumAfter == quorum;
+}
+
+
+// 13. disableConsensus() - acts as expectedly, verified by getQuorum()
+// Status: Pass
+// https://prover.certora.com/output/80942/5ed38df088824591989c89b3bef2be35/?anonymousKey=1d644889f3568f43a5809c7e6c1d09b9b18f4bd3
+rule disableConsensusCorrectness() {
+    env e; env e2;
+    disableConsensus(e);
+    uint256 quorumAfter = getQuorum(e2);
+    assert quorumAfter == UNREACHABLE_QUORUM();
+}
+
+
+// 14. setReportProcessor() - acts as expectedly, verified by getReportProcessor(), also cannot set an empty address or the previous address
+// Status: Pass
+// https://prover.certora.com/output/80942/e93f597cf66240a4ad143839649692a3/?anonymousKey=ef2ca4c22318b6b1c22f86681e2ece751f4abaa6
+rule setReportProcessorCorrectness() {
+    env e; env e2;
+    address reportProcessorBefore = getReportProcessor(e);
+    address reportProcessor;
+    setReportProcessor@withrevert(e, reportProcessor);
+    bool callReverted = lastReverted;
+    address reportProcessorAfter = getReportProcessor(e2);
+
+    assert (reportProcessor == reportProcessorBefore) => callReverted;
+    assert (reportProcessor == 0) => callReverted;
+    assert !callReverted => (reportProcessorAfter == reportProcessor);
+}
+
 
 
 // 24. updateInitialEpoch() - updates correctly the initialEpoch as returned by getFrameConfig()
