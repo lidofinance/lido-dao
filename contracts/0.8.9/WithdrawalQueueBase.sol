@@ -154,10 +154,10 @@ abstract contract WithdrawalQueueBase {
     //  - current share rate of the protocol
     //  - id of the last request that can be finalized
     //  - the amount of eth that must be locked for these requests
-    // To calculate the eth amount we'll need to know which requests int the queue will be finalized as nominal
+    // To calculate the eth amount we'll need to know which requests in the queue will be finalized as nominal
     // and which as discounted and the exact value of the discount. It's impossible to calculate without the unbounded
     // loop over the unfinalized part of the queue. So, we need to extract a part of the algorithm off-chain, bring the
-    // result with oracle report and check it later and check the resukt later.
+    // result with oracle report and check it later and check the result later.
     // So, we came to this solution:
     // Off-chain
     // 1. Oracle iterates over the queue off-chain and calculate the id of the latest finalizable request
@@ -171,14 +171,14 @@ abstract contract WithdrawalQueueBase {
     //  set's the discount checkpoint for these request's if required that will be applied on claim for each request's
     // individually depending on request's share rate.
 
-    /// @notice transient state that is used to pass intemediate results between several `calculateFinalizationBatches`
-    //   invokations
+    /// @notice transient state that is used to pass intermediate results between several `calculateFinalizationBatches`
+    //   invocations
     struct BatchesCalculationState {
         /// @notice amount of ether available in the protocol that can be used to finalize withdrawal requests
         ///  Will decrease on each invokation and will be equal to the remainder when calculation is finished
         ///  Should be set before the first invokation
         uint256 remainingEthBudget;
-        /// @notice flag that is `true` if returned state is final and `false` if more invokations required
+        /// @notice flag that is `true` if returned state is final and `false` if more invocations required
         bool finished;
         /// @notice static array to store all the batches ending request id
         uint256[MAX_BATCHES_LENGTH] batches;
@@ -204,10 +204,10 @@ abstract contract WithdrawalQueueBase {
     ///
     /// @param _maxShareRate current share rate of the protocol with 1e27 precision
     /// @param _maxTimestamp max timestamp of the request that can be finalized
-    /// @param _maxRequestsPerCall max request number that can be processed by the call. Better to me max possible
+    /// @param _maxRequestsPerCall max request number that can be processed by the call. Better to be max possible
     ///  number for EL node to handle before hitting `out of gas`. More this number is less calls it will require to
     ///  calculate the result
-    /// @param _state structure that accumulates the state across multiple invokations to overcome gas limits.
+    /// @param _state structure that accumulates the state across multiple invocations to overcome gas limits.
     ///  To start calculation you should pass `state.remainingEthBudget` and `state.finished == false` and then invoke
     ///  the function with returned `state` until it returns a state with `finished` flag set
     /// @return state that was changed during this function invokation.
