@@ -38,7 +38,7 @@ contract OracleDaemonConfig is AccessControlEnumerable {
     function update(string calldata _key, bytes calldata _value) external onlyRole(CONFIG_MANAGER_ROLE) {
         if (values[_key].length == 0) revert ValueDoesntExist(_key);
         if (_value.length == 0) revert EmptyValue(_key);
-        if (keccak256(values[_key]) == keccak256(_value)) revert ValueIsNotChanged(_key, _value);
+        if (keccak256(values[_key]) == keccak256(_value)) revert ValueIsSame(_key, _value);
         values[_key] = _value;
 
         emit ConfigValueUpdated(_key, _value);
@@ -77,7 +77,7 @@ contract OracleDaemonConfig is AccessControlEnumerable {
     error EmptyValue(string key);
     error ValueDoesntExist(string key);
     error ZeroAddress();
-    error ValueIsNotChanged(string key, bytes value);
+    error ValueIsSame(string key, bytes value);
 
     event ConfigValueSet(string key, bytes value);
     event ConfigValueUpdated(string key, bytes value);
