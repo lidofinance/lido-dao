@@ -302,18 +302,6 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         }
     }
 
-    /// @notice Finalize requests from last finalized one up to `_lastRequestIdToFinalize`
-    /// @dev ether to finalize all the requests should be calculated using `finalizationValue()` and sent along
-    function finalize(uint256[] calldata _batches, uint256 _maxShareRate)
-        external
-        payable
-    {
-        _checkResumed();
-        _checkRole(FINALIZE_ROLE, msg.sender);
-
-        _finalize(_batches, msg.value, _maxShareRate);
-    }
-
     /// @notice Update bunker mode state and last report timestamp
     /// @dev should be called by oracle
     ///

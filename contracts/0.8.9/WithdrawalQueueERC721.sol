@@ -8,6 +8,7 @@ import {IERC721} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721Receiver.sol";
 import {IERC721Metadata} from "@openzeppelin/contracts-v4.4/token/ERC721/extensions/IERC721Metadata.sol";
 import {IERC165} from "@openzeppelin/contracts-v4.4/utils/introspection/IERC165.sol";
+import {IERC4906} from "./interfaces/IERC4906.sol";
 
 import {EnumerableSet} from "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
 import {Address} from "@openzeppelin/contracts-v4.4/utils/Address.sol";
@@ -33,7 +34,7 @@ interface INFTDescriptor {
 /// NFT is minted on every request and burned on claim
 ///
 /// @author psirex, folkyatina
-contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
+contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue, IERC4906 {
     using Address for address;
     using Strings for uint256;
     using EnumerableSet for EnumerableSet.UintSet;
@@ -91,7 +92,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
         returns (bool)
     {
         return interfaceId == type(IERC721).interfaceId || interfaceId == type(IERC721Metadata).interfaceId
-            || super.supportsInterface(interfaceId);
+            || interfaceId == bytes4(0x49064906) || super.supportsInterface(interfaceId);
     }
 
     /// @dev Se_toBytes321Metadata-name}.
@@ -114,8 +115,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
         if (nftDescriptorAddress != address(0)) {
             return INFTDescriptor(nftDescriptorAddress).constructTokenURI(_requestId);
         } else {
-            string memory baseURI = _getBaseURI().value;
-            return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, _requestId.toString())) : "";
+            return _constructTokenUri(_requestId);
         }
     }
 
@@ -144,6 +144,18 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
     function setNFTDescriptorAddress(address _nftDescriptorAddress) external onlyRole(MANAGE_TOKEN_URI_ROLE) {
         NFT_DESCRIPTOR_ADDRESS_POSITION.setStorageAddress(_nftDescriptorAddress);
         emit NftDescriptorAddressSet(_nftDescriptorAddress);
+    }
+
+    /// @notice Finalize requests from last finalized one up to `_lastRequestIdToFinalize`
+    /// @dev ether to finalize all the requests should be calculated using `finalizationValue()` and sent along
+    function finalize(uint256[] calldata _batches, uint256 _maxShareRate) external payable {
+        _checkResumed();
+        _checkRole(FINALIZE_ROLE, msg.sender);
+
+        _finalize(_batches, msg.value, _maxShareRate);
+
+        // ERC4906 metadata update event
+        emit BatchMetadataUpdate(getLastFinalizedRequestId() + 1, _batches[_batches.length - 1]);
     }
 
     /// @dev See {IERC721-balanceOf}.
@@ -337,5 +349,32 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
         assembly {
             baseURI.slot := position
         }
+    }
+
+    function _constructTokenUri(uint256 _requestId) internal view returns (string memory) {
+        string memory baseURI = _getBaseURI().value;
+        if (bytes(baseURI).length == 0) return "";
+
+        // ${baseUri}/${_requestId}?state=finalized|unfinalized&amount=${amount}&created_at=${timestamp}
+        // we still have no string.concat in 0.8.9, so we have to do it with bytes
+        bool finalized = _requestId <= getLastFinalizedRequestId();
+        return string(
+            bytes.concat(
+                bytes(baseURI),
+                bytes(_requestId.toString()),
+                bytes("?status="),
+                bytes(finalized ? "finalized" : "pending"),
+                bytes("&amount="),
+                bytes(
+                    finalized
+                        ? _getClaimableEther(_requestId, _findCheckpointHint(_requestId, 1, getLastCheckpointIndex()))
+                            .toString()
+                        : uint256(_getQueue()[_requestId].cumulativeStETH - _getQueue()[_requestId - 1].cumulativeStETH)
+                            .toString()
+                ),
+                bytes("&created_at="),
+                bytes(uint256(_getQueue()[_requestId].timestamp).toString())
+            )
+        );
     }
 }

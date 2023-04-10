@@ -105,7 +105,29 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
 
     it('returns tokenURI without nftDescriptor', async () => {
       await withdrawalQueue.setBaseURI(baseTokenUri, { from: tokenUriManager })
-      assert.equals(await withdrawalQueue.tokenURI(1), `${baseTokenUri}${requestId}`)
+      assert.equals(
+        await withdrawalQueue.tokenURI(1),
+        `${baseTokenUri}${requestId}?status=pending&amount=${ETH(25)}&created_at=${
+          (await withdrawalQueue.getWithdrawalStatus([1]))[0].timestamp
+        }`
+      )
+      const batch = await withdrawalQueue.prefinalize([1], shareRate(1))
+      await withdrawalQueue.finalize([1], shareRate(1), { from: daoAgent, value: batch.ethToLock })
+      await withdrawalQueue.claimWithdrawal(1, { from: user })
+    })
+
+    it('correct tokenURI after finalization', async () => {
+      await withdrawalQueue.setBaseURI(baseTokenUri, { from: tokenUriManager })
+
+      const batch = await withdrawalQueue.prefinalize([1], shareRate(1))
+      await withdrawalQueue.finalize([1], shareRate(300), { from: daoAgent, value: batch.ethToLock })
+
+      assert.equals(
+        await withdrawalQueue.tokenURI(1),
+        `${baseTokenUri}${requestId}?status=finalized&amount=${
+          (await withdrawalQueue.getClaimableEther([1], [1]))[0]
+        }&created_at=${(await withdrawalQueue.getWithdrawalStatus([1]))[0].timestamp}`
+      )
     })
 
     it('returns tokenURI without nftDescriptor and baseUri', async () => {
@@ -466,7 +488,12 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
 
       assert.equals(await withdrawalQueue.balanceOf(user), 2)
       assert.equals(await withdrawalQueue.ownerOf(1), user)
-      assert.equals(await withdrawalQueue.tokenURI(1), 'https://example.com/1')
+      assert.equals(
+        await withdrawalQueue.tokenURI(1),
+        `https://example.com/1?status=pending&amount=25000000000000000000&created_at=${
+          (await withdrawalQueue.getWithdrawalStatus([1]))[0].timestamp
+        }`
+      )
     })
 
     it('should mint with nftDescriptor', async () => {
