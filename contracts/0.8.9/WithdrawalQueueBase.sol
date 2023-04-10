@@ -70,10 +70,10 @@ abstract contract WithdrawalQueueBase {
         uint256 amountOfStETH;
         /// @notice amount of stETH shares locked on withdrawal queue for this request
         uint256 amountOfShares;
-        /// @notice address that can claim or transfer this request
-        address owner;
         /// @notice timestamp of when the request was created, in seconds
         uint256 timestamp;
+        /// @notice address that can claim or transfer this request
+        address owner;
         /// @notice true, if request is finalized
         bool isFinalized;
         /// @notice true, if request is claimed. Request is claimable if (isFinalized && !isClaimed)
@@ -408,8 +408,8 @@ abstract contract WithdrawalQueueBase {
         status = WithdrawalRequestStatus(
             request.cumulativeStETH - previousRequest.cumulativeStETH,
             request.cumulativeShares - previousRequest.cumulativeShares,
-            request.owner,
             request.timestamp,
+            request.owner,
             _requestId <= getLastFinalizedRequestId(),
             request.claimed
         );
