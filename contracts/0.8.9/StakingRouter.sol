@@ -497,7 +497,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             uint256 totalExitedValidators,
             /* uint256 totalDepositedValidators */,
             /* uint256 depositableValidatorsCount */
-        ) = IStakingModule(stakingModule.stakingModuleAddress).getNodeOperatorSummary(_nodeOperatorId);
+        ) = IStakingModule(moduleAddr).getNodeOperatorSummary(_nodeOperatorId);
 
         if (_correction.currentModuleExitedValidatorsCount != stakingModule.exitedValidatorsCount ||
             _correction.currentNodeOperatorExitedValidatorsCount != totalExitedValidators ||
