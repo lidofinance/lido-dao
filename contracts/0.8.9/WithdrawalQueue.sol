@@ -130,7 +130,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         _checkResumed();
         if (_owner == address(0)) _owner = msg.sender;
         requestIds = new uint256[](amounts.length);
-        for (uint256 i = 0; i < amounts.length; ++i) {
+        for (uint256 i; i < amounts.length; ++i) {
             _checkWithdrawalRequestAmount(amounts[i]);
             requestIds[i] = _requestWithdrawal(amounts[i], _owner);
         }
@@ -149,7 +149,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         _checkResumed();
         if (_owner == address(0)) _owner = msg.sender;
         requestIds = new uint256[](amounts.length);
-        for (uint256 i = 0; i < amounts.length; ++i) {
+        for (uint256 i; i < amounts.length; ++i) {
             requestIds[i] = _requestWithdrawalWstETH(amounts[i], _owner);
         }
     }
@@ -213,7 +213,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         returns (WithdrawalRequestStatus[] memory statuses)
     {
         statuses = new WithdrawalRequestStatus[](_requestIds.length);
-        for (uint256 i = 0; i < _requestIds.length; ++i) {
+        for (uint256 i; i < _requestIds.length; ++i) {
             statuses[i] = _getStatus(_requestIds[i]);
         }
     }
@@ -228,7 +228,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         returns (uint256[] memory claimableEthValues)
     {
         claimableEthValues = new uint256[](_requestIds.length);
-        for (uint256 i = 0; i < _requestIds.length; ++i) {
+        for (uint256 i; i < _requestIds.length; ++i) {
             claimableEthValues[i] = _getClaimableEther(_requestIds[i], _hints[i]);
         }
     }
@@ -248,7 +248,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     {
         if (_recipient == address(0)) revert ZeroRecipient();
 
-        for (uint256 i = 0; i < _requestIds.length; ++i) {
+        for (uint256 i; i < _requestIds.length; ++i) {
             _claim(_requestIds[i], _hints[i], _recipient);
             _emitTransfer(msg.sender, address(0), _requestIds[i]);
         }
@@ -263,7 +263,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     ///  Reverts if any request is not finalized or already claimed
     ///  Reverts if msg sender is not an owner of the requests
     function claimWithdrawals(uint256[] calldata _requestIds, uint256[] calldata _hints) external {
-        for (uint256 i = 0; i < _requestIds.length; ++i) {
+        for (uint256 i; i < _requestIds.length; ++i) {
             _claim(_requestIds[i], _hints[i], msg.sender);
             _emitTransfer(msg.sender, address(0), _requestIds[i]);
         }
@@ -293,8 +293,8 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         returns (uint256[] memory hintIds)
     {
         hintIds = new uint256[](_requestIds.length);
-        uint256 prevRequestId = 0;
-        for (uint256 i = 0; i < _requestIds.length; ++i) {
+        uint256 prevRequestId;
+        for (uint256 i; i < _requestIds.length; ++i) {
             if (_requestIds[i] < prevRequestId) revert RequestIdsNotSorted();
             hintIds[i] = _findCheckpointHint(_requestIds[i], _firstIndex, _lastIndex);
             _firstIndex = hintIds[i];

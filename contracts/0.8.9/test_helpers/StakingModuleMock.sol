@@ -102,7 +102,7 @@ contract StakingModuleMock is IStakingModule {
         uint256 nodeOperatorsCount = getNodeOperatorsCount();
         if (_offset < nodeOperatorsCount && _limit != 0) {
             nodeOperatorIds = new uint256[](Math256.min(_limit, nodeOperatorsCount - _offset));
-            for (uint256 i = 0; i < nodeOperatorIds.length; ++i) {
+            for (uint256 i; i < nodeOperatorIds.length; ++i) {
                 nodeOperatorIds[i] = _offset + i;
             }
         }

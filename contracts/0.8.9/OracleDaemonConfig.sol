@@ -17,7 +17,7 @@ contract OracleDaemonConfig is AccessControlEnumerable {
 
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
 
-        for (uint256 i = 0; i < _configManagers.length; ) {
+        for (uint256 i; i < _configManagers.length; ) {
             if (_configManagers[i] == address(0)) revert ZeroAddress();
             _grantRole(CONFIG_MANAGER_ROLE, _configManagers[i]);
 
@@ -59,7 +59,7 @@ contract OracleDaemonConfig is AccessControlEnumerable {
     function getList(string[] calldata _keys) external view returns (bytes[] memory) {
         bytes[] memory results = new bytes[](_keys.length);
 
-        for (uint256 i = 0; i < _keys.length; ) {
+        for (uint256 i; i < _keys.length; ) {
             if (values[_keys[i]].length == 0) revert ValueDoesntExist(_keys[i]);
 
             results[i] = values[_keys[i]];

@@ -143,7 +143,7 @@ contract ContractStub {
     }
 
     function _logEvents(Log[] memory _logs) internal {
-        for (uint256 i = 0; i < _logs.length; ++i) {
+        for (uint256 i; i < _logs.length; ++i) {
             bytes32 t1 = _logs[i].t1;
             bytes32 t2 = _logs[i].t2;
             bytes32 t3 = _logs[i].t3;
@@ -175,7 +175,7 @@ contract ContractStub {
     }
 
     function _forwardETH(ForwardETH[] memory _ethForwards) internal {
-        for (uint256 i = 0; i < _ethForwards.length; ++i) {
+        for (uint256 i; i < _ethForwards.length; ++i) {
             ForwardETH memory ethForward = _ethForwards[i];
             new ETHForwarder{ value: ethForward.value }(ethForward.recipient);
             emit ContractStub__ethSent(ethForward.recipient, ethForward.value);
@@ -183,7 +183,7 @@ contract ContractStub {
     }
 
     function _makeExternalCalls(ExternalCall[] memory _calls) internal {
-        for (uint256 i = 0; i < _calls.length; ++i) {
+        for (uint256 i; i < _calls.length; ++i) {
             ExternalCall memory externalCall = _calls[i];
             (bool success, bytes memory data) = externalCall.callee.call{
                 value: externalCall.value,
@@ -260,11 +260,11 @@ contract ContractStubStorage {
         SideEffects storage sideEffects = methodStub.sideEffects;
         sideEffects.traceable = _methodStub.sideEffects.traceable;
         sideEffects.nextFrame = _methodStub.sideEffects.nextFrame;
-        for (uint256 i = 0; i < _methodStub.sideEffects.logs.length; ++i) {
+        for (uint256 i; i < _methodStub.sideEffects.logs.length; ++i) {
             sideEffects.logs.push(_methodStub.sideEffects.logs[i]);
         }
         for (
-            uint256 i = 0;
+            uint256 i;
             i < _methodStub.sideEffects.externalCalls.length;
             ++i
         ) {
@@ -273,7 +273,7 @@ contract ContractStubStorage {
             );
         }
         for (
-            uint256 i = 0;
+            uint256 i;
             i < _methodStub.sideEffects.ethForwards.length;
             ++i
         ) {

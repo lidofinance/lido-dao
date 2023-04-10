@@ -167,49 +167,49 @@ function dyn(uint256[3] memory arr) pure returns (uint256[] memory result) {
 
 function dyn(uint256[4] memory arr) pure returns (uint256[] memory result) {
     result = new uint256[](4);
-    for (uint256 i = 0; i < 4; ++i) {
+    for (uint256 i; i < 4; ++i) {
         result[i] = arr[i];
     }
 }
 
 function dyn(uint256[5] memory arr) pure returns (uint256[] memory result) {
     result = new uint256[](5);
-    for (uint256 i = 0; i < 5; ++i) {
+    for (uint256 i; i < 5; ++i) {
         result[i] = arr[i];
     }
 }
 
 function dyn(uint256[6] memory arr) pure returns (uint256[] memory result) {
     result = new uint256[](6);
-    for (uint256 i = 0; i < 6; ++i) {
+    for (uint256 i; i < 6; ++i) {
         result[i] = arr[i];
     }
 }
 
 function dyn(uint256[7] memory arr) pure returns (uint256[] memory result) {
     result = new uint256[](7);
-    for (uint256 i = 0; i < 7; ++i) {
+    for (uint256 i; i < 7; ++i) {
         result[i] = arr[i];
     }
 }
 
 function dyn(uint256[8] memory arr) pure returns (uint256[] memory result) {
     result = new uint256[](8);
-    for (uint256 i = 0; i < 8; ++i) {
+    for (uint256 i; i < 8; ++i) {
         result[i] = arr[i];
     }
 }
 
 function dyn(uint256[9] memory arr) pure returns (uint256[] memory result) {
     result = new uint256[](9);
-    for (uint256 i = 0; i < 9; ++i) {
+    for (uint256 i; i < 9; ++i) {
         result[i] = arr[i];
     }
 }
 
 function dyn(uint256[10] memory arr) pure returns (uint256[] memory result) {
     result = new uint256[](10);
-    for (uint256 i = 0; i < 10; ++i) {
+    for (uint256 i; i < 10; ++i) {
         result[i] = arr[i];
     }
 }

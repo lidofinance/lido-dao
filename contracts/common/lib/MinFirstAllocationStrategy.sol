@@ -72,7 +72,7 @@ library MinFirstAllocationStrategy {
             return 0;
         }
 
-        for (uint256 i = 0; i < buckets.length; ++i) {
+        for (uint256 i; i < buckets.length; ++i) {
             if (buckets[i] >= capacities[i]) {
                 continue;
             } else if (bestCandidateAllocation > buckets[i]) {

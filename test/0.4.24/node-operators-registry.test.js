@@ -3961,4 +3961,37 @@ contract('NodeOperatorsRegistry', (addresses) => {
       assert.emits(tx, 'StuckPenaltyDelayChanged', { stuckPenaltyDelay: sameStackPenaltyDelay })
     })
   })
+
+  describe('getNodeOperatorIds', async () => {
+    beforeEach(async () => {
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[0], { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[1], { from: admin })
+      await nodeOperators.addNodeOperator(app, NODE_OPERATORS[2], { from: admin })
+
+      const stakingModuleSummary = await app.getStakingModuleSummary()
+      assert.equals(stakingModuleSummary.totalExitedValidators, 1)
+      assert.equals(stakingModuleSummary.totalDepositedValidators, 12)
+      assert.equals(stakingModuleSummary.depositableValidatorsCount, 4)
+    })
+
+    it('check offset and limit', async () => {
+      const count = await app.getNodeOperatorsCount()
+
+      const offset = 0
+      const limit = count
+      let ids = await app.getNodeOperatorIds(offset, limit)
+      assert.equals(ids.length, limit)
+
+      ids = await app.getNodeOperatorIds(count + 1, limit)
+      assert.equals(ids.length, 0)
+
+      ids = await app.getNodeOperatorIds(offset, 0)
+      assert.equals(ids.length, 0)
+
+      assert.notEquals(await app.getNodeOperatorIds(0, 2), await app.getNodeOperatorIds(1, 2))
+
+      ids = await app.getNodeOperatorIds(0, count + 1)
+      assert.equals(ids.length, count)
+    })
+  })
 })

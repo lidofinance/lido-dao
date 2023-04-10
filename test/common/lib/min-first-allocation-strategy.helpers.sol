@@ -32,7 +32,7 @@ contract MinFirstAllocationStrategyFuzzTesting {
     function invariant_allocated_bucket_values_not_exceed_capacities() external view {
         (uint256[] memory inputBuckets, uint256[] memory inputCapacities, ) = testWrapper.getInput();
         (uint256[] memory buckets, uint256[] memory capacities, ) = testWrapper.getActualOutput();
-        for (uint256 i = 0; i < buckets.length; ++i) {
+        for (uint256 i; i < buckets.length; ++i) {
             // when bucket initially overloaded skip it from the check
             if (inputBuckets[i] > inputCapacities[i]) continue;
             if (buckets[i] > capacities[i]) {
@@ -51,7 +51,7 @@ contract MinFirstAllocationStrategyFuzzTesting {
         (uint256[] memory buckets, , uint256 allocated) = testWrapper.getActualOutput();
         uint256 inputSum = 0;
         uint256 outputSum = 0;
-        for (uint256 i = 0; i < buckets.length; ++i) {
+        for (uint256 i; i < buckets.length; ++i) {
             inputSum += inputBuckets[i];
             outputSum += buckets[i];
         }
@@ -67,7 +67,7 @@ contract MinFirstAllocationStrategyFuzzTesting {
         (, , uint256 allocationSize) = testWrapper.getInput();
         (uint256[] memory buckets, uint256[] memory capacities , uint256 allocated) = testWrapper.getActualOutput();
         if (allocationSize == allocated) return;
-        for (uint256 i = 0; i < buckets.length; ++i) {
+        for (uint256 i; i < buckets.length; ++i) {
             if (buckets[i] < capacities[i]) {
                 console2.log("The bucket is unfilled");
                 console2.log("bucket index:", i);
@@ -88,7 +88,7 @@ contract MinFirstAllocationStrategyFuzzTesting {
     }
 
     function _assertBucketsAllocation(uint256[] memory _expected, uint256[] memory _actual) internal view {
-        for (uint256 i = 0; i < _expected.length; ++i) {
+        for (uint256 i; i < _expected.length; ++i) {
             if (_expected[i] != _actual[i]) {
                 console2.log("Invalid bucket value after allocation:");
                 console2.log("bucket index:", i);
@@ -172,7 +172,7 @@ contract MinFirstAllocationStrategyTestWrapper {
         uint256 bucketsCount = Math256.min(_fuzzBuckets.length, _fuzzCapacities.length) % MAX_BUCKETS_COUNT;
         _input.buckets = new uint256[](bucketsCount);
         _input.capacities = new uint256[](bucketsCount);
-        for (uint256 i = 0; i < bucketsCount; ++i) {
+        for (uint256 i; i < bucketsCount; ++i) {
             _input.buckets[i] = _fuzzBuckets[i] % MAX_BUCKET_VALUE;
             _input.capacities[i] = _fuzzCapacities[i] % MAX_CAPACITY_VALUE;
         }
@@ -228,7 +228,7 @@ library NaiveMinFirstAllocationStrategy {
         while (allocated < allocationSize) {
             uint256 bestCandidateIndex = MAX_UINT256;
             uint256 bestCandidateAllocation = MAX_UINT256;
-            for (uint256 i = 0; i < buckets.length; ++i) {
+            for (uint256 i; i < buckets.length; ++i) {
                 if (buckets[i] >= capacities[i]) continue;
                 if (buckets[i] < bestCandidateAllocation) {
                     bestCandidateAllocation = buckets[i];

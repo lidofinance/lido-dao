@@ -57,7 +57,7 @@ contract MockStakingRouterForAccountingOracle is IStakingRouter {
 
         uint256 newlyExitedValidatorsCount;
 
-        for (uint256 i = 0; i < moduleIds.length; ++i) {
+        for (uint256 i; i < moduleIds.length; ++i) {
             uint256 moduleId = moduleIds[i];
             newlyExitedValidatorsCount += exitedKeysCounts[i] - _exitedKeysCountsByModuleId[moduleId];
             _exitedKeysCountsByModuleId[moduleId] = exitedKeysCounts[i];

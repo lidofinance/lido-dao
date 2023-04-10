@@ -274,7 +274,7 @@ contract DepositSecurityModule {
      * Only callable by the owner.
      */
     function addGuardians(address[] memory addresses, uint256 newQuorum) external onlyOwner {
-        for (uint256 i = 0; i < addresses.length; ++i) {
+        for (uint256 i; i < addresses.length; ++i) {
             _addGuardian(addresses[i]);
         }
         _setGuardianQuorum(newQuorum);
@@ -449,7 +449,7 @@ contract DepositSecurityModule {
 
         address prevSignerAddr = address(0);
 
-        for (uint256 i = 0; i < sigs.length; ++i) {
+        for (uint256 i; i < sigs.length; ++i) {
             address signerAddr = ECDSA.recover(msgHash, sigs[i].r, sigs[i].vs);
             if (!_isGuardian(signerAddr)) revert InvalidSignature();
             if (signerAddr <= prevSignerAddr) revert SignaturesNotSorted();

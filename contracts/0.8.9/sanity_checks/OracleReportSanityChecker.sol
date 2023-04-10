@@ -651,7 +651,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     }
 
     function _grantRole(bytes32 _role, address[] memory _accounts) internal {
-        for (uint256 i = 0; i < _accounts.length; ++i) {
+        for (uint256 i; i < _accounts.length; ++i) {
             _grantRole(_role, _accounts[i]);
         }
     }

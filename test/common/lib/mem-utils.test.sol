@@ -17,7 +17,7 @@ contract MemUtilsTest is Test {
     }
 
     function fill(bytes memory arr, bytes1 value) internal pure returns (bytes memory) {
-        for (uint256 i = 0; i < arr.length; ++i) {
+        for (uint256 i; i < arr.length; ++i) {
             arr[i] = value;
         }
         return arr;
