@@ -637,8 +637,15 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         // in case of new user-submitted ether & minted `stETH` between the oracle reference slot
         // and the actual report delivery slot
         //
-        // lower it can be for a negative token rebase (token rebase >= one off CL balance decrease)
-        // higher it can be for a positive token rebase (token rebase <= max positive token rebase)
+        // it happens because the oracle daemon snapshots rewards or losses at the reference slot,
+        // and when new ether was submitted together with minting new `stETH`, the oracle daemon still delivers
+        // the same amount of rewards or losses, which now is applicable to more 'shareholders',
+        // lowering the effect per a single share (i.e, changing share rate)
+        //
+        // lower simulated share can be for a negative token rebase (token rebase >= CL one-off balance decrease)
+        // higher simulated share can be for a positive token rebase (token rebase <= max positive token rebase)
+        //
+        // choosing the margin:
         //
         // user-submitted ether & minted `stETH` don't exceed the current staking rate limit
         // (see Lido.getCurrentStakeLimit())
@@ -646,7 +653,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         // thus, the `simulatedShareRateDeviationBPLimit` (L) should be set as follows:
         // L = 2 * SRL * max(CLD, MPR),
         // where:
-        // - CLD is one-off CL balance decrease (as BP),
+        // - CLD is consensus layer one-off balance decrease (as BP),
         // - MPR is max positive token rebase (as BP),
         // - SRL is staking rate limit normalized by TVL (`maxStakeLimit / totalPooledEther`)
         //   totalPooledEther should be chosen as a reasonable lower bound of the protocol TVL
