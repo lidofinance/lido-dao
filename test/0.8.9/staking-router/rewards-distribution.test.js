@@ -103,8 +103,9 @@ contract('StakingRouter', ([deployer, admin, depositor, stranger]) => {
       )
     })
 
-    it('getStakingRewardsDistribution() - reverts if total fee >= 100%', async () => {
-      await assert.reverts(router.getStakingRewardsDistribution(), 'ValueOver100Percent("totalFee")')
+    it("getStakingRewardsDistribution() - doesn't reverts if total fee = 100%", async () => {
+      const { totalFee } = await router.getStakingRewardsDistribution()
+      await assert.equals(totalFee, await router.FEE_PRECISION_POINTS())
     })
 
     it('update module - set fee and treasury fee', async () => {

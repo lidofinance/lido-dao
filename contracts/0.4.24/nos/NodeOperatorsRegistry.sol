@@ -286,7 +286,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     /// @return id a unique key of the added operator
     function addNodeOperator(string _name, address _rewardAddress) external returns (uint256 id) {
         _onlyValidNodeOperatorName(_name);
-        _onlyNonZeroAddress(_rewardAddress);
+        _onlyValidRewardAddress(_rewardAddress);
         _auth(MANAGE_NODE_OPERATOR_ROLE);
 
         id = getNodeOperatorsCount();
@@ -370,7 +370,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     /// @param _nodeOperatorId Node operator id to set reward address for
     /// @param _rewardAddress Execution layer Ethereum address to set as reward address
     function setNodeOperatorRewardAddress(uint256 _nodeOperatorId, address _rewardAddress) external {
-        _onlyNonZeroAddress(_rewardAddress);
+        _onlyValidRewardAddress(_rewardAddress);
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(MANAGE_NODE_OPERATOR_ROLE);
 
@@ -1437,6 +1437,13 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     function _onlyValidNodeOperatorName(string _name) internal pure {
         require(bytes(_name).length > 0 && bytes(_name).length <= MAX_NODE_OPERATOR_NAME_LENGTH, "WRONG_NAME_LENGTH");
+    }
+
+    function _onlyValidRewardAddress(address _rewardAddress) internal view {
+        _onlyNonZeroAddress(_rewardAddress);
+        // The Lido address is forbidden explicitly because stETH transfers on this contract will revert
+        // See onExitedAndStuckValidatorsCountsUpdated() and StETH._transferShares() for details
+        require(_rewardAddress != getLocator().lido(), "LIDO_REWARD_ADDRESS");
     }
 
     function _onlyNonZeroAddress(address _a) internal pure {
