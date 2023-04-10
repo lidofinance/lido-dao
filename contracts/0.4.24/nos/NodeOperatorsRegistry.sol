@@ -85,7 +85,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     // SigningKeysStats
     /// @dev Operator's max validator keys count approved for deposit by the DAO
     uint8 internal constant TOTAL_VETTED_KEYS_COUNT_OFFSET = 0;
-    /// @dev Number of keys in the EXITED state for this operator for all time
+    /// @dev Number of keys in the EXITED state of this operator for all time
     uint8 internal constant TOTAL_EXITED_KEYS_COUNT_OFFSET = 1;
     /// @dev Total number of keys of this operator for all time
     uint8 internal constant TOTAL_KEYS_COUNT_OFFSET = 2;
@@ -150,7 +150,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     // bytes32 internal constant TYPE_POSITION = keccak256("lido.NodeOperatorsRegistry.type");
     bytes32 internal constant TYPE_POSITION = 0xbacf4236659a602d72c631ba0b0d67ec320aaf523f3ae3590d7faee4f42351d0;
 
-    // bytes32 internal constant TYPE_POSITION = keccak256("lido.NodeOperatorsRegistry.stuckPenaltyDelay");
+    // bytes32 internal constant STUCK_PENALTY_DELAY_POSITION = keccak256("lido.NodeOperatorsRegistry.stuckPenaltyDelay");
     bytes32 internal constant STUCK_PENALTY_DELAY_POSITION = 0x8e3a1f3826a82c1116044b334cae49f3c3d12c3866a1c4b18af461e12e58a18e;
 
     //
@@ -383,7 +383,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     /// @dev Current implementation preserves invariant: depositedSigningKeysCount <= vettedSigningKeysCount <= totalSigningKeysCount.
     ///     If _vettedSigningKeysCount out of range [depositedSigningKeysCount, totalSigningKeysCount], the new vettedSigningKeysCount
     ///     value will be set to the nearest range border.
-    /// @param _nodeOperatorId Node operator id to set reward address for
+    /// @param _nodeOperatorId Node operator id to set staking limit for
     /// @param _vettedSigningKeysCount New staking limit of the node operator
     function setNodeOperatorStakingLimit(uint256 _nodeOperatorId, uint64 _vettedSigningKeysCount) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
