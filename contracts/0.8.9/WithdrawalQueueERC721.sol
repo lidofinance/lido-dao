@@ -30,7 +30,7 @@ interface INFTDescriptor {
 /// NFT is minted on every request and burned on claim
 ///
 /// @author psirex, folkyatina
-contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue, IERC4906 {
+contract WithdrawalQueueERC721 is IERC721Metadata, IERC4906, WithdrawalQueue {
     using Address for address;
     using Strings for uint256;
     using EnumerableSet for EnumerableSet.UintSet;
@@ -89,6 +89,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue, IERC4906 {
         returns (bool)
     {
         return interfaceId == type(IERC721).interfaceId || interfaceId == type(IERC721Metadata).interfaceId
+            // 0x49064906 is magic number ERC4906 interfaceId as defined in the standard https://eips.ethereum.org/EIPS/eip-4906
             || interfaceId == bytes4(0x49064906) || super.supportsInterface(interfaceId);
     }
 
