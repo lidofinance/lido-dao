@@ -88,6 +88,7 @@ done
 command -v jq >/dev/null 2>&1 || { echo >&2 "jq is required but it's not installed. Aborting."; exit 1; }
 
 [[ -z "$WEB3_INFURA_PROJECT_ID" ]] && { echo "WEB3_INFURA_PROJECT_ID is required but is not set. Aborting."; exit 1; }
+[[ -z "$ETHERSCAN_TOKEN" ]] && { echo "ETHERSCAN_TOKEN is required but is not set. Aborting."; exit 1; }
 
 sha256sum='sha256sum'
 if [[ $platform == 'darwin' ]]; then
