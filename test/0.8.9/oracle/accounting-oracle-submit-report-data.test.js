@@ -425,9 +425,9 @@ contract('AccountingOracle', ([admin, member1, member2]) => {
           0
         )
         const exitingRateLimit = totalExitedValidators - 1
-        await oracleReportSanityChecker.setChurnValidatorsPerDayLimit(exitingRateLimit)
+        await oracleReportSanityChecker.setExitedValidatorsPerDayLimit(exitingRateLimit)
         assert.equals(
-          (await oracleReportSanityChecker.getOracleReportLimits()).churnValidatorsPerDayLimit,
+          (await oracleReportSanityChecker.getOracleReportLimits()).exitedValidatorsPerDayLimit,
           exitingRateLimit
         )
         await assert.reverts(
