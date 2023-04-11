@@ -34,6 +34,14 @@ contract StakingModuleMock is IStakingModule {
         depositableValidatorsCount = _availableValidatorsCount;
     }
 
+    function getTotalSigningKeyCount(uint256 /*_nodeOperatorId*/) external view returns (uint256) {
+        return 0;
+    }
+
+    function getUnusedSigningKeyCount(uint256 /*_nodeOperatorId*/) external view returns (uint256) {
+        return 0;
+    }
+
     struct NodeOperatorSummary {
         bool isTargetLimitActive;
         uint256 targetValidatorsCount;

@@ -4,7 +4,7 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
+import {AccessControl} from "./utils/access/AccessControl.sol";
 
 import {IStakingModule} from "./interfaces/IStakingModule.sol";
 
@@ -15,7 +15,7 @@ import {MinFirstAllocationStrategy} from "../common/lib/MinFirstAllocationStrate
 import {BeaconChainDepositor} from "./BeaconChainDepositor.sol";
 import {Versioned} from "./utils/Versioned.sol";
 
-contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Versioned {
+contract StakingRouter is AccessControl, BeaconChainDepositor, Versioned {
     using UnstructuredStorage for bytes32;
 
     /// @dev events
@@ -488,16 +488,8 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         address moduleAddr = stakingModule.stakingModuleAddress;
 
-        (
-            /* bool isTargetLimitActive */,
-            /* uint256 targetValidatorsCount */,
-            uint256 stuckValidatorsCount,
-            /* uint256 refundedValidatorsCount */,
-            /* uint256 stuckPenaltyEndTimestamp */,
-            uint256 totalExitedValidators,
-            /* uint256 totalDepositedValidators */,
-            /* uint256 depositableValidatorsCount */
-        ) = IStakingModule(stakingModule.stakingModuleAddress).getNodeOperatorSummary(_nodeOperatorId);
+        uint256 stuckValidatorsCount = 0;
+        uint256 totalExitedValidators = 0;
 
         if (_correction.currentModuleExitedValidatorsCount != stakingModule.exitedValidatorsCount ||
             _correction.currentNodeOperatorExitedValidatorsCount != totalExitedValidators ||
@@ -725,22 +717,14 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         IStakingModule stakingModule = IStakingModule(stakingModuleState.stakingModuleAddress);
         /// @dev using intermediate variables below due to "Stack too deep" error in case of
         ///     assigning directly into the NodeOperatorSummary struct
-        (
-            bool isTargetLimitActive,
-            uint256 targetValidatorsCount,
-            uint256 stuckValidatorsCount,
-            uint256 refundedValidatorsCount,
-            uint256 stuckPenaltyEndTimestamp,
-            uint256 totalExitedValidators,
-            uint256 totalDepositedValidators,
-            uint256 depositableValidatorsCount
-        ) = stakingModule.getNodeOperatorSummary(_nodeOperatorId);
-        summary.isTargetLimitActive = isTargetLimitActive;
-        summary.targetValidatorsCount = targetValidatorsCount;
-        summary.stuckValidatorsCount = stuckValidatorsCount;
-        summary.refundedValidatorsCount = refundedValidatorsCount;
-        summary.stuckPenaltyEndTimestamp = stuckPenaltyEndTimestamp;
-        summary.totalExitedValidators = totalExitedValidators;
+        uint256 totalDepositedValidators = stakingModule.getTotalSigningKeyCount(_nodeOperatorId);
+        uint256 depositableValidatorsCount =  stakingModule.getUnusedSigningKeyCount(_nodeOperatorId);
+        summary.isTargetLimitActive = false;
+        summary.targetValidatorsCount = 0;
+        summary.stuckValidatorsCount = 0;
+        summary.refundedValidatorsCount = 0;
+        summary.stuckPenaltyEndTimestamp = 0;
+        summary.totalExitedValidators = 0;
         summary.totalDepositedValidators = totalDepositedValidators;
         summary.depositableValidatorsCount = depositableValidatorsCount;
     }
@@ -823,7 +807,11 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint256 _limit
     ) public view returns (NodeOperatorDigest[] memory) {
         IStakingModule stakingModule = IStakingModule(_getStakingModuleAddressById(_stakingModuleId));
-        uint256[] memory nodeOperatorIds = stakingModule.getNodeOperatorIds(_offset, _limit);
+        uint256 nodeOperatorsCount = stakingModule.getNodeOperatorsCount();
+        uint256[] memory nodeOperatorIds = new uint256[](Math256.min(_limit, nodeOperatorsCount - _offset));
+        for (uint256 i = 0; i < nodeOperatorIds.length; ++i) {
+            nodeOperatorIds[i] = _offset + i;
+        }
         return getNodeOperatorDigests(_stakingModuleId, nodeOperatorIds);
     }
 
@@ -841,10 +829,17 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         IStakingModule stakingModule = IStakingModule(_getStakingModuleAddressById(_stakingModuleId));
         digests = new NodeOperatorDigest[](_nodeOperatorIds.length);
         for (uint256 i = 0; i < _nodeOperatorIds.length; ++i) {
+            uint256 totalDepositedValidators = stakingModule.getTotalSigningKeyCount(_nodeOperatorIds[i]);
+            uint256 depositableValidatorsCount =  stakingModule.getUnusedSigningKeyCount(_nodeOperatorIds[i]);
+
+            NodeOperatorSummary memory nodeOperatorSummaryMock = NodeOperatorSummary(
+                false,0,0,0,0,0,totalDepositedValidators, depositableValidatorsCount
+            );
+
             digests[i] = NodeOperatorDigest({
                 id: _nodeOperatorIds[i],
-                isActive: stakingModule.getNodeOperatorIsActive(_nodeOperatorIds[i]),
-                summary: getNodeOperatorSummary(_stakingModuleId, _nodeOperatorIds[i])
+                isActive: true,
+                summary: nodeOperatorSummaryMock
             });
         }
     }
