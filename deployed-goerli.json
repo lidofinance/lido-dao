@@ -244,6 +244,7 @@
     ]
   },
   "oracleReportSanityChecker": {
+    "deployCommit": "47ddc7559570e4b941c3b4107c116d7fa3d3b444",
     "parameters": {
       "churnValidatorsPerDayLimit": 1500,
       "oneOffCLBalanceDecreaseBPLimit": 500,
@@ -256,7 +257,7 @@
       "maxPositiveTokenRebase": 750000
     },
     "contract": "OracleReportSanityChecker",
-    "address": "0x230bd3de99f9bBAC84bcafA05f5CA24320d66C7F",
+    "address": "0x0950C6cbe9D8D11432a4e2d99232690E8254f35f",
     "constructorArgs": [
       "0x1eDf09b5023DC86737b59dE68a8130De878984f5",
       "0x4333218072D5d7008546737786663c38B4D561A4",
@@ -323,7 +324,7 @@
   },
   "lidoLocator": {
     "contract": "LidoLocator",
-    "implementation": "0xFd5B65B7A17Fd5ebE882b9907793071235c5E943",
+    "implementation": "0x9b6E41E90158A8d2E0322983f7EA87baFAE5716c",
     "address": "0x1eDf09b5023DC86737b59dE68a8130De878984f5",
     "constructorArgs": [
       [
@@ -332,7 +333,7 @@
         "0x94750381bE1AbA0504C666ee1DB118F68f0780D4",
         "0x24d8451BC07e7aF4Ba94F69aCDD9ad3c6579D9FB",
         "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F",
-        "0x230bd3de99f9bBAC84bcafA05f5CA24320d66C7F",
+        "0x0950C6cbe9D8D11432a4e2d99232690E8254f35f",
         "0x24d8451BC07e7aF4Ba94F69aCDD9ad3c6579D9FB",
         "0x20c61C07C2E2FAb04BF5b4E12ce45a459a18f3B1",
         "0xa3Dbd317E53D363176359E10948BA0b1c0A4c820",
