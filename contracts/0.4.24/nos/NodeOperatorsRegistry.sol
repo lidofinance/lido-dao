@@ -116,11 +116,11 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     // Summary SigningKeysStats
     uint8 internal constant SUMMARY_MAX_VALIDATORS_COUNT_OFFSET = 0;
-    /// @dev Number of keys in the EXITED state for this operator for all time
+    /// @dev Number of keys of all operators which were in the EXITED state for all time
     uint8 internal constant SUMMARY_EXITED_KEYS_COUNT_OFFSET = 1;
-    /// @dev Total number of keys of this operator for all time
+    /// @dev Total number of keys of all operators for all time
     uint8 internal constant SUMMARY_TOTAL_KEYS_COUNT_OFFSET = 2;
-    /// @dev Number of keys of this operator which were in DEPOSITED state for all time
+    /// @dev Number of keys of all operators which were in the DEPOSITED state for all time
     uint8 internal constant SUMMARY_DEPOSITED_KEYS_COUNT_OFFSET = 3;
 
     //
