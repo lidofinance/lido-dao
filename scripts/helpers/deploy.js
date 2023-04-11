@@ -9,7 +9,16 @@ const { getTxData } = require('./tx-data')
 
 
 const GAS_PRICE = process.env.GAS_PRICE || 0
+let TOTAL_GAS_USED = 0
 
+function getTotalGasUsed() {
+  return TOTAL_GAS_USED
+}
+
+async function getDeploymentGasUsed(contract) {
+  const tx = await web3.eth.getTransactionReceipt(contract.transactionHash)
+  return tx.gasUsed
+}
 
 async function printDeployTx(artifactName, opts = {}) {
   const txData = await getDeployTx(artifactName, opts)
@@ -139,7 +148,9 @@ async function deployWithoutProxy(nameInState, artifactName, deployer, construct
       gasPrice: GAS_PRICE,
     })
 
-  console.log(`${artifactName} (NO proxy): ${contract.address}`)
+  const gasUsed = await getDeploymentGasUsed(contract)
+  console.log(`${artifactName} (NO proxy): ${contract.address} (gas used ${gasUsed})`)
+  TOTAL_GAS_USED += gasUsed
 
   if (nameInState) {
     persistNetworkState2(network.name, netId, state, {
@@ -155,18 +166,20 @@ async function deployWithoutProxy(nameInState, artifactName, deployer, construct
 }
 
 
-
 async function deployBehindOssifiableProxy(nameInState, artifactName, proxyOwner, deployer, constructorArgs=[], implementation=null) {
   const netId = await web3.eth.net.getId()
   const state = readNetworkState(network.name, netId)
 
   if (implementation === null) {
     const Contract = await artifacts.require(artifactName)
-    implementation = (await Contract.new(...constructorArgs, {
+    const contract = await Contract.new(...constructorArgs, {
       from: deployer,
       gasPrice: GAS_PRICE,
-    })).address
-    console.log(`${artifactName} implementation: ${implementation}`)
+    })
+    const gasUsed = await getDeploymentGasUsed(contract)
+    TOTAL_GAS_USED += gasUsed
+    implementation = contract.address
+    console.log(`${artifactName} implementation: ${implementation} (gas used ${gasUsed})`)
   } else {
     console.log(`Using pre-deployed implementation ${implementation}`)
   }
@@ -181,7 +194,9 @@ async function deployBehindOssifiableProxy(nameInState, artifactName, proxyOwner
       gasPrice: GAS_PRICE,
     },
   )
-  console.log(`${artifactName} proxy: ${proxy.address} (owner is ${proxyOwner})`)
+  const gasUsed = await getDeploymentGasUsed(proxy)
+    TOTAL_GAS_USED += gasUsed
+  console.log(`${artifactName} proxy: ${proxy.address} (owner is ${proxyOwner}) (gas used ${gasUsed})`)
 
   persistNetworkState2(network.name, netId, state, {
     [nameInState]: {
@@ -237,4 +252,5 @@ module.exports = {
   deployWithoutProxy,
   deployBehindOssifiableProxy,
   updateProxyImplementation,
+  getTotalGasUsed,
 }

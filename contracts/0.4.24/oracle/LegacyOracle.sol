@@ -273,6 +273,8 @@ contract LegacyOracle is Versioned, AragonApp {
     ) external onlyInit {
         // Initializations for v0 --> v3
         _checkContractVersion(0);
+        // deprecated version slot must be empty
+        require(CONTRACT_VERSION_POSITION_DEPRECATED.getStorageUint256() == 0, "WRONG_BASE_VERSION");
         require(_lidoLocator != address(0), "ZERO_LOCATOR_ADDRESS");
         ILidoLocator locator = ILidoLocator(_lidoLocator);
 
@@ -294,7 +296,11 @@ contract LegacyOracle is Versioned, AragonApp {
      * Can be called only once.
      */
     function finalizeUpgrade_v4(address _accountingOracle) external {
+        // deprecated version slot must be set to v3
         require(CONTRACT_VERSION_POSITION_DEPRECATED.getStorageUint256() == 3, "WRONG_BASE_VERSION");
+        // current version slot must not be initialized yet
+        _checkContractVersion(0);
+
         IHashConsensus consensus = IHashConsensus(IAccountingOracle(_accountingOracle).getConsensusContract());
 
         _initialize_v4(_accountingOracle);
@@ -313,7 +319,10 @@ contract LegacyOracle is Versioned, AragonApp {
     function _initialize_v4(address _accountingOracle) internal {
         require(_accountingOracle != address(0), "ZERO_ACCOUNTING_ORACLE_ADDRESS");
         ACCOUNTING_ORACLE_POSITION.setStorageAddress(_accountingOracle);
+        // write current version slot
         _setContractVersion(4);
+        // reset deprecated version slot
+        CONTRACT_VERSION_POSITION_DEPRECATED.setStorageUint256(0);
     }
 
     function _getTime() internal view returns (uint256) {

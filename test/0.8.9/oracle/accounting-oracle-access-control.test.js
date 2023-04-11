@@ -105,9 +105,7 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       })
 
       it('should allow calling from a member', async () => {
-        await consensus.addMember(member2, 2)
-
-        const tx = await oracle.submitReportData(reportItems, CONSENSUS_VERSION, { from: member2 })
+        const tx = await oracle.submitReportData(reportItems, CONSENSUS_VERSION, { from: member1 })
         assert.emits(tx, 'ProcessingStarted', { refSlot: reportFields.refSlot })
       })
     })
@@ -131,12 +129,11 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       })
 
       it('should allow calling from a member', async () => {
-        await consensus.addMember(member2, 2)
         const deadline = (await oracle.getConsensusReport()).processingDeadlineTime
         await consensus.setTime(deadline)
 
-        await oracle.submitReportData(reportItems, CONSENSUS_VERSION, { from: member2 })
-        const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member2 })
+        await oracle.submitReportData(reportItems, CONSENSUS_VERSION, { from: member1 })
+        const tx = await oracle.submitReportExtraDataList(extraDataList, { from: member1 })
 
         assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
       })
@@ -161,12 +158,11 @@ contract('AccountingOracle', ([admin, account1, account2, member1, member2, stra
       })
 
       it('should allow calling from a member', async () => {
-        await consensus.addMember(member2, 2)
         const deadline = (await oracle.getConsensusReport()).processingDeadlineTime
         await consensus.setTime(deadline)
 
-        await oracle.submitReportData(reportItems, CONSENSUS_VERSION, { from: member2 })
-        const tx = await oracle.submitReportExtraDataEmpty({ from: member2 })
+        await oracle.submitReportData(reportItems, CONSENSUS_VERSION, { from: member1 })
+        const tx = await oracle.submitReportExtraDataEmpty({ from: member1 })
 
         assert.emits(tx, 'ExtraDataSubmitted', { refSlot: reportFields.refSlot })
       })

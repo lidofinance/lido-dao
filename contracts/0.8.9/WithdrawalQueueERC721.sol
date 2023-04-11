@@ -95,7 +95,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
     }
 
     /// @dev Se_toBytes321Metadata-name}.
-    function name() external view returns (string memory) {
+    function name() external view override returns (string memory) {
         return _toString(NAME);
     }
 
@@ -230,7 +230,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
         ) revert NotOwnerOrApproved(msgSender);
 
         delete _getTokenApprovals()[_requestId];
-        request.owner = payable(_to);
+        request.owner = _to;
 
         assert(_getRequestsByOwner()[_from].remove(_requestId));
         assert(_getRequestsByOwner()[_to].add(_requestId));

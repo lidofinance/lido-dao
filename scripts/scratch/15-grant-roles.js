@@ -71,31 +71,16 @@ async function deployNewContracts({ web3, artifacts }) {
   // === StakingRouter
   //
   const stakingRouter = await artifacts.require('StakingRouter').at(stakingRouterAddress)
-  await stakingRouter.grantRole(await stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(), votingAddress, { from: stakingRouterAdmin })
   await stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_PAUSE_ROLE(), depositSecurityModuleAddress, { from: stakingRouterAdmin })
-  await stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_RESUME_ROLE(), depositSecurityModuleAddress, { from: stakingRouterAdmin })
   await stakingRouter.grantRole(await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(), accountingOracleAddress, { from: stakingRouterAdmin })
   await stakingRouter.grantRole(await stakingRouter.REPORT_REWARDS_MINTED_ROLE(), lidoAddress, { from: stakingRouterAdmin })
   logWideSplitter()
-
-  //
-  // === AccountingOracle
-  //
-  const accountingOracle = await artifacts.require('AccountingOracle').at(accountingOracleAddress)
-  /// NB: Skip because all roles are supposed to be set by the contract admin later
-  logWideSplitter()
-
-  //
-  // === HashConsensus for AccountingOracle
-  //
-  /// NB: Skip because all roles are supposed to be set by the contract admin
 
   //
   // === ValidatorsExitBusOracle
   //
   const validatorsExitBusOracle = await artifacts.require('ValidatorsExitBusOracle').at(validatorsExitBusOracleAddress)
   await validatorsExitBusOracle.grantRole(await validatorsExitBusOracle.PAUSE_ROLE(), gateSealAddress, { from: testnetAdmin })
-  await validatorsExitBusOracle.grantRole(await validatorsExitBusOracle.RESUME_ROLE(), votingAddress, { from: testnetAdmin })
   logWideSplitter()
 
   //
@@ -103,15 +88,9 @@ async function deployNewContracts({ web3, artifacts }) {
   //
   const withdrawalQueue = await artifacts.require('WithdrawalQueueERC721').at(withdrawalQueueAddress)
   await withdrawalQueue.grantRole(await withdrawalQueue.PAUSE_ROLE(), gateSealAddress, { from: testnetAdmin })
-  await withdrawalQueue.grantRole(await withdrawalQueue.RESUME_ROLE(), votingAddress, { from: testnetAdmin })
   await withdrawalQueue.grantRole(await withdrawalQueue.FINALIZE_ROLE(), lidoAddress, { from: testnetAdmin })
   await withdrawalQueue.grantRole(await withdrawalQueue.ORACLE_ROLE(), accountingOracleAddress, { from: testnetAdmin })
   logWideSplitter()
-
-  //
-  // === HashConsensus for ValidatorExitBusOracle
-  //
-  /// NB: Skip because all roles are supposed to be set by the contract admin later
 
   //
   // === Burner

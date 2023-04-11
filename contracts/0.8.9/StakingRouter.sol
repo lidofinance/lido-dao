@@ -41,6 +41,10 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     error DirectETHTransfer();
     error InvalidReportData(uint256 code);
     error ExitedValidatorsCountCannotDecrease();
+    error ReportedExitedValidatorsExceedDeposited(
+        uint256 reportedExitedValidatorsCount,
+        uint256 depositedValidatorsCount
+    );
     error StakingModulesLimitExceeded();
     error StakingModuleUnregistered();
     error AppAuthLidoFailed();
@@ -124,7 +128,8 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     uint256 public constant FEE_PRECISION_POINTS = 10 ** 20; // 100 * 10 ** 18
     uint256 public constant TOTAL_BASIS_POINTS = 10000;
     uint256 public constant MAX_STAKING_MODULES_COUNT = 32;
-    uint256 public constant MAX_STAKING_MODULE_NAME_LENGTH = 32;
+    /// @dev restrict the name size with 31 bytes to storage in a single slot
+    uint256 public constant MAX_STAKING_MODULE_NAME_LENGTH = 31;
 
     constructor(address _depositContract) BeaconChainDepositor(_depositContract) {}
 
@@ -319,7 +324,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     /// @param _stakingModuleIds Ids of the staking modules to be updated.
     /// @param _exitedValidatorsCounts New counts of exited validators for the specified staking modules.
     ///
-    /// @return The total increase in the aggregate number of exited validators accross all updated modules.
+    /// @return The total increase in the aggregate number of exited validators across all updated modules.
     ///
     /// The total numbers are stored in the staking router and can differ from the totals obtained by calling
     /// `IStakingModule.getStakingModuleSummary()`. The overall process of updating validator counts is the following:
@@ -329,19 +334,19 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     ///    distribute new stake and staking fees between the modules. There can only be single call of this function
     ///    per oracle reporting frame.
     ///
-    /// 2. In the first part of the second data submittion phase, the oracle calls
+    /// 2. In the first part of the second data submission phase, the oracle calls
     ///    `StakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator` on the staking router which passes the
     ///    counts by node operator to the staking module by calling `IStakingModule.updateStuckValidatorsCount`.
     ///    This can be done multiple times for the same module, passing data for different subsets of node operators.
     ///
-    /// 3. In the second part of the second data submittion phase, the oracle calls
+    /// 3. In the second part of the second data submission phase, the oracle calls
     ///    `StakingRouter.reportStakingModuleExitedValidatorsCountByNodeOperator` on the staking router which passes
     ///    the counts by node operator to the staking module by calling `IStakingModule.updateExitedValidatorsCount`.
     ///    This can be done multiple times for the same module, passing data for different subsets of node
     ///    operators.
     ///
-    /// 4. At the end of the second data submission phase, it's expected for the aggragate exited validators count
-    ///    accross all module's node operators (stored in the module) to match the total count for this module
+    /// 4. At the end of the second data submission phase, it's expected for the aggregate exited validators count
+    ///    across all module's node operators (stored in the module) to match the total count for this module
     ///    (stored in the staking router). However, it might happen that the second phase of data submission doesn't
     ///    finish until the new oracle reporting frame is started, in which case staking router will emit a warning
     ///    event `StakingModuleExitedValidatorsIncompleteReporting` when the first data submission phase is performed
@@ -349,7 +354,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     ///    the exited and maybe stuck validator counts during the whole reporting frame. Handling this condition is
     ///    the responsibility of each staking module.
     ///
-    /// 5. When the second reporting phase is finshed, i.e. when the oracle submitted the complete data on the stuck
+    /// 5. When the second reporting phase is finished, i.e. when the oracle submitted the complete data on the stuck
     ///    and exited validator counts per node operator for the current reporting frame, the oracle calls
     ///    `StakingRouter.onValidatorsCountsByNodeOperatorReportingFinished` which, in turn, calls
     ///    `IStakingModule.onExitedAndStuckValidatorsCountsUpdated` on all modules.
@@ -377,19 +382,26 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
                 revert ExitedValidatorsCountCannotDecrease();
             }
 
-            newlyExitedValidatorsCount += _exitedValidatorsCounts[i] - prevReportedExitedValidatorsCount;
-
             (
-                uint256 totalExitedValidatorsCount,
-                /* uint256 totalDepositedValidators */,
+                uint256 totalExitedValidators,
+                uint256 totalDepositedValidators,
                 /* uint256 depositableValidatorsCount */
             ) = IStakingModule(stakingModule.stakingModuleAddress).getStakingModuleSummary();
 
-            if (totalExitedValidatorsCount < prevReportedExitedValidatorsCount) {
+            if (_exitedValidatorsCounts[i] > totalDepositedValidators) {
+                revert ReportedExitedValidatorsExceedDeposited(
+                    _exitedValidatorsCounts[i],
+                    totalDepositedValidators
+                );
+            }
+
+            newlyExitedValidatorsCount += _exitedValidatorsCounts[i] - prevReportedExitedValidatorsCount;
+
+            if (totalExitedValidators < prevReportedExitedValidatorsCount) {
                 // not all of the exited validators were async reported to the module
                 emit StakingModuleExitedValidatorsIncompleteReporting(
                     stakingModuleId,
-                    prevReportedExitedValidatorsCount - totalExitedValidatorsCount
+                    prevReportedExitedValidatorsCount - totalExitedValidators
                 );
             }
 
@@ -482,18 +494,18 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             uint256 stuckValidatorsCount,
             /* uint256 refundedValidatorsCount */,
             /* uint256 stuckPenaltyEndTimestamp */,
-            uint256 totalExitedValidatorsCount,
+            uint256 totalExitedValidators,
             /* uint256 totalDepositedValidators */,
             /* uint256 depositableValidatorsCount */
         ) = IStakingModule(stakingModule.stakingModuleAddress).getNodeOperatorSummary(_nodeOperatorId);
 
         if (_correction.currentModuleExitedValidatorsCount != stakingModule.exitedValidatorsCount ||
-            _correction.currentNodeOperatorExitedValidatorsCount != totalExitedValidatorsCount ||
+            _correction.currentNodeOperatorExitedValidatorsCount != totalExitedValidators ||
             _correction.currentNodeOperatorStuckValidatorsCount != stuckValidatorsCount
         ) {
             revert UnexpectedCurrentValidatorsCount(
                 stakingModule.exitedValidatorsCount,
-                totalExitedValidatorsCount,
+                totalExitedValidators,
                 stuckValidatorsCount
             );
         }
@@ -912,13 +924,13 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     {
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         (
-            uint256 totalExitedValidatorsCount,
-            uint256 totalDepositedValidatorsCount,
+            uint256 totalExitedValidators,
+            uint256 totalDepositedValidators,
             /* uint256 depositableValidatorsCount */
         ) = IStakingModule(stakingModule.stakingModuleAddress).getStakingModuleSummary();
 
-        activeValidatorsCount = totalDepositedValidatorsCount - Math256.max(
-            stakingModule.exitedValidatorsCount, totalExitedValidatorsCount
+        activeValidatorsCount = totalDepositedValidators - Math256.max(
+            stakingModule.exitedValidatorsCount, totalExitedValidators
         );
     }
 
@@ -1000,9 +1012,9 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint96 stakingModuleFee;
 
         for (uint256 i; i < stakingModulesCount; ) {
-            stakingModuleIds[rewardedStakingModulesCount] = stakingModulesCache[i].stakingModuleId;
             /// @dev skip staking modules which have no active validators
             if (stakingModulesCache[i].activeValidatorsCount > 0) {
+                stakingModuleIds[rewardedStakingModulesCount] = stakingModulesCache[i].stakingModuleId;
                 stakingModuleValidatorsShare = ((stakingModulesCache[i].activeValidatorsCount * precisionPoints) / totalActiveValidators);
 
                 recipients[rewardedStakingModulesCount] = address(stakingModulesCache[i].stakingModuleAddress);
@@ -1031,11 +1043,10 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
         /// @dev shrink arrays
         if (rewardedStakingModulesCount < stakingModulesCount) {
-            uint256 trim = stakingModulesCount - rewardedStakingModulesCount;
             assembly {
-                mstore(stakingModuleIds, sub(mload(stakingModuleIds), trim))
-                mstore(recipients, sub(mload(recipients), trim))
-                mstore(stakingModuleFees, sub(mload(stakingModuleFees), trim))
+                mstore(stakingModuleIds, rewardedStakingModulesCount)
+                mstore(recipients, rewardedStakingModulesCount)
+                mstore(stakingModuleFees, rewardedStakingModulesCount)
             }
         }
     }
@@ -1047,10 +1058,9 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     ///         reduced, 1e4 precision.
     function getTotalFeeE4Precision() external view returns (uint16 totalFee) {
         /// @dev The logic is placed here but in Lido contract to save Lido bytecode
-        uint256 E4_BASIS_POINTS = 10000;  // Corresponds to Lido.TOTAL_BASIS_POINTS
         (, , , uint96 totalFeeInHighPrecision, uint256 precision) = getStakingRewardsDistribution();
         // Here we rely on (totalFeeInHighPrecision <= precision)
-        totalFee = uint16((totalFeeInHighPrecision * E4_BASIS_POINTS) / precision);
+        totalFee = _toE4Precision(totalFeeInHighPrecision, precision);
     }
 
     /// @notice Helper for Lido contract (DEPRECATED)
@@ -1061,15 +1071,14 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         returns (uint16 modulesFee, uint16 treasuryFee)
     {
         /// @dev The logic is placed here but in Lido contract to save Lido bytecode
-        uint256 E4_BASIS_POINTS = 10000;  // Corresponds to Lido.TOTAL_BASIS_POINTS
         (
             uint256 modulesFeeHighPrecision,
             uint256 treasuryFeeHighPrecision,
             uint256 precision
         ) = getStakingFeeAggregateDistribution();
         // Here we rely on ({modules,treasury}FeeHighPrecision <= precision)
-        modulesFee = uint16((modulesFeeHighPrecision * E4_BASIS_POINTS) / precision);
-        treasuryFee = uint16((treasuryFeeHighPrecision * E4_BASIS_POINTS) / precision);
+        modulesFee = _toE4Precision(modulesFeeHighPrecision, precision);
+        treasuryFee = _toE4Precision(treasuryFeeHighPrecision, precision);
     }
 
     /// @notice returns new deposits allocation after the distribution of the `_depositsCount` deposits
@@ -1303,5 +1312,9 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         assembly {
             result.slot := position
         }
+    }
+
+    function _toE4Precision(uint256 _value, uint256 _precision) internal pure returns (uint16) {
+        return uint16((_value * TOTAL_BASIS_POINTS) / _precision);
     }
 }

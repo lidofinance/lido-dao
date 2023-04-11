@@ -38,7 +38,7 @@ library SignatureUtils {
             // Solidity <0.5 generates a regular CALL instruction even if the function being called
             // is marked as `view`, and the only way to perform a STATICCALL is to use assembly
             bytes memory data = abi.encodeWithSelector(ERC1271_IS_VALID_SIGNATURE_SELECTOR, msgHash, sig);
-            bytes4 retval;
+            bytes32 retval;
             /// @solidity memory-safe-assembly
             assembly {
                 // allocate memory for storing the return value
@@ -46,11 +46,11 @@ library SignatureUtils {
                 mstore(0x40, add(outDataOffset, 32))
                 // issue a static call and load the result if the call succeeded
                 let success := staticcall(gas(), signer, add(data, 32), mload(data), outDataOffset, 32)
-                if eq(success, 1) {
+                if and(eq(success, 1), eq(returndatasize(), 32)) {
                     retval := mload(outDataOffset)
                 }
             }
-            return retval == ERC1271_IS_VALID_SIGNATURE_SELECTOR;
+            return retval == bytes32(ERC1271_IS_VALID_SIGNATURE_SELECTOR);
         } else {
             return ECDSA.recover(msgHash, v, r, s) == signer;
         }

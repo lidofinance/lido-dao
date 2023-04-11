@@ -1,6 +1,6 @@
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, yl, gr } = require('../helpers/log')
-const { saveDeployTx } = require('../helpers/deploy')
+const { saveDeployTx, getTotalGasUsed } = require('../helpers/deploy')
 const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 const { deployWithoutProxy, deployBehindOssifiableProxy, updateProxyImplementation } = require('../helpers/deploy')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
@@ -34,6 +34,7 @@ async function deployNewContracts({ web3, artifacts }) {
 
   await deployWithoutProxy(`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`, 'NodeOperatorsRegistry', deployer, [], 'implementation')
 
+  console.log(`Total gas used by this deploy script: ${getTotalGasUsed()}`)
 }
 
 module.exports = runOrWrapScript(deployNewContracts, module)

@@ -19,9 +19,14 @@ echo "NETWORK is $NETWORK"
 # yarn install --immutable
 # yarn compile
 
-rm -f deployed-$NETWORK.json
-cp deployed-$NETWORK-defaults.json deployed-$NETWORK.json
+export NETWORK_STATE_FILE_BASENAME="deployed-upgrade"
+DEPLOYED_FILE="${NETWORK_STATE_FILE_BASENAME}-$NETWORK.json"
+rm -f $DEPLOYED_FILE
+# cp deployed-$NETWORK.json deployed-upgrade-$NETWORK.json
+cp $DEFAULT_CONFIG_FILE $DEPLOYED_FILE
 
 yarn hardhat --network $NETWORK run ./scripts/shapella-upgrade/deploy-aragon-implementations.js
 
 yarn hardhat --network $NETWORK run ./scripts/shapella-upgrade/deploy-non-aragon-contracts-no-proxy-binding.js
+
+# manually run verify-contracts-code.sh

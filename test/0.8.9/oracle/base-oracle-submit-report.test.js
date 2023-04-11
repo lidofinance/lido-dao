@@ -34,7 +34,22 @@ contract('BaseOracle', ([admin]) => {
   before(deployContract)
 
   describe('submitConsensusReport is called and changes the contract state', () => {
-    context('submitConsensusReport passes pre-conditions', () => {
+    context('submitConsensusReport rejects a report whose deadline has already passed', () => {
+      before(async () => {
+        await evmSnapshot.rollback()
+      })
+
+      it('the report is rejected', async () => {
+        const deadline = computeDeadlineFromRefSlot(initialRefSlot)
+        await baseOracle.setTime(deadline + 1)
+        await assert.revertsWithCustomError(
+          consensus.submitReportAsConsensus(HASH_1, initialRefSlot, deadline),
+          `ProcessingDeadlineMissed(${deadline})`
+        )
+      })
+    })
+
+    context('submitConsensusReport checks pre-conditions', () => {
       before(async () => {
         await evmSnapshot.rollback()
       })
@@ -42,7 +57,14 @@ contract('BaseOracle', ([admin]) => {
       it('only setConsensus contract can call submitConsensusReport', async () => {
         await assert.revertsWithCustomError(
           baseOracle.submitConsensusReport(HASH_1, initialRefSlot, computeDeadlineFromRefSlot(initialRefSlot)),
-          'OnlyConsensusContractCanSubmitReport()'
+          'SenderIsNotTheConsensusContract()'
+        )
+      })
+
+      it('zero hash cannot be submitted as a report', async () => {
+        await assert.revertsWithCustomError(
+          consensus.submitReportAsConsensus(ZERO_HASH, initialRefSlot, computeDeadlineFromRefSlot(initialRefSlot)),
+          'HashCannotBeZero()'
         )
       })
 
@@ -126,6 +148,10 @@ contract('BaseOracle', ([admin]) => {
         assert(!report.processingStarted)
       })
 
+      it('cannot start processing on empty state', async () => {
+        await assert.reverts(baseOracle.startProcessing(), 'NoConsensusReportToProcess()')
+      })
+
       it('initial report is submitted', async () => {
         await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, computeDeadlineFromRefSlot(initialRefSlot))
         const report = await baseOracle.getConsensusReport()
@@ -188,7 +214,7 @@ contract('BaseOracle', ([admin]) => {
     })
 
     it('initial contract state, no reports, cannot startProcessing', async () => {
-      await assert.revertsWithCustomError(baseOracle.startProcessing(), 'ProcessingDeadlineMissed(0)')
+      await assert.revertsWithCustomError(baseOracle.startProcessing(), 'NoConsensusReportToProcess()')
     })
 
     it('submit first report for initial slot', async () => {
@@ -215,6 +241,74 @@ contract('BaseOracle', ([admin]) => {
       await consensus.submitReportAsConsensus(HASH_3, refSlot2, refSlot2Deadline)
       await baseOracle.setTime(refSlot2Deadline + SECONDS_PER_SLOT * 10)
       await assert.revertsWithCustomError(baseOracle.startProcessing(), `ProcessingDeadlineMissed(${refSlot2Deadline})`)
+    })
+  })
+
+  describe('discardConsensusReport', () => {
+    let nextRefSlot
+
+    before(async () => {
+      await evmSnapshot.rollback()
+      nextRefSlot = computeNextRefSlotFromRefSlot(initialRefSlot)
+    })
+
+    it('noop if no report for this frame', async () => {
+      const tx = await consensus.discardReportAsConsensus(initialRefSlot)
+      assert.emitsNumberOfEvents(tx, 'ReportDiscarded', 0, { abi: baseOracleAbi })
+    })
+
+    it('initial report', async () => {
+      await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, computeDeadlineFromRefSlot(initialRefSlot))
+    })
+
+    it('noop if discarding future report', async () => {
+      const tx = await consensus.discardReportAsConsensus(nextRefSlot)
+      assert.notEmits(tx, 'ReportDiscarded', { abi: baseOracleAbi })
+    })
+
+    it('reverts for invalid slot', async () => {
+      await assert.revertsWithCustomError(
+        consensus.discardReportAsConsensus(initialRefSlot - 1),
+        `RefSlotCannotDecrease(${initialRefSlot - 1}, ${initialRefSlot})`
+      )
+    })
+
+    it('discards report and throws events', async () => {
+      const tx = await consensus.discardReportAsConsensus(initialRefSlot)
+      assert.emits(tx, 'ReportDiscarded', { refSlot: initialRefSlot, hash: HASH_1 }, { abi: baseOracleAbi })
+      const currentReport = await baseOracle.getConsensusReport()
+      assert.equals(currentReport.hash, ZERO_HASH)
+      assert.equals(currentReport.refSlot, initialRefSlot)
+      assert.equals(currentReport.processingDeadlineTime, computeDeadlineFromRefSlot(initialRefSlot))
+      assert.equals(currentReport.processingStarted, false)
+    })
+
+    it('internal _handleConsensusReportDiscarded was called during discard', async () => {
+      const discardedReport = await baseOracle.lastDiscardedReport()
+      assert.equals(discardedReport.hash, HASH_1)
+      assert.equals(discardedReport.refSlot, initialRefSlot)
+      assert.equals(discardedReport.processingDeadlineTime, computeDeadlineFromRefSlot(initialRefSlot))
+    })
+
+    it('cannot start processing on zero report', async () => {
+      await assert.reverts(baseOracle.startProcessing(), 'NoConsensusReportToProcess()')
+    })
+
+    it('report can be resubmitted after discard', async () => {
+      await consensus.submitReportAsConsensus(HASH_2, initialRefSlot, computeDeadlineFromRefSlot(initialRefSlot))
+      const currentReport = await baseOracle.getConsensusReport()
+      assert.equals(currentReport.hash, HASH_2)
+      assert.equals(currentReport.refSlot, initialRefSlot)
+      assert.equals(currentReport.processingDeadlineTime, computeDeadlineFromRefSlot(initialRefSlot))
+      assert.equals(currentReport.processingStarted, false)
+      await baseOracle.startProcessing()
+    })
+
+    it('reverts if processing started', async () => {
+      await assert.revertsWithCustomError(
+        consensus.discardReportAsConsensus(initialRefSlot),
+        `RefSlotAlreadyProcessing()`
+      )
     })
   })
 })

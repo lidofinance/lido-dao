@@ -14,6 +14,13 @@ const { INITIAL_HOLDER } = require('../helpers/constants')
 
 const NodeOperatorsRegistry = artifacts.require('NodeOperatorsRegistry')
 const CURATED_MODULE_ID = 1
+const TOTAL_BASIS_POINTS = 10000
+const CURATED_MODULE_MODULE_FEE = 500
+const CURATED_MODULE_TREASURY_FEE = 500
+
+// Fee and its distribution are in basis points, 10000 corresponding to 100%
+// Total fee is 10%
+const totalFeePoints = 0.1 * TOTAL_BASIS_POINTS
 
 contract('Lido: happy path', (addresses) => {
   const [
@@ -41,14 +48,14 @@ contract('Lido: happy path', (addresses) => {
     async () => {
       const deployed = await deployProtocol({
         stakingModulesFactory: async (protocol) => {
-          const curatedModule = await setupNodeOperatorsRegistry(protocol)
+          const curatedModule = await setupNodeOperatorsRegistry(protocol, true)
           return [
             {
               module: curatedModule,
               name: 'Curated',
               targetShares: 10000,
-              moduleFee: 500,
-              treasuryFee: 500,
+              moduleFee: CURATED_MODULE_MODULE_FEE,
+              treasuryFee: CURATED_MODULE_TREASURY_FEE,
             },
           ]
         },
@@ -83,22 +90,6 @@ contract('Lido: happy path', (addresses) => {
       await stakingRouter.setWithdrawalCredentials(withdrawalCredentials, { from: voting })
     }
   )
-
-  // Fee and its distribution are in basis points, 10000 corresponding to 100%
-
-  // Total fee is 10%
-  const totalFeePoints = 0.1 * 10000
-
-  it.skip('voting sets fee and its distribution', async () => {
-    // Fee and distribution were set
-    assert.equals(await pool.getFee({ from: nobody }), totalFeePoints, 'total fee')
-    const distribution = await pool.getFeeDistribution({ from: nobody })
-    console.log('distribution', distribution)
-    const treasuryFeePoints = 0 // TODO
-    const nodeOperatorsFeePoints = 0 // TODO
-    assert.equals(distribution.treasuryFeeBasisPoints, treasuryFeePoints, 'treasury fee')
-    assert.equals(distribution.operatorsFeeBasisPoints, nodeOperatorsFeePoints, 'node operators fee')
-  })
 
   it('voting sets withdrawal credentials', async () => {
     const wc = '0x'.padEnd(66, '1234')
@@ -500,7 +491,7 @@ contract('Lido: happy path', (addresses) => {
       from: nodeOperator3.address,
     })
     const nodeOperatorInfo = await nodeOperatorsRegistry.getNodeOperator(nodeOperator3.id, false)
-    assert.equals(nodeOperatorInfo.stakingLimit, 5)
+    assert.equals(nodeOperatorInfo.totalVettedValidators, 5)
   })
 
   it('deposit to nodeOperator3 validators', async () => {
@@ -537,13 +528,39 @@ contract('Lido: happy path', (addresses) => {
     let nodeOperatorInfo = await nodeOperatorsRegistry.getNodeOperator(nodeOperator3.id, false)
 
     // validate that only 5 signing keys used after key removing
-    assert.equals(nodeOperatorInfo.stakingLimit, nodeOperatorInfo.usedSigningKeys)
-    assert.equals(nodeOperatorInfo.totalSigningKeys, 9)
+    assert.equals(nodeOperatorInfo.totalVettedValidators, nodeOperatorInfo.totalDepositedValidators)
+    assert.equals(nodeOperatorInfo.totalAddedValidators, 9)
 
     // validate that all other validators used and pool still has buffered ether
     nodeOperatorInfo = await nodeOperatorsRegistry.getNodeOperator(nodeOperator1.id, false)
-    assert.equals(nodeOperatorInfo.totalSigningKeys, nodeOperatorInfo.usedSigningKeys)
+    assert.equals(nodeOperatorInfo.totalAddedValidators, nodeOperatorInfo.totalDepositedValidators)
     nodeOperatorInfo = await nodeOperatorsRegistry.getNodeOperator(nodeOperator2.id, false)
-    assert.equals(nodeOperatorInfo.totalSigningKeys, nodeOperatorInfo.usedSigningKeys)
+    assert.equals(nodeOperatorInfo.totalAddedValidators, nodeOperatorInfo.totalDepositedValidators)
+  })
+
+  it('getFee and getFeeDistribution works as expected', async () => {
+    // Need to have at least single deposited key, otherwise StakingRouter.getStakingRewardsDistribution
+    // will return zero fees because no modules with non-zero total active validators
+    // This is done in the changes in the tests above, but assuming there are no such changes
+    // one could use the following:
+    // await nodeOperatorsRegistry.increaseNodeOperatorDepositedSigningKeysCount(0, 1)
+
+    function getFeeRelativeToTotalFee(absoluteFee) {
+      return (absoluteFee * TOTAL_BASIS_POINTS) / totalFeePoints
+    }
+
+    assert.equals(await pool.getFee({ from: nobody }), totalFeePoints, 'total fee')
+    const distribution = await pool.getFeeDistribution({ from: nobody })
+    assert.equals(distribution.insuranceFeeBasisPoints, 0, 'insurance fee')
+    assert.equals(
+      distribution.treasuryFeeBasisPoints,
+      getFeeRelativeToTotalFee(CURATED_MODULE_TREASURY_FEE),
+      'treasury fee'
+    )
+    assert.equals(
+      distribution.operatorsFeeBasisPoints,
+      getFeeRelativeToTotalFee(CURATED_MODULE_MODULE_FEE),
+      'node operators fee'
+    )
   })
 })

@@ -17,7 +17,7 @@ interface IPostTokenRebaseReceiver {
 }
 
 contract MockLidoForAccountingOracle is ILido {
-    address legacyOracle;
+    address internal legacyOracle;
 
     struct HandleOracleReportLastCall {
         uint256 currentReportTimestamp;

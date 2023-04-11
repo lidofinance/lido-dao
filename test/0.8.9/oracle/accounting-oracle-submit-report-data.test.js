@@ -1,6 +1,7 @@
-const { contract, web3 } = require('hardhat')
+const { contract, web3, ethers } = require('hardhat')
 const { assert } = require('../../helpers/assert')
 const { e9, e18, e27, toNum } = require('../../helpers/utils')
+const { EvmSnapshot } = require('../../helpers/blockchain')
 
 const AccountingOracleAbi = require('../../../lib/abi/AccountingOracle.json')
 
@@ -21,11 +22,12 @@ const {
   HASH_1,
 } = require('./accounting-oracle-deploy.test')
 
-contract('AccountingOracle', ([admin, member1]) => {
+contract('AccountingOracle', ([admin, member1, member2]) => {
   let consensus = null
   let oracle = null
   let reportItems = null
   let reportFields = null
+  let reportHash = null
   let extraDataList = null
   let extraDataHash = null
   let extraDataItems = null
@@ -37,6 +39,7 @@ contract('AccountingOracle', ([admin, member1]) => {
   let oracleReportSanityChecker = null
   let mockLegacyOracle = null
   let mockWithdrawalQueue = null
+  let snapshot = null
 
   const getReportFields = (override = {}) => ({
     consensusVersion: CONSENSUS_VERSION,
@@ -57,6 +60,7 @@ contract('AccountingOracle', ([admin, member1]) => {
   })
 
   const deploy = async (options = undefined) => {
+    snapshot = new EvmSnapshot(ethers.provider)
     const deployed = await deployAndConfigureAccountingOracle(admin)
     const { refSlot } = await deployed.consensus.getCurrentFrame()
 
@@ -79,7 +83,7 @@ contract('AccountingOracle', ([admin, member1]) => {
       refSlot: +refSlot,
     })
     reportItems = getAccountingReportDataItems(reportFields)
-    const reportHash = calcAccountingReportDataHash(reportItems)
+    reportHash = calcAccountingReportDataHash(reportItems)
     await deployed.consensus.addMember(member1, 1, { from: admin })
     await deployed.consensus.submitReport(refSlot, reportHash, CONSENSUS_VERSION, { from: member1 })
 
@@ -93,6 +97,12 @@ contract('AccountingOracle', ([admin, member1]) => {
     oracleReportSanityChecker = deployed.oracleReportSanityChecker
     mockLegacyOracle = deployed.legacyOracle
     mockWithdrawalQueue = deployed.withdrawalQueue
+
+    await snapshot.make()
+  }
+
+  async function rollback() {
+    await snapshot.rollback()
   }
 
   async function prepareNextReport(newReportFields) {
@@ -119,9 +129,10 @@ contract('AccountingOracle', ([admin, member1]) => {
     })
     return next
   }
+  before(deploy)
 
   context('deploying', () => {
-    before(deploy)
+    after(rollback)
 
     it('deploying accounting oracle', async () => {
       assert.isNotNull(oracle)
@@ -138,8 +149,34 @@ contract('AccountingOracle', ([admin, member1]) => {
     })
   })
 
+  context('discarded report prevents data submit', () => {
+    after(rollback)
+
+    it('report is discarded', async () => {
+      const { refSlot } = await consensus.getCurrentFrame()
+      const tx = await consensus.addMember(member2, 2, { from: admin })
+      assert.emits(tx, 'ReportDiscarded', { refSlot, hash: reportHash }, { abi: AccountingOracleAbi })
+    })
+
+    it('processing state reverts to pre-report state ', async () => {
+      const state = await oracle.getProcessingState()
+      assert.equals(state.mainDataHash, ZERO_HASH)
+      assert.equals(state.extraDataHash, ZERO_HASH)
+      assert.equals(state.extraDataFormat, 0)
+      assert.equals(state.mainDataSubmitted, false)
+      assert.equals(state.extraDataFormat, 0)
+      assert.equals(state.extraDataSubmitted, false)
+      assert.equals(state.extraDataItemsCount, 0)
+      assert.equals(state.extraDataItemsSubmitted, 0)
+    })
+
+    it('reverts on trying to submit the discarded report', async () => {
+      await assert.reverts(oracle.submitReportData(reportItems, oracleVersion, { from: member1 }))
+    })
+  })
+
   context('submitReportData', () => {
-    beforeEach(deploy)
+    afterEach(rollback)
 
     context('checks contract version', () => {
       it('should revert if incorrect contract version', async () => {

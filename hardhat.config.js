@@ -57,7 +57,7 @@ const getNetConfig = (networkName, ethAccountName) => {
   }
   const zhejiang = {
     ...base,
-    url: 'http://35.228.211.212:8545',
+    url: accounts.zhejiang_url,
     chainId: 1337803,
   }
   const byNetName = {
@@ -108,13 +108,6 @@ const getNetConfig = (networkName, ethAccountName) => {
       url: 'https://goerli.infura.io/v3/' + accounts.infura.projectId,
       chainId: 5,
       timeout: 60000 * 10,
-    },
-    goerlishapella: {
-      ...base,
-      url: 'https://goerli.infura.io/v3/' + accounts.infura.projectId,
-      chainId: 5,
-      timeout: 60000 * 10,
-      // gasPrice: 50000000000,
     },
     'mainnet-test': {
       ...base,
