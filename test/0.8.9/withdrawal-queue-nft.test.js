@@ -107,7 +107,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
       await withdrawalQueue.setBaseURI(baseTokenUri, { from: tokenUriManager })
       assert.equals(
         await withdrawalQueue.tokenURI(1),
-        `${baseTokenUri}${requestId}?status=pending&amount=${ETH(25)}&created_at=${
+        `${baseTokenUri}/${requestId}?requested=${ETH(25)}&created_at=${
           (await withdrawalQueue.getWithdrawalStatus([1]))[0].timestamp
         }`
       )
@@ -120,9 +120,9 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
 
       assert.equals(
         await withdrawalQueue.tokenURI(1),
-        `${baseTokenUri}${requestId}?status=finalized&amount=${
-          (await withdrawalQueue.getClaimableEther([1], [1]))[0]
-        }&created_at=${(await withdrawalQueue.getWithdrawalStatus([1]))[0].timestamp}`
+        `${baseTokenUri}/${requestId}?requested=${ETH(25)}&created_at=${
+          (await withdrawalQueue.getWithdrawalStatus([1]))[0].timestamp
+        }&finalized=${(await withdrawalQueue.getClaimableEther([1], [1]))[0]}`
       )
     })
 
@@ -134,9 +134,9 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
 
       assert.equals(
         await withdrawalQueue.tokenURI(1),
-        `${baseTokenUri}${requestId}?status=finalized&amount=${batch.sharesToBurn}&created_at=${
+        `${baseTokenUri}/${requestId}?requested=${ETH(25)}&created_at=${
           (await withdrawalQueue.getWithdrawalStatus([1]))[0].timestamp
-        }`
+        }&finalized=${batch.sharesToBurn}`
       )
     })
 
@@ -500,7 +500,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
       assert.equals(await withdrawalQueue.ownerOf(1), user)
       assert.equals(
         await withdrawalQueue.tokenURI(1),
-        `https://example.com/1?status=pending&amount=25000000000000000000&created_at=${
+        `https://example.com/1?requested=25000000000000000000&created_at=${
           (await withdrawalQueue.getWithdrawalStatus([1]))[0].timestamp
         }`
       )

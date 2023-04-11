@@ -354,27 +354,37 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue, IERC4906 {
         string memory baseURI = _getBaseURI().value;
         if (bytes(baseURI).length == 0) return "";
 
-        // ${baseUri}/${_requestId}?state=finalized|unfinalized&amount=${amount}&created_at=${timestamp}
-        // we still have no string.concat in 0.8.9, so we have to do it with bytes
-        bool finalized = _requestId <= getLastFinalizedRequestId();
-        return string(
+        // ${baseUri}/${_requestId}?requested=${amount}&created_at=${timestamp}[&finalized=${claimableAmount}]
+        string memory uri = string(
+            // we have no string.concat in 0.8.9 yet, so we have to do it with bytes.concat
             bytes.concat(
                 bytes(baseURI),
                 bytes("/"),
                 bytes(_requestId.toString()),
-                bytes("?status="),
-                bytes(finalized ? "finalized" : "pending"),
-                bytes("&amount="),
+                bytes("?requested="),
                 bytes(
-                    finalized
-                        ? _getClaimableEther(_requestId, _findCheckpointHint(_requestId, 1, getLastCheckpointIndex()))
-                            .toString()
-                        : uint256(_getQueue()[_requestId].cumulativeStETH - _getQueue()[_requestId - 1].cumulativeStETH)
-                            .toString()
+                    uint256(_getQueue()[_requestId].cumulativeStETH - _getQueue()[_requestId - 1].cumulativeStETH)
+                        .toString()
                 ),
                 bytes("&created_at="),
                 bytes(uint256(_getQueue()[_requestId].timestamp).toString())
             )
         );
+        bool finalized = _requestId <= getLastFinalizedRequestId();
+
+        if (finalized) {
+            uri = string(
+                bytes.concat(
+                    bytes(uri),
+                    bytes("&finalized="),
+                    bytes(
+                        _getClaimableEther(_requestId, _findCheckpointHint(_requestId, 1, getLastCheckpointIndex()))
+                            .toString()
+                    )
+                )
+            );
+        }
+
+        return uri;
     }
 }
