@@ -18,7 +18,8 @@ const LIDO_INIT_BALANCE_ETH = 1
 const ONE_DAY_WITH_MARGIN = 1 * 24 * 60 * 60 + 60 * 10 // one day and 10 minutes
 
 const ORACLE_REPORT_LIMITS_BOILERPLATE = {
-  churnValidatorsPerDayLimit: 255,
+  exitedValidatorsPerDayLimit: 255,
+  appearedValidatorsPerDayLimit: 500,
   oneOffCLBalanceDecreaseBPLimit: 100,
   annualBalanceIncreaseBPLimit: 10000,
   simulatedShareRateDeviationBPLimit: 10000,

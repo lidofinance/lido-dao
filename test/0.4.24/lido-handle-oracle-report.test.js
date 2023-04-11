@@ -29,7 +29,8 @@ const Lido = artifacts.require('Lido')
 const ONE_YEAR = 3600 * 24 * 365
 const ONE_DAY = 3600 * 24
 const ORACLE_REPORT_LIMITS_BOILERPLATE = {
-  churnValidatorsPerDayLimit: 255,
+  exitedValidatorsPerDayLimit: 255,
+  appearedValidatorsPerDayLimit: 500,
   oneOffCLBalanceDecreaseBPLimit: 100,
   annualBalanceIncreaseBPLimit: 10000,
   simulatedShareRateDeviationBPLimit: 15,
@@ -684,7 +685,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
           annualBalanceIncreaseBPLimit: 100,
         },
         { from: voting, gasPrice: 1 }
@@ -708,7 +709,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          appearedValidatorsPerDayLimit: 100,
           annualBalanceIncreaseBPLimit: 100,
         },
         { from: voting, gasPrice: 1 }
@@ -746,7 +747,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
         },
         { from: voting, gasPrice: 1 }
       )
@@ -766,7 +767,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
         },
         { from: voting, gasPrice: 1 }
       )
@@ -796,7 +797,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
           annualBalanceIncreaseBPLimit: 100,
         },
         { from: voting, gasPrice: 1 }
@@ -829,7 +830,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
         },
         { from: voting, gasPrice: 1 }
@@ -863,7 +864,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
         },
         { from: voting, gasPrice: 1 }
@@ -898,7 +899,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
         },
         { from: voting, gasPrice: 1 }
@@ -932,7 +933,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
         },
         { from: voting, gasPrice: 1 }
@@ -966,7 +967,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
         },
         { from: voting, gasPrice: 1 }
       )
@@ -1000,7 +1001,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
         },
         { from: voting, gasPrice: 1 }
@@ -1345,7 +1346,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
         },
         { from: voting, gasPrice: 1 }
@@ -1376,7 +1377,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
         },
         { from: voting, gasPrice: 1 }
       )
@@ -1397,7 +1398,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
         },
         { from: voting, gasPrice: 1 }
       )
@@ -1431,7 +1432,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
           annualBalanceIncreaseBPLimit: 100,
         },
         { from: voting, gasPrice: 1 }
@@ -1464,7 +1465,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
         },
         { from: voting, gasPrice: 1 }
@@ -1498,7 +1499,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
         },
         { from: voting, gasPrice: 1 }
@@ -1533,7 +1534,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
         },
         { from: voting, gasPrice: 1 }
@@ -1567,7 +1568,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
         },
         { from: voting, gasPrice: 1 }
@@ -1601,7 +1602,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
         },
         { from: voting, gasPrice: 1 }
       )
@@ -1932,7 +1933,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
         },
         { from: voting, gasPrice: 1 }
@@ -1986,7 +1987,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
         },
         { from: voting, gasPrice: 1 }
@@ -2095,7 +2096,7 @@ contract('Lido: handleOracleReport', ([appManager, , , , , , bob, stranger, anot
       await oracleReportSanityChecker.setOracleReportLimits(
         {
           ...ORACLE_REPORT_LIMITS_BOILERPLATE,
-          churnValidatorsPerDayLimit: 100,
+          exitedValidatorsPerDayLimit: 100,
           maxPositiveTokenRebase: 10000000,
         },
         { from: voting, gasPrice: 1 }

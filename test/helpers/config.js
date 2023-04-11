@@ -20,7 +20,8 @@ const DEFAULT_DEPLOY_PARAMS = {
   },
   oracleReportSanityChecker: {
     limitsList: {
-      churnValidatorsPerDayLimit: 255,
+      exitedValidatorsPerDayLimit: 255,
+      appearedValidatorsPerDayLimit: 500,
       oneOffCLBalanceDecreaseBPLimit: 10000,
       annualBalanceIncreaseBPLimit: 10000,
       simulatedShareRateDeviationBPLimit: 10000,
@@ -32,7 +33,8 @@ const DEFAULT_DEPLOY_PARAMS = {
     },
     managersRoster: {
       allLimitsManagers: [],
-      churnValidatorsPerDayLimitManagers: [],
+      exitedValidatorsPerDayLimitManagers: [],
+      appearedValidatorsPerDayLimitManagers: [],
       oneOffCLBalanceDecreaseLimitManagers: [],
       annualBalanceIncreaseLimitManagers: [],
       shareRateDeviationLimitManagers: [],
