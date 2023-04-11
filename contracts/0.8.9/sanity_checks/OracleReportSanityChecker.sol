@@ -37,12 +37,12 @@ interface IWithdrawalQueue {
 /// @notice The set of restrictions used in the sanity checks of the oracle report
 /// @dev struct is loaded from the storage and stored in memory during the tx running
 struct LimitsList {
-    /// @notice The max possible number of validators that might been reported as `exited`
+    /// @notice The max possible number of validators that might be reported as `exited`
     ///     per single day, depends on the Consensus Layer churn limit
     /// @dev Must fit into uint16 (<= 65_535)
     uint256 exitedValidatorsPerDayLimit;
 
-    /// @notice The max possible number of validators that might been reported as `appeared`
+    /// @notice The max possible number of validators that might be reported as `appeared`
     ///     per single day, limited by the max daily deposits via DepositSecurityModule in practice
     ///     isn't limited by a consensus layer (because `appeared` includes `pending`, i.e., not `activated` yet)
     /// @dev Must fit into uint16 (<= 65_535)
