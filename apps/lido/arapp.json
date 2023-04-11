@@ -21,38 +21,8 @@
       "params": []
     },
     {
-      "name": "Set fee",
-      "id": "MANAGE_FEE",
-      "params": []
-    },
-    {
-      "name": "Manage withdrawal credentials",
-      "id": "MANAGE_WITHDRAWAL_KEY",
-      "params": []
-    },
-    {
-      "name": "Manage protocol contracts role",
-      "id": "MANAGE_PROTOCOL_CONTRACTS_ROLE",
-      "params": []
-    },
-    {
-      "name": "Burn tokens",
-      "id": "BURN_ROLE",
-      "params": ["Account which tokens are to be burnt", "Token amount"]
-    },
-    {
-      "name": "Deposit role",
-      "id": "DEPOSIT_ROLE",
-      "params": []
-    },
-    {
-      "name": "Set EL rewards vault role",
-      "id": "SET_EL_REWARDS_VAULT_ROLE",
-      "params": []
-    },
-    {
-      "name": "Set EL rewards withdrawal limit role",
-      "id": "SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE",
+      "name": "Unsafely change deposited validators",
+      "id": "UNSAFE_CHANGE_DEPOSITED_VALIDATORS_ROLE",
       "params": []
     }
   ],
