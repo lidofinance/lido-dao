@@ -95,8 +95,7 @@ async function deployNewContracts({ web3, artifacts }) {
   // DummyContract (for initial proxy deployment)
   //
   console.log("Deploying DummyEmptyContract...")
-  const DummyEmptyContract = await artifacts.require('DummyEmptyContract')
-  const dummyContractAddress = (await DummyEmptyContract.new(txParams)).address
+  const dummyContractAddress = await deployWithoutProxy("dummyEmptyContract", "DummyEmptyContract", deployer)
   console.log("Done")
 
   //
