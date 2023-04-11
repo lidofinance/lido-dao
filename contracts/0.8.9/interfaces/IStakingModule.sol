@@ -5,6 +5,9 @@ pragma solidity 0.8.9;
 
 /// @title Lido's Staking Module interface
 interface IStakingModule {
+    function getTotalSigningKeyCount(uint256 _nodeOperatorId) external view returns (uint256);
+    function getUnusedSigningKeyCount(uint256 _nodeOperatorId) external view returns (uint256);
+
     /// @notice Returns the type of the staking module
     function getType() external view returns (bytes32);
 

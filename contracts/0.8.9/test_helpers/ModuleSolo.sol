@@ -40,6 +40,15 @@ contract ModuleSolo is IStakingModule {
         depositableValidatorsCount = totalVetted - totalDeposited;
     }
 
+    function getTotalSigningKeyCount(uint256 /*_nodeOperatorId*/) external view returns (uint256) {
+        return 0;
+    }
+
+    function getUnusedSigningKeyCount(uint256 /*_nodeOperatorId*/) external view returns (uint256) {
+        return 0;
+    }
+
+
     function getNodeOperatorSummary(uint256 _nodeOperatorId) external view returns (
         bool isTargetLimitActive,
         uint256 targetValidatorsCount,
