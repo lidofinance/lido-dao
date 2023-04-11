@@ -122,7 +122,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue, IERC4906 {
         return _getBaseURI().value;
     }
 
-    /// @notice Sets the Base URI for computing {tokenURI}
+    /// @notice Sets the Base URI for computing {tokenURI}. It does not expect the ending slash in provided string.
     /// @dev If NFTDescriptor address isn't set the `baseURI` would be used for generating erc721 tokenURI. In case
     ///  NFTDescriptor address is set it would be used as a first-priority method.
     function setBaseURI(string calldata _baseURI) external onlyRole(MANAGE_TOKEN_URI_ROLE) {
@@ -360,6 +360,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue, IERC4906 {
         return string(
             bytes.concat(
                 bytes(baseURI),
+                bytes("/"),
                 bytes(_requestId.toString()),
                 bytes("?status="),
                 bytes(finalized ? "finalized" : "pending"),

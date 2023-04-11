@@ -97,7 +97,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
 
   context('tokenURI', async () => {
     const requestId = 1
-    const baseTokenUri = 'https://example.com/'
+    const baseTokenUri = 'https://example.com'
 
     beforeEach(async function () {
       await withdrawalQueue.requestWithdrawals([ETH(25), ETH(25)], user, { from: user })
@@ -494,7 +494,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
 
     it('should mint with tokenURI', async () => {
       await withdrawalQueue.requestWithdrawals([ETH(25), ETH(25)], user, { from: user })
-      await withdrawalQueue.setBaseURI('https://example.com/', { from: tokenUriManager })
+      await withdrawalQueue.setBaseURI('https://example.com', { from: tokenUriManager })
 
       assert.equals(await withdrawalQueue.balanceOf(user), 2)
       assert.equals(await withdrawalQueue.ownerOf(1), user)
