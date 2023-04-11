@@ -148,7 +148,7 @@
   "nodeOperatorsRegistry": {
     "parameters": {
       "stakingModuleTypeId": "curated-onchain-v1",
-      "stuckPenaltyDelay": "172800"
+      "stuckPenaltyDelay": "432000"
     }
   },
   "lidoApmDeployTx": "0xfa66476569ecef5790f2d0634997b952862bbca56aa088f151b8049421eeb87b",
@@ -188,14 +188,14 @@
   ],
   "executionLayerRewardsVaultAddress": "0x388C818CA8B9251b393131C08a736A67ccB19297",
   "depositorPreviousAddress": "0x710B3303fB508a84F10793c1106e32bE873C24cd",
+  "executionLayerRewardsParams": {
+    "withdrawalLimit": "1"
+  },
   "burner": {
     "parameters": {
         "totalCoverSharesBurnt": "0",
         "totalNonCoverSharesBurnt": "0"
     }
-  },
-  "executionLayerRewardsParams": {
-    "withdrawalLimit": "1"
   },
   "legacyOracle": {
     "parameters": {
@@ -248,10 +248,10 @@
     "parameters": {
       "NORMALIZED_CL_REWARD_PER_EPOCH": 64,
       "NORMALIZED_CL_REWARD_MISTAKE_RATE_BP": 1000,
-      "REBASE_CHECK_NEAREST_EPOCH_DISTANCE": 4,
-      "REBASE_CHECK_DISTANT_EPOCH_DISTANCE": 10,
+      "REBASE_CHECK_NEAREST_EPOCH_DISTANCE": 1,
+      "REBASE_CHECK_DISTANT_EPOCH_DISTANCE": 23,
       "VALIDATOR_DELAYED_TIMEOUT_IN_SLOTS": 7200,
-      "VALIDATOR_DELINQUENT_TIMEOUT_IN_SLOTS": 21600,
+      "VALIDATOR_DELINQUENT_TIMEOUT_IN_SLOTS": 28800,
       "PREDICTION_DURATION_IN_SLOTS": 50400,
       "FINALIZATION_MAX_NEGATIVE_REBASE_EPOCH_SHIFT": 1350,
       "NODE_OPERATOR_NETWORK_PENETRATION_THRESHOLD_BP": 100
