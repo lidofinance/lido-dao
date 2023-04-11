@@ -1,5 +1,5 @@
 import { Box, GU, Info } from '@aragon/ui'
-import styled from 'styled-components'
+import styled, { keyframes } from 'styled-components'
 
 export const InfoSpaced = styled(Info)`
   margin: ${GU * 3}px 0;
@@ -23,4 +23,20 @@ export const BoxUnpadded = styled(Box)`
   & > div {
     padding: 0;
   }
+`
+
+const blink = keyframes`
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+`
+
+export const Dot = styled.span`
+  margin-right: ${GU}px;
+  color: ${(props) =>
+    props.active ? props.theme.positive : props.theme.negative};
+  animation: ${blink} 0.5s infinite alternate;
 `
