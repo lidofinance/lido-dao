@@ -297,7 +297,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             revert ArraysLengthMismatch(_stakingModuleIds.length, _totalShares.length);
         }
 
-        for (uint256 i = 0; i < _stakingModuleIds.length; ) {
+        for (uint256 i; i < _stakingModuleIds.length; ) {
             if (_totalShares[i] > 0) {
                 address moduleAddr = _getStakingModuleById(_stakingModuleIds[i]).stakingModuleAddress;
                 try IStakingModule(moduleAddr).onRewardsMinted(_totalShares[i]) {}
@@ -373,7 +373,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
         uint256 newlyExitedValidatorsCount;
 
-        for (uint256 i = 0; i < _stakingModuleIds.length; ) {
+        for (uint256 i; i < _stakingModuleIds.length; ) {
             uint256 stakingModuleId = _stakingModuleIds[i];
             StakingModule storage stakingModule = _getStakingModuleById(stakingModuleId);
 
@@ -497,7 +497,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             uint256 totalExitedValidators,
             /* uint256 totalDepositedValidators */,
             /* uint256 depositableValidatorsCount */
-        ) = IStakingModule(stakingModule.stakingModuleAddress).getNodeOperatorSummary(_nodeOperatorId);
+        ) = IStakingModule(moduleAddr).getNodeOperatorSummary(_nodeOperatorId);
 
         if (_correction.currentModuleExitedValidatorsCount != stakingModule.exitedValidatorsCount ||
             _correction.currentNodeOperatorExitedValidatorsCount != totalExitedValidators ||
@@ -789,7 +789,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         returns (StakingModuleDigest[] memory digests)
     {
         digests = new StakingModuleDigest[](_stakingModuleIds.length);
-        for (uint256 i = 0; i < _stakingModuleIds.length; ++i) {
+        for (uint256 i; i < _stakingModuleIds.length; ++i) {
             StakingModule memory stakingModuleState = getStakingModule(_stakingModuleIds[i]);
             IStakingModule stakingModule = IStakingModule(stakingModuleState.stakingModuleAddress);
             digests[i] = StakingModuleDigest({
@@ -840,7 +840,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     {
         IStakingModule stakingModule = IStakingModule(_getStakingModuleAddressById(_stakingModuleId));
         digests = new NodeOperatorDigest[](_nodeOperatorIds.length);
-        for (uint256 i = 0; i < _nodeOperatorIds.length; ++i) {
+        for (uint256 i; i < _nodeOperatorIds.length; ++i) {
             digests[i] = NodeOperatorDigest({
                 id: _nodeOperatorIds[i],
                 isActive: stakingModule.getNodeOperatorIsActive(_nodeOperatorIds[i]),
@@ -1007,7 +1007,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         recipients = new address[](stakingModulesCount);
         stakingModuleFees = new uint96[](stakingModulesCount);
 
-        uint256 rewardedStakingModulesCount = 0;
+        uint256 rewardedStakingModulesCount;
         uint256 stakingModuleValidatorsShare;
         uint96 stakingModuleFee;
 
@@ -1038,8 +1038,8 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             }
         }
 
-        // sanity check
-        if (totalFee >= precisionPoints) revert ValueOver100Percent("totalFee");
+        // Total fee never exceeds 100%
+        assert(totalFee <= precisionPoints);
 
         /// @dev shrink arrays
         if (rewardedStakingModulesCount < stakingModulesCount) {
