@@ -8,7 +8,7 @@ const { deployWithdrawalQueue } = require('./withdrawal-queue-deploy.test')
 contract('WithdrawalQueue', ([owner, daoAgent, user, tokenUriManager]) => {
   let withdrawalQueue
 
-  before('deploy', async () => {
+  before('deploy', async function () {
     if (!process.env.REPORT_GAS) {
       this.skip()
     }
