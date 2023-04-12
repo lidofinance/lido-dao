@@ -330,15 +330,13 @@ abstract contract WithdrawalQueueBase {
     ///  Emits WithdrawalBatchFinalized event.
     /// Checks that:
     /// - _amountOfETH is less or equal to the nominal value of all requests to be finalized
-    function _finalize(uint256[] memory _batches, uint256 _amountOfETH, uint256 _maxShareRate) internal {
-        if (_batches.length == 0) revert EmptyBatches();
-        uint256 lastRequestIdToBeFinalized = _batches[_batches.length - 1];
-        if (lastRequestIdToBeFinalized > getLastRequestId()) revert InvalidRequestId(lastRequestIdToBeFinalized);
+    function _finalize(uint256 _lastRequestIdToBeFinalized, uint256 _amountOfETH, uint256 _maxShareRate) internal {
+        if (_lastRequestIdToBeFinalized > getLastRequestId()) revert InvalidRequestId(_lastRequestIdToBeFinalized);
         uint256 lastFinalizedRequestId = getLastFinalizedRequestId();
-        if (lastRequestIdToBeFinalized <= lastFinalizedRequestId) revert InvalidRequestId(lastRequestIdToBeFinalized);
+        if (_lastRequestIdToBeFinalized <= lastFinalizedRequestId) revert InvalidRequestId(_lastRequestIdToBeFinalized);
 
         WithdrawalRequest memory lastFinalizedRequest = _getQueue()[lastFinalizedRequestId];
-        WithdrawalRequest memory requestToFinalize = _getQueue()[lastRequestIdToBeFinalized];
+        WithdrawalRequest memory requestToFinalize = _getQueue()[_lastRequestIdToBeFinalized];
 
         uint128 stETHToFinalize = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH;
         if (_amountOfETH > stETHToFinalize) revert TooMuchEtherToFinalize(_amountOfETH, stETHToFinalize);
@@ -351,11 +349,11 @@ abstract contract WithdrawalQueueBase {
         _setLastCheckpointIndex(lastCheckpointIndex + 1);
 
         _setLockedEtherAmount(getLockedEtherAmount() + _amountOfETH);
-        _setLastFinalizedRequestId(lastRequestIdToBeFinalized);
+        _setLastFinalizedRequestId(_lastRequestIdToBeFinalized);
 
         emit WithdrawalsFinalized(
             firstRequestIdToFinalize,
-            lastRequestIdToBeFinalized,
+            _lastRequestIdToBeFinalized,
             _amountOfETH,
             requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares,
             block.timestamp
