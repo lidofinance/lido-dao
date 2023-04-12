@@ -430,13 +430,13 @@ abstract contract WithdrawalQueueBase {
     /// @return value that hints `claimWithdrawal` to find the discount for the request,
     ///  or 0 if hint not found in the range
     function _findCheckpointHint(uint256 _requestId, uint256 _start, uint256 _end) internal view returns (uint256) {
-        if (_requestId == 0) revert InvalidRequestId(_requestId);
+        if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
         if (_start == 0) revert InvalidRequestIdRange(_start, _end);
+
         uint256 lastCheckpointIndex = getLastCheckpointIndex();
         if (_end > lastCheckpointIndex) revert InvalidRequestIdRange(_start, _end);
-        if (_requestId > getLastFinalizedRequestId()) revert RequestNotFoundOrNotFinalized(_requestId);
 
-        if (_start > _end) return NOT_FOUND; // we have an empty range to search in, so return NOT_FOUND
+        if (lastCheckpointIndex == 0 || _requestId > getLastFinalizedRequestId() || _start > _end) return NOT_FOUND;
 
         // Right boundary
         if (_requestId >= _getCheckpoints()[_end].fromRequestId) {
