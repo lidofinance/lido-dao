@@ -863,7 +863,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
       it('correctly works before first finalization', async () => {
         const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
         assert.equals(lastCheckpointIndex, 0)
-        const result = await withdrawalQueue.findCheckpointHints([0], 1, lastCheckpointIndex)
+        const result = await withdrawalQueue.findCheckpointHints([requestId], 1, lastCheckpointIndex)
         assert.isTrue(result.length === 1)
         assert.equals(result[0], 0)
 
