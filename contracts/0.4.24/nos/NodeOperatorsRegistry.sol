@@ -866,7 +866,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     ) internal returns (bytes memory pubkeys, bytes memory signatures) {
         (pubkeys, signatures) = SigningKeys.initKeysSigsBuf(_keysCountToLoad);
 
-        uint256 loadedKeysCount;
+        uint256 loadedKeysCount = 0;
         uint256 depositedSigningKeysCountBefore;
         uint256 depositedSigningKeysCountAfter;
         uint256 keysCount;
@@ -951,9 +951,9 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         recipients = new address[](activeCount);
         shares = new uint256[](activeCount);
         penalized = new bool[](activeCount);
-        uint256 idx;
+        uint256 idx = 0;
 
-        uint256 totalActiveValidatorsCount;
+        uint256 totalActiveValidatorsCount = 0;
         Packed64x4.Packed memory signingKeysStats;
         for (uint256 operatorId; operatorId < nodeOperatorCount; ++operatorId) {
             if (!getNodeOperatorIsActive(operatorId)) continue;
@@ -1279,7 +1279,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         uint256 nodeOperatorsCount = getNodeOperatorsCount();
         if (_offset >= nodeOperatorsCount || _limit == 0) return;
         nodeOperatorIds = new uint256[](Math256.min(_limit, nodeOperatorsCount - _offset));
-        for (uint256 i; i < nodeOperatorIds.length; ++i) {
+        for (uint256 i = 0; i < nodeOperatorIds.length; ++i) {
             nodeOperatorIds[i] = _offset + i;
         }
     }
