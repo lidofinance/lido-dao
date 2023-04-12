@@ -66,44 +66,6 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       await burner.requestBurnMyStETHForCover(StETH(1), { from: anotherAccount })
     })
 
-    it(`RECOVER_ASSETS_ROLE works`, async () => {
-      const nft1 = bn(666)
-      const totalERC20Supply = bn(1000000)
-      const mockERC20Token = await ERC20OZMock.new(totalERC20Supply, { from: deployer })
-      const mockNFT = await ERC721OZMock.new({ from: deployer })
-      await mockNFT.mintToken(nft1, { from: deployer })
-      await web3.eth.sendTransaction({ from: anotherAccount, to: lido.address, value: ETH(2) })
-
-      await mockERC20Token.transfer(burner.address, bn(600000), { from: deployer })
-      await mockNFT.transferFrom(deployer, burner.address, nft1, { from: deployer })
-      await lido.transfer(burner.address, StETH(1), { from: anotherAccount })
-
-      assert.isFalse(await burner.hasRole(await burner.RECOVER_ASSETS_ROLE(), anotherAccount))
-
-      await assert.revertsOZAccessControl(
-        burner.recoverERC20(mockERC20Token.address, bn(600000), { from: anotherAccount }),
-        anotherAccount,
-        `RECOVER_ASSETS_ROLE`
-      )
-      await assert.revertsOZAccessControl(
-        burner.recoverERC721(mockNFT.address, nft1, { from: anotherAccount }),
-        anotherAccount,
-        `RECOVER_ASSETS_ROLE`
-      )
-      await assert.revertsOZAccessControl(
-        burner.recoverExcessStETH({ from: anotherAccount }),
-        anotherAccount,
-        `RECOVER_ASSETS_ROLE`
-      )
-
-      await burner.grantRole(await burner.RECOVER_ASSETS_ROLE(), anotherAccount, { from: appManager })
-      assert.isTrue(await burner.hasRole(await burner.RECOVER_ASSETS_ROLE(), anotherAccount))
-
-      await burner.recoverERC20(mockERC20Token.address, bn(600000), { from: anotherAccount })
-      await burner.recoverERC721(mockNFT.address, nft1, { from: anotherAccount })
-      await burner.recoverExcessStETH({ from: anotherAccount })
-    })
-
     it(`REQUEST_BURN_SHARES_ROLE works`, async () => {
       await web3.eth.sendTransaction({ from: anotherAccount, to: lido.address, value: ETH(2) })
       await lido.approve(burner.address, StETH(2), { from: anotherAccount })
@@ -687,7 +649,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       assert.equals(await lido.balanceOf(burner.address), StETH(7.1))
 
       // should change nothing
-      const receipt = await burner.recoverExcessStETH({ from: voting })
+      const receipt = await burner.recoverExcessStETH({ from: anotherAccount })
       assert.emitsNumberOfEvents(receipt, `ExcessStETHRecovered`, 0)
 
       // excess stETH amount didn't changed
@@ -707,9 +669,9 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       assert.equals(await lido.balanceOf(treasury), StETH(0))
 
       const sharesAmount2_3StETH = await lido.sharesOf(burner.address)
-      const receipt = await burner.recoverExcessStETH({ from: voting })
+      const receipt = await burner.recoverExcessStETH({ from: anotherAccount })
       assert.emits(receipt, `ExcessStETHRecovered`, {
-        requestedBy: voting,
+        requestedBy: anotherAccount,
         amountOfStETH: StETH(2.3),
         amountOfShares: sharesAmount2_3StETH,
       })
@@ -754,9 +716,9 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       // run recovery process, excess stETH amount (5)
       // should be transferred to the treasury
       const sharesAmount5stETH = await lido.getSharesByPooledEth(StETH(5))
-      const receipt = await burner.recoverExcessStETH({ from: voting })
+      const receipt = await burner.recoverExcessStETH({ from: anotherAccount })
       assert.emits(receipt, `ExcessStETHRecovered`, {
-        requestedBy: voting,
+        requestedBy: anotherAccount,
         amountOfStETH: StETH(5),
         amountOfShares: sharesAmount5stETH,
       })
@@ -807,7 +769,7 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
     })
 
     it(`can't recover zero-address ERC20`, async () => {
-      await assert.reverts(burner.recoverERC20(ZERO_ADDRESS, bn(10), { from: voting }))
+      await assert.reverts(burner.recoverERC20(ZERO_ADDRESS, bn(10), { from: anotherAccount }))
     })
 
     it(`can't recover stETH by recoverERC20`, async () => {
@@ -826,16 +788,8 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       // revert from anotherAccount
       // need to use recoverExcessStETH
       await assert.revertsWithCustomError(
-        burner.recoverERC20(lido.address, StETH(1), { from: voting }),
+        burner.recoverERC20(lido.address, StETH(1), { from: anotherAccount }),
         `StETHRecoveryWrongFunc()`
-      )
-
-      // revert from deployer
-      // acl
-      await assert.revertsOZAccessControl(
-        burner.recoverERC20(lido.address, StETH(1), { from: deployer }),
-        deployer,
-        `RECOVER_ASSETS_ROLE`
       )
     })
 
@@ -849,9 +803,9 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       assert.equals(await mockERC20Token.balanceOf(burner.address), bn(600000))
 
       // recover ERC20
-      const firstReceipt = await burner.recoverERC20(mockERC20Token.address, bn(100000), { from: voting })
+      const firstReceipt = await burner.recoverERC20(mockERC20Token.address, bn(100000), { from: anotherAccount })
       assert.emits(firstReceipt, `ERC20Recovered`, {
-        requestedBy: voting,
+        requestedBy: anotherAccount,
         token: mockERC20Token.address,
         amount: bn(100000),
       })
@@ -861,24 +815,17 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       assert.equals(await mockERC20Token.balanceOf(treasury), bn(100000))
       assert.equals(await mockERC20Token.balanceOf(voting), bn(0))
 
-      // acl error
-      await assert.revertsOZAccessControl(
-        burner.recoverERC20(mockERC20Token.address, bn(1), { from: anotherAccount }),
-        anotherAccount,
-        `RECOVER_ASSETS_ROLE`
-      )
-
       // recover last portion
-      const lastReceipt = await burner.recoverERC20(mockERC20Token.address, bn(500000), { from: voting })
+      const lastReceipt = await burner.recoverERC20(mockERC20Token.address, bn(500000), { from: anotherAccount })
       assert.emits(lastReceipt, `ERC20Recovered`, {
-        requestedBy: voting,
+        requestedBy: anotherAccount,
         token: mockERC20Token.address,
         amount: bn(500000),
       })
 
       // balance is zero already, have to be reverted
       await assert.reverts(
-        burner.recoverERC20(mockERC20Token.address, bn(1), { from: voting }),
+        burner.recoverERC20(mockERC20Token.address, bn(1), { from: anotherAccount }),
         `ERC20: transfer amount exceeds balance`
       )
     })
@@ -908,30 +855,20 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       assert.equals(await burner.getExcessStETH(), StETH(1))
 
       // can't abuse recoverERC721 API to perform griefing-like attack
-      await assert.revertsOZAccessControl(
-        burner.recoverERC721(lido.address, StETH(1), { from: anotherAccount }),
-        anotherAccount,
-        `RECOVER_ASSETS_ROLE`
-      )
-      await assert.revertsOZAccessControl(
-        burner.recoverERC721(lido.address, StETH(1), { from: deployer }),
-        deployer,
-        `RECOVER_ASSETS_ROLE`
-      )
       await assert.revertsWithCustomError(
-        burner.recoverERC721(lido.address, StETH(1), { from: voting }),
+        burner.recoverERC721(lido.address, StETH(1), { from: anotherAccount }),
         `StETHRecoveryWrongFunc()`
       )
 
-      const receipt = await burner.recoverExcessStETH({ from: voting })
-      assert.emits(receipt, `ExcessStETHRecovered`, { requestedBy: voting, amountOfStETH: StETH(1) })
+      const receipt = await burner.recoverExcessStETH({ from: anotherAccount })
+      assert.emits(receipt, `ExcessStETHRecovered`, { requestedBy: anotherAccount, amountOfStETH: StETH(1) })
 
       // ensure that excess amount is zero
       assert.equals(await burner.getExcessStETH(), StETH(0))
     })
 
     it(`can't recover zero-address ERC721(NFT)`, async () => {
-      await assert.reverts(burner.recoverERC721(ZERO_ADDRESS, 0, { from: voting }))
+      await assert.reverts(burner.recoverERC721(ZERO_ADDRESS, 0, { from: anotherAccount }))
     })
 
     it(`recover some accidentally sent NFTs`, async () => {
@@ -943,13 +880,6 @@ contract('Burner', ([deployer, _, anotherAccount]) => {
       assert.equals(await mockNFT.balanceOf(deployer), bn(0))
       assert.equals(await mockNFT.balanceOf(anotherAccount), bn(1))
       assert.equals(await mockNFT.balanceOf(burner.address), bn(1))
-
-      // access control revert
-      await assert.revertsOZAccessControl(
-        burner.recoverERC721(mockNFT.address, nft2, { from: anotherAccount }),
-        anotherAccount,
-        `RECOVER_ASSETS_ROLE`
-      )
 
       // recover nft2 should work
       const receiptNfc2 = await burner.recoverERC721(mockNFT.address, nft2, { from: voting })
