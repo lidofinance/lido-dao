@@ -851,6 +851,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
   })
 
   context('findCheckpointHints', () => {
+    const NOT_FOUND = 0
     context('unit tests', () => {
       let requestId
       const amount = ETH(20)
@@ -865,11 +866,11 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         assert.equals(lastCheckpointIndex, 0)
         const result = await withdrawalQueue.findCheckpointHints([requestId], 1, lastCheckpointIndex)
         assert.isTrue(result.length === 1)
-        assert.equals(result[0], 0)
+        assert.equals(result[0], NOT_FOUND)
 
         const claimableEthResult = await withdrawalQueue.getClaimableEther([requestId], result)
         assert.isTrue(claimableEthResult.length === 1)
-        assert.equals(claimableEthResult[0], 0)
+        assert.equals(claimableEthResult[0], NOT_FOUND)
       })
 
       it('reverts if first index is zero', async () => {
@@ -904,7 +905,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
           lastCheckpointIndex
         )
         assert.equal(hints.length, 1)
-        assert.equals(hints[0], 0)
+        assert.equals(hints[0], NOT_FOUND)
       })
 
       it('returns hints array with one item for list from single request id', async () => {
@@ -988,13 +989,15 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         assert.equals(await withdrawalQueue.getLastCheckpointIndex(), numOfRequests)
       })
 
-      it('reverts if request is not finalized', async () => {
+      it('return NOT_FOUND if request is not finalized', async () => {
         await withdrawalQueue.requestWithdrawals([ETH(1)], owner, { from: user })
-        await assert.reverts(withdrawalQueue.findCheckpointHints([11], 1, 10), 'RequestNotFoundOrNotFinalized(11)')
+        const hints = await withdrawalQueue.findCheckpointHints([11], 1, 10)
+        assert.equals(hints.length, 1)
+        assert.equals(hints[0], NOT_FOUND)
       })
 
       it('reverts if there is no such a request', async () => {
-        await assert.reverts(withdrawalQueue.findCheckpointHints([12], 1, 10), 'RequestNotFoundOrNotFinalized(12)')
+        await assert.reverts(withdrawalQueue.findCheckpointHints([12], 1, 10), 'InvalidRequestId(12)')
       })
 
       it('range search (found)', async () => {
