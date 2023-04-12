@@ -194,22 +194,9 @@ async function initAccountingOracle({
 }
 
 async function deployOracleReportSanityCheckerForAccounting(lidoLocator, admin) {
-  const exitedValidatorsPerDayLimit = 100
-  const appearedValidatorsPerDayLimit = 200
-  const limitsList = [exitedValidatorsPerDayLimit, appearedValidatorsPerDayLimit, 0, 0, 0, 32 * 12, 15, 16, 0, 0]
-  const managersRoster = [
-    [admin],
-    [admin],
-    [admin],
-    [admin],
-    [admin],
-    [admin],
-    [admin],
-    [admin],
-    [admin],
-    [admin],
-    [admin],
-  ]
+  const churnValidatorsPerDayLimit = 100
+  const limitsList = [churnValidatorsPerDayLimit, 0, 0, 0, 32 * 12, 15, 16, 0, 0]
+  const managersRoster = [[admin], [admin], [admin], [admin], [admin], [admin], [admin], [admin], [admin], [admin]]
 
   const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
 
