@@ -1,5 +1,5 @@
 const { readNetworkState, persistNetworkState2 } = require('./persisted-network-state')
-const { artifacts } = require('hardhat')
+const { artifacts, ethers } = require('hardhat')
 const fs = require('fs').promises
 const chalk = require('chalk')
 const { assert } = require('chai')
@@ -8,7 +8,10 @@ const { log, logDeploy, logDeployTxData } = require('./log')
 const { getTxData } = require('./tx-data')
 
 
-const GAS_PRICE = process.env.GAS_PRICE || 0
+const GAS_PRICE = process.env.GAS_PRICE || null
+const GAS_PRIORITY_FEE = process.env.GAS_PRIORITY_FEE || null
+const GAS_MAX_FEE = process.env.GAS_MAX_FEE || null
+
 let TOTAL_GAS_USED = 0
 
 function getTotalGasUsed() {
@@ -16,7 +19,13 @@ function getTotalGasUsed() {
 }
 
 async function getDeploymentGasUsed(contract) {
-  const tx = await web3.eth.getTransactionReceipt(contract.transactionHash)
+  let txHash = null
+  if (contract.deployTransaction) {
+    txHash = contract.deployTransaction.hash
+  } else {
+    txHash = contract.transactionHash
+  }
+  const tx = await web3.eth.getTransactionReceipt(txHash)
   return tx.gasUsed
 }
 
@@ -133,23 +142,67 @@ function withArgs(...args) {
   }
 }
 
+async function getDeployTxParams(deployer) {
+  const [deployerSigner] = await hre.ethers.getSigners();
+  if (deployer !== deployerSigner.address) {
+    console.log({deployerSigner})
+    throw new Error('DEPLOYER set in ENV must correspond to the deployer specified in accounts.json')
+  }
+
+  if (GAS_PRIORITY_FEE !== null && GAS_MAX_FEE !== null) {
+    return {
+      type: 2,
+      maxPriorityFeePerGas: ethers.utils.parseUnits(String(GAS_PRIORITY_FEE), "gwei"),
+      maxFeePerGas: ethers.utils.parseUnits(String(GAS_MAX_FEE), "gwei"),
+    }
+  } else if (GAS_PRICE !== null) {
+    return {
+      from: deployer,
+      gasPrice: GAS_PRICE,
+    }
+  } else {
+    throw new Error('Must specify gas ENV vars: either "GAS_PRICE" or both "GAS_PRIORITY_FEE" and "GAS_MAX_FEE" in gwei (like just "3")')
+  }
+}
+
+async function deployContractType1(artifactName, constructorArgs, deployer) {
+  const Contract = await artifacts.require(artifactName)
+  const txParams = await getDeployTxParams(deployer)
+  const contract = await Contract.new(...constructorArgs, txParams)
+  return contract
+}
+
+async function deployContractType2(artifactName, constructorArgs, deployer) {
+  const Contract = await ethers.getContractFactory(artifactName)
+  const txParams = await getDeployTxParams(deployer)
+  const contract = await Contract.deploy(...constructorArgs, txParams)
+  await contract.deployed()
+  return contract
+}
+
+async function deployContract(artifactName, constructorArgs, deployer) {
+  const txParams = await getDeployTxParams(deployer)
+  if (txParams.type === 2) {
+    return await deployContractType2(artifactName, constructorArgs, deployer)
+  } else {
+    return await deployContractType1(artifactName, constructorArgs, deployer)
+  }
+}
+
 async function deployWithoutProxy(nameInState, artifactName, deployer, constructorArgs=[], addressFieldName="address") {
   const netId = await web3.eth.net.getId()
   const state = readNetworkState(network.name, netId)
 
-  if (constructorArgs) {
-    console.log(`${artifactName} constructor args: ${constructorArgs}`)
+  console.log(`Deploying ${artifactName}...`)
+  if (constructorArgs.length > 0) {
+    console.log(`Constructor args: ${constructorArgs}`)
   }
 
-  const Contract = await artifacts.require(artifactName)
-  const contract = await Contract.new(...constructorArgs,
-    {
-      from: deployer,
-      gasPrice: GAS_PRICE,
-    })
+  const contract = await deployContract(artifactName, constructorArgs, deployer)
+  console.log(`${artifactName} (NO proxy): ${contract.address}`)
 
   const gasUsed = await getDeploymentGasUsed(contract)
-  console.log(`${artifactName} (NO proxy): ${contract.address} (gas used ${gasUsed})`)
+  console.log(`    gas used ${gasUsed}`)
   TOTAL_GAS_USED += gasUsed
 
   if (nameInState) {
@@ -165,37 +218,27 @@ async function deployWithoutProxy(nameInState, artifactName, deployer, construct
   return contract.address
 }
 
-
 async function deployBehindOssifiableProxy(nameInState, artifactName, proxyOwner, deployer, constructorArgs=[], implementation=null) {
   const netId = await web3.eth.net.getId()
   const state = readNetworkState(network.name, netId)
 
   if (implementation === null) {
-    const Contract = await artifacts.require(artifactName)
-    const contract = await Contract.new(...constructorArgs, {
-      from: deployer,
-      gasPrice: GAS_PRICE,
-    })
+    console.log(`Deploying implementation for proxy of ${artifactName}`)
+    const contract = await deployContract(artifactName, constructorArgs, deployer)
+
     const gasUsed = await getDeploymentGasUsed(contract)
     TOTAL_GAS_USED += gasUsed
     implementation = contract.address
+
     console.log(`${artifactName} implementation: ${implementation} (gas used ${gasUsed})`)
   } else {
-    console.log(`Using pre-deployed implementation ${implementation}`)
+    console.log(`Using pre-deployed implementation of ${artifactName}: ${implementation}`)
   }
 
-  const OssifiableProxy = await artifacts.require("OssifiableProxy")
-  const proxy = await OssifiableProxy.new(
-    implementation,
-    proxyOwner,
-    [],
-    {
-      from: deployer,
-      gasPrice: GAS_PRICE,
-    },
-  )
+  console.log(`Deploying OssifiableProxy for ${artifactName}...`)
+  const proxy = await deployContract("OssifiableProxy", [implementation, proxyOwner, []], deployer)
   const gasUsed = await getDeploymentGasUsed(proxy)
-    TOTAL_GAS_USED += gasUsed
+  TOTAL_GAS_USED += gasUsed
   console.log(`${artifactName} proxy: ${proxy.address} (owner is ${proxyOwner}) (gas used ${gasUsed})`)
 
   persistNetworkState2(network.name, netId, state, {
@@ -249,6 +292,7 @@ module.exports = {
   assertDeployedBytecode,
   assertProxiedContractBytecode,
   withArgs,
+  getDeployTxParams,
   deployWithoutProxy,
   deployBehindOssifiableProxy,
   updateProxyImplementation,
