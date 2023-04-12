@@ -72,6 +72,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     error InvalidReportTimestamp();
     error RequestIdsNotSorted();
     error ZeroRecipient();
+    error ArraysLengthMismatch(uint256 _firstArrayLength, uint256 _secondArrayLength);
 
     /// @param _wstETH address of WstETH contract
     constructor(IWstETH _wstETH) {
@@ -238,6 +239,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @param _recipient address where claimed ether will be sent to
     /// @dev
     ///  Reverts if recipient is equal to zero
+    ///  Reverts if requestIds and hints arrays length differs
     ///  Reverts if any requestId or hint in arguments are not valid
     ///  Reverts if any request is not finalized or already claimed
     ///  Reverts if msg sender is not an owner of the requests
@@ -245,6 +247,9 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         external
     {
         if (_recipient == address(0)) revert ZeroRecipient();
+        if (_requestIds.length != _hints.length) {
+            revert ArraysLengthMismatch(_requestIds.length, _hints.length);
+        }
 
         for (uint256 i = 0; i < _requestIds.length; ++i) {
             _claim(_requestIds[i], _hints[i], _recipient);
@@ -257,10 +262,15 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @param _hints checkpoint hint for each id.
     ///   Can be retrieved with `findCheckpointHints()`
     /// @dev
+    ///  Reverts if requestIds and hints arrays length differs
     ///  Reverts if any requestId or hint in arguments are not valid
     ///  Reverts if any request is not finalized or already claimed
     ///  Reverts if msg sender is not an owner of the requests
     function claimWithdrawals(uint256[] calldata _requestIds, uint256[] calldata _hints) external {
+        if (_requestIds.length != _hints.length) {
+            revert ArraysLengthMismatch(_requestIds.length, _hints.length);
+        }
+
         for (uint256 i = 0; i < _requestIds.length; ++i) {
             _claim(_requestIds[i], _hints[i], msg.sender);
             _emitTransfer(msg.sender, address(0), _requestIds[i]);
