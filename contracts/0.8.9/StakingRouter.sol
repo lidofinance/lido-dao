@@ -717,8 +717,9 @@ contract StakingRouter is AccessControl, BeaconChainDepositor, Versioned {
         IStakingModule stakingModule = IStakingModule(stakingModuleState.stakingModuleAddress);
         /// @dev using intermediate variables below due to "Stack too deep" error in case of
         ///     assigning directly into the NodeOperatorSummary struct
-        uint256 totalDepositedValidators = stakingModule.getTotalSigningKeyCount(_nodeOperatorId);
         uint256 depositableValidatorsCount =  stakingModule.getUnusedSigningKeyCount(_nodeOperatorId);
+        uint256 totalDepositedValidators =
+            stakingModule.getTotalSigningKeyCount(_nodeOperatorId) - depositableValidatorsCount;
         summary.isTargetLimitActive = false;
         summary.targetValidatorsCount = 0;
         summary.stuckValidatorsCount = 0;
@@ -829,8 +830,9 @@ contract StakingRouter is AccessControl, BeaconChainDepositor, Versioned {
         IStakingModule stakingModule = IStakingModule(_getStakingModuleAddressById(_stakingModuleId));
         digests = new NodeOperatorDigest[](_nodeOperatorIds.length);
         for (uint256 i = 0; i < _nodeOperatorIds.length; ++i) {
-            uint256 totalDepositedValidators = stakingModule.getTotalSigningKeyCount(_nodeOperatorIds[i]);
             uint256 depositableValidatorsCount =  stakingModule.getUnusedSigningKeyCount(_nodeOperatorIds[i]);
+            uint256 totalDepositedValidators =
+                stakingModule.getTotalSigningKeyCount(_nodeOperatorIds[i]) - depositableValidatorsCount;
 
             NodeOperatorSummary memory nodeOperatorSummaryMock = NodeOperatorSummary(
                 false,0,0,0,0,0,totalDepositedValidators, depositableValidatorsCount
