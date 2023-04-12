@@ -376,6 +376,10 @@ contract('AccountingOracle', ([admin, member1]) => {
       await snapshot.rollback()
     })
 
+    it('reverts when slotsPerSecond is zero', async () => {
+      await assert.reverts(deployAccountingOracleSetup(admin, { secondsPerSlot: 0 }), 'SecondsPerSlotCannotBeZero()')
+    })
+
     it('deployment and init finishes successfully otherwise', async () => {
       const deployed = await deployAccountingOracleSetup(admin)
 

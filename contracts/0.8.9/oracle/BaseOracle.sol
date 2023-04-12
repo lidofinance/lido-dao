@@ -50,6 +50,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     error UnexpectedConsensusVersion(uint256 expectedVersion, uint256 receivedVersion);
     error HashCannotBeZero();
     error UnexpectedDataHash(bytes32 consensusHash, bytes32 receivedHash);
+    error SecondsPerSlotCannotBeZero();
 
     event ConsensusHashContractSet(address indexed addr, address indexed prevAddr);
     event ConsensusVersionSet(uint256 indexed version, uint256 indexed prevVersion);
@@ -100,6 +101,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     ///
 
     constructor(uint256 secondsPerSlot, uint256 genesisTime) {
+        if (secondsPerSlot == 0) revert SecondsPerSlotCannotBeZero();
         SECONDS_PER_SLOT = secondsPerSlot;
         GENESIS_TIME = genesisTime;
     }
