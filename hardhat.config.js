@@ -70,6 +70,12 @@ const getNetConfig = (networkName, ethAccountName) => {
       chainId: 1337,
       gas: 80000000, // the same as in Görli
     },
+    'mainnet-fork-shapella-upgrade-deployer-eoa': {
+      ...base,
+      url: 'http://localhost:7777',
+      chainId: 1337,
+      gas: 80000000, // the same as in Görli
+    },
     local: {
       ...base,
       accounts: {
