@@ -481,7 +481,7 @@ abstract contract WithdrawalQueueBase {
         // (issue: https://github.com/lidofinance/lido-dao/issues/442 )
         // some dust (1-2 wei per request) will be accumulated upon claiming
         _setLockedEtherAmount(getLockedEtherAmount() - ethWithDiscount);
-        _sendValue(payable(_recipient), ethWithDiscount);
+        _sendValue(_recipient, ethWithDiscount);
 
         emit WithdrawalClaimed(_requestId, msg.sender, _recipient, ethWithDiscount);
     }
