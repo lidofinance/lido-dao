@@ -391,7 +391,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         }
     }
 
-    /// @notice returns claimable ether under the request with _requestId.
+    /// @notice returns claimable ether under the request with _requestId. Returns 0 if request is not finalized or already claimed
     function _getClaimableEther(uint256 _requestId, uint256 _hint) internal view returns (uint256) {
         if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 

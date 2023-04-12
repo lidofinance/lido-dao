@@ -30,7 +30,7 @@ interface INFTDescriptor {
 /// NFT is minted on every request and burned on claim
 ///
 /// @author psirex, folkyatina
-contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue, IERC4906 {
+contract WithdrawalQueueERC721 is IERC721Metadata, IERC4906, WithdrawalQueue {
     using Address for address;
     using Strings for uint256;
     using EnumerableSet for EnumerableSet.UintSet;
@@ -89,6 +89,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue, IERC4906 {
         returns (bool)
     {
         return interfaceId == type(IERC721).interfaceId || interfaceId == type(IERC721Metadata).interfaceId
+            // 0x49064906 is magic number ERC4906 interfaceId as defined in the standard https://eips.ethereum.org/EIPS/eip-4906
             || interfaceId == bytes4(0x49064906) || super.supportsInterface(interfaceId);
     }
 
@@ -122,7 +123,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue, IERC4906 {
         return _getBaseURI().value;
     }
 
-    /// @notice Sets the Base URI for computing {tokenURI}
+    /// @notice Sets the Base URI for computing {tokenURI}. It does not expect the ending slash in provided string.
     /// @dev If NFTDescriptor address isn't set the `baseURI` would be used for generating erc721 tokenURI. In case
     ///  NFTDescriptor address is set it would be used as a first-priority method.
     function setBaseURI(string calldata _baseURI) external onlyRole(MANAGE_TOKEN_URI_ROLE) {
@@ -354,26 +355,37 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue, IERC4906 {
         string memory baseURI = _getBaseURI().value;
         if (bytes(baseURI).length == 0) return "";
 
-        // ${baseUri}/${_requestId}?state=finalized|unfinalized&amount=${amount}&created_at=${timestamp}
-        // we still have no string.concat in 0.8.9, so we have to do it with bytes
-        bool finalized = _requestId <= getLastFinalizedRequestId();
-        return string(
+        // ${baseUri}/${_requestId}?requested=${amount}&created_at=${timestamp}[&finalized=${claimableAmount}]
+        string memory uri = string(
+            // we have no string.concat in 0.8.9 yet, so we have to do it with bytes.concat
             bytes.concat(
                 bytes(baseURI),
+                bytes("/"),
                 bytes(_requestId.toString()),
-                bytes("?status="),
-                bytes(finalized ? "finalized" : "pending"),
-                bytes("&amount="),
+                bytes("?requested="),
                 bytes(
-                    finalized
-                        ? _getClaimableEther(_requestId, _findCheckpointHint(_requestId, 1, getLastCheckpointIndex()))
-                            .toString()
-                        : uint256(_getQueue()[_requestId].cumulativeStETH - _getQueue()[_requestId - 1].cumulativeStETH)
-                            .toString()
+                    uint256(_getQueue()[_requestId].cumulativeStETH - _getQueue()[_requestId - 1].cumulativeStETH)
+                        .toString()
                 ),
                 bytes("&created_at="),
                 bytes(uint256(_getQueue()[_requestId].timestamp).toString())
             )
         );
+        bool finalized = _requestId <= getLastFinalizedRequestId();
+
+        if (finalized) {
+            uri = string(
+                bytes.concat(
+                    bytes(uri),
+                    bytes("&finalized="),
+                    bytes(
+                        _getClaimableEther(_requestId, _findCheckpointHint(_requestId, 1, getLastCheckpointIndex()))
+                            .toString()
+                    )
+                )
+            );
+        }
+
+        return uri;
     }
 }

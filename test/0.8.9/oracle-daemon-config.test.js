@@ -102,18 +102,26 @@ contract('OracleDaemonConfig', async ([deployer, manager, stranger]) => {
       )
     })
 
-    it('revers when empty value passed to set', async () => {
+    it('reverts when empty value passed to set', async () => {
       await assert.revertsWithCustomError(
         config.set(defaultKey, '0x', { from: manager }),
         `EmptyValue("${defaultKey}")`
       )
     })
 
-    it('revers when empty value passed to update', async () => {
+    it('reverts when empty value passed to update', async () => {
       await config.set(defaultKey, defaultValue, { from: manager })
       await assert.revertsWithCustomError(
         config.update(defaultKey, '0x', { from: manager }),
         `EmptyValue("${defaultKey}")`
+      )
+    })
+
+    it('reverts when set key with the same value', async () => {
+      await config.set(defaultKey, defaultValue, { from: manager })
+      await assert.revertsWithCustomError(
+        config.update(defaultKey, defaultValue, { from: manager }),
+        `ValueIsSame("${defaultKey}", "${defaultValue}")`
       )
     })
   })

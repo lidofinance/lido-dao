@@ -44,7 +44,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user, oracle]) => {
     await snapshot()
   })
 
-  context(`2 requests with diff share rate, maxShareRate == shareRate(1)`, async () => {
+  context(`2 requests with diff share rate, maxShareRate == shareRate(1)`, () => {
     ///
     /// invariant 1: all requests in the same batch should be finalized using the same share rate
     ///
@@ -114,7 +114,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user, oracle]) => {
     })
   })
 
-  context(`2 requests 2 batches, shareRate(2) > maxShareRate > shareRate(1)`, async () => {
+  context(`2 requests 2 batches, shareRate(2) > maxShareRate > shareRate(1)`, () => {
     ///
     /// invariant 1: all requests in the same batch should be finalized using the same share rate
     ///

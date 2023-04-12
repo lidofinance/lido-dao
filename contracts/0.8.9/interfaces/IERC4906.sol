@@ -1,3 +1,4 @@
+// SPDX-FileCopyrightText: 2023 OpenZeppelin, Lido <info@lido.fi>
 // SPDX-License-Identifier: MIT
 
 // Based on https://github.com/OpenZeppelin/openzeppelin-contracts/blob/96a2297e15f1a4bbcf470d2d0d6cb9c579c63893/contracts/interfaces/IERC4906.sol
