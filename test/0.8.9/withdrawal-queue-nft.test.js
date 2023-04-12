@@ -97,7 +97,7 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
 
   context('tokenURI', () => {
     const requestId = 1
-    const baseTokenUri = 'https://example.com/'
+    const baseTokenUri = 'https://example.com'
 
     beforeEach(async function () {
       await withdrawalQueue.requestWithdrawals([ETH(25), ETH(25)], user, { from: user })
@@ -106,7 +106,42 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
     it('returns tokenURI without nftDescriptor', async () => {
       const tx = await withdrawalQueue.setBaseURI(baseTokenUri, { from: tokenUriManager })
       assert.emits(tx, 'BaseURISet', { baseURI: baseTokenUri })
-      assert.equals(await withdrawalQueue.tokenURI(1), `${baseTokenUri}${requestId}`)
+
+      assert.equals(
+        await withdrawalQueue.tokenURI(1),
+        `${baseTokenUri}/${requestId}?requested=${ETH(25)}&created_at=${
+          (await withdrawalQueue.getWithdrawalStatus([1]))[0].timestamp
+        }`
+      )
+    })
+
+    it('correct tokenURI after finalization', async () => {
+      const tx = await withdrawalQueue.setBaseURI(baseTokenUri, { from: tokenUriManager })
+      assert.emits(tx, 'BaseURISet', { baseURI: baseTokenUri })
+
+      await withdrawalQueue.finalize([1], shareRate(300), { from: daoAgent, value: ETH(25) })
+
+      assert.equals(
+        await withdrawalQueue.tokenURI(1),
+        `${baseTokenUri}/${requestId}?requested=${ETH(25)}&created_at=${
+          (await withdrawalQueue.getWithdrawalStatus([1]))[0].timestamp
+        }&finalized=${(await withdrawalQueue.getClaimableEther([1], [1]))[0]}`
+      )
+    })
+
+    it('correct tokenURI after finalization with discount', async () => {
+      const tx = await withdrawalQueue.setBaseURI(baseTokenUri, { from: tokenUriManager })
+      assert.emits(tx, 'BaseURISet', { baseURI: baseTokenUri })
+
+      const batch = await withdrawalQueue.prefinalize([1], shareRate(1))
+      await withdrawalQueue.finalize([1], shareRate(1), { from: daoAgent, value: batch.ethToLock })
+
+      assert.equals(
+        await withdrawalQueue.tokenURI(1),
+        `${baseTokenUri}/${requestId}?requested=${ETH(25)}&created_at=${
+          (await withdrawalQueue.getWithdrawalStatus([1]))[0].timestamp
+        }&finalized=${batch.sharesToBurn}`
+      )
     })
 
     it('returns tokenURI without nftDescriptor and baseUri', async () => {
@@ -595,22 +630,17 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, tokenUriManager, 
     })
 
     it('should mint with tokenURI', async () => {
-      const tx = await withdrawalQueue.requestWithdrawals([ETH(25), ETH(25)], user, { from: user })
-      assert.emits(tx, 'Transfer', {
-        from: ZERO_ADDRESS,
-        to: user,
-        tokenId: 1,
-      })
-      assert.emits(tx, 'Transfer', {
-        from: ZERO_ADDRESS,
-        to: user,
-        tokenId: 2,
-      })
-      await withdrawalQueue.setBaseURI('https://example.com/', { from: tokenUriManager })
+      await withdrawalQueue.requestWithdrawals([ETH(25), ETH(25)], user, { from: user })
+      await withdrawalQueue.setBaseURI('https://example.com', { from: tokenUriManager })
 
       assert.equals(await withdrawalQueue.balanceOf(user), 2)
       assert.equals(await withdrawalQueue.ownerOf(1), user)
-      assert.equals(await withdrawalQueue.tokenURI(1), 'https://example.com/1')
+      assert.equals(
+        await withdrawalQueue.tokenURI(1),
+        `https://example.com/1?requested=25000000000000000000&created_at=${
+          (await withdrawalQueue.getWithdrawalStatus([1]))[0].timestamp
+        }`
+      )
     })
 
     it('should mint with nftDescriptor', async () => {
