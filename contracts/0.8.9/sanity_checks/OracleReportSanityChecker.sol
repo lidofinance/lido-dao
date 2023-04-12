@@ -37,8 +37,10 @@ interface IWithdrawalQueue {
 /// @notice The set of restrictions used in the sanity checks of the oracle report
 /// @dev struct is loaded from the storage and stored in memory during the tx running
 struct LimitsList {
-    /// @notice The max possible number of validators that might appear or exit on the Consensus
-    ///     Layer during one day
+    /// @notice The max possible number of validators that might been reported as `appeared` or `exited`
+    ///     during a single day
+    /// NB: `appeared` means `pending` (maybe not `activated` yet), see further explanations
+    //      in docs for the `setChurnValidatorsPerDayLimit` func below.
     /// @dev Must fit into uint16 (<= 65_535)
     uint256 churnValidatorsPerDayLimit;
 
@@ -217,6 +219,15 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     }
 
     /// @notice Sets the new value for the churnValidatorsPerDayLimit
+    ///     The limit is applicable for `appeared` and `exited` validators
+    ///
+    /// NB: AccountingOracle reports validators as `appeared` once them become `pending`
+    ///     (might be not `activated` yet). Thus, this limit should be high enough for such cases
+    ///     because Consensus Layer has no intrinsic churn limit for the amount of `pending` validators
+    ///     (only for `activated` instead). For Lido it's limited by the max daily deposits via DepositSecurityModule
+    ///
+    ///     In contrast, `exited` are reported according to the Consensus Layer churn limit.
+    ///
     /// @param _churnValidatorsPerDayLimit new churnValidatorsPerDayLimit value
     function setChurnValidatorsPerDayLimit(uint256 _churnValidatorsPerDayLimit)
         external
@@ -426,7 +437,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
         // 6. Appeared validators increase
         if (_postCLValidators > _preCLValidators) {
-            _checkValidatorsChurnLimit(limitsList, (_postCLValidators - _preCLValidators), _timeElapsed);
+            _checkAppearedValidatorsChurnLimit(limitsList, (_postCLValidators - _preCLValidators), _timeElapsed);
         }
     }
 
@@ -589,7 +600,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         }
     }
 
-    function _checkValidatorsChurnLimit(
+    function _checkAppearedValidatorsChurnLimit(
         LimitsList memory _limitsList,
         uint256 _appearedValidators,
         uint256 _timeElapsed
