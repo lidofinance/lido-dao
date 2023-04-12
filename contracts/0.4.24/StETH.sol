@@ -247,7 +247,7 @@ contract StETH is IERC20, Pausable {
      *
      * This is an alternative to `approve` that can be used as a mitigation for
      * problems described in:
-     * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol#L42
+     * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/b709eae01d1da91902d06ace340df6b324e6f049/contracts/token/ERC20/IERC20.sol#L57
      * Emits an `Approval` event indicating the updated allowance.
      *
      * Requirements:
@@ -264,7 +264,7 @@ contract StETH is IERC20, Pausable {
      *
      * This is an alternative to `approve` that can be used as a mitigation for
      * problems described in:
-     * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol#L42
+     * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/b709eae01d1da91902d06ace340df6b324e6f049/contracts/token/ERC20/IERC20.sol#L57
      * Emits an `Approval` event indicating the updated allowance.
      *
      * Requirements:
