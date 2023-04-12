@@ -12,7 +12,7 @@ const NFTDescriptorMock = artifacts.require('NFTDescriptorMock.sol')
 
 const QUEUE_NAME = 'Unsteth nft'
 const QUEUE_SYMBOL = 'UNSTETH'
-const NFT_DESCRIPTOR_BASE_URI = 'https://exampleDescriptor.com/'
+const NFT_DESCRIPTOR_BASE_URI = 'https://exampleDescriptor.com'
 
 async function deployWithdrawalQueue({
   stethOwner,

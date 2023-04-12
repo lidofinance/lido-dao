@@ -85,9 +85,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @dev Reverts if `_admin` equals to `address(0)`
     /// @dev NB! It's initialized in paused state by default and should be resumed explicitly to start
     /// @dev NB! Bunker mode is disabled by default
-    function initialize(address _admin)
-        external
-    {
+    function initialize(address _admin) external {
         if (_admin == address(0)) revert AdminZeroAddress();
 
         _initialize(_admin);
@@ -302,25 +300,15 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         }
     }
 
-    /// @notice Finalize requests from last finalized one up to `_lastRequestIdToFinalize`
-    /// @dev ether to finalize all the requests should be calculated using `finalizationValue()` and sent along
-    function finalize(uint256[] calldata _batches, uint256 _maxShareRate)
-        external
-        payable
-    {
-        _checkResumed();
-        _checkRole(FINALIZE_ROLE, msg.sender);
-
-        _finalize(_batches, msg.value, _maxShareRate);
-    }
-
     /// @notice Update bunker mode state and last report timestamp
     /// @dev should be called by oracle
     ///
     /// @param _isBunkerModeNow is bunker mode reported by oracle
     /// @param _bunkerStartTimestamp timestamp of start of the bunker mode
     /// @param _currentReportTimestamp timestamp of the current report ref slot
-    function onOracleReport(bool _isBunkerModeNow, uint256 _bunkerStartTimestamp, uint256 _currentReportTimestamp) external {
+    function onOracleReport(bool _isBunkerModeNow, uint256 _bunkerStartTimestamp, uint256 _currentReportTimestamp)
+        external
+    {
         _checkRole(ORACLE_ROLE, msg.sender);
         if (_bunkerStartTimestamp >= block.timestamp) revert InvalidReportTimestamp();
         if (_currentReportTimestamp >= block.timestamp) revert InvalidReportTimestamp();
@@ -359,9 +347,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     function _emitTransfer(address from, address to, uint256 _requestId) internal virtual;
 
     /// @dev internal initialization helper. Doesn't check provided addresses intentionally
-    function _initialize(address _admin)
-        internal
-    {
+    function _initialize(address _admin) internal {
         _initializeQueue();
         _pauseFor(PAUSE_INFINITELY);
 
@@ -405,7 +391,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         }
     }
 
-    /// @notice returns claimable ether under the request with _requestId.
+    /// @notice returns claimable ether under the request with _requestId. Returns 0 if request is not finalized or already claimed
     function _getClaimableEther(uint256 _requestId, uint256 _hint) internal view returns (uint256) {
         if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 

@@ -41,7 +41,6 @@ abstract contract WithdrawalQueueBase {
     /// @dev timestamp of the last oracle report
     bytes32 internal constant LAST_REPORT_TIMESTAMP_POSITION = keccak256("lido.WithdrawalQueue.lastReportTimestamp");
 
-
     /// @notice structure representing a request for withdrawal.
     struct WithdrawalRequest {
         /// @notice sum of the all stETH submitted for withdrawals up to this request
@@ -217,11 +216,7 @@ abstract contract WithdrawalQueueBase {
         uint256 _maxTimestamp,
         uint256 _maxRequestsPerCall,
         BatchesCalculationState memory _state
-    )
-        external
-        view
-        returns (BatchesCalculationState memory)
-    {
+    ) external view returns (BatchesCalculationState memory) {
         if (_state.finished || _state.remainingEthBudget == 0) revert InvalidState();
 
         uint256 currentId;
@@ -246,7 +241,7 @@ abstract contract WithdrawalQueueBase {
         while (currentId < queueLength && currentId < nextCallRequestId) {
             WithdrawalRequest memory request = _getQueue()[currentId];
 
-            if (request.timestamp > _maxTimestamp) break;  // max timestamp break
+            if (request.timestamp > _maxTimestamp) break; // max timestamp break
 
             (uint256 requestShareRate, uint256 ethToFinalize, uint256 shares) = _calcBatch(prevRequest, request);
 
@@ -335,15 +330,13 @@ abstract contract WithdrawalQueueBase {
     ///  Emits WithdrawalBatchFinalized event.
     /// Checks that:
     /// - _amountOfETH is less or equal to the nominal value of all requests to be finalized
-    function _finalize(uint256[] memory _batches, uint256 _amountOfETH, uint256 _maxShareRate) internal {
-        if (_batches.length == 0) revert EmptyBatches();
-        uint256 lastRequestIdToBeFinalized = _batches[_batches.length - 1];
-        if (lastRequestIdToBeFinalized > getLastRequestId()) revert InvalidRequestId(lastRequestIdToBeFinalized);
+    function _finalize(uint256 _lastRequestIdToBeFinalized, uint256 _amountOfETH, uint256 _maxShareRate) internal {
+        if (_lastRequestIdToBeFinalized > getLastRequestId()) revert InvalidRequestId(_lastRequestIdToBeFinalized);
         uint256 lastFinalizedRequestId = getLastFinalizedRequestId();
-        if (lastRequestIdToBeFinalized <= lastFinalizedRequestId) revert InvalidRequestId(lastRequestIdToBeFinalized);
+        if (_lastRequestIdToBeFinalized <= lastFinalizedRequestId) revert InvalidRequestId(_lastRequestIdToBeFinalized);
 
         WithdrawalRequest memory lastFinalizedRequest = _getQueue()[lastFinalizedRequestId];
-        WithdrawalRequest memory requestToFinalize = _getQueue()[lastRequestIdToBeFinalized];
+        WithdrawalRequest memory requestToFinalize = _getQueue()[_lastRequestIdToBeFinalized];
 
         uint128 stETHToFinalize = requestToFinalize.cumulativeStETH - lastFinalizedRequest.cumulativeStETH;
         if (_amountOfETH > stETHToFinalize) revert TooMuchEtherToFinalize(_amountOfETH, stETHToFinalize);
@@ -356,15 +349,15 @@ abstract contract WithdrawalQueueBase {
         _setLastCheckpointIndex(lastCheckpointIndex + 1);
 
         _setLockedEtherAmount(getLockedEtherAmount() + _amountOfETH);
-        _setLastFinalizedRequestId(lastRequestIdToBeFinalized);
+        _setLastFinalizedRequestId(_lastRequestIdToBeFinalized);
 
         emit WithdrawalsFinalized(
             firstRequestIdToFinalize,
-            lastRequestIdToBeFinalized,
+            _lastRequestIdToBeFinalized,
             _amountOfETH,
             requestToFinalize.cumulativeShares - lastFinalizedRequest.cumulativeShares,
             block.timestamp
-            );
+        );
     }
 
     /// @dev creates a new `WithdrawalRequest` in the queue
@@ -493,7 +486,7 @@ abstract contract WithdrawalQueueBase {
     }
 
     /// @dev Calculates discounted ether value for `_requestId` using a provided `_hint`. Checks if hint is valid
-    /// @return claimableEther discounted eth for `_requestId`. Returns 0 if request is not claimable
+    /// @return claimableEther discounted eth for `_requestId`
     function _calculateClaimableEther(WithdrawalRequest storage _request, uint256 _requestId, uint256 _hint)
         internal
         view
@@ -544,10 +537,11 @@ abstract contract WithdrawalQueueBase {
     }
 
     /// @dev calculate batch stats (shareRate, stETH and shares) for the batch of `(_preStartRequest, _endRequest]`
-    function _calcBatch(
-        WithdrawalRequest memory _preStartRequest,
-        WithdrawalRequest memory _endRequest
-    ) internal pure returns (uint256 shareRate, uint256 stETH, uint256 shares) {
+    function _calcBatch(WithdrawalRequest memory _preStartRequest, WithdrawalRequest memory _endRequest)
+        internal
+        pure
+        returns (uint256 shareRate, uint256 stETH, uint256 shares)
+    {
         stETH = _endRequest.cumulativeStETH - _preStartRequest.cumulativeStETH;
         shares = _endRequest.cumulativeShares - _preStartRequest.cumulativeShares;
 

@@ -39,7 +39,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
 
     const fromRequest = +(await withdrawalQueue.getLastFinalizedRequestId()) + 1
 
-    const tx = await withdrawalQueue.finalize(batches, finalizationShareRate, {
+    const tx = await withdrawalQueue.finalize(batches[batches.length - 1], finalizationShareRate, {
       from: daoAgent,
       value: batch.ethToLock,
     })

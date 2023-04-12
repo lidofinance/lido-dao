@@ -122,7 +122,7 @@ interface IWithdrawalQueue {
         view
         returns (uint256 ethToLock, uint256 sharesToBurn);
 
-    function finalize(uint256[] _batches, uint256 _maxShareRate) external payable;
+    function finalize(uint256 _lastIdToFinalize, uint256 _maxShareRate) external payable;
 
     function isPaused() external view returns (bool);
 
@@ -851,7 +851,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         if (_etherToLockOnWithdrawalQueue > 0) {
             IWithdrawalQueue withdrawalQueue = IWithdrawalQueue(_contracts.withdrawalQueue);
             withdrawalQueue.finalize.value(_etherToLockOnWithdrawalQueue)(
-                _withdrawalFinalizationBatches,
+                _withdrawalFinalizationBatches[_withdrawalFinalizationBatches.length - 1],
                 _simulatedShareRate
             );
         }
