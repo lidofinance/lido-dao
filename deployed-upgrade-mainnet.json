@@ -250,6 +250,11 @@
       "0x442af784A788A5bd6F42A01Ebe9F287a871243fb",
       12,
       1606824023
+    ],
+    "proxyConstructorArgs": [
+      "0xEC3B38EDc7878Ad3f18cFddcd341aa94Fc57d20B",
+      "0x2A78076BF797dAC2D25c9568F79b61aFE565B88C",
+      "0x"
     ]
   },
   "hashConsensusForValidatorsExitBus": {
@@ -280,6 +285,11 @@
       12,
       1606824023,
       "0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb"
+    ],
+    "proxyConstructorArgs": [
+      "0xEC3B38EDc7878Ad3f18cFddcd341aa94Fc57d20B",
+      "0x2A78076BF797dAC2D25c9568F79b61aFE565B88C",
+      "0x"
     ]
   },
   "depositSecurityModule": {
@@ -372,6 +382,11 @@
       "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
       "stETH Withdrawal NFT",
       "unstETH"
+    ],
+    "proxyConstructorArgs": [
+      "0xEC3B38EDc7878Ad3f18cFddcd341aa94Fc57d20B",
+      "0x2A78076BF797dAC2D25c9568F79b61aFE565B88C",
+      "0x"
     ]
   },
   "withdrawalVault": {
@@ -407,6 +422,11 @@
       "0xa2ECee311e61EDaf4a3ac56b437FddFaCEd8Da80",
       "0xB9D7934878B5FB9610B3fE8A5e441e8fad7E293f",
       "0xFc5768E73f8974f087c840470FBF132eD059aEbc"
+    ],
+    "proxyConstructorArgs": [
+      "0xEC3B38EDc7878Ad3f18cFddcd341aa94Fc57d20B",
+      "0x2A78076BF797dAC2D25c9568F79b61aFE565B88C",
+      "0x"
     ]
   },
   "eip712StETH": {
@@ -422,6 +442,11 @@
     "address": "0xaE2D1ef2061389e106726CFD158eBd6f5DE07De5",
     "constructorArgs": [
       "0x00000000219ab540356cBB839Cbe05303d7705Fa"
+    ],
+    "proxyConstructorArgs": [
+      "0xEC3B38EDc7878Ad3f18cFddcd341aa94Fc57d20B",
+      "0x2A78076BF797dAC2D25c9568F79b61aFE565B88C",
+      "0x"
     ]
   }
 }
