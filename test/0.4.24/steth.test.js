@@ -2,9 +2,9 @@ const { artifacts, contract, ethers } = require('hardhat')
 const { assert } = require('../helpers/assert')
 
 const { bn } = require('@aragon/contract-helpers-test')
-const { tokens, ETH } = require('./../helpers/utils')
+const { tokens, ETH, shares } = require('./../helpers/utils')
 const { EvmSnapshot } = require('../helpers/blockchain')
-const { INITIAL_HOLDER, ZERO_ADDRESS } = require('../helpers/constants')
+const { INITIAL_HOLDER, ZERO_ADDRESS, MAX_UINT256 } = require('../helpers/constants')
 
 const StETHMock = artifacts.require('StETHMock')
 
@@ -187,7 +187,7 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
         it('reverts when sender is zero address', async () => {
           await assert.reverts(
             stEth.transferFrom(ZERO_ADDRESS, user3, tokens(0), { from: user2 }),
-            'TRANSFER_FROM_ZERO_ADDR'
+            'APPROVE_FROM_ZERO_ADDR'
           )
         })
 
@@ -213,7 +213,27 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
             to: user3,
             sharesValue: sharesAmount,
           })
-          assert.equals(await stEth.allowance(user2, user1), bn(0))
+          assert.equals(await stEth.allowance(user1, user2), bn(0))
+          assert.equals(await stEth.balanceOf(user1), tokens(49))
+          assert.equals(await stEth.balanceOf(user3), tokens(50))
+        })
+
+        it("doesn't spent allowance if it was set to MAX_UINT256", async () => {
+          await stEth.approve(user2, MAX_UINT256, { from: user1 })
+          assert.equals(await stEth.allowance(user1, user2), bn(MAX_UINT256))
+          const amount = tokens(50)
+          const receipt = await stEth.transferFrom(user1, user3, amount, { from: user2 })
+          assert.emitsNumberOfEvents(receipt, 'Transfer', 1)
+          assert.emitsNumberOfEvents(receipt, 'TransferShares', 1)
+          assert.emitsNumberOfEvents(receipt, 'Approval', 0)
+          assert.emits(receipt, 'Transfer', { from: user1, to: user3, value: amount })
+          const sharesAmount = await stEth.getSharesByPooledEth(amount)
+          assert.emits(receipt, 'TransferShares', {
+            from: user1,
+            to: user3,
+            sharesValue: sharesAmount,
+          })
+          assert.equals(await stEth.allowance(user1, user2), bn(MAX_UINT256))
           assert.equals(await stEth.balanceOf(user1), tokens(49))
           assert.equals(await stEth.balanceOf(user3), tokens(50))
         })
@@ -659,6 +679,26 @@ contract('StETH', ([_, __, user1, user2, user3, nobody]) => {
 
         assert.equals(await stEth.balanceOf(user1), tokens(0))
         assert.equals(await stEth.balanceOf(nobody), '118800000000000000000')
+      })
+
+      it("transferSharesFrom doesn't spent allowance if it was set to MAX_UINT256", async () => {
+        await stEth.approve(user2, MAX_UINT256, { from: user1 })
+        assert.equals(await stEth.allowance(user1, user2), bn(MAX_UINT256))
+        const sharesAmount = shares(50)
+        const tokensAmount = await stEth.getPooledEthByShares(sharesAmount)
+        const receipt = await stEth.transferSharesFrom(user1, user3, sharesAmount, { from: user2 })
+        assert.emitsNumberOfEvents(receipt, 'Transfer', 1)
+        assert.emitsNumberOfEvents(receipt, 'TransferShares', 1)
+        assert.emitsNumberOfEvents(receipt, 'Approval', 0)
+        assert.emits(receipt, 'Transfer', { from: user1, to: user3, value: tokensAmount })
+        assert.emits(receipt, 'TransferShares', {
+          from: user1,
+          to: user3,
+          sharesValue: sharesAmount,
+        })
+        assert.equals(await stEth.allowance(user1, user2), bn(MAX_UINT256))
+        assert.equals(await stEth.balanceOf(user1), tokens(49))
+        assert.equals(await stEth.balanceOf(user3), tokens(50))
       })
     })
   })

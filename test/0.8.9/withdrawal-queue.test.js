@@ -597,6 +597,13 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
         )
       })
 
+      it('reverts when requestIds and hints arrays length mismatch', async () => {
+        await assert.reverts(
+          withdrawalQueue.claimWithdrawalsTo([0], [1, 2], user, { from: owner }),
+          'ArraysLengthMismatch(1, 2)'
+        )
+      })
+
       it('reverts with zero _requestId', async () => {
         await assert.reverts(withdrawalQueue.claimWithdrawalsTo([0], [1], user, { from: owner }), 'InvalidRequestId(0)')
       })
@@ -720,6 +727,10 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
 
     beforeEach('Enqueue a request', async () => {
       await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
+    })
+
+    it('reverts when requestIds and hints arrays length mismatch', async () => {
+      await assert.reverts(withdrawalQueue.claimWithdrawals([1, 2], [1], { from: owner }), 'ArraysLengthMismatch(2, 1)')
     })
 
     it('claims correct requests', async () => {
