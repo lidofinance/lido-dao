@@ -75,6 +75,7 @@ definition ZERO_HASH() returns bytes32 = 0; // bytes32(0)
 //      disableConsensus() - MANAGE_MEMBERS_AND_QUORUM_ROLE, DISABLE_CONSENSUS_ROLE
 //      setReportProcessor() - MANAGE_REPORT_PROCESSOR_ROLE
 //      submitReport() - only if getIsMember(msg.sender) == true
+//      updateInitialEpoch() - DEFAULT_ADMIN_ROLE
 //  3. setFrameConfig() updates epochsPerFrame in a way that either keeps the current reference slot
 //     the same or increases it by at least the minimum of old and new frame sizes
 //  4. setFastLaneLengthSlots() works as expected, setting it to zero disables the fast lane subset
@@ -102,8 +103,7 @@ definition ZERO_HASH() returns bytes32 = 0; // bytes32(0)
 //                      because if Oracle member changes its mind, its previous support is removed
 // 23. submitReport() - all variants should be removed when new frame starts
 // 24. updateInitialEpoch() - updates correctly the initialEpoch as returned by getFrameConfig()
-//                          - only ACL role can call it
-//                          - you cannot call it twice
+//                          - you cannot update the initialEpoch to be one that already it arrived
 // 25. initialEpochSanity rule - once the system is initialized its initialEpoch setting is always sane
 
 
@@ -481,8 +481,7 @@ rule setReportProcessorCorrectness() {
 
 
 // 24. updateInitialEpoch() - updates correctly the initialEpoch as returned by getFrameConfig()
-//                          - only ACL role can call it
-//                          - you cannot call it twice
+//                          - you cannot update the initialEpoch to be one that already it arrived
 // Status: Pass
 // https://prover.certora.com/output/80942/3b2b054cad054559b81de132dd676e0d/?anonymousKey=b5142a9cc196ffc7338c450c4ace6b200fc8d12f
 rule updateInitialEpochCorrectness() {
@@ -511,7 +510,7 @@ rule updateInitialEpochCorrectness() {
 // https://prover.certora.com/output/80942/0dec7449b4c049a4b6cca667f094aa91/?anonymousKey=fd75c248d93e5af85a046ca5b1c42723eea43d60
 rule initialEpochSanity(method f) 
     filtered { f -> !f.isView && 
-                    f.selector != updateInitialEpoch(uint256).selector } // this should revert once initialized
+                    f.selector != updateInitialEpoch(uint256).selector } // this should revert once initialized (see rule 26)
 {
     env e; calldataarg args; env e2;
     require e.block.timestamp > saneTimeConfig();       // time moves forward (saneTimeConfig is for correct initializing)
