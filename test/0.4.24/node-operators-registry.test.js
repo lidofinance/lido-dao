@@ -392,6 +392,16 @@ contract('NodeOperatorsRegistry', (addresses) => {
       await assert.reverts(app.addNodeOperator(name, ZERO_ADDRESS, { from: nodeOperatorsManager }), 'ZERO_ADDRESS')
     })
 
+    it('reverts with error "LIDO_REWARD_ADDRESS" when called with lido as reward address', async () => {
+      const hasPermission = await dao.hasPermission(nodeOperatorsManager, app, 'MANAGE_NODE_OPERATOR_ROLE')
+      assert.isTrue(hasPermission)
+      const name = 'Node Operator #1'
+      await assert.reverts(
+        app.addNodeOperator(name, steth.address, { from: nodeOperatorsManager }),
+        'LIDO_REWARD_ADDRESS'
+      )
+    })
+
     it('reverts with error "MAX_COUNT_EXCEEDED" when total count of node operators = MAX_COUNT_EXCEEDED', async () => {
       const hasPermission = await dao.hasPermission(nodeOperatorsManager, app, 'MANAGE_NODE_OPERATOR_ROLE')
       assert.isTrue(hasPermission)
@@ -886,6 +896,13 @@ contract('NodeOperatorsRegistry', (addresses) => {
       await assert.reverts(
         app.setNodeOperatorRewardAddress(firstNodeOperatorId, ZERO_ADDRESS, { from: nodeOperatorsManager }),
         'ZERO_ADDRESS'
+      )
+    })
+
+    it('reverts with error "LIDO_REWARD_ADDRESS" when new reward address is lido', async () => {
+      await assert.reverts(
+        app.setNodeOperatorRewardAddress(firstNodeOperatorId, steth.address, { from: nodeOperatorsManager }),
+        'LIDO_REWARD_ADDRESS'
       )
     })
 

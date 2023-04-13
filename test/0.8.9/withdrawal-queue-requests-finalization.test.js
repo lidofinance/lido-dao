@@ -37,9 +37,21 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
 
     assert.equalsDelta(batch.ethToLock, budget, 2)
 
-    await withdrawalQueue.finalize(batches, finalizationShareRate, {
+    const fromRequest = +(await withdrawalQueue.getLastFinalizedRequestId()) + 1
+
+    const tx = await withdrawalQueue.finalize(batches[batches.length - 1], finalizationShareRate, {
       from: daoAgent,
       value: batch.ethToLock,
+    })
+
+    const timestamp = (await ethers.provider.getBlock(tx.receipt.blockNumber)).timestamp
+
+    assert.emits(tx, 'WithdrawalsFinalized', {
+      to: batches[batches.length - 1],
+      from: fromRequest,
+      amountOfETHLocked: batch.ethToLock,
+      sharesToBurn: batch.sharesToBurn,
+      timestamp,
     })
 
     return { batch }
@@ -222,10 +234,10 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
   })
 
   context('2 users, 1 batch', () => {
-    ;[0.7].forEach(async (firstRequestRate) => {
-      ;[0.4, 0.7, 1].forEach(async (secondRequestRate) => {
+    ;[0.7].forEach((firstRequestRate) => {
+      ;[0.4, 0.7, 1].forEach((secondRequestRate) => {
         ;[firstRequestRate, secondRequestRate, secondRequestRate - 0.1, secondRequestRate + 0.1].forEach(
-          async (finalizationRate) => {
+          (finalizationRate) => {
             ;[
               firstRequestRate,
               firstRequestRate - 0.1,
@@ -234,7 +246,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
               finalizationRate,
               finalizationRate - 0.1,
               finalizationRate + 0.1,
-            ].forEach(async (postFinalizationRate) => {
+            ].forEach((postFinalizationRate) => {
               it(`rates: first request = ${firstRequestRate}, second request = ${secondRequestRate}, finalization = ${finalizationRate}, claim = ${postFinalizationRate}`, async () => {
                 await setShareRate(firstRequestRate)
                 const userRequestAmount = e18(1)
@@ -326,12 +338,12 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
   })
 
   context('2 users, 2 batch', () => {
-    ;[0.7].forEach(async (firstRequestRate) => {
-      ;[0.4, 0.7, 1].forEach(async (secondRequestRate) => {
+    ;[0.7].forEach((firstRequestRate) => {
+      ;[0.4, 0.7, 1].forEach((secondRequestRate) => {
         ;[firstRequestRate, secondRequestRate, secondRequestRate - 0.1, secondRequestRate + 0.1].forEach(
-          async (firstFinalizationRate) => {
+          (firstFinalizationRate) => {
             ;[firstRequestRate, secondRequestRate, secondRequestRate - 0.1, secondRequestRate + 0.1].forEach(
-              async (secondFinalizationRate) => {
+              (secondFinalizationRate) => {
                 ;[
                   firstRequestRate,
                   firstRequestRate - 0.1,
@@ -341,7 +353,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, user, anotherUser]) => {
                   firstFinalizationRate - 0.1,
                   firstFinalizationRate + 0.1,
                   secondFinalizationRate,
-                ].forEach(async (postFinalizationRate) => {
+                ].forEach((postFinalizationRate) => {
                   it(`rates: first request = ${firstRequestRate}, second request = ${secondRequestRate}, secondFinalizationRate = ${secondFinalizationRate}, firstFinalization = ${firstFinalizationRate}, claim = ${postFinalizationRate}`, async () => {
                     await setShareRate(firstRequestRate)
                     const userRequestAmount = e18(1)

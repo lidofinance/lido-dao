@@ -8,6 +8,7 @@ import {IERC721} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721Receiver.sol";
 import {IERC721Metadata} from "@openzeppelin/contracts-v4.4/token/ERC721/extensions/IERC721Metadata.sol";
 import {IERC165} from "@openzeppelin/contracts-v4.4/utils/introspection/IERC165.sol";
+import {IERC4906} from "./interfaces/IERC4906.sol";
 
 import {EnumerableSet} from "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
 import {Address} from "@openzeppelin/contracts-v4.4/utils/Address.sol";
@@ -18,14 +19,10 @@ import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.so
 import {UnstructuredRefStorage} from "./lib/UnstructuredRefStorage.sol";
 import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 
-/**
-  * @title Interface defining INFTDescriptor to generate ERC721 tokenURI
-  */
+/// @title Interface defining INFTDescriptor to generate ERC721 tokenURI
 interface INFTDescriptor {
-    /**
-      * @notice Returns ERC721 tokenURI content
-      * @param _requestId is an id for particular withdrawal request
-      */
+    /// @notice Returns ERC721 tokenURI content
+    /// @param _requestId is an id for particular withdrawal request
     function constructTokenURI(uint256 _requestId) external view returns (string memory);
 }
 
@@ -33,7 +30,7 @@ interface INFTDescriptor {
 /// NFT is minted on every request and burned on claim
 ///
 /// @author psirex, folkyatina
-contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
+contract WithdrawalQueueERC721 is IERC721Metadata, IERC4906, WithdrawalQueue {
     using Address for address;
     using Strings for uint256;
     using EnumerableSet for EnumerableSet.UintSet;
@@ -43,7 +40,8 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
     bytes32 internal constant TOKEN_APPROVALS_POSITION = keccak256("lido.WithdrawalQueueERC721.tokenApprovals");
     bytes32 internal constant OPERATOR_APPROVALS_POSITION = keccak256("lido.WithdrawalQueueERC721.operatorApprovals");
     bytes32 internal constant BASE_URI_POSITION = keccak256("lido.WithdrawalQueueERC721.baseUri");
-    bytes32 internal constant NFT_DESCRIPTOR_ADDRESS_POSITION = keccak256("lido.WithdrawalQueueERC721.nftDescriptorAddress");
+    bytes32 internal constant NFT_DESCRIPTOR_ADDRESS_POSITION =
+        keccak256("lido.WithdrawalQueueERC721.nftDescriptorAddress");
 
     bytes32 public constant MANAGE_TOKEN_URI_ROLE = keccak256("MANAGE_TOKEN_URI_ROLE");
 
@@ -91,15 +89,16 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
         returns (bool)
     {
         return interfaceId == type(IERC721).interfaceId || interfaceId == type(IERC721Metadata).interfaceId
-            || super.supportsInterface(interfaceId);
+            // 0x49064906 is magic number ERC4906 interfaceId as defined in the standard https://eips.ethereum.org/EIPS/eip-4906
+            || interfaceId == bytes4(0x49064906) || super.supportsInterface(interfaceId);
     }
 
-    /// @dev Se_toBytes321Metadata-name}.
+    /// @dev See {IERC721Metadata-name}.
     function name() external view override returns (string memory) {
         return _toString(NAME);
     }
 
-    /// @dev Se_toBytes321Metadata-symbol}.
+    /// @dev See {IERC721Metadata-symbol}.
     function symbol() external view override returns (string memory) {
         return _toString(SYMBOL);
     }
@@ -114,8 +113,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
         if (nftDescriptorAddress != address(0)) {
             return INFTDescriptor(nftDescriptorAddress).constructTokenURI(_requestId);
         } else {
-            string memory baseURI = _getBaseURI().value;
-            return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, _requestId.toString())) : "";
+            return _constructTokenUri(_requestId);
         }
     }
 
@@ -125,7 +123,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
         return _getBaseURI().value;
     }
 
-    /// @notice Sets the Base URI for computing {tokenURI}
+    /// @notice Sets the Base URI for computing {tokenURI}. It does not expect the ending slash in provided string.
     /// @dev If NFTDescriptor address isn't set the `baseURI` would be used for generating erc721 tokenURI. In case
     ///  NFTDescriptor address is set it would be used as a first-priority method.
     function setBaseURI(string calldata _baseURI) external onlyRole(MANAGE_TOKEN_URI_ROLE) {
@@ -146,6 +144,21 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
         emit NftDescriptorAddressSet(_nftDescriptorAddress);
     }
 
+    /// @notice Finalize requests from last finalized one up to `_lastRequestIdToBeFinalized`
+    /// @dev ether to finalize all the requests should be calculated using `prefinalize()` and sent along
+    function finalize(uint256 _lastRequestIdToBeFinalized, uint256 _maxShareRate) external payable {
+        _checkResumed();
+        _checkRole(FINALIZE_ROLE, msg.sender);
+
+        uint256 firstFinalizedRequestId = getLastFinalizedRequestId() + 1;
+
+        _finalize(_lastRequestIdToBeFinalized, msg.value, _maxShareRate);
+
+        // ERC4906 metadata update event
+        // We are updating all unfinalized to make it look different as they move closer to finalization in the future
+        emit BatchMetadataUpdate(firstFinalizedRequestId, getLastRequestId());
+    }
+
     /// @dev See {IERC721-balanceOf}.
     function balanceOf(address _owner) external view override returns (uint256) {
         if (_owner == address(0)) revert InvalidOwnerAddress(_owner);
@@ -156,7 +169,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
     function ownerOf(uint256 _requestId) public view override returns (address) {
         if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
-        WithdrawalRequest memory request = _getQueue()[_requestId];
+        WithdrawalRequest storage request = _getQueue()[_requestId];
         if (request.claimed) revert RequestAlreadyClaimed(_requestId);
 
         return request.owner;
@@ -227,7 +240,9 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
         address msgSender = msg.sender;
         if (
             !(_from == msgSender || isApprovedForAll(_from, msgSender) || _getTokenApprovals()[_requestId] == msgSender)
-        ) revert NotOwnerOrApproved(msgSender);
+        ) {
+            revert NotOwnerOrApproved(msgSender);
+        }
 
         delete _getTokenApprovals()[_requestId];
         request.owner = _to;
@@ -337,5 +352,43 @@ contract WithdrawalQueueERC721 is IERC721Metadata, WithdrawalQueue {
         assembly {
             baseURI.slot := position
         }
+    }
+
+    function _constructTokenUri(uint256 _requestId) internal view returns (string memory) {
+        string memory baseURI = _getBaseURI().value;
+        if (bytes(baseURI).length == 0) return "";
+
+        // ${baseUri}/${_requestId}?requested=${amount}&created_at=${timestamp}[&finalized=${claimableAmount}]
+        string memory uri = string(
+            // we have no string.concat in 0.8.9 yet, so we have to do it with bytes.concat
+            bytes.concat(
+                bytes(baseURI),
+                bytes("/"),
+                bytes(_requestId.toString()),
+                bytes("?requested="),
+                bytes(
+                    uint256(_getQueue()[_requestId].cumulativeStETH - _getQueue()[_requestId - 1].cumulativeStETH)
+                        .toString()
+                ),
+                bytes("&created_at="),
+                bytes(uint256(_getQueue()[_requestId].timestamp).toString())
+            )
+        );
+        bool finalized = _requestId <= getLastFinalizedRequestId();
+
+        if (finalized) {
+            uri = string(
+                bytes.concat(
+                    bytes(uri),
+                    bytes("&finalized="),
+                    bytes(
+                        _getClaimableEther(_requestId, _findCheckpointHint(_requestId, 1, getLastCheckpointIndex()))
+                            .toString()
+                    )
+                )
+            );
+        }
+
+        return uri;
     }
 }

@@ -297,14 +297,12 @@ async function guardiansFactory({ deployParams }) {
 async function burnerFactory({ appManager, treasury, pool, voting }) {
   const burner = await Burner.new(appManager.address, treasury.address, pool.address, 0, 0)
 
-  const [REQUEST_BURN_MY_STETH_ROLE, REQUEST_BURN_SHARES_ROLE, RECOVER_ASSETS_ROLE] = await Promise.all([
+  const [REQUEST_BURN_MY_STETH_ROLE, REQUEST_BURN_SHARES_ROLE] = await Promise.all([
     burner.REQUEST_BURN_MY_STETH_ROLE(),
     burner.REQUEST_BURN_SHARES_ROLE(),
-    burner.RECOVER_ASSETS_ROLE(),
   ])
 
   await burner.grantRole(REQUEST_BURN_MY_STETH_ROLE, voting.address, { from: appManager.address })
-  await burner.grantRole(RECOVER_ASSETS_ROLE, voting.address, { from: appManager.address })
   await burner.grantRole(REQUEST_BURN_SHARES_ROLE, voting.address, { from: appManager.address })
 
   return burner

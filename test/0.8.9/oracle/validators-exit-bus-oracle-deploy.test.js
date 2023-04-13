@@ -94,11 +94,11 @@ async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
 
 async function deployExitBusOracle(
   admin,
-  { dataSubmitter = null, lastProcessingRefSlot = 0, resumeAfterDeploy = false } = {}
+  { dataSubmitter = null, lastProcessingRefSlot = 0, resumeAfterDeploy = false, secondsPerSlot = SECONDS_PER_SLOT } = {}
 ) {
   const locator = (await deployLocatorWithDummyAddressesImplementation(admin)).address
 
-  const oracle = await ValidatorsExitBusOracle.new(SECONDS_PER_SLOT, GENESIS_TIME, locator, { from: admin })
+  const oracle = await ValidatorsExitBusOracle.new(secondsPerSlot, GENESIS_TIME, locator, { from: admin })
 
   const { consensus } = await deployHashConsensus(admin, {
     epochsPerFrame: EPOCHS_PER_FRAME,
@@ -157,6 +157,10 @@ contract('ValidatorsExitBusOracle', ([admin, member1]) => {
       const deployed = await deployExitBusOracle(admin, { resumeAfterDeploy: false })
       consensus = deployed.consensus
       oracle = deployed.oracle
+    })
+
+    it('reverts when slotsPerSecond is zero', async () => {
+      await assert.reverts(deployExitBusOracle(admin, { secondsPerSlot: 0 }), 'SecondsPerSlotCannotBeZero()')
     })
 
     it('mock time-travellable setup is correct', async () => {
