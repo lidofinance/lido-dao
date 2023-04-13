@@ -51,6 +51,7 @@ contract StETH is IERC20, Pausable {
     using UnstructuredStorage for bytes32;
 
     address constant internal INITIAL_TOKEN_HOLDER = 0xdead;
+    uint256 constant internal INFINITE_ALLOWANCE = ~uint256(0);
 
     /**
      * @dev StETH balances are dynamic and are calculated based on the accounts' shares
@@ -234,11 +235,8 @@ contract StETH is IERC20, Pausable {
      * @dev The `_amount` argument is the amount of tokens, not shares.
      */
     function transferFrom(address _sender, address _recipient, uint256 _amount) external returns (bool) {
-        uint256 currentAllowance = allowances[_sender][msg.sender];
-        require(currentAllowance >= _amount, "ALLOWANCE_EXCEEDED");
-
+        _spendAllowance(_sender, msg.sender, _amount);
         _transfer(_sender, _recipient, _amount);
-        _approve(_sender, msg.sender, currentAllowance.sub(_amount));
         return true;
     }
 
@@ -355,12 +353,9 @@ contract StETH is IERC20, Pausable {
     function transferSharesFrom(
         address _sender, address _recipient, uint256 _sharesAmount
     ) external returns (uint256) {
-        uint256 currentAllowance = allowances[_sender][msg.sender];
         uint256 tokensAmount = getPooledEthByShares(_sharesAmount);
-        require(currentAllowance >= tokensAmount, "ALLOWANCE_EXCEEDED");
-
+        _spendAllowance(_sender, msg.sender, tokensAmount);
         _transferShares(_sender, _recipient, _sharesAmount);
-        _approve(_sender, msg.sender, currentAllowance.sub(tokensAmount));
         _emitTransferEvents(_sender, _recipient, tokensAmount, _sharesAmount);
         return tokensAmount;
     }
@@ -401,6 +396,22 @@ contract StETH is IERC20, Pausable {
 
         allowances[_owner][_spender] = _amount;
         emit Approval(_owner, _spender, _amount);
+    }
+
+    /**
+     * @dev Updates `owner` s allowance for `spender` based on spent `amount`.
+     *
+     * Does not update the allowance amount in case of infinite allowance.
+     * Revert if not enough allowance is available.
+     *
+     * Might emit an {Approval} event.
+     */
+    function _spendAllowance(address _owner, address _spender, uint256 _amount) internal {
+        uint256 currentAllowance = allowances[_owner][_spender];
+        if (currentAllowance != INFINITE_ALLOWANCE) {
+            require(currentAllowance >= _amount, "ALLOWANCE_EXCEEDED");
+            _approve(_owner, _spender, currentAllowance - _amount);
+        }
     }
 
     /**
