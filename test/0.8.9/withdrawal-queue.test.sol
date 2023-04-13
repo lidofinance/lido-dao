@@ -116,7 +116,7 @@ contract WQHandler is CommonBase, StdAssertions, StdUtils {
             (uint256 eth,) = wq.prefinalize(batches, maxShareRate);
 
             vm.deal(address(this), eth);
-            wq.finalize{value: eth}(batches, maxShareRate);
+            wq.finalize{value: eth}(batches[batches.length - 1], maxShareRate);
 
             ghost_totalLockedEth += eth;
 
@@ -180,8 +180,8 @@ contract WQ is WQBase {
         _enqueue(amountOfStEth, amountOfShares, msg.sender);
     }
 
-    function finalize(uint256[] memory _batches, uint256 _maxShareRate) external payable {
-        _finalize(_batches, msg.value, _maxShareRate);
+    function finalize(uint256 _lastRequestIdToFinalize, uint256 _maxShareRate) external payable {
+        _finalize(_lastRequestIdToFinalize, msg.value, _maxShareRate);
     }
 
     function claim(uint256 requestId, uint256 hint) external {
