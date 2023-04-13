@@ -273,6 +273,7 @@ rule callerMustHaveSubmitDataRoleOrBeAConsensusMember(method f)
 // Status: Pass
 // https://vaas-stg.certora.com/output/80942/a468b233b03f4f8d8382141d1d0a6eb6/?anonymousKey=f2e33c53956a1dea740d260ea93a234b0fdc8af4
 // https://vaas-stg.certora.com/output/80942/19f033eb8f694479a32b2c8178f9d6f6/?anonymousKey=6332eb4266f91e455a3e94b6b6782f761dda59eb
+// https://vaas-stg.certora.com/output/80942/afae22c1cabb47b28127102fb008f439/?anonymousKey=604cdc6850fdb6dd9a1b6be7d78cc8d41b2aee08
 rule cannotSubmitReportDataTwiceAtSameTimestamp(method f) 
     filtered { f -> f.selector == submitReportData((uint256,uint256,uint256,uint256,uint256[],uint256[],uint256,uint256,uint256,uint256[],uint256,bool,uint256,bytes32,uint256),uint256).selector ||
                     f.selector == submitReportExtraDataList(bytes).selector ||
@@ -281,12 +282,13 @@ rule cannotSubmitReportDataTwiceAtSameTimestamp(method f)
     require contractAddressesLinked();
     env e; calldataarg args; env e2; calldataarg args2;
 
-    require e.block.timestamp == e2.block.timestamp;
+    // require e.block.timestamp == e2.block.timestamp;
 
     f(e,args);              // successfully submit a report at time == e.block.timestamp
     f@withrevert(e2,args2); // same e.block.timestamp, any calldataarg (i.e., any report)
 
-    assert lastReverted;
+    // assert lastReverted;
+    assert (e.block.timestamp == e2.block.timestamp) => lastReverted;
 }
 
 // 11. Cannot submit the same reports (Data/ExtraDataList/Empty) twice
