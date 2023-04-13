@@ -166,7 +166,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, IERC4906, WithdrawalQueue {
     function ownerOf(uint256 _requestId) public view override returns (address) {
         if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
-        WithdrawalRequest memory request = _getQueue()[_requestId];
+        WithdrawalRequest storage request = _getQueue()[_requestId];
         if (request.claimed) revert RequestAlreadyClaimed(_requestId);
 
         return request.owner;
