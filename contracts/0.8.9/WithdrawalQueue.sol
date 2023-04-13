@@ -48,20 +48,19 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     bytes32 public constant FINALIZE_ROLE = keccak256("FINALIZE_ROLE");
     bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
 
-    /// @notice minimal possible sum that is possible to withdraw
+    /// @notice minimal amount of stETH that is possible to withdraw
     uint256 public constant MIN_STETH_WITHDRAWAL_AMOUNT = 100;
 
-    /// @notice maximum possible sum that is possible to withdraw by a single request
+    /// @notice maximum amount of stETH that is possible to withdraw by a single request
     /// Prevents accumulating too much funds per single request fulfillment in the future.
     /// @dev To withdraw larger amounts, it's recommended to split it to several requests
     uint256 public constant MAX_STETH_WITHDRAWAL_AMOUNT = 1000 * 1e18;
 
-    /// @notice Lido stETH token address to be set upon construction
+    /// @notice Lido stETH token address
     IStETH public immutable STETH;
-    /// @notice Lido wstETH token address to be set upon construction
+    /// @notice Lido wstETH token address
     IWstETH public immutable WSTETH;
 
-    /// @notice Emitted when the contract initialized
     event InitializedV1(address _admin);
     event BunkerModeEnabled(uint256 _sinceTimestamp);
     event BunkerModeDisabled();
@@ -92,63 +91,64 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     }
 
     /// @notice Resume withdrawal requests placement and finalization
+    ///  Contract is deployed in paused state and should be resumed explicitly
     function resume() external {
         _checkRole(RESUME_ROLE, msg.sender);
         _resume();
     }
 
     /// @notice Pause withdrawal requests placement and finalization. Claiming finalized requests will still be available
-    /// @param _duration pause duration, seconds (use `PAUSE_INFINITELY` for unlimited)
-    /// @dev Reverts with `ResumedExpected()` if contract is already paused
-    /// @dev Reverts with `AccessControl:...` reason if sender has no `PAUSE_ROLE`
-    /// @dev Reverts with `ZeroPauseDuration()` if zero duration is passed
+    /// @param _duration pause duration in seconds (use `PAUSE_INFINITELY` for unlimited)
+    /// @dev Reverts with if contract is already paused
+    /// @dev Reverts with reason if sender has no `PAUSE_ROLE`
+    /// @dev Reverts with if zero duration is passed
     function pauseFor(uint256 _duration) external onlyRole(PAUSE_ROLE) {
         _pauseFor(_duration);
     }
 
     /// @notice Pause withdrawal requests placement and finalization. Claiming finalized requests will still be available
     /// @param _pauseUntilInclusive the last second to pause until inclusive
-    /// @dev Reverts with `ResumeSinceInPast()` if the timestamp is in the past
-    /// @dev Reverts with `AccessControl:...` reason if sender has no `PAUSE_ROLE`
-    /// @dev Reverts with `ResumedExpected()` if contract is already paused
+    /// @dev Reverts with if the timestamp is in the past
+    /// @dev Reverts with if sender has no `PAUSE_ROLE`
+    /// @dev Reverts with if contract is already paused
     function pauseUntil(uint256 _pauseUntilInclusive) external onlyRole(PAUSE_ROLE) {
         _pauseUntil(_pauseUntilInclusive);
     }
 
-    /// @notice Request the sequence of stETH withdrawals according to passed `withdrawalRequestInputs` data
-    /// @param amounts an array of stETH amount values. The standalone withdrawal request will
-    ///  be created for each item in the passed list.
-    /// @param _owner address that will be able to transfer or claim the request.
-    ///  If `owner` is set to `address(0)`, `msg.sender` will be used as owner.
-    /// @return requestIds an array of the created withdrawal requests
-    function requestWithdrawals(uint256[] calldata amounts, address _owner)
+    /// @notice Request the batch of stETH for withdrawal. Approvals for the passed amounts should be done before.
+    /// @param _amounts an array of stETH amount values.
+    ///  The standalone withdrawal request will be created for each item in the passed list.
+    /// @param _owner address that will be able to manage the created requests.
+    ///  If `address(0)` is passed, `msg.sender` will be used as owner.
+    /// @return requestIds an array of the created withdrawal request ids
+    function requestWithdrawals(uint256[] calldata _amounts, address _owner)
         public
         returns (uint256[] memory requestIds)
     {
         _checkResumed();
         if (_owner == address(0)) _owner = msg.sender;
-        requestIds = new uint256[](amounts.length);
-        for (uint256 i = 0; i < amounts.length; ++i) {
-            _checkWithdrawalRequestAmount(amounts[i]);
-            requestIds[i] = _requestWithdrawal(amounts[i], _owner);
+        requestIds = new uint256[](_amounts.length);
+        for (uint256 i = 0; i < _amounts.length; ++i) {
+            _checkWithdrawalRequestAmount(_amounts[i]);
+            requestIds[i] = _requestWithdrawal(_amounts[i], _owner);
         }
     }
 
-    /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data
-    /// @param amounts an array of stETH amount values. The standalone withdrawal request will
-    ///  be created for each item in the passed list.
-    /// @param _owner address that will be able to transfer or claim the request.
-    ///  If `owner` is set to `address(0)`, `msg.sender` will be used as owner.
-    /// @return requestIds an array of the created withdrawal requests
-    function requestWithdrawalsWstETH(uint256[] calldata amounts, address _owner)
+    /// @notice Request the batch of wstETH for withdrawal. Approvals for the passed amounts should be done before.
+    /// @param _amounts an array of wstETH amount values.
+    ///  The standalone withdrawal request will be created for each item in the passed list.
+    /// @param _owner address that will be able to manage the created requests.
+    ///  If `address(0)` is passed, `msg.sender` will be used as an owner.
+    /// @return requestIds an array of the created withdrawal request ids
+    function requestWithdrawalsWstETH(uint256[] calldata _amounts, address _owner)
         public
         returns (uint256[] memory requestIds)
     {
         _checkResumed();
         if (_owner == address(0)) _owner = msg.sender;
-        requestIds = new uint256[](amounts.length);
-        for (uint256 i = 0; i < amounts.length; ++i) {
-            requestIds[i] = _requestWithdrawalWstETH(amounts[i], _owner);
+        requestIds = new uint256[](_amounts.length);
+        for (uint256 i = 0; i < _amounts.length; ++i) {
+            requestIds[i] = _requestWithdrawalWstETH(_amounts[i], _owner);
         }
     }
 
@@ -160,14 +160,13 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         bytes32 s;
     }
 
-    /// @notice Request the sequence of stETH withdrawals according to passed `withdrawalRequestInputs`
-    ///  using EIP-2612 Permit
-    /// @param _amounts an array of stETH amount values. The standalone withdrawal request will
-    ///  be created for each item in the passed list.
-    /// @param _owner address that will be able to transfer or claim the request.
-    ///  If `owner` is set to `address(0)`, `msg.sender` will be used as owner.
+    /// @notice Request the batch of stETH for withdrawal using EIP-2612 Permit
+    /// @param _amounts an array of stETH amount values
+    ///  The standalone withdrawal request will be created for each item in the passed list.
+    /// @param _owner address that will be able to manage the created requests.
+    ///  If `address(0)` is passed, `msg.sender` will be used as an owner.
     /// @param _permit data required for the stETH.permit() method to set the allowance
-    /// @return requestIds an array of the created withdrawal requests
+    /// @return requestIds an array of the created withdrawal request ids
     function requestWithdrawalsWithPermit(uint256[] calldata _amounts, address _owner, PermitInput calldata _permit)
         external
         returns (uint256[] memory requestIds)
@@ -176,14 +175,13 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         return requestWithdrawals(_amounts, _owner);
     }
 
-    /// @notice Request the sequence of wstETH withdrawals according to passed `withdrawalRequestInputs` data
-    ///  using EIP-2612 Permit
-    /// @param _amounts an array of stETH amount values. The standalone withdrawal request will
-    ///  be created for each item in the passed list.
-    /// @param _owner address that will be able to transfer or claim the request.
-    ///  If `owner` is set to `address(0)`, `msg.sender` will be used as owner.
-    /// @param _permit data required for the wstETH.permit() method to set the allowance
-    /// @return requestIds an array of the created withdrawal requests
+    /// @notice Request the batch of wstETH for withdrawal using EIP-2612 Permit
+    /// @param _amounts an array of wstETH amount values
+    ///  The standalone withdrawal request will be created for each item in the passed list.
+    /// @param _owner address that will be able to manage the created requests.
+    ///  If `address(0)` is passed, `msg.sender` will be used as an owner.
+    /// @param _permit data required for the wtETH.permit() method to set the allowance
+    /// @return requestIds an array of the created withdrawal request ids
     function requestWithdrawalsWstETHWithPermit(
         uint256[] calldata _amounts,
         address _owner,
@@ -203,7 +201,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         return _getRequestsByOwner()[_owner].values();
     }
 
-    /// @notice Returns statuses for the array of request ids
+    /// @notice Returns status for requests with provided ids
     /// @param _requestIds array of withdrawal request ids
     function getWithdrawalStatus(uint256[] calldata _requestIds)
         external
@@ -216,10 +214,11 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         }
     }
 
-    /// @notice Returns array of claimable eth amounts that is locked for each request
-    /// @param _requestIds array of request ids to find claimable ether for
-    /// @param _hints checkpoint hint for each id.
-    ///   Can be retrieved with `findCheckpointHints()`
+    /// @notice Returns amount of ether available for claim for each provided request id
+    /// @param _requestIds array of request ids
+    /// @param _hints checkpoint hints. can be found with `findCheckpointHints(_requestIds, 1, getLastCheckpointIndex())`
+    /// @return claimableEthValues amount of claimable ether for each request, amount is equal to 0 if request
+    ///  is not finalized or already claimed
     function getClaimableEther(uint256[] calldata _requestIds, uint256[] calldata _hints)
         external
         view
@@ -231,10 +230,9 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         }
     }
 
-    /// @notice Claim a batch of withdrawal requests once finalized (claimable) sending ether to `_recipient`
+    /// @notice Claim a batch of withdrawal requests if they are finalized sending ether to `_recipient`
     /// @param _requestIds array of request ids to claim
-    /// @param _hints checkpoint hint for each id.
-    ///   Can be retrieved with `findCheckpointHints()`
+    /// @param _hints checkpoint hint for each id. Can be obtained with `findCheckpointHints()`
     /// @param _recipient address where claimed ether will be sent to
     /// @dev
     ///  Reverts if recipient is equal to zero
@@ -252,10 +250,9 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         }
     }
 
-    /// @notice Claim a batch of withdrawal requests once finalized (claimable) sending locked ether to the owner
+    /// @notice Claim a batch of withdrawal requests if they are finalized sending locked ether to the owner
     /// @param _requestIds array of request ids to claim
-    /// @param _hints checkpoint hint for each id.
-    ///   Can be retrieved with `findCheckpointHints()`
+    /// @param _hints checkpoint hint for each id. Can be obtained with `findCheckpointHints()`
     /// @dev
     ///  Reverts if any requestId or hint in arguments are not valid
     ///  Reverts if any request is not finalized or already claimed
@@ -280,11 +277,13 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     }
 
     /// @notice Finds the list of hints for the given `_requestIds` searching among the checkpoints with indices
-    ///  in the range  `[_firstIndex, _lastIndex]`. NB! Array of request ids should be sorted
+    ///  in the range  `[_firstIndex, _lastIndex]`.
+    ///  NB! Array of request ids should be sorted
+    ///  NB! `_firstIndex` should be greater than 0, because checkpoint list is 1-based array
     /// @param _requestIds ids of the requests sorted in the ascending order to get hints for
-    /// @param _firstIndex left boundary of the search range
+    /// @param _firstIndex left boundary of the search range. Should be greater than 0
     /// @param _lastIndex right boundary of the search range
-    /// @return hintIds the hints for `claimWithdrawal` to find the checkpoint for the passed request ids
+    /// @return hintIds array of hints used to find required checkpoint for the request
     function findCheckpointHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)
         external
         view
@@ -300,7 +299,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         }
     }
 
-    /// @notice Update bunker mode state and last report timestamp
+    /// @notice Update bunker mode state and last report timestamp on oracle report
     /// @dev should be called by oracle
     ///
     /// @param _isBunkerModeNow is bunker mode reported by oracle
@@ -391,7 +390,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         }
     }
 
-    /// @notice returns claimable ether under the request with _requestId. Returns 0 if request is not finalized or already claimed
+    /// @notice returns claimable ether under the request. Returns 0 if request is not finalized or claimed
     function _getClaimableEther(uint256 _requestId, uint256 _hint) internal view returns (uint256) {
         if (_requestId == 0 || _requestId > getLastRequestId()) revert InvalidRequestId(_requestId);
 
