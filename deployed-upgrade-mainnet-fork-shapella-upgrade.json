@@ -301,10 +301,10 @@
   },
   "oracleReportSanityChecker": {
     "parameters": {
-      "churnValidatorsPerDayLimit": 12375,
+      "churnValidatorsPerDayLimit": 40000,
       "oneOffCLBalanceDecreaseBPLimit": 500,
       "annualBalanceIncreaseBPLimit": 1000,
-      "simulatedShareRateDeviationBPLimit": 10,
+      "simulatedShareRateDeviationBPLimit": 50,
       "maxValidatorExitRequestsPerReport": 500,
       "maxAccountingExtraDataListItemsCount": 500,
       "maxNodeOperatorsPerExtraDataItemCount": 100,
@@ -317,10 +317,10 @@
       "0xd75C357F32Df60A67111BAa62a168c0D644d1C32",
       "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
       [
-        12375,
+        40000,
         500,
         1000,
-        10,
+        50,
         500,
         500,
         100,
