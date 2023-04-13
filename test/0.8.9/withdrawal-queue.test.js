@@ -838,181 +838,193 @@ contract('WithdrawalQueue', ([owner, stranger, daoAgent, user, pauser, resumer, 
     })
   })
 
-  context('findCheckpointHints()', () => {
-    beforeEach(async () => {
-      const numOfRequests = 10
-      const requests = Array(numOfRequests).fill(ETH(20))
-      const discountedPrices = Array(numOfRequests)
-        .fill()
-        .map((_, i) => ETH(i))
-      const sharesPerRequest = await steth.getSharesByPooledEth(ETH(20))
-      const discountShareRates = discountedPrices.map((p) => shareRate(+p / +sharesPerRequest))
+  context('findCheckpointHints', () => {
+    const NOT_FOUND = 0
+    context('unit tests', () => {
+      let requestId
+      const amount = ETH(20)
 
-      await withdrawalQueue.requestWithdrawals(requests, owner, { from: user })
-      for (let i = 1; i <= numOfRequests; i++) {
-        await withdrawalQueue.finalize(i, discountShareRates[i - 1], {
-          from: steth.address,
-          value: discountedPrices[i - 1],
-        })
+      beforeEach('Enqueue a request', async () => {
+        await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
+        requestId = await withdrawalQueue.getLastRequestId()
+      })
+
+      it('correctly works before first finalization', async () => {
+        const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
+        assert.equals(lastCheckpointIndex, 0)
+        const result = await withdrawalQueue.findCheckpointHints([requestId], 1, lastCheckpointIndex)
+        assert.isTrue(result.length === 1)
+        assert.equals(result[0], NOT_FOUND)
+
+        const claimableEthResult = await withdrawalQueue.getClaimableEther([requestId], result)
+        assert.isTrue(claimableEthResult.length === 1)
+        assert.equals(claimableEthResult[0], NOT_FOUND)
+      })
+
+      it('reverts if first index is zero', async () => {
+        const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
+        await assert.reverts(
+          withdrawalQueue.findCheckpointHints([1], 0, lastCheckpointIndex),
+          `InvalidRequestIdRange(0, ${+lastCheckpointIndex})`
+        )
+      })
+
+      it('reverts if last index is larger than in store', async () => {
+        const lastCheckpointWrong = (await withdrawalQueue.getLastCheckpointIndex()) + 1
+        await assert.reverts(
+          withdrawalQueue.findCheckpointHints([1], 1, lastCheckpointWrong),
+          `InvalidRequestIdRange(1, ${+lastCheckpointWrong})`
+        )
+      })
+
+      it('returns empty list when passed empty request ids list', async () => {
+        const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
+        const hints = await withdrawalQueue.findCheckpointHints([], 1, lastCheckpointIndex)
+        assert.equal(hints.length, 0)
+      })
+
+      it('returns not found when indexes have negative overlap', async () => {
+        const batch = await withdrawalQueue.prefinalize.call([requestId], defaultShareRate)
+        await withdrawalQueue.finalize(requestId, defaultShareRate, { from: steth.address, value: batch.ethToLock })
+        const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
+        const hints = await withdrawalQueue.findCheckpointHints(
+          [requestId],
+          +lastCheckpointIndex + 1,
+          lastCheckpointIndex
+        )
+        assert.equal(hints.length, 1)
+        assert.equals(hints[0], NOT_FOUND)
+      })
+
+      it('returns hints array with one item for list from single request id', async () => {
+        const batch = await withdrawalQueue.prefinalize.call([requestId], defaultShareRate)
+        await withdrawalQueue.finalize(requestId, defaultShareRate, { from: steth.address, value: batch.ethToLock })
+        const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
+        const hints = await withdrawalQueue.findCheckpointHints([requestId], 1, lastCheckpointIndex)
+        assert.equal(hints.length, 1)
+        assert.equals(hints[0], 1)
+      })
+
+      it('returns correct hints array for given request ids', async () => {
+        await withdrawalQueue.finalize(requestId, shareRate(20), { from: steth.address, value: ETH(20) })
+
+        await steth.mintShares(owner, shares(1))
+        await steth.approve(withdrawalQueue.address, StETH(300), { from: owner })
+
+        const secondRequestAmount = ETH(10)
+        await withdrawalQueue.requestWithdrawals([secondRequestAmount], owner, { from: owner })
+        const secondRequestId = await withdrawalQueue.getLastRequestId()
+
+        const thirdRequestAmount = ETH(30)
+        await withdrawalQueue.requestWithdrawals([thirdRequestAmount], user, { from: user })
+        const thirdRequestId = await withdrawalQueue.getLastRequestId()
+
+        await withdrawalQueue.finalize(thirdRequestId, shareRate(20), { from: steth.address, value: ETH(40) })
+
+        const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
+        const hints = await withdrawalQueue.findCheckpointHints(
+          [requestId, secondRequestId, thirdRequestId],
+          1,
+          lastCheckpointIndex
+        )
+        assert.equal(hints.length, 3)
+        assert.equals(hints[0], 1)
+        assert.equals(hints[1], 2)
+        assert.equals(hints[2], 2)
+      })
+
+      it('reverts with RequestIdsNotSorted error when request ids not in ascending order', async () => {
+        await withdrawalQueue.finalize(requestId, shareRate(20), { from: steth.address, value: ETH(20) })
+
+        await steth.mintShares(owner, shares(1))
+        await steth.approve(withdrawalQueue.address, StETH(300), { from: owner })
+
+        const secondRequestAmount = ETH(10)
+        await withdrawalQueue.requestWithdrawals([secondRequestAmount], owner, { from: owner })
+        const secondRequestId = await withdrawalQueue.getLastRequestId()
+
+        const thirdRequestAmount = ETH(30)
+        await withdrawalQueue.requestWithdrawals([thirdRequestAmount], user, { from: user })
+        const thirdRequestId = await withdrawalQueue.getLastRequestId()
+
+        await withdrawalQueue.finalize(thirdRequestId, shareRate(20), { from: steth.address, value: ETH(40) })
+
+        const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
+        await assert.reverts(
+          withdrawalQueue.findCheckpointHints([requestId, thirdRequestId, secondRequestId], 1, lastCheckpointIndex),
+          'RequestIdsNotSorted()'
+        )
+      })
+    })
+
+    context('range tests', () => {
+      beforeEach(async () => {
+        const numOfRequests = 10
+        const requests = Array(numOfRequests).fill(ETH(20))
+        const discountedPrices = Array(numOfRequests)
+          .fill()
+          .map((_, i) => ETH(i))
+        const sharesPerRequest = await steth.getSharesByPooledEth(ETH(20))
+        const discountShareRates = discountedPrices.map((p) => shareRate(+p / +sharesPerRequest))
+
+        await withdrawalQueue.requestWithdrawals(requests, owner, { from: user })
+        for (let i = 1; i <= numOfRequests; i++) {
+          await withdrawalQueue.finalize([i], discountShareRates[i - 1], {
+            from: steth.address,
+            value: discountedPrices[i - 1],
+          })
+        }
+        assert.equals(await withdrawalQueue.getLastCheckpointIndex(), numOfRequests)
+      })
+
+      it('return NOT_FOUND if request is not finalized', async () => {
+        await withdrawalQueue.requestWithdrawals([ETH(1)], owner, { from: user })
+        const hints = await withdrawalQueue.findCheckpointHints([11], 1, 10)
+        assert.equals(hints.length, 1)
+        assert.equals(hints[0], NOT_FOUND)
+      })
+
+      it('reverts if there is no such a request', async () => {
+        await assert.reverts(withdrawalQueue.findCheckpointHints([12], 1, 10), 'InvalidRequestId(12)')
+      })
+
+      it('range search (found)', async () => {
+        assert.equals(await withdrawalQueue.findCheckpointHints([5], 1, 9), 5)
+        assert.equals(await withdrawalQueue.findCheckpointHints([1], 1, 9), 1)
+        assert.equals(await withdrawalQueue.findCheckpointHints([9], 1, 9), 9)
+        assert.equals(await withdrawalQueue.findCheckpointHints([5], 5, 5), 5)
+      })
+
+      it('range search (not found)', async () => {
+        assert.equals(await withdrawalQueue.findCheckpointHints([10], 1, 5), 0)
+        assert.equals(await withdrawalQueue.findCheckpointHints([6], 1, 5), 0)
+        assert.equals(await withdrawalQueue.findCheckpointHints([1], 5, 5), 0)
+        assert.equals(await withdrawalQueue.findCheckpointHints([4], 5, 9), 0)
+      })
+
+      it('sequential search', async () => {
+        for (const [idToFind, searchLength] of [
+          [1, 3],
+          [1, 10],
+          [10, 2],
+          [10, 3],
+          [8, 2],
+          [9, 3],
+        ]) {
+          assert.equals(await sequentialSearch(idToFind, searchLength), idToFind)
+        }
+      })
+
+      const sequentialSearch = async (requestId, searchLength) => {
+        const lastIndex = await withdrawalQueue.getLastCheckpointIndex()
+
+        for (let i = 1; i <= lastIndex; i += searchLength) {
+          let end = i + searchLength - 1
+          if (end > lastIndex) end = lastIndex
+          const foundIndex = await withdrawalQueue.findCheckpointHints([requestId], i, end)
+          if (+foundIndex !== 0) return foundIndex
+        }
       }
-      assert.equals(await withdrawalQueue.getLastCheckpointIndex(), numOfRequests)
-    })
-
-    it('reverts if request is not finalized', async () => {
-      await withdrawalQueue.requestWithdrawals([ETH(1)], owner, { from: user })
-      await assert.reverts(withdrawalQueue.findCheckpointHints([11], 1, 10), 'RequestNotFoundOrNotFinalized(11)')
-    })
-
-    it('reverts if there is no such a request', async () => {
-      await assert.reverts(withdrawalQueue.findCheckpointHints([12], 1, 10), 'RequestNotFoundOrNotFinalized(12)')
-    })
-
-    it('range search (found)', async () => {
-      assert.equals(await withdrawalQueue.findCheckpointHints([5], 1, 9), 5)
-      assert.equals(await withdrawalQueue.findCheckpointHints([1], 1, 9), 1)
-      assert.equals(await withdrawalQueue.findCheckpointHints([9], 1, 9), 9)
-      assert.equals(await withdrawalQueue.findCheckpointHints([5], 5, 5), 5)
-    })
-
-    it('range search (not found)', async () => {
-      assert.equals(await withdrawalQueue.findCheckpointHints([10], 1, 5), 0)
-      assert.equals(await withdrawalQueue.findCheckpointHints([6], 1, 5), 0)
-      assert.equals(await withdrawalQueue.findCheckpointHints([1], 5, 5), 0)
-      assert.equals(await withdrawalQueue.findCheckpointHints([4], 5, 9), 0)
-    })
-
-    it('sequential search', async () => {
-      for (const [idToFind, searchLength] of [
-        [1, 3],
-        [1, 10],
-        [10, 2],
-        [10, 3],
-        [8, 2],
-        [9, 3],
-      ]) {
-        assert.equals(await sequentialSearch(idToFind, searchLength), idToFind)
-      }
-    })
-
-    const sequentialSearch = async (requestId, searchLength) => {
-      const lastIndex = await withdrawalQueue.getLastCheckpointIndex()
-
-      for (let i = 1; i <= lastIndex; i += searchLength) {
-        let end = i + searchLength - 1
-        if (end > lastIndex) end = lastIndex
-        const foundIndex = await withdrawalQueue.findCheckpointHints([requestId], i, end)
-        if (+foundIndex !== 0) return foundIndex
-      }
-    }
-  })
-
-  context('findCheckpointHints() 2', () => {
-    let requestId
-    const amount = ETH(20)
-
-    beforeEach('Enqueue a request', async () => {
-      await withdrawalQueue.requestWithdrawals([amount], owner, { from: user })
-      requestId = await withdrawalQueue.getLastRequestId()
-    })
-
-    it('reverts if requestId is zero', async () => {
-      const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
-      await assert.reverts(withdrawalQueue.findCheckpointHints([0], 1, lastCheckpointIndex), 'InvalidRequestId(0)')
-    })
-
-    it('reverts if first index is zero', async () => {
-      const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
-      await assert.reverts(
-        withdrawalQueue.findCheckpointHints([1], 0, lastCheckpointIndex),
-        `InvalidRequestIdRange(0, ${+lastCheckpointIndex})`
-      )
-    })
-
-    it('reverts if last index is larger than in store', async () => {
-      const lastCheckpointWrong = (await withdrawalQueue.getLastCheckpointIndex()) + 1
-      await assert.reverts(
-        withdrawalQueue.findCheckpointHints([1], 1, lastCheckpointWrong),
-        `InvalidRequestIdRange(1, ${+lastCheckpointWrong})`
-      )
-    })
-
-    it('returns empty list when passed empty request ids list', async () => {
-      const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
-      const hints = await withdrawalQueue.findCheckpointHints([], 1, lastCheckpointIndex)
-      assert.equal(hints.length, 0)
-    })
-
-    it('returns not found when indexes have negative overlap', async () => {
-      const batch = await withdrawalQueue.prefinalize.call([requestId], defaultShareRate)
-      await withdrawalQueue.finalize(requestId, defaultShareRate, { from: steth.address, value: batch.ethToLock })
-      const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
-      const hints = await withdrawalQueue.findCheckpointHints(
-        [requestId],
-        +lastCheckpointIndex + 1,
-        lastCheckpointIndex
-      )
-      assert.equal(hints.length, 1)
-      assert.equals(hints[0], 0)
-    })
-
-    it('returns hints array with one item for list from single request id', async () => {
-      const batch = await withdrawalQueue.prefinalize.call([requestId], defaultShareRate)
-      await withdrawalQueue.finalize(requestId, defaultShareRate, { from: steth.address, value: batch.ethToLock })
-      const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
-      const hints = await withdrawalQueue.findCheckpointHints([requestId], 1, lastCheckpointIndex)
-      assert.equal(hints.length, 1)
-      assert.equals(hints[0], 1)
-    })
-
-    it('returns correct hints array for given request ids', async () => {
-      await withdrawalQueue.finalize(requestId, shareRate(20), { from: steth.address, value: ETH(20) })
-
-      await steth.mintShares(owner, shares(1))
-      await steth.approve(withdrawalQueue.address, StETH(300), { from: owner })
-
-      const secondRequestAmount = ETH(10)
-      await withdrawalQueue.requestWithdrawals([secondRequestAmount], owner, { from: owner })
-      const secondRequestId = await withdrawalQueue.getLastRequestId()
-
-      const thirdRequestAmount = ETH(30)
-      await withdrawalQueue.requestWithdrawals([thirdRequestAmount], user, { from: user })
-      const thirdRequestId = await withdrawalQueue.getLastRequestId()
-
-      await withdrawalQueue.finalize(thirdRequestId, shareRate(20), { from: steth.address, value: ETH(40) })
-
-      const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
-      const hints = await withdrawalQueue.findCheckpointHints(
-        [requestId, secondRequestId, thirdRequestId],
-        1,
-        lastCheckpointIndex
-      )
-      assert.equal(hints.length, 3)
-      assert.equals(hints[0], 1)
-      assert.equals(hints[1], 2)
-      assert.equals(hints[2], 2)
-    })
-
-    it('reverts with RequestIdsNotSorted error when request ids not in ascending order', async () => {
-      await withdrawalQueue.finalize(requestId, shareRate(20), { from: steth.address, value: ETH(20) })
-
-      await steth.mintShares(owner, shares(1))
-      await steth.approve(withdrawalQueue.address, StETH(300), { from: owner })
-
-      const secondRequestAmount = ETH(10)
-      await withdrawalQueue.requestWithdrawals([secondRequestAmount], owner, { from: owner })
-      const secondRequestId = await withdrawalQueue.getLastRequestId()
-
-      const thirdRequestAmount = ETH(30)
-      await withdrawalQueue.requestWithdrawals([thirdRequestAmount], user, { from: user })
-      const thirdRequestId = await withdrawalQueue.getLastRequestId()
-
-      await withdrawalQueue.finalize(thirdRequestId, shareRate(20), { from: steth.address, value: ETH(40) })
-
-      const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex()
-      await assert.reverts(
-        withdrawalQueue.findCheckpointHints([requestId, thirdRequestId, secondRequestId], 1, lastCheckpointIndex),
-        'RequestIdsNotSorted()'
-      )
     })
   })
 

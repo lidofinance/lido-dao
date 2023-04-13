@@ -93,12 +93,12 @@ contract WithdrawalQueueERC721 is IERC721Metadata, IERC4906, WithdrawalQueue {
             || interfaceId == bytes4(0x49064906) || super.supportsInterface(interfaceId);
     }
 
-    /// @dev Se_toBytes321Metadata-name}.
+    /// @dev See {IERC721Metadata-name}.
     function name() external view override returns (string memory) {
         return _toString(NAME);
     }
 
-    /// @dev Se_toBytes321Metadata-symbol}.
+    /// @dev See {IERC721Metadata-symbol}.
     function symbol() external view override returns (string memory) {
         return _toString(SYMBOL);
     }
