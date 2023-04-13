@@ -37,8 +37,10 @@ interface IWithdrawalQueue {
 /// @notice The set of restrictions used in the sanity checks of the oracle report
 /// @dev struct is loaded from the storage and stored in memory during the tx running
 struct LimitsList {
-    /// @notice The max possible number of validators that might appear or exit on the Consensus
-    ///     Layer during one day
+    /// @notice The max possible number of validators that might been reported as `appeared` or `exited`
+    ///     during a single day
+    /// NB: `appeared` means `pending` (maybe not `activated` yet), see further explanations
+    //      in docs for the `setChurnValidatorsPerDayLimit` func below.
     /// @dev Must fit into uint16 (<= 65_535)
     uint256 churnValidatorsPerDayLimit;
 
@@ -217,6 +219,15 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     }
 
     /// @notice Sets the new value for the churnValidatorsPerDayLimit
+    ///     The limit is applicable for `appeared` and `exited` validators
+    ///
+    /// NB: AccountingOracle reports validators as `appeared` once them become `pending`
+    ///     (might be not `activated` yet). Thus, this limit should be high enough for such cases
+    ///     because Consensus Layer has no intrinsic churn limit for the amount of `pending` validators
+    ///     (only for `activated` instead). For Lido it's limited by the max daily deposits via DepositSecurityModule
+    ///
+    ///     In contrast, `exited` are reported according to the Consensus Layer churn limit.
+    ///
     /// @param _churnValidatorsPerDayLimit new churnValidatorsPerDayLimit value
     function setChurnValidatorsPerDayLimit(uint256 _churnValidatorsPerDayLimit)
         external
@@ -426,7 +437,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
         // 6. Appeared validators increase
         if (_postCLValidators > _preCLValidators) {
-            _checkValidatorsChurnLimit(limitsList, (_postCLValidators - _preCLValidators), _timeElapsed);
+            _checkAppearedValidatorsChurnLimit(limitsList, (_postCLValidators - _preCLValidators), _timeElapsed);
         }
     }
 
@@ -589,7 +600,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         }
     }
 
-    function _checkValidatorsChurnLimit(
+    function _checkAppearedValidatorsChurnLimit(
         LimitsList memory _limitsList,
         uint256 _appearedValidators,
         uint256 _timeElapsed
@@ -633,20 +644,37 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             revert ActualShareRateIsZero();
         }
 
-        if (_simulatedShareRate > actualShareRate) {
-            // the simulated share rate can't be higher than the actual one
-            // invariant: rounding only can lower the simulated share rate
-            revert TooHighSimulatedShareRate(_simulatedShareRate, actualShareRate);
-        }
-
-        uint256 simulatedShareDiff = actualShareRate - _simulatedShareRate;
+        // the simulated share rate can be either higher or lower than the actual one
+        // in case of new user-submitted ether & minted `stETH` between the oracle reference slot
+        // and the actual report delivery slot
+        //
+        // it happens because the oracle daemon snapshots rewards or losses at the reference slot,
+        // and then calculates simulated share rate, but if new ether was submitted together with minting new `stETH`
+        // after the reference slot passed, the oracle daemon still submits the same amount of rewards or losses,
+        // which now is applicable to more 'shareholders', lowering the impact per a single share
+        // (i.e, changing the actual share rate)
+        //
+        // simulated share rate ≤ actual share rate can be for a negative token rebase
+        // simulated share rate ≥ actual share rate can be for a positive token rebase
+        //
+        // Given that:
+        // 1) CL one-off balance decrease ≤ token rebase ≤ max positive token rebase
+        // 2) user-submitted ether & minted `stETH` don't exceed the current staking rate limit
+        // (see Lido.getCurrentStakeLimit())
+        //
+        // can conclude that `simulatedShareRateDeviationBPLimit` (L) should be set as follows:
+        // L = (2 * SRL) * max(CLD, MPR),
+        // where:
+        // - CLD is consensus layer one-off balance decrease (as BP),
+        // - MPR is max positive token rebase (as BP),
+        // - SRL is staking rate limit normalized by TVL (`maxStakeLimit / totalPooledEther`)
+        //   totalPooledEther should be chosen as a reasonable lower bound of the protocol TVL
+        //
+        uint256 simulatedShareDiff = Math256.absDiff(actualShareRate, _simulatedShareRate);
         uint256 simulatedShareDeviation = (MAX_BASIS_POINTS * simulatedShareDiff) / actualShareRate;
 
         if (simulatedShareDeviation > _limitsList.simulatedShareRateDeviationBPLimit) {
-            // the simulated share rate can be lower than the actual one due to rounding
-            // e.g., new user-submitted ether & minted `stETH`
-            // between an oracle reference slot and an actual accounting report delivery
-            revert TooLowSimulatedShareRate(_simulatedShareRate, actualShareRate);
+            revert IncorrectSimulatedShareRate(_simulatedShareRate, actualShareRate);
         }
     }
 
@@ -724,8 +752,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     error IncorrectExitedValidators(uint256 churnLimit);
     error IncorrectRequestFinalization(uint256 requestCreationBlock);
     error ActualShareRateIsZero();
-    error TooHighSimulatedShareRate(uint256 simulatedShareRate, uint256 actualShareRate);
-    error TooLowSimulatedShareRate(uint256 simulatedShareRate, uint256 actualShareRate);
+    error IncorrectSimulatedShareRate(uint256 simulatedShareRate, uint256 actualShareRate);
     error MaxAccountingExtraDataItemsCountExceeded(uint256 maxItemsCount, uint256 receivedItemsCount);
     error ExitedValidatorsLimitExceeded(uint256 limitPerDay, uint256 exitedPerDay);
     error TooManyNodeOpsPerExtraDataItem(uint256 itemIndex, uint256 nodeOpsCount);

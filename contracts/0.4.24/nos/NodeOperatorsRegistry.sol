@@ -85,7 +85,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     // SigningKeysStats
     /// @dev Operator's max validator keys count approved for deposit by the DAO
     uint8 internal constant TOTAL_VETTED_KEYS_COUNT_OFFSET = 0;
-    /// @dev Number of keys in the EXITED state for this operator for all time
+    /// @dev Number of keys in the EXITED state of this operator for all time
     uint8 internal constant TOTAL_EXITED_KEYS_COUNT_OFFSET = 1;
     /// @dev Total number of keys of this operator for all time
     uint8 internal constant TOTAL_KEYS_COUNT_OFFSET = 2;
@@ -116,11 +116,11 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     // Summary SigningKeysStats
     uint8 internal constant SUMMARY_MAX_VALIDATORS_COUNT_OFFSET = 0;
-    /// @dev Number of keys in the EXITED state for this operator for all time
+    /// @dev Number of keys of all operators which were in the EXITED state for all time
     uint8 internal constant SUMMARY_EXITED_KEYS_COUNT_OFFSET = 1;
-    /// @dev Total number of keys of this operator for all time
+    /// @dev Total number of keys of all operators for all time
     uint8 internal constant SUMMARY_TOTAL_KEYS_COUNT_OFFSET = 2;
-    /// @dev Number of keys of this operator which were in DEPOSITED state for all time
+    /// @dev Number of keys of all operators which were in the DEPOSITED state for all time
     uint8 internal constant SUMMARY_DEPOSITED_KEYS_COUNT_OFFSET = 3;
 
     //
@@ -150,7 +150,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     // bytes32 internal constant TYPE_POSITION = keccak256("lido.NodeOperatorsRegistry.type");
     bytes32 internal constant TYPE_POSITION = 0xbacf4236659a602d72c631ba0b0d67ec320aaf523f3ae3590d7faee4f42351d0;
 
-    // bytes32 internal constant TYPE_POSITION = keccak256("lido.NodeOperatorsRegistry.stuckPenaltyDelay");
+    // bytes32 internal constant STUCK_PENALTY_DELAY_POSITION = keccak256("lido.NodeOperatorsRegistry.stuckPenaltyDelay");
     bytes32 internal constant STUCK_PENALTY_DELAY_POSITION = 0x8e3a1f3826a82c1116044b334cae49f3c3d12c3866a1c4b18af461e12e58a18e;
 
     //
@@ -286,7 +286,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     /// @return id a unique key of the added operator
     function addNodeOperator(string _name, address _rewardAddress) external returns (uint256 id) {
         _onlyValidNodeOperatorName(_name);
-        _onlyNonZeroAddress(_rewardAddress);
+        _onlyValidRewardAddress(_rewardAddress);
         _auth(MANAGE_NODE_OPERATOR_ROLE);
 
         id = getNodeOperatorsCount();
@@ -370,7 +370,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     /// @param _nodeOperatorId Node operator id to set reward address for
     /// @param _rewardAddress Execution layer Ethereum address to set as reward address
     function setNodeOperatorRewardAddress(uint256 _nodeOperatorId, address _rewardAddress) external {
-        _onlyNonZeroAddress(_rewardAddress);
+        _onlyValidRewardAddress(_rewardAddress);
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(MANAGE_NODE_OPERATOR_ROLE);
 
@@ -383,7 +383,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     /// @dev Current implementation preserves invariant: depositedSigningKeysCount <= vettedSigningKeysCount <= totalSigningKeysCount.
     ///     If _vettedSigningKeysCount out of range [depositedSigningKeysCount, totalSigningKeysCount], the new vettedSigningKeysCount
     ///     value will be set to the nearest range border.
-    /// @param _nodeOperatorId Node operator id to set reward address for
+    /// @param _nodeOperatorId Node operator id to set staking limit for
     /// @param _vettedSigningKeysCount New staking limit of the node operator
     function setNodeOperatorStakingLimit(uint256 _nodeOperatorId, uint64 _vettedSigningKeysCount) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
@@ -1437,6 +1437,13 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     function _onlyValidNodeOperatorName(string _name) internal pure {
         require(bytes(_name).length > 0 && bytes(_name).length <= MAX_NODE_OPERATOR_NAME_LENGTH, "WRONG_NAME_LENGTH");
+    }
+
+    function _onlyValidRewardAddress(address _rewardAddress) internal view {
+        _onlyNonZeroAddress(_rewardAddress);
+        // The Lido address is forbidden explicitly because stETH transfers on this contract will revert
+        // See onExitedAndStuckValidatorsCountsUpdated() and StETH._transferShares() for details
+        require(_rewardAddress != getLocator().lido(), "LIDO_REWARD_ADDRESS");
     }
 
     function _onlyNonZeroAddress(address _a) internal pure {

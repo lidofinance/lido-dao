@@ -44,7 +44,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user, oracle]) => {
     await snapshot()
   })
 
-  context(`2 requests with diff share rate, maxShareRate == shareRate(1)`, async () => {
+  context(`2 requests with diff share rate, maxShareRate == shareRate(1)`, () => {
     ///
     /// invariant 1: all requests in the same batch should be finalized using the same share rate
     ///
@@ -98,7 +98,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user, oracle]) => {
     let claimableEther
 
     it(`requests get finalized`, async () => {
-      await queue.finalize(batches, e27(1), { from: finalizer, value: e18(2) })
+      await queue.finalize(batches[batches.length - 1], e27(1), { from: finalizer, value: e18(2) })
       assert.equals(await queue.getLastFinalizedRequestId(), requestIds[1])
 
       const hints = await queue.findCheckpointHints(requestIds, 1, await queue.getLastCheckpointIndex())
@@ -114,7 +114,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user, oracle]) => {
     })
   })
 
-  context(`2 requests 2 batches, shareRate(2) > maxShareRate > shareRate(1)`, async () => {
+  context(`2 requests 2 batches, shareRate(2) > maxShareRate > shareRate(1)`, () => {
     ///
     /// invariant 1: all requests in the same batch should be finalized using the same share rate
     ///
@@ -169,7 +169,7 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user, oracle]) => {
     let claimableEther
 
     it(`requests get finalized`, async () => {
-      await queue.finalize(batches, maxShareRate, { from: finalizer, value: e18(2.5) })
+      await queue.finalize(batches[batches.length - 1], maxShareRate, { from: finalizer, value: e18(2.5) })
       assert.equals(await queue.getLastFinalizedRequestId(), requestIds[1])
 
       const hints = await queue.findCheckpointHints(requestIds, 1, await queue.getLastCheckpointIndex())

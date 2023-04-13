@@ -1,5 +1,6 @@
 const { contract, artifacts } = require('hardhat')
 const { bn } = require('@aragon/contract-helpers-test')
+const { assert } = require('../../helpers/assert')
 
 const BaseOracle = artifacts.require('BaseOracleTimeTravellable')
 const MockConsensusContract = artifacts.require('MockConsensusContract')
@@ -104,6 +105,10 @@ contract('BaseOracle', ([admin]) => {
   context('Deployment and initial configuration', () => {
     it('deploying base oracle ', async () => {
       await deployBaseOracle(admin)
+    })
+
+    it('reverts when slotsPerSecond is zero', async () => {
+      await assert.reverts(deployBaseOracle(admin, { secondsPerSlot: 0 }), 'SecondsPerSlotCannotBeZero()')
     })
 
     // TODO: add more base tests

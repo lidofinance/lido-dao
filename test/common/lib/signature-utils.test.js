@@ -63,7 +63,7 @@ function testWithConsumer(SignatureUtilsConsumer, desc) {
 
         await assert.reverts(
           sigUtils.isValidSignature(alice.address, msgHash, INVALID_V, sig.r, sig.s),
-          `ECDSA: invalid signature 'v' value`
+          'ECDSA: invalid signature'
         )
       })
     })

@@ -72,6 +72,11 @@ contract DepositSecurityModule {
     IStakingRouter public immutable STAKING_ROUTER;
     IDepositContract public immutable DEPOSIT_CONTRACT;
 
+    /**
+     * NB: both `maxDepositsPerBlock` and `minDepositBlockDistance` values
+     * must be harmonized with `OracleReportSanityChecker.churnValidatorsPerDayLimit`
+     * (see docs for the `OracleReportSanityChecker.setChurnValidatorsPerDayLimit` function)
+     */
     uint256 internal maxDepositsPerBlock;
     uint256 internal minDepositBlockDistance;
     uint256 internal pauseIntentValidityPeriodBlocks;
@@ -176,6 +181,9 @@ contract DepositSecurityModule {
 
     /**
      * Sets `maxDepositsPerBlock`. Only callable by the owner.
+     *
+     * NB: the value must be harmonized with `OracleReportSanityChecker.churnValidatorsPerDayLimit`
+     * (see docs for the `OracleReportSanityChecker.setChurnValidatorsPerDayLimit` function)
      */
     function setMaxDeposits(uint256 newValue) external onlyOwner {
         _setMaxDeposits(newValue);
@@ -195,6 +203,9 @@ contract DepositSecurityModule {
 
     /**
      * Sets `minDepositBlockDistance`. Only callable by the owner.
+     *
+     * NB: the value must be harmonized with `OracleReportSanityChecker.churnValidatorsPerDayLimit`
+     * (see docs for the `OracleReportSanityChecker.setChurnValidatorsPerDayLimit` function)
      */
     function setMinDepositBlockDistance(uint256 newValue) external onlyOwner {
         _setMinDepositBlockDistance(newValue);

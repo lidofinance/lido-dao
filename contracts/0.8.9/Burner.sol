@@ -61,7 +61,6 @@ contract Burner is IBurner, AccessControlEnumerable {
     error ZeroAddress(string field);
 
     bytes32 public constant REQUEST_BURN_MY_STETH_ROLE = keccak256("REQUEST_BURN_MY_STETH_ROLE");
-    bytes32 public constant RECOVER_ASSETS_ROLE = keccak256("RECOVER_ASSETS_ROLE");
     bytes32 public constant REQUEST_BURN_SHARES_ROLE = keccak256("REQUEST_BURN_SHARES_ROLE");
 
     uint256 private coverSharesBurnRequested;
@@ -164,7 +163,7 @@ contract Burner is IBurner, AccessControlEnumerable {
       *
       */
     function requestBurnMyStETHForCover(uint256 _stETHAmountToBurn) external onlyRole(REQUEST_BURN_MY_STETH_ROLE) {
-        require(IStETH(STETH).transferFrom(msg.sender, address(this), _stETHAmountToBurn));
+        IStETH(STETH).transferFrom(msg.sender, address(this), _stETHAmountToBurn);
         uint256 sharesAmount = IStETH(STETH).getSharesByPooledEth(_stETHAmountToBurn);
         _requestBurn(sharesAmount, _stETHAmountToBurn, true /* _isCover */);
     }
@@ -197,7 +196,7 @@ contract Burner is IBurner, AccessControlEnumerable {
       *
       */
     function requestBurnMyStETH(uint256 _stETHAmountToBurn) external onlyRole(REQUEST_BURN_MY_STETH_ROLE) {
-        require(IStETH(STETH).transferFrom(msg.sender, address(this), _stETHAmountToBurn));
+        IStETH(STETH).transferFrom(msg.sender, address(this), _stETHAmountToBurn);
         uint256 sharesAmount = IStETH(STETH).getSharesByPooledEth(_stETHAmountToBurn);
         _requestBurn(sharesAmount, _stETHAmountToBurn, false /* _isCover */);
     }
@@ -223,7 +222,7 @@ contract Burner is IBurner, AccessControlEnumerable {
       * but not marked for burning) to the Lido treasury address set upon the
       * contract construction.
       */
-    function recoverExcessStETH() external onlyRole(RECOVER_ASSETS_ROLE) {
+    function recoverExcessStETH() external {
         uint256 excessStETH = getExcessStETH();
 
         if (excessStETH > 0) {
@@ -231,7 +230,7 @@ contract Burner is IBurner, AccessControlEnumerable {
 
             emit ExcessStETHRecovered(msg.sender, excessStETH, excessSharesAmount);
 
-            require(IStETH(STETH).transfer(TREASURY, excessStETH));
+            IStETH(STETH).transfer(TREASURY, excessStETH);
         }
     }
 
@@ -249,7 +248,7 @@ contract Burner is IBurner, AccessControlEnumerable {
       * @param _token an ERC20-compatible token
       * @param _amount token amount
       */
-    function recoverERC20(address _token, uint256 _amount) external onlyRole(RECOVER_ASSETS_ROLE) {
+    function recoverERC20(address _token, uint256 _amount) external {
         if (_amount == 0) revert ZeroRecoveryAmount();
         if (_token == STETH) revert StETHRecoveryWrongFunc();
 
@@ -265,7 +264,7 @@ contract Burner is IBurner, AccessControlEnumerable {
       * @param _token an ERC721-compatible token
       * @param _tokenId minted token id
       */
-    function recoverERC721(address _token, uint256 _tokenId) external onlyRole(RECOVER_ASSETS_ROLE) {
+    function recoverERC721(address _token, uint256 _tokenId) external {
         if (_token == STETH) revert StETHRecoveryWrongFunc();
 
         emit ERC721Recovered(msg.sender, _token, _tokenId);
