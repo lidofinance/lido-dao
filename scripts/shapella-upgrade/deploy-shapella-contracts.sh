@@ -16,13 +16,11 @@ if [[ -z "${NETWORK}" ]]; then
 fi
 echo "NETWORK is $NETWORK"
 
-# yarn install --immutable
-# yarn compile
+yarn compile
 
 export NETWORK_STATE_FILE_BASENAME="deployed-upgrade"
 DEPLOYED_FILE="${NETWORK_STATE_FILE_BASENAME}-$NETWORK.json"
 rm -f $DEPLOYED_FILE
-# cp deployed-$NETWORK.json deployed-upgrade-$NETWORK.json
 cp $DEFAULT_CONFIG_FILE $DEPLOYED_FILE
 
 yarn hardhat --network $NETWORK run ./scripts/shapella-upgrade/deploy-aragon-implementations.js

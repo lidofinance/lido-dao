@@ -1,7 +1,8 @@
+const { ethers } = require('hardhat')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, yl, gr } = require('../helpers/log')
 const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
-const { deployWithoutProxy, deployBehindOssifiableProxy, getTotalGasUsed } = require('../helpers/deploy')
+const { deployWithoutProxy, deployBehindOssifiableProxy, getTotalGasUsed, getDeployTxParams } = require('../helpers/deploy')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
 
 const { APP_NAMES } = require('../constants')
@@ -65,9 +66,14 @@ async function deployNewContracts({ web3, artifacts }) {
   const temporaryAdmin = deployer
   const proxyContractsOwner = temporaryAdmin
   const lidoLocatorProxyTemporaryOwner = temporaryAdmin
-  const DEFAULT_ADMIN_ROLE = "0x00"
+  const DEFAULT_ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000"
   const CONFIG_MANAGER_ROLE = "0xbbfb55d933c2bfa638763473275b1d84c4418e58d26cf9d2cd5758237756d9f0"
-  const txParams = {from: temporaryAdmin, gasPrice: GAS_PRICE}
+  const txParams = await getDeployTxParams(deployer)
+  console.log({
+    txParams,
+    deployer,
+  })
+  let tx = null
 
   //
   // === OracleDaemonConfig ===
@@ -78,18 +84,34 @@ async function deployNewContracts({ web3, artifacts }) {
   ]
   const oracleDaemonConfigAddress = await deployWithoutProxy(
     'oracleDaemonConfig', 'OracleDaemonConfig', deployer, oracleDaemonConfigArgs)
-  const oracleDaemonConfig = await (await artifacts.require("OracleDaemonConfig")).at(oracleDaemonConfigAddress)
-  await oracleDaemonConfig.grantRole(CONFIG_MANAGER_ROLE, temporaryAdmin, txParams)
-  for (const [key, value] of Object.entries(oracleDaemonConfigParams)) {
-    const valueBytes = `0x${value.toString(16)}`
-    console.log(`    oracleDaemonConfig.set(${key}, ${valueBytes})`)
-    await oracleDaemonConfig.set(key, valueBytes, txParams)
-  }
-  await oracleDaemonConfig.revokeRole(CONFIG_MANAGER_ROLE, temporaryAdmin, txParams)
-  await oracleDaemonConfig.grantRole(DEFAULT_ADMIN_ROLE, agentAddress, txParams)
-  await oracleDaemonConfig.revokeRole(DEFAULT_ADMIN_ROLE, temporaryAdmin, txParams)
-  logWideSplitter()
+  const oracleDaemonConfig = await ethers.getContractAt("OracleDaemonConfig", oracleDaemonConfigAddress)
 
+  console.log(`oracleDaemonConfig.grantRole(${CONFIG_MANAGER_ROLE}, ${temporaryAdmin})...`)
+  tx = await oracleDaemonConfig.grantRole(CONFIG_MANAGER_ROLE, temporaryAdmin, txParams)
+  await tx.wait()
+
+  for (const [key, value] of Object.entries(oracleDaemonConfigParams)) {
+    let valueHex = `${value.toString(16)}`
+    if (valueHex.length % 2 == 1) {
+      valueHex = '0' + valueHex
+    }
+    valueHex = '0x' + valueHex
+    console.log(`    oracleDaemonConfig.set(${key}, ${valueHex})...`)
+    await oracleDaemonConfig.set(key, valueHex, txParams)
+  }
+
+  console.log(`oracleDaemonConfig.revokeRole(${CONFIG_MANAGER_ROLE}, ${temporaryAdmin})...`)
+  tx = await oracleDaemonConfig.revokeRole(CONFIG_MANAGER_ROLE, temporaryAdmin, txParams)
+  await tx.wait()
+
+  console.log(`oracleDaemonConfig.grantRole(${DEFAULT_ADMIN_ROLE}, ${agentAddress})...`)
+  tx = await oracleDaemonConfig.grantRole(DEFAULT_ADMIN_ROLE, agentAddress, txParams)
+  await tx.wait()
+
+  console.log(`oracleDaemonConfig.revokeRole(${DEFAULT_ADMIN_ROLE}, ${temporaryAdmin})...`)
+  tx = await oracleDaemonConfig.revokeRole(DEFAULT_ADMIN_ROLE, temporaryAdmin, txParams)
+  await tx.wait()
+  logWideSplitter()
 
   //
   // DummyContract (for initial proxy deployment)
