@@ -545,7 +545,6 @@ abstract contract WithdrawalQueueBase {
     //
     // Internal getters and setters for unstructured storage
     //
-
     function _getQueue() internal pure returns (mapping(uint256 => WithdrawalRequest) storage queue) {
         bytes32 position = QUEUE_POSITION;
         assembly {

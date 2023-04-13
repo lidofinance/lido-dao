@@ -99,18 +99,18 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
 
     /// @notice Pause withdrawal requests placement and finalization. Claiming finalized requests will still be available
     /// @param _duration pause duration in seconds (use `PAUSE_INFINITELY` for unlimited)
-    /// @dev Reverts with if contract is already paused
-    /// @dev Reverts with reason if sender has no `PAUSE_ROLE`
-    /// @dev Reverts with if zero duration is passed
+    /// @dev Reverts if contract is already paused
+    /// @dev Reverts reason if sender has no `PAUSE_ROLE`
+    /// @dev Reverts if zero duration is passed
     function pauseFor(uint256 _duration) external onlyRole(PAUSE_ROLE) {
         _pauseFor(_duration);
     }
 
     /// @notice Pause withdrawal requests placement and finalization. Claiming finalized requests will still be available
     /// @param _pauseUntilInclusive the last second to pause until inclusive
-    /// @dev Reverts with if the timestamp is in the past
-    /// @dev Reverts with if sender has no `PAUSE_ROLE`
-    /// @dev Reverts with if contract is already paused
+    /// @dev Reverts if the timestamp is in the past
+    /// @dev Reverts if sender has no `PAUSE_ROLE`
+    /// @dev Reverts if contract is already paused
     function pauseUntil(uint256 _pauseUntilInclusive) external onlyRole(PAUSE_ROLE) {
         _pauseUntil(_pauseUntilInclusive);
     }
@@ -280,9 +280,10 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     ///  in the range  `[_firstIndex, _lastIndex]`.
     ///  NB! Array of request ids should be sorted
     ///  NB! `_firstIndex` should be greater than 0, because checkpoint list is 1-based array
+    ///  Usage: findCheckpointHints(_requestIds, 1, getLastCheckpointIndex())
     /// @param _requestIds ids of the requests sorted in the ascending order to get hints for
     /// @param _firstIndex left boundary of the search range. Should be greater than 0
-    /// @param _lastIndex right boundary of the search range
+    /// @param _lastIndex right boundary of the search range. Should be less than or equal to getLastCheckpointIndex()
     /// @return hintIds array of hints used to find required checkpoint for the request
     function findCheckpointHints(uint256[] calldata _requestIds, uint256 _firstIndex, uint256 _lastIndex)
         external
