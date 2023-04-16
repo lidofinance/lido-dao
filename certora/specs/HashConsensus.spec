@@ -2,10 +2,27 @@
  *               Methods Declaration              *
  **************************************************/
 methods {
-    submitConsensusReport(bytes32 report, uint256 refSlot, uint256 deadline) => NONDET
-    getLastProcessingRefSlot() returns (uint256) => NONDET
-    getConsensusVersion() returns (uint256) => NONDET
+    submitConsensusReport(bytes32 report, uint256 refSlot, uint256 deadline) => CONSTANT
+    getLastProcessingRefSlot() returns (uint256) => CONSTANT
+    getConsensusVersion() returns (uint256) => CONSTANT
+
+    reportReceivedCounter(uint256 refSlot, address member, bytes32 report) => getSuccessfulReportSubmitEventInfo(refSlot, member, report)
 }
+
+/**************************************************
+ *                GHOSTS AND HOOKS                *
+ **************************************************/
+// the three ghost variables below store info about a successful report submit
+ghost uint256 ghostReportRefSlot {
+    init_state axiom ghostReportRefSlot == 0;
+}
+ghost address ghostReportMember {
+    init_state axiom ghostReportMember == 0;
+}
+ghost bytes32 ghostReportHash {
+    init_state axiom ghostReportHash == 0;
+}
+
 
 /**************************************************
  *                CVL FUNCS & DEFS                *
@@ -28,10 +45,19 @@ function saneTimeConfig() returns uint256 {         // returns the timestamp whe
     // require initialEpoch == farFutureEpoch;         // as in constructor (not good! after constructor updateInitialEpoch() should be called)
     require epochsPerFrame > 0;                     // constructor already ensures this
     require epochsPerFrame < 31536000;              // assuming less than 1 year per frame
+    require epochsPerFrame == 86400;                // simplification: Frame = 1 day = 24 * 60 * 60 seconds
 
     require initialEpoch < ((e0.block.timestamp - genesisTime) / (secondsPerSlot * slotsPerEpoch)); // sane configuration of initialEpoch
 
     return e0.block.timestamp;
+}
+
+// A helper function to get event info of successful report submit
+function getSuccessfulReportSubmitEventInfo(uint256 refSlot, address member, bytes32 report) returns uint256 {
+    require ghostReportRefSlot == refSlot;
+    require ghostReportMember == member;
+    require ghostReportHash == report;
+    return 0;
 }
 
 // definition UINT64_MAX() returns uint64 = max_uint64; //= 0xFFFFFFFFFFFFFFFF;
@@ -91,17 +117,16 @@ definition ZERO_HASH() returns bytes32 = 0; // bytes32(0)
 // 13. disableConsensus() - acts as expectedly, verified by getQuorum()
 // 14. setReportProcessor() - acts as expectedly, verified by getReportProcessor(), also cannot set an empty address or the previous address
 // 15. submitReport() - slot > max_uint64 => revert
-// 16. submitReport() - slot < currentRefSlot => revert
-// 17. submitReport() - slot <= lastProcessingRefSlot => revert
+// 16. submitReport() - slot != refSlot of current frame => revert
+// 17. submitReport() - same member cannot submit two different reports for the same slot
 // 18. submitReport() - reportHash == 0 => revert
 // 19. submitReport() - consensusVersion != getConsensusVersion() => revert
-// 20. submitReport() - verify that _computeTimestampAtSlot(frame.reportProcessingDeadlineSlot) > TimeOf(frame.refSlot)
-//                             that the deadline is explicitly == TimeOf(refslot+FrameSize)
-// 21. submitReport() - revert if same oracle reports the same slot+hash (cannot double vote for same report)
+// 20. submitReport() - verify that the deadline (frame.reportProcessingDeadlineSlot) is explicitly ==  refSlot + FrameSize
+// 21. submitReport() - the same oracle should not report the same slot+hash twice (cannot double vote for same report)
 // 22. submitReport() - single call to submit report increases only one support for one variant
 //                      sum of supports of all variants < total members,
 //                      because if Oracle member changes its mind, its previous support is removed
-// 23. submitReport() - all variants should be removed when new frame starts
+// 23. submitReport() - when new frame starts _reportVariantsLength should reset to 1
 // 24. updateInitialEpoch() - updates correctly the initialEpoch as returned by getFrameConfig()
 //                          - you cannot update the initialEpoch to be one that already it arrived
 // 25. initialEpochSanity rule - once the system is initialized its initialEpoch setting is always sane
@@ -479,6 +504,164 @@ rule setReportProcessorCorrectness() {
 }
 
 
+// 15. submitReport() - slot > max_uint64 => revert
+// Status: Pass
+// https://prover.certora.com/output/80942/870be390cf09430f8177e17e1f2d685c/?anonymousKey=bd2021b839df527ae29aa419b43d14beb25c87ea
+rule cannotSubmitReportWhenSlotIsAboveMaxUint64() {
+    env e;
+    uint256 slot; bytes32 report; uint256 consensusVersion;
+    submitReport@withrevert(e, slot, report, consensusVersion);
+    assert slot > max_uint64 => lastReverted;
+}
+
+
+// 16. submitReport() - slot != refSlot of current frame => revert
+// Status: Pass
+// https://prover.certora.com/output/80942/ec099c0e1f2145ed9c91c9865aa62c78?anonymousKey=51a7cd4d068a5b22043288a52b7a2e2521585669
+rule cannotSubmitReportWhenSlotDoesNotMatchCurrentRefSlot() {
+    env e;
+    uint256 currentRefSlot; uint256 reportProcessingDeadlineSlot;
+    currentRefSlot, reportProcessingDeadlineSlot = getCurrentFrame(e);
+    
+    uint256 slot; bytes32 report; uint256 consensusVersion;
+    submitReport@withrevert(e, slot, report, consensusVersion);
+    assert slot != currentRefSlot => lastReverted;
+}
+
+
+// 17. submitReport() - same member cannot submit two different reports for the same slot
+// Status: Pass
+// https://prover.certora.com/output/80942/f74b693ec24c433cae80f54f8623ae78/?anonymousKey=30f5809f7e82a6cd9782fdc9947590d29242be4c
+rule sameMemberCannotSubmitDifferentReportForTheSameSlot() {
+    env e; env e2;
+
+    uint64 lastReportRefSlot; uint64 lastConsensusRefSlot; uint64 lastConsensusVariantIndex;
+    lastReportRefSlot, lastConsensusRefSlot, lastConsensusVariantIndex = helper_getReportingState(e);
+
+    uint256 lastProcessingRefSlot = helper_getLastProcessingRefSlot(e);
+
+    uint256 slot; bytes32 report; uint256 consensusVersion;
+    require slot > lastProcessingRefSlot;  // otherwise the report doesn't matter
+    require slot > lastConsensusRefSlot;  // reporting for a slot without consensus
+    
+    submitReport(e, slot, report, consensusVersion);
+
+    bytes32 report2;
+    submitReport@withrevert(e2, slot, report2, consensusVersion);
+
+    assert (ghostReportHash != 0) && (e2.msg.sender == e.msg.sender) && (report != report2) => lastReverted;
+}
+
+
+// 18. submitReport() - reportHash == 0 => revert
+// Status: Pass
+// https://prover.certora.com/output/80942/de955bfeccf045249d7470130ae3338d/?anonymousKey=bec48e627f110948e49b36201dad6c3d72622b0c
+rule cannotSubmitReportWithEmptyHash() {
+    env e;
+    uint256 slot; bytes32 report; uint256 consensusVersion;
+    submitReport@withrevert(e, slot, report, consensusVersion);
+    bool callReverted = lastReverted;
+
+    assert (report == ZERO_HASH()) => callReverted;
+}
+
+
+// 19. submitReport() - consensusVersion != getConsensusVersion() => revert
+// Status: Pass
+// https://prover.certora.com/output/80942/3beb82cf292e4db8b39f8a70534cc8fa/?anonymousKey=2665d9fab09defd5f246f302ef5da1e77c058379
+rule submitReportMustHaveCorrectConsensusVersion() {
+    env e;
+    uint256 slot; bytes32 report; uint256 consensusVersion;
+    uint correctConsensusVersion = helper_getConsensusVersion(e);
+    submitReport@withrevert(e, slot, report, consensusVersion);
+
+    assert (consensusVersion != correctConsensusVersion) => lastReverted;
+}
+
+
+// 20. submitReport() - verify that the deadline (frame.reportProcessingDeadlineSlot) is explicitly ==  refSlot + FrameSize
+// Status: Fail
+// https://prover.certora.com/output/80942/74b68662860449abb254f6353e66544f/?anonymousKey=9a09cb40908a6e5c4b0d7001623e7a68d94a6bee
+rule correctDeadlineCalculation() {
+    env e; env e2;
+    require e.block.timestamp > saneTimeConfig();
+    require e2.block.timestamp >= e.block.timestamp;
+
+    // uint64 lastReportRefSlotA; uint64 lastConsensusRefSlotA; uint64 lastConsensusVariantIndexA;
+    // lastReportRefSlotA, lastConsensusRefSlotA, lastConsensusVariantIndexA = helper_getReportingState(e);
+
+    uint256 slot; bytes32 report; uint256 consensusVersion;
+    submitReport(e, slot, report, consensusVersion);
+
+    // uint64 lastReportRefSlotB; uint64 lastConsensusRefSlotB; uint64 lastConsensusVariantIndexB;
+    // lastReportRefSlotB, lastConsensusRefSlotB, lastConsensusVariantIndexB = helper_getReportingState(e2);
+
+    // require lastReportRefSlotB > lastReportRefSlotA;  // the report was submitted successfully
+
+    uint256 refSlot; uint256 reportProcessingDeadlineSlot;
+    refSlot, reportProcessingDeadlineSlot = getCurrentFrame(e2);
+
+    uint256 initialEpoch; uint256 epochsPerFrame; uint256 fastLaneLengthSlots;
+    initialEpoch, epochsPerFrame, fastLaneLengthSlots = getFrameConfig(e2);
+
+    uint256 slotsPerEpoch; uint256 secondsPerSlot; uint256 genesisTime;
+    slotsPerEpoch, secondsPerSlot, genesisTime = getChainConfig(e2);
+
+    uint256 frameSize = epochsPerFrame * slotsPerEpoch;
+    assert (ghostReportHash != 0) => reportProcessingDeadlineSlot == refSlot + frameSize;  // ghostReportHash != 0 ensures report was submitted
+}
+
+
+// 21. submitReport() - the same oracle should not report the same slot+hash twice (cannot double vote for same report)
+// Status: Timeout (no saneTimeConfig)
+// https://prover.certora.com/output/80942/353d54264ae746bd909eeed800613c53/?anonymousKey=665e5f184d4d34fd75bf1f558c43b6f962f16c77
+// Status: - 
+// https://prover.certora.com/output/80942/03e046b378e84977983a9e885db3bf07?anonymousKey=16291f5eddc7374fe1faa5754233b8da62dd71e7
+rule memberCannotDoubleVote() {
+    env e; env e2;
+    require e.block.timestamp > saneTimeConfig();
+    require e2.block.timestamp >= e.block.timestamp;
+
+    uint256 lastProcessingRefSlot = helper_getLastProcessingRefSlot(e);
+
+    uint256 slot; bytes32 report; uint256 consensusVersion;
+    require slot > lastProcessingRefSlot;  // otherwise the report doesn't matter
+
+    submitReport(e, slot, report, consensusVersion);
+    submitReport@withrevert(e2, slot, report, consensusVersion);
+    assert (ghostReportHash != 0) => lastReverted;  // if the first submitReport() was successful then the second should revert
+}
+
+
+// 22. submitReport() - single call to submit report increases only one support for one variant
+//                      sum of supports of all variants < total members,
+//                      because if Oracle member changes its mind, its previous support is removed
+// Status: -
+// 
+
+
+// 23. submitReport() - when new frame starts _reportVariantsLength should reset to 1
+// Status: Pass
+// https://prover.certora.com/output/80942/3b158f84570144cbb35652c79bbfef53/?anonymousKey=b31cbd016c673264fae8a91aee8c60bbfef246be
+rule variantsResetUponNewFrameStart() {
+    env e; env e2;
+
+    uint64 lastReportRefSlot; uint64 lastConsensusRefSlot; uint64 lastConsensusVariantIndex;
+    lastReportRefSlot, lastConsensusRefSlot, lastConsensusVariantIndex = helper_getReportingState(e);
+
+    uint256 lastProcessingRefSlot = helper_getLastProcessingRefSlot(e);
+
+    uint256 slot; bytes32 report; uint256 consensusVersion;
+    require slot > lastProcessingRefSlot;  // otherwise the report doesn't matter
+    require slot > lastConsensusRefSlot;  // reporting for a slot without consensus
+    
+    submitReport(e, slot, report, consensusVersion);
+
+    uint256 reportVariantsLength = getReportVariantsLength(e2);
+
+    assert ((ghostReportHash != 0) && (lastReportRefSlot != slot)) => reportVariantsLength == 1;
+}
+
 
 // 24. updateInitialEpoch() - updates correctly the initialEpoch as returned by getFrameConfig()
 //                          - you cannot update the initialEpoch to be one that already it arrived
@@ -530,8 +713,8 @@ rule initialEpochSanity(method f)
 
 
 // 26. updateInitialEpoch should revert once the system is initialized correctly and the initialEpoch passed
-// Status: - 
-// 
+// Status: Pass
+// https://prover.certora.com/output/80942/5c86836015fc4c9baa0cb035e635975a/?anonymousKey=86dce987e054b75ffa9e119ff360e6a47d607156
 rule updateInitialEpochRevertsCorrectly() {
     env e; calldataarg args;
     require e.block.timestamp > saneTimeConfig();       // time moves forward (saneTimeConfig is for correct initializing)
