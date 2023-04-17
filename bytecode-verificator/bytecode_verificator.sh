@@ -9,6 +9,9 @@ ORANGE='\033[0;33m'
 GREEN='\033[0;32m'
 NC='\033[0m'
 
+zero_padding=$(printf '%0.1s' "0"{1..64})
+placeholder_padding=$(printf '%0.1s' "-"{1..64})
+
 # Prerequisite executables
 prerequisites=(jq yarn awk curl shasum uname)
 
@@ -24,7 +27,9 @@ function show_help() {
       "--remote-rpc https://*" \
       "--config-json ../deployed-*.json" \
       "--contract Name" \
-      "[--constructor-calldata *]"
+      "[--constructor-calldata *]"\
+      "[--proxy]"\
+      "[--implemantation]"
 }
 
 # Fork PID of Ganache
@@ -90,6 +95,14 @@ function parse_cmd_args() {
       --constructor-calldata)
         constructor_calldata="$2"
         shift
+        shift
+        ;;
+      --proxy)
+        is_proxy=true
+        shift
+        ;;
+      --implemantation)
+        is_implemantation=true
         shift
         ;;
       --help)
@@ -160,29 +173,164 @@ function start_fork() {
   sleep 10
 }
 
+function encode_address() {
+  echo $(sed -e 's/0x/000000000000000000000000/' <<< $1)
+}
+
+function encode_uint256() {
+  printf "%064X\n" $1
+}
+
+function encode_bytes32() {
+  echo $(sed -e 's/0x//' <<< $1)
+}
+
+function encode_bytes() {
+  local bytes_str=$(sed -E 's/^0x(00)*//' <<< $1)
+  local data_length=$(expr ${#bytes_str} / 2)
+  local encoded_length=0
+  if [[ data_length -gt "0" ]]; then
+    encoded_length=$(expr $(expr $(expr $(expr ${#bytes_str} - 1) / 64) + 1) \* 64)
+  fi
+  bytes_str=$bytes_str$zero_padding
+  bytes_str=${bytes_str:0:$encoded_length}
+  echo "$(printf "%064X\n" $data_length)$bytes_str"
+}
+
+function encode_string() {
+  local string_bytes=$(xxd -p <<< "$1" | sed 's/..$//')
+  local data_length=$(expr ${#string_bytes} / 2)
+  local encoded_length=0
+  if [[ data_length -gt "0" ]]; then
+    encoded_length=$(expr $(expr $(expr $(expr ${#string_bytes} - 1) / 64) + 1) \* 64)
+  fi
+  string_bytes=$string_bytes$zero_padding
+  string_bytes=${string_bytes:0:$encoded_length}
+  echo "$(printf "%064X\n" $data_length)$string_bytes"
+}
+
+function encode_array() {
+  local types=$1
+  local array=$2
+
+  local array_length=$(jq -r 'length' <<< $array)
+  local encoded_data="$encoded_data$(encode_uint256 $(expr $array_length \* 32))"
+  if [[ $array_length -gt 0 ]]; then
+    for i in $(seq 0 $(expr $array_length - 1) ); do
+      case $type in
+        address\[\]) encoded_data="$encoded_data$(encode_address $(jq -r ".[$i]" <<< $array))" ;;
+        uint256\[\]) encoded_data="$encoded_data$(encode_uint256 $(jq -r ".[$i]" <<< $array))" ;;
+        bytes32\[\]) encoded_data="$encoded_data$(encode_bytes32 $(jq -r ".[$i]" <<< $array))" ;;
+        *) _err "Unknown constructor argument type '$1', use --constructor-calldata instead" ;;
+      esac
+    done
+  fi
+  echo $encoded_data
+}
+
+function encode_tuple() {
+  local types=$1
+  local args=$2
+  local args_length=$(jq -r 'length' <<< $types)
+
+  for arg_index in $(seq 0 $(expr $args_length - 1) ); do
+    local arg_type=$(jq -r ".[$arg_index]" <<< $types)
+    local arg=$(jq -r ".[$arg_index]" <<< $args)
+
+    case $arg_type in
+      address) encoded_data="$encoded_data$(encode_address $arg)" ;;
+      uint256) encoded_data="$encoded_data$(encode_uint256 $arg)" ;;
+      bytes32) encoded_data="$encoded_data$(encode_bytes32 $arg)" ;;
+      *) _err "Unknown constructor argument type '$arg_type', use --constructor-calldata instead" ;;
+    esac
+  done
+  echo $encoded_data
+}
+
+function endode_placeholder() {
+  local placeholder="$1$placeholder_padding"
+  echo ${placeholder:0:64}
+}
+
+
 function compile_contract() {
-  contract_config_name=$(_read_contract_config $contract contract)
-  contract_config_address=$(_read_contract_config $contract address)
+  if [[ $is_proxy ]]; then
+    contract_config_name=OssifiableProxy
+    contract_config_address=$(_read_contract_config $contract address)
+  elif [[ $is_implemantation ]]; then
+    contract_config_name=$(_read_contract_config "$contract" contract)
+    contract_config_address=$(_read_contract_config $contract implementation)
+  else
+    contract_config_name=$(_read_contract_config $contract contract)
+    contract_config_address=$(_read_contract_config $contract address)
+  fi
+
   echo -e "Contract name: ${ORANGE}$contract_config_name${NC}"
   echo -e "Contract address: ${ORANGE}$contract_config_address${NC}"
 
-  echo "Compiling contracts"
-  rm -rf ./build
-  cd ..
-  ./bytecode-verificator/$solc @openzeppelin/contracts-v4.4=./node_modules/@openzeppelin/contracts-v4.4 contracts/$solc_version/**/*.sol contracts/$solc_version/*.sol  -o ./bytecode-verificator/build --bin --overwrite --optimize --optimize-runs 200 --evm-version istanbul  1> ./logs 2>& 1
-  cd ./bytecode-verificator
+  if [[ "$solc_version" == "0.8.9" ]]; then
+    rm -rf ./build
+    cd ..
+    ./bytecode-verificator/$solc @openzeppelin/contracts-v4.4=./node_modules/@openzeppelin/contracts-v4.4 contracts/$solc_version/**/*.sol contracts/$solc_version/*.sol -o ./bytecode-verificator/build --bin --overwrite --optimize --optimize-runs 200 1> ./logs 2>& 1
+    ./bytecode-verificator/$solc @openzeppelin/contracts-v4.4=./node_modules/@openzeppelin/contracts-v4.4 contracts/$solc_version/**/*.sol contracts/$solc_version/*.sol -o ./bytecode-verificator/build --abi --overwrite --optimize --optimize-runs 200 1> ./logs 2>& 1
+    cd ./bytecode-verificator
+  elif [[ "$solc_version" == "0.4.24" ]]; then
+    rm -rf ./build
+    cd ..
+    ./bytecode-verificator/./compilers/solc-darwin-0.4.24 @aragon=./node_modules/@aragon openzeppelin-solidity/contracts=./node_modules/openzeppelin-solidity/contracts contracts/$solc_version/**/*.sol contracts/$solc_version/*.sol /contracts/$solc_version/nos/NodeOperatorsRegistry.sol  --allow-paths $(pwd) -o ./bytecode-verificator/build --bin --overwrite --optimize --optimize-runs 200 --evm-version constantinople 1> ./logs 2>& 1
+    ./bytecode-verificator/./compilers/solc-darwin-0.4.24 @aragon=./node_modules/@aragon openzeppelin-solidity/contracts=./node_modules/openzeppelin-solidity/contracts contracts/$solc_version/**/*.sol contracts/$solc_version/*.sol /contracts/$solc_version/nos/NodeOperatorsRegistry.sol --allow-paths $(pwd) -o ./bytecode-verificator/build --abi --overwrite --optimize --optimize-runs 200 --evm-version constantinople 1> ./logs 2>& 1
+    cd ./bytecode-verificator
+  else
+    _err "Unknown solidity version '$solc_version'"
+  fi
 
   if [[ -z "$constructor_calldata" ]]; then
-      #  read -r -a Words <<< $(_read_contract_config $contract constructorArgs)
-      constructor_config_args=$(_read_contract_config $contract constructorArgs | sed -e 's/[\"[]//g' | tr ", " "\n")
-      constructor_calldata=""
-      for arg in $constructor_config_args; do
-          if [[ ${#arg} == 42 ]]; then
-              constructor_calldata="$constructor_calldata$(echo $arg | sed -e 's/0x/000000000000000000000000/')"
-          elif [[ $arg =~ ^[0-9]+$ ]]; then
-              constructor_calldata="$constructor_calldata$(printf "%064X\n" $arg)"
-          fi
+    local contract_abi=$(cat ./build/$contract_config_name.abi)
+    local constructor_abi=$(jq -r '.[] | select(.type == "constructor") | .inputs ' <<< $contract_abi)
+    echo $constructor_abi
+    local arg_length=$(jq -r 'length' <<< $constructor_abi)
+
+    echo -e "Constructor args: $(jq ".[].type" <<< $constructor_abi)"
+
+    if [[ $is_proxy ]]; then
+      constructor_config_args=$(_read_contract_config $contract proxyConstructorArgs)
+    else
+      constructor_config_args=$(_read_contract_config $contract constructorArgs)
+    fi
+    if [[ $array_length -gt 0 ]]; then
+      compl_data=()
+      for argument_index in $(seq 0 $(expr $arg_length - 1) ); do
+        arg_type=$(jq -r ".[$argument_index].type" <<< $constructor_abi)
+        arg=$(jq -r ".[$argument_index]" <<< $constructor_config_args)
+        case $arg_type in
+          address) constructor_calldata="$constructor_calldata$(encode_address $arg)" ;;
+          uint256) constructor_calldata="$constructor_calldata$(encode_uint256 $arg)" ;;
+          bytes32) constructor_calldata="$constructor_calldata$(encode_bytes32 $arg)" ;;
+          bytes)
+            constructor_calldata="$constructor_calldata$(endode_placeholder ${#compl_data[@]})"
+            compl_data+=$(encode_bytes $arg)
+            ;;
+          string)
+            constructor_calldata="$constructor_calldata$(endode_placeholder ${#compl_data[@]})"
+            compl_data+=($(encode_string "$arg"))
+            ;;
+          tuple)
+            args_types=$(jq -r ".[$argument_index].components | map(.type)" <<< $constructor_abi)
+            constructor_calldata="$constructor_calldata$(encode_tuple "$args_types" "$arg")"
+            ;;
+          *[])
+            constructor_calldata="$constructor_calldata$(endode_placeholder ${#compl_data[@]})"
+            compl_data+=$(encode_array $arg_type "$arg")
+            ;;
+          *) _err "Unknown constructor argument type '$arg_type', use --constructor-calldata instead" ;;
+        esac
       done
+
+      for index in "${!compl_data[@]}"; do
+        encoded_data_length=$(expr ${#constructor_calldata} / 2)
+        constructor_calldata=$(sed -E "s/$(endode_placeholder $index)/$(printf "%064X\n" $encoded_data_length)/" <<< "$constructor_calldata${compl_data[$index]}")
+      done
+    fi
   fi
 
   echo "Contract constructor encoded args: 0x$constructor_calldata"
@@ -208,10 +356,14 @@ function compare_bytecode() {
 
   echo "Replacing CBOR-encoded metadata"
   # https://docs.soliditylang.org/en/v0.8.9/metadata.html#encoding-of-the-metadata-hash-in-the-bytecode
-
   remote_code=$(sed -E 's/a264697066735822[0-9a-f]{68}//' <<< "$remote_code")
   local_code=$(sed -E 's/a264697066735822[0-9a-f]{68}//' <<< "$local_code")
   etherscan_code=$(sed -E 's/a264697066735822[0-9a-f]{68}//' <<< "$etherscan_code")
+
+  # https://docs.soliditylang.org/en/v0.4.24/metadata.html#encoding-of-the-metadata-hash-in-the-bytecode
+  remote_code=$(sed -E 's/a165627a7a72305820[0-9a-f]{68}//' <<< "$remote_code")
+  local_code=$(sed -E 's/a165627a7a72305820[0-9a-f]{68}//' <<< "$local_code")
+  etherscan_code=$(sed -E 's/a165627a7a72305820[0-9a-f]{68}//' <<< "$etherscan_code")
 
   _print_checksum local_code
   _print_checksum remote_code
@@ -249,7 +401,7 @@ _deploy_contract() {
 }
 
 _read_contract_config() {
-    cat $config_json | jq -r ".$1.$2"
+    cat $config_json | jq -r ".\"$1\".\"$2\""
 }
 
 _print_checksum() {
