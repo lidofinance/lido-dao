@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import { Math256 } from "contracts/common/lib/MemUMath256.sol";
+import { Math256 } from "contracts/common/lib/Math256.sol";
 
 contract Math256Test is Test {
 
@@ -238,4 +238,3 @@ contract Math256Test is Test {
         // It shouldn't unexpectedly crash
         Math256.absDiff(b, a);
     }
-}
