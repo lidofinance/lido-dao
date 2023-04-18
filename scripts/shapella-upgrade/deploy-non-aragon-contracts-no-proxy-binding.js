@@ -4,11 +4,12 @@ const { log, logSplitter, logWideSplitter, yl, gr } = require('../helpers/log')
 const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 const { deployWithoutProxy, deployBehindOssifiableProxy, getTotalGasUsed, getDeployTxParams } = require('../helpers/deploy')
 const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { assert } = require('chai')
 
 const { APP_NAMES } = require('../constants')
 
 const DEPLOYER = process.env.DEPLOYER || ''
-const GAS_PRICE = process.env.GAS_PRICE || 0
+const LIDO_LOCATOR_PROXY_PREDEPLOYED = process.env.LIDO_LOCATOR_PROXY_PREDEPLOYED || ''
 const REQUIRED_NET_STATE = [
   `app:${APP_NAMES.LIDO}`,
   `app:${APP_NAMES.ORACLE}`,
@@ -123,7 +124,18 @@ async function deployNewContracts({ web3, artifacts }) {
   //
   // === LidoLocator: dummy invalid implementation ===
   //
-  const locatorAddress = await deployBehindOssifiableProxy('lidoLocator', 'DummyEmptyContract', lidoLocatorProxyTemporaryOwner, deployer, [], implementation=dummyContractAddress)
+  let locatorAddress = null
+  if (LIDO_LOCATOR_PROXY_PREDEPLOYED) {
+    locatorAddress = LIDO_LOCATOR_PROXY_PREDEPLOYED
+
+    // Need to deploy something like locator here to increase nonce to keep the next deployed addresses the same
+    await deployBehindOssifiableProxy('dummyDeployItemNotUsed', 'DummyEmptyContract', lidoLocatorProxyTemporaryOwner, deployer, [], implementation=dummyContractAddress)
+
+    assert(network.name === 'mainnet-fork-shapella-upgrade', 'Using pre-deployed proxy of LidoLocator only allowed in the network for local fork tests')
+    console.log(`Using pre-deployed address of proxy of LidoLocator ${locatorAddress}`)
+  } else {
+    locatorAddress = await deployBehindOssifiableProxy('lidoLocator', 'DummyEmptyContract', lidoLocatorProxyTemporaryOwner, deployer, [], implementation=dummyContractAddress)
+  }
   logWideSplitter()
 
   //

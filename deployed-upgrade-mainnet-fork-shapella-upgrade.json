@@ -245,7 +245,7 @@
     "implementation": "0x115065ad19aDae715576b926CF6e26067F64e741",
     "address": "0x9FE21EeCC385a1FeE057E58427Bfb9588E249231",
     "constructorArgs": [
-      "0xd75C357F32Df60A67111BAa62a168c0D644d1C32",
+      "0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb",
       "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
       "0x442af784A788A5bd6F42A01Ebe9F287a871243fb",
       12,
@@ -279,7 +279,7 @@
     "constructorArgs": [
       12,
       1606824023,
-      "0xd75C357F32Df60A67111BAa62a168c0D644d1C32"
+      "0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb"
     ]
   },
   "depositSecurityModule": {
@@ -314,7 +314,7 @@
     "contract": "OracleReportSanityChecker",
     "address": "0x499A11A07ebe21685953583B6DA9f237E792aEE3",
     "constructorArgs": [
-      "0xd75C357F32Df60A67111BAa62a168c0D644d1C32",
+      "0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb",
       "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
       [
         40000,
@@ -388,10 +388,30 @@
     "address": "0xE2f969983c8859E986d6e19892EDBd1eea7371D2",
     "constructorArgs": []
   },
+  "dummyDeployItemNotUsed": {
+    "contract": "DummyEmptyContract",
+    "implementation": "0xE2f969983c8859E986d6e19892EDBd1eea7371D2",
+    "address": "0xd75C357F32Df60A67111BAa62a168c0D644d1C32",
+    "constructorArgs": []
+  },
+  "eip712StETH": {
+    "contract": "EIP712StETH",
+    "address": "0x8dF3c29C96fd4c4d496954646B8B6a48dFFcA83F",
+    "constructorArgs": [
+      "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"
+    ]
+  },
+  "stakingRouter": {
+    "contract": "StakingRouter",
+    "implementation": "0x4384fB5DcaC0576B93e36b8af6CdfEB739888894",
+    "address": "0x5A2a6cB5e0f57A30085A9411f7F5f07be8ad1Ec7",
+    "constructorArgs": [
+      "0x00000000219ab540356cBB839Cbe05303d7705Fa"
+    ]
+  },
   "lidoLocator": {
     "contract": "LidoLocator",
     "implementation": "0x7948f9cf80D99DDb7C7258Eb23a693E9dFBc97EC",
-    "address": "0xd75C357F32Df60A67111BAa62a168c0D644d1C32",
     "constructorArgs": [
       [
         "0x9FE21EeCC385a1FeE057E58427Bfb9588E249231",
@@ -409,21 +429,6 @@
         "0xB9D7934878B5FB9610B3fE8A5e441e8fad7E293f",
         "0xbA3981771AB991960028B2F83ae83664Fd003F61"
       ]
-    ]
-  },
-  "eip712StETH": {
-    "contract": "EIP712StETH",
-    "address": "0x8dF3c29C96fd4c4d496954646B8B6a48dFFcA83F",
-    "constructorArgs": [
-      "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"
-    ]
-  },
-  "stakingRouter": {
-    "contract": "StakingRouter",
-    "implementation": "0x4384fB5DcaC0576B93e36b8af6CdfEB739888894",
-    "address": "0x5A2a6cB5e0f57A30085A9411f7F5f07be8ad1Ec7",
-    "constructorArgs": [
-      "0x00000000219ab540356cBB839Cbe05303d7705Fa"
     ]
   }
 }
