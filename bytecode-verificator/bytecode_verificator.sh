@@ -29,7 +29,7 @@ function show_help() {
       "--contract Name" \
       "[--constructor-calldata *]"\
       "[--proxy]"\
-      "[--implemantation]"
+      "[--implementation]"
 }
 
 # Fork PID of Ganache
@@ -101,8 +101,8 @@ function parse_cmd_args() {
         is_proxy=true
         shift
         ;;
-      --implemantation)
-        is_implemantation=true
+      --implementation)
+        is_implementation=true
         shift
         ;;
       --help)
@@ -257,7 +257,7 @@ function compile_contract() {
   if [[ $is_proxy ]]; then
     contract_config_name=OssifiableProxy
     contract_config_address=$(_read_contract_config $contract address)
-  elif [[ $is_implemantation ]]; then
+  elif [[ $is_implementation ]]; then
     contract_config_name=$(_read_contract_config "$contract" contract)
     contract_config_address=$(_read_contract_config $contract implementation)
   else
