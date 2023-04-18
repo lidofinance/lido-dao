@@ -277,8 +277,8 @@ function compile_contract() {
   elif [[ "$solc_version" == "0.4.24" ]]; then
     rm -rf ./build
     cd ..
-    ./bytecode-verificator/./compilers/solc-darwin-0.4.24 @aragon=./node_modules/@aragon openzeppelin-solidity/contracts=./node_modules/openzeppelin-solidity/contracts contracts/$solc_version/**/*.sol contracts/$solc_version/*.sol /contracts/$solc_version/nos/NodeOperatorsRegistry.sol  --allow-paths $(pwd) -o ./bytecode-verificator/build --bin --overwrite --optimize --optimize-runs 200 --evm-version constantinople 1> ./logs 2>& 1
-    ./bytecode-verificator/./compilers/solc-darwin-0.4.24 @aragon=./node_modules/@aragon openzeppelin-solidity/contracts=./node_modules/openzeppelin-solidity/contracts contracts/$solc_version/**/*.sol contracts/$solc_version/*.sol /contracts/$solc_version/nos/NodeOperatorsRegistry.sol --allow-paths $(pwd) -o ./bytecode-verificator/build --abi --overwrite --optimize --optimize-runs 200 --evm-version constantinople 1> ./logs 2>& 1
+    ./bytecode-verificator/./compilers/solc-darwin-0.4.24 @aragon=./node_modules/@aragon openzeppelin-solidity/contracts=./node_modules/openzeppelin-solidity/contracts contracts/$solc_version/**/*.sol contracts/$solc_version/*.sol --allow-paths $(pwd) -o ./bytecode-verificator/build --bin --overwrite --optimize --optimize-runs 200 --evm-version constantinople 1> ./logs 2>& 1
+    ./bytecode-verificator/./compilers/solc-darwin-0.4.24 @aragon=./node_modules/@aragon openzeppelin-solidity/contracts=./node_modules/openzeppelin-solidity/contracts contracts/$solc_version/**/*.sol contracts/$solc_version/*.sol --allow-paths $(pwd) -o ./bytecode-verificator/build --abi --overwrite --optimize --optimize-runs 200 --evm-version constantinople 1> ./logs 2>& 1
     cd ./bytecode-verificator
   else
     _err "Unknown solidity version '$solc_version'"
@@ -287,7 +287,6 @@ function compile_contract() {
   if [[ -z "$constructor_calldata" ]]; then
     local contract_abi=$(cat ./build/$contract_config_name.abi)
     local constructor_abi=$(jq -r '.[] | select(.type == "constructor") | .inputs ' <<< $contract_abi)
-    echo $constructor_abi
     local arg_length=$(jq -r 'length' <<< $constructor_abi)
 
     echo -e "Constructor args: $(jq ".[].type" <<< $constructor_abi)"
@@ -297,7 +296,8 @@ function compile_contract() {
     else
       constructor_config_args=$(_read_contract_config $contract constructorArgs)
     fi
-    if [[ $array_length -gt 0 ]]; then
+
+    if [[ $arg_length -gt 0 ]]; then
       compl_data=()
       for argument_index in $(seq 0 $(expr $arg_length - 1) ); do
         arg_type=$(jq -r ".[$argument_index].type" <<< $constructor_abi)
@@ -367,7 +367,7 @@ function compare_bytecode() {
 
   _print_checksum local_code
   _print_checksum remote_code
-  echo -e "${ORANGE}etherscan code${NC} checksum: `echo ${etherscan_code} | shasum -a 256`"
+  _print_checksum etherscan_code
 
   echo "Comparing remote and local bytecode"
   [[ $local_code == $remote_code ]] ||  { _err "local bytecode and remote bytecode is not equal"; }
