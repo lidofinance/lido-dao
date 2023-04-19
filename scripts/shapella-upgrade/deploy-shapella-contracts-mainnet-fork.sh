@@ -17,7 +17,13 @@ function ctrl_c() {
 
 # Run ganache from the scripts at first with
 (nc -vz 127.0.0.1 $local_rpc_port) &>/dev/null && kill -15 $(lsof -t -i:$local_rpc_port)
-fork_command="npx ganache --chain.vmErrorsOnRPCResponse true --fork.blockNumber 17075073 --wallet.totalAccounts 10 --chain.chainId 1337 --fork.url https://mainnet.infura.io/v3/$WEB3_INFURA_PROJECT_ID --miner.blockGasLimit 92000000  --server.port $local_rpc_port --hardfork istanbul -d"
+
+RED='\033[0;31m'
+NC='\033[0m'
+echo -e "${RED}[!]${NC} Temp workaround: forking from block #17075073\n"
+sleep 3
+
+fork_command="npx ganache --chain.vmErrorsOnRPCResponse true --fork.blockNumber 17075073 --wallet.totalAccounts 10 --chain.chainId 1337 --fork.url https://mainnet.infura.io/v3/$WEB3_INFURA_PROJECT_ID --miner.blockGasLimit 92000000 --server.host localhost --server.port $local_rpc_port --hardfork istanbul -d"
 $fork_command &
 fork_pid=$$
 
