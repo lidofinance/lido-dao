@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity 0.8.9;
 
 import "forge-std/Test.sol";
 import { Math256 } from "contracts/common/lib/Math256.sol";
