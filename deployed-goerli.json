@@ -31,7 +31,8 @@
     "proxyAddress": "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F",
     "contract": "Lido",
     "implementation": "0x26c41Ef17780cAdde73A2d00902e5e18856201b4",
-    "constructorArgs": []
+    "constructorArgs": [],
+    "implementationDeployCommit": "85a41c45d5d45b1a35118ad6023e6c7ead1072d2"
   },
   "app:oracle": {
     "baseAddress": "0xcF9d64942DC9096520a8962a2d4496e680c6403b",
@@ -52,7 +53,8 @@
     "proxyAddress": "0x9D4AF1Ee19Dad8857db3a45B0374c81c8A1C6320",
     "contract": "NodeOperatorsRegistry",
     "implementation": "0x4672275F75e8756a53cD87F08F67f51309675D57",
-    "constructorArgs": []
+    "constructorArgs": [],
+    "implementationDeployCommit": "85a41c45d5d45b1a35118ad6023e6c7ead1072d2"
   },
   "lidoApmEnsName": "lidopm-testnet-prater.eth",
   "lidoApmDeployTx": "0x5177a441fbf121e4064979f53756cc2ee807c68684edae33f50868a40ebae013",
@@ -158,7 +160,8 @@
       "0",
       "0"
     ],
-    "contract": "Burner"
+    "contract": "Burner",
+    "implementationDeployCommit": "85a41c45d5d45b1a35118ad6023e6c7ead1072d2"
   },
   "legacyOracle": {
     "parameters": {
@@ -245,7 +248,7 @@
     ]
   },
   "oracleReportSanityChecker": {
-    "deployCommit": "47ddc7559570e4b941c3b4107c116d7fa3d3b444",
+    "deployCommit": "85a41c45d5d45b1a35118ad6023e6c7ead1072d2",
     "parameters": {
       "churnValidatorsPerDayLimit": 15000,
       "oneOffCLBalanceDecreaseBPLimit": 500,
@@ -288,6 +291,7 @@
     ]
   },
   "withdrawalQueueERC721": {
+    "implementationDeployCommit": "85a41c45d5d45b1a35118ad6023e6c7ead1072d2",
     "parameters": {
       "name": "stETH Withdrawal NFT",
       "symbol": "unstETH"
