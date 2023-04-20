@@ -30,7 +30,7 @@
     "id": "0x79ac01111b462384f1b7fba84a17b9ec1f5d2fddcfcb99487d71b443832556ea",
     "proxyAddress": "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F",
     "contract": "Lido",
-    "implementation": "0x5635C2Ac1bD6Fc2C7f9330C5D0B1279bAF41a271",
+    "implementation": "0x26c41Ef17780cAdde73A2d00902e5e18856201b4",
     "constructorArgs": []
   },
   "app:oracle": {
@@ -51,7 +51,7 @@
     "id": "0x57384c8fcaf2c1c2144974769a6ea4e5cf69090d47f5327f8fc93827f8c0001a",
     "proxyAddress": "0x9D4AF1Ee19Dad8857db3a45B0374c81c8A1C6320",
     "contract": "NodeOperatorsRegistry",
-    "implementation": "0x58Fd12AF2D496Bf517eE851eD94d1638DF1901e5",
+    "implementation": "0x4672275F75e8756a53cD87F08F67f51309675D57",
     "constructorArgs": []
   },
   "lidoApmEnsName": "lidopm-testnet-prater.eth",
@@ -150,14 +150,15 @@
       "totalCoverSharesBurnt": "0",
       "totalNonCoverSharesBurnt": "0"
     },
-    "address": "0x20c61C07C2E2FAb04BF5b4E12ce45a459a18f3B1",
+    "address": "0xC1Bc16782BE0ce7A81421874A4d3E9B2B32391f2",
     "constructorArgs": [
-      "0xa5F1d7D49F581136Cf6e58B32cBE9a2039C48bA1",
+      "0x4333218072D5d7008546737786663c38B4D561A4",
       "0x4333218072D5d7008546737786663c38B4D561A4",
       "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F",
       "0",
       "0"
-    ]
+    ],
+    "contract": "Burner"
   },
   "legacyOracle": {
     "parameters": {
@@ -246,7 +247,7 @@
   "oracleReportSanityChecker": {
     "deployCommit": "47ddc7559570e4b941c3b4107c116d7fa3d3b444",
     "parameters": {
-      "churnValidatorsPerDayLimit": 1500,
+      "churnValidatorsPerDayLimit": 15000,
       "oneOffCLBalanceDecreaseBPLimit": 500,
       "annualBalanceIncreaseBPLimit": 1000,
       "simulatedShareRateDeviationBPLimit": 10,
@@ -257,20 +258,20 @@
       "maxPositiveTokenRebase": 750000
     },
     "contract": "OracleReportSanityChecker",
-    "address": "0x0950C6cbe9D8D11432a4e2d99232690E8254f35f",
+    "address": "0xbf74600040F91D3560d5757280727FB00c64Fd2E",
     "constructorArgs": [
       "0x1eDf09b5023DC86737b59dE68a8130De878984f5",
       "0x4333218072D5d7008546737786663c38B4D561A4",
       [
-        "1500",
-        "500",
-        "1000",
-        "10",
-        "500",
-        "500",
-        "100",
-        "384",
-        "750000"
+        15000,
+        500,
+        1000,
+        10,
+        500,
+        500,
+        100,
+        384,
+        750000
       ],
       [
         [],
@@ -292,16 +293,13 @@
       "symbol": "unstETH"
     },
     "contract": "WithdrawalQueueERC721",
-    "implementation": "0xB448E02e818d6209eAE397b2D080C7588e12D4Dd",
+    "implementation": "0x077B60752864B3e5291863cf8890603f9ab335d3",
     "address": "0xCF117961421cA9e546cD7f50bC73abCdB3039533",
     "constructorArgs": [
       "0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f",
       "stETH Withdrawal NFT",
       "unstETH"
     ]
-  },
-  "wstETH": {
-    "address": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0"
   },
   "oracleDaemonConfig": {
     "parameters": {
@@ -324,7 +322,7 @@
   },
   "lidoLocator": {
     "contract": "LidoLocator",
-    "implementation": "0x9b6E41E90158A8d2E0322983f7EA87baFAE5716c",
+    "implementation": "0xBA413498500a21bC07E74605CC45932c2d45aCb8",
     "address": "0x1eDf09b5023DC86737b59dE68a8130De878984f5",
     "constructorArgs": [
       [
@@ -333,9 +331,9 @@
         "0x94750381bE1AbA0504C666ee1DB118F68f0780D4",
         "0x24d8451BC07e7aF4Ba94F69aCDD9ad3c6579D9FB",
         "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F",
-        "0x0950C6cbe9D8D11432a4e2d99232690E8254f35f",
+        "0xbf74600040F91D3560d5757280727FB00c64Fd2E",
         "0x24d8451BC07e7aF4Ba94F69aCDD9ad3c6579D9FB",
-        "0x20c61C07C2E2FAb04BF5b4E12ce45a459a18f3B1",
+        "0xC1Bc16782BE0ce7A81421874A4d3E9B2B32391f2",
         "0xa3Dbd317E53D363176359E10948BA0b1c0A4c820",
         "0x4333218072D5d7008546737786663c38B4D561A4",
         "0xb75A55EFab5A8f5224Ae93B34B25741EDd3da98b",
