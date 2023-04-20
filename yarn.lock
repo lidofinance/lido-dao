@@ -3683,7 +3683,7 @@ __metadata:
     "@nomiclabs/hardhat-ganache": ^2.0.1
     "@nomiclabs/hardhat-truffle5": ^2.0.2
     "@nomiclabs/hardhat-web3": ^2.0.0
-    "@openzeppelin/contracts": 3.4.0
+    "@openzeppelin/contracts": 4.8.3
     "@openzeppelin/contracts-v4.4": "npm:@openzeppelin/contracts@4.4.1"
     "@openzeppelin/test-helpers": ^0.5.6
     "@truffle/contract": ^4.2.22
@@ -4144,17 +4144,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@openzeppelin/contracts@npm:3.1.0":
-  version: 3.1.0
-  resolution: "@openzeppelin/contracts@npm:3.1.0"
-  checksum: 4bd0dbcc6afcbc964c7c162b233f74ac37eb68c02ef254792fb7728bf52d16de65420014c950b68771d1987206e928834998df9d612d38b7c055e46baaed0773
-  languageName: node
-  linkType: hard
-
-"@openzeppelin/contracts@npm:3.4.0":
-  version: 3.4.0
-  resolution: "@openzeppelin/contracts@npm:3.4.0"
-  checksum: 62774f79ac6479001f8755116693dbaad68c26d65c2efd4725cfbdac287d628d1c9dcc12c19477a092e33722c89a5c3c8e600a1656303a0e02cdff3643744b70
+"@openzeppelin/contracts@npm:4.8.3":
+  version: 4.8.3
+  resolution: "@openzeppelin/contracts@npm:4.8.3"
+  checksum: 04fac1306d7fe6d532a30f46f0128969fc6dc47ec713e9a227226718181b7d81be26ce1585492e8d2eef32956bc1ccff682198de27f13670e23dad06c9f6e984
   languageName: node
   linkType: hard
 
@@ -18028,7 +18021,7 @@ __metadata:
     "@babel/core": ^7.11.6
     "@babel/preset-env": ^7.11.5
     "@babel/preset-react": ^7.10.1
-    "@openzeppelin/contracts": 3.1.0
+    "@openzeppelin/contracts": 4.8.3
     babel-eslint: ^10.1.0
     babel-plugin-styled-components: ^1.11.1
     bn.js: ^5.1.3
@@ -18068,7 +18061,7 @@ __metadata:
     "@babel/core": ^7.11.6
     "@babel/preset-env": ^7.11.5
     "@babel/preset-react": ^7.10.1
-    "@openzeppelin/contracts": 3.1.0
+    "@openzeppelin/contracts": 4.8.3
     babel-eslint: ^10.1.0
     babel-plugin-styled-components: ^1.11.1
     copyfiles: ^2.3.0
