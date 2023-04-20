@@ -1,6 +1,6 @@
 {
   "lastDeploymentCommit": "",
-  "deployerEOA": "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1",
+  "deployerEOA": "0xBC862d4beE4E1cd82B9e8519b4375c3457fc6A5a",
   "networkId": 1,
   "ipfsAPI": "https://ipfs.infura.io:5001/api/v0",
   "lidoApmEnsName": "lidopm.eth",
