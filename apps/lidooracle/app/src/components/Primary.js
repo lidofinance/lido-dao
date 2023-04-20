@@ -40,7 +40,7 @@ export const Primary = () => {
                 entries={memberDetails ?? []}
                 renderEntry={(memberInfo) => [
                     <Dot id={memberInfo.address} active={memberInfo.canReport}>•</Dot>,
-                    <><IdentityBadge entity={memberInfo?.address} /> <IconConnect css={css`color: ${props => props.theme.warning}`} /></>,
+                    <><IdentityBadge entity={memberInfo?.address} /> {memberInfo?.isFastLane && <IconConnect css={css`color: ${props => props.theme.warning}`} />}</>,
                     memberInfo?.currentFrameRefSlot,
                     <BytesBadge bytes={memberInfo?.currentFrameMemberReport} />
                 ]}
