@@ -249,10 +249,10 @@ rule setFrameConfigACL() {
 
 //  3. setFrameConfig() updates epochsPerFrame in a way that either keeps the current reference slot
 //     the same or increases it by at least the minimum of old and new frame sizes
-// Status: Timeout (only first two asserts)
-// https://prover.certora.com/output/80942/4a45e56dd5e844d09b131889b4b1e304/?anonymousKey=f687e64cc3d822894394894b26e24ef75834d7bb
+// Status: Pass (only first two asserts)
+// https://prover.certora.com/output/80942/6fd9a56a63794beebf92ca05e5927d48/?anonymousKey=e53577b7d949458634dfe2ee2493188a6d88d54f
 // Status: Fails (with last assert)
-// https://prover.certora.com/output/80942/83a93731b535479e96b453701aed235d/?anonymousKey=cb9b95302e423b38dc1403c4f848a464c0585e3b
+// https://prover.certora.com/output/80942/6ecdd6ed8fc744f5a20e3391ac646e71/?anonymousKey=88e47629aecdc3923433605ee5259b03a7d131bb
 rule setFrameConfigCorrectness() {
     env e; env e2;
     require e.block.timestamp > saneTimeConfig();   // time moves forward (saneTimeConfig is for correct initializing)
@@ -276,8 +276,8 @@ rule setFrameConfigCorrectness() {
     initialEpoch2, epochsPerFrame2, fastLaneLengthSlots2 = getFrameConfig(e2);
 
     // verify getter returns updated values
-    assert epochsPerFrame == epochsPerFrame2;               // only those asserts cause timeout
-    assert fastLaneLengthSlots == fastLaneLengthSlots2;     // only those asserts cause timeout
+    assert epochsPerFrame == epochsPerFrame2;                   // only those two asserts pass
+    assert fastLaneLengthSlots == fastLaneLengthSlots2;         // only those two asserts pass
 
     // verify the comment of the function:
     // keeps the current reference slot the same or
@@ -285,7 +285,7 @@ rule setFrameConfigCorrectness() {
     uint256 slotsPerEpoch; uint256 secondsPerSlot; uint256 genesisTime;
     slotsPerEpoch, secondsPerSlot, genesisTime = getChainConfig(e2);
 
-    assert refSlot2 >= refSlot1;  // fails
+        assert refSlot2 >= refSlot1;  // fails
 
     // assert (epochsPerFrame2 >= epochsPerFrame1) =>
     //            ( (refSlot1 == refSlot2) || (refSlot2 >= refSlot1 + epochsPerFrame1 * slotsPerEpoch) );
