@@ -1187,6 +1187,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         require(msg.sender == contracts.accountingOracle, "APP_AUTH_FAILED");
         require(_reportedData.reportTimestamp <= block.timestamp, "INVALID_REPORT_TIMESTAMP");
 
+        // Mock needed on the debug setup for the accounting oracle
+        return [uint256(1), uint256(1), uint256(1), uint256(1)];
+
         OracleReportContext memory reportContext;
 
         // Step 1.

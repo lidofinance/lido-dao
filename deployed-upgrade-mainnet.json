@@ -127,7 +127,7 @@
     "contentURI": "0x697066733a516d516b4a4d7476753474794a76577250584a666a4c667954576e393539696179794e6a703759714e7a58377053",
     "proxyAddress": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
     "contract": "Lido",
-    "implementation": "0x35364a2Ef47649F6167f4977eEba11e8749b75a2",
+    "implementation": "0x440d5e667E0baae928879FAF1f21A8b0B4b59Dd5",
     "implementationDeploymentCommit": "2eddf4342b23a865c5d77aa352c623a0a9db5a74",
     "constructorArgs": []
   },
@@ -455,7 +455,7 @@
   "lidoStubProxy": {
     "contract": "Lido",
     "deploymentCommit": "2eddf4342b23a865c5d77aa352c623a0a9db5a74",
-    "implementation": "0x35364a2Ef47649F6167f4977eEba11e8749b75a2",
+    "implementation": "0x440d5e667E0baae928879FAF1f21A8b0B4b59Dd5",
     "address": "0x4e876c7C75E34934e82De9afe1Df48D69A60Ac68",
     "constructorArgs": []
   }
