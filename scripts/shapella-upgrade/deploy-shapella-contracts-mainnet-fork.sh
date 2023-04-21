@@ -32,7 +32,7 @@ text="${line#*${key_json_prefix}}"
 text="${text%${key_json_postfix}*}"
 deployer_private_key="0x${text}"
 
-fork_command="npx ganache --chain.vmErrorsOnRPCResponse true --account \"$deployer_private_key,100000000000000000000\" --chain.chainId 1337 --fork.url https://mainnet.infura.io/v3/$WEB3_INFURA_PROJECT_ID --miner.blockGasLimit 92000000 --server.port $local_rpc_port --hardfork istanbul -d -u $DEPLOYER"
+fork_command="npx ganache --chain.vmErrorsOnRPCResponse true --account \"$deployer_private_key,100000000000000000000\" --chain.chainId 1337 --fork.url https://mainnet.infura.io/v3/$WEB3_INFURA_PROJECT_ID --miner.blockGasLimit 92000000 --server.host 127.0.0.1 --server.port $local_rpc_port --hardfork istanbul -d -u $DEPLOYER"
 $fork_command &
 fork_pid=$$
 

@@ -66,7 +66,7 @@ const getNetConfig = (networkName, ethAccountName) => {
     zhejiang,
     'mainnet-fork-shapella-upgrade': {
       ...base,
-      url: 'http://localhost:7777',
+      url: 'http://127.0.0.1:7777',
       chainId: 1337,
       gas: 80000000, // the same as in Görli
     },
