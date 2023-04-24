@@ -216,7 +216,7 @@
   "hashConsensusForValidatorsExitBus": {
     "parameters": {
       "fastLaneLengthSlots": 10,
-      "epochsPerFrame": 56
+      "epochsPerFrame": 75
     }
   },
   "validatorsExitBusOracle": {

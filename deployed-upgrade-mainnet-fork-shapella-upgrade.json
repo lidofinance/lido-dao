@@ -255,7 +255,7 @@
   "hashConsensusForValidatorsExitBus": {
     "parameters": {
       "fastLaneLengthSlots": 10,
-      "epochsPerFrame": 56
+      "epochsPerFrame": 75
     },
     "contract": "HashConsensus",
     "address": "0x08aFd6e128423fE661432b2A4872F53C98Da11Bf",
@@ -263,7 +263,7 @@
       32,
       12,
       1606824023,
-      56,
+      75,
       10,
       "0xBC862d4beE4E1cd82B9e8519b4375c3457fc6A5a",
       "0x110406b2714A48741417a8B78B5D9c291652dc59"
