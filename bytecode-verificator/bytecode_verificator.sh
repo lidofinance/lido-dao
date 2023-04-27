@@ -82,6 +82,7 @@ function check_envs() {
 function parse_cmd_args() {
   is_proxy=false
   is_implementation=false
+  constructor_calldata=""
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -173,10 +174,10 @@ function check_compiler() {
 
 function start_fork() {
   local_rpc_port=7776
-  local_rpc_url=http://localhost:$local_rpc_port
-  local_fork_command="yarn ganache --chain.vmErrorsOnRPCResponse true --wallet.totalAccounts 10 --chain.chainId 1 --fork.url https://mainnet.infura.io/v3/$WEB3_INFURA_PROJECT_ID --miner.blockGasLimit 92000000  --server.port $local_rpc_port --hardfork istanbul -d"
+  local_rpc_url=http://127.0.0.1:$local_rpc_port
+  local_fork_command="yarn ganache --chain.vmErrorsOnRPCResponse true --wallet.totalAccounts 10 --chain.chainId 1 --fork.url https://mainnet.infura.io/v3/$WEB3_INFURA_PROJECT_ID --miner.blockGasLimit 92000000 --server.host 127.0.0.1 --server.port $local_rpc_port --hardfork istanbul -d"
 
-  echo "Starting local fork"
+  echo "Starting local fork ${local_fork_command}"
   (nc -vz 127.0.0.1 $local_rpc_port) &>/dev/null && kill -15 "$(lsof -t -i:$local_rpc_port)"
 
   $local_fork_command 1> ./logs 2>& 1 &
