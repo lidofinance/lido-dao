@@ -69,12 +69,14 @@ function check_prerequisites() {
 }
 
 function check_envs() {
+  set +u
   for e in "${envs[@]}"
   do
     if [[ -z "${!e}" ]]; then
       _err "${e} env var is required but is not set"
     fi
   done
+  set -u
 }
 
 function parse_cmd_args() {
@@ -151,7 +153,7 @@ function check_compiler() {
   echo -e "Compiler binary: ${ORANGE}$solc${NC}"
 
   test -f "$solc" || { _err "compiler \"$solc\" isn't exist"; }
-  compilerSha256Sum=$("$sha256sum" "$solc")
+  compilerSha256Sum=$($sha256sum "$solc")
   grep -q "$compilerSha256Sum" ./SHA256SUMS || { _err "\"$solc\" has unrecognized checksum (local)"; }
 
   if [[ "$platform" == 'darwin' ]]; then
