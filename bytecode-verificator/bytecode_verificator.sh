@@ -80,6 +80,9 @@ function check_envs() {
 }
 
 function parse_cmd_args() {
+  is_proxy=false
+  is_implementation=false
+
   while [[ $# -gt 0 ]]; do
     case $1 in
       --solc-version)
