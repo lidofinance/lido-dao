@@ -50,3 +50,4 @@ foundry/cache
 foundry/out
 
 logs
+**/verificator_diffs/
