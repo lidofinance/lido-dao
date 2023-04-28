@@ -332,7 +332,7 @@ function deploy_contract_on_fork() {
     constructor_abi=$(jq -r '.[] | select(.type == "constructor") | .inputs ' <<< "$contract_abi")
     arg_length=$(jq -r 'length' <<< "$constructor_abi")
 
-    echo -e "Constructor abi: $(jq ".[].type" <<< "$constructor_abi")"
+    echo -e "Constructor args types: $(jq ".[].type" <<< "$constructor_abi")"
 
     if [[ "${is_proxy:+isset}" == "isset" ]]; then
       constructor_config_args=$(_read_contract_config "$contract" proxyConstructorArgs)
