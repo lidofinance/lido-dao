@@ -28,25 +28,35 @@ envs=(WEB3_INFURA_PROJECT_ID ETHERSCAN_TOKEN)
 
 # Commandline args required
 cmdargs=(solc_version remote_rpc_url contract config_json)
+sha256sum='shasum -a 256'
 
 # Vars
 constructor_calldata=""
 contract_config_name=""
 local_rpc_url=""
-
-function show_help() {
-    echo -e "$ORANGE Usage: $NC $0"\
-      "--solc-version 0.x.y" \
-      "--remote-rpc https://*" \
-      "--config-json ../deployed-*.json" \
-      "--contract Name" \
-      "[--constructor-calldata *]"\
-      "[--proxy]"\
-      "[--implementation]"
-}
-
 # Fork PID of Ganache
 fork_pid=0
+
+function show_help() {
+cat <<- _EOF_
+  Bytecode verificator
+
+  CLI tool to validate contract bytecode at remote rpc node, etherscan and bytecode deployed from local source code
+
+  $0 [--solc-version <arg>] [--remote-rpc-url <arg>] [--contract <arg>] [--config-json <arg>] [--constructor-calldata <arg>] [--proxy] [--implementation] [-h|--help]
+
+  Options:
+  --solc-version SOLC-VERSION      version of solidity to compile contract with (e.g. 0.4.24, 0.8.9)
+  --remote-rpc-url REMOTE-RPC-URL  Ethereum node URL that contains the comparating contract bytecode. e.g. https://mainnet.infura.io/v3/\$WEB3_INFURA_PROJECT_ID
+  --contract CONTRACT              Contract name from config file. (e.g. app:lido, stakingRouter, lidoLocator ...)
+  --config-json CONFIG-JSON        Path to JSON file. Artifacts of deployment (e.g './deployed-mainnet.json')
+  --constructor-calldata DATA      (optional) Calldata that will be used for local contract deployment. Will be encoded from config file if does not provided. (hex data with no 0x prefix)
+  --proxy                          (optional) Specifies contract as OssifiableProxy. Conflicts with '--implementation'. 'proxyConstructorArgs' from config will be used to encode constructor calldata if '--constructor-calldata' is not provided  [default: off].
+  --implementation                 (optional) Specifies contract as OssifiableProxy. Conflicts with '--proxy'. 'constructorArgs' from config will be used to encode constructor calldata if '--constructor-calldata' is not provided  [default: off].
+  -h, --help                       Prints help.
+_EOF_
+}
+
 
 # Entry point
 main() {
@@ -65,35 +75,32 @@ main() {
 # Service functions
 
 function check_prerequisites() {
-  for p in "${prerequisites[@]}"
-  do
-    if ! [ -x "$(command -v "$p")" ]; then
-      _err "$p app is required but not found"
-    fi
+  for p in "${prerequisites[@]}"; do
+    [[ -x "$(command -v "$p")" ]] || { _err "$p app is required but not found"; }
   done
 }
 
 function check_envs() {
   set +u
-  for e in "${envs[@]}"
-  do
-    if [[ -z "${!e}" ]]; then
-      _err "${e} env var is required but is not set"
-    fi
+  for e in "${envs[@]}"; do
+    [[ -z "${!e}" ]] && { _err "${e} env var is required but is not set"; }
   done
   set -u
 }
 
 function parse_cmd_args() {
+
   while [[ $# -gt 0 ]]; do
     case $1 in
       --solc-version)
         solc_version="$2"
+        [[ "$solc_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { _err "Invalid solc version: $solc_version" ;}
         shift
         shift
         ;;
       --remote-rpc-url)
         remote_rpc_url="$2"
+        [[ "$remote_rpc_url" =~ ^http ]] || { _err "Invalid remote rpc URL: $remote_rpc_url" ;}
         shift
         shift
         ;;
@@ -104,23 +111,27 @@ function parse_cmd_args() {
         ;;
       --config-json)
         config_json="$2"
+        [[ -f $config_json ]] || { _err "config file ${config_json} does not exist" ;}
         shift
         shift
         ;;
       --constructor-calldata)
         constructor_calldata="$2"
+        [[ "$constructor_calldata" =~ ^[0-9A-Fa-f]+$ ]] || { _err "Invalid calldata: $constructor_calldata" ;}
         shift
         shift
         ;;
       --proxy)
         is_proxy=true
+        [[ "${is_implementation:+isset}" == "isset" ]] && { _err "-proxy and --implementation is not allowed to be used at one time" ;}
         shift
         ;;
       --implementation)
         is_implementation=true
+        [[ "${is_proxy:+isset}" == "isset" ]] && { _err "--proxy and --implementation is not allowed to be used at one time" ;}
         shift
         ;;
-      --help)
+      --help|-h)
         show_help
         exit 0
         ;;
@@ -140,24 +151,17 @@ function parse_cmd_args() {
 
 function check_compiler() {
   platform=$(uname | awk '{print tolower($0)}')
-  sha256sum='sha256sum'
-  if [[ $platform == 'darwin' ]] || [[ $platform == 'linux' ]]; then
-    sha256sum='shasum -a 256'
-  else
-    _err "unknown platform: $platform"
-  fi
 
   solc=./compilers/solc-$platform-$solc_version
 
   if ! [ -x "$(command -v "$solc")" ]; then
-    _err "$solc is not executable"
+    _err "$solc could not be found or is not executable"
   fi
 
   echo -e "Platform: ${ORANGE}$platform${NC}"
-  echo -e "Compiler vesion: ${ORANGE}$solc_version${NC}"
+  echo -e "Compiler version: ${ORANGE}$solc_version${NC}"
   echo -e "Compiler binary: ${ORANGE}$solc${NC}"
 
-  test -f "$solc" || { _err "compiler \"$solc\" isn't exist"; }
   compilerSha256Sum=$($sha256sum "$solc")
   grep -q "$compilerSha256Sum" ./SHA256SUMS || { _err "\"$solc\" has unrecognized checksum (local)"; }
 
@@ -181,7 +185,7 @@ function start_fork() {
   echo "Starting local fork ${local_fork_command}"
   (nc -vz 127.0.0.1 $local_rpc_port) &>/dev/null && kill -15 "$(lsof -t -i:$local_rpc_port)"
 
-  $local_fork_command 1> ./logs 2>& 1 &
+  $local_fork_command 1>> ./logs 2>& 1 &
   fork_pid=$$
   echo "Ganache pid $fork_pid"
 
@@ -233,7 +237,7 @@ function encode_string() {
 }
 
 function encode_array() {
-  local types=$1
+  local type=$1
   local array=$2
   local array_length
   local encoded_data
@@ -242,11 +246,11 @@ function encode_array() {
   encoded_data="$encoded_data$(encode_uint256 "$(bc <<< "$array_length * 32")")"
   if [[ $array_length -gt 0 ]]; then
     for i in $(seq 0 "$(bc <<< "$array_length - 1")" ); do
-      case $types in
+      case $type in
         address\[\]) encoded_data="$encoded_data$(encode_address "$(jq -r ".[$i]" <<< "$array")")" ;;
         uint256\[\]) encoded_data="$encoded_data$(encode_uint256 "$(jq -r ".[$i]" <<< "$array")")" ;;
         bytes32\[\]) encoded_data="$encoded_data$(encode_bytes32 "$(jq -r ".[$i]" <<< "$array")")" ;;
-        *) _err "Unknown constructor argument type '$1', use --constructor-calldata instead" ;;
+        *) _err "Unknown constructor argument type '$type', use --constructor-calldata instead" ;;
       esac
     done
   fi
@@ -278,24 +282,23 @@ function encode_tuple() {
   echo "$encoded_data"
 }
 
-function endode_placeholder() {
+function endode_solidity_calldata_placeholder() {
   local placeholder="$1$placeholder_padding"
   echo "${placeholder:0:64}"
 }
-
 
 function compile_contract() {
   if [[ "$solc_version" == "0.8.9" ]]; then
     rm -rf ./build
     cd ..
-    ./bytecode-verificator/"$solc" @openzeppelin/contracts-v4.4=./node_modules/@openzeppelin/contracts-v4.4 contracts/"$solc_version"/**/*.sol contracts/"$solc_version"/*.sol -o ./bytecode-verificator/build --bin --overwrite --optimize --optimize-runs 200 1> ./logs 2>& 1
-    ./bytecode-verificator/"$solc" @openzeppelin/contracts-v4.4=./node_modules/@openzeppelin/contracts-v4.4 contracts/"$solc_version"/**/*.sol contracts/"$solc_version"/*.sol -o ./bytecode-verificator/build --abi --overwrite --optimize --optimize-runs 200 1> ./logs 2>& 1
+    ./bytecode-verificator/"$solc" @openzeppelin/contracts-v4.4=./node_modules/@openzeppelin/contracts-v4.4 contracts/"$solc_version"/**/*.sol contracts/"$solc_version"/*.sol -o ./bytecode-verificator/build --bin --overwrite --optimize --optimize-runs 200 1>> ./logs 2>& 1
+    ./bytecode-verificator/"$solc" @openzeppelin/contracts-v4.4=./node_modules/@openzeppelin/contracts-v4.4 contracts/"$solc_version"/**/*.sol contracts/"$solc_version"/*.sol -o ./bytecode-verificator/build --abi --overwrite --optimize --optimize-runs 200 1>> ./logs 2>& 1
     cd ./bytecode-verificator
   elif [[ "$solc_version" == "0.4.24" ]]; then
     rm -rf ./build
     cd ..
-    ./bytecode-verificator/"$solc" @aragon=./node_modules/@aragon openzeppelin-solidity/contracts=./node_modules/openzeppelin-solidity/contracts contracts/"$solc_version"/**/*.sol contracts/"$solc_version"/*.sol --allow-paths "$(pwd)" -o ./bytecode-verificator/build --bin --overwrite --optimize --optimize-runs 200 --evm-version constantinople 1> ./logs 2>& 1
-    ./bytecode-verificator/"$solc" @aragon=./node_modules/@aragon openzeppelin-solidity/contracts=./node_modules/openzeppelin-solidity/contracts contracts/"$solc_version"/**/*.sol contracts/"$solc_version"/*.sol --allow-paths "$(pwd)" -o ./bytecode-verificator/build --abi --overwrite --optimize --optimize-runs 200 --evm-version constantinople 1> ./logs 2>& 1
+    ./bytecode-verificator/"$solc" @aragon=./node_modules/@aragon openzeppelin-solidity/contracts=./node_modules/openzeppelin-solidity/contracts contracts/"$solc_version"/**/*.sol contracts/"$solc_version"/*.sol --allow-paths "$(pwd)" -o ./bytecode-verificator/build --bin --overwrite --optimize --optimize-runs 200 --evm-version constantinople 1>> ./logs 2>& 1
+    ./bytecode-verificator/"$solc" @aragon=./node_modules/@aragon openzeppelin-solidity/contracts=./node_modules/openzeppelin-solidity/contracts contracts/"$solc_version"/**/*.sol contracts/"$solc_version"/*.sol --allow-paths "$(pwd)" -o ./bytecode-verificator/build --abi --overwrite --optimize --optimize-runs 200 --evm-version constantinople 1>> ./logs 2>& 1
     cd ./bytecode-verificator
   else
     _err "Unknown solidity version '$solc_version'"
@@ -350,11 +353,11 @@ function deploy_contract_on_fork() {
           uint256) constructor_calldata="$constructor_calldata$(encode_uint256 "$arg")" ;;
           bytes32) constructor_calldata="$constructor_calldata$(encode_bytes32 "$arg")" ;;
           bytes)
-            constructor_calldata="$constructor_calldata$(endode_placeholder ${#compl_data[@]})"
+            constructor_calldata="$constructor_calldata$(endode_solidity_calldata_placeholder ${#compl_data[@]})"
             compl_data+=("$(encode_bytes "$arg")")
             ;;
           string)
-            constructor_calldata="$constructor_calldata$(endode_placeholder ${#compl_data[@]})"
+            constructor_calldata="$constructor_calldata$(endode_solidity_calldata_placeholder ${#compl_data[@]})"
             compl_data+=("$(encode_string "$arg")")
             ;;
           tuple)
@@ -362,7 +365,7 @@ function deploy_contract_on_fork() {
             constructor_calldata="$constructor_calldata$(encode_tuple "$args_types" "$arg")"
             ;;
           *[])
-            constructor_calldata="$constructor_calldata$(endode_placeholder ${#compl_data[@]})"
+            constructor_calldata="$constructor_calldata$(endode_solidity_calldata_placeholder ${#compl_data[@]})"
             compl_data+=("$(encode_array "$arg_type" "$arg")")
             ;;
           *) _err "Unknown constructor argument type '$arg_type', use --constructor-calldata instead" ;;
@@ -371,7 +374,7 @@ function deploy_contract_on_fork() {
 
       for index in "${!compl_data[@]}"; do
         encoded_data_length=$(bc <<< "${#constructor_calldata} / 2")
-        constructor_calldata=$(sed -E "s/$(endode_placeholder "$index")/$(printf "%064X\n" "$encoded_data_length")/" <<< "$constructor_calldata${compl_data[$index]}")
+        constructor_calldata=$(sed -E "s/$(endode_solidity_calldata_placeholder "$index")/$(printf "%064X\n" "$encoded_data_length")/" <<< "$constructor_calldata${compl_data[$index]}")
       done
     fi
   fi
@@ -432,47 +435,64 @@ function compare_bytecode() {
 # Internals
 
 _get_code() {
-    curl -sS -X POST -H "Content-Type: application/json" "$1" --data "{\"jsonrpc\": \"2.0\", \"id\": 42, \"method\": \"eth_getCode\", \"params\": [\"$2\", \"latest\"]}" | jq -r '.result'
+  local rpc_url=$1
+  local contract_address=$2
+
+  curl -sS -X POST -H "Content-Type: application/json" "$rpc_url" --data "{\"jsonrpc\": \"2.0\", \"id\": 42, \"method\": \"eth_getCode\", \"params\": [\"$contract_address\", \"latest\"]}" | jq -r '.result'
 }
 
 _get_code_etherscan() {
-    curl -sS -G -d "address=$1" -d "action=eth_getCode" -d "module=proxy" -d "tag=latest" -d "apikey=$ETHERSCAN_TOKEN" https://api.etherscan.io/api | jq -r '.result'
+  local contract_address=$1
+
+  curl -sS -G -d "address=$contract_address" -d "action=eth_getCode" -d "module=proxy" -d "tag=latest" -d "apikey=$ETHERSCAN_TOKEN" https://api.etherscan.io/api | jq -r '.result'
 }
 
 _get_account() {
-    curl -sS -X POST -H "Content-Type: application/json" "$1" --data '{"jsonrpc": "2.0", "id": 42, "method": "eth_accounts", "params": []}' | jq -r '.result[0]'
+  local rpc_url=$1
+
+  curl -sS -X POST -H "Content-Type: application/json" "$rpc_url" --data '{"jsonrpc": "2.0", "id": 42, "method": "eth_accounts", "params": []}' | jq -r '.result[0]'
 }
 
 _deploy_contract() {
-    tx_hash=$(curl -sS -X POST "$1" --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_sendTransaction\",\"params\":[{\"from\":\"$2\", \"to\":null,  \"gas\": \"0x1312D00\",  \"data\":\"$3\"}], \"id\":1}" -H 'Content-Type: application/json' | jq -r '.result')
+  local rpc_url=$1
+  local deployer=$2
+  local data=$3
 
-    contract_address=$(curl -sS -X POST -H "Content-Type: application/json" "$1" --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionReceipt\",\"params\":[\"$tx_hash\"],\"id\":1}" | jq -r '.result.contractAddress')
+  tx_hash=$(curl -sS -X POST "$rpc_url" --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_sendTransaction\",\"params\":[{\"from\":\"$deployer\", \"to\":null,  \"gas\": \"0x1312D00\",  \"data\":\"$data\"}], \"id\":1}" -H 'Content-Type: application/json' | jq -r '.result')
 
-    echo "$contract_address"
+  contract_address=$(curl -sS -X POST -H "Content-Type: application/json" "$rpc_url" --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionReceipt\",\"params\":[\"$tx_hash\"],\"id\":1}" | jq -r '.result.contractAddress')
+
+  echo "$contract_address"
 }
 
 _read_contract_config() {
-    jq -r ".\"$1\".\"$2\"" < "$config_json"
+  local contract=$1
+  local param=$2
+
+  jq -r ".\"$contract\".\"$param\"" < "$config_json"
 }
 
 _print_checksum() {
-  echo -e "${ORANGE}$1${NC} checksum: $(echo "${!1}" | shasum -a 256)"
+
+  echo -e "${ORANGE}$1${NC} checksum: $(echo "${!1}" | $sha256sum)"
 }
 
 _err() {
-    echo -e "${RED}Error:${NC} $1, aborting." >&2
-    exit 1
+  local message=$1
+
+  echo -e "${RED}Error:${NC} $message, aborting." >&2
+  exit 1
 }
 
 # Intercept ctrl+C
 trap ctrl_c INT
 ctrl_c() {
-    if [[ "$fork_pid" -gt 0 ]];
-    then
-        echo "Stopping ganache"
-        kill -15 "$fork_pid"
-    fi
-    exit 0
+  if [[ "$fork_pid" -gt 0 ]];
+  then
+    echo "Stopping ganache"
+    kill -15 "$fork_pid"
+  fi
+  exit 0
 }
 
 # Run main
