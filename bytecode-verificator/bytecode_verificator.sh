@@ -29,6 +29,11 @@ envs=(WEB3_INFURA_PROJECT_ID ETHERSCAN_TOKEN)
 # Commandline args required
 cmdargs=(solc_version remote_rpc_url contract config_json)
 
+# Vars
+constructor_calldata=""
+contract_config_name=""
+local_rpc_url=""
+
 function show_help() {
     echo -e "$ORANGE Usage: $NC $0"\
       "--solc-version 0.x.y" \
@@ -80,10 +85,6 @@ function check_envs() {
 }
 
 function parse_cmd_args() {
-  is_proxy=false
-  is_implementation=false
-  constructor_calldata=""
-
   while [[ $# -gt 0 ]]; do
     case $1 in
       --solc-version)
@@ -188,7 +189,7 @@ function start_fork() {
 }
 
 function encode_address() {
-  echo "${1//0x//000000000000000000000000}"
+  echo "${1/0x/000000000000000000000000}"
 }
 
 function encode_uint256() {
@@ -196,7 +197,7 @@ function encode_uint256() {
 }
 
 function encode_bytes32() {
-  echo "${1//0x//}"
+  echo "${1/0x/}"
 }
 
 function encode_bytes() {
@@ -256,6 +257,7 @@ function encode_tuple() {
   local types=$1
   local args=$2
   local args_length
+  local encoded_data
 
   args_length=$(jq -r 'length' <<< "$types")
 
@@ -283,20 +285,6 @@ function endode_placeholder() {
 
 
 function compile_contract() {
-  if [[ $is_proxy ]]; then
-    contract_config_name=OssifiableProxy
-    contract_config_address=$(_read_contract_config "$contract" address)
-  elif [[ $is_implementation ]]; then
-    contract_config_name=$(_read_contract_config "$contract" contract)
-    contract_config_address=$(_read_contract_config "$contract" implementation)
-  else
-    contract_config_name=$(_read_contract_config "$contract" contract)
-    contract_config_address=$(_read_contract_config "$contract" address)
-  fi
-
-  echo -e "Contract name: ${ORANGE}$contract_config_name${NC}"
-  echo -e "Contract address: ${ORANGE}$contract_config_address${NC}"
-
   if [[ "$solc_version" == "0.8.9" ]]; then
     rm -rf ./build
     cd ..
@@ -312,29 +300,51 @@ function compile_contract() {
   else
     _err "Unknown solidity version '$solc_version'"
   fi
+}
 
-  if [[ -z "$constructor_calldata" ]]; then
+function deploy_contract_on_fork() {
+  if [[ "${is_proxy:+isset}" == "isset" ]]; then
+    contract_config_name=OssifiableProxy
+    contract_config_address=$(_read_contract_config "$contract" address)
+  elif [[ "${is_implementation:+isset}" == "isset" ]]; then
+    contract_config_name=$(_read_contract_config "$contract" contract)
+    contract_config_address=$(_read_contract_config "$contract" implementation)
+  else
+    contract_config_name=$(_read_contract_config "$contract" contract)
+    contract_config_address=$(_read_contract_config "$contract" address)
+  fi
+
+  echo -e "Contract name: ${ORANGE}$contract_config_name${NC}"
+  echo -e "Contract address: ${ORANGE}$contract_config_address${NC}"
+
+  if [[ "${constructor_calldata:-unset}" == "unset" ]]; then
     local contract_abi
     local constructor_abi
     local arg_length
+    local constructor_config_args
+    local compl_data
 
+    compl_data=()
     contract_abi=$(cat ./build/"$contract_config_name".abi)
     constructor_abi=$(jq -r '.[] | select(.type == "constructor") | .inputs ' <<< "$contract_abi")
     arg_length=$(jq -r 'length' <<< "$constructor_abi")
 
-    echo -e "Constructor args: $(jq ".[].type" <<< "$constructor_abi")"
+    echo -e "Constructor abi: $(jq ".[].type" <<< "$constructor_abi")"
 
-    if [[ $is_proxy ]]; then
+    if [[ "${is_proxy:+isset}" == "isset" ]]; then
       constructor_config_args=$(_read_contract_config "$contract" proxyConstructorArgs)
     else
       constructor_config_args=$(_read_contract_config "$contract" constructorArgs)
     fi
 
     if [[ $arg_length -gt 0 ]]; then
-      compl_data=()
       for argument_index in $(seq 0 "$(bc <<< "$arg_length - 1")" ); do
+        local arg_type
+        local arg
+
         arg_type=$(jq -r ".[$argument_index].type" <<< "$constructor_abi")
         arg=$(jq -r ".[$argument_index]" <<< "$constructor_config_args")
+
         case $arg_type in
           address) constructor_calldata="$constructor_calldata$(encode_address "$arg")" ;;
           uint256) constructor_calldata="$constructor_calldata$(encode_uint256 "$arg")" ;;
@@ -367,14 +377,13 @@ function compile_contract() {
   fi
 
   echo "Contract constructor encoded args: 0x$constructor_calldata"
-}
 
-function deploy_contract_on_fork() {
   echo "Deploying compiled contract to local fork"
   contract_bytecode=$(cat ./build/"$contract_config_name".bin)
   deployment_bytecode="0x$contract_bytecode$constructor_calldata"
   deployer_account=$(_get_account "$local_rpc_url" 0)
   local_contract_address=$(_deploy_contract "$local_rpc_url" "$deployer_account" "$deployment_bytecode")
+  echo "Done"
 }
 
 function compare_bytecode() {
@@ -407,7 +416,12 @@ function compare_bytecode() {
   _print_checksum etherscan_code
 
   echo "Comparing remote and local bytecode"
-  [[ "$local_code" == "$remote_code" ]] ||  { _err "local bytecode and remote bytecode is not equal"; }
+  [[ "$local_code" == "$remote_code" ]] ||  {
+    mkdir -p ./verificator_diffs
+    echo "$local_code" > ./verificator_diffs/"$contract"_local.bin
+    echo "$remote_code" > ./verificator_diffs/"$contract"_remote.bin
+    _err "local bytecode and remote bytecode is not equal. Bytecode saved in ./verificator_diffs/"
+  }
   echo -e "${GREEN}Local bytecode matches with remote rpc${NC}"
 
   echo "Comparing etherscan and local bytecode"
