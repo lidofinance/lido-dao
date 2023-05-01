@@ -187,7 +187,7 @@ function check_compiler() {
 function start_fork() {
   local_rpc_port=7776
   local_rpc_url=http://127.0.0.1:${local_rpc_port}
-  local_fork_command=$(echo $(cat <<- _EOF_
+  local_fork_command=$(cat <<- _EOF_ | xargs | sed 's/ / /g'
     yarn ganache --chain.vmErrorsOnRPCResponse true
     --wallet.totalAccounts 10 --chain.chainId 1
     --fork.url https://mainnet.infura.io/v3/${WEB3_INFURA_PROJECT_ID}
@@ -195,7 +195,7 @@ function start_fork() {
     --server.host 127.0.0.1 --server.port ${local_rpc_port}
     --hardfork istanbul -d
 _EOF_
-  ))
+  )
 
   echo "Starting local fork \"${local_fork_command}\""
   (nc -vz 127.0.0.1 $local_rpc_port) &>/dev/null && kill -SIGTERM "$(lsof -t -i:$local_rpc_port)"
