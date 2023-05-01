@@ -21,7 +21,7 @@ zero_padding=$(printf '%0.1s' "0"{1..64})
 placeholder_padding=$(printf '%0.1s' "-"{1..64})
 
 # Prerequisite executables
-prerequisites=(jq yarn awk curl shasum uname bc)
+prerequisites=(jq yarn awk curl shasum uname bc nc)
 
 # Environment vailable required
 envs=(WEB3_INFURA_PROJECT_ID ETHERSCAN_TOKEN)
@@ -60,6 +60,9 @@ _EOF_
 
 # Entry point
 main() {
+  cd "${PWD}"
+
+  check_root
   check_prerequisites
   check_envs
 
@@ -74,6 +77,12 @@ main() {
 
 # Service functions
 
+function check_root() {
+  if (( EUID == 0 )); then
+    _err "This script must NOT be run as root"
+  fi
+}
+
 function check_prerequisites() {
   for p in "${prerequisites[@]}"; do
     [[ -x "$(command -v "$p")" ]] || { _err "$p app is required but not found"; }
@@ -81,11 +90,9 @@ function check_prerequisites() {
 }
 
 function check_envs() {
-  set +u
   for e in "${envs[@]}"; do
-    [[ -z "${!e}" ]] && { _err "${e} env var is required but is not set"; }
+    [[ "${!e:+isset}" == "isset" ]] || { _err "${e} env var is required but is not set"; }
   done
-  set -u
 }
 
 function parse_cmd_args() {
@@ -143,7 +150,7 @@ function parse_cmd_args() {
 
   for arg in "${cmdargs[@]}"
   do
-    if [ -z "${!arg}" ]; then
+    if [ "${!arg:+isset}" != "isset" ]; then
       _err "argument '--${arg//_/-}' is empty"
     fi
   done
@@ -179,11 +186,19 @@ function check_compiler() {
 
 function start_fork() {
   local_rpc_port=7776
-  local_rpc_url=http://127.0.0.1:$local_rpc_port
-  local_fork_command="yarn ganache --chain.vmErrorsOnRPCResponse true --wallet.totalAccounts 10 --chain.chainId 1 --fork.url https://mainnet.infura.io/v3/$WEB3_INFURA_PROJECT_ID --miner.blockGasLimit 92000000 --server.host 127.0.0.1 --server.port $local_rpc_port --hardfork istanbul -d"
+  local_rpc_url=http://127.0.0.1:${local_rpc_port}
+  local_fork_command=$(cat <<- _EOF_ | xargs | sed 's/ / /g'
+    yarn ganache --chain.vmErrorsOnRPCResponse true
+    --wallet.totalAccounts 10 --chain.chainId 1
+    --fork.url https://mainnet.infura.io/v3/${WEB3_INFURA_PROJECT_ID}
+    --miner.blockGasLimit 92000000
+    --server.host 127.0.0.1 --server.port ${local_rpc_port}
+    --hardfork istanbul -d
+_EOF_
+  )
 
-  echo "Starting local fork ${local_fork_command}"
-  (nc -vz 127.0.0.1 $local_rpc_port) &>/dev/null && kill -15 "$(lsof -t -i:$local_rpc_port)"
+  echo "Starting local fork \"${local_fork_command}\""
+  (nc -vz 127.0.0.1 $local_rpc_port) &>/dev/null && kill -SIGTERM "$(lsof -t -i:$local_rpc_port)"
 
   $local_fork_command 1>> ./logs 2>& 1 &
   fork_pid=$$
@@ -241,6 +256,7 @@ function encode_array() {
   local array=$2
   local array_length
   local encoded_data
+  encoded_data=""
 
   array_length=$(jq -r 'length' <<< "$array")
   encoded_data="$encoded_data$(encode_uint256 "$(bc <<< "$array_length * 32")")"
@@ -262,6 +278,7 @@ function encode_tuple() {
   local args=$2
   local args_length
   local encoded_data
+  encoded_data=""
 
   args_length=$(jq -r 'length' <<< "$types")
 
@@ -289,17 +306,17 @@ function endode_solidity_calldata_placeholder() {
 
 function compile_contract() {
   if [[ "$solc_version" == "0.8.9" ]]; then
-    rm -rf ./build
-    cd ..
+    rm -rf "${PWD}/build"
+    cd "${PWD}/.."
     ./bytecode-verificator/"$solc" @openzeppelin/contracts-v4.4=./node_modules/@openzeppelin/contracts-v4.4 contracts/"$solc_version"/**/*.sol contracts/"$solc_version"/*.sol -o ./bytecode-verificator/build --bin --overwrite --optimize --optimize-runs 200 1>> ./logs 2>& 1
     ./bytecode-verificator/"$solc" @openzeppelin/contracts-v4.4=./node_modules/@openzeppelin/contracts-v4.4 contracts/"$solc_version"/**/*.sol contracts/"$solc_version"/*.sol -o ./bytecode-verificator/build --abi --overwrite --optimize --optimize-runs 200 1>> ./logs 2>& 1
-    cd ./bytecode-verificator
+    cd - &>/dev/null
   elif [[ "$solc_version" == "0.4.24" ]]; then
-    rm -rf ./build
-    cd ..
+    rm -rf "${PWD}/build"
+    cd "${PWD}/.."
     ./bytecode-verificator/"$solc" @aragon=./node_modules/@aragon openzeppelin-solidity/contracts=./node_modules/openzeppelin-solidity/contracts contracts/"$solc_version"/**/*.sol contracts/"$solc_version"/*.sol --allow-paths "$(pwd)" -o ./bytecode-verificator/build --bin --overwrite --optimize --optimize-runs 200 --evm-version constantinople 1>> ./logs 2>& 1
     ./bytecode-verificator/"$solc" @aragon=./node_modules/@aragon openzeppelin-solidity/contracts=./node_modules/openzeppelin-solidity/contracts contracts/"$solc_version"/**/*.sol contracts/"$solc_version"/*.sol --allow-paths "$(pwd)" -o ./bytecode-verificator/build --abi --overwrite --optimize --optimize-runs 200 --evm-version constantinople 1>> ./logs 2>& 1
-    cd ./bytecode-verificator
+    cd - &>/dev/null
   else
     _err "Unknown solidity version '$solc_version'"
   fi
@@ -490,7 +507,7 @@ ctrl_c() {
   if [[ "$fork_pid" -gt 0 ]];
   then
     echo "Stopping ganache"
-    kill -15 "$fork_pid"
+    kill -SIGTERM "$fork_pid"
   fi
   exit 0
 }
