@@ -24,6 +24,7 @@ export NETWORK=mainnet-fork-shapella-upgrade
 export GAS_PRICE=0
 export DEFAULT_CONFIG_FILE="deployed-mainnet-upgrade-defaults.json"
 export LIDO_LOCATOR_PROXY_PREDEPLOYED="0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb"
+export NETWORK_STATE_FILE_BASENAME="deployed-upgrade"
 
 key_json_prefix="\"${NETWORK}\": [\""
 key_json_postfix='"]'
@@ -36,9 +37,11 @@ fork_command="npx ganache --chain.vmErrorsOnRPCResponse true --account \"$deploy
 $fork_command &
 fork_pid=$$
 
-
 sleep 10
 
+DEPLOYED_FILE="${NETWORK_STATE_FILE_BASENAME}-$NETWORK.json"
+rm -f $DEPLOYED_FILE
+cp $DEFAULT_CONFIG_FILE $DEPLOYED_FILE
 bash scripts/shapella-upgrade/deploy-shapella-contracts.sh
 
 sleep 2147483647

@@ -127,7 +127,6 @@ async function deployNewContracts({ web3, artifacts }) {
   let locatorAddress = null
   if (LIDO_LOCATOR_PROXY_PREDEPLOYED) {
     locatorAddress = LIDO_LOCATOR_PROXY_PREDEPLOYED
-    assert(network.name === 'mainnet-fork-shapella-upgrade', 'Using pre-deployed proxy of LidoLocator only allowed in the network for local fork tests')
     console.log(`Using pre-deployed address of proxy of LidoLocator ${locatorAddress}`)
   } else {
     locatorAddress = await deployBehindOssifiableProxy('lidoLocator', 'DummyEmptyContract', lidoLocatorProxyTemporaryOwner, deployer, [], implementation=dummyContractAddress)
