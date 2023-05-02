@@ -1,5 +1,7 @@
 {
   "contracts": {
+    "0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb": "OssifiableProxy",
+
     "0x852deD011285fe67063a08005c71a85690503Cee": "OssifiableProxy",
     "0x0De4Ea0184c2ad0BacA7183356Aea5B8d5Bf5c6e": "OssifiableProxy",
     "0xFdDf38947aFB03C621C71b06C9C70bce73f12999": "OssifiableProxy",
@@ -22,7 +24,7 @@
     "0x7FaDB6358950c5fAA66Cb5EB8eE5147De3df355a": "HashConsensus"
   },
   "network": "mainnet",
-  "github_repo": "https://github.com/lidofinance/lido-dao/tree/35d8c862406f82c64091760aec8feab0e114aac1",
+  "github_repo": "https://github.com/lidofinance/lido-dao/tree/e45c4d6fb8120fd29426b8d969c19d8a798ca974",
   "dependencies": {
       "@aragon/os": "https://github.com/aragon/aragonOS/tree/f3ae59b00f73984e562df00129c925339cd069ff",
       "@openzeppelin/contracts-v4.4": "https://github.com/OpenZeppelin/openzeppelin-contracts/tree/6bd6b76d1156e20e45d1016f355d154141c7e5b9",
