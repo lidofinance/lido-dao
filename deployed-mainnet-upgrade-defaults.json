@@ -204,7 +204,7 @@
   },
   "hashConsensusForAccounting": {
     "parameters": {
-      "fastLaneLengthSlots": 30,
+      "fastLaneLengthSlots": 100,
       "epochsPerFrame": 225
     }
   },
@@ -215,7 +215,7 @@
   },
   "hashConsensusForValidatorsExitBus": {
     "parameters": {
-      "fastLaneLengthSlots": 30,
+      "fastLaneLengthSlots": 100,
       "epochsPerFrame": 75
     }
   },
