@@ -449,6 +449,7 @@
   "lidoLocator": {
     "contract": "LidoLocator",
     "implementation": "0x1D920cc5bACf7eE506a271a5259f2417CaDeCE1d",
+    "address": "0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb",
     "constructorArgs": [
       [
         "0x852deD011285fe67063a08005c71a85690503Cee",
