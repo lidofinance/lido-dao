@@ -204,7 +204,7 @@
   },
   "hashConsensusForAccounting": {
     "parameters": {
-      "fastLaneLengthSlots": 10,
+      "fastLaneLengthSlots": 30,
       "epochsPerFrame": 225
     }
   },
@@ -215,7 +215,7 @@
   },
   "hashConsensusForValidatorsExitBus": {
     "parameters": {
-      "fastLaneLengthSlots": 10,
+      "fastLaneLengthSlots": 30,
       "epochsPerFrame": 75
     }
   },
@@ -233,12 +233,12 @@
   },
   "oracleReportSanityChecker": {
     "parameters": {
-      "churnValidatorsPerDayLimit": 40000,
+      "churnValidatorsPerDayLimit": 20000,
       "oneOffCLBalanceDecreaseBPLimit": 500,
       "annualBalanceIncreaseBPLimit": 1000,
       "simulatedShareRateDeviationBPLimit": 50,
-      "maxValidatorExitRequestsPerReport": 500,
-      "maxAccountingExtraDataListItemsCount": 500,
+      "maxValidatorExitRequestsPerReport": 600,
+      "maxAccountingExtraDataListItemsCount": 2,
       "maxNodeOperatorsPerExtraDataItemCount": 100,
       "requestTimestampMargin": 7680,
       "maxPositiveTokenRebase": 750000
@@ -259,7 +259,7 @@
   },
   "withdrawalQueueERC721": {
     "parameters": {
-      "name": "stETH Withdrawal NFT",
+      "name": "Lido: stETH Withdrawal NFT",
       "symbol": "unstETH"
     }
   },
