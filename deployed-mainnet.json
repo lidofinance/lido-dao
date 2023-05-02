@@ -1,4 +1,6 @@
 {
+  "deployCommit": "",
+  "deployerEOA": "0x8Ea83AD72396f1E0cD2f8E72b1461db8Eb6aF7B5",
   "networkId": 1,
   "ipfsAPI": "https://ipfs.infura.io:5001/api/v0",
   "lidoApmEnsName": "lidopm.eth",
@@ -23,7 +25,6 @@
     },
     "beaconSpec": {
       "depositContractAddress": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
-      "epochsPerFrame": 225,
       "slotsPerEpoch": 32,
       "secondsPerSlot": 12,
       "genesisTime": 1606824023
@@ -145,6 +146,12 @@
     "contentURI": "0x697066733a516d61375058486d456a346a7332676a4d3976744850747176754b3832695335455950694a6d7a4b4c7a55353847",
     "proxyAddress": "0x55032650b14df07b85bF18A3a3eC8E0Af2e028d5"
   },
+  "nodeOperatorsRegistry": {
+    "parameters": {
+      "stakingModuleTypeId": "curated-onchain-v1",
+      "stuckPenaltyDelay": "432000"
+    }
+  },
   "lidoApmDeployTx": "0xfa66476569ecef5790f2d0634997b952862bbca56aa088f151b8049421eeb87b",
   "lidoApmAddress": "0x0cb113890b04B49455DfE06554e2D784598A29C9",
   "createAppReposTx": "0xf48cb21c6be021dd18bd8e02ce89ac7b924245b859f0a8b7c47e88a39016ed41",
@@ -226,5 +233,80 @@
     "4"
   ],
   "selfOwnedStETHBurnerDeployTx": "0xc74b79ce67fd3dd5c0f530e60c1f34d76208694df7d9d193478923dd193a1746",
-  "selfOwnedStETHBurnerAddress": "0xB280E33812c0B09353180e92e27b8AD399B07f26"
+  "selfOwnedStETHBurnerAddress": "0xB280E33812c0B09353180e92e27b8AD399B07f26",
+  "burner": {
+    "parameters": {
+        "totalCoverSharesBurnt": "0",
+        "totalNonCoverSharesBurnt": "32145684728326685744"
+    }
+  },
+  "legacyOracle": {
+    "parameters": {
+      "lastCompletedEpochId": 0
+    }
+  },
+  "hashConsensusForAccounting": {
+    "parameters": {
+      "fastLaneLengthSlots": 30,
+      "epochsPerFrame": 225
+    }
+  },
+  "accountingOracle": {
+    "parameters": {
+      "consensusVersion": 1
+    }
+  },
+  "hashConsensusForValidatorsExitBus": {
+    "parameters": {
+      "fastLaneLengthSlots": 30,
+      "epochsPerFrame": 75
+    }
+  },
+  "validatorsExitBusOracle": {
+    "parameters": {
+      "consensusVersion": 1
+    }
+  },
+  "depositSecurityModule": {
+    "parameters": {
+      "maxDepositsPerBlock": 150,
+      "minDepositBlockDistance": 25,
+      "pauseIntentValidityPeriodBlocks": 6646
+    }
+  },
+  "oracleReportSanityChecker": {
+    "parameters": {
+      "churnValidatorsPerDayLimit": 20000,
+      "oneOffCLBalanceDecreaseBPLimit": 500,
+      "annualBalanceIncreaseBPLimit": 1000,
+      "simulatedShareRateDeviationBPLimit": 50,
+      "maxValidatorExitRequestsPerReport": 600,
+      "maxAccountingExtraDataListItemsCount": 2,
+      "maxNodeOperatorsPerExtraDataItemCount": 100,
+      "requestTimestampMargin": 7680,
+      "maxPositiveTokenRebase": 750000
+    }
+  },
+  "oracleDaemonConfig": {
+    "parameters": {
+      "NORMALIZED_CL_REWARD_PER_EPOCH": 64,
+      "NORMALIZED_CL_REWARD_MISTAKE_RATE_BP": 1000,
+      "REBASE_CHECK_NEAREST_EPOCH_DISTANCE": 1,
+      "REBASE_CHECK_DISTANT_EPOCH_DISTANCE": 23,
+      "VALIDATOR_DELAYED_TIMEOUT_IN_SLOTS": 7200,
+      "VALIDATOR_DELINQUENT_TIMEOUT_IN_SLOTS": 28800,
+      "PREDICTION_DURATION_IN_SLOTS": 50400,
+      "FINALIZATION_MAX_NEGATIVE_REBASE_EPOCH_SHIFT": 1350,
+      "NODE_OPERATOR_NETWORK_PENETRATION_THRESHOLD_BP": 100
+    }
+  },
+  "withdrawalQueueERC721": {
+    "parameters": {
+      "name": "Lido: stETH Withdrawal NFT",
+      "symbol": "unstETH"
+    }
+  },
+  "withdrawalVault": {
+    "address": "0xB9D7934878B5FB9610B3fE8A5e441e8fad7E293f"
+  }
 }
