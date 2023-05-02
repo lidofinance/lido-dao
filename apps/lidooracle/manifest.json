@@ -1,0 +1,20 @@
+{
+  "name": "Oracle",
+  "author": "Lido",
+  "description": "Aragon frontend for Lido V2 Oracle",
+  "details_url": "/meta/details.md",
+  "source_url": "https://github.com/lidofinance/lido-dao",
+  "icons": [
+    {
+      "src": "/meta/icon.svg",
+      "sizes": "56x56"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/meta/screenshot-1.png"
+    }
+  ],
+  "start_url": "/index.html",
+  "script": "/script.js"
+}

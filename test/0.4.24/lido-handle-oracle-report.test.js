@@ -23,7 +23,6 @@ const {
 } = require('../helpers/blockchain')
 const { ZERO_ADDRESS, INITIAL_HOLDER } = require('../helpers/constants')
 const { setupNodeOperatorsRegistry } = require('../helpers/staking-modules')
-
 const Lido = artifacts.require('Lido')
 
 const ONE_YEAR = 3600 * 24 * 365

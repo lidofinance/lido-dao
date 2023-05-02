@@ -689,7 +689,7 @@ contract('NodeOperatorsRegistry', (addresses) => {
       assert.equals(activeNodeOperatorsCountAfter.toNumber(), activeNodeOperatorsCountBefore.toNumber() - 1)
     })
 
-    it('resets depositable when depositable was greater thatn zero', async () => {
+    it('resets depositable when depositable was greater than zero', async () => {
       const activeNodeOperatorId = await nodeOperators.findNodeOperatorId(app, (operator) => operator.active)
       assert.notEqual(activeNodeOperatorId, -1, `Invariant: active node operator not found`)
 
@@ -1553,12 +1553,8 @@ contract('NodeOperatorsRegistry', (addresses) => {
         firstNodeOperatorId,
         true
       )
-      await app.unsafeUpdateValidatorsCount(secondNodeOperatorId, newExitedValidatorsCount, stuckValidatorsCount, {
-        from: stakingRouter,
-      })
-      await app.unsafeUpdateValidatorsCount(secondNodeOperatorId, newExitedValidatorsCount, stuckValidatorsCount, {
-        from: stakingRouter,
-      })
+      const { operatorIds, keysCounts } = prepIdsCountsPayload(secondNodeOperatorId, newExitedValidatorsCount)
+      await app.updateExitedValidatorsCount(operatorIds, keysCounts, { from: stakingRouter })
       const { totalVettedValidators: secondNodeOperatorStakingLimitAfter } = await app.getNodeOperator(
         firstNodeOperatorId,
         true

@@ -26,6 +26,7 @@ import "@aragon/apps-lido/apps/token-manager/contracts/TokenManager.sol";
 import "@aragon/id/contracts/IFIFSResolvingRegistrar.sol";
 
 import "../Lido.sol";
+import "../oracle/LegacyOracle.sol";
 import "../nos/NodeOperatorsRegistry.sol";
 
 contract LidoTemplate is IsContract {
@@ -71,6 +72,7 @@ contract LidoTemplate is IsContract {
 
     // Lido app names
     string private constant LIDO_APP_NAME = "lido";
+    string private constant ORACLE_APP_NAME = "oracle";
     string private constant NODE_OPERATORS_REGISTRY_APP_NAME = "node-operators-registry";
 
     // DAO config constants
@@ -81,6 +83,7 @@ contract LidoTemplate is IsContract {
 
     struct APMRepos {
         Repo lido;
+        Repo oracle;
         Repo nodeOperatorsRegistry;
         Repo aragonAgent;
         Repo aragonFinance;
@@ -98,9 +101,10 @@ contract LidoTemplate is IsContract {
         Finance finance;
         TokenManager tokenManager;
         Voting voting;
-        address oracle;
         Lido lido;
+        LegacyOracle oracle;
         NodeOperatorsRegistry operators;
+        address stakingRouter;
     }
 
     struct AppVersion {
@@ -209,7 +213,9 @@ contract LidoTemplate is IsContract {
         address _lidoImplAddress,
         bytes _lidoContentURI,
         address _nodeOperatorsRegistryImplAddress,
-        bytes _nodeOperatorsRegistryContentURI
+        bytes _nodeOperatorsRegistryContentURI,
+        address _oracleImplAddress,
+        bytes _oracleContentURI
     ) external onlyOwner {
         require(deployState.lidoRegistry != address(0), ERROR_REGISTRY_NOT_DEPLOYED);
 
@@ -231,6 +237,14 @@ contract LidoTemplate is IsContract {
             _initialSemanticVersion,
             _nodeOperatorsRegistryImplAddress,
             _nodeOperatorsRegistryContentURI
+        );
+
+        apmRepos.oracle = lidoRegistry.newRepoWithVersion(
+            ORACLE_APP_NAME,
+            this,
+            _initialSemanticVersion,
+            _oracleImplAddress,
+            _oracleContentURI
         );
 
         // create Aragon app repos pointing to latest upstream versions
@@ -277,16 +291,12 @@ contract LidoTemplate is IsContract {
     function newDAO(
         string _tokenName,
         string _tokenSymbol,
-        uint64[4] _votingSettings,
-        address _oracle
+        uint64[4] _votingSettings
     ) external onlyOwner {
         DeployState memory state = deployState;
 
-        require(_oracle != address(0), "ZERO_ORACLE_ADDRESS");
         require(state.lidoRegistry != address(0), ERROR_REGISTRY_NOT_DEPLOYED);
         require(state.dao == address(0), ERROR_DAO_ALREADY_DEPLOYED);
-
-        state.oracle = _oracle;
 
         state.token = _createToken(_tokenName, _tokenSymbol, TOKEN_DECIMALS);
         (state.dao, state.acl) = _createDAO();
@@ -327,8 +337,9 @@ contract LidoTemplate is IsContract {
             )
         );
 
-
-        state.operators.initialize(state.lido, bytes32(0x1), 2 days);
+        state.oracle = LegacyOracle(
+            _installNonDefaultApp(state.dao, _getAppId(ORACLE_APP_NAME, state.lidoRegistryEnsNode), noInit)
+        );
 
         // used for issuing vested tokens in the next step
         _createTokenManagerPermissionsForTemplate(state.acl, state.tokenManager);
@@ -370,10 +381,12 @@ contract LidoTemplate is IsContract {
 
     function finalizeDAO(
         string _daoName,
-        uint256 _unvestedTokensAmount
+        uint256 _unvestedTokensAmount,
+        address _stakingRouter
     )
         external onlyOwner
     {
+        require(_stakingRouter != address(0));
         DeployState memory state = deployState;
         APMRepos memory repos = apmRepos;
 
@@ -564,16 +577,17 @@ contract LidoTemplate is IsContract {
         // APM repos
 
         // using loops to save contract size
-        Repo[9] memory repoAddresses;
+        Repo[10] memory repoAddresses;
         repoAddresses[0] = _repos.lido;
-        repoAddresses[1] = _repos.nodeOperatorsRegistry;
-        repoAddresses[2] = _repos.aragonAgent;
-        repoAddresses[3] = _repos.aragonFinance;
-        repoAddresses[4] = _repos.aragonTokenManager;
-        repoAddresses[5] = _repos.aragonVoting;
-        repoAddresses[6] = _resolveRepo(_getAppId(APM_APP_NAME, _state.lidoRegistryEnsNode));
-        repoAddresses[7] = _resolveRepo(_getAppId(APM_REPO_APP_NAME, _state.lidoRegistryEnsNode));
-        repoAddresses[8] = _resolveRepo(_getAppId(APM_ENSSUB_APP_NAME, _state.lidoRegistryEnsNode));
+        repoAddresses[1] = _repos.oracle;
+        repoAddresses[2] = _repos.nodeOperatorsRegistry;
+        repoAddresses[3] = _repos.aragonAgent;
+        repoAddresses[4] = _repos.aragonFinance;
+        repoAddresses[5] = _repos.aragonTokenManager;
+        repoAddresses[6] = _repos.aragonVoting;
+        repoAddresses[7] = _resolveRepo(_getAppId(APM_APP_NAME, _state.lidoRegistryEnsNode));
+        repoAddresses[8] = _resolveRepo(_getAppId(APM_REPO_APP_NAME, _state.lidoRegistryEnsNode));
+        repoAddresses[9] = _resolveRepo(_getAppId(APM_ENSSUB_APP_NAME, _state.lidoRegistryEnsNode));
         for (uint256 i = 0; i < repoAddresses.length; ++i) {
             _transferPermissionFromTemplate(apmACL, repoAddresses[i], voting, REPO_CREATE_VERSION_ROLE);
         }
@@ -585,16 +599,18 @@ contract LidoTemplate is IsContract {
         perms[0] = _state.operators.MANAGE_SIGNING_KEYS();
         perms[1] = _state.operators.MANAGE_NODE_OPERATOR_ROLE();
         perms[2] = _state.operators.SET_NODE_OPERATOR_LIMIT_ROLE();
-        for (i = 0; i < 4; ++i) {
+        for (i = 0; i < 3; ++i) {
             _createPermissionForVoting(acl, _state.operators, perms[i], voting);
         }
+        acl.createPermission(_state.stakingRouter, _state.operators, _state.operators.STAKING_ROUTER_ROLE(), voting);
 
         // Lido
         perms[0] = _state.lido.PAUSE_ROLE();
         perms[1] = _state.lido.RESUME_ROLE();
         perms[2] = _state.lido.STAKING_PAUSE_ROLE();
         perms[3] = _state.lido.STAKING_CONTROL_ROLE();
-        for (i = 0; i < 4; ++i) {
+        perms[4] = _state.lido.UNSAFE_CHANGE_DEPOSITED_VALIDATORS_ROLE();
+        for (i = 0; i < 5; ++i) {
             _createPermissionForVoting(acl, _state.lido, perms[i], voting);
         }
     }
@@ -743,10 +759,10 @@ contract LidoTemplate is IsContract {
         delete deployState.tokenManager;
         delete deployState.voting;
         delete deployState.lido;
-        delete deployState.oracle;
         delete deployState.operators;
         delete deployState;
         delete apmRepos.lido;
+        delete apmRepos.oracle;
         delete apmRepos.nodeOperatorsRegistry;
         delete apmRepos.aragonAgent;
         delete apmRepos.aragonFinance;

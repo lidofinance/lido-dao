@@ -110,7 +110,6 @@ async function reportProcessorFactory(_) {
 }
 
 async function hashConsensusFactory({ voting, oracle, signers, legacyOracle, deployParams }) {
-  const initialEpoch = +(await legacyOracle.getLastCompletedEpochId()) + EPOCHS_PER_FRAME
   const consensus = await HashConsensus.new(
     SLOTS_PER_EPOCH,
     SECONDS_PER_SLOT,
@@ -121,7 +120,8 @@ async function hashConsensusFactory({ voting, oracle, signers, legacyOracle, dep
     oracle.address
   )
 
-  await consensus.updateInitialEpoch(initialEpoch, { from: voting.address })
+  // TODO: uncomment and fix undefined initialEpoch
+  // await consensus.updateInitialEpoch(initialEpoch, { from: voting.address })
 
   await consensus.grantRole(await consensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(), voting.address, { from: voting.address })
   await consensus.grantRole(await consensus.DISABLE_CONSENSUS_ROLE(), voting.address, { from: voting.address })

@@ -3,6 +3,7 @@
   "ipfsAPI": "http://127.0.0.1:5001/api/v0",
   "multisigAddress": "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1",
   "owner": "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1",
+  "gateSealAddress": "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1",
   "lidoApmEnsName": "lidopm.eth",
   "lidoApmEnsRegDurationSec": 94608000,
   "daoAragonId": "lido-dao",
@@ -14,7 +15,7 @@
       "objectionPhaseDuration": 1
     },
     "beaconSpec": {
-      "depositContractAddress": "",
+      "depositContractAddress": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
       "epochsPerFrame": 225,
       "slotsPerEpoch": 32,
       "secondsPerSlot": 12,
@@ -49,12 +50,74 @@
     "end": 1639660100,
     "revokable": false
   },
-  "burnerParams": {
-    "totalCoverSharesBurnt": "0",
-    "totalNonCoverSharesBurnt": "0",
-    "maxBurnAmountPerRunBasisPoints": "4"
+  "burner": {
+    "parameters": {
+        "totalCoverSharesBurnt": "0",
+        "totalNonCoverSharesBurnt": "0"
+    }
   },
   "executionLayerRewardsParams": {
     "withdrawalLimit": "1"
+  },
+  "legacyOracle": {
+    "parameters": {
+      "lastCompletedEpochId": 0
+    }
+  },
+  "hashConsensusForAccounting": {
+    "parameters": {
+      "fastLaneLengthSlots": 10,
+      "epochsPerFrame": 12
+    }
+  },
+  "accountingOracle": {
+    "parameters": {
+      "maxExitedValidatorsPerDay": 240,
+      "maxExtraDataListItemsCount": 15,
+      "consensusVersion": 1
+    }
+  },
+  "hashConsensusForValidatorsExitBus": {
+    "parameters": {
+      "fastLaneLengthSlots": 10,
+      "epochsPerFrame": 4
+    }
+  },
+  "validatorsExitBusOracle": {
+    "parameters": {
+      "consensusVersion": 1
+    }
+  },
+  "depositSecurityModule": {
+    "parameters": {
+      "maxDepositsPerBlock": 150,
+      "minDepositBlockDistance": 5,
+      "pauseIntentValidityPeriodBlocks": 6646
+    }
+  },
+  "oracleReportSanityChecker": {
+    "parameters": {
+      "churnValidatorsPerDayLimit": 1500,
+      "oneOffCLBalanceDecreaseBPLimit": 500,
+      "annualBalanceIncreaseBPLimit": 1000,
+      "simulatedShareRateDeviationBPLimit": 250,
+      "maxValidatorExitRequestsPerReport": 2000,
+      "maxAccountingExtraDataListItemsCount": 100,
+      "maxNodeOperatorsPerExtraDataItemCount": 100,
+      "requestTimestampMargin": 128,
+      "maxPositiveTokenRebase": 5000000
+    }
+  },
+  "nodeOperatorsRegistry": {
+    "parameters": {
+      "stakingModuleTypeId": "curated-onchain-v1",
+      "stuckPenaltyDelay": "172800"
+    }
+  },
+  "withdrawalQueueERC721": {
+    "parameters": {
+      "name": "stETH Withdrawal NFT",
+      "symbol": "unstETH"
+    }
   }
 }

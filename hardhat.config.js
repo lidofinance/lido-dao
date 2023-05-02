@@ -10,7 +10,7 @@ require('@nomiclabs/hardhat-etherscan')
 require('hardhat-gas-reporter')
 require('solidity-coverage')
 require('hardhat-contract-sizer')
-require('hardhat-ignore-warnings')
+// require('hardhat-ignore-warnings')
 require('./foundry/skip-sol-tests-compilation')
 
 const NETWORK_NAME = getNetworkName()
@@ -55,17 +55,21 @@ const getNetConfig = (networkName, ethAccountName) => {
     chainId: 1337,
     gas: 80000000, // the same as in Görli
   }
-  const devnet3 = {
+  const zhejiang = {
     ...base,
-    url: 'http://35.228.211.212:8545',
-    chainId: 1337807,
-    gas: 9194304,
+    url: accounts.zhejiang_url,
+    chainId: 1337803,
   }
   const byNetName = {
     localhost,
     mainnetfork,
-    devnet3,
-    // local
+    zhejiang,
+    'mainnet-fork-shapella-upgrade': {
+      ...base,
+      url: 'http://127.0.0.1:7777',
+      chainId: 1337,
+      gas: 80000000, // the same as in Görli
+    },
     local: {
       ...base,
       accounts: {

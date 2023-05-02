@@ -53,7 +53,7 @@ contract('NodeOperatorsRegistry', ([appManager, voting, user1, user2, user3, use
     // inside the testing_requestValidatorsKeysForDeposits() method
     await dao.grantPermission(app.address, app, 'STAKING_ROUTER_ROLE')
 
-    // Instantiate a proxy for the app, using the base c ontract as its logic implementation.
+    // Instantiate a proxy for the app, using the base contract as its logic implementation.
     // const proxyAddress = await newApp(newDAO.dao, 'node-operators-registry', appBase.address, appManager)
     // app = await NodeOperatorsRegistry.at(proxyAddress)
 

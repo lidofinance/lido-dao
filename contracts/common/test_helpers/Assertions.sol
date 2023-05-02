@@ -4,8 +4,7 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-
-import { MemUtils } from "../lib/MemUtils.sol";
+import { MemUtils } from "../../common/lib/MemUtils.sol";
 
 
 library Assert {
