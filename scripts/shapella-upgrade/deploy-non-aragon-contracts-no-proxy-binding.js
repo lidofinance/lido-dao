@@ -98,7 +98,8 @@ async function deployNewContracts({ web3, artifacts }) {
     }
     valueHex = '0x' + valueHex
     console.log(`    oracleDaemonConfig.set(${key}, ${valueHex})...`)
-    await oracleDaemonConfig.set(key, valueHex, txParams)
+    tx = await oracleDaemonConfig.set(key, valueHex, txParams)
+    await tx.wait()
   }
 
   console.log(`oracleDaemonConfig.revokeRole(${CONFIG_MANAGER_ROLE}, ${temporaryAdmin})...`)
