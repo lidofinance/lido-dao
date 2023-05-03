@@ -1,0 +1,33 @@
+{
+  "contracts": {
+    "0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb": "OssifiableProxy",
+
+    "0x852deD011285fe67063a08005c71a85690503Cee": "OssifiableProxy",
+    "0x0De4Ea0184c2ad0BacA7183356Aea5B8d5Bf5c6e": "OssifiableProxy",
+    "0xFdDf38947aFB03C621C71b06C9C70bce73f12999": "OssifiableProxy",
+    "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1": "OssifiableProxy",
+    "0x1D920cc5bACf7eE506a271a5259f2417CaDeCE1d": "LidoLocator",
+    "0xF3c5E0A67f32CF1dc07a8817590efa102079a1aF": "AccountingOracle",
+    "0xA89Ea51FddE660f67d1850e03C9c9862d33Bc42c": "ValidatorsExitBusOracle",
+    "0xD8784e748f59Ba711fB5643191Ec3fAdD50Fb6df": "StakingRouter",
+    "0xE42C659Dc09109566720EA8b2De186c2Be7D94D9": "WithdrawalQueueERC721",
+    "0xCC52f17756C04bBa7E377716d7062fC36D7f69Fd": "WithdrawalVault",
+    "0xa29b819654cE6224A222bb5f586920105E2D7E0E": "LegacyOracle",
+    "0x8538930c385C0438A357d2c25CB3eAD95Ab6D8ed": "NodeOperatorsRegistry",
+    "0x17144556fd3424EDC8Fc8A4C940B2D04936d17eb": "Lido",
+    "0xC77F8768774E1c9244BEed705C4354f2113CFc09": "DepositSecurityModule",
+    "0x9305c1Dbfe22c12c66339184C0025d7006f0f1cC": "OracleReportSanityChecker",
+    "0xbf05A929c3D7885a6aeAd833a992dA6E5ac23b09": "OracleDaemonConfig",
+    "0x8F73e4C2A6D852bb4ab2A45E6a9CF5715b3228B7": "EIP712StETH",
+    "0xD15a672319Cf0352560eE76d9e89eAB0889046D3": "Burner",
+    "0xD624B08C83bAECF0807Dd2c6880C3154a5F0B288": "HashConsensus",
+    "0x7FaDB6358950c5fAA66Cb5EB8eE5147De3df355a": "HashConsensus"
+  },
+  "network": "mainnet",
+  "github_repo": "https://github.com/lidofinance/lido-dao/tree/e45c4d6fb8120fd29426b8d969c19d8a798ca974",
+  "dependencies": {
+      "@aragon/os": "https://github.com/aragon/aragonOS/tree/f3ae59b00f73984e562df00129c925339cd069ff",
+      "@openzeppelin/contracts-v4.4": "https://github.com/OpenZeppelin/openzeppelin-contracts/tree/6bd6b76d1156e20e45d1016f355d154141c7e5b9",
+      "openzeppelin-solidity": "https://github.com/OpenZeppelin/openzeppelin-contracts/tree/06e265b38d3e9daeaa7b33f9035c700d6bc0c6a0"
+  }
+}
