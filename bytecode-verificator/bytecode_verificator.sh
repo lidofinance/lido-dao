@@ -36,6 +36,8 @@ contract_config_name=""
 local_rpc_url=""
 # Fork PID of Ganache
 fork_pid=0
+local_rpc_port=7776
+local_rpc_url=http://127.0.0.1:${local_rpc_port}
 
 function show_help() {
   cat <<-_EOF_
@@ -68,9 +70,9 @@ main() {
 
   parse_cmd_args "$@"
   check_compiler
-  start_fork
+  [[ "${local_ganache:-unset}" == "unset" ]] && start_fork
 
-  compile_contract
+  [[ "${skip_compilation:-unset}" == "unset" ]] && compile_contract
   deploy_contract_on_fork
   compare_bytecode
 }
@@ -138,6 +140,14 @@ function parse_cmd_args() {
       [[ "${is_proxy:+isset}" == "isset" ]] && { _err "--proxy and --implementation is not allowed to be used at one time"; }
       shift
       ;;
+    --skip-compilation)
+      skip_compilation=true
+      shift
+      ;;
+    --local-ganache)
+      local_ganache=true
+      shift
+      ;;
     --help | -h)
       show_help
       exit 0
@@ -184,8 +194,6 @@ function check_compiler() {
 }
 
 function start_fork() {
-  local_rpc_port=7776
-  local_rpc_url=http://127.0.0.1:${local_rpc_port}
   local_fork_command=$(
     cat <<-_EOF_ | xargs | sed 's/ / /g'
     yarn ganache --chain.vmErrorsOnRPCResponse true
