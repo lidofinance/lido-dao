@@ -9,7 +9,7 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 cd "${SCRIPT_DIR}"
 
 # Environment vailable required
-envs=(REMOTE_RPC CONFIG)
+envs=(REMOTE_RPC CONFIG WEB3_INFURA_PROJECT_ID ETHERSCAN_TOKEN)
 for e in "${envs[@]}"; do
   [[ "${!e:+isset}" == "isset" ]] || { _err "${e} env var is required but is not set"; }
 done
