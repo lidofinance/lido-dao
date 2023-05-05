@@ -11,7 +11,7 @@ async function exportAbi() {
 
   const artifactPaths = allArtifactPaths.map((f) => path.relative(artifactsPath, f)).filter((relpath) => !skipNames.test(relpath))
 
-  const lidoArtifactPaths = artifactPaths.filter((p) => p.substr(0, 10) === 'contracts/')
+  const lidoArtifactPaths = artifactPaths.filter((p) => p.substring(0, 10) === 'contracts/')
 
   const aragonArtifactPaths = [
     '@aragon/apps-finance/contracts/Finance.sol/Finance.json',
@@ -29,7 +29,7 @@ async function extractABIs(artifactPaths, abisPath) {
     for (const file of files) {
       await fs.unlink(path.join(abisPath, file))
     }
-    await fs.rmdir(abisPath, { recursive: true })
+    await fs.rm(abisPath, { recursive: true })
   }
 
   await fs.mkdir(abisPath, { recursive: true })

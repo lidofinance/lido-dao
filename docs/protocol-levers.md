@@ -13,7 +13,7 @@ The following contracts are upgradeable by the DAO voting:
 
 * `contracts/0.4.24/Lido.sol`
 * `contracts/0.4.24/NodeOperatorsRegistry.sol`
-* `contracts/0.4.24/LidoOracle.sol`
+* `contracts/0.4.24/LegacyOracle.sol`
 
 Upgradeability is implemented by the Aragon kernel and base contracts. To upgrade an app, one needs
 the `dao.APP_MANAGER_ROLE` permission provided by Aragon. All upgradeable contracts use the
@@ -27,15 +27,6 @@ The following contracts are not upgradeable and don't depend on the Aragon code:
 
 
 ## [Lido.sol](/contracts/0.4.24/Lido.sol)
-
-### Burning stETH tokens
-
-* Mutator: `burnShares(address _account, uint256 _sharesAmount)`
-  * Permission required: `BURN_ROLE`
-
-DAO members can burn token shares via DAO voting to offset slashings using insurance funds.
-E.g. protocol was slashed by 5 Ether; by burning the amount of shares corresponding to 5 stETH
-the stakers can be made whole.
 
 ### Oracle
 
@@ -182,7 +173,7 @@ Allow to manage signing keys for the given node operator.
 Allows to report that `_stoppedIncrement` more validators of a node operator have become stopped.
 
 
-## [LidoOracle.sol](/contracts/0.4.24/oracle/LidoOracle.sol)
+## [LegacyOracle.sol](/contracts/0.4.24/oracle/LegacyOracle.sol)
 
 ### Lido
 

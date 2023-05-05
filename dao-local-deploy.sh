@@ -48,7 +48,7 @@ yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-01-1-deploy-templa
 pause "!!! Now set the daoTemplateDeployTx hash value in deployed-$NETWORK.json"
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-01-2-deploy-lido-base.json
 pause "!!! Now set the lidoBaseDeployTx hash value in deployed-$NETWORK.json"
-yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-01-3-deploy-oracle-base.json
+yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-01-3-deploy-legacy-oracle-base.json
 pause "!!! Now set the oracleBaseDeployTx hash value in deployed-$NETWORK.json"
 yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-01-4-deploy-nops-base.json
 pause "!!! Now set the nodeOperatorsRegistryBaseDeployTx hash value in deployed-$NETWORK.json"
@@ -101,16 +101,16 @@ pause "!!! Now set the compositePostRebaseBeaconReceiverDeployTx hash value in d
 yarn hardhat --network $NETWORK run ./scripts/multisig/22-obtain-composite-post-rebase-beacon-receiver.js
 msg "CompositePostRebaseBeaconReceiver deployed"
 
-# Insurance: deploy SelfOwnedStETHBurner
-yarn hardhat --network $NETWORK run ./scripts/multisig/23-deploy-self-owned-steth-burner.js
-yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-23-deploy-self-owned-steth-burner.json
-pause "!!! Now set the selfOwnedStETHBurnerDeployTx hash value in deployed-$NETWORK.json"
-yarn hardhat --network $NETWORK run ./scripts/multisig/24-obtain-self-owned-steth-burner.js
-msg "SelfOwnedStETHBurner deployed"
+# Insurance: deploy Burner
+yarn hardhat --network $NETWORK run ./scripts/multisig/23-deploy-burner.js
+yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-23-deploy-burner.json
+pause "!!! Now set the burnerDeployTx hash value in deployed-$NETWORK.json"
+yarn hardhat --network $NETWORK run ./scripts/multisig/24-obtain-burner.js
+msg "Burner deployed"
 
 # Insurance: attach the contracts to the protocol
-yarn hardhat --network $NETWORK run ./scripts/multisig/25-vote-self-owned-steth-burner.js
-yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-25-vote-self-owned-steth-burner.json
+yarn hardhat --network $NETWORK run ./scripts/multisig/25-vote-burner.js
+yarn hardhat --network $NETWORK tx --from $DEPLOYER --file tx-25-vote-burner.json
 yarn hardhat --network $NETWORK run ./scripts/multisig/vote-and-enact.js
 msg "Vote for attaching the insurance module is executed"
 

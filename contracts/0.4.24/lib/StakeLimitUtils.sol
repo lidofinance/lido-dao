@@ -1,5 +1,4 @@
-// SPDX-FileCopyrightText: 2022 Lido <info@lido.fi>
-
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
@@ -41,10 +40,10 @@ library StakeLimitState {
       * @dev Internal representation struct (slot-wide)
       */
     struct Data {
-        uint32 prevStakeBlockNumber;
-        uint96 prevStakeLimit;
-        uint32 maxStakeLimitGrowthBlocks;
-        uint96 maxStakeLimit;
+        uint32 prevStakeBlockNumber;      // block number of the previous stake submit
+        uint96 prevStakeLimit;            // limit value (<= `maxStakeLimit`) obtained on the previous stake submit
+        uint32 maxStakeLimitGrowthBlocks; // limit regeneration speed expressed in blocks
+        uint96 maxStakeLimit;             // maximum limit value
     }
 }
 
@@ -94,6 +93,7 @@ library StakeLimitUnstructuredStorage {
 library StakeLimitUtils {
     /**
     * @notice Calculate stake limit for the current block.
+    * @dev using `_constGasMin` to make gas consumption independent of the current block number
     */
     function calculateCurrentStakeLimit(StakeLimitState.Data memory _data) internal view returns(uint256 limit) {
         uint256 stakeLimitIncPerBlock;
@@ -101,10 +101,13 @@ library StakeLimitUtils {
             stakeLimitIncPerBlock = _data.maxStakeLimit / _data.maxStakeLimitGrowthBlocks;
         }
 
-        limit = _data.prevStakeLimit + ((block.number - _data.prevStakeBlockNumber) * stakeLimitIncPerBlock);
-        if (limit > _data.maxStakeLimit) {
-            limit = _data.maxStakeLimit;
-        }
+        uint256 blocksPassed = block.number - _data.prevStakeBlockNumber;
+        uint256 projectedLimit = _data.prevStakeLimit + blocksPassed * stakeLimitIncPerBlock;
+
+        limit = _constGasMin(
+            projectedLimit,
+            _data.maxStakeLimit
+        );
     }
 
     /**
@@ -142,13 +145,19 @@ library StakeLimitUtils {
             "TOO_SMALL_LIMIT_INCREASE"
         );
 
-        // if staking was paused or unlimited previously,
-        // or new limit is lower than previous, then
-        // reset prev stake limit to the new max stake limit
-        if ((_data.maxStakeLimit == 0) || (_maxStakeLimit < _data.prevStakeLimit)) {
+        // reset prev stake limit to the new max stake limit if
+        if (
+            // staking was paused or
+            _data.prevStakeBlockNumber == 0 ||
+            // staking was unlimited or
+            _data.maxStakeLimit == 0 ||
+            // new maximum limit value is lower than the value obtained on the previous stake submit
+            _maxStakeLimit < _data.prevStakeLimit
+        ) {
             _data.prevStakeLimit = uint96(_maxStakeLimit);
         }
-        _data.maxStakeLimitGrowthBlocks = _stakeLimitIncreasePerBlock != 0 ? uint32(_maxStakeLimit / _stakeLimitIncreasePerBlock) : 0;
+        _data.maxStakeLimitGrowthBlocks =
+            _stakeLimitIncreasePerBlock != 0 ? uint32(_maxStakeLimit / _stakeLimitIncreasePerBlock) : 0;
 
         _data.maxStakeLimit = uint96(_maxStakeLimit);
 
@@ -166,7 +175,7 @@ library StakeLimitUtils {
     */
     function removeStakingLimit(
         StakeLimitState.Data memory _data
-    ) internal view returns (StakeLimitState.Data memory) {
+    ) internal pure returns (StakeLimitState.Data memory) {
         _data.maxStakeLimit = 0;
 
         return _data;
@@ -204,5 +213,19 @@ library StakeLimitUtils {
         _data.prevStakeBlockNumber = uint32(_isPaused ? 0 : block.number);
 
         return _data;
+    }
+
+    /**
+     * @notice find a minimum of two numbers with a constant gas consumption
+     * @dev doesn't use branching logic inside
+     * @param _lhs left hand side value
+     * @param _rhs right hand side value
+     */
+    function _constGasMin(uint256 _lhs, uint256 _rhs) internal pure returns (uint256 min) {
+        uint256 lhsIsLess;
+        assembly {
+            lhsIsLess := lt(_lhs, _rhs) // lhsIsLess = (_lhs < _rhs) ? 1 : 0
+        }
+        min = (_lhs * lhsIsLess) + (_rhs * (1 - lhsIsLess));
     }
 }

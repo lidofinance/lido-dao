@@ -1,4 +1,4 @@
-import { GU, Info } from '@aragon/ui'
+import { Box, GU, Info } from '@aragon/ui'
 import styled from 'styled-components'
 
 export const InfoSpaced = styled(Info)`
@@ -16,5 +16,11 @@ export const Controls = styled.div`
 
   & > :first-child {
     margin-right: ${GU * 2}px;
+  }
+`
+
+export const BoxUnpadded = styled(Box)`
+  & > div {
+    padding: 0;
   }
 `

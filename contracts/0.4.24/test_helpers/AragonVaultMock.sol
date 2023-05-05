@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-License-Identifier: GPL-3.0
+
 pragma solidity 0.4.24;
 
 import "@aragon/os/contracts/apps/UnsafeAragonApp.sol";
