@@ -16,7 +16,7 @@ require('@aragon/buidler-aragon/dist/bootstrap-paths')
 
 const { generateArtifacts } = require('@aragon/buidler-aragon/dist/src/utils/artifact/generateArtifacts')
 
-const { APP_NAMES } = require('./multisig/constants')
+const { APP_NAMES } = require('./constants')
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
 
@@ -108,7 +108,7 @@ async function publishAppFrotnend(appDir, appsDirPath, lidoApmEnsName) {
   await generateArtifacts(distPath, bre)
 
   logSplitter()
-  
+
   log(`App dist: ${chalk.yellow(distPath)}`)
 
 }

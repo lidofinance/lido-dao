@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      
+
       - name: Setup node.js version
         uses: actions/setup-node@v3
         with:
@@ -18,28 +18,21 @@ jobs:
           cache: 'yarn'
 
       - name: Install yarn deps
-        run: yarn install --immutable
+        run: yarn
 
       - name: Generate new .storage-layout
         uses: lidofinance/storage-layout-action@v1
         with:
           mode: generate
           src-folder: ./contracts
-          ignore-folders: "{test_helpers,template,mocks}"
-
-      - name: Check for changes
-        id: changes
-        continue-on-error: true
-        run: .github/assert-git-changes.py
-        env:
-          TARGET: .storage-layout
+          ignore-folders: '{test_helpers,template,mocks}'
 
       - name: Create Pull Request
-        if: steps.changes.outcome != 'success'
         uses: lidofinance/create-pull-request@v4
         with:
+          add-paths: .storage-layout
           branch: update-storage-layout-${{ github.ref_name }}
           delete-branch: true
-          commit-message: "fix: Make storage-layout up to date"
-          title: "Update .storage-layout for ${{ github.ref_name }} branch"
-          body: "This PR is generated automatically. Merge it to apply new version of .storage-layout"
+          commit-message: 'fix: Make storage-layout up to date'
+          title: 'Update .storage-layout for ${{ github.ref_name }} branch'
+          body: 'This PR is generated automatically. Merge it to apply new version of .storage-layout'

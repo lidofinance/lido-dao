@@ -1,5 +1,6 @@
 const fs = require('fs')
 const path = require('path')
+const { TASK_COMPILE } = require('hardhat/builtin-tasks/task-names')
 
 require('@aragon/hardhat-aragon')
 require('@nomiclabs/hardhat-web3')
@@ -10,10 +11,13 @@ require('@nomiclabs/hardhat-etherscan')
 require('hardhat-gas-reporter')
 require('solidity-coverage')
 require('hardhat-contract-sizer')
+// require('hardhat-ignore-warnings')
+require('./foundry/skip-sol-tests-compilation')
 
 const NETWORK_NAME = getNetworkName()
 const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
 
+// eslint-disable-next-line no-undef
 task('accounts', 'Prints the list of accounts', async (taskArgs, hre) => {
   const accounts = await hre.ethers.getSigners()
 
@@ -26,84 +30,107 @@ const accounts = readJson(`./accounts.json`) || {
   eth: { dev: 'remote' },
   etherscan: { apiKey: undefined },
   infura: { projectId: undefined },
-  infura_ipfs: { projectId: undefined, projectSecret: undefined }
+  infura_ipfs: { projectId: undefined, projectSecret: undefined },
 }
 
 const getNetConfig = (networkName, ethAccountName) => {
   const netState = readJson(`./deployed-${networkName}.json`) || {}
   const ethAccts = accounts.eth || {}
   const base = {
-    accounts: ethAccountName === 'remote' ? 'remote' : ethAccts[ethAccountName] || ethAccts[networkName] || ethAccts.dev || 'remote',
+    accounts:
+      ethAccountName === 'remote'
+        ? 'remote'
+        : ethAccts[ethAccountName] || ethAccts[networkName] || ethAccts.dev || 'remote',
     ensAddress: netState.ensAddress,
-    timeout: 60000
+    timeout: 60000,
   }
   const localhost = {
     ...base,
     url: 'http://localhost:8545',
     chainId: 31337,
-    gas: 8000000 // the same as in Görli
+    gas: 80000000, // the same as in Görli
+  }
+  const mainnetfork = {
+    ...base,
+    url: 'http://localhost:8545',
+    chainId: 1337,
+    gas: 80000000, // the same as in Görli
+  }
+  const zhejiang = {
+    ...base,
+    url: accounts.zhejiang_url,
+    chainId: 1337803,
   }
   const byNetName = {
     localhost,
-    // local
+    mainnetfork,
+    zhejiang,
+    'mainnet-fork-shapella-upgrade': {
+      ...base,
+      url: 'http://127.0.0.1:7777',
+      chainId: 1337,
+      gas: 80000000, // the same as in Görli
+    },
     local: {
       ...base,
       accounts: {
-        mnemonic: 'explain tackle mirror kit van hammer degree position ginger unfair soup bonus'
+        mnemonic: 'explain tackle mirror kit van hammer degree position ginger unfair soup bonus',
+        count: 30,
       },
       url: 'http://localhost:8545',
-      chainId: 1337
+      chainId: 1337,
     },
     hardhat: {
-      blockGasLimit: 20000000,
+      blockGasLimit: 30000000,
       gasPrice: 0,
       initialBaseFeePerGas: 0,
       allowUnlimitedContractSize: true,
       accounts: {
-        mnemonic: 'hardhat',
-        count: 20,
+        // default hardhat's node mnemonic
+        mnemonic: 'test test test test test test test test test test test junk',
+        count: 30,
         accountsBalance: '100000000000000000000000',
-        gasPrice: 0
-      }
+        gasPrice: 0,
+      },
     },
     'goerli-pyrmont': {
       ...base,
       url: 'http://206.81.31.11/rpc',
-      chainId: 5
+      chainId: 5,
     },
     rinkeby: {
       ...base,
       url: 'https://rinkeby.infura.io/v3/' + accounts.infura.projectId,
       chainId: 4,
-      timeout: 60000 * 10
+      timeout: 60000 * 10,
     },
     goerli: {
       ...base,
       url: 'https://goerli.infura.io/v3/' + accounts.infura.projectId,
       chainId: 5,
-      timeout: 60000 * 10
+      timeout: 60000 * 10,
     },
     'mainnet-test': {
       ...base,
       url: 'https://mainnet.infura.io/v3/' + accounts.infura.projectId,
       chainId: 1,
-      timeout: 60000 * 10
+      timeout: 60000 * 10,
     },
     mainnet: {
       ...base,
       url: 'https://mainnet.infura.io/v3/' + accounts.infura.projectId,
       chainId: 1,
-      timeout: 60000 * 10
+      timeout: 60000 * 10,
     },
     fork: {
       ...base,
       chainId: 1,
       timeout: 60000 * 10,
       forking: {
-        url: 'https://mainnet.infura.io/v3/' + accounts.infura.projectId
+        url: 'https://mainnet.infura.io/v3/' + accounts.infura.projectId,
         // url: 'https://eth-mainnet.alchemyapi.io/v2/' + accounts.alchemy.apiKey
-      }
-    }
+      },
+    },
   }
   const netConfig = byNetName[networkName]
   return netConfig ? { [networkName]: netConfig } : {}
@@ -112,23 +139,23 @@ const getNetConfig = (networkName, ethAccountName) => {
 const solcSettings4 = {
   optimizer: {
     enabled: true,
-    runs: 200
+    runs: 200,
   },
-  evmVersion: 'constantinople'
+  evmVersion: 'constantinople',
 }
 const solcSettings6 = {
   optimizer: {
     enabled: true,
-    runs: 200
+    runs: 200,
   },
-  evmVersion: 'istanbul'
+  evmVersion: 'istanbul',
 }
 const solcSettings8 = {
   optimizer: {
     enabled: true,
-    runs: 200
+    runs: 200,
   },
-  evmVersion: 'istanbul'
+  evmVersion: 'istanbul',
 }
 
 module.exports = {
@@ -138,20 +165,20 @@ module.exports = {
     compilers: [
       {
         version: '0.4.24',
-        settings: solcSettings4
+        settings: solcSettings4,
       },
       {
         version: '0.6.11',
-        settings: solcSettings6
+        settings: solcSettings6,
       },
       {
         version: '0.6.12',
-        settings: solcSettings6
+        settings: solcSettings6,
       },
       {
         version: '0.8.9',
-        settings: solcSettings8
-      }
+        settings: solcSettings8,
+      },
     ],
     overrides: {
       'contracts/0.6.11/deposit_contract.sol': {
@@ -159,29 +186,47 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 5000000 // https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa#code
-          }
-        }
-      }
-    }
+            runs: 5000000, // https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa#code
+          },
+        },
+      },
+      'contracts/0.4.24/test_helpers/MinFirstAllocationStrategyConsumerMockLegacyVersion.sol': {
+        version: '0.4.24',
+        settings: {},
+      },
+    },
+  },
+  warnings: {
+    '@aragon/**/*': {
+      default: 'off',
+    },
+    'contracts/*/test_helpers/**/*': {
+      default: 'off',
+    },
   },
   gasReporter: {
     enabled: !!process.env.REPORT_GAS,
-    currency: 'USD'
+    currency: 'USD',
   },
   etherscan: accounts.etherscan,
   aragon: {
     ipfsApi: process.env.IPFS_API_URL || 'https://ipfs.infura.io:5001/api/v0',
-    ipfsGateway: process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/'
+    ipfsGateway: process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/',
   },
   ipfs: {
     url: process.env.IPFS_API_URL || 'https://ipfs.infura.io:5001/api/v0',
     gateway: process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/',
     pinata: {
       key: 'YOUR_PINATA_API_KEY',
-      secret: 'YOUR_PINATA_API_SECRET_KEY'
-    }
-  }
+      secret: 'YOUR_PINATA_API_SECRET_KEY',
+    },
+  },
+  contractSizer: {
+    disambiguatePaths: false,
+    runOnCompile: true,
+    strict: true,
+    except: ['test_helpers', 'template', 'mocks', '@aragon', 'openzeppelin'],
+  },
 }
 
 function getNetworkName() {
@@ -209,3 +254,44 @@ function readJson(fileName) {
 if (typeof task === 'function') {
   require('./scripts/hardhat-tasks')
 }
+
+// eslint-disable-next-line no-undef
+task(TASK_COMPILE).setAction(async function (args, hre, runSuper) {
+  for (const compiler of hre.config.solidity.compilers) {
+    compiler.settings.outputSelection['*']['*'].push('userdoc')
+  }
+  await runSuper()
+})
+
+// eslint-disable-next-line no-undef
+task('userdoc', 'Generate userdoc JSON files', async function (args, hre) {
+  await hre.run('compile')
+
+  const contractNames = await hre.artifacts.getAllFullyQualifiedNames()
+  const dirPath = path.join(__dirname, '/artifacts-userdoc')
+
+  if (fs.existsSync(dirPath)) {
+    fs.rmSync(dirPath, { recursive: true, force: true })
+  }
+
+  fs.mkdirSync(dirPath)
+
+  const contractHandlers = contractNames.map((contractName) =>
+    (async () => {
+      const [source, name] = contractName.split(':')
+      const { userdoc } = (await hre.artifacts.getBuildInfo(contractName)).output.contracts[source][name]
+
+      if (
+        !userdoc ||
+        (Object.values(userdoc.methods || {}).length === 0 && Object.values(userdoc.events || {}).length === 0)
+      ) {
+        return
+      }
+
+      const filePath = path.join(dirPath, `${name}.json`)
+      await fs.promises.writeFile(filePath, JSON.stringify(userdoc, null, 2))
+    })()
+  )
+
+  await Promise.all(contractHandlers)
+})

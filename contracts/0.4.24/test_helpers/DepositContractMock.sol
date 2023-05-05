@@ -1,16 +1,14 @@
-// SPDX-FileCopyrightText: 2020 Lido <info@lido.fi>
-
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.4.24;
 
-import "../interfaces/IDepositContract.sol";
 
 
 /**
   * @dev This is a mock. Don't use in production.
   */
-contract DepositContractMock is IDepositContract {
+contract DepositContractMock {
     struct Call {
         bytes pubkey;
         bytes withdrawal_credentials;

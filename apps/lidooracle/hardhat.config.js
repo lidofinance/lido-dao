@@ -1,13 +1,13 @@
 require('@aragon/buidler-aragon')
 
 const baseConfig = require('../../hardhat.config.js')
-const hooks = require('./scripts/buidler-hooks')
+const hooks = require('./scripts/buidler-hooks.js')
 
 module.exports = {
   ...baseConfig,
   paths: {
     ...baseConfig.paths,
-    root: '../..'
+    root: '../..',
   },
   defaultNetwork: process.env.NETWORK_NAME || 'localhost',
   // Aragon plugin configuration
@@ -15,9 +15,9 @@ module.exports = {
     ...baseConfig.aragon,
     appServePort: 3011,
     clientServePort: 3000,
-    appSrcPath: 'apps/lidooracle/app/',
-    appBuildOutputPath: 'apps/lidooracle/dist/',
-    appName: 'lidooracle',
-    hooks // Path to script hooks
-  }
+    appSrcPath: 'apps/legacyoracle/app/',
+    appBuildOutputPath: 'apps/legacyoracle/dist/',
+    appName: 'legacyoracle',
+    hooks, // Path to script hooks
+  },
 }

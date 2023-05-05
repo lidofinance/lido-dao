@@ -23,11 +23,11 @@ async function main() {
     user1,
     user2,
     // an unrelated address
-    nobody
+    nobody,
   ] = addresses
 
   const deployed = await deployDaoAndPool(appManager, voting, 100)
-  const { pool, nodeOperatorRegistry } = deployed
+  const { pool, nodeOperatorsRegistry } = deployed
 
   await pool.setFee(0.01 * 10000, { from: voting })
   await pool.setFeeDistribution(0.3 * 10000, 0.2 * 10000, 0.5 * 10000, { from: voting })
@@ -38,23 +38,27 @@ async function main() {
   const numKeys = 3
 
   for (let iProvider = 0; iProvider < numProviders; ++iProvider) {
-    const nosTx = await nodeOperatorRegistry.addNodeOperator(`NOS-${iProvider}`, nodeOperator, nosValidatorsLimit, { from: voting })
-    const nodeOperatorId = getEventArgument(nosTx, 'NodeOperatorAdded', 'id', { decodeForAbi: NodeOperatorsRegistry._json.abi })
+    const nosTx = await nodeOperatorRegistry.addNodeOperator(`NOS-${iProvider}`, nodeOperator, nosValidatorsLimit, {
+      from: voting,
+    })
+    const nodeOperatorId = getEventArgument(nosTx, 'NodeOperatorAdded', 'nodeOperatorId', {
+      decodeForAbi: NodeOperatorsRegistry._json.abi,
+    })
 
     const data = Array.from({ length: numKeys }, (_, iKey) => {
       const n = arbitraryN.clone().addn(10 * iKey + 1000 * iProvider)
       return {
         key: pad(`0x${n.toString(16)}`, 48, 'd'),
-        sig: pad(`0x${n.toString(16)}`, 96, 'e')
+        sig: pad(`0x${n.toString(16)}`, 96, 'e'),
       }
     })
 
     const keys = hexConcat(...data.map((v) => v.key))
     const sigs = hexConcat(...data.map((v) => v.sig))
 
-    await nodeOperatorRegistry.addSigningKeys(nodeOperatorId, numKeys, keys, sigs, { from: voting })
+    await nodeOperatorsRegistry.addSigningKeys(nodeOperatorId, numKeys, keys, sigs, { from: voting })
 
-    const totalKeys = await nodeOperatorRegistry.getTotalSigningKeyCount(nodeOperatorId, { from: nobody })
+    const totalKeys = await nodeOperatorsRegistry.getTotalSigningKeyCount(nodeOperatorId, { from: nobody })
     assertBn(totalKeys, numKeys, 'total signing keys')
 
     validatorData.push.apply(validatorData, data)

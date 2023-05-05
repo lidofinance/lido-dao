@@ -1,4 +1,6 @@
 {
+  "deployCommit": "35d8c862406f82c64091760aec8feab0e114aac1",
+  "deployerEOA": "0x8Ea83AD72396f1E0cD2f8E72b1461db8Eb6aF7B5",
   "networkId": 1,
   "ipfsAPI": "https://ipfs.infura.io:5001/api/v0",
   "lidoApmEnsName": "lidopm.eth",
@@ -23,7 +25,6 @@
     },
     "beaconSpec": {
       "depositContractAddress": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
-      "epochsPerFrame": 225,
       "slotsPerEpoch": 32,
       "secondsPerSlot": 12,
       "genesisTime": 1606824023
@@ -125,7 +126,10 @@
     "id": "0x3ca7c3e38968823ccb4c78ea688df41356f182ae1d159e4ee608d30d68cef320",
     "ipfsCid": "QmQkJMtvu4tyJvWrPXJfjLfyTWn959iayyNjp7YqNzX7pS",
     "contentURI": "0x697066733a516d516b4a4d7476753474794a76577250584a666a4c667954576e393539696179794e6a703759714e7a58377053",
-    "proxyAddress": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"
+    "proxyAddress": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+    "contract": "Lido",
+    "implementation": "0x17144556fd3424EDC8Fc8A4C940B2D04936d17eb",
+    "constructorArgs": []
   },
   "app:oracle": {
     "baseAddress": "0x1430194905301504e8830ce4B0b0df7187E84AbD",
@@ -134,7 +138,10 @@
     "id": "0x8b47ba2a8454ec799cd91646e7ec47168e91fd139b23f017455f3e5898aaba93",
     "ipfsCid": "QmUMPfiEKq5Mxm8y2GYQPLujGaJiWz1tvep5W7EdAGgCR8",
     "contentURI": "0x697066733a516d656138394d5533504852503763513157616b3672327355654d554146324c39727132624c6d5963644b764c57",
-    "proxyAddress": "0x442af784A788A5bd6F42A01Ebe9F287a871243fb"
+    "proxyAddress": "0x442af784A788A5bd6F42A01Ebe9F287a871243fb",
+    "contract": "LegacyOracle",
+    "implementation": "0xa29b819654cE6224A222bb5f586920105E2D7E0E",
+    "constructorArgs": []
   },
   "app:node-operators-registry": {
     "baseAddress": "0x5d39ABaa161e622B99D45616afC8B837E9F19a25",
@@ -143,7 +150,16 @@
     "id": "0x7071f283424072341f856ac9e947e7ec0eb68719f757a7e785979b6b8717579d",
     "ipfsCid": "Qma7PXHmEj4js2gjM9vtHPtqvuK82iS5EYPiJmzKLzU58G",
     "contentURI": "0x697066733a516d61375058486d456a346a7332676a4d3976744850747176754b3832695335455950694a6d7a4b4c7a55353847",
-    "proxyAddress": "0x55032650b14df07b85bF18A3a3eC8E0Af2e028d5"
+    "proxyAddress": "0x55032650b14df07b85bF18A3a3eC8E0Af2e028d5",
+    "contract": "NodeOperatorsRegistry",
+    "implementation": "0x8538930c385C0438A357d2c25CB3eAD95Ab6D8ed",
+    "constructorArgs": []
+  },
+  "nodeOperatorsRegistry": {
+    "parameters": {
+      "stakingModuleTypeId": "curated-onchain-v1",
+      "stuckPenaltyDelay": "432000"
+    }
   },
   "lidoApmDeployTx": "0xfa66476569ecef5790f2d0634997b952862bbca56aa088f151b8049421eeb87b",
   "lidoApmAddress": "0x0cb113890b04B49455DfE06554e2D784598A29C9",
@@ -226,5 +242,256 @@
     "4"
   ],
   "selfOwnedStETHBurnerDeployTx": "0xc74b79ce67fd3dd5c0f530e60c1f34d76208694df7d9d193478923dd193a1746",
-  "selfOwnedStETHBurnerAddress": "0xB280E33812c0B09353180e92e27b8AD399B07f26"
+  "selfOwnedStETHBurnerAddress": "0xB280E33812c0B09353180e92e27b8AD399B07f26",
+  "burner": {
+    "parameters": {
+      "totalCoverSharesBurnt": "0",
+      "totalNonCoverSharesBurnt": "32145684728326685744"
+    },
+    "contract": "Burner",
+    "address": "0xD15a672319Cf0352560eE76d9e89eAB0889046D3",
+    "constructorArgs": [
+      "0x8Ea83AD72396f1E0cD2f8E72b1461db8Eb6aF7B5",
+      "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
+      "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+      "0",
+      "32145684728326685744"
+    ]
+  },
+  "legacyOracle": {
+    "parameters": {
+      "lastCompletedEpochId": 0
+    }
+  },
+  "hashConsensusForAccounting": {
+    "parameters": {
+      "fastLaneLengthSlots": 100,
+      "epochsPerFrame": 225
+    },
+    "contract": "HashConsensus",
+    "address": "0xD624B08C83bAECF0807Dd2c6880C3154a5F0B288",
+    "constructorArgs": [
+      32,
+      12,
+      1606824023,
+      225,
+      100,
+      "0x8Ea83AD72396f1E0cD2f8E72b1461db8Eb6aF7B5",
+      "0x852deD011285fe67063a08005c71a85690503Cee"
+    ]
+  },
+  "accountingOracle": {
+    "parameters": {
+      "consensusVersion": 1
+    },
+    "contract": "AccountingOracle",
+    "implementation": "0xF3c5E0A67f32CF1dc07a8817590efa102079a1aF",
+    "address": "0x852deD011285fe67063a08005c71a85690503Cee",
+    "constructorArgs": [
+      "0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb",
+      "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+      "0x442af784A788A5bd6F42A01Ebe9F287a871243fb",
+      12,
+      1606824023
+    ],
+    "proxyConstructorArgs": [
+      "0x6F6541C2203196fEeDd14CD2C09550dA1CbEDa31",
+      "0x8Ea83AD72396f1E0cD2f8E72b1461db8Eb6aF7B5",
+      "0x"
+    ]
+  },
+  "hashConsensusForValidatorsExitBus": {
+    "parameters": {
+      "fastLaneLengthSlots": 100,
+      "epochsPerFrame": 75
+    },
+    "contract": "HashConsensus",
+    "address": "0x7FaDB6358950c5fAA66Cb5EB8eE5147De3df355a",
+    "constructorArgs": [
+      32,
+      12,
+      1606824023,
+      75,
+      100,
+      "0x8Ea83AD72396f1E0cD2f8E72b1461db8Eb6aF7B5",
+      "0x0De4Ea0184c2ad0BacA7183356Aea5B8d5Bf5c6e"
+    ]
+  },
+  "validatorsExitBusOracle": {
+    "parameters": {
+      "consensusVersion": 1
+    },
+    "contract": "ValidatorsExitBusOracle",
+    "implementation": "0xA89Ea51FddE660f67d1850e03C9c9862d33Bc42c",
+    "address": "0x0De4Ea0184c2ad0BacA7183356Aea5B8d5Bf5c6e",
+    "constructorArgs": [
+      12,
+      1606824023,
+      "0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb"
+    ],
+    "proxyConstructorArgs": [
+      "0x6F6541C2203196fEeDd14CD2C09550dA1CbEDa31",
+      "0x8Ea83AD72396f1E0cD2f8E72b1461db8Eb6aF7B5",
+      "0x"
+    ]
+  },
+  "depositSecurityModule": {
+    "parameters": {
+      "maxDepositsPerBlock": 150,
+      "minDepositBlockDistance": 25,
+      "pauseIntentValidityPeriodBlocks": 6646
+    },
+    "contract": "DepositSecurityModule",
+    "address": "0xC77F8768774E1c9244BEed705C4354f2113CFc09",
+    "constructorArgs": [
+      "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+      "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+      "0xFdDf38947aFB03C621C71b06C9C70bce73f12999",
+      150,
+      25,
+      6646
+    ]
+  },
+  "oracleReportSanityChecker": {
+    "parameters": {
+      "churnValidatorsPerDayLimit": 20000,
+      "oneOffCLBalanceDecreaseBPLimit": 500,
+      "annualBalanceIncreaseBPLimit": 1000,
+      "simulatedShareRateDeviationBPLimit": 50,
+      "maxValidatorExitRequestsPerReport": 600,
+      "maxAccountingExtraDataListItemsCount": 2,
+      "maxNodeOperatorsPerExtraDataItemCount": 100,
+      "requestTimestampMargin": 7680,
+      "maxPositiveTokenRebase": 750000
+    },
+    "contract": "OracleReportSanityChecker",
+    "address": "0x9305c1Dbfe22c12c66339184C0025d7006f0f1cC",
+    "constructorArgs": [
+      "0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb",
+      "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
+      [
+        20000,
+        500,
+        1000,
+        50,
+        600,
+        2,
+        100,
+        7680,
+        750000
+      ],
+      [
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        []
+      ]
+    ]
+  },
+  "oracleDaemonConfig": {
+    "parameters": {
+      "NORMALIZED_CL_REWARD_PER_EPOCH": 64,
+      "NORMALIZED_CL_REWARD_MISTAKE_RATE_BP": 1000,
+      "REBASE_CHECK_NEAREST_EPOCH_DISTANCE": 1,
+      "REBASE_CHECK_DISTANT_EPOCH_DISTANCE": 23,
+      "VALIDATOR_DELAYED_TIMEOUT_IN_SLOTS": 7200,
+      "VALIDATOR_DELINQUENT_TIMEOUT_IN_SLOTS": 28800,
+      "PREDICTION_DURATION_IN_SLOTS": 50400,
+      "FINALIZATION_MAX_NEGATIVE_REBASE_EPOCH_SHIFT": 1350,
+      "NODE_OPERATOR_NETWORK_PENETRATION_THRESHOLD_BP": 100
+    },
+    "contract": "OracleDaemonConfig",
+    "address": "0xbf05A929c3D7885a6aeAd833a992dA6E5ac23b09",
+    "constructorArgs": [
+      "0x8Ea83AD72396f1E0cD2f8E72b1461db8Eb6aF7B5",
+      []
+    ]
+  },
+  "withdrawalQueueERC721": {
+    "parameters": {
+      "name": "Lido: stETH Withdrawal NFT",
+      "symbol": "unstETH"
+    },
+    "contract": "WithdrawalQueueERC721",
+    "implementation": "0xE42C659Dc09109566720EA8b2De186c2Be7D94D9",
+    "address": "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
+    "constructorArgs": [
+      "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+      "Lido: stETH Withdrawal NFT",
+      "unstETH"
+    ],
+    "proxyConstructorArgs": [
+      "0x6F6541C2203196fEeDd14CD2C09550dA1CbEDa31",
+      "0x8Ea83AD72396f1E0cD2f8E72b1461db8Eb6aF7B5",
+      "0x"
+    ]
+  },
+  "withdrawalVault": {
+    "address": "0xB9D7934878B5FB9610B3fE8A5e441e8fad7E293f",
+    "contract": "WithdrawalVault",
+    "implementation": "0xCC52f17756C04bBa7E377716d7062fC36D7f69Fd",
+    "constructorArgs": [
+      "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+      "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c"
+    ]
+  },
+  "dummyEmptyContract": {
+    "contract": "DummyEmptyContract",
+    "address": "0x6F6541C2203196fEeDd14CD2C09550dA1CbEDa31",
+    "constructorArgs": []
+  },
+  "eip712StETH": {
+    "contract": "EIP712StETH",
+    "address": "0x8F73e4C2A6D852bb4ab2A45E6a9CF5715b3228B7",
+    "constructorArgs": [
+      "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"
+    ]
+  },
+  "stakingRouter": {
+    "contract": "StakingRouter",
+    "implementation": "0xD8784e748f59Ba711fB5643191Ec3fAdD50Fb6df",
+    "address": "0xFdDf38947aFB03C621C71b06C9C70bce73f12999",
+    "constructorArgs": [
+      "0x00000000219ab540356cBB839Cbe05303d7705Fa"
+    ],
+    "proxyConstructorArgs": [
+      "0x6F6541C2203196fEeDd14CD2C09550dA1CbEDa31",
+      "0x8Ea83AD72396f1E0cD2f8E72b1461db8Eb6aF7B5",
+      "0x"
+    ]
+  },
+  "lidoLocator": {
+    "contract": "LidoLocator",
+    "implementation": "0x1D920cc5bACf7eE506a271a5259f2417CaDeCE1d",
+    "address": "0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb",
+    "constructorArgs": [
+      [
+        "0x852deD011285fe67063a08005c71a85690503Cee",
+        "0xC77F8768774E1c9244BEed705C4354f2113CFc09",
+        "0x388C818CA8B9251b393131C08a736A67ccB19297",
+        "0x442af784A788A5bd6F42A01Ebe9F287a871243fb",
+        "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+        "0x9305c1Dbfe22c12c66339184C0025d7006f0f1cC",
+        "0x442af784A788A5bd6F42A01Ebe9F287a871243fb",
+        "0xD15a672319Cf0352560eE76d9e89eAB0889046D3",
+        "0xFdDf38947aFB03C621C71b06C9C70bce73f12999",
+        "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
+        "0x0De4Ea0184c2ad0BacA7183356Aea5B8d5Bf5c6e",
+        "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
+        "0xB9D7934878B5FB9610B3fE8A5e441e8fad7E293f",
+        "0xbf05A929c3D7885a6aeAd833a992dA6E5ac23b09"
+      ]
+    ],
+    "proxyConstructorArgs": [
+      "0x6F6541C2203196fEeDd14CD2C09550dA1CbEDa31",
+      "0x8Ea83AD72396f1E0cD2f8E72b1461db8Eb6aF7B5",
+      "0x"
+    ]
+  }
 }

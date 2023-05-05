@@ -39,12 +39,12 @@ async function startAragonClient(
   var deployedFileExists = await fileExists(deployedFileName)
   if (!deployedFileExists) {
     log(`File ${deployedFileName} doesn't exists`)
-    return 
+    return
   }
 
   const deployedFile = await readJSON(deployedFileName)
   const ensAddress = process.env.ENS_ADDRESS || deployedFile.ensAddress || '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e'
-  
+
 
   logHeader(`Checking out aragon-client repo...`)
   await gitCloneRepo(appsRepoPath, ARAGON_APPS_REPO, aragonAppsRepoRef)
@@ -96,7 +96,7 @@ async function startAragonClient(
     aragonEnv.ARAGON_DEFAULT_ETH_NODE = 'ws://localhost:8545'
     aragonEnv.ARAGON_IPFS_GATEWAY = 'https://mainnet.lido.fi/ipfs'
   }
-  
+
   console.log(`ARAGON_APP_LOCATOR=${appLocator}`)
   console.log(`ARAGON_ENS_REGISTRY_ADDRESS=${ensAddress}`)
   console.log(`ARAGON_DEFAULT_ETH_NODE=${aragonEnv.ARAGON_DEFAULT_ETH_NODE}`)
