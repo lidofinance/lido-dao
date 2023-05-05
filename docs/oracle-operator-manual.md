@@ -56,7 +56,7 @@ The daemon fetches the reportable epoch from the `LidoOracle` contract, and if t
 )
 ```
 
-Keep in mind that some of these transactions may revert. This happens when a transaction finalizing the current frame gets included in a block before your oracle's transaction. For example, such a transaction might had already been submitted by another oracle (but not yet included in a block) when your oracle fetched the current reportable epoch.
+Keep in mind that some of these transactions may revert. This happens when a transaction finalizing the current frame gets included in a block before your oracle's transaction. For example, such a transaction might have already been submitted by another oracle (but not yet included in a block) when your oracle fetched the current reportable epoch.
 
 Update stETH Price Data
 

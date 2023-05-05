@@ -1,5 +1,6 @@
 const fs = require('fs')
 const path = require('path')
+const { TASK_COMPILE } = require('hardhat/builtin-tasks/task-names')
 
 require('@aragon/hardhat-aragon')
 require('@nomiclabs/hardhat-web3')
@@ -253,3 +254,39 @@ function readJson(fileName) {
 if (typeof task === 'function') {
   require('./scripts/hardhat-tasks')
 }
+
+task(TASK_COMPILE).setAction(async function (args, hre, runSuper) {
+  for (const compiler of hre.config.solidity.compilers) {
+    compiler.settings.outputSelection['*']['*'].push('userdoc')
+  }
+  await runSuper()
+})
+
+task('userdoc', 'Generate userdoc JSON files', async function (args, hre) {
+  await hre.run('compile');
+
+  const contractNames = await hre.artifacts.getAllFullyQualifiedNames()
+  const dirPath = path.join(__dirname, '/artifacts-userdoc')
+
+  if (fs.existsSync(dirPath)) {
+    fs.rmSync(dirPath, { recursive: true, force: true })
+  }
+
+  fs.mkdirSync(dirPath)
+
+  const contractHandlers = contractNames.map((contractName) =>
+    (async () => {
+      const [source, name] = contractName.split(':')
+      const { userdoc } = (await hre.artifacts.getBuildInfo(contractName)).output.contracts[source][name]
+
+      if (!userdoc || (Object.values(userdoc.methods || {}).length === 0 && Object.values(userdoc.events || {}).length === 0)) {
+        return
+      }
+
+      const filePath = path.join(dirPath, `${name}.json`)
+      await fs.promises.writeFile(filePath, JSON.stringify(userdoc, null, 2))
+    })()
+  )
+
+  await Promise.all(contractHandlers)
+})
