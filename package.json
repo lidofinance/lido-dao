@@ -30,6 +30,7 @@
     "estimate-deposit-loop-gas": "yarn run test:unit ./estimate_deposit_loop_gas.js",
     "compile": "hardhat compile && yarn extract-abi",
     "clean": "hardhat clean",
+    "userdoc": "hardhat userdoc",
     "extract-abi": "node ./scripts/extract-abi.js",
     "size-contracts": "yarn run hardhat size-contracts",
     "deploy": "yarn run deploy:all",
