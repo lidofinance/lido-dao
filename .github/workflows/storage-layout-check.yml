@@ -20,6 +20,9 @@ jobs:
           node-version: 16.x
           cache: 'yarn'
 
+      - name: Submodules
+        run: git submodule update --init --recursive
+
       - name: Install yarn deps
         run: yarn
 
