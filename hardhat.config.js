@@ -255,6 +255,7 @@ if (typeof task === 'function') {
   require('./scripts/hardhat-tasks')
 }
 
+// eslint-disable-next-line no-undef
 task(TASK_COMPILE).setAction(async function (args, hre, runSuper) {
   for (const compiler of hre.config.solidity.compilers) {
     compiler.settings.outputSelection['*']['*'].push('userdoc')
@@ -262,8 +263,9 @@ task(TASK_COMPILE).setAction(async function (args, hre, runSuper) {
   await runSuper()
 })
 
+// eslint-disable-next-line no-undef
 task('userdoc', 'Generate userdoc JSON files', async function (args, hre) {
-  await hre.run('compile');
+  await hre.run('compile')
 
   const contractNames = await hre.artifacts.getAllFullyQualifiedNames()
   const dirPath = path.join(__dirname, '/artifacts-userdoc')
@@ -279,7 +281,10 @@ task('userdoc', 'Generate userdoc JSON files', async function (args, hre) {
       const [source, name] = contractName.split(':')
       const { userdoc } = (await hre.artifacts.getBuildInfo(contractName)).output.contracts[source][name]
 
-      if (!userdoc || (Object.values(userdoc.methods || {}).length === 0 && Object.values(userdoc.events || {}).length === 0)) {
+      if (
+        !userdoc ||
+        (Object.values(userdoc.methods || {}).length === 0 && Object.values(userdoc.events || {}).length === 0)
+      ) {
         return
       }
 
