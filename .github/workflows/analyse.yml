@@ -65,14 +65,14 @@ jobs:
         run: >
           poetry run slither . --sarif results.sarif --no-fail-pedantic
 
-      # - name: Check results.sarif presence
-      #   id: results
-      #   if: always()
-      #   shell: bash
-      #   run: >
-      #     test -f results.sarif &&
-      #     echo 'value=present' >> $GITHUB_OUTPUT ||
-      #     echo 'value=not' >> $GITHUB_OUTPUT
+      - name: Check results.sarif presence
+        id: results
+        if: always()
+        shell: bash
+        run: >
+          test -f results.sarif &&
+          echo 'value=present' >> $GITHUB_OUTPUT ||
+          echo 'value=not' >> $GITHUB_OUTPUT
 
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v2
