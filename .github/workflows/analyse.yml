@@ -57,10 +57,13 @@ jobs:
         run: >
           curl -sSL https://install.python-poetry.org | python - &&
           poetry install --no-root
+      
+      - name: Remove foundry.toml
+        run: rm -f foundry.toml
 
       - name: Run slither
         run: >
-          poetry run slither . --sarif results.sarif || true
+          poetry run slither . --sarif results.sarif --no-fail-pedantic
 
       - name: Check results.sarif presence
         id: results
