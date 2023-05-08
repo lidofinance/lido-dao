@@ -17,7 +17,7 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Run Slither
-      uses: lidofinance/slither-action@v0.3.1
+      uses: lidofinance/slither-action@v3.1.0
       id: slither
       with:
         node-version: 16
