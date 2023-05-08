@@ -13,6 +13,9 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
+    - name: Remove foundry.toml
+      run: rm -f foundry.toml
+
     - name: Run Slither
       uses: lidofinance/slither-action@v3.1.0
       id: slither
