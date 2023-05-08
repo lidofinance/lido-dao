@@ -6,22 +6,13 @@ import ReactDOM from 'react-dom'
 import { AragonApi } from '@aragon/api-react'
 import App from './App'
 
+const defaultState = {
+  isSyncing: true,
+}
+
 const reducer = (state) => {
   if (state === null) {
-    return {
-      oracleMembers: [],
-      quorum: null,
-      currentFrame: null,
-      expectedEpochId: null,
-      currentOraclesReportStatus: null,
-      allowedBeaconBalanceAnnualRelativeIncrease: null,
-      allowedBeaconBalanceRelativeDecrease: null,
-      beaconReportReceiver: null,
-      currentReportVariants: [],
-      lastCompletedReportDelta: null,
-      version: null,
-      isSyncing: true,
-    }
+    return defaultState
   }
   return state
 }

@@ -1,0 +1,249 @@
+[
+    {
+        "constant": true,
+        "inputs": [],
+        "name": "getChainConfig",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "slotsPerEpoch",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "secondsPerSlot",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "genesisTime",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": true,
+        "inputs": [],
+        "name": "getConsensusState",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "refSlot",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "consensusReport",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "bool",
+                "name": "isReportProcessing",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": true,
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "addr",
+                "type": "address"
+            }
+        ],
+        "name": "getConsensusStateForMember",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "currentFrameRefSlot",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "currentFrameConsensusReport",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "isMember",
+                        "type": "bool"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "isFastLane",
+                        "type": "bool"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "canReport",
+                        "type": "bool"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "lastMemberReportRefSlot",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "currentFrameMemberReport",
+                        "type": "bytes32"
+                    }
+                ],
+                "internalType": "struct HashConsensus.MemberConsensusState",
+                "name": "result",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": true,
+        "inputs": [],
+        "name": "getCurrentFrame",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "refSlot",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "reportProcessingDeadlineSlot",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": true,
+        "inputs": [],
+        "name": "getFastLaneMembers",
+        "outputs": [
+            {
+                "internalType": "address[]",
+                "name": "addresses",
+                "type": "address[]"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "lastReportedRefSlots",
+                "type": "uint256[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": true,
+        "inputs": [],
+        "name": "getFrameConfig",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "initialEpoch",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "epochsPerFrame",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "fastLaneLengthSlots",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": true,
+        "inputs": [],
+        "name": "getInitialRefSlot",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": true,
+        "inputs": [],
+        "name": "getMembers",
+        "outputs": [
+            {
+                "internalType": "address[]",
+                "name": "addresses",
+                "type": "address[]"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "lastReportedRefSlots",
+                "type": "uint256[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": true,
+        "inputs": [],
+        "name": "getQuorum",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": true,
+        "inputs": [],
+        "name": "getReportProcessor",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": true,
+        "inputs": [],
+        "name": "getReportVariants",
+        "outputs": [
+            {
+                "internalType": "bytes32[]",
+                "name": "variants",
+                "type": "bytes32[]"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "support",
+                "type": "uint256[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    }
+]

@@ -1,6 +1,10 @@
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import Aragon, { events } from '@aragon/api'
+import LidoABI from "./abi/Lido.abi.json"
+import LidoLocatorABI from "./abi/LidoLocator.abi.json"
+import AccountingOracleABI from "./abi/AccountingOracle.abi.json"
+import HashConsensusABI from "./abi/HashConsensus.abi.json"
 
 const app = new Aragon()
 
@@ -11,50 +15,15 @@ app.store(
     }
 
     try {
-      switch (event) {
-        case 'MemberAdded':
-          return { ...nextState, oracleMembers: await getOracleMembers() }
-        case 'MemberRemoved':
-          return { ...nextState, oracleMembers: await getOracleMembers() }
-        case 'QuorumChanged':
-          return { ...nextState, quorum: await getQuorum() }
-        case 'ExpectedEpochIdUpdated':
-          return { ...nextState, expectedEpochId: await getExpectedEpochId() }
-        case 'AllowedBeaconBalanceAnnualRelativeIncreaseSet':
-          return {
-            ...nextState,
-            allowedBeaconBalanceAnnualRelativeIncrease: await getAllowedBeaconBalanceAnnualRelativeIncrease(),
-          }
-        case 'AllowedBeaconBalanceRelativeDecreaseSet':
-          return {
-            ...nextState,
-            allowedBeaconBalanceRelativeDecrease: await getAllowedBeaconBalanceRelativeDecrease(),
-          }
-        case 'UI:UpdateFrame':
-          return { ...nextState, currentFrame: await getCurrentFrame() }
-        case 'BeaconReportReceiverSet':
-          return {
-            ...nextState,
-            beaconReportReceiver: await getBeaconReportReceiver(),
-          }
-        case 'BeaconReported':
-          return {
-            ...nextState,
-            currentReportVariants: await getCurrentReportVariants(),
-            currentOraclesReportStatus: await getCurrentOraclesReportStatus(),
-          }
-        case 'ContractVersionSet':
-          return {
-            ...nextState,
-            version: await getVersion(),
-          }
-        case events.SYNC_STATUS_SYNCING:
-          return { ...nextState, isSyncing: true }
-        case events.SYNC_STATUS_SYNCED:
-          return { ...nextState, isSyncing: false }
-        default:
-          return state
+      if (event === events.SYNC_STATUS_SYNCING) {
+        return { ...nextState, isSyncing: true }
       }
+
+      if (event === events.SYNC_STATUS_SYNCED) {
+        return { ...nextState, isSyncing: false }
+      }
+
+      return nextState
     } catch (err) {
       console.log(err)
     }
@@ -70,112 +39,160 @@ app.store(
  *                     *
  ***********************/
 
+const accountingOracleState = [
+  {
+    appStateKey: "extraDataFormatEmpty",
+    contractFunction: "EXTRA_DATA_FORMAT_EMPTY"
+  },
+  {
+    appStateKey: "extraDataFormatList",
+    contractFunction: "EXTRA_DATA_FORMAT_LIST"
+  },
+  {
+    appStateKey: "extraDataTypeExitedValidators",
+    contractFunction: "EXTRA_DATA_TYPE_EXITED_VALIDATORS"
+  },
+  {
+    appStateKey: "extraDataTypeStuckValidators",
+    contractFunction: "EXTRA_DATA_TYPE_STUCK_VALIDATORS"
+  },
+  {
+    appStateKey: "genesisTime",
+    contractFunction: "GENESIS_TIME"
+  },
+  {
+    appStateKey: "legacyOracle",
+    contractFunction: "LEGACY_ORACLE"
+  },
+  {
+    appStateKey: "secondsPerSlot",
+    contractFunction: "SECONDS_PER_SLOT"
+  },
+  {
+    appStateKey: "consensusContract",
+    contractFunction: "getConsensusContract"
+  },
+  {
+    appStateKey: "consensusReport",
+    contractFunction: "getConsensusReport"
+  },
+  {
+    appStateKey: "consensusVersion",
+    contractFunction: "getConsensusVersion"
+  },
+  {
+    appStateKey: "contractVersion",
+    contractFunction: "getContractVersion"
+  },
+  {
+    appStateKey: "lastProcessingRefSlot",
+    contractFunction: "getLastProcessingRefSlot"
+  },
+  {
+    appStateKey: "processingState",
+    contractFunction: "getProcessingState"
+  },
+  {
+    appStateKey: "contractVersion",
+    contractFunction: "getContractVersion"
+  },
+  {
+    appStateKey: "contractVersion",
+    contractFunction: "getContractVersion"
+  },
+]
+
+
+const hashConsensusState = [
+  {
+    appStateKey: "chainConfig",
+    contractFunction: "getChainConfig"
+  },
+  {
+    appStateKey: "consensusState",
+    contractFunction: "getConsensusState"
+  },
+  {
+    appStateKey: "currentFrame",
+    contractFunction: "getCurrentFrame"
+  },
+  {
+    appStateKey: "fastLaneMembers",
+    contractFunction: "getFastLaneMembers"
+  },
+  {
+    appStateKey: "frameConfig",
+    contractFunction: "getFrameConfig"
+  },
+  {
+    appStateKey: "initialRefSlot",
+    contractFunction: "getInitialRefSlot"
+  },
+  {
+    appStateKey: "members",
+    contractFunction: "getMembers"
+  },
+  {
+    appStateKey: "quorum",
+    contractFunction: "getQuorum"
+  },
+  {
+    appStateKey: "reportProcessor",
+    contractFunction: "getReportProcessor"
+  },
+  {
+    appStateKey: "reportVariants",
+    contractFunction: "getReportVariants"
+  }
+]
+
 function initializeState() {
   return async (cachedState) => {
-    const [
-      oracleMembers,
-      quorum,
-      currentFrame,
-      expectedEpochId,
-      currentOraclesReportStatus,
-      allowedBeaconBalanceAnnualRelativeIncrease,
-      allowedBeaconBalanceRelativeDecrease,
-      beaconReportReceiver,
-      currentReportVariants,
-      lastCompletedReportDelta,
-      version,
-    ] = await Promise.all([
-      getOracleMembers(),
-      getQuorum(),
-      getCurrentFrame(),
-      getExpectedEpochId(),
-      getCurrentOraclesReportStatus(),
-      getAllowedBeaconBalanceAnnualRelativeIncrease(),
-      getAllowedBeaconBalanceRelativeDecrease(),
-      getBeaconReportReceiver(),
-      getCurrentReportVariants(),
-      getLastCompletedReportDelta(),
-      getVersion(),
-    ])
+
+    const lido = await app.call("getLido").toPromise()
+    const lidoContract = app.external(lido, LidoABI)
+
+
+    const locator = await lidoContract.getLidoLocator().toPromise()
+    const locatorContract = app.external(locator, LidoLocatorABI)
+
+
+    const accountingOracle = await locatorContract.accountingOracle().toPromise()
+    const accountingOracleContract = app.external(accountingOracle, AccountingOracleABI)
+    const aoPromises = accountingOracleState.map(({ contractFunction }) => accountingOracleContract[contractFunction]().toPromise())
+    const settledAoPromises = await Promise.allSettled(aoPromises)
+    const aoState = settledAoPromises.reduce((stateObject, cur, index) => {
+      stateObject[accountingOracleState[index].appStateKey] = cur.value
+      return stateObject
+    }, {})
+
+
+    const { consensusContract } = aoState
+    const hashConsensusContract = app.external(consensusContract, HashConsensusABI)
+    const hcPromises = hashConsensusState.map(({ contractFunction }) => hashConsensusContract[contractFunction]().toPromise())
+    const settledHcPromises = await Promise.allSettled(hcPromises)
+    const hcState = settledHcPromises.reduce((stateObject, cur, index) => {
+      stateObject[hashConsensusState[index].appStateKey] = cur.value
+      return stateObject
+    }, {})
+
+    const memberPromises = hcState.members.addresses.map((memberAddress) => hashConsensusContract.getConsensusStateForMember(memberAddress).toPromise())
+    const settledMemberPromises = await Promise.allSettled(memberPromises)
+
+
+    hcState.memberDetails = settledMemberPromises.reduce((stateArray, cur, index) => {
+      stateArray.push({
+        ...cur.value,
+        address: hcState.members.addresses[index]
+      })
+      return stateArray
+    }, [])
 
     return {
       ...cachedState,
-      oracleMembers,
-      quorum,
-      currentFrame,
-      expectedEpochId,
-      currentOraclesReportStatus,
-      allowedBeaconBalanceAnnualRelativeIncrease,
-      allowedBeaconBalanceRelativeDecrease,
-      beaconReportReceiver,
-      currentReportVariants,
-      lastCompletedReportDelta,
-      version,
+      lido,
+      ...aoState,
+      ...hcState
     }
   }
-}
-
-function getOracleMembers() {
-  return app.call('getOracleMembers').toPromise()
-}
-
-function getQuorum() {
-  return app.call('getQuorum').toPromise()
-}
-
-async function getCurrentFrame() {
-  const frame = await app.call('getCurrentFrame').toPromise()
-  return {
-    frameEpochId: String(frame.frameEpochId),
-    frameStartTime: +frame.frameStartTime,
-    frameEndTime: +frame.frameEndTime,
-  }
-}
-
-function getExpectedEpochId() {
-  return app.call('getExpectedEpochId').toPromise()
-}
-
-function getCurrentOraclesReportStatus() {
-  return app.call('getCurrentOraclesReportStatus').toPromise()
-}
-
-function getCurrentReportVariantsSize() {
-  return app.call('getCurrentReportVariantsSize').toPromise()
-}
-
-async function getCurrentReportVariant(index) {
-  return app.call('getCurrentReportVariant', index).toPromise()
-}
-
-async function getCurrentReportVariants() {
-  const size = await getCurrentReportVariantsSize()
-
-  const variants = []
-  for (let i = 0; i < size; i++) {
-    const variant = await getCurrentReportVariant(i)
-    variants.push(variant)
-  }
-
-  return variants
-}
-
-function getLastCompletedReportDelta() {
-  return app.call('getLastCompletedReportDelta').toPromise()
-}
-
-function getAllowedBeaconBalanceAnnualRelativeIncrease() {
-  return app.call('getAllowedBeaconBalanceAnnualRelativeIncrease').toPromise()
-}
-
-function getAllowedBeaconBalanceRelativeDecrease() {
-  return app.call('getAllowedBeaconBalanceRelativeDecrease').toPromise()
-}
-
-function getBeaconReportReceiver() {
-  return app.call('getBeaconReportReceiver').toPromise()
-}
-
-async function getVersion() {
-  return app.call('getVersion').toPromise()
 }

@@ -30,6 +30,7 @@ async function assertSingleEvent(instance, eventName, instanceName = null, fromB
 
 async function assertNoEvents(instance, instanceName = null, fromBlock = 4532202) {
   const allEvents = await instance.getPastEvents('allEvents', { fromBlock })
+  console.log({allEvents})
   const checkDesc = `${instanceName || instance.constructor.contractName} has generated no events`
   assert.equal(allEvents.length, 0, checkDesc)
   log.success(checkDesc)

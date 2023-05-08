@@ -7,7 +7,7 @@ module.exports = {
   ...baseConfig,
   paths: {
     ...baseConfig.paths,
-    root: '../..'
+    root: '../..',
   },
   defaultNetwork: process.env.NETWORK_NAME || 'localhost',
   // Aragon plugin configuration
@@ -18,6 +18,6 @@ module.exports = {
     appSrcPath: 'apps/lido/app/',
     appBuildOutputPath: 'apps/lido/dist/',
     appName: 'lido',
-    hooks // Path to script hooks
-  }
+    hooks, // Path to script hooks
+  },
 }

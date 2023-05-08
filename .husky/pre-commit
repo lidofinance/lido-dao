@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+RED_COLOR='\033[0;31m'
+NO_COLOR='\033[0m'
+
+yarn compile
+yarn lint

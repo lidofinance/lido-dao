@@ -56,7 +56,7 @@ The daemon fetches the reportable epoch from the `LidoOracle` contract, and if t
 )
 ```
 
-Keep in mind that some of these transactions may revert. This happens when a transaction finalizing the current frame gets included in a block before your oracle's transaction. For example, such a transaction might had already been submitted by another oracle (but not yet included in a block) when your oracle fetched the current reportable epoch.
+Keep in mind that some of these transactions may revert. This happens when a transaction finalizing the current frame gets included in a block before your oracle's transaction. For example, such a transaction might have already been submitted by another oracle (but not yet included in a block) when your oracle fetched the current reportable epoch.
 
 Update stETH Price Data
 
@@ -115,7 +115,7 @@ This will start the oracle in daemon mode. You can also run it in a one-off mode
 ## Prometheus metrics
 
 Lido Oracle daemon 2.0.0 exposes metrics via Prometheus exporter. We encourage Oracle operators to use them to monitor daemon reports and process status.
-Prometheus exporter is running on port 8000 and provides 5 logical metrics groups.  
+Prometheus exporter is running on port 8000 and provides 5 logical metrics groups.
 For the full list of available Prometheus metrics please check [the Lido oracle readme](https://github.com/lidofinance/lido-oracle#prometheus-metrics). We recommend to monitor at least the following ones:
 
 | name                            | description                                                      | frequency                                 | goal                                                                                                                                                                   |
