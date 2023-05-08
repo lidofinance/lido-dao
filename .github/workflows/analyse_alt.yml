@@ -1,0 +1,30 @@
+name: Code Analysis
+
+on:
+  push:
+    branches: [master, develop]
+  pull_request:
+    branches: [master, develop]
+
+jobs:
+  slither:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Run Slither
+      uses: crytic/slither-action@v0.3.0
+      id: slither
+      with:
+        node-version: 16
+        sarif: results.sarif
+        fail-on: none
+
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: ${{ steps.slither.outputs.sarif }}
