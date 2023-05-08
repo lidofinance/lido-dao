@@ -60,7 +60,8 @@ jobs:
       
       - name: Install forge
         run: >
-          curl -L https://foundry.paradigm.xyz | bash
+          curl -L https://foundry.paradigm.xyz | bash &&
+          foundryup
 
       - name: Run slither
         run: >
