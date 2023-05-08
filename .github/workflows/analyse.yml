@@ -58,9 +58,12 @@ jobs:
           curl -sSL https://install.python-poetry.org | python - &&
           poetry install --no-root
       
-      - name: Install forge
+      - name: Download foundry
         run: >
-          curl -L https://foundry.paradigm.xyz | bash &&
+          curl -L https://foundry.paradigm.xyz | bash
+      
+      - name: Install foundry
+        run: >
           foundryup
 
       - name: Run slither
