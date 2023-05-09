@@ -29,7 +29,7 @@ The general flow is the following:
 
 5. The protocol distributes the pooled Ether evenly between all active Node Operators in `32 Ether`
    chunks. When it assigns the next deposit to a Node Operator, it takes the first non-used signing
-   key, as well as the accociated signature, from the Node Operator’s usable set and performs
+   key, as well as the associated signature, from the Node Operator’s usable set and performs
    a deposit to the official `DepositContract`, submitting the pooled funds. At that time, the Node
    Operator should have the validator already running and configured with the public key being used.
 
@@ -58,12 +58,12 @@ each Node Operator runs.
 > second — `0.8` StETH.
 
 The fee is nominated in StETH, a liquid version of ETH2 token introduced by the Lido protocol. The
-tokens correspond 1:1 to the Ether that the token holder would be able get by burning their StETH
+tokens correspond 1:1 to the Ether that the token holder would be able to get by burning their StETH
 if transfers were already enabled in the Beacon chain. At any time point, the total amount of StETH
 tokens is equal to the total amount of Ether controlled by the protocol on both ETH1 and ETH2 sides.
 
 When a user submits Ether to the pool, they get the same amount of freshly-minted StETH tokens.
-When reward is received on the ETH2 side, each StETH holder’s balance increases by the same
+When the reward is received on the ETH2 side, each StETH holder’s balance increases by the same
 percentage that the total amount of protocol-controlled Ether has increased, corrected for the
 protocol fee which is taken by [minting new StETH tokens] to the fee recipients.
 
@@ -86,7 +86,7 @@ Becoming a Lido Node Operator involves several steps, all of which are detailed 
 
 ### Expressing interest to the DAO holders
 
-To include a Node Operator to the protocol, DAO holders must perform a voting. A Node Operator
+To include a Node Operator to the protocol, DAO holders must perform a vote. A Node Operator
 is defined by an address that is used for two purposes:
 
 1. The protocol pays the fee by minting StETH tokens to this address.

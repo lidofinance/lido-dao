@@ -120,8 +120,8 @@ async function hashConsensusFactory({ voting, oracle, signers, legacyOracle, dep
     oracle.address
   )
 
-  // TODO: uncomment and fix undefined initialEpoch
-  // await consensus.updateInitialEpoch(initialEpoch, { from: voting.address })
+  const initialEpoch = +(await legacyOracle.getLastCompletedEpochId()) + EPOCHS_PER_FRAME
+  await consensus.updateInitialEpoch(initialEpoch, { from: voting.address })
 
   await consensus.grantRole(await consensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(), voting.address, { from: voting.address })
   await consensus.grantRole(await consensus.DISABLE_CONSENSUS_ROLE(), voting.address, { from: voting.address })

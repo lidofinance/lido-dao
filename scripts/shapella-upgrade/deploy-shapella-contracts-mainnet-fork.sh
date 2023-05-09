@@ -1,4 +1,5 @@
 #!/bin/bash
+# set -e
 
 # trap ctrl-c and call ctrl_c()
 trap ctrl_c INT
@@ -18,23 +19,29 @@ function ctrl_c() {
 # Run ganache from the scripts at first with
 (nc -vz 127.0.0.1 $local_rpc_port) &>/dev/null && kill -15 $(lsof -t -i:$local_rpc_port)
 
-RED='\033[0;31m'
-NC='\033[0m'
-echo -e "${RED}[!]${NC} Temp workaround: forking from block #17075073\n"
-sleep 3
-
-fork_command="npx ganache --chain.vmErrorsOnRPCResponse true --fork.blockNumber 17075073 --wallet.totalAccounts 10 --chain.chainId 1337 --fork.url https://mainnet.infura.io/v3/$WEB3_INFURA_PROJECT_ID --miner.blockGasLimit 92000000 --server.host localhost --server.port $local_rpc_port --hardfork istanbul -d"
-$fork_command &
-fork_pid=$$
-
-export DEPLOYER=0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1 # ganache account 0 (private key should be added to accounts.json)
+export DEPLOYER=0xBC862d4beE4E1cd82B9e8519b4375c3457fc6A5a # ganache account 0 (private key should be added to accounts.json)
 export NETWORK=mainnet-fork-shapella-upgrade
 export GAS_PRICE=0
 export DEFAULT_CONFIG_FILE="deployed-mainnet-upgrade-defaults.json"
 export LIDO_LOCATOR_PROXY_PREDEPLOYED="0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb"
+export NETWORK_STATE_FILE_BASENAME="deployed-upgrade"
+
+key_json_prefix="\"${NETWORK}\": [\""
+key_json_postfix='"]'
+line=$(grep '"mainnet-fork-shapella-upgrade"' accounts.json)
+text="${line#*${key_json_prefix}}"
+text="${text%${key_json_postfix}*}"
+deployer_private_key="0x${text}"
+
+fork_command="npx ganache --chain.vmErrorsOnRPCResponse true --account \"$deployer_private_key,100000000000000000000\" --chain.chainId 1337 --fork.url https://mainnet.infura.io/v3/$WEB3_INFURA_PROJECT_ID --miner.blockGasLimit 92000000 --server.host 127.0.0.1 --server.port $local_rpc_port --hardfork istanbul -d -u $DEPLOYER"
+$fork_command &
+fork_pid=$$
 
 sleep 10
 
+DEPLOYED_FILE="${NETWORK_STATE_FILE_BASENAME}-$NETWORK.json"
+rm -f $DEPLOYED_FILE
+cp $DEFAULT_CONFIG_FILE $DEPLOYED_FILE
 bash scripts/shapella-upgrade/deploy-shapella-contracts.sh
 
 sleep 2147483647

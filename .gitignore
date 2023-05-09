@@ -48,3 +48,6 @@ cli/vendor
 # foundry artifacts
 foundry/cache
 foundry/out
+
+logs
+**/verificator_diffs/
