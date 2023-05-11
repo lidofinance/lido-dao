@@ -53,7 +53,7 @@ ipfs add -qr --only-hash apps/lido/dist/ | tail -n 1
 ```
 
 
-This command should output `QmXULdguL2DCxR2wpo8Z7kdAkvb2n2BatAmuPNdx7ckJMm`.
+This command should output `QmT4jdi1FhMEKUvWSQ1hwxn36WH9KjegCuZtAhJkchRkzp`.
 
 
 Now we have to obtain the content URI, which is this hash encoded for Aragon.
@@ -61,11 +61,11 @@ Now we have to obtain the content URI, which is this hash encoded for Aragon.
 Now we run the script,
 
 ```bash
-export IPFS_HASH=QmXULdguL2DCxR2wpo8Z7kdAkvb2n2BatAmuPNdx7ckJMm
+export IPFS_HASH=QmT4jdi1FhMEKUvWSQ1hwxn36WH9KjegCuZtAhJkchRkzp
 npx hardhat run scripts/helpers/getContentUri.js
 ```
 
-This command should print `0x697066733a516d58554c6467754c32444378523277706f385a376b64416b7662326e32426174416d75504e647837636b4a4d6d`, which is our content URI.
+This command should print `0x697066733a516d54346a64693146684d454b5576575351316877786e33365748394b6a656743755a7441684a6b6368526b7a70`, which is our content URI.
 
 ### 2. Verifying on-chain StakingRouter App content URI
 
@@ -77,6 +77,6 @@ Now that we have the IPFS hash and content URI, let's see that it is, in fact, t
 
 Open the [StakingRouter app](https://mainnet.lido.fi/#/lido-dao/0x55032650b14df07b85bf18a3a3ec8e0af2e028d5/) in your browser, then open the network inspector and refresh the page to track all of the network requests that the website makes.
 
-You will find that one of the two HTML files has, in fact, been loaded from `https://ipfs.mainnet.fi/ipfs/QmXULdguL2DCxR2wpo8Z7kdAkvb2n2BatAmuPNdx7ckJMm/index.html`.
+You will find that one of the two HTML files has, in fact, been loaded from `https://ipfs.mainnet.fi/ipfs/QmT4jdi1FhMEKUvWSQ1hwxn36WH9KjegCuZtAhJkchRkzp/index.html`.
 
 You are done! ✨
