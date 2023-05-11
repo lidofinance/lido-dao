@@ -49,7 +49,7 @@ npx hardhat run scripts/build-apps-frontend.js
 Get the IPFS hash of the build folder,
 
 ```bash
-ipfs add -qr --only-hash apps/lido/dist/ | tail -n 1
+ipfs add -qr --only-hash apps/node-operators-registry/dist/ | tail -n 1
 ```
 
 
