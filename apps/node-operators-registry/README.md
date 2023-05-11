@@ -26,7 +26,7 @@ Go into the directory,
 cd lido-dao
 ```
 
-Checkout [this commit](https://github.com/lidofinance/lido-dao/commit/c3f680fc25d5ea48de69b65f4aff1f71723ef0e0) (the latest `yarn.lock` update for the StakingRouter app),
+Checkout [this commit](https://github.com/lidofinance/lido-dao/commit/34f5d0d428fcb51aae74f0cb7387b9bd59916817) (the latest `yarn.lock` update for the StakingRouter app),
 
 ```bash
 git checkout 34f5d0d428fcb51aae74f0cb7387b9bd59916817
