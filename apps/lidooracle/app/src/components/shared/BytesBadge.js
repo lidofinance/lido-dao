@@ -1,4 +1,4 @@
-import { GU, textStyle } from '@aragon/ui'
+import { GU, MONOSPACE_FONT_FAMILY, textStyle } from '@aragon/ui'
 import BadgeBase from '@aragon/ui/dist/BadgeBase'
 import IconCheck from '@aragon/ui/dist/IconCheck'
 import React, { useCallback, useEffect, useState } from 'react'
@@ -7,6 +7,7 @@ import styled from 'styled-components'
 
 const BadgeText = styled.span`
   margin-left: ${0.5 * GU}px;
+  font-family: ${MONOSPACE_FONT_FAMILY};
 `
 
 export const BytesBadge = ({ bytes }) => {
