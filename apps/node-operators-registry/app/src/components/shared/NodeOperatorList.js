@@ -39,10 +39,9 @@ export const NodeOperatorList = () => {
         'Node operators',
         'Reward address',
         <ColumnName key={Math.random()}>
-          <p>SL / SV / SKu / SKt </p>{' '}
+          <p>A / D / V / E </p>{' '}
           <Help hint="SL">
-            Staking limit / Stopped validators / Used signing keys / Total
-            signing keys{' '}
+            Added / Deposited / Vetted / Exited{' '}
           </Help>
         </ColumnName>,
       ]}
@@ -53,13 +52,13 @@ export const NodeOperatorList = () => {
         </Dot>,
         no.name,
         <IdentityBadge key={name} entity={no.rewardAddress} />,
-        no.stakingLimit +
+        no.totalAddedValidators +
         '/' +
-        no.stoppedValidators +
+        no.totalDepositedValidators +
         '/' +
-        no.usedSigningKeys +
+        no.totalVettedValidators +
         '/' +
-        no.totalSigningKeys,
+        no.totalExitedValidators,
       ]}
     />
   )
