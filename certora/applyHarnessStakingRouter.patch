@@ -1,0 +1,261 @@
+--- ../contracts/0.8.9/StakingRouter.sol	2023-04-23 13:50:04.760134300 +0300
++++ 	2023-04-19 11:44:55.041438500 +0300
+@@ -4,18 +4,18 @@
+ /* See contracts/COMPILERS.md */
+ pragma solidity 0.8.9;
+ 
+-import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.sol";
++import {AccessControlEnumerable} from "../../contracts/0.8.9/utils/access/AccessControlEnumerable.sol";
+ 
+-import {IStakingModule} from "./interfaces/IStakingModule.sol";
++import {IStakingModule} from "../../contracts/0.8.9/interfaces/IStakingModule.sol";
+ 
+-import {Math256} from "../common/lib/Math256.sol";
+-import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
+-import {MinFirstAllocationStrategy} from "../common/lib/MinFirstAllocationStrategy.sol";
++import {Math256} from "../../contracts/common/lib/Math256.sol";
++import {UnstructuredStorage} from "../../contracts/0.8.9/lib/UnstructuredStorage.sol";
++import {MinFirstAllocationStrategy} from "../../contracts/common/lib/MinFirstAllocationStrategy.sol";
+ 
+-import {BeaconChainDepositor} from "./BeaconChainDepositor.sol";
+-import {Versioned} from "./utils/Versioned.sol";
++import {BeaconChainDepositorHarness} from "../helpers/BeaconChainDepositor.sol";
++import {Versioned} from "../../contracts/0.8.9/utils/Versioned.sol";
+ 
+-contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Versioned {
++contract StakingRouter is AccessControlEnumerable, BeaconChainDepositorHarness, Versioned {
+     using UnstructuredStorage for bytes32;
+ 
+     /// @dev events
+@@ -131,7 +131,7 @@
+     /// @dev restrict the name size with 31 bytes to storage in a single slot
+     uint256 public constant MAX_STAKING_MODULE_NAME_LENGTH = 31;
+ 
+-    constructor(address _depositContract) BeaconChainDepositor(_depositContract) {}
++    constructor(address _depositContract) BeaconChainDepositorHarness(_depositContract) {}
+ 
+     /**
+      * @dev proxy initialization
+@@ -139,7 +139,7 @@
+      * @param _lido Lido address
+      * @param _withdrawalCredentials Lido withdrawal vault contract address
+      */
+-    function initialize(address _admin, address _lido, bytes32 _withdrawalCredentials) external {
++    function initialize(address _admin, address _lido, bytes32 _withdrawalCredentials) public {
+         if (_admin == address(0)) revert ZeroAddress("_admin");
+         if (_lido == address(0)) revert ZeroAddress("_lido");
+ 
+@@ -482,7 +482,7 @@
+         bool _triggerUpdateFinish,
+         ValidatorsCountsCorrection memory _correction
+     )
+-        external
++        public virtual
+         onlyRole(UNSAFE_SET_EXITED_VALIDATORS_ROLE)
+     {
+         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
+@@ -1026,6 +1026,7 @@
+                     stakingModuleFees[rewardedStakingModulesCount] = stakingModuleFee;
+                 }
+                 // else keep stakingModuleFees[rewardedStakingModulesCount] = 0, but increase totalFee
++                else {stakingModuleFees[rewardedStakingModulesCount] = 0;}
+ 
+                 totalFee += (uint96((stakingModuleValidatorsShare * stakingModulesCache[i].treasuryFee) / TOTAL_BASIS_POINTS) + stakingModuleFee);
+ 
+@@ -1042,13 +1043,15 @@
+         assert(totalFee <= precisionPoints);
+ 
+         /// @dev shrink arrays
+-        if (rewardedStakingModulesCount < stakingModulesCount) {
++        /// @notice Certora : restrict rewarded modules count to avoid assembly block.
++        require (rewardedStakingModulesCount == stakingModulesCount); 
++        /* {
+             assembly {
+                 mstore(stakingModuleIds, rewardedStakingModulesCount)
+                 mstore(recipients, rewardedStakingModulesCount)
+                 mstore(stakingModuleFees, rewardedStakingModulesCount)
+             }
+-        }
++        }*/
+     }
+ 
+     /// @notice Helper for Lido contract (DEPRECATED)
+--- ../contracts/0.8.9/BeaconChainDepositor.sol	2023-03-14 12:09:21.827860300 +0200
++++ 	2023-04-19 09:13:49.351314200 +0300
+@@ -4,7 +4,7 @@
+ // See contracts/COMPILERS.md
+ pragma solidity 0.8.9;
+ 
+-import {MemUtils} from "../common/lib/MemUtils.sol";
++import {MemUtils} from "../../contracts/common/lib/MemUtils.sol";
+ 
+ interface IDepositContract {
+     function get_deposit_root() external view returns (bytes32 rootHash);
+@@ -43,7 +43,8 @@
+         bytes memory _withdrawalCredentials,
+         bytes memory _publicKeysBatch,
+         bytes memory _signaturesBatch
+-    ) internal {
++    ) internal virtual {
++        /*
+         if (_publicKeysBatch.length != PUBLIC_KEY_LENGTH * _keysCount) {
+             revert InvalidPublicKeysBatchLength(_publicKeysBatch.length, PUBLIC_KEY_LENGTH * _keysCount);
+         }
+@@ -66,6 +67,7 @@
+                 ++i;
+             }
+         }
++        */
+     }
+ 
+     /// @dev computes the deposit_root_hash required by official Beacon Deposit contract
+--- ../contracts/0.4.24/nos/NodeOperatorsRegistry.sol	2023-04-23 13:50:04.751085900 +0300
++++ 	2023-05-01 14:46:10.020825200 +0300
+@@ -8,13 +8,13 @@
+ import {SafeMath} from "@aragon/os/contracts/lib/math/SafeMath.sol";
+ import {UnstructuredStorage} from "@aragon/os/contracts/common/UnstructuredStorage.sol";
+ 
+-import {Math256} from "../../common/lib/Math256.sol";
+-import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
+-import {ILidoLocator} from "../../common/interfaces/ILidoLocator.sol";
+-import {IBurner} from "../../common/interfaces/IBurner.sol";
+-import {SigningKeys} from "../lib/SigningKeys.sol";
+-import {Packed64x4} from "../lib/Packed64x4.sol";
+-import {Versioned} from "../utils/Versioned.sol";
++import {Math256} from "../../contracts/common/lib/Math256.sol";
++import {MinFirstAllocationStrategy} from "../../contracts/common/lib/MinFirstAllocationStrategy.sol";
++import {ILidoLocator} from "../../contracts/common/interfaces/ILidoLocator.sol";
++import {IBurner} from "../../contracts/common/interfaces/IBurner.sol";
++import {SigningKeys} from "./SigningKeys.sol";
++import {Packed64x4} from "../../contracts/0.4.24/lib/Packed64x4.sol";
++import {Versioned} from "../../contracts/0.4.24/utils/Versioned.sol";
+ 
+ interface IStETH {
+     function sharesOf(address _account) external view returns (uint256);
+@@ -888,9 +888,9 @@
+             assert(depositedSigningKeysCountAfter > depositedSigningKeysCountBefore);
+ 
+             keysCount = depositedSigningKeysCountAfter - depositedSigningKeysCountBefore;
+-            SIGNING_KEYS_MAPPING_NAME.loadKeysSigs(
+-                _nodeOperatorIds[i], depositedSigningKeysCountBefore, keysCount, pubkeys, signatures, loadedKeysCount
+-            );
++            //SIGNING_KEYS_MAPPING_NAME.loadKeysSigs(
++            //    _nodeOperatorIds[i], depositedSigningKeysCountBefore, keysCount, pubkeys, signatures, loadedKeysCount
++            //);
+             loadedKeysCount += keysCount;
+ 
+             emit DepositedSigningKeysCountChanged(_nodeOperatorIds[i], depositedSigningKeysCountAfter);
+@@ -1030,8 +1030,8 @@
+ 
+         _requireValidRange(totalSigningKeysCount.add(_keysCount) <= UINT64_MAX);
+ 
+-        totalSigningKeysCount =
+-            SIGNING_KEYS_MAPPING_NAME.saveKeysSigs(_nodeOperatorId, totalSigningKeysCount, _keysCount, _publicKeys, _signatures);
++        totalSigningKeysCount = totalSigningKeysCount.add(_keysCount);
++        //    SIGNING_KEYS_MAPPING_NAME.saveKeysSigs(_nodeOperatorId, totalSigningKeysCount, _keysCount, _publicKeys, _signatures);
+ 
+         emit TotalSigningKeysCountChanged(_nodeOperatorId, totalSigningKeysCount);
+ 
+@@ -1142,23 +1142,26 @@
+         view
+         returns (bytes key, bytes depositSignature, bool used)
+     {
++        /*
+         bool[] memory keyUses;
+         (key, depositSignature, keyUses) = getSigningKeys(_nodeOperatorId, _index, 1);
+         used = keyUses[0];
++        */
+     }
+ 
+     /// @notice Returns n signing keys of the node operator #`_nodeOperatorId`
+     /// @param _nodeOperatorId Node Operator id
+-    /// @param _offset Offset of the key, starting with 0
++    /// @param offset Offset of the key, starting with 0
+     /// @param _limit Number of keys to return
+     /// @return pubkeys Keys concatenated into the bytes batch
+     /// @return signatures Signatures concatenated into the bytes batch needed for a deposit_contract.deposit call
+     /// @return used Array of flags indicated if the key was used in the staking
+-    function getSigningKeys(uint256 _nodeOperatorId, uint256 _offset, uint256 _limit)
++    function getSigningKeys(uint256 _nodeOperatorId, uint256 offset, uint256 _limit)
+         public
+         view
+         returns (bytes memory pubkeys, bytes memory signatures, bool[] memory used)
+     {
++        /*
+         _onlyExistedNodeOperator(_nodeOperatorId);
+ 
+         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
+@@ -1172,6 +1175,7 @@
+         for (uint256 i; i < _limit; ++i) {
+             used[i] = (_offset + i) < depositedSigningKeysCount;
+         }
++        */
+     }
+ 
+     /// @notice Returns the type of the staking module
+@@ -1180,7 +1184,7 @@
+     }
+ 
+     function getStakingModuleSummary()
+-        external
++        public
+         view
+         returns (uint256 totalExitedValidators, uint256 totalDepositedValidators, uint256 depositableValidatorsCount)
+     {
+@@ -1191,7 +1195,7 @@
+     }
+ 
+     function getNodeOperatorSummary(uint256 _nodeOperatorId)
+-        external
++        public
+         view
+         returns (
+             bool isTargetLimitActive,
+--- ../contracts/0.4.24/lib/SigningKeys.sol	2023-04-23 13:50:04.750092000 +0300
++++ 	2023-04-19 09:13:49.367212500 +0300
+@@ -114,21 +114,41 @@
+             if (i < _totalKeysCount) {
+                 lastOffset = _position.getKeyOffset(_nodeOperatorId, _totalKeysCount - 1);
+                 // move last key to deleted key index
+-                for (j = 0; j < 5;) {
++                // Certora : unroll loop
++                //for (j = 0; j < 5;) {
++                    j = 0;
+                     assembly {
+                         sstore(add(curOffset, j), sload(add(lastOffset, j)))
+                         j := add(j, 1)
++                        sstore(add(curOffset, j), sload(add(lastOffset, j)))
++                        j := add(j, 1)
++                        sstore(add(curOffset, j), sload(add(lastOffset, j)))
++                        j := add(j, 1)
++                        sstore(add(curOffset, j), sload(add(lastOffset, j)))
++                        j := add(j, 1)
++                        sstore(add(curOffset, j), sload(add(lastOffset, j)))
++                        j := add(j, 1)
+                     }
+-                }
++                //}
+                 curOffset = lastOffset;
+             }
+             // clear storage
+-            for (j = 0; j < 5;) {
++            // Certora : unroll loop
++            //for (j = 0; j < 5;) {
++                j = 0;
+                 assembly {
+                     sstore(add(curOffset, j), 0)
+                     j := add(j, 1)
++                    sstore(add(curOffset, j), 0)
++                    j := add(j, 1)
++                    sstore(add(curOffset, j), 0)
++                    j := add(j, 1)
++                    sstore(add(curOffset, j), 0)
++                    j := add(j, 1)
++                    sstore(add(curOffset, j), 0)
++                    j := add(j, 1)
+                 }
+-            }
++            //}
+             assembly {
+                 _totalKeysCount := sub(_totalKeysCount, 1)
+                 i := sub(i, 1)
