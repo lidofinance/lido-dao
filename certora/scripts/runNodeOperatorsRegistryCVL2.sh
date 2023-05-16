@@ -7,7 +7,7 @@ certoraRun \
 \
 --solc_map Burner=solc8.9,NodeOperatorsRegistryHarness=solc4.24,LidoMockStEth=solc4.24 \
 --loop_iter 2 \
---cloud master \
+--staging \
 --optimistic_loop \
 --send_only \
 --rule_sanity basic \
