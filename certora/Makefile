@@ -1,6 +1,6 @@
 default: help
 
-PATCH         = applyHarnessStakingRouter.patch
+PATCH         = applyHarness.patch
 CONTRACTS_DIR = ../contracts
 MUNGED_DIR    = ./munged
 StakingRouter_Origin = ../contracts/0.8.9/StakingRouter.sol
