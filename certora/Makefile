@@ -3,10 +3,14 @@ default: help
 PATCH         = applyHarness.patch
 CONTRACTS_DIR = ../contracts
 MUNGED_DIR    = ./munged
+WithdrawalQueue_Origin = ../contracts/0.8.9/WithdrawalQueue.sol
+WithdrawalQueueBase_Origin = ../contracts/0.8.9/WithdrawalQueueBase.sol
 StakingRouter_Origin = ../contracts/0.8.9/StakingRouter.sol
 BeaconChain_Origin = ../contracts/0.8.9/BeaconChainDepositor.sol
 NodeOperatorsRegistry_Origin = ../contracts/0.4.24/nos/NodeOperatorsRegistry.sol
 SigningKeys_Origin = ../contracts/0.4.24/lib/SigningKeys.sol
+WithdrawalQueue_munged = ./munged/WithdrawalQueue.sol
+WithdrawalQueueBase_munged = ./munged/WithdrawalQueueBase.sol
 StakingRouter_munged = ./munged/StakingRouter.sol
 BeaconChain_munged = ./munged/BeaconChainDepositor.sol
 NodeOperatorsRegistry_munged = ./munged/NodeOperatorsRegistry.sol
@@ -24,6 +28,8 @@ munge:
 	cp $(BeaconChain_Origin) $(MUNGED_DIR)
 	cp $(NodeOperatorsRegistry_Origin) $(MUNGED_DIR)
 	cp $(SigningKeys_Origin) $(MUNGED_DIR)
+	cp $(WithdrawalQueue_Origin) $(MUNGED_DIR)
+	cp $(WithdrawalQueueBase_Origin) $(MUNGED_DIR)
 	patch -d $(MUNGED_DIR) < $(PATCH)
 
 record:
@@ -31,6 +37,7 @@ record:
 	diff -burN $(BeaconChain_Origin) $(BeaconChain_munged) | sed 's+\$(BeaconChain_Origin)/++g' | sed 's+$(BeaconChain_munged)++g' >> $(PATCH)
 	diff -burN $(NodeOperatorsRegistry_Origin) $(NodeOperatorsRegistry_munged) | sed 's+\$(NodeOperatorsRegistry_Origin)/++g' | sed 's+$(NodeOperatorsRegistry_munged)++g' >> $(PATCH)
 	diff -burN $(SigningKeys_Origin) $(SigningKeys_munged) | sed 's+\$(SigningKeys_Origin)/++g' | sed 's+$(SigningKeys_munged)++g' >> $(PATCH)
+	diff -burN $(CONTRACTS_DIR) $(MUNGED_DIR) | sed 's+\.\./$(CONTRACTS_DIR)/++g' | sed 's+$(MUNGED_DIR)/++g' > $(PATCH)
 
 clean:
 	git clean -fdX
