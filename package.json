@@ -28,7 +28,7 @@
     "test:coverage": "yarn compile && hardhat coverage --testfiles test",
     "test:e2e": "yarn compile && ava -T 1000000 -v",
     "estimate-deposit-loop-gas": "yarn run test:unit ./estimate_deposit_loop_gas.js",
-    "compile": "hardhat compile && yarn extract-abi",
+    "compile": "hardhat compile",
     "clean": "hardhat clean",
     "userdoc": "hardhat userdoc",
     "extract-abi": "node ./scripts/extract-abi.js",
