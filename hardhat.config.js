@@ -52,25 +52,13 @@ const getNetConfig = (networkName, ethAccountName) => {
   }
   const mainnetfork = {
     ...base,
-    url: 'http://localhost:8545',
+    url: 'http://127.0.0.1:8545',
     chainId: 1337,
     gas: 80000000, // the same as in Görli
-  }
-  const zhejiang = {
-    ...base,
-    url: accounts.zhejiang_url,
-    chainId: 1337803,
   }
   const byNetName = {
     localhost,
     mainnetfork,
-    zhejiang,
-    'mainnet-fork-shapella-upgrade': {
-      ...base,
-      url: 'http://127.0.0.1:7777',
-      chainId: 1337,
-      gas: 80000000, // the same as in Görli
-    },
     local: {
       ...base,
       accounts: {

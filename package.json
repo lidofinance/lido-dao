@@ -53,8 +53,6 @@
     "deploy:rinkeby:aragon-std-apps": "NETWORK_NAME=rinkeby NETWORK_STATE_FILE=deployed-rinkeby.json IPFS_API_URL=http://127.0.0.1:5001/api/v0 IPFS_GATEWAY_URL=http://127.0.0.1:8080 RELEASE_TYPE=major hardhat run --no-compile ./scripts/scratch/deploy-aragon-std-apps.js --config ./hardhat.config.aragon-apps.js",
     "deploy:mainnetfork:aragon-env": "NETWORK_NAME=mainnetfork NETWORK_STATE_FILE=deployed-mainnetfork.json hardhat run --no-compile ./scripts/scratch/deploy-aragon-env.js",
     "deploy:mainnetfork:aragon-std-apps": "NETWORK_NAME=mainnetfork NETWORK_STATE_FILE=deployed-mainnetfork.json IPFS_API_URL=http://127.0.0.1:5001/api/v0 IPFS_GATEWAY_URL=http://127.0.0.1:8080 RELEASE_TYPE=major hardhat run --no-compile ./scripts/scratch/deploy-aragon-std-apps.js --config ./hardhat.config.aragon-apps.js",
-    "deploy:zhejiang:aragon-env": "NETWORK_NAME=zhejiang NETWORK_STATE_FILE=deployed-zhejiang.json hardhat run --no-compile ./scripts/scratch/deploy-aragon-env.js",
-    "deploy:zhejiang:aragon-std-apps": "NETWORK_NAME=zhejiang NETWORK_STATE_FILE=deployed-zhejiang.json IPFS_API_URL=http://127.0.0.1:5001/api/v0 IPFS_GATEWAY_URL=http://127.0.0.1:8080 RELEASE_TYPE=major hardhat run --no-compile ./scripts/scratch/deploy-aragon-std-apps.js --config ./hardhat.config.aragon-apps.js",
     "deploy:local:apm-and-template": "NETWORK_NAME=local NETWORK_STATE_FILE=deployed-local.json hardhat run --no-compile  ./scripts/scratch/deploy-lido-apm-and-template.js",
     "deploy:local:apps": "NETWORK_NAME=local NETWORK_STATE_FILE=deployed-local.json IPFS_API_URL=http://127.0.0.1:5001/api/v0 IPFS_GATEWAY_URL=http://127.0.0.1:8080o hardhat run --no-compile ./scripts/scratch/deploy-lido-apps.js",
     "apps:lido": "yarn --cwd ./apps/lido/app/ cli",

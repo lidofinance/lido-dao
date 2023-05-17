@@ -110,9 +110,8 @@ async function checkDAO({ web3, artifacts }) {
     artifacts.require('Voting').at(apps[APP_NAMES.ARAGON_VOTING].proxyAddress)
   ])
 
-  const compositePostRebaseBeaconReceiver = await artifacts.require('CompositePostRebaseBeaconReceiver').at(state.compositePostRebaseBeaconReceiverAddress)
   const burner = await artifacts.require('Burner').at(state.burnerAddress)
-  const elRewardsVault = await artifacts.require('LidoExecutionLayerRewardsVault').at(state.executionLayerRewardsVaultAddress)
+  const elRewardsVault = await artifacts.require('LidoExecutionLayerRewardsVault').at(state.executionLayerRewardsVault["address"])
 
   log.splitter()
 
@@ -127,7 +126,6 @@ async function checkDAO({ web3, artifacts }) {
     finance,
     tokenManager,
     voting,
-    compositePostRebaseBeaconReceiver,
     burner,
     elRewardsVault,
     daoAragonId: state.daoAragonId,
@@ -227,7 +225,6 @@ async function assertDAOConfig({
   finance,
   tokenManager,
   voting,
-  compositePostRebaseBeaconReceiver,
   burner,
   elRewardsVault,
   daoInitialSettings: settings
@@ -361,10 +358,6 @@ async function assertDAOConfig({
   assert.log(assert.addressEqual, await oracle.getLido(), lido.address, `oracle.getLido() is ${yl(lido.address)}`)
 
   DAO_LIVE || assert.log(assert.isEmpty, await oracle.getOracleMembers(), `oracle.getOracleMembers() is []`)
-
-  assert.log(assert.addressEqual, await oracle.getBeaconReportReceiver(),
-    compositePostRebaseBeaconReceiver.address,
-    `oracle.getBeaconReportReceiver() is ${yl(compositePostRebaseBeaconReceiver.address)}`)
 
   const beaconSpec = await oracle.getBeaconSpec()
   assert.log(

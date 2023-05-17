@@ -20,7 +20,6 @@ const REQUIRED_NET_STATE = [
   "hashConsensusForAccounting",
   "hashConsensusForValidatorsExitBus",
   "lidoLocator",
-  "legacyOracle",
   "stakingRouter",
   "validatorsExitBusOracle",
   "withdrawalQueueERC721",
