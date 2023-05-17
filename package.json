@@ -104,6 +104,7 @@
     "hardhat": "2.12.7",
     "hardhat-contract-sizer": "^2.5.0",
     "hardhat-gas-reporter": "^1.0.8",
+    "hardhat-ignore-warnings": "skozin/hardhat-ignore-warnings#0ecf2ae85bddb83594193ee5c463cb4ae54cde7d",
     "husky": "^8.0.2",
     "ipfs-http-client": "^55.0.0",
     "js-sha3": "^0.8.0",
