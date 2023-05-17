@@ -1,5 +1,7 @@
 # Node Operator Manual
 
+**WARNING**: this doc is outdated after Lido V2 upgrade
+
 This document is intended for those who wish to participate in the Lido protocol as Node Operators—entities
 who run Beacon validator nodes on behalf of the protocol and receive fee in return. It consists of
 two sections: [General overview](#general-overview) and [Operations HOWTO](#operations-howto).

@@ -1,5 +1,7 @@
 # Protocol levers
 
+**WARNING**: this doc is outdated after Lido V2 upgrade
+
 The protocol provides a number of settings controllable by the DAO. Modifying each of them requires
 the caller to have a specific permission. After deploying the DAO, all permissions belong to the DAO
 `Voting` app, which can also manage them. This means that, initially, levers can only be changed by

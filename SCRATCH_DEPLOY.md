@@ -1,5 +1,7 @@
 # Deploy Lido protocol from scratch
 
+**NB**: at the moment deployment from scratch is broken after Lido V2 upgrade and this guide requires revision.
+
 Video guide: [youtube](https://www.youtube.com/watch?v=dCMXcfglJv0)
 
 ## Requirements

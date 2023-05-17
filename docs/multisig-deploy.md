@@ -1,5 +1,7 @@
 # Multisig deployment
 
+**WARNING**: this doc is outdated after Lido V2 upgrade
+
 This HOWTO describes deployment of the DAO using a multisig/airgapped signer, step-by-step.
 
 ## Preparation
