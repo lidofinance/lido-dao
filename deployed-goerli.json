@@ -17,12 +17,8 @@
     "0x70B3284fD016a570146cE48fC54D7A81bCd94BBa"
   ],
   "daoTemplateDeployTx": "0xda8746bca23c7a4f7c58e1a3370cb1ffa1e250ace90fd4684dbb1842ee6ac921",
-  "compositePostRebaseBeaconReceiverDeployTx": "0x1c301d51d66e20403915bf5f44359470a1f847560d8d22c9d2c99aaffbae50d7",
-  "executionLayerRewardsVaultDeployTx": "0x3bce97664f6003ddf4e3cf7178527dbff6098b1a6fc9ba7c337cb6aca4ea91fb",
-  "selfOwnedStETHBurnerDeployTx": "0x02428a5edd7fc5c4cadbf126a345a401cf2a46ea98116894828d90255e4b27e4",
   "daoTemplateAddress": "0x9A4a36B5fe517f98BD6529d4317B0b723F600AaD",
   "app:lido": {
-    "baseAddress": "0xEE227CC91A769881b1e81350224AEeF7587eBe76",
     "ipfsCid": "QmbmPW5r9HMdyUARNJjjE7MNqBUGrXashwoWvqRZhc1t5b",
     "contentURI": "0x697066733a516d626d5057357239484d64795541524e4a6a6a45374d4e714255477258617368776f577671525a686331743562",
     "name": "lido",
@@ -35,7 +31,6 @@
     "implementationDeployCommit": "85a41c45d5d45b1a35118ad6023e6c7ead1072d2"
   },
   "app:oracle": {
-    "baseAddress": "0xcF9d64942DC9096520a8962a2d4496e680c6403b",
     "ipfsCid": "QmfACH9oSHFWgV81Dh8RSVcgaVBdhkZuHhZY2iZv5syBJK",
     "contentURI": "0x697066733a516d66414348396f5348465767563831446838525356636761564264686b5a7548685a5932695a76357379424a4b",
     "name": "oracle",
@@ -44,7 +39,6 @@
     "proxyAddress": "0x24d8451BC07e7aF4Ba94F69aCDD9ad3c6579D9FB"
   },
   "app:node-operators-registry": {
-    "baseAddress": "0xCAfe9Ac6a4bE2eAfCFf949693C0da9eebF985C3B",
     "ipfsCid": "QmQExJkoyg7xWXJjLaYC75UAmsGY1STY41YTG3wEK7q8dd",
     "contentURI": "0x697066733a516d5145784a6b6f7967377857584a6a4c615943373555416d7347593153545934315954473377454b3771386464",
     "name": "node-operators-registry",
@@ -138,12 +132,19 @@
     "end": 1617139900,
     "revokable": false
   },
-  "wstethContractAddress": "0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f",
-  "wstethContractConstructorArgs": [
-    "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F"
-  ],
-  "executionLayerRewardsVaultAddress": "0x94750381bE1AbA0504C666ee1DB118F68f0780D4",
-  "depositorPreviousAddress": "0xEd23AD3EA5Fb9d10e7371Caef1b141AD1C23A80c",
+  "wstETH": {
+    "address": "0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f",
+    "deployTx": "aaaa",
+    "constructorArgs": [
+      "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F"
+    ],
+    "contract": "WstETH"
+  },
+  "executionLayerRewardsVault": {
+    "address": "0x94750381bE1AbA0504C666ee1DB118F68f0780D4",
+    "deployTx": "0x3bce97664f6003ddf4e3cf7178527dbff6098b1a6fc9ba7c337cb6aca4ea91fb",
+    "contract": "LidoExecutionLayerRewardsVault"
+  },
   "dummyImplementation": {
     "address": "0x6A03b1BbB79460169a205eFBCBc77ebE1011bCf8"
   },
@@ -162,11 +163,6 @@
     ],
     "contract": "Burner",
     "implementationDeployCommit": "85a41c45d5d45b1a35118ad6023e6c7ead1072d2"
-  },
-  "legacyOracle": {
-    "parameters": {
-      "lastCompletedEpochId": 0
-    }
   },
   "hashConsensusForAccounting": {
     "parameters": {
@@ -230,6 +226,7 @@
       "0x1eDf09b5023DC86737b59dE68a8130De878984f5"
     ]
   },
+  "depositorPreviousAddress": "0xEd23AD3EA5Fb9d10e7371Caef1b141AD1C23A80c",
   "depositSecurityModule": {
     "parameters": {
       "maxDepositsPerBlock": 0,
