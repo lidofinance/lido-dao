@@ -1,6 +1,6 @@
 # Protocol levers
 
-**WARNING**: this doc is outdated after Lido V2 upgrade
+**WARNING**: this doc is outdated after Lido V2 upgrade. For the more up-to-date version see https://docs.lido.fi/deployed-contracts/
 
 The protocol provides a number of settings controllable by the DAO. Modifying each of them requires
 the caller to have a specific permission. After deploying the DAO, all permissions belong to the DAO

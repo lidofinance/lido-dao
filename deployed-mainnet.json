@@ -1,5 +1,5 @@
 {
-  "deployCommit": "35d8c862406f82c64091760aec8feab0e114aac1",
+  "deployCommit": "e45c4d6fb8120fd29426b8d969c19d8a798ca974",
   "networkId": 1,
   "ipfsAPI": "https://ipfs.infura.io:5001/api/v0",
   "lidoApmEnsName": "lidopm.eth",
@@ -280,7 +280,6 @@
       "0x"
     ]
   },
-  "previousDepositSecurityModule": "0x710B3303fB508a84F10793c1106e32bE873C24cd",
   "depositSecurityModule": {
     "parameters": {
       "maxDepositsPerBlock": 150,
