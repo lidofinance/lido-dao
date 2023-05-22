@@ -11,8 +11,7 @@ Unlike staked ether, the stETH token is free from the limitations associated wit
 
 Before getting started with this repo, please read:
 
-* [A Primer](https://lido.fi/static/Lido:Ethereum-Liquid-Staking.pdf)
-* [Documentation](/docs)
+* [Documentation](https://docs.lido.fi/)
 
 ## Lido DAO
 
@@ -24,7 +23,7 @@ The Lido DAO is an [Aragon organization](https://aragon.org/dao). Since Aragon p
 
 ## Protocol levers
 
-A full list of protocol levers that are controllable by the Aragon DAO can be found [here](docs/protocol-levers.md).
+A full list of protocol levers that are controllable by the Aragon DAO can be found [here](https://docs.lido.fi/guides/protocol-levers/).
 
 ## Contracts
 
@@ -33,6 +32,7 @@ For the contracts description see https://docs.lido.fi/ contracts section.
 ## Deployments
 
 For the protocol contracts addresses see https://docs.lido.fi/deployed-contracts/
+
 ## Development
 
 ### Requirements
@@ -45,7 +45,7 @@ For the protocol contracts addresses see https://docs.lido.fi/deployed-contracts
 * curl
 * cut
 * docker
-* node.js v12
+* node.js v16
 * (optional) Lerna
 * (optional) Foundry
 
@@ -65,99 +65,12 @@ otherwise:
 npx yarn
 ```
 
-### Building docker containers
-
-```bash
-cd e2e
-docker-compose build --no-cache
-```
-
-### Starting & stopping e2e environment
-
-> ***All E2E operations must be launched under the `./e2e` subdirectory***
-
-The E2E environment consists of two parts: ETH1-related processes and ETH 2.0-related processes.
-
-For ETH1 part: Ethereum single node (ganache), IPFS docker containers and Aragon Web App.
-
-For ETH2 part: Beacon chain node, genesis validators machine, and, optionally, 2nd and 3rd peer beacon chain nodes.
-
-To start the whole environment from pre-deployed snapshots, use:
-
-```bash
-./startup.sh -r -s
-```
-
-then go to [http://localhost:3000/#/lido-dao/](http://localhost:3000/#/lido-dao/) to manage the DAO via Aragon Web App.
-
-> To completely repeat the compilation and deployment process in ETH1 chain, just omit the `-s` flag.
-
-#### ETH1 part
-
-As a result of the script execution, the following will be installed:
-
-* the Deposit Contract instance;
-* all Aragon App instances (contracts: Lido, NodeOperatorsRegistry, and LidoOracle)
-* the Aragon PM for `lido.eth`;
-* the Lido DAO template;
-* and finally, the Lido DAO will be deployed.
-
-To start only the ETH1 part, use:
-
-```bash
-./startup.sh -1
-```
-
-#### ETH2 part
-
-To work with the ETH2 part, the ETH1 part must be running.
-
-As a result of the script execution, the following will happen:
-
-* the Beacon chain genesis config (Minimal with tunes) will be generated;
-* validator's wallet with 4 keys will be generated;
-* a deposit of 32 ETH will be made to the Deposit Contract for each validator key;
-* based on the events about the deposit, a genesis block will be created, including validators;
-* ETH2 node will start from the new Genesis block.
-
-To reseat and restart only the ETH2 part, use:
-
-```bash
-./startup.sh -r2
-```
-
-##### Stop all
-
-To stop, use:
-> Note: this action permanently deletes all generated data
-
-```bash
-./shutdown.sh
-```
-
-### DKG
-
-To build a DGK container:
-
- * Add your local SSH key to the Github account;
- * run `./dkg.sh` inside the `e2e` directory.
-
-### Build & test all our apps
+### Build & test
 
 Run unit tests:
 
 ```bash
 yarn test
-```
-
-Run E2E tests:
-
-```bash
-cd e2e
-./dkg.sh
-./startup.sh -r -s
-yarn test:e2e
-./shutdown.sh
 ```
 
 Run unit tests and report gas used by each Solidity function:
@@ -203,7 +116,7 @@ To develop/test on fork, please see [fork documentation](/docs/dev-fork.md)
 
 # License
 
-2020 Lido <info@lido.fi>
+2023 Lido <info@lido.fi>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
