@@ -137,7 +137,7 @@
     "sourcePath": "contracts/0.8.9/EIP712StETH.sol",
     "name": "EIP712StETH",
     "address": "0x8F73e4C2A6D852bb4ab2A45E6a9CF5715b3228B7",
-    "txHash": "0x9d76786f639bd18365f10c087444761db5dafd0edc85c5c1a3e90219f2d1331d"
+    "txHash": "0xecb5010620fb13b0e2bbc98b8a0c82de0d7385491452cd36cf303cd74216ed91"
   },
   {
     "artifactPath": "artifacts/contracts/0.8.9/proxy/OssifiableProxy.sol/OssifiableProxy.json",
