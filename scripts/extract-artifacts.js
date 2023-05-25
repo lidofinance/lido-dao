@@ -6,6 +6,14 @@ const artifactsPath = path.resolve(__dirname, '..', artifactsFileName)
 const deployedFileName = 'deployed-mainnet.json'
 const deployedPath = path.resolve(__dirname, '..', deployedFileName)
 
+const additionalArtifacts = [
+  {
+    "artifactPath": "artifacts/contracts/0.6.11/deposit_contract.sol/DepositContract.json",
+    "sourcePath": "contracts/0.6.11/deposit_contract.sol",
+    "name": "DepositContract",
+    "address": "0x00000000219ab540356cBB839Cbe05303d7705Fa"
+  }
+]
 
 function isValidContractInfo(info) {
     let isObject = function(a) {
@@ -47,6 +55,7 @@ async function extractArtifacts() {
       artifacts.push(getArtifactFromContractInfo(contractInfo))
     }
   }
+  artifacts.push(...additionalArtifacts)
 
   const artifactsJson = JSON.stringify(artifacts, null, '  ')
   fs.writeFileSync(artifactsPath, artifactsJson + '\n', 'utf8')

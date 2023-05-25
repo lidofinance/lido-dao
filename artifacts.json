@@ -166,5 +166,11 @@
     "name": "LidoLocator",
     "address": "0x1D920cc5bACf7eE506a271a5259f2417CaDeCE1d",
     "txHash": "0xf90012ef0a40e47c909ab3a5b3503ecee78f6a9be134d1349a742e500d37ae33"
+  },
+  {
+    "artifactPath": "artifacts/contracts/0.6.11/deposit_contract.sol/DepositContract.json",
+    "sourcePath": "contracts/0.6.11/deposit_contract.sol",
+    "name": "DepositContract",
+    "address": "0x00000000219ab540356cBB839Cbe05303d7705Fa"
   }
 ]
