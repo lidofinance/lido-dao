@@ -126,13 +126,6 @@
     "txHash": "0xd9eb2eca684770e4d2b192709b6071875f75072a0ce794a582824ee907a704f3"
   },
   {
-    "artifactPath": "artifacts/contracts/0.8.9/test_helpers/DummyEmptyContract.sol/DummyEmptyContract.json",
-    "sourcePath": "contracts/0.8.9/test_helpers/DummyEmptyContract.sol",
-    "name": "DummyEmptyContract",
-    "address": "0x6F6541C2203196fEeDd14CD2C09550dA1CbEDa31",
-    "txHash": "0x9d76786f639bd18365f10c087444761db5dafd0edc85c5c1a3e90219f2d1331d"
-  },
-  {
     "artifactPath": "artifacts/contracts/0.8.9/EIP712StETH.sol/EIP712StETH.json",
     "sourcePath": "contracts/0.8.9/EIP712StETH.sol",
     "name": "EIP712StETH",
