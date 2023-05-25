@@ -1,5 +1,7 @@
 ## Fork test / development
 
+**WARNING**: this doc is outdated after Lido V2 upgrade
+
 !NOTES!
 You need an Infura node with [Archived Data](https://infura.io/docs/ethereum/add-ons/archiveData) access
 or you can use an [Alchemy node](https://www.alchemy.com/) with Archived Data access for free
@@ -24,7 +26,7 @@ Sync data on the fork is not very fast, so you need to wait ~90sec
 
 ### Approach 2 - manual
 
-Download [Aragon client](https://github.com/lidofinance/aragon-client) 
+Download [Aragon client](https://github.com/lidofinance/aragon-client)
 ```bash
 git clone git@github.com:lidofinance/aragon-client.git
 ```
@@ -33,7 +35,7 @@ git clone git@github.com:lidofinance/aragon-client.git
 cd aragon-client && yarn
 ```
 
-Next, get lido apps ID  
+Next, get lido apps ID
 
 ```bash
 export ARAGON_ENS_REGISTRY_ADDRESS=0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e
@@ -61,7 +63,7 @@ So if you want to load the app frontend from localhost (not ipfs), you need to s
 ```bash
 cd apps/lido/app && yarn && yarn dev
 
-# Server running at http://localhost:3010 
+# Server running at http://localhost:3010
 ```
 
 ```bash

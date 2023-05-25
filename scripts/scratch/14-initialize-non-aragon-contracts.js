@@ -19,7 +19,6 @@ const REQUIRED_NET_STATE = [
   "daoInitialSettings",
   "eip712StETH",
   "accountingOracle",
-  "legacyOracle",
   "hashConsensusForAccounting",
   "validatorsExitBusOracle",
   "hashConsensusForValidatorsExitBus",

@@ -1,5 +1,7 @@
 ## Local development
 
+**WARNING**: this doc is outdated after Lido V2 upgrade
+
 Networks are defined in `hardhat.config.js` file. To select the target network for deployment,
 set `NETWORK_NAME` environment variable to a network name defined in that file. All examples
 below assume `localhost` is the target network.

@@ -1,5 +1,7 @@
 # Multisig app upgrade
 
+**WARNING**: this doc is outdated after Lido V2 upgrade
+
 > Please read original [multisig-deploy.md](multisig-deploy.md) before continue.
 
 ## App upgrade steps

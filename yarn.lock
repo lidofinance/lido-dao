@@ -3769,6 +3769,7 @@ __metadata:
     hardhat: 2.12.7
     hardhat-contract-sizer: ^2.5.0
     hardhat-gas-reporter: ^1.0.8
+    hardhat-ignore-warnings: "skozin/hardhat-ignore-warnings#0ecf2ae85bddb83594193ee5c463cb4ae54cde7d"
     husky: ^8.0.2
     ipfs-http-client: ^55.0.0
     js-sha3: ^0.8.0
@@ -15126,6 +15127,17 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
+"hardhat-ignore-warnings@skozin/hardhat-ignore-warnings#0ecf2ae85bddb83594193ee5c463cb4ae54cde7d":
+  version: 0.2.6
+  resolution: "hardhat-ignore-warnings@https://github.com/skozin/hardhat-ignore-warnings.git#commit=0ecf2ae85bddb83594193ee5c463cb4ae54cde7d"
+  dependencies:
+    minimatch: ^5.1.0
+    node-interval-tree: ^2.0.1
+    solidity-comments: ^0.0.2
+  checksum: 0a0326c28acdae7645e98cc4a55283a56d1372ccb860c4f8cb5ce12f5b7ba79d9705355cb54bc2df16fd6d929e50a0c596346923e869a39cf234f91ffa2101d1
+  languageName: node
+  linkType: hard
+
 "hardhat@npm:2.12.7":
   version: 2.12.7
   resolution: "hardhat@npm:2.12.7"
@@ -19755,6 +19767,15 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
+"minimatch@npm:^5.1.0":
+  version: 5.1.6
+  resolution: "minimatch@npm:5.1.6"
+  dependencies:
+    brace-expansion: ^2.0.1
+  checksum: b45972211550a545ef230076acc6885fb2a6a8275797fdf37bd340b770d0d131323a3047575dbaad2b8033fe1969d5dd6533159e40f111486d7f421e3e29bd38
+  languageName: node
+  linkType: hard
+
 "minimatch@npm:^6.2.0":
   version: 6.2.0
   resolution: "minimatch@npm:6.2.0"
@@ -20775,6 +20796,15 @@ fsevents@~2.3.2:
   bin:
     node-gyp: bin/node-gyp.js
   checksum: 78518a89047fdacb14c41586ce038584e21993f5c7ad31834c78cf06de0514fe4ef84a9034461695a10667bc81ee9ad8bc7d725cf951d4dfe1c0c175d763da59
+  languageName: node
+  linkType: hard
+
+"node-interval-tree@npm:^2.0.1":
+  version: 2.1.2
+  resolution: "node-interval-tree@npm:2.1.2"
+  dependencies:
+    shallowequal: ^1.1.0
+  checksum: e0539d914bdc9cb6da2746c9a6bc74a7bec7706083c2bb5dc2eb0f620597d637bdf9d2495e91db377bfa321ac290cc9aca0c014091b4e30c3492d0c2602d584f
   languageName: node
   linkType: hard
 
@@ -25480,6 +25510,115 @@ resolve@^1.22.1:
   bin:
     solhint: solhint.js
   checksum: b0a3e0806bef88be734002ee5b6634fa261d612d946688ddc803cf582995b9b3abc8debe35beb10d4201dacf97870b783f703c0f5b3c5b3ebf195f5d061e7f98
+  languageName: node
+  linkType: hard
+
+"solidity-comments-darwin-arm64@npm:0.0.2":
+  version: 0.0.2
+  resolution: "solidity-comments-darwin-arm64@npm:0.0.2"
+  checksum: 5e53c571c672276059b8ff0d3f7c3b9cd5b104f4a27b95314be2b43174bf5705580dfb22d7d80c7ed207eef153430cd17ba87b8d247dd37488ab4260cc438489
+  languageName: node
+  linkType: hard
+
+"solidity-comments-darwin-x64@npm:0.0.2":
+  version: 0.0.2
+  resolution: "solidity-comments-darwin-x64@npm:0.0.2"
+  checksum: 4bc73cc0c77da609fea981c1bbbdfb0ab118c93e118070476c0ef1bcb4afd91f7e563bbe5765056fface626098ae237e3c25a5cbc009c2f0be5c0ab5f627a0de
+  languageName: node
+  linkType: hard
+
+"solidity-comments-freebsd-x64@npm:0.0.2":
+  version: 0.0.2
+  resolution: "solidity-comments-freebsd-x64@npm:0.0.2"
+  checksum: 4752c764b81f8f83015bf9409450653c0ae66ddbe1e738cc45b970244a5dfa62aa9d4b5ed9a10c686a605e60dc4708fb13c79f9cf4b6b8c2d196c5be64c5cdd4
+  languageName: node
+  linkType: hard
+
+"solidity-comments-linux-arm64-gnu@npm:0.0.2":
+  version: 0.0.2
+  resolution: "solidity-comments-linux-arm64-gnu@npm:0.0.2"
+  checksum: 8aa7ce2eccf94cf4b20095ac1553d97d43ef77a4dc85b4e1dc5dca1abec04706febe4b2c395e71416bdd3beec8fc402ceae2c2a5c05a7ea8ca11fef26921135c
+  languageName: node
+  linkType: hard
+
+"solidity-comments-linux-arm64-musl@npm:0.0.2":
+  version: 0.0.2
+  resolution: "solidity-comments-linux-arm64-musl@npm:0.0.2"
+  checksum: 77683fd62fb9a9fb26d502cb02a679441db6b3945b42b16de28dfe4658e502a924546056098730d18fb7f01204adfe11f04ecc6333fad1520d5697925dc49f14
+  languageName: node
+  linkType: hard
+
+"solidity-comments-linux-x64-gnu@npm:0.0.2":
+  version: 0.0.2
+  resolution: "solidity-comments-linux-x64-gnu@npm:0.0.2"
+  checksum: 0655470f6e43f24e12251600fee42a24e86fab73c6362f3ce58de60bf2e561ba5507f8f1987f9135c2338cae176a3e383f51fd22f9dba4fe6c0b4f94b7109947
+  languageName: node
+  linkType: hard
+
+"solidity-comments-linux-x64-musl@npm:0.0.2":
+  version: 0.0.2
+  resolution: "solidity-comments-linux-x64-musl@npm:0.0.2"
+  checksum: a223eaa328249e96ba534edefd8de3c3e44a4f4523ac0ca7f4b18c072e6a94d114550bba5cb5c9a60f8715c8ab4283f5ffffc6b05162207946cd8a83eed92b20
+  languageName: node
+  linkType: hard
+
+"solidity-comments-win32-arm64-msvc@npm:0.0.2":
+  version: 0.0.2
+  resolution: "solidity-comments-win32-arm64-msvc@npm:0.0.2"
+  checksum: 017dfb04870b159992b452d4208fdd660dac8a04ef48be6cd72061c12ef94d6599dfee99b69f969a70da124dc07970210901f901e07d8c0420ba7125e68f2603
+  languageName: node
+  linkType: hard
+
+"solidity-comments-win32-ia32-msvc@npm:0.0.2":
+  version: 0.0.2
+  resolution: "solidity-comments-win32-ia32-msvc@npm:0.0.2"
+  checksum: c2a7f3e3bac66483a152c51edcecacb6a190d34cf80ef3b2ae5e89f030330959ad42cd87d0fcbdd6787bd473a4563d4383b49b119b82f97412f7c1bc727ba537
+  languageName: node
+  linkType: hard
+
+"solidity-comments-win32-x64-msvc@npm:0.0.2":
+  version: 0.0.2
+  resolution: "solidity-comments-win32-x64-msvc@npm:0.0.2"
+  checksum: b2bd4acc7db67c4e8ea0d1e9f712ec95881352e63f9d9aa81623561e843da62c620f2f8013c3b350aa1d9a5d260548dfb098f87c8edc89e0c133b44b0483a27b
+  languageName: node
+  linkType: hard
+
+"solidity-comments@npm:^0.0.2":
+  version: 0.0.2
+  resolution: "solidity-comments@npm:0.0.2"
+  dependencies:
+    solidity-comments-darwin-arm64: 0.0.2
+    solidity-comments-darwin-x64: 0.0.2
+    solidity-comments-freebsd-x64: 0.0.2
+    solidity-comments-linux-arm64-gnu: 0.0.2
+    solidity-comments-linux-arm64-musl: 0.0.2
+    solidity-comments-linux-x64-gnu: 0.0.2
+    solidity-comments-linux-x64-musl: 0.0.2
+    solidity-comments-win32-arm64-msvc: 0.0.2
+    solidity-comments-win32-ia32-msvc: 0.0.2
+    solidity-comments-win32-x64-msvc: 0.0.2
+  dependenciesMeta:
+    solidity-comments-darwin-arm64:
+      optional: true
+    solidity-comments-darwin-x64:
+      optional: true
+    solidity-comments-freebsd-x64:
+      optional: true
+    solidity-comments-linux-arm64-gnu:
+      optional: true
+    solidity-comments-linux-arm64-musl:
+      optional: true
+    solidity-comments-linux-x64-gnu:
+      optional: true
+    solidity-comments-linux-x64-musl:
+      optional: true
+    solidity-comments-win32-arm64-msvc:
+      optional: true
+    solidity-comments-win32-ia32-msvc:
+      optional: true
+    solidity-comments-win32-x64-msvc:
+      optional: true
+  checksum: 3ca4c8e69c5fb9cc7c90d215858d0133a706568fbe416c7f7d17f4b4736bc04df48c497516370bc106304d04137a6989bf3445d2d9c55fd79236848c66678cb4
   languageName: node
   linkType: hard
 
