@@ -1,5 +1,7 @@
 # Multisig deployment
 
+**WARNING**: this doc is outdated after Lido V2 upgrade
+
 This HOWTO describes deployment of the DAO using a multisig/airgapped signer, step-by-step.
 
 ## Preparation
@@ -144,7 +146,7 @@ Reading network state from /Users/me/lido-dao/deployed-mainnet.json...
 ====================
 Saving deploy TX data for LidoTemplate to tx-01-1-deploy-template.json
 Saving deploy TX data for Lido to tx-01-2-deploy-lido-base.json
-Saving deploy TX data for LidoOracle to tx-01-3-deploy-oracle-base.json
+Saving deploy TX data for LegacyOracle to tx-01-3-deploy-legacy-oracle-base.json
 Saving deploy TX data for NodeOperatorsRegistry to tx-01-4-deploy-nops-base.json
 ====================
 Before continuing the deployment, please send all contract creation transactions
@@ -170,7 +172,7 @@ Run the following to deploy the implementations and the template:
 ```text
 $ yarn hardhat --network mainnet tx --from $DEPLOYER --file tx-01-1-deploy-template.json
 $ yarn hardhat --network mainnet tx --from $DEPLOYER --file tx-01-2-deploy-lido-base.json
-$ yarn hardhat --network mainnet tx --from $DEPLOYER --file tx-01-3-deploy-oracle-base.json
+$ yarn hardhat --network mainnet tx --from $DEPLOYER --file tx-01-3-deploy-legacy-oracle-base.json
 $ yarn hardhat --network mainnet tx --from $DEPLOYER --file tx-01-4-deploy-nops-base.json
 ```
 
@@ -187,7 +189,7 @@ the following values:
 
 * `daoTemplateDeployTx` hash of the TX sent from the `tx-01-1-deploy-template.json` file
 * `lidoBaseDeployTx` hash of the TX sent from the `tx-01-2-deploy-lido-base.json` file
-* `oracleBaseDeployTx` hash of the TX sent from the `tx-01-3-deploy-oracle-base.json` file
+* `oracleBaseDeployTx` hash of the TX sent from the `tx-01-3-deploy-legacy-oracle-base.json` file
 * `nodeOperatorsRegistryBaseDeployTx` hash of the TX sent from the `tx-01-4-deploy-nops-base.json` file
 
 
@@ -203,7 +205,7 @@ This step will verify the deployed contracts and add the following fields to the
 
 * `daoTemplateAddress` address of the `LidoTemplate` contract
 * `app:lido.baseAddress` address of the `Lido` implementation contract
-* `app:oracle.baseAddress` address of the `LidoOracle` implementation contract
+* `app:oracle.baseAddress` address of the `LegacyOracle` implementation contract
 * `app:node-operators-registry.baseAddress` address of the `NodeOperatorsRegistry` implementation contract
 
 
@@ -312,7 +314,7 @@ Run the following:
 yarn hardhat --network mainnet run ./scripts/multisig/07-create-app-repos.js
 ...
 ====================
-Saving data for createRepos transaction to tx-04-create-app-repos.json (projected gas usage is 7160587)
+Saving data for createRepos transaction to tx-07-create-app-repos.json (projected gas usage is 7160587)
 ====================
 ```
 

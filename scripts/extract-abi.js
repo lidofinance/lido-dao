@@ -11,16 +11,16 @@ async function exportAbi() {
 
   const artifactPaths = allArtifactPaths.map((f) => path.relative(artifactsPath, f)).filter((relpath) => !skipNames.test(relpath))
 
-  const lidoArtifactPaths = artifactPaths.filter((p) => p.substr(0, 10) === 'contracts/')
+  const lidoArtifactPaths = artifactPaths.filter((p) => p.substring(0, 10) === 'contracts/')
 
-  const aragonAtrifactPaths = [
+  const aragonArtifactPaths = [
     '@aragon/apps-finance/contracts/Finance.sol/Finance.json',
-    '@aragon/apps-token-manager/contracts/TokenManager.sol/TokenManager.json',
     '@aragon/apps-vault/contracts/Vault.sol/Vault.json',
-    '@aragon/apps-voting/contracts/Voting.sol/Voting.json'
+    '@aragon/apps-lido/apps/voting/contracts/Voting.sol/Voting.json',
+    '@aragon/apps-lido/apps/token-manager/contracts/TokenManager.sol/TokenManager.json'
   ]
 
-  await extractABIs(lidoArtifactPaths.concat(aragonAtrifactPaths), abisPath)
+  await extractABIs(lidoArtifactPaths.concat(aragonArtifactPaths), abisPath)
 }
 
 async function extractABIs(artifactPaths, abisPath) {
@@ -29,7 +29,7 @@ async function extractABIs(artifactPaths, abisPath) {
     for (const file of files) {
       await fs.unlink(path.join(abisPath, file))
     }
-    await fs.rmdir(abisPath, { recursive: true })
+    await fs.rm(abisPath, { recursive: true })
   }
 
   await fs.mkdir(abisPath, { recursive: true })

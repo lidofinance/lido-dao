@@ -1,5 +1,7 @@
 ## Local development
 
+**WARNING**: this doc is outdated after Lido V2 upgrade
+
 Networks are defined in `hardhat.config.js` file. To select the target network for deployment,
 set `NETWORK_NAME` environment variable to a network name defined in that file. All examples
 below assume `localhost` is the target network.
@@ -122,7 +124,7 @@ and start in different terminal
 ipfs daemon
 ```
 
-IPFS is needed to upload an Aragon Apps like (Finance, Voting, etc...) and Lido apps (Lido, LidoOracle,NOS)
+IPFS is needed to upload an Aragon Apps like (Finance, Voting, etc...) and Lido apps (Lido, LegacyOracle,NOS)
 
 
 #### Step 3: start hardhat node in different terminal
@@ -145,7 +147,7 @@ export NETWORK_NAME=localhost
 On this step we can deploy all required contracts and upload all required apps to IPFS with next command
 
 ```bash
-yarn deploy:all 
+yarn deploy:all
 ```
 This is required for test/dev networks that don't have Aragon environment deployed.
 
@@ -187,4 +189,3 @@ NETWORK_NAME=localhost yarn aragon:start
 
 In this step we are replacing the links to the app from the IPFS with a local port,
 set env `ARAGON_APP_LOCATOR=0x8a7b...c6:http://localhost:3010` and start aragon client on http://localhost:3000
-

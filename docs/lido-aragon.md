@@ -1,5 +1,7 @@
 # Lido-aragon
 
+**WARNING**: this doc might be outdated after Lido V2 upgrade
+
 `lido-aragon` tool is used to create, develop lido/aragon apps.
 
 We already have a pre-build versions for linux/mac and amd/arm architecture.
@@ -74,7 +76,7 @@ By this command we:
 - deploy Lido APM registry and DAO template
 - build and deploy Lido applications: Lido, Lido Oracle, Node Operator Registry apps
 - deploy the DAO
-- start Lido apps 
+- start Lido apps
 - start Aragon with replacing lido apps links to local port
 
 if something wrong you can use verbose `-v` flag:
@@ -100,9 +102,9 @@ bash-3.2$ ./lido-aragon start all
 
 What happens here: for the fork, we need to use RPC endpoint, which supports `Archived Data`, so either we use a paid Infura or you can use Alchemy.
 
-- `--apps` - say to Aragon replacing default app link to our address. Format `appName:appAddress`. 
+- `--apps` - say to Aragon replacing default app link to our address. Format `appName:appAddress`.
 
-`appName` - Can be name of app or address like `0x3ca7c..`. If name - try to search appId from `deployed-mainnet.json` file. 
+`appName` - Can be name of app or address like `0x3ca7c..`. If name - try to search appId from `deployed-mainnet.json` file.
 
 ```bash
 {

@@ -2,12 +2,15 @@
 .vscode
 **/build/
 **/node_modules/
+**/lib/abi/*.json
 **/artifacts/
+**/artifacts-userdoc/
 .cache
 **/cache/
 dist/
 tmp/
 venv
+out
 
 /coverage/
 /coverage.json
@@ -38,3 +41,13 @@ cli/vendor
 /accounts.json
 # e2e temp data
 /deployed-e2e.json
+
+# OS relative
+.DS_Store
+
+# foundry artifacts
+foundry/cache
+foundry/out
+
+logs
+**/verificator_diffs/

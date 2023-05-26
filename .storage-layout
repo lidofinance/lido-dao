@@ -1,0 +1,217 @@
+👁👁 STORAGE LAYOUT snapshot 👁👁
+=======================
+
+=======================
+➡ AccountingOracle
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ BeaconChainDepositor
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ Burner
+=======================
+
+| Name                        | Type    | Slot | Offset | Bytes | Contract                          |
+|-----------------------------|---------|------|--------|-------|-----------------------------------|
+| coverSharesBurnRequested    | uint256 | 0    | 0      | 32    | contracts/0.8.9/Burner.sol:Burner |
+| nonCoverSharesBurnRequested | uint256 | 1    | 0      | 32    | contracts/0.8.9/Burner.sol:Burner |
+| totalCoverSharesBurnt       | uint256 | 2    | 0      | 32    | contracts/0.8.9/Burner.sol:Burner |
+| totalNonCoverSharesBurnt    | uint256 | 3    | 0      | 32    | contracts/0.8.9/Burner.sol:Burner |
+
+=======================
+➡ DepositContract
+=======================
+
+| Name          | Type        | Slot | Offset | Bytes | Contract                                              |
+|---------------|-------------|------|--------|-------|-------------------------------------------------------|
+| branch        | bytes32[32] | 0    | 0      | 1024  | contracts/0.6.11/deposit_contract.sol:DepositContract |
+| deposit_count | uint256     | 32   | 0      | 32    | contracts/0.6.11/deposit_contract.sol:DepositContract |
+| zero_hashes   | bytes32[32] | 33   | 0      | 1024  | contracts/0.6.11/deposit_contract.sol:DepositContract |
+
+=======================
+➡ DepositSecurityModule
+=======================
+
+| Name                            | Type                        | Slot | Offset | Bytes | Contract                                                        |
+|---------------------------------|-----------------------------|------|--------|-------|-----------------------------------------------------------------|
+| maxDepositsPerBlock             | uint256                     | 0    | 0      | 32    | contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule |
+| minDepositBlockDistance         | uint256                     | 1    | 0      | 32    | contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule |
+| pauseIntentValidityPeriodBlocks | uint256                     | 2    | 0      | 32    | contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule |
+| owner                           | address                     | 3    | 0      | 20    | contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule |
+| quorum                          | uint256                     | 4    | 0      | 32    | contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule |
+| guardians                       | address[]                   | 5    | 0      | 32    | contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule |
+| guardianIndicesOneBased         | mapping(address => uint256) | 6    | 0      | 32    | contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule |
+
+=======================
+➡ EIP712StETH
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ HashConsensus
+=======================
+
+| Name                  | Type                                                   | Slot | Offset | Bytes | Contract                                               |
+|-----------------------|--------------------------------------------------------|------|--------|-------|--------------------------------------------------------|
+| _frameConfig          | struct HashConsensus.FrameConfig                       | 0    | 0      | 32    | contracts/0.8.9/oracle/HashConsensus.sol:HashConsensus |
+| _memberStates         | struct HashConsensus.MemberState[]                     | 1    | 0      | 32    | contracts/0.8.9/oracle/HashConsensus.sol:HashConsensus |
+| _memberAddresses      | address[]                                              | 2    | 0      | 32    | contracts/0.8.9/oracle/HashConsensus.sol:HashConsensus |
+| _memberIndices1b      | mapping(address => uint256)                            | 3    | 0      | 32    | contracts/0.8.9/oracle/HashConsensus.sol:HashConsensus |
+| _reportingState       | struct HashConsensus.ReportingState                    | 4    | 0      | 32    | contracts/0.8.9/oracle/HashConsensus.sol:HashConsensus |
+| _quorum               | uint256                                                | 5    | 0      | 32    | contracts/0.8.9/oracle/HashConsensus.sol:HashConsensus |
+| _reportVariants       | mapping(uint256 => struct HashConsensus.ReportVariant) | 6    | 0      | 32    | contracts/0.8.9/oracle/HashConsensus.sol:HashConsensus |
+| _reportVariantsLength | uint256                                                | 7    | 0      | 32    | contracts/0.8.9/oracle/HashConsensus.sol:HashConsensus |
+| _reportProcessor      | address                                                | 8    | 0      | 20    | contracts/0.8.9/oracle/HashConsensus.sol:HashConsensus |
+
+=======================
+➡ LegacyOracle
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ Lido
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ LidoExecutionLayerRewardsVault
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ LidoLocator
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ NodeOperatorsRegistry
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ OracleDaemonConfig
+=======================
+
+| Name   | Type                     | Slot | Offset | Bytes | Contract                                                  |
+|--------|--------------------------|------|--------|-------|-----------------------------------------------------------|
+| values | mapping(string => bytes) | 0    | 0      | 32    | contracts/0.8.9/OracleDaemonConfig.sol:OracleDaemonConfig |
+
+=======================
+➡ OracleReportSanityChecker
+=======================
+
+| Name    | Type                    | Slot | Offset | Bytes | Contract                                                                              |
+|---------|-------------------------|------|--------|-------|---------------------------------------------------------------------------------------|
+| _limits | struct LimitsListPacked | 0    | 0      | 32    | contracts/0.8.9/sanity_checks/OracleReportSanityChecker.sol:OracleReportSanityChecker |
+
+=======================
+➡ OssifiableProxy
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ Pausable
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ PausableUntil
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ StETH
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ StETHPermit
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ StakingRouter
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ ValidatorsExitBusOracle
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ Versioned
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ Versioned
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ WithdrawalQueueERC721
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ WithdrawalVault
+=======================
+
+| Name | Type | Slot | Offset | Bytes | Contract |
+|------|------|------|--------|-------|----------|
+
+=======================
+➡ WstETH
+=======================
+
+| Name         | Type                                            | Slot | Offset | Bytes | Contract                           |
+|--------------|-------------------------------------------------|------|--------|-------|------------------------------------|
+| _balances    | mapping(address => uint256)                     | 0    | 0      | 32    | contracts/0.6.12/WstETH.sol:WstETH |
+| _allowances  | mapping(address => mapping(address => uint256)) | 1    | 0      | 32    | contracts/0.6.12/WstETH.sol:WstETH |
+| _totalSupply | uint256                                         | 2    | 0      | 32    | contracts/0.6.12/WstETH.sol:WstETH |
+| _name        | string                                          | 3    | 0      | 32    | contracts/0.6.12/WstETH.sol:WstETH |
+| _symbol      | string                                          | 4    | 0      | 32    | contracts/0.6.12/WstETH.sol:WstETH |
+| _decimals    | uint8                                           | 5    | 0      | 1     | contracts/0.6.12/WstETH.sol:WstETH |
+| _nonces      | mapping(address => struct Counters.Counter)     | 6    | 0      | 32    | contracts/0.6.12/WstETH.sol:WstETH |
+| stETH        | contract IStETH                                 | 7    | 0      | 20    | contracts/0.6.12/WstETH.sol:WstETH |

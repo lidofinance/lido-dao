@@ -7,7 +7,7 @@ module.exports = {
   ...baseConfig,
   paths: {
     ...baseConfig.paths,
-    root: '../..'
+    root: '../..',
   },
   defaultNetwork: process.env.NETWORK_NAME || 'localhost',
   // Aragon plugin configuration
@@ -18,6 +18,6 @@ module.exports = {
     appSrcPath: 'apps/node-operators-registry/app/',
     appBuildOutputPath: 'apps/node-operators-registry/dist/',
     appName: 'node-operators-registry',
-    hooks // Path to script hooks
-  }
+    hooks, // Path to script hooks
+  },
 }

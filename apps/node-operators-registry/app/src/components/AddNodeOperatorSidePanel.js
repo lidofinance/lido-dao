@@ -1,5 +1,5 @@
 import { Button, GU, SidePanel } from '@aragon/ui'
-import React, { useCallback } from 'react'
+import React from 'react'
 import { Formik, Field } from 'formik'
 import * as yup from 'yup'
 import TextField from './TextField'
@@ -7,26 +7,21 @@ import TextField from './TextField'
 const initialValues = {
   name: '',
   address: '',
-  limit: '',
 }
 
 const validationSchema = yup.object().shape({
   name: yup.string().required().min(1),
   address: yup.string().required().min(1),
-  limit: yup.number().integer().min(0).required(),
 })
 
 function PanelContent({ addNodeOperatorApi, onClose }) {
-  const onSubmit = useCallback(
-    ({ name, address }) => {
-      addNodeOperatorApi(name, address)
-        .catch(console.error)
-        .finally(() => {
-          onClose()
-        })
-    },
-    [addNodeOperatorApi, onClose]
-  )
+  const onSubmit = ({ name, address }) => {
+    addNodeOperatorApi(name, address)
+      .catch(console.error)
+      .finally(() => {
+        onClose()
+      })
+  }
 
   return (
     <Formik
@@ -36,7 +31,7 @@ function PanelContent({ addNodeOperatorApi, onClose }) {
       validateOnBlur={false}
       validateOnChange={false}
     >
-      {({ submitForm, isSubmitting }) => {
+      {({ submitForm, isSubmitting, errors, values }) => {
         return (
           <form
             css={`
@@ -47,6 +42,10 @@ function PanelContent({ addNodeOperatorApi, onClose }) {
               submitForm()
             }}
           >
+            <pre>
+              {JSON.stringify(errors, null, 2)}
+              {JSON.stringify(values, null, 2)}
+            </pre>
             <Field name="name" label="Name" required component={TextField} />
             <Field
               name="address"
