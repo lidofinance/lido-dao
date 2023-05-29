@@ -1,6 +1,3 @@
-// After CVL2 migration, this spec results the following error:
-// CRITICAL: java.lang.IllegalArgumentException: Element class kotlinx.serialization.json.JsonLiteral is not a JsonArray
-
 //import "./StEth.spec"
 //import "./WStEth.spec"
 
@@ -56,7 +53,7 @@ methods {
     // WithdrawalQueueBase
     function unfinalizedRequestNumber() external returns (uint256) envfree;
     function unfinalizedStETH() external returns (uint256) envfree;
-    function finalizationBatch(uint256, uint256) external returns (uint256, uint256) envfree;
+    // function finalizationBatch(uint256, uint256) external returns (uint256, uint256) envfree;
 
     // WithdrawalQueueHarness:
     function getWithdrawalRequests(address) external returns (uint256[]) envfree;
@@ -128,9 +125,9 @@ rule integrityOfRequestWithdrawal(address owner, uint256 amount) {
     address reqOwner = getRequestOwner(requestId);
 
     assert requestId == getLastRequestId();
-    assert stEthBalanceBefore - actualShares == stEthBalanceAfter;
-    assert contractStEthBalanceBefore + actualShares == contractStEthBalanceAfter;
-    assert reqCumulativeStEth == lastCumulativeStEth + amount;
+    assert assert_uint256(stEthBalanceBefore - actualShares) == stEthBalanceAfter;
+    assert assert_uint256(contractStEthBalanceBefore + actualShares) == contractStEthBalanceAfter;
+    assert reqCumulativeStEth == assert_uint256(lastCumulativeStEth + amount);
     assert (reqOwner == owner && reqOwner != 0) || reqOwner == e.msg.sender;
 }
 
@@ -158,9 +155,9 @@ rule integrityOfRequestWithdrawalsWstEth(address owner, uint256 amount) {
     address reqOwner = getRequestOwner(requestId);
 
     assert requestId == getLastRequestId();
-    assert wstEthBalanceBefore - amount == wstEthBalanceAfter;
-    assert contractWstEthBalanceBefore + amount == contractWtEthBalanceAfter;
-    assert reqCumulativeStEth == lastCumulativeStEth + amountOfStETH;
+    assert assert_uint256(wstEthBalanceBefore - amount) == wstEthBalanceAfter;
+    assert assert_uint256(contractWstEthBalanceBefore + amount) == contractWtEthBalanceAfter;
+    assert reqCumulativeStEth == assert_uint256(lastCumulativeStEth + amountOfStETH);
     assert (reqOwner == owner && reqOwner != 0) || reqOwner == e.msg.sender;
 }
 
@@ -207,7 +204,7 @@ rule integrityOfFinalize(uint256 lastIdToFinalize, uint256 maxShareRate) {
     uint256 lockedEtherAmountAfter = getLockedEtherAmount();
     uint256 finalizedRequestsCounterAfter = getLastFinalizedRequestId();
 
-    assert lockedEtherAmountAfter >= lockedEtherAmountBefore + e.msg.value;
+    assert lockedEtherAmountAfter >= assert_uint256(lockedEtherAmountBefore + e.msg.value);
     assert finalizedRequestsCounterAfter == lastIdToFinalize;
     assert lastFinalizedRequestIdBefore <= lastIdToFinalize;
 }
@@ -272,7 +269,7 @@ rule newCheckpoint(uint256 requestIdToFinalize, uint256 maxShareRate) {
     uint256 checkpointIndexLenAfter = getLastCheckpointIndex();
     uint256 lastCheckpointFromRequestIdAfter = getCheckpointFromRequestId(checkpointIndexLenAfter);
 
-    assert checkpointIndexLenAfter == checkpointIndexLenBefore + 1 <=> 
+    assert checkpointIndexLenAfter == require_uint256(checkpointIndexLenBefore + 1) <=> 
         (lastCheckpointFromRequestIdAfter > lastCheckpointFromRequestIdBefore);
 }
 
@@ -356,8 +353,8 @@ minimum withdrawal rule. min withdrawal == 0.1 ether == 10 ^ 17
 **/
 invariant cantWithdrawLessThanMinWithdrawal(uint256 reqId) 
     (reqId <= getLastRequestId() && reqId >= 1) => (
-                                getRequestCumulativeStEth(reqId) - getRequestCumulativeStEth(reqId - 1) >= MIN_STETH_WITHDRAWAL_AMOUNT() &&
-                                getRequestCumulativeStEth(reqId) - getRequestCumulativeStEth(reqId - 1) <= MAX_STETH_WITHDRAWAL_AMOUNT()
+                                require_uint256(getRequestCumulativeStEth(reqId) - getRequestCumulativeStEth(require_uint256(reqId - 1))) >= MIN_STETH_WITHDRAWAL_AMOUNT() &&
+                                require_uint256(getRequestCumulativeStEth(reqId) - getRequestCumulativeStEth(require_uint256(reqId - 1))) <= MAX_STETH_WITHDRAWAL_AMOUNT()
                             )
         {
             preserved 
@@ -371,14 +368,14 @@ invariant cantWithdrawLessThanMinWithdrawal(uint256 reqId)
 Each request’s cumulative ETH must be greater than the minimum withdrawal amount.
 **/
 invariant cumulativeEtherGreaterThamMinWithdrawal(uint256 reqId)
-    (reqId <= getLastRequestId() && reqId >= 1) => (getRequestCumulativeStEth(reqId) >= MIN_STETH_WITHDRAWAL_AMOUNT());
+    (reqId <= getLastRequestId() && reqId >= 1) => (getRequestCumulativeStEth(reqId) >= require_uint128(MIN_STETH_WITHDRAWAL_AMOUNT()));
 
 /**
 Cumulative ETH and cumulative shares are monotonic increasing.
 **/
 invariant cumulativeEthMonotonocInc(uint256 reqId)
-        reqId <= getLastRequestId() => (reqId > 0 => getRequestCumulativeStEth(reqId) > getRequestCumulativeStEth(reqId - 1)) &&
-                                      (reqId > 0 => getRequestCumulativeShares(reqId) >= getRequestCumulativeShares(reqId - 1))
+        reqId <= getLastRequestId() => (reqId > 0 => getRequestCumulativeStEth(reqId) > getRequestCumulativeStEth(require_uint256(reqId - 1))) &&
+                                      (reqId > 0 => getRequestCumulativeShares(reqId) >= getRequestCumulativeShares(require_uint256(reqId - 1)))
         {
             preserved 
             {
