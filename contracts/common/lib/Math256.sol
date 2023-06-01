@@ -33,7 +33,6 @@ library Math256 {
     /// This differs from standard division with `/` in that it rounds up instead
     /// of rounding down.
     function ceilDiv(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b != 0, "Division by modulo by 0");
         // (a + b - 1) / b can overflow on addition, so we distribute.
         return a == 0 ? 0 : (a - 1) / b + 1;
     }
