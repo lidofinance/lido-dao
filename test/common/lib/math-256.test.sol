@@ -78,9 +78,6 @@ contract Math256Test is Test {
             expected = b;
         }
 
-        // Must not crash
-        Math256.min(b, a);
-
         // Must be commutative
         assertEq(Math256.min(b, a), Math256.min(a, b));
 
@@ -154,9 +151,6 @@ contract Math256Test is Test {
         } else {
             expected = b;
         }
-
-        // Must not crash
-        Math256.max(b, a);
 
         // Must be commutative
         assertEq(Math256.max(b, a), Math256.max(a, b));
@@ -258,8 +252,8 @@ contract Math256Test is Test {
             assertEq(Math256.ceilDiv(b, a), 1);
         }
 
-        // It shouldn't crash unexpectedly
-        Math256.ceilDiv(a, b);
+        uint256 expected = (a == 0 ? 0 : (a - 1) / b + 1);
+        assertEq(Math256.ceilDiv(a, b), expected);
     }
 
     /// tests for absDiff
