@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.4.24 <0.9.0;
+pragma solidity 0.8.9;
 
 import "forge-std/Test.sol";
 import { UnstructuredStorage } from "contracts/0.8.9/lib/UnstructuredStorage.sol";
