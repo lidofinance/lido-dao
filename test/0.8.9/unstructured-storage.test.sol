@@ -50,8 +50,16 @@ contract ExposedUnstructuredStorageTest is Test {
         assertEq(unstructedStorage.getStorageBool(position), false);
     }
 
+    function testGetStorageBoolUnitializedFuzz(bytes32 position) public {
+        assertEq(unstructedStorage.getStorageBool(position), false);
+    }
+
     function testGetStorageAddressUnitialized() public {
         bytes32 position = keccak256("FOO");
+        assertEq(unstructedStorage.getStorageAddress(position), address(0));
+    }
+
+    function testGetStorageAddressUnitializedFuzz(bytes32 position ) public {
         assertEq(unstructedStorage.getStorageAddress(position), address(0));
     }
 
@@ -61,8 +69,18 @@ contract ExposedUnstructuredStorageTest is Test {
         assertEq(unstructedStorage.getStorageBytes32(position), data);
     }
 
+    function testGetStorageBytes32UnitializedFuzz(bytes32 position) public {
+        bytes32 data;
+        assertEq(unstructedStorage.getStorageBytes32(position), data);
+    }
+
     function testGetStorageUint256Unitialized() public {
         bytes32 position = keccak256("FOO");
+        uint256 data;
+        assertEq(unstructedStorage.getStorageUint256(position), data);
+    }
+
+    function testGetStorageUint256UnitializedFuzz(bytes32 position) public {
         uint256 data;
         assertEq(unstructedStorage.getStorageUint256(position), data);
     }
@@ -87,9 +105,7 @@ contract ExposedUnstructuredStorageTest is Test {
         assertEq(unstructedStorage.getStorageAddress(position), data);
     }
 
-    function testSetStorageAddressFuzz(address data) public {
-        bytes32 position = keccak256("FOO");
-
+    function testSetStorageAddressFuzz(address data, bytes32 position) public {
         assertEq(unstructedStorage.getStorageAddress(position), address(0));
         unstructedStorage.setStorageAddress(position, data);
         assertEq(unstructedStorage.getStorageAddress(position), data);
@@ -105,8 +121,7 @@ contract ExposedUnstructuredStorageTest is Test {
         assertEq(unstructedStorage.getStorageBytes32(position), data);
     }
 
-    function testSetStorageBytes32Fuzz(bytes32 data) public {
-        bytes32 position = keccak256("FOO");
+    function testSetStorageBytes32Fuzz(bytes32 data, bytes32 position) public {
         bytes32 unintializedData;
 
         assertEq(unstructedStorage.getStorageBytes32(position), unintializedData);
@@ -124,8 +139,7 @@ contract ExposedUnstructuredStorageTest is Test {
         assertEq(unstructedStorage.getStorageUint256(position), data);
     }
 
-    function testSetStorageUint256Fuzz(uint256 data) public {
-        bytes32 position = keccak256("FOO");
+    function testSetStorageUint256Fuzz(uint256 data, bytes32 position) public {
         uint256 unintializedData;
 
         assertEq(unstructedStorage.getStorageUint256(position), unintializedData);
