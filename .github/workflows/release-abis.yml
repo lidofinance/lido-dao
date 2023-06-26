@@ -56,7 +56,6 @@ jobs:
         run: zip -j abis.zip lib/abi/*.json
 
       - name: Upload the archive to the release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.ref }} # is set to the tag of the release
-          files: abis.zip
+        run: |
+          gh release view "$GITHUB_REF" || exit;
+          gh release upload "$GITHUB_REF" abis.zip;
