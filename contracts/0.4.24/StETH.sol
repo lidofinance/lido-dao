@@ -176,7 +176,7 @@ contract StETH is IERC20, Pausable {
      *
      * Requirements:
      *
-     * - `_recipient` cannot be the zero address.
+     * - `_recipient` cannot be the zero address or stETH contract itself.
      * - the caller must have a balance of at least `_amount`.
      * - the contract must not be paused.
      *
@@ -227,7 +227,8 @@ contract StETH is IERC20, Pausable {
      *
      * Requirements:
      *
-     * - `_sender` and `_recipient` cannot be the zero addresses.
+     * - `_sender` cannot be the zero addresses.
+     * - `_recipient` cannot be the zero addresses or stETH contract itself.
      * - `_sender` must have a balance of at least `_amount`.
      * - the caller must have allowance for `_sender`'s tokens of at least `_amount`.
      * - the contract must not be paused.
@@ -321,7 +322,7 @@ contract StETH is IERC20, Pausable {
      *
      * Requirements:
      *
-     * - `_recipient` cannot be the zero address.
+     * - `_recipient` cannot be the zero address or stETH contract itself.
      * - the caller must have at least `_sharesAmount` shares.
      * - the contract must not be paused.
      *
@@ -335,15 +336,19 @@ contract StETH is IERC20, Pausable {
     }
 
     /**
-     * @notice Moves `_sharesAmount` token shares from the `_sender` account to the `_recipient` account.
+     * @notice Moves `_sharesAmount` token shares from the `_sender` account to the `_recipient` using
+     * the allowance mechanism. The amount of tokens equivalent to `_sharesAmount` is then deducted
+     * from the caller's allowance.
      *
      * @return amount of transferred tokens.
      * Emits a `TransferShares` event.
      * Emits a `Transfer` event.
+     * Emits an `Approval` event indicating the updated allowance.
      *
      * Requirements:
      *
-     * - `_sender` and `_recipient` cannot be the zero addresses.
+     * - `_sender` cannot be the zero address.
+     * - `_recipient` cannot be the zero address or stETH contract itself.
      * - `_sender` must have at least `_sharesAmount` shares.
      * - the caller must have allowance for `_sender`'s tokens of at least `getPooledEthByShares(_sharesAmount)`.
      * - the contract must not be paused.
