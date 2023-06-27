@@ -94,12 +94,12 @@ contract LidoExecutionLayerRewardsVault {
     }
 
     /**
-      * Transfers a given `_amount` of an ERC20-token (defined by the `_token` contract address)
-      * currently belonging to the burner contract address to the Lido treasury address.
-      *
-      * @param _token an ERC20-compatible token
-      * @param _amount token amount
-      */
+     * @notice Transfers a given `_amount` of an ERC20-token (defined by the `_token` contract address)
+     * currently belonging to the vault contract address to the Lido treasury address.
+     *
+     * @param _token an ERC20-compatible token
+     * @param _amount token amount
+     */
     function recoverERC20(address _token, uint256 _amount) external {
         require(_amount > 0, "ZERO_RECOVERY_AMOUNT");
 
@@ -109,12 +109,12 @@ contract LidoExecutionLayerRewardsVault {
     }
 
     /**
-      * Transfers a given token_id of an ERC721-compatible NFT (defined by the token contract address)
-      * currently belonging to the burner contract address to the Lido treasury address.
-      *
-      * @param _token an ERC721-compatible token
-      * @param _tokenId minted token id
-      */
+     * @notice Transfers the given tokenId of the ERC721-compatible NFT (defined by the provided token contract address)
+     * currently belonging to the vault contract address to the Lido treasury address.
+     *
+     * @param _token an ERC721-compatible token
+     * @param _tokenId minted token id
+     */
     function recoverERC721(address _token, uint256 _tokenId) external {
         emit ERC721Recovered(msg.sender, _token, _tokenId);
 
