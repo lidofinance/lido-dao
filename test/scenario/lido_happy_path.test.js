@@ -28,7 +28,7 @@ contract('Lido: happy path', (addresses) => {
     operator_1,
     operator_2,
     operator_3,
-    // users who deposit Ether to the pool
+    // users who deposit ether to the pool
     user1,
     user2,
     user3,
@@ -189,7 +189,7 @@ contract('Lido: happy path', (addresses) => {
       signatures
     )
 
-    // No Ether was deposited yet to the validator contract
+    // No ether was deposited yet to the validator contract
 
     assert.equals(await depositContractMock.totalCalls(), 0)
 
@@ -197,7 +197,7 @@ contract('Lido: happy path', (addresses) => {
     assert.equals(ether2Stat.depositedValidators, 0, 'deposited ether2')
     assert.equals(ether2Stat.beaconBalance, 0, 'remote ether2')
 
-    // All Ether was buffered within the pool contract atm
+    // All ether was buffered within the pool contract atm
 
     assert.equals(await pool.getBufferedEther(), ETH(3), 'buffered ether')
     assert.equals(await pool.getTotalPooledEther(), ETH(3), 'total pooled ether')
@@ -253,7 +253,7 @@ contract('Lido: happy path', (addresses) => {
     assert.equals(ether2Stat.depositedValidators, 1, 'deposited ether2')
     assert.equals(ether2Stat.beaconBalance, 0, 'remote ether2')
 
-    // Some Ether remained buffered within the pool contract
+    // Some ether remained buffered within the pool contract
 
     assert.equals(await pool.getBufferedEther(), ETH(1), 'buffered ether')
     assert.equals(await pool.getTotalPooledEther(), ETH(1 + 32), 'total pooled ether')
@@ -402,7 +402,7 @@ contract('Lido: happy path', (addresses) => {
     const newTotalShares = await token.getTotalShares()
     assert.equals(newTotalShares, '97031905270948112819', 'total shares')
 
-    // Total pooled Ether increased
+    // Total pooled ether increased
 
     const newTotalPooledEther = await pool.getTotalPooledEther()
     assert.equals(newTotalPooledEther, ETH(33 + 64.32), 'total pooled ether')
@@ -413,7 +413,7 @@ contract('Lido: happy path', (addresses) => {
     assert.equals(ether2Stat.depositedValidators, 2, 'deposited ether2')
     assert.equals(ether2Stat.beaconBalance, ETH(64.32), 'remote ether2')
 
-    // Buffered Ether amount didn't change
+    // Buffered ether amount didn't change
 
     assert.equals(await pool.getBufferedEther(), ETH(33), 'buffered ether')
 
@@ -437,7 +437,7 @@ contract('Lido: happy path', (addresses) => {
     assert.equalsDelta(await token.balanceOf(nodeOperatorsRegistry.address), 0, 1, 'staking module tokens')
 
     // The node operators' fee is distributed between all active node operators,
-    // proportional to their effective stake (the amount of Ether staked by the operator's
+    // proportional to their effective stake (the amount of ether staked by the operator's
     // used and non-stopped validators).
     //
     // In our case, both node operators received the same fee since they have the same

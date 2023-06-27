@@ -1219,7 +1219,7 @@ contract('Lido', ([appManager, , , , , , , , , , , , user1, user2, user3, nobody
     assert.equals(await app.totalSupply(), tokens(32)) // 30 remote (slashed) + 2 buffered = 32
     await checkRewards({ treasury: 0, operator: 0 })
 
-    // rewarded 200 Ether (was 30, became 230)
+    // rewarded 200 ether (was 30, became 230)
     await pushReport(1, ETH(130))
     await checkStat({ depositedValidators: 1, beaconValidators: 1, beaconBalance: ETH(130) })
     // Todo check reward effects

@@ -179,7 +179,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     /// @dev storage slot position of the staking rate limit structure
     bytes32 internal constant STAKING_STATE_POSITION =
         0xa3678de4a579be090bed1177e0a24f77cc29d181ac22fd7688aca344d8938015; // keccak256("lido.Lido.stakeLimit");
-    /// @dev amount of Ether (on the current Ethereum side) buffered on this smart contract balance
+    /// @dev amount of ether (on the current Ethereum side) buffered on this smart contract balance
     bytes32 internal constant BUFFERED_ETHER_POSITION =
         0xed310af23f61f96daefbcd140b306c0bdbf8c178398299741687b90e794772b0; // keccak256("lido.Lido.bufferedEther");
     /// @dev number of deposited validators (incrementing counter of deposit operations).
@@ -314,9 +314,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @notice Stops accepting new Ether to the protocol
+     * @notice Stops accepting new ether to the protocol
      *
-     * @dev While accepting new Ether is stopped, calls to the `submit` function,
+     * @dev While accepting new ether is stopped, calls to the `submit` function,
      * as well as to the default payable function, will revert.
      *
      * Emits `StakingPaused` event.
@@ -328,7 +328,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @notice Resumes accepting new Ether to the protocol (if `pauseStaking` was called previously)
+     * @notice Resumes accepting new ether to the protocol (if `pauseStaking` was called previously)
      * NB: Staking could be rate-limited by imposing a limit on the stake amount
      * at each moment in time, see `setStakingLimit()` and `removeStakingLimit()`
      *
@@ -397,7 +397,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
 
     /**
-     * @notice Returns how much Ether can be staked in the current block
+     * @notice Returns how much ether can be staked in the current block
      * @dev Special return values:
      * - 2^256 - 1 if staking is unlimited;
      * - 0 if staking is paused or if limit is exhausted.
@@ -1078,7 +1078,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @dev Gets the amount of Ether temporary buffered on this contract balance
+     * @dev Gets the amount of ether temporary buffered on this contract balance
      */
     function _getBufferedEther() internal view returns (uint256) {
         return BUFFERED_ETHER_POSITION.getStorageUint256();
@@ -1100,7 +1100,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @dev Gets the total amount of Ether controlled by the system
+     * @dev Gets the total amount of ether controlled by the system
      * @return total balance in wei
      */
     function _getTotalPooledEther() internal view returns (uint256) {
