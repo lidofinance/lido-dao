@@ -602,13 +602,12 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @notice Unsafely change deposited validators
+     * @notice Unsafely change deposited validators counter
      *
-     * The method unsafely changes deposited validator counter.
-     * Can be required when onboarding external validators to Lido
+     * @dev Can be required when onboarding external validators to Lido
      * (i.e., had deposited before and rotated their type-0x00 withdrawal credentials to Lido)
      *
-     * @param _newDepositedValidators new value
+     * @param _newDepositedValidators new value for deposited validators counter
      */
     function unsafeChangeDepositedValidators(uint256 _newDepositedValidators) external {
         _auth(UNSAFE_CHANGE_DEPOSITED_VALIDATORS_ROLE);
@@ -626,7 +625,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-    * @notice Get the amount of Ether temporary buffered on this contract balance
+    * @notice Get the amount of ether temporary buffered on this contract balance
     * @dev Buffered balance is kept on the contract from the moment the funds are received from user
     * until the moment they are actually sent to the official Deposit contract.
     * @return amount of buffered funds in wei
@@ -637,8 +636,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
     /**
      * @notice Get total amount of execution layer rewards collected to Lido contract
-     * @dev Ether got through LidoExecutionLayerRewardsVault is kept on this contract's balance the same way
-     * as other buffered Ether is kept (until it gets deposited)
+     * @dev ether got through LidoExecutionLayerRewardsVault is kept on this contract's balance the same way
+     * as other buffered ether is kept (until it gets deposited)
      * @return amount of funds received as execution layer rewards in wei
      */
     function getTotalELRewardsCollected() public view returns (uint256) {
@@ -667,16 +666,16 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @dev Check that Lido allows depositing buffered ether to the consensus layer
-     * Depends on the bunker state and protocol's pause state
+     * @return true if  depositing buffered ether to the consensus layer is allowed
+     * @dev Depends on the bunker state and protocol's pause state
      */
     function canDeposit() public view returns (bool) {
         return !_withdrawalQueue().isBunkerModeActive() && !isStopped();
     }
 
     /**
-     * @dev Returns depositable ether amount.
-     * Takes into account unfinalized stETH required by WithdrawalQueue
+     * @return the amount of ether available to deposit
+     * @dev Takes into account unfinalized stETH on WithdrawalQueue
      */
     function getDepositableEther() public view returns (uint256) {
         uint256 bufferedEther = _getBufferedEther();
@@ -685,7 +684,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @dev Invokes a deposit call to the Staking Router contract and updates buffered counters
+     * @notice Deposit buffered ether to StakingRouter's module with id of `_stakingModuleId`
      * @param _maxDepositsCount max deposits count
      * @param _stakingModuleId id of the staking module to be deposited
      * @param _depositCalldata module calldata
