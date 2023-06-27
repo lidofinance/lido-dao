@@ -41,7 +41,7 @@ import "./utils/Pausable.sol";
  * emitting an event for each token holder and thus running an unbounded loop.
  *
  * The token inherits from `Pausable` and uses `whenNotStopped` modifier for methods
- * which change `shares` or `allowances`. `_stop` and `_resume` functions are overridden
+ * which change `shares`. `_stop` and `_resume` functions are overridden
  * in `Lido.sol` and might be called by an account with the `PAUSE_ROLE` assigned by the
  * DAO. This is useful for emergency scenarios, e.g. a protocol bug, where one might want
  * to freeze all token transfers and approvals until the emergency is resolved.
