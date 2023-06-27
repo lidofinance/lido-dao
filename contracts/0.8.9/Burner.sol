@@ -13,42 +13,42 @@ import {AccessControlEnumerable} from "./utils/access/AccessControlEnumerable.so
 import {IBurner} from "../common/interfaces/IBurner.sol";
 
 /**
-  * @title Interface defining ERC20-compatible StETH token
-  */
+ * @title Interface defining ERC20-compatible StETH token
+ */
 interface IStETH is IERC20 {
     /**
-      * @notice Get stETH amount by the provided shares amount
-      * @param _sharesAmount shares amount
-      * @dev dual to `getSharesByPooledEth`.
-      */
+     * @notice Get stETH amount by the provided shares amount
+     * @param _sharesAmount shares amount
+     * @dev dual to `getSharesByPooledEth`.
+     */
     function getPooledEthByShares(uint256 _sharesAmount) external view returns (uint256);
 
     /**
-      * @notice Get shares amount by the provided stETH amount
-      * @param _pooledEthAmount stETH amount
-      * @dev dual to `getPooledEthByShares`.
-      */
+     * @notice Get shares amount by the provided stETH amount
+     * @param _pooledEthAmount stETH amount
+     * @dev dual to `getPooledEthByShares`.
+     */
     function getSharesByPooledEth(uint256 _pooledEthAmount) external view returns (uint256);
 
     /**
-      * @notice Get shares amount of the provided account
-      * @param _account provided account address.
-      */
+     * @notice Get shares amount of the provided account
+     * @param _account provided account address.
+     */
     function sharesOf(address _account) external view returns (uint256);
 
     /**
-      * @notice Transfer `_sharesAmount` stETH shares from `_sender` to `_receiver` using allowance.
-      */
-    function transferSharesFrom(
-        address _sender, address _recipient, uint256 _sharesAmount
-    ) external returns (uint256);
+     * @notice Transfer `_sharesAmount` stETH shares from `_sender` to `_receiver` using allowance.
+     */
+    function transferSharesFrom(address _sender, address _recipient, uint256 _sharesAmount)
+        external
+        returns (uint256);
 }
 
 /**
-  * @notice A dedicated contract for stETH burning requests scheduling
-  *
-  * @dev Burning stETH means 'decrease total underlying shares amount to perform stETH positive token rebase'
-  */
+ * @notice A dedicated contract for stETH burning requests scheduling
+ *
+ * @dev Burning stETH means 'decrease total underlying shares amount to perform stETH positive token rebase'
+ */
 contract Burner is IBurner, AccessControlEnumerable {
     using SafeERC20 for IERC20;
 
@@ -73,63 +73,42 @@ contract Burner is IBurner, AccessControlEnumerable {
     address public immutable TREASURY;
 
     /**
-      * Emitted when a new stETH burning request is added by the `requestedBy` address.
-      */
+     * @notice Emitted when a new stETH burning request is added by the `requestedBy` address.
+     */
     event StETHBurnRequested(
-        bool indexed isCover,
-        address indexed requestedBy,
-        uint256 amountOfStETH,
-        uint256 amountOfShares
+        bool indexed isCover, address indexed requestedBy, uint256 amountOfStETH, uint256 amountOfShares
     );
 
     /**
-      * Emitted when the stETH `amount` (corresponding to `amountOfShares` shares) burnt for the `isCover` reason.
-      */
-    event StETHBurnt(
-        bool indexed isCover,
-        uint256 amountOfStETH,
-        uint256 amountOfShares
-    );
+     * @notice Emitted when the stETH `amount` (corresponding to `amountOfShares` shares) burnt for the `isCover` reason.
+     */
+    event StETHBurnt(bool indexed isCover, uint256 amountOfStETH, uint256 amountOfShares);
 
     /**
-      * Emitted when the excessive stETH `amount` (corresponding to `amountOfShares` shares) recovered (i.e. transferred)
-      * to the Lido treasure address by `requestedBy` sender.
-      */
-    event ExcessStETHRecovered(
-        address indexed requestedBy,
-        uint256 amountOfStETH,
-        uint256 amountOfShares
-    );
+     * @notice Emitted when the excessive stETH `amount` (corresponding to `amountOfShares` shares) recovered (i.e. transferred)
+     * to the Lido treasure address by `requestedBy` sender.
+     */
+    event ExcessStETHRecovered(address indexed requestedBy, uint256 amountOfStETH, uint256 amountOfShares);
 
     /**
-      * Emitted when the ERC20 `token` recovered (i.e. transferred)
-      * to the Lido treasure address by `requestedBy` sender.
-      */
-    event ERC20Recovered(
-        address indexed requestedBy,
-        address indexed token,
-        uint256 amount
-    );
+     * @notice Emitted when the ERC20 `token` recovered (i.e. transferred)
+     * to the Lido treasure address by `requestedBy` sender.
+     */
+    event ERC20Recovered(address indexed requestedBy, address indexed token, uint256 amount);
 
     /**
-      * Emitted when the ERC721-compatible `token` (NFT) recovered (i.e. transferred)
-      * to the Lido treasure address by `requestedBy` sender.
-      */
-    event ERC721Recovered(
-        address indexed requestedBy,
-        address indexed token,
-        uint256 tokenId
-    );
+     * @notice Emitted when the ERC721-compatible `token` (NFT) recovered (i.e. transferred)
+     * to the Lido treasure address by `requestedBy` sender.
+     */
+    event ERC721Recovered(address indexed requestedBy, address indexed token, uint256 tokenId);
 
     /**
-      * Ctor
-      *
-      * @param _admin the Lido DAO Aragon agent contract address
-      * @param _treasury the Lido treasury address (see StETH/ERC20/ERC721-recovery interfaces)
-      * @param _stETH stETH token address
-      * @param _totalCoverSharesBurnt Shares burnt counter init value (cover case)
-      * @param _totalNonCoverSharesBurnt Shares burnt counter init value (non-cover case)
-      */
+     * @param _admin the Lido DAO Aragon agent contract address
+     * @param _treasury the Lido treasury address (see StETH/ERC20/ERC721-recovery interfaces)
+     * @param _stETH stETH token address
+     * @param _totalCoverSharesBurnt Shares burnt counter init value (cover case)
+     * @param _totalNonCoverSharesBurnt Shares burnt counter init value (non-cover case)
+     */
     constructor(
         address _admin,
         address _treasury,
@@ -152,76 +131,81 @@ contract Burner is IBurner, AccessControlEnumerable {
     }
 
     /**
-      * @notice BE CAREFUL, the provided stETH will be burnt permanently.
-      *
-      * Transfers `_stETHAmountToBurn` stETH tokens from the message sender and irreversibly locks these
-      * on the burner contract address. Internally converts `_stETHAmountToBurn` amount into underlying
-      * shares amount (`_stETHAmountToBurnAsShares`) and marks the converted amount for burning
-      * by increasing the `coverSharesBurnRequested` counter.
-      *
-      * @param _stETHAmountToBurn stETH tokens to burn
-      *
-      */
+     * @notice BE CAREFUL, the provided stETH will be burnt permanently.
+     *
+     * Transfers `_stETHAmountToBurn` stETH tokens from the message sender and irreversibly locks these
+     * on the burner contract address. Internally converts `_stETHAmountToBurn` amount into underlying
+     * shares amount (`_stETHAmountToBurnAsShares`) and marks the converted amount for burning
+     * by increasing the `coverSharesBurnRequested` counter.
+     *
+     * @param _stETHAmountToBurn stETH tokens to burn
+     */
     function requestBurnMyStETHForCover(uint256 _stETHAmountToBurn) external onlyRole(REQUEST_BURN_MY_STETH_ROLE) {
         IStETH(STETH).transferFrom(msg.sender, address(this), _stETHAmountToBurn);
         uint256 sharesAmount = IStETH(STETH).getSharesByPooledEth(_stETHAmountToBurn);
-        _requestBurn(sharesAmount, _stETHAmountToBurn, true /* _isCover */);
+        _requestBurn(sharesAmount, _stETHAmountToBurn, true /* _isCover */ );
     }
 
     /**
-      * @notice BE CAREFUL, the provided stETH will be burnt permanently.
-      *
-      * Transfers `_sharesAmountToBurn` stETH shares from `_from` and irreversibly locks these
-      * on the burner contract address. Marks the shares amount for burning
-      * by increasing the `coverSharesBurnRequested` counter.
-      *
-      * @param _from address to transfer shares from
-      * @param _sharesAmountToBurn stETH shares to burn
-      *
-      */
-    function requestBurnSharesForCover(address _from, uint256 _sharesAmountToBurn) external onlyRole(REQUEST_BURN_SHARES_ROLE) {
+     * @notice BE CAREFUL, the provided stETH will be burnt permanently.
+     *
+     * Transfers `_sharesAmountToBurn` stETH shares from `_from` and irreversibly locks these
+     * on the burner contract address. Marks the shares amount for burning
+     * by increasing the `coverSharesBurnRequested` counter.
+     *
+     * @param _from address to transfer shares from
+     * @param _sharesAmountToBurn stETH shares to burn
+     *
+     */
+    function requestBurnSharesForCover(address _from, uint256 _sharesAmountToBurn)
+        external
+        onlyRole(REQUEST_BURN_SHARES_ROLE)
+    {
         uint256 stETHAmount = IStETH(STETH).transferSharesFrom(_from, address(this), _sharesAmountToBurn);
         _requestBurn(_sharesAmountToBurn, stETHAmount, true /* _isCover */);
     }
 
     /**
-      * @notice BE CAREFUL, the provided stETH will be burnt permanently.
-      *
-      * Transfers `_stETHAmountToBurn` stETH tokens from the message sender and irreversibly locks these
-      * on the burner contract address. Internally converts `_stETHAmountToBurn` amount into underlying
-      * shares amount (`_stETHAmountToBurnAsShares`) and marks the converted amount for burning
-      * by increasing the `nonCoverSharesBurnRequested` counter.
-      *
-      * @param _stETHAmountToBurn stETH tokens to burn
-      *
-      */
+     * @notice BE CAREFUL, the provided stETH will be burnt permanently.
+     *
+     * Transfers `_stETHAmountToBurn` stETH tokens from the message sender and irreversibly locks these
+     * on the burner contract address. Internally converts `_stETHAmountToBurn` amount into underlying
+     * shares amount (`_stETHAmountToBurnAsShares`) and marks the converted amount for burning
+     * by increasing the `nonCoverSharesBurnRequested` counter.
+     *
+     * @param _stETHAmountToBurn stETH tokens to burn
+     *
+     */
     function requestBurnMyStETH(uint256 _stETHAmountToBurn) external onlyRole(REQUEST_BURN_MY_STETH_ROLE) {
         IStETH(STETH).transferFrom(msg.sender, address(this), _stETHAmountToBurn);
         uint256 sharesAmount = IStETH(STETH).getSharesByPooledEth(_stETHAmountToBurn);
-        _requestBurn(sharesAmount, _stETHAmountToBurn, false /* _isCover */);
+        _requestBurn(sharesAmount, _stETHAmountToBurn, false /* _isCover */ );
     }
 
     /**
-      * @notice BE CAREFUL, the provided stETH will be burnt permanently.
-      *
-      * Transfers `_sharesAmountToBurn` stETH shares from `_from` and irreversibly locks these
-      * on the burner contract address. Marks the shares amount for burning
-      * by increasing the `nonCoverSharesBurnRequested` counter.
-      *
-      * @param _from address to transfer shares from
-      * @param _sharesAmountToBurn stETH shares to burn
-      *
-      */
-    function requestBurnShares(address _from, uint256 _sharesAmountToBurn) external onlyRole(REQUEST_BURN_SHARES_ROLE) {
+     * @notice BE CAREFUL, the provided stETH will be burnt permanently.
+     *
+     * Transfers `_sharesAmountToBurn` stETH shares from `_from` and irreversibly locks these
+     * on the burner contract address. Marks the shares amount for burning
+     * by increasing the `nonCoverSharesBurnRequested` counter.
+     *
+     * @param _from address to transfer shares from
+     * @param _sharesAmountToBurn stETH shares to burn
+     *
+     */
+    function requestBurnShares(address _from, uint256 _sharesAmountToBurn)
+        external
+        onlyRole(REQUEST_BURN_SHARES_ROLE)
+    {
         uint256 stETHAmount = IStETH(STETH).transferSharesFrom(_from, address(this), _sharesAmountToBurn);
-        _requestBurn(_sharesAmountToBurn, stETHAmount, false /* _isCover */);
+        _requestBurn(_sharesAmountToBurn, stETHAmount, false /* _isCover */ );
     }
 
     /**
-      * Transfers the excess stETH amount (e.g. belonging to the burner contract address
-      * but not marked for burning) to the Lido treasury address set upon the
-      * contract construction.
-      */
+     * @notice Transfers the excess stETH amount (e.g. belonging to the burner contract address
+     * but not marked for burning) to the Lido treasury address set upon the
+     * contract construction.
+     */
     function recoverExcessStETH() external {
         uint256 excessStETH = getExcessStETH();
 
@@ -235,19 +219,19 @@ contract Burner is IBurner, AccessControlEnumerable {
     }
 
     /**
-      * Intentionally deny incoming ether
-      */
+     * @dev Intentionally deny incoming ether
+     */
     receive() external payable {
         revert DirectETHTransfer();
     }
 
     /**
-      * Transfers a given `_amount` of an ERC20-token (defined by the `_token` contract address)
-      * currently belonging to the burner contract address to the Lido treasury address.
-      *
-      * @param _token an ERC20-compatible token
-      * @param _amount token amount
-      */
+     * @notice Transfers a given `_amount` of an ERC20-token (defined by the `_token` contract address)
+     * currently belonging to the burner contract address to the Lido treasury address.
+     *
+     * @param _token an ERC20-compatible token
+     * @param _amount token amount
+     */
     function recoverERC20(address _token, uint256 _amount) external {
         if (_amount == 0) revert ZeroRecoveryAmount();
         if (_token == STETH) revert StETHRecoveryWrongFunc();
@@ -258,12 +242,12 @@ contract Burner is IBurner, AccessControlEnumerable {
     }
 
     /**
-      * Transfers a given token_id of an ERC721-compatible NFT (defined by the token contract address)
-      * currently belonging to the burner contract address to the Lido treasury address.
-      *
-      * @param _token an ERC721-compatible token
-      * @param _tokenId minted token id
-      */
+     * @notice Transfers a given `_tokenId` of an ERC721-compatible NFT (defined by the `_token` contract address)
+     * currently belonging to the burner contract address to the Lido treasury address.
+     *
+     * @param _token an ERC721-compatible token
+     * @param _tokenId minted token id
+     */
     function recoverERC721(address _token, uint256 _tokenId) external {
         if (_token == STETH) revert StETHRecoveryWrongFunc();
 
@@ -273,7 +257,7 @@ contract Burner is IBurner, AccessControlEnumerable {
     }
 
     /**
-     * Commit cover/non-cover burning requests and logs cover/non-cover shares amount just burnt.
+     * @notice Commit cover/non-cover burning requests and logs cover/non-cover shares amount just burnt.
      *
      * NB: The real burn enactment to be invoked after the call (via internal Lido._burnShares())
      *
@@ -305,20 +289,18 @@ contract Burner is IBurner, AccessControlEnumerable {
 
             totalCoverSharesBurnt += sharesToBurnNowForCover;
             uint256 stETHToBurnNowForCover = IStETH(STETH).getPooledEthByShares(sharesToBurnNowForCover);
-            emit StETHBurnt(true /* isCover */, stETHToBurnNowForCover, sharesToBurnNowForCover);
+            emit StETHBurnt(true, /* isCover */ stETHToBurnNowForCover, sharesToBurnNowForCover);
 
             coverSharesBurnRequested -= sharesToBurnNowForCover;
             sharesToBurnNow += sharesToBurnNowForCover;
         }
         if (memNonCoverSharesBurnRequested > 0 && sharesToBurnNow < _sharesToBurn) {
-            uint256 sharesToBurnNowForNonCover = Math.min(
-                _sharesToBurn - sharesToBurnNow,
-                memNonCoverSharesBurnRequested
-            );
+            uint256 sharesToBurnNowForNonCover =
+                Math.min(_sharesToBurn - sharesToBurnNow, memNonCoverSharesBurnRequested);
 
             totalNonCoverSharesBurnt += sharesToBurnNowForNonCover;
             uint256 stETHToBurnNowForNonCover = IStETH(STETH).getPooledEthByShares(sharesToBurnNowForNonCover);
-            emit StETHBurnt(false /* isCover */, stETHToBurnNowForNonCover, sharesToBurnNowForNonCover);
+            emit StETHBurnt(false, /* isCover */ stETHToBurnNowForNonCover, sharesToBurnNowForNonCover);
 
             nonCoverSharesBurnRequested -= sharesToBurnNowForNonCover;
             sharesToBurnNow += sharesToBurnNowForNonCover;
@@ -327,33 +309,37 @@ contract Burner is IBurner, AccessControlEnumerable {
     }
 
     /**
-      * Returns the current amount of shares locked on the contract to be burnt.
-      */
-    function getSharesRequestedToBurn() external view virtual override returns (
-        uint256 coverShares, uint256 nonCoverShares
-    ) {
+     * @notice Returns the current amount of shares locked on the contract to be burnt.
+     */
+    function getSharesRequestedToBurn()
+        external
+        view
+        virtual
+        override
+        returns (uint256 coverShares, uint256 nonCoverShares)
+    {
         coverShares = coverSharesBurnRequested;
         nonCoverShares = nonCoverSharesBurnRequested;
     }
 
     /**
-      * Returns the total cover shares ever burnt.
-      */
+     * @notice Returns the total cover shares ever burnt.
+     */
     function getCoverSharesBurnt() external view virtual override returns (uint256) {
         return totalCoverSharesBurnt;
     }
 
     /**
-      * Returns the total non-cover shares ever burnt.
-      */
+     * @notice Returns the total non-cover shares ever burnt.
+     */
     function getNonCoverSharesBurnt() external view virtual override returns (uint256) {
         return totalNonCoverSharesBurnt;
     }
 
     /**
-      * Returns the stETH amount belonging to the burner contract address but not marked for burning.
-      */
-    function getExcessStETH() public view returns (uint256)  {
+     * @notice Returns the stETH amount belonging to the burner contract address but not marked for burning.
+     */
+    function getExcessStETH() public view returns (uint256) {
         return IStETH(STETH).getPooledEthByShares(_getExcessStETHShares());
     }
 

@@ -10,13 +10,12 @@ import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
 interface ILido {
     /**
-      * @notice A payable function supposed to be called only by LidoExecLayerRewardsVault contract
-      * @dev We need a dedicated function because funds received by the default payable function
-      * are treated as a user deposit
-      */
+     * @notice A payable function supposed to be called only by LidoExecLayerRewardsVault contract
+     * @dev We need a dedicated function because funds received by the default payable function
+     * are treated as a user deposit
+     */
     function receiveELRewards() external payable;
 }
-
 
 /**
  * @title A vault for temporary storage of execution layer rewards (MEV and tx priority fee)
@@ -28,38 +27,26 @@ contract LidoExecutionLayerRewardsVault {
     address public immutable TREASURY;
 
     /**
-      * Emitted when the ERC20 `token` recovered (i.e. transferred)
-      * to the Lido treasury address by `requestedBy` sender.
-      */
-    event ERC20Recovered(
-        address indexed requestedBy,
-        address indexed token,
-        uint256 amount
-    );
+     * @notice Emitted when the ERC20 `token` recovered (i.e. transferred)
+     * to the Lido treasury address by `requestedBy` sender.
+     */
+    event ERC20Recovered(address indexed requestedBy, address indexed token, uint256 amount);
 
     /**
-      * Emitted when the ERC721-compatible `token` (NFT) recovered (i.e. transferred)
-      * to the Lido treasury address by `requestedBy` sender.
-      */
-    event ERC721Recovered(
-        address indexed requestedBy,
-        address indexed token,
-        uint256 tokenId
-    );
+     * @notice Emitted when the ERC721-compatible `token` (NFT) recovered (i.e. transferred)
+     * to the Lido treasury address by `requestedBy` sender.
+     */
+    event ERC721Recovered(address indexed requestedBy, address indexed token, uint256 tokenId);
 
     /**
-      * Emitted when the vault received ETH
-      */
-    event ETHReceived(
-        uint256 amount
-    );
+     * @notice Emitted when the vault received ETH
+     */
+    event ETHReceived(uint256 amount);
 
     /**
-      * Ctor
-      *
-      * @param _lido the Lido token (stETH) address
-      * @param _treasury the Lido treasury address (see ERC20/ERC721-recovery interfaces)
-      */
+     * @param _lido the Lido token (stETH) address
+     * @param _treasury the Lido treasury address (see ERC20/ERC721-recovery interfaces)
+     */
     constructor(address _lido, address _treasury) {
         require(_lido != address(0), "LIDO_ZERO_ADDRESS");
         require(_treasury != address(0), "TREASURY_ZERO_ADDRESS");
@@ -69,19 +56,19 @@ contract LidoExecutionLayerRewardsVault {
     }
 
     /**
-      * @notice Allows the contract to receive ETH
-      * @dev execution layer rewards may be sent as plain ETH transfers
-      */
+     * @notice Allows the contract to receive ETH
+     * @dev execution layer rewards may be sent as plain ETH transfers
+     */
     receive() external payable {
         emit ETHReceived(msg.value);
     }
 
     /**
-      * @notice Withdraw all accumulated rewards to Lido contract
-      * @dev Can be called only by the Lido contract
-      * @param _maxAmount Max amount of ETH to withdraw
-      * @return amount of funds received as execution layer rewards (in wei)
-      */
+     * @notice Withdraw all accumulated rewards to Lido contract
+     * @dev Can be called only by the Lido contract
+     * @param _maxAmount Max amount of ETH to withdraw
+     * @return amount of funds received as execution layer rewards (in wei)
+     */
     function withdrawRewards(uint256 _maxAmount) external returns (uint256 amount) {
         require(msg.sender == LIDO, "ONLY_LIDO_CAN_WITHDRAW");
 
