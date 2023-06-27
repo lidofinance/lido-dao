@@ -646,8 +646,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @notice Gets authorized oracle address
-     * @return address of oracle contract
+     * @notice address of LidoLocator
      */
     function getLidoLocator() public view returns (ILidoLocator) {
         return ILidoLocator(LIDO_LOCATOR_POSITION.getStorageAddress());
