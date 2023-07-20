@@ -124,7 +124,7 @@ contract WithdrawalQueueERC721 is IERC721Metadata, IERC4906, WithdrawalQueue {
     }
 
     /// @notice Sets the Base URI for computing {tokenURI}. It does not expect the ending slash in provided string.
-    /// @dev If NFTDescriptor address isn't set the `baseURI` would be used for generating erc721 tokenURI. In case
+    /// @dev If NFTDescriptor address isn't set the `baseURI` would be used for generating the ERC-721 token URI. In case
     ///  NFTDescriptor address is set it would be used as a first-priority method.
     function setBaseURI(string calldata _baseURI) external onlyRole(MANAGE_TOKEN_URI_ROLE) {
         _getBaseURI().value = _baseURI;
@@ -144,8 +144,10 @@ contract WithdrawalQueueERC721 is IERC721Metadata, IERC4906, WithdrawalQueue {
         emit NftDescriptorAddressSet(_nftDescriptorAddress);
     }
 
-    /// @notice Finalize requests from last finalized one up to `_lastRequestIdToBeFinalized`
+    /// @notice Finalize requests from the last finalized one up to `_lastRequestIdToBeFinalized`
     /// @dev ether to finalize all the requests should be calculated using `prefinalize()` and sent along
+    /// @param _lastRequestIdToBeFinalized the last request id to finalize
+    /// @param _maxShareRate the max share rate (ETH per share) for the request finalization (1e27 precision)
     function finalize(uint256 _lastRequestIdToBeFinalized, uint256 _maxShareRate) external payable {
         _checkResumed();
         _checkRole(FINALIZE_ROLE, msg.sender);

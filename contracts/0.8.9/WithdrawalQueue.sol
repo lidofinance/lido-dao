@@ -92,7 +92,9 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     }
 
     /// @notice Resume withdrawal requests placement and finalization
-    ///  Contract is deployed in paused state and should be resumed explicitly
+    /// @dev The contract is deployed in paused state and should be resumed explicitly
+    /// @dev Reverts if sender has no `RESUME_ROLE`
+    /// @dev Reverts if contract is already resumed
     function resume() external {
         _checkRole(RESUME_ROLE, msg.sender);
         _resume();
@@ -101,7 +103,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     /// @notice Pause withdrawal requests placement and finalization. Claiming finalized requests will still be available
     /// @param _duration pause duration in seconds (use `PAUSE_INFINITELY` for unlimited)
     /// @dev Reverts if contract is already paused
-    /// @dev Reverts reason if sender has no `PAUSE_ROLE`
+    /// @dev Reverts if sender has no `PAUSE_ROLE`
     /// @dev Reverts if zero duration is passed
     function pauseFor(uint256 _duration) external onlyRole(PAUSE_ROLE) {
         _pauseFor(_duration);
@@ -192,7 +194,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         return requestWithdrawalsWstETH(_amounts, _owner);
     }
 
-    /// @notice Returns all withdrawal requests that belongs to the `_owner` address
+    /// @notice Returns all withdrawal requests that belong to the `_owner` address
     ///
     /// WARNING: This operation will copy the entire storage to memory, which can be quite expensive. This is designed
     /// to mostly be used by view accessors that are queried without any gas fees. Developers should keep in mind that
@@ -202,7 +204,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         return _getRequestsByOwner()[_owner].values();
     }
 
-    /// @notice Returns status for requests with provided ids
+    /// @notice Returns status of requests with provided ids
     /// @param _requestIds array of withdrawal request ids
     function getWithdrawalStatus(uint256[] calldata _requestIds)
         external
@@ -215,7 +217,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         }
     }
 
-    /// @notice Returns amount of ether available for claim for each provided request id
+    /// @notice Returns the amount of ether available for claiming for each provided request id
     /// @param _requestIds array of request ids
     /// @param _hints checkpoint hints. can be found with `findCheckpointHints(_requestIds, 1, getLastCheckpointIndex())`
     /// @return claimableEthValues amount of claimable ether for each request, amount is equal to 0 if request
@@ -311,10 +313,10 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
     }
 
     /// @notice Update bunker mode state and last report timestamp on oracle report
-    /// @dev should be called by oracle
+    /// @dev Reverts if sender has no `RESUME_ROLE`
     ///
-    /// @param _isBunkerModeNow is bunker mode reported by oracle
-    /// @param _bunkerStartTimestamp timestamp of start of the bunker mode
+    /// @param _isBunkerModeNow is bunker mode reported by the oracle
+    /// @param _bunkerStartTimestamp timestamp of the bunker mode activation
     /// @param _currentReportTimestamp timestamp of the current report ref slot
     function onOracleReport(bool _isBunkerModeNow, uint256 _bunkerStartTimestamp, uint256 _currentReportTimestamp)
         external
@@ -342,12 +344,12 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, PausableUntil, Wit
         }
     }
 
-    /// @notice Check if bunker mode is active
+    /// @notice Returns `true` if bunker mode is active
     function isBunkerModeActive() public view returns (bool) {
         return bunkerModeSinceTimestamp() < BUNKER_MODE_DISABLED_TIMESTAMP;
     }
 
-    /// @notice Get bunker mode activation timestamp
+    /// @notice Returns bunker mode activation timestamp
     /// @dev returns `BUNKER_MODE_DISABLED_TIMESTAMP` if bunker mode is disable (i.e., protocol in turbo mode)
     function bunkerModeSinceTimestamp() public view returns (uint256) {
         return BUNKER_MODE_SINCE_TIMESTAMP_POSITION.getStorageUint256();
