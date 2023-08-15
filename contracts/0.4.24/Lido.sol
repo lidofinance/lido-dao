@@ -444,7 +444,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-    * @notice Send funds to the pool and mints `StETH` tokens to `msg.sender` address
+    * @notice Sends funds to the pool and mints `StETH` tokens to the `msg.sender` address
     * @dev Users are able to submit their funds by sending ether to the contract address.
     * Unlike vanilla Ethereum Deposit contract, accepting only 32-Ether transactions, Lido
     * accepts payments of any size. Submitted ether are stored in the buffer until someone calls
@@ -458,8 +458,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @notice Send funds to the pool with the optional `_referral` parameter and mints `StETH` tokens to `msg.sender` address
-     * @dev This function is alternative way to submit funds. Supports optional referral address.
+     * @notice Sends funds to the pool with the optional `_referral` parameter and mints `StETH` tokens to the `msg.sender` address
+     * @param _referral optonal referral address. See https://lido.fi/referral for details.
      * @return Amount of StETH shares generated
      */
     function submit(address _referral) external payable returns (uint256) {
