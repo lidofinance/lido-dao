@@ -444,10 +444,10 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-    * @notice Send funds to the pool
-    * @dev Users are able to submit their funds by transacting to the fallback function.
+    * @notice Send funds to the pool and mints `StETH` tokens to `msg.sender` address
+    * @dev Users are able to submit their funds by sending ether to the contract address.
     * Unlike vanilla Ethereum Deposit contract, accepting only 32-Ether transactions, Lido
-    * accepts payments of any size. Submitted Ethers are stored in Buffer until someone calls
+    * accepts payments of any size. Submitted ether are stored in the buffer until someone calls
     * deposit() and pushes them to the Ethereum Deposit contract.
     */
     // solhint-disable-next-line no-complex-fallback
@@ -458,7 +458,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     }
 
     /**
-     * @notice Send funds to the pool with optional _referral parameter
+     * @notice Send funds to the pool with the optional `_referral` parameter and mints `StETH` tokens to `msg.sender` address
      * @dev This function is alternative way to submit funds. Supports optional referral address.
      * @return Amount of StETH shares generated
      */
