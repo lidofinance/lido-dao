@@ -176,7 +176,7 @@ contract StETH is IERC20, Pausable {
      *
      * Requirements:
      *
-     * - `_recipient` cannot be the zero address or stETH contract itself.
+     * - `_recipient` cannot be the zero address or the stETH contract itself.
      * - the caller must have a balance of at least `_amount`.
      * - the contract must not be paused.
      *
@@ -200,6 +200,9 @@ contract StETH is IERC20, Pausable {
     /**
      * @notice Sets `_amount` as the allowance of `_spender` over the caller's tokens.
      *
+     * @dev allowance can be set to "infinity" (INFINITE_ALLOWANCE).
+     * In this case allowance is not to be spent on transfer, that can save some gas.
+     *
      * @return a boolean value indicating whether the operation succeeded.
      * Emits an `Approval` event.
      *
@@ -217,13 +220,13 @@ contract StETH is IERC20, Pausable {
     /**
      * @notice Moves `_amount` tokens from `_sender` to `_recipient` using the
      * allowance mechanism. `_amount` is then deducted from the caller's
-     * allowance.
+     * allowance if the allowance is not infinite.
      *
      * @return a boolean value indicating whether the operation succeeded.
      *
      * Emits a `Transfer` event.
      * Emits a `TransferShares` event.
-     * Emits an `Approval` event indicating the updated allowance.
+     * Emits an `Approval` event if allowance is updated.
      *
      * Requirements:
      *
@@ -322,7 +325,7 @@ contract StETH is IERC20, Pausable {
      *
      * Requirements:
      *
-     * - `_recipient` cannot be the zero address or stETH contract itself.
+     * - `_recipient` cannot be the zero address or the stETH contract itself.
      * - the caller must have at least `_sharesAmount` shares.
      * - the contract must not be paused.
      *
@@ -338,12 +341,12 @@ contract StETH is IERC20, Pausable {
     /**
      * @notice Moves `_sharesAmount` token shares from the `_sender` account to the `_recipient` using
      * the allowance mechanism. The amount of tokens equivalent to `_sharesAmount` is then deducted
-     * from the caller's allowance.
+     * from the caller's allowance if the allowance is not infinite.
      *
      * @return amount of transferred tokens.
      * Emits a `TransferShares` event.
      * Emits a `Transfer` event.
-     * Emits an `Approval` event indicating the updated allowance.
+     * Emits an `Approval` event if allowance is updated.
      *
      * Requirements:
      *
