@@ -18,8 +18,8 @@ async function deployProtocol(factories = {}, deployParams = {}) {
   protocol.dao = dao
   protocol.acl = acl
 
-  const { govToken, tokenManager, voting } = await protocol.factories.votingFactory(protocol)
-  protocol.govToken = govToken
+  const { daoToken, tokenManager, voting } = await protocol.factories.votingFactory(protocol)
+  protocol.daoToken = daoToken
   protocol.tokenManager = tokenManager
   protocol.voting = voting
 

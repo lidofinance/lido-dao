@@ -77,15 +77,15 @@ async function appManagerFactory({ signers }) {
 }
 
 async function votingEOAFactory({ signers }) {
-  return { voting: signers[1], govToken: null, tokenManager: null }
+  return { voting: signers[1], daoToken: null, tokenManager: null }
 }
 
 async function votingFactory({ appManager, dao, acl, deployParams }) {
   const {
-    govTokenDecimals = 18,
-    govTokenName = 'GovToken',
-    govTokenSymbol = 'GT',
-    govTotalSupply = '1000000000000000000000000',
+    daoTokenDecimals = 18,
+    daoTokenName = 'DAO Token',
+    daoTokenSymbol = 'DAOTKN',
+    daoTokenTotalSupply = '1000000000000000000000000',
     minSupportRequired = '500000000000000000',
     minAcceptanceQuorum = '50000000000000000',
     voteDuration = 3600,
@@ -93,13 +93,13 @@ async function votingFactory({ appManager, dao, acl, deployParams }) {
   } = deployParams
 
   // deploy gov token (aka LDO)
-  const govToken = await MiniMeToken.new(
+  const daoToken = await MiniMeToken.new(
     ZERO_ADDRESS,
     ZERO_ADDRESS,
     0,
-    govTokenName,
-    govTokenDecimals,
-    govTokenSymbol,
+    daoTokenName,
+    daoTokenDecimals,
+    daoTokenSymbol,
     true
   )
 
@@ -107,8 +107,8 @@ async function votingFactory({ appManager, dao, acl, deployParams }) {
   const tmBase = await TokenManager.new()
   const tmProxyAddress = await newApp(dao, 'aragon-token-manager', tmBase.address, appManager.address)
   const tokenManager = await TokenManager.at(tmProxyAddress)
-  await govToken.changeController(tokenManager.address, { from: appManager.address })
-  await tokenManager.initialize(govToken.address, true, 0, { from: appManager.address })
+  await daoToken.changeController(tokenManager.address, { from: appManager.address })
+  await tokenManager.initialize(daoToken.address, true, 0, { from: appManager.address })
 
   await Promise.all([
     acl.createPermission(
@@ -132,15 +132,15 @@ async function votingFactory({ appManager, dao, acl, deployParams }) {
   ])
 
   // issue gov token to appManger
-  await tokenManager.issue(govTotalSupply, { from: appManager.address })
-  await tokenManager.assign(appManager.address, govTotalSupply, { from: appManager.address })
+  await tokenManager.issue(daoTokenTotalSupply, { from: appManager.address })
+  await tokenManager.assign(appManager.address, daoTokenTotalSupply, { from: appManager.address })
 
   // deploy Voting
   const votingBase = await Voting.new()
   const proxyAddress = await newApp(dao, 'aragon-voting', votingBase.address, appManager.address)
   const voting = await Voting.at(proxyAddress)
   await voting.initialize(
-    govToken.address,
+    daoToken.address,
     minSupportRequired,
     minAcceptanceQuorum,
     voteDuration,
@@ -163,7 +163,7 @@ async function votingFactory({ appManager, dao, acl, deployParams }) {
     // }),
   ])
 
-  return { voting, govToken, tokenManager }
+  return { voting, daoToken, tokenManager }
 }
 
 async function treasuryFactory(_) {

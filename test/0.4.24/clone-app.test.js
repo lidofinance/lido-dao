@@ -89,7 +89,7 @@ contract('Simple DVT', ([appManager, , , , , , , , , , , , user1, user2, user3, 
         return [
           {
             module: curatedModule,
-            name: 'Curated',
+            name: 'SimpleDVT',
             targetShares: 10000,
             moduleFee: 500,
             treasuryFee: 500,
