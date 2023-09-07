@@ -48,13 +48,13 @@ const getNetConfig = (networkName, ethAccountName) => {
     ...base,
     url: 'http://localhost:8545',
     chainId: 31337,
-    gas: 80000000, // the same as in Görli
+    gas: 100000000, // the same as in Görli
   }
   const mainnetfork = {
     ...base,
     url: 'http://127.0.0.1:8545',
     chainId: 1337,
-    gas: 80000000, // the same as in Görli
+    gas: 100000000, // the same as in Görli
   }
   const byNetName = {
     localhost,
@@ -69,7 +69,7 @@ const getNetConfig = (networkName, ethAccountName) => {
       chainId: 1337,
     },
     hardhat: {
-      blockGasLimit: 30000000,
+      blockGasLimit: 100000000,
       gasPrice: 0,
       initialBaseFeePerGas: 0,
       allowUnlimitedContractSize: true,
