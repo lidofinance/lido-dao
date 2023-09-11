@@ -1,8 +1,7 @@
 {
-  "networkId": 1,
   "ipfsAPI": "http://127.0.0.1:5001/api/v0",
-  "multisigAddress": "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1",
-  "owner": "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1",
+  "multisigAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
   "gateSealAddress": "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1",
   "lidoApmEnsName": "lidopm.eth",
   "lidoApmEnsRegDurationSec": 94608000,
@@ -15,7 +14,6 @@
       "objectionPhaseDuration": 1
     },
     "beaconSpec": {
-      "depositContractAddress": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
       "epochsPerFrame": 225,
       "slotsPerEpoch": 32,
       "secondsPerSlot": 12,

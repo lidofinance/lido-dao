@@ -10,8 +10,6 @@ const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log } = require('../helpers/log')
 const { assertLastEvent } = require('../helpers/events')
 const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
-const { saveCallTxData } = require('../helpers/tx-data')
-const { resolveLatestVersion: apmResolveLatest } = require('../components/apm')
 
 const { APP_NAMES } = require('../constants')
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
@@ -78,11 +76,10 @@ async function issueTokens({ web3, artifacts }) {
 
     endTotalSupply.iadd(bigSum(iAmounts))
 
-    await saveCallTxData(`issueTokens (batch ${i + 1})`, template, 'issueTokens', `tx-06-${i + 1}-issue-tokens.json`, {
-      arguments: [iHolders, iAmounts, vesting.start, vesting.cliff, vesting.end, vesting.revokable, '0x' + endTotalSupply.toString(16)],
-      from: state.multisigAddress,
-      estimateGas: i === 0
-    })
+    await template.issueTokens(
+      iHolders, iAmounts, vesting.start, vesting.cliff, vesting.end, vesting.revokable, '0x' + endTotalSupply.toString(16),
+      { from: state.multisigAddress },
+    )
   }
 }
 

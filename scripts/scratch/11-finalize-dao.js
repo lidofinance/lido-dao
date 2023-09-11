@@ -4,7 +4,6 @@ const { assert } = require('chai')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log } = require('../helpers/log')
 const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
-const { saveCallTxData } = require('../helpers/tx-data')
 const { assertLastEvent } = require('../helpers/events')
 const { percentToBP } = require('../helpers/index')
 
@@ -69,14 +68,12 @@ async function finalizeDAO({ web3, artifacts }) {
 
   log.splitter()
 
-  await saveCallTxData(`finalizeDAO`, template, 'finalizeDAO', `tx-11-finalize-dao.json`, {
-    arguments: [
-      state.daoAragonId,
-      state.vestingParams.unvestedTokensAmount,
-      state.stakingRouter.address,
-    ],
-    from: state.multisigAddress
-  })
+  await template.finalizeDAO(
+    state.daoAragonId,
+    state.vestingParams.unvestedTokensAmount,
+    state.stakingRouter.address,
+    { from: state.multisigAddress }
+  )
 }
 
 module.exports = runOrWrapScript(finalizeDAO, module)

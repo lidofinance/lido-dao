@@ -5,7 +5,6 @@ const keccak256 = require('js-sha3').keccak_256
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter } = require('../helpers/log')
-const { saveCallTxData } = require('../helpers/tx-data')
 const { assertNoEvents } = require('../helpers/events')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 const { getENSNodeOwner } = require('../components/ens')
@@ -57,15 +56,15 @@ async function deployAPM({ web3, artifacts }) {
 
   logSplitter()
 
+  const from = state.multisigAddress
+
   const lidoApmDeployArguments = [parentHash, subHash]
-  await saveCallTxData(`APM deploy`, template, 'deployLidoAPM', `tx-03-deploy-apm.json`, {
-    arguments: lidoApmDeployArguments,
-    from: state.multisigAddress
-  })
+  const receipt = await template.deployLidoAPM(...lidoApmDeployArguments, { from })
+  console.log({receipt})
 
   persistNetworkState(network.name, netId, state, {
     lidoApmDeployArguments,
-    lidoApmDeployTx: ''
+    lidoApmDeployTx: receipt.tx,
   })
 }
 

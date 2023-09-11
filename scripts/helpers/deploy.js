@@ -218,6 +218,30 @@ async function deployWithoutProxy(nameInState, artifactName, deployer, construct
   return contract.address
 }
 
+async function deployImplementation(nameInState, artifactName, deployer, constructorArgs=[]) {
+  const netId = await web3.eth.net.getId()
+  const state = readNetworkState(network.name, netId)
+
+  console.log(`Deploying implementation for proxy of ${artifactName}`)
+  const contract = await deployContract(artifactName, constructorArgs, deployer)
+
+  const gasUsed = await getDeploymentGasUsed(contract)
+  TOTAL_GAS_USED += gasUsed
+  implementation = contract.address
+
+  console.log(`${artifactName} implementation: ${implementation} (gas used ${gasUsed})`)
+
+  persistNetworkState2(network.name, netId, state, {
+    [nameInState]: {
+      "implementation": {
+        contract: artifactName,
+        address: implementation,
+        constructorArgs: constructorArgs,
+      },
+    }
+  })
+}
+
 async function deployBehindOssifiableProxy(nameInState, artifactName, proxyOwner, deployer, constructorArgs=[], implementation=null) {
   const netId = await web3.eth.net.getId()
   const state = readNetworkState(network.name, netId)
@@ -260,16 +284,9 @@ async function updateProxyImplementation(nameInState, artifactName, proxyAddress
   const OssifiableProxy = await artifacts.require('OssifiableProxy')
   const proxy = await OssifiableProxy.at(proxyAddress)
 
-  const Contract = await artifacts.require(artifactName)
-  const implementation = await Contract.new(...constructorArgs, {
-    from: proxyOwner,
-    gasPrice: GAS_PRICE,
-  })
+  const implementation = await deployContract(artifactName, constructorArgs, proxyOwner)
 
-  await proxy.proxy__upgradeTo(implementation.address, {
-    from: proxyOwner,
-    gasPrice: GAS_PRICE,
-  })
+  await proxy.proxy__upgradeTo(implementation.address, { from: proxyOwner })
 
   persistNetworkState2(network.name, netId, state, {
     [nameInState]: {
@@ -294,6 +311,8 @@ module.exports = {
   withArgs,
   getDeployTxParams,
   deployWithoutProxy,
+  deployContract,
+  deployImplementation,
   deployBehindOssifiableProxy,
   updateProxyImplementation,
   getTotalGasUsed,

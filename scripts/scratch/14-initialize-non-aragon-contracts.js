@@ -87,7 +87,6 @@ async function deployNewContracts({ web3, artifacts }) {
     lidoLocatorAddress,
     eip712StETHAddress,
   ]
-  console.log({ lidoInitArgs })
   const bootstrapInitBalance = 10 // wei
   const lido = await artifacts.require('Lido').at(lidoAddress)
   await lido.initialize(...lidoInitArgs, { value: bootstrapInitBalance, from: DEPLOYER })
@@ -100,7 +99,6 @@ async function deployNewContracts({ web3, artifacts }) {
     lidoLocatorAddress,
     hashConsensusForAccountingAddress,
   ]
-  console.log({legacyOracleArgs})
   const legacyOracle = await artifacts.require('LegacyOracle').at(legacyOracleAddress)
   await legacyOracle.initialize(...legacyOracleArgs, { from: DEPLOYER })
 
@@ -117,7 +115,6 @@ async function deployNewContracts({ web3, artifacts }) {
     accountingOracleParams.consensusVersion,
     zeroLastProcessingRefSlot,
   ]
-  console.log({accountingOracleArgs})
   await accountingOracle.initializeWithoutMigration(...accountingOracleArgs, { from: DEPLOYER })
 
   //
@@ -138,7 +135,6 @@ async function deployNewContracts({ web3, artifacts }) {
   const withdrawalQueueArgs = [
     withdrawalQueueAdmin,  // _admin
   ]
-  console.log({ withdrawalQueueArgs })
   const withdrawalQueue = await artifacts.require('WithdrawalQueueERC721').at(withdrawalQueueAddress)
   await withdrawalQueue.initialize(
     ...withdrawalQueueArgs,
@@ -149,13 +145,11 @@ async function deployNewContracts({ web3, artifacts }) {
   // === StakingRouter: initialize ===
   //
   const withdrawalCredentials = `0x010000000000000000000000${withdrawalVaultAddress.slice(2)}`
-  console.log({withdrawalCredentials})
   const stakingRouterArgs = [
     stakingRouterAdmin,  // _admin
     lidoAddress,  // _lido
     withdrawalCredentials,  // _withdrawalCredentials
   ]
-  console.log({ stakingRouterArgs })
   const stakingRouter = await artifacts.require('StakingRouter').at(stakingRouterAddress)
   await stakingRouter.initialize(
     ...stakingRouterArgs,

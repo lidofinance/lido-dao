@@ -44,29 +44,20 @@ const getNetConfig = (networkName, ethAccountName) => {
     ensAddress: netState.ensAddress,
     timeout: 60000,
   }
-  const localhost = {
-    ...base,
-    url: 'http://localhost:8545',
-    chainId: 31337,
-    gas: 80000000, // the same as in Görli
-  }
-  const mainnetfork = {
-    ...base,
-    url: 'http://127.0.0.1:8545',
-    chainId: 1337,
-    gas: 80000000, // the same as in Görli
-  }
   const byNetName = {
-    localhost,
-    mainnetfork,
-    local: {
+    mainnetfork: {
       ...base,
-      accounts: {
-        mnemonic: 'explain tackle mirror kit van hammer degree position ginger unfair soup bonus',
-        count: 30,
-      },
-      url: 'http://localhost:8545',
-      chainId: 1337,
+      url: process.env.RPC_URL,
+      chainId: Number(process.env.CHAIN_ID) || 1,
+    },
+    goerlifork: {
+      ...base,
+      url: process.env.RPC_URL,
+      chainId: Number(process.env.CHAIN_ID) || 5,
+    },
+    local: {
+      url: process.env.RPC_URL,
+      chainId: Number(process.env.CHAIN_ID) || 1337,
     },
     hardhat: {
       blockGasLimit: 30000000,
@@ -76,32 +67,16 @@ const getNetConfig = (networkName, ethAccountName) => {
       accounts: {
         // default hardhat's node mnemonic
         mnemonic: 'test test test test test test test test test test test junk',
-        count: 30,
+        count: 10,
         accountsBalance: '100000000000000000000000',
         gasPrice: 0,
       },
-    },
-    'goerli-pyrmont': {
-      ...base,
-      url: 'http://206.81.31.11/rpc',
-      chainId: 5,
-    },
-    rinkeby: {
-      ...base,
-      url: 'https://rinkeby.infura.io/v3/' + accounts.infura.projectId,
-      chainId: 4,
-      timeout: 60000 * 10,
+      chainId: Number(process.env.CHAIN_ID) || 1337,
     },
     goerli: {
       ...base,
       url: 'https://goerli.infura.io/v3/' + accounts.infura.projectId,
       chainId: 5,
-      timeout: 60000 * 10,
-    },
-    'mainnet-test': {
-      ...base,
-      url: 'https://mainnet.infura.io/v3/' + accounts.infura.projectId,
-      chainId: 1,
       timeout: 60000 * 10,
     },
     mainnet: {
