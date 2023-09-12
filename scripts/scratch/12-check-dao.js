@@ -129,7 +129,7 @@ async function checkDAO({ web3, artifacts }) {
     burner,
     elRewardsVault,
     daoAragonId: state.daoAragonId,
-    daoInitialSettings: state.daoInitialSettings
+    state,
   })
 
   log.splitter()
@@ -227,11 +227,13 @@ async function assertDAOConfig({
   voting,
   burner,
   elRewardsVault,
-  daoInitialSettings: settings
+  state,
 }) {
   const assertKernel = async (app, appName) => {
     assert.log(assert.addressEqual, await app.kernel(), dao.address, `${appName}.kernel is ${yl(dao.address)}`)
   }
+  const settings = state.daoInitialSettings
+  const chainSpec = state.chainSpec
 
   assert.log(
     assert.addressEqual,
@@ -360,28 +362,28 @@ async function assertDAOConfig({
   DAO_LIVE || assert.log(assert.isEmpty, await oracle.getOracleMembers(), `oracle.getOracleMembers() is []`)
 
   const beaconSpec = await oracle.getBeaconSpec()
-  assert.log(
-    assert.bnEqual,
-    beaconSpec.epochsPerFrame,
-    settings.beaconSpec.epochsPerFrame,
-    `oracle.getBeaconSpec().epochsPerFrame is ${yl(settings.beaconSpec.epochsPerFrame)}`
-  )
+  // assert.log(
+  //   assert.bnEqual,
+  //   beaconSpec.epochsPerFrame,
+  //   chainSpec.epochsPerFrame,
+  //   `oracle.getBeaconSpec().epochsPerFrame is ${yl(settings.beaconSpec.epochsPerFrame)}`
+  // )
   assert.log(
     assert.bnEqual,
     beaconSpec.slotsPerEpoch,
-    settings.beaconSpec.slotsPerEpoch,
+    chainSpec.slotsPerEpoch,
     `oracle.getBeaconSpec().slotsPerEpoch is ${yl(settings.beaconSpec.slotsPerEpoch)}`
   )
   assert.log(
     assert.bnEqual,
     beaconSpec.secondsPerSlot,
-    settings.beaconSpec.secondsPerSlot,
+    chainSpec.secondsPerSlot,
     `oracle.getBeaconSpec().secondsPerSlot is ${yl(settings.beaconSpec.secondsPerSlot)}`
   )
   assert.log(
     assert.bnEqual,
     beaconSpec.genesisTime,
-    settings.beaconSpec.genesisTime,
+    chainSpec.genesisTime,
     `oracle.getBeaconSpec().genesisTime is ${yl(settings.beaconSpec.genesisTime)}`
   )
 

@@ -18,7 +18,6 @@ const REQUIRED_NET_STATE = [
   'daoInitialSettings',
   'vestingParams',
   `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`,
-  'executionLayerRewardsParams',
   'stakingRouter',
 ]
 

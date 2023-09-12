@@ -75,7 +75,8 @@ const getNetConfig = (networkName, ethAccountName) => {
     },
     goerli: {
       ...base,
-      url: 'https://goerli.infura.io/v3/' + accounts.infura.projectId,
+      // url: 'https://goerli.infura.io/v3/' + process.env.WEB3_INFURA_PROJECT_ID,
+      url: process.env.RPC_URL,
       chainId: 5,
       timeout: 60000 * 10,
     },

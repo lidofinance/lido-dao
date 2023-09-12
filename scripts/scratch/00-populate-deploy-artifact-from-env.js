@@ -6,19 +6,25 @@ const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = re
 
 const DEPLOYER = process.env.DEPLOYER
 const CHAIN_ID = process.env.CHAIN_ID
+const GATE_SEAL = process.env.GATE_SEAL
+const GENESIS_TIME = process.env.GENESIS_TIME
+const DEPOSIT_CONTRACT = process.env.DEPOSIT_CONTRACT
 
-async function deployTemplate({ web3, artifacts }) {
+async function saveDeployParameters({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
-
-  log.splitter()
-  log(`Network ID: ${chalk.yellow(netId)}`)
-  log(`Deployer: ${chalk.yellow(DEPLOYER)}`)
 
   const state = readNetworkState(network.name, netId)
   persistNetworkState(network.name, netId, state, {
     chainId: CHAIN_ID,
     multisigAddress: DEPLOYER,
+    owner: DEPLOYER,
+    gateSealAddress: GATE_SEAL,
+    chainSpec: {
+      ...state.chainSpec,
+      genesisTime: GENESIS_TIME,
+      depositContract: DEPOSIT_CONTRACT,
+    },
   })
 }
 
-module.exports = runOrWrapScript(deployTemplate, module)
+module.exports = runOrWrapScript(saveDeployParameters, module)

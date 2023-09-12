@@ -60,7 +60,6 @@ async function deployAPM({ web3, artifacts }) {
 
   const lidoApmDeployArguments = [parentHash, subHash]
   const receipt = await template.deployLidoAPM(...lidoApmDeployArguments, { from })
-  console.log({receipt})
 
   persistNetworkState(network.name, netId, state, {
     lidoApmDeployArguments,

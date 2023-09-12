@@ -31,7 +31,7 @@ async function deployNewContracts({ web3, artifacts }) {
   const agentAddress = state["app:aragon-agent"].proxyAddress
   const votingAddress = state["app:aragon-voting"].proxyAddress
   const treasuryAddress = agentAddress
-  const beaconSpec = state["daoInitialSettings"]["beaconSpec"]
+  const chainSpec = state["chainSpec"]
   const depositSecurityModuleParams = state["depositSecurityModule"].parameters
   const burnerParams = state["burner"].parameters
   const hashConsensusForAccountingParams = state["hashConsensusForAccounting"].parameters
@@ -42,8 +42,6 @@ async function deployNewContracts({ web3, artifacts }) {
     throw new Error('Deployer is not specified')
   }
 
-  // TODO
-  // const proxyContractsOwner = votingAddress
   const proxyContractsOwner = DEPLOYER
   const admin = DEPLOYER
   const deployer = DEPLOYER
@@ -51,13 +49,10 @@ async function deployNewContracts({ web3, artifacts }) {
   const sanityChecks = state["oracleReportSanityChecker"].parameters
   logWideSplitter()
 
-  if (!state.depositContractAddress && !state.daoInitialSettings.beaconSpec.depositContractAddress && isPublicNet) {
-    throw new Error(`please specify deposit contract address in state file ${networkStateFile}`)
+  if (!chainSpec.depositContract) {
+    throw new Error(`please specify deposit contract address in state file at /chainSpec/depositContract`)
   }
-  const depositContract = state.depositContractAddress || state.daoInitialSettings.beaconSpec.depositContractAddress
-
-  // TODO: set proxyContractsOwner from state file? or from env?
-
+  const depositContract = state.chainSpec.depositContract
 
   //
   // === OracleDaemonConfig ===
@@ -170,9 +165,10 @@ async function deployNewContracts({ web3, artifacts }) {
     locatorAddress,
     lidoAddress,
     legacyOracleAddress,
-    beaconSpec.secondsPerSlot,
-    beaconSpec.genesisTime,
+    Number(chainSpec.secondsPerSlot),
+    Number(chainSpec.genesisTime),
   ]
+  console.log({accountingOracleArgs})
   const accountingOracleAddress = await deployBehindOssifiableProxy(
     "accountingOracle", "AccountingOracle", proxyContractsOwner, deployer, accountingOracleArgs)
   logWideSplitter()
@@ -181,9 +177,9 @@ async function deployNewContracts({ web3, artifacts }) {
   // === HashConsensus for AccountingOracle ===
   //
   const hashConsensusForAccountingArgs = [
-    beaconSpec.slotsPerEpoch,
-    beaconSpec.secondsPerSlot,
-    beaconSpec.genesisTime,
+    chainSpec.slotsPerEpoch,
+    chainSpec.secondsPerSlot,
+    chainSpec.genesisTime,
     hashConsensusForAccountingParams.epochsPerFrame,
     hashConsensusForAccountingParams.fastLaneLengthSlots,
     admin, // admin
@@ -196,8 +192,8 @@ async function deployNewContracts({ web3, artifacts }) {
   // === ValidatorsExitBusOracle ===
   //
   const validatorsExitBusOracleArgs = [
-    beaconSpec.secondsPerSlot,
-    beaconSpec.genesisTime,
+    chainSpec.secondsPerSlot,
+    chainSpec.genesisTime,
     locatorAddress,
   ]
   const validatorsExitBusOracleAddress = await deployBehindOssifiableProxy(
@@ -208,9 +204,9 @@ async function deployNewContracts({ web3, artifacts }) {
   // === HashConsensus for ValidatorsExitBusOracle ===
   //
   const hashConsensusForExitBusArgs = [
-    beaconSpec.slotsPerEpoch,
-    beaconSpec.secondsPerSlot,
-    beaconSpec.genesisTime,
+    chainSpec.slotsPerEpoch,
+    chainSpec.secondsPerSlot,
+    chainSpec.genesisTime,
     hashConsensusForExitBusParams.epochsPerFrame,
     hashConsensusForExitBusParams.fastLaneLengthSlots,
     admin, // admin
