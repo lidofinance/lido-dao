@@ -21,7 +21,8 @@ const { hash: namehash } = require('eth-ens-namehash')
 
 const { APP_NAMES, APP_ARTIFACTS } = require('../constants')
 
-const APP_TRG = process.env.APP_TRG || 'simple-dvt'
+const APP_TRG = process.env.APP_TRG || APP_NAMES.SIMPLE_DVT
+const APP_IPFS_CID = process.env.APP_IPFS_CID || 'QmaSSujHCGcnFuetAPGwVW5BegaMBvn5SCsgi3LSfvraSo'
 const DEPLOYER = process.env.DEPLOYER || ''
 const SIMULATE = !!process.env.SIMULATE
 
@@ -37,7 +38,7 @@ const REQUIRED_NET_STATE = [
 
 const KERNEL_APP_BASES_NAMESPACE = '0xf1f3eb40f5bc1ad1344716ced8b8a0431d840b5783aea1fd01786bc26f35ac0f'
 
-async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG }) {
+async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid = APP_IPFS_CID }) {
   const netId = await web3.eth.net.getId()
 
   const srcAppName = APP_NAMES.NODE_OPERATORS_REGISTRY
@@ -59,20 +60,16 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG }) {
 
   const srcAppFullName = `${srcAppName}.${state.lidoApmEnsName}`
   const srcAppId = namehash(srcAppFullName)
-  const { semanticVersion, contractAddress, contentURI } = await resolveLatestVersion(srcAppId, ens, artifacts)
+  const { semanticVersion, contractAddress } = await resolveLatestVersion(srcAppId, ens, artifacts)
   const srcVersion = semanticVersion.map((n) => n.toNumber())
-  // strip 0x from content uri, then strip 'ipfs:' prefix
-  const ipfsCid = Buffer.from(contentURI.substring(2), 'hex').toString().substring(5)
 
   log(`Source App:`, yl(srcAppName))
   log(`Source App ENS:`, yl(srcAppFullName))
   log(`Source App ID:`, yl(srcAppId))
   log(`Source Contract implementation:`, yl(contractAddress))
-  log(`Source Content URI:`, yl(contentURI))
-  log(`Source Content IPFS CID:`, yl(ipfsCid))
   log(`Source App version:`, yl(srcVersion.join('.')))
-
   log.splitter()
+
   const trgAppFullName = `${trgAppName}.${state.lidoApmEnsName}`
   const trgAppId = namehash(trgAppFullName)
   const trgRepoAddress = await resolveEnsAddress(artifacts, ens, trgAppId)
@@ -81,11 +78,14 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG }) {
 
   // set new version to 1.0.0
   const trgVersion = [1, 0, 0]
+  const contentURI = '0x' + Buffer.from(`ipfs:${ipfsCid}`, 'utf8').toString('hex')
+
   log(`Target App:`, yl(trgAppName))
   log(`Target App ENS:`, yl(trgAppFullName))
   log(`Target App ID:`, yl(trgAppId))
   log(`Target App proxy`, yl(trgProxyAddress))
   log(`Target Contract implementation:`, yl(contractAddress))
+  log(`Target Content IPFS CID:`, yl(ipfsCid))
   log(`Target Content URI:`, yl(contentURI))
   log(`Target App version:`, yl(trgVersion.join('.')))
 
