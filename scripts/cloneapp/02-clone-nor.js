@@ -6,7 +6,7 @@ const { getEventArgument } = require('@aragon/contract-helpers-test')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 
-const { log, yl, gr, rd } = require('../helpers/log')
+const { log, yl, gr } = require('../helpers/log')
 const { saveCallTxData } = require('../helpers/tx-data')
 const { getDeployer, readStateAppAddress } = require('./helpers')
 const { resolveLatestVersion } = require('../components/apm')
@@ -195,11 +195,11 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG }) {
     }
   }
 
-  // check missed STAKING_MODULE_MANAGE_ROLE role
+  // check missed STAKING_MODULE_MANAGE_ROLE role on Agent
   const STAKING_MODULE_MANAGE_ROLE = '0x3105bcbf19d4417b73ae0e58d508a65ecf75665e46c2622d8521732de6080c48'
   if (!(await stakingRouter.hasRole(STAKING_MODULE_MANAGE_ROLE, voting.address))) {
     const grantRoleCallData = await stakingRouter.contract.methods
-      .grantRole(STAKING_MODULE_MANAGE_ROLE, voting.address)
+      .grantRole(STAKING_MODULE_MANAGE_ROLE, agent.address)
       .encodeABI()
     evmScriptCalls.push({
       to: agent.address,
@@ -207,18 +207,19 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG }) {
     })
   }
 
-  // add to SR
+  // add module to SR
+  const addModuleCallData = await stakingRouter.contract.methods
+    .addStakingModule(
+      moduleName, // name
+      trgProxyAddress, // module address
+      targetShare,
+      moduleFee,
+      treasuryFee
+    )
+    .encodeABI()
   evmScriptCalls.push({
-    to: stakingRouter.address,
-    calldata: await stakingRouter.contract.methods
-      .addStakingModule(
-        moduleName, // name
-        trgProxyAddress, // module address
-        targetShare,
-        moduleFee,
-        treasuryFee
-      )
-      .encodeABI(),
+    to: agent.address,
+    calldata: await agent.contract.methods.execute(stakingRouter.address, 0, addModuleCallData).encodeABI(),
   })
 
   const newVoteEvmScript = encodeCallScript([
@@ -234,7 +235,7 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG }) {
 
   if (SIMULATE) {
     log.splitter()
-    log(rd(`Simulating voting creation and enact!`))
+    log(gr(`Simulating voting creation and enact!`))
 
     // create voting on behalf of dao agent
     await ethers.getImpersonatedSigner(agentAddress)
