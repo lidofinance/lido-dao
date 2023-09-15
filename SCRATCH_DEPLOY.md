@@ -2,7 +2,7 @@
 
 ## Requirements
 
-* node.js v16
+* node.js v16 (v18 might work fine as well)
 * yarn
 
 ## General info
@@ -11,8 +11,44 @@ The repo contains bash scripts which allow to deploy the DAO under multiple envi
 - local node (ganache, anvil, hardhat network) - `dao-local-deploy.sh`
 - goerli testnet - `dao-goerli-deploy.sh`
 
-The protocol has a bunch of parameters to configure during the scratch deployment. The default configuration is stored in files `deployed-...-defaults.json`. Currently there is single default configuration `deployed-testnet-defaults.json` suitable for testnet deployments. Compared to the mainnet configuration it has lower vote durations, more frequent oracle report cycles, etc.
-During the deployment, the "default" configuration is copied to file `deployed-<network name>.json` which gets populated with the contract addresses and transaction hashes during the deployment process.
+The protocol has a bunch of parameters to configure for the scratch deployment. The default configuration is stored in files `deployed-<deploy env>-defaults.json`, where `<deploy env>` is the target environment. Currently there is single default configuration `deployed-testnet-defaults.json` suitable for testnet deployments. Compared to the mainnet configuration, it has lower vote durations, more frequent oracle report cycles, etc.
+During the deployment, the "default" configuration is copied to `deployed-<network name>.json`, where `<network name>` is the name of a network configuration defined in `hardhat.config.js`. The file `deployed-<network name>.json` gets populated with the contract addresses and transaction hashes during the deployment process.
+
+These are the deployment setups, supported currently:
+- local (basically any node at http://127.0.0.1:8545);
+- Goerli.
+
+Each is described in the details in the sections below.
+
+> NB: Aragon UI for Lido DAO is to be deprecated and replaced by a custom solution, thus not included in the deployment script.
+
+### Deploy steps
+
+A brief description of what's going on under the hood in the deploy script.
+
+- Prepare `deployed-<network name>.json` file
+  - It is copied from `deployed-testnet-defaults.json`
+  - and expended by env variables values, e. g. `DEPLOYER`.
+  - It gets filled with the deployed contracts info from step to step.
+- (optional) Deploy DepositContract.
+  - The step is skipped if the DepositContract address is specified
+- (optional) Deploy ENS
+  - The step is skipped if the ENS Registry address is specified
+- Deploy Aragon framework environment
+- Deploy standard Aragon apps contracts (like `Agent`, `Voting`)
+- Deploy `LidoTemplate` contract
+  - This is an auxiliary deploy contract, which performs DAO configuration
+- Deploy Lido custom Aragon apps implementations (aka bases), namely for `Lido`, `LegacyOracle`, `NodeOperatorsRegistry`)
+- Registry Lido APM name in ENS
+- Deploy Aragon package manager contract `APMRegistry` (via `LidoTemplate`)
+- Deploy Lido custom Aragon apps repo contracts (via `LidoTemplate`)
+- Deploy Lido DAO (via `LidoTemplate`)
+- Issue DAO tokens (via `LidoTemplate`)
+- Deploy non-Aragon Lido contracts: `OracleDaemonConfig`, `LidoLocator`, `OracleReportSanityChecker`, `EIP712StETH`, `WstETH`, `WithdrawalQueueERC721`, `WithdrawalVault`, `LidoExecutionLayerRewardsVault`, `StakingRouter`, `DepositSecurityModule`, `AccountingOracle`, `HashConsensus` for AccountingOracle, `ValidatorsExitBusOracle`, `HashConsensus` for ValidatorsExitBusOracle, `Burner`.
+- Finalize Lido DAO deployment: issue unvested LDO tokens, setup Aragon permissions, register Lido DAO name in Aragon ID (via `LidoTemplate`)
+- Initialize non-Aragon Lido contracts
+- Setup non-Aragon permissions
+
 
 ## Local deployment
 
@@ -59,8 +95,16 @@ To do Goerli deployment, the following parameters must be set up via env variabl
 
 Also you need to specify `DEPLOYER` private key in `accounts.json` under `/eth/goerli` like `"goerli": ["<key>"]`. See `accounts.sample.json` for an example.
 
-Run, replacing env variables values:
+To start the deployment, run (the env variables must already defined):
 ```shell
-DEPLOYER=0x0000000000000000000000000000000000000000 GATE_SEAL=0x0000000000000000000000000000000000000000 RPC_URL=https://goerli.infura.io/v3/yourProjectId  bash dao-goerli-deploy.sh
+bash dao-goerli-deploy.sh
 ```
 and checkout `deployed-goerli.json`.
+
+## Holešky deployment
+
+TODO
+
+## Deploy verification
+
+TODO
