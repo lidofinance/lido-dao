@@ -404,6 +404,8 @@ contract LidoTemplate is IsContract {
         require(state.dao != address(0), ERROR_DAO_NOT_DEPLOYED);
         require(bytes(_daoName).length > 0, ERROR_INVALID_ID);
 
+        state.stakingRouter = _stakingRouter;
+
         if (_unvestedTokensAmount != 0) {
             // using issue + assign to avoid setting the additional MINT_ROLE for the template
             state.tokenManager.issue(_unvestedTokensAmount);
