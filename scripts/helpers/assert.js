@@ -13,6 +13,10 @@ assert.addressEqual = (actual, expected, msg) => {
   assert.equal(toChecksumAddress(actual), toChecksumAddress(expected), msg)
 }
 
+assert.hexEqual = (actual, expected, msg) => {
+  assert.equal(actual.toLowerCase(), expected.toLowerCase(), msg)
+}
+
 assert.log = (doAssert, ...args) => {
   doAssert(...args)
   log.success(args[args.length - 1])

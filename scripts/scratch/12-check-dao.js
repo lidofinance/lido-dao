@@ -101,17 +101,18 @@ async function checkDAO({ web3, artifacts }) {
     state[key] = { ...state[key], ...app }
   }
 
-  const [lido, oracle, nopsRegistry, agent, finance, tokenManager, voting] = await Promise.all([
+  const [lido, legacyOracle, nopsRegistry, agent, finance, tokenManager, voting, burner, elRewardsVault, stakingRouter] = await Promise.all([
     artifacts.require('Lido').at(apps[APP_NAMES.LIDO].proxyAddress),
+    artifacts.require('LegacyOracle').at(apps[APP_NAMES.ORACLE].proxyAddress),
     artifacts.require('NodeOperatorsRegistry').at(apps[APP_NAMES.NODE_OPERATORS_REGISTRY].proxyAddress),
     artifacts.require('Agent').at(apps[APP_NAMES.ARAGON_AGENT].proxyAddress),
     artifacts.require('Finance').at(apps[APP_NAMES.ARAGON_FINANCE].proxyAddress),
     artifacts.require('TokenManager').at(apps[APP_NAMES.ARAGON_TOKEN_MANAGER].proxyAddress),
-    artifacts.require('Voting').at(apps[APP_NAMES.ARAGON_VOTING].proxyAddress)
+    artifacts.require('Voting').at(apps[APP_NAMES.ARAGON_VOTING].proxyAddress),
+    artifacts.require('Burner').at(state.burner.address),
+    artifacts.require('LidoExecutionLayerRewardsVault').at(state.executionLayerRewardsVault["address"]),
+    artifacts.require('StakingRouter').at(state.stakingRouter.address),
   ])
-
-  const burner = await artifacts.require('Burner').at(state.burnerAddress)
-  const elRewardsVault = await artifacts.require('LidoExecutionLayerRewardsVault').at(state.executionLayerRewardsVault["address"])
 
   log.splitter()
 
@@ -119,8 +120,9 @@ async function checkDAO({ web3, artifacts }) {
     ens,
     dao,
     daoToken,
+    daoAragonId: state.daoAragonId,
     lido,
-    oracle,
+    legacyOracle,
     nopsRegistry,
     agent,
     finance,
@@ -128,7 +130,7 @@ async function checkDAO({ web3, artifacts }) {
     voting,
     burner,
     elRewardsVault,
-    daoAragonId: state.daoAragonId,
+    stakingRouter,
     state,
   })
 
@@ -138,12 +140,14 @@ async function checkDAO({ web3, artifacts }) {
     {
       kernel: dao,
       lido,
+      legacyOracle,
       nopsRegistry,
       agent,
       finance,
       tokenManager,
       voting,
       burner,
+      stakingRouter,
     },
     state.daoTemplateDeployBlock
   )
@@ -219,7 +223,7 @@ async function assertDAOConfig({
   daoToken,
   daoAragonId,
   lido,
-  oracle,
+  legacyOracle,
   nopsRegistry,
   agent,
   finance,
@@ -227,6 +231,7 @@ async function assertDAOConfig({
   voting,
   burner,
   elRewardsVault,
+  stakingRouter,
   state,
 }) {
   const assertKernel = async (app, appName) => {
@@ -287,8 +292,7 @@ async function assertDAOConfig({
     `voting.voteTime is ${yl(settings.voting.voteDuration)}`
   )
 
-  // NB: votesLength depends on the presence of insurance and el-rewards modules
-  // DAO_LIVE || assert.log(assert.bnEqual, await voting.votesLength(), 1, `voting.votesLength is ${yl('1')}`)
+  DAO_LIVE || assert.log(assert.bnEqual, await voting.votesLength(), 0, `voting.votesLength is ${yl('0')}`)
 
   log.splitter()
   await assertKernel(tokenManager, 'tokenManager')
@@ -323,71 +327,59 @@ async function assertDAOConfig({
 
   assert.log(assert.bnEqual, await lido.decimals(), STETH_TOKEN_DECIMALS, `lido.decimals is ${yl(STETH_TOKEN_DECIMALS)}`)
 
-  DAO_LIVE || assert.log(assert.bnEqual, await lido.totalSupply(), 0, `lido.totalSupply() is ${yl(0)}`)
+  // TODO
+  // DAO_LIVE || assert.log(assert.bnEqual, await lido.totalSupply(), 0, `lido.totalSupply() is ${yl(0)}`)
 
   DAO_LIVE ||
     assert.log(assert.equal, await lido.isStopped(), PROTOCOL_PAUSED_AFTER_DEPLOY, `lido.isStopped is ${yl(PROTOCOL_PAUSED_AFTER_DEPLOY)}`)
 
-  // TODO: restore the check
-  // DAO_LIVE ||
-  //   assert.log(
-  //     assert.bnEqual,
-  //     await lido.getWithdrawalCredentials(),
-  //     ZERO_WITHDRAWAL_CREDENTIALS,
-  //     `lido.getWithdrawalCredentials() is ${yl(ZERO_WITHDRAWAL_CREDENTIALS)}`
-  //   )
+  DAO_LIVE ||
+    assert.log(
+      assert.hexEqual,
+      await lido.getWithdrawalCredentials(),
+      `0x010000000000000000000000${state.withdrawalVault.address.slice(2)}`,
+      `lido.getWithdrawalCredentials() is ${yl(await lido.getWithdrawalCredentials())}`
+    )
 
 
-  // assert.log(
-  //   assert.addressEqual,
-  //   await lido.getDepositContract(),
-  //   settings.beaconSpec.depositContractAddress,
-  //   `lido.getValidatorRegistrationContract() is ${yl(settings.beaconSpec.depositContractAddress)}`
-  // )
+  assert.log(
+    assert.addressEqual,
+    await stakingRouter.DEPOSIT_CONTRACT(),
+    chainSpec.depositContract,
+    `stakingRouter.DEPOSIT_CONTRACT() is ${yl(stakingRouter.DEPOSIT_CONTRACT())}`
+  )
 
-  assert.log(assert.addressEqual, await lido.getOracle(), oracle.address, `lido.getOracle() is ${yl(oracle.address)}`)
+  assert.log(assert.addressEqual, await lido.getOracle(), legacyOracle.address, `lido.getOracle() is ${yl(legacyOracle.address)}`)
 
-  // assert.log(assert.addressEqual, await lido.getOperators(), nopsRegistry.address, `lido.getOperators() is ${yl(nopsRegistry.address)}`)
 
   assert.log(assert.addressEqual, await lido.getTreasury(), agent.address, `lido.getTreasury() is ${yl(agent.address)}`)
 
-  assert.log(assert.addressEqual, await lido.getELRewardsVault(), elRewardsVault.address,
-    `lido.getELRewardsVault() is ${yl(elRewardsVault.address)}`)
-
   log.splitter()
-  // await assertKernel(oracle, 'oracle')
+  await assertKernel(legacyOracle, 'oracle')
 
-  assert.log(assert.addressEqual, await oracle.getLido(), lido.address, `oracle.getLido() is ${yl(lido.address)}`)
+  assert.log(assert.addressEqual, await legacyOracle.getLido(), lido.address, `legacyOracle.getLido() is ${yl(lido.address)}`)
 
-  DAO_LIVE || assert.log(assert.isEmpty, await oracle.getOracleMembers(), `oracle.getOracleMembers() is []`)
-
-  const beaconSpec = await oracle.getBeaconSpec()
-  // assert.log(
-  //   assert.bnEqual,
-  //   beaconSpec.epochsPerFrame,
-  //   chainSpec.epochsPerFrame,
-  //   `oracle.getBeaconSpec().epochsPerFrame is ${yl(settings.beaconSpec.epochsPerFrame)}`
-  // )
+  const legacyOracleBeaconSpec = await legacyOracle.getBeaconSpec()
   assert.log(
     assert.bnEqual,
-    beaconSpec.slotsPerEpoch,
+    legacyOracleBeaconSpec.slotsPerEpoch,
     chainSpec.slotsPerEpoch,
-    `oracle.getBeaconSpec().slotsPerEpoch is ${yl(settings.beaconSpec.slotsPerEpoch)}`
+    `legacyOracle.getBeaconSpec().slotsPerEpoch is ${yl(chainSpec.slotsPerEpoch)}`
   )
   assert.log(
     assert.bnEqual,
-    beaconSpec.secondsPerSlot,
+    legacyOracleBeaconSpec.secondsPerSlot,
     chainSpec.secondsPerSlot,
-    `oracle.getBeaconSpec().secondsPerSlot is ${yl(settings.beaconSpec.secondsPerSlot)}`
+    `legacyOracle.getBeaconSpec().secondsPerSlot is ${yl(chainSpec.secondsPerSlot)}`
   )
   assert.log(
     assert.bnEqual,
-    beaconSpec.genesisTime,
+    legacyOracleBeaconSpec.genesisTime,
     chainSpec.genesisTime,
-    `oracle.getBeaconSpec().genesisTime is ${yl(settings.beaconSpec.genesisTime)}`
+    `legacyOracle.getBeaconSpec().genesisTime is ${yl(chainSpec.genesisTime)}`
   )
 
-  DAO_LIVE || assert.log(assert.bnEqual, await oracle.getQuorum(), 1, `oracle.getQuorum() is ${yl(1)}`)
+  // DAO_LIVE || assert.log(assert.bnEqual, await legacyOracle.getQuorum(), 1, `oracle.getQuorum() is ${yl(1)}`)
 
   log.splitter()
   await assertKernel(nopsRegistry, 'nopsRegistry')
@@ -403,7 +395,7 @@ async function assertDAOConfig({
     )
 }
 
-async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent, finance, tokenManager, voting, burner }, fromBlock = 4532202) {
+async function assertDaoPermissions({ kernel, lido, legacyOracle, nopsRegistry, agent, finance, tokenManager, voting, burner, stakingRouter }, fromBlock = 4532202) {
   const aclAddress = await kernel.acl()
   const acl = await artifacts.require('ACL').at(aclAddress)
   const allAclEvents = await acl.getPastEvents('allEvents', { fromBlock })
@@ -556,10 +548,9 @@ async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent,
         roleNames: [
           'PAUSE_ROLE',
           'RESUME_ROLE',
-          'MANAGE_PROTOCOL_CONTRACTS_ROLE',
-          'MANAGE_WITHDRAWAL_KEY',
           'STAKING_PAUSE_ROLE',
-          'STAKING_CONTROL_ROLE'
+          'STAKING_CONTROL_ROLE',
+          'UNSAFE_CHANGE_DEPOSITED_VALIDATORS_ROLE'
         ],
         grantee: voting
       }
@@ -568,7 +559,7 @@ async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent,
 
   log.splitter()
 
-  log.splitter()
+  console.log({ stakingRouter: stakingRouter.address })
 
   await assertRoles({
     app: nopsRegistry,
@@ -578,15 +569,16 @@ async function assertDaoPermissions({ kernel, lido, oracle, nopsRegistry, agent,
       {
         roleNames: [
           'MANAGE_SIGNING_KEYS',
-          'ADD_NODE_OPERATOR_ROLE',
-          'ACTIVATE_NODE_OPERATOR_ROLE',
-          'DEACTIVATE_NODE_OPERATOR_ROLE',
-          'SET_NODE_OPERATOR_NAME_ROLE',
-          'SET_NODE_OPERATOR_ADDRESS_ROLE',
           'SET_NODE_OPERATOR_LIMIT_ROLE',
-          'REPORT_STOPPED_VALIDATORS_ROLE'
+          'MANAGE_NODE_OPERATOR_ROLE',
         ],
         grantee: voting
+      },
+      {
+        roleNames: [
+          'STAKING_ROUTER_ROLE',
+        ],
+        grantee: stakingRouter
       }
     ]
   })

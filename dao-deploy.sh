@@ -82,4 +82,8 @@ msg "Non-aragon contracts initialized"
 yarn hardhat --network $NETWORK run ./scripts/scratch/15-grant-roles.js --no-compile
 msg "Roles granted"
 
+
+yarn hardhat --network $NETWORK run ./scripts/scratch/12-check-dao.js --no-compile
+msg "The deployed protocol state checked"
+
 # TODO: save commit of the latest deploy
