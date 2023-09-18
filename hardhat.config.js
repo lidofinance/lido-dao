@@ -11,7 +11,7 @@ require('@nomiclabs/hardhat-etherscan')
 require('hardhat-gas-reporter')
 require('solidity-coverage')
 require('hardhat-contract-sizer')
-// require('hardhat-ignore-warnings')
+require('hardhat-ignore-warnings')
 require('./foundry/skip-sol-tests-compilation')
 
 const NETWORK_NAME = getNetworkName()
@@ -79,6 +79,12 @@ const getNetConfig = (networkName, ethAccountName) => {
       url: process.env.RPC_URL,
       chainId: 5,
       timeout: 60000 * 10,
+    },
+    goerlidebug: {
+      ...base,
+      url: process.env.RPC_URL,
+      chainId: 5,
+      timeout: 60000 * 15,
     },
     mainnet: {
       ...base,
