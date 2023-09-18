@@ -73,18 +73,22 @@ function _getFileName(netName, baseName, dir) {
   return path.resolve(dir, `${baseName}-${netName}.json`)
 }
 
-function _readNetworkStateFile(fileName, netId) {
-  if (!fs.existsSync(fileName)) {
-    const state = { networkId: netId }
-    _writeNetworkStateFile(fileName, state)
-    return state
-  }
+function readStateFile(fileName) {
   const data = fs.readFileSync(fileName, 'utf8')
   try {
     return JSON.parse(data)
   } catch (err) {
     throw new Error(`malformed network state file ${fileName}: ${err.message}`)
   }
+}
+
+function _readNetworkStateFile(fileName, netId) {
+  if (!fs.existsSync(fileName)) {
+    const state = { networkId: netId }
+    _writeNetworkStateFile(fileName, state)
+    return state
+  }
+  return readStateFile(fileName)
 }
 
 function _writeNetworkStateFile(fileName, state) {
@@ -98,4 +102,5 @@ module.exports = {
   persistNetworkState2,
   updateNetworkState,
   assertRequiredNetworkState,
+  readStateFile,
 }

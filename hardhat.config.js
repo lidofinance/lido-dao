@@ -60,6 +60,7 @@ const getNetConfig = (networkName, ethAccountName) => {
       chainId: Number(process.env.CHAIN_ID) || 1337,
     },
     hardhat: {
+      // NB!: forking get enabled if env variable HARDHAT_FORKING_URL is set, see code below
       blockGasLimit: 30000000,
       gasPrice: 0,
       initialBaseFeePerGas: 0,
@@ -71,7 +72,6 @@ const getNetConfig = (networkName, ethAccountName) => {
         accountsBalance: '100000000000000000000000',
         gasPrice: 0,
       },
-      chainId: Number(process.env.CHAIN_ID) || 1337,
     },
     goerli: {
       ...base,
@@ -103,6 +103,9 @@ const getNetConfig = (networkName, ethAccountName) => {
     },
   }
   const netConfig = byNetName[networkName]
+  if (networkName === 'hardhat' && process.env.HARDHAT_FORKING_URL) {
+    netConfig.forking = { url: process.env.HARDHAT_FORKING_URL }
+  }
   return netConfig ? { [networkName]: netConfig } : {}
 }
 
