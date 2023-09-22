@@ -1,9 +1,10 @@
-const { network } = require('hardhat')
+const { network, ethers } = require('hardhat')
 const chalk = require('chalk')
 const { assert } = require('chai')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
-const { log, yl } = require('../helpers/log')
+const { log, yl, gr } = require('../helpers/log')
 const {
+  getDeployer,
   readStateAppAddress,
   MANAGE_SIGNING_KEYS,
   MANAGE_NODE_OPERATOR_ROLE,
@@ -16,9 +17,13 @@ const { readNetworkState, assertRequiredNetworkState } = require('../helpers/per
 const { hash: namehash } = require('eth-ens-namehash')
 const { resolveLatestVersion } = require('../components/apm')
 const { APP_NAMES, APP_ARTIFACTS } = require('../constants')
+const { ETH, toBN, genKeys } = require('../../test/helpers/utils')
+const { EvmSnapshot } = require('../../test/helpers/blockchain')
 
 const APP_TRG = process.env.APP_TRG || 'simple-dvt'
 const APP_IPFS_CID = process.env.APP_IPFS_CID || SIMPLE_DVT_IPFS_CID
+
+const SIMULATE = !!process.env.SIMULATE
 
 const REQUIRED_NET_STATE = [
   'ensAddress',
@@ -86,7 +91,9 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   const acl = await artifacts.require('ACL').at(aclAddress)
   const agentAddress = readStateAppAddress(state, `app:${APP_NAMES.ARAGON_AGENT}`)
   const votingAddress = readStateAppAddress(state, `app:${APP_NAMES.ARAGON_VOTING}`)
+  const lidoAddress = readStateAppAddress(state, `app:${APP_NAMES.LIDO}`)
   const srAddress = readStateAppAddress(state, 'stakingRouter')
+  const dsmAddress = readStateAppAddress(state, 'depositSecurityModule')
   const stakingRouter = await artifacts.require('StakingRouter').at(srAddress)
 
   _checkEq(
@@ -199,12 +206,122 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
 
   const { totalExitedValidators, totalDepositedValidators, depositableValidatorsCount } =
     await trgApp.getStakingModuleSummary()
-  // console.log({ totalExitedValidators, totalDepositedValidators, depositableValidatorsCount })
   _checkEq(totalExitedValidators, 0, `App initial values: totalExitedValidators = 0`)
   _checkEq(totalDepositedValidators, 0, `App initial values: totalDepositedValidators = 0`)
   _checkEq(depositableValidatorsCount, 0, `App initial values: depositableValidatorsCount = 0`)
 
   log.splitter()
+
+  if (SIMULATE) {
+    log(gr(`Simulating adding keys and deposit!`))
+    log('Creating snapshot...')
+    const snapshot = new EvmSnapshot(ethers.provider)
+    await snapshot.make()
+
+    try {
+      const lido = await artifacts.require('Lido').at(lidoAddress)
+
+      // create voting on behalf of dao agent
+      await ethers.getImpersonatedSigner(agentAddress)
+      await ethers.getImpersonatedSigner(votingAddress)
+      await ethers.getImpersonatedSigner(dsmAddress)
+
+      const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
+      const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
+
+      const depositsCount = 100
+      const op1keysAmount = 100
+      const op2keysAmount = 50
+      const keysAmount = op1keysAmount + op2keysAmount
+      if ((await trgApp.getNodeOperatorsCount()) < 1) {
+        // prepare node operators
+        await trgApp.addNodeOperator('op 1', ADDRESS_1, { from: votingAddress, gasPrice: 0 })
+        await trgApp.addNodeOperator('op 2', ADDRESS_2, { from: votingAddress, gasPrice: 0 })
+
+        // add keys to module for op1
+        let keys = genKeys(op1keysAmount)
+        await trgApp.addSigningKeys(0, op1keysAmount, keys.pubkeys, keys.sigkeys, { from: votingAddress, gasPrice: 0 })
+        // add keys to module for op2
+        keys = genKeys(op2keysAmount)
+        await trgApp.addSigningKeys(1, op2keysAmount, keys.pubkeys, keys.sigkeys, { from: votingAddress, gasPrice: 0 })
+
+        // increase keys limit
+        await trgApp.setNodeOperatorStakingLimit(0, 100000, { from: votingAddress, gasPrice: 0 })
+        await trgApp.setNodeOperatorStakingLimit(1, 100000, { from: votingAddress, gasPrice: 0 })
+      }
+
+      _checkEq(await trgApp.getNodeOperatorsCount(), 2, `Simulate init: operators count = 2`)
+      let summary = await trgApp.getStakingModuleSummary()
+      // console.log(summary)
+      _checkEq(summary.totalDepositedValidators, 0, `Simulate init: totalDepositedValidators = 0`)
+      _checkEq(
+        summary.depositableValidatorsCount,
+        keysAmount,
+        `Simulate init: depositableValidatorsCount = ${keysAmount}`
+      )
+
+      const stranger = await getDeployer(web3)
+      const wqAddress = readStateAppAddress(state, 'withdrawalQueueERC721')
+      const withdrwalQueue = await artifacts.require('WithdrawalQueueERC721').at(wqAddress)
+
+      const unfinalizedStETH = await withdrwalQueue.unfinalizedStETH()
+      const ethToDeposit = toBN(ETH(32 * depositsCount))
+      let depositableEther = await lido.getDepositableEther()
+      if (depositableEther.lt(ethToDeposit)) {
+        const bufferedEther = await lido.getBufferedEther()
+        const wqDebt = unfinalizedStETH.gt(bufferedEther) ? unfinalizedStETH.sub(bufferedEther) : toBN(0)
+        const ethToSubmit = ethToDeposit.add(wqDebt)
+        await web3.eth.sendTransaction({ value: ethToSubmit, to: lido.address, from: stranger, gasPrice: 0 })
+      }
+      depositableEther = await lido.getDepositableEther()
+
+      _checkEq(
+        depositableEther >= ethToDeposit,
+        true,
+        `Simulate init: enough depositable ether for ${depositsCount} keys`
+      )
+      log('Depositing...')
+      const trgModuleId = 2 // sr module id
+      await lido.deposit(depositsCount, trgModuleId, '0x', {
+        from: dsmAddress,
+        gasPrice: 0,
+      })
+      await ethers.provider.send('evm_increaseTime', [600])
+      await ethers.provider.send('evm_mine')
+
+      summary = await trgApp.getStakingModuleSummary()
+      _checkEq(
+        summary.totalDepositedValidators,
+        op1keysAmount,
+        `Simulate deposited: summary totalDepositedValidators = ${depositsCount}`
+      )
+      _checkEq(
+        summary.depositableValidatorsCount,
+        keysAmount - depositsCount,
+        `Simulate deposited: summary depositableValidatorsCount = ${keysAmount - depositsCount}`
+      )
+
+      const depositedKeysPerOp = depositsCount / 2 // as only 2 ops in module and each has 0 deposited keys before
+      const op1 = await trgApp.getNodeOperator(0, false)
+      _checkEq(op1.totalAddedValidators, op1keysAmount, `Simulate op1 state: totalAddedValidators = 100`)
+      _checkEq(
+        op1.totalDepositedValidators,
+        depositedKeysPerOp,
+        `Simulate op1 state: totalDepositedValidators = ${depositedKeysPerOp}`
+      )
+
+      const op2 = await trgApp.getNodeOperator(1, false)
+      _checkEq(op2.totalAddedValidators, op2keysAmount, `Simulate op2 state: totalAddedValidators = 50`)
+      _checkEq(
+        op2.totalDepositedValidators,
+        depositedKeysPerOp,
+        `Simulate op2 state: totalDepositedValidators = ${depositedKeysPerOp}`
+      )
+    } finally {
+      log('Reverting snapshot...')
+      await snapshot.rollback()
+    }
+  }
 }
 
 module.exports = runOrWrapScript(deployNORClone, module)
