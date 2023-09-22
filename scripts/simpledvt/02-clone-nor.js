@@ -8,7 +8,17 @@ const runOrWrapScript = require('../helpers/run-or-wrap-script')
 
 const { log, yl, gr } = require('../helpers/log')
 const { saveCallTxData } = require('../helpers/tx-data')
-const { getDeployer, readStateAppAddress } = require('./helpers')
+const {
+  getDeployer,
+  readStateAppAddress,
+  KERNEL_APP_BASES_NAMESPACE,
+  MANAGE_SIGNING_KEYS,
+  MANAGE_NODE_OPERATOR_ROLE,
+  SET_NODE_OPERATOR_LIMIT_ROLE,
+  STAKING_ROUTER_ROLE,
+  STAKING_MODULE_MANAGE_ROLE,
+  SIMPLE_DVT_IPFS_CID,
+} = require('./helpers')
 const { resolveLatestVersion } = require('../components/apm')
 const {
   readNetworkState,
@@ -22,8 +32,10 @@ const { hash: namehash } = require('eth-ens-namehash')
 const { APP_NAMES, APP_ARTIFACTS } = require('../constants')
 
 const APP_TRG = process.env.APP_TRG || APP_NAMES.SIMPLE_DVT
-const APP_IPFS_CID = process.env.APP_IPFS_CID || 'QmaSSujHCGcnFuetAPGwVW5BegaMBvn5SCsgi3LSfvraSo'
+const APP_IPFS_CID = process.env.APP_IPFS_CID || SIMPLE_DVT_IPFS_CID
 const DEPLOYER = process.env.DEPLOYER || ''
+const MANAGER = process.env.MANAGER || ''
+const EASYTRACK = process.env.EASYTRACK || ''
 const SIMULATE = !!process.env.SIMULATE
 
 const REQUIRED_NET_STATE = [
@@ -35,8 +47,6 @@ const REQUIRED_NET_STATE = [
   `app:${APP_NAMES.ARAGON_VOTING}`,
   `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`,
 ]
-
-const KERNEL_APP_BASES_NAMESPACE = '0xf1f3eb40f5bc1ad1344716ced8b8a0431d840b5783aea1fd01786bc26f35ac0f'
 
 async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid = APP_IPFS_CID }) {
   const netId = await web3.eth.net.getId()
@@ -116,19 +126,6 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     return
   }
 
-  // clone source app info
-  persistNetworkState2(network.name, netId, state, {
-    [`app:${trgAppName}`]: {
-      fullName: trgAppFullName,
-      name: trgAppName,
-      id: trgAppId,
-      ipfsCid,
-      contentURI,
-      implementation: contractAddress,
-      contract: trgAppArtifact,
-    },
-  })
-
   // preload voting and stakingRouter addresses
   const votingAddress = readStateAppAddress(state, `app:${APP_NAMES.ARAGON_VOTING}`)
   const tokenManagerAddress = readStateAppAddress(state, `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`)
@@ -174,16 +171,39 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     {
       grantee: votingAddress, // default to voting
       roles: {
-        MANAGE_SIGNING_KEYS: '0x75abc64490e17b40ea1e66691c3eb493647b24430b358bd87ec3e5127f1621ee',
-        MANAGE_NODE_OPERATOR_ROLE: '0x78523850fdd761612f46e844cf5a16bda6b3151d6ae961fd7e8e7b92bfbca7f8',
-        SET_NODE_OPERATOR_LIMIT_ROLE: '0x07b39e0faf2521001ae4e58cb9ffd3840a63e205d288dc9c93c3774f0d794754',
+        MANAGE_SIGNING_KEYS,
+        MANAGE_NODE_OPERATOR_ROLE,
+        SET_NODE_OPERATOR_LIMIT_ROLE,
       },
     },
     {
       grantee: srAddress,
-      roles: { STAKING_ROUTER_ROLE: '0xbb75b874360e0bfd87f964eadd8276d8efb7c942134fc329b513032d0803e0c6' },
+      roles: { STAKING_ROUTER_ROLE },
     },
   ]
+
+  // grant manage roles to custom module manager if defined
+  if (MANAGER) {
+    srcAppPerms.push({
+      grantee: MANAGER,
+      roles: {
+        MANAGE_SIGNING_KEYS,
+        MANAGE_NODE_OPERATOR_ROLE,
+        SET_NODE_OPERATOR_LIMIT_ROLE,
+      },
+    })
+  }
+
+  // grant keys limit role to easytrack if defined
+  if (EASYTRACK) {
+    srcAppPerms.push({
+      grantee: EASYTRACK,
+      roles: {
+        SET_NODE_OPERATOR_LIMIT_ROLE,
+      },
+    })
+  }
+
   for (const group of srcAppPerms) {
     for (const roleId of Object.values(group.roles)) {
       evmScriptCalls.push({
@@ -196,7 +216,6 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   }
 
   // check missed STAKING_MODULE_MANAGE_ROLE role on Agent
-  const STAKING_MODULE_MANAGE_ROLE = '0x3105bcbf19d4417b73ae0e58d508a65ecf75665e46c2622d8521732de6080c48'
   if (!(await stakingRouter.hasRole(STAKING_MODULE_MANAGE_ROLE, voting.address))) {
     const grantRoleCallData = await stakingRouter.contract.methods
       .grantRole(STAKING_MODULE_MANAGE_ROLE, agent.address)
@@ -231,6 +250,20 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     },
   ])
 
+  // save app info
+  persistNetworkState2(network.name, netId, state, {
+    [`app:${trgAppName}`]: {
+      fullName: trgAppFullName,
+      name: trgAppName,
+      id: trgAppId,
+      ipfsCid,
+      contentURI,
+      implementation: contractAddress,
+      contract: trgAppArtifact,
+      managerAddress: MANAGER,
+      easytrackAddress: EASYTRACK,
+    },
+  })
   // console.log({ newVoteEvmScript })
 
   if (SIMULATE) {
