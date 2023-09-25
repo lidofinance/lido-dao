@@ -144,25 +144,6 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     'StakingRouter has permission: STAKING_ROUTER_ROLE'
   )
 
-  if (state.managerAddress) {
-    _checkEq(
-      await acl.hasPermission(state.managerAddress, trgProxyAddress, MANAGE_SIGNING_KEYS),
-      true,
-      'Module Manager has permission: MANAGE_SIGNING_KEYS'
-    )
-    _checkEq(
-      await acl.hasPermission(state.managerAddress, trgProxyAddress, MANAGE_NODE_OPERATOR_ROLE),
-      true,
-      'Module Manager has permission: MANAGE_NODE_OPERATOR_ROLE'
-    )
-    _checkEq(
-      await acl.hasPermission(state.managerAddress, trgProxyAddress, SET_NODE_OPERATOR_LIMIT_ROLE),
-      true,
-      'Module Manager has permission: MANAGE_SIGNING_KEYS'
-    )
-  } else {
-    log(yl('[-]'), 'No additional app manager address set - skip!')
-  }
   if (state.easytrackAddress) {
     _checkEq(
       await acl.hasPermission(state.easytrackAddress, trgProxyAddress, SET_NODE_OPERATOR_LIMIT_ROLE),

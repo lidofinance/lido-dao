@@ -34,7 +34,7 @@ const { APP_NAMES, APP_ARTIFACTS } = require('../constants')
 const APP_TRG = process.env.APP_TRG || APP_NAMES.SIMPLE_DVT
 const APP_IPFS_CID = process.env.APP_IPFS_CID || SIMPLE_DVT_IPFS_CID
 const DEPLOYER = process.env.DEPLOYER || ''
-const MANAGER = process.env.MANAGER || ''
+
 const EASYTRACK = process.env.EASYTRACK || ''
 const SIMULATE = !!process.env.SIMULATE
 
@@ -182,18 +182,6 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     },
   ]
 
-  // grant manage roles to custom module manager if defined
-  if (MANAGER) {
-    srcAppPerms.push({
-      grantee: MANAGER,
-      roles: {
-        MANAGE_SIGNING_KEYS,
-        MANAGE_NODE_OPERATOR_ROLE,
-        SET_NODE_OPERATOR_LIMIT_ROLE,
-      },
-    })
-  }
-
   // grant keys limit role to easytrack if defined
   if (EASYTRACK) {
     srcAppPerms.push({
@@ -260,7 +248,6 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
       contentURI,
       implementation: contractAddress,
       contract: trgAppArtifact,
-      managerAddress: MANAGER,
       easytrackAddress: EASYTRACK,
     },
   })
