@@ -7,7 +7,7 @@ const { getEventArgument } = require('@aragon/contract-helpers-test')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 
 const { log, yl, gr } = require('../helpers/log')
-const { saveCallTxData } = require('../helpers/tx-data')
+// const { saveCallTxData } = require('../helpers/tx-data')
 const {
   getDeployer,
   readStateAppAddress,
@@ -37,6 +37,7 @@ const DEPLOYER = process.env.DEPLOYER || ''
 
 const EASYTRACK = process.env.EASYTRACK || ''
 const SIMULATE = !!process.env.SIMULATE
+// const EXTERNAL_DEPLOYER = !!process.env.EXTERNAL_DEPLOYER
 
 const REQUIRED_NET_STATE = [
   'ensAddress',
@@ -251,7 +252,6 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
       easytrackAddress: EASYTRACK,
     },
   })
-  // console.log({ newVoteEvmScript })
 
   if (SIMULATE) {
     log.splitter()
@@ -262,7 +262,7 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
 
     const result = await tokenManager.forward(newVoteEvmScript, { from: agentAddress, gasPrice: 0 })
     const voteId = getEventArgument(result, 'StartVote', 'voteId', { decodeForAbi: voting.abi })
-    log(`Vote Id`, yl(voteId))
+    log(`Voting created, id`, yl(voteId))
 
     // vote
     await voting.vote(voteId, true, true, { from: agentAddress, gasPrice: 0 })
@@ -274,23 +274,32 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
 
     log(`Target App initialized`, yl(await trgApp.hasInitialized()))
   } else {
-    await saveCallTxData(
+    const tx = await log.tx(
       `Voting: Clone app '${srcAppName}' to '${trgAppName}'`,
-      tokenManager,
-      'forward',
-      `clone-tx-02-create-voting.json`,
-      {
-        arguments: [newVoteEvmScript],
-        from: deployer,
-      }
+      tokenManager.forward(newVoteEvmScript, { from: deployer })
     )
-    // console.log({ txData })
 
-    log.splitter()
-    log(gr(`Before continuing the cloning, please send voting creation transactions`))
-    log(gr(`that you can find in the file listed above. You may use a multisig address`))
-    log(gr(`if it supports sending arbitrary tx.`))
+    const voteId = getEventArgument(tx, 'StartVote', 'voteId', { decodeForAbi: voting.abi })
+    log(`Voting created, id`, yl(voteId))
   }
+  // else {
+  //   await saveCallTxData(
+  //     `Voting: Clone app '${srcAppName}' to '${trgAppName}'`,
+  //     tokenManager,
+  //     'forward',
+  //     `clone-tx-02-create-voting.json`,
+  //     {
+  //       arguments: [newVoteEvmScript],
+  //       from: deployer,
+  //     }
+  //   )
+  //   // console.log({ txData })
+
+  //   log.splitter()
+  //   log(gr(`Before continuing the cloning, please send voting creation transactions`))
+  //   log(gr(`that you can find in the file listed above. You may use a multisig address`))
+  //   log(gr(`if it supports sending arbitrary tx.`))
+  // }
 
   log.splitter()
 }
