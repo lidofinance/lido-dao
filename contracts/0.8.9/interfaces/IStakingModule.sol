@@ -97,10 +97,10 @@ interface IStakingModule {
 
     /// @notice Updates the number of the validators in the EXITED state for node operator with given id
     /// @param _nodeOperatorIds bytes packed array of the node operators id
-        /// @param _stuckValidatorsCounts bytes packed array of the new number of EXITED validators for the node operators
+    /// @param _exitedValidatorsCounts bytes packed array of the new number of EXITED validators for the node operators
     function updateExitedValidatorsCount(
         bytes calldata _nodeOperatorIds,
-        bytes calldata _stuckValidatorsCounts
+        bytes calldata _exitedValidatorsCounts
     ) external;
 
     /// @notice Updates the number of the refunded validators for node operator with the given id
