@@ -2,9 +2,6 @@
 set -e +u
 set -o pipefail
 
-export GATE_SEAL=0x0000000000000000000000000000000000000000
-export RPC_URL=https://goerli.infura.io/v3/c0414a86855e42f897f53cd3aa6d73ad
-export DEPLOYER=0x22896Bfc68814BFD855b1a167255eE497006e730
 
 if [[ -z "$DEPLOYER" ]]; then
     echo "Must set DEPLOYER env variable" 1>&2

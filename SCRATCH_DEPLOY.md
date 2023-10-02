@@ -48,6 +48,11 @@ A brief description of what's going on under the hood in the deploy script.
 - Finalize Lido DAO deployment: issue unvested LDO tokens, setup Aragon permissions, register Lido DAO name in Aragon ID (via `LidoTemplate`)
 - Initialize non-Aragon Lido contracts
 - Setup non-Aragon permissions
+- Plug NodeOperatorsRegistry as Curated staking module
+- Transfer all admin roles from deployer to `Agent`
+  - OZ admin roles: `Burner`, `HashConsensus` for `AccountingOracle`, `HashConsensus` TODO
+  - OssifiableProxy admins: TODO
+  - DepositSecurityModule owner
 
 
 ## Local deployment
@@ -103,8 +108,48 @@ and checkout `deployed-goerli.json`.
 
 ## Holešky deployment
 
+```shell
+RPC_URL=<PUT-YOUR-VALUE> GATE_SEAL=<PUT-YOUR-VALUE> DEPLOYER=<PUT-YOUR-VALUE> bash dao-holesky-deploy.sh
+```
+
+## Publishing sources to Etherscan
+
 TODO
 
-## Deploy verification
+
+## Post deploy initialization
+
+### Post deploy state
 
 TODO
+
+TODO: paused: staking, steth transfers, accounting  oracle reports, ... what else?
+
+### Initialization up to fully operational state
+
+In order to make protocol fully operational the additional steps are required.
+
+- add `NodeOperatorsRegistry` as staking module: `StakingRouter.addStakingModule`
+- add oracle committee members to `HashConsensus` contracts for `AccountingOracle` and `ValidatorsExitBusOracle`: `HashConsensus.addMember`
+- initialize initial epoch for `HashConsensus` contracts for `AccountingOracle` and `ValidatorsExitBusOracle`: `HashConsensus.updateInitialEpoch`
+- add guardians to `DepositSecurityModule`: `DepositSecurityModule.addGuardians`
+- resume protocol: `Lido.resume`
+- resume WithdrawalQueue: `WithdrawalQueueERC721.resume`
+- add at least one Node Operator: `NodeOperatorsRegistry.addNodeOperator`
+- add validator keys to the Node Operators: `NodeOperatorsRegistry.addSigningKeys`
+- set staking limits for the Node Operators: `NodeOperatorsRegistry.setNodeOperatorStakingLimit`
+
+NB, that part of the actions require preliminary granting of the required roles, e.g. `STAKING_MODULE_MANAGE_ROLE` for `StakingRouter.addStakingModule`:
+
+```js
+  await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, agent.address, { from: agent.address })
+  await stakingRouter.addStakingModule(
+    state.nodeOperatorsRegistry.parameters.stakingModuleTypeId,
+    nodeOperatorsRegistry.address,
+    NOR_STAKING_MODULE_TARGET_SHARE_BP,
+    NOR_STAKING_MODULE_MODULE_FEE_BP,
+    NOR_STAKING_MODULE_TREASURY_FEE_BP,
+    { from: agent.address }
+  )
+  await stakingRouter.renounceRole(STAKING_MODULE_MANAGE_ROLE, agent.address, { from: agent.address })
+```
