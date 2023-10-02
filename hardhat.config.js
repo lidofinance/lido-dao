@@ -37,6 +37,12 @@ const accounts = readJson(`./accounts.json`) || {
 const getNetConfig = (networkName, ethAccountName) => {
   const netState = readJson(`./deployed-${networkName}.json`) || {}
   const ethAccts = accounts.eth || {}
+
+  if (RPC_URL === undefined && networkName !== 'hardhat') {
+    console.error('ERROR: RPC_URL env variable is not set')
+    process.exit(1)
+  }
+
   const base = {
     accounts:
       ethAccountName === 'remote'
@@ -87,9 +93,15 @@ const getNetConfig = (networkName, ethAccountName) => {
       chainId: 5,
       timeout: 60000 * 15,
     },
+    holesky: {
+      ...base,
+      url: RPC_URL,
+      chainId: 17000,
+      timeout: 60000 * 15,
+    },
     mainnet: {
       ...base,
-      url: 'https://mainnet.infura.io/v3/' + accounts.infura.projectId,
+      url: RPC_URL,
       chainId: 1,
       timeout: 60000 * 10,
     },
@@ -98,7 +110,7 @@ const getNetConfig = (networkName, ethAccountName) => {
       chainId: 1,
       timeout: 60000 * 10,
       forking: {
-        url: 'https://mainnet.infura.io/v3/' + accounts.infura.projectId,
+        url: RPC_URL,
         // url: 'https://eth-mainnet.alchemyapi.io/v2/' + accounts.alchemy.apiKey
       },
     },
@@ -182,10 +194,18 @@ module.exports = {
     enabled: !!process.env.REPORT_GAS,
     currency: 'USD',
   },
-  etherscan: accounts.etherscan,
-  aragon: {
-    ipfsApi: process.env.IPFS_API_URL || 'https://ipfs.infura.io:5001/api/v0',
-    ipfsGateway: process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/',
+  etherscan: {
+    apiKey: accounts.etherscan.apiKey,
+    customChains: [
+      {
+        network: 'holesky',
+        chainId: 17000,
+        urls: {
+          apiURL: 'https://api-holesky.etherscan.io/api',
+          browserURL: 'https://holesky.etherscan.io',
+        },
+      },
+    ],
   },
   ipfs: {
     url: process.env.IPFS_API_URL || 'https://ipfs.infura.io:5001/api/v0',
