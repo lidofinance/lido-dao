@@ -168,7 +168,6 @@ async function deployNewContracts({ web3, artifacts }) {
     Number(chainSpec.secondsPerSlot),
     Number(chainSpec.genesisTime),
   ]
-  console.log({accountingOracleArgs})
   const accountingOracleAddress = await deployBehindOssifiableProxy(
     "accountingOracle", "AccountingOracle", proxyContractsOwner, deployer, accountingOracleArgs)
   logWideSplitter()

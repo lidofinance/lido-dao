@@ -100,9 +100,9 @@ async function deployTemplate({ web3, artifacts }) {
 
     log.splitter()
 
-    await controller.commit(commitment, { from: state.multisigAddress })
+    await log.makeTx(controller, 'commit', [commitment], { from: state.multisigAddress })
 
-    await controller.register(domainLabel, domainOwner, domainRegDuration, salt, {
+    await log.makeTx(controller, 'register', [domainLabel, domainOwner, domainRegDuration, salt], {
       from: state.multisigAddress,
       value: '0x' + registerTxValue.toString(16),
     })
@@ -112,10 +112,10 @@ async function deployTemplate({ web3, artifacts }) {
     log(`ENS domain new owner:`, yl(domainOwner))
     if ((await ens.owner(node)) === state.multisigAddress) {
       log(`Transferring name ownership from owner ${chalk.yellow(state.multisigAddress)} to template ${chalk.yellow(domainOwner)}`)
-      await ens.setOwner(node, domainOwner, { from: state.multisigAddress })
+      await log.makeTx(ens, 'setOwner', [node, domainOwner], { from: state.multisigAddress })
     } else {
       log(`Creating the subdomain and assigning it to template ${chalk.yellow(domainOwner)}`)
-      await ens.setSubnodeOwner(tldNode, labelHash, domainOwner, { from: state.multisigAddress })
+      await log.makeTx(ens, 'setSubnodeOwner', [tldNode, labelHash, domainOwner], { from: state.multisigAddress })
     }
 
     log.splitter()

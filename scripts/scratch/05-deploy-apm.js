@@ -59,7 +59,7 @@ async function deployAPM({ web3, artifacts }) {
   const from = state.multisigAddress
 
   const lidoApmDeployArguments = [parentHash, subHash]
-  const receipt = await template.deployLidoAPM(...lidoApmDeployArguments, { from })
+  const receipt = await log.makeTx(template, 'deployLidoAPM', lidoApmDeployArguments, { from })
 
   persistNetworkState(network.name, netId, state, {
     lidoApmDeployArguments,

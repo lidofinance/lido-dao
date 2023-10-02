@@ -76,9 +76,9 @@ async function issueTokens({ web3, artifacts }) {
 
     endTotalSupply.iadd(bigSum(iAmounts))
 
-    await template.issueTokens(
-      iHolders, iAmounts, vesting.start, vesting.cliff, vesting.end, vesting.revokable, '0x' + endTotalSupply.toString(16),
-      { from: state.multisigAddress },
+    await log.makeTx(template, 'issueTokens',
+      [iHolders, iAmounts, vesting.start, vesting.cliff, vesting.end, vesting.revokable, '0x' + endTotalSupply.toString(16)]
+      , { from: state.multisigAddress },
     )
   }
 }

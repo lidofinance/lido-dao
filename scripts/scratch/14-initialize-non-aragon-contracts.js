@@ -1,8 +1,6 @@
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, yl, gr } = require('../helpers/log')
-const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
-const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
-const { web3 } = require('hardhat')
+const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 
 const { APP_NAMES } = require('../constants')
 
@@ -36,8 +34,6 @@ async function deployNewContracts({ web3, artifacts }) {
   let state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
-  const agent = state["app:aragon-agent"].proxyAddress
-  const votingAddress = state["app:aragon-voting"].proxyAddress
   const lidoAddress = state["app:lido"].proxyAddress
   const legacyOracleAddress = state["app:oracle"].proxyAddress
   const nodeOperatorsRegistryAddress = state["app:node-operators-registry"].proxyAddress
@@ -75,10 +71,7 @@ async function deployNewContracts({ web3, artifacts }) {
     nodeOperatorsRegistryParams.stuckPenaltyDelay,
   ]
   const nodeOperatorsRegistry = await artifacts.require('NodeOperatorsRegistry').at(nodeOperatorsRegistryAddress)
-  await nodeOperatorsRegistry.initialize(
-    ...nodeOperatorsRegistryArgs,
-    { from: DEPLOYER },
-  )
+  await log.makeTx(nodeOperatorsRegistry, 'initialize', nodeOperatorsRegistryArgs, { from: DEPLOYER })
 
   //
   // === Lido: initialize ===
@@ -89,7 +82,7 @@ async function deployNewContracts({ web3, artifacts }) {
   ]
   const bootstrapInitBalance = 10 // wei
   const lido = await artifacts.require('Lido').at(lidoAddress)
-  await lido.initialize(...lidoInitArgs, { value: bootstrapInitBalance, from: DEPLOYER })
+  await log.makeTx(lido, 'initialize', lidoInitArgs, { value: bootstrapInitBalance, from: DEPLOYER })
   logWideSplitter()
 
   //
@@ -100,7 +93,7 @@ async function deployNewContracts({ web3, artifacts }) {
     hashConsensusForAccountingAddress,
   ]
   const legacyOracle = await artifacts.require('LegacyOracle').at(legacyOracleAddress)
-  await legacyOracle.initialize(...legacyOracleArgs, { from: DEPLOYER })
+  await log.makeTx(legacyOracle, 'initialize', legacyOracleArgs, { from: DEPLOYER })
 
   const zeroLastProcessingRefSlot = 0
 
@@ -115,19 +108,19 @@ async function deployNewContracts({ web3, artifacts }) {
     accountingOracleParams.consensusVersion,
     zeroLastProcessingRefSlot,
   ]
-  await accountingOracle.initializeWithoutMigration(...accountingOracleArgs, { from: DEPLOYER })
+  await log.makeTx(accountingOracle, 'initializeWithoutMigration', accountingOracleArgs, { from: DEPLOYER })
 
   //
   // === ValidatorsExitBusOracle: initialize ===
   //
-  const ValidatorsExitBusOracle = await artifacts.require('ValidatorsExitBusOracle').at(ValidatorsExitBusOracleAddress)
+  const validatorsExitBusOracle = await artifacts.require('ValidatorsExitBusOracle').at(ValidatorsExitBusOracleAddress)
   const validatorsExitBusOracleArgs = [
     exitBusOracleAdmin,  // admin
     hashConsensusForValidatorsExitBusOracleAddress,
     validatorsExitBusOracleParams.consensusVersion,
     zeroLastProcessingRefSlot,
   ]
-  await ValidatorsExitBusOracle.initialize(...validatorsExitBusOracleArgs, { from: DEPLOYER })
+  await log.makeTx(validatorsExitBusOracle, 'initialize', validatorsExitBusOracleArgs, { from: DEPLOYER })
 
   //
   // === WithdrawalQueue initialize ===
@@ -136,10 +129,7 @@ async function deployNewContracts({ web3, artifacts }) {
     withdrawalQueueAdmin,  // _admin
   ]
   const withdrawalQueue = await artifacts.require('WithdrawalQueueERC721').at(withdrawalQueueAddress)
-  await withdrawalQueue.initialize(
-    ...withdrawalQueueArgs,
-    { from: DEPLOYER },
-  )
+  await log.makeTx(withdrawalQueue, 'initialize', withdrawalQueueArgs, { from: DEPLOYER })
 
   //
   // === StakingRouter: initialize ===
@@ -151,10 +141,7 @@ async function deployNewContracts({ web3, artifacts }) {
     withdrawalCredentials,  // _withdrawalCredentials
   ]
   const stakingRouter = await artifacts.require('StakingRouter').at(stakingRouterAddress)
-  await stakingRouter.initialize(
-    ...stakingRouterArgs,
-    { from: DEPLOYER },
-  )
+  await log.makeTx(stakingRouter, 'initialize', stakingRouterArgs, { from: DEPLOYER })
   logWideSplitter()
 
 }

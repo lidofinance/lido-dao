@@ -65,7 +65,7 @@ async function createAppRepos({ web3, artifacts }) {
 
   console.log({arguments, from})
 
-  const lidoAppsReceipt = await template.createRepos(...createReposArguments, { from })
+  const lidoAppsReceipt = await log.makeTx(template, 'createRepos', createReposArguments, { from })
   console.log(`=== Aragon Lido Apps Repos (Lido, AccountingOracle, NodeOperatorsRegistry deployed: ${lidoAppsReceipt.tx} ===`)
 
 
@@ -76,7 +76,7 @@ async function createAppRepos({ web3, artifacts }) {
     state['app:aragon-voting']["implementation"]["address"],
   ]
 
-  const aragonStdAppsReceipt = await template.createStdAragonRepos(...createStdAragonReposArguments, { from })
+  const aragonStdAppsReceipt = await log.makeTx(template, 'createStdAragonRepos', createStdAragonReposArguments, { from })
   console.log(`=== Aragon Std Apps Repos (Agent, Finance, TokenManager, Voting deployed: ${aragonStdAppsReceipt.tx} ===`)
 
   logSplitter()

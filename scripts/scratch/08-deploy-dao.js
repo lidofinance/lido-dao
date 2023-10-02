@@ -64,12 +64,11 @@ async function deployDAO({ web3, artifacts }) {
 
   log(`Using DAO token settings:`, daoInitialSettings.token)
   log(`Using DAO voting settings:`, daoInitialSettings.voting)
-  await template.newDAO(
+  await log.makeTx(template, 'newDAO', [
     daoInitialSettings.token.name,
     daoInitialSettings.token.symbol,
     votingSettings,
-    { from: state.multisigAddress },
-  )
+  ], { from: state.multisigAddress })
 }
 
 async function checkAppRepos(state) {

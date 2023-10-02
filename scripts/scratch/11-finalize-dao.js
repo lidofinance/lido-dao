@@ -67,12 +67,11 @@ async function finalizeDAO({ web3, artifacts }) {
 
   log.splitter()
 
-  await template.finalizeDAO(
+  await log.makeTx(template, 'finalizeDAO', [
     state.daoAragonId,
     state.vestingParams.unvestedTokensAmount,
-    state.stakingRouter.address,
-    { from: state.multisigAddress }
-  )
+    state.stakingRouter.address
+  ], { from: state.multisigAddress })
 }
 
 module.exports = runOrWrapScript(finalizeDAO, module)
