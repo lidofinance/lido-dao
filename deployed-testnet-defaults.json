@@ -15,8 +15,8 @@
     "voting": {
       "minSupportRequired": "500000000000000000",
       "minAcceptanceQuorum": "50000000000000000",
-      "voteDuration": 30,
-      "objectionPhaseDuration": 1
+      "voteDuration": 900,
+      "objectionPhaseDuration": 300
     },
     "fee": {
       "totalPercent": 10,
