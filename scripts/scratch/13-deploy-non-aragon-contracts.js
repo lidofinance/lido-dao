@@ -64,9 +64,15 @@ async function deployNewContracts({ web3, artifacts }) {
   logWideSplitter()
 
   //
+  // === DummyEmptyContract ===
+  //
+  const dummyContractAddress = await deployWithoutProxy('dummyEmptyContract', 'DummyEmptyContract', deployer)
+
+
+  //
   // === LidoLocator: dummy invalid implementation ===
   //
-  const locatorAddress = await deployBehindOssifiableProxy('lidoLocator', 'DummyEmptyContract', proxyContractsOwner, deployer)
+  const locatorAddress = await deployBehindOssifiableProxy('lidoLocator', 'DummyEmptyContract', proxyContractsOwner, deployer, [], dummyContractAddress)
   logWideSplitter()
 
   //
