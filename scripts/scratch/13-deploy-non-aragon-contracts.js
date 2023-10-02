@@ -1,8 +1,7 @@
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, yl, gr } = require('../helpers/log')
 const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
-const { deployWithoutProxy, deployBehindOssifiableProxy, updateProxyImplementation } = require('../helpers/deploy')
-const { ZERO_ADDRESS, bn } = require('@aragon/contract-helpers-test')
+const { deployWithoutProxy, deployBehindOssifiableProxy, updateProxyImplementation, deployImplementation } = require('../helpers/deploy')
 
 const { APP_NAMES } = require('../constants')
 
@@ -29,7 +28,6 @@ async function deployNewContracts({ web3, artifacts }) {
   const lidoAddress = state["app:lido"].proxyAddress
   const legacyOracleAddress = state["app:oracle"].proxyAddress
   const agentAddress = state["app:aragon-agent"].proxyAddress
-  const votingAddress = state["app:aragon-voting"].proxyAddress
   const treasuryAddress = agentAddress
   const chainSpec = state["chainSpec"]
   const depositSecurityModuleParams = state["depositSecurityModule"].parameters

@@ -16,6 +16,7 @@ require('./foundry/skip-sol-tests-compilation')
 
 const NETWORK_NAME = getNetworkName()
 const ETH_ACCOUNT_NAME = process.env.ETH_ACCOUNT_NAME
+const RPC_URL = process.env.RPC_URL
 
 // eslint-disable-next-line no-undef
 task('accounts', 'Prints the list of accounts', async (taskArgs, hre) => {
@@ -47,16 +48,16 @@ const getNetConfig = (networkName, ethAccountName) => {
   const byNetName = {
     mainnetfork: {
       ...base,
-      url: process.env.RPC_URL,
+      url: RPC_URL,
       chainId: Number(process.env.CHAIN_ID) || 1,
     },
     goerlifork: {
       ...base,
-      url: process.env.RPC_URL,
+      url: RPC_URL,
       chainId: Number(process.env.CHAIN_ID) || 5,
     },
     local: {
-      url: process.env.RPC_URL,
+      url: RPC_URL,
       chainId: Number(process.env.CHAIN_ID) || 1337,
     },
     hardhat: {
@@ -76,13 +77,13 @@ const getNetConfig = (networkName, ethAccountName) => {
     goerli: {
       ...base,
       // url: 'https://goerli.infura.io/v3/' + process.env.WEB3_INFURA_PROJECT_ID,
-      url: process.env.RPC_URL,
+      url: RPC_URL,
       chainId: 5,
       timeout: 60000 * 10,
     },
     goerlidebug: {
       ...base,
-      url: process.env.RPC_URL,
+      url: RPC_URL,
       chainId: 5,
       timeout: 60000 * 15,
     },

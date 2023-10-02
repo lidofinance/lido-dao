@@ -3,9 +3,8 @@ const { assert } = require('chai')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log } = require('../helpers/log')
-const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
+const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 const { assertLastEvent } = require('../helpers/events')
-const { percentToBP } = require('../helpers/index')
 
 const { APP_NAMES } = require('../constants')
 const { assertVesting } = require('./checks/dao-token')
@@ -53,7 +52,6 @@ async function finalizeDAO({ web3, artifacts }) {
   log(`Using fee initial settings:`)
   log(`  total fee:`, chalk.yellow(`${fee.totalPercent}%`))
   log(`  treasury fee:`, chalk.yellow(`${fee.treasuryPercent}%`))
-  log(`  insurance fee:`, chalk.yellow(`${fee.insurancePercent}%`))
   log(`  node operators fee:`, chalk.yellow(`${fee.nodeOperatorsPercent}%`))
 
   await assertVesting({

@@ -13,8 +13,6 @@ export DEPLOYER=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 export GAS_PRIORITY_FEE=1
 export GAS_MAX_FEE=100
 #
-export NO_ARAGON_UI=1
-#
 export NETWORK_STATE_FILE="deployed-${NETWORK}.json"
 export NETWORK_STATE_DEFAULTS_FILE="deployed-testnet-defaults.json"
 # TODO export SCRATCH_DEPLOY_DEPOSIT_CONTRACT=1

@@ -1,13 +1,12 @@
 const chalk = require('chalk')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
-const { log, yl, gr } = require('../helpers/log')
-const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
+const { readNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 
 const DEPLOYER = process.env.DEPLOYER
-const CHAIN_ID = process.env.CHAIN_ID
+const CHAIN_ID = parseInt(process.env.CHAIN_ID)
 const GATE_SEAL = process.env.GATE_SEAL
-const GENESIS_TIME = process.env.GENESIS_TIME
+const GENESIS_TIME = parseInt(process.env.GENESIS_TIME)
 const DEPOSIT_CONTRACT = process.env.DEPOSIT_CONTRACT
 
 async function saveDeployParameters({ web3, artifacts }) {

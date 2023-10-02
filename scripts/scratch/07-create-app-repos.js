@@ -8,9 +8,8 @@ const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = re
 
 const { APP_NAMES } = require('../constants')
 
-const DULL_CONTENT_URI = "0x697066733a516d516b4a4d7476753474794a76577250584a666a4c667954576e393539696179794e6a703759714e7a58377053"
+const DULL_CONTENT_URI = "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 
-const NO_ARAGON_UI = process.env.NO_ARAGON_UI
 
 const REQUIRED_NET_STATE = [
   'multisigAddress',
@@ -53,13 +52,13 @@ async function createAppRepos({ web3, artifacts }) {
     [1, 0, 0],
     // Lido app
     lidoAppState.implementation,
-    NO_ARAGON_UI ? DULL_CONTENT_URI : lidoAppState.contentURI,
+    DULL_CONTENT_URI,
     // NodeOperatorsRegistry app
     nodeOperatorsAppState.implementation,
-    NO_ARAGON_UI ? DULL_CONTENT_URI : nodeOperatorsAppState.contentURI,
+    DULL_CONTENT_URI,
     // LegacyOracle app
     oracleAppState.implementation,
-    NO_ARAGON_UI ? DULL_CONTENT_URI : oracleAppState.contentURI,
+    DULL_CONTENT_URI,
   ]
   const from = state.multisigAddress
 

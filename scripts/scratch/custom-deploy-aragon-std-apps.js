@@ -50,24 +50,11 @@ async function deployAragonStdApps({ web3, artifacts, }) {
   const appName = "Agent"
   const constructorArgs = []
   const deployer = state["multisigAddress"]
-  // const agentImpl = deployApp({artifacts, appName, constructorArgs, deployer})
 
-  // state['app:aragon-agent']["implementation"]["address"]
   await deployImplementation("app:aragon-agent", "Agent", deployer)
   await deployImplementation("app:aragon-finance", "Finance", deployer)
   await deployImplementation("app:aragon-token-manager", "TokenManager", deployer)
   await deployImplementation("app:aragon-voting", "Voting", deployer)
-  // await deployContract("app:aragon-agent", constructorArgs, deployer)
-  // await deployContract("app:aragon-finance", constructorArgs, deployer)
-  // await deployContract("app:aragon-token-manager", constructorArgs, deployer)
-  // await deployContract("app:aragon-voting", constructorArgs, deployer)
-
-  // await apm.newRepoWithVersion(
-
-  // {})
-
-  // TODO: apm.publishVersion
-  // don't forget .wait
 }
 
 async function deployApp({ artifacts, appName, constructorArgs, deployer }) {

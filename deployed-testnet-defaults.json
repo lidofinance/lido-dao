@@ -1,5 +1,4 @@
 {
-  "ipfsAPI": "http://127.0.0.1:5001/api/v0",
   "multisigAddress": "",
   "owner": "",
   "gateSealAddress": "",
@@ -21,8 +20,7 @@
     },
     "fee": {
       "totalPercent": 10,
-      "treasuryPercent": 0,
-      "insurancePercent": 50,
+      "treasuryPercent": 50,
       "nodeOperatorsPercent": 50
     },
     "token": {
@@ -106,7 +104,7 @@
   "nodeOperatorsRegistry": {
     "parameters": {
       "stakingModuleTypeId": "curated-onchain-v1",
-      "stuckPenaltyDelay": "172800"
+      "stuckPenaltyDelay": 172800
     }
   },
   "withdrawalQueueERC721": {
