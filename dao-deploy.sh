@@ -81,6 +81,8 @@ msg "Non-aragon contracts initialized"
 yarn hardhat --network $NETWORK run ./scripts/scratch/15-grant-roles.js --no-compile
 msg "Roles granted"
 
+yarn hardhat --network $NETWORK run ./scripts/scratch/16-plug-curated-staking-module.js --no-compile
+msg "Plugged NodeOperatorsRegistry as Curated staking module"
 
 yarn hardhat --network $NETWORK run ./scripts/scratch/12-check-dao.js --no-compile
 msg "The deployed protocol state checked"
