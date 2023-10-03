@@ -199,7 +199,9 @@ async function checkSubmitDepositReportWithdrawal(protocol, state, user1, user2)
 
   const epochsPerFrame = +(await hashConsensusForAO.getFrameConfig()).epochsPerFrame
   const initialEpochTimestamp = chainSpec.genesisTime + initialEpoch * chainSpec.slotsPerEpoch * chainSpec.secondsPerSlot
-  const nextReportEpochTimestamp = initialEpochTimestamp + epochsPerFrame * chainSpec.slotsPerEpoch * chainSpec.secondsPerSlot
+
+  // skip two reports to be sure about REQUEST_TIMESTAMP_MARGIN
+  const nextReportEpochTimestamp = initialEpochTimestamp + 2 * epochsPerFrame * chainSpec.slotsPerEpoch * chainSpec.secondsPerSlot
 
   const timeToWaitTillReportWindow = nextReportEpochTimestamp - latestBlockTimestamp + chainSpec.secondsPerSlot
 
