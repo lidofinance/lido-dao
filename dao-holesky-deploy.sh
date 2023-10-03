@@ -10,8 +10,8 @@ if [[ -z "$RPC_URL" ]]; then
     echo "Must set RPC_URL env variable" 1>&2
     exit 1
 fi
-if [[ -z "$GATE_SEAL" ]]; then
-    echo "Must set GATE_SEAL env variable" 1>&2
+if [[ -z "$GATE_SEAL_FACTORY" ]]; then
+    echo "Must set GATE_SEAL_FACTORY env variable" 1>&2
     exit 1
 fi
 

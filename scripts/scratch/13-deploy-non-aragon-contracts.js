@@ -1,7 +1,7 @@
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, yl, gr } = require('../helpers/log')
-const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
-const { deployWithoutProxy, deployBehindOssifiableProxy, updateProxyImplementation, deployImplementation } = require('../helpers/deploy')
+const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
+const { deployWithoutProxy, deployBehindOssifiableProxy, updateProxyImplementation, deployImplementation, deployContract, getContractPath } = require('../helpers/deploy')
 
 const { APP_NAMES } = require('../constants')
 
@@ -25,9 +25,10 @@ async function deployNewContracts({ web3, artifacts }) {
   log(`Network ID:`, yl(netId))
   let state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
-  const lidoAddress = state["app:lido"].proxyAddress
-  const legacyOracleAddress = state["app:oracle"].proxyAddress
-  const agentAddress = state["app:aragon-agent"].proxyAddress
+  const lidoAddress = state["app:lido"].proxy.address
+  const legacyOracleAddress = state["app:oracle"].proxy.address
+  const votingAddress = state["app:aragon-voting"].proxy.address
+  const agentAddress = state["app:aragon-agent"].proxy.address
   const treasuryAddress = agentAddress
   const chainSpec = state["chainSpec"]
   const depositSecurityModuleParams = state["depositSecurityModule"].parameters
@@ -129,7 +130,21 @@ async function deployNewContracts({ web3, artifacts }) {
   //
   // === WithdrawalVault ===
   //
-  const withdrawalVaultAddress = await deployBehindOssifiableProxy("withdrawalVault", "WithdrawalVault", proxyContractsOwner, deployer, [lidoAddress, treasuryAddress])
+  const withdrawalVaultImpl = await deployImplementation("withdrawalVault", "WithdrawalVault", deployer, [lidoAddress, treasuryAddress])
+  state = readNetworkState(network.name, netId)
+  const withdrawalsManagerProxyConstructorArgs = [votingAddress, withdrawalVaultImpl.address]
+  const withdrawalsManagerProxy = await deployContract("WithdrawalsManagerProxy", withdrawalsManagerProxyConstructorArgs, deployer)
+  const withdrawalVaultAddress = withdrawalsManagerProxy.address
+  state.withdrawalVault = {
+    ...state.withdrawalVault,
+    proxy: {
+      contract: await getContractPath("WithdrawalsManagerProxy"),
+      address: withdrawalsManagerProxy.address,
+      constructorArgs: withdrawalsManagerProxyConstructorArgs,
+    },
+    address: withdrawalsManagerProxy.address,
+  }
+  persistNetworkState(network.name, netId, state)
   logWideSplitter()
 
   //

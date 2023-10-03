@@ -40,11 +40,11 @@ async function deployDAO({ web3, artifacts }) {
 
   log(`Using LidoTemplate: ${chalk.yellow(daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
-  if (state.daoTemplateDeployBlock) {
-    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
+  if (state.lidoTemplate.deployBlock) {
+    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.lidoTemplate.deployBlock)}`)
   }
 
-  const reposCreatedEvt = await assertLastEvent(template, 'TmplReposCreated', null, state.daoTemplateDeployBlock)
+  const reposCreatedEvt = await assertLastEvent(template, 'TmplReposCreated', null, state.lidoTemplate.deployBlock)
   state.createAppReposTx = reposCreatedEvt.transactionHash
   log(`Using createRepos transaction: ${chalk.yellow(state.createAppReposTx)}`)
   persistNetworkState(network.name, netId, state)
@@ -64,11 +64,13 @@ async function deployDAO({ web3, artifacts }) {
 
   log(`Using DAO token settings:`, daoInitialSettings.token)
   log(`Using DAO voting settings:`, daoInitialSettings.voting)
-  await log.makeTx(template, 'newDAO', [
+  const receipt = await log.makeTx(template, 'newDAO', [
     daoInitialSettings.token.name,
     daoInitialSettings.token.symbol,
     votingSettings,
   ], { from: state.multisigAddress })
+  state.lidoTemplateNewDaoTx = receipt.tx
+  persistNetworkState(network.name, netId, state)
 }
 
 async function checkAppRepos(state) {
@@ -109,7 +111,7 @@ async function checkAppRepos(state) {
     const appDesc = `repo ${chalk.yellow(app.appName + '.' + state.lidoApmEnsName)}`
 
     const addrCheckDesc = `${appDesc}: latest version contract address is correct`
-    assert.equal(app.contractAddress, appState.implementation, addrCheckDesc)
+    assert.equal(app.contractAddress, appState.implementation.address, addrCheckDesc)
     log.success(addrCheckDesc)
 
     const contentCheckDesc = `${appDesc}: latest version content URI is correct`

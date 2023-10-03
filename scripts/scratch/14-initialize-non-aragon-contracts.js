@@ -34,9 +34,9 @@ async function deployNewContracts({ web3, artifacts }) {
   let state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
-  const lidoAddress = state["app:lido"].proxyAddress
-  const legacyOracleAddress = state["app:oracle"].proxyAddress
-  const nodeOperatorsRegistryAddress = state["app:node-operators-registry"].proxyAddress
+  const lidoAddress = state["app:lido"].proxy.address
+  const legacyOracleAddress = state["app:oracle"].proxy.address
+  const nodeOperatorsRegistryAddress = state["app:node-operators-registry"].proxy.address
   const nodeOperatorsRegistryParams = state["nodeOperatorsRegistry"].parameters
 
   const validatorsExitBusOracleParams = state["validatorsExitBusOracle"].parameters
@@ -50,7 +50,7 @@ async function deployNewContracts({ web3, artifacts }) {
   const ValidatorsExitBusOracleAddress = state["validatorsExitBusOracle"].address
   const hashConsensusForValidatorsExitBusOracleAddress = state["hashConsensusForValidatorsExitBus"].address
   const eip712StETHAddress = state["eip712StETH"].address
-  const withdrawalVaultAddress = state["withdrawalVault"].address
+  const withdrawalVaultAddress = state["withdrawalVault"].proxy.address
 
   const testnetAdmin = DEPLOYER
   const accountingOracleAdmin = testnetAdmin

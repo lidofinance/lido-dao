@@ -49,7 +49,7 @@ async function deployTemplate({ web3, artifacts }) {
 
   logHeader('Lido app base')
   {
-    const lidoBaseAddress = state[`app:${APP_NAMES.LIDO}`].implementation
+    const lidoBaseAddress = state[`app:${APP_NAMES.LIDO}`].implementation.address
     const lidoBase = await artifacts.require('Lido').at(lidoBaseAddress)
     log(`Checking...`)
     await assertDeployedBytecode(lidoBaseAddress, 'Lido')
@@ -58,7 +58,7 @@ async function deployTemplate({ web3, artifacts }) {
 
   logHeader('NodeOperatorsRegistry app base')
   {
-    const nodeOperatorsRegistryBaseAddress = state[`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`].implementation
+    const nodeOperatorsRegistryBaseAddress = state[`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`].implementation.address
     const nodeOperatorsRegistryBase = await artifacts.require('NodeOperatorsRegistry').at(nodeOperatorsRegistryBaseAddress)
     log(`Checking...`)
     await assertDeployedBytecode(nodeOperatorsRegistryBase.address, 'NodeOperatorsRegistry')
@@ -67,7 +67,7 @@ async function deployTemplate({ web3, artifacts }) {
 
   logHeader('LegacyOracle app base')
   {
-    const legacyOracleBaseAddress = state[`app:${APP_NAMES.ORACLE}`].implementation
+    const legacyOracleBaseAddress = state[`app:${APP_NAMES.ORACLE}`].implementation.address
     const legacyOracleBase = await artifacts.require('LegacyOracle').at(legacyOracleBaseAddress)
     log(`Checking...`)
     await assertDeployedBytecode(legacyOracleBase.address, 'LegacyOracle')

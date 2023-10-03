@@ -162,6 +162,10 @@ module.exports = {
         settings: solcSettings6,
       },
       {
+        version: '0.8.4',
+        settings: solcSettings8,
+      },
+      {
         version: '0.8.9',
         settings: solcSettings8,
       },

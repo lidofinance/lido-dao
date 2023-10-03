@@ -22,7 +22,7 @@ const REQUIRED_NET_STATE = [
   "validatorsExitBusOracle",
   "withdrawalQueueERC721",
   "withdrawalVault",
-  "gateSealAddress",
+  "gateSeal",
 ]
 
 
@@ -34,9 +34,9 @@ async function deployNewContracts({ web3, artifacts }) {
   let state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
-  const lidoAddress = state["app:lido"].proxyAddress
-  const nodeOperatorsRegistryAddress = state["app:node-operators-registry"].proxyAddress
-  const gateSealAddress = state["gateSealAddress"]
+  const lidoAddress = state["app:lido"].proxy.address
+  const nodeOperatorsRegistryAddress = state["app:node-operators-registry"].proxy.address
+  const gateSealAddress = state.gateSeal.address
 
   const burnerAddress = state["burner"].address
   const stakingRouterAddress = state["stakingRouter"].address

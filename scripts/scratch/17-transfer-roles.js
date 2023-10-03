@@ -49,7 +49,7 @@ async function deployNewContracts({ web3, artifacts }) {
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   const owner = state.owner
-  const agent = state["app:aragon-agent"].proxyAddress
+  const agent = state["app:aragon-agent"].proxy.address
 
   await transferOZAdmin('Burner', state.burner.address, owner, agent)
   await transferOZAdmin('HashConsensus', state.hashConsensusForAccounting.address, owner, agent)

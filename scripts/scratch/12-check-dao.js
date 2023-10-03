@@ -57,28 +57,28 @@ async function checkDAO({ web3, artifacts }) {
 
   log(`Using LidoTemplate: ${yl(daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
-  if (state.daoTemplateDeployBlock) {
-    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
+  if (state.lidoTemplate.deployBlock) {
+    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.lidoTemplate.deployBlock)}`)
   }
-  await assertLastEvent(template, 'TmplDaoFinalized', null, state.daoTemplateDeployBlock)
+  await assertLastEvent(template, 'TmplDaoFinalized', null, state.lidoTemplate.deployBlock)
 
-  const apmDeployedEvt = await assertSingleEvent(template, 'TmplAPMDeployed', null, state.daoTemplateDeployBlock)
-  const daoDeployedEvt = await assertSingleEvent(template, 'TmplDAOAndTokenDeployed', null, state.daoTemplateDeployBlock)
+  const apmDeployedEvt = await assertSingleEvent(template, 'TmplAPMDeployed', null, state.lidoTemplate.deployBlock)
+  const daoDeployedEvt = await assertSingleEvent(template, 'TmplDAOAndTokenDeployed', null, state.lidoTemplate.deployBlock)
 
   state.lidoApmAddress = apmDeployedEvt.args.apm
-  state.daoAddress = daoDeployedEvt.args.dao
-  state.daoTokenAddress = daoDeployedEvt.args.token
+  daoAddress = daoDeployedEvt.args.dao
+  daoTokenAddress = daoDeployedEvt.args.token
 
   log.splitter()
 
   log(`Using APMRegistry:`, yl(state.lidoApmAddress))
   const registry = await artifacts.require('APMRegistry').at(state.lidoApmAddress)
 
-  log(`Using Kernel:`, yl(state.daoAddress))
-  const dao = await artifacts.require('Kernel').at(state.daoAddress)
+  log(`Using Kernel:`, yl(daoAddress))
+  const dao = await artifacts.require('Kernel').at(daoAddress)
 
-  log(`Using MiniMeToken:`, yl(state.daoTokenAddress))
-  const daoToken = await artifacts.require('MiniMeToken').at(state.daoTokenAddress)
+  log(`Using MiniMeToken:`, yl(daoTokenAddress))
+  const daoToken = await artifacts.require('MiniMeToken').at(daoTokenAddress)
 
   log.splitter()
 
@@ -89,7 +89,7 @@ async function checkDAO({ web3, artifacts }) {
       lidoApmEnsName: state.lidoApmEnsName,
       appProxyUpgradeableArtifactName: 'external:AppProxyUpgradeable_DAO'
     },
-    state.daoTemplateDeployBlock
+    state.lidoTemplate.deployBlock
   )
 
   log.splitter()
@@ -149,16 +149,16 @@ async function checkDAO({ web3, artifacts }) {
       burner,
       stakingRouter,
     },
-    state.daoTemplateDeployBlock
+    state.lidoTemplate.deployBlock
   )
 
   log.splitter()
 
-  const { registryACL } = await assertLidoAPMPermissions({ registry, votingAddress: voting.address }, state.daoTemplateDeployBlock)
+  const { registryACL } = await assertLidoAPMPermissions({ registry, votingAddress: voting.address }, state.lidoTemplate.deployBlock)
 
   log.splitter()
 
-  await assertReposPermissions({ registry, registryACL, votingAddress: voting.address }, state.daoTemplateDeployBlock)
+  await assertReposPermissions({ registry, registryACL, votingAddress: voting.address }, state.lidoTemplate.deployBlock)
 
   log.splitter()
 
@@ -202,11 +202,12 @@ async function assertReposPermissions({ registry, registryACL, votingAddress }, 
   const newRepoEvents = await registry.getPastEvents('NewRepo', { fromBlock })
 
   for (const evt of newRepoEvents) {
-    const repo = await Repo.at(evt.args.repo)
+    const repoAddress = await Repo.at(evt.args.repo)
+    const repoName = evt.args.name
     await assertRole(
       {
         acl: registryACL,
-        app: repo,
+        app: repoAddress,
         appName: `repo<${evt.args.name}>`,
         roleName: 'CREATE_VERSION_ROLE',
         managerAddress: votingAddress,
@@ -558,8 +559,6 @@ async function assertDaoPermissions({ kernel, lido, legacyOracle, nopsRegistry, 
   })
 
   log.splitter()
-
-  console.log({ stakingRouter: stakingRouter.address })
 
   await assertRoles({
     app: nopsRegistry,

@@ -36,11 +36,11 @@ async function createAppRepos({ web3, artifacts }) {
   logSplitter()
   log(`Using LidoTemplate: ${chalk.yellow(daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
-  if (state.daoTemplateDeployBlock) {
-    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
+  if (state.lidoTemplate.deployBlock) {
+    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.lidoTemplate.deployBlock)}`)
   }
 
-  await assertLastEvent(template, 'TmplAPMDeployed', null, state.daoTemplateDeployBlock)
+  await assertLastEvent(template, 'TmplAPMDeployed', null, state.lidoTemplate.deployBlock)
   logSplitter()
 
   const lidoAppState = state[`app:${APP_NAMES.LIDO}`]
@@ -51,13 +51,13 @@ async function createAppRepos({ web3, artifacts }) {
   const createReposArguments = [
     [1, 0, 0],
     // Lido app
-    lidoAppState.implementation,
+    lidoAppState.implementation.address,
     DULL_CONTENT_URI,
     // NodeOperatorsRegistry app
-    nodeOperatorsAppState.implementation,
+    nodeOperatorsAppState.implementation.address,
     DULL_CONTENT_URI,
     // LegacyOracle app
-    oracleAppState.implementation,
+    oracleAppState.implementation.address,
     DULL_CONTENT_URI,
   ]
   const from = state.multisigAddress
@@ -69,10 +69,10 @@ async function createAppRepos({ web3, artifacts }) {
 
 
   const createStdAragonReposArguments = [
-    state['app:aragon-agent']["implementation"]["address"],
-    state['app:aragon-finance']["implementation"]["address"],
-    state['app:aragon-token-manager']["implementation"]["address"],
-    state['app:aragon-voting']["implementation"]["address"],
+    state['app:aragon-agent'].implementation.address,
+    state['app:aragon-finance'].implementation.address,
+    state['app:aragon-token-manager'].implementation.address,
+    state['app:aragon-voting'].implementation.address,
   ]
 
   const aragonStdAppsReceipt = await log.makeTx(template, 'createStdAragonRepos', createStdAragonReposArguments, { from })

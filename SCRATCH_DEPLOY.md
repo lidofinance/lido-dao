@@ -96,7 +96,7 @@ To do Goerli deployment, the following parameters must be set up via env variabl
 - `RPC_URL`. Address of of the Ethereum RPC node to use. E.g. for Infura it is `https://goerli.infura.io/v3/<yourProjectId>`
 - `GAS_PRIORITY_FEE`. Gas priority fee. By default set to `2`
 - `GAS_MAX_FEE`. Gas max fee. By default set to `100`
-- `GATE_SEAL`. Address of the [GateSeal](https://github.com/lidofinance/gate-seals) contract. Must be deployed preliminary. Can be set to any `0x0000000000000000000000000000000000000000` to debug deployment.
+- `GATE_SEAL_FACTORY`. Address of the [GateSeal Factory](https://github.com/lidofinance/gate-seals) contract. Must be deployed preliminary. Can be set to any `0x0000000000000000000000000000000000000000` to debug deployment.
 
 Also you need to specify `DEPLOYER` private key in `accounts.json` under `/eth/goerli` like `"goerli": ["<key>"]`. See `accounts.sample.json` for an example.
 

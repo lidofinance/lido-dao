@@ -25,6 +25,7 @@ function msg() {
   fi
 }
 
+
 # yarn install --immutable
 yarn compile
 
@@ -71,6 +72,8 @@ msg "Tokens issued"
 # Deploy the contracts before finalizing DAO, because the template might set permissions on some of them
 yarn hardhat --network $NETWORK run ./scripts/scratch/13-deploy-non-aragon-contracts.js --no-compile
 msg "Non-aragon contracts deployed"
+
+yarn hardhat --network $NETWORK run ./scripts/scratch/13-gate-seal.js --no-compile
 
 yarn hardhat --network $NETWORK run ./scripts/scratch/11-finalize-dao.js --no-compile
 msg "DAO deploy finalized"

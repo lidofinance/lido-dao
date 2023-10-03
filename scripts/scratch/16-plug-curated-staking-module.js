@@ -24,7 +24,6 @@ const REQUIRED_NET_STATE = [
   "validatorsExitBusOracle",
   "withdrawalQueueERC721",
   "withdrawalVault",
-  "gateSealAddress",
 ]
 
 const NOR_STAKING_MODULE_TARGET_SHARE_BP = 10000  // 100%
@@ -43,7 +42,7 @@ async function deployNewContracts({ web3, artifacts }) {
 
   const owner = state.owner
   const stakingRouter = await artifacts.require('StakingRouter').at(state.stakingRouter.address)
-  const nodeOperatorsRegistry = await artifacts.require('NodeOperatorsRegistry').at(state['app:node-operators-registry'].proxyAddress)
+  const nodeOperatorsRegistry = await artifacts.require('NodeOperatorsRegistry').at(state['app:node-operators-registry'].proxy.address)
 
   await log.makeTx(stakingRouter, 'grantRole', [STAKING_MODULE_MANAGE_ROLE, owner], { from: owner })
 

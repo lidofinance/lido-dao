@@ -10,8 +10,7 @@ const { APP_NAMES } = require('../constants')
 const { assertVesting } = require('./checks/dao-token')
 
 const REQUIRED_NET_STATE = [
-  'daoAddress',
-  'daoTokenAddress',
+  'ldo',
   'lidoTemplate',
   'daoAragonId',
   'daoInitialSettings',
@@ -35,18 +34,18 @@ async function finalizeDAO({ web3, artifacts }) {
 
   log(`Using LidoTemplate: ${chalk.yellow(daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
-  if (state.daoTemplateDeployBlock) {
-    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
+  if (state.lidoTemplate.deployBlock) {
+    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.lidoTemplate.deployBlock)}`)
   }
-  await assertLastEvent(template, 'TmplTokensIssued', null, state.daoTemplateDeployBlock)
+  await assertLastEvent(template, 'TmplTokensIssued', null, state.lidoTemplate.deployBlock)
   log.splitter()
 
-  const tokenManagerAddress = state[`app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`].proxyAddress
+  const tokenManagerAddress = state[`app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`].proxy.address
   log(`Using TokenManager:`, chalk.yellow(tokenManagerAddress))
   const tokenManager = await artifacts.require('TokenManager').at(tokenManagerAddress)
 
-  log(`Using MiniMeToken`, chalk.yellow(state.daoTokenAddress))
-  const daoToken = await artifacts.require('MiniMeToken').at(state.daoTokenAddress)
+  log(`Using MiniMeToken`, chalk.yellow(state.ldo.address))
+  const daoToken = await artifacts.require('MiniMeToken').at(state.ldo.address)
 
   const { fee } = state.daoInitialSettings
   log(`Using fee initial settings:`)

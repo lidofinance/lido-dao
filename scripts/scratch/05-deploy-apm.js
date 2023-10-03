@@ -31,11 +31,11 @@ async function deployAPM({ web3, artifacts }) {
   log(`Using DAO template: ${chalk.yellow(daoTemplateAddress)}`)
 
   const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
-  if (state.daoTemplateDeployBlock) {
-    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
+  if (state.lidoTemplate.deployBlock) {
+    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.lidoTemplate.deployBlock)}`)
   }
   log.splitter()
-  await assertNoEvents(template, null, state.daoTemplateDeployBlock)
+  await assertNoEvents(template, null, state.lidoTemplate.deployBlock)
 
   const ens = await artifacts.require('ENS').at(state.ensAddress)
   const lidoApmEnsNode = namehash(state.lidoApmEnsName)

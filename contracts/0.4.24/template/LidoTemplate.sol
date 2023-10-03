@@ -124,7 +124,7 @@ contract LidoTemplate is IsContract {
 
     event TmplAPMDeployed(address apm);
     event TmplReposCreated();
-    event TmplAppInstalled(address appProxy, bytes32 appId);
+    event TmplAppInstalled(address appProxy, bytes32 appId, bytes initializeData);
     event TmplDAOAndTokenDeployed(address dao, address token);
     event TmplTokensIssued(uint256 totalAmount);
     event TmplDaoFinalized();
@@ -508,7 +508,7 @@ contract LidoTemplate is IsContract {
     ) internal returns (address) {
         address latestBaseAppAddress = _apmResolveLatest(_appId).contractAddress;
         address instance = address(_dao.newAppInstance(_appId, latestBaseAppAddress, _initializeData, _setDefault));
-        emit TmplAppInstalled(instance, _appId);
+        emit TmplAppInstalled(instance, _appId, _initializeData);
         return instance;
     }
 

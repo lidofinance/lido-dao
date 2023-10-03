@@ -1,7 +1,11 @@
 {
   "multisigAddress": "",
   "owner": "",
-  "gateSealAddress": "",
+  "gateSeal": {
+    "factoryAddress": "",
+    "sealDuration": 518400,
+    "expiryTimestamp": 1714521600
+  },
   "lidoApmEnsName": "lidopm.eth",
   "lidoApmEnsRegDurationSec": 94608000,
   "daoAragonId": "lido-dao",

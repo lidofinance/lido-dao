@@ -14,7 +14,7 @@ const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = re
 const { APP_NAMES } = require('../constants')
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
-const REQUIRED_NET_STATE = ['daoAddress', 'lidoTemplate', 'vestingParams']
+const REQUIRED_NET_STATE = ['lidoTemplate', 'vestingParams']
 
 const MAX_HOLDERS_IN_ONE_TX = 30
 
@@ -31,10 +31,10 @@ async function issueTokens({ web3, artifacts }) {
   log.splitter()
   log(`Using LidoTemplate: ${chalk.yellow(daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
-  if (state.daoTemplateDeployBlock) {
-    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
+  if (state.lidoTemplate.deployBlock) {
+    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.lidoTemplate.deployBlock)}`)
   }
-  await assertLastEvent(template, 'TmplDAOAndTokenDeployed', null, state.daoTemplateDeployBlock)
+  await assertLastEvent(template, 'TmplDAOAndTokenDeployed', null, state.lidoTemplate.deployBlock)
   log.splitter()
 
   const { vestingParams: vesting } = state
