@@ -632,5 +632,21 @@
       ]
     },
     "address": "0xd6EbF043D30A7fe46D1Db32BA90a0A51207FE229"
+  },
+  "app:simple-dvt": {
+    "aragonApp": {
+      "name": "simple-dvt",
+      "fullName": "simple-dvt.lidopm.eth",
+      "id": "0xe1635b63b5f7b5e545f2a637558a4029dea7905361a2f0fc28c66e9136cf86a4"
+    },
+    "proxy": {
+      "address": "0x11a93807078f8BB880c1BD0ee4C387537de4b4b6",
+      "contract": "@aragon/os/contracts/apps/AppProxyUpgradeable.sol",
+      "constructorArgs": [
+        "0x3b03f75Ec541Ca11a223bB58621A3146246E1644",
+        "0xe1635b63b5f7b5e545f2a637558a4029dea7905361a2f0fc28c66e9136cf86a4",
+        "0x"
+      ]
+    }
   }
 }
