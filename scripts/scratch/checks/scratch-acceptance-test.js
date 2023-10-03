@@ -67,7 +67,7 @@ async function loadDeployedProtocol(state) {
     hashConsensusForAO: await artifacts.require('HashConsensus').at(state.hashConsensusForAccounting.address),
     elRewardsVault: await artifacts.require('LidoExecutionLayerRewardsVault').at(state.executionLayerRewardsVault.address),
     withdrawalQueue: await artifacts.require('WithdrawalQueueERC721').at(state.withdrawalQueueERC721.address),
-    ldo: await artifacts.require('MiniMeToken').at(state.daoTokenAddress),
+    ldo: await artifacts.require('MiniMeToken').at(state.ldo.address),
   }
 }
 
