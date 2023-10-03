@@ -189,7 +189,7 @@ async function obtainDeployedAPM({ web3, artifacts }) {
         constructorArgs: [], // see DAOFactory.newDAO and EVMScriptRegistryFactory.baseReg
       }
     }
-
+  }
   persistNetworkState(network.name, netId, state)
 }
 
