@@ -294,8 +294,8 @@ async function updateProxyImplementation(nameInState, artifactName, proxyAddress
 
   state[nameInState] = { ...state[nameInState] }
   state[nameInState].implementation = {
-    contract: artifactName,
-    implementation: implementation.address,
+    contract: await getContractPath(artifactName),
+    address: implementation.address,
     constructorArgs: constructorArgs,
   }
   persistNetworkState(network.name, netId, state)
