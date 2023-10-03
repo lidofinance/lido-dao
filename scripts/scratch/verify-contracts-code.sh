@@ -8,19 +8,23 @@ if [[ -z "$NETWORK" ]]; then
     exit 1
 fi
 
-function jsonGet {
-    node -e "const fs = require('fs'); const obj = JSON.parse(fs.readFileSync('deployed-${NETWORK}.json', 'utf8')); const path='$1'; let res = path.split('.').reduce(function(o, k) {return o && o[k] }, obj);  console.log(res)"
-}
+NETWORK_STATE_FILE="deployed-${NETWORK}.json"
+if [ ! -f $NETWORK_STATE_FILE ]; then
+    echo "Cannot find network state file ${NETWORK_STATE_FILE}"
+    exit 1
+fi
+echo "Using network state file ${NETWORK_STATE_FILE}"
 
-function jsonGetArray {
-    node -e "const fs = require('fs'); const obj = JSON.parse(fs.readFileSync('deployed-${NETWORK}.json', 'utf8')); const path='$1'; let res = path.split('.').reduce(function(o, k) {return o && o[k] }, obj);  console.log(res.join(' '))"
+function jsonGet {
+    node -e "const fs = require('fs'); const obj = JSON.parse(fs.readFileSync('${NETWORK_STATE_FILE}', 'utf8')); const path='$1'; let res = path.split('.').reduce(function(o, k) {return o && o[k] }, obj);  console.log(res)"
 }
 
 function verify {
     contractPath="$(jsonGet ${1}.contract)"
     contractName="${contractPath##*/}"
     contractName="${contractName%.*}"
-    echo "module.exports = $(jsonGet ${1}.constructorArgs)" > contract-args.js
+    argsJson=$(jsonGet ${1}.constructorArgs)
+    echo "module.exports = $argsJson" > contract-args.js
     yarn hardhat --network $NETWORK verify --no-compile --contract "$contractPath:$contractName" --constructor-args contract-args.js $(jsonGet ${1}.address)
 }
 
@@ -55,10 +59,14 @@ function verify {
 
 # verify withdrawalQueueERC721.implementation
 
+# ^ verified up to here
+
+verify app:lido.proxy
+
 # TODO: fix this verifications
-verify ldo
+# verify ldo
+# verify app:simple-dvt.proxy
 # verify app:aragon-token-manager.proxy
-# verify app:lido.proxy
 # verify app:oracle.proxy
 # verify app:node-operators-registry.proxy
 # verify app:aragon-voting.proxy
