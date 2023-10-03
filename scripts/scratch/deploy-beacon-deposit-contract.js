@@ -15,20 +15,20 @@ async function deployBeaconDepositContract({ web3, artifacts, networkStateFile =
 
   const state = readNetworkState(network.name, netId)
   const [firstAccount] = await web3.eth.getAccounts()
-  const { daoInitialSettings = { beaconSpec: { depositContractAddress: '' } } } = state
+  const chainSpec = state.chainSpec
   let depositContractAddress
-  if (daoInitialSettings.beaconSpec && daoInitialSettings.beaconSpec.depositContractAddress) {
-    depositContractAddress = daoInitialSettings.beaconSpec.depositContractAddress
+  if (chainSpec.depositContract) {
+    depositContractAddress = chainSpec.depositContract
   }
   const { depositContract } = await useOrDeployDepositContract({
     artifacts,
     owner: firstAccount,
-    depositContractAddress: depositContractAddress || state.depositContractAddress
+    depositContractAddress: depositContractAddress,
   })
 
-  daoInitialSettings.beaconSpec.depositContractAddress = depositContract.address
+  chainSpec.depositContract = depositContract.address
   logSplitter()
-  persistNetworkState(network.name, netId, state, { depositContract, daoInitialSettings })
+  persistNetworkState(network.name, netId, state, { chainSpec })
 }
 
 async function useOrDeployDepositContract({ artifacts, owner, depositContractAddress }) {

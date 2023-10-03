@@ -3,18 +3,24 @@ const { assert } = require('chai')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter } = require('../helpers/log')
-const { saveCallTxData } = require('../helpers/tx-data')
 const { assertLastEvent } = require('../helpers/events')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 
 const { APP_NAMES } = require('../constants')
+
+const DULL_CONTENT_URI = "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+
 
 const REQUIRED_NET_STATE = [
   'multisigAddress',
   'lidoTemplate',
   `app:${APP_NAMES.LIDO}`,
   `app:${APP_NAMES.ORACLE}`,
-  `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`
+  `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`,
+  `app:aragon-agent`,
+  `app:aragon-finance`,
+  `app:aragon-token-manager`,
+  `app:aragon-voting`,
 ]
 
 async function createAppRepos({ web3, artifacts }) {
@@ -30,32 +36,47 @@ async function createAppRepos({ web3, artifacts }) {
   logSplitter()
   log(`Using LidoTemplate: ${chalk.yellow(daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
-  if (state.daoTemplateDeployBlock) {
-    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
+  if (state.lidoTemplate.deployBlock) {
+    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.lidoTemplate.deployBlock)}`)
   }
 
-  await assertLastEvent(template, 'TmplAPMDeployed', null, state.daoTemplateDeployBlock)
+  await assertLastEvent(template, 'TmplAPMDeployed', null, state.lidoTemplate.deployBlock)
   logSplitter()
 
   const lidoAppState = state[`app:${APP_NAMES.LIDO}`]
   const oracleAppState = state[`app:${APP_NAMES.ORACLE}`]
   const nodeOperatorsAppState = state[`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`]
 
-  await saveCallTxData(`createRepos`, template, 'createRepos', `tx-07-create-app-repos.json`, {
-    arguments: [
-      [1, 0, 0],
-      // Lido app
-      lidoAppState.implementation,
-      lidoAppState.contentURI,
-      // NodeOperatorsRegistry app
-      nodeOperatorsAppState.implementation,
-      nodeOperatorsAppState.contentURI,
-      // LegacyOracle app
-      oracleAppState.implementation,
-      oracleAppState.contentURI,
-    ],
-    from: state.multisigAddress
-  })
+
+  const createReposArguments = [
+    [1, 0, 0],
+    // Lido app
+    lidoAppState.implementation.address,
+    DULL_CONTENT_URI,
+    // NodeOperatorsRegistry app
+    nodeOperatorsAppState.implementation.address,
+    DULL_CONTENT_URI,
+    // LegacyOracle app
+    oracleAppState.implementation.address,
+    DULL_CONTENT_URI,
+  ]
+  const from = state.multisigAddress
+
+  console.log({arguments, from})
+
+  const lidoAppsReceipt = await log.makeTx(template, 'createRepos', createReposArguments, { from })
+  console.log(`=== Aragon Lido Apps Repos (Lido, AccountingOracle, NodeOperatorsRegistry deployed: ${lidoAppsReceipt.tx} ===`)
+
+
+  const createStdAragonReposArguments = [
+    state['app:aragon-agent'].implementation.address,
+    state['app:aragon-finance'].implementation.address,
+    state['app:aragon-token-manager'].implementation.address,
+    state['app:aragon-voting'].implementation.address,
+  ]
+
+  const aragonStdAppsReceipt = await log.makeTx(template, 'createStdAragonRepos', createStdAragonReposArguments, { from })
+  console.log(`=== Aragon Std Apps Repos (Agent, Finance, TokenManager, Voting deployed: ${aragonStdAppsReceipt.tx} ===`)
 
   logSplitter()
   persistNetworkState(network.name, netId, state)

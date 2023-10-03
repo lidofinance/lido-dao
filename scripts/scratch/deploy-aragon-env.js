@@ -5,13 +5,12 @@ const getAccounts = require('@aragon/os/scripts/helpers/get-accounts')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, logHeader, logTx, logDeploy } = require('../helpers/log')
-const { deploy, useOrDeploy, withArgs } = require('../helpers/deploy')
+const { deploy, useOrDeploy, withArgs, deployImplementation } = require('../helpers/deploy')
 const { readNetworkState, persistNetworkState, updateNetworkState } = require('../helpers/persisted-network-state')
 
 const { deployAPM } = require('../components/apm')
 const { assignENSName } = require('../components/ens')
 
-const OWNER = process.env.OWNER
 const ARAGON_ENS_LABEL = process.env.ARAGON_ENS_LABEL || 'aragonpm'
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 
@@ -24,7 +23,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
   logWideSplitter()
   log(`Network ID: ${chalk.yellow(netId)}`)
 
-  const state = readNetworkState(network.name, netId)
+  let state = readNetworkState(network.name, netId)
 
   if (state.owner) {
     const lowercaseOwner = state.owner.toLowerCase()
@@ -40,6 +39,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
     state.aragonEnsLabelName = ARAGON_ENS_LABEL
     log(`Using Aragon ENS label: ${state.aragonEnsLabelName}`)
   }
+  persistNetworkState(network.name, netId, state)
 
   logHeader(`ENS`)
   const ensResults = await useOrDeployENS({
@@ -47,6 +47,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
     owner: state.owner,
     ensAddress: state.ensAddress
   })
+  state = readNetworkState(network.name, netId)
   updateNetworkState(state, ensResults)
   persistNetworkState(network.name, netId, state)
 
@@ -56,6 +57,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
     owner: state.owner,
     daoFactoryAddress: state.daoFactoryAddress
   })
+  state = readNetworkState(network.name, netId)
   updateNetworkState(state, daoFactoryResults)
   persistNetworkState(network.name, netId, state)
 
@@ -70,6 +72,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
     apmRepoBaseAddress: state.apmRepoBaseAddress,
     ensSubdomainRegistrarBaseAddress: state.ensSubdomainRegistrarBaseAddress
   })
+  state = readNetworkState(network.name, netId)
   updateNetworkState(state, apmRegistryFactoryResults)
   persistNetworkState(network.name, netId, state)
 
@@ -83,6 +86,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
     apmRegistryFactory: apmRegistryFactoryResults.apmRegistryFactory,
     apmRegistryAddress: state.aragonApmRegistryAddress
   })
+  state = readNetworkState(network.name, netId)
   updateNetworkState(state, {
     aragonApmRegistry: apmResults.apmRegistry,
     aragonEnsNodeName: apmResults.ensNodeName,
@@ -96,6 +100,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
     owner: state.owner,
     miniMeTokenFactoryAddress: state.miniMeTokenFactoryAddress
   })
+  state = readNetworkState(network.name, netId)
   updateNetworkState(state, tokenFactoryResults)
   persistNetworkState(network.name, netId, state)
 
@@ -106,8 +111,25 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
     ens: ensResults.ens,
     aragonIDAddress: state.aragonIDAddress
   })
+  state = readNetworkState(network.name, netId)
   updateNetworkState(state, aragonIDResults)
   persistNetworkState(network.name, netId, state)
+
+  // state = readNetworkState(network.name, netId)
+  // state.apmRegistry = {
+  //   address: apmResults.apmRegistry.address,
+  //   ensNodeName: apmResults.ensNodeName,
+  //   ensNode: apmResults.ensNode,
+  // }
+  // state.aragonId = {
+  //   address: aragonIDResults.aragonID.address,
+  //   ensNodeName: aragonIDResults.aragonIDEnsNodeName,
+  //   ensNode: aragonIDResults.aragonIDEnsNode,
+  // }
+  // state.ens = {
+  //   address: ensResults.ens.address,
+  // }
+  // persistNetworkState(network.name, netId, state)
 }
 
 async function useOrDeployENS({ artifacts, owner, ensAddress }) {
@@ -139,7 +161,6 @@ async function deployENS({ artifacts, owner }) {
 }
 
 async function useOrDeployDaoFactory({ artifacts, owner, daoFactoryAddress }) {
-  let daoFactoryResults
   let daoFactory
   if (daoFactoryAddress) {
     daoFactory = await artifacts.require('DAOFactory').at(daoFactoryAddress)
@@ -177,15 +198,17 @@ async function useOrDeployAPMRegistryFactory({
 }
 
 async function deployDAOFactory({ artifacts, owner, kernelBaseAddress, aclBaseAddress, withEvmScriptRegistryFactory }) {
-  const kernelBase = await useOrDeploy(
-    'Kernel',
-    artifacts,
-    kernelBaseAddress,
-    // immediately petrify
-    withArgs(true, { from: owner })
-  )
+  const kernelBase = await deployImplementation('aragon-kernel', 'Kernel', owner, [true])
+  // const kernelBase = await useOrDeploy(
+  //   'Kernel',
+  //   artifacts,
+  //   kernelBaseAddress,
+  //   // immediately petrify
+  //   withArgs(true, { from: owner })
+  // )
 
-  const aclBase = await useOrDeploy('ACL', artifacts, aclBaseAddress, withArgs({ from: owner }))
+  // const aclBase = await useOrDeploy('ACL', artifacts, aclBaseAddress, withArgs({ from: owner }))
+  const aclBase = await deployImplementation('aragon-acl', 'ACL', owner)
 
   const evmScriptRegistryFactory = withEvmScriptRegistryFactory
     ? await deploy('EVMScriptRegistryFactory', artifacts, withArgs({ from: owner }))

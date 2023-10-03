@@ -1,84 +1,155 @@
 # Deploy Lido protocol from scratch
 
-**NB**: at the moment the deployment from scratch scripts and manual target Lido V1 version (before Lido V2 upgrade) and is not working
-
-Video guide: [youtube](https://www.youtube.com/watch?v=dCMXcfglJv0)
-
 ## Requirements
 
-* shell - bash or zsh
-* docker
-* node.js v14
+* node.js v16 (v18 might work fine as well)
 * yarn
 
-## Environment
+## General info
 
-You will need at least:
+The repo contains bash scripts which allow to deploy the DAO under multiple environments:
+- local node (ganache, anvil, hardhat network) - `dao-local-deploy.sh`
+- goerli testnet - `dao-goerli-deploy.sh`
 
-* Ethereum node
-* IPFS node
-* Aragon web client
+The protocol has a bunch of parameters to configure for the scratch deployment. The default configuration is stored in files `deployed-<deploy env>-defaults.json`, where `<deploy env>` is the target environment. Currently there is single default configuration `deployed-testnet-defaults.json` suitable for testnet deployments. Compared to the mainnet configuration, it has lower vote durations, more frequent oracle report cycles, etc.
+During the deployment, the "default" configuration is copied to `deployed-<network name>.json`, where `<network name>` is the name of a network configuration defined in `hardhat.config.js`. The file `deployed-<network name>.json` gets populated with the contract addresses and transaction hashes during the deployment process.
 
-In case of local deploy this environment is set up with docker.
+These are the deployment setups, supported currently:
+- local (basically any node at http://127.0.0.1:8545);
+- Goerli.
 
-> Note: Lido protocol is based on Aragon framework, so the entire Aragon framework environment is required for deployment.
+Each is described in the details in the sections below.
 
-## DAO configuration
+> NB: Aragon UI for Lido DAO is to be deprecated and replaced by a custom solution, thus not included in the deployment script.
 
-Dao config is stored in `deployed-{NETWORK_NAME}.json` file, where `{NETWORK_NAME}` is network name of your choice. See the [`deployed-local-defaults.json`](deployed-local-defaults.json) for basic parameters. Please refer to [`deployed-mainnet.json`](deployed-mainnet.json) for currently deployed Mainnet version of DAO.
+### Deploy steps
 
-Copy `deployed-local-defaults.json` to `deployed-{NETWORK_NAME}.json` (e.g. `deployed-kintsugi.json`) and update it accordingly .
+A brief description of what's going on under the hood in the deploy script.
 
-## Network configuration
+- Prepare `deployed-<network name>.json` file
+  - It is copied from `deployed-testnet-defaults.json`
+  - and expended by env variables values, e. g. `DEPLOYER`.
+  - It gets filled with the deployed contracts info from step to step.
+- (optional) Deploy DepositContract.
+  - The step is skipped if the DepositContract address is specified
+- (optional) Deploy ENS
+  - The step is skipped if the ENS Registry address is specified
+- Deploy Aragon framework environment
+- Deploy standard Aragon apps contracts (like `Agent`, `Voting`)
+- Deploy `LidoTemplate` contract
+  - This is an auxiliary deploy contract, which performs DAO configuration
+- Deploy Lido custom Aragon apps implementations (aka bases), namely for `Lido`, `LegacyOracle`, `NodeOperatorsRegistry`)
+- Registry Lido APM name in ENS
+- Deploy Aragon package manager contract `APMRegistry` (via `LidoTemplate`)
+- Deploy Lido custom Aragon apps repo contracts (via `LidoTemplate`)
+- Deploy Lido DAO (via `LidoTemplate`)
+- Issue DAO tokens (via `LidoTemplate`)
+- Deploy non-Aragon Lido contracts: `OracleDaemonConfig`, `LidoLocator`, `OracleReportSanityChecker`, `EIP712StETH`, `WstETH`, `WithdrawalQueueERC721`, `WithdrawalVault`, `LidoExecutionLayerRewardsVault`, `StakingRouter`, `DepositSecurityModule`, `AccountingOracle`, `HashConsensus` for AccountingOracle, `ValidatorsExitBusOracle`, `HashConsensus` for ValidatorsExitBusOracle, `Burner`.
+- Finalize Lido DAO deployment: issue unvested LDO tokens, setup Aragon permissions, register Lido DAO name in Aragon ID (via `LidoTemplate`)
+- Initialize non-Aragon Lido contracts
+- Setup non-Aragon permissions
+- Plug NodeOperatorsRegistry as Curated staking module
+- Transfer all admin roles from deployer to `Agent`
+  - OZ admin roles: `Burner`, `HashConsensus` for `AccountingOracle`, `HashConsensus` TODO
+  - OssifiableProxy admins: TODO
+  - DepositSecurityModule owner
 
-Add to [`hardhat.config.js`](hardhat.config.js) your network connection parameter (inside the `getNetConfig` function, use `mainnet` or `local` as reference).
 
-## Deploy process
+## Local deployment
 
-> Note: all deploy process is depend of ENS contract. If the target network has one, you can use it. In this case, write it directly to the `deployed-{NETWORK_NAME}.json` file. Otherwise, own ENS contract will be deployed.
+Deploys the DAO to local (http://127.0.0.1:8545) dev node (anvil, hardhat, ganache).
+The deployment is done from default test account `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`.
+The node must be configured with the default test accounts derived from mnemonic `test test test test test test test test test test test junk`.
 
-> Note: ETH2 Deposit contract is required. If the target network has one, you must use it. In this case, write it directly to the `deployed-{NETWORK_NAME}.json` file. Otherwise, own Deposit contract will be deployed.
+1. Run `yarn install` (get sure repo dependencies are installed)
+2. Run the node on default port 8545 (for the commands see subsections below)
+3. Set test account private key `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80` to `accounts.json` under `/eth/local` like `"local": ["<private key>"]` (see `accounts.sample.json` for example)
+4. Run the deploy script `bash dao-local-deploy.sh` from root repo directory
+5. Check out the deploy artifacts in `deployed-local.json`
 
-Steps for deploy:
+### Anvil
 
-* [ ] run environment docker containers
-* [ ] set up network config
-* [ ] prepare DAO config file
-* [ ] deploy Aragon framework environment (including ENS)
-* [ ] build and deploy standard Aragon apps (contracts and frontend files)
-* [ ] deploy Deposit contract (if necessary)
-* [ ] deploy Lido DAO template contract
-* [ ] deploy Lido Apps contract implementations
-* [ ] register Lido APM name in ENS
-* [ ] build Lido Apps frontend files and upload it to IPFS
-* [ ] deploy Lido APM contract (via Lido Template)
-* [ ] deploy Lido Apps repo contracts (via Lido Template)
-* [ ] deploy Lido DAO contract (via Lido Template)
-* [ ] issue DAO tokens (via Lido Template)
-* [ ] deploy LidoExecutionLayerRewardsVault
-* [ ] finalize DAO setup (via Lido Template)
-* [ ] deploy CompositePostRebaseBeaconReceiver
-* [ ] deploy Burner
-* [ ] make final deployed DAO check via script
-* [ ] open and check Lido DAO web interface (via Aragon client)
+Run the node with command:
 
-All steps are automated via shell script [`dao-local-deploy.sh`](dao-local-deploy.sh) for local deploy process. The script be modified for any other network:
-
-So, one-click local deploy from scratch command is:
-
-```bash
-./dao-local-deploy.sh
+```shell
+anvil -p 8545 --auto-impersonate --gas-price 0 --base-fee 0 --chain-id 1337 --mnemonic "test test test test test test test test test test test junk"
 ```
 
-> Note: some steps require manually updating some transaction hashes in the `deployed-{NETWORK_NAME}.json` file. The script will pause the process in this case, please follow the script tips.
+### Hardhat node
 
-## Aragon dependency issue
+> NB: Hardhat node configuration is set in `hardhat.config.js` under `hardhat: { `.
 
-`ipfs-http-client` version has been strictly pinned to `43.0.0` in [this commit](https://github.com/lidofinance/lido-dao/commit/38bf0232fbc59ec6d69d27e170e3e75cfbe1ba11) because `/scripts/multisig/04-publish-app-frontends.js` used to crash at
-```javascript
-const rootCid = await uploadDirToIpfs({ dirPath: distPath, ipfsApiUrl: ipfsAPI })
+To run hardhat node execute:
+```shell
+yarn hardhat node
 ```
 
-It appeared that `@aragon/buidler-aragon@npm:^0.2.9` uses `ipfs-http-client`.
+### Ganache
 
-`ipfs-http-client` has a brittle API. Neither `41.0.0` nor `50.0.0` versions of it will work with `@aragon/buidler-aragon@npm:^0.2.9`.
+TODO
+
+## Goerli deployment
+
+To do Goerli deployment, the following parameters must be set up via env variables:
+
+- `DEPLOYER`. The deployer address, you must have its private key. It must have enough ether.
+- `RPC_URL`. Address of of the Ethereum RPC node to use. E.g. for Infura it is `https://goerli.infura.io/v3/<yourProjectId>`
+- `GAS_PRIORITY_FEE`. Gas priority fee. By default set to `2`
+- `GAS_MAX_FEE`. Gas max fee. By default set to `100`
+- `GATE_SEAL_FACTORY`. Address of the [GateSeal Factory](https://github.com/lidofinance/gate-seals) contract. Must be deployed preliminary. Can be set to any `0x0000000000000000000000000000000000000000` to debug deployment.
+
+Also you need to specify `DEPLOYER` private key in `accounts.json` under `/eth/goerli` like `"goerli": ["<key>"]`. See `accounts.sample.json` for an example.
+
+To start the deployment, run (the env variables must already defined):
+```shell
+bash dao-goerli-deploy.sh
+```
+and checkout `deployed-goerli.json`.
+
+## Holešky deployment
+
+```shell
+RPC_URL=<PUT-YOUR-VALUE> GATE_SEAL=<PUT-YOUR-VALUE> DEPLOYER=<PUT-YOUR-VALUE> bash dao-holesky-deploy.sh
+```
+
+## Publishing sources to Etherscan
+
+TODO
+
+
+## Post deploy initialization
+
+### Post deploy state
+
+TODO
+
+TODO: paused: staking, steth transfers, accounting  oracle reports, ... what else?
+
+### Initialization up to fully operational state
+
+In order to make protocol fully operational the additional steps are required.
+
+- add `NodeOperatorsRegistry` as staking module: `StakingRouter.addStakingModule`
+- add oracle committee members to `HashConsensus` contracts for `AccountingOracle` and `ValidatorsExitBusOracle`: `HashConsensus.addMember`
+- initialize initial epoch for `HashConsensus` contracts for `AccountingOracle` and `ValidatorsExitBusOracle`: `HashConsensus.updateInitialEpoch`
+- add guardians to `DepositSecurityModule`: `DepositSecurityModule.addGuardians`
+- resume protocol: `Lido.resume`
+- resume WithdrawalQueue: `WithdrawalQueueERC721.resume`
+- add at least one Node Operator: `NodeOperatorsRegistry.addNodeOperator`
+- add validator keys to the Node Operators: `NodeOperatorsRegistry.addSigningKeys`
+- set staking limits for the Node Operators: `NodeOperatorsRegistry.setNodeOperatorStakingLimit`
+
+NB, that part of the actions require preliminary granting of the required roles, e.g. `STAKING_MODULE_MANAGE_ROLE` for `StakingRouter.addStakingModule`:
+
+```js
+  await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, agent.address, { from: agent.address })
+  await stakingRouter.addStakingModule(
+    state.nodeOperatorsRegistry.parameters.stakingModuleTypeId,
+    nodeOperatorsRegistry.address,
+    NOR_STAKING_MODULE_TARGET_SHARE_BP,
+    NOR_STAKING_MODULE_MODULE_FEE_BP,
+    NOR_STAKING_MODULE_TREASURY_FEE_BP,
+    { from: agent.address }
+  )
+  await stakingRouter.renounceRole(STAKING_MODULE_MANAGE_ROLE, agent.address, { from: agent.address })
+```

@@ -7,7 +7,7 @@ const hardhatTaskNames = require('hardhat/builtin-tasks/task-names')
 
 
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
-const { log, logSplitter, logWideSplitter, logHeader, logTx } = require('./helpers/log')
+const { log, logSplitter, logWideSplitter, logHeader} = require('./helpers/log')
 const { exec, execLive } = require('./helpers/exec')
 const { readJSON } = require('./helpers/fs')
 

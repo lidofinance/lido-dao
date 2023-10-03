@@ -10,13 +10,11 @@ const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log } = require('../helpers/log')
 const { assertLastEvent } = require('../helpers/events')
 const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
-const { saveCallTxData } = require('../helpers/tx-data')
-const { resolveLatestVersion: apmResolveLatest } = require('../components/apm')
 
 const { APP_NAMES } = require('../constants')
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
-const REQUIRED_NET_STATE = ['daoAddress', 'lidoTemplate', 'vestingParams']
+const REQUIRED_NET_STATE = ['lidoTemplate', 'vestingParams']
 
 const MAX_HOLDERS_IN_ONE_TX = 30
 
@@ -33,10 +31,10 @@ async function issueTokens({ web3, artifacts }) {
   log.splitter()
   log(`Using LidoTemplate: ${chalk.yellow(daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
-  if (state.daoTemplateDeployBlock) {
-    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
+  if (state.lidoTemplate.deployBlock) {
+    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.lidoTemplate.deployBlock)}`)
   }
-  await assertLastEvent(template, 'TmplDAOAndTokenDeployed', null, state.daoTemplateDeployBlock)
+  await assertLastEvent(template, 'TmplDAOAndTokenDeployed', null, state.lidoTemplate.deployBlock)
   log.splitter()
 
   const { vestingParams: vesting } = state
@@ -78,11 +76,10 @@ async function issueTokens({ web3, artifacts }) {
 
     endTotalSupply.iadd(bigSum(iAmounts))
 
-    await saveCallTxData(`issueTokens (batch ${i + 1})`, template, 'issueTokens', `tx-06-${i + 1}-issue-tokens.json`, {
-      arguments: [iHolders, iAmounts, vesting.start, vesting.cliff, vesting.end, vesting.revokable, '0x' + endTotalSupply.toString(16)],
-      from: state.multisigAddress,
-      estimateGas: i === 0
-    })
+    await log.makeTx(template, 'issueTokens',
+      [iHolders, iAmounts, vesting.start, vesting.cliff, vesting.end, vesting.revokable, '0x' + endTotalSupply.toString(16)]
+      , { from: state.multisigAddress },
+    )
   }
 }
 

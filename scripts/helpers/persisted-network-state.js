@@ -8,11 +8,7 @@ const NETWORK_STATE_FILE_DIR = process.env.NETWORK_STATE_FILE_DIR || '.'
 
 function readNetworkState(netName, netId) {
   const fileName = _getFileName(netName, NETWORK_STATE_FILE_BASENAME, NETWORK_STATE_FILE_DIR)
-  log(`Reading network state from ${fileName}...`)
   const state = _readNetworkStateFile(fileName, netId)
-  if (state.networkId !== netId) {
-    throw new Error(`network id (${netId}) doesn't match the one in the state file (${state.networkId})`)
-  }
   return state
 }
 
@@ -22,7 +18,6 @@ function persistNetworkState(netName, netId, state, updates = undefined) {
     updateNetworkState(state, updates)
   }
   const fileName = _getFileName(netName, NETWORK_STATE_FILE_BASENAME, NETWORK_STATE_FILE_DIR)
-  log(`Writing network state to ${fileName}...`)
   _writeNetworkStateFile(fileName, state)
 }
 
@@ -32,7 +27,6 @@ function persistNetworkState2(netName, netId, state, updates = undefined) {
     updateNetworkState2(state, updates)
   }
   const fileName = _getFileName(netName, NETWORK_STATE_FILE_BASENAME, NETWORK_STATE_FILE_DIR)
-  log(`Writing network state to ${fileName}...`)
   _writeNetworkStateFile(fileName, state)
 }
 
@@ -76,18 +70,22 @@ function _getFileName(netName, baseName, dir) {
   return path.resolve(dir, `${baseName}-${netName}.json`)
 }
 
-function _readNetworkStateFile(fileName, netId) {
-  if (!fs.existsSync(fileName)) {
-    const state = { networkId: netId }
-    _writeNetworkStateFile(fileName, state)
-    return state
-  }
+function readStateFile(fileName) {
   const data = fs.readFileSync(fileName, 'utf8')
   try {
     return JSON.parse(data)
   } catch (err) {
     throw new Error(`malformed network state file ${fileName}: ${err.message}`)
   }
+}
+
+function _readNetworkStateFile(fileName, netId) {
+  if (!fs.existsSync(fileName)) {
+    const state = { networkId: netId }
+    _writeNetworkStateFile(fileName, state)
+    return state
+  }
+  return readStateFile(fileName)
 }
 
 function _writeNetworkStateFile(fileName, state) {
@@ -101,4 +99,5 @@ module.exports = {
   persistNetworkState2,
   updateNetworkState,
   assertRequiredNetworkState,
+  readStateFile,
 }

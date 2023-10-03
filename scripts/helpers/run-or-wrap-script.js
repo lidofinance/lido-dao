@@ -15,7 +15,7 @@ module.exports = (scriptFn, mainModule) => {
     // Buidler executes scripts in a forked subprocess
     scriptFn({ artifacts: globalArtifacts, web3: globalWeb3 })
       .then(() => {
-        console.error('All done!')
+        console.error('')
         process.exit(0)
       })
       .catch((err) => {

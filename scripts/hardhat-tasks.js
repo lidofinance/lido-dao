@@ -4,7 +4,7 @@ task(`tx`, `Performs a transaction`)
   .addOptionalParam(`wait`, `The number of seconds to wait before sending the transaction`)
   .addOptionalParam(`gasPrice`, `Gas price`)
   .addOptionalParam(`nonce`, `Nonce`)
-  .setAction(async ({ file, from: fromArg, gasPrice, nonce, wait: waitSec = 5 }) => {
+  .setAction(async ({ file, from: fromArg, gasPrice, nonce, wait: waitSec = 1 }) => {
     const netId = await web3.eth.net.getId()
 
     console.error('====================')

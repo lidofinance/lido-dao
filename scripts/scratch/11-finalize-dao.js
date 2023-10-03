@@ -3,23 +3,19 @@ const { assert } = require('chai')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log } = require('../helpers/log')
-const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
-const { saveCallTxData } = require('../helpers/tx-data')
+const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 const { assertLastEvent } = require('../helpers/events')
-const { percentToBP } = require('../helpers/index')
 
 const { APP_NAMES } = require('../constants')
 const { assertVesting } = require('./checks/dao-token')
 
 const REQUIRED_NET_STATE = [
-  'daoAddress',
-  'daoTokenAddress',
+  'ldo',
   'lidoTemplate',
   'daoAragonId',
   'daoInitialSettings',
   'vestingParams',
   `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`,
-  'executionLayerRewardsParams',
   'stakingRouter',
 ]
 
@@ -38,24 +34,23 @@ async function finalizeDAO({ web3, artifacts }) {
 
   log(`Using LidoTemplate: ${chalk.yellow(daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
-  if (state.daoTemplateDeployBlock) {
-    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
+  if (state.lidoTemplate.deployBlock) {
+    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.lidoTemplate.deployBlock)}`)
   }
-  await assertLastEvent(template, 'TmplTokensIssued', null, state.daoTemplateDeployBlock)
+  await assertLastEvent(template, 'TmplTokensIssued', null, state.lidoTemplate.deployBlock)
   log.splitter()
 
-  const tokenManagerAddress = state[`app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`].proxyAddress
+  const tokenManagerAddress = state[`app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`].proxy.address
   log(`Using TokenManager:`, chalk.yellow(tokenManagerAddress))
   const tokenManager = await artifacts.require('TokenManager').at(tokenManagerAddress)
 
-  log(`Using MiniMeToken`, chalk.yellow(state.daoTokenAddress))
-  const daoToken = await artifacts.require('MiniMeToken').at(state.daoTokenAddress)
+  log(`Using MiniMeToken`, chalk.yellow(state.ldo.address))
+  const daoToken = await artifacts.require('MiniMeToken').at(state.ldo.address)
 
   const { fee } = state.daoInitialSettings
   log(`Using fee initial settings:`)
   log(`  total fee:`, chalk.yellow(`${fee.totalPercent}%`))
   log(`  treasury fee:`, chalk.yellow(`${fee.treasuryPercent}%`))
-  log(`  insurance fee:`, chalk.yellow(`${fee.insurancePercent}%`))
   log(`  node operators fee:`, chalk.yellow(`${fee.nodeOperatorsPercent}%`))
 
   await assertVesting({
@@ -69,14 +64,11 @@ async function finalizeDAO({ web3, artifacts }) {
 
   log.splitter()
 
-  await saveCallTxData(`finalizeDAO`, template, 'finalizeDAO', `tx-11-finalize-dao.json`, {
-    arguments: [
-      state.daoAragonId,
-      state.vestingParams.unvestedTokensAmount,
-      state.stakingRouter.address,
-    ],
-    from: state.multisigAddress
-  })
+  await log.makeTx(template, 'finalizeDAO', [
+    state.daoAragonId,
+    state.vestingParams.unvestedTokensAmount,
+    state.stakingRouter.address
+  ], { from: state.multisigAddress })
 }
 
 module.exports = runOrWrapScript(finalizeDAO, module)

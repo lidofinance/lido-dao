@@ -31,12 +31,12 @@ async function obtainDeployedAPM({ web3, artifacts }) {
   log(`Using LidoTemplate: ${chalk.yellow(daoTemplateAddress)}`)
   const template = await artifacts.require('LidoTemplate').at(daoTemplateAddress)
 
-  if (state.daoTemplateDeployBlock) {
-    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.daoTemplateDeployBlock)}`)
+  if (state.lidoTemplate.deployBlock) {
+    log(`Using LidoTemplate deploy block: ${chalk.yellow(state.lidoTemplate.deployBlock)}`)
   }
 
   // if (!state.lidoApmDeployTx) {
-  const apmDeployedEvt = await assertLastEvent(template, 'TmplAPMDeployed', null, state.daoTemplateDeployBlock)
+  const apmDeployedEvt = await assertLastEvent(template, 'TmplAPMDeployed', null, state.lidoTemplate.deployBlock)
   state.lidoApmDeployTx = apmDeployedEvt.transactionHash
   // }
   log(`Using deployLidoAPM transaction: ${chalk.yellow(state.lidoApmDeployTx)}`)
@@ -93,7 +93,7 @@ async function obtainDeployedAPM({ web3, artifacts }) {
       registryKernel,
       rootAddress: daoTemplateAddress
     },
-    state.daoTemplateDeployBlock
+    state.lidoTemplate.deployBlock
   )
 
   log.splitter()

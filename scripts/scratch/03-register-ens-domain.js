@@ -6,7 +6,6 @@ const keccak256 = require('js-sha3').keccak_256
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { assert } = require('../helpers/assert')
 const { log, yl, gr } = require('../helpers/log')
-const { saveCallTxData } = require('../helpers/tx-data')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 
 const TLD = 'eth'
@@ -101,42 +100,24 @@ async function deployTemplate({ web3, artifacts }) {
 
     log.splitter()
 
-    await saveCallTxData(`commit`, controller, 'commit', `tx-02-1-commit-ens-registration.json`, {
-      arguments: [commitment],
-      from: state.multisigAddress
-    })
+    await log.makeTx(controller, 'commit', [commitment], { from: state.multisigAddress })
 
-    await saveCallTxData(`register`, controller, 'register', `tx-02-2-make-ens-registration.json`, {
-      arguments: [domainLabel, domainOwner, domainRegDuration, salt],
+    await log.makeTx(controller, 'register', [domainLabel, domainOwner, domainRegDuration, salt], {
       from: state.multisigAddress,
       value: '0x' + registerTxValue.toString(16),
-      estimateGas: false // estimation will fail since no commitment is actually made yet
     })
 
-    log.splitter()
-    log(gr(`Before continuing the deployment, please send all transactions listed above.\n`))
-    log(gr(`Make sure to send the second transaction at least ${yl(minCommitmentAge)} seconds after the`))
-    log(gr(`first one is included in a block, but no more than ${yl(maxCommitmentAge)} seconds after that.`))
     log.splitter()
   } else {
     log(`ENS domain new owner:`, yl(domainOwner))
-
     if ((await ens.owner(node)) === state.multisigAddress) {
       log(`Transferring name ownership from owner ${chalk.yellow(state.multisigAddress)} to template ${chalk.yellow(domainOwner)}`)
-      await saveCallTxData(`setOwner`, ens, 'setOwner', `tx-02-2-make-ens-registration.json`, {
-        arguments: [node, domainOwner],
-        from: state.multisigAddress
-      })
+      await log.makeTx(ens, 'setOwner', [node, domainOwner], { from: state.multisigAddress })
     } else {
       log(`Creating the subdomain and assigning it to template ${chalk.yellow(domainOwner)}`)
-      await saveCallTxData(`setSubnodeOwner`, ens, 'setSubnodeOwner', `tx-02-2-make-ens-registration.json`, {
-        arguments: [tldNode, labelHash, domainOwner],
-        from: state.multisigAddress
-      })
+      await log.makeTx(ens, 'setSubnodeOwner', [tldNode, labelHash, domainOwner], { from: state.multisigAddress })
     }
 
-    log.splitter()
-    log(gr(`Before continuing the deployment, please send all transactions listed above.\n`))
     log.splitter()
   }
 }

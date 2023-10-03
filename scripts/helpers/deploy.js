@@ -1,4 +1,4 @@
-const { readNetworkState, persistNetworkState2 } = require('./persisted-network-state')
+const { readNetworkState, persistNetworkState } = require('./persisted-network-state')
 const { artifacts, ethers } = require('hardhat')
 const fs = require('fs').promises
 const chalk = require('chalk')
@@ -87,6 +87,10 @@ async function getDeployed(artifactName, deployTxHash) {
   }
   log(`Using ${artifactName}: ${chalk.yellow(receipt.contractAddress)}`)
   return await Artifact.at(receipt.contractAddress)
+}
+
+async function getContractPath(contractName) {
+  return await artifacts.require(contractName)._hArtifact.sourceName
 }
 
 async function getTxBlock(txHash) {
@@ -193,63 +197,88 @@ async function deployWithoutProxy(nameInState, artifactName, deployer, construct
   const netId = await web3.eth.net.getId()
   const state = readNetworkState(network.name, netId)
 
-  console.log(`Deploying ${artifactName}...`)
-  if (constructorArgs.length > 0) {
-    console.log(`Constructor args: ${constructorArgs}`)
-  }
+  process.stdout.write(`Deploying ${artifactName} (NO proxy)... `)
 
   const contract = await deployContract(artifactName, constructorArgs, deployer)
-  console.log(`${artifactName} (NO proxy): ${contract.address}`)
 
   const gasUsed = await getDeploymentGasUsed(contract)
-  console.log(`    gas used ${gasUsed}`)
+  console.log(`done: ${contract.address} (gas used ${gasUsed})`)
   TOTAL_GAS_USED += gasUsed
 
-  if (nameInState) {
-    persistNetworkState2(network.name, netId, state, {
-      [nameInState]: {
-        "contract": artifactName,
-        [addressFieldName]: contract.address,
-        "constructorArgs": constructorArgs,
-      }
-    })
+  state[nameInState] = {
+    ...state[nameInState],
+    contract: await getContractPath(artifactName),
+    [addressFieldName]: contract.address,
+    constructorArgs: constructorArgs,
   }
+  persistNetworkState(network.name, netId, state)
 
+  console.log()
   return contract.address
+}
+
+async function deployImplementation(nameInState, artifactName, deployer, constructorArgs=[]) {
+  const netId = await web3.eth.net.getId()
+  const state = readNetworkState(network.name, netId)
+
+  process.stdout.write(`Deploying implementation for proxy of ${artifactName}... `)
+  const contract = await deployContract(artifactName, constructorArgs, deployer)
+
+  const gasUsed = await getDeploymentGasUsed(contract)
+  TOTAL_GAS_USED += gasUsed
+
+  console.log(`done: ${contract.address} (gas used ${gasUsed})`)
+
+  state[nameInState] = { ...state[nameInState] }
+  state[nameInState].implementation = {
+    contract: await getContractPath(artifactName),
+    address: contract.address,
+    constructorArgs: constructorArgs,
+  }
+  persistNetworkState(network.name, netId, state)
+  return contract
 }
 
 async function deployBehindOssifiableProxy(nameInState, artifactName, proxyOwner, deployer, constructorArgs=[], implementation=null) {
   const netId = await web3.eth.net.getId()
   const state = readNetworkState(network.name, netId)
+  const proxyContractName = 'OssifiableProxy'
 
   if (implementation === null) {
-    console.log(`Deploying implementation for proxy of ${artifactName}`)
+    process.stdout.write(`Deploying implementation for proxy of ${artifactName}... `)
     const contract = await deployContract(artifactName, constructorArgs, deployer)
 
     const gasUsed = await getDeploymentGasUsed(contract)
     TOTAL_GAS_USED += gasUsed
     implementation = contract.address
 
-    console.log(`${artifactName} implementation: ${implementation} (gas used ${gasUsed})`)
+    console.log(`done: ${implementation} (gas used ${gasUsed})`)
   } else {
     console.log(`Using pre-deployed implementation of ${artifactName}: ${implementation}`)
   }
 
-  console.log(`Deploying OssifiableProxy for ${artifactName}...`)
-  const proxy = await deployContract("OssifiableProxy", [implementation, proxyOwner, []], deployer)
+  process.stdout.write(`Deploying OssifiableProxy for ${artifactName}... `)
+  const proxyConstructorArgs = [implementation, proxyOwner, '0x']
+  const proxy = await deployContract(proxyContractName, proxyConstructorArgs, deployer)
   const gasUsed = await getDeploymentGasUsed(proxy)
   TOTAL_GAS_USED += gasUsed
-  console.log(`${artifactName} proxy: ${proxy.address} (owner is ${proxyOwner}) (gas used ${gasUsed})`)
+  console.log(`done: ${proxy.address} (gas used ${gasUsed})`)
 
-  persistNetworkState2(network.name, netId, state, {
-    [nameInState]: {
-      "contract": artifactName,
-      "implementation": implementation,
-      "address": proxy.address,
-      "constructorArgs": constructorArgs,
-    }
-  })
+  state[nameInState] = { ...state[nameInState] }
+  state[nameInState].proxy = {
+    contract: await getContractPath(proxyContractName),
+    address: proxy.address,
+    constructorArgs: proxyConstructorArgs,
+  }
+  state[nameInState].implementation = {
+    contract: await getContractPath(artifactName),
+    address: implementation,
+    constructorArgs: constructorArgs,
+  }
+  state[nameInState].address = state[nameInState].proxy.address
 
+  persistNetworkState(network.name, netId, state)
+  console.log()
   return proxy.address
 }
 
@@ -257,27 +286,20 @@ async function updateProxyImplementation(nameInState, artifactName, proxyAddress
   const netId = await web3.eth.net.getId()
   const state = readNetworkState(network.name, netId)
 
-  const OssifiableProxy = await artifacts.require('OssifiableProxy')
-  const proxy = await OssifiableProxy.at(proxyAddress)
+  const proxy = await artifacts.require('OssifiableProxy').at(proxyAddress)
 
-  const Contract = await artifacts.require(artifactName)
-  const implementation = await Contract.new(...constructorArgs, {
-    from: proxyOwner,
-    gasPrice: GAS_PRICE,
-  })
+  const implementation = await deployContract(artifactName, constructorArgs, proxyOwner)
 
-  await proxy.proxy__upgradeTo(implementation.address, {
-    from: proxyOwner,
-    gasPrice: GAS_PRICE,
-  })
+  await log.makeTx(proxy, 'proxy__upgradeTo', [implementation.address], { from: proxyOwner })
 
-  persistNetworkState2(network.name, netId, state, {
-    [nameInState]: {
-      "contract": artifactName,
-      "implementation": implementation.address,
-      "constructorArgs": constructorArgs,
-    }
-  })
+  state[nameInState] = { ...state[nameInState] }
+  state[nameInState].implementation = {
+    contract: await getContractPath(artifactName),
+    address: implementation.address,
+    constructorArgs: constructorArgs,
+  }
+  persistNetworkState(network.name, netId, state)
+  return implementation
 }
 
 module.exports = {
@@ -294,7 +316,10 @@ module.exports = {
   withArgs,
   getDeployTxParams,
   deployWithoutProxy,
+  deployContract,
+  deployImplementation,
   deployBehindOssifiableProxy,
   updateProxyImplementation,
   getTotalGasUsed,
+  getContractPath,
 }
