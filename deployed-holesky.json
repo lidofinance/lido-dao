@@ -634,6 +634,26 @@
     "address": "0xd6EbF043D30A7fe46D1Db32BA90a0A51207FE229"
   },
   "app:simple-dvt": {
+    "stakingRouterModuleParams": {
+      "moduleName": "SimpleDVT",
+      "moduleType": "simple-dvt-onchain-v1",
+      "targetShare": 50,
+      "moduleFee": 800,
+      "treasuryFee": 200,
+      "penaltyDelay": 86400,
+      "easyTrackAddress": "0x1763b9ED3586B08AE796c7787811a2E1bc16163a",
+      "easyTrackEVMScriptExecutor": "0x2819B65021E13CEEB9AC33E77DB32c7e64e7520D",
+      "easyTrackFactories": {
+        "AddNodeOperators": "0xC20129f1dd4DFeD023a6d6A8de9d54A7b61af5CC",
+        "ActivateNodeOperators": "0x08c48Fef9Cadca882E27d2325D1785858D5c1aE3",
+        "DeactivateNodeOperators": "0xf5436129Cf9d8fa2a1cb6e591347155276550635",
+        "SetNodeOperatorNames": "0xb6a31141A579FCB540E3BB3504C58F1e6F5f543a",
+        "SetNodeOperatorRewardAddresses": "0x7F9c5b838510e06b85DD146e71553EB7890fAf2e",
+        "UpdateTargetValidatorLimits": "0x6e570D487aE5729Bd982A7bb3a7bfA5213AeAEdE",
+        "SetVettedValidatorsLimits": "0xD420d6C8aA81c087829A64Ce59936b7C1176A81a",
+        "TransferNodeOperatorManager": "0xaa49cF620e3f80Ce72D3A7668b1b4f3dF370D2C7"
+      }
+    },
     "aragonApp": {
       "name": "simple-dvt",
       "fullName": "simple-dvt.lidopm.eth",
