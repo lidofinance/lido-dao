@@ -294,19 +294,35 @@
     "0xF1A087E055EA1C11ec3B540795Bd1A544e6dcbe9",
     "0x11E7591F83360d0Bc238c8AB9e50B6D2B7566aDc"
   ],
-  "apmRegistryBaseAddress": "0x3EcF7190312F50043DB0494bA0389135Fc3833F3",
+  "aragon-apm-registry": {
+    "implementation": {
+      "contract": "@aragon/os/contracts/apm/APMRegistry.sol",
+      "address": "0x3EcF7190312F50043DB0494bA0389135Fc3833F3",
+      "constructorArgs": [
+        "0x3b03f75Ec541Ca11a223bB58621A3146246E1644",
+        "0x9089af016eb74d66811e1c39c1eef86fdcdb84b5665a4884ebf62339c2613991",
+        "0x00"
+      ]
+    },
+    "proxy": {
+      "address": "0xB576A85c310CC7Af5C106ab26d2942fA3a5ea94A",
+      "contract": "@aragon/os/contracts/apps/AppProxyUpgradeable.sol"
+    },
+    "factory": {
+      "address": "0x54eF0022cc769344D0cBCeF12e051281cCBb9fad",
+      "contract": "@aragon/os/contracts/factory/APMRegistryFactory.sol",
+      "constructorArgs": [
+        "0xB33f9AE6C34D8cC59A48fd9973C64488f00fa64F",
+        "0x3EcF7190312F50043DB0494bA0389135Fc3833F3",
+        "0x8959360c48D601a6817BAf2449E5D00cC543FA3A",
+        "0x7B133ACab5Cec7B90FB13CCf68d6568f8A051EcE",
+        "0x4327d1Fc6E5fa0326CCAE737F67C066c50BcC258",
+        "0x0000000000000000000000000000000000000000"
+      ]
+    }
+  },
   "apmRepoBaseAddress": "0x8959360c48D601a6817BAf2449E5D00cC543FA3A",
   "ensSubdomainRegistrarBaseAddress": "0x7B133ACab5Cec7B90FB13CCf68d6568f8A051EcE",
-  "apmRegistryFactoryAddress": "0x54eF0022cc769344D0cBCeF12e051281cCBb9fad",
-  "apmRegistryFactoryConstructorArgs": [
-    "0xB33f9AE6C34D8cC59A48fd9973C64488f00fa64F",
-    "0x3EcF7190312F50043DB0494bA0389135Fc3833F3",
-    "0x8959360c48D601a6817BAf2449E5D00cC543FA3A",
-    "0x7B133ACab5Cec7B90FB13CCf68d6568f8A051EcE",
-    "0x4327d1Fc6E5fa0326CCAE737F67C066c50BcC258",
-    "0x0000000000000000000000000000000000000000"
-  ],
-  "aragonApmRegistryAddress": "0xB576A85c310CC7Af5C106ab26d2942fA3a5ea94A",
   "aragonEnsNodeName": "aragonpm.eth",
   "aragonEnsNode": "0x9065c3e7f7b7ef1ef4e53d2d0b8e0cef02874ab020c1ece79d5f0d3d0111c0ba",
   "miniMeTokenFactoryAddress": "0x15ef666c9620C0f606Ba35De2aF668fe987E26ae",
@@ -437,6 +453,18 @@
       ]
     }
   },
+  "aragon-app-repo-lido": {
+    "implementation": {
+      "contract": "@aragon/os/contracts/apm/Repo.sol",
+      "address": "0x8959360c48D601a6817BAf2449E5D00cC543FA3A",
+      "constructorArgs": []
+    },
+    "proxy": {
+      "address": "0xA37fb4C41e7D30af5172618a863BBB0f9042c604",
+      "contract": "@aragon/os/contracts/apps/AppProxyUpgradeable.sol",
+      "constructorArgs": []
+    }
+  },
   "app:oracle": {
     "implementation": {
       "contract": "contracts/0.4.24/oracle/LegacyOracle.sol",
@@ -458,6 +486,18 @@
       ]
     }
   },
+  "aragon-app-repo-oracle": {
+    "implementation": {
+      "contract": "@aragon/os/contracts/apm/Repo.sol",
+      "address": "0x8959360c48D601a6817BAf2449E5D00cC543FA3A",
+      "constructorArgs": []
+    },
+    "proxy": {
+      "address": "0xA37fb4C41e7D30af5172618a863BBB0f9042c604",
+      "contract": "@aragon/os/contracts/apps/AppProxyUpgradeable.sol",
+      "constructorArgs": []
+    }
+  },
   "app:node-operators-registry": {
     "implementation": {
       "contract": "contracts/0.4.24/nos/NodeOperatorsRegistry.sol",
@@ -477,6 +517,18 @@
         "0x7071f283424072341f856ac9e947e7ec0eb68719f757a7e785979b6b8717579d",
         "0x"
       ]
+    }
+  },
+  "aragon-app-repo-node-operators-registry": {
+    "implementation": {
+      "contract": "@aragon/os/contracts/apm/Repo.sol",
+      "address": "0x8959360c48D601a6817BAf2449E5D00cC543FA3A",
+      "constructorArgs": []
+    },
+    "proxy": {
+      "address": "0xB3d74c319C0C792522705fFD3097f873eEc71764",
+      "contract": "@aragon/os/contracts/apps/AppProxyUpgradeable.sol",
+      "constructorArgs": []
     }
   },
   "lidoApmDeployArguments": [
@@ -512,7 +564,7 @@
       "constructorArgs": [
         "0x3b03f75Ec541Ca11a223bB58621A3146246E1644",
         "0xddbcfd564f642ab5627cf68b9b7d374fb4f8a36e941a75d89c87998cef03bd61",
-        "0x00"
+        "0x8129fc1c"
       ],
       "contract": "@aragon/os/contracts/apps/AppProxyPinned.sol"
     },
@@ -532,7 +584,18 @@
     "constructorArgs": [
       "0x22896Bfc68814BFD855b1a167255eE497006e730",
       []
-    ]
+    ],
+    "parameters": {
+      "NORMALIZED_CL_REWARD_PER_EPOCH": 64,
+      "NORMALIZED_CL_REWARD_MISTAKE_RATE_BP": 1000,
+      "REBASE_CHECK_NEAREST_EPOCH_DISTANCE": 1,
+      "REBASE_CHECK_DISTANT_EPOCH_DISTANCE": 23,
+      "VALIDATOR_DELAYED_TIMEOUT_IN_SLOTS": 7200,
+      "VALIDATOR_DELINQUENT_TIMEOUT_IN_SLOTS": 28800,
+      "NODE_OPERATOR_NETWORK_PENETRATION_THRESHOLD_BP": 100,
+      "PREDICTION_DURATION_IN_SLOTS": 50400,
+      "FINALIZATION_MAX_NEGATIVE_REBASE_EPOCH_SHIFT": 1350
+    }
   },
   "dummyEmptyContract": {
     "contract": "contracts/0.8.9/test_helpers/DummyEmptyContract.sol",
