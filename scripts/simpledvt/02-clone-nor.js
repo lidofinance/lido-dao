@@ -3,14 +3,22 @@ const chalk = require('chalk')
 const { Contract } = require('ethers')
 const { encodeCallScript } = require('@aragon/contract-helpers-test/src/aragon-os')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
-
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
-
 const { log, yl, gr } = require('../helpers/log')
 // const { saveCallTxData } = require('../helpers/tx-data')
+const { resolveLatestVersion } = require('../components/apm')
+const {
+  readNetworkState,
+  assertRequiredNetworkState,
+  persistNetworkState2,
+} = require('../helpers/persisted-network-state')
+const { resolveEnsAddress } = require('../components/ens')
+const { hash: namehash } = require('eth-ens-namehash')
+const { APP_NAMES, APP_ARTIFACTS } = require('../constants')
 const {
   getDeployer,
   readStateAppAddress,
+  getSignature,
   KERNEL_APP_BASES_NAMESPACE,
   MANAGE_SIGNING_KEYS,
   MANAGE_NODE_OPERATOR_ROLE,
@@ -19,17 +27,6 @@ const {
   STAKING_MODULE_MANAGE_ROLE,
   SIMPLE_DVT_IPFS_CID,
 } = require('./helpers')
-const { resolveLatestVersion } = require('../components/apm')
-const {
-  readNetworkState,
-  assertRequiredNetworkState,
-  persistNetworkState2,
-} = require('../helpers/persisted-network-state')
-
-const { resolveEnsAddress } = require('../components/ens')
-const { hash: namehash } = require('eth-ens-namehash')
-
-const { APP_NAMES, APP_ARTIFACTS } = require('../constants')
 
 const APP_TRG = process.env.APP_TRG || APP_NAMES.SIMPLE_DVT
 const APP_IPFS_CID = process.env.APP_IPFS_CID || SIMPLE_DVT_IPFS_CID
@@ -85,14 +82,6 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   const trgProxyAddress = readStateAppAddress(state, `app:${trgAppName}`)
   const trgAppArtifact = APP_ARTIFACTS[srcAppName] // get source app artifact
   const trgApp = await artifacts.require(trgAppArtifact).at(trgProxyAddress)
-
-  function _getSignature(instance, method) {
-    const methodAbi = instance.contract._jsonInterface.find((i) => i.name === method)
-    if (!methodAbi) {
-      throw new Error(`Method ${method} not found in contract`)
-    }
-    return methodAbi.signature
-  }
 
   // set new version to 1.0.0
   const trgVersion = [1, 0, 0]
@@ -246,9 +235,9 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     calldata: await easytrack.interface.encodeFunctionData('addEVMScriptFactory', [
       easyTrackFactories.AddNodeOperators,
       trgProxyAddress +
-        _getSignature(trgApp, 'addNodeOperator').substring(2) +
+        getSignature(trgApp, 'addNodeOperator').substring(2) +
         aclAddress.substring(2) +
-        _getSignature(acl, 'grantPermissionP').substring(2),
+        getSignature(acl, 'grantPermissionP').substring(2),
     ]),
   })
   evmScriptCalls.push({
@@ -256,9 +245,9 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     calldata: await easytrack.interface.encodeFunctionData('addEVMScriptFactory', [
       easyTrackFactories.ActivateNodeOperators,
       trgProxyAddress +
-        _getSignature(trgApp, 'activateNodeOperator').substring(2) +
+        getSignature(trgApp, 'activateNodeOperator').substring(2) +
         aclAddress.substring(2) +
-        _getSignature(acl, 'grantPermissionP').substring(2),
+        getSignature(acl, 'grantPermissionP').substring(2),
     ]),
   })
   evmScriptCalls.push({
@@ -266,37 +255,37 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     calldata: await easytrack.interface.encodeFunctionData('addEVMScriptFactory', [
       easyTrackFactories.DeactivateNodeOperators,
       trgProxyAddress +
-        _getSignature(trgApp, 'deactivateNodeOperator').substring(2) +
+        getSignature(trgApp, 'deactivateNodeOperator').substring(2) +
         aclAddress.substring(2) +
-        _getSignature(acl, 'revokePermission').substring(2),
+        getSignature(acl, 'revokePermission').substring(2),
     ]),
   })
   evmScriptCalls.push({
     to: easytrack.address,
     calldata: await easytrack.interface.encodeFunctionData('addEVMScriptFactory', [
       easyTrackFactories.SetVettedValidatorsLimits,
-      trgProxyAddress + _getSignature(trgApp, 'setNodeOperatorStakingLimit').substring(2),
+      trgProxyAddress + getSignature(trgApp, 'setNodeOperatorStakingLimit').substring(2),
     ]),
   })
   evmScriptCalls.push({
     to: easytrack.address,
     calldata: await easytrack.interface.encodeFunctionData('addEVMScriptFactory', [
       easyTrackFactories.UpdateTargetValidatorLimits,
-      trgProxyAddress + _getSignature(trgApp, 'updateTargetValidatorsLimits').substring(2),
+      trgProxyAddress + getSignature(trgApp, 'updateTargetValidatorsLimits').substring(2),
     ]),
   })
   evmScriptCalls.push({
     to: easytrack.address,
     calldata: await easytrack.interface.encodeFunctionData('addEVMScriptFactory', [
       easyTrackFactories.SetNodeOperatorNames,
-      trgProxyAddress + _getSignature(trgApp, 'setNodeOperatorName').substring(2),
+      trgProxyAddress + getSignature(trgApp, 'setNodeOperatorName').substring(2),
     ]),
   })
   evmScriptCalls.push({
     to: easytrack.address,
     calldata: await easytrack.interface.encodeFunctionData('addEVMScriptFactory', [
       easyTrackFactories.SetNodeOperatorRewardAddresses,
-      trgProxyAddress + _getSignature(trgApp, 'setNodeOperatorRewardAddress').substring(2),
+      trgProxyAddress + getSignature(trgApp, 'setNodeOperatorRewardAddress').substring(2),
     ]),
   })
   evmScriptCalls.push({
@@ -304,9 +293,9 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     calldata: await easytrack.interface.encodeFunctionData('addEVMScriptFactory', [
       easyTrackFactories.TransferNodeOperatorManager,
       aclAddress +
-        _getSignature(acl, 'revokePermission').substring(2) +
+        getSignature(acl, 'revokePermission').substring(2) +
         aclAddress.substring(2) +
-        _getSignature(acl, 'grantPermissionP').substring(2),
+        getSignature(acl, 'grantPermissionP').substring(2),
     ]),
   })
 

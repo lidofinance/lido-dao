@@ -21,9 +21,18 @@ function readStateAppAddress(state, app = '') {
   return appState.proxyAddress || (appState.proxy && appState.proxy.address) || appState.address
 }
 
+function getSignature(instance, method) {
+  const methodAbi = instance.contract._jsonInterface.find((i) => i.name === method)
+  if (!methodAbi) {
+    throw new Error(`Method ${method} not found in contract`)
+  }
+  return methodAbi.signature
+}
+
 module.exports = {
   readStateAppAddress,
   getDeployer,
+  getSignature,
   KERNEL_APP_BASES_NAMESPACE,
   MANAGE_SIGNING_KEYS,
   MANAGE_NODE_OPERATOR_ROLE,
