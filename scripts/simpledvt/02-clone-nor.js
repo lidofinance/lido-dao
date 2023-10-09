@@ -36,7 +36,7 @@ const APP_IPFS_CID = process.env.APP_IPFS_CID || SIMPLE_DVT_IPFS_CID
 const DEPLOYER = process.env.DEPLOYER || ''
 
 const SIMULATE = !!process.env.SIMULATE
-// const EXTERNAL_DEPLOYER = !!process.env.EXTERNAL_DEPLOYER
+const VOTE_ID = process.env.VOTE_ID || ''
 
 const REQUIRED_NET_STATE = [
   'ensAddress',
@@ -345,31 +345,39 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     },
   ])
 
-  // save app info
-  persistNetworkState2(network.name, netId, state, {
-    [`app:${trgAppName}`]: {
-      fullName: trgAppFullName,
-      name: trgAppName,
-      id: trgAppId,
-      ipfsCid,
-      contentURI,
-      implementation: contractAddress,
-      contract: trgAppArtifact,
-    },
-  })
+  // skip update if VOTE_ID set
+  if (!VOTE_ID) {
+    // save app info
+    persistNetworkState2(network.name, netId, state, {
+      [`app:${trgAppName}`]: {
+        fullName: trgAppFullName,
+        name: trgAppName,
+        id: trgAppId,
+        ipfsCid,
+        contentURI,
+        implementation: contractAddress,
+        contract: trgAppArtifact,
+      },
+    })
+  }
 
   if (SIMULATE) {
     log.splitter()
     log(gr(`Simulating voting creation and enact!`))
-
     // create voting on behalf of dao agent
     await ethers.getImpersonatedSigner(agentAddress)
 
-    const result = await tokenManager.forward(newVoteEvmScript, { from: agentAddress, gasPrice: 0 })
-    const voteId = getEventArgument(result, 'StartVote', 'voteId', { decodeForAbi: voting.abi })
-    log(`Voting created, id`, yl(voteId))
+    let voteId
+    if (!VOTE_ID) {
+      const result = await tokenManager.forward(newVoteEvmScript, { from: agentAddress, gasPrice: 0 })
+      voteId = getEventArgument(result, 'StartVote', 'voteId', { decodeForAbi: voting.abi })
+      log(`Voting created, id`, yl(voteId))
+    } else {
+      voteId = VOTE_ID
+    }
 
     // vote
+    log(`Enacting voting, id`, yl(voteId))
     await voting.vote(voteId, true, true, { from: agentAddress, gasPrice: 0 })
     const voteTime = (await voting.voteTime()).toNumber()
     // pass time and enact
