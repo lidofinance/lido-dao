@@ -51,7 +51,7 @@ if (!process.env.NETWORK_STATE_FILE) {
   console.error('Env variable NETWORK_STATE_FILE must be set to run fork acceptance tests')
   process.exit(1);
 }
-const NETWORK_STATE_FILE=process.env.NETWORK_STATE_FILE
+const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE
 
 
 
@@ -177,6 +177,7 @@ async function checkSubmitDepositReportWithdrawal(protocol, state, user1, user2)
   const latestBlockTimestamp = (await ethers.provider.getBlock('latest')).timestamp
   const initialEpoch = Math.floor((latestBlockTimestamp - chainSpec.genesisTime)
     / (chainSpec.slotsPerEpoch * chainSpec.secondsPerSlot))
+
   await hashConsensusForAO.updateInitialEpoch(initialEpoch, { from: agent.address })
 
 
@@ -186,20 +187,23 @@ async function checkSubmitDepositReportWithdrawal(protocol, state, user1, user2)
   // await pushOracleReport(hashConsensusForAO, accountingOracle, 1, ETH(35), elRewardsVaultBalance)
   // await reportOracle(hashConsensusForAO, accountingOracle, { numValidators, clBalance, elRewardsVaultBalance })
 
-  const initialUser1StethAmount = ETH(34)
+  const withdrawalAmount = ETH(1)
   // const finalUser1StethAmount = '36699999999999999999'
   // assert.equals(await lido.balanceOf(user1.address), finalStethAmount)
 
-  await lido.approve(withdrawalQueue.address, initialUser1StethAmount, { from: user1.address })
-  const receipt = await withdrawalQueue.requestWithdrawals([initialUser1StethAmount], user1.address, { from: user1.address })
+  await lido.approve(withdrawalQueue.address, withdrawalAmount, { from: user1.address })
+  const receipt = await withdrawalQueue.requestWithdrawals([withdrawalAmount], user1.address, { from: user1.address })
   const requestId = getEventArgument(receipt, 'WithdrawalRequested', 'requestId')
+
   log.success('Withdrawal request made')
 
+  const epochsPerFrame = +(await hashConsensusForAO.getFrameConfig()).epochsPerFrame
   const initialEpochTimestamp = chainSpec.genesisTime + initialEpoch * chainSpec.slotsPerEpoch * chainSpec.secondsPerSlot
-  const timeToWaitTillReportWindow = initialEpochTimestamp - latestBlockTimestamp
-    + state.oracleReportSanityChecker.parameters.requestTimestampMargin + chainSpec.secondsPerSlot
 
-  console.log({ timeToWaitTillReportWindow })
+  // skip two reports to be sure about REQUEST_TIMESTAMP_MARGIN
+  const nextReportEpochTimestamp = initialEpochTimestamp + 2 * epochsPerFrame * chainSpec.slotsPerEpoch * chainSpec.secondsPerSlot
+
+  const timeToWaitTillReportWindow = nextReportEpochTimestamp - latestBlockTimestamp + chainSpec.secondsPerSlot
 
   await advanceChainTime(timeToWaitTillReportWindow)
 
@@ -208,33 +212,29 @@ async function checkSubmitDepositReportWithdrawal(protocol, state, user1, user2)
 
 
   const { refSlot } = await hashConsensusForAO.getCurrentFrame()
-
-  { // Debug section
-    const initialRefSlot = await hashConsensusForAO.getInitialRefSlot()
-
-    const tmp = await withdrawalQueue.getWithdrawalStatus([requestId])
-    const withdrawalRequestTimestamp = tmp[0].timestamp
-
-    const reportTimestamp = +chainSpec.genesisTime + (+refSlot) * (+chainSpec.secondsPerSlot)
-    const blockTimestamp = (await ethers.provider.getBlock('latest')).timestamp
-
-    console.log({
-      initialRefSlot: initialRefSlot.toString(),
-      refSlot: refSlot.toString(),
-      // hcInitialEpoch: hcInitialEpoch.toString(),
-      reportTimestamp: reportTimestamp.toString(),
-      blockTimestamp: blockTimestamp.toString(),
-      genesisTime: chainSpec.genesisTime.toString(),
-      withdrawalRequestTimestamp: withdrawalRequestTimestamp.toString(),
-      latestBlockTimestamp,
-      initialEpoch,
-    })
-  }
-
-  // const hcInitialEpoch = await hashConsensusForAO.getFrameConfig().initialEpoch
+  const reportTimestamp = +chainSpec.genesisTime + (+refSlot) * (+chainSpec.secondsPerSlot)
+  const timeElapsed = +(nextReportEpochTimestamp - initialEpochTimestamp)
 
   const withdrawalFinalizationBatches = [1]
-  const simulatedShareRate = e27(1)
+
+  // Performing dry-run to estimate simulated share rate
+  const [postTotalPooledEther, postTotalShares, withdrawals, elRewards] = await lido.handleOracleReport.call(
+    reportTimestamp,
+    timeElapsed,
+    stat.depositedValidators,
+    clBalance,
+    0 /* withdrawals vault balance */,
+    elRewardsVaultBalance,
+    0 /* shares requested to burn */,
+    [] /* withdrawal finalization batches */,
+    0 /* simulated share rate */,
+    { from: accountingOracle.address }
+  )
+
+  log.success('Oracle report simulated')
+
+  const simulatedShareRate = postTotalPooledEther.mul(toBN(e27(1))).div(postTotalShares)
+
   await reportOracle(hashConsensusForAO, accountingOracle, {
     refSlot,
     numValidators: stat.depositedValidators,
@@ -244,8 +244,11 @@ async function checkSubmitDepositReportWithdrawal(protocol, state, user1, user2)
     simulatedShareRate,
   })
 
+  log.success('Oracle report submitted')
 
   await withdrawalQueue.claimWithdrawalsTo([requestId], [requestId], user1.address, { from: user1.address })
+
+  log.success('Withdrawal claimed successfully')
 }
 
 async function checkMainProtocolFlows({ web3 }) {
