@@ -366,5 +366,32 @@
     "constructorArgs": [
       "0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b"
     ]
+  },
+  "app:simple-dvt": {
+    "stakingRouterModuleParams": {
+      "moduleName": "SimpleDVT",
+      "moduleType": "curated",
+      "targetShare": 1000,
+      "moduleFee": 500,
+      "treasuryFee": 500,
+      "penaltyDelay": 86400,
+      "easyTrackAddress": "0xAf072C8D368E4DD4A9d4fF6A76693887d6ae92Af",
+      "easyTrackEVMScriptExecutor": "0x3c9AcA237b838c59612d79198685e7f20C7fE783",
+      "easyTrackFactories": {}
+    },
+    "aragonApp": {
+      "name": "simple-dvt",
+      "fullName": "simple-dvt.lidopm-testnet-prater.eth",
+      "id": "0x532a9a50bd35712df1229f81b7f2617f4d9f4f2f83b64aa83a3f4047010e246a"
+    },
+    "proxy": {
+      "address": "0x3f03E034D4fa3ab722A43b6064645Fe508e7140B",
+      "contract": "@aragon/os/contracts/apps/AppProxyUpgradeable.sol",
+      "constructorArgs": [
+        "0x1dD91b354Ebd706aB3Ac7c727455C7BAA164945A",
+        "0x532a9a50bd35712df1229f81b7f2617f4d9f4f2f83b64aa83a3f4047010e246a",
+        "0x"
+      ]
+    }
   }
 }

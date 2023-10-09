@@ -1,4 +1,5 @@
 const { network, ethers } = require('hardhat')
+const { Contract, utils } = require('ethers')
 const chalk = require('chalk')
 const { assert } = require('chai')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
@@ -65,6 +66,7 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   const trgAppFullName = `${trgAppName}.${state.lidoApmEnsName}`
   const trgAppId = namehash(trgAppFullName)
 
+  console.log({ trgAppId, ens, artifacts })
   const { semanticVersion, contractAddress, contentURI } = await resolveLatestVersion(trgAppId, ens, artifacts)
 
   _checkEq(contractAddress, srcContractAddress, 'App APM repo last version: implementation is the same to NOR')
@@ -78,7 +80,17 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   const trgProxyAddress = readStateAppAddress(state, `app:${trgAppName}`)
   const trgAppArtifact = APP_ARTIFACTS[srcAppName] // get source app artifact
   const trgApp = await artifacts.require(trgAppArtifact).at(trgProxyAddress)
-  const { moduleType, penaltyDelay } = state[`app:${trgAppName}`].stakingRouterModuleParams
+  const {
+    moduleName,
+    moduleType,
+    targetShare,
+    moduleFee,
+    treasuryFee,
+    penaltyDelay,
+    easyTrackAddress,
+    easyTrackEVMScriptExecutor,
+    easyTrackFactories = {},
+  } = state[`app:${trgAppName}`].stakingRouterModuleParams
 
   _checkEq(await trgApp.appId(), trgAppId, 'App Contract: AppID correct')
   _checkEq(await trgApp.kernel(), state.daoAddress, 'App Contract: kernel address correct')
@@ -99,13 +111,13 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   _checkEq(
     await stakingRouter.hasRole(STAKING_MODULE_MANAGE_ROLE, agentAddress),
     true,
-    'Agent has rolw: STAKING_MODULE_MANAGE_ROLE'
+    'Agent has role: STAKING_MODULE_MANAGE_ROLE'
   )
 
   _checkEq(
     await acl.getPermissionManager(trgProxyAddress, MANAGE_SIGNING_KEYS),
-    votingAddress,
-    'Voting is permission manager: MANAGE_SIGNING_KEYS'
+    easyTrackEVMScriptExecutor,
+    'EasyTrackEVMScriptExecutor is permission manager: MANAGE_SIGNING_KEYS'
   )
   _checkEq(
     await acl.getPermissionManager(trgProxyAddress, MANAGE_NODE_OPERATOR_ROLE),
@@ -124,20 +136,27 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   )
 
   _checkEq(
-    await acl.hasPermission(votingAddress, trgProxyAddress, MANAGE_SIGNING_KEYS),
+    await acl.hasPermission(easyTrackEVMScriptExecutor, trgProxyAddress, MANAGE_SIGNING_KEYS),
     true,
-    'Voting has permission: MANAGE_SIGNING_KEYS'
+    'EasyTrackEVMScriptExecutor has permission: MANAGE_SIGNING_KEYS'
   )
   _checkEq(
-    await acl.hasPermission(votingAddress, trgProxyAddress, MANAGE_NODE_OPERATOR_ROLE),
+    await acl.hasPermission(easyTrackEVMScriptExecutor, trgProxyAddress, MANAGE_NODE_OPERATOR_ROLE),
     true,
-    'Voting has permission: MANAGE_NODE_OPERATOR_ROLE'
+    'EasyTrackEVMScriptExecutor has permission: MANAGE_NODE_OPERATOR_ROLE'
   )
   _checkEq(
-    await acl.hasPermission(votingAddress, trgProxyAddress, SET_NODE_OPERATOR_LIMIT_ROLE),
+    await acl.hasPermission(easyTrackEVMScriptExecutor, trgProxyAddress, SET_NODE_OPERATOR_LIMIT_ROLE),
     true,
-    'Voting has permission: MANAGE_SIGNING_KEYS'
+    'EasyTrackEVMScriptExecutor has permission: SET_NODE_OPERATOR_LIMIT_ROLE'
   )
+
+  _checkEq(
+    await acl.hasPermission(easyTrackEVMScriptExecutor, trgProxyAddress, STAKING_ROUTER_ROLE),
+    true,
+    'EasyTrackEVMScriptExecutor has permission: STAKING_ROUTER_ROLE'
+  )
+
   _checkEq(
     await acl.hasPermission(srAddress, trgProxyAddress, STAKING_ROUTER_ROLE),
     true,
@@ -164,7 +183,6 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     `StakingRouter: expected moduleId = ${srModuleId} exists`
   )
 
-  const { moduleName, targetShare, moduleFee, treasuryFee } = state[`app:${trgAppName}`].stakingRouterModuleParams
   const srModule = await stakingRouter.getStakingModule(srModuleId)
   _checkEq(srModule.name, moduleName, `StakingRouter module: name = ${trgAppName}`)
   _checkEq(srModule.stakingModuleAddress, trgProxyAddress, `StakingRouter module: address correct`)
@@ -195,6 +213,10 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
 
   if (SIMULATE) {
     log(gr(`Simulating adding keys and deposit!`))
+    const stranger = await getDeployer(web3)
+
+    const abiCoder = new utils.AbiCoder()
+
     log('Creating snapshot...')
     const snapshot = new EvmSnapshot(ethers.provider)
     await snapshot.make()
@@ -202,13 +224,18 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     try {
       const lido = await artifacts.require('Lido').at(lidoAddress)
 
+      const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
+      const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
+      const MANAGER_1 = '0x0000000000000000000000000000000000000011'
+      const MANAGER_2 = '0x0000000000000000000000000000000000000012'
+
       // create voting on behalf of dao agent
       await ethers.getImpersonatedSigner(agentAddress)
       await ethers.getImpersonatedSigner(votingAddress)
       await ethers.getImpersonatedSigner(dsmAddress)
-
-      const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
-      const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
+      await ethers.getImpersonatedSigner(easyTrackEVMScriptExecutor)
+      await ethers.getImpersonatedSigner(ADDRESS_1)
+      await ethers.getImpersonatedSigner(ADDRESS_2)
 
       const depositsCount = 100
       const op1keysAmount = 100
@@ -216,19 +243,82 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
       const keysAmount = op1keysAmount + op2keysAmount
       if ((await trgApp.getNodeOperatorsCount()) < 1) {
         // prepare node operators
-        await trgApp.addNodeOperator('op 1', ADDRESS_1, { from: votingAddress, gasPrice: 0 })
-        await trgApp.addNodeOperator('op 2', ADDRESS_2, { from: votingAddress, gasPrice: 0 })
+
+        // const factoryABI = [
+        //   {
+        //     inputs: [
+        //       { internalType: 'address', name: '_creator', type: 'address' },
+        //       { internalType: 'bytes', name: '_evmScriptCallData', type: 'bytes' },
+        //     ],
+        //     name: 'createEVMScript',
+        //     outputs: [{ internalType: 'bytes', name: '', type: 'bytes' }],
+        //     stateMutability: 'view',
+        //     type: 'function',
+        //   },
+        //   {
+        //     inputs: [{ internalType: 'bytes', name: '_evmScriptCallData', type: 'bytes' }],
+        //     name: 'decodeEVMScriptCallData',
+        //     outputs: [
+        //       { internalType: 'uint256', name: 'nodeOperatorsCount', type: 'uint256' },
+        //       {
+        //         components: [
+        //           { internalType: 'string', name: 'name', type: 'string' },
+        //           { internalType: 'address', name: 'rewardAddress', type: 'address' },
+        //           { internalType: 'address', name: 'managerAddress', type: 'address' },
+        //         ],
+        //         internalType: 'struct AddNodeOperators.AddNodeOperatorInput[]',
+        //         name: 'nodeOperators',
+        //         type: 'tuple[]',
+        //       },
+        //     ],
+        //     stateMutability: 'pure',
+        //     type: 'function',
+        //   },
+        //   {
+        //     inputs: [],
+        //     name: 'nodeOperatorsRegistry',
+        //     outputs: [{ internalType: 'contract INodeOperatorsRegistry', name: '', type: 'address' }],
+        //     stateMutability: 'view',
+        //     type: 'function',
+        //   },
+        //   {
+        //     inputs: [],
+        //     name: 'trustedCaller',
+        //     outputs: [{ internalType: 'address', name: '', type: 'address' }],
+        //     stateMutability: 'view',
+        //     type: 'function',
+        //   },
+        // ]
+
+        // let factoryAddress = easyTrackFactories.AddNodeOperators
+        // let factory = new Contract(factoryAddress, factoryABI, ethers.provider)
+
+        // _checkEq(await factory.nodeOperatorsRegistry(), trgProxyAddress, `Simulate init: operators count = 2`)
+
+        // let callData = abiCoder.encode(
+        //   ['uint256', 'tuple(string,address,address)[]'],
+        //   [1, [['op 1', ADDRESS_1, MANAGER_1]]]
+        // )
+        // console.log(await factory.decodeEVMScriptCallData(callData))
+
+        // let trustedCaller = await factory.trustedCaller()
+        // await ethers.getImpersonatedSigner(trustedCaller)
+        // let evmScript = await factory.createEVMScript(stranger, callData, { from: trustedCaller, gasPrice: 0 })
+        // console.log(evmScript)
+
+        await trgApp.addNodeOperator('op 1', ADDRESS_1, { from: easyTrackEVMScriptExecutor, gasPrice: 0 })
+        await trgApp.addNodeOperator('op 2', ADDRESS_2, { from: easyTrackEVMScriptExecutor, gasPrice: 0 })
 
         // add keys to module for op1
         let keys = genKeys(op1keysAmount)
-        await trgApp.addSigningKeys(0, op1keysAmount, keys.pubkeys, keys.sigkeys, { from: votingAddress, gasPrice: 0 })
+        await trgApp.addSigningKeys(0, op1keysAmount, keys.pubkeys, keys.sigkeys, { from: ADDRESS_1, gasPrice: 0 })
         // add keys to module for op2
         keys = genKeys(op2keysAmount)
-        await trgApp.addSigningKeys(1, op2keysAmount, keys.pubkeys, keys.sigkeys, { from: votingAddress, gasPrice: 0 })
+        await trgApp.addSigningKeys(1, op2keysAmount, keys.pubkeys, keys.sigkeys, { from: ADDRESS_2, gasPrice: 0 })
 
         // increase keys limit
-        await trgApp.setNodeOperatorStakingLimit(0, 100000, { from: votingAddress, gasPrice: 0 })
-        await trgApp.setNodeOperatorStakingLimit(1, 100000, { from: votingAddress, gasPrice: 0 })
+        await trgApp.setNodeOperatorStakingLimit(0, 100000, { from: easyTrackEVMScriptExecutor, gasPrice: 0 })
+        await trgApp.setNodeOperatorStakingLimit(1, 100000, { from: easyTrackEVMScriptExecutor, gasPrice: 0 })
       }
 
       _checkEq(await trgApp.getNodeOperatorsCount(), 2, `Simulate init: operators count = 2`)
@@ -241,7 +331,6 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
         `Simulate init: depositableValidatorsCount = ${keysAmount}`
       )
 
-      const stranger = await getDeployer(web3)
       const wqAddress = readStateAppAddress(state, 'withdrawalQueueERC721')
       const withdrwalQueue = await artifacts.require('WithdrawalQueueERC721').at(wqAddress)
 

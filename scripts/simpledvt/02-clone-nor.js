@@ -1,6 +1,6 @@
 const { network, ethers } = require('hardhat')
 const chalk = require('chalk')
-
+const { Contract } = require('ethers')
 const { encodeCallScript } = require('@aragon/contract-helpers-test/src/aragon-os')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
 
@@ -35,9 +35,8 @@ const APP_TRG = process.env.APP_TRG || APP_NAMES.SIMPLE_DVT
 const APP_IPFS_CID = process.env.APP_IPFS_CID || SIMPLE_DVT_IPFS_CID
 const DEPLOYER = process.env.DEPLOYER || ''
 
-const EASYTRACK = process.env.EASYTRACK || ''
 const SIMULATE = !!process.env.SIMULATE
-// const EXTERNAL_DEPLOYER = !!process.env.EXTERNAL_DEPLOYER
+const VOTE_ID = process.env.VOTE_ID || ''
 
 const REQUIRED_NET_STATE = [
   'ensAddress',
@@ -83,9 +82,17 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
 
   const trgAppFullName = `${trgAppName}.${state.lidoApmEnsName}`
   const trgAppId = namehash(trgAppFullName)
-  const trgRepoAddress = await resolveEnsAddress(artifacts, ens, trgAppId)
   const trgProxyAddress = readStateAppAddress(state, `app:${trgAppName}`)
   const trgAppArtifact = APP_ARTIFACTS[srcAppName] // get source app artifact
+  const trgApp = await artifacts.require(trgAppArtifact).at(trgProxyAddress)
+
+  function _getSignature(instance, method) {
+    const methodAbi = instance.contract._jsonInterface.find((i) => i.name === method)
+    if (!methodAbi) {
+      throw new Error(`Method ${method} not found in contract`)
+    }
+    return methodAbi.signature
+  }
 
   // set new version to 1.0.0
   const trgVersion = [1, 0, 0]
@@ -108,6 +115,9 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     moduleFee = 500,
     treasuryFee = 500,
     penaltyDelay,
+    easyTrackAddress,
+    easyTrackEVMScriptExecutor,
+    easyTrackFactories = {},
   } = state[`app:${trgAppName}`].stakingRouterModuleParams
   log(`Target SR Module name`, yl(moduleName))
   log(`Target SR Module type`, yl(moduleType))
@@ -120,6 +130,8 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     log.error(`Target app proxy is not yet deployed!`)
     return
   }
+
+  const trgRepoAddress = await resolveEnsAddress(artifacts, ens, trgAppId)
 
   if (trgRepoAddress && (await web3.eth.getCode(trgProxyAddress)) !== '0x') {
     log(`Target App APM repo:`, yl(trgRepoAddress))
@@ -138,13 +150,35 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   const stakingRouter = await artifacts.require('StakingRouter').at(srAddress)
   const apmRegistry = await artifacts.require('APMRegistry').at(state.lidoApmAddress)
 
-  const trgApp = await artifacts.require(trgAppArtifact).at(trgProxyAddress)
   const voteDesc = `Clone app '${srcAppName}' to '${trgAppName}'`
   const voting = await artifacts.require('Voting').at(votingAddress)
   const tokenManager = await artifacts.require('TokenManager').at(tokenManagerAddress)
   const agentAddress = readStateAppAddress(state, `app:${APP_NAMES.ARAGON_AGENT}`)
   const agent = await artifacts.require('Agent').at(agentAddress)
 
+  const easytrackABI = [
+    {
+      inputs: [
+        {
+          internalType: 'address',
+          name: '_evmScriptFactory',
+          type: 'address',
+        },
+        {
+          internalType: 'bytes',
+          name: '_permissions',
+          type: 'bytes',
+        },
+      ],
+      name: 'addEVMScriptFactory',
+      outputs: [],
+      stateMutability: 'nonpayable',
+      type: 'function',
+    },
+  ]
+
+  // use ethers.js Contract instance
+  const easytrack = new Contract(easyTrackAddress, easytrackABI)
   const evmScriptCalls = [
     // create app repo
     {
@@ -168,41 +202,113 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   ]
 
   // set permissions
-  const srcAppPerms = [
-    {
-      grantee: votingAddress, // default to voting
-      roles: {
-        MANAGE_SIGNING_KEYS,
-        MANAGE_NODE_OPERATOR_ROLE,
-        SET_NODE_OPERATOR_LIMIT_ROLE,
-      },
-    },
-    {
-      grantee: srAddress,
-      roles: { STAKING_ROUTER_ROLE },
-    },
-  ]
 
-  // grant keys limit role to easytrack if defined
-  if (EASYTRACK) {
-    srcAppPerms.push({
-      grantee: EASYTRACK,
-      roles: {
-        SET_NODE_OPERATOR_LIMIT_ROLE,
-      },
-    })
-  }
+  // grant perm for staking router
+  evmScriptCalls.push({
+    to: acl.address,
+    calldata: await acl.contract.methods
+      .createPermission(srAddress, trgProxyAddress, STAKING_ROUTER_ROLE, votingAddress)
+      .encodeABI(),
+  })
 
-  for (const group of srcAppPerms) {
-    for (const roleId of Object.values(group.roles)) {
-      evmScriptCalls.push({
-        to: acl.address,
-        calldata: await acl.contract.methods
-          .createPermission(group.grantee, trgProxyAddress, roleId, votingAddress)
-          .encodeABI(),
-      })
-    }
-  }
+  // grant perms to easytrack evm script executor
+  evmScriptCalls.push({
+    to: acl.address,
+    calldata: await acl.contract.methods
+      .grantPermission(easyTrackEVMScriptExecutor, trgProxyAddress, STAKING_ROUTER_ROLE)
+      .encodeABI(),
+  })
+
+  evmScriptCalls.push({
+    to: acl.address,
+    calldata: await acl.contract.methods
+      .createPermission(easyTrackEVMScriptExecutor, trgProxyAddress, MANAGE_NODE_OPERATOR_ROLE, votingAddress)
+      .encodeABI(),
+  })
+  evmScriptCalls.push({
+    to: acl.address,
+    calldata: await acl.contract.methods
+      .createPermission(easyTrackEVMScriptExecutor, trgProxyAddress, SET_NODE_OPERATOR_LIMIT_ROLE, votingAddress)
+      .encodeABI(),
+  })
+
+  // grant manager to easytrack evm script executor
+  evmScriptCalls.push({
+    to: acl.address,
+    calldata: await acl.contract.methods
+      .createPermission(easyTrackEVMScriptExecutor, trgProxyAddress, MANAGE_SIGNING_KEYS, easyTrackEVMScriptExecutor)
+      .encodeABI(),
+  })
+
+  // grant perms to easytrack factories
+  evmScriptCalls.push({
+    to: easytrack.address,
+    calldata: await easytrack.interface.encodeFunctionData('addEVMScriptFactory', [
+      easyTrackFactories.AddNodeOperators,
+      trgProxyAddress +
+        _getSignature(trgApp, 'addNodeOperator').substring(2) +
+        aclAddress.substring(2) +
+        _getSignature(acl, 'grantPermissionP').substring(2),
+    ]),
+  })
+  evmScriptCalls.push({
+    to: easytrack.address,
+    calldata: await easytrack.interface.encodeFunctionData('addEVMScriptFactory', [
+      easyTrackFactories.ActivateNodeOperators,
+      trgProxyAddress +
+        _getSignature(trgApp, 'activateNodeOperator').substring(2) +
+        aclAddress.substring(2) +
+        _getSignature(acl, 'grantPermissionP').substring(2),
+    ]),
+  })
+  evmScriptCalls.push({
+    to: easytrack.address,
+    calldata: await easytrack.interface.encodeFunctionData('addEVMScriptFactory', [
+      easyTrackFactories.DeactivateNodeOperators,
+      trgProxyAddress +
+        _getSignature(trgApp, 'deactivateNodeOperator').substring(2) +
+        aclAddress.substring(2) +
+        _getSignature(acl, 'revokePermission').substring(2),
+    ]),
+  })
+  evmScriptCalls.push({
+    to: easytrack.address,
+    calldata: await easytrack.interface.encodeFunctionData('addEVMScriptFactory', [
+      easyTrackFactories.SetVettedValidatorsLimits,
+      trgProxyAddress + _getSignature(trgApp, 'setNodeOperatorStakingLimit').substring(2),
+    ]),
+  })
+  evmScriptCalls.push({
+    to: easytrack.address,
+    calldata: await easytrack.interface.encodeFunctionData('addEVMScriptFactory', [
+      easyTrackFactories.UpdateTargetValidatorLimits,
+      trgProxyAddress + _getSignature(trgApp, 'updateTargetValidatorsLimits').substring(2),
+    ]),
+  })
+  evmScriptCalls.push({
+    to: easytrack.address,
+    calldata: await easytrack.interface.encodeFunctionData('addEVMScriptFactory', [
+      easyTrackFactories.SetNodeOperatorNames,
+      trgProxyAddress + _getSignature(trgApp, 'setNodeOperatorName').substring(2),
+    ]),
+  })
+  evmScriptCalls.push({
+    to: easytrack.address,
+    calldata: await easytrack.interface.encodeFunctionData('addEVMScriptFactory', [
+      easyTrackFactories.SetNodeOperatorRewardAddresses,
+      trgProxyAddress + _getSignature(trgApp, 'setNodeOperatorRewardAddress').substring(2),
+    ]),
+  })
+  evmScriptCalls.push({
+    to: easytrack.address,
+    calldata: await easytrack.interface.encodeFunctionData('addEVMScriptFactory', [
+      easyTrackFactories.TransferNodeOperatorManager,
+      aclAddress +
+        _getSignature(acl, 'revokePermission').substring(2) +
+        aclAddress.substring(2) +
+        _getSignature(acl, 'grantPermissionP').substring(2),
+    ]),
+  })
 
   // check missed STAKING_MODULE_MANAGE_ROLE role on Agent
   if (!(await stakingRouter.hasRole(STAKING_MODULE_MANAGE_ROLE, voting.address))) {
@@ -239,32 +345,39 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     },
   ])
 
-  // save app info
-  persistNetworkState2(network.name, netId, state, {
-    [`app:${trgAppName}`]: {
-      fullName: trgAppFullName,
-      name: trgAppName,
-      id: trgAppId,
-      ipfsCid,
-      contentURI,
-      implementation: contractAddress,
-      contract: trgAppArtifact,
-      easytrackAddress: EASYTRACK,
-    },
-  })
+  // skip update if VOTE_ID set
+  if (!VOTE_ID) {
+    // save app info
+    persistNetworkState2(network.name, netId, state, {
+      [`app:${trgAppName}`]: {
+        fullName: trgAppFullName,
+        name: trgAppName,
+        id: trgAppId,
+        ipfsCid,
+        contentURI,
+        implementation: contractAddress,
+        contract: trgAppArtifact,
+      },
+    })
+  }
 
   if (SIMULATE) {
     log.splitter()
     log(gr(`Simulating voting creation and enact!`))
-
     // create voting on behalf of dao agent
     await ethers.getImpersonatedSigner(agentAddress)
 
-    const result = await tokenManager.forward(newVoteEvmScript, { from: agentAddress, gasPrice: 0 })
-    const voteId = getEventArgument(result, 'StartVote', 'voteId', { decodeForAbi: voting.abi })
-    log(`Voting created, id`, yl(voteId))
+    let voteId
+    if (!VOTE_ID) {
+      const result = await tokenManager.forward(newVoteEvmScript, { from: agentAddress, gasPrice: 0 })
+      voteId = getEventArgument(result, 'StartVote', 'voteId', { decodeForAbi: voting.abi })
+      log(`Voting created, id`, yl(voteId))
+    } else {
+      voteId = VOTE_ID
+    }
 
     // vote
+    log(`Enacting voting, id`, yl(voteId))
     await voting.vote(voteId, true, true, { from: agentAddress, gasPrice: 0 })
     const voteTime = (await voting.voteTime()).toNumber()
     // pass time and enact
