@@ -47,6 +47,7 @@ A brief description of what's going on under the hood in the deploy script.
 - Deploy non-Aragon Lido contracts: `OracleDaemonConfig`, `LidoLocator`, `OracleReportSanityChecker`, `EIP712StETH`, `WstETH`, `WithdrawalQueueERC721`, `WithdrawalVault`, `LidoExecutionLayerRewardsVault`, `StakingRouter`, `DepositSecurityModule`, `AccountingOracle`, `HashConsensus` for AccountingOracle, `ValidatorsExitBusOracle`, `HashConsensus` for ValidatorsExitBusOracle, `Burner`.
 - Finalize Lido DAO deployment: issue unvested LDO tokens, setup Aragon permissions, register Lido DAO name in Aragon ID (via `LidoTemplate`)
 - Initialize non-Aragon Lido contracts
+- Set parameters of `OracleDaemonConfig`
 - Setup non-Aragon permissions
 - Plug NodeOperatorsRegistry as Curated staking module
 - Transfer all admin roles from deployer to `Agent`
@@ -152,4 +153,37 @@ NB, that part of the actions require preliminary granting of the required roles,
     { from: agent.address }
   )
   await stakingRouter.renounceRole(STAKING_MODULE_MANAGE_ROLE, agent.address, { from: agent.address })
+```
+
+
+## Protocol parameters
+
+This section describes part of the parameters and their values used at the deployment. The values are specified in `deployed-testnet-defaults.json`. The subsections below describes values of the parameters.
+
+### OracleDaemonConfig
+
+```python
+# Parameters related to "bunker mode"
+# See https://research.lido.fi/t/withdrawals-for-lido-on-ethereum-bunker-mode-design-and-implementation/3890/4
+# and https://snapshot.org/#/lido-snapshot.eth/proposal/0xa4eb1220a15d46a1825d5a0f44de1b34644d4aa6bb95f910b86b29bb7654e330
+# NB: BASE_REWARD_FACTOR: https://ethereum.github.io/consensus-specs/specs/phase0/beacon-chain/#rewards-and-penalties
+NORMALIZED_CL_REWARD_PER_EPOCH=64
+NORMALIZED_CL_REWARD_MISTAKE_RATE_BP=1000  # 10%
+REBASE_CHECK_NEAREST_EPOCH_DISTANCE=1
+REBASE_CHECK_DISTANT_EPOCH_DISTANCE=23  # 10% of AO 225 epochs frame
+VALIDATOR_DELAYED_TIMEOUT_IN_SLOTS=7200  # 1 day
+
+# See https://snapshot.org/#/lido-snapshot.eth/proposal/0xa4eb1220a15d46a1825d5a0f44de1b34644d4aa6bb95f910b86b29bb7654e330 for "Requirement not be considered Delinquent"
+VALIDATOR_DELINQUENT_TIMEOUT_IN_SLOTS=28800  # 4 days
+
+# See "B.3.I" of https://snapshot.org/#/lido-snapshot.eth/proposal/0xa4eb1220a15d46a1825d5a0f44de1b34644d4aa6bb95f910b86b29bb7654e330
+NODE_OPERATOR_NETWORK_PENETRATION_THRESHOLD_BP=100  # 1% network penetration for a single NO
+
+# Time period of historical observations used for prediction of the rewards amount
+# see https://research.lido.fi/t/withdrawals-for-lido-on-ethereum-bunker-mode-design-and-implementation/3890/4
+PREDICTION_DURATION_IN_SLOTS=50400  # 7 days
+
+# Max period of delay for requests finalization in case of bunker due to negative rebase
+# twice min governance response time - 3 days voting duration
+FINALIZATION_MAX_NEGATIVE_REBASE_EPOCH_SHIFT=1350  # 6 days
 ```

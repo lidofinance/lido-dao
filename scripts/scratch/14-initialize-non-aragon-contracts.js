@@ -1,7 +1,7 @@
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, yl, gr } = require('../helpers/log')
 const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
-
+const { hexPaddedToByte } = require('../../test/helpers/utils')
 const { APP_NAMES } = require('../constants')
 
 
@@ -51,6 +51,7 @@ async function deployNewContracts({ web3, artifacts }) {
   const hashConsensusForValidatorsExitBusOracleAddress = state["hashConsensusForValidatorsExitBus"].address
   const eip712StETHAddress = state["eip712StETH"].address
   const withdrawalVaultAddress = state["withdrawalVault"].proxy.address
+  const oracleDaemonConfigAddress = state.oracleDaemonConfig.address
 
   const testnetAdmin = DEPLOYER
   const accountingOracleAdmin = testnetAdmin
@@ -144,6 +145,16 @@ async function deployNewContracts({ web3, artifacts }) {
   await log.makeTx(stakingRouter, 'initialize', stakingRouterArgs, { from: DEPLOYER })
   logWideSplitter()
 
+  //
+  // === OracleDaemonConfig: set parameters ===
+  //
+  const oracleDaemonConfig = await artifacts.require('OracleDaemonConfig').at(oracleDaemonConfigAddress)
+  const CONFIG_MANAGER_ROLE = await oracleDaemonConfig.CONFIG_MANAGER_ROLE()
+  await log.makeTx(oracleDaemonConfig, 'grantRole', [CONFIG_MANAGER_ROLE, testnetAdmin], { from: testnetAdmin })
+  for (const [key, value] of Object.entries(state.oracleDaemonConfig.parameters)) {
+    await log.makeTx(oracleDaemonConfig, 'set', [key, hexPaddedToByte(value)], { from: DEPLOYER })
+  }
+  await log.makeTx(oracleDaemonConfig, 'renounceRole', [CONFIG_MANAGER_ROLE, testnetAdmin], { from: testnetAdmin })
 }
 
 module.exports = runOrWrapScript(deployNewContracts, module)
