@@ -541,7 +541,7 @@
       "constructorArgs": []
     },
     "proxy": {
-      "address": "0xA37fb4C41e7D30af5172618a863BBB0f9042c604",
+      "address": "0xB3d74c319C0C792522705fFD3097f873eEc71764",
       "contract": "@aragon/os/contracts/apps/AppProxyUpgradeable.sol",
       "constructorArgs": []
     }
@@ -574,7 +574,7 @@
       "constructorArgs": []
     },
     "proxy": {
-      "address": "0xB3d74c319C0C792522705fFD3097f873eEc71764",
+      "address": "0x4E8970d148CB38460bE9b6ddaab20aE2A74879AF",
       "contract": "@aragon/os/contracts/apps/AppProxyUpgradeable.sol",
       "constructorArgs": []
     }
