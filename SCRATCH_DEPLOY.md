@@ -11,7 +11,7 @@ The repo contains bash scripts which allow to deploy the DAO under multiple envi
 - local node (ganache, anvil, hardhat network) - `dao-local-deploy.sh`
 - goerli testnet - `dao-goerli-deploy.sh`
 
-The protocol has a bunch of parameters to configure for the scratch deployment. The default configuration is stored in files `deployed-<deploy env>-defaults.json`, where `<deploy env>` is the target environment. Currently there is single default configuration `deployed-testnet-defaults.json` suitable for testnet deployments. Compared to the mainnet configuration, it has lower vote durations, more frequent oracle report cycles, etc.
+The protocol has a bunch of parameters to configure for the scratch deployment. The default configuration is stored in files `deployed-<deploy env>-defaults.json`, where `<deploy env>` is the target environment. Currently there is single default configuration `deployed-testnet-defaults.json` suitable for testnet deployments. Compared to the mainnet configuration, it has lower vote durations, more frequent oracle report cycles, etc. Part of the parameters require further specification -- they are marked with `null` values.
 During the deployment, the "default" configuration is copied to `deployed-<network name>.json`, where `<network name>` is the name of a network configuration defined in `hardhat.config.js`. The file `deployed-<network name>.json` gets populated with the contract addresses and transaction hashes during the deployment process.
 
 These are the deployment setups, supported currently:

@@ -22,7 +22,7 @@ async function saveDeployParameters({ web3, artifacts }) {
 
   const state = readNetworkState(network.name, netId)
   const ldoHolder = Object.keys(state.vestingParams.holders)[0]
-  const gateSealAddress = (GATE_SEAL_FACTORY === "" || GATE_SEAL_FACTORY === ZERO_ADDRESS)
+  const gateSealAddress = (GATE_SEAL_FACTORY === null || GATE_SEAL_FACTORY === ZERO_ADDRESS)
     ? ZERO_ADDRESS : ''
 
   state.chainId = CHAIN_ID
