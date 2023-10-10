@@ -58,6 +58,7 @@ async function deployNewContracts({ web3, artifacts }) {
   await transferOZAdmin('AccountingOracle', state.accountingOracle.address, owner, agent)
   await transferOZAdmin('ValidatorsExitBusOracle', state.validatorsExitBusOracle.address, owner, agent)
   await transferOZAdmin('WithdrawalQueueERC721', state.withdrawalQueueERC721.address, owner, agent)
+  await transferOZAdmin('OracleDaemonConfig', state.oracleDaemonConfig.address, owner, agent)
 
   await changeOssifiableProxyAdmin(state.lidoLocator.address, owner, agent)
   await changeOssifiableProxyAdmin(state.stakingRouter.address, owner, agent)
