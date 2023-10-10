@@ -51,10 +51,9 @@ A brief description of what's going on under the hood in the deploy script.
 - Setup non-Aragon permissions
 - Plug NodeOperatorsRegistry as Curated staking module
 - Transfer all admin roles from deployer to `Agent`
-  - OZ admin roles: `Burner`, `HashConsensus` for `AccountingOracle`, `HashConsensus` TODO
-  - OssifiableProxy admins: TODO
-  - DepositSecurityModule owner
-
+  - OZ admin roles: `Burner`, `HashConsensus` for `AccountingOracle`, `HashConsensus` for `ValidatorsExitBusOracle`, `StakingRouter`, `AccountingOracle`, `ValidatorsExitBusOracle`, `WithdrawalQueueERC721`, `OracleDaemonConfig`
+  - OssifiableProxy admins: : `LidoLocator`, `StakingRouter`, `AccountingOracle`, `ValidatorsExitBusOracle`, `WithdrawalQueueERC721`
+  - `DepositSecurityModule` owner
 
 ## Local deployment
 
@@ -115,8 +114,26 @@ RPC_URL=<PUT-YOUR-VALUE> GATE_SEAL=<PUT-YOUR-VALUE> DEPLOYER=<PUT-YOUR-VALUE> ba
 
 ## Publishing sources to Etherscan
 
-TODO
+After the deployment run
 
+```shell
+NETWORK=<PUT-YOUR-VALUE> RPC_URL=<PUT-YOUR-VALUE> bash ./scripts/scratch/verify-contracts-code.sh
+```
+
+### Issues with verification of part of the contracts deployed from factories
+
+There are some contracts deployed from other contracts for which automatic hardhat etherscan verification fails:
+
+- `AppProxyUpgradeable` of multiple contracts (`app:lido`, `app:node-operators-registry`, `app:oracle`, `app:voting`, ...)
+- `KernelProxy` -- proxy for `Kernel`
+- `AppProxyPinned` -- proxy for `EVMScriptRegistry`
+- `MiniMeToken` -- LDO token
+- `CallsScript` -- Aragon internal contract
+- `EVMScriptRegistry` -- Aragon internal contract
+
+The workaround used during Holešky deployment is to deploy auxiliary instances of these contracts standalone and verify them via hardhat Etherscan plugin. After this Etherscan will mark the target contracts as verified by "Similar Match Source Code".
+
+NB, that some contracts require additional auxiliary contract to be deployed. Namely, constructor of `AppProxyPinned` depends on proxy implementation ("base" in Aragon terms) contract with `initialize()` function and `Kernel` contract which must return the implementation by call `kernel().getApp(KERNEL_APP_BASES_NAMESPACE, _appId)`. See `@aragon/os/contracts/apps/AppProxyBase.sol` for the details.
 
 ## Post deploy initialization
 

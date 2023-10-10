@@ -28,49 +28,61 @@ function verify {
     yarn hardhat --network $NETWORK verify --no-compile --contract "$contractPath:$contractName" --constructor-args contract-args.js $(jsonGet ${1}.address)
 }
 
-# verify dummyEmptyContract
-# verify burner
-# verify hashConsensusForAccounting
-# verify hashConsensusForValidatorsExitBus
-# verify accountingOracle.implementation
-# verify accountingOracle.proxy
-# verify validatorsExitBusOracle.implementation
-# verify validatorsExitBusOracle.proxy
-# verify stakingRouter.implementation
-# verify stakingRouter.proxy
-# verify withdrawalQueueERC721.proxy
-# verify wstETH
-# verify executionLayerRewardsVault
-# verify eip712StETH
-# verify lidoTemplate
-# verify withdrawalVault.proxy
-# verify withdrawalVault.implementation
-# verify lidoLocator.proxy
-# verify lidoLocator.implementation
-# verify app:lido.implementation
-# verify app:oracle.implementation
-# verify app:node-operators-registry.implementation
-# verify app:aragon-voting.implementation
-# verify app:aragon-token-manager.implementation
-# verify app:aragon-finance.implementation
-# verify app:aragon-agent.implementation
-# verify oracleDaemonConfig
-# verify oracleReportSanityChecker
+# NB: Although most of the contracts listed below would be verified by running
+# this bash script as it is, some might require some manual tweaking.
+# Sometimes first attempt to verify fails without observable reason.
+# Part of the contract require a workaround see SCRATCH_DEPLOY.md section
+# "Issues with verification of part of the contracts deployed from factories".
 
-# verify withdrawalQueueERC721.implementation
-
-# ^ verified up to here
-
+verify dummyEmptyContract
+verify burner
+verify hashConsensusForAccounting
+verify hashConsensusForValidatorsExitBus
+verify accountingOracle.implementation
+verify accountingOracle.proxy
+verify validatorsExitBusOracle.implementation
+verify validatorsExitBusOracle.proxy
+verify stakingRouter.implementation
+verify stakingRouter.proxy
+verify withdrawalQueueERC721.proxy
+verify wstETH
+verify executionLayerRewardsVault
+verify eip712StETH
+verify lidoTemplate
+verify withdrawalVault.proxy
+verify withdrawalVault.implementation
+verify lidoLocator.proxy
+verify lidoLocator.implementation
+verify app:lido.implementation
+verify app:oracle.implementation
+verify app:node-operators-registry.implementation
+verify app:aragon-voting.implementation
+verify app:aragon-token-manager.implementation
+verify app:aragon-finance.implementation
+verify app:aragon-agent.implementation
+verify oracleDaemonConfig
+verify oracleReportSanityChecker
+verify fakeAppProxyPinned
 verify app:lido.proxy
-
-# TODO: fix this verifications
-# verify ldo
-# verify app:simple-dvt.proxy
-# verify app:aragon-token-manager.proxy
-# verify app:oracle.proxy
-# verify app:node-operators-registry.proxy
-# verify app:aragon-voting.proxy
-# verify app:aragon-finance.proxy
-# verify app:aragon-agent.proxy
-# verify lidoApmAddress
-
+verify depositSecurityModule
+verify withdrawalQueueERC721.implementation
+verify aragon-kernel.implementation
+verify aragon-acl.implementation
+verify aragon-kernel.proxy
+verify ldo
+verify callsScript
+verify aragon-evm-script-registry.proxy
+verify aragon-apm-registry.implementation
+verify aragon-apm-registry.factory
+verify aragon-app-repo-lido.implementation
+verify aragon-app-repo-node-operators-registry.implementation
+# NB: App Repos of lido, oracle and node-operators-registry share same implementation
+verify aragon-evm-script-registry.proxy
+verify aragon-evm-script-registry.implementation
+verify app:simple-dvt.proxy
+verify app:aragon-token-manager.proxy
+verify app:oracle.proxy
+verify app:node-operators-registry.proxy
+verify app:aragon-voting.proxy
+verify app:aragon-finance.proxy
+verify app:aragon-agent.proxy
