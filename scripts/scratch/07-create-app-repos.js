@@ -77,6 +77,7 @@ async function createAppRepos({ web3, artifacts }) {
 
   const aragonStdAppsReceipt = await log.makeTx(template, 'createStdAragonRepos', createStdAragonReposArguments, { from })
   console.log(`=== Aragon Std Apps Repos (Agent, Finance, TokenManager, Voting deployed: ${aragonStdAppsReceipt.tx} ===`)
+  state.lidoTemplateCreateStdAppReposTx = aragonStdAppsReceipt.tx
 
   logSplitter()
   persistNetworkState(network.name, netId, state)

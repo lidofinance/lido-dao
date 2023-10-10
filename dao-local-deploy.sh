@@ -15,9 +15,5 @@ export GAS_MAX_FEE=100
 #
 export NETWORK_STATE_FILE="deployed-${NETWORK}.json"
 export NETWORK_STATE_DEFAULTS_FILE="deployed-testnet-defaults.json"
-# TODO export SCRATCH_DEPLOY_DEPOSIT_CONTRACT=1
-
-# Set the variable to skip long Aragon apps frontend rebuild step on repetetive deploys
-# export SKIP_APPS_LONG_BUILD_STEPS=1
 
 bash dao-deploy.sh

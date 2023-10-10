@@ -76,7 +76,8 @@ verify aragon-apm-registry.implementation
 verify aragon-apm-registry.factory
 verify aragon-app-repo-lido.implementation
 verify aragon-app-repo-node-operators-registry.implementation
-# NB: App Repos of lido, oracle and node-operators-registry share same implementation
+# NB: App Repos of lido, oracle, node-operators-registry, finance, agent, token-manager, voting
+#     share same implementation of Repo contract
 verify aragon-evm-script-registry.proxy
 verify aragon-evm-script-registry.implementation
 verify app:simple-dvt.proxy

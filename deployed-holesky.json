@@ -356,6 +356,18 @@
       ]
     }
   },
+  "aragon-app-repo-agent": {
+    "implementation": {
+      "contract": "@aragon/os/contracts/apm/Repo.sol",
+      "address": "0x8959360c48D601a6817BAf2449E5D00cC543FA3A",
+      "constructorArgs": []
+    },
+    "proxy": {
+      "address": "0xe7b4567913AaF2bD54A26E742cec22727D8109eA",
+      "contract": "@aragon/os/contracts/apps/AppProxyUpgradeable.sol",
+      "constructorArgs": []
+    }
+  },
   "app:aragon-finance": {
     "implementation": {
       "contract": "@aragon/apps-finance/contracts/Finance.sol",
@@ -375,6 +387,18 @@
         "0x5c9918c99c4081ca9459c178381be71d9da40e49e151687da55099c49a4237f1",
         "0x1798de81000000000000000000000000e92329ec7ddb11d25e25b3c21eebf11f15eb325d0000000000000000000000000000000000000000000000000000000000278d00"
       ]
+    }
+  },
+  "aragon-app-repo-finance": {
+    "implementation": {
+      "contract": "@aragon/os/contracts/apm/Repo.sol",
+      "address": "0x8959360c48D601a6817BAf2449E5D00cC543FA3A",
+      "constructorArgs": []
+    },
+    "proxy": {
+      "address": "0x0df65b7c78Dc42a872010d031D3601C284D8fE71",
+      "contract": "@aragon/os/contracts/apps/AppProxyUpgradeable.sol",
+      "constructorArgs": []
     }
   },
   "app:aragon-token-manager": {
@@ -398,6 +422,18 @@
       ]
     }
   },
+  "aragon-app-repo-token-manager": {
+    "implementation": {
+      "contract": "@aragon/os/contracts/apm/Repo.sol",
+      "address": "0x8959360c48D601a6817BAf2449E5D00cC543FA3A",
+      "constructorArgs": []
+    },
+    "proxy": {
+      "address": "0xD327b4Fb87fa01599DaD491Aa63B333c44C74472",
+      "contract": "@aragon/os/contracts/apps/AppProxyUpgradeable.sol",
+      "constructorArgs": []
+    }
+  },
   "app:aragon-voting": {
     "implementation": {
       "contract": "@aragon/apps-lido/apps/voting/contracts/Voting.sol",
@@ -417,6 +453,18 @@
         "0x0abcd104777321a82b010357f20887d61247493d89d2e987ff57bcecbde00e1e",
         "0x13e0945300000000000000000000000014ae7daeecdf57034f3e9db8564e46dba8d9734400000000000000000000000000000000000000000000000006f05b59d3b2000000000000000000000000000000000000000000000000000000b1a2bc2ec500000000000000000000000000000000000000000000000000000000000000000384000000000000000000000000000000000000000000000000000000000000012c"
       ]
+    }
+  },
+  "aragon-app-repo-voting": {
+    "implementation": {
+      "contract": "@aragon/os/contracts/apm/Repo.sol",
+      "address": "0x8959360c48D601a6817BAf2449E5D00cC543FA3A",
+      "constructorArgs": []
+    },
+    "proxy": {
+      "address": "0x2997EA0D07D79038D83Cb04b3BB9A2Bc512E3fDA",
+      "contract": "@aragon/os/contracts/apps/AppProxyUpgradeable.sol",
+      "constructorArgs": []
     }
   },
   "lidoTemplate": {
@@ -539,6 +587,7 @@
   "lidoApmAddress": "0x4605Dc9dC4BD0442F850eB8226B94Dd0e27C3Ce7",
   "createAppReposTx": "0xd8a9b10e16b5e75b984c90154a9cb51fbb06bf560a3c424e2e7ad81951008502",
   "lidoTemplateNewDaoTx": "0x3346246f09f91ffbc260b6c300b11ababce9f5ca54d7880a277860961f343112",
+  "lidoTemplateCreateStdAppReposTx": "0x3f5b8918667bd3e971606a54a907798720158587df355a54ce07c0d0f9750d3c",
   "newDaoTx": "0x3346246f09f91ffbc260b6c300b11ababce9f5ca54d7880a277860961f343112",
   "ldo": {
     "address": "0x14ae7daeecdf57034f3E9db8564e46Dba8D97344",
