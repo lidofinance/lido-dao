@@ -10,7 +10,7 @@
   "apmRegistryFactoryAddress": "0xa0BC4B67F5FacDE4E50EAFF48691Cfc43F4E280A",
   "miniMeTokenFactoryAddress": "0x909d05f384d0663ed4be59863815ab43b4f347ec",
   "aragonIDAddress": "0x546aa2eae2514494eeadb7bbb35243348983c59d",
-  "multisigAddress": "0x55Bc991b2edF3DDb4c520B222bE4F378418ff0fA",
+  "deployer": "0x55Bc991b2edF3DDb4c520B222bE4F378418ff0fA",
   "daoInitialSettings": {
     "token": {
       "name": "Lido DAO Token",

@@ -1,6 +1,5 @@
 {
-  "multisigAddress": "",
-  "owner": "",
+  "deployer": "",
   "gateSeal": {
     "factoryAddress": "",
     "sealDuration": 518400,

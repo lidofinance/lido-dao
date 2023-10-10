@@ -15,7 +15,7 @@ const REQUIRED_NET_STATE = [
   'ensAddress',
   'lidoApmEnsName',
   'lidoApmEnsRegDurationSec',
-  'multisigAddress',
+  'deployer',
   'lidoTemplate'
 ]
 
@@ -53,7 +53,7 @@ async function deployTemplate({ web3, artifacts }) {
   log(`TLD node: ${chalk.yellow(TLD)} (${tldNode})`)
   log(`Label: ${chalk.yellow(domainLabel)} (${labelHash})`)
 
-  if ((await ens.owner(node)) !== state.multisigAddress && (await ens.owner(tldNode)) !== state.multisigAddress) {
+  if ((await ens.owner(node)) !== state.deployer && (await ens.owner(tldNode)) !== state.deployer) {
     const tldResolverAddr = await ens.resolver(tldNode)
     log(`Using TLD resolver:`, yl(tldResolverAddr))
     const tldResolver = await artifacts.require('IInterfaceResolver').at(tldResolverAddr)
@@ -100,22 +100,22 @@ async function deployTemplate({ web3, artifacts }) {
 
     log.splitter()
 
-    await log.makeTx(controller, 'commit', [commitment], { from: state.multisigAddress })
+    await log.makeTx(controller, 'commit', [commitment], { from: state.deployer })
 
     await log.makeTx(controller, 'register', [domainLabel, domainOwner, domainRegDuration, salt], {
-      from: state.multisigAddress,
+      from: state.deployer,
       value: '0x' + registerTxValue.toString(16),
     })
 
     log.splitter()
   } else {
     log(`ENS domain new owner:`, yl(domainOwner))
-    if ((await ens.owner(node)) === state.multisigAddress) {
-      log(`Transferring name ownership from owner ${chalk.yellow(state.multisigAddress)} to template ${chalk.yellow(domainOwner)}`)
-      await log.makeTx(ens, 'setOwner', [node, domainOwner], { from: state.multisigAddress })
+    if ((await ens.owner(node)) === state.deployer) {
+      log(`Transferring name ownership from owner ${chalk.yellow(state.deployer)} to template ${chalk.yellow(domainOwner)}`)
+      await log.makeTx(ens, 'setOwner', [node, domainOwner], { from: state.deployer })
     } else {
       log(`Creating the subdomain and assigning it to template ${chalk.yellow(domainOwner)}`)
-      await log.makeTx(ens, 'setSubnodeOwner', [tldNode, labelHash, domainOwner], { from: state.multisigAddress })
+      await log.makeTx(ens, 'setSubnodeOwner', [tldNode, labelHash, domainOwner], { from: state.deployer })
     }
 
     log.splitter()

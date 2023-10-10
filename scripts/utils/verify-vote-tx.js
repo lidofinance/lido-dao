@@ -7,7 +7,6 @@ const { readNetworkState, assertRequiredNetworkState } = require('../helpers/per
 const TX = process.env.TX
 const REQUIRED_NET_STATE = [
   'ensAddress',
-  'multisigAddress',
   'lidoBaseDeployTx',
   'oracleBaseDeployTx',
   'nodeOperatorsRegistryBaseDeployTx',

@@ -126,7 +126,7 @@ async function createVoting({ web3, artifacts }) {
 
   await saveCallTxData(votingDesc, tokenManager, 'forward', txName, {
     arguments: [votingCallData],
-    from: DEPLOYER || state.multisigAddress
+    from: DEPLOYER || state.deployer
   })
 
   log.splitter()

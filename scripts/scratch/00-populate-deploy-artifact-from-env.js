@@ -26,8 +26,7 @@ async function saveDeployParameters({ web3, artifacts }) {
     ? ZERO_ADDRESS : ''
 
   state.chainId = CHAIN_ID
-  state.multisigAddress = DEPLOYER
-  state.owner = DEPLOYER
+  state.deployer = DEPLOYER
   state.gateSeal = {
     ...state.gateSeal,
     factoryAddress: GATE_SEAL_FACTORY,

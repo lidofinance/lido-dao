@@ -17,6 +17,7 @@ const REQUIRED_NET_STATE = [
   'vestingParams',
   `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`,
   'stakingRouter',
+  'deployer',
 ]
 
 async function finalizeDAO({ web3, artifacts }) {
@@ -68,7 +69,7 @@ async function finalizeDAO({ web3, artifacts }) {
     state.daoAragonId,
     state.vestingParams.unvestedTokensAmount,
     state.stakingRouter.address
-  ], { from: state.multisigAddress })
+  ], { from: state.deployer })
 }
 
 module.exports = runOrWrapScript(finalizeDAO, module)

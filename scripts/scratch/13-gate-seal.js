@@ -6,7 +6,7 @@ const { getEventArgument } = require('@aragon/contract-helpers-test')
 const { APP_NAMES } = require('../constants')
 
 const REQUIRED_NET_STATE = [
-  "multisigAddress",
+  "deployer",
   "gateSeal",
   "validatorsExitBusOracle",
   "withdrawalQueueERC721",
@@ -25,7 +25,7 @@ async function deployNewContracts({ web3, artifacts }) {
   }
 
   const gateSealFactoryAddress = state.gateSeal.factoryAddress
-  const deployer = state.multisigAddress
+  const deployer = state.deployer
   const sealables = [
     state.withdrawalQueueERC721.proxy.address,
     state.validatorsExitBusOracle.proxy.address,

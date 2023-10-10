@@ -15,7 +15,7 @@ const REQUIRED_NET_STATE = [
   'miniMeTokenFactoryAddress',
   'aragonIDAddress',
   'apmRegistryFactoryAddress',
-  'multisigAddress',
+  'deployer',
   'lidoTemplate',
   `app:${APP_NAMES.LIDO}`,
   `app:${APP_NAMES.ORACLE}`,
@@ -38,7 +38,7 @@ async function deployTemplate({ web3, artifacts }) {
     log(`Checking...`)
     await assertDeployedBytecode(daoTemplate.address, 'LidoTemplate')
     const templateConfig = await daoTemplate.getConfig()
-    assert.addressEqual(templateConfig._owner, state.multisigAddress, 'tmpl: owner')
+    assert.addressEqual(templateConfig._owner, state.deployer, 'tmpl: owner')
     assert.addressEqual(templateConfig._daoFactory, state.daoFactoryAddress, 'tmpl: daoFactory')
     assert.addressEqual(templateConfig._ens, state.ensAddress, 'tmpl: ens')
     assert.addressEqual(templateConfig._miniMeFactory, state.miniMeTokenFactoryAddress, 'tmpl: miniMeFactory')

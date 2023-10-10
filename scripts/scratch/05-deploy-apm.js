@@ -10,7 +10,7 @@ const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = re
 const { getENSNodeOwner } = require('../components/ens')
 
 const REQUIRED_NET_STATE = [
-  'multisigAddress',
+  'deployer',
   'lidoTemplate',
   'ensAddress',
   'lidoApmEnsName',
@@ -56,7 +56,7 @@ async function deployAPM({ web3, artifacts }) {
 
   logSplitter()
 
-  const from = state.multisigAddress
+  const from = state.deployer
 
   const lidoApmDeployArguments = [parentHash, subHash]
   const receipt = await log.makeTx(template, 'deployLidoAPM', lidoApmDeployArguments, { from })

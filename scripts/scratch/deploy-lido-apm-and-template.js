@@ -14,8 +14,7 @@ const DAO_TEMPLATE_ENS_LABEL = process.env.DAO_TEMPLATE_ENS_LABEL || 'template'
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
 
 const REQUIRED_NET_STATE = [
-  'owner',
-  'multisigAddress',
+  'deployer',
   'ensAddress',
   'apmRegistryFactoryAddress',
   'daoFactoryAddress',
@@ -42,7 +41,7 @@ async function deployApmAndTemplate({
     throw new Error(`missing following fields from network state file, make sure you've run previous deployment steps: ${missingDesc}`)
   }
 
-  log(`Owner: ${chalk.yellow(state.owner)}`)
+  log(`Deployer: ${chalk.yellow(state.deployer)}`)
 
   const ens = await artifacts.require('ENS').at(state.ensAddress)
   log(`Using ENS: ${chalk.yellow(ens.address)}`)
@@ -64,7 +63,7 @@ async function deployApmAndTemplate({
     artifacts,
     ens,
     apmRegistryFactory,
-    owner: state.owner,
+    owner: state.deployer,
     labelName: state.lidoEnsLabelName,
     apmRegistryAddress: state.lidoApmAddress
   })
@@ -79,7 +78,7 @@ async function deployApmAndTemplate({
   const daoTemplateResults = await deployDaoTemplate({
     artifacts,
     ens,
-    owner: state.owner,
+    owner: state.deployer,
     lidoEnsNodeName: state.lidoEnsNodeName,
     lidoApmAddress: state.lidoApmAddress,
     daoFactoryAddress: state.daoFactoryAddress,

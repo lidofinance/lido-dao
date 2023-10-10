@@ -1,6 +1,5 @@
 {
-  "multisigAddress": "0x22896Bfc68814BFD855b1a167255eE497006e730",
-  "owner": "0x22896Bfc68814BFD855b1a167255eE497006e730",
+  "deployer": "0x22896Bfc68814BFD855b1a167255eE497006e730",
   "gateSeal": {
     "factoryAddress": "0x1134F7077055b0B3559BE52AfeF9aA22A0E1eEC2",
     "sealDuration": 518400,

@@ -18,7 +18,7 @@ require('@aragon/buidler-aragon/dist/bootstrap-paths')
 
 
 const REQUIRED_NET_STATE = [
-  'multisigAddress',
+  'deployer',
 ]
 
 
@@ -27,7 +27,7 @@ async function deployAragonStdApps({ web3, artifacts, }) {
   const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
-  const deployer = state["multisigAddress"]
+  const deployer = state.deployer
   await deployImplementation("app:aragon-agent", "Agent", deployer)
   await deployImplementation("app:aragon-finance", "Finance", deployer)
   await deployImplementation("app:aragon-token-manager", "TokenManager", deployer)
