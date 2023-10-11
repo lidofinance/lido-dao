@@ -12,7 +12,7 @@ const REQUIRED_NET_STATE = [
   'miniMeTokenFactoryAddress',
   'aragonIDAddress',
   'apmRegistryFactoryAddress',
-  'multisigAddress'
+  'deployer'
 ]
 
 async function deployTemplate({ web3, artifacts }) {
@@ -25,7 +25,7 @@ async function deployTemplate({ web3, artifacts }) {
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   const daoTemplateConstructorArgs = [
-    state.multisigAddress,
+    state.deployer,
     state.daoFactoryAddress,
     state.ensAddress,
     state.miniMeTokenFactoryAddress,
@@ -35,14 +35,14 @@ async function deployTemplate({ web3, artifacts }) {
 
   log.splitter()
 
-  await deployWithoutProxy('lidoTemplate', 'LidoTemplate', state.multisigAddress, daoTemplateConstructorArgs)
+  await deployWithoutProxy('lidoTemplate', 'LidoTemplate', state.deployer, daoTemplateConstructorArgs)
   const daoTemplateDeployBlock = (await ethers.provider.getBlock('latest')).number
 
-  await deployImplementation(`app:${APP_NAMES.LIDO}`, 'Lido', state.multisigAddress)
+  await deployImplementation(`app:${APP_NAMES.LIDO}`, 'Lido', state.deployer)
 
-  await deployImplementation(`app:${APP_NAMES.ORACLE}`, 'LegacyOracle', state.multisigAddress)
+  await deployImplementation(`app:${APP_NAMES.ORACLE}`, 'LegacyOracle', state.deployer)
 
-  await deployImplementation(`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`, 'NodeOperatorsRegistry', state.multisigAddress)
+  await deployImplementation(`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`, 'NodeOperatorsRegistry', state.deployer)
 
   persistNetworkState2(network.name, netId, readNetworkState(network.name, netId), {
     lidoTemplate: {

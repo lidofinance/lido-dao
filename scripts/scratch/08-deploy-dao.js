@@ -16,7 +16,7 @@ const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
 const REQUIRED_NET_STATE = [
   'ensAddress',
-  'multisigAddress',
+  'deployer',
   'lidoTemplate',
   `app:${APP_NAMES.LIDO}`,
   `app:${APP_NAMES.ORACLE}`,
@@ -68,7 +68,7 @@ async function deployDAO({ web3, artifacts }) {
     daoInitialSettings.token.name,
     daoInitialSettings.token.symbol,
     votingSettings,
-  ], { from: state.multisigAddress })
+  ], { from: state.deployer })
   state.lidoTemplateNewDaoTx = receipt.tx
   persistNetworkState(network.name, netId, state)
 }

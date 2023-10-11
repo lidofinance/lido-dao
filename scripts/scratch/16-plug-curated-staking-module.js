@@ -8,8 +8,7 @@ const { APP_NAMES } = require('../constants')
 const REQUIRED_NET_STATE = [
   "stakingRouter",
   "app:node-operators-registry",
-  "owner",
-
+  "deployer",
   "app:aragon-agent",
   `app:${APP_NAMES.LIDO}`,
   `app:${APP_NAMES.ORACLE}`,
@@ -40,11 +39,11 @@ async function deployNewContracts({ web3, artifacts }) {
   let state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
-  const owner = state.owner
+  const deployer = state.deployer
   const stakingRouter = await artifacts.require('StakingRouter').at(state.stakingRouter.address)
   const nodeOperatorsRegistry = await artifacts.require('NodeOperatorsRegistry').at(state['app:node-operators-registry'].proxy.address)
 
-  await log.makeTx(stakingRouter, 'grantRole', [STAKING_MODULE_MANAGE_ROLE, owner], { from: owner })
+  await log.makeTx(stakingRouter, 'grantRole', [STAKING_MODULE_MANAGE_ROLE, deployer], { from: deployer })
 
   await log.makeTx(stakingRouter, 'addStakingModule', [
     state.nodeOperatorsRegistry.parameters.stakingModuleTypeId,
@@ -52,8 +51,8 @@ async function deployNewContracts({ web3, artifacts }) {
     NOR_STAKING_MODULE_TARGET_SHARE_BP,
     NOR_STAKING_MODULE_MODULE_FEE_BP,
     NOR_STAKING_MODULE_TREASURY_FEE_BP,
-  ], { from: owner })
-  await log.makeTx(stakingRouter, 'renounceRole', [STAKING_MODULE_MANAGE_ROLE, owner], { from: owner })
+  ], { from: deployer })
+  await log.makeTx(stakingRouter, 'renounceRole', [STAKING_MODULE_MANAGE_ROLE, deployer], { from: deployer })
 }
 
 module.exports = runOrWrapScript(deployNewContracts, module)

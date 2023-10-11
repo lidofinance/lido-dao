@@ -78,12 +78,12 @@ async function createVoting({ web3, artifacts }) {
 
   const txName = `tx-31-start-protocol.json`
   const votingDesc = `1) Unpause protocol
-2) Unpause staking 
+2) Unpause staking
 3) Set daily staking limit to ${fromE18ToString(dailyStakingLimit)}`
 
   await saveCallTxData(votingDesc, tokenManager, 'forward', txName, {
     arguments: [votingCallData],
-    from: DEPLOYER || state.multisigAddress
+    from: DEPLOYER || state.deployer
   })
 
   log.splitter()

@@ -12,7 +12,7 @@ const DULL_CONTENT_URI = "0x0000000000000000000000000000000000000000000000000000
 
 
 const REQUIRED_NET_STATE = [
-  'multisigAddress',
+  'deployer',
   'lidoTemplate',
   `app:${APP_NAMES.LIDO}`,
   `app:${APP_NAMES.ORACLE}`,
@@ -60,7 +60,7 @@ async function createAppRepos({ web3, artifacts }) {
     oracleAppState.implementation.address,
     DULL_CONTENT_URI,
   ]
-  const from = state.multisigAddress
+  const from = state.deployer
 
   console.log({arguments, from})
 
@@ -77,6 +77,7 @@ async function createAppRepos({ web3, artifacts }) {
 
   const aragonStdAppsReceipt = await log.makeTx(template, 'createStdAragonRepos', createStdAragonReposArguments, { from })
   console.log(`=== Aragon Std Apps Repos (Agent, Finance, TokenManager, Voting deployed: ${aragonStdAppsReceipt.tx} ===`)
+  state.lidoTemplateCreateStdAppReposTx = aragonStdAppsReceipt.tx
 
   logSplitter()
   persistNetworkState(network.name, netId, state)

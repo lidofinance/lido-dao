@@ -1,8 +1,7 @@
 {
-  "multisigAddress": "",
-  "owner": "",
+  "deployer": null,
   "gateSeal": {
-    "factoryAddress": "",
+    "factoryAddress": null,
     "sealDuration": 518400,
     "expiryTimestamp": 1714521600
   },
@@ -12,8 +11,8 @@
   "chainSpec": {
     "slotsPerEpoch": 32,
     "secondsPerSlot": 12,
-    "genesisTime": 0,
-    "depositContract": ""
+    "genesisTime": null,
+    "depositContract": null
   },
   "daoInitialSettings": {
     "voting": {
@@ -97,6 +96,19 @@
       "maxNodeOperatorsPerExtraDataItemCount": 100,
       "requestTimestampMargin": 128,
       "maxPositiveTokenRebase": 5000000
+    }
+  },
+  "oracleDaemonConfig": {
+    "parameters": {
+      "NORMALIZED_CL_REWARD_PER_EPOCH": 64,
+      "NORMALIZED_CL_REWARD_MISTAKE_RATE_BP": 1000,
+      "REBASE_CHECK_NEAREST_EPOCH_DISTANCE": 1,
+      "REBASE_CHECK_DISTANT_EPOCH_DISTANCE": 23,
+      "VALIDATOR_DELAYED_TIMEOUT_IN_SLOTS": 7200,
+      "VALIDATOR_DELINQUENT_TIMEOUT_IN_SLOTS": 28800,
+      "NODE_OPERATOR_NETWORK_PENETRATION_THRESHOLD_BP": 100,
+      "PREDICTION_DURATION_IN_SLOTS": 50400,
+      "FINALIZATION_MAX_NEGATIVE_REBASE_EPOCH_SHIFT": 1350
     }
   },
   "nodeOperatorsRegistry": {

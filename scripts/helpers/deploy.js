@@ -235,7 +235,7 @@ async function deployImplementation(nameInState, artifactName, deployer, constru
     address: contract.address,
     constructorArgs: constructorArgs,
   }
-  persistNetworkState(network.name, netId, state)
+  persistNetworkState2(network.name, netId, state)
   return contract
 }
 

@@ -26,7 +26,7 @@ async function upgradeApp({ web3, artifacts, appName = APP }) {
   logSplitter()
 
   await saveDeployTx(appArtifact, `tx-13-1-deploy-${appName}-base.json`, {
-    from: DEPLOYER || state.multisigAddress
+    from: DEPLOYER || state.deployer
   })
 
   logSplitter()

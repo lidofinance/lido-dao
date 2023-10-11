@@ -25,14 +25,14 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
 
   let state = readNetworkState(network.name, netId)
 
-  if (state.owner) {
-    const lowercaseOwner = state.owner.toLowerCase()
+  if (state.deployer) {
+    const lowercaseOwner = state.deployer.toLowerCase()
     if (!accounts.some((acc) => acc.toLowerCase() === lowercaseOwner)) {
-      throw new Error(`owner account ${state.owner} is missing from provided accounts`)
+      throw new Error(`owner account ${state.deployer} is missing from provided accounts`)
     }
   } else {
-    state.owner = accounts[0]
-    log(`Setting owner to the first provided account: ${chalk.yellow(state.owner)}`)
+    state.deployer = accounts[0]
+    log(`Setting owner to the first provided account: ${chalk.yellow(state.deployer)}`)
   }
 
   if (!state.aragonEnsLabelName) {
@@ -44,7 +44,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
   logHeader(`ENS`)
   const ensResults = await useOrDeployENS({
     artifacts,
-    owner: state.owner,
+    owner: state.deployer,
     ensAddress: state.ensAddress
   })
   state = readNetworkState(network.name, netId)
@@ -54,7 +54,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
   logHeader(`DAO factory`)
   const daoFactoryResults = await useOrDeployDaoFactory({
     artifacts,
-    owner: state.owner,
+    owner: state.deployer,
     daoFactoryAddress: state.daoFactoryAddress
   })
   state = readNetworkState(network.name, netId)
@@ -64,7 +64,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
   logHeader(`APM registry factory`)
   const apmRegistryFactoryResults = await useOrDeployAPMRegistryFactory({
     artifacts,
-    owner: state.owner,
+    owner: state.deployer,
     ens: ensResults.ens,
     daoFactory: daoFactoryResults.daoFactory,
     apmRegistryFactoryAddress: state.apmRegistryFactoryAddress,
@@ -80,7 +80,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
   const apmResults = await deployAPM({
     web3,
     artifacts,
-    owner: state.owner,
+    owner: state.deployer,
     labelName: state.aragonEnsLabelName,
     ens: ensResults.ens,
     apmRegistryFactory: apmRegistryFactoryResults.apmRegistryFactory,
@@ -97,7 +97,7 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
   logHeader(`MiniMeTokenFactory`)
   const tokenFactoryResults = await deployMiniMeTokenFactory({
     artifacts,
-    owner: state.owner,
+    owner: state.deployer,
     miniMeTokenFactoryAddress: state.miniMeTokenFactoryAddress
   })
   state = readNetworkState(network.name, netId)
@@ -107,29 +107,13 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
   logHeader('AragonID')
   const aragonIDResults = await deployAragonID({
     artifacts,
-    owner: state.owner,
+    owner: state.deployer,
     ens: ensResults.ens,
     aragonIDAddress: state.aragonIDAddress
   })
   state = readNetworkState(network.name, netId)
   updateNetworkState(state, aragonIDResults)
   persistNetworkState(network.name, netId, state)
-
-  // state = readNetworkState(network.name, netId)
-  // state.apmRegistry = {
-  //   address: apmResults.apmRegistry.address,
-  //   ensNodeName: apmResults.ensNodeName,
-  //   ensNode: apmResults.ensNode,
-  // }
-  // state.aragonId = {
-  //   address: aragonIDResults.aragonID.address,
-  //   ensNodeName: aragonIDResults.aragonIDEnsNodeName,
-  //   ensNode: aragonIDResults.aragonIDEnsNode,
-  // }
-  // state.ens = {
-  //   address: ensResults.ens.address,
-  // }
-  // persistNetworkState(network.name, netId, state)
 }
 
 async function useOrDeployENS({ artifacts, owner, ensAddress }) {
@@ -199,15 +183,7 @@ async function useOrDeployAPMRegistryFactory({
 
 async function deployDAOFactory({ artifacts, owner, kernelBaseAddress, aclBaseAddress, withEvmScriptRegistryFactory }) {
   const kernelBase = await deployImplementation('aragon-kernel', 'Kernel', owner, [true])
-  // const kernelBase = await useOrDeploy(
-  //   'Kernel',
-  //   artifacts,
-  //   kernelBaseAddress,
-  //   // immediately petrify
-  //   withArgs(true, { from: owner })
-  // )
 
-  // const aclBase = await useOrDeploy('ACL', artifacts, aclBaseAddress, withArgs({ from: owner }))
   const aclBase = await deployImplementation('aragon-acl', 'ACL', owner)
 
   const evmScriptRegistryFactory = withEvmScriptRegistryFactory

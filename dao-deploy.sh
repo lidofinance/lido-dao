@@ -37,13 +37,13 @@ cp ${NETWORK_STATE_DEFAULTS_FILE} ${NETWORK_STATE_FILE}
 yarn hardhat --network $NETWORK run ./scripts/scratch/00-populate-deploy-artifact-from-env.js  --no-compile
 
 # It does not deploy DepositContract if it is specified in deployed-${NETWORK}-defaults.json
-yarn hardhat --network $NETWORK run ./scripts/scratch/deploy-beacon-deposit-contract.js --no-compile
+yarn hardhat --network $NETWORK run ./scripts/scratch/deploy-deposit-contract.js --no-compile
 msg "Deposit contract deployed or is specified."
 
-yarn deploy:aragon-env
+yarn hardhat --network $NETWORK run --no-compile ./scripts/scratch/deploy-aragon-env.js
 msg "Aragon ENV deployed."
 
-yarn deploy:aragon-std-apps-custom
+yarn hardhat run  --no-compile ./scripts/scratch/deploy-aragon-std-apps.js  --network $NETWORK
 msg "Aragon STD apps deployed."
 
 yarn hardhat --network $NETWORK run ./scripts/scratch/01-deploy-lido-template-and-bases.js --no-compile
