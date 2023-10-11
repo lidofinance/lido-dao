@@ -44,7 +44,7 @@ async function deployEmptyProxy({ web3, artifacts, trgAppName = APP_TRG }) {
   }
 
   if (trgProxyAddress && (await web3.eth.getCode(trgProxyAddress)) !== '0x') {
-    log.error(`Target app proxy is already deployed at`)
+    log.error(`Target app proxy is already deployed at ${yl(trgProxyAddress)}`)
     return
   }
 
