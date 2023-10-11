@@ -39,7 +39,6 @@ const REQUIRED_NET_STATE = [
   'ensAddress',
   'lidoApmAddress',
   'lidoApmEnsName',
-  'daoAddress',
   'lidoLocator',
   `app:${APP_NAMES.ARAGON_VOTING}`,
   `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`,
@@ -56,6 +55,11 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   const deployer = await getDeployer(web3, DEPLOYER)
   const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE.concat([`app:${srcAppName}`, `app:${trgAppName}`]))
+
+  const kernelAddress = state.daoAddress || readStateAppAddress(state, `aragon-kernel`)
+  if (!kernelAddress) {
+    throw new Error(`No Aragon kernel (DAO address) found!`)
+  }
 
   log.splitter()
 
@@ -133,7 +137,7 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   const tokenManagerAddress = readStateAppAddress(state, `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`)
   const srAddress = readStateAppAddress(state, 'stakingRouter')
 
-  const kernel = await artifacts.require('Kernel').at(state.daoAddress)
+  const kernel = await artifacts.require('Kernel').at(kernelAddress)
   const aclAddress = await kernel.acl()
   const acl = await artifacts.require('ACL').at(aclAddress)
   const stakingRouter = await artifacts.require('StakingRouter').at(srAddress)
