@@ -114,22 +114,6 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
   state = readNetworkState(network.name, netId)
   updateNetworkState(state, aragonIDResults)
   persistNetworkState(network.name, netId, state)
-
-  // state = readNetworkState(network.name, netId)
-  // state.apmRegistry = {
-  //   address: apmResults.apmRegistry.address,
-  //   ensNodeName: apmResults.ensNodeName,
-  //   ensNode: apmResults.ensNode,
-  // }
-  // state.aragonId = {
-  //   address: aragonIDResults.aragonID.address,
-  //   ensNodeName: aragonIDResults.aragonIDEnsNodeName,
-  //   ensNode: aragonIDResults.aragonIDEnsNode,
-  // }
-  // state.ens = {
-  //   address: ensResults.ens.address,
-  // }
-  // persistNetworkState(network.name, netId, state)
 }
 
 async function useOrDeployENS({ artifacts, owner, ensAddress }) {
@@ -199,15 +183,7 @@ async function useOrDeployAPMRegistryFactory({
 
 async function deployDAOFactory({ artifacts, owner, kernelBaseAddress, aclBaseAddress, withEvmScriptRegistryFactory }) {
   const kernelBase = await deployImplementation('aragon-kernel', 'Kernel', owner, [true])
-  // const kernelBase = await useOrDeploy(
-  //   'Kernel',
-  //   artifacts,
-  //   kernelBaseAddress,
-  //   // immediately petrify
-  //   withArgs(true, { from: owner })
-  // )
 
-  // const aclBase = await useOrDeploy('ACL', artifacts, aclBaseAddress, withArgs({ from: owner }))
   const aclBase = await deployImplementation('aragon-acl', 'ACL', owner)
 
   const evmScriptRegistryFactory = withEvmScriptRegistryFactory

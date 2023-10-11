@@ -1,8 +1,8 @@
 const chalk = require('chalk')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
-const { log, logSplitter, logWideSplitter, logHeader, logTx, logDeploy } = require('../helpers/log')
-const { deploy, useOrDeploy, withArgs } = require('../helpers/deploy')
+const { log, logSplitter, logWideSplitter } = require('../helpers/log')
+const { deploy, withArgs } = require('../helpers/deploy')
 const { readNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'

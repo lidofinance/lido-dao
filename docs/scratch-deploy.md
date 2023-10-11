@@ -2,14 +2,15 @@
 
 ## Requirements
 
-* node.js v16 (v18 might work fine as well)
+* node.js v16 or v18 (later might work fine as well, but not tested)
 * yarn
 
 ## General info
 
-The repo contains bash scripts which allow to deploy the DAO under multiple environments:
+The repo contains bash scripts for deployment of the DAO under multiple environments:
 - local node (ganache, anvil, hardhat network) - `dao-local-deploy.sh`
 - goerli testnet - `dao-goerli-deploy.sh`
+- holesky testnet - `dao-holesky-deploy.sh`
 
 The protocol has a bunch of parameters to configure for the scratch deployment. The default configuration is stored in files `deployed-<deploy env>-defaults.json`, where `<deploy env>` is the target environment. Currently there is single default configuration `deployed-testnet-defaults.json` suitable for testnet deployments. Compared to the mainnet configuration, it has lower vote durations, more frequent oracle report cycles, etc. Part of the parameters require further specification -- they are marked with `null` values.
 During the deployment, the "default" configuration is copied to `deployed-<network name>.json`, where `<network name>` is the name of a network configuration defined in `hardhat.config.js`. The file `deployed-<network name>.json` gets populated with the contract addresses and transaction hashes during the deployment process.
@@ -84,10 +85,6 @@ To run hardhat node execute:
 yarn hardhat node
 ```
 
-### Ganache
-
-TODO
-
 ## Goerli deployment
 
 To do Goerli deployment, the following parameters must be set up via env variables:
@@ -136,12 +133,6 @@ The workaround used during Holešky deployment is to deploy auxiliary instances 
 NB, that some contracts require additional auxiliary contract to be deployed. Namely, constructor of `AppProxyPinned` depends on proxy implementation ("base" in Aragon terms) contract with `initialize()` function and `Kernel` contract which must return the implementation by call `kernel().getApp(KERNEL_APP_BASES_NAMESPACE, _appId)`. See `@aragon/os/contracts/apps/AppProxyBase.sol` for the details.
 
 ## Post deploy initialization
-
-### Post deploy state
-
-TODO
-
-TODO: paused: staking, steth transfers, accounting  oracle reports, ... what else?
 
 ### Initialization up to fully operational state
 
