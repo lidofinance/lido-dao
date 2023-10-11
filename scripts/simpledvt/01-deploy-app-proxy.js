@@ -30,8 +30,13 @@ async function deployEmptyProxy({ web3, artifacts, trgAppName = APP_TRG }) {
   const trgAppFullName = `${trgAppName}.${state.lidoApmEnsName}`
   const trgAppId = namehash(trgAppFullName)
 
+  const kernelAddress = state.daoAddress || readStateAppAddress(state, `aragon-kernel`)
+  if (!kernelAddress) {
+    throw new Error(`No Aragon kernel (DAO address) found!`)
+  }
+
   log.splitter()
-  log(`DAO:`, yl(state.daoAddress))
+  log(`DAO:`, yl(kernelAddress))
   log(`Target App:`, yl(trgAppName))
   log(`Target App ENS:`, yl(trgAppFullName))
   log(`Target App ID:`, yl(trgAppId))
@@ -48,11 +53,6 @@ async function deployEmptyProxy({ web3, artifacts, trgAppName = APP_TRG }) {
     return
   }
 
-  const kernelAddress = state.daoAddress || readStateAppAddress(state, `aragon-kernel`)
-  if (!kernelAddress) {
-    log.error(`No Aragon kernel found!`)
-    return
-  }
   const kernel = await artifacts.require('Kernel').at(kernelAddress)
   const tx = await log.tx(
     `Deploying proxy for ${trgAppName}`,
