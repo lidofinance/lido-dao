@@ -36,8 +36,8 @@ function verify {
 
 verify dummyEmptyContract
 verify burner
-verify hashConsensusForAccounting
-verify hashConsensusForValidatorsExitBus
+verify hashConsensusForAccountingOracle
+verify hashConsensusForValidatorsExitBusOracle
 verify accountingOracle.implementation
 verify accountingOracle.proxy
 verify validatorsExitBusOracle.implementation

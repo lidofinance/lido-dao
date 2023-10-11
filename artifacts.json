@@ -1,5 +1,12 @@
 [
   {
+    "artifactPath": "artifacts/contracts/0.4.24/template/LidoTemplate.sol/LidoTemplate.json",
+    "sourcePath": "contracts/0.4.24/template/LidoTemplate.sol",
+    "name": "LidoTemplate",
+    "address": "0x752350797CB92Ad3BF1295Faf904B27585e66BF5",
+    "txHash": "0xdcd4ebe028aa3663a1fe8bbc92ae8489045e29d2a6ef5284083d9be5c3fa5f19"
+  },
+  {
     "artifactPath": "artifacts/contracts/0.4.24/Lido.sol/Lido.json",
     "sourcePath": "contracts/0.4.24/Lido.sol",
     "name": "Lido",

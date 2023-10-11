@@ -7,8 +7,8 @@ const REQUIRED_NET_STATE = [
   "accountingOracle",
   "burner",
   "daoInitialSettings",
-  "hashConsensusForAccounting",
-  "hashConsensusForValidatorsExitBus",
+  "hashConsensusForAccountingOracle",
+  "hashConsensusForValidatorsExitBusOracle",
   "lidoLocator",
   "stakingRouter",
   "validatorsExitBusOracle",
@@ -52,19 +52,19 @@ async function deployNewContracts({ web3, artifacts }) {
   const agent = state["app:aragon-agent"].proxy.address
 
   await transferOZAdmin('Burner', state.burner.address, deployer, agent)
-  await transferOZAdmin('HashConsensus', state.hashConsensusForAccounting.address, deployer, agent)
-  await transferOZAdmin('HashConsensus', state.hashConsensusForValidatorsExitBus.address, deployer, agent)
-  await transferOZAdmin('StakingRouter', state.stakingRouter.address, deployer, agent)
-  await transferOZAdmin('AccountingOracle', state.accountingOracle.address, deployer, agent)
-  await transferOZAdmin('ValidatorsExitBusOracle', state.validatorsExitBusOracle.address, deployer, agent)
-  await transferOZAdmin('WithdrawalQueueERC721', state.withdrawalQueueERC721.address, deployer, agent)
+  await transferOZAdmin('HashConsensus', state.hashConsensusForAccountingOracle.address, deployer, agent)
+  await transferOZAdmin('HashConsensus', state.hashConsensusForValidatorsExitBusOracle.address, deployer, agent)
+  await transferOZAdmin('StakingRouter', state.stakingRouter.proxy.address, deployer, agent)
+  await transferOZAdmin('AccountingOracle', state.accountingOracle.proxy.address, deployer, agent)
+  await transferOZAdmin('ValidatorsExitBusOracle', state.validatorsExitBusOracle.proxy.address, deployer, agent)
+  await transferOZAdmin('WithdrawalQueueERC721', state.withdrawalQueueERC721.proxy.address, deployer, agent)
   await transferOZAdmin('OracleDaemonConfig', state.oracleDaemonConfig.address, deployer, agent)
 
-  await changeOssifiableProxyAdmin(state.lidoLocator.address, deployer, agent)
-  await changeOssifiableProxyAdmin(state.stakingRouter.address, deployer, agent)
-  await changeOssifiableProxyAdmin(state.accountingOracle.address, deployer, agent)
-  await changeOssifiableProxyAdmin(state.validatorsExitBusOracle.address, deployer, agent)
-  await changeOssifiableProxyAdmin(state.withdrawalQueueERC721.address, deployer, agent)
+  await changeOssifiableProxyAdmin(state.lidoLocator.proxy.address, deployer, agent)
+  await changeOssifiableProxyAdmin(state.stakingRouter.proxy.address, deployer, agent)
+  await changeOssifiableProxyAdmin(state.accountingOracle.proxy.address, deployer, agent)
+  await changeOssifiableProxyAdmin(state.validatorsExitBusOracle.proxy.address, deployer, agent)
+  await changeOssifiableProxyAdmin(state.withdrawalQueueERC721.proxy.address, deployer, agent)
 
   await changeDepositSecurityModuleAdmin(state.depositSecurityModule.address, deployer, agent)
 }

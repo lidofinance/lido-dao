@@ -14,8 +14,8 @@ const REQUIRED_NET_STATE = [
   "daoInitialSettings",
   "oracleReportSanityChecker",
   "burner",
-  "hashConsensusForAccounting",
-  "hashConsensusForValidatorsExitBus",
+  "hashConsensusForAccountingOracle",
+  "hashConsensusForValidatorsExitBusOracle",
   "withdrawalQueueERC721",
 ]
 
@@ -31,11 +31,11 @@ async function deployNewContracts({ web3, artifacts }) {
   const agentAddress = state["app:aragon-agent"].proxy.address
   const treasuryAddress = agentAddress
   const chainSpec = state["chainSpec"]
-  const depositSecurityModuleParams = state["depositSecurityModule"].parameters
-  const burnerParams = state["burner"].parameters
-  const hashConsensusForAccountingParams = state["hashConsensusForAccounting"].parameters
-  const hashConsensusForExitBusParams = state["hashConsensusForValidatorsExitBus"].parameters
-  const withdrawalQueueERC721Params = state["withdrawalQueueERC721"].parameters
+  const depositSecurityModuleParams = state["depositSecurityModule"].deployParameters
+  const burnerParams = state["burner"].deployParameters
+  const hashConsensusForAccountingParams = state["hashConsensusForAccountingOracle"].deployParameters
+  const hashConsensusForExitBusParams = state["hashConsensusForValidatorsExitBusOracle"].deployParameters
+  const withdrawalQueueERC721Params = state["withdrawalQueueERC721"].deployParameters
 
   if (!DEPLOYER) {
     throw new Error('Deployer is not specified')
@@ -45,7 +45,7 @@ async function deployNewContracts({ web3, artifacts }) {
   const admin = DEPLOYER
   const deployer = DEPLOYER
 
-  const sanityChecks = state["oracleReportSanityChecker"].parameters
+  const sanityChecks = state["oracleReportSanityChecker"].deployParameters
   logWideSplitter()
 
   if (!chainSpec.depositContract) {
@@ -203,7 +203,7 @@ async function deployNewContracts({ web3, artifacts }) {
     admin, // admin
     accountingOracleAddress,  // reportProcessor
   ]
-  await deployWithoutProxy("hashConsensusForAccounting", "HashConsensus", deployer, hashConsensusForAccountingArgs)
+  await deployWithoutProxy("hashConsensusForAccountingOracle", "HashConsensus", deployer, hashConsensusForAccountingArgs)
   logWideSplitter()
 
   //
@@ -230,7 +230,7 @@ async function deployNewContracts({ web3, artifacts }) {
     admin, // admin
     validatorsExitBusOracleAddress,  // reportProcessor
   ]
-  await deployWithoutProxy("hashConsensusForValidatorsExitBus", "HashConsensus", deployer, hashConsensusForExitBusArgs)
+  await deployWithoutProxy("hashConsensusForValidatorsExitBusOracle", "HashConsensus", deployer, hashConsensusForExitBusArgs)
   logWideSplitter()
 
 

@@ -1,4 +1,4 @@
-const { readNetworkState, persistNetworkState } = require('./persisted-network-state')
+const { readNetworkState, persistNetworkState, persistNetworkState2 } = require('./persisted-network-state')
 const { artifacts, ethers } = require('hardhat')
 const fs = require('fs').promises
 const chalk = require('chalk')
@@ -275,7 +275,6 @@ async function deployBehindOssifiableProxy(nameInState, artifactName, proxyOwner
     address: implementation,
     constructorArgs: constructorArgs,
   }
-  state[nameInState].address = state[nameInState].proxy.address
 
   persistNetworkState(network.name, netId, state)
   console.log()

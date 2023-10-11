@@ -153,7 +153,7 @@ NB, that part of the actions require preliminary granting of the required roles,
 ```js
   await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, agent.address, { from: agent.address })
   await stakingRouter.addStakingModule(
-    state.nodeOperatorsRegistry.parameters.stakingModuleTypeId,
+    state.nodeOperatorsRegistry.deployParameters.stakingModuleTypeId,
     nodeOperatorsRegistry.address,
     NOR_STAKING_MODULE_TARGET_SHARE_BP,
     NOR_STAKING_MODULE_MODULE_FEE_BP,
