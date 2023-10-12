@@ -413,6 +413,7 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
 
       log(`Depositing ${depositsCount} keys ..`)
       const trgModuleId = 2 // sr module id
+      await ethers.getImpersonatedSigner(dsmAddress)
       await lido.deposit(depositsCount, trgModuleId, '0x', {
         from: dsmAddress,
         gasPrice: 0,
