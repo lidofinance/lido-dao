@@ -31,6 +31,7 @@ const REQUIRED_NET_STATE = [
   'lidoApmAddress',
   'lidoApmEnsName',
   'lidoLocator',
+  `app:${APP_NAMES.ARAGON_AGENT}`,
   `app:${APP_NAMES.ARAGON_VOTING}`,
   `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`,
 ]
@@ -215,6 +216,56 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
 
   log.splitter()
 
+  // hardcode ET EVM script executor and ET factory ABIs to avoid adding external ABI files to repo
+  const evmExecutorABI = [
+    {
+      inputs: [{ internalType: 'bytes', name: '_evmScript', type: 'bytes' }],
+      name: 'executeEVMScript',
+      outputs: [{ internalType: 'bytes', name: '', type: 'bytes' }],
+      stateMutability: 'nonpayable',
+      type: 'function',
+    },
+  ]
+
+  const factoryABI = [
+    {
+      inputs: [
+        { internalType: 'address', name: '_creator', type: 'address' },
+        { internalType: 'bytes', name: '_evmScriptCallData', type: 'bytes' },
+      ],
+      name: 'createEVMScript',
+      outputs: [{ internalType: 'bytes', name: '', type: 'bytes' }],
+      stateMutability: 'view',
+      type: 'function',
+    },
+    {
+      inputs: [],
+      name: 'nodeOperatorsRegistry',
+      outputs: [{ internalType: 'contract INodeOperatorsRegistry', name: '', type: 'address' }],
+      stateMutability: 'view',
+      type: 'function',
+    },
+    {
+      inputs: [],
+      name: 'trustedCaller',
+      outputs: [{ internalType: 'address', name: '', type: 'address' }],
+      stateMutability: 'view',
+      type: 'function',
+    },
+  ]
+
+  // create ET factories instances
+  const factories = Object.entries(easyTrackFactories).reduce(
+    (f, [n, a]) => ({ ...f, [n]: new Contract(a, factoryABI, ethers.provider) }),
+    {}
+  )
+
+  for (const name of Object.keys(factories)) {
+    _checkEq(await factories[name].nodeOperatorsRegistry(), trgProxyAddress, `ET factory ${name} matches App`)
+  }
+
+  log.splitter()
+
   if (SIMULATE) {
     log(gr(`Simulating adding keys and deposit!`))
     const stranger = await getDeployer(web3)
@@ -227,112 +278,108 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
 
     try {
       const lido = await artifacts.require('Lido').at(lidoAddress)
+      await ethers.getImpersonatedSigner(easyTrackAddress)
+      const easyTrackSigner = await ethers.getSigner(easyTrackAddress)
+      const evmExecutor = new Contract(easyTrackEVMScriptExecutor, evmExecutorABI, easyTrackSigner)
 
       const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
       const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
       const MANAGER_1 = '0x0000000000000000000000000000000000000011'
       const MANAGER_2 = '0x0000000000000000000000000000000000000012'
 
-      // create voting on behalf of dao agent
-      await ethers.getImpersonatedSigner(agentAddress)
-      await ethers.getImpersonatedSigner(votingAddress)
-      await ethers.getImpersonatedSigner(dsmAddress)
-      await ethers.getImpersonatedSigner(easyTrackEVMScriptExecutor)
-      await ethers.getImpersonatedSigner(ADDRESS_1)
-      await ethers.getImpersonatedSigner(ADDRESS_2)
-
-      const depositsCount = 100
+      const depositsCount = 2000
       const op1keysAmount = 100
       const op2keysAmount = 50
       const keysAmount = op1keysAmount + op2keysAmount
       if ((await trgApp.getNodeOperatorsCount()) < 1) {
         // prepare node operators
+        const trustedCaller = await factories.AddNodeOperators.trustedCaller()
 
-        // const factoryABI = [
-        //   {
-        //     inputs: [
-        //       { internalType: 'address', name: '_creator', type: 'address' },
-        //       { internalType: 'bytes', name: '_evmScriptCallData', type: 'bytes' },
-        //     ],
-        //     name: 'createEVMScript',
-        //     outputs: [{ internalType: 'bytes', name: '', type: 'bytes' }],
-        //     stateMutability: 'view',
-        //     type: 'function',
-        //   },
-        //   {
-        //     inputs: [{ internalType: 'bytes', name: '_evmScriptCallData', type: 'bytes' }],
-        //     name: 'decodeEVMScriptCallData',
-        //     outputs: [
-        //       { internalType: 'uint256', name: 'nodeOperatorsCount', type: 'uint256' },
-        //       {
-        //         components: [
-        //           { internalType: 'string', name: 'name', type: 'string' },
-        //           { internalType: 'address', name: 'rewardAddress', type: 'address' },
-        //           { internalType: 'address', name: 'managerAddress', type: 'address' },
-        //         ],
-        //         internalType: 'struct AddNodeOperators.AddNodeOperatorInput[]',
-        //         name: 'nodeOperators',
-        //         type: 'tuple[]',
-        //       },
-        //     ],
-        //     stateMutability: 'pure',
-        //     type: 'function',
-        //   },
-        //   {
-        //     inputs: [],
-        //     name: 'nodeOperatorsRegistry',
-        //     outputs: [{ internalType: 'contract INodeOperatorsRegistry', name: '', type: 'address' }],
-        //     stateMutability: 'view',
-        //     type: 'function',
-        //   },
-        //   {
-        //     inputs: [],
-        //     name: 'trustedCaller',
-        //     outputs: [{ internalType: 'address', name: '', type: 'address' }],
-        //     stateMutability: 'view',
-        //     type: 'function',
-        //   },
-        // ]
+        // add 2 NO via ET
+        // equivalent of:
+        // await trgApp.addNodeOperator('op 1', ADDRESS_1, { from: easyTrackEVMScriptExecutor, gasPrice: 0 })
+        // await trgApp.addNodeOperator('op 2', ADDRESS_2, { from: easyTrackEVMScriptExecutor, gasPrice: 0 })
 
-        // let factoryAddress = easyTrackFactories.AddNodeOperators
-        // let factory = new Contract(factoryAddress, factoryABI, ethers.provider)
-
-        // _checkEq(await factory.nodeOperatorsRegistry(), trgProxyAddress, `Simulate init: operators count = 2`)
-
-        // let callData = abiCoder.encode(
-        //   ['uint256', 'tuple(string,address,address)[]'],
-        //   [1, [['op 1', ADDRESS_1, MANAGER_1]]]
-        // )
-        // console.log(await factory.decodeEVMScriptCallData(callData))
-
-        // let trustedCaller = await factory.trustedCaller()
-        // await ethers.getImpersonatedSigner(trustedCaller)
-        // let evmScript = await factory.createEVMScript(stranger, callData, { from: trustedCaller, gasPrice: 0 })
-        // console.log(evmScript)
-
-        await trgApp.addNodeOperator('op 1', ADDRESS_1, { from: easyTrackEVMScriptExecutor, gasPrice: 0 })
-        await trgApp.addNodeOperator('op 2', ADDRESS_2, { from: easyTrackEVMScriptExecutor, gasPrice: 0 })
+        let callData = abiCoder.encode(
+          // struct AddNodeOperatorInput {
+          //     string name;
+          //     address rewardAddress;
+          //     address managerAddress;
+          // }
+          //
+          // uint256 nodeOperatorsCount, AddNodeOperatorInput[] memory nodeOperators
+          ['uint256', 'tuple(string,address,address)[]'],
+          [
+            0,
+            [
+              ['op 1', ADDRESS_1, MANAGER_1],
+              ['op 2', ADDRESS_2, MANAGER_2],
+            ],
+          ]
+        )
+        let evmScript = await factories.AddNodeOperators.createEVMScript(trustedCaller, callData, {
+          from: stranger,
+          gasPrice: 0,
+        })
+        await evmExecutor.executeEVMScript(evmScript)
+        _checkEq(await trgApp.getNodeOperatorsCount(), 2, `Simulate init: operators count = 2`)
 
         // add keys to module for op1
+        await ethers.getImpersonatedSigner(ADDRESS_1)
         let keys = genKeys(op1keysAmount)
         await trgApp.addSigningKeys(0, op1keysAmount, keys.pubkeys, keys.sigkeys, { from: ADDRESS_1, gasPrice: 0 })
+
         // add keys to module for op2
+        await ethers.getImpersonatedSigner(ADDRESS_2)
         keys = genKeys(op2keysAmount)
         await trgApp.addSigningKeys(1, op2keysAmount, keys.pubkeys, keys.sigkeys, { from: ADDRESS_2, gasPrice: 0 })
 
-        // increase keys limit
-        await trgApp.setNodeOperatorStakingLimit(0, 100000, { from: easyTrackEVMScriptExecutor, gasPrice: 0 })
-        await trgApp.setNodeOperatorStakingLimit(1, 100000, { from: easyTrackEVMScriptExecutor, gasPrice: 0 })
+        let opInfo = await trgApp.getNodeOperator(0, true)
+        _checkEq(
+          opInfo.totalAddedValidators,
+          op1keysAmount,
+          `Simulate init: NO 1 totalAddedValidators = ${op1keysAmount}`
+        )
+        opInfo = await trgApp.getNodeOperator(1, true)
+        _checkEq(
+          opInfo.totalAddedValidators,
+          op2keysAmount,
+          `Simulate init: NO 2 totalAddedValidators = ${op2keysAmount}`
+        )
+
+        // increase keys limit via ET
+        // equivalent of:
+        // await trgApp.setNodeOperatorStakingLimit(0, op1keysAmount, { from: easyTrackEVMScriptExecutor, gasPrice: 0 })
+        // await trgApp.setNodeOperatorStakingLimit(1, op2keysAmount, { from: easyTrackEVMScriptExecutor, gasPrice: 0 })
+
+        callData = abiCoder.encode(
+          // struct VettedValidatorsLimitInput {
+          //   uint256 nodeOperatorId;
+          //   uint256 stakingLimit;
+          // }
+          //
+          // VettedValidatorsLimitInput[]
+          ['tuple(uint256,uint256)[]'],
+          [
+            [
+              [0, op1keysAmount],
+              [1, op2keysAmount],
+            ],
+          ]
+        )
+        evmScript = await factories.SetVettedValidatorsLimits.createEVMScript(trustedCaller, callData, {
+          from: stranger,
+          gasPrice: 0,
+        })
+        await evmExecutor.executeEVMScript(evmScript)
       }
 
-      _checkEq(await trgApp.getNodeOperatorsCount(), 2, `Simulate init: operators count = 2`)
       let summary = await trgApp.getStakingModuleSummary()
-      // console.log(summary)
-      _checkEq(summary.totalDepositedValidators, 0, `Simulate init: totalDepositedValidators = 0`)
+      _checkEq(summary.totalDepositedValidators, 0, `Simulate init: module totalDepositedValidators = 0`)
       _checkEq(
         summary.depositableValidatorsCount,
         keysAmount,
-        `Simulate init: depositableValidatorsCount = ${keysAmount}`
+        `Simulate init: module depositableValidatorsCount = ${keysAmount}`
       )
 
       const wqAddress = readStateAppAddress(state, 'withdrawalQueueERC721')
@@ -341,6 +388,8 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
       const unfinalizedStETH = await withdrwalQueue.unfinalizedStETH()
       const ethToDeposit = toBN(ETH(32 * depositsCount))
       let depositableEther = await lido.getDepositableEther()
+
+      // simulate deposits by transfering ethers to Lido contract
       if (depositableEther.lt(ethToDeposit)) {
         const bufferedEther = await lido.getBufferedEther()
         const wqDebt = unfinalizedStETH.gt(bufferedEther) ? unfinalizedStETH.sub(bufferedEther) : toBN(0)
@@ -354,7 +403,15 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
         true,
         `Simulate init: enough depositable ether for ${depositsCount} keys`
       )
-      log('Depositing...')
+
+      // get max deposits count from SR (according targetShare value)
+      //
+      // NOR module id = 1
+      // const maxDepositsCount1 = (await stakingRouter.getStakingModuleMaxDepositsCount(1, ethToDeposit)).toNumber()
+      // SimpleDVT module id = 2
+      const maxDepositsCount2 = (await stakingRouter.getStakingModuleMaxDepositsCount(2, ethToDeposit)).toNumber()
+
+      log(`Depositing ${depositsCount} keys ..`)
       const trgModuleId = 2 // sr module id
       await lido.deposit(depositsCount, trgModuleId, '0x', {
         from: dsmAddress,
@@ -366,16 +423,17 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
       summary = await trgApp.getStakingModuleSummary()
       _checkEq(
         summary.totalDepositedValidators,
-        op1keysAmount,
-        `Simulate deposited: summary totalDepositedValidators = ${depositsCount}`
+        maxDepositsCount2,
+        `Simulate deposited: summary totalDepositedValidators = ${maxDepositsCount2}`
       )
       _checkEq(
         summary.depositableValidatorsCount,
-        keysAmount - depositsCount,
-        `Simulate deposited: summary depositableValidatorsCount = ${keysAmount - depositsCount}`
+        keysAmount - maxDepositsCount2,
+        `Simulate deposited: summary depositableValidatorsCount = ${keysAmount - maxDepositsCount2}`
       )
 
-      const depositedKeysPerOp = depositsCount / 2 // as only 2 ops in module and each has 0 deposited keys before
+      // as only 2 ops in module and each has 0 deposited keys before
+      const depositedKeysPerOp = maxDepositsCount2 / 2
       const op1 = await trgApp.getNodeOperator(0, false)
       _checkEq(op1.totalAddedValidators, op1keysAmount, `Simulate op1 state: totalAddedValidators = 100`)
       _checkEq(
