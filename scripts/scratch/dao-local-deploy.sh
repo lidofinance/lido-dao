@@ -16,4 +16,4 @@ export GAS_MAX_FEE=100
 export NETWORK_STATE_FILE="deployed-${NETWORK}.json"
 export NETWORK_STATE_DEFAULTS_FILE="deployed-testnet-defaults.json"
 
-bash dao-deploy.sh
+bash scripts/scratch/dao-deploy.sh

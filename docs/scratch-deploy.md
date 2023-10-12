@@ -8,8 +8,7 @@
 ## General info
 
 The repo contains bash scripts for deployment of the DAO under multiple environments:
-- local node (ganache, anvil, hardhat network) - `dao-local-deploy.sh`
-- goerli testnet - `dao-goerli-deploy.sh`
+- local node (ganache, anvil, hardhat network) `dao-local-deploy.sh`
 - holesky testnet - `dao-holesky-deploy.sh`
 
 The protocol has a bunch of parameters to configure for the scratch deployment. The default configuration is stored in files `deployed-<deploy env>-defaults.json`, where `<deploy env>` is the target environment. Currently there is single default configuration `deployed-testnet-defaults.json` suitable for testnet deployments. Compared to the mainnet configuration, it has lower vote durations, more frequent oracle report cycles, etc. Part of the parameters require further specification -- they are marked with `null` values.
@@ -17,7 +16,7 @@ During the deployment, the "default" configuration is copied to `deployed-<netwo
 
 These are the deployment setups, supported currently:
 - local (basically any node at http://127.0.0.1:8545);
-- Goerli.
+- Holešky testnet.
 
 Each is described in the details in the sections below.
 
@@ -65,7 +64,7 @@ The node must be configured with the default test accounts derived from mnemonic
 1. Run `yarn install` (get sure repo dependencies are installed)
 2. Run the node on default port 8545 (for the commands see subsections below)
 3. Set test account private key `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80` to `accounts.json` under `/eth/local` like `"local": ["<private key>"]` (see `accounts.sample.json` for example)
-4. Run the deploy script `bash dao-local-deploy.sh` from root repo directory
+4. Run the deploy script `bash scripts/scratch/dao-local-deploy.sh` from root repo directory
 5. Check out the deploy artifacts in `deployed-local.json`
 
 ### Anvil
@@ -85,29 +84,23 @@ To run hardhat node execute:
 yarn hardhat node
 ```
 
-## Goerli deployment
+## Holešky deployment
 
-To do Goerli deployment, the following parameters must be set up via env variables:
+To do Holešky deployment, the following parameters must be set up via env variables:
 
 - `DEPLOYER`. The deployer address, you must have its private key. It must have enough ether.
-- `RPC_URL`. Address of of the Ethereum RPC node to use. E.g. for Infura it is `https://goerli.infura.io/v3/<yourProjectId>`
+- `RPC_URL`. Address of of the Ethereum RPC node to use. E.g. for Infura it is `https://holesky.infura.io/v3/<yourProjectId>`
 - `GAS_PRIORITY_FEE`. Gas priority fee. By default set to `2`
 - `GAS_MAX_FEE`. Gas max fee. By default set to `100`
 - `GATE_SEAL_FACTORY`. Address of the [GateSeal Factory](https://github.com/lidofinance/gate-seals) contract. Must be deployed preliminary. Can be set to any `0x0000000000000000000000000000000000000000` to debug deployment.
 
-Also you need to specify `DEPLOYER` private key in `accounts.json` under `/eth/goerli` like `"goerli": ["<key>"]`. See `accounts.sample.json` for an example.
+Also you need to specify `DEPLOYER` private key in `accounts.json` under `/eth/holesky` like `"holesky": ["<key>"]`. See `accounts.sample.json` for an example.
 
-To start the deployment, run (the env variables must already defined):
+To start the deployment, run (the env variables must already defined) from root repo directory:
 ```shell
-bash dao-goerli-deploy.sh
+bash scripts/scratch/dao-holesky-deploy.sh
 ```
-and checkout `deployed-goerli.json`.
-
-## Holešky deployment
-
-```shell
-RPC_URL=<PUT-YOUR-VALUE> GATE_SEAL=<PUT-YOUR-VALUE> DEPLOYER=<PUT-YOUR-VALUE> bash dao-holesky-deploy.sh
-```
+Deploy artifacts information will be store in `deployed-holesky.json`.
 
 ## Publishing sources to Etherscan
 
@@ -163,10 +156,9 @@ NB, that part of the actions require preliminary granting of the required roles,
   await stakingRouter.renounceRole(STAKING_MODULE_MANAGE_ROLE, agent.address, { from: agent.address })
 ```
 
-
 ## Protocol parameters
 
-This section describes part of the parameters and their values used at the deployment. The values are specified in `deployed-testnet-defaults.json`. The subsections below describes values of the parameters.
+This section describes part of the parameters and their values used at the deployment. The values are specified in `deployed-testnet-defaults.json`.
 
 ### OracleDaemonConfig
 
