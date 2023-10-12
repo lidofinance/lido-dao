@@ -56,7 +56,6 @@ const getNetConfig = (networkName, ethAccountName) => {
       ...base,
       url: 'http://localhost:8545',
       chainId: 31337,
-      gas: 100000000,
     },
     mainnetfork: {
       ...base,

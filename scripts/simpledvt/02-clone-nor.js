@@ -27,6 +27,7 @@ const {
   STAKING_MODULE_MANAGE_ROLE,
   SIMPLE_DVT_IPFS_CID,
 } = require('./helpers')
+const { ETH, toBN } = require('../../test/helpers/utils')
 
 const APP_TRG = process.env.APP_TRG || APP_NAMES.SIMPLE_DVT
 const APP_IPFS_CID = process.env.APP_IPFS_CID || SIMPLE_DVT_IPFS_CID
@@ -148,6 +149,8 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   const tokenManager = await artifacts.require('TokenManager').at(tokenManagerAddress)
   const agentAddress = readStateAppAddress(state, `app:${APP_NAMES.ARAGON_AGENT}`)
   const agent = await artifacts.require('Agent').at(agentAddress)
+  const daoTokenAddress = await tokenManager.token()
+  const daoToken = await artifacts.require('MiniMeToken').at(daoTokenAddress)
 
   const easytrackABI = [
     {
@@ -357,12 +360,19 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   if (SIMULATE) {
     log.splitter()
     log(gr(`Simulating voting creation and enact!`))
-    // create voting on behalf of dao agent
-    await ethers.getImpersonatedSigner(agentAddress)
+    const voters = getVoters(
+      agentAddress,
+      state.vestingParams,
+      await daoToken.totalSupply(),
+      await voting.minAcceptQuorumPct()
+    )
 
     let voteId
     if (!VOTE_ID) {
-      const result = await tokenManager.forward(newVoteEvmScript, { from: agentAddress, gasPrice: 0 })
+      // create voting on behalf ldo holder
+      await ethers.getImpersonatedSigner(voters[0])
+      log(`Creating voting on behalf holder`, yl(voters[0]))
+      const result = await tokenManager.forward(newVoteEvmScript, { from: voters[0], gasPrice: 0 })
       voteId = getEventArgument(result, 'StartVote', 'voteId', { decodeForAbi: voting.abi })
       log(`Voting created, id`, yl(voteId))
     } else {
@@ -370,12 +380,18 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     }
 
     // vote
-    log(`Enacting voting, id`, yl(voteId))
-    await voting.vote(voteId, true, true, { from: agentAddress, gasPrice: 0 })
+    log(`Collect votes...`)
+    for (const voter of voters) {
+      await ethers.getImpersonatedSigner(voter)
+      log(`Cast voting on behalf holder`, yl(voters[0]))
+      await voting.vote(voteId, true, true, { from: voter, gasPrice: 0 })
+    }
     const voteTime = (await voting.voteTime()).toNumber()
     // pass time and enact
+    log(`Pass time...`)
     await ethers.provider.send('evm_increaseTime', [voteTime])
     await ethers.provider.send('evm_mine')
+    log(`Enacting voting, id`, yl(voteId))
     await voting.executeVote(voteId, { from: deployer, gasPrice: 0 })
 
     log(`Target App initialized`, yl(await trgApp.hasInitialized()))
@@ -410,4 +426,30 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   log.splitter()
 }
 
+// try to get list of voters with most significant LDO amounts
+function getVoters(agentAddress, vestingParams, daoTokenTotalSupply, quorumPcnt) {
+  const agentBalance = toBN(vestingParams.unvestedTokensAmount)
+  const holderBalances = Object.entries(vestingParams.holders)
+    .sort((a, b) => (a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0))
+    .map(([h, b]) => [h, toBN(b)])
+
+  const quorumBalance = (daoTokenTotalSupply * quorumPcnt) / ETH(1)
+
+  const voters = []
+  let voteBalance = ETH(0)
+  if (agentBalance > 0) {
+    voters.push(agentAddress)
+    voteBalance += agentBalance
+  }
+  for (let i = 0; i < holderBalances.length; i++) {
+    if (voteBalance >= quorumBalance) {
+      break
+    }
+    // todo: check actual balance?
+    voters.push(holderBalances[i][0])
+    voteBalance += holderBalances[i][1]
+  }
+
+  return voters
+}
 module.exports = runOrWrapScript(deployNORClone, module)
