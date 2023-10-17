@@ -12,6 +12,7 @@ const {
   SET_NODE_OPERATOR_LIMIT_ROLE,
   STAKING_ROUTER_ROLE,
   STAKING_MODULE_MANAGE_ROLE,
+  REQUEST_BURN_SHARES_ROLE,
   SIMPLE_DVT_IPFS_CID,
 } = require('./helpers')
 const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
@@ -71,7 +72,6 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   const trgAppFullName = `${trgAppName}.${state.lidoApmEnsName}`
   const trgAppId = namehash(trgAppFullName)
 
-  console.log({ trgAppId, ens, artifacts })
   const { semanticVersion, contractAddress, contentURI } = await resolveLatestVersion(trgAppId, ens, artifacts)
 
   _checkEq(contractAddress, srcContractAddress, 'App APM repo last version: implementation is the same to NOR')
@@ -112,11 +112,19 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   const srAddress = readStateAppAddress(state, 'stakingRouter')
   const dsmAddress = readStateAppAddress(state, 'depositSecurityModule')
   const stakingRouter = await artifacts.require('StakingRouter').at(srAddress)
+  const burnerAddress = readStateAppAddress(state, `burner`)
+  const burner = await artifacts.require('Burner').at(burnerAddress)
 
   _checkEq(
     await stakingRouter.hasRole(STAKING_MODULE_MANAGE_ROLE, agentAddress),
     true,
     'Agent has role: STAKING_MODULE_MANAGE_ROLE'
+  )
+
+  _checkEq(
+    await burner.hasRole(REQUEST_BURN_SHARES_ROLE, trgProxyAddress),
+    true,
+    'App has role: REQUEST_BURN_SHARES_ROLE'
   )
 
   _checkEq(
@@ -167,16 +175,6 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     true,
     'StakingRouter has permission: STAKING_ROUTER_ROLE'
   )
-
-  if (state.easytrackAddress) {
-    _checkEq(
-      await acl.hasPermission(state.easytrackAddress, trgProxyAddress, SET_NODE_OPERATOR_LIMIT_ROLE),
-      true,
-      'Easytrack has permission: SET_NODE_OPERATOR_LIMIT_ROLE'
-    )
-  } else {
-    log(yl('[-]'), 'No Easytrack address set - skip!')
-  }
 
   log.splitter()
 
