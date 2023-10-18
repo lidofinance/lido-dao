@@ -38,9 +38,7 @@
     "deploy:app-staking-providers-registry": "APPS=staking-providers-registry yarn deploy:apps",
     "apps:lido": "yarn --cwd ./apps/lido/app/ cli",
     "apps:nos": "yarn --cwd ./apps/node-operators-registry/app/ cli",
-    "lido:apps": "concurrently \"yarn apps:lido\" \"yarn apps:oracle\" \"yarn apps:nos\" ",
-    "aragon:start": "node scripts/start-aragon.js",
-    "lido:start": "hardhat node& yarn deploy:all && yarn lido:apps& hardhat run --no-compile scripts/start-aragon.js"
+    "lido:apps": "concurrently \"yarn apps:lido\" \"yarn apps:oracle\" \"yarn apps:nos\" "
   },
   "devDependencies": {
     "@aragon/apps-agent": "^2.0.0",

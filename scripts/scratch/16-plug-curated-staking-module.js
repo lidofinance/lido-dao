@@ -17,8 +17,8 @@ const REQUIRED_NET_STATE = [
   "burner",
   "daoInitialSettings",
   "eip712StETH",
-  "hashConsensusForAccounting",
-  "hashConsensusForValidatorsExitBus",
+  "hashConsensusForAccountingOracle",
+  "hashConsensusForValidatorsExitBusOracle",
   "lidoLocator",
   "validatorsExitBusOracle",
   "withdrawalQueueERC721",
@@ -40,13 +40,13 @@ async function deployNewContracts({ web3, artifacts }) {
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
   const deployer = state.deployer
-  const stakingRouter = await artifacts.require('StakingRouter').at(state.stakingRouter.address)
+  const stakingRouter = await artifacts.require('StakingRouter').at(state.stakingRouter.proxy.address)
   const nodeOperatorsRegistry = await artifacts.require('NodeOperatorsRegistry').at(state['app:node-operators-registry'].proxy.address)
 
   await log.makeTx(stakingRouter, 'grantRole', [STAKING_MODULE_MANAGE_ROLE, deployer], { from: deployer })
 
   await log.makeTx(stakingRouter, 'addStakingModule', [
-    state.nodeOperatorsRegistry.parameters.stakingModuleTypeId,
+    state.nodeOperatorsRegistry.deployParameters.stakingModuleTypeId,
     nodeOperatorsRegistry.address,
     NOR_STAKING_MODULE_TARGET_SHARE_BP,
     NOR_STAKING_MODULE_MODULE_FEE_BP,

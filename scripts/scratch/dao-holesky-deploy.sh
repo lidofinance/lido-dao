@@ -27,4 +27,4 @@ export CHAIN_ID=17000
 export GAS_PRIORITY_FEE="${GAS_PRIORITY_FEE:=1}"
 export GAS_MAX_FEE="${GAS_MAX_FEE:=100}"
 
-bash dao-deploy.sh
+bash scripts/scratch/dao-deploy.sh

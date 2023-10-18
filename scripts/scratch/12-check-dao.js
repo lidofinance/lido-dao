@@ -111,7 +111,7 @@ async function checkDAO({ web3, artifacts }) {
     artifacts.require('Voting').at(apps[APP_NAMES.ARAGON_VOTING].proxyAddress),
     artifacts.require('Burner').at(state.burner.address),
     artifacts.require('LidoExecutionLayerRewardsVault').at(state.executionLayerRewardsVault["address"]),
-    artifacts.require('StakingRouter').at(state.stakingRouter.address),
+    artifacts.require('StakingRouter').at(state.stakingRouter.proxy.address),
   ])
 
   log.splitter()

@@ -44,49 +44,47 @@
     "revokable": false
   },
   "burner": {
-    "parameters": {
+    "deployParameters": {
         "totalCoverSharesBurnt": "0",
         "totalNonCoverSharesBurnt": "0"
     }
   },
   "legacyOracle": {
-    "parameters": {
+    "deployParameters": {
       "lastCompletedEpochId": 0
     }
   },
-  "hashConsensusForAccounting": {
-    "parameters": {
+  "hashConsensusForAccountingOracle": {
+    "deployParameters": {
       "fastLaneLengthSlots": 10,
       "epochsPerFrame": 12
     }
   },
   "accountingOracle": {
-    "parameters": {
-      "maxExitedValidatorsPerDay": 240,
-      "maxExtraDataListItemsCount": 15,
+    "deployParameters": {
       "consensusVersion": 1
     }
   },
-  "hashConsensusForValidatorsExitBus": {
-    "parameters": {
+  "hashConsensusForValidatorsExitBusOracle": {
+    "deployParameters": {
       "fastLaneLengthSlots": 10,
       "epochsPerFrame": 4
     }
   },
   "validatorsExitBusOracle": {
-    "parameters": {
+    "deployParameters": {
       "consensusVersion": 1
     }
   },
   "depositSecurityModule": {
-    "parameters": {
+    "deployParameters": {
       "maxDepositsPerBlock": 150,
       "minDepositBlockDistance": 5,
       "pauseIntentValidityPeriodBlocks": 6646
     }
   },
   "oracleReportSanityChecker": {
-    "parameters": {
+    "deployParameters": {
       "churnValidatorsPerDayLimit": 1500,
       "oneOffCLBalanceDecreaseBPLimit": 500,
       "annualBalanceIncreaseBPLimit": 1000,
@@ -99,7 +97,7 @@
     }
   },
   "oracleDaemonConfig": {
-    "parameters": {
+    "deployParameters": {
       "NORMALIZED_CL_REWARD_PER_EPOCH": 64,
       "NORMALIZED_CL_REWARD_MISTAKE_RATE_BP": 1000,
       "REBASE_CHECK_NEAREST_EPOCH_DISTANCE": 1,
@@ -112,13 +110,13 @@
     }
   },
   "nodeOperatorsRegistry": {
-    "parameters": {
+    "deployParameters": {
       "stakingModuleTypeId": "curated-onchain-v1",
       "stuckPenaltyDelay": 172800
     }
   },
   "withdrawalQueueERC721": {
-    "parameters": {
+    "deployParameters": {
       "name": "stETH Withdrawal NFT",
       "symbol": "unstETH"
     }

@@ -17,9 +17,9 @@ const REQUIRED_NET_STATE = [
   "daoInitialSettings",
   "eip712StETH",
   "accountingOracle",
-  "hashConsensusForAccounting",
+  "hashConsensusForAccountingOracle",
   "validatorsExitBusOracle",
-  "hashConsensusForValidatorsExitBus",
+  "hashConsensusForValidatorsExitBusOracle",
   "withdrawalQueueERC721",
   "withdrawalVault",
   "nodeOperatorsRegistry",
@@ -37,18 +37,18 @@ async function deployNewContracts({ web3, artifacts }) {
   const lidoAddress = state["app:lido"].proxy.address
   const legacyOracleAddress = state["app:oracle"].proxy.address
   const nodeOperatorsRegistryAddress = state["app:node-operators-registry"].proxy.address
-  const nodeOperatorsRegistryParams = state["nodeOperatorsRegistry"].parameters
+  const nodeOperatorsRegistryParams = state["nodeOperatorsRegistry"].deployParameters
 
-  const validatorsExitBusOracleParams = state["validatorsExitBusOracle"].parameters
-  const accountingOracleParams = state["accountingOracle"].parameters
+  const validatorsExitBusOracleParams = state["validatorsExitBusOracle"].deployParameters
+  const accountingOracleParams = state["accountingOracle"].deployParameters
 
-  const stakingRouterAddress = state["stakingRouter"].address
-  const withdrawalQueueAddress = state["withdrawalQueueERC721"].address
-  const lidoLocatorAddress = state["lidoLocator"].address
-  const accountingOracleAddress = state["accountingOracle"].address
-  const hashConsensusForAccountingAddress = state["hashConsensusForAccounting"].address
-  const ValidatorsExitBusOracleAddress = state["validatorsExitBusOracle"].address
-  const hashConsensusForValidatorsExitBusOracleAddress = state["hashConsensusForValidatorsExitBus"].address
+  const stakingRouterAddress = state["stakingRouter"].proxy.address
+  const withdrawalQueueAddress = state["withdrawalQueueERC721"].proxy.address
+  const lidoLocatorAddress = state["lidoLocator"].proxy.address
+  const accountingOracleAddress = state["accountingOracle"].proxy.address
+  const hashConsensusForAccountingAddress = state["hashConsensusForAccountingOracle"].address
+  const ValidatorsExitBusOracleAddress = state["validatorsExitBusOracle"].proxy.address
+  const hashConsensusForValidatorsExitBusOracleAddress = state["hashConsensusForValidatorsExitBusOracle"].address
   const eip712StETHAddress = state["eip712StETH"].address
   const withdrawalVaultAddress = state["withdrawalVault"].proxy.address
   const oracleDaemonConfigAddress = state.oracleDaemonConfig.address
@@ -151,7 +151,7 @@ async function deployNewContracts({ web3, artifacts }) {
   const oracleDaemonConfig = await artifacts.require('OracleDaemonConfig').at(oracleDaemonConfigAddress)
   const CONFIG_MANAGER_ROLE = await oracleDaemonConfig.CONFIG_MANAGER_ROLE()
   await log.makeTx(oracleDaemonConfig, 'grantRole', [CONFIG_MANAGER_ROLE, testnetAdmin], { from: testnetAdmin })
-  for (const [key, value] of Object.entries(state.oracleDaemonConfig.parameters)) {
+  for (const [key, value] of Object.entries(state.oracleDaemonConfig.deployParameters)) {
     await log.makeTx(oracleDaemonConfig, 'set', [key, hexPaddedToByte(value)], { from: DEPLOYER })
   }
   await log.makeTx(oracleDaemonConfig, 'renounceRole', [CONFIG_MANAGER_ROLE, testnetAdmin], { from: testnetAdmin })

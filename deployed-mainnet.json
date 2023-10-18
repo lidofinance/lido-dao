@@ -4,23 +4,23 @@
   "ipfsAPI": "https://ipfs.infura.io:5001/api/v0",
   "lidoApmEnsName": "lidopm.eth",
   "lidoApmEnsRegDurationSec": 94608000,
+  "deployer": "0x55Bc991b2edF3DDb4c520B222bE4F378418ff0fA",
   "daoAragonId": "lido-dao",
   "ensAddress": "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e",
   "daoFactoryAddress": "0x7378ad1ba8f3c8e64bbb2a04473edd35846360f1",
   "apmRegistryFactoryAddress": "0xa0BC4B67F5FacDE4E50EAFF48691Cfc43F4E280A",
   "miniMeTokenFactoryAddress": "0x909d05f384d0663ed4be59863815ab43b4f347ec",
   "aragonIDAddress": "0x546aa2eae2514494eeadb7bbb35243348983c59d",
-  "deployer": "0x55Bc991b2edF3DDb4c520B222bE4F378418ff0fA",
+  "chainSpec": {
+    "depositContractAddress": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+    "slotsPerEpoch": 32,
+    "secondsPerSlot": 12,
+    "genesisTime": 1606824023
+  },
   "daoInitialSettings": {
     "token": {
       "name": "Lido DAO Token",
       "symbol": "LDO"
-    },
-    "beaconSpec": {
-      "depositContractAddress": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
-      "slotsPerEpoch": 32,
-      "secondsPerSlot": 12,
-      "genesisTime": 1606824023
     },
     "voting": {
       "minSupportRequired": "500000000000000000",
@@ -103,7 +103,8 @@
     "end": 1671321600,
     "revokable": false
   },
-  "daoTemplate": {
+  "lidoTemplate": {
+    "contract": "contracts/0.4.24/template/LidoTemplate.sol",
     "address": "0x752350797CB92Ad3BF1295Faf904B27585e66BF5",
     "deployTx": "0xdcd4ebe028aa3663a1fe8bbc92ae8489045e29d2a6ef5284083d9be5c3fa5f19",
     "constructorArgs": [
@@ -177,31 +178,83 @@
   "lidoApmAddress": "0x0cb113890b04B49455DfE06554e2D784598A29C9",
   "createAppReposTx": "0xf48cb21c6be021dd18bd8e02ce89ac7b924245b859f0a8b7c47e88a39016ed41",
   "newDaoTx": "0x3feabd79e8549ad68d1827c074fa7123815c80206498946293d5373a160fd866",
-  "daoAddress": "0xb8FFC3Cd6e7Cf5a098A1c92F48009765B24088Dc",
   "daoTokenAddress": "0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32",
+  "aragon-kernel": {
+    "implementation": {
+      "contract": "@aragon/os/contracts/kernel/Kernel.sol",
+      "address": "0x2b33CF282f867A7FF693A66e11B0FcC5552e4425",
+      "constructorArgs": [
+        true
+      ]
+    },
+    "proxy": {
+      "address": "0xb8FFC3Cd6e7Cf5a098A1c92F48009765B24088Dc",
+      "contract": "@aragon/os/contracts/kernel/KernelProxy.sol"
+    }
+  },
   "app:aragon-agent": {
-    "name": "aragon-agent",
-    "fullName": "aragon-agent.lidopm.eth",
-    "id": "0x701a4fd1f5174d12a0f1d9ad2c88d0ad11ab6aad0ac72b7d9ce621815f8016a9",
-    "address": "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c"
+    "implementation": {
+      "contract": "@aragon/apps-agent/contracts/Agent.sol",
+      "address": "0x3A93C17FC82CC33420d1809dDA9Fb715cc89dd37",
+      "constructorArgs": []
+    },
+    "aragonApp": {
+      "name": "aragon-agent",
+      "fullName": "aragon-agent.lidopm.eth",
+      "id": "0x701a4fd1f5174d12a0f1d9ad2c88d0ad11ab6aad0ac72b7d9ce621815f8016a9"
+    },
+    "proxy": {
+      "address": "0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c",
+      "contract": "@aragon/os/contracts/apps/AppProxyUpgradeable.sol"
+    }
   },
   "app:aragon-finance": {
-    "address": "0xB9E5CBB9CA5b0d659238807E84D0176930753d86",
-    "name": "aragon-finance",
-    "fullName": "aragon-finance.lidopm.eth",
-    "id": "0x5c9918c99c4081ca9459c178381be71d9da40e49e151687da55099c49a4237f1"
+    "implementation": {
+      "contract": "@aragon/apps-finance/contracts/Finance.sol",
+      "address": "0x836835289A2E81B66AE5d95b7c8dBC0480dCf9da",
+      "constructorArgs": []
+    },
+    "aragonApp": {
+      "name": "aragon-finance",
+      "fullName": "aragon-finance.lidopm.eth",
+      "id": "0x5c9918c99c4081ca9459c178381be71d9da40e49e151687da55099c49a4237f1"
+    },
+    "proxy": {
+      "address": "0xB9E5CBB9CA5b0d659238807E84D0176930753d86",
+      "contract": "@aragon/os/contracts/apps/AppProxyUpgradeable.sol"
+    }
   },
   "app:aragon-token-manager": {
-    "address": "0xf73a1260d222f447210581DDf212D915c09a3249",
-    "name": "aragon-token-manager",
-    "fullName": "aragon-token-manager.lidopm.eth",
-    "id": "0xcd567bdf93dd0f6acc3bc7f2155f83244d56a65abbfbefb763e015420102c67b"
+    "implementation": {
+      "contract": "@aragon/apps-lido/apps/token-manager/contracts/TokenManager.sol",
+      "address": "0xde3A93028F2283cc28756B3674BD657eaFB992f4",
+      "constructorArgs": []
+    },
+    "aragonApp": {
+      "name": "aragon-token-manager",
+      "fullName": "aragon-token-manager.lidopm.eth",
+      "id": "0xcd567bdf93dd0f6acc3bc7f2155f83244d56a65abbfbefb763e015420102c67b"
+    },
+    "proxy": {
+      "address": "0xf73a1260d222f447210581DDf212D915c09a3249",
+      "contract": "@aragon/os/contracts/apps/AppProxyUpgradeable.sol"
+    }
   },
   "app:aragon-voting": {
-    "address": "0x2e59A20f205bB85a89C53f1936454680651E618e",
-    "name": "aragon-voting",
-    "fullName": "aragon-voting.lidopm.eth",
-    "id": "0x0abcd104777321a82b010357f20887d61247493d89d2e987ff57bcecbde00e1e"
+    "implementation": {
+      "contract": "@aragon/apps-lido/apps/voting/contracts/Voting.sol",
+      "address": "0x72fb5253AD16307B9E773d2A78CaC58E309d5Ba4",
+      "constructorArgs": []
+    },
+    "aragonApp": {
+      "name": "aragon-voting",
+      "fullName": "aragon-voting.lidopm.eth",
+      "id": "0x0abcd104777321a82b010357f20887d61247493d89d2e987ff57bcecbde00e1e"
+    },
+    "proxy": {
+      "address": "0x2e59A20f205bB85a89C53f1936454680651E618e",
+      "contract": "@aragon/os/contracts/apps/AppProxyUpgradeable.sol"
+    }
   },
   "wstETH": {
     "address": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
@@ -251,6 +304,9 @@
     }
   },
   "accountingOracle": {
+    "deployParameters": {
+      "consensusVersion": 1
+    },
     "proxy": {
       "address": "0x852deD011285fe67063a08005c71a85690503Cee",
       "contract": "contracts/0.8.9/proxy/OssifiableProxy.sol",
@@ -271,10 +327,7 @@
         "0x442af784A788A5bd6F42A01Ebe9F287a871243fb",
         12,
         1606824023
-      ],
-      "deployParameters": {
-        "consensusVersion": 1
-      }
+      ]
     }
   },
   "hashConsensusForValidatorsExitBusOracle": {

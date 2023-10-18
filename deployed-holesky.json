@@ -1,4 +1,5 @@
 {
+  "deployCommit": "eda16728a7c80f1bb55c3b91c668aae190a1efb0",
   "deployer": "0x22896Bfc68814BFD855b1a167255eE497006e730",
   "gateSeal": {
     "factoryAddress": "0x1134F7077055b0B3559BE52AfeF9aA22A0E1eEC2",
@@ -46,7 +47,7 @@
     "revokable": false
   },
   "burner": {
-    "parameters": {
+    "deployParameters": {
       "totalCoverSharesBurnt": "0",
       "totalNonCoverSharesBurnt": "0"
     },
@@ -61,12 +62,12 @@
     ]
   },
   "legacyOracle": {
-    "parameters": {
+    "deployParameters": {
       "lastCompletedEpochId": 0
     }
   },
-  "hashConsensusForAccounting": {
-    "parameters": {
+  "hashConsensusForAccountingOracle": {
+    "deployParameters": {
       "fastLaneLengthSlots": 10,
       "epochsPerFrame": 12
     },
@@ -83,9 +84,7 @@
     ]
   },
   "accountingOracle": {
-    "parameters": {
-      "maxExitedValidatorsPerDay": 240,
-      "maxExtraDataListItemsCount": 15,
+    "deployParameters": {
       "consensusVersion": 1
     },
     "proxy": {
@@ -107,11 +106,10 @@
         12,
         1695902400
       ]
-    },
-    "address": "0x4E97A3972ce8511D87F334dA17a2C332542a5246"
+    }
   },
-  "hashConsensusForValidatorsExitBus": {
-    "parameters": {
+  "hashConsensusForValidatorsExitBusOracle": {
+    "deployParameters": {
       "fastLaneLengthSlots": 10,
       "epochsPerFrame": 4
     },
@@ -128,7 +126,7 @@
     ]
   },
   "validatorsExitBusOracle": {
-    "parameters": {
+    "deployParameters": {
       "consensusVersion": 1
     },
     "proxy": {
@@ -148,11 +146,10 @@
         1695902400,
         "0x28FAB2059C713A7F9D8c86Db49f9bb0e96Af1ef8"
       ]
-    },
-    "address": "0xffDDF7025410412deaa05E3E1cE68FE53208afcb"
+    }
   },
   "depositSecurityModule": {
-    "parameters": {
+    "deployParameters": {
       "maxDepositsPerBlock": 150,
       "minDepositBlockDistance": 5,
       "pauseIntentValidityPeriodBlocks": 6646
@@ -169,7 +166,7 @@
     ]
   },
   "oracleReportSanityChecker": {
-    "parameters": {
+    "deployParameters": {
       "churnValidatorsPerDayLimit": 1500,
       "oneOffCLBalanceDecreaseBPLimit": 500,
       "annualBalanceIncreaseBPLimit": 1000,
@@ -211,13 +208,13 @@
     ]
   },
   "nodeOperatorsRegistry": {
-    "parameters": {
+    "deployParameters": {
       "stakingModuleTypeId": "curated-onchain-v1",
       "stuckPenaltyDelay": 172800
     }
   },
   "withdrawalQueueERC721": {
-    "parameters": {
+    "deployParameters": {
       "name": "stETH Withdrawal NFT",
       "symbol": "unstETH"
     },
@@ -238,8 +235,7 @@
         "stETH Withdrawal NFT",
         "unstETH"
       ]
-    },
-    "address": "0xc7cc160b58F8Bb0baC94b80847E2CF2800565C50"
+    }
   },
   "networkId": 17000,
   "chainId": 17000,
@@ -633,7 +629,7 @@
       "0x22896Bfc68814BFD855b1a167255eE497006e730",
       []
     ],
-    "parameters": {
+    "deployParameters": {
       "NORMALIZED_CL_REWARD_PER_EPOCH": 64,
       "NORMALIZED_CL_REWARD_MISTAKE_RATE_BP": 1000,
       "REBASE_CHECK_NEAREST_EPOCH_DISTANCE": 1,
@@ -681,8 +677,7 @@
           "0xC01fC1F2787687Bc656EAc0356ba9Db6e6b7afb7"
         ]
       ]
-    },
-    "address": "0x28FAB2059C713A7F9D8c86Db49f9bb0e96Af1ef8"
+    }
   },
   "eip712StETH": {
     "contract": "contracts/0.8.9/EIP712StETH.sol",
@@ -714,8 +709,7 @@
         "0xdA7d2573Df555002503F29aA4003e398d28cc00f",
         "0xd517d9d04DA9B47dA23df91261bd3bF435BE964A"
       ]
-    },
-    "address": "0xF0179dEC45a37423EAD4FaD5fCb136197872EAd9"
+    }
   },
   "executionLayerRewardsVault": {
     "contract": "contracts/0.8.9/LidoExecutionLayerRewardsVault.sol",
@@ -741,8 +735,7 @@
       "constructorArgs": [
         "0x4242424242424242424242424242424242424242"
       ]
-    },
-    "address": "0xd6EbF043D30A7fe46D1Db32BA90a0A51207FE229"
+    }
   },
   "app:simple-dvt": {
     "stakingRouterModuleParams": {

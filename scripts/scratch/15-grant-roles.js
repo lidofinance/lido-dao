@@ -15,8 +15,8 @@ const REQUIRED_NET_STATE = [
   "burner",
   "daoInitialSettings",
   "eip712StETH",
-  "hashConsensusForAccounting",
-  "hashConsensusForValidatorsExitBus",
+  "hashConsensusForAccountingOracle",
+  "hashConsensusForValidatorsExitBusOracle",
   "lidoLocator",
   "stakingRouter",
   "validatorsExitBusOracle",
@@ -39,10 +39,10 @@ async function deployNewContracts({ web3, artifacts }) {
   const gateSealAddress = state.gateSeal.address
 
   const burnerAddress = state["burner"].address
-  const stakingRouterAddress = state["stakingRouter"].address
-  const withdrawalQueueAddress = state["withdrawalQueueERC721"].address
-  const accountingOracleAddress = state["accountingOracle"].address
-  const validatorsExitBusOracleAddress = state["validatorsExitBusOracle"].address
+  const stakingRouterAddress = state["stakingRouter"].proxy.address
+  const withdrawalQueueAddress = state["withdrawalQueueERC721"].proxy.address
+  const accountingOracleAddress = state["accountingOracle"].proxy.address
+  const validatorsExitBusOracleAddress = state["validatorsExitBusOracle"].proxy.address
   const depositSecurityModuleAddress = state.depositSecurityModule.address
 
   const deployer = state.deployer

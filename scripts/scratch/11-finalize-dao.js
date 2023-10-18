@@ -68,7 +68,7 @@ async function finalizeDAO({ web3, artifacts }) {
   await log.makeTx(template, 'finalizeDAO', [
     state.daoAragonId,
     state.vestingParams.unvestedTokensAmount,
-    state.stakingRouter.address
+    state.stakingRouter.proxy.address
   ], { from: state.deployer })
 }
 
