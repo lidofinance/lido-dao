@@ -25,6 +25,7 @@ const {
   SET_NODE_OPERATOR_LIMIT_ROLE,
   STAKING_ROUTER_ROLE,
   STAKING_MODULE_MANAGE_ROLE,
+  REQUEST_BURN_SHARES_ROLE,
   SIMPLE_DVT_IPFS_CID,
 } = require('./helpers')
 const { ETH, toBN } = require('../../test/helpers/utils')
@@ -151,6 +152,9 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   const agent = await artifacts.require('Agent').at(agentAddress)
   const daoTokenAddress = await tokenManager.token()
   const daoToken = await artifacts.require('MiniMeToken').at(daoTokenAddress)
+
+  const burnerAddress = readStateAppAddress(state, `burner`)
+  const burner = await artifacts.require('Burner').at(burnerAddress)
 
   const easytrackABI = [
     {
@@ -308,14 +312,29 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
 
   // check missed STAKING_MODULE_MANAGE_ROLE role on Agent
   if (!(await stakingRouter.hasRole(STAKING_MODULE_MANAGE_ROLE, voting.address))) {
-    const grantRoleCallData = await stakingRouter.contract.methods
-      .grantRole(STAKING_MODULE_MANAGE_ROLE, agent.address)
-      .encodeABI()
     evmScriptCalls.push({
       to: agent.address,
-      calldata: await agent.contract.methods.execute(stakingRouter.address, 0, grantRoleCallData).encodeABI(),
+      calldata: await agent.contract.methods
+        .execute(
+          stakingRouter.address,
+          0,
+          await stakingRouter.contract.methods.grantRole(STAKING_MODULE_MANAGE_ROLE, agent.address).encodeABI()
+        )
+        .encodeABI(),
     })
   }
+
+  // allow to request burner, add REQUEST_BURN_SHARES_ROLE
+  evmScriptCalls.push({
+    to: agent.address,
+    calldata: await agent.contract.methods
+      .execute(
+        burner.address,
+        0,
+        await burner.contract.methods.grantRole(REQUEST_BURN_SHARES_ROLE, trgProxyAddress).encodeABI()
+      )
+      .encodeABI(),
+  })
 
   // add module to SR
   const addModuleCallData = await stakingRouter.contract.methods
