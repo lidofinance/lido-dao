@@ -46,7 +46,7 @@ const REQUIRED_NET_STATE = [
   `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`,
 ]
 
-async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid = APP_IPFS_CID }) {
+async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid = APP_IPFS_CID }) {
   const netId = await web3.eth.net.getId()
 
   const srcAppName = APP_NAMES.NODE_OPERATORS_REGISTRY
@@ -471,4 +471,4 @@ function getVoters(agentAddress, vestingParams, daoTokenTotalSupply, quorumPcnt)
 
   return voters
 }
-module.exports = runOrWrapScript(deployNORClone, module)
+module.exports = runOrWrapScript(deploySimpleDVT, module)

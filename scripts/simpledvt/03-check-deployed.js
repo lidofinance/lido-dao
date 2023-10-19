@@ -1,12 +1,12 @@
 const { network, ethers } = require('hardhat')
 const { Contract, utils } = require('ethers')
 const chalk = require('chalk')
-const { assert } = require('chai')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, yl, gr } = require('../helpers/log')
 const {
   getDeployer,
   readStateAppAddress,
+  _checkEq,
   MANAGE_SIGNING_KEYS,
   MANAGE_NODE_OPERATOR_ROLE,
   SET_NODE_OPERATOR_LIMIT_ROLE,
@@ -37,12 +37,7 @@ const REQUIRED_NET_STATE = [
   `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`,
 ]
 
-function _checkEq(a, b, descr = '') {
-  assert.equal(a, b, descr)
-  log.success(descr)
-}
-
-async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid = APP_IPFS_CID }) {
+async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid = APP_IPFS_CID }) {
   const netId = await web3.eth.net.getId()
 
   log.splitter()
@@ -455,4 +450,4 @@ async function deployNORClone({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   }
 }
 
-module.exports = runOrWrapScript(deployNORClone, module)
+module.exports = runOrWrapScript(checkSimpleDVT, module)

@@ -3,7 +3,7 @@ const chalk = require('chalk')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, yl } = require('../helpers/log')
-const { getDeployer, readStateAppAddress } = require('./helpers')
+const { getDeployer, readStateAppAddress, _checkEq } = require('./helpers')
 const {
   readNetworkState,
   assertRequiredNetworkState,
@@ -11,6 +11,7 @@ const {
 } = require('../helpers/persisted-network-state')
 
 const { hash: namehash } = require('eth-ens-namehash')
+const { ZERO_ADDRESS } = require('../../test/helpers/utils')
 
 const APP_TRG = process.env.APP_TRG || 'simple-dvt'
 const DEPLOYER = process.env.DEPLOYER || ''
@@ -48,38 +49,43 @@ async function deployEmptyProxy({ web3, artifacts, trgAppName = APP_TRG }) {
     trgProxyAddress = readStateAppAddress(state, `app:${trgAppName}`)
   }
 
-  if (trgProxyAddress && (await web3.eth.getCode(trgProxyAddress)) !== '0x') {
-    log.error(`Target app proxy is already deployed at ${yl(trgProxyAddress)}`)
-    return
+  if (!trgProxyAddress || (await web3.eth.getCode(trgProxyAddress)) === '0x') {
+    const kernel = await artifacts.require('Kernel').at(kernelAddress)
+    const tx = await log.tx(
+      `Deploying proxy for ${trgAppName}`,
+      kernel.newAppProxy(kernelAddress, trgAppId, { from: deployer })
+    )
+    // Find the deployed proxy address in the tx logs.
+    const e = tx.logs.find((l) => l.event === 'NewAppProxy')
+    trgProxyAddress = e.args.proxy
+
+    // upd deployed state
+    persistNetworkState2(network.name, netId, state, {
+      [`app:${trgAppName}`]: {
+        aragonApp: {
+          name: trgAppName,
+          fullName: trgAppFullName,
+          id: trgAppId,
+        },
+        proxy: {
+          address: trgProxyAddress,
+          contract: '@aragon/os/contracts/apps/AppProxyUpgradeable.sol',
+          constructorArgs: [kernelAddress, trgAppId, '0x'],
+        },
+      },
+    })
   }
 
-  const kernel = await artifacts.require('Kernel').at(kernelAddress)
-  const tx = await log.tx(
-    `Deploying proxy for ${trgAppName}`,
-    kernel.newAppProxy(kernelAddress, trgAppId, { from: deployer })
-  )
-  // Find the deployed proxy address in the tx logs.
-  const e = tx.logs.find((l) => l.event === 'NewAppProxy')
-  trgProxyAddress = e.args.proxy
-
-  // upd deployed state
-  persistNetworkState2(network.name, netId, state, {
-    [`app:${trgAppName}`]: {
-      aragonApp: {
-        name: trgAppName,
-        fullName: trgAppFullName,
-        id: trgAppId,
-      },
-      proxy: {
-        address: trgProxyAddress,
-        contract: '@aragon/os/contracts/apps/AppProxyUpgradeable.sol',
-        constructorArgs: [kernelAddress, trgAppId, '0x'],
-      },
-    },
-  })
-
   log(`Target app proxy deployed at`, yl(trgProxyAddress))
+
   log.splitter()
+  log('Checking deployed proxy...')
+
+  const proxy = await artifacts.require('AppProxyUpgradeable').at(trgProxyAddress)
+
+  _checkEq(await proxy.kernel(), kernelAddress, 'App proxy kernel address matches Lido DAO')
+  _checkEq(await proxy.appId(), trgAppId, 'App proxy AppId matches SimpleDVT')
+  _checkEq(await proxy.implementation(), ZERO_ADDRESS, 'App proxy has ZERO_ADDRESS implementations')
 }
 
 module.exports = runOrWrapScript(deployEmptyProxy, module)

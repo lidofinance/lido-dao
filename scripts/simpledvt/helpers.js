@@ -1,3 +1,6 @@
+const { assert } = require('chai')
+const { log } = require('../helpers/log')
+
 const KERNEL_APP_BASES_NAMESPACE = '0xf1f3eb40f5bc1ad1344716ced8b8a0431d840b5783aea1fd01786bc26f35ac0f'
 
 const MANAGE_SIGNING_KEYS = '0x75abc64490e17b40ea1e66691c3eb493647b24430b358bd87ec3e5127f1621ee'
@@ -30,10 +33,16 @@ function getSignature(instance, method) {
   return methodAbi.signature
 }
 
+function _checkEq(a, b, descr = '') {
+  assert.equal(a, b, descr)
+  log.success(descr)
+}
+
 module.exports = {
   readStateAppAddress,
   getDeployer,
   getSignature,
+  _checkEq,
   KERNEL_APP_BASES_NAMESPACE,
   MANAGE_SIGNING_KEYS,
   MANAGE_NODE_OPERATOR_ROLE,
