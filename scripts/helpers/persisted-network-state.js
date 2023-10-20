@@ -88,8 +88,18 @@ function _readNetworkStateFile(fileName, netId) {
   return readStateFile(fileName)
 }
 
+function sortKeysAlphabetically(object) {
+  const sortedObject = {}
+  const sortedKeys = Object.keys(object).sort()
+  for (const key of sortedKeys) {
+    sortedObject[key] = object[key]
+  }
+  return sortedObject
+}
+
 function _writeNetworkStateFile(fileName, state) {
-  const data = JSON.stringify(state, null, '  ')
+  const stateSorted = sortKeysAlphabetically(state)
+  const data = JSON.stringify(stateSorted, null, '  ')
   fs.writeFileSync(fileName, data + '\n', 'utf8')
 }
 
