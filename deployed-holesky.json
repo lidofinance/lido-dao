@@ -770,6 +770,13 @@
         "0xe1635b63b5f7b5e545f2a637558a4029dea7905361a2f0fc28c66e9136cf86a4",
         "0x"
       ]
-    }
+    },
+    "fullName": "simple-dvt.lidopm.eth",
+    "name": "simple-dvt",
+    "id": "0xe1635b63b5f7b5e545f2a637558a4029dea7905361a2f0fc28c66e9136cf86a4",
+    "ipfsCid": "QmaSSujHCGcnFuetAPGwVW5BegaMBvn5SCsgi3LSfvraSo",
+    "contentURI": "0x697066733a516d615353756a484347636e4675657441504777565735426567614d42766e355343736769334c5366767261536f",
+    "implementation": "0xE0270CF2564d81E02284e16539F59C1B5a4718fE",
+    "contract": "NodeOperatorsRegistry"
   }
 }
