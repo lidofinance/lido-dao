@@ -754,7 +754,7 @@
         "SetNodeOperatorRewardAddresses": "0x7F9c5b838510e06b85DD146e71553EB7890fAf2e",
         "UpdateTargetValidatorLimits": "0x6e570D487aE5729Bd982A7bb3a7bfA5213AeAEdE",
         "SetVettedValidatorsLimits": "0xD420d6C8aA81c087829A64Ce59936b7C1176A81a",
-        "TransferNodeOperatorManager": "0xaa49cF620e3f80Ce72D3A7668b1b4f3dF370D2C7"
+        "ChangeNodeOperatorManager": "0xaa49cF620e3f80Ce72D3A7668b1b4f3dF370D2C7"
       }
     },
     "aragonApp": {
