@@ -294,7 +294,7 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
           from: stranger,
           gasPrice: 0,
         })
-        await evmExecutor.executeEVMScript(evmScript)
+        await evmExecutor.executeEVMScript(evmScript, { gasPrice: 0 })
         _checkEq(await trgApp.getNodeOperatorsCount(), 2, `Simulate init: operators count = 2`)
 
         // add keys to module for op1 (on behalf op1 reward addr)

@@ -389,10 +389,6 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
     }
   }
 
-  log.splitter()
-  await _pause()
-  log.splitter()
-
   const newVoteEvmScript = encodeCallScript([
     {
       to: voting.address,
@@ -458,6 +454,9 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
 
     log(`Target App initialized`, yl(await trgApp.hasInitialized()))
   } else {
+    await _pause(mg('>>> Ready fo TX, enter Y to continue, interrupt process otherwise:'))
+    log.splitter()
+
     const tx = await log.tx(
       `Voting: Clone app '${srcAppName}' to '${trgAppName}'`,
       tokenManager.forward(newVoteEvmScript, { from: deployer })
