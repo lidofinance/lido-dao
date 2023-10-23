@@ -1,6 +1,6 @@
 const readline = require('readline')
 const { assert } = require('chai')
-const { log, rd, mg } = require('../helpers/log')
+const { log, rd, mg, yl } = require('../helpers/log')
 
 const KERNEL_APP_BASES_NAMESPACE = '0xf1f3eb40f5bc1ad1344716ced8b8a0431d840b5783aea1fd01786bc26f35ac0f'
 
@@ -133,6 +133,12 @@ function _checkEq(a, b, descr = '') {
   log.success(descr)
 }
 
+function _checkLog(value, msg) {
+  log(msg, yl(value))
+  if (value === undefined) {
+    throw new Error('Parameter missing')
+  }
+}
 function _pause(query = mg('>>> Enter Y to continue, interrupt process otherwise:')) {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
 
@@ -153,6 +159,7 @@ module.exports = {
   getDeployer,
   getSignature,
   _checkEq,
+  _checkLog,
   _pause,
   KERNEL_APP_BASES_NAMESPACE,
   MANAGE_SIGNING_KEYS,

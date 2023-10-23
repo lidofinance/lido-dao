@@ -30,6 +30,7 @@ const {
   SIMPLE_DVT_IPFS_CID,
   easyTrackABI,
   _pause,
+  _checkLog,
 } = require('./helpers')
 const { ETH, toBN } = require('../../test/helpers/utils')
 
@@ -106,20 +107,21 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
   log.splitter()
   const {
     moduleName,
-    moduleType = 'curated',
-    targetShare = 1000,
-    moduleFee = 500,
-    treasuryFee = 500,
+    moduleType,
+    targetShare,
+    moduleFee,
+    treasuryFee,
     penaltyDelay,
     easyTrackAddress,
     easyTrackFactories = {},
   } = state[`app:${trgAppName}`].stakingRouterModuleParams
-  log(`Target SR Module name`, yl(moduleName))
-  log(`Target SR Module type`, yl(moduleType))
-  log(`Target SR Module fee`, yl(moduleFee))
-  log(`Target SR Module targetShare`, yl(targetShare))
-  log(`Target SR Module treasuryFee`, yl(treasuryFee))
-  log(`Target SR Module penaltyDelay`, yl(penaltyDelay))
+
+  _checkLog(moduleName, `Target SR Module name`)
+  _checkLog(moduleType, `Target SR Module type`)
+  _checkLog(moduleFee, `Target SR Module fee`)
+  _checkLog(targetShare, `Target SR Module targetShare`)
+  _checkLog(treasuryFee, `Target SR Module treasuryFee`)
+  _checkLog(penaltyDelay, `Target SR Module penaltyDelay`)
 
   if (!trgProxyAddress || (await web3.eth.getCode(trgProxyAddress)) === '0x') {
     log.error(`Target app proxy is not yet deployed!`)
@@ -128,7 +130,7 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
 
   const trgRepoAddress = await resolveEnsAddress(artifacts, ens, trgAppId)
 
-  if (trgRepoAddress && (await web3.eth.getCode(trgProxyAddress)) !== '0x') {
+  if (trgRepoAddress && (await web3.eth.getCode(trgRepoAddress)) !== '0x') {
     log(`Target App APM repo:`, yl(trgRepoAddress))
     log.error(`Target app is already deployed!`)
     return
