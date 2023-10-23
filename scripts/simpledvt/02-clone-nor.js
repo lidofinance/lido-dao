@@ -3,8 +3,9 @@ const chalk = require('chalk')
 const { Contract } = require('ethers')
 const { encodeCallScript } = require('@aragon/contract-helpers-test/src/aragon-os')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
+const { EVMScriptDecoder, abiProviders } = require('evm-script-decoder')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
-const { log, yl, gr } = require('../helpers/log')
+const { log, yl, gr, cy } = require('../helpers/log')
 // const { saveCallTxData } = require('../helpers/tx-data')
 const { resolveLatestVersion } = require('../components/apm')
 const {
@@ -27,6 +28,8 @@ const {
   STAKING_MODULE_MANAGE_ROLE,
   REQUEST_BURN_SHARES_ROLE,
   SIMPLE_DVT_IPFS_CID,
+  easyTrackABI,
+  _pause,
 } = require('./helpers')
 const { ETH, toBN } = require('../../test/helpers/utils')
 
@@ -67,8 +70,6 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
 
   log(`Using ENS:`, yl(state.ensAddress))
   const ens = await artifacts.require('ENS').at(state.ensAddress)
-  const lidoLocatorAddress = readStateAppAddress(state, `lidoLocator`)
-  log(`Lido Locator:`, yl(lidoLocatorAddress))
   log.splitter()
 
   const srcAppFullName = `${srcAppName}.${state.lidoApmEnsName}`
@@ -111,7 +112,6 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
     treasuryFee = 500,
     penaltyDelay,
     easyTrackAddress,
-    easyTrackEVMScriptExecutor,
     easyTrackFactories = {},
   } = state[`app:${trgAppName}`].stakingRouterModuleParams
   log(`Target SR Module name`, yl(moduleName))
@@ -134,7 +134,7 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
     return
   }
 
-  // preload voting and stakingRouter addresses
+  const lidoLocatorAddress = readStateAppAddress(state, `lidoLocator`)
   const votingAddress = readStateAppAddress(state, `app:${APP_NAMES.ARAGON_VOTING}`)
   const tokenManagerAddress = readStateAppAddress(state, `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`)
   const srAddress = readStateAppAddress(state, 'stakingRouter')
@@ -156,29 +156,34 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
   const burnerAddress = readStateAppAddress(state, `burner`)
   const burner = await artifacts.require('Burner').at(burnerAddress)
 
-  const easytrackABI = [
-    {
-      inputs: [
-        {
-          internalType: 'address',
-          name: '_evmScriptFactory',
-          type: 'address',
-        },
-        {
-          internalType: 'bytes',
-          name: '_permissions',
-          type: 'bytes',
-        },
-      ],
-      name: 'addEVMScriptFactory',
-      outputs: [],
-      stateMutability: 'nonpayable',
-      type: 'function',
-    },
-  ]
+  log.splitter()
+  log(`DAO Kernel`, yl(kernelAddress))
+  log(`ACL`, yl(aclAddress))
+  log(`Voting`, yl(votingAddress))
+  log(`Token manager`, yl(tokenManagerAddress))
+  log(`LDO token`, yl(daoTokenAddress))
+  log(`Lido APM`, yl(state.lidoApmAddress))
+  log(`Staking Router`, yl(srAddress))
+  log(`Burner`, yl(burnerAddress))
+  log(`Lido Locator:`, yl(lidoLocatorAddress))
+
+  log.splitter()
 
   // use ethers.js Contract instance
-  const easytrack = new Contract(easyTrackAddress, easytrackABI)
+  const easytrack = new Contract(easyTrackAddress, easyTrackABI).connect(ethers.provider)
+  const easyTrackEVMScriptExecutor = await easytrack.evmScriptExecutor()
+
+  log(`EasyTrack`, yl(easyTrackAddress))
+  log(`EasyTrack EVM Script Executor`, yl(easyTrackEVMScriptExecutor))
+
+  for (const f of Object.keys(easyTrackFactories)) {
+    log(`EasyTrack Factory <${cy(f)}>`, yl(easyTrackFactories[f]))
+  }
+
+  log.splitter()
+  await _pause()
+  log.splitter()
+
   const evmScriptCalls = [
     // create app repo
     {
@@ -351,12 +356,45 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
     calldata: await agent.contract.methods.execute(stakingRouter.address, 0, addModuleCallData).encodeABI(),
   })
 
+  const evmScript = encodeCallScript(evmScriptCalls)
+
+  const evmScriptDecoder = new EVMScriptDecoder(
+    new abiProviders.Local({
+      [kernel.address]: kernel.abi,
+      [acl.address]: acl.abi,
+      [voting.address]: voting.abi,
+      [agent.address]: agent.abi,
+      [stakingRouter.address]: stakingRouter.abi,
+      [apmRegistry.address]: apmRegistry.abi,
+      [trgApp.address]: trgApp.abi,
+      [easytrack.address]: easyTrackABI,
+    })
+  )
+
+  const decodedEVMScript = await evmScriptDecoder.decodeEVMScript(evmScript)
+
+  log('Decoded voting script:')
+  for (const call of decodedEVMScript.calls) {
+    if (call.abi) {
+      const params = {}
+      const inputs = call.abi.inputs || []
+      for (let i = 0; i < inputs.length; ++i) {
+        params[inputs[i].name] = call.decodedCallData[i]
+      }
+      log({ contract: call.address, method: call.abi.name, params })
+    } else {
+      log(call)
+    }
+  }
+
+  log.splitter()
+  await _pause()
+  log.splitter()
+
   const newVoteEvmScript = encodeCallScript([
     {
       to: voting.address,
-      calldata: await voting.contract.methods
-        .newVote(encodeCallScript(evmScriptCalls), voteDesc, false, false)
-        .encodeABI(),
+      calldata: await voting.contract.methods.newVote(evmScript, voteDesc, false, false).encodeABI(),
     },
   ])
 

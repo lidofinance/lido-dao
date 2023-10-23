@@ -79,6 +79,7 @@
     "ethereumjs-testrpc-sc": "^6.5.1-sc.1",
     "ethereumjs-util": "^7.0.8",
     "ethers": "^5.1.4",
+    "evm-script-decoder": "git+https://github.com/lidofinance/evm-script-decoder.git#v0.2.2",
     "ganache": "=7.6.0",
     "hardhat": "2.12.7",
     "hardhat-contract-sizer": "^2.5.0",

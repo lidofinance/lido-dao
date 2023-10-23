@@ -1,5 +1,6 @@
+const readline = require('readline')
 const { assert } = require('chai')
-const { log } = require('../helpers/log')
+const { log, rd, mg } = require('../helpers/log')
 
 const KERNEL_APP_BASES_NAMESPACE = '0xf1f3eb40f5bc1ad1344716ced8b8a0431d840b5783aea1fd01786bc26f35ac0f'
 
@@ -10,6 +11,100 @@ const STAKING_ROUTER_ROLE = '0xbb75b874360e0bfd87f964eadd8276d8efb7c942134fc329b
 const STAKING_MODULE_MANAGE_ROLE = '0x3105bcbf19d4417b73ae0e58d508a65ecf75665e46c2622d8521732de6080c48'
 const REQUEST_BURN_SHARES_ROLE = '0x4be29e0e4eb91f98f709d98803cba271592782e293b84a625e025cbb40197ba8'
 const SIMPLE_DVT_IPFS_CID = 'QmaSSujHCGcnFuetAPGwVW5BegaMBvn5SCsgi3LSfvraSo'
+
+const easyTrackABI = [
+  {
+    inputs: [],
+    name: 'evmScriptExecutor',
+    outputs: [{ internalType: 'contract IEVMScriptExecutor', name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: '_evmScriptFactory',
+        type: 'address',
+      },
+      {
+        internalType: 'bytes',
+        name: '_permissions',
+        type: 'bytes',
+      },
+    ],
+    name: 'addEVMScriptFactory',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    name: 'evmScriptFactories',
+    outputs: [{ internalType: 'address', name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'address', name: '', type: 'address' }],
+    name: 'evmScriptFactoryPermissions',
+    outputs: [{ internalType: 'bytes', name: '', type: 'bytes' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'getEVMScriptFactories',
+    outputs: [{ internalType: 'address[]', name: '', type: 'address[]' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+
+  {
+    inputs: [{ internalType: 'address', name: '_maybeEVMScriptFactory', type: 'address' }],
+    name: 'isEVMScriptFactory',
+    outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+]
+
+const easyTrackEvmExecutorABI = [
+  {
+    inputs: [{ internalType: 'bytes', name: '_evmScript', type: 'bytes' }],
+    name: 'executeEVMScript',
+    outputs: [{ internalType: 'bytes', name: '', type: 'bytes' }],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+]
+
+const easyTrackFactoryABI = [
+  {
+    inputs: [
+      { internalType: 'address', name: '_creator', type: 'address' },
+      { internalType: 'bytes', name: '_evmScriptCallData', type: 'bytes' },
+    ],
+    name: 'createEVMScript',
+    outputs: [{ internalType: 'bytes', name: '', type: 'bytes' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'nodeOperatorsRegistry',
+    outputs: [{ internalType: 'contract INodeOperatorsRegistry', name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'trustedCaller',
+    outputs: [{ internalType: 'address', name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+]
 
 async function getDeployer(web3, defaultDeployer) {
   if (!defaultDeployer) {
@@ -38,11 +133,27 @@ function _checkEq(a, b, descr = '') {
   log.success(descr)
 }
 
+function _pause(query = mg('>>> Enter Y to continue, interrupt process otherwise:')) {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+
+  return new Promise((resolve) =>
+    rl.question(query, (ans) => {
+      rl.close()
+      if (ans !== 'y' && ans !== 'Y') {
+        console.error(rd('Process aborted'))
+        process.exit(1)
+      }
+      resolve()
+    })
+  )
+}
+
 module.exports = {
   readStateAppAddress,
   getDeployer,
   getSignature,
   _checkEq,
+  _pause,
   KERNEL_APP_BASES_NAMESPACE,
   MANAGE_SIGNING_KEYS,
   MANAGE_NODE_OPERATOR_ROLE,
@@ -51,4 +162,7 @@ module.exports = {
   STAKING_MODULE_MANAGE_ROLE,
   REQUEST_BURN_SHARES_ROLE,
   SIMPLE_DVT_IPFS_CID,
+  easyTrackABI,
+  easyTrackEvmExecutorABI,
+  easyTrackFactoryABI,
 }
