@@ -746,7 +746,6 @@
       "treasuryFee": 200,
       "penaltyDelay": 86400,
       "easyTrackAddress": "0x1763b9ED3586B08AE796c7787811a2E1bc16163a",
-      "easyTrackEVMScriptExecutor": "0x2819B65021E13CEEB9AC33E77DB32c7e64e7520D",
       "easyTrackFactories": {
         "AddNodeOperators": "0xC20129f1dd4DFeD023a6d6A8de9d54A7b61af5CC",
         "ActivateNodeOperators": "0x08c48Fef9Cadca882E27d2325D1785858D5c1aE3",

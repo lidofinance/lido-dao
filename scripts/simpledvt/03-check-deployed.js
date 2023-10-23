@@ -2,11 +2,12 @@ const { network, ethers } = require('hardhat')
 const { Contract, utils } = require('ethers')
 const chalk = require('chalk')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
-const { log, yl, gr } = require('../helpers/log')
+const { log, yl, gr, cy, mg } = require('../helpers/log')
 const {
   getDeployer,
   readStateAppAddress,
   _checkEq,
+  _pause,
   MANAGE_SIGNING_KEYS,
   MANAGE_NODE_OPERATOR_ROLE,
   SET_NODE_OPERATOR_LIMIT_ROLE,
@@ -14,6 +15,9 @@ const {
   STAKING_MODULE_MANAGE_ROLE,
   REQUEST_BURN_SHARES_ROLE,
   SIMPLE_DVT_IPFS_CID,
+  easyTrackABI,
+  easyTrackEvmExecutorABI,
+  easyTrackFactoryABI,
 } = require('./helpers')
 const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 const { hash: namehash } = require('eth-ens-namehash')
@@ -88,7 +92,6 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     treasuryFee,
     penaltyDelay,
     easyTrackAddress,
-    easyTrackEVMScriptExecutor,
     easyTrackFactories = {},
   } = state[`app:${trgAppName}`].stakingRouterModuleParams
 
@@ -109,6 +112,8 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   const stakingRouter = await artifacts.require('StakingRouter').at(srAddress)
   const burnerAddress = readStateAppAddress(state, `burner`)
   const burner = await artifacts.require('Burner').at(burnerAddress)
+  const easytrack = new Contract(easyTrackAddress, easyTrackABI).connect(ethers.provider)
+  const easyTrackEVMScriptExecutor = await easytrack.evmScriptExecutor()
 
   _checkEq(
     await stakingRouter.hasRole(STAKING_MODULE_MANAGE_ROLE, agentAddress),
@@ -210,56 +215,30 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   log.splitter()
 
   // hardcode ET EVM script executor and ET factory ABIs to avoid adding external ABI files to repo
-  const evmExecutorABI = [
-    {
-      inputs: [{ internalType: 'bytes', name: '_evmScript', type: 'bytes' }],
-      name: 'executeEVMScript',
-      outputs: [{ internalType: 'bytes', name: '', type: 'bytes' }],
-      stateMutability: 'nonpayable',
-      type: 'function',
-    },
-  ]
 
-  const factoryABI = [
-    {
-      inputs: [
-        { internalType: 'address', name: '_creator', type: 'address' },
-        { internalType: 'bytes', name: '_evmScriptCallData', type: 'bytes' },
-      ],
-      name: 'createEVMScript',
-      outputs: [{ internalType: 'bytes', name: '', type: 'bytes' }],
-      stateMutability: 'view',
-      type: 'function',
-    },
-    {
-      inputs: [],
-      name: 'nodeOperatorsRegistry',
-      outputs: [{ internalType: 'contract INodeOperatorsRegistry', name: '', type: 'address' }],
-      stateMutability: 'view',
-      type: 'function',
-    },
-    {
-      inputs: [],
-      name: 'trustedCaller',
-      outputs: [{ internalType: 'address', name: '', type: 'address' }],
-      stateMutability: 'view',
-      type: 'function',
-    },
-  ]
+  const allFactories = await easytrack.getEVMScriptFactories()
+  // console.log(allFactories)
 
   // create ET factories instances
   const factories = Object.entries(easyTrackFactories).reduce(
-    (f, [n, a]) => ({ ...f, [n]: new Contract(a, factoryABI, ethers.provider) }),
+    (f, [n, a]) => ({ ...f, [n]: new Contract(a, easyTrackFactoryABI, ethers.provider) }),
     {}
   )
 
   for (const name of Object.keys(factories)) {
-    _checkEq(await factories[name].nodeOperatorsRegistry(), trgProxyAddress, `ET factory ${name} matches App`)
+    // `EasyTrack Factory <${cy(f)}>`
+    log(`ET factory <${cy(name)}>:`)
+    _checkEq(allFactories.includes(factories[name].address), true, `- in global list`)
+    _checkEq(await easytrack.isEVMScriptFactory(factories[name].address), true, `- isEVMScriptFactory`)
+    _checkEq(await factories[name].nodeOperatorsRegistry(), trgProxyAddress, `- matches target App`)
   }
 
   log.splitter()
 
   if (SIMULATE) {
+    await _pause(mg('>>> Enter Y to start simulation, interrupt process otherwise:'))
+    log.splitter()
+
     log(gr(`Simulating adding keys and deposit!`))
     const stranger = await getDeployer(web3)
 
@@ -271,9 +250,10 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
 
     try {
       const lido = await artifacts.require('Lido').at(lidoAddress)
+
       await ethers.getImpersonatedSigner(easyTrackAddress)
       const easyTrackSigner = await ethers.getSigner(easyTrackAddress)
-      const evmExecutor = new Contract(easyTrackEVMScriptExecutor, evmExecutorABI, easyTrackSigner)
+      const evmExecutor = new Contract(easyTrackEVMScriptExecutor, easyTrackEvmExecutorABI, easyTrackSigner)
 
       const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
       const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
@@ -317,15 +297,15 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
         await evmExecutor.executeEVMScript(evmScript)
         _checkEq(await trgApp.getNodeOperatorsCount(), 2, `Simulate init: operators count = 2`)
 
-        // add keys to module for op1
+        // add keys to module for op1 (on behalf op1 reward addr)
         await ethers.getImpersonatedSigner(ADDRESS_1)
         let keys = genKeys(op1keysAmount)
         await trgApp.addSigningKeys(0, op1keysAmount, keys.pubkeys, keys.sigkeys, { from: ADDRESS_1, gasPrice: 0 })
 
-        // add keys to module for op2
-        await ethers.getImpersonatedSigner(ADDRESS_2)
+        // add keys to module for op2 (on behalf op2 manager)
+        await ethers.getImpersonatedSigner(MANAGER_2)
         keys = genKeys(op2keysAmount)
-        await trgApp.addSigningKeys(1, op2keysAmount, keys.pubkeys, keys.sigkeys, { from: ADDRESS_2, gasPrice: 0 })
+        await trgApp.addSigningKeys(1, op2keysAmount, keys.pubkeys, keys.sigkeys, { from: MANAGER_2, gasPrice: 0 })
 
         let opInfo = await trgApp.getNodeOperator(0, true)
         _checkEq(

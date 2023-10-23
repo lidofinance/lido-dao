@@ -5,7 +5,7 @@ const { encodeCallScript } = require('@aragon/contract-helpers-test/src/aragon-o
 const { getEventArgument } = require('@aragon/contract-helpers-test')
 const { EVMScriptDecoder, abiProviders } = require('evm-script-decoder')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
-const { log, yl, gr, cy } = require('../helpers/log')
+const { log, yl, gr, cy, mg } = require('../helpers/log')
 // const { saveCallTxData } = require('../helpers/tx-data')
 const { resolveLatestVersion } = require('../components/apm')
 const {
@@ -414,7 +414,10 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
     })
   }
 
+  log.splitter()
+
   if (SIMULATE) {
+    await _pause(mg('>>> Enter Y to start simulation, interrupt process otherwise:'))
     log.splitter()
     log(gr(`Simulating voting creation and enact!`))
     const voters = getVoters(
