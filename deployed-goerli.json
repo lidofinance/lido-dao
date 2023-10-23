@@ -430,13 +430,12 @@
   "app:simple-dvt": {
     "stakingRouterModuleParams": {
       "moduleName": "SimpleDVT",
-      "moduleType": "curated",
+      "moduleType": "curated-onchain-v1",
       "targetShare": 1000,
       "moduleFee": 500,
       "treasuryFee": 500,
       "penaltyDelay": 86400,
       "easyTrackAddress": "0xAf072C8D368E4DD4A9d4fF6A76693887d6ae92Af",
-      "easyTrackEVMScriptExecutor": "0x3c9AcA237b838c59612d79198685e7f20C7fE783",
       "easyTrackFactories": {}
     },
     "aragonApp": {
