@@ -214,12 +214,9 @@ contract LidoTemplate is IsContract {
         address _tokenManagerImpl,
         address _votingImpl
     ) external onlyOwner {
-        // uint16[3] memory initialSemanticVersion = [1, 0, 0];
-
         uint16[3] memory initialSemanticVersion = [uint16(1), uint16(0), uint16(0)];
 
         bytes memory dummyContentURI = new bytes(0);
-        // new bytes(0x697066733a516d516b4a4d7476753474794a76577250584a666a4c667954576e393539696179794e6a703759714e7a58377053);
 
         APMRegistry lidoRegistry = deployState.lidoRegistry;
 

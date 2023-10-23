@@ -1,24 +1,12 @@
-const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
-const { getEvents, getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
-
-
+const { getEventArgument, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 const runOrWrapScript = require('../../helpers/run-or-wrap-script')
 const { log, yl } = require('../../helpers/log')
-const { hexConcat, pad, ETH, tokens, div15, StETH, shares, prepIdsCountsPayload, e27, e18, e9, toBN } = require('../../../test/helpers/utils')
+const { hexConcat, pad, ETH, e27, e18, toBN } = require('../../../test/helpers/utils')
 const { reportOracle } = require('../../../test/helpers/oracle')
 const { getBalance, advanceChainTime } = require('../../../test/helpers/blockchain')
-const { readNetworkState, assertRequiredNetworkState, readStateFile } = require('../../helpers/persisted-network-state')
-const { assertRole, assertMissingRole } = require('../../helpers/aragon')
-const { assertLastEvent, assertSingleEvent } = require('../../helpers/events')
+const { assertRequiredNetworkState, readStateFile } = require('../../helpers/persisted-network-state')
 const { assert } = require('../../../test/helpers/assert')
-const { percentToBP } = require('../../helpers/index')
-const { resolveEnsAddress } = require('../../components/ens')
 
-const { APP_NAMES } = require('../../constants')
-
-const { assertAPMRegistryPermissions } = require('./apm')
-const { assertInstalledApps } = require('./apps')
-const { assertVesting } = require('./dao-token')
 
 const REQUIRED_NET_STATE = [
   'ensAddress',
@@ -29,17 +17,12 @@ const REQUIRED_NET_STATE = [
   'lidoTemplate'
 ]
 
-const STETH_TOKEN_NAME = 'Liquid staked Ether 2.0'
-const STETH_TOKEN_SYMBOL = 'stETH'
-const STETH_TOKEN_DECIMALS = 18
 const UNLIMITED = 1000000000
 const CURATED_MODULE_ID = 1
 const CALLDATA = '0x0'
 const MAX_DEPOSITS = 150
 const ADDRESS_1 = '0x0000000000000000000000000000000000000001'
 const ADDRESS_2 = '0x0000000000000000000000000000000000000002'
-const ADDRESS_3 = '0x0000000000000000000000000000000000000003'
-const ADDRESS_4 = '0x0000000000000000000000000000000000000004'
 
 const MANAGE_MEMBERS_AND_QUORUM_ROLE = web3.utils.keccak256('MANAGE_MEMBERS_AND_QUORUM_ROLE')
 
@@ -85,15 +68,12 @@ async function checkLDOCanBeTransferred(ldo, state) {
 
 async function prepareProtocolForSubmitDepositReportWithdrawalFlow(protocol, state, oracleMember1, oracleMember2) {
   const {
-    stakingRouter,
     lido,
     voting,
     agent,
     nodeOperatorsRegistry,
     depositSecurityModule,
-    accountingOracle,
     hashConsensusForAO,
-    elRewardsVault,
     withdrawalQueue,
   } = protocol
 
@@ -122,8 +102,6 @@ async function prepareProtocolForSubmitDepositReportWithdrawalFlow(protocol, sta
   await nodeOperatorsRegistry.setNodeOperatorStakingLimit(0, UNLIMITED, { from: voting.address })
   await nodeOperatorsRegistry.setNodeOperatorStakingLimit(1, UNLIMITED, { from: voting.address })
 
-
-
   const quorum = 2
   await hashConsensusForAO.grantRole(MANAGE_MEMBERS_AND_QUORUM_ROLE, agent.address, { from: agent.address })
   await hashConsensusForAO.addMember(oracleMember1.address, quorum, { from: agent.address })
@@ -135,11 +113,8 @@ async function prepareProtocolForSubmitDepositReportWithdrawalFlow(protocol, sta
 
 async function checkSubmitDepositReportWithdrawal(protocol, state, user1, user2) {
   const {
-    stakingRouter,
     lido,
-    voting,
     agent,
-    nodeOperatorsRegistry,
     depositSecurityModule,
     accountingOracle,
     hashConsensusForAO,
@@ -165,15 +140,6 @@ async function checkSubmitDepositReportWithdrawal(protocol, state, user1, user2)
 
   assert.equals((await lido.getBeaconStat()).depositedValidators, 1)
 
-  // const checkStat = async ({ depositedValidators, beaconValidators, beaconBalance }) => {
-  //   const stat = (await lido.getBeaconStat()).depositedValidators
-  //   assert.equals(stat.depositedValidators, depositedValidators, 'depositedValidators check')
-  //   assert.equals(stat.beaconValidators, beaconValidators, 'beaconValidators check')
-  //   assert.equals(stat.beaconBalance, beaconBalance, 'beaconBalance check')
-  // }
-  // await checkStat({ depositedValidators: 1, beaconValidators: 0, beaconBalance: ETH(0) })
-
-
   const latestBlockTimestamp = (await ethers.provider.getBlock('latest')).timestamp
   const initialEpoch = Math.floor((latestBlockTimestamp - chainSpec.genesisTime)
     / (chainSpec.slotsPerEpoch * chainSpec.secondsPerSlot))
@@ -182,14 +148,8 @@ async function checkSubmitDepositReportWithdrawal(protocol, state, user1, user2)
 
 
   const elRewardsVaultBalance = await web3.eth.getBalance(elRewardsVault.address)
-  // const numValidators = 1
-  // const clBalance = ETH(35)
-  // await pushOracleReport(hashConsensusForAO, accountingOracle, 1, ETH(35), elRewardsVaultBalance)
-  // await reportOracle(hashConsensusForAO, accountingOracle, { numValidators, clBalance, elRewardsVaultBalance })
 
   const withdrawalAmount = ETH(1)
-  // const finalUser1StethAmount = '36699999999999999999'
-  // assert.equals(await lido.balanceOf(user1.address), finalStethAmount)
 
   await lido.approve(withdrawalQueue.address, withdrawalAmount, { from: user1.address })
   const receipt = await withdrawalQueue.requestWithdrawals([withdrawalAmount], user1.address, { from: user1.address })
