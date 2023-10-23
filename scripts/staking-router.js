@@ -62,7 +62,7 @@ let StakingRouter = {
   last_distribute: 0,
 
   //
-  // fucntions
+  // functions
   //
 
   getTotalKeys: function() {
@@ -262,7 +262,7 @@ function main() {
 
   let allocation = StakingRouter.allocation
   console.log('allocation1', allocation)
-  console.log('last distibute', StakingRouter.last_distribute)
+  console.log('last distribute', StakingRouter.last_distribute)
 
   //community deposited
   communityModule.deposit(3)
@@ -283,7 +283,7 @@ function main() {
 
 
   //try to get next deposit by por from solo
-  console.log('try depoist curated again 150 keys')
+  console.log('try deposit curated again 150 keys')
   curatedModule.deposit(150)
 
   allocation = StakingRouter.allocation
