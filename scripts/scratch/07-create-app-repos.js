@@ -8,7 +8,7 @@ const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = re
 
 const { APP_NAMES } = require('../constants')
 
-const DULL_CONTENT_URI = "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+const NULL_CONTENT_URI = "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 
 
 const REQUIRED_NET_STATE = [
@@ -52,13 +52,13 @@ async function createAppRepos({ web3, artifacts }) {
     [1, 0, 0],
     // Lido app
     lidoAppState.implementation.address,
-    DULL_CONTENT_URI,
+    NULL_CONTENT_URI,
     // NodeOperatorsRegistry app
     nodeOperatorsAppState.implementation.address,
-    DULL_CONTENT_URI,
+    NULL_CONTENT_URI,
     // LegacyOracle app
     oracleAppState.implementation.address,
-    DULL_CONTENT_URI,
+    NULL_CONTENT_URI,
   ]
   const from = state.deployer
 

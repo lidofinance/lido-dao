@@ -90,7 +90,7 @@ async function obtainDeployedAPM({ web3, artifacts }) {
     address: daoToken.address,
     contract: await getContractPath('MiniMeToken'),
     constructorArgs: [ // see LidoTemplate._createToken
-      state.miniMeTokenFactoryAddress,
+      state.miniMeTokenFactory.address,
       ZERO_ADDRESS,
       0,
       state.daoInitialSettings.token.name,
@@ -100,7 +100,7 @@ async function obtainDeployedAPM({ web3, artifacts }) {
     ],
   }
 
-  const evmScriptRegistryFactory = await artifacts.require('EVMScriptRegistryFactory').at(state.evmScriptRegistryFactoryAddress)
+  const evmScriptRegistryFactory = await artifacts.require('EVMScriptRegistryFactory').at(state.evmScriptRegistryFactory.address)
   state.callsScript = {
     address: await evmScriptRegistryFactory.baseCallScript(),
     contract: await getContractPath('CallsScript'),

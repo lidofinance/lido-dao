@@ -12,7 +12,7 @@ const TLD = 'eth'
 const CONTROLLER_INTERFACE_ID = '0x018fac06'
 
 const REQUIRED_NET_STATE = [
-  'ensAddress',
+  'ens',
   'lidoApmEnsName',
   'lidoApmEnsRegDurationSec',
   'deployer',
@@ -30,8 +30,8 @@ async function deployTemplate({ web3, artifacts }) {
 
   log.splitter()
 
-  log(`Using ENS:`, yl(state.ensAddress))
-  const ens = await artifacts.require('ENS').at(state.ensAddress)
+  log(`Using ENS:`, yl(state.ens.address))
+  const ens = await artifacts.require('ENS').at(state.ens.address)
 
   const tldNode = namehash(TLD)
 

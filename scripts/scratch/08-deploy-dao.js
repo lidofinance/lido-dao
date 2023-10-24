@@ -15,7 +15,7 @@ const { APP_NAMES } = require('../constants')
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
 const REQUIRED_NET_STATE = [
-  'ensAddress',
+  'ens',
   'deployer',
   'lidoTemplate',
   `app:${APP_NAMES.LIDO}`,
@@ -119,7 +119,7 @@ async function checkAppRepos(state) {
     log.success(contentCheckDesc)
   }
 
-  const ens = await artifacts.require('ENS').at(state.ensAddress)
+  const ens = await artifacts.require('ENS').at(state.ens.address)
 
   for (const app of aragonApps) {
     const upstreamRepoName = `${app.appName.substring(7)}.${ARAGON_APM_ENS_DOMAIN}`

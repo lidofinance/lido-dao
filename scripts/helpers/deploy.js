@@ -1,4 +1,4 @@
-const { readNetworkState, persistNetworkState, persistNetworkState2 } = require('./persisted-network-state')
+const { readNetworkState, persistNetworkState } = require('./persisted-network-state')
 const { artifacts, ethers } = require('hardhat')
 const fs = require('fs').promises
 const chalk = require('chalk')
@@ -118,12 +118,11 @@ async function assertDeployedBytecode(address, artifact, desc = '') {
   const bytecode = await web3.eth.getCode(address)
   const nameDesc = artifact.contractName ? chalk.yellow(artifact.contractName) : 'the expected one'
   const checkDesc = `${desc ? desc + ': ' : ''}the bytecode at ${chalk.yellow(address)} matches ${nameDesc}`
-  // TODO: restore the check
-  // if (bytecode.toLowerCase() !== artifact.deployedBytecode.toLowerCase()) {
-  //   console.log({bytecode: bytecode.toLowerCase()})
-  //   console.log({deployedBytecode: artifact.deployedBytecode.toLowerCase()})
-  // }
-  // assert.isTrue(bytecode.toLowerCase() === artifact.deployedBytecode.toLowerCase(), checkDesc)
+  if (bytecode.toLowerCase() !== artifact.deployedBytecode.toLowerCase()) {
+    console.log({bytecode: bytecode.toLowerCase()})
+    console.log({deployedBytecode: artifact.deployedBytecode.toLowerCase()})
+  }
+  assert.isTrue(bytecode.toLowerCase() === artifact.deployedBytecode.toLowerCase(), checkDesc)
   log.success(checkDesc)
 }
 
@@ -235,7 +234,7 @@ async function deployImplementation(nameInState, artifactName, deployer, constru
     address: contract.address,
     constructorArgs: constructorArgs,
   }
-  persistNetworkState2(network.name, netId, state)
+  persistNetworkState(network.name, netId, state)
   return contract
 }
 

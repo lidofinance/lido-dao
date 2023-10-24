@@ -542,12 +542,14 @@
       "lastCompletedEpochId": 0
     }
   },
-  "lidoApmAddress": "0x4605Dc9dC4BD0442F850eB8226B94Dd0e27C3Ce7",
-  "lidoApmDeployArguments": [
-    "0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae",
-    "0x90a9580abeb24937fc658e497221c81ce8553b560304f9525821f32b17dbdaec"
-  ],
-  "lidoApmDeployTx": "0x2fac1c172a250736c34d16d3a721d2916abac0de0dea67d79955346a1f4345a2",
+  "lidoApm": {
+    "deployArguments": [
+      "0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae",
+      "0x90a9580abeb24937fc658e497221c81ce8553b560304f9525821f32b17dbdaec"
+    ],
+    "deployTx": "0x2fac1c172a250736c34d16d3a721d2916abac0de0dea67d79955346a1f4345a2",
+    "address": "0x4605Dc9dC4BD0442F850eB8226B94Dd0e27C3Ce7"
+  },
   "lidoApmEnsName": "lidopm.eth",
   "lidoApmEnsRegDurationSec": 94608000,
   "lidoLocator": {

@@ -25,6 +25,7 @@ async function saveDeployParameters({ web3, artifacts }) {
   const gateSealAddress = (GATE_SEAL_FACTORY === null || GATE_SEAL_FACTORY === ZERO_ADDRESS)
     ? ZERO_ADDRESS : ''
 
+  state.networkId = await web3.eth.net.getId()
   state.chainId = CHAIN_ID
   state.deployer = DEPLOYER
   state.gateSeal = {

@@ -21,7 +21,7 @@ const { assertAPMRegistryPermissions } = require('./checks/apm')
 const { assertInstalledApps } = require('./checks/apps')
 const { assertVesting } = require('./checks/dao-token')
 
-const REQUIRED_NET_STATE = ['ensAddress', 'lidoApmEnsName', 'daoAragonId', 'vestingParams', 'daoInitialSettings', 'lidoTemplate']
+const REQUIRED_NET_STATE = ['ens', 'lidoApmEnsName', 'daoAragonId', 'vestingParams', 'daoInitialSettings', 'lidoTemplate']
 
 const TOKEN_TRANSFERABLE = true
 const TOKEN_DECIMALS = 18
@@ -50,8 +50,8 @@ async function checkDAO({ web3, artifacts }) {
 
   log.splitter()
 
-  log(`Using ENS:`, yl(state.ensAddress))
-  const ens = await artifacts.require('ENS').at(state.ensAddress)
+  log(`Using ENS:`, yl(state.ens.address))
+  const ens = await artifacts.require('ENS').at(state.ens.address)
 
   log.splitter()
 
@@ -65,14 +65,14 @@ async function checkDAO({ web3, artifacts }) {
   const apmDeployedEvt = await assertSingleEvent(template, 'TmplAPMDeployed', null, state.lidoTemplate.deployBlock)
   const daoDeployedEvt = await assertSingleEvent(template, 'TmplDAOAndTokenDeployed', null, state.lidoTemplate.deployBlock)
 
-  state.lidoApmAddress = apmDeployedEvt.args.apm
+  lidoApmAddress = apmDeployedEvt.args.apm
   daoAddress = daoDeployedEvt.args.dao
   daoTokenAddress = daoDeployedEvt.args.token
 
   log.splitter()
 
-  log(`Using APMRegistry:`, yl(state.lidoApmAddress))
-  const registry = await artifacts.require('APMRegistry').at(state.lidoApmAddress)
+  log(`Using APMRegistry:`, yl(lidoApmAddress))
+  const registry = await artifacts.require('APMRegistry').at(lidoApmAddress)
 
   log(`Using Kernel:`, yl(daoAddress))
   const dao = await artifacts.require('Kernel').at(daoAddress)

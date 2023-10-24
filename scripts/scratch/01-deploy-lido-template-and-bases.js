@@ -3,15 +3,15 @@ const chalk = require('chalk')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, yl, gr } = require('../helpers/log')
 const { deployImplementation, deployWithoutProxy } = require('../helpers/deploy')
-const { readNetworkState, assertRequiredNetworkState, persistNetworkState2 } = require('../helpers/persisted-network-state')
+const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 const { APP_NAMES } = require('../constants')
 
 const REQUIRED_NET_STATE = [
-  'ensAddress',
-  'daoFactoryAddress',
-  'miniMeTokenFactoryAddress',
-  'aragonIDAddress',
-  'apmRegistryFactoryAddress',
+  'ens',
+  'daoFactory',
+  'miniMeTokenFactory',
+  'aragonID',
+  'apmRegistryFactory',
   'deployer'
 ]
 
@@ -26,11 +26,11 @@ async function deployTemplate({ web3, artifacts }) {
 
   const daoTemplateConstructorArgs = [
     state.deployer,
-    state.daoFactoryAddress,
-    state.ensAddress,
-    state.miniMeTokenFactoryAddress,
-    state.aragonIDAddress,
-    state.apmRegistryFactoryAddress
+    state.daoFactory.address,
+    state.ens.address,
+    state.miniMeTokenFactory.address,
+    state.aragonID.address,
+    state.apmRegistryFactory.address
   ]
 
   log.splitter()
@@ -44,7 +44,7 @@ async function deployTemplate({ web3, artifacts }) {
 
   await deployImplementation(`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`, 'NodeOperatorsRegistry', state.deployer)
 
-  persistNetworkState2(network.name, netId, readNetworkState(network.name, netId), {
+  persistNetworkState(network.name, netId, readNetworkState(network.name, netId), {
     lidoTemplate: {
       deployBlock: daoTemplateDeployBlock,
     }
