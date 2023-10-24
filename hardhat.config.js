@@ -55,16 +55,13 @@ const getNetConfig = (networkName, ethAccountName) => {
     mainnetfork: {
       ...base,
       url: RPC_URL,
-      chainId: Number(process.env.CHAIN_ID) || 1,
     },
     goerlifork: {
       ...base,
       url: RPC_URL,
-      chainId: Number(process.env.CHAIN_ID) || 5,
     },
     local: {
       url: RPC_URL,
-      chainId: Number(process.env.CHAIN_ID) || 1337,
     },
     hardhat: {
       // NB!: forking get enabled if env variable HARDHAT_FORKING_URL is set, see code below
@@ -75,14 +72,13 @@ const getNetConfig = (networkName, ethAccountName) => {
       accounts: {
         // default hardhat's node mnemonic
         mnemonic: 'test test test test test test test test test test test junk',
-        count: 10,
+        count: 30,
         accountsBalance: '100000000000000000000000',
         gasPrice: 0,
       },
     },
     goerli: {
       ...base,
-      // url: 'https://goerli.infura.io/v3/' + process.env.WEB3_INFURA_PROJECT_ID,
       url: RPC_URL,
       chainId: 5,
       timeout: 60000 * 10,
@@ -111,7 +107,6 @@ const getNetConfig = (networkName, ethAccountName) => {
       timeout: 60000 * 10,
       forking: {
         url: RPC_URL,
-        // url: 'https://eth-mainnet.alchemyapi.io/v2/' + accounts.alchemy.apiKey
       },
     },
   }

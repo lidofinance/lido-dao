@@ -11,7 +11,7 @@ The repo contains bash scripts for deployment of the DAO under multiple environm
 - local node (ganache, anvil, hardhat network) `dao-local-deploy.sh`
 - holesky testnet - `dao-holesky-deploy.sh`
 
-The protocol has a bunch of parameters to configure for the scratch deployment. The default configuration is stored in files `deployed-<deploy env>-defaults.json`, where `<deploy env>` is the target environment. Currently there is single default configuration `deployed-testnet-defaults.json` suitable for testnet deployments. Compared to the mainnet configuration, it has lower vote durations, more frequent oracle report cycles, etc. Part of the parameters require further specification -- they are marked with `null` values.
+The protocol has a bunch of parameters to configure for the scratch deployment. The default configuration is stored in files `deployed-<deploy env>-defaults.json`, where `<deploy env>` is the target environment. Currently, there is a single default configuration, `deployed-testnet-defaults.json`, suitable for testnet deployments. Compared to the mainnet configuration, it has lower vote durations, more frequent oracle report cycles, etc. Part of the parameters require further specification -- they are marked with `null` values.
 During the deployment, the "default" configuration is copied to `deployed-<network name>.json`, where `<network name>` is the name of a network configuration defined in `hardhat.config.js`. The file `deployed-<network name>.json` gets populated with the contract addresses and transaction hashes during the deployment process.
 
 These are the deployment setups, supported currently:
@@ -37,15 +37,15 @@ A brief description of what's going on under the hood in the deploy script.
 - Deploy Aragon framework environment
 - Deploy standard Aragon apps contracts (like `Agent`, `Voting`)
 - Deploy `LidoTemplate` contract
-  - This is an auxiliary deploy contract, which performs DAO configuration
-- Deploy Lido custom Aragon apps implementations (aka bases), namely for `Lido`, `LegacyOracle`, `NodeOperatorsRegistry`)
+  - This is an auxiliary deploy contract which performs DAO configuration
+- Deploy Lido custom Aragon apps implementations (aka bases), namely for `Lido`, `LegacyOracle`, `NodeOperatorsRegistry`
 - Registry Lido APM name in ENS
 - Deploy Aragon package manager contract `APMRegistry` (via `LidoTemplate`)
 - Deploy Lido custom Aragon apps repo contracts (via `LidoTemplate`)
 - Deploy Lido DAO (via `LidoTemplate`)
 - Issue DAO tokens (via `LidoTemplate`)
 - Deploy non-Aragon Lido contracts: `OracleDaemonConfig`, `LidoLocator`, `OracleReportSanityChecker`, `EIP712StETH`, `WstETH`, `WithdrawalQueueERC721`, `WithdrawalVault`, `LidoExecutionLayerRewardsVault`, `StakingRouter`, `DepositSecurityModule`, `AccountingOracle`, `HashConsensus` for AccountingOracle, `ValidatorsExitBusOracle`, `HashConsensus` for ValidatorsExitBusOracle, `Burner`.
-- Finalize Lido DAO deployment: issue unvested LDO tokens, setup Aragon permissions, register Lido DAO name in Aragon ID (via `LidoTemplate`)
+- Finalize Lido DAO deployment: issue unvested LDO tokens, set Aragon permissions, register Lido DAO name in Aragon ID (via `LidoTemplate`)
 - Initialize non-Aragon Lido contracts
 - Set parameters of `OracleDaemonConfig`
 - Setup non-Aragon permissions
@@ -58,18 +58,18 @@ A brief description of what's going on under the hood in the deploy script.
 ## Local deployment
 
 Deploys the DAO to local (http://127.0.0.1:8545) dev node (anvil, hardhat, ganache).
-The deployment is done from default test account `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`.
-The node must be configured with the default test accounts derived from mnemonic `test test test test test test test test test test test junk`.
+The deployment is done from the default test account `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`.
+The node must be configured with the default test accounts derived from the mnemonic `test test test test test test test test test test test junk`.
 
 1. Run `yarn install` (get sure repo dependencies are installed)
-2. Run the node on default port 8545 (for the commands see subsections below)
+2. Run the node on default port 8545 (for the commands, see subsections below)
 3. Set test account private key `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80` to `accounts.json` under `/eth/local` like `"local": ["<private key>"]` (see `accounts.sample.json` for example)
 4. Run the deploy script `bash scripts/scratch/dao-local-deploy.sh` from root repo directory
 5. Check out the deploy artifacts in `deployed-local.json`
 
 ### Anvil
 
-Run the node with command:
+Run the node with the command:
 
 ```shell
 anvil -p 8545 --auto-impersonate --gas-price 0 --base-fee 0 --chain-id 1337 --mnemonic "test test test test test test test test test test test junk"
@@ -88,19 +88,19 @@ yarn hardhat node
 
 To do Holešky deployment, the following parameters must be set up via env variables:
 
-- `DEPLOYER`. The deployer address, you must have its private key. It must have enough ether.
+- `DEPLOYER`. The deployer address. The deployer must own its private key. It must have enough ether.
 - `RPC_URL`. Address of of the Ethereum RPC node to use. E.g. for Infura it is `https://holesky.infura.io/v3/<yourProjectId>`
 - `GAS_PRIORITY_FEE`. Gas priority fee. By default set to `2`
 - `GAS_MAX_FEE`. Gas max fee. By default set to `100`
-- `GATE_SEAL_FACTORY`. Address of the [GateSeal Factory](https://github.com/lidofinance/gate-seals) contract. Must be deployed preliminary. Can be set to any `0x0000000000000000000000000000000000000000` to debug deployment.
+- `GATE_SEAL_FACTORY`. Address of the [GateSeal Factory](https://github.com/lidofinance/gate-seals) contract. Must be deployed in advance. Can be set to any `0x0000000000000000000000000000000000000000` to debug deployment.
 
 Also you need to specify `DEPLOYER` private key in `accounts.json` under `/eth/holesky` like `"holesky": ["<key>"]`. See `accounts.sample.json` for an example.
 
-To start the deployment, run (the env variables must already defined) from root repo directory:
+To start the deployment, run (the env variables must already defined) from the root repo directory:
 ```shell
 bash scripts/scratch/dao-holesky-deploy.sh
 ```
-Deploy artifacts information will be store in `deployed-holesky.json`.
+Deploy artifacts information will be stored in `deployed-holesky.json`.
 
 ## Publishing sources to Etherscan
 
@@ -123,25 +123,24 @@ There are some contracts deployed from other contracts for which automatic hardh
 
 The workaround used during Holešky deployment is to deploy auxiliary instances of these contracts standalone and verify them via hardhat Etherscan plugin. After this Etherscan will mark the target contracts as verified by "Similar Match Source Code".
 
-NB, that some contracts require additional auxiliary contract to be deployed. Namely, constructor of `AppProxyPinned` depends on proxy implementation ("base" in Aragon terms) contract with `initialize()` function and `Kernel` contract which must return the implementation by call `kernel().getApp(KERNEL_APP_BASES_NAMESPACE, _appId)`. See `@aragon/os/contracts/apps/AppProxyBase.sol` for the details.
+NB, that some contracts require additional auxiliary contract to be deployed. Namely, the constructor of `AppProxyPinned` depends on proxy implementation ("base" in Aragon terms) contract with `initialize()` function and `Kernel` contract, which must return the implementation by call `kernel().getApp(KERNEL_APP_BASES_NAMESPACE, _appId)`. See `@aragon/os/contracts/apps/AppProxyBase.sol` for the details.
 
 ## Post deploy initialization
 
-### Initialization up to fully operational state
+### Initialization up to the fully operational state
 
-In order to make protocol fully operational the additional steps are required.
+In order to make the protocol fully operational, the additional steps are required:
 
-- add `NodeOperatorsRegistry` as staking module: `StakingRouter.addStakingModule`
-- add oracle committee members to `HashConsensus` contracts for `AccountingOracle` and `ValidatorsExitBusOracle`: `HashConsensus.addMember`
-- initialize initial epoch for `HashConsensus` contracts for `AccountingOracle` and `ValidatorsExitBusOracle`: `HashConsensus.updateInitialEpoch`
-- add guardians to `DepositSecurityModule`: `DepositSecurityModule.addGuardians`
-- resume protocol: `Lido.resume`
-- resume WithdrawalQueue: `WithdrawalQueueERC721.resume`
-- add at least one Node Operator: `NodeOperatorsRegistry.addNodeOperator`
-- add validator keys to the Node Operators: `NodeOperatorsRegistry.addSigningKeys`
-- set staking limits for the Node Operators: `NodeOperatorsRegistry.setNodeOperatorStakingLimit`
+- add oracle committee members to `HashConsensus` contracts for `AccountingOracle` and `ValidatorsExitBusOracle`: `HashConsensus.addMember`;
+- initialize initial epoch for `HashConsensus` contracts for `AccountingOracle` and `ValidatorsExitBusOracle`: `HashConsensus.updateInitialEpoch`;
+- add guardians to `DepositSecurityModule`: `DepositSecurityModule.addGuardians`;
+- resume protocol: `Lido.resume`;
+- resume WithdrawalQueue: `WithdrawalQueueERC721.resume`;
+- add at least one Node Operator: `NodeOperatorsRegistry.addNodeOperator`;
+- add validator keys to the Node Operators: `NodeOperatorsRegistry.addSigningKeys`;
+- set staking limits for the Node Operators: `NodeOperatorsRegistry.setNodeOperatorStakingLimit`.
 
-NB, that part of the actions require preliminary granting of the required roles, e.g. `STAKING_MODULE_MANAGE_ROLE` for `StakingRouter.addStakingModule`:
+NB, that part of the actions require prior granting of the required roles, e.g. `STAKING_MODULE_MANAGE_ROLE` for `StakingRouter.addStakingModule`:
 
 ```js
   await stakingRouter.grantRole(STAKING_MODULE_MANAGE_ROLE, agent.address, { from: agent.address })

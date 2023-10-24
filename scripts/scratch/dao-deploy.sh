@@ -92,5 +92,3 @@ msg "Role admin permissions transferred to Agent"
 
 yarn hardhat --network $NETWORK run ./scripts/scratch/12-check-dao.js --no-compile
 msg "The deployed protocol state checked"
-
-# TODO: save commit of the latest deploy

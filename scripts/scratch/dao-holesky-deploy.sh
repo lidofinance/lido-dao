@@ -22,7 +22,6 @@ export NETWORK_STATE_DEFAULTS_FILE="deployed-testnet-defaults.json"
 # Holesky params: https://github.com/eth-clients/holesky/blob/main/README.md
 export GENESIS_TIME=1695902400
 export DEPOSIT_CONTRACT=0x4242424242424242424242424242424242424242
-export CHAIN_ID=17000
 
 export GAS_PRIORITY_FEE="${GAS_PRIORITY_FEE:=1}"
 export GAS_MAX_FEE="${GAS_MAX_FEE:=100}"

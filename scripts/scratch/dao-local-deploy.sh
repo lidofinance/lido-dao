@@ -4,7 +4,6 @@ set -o pipefail
 
 #
 export NETWORK=local
-export CHAIN_ID=1337
 export RPC_URL="http://127.0.0.1:8545"
 export GATE_SEAL_FACTORY=0x0000000000000000000000000000000000000000
 export GENESIS_TIME=1639659600  # just some time

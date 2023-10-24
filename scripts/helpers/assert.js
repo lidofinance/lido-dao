@@ -1,5 +1,5 @@
 const { assert } = require('chai')
-const { toChecksumAddress } = require('web3-utils')
+const { toChecksumAddress, isHexStrict } = require('web3-utils')
 
 const { log } = require('./log')
 
@@ -14,6 +14,8 @@ assert.addressEqual = (actual, expected, msg) => {
 }
 
 assert.hexEqual = (actual, expected, msg) => {
+  assert.isTrue(isHexStrict(actual), `Actual string ${actual} is not a valid hex string`)
+  assert.isTrue(isHexStrict(expected), `Expected string ${expected} is not a valid hex string`)
   assert.equal(actual.toLowerCase(), expected.toLowerCase(), msg)
 }
 

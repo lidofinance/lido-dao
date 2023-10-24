@@ -3,7 +3,6 @@ const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { readNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 
 const DEPLOYER = process.env.DEPLOYER
-const CHAIN_ID = parseInt(process.env.CHAIN_ID)
 const GATE_SEAL_FACTORY = process.env.GATE_SEAL_FACTORY
 const GENESIS_TIME = parseInt(process.env.GENESIS_TIME)
 const DEPOSIT_CONTRACT = process.env.DEPOSIT_CONTRACT
@@ -14,7 +13,6 @@ async function saveDeployParameters({ web3, artifacts }) {
   console.log('Using env values:')
   console.log({
     DEPLOYER,
-    CHAIN_ID,
     GATE_SEAL_FACTORY,
     GENESIS_TIME,
     DEPOSIT_CONTRACT,
@@ -26,7 +24,7 @@ async function saveDeployParameters({ web3, artifacts }) {
     ? ZERO_ADDRESS : ''
 
   state.networkId = await web3.eth.net.getId()
-  state.chainId = CHAIN_ID
+  state.chainId = (await ethers.provider.getNetwork()).chainId
   state.deployer = DEPLOYER
   state.gateSeal = {
     ...state.gateSeal,
