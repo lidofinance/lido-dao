@@ -135,12 +135,18 @@ function _checkEq(a, b, descr = '') {
 
 function _checkLog(value, msg) {
   log(msg, yl(value))
-  if (value === undefined) {
-    throw new Error('Parameter missing')
-  }
+  assert.isDefined(value, 'Value is missing')
 }
-function _pause(query = mg('>>> Enter Y to continue, interrupt process otherwise:')) {
+
+function _checkEqLog(value, etalon, msg) {
+  log(msg, yl(value))
+  assert.equal(value, etalon, `Value not equal to: ${etalon}`)
+}
+
+function _pause(msg) {
+  if (msg) log(rd(`!!! ${msg}`))
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  const query = mg('>>> Enter Y (or y) to continue, interrupt process otherwise:')
 
   return new Promise((resolve) =>
     rl.question(query, (ans) => {
@@ -160,6 +166,7 @@ module.exports = {
   getSignature,
   _checkEq,
   _checkLog,
+  _checkEqLog,
   _pause,
   KERNEL_APP_BASES_NAMESPACE,
   MANAGE_SIGNING_KEYS,

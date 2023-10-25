@@ -5,7 +5,7 @@ const { encodeCallScript } = require('@aragon/contract-helpers-test/src/aragon-o
 const { getEventArgument } = require('@aragon/contract-helpers-test')
 const { EVMScriptDecoder, abiProviders } = require('evm-script-decoder')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
-const { log, yl, gr, cy, mg } = require('../helpers/log')
+const { log, yl, gr, cy } = require('../helpers/log')
 // const { saveCallTxData } = require('../helpers/tx-data')
 const { resolveLatestVersion } = require('../components/apm')
 const {
@@ -29,8 +29,10 @@ const {
   REQUEST_BURN_SHARES_ROLE,
   SIMPLE_DVT_IPFS_CID,
   easyTrackABI,
+  easyTrackFactoryABI,
   _pause,
   _checkLog,
+  _checkEqLog,
 } = require('./helpers')
 const { ETH, toBN } = require('../../test/helpers/utils')
 
@@ -113,6 +115,7 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
     treasuryFee,
     penaltyDelay,
     easyTrackAddress,
+    easyTrackTrustedCaller,
     easyTrackFactories = {},
   } = state[`app:${trgAppName}`].stakingRouterModuleParams
 
@@ -177,12 +180,16 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
 
   log(`EasyTrack`, yl(easyTrackAddress))
   log(`EasyTrack EVM Script Executor`, yl(easyTrackEVMScriptExecutor))
+  log(`EasyTrack Trusted caller`, yl(easyTrackTrustedCaller))
 
   for (const f of Object.keys(easyTrackFactories)) {
     log(`EasyTrack Factory <${cy(f)}>`, yl(easyTrackFactories[f]))
+    const fc = new Contract(easyTrackFactories[f], easyTrackFactoryABI, ethers.provider)
+    _checkEqLog(await fc.trustedCaller(), easyTrackTrustedCaller, `EasyTrack Factory <${cy(f)}> trusted caller`)
   }
 
   log.splitter()
+  log(yl('^^^ check all the params above ^^^'))
   await _pause()
   log.splitter()
 
@@ -413,9 +420,10 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
   }
 
   log.splitter()
+  log(yl('^^^ check the decoded voting script above ^^^'))
 
   if (SIMULATE) {
-    await _pause(mg('>>> Enter Y to start simulation, interrupt process otherwise:'))
+    await _pause('Ready for simulation')
     log.splitter()
     log(gr(`Simulating voting creation and enact!`))
     const voters = getVoters(
@@ -432,29 +440,54 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
       log(`Creating voting on behalf holder`, yl(voters[0]))
       const result = await tokenManager.forward(newVoteEvmScript, { from: voters[0], gasPrice: 0 })
       voteId = getEventArgument(result, 'StartVote', 'voteId', { decodeForAbi: voting.abi })
-      log(`Voting created, id`, yl(voteId))
+      log(`Voting created, Vote ID:`, yl(voteId))
     } else {
       voteId = VOTE_ID
     }
 
     // vote
-    log(`Collect votes...`)
-    for (const voter of voters) {
-      await ethers.getImpersonatedSigner(voter)
-      log(`Cast voting on behalf holder`, yl(voters[0]))
-      await voting.vote(voteId, true, true, { from: voter, gasPrice: 0 })
+    log(`Checking state, Vote ID:`, yl(voteId))
+    let vote = await voting.getVote(voteId)
+    if (vote.executed) {
+      log.error(`Vote ID: ${yl(voteId)} is already executed, can't simulate!`)
+      return
     }
+
+    log(`Collecting votes...`)
+    for (const voter of voters) {
+      if (vote.yea >= vote.supportRequired) {
+        break
+      }
+      const canVote = await voting.canVote(voteId, voter)
+      if (canVote) {
+        await ethers.getImpersonatedSigner(voter)
+        log(`Cast voting on behalf holder:`, yl(voters[0]))
+
+        await voting.vote(voteId, true, true, { from: voter, gasPrice: 0 })
+        vote = await voting.getVote(voteId)
+      } else {
+        log(`Skip holder (can't vote):`, voters[0])
+      }
+    }
+
+    if (vote.yea < vote.supportRequired) {
+      log.error(`Not enough voting power for Vote ID:`, yl(voteId))
+      return
+    }
+    log(`Vote quorum passed`)
+
     const voteTime = (await voting.voteTime()).toNumber()
     // pass time and enact
     log(`Pass time...`)
     await ethers.provider.send('evm_increaseTime', [voteTime])
     await ethers.provider.send('evm_mine')
-    log(`Enacting voting, id`, yl(voteId))
+    log(`Enacting vote...`)
     await voting.executeVote(voteId, { from: deployer, gasPrice: 0 })
 
-    log(`Target App initialized`, yl(await trgApp.hasInitialized()))
+    log(`Vote executed!`)
+    _checkEqLog(await trgApp.hasInitialized(), true, `Target App initialized`)
   } else {
-    await _pause(mg('>>> Ready fo TX, enter Y to continue, interrupt process otherwise:'))
+    await _pause('Ready for TX')
     log.splitter()
 
     const tx = await log.tx(

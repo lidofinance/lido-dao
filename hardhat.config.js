@@ -54,7 +54,7 @@ const getNetConfig = (networkName, ethAccountName) => {
   const byNetName = {
     localhost: {
       ...base,
-      url: 'http://localhost:8545',
+      url: 'http://127.0.0.1:8545',
       chainId: 31337,
     },
     mainnetfork: {
@@ -66,6 +66,11 @@ const getNetConfig = (networkName, ethAccountName) => {
       ...base,
       url: RPC_URL,
       chainId: Number(process.env.CHAIN_ID) || 5,
+    },
+    holeskyfork: {
+      ...base,
+      url: RPC_URL,
+      chainId: Number(process.env.CHAIN_ID) || 17000,
     },
     local: {
       url: RPC_URL,

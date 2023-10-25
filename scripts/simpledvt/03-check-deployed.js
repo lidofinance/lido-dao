@@ -2,9 +2,8 @@ const { network, ethers } = require('hardhat')
 const { Contract, utils } = require('ethers')
 const chalk = require('chalk')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
-const { log, yl, gr, cy, mg } = require('../helpers/log')
+const { log, yl, gr, cy } = require('../helpers/log')
 const {
-  getDeployer,
   readStateAppAddress,
   _checkEq,
   _pause,
@@ -23,7 +22,7 @@ const { readNetworkState, assertRequiredNetworkState } = require('../helpers/per
 const { hash: namehash } = require('eth-ens-namehash')
 const { resolveLatestVersion } = require('../components/apm')
 const { APP_NAMES, APP_ARTIFACTS } = require('../constants')
-const { ETH, toBN, genKeys } = require('../../test/helpers/utils')
+const { ETH, toBN, genKeys, ethToStr } = require('../../test/helpers/utils')
 const { EvmSnapshot } = require('../../test/helpers/blockchain')
 
 const APP_TRG = process.env.APP_TRG || 'simple-dvt'
@@ -92,6 +91,7 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     treasuryFee,
     penaltyDelay,
     easyTrackAddress,
+    easyTrackTrustedCaller,
     easyTrackFactories = {},
   } = state[`app:${trgAppName}`].stakingRouterModuleParams
 
@@ -231,16 +231,17 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
     _checkEq(allFactories.includes(factories[name].address), true, `- in global list`)
     _checkEq(await easytrack.isEVMScriptFactory(factories[name].address), true, `- isEVMScriptFactory`)
     _checkEq(await factories[name].nodeOperatorsRegistry(), trgProxyAddress, `- matches target App`)
+    _checkEq(await factories[name].trustedCaller(), easyTrackTrustedCaller, `- trusted caller`)
   }
 
   log.splitter()
 
   if (SIMULATE) {
-    await _pause(mg('>>> Enter Y to start simulation, interrupt process otherwise:'))
+    await _pause('Ready for simulation')
     log.splitter()
 
     log(gr(`Simulating adding keys and deposit!`))
-    const stranger = await getDeployer(web3)
+    const strangers = await web3.eth.getAccounts()
 
     const abiCoder = new utils.AbiCoder()
 
@@ -266,13 +267,13 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
       const keysAmount = op1keysAmount + op2keysAmount
       if ((await trgApp.getNodeOperatorsCount()) < 1) {
         // prepare node operators
-        const trustedCaller = await factories.AddNodeOperators.trustedCaller()
 
         // add 2 NO via ET
         // equivalent of:
         // await trgApp.addNodeOperator('op 1', ADDRESS_1, { from: easyTrackEVMScriptExecutor, gasPrice: 0 })
         // await trgApp.addNodeOperator('op 2', ADDRESS_2, { from: easyTrackEVMScriptExecutor, gasPrice: 0 })
 
+        log(`Adding 2 operators via ET ${cy('AddNodeOperators')} factory...`)
         let callData = abiCoder.encode(
           // struct AddNodeOperatorInput {
           //     string name;
@@ -290,41 +291,34 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
             ],
           ]
         )
-        let evmScript = await factories.AddNodeOperators.createEVMScript(trustedCaller, callData, {
-          from: stranger,
-          gasPrice: 0,
-        })
+        let evmScript = await factories.AddNodeOperators.createEVMScript(easyTrackTrustedCaller, callData)
         await evmExecutor.executeEVMScript(evmScript, { gasPrice: 0 })
-        _checkEq(await trgApp.getNodeOperatorsCount(), 2, `Simulate init: operators count = 2`)
+        _checkEq(await trgApp.getNodeOperatorsCount(), 2, `Module operators count = 2`)
 
         // add keys to module for op1 (on behalf op1 reward addr)
+        log(`Adding ${op1keysAmount} keys for op1 (on behalf op1 reward addr)...`)
         await ethers.getImpersonatedSigner(ADDRESS_1)
         let keys = genKeys(op1keysAmount)
         await trgApp.addSigningKeys(0, op1keysAmount, keys.pubkeys, keys.sigkeys, { from: ADDRESS_1, gasPrice: 0 })
 
         // add keys to module for op2 (on behalf op2 manager)
+        log(`Adding ${op2keysAmount} keys for op1 (on behalf op2 manager)...`)
         await ethers.getImpersonatedSigner(MANAGER_2)
         keys = genKeys(op2keysAmount)
         await trgApp.addSigningKeys(1, op2keysAmount, keys.pubkeys, keys.sigkeys, { from: MANAGER_2, gasPrice: 0 })
 
+        log('Checking operators initial state...')
         let opInfo = await trgApp.getNodeOperator(0, true)
-        _checkEq(
-          opInfo.totalAddedValidators,
-          op1keysAmount,
-          `Simulate init: NO 1 totalAddedValidators = ${op1keysAmount}`
-        )
+        _checkEq(opInfo.totalAddedValidators, op1keysAmount, `NO 1 totalAddedValidators = ${op1keysAmount}`)
         opInfo = await trgApp.getNodeOperator(1, true)
-        _checkEq(
-          opInfo.totalAddedValidators,
-          op2keysAmount,
-          `Simulate init: NO 2 totalAddedValidators = ${op2keysAmount}`
-        )
+        _checkEq(opInfo.totalAddedValidators, op2keysAmount, `NO 2 totalAddedValidators = ${op2keysAmount}`)
 
         // increase keys limit via ET
         // equivalent of:
         // await trgApp.setNodeOperatorStakingLimit(0, op1keysAmount, { from: easyTrackEVMScriptExecutor, gasPrice: 0 })
         // await trgApp.setNodeOperatorStakingLimit(1, op2keysAmount, { from: easyTrackEVMScriptExecutor, gasPrice: 0 })
 
+        log(`Increasing operator's vetted keys limit via ET ${cy('SetVettedValidatorsLimits')} factory...`)
         callData = abiCoder.encode(
           // struct VettedValidatorsLimitInput {
           //   uint256 nodeOperatorId;
@@ -340,20 +334,14 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
             ],
           ]
         )
-        evmScript = await factories.SetVettedValidatorsLimits.createEVMScript(trustedCaller, callData, {
-          from: stranger,
-          gasPrice: 0,
-        })
+        evmScript = await factories.SetVettedValidatorsLimits.createEVMScript(easyTrackTrustedCaller, callData)
         await evmExecutor.executeEVMScript(evmScript)
       }
 
+      log(`Checking SimpleDVT module state in StakingRouter...`)
       let summary = await trgApp.getStakingModuleSummary()
-      _checkEq(summary.totalDepositedValidators, 0, `Simulate init: module totalDepositedValidators = 0`)
-      _checkEq(
-        summary.depositableValidatorsCount,
-        keysAmount,
-        `Simulate init: module depositableValidatorsCount = ${keysAmount}`
-      )
+      _checkEq(summary.totalDepositedValidators, 0, `Module totalDepositedValidators = 0`)
+      _checkEq(summary.depositableValidatorsCount, keysAmount, `Module depositableValidatorsCount = ${keysAmount}`)
 
       const wqAddress = readStateAppAddress(state, 'withdrawalQueueERC721')
       const withdrwalQueue = await artifacts.require('WithdrawalQueueERC721').at(wqAddress)
@@ -362,19 +350,39 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
       const ethToDeposit = toBN(ETH(32 * depositsCount))
       let depositableEther = await lido.getDepositableEther()
 
+      log(`Depositable ETH ${yl(ethToStr(depositableEther))} ETH`)
+      log(`Need (${yl(ethToStr(ethToDeposit))} ETH to deposit ${yl(depositsCount)} keys`)
+
       // simulate deposits by transfering ethers to Lido contract
       if (depositableEther.lt(ethToDeposit)) {
+        log(`Simulating additional ETH submitting...`)
         const bufferedEther = await lido.getBufferedEther()
         const wqDebt = unfinalizedStETH.gt(bufferedEther) ? unfinalizedStETH.sub(bufferedEther) : toBN(0)
-        const ethToSubmit = ethToDeposit.add(wqDebt)
-        await web3.eth.sendTransaction({ value: ethToSubmit, to: lido.address, from: stranger, gasPrice: 0 })
+        let ethToSubmit = ethToDeposit.add(wqDebt)
+
+        let i = 0
+        const minBalance = toBN(ETH(1))
+        while (!ethToSubmit.isZero() && i < strangers.length) {
+          const balance = toBN(await web3.eth.getBalance(strangers[i]))
+          if (balance.gt(minBalance)) {
+            let ethToTransfer = balance.sub(minBalance)
+            if (ethToTransfer.gt(ethToSubmit)) {
+              ethToTransfer = ethToSubmit
+            }
+            log(`- ${ethToStr(ethToTransfer)} ETH from stranger ${strangers[i]}...`)
+            await web3.eth.sendTransaction({ value: ethToTransfer, to: lido.address, from: strangers[i], gasPrice: 0 })
+            ethToSubmit = ethToSubmit.sub(ethToTransfer)
+          }
+          ++i
+        }
       }
       depositableEther = await lido.getDepositableEther()
 
       _checkEq(
-        depositableEther >= ethToDeposit,
+        depositableEther.gte(ethToDeposit),
         true,
-        `Simulate init: enough depositable ether for ${depositsCount} keys`
+        `Enough depositable ${yl(ethToStr(depositableEther))} ETH to` +
+          ` deposit ${yl(depositsCount)} keys (${yl(ethToStr(ethToDeposit))} ETH)`
       )
 
       // get max deposits count from SR (according targetShare value)
@@ -384,7 +392,7 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
       // SimpleDVT module id = 2
       const maxDepositsCount2 = (await stakingRouter.getStakingModuleMaxDepositsCount(2, ethToDeposit)).toNumber()
 
-      log(`Depositing ${depositsCount} keys ..`)
+      log(`Depositing ${depositsCount} keys (on behalf DSM)..`)
       const trgModuleId = 2 // sr module id
       await ethers.getImpersonatedSigner(dsmAddress)
       await lido.deposit(depositsCount, trgModuleId, '0x', {
@@ -394,34 +402,35 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
       await ethers.provider.send('evm_increaseTime', [600])
       await ethers.provider.send('evm_mine')
 
+      log(`Checking SimpleDVT module new state in StakingRouter...`)
       summary = await trgApp.getStakingModuleSummary()
       _checkEq(
         summary.totalDepositedValidators,
         maxDepositsCount2,
-        `Simulate deposited: summary totalDepositedValidators = ${maxDepositsCount2}`
+        `Summary totalDepositedValidators = ${maxDepositsCount2}`
       )
       _checkEq(
         summary.depositableValidatorsCount,
         keysAmount - maxDepositsCount2,
-        `Simulate deposited: summary depositableValidatorsCount = ${keysAmount - maxDepositsCount2}`
+        `Summary depositableValidatorsCount = ${keysAmount - maxDepositsCount2}`
       )
 
       // as only 2 ops in module and each has 0 deposited keys before
       const depositedKeysPerOp = maxDepositsCount2 / 2
       const op1 = await trgApp.getNodeOperator(0, false)
-      _checkEq(op1.totalAddedValidators, op1keysAmount, `Simulate op1 state: totalAddedValidators = 100`)
+      _checkEq(op1.totalAddedValidators, op1keysAmount, `op1 state: totalAddedValidators = 100`)
       _checkEq(
         op1.totalDepositedValidators,
         depositedKeysPerOp,
-        `Simulate op1 state: totalDepositedValidators = ${depositedKeysPerOp}`
+        `op1 state: totalDepositedValidators = ${depositedKeysPerOp}`
       )
 
       const op2 = await trgApp.getNodeOperator(1, false)
-      _checkEq(op2.totalAddedValidators, op2keysAmount, `Simulate op2 state: totalAddedValidators = 50`)
+      _checkEq(op2.totalAddedValidators, op2keysAmount, `op2 state: totalAddedValidators = 50`)
       _checkEq(
         op2.totalDepositedValidators,
         depositedKeysPerOp,
-        `Simulate op2 state: totalDepositedValidators = ${depositedKeysPerOp}`
+        `op2 state: totalDepositedValidators = ${depositedKeysPerOp}`
       )
     } finally {
       log('Reverting snapshot...')
