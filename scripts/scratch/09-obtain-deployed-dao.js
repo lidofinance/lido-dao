@@ -22,9 +22,20 @@ const REQUIRED_NET_STATE = [
 ]
 
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
+const AGENT_VESTING_PLACEHOLDER = 'lido-aragon-agent-placeholder'
 
 // See KernelConstants.sol
 const KERNEL_DEFAULT_ACL_APP_ID = '0xe3262375f45a6e2026b7e7b18c2b807434f2508fe1a2a3dfb493c7df8f4aad6a'
+
+function updateAgentVestingAddressPlaceholder(state) {
+  if (state['app:aragon-agent']) {
+    const agentAddress = state['app:aragon-agent'].proxy.address
+    const vestingAmount = state.vestingParams.holders[AGENT_VESTING_PLACEHOLDER]
+    state.vestingParams.holders[agentAddress] = vestingAmount
+    delete state.vestingParams.holders[AGENT_VESTING_PLACEHOLDER]
+  }
+}
+
 
 async function obtainDeployedAPM({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
@@ -137,7 +148,7 @@ async function obtainDeployedAPM({ web3, artifacts }) {
       }
     }
   }
-
+  updateAgentVestingAddressPlaceholder(state)
   log.splitter()
   persistNetworkState(network.name, netId, state)
 

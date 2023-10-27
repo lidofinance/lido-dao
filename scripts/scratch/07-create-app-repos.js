@@ -17,10 +17,10 @@ const REQUIRED_NET_STATE = [
   `app:${APP_NAMES.LIDO}`,
   `app:${APP_NAMES.ORACLE}`,
   `app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`,
-  `app:aragon-agent`,
-  `app:aragon-finance`,
-  `app:aragon-token-manager`,
-  `app:aragon-voting`,
+  `app:${APP_NAMES.ARAGON_AGENT}`,
+  `app:${APP_NAMES.ARAGON_FINANCE}`,
+  `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`,
+  `app:${APP_NAMES.ARAGON_VOTING}`,
 ]
 
 async function createAppRepos({ web3, artifacts }) {
@@ -47,7 +47,6 @@ async function createAppRepos({ web3, artifacts }) {
   const oracleAppState = state[`app:${APP_NAMES.ORACLE}`]
   const nodeOperatorsAppState = state[`app:${APP_NAMES.NODE_OPERATORS_REGISTRY}`]
 
-
   const createReposArguments = [
     [1, 0, 0],
     // Lido app
@@ -66,7 +65,6 @@ async function createAppRepos({ web3, artifacts }) {
 
   const lidoAppsReceipt = await log.makeTx(template, 'createRepos', createReposArguments, { from })
   console.log(`=== Aragon Lido Apps Repos (Lido, AccountingOracle, NodeOperatorsRegistry deployed: ${lidoAppsReceipt.tx} ===`)
-
 
   const createStdAragonReposArguments = [
     state['app:aragon-agent'].implementation.address,
