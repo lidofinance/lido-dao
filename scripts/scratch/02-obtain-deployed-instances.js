@@ -1,10 +1,9 @@
 const chalk = require('chalk')
-
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
-const { log, logSplitter, logWideSplitter, logHeader, logTx } = require('../helpers/log')
-const { useOrGetDeployed, assertDeployedBytecode, getTxBlock } = require('../helpers/deploy')
+const { log, logWideSplitter, logHeader } = require('../helpers/log')
+const { assertDeployedBytecode } = require('../helpers/deploy')
 const { assert } = require('../helpers/assert')
-const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
+const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 
 const { APP_NAMES } = require('../constants')
 const { network } = require('hardhat')

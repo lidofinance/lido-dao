@@ -93,15 +93,7 @@ async function logTx(desc, promise) {
   return result
 }
 
-async function txWithLog(contract, funcName, args, txParams) {
-  console.log(`${contract.constructor._json.contractName}[${contract.address}].${funcName}()...`)
-  const receipt = await contract[funcName](...args, txParams)
-  console.log(`${OK} tx: ${receipt.tx}`)
-  return receipt
-}
-
 log.tx = logTx
-log.makeTx = txWithLog
 
 async function logDeployTxData(contractName, txData) {
   logSplitter(`To deploy ${yl(contractName)}, send the following transaction:`)
@@ -127,7 +119,6 @@ module.exports = {
   logDeploy,
   logDeployTxData,
   logTx,
-  txWithLog,
   rd,
   yl,
   gr,

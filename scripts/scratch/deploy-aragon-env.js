@@ -5,7 +5,7 @@ const getAccounts = require('@aragon/os/scripts/helpers/get-accounts')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, logHeader, logTx } = require('../helpers/log')
-const { deploy, useOrDeploy, withArgs, deployImplementation } = require('../helpers/deploy')
+const { deploy, useOrDeploy, withArgs, deployImplementation, TotalGasCounter } = require('../helpers/deploy')
 const { readNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 
 const { deployAPM } = require('../components/apm')
@@ -167,6 +167,8 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
     constructorArgs: aragonID.constructorArgs,
   }
   persistNetworkState(network.name, netId, state)
+
+  await TotalGasCounter.incrementTotalGasUsedInStateFile()
 }
 
 async function useOrDeployENS({ artifacts, owner, ensAddress }) {

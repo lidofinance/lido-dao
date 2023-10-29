@@ -2,7 +2,7 @@ const chalk = require('chalk')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter } = require('../helpers/log')
-const { deploy, withArgs } = require('../helpers/deploy')
+const { deployWithoutProxy, TotalGasCounter } = require('../helpers/deploy')
 const { readNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE || 'deployed.json'
@@ -20,25 +20,26 @@ async function deployBeaconDepositContract({ web3, artifacts, networkStateFile =
   if (chainSpec.depositContract) {
     depositContractAddress = chainSpec.depositContract
   }
-  const { depositContract } = await useOrDeployDepositContract({
+  depositContractAddress = await useOrDeployDepositContract({
     artifacts,
     owner: firstAccount,
-    depositContractAddress: depositContractAddress,
+    depositContractAddress,
   })
 
-  chainSpec.depositContract = depositContract.address
+  state.chainSpec.depositContract = depositContractAddress
+  persistNetworkState(network.name, netId, state)
   logSplitter()
-  persistNetworkState(network.name, netId, state, { chainSpec })
+
+  await TotalGasCounter.incrementTotalGasUsedInStateFile()
 }
 
 async function useOrDeployDepositContract({ artifacts, owner, depositContractAddress }) {
   if (depositContractAddress) {
     log(`Using DepositContract at: ${chalk.yellow(depositContractAddress)}`)
     const depositContract = await artifacts.require('DepositContract').at(depositContractAddress)
-    return { depositContract }
+    return depositContract.address
   }
-  const depositContract = await deploy('DepositContract', artifacts, withArgs({ from: owner }))
-  return { depositContract }
+  return await deployWithoutProxy('depositContract', 'DepositContract', owner)
 }
 
 module.exports = runOrWrapScript(deployBeaconDepositContract, module)

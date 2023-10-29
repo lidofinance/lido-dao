@@ -8,6 +8,7 @@ const { log, logSplitter, logWideSplitter } = require('../helpers/log')
 const { assertNoEvents } = require('../helpers/events')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 const { getENSNodeOwner } = require('../components/ens')
+const { makeTx, TotalGasCounter } = require('../helpers/deploy')
 
 const REQUIRED_NET_STATE = [
   'deployer',
@@ -59,7 +60,7 @@ async function deployAPM({ web3, artifacts }) {
   const from = state.deployer
 
   const lidoApmDeployArguments = [parentHash, subHash]
-  const receipt = await log.makeTx(template, 'deployLidoAPM', lidoApmDeployArguments, { from })
+  const receipt = await makeTx(template, 'deployLidoAPM', lidoApmDeployArguments, { from })
 
   state.lidoApm = {
     ...state.lidoApm,
@@ -67,6 +68,8 @@ async function deployAPM({ web3, artifacts }) {
     deployTx: receipt.tx,
   }
   persistNetworkState(network.name, netId, state)
+
+  await TotalGasCounter.incrementTotalGasUsedInStateFile()
 }
 
 function splitDomain(domain) {

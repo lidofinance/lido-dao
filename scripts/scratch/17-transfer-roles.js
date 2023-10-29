@@ -1,6 +1,7 @@
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, yl, gr, OK } = require('../helpers/log')
 const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
+const { makeTx, TotalGasCounter } = require('../helpers/deploy')
 
 const REQUIRED_NET_STATE = [
   "app:aragon-agent",
@@ -21,22 +22,22 @@ const DEFAULT_ADMIN_ROLE = "0x00"
 async function transferOZAdmin(contractName, contractAddress, currentAdmin, newAdmin) {
   console.log(`Transferring OZ admin of ${contractAddress} from ${currentAdmin} to ${newAdmin}:`)
   const contract = await artifacts.require(contractName).at(contractAddress)
-  await log.makeTx(contract, 'grantRole', [DEFAULT_ADMIN_ROLE, newAdmin], { from: currentAdmin })
-  await log.makeTx(contract, 'renounceRole', [DEFAULT_ADMIN_ROLE, currentAdmin], { from: currentAdmin })
+  await makeTx(contract, 'grantRole', [DEFAULT_ADMIN_ROLE, newAdmin], { from: currentAdmin })
+  await makeTx(contract, 'renounceRole', [DEFAULT_ADMIN_ROLE, currentAdmin], { from: currentAdmin })
   console.log()
 }
 
 async function changeOssifiableProxyAdmin(contractAddress, currentAdmin, newAdmin) {
   console.log(`Transferring OssifiableProxy admin of ${contractAddress} from ${currentAdmin} to ${newAdmin}...`)
   const contract = await artifacts.require('OssifiableProxy').at(contractAddress)
-  await log.makeTx(contract, 'proxy__changeAdmin', [newAdmin], { from: currentAdmin })
+  await makeTx(contract, 'proxy__changeAdmin', [newAdmin], { from: currentAdmin })
   console.log()
 }
 
 async function changeDepositSecurityModuleAdmin(contractAddress, currentAdmin, newAdmin) {
   console.log(`Changing DepositSecurityModule owner of ${contractAddress} from ${currentAdmin} to ${newAdmin}...`)
   const depositSecurityModule = await artifacts.require('DepositSecurityModule').at(contractAddress)
-  await log.makeTx(depositSecurityModule, 'setOwner', [newAdmin], { from: currentAdmin } )
+  await makeTx(depositSecurityModule, 'setOwner', [newAdmin], { from: currentAdmin } )
   console.log()
 }
 
@@ -67,6 +68,8 @@ async function deployNewContracts({ web3, artifacts }) {
   await changeOssifiableProxyAdmin(state.withdrawalQueueERC721.proxy.address, deployer, agent)
 
   await changeDepositSecurityModuleAdmin(state.depositSecurityModule.address, deployer, agent)
+
+  await TotalGasCounter.incrementTotalGasUsedInStateFile()
 }
 
 module.exports = runOrWrapScript(deployNewContracts, module)

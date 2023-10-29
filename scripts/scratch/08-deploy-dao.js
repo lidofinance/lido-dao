@@ -3,7 +3,7 @@ const chalk = require('chalk')
 const { assert } = require('chai')
 const { getEvents } = require('@aragon/contract-helpers-test')
 const { hash: namehash } = require('eth-ens-namehash')
-const { toChecksumAddress } = require('web3-utils')
+const { makeTx, TotalGasCounter } = require('../helpers/deploy')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log } = require('../helpers/log')
@@ -64,13 +64,15 @@ async function deployDAO({ web3, artifacts }) {
 
   log(`Using DAO token settings:`, daoInitialSettings.token)
   log(`Using DAO voting settings:`, daoInitialSettings.voting)
-  const receipt = await log.makeTx(template, 'newDAO', [
+  const receipt = await makeTx(template, 'newDAO', [
     daoInitialSettings.token.name,
     daoInitialSettings.token.symbol,
     votingSettings,
   ], { from: state.deployer })
   state.lidoTemplateNewDaoTx = receipt.tx
   persistNetworkState(network.name, netId, state)
+
+  await TotalGasCounter.incrementTotalGasUsedInStateFile()
 }
 
 async function checkAppRepos(state) {

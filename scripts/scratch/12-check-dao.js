@@ -4,7 +4,6 @@ const BN = require('bn.js')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
 const { getEvents } = require('@aragon/contract-helpers-test')
 const { hash: namehash } = require('eth-ens-namehash')
-const { toChecksumAddress } = require('web3-utils')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, yl } = require('../helpers/log')
@@ -170,6 +169,8 @@ async function checkDAO({ web3, artifacts }) {
   })
 
   log.splitter()
+
+  console.log(`Total gas used during scratch deployment: ${state.initialDeployTotalGasUsed}`)
 }
 
 async function assertLidoAPMPermissions({ registry, votingAddress }, fromBlock = 4532202) {

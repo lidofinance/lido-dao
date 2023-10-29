@@ -5,6 +5,7 @@ const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter } = require('../helpers/log')
 const { assertLastEvent } = require('../helpers/events')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
+const { makeTx, TotalGasCounter } = require('../helpers/deploy')
 
 const { APP_NAMES } = require('../constants')
 
@@ -63,7 +64,7 @@ async function createAppRepos({ web3, artifacts }) {
 
   console.log({arguments, from})
 
-  const lidoAppsReceipt = await log.makeTx(template, 'createRepos', createReposArguments, { from })
+  const lidoAppsReceipt = await makeTx(template, 'createRepos', createReposArguments, { from })
   console.log(`=== Aragon Lido Apps Repos (Lido, AccountingOracle, NodeOperatorsRegistry deployed: ${lidoAppsReceipt.tx} ===`)
 
   const createStdAragonReposArguments = [
@@ -73,12 +74,14 @@ async function createAppRepos({ web3, artifacts }) {
     state['app:aragon-voting'].implementation.address,
   ]
 
-  const aragonStdAppsReceipt = await log.makeTx(template, 'createStdAragonRepos', createStdAragonReposArguments, { from })
+  const aragonStdAppsReceipt = await makeTx(template, 'createStdAragonRepos', createStdAragonReposArguments, { from })
   console.log(`=== Aragon Std Apps Repos (Agent, Finance, TokenManager, Voting deployed: ${aragonStdAppsReceipt.tx} ===`)
   state.lidoTemplateCreateStdAppReposTx = aragonStdAppsReceipt.tx
 
   logSplitter()
   persistNetworkState(network.name, netId, state)
+
+  await TotalGasCounter.incrementTotalGasUsedInStateFile()
 }
 
 module.exports = runOrWrapScript(createAppRepos, module)

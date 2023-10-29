@@ -1,8 +1,8 @@
 const chalk = require('chalk')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
-const { log, yl, gr } = require('../helpers/log')
-const { deployImplementation, deployWithoutProxy } = require('../helpers/deploy')
+const { log } = require('../helpers/log')
+const { deployImplementation, deployWithoutProxy, TotalGasCounter } = require('../helpers/deploy')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 const { APP_NAMES } = require('../constants')
 
@@ -51,6 +51,8 @@ async function deployTemplate({ web3, artifacts }) {
   })
 
   log.splitter()
+
+  await TotalGasCounter.incrementTotalGasUsedInStateFile()
 }
 
 module.exports = runOrWrapScript(deployTemplate, module)
