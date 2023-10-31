@@ -1,4 +1,5 @@
 const path = require('path')
+const fs = require('fs')
 const chalk = require('chalk')
 const BN = require('bn.js')
 const { assertBn } = require('@aragon/contract-helpers-test/src/asserts')
@@ -13,6 +14,7 @@ const { assertLastEvent, assertSingleEvent } = require('../helpers/events')
 const { assert } = require('../helpers/assert')
 const { percentToBP } = require('../helpers/index')
 const { resolveEnsAddress } = require('../components/ens')
+const { isAddress } = require('web3-utils')
 
 const { APP_NAMES } = require('../constants')
 
@@ -34,6 +36,8 @@ const STETH_TOKEN_DECIMALS = 18
 
 const ZERO_WITHDRAWAL_CREDENTIALS = '0x0000000000000000000000000000000000000000000000000000000000000000'
 const PROTOCOL_PAUSED_AFTER_DEPLOY = true
+const OSSIFIABLE_PROXY = 'OssifiableProxy'
+const ACCESS_CONTROL_ENUMERABLE = 'AccessControlEnumerable'
 
 const DAO_LIVE = /^true|1$/i.test(process.env.DAO_LIVE)
 
@@ -135,7 +139,7 @@ async function checkDAO({ web3, artifacts }) {
 
   log.splitter()
 
-  await assertDaoPermissions(
+  await assertAragonPermissions(
     {
       kernel: dao,
       lido,
@@ -169,6 +173,14 @@ async function checkDAO({ web3, artifacts }) {
   })
 
   log.splitter()
+
+  const permissionsConfig = JSON.parse(fs.readFileSync('./scripts/scratch/checks/scratch-deploy-permissions.json'))
+  await assertNonAragonPermissions(state, permissionsConfig)
+
+  log.splitter()
+
+  await assertHashConsensusMembers(state.hashConsensusForAccountingOracle.address, [])
+  await assertHashConsensusMembers(state.hashConsensusForValidatorsExitBusOracle.address, [])
 
   console.log(`Total gas used during scratch deployment: ${state.initialDeployTotalGasUsed}`)
 }
@@ -397,7 +409,7 @@ async function assertDAOConfig({
     )
 }
 
-async function assertDaoPermissions({ kernel, lido, legacyOracle, nopsRegistry, agent, finance, tokenManager, voting, burner, stakingRouter }, fromBlock = 4532202) {
+async function assertAragonPermissions({ kernel, lido, legacyOracle, nopsRegistry, agent, finance, tokenManager, voting, burner, stakingRouter }, fromBlock = 4532202) {
   const aclAddress = await kernel.acl()
   const acl = await artifacts.require('ACL').at(aclAddress)
   const allAclEvents = await acl.getPastEvents('allEvents', { fromBlock })
@@ -581,6 +593,92 @@ async function assertDaoPermissions({ kernel, lido, legacyOracle, nopsRegistry, 
       }
     ]
   })
+}
+
+function addressFromStateField(state, fieldOrAddress) {
+  if (isAddress(fieldOrAddress)) {
+    return fieldOrAddress
+  }
+
+  if (state[fieldOrAddress] === undefined) {
+    throw new Error(`There is no field "${fieldOrAddress}" in state`)
+  }
+
+  if (state[fieldOrAddress].address) {
+    return state[fieldOrAddress].address
+  } else if (state[fieldOrAddress].proxy.address) {
+    return state[fieldOrAddress].proxy.address
+  } else {
+    throw new Error(`Cannot get address for contract field "${fieldOrAddress}" from state file`)
+  }
+}
+
+function getRoleBytes32ByName(roleName) {
+  if (roleName === 'DEFAULT_ADMIN_ROLE') {
+    return '0x0000000000000000000000000000000000000000000000000000000000000000'
+  } else {
+    return web3.utils.keccak256(roleName)
+  }
+}
+
+async function assertHashConsensusMembers(hashConsensusAddress, expectedMembers) {
+  const hashConsensus = await artifacts.require('HashConsensus').at(hashConsensusAddress)
+  const actualMembers = (await hashConsensus.getMembers()).addresses
+  assert.log(
+    assert.arrayOfAddressesEqual,
+    actualMembers,
+    expectedMembers,
+    `HashConsensus ${hashConsensusAddress} members are expected: [${expectedMembers.toString()}]`
+  )
+}
+
+async function assertNonAragonPermissions(state, permissionsConfig) {
+  for (const [stateField, permissionTypes] of Object.entries(permissionsConfig)) {
+    for (const [contractType, permissionParams] of Object.entries(permissionTypes)) {
+      const contract = await artifacts.require(contractType).at(addressFromStateField(state, stateField))
+      if (contractType == OSSIFIABLE_PROXY) {
+        const actualAdmin = await contract.proxy__getAdmin()
+        assert.log(
+          assert.addressEqual,
+          actualAdmin,
+          addressFromStateField(state, permissionParams.admin),
+          `${stateField} ${contractType} admin is ${actualAdmin}`
+        )
+      } else if (contractType == ACCESS_CONTROL_ENUMERABLE) {
+        for (const [role, theHolders] of Object.entries(permissionParams.roles)) {
+          const roleHash = getRoleBytes32ByName(role)
+          const actualRoleMemberCount = await contract.getRoleMemberCount(roleHash)
+          assert.log(
+            assert.bnEqual,
+            theHolders.length,
+            actualRoleMemberCount,
+            `Contract ${stateField} ${contractType} has correct number of ${role} holders`
+          )
+          for (const holder of theHolders) {
+            assert.log(assert.equal, true,
+              await contract.hasRole(roleHash, addressFromStateField(state, holder)),
+              `Contract ${stateField} ${contractType} has role ${role} holer ${holder}`)
+          }
+        }
+      } else if (permissionParams.specificViews !== undefined) {
+        for (const [methodName, expectedValue] of Object.entries(permissionParams.specificViews)) {
+          const actualValue = await contract[methodName].call()
+          if (isAddress(actualValue)) {
+            assert.log(
+              assert.addressEqual,
+              actualValue,
+              addressFromStateField(state, expectedValue),
+              `${stateField} ${contractType} ${methodName} is ${actualValue}`
+            )
+          } else {
+            throw new Error(`Unsupported view ${methodName} result type of ${expectedValue} of contract ${stateField}`)
+          }
+        }
+      } else {
+        throw new Error(`Unsupported ACL contract type "${contractType}"`)
+      }
+    }
+  }
 }
 
 module.exports = runOrWrapScript(checkDAO, module)
