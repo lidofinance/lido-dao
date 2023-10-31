@@ -24747,6 +24747,42 @@ resolve@^1.22.1:
   languageName: node
   linkType: hard
 
+"sandbox-frontend@workspace:apps/sandbox/app":
+  version: 0.0.0-use.local
+  resolution: "sandbox-frontend@workspace:apps/sandbox/app"
+  dependencies:
+    "@aragon/api": ^2.0.0
+    "@aragon/api-react": ^2.0.0
+    "@aragon/ui": ^1.7.0
+    "@babel/core": ^7.21.0
+    "@babel/preset-env": ^7.11.5
+    "@babel/preset-react": ^7.10.1
+    babel-eslint: ^10.1.0
+    babel-plugin-styled-components: ^1.11.1
+    copyfiles: ^2.3.0
+    core-js: ^3.6.5
+    eslint: ^8.34.0
+    eslint-config-prettier: ^8.6.0
+    eslint-config-standard: ^17.0.0
+    eslint-config-standard-react: ^9.2.0
+    eslint-plugin-import: ^2.27.5
+    eslint-plugin-node: ^11.1.0
+    eslint-plugin-prettier: ^4.2.1
+    eslint-plugin-promise: ^6.1.1
+    eslint-plugin-react: ^7.20.6
+    eslint-plugin-react-hooks: ^4.1.2
+    eslint-plugin-standard: ^5.0.0
+    formik: ^2.2.0
+    parcel-bundler: ^1.12.4
+    prettier: ^2.8.4
+    react: ^16.13.1
+    react-dom: ^16.13.1
+    regenerator-runtime: ^0.13.7
+    styled-components: ^5.2.0
+    yup: ^0.29.3
+  languageName: unknown
+  linkType: soft
+
 "sax@npm:~1.2.4":
   version: 1.2.4
   resolution: "sax@npm:1.2.4"
