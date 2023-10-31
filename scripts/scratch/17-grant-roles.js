@@ -53,6 +53,7 @@ async function deployNewContracts({ web3, artifacts }) {
   //
   const stakingRouter = await artifacts.require('StakingRouter').at(stakingRouterAddress)
   await makeTx(stakingRouter, 'grantRole', [await stakingRouter.STAKING_MODULE_PAUSE_ROLE(), depositSecurityModuleAddress], { from: deployer })
+  await makeTx(stakingRouter, 'grantRole', [await stakingRouter.STAKING_MODULE_RESUME_ROLE(), depositSecurityModuleAddress], { from: deployer })
   await makeTx(stakingRouter, 'grantRole', [await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(), accountingOracleAddress], { from: deployer })
   await makeTx(stakingRouter, 'grantRole', [await stakingRouter.REPORT_REWARDS_MINTED_ROLE(), lidoAddress], { from: deployer })
   logWideSplitter()

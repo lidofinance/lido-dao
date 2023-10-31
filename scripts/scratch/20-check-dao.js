@@ -569,8 +569,7 @@ async function assertDaoPermissions({ kernel, lido, legacyOracle, nopsRegistry, 
       {
         roleNames: [
           'MANAGE_SIGNING_KEYS',
-          'SET_NODE_OPERATOR_LIMIT_ROLE',
-          'MANAGE_NODE_OPERATOR_ROLE',
+          'SET_NODE_OPERATOR_LIMIT_ROLE'
         ],
         grantee: voting
       },
