@@ -1,0 +1,132 @@
+{
+  "lidoLocator": {
+    "OssifiableProxy": {
+      "admin": "app:aragon-agent"
+    }
+  },
+  "burner": {
+    "AccessControlEnumerable": {
+      "roles": {
+        "DEFAULT_ADMIN_ROLE": ["app:aragon-agent"],
+        "REQUEST_BURN_MY_STETH_ROLE": [],
+        "REQUEST_BURN_SHARES_ROLE": ["app:lido", "app:node-operators-registry"]
+      }
+    }
+  },
+  "stakingRouter": {
+    "AccessControlEnumerable": {
+      "roles": {
+        "DEFAULT_ADMIN_ROLE": ["app:aragon-agent"],
+        "MANAGE_WITHDRAWAL_CREDENTIALS_ROLE": [],
+        "STAKING_MODULE_PAUSE_ROLE": ["depositSecurityModule"],
+        "STAKING_MODULE_RESUME_ROLE": ["depositSecurityModule"],
+        "STAKING_MODULE_MANAGE_ROLE": [],
+        "REPORT_EXITED_VALIDATORS_ROLE": ["accountingOracle"],
+        "UNSAFE_SET_EXITED_VALIDATORS_ROLE": [],
+        "REPORT_REWARDS_MINTED_ROLE": ["app:lido"]
+      }
+    },
+    "OssifiableProxy": {
+      "admin": "app:aragon-agent"
+    }
+  },
+  "withdrawalQueueERC721": {
+    "AccessControlEnumerable": {
+      "roles": {
+        "DEFAULT_ADMIN_ROLE": ["app:aragon-agent"],
+        "PAUSE_ROLE": ["gateSeal"],
+        "RESUME_ROLE": [],
+        "FINALIZE_ROLE": ["app:lido"],
+        "ORACLE_ROLE": ["accountingOracle"],
+        "MANAGE_TOKEN_URI_ROLE": []
+      }
+    },
+    "OssifiableProxy": {
+      "admin": "app:aragon-agent"
+    }
+  },
+  "accountingOracle": {
+    "AccessControlEnumerable": {
+      "roles": {
+        "DEFAULT_ADMIN_ROLE": ["app:aragon-agent"],
+        "SUBMIT_DATA_ROLE": [],
+        "MANAGE_CONSENSUS_CONTRACT_ROLE": [],
+        "MANAGE_CONSENSUS_VERSION_ROLE": []
+      }
+    },
+    "OssifiableProxy": {
+      "admin": "app:aragon-agent"
+    }
+  },
+  "validatorsExitBusOracle": {
+    "AccessControlEnumerable": {
+      "roles": {
+        "DEFAULT_ADMIN_ROLE": ["app:aragon-agent"],
+        "SUBMIT_DATA_ROLE": [],
+        "PAUSE_ROLE": ["gateSeal"],
+        "RESUME_ROLE": [],
+        "MANAGE_CONSENSUS_CONTRACT_ROLE": [],
+        "MANAGE_CONSENSUS_VERSION_ROLE": []
+      }
+    },
+    "OssifiableProxy": {
+      "admin": "app:aragon-agent"
+    }
+  },
+  "hashConsensusForAccountingOracle": {
+    "AccessControlEnumerable": {
+      "roles": {
+        "DEFAULT_ADMIN_ROLE": ["app:aragon-agent"],
+        "MANAGE_MEMBERS_AND_QUORUM_ROLE": [],
+        "DISABLE_CONSENSUS_ROLE": [],
+        "MANAGE_FRAME_CONFIG_ROLE": [],
+        "MANAGE_FAST_LANE_CONFIG_ROLE": [],
+        "MANAGE_REPORT_PROCESSOR_ROLE": []
+      }
+    }
+  },
+  "hashConsensusForValidatorsExitBusOracle": {
+    "AccessControlEnumerable": {
+      "roles": {
+        "DEFAULT_ADMIN_ROLE": ["app:aragon-agent"],
+        "MANAGE_MEMBERS_AND_QUORUM_ROLE": [],
+        "DISABLE_CONSENSUS_ROLE": [],
+        "MANAGE_FRAME_CONFIG_ROLE": [],
+        "MANAGE_FAST_LANE_CONFIG_ROLE": [],
+        "MANAGE_REPORT_PROCESSOR_ROLE": []
+      }
+    }
+  },
+  "oracleReportSanityChecker": {
+    "AccessControlEnumerable": {
+      "roles": {
+        "DEFAULT_ADMIN_ROLE": ["app:aragon-agent"],
+        "ALL_LIMITS_MANAGER_ROLE": [],
+        "CHURN_VALIDATORS_PER_DAY_LIMIT_MANAGER_ROLE": [],
+        "ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE": [],
+        "ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE": [],
+        "SHARE_RATE_DEVIATION_LIMIT_MANAGER_ROLE": [],
+        "MAX_VALIDATOR_EXIT_REQUESTS_PER_REPORT_ROLE": [],
+        "MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE": [],
+        "MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_COUNT_ROLE": [],
+        "REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE": [],
+        "MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE": []
+      }
+    }
+  },
+  "depositSecurityModule": {
+    "DepositSecurityModule": {
+      "specificViews": {
+        "getOwner": "app:aragon-agent"
+      }
+    }
+  },
+  "oracleDaemonConfig": {
+    "AccessControlEnumerable": {
+      "roles": {
+        "DEFAULT_ADMIN_ROLE": ["app:aragon-agent"],
+        "CONFIG_MANAGER_ROLE": []
+      }
+    }
+  }
+}

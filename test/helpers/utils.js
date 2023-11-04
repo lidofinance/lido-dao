@@ -68,6 +68,12 @@ function hex(n, byteLen = undefined) {
   return byteLen === undefined ? s : s.padStart(byteLen * 2, '0')
 }
 
+function hexPaddedToByte(n) {
+  const s = n.toString(16)
+  const prefix = s.length % 2 ? '0x0' : '0x'
+  return prefix + s
+}
+
 function strip0x(s) {
   return s.substr(0, 2) === '0x' ? s.substr(2) : s
 }
@@ -185,6 +191,7 @@ module.exports = {
   hexSplit,
   toBN,
   hex,
+  hexPaddedToByte,
   strip0x,
   bufferFromHexString,
   hexStringFromBuffer,
