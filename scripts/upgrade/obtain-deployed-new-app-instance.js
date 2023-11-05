@@ -8,7 +8,7 @@ const { APP_NAMES, APP_ARTIFACTS } = require('./constants')
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
 
 const APP = process.env.APP || ''
-const REQUIRED_NET_STATE = ['ensAddress', 'multisigAddress', 'lidoBaseDeployTx', 'oracleBaseDeployTx', 'nodeOperatorsRegistryBaseDeployTx']
+const REQUIRED_NET_STATE = ['ensAddress', 'deployer', 'lidoBaseDeployTx', 'oracleBaseDeployTx', 'nodeOperatorsRegistryBaseDeployTx']
 
 async function obtainInstance({ web3, artifacts, appName = APP }) {
   if (!appName || !VALID_APP_NAMES.includes(appName)) {

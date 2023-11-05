@@ -4,7 +4,7 @@ task(`tx`, `Performs a transaction`)
   .addOptionalParam(`wait`, `The number of seconds to wait before sending the transaction`)
   .addOptionalParam(`gasPrice`, `Gas price`)
   .addOptionalParam(`nonce`, `Nonce`)
-  .setAction(async ({ file, from: fromArg, gasPrice, nonce, wait: waitSec = 5 }) => {
+  .setAction(async ({ file, from: fromArg, gasPrice, nonce, wait: waitSec = 1 }) => {
     const netId = await web3.eth.net.getId()
 
     console.error('====================')
@@ -14,7 +14,7 @@ task(`tx`, `Performs a transaction`)
     const data = JSON.parse(require('fs').readFileSync(file))
 
     if (fromArg) {
-      console.error(`Using the sender address provided via the commandline argument: ${fromArg}`)
+      console.error(`Using the sender address provided via the command line argument: ${fromArg}`)
       data.from = fromArg
     }
 
@@ -66,7 +66,7 @@ task(`tx`, `Performs a transaction`)
 
     if (!receipt.status) {
       console.error('====================')
-      console.error(`An error occured:`, receipt.error)
+      console.error(`An error occurred:`, receipt.error)
     }
 
     if (receipt.contractAddress) {
@@ -98,7 +98,7 @@ task('ens-assign', `Assigns/transfers ENS node owner`)
     if (owner.toLowerCase() !== params.to.toLowerCase()) {
       throw new Error(`the owner '${owner}' is different from the expected '${params.to}'`)
     }
-    console.error(chalk.green('✓'), `the ownsership was successfully updated`)
+    console.error(chalk.green('✓'), `the ownership was successfully updated`)
   })
 
 task('list-accts', `List accounts and their balances`)
