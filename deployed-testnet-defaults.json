@@ -119,7 +119,8 @@
   "withdrawalQueueERC721": {
     "deployParameters": {
       "name": "stETH Withdrawal NFT",
-      "symbol": "unstETH"
+      "symbol": "unstETH",
+      "baseUri": null
     }
   }
 }
