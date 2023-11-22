@@ -125,13 +125,25 @@ async function deployNewContracts({ web3, artifacts }) {
   await makeTx(validatorsExitBusOracle, 'initialize', validatorsExitBusOracleArgs, { from: DEPLOYER })
 
   //
-  // === WithdrawalQueue initialize ===
+  // === WithdrawalQueue: initialize ===
   //
+  const withdrawalQueue = await artifacts.require('WithdrawalQueueERC721').at(withdrawalQueueAddress)
   const withdrawalQueueArgs = [
     withdrawalQueueAdmin,  // _admin
   ]
-  const withdrawalQueue = await artifacts.require('WithdrawalQueueERC721').at(withdrawalQueueAddress)
   await makeTx(withdrawalQueue, 'initialize', withdrawalQueueArgs, { from: DEPLOYER })
+
+  //
+  // === WithdrawalQueue: setBaseURI ===
+  //
+  const withdrawalQueueBaseUri = state["withdrawalQueueERC721"].deployParameters.baseUri
+  if (withdrawalQueueBaseUri !== null && withdrawalQueueBaseUri !== "") {
+    const MANAGE_TOKEN_URI_ROLE = await withdrawalQueue.MANAGE_TOKEN_URI_ROLE()
+    await makeTx(withdrawalQueue, 'grantRole', [MANAGE_TOKEN_URI_ROLE, DEPLOYER], { from: DEPLOYER })
+    await makeTx(withdrawalQueue, 'setBaseURI', [withdrawalQueueBaseUri] , { from: DEPLOYER })
+    console.log({ withdrawalQueueBaseUri })
+    await makeTx(withdrawalQueue, 'renounceRole', [MANAGE_TOKEN_URI_ROLE, DEPLOYER], { from: DEPLOYER })
+  }
 
   //
   // === StakingRouter: initialize ===

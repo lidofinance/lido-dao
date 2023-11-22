@@ -6,6 +6,7 @@ const DEPLOYER = process.env.DEPLOYER
 const GATE_SEAL_FACTORY = process.env.GATE_SEAL_FACTORY
 const GENESIS_TIME = parseInt(process.env.GENESIS_TIME)
 const DEPOSIT_CONTRACT = process.env.DEPOSIT_CONTRACT
+const WITHDRAWAL_QUEUE_BASE_URI = process.env.WITHDRAWAL_QUEUE_BASE_URI
 
 async function saveDeployParameters({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
@@ -36,6 +37,12 @@ async function saveDeployParameters({ web3, artifacts }) {
     ...state.chainSpec,
     genesisTime: GENESIS_TIME,
     depositContract: DEPOSIT_CONTRACT,
+  }
+  if (WITHDRAWAL_QUEUE_BASE_URI !== undefined) {
+    state.withdrawalQueueERC721.deployParameters = {
+      ...state.withdrawalQueueERC721.deployParameters,
+      baseUri: WITHDRAWAL_QUEUE_BASE_URI,
+    }
   }
   persistNetworkState(network.name, netId, state)
 }

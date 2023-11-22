@@ -93,6 +93,7 @@ To do Holešky deployment, the following parameters must be set up via env varia
 - `GAS_PRIORITY_FEE`. Gas priority fee. By default set to `2`
 - `GAS_MAX_FEE`. Gas max fee. By default set to `100`
 - `GATE_SEAL_FACTORY`. Address of the [GateSeal Factory](https://github.com/lidofinance/gate-seals) contract. Must be deployed in advance. Can be set to any `0x0000000000000000000000000000000000000000` to debug deployment.
+- `WITHDRAWAL_QUEUE_BASE_URI`. BaseURI for WithdrawalQueueERC712. By default not set (left an empty string).
 
 Also you need to specify `DEPLOYER` private key in `accounts.json` under `/eth/holesky` like `"holesky": ["<key>"]`. See `accounts.sample.json` for an example.
 

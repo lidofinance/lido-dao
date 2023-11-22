@@ -118,8 +118,9 @@
   },
   "withdrawalQueueERC721": {
     "deployParameters": {
-      "name": "stETH Withdrawal NFT",
-      "symbol": "unstETH"
+      "name": "Lido: stETH Withdrawal NFT",
+      "symbol": "unstETH",
+      "baseUri": null
     }
   }
 }
