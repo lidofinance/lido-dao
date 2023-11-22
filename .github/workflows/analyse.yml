@@ -14,7 +14,7 @@ jobs:
       security-events: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
 
@@ -57,7 +57,7 @@ jobs:
         run: >
           curl -sSL https://install.python-poetry.org | python - &&
           poetry install --no-root
-      
+
       - name: Remove foundry.toml
         run: rm -f foundry.toml
 
