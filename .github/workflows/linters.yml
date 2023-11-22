@@ -15,7 +15,7 @@ jobs:
       - name: Setup node.js version
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
@@ -64,7 +64,7 @@ jobs:
       - name: Setup node.js version
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
