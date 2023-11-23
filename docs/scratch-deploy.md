@@ -75,6 +75,12 @@ Run the node with the command:
 anvil -p 8545 --auto-impersonate --gas-price 0 --base-fee 0 --chain-id 1337 --mnemonic "test test test test test test test test test test test junk"
 ```
 
+or just
+
+```shell
+anvil
+```
+
 ### Hardhat node
 
 > NB: Hardhat node configuration is set in `hardhat.config.js` under `hardhat: { `.

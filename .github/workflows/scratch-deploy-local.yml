@@ -1,4 +1,4 @@
-name: Do scratch deployment on local anvil node
+name: Scratch deploy on local clean anvil
 
 on:
   pull_request:
@@ -6,7 +6,6 @@ on:
 
 jobs:
   do-scratch-deploy:
-    name: Assert deployed contracts bytecode
     runs-on: ubuntu-latest
 
     steps:
@@ -14,11 +13,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install Froundy
+      - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
-      - name: Start anvil
-        run: anvil &
+      - name: Start anvil in background
+        run: anvil --accounts 20 --mnemonic "test test test test test test test test test test test junk" &
 
       - name: Setup node.js version
         uses: actions/setup-node@v4
@@ -51,8 +50,5 @@ jobs:
           steps.cache-yarn-cache.outputs.cache-hit != 'true' ||
           steps.cache-node-modules.outputs.cache-hit != 'true'
 
-      - name: Run JS linters
-        run: yarn lint:js
-
-      - name: Run deploy scripts
+      - name: Run local deploy script
         run: bash scripts/scratch/dao-local-deploy.sh
