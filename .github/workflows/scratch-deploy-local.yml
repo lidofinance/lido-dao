@@ -2,7 +2,7 @@ name: Scratch deploy on local clean anvil
 
 on:
   pull_request:
-    branches: [master, develop]
+    branches: [master, develop, "feat/ci-scratcy-deploy"]
 
 jobs:
   do-scratch-deploy:
