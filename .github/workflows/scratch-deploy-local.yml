@@ -1,17 +1,58 @@
-name: Verify deployed contracts' bytecode
+name: Do scratch deployment on local anvil node
 
 on:
   pull_request:
     branches: [master, develop, "feat/ci-scratcy-deploy"]
 
 jobs:
-  assert-bytecode:
+  do-scratch-deploy:
     name: Assert deployed contracts bytecode
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
       - name: Install Froundy
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Start anvil
-        run: anvil
+        run: anvil &
+
+      - name: Setup node.js version
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
+
+      - name: Cache yarn cache
+        id: cache-yarn-cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: yarn-${{ hashFiles('**/yarn.lock') }}
+
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v3
+        with:
+          path: '**/node_modules'
+          key: node_modules-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: node_modules-${{ hashFiles('**/yarn.lock') }}
+
+      - name: Install modules
+        run: yarn
+        if: |
+          steps.cache-yarn-cache.outputs.cache-hit != 'true' ||
+          steps.cache-node-modules.outputs.cache-hit != 'true'
+
+      - name: Run JS linters
+        run: yarn lint:js
+
+      - name: Run deploy scripts
+        run: bash scripts/scratch/dao-local-deploy.sh
