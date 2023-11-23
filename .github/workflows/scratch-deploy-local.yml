@@ -1,0 +1,17 @@
+name: Verify deployed contracts' bytecode
+
+on:
+  pull_request:
+    branches: [master, develop, "feat/ci-scratcy-deploy"]
+
+jobs:
+  assert-bytecode:
+    name: Assert deployed contracts bytecode
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install Froundy
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Start anvil
+        run: anvil

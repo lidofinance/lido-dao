@@ -2,8 +2,7 @@ name: Verify deployed contracts' bytecode
 
 on:
   pull_request:
-    branches:
-      - 'master'
+    branches: [master]
 
 jobs:
   assert-bytecode:
