@@ -48,6 +48,9 @@ jobs:
       - name: Compile contracts
         run: yarn compile
 
+      - name: Write config for action-verify-bytecode
+        run: extract-artifacts
+
       - name: Verify bytecode
         uses: lidofinance/action-verify-bytecode@master
         with:
