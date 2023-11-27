@@ -2,7 +2,7 @@ name: Verify deployed contracts' bytecode
 
 on:
   pull_request:
-    branches: [master]
+    branches: [master, develop]
 
 jobs:
   assert-bytecode:
@@ -49,7 +49,7 @@ jobs:
         run: yarn compile
 
       - name: Write config for action-verify-bytecode
-        run: extract-artifacts
+        run: yarn extract-artifacts
 
       - name: Verify bytecode
         uses: lidofinance/action-verify-bytecode@master
