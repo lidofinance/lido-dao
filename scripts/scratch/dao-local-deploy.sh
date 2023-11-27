@@ -4,7 +4,7 @@ set -o pipefail
 
 #
 export NETWORK=local
-export RPC_URL="http://127.0.0.1:8545"
+export RPC_URL=${RPC_URL:="http://127.0.0.1:8555"}  # if defined use the value set to default otherwise
 
 # If GateSeal factory is zero, deploy no GateSeal instance. Otherwise use the factory to deploy an instance
 export GATE_SEAL_FACTORY=0x0000000000000000000000000000000000000000
@@ -19,3 +19,8 @@ export NETWORK_STATE_FILE="deployed-${NETWORK}.json"
 export NETWORK_STATE_DEFAULTS_FILE="deployed-testnet-defaults.json"
 
 bash scripts/scratch/dao-deploy.sh
+
+# # Need this to get sure the last transactions are mined
+yarn hardhat --network $NETWORK run ./scripts/scratch/send-hardhat-mine.js --no-compile
+
+NETWORK_STATE_FILE=deployed-local.json HARDHAT_FORKING_URL="${RPC_URL}" yarn hardhat run --no-compile ./scripts/scratch/checks/scratch-acceptance-test.js --network hardhat

@@ -9,12 +9,8 @@ const { assert } = require('../../../test/helpers/assert')
 
 
 const REQUIRED_NET_STATE = [
-  'ensAddress',
-  'lidoApmEnsName',
-  'daoAragonId',
   'vestingParams',
   'daoInitialSettings',
-  'lidoTemplate'
 ]
 
 const UNLIMITED = 1000000000

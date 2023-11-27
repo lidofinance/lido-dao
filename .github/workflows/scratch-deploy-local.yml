@@ -17,7 +17,8 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Start anvil in background
-        run: anvil -p 8545 --mnemonic "test test test test test test test test test test test junk" &
+        # For the port see port in scripts/scratch/dao-local-deploy.sh in RPC_URL env var
+        run: anvil -p 8555 --mnemonic "test test test test test test test test test test test junk" &
 
       - name: Setup node.js version
         uses: actions/setup-node@v4
