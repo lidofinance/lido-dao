@@ -608,7 +608,12 @@ contract LidoTemplate is IsContract {
         // NodeOperatorsRegistry
         perms[0] = _state.operators.MANAGE_SIGNING_KEYS();
         perms[1] = _state.operators.SET_NODE_OPERATOR_LIMIT_ROLE();
-        for (i = 0; i < 2; ++i) {
+        // Need MANAGE_NODE_OPERATOR_ROLE to make current scratch acceptance script
+        // (scripts/scratch/checks/scratch-acceptance-test.js) work.
+        // After voting utilities added to the repo should rewrite the acceptance
+        // script to grant/renounce this role and remove granting from here.
+        perms[2] = _state.operators.MANAGE_NODE_OPERATOR_ROLE();
+        for (i = 0; i < 3; ++i) {
             _createPermissionForVoting(acl, _state.operators, perms[i], voting);
         }
         acl.createPermission(_state.stakingRouter, _state.operators, _state.operators.STAKING_ROUTER_ROLE(), voting);
