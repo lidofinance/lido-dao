@@ -27,8 +27,9 @@ jobs:
         run: yarn
 
       - name: Check storage-layout
-        uses: lidofinance/storage-layout-action@v1
+        uses: lidofinance/storage-layout-action@feat/ignore-contracts-input
         with:
           mode: check
           src-folder: ./contracts
           ignore-folders: '{test_helpers,template,mocks}'
+          ignore-contracts: 'WithdrawalsManagerProxy|WithdrawalsManagerStub'
