@@ -27,7 +27,7 @@ jobs:
         run: yarn
 
       - name: Check storage-layout
-        uses: lidofinance/storage-layout-action@feat/ignore-contracts-input
+        uses: lidofinance/storage-layout-action@v1
         with:
           mode: check
           src-folder: ./contracts
