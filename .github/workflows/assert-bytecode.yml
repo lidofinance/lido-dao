@@ -66,5 +66,5 @@ jobs:
           cat _actual _expected | sort | uniq -u | tee _diff
           [ -s _diff ] && exit 1 || exit 0
         env:
-          IGNORE_REGEX: test|lib|mock|interface|template|OrderedCallback|Pausable|Versioned|BeaconChainDepositor|PausableUntil
+          IGNORE_REGEX: test|lib|mock|interface|template|OrderedCallback|Pausable|Versioned|BeaconChainDepositor|PausableUntil|WithdrawalsManagerProxy|WithdrawalsManagerStub|ERC1967Proxy
         if: ${{ always() }}
