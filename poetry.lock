@@ -286,13 +286,13 @@ test = ["pytest", "pytest-cov"]
 
 [[package]]
 name = "certifi"
-version = "2023.5.7"
+version = "2023.7.22"
 description = "Python package for providing Mozilla's CA Bundle."
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "certifi-2023.5.7-py3-none-any.whl", hash = "sha256:c6c2e98f5c7869efca1f8916fed228dd91539f9f1b444c314c06eef02980c716"},
-    {file = "certifi-2023.5.7.tar.gz", hash = "sha256:0f0d56dc5a6ad56fd4ba36484d6cc34451e1c6548c61daad8c320169f91eddc7"},
+    {file = "certifi-2023.7.22-py3-none-any.whl", hash = "sha256:92d6037539857d8206b8f6ae472e8b77db8058fec5937a1ef3f54304089edbb9"},
+    {file = "certifi-2023.7.22.tar.gz", hash = "sha256:539cc1d13202e33ca466e88b2807e29f4c13049d6d87031a3c110744495cb082"},
 ]
 
 [[package]]
@@ -513,13 +513,13 @@ cython = ["cython"]
 
 [[package]]
 name = "eth-abi"
-version = "4.0.0"
+version = "4.2.0"
 description = "eth_abi: Python utilities for working with Ethereum ABI definitions, especially encoding and decoding"
 optional = false
-python-versions = ">=3.7, <4"
+python-versions = ">=3.7.2, <4"
 files = [
-    {file = "eth_abi-4.0.0-py3-none-any.whl", hash = "sha256:79d258669f3505319e53638d644a75e1c816db552a1ab1927c3063763cc41031"},
-    {file = "eth_abi-4.0.0.tar.gz", hash = "sha256:6949baba61a2c453f0719309ca145e8876a1cbae7ba377c991e67240c13ec7fc"},
+    {file = "eth_abi-4.2.0-py3-none-any.whl", hash = "sha256:0d50469de2f9948bacd764fc3f8f337a090bbb6ac3a759ef22c094bf56c1e6d9"},
+    {file = "eth_abi-4.2.0.tar.gz", hash = "sha256:a9adae5e0c2b9a35703b76856d6db3a0498effdf1243011b2d56280165db1cdd"},
 ]
 
 [package.dependencies]
@@ -528,10 +528,10 @@ eth-utils = ">=2.0.0"
 parsimonious = ">=0.9.0,<0.10.0"
 
 [package.extras]
-dev = ["black", "bumpversion (>=0.5.3,<1)", "eth-hash[pycryptodome]", "flake8", "hypothesis (>=4.18.2,<5.0.0)", "ipython", "isort (>=4.2.15,<5)", "jinja2 (>=3.0.0,<3.1.0)", "mypy (==0.910)", "pydocstyle (>=6.0.0,<7)", "pytest (>=6.2.5,<7)", "pytest-pythonpath (>=0.7.1)", "pytest-watch (>=4.1.0,<5)", "pytest-xdist (>=2.5.0,<3)", "sphinx (>=4.5.0,<5)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (==18.5.0)", "tox (>=2.9.1,<3)", "twine", "wheel"]
-doc = ["jinja2 (>=3.0.0,<3.1.0)", "sphinx (>=4.5.0,<5)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (==18.5.0)"]
-lint = ["black", "flake8", "isort (>=4.2.15,<5)", "mypy (==0.910)", "pydocstyle (>=6.0.0,<7)"]
-test = ["eth-hash[pycryptodome]", "hypothesis (>=4.18.2,<5.0.0)", "pytest (>=6.2.5,<7)", "pytest-pythonpath (>=0.7.1)", "pytest-xdist (>=2.5.0,<3)", "tox (>=2.9.1,<3)"]
+dev = ["black (>=23)", "build (>=0.9.0)", "bumpversion (>=0.5.3)", "eth-hash[pycryptodome]", "flake8 (==6.0.0)", "flake8-bugbear (==23.3.23)", "hypothesis (>=4.18.2,<5.0.0)", "ipython", "isort (>=5.10.1)", "mypy (==0.971)", "pydocstyle (>=6.0.0)", "pytest (>=7.0.0)", "pytest-pythonpath (>=0.7.1)", "pytest-watch (>=4.1.0)", "pytest-xdist (>=2.4.0)", "sphinx (>=5.0.0)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (>=21,<22)", "tox (>=4.0.0)", "twine", "wheel"]
+doc = ["sphinx (>=5.0.0)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (>=21,<22)"]
+lint = ["black (>=23)", "flake8 (==6.0.0)", "flake8-bugbear (==23.3.23)", "isort (>=5.10.1)", "mypy (==0.971)", "pydocstyle (>=6.0.0)"]
+test = ["eth-hash[pycryptodome]", "hypothesis (>=4.18.2,<5.0.0)", "pytest (>=7.0.0)", "pytest-pythonpath (>=0.7.1)", "pytest-xdist (>=2.4.0)"]
 tools = ["hypothesis (>=4.18.2,<5.0.0)"]
 
 [[package]]
@@ -1225,13 +1225,13 @@ files = [
 
 [[package]]
 name = "requests"
-version = "2.30.0"
+version = "2.31.0"
 description = "Python HTTP for Humans."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "requests-2.30.0-py3-none-any.whl", hash = "sha256:10e94cc4f3121ee6da529d358cdaeaff2f1c409cd377dbc72b825852f2f7e294"},
-    {file = "requests-2.30.0.tar.gz", hash = "sha256:239d7d4458afcb28a692cdd298d87542235f4ca8d36d03a15bfc128a6559a2f4"},
+    {file = "requests-2.31.0-py3-none-any.whl", hash = "sha256:58cd2187c01e70e6e26505bca751777aa9f2ee0b7f4300988b709f44e013003f"},
+    {file = "requests-2.31.0.tar.gz", hash = "sha256:942c5a758f98d790eaed1a29cb6eefc7ffb0d1cf7af05c3d2791656dbd6ad1e1"},
 ]
 
 [package.dependencies]
@@ -1314,13 +1314,13 @@ files = [
 
 [[package]]
 name = "urllib3"
-version = "2.0.2"
+version = "2.0.7"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "urllib3-2.0.2-py3-none-any.whl", hash = "sha256:d055c2f9d38dc53c808f6fdc8eab7360b6fdbbde02340ed25cfbcd817c62469e"},
-    {file = "urllib3-2.0.2.tar.gz", hash = "sha256:61717a1095d7e155cdb737ac7bb2f4324a858a1e2e6466f6d03ff630ca68d3cc"},
+    {file = "urllib3-2.0.7-py3-none-any.whl", hash = "sha256:fdb6d215c776278489906c2f8916e6e7d4f5a9b602ccbcfdf7f016fc8da0596e"},
+    {file = "urllib3-2.0.7.tar.gz", hash = "sha256:c97dfde1f7bd43a71c8d2a58e369e9b2bf692d1334ea9f9cae55add7d0dd0f84"},
 ]
 
 [package.extras]

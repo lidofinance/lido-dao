@@ -37,8 +37,8 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
 
   logSplitter()
 
-  log(`Using ENS:`, yl(state.ensAddress))
-  const ens = await artifacts.require('ENS').at(state.ensAddress)
+  log(`Using ENS:`, yl(state.ens.address))
+  const ens = await artifacts.require('ENS').at(state.ens.address)
   log.splitter()
 
   const appId = namehash(`${appName}.${state.lidoApmEnsName}`)
@@ -73,7 +73,7 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   }
   const versionTo = currentVersion.map((n) => n.toNumber())
 
-  const txSender = HOLDER || state.multisigAddress
+  const txSender = HOLDER || state.deployer
 
   log(`Upgrading app:`, yl(appName))
   log(`App ID:`, yl(appId))
