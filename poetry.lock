@@ -525,13 +525,13 @@ cython = ["cython"]
 
 [[package]]
 name = "eth-abi"
-version = "4.0.0"
+version = "4.2.0"
 description = "eth_abi: Python utilities for working with Ethereum ABI definitions, especially encoding and decoding"
 optional = false
-python-versions = ">=3.7, <4"
+python-versions = ">=3.7.2, <4"
 files = [
-    {file = "eth_abi-4.0.0-py3-none-any.whl", hash = "sha256:79d258669f3505319e53638d644a75e1c816db552a1ab1927c3063763cc41031"},
-    {file = "eth_abi-4.0.0.tar.gz", hash = "sha256:6949baba61a2c453f0719309ca145e8876a1cbae7ba377c991e67240c13ec7fc"},
+    {file = "eth_abi-4.2.0-py3-none-any.whl", hash = "sha256:0d50469de2f9948bacd764fc3f8f337a090bbb6ac3a759ef22c094bf56c1e6d9"},
+    {file = "eth_abi-4.2.0.tar.gz", hash = "sha256:a9adae5e0c2b9a35703b76856d6db3a0498effdf1243011b2d56280165db1cdd"},
 ]
 
 [package.dependencies]
@@ -540,10 +540,10 @@ eth-utils = ">=2.0.0"
 parsimonious = ">=0.9.0,<0.10.0"
 
 [package.extras]
-dev = ["black", "bumpversion (>=0.5.3,<1)", "eth-hash[pycryptodome]", "flake8", "hypothesis (>=4.18.2,<5.0.0)", "ipython", "isort (>=4.2.15,<5)", "jinja2 (>=3.0.0,<3.1.0)", "mypy (==0.910)", "pydocstyle (>=6.0.0,<7)", "pytest (>=6.2.5,<7)", "pytest-pythonpath (>=0.7.1)", "pytest-watch (>=4.1.0,<5)", "pytest-xdist (>=2.5.0,<3)", "sphinx (>=4.5.0,<5)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (==18.5.0)", "tox (>=2.9.1,<3)", "twine", "wheel"]
-doc = ["jinja2 (>=3.0.0,<3.1.0)", "sphinx (>=4.5.0,<5)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (==18.5.0)"]
-lint = ["black", "flake8", "isort (>=4.2.15,<5)", "mypy (==0.910)", "pydocstyle (>=6.0.0,<7)"]
-test = ["eth-hash[pycryptodome]", "hypothesis (>=4.18.2,<5.0.0)", "pytest (>=6.2.5,<7)", "pytest-pythonpath (>=0.7.1)", "pytest-xdist (>=2.5.0,<3)", "tox (>=2.9.1,<3)"]
+dev = ["black (>=23)", "build (>=0.9.0)", "bumpversion (>=0.5.3)", "eth-hash[pycryptodome]", "flake8 (==6.0.0)", "flake8-bugbear (==23.3.23)", "hypothesis (>=4.18.2,<5.0.0)", "ipython", "isort (>=5.10.1)", "mypy (==0.971)", "pydocstyle (>=6.0.0)", "pytest (>=7.0.0)", "pytest-pythonpath (>=0.7.1)", "pytest-watch (>=4.1.0)", "pytest-xdist (>=2.4.0)", "sphinx (>=5.0.0)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (>=21,<22)", "tox (>=4.0.0)", "twine", "wheel"]
+doc = ["sphinx (>=5.0.0)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (>=21,<22)"]
+lint = ["black (>=23)", "flake8 (==6.0.0)", "flake8-bugbear (==23.3.23)", "isort (>=5.10.1)", "mypy (==0.971)", "pydocstyle (>=6.0.0)"]
+test = ["eth-hash[pycryptodome]", "hypothesis (>=4.18.2,<5.0.0)", "pytest (>=7.0.0)", "pytest-pythonpath (>=0.7.1)", "pytest-xdist (>=2.4.0)"]
 tools = ["hypothesis (>=4.18.2,<5.0.0)"]
 
 [[package]]
