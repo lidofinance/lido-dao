@@ -41,4 +41,9 @@ library Math256 {
     function absDiff(uint256 a, uint256 b) internal pure returns (uint256) {
         return a > b ? a - b : b - a;
     }
+
+    /// @dev Returns the rounded first number by the second.
+    function round(uint256 a, uint256 b) internal pure returns (uint256) {
+        return b == 0 ? 0 : (a / b) * b;
+    }
 }

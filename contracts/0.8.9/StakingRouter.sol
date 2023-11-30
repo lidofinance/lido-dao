@@ -98,8 +98,9 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint16 treasuryFee;
         uint16 targetShare;
         StakingModuleStatus status;
-        uint256 activeValidatorsCount;
+        uint256 activeValidatorsBalance;
         uint256 availableValidatorsCount;
+        uint256 depositSize;
     }
 
     bytes32 public constant MANAGE_WITHDRAWAL_CREDENTIALS_ROLE = keccak256("MANAGE_WITHDRAWAL_CREDENTIALS_ROLE");
@@ -858,6 +859,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         StakingModule storage stakingModule = _getStakingModuleById(_stakingModuleId);
         if (StakingModuleStatus(stakingModule.status) == _status)
             revert StakingModuleStatusTheSame();
+        }
         _setStakingModuleStatus(stakingModule, _status);
     }
 
@@ -938,20 +940,21 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     ///     on the passed `_maxDepositsValue` amount
     /// @param _stakingModuleId id of the staking module to be deposited
     /// @param _maxDepositsValue max amount of ether that might be used for deposits count calculation
-    /// @return max number of deposits might be done using the given staking module
-    function getStakingModuleMaxDepositsCount(uint256 _stakingModuleId, uint256 _maxDepositsValue)
+    /// @return depositsCount max number of deposits might be done using the given staking module
+    ///         depositSize deposit size value set for module
+    function getStakingModuleMaxDeposits(uint256 _stakingModuleId, uint256 _maxDepositsValue)
         public
         view
-        returns (uint256)
+        returns (uint256 depositsCount, uint256 depositSize)
     {
         (
             /* uint256 allocated */,
             uint256[] memory newDepositsAllocation,
             StakingModuleCache[] memory stakingModulesCache
-        ) = _getDepositsAllocation(_maxDepositsValue / DEPOSIT_SIZE);
+        ) = _getDepositsAllocation(_maxDepositsValue);
         uint256 stakingModuleIndex = _getStakingModuleIndexById(_stakingModuleId);
-        return
-            newDepositsAllocation[stakingModuleIndex] - stakingModulesCache[stakingModuleIndex].activeValidatorsCount;
+        depositSize = stakingModulesCache[stakingModuleIndex].depositSize;
+        depositsCount = (newDepositsAllocation[stakingModuleIndex] - stakingModulesCache[stakingModuleIndex].activeValidatorsBalance) / depositSize;
     }
 
     /**
@@ -1058,7 +1061,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     ///         reduced, 1e4 precision.
     function getTotalFeeE4Precision() external view returns (uint16 totalFee) {
         /// @dev The logic is placed here but in Lido contract to save Lido bytecode
-        (, , , uint96 totalFeeInHighPrecision, uint256 precision) = getStakingRewardsDistribution();
+        (,,, uint96 totalFeeInHighPrecision, uint256 precision) = getStakingRewardsDistribution();
         // Here we rely on (totalFeeInHighPrecision <= precision)
         totalFee = _toE4Precision(totalFeeInHighPrecision, precision);
     }
@@ -1082,8 +1085,8 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     }
 
     /// @notice returns new deposits allocation after the distribution of the `_depositsCount` deposits
-    function getDepositsAllocation(uint256 _depositsCount) external view returns (uint256 allocated, uint256[] memory allocations) {
-        (allocated, allocations, ) = _getDepositsAllocation(_depositsCount);
+    function getDepositsAllocation(uint256 _depositsAmount) external view returns (uint256 allocated, uint256[] memory allocations) {
+        (allocated, allocations,) = _getDepositsAllocation(_depositsAmount);
     }
 
     /// @dev Invokes a deposit call to the official Deposit contract
@@ -1111,9 +1114,11 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
         uint256 depositsValue = msg.value;
         emit StakingRouterETHDeposited(_stakingModuleId, depositsValue);
+        uint256 depositSize = _getStakingModuleDepositSizrById(_stakingModuleId);
 
-        if (depositsValue != _depositsCount * DEPOSIT_SIZE)
+        if (depositsValue != _depositsCount * depositSize) {
             revert InvalidDepositsValue(depositsValue, _depositsCount);
+        }
 
         if (_depositsCount > 0) {
             (bytes memory publicKeysBatch, bytes memory signaturesBatch) =
@@ -1190,17 +1195,17 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
     /// @dev load modules into a memory cache
     ///
-    /// @return totalActiveValidators total active validators across all modules
+    /// @return totalActiveValidatorsBalance total active validators across all modules
     /// @return stakingModulesCache array of StakingModuleCache structs
     function _loadStakingModulesCache() internal view returns (
-        uint256 totalActiveValidators,
+        uint256 totalActiveValidatorsBalance,
         StakingModuleCache[] memory stakingModulesCache
     ) {
         uint256 stakingModulesCount = getStakingModulesCount();
         stakingModulesCache = new StakingModuleCache[](stakingModulesCount);
         for (uint256 i; i < stakingModulesCount; ) {
             stakingModulesCache[i] = _loadStakingModulesCacheItem(i);
-            totalActiveValidators += stakingModulesCache[i].activeValidatorsCount;
+            totalActiveValidatorsBalance += stakingModulesCache[i].activeValidatorsBalance;
             unchecked {
                 ++i;
             }
@@ -1220,6 +1225,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         cacheItem.treasuryFee = stakingModuleData.treasuryFee;
         cacheItem.targetShare = stakingModuleData.targetShare;
         cacheItem.status = StakingModuleStatus(stakingModuleData.status);
+        cacheItem.depositSize = _getStakingModuleDepositSizrById(stakingModuleData.id);
 
         (
             uint256 totalExitedValidators,
@@ -1227,9 +1233,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             uint256 depositableValidatorsCount
         ) = IStakingModule(cacheItem.stakingModuleAddress).getStakingModuleSummary();
 
-        cacheItem.availableValidatorsCount = cacheItem.status == StakingModuleStatus.Active
-            ? depositableValidatorsCount
-            : 0;
+        cacheItem.availableValidatorsCount = cacheItem.status == StakingModuleStatus.Active ? depositableValidatorsCount : 0;
 
         // the module might not receive all exited validators data yet => we need to replacing
         // the exitedValidatorsCount with the one that the staking router is aware of
@@ -1247,31 +1251,36 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     }
 
     function _getDepositsAllocation(
-        uint256 _depositsToAllocate
+        uint256 _depositsAmountToAllocate
     ) internal view returns (uint256 allocated, uint256[] memory allocations, StakingModuleCache[] memory stakingModulesCache) {
         // calculate total used validators for operators
-        uint256 totalActiveValidators;
+        uint256 totalActiveValidatorsBalance;
 
-        (totalActiveValidators, stakingModulesCache) = _loadStakingModulesCache();
+        (totalActiveValidatorsBalance, stakingModulesCache) = _loadStakingModulesCache();
 
         uint256 stakingModulesCount = stakingModulesCache.length;
         allocations = new uint256[](stakingModulesCount);
         if (stakingModulesCount > 0) {
             /// @dev new estimated active validators count
-            totalActiveValidators += _depositsToAllocate;
+            totalActiveValidatorsBalance += _depositsAmountToAllocate;
             uint256[] memory capacities = new uint256[](stakingModulesCount);
-            uint256 targetValidators;
+            uint256 targetValidatorsBalance;
 
-            for (uint256 i; i < stakingModulesCount; ) {
-                allocations[i] = stakingModulesCache[i].activeValidatorsCount;
-                targetValidators = (stakingModulesCache[i].targetShare * totalActiveValidators) / TOTAL_BASIS_POINTS;
-                capacities[i] = Math256.min(targetValidators, stakingModulesCache[i].activeValidatorsCount + stakingModulesCache[i].availableValidatorsCount);
+            for (uint256 i; i < stakingModulesCount;) {
+                allocations[i] = stakingModulesCache[i].activeValidatorsBalance;
+                // rounding to per module depositSize
+                // targetValidatorsBalance = Math256.round((stakingModulesCache[i].targetShare * totalActiveValidatorsBalance) / TOTAL_BASIS_POINTS, stakingModulesCache[i].depositSize);
+                targetValidatorsBalance = (stakingModulesCache[i].targetShare * totalActiveValidatorsBalance) / TOTAL_BASIS_POINTS;
+                capacities[i] = Math256.min(
+                    targetValidatorsBalance,
+                    stakingModulesCache[i].activeValidatorsBalance + (stakingModulesCache[i].availableValidatorsCount * stakingModulesCache[i].depositSize)
+                );
                 unchecked {
                     ++i;
                 }
             }
 
-            allocated = MinFirstAllocationStrategy.allocate(allocations, capacities, _depositsToAllocate);
+            allocated = MinFirstAllocationStrategy.allocate(allocations, capacities, _depositsAmountToAllocate);
         }
     }
 
@@ -1298,6 +1307,10 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
     function _getStakingModuleAddressById(uint256 _stakingModuleId) internal view returns (address) {
         return _getStakingModuleById(_stakingModuleId).stakingModuleAddress;
+    }
+
+    function _getStakingModuleDepositSizrById(uint256 _stakingModuleId) internal pure returns (uint256) {
+        return DEPOSIT_SIZE;
     }
 
     function _getStorageStakingModulesMapping() internal pure returns (mapping(uint256 => StakingModule) storage result) {

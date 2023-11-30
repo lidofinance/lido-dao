@@ -9,15 +9,15 @@ interface IStakingModule {
     function getType() external view returns (bytes32);
 
     /// @notice Returns all-validators summary in the staking module
-    /// @return totalExitedValidators total number of validators in the EXITED state
+    /// @return totalExitedValidatorsBalance total number of validators in the EXITED state
     ///     on the Consensus Layer. This value can't decrease in normal conditions
-    /// @return totalDepositedValidators total number of validators deposited via the
+    /// @return totalDepositedValidatorsBalance total number of validators deposited via the
     ///     official Deposit Contract. This value is a cumulative counter: even when the validator
     ///     goes into EXITED state this counter is not decreasing
     /// @return depositableValidatorsCount number of validators in the set available for deposit
     function getStakingModuleSummary() external view returns (
-        uint256 totalExitedValidators,
-        uint256 totalDepositedValidators,
+        uint256 totalExitedValidatorsBalance,
+        uint256 totalDepositedValidatorsBalance,
         uint256 depositableValidatorsCount
     );
 
@@ -30,9 +30,9 @@ interface IStakingModule {
     ///     costs were compensated to the Lido by the node operator
     /// @return stuckPenaltyEndTimestamp time when the penalty for stuck validators stops applying
     ///     to node operator rewards
-    /// @return totalExitedValidators total number of validators in the EXITED state
+    /// @return totalExitedValidatorsBalance total number of validators in the EXITED state
     ///     on the Consensus Layer. This value can't decrease in normal conditions
-    /// @return totalDepositedValidators total number of validators deposited via the official
+    /// @return totalDepositedValidatorsBalance total number of validators deposited via the official
     ///     Deposit Contract. This value is a cumulative counter: even when the validator goes into
     ///     EXITED state this counter is not decreasing
     /// @return depositableValidatorsCount number of validators in the set available for deposit
@@ -42,8 +42,8 @@ interface IStakingModule {
         uint256 stuckValidatorsCount,
         uint256 refundedValidatorsCount,
         uint256 stuckPenaltyEndTimestamp,
-        uint256 totalExitedValidators,
-        uint256 totalDepositedValidators,
+        uint256 totalExitedValidatorsBalance,
+        uint256 totalDepositedValidatorsBalance,
         uint256 depositableValidatorsCount
     );
 

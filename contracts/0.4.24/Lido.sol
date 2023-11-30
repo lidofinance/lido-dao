@@ -81,11 +81,7 @@ interface IWithdrawalVault {
 }
 
 interface IStakingRouter {
-    function deposit(
-        uint256 _depositsCount,
-        uint256 _stakingModuleId,
-        bytes _depositCalldata
-    ) external payable;
+    function deposit(uint256 _depositsCount, uint256 _stakingModuleId, bytes _depositCalldata) external payable;
 
     function getStakingRewardsDistribution()
         external
@@ -108,10 +104,10 @@ interface IStakingRouter {
         uint16 modulesFee, uint16 treasuryFee
     );
 
-    function getStakingModuleMaxDepositsCount(uint256 _stakingModuleId, uint256 _maxDepositsValue)
+    function getStakingModuleMaxDeposits(uint256 _stakingModuleId, uint256 _maxDepositsValue)
         external
         view
-        returns (uint256);
+        returns (uint256 depositsCount, uint256 depositSize);
 
     function TOTAL_BASIS_POINTS() external view returns (uint256);
 }
@@ -185,6 +181,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     /// @dev number of deposited validators (incrementing counter of deposit operations).
     bytes32 internal constant DEPOSITED_VALIDATORS_POSITION =
         0xe6e35175eb53fc006520a2a9c3e9711a7c00de6ff2c32dd31df8c5a24cac1b5c; // keccak256("lido.Lido.depositedValidators");
+    bytes32 internal constant DEPOSITED_BALANCE_POSITION =
+        0x824b553776062cb6506c204b2d4c4bfb9bcc04d85f2cb247e68b2ff456314036; // keccak256("lido.Lido.depositedBalance");
+
     /// @dev total amount of ether on Consensus Layer (sum of all the balances of Lido validators)
     // "beacon" in the `keccak256()` parameter is staying here for compatibility reason
     bytes32 internal constant CL_BALANCE_POSITION =
@@ -213,9 +212,9 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         uint256 postCLValidators
     );
 
-    // Emits when var at `DEPOSITED_VALIDATORS_POSITION` changed
-    event DepositedValidatorsChanged(
-        uint256 depositedValidators
+    // Emits when var at `DEPOSITED_VALIDATORS_BALANCE_POSITION` changed
+    event DepositedBalanceChanged(
+        uint256 depositedValidatorsBalance
     );
 
     // Emits when oracle accounting report processed
@@ -293,6 +292,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         emit LidoLocatorSet(_lidoLocator);
     }
 
+    //@todo _initialize_v3
+
     /**
      * @notice A function to finalize upgrade to v2 (from v1). Can be called only once
      * @dev Value "1" in CONTRACT_VERSION_POSITION is skipped due to change in numbering
@@ -312,6 +313,8 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
         _initialize_v2(_lidoLocator, _eip712StETH);
     }
+
+    //@todo finalizeUpgrade_v3
 
     /**
      * @notice Stops accepting new Ether to the protocol
@@ -608,14 +611,14 @@ contract Lido is Versioned, StETHPermit, AragonApp {
      * Can be required when onboarding external validators to Lido
      * (i.e., had deposited before and rotated their type-0x00 withdrawal credentials to Lido)
      *
-     * @param _newDepositedValidators new value
+     * @param _newDepositedBalance new value
      */
-    function unsafeChangeDepositedValidators(uint256 _newDepositedValidators) external {
+    function unsafeChangeDepositedBalance(uint256 _newDepositedBalance) external {
         _auth(UNSAFE_CHANGE_DEPOSITED_VALIDATORS_ROLE);
 
-        DEPOSITED_VALIDATORS_POSITION.setStorageUint256(_newDepositedValidators);
+        DEPOSITED_BALANCE_POSITION.setStorageUint256(_newDepositedBalance);
 
-        emit DepositedValidatorsChanged(_newDepositedValidators);
+        emit DepositedBalanceChanged(_newDepositedBalance);
     }
 
     /**
@@ -655,15 +658,15 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
     /**
     * @notice Returns the key values related to Consensus Layer side of the contract. It historically contains beacon
-    * @return depositedValidators - number of deposited validators from Lido contract side
+    * @return depositedBalance - total balance of deposited validators from Lido contract side
     * @return beaconValidators - number of Lido validators visible on Consensus Layer, reported by oracle
     * @return beaconBalance - total amount of ether on the Consensus Layer side (sum of all the balances of Lido validators)
     *
     * @dev `beacon` in naming still here for historical reasons
     */
-    function getBeaconStat() external view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance) {
-        depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
-        beaconValidators = CL_VALIDATORS_POSITION.getStorageUint256();
+    function getBeaconStat() external view returns (uint256 depositedBalance, uint256, uint256 beaconBalance) {
+        depositedBalance = DEPOSITED_BALANCE_POSITION.getStorageUint256();
+        // beaconValidators = CL_VALIDATORS_POSITION.getStorageUint256();
         beaconBalance = CL_BALANCE_POSITION.getStorageUint256();
     }
 
@@ -687,7 +690,7 @@ contract Lido is Versioned, StETHPermit, AragonApp {
 
     /**
      * @dev Invokes a deposit call to the Staking Router contract and updates buffered counters
-     * @param _maxDepositsCount max deposits count
+     * @param _maxDepositsCount max deposits value for module
      * @param _stakingModuleId id of the staking module to be deposited
      * @param _depositCalldata module calldata
      */
@@ -698,22 +701,21 @@ contract Lido is Versioned, StETHPermit, AragonApp {
         require(canDeposit(), "CAN_NOT_DEPOSIT");
 
         IStakingRouter stakingRouter = _stakingRouter();
-        uint256 depositsCount = Math256.min(
-            _maxDepositsCount,
-            stakingRouter.getStakingModuleMaxDepositsCount(_stakingModuleId, getDepositableEther())
-        );
+
+        (uint256 depositsCount, uint256 depositSize) = stakingRouter.getStakingModuleMaxDeposits(_stakingModuleId, getDepositableEther());
+        depositsCount = Math256.min(_maxDepositsCount, depositsCount);
 
         uint256 depositsValue;
         if (depositsCount > 0) {
-            depositsValue = depositsCount.mul(DEPOSIT_SIZE);
+            depositsValue = depositsCount.mul(depositSize);
             /// @dev firstly update the local state of the contract to prevent a reentrancy attack,
             ///     even if the StakingRouter is a trusted contract.
             BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther().sub(depositsValue));
             emit Unbuffered(depositsValue);
 
-            uint256 newDepositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256().add(depositsCount);
-            DEPOSITED_VALIDATORS_POSITION.setStorageUint256(newDepositedValidators);
-            emit DepositedValidatorsChanged(newDepositedValidators);
+            uint256 newDepositedBalance = DEPOSITED_BALANCE_POSITION.getStorageUint256().add(depositsValue);
+            DEPOSITED_BALANCE_POSITION.setStorageUint256(newDepositedBalance);
+            emit DepositedBalanceChanged(newDepositedBalance);
         }
 
         /// @dev transfer ether to StakingRouter and make a deposit at the same time. All the ether
@@ -1092,11 +1094,11 @@ contract Lido is Versioned, StETHPermit, AragonApp {
     ///     i.e. submitted to the official Deposit contract but not yet visible in the CL state.
     /// @return transient balance in wei (1e-18 Ether)
     function _getTransientBalance() internal view returns (uint256) {
-        uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
-        uint256 clValidators = CL_VALIDATORS_POSITION.getStorageUint256();
+        uint256 depositedBalance = DEPOSITED_BALANCE_POSITION.getStorageUint256();
+        uint256 clBalance = CL_BALANCE_POSITION.getStorageUint256();
         // clValidators can never be less than deposited ones.
-        assert(depositedValidators >= clValidators);
-        return (depositedValidators - clValidators).mul(DEPOSIT_SIZE);
+        assert(depositedBalance >= clBalance);
+        return depositedBalance - clBalance;
     }
 
     /**
