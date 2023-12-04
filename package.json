@@ -1,0 +1,73 @@
+{
+  "name": "core-protocol",
+  "version": "2.0.0",
+  "description": "Lido core protocol",
+  "main": "index.js",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=8"
+  },
+  "scripts": {
+    "lint:sol": "solhint 'contracts/**/*.sol'",
+    "lint:sol:fix": "pnpm lint:sol --fix",
+    "lint:ts": "eslint . --ignore-path .gitignore --max-warnings=0",
+    "lint:ts:fix": "pnpm lint:ts --fix",
+    "lint": "pnpm lint:sol && pnpm lint:ts",
+    "format": "prettier . --write --ignore-path .gitignore --ignore-path .prettierignore",
+    "test": "npx hardhat test",
+    "prepare": "husky install"
+  },
+  "lint-staged": {
+    "./**/*.ts": [
+      "eslint --ignore-path .gitignore --max-warnings=0"
+    ],
+    "./**/*.{ts,md,json}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^17.7.1",
+    "@commitlint/config-conventional": "^17.7.0",
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
+    "@nomicfoundation/hardhat-toolbox": "^3.0.0",
+    "@nomicfoundation/hardhat-verify": "^1.0.0",
+    "@typechain/ethers-v6": "^0.4.0",
+    "@typechain/hardhat": "^8.0.0",
+    "@types/chai": "^4.2.0",
+    "@types/mocha": ">=9.1.0",
+    "@types/node": ">=16.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.6.0",
+    "@typescript-eslint/parser": "^6.6.0",
+    "chai": "^4.2.0",
+    "dotenv": "^16.3.1",
+    "eslint": "^8.48.0",
+    "eslint-config-prettier": "^9.0.0",
+    "ethers": "^6.4.0",
+    "hardhat": "^2.17.2",
+    "hardhat-gas-reporter": "^1.0.8",
+    "husky": "^8.0.0",
+    "lint-staged": "^14.0.1",
+    "prettier": "^3.0.3",
+    "solhint": "^3.6.2",
+    "solhint-plugin-lido": "^0.0.4",
+    "solidity-coverage": "^0.8.4",
+    "ts-node": ">=8.0.0",
+    "typechain": "^8.3.2",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@aragon/apps-agent": "2.1.0",
+    "@aragon/apps-finance": "3.0.0",
+    "@aragon/apps-lido": "lidofinance/aragon-apps#master",
+    "@aragon/apps-vault": "4.1.0",
+    "@aragon/id": "2.1.1",
+    "@aragon/minime": "1.0.0",
+    "@aragon/os": "4.4.0",
+    "@openzeppelin/contracts": "3.4.0",
+    "@openzeppelin/contracts-v4.4": "npm:@openzeppelin/contracts@4.4.1",
+    "openzeppelin-solidity": "2.0.0"
+  }
+}

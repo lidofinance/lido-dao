@@ -1,0 +1,22 @@
+{
+  "extends": "solhint:recommended",
+  "plugins": ["lido"],
+  "rules": {
+    "not-rely-on-time": "off",
+    "no-inline-assembly": "off",
+    "var-name-mixedcase": "off",
+    "compiler-version": "off",
+    "reason-string": "off",
+    "no-empty-blocks": "off",
+    "func-name-mixedcase": "off",
+    "lido/fixed-compiler-version": "error",
+    "visibility-modifier-order": "error",
+    "no-unused-vars": "error",
+    "func-visibility": [
+      "warn",
+      {
+        "ignoreConstructors": true
+      }
+    ]
+  }
+}
