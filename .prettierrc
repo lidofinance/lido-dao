@@ -1,9 +1,0 @@
-{
-  "singleQuote": true,
-  "semi": false,
-  "bracketSpacing": true,
-  "jsxBracketSameLine": false,
-  "options": {
-    "editorconfig": true
-  }
-}
