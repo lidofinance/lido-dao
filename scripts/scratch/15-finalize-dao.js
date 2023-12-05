@@ -5,6 +5,7 @@ const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log } = require('../helpers/log')
 const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 const { assertLastEvent } = require('../helpers/events')
+const { makeTx, TotalGasCounter } = require('../helpers/deploy')
 
 const { APP_NAMES } = require('../constants')
 const { assertVesting } = require('./checks/dao-token')
@@ -62,14 +63,15 @@ async function finalizeDAO({ web3, artifacts }) {
       unvestedTokensAmount: '0' // since we're minting them during the finalizeDAO call below
     }
   })
-
   log.splitter()
 
-  await log.makeTx(template, 'finalizeDAO', [
+  await makeTx(template, 'finalizeDAO', [
     state.daoAragonId,
     state.vestingParams.unvestedTokensAmount,
     state.stakingRouter.proxy.address
   ], { from: state.deployer })
+
+  await TotalGasCounter.incrementTotalGasUsedInStateFile()
 }
 
 module.exports = runOrWrapScript(finalizeDAO, module)

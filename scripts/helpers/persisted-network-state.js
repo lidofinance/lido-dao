@@ -2,6 +2,7 @@ const fs = require('fs')
 const path = require('path')
 
 const { log } = require('./log')
+const { assert } = require('../../test/helpers/assert')
 
 const NETWORK_STATE_FILE_BASENAME = process.env.NETWORK_STATE_FILE_BASENAME || 'deployed'
 const NETWORK_STATE_FILE_DIR = process.env.NETWORK_STATE_FILE_DIR || '.'
@@ -13,7 +14,7 @@ function readNetworkState(netName, netId) {
 }
 
 function persistNetworkState(netName, netId, state, updates = undefined) {
-  state.networkId = netId
+  assert.equal(netId, state.networkId, `Network id ${netId} does not match one in state file ${state.networkId}`)
   if (updates) {
     updateNetworkState(state, updates)
   }
@@ -21,37 +22,12 @@ function persistNetworkState(netName, netId, state, updates = undefined) {
   _writeNetworkStateFile(fileName, state)
 }
 
-function persistNetworkState2(netName, netId, state, updates = undefined) {
-  state.networkId = netId
-  if (updates) {
-    updateNetworkState2(state, updates)
-  }
-  const fileName = _getFileName(netName, NETWORK_STATE_FILE_BASENAME, NETWORK_STATE_FILE_DIR)
-  _writeNetworkStateFile(fileName, state)
-}
-
-function updateNetworkState2(state, newState) {
+function updateNetworkState(state, newState) {
   Object.keys(newState).forEach((key) => {
     const previousValue = state[key]
     const value = newState[key]
     if (value != null) {
       state[key] = Object.assign(previousValue || {}, value)
-    }
-  })
-}
-
-function updateNetworkState(state, newState) {
-  Object.keys(newState).forEach((key) => {
-    const value = newState[key]
-    if (value != null) {
-      if (value.address) {
-        state[`${key}Address`] = value.address
-        if (value.constructorArgs) {
-          state[`${key}ConstructorArgs`] = value.constructorArgs
-        }
-      } else {
-        state[key] = value
-      }
     }
   })
 }
@@ -106,7 +82,6 @@ function _writeNetworkStateFile(fileName, state) {
 module.exports = {
   readNetworkState,
   persistNetworkState,
-  persistNetworkState2,
   updateNetworkState,
   assertRequiredNetworkState,
   readStateFile,

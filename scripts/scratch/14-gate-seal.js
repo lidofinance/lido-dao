@@ -2,6 +2,7 @@ const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, logSplitter, logWideSplitter, yl, gr } = require('../helpers/log')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
+const { makeTx, TotalGasCounter } = require('../helpers/deploy')
 
 const { APP_NAMES } = require('../constants')
 
@@ -33,7 +34,7 @@ async function deployNewContracts({ web3, artifacts }) {
 
   const GateSealFactory = await artifacts.require("IGateSealFactory")
   const gateSealFactory = await GateSealFactory.at(gateSealFactoryAddress)
-  const receipt = await log.makeTx(gateSealFactory, "create_gate_seal", [
+  const receipt = await makeTx(gateSealFactory, "create_gate_seal", [
     state.gateSeal.sealingCommittee,
     state.gateSeal.sealDuration,
     sealables,
@@ -43,6 +44,8 @@ async function deployNewContracts({ web3, artifacts }) {
   console.log(`GateSeal created: ${gateSealAddress}`)
   state.gateSeal.address = gateSealAddress
   persistNetworkState(network.name, netId, state)
+
+  await TotalGasCounter.incrementTotalGasUsedInStateFile()
 }
 
 module.exports = runOrWrapScript(deployNewContracts, module)

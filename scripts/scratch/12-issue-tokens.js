@@ -1,15 +1,11 @@
 const BN = require('bn.js')
-const path = require('path')
 const chalk = require('chalk')
-const { assert } = require('chai')
-const { getEvents } = require('@aragon/contract-helpers-test')
-const { hash: namehash } = require('eth-ens-namehash')
-const { toChecksumAddress } = require('web3-utils')
+const { makeTx, TotalGasCounter } = require('../helpers/deploy')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log } = require('../helpers/log')
 const { assertLastEvent } = require('../helpers/events')
-const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
+const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 
 const { APP_NAMES } = require('../constants')
 const VALID_APP_NAMES = Object.entries(APP_NAMES).map((e) => e[1])
@@ -76,11 +72,13 @@ async function issueTokens({ web3, artifacts }) {
 
     endTotalSupply.iadd(bigSum(iAmounts))
 
-    await log.makeTx(template, 'issueTokens',
+    await makeTx(template, 'issueTokens',
       [iHolders, iAmounts, vesting.start, vesting.cliff, vesting.end, vesting.revokable, '0x' + endTotalSupply.toString(16)]
       , { from: state.deployer },
     )
   }
+
+  await TotalGasCounter.incrementTotalGasUsedInStateFile()
 }
 
 function bigSum(amounts, initialAmount = 0) {

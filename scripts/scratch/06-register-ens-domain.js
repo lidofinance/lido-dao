@@ -6,13 +6,14 @@ const keccak256 = require('js-sha3').keccak_256
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { assert } = require('../helpers/assert')
 const { log, yl, gr } = require('../helpers/log')
-const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
+const { makeTx, TotalGasCounter } = require('../helpers/deploy')
+const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 
 const TLD = 'eth'
 const CONTROLLER_INTERFACE_ID = '0x018fac06'
 
 const REQUIRED_NET_STATE = [
-  'ensAddress',
+  'ens',
   'lidoApmEnsName',
   'lidoApmEnsRegDurationSec',
   'deployer',
@@ -30,8 +31,8 @@ async function deployTemplate({ web3, artifacts }) {
 
   log.splitter()
 
-  log(`Using ENS:`, yl(state.ensAddress))
-  const ens = await artifacts.require('ENS').at(state.ensAddress)
+  log(`Using ENS:`, yl(state.ens.address))
+  const ens = await artifacts.require('ENS').at(state.ens.address)
 
   const tldNode = namehash(TLD)
 
@@ -100,9 +101,9 @@ async function deployTemplate({ web3, artifacts }) {
 
     log.splitter()
 
-    await log.makeTx(controller, 'commit', [commitment], { from: state.deployer })
+    await makeTx(controller, 'commit', [commitment], { from: state.deployer })
 
-    await log.makeTx(controller, 'register', [domainLabel, domainOwner, domainRegDuration, salt], {
+    await makeTx(controller, 'register', [domainLabel, domainOwner, domainRegDuration, salt], {
       from: state.deployer,
       value: '0x' + registerTxValue.toString(16),
     })
@@ -112,14 +113,16 @@ async function deployTemplate({ web3, artifacts }) {
     log(`ENS domain new owner:`, yl(domainOwner))
     if ((await ens.owner(node)) === state.deployer) {
       log(`Transferring name ownership from owner ${chalk.yellow(state.deployer)} to template ${chalk.yellow(domainOwner)}`)
-      await log.makeTx(ens, 'setOwner', [node, domainOwner], { from: state.deployer })
+      await makeTx(ens, 'setOwner', [node, domainOwner], { from: state.deployer })
     } else {
       log(`Creating the subdomain and assigning it to template ${chalk.yellow(domainOwner)}`)
-      await log.makeTx(ens, 'setSubnodeOwner', [tldNode, labelHash, domainOwner], { from: state.deployer })
+      await makeTx(ens, 'setSubnodeOwner', [tldNode, labelHash, domainOwner], { from: state.deployer })
     }
 
     log.splitter()
   }
+
+  await TotalGasCounter.incrementTotalGasUsedInStateFile()
 }
 
 const HOUR = 60 * 60

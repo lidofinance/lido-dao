@@ -34,9 +34,10 @@
   "vestingParams": {
     "unvestedTokensAmount": "0",
     "holders": {
-      "0xCD1f9954330AF39a74Fd6e7B25781B4c24ee373f": "880000000000000000000000",
+      "0xCD1f9954330AF39a74Fd6e7B25781B4c24ee373f": "820000000000000000000000",
       "0xaa6bfBCD634EE744CB8FE522b29ADD23124593D3": "60000000000000000000000",
-      "0xBA59A84C6440E8cccfdb5448877E26F1A431Fc8B": "60000000000000000000000"
+      "0xBA59A84C6440E8cccfdb5448877E26F1A431Fc8B": "60000000000000000000000",
+      "lido-aragon-agent-placeholder": "60000000000000000000000"
     },
     "start": 0,
     "cliff": 0,
@@ -117,8 +118,9 @@
   },
   "withdrawalQueueERC721": {
     "deployParameters": {
-      "name": "stETH Withdrawal NFT",
-      "symbol": "unstETH"
+      "name": "Lido: stETH Withdrawal NFT",
+      "symbol": "unstETH",
+      "baseUri": null
     }
   }
 }

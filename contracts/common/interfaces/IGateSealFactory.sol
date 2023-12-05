@@ -5,6 +5,7 @@
 // solhint-disable-next-line
 pragma solidity >=0.4.24 <0.9.0;
 
+// https://github.com/lidofinance/gate-seals/blob/main/contracts/GateSealFactory.vy
 interface IGateSealFactory {
 
     event GateSealCreated(address gate_seal);

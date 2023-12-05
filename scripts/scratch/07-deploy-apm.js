@@ -8,11 +8,12 @@ const { log, logSplitter, logWideSplitter } = require('../helpers/log')
 const { assertNoEvents } = require('../helpers/events')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 const { getENSNodeOwner } = require('../components/ens')
+const { makeTx, TotalGasCounter } = require('../helpers/deploy')
 
 const REQUIRED_NET_STATE = [
   'deployer',
   'lidoTemplate',
-  'ensAddress',
+  'ens',
   'lidoApmEnsName',
 ]
 
@@ -37,7 +38,7 @@ async function deployAPM({ web3, artifacts }) {
   log.splitter()
   await assertNoEvents(template, null, state.lidoTemplate.deployBlock)
 
-  const ens = await artifacts.require('ENS').at(state.ensAddress)
+  const ens = await artifacts.require('ENS').at(state.ens.address)
   const lidoApmEnsNode = namehash(state.lidoApmEnsName)
   const lidoApmEnsNodeOwner = await getENSNodeOwner(ens, lidoApmEnsNode)
   const checkDesc = `ENS node is owned by the DAO template`
@@ -59,12 +60,16 @@ async function deployAPM({ web3, artifacts }) {
   const from = state.deployer
 
   const lidoApmDeployArguments = [parentHash, subHash]
-  const receipt = await log.makeTx(template, 'deployLidoAPM', lidoApmDeployArguments, { from })
+  const receipt = await makeTx(template, 'deployLidoAPM', lidoApmDeployArguments, { from })
 
-  persistNetworkState(network.name, netId, state, {
-    lidoApmDeployArguments,
-    lidoApmDeployTx: receipt.tx,
-  })
+  state.lidoApm = {
+    ...state.lidoApm,
+    deployArguments: lidoApmDeployArguments,
+    deployTx: receipt.tx,
+  }
+  persistNetworkState(network.name, netId, state)
+
+  await TotalGasCounter.incrementTotalGasUsedInStateFile()
 }
 
 function splitDomain(domain) {

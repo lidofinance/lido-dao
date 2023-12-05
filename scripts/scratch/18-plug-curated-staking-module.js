@@ -3,6 +3,7 @@ const { log, logSplitter, logWideSplitter, yl, gr } = require('../helpers/log')
 const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 
 const { APP_NAMES } = require('../constants')
+const { makeTx, TotalGasCounter } = require('../helpers/deploy')
 
 
 const REQUIRED_NET_STATE = [
@@ -43,16 +44,18 @@ async function deployNewContracts({ web3, artifacts }) {
   const stakingRouter = await artifacts.require('StakingRouter').at(state.stakingRouter.proxy.address)
   const nodeOperatorsRegistry = await artifacts.require('NodeOperatorsRegistry').at(state['app:node-operators-registry'].proxy.address)
 
-  await log.makeTx(stakingRouter, 'grantRole', [STAKING_MODULE_MANAGE_ROLE, deployer], { from: deployer })
+  await makeTx(stakingRouter, 'grantRole', [STAKING_MODULE_MANAGE_ROLE, deployer], { from: deployer })
 
-  await log.makeTx(stakingRouter, 'addStakingModule', [
+  await makeTx(stakingRouter, 'addStakingModule', [
     state.nodeOperatorsRegistry.deployParameters.stakingModuleTypeId,
     nodeOperatorsRegistry.address,
     NOR_STAKING_MODULE_TARGET_SHARE_BP,
     NOR_STAKING_MODULE_MODULE_FEE_BP,
     NOR_STAKING_MODULE_TREASURY_FEE_BP,
   ], { from: deployer })
-  await log.makeTx(stakingRouter, 'renounceRole', [STAKING_MODULE_MANAGE_ROLE, deployer], { from: deployer })
+  await makeTx(stakingRouter, 'renounceRole', [STAKING_MODULE_MANAGE_ROLE, deployer], { from: deployer })
+
+  await TotalGasCounter.incrementTotalGasUsedInStateFile()
 }
 
 module.exports = runOrWrapScript(deployNewContracts, module)

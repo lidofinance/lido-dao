@@ -3,6 +3,7 @@ const { log, logSplitter, logWideSplitter, yl, gr } = require('../helpers/log')
 const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 
 const { APP_NAMES } = require('../constants')
+const { makeTx, TotalGasCounter } = require('../helpers/deploy')
 
 
 const REQUIRED_NET_STATE = [
@@ -51,25 +52,26 @@ async function deployNewContracts({ web3, artifacts }) {
   // === StakingRouter
   //
   const stakingRouter = await artifacts.require('StakingRouter').at(stakingRouterAddress)
-  await log.makeTx(stakingRouter, 'grantRole', [await stakingRouter.STAKING_MODULE_PAUSE_ROLE(), depositSecurityModuleAddress], { from: deployer })
-  await log.makeTx(stakingRouter, 'grantRole', [await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(), accountingOracleAddress], { from: deployer })
-  await log.makeTx(stakingRouter, 'grantRole', [await stakingRouter.REPORT_REWARDS_MINTED_ROLE(), lidoAddress], { from: deployer })
+  await makeTx(stakingRouter, 'grantRole', [await stakingRouter.STAKING_MODULE_PAUSE_ROLE(), depositSecurityModuleAddress], { from: deployer })
+  await makeTx(stakingRouter, 'grantRole', [await stakingRouter.STAKING_MODULE_RESUME_ROLE(), depositSecurityModuleAddress], { from: deployer })
+  await makeTx(stakingRouter, 'grantRole', [await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(), accountingOracleAddress], { from: deployer })
+  await makeTx(stakingRouter, 'grantRole', [await stakingRouter.REPORT_REWARDS_MINTED_ROLE(), lidoAddress], { from: deployer })
   logWideSplitter()
 
   //
   // === ValidatorsExitBusOracle
   //
   const validatorsExitBusOracle = await artifacts.require('ValidatorsExitBusOracle').at(validatorsExitBusOracleAddress)
-  await log.makeTx(validatorsExitBusOracle, 'grantRole', [await validatorsExitBusOracle.PAUSE_ROLE(), gateSealAddress], { from: deployer })
+  await makeTx(validatorsExitBusOracle, 'grantRole', [await validatorsExitBusOracle.PAUSE_ROLE(), gateSealAddress], { from: deployer })
   logWideSplitter()
 
   //
   // === WithdrawalQueue
   //
   const withdrawalQueue = await artifacts.require('WithdrawalQueueERC721').at(withdrawalQueueAddress)
-  await log.makeTx(withdrawalQueue, 'grantRole', [await withdrawalQueue.PAUSE_ROLE(), gateSealAddress], { from: deployer })
-  await log.makeTx(withdrawalQueue, 'grantRole', [await withdrawalQueue.FINALIZE_ROLE(), lidoAddress], { from: deployer })
-  await log.makeTx(withdrawalQueue, 'grantRole', [await withdrawalQueue.ORACLE_ROLE(), accountingOracleAddress], { from: deployer })
+  await makeTx(withdrawalQueue, 'grantRole', [await withdrawalQueue.PAUSE_ROLE(), gateSealAddress], { from: deployer })
+  await makeTx(withdrawalQueue, 'grantRole', [await withdrawalQueue.FINALIZE_ROLE(), lidoAddress], { from: deployer })
+  await makeTx(withdrawalQueue, 'grantRole', [await withdrawalQueue.ORACLE_ROLE(), accountingOracleAddress], { from: deployer })
   logWideSplitter()
 
   //
@@ -77,8 +79,9 @@ async function deployNewContracts({ web3, artifacts }) {
   //
   const burner = await artifacts.require('Burner').at(burnerAddress)
   // NB: REQUEST_BURN_SHARES_ROLE is already granted to Lido in Burner constructor
-  await log.makeTx(burner, 'grantRole', [await burner.REQUEST_BURN_SHARES_ROLE(), nodeOperatorsRegistryAddress], { from: deployer })
+  await makeTx(burner, 'grantRole', [await burner.REQUEST_BURN_SHARES_ROLE(), nodeOperatorsRegistryAddress], { from: deployer })
 
+  await TotalGasCounter.incrementTotalGasUsedInStateFile()
 }
 
 module.exports = runOrWrapScript(deployNewContracts, module)

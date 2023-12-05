@@ -272,8 +272,10 @@
       "0xb75A55EFab5A8f5224Ae93B34B25741EDd3da98b"
     ]
   },
-  "lidoApmAddress": "0x64361389f8Bb7A1ff64e0Ad97FfAa432399D45E7",
-  "lidoApmDeployTx": "0x5177a441fbf121e4064979f53756cc2ee807c68684edae33f50868a40ebae013",
+  "lidoApm": {
+    "deployTx": "0x5177a441fbf121e4064979f53756cc2ee807c68684edae33f50868a40ebae013",
+    "address": "0x64361389f8Bb7A1ff64e0Ad97FfAa432399D45E7"
+  },
   "lidoApmEnsName": "lidopm-testnet-prater.eth",
   "lidoLocator": {
     "contract": "LidoLocator",

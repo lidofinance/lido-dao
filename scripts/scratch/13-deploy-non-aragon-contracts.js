@@ -1,7 +1,7 @@
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
-const { log, logSplitter, logWideSplitter, yl, gr } = require('../helpers/log')
+const { log, logWideSplitter, yl, gr } = require('../helpers/log')
 const { readNetworkState, assertRequiredNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
-const { deployWithoutProxy, deployBehindOssifiableProxy, updateProxyImplementation, deployImplementation, deployContract, getContractPath } = require('../helpers/deploy')
+const { deployWithoutProxy, deployBehindOssifiableProxy, updateProxyImplementation, deployImplementation, deployContract, getContractPath, TotalGasCounter } = require('../helpers/deploy')
 
 const { APP_NAMES } = require('../constants')
 
@@ -268,6 +268,8 @@ async function deployNewContracts({ web3, artifacts }) {
     oracleDaemonConfigAddress,
   ]
   await updateProxyImplementation("lidoLocator", "LidoLocator", locatorAddress, proxyContractsOwner, [locatorConfig])
+
+  await TotalGasCounter.incrementTotalGasUsedInStateFile()
 }
 
 module.exports = runOrWrapScript(deployNewContracts, module)

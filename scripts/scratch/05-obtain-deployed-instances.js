@@ -1,20 +1,19 @@
 const chalk = require('chalk')
-
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
-const { log, logSplitter, logWideSplitter, logHeader, logTx } = require('../helpers/log')
-const { useOrGetDeployed, assertDeployedBytecode, getTxBlock } = require('../helpers/deploy')
+const { log, logWideSplitter, logHeader } = require('../helpers/log')
+const { assertDeployedBytecode } = require('../helpers/deploy')
 const { assert } = require('../helpers/assert')
-const { readNetworkState, persistNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
+const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 
 const { APP_NAMES } = require('../constants')
 const { network } = require('hardhat')
 
 const REQUIRED_NET_STATE = [
-  'ensAddress',
-  'daoFactoryAddress',
-  'miniMeTokenFactoryAddress',
-  'aragonIDAddress',
-  'apmRegistryFactoryAddress',
+  'ens',
+  'daoFactory',
+  'miniMeTokenFactory',
+  'aragonID',
+  'apmRegistryFactory',
   'deployer',
   'lidoTemplate',
   `app:${APP_NAMES.LIDO}`,
@@ -39,11 +38,11 @@ async function deployTemplate({ web3, artifacts }) {
     await assertDeployedBytecode(daoTemplate.address, 'LidoTemplate')
     const templateConfig = await daoTemplate.getConfig()
     assert.addressEqual(templateConfig._owner, state.deployer, 'tmpl: owner')
-    assert.addressEqual(templateConfig._daoFactory, state.daoFactoryAddress, 'tmpl: daoFactory')
-    assert.addressEqual(templateConfig._ens, state.ensAddress, 'tmpl: ens')
-    assert.addressEqual(templateConfig._miniMeFactory, state.miniMeTokenFactoryAddress, 'tmpl: miniMeFactory')
-    assert.addressEqual(templateConfig._aragonID, state.aragonIDAddress, 'tmpl: aragonId')
-    assert.addressEqual(templateConfig._apmRegistryFactory, state.apmRegistryFactoryAddress, 'tmpl: apmRegistryFactory')
+    assert.addressEqual(templateConfig._daoFactory, state.daoFactory.address, 'tmpl: daoFactory')
+    assert.addressEqual(templateConfig._ens, state.ens.address, 'tmpl: ens')
+    assert.addressEqual(templateConfig._miniMeFactory, state.miniMeTokenFactory.address, 'tmpl: miniMeFactory')
+    assert.addressEqual(templateConfig._aragonID, state.aragonID.address, 'tmpl: aragonId')
+    assert.addressEqual(templateConfig._apmRegistryFactory, state.apmRegistryFactory.address, 'tmpl: apmRegistryFactory')
     log.success(`the config`)
   }
 

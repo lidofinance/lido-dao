@@ -4,9 +4,9 @@ const keccak256 = require('js-sha3').keccak_256
 const getAccounts = require('@aragon/os/scripts/helpers/get-accounts')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
-const { log, logSplitter, logWideSplitter, logHeader, logTx, logDeploy } = require('../helpers/log')
-const { deploy, useOrDeploy, withArgs, deployImplementation } = require('../helpers/deploy')
-const { readNetworkState, persistNetworkState, updateNetworkState } = require('../helpers/persisted-network-state')
+const { log, logSplitter, logWideSplitter, logHeader, logTx } = require('../helpers/log')
+const { deploy, useOrDeploy, withArgs, deployImplementation, TotalGasCounter } = require('../helpers/deploy')
+const { readNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 
 const { deployAPM } = require('../components/apm')
 const { assignENSName } = require('../components/ens')
@@ -42,78 +42,133 @@ async function deployAragonEnv({ web3, artifacts, networkStateFile = NETWORK_STA
   persistNetworkState(network.name, netId, state)
 
   logHeader(`ENS`)
-  const ensResults = await useOrDeployENS({
+  const { ens, ensFactory } = await useOrDeployENS({
     artifacts,
     owner: state.deployer,
-    ensAddress: state.ensAddress
+    ensAddress: state.ensAddress,
   })
   state = readNetworkState(network.name, netId)
-  updateNetworkState(state, ensResults)
+  state.ens = {
+    address: ens.address,
+    constructorArgs: ens.constructorArgs,
+  }
+  state.ensFactory = {
+    address: ensFactory.address,
+    constructorArgs: ensFactory.constructorArgs,
+  }
   persistNetworkState(network.name, netId, state)
 
   logHeader(`DAO factory`)
-  const daoFactoryResults = await useOrDeployDaoFactory({
+  const { daoFactory, evmScriptRegistryFactory } = await useOrDeployDaoFactory({
     artifacts,
     owner: state.deployer,
     daoFactoryAddress: state.daoFactoryAddress
   })
   state = readNetworkState(network.name, netId)
-  updateNetworkState(state, daoFactoryResults)
+  state.daoFactory = {
+    address: daoFactory.address,
+    constructorArgs: daoFactory.constructorArgs,
+  }
+  state.evmScriptRegistryFactory = {
+    address: evmScriptRegistryFactory.address,
+    constructorArgs: evmScriptRegistryFactory.constructorArgs,
+  }
   persistNetworkState(network.name, netId, state)
 
   logHeader(`APM registry factory`)
-  const apmRegistryFactoryResults = await useOrDeployAPMRegistryFactory({
+  const {
+    apmRegistryBase,
+    apmRepoBase,
+    ensSubdomainRegistrarBase,
+    apmRegistryFactory
+  } = await useOrDeployAPMRegistryFactory({
     artifacts,
     owner: state.deployer,
-    ens: ensResults.ens,
-    daoFactory: daoFactoryResults.daoFactory,
+    ens: ens,
+    daoFactory: daoFactory,
     apmRegistryFactoryAddress: state.apmRegistryFactoryAddress,
     apmRegistryBaseAddress: state.apmRegistryBaseAddress,
     apmRepoBaseAddress: state.apmRepoBaseAddress,
-    ensSubdomainRegistrarBaseAddress: state.ensSubdomainRegistrarBaseAddress
+    ensSubdomainRegistrarBaseAddress: state.ensSubdomainRegistrarBaseAddress,
   })
   state = readNetworkState(network.name, netId)
-  updateNetworkState(state, apmRegistryFactoryResults)
+  state.apmRegistry = {
+    implementation: {
+      address: apmRegistryBase,
+    },
+  }
+  state.apmRepo = {
+    implementation: {
+      address: apmRepoBase.address,
+      constructorArgs: apmRepoBase.constructorArgs,
+    },
+  }
+  state.ensSubdomainRegistrar = {
+    implementation: {
+      address: ensSubdomainRegistrarBase.address,
+      constructorArgs: ensSubdomainRegistrarBase.constructorArgs,
+    },
+  }
+  state.apmRegistryFactory = {
+    address: apmRegistryFactory.address,
+    constructorArgs: apmRegistryFactory.constructorArgs,
+  }
   persistNetworkState(network.name, netId, state)
 
   logHeader(`Aragon APM`)
-  const apmResults = await deployAPM({
+  const {
+    apmRegistry,
+    ensNodeName,
+    ensNode,
+  } = await deployAPM({
     web3,
     artifacts,
     owner: state.deployer,
     labelName: state.aragonEnsLabelName,
-    ens: ensResults.ens,
-    apmRegistryFactory: apmRegistryFactoryResults.apmRegistryFactory,
+    ens: ens,
+    apmRegistryFactory: apmRegistryFactory,
     apmRegistryAddress: state.aragonApmRegistryAddress
   })
   state = readNetworkState(network.name, netId)
-  updateNetworkState(state, {
-    aragonApmRegistry: apmResults.apmRegistry,
-    aragonEnsNodeName: apmResults.ensNodeName,
-    aragonEnsNode: apmResults.ensNode
-  })
+  state.ensNode = {
+    nodeName: ensNodeName,
+    nodeId: ensNode,
+  }
+  state.apmRegistry = {
+    proxy: {
+      address: apmRegistry.address,
+    },
+  }
   persistNetworkState(network.name, netId, state)
 
   logHeader(`MiniMeTokenFactory`)
-  const tokenFactoryResults = await deployMiniMeTokenFactory({
+  const { miniMeTokenFactory } = await deployMiniMeTokenFactory({
     artifacts,
     owner: state.deployer,
     miniMeTokenFactoryAddress: state.miniMeTokenFactoryAddress
   })
   state = readNetworkState(network.name, netId)
-  updateNetworkState(state, tokenFactoryResults)
+  state.miniMeTokenFactory = {
+    address: miniMeTokenFactory.address,
+    constructorArgs: miniMeTokenFactory.constructorArgs,
+  }
   persistNetworkState(network.name, netId, state)
 
   logHeader('AragonID')
-  const aragonIDResults = await deployAragonID({
+  const { aragonID } = await deployAragonID({
     artifacts,
     owner: state.deployer,
-    ens: ensResults.ens,
+    ens: ens,
     aragonIDAddress: state.aragonIDAddress
   })
   state = readNetworkState(network.name, netId)
-  updateNetworkState(state, aragonIDResults)
+  state.aragonID = {
+    address: aragonID.address,
+    constructorArgs: aragonID.constructorArgs,
+  }
   persistNetworkState(network.name, netId, state)
+
+  await TotalGasCounter.incrementTotalGasUsedInStateFile()
 }
 
 async function useOrDeployENS({ artifacts, owner, ensAddress }) {

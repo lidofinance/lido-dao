@@ -283,8 +283,10 @@
     }
   },
   "ipfsAPI": "https://ipfs.infura.io:5001/api/v0",
-  "lidoApmAddress": "0x0cb113890b04B49455DfE06554e2D784598A29C9",
-  "lidoApmDeployTx": "0xfa66476569ecef5790f2d0634997b952862bbca56aa088f151b8049421eeb87b",
+  "lidoApm": {
+    "deployTx": "0xfa66476569ecef5790f2d0634997b952862bbca56aa088f151b8049421eeb87b",
+    "address": "0x0cb113890b04B49455DfE06554e2D784598A29C9"
+  },
   "lidoApmEnsName": "lidopm.eth",
   "lidoApmEnsRegDurationSec": 94608000,
   "lidoLocator": {

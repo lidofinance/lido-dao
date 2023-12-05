@@ -14,7 +14,7 @@ const { getENSNodeOwner } = require('../components/ens')
 
 const { assertAPMRegistryPermissions } = require('./checks/apm')
 
-const REQUIRED_NET_STATE = ['ensAddress', 'lidoApmEnsName', 'lidoTemplate']
+const REQUIRED_NET_STATE = ['ens', 'lidoApmEnsName', 'lidoTemplate']
 
 async function obtainDeployedAPM({ web3, artifacts }) {
   const netId = await web3.eth.net.getId()
@@ -35,12 +35,8 @@ async function obtainDeployedAPM({ web3, artifacts }) {
     log(`Using LidoTemplate deploy block: ${chalk.yellow(state.lidoTemplate.deployBlock)}`)
   }
 
-  // if (!state.lidoApmDeployTx) {
   const apmDeployedEvt = await assertLastEvent(template, 'TmplAPMDeployed', null, state.lidoTemplate.deployBlock)
-  state.lidoApmDeployTx = apmDeployedEvt.transactionHash
-  // }
-  log(`Using deployLidoAPM transaction: ${chalk.yellow(state.lidoApmDeployTx)}`)
-  persistNetworkState(network.name, netId, state)
+  log(`Using deployLidoAPM transaction: ${chalk.yellow(state.lidoApm.deployTx)}`)
 
   const registryAddress = apmDeployedEvt.args.apm
   log.splitter(`Using APMRegistry: ${chalk.yellow(registryAddress)}`)
@@ -52,7 +48,7 @@ async function obtainDeployedAPM({ web3, artifacts }) {
   await assertProxiedContractBytecode(registry.address, proxyArtifact, registryArtifact)
 
   const ensAddress = await registry.ens()
-  assert.addressEqual(ensAddress, state.ensAddress, 'APMRegistry ENS address')
+  assert.addressEqual(ensAddress, state.ens.address, 'APMRegistry ENS address')
   log.success(`registry.ens: ${chalk.yellow(ensAddress)}`)
 
   const registrarAddress = await registry.registrar()
@@ -60,7 +56,7 @@ async function obtainDeployedAPM({ web3, artifacts }) {
   log.success(`registry.registrar: ${chalk.yellow(registrarAddress)}`)
 
   const registrarEnsAddress = await registrar.ens()
-  assert.addressEqual(registrarEnsAddress, state.ensAddress, 'ENSSubdomainRegistrar: ENS address')
+  assert.addressEqual(registrarEnsAddress, state.ens.address, 'ENSSubdomainRegistrar: ENS address')
   log.success(`registry.registrar.ens: ${chalk.yellow(registrarEnsAddress)}`)
 
   const rootNode = await registrar.rootNode()
@@ -97,7 +93,12 @@ async function obtainDeployedAPM({ web3, artifacts }) {
   )
 
   log.splitter()
-  persistNetworkState(network.name, netId, state, { lidoApmAddress: registryAddress })
+
+  state.lidoApm = {
+    ...state.lidoApm,
+    address: registryAddress,
+  }
+  persistNetworkState(network.name, netId, state)
 }
 
 module.exports = runOrWrapScript(obtainDeployedAPM, module)

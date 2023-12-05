@@ -1,10 +1,10 @@
-const { readNetworkState, persistNetworkState, persistNetworkState2 } = require('./persisted-network-state')
+const { readNetworkState, persistNetworkState } = require('./persisted-network-state')
 const { artifacts, ethers } = require('hardhat')
 const fs = require('fs').promises
 const chalk = require('chalk')
 const { assert } = require('chai')
 
-const { log, logDeploy, logDeployTxData } = require('./log')
+const { log, logDeploy, logDeployTxData, OK } = require('./log')
 const { getTxData } = require('./tx-data')
 
 
@@ -12,10 +12,34 @@ const GAS_PRICE = process.env.GAS_PRICE || null
 const GAS_PRIORITY_FEE = process.env.GAS_PRIORITY_FEE || null
 const GAS_MAX_FEE = process.env.GAS_MAX_FEE || null
 
-let TOTAL_GAS_USED = 0
 
-function getTotalGasUsed() {
-  return TOTAL_GAS_USED
+class TotalGasCounterPrivate {
+  constructor() {
+      this.totalGasUsed = 0
+  }
+}
+class TotalGasCounter {
+  constructor() {
+      throw new Error('Use TotalGasCounter.getInstance()');
+  }
+  static getInstance() {
+      if (!TotalGasCounter.instance) {
+        TotalGasCounter.instance = new TotalGasCounterPrivate()
+      }
+      return TotalGasCounter.instance
+  }
+  static add(gasUsed) {
+    return this.getInstance().totalGasUsed += gasUsed
+  }
+  static getTotalGasUsed() {
+    return this.getInstance().totalGasUsed
+  }
+  static async incrementTotalGasUsedInStateFile() {
+    const netId = await web3.eth.net.getId()
+    const state = readNetworkState(network.name, netId)
+    state.initialDeployTotalGasUsed += TotalGasCounter.getTotalGasUsed()
+    persistNetworkState(network.name, netId, state)
+  }
 }
 
 async function getDeploymentGasUsed(contract) {
@@ -48,6 +72,19 @@ async function getDeployTx(artifactName, opts = {}) {
   const contract = new web3.eth.Contract(artifactData.abi, txOpts)
   const txObj = contract.deploy({ data: artifactData.bytecode, arguments: args })
   return await getTxData(txObj)
+}
+
+async function makeTx(contract, funcName, args, txParams) {
+  console.log(`${contract.constructor._json.contractName}[${contract.address}].${funcName}()...`)
+  const receipt = await contract[funcName](...args, txParams)
+  const gasUsed = receipt.gasUsed ? receipt.gasUsed : receipt.receipt.gasUsed
+  if (gasUsed === undefined) {
+    console.log({ receipt })
+    assert(false)
+  }
+  console.log(`${OK} tx: ${receipt.tx} (gasUsed ${gasUsed})`)
+  TotalGasCounter.add(gasUsed)
+  return receipt
 }
 
 async function deploy(artifactName, artifacts, deploy) {
@@ -118,12 +155,11 @@ async function assertDeployedBytecode(address, artifact, desc = '') {
   const bytecode = await web3.eth.getCode(address)
   const nameDesc = artifact.contractName ? chalk.yellow(artifact.contractName) : 'the expected one'
   const checkDesc = `${desc ? desc + ': ' : ''}the bytecode at ${chalk.yellow(address)} matches ${nameDesc}`
-  // TODO: restore the check
-  // if (bytecode.toLowerCase() !== artifact.deployedBytecode.toLowerCase()) {
-  //   console.log({bytecode: bytecode.toLowerCase()})
-  //   console.log({deployedBytecode: artifact.deployedBytecode.toLowerCase()})
-  // }
-  // assert.isTrue(bytecode.toLowerCase() === artifact.deployedBytecode.toLowerCase(), checkDesc)
+  if (bytecode.toLowerCase() !== artifact.deployedBytecode.toLowerCase()) {
+    console.log({bytecode: bytecode.toLowerCase()})
+    console.log({deployedBytecode: artifact.deployedBytecode.toLowerCase()})
+  }
+  assert.isTrue(bytecode.toLowerCase() === artifact.deployedBytecode.toLowerCase(), checkDesc)
   log.success(checkDesc)
 }
 
@@ -203,7 +239,7 @@ async function deployWithoutProxy(nameInState, artifactName, deployer, construct
 
   const gasUsed = await getDeploymentGasUsed(contract)
   console.log(`done: ${contract.address} (gas used ${gasUsed})`)
-  TOTAL_GAS_USED += gasUsed
+  TotalGasCounter.add(gasUsed)
 
   state[nameInState] = {
     ...state[nameInState],
@@ -223,10 +259,8 @@ async function deployImplementation(nameInState, artifactName, deployer, constru
 
   process.stdout.write(`Deploying implementation for proxy of ${artifactName}... `)
   const contract = await deployContract(artifactName, constructorArgs, deployer)
-
   const gasUsed = await getDeploymentGasUsed(contract)
-  TOTAL_GAS_USED += gasUsed
-
+  TotalGasCounter.add(gasUsed)
   console.log(`done: ${contract.address} (gas used ${gasUsed})`)
 
   state[nameInState] = { ...state[nameInState] }
@@ -235,7 +269,7 @@ async function deployImplementation(nameInState, artifactName, deployer, constru
     address: contract.address,
     constructorArgs: constructorArgs,
   }
-  persistNetworkState2(network.name, netId, state)
+  persistNetworkState(network.name, netId, state)
   return contract
 }
 
@@ -247,12 +281,12 @@ async function deployBehindOssifiableProxy(nameInState, artifactName, proxyOwner
   if (implementation === null) {
     process.stdout.write(`Deploying implementation for proxy of ${artifactName}... `)
     const contract = await deployContract(artifactName, constructorArgs, deployer)
-
     const gasUsed = await getDeploymentGasUsed(contract)
-    TOTAL_GAS_USED += gasUsed
+    TotalGasCounter.add(gasUsed)
     implementation = contract.address
 
     console.log(`done: ${implementation} (gas used ${gasUsed})`)
+
   } else {
     console.log(`Using pre-deployed implementation of ${artifactName}: ${implementation}`)
   }
@@ -261,7 +295,7 @@ async function deployBehindOssifiableProxy(nameInState, artifactName, proxyOwner
   const proxyConstructorArgs = [implementation, proxyOwner, '0x']
   const proxy = await deployContract(proxyContractName, proxyConstructorArgs, deployer)
   const gasUsed = await getDeploymentGasUsed(proxy)
-  TOTAL_GAS_USED += gasUsed
+  TotalGasCounter.add(gasUsed)
   console.log(`done: ${proxy.address} (gas used ${gasUsed})`)
 
   state[nameInState] = { ...state[nameInState] }
@@ -288,8 +322,10 @@ async function updateProxyImplementation(nameInState, artifactName, proxyAddress
   const proxy = await artifacts.require('OssifiableProxy').at(proxyAddress)
 
   const implementation = await deployContract(artifactName, constructorArgs, proxyOwner)
+  const gasUsed = await getDeploymentGasUsed(implementation)
+  TotalGasCounter.add(gasUsed)
 
-  await log.makeTx(proxy, 'proxy__upgradeTo', [implementation.address], { from: proxyOwner })
+  await makeTx(proxy, 'proxy__upgradeTo', [implementation.address], { from: proxyOwner })
 
   state[nameInState] = { ...state[nameInState] }
   state[nameInState].implementation = {
@@ -319,6 +355,7 @@ module.exports = {
   deployImplementation,
   deployBehindOssifiableProxy,
   updateProxyImplementation,
-  getTotalGasUsed,
   getContractPath,
+  makeTx,
+  TotalGasCounter,
 }

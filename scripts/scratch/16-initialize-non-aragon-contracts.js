@@ -1,8 +1,9 @@
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
-const { log, logSplitter, logWideSplitter, yl, gr } = require('../helpers/log')
+const { log, logWideSplitter, yl, gr } = require('../helpers/log')
 const { readNetworkState, assertRequiredNetworkState } = require('../helpers/persisted-network-state')
 const { hexPaddedToByte } = require('../../test/helpers/utils')
 const { APP_NAMES } = require('../constants')
+const { makeTx, TotalGasCounter } = require('../helpers/deploy')
 
 
 const DEPLOYER = process.env.DEPLOYER || ''
@@ -72,7 +73,7 @@ async function deployNewContracts({ web3, artifacts }) {
     nodeOperatorsRegistryParams.stuckPenaltyDelay,
   ]
   const nodeOperatorsRegistry = await artifacts.require('NodeOperatorsRegistry').at(nodeOperatorsRegistryAddress)
-  await log.makeTx(nodeOperatorsRegistry, 'initialize', nodeOperatorsRegistryArgs, { from: DEPLOYER })
+  await makeTx(nodeOperatorsRegistry, 'initialize', nodeOperatorsRegistryArgs, { from: DEPLOYER })
 
   //
   // === Lido: initialize ===
@@ -83,7 +84,7 @@ async function deployNewContracts({ web3, artifacts }) {
   ]
   const bootstrapInitBalance = 10 // wei
   const lido = await artifacts.require('Lido').at(lidoAddress)
-  await log.makeTx(lido, 'initialize', lidoInitArgs, { value: bootstrapInitBalance, from: DEPLOYER })
+  await makeTx(lido, 'initialize', lidoInitArgs, { value: bootstrapInitBalance, from: DEPLOYER })
   logWideSplitter()
 
   //
@@ -94,7 +95,7 @@ async function deployNewContracts({ web3, artifacts }) {
     hashConsensusForAccountingAddress,
   ]
   const legacyOracle = await artifacts.require('LegacyOracle').at(legacyOracleAddress)
-  await log.makeTx(legacyOracle, 'initialize', legacyOracleArgs, { from: DEPLOYER })
+  await makeTx(legacyOracle, 'initialize', legacyOracleArgs, { from: DEPLOYER })
 
   const zeroLastProcessingRefSlot = 0
 
@@ -109,7 +110,7 @@ async function deployNewContracts({ web3, artifacts }) {
     accountingOracleParams.consensusVersion,
     zeroLastProcessingRefSlot,
   ]
-  await log.makeTx(accountingOracle, 'initializeWithoutMigration', accountingOracleArgs, { from: DEPLOYER })
+  await makeTx(accountingOracle, 'initializeWithoutMigration', accountingOracleArgs, { from: DEPLOYER })
 
   //
   // === ValidatorsExitBusOracle: initialize ===
@@ -121,16 +122,28 @@ async function deployNewContracts({ web3, artifacts }) {
     validatorsExitBusOracleParams.consensusVersion,
     zeroLastProcessingRefSlot,
   ]
-  await log.makeTx(validatorsExitBusOracle, 'initialize', validatorsExitBusOracleArgs, { from: DEPLOYER })
+  await makeTx(validatorsExitBusOracle, 'initialize', validatorsExitBusOracleArgs, { from: DEPLOYER })
 
   //
-  // === WithdrawalQueue initialize ===
+  // === WithdrawalQueue: initialize ===
   //
+  const withdrawalQueue = await artifacts.require('WithdrawalQueueERC721').at(withdrawalQueueAddress)
   const withdrawalQueueArgs = [
     withdrawalQueueAdmin,  // _admin
   ]
-  const withdrawalQueue = await artifacts.require('WithdrawalQueueERC721').at(withdrawalQueueAddress)
-  await log.makeTx(withdrawalQueue, 'initialize', withdrawalQueueArgs, { from: DEPLOYER })
+  await makeTx(withdrawalQueue, 'initialize', withdrawalQueueArgs, { from: DEPLOYER })
+
+  //
+  // === WithdrawalQueue: setBaseURI ===
+  //
+  const withdrawalQueueBaseUri = state["withdrawalQueueERC721"].deployParameters.baseUri
+  if (withdrawalQueueBaseUri !== null && withdrawalQueueBaseUri !== "") {
+    const MANAGE_TOKEN_URI_ROLE = await withdrawalQueue.MANAGE_TOKEN_URI_ROLE()
+    await makeTx(withdrawalQueue, 'grantRole', [MANAGE_TOKEN_URI_ROLE, DEPLOYER], { from: DEPLOYER })
+    await makeTx(withdrawalQueue, 'setBaseURI', [withdrawalQueueBaseUri] , { from: DEPLOYER })
+    console.log({ withdrawalQueueBaseUri })
+    await makeTx(withdrawalQueue, 'renounceRole', [MANAGE_TOKEN_URI_ROLE, DEPLOYER], { from: DEPLOYER })
+  }
 
   //
   // === StakingRouter: initialize ===
@@ -142,7 +155,7 @@ async function deployNewContracts({ web3, artifacts }) {
     withdrawalCredentials,  // _withdrawalCredentials
   ]
   const stakingRouter = await artifacts.require('StakingRouter').at(stakingRouterAddress)
-  await log.makeTx(stakingRouter, 'initialize', stakingRouterArgs, { from: DEPLOYER })
+  await makeTx(stakingRouter, 'initialize', stakingRouterArgs, { from: DEPLOYER })
   logWideSplitter()
 
   //
@@ -150,11 +163,13 @@ async function deployNewContracts({ web3, artifacts }) {
   //
   const oracleDaemonConfig = await artifacts.require('OracleDaemonConfig').at(oracleDaemonConfigAddress)
   const CONFIG_MANAGER_ROLE = await oracleDaemonConfig.CONFIG_MANAGER_ROLE()
-  await log.makeTx(oracleDaemonConfig, 'grantRole', [CONFIG_MANAGER_ROLE, testnetAdmin], { from: testnetAdmin })
+  await makeTx(oracleDaemonConfig, 'grantRole', [CONFIG_MANAGER_ROLE, testnetAdmin], { from: testnetAdmin })
   for (const [key, value] of Object.entries(state.oracleDaemonConfig.deployParameters)) {
-    await log.makeTx(oracleDaemonConfig, 'set', [key, hexPaddedToByte(value)], { from: DEPLOYER })
+    await makeTx(oracleDaemonConfig, 'set', [key, hexPaddedToByte(value)], { from: DEPLOYER })
   }
-  await log.makeTx(oracleDaemonConfig, 'renounceRole', [CONFIG_MANAGER_ROLE, testnetAdmin], { from: testnetAdmin })
+  await makeTx(oracleDaemonConfig, 'renounceRole', [CONFIG_MANAGER_ROLE, testnetAdmin], { from: testnetAdmin })
+
+  await TotalGasCounter.incrementTotalGasUsedInStateFile()
 }
 
 module.exports = runOrWrapScript(deployNewContracts, module)
