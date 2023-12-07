@@ -58,21 +58,20 @@ A brief description of what's going on under the hood in the deploy script.
 ## Local deployment
 
 Deploys the DAO to local (http://127.0.0.1:8545) dev node (anvil, hardhat, ganache).
-The deployment is done from the default test account `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`.
-The node must be configured with the default test accounts derived from the mnemonic `test test test test test test test test test test test junk`.
+The deployment is done from the default test account `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266` derived from the default mnemonic.
+Thus the node must be configured with the default test accounts derived from the mnemonic `test test test test test test test test test test test junk`.
 
 1. Run `yarn install` (get sure repo dependencies are installed)
 2. Run the node on default port 8545 (for the commands, see subsections below)
-3. Set test account private key `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80` to `accounts.json` under `/eth/local` like `"local": ["<private key>"]` (see `accounts.sample.json` for example)
-4. Run the deploy script `bash scripts/scratch/dao-local-deploy.sh` from root repo directory
-5. Check out the deploy artifacts in `deployed-local.json`
+3. Run the deploy script `bash scripts/scratch/dao-local-deploy.sh` from root repo directory
+4. Check out the deploy artifacts in `deployed-local.json`
 
 ### Anvil
 
 Run the node with the command:
 
 ```shell
-anvil -p 8545 --auto-impersonate --gas-price 0 --base-fee 0 --chain-id 1337 --mnemonic "test test test test test test test test test test test junk"
+anvil -p 8545 --mnemonic "test test test test test test test test test test test junk"
 ```
 
 ### Hardhat node

@@ -9,12 +9,8 @@ const { assert } = require('../../../test/helpers/assert')
 
 
 const REQUIRED_NET_STATE = [
-  'ensAddress',
-  'lidoApmEnsName',
-  'daoAragonId',
   'vestingParams',
   'daoInitialSettings',
-  'lidoTemplate'
 ]
 
 const UNLIMITED = 1000000000
@@ -87,8 +83,8 @@ async function prepareProtocolForSubmitDepositReportWithdrawalFlow(protocol, sta
   await withdrawalQueue.resume({ from: agent.address })
   await withdrawalQueue.renounceRole(await withdrawalQueue.RESUME_ROLE(), agent.address, { from: agent.address })
 
-  await nodeOperatorsRegistry.addNodeOperator('1', ADDRESS_1, { from: voting.address })
-  await nodeOperatorsRegistry.addNodeOperator('2', ADDRESS_2, { from: voting.address })
+  await nodeOperatorsRegistry.addNodeOperator('1', ADDRESS_1, { from: agent.address })
+  await nodeOperatorsRegistry.addNodeOperator('2', ADDRESS_2, { from: agent.address })
 
   await nodeOperatorsRegistry.addSigningKeys(0, 1, pad('0x010203', 48), pad('0x01', 96), { from: voting.address })
   await nodeOperatorsRegistry.addSigningKeys(

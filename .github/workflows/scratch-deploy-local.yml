@@ -1,18 +1,24 @@
-name: Verify deployed contracts' bytecode
+name: Scratch deploy on local clean anvil
 
 on:
   pull_request:
-    branches: [master]
+    branches: [master, develop]
 
 jobs:
-  assert-bytecode:
-    name: Assert deployed contracts bytecode
+  do-scratch-deploy:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Start anvil in background
+        # For the port see port in scripts/scratch/dao-local-deploy.sh in RPC_URL env var
+        run: anvil -p 8555 --mnemonic "test test test test test test test test test test test junk" &
 
       - name: Setup node.js version
         uses: actions/setup-node@v4
@@ -45,26 +51,5 @@ jobs:
           steps.cache-yarn-cache.outputs.cache-hit != 'true' ||
           steps.cache-node-modules.outputs.cache-hit != 'true'
 
-      - name: Compile contracts
-        run: yarn compile
-
-      - name: Write config for action-verify-bytecode
-        run: yarn extract-artifacts
-
-      - name: Verify bytecode
-        uses: lidofinance/action-verify-bytecode@master
-        with:
-          file: artifacts.json
-
-      - name: Check artifacts.json file completeness
-        run: |
-          shopt -s globstar
-          jq -r 'select(.deployedBytecode? | length > 2) | select(.abi? | length > 0) |
-              select(.sourceName? | strings | test(env.IGNORE_REGEX) == false) |
-              input_filename' artifacts/contracts/**/*.json > _expected
-          jq -r '.[] | .artifactPath' artifacts.json > _actual
-          cat _actual _expected | sort | uniq -u | tee _diff
-          [ -s _diff ] && exit 1 || exit 0
-        env:
-          IGNORE_REGEX: test|lib|mock|interface|template|OrderedCallback|Pausable|Versioned|BeaconChainDepositor|PausableUntil|WithdrawalsManagerProxy|WithdrawalsManagerStub|ERC1967Proxy
-        if: ${{ always() }}
+      - name: Run local deploy script
+        run: bash scripts/scratch/dao-local-deploy.sh
