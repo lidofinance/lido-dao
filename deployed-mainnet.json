@@ -149,6 +149,42 @@
       "contentURI": "0x697066733a516d656138394d5533504852503763513157616b3672327355654d554146324c39727132624c6d5963644b764c57"
     }
   },
+  "app:simple-dvt": {
+    "stakingRouterModuleParams": {
+      "moduleName": "SimpleDVT",
+      "moduleType": "curated-onchain-v1",
+      "targetShare": 50,
+      "moduleFee": 800,
+      "treasuryFee": 200,
+      "penaltyDelay": 432000,
+      "easyTrackTrustedCaller": "",
+      "easyTrackAddress": "0xF0211b7660680B49De1A7E9f25C65660F0a13Fea",
+      "easyTrackFactories": {
+        "AddNodeOperators": "",
+        "ActivateNodeOperators": "",
+        "DeactivateNodeOperators": "",
+        "SetVettedValidatorsLimits": "",
+        "SetNodeOperatorNames": "",
+        "SetNodeOperatorRewardAddresses": "",
+        "UpdateTargetValidatorLimits": "",
+        "ChangeNodeOperatorManager": ""
+      }
+    },
+    "aragonApp": {
+      "name": "simple-dvt",
+      "fullName": "simple-dvt.lidopm.eth",
+      "id": "0xe1635b63b5f7b5e545f2a637558a4029dea7905361a2f0fc28c66e9136cf86a4"
+    },
+    "proxy": {
+      "address": "0xaE7B191A31f627b4eB1d4DaC64eaB9976995b433",
+      "contract": "@aragon/os/contracts/apps/AppProxyUpgradeable.sol",
+      "constructorArgs": [
+        "0xb8FFC3Cd6e7Cf5a098A1c92F48009765B24088Dc",
+        "0xe1635b63b5f7b5e545f2a637558a4029dea7905361a2f0fc28c66e9136cf86a4",
+        "0x"
+      ]
+    }
+  },
   "aragon-kernel": {
     "implementation": {
       "contract": "@aragon/os/contracts/kernel/Kernel.sol",

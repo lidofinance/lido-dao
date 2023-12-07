@@ -408,13 +408,17 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
     // save app info
     persistNetworkState(network.name, netId, state, {
       [`app:${trgAppName}`]: {
-        fullName: trgAppFullName,
-        name: trgAppName,
-        id: trgAppId,
-        ipfsCid,
-        contentURI,
-        implementation: contractAddress,
-        contract: trgAppArtifact,
+        aragonApp: {
+          name: trgAppName,
+          fullName: trgAppFullName,
+          id: trgAppId,
+          ipfsCid,
+          contentURI,
+        },
+        implementation: {
+          address: contractAddress,
+          contract: 'contracts/0.4.24/nos/NodeOperatorsRegistry.sol',
+        },
       },
     })
   }
