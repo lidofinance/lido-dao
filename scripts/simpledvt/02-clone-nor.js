@@ -11,7 +11,7 @@ const { resolveLatestVersion } = require('../components/apm')
 const {
   readNetworkState,
   assertRequiredNetworkState,
-  persistNetworkState2,
+  persistNetworkState,
 } = require('../helpers/persisted-network-state')
 const { resolveEnsAddress } = require('../components/ens')
 const { hash: namehash } = require('eth-ens-namehash')
@@ -45,7 +45,7 @@ const VOTE_ID = process.env.VOTE_ID || ''
 
 const REQUIRED_NET_STATE = [
   'ensAddress',
-  'lidoApmAddress',
+  'lidoApm',
   'lidoApmEnsName',
   'lidoLocator',
   `app:${APP_NAMES.ARAGON_VOTING}`,
@@ -143,12 +143,13 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
   const votingAddress = readStateAppAddress(state, `app:${APP_NAMES.ARAGON_VOTING}`)
   const tokenManagerAddress = readStateAppAddress(state, `app:${APP_NAMES.ARAGON_TOKEN_MANAGER}`)
   const srAddress = readStateAppAddress(state, 'stakingRouter')
+  const lidoApmAddress = readStateAppAddress(state, 'lidoApm')
 
   const kernel = await artifacts.require('Kernel').at(kernelAddress)
   const aclAddress = await kernel.acl()
   const acl = await artifacts.require('ACL').at(aclAddress)
   const stakingRouter = await artifacts.require('StakingRouter').at(srAddress)
-  const apmRegistry = await artifacts.require('APMRegistry').at(state.lidoApmAddress)
+  const apmRegistry = await artifacts.require('APMRegistry').at(lidoApmAddress)
 
   const voteDesc = `Clone app '${srcAppName}' to '${trgAppName}'`
   const voting = await artifacts.require('Voting').at(votingAddress)
@@ -167,7 +168,7 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
   log(`Voting`, yl(votingAddress))
   log(`Token manager`, yl(tokenManagerAddress))
   log(`LDO token`, yl(daoTokenAddress))
-  log(`Lido APM`, yl(state.lidoApmAddress))
+  log(`Lido APM`, yl(lidoApmAddress))
   log(`Staking Router`, yl(srAddress))
   log(`Burner`, yl(burnerAddress))
   log(`Lido Locator:`, yl(lidoLocatorAddress))
@@ -406,7 +407,7 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
   // skip update if VOTE_ID set
   if (!VOTE_ID) {
     // save app info
-    persistNetworkState2(network.name, netId, state, {
+    persistNetworkState(network.name, netId, state, {
       [`app:${trgAppName}`]: {
         fullName: trgAppFullName,
         name: trgAppName,
@@ -426,12 +427,7 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
     await _pause('Ready for simulation')
     log.splitter()
     log(gr(`Simulating voting creation and enact!`))
-    const voters = getVoters(
-      agentAddress,
-      state.vestingParams,
-      await daoToken.totalSupply(),
-      await voting.minAcceptQuorumPct()
-    )
+    const { voters, quorum } = await getVoters(agentAddress, state.vestingParams, daoToken, voting)
 
     let voteId
     if (!VOTE_ID) {
@@ -455,22 +451,23 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
 
     log(`Collecting votes...`)
     for (const voter of voters) {
-      if (vote.yea >= vote.supportRequired) {
+      if (vote.yea.gte(quorum)) {
         break
       }
       const canVote = await voting.canVote(voteId, voter)
+
       if (canVote) {
         await ethers.getImpersonatedSigner(voter)
-        log(`Cast voting on behalf holder:`, yl(voters[0]))
+        log(`Cast voting on behalf holder:`, yl(voter))
 
         await voting.vote(voteId, true, true, { from: voter, gasPrice: 0 })
         vote = await voting.getVote(voteId)
       } else {
-        log(`Skip holder (can't vote):`, voters[0])
+        log(`Skip holder (can't vote):`, voter)
       }
     }
 
-    if (vote.yea < vote.supportRequired) {
+    if (vote.yea.lt(quorum)) {
       log.error(`Not enough voting power for Vote ID:`, yl(voteId))
       return
     }
@@ -521,29 +518,33 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
 }
 
 // try to get list of voters with most significant LDO amounts
-function getVoters(agentAddress, vestingParams, daoTokenTotalSupply, quorumPcnt) {
-  const agentBalance = toBN(vestingParams.unvestedTokensAmount)
-  const holderBalances = Object.entries(vestingParams.holders)
-    .sort((a, b) => (a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0))
-    .map(([h, b]) => [h, toBN(b)])
-
-  const quorumBalance = (daoTokenTotalSupply * quorumPcnt) / ETH(1)
-
+async function getVoters(agentAddress, vestingParams, daoToken, voting) {
+  const totalSupply = await daoToken.totalSupply()
+  const quorumPcnt = await voting.minAcceptQuorumPct()
+  const quorum = totalSupply.mul(quorumPcnt).div(toBN(ETH(1)))
+  const minBalance = quorum.div(toBN(10)) // cliff to skip small holders
   const voters = []
-  let voteBalance = ETH(0)
-  if (agentBalance > 0) {
-    voters.push(agentAddress)
-    voteBalance += agentBalance
-  }
-  for (let i = 0; i < holderBalances.length; i++) {
-    if (voteBalance >= quorumBalance) {
-      break
+  let voteBalance = toBN(0)
+
+  const holders = [
+    agentAddress, // agent at 1st place as potentially the only sufficient
+    ...Object.entries(vestingParams.holders)
+      .sort((a, b) => (a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0))
+      .map(([h, b]) => h),
+  ]
+
+  for (const holder of holders) {
+    const balance = await daoToken.balanceOf(holder)
+    if (balance.gte(minBalance)) {
+      voters.push(holder)
+      voteBalance = voteBalance.add(balance)
+      if (voteBalance.gt(quorum)) {
+        break
+      }
     }
-    // todo: check actual balance?
-    voters.push(holderBalances[i][0])
-    voteBalance += holderBalances[i][1]
   }
 
-  return voters
+  return { voters, quorum }
 }
+
 module.exports = runOrWrapScript(deploySimpleDVT, module)

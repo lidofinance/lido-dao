@@ -7,7 +7,7 @@ const { getDeployer, readStateAppAddress, _checkEq } = require('./helpers')
 const {
   readNetworkState,
   assertRequiredNetworkState,
-  persistNetworkState2,
+  persistNetworkState,
 } = require('../helpers/persisted-network-state')
 
 const { hash: namehash } = require('eth-ens-namehash')
@@ -16,7 +16,7 @@ const { ZERO_ADDRESS } = require('../../test/helpers/utils')
 const APP_TRG = process.env.APP_TRG || 'simple-dvt'
 const DEPLOYER = process.env.DEPLOYER || ''
 
-const REQUIRED_NET_STATE = ['lidoApmAddress', 'lidoApmEnsName']
+const REQUIRED_NET_STATE = ['lidoApm', 'lidoApmEnsName']
 
 async function deployEmptyProxy({ web3, artifacts, trgAppName = APP_TRG }) {
   const netId = await web3.eth.net.getId()
@@ -60,7 +60,7 @@ async function deployEmptyProxy({ web3, artifacts, trgAppName = APP_TRG }) {
     trgProxyAddress = e.args.proxy
 
     // upd deployed state
-    persistNetworkState2(network.name, netId, state, {
+    persistNetworkState(network.name, netId, state, {
       [`app:${trgAppName}`]: {
         aragonApp: {
           name: trgAppName,

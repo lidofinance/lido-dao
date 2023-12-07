@@ -32,7 +32,7 @@ const SIMULATE = !!process.env.SIMULATE
 
 const REQUIRED_NET_STATE = [
   'ensAddress',
-  'lidoApmAddress',
+  'lidoApm',
   'lidoApmEnsName',
   'lidoLocator',
   `app:${APP_NAMES.ARAGON_AGENT}`,
@@ -391,6 +391,7 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
       // const maxDepositsCount1 = (await stakingRouter.getStakingModuleMaxDepositsCount(1, ethToDeposit)).toNumber()
       // SimpleDVT module id = 2
       const maxDepositsCount2 = (await stakingRouter.getStakingModuleMaxDepositsCount(2, ethToDeposit)).toNumber()
+      // console.log({maxDepositsCount1, maxDepositsCount2});
 
       log(`Depositing ${depositsCount} keys (on behalf DSM)..`)
       const trgModuleId = 2 // sr module id
@@ -416,21 +417,34 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
       )
 
       // as only 2 ops in module and each has 0 deposited keys before
-      const depositedKeysPerOp = maxDepositsCount2 / 2
+      const depositedKeysHalf = maxDepositsCount2 / 2
+      let op1DepositedKeys
+      let op2DepositedKeys
+      if (op1keysAmount < depositedKeysHalf) {
+        op1DepositedKeys = op1keysAmount
+        op2DepositedKeys = maxDepositsCount2 - op1DepositedKeys
+      } else if (op2keysAmount < depositedKeysHalf) {
+        op2DepositedKeys = op2keysAmount
+        op1DepositedKeys = maxDepositsCount2 - op2DepositedKeys
+      } else {
+        op1DepositedKeys = depositedKeysHalf
+        op2DepositedKeys = depositedKeysHalf
+      }
+
       const op1 = await trgApp.getNodeOperator(0, false)
-      _checkEq(op1.totalAddedValidators, op1keysAmount, `op1 state: totalAddedValidators = 100`)
+      _checkEq(op1.totalAddedValidators, op1keysAmount, `op1 state: totalAddedValidators = ${op1keysAmount}`)
       _checkEq(
         op1.totalDepositedValidators,
-        depositedKeysPerOp,
-        `op1 state: totalDepositedValidators = ${depositedKeysPerOp}`
+        op1DepositedKeys,
+        `op1 state: totalDepositedValidators = ${op1DepositedKeys}`
       )
 
       const op2 = await trgApp.getNodeOperator(1, false)
-      _checkEq(op2.totalAddedValidators, op2keysAmount, `op2 state: totalAddedValidators = 50`)
+      _checkEq(op2.totalAddedValidators, op2keysAmount, `op2 state: totalAddedValidators = ${op2keysAmount}`)
       _checkEq(
         op2.totalDepositedValidators,
-        depositedKeysPerOp,
-        `op2 state: totalDepositedValidators = ${depositedKeysPerOp}`
+        op2DepositedKeys,
+        `op2 state: totalDepositedValidators = ${op2DepositedKeys}`
       )
     } finally {
       log('Reverting snapshot...')
