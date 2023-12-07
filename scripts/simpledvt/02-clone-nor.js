@@ -1,5 +1,4 @@
 const { network, ethers } = require('hardhat')
-const chalk = require('chalk')
 const { Contract } = require('ethers')
 const { encodeCallScript } = require('@aragon/contract-helpers-test/src/aragon-os')
 const { getEventArgument } = require('@aragon/contract-helpers-test')
@@ -54,14 +53,14 @@ const REQUIRED_NET_STATE = [
 
 async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid = APP_IPFS_CID }) {
   const netId = await web3.eth.net.getId()
-
-  const srcAppName = APP_NAMES.NODE_OPERATORS_REGISTRY
+  const deployer = await getDeployer(web3, DEPLOYER)
 
   log.splitter()
-  log(`Network ID: ${chalk.yellow(netId)}`)
+  log(`Network ID: ${yl(netId)}`)
+  log(`Deployer: ${yl(deployer)}`)
 
-  const deployer = await getDeployer(web3, DEPLOYER)
   const state = readNetworkState(network.name, netId)
+  const srcAppName = APP_NAMES.NODE_OPERATORS_REGISTRY
   assertRequiredNetworkState(state, REQUIRED_NET_STATE.concat([`app:${srcAppName}`, `app:${trgAppName}`]))
 
   const kernelAddress = state.daoAddress || readStateAppAddress(state, `aragon-kernel`)

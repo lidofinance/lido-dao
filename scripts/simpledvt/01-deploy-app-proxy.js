@@ -1,9 +1,7 @@
 const { network } = require('hardhat')
-const chalk = require('chalk')
-
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, yl } = require('../helpers/log')
-const { getDeployer, readStateAppAddress, _checkEq } = require('./helpers')
+const { getDeployer, readStateAppAddress, _checkEq, _pause } = require('./helpers')
 const {
   readNetworkState,
   assertRequiredNetworkState,
@@ -20,11 +18,12 @@ const REQUIRED_NET_STATE = ['lidoApm', 'lidoApmEnsName']
 
 async function deployEmptyProxy({ web3, artifacts, trgAppName = APP_TRG }) {
   const netId = await web3.eth.net.getId()
+  const deployer = await getDeployer(web3, DEPLOYER)
 
   log.splitter()
-  log(`Network ID: ${chalk.yellow(netId)}`)
+  log(`Network ID: ${yl(netId)}`)
+  log(`Deployer: ${yl(deployer)}`)
 
-  const deployer = await getDeployer(web3, DEPLOYER)
   const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE)
 
@@ -50,6 +49,9 @@ async function deployEmptyProxy({ web3, artifacts, trgAppName = APP_TRG }) {
   }
 
   if (!trgProxyAddress || (await web3.eth.getCode(trgProxyAddress)) === '0x') {
+    await _pause('Ready for TX')
+    log.splitter()
+
     const kernel = await artifacts.require('Kernel').at(kernelAddress)
     const tx = await log.tx(
       `Deploying proxy for ${trgAppName}`,

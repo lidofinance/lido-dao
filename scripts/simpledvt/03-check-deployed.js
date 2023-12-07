@@ -1,6 +1,5 @@
 const { network, ethers } = require('hardhat')
 const { Contract, utils } = require('ethers')
-const chalk = require('chalk')
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
 const { log, yl, gr, cy } = require('../helpers/log')
 const {
@@ -44,7 +43,7 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   const netId = await web3.eth.net.getId()
 
   log.splitter()
-  log(`Network ID: ${chalk.yellow(netId)}`)
+  log(`Network ID: ${yl(netId)}`)
 
   const state = readNetworkState(network.name, netId)
   assertRequiredNetworkState(state, REQUIRED_NET_STATE.concat([`app:${trgAppName}`]))
