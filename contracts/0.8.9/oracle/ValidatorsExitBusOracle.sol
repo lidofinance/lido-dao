@@ -15,6 +15,9 @@ import { BaseOracle } from "./BaseOracle.sol";
 interface IOracleReportSanityChecker {
     function checkExitBusOracleReport(uint256 _exitRequestsCount) external view;
 }
+interface IWithdrawalVault {
+    function validatorExit(bytes calldata validatorPubkey) external;
+}
 
 
 contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
@@ -174,6 +177,10 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         bytes data;
     }
 
+    /// @dev Storage slot: mapping(uint256 => bytes) reportHash
+    /// A mapping from the `refSlot` to the report hash.
+    bytes32 internal constant REPORT_HASH_POSITION = keccak256("lido.ValidatorsExitBusOracle.reportHash");
+
     /// @notice The list format of the validator exit requests data. Used when all
     /// requests fit into a single transaction.
     ///
@@ -218,8 +225,30 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         _checkContractVersion(contractVersion);
         // it's a waste of gas to copy the whole calldata into mem but seems there's no way around
         _checkConsensusData(data.refSlot, data.consensusVersion, keccak256(abi.encode(data)));
+
+        //save reportHash for refSlot
+        _storageReportHash()[data.refSlot] = keccak256(abi.encode(data));
+
         _startProcessing();
         _handleConsensusReportData(data);
+    }
+
+    error EmptyRefSlotHash();
+    error InvalidReportData();
+
+    event ValidatorTriggereableExitRequest(
+        uint256 refSlot,
+        bytes32 hash,
+        uint256 from,
+        uint256 limit
+    );
+    function submitValidatorsExit(uint256 refSlot, ReportData calldata data, uint256 from, uint256 limit) external {
+        bytes32 refslotHash = _storageReportHash()[refSlot];
+        if (refslotHash == bytes32(0)) revert EmptyRefSlotHash();
+        if (refslotHash != keccak256(abi.encode(data))) revert InvalidReportData();
+
+        // IWithdrawalVault(LOCATOR.withdrawalVault()).validatorExit(pubkey);
+        emit ValidatorTriggereableExitRequest(refSlot, refslotHash, from, limit);
     }
 
     /// @notice Returns the total number of validator exit requests ever processed
@@ -380,6 +409,8 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
 
         uint256 timestamp = _getTime();
 
+        IWithdrawalVault withdrawalVault = IWithdrawalVault(LOCATOR.withdrawalVault());
+
         while (offset < offsetPastEnd) {
             uint256 dataWithoutPubkey;
             assembly {
@@ -428,6 +459,8 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             lastDataWithoutPubkey = dataWithoutPubkey;
 
             emit ValidatorExitRequest(moduleId, nodeOpId, valIndex, pubkey, timestamp);
+
+            withdrawalVault.validatorExit(pubkey);
         }
 
         if (lastNodeOpKey != 0) {
@@ -458,6 +491,13 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         StorageDataProcessingState storage r
     ) {
         bytes32 position = DATA_PROCESSING_STATE_POSITION;
+        assembly { r.slot := position }
+    }
+
+    function _storageReportHash() internal pure returns (
+        mapping(uint256 => bytes32) storage r
+    ) {
+        bytes32 position = REPORT_HASH_POSITION;
         assembly { r.slot := position }
     }
 }

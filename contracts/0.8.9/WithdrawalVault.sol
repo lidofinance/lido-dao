@@ -122,4 +122,15 @@ contract WithdrawalVault is Versioned {
 
         _token.transferFrom(address(this), TREASURY, _tokenId);
     }
+
+    /**
+     * @dev simulate triggerable exits EIP-7002
+     */
+    event TriggerExit(bytes validator_pubkey);
+
+    function validatorExit(bytes calldata validatorPubkey) external {
+        //role(VALIDATOR_EXIT_ROLE) - only VEBO can trigger exits
+
+        emit TriggerExit(validatorPubkey);
+    }
 }

@@ -34,4 +34,8 @@ contract ValidatorsExitBusTimeTravellable is ValidatorsExitBusOracle, ITimeProvi
     function getDataProcessingState() external view returns (DataProcessingState memory) {
         return _storageDataProcessingState().value;
     }
+
+    function getRefSlotReportHash(uint256 refSlot) external view returns (bytes32) {
+        return _storageReportHash()[refSlot];
+    }
 }

@@ -26,6 +26,7 @@ const {
 const { calcValidatorsExitBusReportDataHash, getValidatorsExitBusReportDataItems } = require('../../helpers/reportData')
 
 const ValidatorsExitBusOracle = artifacts.require('ValidatorsExitBusTimeTravellable')
+const WithdrawalVault = artifacts.require('WithdrawalVault')
 
 const DATA_FORMAT_LIST = 1
 
@@ -72,7 +73,13 @@ module.exports = {
   encodeExitRequestsDataList,
   deployExitBusOracle,
   deployOracleReportSanityCheckerForExitBus,
+  deployWithdrawalVault,
 }
+async function deployWithdrawalVault(lidoAddress, treasuryAddress) {
+  const withdrawalVault = await WithdrawalVault.new(lidoAddress, treasuryAddress)
+  return withdrawalVault
+}
+
 async function deployOracleReportSanityCheckerForExitBus(lidoLocator, admin) {
   const maxValidatorExitRequestsPerReport = 2000
   const limitsList = [0, 0, 0, 0, maxValidatorExitRequestsPerReport, 0, 0, 0, 0]
@@ -106,9 +113,11 @@ async function deployExitBusOracle(
   })
 
   const oracleReportSanityChecker = await deployOracleReportSanityCheckerForExitBus(locator, admin)
+  const withdrawalVault = await deployWithdrawalVault(locator, admin)
   await updateLocatorImplementation(locator, admin, {
     validatorsExitBusOracle: oracle.address,
     oracleReportSanityChecker: oracleReportSanityChecker.address,
+    withdrawalVault: withdrawalVault.address,
   })
 
   const initTx = await oracle.initialize(admin, consensus.address, CONSENSUS_VERSION, lastProcessingRefSlot, {
@@ -145,7 +154,7 @@ async function deployExitBusOracle(
     await oracle.resume({ from: admin })
   }
 
-  return { consensus, oracle, oracleReportSanityChecker, locator, initTx }
+  return { consensus, oracle, oracleReportSanityChecker, locator, initTx, withdrawalVault }
 }
 
 contract('ValidatorsExitBusOracle', ([admin, member1]) => {
