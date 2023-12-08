@@ -4,7 +4,7 @@ import { ethers } from "hardhat";
 import { assert, expect } from "chai";
 import { ERC20 } from "../../typechain-types/@openzeppelin/contracts/token/ERC20/ERC20";
 import { parseUnits } from "ethers";
-import { describe } from "mocha";
+import { ExclusiveSuiteFunction, PendingSuiteFunction, describe } from "mocha";
 
 interface ERC20Target {
   tokenName: string;
@@ -16,6 +16,7 @@ interface ERC20Target {
     totalSupply: bigint;
     holder: HardhatEthersSigner;
   }>;
+  suiteFunction?: ExclusiveSuiteFunction | PendingSuiteFunction;
 }
 
 /**
@@ -39,10 +40,17 @@ interface ERC20Target {
  * aiding developers in assessing the compliance of their ERC-20 contracts effectively.
  *
  * @param {object} target.tokenName name of the token to use in the suite description
- * @param {object} target.deploy an async function that returns the instance of the contract and initial parameters
+ * @param {object} target.deploy async function that returns the instance of the contract and initial parameters
+ * @param {object} target.suiteFunction function that runs the suite, a temporary workaround for running
+ * the suite exclusively or skipping the suite; see the todo below
+ *
+ * @todo rewrite the function to support the same interface as `describe`, i.e.
+ * instead of passing `suiteFunction`, we should be able to call the function like:
+ * testERC20Compliance.only(target)
+ * testERC20Compliance.skip(target)
  */
-export function testERC20Compliance({ tokenName, deploy }: ERC20Target) {
-  describe(`${tokenName} ERC-20 Compliance`, function () {
+export function testERC20Compliance({ tokenName, deploy, suiteFunction = describe }: ERC20Target) {
+  suiteFunction(`${tokenName} ERC-20 Compliance`, function () {
     let token: ERC20;
     let name: string;
     let symbol: string;
