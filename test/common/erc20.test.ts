@@ -41,8 +41,8 @@ interface ERC20Target {
  * @param {object} target.tokenName name of the token to use in the suite description
  * @param {object} target.deploy an async function that returns the instance of the contract and initial parameters
  */
-function testERC20Compliance({ tokenName, deploy }: ERC20Target) {
-  describe.only(`${tokenName} ERC-20 Compliance`, function () {
+export function testERC20Compliance({ tokenName, deploy }: ERC20Target) {
+  describe(`${tokenName} ERC-20 Compliance`, function () {
     let token: ERC20;
     let name: string;
     let symbol: string;
@@ -64,223 +64,289 @@ function testERC20Compliance({ tokenName, deploy }: ERC20Target) {
       ({ token, name, symbol, decimals, totalSupply, holder } = await deploy());
     });
 
-    it("[OPTIONAL] Function `name` returns the name of the token", async function () {
-      if (typeof token.name !== "function") this.skip();
+    context("Read functions", function () {
+      it("[OPTIONAL] Function `name` returns the name of the token", async function () {
+        if (typeof token.name !== "function") this.skip();
 
-      expect(await token.name()).to.equal(name);
-    });
-
-    it("[OPTIONAL] Function `symbol` returns the symbol of the token", async function () {
-      if (typeof token.symbol !== "function") this.skip();
-
-      expect(await token.symbol()).to.equal(symbol);
-    });
-
-    it("[OPTIONAL] Function `decimals` returns the number of decimals the token uses", async function () {
-      if (typeof token.decimals !== "function") this.skip();
-
-      expect(await token.decimals()).to.equal(decimals);
-    });
-
-    it("Function `totalSupply` returns the total token supply", async function () {
-      expect(await token.totalSupply()).to.equal(totalSupply);
-    });
-
-    it("Function `balanceOf` returns the account balance of another account", async function () {
-      expect(await token.balanceOf(holder)).to.be.greaterThan(0n);
-    });
-
-    context("Function `transfer`", function () {
-      let recipient: HardhatEthersSigner;
-      let transferAmount: bigint;
-
-      let originalState: string;
-
-      this.beforeAll(async function () {
-        originalState = await Snapshot.take();
+        expect(await token.name()).to.equal(name);
       });
 
-      this.afterAll(async function () {
-        await Snapshot.restore(originalState);
+      it("[OPTIONAL] Function `symbol` returns the symbol of the token", async function () {
+        if (typeof token.symbol !== "function") this.skip();
+
+        expect(await token.symbol()).to.equal(symbol);
       });
 
-      this.beforeEach(async function () {
-        [recipient] = await ethers.getSigners();
-        transferAmount = await token.balanceOf(holder);
+      it("[OPTIONAL] Function `decimals` returns the number of decimals the token uses", async function () {
+        if (typeof token.decimals !== "function") this.skip();
+
+        expect(await token.decimals()).to.equal(decimals);
       });
 
-      it("Transfers an amount of tokens to the recipient, and MUST fire the `Transfer` event", async function () {
-        const before = await batch({
-          holderBalance: token.balanceOf(holder),
-          recipientBalance: token.balanceOf(recipient),
-        });
-
-        await expect(token.connect(holder).transfer(recipient, transferAmount))
-          .to.emit(token, "Transfer")
-          .withArgs(holder.address, recipient.address, transferAmount);
-
-        const after = await batch({
-          holderBalance: token.balanceOf(holder),
-          recipientBalance: token.balanceOf(recipient),
-        });
-
-        expect(after.holderBalance).to.equal(before.holderBalance - transferAmount);
-        expect(after.recipientBalance).to.equal(before.recipientBalance + transferAmount);
+      it("Function `totalSupply` returns the total token supply", async function () {
+        expect(await token.totalSupply()).to.equal(totalSupply);
       });
 
-      it("MUST treat transfers of 0 values as normal transfers and fire the `Transfer` event.", async function () {
-        const [recipient] = await ethers.getSigners();
-
-        const before = await batch({
-          holderBalance: token.balanceOf(holder),
-          recipientBalance: token.balanceOf(recipient),
-        });
-
-        const transferAmount = 0n;
-
-        await expect(token.connect(holder).transfer(recipient, transferAmount))
-          .to.emit(token, "Transfer")
-          .withArgs(holder.address, recipient.address, transferAmount);
-
-        const after = await batch({
-          holderBalance: token.balanceOf(holder),
-          recipientBalance: token.balanceOf(recipient),
-        });
-
-        expect(after.holderBalance).to.equal(before.holderBalance - transferAmount);
-        expect(after.recipientBalance).to.equal(before.recipientBalance + transferAmount);
+      it("Function `balanceOf` returns the account balance of another account", async function () {
+        expect(await token.balanceOf(holder)).to.be.greaterThan(0n);
       });
 
-      it("SHOULD throw if the message caller’s account balance does not have enough tokens to spend", async function () {
-        const [recipient] = await ethers.getSigners();
+      it("Function `allowance` the amount which the spender is still allowed to withdraw from the holder", async function () {
+        const [spender] = await ethers.getSigners();
+        const allowance = parseUnits("1.0");
 
-        const before = await batch({
-          holderBalance: token.balanceOf(holder),
-        });
-
-        const transferAmount = before.holderBalance + 1n;
-
-        await expect(token.connect(holder).transfer(recipient, transferAmount)).to.be.reverted;
-      });
-
-      it("Returns `true` if the transfer succeeds", async function () {
-        const [recipient] = await ethers.getSigners();
-
-        const success = await token.connect(holder).transfer.staticCallResult(recipient, parseUnits("1.0"));
-        assert(success);
-      });
-    });
-
-    context("Function `transferFrom`", function () {
-      let spender: HardhatEthersSigner, recipient: HardhatEthersSigner;
-      let transferAmount: bigint;
-
-      let originalState: string;
-
-      this.beforeAll(async function () {
-        originalState = await Snapshot.take();
-      });
-
-      this.afterAll(async function () {
-        await Snapshot.restore(originalState);
-      });
-
-      this.beforeEach(async function () {
-        [spender, recipient] = await ethers.getSigners();
-        transferAmount = await token.balanceOf(holder);
-
-        const allowanceBefore = await token.allowance(holder, spender);
-
-        await expect(token.connect(holder).approve(spender, transferAmount))
+        await expect(token.connect(holder).approve(spender, allowance))
           .to.emit(token, "Approval")
-          .withArgs(holder.address, spender.address, transferAmount);
+          .withArgs(holder.address, spender.address, allowance);
 
-        expect(await token.allowance(holder, spender)).to.equal(allowanceBefore + transferAmount);
+        expect(await token.allowance(holder, spender)).to.equal(allowance);
       });
+    });
 
-      it("Transfers an amount of tokens from to the recipient on behalf of the holder, and MUST fire the `Transfer` event", async function () {
-        const before = await batch({
-          holderBalance: token.balanceOf(holder),
-          spenderAllowance: token.allowance(holder, spender),
-          recipientBalance: token.balanceOf(recipient),
+    context("Write functions", function () {
+      context("Function `transfer`", function () {
+        let recipient: HardhatEthersSigner;
+        let transferAmount: bigint;
+
+        let originalState: string;
+
+        this.beforeAll(async function () {
+          originalState = await Snapshot.take();
         });
 
-        await expect(token.connect(spender).transferFrom(holder, recipient, transferAmount))
-          .to.emit(token, "Transfer")
-          .withArgs(holder.address, recipient.address, transferAmount);
-
-        const after = await batch({
-          holderBalance: token.balanceOf(holder),
-          spenderAllowance: token.allowance(holder, spender),
-          recipientBalance: token.balanceOf(recipient),
+        this.afterAll(async function () {
+          await Snapshot.restore(originalState);
         });
 
-        expect(after.holderBalance).to.equal(before.holderBalance - transferAmount);
-        expect(after.recipientBalance).to.equal(before.recipientBalance + transferAmount);
-        expect(after.spenderAllowance).to.equal(before.spenderAllowance - transferAmount);
-      });
-
-      it("MUST treat transfers of 0 values as normal transfers and fire the `Transfer` event.", async function () {
-        const before = await batch({
-          holderBalance: token.balanceOf(holder),
-          spenderAllowance: token.allowance(holder, spender),
-          recipientBalance: token.balanceOf(recipient),
+        this.beforeEach(async function () {
+          [recipient] = await ethers.getSigners();
+          transferAmount = await token.balanceOf(holder);
         });
 
-        await expect(token.connect(spender).transferFrom(holder, recipient, transferAmount))
-          .to.emit(token, "Transfer")
-          .withArgs(holder.address, recipient.address, transferAmount);
+        it("Transfers an amount of tokens to the recipient, and MUST fire the `Transfer` event", async function () {
+          const before = await batch({
+            holderBalance: token.balanceOf(holder),
+            recipientBalance: token.balanceOf(recipient),
+          });
 
-        const after = await batch({
-          holderBalance: token.balanceOf(holder),
-          spenderAllowance: token.allowance(holder, spender),
-          recipientBalance: token.balanceOf(recipient),
+          await expect(token.connect(holder).transfer(recipient, transferAmount))
+            .to.emit(token, "Transfer")
+            .withArgs(holder.address, recipient.address, transferAmount);
+
+          const after = await batch({
+            holderBalance: token.balanceOf(holder),
+            recipientBalance: token.balanceOf(recipient),
+          });
+
+          expect(after.holderBalance).to.equal(before.holderBalance - transferAmount);
+          expect(after.recipientBalance).to.equal(before.recipientBalance + transferAmount);
         });
 
-        expect(after.holderBalance).to.equal(before.holderBalance - transferAmount);
-        expect(after.recipientBalance).to.equal(before.recipientBalance + transferAmount);
-        expect(after.spenderAllowance).to.equal(before.spenderAllowance - transferAmount);
+        it("MUST treat transfers of 0 values as normal transfers and fire the `Transfer` event.", async function () {
+          const [recipient] = await ethers.getSigners();
+
+          const before = await batch({
+            holderBalance: token.balanceOf(holder),
+            recipientBalance: token.balanceOf(recipient),
+          });
+
+          const transferAmount = 0n;
+
+          await expect(token.connect(holder).transfer(recipient, transferAmount))
+            .to.emit(token, "Transfer")
+            .withArgs(holder.address, recipient.address, transferAmount);
+
+          const after = await batch({
+            holderBalance: token.balanceOf(holder),
+            recipientBalance: token.balanceOf(recipient),
+          });
+
+          expect(after.holderBalance).to.equal(before.holderBalance - transferAmount);
+          expect(after.recipientBalance).to.equal(before.recipientBalance + transferAmount);
+        });
+
+        it("SHOULD throw if the message caller’s account balance does not have enough tokens to spend", async function () {
+          const [recipient] = await ethers.getSigners();
+
+          const before = await batch({
+            holderBalance: token.balanceOf(holder),
+          });
+
+          const transferAmount = before.holderBalance + 1n;
+
+          await expect(token.connect(holder).transfer(recipient, transferAmount)).to.be.reverted;
+        });
+
+        it("Returns `true` if the transfer succeeds", async function () {
+          const [recipient] = await ethers.getSigners();
+
+          const success = await token.connect(holder).transfer.staticCallResult(recipient, parseUnits("1.0"));
+          assert(success);
+        });
       });
 
-      it("SHOULD throw if the message caller’s account balance does not have enough tokens to spend", async function () {
-        const insufficientTransferAmount = transferAmount + 1n;
+      context("Function `transferFrom`", function () {
+        let spender: HardhatEthersSigner, recipient: HardhatEthersSigner;
+        let transferAmount: bigint;
 
-        await expect(token.connect(spender).transferFrom(holder, recipient, insufficientTransferAmount)).to.be.reverted;
+        let originalState: string;
+
+        this.beforeAll(async function () {
+          originalState = await Snapshot.take();
+        });
+
+        this.afterAll(async function () {
+          await Snapshot.restore(originalState);
+        });
+
+        this.beforeEach(async function () {
+          [spender, recipient] = await ethers.getSigners();
+          transferAmount = await token.balanceOf(holder);
+
+          const allowanceBefore = await token.allowance(holder, spender);
+
+          await expect(token.connect(holder).approve(spender, transferAmount))
+            .to.emit(token, "Approval")
+            .withArgs(holder.address, spender.address, transferAmount);
+
+          expect(await token.allowance(holder, spender)).to.equal(allowanceBefore + transferAmount);
+        });
+
+        it("Transfers an amount of tokens from to the recipient on behalf of the holder, and MUST fire the `Transfer` event", async function () {
+          const before = await batch({
+            holderBalance: token.balanceOf(holder),
+            spenderAllowance: token.allowance(holder, spender),
+            recipientBalance: token.balanceOf(recipient),
+          });
+
+          await expect(token.connect(spender).transferFrom(holder, recipient, transferAmount))
+            .to.emit(token, "Transfer")
+            .withArgs(holder.address, recipient.address, transferAmount);
+
+          const after = await batch({
+            holderBalance: token.balanceOf(holder),
+            spenderAllowance: token.allowance(holder, spender),
+            recipientBalance: token.balanceOf(recipient),
+          });
+
+          expect(after.holderBalance).to.equal(before.holderBalance - transferAmount);
+          expect(after.recipientBalance).to.equal(before.recipientBalance + transferAmount);
+          expect(after.spenderAllowance).to.equal(before.spenderAllowance - transferAmount);
+        });
+
+        it("MUST treat transfers of 0 values as normal transfers and fire the `Transfer` event.", async function () {
+          const before = await batch({
+            holderBalance: token.balanceOf(holder),
+            spenderAllowance: token.allowance(holder, spender),
+            recipientBalance: token.balanceOf(recipient),
+          });
+
+          await expect(token.connect(spender).transferFrom(holder, recipient, transferAmount))
+            .to.emit(token, "Transfer")
+            .withArgs(holder.address, recipient.address, transferAmount);
+
+          const after = await batch({
+            holderBalance: token.balanceOf(holder),
+            spenderAllowance: token.allowance(holder, spender),
+            recipientBalance: token.balanceOf(recipient),
+          });
+
+          expect(after.holderBalance).to.equal(before.holderBalance - transferAmount);
+          expect(after.recipientBalance).to.equal(before.recipientBalance + transferAmount);
+          expect(after.spenderAllowance).to.equal(before.spenderAllowance - transferAmount);
+        });
+
+        it("SHOULD throw if the message caller’s account balance does not have enough tokens to spend", async function () {
+          const insufficientTransferAmount = transferAmount + 1n;
+
+          await expect(token.connect(spender).transferFrom(holder, recipient, insufficientTransferAmount)).to.be
+            .reverted;
+        });
+
+        it("Returns `true` if the transfer succeeds", async function () {
+          const [recipient] = await ethers.getSigners();
+
+          const success = await token
+            .connect(spender)
+            .transferFrom.staticCallResult(holder, recipient, parseUnits("1.0"));
+          assert(success);
+        });
       });
 
-      it("Returns `true` if the transfer succeeds", async function () {
-        const [recipient] = await ethers.getSigners();
+      context("Function `approve`", function () {
+        let spender: HardhatEthersSigner, recipient: HardhatEthersSigner;
+        let approveAmount: bigint;
 
-        const success = await token
-          .connect(spender)
-          .transferFrom.staticCallResult(holder, recipient, parseUnits("1.0"));
-        assert(success);
+        let originalState: string;
+
+        this.beforeAll(async function () {
+          originalState = await Snapshot.take();
+        });
+
+        this.afterAll(async function () {
+          await Snapshot.restore(originalState);
+        });
+
+        this.beforeEach(async function () {
+          [spender, recipient] = await ethers.getSigners();
+          approveAmount = await token.balanceOf(holder);
+
+          const allowanceBefore = await token.allowance(holder, spender);
+
+          await expect(token.connect(holder).approve(spender, approveAmount))
+            .to.emit(token, "Approval")
+            .withArgs(holder.address, spender.address, approveAmount);
+
+          expect(await token.allowance(holder, spender)).to.equal(allowanceBefore + approveAmount);
+        });
+
+        for (const transferCount of [1n, 2n, 5n]) {
+          it(`Allows the spender to transfer on behalf of the holder multiples times (${transferCount}), up to the approved amount`, async function () {
+            const transferAmount = approveAmount / transferCount;
+            assert(transferAmount * transferCount === approveAmount);
+
+            for (let i = 0; i < transferCount; i++) {
+              const before = await batch({
+                holderBalance: token.balanceOf(holder),
+                recipientBalance: token.balanceOf(recipient),
+                spenderAllowance: token.allowance(holder, spender),
+              });
+
+              await expect(token.connect(spender).transferFrom(holder, recipient, transferAmount))
+                .to.emit(token, "Transfer")
+                .withArgs(holder.address, recipient.address, transferAmount);
+
+              const after = await batch({
+                holderBalance: token.balanceOf(holder),
+                recipientBalance: token.balanceOf(recipient),
+                spenderAllowance: token.allowance(holder, spender),
+              });
+
+              expect(after.holderBalance).equal(before.holderBalance - transferAmount);
+              expect(after.recipientBalance).equal(before.recipientBalance + transferAmount);
+              expect(after.spenderAllowance).equal(before.spenderAllowance - transferAmount);
+            }
+          });
+        }
+
+        for (const delta of [-1n, 1n]) {
+          it(`Overwrites the current allowance to a ${delta < 0 ? "smaller" : "greater"} amount`, async function () {
+            const updatedAllowance = approveAmount + delta;
+
+            await expect(token.connect(holder).approve(spender, updatedAllowance))
+              .to.emit(token, "Approval")
+              .withArgs(holder.address, spender.address, updatedAllowance);
+
+            expect(await token.allowance(holder, spender)).to.equal(updatedAllowance);
+          });
+        }
+
+        it("Returns `true` if the approve succeeds", async function () {
+          const success = await token.connect(holder).approve.staticCallResult(spender, approveAmount + 1n);
+
+          assert(success);
+        });
       });
     });
   });
 }
-
-testERC20Compliance({
-  tokenName: "stETH",
-  deploy: async () => {
-    const initialSupply = parseUnits("1.0", "ether");
-    const userBalance = parseUnits("10.0", "ether");
-    const totalSupply = initialSupply + userBalance;
-
-    const token = await ethers.deployContract("StETHMock", { value: initialSupply });
-
-    const signers = await ethers.getSigners();
-    const holder = signers[signers.length - 1];
-
-    await token.mintSteth(holder, { value: userBalance });
-
-    return {
-      token,
-      name: "Liquid staked Ether 2.0",
-      symbol: "stETH",
-      decimals: 18n,
-      totalSupply,
-      holder,
-    };
-  },
-});
