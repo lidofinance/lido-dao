@@ -180,7 +180,9 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
             holderBalance: token.balanceOf(holder),
           });
 
-          const transferAmount = before.holderBalance + 1n;
+          // exceeding the current balance only by 1 sometimes does not revert the transaction
+          // due to the stETH 1-2 stWei error margin, which is why we exceed by 3
+          const transferAmount = before.holderBalance + 3n;
 
           await expect(token.connect(holder).transfer(recipient, transferAmount)).to.be.reverted;
         });
