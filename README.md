@@ -28,3 +28,8 @@ pnpm test
 - anvil
 - slither
 - readme
+
+## Conventions
+
+- use the `batch` helper to resolve multiple promises in parallel
+- use `Snapshot` helper to restore the state at the end of suite
