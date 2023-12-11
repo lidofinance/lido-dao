@@ -1,7 +1,7 @@
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { Snapshot, batch } from "../../lib";
 import { ethers } from "hardhat";
-import { assert, expect } from "chai";
+import { expect } from "chai";
 import { ERC20 } from "../../typechain-types/@openzeppelin/contracts/token/ERC20/ERC20";
 import { parseUnits } from "ethers";
 import { ExclusiveSuiteFunction, PendingSuiteFunction, describe } from "mocha";
@@ -190,8 +190,8 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
         it("Returns `true` if the transfer succeeds", async function () {
           const [recipient] = await ethers.getSigners();
 
-          const success = await token.connect(holder).transfer.staticCallResult(recipient, parseUnits("1.0"));
-          assert(success);
+          const [success] = await token.connect(holder).transfer.staticCallResult(recipient, parseUnits("1.0"));
+          expect(success).to.equal(true);
         });
       });
 
@@ -276,10 +276,10 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
         it("Returns `true` if the transfer succeeds", async function () {
           const [recipient] = await ethers.getSigners();
 
-          const success = await token
+          const [success] = await token
             .connect(spender)
             .transferFrom.staticCallResult(holder, recipient, parseUnits("1.0"));
-          assert(success);
+          expect(success).to.equal(true);
         });
       });
 
@@ -313,7 +313,7 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
         for (const transferCount of [1n, 2n, 5n]) {
           it(`Allows the spender to transfer on behalf of the holder multiples times (${transferCount}), up to the approved amount`, async function () {
             const transferAmount = approveAmount / transferCount;
-            assert(transferAmount * transferCount === approveAmount);
+            expect(transferAmount * transferCount).to.equal(approveAmount);
 
             for (let i = 0; i < transferCount; i++) {
               const before = await batch({
@@ -352,9 +352,9 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
         }
 
         it("Returns `true` if the approve succeeds", async function () {
-          const success = await token.connect(holder).approve.staticCallResult(spender, approveAmount + 1n);
+          const [success] = await token.connect(holder).approve.staticCallResult(spender, approveAmount + 1n);
 
-          assert(success);
+          expect(success).to.equal(true);
         });
       });
     });
