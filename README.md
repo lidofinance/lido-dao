@@ -1,5 +1,15 @@
 # Lido Core
 
+## Develop
+
+```sh
+# install deps
+pnpm install
+
+# run tests
+pnpm test
+```
+
 ## Setup
 
 - node.js v20
