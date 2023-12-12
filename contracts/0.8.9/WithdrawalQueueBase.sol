@@ -111,30 +111,30 @@ abstract contract WithdrawalQueueBase {
     error InvalidHint(uint256 _hint);
     error CantSendValueRecipientMayHaveReverted();
 
-    /// @notice id of the last request
-    ///  NB! requests are indexed from 1, so it returns 0 if there is no requests in the queue
+    /// @notice Returns the id of the last request in the queue
+    ///  NB! requests are indexed from 1, so it returns 0 if there are no requests in the queue
     function getLastRequestId() public view returns (uint256) {
         return LAST_REQUEST_ID_POSITION.getStorageUint256();
     }
 
-    /// @notice id of the last finalized request
-    ///  NB! requests are indexed from 1, so it returns 0 if there is no finalized requests in the queue
+    /// @notice Returns the id of the last finalized request in the queue
+    ///  NB! requests are indexed from 1, so it returns 0 if there are no finalized requests in the queue
     function getLastFinalizedRequestId() public view returns (uint256) {
         return LAST_FINALIZED_REQUEST_ID_POSITION.getStorageUint256();
     }
 
-    /// @notice amount of ETH on this contract balance that is locked for withdrawal and available to claim
+    /// @notice Returns the amount of ether on the balance locked for withdrawal and available to claim
     function getLockedEtherAmount() public view returns (uint256) {
         return LOCKED_ETHER_AMOUNT_POSITION.getStorageUint256();
     }
 
-    /// @notice length of the checkpoint array. Last possible value for the hint.
-    ///  NB! checkpoints are indexed from 1, so it returns 0 if there is no checkpoints
+    /// @notice Returns the length of the checkpoint array. Last possible value for the hint.
+    ///  NB! checkpoints are indexed from 1, so it returns 0 if there are no checkpoints yet
     function getLastCheckpointIndex() public view returns (uint256) {
         return LAST_CHECKPOINT_INDEX_POSITION.getStorageUint256();
     }
 
-    /// @notice return the number of unfinalized requests in the queue
+    /// @notice Returns the number of unfinalized requests in the queue
     function unfinalizedRequestNumber() external view returns (uint256) {
         return getLastRequestId() - getLastFinalizedRequestId();
     }
@@ -183,15 +183,15 @@ abstract contract WithdrawalQueueBase {
         uint256 remainingEthBudget;
         /// @notice flag that is set to `true` if returned state is final and `false` if more calls are required
         bool finished;
-        /// @notice static array to store last request id in each batch
+        /// @notice the resulting array of batches, represented by the id of the last request in the batch
         uint256[MAX_BATCHES_LENGTH] batches;
         /// @notice length of the filled part of `batches` array
         uint256 batchesLength;
     }
 
     /// @notice Offchain view for the oracle daemon that calculates how many requests can be finalized within
-    /// the given budget, time period and share rate limits. Returned requests are split into batches.
-    /// Each batch consist of the requests that all have the share rate below the `_maxShareRate` or above it.
+    /// the given budget, time period, and share rate limits. Returned requests are split into batches.
+    /// All requests belonging to one batch must have their share rate above or below (or equal) to the `_maxShareRate`.
     /// Below you can see an example how 14 requests with different share rates will be split into 5 batches by
     /// this method
     ///
@@ -285,11 +285,11 @@ abstract contract WithdrawalQueueBase {
         return _state;
     }
 
-    /// @notice Checks finalization batches, calculates required ether and the amount of shares to burn
+    /// @notice Checks finalization batches, calculates required amount of ether to lock and the number of shares to burn
     /// @param _batches finalization batches calculated offchain using `calculateFinalizationBatches()`
-    /// @param _maxShareRate max share rate that will be used for request finalization (1e27 precision)
-    /// @return ethToLock amount of ether that should be sent with `finalize()` method
-    /// @return sharesToBurn amount of shares that belongs to requests that will be finalized
+    /// @param _maxShareRate the max share rate (ETH per share) for the request finalization (1e27 precision)
+    /// @return ethToLock the amount of ether to be sent with `finalize()` method
+    /// @return sharesToBurn the number of shares to be burnt to match this finalization call
     function prefinalize(uint256[] calldata _batches, uint256 _maxShareRate)
         external
         view

@@ -112,7 +112,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
     bytes32 internal constant LIDO_POSITION = keccak256("lido.StakingRouter.lido");
 
-    /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
+    /// @dev Credentials which allows the DAO to withdraw ether on the 2.0 side
     bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lido.StakingRouter.withdrawalCredentials");
 
     /// @dev total count of staking modules

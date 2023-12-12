@@ -52,7 +52,7 @@ contract('Lido: merge acceptance', (addresses) => {
     // node operators
     operator_1,
     operator_2,
-    // users who deposit Ether to the pool
+    // users who deposit ether to the pool
     user1,
     user2,
     user3,
@@ -250,14 +250,14 @@ contract('Lido: merge acceptance', (addresses) => {
       signatures
     )
 
-    // No Ether was deposited yet to the validator contract
+    // No ether was deposited yet to the validator contract
     assert.equals(await depositContractMock.totalCalls(), 0)
 
     const ether2Stat = await pool.getBeaconStat()
     assert.equals(ether2Stat.depositedValidators, 0, 'deposited ether2')
     assert.equals(ether2Stat.beaconBalance, 0, 'remote ether2')
 
-    // All Ether was buffered within the pool contract atm
+    // All ether was buffered within the pool contract atm
 
     // The contract's balance must be non-zero. When the contract is deployed,
     // it receives LIDO_INIT_BALANCE_ETH ETH in deployProtocol() function.
@@ -315,7 +315,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assert.equals(ether2Stat.depositedValidators, 1, 'deposited ether2')
     assert.equals(ether2Stat.beaconBalance, 0, 'remote ether2')
 
-    // Some Ether remained buffered within the pool contract
+    // Some ether remained buffered within the pool contract
 
     // The contract's balance must be non-zero. When the contract is deployed,
     // it receives LIDO_INIT_BALANCE_ETH ETH in deployProtocol() function.
@@ -449,7 +449,7 @@ contract('Lido: merge acceptance', (addresses) => {
 
     const elRewards = 9
 
-    // Total pooled Ether increased
+    // Total pooled ether increased
     const newTotalPooledEther = await pool.getTotalPooledEther()
     assert.equals(newTotalPooledEther, ETH(LIDO_INIT_BALANCE_ETH + 3 + 30 + 64.35 + elRewards), 'total pooled ether')
 
@@ -459,7 +459,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assert.equals(ether2Stat.depositedValidators, 2, 'deposited ether2')
     assert.equals(ether2Stat.beaconBalance, ETH(64.35), 'remote ether2')
 
-    // Buffered Ether amount changed on execution layer rewards
+    // Buffered ether amount changed on execution layer rewards
     assert.equals(await pool.getBufferedEther(), ETH(LIDO_INIT_BALANCE_ETH + 33 + elRewards), 'buffered ether')
 
     // New tokens was minted to distribute fee
@@ -553,7 +553,7 @@ contract('Lido: merge acceptance', (addresses) => {
     const newTotalShares = await token.getTotalShares()
     assert.equals(newTotalShares, oldTotalShares, 'total shares')
 
-    // Total pooled Ether increased
+    // Total pooled ether increased
 
     const newTotalPooledEther = await pool.getTotalPooledEther()
     assert.equals(newTotalPooledEther, ETH(107.35 + 7), 'total pooled ether')
@@ -564,7 +564,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assert.equals(ether2Stat.depositedValidators, 2, 'deposited ether2')
     assert.equals(ether2Stat.beaconBalance, ETH(64.35), 'remote ether2')
 
-    // Buffered Ether amount changed on execution layer rewards
+    // Buffered ether amount changed on execution layer rewards
     assert.equals(await pool.getBufferedEther(), ETH(LIDO_INIT_BALANCE_ETH + 42 + 7), 'buffered ether')
 
     assert.equals(await token.totalSupply(), tokens(114.35), 'token total supply')
@@ -647,7 +647,7 @@ contract('Lido: merge acceptance', (addresses) => {
     const newTotalShares = await token.getTotalShares()
     assert.equals(newTotalShares, oldTotalShares, 'total shares')
 
-    // Total pooled Ether increased by 5ETH - 2ETH
+    // Total pooled ether increased by 5ETH - 2ETH
     const newTotalPooledEther = await pool.getTotalPooledEther()
     assert.equals(newTotalPooledEther, ETH(114.35 + 3), 'total pooled ether')
 
@@ -656,7 +656,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assert.equals(ether2Stat.depositedValidators, 2, 'deposited ether2')
     assert.equals(ether2Stat.beaconBalance, ETH(62.35), 'remote ether2')
 
-    // Buffered Ether amount changed on execution layer rewards
+    // Buffered ether amount changed on execution layer rewards
     assert.equals(await pool.getBufferedEther(), ETH(LIDO_INIT_BALANCE_ETH + 49 + 5), 'buffered ether')
 
     assert.equals(await token.totalSupply(), tokens(114.35 + 3), 'token total supply')
@@ -743,7 +743,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assert.equals(ether2Stat.depositedValidators, 2, 'deposited ether2')
     assert.equals(ether2Stat.beaconBalance, ETH(59.35), 'remote ether2')
 
-    // Buffered Ether amount changed on execution layer rewards
+    // Buffered ether amount changed on execution layer rewards
     assert.equals(await pool.getBufferedEther(), ETH(LIDO_INIT_BALANCE_ETH + 54 + 3), 'buffered ether')
 
     assert.equals(await token.totalSupply(), tokens(117.35), 'token total supply')
@@ -805,7 +805,7 @@ contract('Lido: merge acceptance', (addresses) => {
     const newTotalShares = await token.getTotalShares()
     assert.equals(newTotalShares, oldTotalShares, 'total shares')
 
-    // Total pooled Ether decreased by 8ETH-2ETH
+    // Total pooled ether decreased by 8ETH-2ETH
     const newTotalPooledEther = await pool.getTotalPooledEther()
     assert.equals(newTotalPooledEther, ETH(111.35), 'total pooled ether')
 
@@ -814,7 +814,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assert.equals(ether2Stat.depositedValidators, 2, 'deposited ether2')
     assert.equals(ether2Stat.beaconBalance, ETH(51.35), 'remote ether2')
 
-    // Buffered Ether amount changed on execution layer rewards
+    // Buffered ether amount changed on execution layer rewards
     assert.equals(await pool.getBufferedEther(), ETH(LIDO_INIT_BALANCE_ETH + 57 + 2), 'buffered ether')
 
     assert.equals(await token.totalSupply(), tokens(111.35), 'token total supply')
@@ -906,7 +906,7 @@ contract('Lido: merge acceptance', (addresses) => {
     const newTotalShares = await token.getTotalShares()
     assert.equals(newTotalShares, new BN('99132944596694892595'), 'total shares')
 
-    // Total pooled Ether increased by 0.14ETH+3ETH
+    // Total pooled ether increased by 0.14ETH+3ETH
     const newTotalPooledEther = await pool.getTotalPooledEther()
     assert.equals(newTotalPooledEther, ETH(111.49 + 3), 'total pooled ether')
 
@@ -915,7 +915,7 @@ contract('Lido: merge acceptance', (addresses) => {
     assert.equals(ether2Stat.depositedValidators, 2, 'deposited ether2')
     assert.equals(ether2Stat.beaconBalance, ETH(51.49), 'remote ether2')
 
-    // Buffered Ether amount changed on execution layer rewards
+    // Buffered ether amount changed on execution layer rewards
     assert.equals(await pool.getBufferedEther(), ETH(LIDO_INIT_BALANCE_ETH + 59 + 3), 'buffered ether')
 
     assert.equals(await token.totalSupply(), tokens(111.49 + 3), 'token total supply')

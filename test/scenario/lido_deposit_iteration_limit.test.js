@@ -14,7 +14,7 @@ const CURATED_MODULE_ID = 1
 
 contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) => {
   // Limits the number of validators assigned in a single transaction, regardless the amount
-  // of Ether submitted to/buffered in the contract and the number of spare validator keys.
+  // of ether submitted to/buffered in the contract and the number of spare validator keys.
   // This is needed to prevent the deposit loop from failing due to it using more gas than
   // available in a single block and to protect from possible attacks exploiting this.
 
@@ -129,7 +129,7 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
     const ether2Stat = await pool.getBeaconStat()
     assert.equals(ether2Stat.depositedValidators, 10, 'deposited validators')
 
-    // the rest of the received Ether is still buffered in the pool
+    // the rest of the received ether is still buffered in the pool
     assert.equals(await pool.getBufferedEther(), ETH(15 * 32), 'buffered ether')
   })
 
@@ -246,7 +246,7 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
     const ether2Stat = await pool.getBeaconStat()
     assert.equals(ether2Stat.depositedValidators, 26, 'deposited validators')
 
-    // the rest of the received Ether is still buffered in the pool
+    // the rest of the received ether is still buffered in the pool
     assert.equals(await pool.getBufferedEther(), ETH(1 * 32), 'buffered ether')
   })
 
@@ -280,7 +280,7 @@ contract('Lido: deposit loop iteration limit', ([user1, nobody, nodeOperator]) =
 
     assert.equals(await depositContractMock.totalCalls(), 26, 'total validators assigned')
 
-    // the rest of the received Ether is still buffered in the pool
+    // the rest of the received ether is still buffered in the pool
     assert.equals(await pool.getBufferedEther(), ETH(1 * 32), 'buffered ether')
   })
 })

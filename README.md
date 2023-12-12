@@ -3,11 +3,11 @@
 [![Tests](https://github.com/lidofinance/lido-dao/workflows/Tests/badge.svg)](https://github.com/lidofinance/lido-dao/actions)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-The Lido Ethereum Liquid Staking Protocol allows their users to earn staking rewards on the Beacon chain without locking Ether or maintaining staking infrastructure.
+The Lido Ethereum Liquid Staking Protocol allows their users to earn staking rewards on the Beacon Chain without locking ether or maintaining staking infrastructure.
 
-Users can deposit Ether to the Lido smart contract and receive stETH tokens in return. The smart contract then stakes tokens with the DAO-picked node operators. Users' deposited funds are pooled by the DAO, node operators never have direct access to the users' assets.
+Users can deposit ether to the Lido smart contract and receive stETH tokens in return. The smart contract then stakes tokens with the DAO-picked node operators. Users' deposited funds are pooled by the DAO, node operators never have direct access to the users' assets.
 
-Unlike staked ether, the stETH token is free from the limitations associated with a lack of liquidity and can be transferred at any time. The stETH token balance corresponds to the amount of Ether that the holder could request to withdraw.
+Unlike staked ether, the stETH token is free from the limitations associated with a lack of liquidity and can be transferred at any time. The stETH token balance corresponds to the amount of ether that the holder could request to withdraw.
 
 Before getting started with this repo, please read:
 

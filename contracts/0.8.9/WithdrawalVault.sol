@@ -30,13 +30,13 @@ contract WithdrawalVault is Versioned {
 
     // Events
     /**
-     * Emitted when the ERC20 `token` recovered (i.e. transferred)
+     * @notice Emitted when the ERC20 `token` recovered (i.e. transferred)
      * to the Lido treasury address by `requestedBy` sender.
      */
     event ERC20Recovered(address indexed requestedBy, address indexed token, uint256 amount);
 
     /**
-     * Emitted when the ERC721-compatible `token` (NFT) recovered (i.e. transferred)
+     * @notice Emitted when the ERC721-compatible `token` (NFT) recovered (i.e. transferred)
      * to the Lido treasury address by `requestedBy` sender.
      */
     event ERC721Recovered(address indexed requestedBy, address indexed token, uint256 tokenId);
@@ -94,8 +94,8 @@ contract WithdrawalVault is Versioned {
     }
 
     /**
-     * Transfers a given `_amount` of an ERC20-token (defined by the `_token` contract address)
-     * currently belonging to the burner contract address to the Lido treasury address.
+     * @notice Transfers a given `_amount` of an ERC20-token (defined by the `_token` contract address)
+     * currently belonging to the vault contract address to the Lido treasury address.
      *
      * @param _token an ERC20-compatible token
      * @param _amount token amount
@@ -111,8 +111,8 @@ contract WithdrawalVault is Versioned {
     }
 
     /**
-     * Transfers a given token_id of an ERC721-compatible NFT (defined by the token contract address)
-     * currently belonging to the burner contract address to the Lido treasury address.
+     * @notice Transfers the given tokenId of the ERC721-compatible NFT (defined by the provided token contract address)
+     * currently belonging to the vault contract address to the Lido treasury address.
      *
      * @param _token an ERC721-compatible token
      * @param _tokenId minted token id

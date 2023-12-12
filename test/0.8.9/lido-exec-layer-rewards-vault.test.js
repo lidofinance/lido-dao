@@ -36,14 +36,14 @@ contract('LidoExecutionLayerRewardsVault', ([deployer, anotherAccount]) => {
     await assert.reverts(elRewardsVault.withdrawRewards(12345, { from: appManager }), 'ONLY_LIDO_CAN_WITHDRAW')
   })
 
-  it('Execution layer rewards vault can receive Ether by plain transfers (no call data)', async () => {
+  it('Execution layer rewards vault can receive ether by plain transfers (no call data)', async () => {
     const before = +(await web3.eth.getBalance(elRewardsVault.address)).toString()
     const amount = 0.02
     await web3.eth.sendTransaction({ to: elRewardsVault.address, from: anotherAccount, value: ETH(amount) })
     assert.equals(await web3.eth.getBalance(elRewardsVault.address), ETH(before + amount))
   })
 
-  it('Execution layer rewards vault refuses to receive Ether by transfers with call data', async () => {
+  it('Execution layer rewards vault refuses to receive ether by transfers with call data', async () => {
     const amount = 0.02
     await assert.reverts(
       web3.eth.sendTransaction({
