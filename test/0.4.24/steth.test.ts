@@ -6,7 +6,7 @@ import { ethers } from "hardhat";
 import { expect } from "chai";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-describe.only("StETH.sol", function () {
+describe("StETH.sol", function () {
   const initialSupply = parseUnits("1.0", "ether");
 
   let steth: StETHMock;
