@@ -19,3 +19,15 @@ export class Snapshot {
     return Snapshot.take();
   }
 }
+
+export function resetState(suite: Mocha.Suite) {
+  let suiteStartState: string;
+
+  suite.beforeAll(async function () {
+    suiteStartState = await Snapshot.take();
+  });
+
+  suite.afterAll(async function () {
+    await Snapshot.restore(suiteStartState);
+  });
+}
