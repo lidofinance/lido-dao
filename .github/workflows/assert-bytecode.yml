@@ -2,8 +2,7 @@ name: Verify deployed contracts' bytecode
 
 on:
   pull_request:
-    branches:
-      - 'master'
+    branches: [master]
 
 jobs:
   assert-bytecode:
@@ -11,14 +10,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
 
       - name: Setup node.js version
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
@@ -49,6 +48,9 @@ jobs:
       - name: Compile contracts
         run: yarn compile
 
+      - name: Write config for action-verify-bytecode
+        run: yarn extract-artifacts
+
       - name: Verify bytecode
         uses: lidofinance/action-verify-bytecode@master
         with:
@@ -64,5 +66,5 @@ jobs:
           cat _actual _expected | sort | uniq -u | tee _diff
           [ -s _diff ] && exit 1 || exit 0
         env:
-          IGNORE_REGEX: test|lib|mock|interface|template|OrderedCallback|Pausable|Versioned|BeaconChainDepositor|PausableUntil
+          IGNORE_REGEX: test|lib|mock|interface|template|OrderedCallback|Pausable|Versioned|BeaconChainDepositor|PausableUntil|WithdrawalsManagerProxy|WithdrawalsManagerStub|ERC1967Proxy
         if: ${{ always() }}

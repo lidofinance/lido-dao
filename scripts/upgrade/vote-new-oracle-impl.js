@@ -42,7 +42,7 @@ async function upgradeAppImpl({ web3, artifacts, appName = APP }) {
   logSplitter()
 
   log(`Using ENS:`, yl(state.ensAddress))
-  const ens = await artifacts.require('ENS').at(state.ensAddress)
+  const ens = await artifacts.require('ENS').at(state.ens.address)
   log.splitter()
 
   const appId = namehash(`${appName}.${state.lidoApmEnsName}`)

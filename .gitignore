@@ -42,6 +42,8 @@ cli/vendor
 # e2e temp data
 /deployed-e2e.json
 
+/deployed-local.json
+
 # OS relative
 .DS_Store
 

@@ -1,0 +1,55 @@
+name: Scratch deploy on local clean anvil
+
+on:
+  pull_request:
+    branches: [master, develop]
+
+jobs:
+  do-scratch-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Start anvil in background
+        # For the port see port in scripts/scratch/dao-local-deploy.sh in RPC_URL env var
+        run: anvil -p 8555 --mnemonic "test test test test test test test test test test test junk" &
+
+      - name: Setup node.js version
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
+
+      - name: Cache yarn cache
+        id: cache-yarn-cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: yarn-${{ hashFiles('**/yarn.lock') }}
+
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v3
+        with:
+          path: '**/node_modules'
+          key: node_modules-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: node_modules-${{ hashFiles('**/yarn.lock') }}
+
+      - name: Install modules
+        run: yarn
+        if: |
+          steps.cache-yarn-cache.outputs.cache-hit != 'true' ||
+          steps.cache-node-modules.outputs.cache-hit != 'true'
+
+      - name: Run local deploy script
+        run: bash scripts/scratch/dao-local-deploy.sh

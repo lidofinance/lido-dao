@@ -68,7 +68,8 @@ async function assertInstalledApps(
       name: appName,
       fullName: `${appName}.${lidoApmEnsName}`,
       id: evt.appId,
-      proxyAddress
+      proxyAddress,
+      initializeData: evt.initializeData || "0x",
     }
   }
 

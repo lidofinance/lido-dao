@@ -6,7 +6,7 @@ const artifactsPath = path.resolve(__dirname, '..', artifactsFileName)
 const deployedFileName = 'deployed-mainnet.json'
 const deployedPath = path.resolve(__dirname, '..', deployedFileName)
 
-const stateKeysToIgnore = ['dummyEmptyContract']
+const stateKeysToIgnore = ['dummyEmptyContract', 'lidoTemplate']
 const additionalArtifacts = [
   {
     "artifactPath": "artifacts/contracts/0.6.11/deposit_contract.sol/DepositContract.json",

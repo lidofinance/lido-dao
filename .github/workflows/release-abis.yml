@@ -1,0 +1,61 @@
+---
+name: Upload ABIs to a published release
+
+on:
+  release:
+    types: [published] # stable and pre-releases
+
+permissions:
+  contents: write
+
+jobs:
+  release-abis:
+    name: Build ABIs and upload to the release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup node.js version
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache yarn cache
+        id: cache-yarn-cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: yarn-${{ hashFiles('**/yarn.lock') }}
+
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v3
+        with:
+          path: '**/node_modules'
+          key: node_modules-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: node_modules-${{ hashFiles('**/yarn.lock') }}
+
+      - name: Install modules
+        run: yarn
+        if: |
+          steps.cache-yarn-cache.outputs.cache-hit != 'true' ||
+          steps.cache-node-modules.outputs.cache-hit != 'true'
+
+      - name: Compile contracts
+        run: yarn compile
+
+      - name: Make an ABIs archive
+        run: zip -j abis.zip lib/abi/*.json
+
+      - name: Upload the archive to the release
+        run: |
+          gh release view "$GITHUB_REF" || exit;
+          gh release upload "$GITHUB_REF" abis.zip;
