@@ -18,13 +18,13 @@ Users can deposit Ether to the Lido smart contract and receive stETH tokens in r
 
 Unlike staked ether, the stETH token is free from the limitations associated with a lack of liquidity and can be transferred at any time. The stETH token balance corresponds to the amount of Ether that the holder could request to withdraw.
 
-**NB:** Before getting started with this repo, it's advised to read [Documentation](https://docs.lido.fi/)
+**NB:** It's advised to read [Documentation](https://docs.lido.fi/) before getting started with this repo.
 
 ## Lido DAO
 
-The [Lido DAO](https://docs.lido.fi/lido-dao) is a Decentralized Autonomous Organization that manages the liquid staking protocol by deciding on key parameters (e.g., setting fees, assigning node operators and oracles, etc.) through the voting power of governance token (LDO) holders.
+The [Lido DAO](https://docs.lido.fi/lido-dao) is a Decentralized Autonomous Organization that manages the liquid staking protocol by deciding on key parameters (e.g., setting fees, assigning node operators and oracles, performing upgrades, etc.) through the voting power of governance token (LDO) holders.
 
-Also, the Lido DAO accumulates service fees and spend them on research, development, protocol upgrades, and possible coverage cases.
+Also, the Lido DAO accumulates service fees and spends them on research, development, protocol upgrades execution, and hypothetical coverage applications.
 
 The Lido DAO is an [Aragon organization](https://aragon.org/dao).
 
@@ -112,7 +112,7 @@ forge test
 
 ## Deploying
 
-There are various ways to deploy the lido protocol smart-contracts and run the instance either locally or on a new testnet,
+To deploy the smart contracts and run the protocol instance either locally or on a new testnet,
 please proceed to the following [scratch deploy documentation](/docs/scratch-deploy.md)
 
 # License
