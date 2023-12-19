@@ -14,9 +14,9 @@
 
 The **Lido on Ethereum Liquid Staking Protocol** allows their users to earn staking rewards on the Beacon chain without locking Ether or maintaining staking infrastructure.
 
-Users can deposit Ether to the Lido smart contract and receive stETH tokens in return. The smart contract then stakes tokens with the DAO-picked node operators. Users' deposited funds are pooled by the DAO, node operators never have direct access to the users' assets.
+Users can deposit ether to the Lido smart contract and receive stETH tokens in return. The smart contract then stakes tokens with the DAO-picked node operators. Users' deposited funds are pooled by the DAO, and node operators never have direct access to the users' assets.
 
-Unlike staked ether, the stETH token is free from the limitations associated with a lack of liquidity and can be transferred at any time. The stETH token balance corresponds to the amount of Ether that the holder could request to withdraw.
+Unlike staked ether, the stETH token is free from the limitations associated with a lack of liquidity, and can be transferred at any time. The stETH token balance corresponds to the amount of ether that the holder could request to withdraw.
 
 **NB:** It's advised to read [Documentation](https://docs.lido.fi/) before getting started with this repo.
 
@@ -24,9 +24,9 @@ Unlike staked ether, the stETH token is free from the limitations associated wit
 
 The [Lido DAO](https://docs.lido.fi/lido-dao) is a Decentralized Autonomous Organization that manages the liquid staking protocol by deciding on key parameters (e.g., setting fees, assigning node operators and oracles, performing upgrades, etc.) through the voting power of governance token (LDO) holders.
 
-Also, the Lido DAO accumulates service fees and spends them on research, development, protocol upgrades execution, and hypothetical coverage applications.
+The Lido DAO charges service fees that support infrastructure maintenance, research, development, protocol upgrades, and potential loss coverage.
 
-The Lido DAO is an [Aragon organization](https://aragon.org/dao).
+The Lido DAO was built using the [Aragon DAO]((https://aragon.org/dao)) framework.
 
 ## Protocol levers
 
@@ -45,13 +45,11 @@ For the protocol contracts addresses see <https://docs.lido.fi/deployed-contract
 ### Requirements
 
 * shell - bash or zsh
-* docker
 * find
 * sed
 * jq
 * curl
 * cut
-* docker
 * node.js v18
 * (optional) Lerna
 * (optional) Foundry
