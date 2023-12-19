@@ -12,7 +12,7 @@
 </div>
 <br/>
 
-The **Lido on Ethereum Liquid Staking Protocol** allows their users to earn staking rewards on the Beacon chain without locking Ether or maintaining staking infrastructure.
+The **Lido on Ethereum Liquid Staking Protocol** allows their users to earn staking rewards on the Beacon chain without locking ether or maintaining staking infrastructure.
 
 Users can deposit ether to the Lido smart contract and receive stETH tokens in return. The smart contract then stakes tokens with the DAO-picked node operators. Users' deposited funds are pooled by the DAO, and node operators never have direct access to the users' assets.
 
