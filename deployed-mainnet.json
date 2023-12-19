@@ -157,7 +157,7 @@
       "moduleFee": 800,
       "treasuryFee": 200,
       "penaltyDelay": 432000,
-      "easyTrackTrustedCaller": "",
+      "easyTrackTrustedCaller": "0x08637515E85A4633E23dfc7861e2A9f53af640f7",
       "easyTrackAddress": "0xF0211b7660680B49De1A7E9f25C65660F0a13Fea",
       "easyTrackFactories": {
         "AddNodeOperators": "",

@@ -23,6 +23,7 @@ const { resolveLatestVersion } = require('../components/apm')
 const { APP_NAMES, APP_ARTIFACTS } = require('../constants')
 const { ETH, toBN, genKeys, ethToStr } = require('../../test/helpers/utils')
 const { EvmSnapshot } = require('../../test/helpers/blockchain')
+const { reportOracle, getSecondsPerFrame } = require('../../test/helpers/oracle')
 
 const APP_TRG = process.env.APP_TRG || 'simple-dvt'
 const APP_IPFS_CID = process.env.APP_IPFS_CID || SIMPLE_DVT_IPFS_CID
@@ -113,6 +114,11 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
   const burner = await artifacts.require('Burner').at(burnerAddress)
   const easytrack = new Contract(easyTrackAddress, easyTrackABI).connect(ethers.provider)
   const easyTrackEVMScriptExecutor = await easytrack.evmScriptExecutor()
+
+  const accountingOracleAddress = readStateAppAddress(state, 'accountingOracle')
+  const oracle = await artifacts.require('AccountingOracle').at(accountingOracleAddress)
+  const hashConsensusAddress = readStateAppAddress(state, 'hashConsensusForAccountingOracle')
+  const consensus = await artifacts.require('HashConsensus').at(hashConsensusAddress)
 
   _checkEq(
     await stakingRouter.hasRole(STAKING_MODULE_MANAGE_ROLE, agentAddress),
@@ -445,6 +451,34 @@ async function checkSimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid =
         op2DepositedKeys,
         `op2 state: totalDepositedValidators = ${op2DepositedKeys}`
       )
+
+      log(`Simulating Oracle report...`)
+      const stat = await lido.getBeaconStat()
+      const rewards = stat.beaconBalance.mul(toBN(5)).div(toBN(365000)) // 5% annual
+      const clBalance = stat.beaconBalance.add(toBN(maxDepositsCount2).mul(toBN(ETH(32)))).add(rewards)
+
+      // pass 1 frame
+      const secondsPerFrame = await getSecondsPerFrame(consensus)
+      await ethers.provider.send('evm_increaseTime', [secondsPerFrame])
+      await ethers.provider.send('evm_mine')
+      const members = await consensus.getMembers()
+      for (const member of members.addresses) {
+        await ethers.getImpersonatedSigner(member)
+      }
+
+      const bal11 = await lido.balanceOf(ADDRESS_1)
+      const bal21 = await lido.balanceOf(ADDRESS_2)
+
+      await reportOracle(consensus, oracle, {
+        numValidators: stat.depositedValidators,
+        clBalance,
+      })
+
+      const bal12 = await lido.balanceOf(ADDRESS_1)
+      const bal22 = await lido.balanceOf(ADDRESS_2)
+
+      _checkEq(bal12.gt(bal11), true, 'op1 got rewards')
+      _checkEq(bal22.gt(bal21), true, 'op2 got rewards')
     } finally {
       log('Reverting snapshot...')
       await snapshot.rollback()
