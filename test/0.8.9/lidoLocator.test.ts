@@ -32,7 +32,7 @@ function randomConfig(): Config {
   }, {} as Config);
 }
 
-describe.only("LidoLocator.sol", function () {
+describe("LidoLocator.sol", function () {
   const config = randomConfig();
   let locator: LidoLocator;
 
