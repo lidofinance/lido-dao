@@ -35,5 +35,4 @@ testERC721Compliance({
       holderTokenId,
     };
   },
-  suiteFunction: describe.only,
 });
