@@ -84,15 +84,19 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
       contractRecipient = await ethers.deployContract("ERC721ReceiverMock");
     });
 
-    it("Function `name` returns the name of the token", async function () {
-      expect(await token.name()).to.equal(name);
+    context("name", function () {
+      it("Returns the name of the token", async function () {
+        expect(await token.name()).to.equal(name);
+      });
     });
 
-    it("Function `symbol` returns the symbol of the token", async function () {
-      expect(await token.symbol()).to.equal(symbol);
+    context("symbol", function () {
+      it("Returns the symbol of the token", async function () {
+        expect(await token.symbol()).to.equal(symbol);
+      });
     });
 
-    context("Function `supportsInterface`", function () {
+    context("supportsInterface", function () {
       it("Returns true for ERC-165 interface", async function () {
         expect(await token.supportsInterface(ERC165_INTERFACE_ID)).to.equal(true);
       });
@@ -110,7 +114,7 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
       });
     });
 
-    context("Function `balanceOf`", function () {
+    context("balanceOf", function () {
       it("Returns the number of tokens owned by the holder", async function () {
         expect(await token.balanceOf(holder)).to.be.greaterThan(0n);
       });
@@ -124,13 +128,13 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
       });
     });
 
-    context("Function `ownerOf`", function () {
+    context("ownerOf", function () {
       it("Returns the address of the holder", async function () {
         expect(await token.ownerOf(holderTokenId)).to.equal(holder.address);
       });
     });
 
-    context("Function `safeTransferFrom`", function () {
+    context("safeTransferFrom", function () {
       this.beforeEach(async function () {
         await expect(token.connect(holder).approve(spender, holderTokenId))
           .to.emit(token, "Approval")
@@ -253,7 +257,7 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
       });
     });
 
-    context("Function `transferFrom`", function () {
+    context("transferFrom", function () {
       this.beforeEach(async function () {
         await expect(token.connect(holder).approve(spender, holderTokenId))
           .to.emit(token, "Approval")
@@ -289,7 +293,7 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
       });
     });
 
-    context("Function `approve`", function () {
+    context("approve", function () {
       this.beforeEach(async function () {
         await expect(token.connect(holder).approve(spender, holderTokenId))
           .to.emit(token, "Approval")
@@ -331,7 +335,7 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
       });
     });
 
-    context("Function `setApprovalForAll`", function () {
+    context("setApprovalForAll", function () {
       it("Enable approval for the spender to manage all of the holder's tokens", async function () {
         expect(await token.isApprovedForAll(holder, spender)).to.equal(false);
 
@@ -375,7 +379,7 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
       });
     });
 
-    context("Function `getApproved`", function () {
+    context("getApproved", function () {
       it("Returns the approved address for the token", async function () {
         await expect(token.connect(holder).approve(spender, holderTokenId))
           .to.emit(token, "Approval")
@@ -393,7 +397,7 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
       });
     });
 
-    context("Function `isApprovedForAll`", function () {
+    context("isApprovedForAll`", function () {
       it("Returns false if the address is not approved for all holder's tokens", async function () {
         expect(await token.isApprovedForAll(holder, spender)).to.equal(false);
       });
