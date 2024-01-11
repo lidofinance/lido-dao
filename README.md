@@ -37,5 +37,4 @@ pnpm test
 
 ### Pending
 
-- use node 20
 - test optional ERC-20 methods
