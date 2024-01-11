@@ -54,24 +54,24 @@ describe("LidoLocator.sol", function () {
     }
   });
 
-  context("functions", function () {
-    context("coreComponents", function () {
-      it("Returns ", async function () {
-        const { elRewardsVault, oracleReportSanityChecker, stakingRouter, treasury, withdrawalQueue, withdrawalVault } =
-          config;
+  context("coreComponents", function () {
+    it("Returns correct services in correct order", async function () {
+      const { elRewardsVault, oracleReportSanityChecker, stakingRouter, treasury, withdrawalQueue, withdrawalVault } =
+        config;
 
-        expect(await locator.coreComponents()).to.deep.equal([
-          elRewardsVault,
-          oracleReportSanityChecker,
-          stakingRouter,
-          treasury,
-          withdrawalQueue,
-          withdrawalVault,
-        ]);
-      });
+      expect(await locator.coreComponents()).to.deep.equal([
+        elRewardsVault,
+        oracleReportSanityChecker,
+        stakingRouter,
+        treasury,
+        withdrawalQueue,
+        withdrawalVault,
+      ]);
     });
+  });
 
-    it("oracleReportComponentsForLido", async function () {
+  context("oracleReportComponentsForLido", function () {
+    it("Returns correct services in correct order", async function () {
       const {
         accountingOracle,
         elRewardsVault,
