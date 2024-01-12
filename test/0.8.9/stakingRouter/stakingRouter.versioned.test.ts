@@ -20,5 +20,4 @@ testVersionedCompliance({
       version: 1n,
     },
   ],
-  suiteFunction: describe.only,
 });
