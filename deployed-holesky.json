@@ -190,7 +190,7 @@
         "SetNodeOperatorNames": "0x4792BaC0a262200fA7d3b68e7622bFc1c2c3a72d",
         "SetNodeOperatorRewardAddresses": "0x6Bfc576018C7f3D2a9180974E5c8e6CFa021f617",
         "UpdateTargetValidatorLimits": "0xC91a676A69Eb49be9ECa1954fE6fc861AE07A9A2",
-        "ChangeNodeOperatorManager": "0xb8C4728bc0826bA5864D02FA53148de7A44C2f7E"
+        "ChangeNodeOperatorManagers": "0xb8C4728bc0826bA5864D02FA53148de7A44C2f7E"
       }
     },
     "aragonApp": {

@@ -316,7 +316,7 @@ async function deploySimpleDVT({ web3, artifacts, trgAppName = APP_TRG, ipfsCid 
   evmScriptCalls.push({
     to: easytrack.address,
     calldata: await easytrack.interface.encodeFunctionData('addEVMScriptFactory', [
-      easyTrackFactories.ChangeNodeOperatorManager,
+      easyTrackFactories.ChangeNodeOperatorManagers,
       aclAddress +
         getSignature(acl, 'revokePermission').substring(2) +
         aclAddress.substring(2) +
