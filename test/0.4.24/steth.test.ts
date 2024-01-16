@@ -87,6 +87,14 @@ describe("StETH.sol", function () {
           "TRANSFER_TO_ZERO_ADDR",
         );
       });
+
+      it.only("Reverts when the recipient is stETH contract", async function () {
+        const transferAmount = await steth.balanceOf(holder);
+
+        await expect(steth.connect(holder).transfer(steth, transferAmount)).to.be.revertedWith(
+          "TRANSFER_TO_STETH_CONTRACT",
+        );
+      });
     });
 
     context("Allowance", function () {
