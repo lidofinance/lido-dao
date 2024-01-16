@@ -1,7 +1,6 @@
-import { ethers } from "hardhat";
 import { BaseContract, BytesLike } from "ethers";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { OssifiableProxy } from "../typechain-types";
+import { OssifiableProxy, OssifiableProxy__factory } from "../typechain-types";
 
 interface ProxifyArgs<T> {
   impl: T;
@@ -18,9 +17,7 @@ export async function proxify<T extends BaseContract>({
 }: ProxifyArgs<T>): Promise<[T, OssifiableProxy]> {
   const implAddres = await impl.getAddress();
 
-  const proxy = await ethers.deployContract("OssifiableProxy", [implAddres, admin.address, data], {
-    from: admin,
-  });
+  const proxy = await new OssifiableProxy__factory(admin).deploy(implAddres, admin.address, data);
 
   const proxied = impl.attach(await proxy.getAddress()) as T;
   proxied.connect(caller);
