@@ -10,6 +10,9 @@ interface DeriveDomainSeparatorArgs {
   verifyingContract: string;
 }
 
+/**
+ * @todo: refactor using ethers.TypedDataEncoder
+ */
 export function deriveDomainSeparator({
   type,
   name,
