@@ -1,7 +1,10 @@
-import { HardhatUserConfig } from "hardhat/config";
-import "@typechain/hardhat";
-import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-chai-matchers";
+import "@nomicfoundation/hardhat-toolbox";
+import "@typechain/hardhat";
+import { globSync } from "glob";
+import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/task-names";
+import { HardhatUserConfig, subtask } from "hardhat/config";
+import path from "path";
 import "solidity-coverage";
 
 const config: HardhatUserConfig = {
@@ -58,5 +61,16 @@ const config: HardhatUserConfig = {
     dontOverrideCompile: false,
   },
 };
+
+// a workaround for having an additional source directory for compilation
+// see, https://github.com/NomicFoundation/hardhat/issues/776#issuecomment-1713584386
+subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, hre, runSuper) => {
+  const paths = await runSuper();
+
+  const otherDirectoryGlob = path.join(hre.config.paths.root, "test", "**", "*.sol");
+  const otherPaths = globSync(otherDirectoryGlob);
+
+  return [...paths, ...otherPaths];
+});
 
 export default config;
