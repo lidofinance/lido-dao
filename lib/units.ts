@@ -1,5 +1,1 @@
-import { parseUnits } from "ethers";
-
-export function ether(value: string): bigint {
-  return parseUnits(value, "ether");
-}
+export { parseEther as ether } from "ethers";
