@@ -70,6 +70,14 @@ describe("StETH.sol", function () {
           .withArgs(holder.address, recipient.address, transferAmount)
           .and.to.emit(steth, "TransferShares")
           .withArgs(holder.address, recipient.address, transferAmountInShares);
+
+        const afterTransfer = await batch({
+          holderBalance: steth.balanceOf(holder),
+          recipientBalance: steth.balanceOf(recipient),
+        });
+
+        expect(afterTransfer.holderBalance).to.equal(beforeTransfer.holderBalance - transferAmount);
+        expect(afterTransfer.recipientBalance).to.equal(beforeTransfer.recipientBalance + transferAmount);
       });
 
       it("Reverts when the recipient is zero address", async function () {
