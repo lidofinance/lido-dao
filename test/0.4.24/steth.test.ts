@@ -1,13 +1,13 @@
 import { describe } from "mocha";
 import { batch, ether, resetState } from "../../lib";
-import { ZeroAddress, parseUnits } from "ethers";
+import { ZeroAddress } from "ethers";
 import { StETHMock } from "../../typechain-types";
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 describe("StETH.sol", function () {
-  const initialSupply = parseUnits("1.0", "ether");
+  const initialSupply = ether("1.0");
 
   let steth: StETHMock;
 
