@@ -1,5 +1,5 @@
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { Snapshot, batch } from "../../lib";
+import { Snapshot, batch } from "lib";
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import { ERC20 } from "../../typechain-types/@openzeppelin/contracts/token/ERC20/ERC20";

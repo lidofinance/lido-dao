@@ -9,8 +9,8 @@ import {
   ERC721_INTERFACE_ID,
   INVALID_INTERFACE_ID,
   resetState,
-} from "../../lib";
-import { ERC721, ERC721ReceiverMock } from "../../typechain-types";
+} from "lib";
+import { ERC721, ERC721ReceiverMock } from "typechain-types";
 
 interface ERC721Target {
   tokenName: string;

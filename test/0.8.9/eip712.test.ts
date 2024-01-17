@@ -2,8 +2,8 @@ import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers, network } from "hardhat";
 import { describe } from "mocha";
-import { deriveDomainSeparator, deriveTypeDataHash, randomAddress, streccak } from "../../lib";
-import { EIP712StETH } from "../../typechain-types";
+import { deriveDomainSeparator, deriveTypeDataHash, randomAddress, streccak } from "lib";
+import { EIP712StETH } from "typechain-types";
 
 describe("EIP712StETH.sol", function () {
   const domain = {

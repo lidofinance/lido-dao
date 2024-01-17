@@ -6,6 +6,7 @@ import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/ta
 import { HardhatUserConfig, subtask } from "hardhat/config";
 import path from "path";
 import "solidity-coverage";
+import "tsconfig-paths/register";
 
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",

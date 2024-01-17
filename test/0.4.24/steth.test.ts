@@ -1,10 +1,10 @@
-import { describe } from "mocha";
-import { batch, ether, resetState } from "../../lib";
-import { ZeroAddress } from "ethers";
-import { StETHMock } from "../../typechain-types";
-import { ethers } from "hardhat";
-import { expect } from "chai";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { expect } from "chai";
+import { ZeroAddress } from "ethers";
+import { ethers } from "hardhat";
+import { batch, ether, resetState } from "lib";
+import { describe } from "mocha";
+import { StETHMock } from "typechain-types";
 
 describe("StETH.sol", function () {
   const initialSupply = ether("1.0");
