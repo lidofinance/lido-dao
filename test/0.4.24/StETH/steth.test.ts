@@ -88,7 +88,7 @@ describe("StETH.sol", function () {
         );
       });
 
-      it.only("Reverts when the recipient is stETH contract", async function () {
+      it("Reverts when the recipient is stETH contract", async function () {
         const transferAmount = await steth.balanceOf(holder);
 
         await expect(steth.connect(holder).transfer(steth, transferAmount)).to.be.revertedWith(

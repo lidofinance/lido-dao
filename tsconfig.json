@@ -10,9 +10,10 @@
     "baseUrl": ".",
     "paths": {
       "lib/*": ["./lib"],
+      "test/*": ["./test"],
       "typechain-types/*": ["./typechain-types"]
     }
   },
-  "include": ["./scripts", "./test", "./typechain-types"],
+  "include": ["./scripts", "./test", "./typechain-types", "./lib"],
   "files": ["./hardhat.config.ts"]
 }
