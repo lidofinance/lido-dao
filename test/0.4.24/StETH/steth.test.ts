@@ -1,23 +1,50 @@
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
-import { batch, ether, resetState } from "lib";
+import { ONE_ETHER, batch, ether, resetState } from "lib";
 import { describe } from "mocha";
-import { StETHMock } from "typechain-types";
+import { StethMock__factory } from "typechain-types";
 
-describe("StETH.sol", function () {
-  const initialSupply = ether("1.0");
+describe.only("StETH.sol", function () {
+  async function deploySteth() {
+    const signers = await ethers.getSigners();
+    const [holder, recipient, spender] = signers;
+    const holderBalance = ether("10.0");
+    const totalSupply = holderBalance;
 
-  let steth: StETHMock;
+    const factory = new StethMock__factory(holder);
+    const steth = await factory.deploy(holder, { value: holderBalance });
 
-  this.beforeEach(async function () {
-    steth = await ethers.deployContract("StETHMock", { value: initialSupply });
-  });
+    expect(await steth.balanceOf(holder)).to.equal(holderBalance);
+    expect(await steth.totalSupply()).to.equal(totalSupply);
 
-  context("Function `getTotalPooledEther`", function () {
+    return {
+      holder,
+      holderBalance,
+      recipient,
+      spender,
+      totalSupply,
+      steth,
+    };
+  }
+
+  async function deployApprovedSteth() {
+    const deployed = await loadFixture(deploySteth);
+    const { steth, holder, spender } = deployed;
+
+    const allowance = await steth.balanceOf(holder);
+    await steth.connect(holder).approve(spender, allowance);
+    expect(await steth.allowance(holder, spender)).to.equal(allowance);
+
+    return deployed;
+  }
+
+  context("getTotalPooledEther", function () {
     it("Returns the amount of ether sent upon construction", async function () {
-      expect(await steth.getTotalPooledEther()).to.equal(initialSupply);
+      const { steth, totalSupply } = await loadFixture(deploySteth);
+
+      expect(await steth.getTotalPooledEther()).to.equal(totalSupply);
     });
 
     for (const [rebase, factor] of [
@@ -25,112 +52,95 @@ describe("StETH.sol", function () {
       ["positive", 105n], // 0.95
       ["negative", 95n], // 1.05
     ]) {
-      context(`After ${rebase} rebase`, function () {
-        const totalPooledEtherAfterRebase = (initialSupply * (factor as bigint)) / 100n;
+      it(`Returns the correct value after ${rebase} rebase`, async function () {
+        const { steth, totalSupply } = await loadFixture(deploySteth);
 
-        this.beforeEach(async function () {
-          await steth.setTotalPooledEther(totalPooledEtherAfterRebase);
-        });
+        const rebasedSupply = (totalSupply * (factor as bigint)) / 100n;
+        await steth.setTotalPooledEther(rebasedSupply);
 
-        it("Is equivalent to the `totalSupply` call", async function () {
-          expect(await steth.getTotalPooledEther()).to.equal(await steth.totalSupply());
-        });
+        expect(await steth.getTotalPooledEther()).to.equal(rebasedSupply);
       });
     }
   });
 
-  context("With a holder", function () {
-    let holder: HardhatEthersSigner;
-    let recipient: HardhatEthersSigner;
-    let spender: HardhatEthersSigner;
+  context("transfer", function () {
+    it("Transfers stETH to the recipient and fires the `Transfer` and `TransferShares` events", async function () {
+      const { steth, holder, recipient } = await loadFixture(deploySteth);
 
-    this.beforeEach(async function () {
-      [holder, recipient, spender] = await ethers.getSigners();
+      const beforeTransfer = await batch({
+        holderBalance: steth.balanceOf(holder),
+        recipientBalance: steth.balanceOf(recipient),
+        shareRate: steth.getSharesByPooledEth(ONE_ETHER),
+      });
 
-      await steth.setTotalPooledEther(ether("100.0"));
+      const transferAmount = beforeTransfer.holderBalance;
+      const transferAmountInShares = (transferAmount * beforeTransfer.shareRate) / ONE_ETHER;
 
-      const holderBalance = ether("99.0");
-      await steth.mintShares(holder, holderBalance);
-      expect(await steth.balanceOf(holder)).to.equal(holderBalance);
+      await expect(steth.connect(holder).transfer(recipient, transferAmount))
+        .to.emit(steth, "Transfer")
+        .withArgs(holder.address, recipient.address, transferAmount)
+        .and.to.emit(steth, "TransferShares")
+        .withArgs(holder.address, recipient.address, transferAmountInShares);
+
+      const afterTransfer = await batch({
+        holderBalance: steth.balanceOf(holder),
+        recipientBalance: steth.balanceOf(recipient),
+      });
+
+      expect(afterTransfer.holderBalance).to.equal(beforeTransfer.holderBalance - transferAmount);
+      expect(afterTransfer.recipientBalance).to.equal(beforeTransfer.recipientBalance + transferAmount);
     });
 
-    context("Function `transfer`", function () {
-      it("Transfers stETH to the recipient and fires the `Transfer` and `TransferShares` events", async function () {
-        const beforeTransfer = await batch({
-          holderBalance: steth.balanceOf(holder),
-          recipientBalance: steth.balanceOf(recipient),
-          shareRate: steth.getSharesByPooledEth(ether("1.0")),
-        });
+    it("Reverts when the recipient is zero address", async function () {
+      const { steth, holder } = await loadFixture(deploySteth);
 
-        const transferAmount = beforeTransfer.holderBalance;
-        const transferAmountInShares = (transferAmount * beforeTransfer.shareRate) / ether("1.0");
+      const transferAmount = await steth.balanceOf(holder);
 
-        await expect(steth.connect(holder).transfer(recipient, transferAmount))
-          .to.emit(steth, "Transfer")
-          .withArgs(holder.address, recipient.address, transferAmount)
-          .and.to.emit(steth, "TransferShares")
-          .withArgs(holder.address, recipient.address, transferAmountInShares);
-
-        const afterTransfer = await batch({
-          holderBalance: steth.balanceOf(holder),
-          recipientBalance: steth.balanceOf(recipient),
-        });
-
-        expect(afterTransfer.holderBalance).to.equal(beforeTransfer.holderBalance - transferAmount);
-        expect(afterTransfer.recipientBalance).to.equal(beforeTransfer.recipientBalance + transferAmount);
-      });
-
-      it("Reverts when the recipient is zero address", async function () {
-        const transferAmount = await steth.balanceOf(holder);
-
-        await expect(steth.connect(holder).transfer(ZeroAddress, transferAmount)).to.be.revertedWith(
-          "TRANSFER_TO_ZERO_ADDR",
-        );
-      });
-
-      it("Reverts when the recipient is stETH contract", async function () {
-        const transferAmount = await steth.balanceOf(holder);
-
-        await expect(steth.connect(holder).transfer(steth, transferAmount)).to.be.revertedWith(
-          "TRANSFER_TO_STETH_CONTRACT",
-        );
-      });
+      await expect(steth.connect(holder).transfer(ZeroAddress, transferAmount)).to.be.revertedWith(
+        "TRANSFER_TO_ZERO_ADDR",
+      );
     });
 
-    context("Allowance", function () {
-      this.beforeEach(async function () {
-        const allowance = await steth.balanceOf(holder);
-        await steth.connect(holder).approve(spender, allowance);
-        expect(await steth.allowance(holder, spender)).to.equal(allowance);
-      });
+    it("Reverts when the recipient is stETH contract", async function () {
+      const { steth, holder } = await loadFixture(deploySteth);
 
-      context("Function `increaseAllowance`", function () {
-        it("Increases the spender's allowance by the amount and fires the `Approval` event", async function () {
-          const allowance = await steth.allowance(holder, spender);
-          const increaseAmount = ether("1.0");
-          const updatedAllowance = allowance + increaseAmount;
+      const transferAmount = await steth.balanceOf(holder);
 
-          await expect(steth.connect(holder).increaseAllowance(spender, increaseAmount))
-            .to.emit(steth, "Approval")
-            .withArgs(holder.address, spender.address, updatedAllowance);
+      await expect(steth.connect(holder).transfer(steth, transferAmount)).to.be.revertedWith(
+        "TRANSFER_TO_STETH_CONTRACT",
+      );
+    });
+  });
 
-          expect(await steth.allowance(holder, spender)).to.equal(updatedAllowance);
-        });
-      });
+  context("increaseAllowance", function () {
+    it("Increases the spender's allowance by the amount and fires the `Approval` event", async function () {
+      const { steth, holder, spender } = await loadFixture(deployApprovedSteth);
 
-      context("Function `decreaseAllowance`", function () {
-        it("Decreases the spender's allowance by the amount and fires the `Approval` event", async function () {
-          const allowance = await steth.allowance(holder, spender);
-          const decreaseAmount = ether("1.0");
-          const updatedAllowance = allowance - decreaseAmount;
+      const allowance = await steth.allowance(holder, spender);
+      const increaseAmount = ether("1.0");
+      const updatedAllowance = allowance + increaseAmount;
 
-          await expect(steth.connect(holder).decreaseAllowance(spender, decreaseAmount))
-            .to.emit(steth, "Approval")
-            .withArgs(holder.address, spender.address, updatedAllowance);
+      await expect(steth.connect(holder).increaseAllowance(spender, increaseAmount))
+        .to.emit(steth, "Approval")
+        .withArgs(holder.address, spender.address, updatedAllowance);
 
-          expect(await steth.allowance(holder, spender)).to.equal(updatedAllowance);
-        });
-      });
+      expect(await steth.allowance(holder, spender)).to.equal(updatedAllowance);
+    });
+  });
+
+  context("decreaseAllowance", function () {
+    it("Decreases the spender's allowance by the amount and fires the `Approval` event", async function () {
+      const { steth, holder, spender } = await loadFixture(deployApprovedSteth);
+
+      const allowance = await steth.allowance(holder, spender);
+      const decreaseAmount = ether("1.0");
+      const updatedAllowance = allowance - decreaseAmount;
+
+      await expect(steth.connect(holder).decreaseAllowance(spender, decreaseAmount))
+        .to.emit(steth, "Approval")
+        .withArgs(holder.address, spender.address, updatedAllowance);
+
+      expect(await steth.allowance(holder, spender)).to.equal(updatedAllowance);
     });
   });
 

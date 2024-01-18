@@ -1,6 +1,6 @@
 import { testERC20Compliance } from "../../common/erc20.test";
 import { ethers } from "hardhat";
-import { StethERC20__factory } from "typechain-types";
+import { StethERC20Mock__factory } from "typechain-types";
 import { ether } from "lib/units";
 
 testERC20Compliance({
@@ -23,7 +23,7 @@ async function deploy(rebaseFactor: bigint = 100n) {
   const holder = signers[signers.length - 1];
   const holderBalance = ether("10.0");
 
-  const factory = new StethERC20__factory(holder);
+  const factory = new StethERC20Mock__factory(holder);
   const steth = await factory.deploy(holder, { value: holderBalance });
 
   const rebasedTotalSupply = (holderBalance * rebaseFactor) / 100n;
