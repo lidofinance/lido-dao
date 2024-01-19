@@ -41,13 +41,10 @@ export function deriveStethDomainSeparator(stethAddress: string): string {
 }
 
 interface DeriveTypeDataHashArgs {
-  address: string;
   structHash: string;
+  domainSeparator: string;
 }
 
-export function deriveTypeDataHash({ address, structHash }: DeriveTypeDataHashArgs): string {
-  return solidityPackedKeccak256(
-    ["bytes", "bytes32", "bytes32"],
-    ["0x1901", deriveStethDomainSeparator(address), structHash],
-  );
+export function deriveTypeDataHash({ structHash, domainSeparator }: DeriveTypeDataHashArgs): string {
+  return solidityPackedKeccak256(["bytes", "bytes32", "bytes32"], ["0x1901", domainSeparator, structHash]);
 }
