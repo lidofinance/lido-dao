@@ -6,7 +6,7 @@ import { ONE_ETHER, batch, ether, resetState } from "lib";
 import { describe } from "mocha";
 import { StethMock__factory } from "typechain-types";
 
-describe.only("StETH.sol", function () {
+describe("StETH.sol", function () {
   async function deploySteth() {
     const signers = await ethers.getSigners();
     const [holder, recipient, spender] = signers;

@@ -20,21 +20,23 @@ testERC20Compliance({
 
 async function deploy(rebaseFactor: bigint = 100n) {
   const signers = await ethers.getSigners();
-  const holder = signers[signers.length - 1];
+  const [deployer, holder, recipient, spender] = signers;
   const holderBalance = ether("10.0");
 
-  const factory = new StethERC20Mock__factory(holder);
+  const factory = new StethERC20Mock__factory(deployer);
   const steth = await factory.deploy(holder, { value: holderBalance });
 
-  const rebasedTotalSupply = (holderBalance * rebaseFactor) / 100n;
-  await steth.setTotalPooledEther(rebasedTotalSupply);
+  const totalSupply = (holderBalance * rebaseFactor) / 100n;
+  await steth.setTotalPooledEther(totalSupply);
 
   return {
-    token: steth,
+    token: steth.connect(holder),
     name: "Liquid staked Ether 2.0",
     symbol: "stETH",
     decimals: 18n,
-    totalSupply: rebasedTotalSupply,
+    totalSupply,
     holder,
+    recipient,
+    spender,
   };
 }
