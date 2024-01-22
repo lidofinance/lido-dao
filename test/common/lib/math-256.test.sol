@@ -129,7 +129,7 @@ contract Math256Test is Test {
         assertEq(Math256.max(b, a), a);
     }
 
-    function testMaxInt256_b_a_postive_negative() public {
+    function testMaxInt256_b_a_positive_negative() public {
         int256 a = 1;
         int256 b = -2;
 
