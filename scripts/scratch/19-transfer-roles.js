@@ -68,7 +68,9 @@ async function deployNewContracts({ web3, artifacts }) {
   await changeOssifiableProxyAdmin(state.validatorsExitBusOracle.proxy.address, deployer, agent)
   await changeOssifiableProxyAdmin(state.withdrawalQueueERC721.proxy.address, deployer, agent)
 
-  await changeDepositSecurityModuleAdmin(state.depositSecurityModule.address, deployer, agent)
+  if (state.depositSecurityModule.deployParameters.usePredefinedAddressInstead === null) {
+    await changeDepositSecurityModuleAdmin(state.depositSecurityModule.address, deployer, agent)
+  }
 
   await TotalGasCounter.incrementTotalGasUsedInStateFile()
 }

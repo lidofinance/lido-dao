@@ -164,17 +164,22 @@ async function deployNewContracts({ web3, artifacts }) {
   //
   // === DepositSecurityModule ===
   //
-  const {maxDepositsPerBlock, minDepositBlockDistance, pauseIntentValidityPeriodBlocks} = depositSecurityModuleParams
-  const depositSecurityModuleArgs = [
-    lidoAddress,
-    depositContract,
-    stakingRouterAddress,
-    maxDepositsPerBlock,
-    minDepositBlockDistance,
-    pauseIntentValidityPeriodBlocks,
-  ]
-  const depositSecurityModuleAddress = await deployWithoutProxy(
-    "depositSecurityModule", "DepositSecurityModule", deployer, depositSecurityModuleArgs)
+  let depositSecurityModuleAddress = depositSecurityModuleParams.usePredefinedAddressInstead
+  if (depositSecurityModuleAddress === null) {
+    const {maxDepositsPerBlock, minDepositBlockDistance, pauseIntentValidityPeriodBlocks} = depositSecurityModuleParams
+    const depositSecurityModuleArgs = [
+      lidoAddress,
+      depositContract,
+      stakingRouterAddress,
+      maxDepositsPerBlock,
+      minDepositBlockDistance,
+      pauseIntentValidityPeriodBlocks,
+    ]
+    depositSecurityModuleAddress = await deployWithoutProxy(
+      "depositSecurityModule", "DepositSecurityModule", deployer, depositSecurityModuleArgs)
+  } else {
+    console.log(`NB: skipping deployment of DepositSecurityModule - using the predefined address ${depositSecurityModuleAddress} instead`)
+  }
   logWideSplitter()
 
   //
