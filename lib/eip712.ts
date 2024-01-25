@@ -1,6 +1,9 @@
-import { AbiCoder, keccak256, solidityPackedKeccak256 } from "ethers";
+import { AbiCoder, HDNodeWallet, keccak256, solidityPackedKeccak256 } from "ethers";
 import { network } from "hardhat";
+import { PermitSigner } from "typechain-types/*";
+import { sign } from "./ec";
 import { streccak } from "./keccak";
+import { de0x } from "./string";
 
 interface DeriveDomainSeparatorArgs {
   type: string;
@@ -47,4 +50,64 @@ interface DeriveTypeDataHashArgs {
 
 export function deriveTypeDataHash({ structHash, domainSeparator }: DeriveTypeDataHashArgs): string {
   return solidityPackedKeccak256(["bytes", "bytes32", "bytes32"], ["0x1901", domainSeparator, structHash]);
+}
+
+interface SignPermitArgs {
+  type: string;
+  owner: HDNodeWallet;
+  spender: HDNodeWallet;
+  value: bigint;
+  nonce: bigint;
+  deadline: bigint;
+  steth: string;
+}
+
+export function signStethPermit({ type, owner, spender, value, nonce, deadline, steth }: SignPermitArgs) {
+  type = streccak(type);
+
+  const parameters = keccak256(
+    new AbiCoder().encode(
+      ["bytes32", "address", "address", "uint256", "uint256", "uint256"],
+      [type, owner.address, spender.address, value, nonce, deadline],
+    ),
+  );
+
+  const domainSeparator = deriveStethDomainSeparator(steth);
+  const message = keccak256("0x1901" + de0x(domainSeparator) + de0x(parameters));
+
+  return sign(message, owner.privateKey);
+}
+
+interface SignPermitEIP1271Args {
+  type: string;
+  owner: PermitSigner;
+  spender: PermitSigner;
+  value: bigint;
+  nonce: bigint;
+  deadline: bigint;
+  steth: string;
+}
+
+export async function signStethPermitEIP1271({
+  type,
+  owner,
+  spender,
+  value,
+  nonce,
+  deadline,
+  steth,
+}: SignPermitEIP1271Args) {
+  type = streccak(type);
+
+  const parameters = keccak256(
+    new AbiCoder().encode(
+      ["bytes32", "address", "address", "uint256", "uint256", "uint256"],
+      [type, await owner.getAddress(), await spender.getAddress(), value, nonce, deadline],
+    ),
+  );
+
+  const domainSeparator = deriveStethDomainSeparator(steth);
+  const message = keccak256("0x1901" + de0x(domainSeparator) + de0x(parameters));
+
+  return owner.sign(message);
 }

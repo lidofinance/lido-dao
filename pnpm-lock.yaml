@@ -91,6 +91,9 @@ devDependencies:
   eslint-config-prettier:
     specifier: ^9.0.0
     version: 9.0.0(eslint@8.48.0)
+  ethereumjs-util:
+    specifier: ^7.1.5
+    version: 7.1.5
   ethers:
     specifier: ^6.4.0
     version: 6.7.1
