@@ -2,12 +2,12 @@ import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { Wallet, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
-import { days, ether, signStethPermit, signStethPermitEIP1271 } from "lib";
+import { days, ether, randomAddress, signStethPermit, signStethPermitEIP1271 } from "lib";
 import { describe } from "mocha";
 import { EIP712StETH__factory, StethPermitInheritor__factory } from "typechain-types/*";
 import { PermitSigner__factory } from "typechain-types/factories/test/0.4.24/Lido/PermitSigner.sol";
 
-describe.only("StethPermit", () => {
+describe("StethPermit", () => {
   async function deploy() {
     const [deployer] = await ethers.getSigners();
 
@@ -40,7 +40,7 @@ describe.only("StethPermit", () => {
     const permit = {
       type: "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)",
       owner: Wallet.createRandom(),
-      spender: Wallet.createRandom(),
+      spender: randomAddress(),
       value: ether("1.0"),
       deadline: BigInt(await time.latest()) + days(7n),
     };
@@ -62,7 +62,7 @@ describe.only("StethPermit", () => {
     await loadFixture(initialize);
 
     const owner = await new PermitSigner__factory(deployer).deploy();
-    const spender = await new PermitSigner__factory(deployer).deploy();
+    const spender = randomAddress();
 
     const permit = {
       type: "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)",
@@ -146,7 +146,7 @@ describe.only("StethPermit", () => {
 
       await expect(steth.permit(owner, spender, value, deadline, v, r, s))
         .to.emit(steth, "Approval")
-        .withArgs(owner.address, spender.address, value);
+        .withArgs(owner.address, spender, value);
 
       expect(await steth.nonces(owner)).to.equal(1n);
       expect(await steth.allowance(owner, spender)).to.equal(value);
@@ -161,7 +161,7 @@ describe.only("StethPermit", () => {
 
       await expect(steth.permit(owner, spender, value, deadline, v, r, s))
         .to.emit(steth, "Approval")
-        .withArgs(await owner.getAddress(), await spender.getAddress(), value);
+        .withArgs(await owner.getAddress(), spender, value);
 
       expect(await steth.nonces(owner)).to.equal(1n);
       expect(await steth.allowance(owner, spender)).to.equal(value);

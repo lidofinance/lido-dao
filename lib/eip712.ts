@@ -4,6 +4,7 @@ import { PermitSigner } from "typechain-types/*";
 import { sign } from "./ec";
 import { streccak } from "./keccak";
 import { de0x } from "./string";
+import { toBuffer } from "ethereumjs-util";
 
 interface DeriveDomainSeparatorArgs {
   type: string;
@@ -55,7 +56,7 @@ export function deriveTypeDataHash({ structHash, domainSeparator }: DeriveTypeDa
 interface SignPermitArgs {
   type: string;
   owner: HDNodeWallet;
-  spender: HDNodeWallet;
+  spender: string;
   value: bigint;
   nonce: bigint;
   deadline: bigint;
@@ -63,12 +64,10 @@ interface SignPermitArgs {
 }
 
 export function signStethPermit({ type, owner, spender, value, nonce, deadline, steth }: SignPermitArgs) {
-  type = streccak(type);
-
   const parameters = keccak256(
     new AbiCoder().encode(
       ["bytes32", "address", "address", "uint256", "uint256", "uint256"],
-      [type, owner.address, spender.address, value, nonce, deadline],
+      [streccak(type), owner.address, spender, value, nonce, deadline],
     ),
   );
 
@@ -81,7 +80,7 @@ export function signStethPermit({ type, owner, spender, value, nonce, deadline, 
 interface SignPermitEIP1271Args {
   type: string;
   owner: PermitSigner;
-  spender: PermitSigner;
+  spender: string;
   value: bigint;
   nonce: bigint;
   deadline: bigint;
@@ -102,12 +101,18 @@ export async function signStethPermitEIP1271({
   const parameters = keccak256(
     new AbiCoder().encode(
       ["bytes32", "address", "address", "uint256", "uint256", "uint256"],
-      [type, await owner.getAddress(), await spender.getAddress(), value, nonce, deadline],
+      [type, await owner.getAddress(), spender, value, nonce, deadline],
     ),
   );
 
   const domainSeparator = deriveStethDomainSeparator(steth);
   const message = keccak256("0x1901" + de0x(domainSeparator) + de0x(parameters));
 
-  return owner.sign(message);
+  const { v, r, s } = await owner.sign(message);
+
+  return {
+    v: Number(v),
+    r: toBuffer(r),
+    s: toBuffer(s),
+  };
 }
