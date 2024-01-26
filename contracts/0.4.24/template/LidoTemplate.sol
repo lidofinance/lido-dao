@@ -612,6 +612,7 @@ contract LidoTemplate is IsContract {
             _createPermissionForVoting(acl, _state.operators, perms[i], voting);
         }
         acl.createPermission(_state.stakingRouter, _state.operators, _state.operators.STAKING_ROUTER_ROLE(), voting);
+        acl.createPermission(_state.agent, _state.operators, _state.operators.MANAGE_NODE_OPERATOR_ROLE(), voting);
 
         // Lido
         perms[0] = _state.lido.PAUSE_ROLE();

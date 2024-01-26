@@ -17,6 +17,7 @@ async function saveDeployParameters({ web3, artifacts }) {
     GATE_SEAL_FACTORY,
     GENESIS_TIME,
     DEPOSIT_CONTRACT,
+    WITHDRAWAL_QUEUE_BASE_URI,
   })
 
   const state = readNetworkState(network.name, netId)
