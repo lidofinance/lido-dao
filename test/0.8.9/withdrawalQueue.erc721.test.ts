@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 import { testERC721Compliance } from "../common/erc721.test";
-import { ether } from "../../lib";
+import { ether } from "lib";
 
 testERC721Compliance({
   tokenName: "WithdrawalQueue NFT",

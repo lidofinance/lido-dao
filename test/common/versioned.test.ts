@@ -2,8 +2,8 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { ExclusiveSuiteFunction, PendingSuiteFunction, describe } from "mocha";
-import { MAX_UINT256 } from "../../lib";
-import { OssifiableProxy, Versioned, Versioned__factory } from "../../typechain-types";
+import { MAX_UINT256 } from "lib";
+import { OssifiableProxy, Versioned, Versioned__factory } from "typechain-types";
 
 interface VersionUpdate {
   call: string;

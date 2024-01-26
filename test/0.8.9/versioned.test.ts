@@ -2,8 +2,8 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { describe } from "mocha";
-import { MAX_UINT256, proxify, streccak } from "../../lib";
-import { VersionedConsumerMock } from "../../typechain-types";
+import { MAX_UINT256, proxify, streccak } from "lib";
+import { VersionedConsumerMock } from "typechain-types";
 
 describe("Versioned.sol", function () {
   let admin: HardhatEthersSigner;
