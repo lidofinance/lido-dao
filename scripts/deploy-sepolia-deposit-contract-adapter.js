@@ -14,8 +14,9 @@ async function deployNewContracts({ web3, artifacts }) {
   }
 
   const sepoliaDepositContract = "0x7f02C3E3c98b133055B8B348B2Ac625669Ed295D"
-  const constructorArgs = [sepoliaDepositContract]
-  const Contract = await ethers.getContractFactory("DepositContractAdapter")
+  // const constructorArgs = [sepoliaDepositContract]
+  const constructorArgs = []
+  const Contract = await ethers.getContractFactory("SepoliaDepositAdapter")
   const txParams = {
     type: 2,
     maxPriorityFeePerGas: ethers.utils.parseUnits(String(2), "gwei"),
