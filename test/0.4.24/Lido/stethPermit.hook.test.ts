@@ -15,7 +15,7 @@ import {
   PermitSigner__factory,
 } from "typechain-types";
 
-describe.only("Permit", () => {
+describe("Permit", () => {
   let deployer: HardhatEthersSigner;
 
   let steth: EIP2612StethMock;
