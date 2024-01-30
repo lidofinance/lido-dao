@@ -7,7 +7,8 @@ pragma solidity 0.8.9;
 
 contract SepoliaDepositAdapter {
 
-    uint public constant dnaDigits = 16;
+    uint public constant TEST_VALUE = 16;
+    address public depositContract;
 
     function deposit(
         bytes calldata pubkey,
@@ -18,6 +19,7 @@ contract SepoliaDepositAdapter {
     }
 
     constructor(address _deposit_contract) {
+        depositContract = _deposit_contract;
     }
 
 

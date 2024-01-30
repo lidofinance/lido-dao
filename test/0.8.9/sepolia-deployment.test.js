@@ -10,7 +10,7 @@ contract('SepoliaDepositAdapter', ([deployer]) => {
 
   before('deploy lido with dao', async () => {
     depositAdapter = await SepoliaDepositAdapter.new(deployer, { from: deployer })
-    const dna = await depositAdapter.dnaDigits()
+    const dna = await depositAdapter.TEST_VALUE()
     console.log(dna)
 
     snapshot = new EvmSnapshot(ethers.provider)
