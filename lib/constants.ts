@@ -12,3 +12,5 @@ export const ERC721METADATA_INTERFACE_ID = "0x5b5e139f";
 
 // special reserved interface id
 export const INVALID_INTERFACE_ID = "0xffffffff";
+
+export const BLOCK_TIME = 12n;

@@ -1,10 +1,10 @@
 import { describe } from "mocha";
-import { OssifiableProxy } from "../../typechain-types";
+import { OssifiableProxy } from "typechain-types";
 import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
-import { VersionedMock } from "../../typechain-types/contracts/0.4.24/test_helpers";
-import { VersionedMock__factory } from "../../typechain-types/factories/contracts/0.4.24/test_helpers";
+import { VersionedMock } from "typechain-types/contracts/0.4.24/test_helpers";
+import { VersionedMock__factory } from "typechain-types/factories/contracts/0.4.24/test_helpers";
 
 // TODO: rewrite to be reusable for any derived contract
 describe("Versioned", function () {
