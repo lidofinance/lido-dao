@@ -7,6 +7,8 @@ pragma solidity 0.8.9;
 
 contract SepoliaDepositAdapter {
 
+    uint public constant dnaDigits = 16;
+
     function deposit(
         bytes calldata pubkey,
         bytes calldata withdrawal_credentials,
@@ -15,7 +17,9 @@ contract SepoliaDepositAdapter {
     ) external payable {
     }
 
-    constructor() {
+    constructor(address _deposit_contract) {
     }
+
+
 
 }
