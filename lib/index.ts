@@ -7,3 +7,6 @@ export * from "./type";
 export * from "./eip712";
 export * from "./keccak";
 export * from "./proxy";
+export * from "./time";
+export * from "./string";
+export * from "./ec";

@@ -1,8 +1,8 @@
 import { ethers } from "hardhat";
-import { randomAddress } from "../../../lib";
+import { randomAddress } from "lib";
 import testVersionedCompliance from "../../common/versioned.test";
 import { randomBytes } from "crypto";
-import { StakingRouter__factory } from "../../../typechain-types";
+import { StakingRouter__factory } from "typechain-types";
 
 testVersionedCompliance({
   name: "StakingRouter",

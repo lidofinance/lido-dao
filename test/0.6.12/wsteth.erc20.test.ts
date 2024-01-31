@@ -1,34 +1,34 @@
 import { ethers } from "hardhat";
+import { ether } from "lib/units";
+import { WstETH__factory } from "typechain-types";
 import { testERC20Compliance } from "../common/erc20.test";
-import { parseUnits } from "ethers";
+import { StethMinimalMockWithTotalPooledEther__factory } from "typechain-types";
 
 testERC20Compliance({
   tokenName: "wstETH",
   deploy: async () => {
-    const initialSupply = parseUnits("1.0", "ether");
-    const userBalance = parseUnits("10.0", "ether");
-
-    const steth = await ethers.deployContract("StETHMock", { value: initialSupply });
-
     const signers = await ethers.getSigners();
-    const holder = signers[signers.length - 1];
+    const [deployer, holder, recipient, spender] = signers;
+    const totalSupply = ether("10.0");
 
-    await steth.mintSteth(holder, { value: userBalance });
+    const stethFactory = new StethMinimalMockWithTotalPooledEther__factory(deployer);
+    const steth = await stethFactory.deploy(holder, { value: totalSupply });
 
-    const wsteth = await ethers.deployContract("WstETHMock", [await steth.getAddress()]);
+    const wstethFactory = new WstETH__factory(deployer);
+    const wsteth = await wstethFactory.deploy(await steth.getAddress());
 
-    await steth.connect(holder).approve(await wsteth.getAddress(), userBalance);
-    await wsteth.connect(holder).wrap(userBalance);
-
-    const totalSupply = userBalance;
+    await steth.connect(holder).approve(await wsteth.getAddress(), totalSupply);
+    await wsteth.connect(holder).wrap(totalSupply);
 
     return {
-      token: wsteth,
+      token: wsteth.connect(holder),
       name: "Wrapped liquid staked Ether 2.0",
       symbol: "wstETH",
       decimals: 18n,
       totalSupply,
       holder,
+      recipient,
+      spender,
     };
   },
 });

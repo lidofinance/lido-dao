@@ -1,10 +1,10 @@
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { Snapshot, batch } from "../../lib";
-import { ethers } from "hardhat";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { ERC20 } from "../../typechain-types/@openzeppelin/contracts/token/ERC20/ERC20";
 import { parseUnits } from "ethers";
+import { batch } from "lib";
 import { ExclusiveSuiteFunction, PendingSuiteFunction, describe } from "mocha";
+import { ERC20 } from "typechain-types/@openzeppelin/contracts/token/ERC20/ERC20";
 
 interface ERC20Target {
   tokenName: string;
@@ -15,6 +15,8 @@ interface ERC20Target {
     decimals: bigint;
     totalSupply: bigint;
     holder: HardhatEthersSigner;
+    spender: HardhatEthersSigner;
+    recipient: HardhatEthersSigner;
   }>;
   suiteFunction?: ExclusiveSuiteFunction | PendingSuiteFunction;
 }
@@ -51,29 +53,10 @@ interface ERC20Target {
  */
 export function testERC20Compliance({ tokenName, deploy, suiteFunction = describe }: ERC20Target) {
   suiteFunction(`${tokenName} ERC-20 Compliance`, function () {
-    let token: ERC20;
-    let name: string;
-    let symbol: string;
-    let decimals: bigint;
-    let totalSupply: bigint;
-    let holder: HardhatEthersSigner;
-
-    let originalState: string;
-
-    this.beforeAll(async function () {
-      originalState = await Snapshot.take();
-    });
-
-    this.afterAll(async function () {
-      await Snapshot.restore(originalState);
-    });
-
-    this.beforeEach(async function () {
-      ({ token, name, symbol, decimals, totalSupply, holder } = await deploy());
-    });
-
     context("name", function () {
       it("[OPTIONAL] Returns the name of the token", async function () {
+        const { token, name } = await loadFixture(deploy);
+
         if (typeof token.name !== "function") this.skip();
 
         expect(await token.name()).to.equal(name);
@@ -82,6 +65,8 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
 
     context("symbol", function () {
       it("[OPTIONAL] Returns the symbol of the token", async function () {
+        const { token, symbol } = await loadFixture(deploy);
+
         if (typeof token.symbol !== "function") this.skip();
 
         expect(await token.symbol()).to.equal(symbol);
@@ -90,30 +75,36 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
 
     context("decimals", function () {
       it("[OPTIONAL] Returns the number of decimals the token uses", async function () {
+        const { token, decimals } = await loadFixture(deploy);
+
         if (typeof token.decimals !== "function") this.skip();
 
         expect(await token.decimals()).to.equal(decimals);
       });
     });
 
-    context("name", function () {
+    context("totalSupply", function () {
       it("Returns the total token supply", async function () {
+        const { token, totalSupply } = await loadFixture(deploy);
+
         expect(await token.totalSupply()).to.equal(totalSupply);
       });
     });
 
     context("balanceOf", function () {
       it("Returns the account balance of another account", async function () {
+        const { token, holder } = await loadFixture(deploy);
+
         expect(await token.balanceOf(holder)).to.be.greaterThan(0n);
       });
     });
 
     context("allowance", function () {
       it("Returns the amount which the spender is still allowed to withdraw from the holder", async function () {
-        const [spender] = await ethers.getSigners();
+        const { token, holder, spender } = await loadFixture(deploy);
         const allowance = parseUnits("1.0");
 
-        await expect(token.connect(holder).approve(spender, allowance))
+        await expect(token.approve(spender, allowance))
           .to.emit(token, "Approval")
           .withArgs(holder.address, spender.address, allowance);
 
@@ -122,31 +113,17 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
     });
 
     context("transfer", function () {
-      let recipient: HardhatEthersSigner;
-      let transferAmount: bigint;
-
-      let originalState: string;
-
-      this.beforeAll(async function () {
-        originalState = await Snapshot.take();
-      });
-
-      this.afterAll(async function () {
-        await Snapshot.restore(originalState);
-      });
-
-      this.beforeEach(async function () {
-        [recipient] = await ethers.getSigners();
-        transferAmount = await token.balanceOf(holder);
-      });
-
       it("Transfers an amount of tokens to the recipient, and MUST fire the `Transfer` event", async function () {
+        const { token, holder, recipient } = await loadFixture(deploy);
+
         const before = await batch({
           holderBalance: token.balanceOf(holder),
           recipientBalance: token.balanceOf(recipient),
         });
 
-        await expect(token.connect(holder).transfer(recipient, transferAmount))
+        const transferAmount = before.holderBalance;
+
+        await expect(token.transfer(recipient, transferAmount))
           .to.emit(token, "Transfer")
           .withArgs(holder.address, recipient.address, transferAmount);
 
@@ -160,7 +137,7 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
       });
 
       it("MUST treat transfers of 0 values as normal transfers and fire the `Transfer` event.", async function () {
-        const [recipient] = await ethers.getSigners();
+        const { token, holder, recipient } = await loadFixture(deploy);
 
         const before = await batch({
           holderBalance: token.balanceOf(holder),
@@ -169,7 +146,7 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
 
         const transferAmount = 0n;
 
-        await expect(token.connect(holder).transfer(recipient, transferAmount))
+        await expect(token.transfer(recipient, transferAmount))
           .to.emit(token, "Transfer")
           .withArgs(holder.address, recipient.address, transferAmount);
 
@@ -183,7 +160,7 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
       });
 
       it("SHOULD throw if the message caller’s account balance does not have enough tokens to spend", async function () {
-        const [recipient] = await ethers.getSigners();
+        const { token, holder, recipient } = await loadFixture(deploy);
 
         const before = await batch({
           holderBalance: token.balanceOf(holder),
@@ -193,50 +170,44 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
         // due to the stETH 1-2 stWei error margin, which is why we exceed by 3
         const transferAmount = before.holderBalance + 3n;
 
-        await expect(token.connect(holder).transfer(recipient, transferAmount)).to.be.reverted;
+        await expect(token.transfer(recipient, transferAmount)).to.be.reverted;
       });
 
       it("Returns `true` if the transfer succeeds", async function () {
-        const [recipient] = await ethers.getSigners();
+        const { token, holder, recipient } = await loadFixture(deploy);
 
         const [success] = await token.connect(holder).transfer.staticCallResult(recipient, parseUnits("1.0"));
         expect(success).to.equal(true);
       });
     });
 
+    async function setupAllowance() {
+      const deployed = await loadFixture(deploy);
+      const { token, holder, spender } = deployed;
+      const approveAmount = await token.balanceOf(holder);
+
+      const allowanceBefore = await token.allowance(holder, spender);
+
+      await expect(token.approve(spender, approveAmount))
+        .to.emit(token, "Approval")
+        .withArgs(holder.address, spender.address, approveAmount);
+
+      expect(await token.allowance(holder, spender)).to.equal(allowanceBefore + approveAmount);
+
+      return deployed;
+    }
+
     context("transferFrom", function () {
-      let spender: HardhatEthersSigner, recipient: HardhatEthersSigner;
-      let transferAmount: bigint;
-
-      let originalState: string;
-
-      this.beforeAll(async function () {
-        originalState = await Snapshot.take();
-      });
-
-      this.afterAll(async function () {
-        await Snapshot.restore(originalState);
-      });
-
-      this.beforeEach(async function () {
-        [spender, recipient] = await ethers.getSigners();
-        transferAmount = await token.balanceOf(holder);
-
-        const allowanceBefore = await token.allowance(holder, spender);
-
-        await expect(token.connect(holder).approve(spender, transferAmount))
-          .to.emit(token, "Approval")
-          .withArgs(holder.address, spender.address, transferAmount);
-
-        expect(await token.allowance(holder, spender)).to.equal(allowanceBefore + transferAmount);
-      });
-
       it("Transfers an amount of tokens from to the recipient on behalf of the holder, and MUST fire the `Transfer` event", async function () {
+        const { token, holder, spender, recipient } = await loadFixture(setupAllowance);
+
         const before = await batch({
           holderBalance: token.balanceOf(holder),
           spenderAllowance: token.allowance(holder, spender),
           recipientBalance: token.balanceOf(recipient),
         });
+
+        const transferAmount = before.spenderAllowance;
 
         await expect(token.connect(spender).transferFrom(holder, recipient, transferAmount))
           .to.emit(token, "Transfer")
@@ -254,11 +225,15 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
       });
 
       it("MUST treat transfers of 0 values as normal transfers and fire the `Transfer` event.", async function () {
+        const { token, holder, spender, recipient } = await loadFixture(setupAllowance);
+
         const before = await batch({
           holderBalance: token.balanceOf(holder),
           spenderAllowance: token.allowance(holder, spender),
           recipientBalance: token.balanceOf(recipient),
         });
+
+        const transferAmount = before.spenderAllowance;
 
         await expect(token.connect(spender).transferFrom(holder, recipient, transferAmount))
           .to.emit(token, "Transfer")
@@ -276,13 +251,15 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
       });
 
       it("SHOULD throw if the message caller’s account balance does not have enough tokens to spend", async function () {
+        const { token, holder, spender, recipient } = await loadFixture(setupAllowance);
+        const transferAmount = await token.allowance(holder, spender);
         const insufficientTransferAmount = transferAmount + 1n;
 
         await expect(token.connect(spender).transferFrom(holder, recipient, insufficientTransferAmount)).to.be.reverted;
       });
 
       it("Returns `true` if the transfer succeeds", async function () {
-        const [recipient] = await ethers.getSigners();
+        const { token, holder, spender, recipient } = await loadFixture(setupAllowance);
 
         const [success] = await token
           .connect(spender)
@@ -292,34 +269,11 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
     });
 
     context("approve", function () {
-      let spender: HardhatEthersSigner, recipient: HardhatEthersSigner;
-      let approveAmount: bigint;
-
-      let originalState: string;
-
-      this.beforeAll(async function () {
-        originalState = await Snapshot.take();
-      });
-
-      this.afterAll(async function () {
-        await Snapshot.restore(originalState);
-      });
-
-      this.beforeEach(async function () {
-        [spender, recipient] = await ethers.getSigners();
-        approveAmount = await token.balanceOf(holder);
-
-        const allowanceBefore = await token.allowance(holder, spender);
-
-        await expect(token.connect(holder).approve(spender, approveAmount))
-          .to.emit(token, "Approval")
-          .withArgs(holder.address, spender.address, approveAmount);
-
-        expect(await token.allowance(holder, spender)).to.equal(allowanceBefore + approveAmount);
-      });
-
       for (const transferCount of [1n, 2n, 5n]) {
         it(`Allows the spender to transfer on behalf of the holder multiples times (${transferCount}), up to the approved amount`, async function () {
+          const { token, holder, spender, recipient } = await loadFixture(setupAllowance);
+          const approveAmount = await token.allowance(holder, spender);
+
           const transferAmount = approveAmount / transferCount;
           expect(transferAmount * transferCount).to.equal(approveAmount);
 
@@ -349,6 +303,8 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
 
       for (const delta of [-1n, 1n]) {
         it(`Overwrites the current allowance to a ${delta < 0 ? "smaller" : "greater"} amount`, async function () {
+          const { token, holder, spender } = await loadFixture(setupAllowance);
+          const approveAmount = await token.allowance(holder, spender);
           const updatedAllowance = approveAmount + delta;
 
           await expect(token.connect(holder).approve(spender, updatedAllowance))
@@ -360,6 +316,9 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
       }
 
       it("Returns `true` if the approve succeeds", async function () {
+        const { token, holder, spender } = await loadFixture(setupAllowance);
+        const approveAmount = await token.allowance(holder, spender);
+
         const [success] = await token.connect(holder).approve.staticCallResult(spender, approveAmount + 1n);
 
         expect(success).to.equal(true);
