@@ -4,14 +4,17 @@ import { Wallet, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 import { days, ether, randomAddress, signStethPermit, signStethPermitEIP1271 } from "lib";
 import { describe } from "mocha";
-import { EIP712StETH__factory, StethPermitInheritor__factory } from "typechain-types/*";
-import { PermitSigner__factory } from "typechain-types/factories/test/0.4.24/Lido/PermitSigner.sol";
+import { EIP712StETH__factory } from "typechain-types";
+import { OwnerWithEip712PermitSignature__factory } from "typechain-types/factories/test/0.4.24/Lido/contracts/OwnerWithEip712PermitSignature__factory";
+import { StethPermitMockWithEip712Initialization__factory } from "typechain-types/factories/test/0.4.24/Lido/contracts/StethPermitMockWithEip712Initialization__factory";
 
 describe("StethPermit", () => {
   async function deploy() {
     const [deployer] = await ethers.getSigners();
 
-    const steth = await new StethPermitInheritor__factory(deployer).deploy(deployer, { value: ether("100.0") });
+    const steth = await new StethPermitMockWithEip712Initialization__factory(deployer).deploy(deployer, {
+      value: ether("100.0"),
+    });
     const stethAddress = await steth.getAddress();
 
     return {
@@ -61,7 +64,7 @@ describe("StethPermit", () => {
     const { deployer, steth } = await loadFixture(deploy);
     await loadFixture(initialize);
 
-    const owner = await new PermitSigner__factory(deployer).deploy();
+    const owner = await new OwnerWithEip712PermitSignature__factory(deployer).deploy();
     const spender = randomAddress();
 
     const permit = {

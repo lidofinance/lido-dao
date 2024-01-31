@@ -2,7 +2,7 @@
 // for testing purposes only
 pragma solidity 0.8.9;
 
-contract LidoLocatorMockForLidoInitialize {
+contract LidoLocatorPartialReturningOnlyWithdrawalQueueAndBurner {
   address public immutable withdrawalQueue;
   address public immutable burner;
 

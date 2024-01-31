@@ -4,16 +4,16 @@ import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 import { ONE_ETHER, batch, ether, resetState } from "lib";
 import { describe } from "mocha";
-import { StethMock__factory } from "typechain-types";
+import { StethMinimalMockWithTotalPooledEther__factory } from "typechain-types/factories/test/0.4.24/Lido/contracts/StethMinimalMockWithTotalPooledEther__factory";
 
-describe("StETH.sol", function () {
+describe("StETH:non-ERC-20 behavior", function () {
   async function deploySteth() {
     const signers = await ethers.getSigners();
     const [holder, recipient, spender] = signers;
     const holderBalance = ether("10.0");
     const totalSupply = holderBalance;
 
-    const factory = new StethMock__factory(holder);
+    const factory = new StethMinimalMockWithTotalPooledEther__factory(holder);
     const steth = await factory.deploy(holder, { value: holderBalance });
 
     expect(await steth.balanceOf(holder)).to.equal(holderBalance);

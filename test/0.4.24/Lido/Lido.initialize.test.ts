@@ -4,9 +4,10 @@ import { expect } from "chai";
 import { MaxUint256, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 import { INITIAL_STETH_HOLDER, certainAddress, proxify } from "lib/address";
-import { Lido, LidoLocator, LidoLocatorMockForLidoInitialize__factory, Lido__factory } from "typechain-types/*";
+import { Lido, LidoLocator, Lido__factory } from "typechain-types";
+import { LidoLocatorPartialReturningOnlyWithdrawalQueueAndBurner__factory } from "typechain-types/factories/test/0.4.24/Lido/contracts/LidoLocatorPartialReturningOnlyWithdrawalQueueAndBurner__factory";
 
-describe.only("Lido:initialize", () => {
+describe("Lido:initialize", () => {
   let deployer: HardhatEthersSigner;
 
   let impl: Lido;
@@ -32,7 +33,7 @@ describe.only("Lido:initialize", () => {
     let locator: LidoLocator;
 
     beforeEach(async () => {
-      const factory = new LidoLocatorMockForLidoInitialize__factory(deployer);
+      const factory = new LidoLocatorPartialReturningOnlyWithdrawalQueueAndBurner__factory(deployer);
       locator = (await factory.deploy(withdrawalQueueAddress, burnerAddress)) as LidoLocator;
     });
 

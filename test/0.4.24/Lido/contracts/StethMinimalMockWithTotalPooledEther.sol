@@ -5,7 +5,7 @@ pragma solidity 0.4.24;
 
 import {StETH} from "contracts/0.4.24/StETH.sol";
 
-contract StethMock is StETH {
+contract StethMinimalMockWithTotalPooledEther is StETH {
   uint256 private totalPooledEther;
 
   constructor(address _holder) public payable {

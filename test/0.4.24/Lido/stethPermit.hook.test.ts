@@ -6,26 +6,23 @@ import { HDNodeWallet, Wallet, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 import { certainAddress, days, ether, randomAddress, signStethPermit, signStethPermitEIP1271 } from "lib";
 import { describe } from "mocha";
-import {
-  EIP2612StethMock,
-  EIP2612StethMock__factory,
-  EIP712StETH,
-  EIP712StETH__factory,
-  PermitSigner,
-  PermitSigner__factory,
-} from "typechain-types";
+import { EIP712StETH, EIP712StETH__factory } from "typechain-types";
+import { OwnerWithEip712PermitSignature__factory } from "typechain-types/factories/test/0.4.24/Lido/contracts/OwnerWithEip712PermitSignature__factory";
+import { StethPermitMockWithEip712Initialization__factory } from "typechain-types/factories/test/0.4.24/Lido/contracts/StethPermitMockWithEip712Initialization__factory";
+import { OwnerWithEip712PermitSignature } from "typechain-types/test/0.4.24/Lido/contracts/OwnerWithEip712PermitSignature";
+import { StethPermitMockWithEip712Initialization } from "typechain-types/test/0.4.24/Lido/contracts/StethPermitMockWithEip712Initialization";
 
 describe("Permit", () => {
   let deployer: HardhatEthersSigner;
 
-  let steth: EIP2612StethMock;
+  let steth: StethPermitMockWithEip712Initialization;
 
   const value = ether("1.0");
 
   beforeEach(async () => {
     [deployer] = await ethers.getSigners();
 
-    const factory = new EIP2612StethMock__factory(deployer);
+    const factory = new StethPermitMockWithEip712Initialization__factory(deployer);
     steth = await factory.deploy(deployer, { value });
   });
 
@@ -132,7 +129,7 @@ describe("Permit", () => {
         let signature: ECDSASignature;
 
         beforeEach(async () => {
-          const owner = await new PermitSigner__factory(deployer).deploy();
+          const owner = await new OwnerWithEip712PermitSignature__factory(deployer).deploy();
 
           permit = {
             type: "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)",
@@ -175,5 +172,5 @@ interface EoaPermit extends Permit {
 }
 
 interface ContractPermit extends Permit {
-  owner: PermitSigner;
+  owner: OwnerWithEip712PermitSignature;
 }
