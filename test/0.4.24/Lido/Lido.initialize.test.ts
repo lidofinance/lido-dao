@@ -4,8 +4,12 @@ import { expect } from "chai";
 import { MaxUint256, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 import { INITIAL_STETH_HOLDER, certainAddress, proxify } from "lib/address";
-import { Lido, LidoLocator, Lido__factory } from "typechain-types";
-import { LidoLocatorPartialReturningOnlyWithdrawalQueueAndBurner__factory } from "typechain-types/factories/test/0.4.24/Lido/contracts/LidoLocatorPartialReturningOnlyWithdrawalQueueAndBurner__factory";
+import {
+  Lido,
+  LidoLocator,
+  Lido__factory,
+  LidoLocatorPartialReturningOnlyWithdrawalQueueAndBurner__factory,
+} from "typechain-types";
 
 describe("Lido:initialize", () => {
   let deployer: HardhatEthersSigner;

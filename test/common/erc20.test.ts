@@ -4,7 +4,7 @@ import { expect } from "chai";
 import { parseUnits } from "ethers";
 import { batch } from "lib";
 import { ExclusiveSuiteFunction, PendingSuiteFunction, describe } from "mocha";
-import { ERC20 } from "../../typechain-types/@openzeppelin/contracts/token/ERC20/ERC20";
+import { ERC20 } from "typechain-types/@openzeppelin/contracts/token/ERC20/ERC20";
 
 interface ERC20Target {
   tokenName: string;

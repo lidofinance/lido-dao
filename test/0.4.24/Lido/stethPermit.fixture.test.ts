@@ -4,9 +4,11 @@ import { Wallet, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 import { days, ether, randomAddress, signStethPermit, signStethPermitEIP1271 } from "lib";
 import { describe } from "mocha";
-import { EIP712StETH__factory } from "typechain-types";
-import { OwnerWithEip712PermitSignature__factory } from "typechain-types/factories/test/0.4.24/Lido/contracts/OwnerWithEip712PermitSignature__factory";
-import { StethPermitMockWithEip712Initialization__factory } from "typechain-types/factories/test/0.4.24/Lido/contracts/StethPermitMockWithEip712Initialization__factory";
+import {
+  EIP712StETH__factory,
+  OwnerWithEip712PermitSignature__factory,
+  StethPermitMockWithEip712Initialization__factory,
+} from "typechain-types";
 
 describe("StethPermit", () => {
   async function deploy() {

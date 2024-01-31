@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import { ether } from "lib/units";
 import { WstETH__factory } from "typechain-types";
 import { testERC20Compliance } from "../common/erc20.test";
-import { StethMinimalMockWithTotalPooledEther__factory } from "typechain-types/factories/test/0.4.24/Lido/contracts/StethMinimalMockWithTotalPooledEther__factory";
+import { StethMinimalMockWithTotalPooledEther__factory } from "typechain-types";
 
 testERC20Compliance({
   tokenName: "wstETH",

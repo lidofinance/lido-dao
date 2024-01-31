@@ -4,7 +4,7 @@ import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 import { ONE_ETHER, batch, ether, resetState } from "lib";
 import { describe } from "mocha";
-import { StethMinimalMockWithTotalPooledEther__factory } from "typechain-types/factories/test/0.4.24/Lido/contracts/StethMinimalMockWithTotalPooledEther__factory";
+import { StethMinimalMockWithTotalPooledEther__factory } from "typechain-types";
 
 describe("StETH:non-ERC-20 behavior", function () {
   async function deploySteth() {
