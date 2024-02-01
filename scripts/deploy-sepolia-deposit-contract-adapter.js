@@ -1,4 +1,5 @@
 const runOrWrapScript = require('./helpers/run-or-wrap-script')
+const { deployBehindOssifiableProxy } = require('./helpers/deploy')
 
 const DEPLOYER = process.env.DEPLOYER || ''
 
@@ -14,19 +15,13 @@ async function deployNewContracts({ web3, artifacts }) {
   }
 
   const sepoliaDepositContract = "0x7f02C3E3c98b133055B8B348B2Ac625669Ed295D"
-  // const constructorArgs = [sepoliaDepositContract]
-  const constructorArgs = []
-  const Contract = await ethers.getContractFactory("SepoliaDepositAdapter")
-  const txParams = {
-    type: 2,
-    maxPriorityFeePerGas: ethers.utils.parseUnits(String(2), "gwei"),
-    maxFeePerGas: ethers.utils.parseUnits(String(200), "gwei"),
-    // from: DEPLOYER,
-  }
-  const contract = await Contract.deploy(...constructorArgs, txParams)
-  await contract.deployed()
+  const depositAdapterProxyOwner = "0x6885E36BFcb68CB383DfE90023a462C03BCB2AE5"
+  const constructorArgs = [sepoliaDepositContract]
 
-  console.log(contract.address)
+  const contract = await deployBehindOssifiableProxy(null, "SepoliaDepositAdapter", depositAdapterProxyOwner, DEPLOYER, 
+    constructorArgs, null)
+
+  console.log(contract)
 
 }
 
