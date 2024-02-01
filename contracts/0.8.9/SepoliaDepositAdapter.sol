@@ -8,7 +8,7 @@ pragma solidity 0.8.9;
 contract SepoliaDepositAdapter {
 
     uint public constant TEST_VALUE = 16;
-    address public depositContract;
+    address public immutable depositContract;
 
     function deposit(
         bytes calldata pubkey,
