@@ -2,7 +2,7 @@
 pragma solidity 0.4.24;
 
 import {StETHPermit} from "contracts/0.4.24/StETHPermit.sol";
-import {StethMinimalMockWithTotalPooledEther} from "test/0.4.24/Lido/contracts/StethMinimalMockWithTotalPooledEther.sol";
+import {StethMinimalMockWithTotalPooledEther} from "test/0.4.24/contracts/StethMinimalMockWithTotalPooledEther.sol";
 
 contract StethPermitMockWithEip712Initialization is StETHPermit, StethMinimalMockWithTotalPooledEther {
   constructor(address _holder) payable StethMinimalMockWithTotalPooledEther(_holder) {}
