@@ -11,7 +11,7 @@ import {
   LidoLocatorPartialReturningOnlyWithdrawalQueueAndBurner__factory,
 } from "typechain-types";
 
-describe.only("Lido:finalizeUpgrade_v2", () => {
+describe("Lido:finalizeUpgrade_v2", () => {
   let deployer: HardhatEthersSigner;
 
   let impl: LidoInitializedForFinalizeUpgradeV2;
