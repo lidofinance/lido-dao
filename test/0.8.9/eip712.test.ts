@@ -32,8 +32,8 @@ describe("EIP712StETH.sol", () => {
     eip712steth = await factory.deploy(domain.verifyingContract);
   });
 
-  context("constructor", function () {
-    it("Reverts if the verifying contract is zero address", async function () {
+  context("constructor", () => {
+    it("Reverts if the verifying contract is zero address", async () => {
       const [deployer] = await ethers.getSigners();
       const factory = new EIP712StETH__factory(deployer);
 
@@ -41,16 +41,16 @@ describe("EIP712StETH.sol", () => {
     });
   });
 
-  context("domainSeparatorV4", function () {
-    it("Returns the correct domain separator", async function () {
+  context("domainSeparatorV4", () => {
+    it("Returns the correct domain separator", async () => {
       const expectedSeparator = deriveDomainSeparator(domain);
 
       expect(await eip712steth.domainSeparatorV4(domain.verifyingContract)).to.equal(expectedSeparator);
     });
   });
 
-  context("hashTypedDataV4", function () {
-    it("Returns the message hash", async function () {
+  context("hashTypedDataV4", () => {
+    it("Returns the message hash", async () => {
       const domainSeparator = deriveDomainSeparator(domain);
 
       const expectedHash = deriveTypeDataHash({
@@ -62,8 +62,8 @@ describe("EIP712StETH.sol", () => {
     });
   });
 
-  context("eip712Domain", function () {
-    it("Returns the domain data", async function () {
+  context("eip712Domain", () => {
+    it("Returns the domain data", async () => {
       expect(await eip712steth.eip712Domain(domain.verifyingContract)).to.deep.equal([
         domain.name,
         domain.version,
