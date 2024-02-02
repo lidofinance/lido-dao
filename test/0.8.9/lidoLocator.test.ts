@@ -32,17 +32,17 @@ function randomConfig(): Config {
   }, {} as Config);
 }
 
-describe("LidoLocator.sol", function () {
+describe("LidoLocator.sol", () => {
   const config = randomConfig();
   let locator: LidoLocator;
 
-  this.beforeAll(async function () {
+  before(async () => {
     locator = await ethers.deployContract("LidoLocator", [config]);
   });
 
-  context("constructor", function () {
+  context("constructor", () => {
     for (const service of services) {
-      it(`Reverts if the \`config.${service}\` is zero address`, async function () {
+      it(`Reverts if the \`config.${service}\` is zero address`, async () => {
         const config = randomConfig();
         config[service] = ZeroAddress;
 
@@ -54,8 +54,8 @@ describe("LidoLocator.sol", function () {
     }
   });
 
-  context("coreComponents", function () {
-    it("Returns correct services in correct order", async function () {
+  context("coreComponents", () => {
+    it("Returns correct services in correct order", async () => {
       const { elRewardsVault, oracleReportSanityChecker, stakingRouter, treasury, withdrawalQueue, withdrawalVault } =
         config;
 
@@ -70,8 +70,8 @@ describe("LidoLocator.sol", function () {
     });
   });
 
-  context("oracleReportComponentsForLido", function () {
-    it("Returns correct services in correct order", async function () {
+  context("oracleReportComponentsForLido", () => {
+    it("Returns correct services in correct order", async () => {
       const {
         accountingOracle,
         elRewardsVault,

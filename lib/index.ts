@@ -10,3 +10,6 @@ export * from "./proxy";
 export * from "./time";
 export * from "./string";
 export * from "./ec";
+export * from "./dummy";
+export * from "./event";
+export * from "./aragon";

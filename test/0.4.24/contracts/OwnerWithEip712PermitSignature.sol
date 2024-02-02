@@ -2,7 +2,7 @@
 // for testing purposes only
 pragma solidity 0.8.9;
 
-contract PermitSigner {
+contract OwnerWithEip712PermitSignature {
   bytes4 public constant ERC1271_MAGIC_VALUE = 0x1626ba7e;
 
   function sign(bytes32 hash) public view returns (bytes1 v, bytes32 r, bytes32 s) {
