@@ -2,9 +2,12 @@
   "parser": "@typescript-eslint/parser",
   "extends": ["plugin:@typescript-eslint/recommended", "prettier"],
   "parserOptions": { "ecmaVersion": 2022, "sourceType": "module" },
+  "plugins": ["no-only-tests"],
   "rules": {
     "@typescript-eslint/no-explicit-any": ["warn"],
-    "@typescript-eslint/no-unused-vars": ["warn"]
+    "@typescript-eslint/no-unused-vars": ["warn"],
+    // prevents committing `describe.only` and `it.only` tests
+    "no-only-tests/no-only-tests": "warn"
   },
   "overrides": [
     {
