@@ -63,7 +63,7 @@ verify app:aragon-agent.implementation
 verify oracleDaemonConfig
 verify oracleReportSanityChecker
 # verify fakeAppProxyPinned
-# verify app:lido.proxy
+verify app:lido.proxy
 # verify depositSecurityModule
 verify withdrawalQueueERC721.implementation
 verify aragon-kernel.implementation
