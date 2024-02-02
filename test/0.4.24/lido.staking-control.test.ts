@@ -4,7 +4,7 @@ import { ethers } from "hardhat";
 import { deployLidoDao } from "lib";
 import { ACL, Lido } from "typechain-types";
 
-describe.only("Lido:staking-control", () => {
+describe("Lido:staking-control", () => {
   let deployer: HardhatEthersSigner;
   let user: HardhatEthersSigner;
 
