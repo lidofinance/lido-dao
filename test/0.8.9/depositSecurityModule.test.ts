@@ -79,7 +79,7 @@ describe("DepositSecurityModule.sol", function () {
     return await provider.getBlock("latest");
   }
 
-  this.beforeAll(async function () {
+  before(async () => {
     [admin, stranger] = await ethers.getSigners();
 
     provider = admin.provider;
@@ -116,21 +116,21 @@ describe("DepositSecurityModule.sol", function () {
     originalState = await Snapshot.take();
   });
 
-  this.afterAll(async function () {
+  after(async () => {
     await Snapshot.restore(originalState);
   });
 
   context("constructor", function () {
     let originalState: string;
 
-    this.beforeEach(async function () {
+    beforeEach(async () => {
       originalState = await Snapshot.take();
     });
-    this.afterEach(async function () {
+    afterEach(async () => {
       await Snapshot.restore(originalState);
     });
 
-    it("Reverts if the `lido` is zero address", async function () {
+    it("Reverts if the `lido` is zero address", async () => {
       const cfg = { ...config };
       cfg.lido = ZeroAddress;
       await expect(ethers.deployContract("DepositSecurityModule", Object.values(cfg))).to.be.revertedWithCustomError(
@@ -139,7 +139,7 @@ describe("DepositSecurityModule.sol", function () {
       );
     });
 
-    it("Reverts if the `depositContract` is zero address", async function () {
+    it("Reverts if the `depositContract` is zero address", async () => {
       const cfg = { ...config };
       cfg.depositContract = ZeroAddress;
       await expect(ethers.deployContract("DepositSecurityModule", Object.values(cfg))).to.be.revertedWithCustomError(
@@ -148,7 +148,7 @@ describe("DepositSecurityModule.sol", function () {
       );
     });
 
-    it("Reverts if the `stakingRouter` is zero address", async function () {
+    it("Reverts if the `stakingRouter` is zero address", async () => {
       const cfg = { ...config };
       cfg.stakingRouter = ZeroAddress;
       await expect(ethers.deployContract("DepositSecurityModule", Object.values(cfg))).to.be.revertedWithCustomError(
@@ -159,7 +159,7 @@ describe("DepositSecurityModule.sol", function () {
   });
 
   context("Constants", function () {
-    it("Returns the ATTEST_MESSAGE_PREFIX variable", async function () {
+    it("Returns the ATTEST_MESSAGE_PREFIX variable", async () => {
       const dsmAttestMessagePrefix = streccak("lido.DepositSecurityModule.ATTEST_MESSAGE");
       expect(dsmAttestMessagePrefix).to.equal("0x1085395a994e25b1b3d0ea7937b7395495fb405b31c7d22dbc3976a6bd01f2bf");
 
@@ -172,7 +172,7 @@ describe("DepositSecurityModule.sol", function () {
 
       expect(await dsm.ATTEST_MESSAGE_PREFIX()).to.equal(encodedAttestMessagePrefix);
     });
-    it("Returns the PAUSE_MESSAGE_PREFIX variable", async function () {
+    it("Returns the PAUSE_MESSAGE_PREFIX variable", async () => {
       const dsmPauseMessagePrefix = streccak("lido.DepositSecurityModule.PAUSE_MESSAGE");
       expect(dsmPauseMessagePrefix).to.equal("0x9c4c40205558f12027f21204d6218b8006985b7a6359bcab15404bcc3e3fa122");
 
@@ -185,20 +185,20 @@ describe("DepositSecurityModule.sol", function () {
 
       expect(await dsm.PAUSE_MESSAGE_PREFIX()).to.equal(encodedPauseMessagePrefix);
     });
-    it("Returns the LIDO address", async function () {
+    it("Returns the LIDO address", async () => {
       expect(await dsm.LIDO()).to.equal(config.lido);
     });
-    it("Returns the STAKING_ROUTER address", async function () {
+    it("Returns the STAKING_ROUTER address", async () => {
       expect(await dsm.STAKING_ROUTER()).to.equal(config.stakingRouter);
     });
-    it("Returns the DEPOSIT_CONTRACT address", async function () {
+    it("Returns the DEPOSIT_CONTRACT address", async () => {
       expect(await dsm.DEPOSIT_CONTRACT()).to.equal(config.depositContract);
     });
   });
 
   context("Owner", function () {
     context("Function `getOwner`", function () {
-      it("Returns the current owner of the contract", async function () {
+      it("Returns the current owner of the contract", async () => {
         expect(await dsm.getOwner()).to.equal(admin.address);
       });
     });
@@ -206,26 +206,26 @@ describe("DepositSecurityModule.sol", function () {
     context("Function `setOwner`", function () {
       let originalState: string;
 
-      this.beforeAll(async function () {
+      before(async () => {
         originalState = await Snapshot.take();
       });
 
-      this.afterAll(async function () {
+      after(async () => {
         await Snapshot.restore(originalState);
       });
 
-      it("Reverts if the `newValue` is zero address", async function () {
+      it("Reverts if the `newValue` is zero address", async () => {
         await expect(dsm.setOwner(ZeroAddress)).to.be.revertedWithCustomError(dsm, "ZeroAddress");
       });
 
-      it("Reverts if the `setOwner` called by not an owner", async function () {
+      it("Reverts if the `setOwner` called by not an owner", async () => {
         await expect(dsm.connect(stranger).setOwner(certainAddress("owner"))).to.be.revertedWithCustomError(
           dsm,
           "NotAnOwner",
         );
       });
 
-      it("Set a new owner and fires `OwnerChanged` event", async function () {
+      it("Set a new owner and fires `OwnerChanged` event", async () => {
         const valueBefore = await dsm.getOwner();
         const newOwner = certainAddress("new owner");
 
@@ -239,7 +239,7 @@ describe("DepositSecurityModule.sol", function () {
 
   context("Pause intent validity period blocks", function () {
     context("Function `getPauseIntentValidityPeriodBlocks`", function () {
-      it("Returns current `pauseIntentValidityPeriodBlocks` contract parameter", async function () {
+      it("Returns current `pauseIntentValidityPeriodBlocks` contract parameter", async () => {
         expect(await dsm.getPauseIntentValidityPeriodBlocks()).to.equal(config.pauseIntentValidityPeriodBlocks);
       });
     });
@@ -247,25 +247,25 @@ describe("DepositSecurityModule.sol", function () {
     context("Function `setPauseIntentValidityPeriodBlocks`", function () {
       let originalState: string;
 
-      this.beforeAll(async function () {
+      before(async () => {
         originalState = await Snapshot.take();
       });
 
-      this.afterAll(async function () {
+      after(async () => {
         await Snapshot.restore(originalState);
       });
 
-      it("Reverts if the `newValue` is zero parameter", async function () {
+      it("Reverts if the `newValue` is zero parameter", async () => {
         await expect(dsm.setPauseIntentValidityPeriodBlocks(0)).to.be.revertedWithCustomError(dsm, "ZeroParameter");
       });
 
-      it("Reverts if the `setPauseIntentValidityPeriodBlocks` called by not an owner", async function () {
+      it("Reverts if the `setPauseIntentValidityPeriodBlocks` called by not an owner", async () => {
         await expect(
           dsm.connect(stranger).setPauseIntentValidityPeriodBlocks(config.pauseIntentValidityPeriodBlocks),
         ).to.be.revertedWithCustomError(dsm, "NotAnOwner");
       });
 
-      it("Sets `pauseIntentValidityPeriodBlocks` and fires `PauseIntentValidityPeriodBlocksChanged` event", async function () {
+      it("Sets `pauseIntentValidityPeriodBlocks` and fires `PauseIntentValidityPeriodBlocksChanged` event", async () => {
         const newValue = config.pauseIntentValidityPeriodBlocks + 1;
 
         await expect(dsm.setPauseIntentValidityPeriodBlocks(newValue))
@@ -279,7 +279,7 @@ describe("DepositSecurityModule.sol", function () {
 
   context("Max deposits", function () {
     context("Function `getMaxDeposits`", function () {
-      it("Returns `maxDepositsPerBlock`", async function () {
+      it("Returns `maxDepositsPerBlock`", async () => {
         expect(await dsm.getMaxDeposits()).to.equal(config.maxDepositsPerBlock);
       });
     });
@@ -287,21 +287,21 @@ describe("DepositSecurityModule.sol", function () {
     context("Function `setMaxDeposits`", function () {
       let originalState: string;
 
-      this.beforeAll(async function () {
+      before(async () => {
         originalState = await Snapshot.take();
       });
 
-      this.afterAll(async function () {
+      after(async () => {
         await Snapshot.restore(originalState);
       });
 
-      it("Reverts if the `setMaxDeposits` called by not an owner", async function () {
+      it("Reverts if the `setMaxDeposits` called by not an owner", async () => {
         await expect(
           dsm.connect(stranger).setMaxDeposits(config.maxDepositsPerBlock + 1),
         ).to.be.revertedWithCustomError(dsm, "NotAnOwner");
       });
 
-      it("Sets `setMaxDeposits` and fires `MaxDepositsChanged` event", async function () {
+      it("Sets `setMaxDeposits` and fires `MaxDepositsChanged` event", async () => {
         const valueBefore = await dsm.getMaxDeposits();
 
         const newValue = config.maxDepositsPerBlock + 1;
@@ -315,7 +315,7 @@ describe("DepositSecurityModule.sol", function () {
 
   context("Min deposit block distance", function () {
     context("Function `getMinDepositBlockDistance`", function () {
-      it("Returns `getMinDepositBlockDistance`", async function () {
+      it("Returns `getMinDepositBlockDistance`", async () => {
         expect(await dsm.getMinDepositBlockDistance()).to.equal(config.minDepositBlockDistance);
       });
     });
@@ -323,25 +323,25 @@ describe("DepositSecurityModule.sol", function () {
     context("Function `setMinDepositBlockDistance`", function () {
       let originalState: string;
 
-      this.beforeAll(async function () {
+      before(async () => {
         originalState = await Snapshot.take();
       });
 
-      this.afterAll(async function () {
+      after(async () => {
         await Snapshot.restore(originalState);
       });
 
-      it("Reverts if the `setMinDepositBlockDistance` called by not an owner", async function () {
+      it("Reverts if the `setMinDepositBlockDistance` called by not an owner", async () => {
         await expect(
           dsm.connect(stranger).setMinDepositBlockDistance(config.minDepositBlockDistance + 1),
         ).to.be.revertedWithCustomError(dsm, "NotAnOwner");
       });
 
-      it("Reverts if the `newValue` is zero parameter", async function () {
+      it("Reverts if the `newValue` is zero parameter", async () => {
         await expect(dsm.setMinDepositBlockDistance(0)).to.be.revertedWithCustomError(dsm, "ZeroParameter");
       });
 
-      it("Sets the equal `newValue` as previous one and NOT fires `MinDepositBlockDistanceChanged` event", async function () {
+      it("Sets the equal `newValue` as previous one and NOT fires `MinDepositBlockDistanceChanged` event", async () => {
         await expect(dsm.setMinDepositBlockDistance(config.minDepositBlockDistance)).to.not.emit(
           dsm,
           "MinDepositBlockDistanceChanged",
@@ -350,7 +350,7 @@ describe("DepositSecurityModule.sol", function () {
         expect(await dsm.getMinDepositBlockDistance()).to.equal(config.minDepositBlockDistance);
       });
 
-      it("Sets the `newValue` and fires `MinDepositBlockDistanceChanged` event", async function () {
+      it("Sets the `newValue` and fires `MinDepositBlockDistanceChanged` event", async () => {
         const newValue = config.minDepositBlockDistance + 1;
 
         await expect(dsm.setMinDepositBlockDistance(newValue))
@@ -364,7 +364,7 @@ describe("DepositSecurityModule.sol", function () {
 
   context("Guardians", function () {
     context("Function `getGuardianQuorum`", function () {
-      it("Returns number of valid guardian signatures required to vet", async function () {
+      it("Returns number of valid guardian signatures required to vet", async () => {
         expect(await dsm.getGuardianQuorum()).to.equal(0);
       });
     });
@@ -373,22 +373,22 @@ describe("DepositSecurityModule.sol", function () {
       let originalState: string;
       const guardianQuorum = 1;
 
-      this.beforeEach(async function () {
+      beforeEach(async () => {
         originalState = await Snapshot.take();
       });
 
-      this.afterEach(async function () {
+      afterEach(async () => {
         await Snapshot.restore(originalState);
       });
 
-      it("Reverts if the `setGuardianQuorum` called by not an owner", async function () {
+      it("Reverts if the `setGuardianQuorum` called by not an owner", async () => {
         await expect(dsm.connect(stranger).setGuardianQuorum(guardianQuorum)).to.be.revertedWithCustomError(
           dsm,
           "NotAnOwner",
         );
       });
 
-      it("Sets the `newValue` and fires `GuardianQuorumChanged` event", async function () {
+      it("Sets the `newValue` and fires `GuardianQuorumChanged` event", async () => {
         await expect(dsm.setGuardianQuorum(guardianQuorum))
           .to.emit(dsm, "GuardianQuorumChanged")
           .withArgs(guardianQuorum);
@@ -396,7 +396,7 @@ describe("DepositSecurityModule.sol", function () {
         expect(await dsm.getGuardianQuorum()).to.equal(guardianQuorum);
       });
 
-      it("Sets the equal `newValue` as previous one and NOT fires `GuardianQuorumChanged` event", async function () {
+      it("Sets the equal `newValue` as previous one and NOT fires `GuardianQuorumChanged` event", async () => {
         await expect(dsm.setGuardianQuorum(guardianQuorum))
           .to.emit(dsm, "GuardianQuorumChanged")
           .withArgs(guardianQuorum);
@@ -406,7 +406,7 @@ describe("DepositSecurityModule.sol", function () {
         expect(await dsm.getGuardianQuorum()).to.equal(guardianQuorum);
       });
 
-      it("Sets the `newValue` higher than the current guardians count", async function () {
+      it("Sets the `newValue` higher than the current guardians count", async () => {
         const newGuardianQuorum = 100;
         await dsm.setGuardianQuorum(newGuardianQuorum);
         expect(await dsm.getGuardianQuorum()).to.equal(newGuardianQuorum);
@@ -417,7 +417,7 @@ describe("DepositSecurityModule.sol", function () {
     });
 
     context("Function `getGuardians`", function () {
-      it("Returns empty list of guardians initially", async function () {
+      it("Returns empty list of guardians initially", async () => {
         expect((await dsm.getGuardians()).length).to.equal(0);
       });
     });
@@ -425,19 +425,19 @@ describe("DepositSecurityModule.sol", function () {
     context("Function `isGuardian`", function () {
       let originalState: string;
 
-      this.beforeEach(async function () {
+      beforeEach(async () => {
         originalState = await Snapshot.take();
       });
 
-      this.afterEach(async function () {
+      afterEach(async () => {
         await Snapshot.restore(originalState);
       });
 
-      it("Returns false if list of guardians is empty", async function () {
+      it("Returns false if list of guardians is empty", async () => {
         expect(await dsm.isGuardian(guardian1)).to.equal(false);
       });
 
-      it("Returns false for non-guardian", async function () {
+      it("Returns false for non-guardian", async () => {
         await dsm.addGuardian(guardian1, 0);
         await dsm.addGuardian(guardian2, 0);
 
@@ -445,7 +445,7 @@ describe("DepositSecurityModule.sol", function () {
         expect(await dsm.isGuardian(guardian3)).to.equal(false);
       });
 
-      it("Returns true non-guardian", async function () {
+      it("Returns true non-guardian", async () => {
         await dsm.addGuardian(guardian1, 0);
         await dsm.addGuardian(guardian2, 0);
 
@@ -458,19 +458,19 @@ describe("DepositSecurityModule.sol", function () {
     context("Function `getGuardianIndex`", function () {
       let originalState: string;
 
-      this.beforeEach(async function () {
+      beforeEach(async () => {
         originalState = await Snapshot.take();
       });
 
-      this.afterEach(async function () {
+      afterEach(async () => {
         await Snapshot.restore(originalState);
       });
 
-      it("Returns -1 if list of guardians is empty", async function () {
+      it("Returns -1 if list of guardians is empty", async () => {
         expect(await dsm.getGuardianIndex(guardian1)).to.equal(-1);
       });
 
-      it("Returns -1 if the address is not a guardian", async function () {
+      it("Returns -1 if the address is not a guardian", async () => {
         await dsm.addGuardian(guardian1, 0);
         await dsm.addGuardian(guardian2, 0);
 
@@ -478,7 +478,7 @@ describe("DepositSecurityModule.sol", function () {
         expect(await dsm.getGuardianIndex(guardian3)).to.equal(-1);
       });
 
-      it("Returns index of the guardian", async function () {
+      it("Returns index of the guardian", async () => {
         await dsm.addGuardian(guardian1, 0);
         await dsm.addGuardian(guardian2, 0);
 
@@ -490,29 +490,29 @@ describe("DepositSecurityModule.sol", function () {
     context("Function `addGuardian`", function () {
       let originalState: string;
 
-      this.beforeEach(async function () {
+      beforeEach(async () => {
         originalState = await Snapshot.take();
       });
 
-      this.afterEach(async function () {
+      afterEach(async () => {
         await Snapshot.restore(originalState);
       });
 
-      it("Reverts if the `addGuardian` called by not an owner", async function () {
+      it("Reverts if the `addGuardian` called by not an owner", async () => {
         await expect(dsm.connect(stranger).addGuardian(guardian1, 0)).to.be.revertedWithCustomError(dsm, "NotAnOwner");
       });
 
-      it("Reverts if added zero address", async function () {
+      it("Reverts if added zero address", async () => {
         await expect(dsm.addGuardian(ZeroAddress, 0)).to.be.revertedWithCustomError(dsm, "ZeroAddress");
       });
 
-      it("Reverts if added duplicate address", async function () {
+      it("Reverts if added duplicate address", async () => {
         await dsm.addGuardian(guardian1, 0);
 
         await expect(dsm.addGuardian(guardian1, 0)).to.be.revertedWithCustomError(dsm, "DuplicateAddress");
       });
 
-      it("Adds a guardian address sets a new quorum value, fires `GuardianAdded` and `GuardianQuorumChanged` events", async function () {
+      it("Adds a guardian address sets a new quorum value, fires `GuardianAdded` and `GuardianQuorumChanged` events", async () => {
         const newQuorum = 1;
         const tx1 = await dsm.addGuardian(guardian1, newQuorum);
         expect((await dsm.getGuardians()).length).to.equal(1);
@@ -523,7 +523,7 @@ describe("DepositSecurityModule.sol", function () {
         await expect(tx1).to.emit(dsm, "GuardianQuorumChanged").withArgs(newQuorum);
       });
 
-      it("Adds a guardian address sets the same quorum value, fires `GuardianAdded` and NOT `GuardianQuorumChanged` events", async function () {
+      it("Adds a guardian address sets the same quorum value, fires `GuardianAdded` and NOT `GuardianQuorumChanged` events", async () => {
         const newQuorum = 0;
         const tx1 = await dsm.addGuardian(guardian1, newQuorum);
         expect((await dsm.getGuardians()).length).to.equal(1);
@@ -534,7 +534,7 @@ describe("DepositSecurityModule.sol", function () {
         await expect(tx1).to.not.emit(dsm, "GuardianQuorumChanged");
       });
 
-      it("Re-adds deleted guardian", async function () {
+      it("Re-adds deleted guardian", async () => {
         await dsm.addGuardian(guardian1, 0);
         await dsm.addGuardian(guardian2, 0);
         expect((await dsm.getGuardians()).length).to.equal(2);
@@ -553,29 +553,29 @@ describe("DepositSecurityModule.sol", function () {
     context("Function `addGuardians`", function () {
       let originalState: string;
 
-      this.beforeEach(async function () {
+      beforeEach(async () => {
         originalState = await Snapshot.take();
       });
 
-      this.afterEach(async function () {
+      afterEach(async () => {
         await Snapshot.restore(originalState);
       });
 
-      it("Reverts if the `addGuardians` called by not an owner", async function () {
+      it("Reverts if the `addGuardians` called by not an owner", async () => {
         await expect(dsm.connect(stranger).addGuardians([guardian1, guardian2], 0)).to.be.revertedWithCustomError(
           dsm,
           "NotAnOwner",
         );
       });
 
-      it("Reverts if added zero address", async function () {
+      it("Reverts if added zero address", async () => {
         await expect(dsm.addGuardians([guardian1, ZeroAddress, guardian2], 0)).to.be.revertedWithCustomError(
           dsm,
           "ZeroAddress",
         );
       });
 
-      it("Reverts if added duplicate address", async function () {
+      it("Reverts if added duplicate address", async () => {
         await dsm.addGuardian(guardian1, 0);
 
         await expect(dsm.addGuardians([guardian1, guardian2, guardian1], 0)).to.be.revertedWithCustomError(
@@ -584,7 +584,7 @@ describe("DepositSecurityModule.sol", function () {
         );
       });
 
-      it("Re-adds deleted guardian", async function () {
+      it("Re-adds deleted guardian", async () => {
         await dsm.addGuardians([guardian1, guardian2], 0);
         expect((await dsm.getGuardians()).length).to.equal(2);
 
@@ -602,27 +602,27 @@ describe("DepositSecurityModule.sol", function () {
     context("Function `removeGuardian`", function () {
       let originalState: string;
 
-      this.beforeEach(async function () {
+      beforeEach(async () => {
         originalState = await Snapshot.take();
       });
 
-      this.afterEach(async function () {
+      afterEach(async () => {
         await Snapshot.restore(originalState);
       });
 
-      it("Reverts if the `removeGuardian` called by not an owner", async function () {
+      it("Reverts if the `removeGuardian` called by not an owner", async () => {
         await expect(dsm.connect(stranger).removeGuardian(guardian1, 0)).to.be.revertedWithCustomError(
           dsm,
           "NotAnOwner",
         );
       });
 
-      it("Reverts if the `addr` is non-guardian address", async function () {
+      it("Reverts if the `addr` is non-guardian address", async () => {
         await dsm.addGuardian(guardian1, 0);
         await expect(dsm.removeGuardian(guardian2, 0)).to.be.revertedWithCustomError(dsm, "NotAGuardian");
       });
 
-      it("Sets a new quorum on `removeGuardian` and fires `GuardianRemoved` and `GuardianQuorumChanged` event", async function () {
+      it("Sets a new quorum on `removeGuardian` and fires `GuardianRemoved` and `GuardianQuorumChanged` event", async () => {
         const newQuorum = 2;
 
         await dsm.addGuardian(guardian1, 0);
@@ -634,7 +634,7 @@ describe("DepositSecurityModule.sol", function () {
         await expect(tx1).to.emit(dsm, "GuardianQuorumChanged").withArgs(newQuorum);
       });
 
-      it("Can be used to remove all guardians going from head", async function () {
+      it("Can be used to remove all guardians going from head", async () => {
         await dsm.addGuardians([guardian1, guardian2, guardian3], 0);
 
         await dsm.removeGuardian(guardian1, 0);
@@ -656,7 +656,7 @@ describe("DepositSecurityModule.sol", function () {
         expect(await dsm.getGuardianIndex(guardian3)).to.equal(-1);
       });
 
-      it("Can be used to remove all guardians going from tail", async function () {
+      it("Can be used to remove all guardians going from tail", async () => {
         await dsm.addGuardians([guardian1, guardian2, guardian3], 0);
 
         await dsm.removeGuardian(guardian3, 0);
@@ -678,7 +678,7 @@ describe("DepositSecurityModule.sol", function () {
         expect(await dsm.getGuardianIndex(guardian3)).to.equal(-1);
       });
 
-      it("Can be used to remove all guardians going from the middle", async function () {
+      it("Can be used to remove all guardians going from the middle", async () => {
         await dsm.addGuardians([guardian1, guardian2, guardian3], 0);
 
         await dsm.removeGuardian(guardian2, 0);
@@ -693,17 +693,17 @@ describe("DepositSecurityModule.sol", function () {
   context("Function `pauseDeposits`", function () {
     let originalState: string;
 
-    this.beforeEach(async function () {
+    beforeEach(async () => {
       originalState = await Snapshot.take();
 
       await dsm.addGuardians([guardian1, guardian2], 0);
     });
 
-    this.afterEach(async function () {
+    afterEach(async () => {
       await Snapshot.restore(originalState);
     });
 
-    it("Reverts if staking module is unregistered and fires `StakingModuleUnregistered` event on StakingRouter contract", async function () {
+    it("Reverts if staking module is unregistered and fires `StakingModuleUnregistered` event on StakingRouter contract", async () => {
       const blockNumber = 1;
 
       const sig: DepositSecurityModule.SignatureStruct = {
@@ -717,7 +717,7 @@ describe("DepositSecurityModule.sol", function () {
       );
     });
 
-    it("Reverts if signature is invalid", async function () {
+    it("Reverts if signature is invalid", async () => {
       const blockNumber = 1;
 
       const sig: DepositSecurityModule.SignatureStruct = {
@@ -730,7 +730,7 @@ describe("DepositSecurityModule.sol", function () {
       );
     });
 
-    it("Reverts if signature is not guardian", async function () {
+    it("Reverts if signature is not guardian", async () => {
       const blockNumber = await time.latestBlock();
       const validPauseMessage = new DSMPauseMessage(blockNumber, STAKING_MODULE_ID);
 
@@ -742,7 +742,7 @@ describe("DepositSecurityModule.sol", function () {
       );
     });
 
-    it("Reverts if called by an anon submitting an unrelated sig", async function () {
+    it("Reverts if called by an anon submitting an unrelated sig", async () => {
       const blockNumber = await time.latestBlock();
       const validPauseMessage = new DSMPauseMessage(blockNumber, STAKING_MODULE_ID);
 
@@ -753,7 +753,7 @@ describe("DepositSecurityModule.sol", function () {
       ).to.be.revertedWithCustomError(dsm, "InvalidSignature");
     });
 
-    it("Reverts if called with an expired `blockNumber` by a guardian", async function () {
+    it("Reverts if called with an expired `blockNumber` by a guardian", async () => {
       const blockNumber = await time.latestBlock();
       const staleBlockNumber = blockNumber - PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS;
       const validPauseMessage = new DSMPauseMessage(blockNumber, STAKING_MODULE_ID);
@@ -765,7 +765,7 @@ describe("DepositSecurityModule.sol", function () {
       ).to.be.revertedWithCustomError(dsm, "PauseIntentExpired");
     });
 
-    it("Reverts if called with an expired `blockNumber` by an anon submitting a guardian's sig", async function () {
+    it("Reverts if called with an expired `blockNumber` by an anon submitting a guardian's sig", async () => {
       const blockNumber = await time.latestBlock();
       const staleBlockNumber = blockNumber - PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS;
 
@@ -777,7 +777,7 @@ describe("DepositSecurityModule.sol", function () {
       ).to.be.revertedWithCustomError(dsm, "PauseIntentExpired");
     });
 
-    it("Reverts if called with a future `blockNumber` by a guardian", async function () {
+    it("Reverts if called with a future `blockNumber` by a guardian", async () => {
       const futureBlockNumber = (await time.latestBlock()) + 100;
 
       const sig: DepositSecurityModule.SignatureStruct = {
@@ -790,7 +790,7 @@ describe("DepositSecurityModule.sol", function () {
       ).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
-    it("Reverts if called with a future `blockNumber` by an anon submitting a guardian's sig", async function () {
+    it("Reverts if called with a future `blockNumber` by an anon submitting a guardian's sig", async () => {
       const futureBlockNumber = (await time.latestBlock()) + 100;
 
       const futurePauseMessage = new DSMPauseMessage(futureBlockNumber, STAKING_MODULE_ID);
@@ -852,7 +852,7 @@ describe("DepositSecurityModule.sol", function () {
   context("Function `unpauseDeposits`", function () {
     let originalState: string;
 
-    this.beforeEach(async () => {
+    beforeEach(async () => {
       originalState = await Snapshot.take();
 
       await dsm.addGuardians([guardian1, guardian2], 0);
@@ -870,7 +870,7 @@ describe("DepositSecurityModule.sol", function () {
         .withArgs(STAKING_MODULE_ID, StakingModuleStatus.DepositsPaused, await dsm.getAddress());
     });
 
-    this.afterEach(async () => {
+    afterEach(async () => {
       await Snapshot.restore(originalState);
     });
 
@@ -881,14 +881,14 @@ describe("DepositSecurityModule.sol", function () {
       );
     });
 
-    it("Reverts if staking module is unregistered and fires `StakingModuleUnregistered` event on StakingRouter contract", async function () {
+    it("Reverts if staking module is unregistered and fires `StakingModuleUnregistered` event on StakingRouter contract", async () => {
       await expect(dsm.unpauseDeposits(UNREGISTERED_STAKING_MODULE_ID)).to.be.revertedWithCustomError(
         stakingRouter,
         "StakingModuleUnregistered",
       );
     });
 
-    it("No events on active module", async function () {
+    it("No events on active module", async () => {
       expect(await stakingRouter.getStakingModuleStatus(STAKING_MODULE_ID)).to.equal(
         StakingModuleStatus.DepositsPaused,
       );
@@ -898,7 +898,7 @@ describe("DepositSecurityModule.sol", function () {
       await expect(dsm.unpauseDeposits(STAKING_MODULE_ID)).to.not.emit(dsm, "DepositsUnpaused");
     });
 
-    it("No events on stopped module", async function () {
+    it("No events on stopped module", async () => {
       expect(await stakingRouter.getStakingModuleStatus(STAKING_MODULE_ID)).to.equal(
         StakingModuleStatus.DepositsPaused,
       );
@@ -908,7 +908,7 @@ describe("DepositSecurityModule.sol", function () {
       await expect(dsm.unpauseDeposits(STAKING_MODULE_ID)).to.not.emit(dsm, "DepositsUnpaused");
     });
 
-    it("Unpause if called by owner and module status is `DepositsPaused` and fires events", async function () {
+    it("Unpause if called by owner and module status is `DepositsPaused` and fires events", async () => {
       expect(await stakingRouter.getStakingModuleStatus(STAKING_MODULE_ID)).to.equal(
         StakingModuleStatus.DepositsPaused,
       );
@@ -925,19 +925,19 @@ describe("DepositSecurityModule.sol", function () {
   context("Function `canDeposit`", function () {
     let originalState: string;
 
-    this.beforeEach(async () => {
+    beforeEach(async () => {
       originalState = await Snapshot.take();
     });
 
-    this.afterEach(async () => {
+    afterEach(async () => {
       await Snapshot.restore(originalState);
     });
 
-    it("Returns `false` if staking module is unregistered in StakingRouter", async function () {
+    it("Returns `false` if staking module is unregistered in StakingRouter", async () => {
       expect(await dsm.canDeposit(UNREGISTERED_STAKING_MODULE_ID)).to.equal(false);
     });
 
-    it("Returns `true` if: \n\t\t1) StakingModule is not paused \n\t\t2) DSN quorum > 0 \n\t\t3) block.number - lastDepositBlock >= minDepositBlockDistance \n\t\t4) Lido.canDeposit() is true", async function () {
+    it("Returns `true` if: \n\t\t1) StakingModule is not paused \n\t\t2) DSN quorum > 0 \n\t\t3) block.number - lastDepositBlock >= minDepositBlockDistance \n\t\t4) Lido.canDeposit() is true", async () => {
       expect(await stakingRouter.getStakingModuleIsActive(STAKING_MODULE_ID)).to.equal(true);
 
       await dsm.addGuardian(guardian1, 1);
@@ -955,7 +955,7 @@ describe("DepositSecurityModule.sol", function () {
       expect(await dsm.canDeposit(STAKING_MODULE_ID)).to.equal(true);
     });
 
-    it("Returns `false` if: \n\t\t1) StakingModule is paused \n\t\t2) DSN quorum > 0 \n\t\t3) block.number - lastDepositBlock >= minDepositBlockDistance \n\t\t4) Lido.canDeposit() is true", async function () {
+    it("Returns `false` if: \n\t\t1) StakingModule is paused \n\t\t2) DSN quorum > 0 \n\t\t3) block.number - lastDepositBlock >= minDepositBlockDistance \n\t\t4) Lido.canDeposit() is true", async () => {
       expect(await stakingRouter.getStakingModuleIsActive(STAKING_MODULE_ID)).to.equal(true);
       await stakingRouter.setStakingModuleStatus(STAKING_MODULE_ID, StakingModuleStatus.DepositsPaused);
       expect(await stakingRouter.getStakingModuleIsDepositsPaused(STAKING_MODULE_ID)).to.equal(true);
@@ -975,7 +975,7 @@ describe("DepositSecurityModule.sol", function () {
       expect(await dsm.canDeposit(STAKING_MODULE_ID)).to.equal(false);
     });
 
-    it("Returns `false` if: \n\t\t1) StakingModule is not paused \n\t\t2) DSN quorum = 0 \n\t\t3) block.number - lastDepositBlock >= minDepositBlockDistance \n\t\t4) Lido.canDeposit() is true", async function () {
+    it("Returns `false` if: \n\t\t1) StakingModule is not paused \n\t\t2) DSN quorum = 0 \n\t\t3) block.number - lastDepositBlock >= minDepositBlockDistance \n\t\t4) Lido.canDeposit() is true", async () => {
       expect(await stakingRouter.getStakingModuleIsActive(STAKING_MODULE_ID)).to.equal(true);
 
       await dsm.addGuardian(guardian1, 0);
@@ -993,7 +993,7 @@ describe("DepositSecurityModule.sol", function () {
       expect(await dsm.canDeposit(STAKING_MODULE_ID)).to.equal(false);
     });
 
-    it("Returns `false` if: \n\t\t1) StakingModule is not paused \n\t\t2) DSN quorum > 0 \n\t\t3) block.number - lastDepositBlock < minDepositBlockDistance \n\t\t4) Lido.canDeposit() is true", async function () {
+    it("Returns `false` if: \n\t\t1) StakingModule is not paused \n\t\t2) DSN quorum > 0 \n\t\t3) block.number - lastDepositBlock < minDepositBlockDistance \n\t\t4) Lido.canDeposit() is true", async () => {
       expect(await stakingRouter.getStakingModuleIsActive(STAKING_MODULE_ID)).to.equal(true);
 
       await dsm.addGuardian(guardian1, 1);
@@ -1011,7 +1011,7 @@ describe("DepositSecurityModule.sol", function () {
       expect(await dsm.canDeposit(STAKING_MODULE_ID)).to.equal(false);
     });
 
-    it("Returns `false` if: \n\t\t1) StakingModule is not paused \n\t\t2) DSN quorum > 0 \n\t\t3) block.number - lastDepositBlock >= minDepositBlockDistance \n\t\t4) Lido.canDeposit() is false", async function () {
+    it("Returns `false` if: \n\t\t1) StakingModule is not paused \n\t\t2) DSN quorum > 0 \n\t\t3) block.number - lastDepositBlock >= minDepositBlockDistance \n\t\t4) Lido.canDeposit() is false", async () => {
       expect(await stakingRouter.getStakingModuleIsActive(STAKING_MODULE_ID)).to.equal(true);
 
       await dsm.addGuardian(guardian1, 1);
@@ -1038,7 +1038,7 @@ describe("DepositSecurityModule.sol", function () {
     let validAttestMessage: DSMAttestMessage;
     let block: Block;
 
-    this.beforeEach(async () => {
+    beforeEach(async () => {
       originalState = await Snapshot.take();
       block = await getLatestBlock();
 
@@ -1054,7 +1054,7 @@ describe("DepositSecurityModule.sol", function () {
       );
     });
 
-    this.afterEach(async () => {
+    afterEach(async () => {
       await Snapshot.restore(originalState);
     });
 
