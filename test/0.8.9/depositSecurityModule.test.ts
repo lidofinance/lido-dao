@@ -56,7 +56,7 @@ function initialParams(): Params {
   } as Params;
 }
 
-describe("DepositSecurityModule.sol", function () {
+describe("DepositSecurityModule.sol", () => {
   const config = initialParams();
 
   let dsm: DepositSecurityModule;
@@ -120,7 +120,7 @@ describe("DepositSecurityModule.sol", function () {
     await Snapshot.restore(originalState);
   });
 
-  context("constructor", function () {
+  context("constructor", () => {
     let originalState: string;
 
     beforeEach(async () => {
@@ -158,7 +158,7 @@ describe("DepositSecurityModule.sol", function () {
     });
   });
 
-  context("Constants", function () {
+  context("Constants", () => {
     it("Returns the ATTEST_MESSAGE_PREFIX variable", async () => {
       const dsmAttestMessagePrefix = streccak("lido.DepositSecurityModule.ATTEST_MESSAGE");
       expect(dsmAttestMessagePrefix).to.equal("0x1085395a994e25b1b3d0ea7937b7395495fb405b31c7d22dbc3976a6bd01f2bf");
@@ -196,14 +196,14 @@ describe("DepositSecurityModule.sol", function () {
     });
   });
 
-  context("Owner", function () {
-    context("Function `getOwner`", function () {
+  context("Owner", () => {
+    context("Function `getOwner`", () => {
       it("Returns the current owner of the contract", async () => {
         expect(await dsm.getOwner()).to.equal(admin.address);
       });
     });
 
-    context("Function `setOwner`", function () {
+    context("Function `setOwner`", () => {
       let originalState: string;
 
       before(async () => {
@@ -237,14 +237,14 @@ describe("DepositSecurityModule.sol", function () {
     });
   });
 
-  context("Pause intent validity period blocks", function () {
-    context("Function `getPauseIntentValidityPeriodBlocks`", function () {
+  context("Pause intent validity period blocks", () => {
+    context("Function `getPauseIntentValidityPeriodBlocks`", () => {
       it("Returns current `pauseIntentValidityPeriodBlocks` contract parameter", async () => {
         expect(await dsm.getPauseIntentValidityPeriodBlocks()).to.equal(config.pauseIntentValidityPeriodBlocks);
       });
     });
 
-    context("Function `setPauseIntentValidityPeriodBlocks`", function () {
+    context("Function `setPauseIntentValidityPeriodBlocks`", () => {
       let originalState: string;
 
       before(async () => {
@@ -277,14 +277,14 @@ describe("DepositSecurityModule.sol", function () {
     });
   });
 
-  context("Max deposits", function () {
-    context("Function `getMaxDeposits`", function () {
+  context("Max deposits", () => {
+    context("Function `getMaxDeposits`", () => {
       it("Returns `maxDepositsPerBlock`", async () => {
         expect(await dsm.getMaxDeposits()).to.equal(config.maxDepositsPerBlock);
       });
     });
 
-    context("Function `setMaxDeposits`", function () {
+    context("Function `setMaxDeposits`", () => {
       let originalState: string;
 
       before(async () => {
@@ -313,14 +313,14 @@ describe("DepositSecurityModule.sol", function () {
     });
   });
 
-  context("Min deposit block distance", function () {
-    context("Function `getMinDepositBlockDistance`", function () {
+  context("Min deposit block distance", () => {
+    context("Function `getMinDepositBlockDistance`", () => {
       it("Returns `getMinDepositBlockDistance`", async () => {
         expect(await dsm.getMinDepositBlockDistance()).to.equal(config.minDepositBlockDistance);
       });
     });
 
-    context("Function `setMinDepositBlockDistance`", function () {
+    context("Function `setMinDepositBlockDistance`", () => {
       let originalState: string;
 
       before(async () => {
@@ -362,14 +362,14 @@ describe("DepositSecurityModule.sol", function () {
     });
   });
 
-  context("Guardians", function () {
-    context("Function `getGuardianQuorum`", function () {
+  context("Guardians", () => {
+    context("Function `getGuardianQuorum`", () => {
       it("Returns number of valid guardian signatures required to vet", async () => {
         expect(await dsm.getGuardianQuorum()).to.equal(0);
       });
     });
 
-    context("Function `setGuardianQuorum`", function () {
+    context("Function `setGuardianQuorum`", () => {
       let originalState: string;
       const guardianQuorum = 1;
 
@@ -416,13 +416,13 @@ describe("DepositSecurityModule.sol", function () {
       });
     });
 
-    context("Function `getGuardians`", function () {
+    context("Function `getGuardians`", () => {
       it("Returns empty list of guardians initially", async () => {
         expect((await dsm.getGuardians()).length).to.equal(0);
       });
     });
 
-    context("Function `isGuardian`", function () {
+    context("Function `isGuardian`", () => {
       let originalState: string;
 
       beforeEach(async () => {
@@ -455,7 +455,7 @@ describe("DepositSecurityModule.sol", function () {
       });
     });
 
-    context("Function `getGuardianIndex`", function () {
+    context("Function `getGuardianIndex`", () => {
       let originalState: string;
 
       beforeEach(async () => {
@@ -487,7 +487,7 @@ describe("DepositSecurityModule.sol", function () {
       });
     });
 
-    context("Function `addGuardian`", function () {
+    context("Function `addGuardian`", () => {
       let originalState: string;
 
       beforeEach(async () => {
@@ -550,7 +550,7 @@ describe("DepositSecurityModule.sol", function () {
       });
     });
 
-    context("Function `addGuardians`", function () {
+    context("Function `addGuardians`", () => {
       let originalState: string;
 
       beforeEach(async () => {
@@ -599,7 +599,7 @@ describe("DepositSecurityModule.sol", function () {
       });
     });
 
-    context("Function `removeGuardian`", function () {
+    context("Function `removeGuardian`", () => {
       let originalState: string;
 
       beforeEach(async () => {
@@ -690,7 +690,7 @@ describe("DepositSecurityModule.sol", function () {
     });
   });
 
-  context("Function `pauseDeposits`", function () {
+  context("Function `pauseDeposits`", () => {
     let originalState: string;
 
     beforeEach(async () => {
@@ -849,7 +849,7 @@ describe("DepositSecurityModule.sol", function () {
     });
   });
 
-  context("Function `unpauseDeposits`", function () {
+  context("Function `unpauseDeposits`", () => {
     let originalState: string;
 
     beforeEach(async () => {
@@ -922,7 +922,7 @@ describe("DepositSecurityModule.sol", function () {
     });
   });
 
-  context("Function `canDeposit`", function () {
+  context("Function `canDeposit`", () => {
     let originalState: string;
 
     beforeEach(async () => {
