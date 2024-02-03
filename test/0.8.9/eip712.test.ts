@@ -1,37 +1,39 @@
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
-import { deriveDomainSeparator, deriveTypeDataHash, randomAddress, streccak } from "lib";
+import { certainAddress, deriveDomainSeparator, deriveTypeDataHash, streccak } from "lib";
 import { describe } from "mocha";
-import { EIP712StETH__factory } from "typechain-types";
+import { EIP712StETH, EIP712StETH__factory } from "typechain-types";
 
-describe("EIP712StETH.sol", function () {
-  async function deploy() {
-    const chainId = await ethers.provider.send("eth_chainId", []);
+interface Domain {
+  type: string;
+  name: string;
+  version: string;
+  chainId: number;
+  verifyingContract: string;
+}
 
-    const domain = {
+describe("EIP712StETH.sol", () => {
+  let domain: Domain;
+
+  let eip712steth: EIP712StETH;
+
+  beforeEach(async () => {
+    domain = {
       type: "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)",
       name: "Liquid staked Ether 2.0",
       version: "2",
-      chainId,
-      verifyingContract: randomAddress(),
+      chainId: await ethers.provider.send("eth_chainId", []),
+      verifyingContract: certainAddress("eip712.test:domain:verifying-contract"),
     };
 
     const [deployer] = await ethers.getSigners();
     const factory = new EIP712StETH__factory(deployer);
-    const eip712steth = await factory.deploy(domain.verifyingContract);
+    eip712steth = await factory.deploy(domain.verifyingContract);
+  });
 
-    return {
-      eip712steth,
-      domain,
-    };
-  }
-
-  context("constructor", function () {
-    it("Reverts if the verifying contract is zero address", async function () {
-      const { eip712steth } = await loadFixture(deploy);
-
+  context("constructor", () => {
+    it("Reverts if the verifying contract is zero address", async () => {
       const [deployer] = await ethers.getSigners();
       const factory = new EIP712StETH__factory(deployer);
 
@@ -39,20 +41,16 @@ describe("EIP712StETH.sol", function () {
     });
   });
 
-  context("domainSeparatorV4", function () {
-    it("Returns the correct domain separator", async function () {
-      const { eip712steth, domain } = await loadFixture(deploy);
-
+  context("domainSeparatorV4", () => {
+    it("Returns the correct domain separator", async () => {
       const expectedSeparator = deriveDomainSeparator(domain);
 
       expect(await eip712steth.domainSeparatorV4(domain.verifyingContract)).to.equal(expectedSeparator);
     });
   });
 
-  context("hashTypedDataV4", function () {
-    it("Returns the message hash", async function () {
-      const { eip712steth, domain } = await loadFixture(deploy);
-
+  context("hashTypedDataV4", () => {
+    it("Returns the message hash", async () => {
       const domainSeparator = deriveDomainSeparator(domain);
 
       const expectedHash = deriveTypeDataHash({
@@ -64,10 +62,8 @@ describe("EIP712StETH.sol", function () {
     });
   });
 
-  context("eip712Domain", function () {
-    it("Returns the domain data", async function () {
-      const { eip712steth, domain } = await loadFixture(deploy);
-
+  context("eip712Domain", () => {
+    it("Returns the domain data", async () => {
       expect(await eip712steth.eip712Domain(domain.verifyingContract)).to.deep.equal([
         domain.name,
         domain.version,

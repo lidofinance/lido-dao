@@ -3,24 +3,18 @@ import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { MaxUint256, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
-import { INITIAL_STETH_HOLDER, certainAddress, proxify } from "lib/address";
-import {
-  Lido,
-  LidoLocator,
-  Lido__factory,
-  LidoLocatorPartialReturningOnlyWithdrawalQueueAndBurner__factory,
-} from "typechain-types";
+import { INITIAL_STETH_HOLDER, certainAddress, dummyLocator, proxify } from "lib/address";
+import { Lido, LidoLocator, Lido__factory } from "typechain-types";
 
 describe("Lido:initialize", () => {
   let deployer: HardhatEthersSigner;
 
-  let impl: Lido;
   let lido: Lido;
 
   beforeEach(async () => {
     [deployer] = await ethers.getSigners();
     const factory = new Lido__factory(deployer);
-    impl = await factory.deploy();
+    const impl = await factory.deploy();
     expect(await impl.getInitializationBlock()).to.equal(MaxUint256);
 
     [lido] = await proxify({ impl, admin: deployer });
@@ -30,15 +24,15 @@ describe("Lido:initialize", () => {
     const initialValue = 1n;
     const contractVersion = 2n;
 
-    const withdrawalQueueAddress = certainAddress("lido:initialize:withdrawalQueue");
-    const burnerAddress = certainAddress("lido:initialize:burner");
+    let withdrawalQueueAddress: string;
+    let burnerAddress: string;
     const eip712helperAddress = certainAddress("lido:initialize:eip712helper");
 
     let locator: LidoLocator;
 
     beforeEach(async () => {
-      const factory = new LidoLocatorPartialReturningOnlyWithdrawalQueueAndBurner__factory(deployer);
-      locator = (await factory.deploy(withdrawalQueueAddress, burnerAddress)) as LidoLocator;
+      locator = await dummyLocator({ lido });
+      [withdrawalQueueAddress, burnerAddress] = await Promise.all([locator.withdrawalQueue(), locator.burner()]);
     });
 
     it("Reverts if Locator is zero address", async () => {

@@ -1,49 +1,31 @@
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
-import { ONE_ETHER, batch, ether, resetState } from "lib";
+import { ONE_ETHER, batch, ether } from "lib";
 import { describe } from "mocha";
-import { StethMinimalMockWithTotalPooledEther__factory } from "typechain-types";
+import { StethMinimalMockWithTotalPooledEther, StethMinimalMockWithTotalPooledEther__factory } from "typechain-types";
 
-describe("StETH:non-ERC-20 behavior", function () {
-  async function deploySteth() {
+describe("StETH:non-ERC-20 behavior", () => {
+  let holder: HardhatEthersSigner;
+  let recipient: HardhatEthersSigner;
+  let spender: HardhatEthersSigner;
+
+  const holderBalance = ether("10.0");
+  const totalSupply = holderBalance;
+
+  let steth: StethMinimalMockWithTotalPooledEther;
+
+  beforeEach(async () => {
     const signers = await ethers.getSigners();
-    const [holder, recipient, spender] = signers;
-    const holderBalance = ether("10.0");
-    const totalSupply = holderBalance;
+    [holder, recipient, spender] = signers;
 
     const factory = new StethMinimalMockWithTotalPooledEther__factory(holder);
-    const steth = await factory.deploy(holder, { value: holderBalance });
+    steth = await factory.deploy(holder, { value: holderBalance });
+  });
 
-    expect(await steth.balanceOf(holder)).to.equal(holderBalance);
-    expect(await steth.totalSupply()).to.equal(totalSupply);
-
-    return {
-      holder,
-      holderBalance,
-      recipient,
-      spender,
-      totalSupply,
-      steth,
-    };
-  }
-
-  async function deployApprovedSteth() {
-    const deployed = await loadFixture(deploySteth);
-    const { steth, holder, spender } = deployed;
-
-    const allowance = await steth.balanceOf(holder);
-    await steth.connect(holder).approve(spender, allowance);
-    expect(await steth.allowance(holder, spender)).to.equal(allowance);
-
-    return deployed;
-  }
-
-  context("getTotalPooledEther", function () {
-    it("Returns the amount of ether sent upon construction", async function () {
-      const { steth, totalSupply } = await loadFixture(deploySteth);
-
+  context("getTotalPooledEther", () => {
+    it("Returns the amount of ether sent upon construction", async () => {
       expect(await steth.getTotalPooledEther()).to.equal(totalSupply);
     });
 
@@ -52,9 +34,7 @@ describe("StETH:non-ERC-20 behavior", function () {
       ["positive", 105n], // 0.95
       ["negative", 95n], // 1.05
     ]) {
-      it(`Returns the correct value after ${rebase} rebase`, async function () {
-        const { steth, totalSupply } = await loadFixture(deploySteth);
-
+      it(`Returns the correct value after ${rebase} rebase`, async () => {
         const rebasedSupply = (totalSupply * (factor as bigint)) / 100n;
         await steth.setTotalPooledEther(rebasedSupply);
 
@@ -63,10 +43,8 @@ describe("StETH:non-ERC-20 behavior", function () {
     }
   });
 
-  context("transfer", function () {
-    it("Transfers stETH to the recipient and fires the `Transfer` and `TransferShares` events", async function () {
-      const { steth, holder, recipient } = await loadFixture(deploySteth);
-
+  context("transfer", () => {
+    it("Transfers stETH to the recipient and fires the `Transfer` and `TransferShares` events", async () => {
       const beforeTransfer = await batch({
         holderBalance: steth.balanceOf(holder),
         recipientBalance: steth.balanceOf(recipient),
@@ -91,9 +69,7 @@ describe("StETH:non-ERC-20 behavior", function () {
       expect(afterTransfer.recipientBalance).to.equal(beforeTransfer.recipientBalance + transferAmount);
     });
 
-    it("Reverts when the recipient is zero address", async function () {
-      const { steth, holder } = await loadFixture(deploySteth);
-
+    it("Reverts when the recipient is zero address", async () => {
       const transferAmount = await steth.balanceOf(holder);
 
       await expect(steth.connect(holder).transfer(ZeroAddress, transferAmount)).to.be.revertedWith(
@@ -101,9 +77,7 @@ describe("StETH:non-ERC-20 behavior", function () {
       );
     });
 
-    it("Reverts when the recipient is stETH contract", async function () {
-      const { steth, holder } = await loadFixture(deploySteth);
-
+    it("Reverts when the recipient is stETH contract", async () => {
       const transferAmount = await steth.balanceOf(holder);
 
       await expect(steth.connect(holder).transfer(steth, transferAmount)).to.be.revertedWith(
@@ -112,11 +86,12 @@ describe("StETH:non-ERC-20 behavior", function () {
     });
   });
 
-  context("increaseAllowance", function () {
-    it("Increases the spender's allowance by the amount and fires the `Approval` event", async function () {
-      const { steth, holder, spender } = await loadFixture(deployApprovedSteth);
+  context("increaseAllowance", () => {
+    it("Increases the spender's allowance by the amount and fires the `Approval` event", async () => {
+      const allowance = await steth.balanceOf(holder);
+      await steth.connect(holder).approve(spender, allowance);
+      expect(await steth.allowance(holder, spender)).to.equal(allowance);
 
-      const allowance = await steth.allowance(holder, spender);
       const increaseAmount = ether("1.0");
       const updatedAllowance = allowance + increaseAmount;
 
@@ -128,11 +103,12 @@ describe("StETH:non-ERC-20 behavior", function () {
     });
   });
 
-  context("decreaseAllowance", function () {
-    it("Decreases the spender's allowance by the amount and fires the `Approval` event", async function () {
-      const { steth, holder, spender } = await loadFixture(deployApprovedSteth);
+  context("decreaseAllowance", () => {
+    it("Decreases the spender's allowance by the amount and fires the `Approval` event", async () => {
+      const allowance = await steth.balanceOf(holder);
+      await steth.connect(holder).approve(spender, allowance);
+      expect(await steth.allowance(holder, spender)).to.equal(allowance);
 
-      const allowance = await steth.allowance(holder, spender);
       const decreaseAmount = ether("1.0");
       const updatedAllowance = allowance - decreaseAmount;
 
@@ -143,6 +119,4 @@ describe("StETH:non-ERC-20 behavior", function () {
       expect(await steth.allowance(holder, spender)).to.equal(updatedAllowance);
     });
   });
-
-  resetState(this);
 });

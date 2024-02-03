@@ -37,7 +37,7 @@ interface VersionedTarget {
  * testVersionedCompliance.skip(target)
  */
 export default function testVersionedCompliance({ name, deploy, updates, suiteFunction = describe }: VersionedTarget) {
-  suiteFunction(`${name} Versioned Compliance`, function () {
+  suiteFunction(`${name} Versioned Compliance`, () => {
     let admin: HardhatEthersSigner;
     let user: HardhatEthersSigner;
     let impl: Versioned;
@@ -46,7 +46,7 @@ export default function testVersionedCompliance({ name, deploy, updates, suiteFu
 
     const petrifiedVersion = MAX_UINT256;
 
-    this.beforeEach(async function () {
+    beforeEach(async () => {
       [admin, user] = await ethers.getSigners();
 
       impl = await deploy();
@@ -60,21 +60,21 @@ export default function testVersionedCompliance({ name, deploy, updates, suiteFu
       versioned = Versioned__factory.connect(await proxy.getAddress(), user);
     });
 
-    context("constructor", function () {
-      it("Petrifies the implementation", async function () {
+    context("constructor", () => {
+      it("Petrifies the implementation", async () => {
         expect(await impl.getContractVersion()).to.equal(petrifiedVersion);
       });
     });
 
-    context("getContractVersion", function () {
-      it("Returns 0 as the initial contract version", async function () {
+    context("getContractVersion", () => {
+      it("Returns 0 as the initial contract version", async () => {
         expect(await versioned.getContractVersion()).to.equal(0n);
       });
     });
 
-    context("setContractVersion", function () {
+    context("setContractVersion", () => {
       for (const { call, version } of updates) {
-        it("Updates the contract version on the proxy", async function () {
+        it("Updates the contract version on the proxy", async () => {
           await user.sendTransaction({
             to: await versioned.getAddress(),
             data: call,

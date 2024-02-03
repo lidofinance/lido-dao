@@ -3,15 +3,14 @@ import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { MaxUint256, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
-import { INITIAL_STETH_HOLDER, certainAddress, proxify } from "lib/address";
+import { INITIAL_STETH_HOLDER, certainAddress, dummyLocator, proxify } from "lib/address";
 import {
   LidoInitializedForFinalizeUpgradeV2,
   LidoInitializedForFinalizeUpgradeV2__factory,
   LidoLocator,
-  LidoLocatorPartialReturningOnlyWithdrawalQueueAndBurner__factory,
 } from "typechain-types";
 
-describe.only("Lido:finalizeUpgrade_v2", () => {
+describe("Lido:finalizeUpgrade_v2", () => {
   let deployer: HardhatEthersSigner;
 
   let impl: LidoInitializedForFinalizeUpgradeV2;
@@ -22,8 +21,8 @@ describe.only("Lido:finalizeUpgrade_v2", () => {
   const initialVersion = 0n;
   const finalizeVersion = 2n;
 
-  const withdrawalQueueAddress = certainAddress("lido:initialize:withdrawalQueue");
-  const burnerAddress = certainAddress("lido:initialize:burner");
+  let withdrawalQueueAddress: string;
+  let burnerAddress: string;
   const eip712helperAddress = certainAddress("lido:initialize:eip712helper");
 
   beforeEach(async () => {
@@ -32,8 +31,8 @@ describe.only("Lido:finalizeUpgrade_v2", () => {
     impl = await lidoFactory.deploy();
     [lido] = await proxify({ impl, admin: deployer });
 
-    const locatorFactory = new LidoLocatorPartialReturningOnlyWithdrawalQueueAndBurner__factory(deployer);
-    locator = (await locatorFactory.deploy(withdrawalQueueAddress, burnerAddress)) as LidoLocator;
+    locator = await dummyLocator();
+    [withdrawalQueueAddress, burnerAddress] = await Promise.all([locator.withdrawalQueue(), locator.burner()]);
   });
 
   it("Reverts if contract version does not equal zero", async () => {
