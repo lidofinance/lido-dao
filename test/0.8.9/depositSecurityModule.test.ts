@@ -11,10 +11,9 @@ import {
   LidoMockForDepositSecurityModule,
   StakingRouterMockForDepositSecurityModule,
   DepositContractMockForDepositSecurityModule,
-} from "../../typechain-types";
+} from "typechain-types";
 
-import { Snapshot, certainAddress, ether, streccak } from "../../lib";
-import { DSMAttestMessage, DSMPauseMessage } from "../../lib/dsm";
+import { Snapshot, certainAddress, ether, streccak, DSMAttestMessage, DSMPauseMessage } from "lib";
 
 const UNREGISTERED_STAKING_MODULE_ID = 1;
 const STAKING_MODULE_ID = 100;
