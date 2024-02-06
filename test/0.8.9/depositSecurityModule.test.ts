@@ -72,16 +72,15 @@ describe("DepositSecurityModule.sol", () => {
   let unrelatedGuardian2: Wallet;
 
   let originalState: string;
-  let provider: ethers.JsonRpcProvider | HardhatEthersProvider;
+  let provider: typeof ethers.provider;
 
   async function getLatestBlock() {
     return await provider.getBlock("latest");
   }
 
   before(async () => {
+    ({ provider } = ethers);
     [admin, stranger] = await ethers.getSigners();
-
-    provider = admin.provider;
 
     guardian1 = new Wallet(streccak("guardian1"), provider);
     guardian2 = new Wallet(streccak("guardian2"), provider);
