@@ -15,7 +15,9 @@
     "lint:ts:fix": "pnpm lint:ts --fix",
     "lint": "pnpm lint:sol && pnpm lint:ts",
     "format": "prettier . --write --ignore-path .gitignore --ignore-path .prettierignore",
-    "test": "npx hardhat test",
+    "test": "pnpm hardhat test",
+    "test:coverage": "pnpm hardhat coverage",
+    "typecheck": "tsc --noEmit",
     "prepare": "husky install"
   },
   "lint-staged": {
