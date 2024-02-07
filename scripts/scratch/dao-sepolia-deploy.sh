@@ -19,7 +19,7 @@ export NETWORK_STATE_DEFAULTS_FILE="deployed-testnet-defaults.json"
 # Sepolia params: https://github.com/eth-clients/sepolia/blob/main/README.md
 export GENESIS_TIME=1655733600
 
-# EOA 
+# EOA
 export DSM_PREDEFINED_ADDRESS="0x6885E36BFcb68CB383DfE90023a462C03BCB2AE5"
 
 export GAS_PRIORITY_FEE="${GAS_PRIORITY_FEE:=1}"

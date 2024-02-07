@@ -31,7 +31,7 @@ function verify {
 # NB: Although most of the contracts listed below would be verified by running
 # this bash script as it is, some might require some manual tweaking.
 # Sometimes first attempt to verify fails without observable reason.
-# Part of the contract require a workaround see SCRATCH_DEPLOY.md section
+# Part of the contract require a workaround see scratch-deploy.md section
 # "Issues with verification of part of the contracts deployed from factories".
 
 verify dummyEmptyContract
@@ -62,25 +62,25 @@ verify app:aragon-finance.implementation
 verify app:aragon-agent.implementation
 verify oracleDaemonConfig
 verify oracleReportSanityChecker
-# verify fakeAppProxyPinned
+verify fakeAppProxyPinned
 verify app:lido.proxy
-# verify depositSecurityModule
+verify depositSecurityModule
 verify withdrawalQueueERC721.implementation
 verify aragon-kernel.implementation
 verify aragon-acl.implementation
 verify aragon-kernel.proxy
 verify ldo
 verify callsScript
-# verify aragon-evm-script-registry.proxy
-# verify aragon-apm-registry.implementation
-# verify aragon-apm-registry.factory
-# verify aragon-app-repo-lido.implementation
-# verify aragon-app-repo-node-operators-registry.implementation
+verify aragon-evm-script-registry.proxy
+verify aragon-apm-registry.implementation
+verify aragon-apm-registry.factory
+verify aragon-app-repo-lido.implementation
+verify aragon-app-repo-node-operators-registry.implementation
 # NB: App Repos of lido, oracle, node-operators-registry, finance, agent, token-manager, voting
 #     share same implementation of Repo contract
-# verify aragon-evm-script-registry.proxy
-# verify aragon-evm-script-registry.implementation
-# verify app:simple-dvt.proxy
+verify aragon-evm-script-registry.proxy
+verify aragon-evm-script-registry.implementation
+verify app:simple-dvt.proxy
 verify app:aragon-token-manager.proxy
 verify app:oracle.proxy
 verify app:node-operators-registry.proxy
