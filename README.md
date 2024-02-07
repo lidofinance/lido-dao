@@ -22,11 +22,11 @@ pnpm test
 - eslint
 - prettier
 - solhint
+- slither
 
 ## Todos
 
 - anvil
-- slither
 - readme
 
 ## Conventions

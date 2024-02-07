@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "core-protocol"
+version = "2.0.0"
+description = "Lido core protocol"
+authors = ["Lido"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "core_protocol", from = "contracts"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+setuptools = "^69.0.3"
+
+[tool.poetry.group.dev.dependencies]
+slither-analyzer = "^0.10.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
