@@ -95,6 +95,12 @@ const getNetConfig = (networkName, ethAccountName) => {
       chainId: 17000,
       timeout: 60000 * 15,
     },
+    sepolia: {
+      ...base,
+      url: RPC_URL,
+      chainId: 11155111,
+      timeout: 60000 * 15,
+    },
     mainnet: {
       ...base,
       url: RPC_URL,
@@ -202,6 +208,14 @@ module.exports = {
         urls: {
           apiURL: 'https://api-holesky.etherscan.io/api',
           browserURL: 'https://holesky.etherscan.io',
+        },
+      },
+      {
+        network: 'sepolia',
+        chainId: 11155111,
+        urls: {
+          apiURL: 'https://api-sepolia.etherscan.io/api',
+          browserURL: 'https://sepolia.etherscan.io',
         },
       },
     ],

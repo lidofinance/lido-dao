@@ -6,7 +6,7 @@ pragma solidity 0.4.24;
 import {SignatureUtils} from "../lib/SignatureUtils.sol";
 
 
-contract SignatureUtilsConsumer_0_4_24 {
+contract SignatureUtilsConsumer_0_4_24 { // solhint-disable-line contract-name-camelcase
 
     function isValidSignature(
         address signer,
