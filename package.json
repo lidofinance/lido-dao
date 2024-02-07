@@ -17,7 +17,7 @@
     "format": "prettier . --write --ignore-path .gitignore --ignore-path .prettierignore",
     "test": "pnpm hardhat test",
     "test:coverage": "pnpm hardhat coverage",
-    "typecheck": "tsc --noEmit",
+    "type:check": "tsc --noEmit",
     "prepare": "husky install"
   },
   "lint-staged": {
