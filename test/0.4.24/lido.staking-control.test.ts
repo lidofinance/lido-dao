@@ -7,12 +7,13 @@ import { ACL, Lido } from "typechain-types";
 describe("Lido:staking-control", () => {
   let deployer: HardhatEthersSigner;
   let user: HardhatEthersSigner;
+  let stranger: HardhatEthersSigner;
 
   let lido: Lido;
   let acl: ACL;
 
   beforeEach(async () => {
-    [deployer, user] = await ethers.getSigners();
+    [deployer, user, stranger] = await ethers.getSigners();
 
     ({ lido, acl } = await deployLidoDao({ rootAccount: deployer, initialized: true }));
 
@@ -25,18 +26,28 @@ describe("Lido:staking-control", () => {
   context("resumeStaking", () => {
     it("Resumes staking", async () => {
       expect(await lido.isStakingPaused()).to.equal(true);
-      await lido.resumeStaking();
+      await expect(lido.resumeStaking()).to.emit(lido, "StakingResumed");
       expect(await lido.isStakingPaused()).to.equal(false);
+    });
+
+    it("Reverts if the caller is unauthorized", async () => {
+      await expect(lido.connect(stranger).resumeStaking()).to.be.revertedWith("APP_AUTH_FAILED");
     });
   });
 
   context("pauseStaking", () => {
-    it("Pauses staking", async () => {
+    beforeEach(async () => {
       await lido.resumeStaking();
       expect(await lido.isStakingPaused()).to.equal(false);
+    });
 
-      await lido.pauseStaking();
+    it("Pauses staking", async () => {
+      await expect(lido.pauseStaking()).to.emit(lido, "StakingPaused");
       expect(await lido.isStakingPaused()).to.equal(true);
+    });
+
+    it("Reverts if the caller is unauthorized", async () => {
+      await expect(lido.connect(stranger).pauseStaking()).to.be.revertedWith("APP_AUTH_FAILED");
     });
   });
 });
