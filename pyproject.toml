@@ -3,7 +3,7 @@ name = "core-protocol"
 version = "2.0.0"
 description = "Lido core protocol"
 authors = ["Lido"]
-license = "MIT"
+license = "GPL-3.0"
 readme = "README.md"
 packages = [{include = "core_protocol", from = "contracts"}]
 
