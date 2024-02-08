@@ -3,7 +3,7 @@ name = "lido-dao"
 version = "0.1.0"
 description = ""
 authors = ["Your Name <you@example.com>"]
-license = "MIT"
+license = "GPL-3.0"
 readme = "README.md"
 packages = [{include = "lido_dao"}]
 
