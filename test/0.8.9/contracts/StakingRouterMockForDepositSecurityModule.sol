@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
+// for testing purposes only
 
-/* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import {IStakingRouter} from "../DepositSecurityModule.sol";
-import {StakingRouter} from "../StakingRouter.sol";
+import {IStakingRouter} from "contracts/0.8.9/DepositSecurityModule.sol";
+import {StakingRouter} from "contracts/0.8.9/StakingRouter.sol";
 
 
 contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
