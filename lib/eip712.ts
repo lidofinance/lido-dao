@@ -2,7 +2,7 @@ import { toBuffer } from "ethereumjs-util";
 import { AbiCoder, HDNodeWallet, keccak256, solidityPackedKeccak256 } from "ethers";
 import { network } from "hardhat";
 
-import { PermitSigner } from "typechain-types";
+import { OwnerWithEip712PermitSignature } from "typechain-types";
 
 import { sign } from "./ec";
 import { streccak } from "./keccak";
@@ -81,7 +81,7 @@ export function signStethPermit({ type, owner, spender, value, nonce, deadline, 
 
 interface SignPermitEIP1271Args {
   type: string;
-  owner: PermitSigner;
+  owner: OwnerWithEip712PermitSignature;
   spender: string;
   value: bigint;
   nonce: bigint;
