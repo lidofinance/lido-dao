@@ -1,22 +1,34 @@
 // SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
-import "../0.6.11/sepolia_deposit_contract.sol";
-
 /* See contracts/COMPILERS.md */
-// pragma solidity 0.8.9;
-pragma solidity >=0.6.8 <0.9.0;
+pragma solidity 0.8.9;
 
+interface ISepoliaDepositContract {
+
+    function deposit(
+        bytes calldata pubkey,
+        bytes calldata withdrawal_credentials,
+        bytes calldata signature,
+        bytes32 deposit_data_root
+    ) external payable;
+
+    function get_deposit_root() external view returns (bytes32);
+
+    function get_deposit_count() external view returns (bytes memory);
+
+    function name() external view returns (string memory);
+}
 
 contract SepoliaDepositAdapter {
 
     uint public constant VERSION = 2;
-    SepoliaDepositContract origContract;
+    ISepoliaDepositContract origContract;
 
     address payable public creator;
 
-    constructor(address _deposit_contract) public {
-        origContract = SepoliaDepositContract(_deposit_contract);
+    constructor(address _deposit_contract) {
+        origContract = ISepoliaDepositContract(_deposit_contract);
         creator = payable(msg.sender);
     }
 
@@ -31,6 +43,8 @@ contract SepoliaDepositAdapter {
     function test() external view returns (string memory) {
         return origContract.name();
     }
+
+    receive() payable external {}
 
     function deposit(
         bytes calldata pubkey,
