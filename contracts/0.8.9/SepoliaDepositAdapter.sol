@@ -1,44 +1,35 @@
 // SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
+import "../0.6.11/sepolia_deposit_contract.sol";
+
 /* See contracts/COMPILERS.md */
-pragma solidity 0.8.9;
+// pragma solidity 0.8.9;
+pragma solidity >=0.6.8 <0.9.0;
 
-
-abstract contract SepoliaDepositInterface {
-
-    function get_deposit_root() external virtual view returns (bytes32);
-
-    function get_deposit_count() external virtual view returns (bytes memory);
-
-    function deposit(
-        bytes calldata pubkey,
-        bytes calldata withdrawal_credentials,
-        bytes calldata signature,
-        bytes32 deposit_data_root
-    ) external virtual payable;
-
-}
 
 contract SepoliaDepositAdapter {
 
     uint public constant VERSION = 2;
-    address public immutable depositContract;
+    SepoliaDepositContract origContract;
+
     address payable public creator;
 
-    constructor(address _deposit_contract) {
-        depositContract = _deposit_contract;
+    constructor(address _deposit_contract) public {
+        origContract = SepoliaDepositContract(_deposit_contract);
         creator = payable(msg.sender);
     }
 
     function get_deposit_root() external view returns (bytes32) {
-        SepoliaDepositInterface origContract = SepoliaDepositInterface(depositContract);
         return origContract.get_deposit_root();
     }
 
     function get_deposit_count() external view returns (bytes memory) {
-        SepoliaDepositInterface origContract = SepoliaDepositInterface(depositContract);
         return origContract.get_deposit_count();
+    }
+
+    function test() external view returns (string memory) {
+        return origContract.name();
     }
 
     function deposit(
@@ -47,7 +38,6 @@ contract SepoliaDepositAdapter {
         bytes calldata signature,
         bytes32 deposit_data_root
     ) external payable {
-        SepoliaDepositInterface origContract = SepoliaDepositInterface(depositContract);
         origContract.deposit(pubkey, withdrawal_credentials, signature, deposit_data_root);
     }
 
