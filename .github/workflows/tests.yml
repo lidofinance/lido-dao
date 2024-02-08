@@ -1,6 +1,6 @@
 name: Tests
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   test:
@@ -46,3 +46,13 @@ jobs:
 
       - name: Run Solidity coverage
         run: pnpm test:coverage
+
+      - name: Produce the coverage report
+        uses: insightsengineering/coverage-action@v2
+        with:
+          path: ./coverage/cobertura-coverage.xml
+          publish: true
+          diff: true
+          diff-branch: master
+          diff-storage: _core_coverage_reports
+          coverage-summary-title: "Code Coverage Summary"
