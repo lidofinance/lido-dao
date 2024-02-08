@@ -74,11 +74,11 @@ describe("DepositSecurityModule.sol", () => {
   let originalState: string;
   let provider: typeof ethers.provider;
 
-  async function getLatestBlock() {
+  async function getLatestBlock(): Promise<Block> {
     const block = await provider.getBlock("latest");
     if (!block) throw new Error("Failed to retrieve latest block");
 
-    return block;
+    return block as Block;
   }
 
   before(async () => {
@@ -1041,7 +1041,7 @@ describe("DepositSecurityModule.sol", () => {
 
     beforeEach(async () => {
       originalState = await Snapshot.take();
-      block = (await getLatestBlock()) as Block;
+      block = await getLatestBlock();
 
       await stakingRouter.setStakingModuleNonce(DEPOSIT_NONCE);
       expect(await stakingRouter.getStakingModuleNonce(STAKING_MODULE_ID)).to.equal(DEPOSIT_NONCE);
