@@ -13,3 +13,4 @@ export * from "./ec";
 export * from "./dummy";
 export * from "./event";
 export * from "./aragon";
+export * from "./dsm";

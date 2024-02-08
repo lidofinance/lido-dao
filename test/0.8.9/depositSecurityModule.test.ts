@@ -11,10 +11,9 @@ import {
   LidoMockForDepositSecurityModule,
   StakingRouterMockForDepositSecurityModule,
   DepositContractMockForDepositSecurityModule,
-} from "../../typechain-types";
+} from "typechain-types";
 
-import { Snapshot, certainAddress, ether, streccak } from "../../lib";
-import { DSMAttestMessage, DSMPauseMessage } from "../../lib/dsm";
+import { Snapshot, certainAddress, ether, streccak, DSMAttestMessage, DSMPauseMessage } from "lib";
 
 const UNREGISTERED_STAKING_MODULE_ID = 1;
 const STAKING_MODULE_ID = 100;
@@ -73,16 +72,18 @@ describe("DepositSecurityModule.sol", () => {
   let unrelatedGuardian2: Wallet;
 
   let originalState: string;
-  let provider: ethers.JsonRpcProvider | HardhatEthersProvider;
+  let provider: typeof ethers.provider;
 
-  async function getLatestBlock() {
-    return await provider.getBlock("latest");
+  async function getLatestBlock(): Promise<Block> {
+    const block = await provider.getBlock("latest");
+    if (!block) throw new Error("Failed to retrieve latest block");
+
+    return block as Block;
   }
 
   before(async () => {
+    ({ provider } = ethers);
     [admin, stranger] = await ethers.getSigners();
-
-    provider = admin.provider;
 
     guardian1 = new Wallet(streccak("guardian1"), provider);
     guardian2 = new Wallet(streccak("guardian2"), provider);
@@ -1063,7 +1064,7 @@ describe("DepositSecurityModule.sol", () => {
         expect(await dsm.getGuardianQuorum()).to.equal(0);
 
         const depositCalldata = encodeBytes32String("");
-        const sortedGuardianSignatures = [];
+        const sortedGuardianSignatures: DepositSecurityModule.SignatureStruct[] = [];
         await expect(
           dsm.depositBufferedEther(
             block.number,
@@ -1086,7 +1087,7 @@ describe("DepositSecurityModule.sol", () => {
         expect(await dsm.getGuardianQuorum()).to.equal(0);
 
         const depositCalldata = encodeBytes32String("");
-        const sortedGuardianSignatures = [];
+        const sortedGuardianSignatures: DepositSecurityModule.SignatureStruct[] = [];
         await expect(
           dsm.depositBufferedEther(
             block.number,
@@ -1109,7 +1110,7 @@ describe("DepositSecurityModule.sol", () => {
         expect(await dsm.getGuardianQuorum()).to.equal(1);
 
         const depositCalldata = encodeBytes32String("");
-        const sortedGuardianSignatures = [];
+        const sortedGuardianSignatures: DepositSecurityModule.SignatureStruct[] = [];
         await expect(
           dsm.depositBufferedEther(
             block.number,
@@ -1358,7 +1359,7 @@ describe("DepositSecurityModule.sol", () => {
         expect(await dsm.getGuardianQuorum()).to.equal(2);
 
         const depositCalldata = encodeBytes32String("");
-        const sortedGuardianSignatures = [];
+        const sortedGuardianSignatures: DepositSecurityModule.SignatureStruct[] = [];
 
         await expect(
           dsm
