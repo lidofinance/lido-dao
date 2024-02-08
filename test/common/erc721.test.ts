@@ -1,10 +1,13 @@
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
-import { ExclusiveSuiteFunction, PendingSuiteFunction, describe } from "mocha";
-import { ERC165_INTERFACE_ID, ERC721METADATA_INTERFACE_ID, ERC721_INTERFACE_ID, INVALID_INTERFACE_ID } from "lib";
+import { ExclusiveSuiteFunction, PendingSuiteFunction } from "mocha";
+
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+
 import { ERC721, ERC721ReceiverMock } from "typechain-types";
+
+import { ERC165_INTERFACE_ID, ERC721_INTERFACE_ID, ERC721METADATA_INTERFACE_ID, INVALID_INTERFACE_ID } from "lib";
 
 interface ERC721Target {
   tokenName: string;
@@ -189,12 +192,9 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
         await expect(
           token
             .connect(spender)
-            ["safeTransferFrom(address,address,uint256,bytes)"](
-              stranger,
-              eoaRecipient,
-              holderTokenId,
-              new Uint8Array(),
-            ),
+            [
+              "safeTransferFrom(address,address,uint256,bytes)"
+            ](stranger, eoaRecipient, holderTokenId, new Uint8Array()),
         ).to.be.reverted;
       });
 
@@ -222,12 +222,9 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
         await expect(
           token
             .connect(spender)
-            ["safeTransferFrom(address,address,uint256,bytes)"](
-              holder,
-              eoaRecipient,
-              holderTokenId + 1n,
-              new Uint8Array(),
-            ),
+            [
+              "safeTransferFrom(address,address,uint256,bytes)"
+            ](holder, eoaRecipient, holderTokenId + 1n, new Uint8Array()),
         ).to.be.reverted;
       });
 
@@ -241,12 +238,9 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
         await expect(
           token
             .connect(spender)
-            ["safeTransferFrom(address,address,uint256,bytes)"](
-              holder,
-              contractRecipient,
-              holderTokenId,
-              new Uint8Array(),
-            ),
+            [
+              "safeTransferFrom(address,address,uint256,bytes)"
+            ](holder, contractRecipient, holderTokenId, new Uint8Array()),
         ).to.be.reverted;
       });
     });

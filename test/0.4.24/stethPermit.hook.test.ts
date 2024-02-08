@@ -1,19 +1,21 @@
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ECDSASignature } from "ethereumjs-util";
 import { HDNodeWallet, Wallet, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
-import { certainAddress, days, ether, randomAddress, signStethPermit, signStethPermitEIP1271 } from "lib";
-import { describe } from "mocha";
+
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
+
 import {
   EIP712StETH,
   EIP712StETH__factory,
-  OwnerWithEip712PermitSignature__factory,
-  StethPermitMockWithEip712Initialization__factory,
   OwnerWithEip712PermitSignature,
+  OwnerWithEip712PermitSignature__factory,
   StethPermitMockWithEip712Initialization,
+  StethPermitMockWithEip712Initialization__factory,
 } from "typechain-types";
+
+import { certainAddress, days, ether, randomAddress, signStethPermit, signStethPermitEIP1271 } from "lib";
 
 describe("Permit", () => {
   let deployer: HardhatEthersSigner;

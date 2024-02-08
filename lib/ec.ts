@@ -1,4 +1,5 @@
-import { ECDSASignature, bufferToHex, ecrecover, ecsign, pubToAddress, toChecksumAddress } from "ethereumjs-util";
+import { bufferToHex, ECDSASignature, ecrecover, ecsign, pubToAddress, toChecksumAddress } from "ethereumjs-util";
+
 import { de0x } from "./string";
 
 export function sign(message: string, privateKey: string) {
