@@ -1,5 +1,8 @@
-import { sign, toEip2098 } from "./ec";
 import { solidityPackedKeccak256 } from "ethers";
+
+import { DepositSecurityModule } from "typechain-types";
+
+import { sign, toEip2098 } from "./ec";
 
 class DSMMessage {
   static MESSAGE_PREFIX: string;
@@ -9,7 +12,7 @@ class DSMMessage {
   }
 
   get messagePrefix(): string {
-    const messagePrefix = this.constructor.MESSAGE_PREFIX;
+    const messagePrefix = (this.constructor as typeof DSMMessage).MESSAGE_PREFIX;
     if (messagePrefix === undefined) {
       throw new Error(`MESSAGE_PREFIX isn't set`);
     }

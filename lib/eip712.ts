@@ -1,10 +1,12 @@
+import { toBuffer } from "ethereumjs-util";
 import { AbiCoder, HDNodeWallet, keccak256, solidityPackedKeccak256 } from "ethers";
 import { network } from "hardhat";
+
 import { OwnerWithEip712PermitSignature } from "typechain-types";
+
 import { sign } from "./ec";
 import { streccak } from "./keccak";
 import { de0x } from "./string";
-import { toBuffer } from "ethereumjs-util";
 
 interface DeriveDomainSeparatorArgs {
   type: string;

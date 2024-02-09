@@ -1,8 +1,11 @@
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { deployLidoDao } from "lib";
+
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+
 import { ACL, Lido } from "typechain-types";
+
+import { deployLidoDao } from "lib";
 
 describe("Lido:staking-control", () => {
   let deployer: HardhatEthersSigner;

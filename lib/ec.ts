@@ -1,12 +1,13 @@
 import {
-  ECDSASignature,
   bufferToHex,
-  toBuffer,
+  ECDSASignature,
   ecrecover,
   ecsign,
   pubToAddress,
+  toBuffer,
   toChecksumAddress,
 } from "ethereumjs-util";
+
 import { de0x } from "./string";
 
 export function sign(message: string, privateKey: string) {
@@ -19,11 +20,11 @@ export function recover(messageHash: string, { v, r, s }: ECDSASignature) {
 }
 
 // Converts a ECDSA signature to the format provided in https://eips.ethereum.org/EIPS/eip-2098.
-export function toEip2098({ v, r, s }) {
+export function toEip2098({ v, r, s }: ECDSASignature) {
   const vs = toBuffer(s);
   if (vs[0] >> 7 === 1) {
     throw new Error(`invalid signature 's' value`);
   }
   vs[0] |= v % 27 << 7; // set the first bit of vs to the v parity bit
-  return [r, bufferToHex(vs)];
+  return { r, vs: bufferToHex(vs) };
 }

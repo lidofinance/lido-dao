@@ -1,19 +1,20 @@
-import { describe } from "mocha";
-import { ZeroAddress, keccak256, solidityPacked, encodeBytes32String, Wallet } from "ethers";
-import { ethers, network } from "hardhat";
 import { expect } from "chai";
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { time, mineUpTo, setBalance } from "@nomicfoundation/hardhat-network-helpers";
+import { encodeBytes32String, keccak256, solidityPacked, Wallet, ZeroAddress } from "ethers";
+import { ethers, network } from "hardhat";
+import { describe } from "mocha";
+
 import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { mineUpTo, setBalance, time } from "@nomicfoundation/hardhat-network-helpers";
 
 import {
+  DepositContractMockForDepositSecurityModule,
   DepositSecurityModule,
   LidoMockForDepositSecurityModule,
   StakingRouterMockForDepositSecurityModule,
-  DepositContractMockForDepositSecurityModule,
 } from "typechain-types";
 
-import { Snapshot, certainAddress, ether, streccak, DSMAttestMessage, DSMPauseMessage } from "lib";
+import { certainAddress, DSMAttestMessage, DSMPauseMessage, ether, Snapshot, streccak } from "lib";
 
 const UNREGISTERED_STAKING_MODULE_ID = 1;
 const STAKING_MODULE_ID = 100;
@@ -788,7 +789,7 @@ describe("DepositSecurityModule.sol", () => {
 
       await expect(
         dsm.connect(guardian1).pauseDeposits(futureBlockNumber, STAKING_MODULE_ID, sig),
-      ).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
+      ).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_OVERFLOW);
     });
 
     it("Reverts if called with a future `blockNumber` by an anon submitting a guardian's sig", async () => {
@@ -799,7 +800,7 @@ describe("DepositSecurityModule.sol", () => {
 
       await expect(
         dsm.connect(stranger).pauseDeposits(futureBlockNumber, STAKING_MODULE_ID, sig),
-      ).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
+      ).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_OVERFLOW);
     });
 
     it("Pause if called by guardian and fires `DepositsPaused` and `StakingModuleStatusSet` events", async () => {
