@@ -17,6 +17,7 @@
     "format": "prettier . --write --ignore-path .gitignore --ignore-path .prettierignore",
     "test": "pnpm hardhat test",
     "test:coverage": "pnpm hardhat coverage",
+    "test:trace": "pnpm hardhat test --trace",
     "type:check": "tsc --noEmit",
     "prepare": "husky install"
   },
@@ -54,6 +55,7 @@
     "glob": "^10.3.10",
     "hardhat": "^2.17.2",
     "hardhat-gas-reporter": "^1.0.8",
+    "hardhat-tracer": "2.7.0",
     "husky": "^8.0.0",
     "lint-staged": "^14.0.1",
     "prettier": "^3.0.3",

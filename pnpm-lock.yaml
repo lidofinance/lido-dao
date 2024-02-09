@@ -112,6 +112,9 @@ devDependencies:
   hardhat-gas-reporter:
     specifier: ^1.0.8
     version: 1.0.10(hardhat@2.19.5)
+  hardhat-tracer:
+    specifier: 2.7.0
+    version: 2.7.0(chai@4.4.1)(hardhat@2.19.5)
   husky:
     specifier: ^8.0.0
     version: 8.0.3
@@ -5187,6 +5190,23 @@ packages:
       - '@codechecks/client'
       - bufferutil
       - debug
+      - utf-8-validate
+    dev: true
+
+  /hardhat-tracer@2.7.0(chai@4.4.1)(hardhat@2.19.5):
+    resolution: {integrity: sha512-H+30jj6bCyX7NfhY7Umbzq535jhi9Wd5fGNli9qWcQ+5iOB477Nm8XdGtPtgOV1vQ7VQzIwKFzoEbqy+BuxTlg==}
+    peerDependencies:
+      chai: 4.x
+      hardhat: '>=2.16 <3.x'
+    dependencies:
+      chai: 4.4.1
+      chalk: 4.1.2
+      debug: 4.3.4(supports-color@8.1.1)
+      ethers: 5.7.2
+      hardhat: 2.19.5(ts-node@10.9.2)(typescript@5.3.3)
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
       - utf-8-validate
     dev: true
 
