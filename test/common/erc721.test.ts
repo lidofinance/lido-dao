@@ -55,10 +55,6 @@ interface ERC721Target {
  *
  * @todo call safeTransferFrom directly instead of using signature
  * @todo use DRY when testing overloadable functions (calling without and with extra data)
- * @todo rewrite the function to support the same interface as `describe`, i.e.
- * instead of passing `suiteFunction`, we should be able to call the function like:
- * testERC20Compliance.only(target)
- * testERC20Compliance.skip(target)
  */
 export function testERC721Compliance({ tokenName, deploy, suiteFunction = describe }: ERC721Target) {
   suiteFunction(`${tokenName} ERC-721 Compliance`, () => {
@@ -400,3 +396,15 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
     });
   });
 }
+
+testERC721Compliance.only = (target: ERC721Target) =>
+  testERC721Compliance({
+    ...target,
+    suiteFunction: describe.only, // eslint-disable-line no-only-tests/no-only-tests
+  });
+
+testERC721Compliance.skip = (target: ERC721Target) =>
+  testERC721Compliance({
+    ...target,
+    suiteFunction: describe.skip,
+  });

@@ -5,7 +5,7 @@ import { StakingRouter__factory } from "typechain-types";
 
 import { randomAddress } from "lib";
 
-import testVersionedCompliance from "../../common/versioned.test";
+import { testVersionedCompliance } from "../../common/versioned.test";
 
 testVersionedCompliance({
   name: "StakingRouter",

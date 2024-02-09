@@ -47,11 +47,6 @@ interface ERC20Target {
  * @param {object} target.deploy async function that returns the instance of the contract and initial parameters
  * @param {object} target.suiteFunction function that runs the suite, a temporary workaround for running
  * the suite exclusively or skipping the suite; see the todo below
- *
- * @todo rewrite the function to support the same interface as `describe`, i.e.
- * instead of passing `suiteFunction`, we should be able to call the function like:
- * testERC20Compliance.only(target)
- * testERC20Compliance.skip(target)
  */
 export function testERC20Compliance({ tokenName, deploy, suiteFunction = describe }: ERC20Target) {
   suiteFunction(`${tokenName} ERC-20 Compliance`, () => {
@@ -306,3 +301,15 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
     });
   });
 }
+
+testERC20Compliance.only = (target: ERC20Target) =>
+  testERC20Compliance({
+    ...target,
+    suiteFunction: describe.only, // eslint-disable-line no-only-tests/no-only-tests
+  });
+
+testERC20Compliance.skip = (target: ERC20Target) =>
+  testERC20Compliance({
+    ...target,
+    suiteFunction: describe.skip,
+  });
