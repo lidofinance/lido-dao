@@ -33,13 +33,8 @@ interface VersionedTarget {
  * predict how the derived contracts are used.
  * @param {object} target.suiteFunction function that runs the suite, a temporary workaround for running
  * the suite exclusively or skipping the suite; see the todo below
- *
- * @todo rewrite the function to support the same interface as `describe`, i.e.
- * instead of passing `suiteFunction`, we should be able to call the function like:
- * testVersionedCompliance.only(target)
- * testVersionedCompliance.skip(target)
  */
-export default function testVersionedCompliance({ name, deploy, updates, suiteFunction = describe }: VersionedTarget) {
+export function testVersionedCompliance({ name, deploy, updates, suiteFunction = describe }: VersionedTarget) {
   suiteFunction(`${name} Versioned Compliance`, () => {
     let admin: HardhatEthersSigner;
     let user: HardhatEthersSigner;
@@ -90,3 +85,15 @@ export default function testVersionedCompliance({ name, deploy, updates, suiteFu
     });
   });
 }
+
+testVersionedCompliance.only = (target: VersionedTarget) =>
+  testVersionedCompliance({
+    ...target,
+    suiteFunction: describe.only, // eslint-disable-line no-only-tests/no-only-tests
+  });
+
+testVersionedCompliance.skip = (target: VersionedTarget) =>
+  testVersionedCompliance({
+    ...target,
+    suiteFunction: describe.skip,
+  });
