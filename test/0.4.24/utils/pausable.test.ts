@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
+
 import { PausableMockWithExposedApi } from "typechain-types";
 
 describe("Pausable", () => {
