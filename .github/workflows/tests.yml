@@ -57,6 +57,6 @@ jobs:
           path: ./coverage/cobertura-coverage.xml
           publish: true
           diff: true
-          diff-branch: master
+          diff-branch: develop
           diff-storage: _core_coverage_reports
           coverage-summary-title: "Code Coverage Summary"
