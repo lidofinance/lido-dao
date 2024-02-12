@@ -1,9 +1,10 @@
 import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
-import { certainAddress, deriveDomainSeparator, deriveTypeDataHash, streccak } from "lib";
-import { describe } from "mocha";
+
 import { EIP712StETH, EIP712StETH__factory } from "typechain-types";
+
+import { certainAddress, deriveDomainSeparator, deriveTypeDataHash, streccak } from "lib";
 
 interface Domain {
   type: string;

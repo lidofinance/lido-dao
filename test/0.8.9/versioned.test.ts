@@ -1,9 +1,11 @@
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { describe } from "mocha";
-import { MAX_UINT256, proxify, streccak } from "lib";
+
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+
 import { VersionedConsumerMock } from "typechain-types";
+
+import { MAX_UINT256, proxify, streccak } from "lib";
 
 describe("Versioned.sol", () => {
   let admin: HardhatEthersSigner;

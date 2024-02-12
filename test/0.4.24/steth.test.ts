@@ -1,10 +1,12 @@
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
-import { ONE_ETHER, batch, ether } from "lib";
-import { describe } from "mocha";
+
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+
 import { StethMinimalMockWithTotalPooledEther, StethMinimalMockWithTotalPooledEther__factory } from "typechain-types";
+
+import { batch, ether, ONE_ETHER } from "lib";
 
 describe("StETH:non-ERC-20 behavior", () => {
   let holder: HardhatEthersSigner;

@@ -1,0 +1,54 @@
+name: Linters
+
+on: [push]
+
+jobs:
+  lint:
+    name: Solidity and TypeScript linters
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - run: corepack enable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run Solidity linters
+        run: pnpm lint:sol
+
+      - name: Run TS linters
+        run: pnpm lint:ts
+
+  types:
+    name: TypeScript types check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - run: corepack enable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Generate typechain types
+        run: pnpm hardhat compile
+
+      - name: Run TypeScript types check
+        run: pnpm type:check

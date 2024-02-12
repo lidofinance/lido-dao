@@ -1,9 +1,12 @@
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
 import { parseUnits } from "ethers";
-import { batch } from "lib";
-import { ExclusiveSuiteFunction, PendingSuiteFunction, describe } from "mocha";
+import { ExclusiveSuiteFunction, PendingSuiteFunction } from "mocha";
+
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+
 import { ERC20 } from "typechain-types/@openzeppelin/contracts/token/ERC20/ERC20";
+
+import { batch } from "lib";
 
 interface ERC20Target {
   tokenName: string;

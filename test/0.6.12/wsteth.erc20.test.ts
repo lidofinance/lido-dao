@@ -1,8 +1,11 @@
 import { ethers } from "hardhat";
-import { ether } from "lib/units";
+
 import { WstETH__factory } from "typechain-types";
-import { testERC20Compliance } from "../common/erc20.test";
 import { StethMinimalMockWithTotalPooledEther__factory } from "typechain-types";
+
+import { ether } from "lib/units";
+
+import { testERC20Compliance } from "../common/erc20.test";
 
 testERC20Compliance({
   tokenName: "wstETH",
