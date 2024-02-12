@@ -72,6 +72,42 @@ describe("Lido:staking", () => {
     });
   });
 
+  context("resume", () => {
+    it("Resumes the contract", async () => {
+      await expect(lido.resume()).to.emit(lido, "Resumed").and.to.emit(lido, "StakingResumed");
+    });
+
+    it("Reverts if the caller is unauthorized", async () => {
+      await expect(lido.connect(stranger).resume()).to.be.revertedWith("APP_AUTH_FAILED");
+    });
+
+    it("Reverts if the contract is already resumed", async () => {
+      await lido.resume();
+
+      await expect(lido.resume()).to.be.revertedWith("CONTRACT_IS_ACTIVE");
+    });
+  });
+
+  context("stop", () => {
+    beforeEach(async () => {
+      await lido.resume();
+    });
+
+    it("Stops the contract", async () => {
+      await expect(lido.stop()).to.emit(lido, "Stopped").and.to.emit(lido, "StakingPaused");
+    });
+
+    it("Reverts if the caller is unauthorized", async () => {
+      await expect(lido.connect(stranger).stop()).to.be.revertedWith("APP_AUTH_FAILED");
+    });
+
+    it("Reverts if the contract is already stopped", async () => {
+      await lido.stop();
+
+      await expect(lido.stop()).to.be.revertedWith("CONTRACT_IS_STOPPED");
+    });
+  });
+
   context("getCurrentStakeLimit", () => {
     it("Returns zero if staking is paused", async () => {
       expect(await lido.getCurrentStakeLimit()).to.equal(0);
