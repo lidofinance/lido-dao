@@ -4,7 +4,10 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-interface ISepoliaDepositContract {
+import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
+
+// Sepolia deposit contract variant of the source code https://github.com/protolambda/testnet-dep-contract/blob/master/deposit_contract.sol
+interface ISepoliaDepositContract is IERC20 {
 
     function deposit(
         bytes calldata pubkey,

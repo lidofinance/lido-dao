@@ -21,7 +21,7 @@ contract('SepoliaDepositAdapter impl', ([deployer]) => {
     const depositAdapterVersion = await depositAdapter.VERSION()
     assert.equals(depositAdapterVersion, 2)
 
-    bepoliaToken = await ethers.getContractAt('SepoliaDepositContract', sepoliaDepositContract)
+    bepoliaToken = await ethers.getContractAt('ISepoliaDepositContract', sepoliaDepositContract)
 
     snapshot = new EvmSnapshot(ethers.provider)
     await snapshot.make()
