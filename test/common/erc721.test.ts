@@ -44,7 +44,7 @@ interface ERC721Target {
  * @param {Function} target.deploy async function that deploys the token and returns its
  * instance along with other necessary details.
  * @param {Function} [target.suiteFunction=describe] function that runs the suite, a temporary workaround for running
- * the suite exclusively or skipping the suite; see the todo below
+ * the suite exclusively or skipping the suite;
  *
  * The `deploy` function should return an object containing:
  * - `token`: The ERC721 token instance.
