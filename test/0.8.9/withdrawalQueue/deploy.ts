@@ -13,7 +13,7 @@ interface MinimumWithdrawalQueueDeploymentParams {
   symbol?: string;
 }
 
-export default async function deployMinimumWithdrawalQueue({
+export default async function deployWithdrawalQueue({
   owner,
   name = QUEUE_NAME,
   symbol = QUEUE_SYMBOL,
@@ -33,14 +33,16 @@ export default async function deployMinimumWithdrawalQueue({
   const wstEthAddress = await wstEth.getAddress();
 
   const token = await ethers.deployContract("WithdrawalQueueERC721", [wstEthAddress, name, symbol]);
+  const tokenAddress = await token.getAddress();
 
-  await stEth.connect(owner).approve(await token.getAddress(), holderStEth);
+  await stEth.connect(owner).approve(tokenAddress, holderStEth);
   await token.connect(owner).requestWithdrawals([holderStEth], owner);
 
   const ownerTokenId = await token.getLastRequestId();
 
   return {
     token,
+    tokenAddress,
     name,
     symbol,
     owner,

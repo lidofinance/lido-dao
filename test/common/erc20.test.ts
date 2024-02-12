@@ -46,7 +46,7 @@ interface ERC20Target {
  * @param {object} target.tokenName name of the token to use in the suite description
  * @param {object} target.deploy async function that returns the instance of the contract and initial parameters
  * @param {object} target.suiteFunction function that runs the suite, a temporary workaround for running
- * the suite exclusively or skipping the suite; see the todo below
+ * the suite exclusively or skipping the suite;
  */
 export function testERC20Compliance({ tokenName, deploy, suiteFunction = describe }: ERC20Target) {
   suiteFunction(`${tokenName} ERC-20 Compliance`, () => {

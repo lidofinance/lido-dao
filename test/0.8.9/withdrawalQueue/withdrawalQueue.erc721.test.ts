@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 
 import { testERC721Compliance } from "../../common/erc721.test";
 
-import deployMinimumWithdrawalQueue from "./deploy";
+import deployWithdrawalQueue from "./deploy";
 
 testERC721Compliance({
   tokenName: "WithdrawalQueue NFT",
@@ -10,7 +10,7 @@ testERC721Compliance({
     const signers = await ethers.getSigners();
     const owner = signers[signers.length - 1];
 
-    const deployed = await deployMinimumWithdrawalQueue({ owner });
+    const deployed = await deployWithdrawalQueue({ owner });
 
     return {
       token: deployed.token,
