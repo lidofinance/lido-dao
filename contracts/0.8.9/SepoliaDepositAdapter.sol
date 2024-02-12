@@ -28,7 +28,7 @@ contract SepoliaDepositAdapter {
     uint public constant VERSION = 2;
     ISepoliaDepositContract public originalContract;
 
-    address payable public creator;
+    address payable public immutable creator;
 
     constructor(address _deposit_contract) {
         originalContract = ISepoliaDepositContract(_deposit_contract);
@@ -47,7 +47,7 @@ contract SepoliaDepositAdapter {
         return originalContract.name();
     }
 
-    receive() external payable  {}
+    receive() external payable {}
 
     function deposit(
         bytes calldata pubkey,
