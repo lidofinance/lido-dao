@@ -7,7 +7,7 @@ import { mine } from "@nomicfoundation/hardhat-network-helpers";
 
 import { ACL, Lido } from "typechain-types";
 
-import { deployLidoDao, ether } from "lib";
+import { deployLidoDao, ether, ONE_ETHER } from "lib";
 
 describe("Lido:staking", () => {
   let deployer: HardhatEthersSigner;
@@ -175,6 +175,39 @@ describe("Lido:staking", () => {
         expected.currentStakeLimit = (expected.maxStakeLimit / expected.maxStakeLimitGrowthBlocks) * i;
         expect(await lido.getStakeLimitFullInfo()).to.deep.equal(Object.values(expected));
       }
+    });
+  });
+
+  context("fallback", () => {
+    beforeEach(async () => {
+      await lido.resumeStaking();
+    });
+
+    it("Defaults to submit", async () => {
+      await expect(
+        user.sendTransaction({
+          to: await lido.getAddress(),
+          value: ONE_ETHER,
+        }),
+      )
+        .to.emit(lido, "Submitted")
+        .withArgs(user.address, ONE_ETHER, ZeroAddress)
+        .and.to.emit(lido, "Transfer")
+        .withArgs(ZeroAddress, user.address, ONE_ETHER)
+        .and.to.emit(lido, "TransferShares")
+        .withArgs(ZeroAddress, user.address, ONE_ETHER);
+
+      expect(await lido.balanceOf(user)).to.equal(ONE_ETHER);
+    });
+
+    it("Reverts when tx data is not empty", async () => {
+      await expect(
+        user.sendTransaction({
+          to: await lido.getAddress(),
+          value: ONE_ETHER,
+          data: "0x01",
+        }),
+      ).to.be.revertedWith("NON_EMPTY_DATA");
     });
   });
 });
