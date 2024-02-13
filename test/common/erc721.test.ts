@@ -381,7 +381,7 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
       });
     });
 
-    context("isApprovedForAll`", () => {
+    context("isApprovedForAll", () => {
       it("Returns false if the address is not approved for all holder's tokens", async () => {
         expect(await token.isApprovedForAll(holder, spender)).to.equal(false);
       });

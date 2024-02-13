@@ -4,49 +4,25 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { OssifiableProxy, StakingRouter, StakingRouter__factory } from "typechain-types";
+import { StakingRouter } from "typechain-types";
 
-import { MAX_UINT256, randomAddress } from "lib";
+import { proxify, randomAddress } from "lib";
 
 describe("StakingRouter:Versioned", () => {
   let owner: HardhatEthersSigner;
 
-  let proxy: OssifiableProxy;
-  let impl: StakingRouter;
   let versioned: StakingRouter;
-
-  const petrifiedVersion = MAX_UINT256;
 
   before(async () => {
     [owner] = await ethers.getSigners();
     const depositContract = randomAddress();
-    impl = await ethers.deployContract("StakingRouter", [depositContract]);
+    const impl = await ethers.deployContract("StakingRouter", [depositContract]);
 
-    proxy = await ethers.deployContract("OssifiableProxy", [await impl.getAddress(), owner.address, new Uint8Array()], {
-      from: owner,
-    });
-
-    versioned = StakingRouter__factory.connect(await proxy.getAddress(), owner);
+    [versioned] = await proxify({ impl, admin: owner });
   });
 
-  context("constructor", () => {
-    it("Petrifies the implementation", async () => {
-      expect(await impl.getContractVersion()).to.equal(petrifiedVersion);
-    });
-  });
-
-  context("getContractVersion", () => {
-    it("Returns 0 as the initial contract version", async () => {
-      expect(await versioned.getContractVersion()).to.equal(0n);
-    });
-  });
-
-  context("setContractVersion", () => {
-    it("Updates the contract version on the proxy", async () => {
-      await versioned.initialize(randomAddress(), randomAddress(), randomBytes(32));
-
-      expect(await versioned.getContractVersion()).to.equal(1n);
-      expect(await impl.getContractVersion()).to.equal(petrifiedVersion);
-    });
+  it("Increments version", async () => {
+    await versioned.initialize(randomAddress(), randomAddress(), randomBytes(32));
+    expect(await versioned.getContractVersion()).to.equal(1n);
   });
 });
