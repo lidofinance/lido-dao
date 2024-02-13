@@ -29,11 +29,8 @@ contract SepoliaDepositAdapter is Ownable {
     uint public constant VERSION = 2;
     ISepoliaDepositContract public immutable originalContract;
 
-    address payable public immutable creator;
-
     constructor(address _deposit_contract) {
         originalContract = ISepoliaDepositContract(_deposit_contract);
-        creator = payable(msg.sender);
     }
 
     function get_deposit_root() external view returns (bytes32) {
@@ -65,10 +62,5 @@ contract SepoliaDepositAdapter is Ownable {
         bytes32 deposit_data_root
     ) external payable {
         originalContract.deposit(pubkey, withdrawal_credentials, signature, deposit_data_root);
-    }
-
-    // Public function to send all available funds back to contract creator
-    function drain() public {
-        creator.transfer(address(this).balance);
     }
 }
