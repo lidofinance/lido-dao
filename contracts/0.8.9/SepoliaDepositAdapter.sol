@@ -26,7 +26,7 @@ interface ISepoliaDepositContract is IERC20 {
 contract SepoliaDepositAdapter {
 
     uint public constant VERSION = 2;
-    ISepoliaDepositContract public originalContract;
+    ISepoliaDepositContract public immutable originalContract;
 
     address payable public immutable creator;
 
