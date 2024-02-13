@@ -5,6 +5,7 @@
 pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-v4.4/access/Ownable.sol";
 
 // Sepolia deposit contract variant of the source code https://github.com/protolambda/testnet-dep-contract/blob/master/deposit_contract.sol
 interface ISepoliaDepositContract is IERC20 {
@@ -23,7 +24,7 @@ interface ISepoliaDepositContract is IERC20 {
     function name() external view returns (string memory);
 }
 
-contract SepoliaDepositAdapter {
+contract SepoliaDepositAdapter is Ownable {
 
     uint public constant VERSION = 2;
     ISepoliaDepositContract public immutable originalContract;
