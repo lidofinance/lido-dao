@@ -9,43 +9,46 @@ const QUEUE_SYMBOL = "unstETH";
 
 interface MinimumWithdrawalQueueDeploymentParams {
   owner: HardhatEthersSigner;
+  initialStEth?: bigint;
+  ownerStEth?: bigint;
   name?: string;
   symbol?: string;
 }
 
 export default async function deployWithdrawalQueue({
   owner,
+  initialStEth = ether("1.0"),
+  ownerStEth = ether("99.0"),
   name = QUEUE_NAME,
   symbol = QUEUE_SYMBOL,
 }: MinimumWithdrawalQueueDeploymentParams) {
-  const initialTotalSupply = ether("1.0");
-  const holderStEth = ether("99.0");
-
   const stEth = await ethers.deployContract("StETHPermitMock", {
-    value: initialTotalSupply,
+    value: initialStEth,
   });
 
-  await stEth.mintSteth(owner, { value: holderStEth });
+  await stEth.mintSteth(owner, { value: ownerStEth });
 
   const stEthAddress = await stEth.getAddress();
   const wstEth = await ethers.deployContract("WstETHMock", [stEthAddress]);
 
   const wstEthAddress = await wstEth.getAddress();
 
-  const token = await ethers.deployContract("WithdrawalQueueERC721", [wstEthAddress, name, symbol]);
+  const deployConfig = [wstEthAddress, name, symbol];
+  const token = await ethers.deployContract("WithdrawalQueueERC721", deployConfig);
+
   const tokenAddress = await token.getAddress();
 
-  await stEth.connect(owner).approve(tokenAddress, holderStEth);
-  await token.connect(owner).requestWithdrawals([holderStEth], owner);
-
-  const ownerTokenId = await token.getLastRequestId();
-
   return {
+    // Deployed contract
     token,
     tokenAddress,
     name,
     symbol,
     owner,
-    ownerTokenId,
+    // Related contracts
+    stEth,
+    stEthAddress,
+    wstEth,
+    wstEthAddress,
   };
 }
