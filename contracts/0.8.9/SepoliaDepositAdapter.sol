@@ -48,7 +48,15 @@ contract SepoliaDepositAdapter is Ownable {
         return originalContract.name();
     }
 
-    receive() external payable {}
+    receive() external payable {
+        address payable owner = payable(owner());
+        owner.transfer(msg.value);
+    }
+
+    function drainBepolia() external onlyOwner {
+        uint bepoliaOwnTokens = originalContract.balanceOf(address(this));
+        originalContract.transfer(owner(), bepoliaOwnTokens);
+    }    
 
     function deposit(
         bytes calldata pubkey,
