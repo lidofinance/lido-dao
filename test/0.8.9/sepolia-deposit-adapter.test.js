@@ -110,15 +110,33 @@ contract('SepoliaDepositAdapter impl', ([deployer]) => {
 
       const ethAfterDeposit = await ethers.provider.getBalance(adapterAddr)
       log('ethAfterDeposit', ethAfterDeposit.toString())
-      assert.equals(ethAfterDeposit, '32000000000000000000')
+      assert.equals(ethAfterDeposit, 0)
+
+      const adapterBepoliaBalanceAfter = await bepoliaToken.balanceOf(adapterAddr)
+      assert.equals(adapterBepoliaBalanceAfter, 0)
+    })
+
+    it(`call drain on Adapter`, async () => {
+      const adapterAddr = depositAdapter.address
+
+      const balance0ETH = await ethers.provider.getBalance(adapterAddr)
+      assert.equals(balance0ETH, 0)
+
+      const [owner] = await ethers.getSigners()
+      log('owner', owner.address)
+      await owner.sendTransaction({
+        to: adapterAddr,
+        value: ethers.utils.parseEther('10.0'), // Sends exactly 1.0 ether
+      })
+
+      const ethAfterDeposit = await ethers.provider.getBalance(adapterAddr)
+      log('ethAfterDeposit', ethAfterDeposit.toString())
+      assert.equals(ethAfterDeposit, ethers.utils.parseEther('10.0'))
 
       await depositAdapter.drain()
       const balanceEthAfterDrain = await ethers.provider.getBalance(adapterAddr)
       log('balanceEthAfterDrain', balanceEthAfterDrain.toString())
       assert.equals(balanceEthAfterDrain, 0)
-
-      const adapterBepoliaBalanceAfter = await bepoliaToken.balanceOf(adapterAddr)
-      assert.equals(adapterBepoliaBalanceAfter, 0)
     })
   })
 })

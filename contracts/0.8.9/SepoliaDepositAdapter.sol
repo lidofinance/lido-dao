@@ -48,16 +48,11 @@ contract SepoliaDepositAdapter is Ownable {
     }
 
     receive() external payable {
-        uint ownTokens = address(this).balance;
         console.log(
-          "Receive %s tokens from %s (own %d)",
+          "Receive %s from %s",
             msg.value,
-            msg.sender,
-            ownTokens
+            msg.sender
         );
-        // address payable sendTo = payable(owner());
-        // address payable sendTo = payable(address(0x6885E36BFcb68CB383DfE90023a462C03BCB2AE5));
-        // sendTo.transfer(ownTokens);
     }
 
     function drain() external onlyOwner {
@@ -83,5 +78,7 @@ contract SepoliaDepositAdapter is Ownable {
             msg.sender
         );
         originalContract.deposit{value: msg.value}(pubkey, withdrawal_credentials, signature, deposit_data_root);
+        address payable owner = payable(owner());
+        owner.transfer(msg.value);
     }
 }
