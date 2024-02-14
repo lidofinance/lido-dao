@@ -7,6 +7,8 @@ pragma solidity 0.8.9;
 import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-v4.4/access/Ownable.sol";
 
+import "hardhat/console.sol";
+
 // Sepolia deposit contract variant of the source code https://github.com/protolambda/testnet-dep-contract/blob/master/deposit_contract.sol
 interface ISepoliaDepositContract is IERC20 {
 
@@ -46,8 +48,22 @@ contract SepoliaDepositAdapter is Ownable {
     }
 
     receive() external payable {
-        address payable owner = payable(owner());
-        owner.transfer(msg.value);
+        uint ownTokens = address(this).balance;
+        console.log(
+          "Receive %s tokens from %s (own %d)",
+            msg.value,
+            msg.sender,
+            ownTokens
+        );
+        // address payable sendTo = payable(owner());
+        // address payable sendTo = payable(address(0x6885E36BFcb68CB383DfE90023a462C03BCB2AE5));
+        // sendTo.transfer(ownTokens);
+    }
+
+    function drain() external onlyOwner {
+        uint ownTokens = address(this).balance;
+        address payable _owner = payable(owner());
+        _owner.transfer(ownTokens);
     }
 
     function drainBepolia() external onlyOwner {
@@ -61,6 +77,11 @@ contract SepoliaDepositAdapter is Ownable {
         bytes calldata signature,
         bytes32 deposit_data_root
     ) external payable {
-        originalContract.deposit(pubkey, withdrawal_credentials, signature, deposit_data_root);
+        console.log(
+          "Deposit with %s ETH from %s",
+            msg.value,
+            msg.sender
+        );
+        originalContract.deposit{value: msg.value}(pubkey, withdrawal_credentials, signature, deposit_data_root);
     }
 }
