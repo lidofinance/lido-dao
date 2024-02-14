@@ -77,7 +77,7 @@ contract('SepoliaDepositAdapter impl', ([deployer]) => {
       await bepoliaToken.connect(impersonatedSigner).transfer(adapterAddr, 1)
 
       const [owner] = await ethers.getSigners()
-      // log('owner', owner.address);
+      log('owner', owner.address)
       // await owner.sendTransaction({
       //   to: adapterAddr,
       //   value: ethers.utils.parseEther("10.0"), // Sends exactly 1.0 ether
