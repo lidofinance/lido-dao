@@ -78,10 +78,6 @@ contract('SepoliaDepositAdapter impl', ([deployer]) => {
 
       const [owner] = await ethers.getSigners()
       log('owner', owner.address)
-      // await owner.sendTransaction({
-      //   to: adapterAddr,
-      //   value: ethers.utils.parseEther("10.0"), // Sends exactly 1.0 ether
-      // });
 
       const bepoliaTokenHolderBalance = await bepoliaToken.balanceOf(bepoliaTokenHolder)
       const adapterBepoliaBalance = await bepoliaToken.balanceOf(adapterAddr)
@@ -126,7 +122,7 @@ contract('SepoliaDepositAdapter impl', ([deployer]) => {
       log('owner', owner.address)
       await owner.sendTransaction({
         to: adapterAddr,
-        value: ethers.utils.parseEther('10.0'), // Sends exactly 1.0 ether
+        value: ethers.utils.parseEther('10.0'),
       })
 
       const ethAfterDeposit = await ethers.provider.getBalance(adapterAddr)
