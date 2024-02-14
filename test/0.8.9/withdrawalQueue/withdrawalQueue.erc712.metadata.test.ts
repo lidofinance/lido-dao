@@ -91,8 +91,9 @@ describe("WithdrawalQueueERC721 ERC-721 Metadata Compliance", () => {
 
     // REVIEW: Do we need this? Need custom error?
     it("Reverts when called by non-manager", async () => {
-      await expect(queue.connect(stranger).setBaseURI(baseTokenUri)).to.be.revertedWith(
-        /AccessControl.*?is missing role.*/,
+      await expect(queue.connect(stranger).setBaseURI(baseTokenUri)).to.be.revertedWithOZAccessControlError(
+        stranger.address,
+        MANAGE_TOKEN_URI_ROLE,
       );
     });
 
