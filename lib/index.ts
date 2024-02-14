@@ -14,3 +14,4 @@ export * from "./dummy";
 export * from "./event";
 export * from "./aragon";
 export * from "./dsm";
+export * from "./withdrawal";

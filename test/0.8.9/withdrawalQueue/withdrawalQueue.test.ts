@@ -6,9 +6,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { WithdrawalQueueERC721 } from "typechain-types";
 
-import { MAX_UINT256, Snapshot, streccak } from "lib";
-
-import deployWithdrawalQueue from "./deploy";
+import { deployWithdrawalQueue, MAX_UINT256, Snapshot, streccak } from "lib";
 
 interface WithdrawalQueueContractACLRolesConstants {
   PAUSE_ROLE: string;
@@ -62,28 +60,37 @@ describe("WithdrawalQueueERC721.sol", () => {
 
   let wq: WithdrawalQueueERC721;
 
-  let admin: HardhatEthersSigner;
+  let queueAdmin: HardhatEthersSigner;
+
+  let originalState: string;
 
   const getDeployConfig = (config: WithdrawalQueueContractConfig) => [config.wstEthAddress, config.name, config.symbol];
 
   before(async () => {
-    [admin] = await ethers.getSigners();
+    [queueAdmin] = await ethers.getSigners();
 
-    const deployed = await deployWithdrawalQueue({ owner: admin });
+    const deployed = await deployWithdrawalQueue({
+      queueAdmin,
+    });
 
-    wq = deployed.token;
+    wq = deployed.queue;
 
     config.stEthAddress = deployed.stEthAddress;
     config.wstEthAddress = deployed.wstEthAddress;
     config.name = deployed.name;
     config.symbol = deployed.symbol;
+
+    originalState = await Snapshot.take();
   });
 
   context("Constants", () => {
-    let originalState: string;
+    beforeEach(async () => {
+      originalState = await Snapshot.take();
+    });
 
-    beforeEach(async () => (originalState = await Snapshot.take()));
-    afterEach(async () => await Snapshot.restore(originalState));
+    afterEach(async () => {
+      await Snapshot.restore(originalState);
+    });
 
     // WithdrawalQueueBase
 
@@ -128,10 +135,13 @@ describe("WithdrawalQueueERC721.sol", () => {
   });
 
   context("constructor", () => {
-    let originalState: string;
+    beforeEach(async () => {
+      originalState = await Snapshot.take();
+    });
 
-    beforeEach(async () => (originalState = await Snapshot.take()));
-    afterEach(async () => await Snapshot.restore(originalState));
+    afterEach(async () => {
+      await Snapshot.restore(originalState);
+    });
 
     it("Reverts if wstAddress is wrong", async () => {
       await expect(
@@ -176,7 +186,7 @@ describe("WithdrawalQueueERC721.sol", () => {
 
     it("Sets initial properties", async () => {
       expect(await wq.isPaused()).to.equal(false, "isPaused");
-      // expect(await wq.getLastRequestId()).to.equal(ZERO, "getLastRequestId");
+      expect(await wq.getLastRequestId()).to.equal(ZERO, "getLastRequestId");
       expect(await wq.getLastFinalizedRequestId()).to.equal(ZERO, "getLastFinalizedRequestId");
       expect(await wq.getLastCheckpointIndex()).to.equal(ZERO, "getLastCheckpointIndex");
       expect(await wq.unfinalizedStETH()).to.equal(ZERO, "unfinalizedStETH");

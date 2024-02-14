@@ -5,20 +5,18 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { WithdrawalQueueERC721 } from "typechain-types";
 
-import { proxify, randomAddress } from "lib";
-
-import deployWithdrawalQueue from "./deploy";
+import { deployWithdrawalQueueImpl, proxify, randomAddress } from "lib";
 
 describe("WithdrawalQueueERC721:Versioned", () => {
   let owner: HardhatEthersSigner;
-
   let versioned: WithdrawalQueueERC721;
 
   before(async () => {
     [owner] = await ethers.getSigners();
-    const deployed = await deployWithdrawalQueue({ owner });
 
-    [versioned] = await proxify({ impl: deployed.token, admin: owner });
+    const deployed = await deployWithdrawalQueueImpl();
+
+    [versioned] = await proxify({ impl: deployed.impl, admin: owner });
   });
 
   it("Increments version", async () => {

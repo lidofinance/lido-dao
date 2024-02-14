@@ -1,38 +1,35 @@
 import { ethers } from "hardhat";
 
-import { ether } from "lib";
+import { deployWithdrawalQueue, ether } from "lib";
 
 import { testERC721Compliance } from "../../common/erc721.test";
-
-import deployWithdrawalQueue from "./deploy";
 
 testERC721Compliance({
   tokenName: "WithdrawalQueue NFT",
   deploy: async () => {
     const signers = await ethers.getSigners();
-    const holder = signers[signers.length - 1];
+    const owner = signers[signers.length - 1];
 
     const initialStEth = ether("1.0");
-    const holderStEth = ether("99.0");
+    const ownerStEth = ether("99.0");
 
     const deployed = await deployWithdrawalQueue({
-      initialStEth,
-      owner: holder,
-      ownerStEth: holderStEth,
+      stEthSettings: { initialStEth, owner: owner, ownerStEth },
+      queueAdmin: owner,
     });
 
-    const { token, tokenAddress, stEth } = deployed;
+    const { queue, queueAddress, stEth } = deployed;
 
-    await stEth.connect(holder).approve(tokenAddress, holderStEth);
-    await token.connect(holder).requestWithdrawals([holderStEth], holder);
+    await stEth.connect(owner).approve(queueAddress, ownerStEth);
+    await queue.connect(owner).requestWithdrawals([ownerStEth], owner);
 
-    const holderTokenId = await token.getLastRequestId();
+    const holderTokenId = await queue.getLastRequestId();
 
     return {
-      token,
+      token: queue,
       name: deployed.name,
       symbol: deployed.symbol,
-      holder,
+      holder: owner,
       holderTokenId,
     };
   },

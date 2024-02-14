@@ -9,20 +9,22 @@ import { ERC721, ERC721ReceiverMock } from "typechain-types";
 
 import { ERC165_INTERFACE_ID, ERC721_INTERFACE_ID, ERC721METADATA_INTERFACE_ID, INVALID_INTERFACE_ID } from "lib";
 
+interface ERC721Deployment {
+  token: ERC721;
+  name: string;
+  symbol: string;
+  holder: HardhatEthersSigner;
+  holderTokenId: bigint;
+}
+
 interface ERC721Target {
   tokenName: string;
-  deploy: () => Promise<{
-    token: ERC721;
-    name: string;
-    symbol: string;
-    holder: HardhatEthersSigner;
-    holderTokenId: bigint;
-  }>;
+  deploy: () => Promise<ERC721Deployment>;
   suiteFunction?: ExclusiveSuiteFunction | PendingSuiteFunction;
 }
 
 /**
- * @function testERC20Compliance
+ * @function testERC721Compliance
  * @description This function provides a black-box test suite for verifying
  * the compliance of Ethereum contracts with the ERC-721 token standard.
  * Reference: https://eips.ethereum.org/EIPS/eip-721
@@ -46,7 +48,7 @@ interface ERC721Target {
  * @param {Function} [target.suiteFunction=describe] function that runs the suite, a temporary workaround for running
  * the suite exclusively or skipping the suite;
  *
- * The `deploy` function should return an object containing:
+ * The `deploy` function should return an object compatible with the `ERC721Deployment` interface.
  * - `token`: The ERC721 token instance.
  * - `name`: The expected name of the token.
  * - `symbol`: The expected symbol of the token.
@@ -78,13 +80,13 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
     });
 
     context("name", () => {
-      it("Returns the name of the token", async () => {
+      it("[OPTIONAL] Returns the name of the token", async () => {
         expect(await token.name()).to.equal(name);
       });
     });
 
     context("symbol", () => {
-      it("Returns the symbol of the token", async () => {
+      it("[OPTIONAL] Returns the symbol of the token", async () => {
         expect(await token.symbol()).to.equal(symbol);
       });
     });
