@@ -63,7 +63,8 @@ contract SepoliaDepositAdapter is Ownable {
 
     function drainBepolia() external onlyOwner {
         uint bepoliaOwnTokens = originalContract.balanceOf(address(this));
-        originalContract.transfer(owner(), bepoliaOwnTokens);
+        bool success = originalContract.transfer(owner(), bepoliaOwnTokens);
+        require(success, "Transfer failed");
     }    
 
     function deposit(
