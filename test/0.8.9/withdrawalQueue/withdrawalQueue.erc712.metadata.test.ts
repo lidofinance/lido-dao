@@ -9,6 +9,7 @@ import { StETHMock, WithdrawalQueueERC721 } from "typechain-types";
 
 import {
   deployWithdrawalQueue,
+  ERC4906_INTERFACE_ID,
   ether,
   MANAGE_TOKEN_URI_ROLE,
   NFT_DESCRIPTOR_BASE_URI,
@@ -44,7 +45,7 @@ describe("WithdrawalQueueERC721 ERC-721 Metadata Compliance", () => {
       queueFinalizer: daoAgent,
     });
 
-    ({ queue, queue, queueAddress, stEth, nftDescriptorAddress } = deployed);
+    ({ queue, queueAddress, stEth, nftDescriptorAddress } = deployed);
 
     await deployed.stEth.setTotalPooledEther(ether("600.00"));
     // we need 1 ETH additionally to pay gas on finalization because coverage ignores gasPrice=0
@@ -56,6 +57,13 @@ describe("WithdrawalQueueERC721 ERC-721 Metadata Compliance", () => {
     await queue.connect(daoAgent).grantRole(MANAGE_TOKEN_URI_ROLE, tokenUriManager);
 
     originalState = await Snapshot.take();
+  });
+
+  context("supportsInterface", () => {
+    // NB! This is a test for ERC4906, that is Metadata Update Extension https://eips.ethereum.org/EIPS/eip-4906
+    it("Returns true for ERC4906 interface", async () => {
+      expect(await queue.supportsInterface(ERC4906_INTERFACE_ID)).to.be.true;
+    });
   });
 
   context("name", () => {
