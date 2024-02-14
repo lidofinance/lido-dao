@@ -4,7 +4,14 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { ACL, Lido, LidoLocator, LidoLocator__factory, WithdrawalQueueMinimalApiForLido } from "typechain-types";
+import {
+  ACL,
+  Lido,
+  LidoLocator,
+  LidoLocator__factory,
+  StakingRouterMinimalApiForLido,
+  WithdrawalQueueMinimalApiForLido,
+} from "typechain-types";
 
 import { batch, certainAddress, deployLidoDao, ether, impersonate, ONE_ETHER } from "lib";
 
@@ -19,6 +26,7 @@ describe("Lido:misc", () => {
   let acl: ACL;
   let locator: LidoLocator;
   let withdrawalQueue: WithdrawalQueueMinimalApiForLido;
+  let stakingRouter: StakingRouterMinimalApiForLido;
 
   const elRewardsVaultBalance = ether("100.0");
   const withdrawalsVaultBalance = ether("100.0");
@@ -27,11 +35,14 @@ describe("Lido:misc", () => {
     [deployer, user, stranger] = await ethers.getSigners();
 
     withdrawalQueue = await ethers.deployContract("WithdrawalQueueMinimalApiForLido");
+    stakingRouter = await ethers.deployContract("StakingRouterMinimalApiForLido");
+
     ({ lido, acl } = await deployLidoDao({
       rootAccount: deployer,
       initialized: true,
       locatorConfig: {
         withdrawalQueue,
+        stakingRouter,
       },
     }));
 
@@ -170,6 +181,44 @@ describe("Lido:misc", () => {
 
     it("Reverts if the caller is unauthorized", async () => {
       await expect(lido.connect(stranger).unsafeChangeDepositedValidators(100n)).to.be.revertedWith("APP_AUTH_FAILED");
+    });
+  });
+
+  context("getWithdrawalCredentials", () => {
+    it("Returns the 0x01 Lido withdrawal credentials", async () => {
+      expect(await lido.getWithdrawalCredentials()).to.equal(await stakingRouter.getWithdrawalCredentials());
+    });
+  });
+
+  context("getOracle", () => {
+    it("Returns the address of the legacy oracle", async () => {
+      expect(await lido.getOracle()).to.equal(await locator.legacyOracle());
+    });
+  });
+
+  context("getTreasury", () => {
+    it("Returns the address of the Lido treasury", async () => {
+      expect(await lido.getTreasury()).to.equal(await locator.treasury());
+    });
+  });
+
+  context("getFee", () => {
+    it("Returns the protocol fee", async () => {
+      expect(await lido.getFee()).to.equal(await stakingRouter.getTotalFeeE4Precision());
+    });
+  });
+
+  context("getFeeDistribution", () => {
+    it("Returns the fee distribution between insurance, treasury, and modules", async () => {
+      const totalBasisPoints = await stakingRouter.TOTAL_BASIS_POINTS();
+      const totalFee = await stakingRouter.getTotalFeeE4Precision();
+      let { treasuryFee, modulesFee } = await stakingRouter.getStakingFeeAggregateDistributionE4Precision();
+
+      const insuranceFee = 0n;
+      treasuryFee = (treasuryFee * totalBasisPoints) / totalFee;
+      modulesFee = (modulesFee * totalBasisPoints) / totalFee;
+
+      expect(await lido.getFeeDistribution()).to.deep.equal([treasuryFee, insuranceFee, modulesFee]);
     });
   });
 });
