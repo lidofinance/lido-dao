@@ -118,6 +118,9 @@ devDependencies:
   hardhat-tracer:
     specifier: 2.7.0
     version: 2.7.0(chai@4.4.1)(hardhat@2.19.5)
+  hardhat-watcher:
+    specifier: 2.5.0
+    version: 2.5.0(hardhat@2.19.5)
   husky:
     specifier: ^8.0.0
     version: 8.0.3
@@ -5335,6 +5338,15 @@ packages:
       - bufferutil
       - supports-color
       - utf-8-validate
+    dev: true
+
+  /hardhat-watcher@2.5.0(hardhat@2.19.5):
+    resolution: {integrity: sha512-Su2qcSMIo2YO2PrmJ0/tdkf+6pSt8zf9+4URR5edMVti6+ShI8T3xhPrwugdyTOFuyj8lKHrcTZNKUFYowYiyA==}
+    peerDependencies:
+      hardhat: ^2.0.0
+    dependencies:
+      chokidar: 3.6.0
+      hardhat: 2.19.5(ts-node@10.9.2)(typescript@5.3.3)
     dev: true
 
   /hardhat@2.19.5(ts-node@10.9.2)(typescript@5.3.3):
