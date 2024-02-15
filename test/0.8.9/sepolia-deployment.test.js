@@ -9,7 +9,11 @@ contract('SepoliaDepositAdapter deployment', ([deployer]) => {
   let depositAdapter
   let snapshot
 
-  before('deploy lido with dao', async () => {
+  before('deploy lido with dao', async function () {
+    if (!process.env.HARDHAT_FORKING_URL) {
+      return this.skip()
+    }
+
     depositAdapter = await SepoliaDepositAdapter.new(deployer, { from: deployer })
 
     snapshot = new EvmSnapshot(ethers.provider)

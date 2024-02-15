@@ -14,7 +14,11 @@ contract('SepoliaDepositAdapter impl', ([deployer]) => {
   // const log = console.log
   const log = () => {}
 
-  before('deploy lido with dao', async () => {
+  before('deploy lido with dao', async function () {
+    if (!process.env.HARDHAT_FORKING_URL) {
+      return this.skip()
+    }
+
     // depositAdapter = await SepoliaDepositAdapter.at(sepoliaDepositAdapterContract)
     depositAdapter = await ethers.deployContract('SepoliaDepositAdapter', [sepoliaDepositContract])
     log('depositAdapter address', depositAdapter.address)
