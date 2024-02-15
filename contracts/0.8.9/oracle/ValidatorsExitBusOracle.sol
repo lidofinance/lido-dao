@@ -11,9 +11,13 @@ import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
 
 import { BaseOracle } from "./BaseOracle.sol";
 
+import "hardhat/console.sol";
 
 interface IOracleReportSanityChecker {
     function checkExitBusOracleReport(uint256 _exitRequestsCount) external view;
+}
+interface IWithdrawalVault {
+    function forcedExit(uint256 moduleId, uint256 nodeOpId, uint256 valIndex, bytes calldata pubkey) external;
 }
 
 
@@ -85,6 +89,8 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         keccak256("lido.ValidatorsExitBusOracle.dataProcessingState");
 
     ILidoLocator internal immutable LOCATOR;
+
+    mapping (uint256 => bytes32) public reports;
 
     ///
     /// Initialization & admin functions
@@ -214,11 +220,12 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     function submitReportData(ReportData calldata data, uint256 contractVersion)
         external whenResumed
     {
-        _checkMsgSenderIsAllowedToSubmitData();
-        _checkContractVersion(contractVersion);
-        // it's a waste of gas to copy the whole calldata into mem but seems there's no way around
-        _checkConsensusData(data.refSlot, data.consensusVersion, keccak256(abi.encode(data)));
-        _startProcessing();
+        // _checkMsgSenderIsAllowedToSubmitData();
+        // _checkContractVersion(contractVersion);
+        // // it's a waste of gas to copy the whole calldata into mem but seems there's no way around
+        // _checkConsensusData(data.refSlot, data.consensusVersion, keccak256(abi.encode(data)));
+        reports[data.refSlot] = keccak256(abi.encode(data));
+        // _startProcessing();
         _handleConsensusReportData(data);
     }
 
@@ -336,8 +343,8 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             revert InvalidRequestsDataLength();
         }
 
-        IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
-            .checkExitBusOracleReport(data.requestsCount);
+        // IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
+        //     .checkExitBusOracleReport(data.requestsCount);
 
         if (data.data.length / PACKED_REQUEST_LENGTH != data.requestsCount) {
             revert UnexpectedRequestsDataLength();
@@ -459,5 +466,70 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     ) {
         bytes32 position = DATA_PROCESSING_STATE_POSITION;
         assembly { r.slot := position }
+    }
+
+    error InvalidReport();
+    error InvalidPubkeyInReport();
+
+    function forcedExitFromRefSlot(uint256 moduleId, uint256 nodeOpId, uint256 valIndex, bytes calldata pk, ReportData calldata data) external {
+        if (reports[data.refSlot] != keccak256(abi.encode(data))) {
+            revert InvalidReport();
+        }
+        if (!_validatePubkey(pk, data.data)) {
+            revert InvalidPubkeyInReport();
+        }
+        IWithdrawalVault(LOCATOR.withdrawalVault()).forcedExit(moduleId, nodeOpId, valIndex, pk);
+    }
+
+    function _validatePubkey(bytes calldata pk, bytes calldata data) internal view returns(bool) {
+        uint256 offset;
+        uint256 offsetPastEnd;
+        assembly {
+            offset := data.offset
+            offsetPastEnd := add(offset, data.length)
+        }
+
+        uint256 lastDataWithoutPubkey = 0;
+        bytes calldata pubkey;
+        bytes32 k_pk = keccak256(pk);
+
+
+        assembly {
+            pubkey.length := 48
+        }
+
+        while (offset < offsetPastEnd) {
+            uint256 dataWithoutPubkey;
+            assembly {
+                // 16 most significant bytes are taken by module id, node op id, and val index
+                dataWithoutPubkey := shr(128, calldataload(offset))
+                // the next 48 bytes are taken by the pubkey
+                pubkey.offset := add(offset, 16)
+                // totalling to 64 bytes
+                offset := add(offset, 64)
+            }
+            //                              dataWithoutPubkey
+            // MSB <---------------------------------------------------------------------- LSB
+            // | 128 bits: zeros | 24 bits: moduleId | 40 bits: nodeOpId | 64 bits: valIndex |
+            //
+            if (dataWithoutPubkey <= lastDataWithoutPubkey) {
+                revert InvalidRequestsDataSortOrder();
+            }
+
+            uint64 valIndex = uint64(dataWithoutPubkey);
+            uint256 nodeOpId = uint40(dataWithoutPubkey >> 64);
+            uint256 moduleId = uint24(dataWithoutPubkey >> (64 + 40));
+
+            if (moduleId == 0) {
+                revert InvalidRequestsData();
+            }
+
+            if (keccak256(pubkey) == k_pk) {
+                return true;
+            }
+
+        }
+
+        return false;
     }
 }
