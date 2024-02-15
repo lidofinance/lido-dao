@@ -3,6 +3,8 @@ const { assert } = require('../helpers/assert')
 
 const { EvmSnapshot } = require('../helpers/blockchain')
 
+// To run Sepolia Deposit Adapter tests:
+// HARDHAT_FORKING_URL=<rpc url> npx hardhat test --grep "SepoliaDepositAdapter"
 contract('SepoliaDepositAdapter impl', ([deployer]) => {
   let depositAdapter
   let snapshot
