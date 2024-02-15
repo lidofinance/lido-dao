@@ -1,4 +1,7 @@
+import { BaseContract } from "ethers";
+
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+
 import {
   ACL__factory,
   DAOFactory__factory,
@@ -8,10 +11,10 @@ import {
   Kernel__factory,
   Lido__factory,
 } from "typechain-types";
+
+import { dummyLocator } from "./dummy";
 import { findEvents } from "./event";
 import { streccak } from "./keccak";
-import { BaseContract } from "ethers";
-import { dummyLocator } from "./dummy";
 import { ether } from "./units";
 
 export async function createAragonDao(rootAccount: HardhatEthersSigner) {

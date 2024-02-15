@@ -1,4 +1,5 @@
 import { Wallet } from "ethers";
+
 import { streccak } from "./keccak";
 
 export function randomAddress() {

@@ -1,11 +1,14 @@
-node_modules
-.env
-coverage
+/.idea
+
+/node_modules
+/coverage
 coverage.json
-typechain
-typechain-types
+
+/typechain
+/typechain-types
 
 # Hardhat files
-cache
-artifacts
+/cache
+/artifacts
 
+.env

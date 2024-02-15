@@ -1,10 +1,13 @@
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { MaxUint256, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
-import { INITIAL_STETH_HOLDER, certainAddress, dummyLocator, proxify } from "lib/address";
-import { Lido, LidoLocator, Lido__factory } from "typechain-types";
+
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
+
+import { Lido, Lido__factory, LidoLocator } from "typechain-types";
+
+import { certainAddress, dummyLocator, INITIAL_STETH_HOLDER, proxify } from "lib/address";
 
 describe("Lido:initialize", () => {
   let deployer: HardhatEthersSigner;
