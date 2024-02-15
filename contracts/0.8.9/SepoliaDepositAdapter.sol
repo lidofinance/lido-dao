@@ -43,7 +43,7 @@ contract SepoliaDepositAdapter is Ownable {
         return originalContract.get_deposit_count();
     }
 
-    function test() external view returns (string memory) {
+    function name() external view returns (string memory) {
         return originalContract.name();
     }
 
