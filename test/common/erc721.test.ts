@@ -7,7 +7,13 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { ERC721, ERC721ReceiverMock } from "typechain-types";
 
-import { ERC165_INTERFACE_ID, ERC721_INTERFACE_ID, ERC721METADATA_INTERFACE_ID, INVALID_INTERFACE_ID } from "lib";
+import {
+  ERC165_INTERFACE_ID,
+  ERC721_INTERFACE_ID,
+  ERC721METADATA_INTERFACE_ID,
+  INVALID_INTERFACE_ID,
+  Snapshot,
+} from "lib";
 
 interface ERC721Target {
   tokenName: string;
@@ -70,12 +76,18 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
     let contractRecipient: ERC721ReceiverMock;
     let stranger: HardhatEthersSigner;
 
-    beforeEach(async () => {
+    let originalState: string;
+
+    before(async () => {
       ({ token, name, symbol, holder, holderTokenId } = await deploy());
       [spender, newSpender, eoaRecipient, stranger] = await ethers.getSigners();
 
       contractRecipient = await ethers.deployContract("ERC721ReceiverMock");
     });
+
+    beforeEach(async () => (originalState = await Snapshot.take()));
+
+    afterEach(async () => await Snapshot.restore(originalState));
 
     context("name", () => {
       it("Returns the name of the token", async () => {
