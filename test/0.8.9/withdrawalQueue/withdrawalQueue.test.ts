@@ -231,13 +231,44 @@ describe("WithdrawalQueueERC721.sol", () => {
     it("Disables bunker mode", async () => {
       await withdrawalQueue.initialize(queueAdmin.address);
 
-      const BUNKER_MODE_DISABLED_TIMESTAMP = await withdrawalQueue.BUNKER_MODE_DISABLED_TIMESTAMP();
+      const TS = await withdrawalQueue.BUNKER_MODE_DISABLED_TIMESTAMP();
 
       expect(await withdrawalQueue.isBunkerModeActive()).to.equal(false, "isBunkerModeActive");
-      expect(await withdrawalQueue.bunkerModeSinceTimestamp()).to.equal(
-        BUNKER_MODE_DISABLED_TIMESTAMP,
-        "bunkerModeSinceTimestamp",
-      );
+      expect(await withdrawalQueue.bunkerModeSinceTimestamp()).to.equal(TS, "bunkerModeSinceTimestamp");
+    });
+  });
+
+  context("Bunker mode", () => {
+    beforeEach(async () => {
+      originalState = await Snapshot.take();
+    });
+
+    afterEach(async () => {
+      await Snapshot.restore(originalState);
+    });
+
+    context("isBunkerModeActive", () => {
+      it("Returns true if bunker mode is active", async () => {
+        expect(await withdrawalQueue.isBunkerModeActive()).to.equal(true);
+      });
+
+      it("Returns false if bunker mode is disabled", async () => {
+        await withdrawalQueue.initialize(queueAdmin.address);
+
+        expect(await withdrawalQueue.isBunkerModeActive()).to.equal(false);
+      });
+    });
+
+    context("bunkerModeSinceTimestamp", () => {
+      it("Returns 0 if bunker mode is active", async () => {
+        expect(await withdrawalQueue.bunkerModeSinceTimestamp()).to.equal(0);
+      });
+
+      it("Returns the timestamp if bunker mode is disabled", async () => {
+        await withdrawalQueue.initialize(queueAdmin.address);
+
+        expect(await withdrawalQueue.bunkerModeSinceTimestamp()).to.equal(WQ_BUNKER_MODE_DISABLED_TIMESTAMP);
+      });
     });
   });
 });

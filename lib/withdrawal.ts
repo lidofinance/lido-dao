@@ -23,7 +23,6 @@ export const WQ_BUNKER_MODE_DISABLED_TIMESTAMP = MAX_UINT256;
 export const WQ_MIN_STETH_WITHDRAWAL_AMOUNT = 100n;
 export const WQ_MAX_STETH_WITHDRAWAL_AMOUNT = 10n ** 21n; // 1000 * 1e18
 
-export const WQ_DEFAULT_ADMIN_ROLE = streccak("DEFAULT_ADMIN_ROLE");
 export const WQ_FINALIZE_ROLE = streccak("FINALIZE_ROLE");
 export const WQ_MANAGE_TOKEN_URI_ROLE = streccak("MANAGE_TOKEN_URI_ROLE");
 export const WQ_ORACLE_ROLE = streccak("ORACLE_ROLE");
@@ -156,9 +155,10 @@ export async function deployWithdrawalQueue({
     await queue.connect(queueAdmin).grantRole(WQ_PAUSE_ROLE, queuePauser || queueAdmin);
     await queue.connect(queueAdmin).grantRole(WQ_RESUME_ROLE, queueResumer || queueAdmin);
     await queue.connect(queueAdmin).grantRole(WQ_ORACLE_ROLE, queueOracle || stEthAddress);
+    await queue.connect(queueAdmin).grantRole(WQ_MANAGE_TOKEN_URI_ROLE, queueAdmin);
 
     if (doResume) {
-      await queue.connect(queueAdmin).resume({ from: queueResumer || queueAdmin });
+      await queue.connect(queueResumer || queueAdmin).resume();
     }
   }
 
