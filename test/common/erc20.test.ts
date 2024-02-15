@@ -6,7 +6,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { ERC20 } from "typechain-types/@openzeppelin/contracts/token/ERC20/ERC20";
 
-import { batch } from "lib";
+import { batch, Snapshot } from "lib";
 
 interface ERC20Target {
   tokenName: string;
@@ -60,9 +60,15 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
     let spender: HardhatEthersSigner;
     let recipient: HardhatEthersSigner;
 
-    beforeEach(async () => {
+    let originalState: string;
+
+    before(async () => {
       ({ token, name, symbol, decimals, totalSupply, holder, spender, recipient } = await deploy());
     });
+
+    beforeEach(async () => (originalState = await Snapshot.take()));
+
+    afterEach(async () => await Snapshot.restore(originalState));
 
     context("name", () => {
       it("[OPTIONAL] Returns the name of the token", async () => {
