@@ -119,10 +119,14 @@ describe(`WithdrawalQueueERC721:ACL`, () => {
       await expect(
         contract.connect(pauser).revokeRole(WQ_PAUSE_ROLE, pauser.address),
       ).to.be.revertedWithOZAccessControlError(pauser.address, DEFAULT_ADMIN_ROLE);
+
+      expect(await contract.hasRole(WQ_PAUSE_ROLE, pauser.address)).to.be.true;
     });
 
     it("Does nothing if role is already revoked", async () => {
       await expect(contract.revokeRole(WQ_RESUME_ROLE, pauser.address)).not.to.emit(contract, "RoleRevoked");
+
+      expect(await contract.hasRole(WQ_RESUME_ROLE, pauser.address)).to.be.false;
     });
 
     it("Revokes the role", async () => {
@@ -139,6 +143,8 @@ describe(`WithdrawalQueueERC721:ACL`, () => {
       await expect(contract.renounceRole(WQ_PAUSE_ROLE, pauser.address)).to.be.revertedWith(
         "AccessControl: can only renounce roles for self",
       );
+
+      expect(await contract.hasRole(WQ_PAUSE_ROLE, pauser.address)).to.be.true;
     });
 
     it("Does nothing if role is not assigned", async () => {
@@ -146,6 +152,8 @@ describe(`WithdrawalQueueERC721:ACL`, () => {
         contract,
         "RoleRevoked",
       );
+
+      expect(await contract.hasRole(WQ_PAUSE_ROLE, resumer.address)).to.be.false;
     });
 
     it("Revokes the role", async () => {

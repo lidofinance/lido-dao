@@ -2,6 +2,7 @@ import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
+import { HardhatEthersProvider } from "@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { WithdrawalQueueERC721 } from "typechain-types";
@@ -29,6 +30,11 @@ interface WithdrawalQueueContractConfig {
 
 const ZERO = 0n;
 
+const getBlockTimestamp = async (provider: HardhatEthersProvider) => {
+  const block = await provider.getBlock("latest");
+  return block!.timestamp;
+};
+
 describe("WithdrawalQueueERC721.sol", () => {
   const config: WithdrawalQueueContractConfig = {
     stEthAddress: "",
@@ -40,13 +46,18 @@ describe("WithdrawalQueueERC721.sol", () => {
   let withdrawalQueue: WithdrawalQueueERC721;
 
   let queueAdmin: HardhatEthersSigner;
+  let stanger: HardhatEthersSigner;
+  let oracle: HardhatEthersSigner;
 
   let originalState: string;
+  let provider: typeof ethers.provider;
 
   const getDeployConfig = (config: WithdrawalQueueContractConfig) => [config.wstEthAddress, config.name, config.symbol];
 
   before(async () => {
-    [queueAdmin] = await ethers.getSigners();
+    ({ provider } = ethers);
+
+    [queueAdmin, stanger, oracle] = await ethers.getSigners();
 
     const deployed = await deployWithdrawalQueue({
       queueAdmin: queueAdmin,
@@ -253,7 +264,7 @@ describe("WithdrawalQueueERC721.sol", () => {
       });
 
       it("Returns false if bunker mode is disabled", async () => {
-        await withdrawalQueue.initialize(queueAdmin.address);
+        await withdrawalQueue.initialize(queueAdmin.address); // Disable bunker mode
 
         expect(await withdrawalQueue.isBunkerModeActive()).to.equal(false);
       });
@@ -265,8 +276,62 @@ describe("WithdrawalQueueERC721.sol", () => {
       });
 
       it("Returns the timestamp if bunker mode is disabled", async () => {
-        await withdrawalQueue.initialize(queueAdmin.address);
+        await withdrawalQueue.initialize(queueAdmin.address); // Disable bunker mode
 
+        expect(await withdrawalQueue.bunkerModeSinceTimestamp()).to.equal(WQ_BUNKER_MODE_DISABLED_TIMESTAMP);
+      });
+    });
+
+    context("onOracleReport", () => {
+      before(async () => {
+        await withdrawalQueue.initialize(queueAdmin.address);
+        await withdrawalQueue.grantRole(WQ_ORACLE_ROLE, oracle.address);
+      });
+
+      it("Reverts if not called by the oracle", async () => {
+        await expect(
+          withdrawalQueue.connect(stanger).onOracleReport(true, 0, 0),
+        ).to.be.revertedWithOZAccessControlError(stanger.address, WQ_ORACLE_ROLE);
+      });
+
+      it("Reverts if the bunker mode start time in future", async () => {
+        const futureTimestamp = (await getBlockTimestamp(provider)) + 1000;
+
+        await expect(
+          withdrawalQueue.connect(oracle).onOracleReport(true, futureTimestamp, 0),
+        ).to.be.revertedWithCustomError(withdrawalQueue, "InvalidReportTimestamp");
+      });
+
+      it("Reverts if the current report time in future", async () => {
+        const futureTimestamp = (await getBlockTimestamp(provider)) + 1000;
+
+        await expect(
+          withdrawalQueue.connect(oracle).onOracleReport(true, 0, futureTimestamp),
+        ).to.be.revertedWithCustomError(withdrawalQueue, "InvalidReportTimestamp");
+      });
+
+      it("Enables bunker mode and emit `BunkerModeEnabled`", async () => {
+        const validTimestamp = await getBlockTimestamp(provider);
+
+        await expect(withdrawalQueue.connect(oracle).onOracleReport(true, validTimestamp, validTimestamp))
+          .to.emit(withdrawalQueue, "BunkerModeEnabled")
+          .withArgs(validTimestamp);
+
+        expect(await withdrawalQueue.isBunkerModeActive()).to.equal(true);
+        expect(await withdrawalQueue.bunkerModeSinceTimestamp()).to.equal(validTimestamp);
+      });
+
+      it("Disables bunker mode and emit `BunkerModeDisabled`", async () => {
+        const validTimestamp = await getBlockTimestamp(provider);
+
+        await withdrawalQueue.connect(oracle).onOracleReport(true, validTimestamp, validTimestamp);
+
+        await expect(withdrawalQueue.connect(oracle).onOracleReport(false, validTimestamp, validTimestamp + 1)).to.emit(
+          withdrawalQueue,
+          "BunkerModeDisabled",
+        );
+
+        expect(await withdrawalQueue.isBunkerModeActive()).to.equal(false);
         expect(await withdrawalQueue.bunkerModeSinceTimestamp()).to.equal(WQ_BUNKER_MODE_DISABLED_TIMESTAMP);
       });
     });
