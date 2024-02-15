@@ -11,14 +11,14 @@ import {
   deployWithdrawalQueue,
   ERC4906_INTERFACE_ID,
   ether,
-  MANAGE_TOKEN_URI_ROLE,
-  NFT_DESCRIPTOR_BASE_URI,
+  MOCK_NFT_DESCRIPTOR_BASE_URI,
   ONE_ETHER,
   QUEUE_NAME,
   QUEUE_SYMBOL,
   shareRate,
   shares,
   Snapshot,
+  WQ_MANAGE_TOKEN_URI_ROLE,
 } from "lib";
 
 describe("WithdrawalQueueERC721 ERC-721 Metadata Compliance", () => {
@@ -54,9 +54,15 @@ describe("WithdrawalQueueERC721 ERC-721 Metadata Compliance", () => {
     await stEth.mintShares(user, shares(1n));
     await stEth.connect(user).approve(queueAddress, ether("300.00"));
 
-    await queue.connect(daoAgent).grantRole(MANAGE_TOKEN_URI_ROLE, tokenUriManager);
+    await queue.connect(daoAgent).grantRole(WQ_MANAGE_TOKEN_URI_ROLE, tokenUriManager);
 
     originalState = await Snapshot.take();
+  });
+
+  context("Constants", () => {
+    it("Returns the MANAGE_TOKEN_URI_ROLE variable", async () => {
+      expect(await queue.MANAGE_TOKEN_URI_ROLE()).to.equal(WQ_MANAGE_TOKEN_URI_ROLE);
+    });
   });
 
   context("supportsInterface", () => {
@@ -78,99 +84,103 @@ describe("WithdrawalQueueERC721 ERC-721 Metadata Compliance", () => {
     });
   });
 
-  context("setBaseURI", () => {
-    const baseTokenUri = "https://example.com";
+  context("Base URI", () => {
+    context("setBaseURI", () => {
+      const baseTokenUri = "https://example.com";
 
-    beforeEach(async () => {
-      originalState = await Snapshot.take();
+      beforeEach(async () => {
+        originalState = await Snapshot.take();
+      });
+
+      afterEach(async () => {
+        await Snapshot.restore(originalState);
+      });
+
+      // REVIEW: Do we need this? Need custom error?
+      it("Reverts when called by non-manager", async () => {
+        await expect(queue.connect(stranger).setBaseURI(baseTokenUri)).to.be.revertedWithOZAccessControlError(
+          stranger.address,
+          WQ_MANAGE_TOKEN_URI_ROLE,
+        );
+      });
+
+      it("Sets the correct baseURI and fires `BaseURISet`", async () => {
+        expect(await queue.connect(tokenUriManager).setBaseURI(baseTokenUri))
+          .to.emit(queue, "BaseURISet")
+          .withArgs(baseTokenUri);
+
+        expect(await queue.getBaseURI()).to.equal(baseTokenUri);
+      });
     });
 
-    afterEach(async () => {
-      await Snapshot.restore(originalState);
-    });
+    context("getBaseURI", () => {
+      const baseTokenUri = "https://example.com";
 
-    // REVIEW: Do we need this? Need custom error?
-    it("Reverts when called by non-manager", async () => {
-      await expect(queue.connect(stranger).setBaseURI(baseTokenUri)).to.be.revertedWithOZAccessControlError(
-        stranger.address,
-        MANAGE_TOKEN_URI_ROLE,
-      );
-    });
+      beforeEach(async () => {
+        originalState = await Snapshot.take();
+      });
 
-    it("Sets the correct baseURI and fires `BaseURISet`", async () => {
-      expect(await queue.connect(tokenUriManager).setBaseURI(baseTokenUri))
-        .to.emit(queue, "BaseURISet")
-        .withArgs(baseTokenUri);
+      afterEach(async () => {
+        await Snapshot.restore(originalState);
+      });
 
-      expect(await queue.getBaseURI()).to.equal(baseTokenUri);
-    });
-  });
+      it("Returns empty string when not set", async () => {
+        expect(await queue.getBaseURI()).to.equal("");
+      });
 
-  context("getBaseURI", () => {
-    const baseTokenUri = "https://example.com";
+      it("Returns correct tokenURI when set by token manager", async () => {
+        expect(await queue.connect(tokenUriManager).setBaseURI(baseTokenUri))
+          .to.emit(queue, "BaseURISet")
+          .withArgs(baseTokenUri);
 
-    beforeEach(async () => {
-      originalState = await Snapshot.take();
-    });
-
-    afterEach(async () => {
-      await Snapshot.restore(originalState);
-    });
-
-    it("Returns empty string when not set", async () => {
-      expect(await queue.getBaseURI()).to.equal("");
-    });
-
-    it("Returns correct tokenURI when set by token manager", async () => {
-      expect(await queue.connect(tokenUriManager).setBaseURI(baseTokenUri))
-        .to.emit(queue, "BaseURISet")
-        .withArgs(baseTokenUri);
-
-      expect(await queue.getBaseURI()).to.equal(baseTokenUri);
-    });
-  });
-
-  context("setNFTDescriptorAddress", () => {
-    beforeEach(async () => {
-      originalState = await Snapshot.take();
-    });
-
-    afterEach(async () => {
-      await Snapshot.restore(originalState);
-    });
-
-    it("Reverts when called by non-manager", async () => {
-      await expect(queue.connect(stranger).setNFTDescriptorAddress(nftDescriptorAddress)).to.be.revertedWith(
-        /AccessControl.*?is missing role.*/,
-      );
-    });
-
-    it("Sets the correct NFTDescriptorAddress and fires `NftDescriptorAddressSet`", async () => {
-      expect(await queue.connect(tokenUriManager).setNFTDescriptorAddress(nftDescriptorAddress))
-        .to.emit(queue, "NftDescriptorAddressSet")
-        .withArgs(nftDescriptorAddress);
-
-      expect(await queue.getNFTDescriptorAddress()).to.equal(nftDescriptorAddress);
+        expect(await queue.getBaseURI()).to.equal(baseTokenUri);
+      });
     });
   });
 
-  context("getNFTDescriptorAddress", () => {
-    beforeEach(async () => {
-      originalState = await Snapshot.take();
+  context("NFT Descriptor", () => {
+    context("setNFTDescriptorAddress", () => {
+      beforeEach(async () => {
+        originalState = await Snapshot.take();
+      });
+
+      afterEach(async () => {
+        await Snapshot.restore(originalState);
+      });
+
+      it("Reverts when called by non-manager", async () => {
+        await expect(queue.connect(stranger).setNFTDescriptorAddress(nftDescriptorAddress)).to.be.revertedWith(
+          /AccessControl.*?is missing role.*/,
+        );
+      });
+
+      it("Sets the correct NFTDescriptorAddress and fires `NftDescriptorAddressSet`", async () => {
+        expect(await queue.connect(tokenUriManager).setNFTDescriptorAddress(nftDescriptorAddress))
+          .to.emit(queue, "NftDescriptorAddressSet")
+          .withArgs(nftDescriptorAddress);
+
+        expect(await queue.getNFTDescriptorAddress()).to.equal(nftDescriptorAddress);
+      });
     });
 
-    afterEach(async () => {
-      await Snapshot.restore(originalState);
-    });
+    context("getNFTDescriptorAddress", () => {
+      beforeEach(async () => {
+        originalState = await Snapshot.take();
+      });
 
-    it("Returns zero address when not set", async () => {
-      expect(await queue.getNFTDescriptorAddress()).to.equal(ZeroAddress);
-    });
+      afterEach(async () => {
+        await Snapshot.restore(originalState);
+      });
 
-    it("Returns correct NFTDescriptorAddress when set by token manager", async () => {
-      await queue.connect(tokenUriManager).setNFTDescriptorAddress(nftDescriptorAddress);
+      it("Returns zero address when not set", async () => {
+        expect(await queue.getNFTDescriptorAddress()).to.equal(ZeroAddress);
+      });
 
-      expect(await queue.getNFTDescriptorAddress()).to.equal(nftDescriptorAddress);
+      it("Returns correct NFTDescriptorAddress when set by token manager", async () => {
+        await queue.connect(tokenUriManager).setNFTDescriptorAddress(nftDescriptorAddress);
+
+        expect(await queue.getNFTDescriptorAddress()).to.equal(nftDescriptorAddress);
+      });
     });
   });
 
@@ -201,8 +211,12 @@ describe("WithdrawalQueueERC721 ERC-721 Metadata Compliance", () => {
         .withArgs(baseTokenUri);
 
       const createdAt = (await queue.getWithdrawalStatus([requestId]))[0].timestamp;
-      const expectedTokenUri = `${baseTokenUri}/${requestId}?requested=${ether("25.00")}&created_at=${createdAt}`;
-      expect(await queue.tokenURI(requestId)).to.equal(expectedTokenUri);
+      const params = new URLSearchParams({
+        requested: ether("25.00").toString(),
+        created_at: createdAt.toString(),
+      });
+
+      expect(await queue.tokenURI(requestId)).to.equal(`${baseTokenUri}/${requestId}?${params.toString()}`);
     });
 
     it("Returns correct tokenURI with nftDescriptor", async () => {
@@ -210,7 +224,7 @@ describe("WithdrawalQueueERC721 ERC-721 Metadata Compliance", () => {
         .to.emit(queue, "NftDescriptorAddressSet")
         .withArgs(nftDescriptorAddress);
 
-      expect(await queue.tokenURI(requestId)).to.equal(`${NFT_DESCRIPTOR_BASE_URI}${requestId}`);
+      expect(await queue.tokenURI(requestId)).to.equal(`${MOCK_NFT_DESCRIPTOR_BASE_URI}${requestId}`);
     });
 
     it("Returns correct tokenURI after finalization", async () => {
@@ -223,8 +237,13 @@ describe("WithdrawalQueueERC721 ERC-721 Metadata Compliance", () => {
       const createdAt = (await queue.getWithdrawalStatus([requestId]))[0].timestamp;
       const finalizedEth = (await queue.getClaimableEther([1], [1]))[0];
 
-      const expectedTokenUri = `${baseTokenUri}/${requestId}?requested=${ether("25.00")}&created_at=${createdAt}&finalized=${finalizedEth}`;
-      expect(await queue.tokenURI(requestId)).to.equal(expectedTokenUri);
+      const params = new URLSearchParams({
+        requested: ether("25.00").toString(),
+        created_at: createdAt.toString(),
+        finalized: finalizedEth.toString(),
+      });
+
+      expect(await queue.tokenURI(requestId)).to.equal(`${baseTokenUri}/${requestId}?${params.toString()}`);
     });
 
     it("Returns correct tokenURI after finalization with discount", async () => {
@@ -236,10 +255,15 @@ describe("WithdrawalQueueERC721 ERC-721 Metadata Compliance", () => {
       await queue.connect(daoAgent).finalize(1, shareRate(1n), { value: batch.ethToLock });
 
       const createdAt = (await queue.getWithdrawalStatus([requestId]))[0].timestamp;
-      const finalizedEth = batch.sharesToBurn;
+      const finalized = batch.sharesToBurn;
 
-      const expectedTokenUri = `${baseTokenUri}/${requestId}?requested=${ether("25.00")}&created_at=${createdAt}&finalized=${finalizedEth}`;
-      expect(await queue.tokenURI(requestId)).to.equal(expectedTokenUri);
+      const params = new URLSearchParams({
+        requested: ether("25.00").toString(),
+        created_at: createdAt.toString(),
+        finalized: finalized.toString(),
+      });
+
+      expect(await queue.tokenURI(requestId)).to.equal(`${baseTokenUri}/${requestId}?${params.toString()}`);
     });
   });
 });

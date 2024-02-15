@@ -7,7 +7,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { WithdrawalQueueERC721 } from "typechain-types";
 
-import { deployWithdrawalQueue, MAX_UINT256, ONE_ETHER, PAUSE_ROLE, RESUME_ROLE, Snapshot } from "lib";
+import { deployWithdrawalQueue, MAX_UINT256, ONE_ETHER, Snapshot, WQ_PAUSE_ROLE, WQ_RESUME_ROLE } from "lib";
 
 const getBlockTimestamp = async (provider: HardhatEthersProvider) => {
   const block = await provider.getBlock("latest");
@@ -26,6 +26,7 @@ describe("WithdrawalQueueERC721:Pausable", () => {
 
   before(async () => {
     ({ provider } = ethers);
+
     [owner, stranger, daoAgent] = await ethers.getSigners();
 
     const deployed = await deployWithdrawalQueue({
@@ -39,6 +40,20 @@ describe("WithdrawalQueueERC721:Pausable", () => {
     ({ queue } = deployed);
 
     originalState = await Snapshot.take();
+  });
+
+  context("Constants", () => {
+    it("Returns the PAUSE_INFINITELY variable", async () => {
+      expect(await queue.PAUSE_INFINITELY()).to.equal(MAX_UINT256);
+    });
+
+    it("Returns the PAUSE_ROLE variable", async () => {
+      expect(await queue.PAUSE_ROLE()).to.equal(WQ_PAUSE_ROLE);
+    });
+
+    it("Returns the RESUME_ROLE variable", async () => {
+      expect(await queue.RESUME_ROLE()).to.equal(WQ_RESUME_ROLE);
+    });
   });
 
   context("pauseFor", () => {
@@ -58,7 +73,7 @@ describe("WithdrawalQueueERC721:Pausable", () => {
     it("Reverts if the caller is unauthorised", async () => {
       await expect(queue.connect(stranger).pauseFor(1n)).to.be.revertedWithOZAccessControlError(
         stranger.address,
-        PAUSE_ROLE,
+        WQ_PAUSE_ROLE,
       );
     });
 
@@ -104,7 +119,7 @@ describe("WithdrawalQueueERC721:Pausable", () => {
 
       await expect(queue.connect(stranger).pauseUntil(blockTimestamp + 1)).to.be.revertedWithOZAccessControlError(
         stranger.address,
-        PAUSE_ROLE,
+        WQ_PAUSE_ROLE,
       );
     });
 
@@ -190,7 +205,7 @@ describe("WithdrawalQueueERC721:Pausable", () => {
 
       await expect(queue.connect(stranger).resume()).to.be.revertedWithOZAccessControlError(
         stranger.address,
-        RESUME_ROLE,
+        WQ_RESUME_ROLE,
       );
     });
 

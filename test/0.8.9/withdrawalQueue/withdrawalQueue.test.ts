@@ -6,33 +6,25 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { WithdrawalQueueERC721 } from "typechain-types";
 
-import { deployWithdrawalQueue, MAX_UINT256, Snapshot, streccak } from "lib";
-
-interface WithdrawalQueueContractACLRolesConstants {
-  PAUSE_ROLE: string;
-  RESUME_ROLE: string;
-  FINALIZE_ROLE: string;
-  ORACLE_ROLE: string;
-}
-
-interface WithdrawalQueueContractConstants {
-  // WithdrawalQueueBase
-  MAX_BATCHES_LENGTH: bigint;
-  // WithdrawalQueue
-  BUNKER_MODE_DISABLED_TIMESTAMP: bigint;
-  ACL: WithdrawalQueueContractACLRolesConstants;
-  MIN_STETH_WITHDRAWAL_AMOUNT: bigint;
-  MAX_STETH_WITHDRAWAL_AMOUNT: bigint;
-  // WithdrawalQueueERC721
-  MANAGE_TOKEN_URI_ROLE: string;
-}
+import {
+  deployWithdrawalQueue,
+  Snapshot,
+  WQ_BUNKER_MODE_DISABLED_TIMESTAMP,
+  WQ_FINALIZE_ROLE,
+  WQ_MANAGE_TOKEN_URI_ROLE,
+  WQ_MAX_BATCHES_LENGTH,
+  WQ_MAX_STETH_WITHDRAWAL_AMOUNT,
+  WQ_MIN_STETH_WITHDRAWAL_AMOUNT,
+  WQ_ORACLE_ROLE,
+  WQ_PAUSE_ROLE,
+  WQ_RESUME_ROLE,
+} from "lib";
 
 interface WithdrawalQueueContractConfig {
   stEthAddress: string;
   wstEthAddress: string;
   name: string;
   symbol: string;
-  CONSTANT: WithdrawalQueueContractConstants;
 }
 
 const ZERO = 0n;
@@ -43,22 +35,9 @@ describe("WithdrawalQueueERC721.sol", () => {
     wstEthAddress: "",
     name: "",
     symbol: "",
-    CONSTANT: {
-      MAX_BATCHES_LENGTH: 36n,
-      BUNKER_MODE_DISABLED_TIMESTAMP: MAX_UINT256,
-      MIN_STETH_WITHDRAWAL_AMOUNT: 100n,
-      MAX_STETH_WITHDRAWAL_AMOUNT: 10n ** 21n, // 1000 * 1e18
-      ACL: {
-        PAUSE_ROLE: streccak("PAUSE_ROLE"),
-        RESUME_ROLE: streccak("RESUME_ROLE"),
-        FINALIZE_ROLE: streccak("FINALIZE_ROLE"),
-        ORACLE_ROLE: streccak("ORACLE_ROLE"),
-      },
-      MANAGE_TOKEN_URI_ROLE: streccak("MANAGE_TOKEN_URI_ROLE"),
-    },
   };
 
-  let wq: WithdrawalQueueERC721;
+  let withdrawalQueue: WithdrawalQueueERC721;
 
   let queueAdmin: HardhatEthersSigner;
 
@@ -70,10 +49,11 @@ describe("WithdrawalQueueERC721.sol", () => {
     [queueAdmin] = await ethers.getSigners();
 
     const deployed = await deployWithdrawalQueue({
-      queueAdmin,
+      queueAdmin: queueAdmin,
+      doInitialise: false,
     });
 
-    wq = deployed.queue;
+    withdrawalQueue = deployed.queue;
 
     config.stEthAddress = deployed.stEthAddress;
     config.wstEthAddress = deployed.wstEthAddress;
@@ -95,42 +75,42 @@ describe("WithdrawalQueueERC721.sol", () => {
     // WithdrawalQueueBase
 
     it("Returns the MAX_BATCHES_LENGTH variable", async () => {
-      expect(await wq.MAX_BATCHES_LENGTH()).to.equal(config.CONSTANT.MAX_BATCHES_LENGTH);
+      expect(await withdrawalQueue.MAX_BATCHES_LENGTH()).to.equal(WQ_MAX_BATCHES_LENGTH);
     });
 
     // WithdrawalQueue
 
     it("Returns ths BUNKER_MODE_DISABLED_TIMESTAMP variable", async () => {
-      expect(await wq.BUNKER_MODE_DISABLED_TIMESTAMP()).to.equal(config.CONSTANT.BUNKER_MODE_DISABLED_TIMESTAMP);
+      expect(await withdrawalQueue.BUNKER_MODE_DISABLED_TIMESTAMP()).to.equal(WQ_BUNKER_MODE_DISABLED_TIMESTAMP);
     });
 
     it("Returns ACL variables", async () => {
-      expect(await wq.PAUSE_ROLE()).to.equal(config.CONSTANT.ACL.PAUSE_ROLE);
-      expect(await wq.RESUME_ROLE()).to.equal(config.CONSTANT.ACL.RESUME_ROLE);
-      expect(await wq.FINALIZE_ROLE()).to.equal(config.CONSTANT.ACL.FINALIZE_ROLE);
-      expect(await wq.ORACLE_ROLE()).to.equal(config.CONSTANT.ACL.ORACLE_ROLE);
+      expect(await withdrawalQueue.PAUSE_ROLE()).to.equal(WQ_PAUSE_ROLE);
+      expect(await withdrawalQueue.RESUME_ROLE()).to.equal(WQ_RESUME_ROLE);
+      expect(await withdrawalQueue.FINALIZE_ROLE()).to.equal(WQ_FINALIZE_ROLE);
+      expect(await withdrawalQueue.ORACLE_ROLE()).to.equal(WQ_ORACLE_ROLE);
     });
 
     it("Returns the MIN_STETH_WITHDRAWAL_AMOUNT variable", async () => {
-      expect(await wq.MIN_STETH_WITHDRAWAL_AMOUNT()).to.equal(config.CONSTANT.MIN_STETH_WITHDRAWAL_AMOUNT);
+      expect(await withdrawalQueue.MIN_STETH_WITHDRAWAL_AMOUNT()).to.equal(WQ_MIN_STETH_WITHDRAWAL_AMOUNT);
     });
 
     it("Returns the MAX_STETH_WITHDRAWAL_AMOUNT variable", async () => {
-      expect(await wq.MAX_STETH_WITHDRAWAL_AMOUNT()).to.equal(config.CONSTANT.MAX_STETH_WITHDRAWAL_AMOUNT);
+      expect(await withdrawalQueue.MAX_STETH_WITHDRAWAL_AMOUNT()).to.equal(WQ_MAX_STETH_WITHDRAWAL_AMOUNT);
     });
 
     it("Returns the STETH address", async () => {
-      expect(await wq.STETH()).to.equal(config.stEthAddress);
+      expect(await withdrawalQueue.STETH()).to.equal(config.stEthAddress);
     });
 
     it("Returns the WSTETH address", async () => {
-      expect(await wq.WSTETH()).to.equal(config.wstEthAddress);
+      expect(await withdrawalQueue.WSTETH()).to.equal(config.wstEthAddress);
     });
 
     // WithdrawalQueueERC721
 
     it("Returns the MANAGE_TOKEN_URI_ROLE variable", async () => {
-      expect(await wq.MANAGE_TOKEN_URI_ROLE()).to.equal(config.CONSTANT.MANAGE_TOKEN_URI_ROLE);
+      expect(await withdrawalQueue.MANAGE_TOKEN_URI_ROLE()).to.equal(WQ_MANAGE_TOKEN_URI_ROLE);
     });
   });
 
@@ -144,54 +124,120 @@ describe("WithdrawalQueueERC721.sol", () => {
     });
 
     it("Reverts if wstAddress is wrong", async () => {
-      await expect(
-        ethers.deployContract(
-          "WithdrawalQueueERC721",
-          getDeployConfig({
-            ...config,
-            wstEthAddress: ZeroAddress,
-          }),
-        ),
-      ).to.be.revertedWithoutReason();
+      const deployConfig = getDeployConfig({ ...config, wstEthAddress: ZeroAddress });
+
+      await expect(ethers.deployContract("WithdrawalQueueERC721", deployConfig)).to.be.revertedWithoutReason();
     });
 
     it("Reverts if name is empty", async () => {
-      await expect(
-        ethers.deployContract(
-          "WithdrawalQueueERC721",
-          getDeployConfig({
-            ...config,
-            name: "",
-          }),
-        ),
-      ).to.be.revertedWithCustomError(wq, "ZeroMetadata");
+      const deployConfig = getDeployConfig({ ...config, name: "" });
+
+      await expect(ethers.deployContract("WithdrawalQueueERC721", deployConfig)).to.be.revertedWithCustomError(
+        withdrawalQueue,
+        "ZeroMetadata",
+      );
     });
 
     it("Reverts if symbol is empty", async () => {
-      await expect(
-        ethers.deployContract(
-          "WithdrawalQueueERC721",
-          getDeployConfig({
-            ...config,
-            symbol: "",
-          }),
-        ),
-      ).to.be.revertedWithCustomError(wq, "ZeroMetadata");
+      const deployConfig = getDeployConfig({ ...config, symbol: "" });
+
+      await expect(ethers.deployContract("WithdrawalQueueERC721", deployConfig)).to.be.revertedWithCustomError(
+        withdrawalQueue,
+        "ZeroMetadata",
+      );
     });
 
     it("Sets the name and symbol", async () => {
-      expect(await wq.name()).to.equal(config.name, "name");
-      expect(await wq.symbol()).to.equal(config.symbol, "symbol");
+      expect(await withdrawalQueue.name()).to.equal(config.name, "name");
+      expect(await withdrawalQueue.symbol()).to.equal(config.symbol, "symbol");
+    });
+
+    it("Sets the WSTETH and STETH addresses", async () => {
+      expect(await withdrawalQueue.WSTETH()).to.equal(config.wstEthAddress, "WSTETH");
+      expect(await withdrawalQueue.STETH()).to.equal(config.stEthAddress, "STETH");
     });
 
     it("Sets initial properties", async () => {
-      expect(await wq.isPaused()).to.equal(false, "isPaused");
-      expect(await wq.getLastRequestId()).to.equal(ZERO, "getLastRequestId");
-      expect(await wq.getLastFinalizedRequestId()).to.equal(ZERO, "getLastFinalizedRequestId");
-      expect(await wq.getLastCheckpointIndex()).to.equal(ZERO, "getLastCheckpointIndex");
-      expect(await wq.unfinalizedStETH()).to.equal(ZERO, "unfinalizedStETH");
-      expect(await wq.unfinalizedRequestNumber()).to.equal(ZERO, "unfinalizedRequestNumber");
-      expect(await wq.getLockedEtherAmount()).to.equal(ZERO, "getLockedEtherAmount");
+      expect(await withdrawalQueue.isPaused()).to.equal(false, "isPaused");
+      expect(await withdrawalQueue.getLastRequestId()).to.equal(ZERO, "getLastRequestId");
+      expect(await withdrawalQueue.getLastFinalizedRequestId()).to.equal(ZERO, "getLastFinalizedRequestId");
+      expect(await withdrawalQueue.getLastCheckpointIndex()).to.equal(ZERO, "getLastCheckpointIndex");
+      expect(await withdrawalQueue.unfinalizedStETH()).to.equal(ZERO, "unfinalizedStETH");
+      expect(await withdrawalQueue.unfinalizedRequestNumber()).to.equal(ZERO, "unfinalizedRequestNumber");
+      expect(await withdrawalQueue.getLockedEtherAmount()).to.equal(ZERO, "getLockedEtherAmount");
+    });
+
+    it("Enables bunker mode", async () => {
+      expect(await withdrawalQueue.isBunkerModeActive()).to.equal(true, "isBunkerModeActive");
+      expect(await withdrawalQueue.bunkerModeSinceTimestamp()).to.equal(0, "bunkerModeSinceTimestamp");
+    });
+  });
+
+  context("initialize", () => {
+    beforeEach(async () => {
+      originalState = await Snapshot.take();
+    });
+
+    afterEach(async () => {
+      await Snapshot.restore(originalState);
+    });
+
+    it("Reverts if initialized with zero address", async () => {
+      await expect(withdrawalQueue.initialize(ZeroAddress)).to.be.revertedWithCustomError(
+        withdrawalQueue,
+        "AdminZeroAddress",
+      );
+    });
+
+    it("Reverts if already initialized and in pause", async () => {
+      await withdrawalQueue.initialize(queueAdmin.address);
+
+      await expect(withdrawalQueue.initialize(queueAdmin.address)).to.be.revertedWithCustomError(
+        withdrawalQueue,
+        "ResumedExpected",
+      );
+    });
+
+    it("Reverts if already initialized and not in pause", async () => {
+      await withdrawalQueue.initialize(queueAdmin.address);
+
+      await withdrawalQueue.connect(queueAdmin).grantRole(WQ_RESUME_ROLE, queueAdmin.address);
+      await withdrawalQueue.connect(queueAdmin).resume();
+
+      await expect(withdrawalQueue.initialize(queueAdmin.address)).to.be.revertedWithCustomError(
+        withdrawalQueue,
+        "NonZeroContractVersionOnInit",
+      );
+    });
+
+    it("Sets initial properties", async () => {
+      await withdrawalQueue.initialize(queueAdmin.address);
+
+      expect(await withdrawalQueue.getContractVersion()).to.equal(1n, "getContractVersion");
+      expect(await withdrawalQueue.getLastRequestId()).to.equal(ZERO, "getLastRequestId");
+      expect(await withdrawalQueue.getLastFinalizedRequestId()).to.equal(ZERO, "getLastFinalizedRequestId");
+      expect(await withdrawalQueue.getLastCheckpointIndex()).to.equal(ZERO, "getLastCheckpointIndex");
+      expect(await withdrawalQueue.unfinalizedStETH()).to.equal(ZERO, "unfinalizedStETH");
+      expect(await withdrawalQueue.unfinalizedRequestNumber()).to.equal(ZERO, "unfinalizedRequestNumber");
+      expect(await withdrawalQueue.getLockedEtherAmount()).to.equal(ZERO, "getLockedEtherAmount");
+    });
+
+    it("Pause the contract", async () => {
+      await withdrawalQueue.initialize(queueAdmin.address);
+
+      expect(await withdrawalQueue.isPaused()).to.equal(true, "isPaused");
+    });
+
+    it("Disables bunker mode", async () => {
+      await withdrawalQueue.initialize(queueAdmin.address);
+
+      const BUNKER_MODE_DISABLED_TIMESTAMP = await withdrawalQueue.BUNKER_MODE_DISABLED_TIMESTAMP();
+
+      expect(await withdrawalQueue.isBunkerModeActive()).to.equal(false, "isBunkerModeActive");
+      expect(await withdrawalQueue.bunkerModeSinceTimestamp()).to.equal(
+        BUNKER_MODE_DISABLED_TIMESTAMP,
+        "bunkerModeSinceTimestamp",
+      );
     });
   });
 });

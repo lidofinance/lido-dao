@@ -11,19 +11,26 @@ import {
   WstETHMock,
 } from "typechain-types";
 
-import { ONE_ETHER, proxify, streccak } from "lib";
+import { MAX_UINT256, ONE_ETHER, proxify, streccak } from "lib";
 
 export const QUEUE_NAME = "Lido: Withdrawal Request NFT";
 export const QUEUE_SYMBOL = "unstETH";
 
-export const NFT_DESCRIPTOR_BASE_URI = "https://example-descriptor.com/";
+export const WQ_MAX_BATCHES_LENGTH = 36n;
 
-export const FINALIZE_ROLE = streccak("FINALIZE_ROLE");
-export const PAUSE_ROLE = streccak("PAUSE_ROLE");
-export const RESUME_ROLE = streccak("RESUME_ROLE");
-export const ORACLE_ROLE = streccak("ORACLE_ROLE");
+export const WQ_BUNKER_MODE_DISABLED_TIMESTAMP = MAX_UINT256;
 
-export const MANAGE_TOKEN_URI_ROLE = streccak("MANAGE_TOKEN_URI_ROLE");
+export const WQ_MIN_STETH_WITHDRAWAL_AMOUNT = 100n;
+export const WQ_MAX_STETH_WITHDRAWAL_AMOUNT = 10n ** 21n; // 1000 * 1e18
+
+export const WQ_DEFAULT_ADMIN_ROLE = streccak("DEFAULT_ADMIN_ROLE");
+export const WQ_FINALIZE_ROLE = streccak("FINALIZE_ROLE");
+export const WQ_MANAGE_TOKEN_URI_ROLE = streccak("MANAGE_TOKEN_URI_ROLE");
+export const WQ_ORACLE_ROLE = streccak("ORACLE_ROLE");
+export const WQ_PAUSE_ROLE = streccak("PAUSE_ROLE");
+export const WQ_RESUME_ROLE = streccak("RESUME_ROLE");
+
+export const WQ_PAUSE_INFINITELY = MAX_UINT256;
 
 interface StEthDeploymentParams {
   initialStEth: bigint;
@@ -45,11 +52,14 @@ interface WithdrawalQueueDeploymentParams extends BaseWithdrawalQueueDeploymentP
   queueFinalizer?: HardhatEthersSigner;
   queueOracle?: HardhatEthersSigner;
 
+  doInitialise?: boolean;
   doResume?: boolean;
 }
 
+export const MOCK_NFT_DESCRIPTOR_BASE_URI = "https://example-descriptor.com/";
+
 async function deployNftDescriptor() {
-  const nftDescriptor = await ethers.deployContract("NFTDescriptorMock", [NFT_DESCRIPTOR_BASE_URI]);
+  const nftDescriptor = await ethers.deployContract("NFTDescriptorMock", [MOCK_NFT_DESCRIPTOR_BASE_URI]);
 
   return { nftDescriptor, nftDescriptorAddress: await nftDescriptor.getAddress() };
 }
@@ -79,7 +89,7 @@ async function deployWstEthMock(stEthAddress: string) {
   return { wstEth, wstEthAddress: await wstEth.getAddress() };
 }
 
-export async function deployWithdrawalQueueImpl({
+async function deployWithdrawalQueueImpl({
   stEthSettings = { initialStEth: ONE_ETHER },
   name = QUEUE_NAME,
   symbol = QUEUE_SYMBOL,
@@ -89,10 +99,15 @@ export async function deployWithdrawalQueueImpl({
   const { wstEth, wstEthAddress } = await deployWstEthMock(stEthAddress);
 
   const deployConfig = [wstEthAddress, name, symbol];
+
   const impl = await ethers.deployContract("WithdrawalQueueERC721", deployConfig);
 
   return {
+    // Deployed contract
     impl,
+    name,
+    symbol,
+    // Related contracts
     stEth,
     stEthAddress,
     wstEth,
@@ -111,6 +126,7 @@ export async function deployWithdrawalQueue({
   queueResumer,
   queueFinalizer,
   queueOracle,
+  doInitialise = true,
   doResume = true,
 }: WithdrawalQueueDeploymentParams): Promise<{
   queue: WithdrawalQueueERC721;
@@ -118,7 +134,7 @@ export async function deployWithdrawalQueue({
   impl: WithdrawalQueueERC721;
   name: string;
   symbol: string;
-  initTx: ContractTransactionResponse;
+  initTx: ContractTransactionResponse | null;
   stEth: StETHPermitMock;
   stEthAddress: string;
   wstEth: WstETHMock;
@@ -132,17 +148,18 @@ export async function deployWithdrawalQueue({
 
   const [queue, proxy] = await proxify({ impl, admin: queueAdmin });
 
-  const initTx = await queue.initialize(queueAdmin);
+  let initTx = null;
+  if (doInitialise) {
+    initTx = await queue.initialize(queueAdmin);
 
-  const adminConnection = queue.connect(queueAdmin);
+    await queue.connect(queueAdmin).grantRole(WQ_FINALIZE_ROLE, queueFinalizer || stEthAddress);
+    await queue.connect(queueAdmin).grantRole(WQ_PAUSE_ROLE, queuePauser || queueAdmin);
+    await queue.connect(queueAdmin).grantRole(WQ_RESUME_ROLE, queueResumer || queueAdmin);
+    await queue.connect(queueAdmin).grantRole(WQ_ORACLE_ROLE, queueOracle || stEthAddress);
 
-  await adminConnection.grantRole(FINALIZE_ROLE, queueFinalizer || stEthAddress);
-  await adminConnection.grantRole(PAUSE_ROLE, queuePauser || queueAdmin);
-  await adminConnection.grantRole(RESUME_ROLE, queueResumer || queueAdmin);
-  await adminConnection.grantRole(ORACLE_ROLE, queueOracle || stEthAddress);
-
-  if (doResume) {
-    await adminConnection.resume({ from: queueResumer || queueAdmin });
+    if (doResume) {
+      await queue.connect(queueAdmin).resume({ from: queueResumer || queueAdmin });
+    }
   }
 
   return {
