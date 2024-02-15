@@ -133,7 +133,7 @@ contract('SepoliaDepositAdapter impl', ([deployer]) => {
       log('ethAfterDeposit', ethAfterDeposit.toString())
       assert.equals(ethAfterDeposit, ethers.utils.parseEther('10.0'))
 
-      await depositAdapter.drain()
+      await depositAdapter.drain(owner.address)
       const balanceEthAfterDrain = await ethers.provider.getBalance(adapterAddr)
       log('balanceEthAfterDrain', balanceEthAfterDrain.toString())
       assert.equals(balanceEthAfterDrain, 0)
