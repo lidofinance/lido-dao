@@ -56,9 +56,9 @@ contract SepoliaDepositAdapter is Ownable {
     }
 
     function drain() external onlyOwner {
-        uint ownTokens = address(this).balance;
+        uint balance = address(this).balance;
         address payable _owner = payable(owner());
-        _owner.transfer(ownTokens);
+        _owner.transfer(balance);
     }
 
     function drainBepolia() external onlyOwner {
