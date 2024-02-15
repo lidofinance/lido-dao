@@ -7,8 +7,6 @@ pragma solidity 0.8.9;
 import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-v4.4/access/Ownable.sol";
 
-import "hardhat/console.sol";
-
 // Sepolia deposit contract variant of the source code https://github.com/protolambda/testnet-dep-contract/blob/master/deposit_contract.sol
 interface ISepoliaDepositContract is IERC20 {
 
@@ -28,8 +26,9 @@ interface ISepoliaDepositContract is IERC20 {
 
 contract SepoliaDepositAdapter is Ownable {
 
-    uint public constant VERSION = 2;
     ISepoliaDepositContract public immutable originalContract;
+
+    error TransferFailed();
 
     constructor(address _deposit_contract) {
         originalContract = ISepoliaDepositContract(_deposit_contract);
@@ -48,22 +47,22 @@ contract SepoliaDepositAdapter is Ownable {
     }
 
     receive() external payable {
-        console.log(
-          "Receive %s from %s",
-            msg.value,
-            msg.sender
-        );
     }
 
-    function drain(address payable destination) external onlyOwner {
+    function recoverEth() external onlyOwner {
         uint balance = address(this).balance;
-        destination.transfer(balance);
+        (bool success,) = owner().call{value: balance}("");
+        if (!success) {
+            revert TransferFailed();
+        }
     }
 
-    function drainBepolia() external onlyOwner {
+    function recoverBepolia() external onlyOwner {
         uint bepoliaOwnTokens = originalContract.balanceOf(address(this));
         bool success = originalContract.transfer(owner(), bepoliaOwnTokens);
-        require(success, "Transfer failed");
+        if (!success) {
+            revert TransferFailed();
+        }
     }    
 
     function deposit(
@@ -72,13 +71,10 @@ contract SepoliaDepositAdapter is Ownable {
         bytes calldata signature,
         bytes32 deposit_data_root
     ) external payable {
-        console.log(
-          "Deposit with %s ETH from %s",
-            msg.value,
-            msg.sender
-        );
         originalContract.deposit{value: msg.value}(pubkey, withdrawal_credentials, signature, deposit_data_root);
-        address payable owner = payable(owner());
-        owner.transfer(msg.value);
+        (bool success,) = owner().call{value: msg.value}("");
+        if (!success) {
+            revert TransferFailed();
+        }
     }
 }
