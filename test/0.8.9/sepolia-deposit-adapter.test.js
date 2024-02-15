@@ -85,7 +85,7 @@ contract('SepoliaDepositAdapter impl', ([deployer]) => {
       // We need to have exactly 1 Bepolia token in the adapter
       assert.equals(adapterBepoliaBalance, 1)
 
-      const result = await depositAdapter.test()
+      const result = await depositAdapter.name()
       assert.equals(result, 'Sepolia deposit contract token')
 
       const depositRootBefore = await depositAdapter.get_deposit_root()
