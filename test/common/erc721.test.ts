@@ -7,7 +7,13 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { ERC721, ERC721ReceiverMock } from "typechain-types";
 
-import { ERC165_INTERFACE_ID, ERC721_INTERFACE_ID, ERC721METADATA_INTERFACE_ID, INVALID_INTERFACE_ID } from "lib";
+import {
+  ERC165_INTERFACE_ID,
+  ERC721_INTERFACE_ID,
+  ERC721METADATA_INTERFACE_ID,
+  INVALID_INTERFACE_ID,
+  Snapshot,
+} from "lib";
 
 interface ERC721Target {
   tokenName: string;
@@ -44,7 +50,7 @@ interface ERC721Target {
  * @param {Function} target.deploy async function that deploys the token and returns its
  * instance along with other necessary details.
  * @param {Function} [target.suiteFunction=describe] function that runs the suite, a temporary workaround for running
- * the suite exclusively or skipping the suite; see the todo below
+ * the suite exclusively or skipping the suite;
  *
  * The `deploy` function should return an object containing:
  * - `token`: The ERC721 token instance.
@@ -55,10 +61,6 @@ interface ERC721Target {
  *
  * @todo call safeTransferFrom directly instead of using signature
  * @todo use DRY when testing overloadable functions (calling without and with extra data)
- * @todo rewrite the function to support the same interface as `describe`, i.e.
- * instead of passing `suiteFunction`, we should be able to call the function like:
- * testERC20Compliance.only(target)
- * testERC20Compliance.skip(target)
  */
 export function testERC721Compliance({ tokenName, deploy, suiteFunction = describe }: ERC721Target) {
   suiteFunction(`${tokenName} ERC-721 Compliance`, () => {
@@ -74,12 +76,18 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
     let contractRecipient: ERC721ReceiverMock;
     let stranger: HardhatEthersSigner;
 
-    beforeEach(async () => {
+    let originalState: string;
+
+    before(async () => {
       ({ token, name, symbol, holder, holderTokenId } = await deploy());
       [spender, newSpender, eoaRecipient, stranger] = await ethers.getSigners();
 
       contractRecipient = await ethers.deployContract("ERC721ReceiverMock");
     });
+
+    beforeEach(async () => (originalState = await Snapshot.take()));
+
+    afterEach(async () => await Snapshot.restore(originalState));
 
     context("name", () => {
       it("Returns the name of the token", async () => {
@@ -385,7 +393,7 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
       });
     });
 
-    context("isApprovedForAll`", () => {
+    context("isApprovedForAll", () => {
       it("Returns false if the address is not approved for all holder's tokens", async () => {
         expect(await token.isApprovedForAll(holder, spender)).to.equal(false);
       });
@@ -400,3 +408,15 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
     });
   });
 }
+
+testERC721Compliance.only = (target: ERC721Target) =>
+  testERC721Compliance({
+    ...target,
+    suiteFunction: describe.only, // eslint-disable-line no-only-tests/no-only-tests
+  });
+
+testERC721Compliance.skip = (target: ERC721Target) =>
+  testERC721Compliance({
+    ...target,
+    suiteFunction: describe.skip,
+  });
