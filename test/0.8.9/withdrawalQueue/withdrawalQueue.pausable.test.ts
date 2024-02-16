@@ -7,7 +7,15 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { WithdrawalQueueERC721 } from "typechain-types";
 
-import { deployWithdrawalQueue, MAX_UINT256, ONE_ETHER, Snapshot, WQ_PAUSE_ROLE, WQ_RESUME_ROLE } from "lib";
+import {
+  deployWithdrawalQueue,
+  MAX_UINT256,
+  ONE_ETHER,
+  Snapshot,
+  WITHDRAWAL_PAUSE_INFINITELY,
+  WITHDRAWAL_PAUSE_ROLE,
+  WITHDRAWAL_RESUME_ROLE,
+} from "lib";
 
 const getBlockTimestamp = async (provider: HardhatEthersProvider) => {
   const block = await provider.getBlock("latest");
@@ -24,6 +32,9 @@ describe("WithdrawalQueueERC721:Pausable", () => {
   let originalState: string;
   let provider: typeof ethers.provider;
 
+  let PAUSE_ROLE: string;
+  let RESUME_ROLE: string;
+
   before(async () => {
     ({ provider } = ethers);
 
@@ -39,32 +50,29 @@ describe("WithdrawalQueueERC721:Pausable", () => {
 
     ({ queue } = deployed);
 
-    originalState = await Snapshot.take();
+    PAUSE_ROLE = await queue.PAUSE_ROLE();
+    RESUME_ROLE = await queue.RESUME_ROLE();
   });
+
+  beforeEach(async () => (originalState = await Snapshot.take()));
+
+  afterEach(async () => await Snapshot.restore(originalState));
 
   context("Constants", () => {
     it("Returns the PAUSE_INFINITELY variable", async () => {
-      expect(await queue.PAUSE_INFINITELY()).to.equal(MAX_UINT256);
+      expect(await queue.PAUSE_INFINITELY()).to.equal(WITHDRAWAL_PAUSE_INFINITELY);
     });
 
     it("Returns the PAUSE_ROLE variable", async () => {
-      expect(await queue.PAUSE_ROLE()).to.equal(WQ_PAUSE_ROLE);
+      expect(await queue.PAUSE_ROLE()).to.equal(WITHDRAWAL_PAUSE_ROLE);
     });
 
     it("Returns the RESUME_ROLE variable", async () => {
-      expect(await queue.RESUME_ROLE()).to.equal(WQ_RESUME_ROLE);
+      expect(await queue.RESUME_ROLE()).to.equal(WITHDRAWAL_RESUME_ROLE);
     });
   });
 
   context("pauseFor", () => {
-    beforeEach(async () => {
-      originalState = await Snapshot.take();
-    });
-
-    afterEach(async () => {
-      await Snapshot.restore(originalState);
-    });
-
     it("Reverts if contract is paused", async () => {
       await queue.connect(daoAgent).pauseFor(1000n);
       await expect(queue.connect(daoAgent).pauseFor(1n)).to.be.revertedWithCustomError(queue, "ResumedExpected");
@@ -73,7 +81,7 @@ describe("WithdrawalQueueERC721:Pausable", () => {
     it("Reverts if the caller is unauthorised", async () => {
       await expect(queue.connect(stranger).pauseFor(1n)).to.be.revertedWithOZAccessControlError(
         stranger.address,
-        WQ_PAUSE_ROLE,
+        PAUSE_ROLE,
       );
     });
 
@@ -95,14 +103,6 @@ describe("WithdrawalQueueERC721:Pausable", () => {
   });
 
   context("pauseUntil", () => {
-    beforeEach(async () => {
-      originalState = await Snapshot.take();
-    });
-
-    afterEach(async () => {
-      await Snapshot.restore(originalState);
-    });
-
     it("Reverts if contract is paused", async () => {
       await queue.connect(daoAgent).pauseFor(1000n);
 
@@ -119,7 +119,7 @@ describe("WithdrawalQueueERC721:Pausable", () => {
 
       await expect(queue.connect(stranger).pauseUntil(blockTimestamp + 1)).to.be.revertedWithOZAccessControlError(
         stranger.address,
-        WQ_PAUSE_ROLE,
+        PAUSE_ROLE,
       );
     });
 
@@ -146,14 +146,6 @@ describe("WithdrawalQueueERC721:Pausable", () => {
   });
 
   context("isPaused", () => {
-    beforeEach(async () => {
-      originalState = await Snapshot.take();
-    });
-
-    afterEach(async () => {
-      await Snapshot.restore(originalState);
-    });
-
     it("Returns false if contract is not paused", async () => {
       expect(await queue.isPaused()).to.be.false;
     });
@@ -166,14 +158,6 @@ describe("WithdrawalQueueERC721:Pausable", () => {
   });
 
   context("getResumeSinceTimestamp", () => {
-    beforeEach(async () => {
-      originalState = await Snapshot.take();
-    });
-
-    afterEach(async () => {
-      await Snapshot.restore(originalState);
-    });
-
     it("Returns 0 if contract is not paused", async () => {
       const blockTimestamp = await getBlockTimestamp(provider);
       expect(await queue.getResumeSinceTimestamp()).to.equal(blockTimestamp);
@@ -188,14 +172,6 @@ describe("WithdrawalQueueERC721:Pausable", () => {
   });
 
   context("resume", () => {
-    beforeEach(async () => {
-      originalState = await Snapshot.take();
-    });
-
-    afterEach(async () => {
-      await Snapshot.restore(originalState);
-    });
-
     it("Reverts if contract is not paused", async () => {
       await expect(queue.connect(daoAgent).resume()).to.be.revertedWithCustomError(queue, "PausedExpected");
     });
@@ -205,7 +181,7 @@ describe("WithdrawalQueueERC721:Pausable", () => {
 
       await expect(queue.connect(stranger).resume()).to.be.revertedWithOZAccessControlError(
         stranger.address,
-        WQ_RESUME_ROLE,
+        RESUME_ROLE,
       );
     });
 

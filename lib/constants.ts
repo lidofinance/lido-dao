@@ -1,3 +1,5 @@
+import { streccak } from "./keccak";
+
 export const MAX_UINT256 = 2n ** 256n - 1n;
 export const INITIAL_STETH_HOLDER = "0x000000000000000000000000000000000000dEaD";
 
@@ -24,3 +26,18 @@ export const BLOCK_TIME = 12n;
 
 // Default admin role for AccessControl compatible contracts
 export const DEFAULT_ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000";
+
+// Withdrawal Queue related constants
+export const WITHDRAWAL_MAX_BATCHES_LENGTH = 36n;
+
+export const WITHDRAWAL_BUNKER_MODE_DISABLED_TIMESTAMP = MAX_UINT256;
+export const WITHDRAWAL_PAUSE_INFINITELY = MAX_UINT256;
+
+export const WITHDRAWAL_MIN_STETH_WITHDRAWAL_AMOUNT = 100n;
+export const WITHDRAWAL_MAX_STETH_WITHDRAWAL_AMOUNT = 10n ** 21n; // 1000 * 1e18
+
+export const WITHDRAWAL_FINALIZE_ROLE = streccak("FINALIZE_ROLE");
+export const WITHDRAWAL_MANAGE_TOKEN_URI_ROLE = streccak("MANAGE_TOKEN_URI_ROLE");
+export const WITHDRAWAL_ORACLE_ROLE = streccak("ORACLE_ROLE");
+export const WITHDRAWAL_PAUSE_ROLE = streccak("PAUSE_ROLE");
+export const WITHDRAWAL_RESUME_ROLE = streccak("RESUME_ROLE");

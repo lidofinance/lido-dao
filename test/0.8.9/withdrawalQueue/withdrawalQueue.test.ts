@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
+import { afterEach } from "mocha";
 
 import { HardhatEthersProvider } from "@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
@@ -8,17 +9,18 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { WithdrawalQueueERC721 } from "typechain-types";
 
 import {
+  DEFAULT_ADMIN_ROLE,
   deployWithdrawalQueue,
   Snapshot,
-  WQ_BUNKER_MODE_DISABLED_TIMESTAMP,
-  WQ_FINALIZE_ROLE,
-  WQ_MANAGE_TOKEN_URI_ROLE,
-  WQ_MAX_BATCHES_LENGTH,
-  WQ_MAX_STETH_WITHDRAWAL_AMOUNT,
-  WQ_MIN_STETH_WITHDRAWAL_AMOUNT,
-  WQ_ORACLE_ROLE,
-  WQ_PAUSE_ROLE,
-  WQ_RESUME_ROLE,
+  WITHDRAWAL_BUNKER_MODE_DISABLED_TIMESTAMP,
+  WITHDRAWAL_FINALIZE_ROLE,
+  WITHDRAWAL_MANAGE_TOKEN_URI_ROLE,
+  WITHDRAWAL_MAX_BATCHES_LENGTH,
+  WITHDRAWAL_MAX_STETH_WITHDRAWAL_AMOUNT,
+  WITHDRAWAL_MIN_STETH_WITHDRAWAL_AMOUNT,
+  WITHDRAWAL_ORACLE_ROLE,
+  WITHDRAWAL_PAUSE_ROLE,
+  WITHDRAWAL_RESUME_ROLE,
 } from "lib";
 
 interface WithdrawalQueueContractConfig {
@@ -52,6 +54,9 @@ describe("WithdrawalQueueERC721.sol", () => {
   let originalState: string;
   let provider: typeof ethers.provider;
 
+  let RESUME_ROLE: string;
+  let ORACLE_ROLE: string;
+
   const getDeployConfig = (config: WithdrawalQueueContractConfig) => [config.wstEthAddress, config.name, config.symbol];
 
   before(async () => {
@@ -71,43 +76,43 @@ describe("WithdrawalQueueERC721.sol", () => {
     config.name = deployed.name;
     config.symbol = deployed.symbol;
 
-    originalState = await Snapshot.take();
+    RESUME_ROLE = await withdrawalQueue.RESUME_ROLE();
+    ORACLE_ROLE = await withdrawalQueue.ORACLE_ROLE();
   });
 
+  beforeEach(async () => (originalState = await Snapshot.take()));
+
+  afterEach(async () => await Snapshot.restore(originalState));
+
   context("Constants", () => {
-    beforeEach(async () => {
-      originalState = await Snapshot.take();
-    });
-
-    afterEach(async () => {
-      await Snapshot.restore(originalState);
-    });
-
     // WithdrawalQueueBase
 
     it("Returns the MAX_BATCHES_LENGTH variable", async () => {
-      expect(await withdrawalQueue.MAX_BATCHES_LENGTH()).to.equal(WQ_MAX_BATCHES_LENGTH);
+      expect(await withdrawalQueue.MAX_BATCHES_LENGTH()).to.equal(WITHDRAWAL_MAX_BATCHES_LENGTH);
     });
 
     // WithdrawalQueue
 
     it("Returns ths BUNKER_MODE_DISABLED_TIMESTAMP variable", async () => {
-      expect(await withdrawalQueue.BUNKER_MODE_DISABLED_TIMESTAMP()).to.equal(WQ_BUNKER_MODE_DISABLED_TIMESTAMP);
+      expect(await withdrawalQueue.BUNKER_MODE_DISABLED_TIMESTAMP()).to.equal(
+        WITHDRAWAL_BUNKER_MODE_DISABLED_TIMESTAMP,
+      );
     });
 
     it("Returns ACL variables", async () => {
-      expect(await withdrawalQueue.PAUSE_ROLE()).to.equal(WQ_PAUSE_ROLE);
-      expect(await withdrawalQueue.RESUME_ROLE()).to.equal(WQ_RESUME_ROLE);
-      expect(await withdrawalQueue.FINALIZE_ROLE()).to.equal(WQ_FINALIZE_ROLE);
-      expect(await withdrawalQueue.ORACLE_ROLE()).to.equal(WQ_ORACLE_ROLE);
+      expect(await withdrawalQueue.DEFAULT_ADMIN_ROLE()).to.equal(DEFAULT_ADMIN_ROLE);
+      expect(await withdrawalQueue.PAUSE_ROLE()).to.equal(WITHDRAWAL_PAUSE_ROLE);
+      expect(await withdrawalQueue.RESUME_ROLE()).to.equal(WITHDRAWAL_RESUME_ROLE);
+      expect(await withdrawalQueue.FINALIZE_ROLE()).to.equal(WITHDRAWAL_FINALIZE_ROLE);
+      expect(await withdrawalQueue.ORACLE_ROLE()).to.equal(WITHDRAWAL_ORACLE_ROLE);
     });
 
     it("Returns the MIN_STETH_WITHDRAWAL_AMOUNT variable", async () => {
-      expect(await withdrawalQueue.MIN_STETH_WITHDRAWAL_AMOUNT()).to.equal(WQ_MIN_STETH_WITHDRAWAL_AMOUNT);
+      expect(await withdrawalQueue.MIN_STETH_WITHDRAWAL_AMOUNT()).to.equal(WITHDRAWAL_MIN_STETH_WITHDRAWAL_AMOUNT);
     });
 
     it("Returns the MAX_STETH_WITHDRAWAL_AMOUNT variable", async () => {
-      expect(await withdrawalQueue.MAX_STETH_WITHDRAWAL_AMOUNT()).to.equal(WQ_MAX_STETH_WITHDRAWAL_AMOUNT);
+      expect(await withdrawalQueue.MAX_STETH_WITHDRAWAL_AMOUNT()).to.equal(WITHDRAWAL_MAX_STETH_WITHDRAWAL_AMOUNT);
     });
 
     it("Returns the STETH address", async () => {
@@ -121,19 +126,11 @@ describe("WithdrawalQueueERC721.sol", () => {
     // WithdrawalQueueERC721
 
     it("Returns the MANAGE_TOKEN_URI_ROLE variable", async () => {
-      expect(await withdrawalQueue.MANAGE_TOKEN_URI_ROLE()).to.equal(WQ_MANAGE_TOKEN_URI_ROLE);
+      expect(await withdrawalQueue.MANAGE_TOKEN_URI_ROLE()).to.equal(WITHDRAWAL_MANAGE_TOKEN_URI_ROLE);
     });
   });
 
   context("constructor", () => {
-    beforeEach(async () => {
-      originalState = await Snapshot.take();
-    });
-
-    afterEach(async () => {
-      await Snapshot.restore(originalState);
-    });
-
     it("Reverts if wstAddress is wrong", async () => {
       const deployConfig = getDeployConfig({ ...config, wstEthAddress: ZeroAddress });
 
@@ -185,14 +182,6 @@ describe("WithdrawalQueueERC721.sol", () => {
   });
 
   context("initialize", () => {
-    beforeEach(async () => {
-      originalState = await Snapshot.take();
-    });
-
-    afterEach(async () => {
-      await Snapshot.restore(originalState);
-    });
-
     it("Reverts if initialized with zero address", async () => {
       await expect(withdrawalQueue.initialize(ZeroAddress)).to.be.revertedWithCustomError(
         withdrawalQueue,
@@ -212,7 +201,7 @@ describe("WithdrawalQueueERC721.sol", () => {
     it("Reverts if already initialized and not in pause", async () => {
       await withdrawalQueue.initialize(queueAdmin.address);
 
-      await withdrawalQueue.connect(queueAdmin).grantRole(WQ_RESUME_ROLE, queueAdmin.address);
+      await withdrawalQueue.connect(queueAdmin).grantRole(RESUME_ROLE, queueAdmin.address);
       await withdrawalQueue.connect(queueAdmin).resume();
 
       await expect(withdrawalQueue.initialize(queueAdmin.address)).to.be.revertedWithCustomError(
@@ -250,14 +239,6 @@ describe("WithdrawalQueueERC721.sol", () => {
   });
 
   context("Bunker mode", () => {
-    beforeEach(async () => {
-      originalState = await Snapshot.take();
-    });
-
-    afterEach(async () => {
-      await Snapshot.restore(originalState);
-    });
-
     context("isBunkerModeActive", () => {
       it("Returns true if bunker mode is active", async () => {
         expect(await withdrawalQueue.isBunkerModeActive()).to.equal(true);
@@ -278,20 +259,20 @@ describe("WithdrawalQueueERC721.sol", () => {
       it("Returns the timestamp if bunker mode is disabled", async () => {
         await withdrawalQueue.initialize(queueAdmin.address); // Disable bunker mode
 
-        expect(await withdrawalQueue.bunkerModeSinceTimestamp()).to.equal(WQ_BUNKER_MODE_DISABLED_TIMESTAMP);
+        expect(await withdrawalQueue.bunkerModeSinceTimestamp()).to.equal(WITHDRAWAL_BUNKER_MODE_DISABLED_TIMESTAMP);
       });
     });
 
     context("onOracleReport", () => {
       before(async () => {
         await withdrawalQueue.initialize(queueAdmin.address);
-        await withdrawalQueue.grantRole(WQ_ORACLE_ROLE, oracle.address);
+        await withdrawalQueue.grantRole(ORACLE_ROLE, oracle.address);
       });
 
       it("Reverts if not called by the oracle", async () => {
         await expect(
           withdrawalQueue.connect(stanger).onOracleReport(true, 0, 0),
-        ).to.be.revertedWithOZAccessControlError(stanger.address, WQ_ORACLE_ROLE);
+        ).to.be.revertedWithOZAccessControlError(stanger.address, ORACLE_ROLE);
       });
 
       it("Reverts if the bunker mode start time in future", async () => {
@@ -332,7 +313,7 @@ describe("WithdrawalQueueERC721.sol", () => {
         );
 
         expect(await withdrawalQueue.isBunkerModeActive()).to.equal(false);
-        expect(await withdrawalQueue.bunkerModeSinceTimestamp()).to.equal(WQ_BUNKER_MODE_DISABLED_TIMESTAMP);
+        expect(await withdrawalQueue.bunkerModeSinceTimestamp()).to.equal(WITHDRAWAL_BUNKER_MODE_DISABLED_TIMESTAMP);
       });
     });
   });

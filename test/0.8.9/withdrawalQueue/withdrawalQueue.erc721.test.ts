@@ -18,7 +18,7 @@ import {
   shareRate,
   shares,
   Snapshot,
-  WQ_MANAGE_TOKEN_URI_ROLE,
+  WITHDRAWAL_MANAGE_TOKEN_URI_ROLE,
 } from "lib";
 
 import { testERC721Compliance } from "../../common/erc721.test";
@@ -68,6 +68,8 @@ describe("WithdrawalQueueERC721 ERC-721 Metadata Compliance", () => {
 
   let originalState: string;
 
+  let MANAGE_TOKEN_URI_ROLE: string;
+
   before(async () => {
     [owner, stranger, daoAgent, user, tokenUriManager] = await ethers.getSigners();
     const deployed = await deployWithdrawalQueue({
@@ -80,6 +82,8 @@ describe("WithdrawalQueueERC721 ERC-721 Metadata Compliance", () => {
 
     ({ queue, queueAddress, stEth, nftDescriptorAddress } = deployed);
 
+    MANAGE_TOKEN_URI_ROLE = await queue.MANAGE_TOKEN_URI_ROLE();
+
     await deployed.stEth.setTotalPooledEther(ether("600.00"));
     // we need 1 ETH additionally to pay gas on finalization because coverage ignores gasPrice=0
     await setBalance(deployed.stEthAddress, ether("601.00"));
@@ -87,14 +91,16 @@ describe("WithdrawalQueueERC721 ERC-721 Metadata Compliance", () => {
     await stEth.mintShares(user, shares(1n));
     await stEth.connect(user).approve(queueAddress, ether("300.00"));
 
-    await queue.connect(daoAgent).grantRole(WQ_MANAGE_TOKEN_URI_ROLE, tokenUriManager);
-
-    originalState = await Snapshot.take();
+    await queue.connect(daoAgent).grantRole(MANAGE_TOKEN_URI_ROLE, tokenUriManager);
   });
+
+  beforeEach(async () => (originalState = await Snapshot.take()));
+
+  afterEach(async () => await Snapshot.restore(originalState));
 
   context("Constants", () => {
     it("Returns the MANAGE_TOKEN_URI_ROLE variable", async () => {
-      expect(await queue.MANAGE_TOKEN_URI_ROLE()).to.equal(WQ_MANAGE_TOKEN_URI_ROLE);
+      expect(await queue.MANAGE_TOKEN_URI_ROLE()).to.equal(WITHDRAWAL_MANAGE_TOKEN_URI_ROLE);
     });
   });
 
@@ -121,19 +127,11 @@ describe("WithdrawalQueueERC721 ERC-721 Metadata Compliance", () => {
     context("setBaseURI", () => {
       const baseTokenUri = "https://example.com";
 
-      beforeEach(async () => {
-        originalState = await Snapshot.take();
-      });
-
-      afterEach(async () => {
-        await Snapshot.restore(originalState);
-      });
-
       // REVIEW: Do we need this? Need custom error?
       it("Reverts when called by non-manager", async () => {
         await expect(queue.connect(stranger).setBaseURI(baseTokenUri)).to.be.revertedWithOZAccessControlError(
           stranger.address,
-          WQ_MANAGE_TOKEN_URI_ROLE,
+          MANAGE_TOKEN_URI_ROLE,
         );
       });
 
@@ -148,14 +146,6 @@ describe("WithdrawalQueueERC721 ERC-721 Metadata Compliance", () => {
 
     context("getBaseURI", () => {
       const baseTokenUri = "https://example.com";
-
-      beforeEach(async () => {
-        originalState = await Snapshot.take();
-      });
-
-      afterEach(async () => {
-        await Snapshot.restore(originalState);
-      });
 
       it("Returns empty string when not set", async () => {
         expect(await queue.getBaseURI()).to.equal("");
@@ -173,18 +163,10 @@ describe("WithdrawalQueueERC721 ERC-721 Metadata Compliance", () => {
 
   context("NFT Descriptor", () => {
     context("setNFTDescriptorAddress", () => {
-      beforeEach(async () => {
-        originalState = await Snapshot.take();
-      });
-
-      afterEach(async () => {
-        await Snapshot.restore(originalState);
-      });
-
       it("Reverts when called by non-manager", async () => {
         await expect(
           queue.connect(stranger).setNFTDescriptorAddress(nftDescriptorAddress),
-        ).to.be.revertedWithOZAccessControlError(stranger.address, WQ_MANAGE_TOKEN_URI_ROLE);
+        ).to.be.revertedWithOZAccessControlError(stranger.address, MANAGE_TOKEN_URI_ROLE);
       });
 
       it("Sets the correct NFTDescriptorAddress and fires `NftDescriptorAddressSet`", async () => {
@@ -197,14 +179,6 @@ describe("WithdrawalQueueERC721 ERC-721 Metadata Compliance", () => {
     });
 
     context("getNFTDescriptorAddress", () => {
-      beforeEach(async () => {
-        originalState = await Snapshot.take();
-      });
-
-      afterEach(async () => {
-        await Snapshot.restore(originalState);
-      });
-
       it("Returns zero address when not set", async () => {
         expect(await queue.getNFTDescriptorAddress()).to.equal(ZeroAddress);
       });
@@ -222,12 +196,7 @@ describe("WithdrawalQueueERC721 ERC-721 Metadata Compliance", () => {
     const baseTokenUri = "https://example.com";
 
     beforeEach(async () => {
-      originalState = await Snapshot.take();
       await queue.connect(user).requestWithdrawals([ether("25.00"), ether("25.00")], user);
-    });
-
-    afterEach(async () => {
-      await Snapshot.restore(originalState);
     });
 
     it("Reverts on invalid token id", async () => {
