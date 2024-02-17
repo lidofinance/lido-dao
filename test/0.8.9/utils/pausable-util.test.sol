@@ -211,15 +211,20 @@ contract PausableUntilTest is Test {
         assertEq(pausableUntil.getResumeSinceTimestamp(), _resumeSince);
     }
 
-    function testCheckResumed(uint256 _randomTime) public {
-        // set paused for 3 seconds
+    function testCheckResumed(uint256 _randomTime, uint256 _randomDuration) public {
+        // make sure the test logic itself doesn't overflow
+        unchecked {
+            vm.assume(block.timestamp + _randomDuration > _randomDuration);
+        }
+
+        // set paused for N seconds
         uint256 originalTimestamp = block.timestamp;
-        pausableUntil.setPausedState(block.timestamp + 3);
+        pausableUntil.setPausedState(block.timestamp + _randomDuration);
 
         // pick a random time
         vm.warp(_randomTime);
 
-        if (_randomTime < (originalTimestamp + 3)) {
+        if (_randomTime < (originalTimestamp + _randomDuration)) {
             vm.expectRevert();
         }
         
