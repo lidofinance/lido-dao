@@ -8,20 +8,23 @@
     "@typescript-eslint/no-unused-vars": ["warn"],
     // prevents committing `describe.only` and `it.only` tests
     "no-only-tests/no-only-tests": "warn",
-    "simple-import-sort/imports": ["error",{
-      "groups": [
-        ["^node:"],
-        ["^\\u0000"],
-        ["^[^@]\\w"],
-        ["^@\\w"],
-        ["^typechain-types"],
-        ["^lib"],
-        ["^test"],
-        ["^../"],
-        ["^./"],
-        ["^"]
-      ]
-    }]
+    "simple-import-sort/imports": [
+      "error",
+      {
+        "groups": [
+          ["^node:"],
+          ["^\\u0000"],
+          ["^[^@]\\w"],
+          ["^@\\w"],
+          ["^typechain-types"],
+          ["^lib"],
+          ["^test"],
+          ["^../"],
+          ["^./"],
+          ["^"]
+        ]
+      }
+    ]
   },
   "overrides": [
     {
