@@ -180,6 +180,30 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
         expect(await token.ownerOf(holderTokenId)).to.equal(await eoaRecipient.getAddress());
       });
 
+      it("Allows the holder to transfer the token to the contract", async () => {
+        await contractRecipient.setDoesAcceptTokens(true);
+
+        await expect(
+          token.connect(spender)["safeTransferFrom(address,address,uint256)"](holder, contractRecipient, holderTokenId),
+        )
+          .to.emit(token, "Transfer")
+          .withArgs(holder.address, await contractRecipient.getAddress(), holderTokenId);
+      });
+
+      it("Allows the holder to transfer the token to the contract (with data)", async () => {
+        await contractRecipient.setDoesAcceptTokens(true);
+
+        await expect(
+          token
+            .connect(spender)
+            [
+              "safeTransferFrom(address,address,uint256,bytes)"
+            ](holder, contractRecipient, holderTokenId, new Uint8Array()),
+        )
+          .to.emit(token, "Transfer")
+          .withArgs(holder.address, await contractRecipient.getAddress(), holderTokenId);
+      });
+
       it("Allows the holder to transfer the token to the recipient (with data)", async () => {
         await expect(
           token
@@ -288,6 +312,10 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
 
       it("Throws if the token id is invalid", async () => {
         await expect(token.connect(spender).transferFrom(holder, eoaRecipient, holderTokenId + 1n)).to.be.reverted;
+      });
+
+      it("Throws if request id is zero", async () => {
+        await expect(token.connect(spender).transferFrom(holder, eoaRecipient, 0)).to.be.reverted;
       });
     });
 
