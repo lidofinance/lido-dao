@@ -28,7 +28,7 @@ contract('SepoliaDepositAdapter', ([deployer]) => {
 
     bepoliaToken = await ethers.getContractAt('ISepoliaDepositContract', sepoliaDepositContract)
 
-    const result = await depositAdapter.name()
+    const name = await depositAdapter.name()
     assert.equals(result, 'Sepolia deposit contract token')
 
     snapshot = new EvmSnapshot(ethers.provider)
