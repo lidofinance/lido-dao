@@ -58,6 +58,7 @@ contract SepoliaDepositAdapter is IDepositContract, Ownable {
 
     function recoverEth() external onlyOwner {
         uint256 balance = address(this).balance;
+        // solhint-disable-next-line avoid-low-level-calls
         (bool success,) = owner().call{value: balance}("");
         if (!success) {
             revert EthRecoverFailed();
@@ -80,6 +81,7 @@ contract SepoliaDepositAdapter is IDepositContract, Ownable {
         bytes32 deposit_data_root
     ) override external payable {
         originalContract.deposit{value: msg.value}(pubkey, withdrawal_credentials, signature, deposit_data_root);
+        // solhint-disable-next-line avoid-low-level-calls
         (bool success,) = owner().call{value: msg.value}("");
         if (!success) {
             revert DepositFailed();
