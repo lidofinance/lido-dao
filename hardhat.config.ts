@@ -8,6 +8,7 @@ import "solidity-coverage";
 import "tsconfig-paths/register";
 import "hardhat-tracer";
 import "hardhat-watcher";
+import "hardhat-ignore-warnings";
 import { globSync } from "glob";
 import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/task-names";
 import { HardhatUserConfig, subtask } from "hardhat/config";
@@ -71,6 +72,23 @@ const config: HardhatUserConfig = {
       files: ["./test/**/*"],
       clearOnStart: true,
       start: "echo Running tests...",
+    },
+  },
+  warnings: {
+    "@aragon/**/*": {
+      default: "off",
+    },
+    "contracts/*/test_helpers/**/*": {
+      default: "off",
+    },
+    "contracts/*/mocks/**/*": {
+      default: "off",
+    },
+    "test/*/contracts/**/*": {
+      default: "off",
+    },
+    "contracts/common/interfaces/ILidoLocator.sol": {
+      default: "off",
     },
   },
 };
