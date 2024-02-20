@@ -50,7 +50,7 @@ contract SepoliaDepositAdapter is Ownable {
     }
 
     function recoverEth() external onlyOwner {
-        uint balance = address(this).balance;
+        uint256 balance = address(this).balance;
         (bool success,) = owner().call{value: balance}("");
         if (!success) {
             revert TransferFailed();
