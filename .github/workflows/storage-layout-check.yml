@@ -32,4 +32,4 @@ jobs:
           mode: check
           src-folder: ./contracts
           ignore-folders: '{test_helpers,template,mocks}'
-          ignore-contracts: 'WithdrawalsManagerProxy|WithdrawalsManagerStub|ERC1967Proxy'
+          ignore-contracts: 'WithdrawalsManagerProxy|WithdrawalsManagerStub|ERC1967Proxy|SepoliaDepositAdapter'
