@@ -24,6 +24,9 @@ interface IDepositContract {
 interface ISepoliaDepositContract is IDepositContract, IERC20 { }
 
 // Sepolia testnet deposit contract have a different interface than the mainnet deposit contract.
+// The differences are:
+// 1. Sepolia contract require specific Bepolia token to be used for depositing. It burns this token after depositing.
+// 2. It returns the ETH to the sender after depositing.
 // This adapter is used to make the mainnet deposit contract compatible with the testnet deposit contract.
 // For further information see Sepolia deposit contract variant source code link above.
 contract SepoliaDepositAdapter is IDepositContract, Ownable {
