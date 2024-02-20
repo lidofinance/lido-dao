@@ -36,13 +36,23 @@ export function deriveDomainSeparator({
   );
 }
 
-export function deriveStethDomainSeparator(stethAddress: string): string {
+export function deriveStETHDomainSeparator(stETHAddress: string): string {
   return deriveDomainSeparator({
     type: "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)",
     name: "Liquid staked Ether 2.0",
     version: "2",
     chainId: network.config.chainId!,
-    verifyingContract: stethAddress,
+    verifyingContract: stETHAddress,
+  });
+}
+
+export function deriveWstETHDomainSeparator(wstETHAddress: string): string {
+  return deriveDomainSeparator({
+    type: "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)",
+    name: "Wrapped liquid staked Ether 2.0",
+    version: "1",
+    chainId: network.config.chainId!,
+    verifyingContract: wstETHAddress,
   });
 }
 
@@ -62,10 +72,10 @@ interface SignPermitArgs {
   value: bigint;
   nonce: bigint;
   deadline: bigint;
-  steth: string;
+  domainSeparator: string;
 }
 
-export function signStethPermit({ type, owner, spender, value, nonce, deadline, steth }: SignPermitArgs) {
+export function signPermit({ type, owner, spender, value, nonce, deadline, domainSeparator }: SignPermitArgs) {
   const parameters = keccak256(
     new AbiCoder().encode(
       ["bytes32", "address", "address", "uint256", "uint256", "uint256"],
@@ -73,11 +83,22 @@ export function signStethPermit({ type, owner, spender, value, nonce, deadline, 
     ),
   );
 
-  const domainSeparator = deriveStethDomainSeparator(steth);
   const message = keccak256("0x1901" + de0x(domainSeparator) + de0x(parameters));
 
   return sign(message, owner.privateKey);
 }
+
+export const signStETHPermit = (options: Omit<SignPermitArgs, "domainSeparator">, verifyingContract: string) =>
+  signPermit({
+    ...options,
+    domainSeparator: deriveStETHDomainSeparator(verifyingContract),
+  });
+
+export const signWstETHPermit = (options: Omit<SignPermitArgs, "domainSeparator">, verifyingContract: string) =>
+  signPermit({
+    ...options,
+    domainSeparator: deriveWstETHDomainSeparator(verifyingContract),
+  });
 
 interface SignPermitEIP1271Args {
   type: string;
@@ -86,17 +107,17 @@ interface SignPermitEIP1271Args {
   value: bigint;
   nonce: bigint;
   deadline: bigint;
-  steth: string;
+  domainSeparator: string;
 }
 
-export async function signStethPermitEIP1271({
+export async function signPermitEIP1271({
   type,
   owner,
   spender,
   value,
   nonce,
   deadline,
-  steth,
+  domainSeparator,
 }: SignPermitEIP1271Args) {
   type = streccak(type);
 
@@ -107,7 +128,6 @@ export async function signStethPermitEIP1271({
     ),
   );
 
-  const domainSeparator = deriveStethDomainSeparator(steth);
   const message = keccak256("0x1901" + de0x(domainSeparator) + de0x(parameters));
 
   const { v, r, s } = await owner.sign(message);
@@ -118,3 +138,21 @@ export async function signStethPermitEIP1271({
     s: toBuffer(s),
   };
 }
+
+export const signStETHPermitEIP1271 = async (
+  options: Omit<SignPermitEIP1271Args, "domainSeparator">,
+  verifyingContract: string,
+) =>
+  signPermitEIP1271({
+    ...options,
+    domainSeparator: deriveStETHDomainSeparator(verifyingContract),
+  });
+
+export const signWstETHPermitEIP1271 = async (
+  options: Omit<SignPermitEIP1271Args, "domainSeparator">,
+  verifyingContract: string,
+) =>
+  signPermitEIP1271({
+    ...options,
+    domainSeparator: deriveWstETHDomainSeparator(verifyingContract),
+  });

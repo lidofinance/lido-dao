@@ -15,7 +15,15 @@ import {
   StethPermitMockWithEip712Initialization__factory,
 } from "typechain-types";
 
-import { certainAddress, days, ether, randomAddress, signStethPermit, signStethPermitEIP1271 } from "lib";
+import {
+  certainAddress,
+  days,
+  deriveStETHDomainSeparator,
+  ether,
+  randomAddress,
+  signPermitEIP1271,
+  signStETHPermit,
+} from "lib";
 
 describe("Permit", () => {
   let deployer: HardhatEthersSigner;
@@ -70,10 +78,9 @@ describe("Permit", () => {
         nonce: await steth.nonces(owner),
         value,
         deadline: BigInt(await time.latest()) + days(7n),
-        steth: await steth.getAddress(),
       };
 
-      signature = signStethPermit(permit);
+      signature = signStETHPermit(permit, await steth.getAddress());
     });
 
     context("uninitialized", () => {
@@ -143,10 +150,12 @@ describe("Permit", () => {
             nonce: await steth.nonces(owner),
             value,
             deadline: BigInt(await time.latest()) + days(7n),
-            steth: await steth.getAddress(),
           };
 
-          signature = await signStethPermitEIP1271(permit);
+          signature = await signPermitEIP1271({
+            ...permit,
+            domainSeparator: deriveStETHDomainSeparator(await steth.getAddress()),
+          });
         });
 
         it("Sets spender allowance", async () => {
@@ -169,7 +178,6 @@ interface Permit {
   nonce: bigint;
   deadline: bigint;
   spender: string;
-  steth: string;
 }
 
 interface EoaPermit extends Permit {
