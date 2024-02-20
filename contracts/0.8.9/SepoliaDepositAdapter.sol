@@ -31,7 +31,7 @@ interface IDepositContract {
 // Sepolia deposit contract variant of the source code https://github.com/protolambda/testnet-dep-contract/blob/master/deposit_contract.sol
 interface ISepoliaDepositContract is IDepositContract, IERC20 { }
 
-// Sepolia testnet deposit contract have a different interface than the mainnet deposit contract.
+// Sepolia testnet deposit contract have a bit different logic than the mainnet deposit contract.
 // The differences are:
 // 1. Sepolia contract require specific Bepolia token to be used for depositing. It burns this token after depositing.
 // 2. It returns the ETH to the sender after depositing.
