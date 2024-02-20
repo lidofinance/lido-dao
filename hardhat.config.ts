@@ -6,6 +6,8 @@ import "@typechain/hardhat";
 
 import "solidity-coverage";
 import "tsconfig-paths/register";
+import "hardhat-tracer";
+import "hardhat-watcher";
 import { globSync } from "glob";
 import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/task-names";
 import { HardhatUserConfig, subtask } from "hardhat/config";
@@ -62,6 +64,14 @@ const config: HardhatUserConfig = {
     alwaysGenerateOverloads: false,
     externalArtifacts: ["externalArtifacts/*.json"],
     dontOverrideCompile: false,
+  },
+  watcher: {
+    test: {
+      tasks: [{ command: "test", params: { testFiles: ["{path}"] } }],
+      files: ["./test/**/*"],
+      clearOnStart: true,
+      start: "echo Running tests...",
+    },
   },
 };
 
