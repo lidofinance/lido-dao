@@ -54,7 +54,8 @@ async function deployStEthMock(stEthSettings: StEthDeploymentParams) {
   });
 
   if (stEthSettings.owner) {
-    await stEth.initializeEIP712StETH(stEthSettings.owner);
+    const eip712StETH = await ethers.deployContract("EIP712StETH", [await stEth.getAddress()]);
+    await stEth.initializeEIP712StETH(await eip712StETH.getAddress());
 
     if (stEthSettings.ownerStEth) {
       await stEth.mintSteth(stEthSettings.owner, { value: stEthSettings.ownerStEth });

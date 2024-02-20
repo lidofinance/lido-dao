@@ -89,13 +89,13 @@ describe("WithdrawalQueueERC721:Pausable", () => {
       await expect(queue.connect(daoAgent).pauseFor(0)).to.be.revertedWithCustomError(queue, "ZeroPauseDuration");
     });
 
-    it("Pause and emits `Paused` event", async () => {
+    it("Pauses contract for duration and emits `Paused` event", async () => {
       await expect(await queue.connect(daoAgent).pauseFor(404n))
         .to.emit(queue, "Paused")
         .withArgs(404n);
     });
 
-    it("Pause to infinity and emits `Paused` event", async () => {
+    it("Pauses contract for MAX_UINT256 and emits `Paused` event", async () => {
       await expect(await queue.connect(daoAgent).pauseFor(MAX_UINT256))
         .to.emit(queue, "Paused")
         .withArgs(MAX_UINT256);
@@ -130,7 +130,7 @@ describe("WithdrawalQueueERC721:Pausable", () => {
       );
     });
 
-    it("Pause and emits `Paused` event", async () => {
+    it("Pauses contract correctly and emits `Paused` event", async () => {
       const blockTimestamp = await getBlockTimestamp(provider);
 
       await expect(await queue.connect(daoAgent).pauseUntil(blockTimestamp + 1000))
@@ -138,7 +138,7 @@ describe("WithdrawalQueueERC721:Pausable", () => {
         .withArgs(1000n);
     });
 
-    it("Pause to infinity and emits `Paused` event", async () => {
+    it("Pauses contract to MAX_UINT256 and emits `Paused` event", async () => {
       await expect(await queue.connect(daoAgent).pauseUntil(MAX_UINT256))
         .to.emit(queue, "Paused")
         .withArgs(MAX_UINT256);
@@ -185,7 +185,7 @@ describe("WithdrawalQueueERC721:Pausable", () => {
       );
     });
 
-    it("Resumes and emits `Resumed` event", async () => {
+    it("Resumes contract and emits `Resumed` event", async () => {
       await queue.connect(daoAgent).pauseFor(1000n);
 
       await expect(await queue.connect(daoAgent).resume()).to.emit(queue, "Resumed");
