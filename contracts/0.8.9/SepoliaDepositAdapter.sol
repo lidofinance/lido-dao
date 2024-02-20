@@ -8,6 +8,14 @@ import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-v4.4/access/Ownable.sol";
 
 interface IDepositContract {
+    event DepositEvent(
+        bytes pubkey,
+        bytes withdrawal_credentials,
+        bytes amount,
+        bytes signature,
+        bytes index
+    );
+
     function deposit(
         bytes calldata pubkey,
         bytes calldata withdrawal_credentials,

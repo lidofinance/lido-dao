@@ -5,6 +5,7 @@ const { ETH } = require('../helpers/utils')
 const { EvmSnapshot } = require('../helpers/blockchain')
 
 const SepoliaDepositAdapter = artifacts.require('SepoliaDepositAdapter')
+const SepoliaDepositContract = artifacts.require('ISepoliaDepositContract')
 
 // To run Sepolia Deposit Adapter tests:
 // HARDHAT_FORKING_URL=<rpc url> HARDHAT_CHAIN_ID=11155111 npx hardhat test --grep "SepoliaDepositAdapter"
@@ -12,7 +13,7 @@ contract('SepoliaDepositAdapter', ([deployer]) => {
   let depositAdapter
   let snapshot
   let bepoliaToken
-  const sepoliaDepositContract = '0x7f02C3E3c98b133055B8B348B2Ac625669Ed295D'
+  const sepoliaDepositContractAddress = '0x7f02C3E3c98b133055B8B348B2Ac625669Ed295D'
   const EOAddress = '0x6885E36BFcb68CB383DfE90023a462C03BCB2AE5'
   const bepoliaTokenHolder = EOAddress
   // const log = console.log
@@ -24,10 +25,10 @@ contract('SepoliaDepositAdapter', ([deployer]) => {
       return this.skip()
     }
 
-    depositAdapter = await SepoliaDepositAdapter.new(sepoliaDepositContract)
+    depositAdapter = await SepoliaDepositAdapter.new(sepoliaDepositContractAddress)
     log('depositAdapter address', depositAdapter.address)
 
-    bepoliaToken = await ethers.getContractAt('ISepoliaDepositContract', sepoliaDepositContract)
+    bepoliaToken = await ethers.getContractAt('ISepoliaDepositContract', sepoliaDepositContractAddress)
 
     const code = await ethers.provider.getCode(depositAdapter.address)
     assert.notEqual(code, '0x')
@@ -97,11 +98,20 @@ contract('SepoliaDepositAdapter', ([deployer]) => {
       const depositCountBefore = await depositAdapter.get_deposit_count()
       log('depositCount', depositCountBefore)
 
+      const sepoliaDepositContract = await SepoliaDepositContract.at(sepoliaDepositContractAddress)
+
       const receipt = await depositAdapter.deposit(key, withdrawalCredentials, sig, dataRoot, {
         from: owner.address,
         value: ETH(32),
       })
-      assert.emits(receipt, 'EthReceived', { sender: sepoliaDepositContract, amount: ETH(32) })
+      assert.emits(receipt, 'EthReceived', { sender: sepoliaDepositContractAddress, amount: ETH(32) })
+      const depositEvents = await sepoliaDepositContract.getPastEvents('DepositEvent')
+      assert.equals(depositEvents.length, 1)
+      log('depositEvents', depositEvents, ETH(32))
+
+      assert.equals(depositEvents[0].args.pubkey, key)
+      assert.equals(depositEvents[0].args.withdrawal_credentials, withdrawalCredentials)
+      assert.equals(depositEvents[0].args.signature, sig)
 
       const depositRootAfter = await depositAdapter.get_deposit_root()
       log('depositRoot After', depositRootAfter)
