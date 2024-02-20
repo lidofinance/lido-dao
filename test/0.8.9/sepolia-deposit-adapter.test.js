@@ -1,7 +1,10 @@
-const { contract, ethers } = require('hardhat')
+const { contract, artifacts, ethers } = require('hardhat')
 const { assert } = require('../helpers/assert')
+const { ETH } = require('../helpers/utils')
 
 const { EvmSnapshot } = require('../helpers/blockchain')
+
+const SepoliaDepositAdapter = artifacts.require('SepoliaDepositAdapter')
 
 // To run Sepolia Deposit Adapter tests:
 // HARDHAT_FORKING_URL=<rpc url> HARDHAT_CHAIN_ID=11155111 npx hardhat test --grep "SepoliaDepositAdapter"
@@ -9,7 +12,6 @@ contract('SepoliaDepositAdapter', ([deployer]) => {
   let depositAdapter
   let snapshot
   let bepoliaToken
-  // const sepoliaDepositAdapterContract = '0x899e45316FaA439200b36c7d7733192530e3DfC0'
   const sepoliaDepositContract = '0x7f02C3E3c98b133055B8B348B2Ac625669Ed295D'
   const EOAddress = '0x6885E36BFcb68CB383DfE90023a462C03BCB2AE5'
   const bepoliaTokenHolder = EOAddress
@@ -22,14 +24,13 @@ contract('SepoliaDepositAdapter', ([deployer]) => {
       return this.skip()
     }
 
-    // depositAdapter = await SepoliaDepositAdapter.at(sepoliaDepositAdapterContract)
-    depositAdapter = await ethers.deployContract('SepoliaDepositAdapter', [sepoliaDepositContract])
+    depositAdapter = await SepoliaDepositAdapter.new(sepoliaDepositContract)
     log('depositAdapter address', depositAdapter.address)
 
     bepoliaToken = await ethers.getContractAt('ISepoliaDepositContract', sepoliaDepositContract)
 
-    const name = await depositAdapter.name()
-    assert.equals(result, 'Sepolia deposit contract token')
+    const code = await ethers.provider.getCode(depositAdapter.address)
+    assert.notEqual(code, '0x')
 
     snapshot = new EvmSnapshot(ethers.provider)
     await snapshot.make()
@@ -79,7 +80,6 @@ contract('SepoliaDepositAdapter', ([deployer]) => {
       assert.equals(balance0ETH, 0)
 
       const impersonatedSigner = await ethers.getImpersonatedSigner(bepoliaTokenHolder)
-      await depositAdapter.connect(impersonatedSigner)
       // Transfer 1 Bepolia token to depositCaller
       await bepoliaToken.connect(impersonatedSigner).transfer(adapterAddr, 1)
 
@@ -97,10 +97,12 @@ contract('SepoliaDepositAdapter', ([deployer]) => {
       const depositCountBefore = await depositAdapter.get_deposit_count()
       log('depositCount', depositCountBefore)
 
-      await depositAdapter.deposit(key, withdrawalCredentials, sig, dataRoot, {
+      const receipt = await depositAdapter.deposit(key, withdrawalCredentials, sig, dataRoot, {
         from: owner.address,
-        value: ethers.utils.parseEther('32.0'),
+        value: ETH(32),
       })
+      assert.emits(receipt, 'EthReceived', { sender: sepoliaDepositContract, amount: ETH(32) })
+
       const depositRootAfter = await depositAdapter.get_deposit_root()
       log('depositRoot After', depositRootAfter)
       const depositCountAfter = await depositAdapter.get_deposit_count()
@@ -117,6 +119,7 @@ contract('SepoliaDepositAdapter', ([deployer]) => {
     })
 
     it(`recover ETH`, async () => {
+      const ETH_TO_TRANSFER = ETH(10)
       const adapterAddr = depositAdapter.address
 
       const balance0ETH = await ethers.provider.getBalance(adapterAddr)
@@ -126,14 +129,16 @@ contract('SepoliaDepositAdapter', ([deployer]) => {
       log('owner', owner.address)
       await owner.sendTransaction({
         to: adapterAddr,
-        value: ethers.utils.parseEther('10.0'),
+        value: ETH_TO_TRANSFER,
       })
 
       const ethAfterDeposit = await ethers.provider.getBalance(adapterAddr)
       log('ethAfterDeposit', ethAfterDeposit.toString())
-      assert.equals(ethAfterDeposit, ethers.utils.parseEther('10.0'))
+      assert.equals(ethAfterDeposit, ETH_TO_TRANSFER)
 
-      await depositAdapter.recoverEth()
+      const receipt = await depositAdapter.recoverEth()
+      assert.emits(receipt, 'EthRecovered', { amount: ETH_TO_TRANSFER })
+
       const balanceEthAfterRecover = await ethers.provider.getBalance(adapterAddr)
       log('balanceEthAfterRecover', balanceEthAfterRecover.toString())
       assert.equals(balanceEthAfterRecover, 0)
