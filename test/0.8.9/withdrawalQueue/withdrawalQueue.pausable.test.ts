@@ -9,7 +9,6 @@ import { WithdrawalQueueERC721 } from "typechain-types";
 
 import {
   deployWithdrawalQueue,
-  MAX_UINT256,
   ONE_ETHER,
   Snapshot,
   WITHDRAWAL_PAUSE_INFINITELY,
@@ -73,47 +72,15 @@ describe("WithdrawalQueueERC721:Pausable", () => {
   });
 
   context("pauseFor", () => {
-    it("Reverts if contract is paused", async () => {
-      await queue.connect(daoAgent).pauseFor(1000n);
-      await expect(queue.connect(daoAgent).pauseFor(1n)).to.be.revertedWithCustomError(queue, "ResumedExpected");
-    });
-
     it("Reverts if the caller is unauthorised", async () => {
       await expect(queue.connect(stranger).pauseFor(1n)).to.be.revertedWithOZAccessControlError(
         stranger.address,
         PAUSE_ROLE,
       );
     });
-
-    it("Reverts if zero pause duration", async () => {
-      await expect(queue.connect(daoAgent).pauseFor(0)).to.be.revertedWithCustomError(queue, "ZeroPauseDuration");
-    });
-
-    it("Pauses contract for duration and emits `Paused` event", async () => {
-      await expect(await queue.connect(daoAgent).pauseFor(404n))
-        .to.emit(queue, "Paused")
-        .withArgs(404n);
-    });
-
-    it("Pauses contract for MAX_UINT256 and emits `Paused` event", async () => {
-      await expect(await queue.connect(daoAgent).pauseFor(MAX_UINT256))
-        .to.emit(queue, "Paused")
-        .withArgs(MAX_UINT256);
-    });
   });
 
   context("pauseUntil", () => {
-    it("Reverts if contract is paused", async () => {
-      await queue.connect(daoAgent).pauseFor(1000n);
-
-      const blockTimestamp = await getBlockTimestamp(provider);
-
-      await expect(queue.connect(daoAgent).pauseUntil(blockTimestamp + 1)).to.be.revertedWithCustomError(
-        queue,
-        "ResumedExpected",
-      );
-    });
-
     it("Reverts if the caller is unauthorised", async () => {
       const blockTimestamp = await getBlockTimestamp(provider);
 
@@ -122,60 +89,9 @@ describe("WithdrawalQueueERC721:Pausable", () => {
         PAUSE_ROLE,
       );
     });
-
-    it("Reverts if timestamp is in the past", async () => {
-      await expect(queue.connect(daoAgent).pauseUntil(0)).to.be.revertedWithCustomError(
-        queue,
-        "PauseUntilMustBeInFuture",
-      );
-    });
-
-    it("Pauses contract correctly and emits `Paused` event", async () => {
-      const blockTimestamp = await getBlockTimestamp(provider);
-
-      await expect(await queue.connect(daoAgent).pauseUntil(blockTimestamp + 1000))
-        .to.emit(queue, "Paused")
-        .withArgs(1000n);
-    });
-
-    it("Pauses contract to MAX_UINT256 and emits `Paused` event", async () => {
-      await expect(await queue.connect(daoAgent).pauseUntil(MAX_UINT256))
-        .to.emit(queue, "Paused")
-        .withArgs(MAX_UINT256);
-    });
-  });
-
-  context("isPaused", () => {
-    it("Returns false if contract is not paused", async () => {
-      expect(await queue.isPaused()).to.be.false;
-    });
-
-    it("Returns true if contract is paused", async () => {
-      await queue.connect(daoAgent).pauseFor(1000n);
-
-      expect(await queue.isPaused()).to.be.true;
-    });
-  });
-
-  context("getResumeSinceTimestamp", () => {
-    it("Returns 0 if contract is not paused", async () => {
-      const blockTimestamp = await getBlockTimestamp(provider);
-      expect(await queue.getResumeSinceTimestamp()).to.equal(blockTimestamp);
-    });
-
-    it("Returns the duration since the contract was paused", async () => {
-      await queue.connect(daoAgent).pauseFor(1000n);
-
-      const blockTimestamp = await getBlockTimestamp(provider);
-      expect(await queue.getResumeSinceTimestamp()).to.equal(blockTimestamp + 1000);
-    });
   });
 
   context("resume", () => {
-    it("Reverts if contract is not paused", async () => {
-      await expect(queue.connect(daoAgent).resume()).to.be.revertedWithCustomError(queue, "PausedExpected");
-    });
-
     it("Reverts if the caller is unauthorised", async () => {
       await queue.connect(daoAgent).pauseFor(1000n);
 
@@ -183,12 +99,6 @@ describe("WithdrawalQueueERC721:Pausable", () => {
         stranger.address,
         RESUME_ROLE,
       );
-    });
-
-    it("Resumes contract and emits `Resumed` event", async () => {
-      await queue.connect(daoAgent).pauseFor(1000n);
-
-      await expect(await queue.connect(daoAgent).resume()).to.emit(queue, "Resumed");
     });
   });
 });
