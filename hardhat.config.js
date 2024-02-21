@@ -120,6 +120,9 @@ const getNetConfig = (networkName, ethAccountName) => {
   if (networkName === 'hardhat' && process.env.HARDHAT_FORKING_URL) {
     netConfig.forking = { url: process.env.HARDHAT_FORKING_URL }
   }
+  if (networkName === 'hardhat' && process.env.HARDHAT_CHAIN_ID) {
+    netConfig.chainId = +process.env.HARDHAT_CHAIN_ID
+  }
   return netConfig ? { [networkName]: netConfig } : {}
 }
 
