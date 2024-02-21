@@ -18,6 +18,32 @@ describe("PausableUtils", () => {
     });
   });
 
+  context("Modifiers", () => {
+    context("whenPaused", () => {
+      it("Reverts if contract is not paused", async () => {
+        await expect(pausable.testWhenPaused()).to.be.revertedWithCustomError(pausable, "PausedExpected");
+      });
+
+      it("Does not revert if contract is paused", async () => {
+        await expect(pausable.pauseFor(1000n)).to.emit(pausable, "Paused");
+
+        await expect(pausable.testWhenPaused()).to.not.be.reverted;
+      });
+    });
+
+    context("whenResumed", () => {
+      it("Reverts if contract is paused", async () => {
+        await expect(pausable.pauseFor(1000n)).to.emit(pausable, "Paused");
+
+        await expect(pausable.testWhenResumed()).to.be.revertedWithCustomError(pausable, "ResumedExpected");
+      });
+
+      it("Does not revert if contract is not paused", async () => {
+        await expect(pausable.testWhenResumed()).to.not.be.reverted;
+      });
+    });
+  });
+
   context("isPaused", () => {
     it("Returns false if not paused", async () => {
       expect(await pausable.isPaused()).to.equal(false);
@@ -107,32 +133,6 @@ describe("PausableUtils", () => {
 
       await expect(pausable.resume()).to.be.revertedWithCustomError(pausable, "PausedExpected");
       expect(await pausable.isPaused()).to.equal(false);
-    });
-  });
-
-  context("Modifiers", () => {
-    context("whenPaused", () => {
-      it("Reverts if contract is not paused", async () => {
-        await expect(pausable.testWhenPaused()).to.be.revertedWithCustomError(pausable, "PausedExpected");
-      });
-
-      it("Does not revert if contract is paused", async () => {
-        await expect(pausable.pauseFor(1000n)).to.emit(pausable, "Paused");
-
-        await expect(pausable.testWhenPaused()).to.not.be.reverted;
-      });
-    });
-
-    context("whenResumed", () => {
-      it("Reverts if contract is paused", async () => {
-        await expect(pausable.pauseFor(1000n)).to.emit(pausable, "Paused");
-
-        await expect(pausable.testWhenResumed()).to.be.revertedWithCustomError(pausable, "ResumedExpected");
-      });
-
-      it("Does not revert if contract is not paused", async () => {
-        await expect(pausable.testWhenResumed()).to.not.be.reverted;
-      });
     });
   });
 });
