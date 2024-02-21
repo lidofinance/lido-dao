@@ -58,7 +58,8 @@ contract('SepoliaDepositAdapter', ([deployer]) => {
       log('bepoliaHolderEndBalance', bepoliaHolderEndBalance)
 
       // Recover Bepolia tokens
-      await depositAdapter.recoverBepolia()
+      const receipt = await depositAdapter.recoverBepolia()
+      assert.emits(receipt, 'BepoliaRecovered', { amount: BEPOLIA_TO_TRANSFER })
 
       const bepoliaTokensOnAdapter = await bepoliaToken.balanceOf(adapterAddr)
       assert.equals(bepoliaTokensOnAdapter, 0)

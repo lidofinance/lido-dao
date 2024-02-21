@@ -43,6 +43,8 @@ contract SepoliaDepositAdapter is IDepositContract, Ownable {
 
     event EthRecovered(uint256 amount);
 
+    event BepoliaRecovered(uint256 amount);
+
     error EthRecoverFailed();
 
     error BepoliaRecoverFailed();
@@ -83,6 +85,7 @@ contract SepoliaDepositAdapter is IDepositContract, Ownable {
         if (!success) {
             revert BepoliaRecoverFailed();
         }
+        emit BepoliaRecovered(bepoliaOwnTokens);
     }    
 
     function deposit(
