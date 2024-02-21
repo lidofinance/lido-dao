@@ -25,6 +25,9 @@ export DSM_PREDEFINED_ADDRESS="0x6885E36BFcb68CB383DfE90023a462C03BCB2AE5"
 export GAS_PRIORITY_FEE="${GAS_PRIORITY_FEE:=1}"
 export GAS_MAX_FEE="${GAS_MAX_FEE:=100}"
 
+# Deposit adapter depoyment / upgrading
+# yarn hardhat --network $NETWORK run ./scripts/deploy-sepolia-deposit-contract-adapter.js  --no-compile
+
 # Deposit contract custom LIDO adapter
 # deployed from scripts/deploy-sepolia-deposit-contract-adapter.js
 export DEPOSIT_CONTRACT="0x80b5DC88C98E528bF9cb4B7F0f076aC41da24651"
