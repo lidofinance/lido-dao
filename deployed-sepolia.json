@@ -531,6 +531,22 @@
       ]
     ]
   },
+  "sepoliaDepositAdapter": {
+    "implementation": {
+      "contract": "contracts/0.8.9/SepoliaDepositAdapter.sol",
+      "address": "0x5c5C4556F0017FF57c331185E1C61d91acEf966e",
+      "constructorArgs": [
+        "0x7f02C3E3c98b133055B8B348B2Ac625669Ed295D"
+      ]
+    },
+    "proxy": {
+      "address": "0x80b5DC88C98E528bF9cb4B7F0f076aC41da24651",
+      "contract": "contracts/0.8.9/proxy/OssifiableProxy.sol",
+      "constructorArgs": [
+        "0x5c5C4556F0017FF57c331185E1C61d91acEf966e"
+      ]
+    }
+  },
   "stakingRouter": {
     "proxy": {
       "contract": "contracts/0.8.9/proxy/OssifiableProxy.sol",
