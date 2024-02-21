@@ -13,7 +13,7 @@ async function updateAdapterImplementation(proxyOwner) {
   await proxy.proxy__upgradeTo(sepoliaDepositAdapter, { from: proxyOwner })
 }
 
-async function deployAdaperBehindPrixy(depositAdapterProxyOwner) {
+async function deployAdaperBehindProxy(depositAdapterProxyOwner) {
   const sepoliaDepositContract = "0x7f02C3E3c98b133055B8B348B2Ac625669Ed295D"
   const constructorArgs = [sepoliaDepositContract]
 
@@ -36,7 +36,7 @@ async function deployNewContracts({ web3, artifacts }) {
 
   const depositAdapterProxyOwner = "0x6885E36BFcb68CB383DfE90023a462C03BCB2AE5"
 
-  // await deployAdaperBehindPrixy(depositAdapterProxyOwner)
+  // await deployAdaperBehindProxy(depositAdapterProxyOwner)
   await updateAdapterImplementation(depositAdapterProxyOwner)
 }
 
