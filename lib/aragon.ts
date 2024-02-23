@@ -64,6 +64,7 @@ interface DeployLidoDaoArgs {
   locatorConfig?: Partial<LidoLocator.ConfigStruct>;
 }
 
+// TODO: extract initialization from this function
 export async function deployLidoDao({ rootAccount, initialized, locatorConfig = {} }: DeployLidoDaoArgs) {
   const { dao, acl } = await createAragonDao(rootAccount);
 
