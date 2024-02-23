@@ -23,6 +23,7 @@ describe("WithdrawalQueueBase", () => {
   let stranger: HardhatEthersSigner;
 
   let queue: WithdrawalsQueueBaseHarness;
+  let queueAddress: string;
   let receiver: ReceiverMock;
 
   let originalState: string;
@@ -34,7 +35,18 @@ describe("WithdrawalQueueBase", () => {
 
     queue = await ethers.deployContract("WithdrawalsQueueBaseHarness");
     receiver = await ethers.deployContract("ReceiverMock");
+
+    queueAddress = await queue.getAddress();
   });
+
+  const setUpRequestsState = async (requestsCount: number, finalizedCount: number) => {
+    for (let i = 0; i < requestsCount; i++) {
+      await queue.exposedEnqueue(ether("1.00"), shares(1n), owner);
+      if (i < finalizedCount) {
+        await queue.exposedFinalize(i + 1, ether("1.00"), shareRate(1n));
+      }
+    }
+  };
 
   beforeEach(async () => (originalState = await Snapshot.take()));
 
@@ -377,7 +389,7 @@ describe("WithdrawalQueueBase", () => {
 
       const result = await queue.prefinalize([1, 2], shareRate(1n));
 
-      expect(result.ethToLock).to.equal(ether("2.00")); // 2 + 1 = 2 :D :magic:
+      expect(result.ethToLock).to.equal(ether("2.00"));
       expect(result.sharesToBurn).to.equal(shares(2n));
     });
   });
@@ -483,22 +495,196 @@ describe("WithdrawalQueueBase", () => {
         .withArgs(1n, 1000n);
     });
 
-    it("Returns 0 if no checkpoints", async () => {
-      await queue.exposedEnqueue(ether("1.00"), shares(1n), owner);
+    it("Rerurns 0 if last checkpoint id is 0", async () => {
+      await setUpRequestsState(1, 0);
 
-      const lastCheckpointIndex = await queue.getLastCheckpointIndex();
+      expect(await queue.exposedFindCheckpointHint(1n, 1n, 0n)).to.equal(0);
+    });
 
-      expect(await queue.exposedFindCheckpointHint(1n, 1n, lastCheckpointIndex)).to.equal(0);
+    it("Returns 0 if request id is greater than last finalized request", async () => {
+      await queue.exposedSetLastCheckpointIndex(1n);
+      await setUpRequestsState(2, 1);
+
+      expect(await queue.exposedFindCheckpointHint(2n, 1n, 2n)).to.equal(0);
+    });
+
+    it("Returns 0 if start request id is greater than end request id", async () => {
+      await queue.exposedSetLastCheckpointIndex(1n);
+      await setUpRequestsState(2, 1);
+
+      expect(await queue.exposedFindCheckpointHint(1n, 2n, 1n)).to.equal(0);
+    });
+
+    it("Returns right boundary hint for last checkpoint", async () => {
+      await setUpRequestsState(1, 1);
+
+      expect(await queue.exposedFindCheckpointHint(1n, 1n, 1n)).to.equal(1n);
+    });
+
+    it("Returns right boundary hint if request fits right before the next checkpoint", async () => {
+      await queue.exposedSetLastCheckpointIndex(1n);
+      await setUpRequestsState(3, 3);
+
+      expect(await queue.exposedFindCheckpointHint(1n, 2n, 2n)).to.equal(2n);
+    });
+
+    it("Returns 0 for right boundary hint request can't be fitted", async () => {
+      await queue.exposedSetLastCheckpointIndex(3n);
+      await setUpRequestsState(3, 1);
+
+      expect(await queue.exposedFindCheckpointHint(1n, 1n, 3n)).to.equal(0);
+    });
+
+    it("Returns left boundary hint for first request", async () => {
+      await setUpRequestsState(3, 3);
+
+      expect(await queue.exposedFindCheckpointHint(1n, 2n, 3n)).to.equal(0);
+    });
+
+    it("Returns binary search results", async () => {
+      await setUpRequestsState(3, 3);
+
+      expect(await queue.exposedFindCheckpointHint(2n, 1n, 3n)).to.equal(2n);
+    });
+
+    it("Returns binary search results", async () => {
+      await setUpRequestsState(5, 5);
+
+      expect(await queue.exposedFindCheckpointHint(3n, 1n, 5n)).to.equal(3n);
     });
   });
 
-  context("_claim", () => {});
+  context("_claim", () => {
+    it("Reverts if request id is 0", async () => {
+      await expect(queue.exposedClaim(0, 1, owner))
+        .to.be.revertedWithCustomError(queue, "InvalidRequestId")
+        .withArgs(0);
+    });
 
-  context("_calculateClaimableEther", () => {});
+    it("Reverts if request id is out of queue bounds", async () => {
+      await expect(queue.exposedClaim(1, 1, owner))
+        .to.be.revertedWithCustomError(queue, "RequestNotFoundOrNotFinalized")
+        .withArgs(1);
+    });
 
-  context("_calculateClaimableStETH", () => {});
+    it("Reverts if request is not finalized", async () => {
+      await queue.exposedEnqueue(ether("1.00"), shares(1n), owner);
 
-  context("_initializeQueue", () => {});
+      await expect(queue.exposedClaim(1, 1, owner))
+        .to.be.revertedWithCustomError(queue, "RequestNotFoundOrNotFinalized")
+        .withArgs(1);
+    });
+
+    it("Reverts if request is already claimed", async () => {
+      await setBalance(queueAddress, ether("10.00"));
+
+      await queue.exposedEnqueue(ether("1.00"), shares(1n), owner);
+      await queue.exposedFinalize(1, ether("1.00"), shareRate(1n));
+      await queue.exposedClaim(1, 1, owner);
+
+      await expect(queue.exposedClaim(1, 1, owner))
+        .to.be.revertedWithCustomError(queue, "RequestAlreadyClaimed")
+        .withArgs(1);
+    });
+
+    it("Reverts if not enough ether", async () => {
+      await queue.exposedEnqueue(ether("1.00"), shares(1n), owner);
+      await queue.exposedFinalize(1, ether("1.00"), shareRate(1n));
+
+      await expect(queue.exposedClaim(1, 1, owner)).to.be.revertedWithCustomError(queue, "NotEnoughEther");
+    });
+
+    it("Reverts if not owner", async () => {
+      await setBalance(queueAddress, ether("10.00"));
+
+      await queue.exposedEnqueue(ether("1.00"), shares(1n), owner);
+      await queue.exposedFinalize(1, ether("1.00"), shareRate(1n));
+
+      await expect(queue.connect(stranger).exposedClaim(1, 1, owner))
+        .to.be.revertedWithCustomError(queue, "NotOwner")
+        .withArgs(stranger.address, owner.address);
+    });
+
+    it("Claims the request", async () => {
+      await setBalance(queueAddress, ether("10.00"));
+
+      await queue.exposedEnqueue(ether("1.00"), shares(1n), owner);
+      await queue.prefinalize([1], shareRate(1n));
+      await queue.exposedFinalize(1, ether("1.00"), shareRate(1n));
+
+      const balanceBefore = await provider.getBalance(stranger.address);
+      const lockedBefore = await queue.getLockedEtherAmount();
+
+      await expect(queue.exposedClaim(1, 1, stranger))
+        .to.emit(queue, "WithdrawalClaimed")
+        .withArgs(1, owner.address, stranger.address, shares(1n));
+
+      const balanceAfter = await provider.getBalance(stranger.address);
+      const lockedAfter = await queue.getLockedEtherAmount();
+
+      expect(balanceAfter - balanceBefore).to.equal(ether("1.00"));
+      expect(lockedBefore - lockedAfter).to.equal(ether("1.00"));
+    });
+  });
+
+  context("_calculateClaimableEther", () => {
+    it("Reverts if hint is 0", async () => {
+      await expect(queue.exposedCalculateClaimableEther(1, 0))
+        .to.be.revertedWithCustomError(queue, "InvalidHint")
+        .withArgs(0);
+    });
+
+    it("Reverts if request id is 0", async () => {
+      await expect(queue.exposedCalculateClaimableEther(0, 1))
+        .to.be.revertedWithCustomError(queue, "InvalidHint")
+        .withArgs(1);
+    });
+
+    it("Reverts if request id is out of hints range", async () => {
+      await setUpRequestsState(3, 3);
+
+      await expect(queue.exposedCalculateClaimableEther(1, 3))
+        .to.be.revertedWithCustomError(queue, "InvalidHint")
+        .withArgs(3);
+    });
+
+    it("Reverts if request id is not in hints range", async () => {
+      await setUpRequestsState(5, 5);
+
+      await expect(queue.exposedCalculateClaimableEther(5, 3))
+        .to.be.revertedWithCustomError(queue, "InvalidHint")
+        .withArgs(3);
+    });
+
+    it("Calculates the claimable ether", async () => {
+      await setUpRequestsState(5, 5);
+
+      expect(await queue.exposedCalculateClaimableEther(3, 3)).to.equal(ether("1.00"));
+    });
+
+    it("Calculates the claimable ether taking share rate into account", async () => {
+      await queue.exposedEnqueue(ether("2.00"), shares(3n), owner);
+      await queue.exposedEnqueue(ether("2.00"), shares(2n), owner);
+      await queue.exposedEnqueue(ether("2.00"), shares(1n), owner);
+      await queue.exposedFinalize(1, ether("2.00"), shareRate(3n));
+      await queue.exposedFinalize(2, ether("2.00"), shareRate(2n));
+      await queue.exposedFinalize(3, ether("2.00"), shareRate(1n));
+
+      expect(await queue.exposedCalculateClaimableEther(3, 3)).to.equal(ether("1.00"));
+    });
+  });
+
+  context("_initializeQueue", () => {
+    it("Initializes the queue with default params", async () => {
+      await queue.exposedInitializeQueue();
+
+      expect(await queue.getLastRequestId()).to.equal(0);
+      expect(await queue.getLastFinalizedRequestId()).to.equal(0);
+      expect(await queue.getLastCheckpointIndex()).to.equal(0);
+      expect(await queue.getLockedEtherAmount()).to.equal(0);
+      expect(await queue.exposedGetLastReportTimestamp()).to.equal(0);
+    });
+  });
 
   context("_sendValue", () => {
     it("Reverts if not enough ether", async () => {
@@ -509,7 +695,7 @@ describe("WithdrawalQueueBase", () => {
     });
 
     it("Reverts if not successful transfer", async () => {
-      await setBalance(await queue.getAddress(), ether("10.00"));
+      await setBalance(queueAddress, ether("10.00"));
 
       await receiver.setCanReceive(false);
 
@@ -520,7 +706,7 @@ describe("WithdrawalQueueBase", () => {
     });
 
     it("Sends value to the recipient", async () => {
-      await setBalance(await queue.getAddress(), ether("10.00"));
+      await setBalance(queueAddress, ether("10.00"));
 
       const balanceBefore = await provider.getBalance(stranger);
 

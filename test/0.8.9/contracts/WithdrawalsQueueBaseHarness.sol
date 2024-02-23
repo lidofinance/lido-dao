@@ -35,6 +35,20 @@ contract WithdrawalsQueueBaseHarness is WithdrawalQueueBase {
     return _calcBatch(_preStartRequest, _endRequest);
   }
 
+  function exposedClaim(uint256 _requestId, uint256 _hint, address _recipient) external {
+    return _claim(_requestId, _hint, _recipient);
+  }
+
+  function exposedCalculateClaimableEther(uint256 _requestId, uint256 _hint) external view returns (uint256) {
+    WithdrawalRequest storage request = _getQueue()[_requestId];
+
+    return _calculateClaimableEther(request, _requestId, _hint);
+  }
+
+  function exposedInitializeQueue() external {
+    _initializeQueue();
+  }
+
   // Internal functions
 
   function exposedGetLastReportTimestamp() external view returns (uint256) {
