@@ -1,9 +1,11 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
+import { time } from "@nomicfoundation/hardhat-network-helpers";
+
 import { PausableUntilHarness } from "typechain-types";
 
-import { getBlockTimestamp, MAX_UINT256 } from "lib";
+import { MAX_UINT256 } from "lib";
 
 describe("PausableUtils", () => {
   let pausable: PausableUntilHarness;
@@ -63,10 +65,9 @@ describe("PausableUtils", () => {
 
     it("Returns the duration since the contract was paused", async () => {
       await pausable.exposedPauseFor(1000n);
+      const timestamp = await time.latest();
 
-      const blockTimestamp = await getBlockTimestamp(ethers.provider);
-
-      expect(await pausable.getResumeSinceTimestamp()).to.equal(blockTimestamp + 1000);
+      expect(await pausable.getResumeSinceTimestamp()).to.equal(timestamp + 1000);
     });
   });
 
@@ -102,9 +103,9 @@ describe("PausableUtils", () => {
     });
 
     it("Pauses contract correctly and emits `Paused` event", async () => {
-      const blockTimestamp = await getBlockTimestamp(ethers.provider);
+      const timestamp = await time.latest();
 
-      await expect(pausable.exposedPauseUntil(blockTimestamp + 1000))
+      await expect(pausable.exposedPauseUntil(timestamp + 1000))
         .to.emit(pausable, "Paused")
         .withArgs(1000n);
     });
@@ -138,8 +139,9 @@ describe("PausableUtils", () => {
 
   context("_setPausedState", async () => {
     let timestamp: number;
+
     beforeEach(async () => {
-      timestamp = await getBlockTimestamp(ethers.provider);
+      timestamp = await time.latest();
     });
 
     it("Pauses the contract", async () => {
