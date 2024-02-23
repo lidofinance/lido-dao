@@ -31,7 +31,7 @@ function verify {
 # NB: Although most of the contracts listed below would be verified by running
 # this bash script as it is, some might require some manual tweaking.
 # Sometimes first attempt to verify fails without observable reason.
-# Part of the contract require a workaround see SCRATCH_DEPLOY.md section
+# Part of the contract require a workaround see scratch-deploy.md section
 # "Issues with verification of part of the contracts deployed from factories".
 
 verify dummyEmptyContract

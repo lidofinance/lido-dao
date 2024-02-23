@@ -275,7 +275,6 @@ async function deployImplementation(nameInState, artifactName, deployer, constru
 
 async function deployBehindOssifiableProxy(nameInState, artifactName, proxyOwner, deployer, constructorArgs=[], implementation=null) {
   const netId = await web3.eth.net.getId()
-  const state = readNetworkState(network.name, netId)
   const proxyContractName = 'OssifiableProxy'
 
   if (implementation === null) {
@@ -298,19 +297,22 @@ async function deployBehindOssifiableProxy(nameInState, artifactName, proxyOwner
   TotalGasCounter.add(gasUsed)
   console.log(`done: ${proxy.address} (gas used ${gasUsed})`)
 
-  state[nameInState] = { ...state[nameInState] }
-  state[nameInState].proxy = {
-    contract: await getContractPath(proxyContractName),
-    address: proxy.address,
-    constructorArgs: proxyConstructorArgs,
-  }
-  state[nameInState].implementation = {
-    contract: await getContractPath(artifactName),
-    address: implementation,
-    constructorArgs: constructorArgs,
-  }
+  if (nameInState) {
+    const state = readNetworkState(network.name, netId)
 
-  persistNetworkState(network.name, netId, state)
+    state[nameInState] = { ...state[nameInState] }
+    state[nameInState].proxy = {
+      contract: await getContractPath(proxyContractName),
+      address: proxy.address,
+      constructorArgs: proxyConstructorArgs,
+    }
+    state[nameInState].implementation = {
+      contract: await getContractPath(artifactName),
+      address: implementation,
+      constructorArgs: constructorArgs,
+    }
+    persistNetworkState(network.name, netId, state)
+  }
   console.log()
   return proxy.address
 }

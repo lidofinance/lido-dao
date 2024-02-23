@@ -81,7 +81,8 @@
     "deployParameters": {
       "maxDepositsPerBlock": 150,
       "minDepositBlockDistance": 5,
-      "pauseIntentValidityPeriodBlocks": 6646
+      "pauseIntentValidityPeriodBlocks": 6646,
+      "usePredefinedAddressInstead": null
     }
   },
   "oracleReportSanityChecker": {

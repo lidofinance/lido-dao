@@ -175,6 +175,9 @@ async function checkDAO({ web3, artifacts }) {
   log.splitter()
 
   const permissionsConfig = JSON.parse(fs.readFileSync('./scripts/scratch/checks/scratch-deploy-permissions.json'))
+  if (state.depositSecurityModule.deployParameters.usePredefinedAddressInstead !== null) {
+    delete permissionsConfig['depositSecurityModule']
+  }
   await assertNonAragonPermissions(state, permissionsConfig)
 
   log.splitter()

@@ -41,7 +41,7 @@ async function loadDeployedProtocol(state) {
     voting: await artifacts.require('Voting').at(state['app:aragon-voting'].proxy.address),
     agent: await artifacts.require('Agent').at(state['app:aragon-agent'].proxy.address),
     nodeOperatorsRegistry: await artifacts.require('NodeOperatorsRegistry').at(state['app:node-operators-registry'].proxy.address),
-    depositSecurityModule: await artifacts.require('DepositSecurityModule').at(state.depositSecurityModule.address),
+    depositSecurityModuleAddress: state.depositSecurityModule.address, // Deploying DepositSecurityModule might be omitted and e.g. EOA is used
     accountingOracle: await artifacts.require('AccountingOracle').at(state.accountingOracle.proxy.address),
     hashConsensusForAO: await artifacts.require('HashConsensus').at(state.hashConsensusForAccountingOracle.address),
     elRewardsVault: await artifacts.require('LidoExecutionLayerRewardsVault').at(state.executionLayerRewardsVault.address),
@@ -68,13 +68,13 @@ async function prepareProtocolForSubmitDepositReportWithdrawalFlow(protocol, sta
     voting,
     agent,
     nodeOperatorsRegistry,
-    depositSecurityModule,
+    depositSecurityModuleAddress,
     hashConsensusForAO,
     withdrawalQueue,
   } = protocol
 
   await ethers.provider.send('hardhat_impersonateAccount', [voting.address])
-  await ethers.provider.send('hardhat_impersonateAccount', [depositSecurityModule.address])
+  await ethers.provider.send('hardhat_impersonateAccount', [depositSecurityModuleAddress])
   await ethers.provider.send('hardhat_impersonateAccount', [agent.address])
 
   await lido.resume({ from: voting.address })
@@ -111,7 +111,7 @@ async function checkSubmitDepositReportWithdrawal(protocol, state, user1, user2)
   const {
     lido,
     agent,
-    depositSecurityModule,
+    depositSecurityModuleAddress,
     accountingOracle,
     hashConsensusForAO,
     elRewardsVault,
@@ -130,7 +130,7 @@ async function checkSubmitDepositReportWithdrawal(protocol, state, user1, user2)
   assert.equals(await lido.getTotalPooledEther(), initialLidoBalance + BigInt(ETH(34)))
   assert.equals(await lido.getBufferedEther(), initialLidoBalance + BigInt(ETH(34)))
 
-  await lido.deposit(MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositSecurityModule.address })
+  await lido.deposit(MAX_DEPOSITS, CURATED_MODULE_ID, CALLDATA, { from: depositSecurityModuleAddress })
   log.success('Ether deposited')
 
 

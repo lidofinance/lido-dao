@@ -142,7 +142,7 @@ contract('Lido, AccountingOracle, WithdrawalQueue integration', ([depositor, use
         })
 
         if (i === numRebases - 1) {
-          it(`users submit enough ETH to buffer to fullfill all withdrawals`, async () => {
+          it(`users submit enough ETH to buffer to fulfill all withdrawals`, async () => {
             // twice as much ETH will be enough in all scenarios
             await lido.submit(ZERO_ADDRESS, { from: user2, value: toBN(userBalance).muln(2) })
           })

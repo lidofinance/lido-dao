@@ -105,11 +105,11 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user, oracle]) => {
       claimableEther = await queue.getClaimableEther(requestIds, hints)
     })
 
-    it(`first request is fullfilled with 1 ETH`, async () => {
+    it(`first request is fulfilled with 1 ETH`, async () => {
       assert.isClose(claimableEther[0], e18(1), 10)
     })
 
-    it(`second request is fullfilled with 1 ETH`, async () => {
+    it(`second request is fulfilled with 1 ETH`, async () => {
       assert.isClose(claimableEther[1], e18(1), 10)
     })
   })
@@ -176,11 +176,11 @@ contract('WithdrawalQueue', ([owner, daoAgent, finalizer, user, oracle]) => {
       claimableEther = await queue.getClaimableEther(requestIds, hints)
     })
 
-    it(`first request is fullfilled with 1 ETH`, async () => {
+    it(`first request is fulfilled with 1 ETH`, async () => {
       assert.isClose(claimableEther[0], e18(1), 10)
     })
 
-    it(`second request is fullfilled with 1 ETH`, async () => {
+    it(`second request is fulfilled with 1 ETH`, async () => {
       assert.isClose(claimableEther[1], e18(1.5), 10)
     })
   })

@@ -38,7 +38,7 @@ const getNetConfig = (networkName, ethAccountName) => {
   const netState = readJson(`./deployed-${networkName}.json`) || {}
   const ethAccts = accounts.eth || {}
 
-  if (RPC_URL === undefined && networkName !== 'hardhat') {
+  if (RPC_URL === undefined && networkName !== 'hardhat' && networkName !== 'localhost') {
     console.error('ERROR: RPC_URL env variable is not set')
     process.exit(1)
   }
@@ -52,6 +52,11 @@ const getNetConfig = (networkName, ethAccountName) => {
     timeout: 60000,
   }
   const byNetName = {
+    localhost: {
+      ...base,
+      url: 'http://127.0.0.1:8545',
+      chainId: 31337,
+    },
     mainnetfork: {
       ...base,
       url: RPC_URL,
@@ -59,6 +64,11 @@ const getNetConfig = (networkName, ethAccountName) => {
     goerlifork: {
       ...base,
       url: RPC_URL,
+    },
+    holeskyfork: {
+      ...base,
+      url: RPC_URL,
+      chainId: Number(process.env.CHAIN_ID) || 17000,
     },
     local: {
       url: RPC_URL,
@@ -95,6 +105,12 @@ const getNetConfig = (networkName, ethAccountName) => {
       chainId: 17000,
       timeout: 60000 * 15,
     },
+    sepolia: {
+      ...base,
+      url: RPC_URL,
+      chainId: 11155111,
+      timeout: 60000 * 15,
+    },
     mainnet: {
       ...base,
       url: RPC_URL,
@@ -113,6 +129,9 @@ const getNetConfig = (networkName, ethAccountName) => {
   const netConfig = byNetName[networkName]
   if (networkName === 'hardhat' && process.env.HARDHAT_FORKING_URL) {
     netConfig.forking = { url: process.env.HARDHAT_FORKING_URL }
+  }
+  if (networkName === 'hardhat' && process.env.HARDHAT_CHAIN_ID) {
+    netConfig.chainId = +process.env.HARDHAT_CHAIN_ID
   }
   return netConfig ? { [networkName]: netConfig } : {}
 }
@@ -202,6 +221,14 @@ module.exports = {
         urls: {
           apiURL: 'https://api-holesky.etherscan.io/api',
           browserURL: 'https://holesky.etherscan.io',
+        },
+      },
+      {
+        network: 'sepolia',
+        chainId: 11155111,
+        urls: {
+          apiURL: 'https://api-sepolia.etherscan.io/api',
+          browserURL: 'https://sepolia.etherscan.io',
         },
       },
     ],

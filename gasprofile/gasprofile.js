@@ -390,7 +390,7 @@ function getGasCost(log, nextLog) {
     return 0;
   }
   if (nextLog && nextLog.depth === log.depth && (op === 'CALL' || op === 'CALLCODE' || op === 'DELEGATECALL' || op === 'STATICCALL')) {
-    // geth reports the cost including 1/64 gas deposit even if it doesn't intorduce
+    // geth reports the cost including 1/64 gas deposit even if it doesn't introduce
     // a new stack item (e.g. calls to precompiled contracts like sha256), so the
     // deposit is already returned by the next opcode
     return log.gas - nextLog.gas;

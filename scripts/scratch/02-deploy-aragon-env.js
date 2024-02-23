@@ -4,8 +4,8 @@ const keccak256 = require('js-sha3').keccak_256
 const getAccounts = require('@aragon/os/scripts/helpers/get-accounts')
 
 const runOrWrapScript = require('../helpers/run-or-wrap-script')
-const { log, logSplitter, logWideSplitter, logHeader, logTx } = require('../helpers/log')
-const { deploy, useOrDeploy, withArgs, deployImplementation, TotalGasCounter } = require('../helpers/deploy')
+const { log, logSplitter, logWideSplitter, logHeader } = require('../helpers/log')
+const { deployImplementation, deployContract, makeTx, TotalGasCounter } = require('../helpers/deploy')
 const { readNetworkState, persistNetworkState } = require('../helpers/persisted-network-state')
 
 const { deployAPM } = require('../components/apm')
@@ -187,8 +187,9 @@ async function useOrDeployENS({ artifacts, owner, ensAddress }) {
 async function deployENS({ artifacts, owner }) {
   const ENS = artifacts.require('ENS')
 
-  const factory = await deploy(`ENSFactory`, artifacts, withArgs({ from: owner }))
-  const result = await logTx(`Creating ENS`, factory.newENS(owner, { from: owner }))
+  const factoryAddress = (await deployContract('ENSFactory', [], owner)).address
+  const factory = await artifacts.require('ENSFactory').at(factoryAddress)
+  const result = await makeTx(factory, 'newENS', [owner], { from: owner })
 
   const ensAddr = result.logs.filter((l) => l.event === 'DeployENS')[0].args.ens
   log(`ENS address: ${chalk.yellow(ensAddr)}`)
@@ -222,17 +223,29 @@ async function useOrDeployAPMRegistryFactory({
   apmRepoBaseAddress,
   ensSubdomainRegistrarBaseAddress
 }) {
-  const apmRegistryBase = await useOrDeploy('APMRegistry', artifacts, apmRegistryBaseAddress)
-  const apmRepoBase = await useOrDeploy('Repo', artifacts, apmRepoBaseAddress)
-  const ensSubdomainRegistrarBase = await useOrDeploy('ENSSubdomainRegistrar', artifacts, ensSubdomainRegistrarBaseAddress)
-  const apmRegistryFactory = await useOrDeploy(
-    'APMRegistryFactory',
-    artifacts,
-    apmRegistryFactoryAddress,
-    withArgs(daoFactory.address, apmRegistryBase.address, apmRepoBase.address, ensSubdomainRegistrarBase.address, ens.address, ZERO_ADDR, {
-      from: owner
-    })
-  )
+  if (!apmRegistryBaseAddress) {
+    apmRegistryBaseAddress = (await deployContract('APMRegistry', [], owner)).address
+  }
+  const apmRegistryBase = await artifacts.require('APMRegistry').at(apmRegistryBaseAddress)
+
+  if (!apmRepoBaseAddress) {
+    apmRepoBaseAddress = (await deployContract('Repo', [], owner)).address
+  }
+  const apmRepoBase = await artifacts.require('Repo').at(apmRepoBaseAddress)
+
+  if (!ensSubdomainRegistrarBaseAddress) {
+    ensSubdomainRegistrarBaseAddress = (await deployContract('ENSSubdomainRegistrar', [], owner)).address
+  }
+  const ensSubdomainRegistrarBase = await artifacts.require('ENSSubdomainRegistrar').at(ensSubdomainRegistrarBaseAddress)
+
+  const apmRegistryFactoryArgs = [
+    daoFactory.address, apmRegistryBase.address, apmRepoBase.address, ensSubdomainRegistrarBase.address, ens.address, ZERO_ADDR
+  ]
+  if (!apmRegistryFactoryAddress) {
+    apmRegistryFactoryAddress = (await deployContract('APMRegistryFactory', apmRegistryFactoryArgs, owner)).address
+  }
+  const apmRegistryFactory = await artifacts.require('APMRegistryFactory').at(apmRegistryFactoryAddress)
+
   return { apmRegistryBase, apmRepoBase, ensSubdomainRegistrarBase, apmRegistryFactory }
 }
 
@@ -241,26 +254,34 @@ async function deployDAOFactory({ artifacts, owner, kernelBaseAddress, aclBaseAd
 
   const aclBase = await deployImplementation('aragon-acl', 'ACL', owner)
 
-  const evmScriptRegistryFactory = withEvmScriptRegistryFactory
-    ? await deploy('EVMScriptRegistryFactory', artifacts, withArgs({ from: owner }))
-    : undefined
+  let evmScriptRegistryFactory = undefined
+  if (withEvmScriptRegistryFactory) {
+    const evmScriptRegistryFactoryAddress = (await deployContract('EVMScriptRegistryFactory', [], owner)).address
+    evmScriptRegistryFactory = await artifacts.require('EVMScriptRegistryFactory').at(evmScriptRegistryFactoryAddress)
+  }
 
-  const daoFactory = await deploy(
-    'DAOFactory',
-    artifacts,
-    withArgs(kernelBase.address, aclBase.address, evmScriptRegistryFactory ? evmScriptRegistryFactory.address : ZERO_ADDR, { from: owner })
-  )
+  const daoFactoryArgs = [
+    kernelBase.address,
+    aclBase.address,
+    evmScriptRegistryFactory ? evmScriptRegistryFactory.address : ZERO_ADDR
+  ]
+  const daoFactoryAddress = (await deployContract('DAOFactory', daoFactoryArgs, owner)).address
+  const daoFactory = await artifacts.require('DAOFactory').at(daoFactoryAddress)
 
   return {
     kernelBase,
     aclBase,
     ...(evmScriptRegistryFactory ? { evmScriptRegistryFactory } : null),
-    daoFactory
+    daoFactory,
   }
 }
 
 async function deployMiniMeTokenFactory({ artifacts, owner, miniMeTokenFactoryAddress }) {
-  const factory = await useOrDeploy('MiniMeTokenFactory', artifacts, miniMeTokenFactoryAddress, withArgs({ from: owner }))
+  if (!miniMeTokenFactoryAddress) {
+    miniMeTokenFactoryAddress = (await deployContract('MiniMeTokenFactory', [], owner)).address
+  }
+  const factory = await artifacts.require('MiniMeTokenFactory').at(miniMeTokenFactoryAddress)
+
   return { miniMeTokenFactory: factory }
 }
 
@@ -281,7 +302,11 @@ async function deployAragonID({ artifacts, owner, ens, aragonIDAddress }) {
   const node = namehash(nodeName)
   log(`ENS node: ${chalk.yellow(nodeName)} (${node})`)
 
-  const aragonID = await deploy('FIFSResolvingRegistrar', artifacts, withArgs(ens.address, publicResolverAddress, node, { from: owner }))
+  const fifsResolvingRegistrarArgs = [
+    ens.address, publicResolverAddress, node
+  ]
+  const registrarAddress = (await deployContract('FIFSResolvingRegistrar', fifsResolvingRegistrarArgs, owner)).address
+  const aragonID = await artifacts.require('FIFSResolvingRegistrar').at(registrarAddress)
 
   logSplitter()
   await assignENSName({
@@ -294,7 +319,7 @@ async function deployAragonID({ artifacts, owner, ens, aragonIDAddress }) {
   })
 
   logSplitter()
-  await logTx(`Assigning owner name`, aragonID.register('0x' + keccak256('owner'), owner, { from: owner }))
+  await makeTx(aragonID, 'register', ['0x' + keccak256('owner'), owner], { from: owner })
 
   return { aragonID, aragonIDEnsNodeName: nodeName, aragonIDEnsNode: node }
 }

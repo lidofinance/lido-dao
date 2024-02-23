@@ -7,8 +7,9 @@ const GATE_SEAL_FACTORY = process.env.GATE_SEAL_FACTORY
 const GENESIS_TIME = parseInt(process.env.GENESIS_TIME)
 const DEPOSIT_CONTRACT = process.env.DEPOSIT_CONTRACT
 const WITHDRAWAL_QUEUE_BASE_URI = process.env.WITHDRAWAL_QUEUE_BASE_URI
+const DSM_PREDEFINED_ADDRESS = process.env.DSM_PREDEFINED_ADDRESS
 
-async function saveDeployParameters({ web3, artifacts }) {
+async function saveDeployParameters({ web3 }) {
   const netId = await web3.eth.net.getId()
 
   console.log('Using env values:')
@@ -44,6 +45,13 @@ async function saveDeployParameters({ web3, artifacts }) {
       ...state.withdrawalQueueERC721.deployParameters,
       baseUri: WITHDRAWAL_QUEUE_BASE_URI,
     }
+  }
+  if (DSM_PREDEFINED_ADDRESS !== undefined) {
+    state.depositSecurityModule.deployParameters = {
+      ...state.depositSecurityModule.deployParameters,
+      usePredefinedAddressInstead: DSM_PREDEFINED_ADDRESS,
+    }
+    state.depositSecurityModule.address = DSM_PREDEFINED_ADDRESS
   }
   persistNetworkState(network.name, netId, state)
 }
