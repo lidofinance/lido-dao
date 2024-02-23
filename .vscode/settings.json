@@ -2,5 +2,6 @@
   "files.trimTrailingWhitespace": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "always"
-  }
+  },
+  "solidity.defaultCompiler": "remote"
 }
