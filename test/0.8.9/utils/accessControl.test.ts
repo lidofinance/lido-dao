@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { AccessControlMockExposedApi } from "typechain-types";
+import { AccessControlHarness } from "typechain-types";
 
 import {
   DEFAULT_ADMIN_ROLE,
@@ -21,14 +21,14 @@ describe("AccessControl", () => {
   let owner: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;
 
-  let contract: AccessControlMockExposedApi;
+  let contract: AccessControlHarness;
 
   let originalState: string;
 
   before(async () => {
     [owner, stranger] = await ethers.getSigners();
 
-    contract = await ethers.deployContract("AccessControlMockExposedApi");
+    contract = await ethers.deployContract("AccessControlHarness");
   });
 
   beforeEach(async () => (originalState = await Snapshot.take()));
@@ -45,12 +45,12 @@ describe("AccessControl", () => {
     context("onlyRole", () => {
       it("Reverts if caller does not have the role", async () => {
         await expect(
-          contract.connect(stranger).testOnlyRole(DEFAULT_ADMIN_ROLE),
+          contract.connect(stranger).modifierOnlyRole(DEFAULT_ADMIN_ROLE),
         ).to.be.revertedWithOZAccessControlError(stranger.address, DEFAULT_ADMIN_ROLE);
       });
 
       it("Does not revert if caller has the role", async () => {
-        await expect(contract.connect(owner).testOnlyRole(DEFAULT_ADMIN_ROLE)).to.not.be.reverted;
+        await expect(contract.connect(owner).modifierOnlyRole(DEFAULT_ADMIN_ROLE)).to.not.be.reverted;
       });
     });
   });
@@ -148,7 +148,7 @@ describe("AccessControl", () => {
 
   context("_setRoleAdmin", () => {
     it("Sets the role's admin role", async () => {
-      await expect(await contract.testSetupAdminRole(TEST_ROLE, TEST_ADMIN_ROLE))
+      await expect(await contract.exposedSetupAdminRole(TEST_ROLE, TEST_ADMIN_ROLE))
         .to.emit(contract, "RoleAdminChanged")
         .withArgs(TEST_ROLE, DEFAULT_ADMIN_ROLE, TEST_ADMIN_ROLE);
 

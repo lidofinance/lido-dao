@@ -4,7 +4,7 @@ pragma solidity 0.8.9;
 
 import "contracts/0.8.9/utils/access/AccessControl.sol";
 
-contract AccessControlMockExposedApi is AccessControl {
+contract AccessControlHarness is AccessControl {
 
   bytes32 public constant TEST_ADMIN_ROLE = keccak256("TEST_ADMIN_ROLE");
 
@@ -14,9 +14,9 @@ contract AccessControlMockExposedApi is AccessControl {
     _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
   }
 
-  function testOnlyRole(bytes32 role) external view onlyRole(role) {}
+  function modifierOnlyRole(bytes32 role) external view onlyRole(role) {}
 
-  function testSetupAdminRole(bytes32 role, bytes32 adminRole) external {
+  function exposedSetupAdminRole(bytes32 role, bytes32 adminRole) external {
     _setRoleAdmin(role, adminRole);
   }
 }

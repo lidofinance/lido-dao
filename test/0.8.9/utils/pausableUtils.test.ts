@@ -1,15 +1,15 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-import { PausableUntilMockWithExposedApi } from "typechain-types";
+import { PausableUntilHarness } from "typechain-types";
 
 import { getBlockTimestamp, MAX_UINT256 } from "lib";
 
 describe("PausableUtils", () => {
-  let pausable: PausableUntilMockWithExposedApi;
+  let pausable: PausableUntilHarness;
 
   beforeEach(async () => {
-    pausable = await ethers.deployContract("PausableUntilMockWithExposedApi");
+    pausable = await ethers.deployContract("PausableUntilHarness");
   });
 
   context("Constants", () => {
@@ -21,25 +21,25 @@ describe("PausableUtils", () => {
   context("Modifiers", () => {
     context("whenPaused", () => {
       it("Reverts if contract is not paused", async () => {
-        await expect(pausable.testWhenPaused()).to.be.revertedWithCustomError(pausable, "PausedExpected");
+        await expect(pausable.modifierWhenPaused()).to.be.revertedWithCustomError(pausable, "PausedExpected");
       });
 
       it("Does not revert if contract is paused", async () => {
-        await expect(pausable.pauseFor(1000n)).to.emit(pausable, "Paused");
+        await expect(pausable.exposedPauseFor(1000n)).to.emit(pausable, "Paused");
 
-        await expect(pausable.testWhenPaused()).to.not.be.reverted;
+        await expect(pausable.modifierWhenPaused()).to.not.be.reverted;
       });
     });
 
     context("whenResumed", () => {
       it("Reverts if contract is paused", async () => {
-        await expect(pausable.pauseFor(1000n)).to.emit(pausable, "Paused");
+        await expect(pausable.exposedPauseFor(1000n)).to.emit(pausable, "Paused");
 
-        await expect(pausable.testWhenResumed()).to.be.revertedWithCustomError(pausable, "ResumedExpected");
+        await expect(pausable.modifierWhenResumed()).to.be.revertedWithCustomError(pausable, "ResumedExpected");
       });
 
       it("Does not revert if contract is not paused", async () => {
-        await expect(pausable.testWhenResumed()).to.not.be.reverted;
+        await expect(pausable.modifierWhenResumed()).to.not.be.reverted;
       });
     });
   });
@@ -50,7 +50,7 @@ describe("PausableUtils", () => {
     });
 
     it("Returns true if paused", async () => {
-      await expect(pausable.pauseFor(1000n)).to.emit(pausable, "Paused");
+      await expect(pausable.exposedPauseFor(1000n)).to.emit(pausable, "Paused");
 
       expect(await pausable.isPaused()).to.equal(true);
     });
@@ -62,7 +62,7 @@ describe("PausableUtils", () => {
     });
 
     it("Returns the duration since the contract was paused", async () => {
-      await pausable.pauseFor(1000n);
+      await pausable.exposedPauseFor(1000n);
 
       const blockTimestamp = await getBlockTimestamp(ethers.provider);
 
@@ -70,68 +70,97 @@ describe("PausableUtils", () => {
     });
   });
 
-  context("pauseFor", () => {
+  context("_pauseFor", () => {
     it("Reverts if contract is already paused", async () => {
-      await expect(pausable.pauseFor(1000n)).to.emit(pausable, "Paused");
+      await expect(pausable.exposedPauseFor(1000n)).to.emit(pausable, "Paused");
 
-      await expect(pausable.pauseFor(1000n)).to.be.revertedWithCustomError(pausable, "ResumedExpected");
+      await expect(pausable.exposedPauseFor(1000n)).to.be.revertedWithCustomError(pausable, "ResumedExpected");
     });
 
     it("Reverts if zero pause duration", async () => {
-      await expect(pausable.pauseFor(0)).to.be.revertedWithCustomError(pausable, "ZeroPauseDuration");
+      await expect(pausable.exposedPauseFor(0)).to.be.revertedWithCustomError(pausable, "ZeroPauseDuration");
     });
 
     it("Pauses contract correctly and emits `Paused` event", async () => {
-      await expect(pausable.pauseFor(404n)).to.emit(pausable, "Paused").withArgs(404n);
+      await expect(pausable.exposedPauseFor(404n)).to.emit(pausable, "Paused").withArgs(404n);
     });
 
     it("Pauses contract to MAX_UINT256 and emits `Paused` event", async () => {
-      await expect(pausable.pauseFor(MAX_UINT256)).to.emit(pausable, "Paused").withArgs(MAX_UINT256);
+      await expect(pausable.exposedPauseFor(MAX_UINT256)).to.emit(pausable, "Paused").withArgs(MAX_UINT256);
     });
   });
 
-  context("pauseUntil", () => {
+  context("_pauseUntil", () => {
     it("Reverts if contract is already paused", async () => {
-      await expect(pausable.pauseFor(1000n)).to.emit(pausable, "Paused");
+      await expect(pausable.exposedPauseFor(1000n)).to.emit(pausable, "Paused");
 
-      await expect(pausable.pauseFor(1000n)).to.be.revertedWithCustomError(pausable, "ResumedExpected");
+      await expect(pausable.exposedPauseFor(1000n)).to.be.revertedWithCustomError(pausable, "ResumedExpected");
     });
 
     it("Reverts if timestamp is in the past", async () => {
-      await expect(pausable.pauseUntil(0)).to.be.revertedWithCustomError(pausable, "PauseUntilMustBeInFuture");
+      await expect(pausable.exposedPauseUntil(0)).to.be.revertedWithCustomError(pausable, "PauseUntilMustBeInFuture");
     });
 
     it("Pauses contract correctly and emits `Paused` event", async () => {
       const blockTimestamp = await getBlockTimestamp(ethers.provider);
 
-      await expect(pausable.pauseUntil(blockTimestamp + 1000))
+      await expect(pausable.exposedPauseUntil(blockTimestamp + 1000))
         .to.emit(pausable, "Paused")
         .withArgs(1000n);
     });
 
     it("Pauses contract to MAX_UINT256 and emits `Paused` event", async () => {
-      await expect(pausable.pauseUntil(MAX_UINT256)).to.emit(pausable, "Paused").withArgs(MAX_UINT256);
+      await expect(pausable.exposedPauseUntil(MAX_UINT256)).to.emit(pausable, "Paused").withArgs(MAX_UINT256);
     });
   });
 
-  context("resume", async () => {
+  context("_resume", async () => {
     it("Reverts if contract is not paused", async () => {
-      await expect(pausable.resume()).to.be.revertedWithCustomError(pausable, "PausedExpected");
+      await expect(pausable.exposedResume()).to.be.revertedWithCustomError(pausable, "PausedExpected");
     });
 
     it("Resumes the contract", async () => {
-      await expect(pausable.pauseFor(1000n)).to.emit(pausable, "Paused");
+      await expect(pausable.exposedPauseFor(1000n)).to.emit(pausable, "Paused");
 
-      await expect(pausable.resume()).to.emit(pausable, "Resumed");
+      await expect(pausable.exposedResume()).to.emit(pausable, "Resumed");
       expect(await pausable.isPaused()).to.equal(false);
     });
 
     it("Reverts if already resumed", async () => {
-      await expect(pausable.pauseFor(1000n)).to.emit(pausable, "Paused");
+      await expect(pausable.exposedPauseFor(1000n)).to.emit(pausable, "Paused");
 
-      await expect(pausable.resume()).to.emit(pausable, "Resumed");
+      await expect(pausable.exposedResume()).to.emit(pausable, "Resumed");
 
-      await expect(pausable.resume()).to.be.revertedWithCustomError(pausable, "PausedExpected");
+      await expect(pausable.exposedResume()).to.be.revertedWithCustomError(pausable, "PausedExpected");
+      expect(await pausable.isPaused()).to.equal(false);
+    });
+  });
+
+  context("_setPausedState", async () => {
+    let timestamp: number;
+    beforeEach(async () => {
+      timestamp = await getBlockTimestamp(ethers.provider);
+    });
+
+    it("Pauses the contract", async () => {
+      const resumeSinceTimestamp = BigInt(timestamp) + 1000n;
+
+      await expect(pausable.exposedSetPauseState(resumeSinceTimestamp)).to.emit(pausable, "Paused").withArgs(999n); // X+1000n - X+1n for the block timestamp
+
+      expect(await pausable.isPaused()).to.equal(true);
+    });
+
+    it("Pauses the contract to MAX_UINT256", async () => {
+      await expect(pausable.exposedSetPauseState(MAX_UINT256)).to.emit(pausable, "Paused");
+
+      expect(await pausable.isPaused()).to.equal(true);
+    });
+
+    it("Resumes the contract", async () => {
+      await expect(pausable.exposedSetPauseState(timestamp + 1))
+        .to.emit(pausable, "Paused")
+        .withArgs(0n);
+
       expect(await pausable.isPaused()).to.equal(false);
     });
   });
