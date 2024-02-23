@@ -10,6 +10,7 @@ const NETWORK_STATE_FILE_DIR = process.env.NETWORK_STATE_FILE_DIR || '.'
 function readNetworkState(netName, netId) {
   const fileName = _getFileName(netName, NETWORK_STATE_FILE_BASENAME, NETWORK_STATE_FILE_DIR)
   const state = _readNetworkStateFile(fileName, netId)
+  assert.equal(netId, state.networkId, `Network id ${netId} does not match one in state file ${state.networkId}`)
   return state
 }
 

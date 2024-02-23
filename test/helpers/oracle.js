@@ -69,9 +69,12 @@ async function prepareOracleReport({ clBalance, ...restFields }) {
 
 async function triggerConsensusOnHash(hash, consensus) {
   const members = await consensus.getMembers()
+  const quorum = (await consensus.getQuorum()).toNumber()
   const { refSlot } = await consensus.getCurrentFrame()
-  await consensus.submitReport(refSlot, hash, CONSENSUS_VERSION, { from: members.addresses[0] })
-  await consensus.submitReport(refSlot, hash, CONSENSUS_VERSION, { from: members.addresses[1] })
+  for (let i = 0; i < quorum; i++) {
+    await consensus.submitReport(refSlot, hash, CONSENSUS_VERSION, { from: members.addresses[i] })
+  }
+  // await consensus.submitReport(refSlot, hash, CONSENSUS_VERSION, { from: members.addresses[1] })
   assert.equal((await consensus.getConsensusState()).consensusReport, hash)
 }
 

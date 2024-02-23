@@ -38,7 +38,7 @@ const getNetConfig = (networkName, ethAccountName) => {
   const netState = readJson(`./deployed-${networkName}.json`) || {}
   const ethAccts = accounts.eth || {}
 
-  if (RPC_URL === undefined && networkName !== 'hardhat') {
+  if (RPC_URL === undefined && networkName !== 'hardhat' && networkName !== 'localhost') {
     console.error('ERROR: RPC_URL env variable is not set')
     process.exit(1)
   }
@@ -52,6 +52,11 @@ const getNetConfig = (networkName, ethAccountName) => {
     timeout: 60000,
   }
   const byNetName = {
+    localhost: {
+      ...base,
+      url: 'http://127.0.0.1:8545',
+      chainId: 31337,
+    },
     mainnetfork: {
       ...base,
       url: RPC_URL,
@@ -59,6 +64,11 @@ const getNetConfig = (networkName, ethAccountName) => {
     goerlifork: {
       ...base,
       url: RPC_URL,
+    },
+    holeskyfork: {
+      ...base,
+      url: RPC_URL,
+      chainId: Number(process.env.CHAIN_ID) || 17000,
     },
     local: {
       url: RPC_URL,

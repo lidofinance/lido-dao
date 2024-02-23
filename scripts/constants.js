@@ -4,6 +4,7 @@ const APP_NAMES = {
   LIDO: 'lido',
   ORACLE: 'oracle',
   NODE_OPERATORS_REGISTRY: 'node-operators-registry',
+  SIMPLE_DVT: 'simple-dvt',
   // Aragon apps
   ARAGON_AGENT: 'aragon-agent',
   ARAGON_FINANCE: 'aragon-finance',
