@@ -57,6 +57,7 @@
     "glob": "^10.3.10",
     "hardhat": "^2.20.1",
     "hardhat-gas-reporter": "^1.0.8",
+    "hardhat-ignore-warnings": "^0.2.9",
     "hardhat-tracer": "2.8.0",
     "hardhat-watcher": "2.5.0",
     "husky": "^9.0.11",
