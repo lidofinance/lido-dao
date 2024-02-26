@@ -6,7 +6,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { ERC20 } from "typechain-types/@openzeppelin/contracts/token/ERC20/ERC20";
 
-import { batch } from "lib";
+import { batch, Snapshot } from "lib";
 
 interface ERC20Target {
   tokenName: string;
@@ -46,12 +46,7 @@ interface ERC20Target {
  * @param {object} target.tokenName name of the token to use in the suite description
  * @param {object} target.deploy async function that returns the instance of the contract and initial parameters
  * @param {object} target.suiteFunction function that runs the suite, a temporary workaround for running
- * the suite exclusively or skipping the suite; see the todo below
- *
- * @todo rewrite the function to support the same interface as `describe`, i.e.
- * instead of passing `suiteFunction`, we should be able to call the function like:
- * testERC20Compliance.only(target)
- * testERC20Compliance.skip(target)
+ * the suite exclusively or skipping the suite;
  */
 export function testERC20Compliance({ tokenName, deploy, suiteFunction = describe }: ERC20Target) {
   suiteFunction(`${tokenName} ERC-20 Compliance`, () => {
@@ -65,9 +60,15 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
     let spender: HardhatEthersSigner;
     let recipient: HardhatEthersSigner;
 
-    beforeEach(async () => {
+    let originalState: string;
+
+    before(async () => {
       ({ token, name, symbol, decimals, totalSupply, holder, spender, recipient } = await deploy());
     });
+
+    beforeEach(async () => (originalState = await Snapshot.take()));
+
+    afterEach(async () => await Snapshot.restore(originalState));
 
     context("name", () => {
       it("[OPTIONAL] Returns the name of the token", async () => {
@@ -306,3 +307,15 @@ export function testERC20Compliance({ tokenName, deploy, suiteFunction = describ
     });
   });
 }
+
+testERC20Compliance.only = (target: ERC20Target) =>
+  testERC20Compliance({
+    ...target,
+    suiteFunction: describe.only, // eslint-disable-line no-only-tests/no-only-tests
+  });
+
+testERC20Compliance.skip = (target: ERC20Target) =>
+  testERC20Compliance({
+    ...target,
+    suiteFunction: describe.skip,
+  });
