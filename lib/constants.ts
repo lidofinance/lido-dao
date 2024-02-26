@@ -10,7 +10,17 @@ export const ERC165_INTERFACE_ID = "0x01ffc9a7";
 export const ERC721_INTERFACE_ID = "0x80ac58cd";
 export const ERC721METADATA_INTERFACE_ID = "0x5b5e139f";
 
+// OZ Interfaces
+export const OZ_ACCESS_CONTROL_INTERFACE_ID = "0x7965db0b";
+export const OZ_ACCESS_CONTROL_ENUMERABLE_INTERFACE_ID = "0x5a05180f";
+
 // special reserved interface id
 export const INVALID_INTERFACE_ID = "0xffffffff";
 
 export const BLOCK_TIME = 12n;
+
+// Default admin role for AccessControl compatible contracts
+export const DEFAULT_ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000";
+
+// Withdrawal Queue related constants
+export const WITHDRAWAL_MAX_BATCHES_LENGTH = 36n;

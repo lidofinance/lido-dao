@@ -10,7 +10,9 @@ import {
   LidoLocator,
   LidoLocator__factory,
   StakingRouterMinimalApiForLido,
-  WithdrawalQueueMinimalApiForLido,
+  StakingRouterMinimalApiForLido__factory,
+  WithdrawalQueue__MockForLidoMisc,
+  WithdrawalQueue__MockForLidoMisc__factory,
 } from "typechain-types";
 
 import { batch, certainAddress, deployLidoDao, ether, impersonate, ONE_ETHER } from "lib";
@@ -25,7 +27,7 @@ describe("Lido:misc", () => {
   let lido: Lido;
   let acl: ACL;
   let locator: LidoLocator;
-  let withdrawalQueue: WithdrawalQueueMinimalApiForLido;
+  let withdrawalQueue: WithdrawalQueue__MockForLidoMisc;
   let stakingRouter: StakingRouterMinimalApiForLido;
 
   const elRewardsVaultBalance = ether("100.0");
@@ -34,8 +36,8 @@ describe("Lido:misc", () => {
   beforeEach(async () => {
     [deployer, user, stranger] = await ethers.getSigners();
 
-    withdrawalQueue = await ethers.deployContract("WithdrawalQueueMinimalApiForLido");
-    stakingRouter = await ethers.deployContract("StakingRouterMinimalApiForLido");
+    withdrawalQueue = await new WithdrawalQueue__MockForLidoMisc__factory(deployer).deploy();
+    stakingRouter = await new StakingRouterMinimalApiForLido__factory(deployer).deploy();
 
     ({ lido, acl } = await deployLidoDao({
       rootAccount: deployer,
@@ -141,26 +143,26 @@ describe("Lido:misc", () => {
   context("canDeposit", () => {
     it("Returns true if Lido is not stopped and bunkerMode is disabled", async () => {
       await lido.resume();
-      await withdrawalQueue._setBunkerMode(false);
+      await withdrawalQueue.mock__bunkerMode(false);
 
       expect(await lido.canDeposit()).to.equal(true);
     });
 
     it("Returns false if Lido is stopped and bunkerMode is disabled", async () => {
-      await withdrawalQueue._setBunkerMode(false);
+      await withdrawalQueue.mock__bunkerMode(false);
 
       expect(await lido.canDeposit()).to.equal(false);
     });
 
     it("Returns false if Lido is not stopped and bunkerMode is enabled", async () => {
       await lido.resume();
-      await withdrawalQueue._setBunkerMode(true);
+      await withdrawalQueue.mock__bunkerMode(true);
 
       expect(await lido.canDeposit()).to.equal(false);
     });
 
     it("Returns false if Lido is stopped and bunkerMode is disabled", async () => {
-      await withdrawalQueue._setBunkerMode(true);
+      await withdrawalQueue.mock__bunkerMode(true);
 
       expect(await lido.canDeposit()).to.equal(false);
     });
