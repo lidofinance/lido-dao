@@ -16,7 +16,7 @@
     "lint:ts:fix": "pnpm lint:ts --fix",
     "lint": "pnpm lint:sol && pnpm lint:ts",
     "format": "prettier . --write --ignore-path .gitignore --ignore-path .prettierignore",
-    "test": "pnpm hardhat test",
+    "test": "pnpm hardhat test --parallel",
     "test:coverage": "pnpm hardhat coverage",
     "test:trace": "pnpm hardhat test --trace",
     "watch:test": "pnpm hardhat watch test",

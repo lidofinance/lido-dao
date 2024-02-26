@@ -14,6 +14,8 @@ import { globSync } from "glob";
 import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/task-names";
 import { HardhatUserConfig, subtask } from "hardhat/config";
 
+import { mochaRootHooks } from "./test/setup";
+
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   solidity: {
@@ -74,6 +76,9 @@ const config: HardhatUserConfig = {
       clearOnStart: true,
       start: "echo Running tests...",
     },
+  },
+  mocha: {
+    rootHooks: mochaRootHooks,
   },
   warnings: {
     "@aragon/**/*": {
