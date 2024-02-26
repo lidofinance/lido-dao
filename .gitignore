@@ -1,7 +1,8 @@
-/.idea
+.idea
 
-/node_modules
-/coverage
+node_modules
+.env
+coverage
 coverage.json
 
 /typechain
@@ -11,4 +12,5 @@ coverage.json
 /cache
 /artifacts
 
-.env
+broadcast
+cache
