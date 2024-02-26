@@ -6,7 +6,7 @@ import { ether } from "lib/units";
 
 import { testERC2612Compliance } from "../common/erc2612.test";
 
-testERC2612Compliance.only({
+testERC2612Compliance({
   tokenName: "wstETH",
   deploy: async () => {
     const signers = await ethers.getSigners();
