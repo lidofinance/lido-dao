@@ -11,8 +11,6 @@ import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
 
 import { BaseOracle } from "./BaseOracle.sol";
 
-import "hardhat/console.sol";
-
 interface IOracleReportSanityChecker {
     function checkExitBusOracleReport(uint256 _exitRequestsCount) external view;
 }
@@ -69,6 +67,9 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     /// @notice An ACL role granting the permission to submit the data for a committee report.
     bytes32 public constant SUBMIT_DATA_ROLE = keccak256("SUBMIT_DATA_ROLE");
 
+    /// @notice An ACL role granting the permission to submit the data for a committee report.
+    bytes32 public constant SUBMIT_PRIORITY_DATA_ROLE = keccak256("SUBMIT_PRIORITY_DATA_ROLE");
+
     /// @notice An ACL role granting the permission to pause accepting validator exit requests
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
 
@@ -88,9 +89,11 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     bytes32 internal constant DATA_PROCESSING_STATE_POSITION =
         keccak256("lido.ValidatorsExitBusOracle.dataProcessingState");
 
-    ILidoLocator internal immutable LOCATOR;
+    /// @dev Storage slot: DataProcessingState dataProcessingState
+    bytes32 internal constant REPORTS_POSITION =
+        keccak256("lido.ValidatorsExitBusOracle.reports");
 
-    mapping (uint256 => bytes32) public reports;
+    ILidoLocator internal immutable LOCATOR;
 
     ///
     /// Initialization & admin functions
@@ -100,6 +103,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         BaseOracle(secondsPerSlot, genesisTime)
     {
         LOCATOR = ILidoLocator(lidoLocator);
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     function initialize(
@@ -220,12 +224,12 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     function submitReportData(ReportData calldata data, uint256 contractVersion)
         external whenResumed
     {
-        // _checkMsgSenderIsAllowedToSubmitData();
-        // _checkContractVersion(contractVersion);
-        // // it's a waste of gas to copy the whole calldata into mem but seems there's no way around
-        // _checkConsensusData(data.refSlot, data.consensusVersion, keccak256(abi.encode(data)));
-        reports[data.refSlot] = keccak256(abi.encode(data));
-        // _startProcessing();
+        _checkMsgSenderIsAllowedToSubmitData();
+        _checkContractVersion(contractVersion);
+        // it's a waste of gas to copy the whole calldata into mem but seems there's no way around
+        _checkConsensusData(data.refSlot, data.consensusVersion, keccak256(abi.encode(data)));
+        _saveReportData(data);
+        _startProcessing();
         _handleConsensusReportData(data);
     }
 
@@ -468,17 +472,32 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         assembly { r.slot := position }
     }
 
+    function _storageReports() internal pure returns (
+        mapping(bytes32 => uint256) storage r
+    ) {
+        bytes32 position = REPORTS_POSITION;
+        assembly { r.slot := position }
+    }
+
     error InvalidReport();
     error InvalidPubkeyInReport();
 
-    function forcedExitFromRefSlot(uint256 moduleId, uint256 nodeOpId, uint256 valIndex, bytes calldata pk, ReportData calldata data) external {
-        if (reports[data.refSlot] != keccak256(abi.encode(data))) {
+    function forcedExitFromReport(uint256 moduleId, uint256 nodeOpId, uint256 valIndex, bytes calldata pk, ReportData calldata data) external {
+        if (_storageReports()[keccak256(abi.encode(data))] == 0) {
             revert InvalidReport();
         }
         if (!_validatePubkey(pk, data.data)) {
             revert InvalidPubkeyInReport();
         }
         IWithdrawalVault(LOCATOR.withdrawalVault()).forcedExit(moduleId, nodeOpId, valIndex, pk);
+    }
+
+    function submitPriorityReportData(ReportData calldata data) external onlyRole(SUBMIT_PRIORITY_DATA_ROLE){
+        _saveReportData(data);
+    }
+
+    function _saveReportData(ReportData calldata data) internal {
+        _storageReports()[keccak256(abi.encode(data))] = data.requestsCount;
     }
 
     function _validatePubkey(bytes calldata pk, bytes calldata data) internal view returns(bool) {
@@ -516,8 +535,8 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
                 revert InvalidRequestsDataSortOrder();
             }
 
-            uint64 valIndex = uint64(dataWithoutPubkey);
-            uint256 nodeOpId = uint40(dataWithoutPubkey >> 64);
+            // uint64 valIndex = uint64(dataWithoutPubkey);
+            // uint256 nodeOpId = uint40(dataWithoutPubkey >> 64);
             uint256 moduleId = uint24(dataWithoutPubkey >> (64 + 40));
 
             if (moduleId == 0) {

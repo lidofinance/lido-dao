@@ -6,31 +6,28 @@ pragma solidity 0.8.9;
 
 contract PriorityExitBus {
 
-  struct Validator {
-    bytes validatorPubkey;
-    uint256 stakingModuleId;
-    uint256 nodeOperatorId;
-    uint256 validatorIndex;
-    uint256 timestamp;
-  }
+  struct ReportData {
+        ///
+        /// Requests data
+        ///
 
-  mapping (uint256=>Validator) public validators;
-  uint256 public validatorsCount;
+        /// @dev Total number of validator exit requests in this report. Must not be greater
+        /// than limit checked in OracleReportSanityChecker.checkExitBusOracleReport.
+        uint256 requestsCount;
 
-  function add(Validator calldata validator) external returns (uint256) {
-    Validator storage val = validators[validator.validatorIndex];
-    require(val.timestamp > 0);
-
-    val.nodeOperatorId = validator.nodeOperatorId;
-    val.stakingModuleId = validator.stakingModuleId;
-    val.validatorIndex = validator.validatorIndex;
-    val.timestamp = validator.timestamp;
-    val.validatorPubkey = validator.validatorPubkey;
+        /// @dev Validator exit requests data. Can differ based on the data format,
+        /// see the constant defining a specific data format below for more info.
+        bytes data;
+    }
 
 
-    validatorsCount++;
+  mapping (bytes32 => uint256) public reports;
 
-    return validatorsCount;
+  function submitReportData(ReportData calldata data)
+        external
+    {
+        reports[keccak256(abi.encode(data))] = data.requestsCount;
+    }
 
-  }
+
 }

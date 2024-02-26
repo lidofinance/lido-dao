@@ -10,7 +10,6 @@ import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
 import {Versioned} from "./utils/Versioned.sol";
 
-import "hardhat/console.sol";
 interface ILido {
     /**
      * @notice A payable function supposed to be called only by WithdrawalVault contract
@@ -133,5 +132,6 @@ contract WithdrawalVault is Versioned {
     );
     function forcedExit(uint256 moduleId, uint256 nodeOpId, uint256 valIndex, bytes calldata pubkey) external {
         emit TriggerableExit(moduleId, nodeOpId, valIndex, pubkey, block.timestamp);
+        // TriggerableExit.trigger_exit()
     }
 }
