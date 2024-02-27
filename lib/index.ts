@@ -1,7 +1,6 @@
 export * from "./account";
 export * from "./address";
 export * from "./aragon";
-export * from "./blockchain";
 export * from "./client";
 export * from "./constants";
 export * from "./dsm";

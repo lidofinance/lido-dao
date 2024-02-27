@@ -52,6 +52,12 @@ describe("WithdrawalQueueBase", () => {
 
   afterEach(async () => await Snapshot.restore(originalState));
 
+  context("Constants", () => {
+    it("Returns the MAX_BATCHES_LENGTH variable", async () => {
+      expect(await queue.MAX_BATCHES_LENGTH()).to.equal(WITHDRAWAL_MAX_BATCHES_LENGTH);
+    });
+  });
+
   context("getLastRequestId", () => {
     it("Returns 0 if no requests in the queue", async () => {
       expect(await queue.getLastRequestId()).to.equal(0);

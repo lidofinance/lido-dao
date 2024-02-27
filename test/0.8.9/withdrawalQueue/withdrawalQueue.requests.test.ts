@@ -4,14 +4,13 @@ import { ethers } from "hardhat";
 import { afterEach } from "mocha";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
+import { setBalance, time } from "@nomicfoundation/hardhat-network-helpers";
 
 import { StETHPermitMock, WithdrawalQueueERC721, WstETHMock } from "typechain-types";
 
 import {
   deployWithdrawalQueue,
   ether,
-  getBlockTimestamp,
   impersonate,
   MAX_UINT256,
   ONE_ETHER,
@@ -441,7 +440,7 @@ describe("WithdrawalQueueERC721:requests", () => {
 
       await queue.connect(user).requestWithdrawals([amount1, amount2], stranger);
 
-      const timestamp = BigInt(await getBlockTimestamp(provider));
+      const timestamp = BigInt(await time.latest());
 
       expect(await queue.getWithdrawalStatus([1, 2])).to.deep.equal([
         [amount1, shares1, stranger.address, timestamp, false, false],
@@ -455,7 +454,7 @@ describe("WithdrawalQueueERC721:requests", () => {
 
       await queue.connect(user).requestWithdrawals([amount], stranger);
 
-      const timestamp = BigInt(await getBlockTimestamp(provider));
+      const timestamp = BigInt(await time.latest());
       const lastRequestId = await queue.getLastRequestId();
 
       await queue.connect(daoAgent).finalize(lastRequestId, shareRate(shares));
@@ -471,7 +470,7 @@ describe("WithdrawalQueueERC721:requests", () => {
 
       await queue.connect(user).requestWithdrawals([amount], stranger);
 
-      const timestamp = BigInt(await getBlockTimestamp(provider));
+      const timestamp = BigInt(await time.latest());
       const lastRequestId = await queue.getLastRequestId();
 
       await queue.connect(daoAgent).finalize(lastRequestId, shareRate(shares));

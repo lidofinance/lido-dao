@@ -3,10 +3,11 @@ import { ethers } from "hardhat";
 import { afterEach } from "mocha";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 import { WithdrawalQueueERC721 } from "typechain-types";
 
-import { deployWithdrawalQueue, getBlockTimestamp, Snapshot, WITHDRAWAL_BUNKER_MODE_DISABLED_TIMESTAMP } from "lib";
+import { deployWithdrawalQueue, Snapshot, WITHDRAWAL_BUNKER_MODE_DISABLED_TIMESTAMP } from "lib";
 
 interface WithdrawalQueueContractConfig {
   stEthAddress: string;
@@ -30,13 +31,10 @@ describe("WithdrawalQueueERC721:bunker", () => {
   let oracle: HardhatEthersSigner;
 
   let originalState: string;
-  let provider: typeof ethers.provider;
 
   let ORACLE_ROLE: string;
 
   before(async () => {
-    ({ provider } = ethers);
-
     [queueAdmin, stanger, oracle] = await ethers.getSigners();
 
     const deployed = await deployWithdrawalQueue({
@@ -96,7 +94,7 @@ describe("WithdrawalQueueERC721:bunker", () => {
     });
 
     it("Reverts if the bunker mode start time in future", async () => {
-      const futureTimestamp = (await getBlockTimestamp(provider)) + 1000;
+      const futureTimestamp = (await time.latest()) + 1000;
 
       await expect(
         withdrawalQueue.connect(oracle).onOracleReport(true, futureTimestamp, 0),
@@ -104,7 +102,7 @@ describe("WithdrawalQueueERC721:bunker", () => {
     });
 
     it("Reverts if the current report time in future", async () => {
-      const futureTimestamp = (await getBlockTimestamp(provider)) + 1000;
+      const futureTimestamp = (await time.latest()) + 1000;
 
       await expect(
         withdrawalQueue.connect(oracle).onOracleReport(true, 0, futureTimestamp),
@@ -112,7 +110,7 @@ describe("WithdrawalQueueERC721:bunker", () => {
     });
 
     it("Enables bunker mode and emit `BunkerModeEnabled`", async () => {
-      const validTimestamp = await getBlockTimestamp(provider);
+      const validTimestamp = await time.latest();
 
       await expect(withdrawalQueue.connect(oracle).onOracleReport(true, validTimestamp, validTimestamp))
         .to.emit(withdrawalQueue, "BunkerModeEnabled")
@@ -123,7 +121,7 @@ describe("WithdrawalQueueERC721:bunker", () => {
     });
 
     it("Disables bunker mode and emit `BunkerModeDisabled`", async () => {
-      const validTimestamp = await getBlockTimestamp(provider);
+      const validTimestamp = await time.latest();
 
       await withdrawalQueue.connect(oracle).onOracleReport(true, validTimestamp, validTimestamp);
 

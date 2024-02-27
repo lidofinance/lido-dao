@@ -7,20 +7,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { WithdrawalQueueERC721 } from "typechain-types";
 
-import {
-  DEFAULT_ADMIN_ROLE,
-  deployWithdrawalQueue,
-  Snapshot,
-  WITHDRAWAL_BUNKER_MODE_DISABLED_TIMESTAMP,
-  WITHDRAWAL_FINALIZE_ROLE,
-  WITHDRAWAL_MANAGE_TOKEN_URI_ROLE,
-  WITHDRAWAL_MAX_BATCHES_LENGTH,
-  WITHDRAWAL_MAX_STETH_WITHDRAWAL_AMOUNT,
-  WITHDRAWAL_MIN_STETH_WITHDRAWAL_AMOUNT,
-  WITHDRAWAL_ORACLE_ROLE,
-  WITHDRAWAL_PAUSE_ROLE,
-  WITHDRAWAL_RESUME_ROLE,
-} from "lib";
+import { deployWithdrawalQueue, Snapshot, WITHDRAWAL_MANAGE_TOKEN_URI_ROLE } from "lib";
 
 interface WithdrawalQueueContractConfig {
   stEthAddress: string;
@@ -72,44 +59,6 @@ describe("WithdrawalQueueERC721:initialize", () => {
   afterEach(async () => await Snapshot.restore(originalState));
 
   context("Constants", () => {
-    // WithdrawalQueueBase
-
-    it("Returns the MAX_BATCHES_LENGTH variable", async () => {
-      expect(await withdrawalQueue.MAX_BATCHES_LENGTH()).to.equal(WITHDRAWAL_MAX_BATCHES_LENGTH);
-    });
-
-    // WithdrawalQueue
-
-    it("Returns ths BUNKER_MODE_DISABLED_TIMESTAMP variable", async () => {
-      expect(await withdrawalQueue.BUNKER_MODE_DISABLED_TIMESTAMP()).to.equal(
-        WITHDRAWAL_BUNKER_MODE_DISABLED_TIMESTAMP,
-      );
-    });
-
-    it("Returns ACL variables", async () => {
-      expect(await withdrawalQueue.DEFAULT_ADMIN_ROLE()).to.equal(DEFAULT_ADMIN_ROLE);
-      expect(await withdrawalQueue.PAUSE_ROLE()).to.equal(WITHDRAWAL_PAUSE_ROLE);
-      expect(await withdrawalQueue.RESUME_ROLE()).to.equal(WITHDRAWAL_RESUME_ROLE);
-      expect(await withdrawalQueue.FINALIZE_ROLE()).to.equal(WITHDRAWAL_FINALIZE_ROLE);
-      expect(await withdrawalQueue.ORACLE_ROLE()).to.equal(WITHDRAWAL_ORACLE_ROLE);
-    });
-
-    it("Returns the MIN_STETH_WITHDRAWAL_AMOUNT variable", async () => {
-      expect(await withdrawalQueue.MIN_STETH_WITHDRAWAL_AMOUNT()).to.equal(WITHDRAWAL_MIN_STETH_WITHDRAWAL_AMOUNT);
-    });
-
-    it("Returns the MAX_STETH_WITHDRAWAL_AMOUNT variable", async () => {
-      expect(await withdrawalQueue.MAX_STETH_WITHDRAWAL_AMOUNT()).to.equal(WITHDRAWAL_MAX_STETH_WITHDRAWAL_AMOUNT);
-    });
-
-    it("Returns the STETH address", async () => {
-      expect(await withdrawalQueue.STETH()).to.equal(config.stEthAddress);
-    });
-
-    it("Returns the WSTETH address", async () => {
-      expect(await withdrawalQueue.WSTETH()).to.equal(config.wstEthAddress);
-    });
-
     // WithdrawalQueueERC721
 
     it("Returns the MANAGE_TOKEN_URI_ROLE variable", async () => {

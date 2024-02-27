@@ -2,8 +2,8 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { afterEach } from "mocha";
 
-import { HardhatEthersProvider } from "@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 import { WithdrawalQueueERC721 } from "typechain-types";
 
@@ -16,11 +16,6 @@ import {
   WITHDRAWAL_RESUME_ROLE,
 } from "lib";
 
-const getBlockTimestamp = async (provider: HardhatEthersProvider) => {
-  const block = await provider.getBlock("latest");
-  return block!.timestamp;
-};
-
 describe("WithdrawalQueueERC721:Pausable", () => {
   let owner: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;
@@ -29,14 +24,11 @@ describe("WithdrawalQueueERC721:Pausable", () => {
   let queue: WithdrawalQueueERC721;
 
   let originalState: string;
-  let provider: typeof ethers.provider;
 
   let PAUSE_ROLE: string;
   let RESUME_ROLE: string;
 
   before(async () => {
-    ({ provider } = ethers);
-
     [owner, stranger, daoAgent] = await ethers.getSigners();
 
     const deployed = await deployWithdrawalQueue({
@@ -82,7 +74,7 @@ describe("WithdrawalQueueERC721:Pausable", () => {
 
   context("pauseUntil", () => {
     it("Reverts if the caller is unauthorised", async () => {
-      const blockTimestamp = await getBlockTimestamp(provider);
+      const blockTimestamp = await time.latest();
 
       await expect(queue.connect(stranger).pauseUntil(blockTimestamp + 1)).to.be.revertedWithOZAccessControlError(
         stranger.address,
