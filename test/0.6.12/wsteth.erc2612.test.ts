@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 
 import { StethMinimalMockWithTotalPooledEther__factory, WstETH__factory } from "typechain-types";
 
@@ -9,23 +9,27 @@ import { testERC2612Compliance } from "../common/erc2612.test";
 testERC2612Compliance({
   tokenName: "wstETH",
   deploy: async () => {
-    const signers = await ethers.getSigners();
-    const [deployer, holder] = signers;
+    const [deployer, owner] = await ethers.getSigners();
     const totalSupply = ether("10.0");
 
     const stethFactory = new StethMinimalMockWithTotalPooledEther__factory(deployer);
-    const steth = await stethFactory.deploy(holder, { value: totalSupply });
+    const steth = await stethFactory.deploy(owner, { value: totalSupply });
 
     const wstethFactory = new WstETH__factory(deployer);
     const wsteth = await wstethFactory.deploy(await steth.getAddress());
 
-    await steth.connect(holder).approve(await wsteth.getAddress(), totalSupply);
-    await wsteth.connect(holder).wrap(totalSupply);
+    await steth.connect(owner).approve(await wsteth.getAddress(), totalSupply);
+    await wsteth.connect(owner).wrap(totalSupply);
 
     return {
       token: wsteth,
-      name: "Wrapped liquid staked Ether 2.0",
-      version: "1",
+      domain: {
+        name: "Wrapped liquid staked Ether 2.0",
+        version: "1",
+        chainId: network.config.chainId!,
+        verifyingContract: await wsteth.getAddress(),
+      },
+      owner,
     };
   },
 });
