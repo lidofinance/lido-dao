@@ -13,7 +13,8 @@ interface ERC2612Target {
   deploy: () => Promise<{
     token: IERC20 & IERC2612;
     domain: TypedDataDomain;
-    owner: Signer;
+    owner: string;
+    signer: Signer;
   }>;
   suiteFunction?: ExclusiveSuiteFunction | PendingSuiteFunction;
 }
@@ -30,7 +31,8 @@ export function testERC2612Compliance({ tokenName, deploy, suiteFunction = descr
   suiteFunction(`${tokenName} ERC-2612 Compliance`, () => {
     let token: IERC20 & IERC2612;
     let domain: TypedDataDomain;
-    let owner: Signer;
+    let owner: string;
+    let signer: Signer;
 
     let permit: Permit;
     let signature: string;
@@ -38,12 +40,12 @@ export function testERC2612Compliance({ tokenName, deploy, suiteFunction = descr
     let originalState: string;
 
     before(async () => {
-      ({ token, domain, owner } = await deploy());
+      ({ token, domain, owner, signer } = await deploy());
 
       const holderBalance = await token.balanceOf(owner);
 
       permit = {
-        owner: await owner.getAddress(),
+        owner,
         spender: certainAddress("spender"),
         value: holderBalance,
         nonce: await token.nonces(owner),
@@ -60,7 +62,7 @@ export function testERC2612Compliance({ tokenName, deploy, suiteFunction = descr
         ],
       };
 
-      signature = await owner.signTypedData(domain, types, permit);
+      signature = await signer.signTypedData(domain, types, permit);
     });
 
     beforeEach(async () => (originalState = await Snapshot.take()));

@@ -29,7 +29,8 @@ testERC2612Compliance({
         chainId: network.config.chainId!,
         verifyingContract: await wsteth.getAddress(),
       },
-      owner,
+      owner: owner.address,
+      signer: owner,
     };
   },
 });
