@@ -16,8 +16,15 @@ import { HardhatUserConfig, subtask } from "hardhat/config";
 
 import { mochaRootHooks } from "./test/setup";
 
+const RPC_URL: string = process.env.RPC_URL || "";
+
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
+  networks: {
+    local: {
+      url: RPC_URL,
+    },
+  },
   solidity: {
     compilers: [
       {
@@ -42,6 +49,16 @@ const config: HardhatUserConfig = {
       },
       {
         version: "0.6.12",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+          evmVersion: "istanbul",
+        },
+      },
+      {
+        version: "0.8.4",
         settings: {
           optimizer: {
             enabled: true,

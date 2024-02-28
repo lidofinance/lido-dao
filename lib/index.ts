@@ -16,3 +16,7 @@ export * from "./aragon";
 export * from "./dsm";
 export * from "./account";
 export * from "./client";
+export * from "./log";
+export * from "./deploy";
+export * from "./ens";
+export * from "./state-file";
