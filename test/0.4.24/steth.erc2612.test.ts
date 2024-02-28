@@ -10,7 +10,7 @@ import { ether } from "lib/units";
 
 import { testERC2612Compliance } from "../common/erc2612.test";
 
-testERC2612Compliance.only({
+testERC2612Compliance({
   tokenName: "stETH",
   deploy: async () => {
     const [deployer, owner] = await ethers.getSigners();
@@ -35,7 +35,7 @@ testERC2612Compliance.only({
   },
 });
 
-testERC2612Compliance.only({
+testERC2612Compliance({
   tokenName: "stETH (for ERC-1271 wallets)",
   deploy: async () => {
     const [deployer, owner] = await ethers.getSigners();
@@ -46,8 +46,7 @@ testERC2612Compliance.only({
     const eip712helper = await new EIP712StETH__factory(deployer).deploy(steth);
     await steth.initializeEIP712StETH(eip712helper);
 
-    const walletFactory = new ERC1271Wallet__factory(deployer);
-    const wallet = await walletFactory.deploy(owner.address);
+    const wallet = await new ERC1271Wallet__factory(deployer).deploy(owner.address);
     await steth.connect(owner).transfer(await wallet.getAddress(), await steth.balanceOf(owner));
 
     return {
