@@ -3,7 +3,7 @@ import { HDNodeWallet, Wallet, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { time } from "@nomicfoundation/hardhat-network-helpers";
+import { setBalance, time } from "@nomicfoundation/hardhat-network-helpers";
 
 import {
   StETH__MockForWithdrawalQueue,
@@ -15,16 +15,14 @@ import {
   impersonate,
   MAX_UINT256,
   proxify,
+  randomAddress,
   shares,
   signStETHPermit,
+  signWstETHPermit,
   Snapshot,
-  WITHDRAWAL_BUNKER_MODE_DISABLED_TIMESTAMP,
-  WITHDRAWAL_FINALIZE_ROLE,
+  streccak,
   WITHDRAWAL_MAX_STETH_WITHDRAWAL_AMOUNT,
   WITHDRAWAL_MIN_STETH_WITHDRAWAL_AMOUNT,
-  WITHDRAWAL_ORACLE_ROLE,
-  WITHDRAWAL_PAUSE_ROLE,
-  WITHDRAWAL_RESUME_ROLE,
 } from "lib";
 
 import { ether } from "../../lib/units";
@@ -39,6 +37,14 @@ interface Permit {
   s: Buffer;
 }
 
+const BUNKER_MODE_DISABLED_TIMESTAMP = MAX_UINT256;
+const PETRIFIED_VERSION = MAX_UINT256;
+
+const FINALIZE_ROLE = streccak("FINALIZE_ROLE");
+const ORACLE_ROLE = streccak("ORACLE_ROLE");
+const PAUSE_ROLE = streccak("PAUSE_ROLE");
+const RESUME_ROLE = streccak("RESUME_ROLE");
+
 describe("WithdrawalQueue", () => {
   let aliceWallet: HDNodeWallet;
   let alice: HardhatEthersSigner;
@@ -46,12 +52,14 @@ describe("WithdrawalQueue", () => {
   let owner: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;
   let user: HardhatEthersSigner;
+  let oracle: HardhatEthersSigner;
 
   let stEth: StETH__MockForWithdrawalQueue;
   let stEthAddress: string;
   let wstEth: WstETH__MockForWithdrawalQueue;
   let wstEthAddress: string;
 
+  let impl: WithdrawalsQueueHarness;
   let queue: WithdrawalsQueueHarness;
   let queueAddress: string;
 
@@ -60,7 +68,7 @@ describe("WithdrawalQueue", () => {
   const deadline = MAX_UINT256;
 
   beforeEach(async () => {
-    [owner, stranger, user] = await ethers.getSigners();
+    [owner, stranger, user, oracle] = await ethers.getSigners();
 
     stEth = await ethers.deployContract("StETH__MockForWithdrawalQueue", []);
     stEthAddress = await stEth.getAddress();
@@ -68,7 +76,7 @@ describe("WithdrawalQueue", () => {
     wstEth = await ethers.deployContract("WstETH__MockForWithdrawalQueue", [await stEth.getAddress()]);
     wstEthAddress = await wstEth.getAddress();
 
-    const impl = await ethers.deployContract("WithdrawalsQueueHarness", [wstEthAddress], owner);
+    impl = await ethers.deployContract("WithdrawalsQueueHarness", [wstEthAddress], owner);
 
     [queue] = await proxify({ impl, admin: owner });
 
@@ -84,14 +92,14 @@ describe("WithdrawalQueue", () => {
 
   context("Constants", () => {
     it("Returns ths BUNKER_MODE_DISABLED_TIMESTAMP variable", async () => {
-      expect(await queue.BUNKER_MODE_DISABLED_TIMESTAMP()).to.equal(WITHDRAWAL_BUNKER_MODE_DISABLED_TIMESTAMP);
+      expect(await queue.BUNKER_MODE_DISABLED_TIMESTAMP()).to.equal(BUNKER_MODE_DISABLED_TIMESTAMP);
     });
 
     it("Returns ACL roles", async () => {
-      expect(await queue.PAUSE_ROLE()).to.equal(WITHDRAWAL_PAUSE_ROLE);
-      expect(await queue.RESUME_ROLE()).to.equal(WITHDRAWAL_RESUME_ROLE);
-      expect(await queue.FINALIZE_ROLE()).to.equal(WITHDRAWAL_FINALIZE_ROLE);
-      expect(await queue.ORACLE_ROLE()).to.equal(WITHDRAWAL_ORACLE_ROLE);
+      expect(await queue.PAUSE_ROLE()).to.equal(PAUSE_ROLE);
+      expect(await queue.RESUME_ROLE()).to.equal(RESUME_ROLE);
+      expect(await queue.FINALIZE_ROLE()).to.equal(FINALIZE_ROLE);
+      expect(await queue.ORACLE_ROLE()).to.equal(ORACLE_ROLE);
     });
 
     it("Returns the MIN_STETH_WITHDRAWAL_AMOUNT variable", async () => {
@@ -122,6 +130,19 @@ describe("WithdrawalQueue", () => {
       expect(await deployed.STETH()).to.equal(stEthAddress, "stETH address");
       expect(await deployed.WSTETH()).to.equal(wstEthAddress, "wstETH address");
     });
+
+    it("Petrifies the implementation", async () => {
+      expect(await impl.getContractVersion()).to.equal(PETRIFIED_VERSION);
+    });
+
+    it("Returns 0 as the initial contract version", async () => {
+      expect(await queue.getContractVersion()).to.equal(0n);
+    });
+
+    it("Enables bunker mode", async () => {
+      expect(await queue.isBunkerModeActive()).to.equal(true, "isBunkerModeActive");
+      expect(await queue.bunkerModeSinceTimestamp()).to.equal(0, "bunkerModeSinceTimestamp");
+    });
   });
 
   context("initialize", () => {
@@ -129,8 +150,8 @@ describe("WithdrawalQueue", () => {
       await expect(queue.initialize(ZeroAddress)).to.be.revertedWithCustomError(queue, "AdminZeroAddress");
     });
 
-    it("Sets initial properties and emits `InitializedV1`", async () => {
-      await expect(queue.initialize(owner.address)).to.emit(queue, "InitializedV1").withArgs(owner.address);
+    it("Sets initial properties`", async () => {
+      await queue.initialize(owner.address);
 
       expect(await queue.getContractVersion()).to.equal(1n, "getContractVersion");
       expect(await queue.getLastRequestId()).to.equal(ZERO, "getLastRequestId");
@@ -155,6 +176,16 @@ describe("WithdrawalQueue", () => {
       expect(await queue.isBunkerModeActive()).to.equal(false, "isBunkerModeActive");
       expect(await queue.bunkerModeSinceTimestamp()).to.equal(TS, "bunkerModeSinceTimestamp");
     });
+
+    it("Increases version", async () => {
+      await queue.initialize(randomAddress());
+
+      expect(await queue.getContractVersion()).to.equal(1n);
+    });
+
+    it("Emits `InitializedV1`", async () => {
+      await expect(queue.initialize(owner.address)).to.emit(queue, "InitializedV1").withArgs(owner.address);
+    });
   });
 
   context("Pausable", () => {
@@ -166,7 +197,7 @@ describe("WithdrawalQueue", () => {
       it("Reverts if the caller is unauthorised", async () => {
         await expect(queue.connect(stranger).resume()).to.be.revertedWithOZAccessControlError(
           stranger.address,
-          WITHDRAWAL_RESUME_ROLE,
+          RESUME_ROLE,
         );
       });
 
@@ -189,7 +220,7 @@ describe("WithdrawalQueue", () => {
       it("Reverts if the caller is unauthorised", async () => {
         await expect(queue.connect(stranger).pauseFor(1n)).to.be.revertedWithOZAccessControlError(
           stranger.address,
-          WITHDRAWAL_PAUSE_ROLE,
+          PAUSE_ROLE,
         );
       });
 
@@ -214,7 +245,7 @@ describe("WithdrawalQueue", () => {
 
         await expect(queue.connect(stranger).pauseUntil(blockTimestamp + 1)).to.be.revertedWithOZAccessControlError(
           stranger.address,
-          WITHDRAWAL_PAUSE_ROLE,
+          PAUSE_ROLE,
         );
       });
 
@@ -241,19 +272,6 @@ describe("WithdrawalQueue", () => {
       await queue.grantRole(await queue.PAUSE_ROLE(), owner);
       await queue.resume();
     });
-
-    const getPermit = async (
-      owner: HDNodeWallet,
-      spender: string,
-      value: bigint,
-      deadline: bigint,
-    ): Promise<Permit> => {
-      const type = "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)";
-
-      const { v, r, s } = signStETHPermit({ type, owner, spender, value, nonce: 1n, deadline }, stEthAddress);
-
-      return { deadline: MAX_UINT256, value, v, r, s };
-    };
 
     context("requestWithdrawals", () => {
       beforeEach(async () => {
@@ -404,11 +422,16 @@ describe("WithdrawalQueue", () => {
       let permit: Permit;
 
       beforeEach(async () => {
-        await stEth.setTotalPooledEther(ether("1000.00"));
-        await stEth.mintShares(alice, shares(500n));
-        await stEth.connect(alice).approve(queueAddress, ether("500.00"));
+        await stEth.setTotalPooledEther(ether("100.00"));
+        await stEth.mintShares(alice, shares(100n));
+        await stEth.connect(alice).approve(queueAddress, ether("100.00"));
 
-        permit = await getPermit(aliceWallet, owner.address, amount, deadline);
+        const type = "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)";
+
+        const options = { type, owner: aliceWallet, spender: owner.address, value: amount, nonce: 1n, deadline };
+        const { v, r, s } = signStETHPermit(options, stEthAddress);
+
+        permit = { deadline: MAX_UINT256, value: amount, v, r, s };
       });
 
       it("Reverts if the contract is paused", async () => {
@@ -420,7 +443,7 @@ describe("WithdrawalQueue", () => {
       });
 
       it("Reverts bad permit with `INVALID_SIGNATURE`", async () => {
-        await stEth.mock__setSignatureIsValid(false);
+        await stEth.mock__setIsSignatureValid(false);
 
         await expect(queue.connect(alice).requestWithdrawalsWithPermit(requests, owner, permit)).to.be.revertedWith(
           "INVALID_SIGNATURE",
@@ -458,7 +481,78 @@ describe("WithdrawalQueue", () => {
       });
     });
 
-    context("requestWithdrawalsWstETHWithPermit", () => {});
+    context("requestWithdrawalsWstETHWithPermit", () => {
+      const requestsCount = 2;
+      const requestSize = ether("10.00");
+      const requests = Array(requestsCount).fill(requestSize);
+      const amount = BigInt(requestsCount) * requestSize * 10n;
+
+      let permit: Permit;
+
+      beforeEach(async () => {
+        await stEth.setTotalPooledEther(ether("200.00"));
+        await stEth.mintShares(wstEthAddress, shares(100n));
+        await stEth.mintShares(alice, shares(100n));
+
+        await wstEth.mint(alice, ether("100.00"));
+        await wstEth.connect(alice).approve(queueAddress, ether("300.00"));
+
+        const type = "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)";
+
+        const options = { type, owner: aliceWallet, spender: owner.address, value: amount, nonce: 1n, deadline };
+        const { v, r, s } = signWstETHPermit(options, stEthAddress);
+
+        permit = { deadline: MAX_UINT256, value: amount, v, r, s };
+      });
+
+      it("Reverts if the contract is paused", async () => {
+        await queue.pauseFor(100n);
+
+        await expect(
+          queue.connect(alice).requestWithdrawalsWstETHWithPermit(requests, owner, permit),
+        ).to.be.revertedWithCustomError(queue, "ResumedExpected");
+      });
+
+      it("Reverts bad permit with `ERC20Permit: invalid signature`", async () => {
+        await wstEth.mock__setIsSignatureValid(false);
+
+        await expect(
+          queue.connect(alice).requestWithdrawalsWstETHWithPermit(requests, owner, permit),
+        ).to.be.revertedWith("ERC20Permit: invalid signature");
+      });
+
+      it("Creates requests for multiple amounts with valid permit", async () => {
+        const oneRequestSize = requests[0];
+        const stEthAmount = await wstEth.getStETHByWstETH(oneRequestSize);
+        const shares = await stEth.getSharesByPooledEth(stEthAmount);
+        const requestIdBefore = await queue.getLastRequestId();
+
+        await expect(queue.connect(alice).requestWithdrawalsWstETHWithPermit(requests, owner, permit))
+          .to.emit(queue, "WithdrawalRequested")
+          .withArgs(1, alice.address, owner.address, stEthAmount, shares)
+          .to.emit(queue, "WithdrawalRequested")
+          .withArgs(2, alice.address, owner.address, stEthAmount, shares);
+
+        const requestIdAfter = await queue.getLastRequestId();
+        const diff = requestIdAfter - requestIdBefore;
+        expect(diff).to.equal(requestIdBefore + BigInt(requests.length));
+      });
+
+      it("Creates requests for single amounts with valid permit and zero owner address", async () => {
+        const request = requests[0];
+        const stEthAmount = await wstEth.getStETHByWstETH(request);
+        const shares = await stEth.getSharesByPooledEth(stEthAmount);
+        const requestIdBefore = await queue.getLastRequestId();
+
+        await expect(queue.connect(alice).requestWithdrawalsWstETHWithPermit([request], ZeroAddress, permit))
+          .to.emit(queue, "WithdrawalRequested")
+          .withArgs(1, alice.address, alice.address, stEthAmount, shares);
+
+        const requestIdAfter = await queue.getLastRequestId();
+        const diff = requestIdAfter - requestIdBefore;
+        expect(diff).to.equal(requestIdBefore + 1n);
+      });
+    });
 
     context("getWithdrawalRequests", () => {
       beforeEach(async () => {
@@ -477,9 +571,44 @@ describe("WithdrawalQueue", () => {
         expect(await queue.getWithdrawalRequests(stranger)).to.deep.equal([1n, 2n]);
       });
     });
-  });
 
-  context("getWithdrawalStatus", () => {});
+    context("getWithdrawalStatus", () => {
+      beforeEach(async () => {
+        await stEth.setTotalPooledEther(ether("1000.00"));
+        await setBalance(stEthAddress, ether("1001.00"));
+
+        await stEth.mintShares(user, shares(300n));
+        await stEth.connect(user).approve(queueAddress, ether("300.00"));
+      });
+
+      it("Reverts if the request does not exist", async () => {
+        await expect(queue.getWithdrawalStatus([1]))
+          .to.be.revertedWithCustomError(queue, "InvalidRequestId")
+          .withArgs(1);
+      });
+
+      it("Returns empty array if no requests", async () => {
+        expect(await queue.getWithdrawalStatus([])).to.deep.equal([]);
+      });
+
+      it("Returns correct status", async () => {
+        const amount1 = ether("10.00");
+        const amount2 = ether("20.00");
+
+        const shares1 = await stEth.getSharesByPooledEth(amount1);
+        const shares2 = await stEth.getSharesByPooledEth(amount2);
+
+        await queue.connect(user).requestWithdrawals([amount1, amount2], stranger);
+
+        const timestamp = BigInt(await time.latest());
+
+        expect(await queue.getWithdrawalStatus([1, 2])).to.deep.equal([
+          [amount1, shares1, stranger.address, timestamp, false, false],
+          [amount2, shares2, stranger.address, timestamp, false, false],
+        ]);
+      });
+    });
+  });
 
   context("getClaimableEther", () => {});
 
@@ -489,9 +618,98 @@ describe("WithdrawalQueue", () => {
 
   context("findCheckpointHints", () => {});
 
-  context("onOracleReport", () => {});
+  context("onOracleReport", () => {
+    beforeEach(async () => {
+      await queue.initialize(owner.address);
+      await queue.grantRole(await queue.ORACLE_ROLE(), oracle);
+    });
 
-  context("isBunkerModeActive", () => {});
+    it("Reverts if not called by the oracle", async () => {
+      await expect(queue.connect(stranger).onOracleReport(true, 0, 0)).to.be.revertedWithOZAccessControlError(
+        stranger.address,
+        ORACLE_ROLE,
+      );
+    });
 
-  context("bunkerModeSinceTimestamp", () => {});
+    it("Reverts if the bunker mode start time in future", async () => {
+      const futureTimestamp = (await time.latest()) + 1000;
+
+      await expect(queue.connect(oracle).onOracleReport(true, futureTimestamp, 0)).to.be.revertedWithCustomError(
+        queue,
+        "InvalidReportTimestamp",
+      );
+    });
+
+    it("Reverts if the current report time in future", async () => {
+      const futureTimestamp = (await time.latest()) + 1000;
+
+      await expect(queue.connect(oracle).onOracleReport(true, 0, futureTimestamp)).to.be.revertedWithCustomError(
+        queue,
+        "InvalidReportTimestamp",
+      );
+    });
+
+    it("Enables bunker mode and emit `BunkerModeEnabled`", async () => {
+      const validTimestamp = await time.latest();
+
+      await expect(queue.connect(oracle).onOracleReport(true, validTimestamp, validTimestamp))
+        .to.emit(queue, "BunkerModeEnabled")
+        .withArgs(validTimestamp);
+
+      expect(await queue.isBunkerModeActive()).to.equal(true);
+      expect(await queue.bunkerModeSinceTimestamp()).to.equal(validTimestamp);
+    });
+
+    it("Disables bunker mode and emit `BunkerModeDisabled`", async () => {
+      const validTimestamp = await time.latest();
+
+      await queue.connect(oracle).onOracleReport(true, validTimestamp, validTimestamp);
+
+      await expect(queue.connect(oracle).onOracleReport(false, validTimestamp, validTimestamp + 1)).to.emit(
+        queue,
+        "BunkerModeDisabled",
+      );
+
+      expect(await queue.isBunkerModeActive()).to.equal(false);
+      expect(await queue.bunkerModeSinceTimestamp()).to.equal(BUNKER_MODE_DISABLED_TIMESTAMP);
+    });
+
+    it("Changes nothing if the bunker mode is already active", async () => {
+      const validTimestamp = await time.latest();
+
+      await queue.connect(oracle).onOracleReport(true, validTimestamp, validTimestamp);
+
+      await expect(queue.connect(oracle).onOracleReport(true, validTimestamp, validTimestamp)).to.not.emit(
+        queue,
+        "BunkerModeEnabled",
+      );
+
+      expect(await queue.isBunkerModeActive()).to.equal(true);
+      expect(await queue.bunkerModeSinceTimestamp()).to.equal(validTimestamp);
+    });
+  });
+
+  context("isBunkerModeActive", () => {
+    it("Returns true if bunker mode is active", async () => {
+      expect(await queue.isBunkerModeActive()).to.equal(true);
+    });
+
+    it("Returns false if bunker mode is disabled", async () => {
+      await queue.initialize(queueAddress); // Disable bunker mode
+
+      expect(await queue.isBunkerModeActive()).to.equal(false);
+    });
+  });
+
+  context("bunkerModeSinceTimestamp", () => {
+    it("Returns 0 if bunker mode is active", async () => {
+      expect(await queue.bunkerModeSinceTimestamp()).to.equal(0);
+    });
+
+    it("Returns the timestamp if bunker mode is disabled", async () => {
+      await queue.initialize(queueAddress); // Disable bunker mode
+
+      expect(await queue.bunkerModeSinceTimestamp()).to.equal(BUNKER_MODE_DISABLED_TIMESTAMP);
+    });
+  });
 });

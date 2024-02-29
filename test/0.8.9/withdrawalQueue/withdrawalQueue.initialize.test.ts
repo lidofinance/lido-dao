@@ -67,12 +67,6 @@ describe("WithdrawalQueueERC721:initialize", () => {
   });
 
   context("constructor", () => {
-    it("Reverts if wstAddress is wrong", async () => {
-      const deployConfig = getDeployConfig({ ...config, wstEthAddress: ZeroAddress });
-
-      await expect(ethers.deployContract("WithdrawalQueueERC721", deployConfig)).to.be.revertedWithoutReason();
-    });
-
     it("Reverts if name is empty", async () => {
       const deployConfig = getDeployConfig({ ...config, name: "" });
 
@@ -94,11 +88,6 @@ describe("WithdrawalQueueERC721:initialize", () => {
     it("Sets the name and symbol", async () => {
       expect(await withdrawalQueue.name()).to.equal(config.name, "name");
       expect(await withdrawalQueue.symbol()).to.equal(config.symbol, "symbol");
-    });
-
-    it("Sets the WSTETH and STETH addresses", async () => {
-      expect(await withdrawalQueue.WSTETH()).to.equal(config.wstEthAddress, "WSTETH");
-      expect(await withdrawalQueue.STETH()).to.equal(config.stEthAddress, "STETH");
     });
 
     it("Sets initial properties", async () => {

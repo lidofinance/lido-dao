@@ -24,13 +24,13 @@ contract StETH__MockForWithdrawalQueue is IERC20 {
 
   mapping(address => uint256) internal noncesByAddress;
 
+  bool internal mock__isSignatureValid = true;
+
   event TransferShares(
     address indexed from,
     address indexed to,
     uint256 sharesValue
   );
-
-  bool internal mock__signatureIsValid = true;
 
   constructor() {}
 
@@ -95,7 +95,7 @@ contract StETH__MockForWithdrawalQueue is IERC20 {
     address _owner, address _spender, uint256 _value, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s
   ) external {
     require(block.timestamp <= _deadline, "DEADLINE_EXPIRED");
-    require(mock__signatureIsValid, "INVALID_SIGNATURE");
+    require(mock__isSignatureValid, "INVALID_SIGNATURE");
 
     _approve(_owner, _spender, _value);
   }
@@ -152,7 +152,7 @@ contract StETH__MockForWithdrawalQueue is IERC20 {
   /**
     * Switches the permit signature validation on or off.
     */
-  function mock__setSignatureIsValid(bool _validSignature) external {
-    mock__signatureIsValid = _validSignature;
+  function mock__setIsSignatureValid(bool _validSignature) external {
+    mock__isSignatureValid = _validSignature;
   }
 }

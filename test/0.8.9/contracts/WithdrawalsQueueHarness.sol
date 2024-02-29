@@ -19,6 +19,6 @@ contract WithdrawalsQueueHarness is WithdrawalQueue {
   }
 
   function _emitTransfer(address _from, address _to, uint256 _requestId) internal override {
-    // do nothing
+    // do nothing, function is not implemented on this level
   }
 }
