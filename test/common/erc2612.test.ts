@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { Signature, Signer, TypedDataDomain, TypedDataEncoder } from "ethers";
+import { MaxUint256, Signature, Signer, TypedDataDomain, TypedDataEncoder, Wallet, ZeroAddress } from "ethers";
 import { ExclusiveSuiteFunction, PendingSuiteFunction } from "mocha";
 
 import { time } from "@nomicfoundation/hardhat-network-helpers";
@@ -35,6 +35,7 @@ export function testERC2612Compliance({ tokenName, deploy, suiteFunction = descr
     let signer: Signer;
 
     let permit: Permit;
+    let types: Record<string, { name: string; type: string }[]>;
     let signature: string;
 
     let originalState: string;
@@ -52,7 +53,7 @@ export function testERC2612Compliance({ tokenName, deploy, suiteFunction = descr
         deadline: BigInt(await time.latest()) + days(7n),
       };
 
-      const types = {
+      types = {
         Permit: [
           { name: "owner", type: "address" },
           { name: "spender", type: "address" },
@@ -80,6 +81,86 @@ export function testERC2612Compliance({ tokenName, deploy, suiteFunction = descr
 
         expect(await token.allowance(owner, spender)).to.equal(value);
         expect(await token.nonces(owner)).to.equal(nonce + 1n);
+      });
+
+      it("The deadline argument can be set to uint(-1) to create Permits that effectively never expire.", async () => {
+        const { owner, spender, value } = permit;
+        const deadline = MaxUint256;
+        const signature = await signer.signTypedData(domain, types, { ...permit, deadline });
+        const { v, r, s } = Signature.from(signature);
+
+        await expect(token.permit(owner, spender, value, deadline, v, r, s)).not.to.be.reverted;
+      });
+
+      context("Reverts if not", () => {
+        it("The current blocktime is less than or equal to deadline", async () => {
+          const expiredDeadline = await time.latest();
+          const { owner, spender, value } = permit;
+          const signature = await signer.signTypedData(domain, types, { ...permit, deadline: expiredDeadline });
+          const { v, r, s } = Signature.from(signature);
+
+          await expect(token.permit(owner, spender, value, expiredDeadline, v, r, s)).to.be.reverted;
+        });
+
+        it("owner is not the zero address", async () => {
+          const { spender, value, deadline } = permit;
+          const signature = await signer.signTypedData(domain, types, { ...permit, owner: ZeroAddress });
+          const { v, r, s } = Signature.from(signature);
+
+          await expect(token.permit(ZeroAddress, spender, value, deadline, v, r, s)).to.be.reverted;
+        });
+
+        it("nonces[owner] (before the state update) is equal to nonce", async () => {
+          const { owner, spender, value, deadline, nonce } = permit;
+          const { v, r, s } = Signature.from(signature);
+
+          await expect(token.permit(owner, spender, value, deadline, v, r, s)).not.to.be.reverted;
+          expect(await token.nonces(owner)).to.equal(nonce + 1n);
+          await expect(token.permit(owner, spender, value, deadline, v, r, s)).to.be.reverted;
+        });
+
+        it("r, s and v is a valid secp256k1 signature from owner of the message", async () => {
+          const { owner, spender, value, deadline } = permit;
+          const { v, r, s } = Signature.from(signature);
+
+          await expect(token.permit(owner, spender, value, deadline, v + 1, r, s)).to.be.reverted;
+        });
+
+        it("r, s and v is a valid secp256k1 signature from owner of the message", async () => {
+          const { owner, spender, value, deadline } = permit;
+          const signature = await Wallet.createRandom().signTypedData(domain, types, permit);
+          const { v, r, s } = Signature.from(signature);
+
+          await expect(token.permit(owner, spender, value, deadline, v, r, s)).to.be.reverted;
+        });
+      });
+
+      it("Reverts if owner does not match", async () => {
+        const { spender, value, deadline } = permit;
+        const { v, r, s } = Signature.from(signature);
+
+        await expect(token.permit(spender, spender, value, deadline, v, r, s)).to.be.reverted;
+      });
+
+      it("Reverts if spender does not match", async () => {
+        const { owner, value, deadline } = permit;
+        const { v, r, s } = Signature.from(signature);
+
+        await expect(token.permit(owner, owner, value, deadline, v, r, s)).to.be.reverted;
+      });
+
+      it("Reverts if value does not match", async () => {
+        const { owner, value, deadline } = permit;
+        const { v, r, s } = Signature.from(signature);
+
+        await expect(token.permit(owner, owner, value + 1n, deadline, v, r, s)).to.be.reverted;
+      });
+
+      it("Reverts if deadline does not match", async () => {
+        const { owner, value } = permit;
+        const { v, r, s } = Signature.from(signature);
+
+        await expect(token.permit(owner, owner, value, BigInt(await time.latest()) + days(1n), v, r, s)).to.be.reverted;
       });
     });
 
