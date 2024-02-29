@@ -16,6 +16,7 @@ import {
   MAX_UINT256,
   proxify,
   randomAddress,
+  shareRate,
   shares,
   signStETHPermit,
   signWstETHPermit,
@@ -213,7 +214,6 @@ describe("WithdrawalQueue", () => {
     context("pauseFor", () => {
       beforeEach(async () => {
         await queue.grantRole(await queue.RESUME_ROLE(), owner);
-
         await queue.resume();
       });
 
@@ -236,7 +236,6 @@ describe("WithdrawalQueue", () => {
     context("pauseUntil", () => {
       beforeEach(async () => {
         await queue.grantRole(await queue.RESUME_ROLE(), owner);
-
         await queue.resume();
       });
 
@@ -612,9 +611,115 @@ describe("WithdrawalQueue", () => {
 
   context("getClaimableEther", () => {});
 
-  context("claimWithdrawalsTo", () => {});
+  context("Claim Withdrawals", () => {
+    beforeEach(async () => {
+      await queue.initialize(owner.address);
+      await queue.grantRole(await queue.PAUSE_ROLE(), owner);
+      await queue.grantRole(await queue.RESUME_ROLE(), owner);
+      await queue.resume();
+    });
 
-  context("claimWithdrawals", () => {});
+    context("claimWithdrawalsTo", () => {
+      it("Reverts on zero recipient address", async () => {
+        await expect(queue.connect(owner).claimWithdrawalsTo([1], [1], ZeroAddress)).to.be.revertedWithCustomError(
+          queue,
+          "ZeroRecipient",
+        );
+      });
+
+      it("Reverts on arrays length mismatch", async () => {
+        await expect(queue.connect(owner).claimWithdrawalsTo([1], [], stranger))
+          .to.revertedWithCustomError(queue, "ArraysLengthMismatch")
+          .withArgs(1, 0);
+      });
+
+      it("Claims the withdrawals for stranger and emit `WithdrawalClaimed` and triggers emitting of `Transfer` event", async () => {
+        await setBalance(queueAddress, ether("10.00"));
+
+        const requests = [1, 2];
+
+        for (const requestId of requests) {
+          await queue.exposedEnqueue(ether("1.00"), shares(1n), owner);
+          await queue.prefinalize([requestId], shareRate(1n));
+          await queue.exposedFinalize(requestId, shareRate(1n), { value: ether("1.00") });
+        }
+
+        const lastCheckpointIndex = await queue.getLastCheckpointIndex();
+        const hints = await queue.findCheckpointHints(requests, 1, lastCheckpointIndex);
+
+        await expect(
+          queue.connect(owner).claimWithdrawalsTo(
+            requests,
+            hints.map((h) => h.valueOf()),
+            stranger.address,
+          ),
+        )
+          .to.emit(queue, "WithdrawalClaimed")
+          .withArgs(1, owner.address, stranger.address, ether("1.00"))
+          .to.emit(queue, "WithdrawalClaimed")
+          .withArgs(2, owner.address, stranger.address, ether("1.00"))
+          .to.emit(queue, "Mock__Transfer")
+          .withArgs(owner.address, ZeroAddress, requests[0])
+          .to.emit(queue, "Mock__Transfer")
+          .withArgs(owner.address, ZeroAddress, requests[1]);
+      });
+    });
+
+    context("claimWithdrawals", () => {
+      it("Reverts on arrays length mismatch", async () => {
+        await expect(queue.connect(owner).claimWithdrawals([1], []))
+          .to.revertedWithCustomError(queue, "ArraysLengthMismatch")
+          .withArgs(1, 0);
+      });
+
+      it("Claims the withdrawals and emit `WithdrawalClaimed` and triggers emitting of `Transfer` event", async () => {
+        await setBalance(queueAddress, ether("10.00"));
+
+        const requests = [1, 2];
+
+        for (const requestId of requests) {
+          await queue.exposedEnqueue(ether("1.00"), shares(1n), owner);
+          await queue.prefinalize([requestId], shareRate(1n));
+          await queue.exposedFinalize(requestId, shareRate(1n), { value: ether("1.00") });
+        }
+
+        const lastCheckpointIndex = await queue.getLastCheckpointIndex();
+        const hints = await queue.findCheckpointHints(requests, 1, lastCheckpointIndex);
+
+        await expect(
+          queue.connect(owner).claimWithdrawals(
+            requests,
+            hints.map((h) => h.valueOf()),
+          ),
+        )
+          .to.emit(queue, "WithdrawalClaimed")
+          .withArgs(1, owner.address, owner.address, ether("1.00"))
+          .to.emit(queue, "WithdrawalClaimed")
+          .withArgs(2, owner.address, owner.address, ether("1.00"))
+          .to.emit(queue, "Mock__Transfer")
+          .withArgs(owner.address, ZeroAddress, requests[0])
+          .to.emit(queue, "Mock__Transfer")
+          .withArgs(owner.address, ZeroAddress, requests[1]);
+      });
+    });
+
+    context("claimWithdrawal", () => {
+      it("Claims the withdrawals and emit `WithdrawalClaimed` and triggers emitting of `Transfer` event", async () => {
+        const requestId = 1;
+
+        await setBalance(queueAddress, ether("10.00"));
+        await queue.exposedEnqueue(ether("1.00"), shares(1n), owner);
+        await queue.prefinalize([requestId], shareRate(1n));
+        await queue.exposedFinalize(requestId, shareRate(1n), { value: ether("1.00") });
+
+        await expect(queue.connect(owner).claimWithdrawal(requestId))
+          .to.emit(queue, "WithdrawalClaimed")
+          .withArgs(1, owner.address, owner.address, ether("1.00"))
+          .to.emit(queue, "Mock__Transfer")
+          .withArgs(owner.address, ZeroAddress, requestId);
+      });
+    });
+  });
 
   context("findCheckpointHints", () => {});
 

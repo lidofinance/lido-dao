@@ -8,7 +8,17 @@ import "contracts/0.8.9/WithdrawalQueue.sol";
 
 contract WithdrawalsQueueHarness is WithdrawalQueue {
 
+  event Mock__Transfer(address indexed from, address indexed to, uint256 requestId);
+
   constructor(address _wstETH) WithdrawalQueue(IWstETH(_wstETH)) {}
+
+  function exposedEnqueue(uint128 _amountOfStETH, uint128 _amountOfShares, address _owner) external returns (uint256 requestId) {
+    return _enqueue(_amountOfStETH, _amountOfShares, _owner);
+  }
+
+  function exposedClaim(uint256 _requestId, uint256 _hint, address _recipient) external {
+    return _claim(_requestId, _hint, _recipient);
+  }
 
   function exposedGetClaimableEther(uint256 _requestId, uint256 _hint) external view returns (uint256) {
     return _getClaimableEther(_requestId, _hint);
@@ -19,6 +29,6 @@ contract WithdrawalsQueueHarness is WithdrawalQueue {
   }
 
   function _emitTransfer(address _from, address _to, uint256 _requestId) internal override {
-    // do nothing, function is not implemented on this level
+    emit Mock__Transfer(_from, _to, _requestId);
   }
 }
