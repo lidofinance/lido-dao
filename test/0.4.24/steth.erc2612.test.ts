@@ -1,4 +1,4 @@
-import { ethers, network } from "hardhat";
+import { ethers } from "hardhat";
 
 import {
   EIP712StETH__factory,
@@ -6,7 +6,7 @@ import {
   StethPermitMockWithEip712Initialization__factory,
 } from "typechain-types";
 
-import { ether } from "lib/units";
+import { ether, stethDomain } from "lib/units";
 
 import { testERC2612Compliance } from "../common/erc2612.test";
 
@@ -23,12 +23,7 @@ testERC2612Compliance({
 
     return {
       token: steth,
-      domain: {
-        name: "Liquid staked Ether 2.0",
-        version: "2",
-        chainId: network.config.chainId!,
-        verifyingContract: await steth.getAddress(),
-      },
+      domain: await stethDomain(steth),
       owner: owner.address,
       signer: owner,
     };
@@ -51,12 +46,7 @@ testERC2612Compliance({
 
     return {
       token: steth,
-      domain: {
-        name: "Liquid staked Ether 2.0",
-        version: "2",
-        chainId: network.config.chainId!,
-        verifyingContract: await steth.getAddress(),
-      },
+      domain: await stethDomain(steth),
       owner: await wallet.getAddress(),
       signer: owner,
     };

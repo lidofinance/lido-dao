@@ -1,27 +1,18 @@
 import { expect } from "chai";
-import { ZeroAddress } from "ethers";
+import { MaxUint256, TypedDataDomain, TypedDataEncoder, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
 import { EIP712StETH, EIP712StETH__factory } from "typechain-types";
 
-import { certainAddress, deriveDomainSeparator, deriveTypeDataHash, streccak } from "lib";
-
-interface Domain {
-  type: string;
-  name: string;
-  version: string;
-  chainId: number;
-  verifyingContract: string;
-}
+import { certainAddress } from "lib";
 
 describe("EIP712StETH.sol", () => {
-  let domain: Domain;
+  let domain: TypedDataDomain;
 
   let eip712steth: EIP712StETH;
 
   beforeEach(async () => {
     domain = {
-      type: "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)",
       name: "Liquid staked Ether 2.0",
       version: "2",
       chainId: await ethers.provider.send("eth_chainId", []),
@@ -30,7 +21,7 @@ describe("EIP712StETH.sol", () => {
 
     const [deployer] = await ethers.getSigners();
     const factory = new EIP712StETH__factory(deployer);
-    eip712steth = await factory.deploy(domain.verifyingContract);
+    eip712steth = await factory.deploy(domain.verifyingContract!);
   });
 
   context("constructor", () => {
@@ -44,28 +35,43 @@ describe("EIP712StETH.sol", () => {
 
   context("domainSeparatorV4", () => {
     it("Returns the correct domain separator", async () => {
-      const expectedSeparator = deriveDomainSeparator(domain);
+      const expectedSeparator = TypedDataEncoder.hashDomain(domain);
 
-      expect(await eip712steth.domainSeparatorV4(domain.verifyingContract)).to.equal(expectedSeparator);
+      expect(await eip712steth.domainSeparatorV4(domain.verifyingContract!)).to.equal(expectedSeparator);
     });
   });
 
   context("hashTypedDataV4", () => {
     it("Returns the message hash", async () => {
-      const domainSeparator = deriveDomainSeparator(domain);
+      const types = {
+        Permit: [
+          { name: "owner", type: "address" },
+          { name: "spender", type: "address" },
+          { name: "value", type: "uint256" },
+          { name: "nonce", type: "uint256" },
+          { name: "deadline", type: "uint256" },
+        ],
+      };
 
-      const expectedHash = deriveTypeDataHash({
-        domainSeparator,
-        structHash: streccak(domain.type),
-      });
+      const values = {
+        owner: certainAddress("owner"),
+        spender: certainAddress("spender"),
+        value: MaxUint256,
+        nonce: 0n,
+        deadline: MaxUint256,
+      };
 
-      expect(await eip712steth.hashTypedDataV4(domain.verifyingContract, streccak(domain.type))).to.equal(expectedHash);
+      const structHash = TypedDataEncoder.from(types).hash(values);
+
+      const expectedHash = TypedDataEncoder.hash(domain, types, values);
+
+      expect(await eip712steth.hashTypedDataV4(domain.verifyingContract!, structHash)).to.equal(expectedHash);
     });
   });
 
   context("eip712Domain", () => {
     it("Returns the domain data", async () => {
-      expect(await eip712steth.eip712Domain(domain.verifyingContract)).to.deep.equal([
+      expect(await eip712steth.eip712Domain(domain.verifyingContract!)).to.deep.equal([
         domain.name,
         domain.version,
         domain.chainId,
