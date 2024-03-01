@@ -609,7 +609,66 @@ describe("WithdrawalQueue", () => {
     });
   });
 
-  context("getClaimableEther", () => {});
+  context("getClaimableEther", () => {
+    const requests = [1, 2];
+    const amounts = [ether("10.00"), ether("20.00")];
+    let lastCheckpointIndex: bigint;
+
+    beforeEach(async () => {
+      await queue.initialize(owner.address);
+      await queue.grantRole(await queue.RESUME_ROLE(), owner);
+      await queue.resume();
+
+      await stEth.setTotalPooledEther(ether("300.00"));
+      await stEth.mintShares(user, shares(300n));
+      await stEth.connect(user).approve(queueAddress, ether("300.00"));
+
+      await queue.connect(user).requestWithdrawals(amounts, stranger);
+      await queue.prefinalize(requests, shareRate(1n));
+
+      // Only finalize the first request, the second one will be finalized later in the test
+      await queue.exposedFinalize(1, shareRate(1n), { value: amounts[0] });
+
+      lastCheckpointIndex = await queue.getLastCheckpointIndex();
+    });
+
+    it("Reverts if the request id is zero", async () => {
+      await expect(queue.getClaimableEther([0], [0]))
+        .to.be.revertedWithCustomError(queue, "InvalidRequestId")
+        .withArgs(0);
+    });
+
+    it("Reverts if the request id is out of bounds", async () => {
+      await expect(queue.getClaimableEther([3], [0]))
+        .to.be.revertedWithCustomError(queue, "InvalidRequestId")
+        .withArgs(3);
+    });
+
+    it("Returns 0 if the request is not finalized", async () => {
+      expect(await queue.getClaimableEther([2], [lastCheckpointIndex])).to.deep.equal([0n]);
+    });
+
+    it("Returns 0 if the request is already claimed", async () => {
+      await queue.connect(stranger).claimWithdrawal(1);
+
+      expect(await queue.getClaimableEther([1], [lastCheckpointIndex])).to.deep.equal([0n]);
+    });
+
+    it("Returns the claimable ether", async () => {
+      await queue.connect(user).requestWithdrawals([], stranger);
+      await queue.exposedFinalize(2, shareRate(1n), { value: amounts[0] }); // Finalize the second request
+
+      lastCheckpointIndex = await queue.getLastCheckpointIndex();
+      const hints = await queue.findCheckpointHints(requests, 1, lastCheckpointIndex);
+
+      expect(
+        await queue.getClaimableEther(
+          requests,
+          hints.map((v) => v.valueOf()),
+        ),
+      ).to.deep.equal(amounts);
+    });
+  });
 
   context("Claim Withdrawals", () => {
     beforeEach(async () => {
@@ -721,100 +780,129 @@ describe("WithdrawalQueue", () => {
     });
   });
 
-  context("findCheckpointHints", () => {});
+  context("findCheckpointHints", () => {
+    const requests = [1, 2];
+    let lastCheckpointIndex: bigint;
 
-  context("onOracleReport", () => {
     beforeEach(async () => {
       await queue.initialize(owner.address);
-      await queue.grantRole(await queue.ORACLE_ROLE(), oracle);
+      await queue.grantRole(await queue.RESUME_ROLE(), owner);
+      await queue.resume();
+
+      for (const requestId of requests) {
+        await queue.exposedEnqueue(ether("1.00"), shares(1n), owner);
+        await queue.prefinalize([requestId], shareRate(1n));
+        await queue.exposedFinalize(requestId, shareRate(1n), { value: ether("1.00") });
+      }
+
+      lastCheckpointIndex = await queue.getLastCheckpointIndex();
     });
 
-    it("Reverts if not called by the oracle", async () => {
-      await expect(queue.connect(stranger).onOracleReport(true, 0, 0)).to.be.revertedWithOZAccessControlError(
-        stranger.address,
-        ORACLE_ROLE,
-      );
+    it("Reverts if the requestIds are not sorted", async () => {
+      await expect(queue.findCheckpointHints([2, 1], 1, 1)).to.be.revertedWithCustomError(queue, "RequestIdsNotSorted");
     });
 
-    it("Reverts if the bunker mode start time in future", async () => {
-      const futureTimestamp = (await time.latest()) + 1000;
+    it("Returns the checkpoint hints", async () => {
+      const hints = await queue.findCheckpointHints(requests, 1, lastCheckpointIndex);
 
-      await expect(queue.connect(oracle).onOracleReport(true, futureTimestamp, 0)).to.be.revertedWithCustomError(
-        queue,
-        "InvalidReportTimestamp",
-      );
-    });
-
-    it("Reverts if the current report time in future", async () => {
-      const futureTimestamp = (await time.latest()) + 1000;
-
-      await expect(queue.connect(oracle).onOracleReport(true, 0, futureTimestamp)).to.be.revertedWithCustomError(
-        queue,
-        "InvalidReportTimestamp",
-      );
-    });
-
-    it("Enables bunker mode and emit `BunkerModeEnabled`", async () => {
-      const validTimestamp = await time.latest();
-
-      await expect(queue.connect(oracle).onOracleReport(true, validTimestamp, validTimestamp))
-        .to.emit(queue, "BunkerModeEnabled")
-        .withArgs(validTimestamp);
-
-      expect(await queue.isBunkerModeActive()).to.equal(true);
-      expect(await queue.bunkerModeSinceTimestamp()).to.equal(validTimestamp);
-    });
-
-    it("Disables bunker mode and emit `BunkerModeDisabled`", async () => {
-      const validTimestamp = await time.latest();
-
-      await queue.connect(oracle).onOracleReport(true, validTimestamp, validTimestamp);
-
-      await expect(queue.connect(oracle).onOracleReport(false, validTimestamp, validTimestamp + 1)).to.emit(
-        queue,
-        "BunkerModeDisabled",
-      );
-
-      expect(await queue.isBunkerModeActive()).to.equal(false);
-      expect(await queue.bunkerModeSinceTimestamp()).to.equal(BUNKER_MODE_DISABLED_TIMESTAMP);
-    });
-
-    it("Changes nothing if the bunker mode is already active", async () => {
-      const validTimestamp = await time.latest();
-
-      await queue.connect(oracle).onOracleReport(true, validTimestamp, validTimestamp);
-
-      await expect(queue.connect(oracle).onOracleReport(true, validTimestamp, validTimestamp)).to.not.emit(
-        queue,
-        "BunkerModeEnabled",
-      );
-
-      expect(await queue.isBunkerModeActive()).to.equal(true);
-      expect(await queue.bunkerModeSinceTimestamp()).to.equal(validTimestamp);
+      expect(hints).to.deep.equal([1n, 2n]);
     });
   });
 
-  context("isBunkerModeActive", () => {
-    it("Returns true if bunker mode is active", async () => {
-      expect(await queue.isBunkerModeActive()).to.equal(true);
+  context("Bunker Mode", () => {
+    context("onOracleReport", () => {
+      beforeEach(async () => {
+        await queue.initialize(owner.address);
+        await queue.grantRole(await queue.ORACLE_ROLE(), oracle);
+      });
+
+      it("Reverts if not called by the oracle", async () => {
+        await expect(queue.connect(stranger).onOracleReport(true, 0, 0)).to.be.revertedWithOZAccessControlError(
+          stranger.address,
+          ORACLE_ROLE,
+        );
+      });
+
+      it("Reverts if the bunker mode start time in future", async () => {
+        const futureTimestamp = (await time.latest()) + 1000;
+
+        await expect(queue.connect(oracle).onOracleReport(true, futureTimestamp, 0)).to.be.revertedWithCustomError(
+          queue,
+          "InvalidReportTimestamp",
+        );
+      });
+
+      it("Reverts if the current report time in future", async () => {
+        const futureTimestamp = (await time.latest()) + 1000;
+
+        await expect(queue.connect(oracle).onOracleReport(true, 0, futureTimestamp)).to.be.revertedWithCustomError(
+          queue,
+          "InvalidReportTimestamp",
+        );
+      });
+
+      it("Enables bunker mode and emit `BunkerModeEnabled`", async () => {
+        const validTimestamp = await time.latest();
+
+        await expect(queue.connect(oracle).onOracleReport(true, validTimestamp, validTimestamp))
+          .to.emit(queue, "BunkerModeEnabled")
+          .withArgs(validTimestamp);
+
+        expect(await queue.isBunkerModeActive()).to.equal(true);
+        expect(await queue.bunkerModeSinceTimestamp()).to.equal(validTimestamp);
+      });
+
+      it("Disables bunker mode and emit `BunkerModeDisabled`", async () => {
+        const validTimestamp = await time.latest();
+
+        await queue.connect(oracle).onOracleReport(true, validTimestamp, validTimestamp);
+
+        await expect(queue.connect(oracle).onOracleReport(false, validTimestamp, validTimestamp + 1)).to.emit(
+          queue,
+          "BunkerModeDisabled",
+        );
+
+        expect(await queue.isBunkerModeActive()).to.equal(false);
+        expect(await queue.bunkerModeSinceTimestamp()).to.equal(BUNKER_MODE_DISABLED_TIMESTAMP);
+      });
+
+      it("Changes nothing if the bunker mode is already active", async () => {
+        const validTimestamp = await time.latest();
+
+        await queue.connect(oracle).onOracleReport(true, validTimestamp, validTimestamp);
+
+        await expect(queue.connect(oracle).onOracleReport(true, validTimestamp, validTimestamp)).to.not.emit(
+          queue,
+          "BunkerModeEnabled",
+        );
+
+        expect(await queue.isBunkerModeActive()).to.equal(true);
+        expect(await queue.bunkerModeSinceTimestamp()).to.equal(validTimestamp);
+      });
     });
 
-    it("Returns false if bunker mode is disabled", async () => {
-      await queue.initialize(queueAddress); // Disable bunker mode
+    context("isBunkerModeActive", () => {
+      it("Returns true if bunker mode is active", async () => {
+        expect(await queue.isBunkerModeActive()).to.equal(true);
+      });
 
-      expect(await queue.isBunkerModeActive()).to.equal(false);
+      it("Returns false if bunker mode is disabled", async () => {
+        await queue.initialize(queueAddress); // Disable bunker mode
+
+        expect(await queue.isBunkerModeActive()).to.equal(false);
+      });
     });
-  });
 
-  context("bunkerModeSinceTimestamp", () => {
-    it("Returns 0 if bunker mode is active", async () => {
-      expect(await queue.bunkerModeSinceTimestamp()).to.equal(0);
-    });
+    context("bunkerModeSinceTimestamp", () => {
+      it("Returns 0 if bunker mode is active", async () => {
+        expect(await queue.bunkerModeSinceTimestamp()).to.equal(0);
+      });
 
-    it("Returns the timestamp if bunker mode is disabled", async () => {
-      await queue.initialize(queueAddress); // Disable bunker mode
+      it("Returns the timestamp if bunker mode is disabled", async () => {
+        await queue.initialize(queueAddress); // Disable bunker mode
 
-      expect(await queue.bunkerModeSinceTimestamp()).to.equal(BUNKER_MODE_DISABLED_TIMESTAMP);
+        expect(await queue.bunkerModeSinceTimestamp()).to.equal(BUNKER_MODE_DISABLED_TIMESTAMP);
+      });
     });
   });
 });
