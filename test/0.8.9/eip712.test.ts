@@ -39,6 +39,12 @@ describe("EIP712StETH.sol", () => {
 
       expect(await eip712steth.domainSeparatorV4(domain.verifyingContract!)).to.equal(expectedSeparator);
     });
+
+    it("Returns the correct non-cached domain separator", async () => {
+      const expectedSeparator = TypedDataEncoder.hashDomain(domain);
+
+      expect(await eip712steth.domainSeparatorV4(ZeroAddress)).to.equal(expectedSeparator);
+    });
   });
 
   context("hashTypedDataV4", () => {
