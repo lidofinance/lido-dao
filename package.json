@@ -17,9 +17,10 @@
     "lint": "pnpm lint:sol && pnpm lint:ts",
     "format": "prettier . --write --ignore-path .gitignore --ignore-path .prettierignore",
     "test": "pnpm hardhat test --parallel",
+    "test:single": "pnpm hardhat test",
     "test:coverage": "pnpm hardhat coverage",
     "test:trace": "pnpm hardhat test --trace",
-    "watch:test": "pnpm hardhat watch test",
+    "test:watch": "pnpm hardhat watch test",
     "type:check": "tsc --noEmit",
     "prepare": "husky install"
   },
