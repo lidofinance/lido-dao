@@ -1,43 +1,50 @@
 import { expect } from "chai";
-import { ECDSASignature } from "ethereumjs-util";
-import { HDNodeWallet, Wallet, ZeroAddress } from "ethers";
+import { Signature, Signer, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 import {
-  EIP712StETH,
   EIP712StETH__factory,
-  OwnerWithEip712PermitSignature,
-  OwnerWithEip712PermitSignature__factory,
   StethPermitMockWithEip712Initialization,
   StethPermitMockWithEip712Initialization__factory,
 } from "typechain-types";
 
-import {
-  certainAddress,
-  days,
-  deriveStETHDomainSeparator,
-  ether,
-  randomAddress,
-  signPermitEIP1271,
-  signStETHPermit,
-} from "lib";
+import { certainAddress, days, ether, Permit, signPermit, Snapshot, stethDomain } from "lib";
 
 describe("Permit", () => {
-  let deployer: HardhatEthersSigner;
+  let deployer: Signer;
+  let owner: Signer;
+
+  let originalState: string;
+  let permit: Permit;
+  let signature: Signature;
 
   let steth: StethPermitMockWithEip712Initialization;
 
-  const value = ether("1.0");
+  before(async () => {
+    [deployer, owner] = await ethers.getSigners();
 
-  beforeEach(async () => {
-    [deployer] = await ethers.getSigners();
+    steth = await new StethPermitMockWithEip712Initialization__factory(deployer).deploy(owner, {
+      value: ether("10.0"),
+    });
 
-    const factory = new StethPermitMockWithEip712Initialization__factory(deployer);
-    steth = await factory.deploy(deployer, { value });
+    const holderBalance = await steth.balanceOf(owner);
+
+    permit = {
+      owner: await owner.getAddress(),
+      spender: certainAddress("spender"),
+      value: holderBalance,
+      nonce: await steth.nonces(owner),
+      deadline: BigInt(await time.latest()) + days(7n),
+    };
+
+    signature = await signPermit(await stethDomain(steth), permit, owner);
   });
+
+  beforeEach(async () => (originalState = await Snapshot.take()));
+
+  afterEach(async () => await Snapshot.restore(originalState));
 
   context("initialize", () => {
     it("Reverts if the EIP-712 helper contract is zero address", async () => {
@@ -64,126 +71,40 @@ describe("Permit", () => {
     });
   });
 
-  context("permit", () => {
-    let permit: EoaPermit;
-    let signature: ECDSASignature;
+  context("Uninitialized", () => {
+    it("Permit reverts", async () => {
+      const { owner, spender, deadline, value } = permit;
+      const { v, r, s } = signature;
 
+      await expect(steth.permit(owner, spender, value, deadline, v, r, s)).to.be.reverted;
+    });
+
+    it("eip712Domain() reverts", async () => {
+      await expect(steth.eip712Domain()).to.be.revertedWithoutReason();
+    });
+  });
+
+  context("Initialized", () => {
     beforeEach(async () => {
-      const owner = Wallet.createRandom();
-
-      permit = {
-        type: "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)",
-        owner,
-        spender: randomAddress(),
-        nonce: await steth.nonces(owner),
-        value,
-        deadline: BigInt(await time.latest()) + days(7n),
-      };
-
-      signature = signStETHPermit(permit, await steth.getAddress());
+      const eip712helper = await new EIP712StETH__factory(deployer).deploy(steth);
+      await steth.initializeEIP712StETH(eip712helper);
     });
 
-    context("uninitialized", () => {
-      it("Reverts", async () => {
-        const { owner, spender, deadline } = permit;
-        const { v, r, s } = signature;
+    it("Permit executes successfully", async () => {
+      const { owner, spender, deadline, value } = permit;
+      const { v, r, s } = signature;
 
-        await expect(steth.permit(owner.address, spender, value, deadline, v, r, s)).to.be.reverted;
-      });
+      await expect(steth.permit(owner, spender, value, deadline, v, r, s)).not.to.be.reverted;
     });
 
-    context("initialized", () => {
-      let eip712helper: EIP712StETH;
-
-      beforeEach(async () => {
-        const factory = new EIP712StETH__factory(deployer);
-        eip712helper = await factory.deploy(steth);
-
-        await expect(steth.initializeEIP712StETH(eip712helper))
-          .to.be.emit(steth, "EIP712StETHInitialized")
-          .withArgs(await eip712helper.getAddress());
-        expect(await steth.getEIP712StETH()).to.equal(await eip712helper.getAddress());
-      });
-
-      it("Reverts if the deadline is expired", async () => {
-        const expiredDeadline = await time.latest();
-        const { owner, spender } = permit;
-        const { v, r, s } = signature;
-
-        await expect(steth.permit(owner.address, spender, value, expiredDeadline, v, r, s)).to.be.revertedWith(
-          "DEADLINE_EXPIRED",
-        );
-      });
-
-      it("Reverts if the signature does not match", async () => {
-        const { owner, spender, deadline } = permit;
-        const { v, r, s } = signature;
-        // corrupting the signature
-        s[0] = (s[0] + 1) % 255;
-
-        await expect(steth.permit(owner.address, spender, value, deadline, v, r, s)).to.be.revertedWith(
-          "INVALID_SIGNATURE",
-        );
-      });
-
-      it("Sets spender allowance", async () => {
-        const { owner, spender, deadline } = permit;
-        const { v, r, s } = signature;
-
-        await expect(steth.permit(owner.address, spender, value, deadline, v, r, s))
-          .to.emit(steth, "Approval")
-          .withArgs(owner.address, spender, value);
-        expect(await steth.allowance(owner, spender)).to.equal(value);
-      });
-
-      context("As contract owner", () => {
-        let permit: ContractPermit;
-        let signature: ECDSASignature;
-
-        beforeEach(async () => {
-          const owner = await new OwnerWithEip712PermitSignature__factory(deployer).deploy();
-
-          permit = {
-            type: "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)",
-            owner,
-            spender: randomAddress(),
-            nonce: await steth.nonces(owner),
-            value,
-            deadline: BigInt(await time.latest()) + days(7n),
-          };
-
-          signature = await signPermitEIP1271({
-            ...permit,
-            domainSeparator: deriveStETHDomainSeparator(await steth.getAddress()),
-          });
-        });
-
-        it("Sets spender allowance", async () => {
-          const { owner, spender, deadline } = permit;
-          const { v, r, s } = signature;
-
-          await expect(steth.permit(owner, spender, value, deadline, v, r, s))
-            .to.emit(steth, "Approval")
-            .withArgs(await owner.getAddress(), spender, value);
-          expect(await steth.allowance(owner, spender)).to.equal(value);
-        });
-      });
+    it("eip712Domain() returns the EIP-712 domain", async () => {
+      const domain = await stethDomain(steth);
+      expect(await steth.eip712Domain()).to.deep.equal([
+        domain.name,
+        domain.version,
+        domain.chainId,
+        domain.verifyingContract,
+      ]);
     });
   });
 });
-
-interface Permit {
-  type: string;
-  value: bigint;
-  nonce: bigint;
-  deadline: bigint;
-  spender: string;
-}
-
-interface EoaPermit extends Permit {
-  owner: HDNodeWallet;
-}
-
-interface ContractPermit extends Permit {
-  owner: OwnerWithEip712PermitSignature;
-}

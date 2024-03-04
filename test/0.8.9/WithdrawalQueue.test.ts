@@ -18,8 +18,6 @@ import {
   randomAddress,
   shareRate,
   shares,
-  signStETHPermit,
-  signWstETHPermit,
   Snapshot,
   streccak,
   WITHDRAWAL_MAX_STETH_WITHDRAWAL_AMOUNT,
@@ -30,14 +28,6 @@ import { ether } from "../../lib/units";
 
 const ZERO = 0n;
 
-interface Permit {
-  deadline: bigint;
-  value: bigint;
-  v: number;
-  r: Buffer;
-  s: Buffer;
-}
-
 const BUNKER_MODE_DISABLED_TIMESTAMP = MAX_UINT256;
 const PETRIFIED_VERSION = MAX_UINT256;
 
@@ -45,6 +35,14 @@ const FINALIZE_ROLE = streccak("FINALIZE_ROLE");
 const ORACLE_ROLE = streccak("ORACLE_ROLE");
 const PAUSE_ROLE = streccak("PAUSE_ROLE");
 const RESUME_ROLE = streccak("RESUME_ROLE");
+
+const DEFAULT_PERMIT = {
+  deadline: MAX_UINT256,
+  value: 0,
+  v: 0,
+  r: Buffer.alloc(32),
+  s: Buffer.alloc(32),
+};
 
 describe("WithdrawalQueue", () => {
   let aliceWallet: HDNodeWallet;
@@ -65,8 +63,6 @@ describe("WithdrawalQueue", () => {
   let queueAddress: string;
 
   let originalState: string;
-
-  const deadline = MAX_UINT256;
 
   beforeEach(async () => {
     [owner, stranger, user, oracle] = await ethers.getSigners();
@@ -274,8 +270,8 @@ describe("WithdrawalQueue", () => {
 
     context("requestWithdrawals", () => {
       beforeEach(async () => {
-        await stEth.setTotalPooledEther(ether("600.00"));
-        await stEth.mintShares(user, shares(300n));
+        await stEth.mockSetTotalPooledEther(ether("600.00"));
+        await stEth.exposedMintShares(user, shares(300n));
         await stEth.connect(user).approve(queueAddress, ether("300.00"));
       });
 
@@ -347,10 +343,10 @@ describe("WithdrawalQueue", () => {
 
     context("requestWithdrawalsWstETH", () => {
       beforeEach(async () => {
-        await stEth.setTotalPooledEther(ether("600.00"));
-        await stEth.mintShares(wstEthAddress, shares(100n));
-        await stEth.mintShares(user, shares(100n));
-        await wstEth.mint(user, ether("100.00"));
+        await stEth.mockSetTotalPooledEther(ether("600.00"));
+        await stEth.exposedMintShares(wstEthAddress, shares(100n));
+        await stEth.exposedMintShares(user, shares(100n));
+        await wstEth.exposedMint(user, ether("100.00"));
         await wstEth.connect(user).approve(queueAddress, ether("300.00"));
       });
 
@@ -418,19 +414,15 @@ describe("WithdrawalQueue", () => {
       const requests = Array(requestsCount).fill(requestSize);
       const amount = BigInt(requestsCount) * requestSize;
 
-      let permit: Permit;
+      const permit = {
+        ...DEFAULT_PERMIT,
+        value: amount,
+      };
 
       beforeEach(async () => {
-        await stEth.setTotalPooledEther(ether("100.00"));
-        await stEth.mintShares(alice, shares(100n));
+        await stEth.mockSetTotalPooledEther(ether("100.00"));
+        await stEth.exposedMintShares(alice, shares(100n));
         await stEth.connect(alice).approve(queueAddress, ether("100.00"));
-
-        const type = "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)";
-
-        const options = { type, owner: aliceWallet, spender: owner.address, value: amount, nonce: 1n, deadline };
-        const { v, r, s } = signStETHPermit(options, stEthAddress);
-
-        permit = { deadline: MAX_UINT256, value: amount, v, r, s };
       });
 
       it("Reverts if the contract is paused", async () => {
@@ -442,7 +434,7 @@ describe("WithdrawalQueue", () => {
       });
 
       it("Reverts bad permit with `INVALID_SIGNATURE`", async () => {
-        await stEth.mock__setIsSignatureValid(false);
+        await stEth.workaroundSetIsSignatureValid(false);
 
         await expect(queue.connect(alice).requestWithdrawalsWithPermit(requests, owner, permit)).to.be.revertedWith(
           "INVALID_SIGNATURE",
@@ -485,23 +477,15 @@ describe("WithdrawalQueue", () => {
       const requestSize = ether("10.00");
       const requests = Array(requestsCount).fill(requestSize);
       const amount = BigInt(requestsCount) * requestSize * 10n;
-
-      let permit: Permit;
+      const permit = { ...DEFAULT_PERMIT, value: amount };
 
       beforeEach(async () => {
-        await stEth.setTotalPooledEther(ether("200.00"));
-        await stEth.mintShares(wstEthAddress, shares(100n));
-        await stEth.mintShares(alice, shares(100n));
+        await stEth.mockSetTotalPooledEther(ether("200.00"));
+        await stEth.exposedMintShares(wstEthAddress, shares(100n));
+        await stEth.exposedMintShares(alice, shares(100n));
 
-        await wstEth.mint(alice, ether("100.00"));
+        await wstEth.exposedMint(alice, ether("100.00"));
         await wstEth.connect(alice).approve(queueAddress, ether("300.00"));
-
-        const type = "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)";
-
-        const options = { type, owner: aliceWallet, spender: owner.address, value: amount, nonce: 1n, deadline };
-        const { v, r, s } = signWstETHPermit(options, stEthAddress);
-
-        permit = { deadline: MAX_UINT256, value: amount, v, r, s };
       });
 
       it("Reverts if the contract is paused", async () => {
@@ -513,7 +497,7 @@ describe("WithdrawalQueue", () => {
       });
 
       it("Reverts bad permit with `ERC20Permit: invalid signature`", async () => {
-        await wstEth.mock__setIsSignatureValid(false);
+        await wstEth.workaroundSetIsSignatureValid(false);
 
         await expect(
           queue.connect(alice).requestWithdrawalsWstETHWithPermit(requests, owner, permit),
@@ -555,8 +539,8 @@ describe("WithdrawalQueue", () => {
 
     context("getWithdrawalRequests", () => {
       beforeEach(async () => {
-        await stEth.setTotalPooledEther(ether("1000.00"));
-        await stEth.mintShares(user, shares(300n));
+        await stEth.mockSetTotalPooledEther(ether("1000.00"));
+        await stEth.exposedMintShares(user, shares(300n));
         await stEth.connect(user).approve(queueAddress, ether("300.00"));
       });
 
@@ -573,10 +557,10 @@ describe("WithdrawalQueue", () => {
 
     context("getWithdrawalStatus", () => {
       beforeEach(async () => {
-        await stEth.setTotalPooledEther(ether("1000.00"));
+        await stEth.mockSetTotalPooledEther(ether("1000.00"));
         await setBalance(stEthAddress, ether("1001.00"));
 
-        await stEth.mintShares(user, shares(300n));
+        await stEth.exposedMintShares(user, shares(300n));
         await stEth.connect(user).approve(queueAddress, ether("300.00"));
       });
 
@@ -619,8 +603,8 @@ describe("WithdrawalQueue", () => {
       await queue.grantRole(await queue.RESUME_ROLE(), owner);
       await queue.resume();
 
-      await stEth.setTotalPooledEther(ether("300.00"));
-      await stEth.mintShares(user, shares(300n));
+      await stEth.mockSetTotalPooledEther(ether("300.00"));
+      await stEth.exposedMintShares(user, shares(300n));
       await stEth.connect(user).approve(queueAddress, ether("300.00"));
 
       await queue.connect(user).requestWithdrawals(amounts, stranger);

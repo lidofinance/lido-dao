@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 // for testing purposes only
 
@@ -28,6 +28,7 @@ contract WithdrawalsQueueHarness is WithdrawalQueue {
     _finalize(_lastRequestIdToBeFinalized, msg.value, _maxShareRate);
   }
 
+  // Implementing the virtual function from WithdrawalQueue
   function _emitTransfer(address _from, address _to, uint256 _requestId) internal override {
     emit Mock__Transfer(_from, _to, _requestId);
   }

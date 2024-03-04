@@ -1,56 +1,45 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 // for testing purposes only
 
 pragma solidity 0.8.9;
 
-import {IERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
-import {IERC20Permit} from "@openzeppelin/contracts-v4.4/token/ERC20/extensions/draft-IERC20Permit.sol";
-import {ERC20} from "@openzeppelin/contracts-v4.4/token/ERC20/ERC20.sol";
-import {ERC20Permit} from "@openzeppelin/contracts-v4.4/token/ERC20/extensions/draft-ERC20Permit.sol";
+import {Counters} from "test/0.8.9/contracts/Counters.sol";
+import {IStETH} from "test/0.8.9/contracts/StETH__MockForWithdrawalQueue.sol";
 
-interface IStETH is IERC20, IERC20Permit {
-  function getPooledEthByShares(uint256 _stETHAmount) external view returns (uint256);
-}
-
-contract WstETH__MockForWithdrawalQueue is ERC20 {
+contract WstETH__MockForWithdrawalQueue {
+  using Counters for Counters.Counter;
 
   IStETH public stETH;
 
   mapping (address => uint256) private _balances;
 
+  mapping (address => mapping (address => uint256)) private _allowances;
+
   uint256 private _totalSupply;
 
-  mapping (address => uint256) internal noncesByAddress;
+  mapping (address => Counters.Counter) private _nonces;
 
-  bool internal mock__isSignatureValid = true;
+  bool internal isSignatureValid = true;
 
-  constructor(IStETH _stETH) ERC20("Wrapped liquid staked Ether 2.0", "wstETH") {
+  constructor(IStETH _stETH) {
     stETH = _stETH;
   }
 
-  // IERC20 implementation
+  // openzeppelin/contracts/token/ERC20/IERC20.sol
+  event Transfer(address indexed from, address indexed to, uint256 value);
 
-  function approve(address spender, uint256 amount) public override returns (bool) {
-    _approve(msg.sender, spender, amount);
-    return true;
-  }
+  // openzeppelin/contracts/token/ERC20/IERC20.sol
+  event Approval(address indexed owner, address indexed spender, uint256 value);
 
-  function transfer(address recipient, uint256 amount) public override returns (bool) {
-    _transfer(msg.sender, recipient, amount);
-    return true;
-  }
+  // WstEth interface implementations
 
-  // WithdrawalQueue tests callables
-
-  function mint(address _recipient, uint256 _amount) public {
-    _mint(_recipient, _amount);
-  }
-
+  // WstETH::getStETHByWstETH
   function getStETHByWstETH(uint256 _wstETHAmount) external view returns (uint256) {
     return stETH.getPooledEthByShares(_wstETHAmount);
   }
 
+  // WstETH::unwrap
   function unwrap(uint256 _wstETHAmount) external returns (uint256) {
     require(_wstETHAmount > 0, "wstETH: zero amount unwrap not allowed");
     uint256 stETHAmount = stETH.getPooledEthByShares(_wstETHAmount);
@@ -59,24 +48,88 @@ contract WstETH__MockForWithdrawalQueue is ERC20 {
     return stETHAmount;
   }
 
-  function nonces(address owner) external view returns (uint256) {
-    return noncesByAddress[owner];
+  // openzeppelin/contracts/token/ERC20/ERC20.sol
+  function approve(address spender, uint256 amount) public returns (bool) {
+    _approve(msg.sender, spender, amount);
+    return true;
   }
 
-  /**
-   * @dev See {ERC20Permit-permit}.
-   */
+  // openzeppelin/contracts/token/ERC20/ERC20.sol
+  function transferFrom(address sender, address recipient, uint256 amount) public virtual returns (bool) {
+    _transfer(sender, recipient, amount);
+    require(amount <= _allowances[sender][msg.sender], "ERC20: transfer amount exceeds allowance");
+    _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount);
+    return true;
+  }
+
+  // @dev Overrides the actual permit function to allow for testing without signatures based on `isSignatureValid` flag.
+  // openzeppelin/contracts/drafts/ERC20Permit.sol
   function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external {
     require(block.timestamp <= deadline, "ERC20Permit: expired deadline");
-    require(mock__isSignatureValid, "ERC20Permit: invalid signature");
+    require(isSignatureValid, "ERC20Permit: invalid signature");
 
+    _nonces[owner].increment();
     _approve(owner, spender, value);
   }
 
-  /**
-    * Switches the permit signature validation on or off.
-    */
-  function mock__setIsSignatureValid(bool _validSignature) external {
-    mock__isSignatureValid = _validSignature;
+  // Exposed functions
+
+  // openzeppelin/contracts/token/ERC20/ERC20.sol
+  function exposedMint(address _recipient, uint256 _amount) public {
+    _mint(_recipient, _amount);
+  }
+
+  // Workarounds
+
+  function workaroundSetIsSignatureValid(bool _validSignature) external {
+    isSignatureValid = _validSignature;
+  }
+
+  // Internal functions
+
+  // openzeppelin/contracts/token/ERC20/ERC20.sol
+  function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual { }
+
+  // openzeppelin/contracts/token/ERC20/ERC20.sol
+  function _mint(address account, uint256 amount) internal virtual {
+    require(account != address(0), "ERC20: mint to the zero address");
+
+    _beforeTokenTransfer(address(0), account, amount);
+
+    _totalSupply = _totalSupply + amount;
+    _balances[account] = _balances[account] + amount;
+    emit Transfer(address(0), account, amount);
+  }
+
+  // openzeppelin/contracts/token/ERC20/ERC20.sol
+  function _approve(address owner, address spender, uint256 amount) internal virtual {
+    require(owner != address(0), "ERC20: approve from the zero address");
+    require(spender != address(0), "ERC20: approve to the zero address");
+
+    _allowances[owner][spender] = amount;
+    emit Approval(owner, spender, amount);
+  }
+
+  // openzeppelin/contracts/token/ERC20/ERC20.sol
+  function _transfer(address sender, address recipient, uint256 amount) internal virtual {
+    require(sender != address(0), "ERC20: transfer from the zero address");
+    require(recipient != address(0), "ERC20: transfer to the zero address");
+
+    _beforeTokenTransfer(sender, recipient, amount);
+
+    require(_balances[sender] >= amount, "ERC20: transfer amount exceeds balance");
+    _balances[sender] = _balances[sender] - amount;
+    _balances[recipient] = _balances[recipient] + amount;
+    emit Transfer(sender, recipient, amount);
+  }
+
+  // openzeppelin/contracts/token/ERC20/ERC20.sol
+  function _burn(address account, uint256 value) internal {
+    require(account != address(0));
+    require(value <= _balances[account]);
+
+    _totalSupply = _totalSupply - value;
+    _balances[account] = _balances[account] - value;
+    emit Transfer(account, address(0), value);
   }
 }
