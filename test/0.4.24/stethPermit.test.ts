@@ -78,21 +78,33 @@ describe("Permit", () => {
 
       await expect(steth.permit(owner, spender, value, deadline, v, r, s)).to.be.reverted;
     });
+
+    it("eip712Domain() reverts", async () => {
+      await expect(steth.eip712Domain()).to.be.revertedWithoutReason();
+    });
   });
 
   context("Initialized", () => {
-    it("Permit executes successfully", async () => {
+    beforeEach(async () => {
       const eip712helper = await new EIP712StETH__factory(deployer).deploy(steth);
+      await steth.initializeEIP712StETH(eip712helper);
+    });
 
-      await expect(steth.initializeEIP712StETH(eip712helper))
-        .to.be.emit(steth, "EIP712StETHInitialized")
-        .withArgs(await eip712helper.getAddress());
-      expect(await steth.getEIP712StETH()).to.equal(await eip712helper.getAddress());
-
+    it("Permit executes successfully", async () => {
       const { owner, spender, deadline, value } = permit;
       const { v, r, s } = signature;
 
       await expect(steth.permit(owner, spender, value, deadline, v, r, s)).not.to.be.reverted;
+    });
+
+    it("eip712Domain() returns the EIP-712 domain", async () => {
+      const domain = await stethDomain(steth);
+      expect(await steth.eip712Domain()).to.deep.equal([
+        domain.name,
+        domain.version,
+        domain.chainId,
+        domain.verifyingContract,
+      ]);
     });
   });
 });
