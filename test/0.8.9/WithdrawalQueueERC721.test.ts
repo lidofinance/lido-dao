@@ -28,7 +28,6 @@ import {
   shares,
   Snapshot,
   streccak,
-  WITHDRAWAL_MANAGE_TOKEN_URI_ROLE,
   WITHDRAWAL_QUEUE_NAME,
   WITHDRAWAL_QUEUE_SYMBOL,
 } from "lib";
@@ -95,7 +94,7 @@ describe("WithdrawalQueueERC721.sol", () => {
 
   context("Constants", () => {
     it("Returns the MANAGE_TOKEN_URI_ROLE variable", async () => {
-      expect(await queue.MANAGE_TOKEN_URI_ROLE()).to.equal(WITHDRAWAL_MANAGE_TOKEN_URI_ROLE);
+      expect(await queue.MANAGE_TOKEN_URI_ROLE()).to.equal(MANAGE_TOKEN_URI_ROLE);
     });
   });
 
@@ -574,7 +573,7 @@ describe("WithdrawalQueueERC721.sol", () => {
         ).revertedWith("ERC721_NOT_ACCEPT_TOKENS");
       });
 
-      it("Revets when transfer to IERC721 receiver that returns not selector", async () => {
+      it("Reverts when transfer to IERC721 receiver that returns not selector", async () => {
         await erc721ReceiverContract.setDoesAcceptTokens(true);
         await erc721ReceiverContract.setReturnValid(false);
 

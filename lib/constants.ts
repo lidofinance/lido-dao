@@ -1,5 +1,3 @@
-import { streccak } from "./keccak";
-
 export const MAX_UINT256 = 2n ** 256n - 1n;
 export const INITIAL_STETH_HOLDER = "0x000000000000000000000000000000000000dEaD";
 
@@ -34,5 +32,3 @@ export const WITHDRAWAL_MAX_BATCHES_LENGTH = 36n;
 
 export const WITHDRAWAL_MIN_STETH_WITHDRAWAL_AMOUNT = 100n;
 export const WITHDRAWAL_MAX_STETH_WITHDRAWAL_AMOUNT = 10n ** 21n; // 1000 * 1e18
-
-export const WITHDRAWAL_MANAGE_TOKEN_URI_ROLE = streccak("MANAGE_TOKEN_URI_ROLE");
