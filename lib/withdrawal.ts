@@ -11,10 +11,7 @@ import {
   WstETHMock,
 } from "typechain-types";
 
-import { ONE_ETHER, proxify } from "lib";
-
-export const QUEUE_NAME = "Lido: Withdrawal Request NFT";
-export const QUEUE_SYMBOL = "unstETH";
+import { ONE_ETHER, proxify, WITHDRAWAL_QUEUE_NAME, WITHDRAWAL_QUEUE_SYMBOL } from "lib";
 
 interface StEthDeploymentParams {
   initialStEth: bigint;
@@ -76,8 +73,8 @@ async function deployWstEthMock(stEthAddress: string) {
 
 async function deployWithdrawalQueueImpl({
   stEthSettings = { initialStEth: ONE_ETHER },
-  name = QUEUE_NAME,
-  symbol = QUEUE_SYMBOL,
+  name = WITHDRAWAL_QUEUE_NAME,
+  symbol = WITHDRAWAL_QUEUE_SYMBOL,
 }: BaseWithdrawalQueueDeploymentParams = {}) {
   const { nftDescriptor, nftDescriptorAddress } = await deployNftDescriptor();
   const { stEth, stEthAddress } = await deployStEthMock(stEthSettings);
@@ -104,8 +101,8 @@ async function deployWithdrawalQueueImpl({
 
 export async function deployWithdrawalQueue({
   stEthSettings = { initialStEth: ONE_ETHER },
-  name = QUEUE_NAME,
-  symbol = QUEUE_SYMBOL,
+  name = WITHDRAWAL_QUEUE_NAME,
+  symbol = WITHDRAWAL_QUEUE_SYMBOL,
   queueAdmin,
   queuePauser,
   queueResumer,

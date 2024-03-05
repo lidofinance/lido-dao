@@ -28,6 +28,8 @@ export const BLOCK_TIME = 12n;
 export const DEFAULT_ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 // Withdrawal Queue related constants
+export const WITHDRAWAL_QUEUE_NAME = "Lido: Withdrawal Request NFT";
+export const WITHDRAWAL_QUEUE_SYMBOL = "unstETH";
 export const WITHDRAWAL_MAX_BATCHES_LENGTH = 36n;
 
 export const WITHDRAWAL_MIN_STETH_WITHDRAWAL_AMOUNT = 100n;

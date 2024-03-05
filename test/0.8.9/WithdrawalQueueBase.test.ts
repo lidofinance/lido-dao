@@ -18,7 +18,7 @@ const buildBatchCalculationState = (...args: unknown[]) => ({
 
 const MAX_BATCHES = Number(WITHDRAWAL_MAX_BATCHES_LENGTH);
 
-describe("WithdrawalQueueBase", () => {
+describe("WithdrawalQueueBase.sol", () => {
   let owner: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;
 
