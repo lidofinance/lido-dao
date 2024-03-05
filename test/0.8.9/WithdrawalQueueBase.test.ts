@@ -618,14 +618,14 @@ describe("WithdrawalQueueBase.sol", () => {
       await queue.prefinalize([1], shareRate(1n));
       await queue.exposedFinalize(1, ether("1.00"), shareRate(1n));
 
-      const balanceBefore = await provider.getBalance(stranger.address);
+      const balanceBefore = await provider.getBalance(stranger);
       const lockedBefore = await queue.getLockedEtherAmount();
 
       await expect(queue.exposedClaim(1, 1, stranger))
         .to.emit(queue, "WithdrawalClaimed")
         .withArgs(1, owner.address, stranger.address, shares(1n));
 
-      const balanceAfter = await provider.getBalance(stranger.address);
+      const balanceAfter = await provider.getBalance(stranger);
       const lockedAfter = await queue.getLockedEtherAmount();
 
       expect(balanceAfter - balanceBefore).to.equal(ether("1.00"));

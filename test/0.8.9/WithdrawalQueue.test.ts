@@ -694,7 +694,7 @@ describe("WithdrawalQueue.sol", () => {
           queue.connect(owner).claimWithdrawalsTo(
             requests,
             hints.map((h) => h.valueOf()),
-            stranger.address,
+            stranger,
           ),
         )
           .to.emit(queue, "WithdrawalClaimed")

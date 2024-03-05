@@ -468,7 +468,7 @@ describe("WithdrawalQueueERC721.sol", () => {
     });
 
     it("Returns correct spender for approved token", async () => {
-      await queue.connect(user).approve(stranger.address, 1);
+      await queue.connect(user).approve(stranger, 1);
 
       expect(await queue.getApproved(1)).to.equal(stranger.address);
     });
@@ -476,14 +476,14 @@ describe("WithdrawalQueueERC721.sol", () => {
 
   context("setApprovalForAll", () => {
     it("Reverts if operator is the caller", async () => {
-      await expect(queue.connect(user).setApprovalForAll(user.address, true)).to.be.revertedWithCustomError(
+      await expect(queue.connect(user).setApprovalForAll(user, true)).to.be.revertedWithCustomError(
         queue,
         "ApproveToCaller",
       );
     });
 
     it("Approves operator for all tokens", async () => {
-      await expect(queue.connect(user).setApprovalForAll(stranger.address, true))
+      await expect(queue.connect(user).setApprovalForAll(stranger, true))
         .to.emit(queue, "ApprovalForAll")
         .withArgs(user.address, stranger.address, true);
     });
@@ -491,13 +491,13 @@ describe("WithdrawalQueueERC721.sol", () => {
 
   context("isApprovedForAll", () => {
     it("Returns false for non-operator", async () => {
-      expect(await queue.isApprovedForAll(user.address, stranger.address)).to.equal(false);
+      expect(await queue.isApprovedForAll(user, stranger)).to.equal(false);
     });
 
     it("Returns true for operator", async () => {
-      await queue.connect(user).setApprovalForAll(stranger.address, true);
+      await queue.connect(user).setApprovalForAll(stranger, true);
 
-      expect(await queue.isApprovedForAll(user.address, stranger.address)).to.equal(true);
+      expect(await queue.isApprovedForAll(user, stranger)).to.equal(true);
     });
   });
 
@@ -514,9 +514,7 @@ describe("WithdrawalQueueERC721.sol", () => {
       });
 
       it("Works as safeTransferFrom(address,address,uint256,bytes)", async () => {
-        await expect(
-          queue.connect(user)["safeTransferFrom(address,address,uint256)"](user.address, stranger.address, 1),
-        )
+        await expect(queue.connect(user)["safeTransferFrom(address,address,uint256)"](user, stranger, 1))
           .to.emit(queue, "Transfer")
           .withArgs(user.address, stranger.address, 1);
       });
@@ -545,9 +543,7 @@ describe("WithdrawalQueueERC721.sol", () => {
 
       it("Transfers token to user", async () => {
         await expect(
-          queue
-            .connect(user)
-            ["safeTransferFrom(address,address,uint256,bytes)"](user.address, stranger.address, 1, new Uint8Array()),
+          queue.connect(user)["safeTransferFrom(address,address,uint256,bytes)"](user, stranger, 1, new Uint8Array()),
         )
           .to.emit(queue, "Transfer")
           .withArgs(user.address, stranger.address, 1);
@@ -557,9 +553,7 @@ describe("WithdrawalQueueERC721.sol", () => {
         await expect(
           queue
             .connect(user)
-            [
-              "safeTransferFrom(address,address,uint256,bytes)"
-            ](user.address, receiverContractAddress, 1, new Uint8Array()),
+            ["safeTransferFrom(address,address,uint256,bytes)"](user, receiverContractAddress, 1, new Uint8Array()),
         )
           .revertedWithCustomError(queue, "TransferToNonIERC721Receiver")
           .withArgs(receiverContractAddress);
@@ -573,7 +567,7 @@ describe("WithdrawalQueueERC721.sol", () => {
             .connect(user)
             [
               "safeTransferFrom(address,address,uint256,bytes)"
-            ](user.address, erc721ReceiverContractAddress, 1, new Uint8Array()),
+            ](user, erc721ReceiverContractAddress, 1, new Uint8Array()),
         ).revertedWith("ERC721_NOT_ACCEPT_TOKENS");
       });
 
@@ -586,7 +580,7 @@ describe("WithdrawalQueueERC721.sol", () => {
             .connect(user)
             [
               "safeTransferFrom(address,address,uint256,bytes)"
-            ](user.address, erc721ReceiverContractAddress, 1, new Uint8Array()),
+            ](user, erc721ReceiverContractAddress, 1, new Uint8Array()),
         )
           .revertedWithCustomError(queue, "TransferToNonIERC721Receiver")
           .withArgs(erc721ReceiverContractAddress);
@@ -601,7 +595,7 @@ describe("WithdrawalQueueERC721.sol", () => {
             .connect(user)
             [
               "safeTransferFrom(address,address,uint256,bytes)"
-            ](user.address, erc721ReceiverContractAddress, 1, new Uint8Array()),
+            ](user, erc721ReceiverContractAddress, 1, new Uint8Array()),
         )
           .to.emit(queue, "Transfer")
           .withArgs(user.address, erc721ReceiverContractAddress, 1);
@@ -620,27 +614,27 @@ describe("WithdrawalQueueERC721.sol", () => {
     });
 
     it("Reverts if transfer to zero address", async () => {
-      await expect(queue.connect(user).transferFrom(user.address, ZeroAddress, 1)).to.be.revertedWithCustomError(
+      await expect(queue.connect(user).transferFrom(user, ZeroAddress, 1)).to.be.revertedWithCustomError(
         queue,
         "TransferToZeroAddress",
       );
     });
 
     it("Reverts if transfer to self", async () => {
-      await expect(queue.connect(user).transferFrom(user.address, user.address, 1)).to.be.revertedWithCustomError(
+      await expect(queue.connect(user).transferFrom(user, user, 1)).to.be.revertedWithCustomError(
         queue,
         "TransferToThemselves",
       );
     });
 
     it("Reverts if request id is 0", async () => {
-      await expect(queue.connect(user).transferFrom(user.address, stranger.address, 0))
+      await expect(queue.connect(user).transferFrom(user, stranger, 0))
         .to.be.revertedWithCustomError(queue, "InvalidRequestId")
         .withArgs(0);
     });
 
     it("Reverts if request id is out of bounds", async () => {
-      await expect(queue.connect(user).transferFrom(user.address, stranger.address, 10))
+      await expect(queue.connect(user).transferFrom(user, stranger, 10))
         .to.be.revertedWithCustomError(queue, "InvalidRequestId")
         .withArgs(10);
     });
@@ -652,19 +646,19 @@ describe("WithdrawalQueueERC721.sol", () => {
       await queue.connect(finalizer).finalize(1, shareRate(300n), { value: ether("25.00") });
       await queue.connect(user).claimWithdrawal(1);
 
-      await expect(queue.connect(user).transferFrom(user.address, stranger.address, 1))
+      await expect(queue.connect(user).transferFrom(user, stranger, 1))
         .to.be.revertedWithCustomError(queue, "RequestAlreadyClaimed")
         .withArgs(1);
     });
 
     it("Reverts if transfer from incorrect owner", async () => {
-      await expect(queue.connect(stranger).transferFrom(stranger.address, user.address, 1))
+      await expect(queue.connect(stranger).transferFrom(stranger, user, 1))
         .to.be.revertedWithCustomError(queue, "TransferFromIncorrectOwner")
         .withArgs(stranger.address, user.address);
     });
 
     it("Reverts if not owner and not approved for all", async () => {
-      await expect(queue.connect(stranger).transferFrom(user.address, stranger.address, 1))
+      await expect(queue.connect(stranger).transferFrom(user, stranger, 1))
         .to.be.revertedWithCustomError(queue, "NotOwnerOrApproved")
         .withArgs(stranger.address);
     });
