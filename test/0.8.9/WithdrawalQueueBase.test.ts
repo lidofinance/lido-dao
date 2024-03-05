@@ -18,7 +18,7 @@ const buildBatchCalculationState = (...args: unknown[]) => ({
 
 const MAX_BATCHES = Number(WITHDRAWAL_MAX_BATCHES_LENGTH);
 
-describe("WithdrawalQueueBase", () => {
+describe("WithdrawalQueueBase.sol", () => {
   let owner: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;
 
@@ -51,6 +51,12 @@ describe("WithdrawalQueueBase", () => {
   beforeEach(async () => (originalState = await Snapshot.take()));
 
   afterEach(async () => await Snapshot.restore(originalState));
+
+  context("Constants", () => {
+    it("Returns the MAX_BATCHES_LENGTH variable", async () => {
+      expect(await queue.MAX_BATCHES_LENGTH()).to.equal(WITHDRAWAL_MAX_BATCHES_LENGTH);
+    });
+  });
 
   context("getLastRequestId", () => {
     it("Returns 0 if no requests in the queue", async () => {
@@ -612,14 +618,14 @@ describe("WithdrawalQueueBase", () => {
       await queue.prefinalize([1], shareRate(1n));
       await queue.exposedFinalize(1, ether("1.00"), shareRate(1n));
 
-      const balanceBefore = await provider.getBalance(stranger.address);
+      const balanceBefore = await provider.getBalance(stranger);
       const lockedBefore = await queue.getLockedEtherAmount();
 
       await expect(queue.exposedClaim(1, 1, stranger))
         .to.emit(queue, "WithdrawalClaimed")
         .withArgs(1, owner.address, stranger.address, shares(1n));
 
-      const balanceAfter = await provider.getBalance(stranger.address);
+      const balanceAfter = await provider.getBalance(stranger);
       const lockedAfter = await queue.getLockedEtherAmount();
 
       expect(balanceAfter - balanceBefore).to.equal(ether("1.00"));

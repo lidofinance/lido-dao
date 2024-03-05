@@ -65,10 +65,9 @@ describe("PausableUtils", () => {
 
     it("Returns the duration since the contract was paused", async () => {
       await pausable.exposedPauseFor(1000n);
+      const timestamp = await time.latest();
 
-      const blockTimestamp = await time.latest();
-
-      expect(await pausable.getResumeSinceTimestamp()).to.equal(blockTimestamp + 1000);
+      expect(await pausable.getResumeSinceTimestamp()).to.equal(timestamp + 1000);
     });
   });
 
@@ -104,9 +103,9 @@ describe("PausableUtils", () => {
     });
 
     it("Pauses contract correctly and emits `Paused` event", async () => {
-      const blockTimestamp = await time.latest();
+      const timestamp = await time.latest();
 
-      await expect(pausable.exposedPauseUntil(blockTimestamp + 1000))
+      await expect(pausable.exposedPauseUntil(timestamp + 1000))
         .to.emit(pausable, "Paused")
         .withArgs(1000n);
     });

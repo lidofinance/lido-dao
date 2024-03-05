@@ -44,7 +44,7 @@ const DEFAULT_PERMIT = {
   s: Buffer.alloc(32),
 };
 
-describe("WithdrawalQueue", () => {
+describe("WithdrawalQueue.sol", () => {
   let aliceWallet: HDNodeWallet;
   let alice: HardhatEthersSigner;
 
@@ -148,7 +148,7 @@ describe("WithdrawalQueue", () => {
     });
 
     it("Sets initial properties`", async () => {
-      await queue.initialize(owner.address);
+      await queue.initialize(owner);
 
       expect(await queue.getContractVersion()).to.equal(1n, "getContractVersion");
       expect(await queue.getLastRequestId()).to.equal(ZERO, "getLastRequestId");
@@ -160,13 +160,13 @@ describe("WithdrawalQueue", () => {
     });
 
     it("Pauses the contract", async () => {
-      await queue.initialize(owner.address);
+      await queue.initialize(owner);
 
       expect(await queue.isPaused()).to.equal(true, "isPaused");
     });
 
     it("Disables bunker mode", async () => {
-      await queue.initialize(owner.address);
+      await queue.initialize(owner);
 
       const TS = await queue.BUNKER_MODE_DISABLED_TIMESTAMP();
 
@@ -181,13 +181,13 @@ describe("WithdrawalQueue", () => {
     });
 
     it("Emits `InitializedV1`", async () => {
-      await expect(queue.initialize(owner.address)).to.emit(queue, "InitializedV1").withArgs(owner.address);
+      await expect(queue.initialize(owner)).to.emit(queue, "InitializedV1").withArgs(owner.address);
     });
   });
 
   context("Pausable", () => {
     beforeEach(async () => {
-      await queue.initialize(owner.address);
+      await queue.initialize(owner);
     });
 
     context("resume", () => {
@@ -262,7 +262,7 @@ describe("WithdrawalQueue", () => {
 
   context("Withdrawal Requests", () => {
     beforeEach(async () => {
-      await queue.initialize(owner.address);
+      await queue.initialize(owner);
       await queue.grantRole(await queue.RESUME_ROLE(), owner);
       await queue.grantRole(await queue.PAUSE_ROLE(), owner);
       await queue.resume();
@@ -599,7 +599,7 @@ describe("WithdrawalQueue", () => {
     let lastCheckpointIndex: bigint;
 
     beforeEach(async () => {
-      await queue.initialize(owner.address);
+      await queue.initialize(owner);
       await queue.grantRole(await queue.RESUME_ROLE(), owner);
       await queue.resume();
 
@@ -656,7 +656,7 @@ describe("WithdrawalQueue", () => {
 
   context("Claim Withdrawals", () => {
     beforeEach(async () => {
-      await queue.initialize(owner.address);
+      await queue.initialize(owner);
       await queue.grantRole(await queue.PAUSE_ROLE(), owner);
       await queue.grantRole(await queue.RESUME_ROLE(), owner);
       await queue.resume();
@@ -694,7 +694,7 @@ describe("WithdrawalQueue", () => {
           queue.connect(owner).claimWithdrawalsTo(
             requests,
             hints.map((h) => h.valueOf()),
-            stranger.address,
+            stranger,
           ),
         )
           .to.emit(queue, "WithdrawalClaimed")
@@ -769,7 +769,7 @@ describe("WithdrawalQueue", () => {
     let lastCheckpointIndex: bigint;
 
     beforeEach(async () => {
-      await queue.initialize(owner.address);
+      await queue.initialize(owner);
       await queue.grantRole(await queue.RESUME_ROLE(), owner);
       await queue.resume();
 
@@ -796,7 +796,7 @@ describe("WithdrawalQueue", () => {
   context("Bunker Mode", () => {
     context("onOracleReport", () => {
       beforeEach(async () => {
-        await queue.initialize(owner.address);
+        await queue.initialize(owner);
         await queue.grantRole(await queue.ORACLE_ROLE(), oracle);
       });
 
