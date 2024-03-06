@@ -223,4 +223,41 @@ describe("Lido:misc", () => {
       expect(await lido.getFeeDistribution()).to.deep.equal([treasuryFee, insuranceFee, modulesFee]);
     });
   });
+
+  context("getDepositableEther", () => {
+    it("Returns the amount of ether eligible for deposits", async () => {
+      await lido.resume();
+
+      const bufferedEtherBefore = await lido.getBufferedEther();
+
+      // top up buffer
+      const deposit = ether("10.0");
+      await lido.submit(ZeroAddress, { value: deposit });
+
+      expect(await lido.getDepositableEther()).to.equal(bufferedEtherBefore + deposit);
+    });
+
+    it("Returns 0 if reserved by the buffered ether is fully reserved for withdrawals", async () => {
+      await lido.resume();
+
+      const bufferedEther = await lido.getBufferedEther();
+
+      // reserve all buffered ether for withdrawals
+      await withdrawalQueue.mock__unfinalizedStETH(bufferedEther);
+
+      expect(await lido.getDepositableEther()).to.equal(0);
+    });
+
+    it("Returns the difference if the buffered ether is partially reserved", async () => {
+      await lido.resume();
+
+      const bufferedEther = await lido.getBufferedEther();
+
+      // reserve half of buffered ether for withdrawals
+      const reservedForWithdrawals = bufferedEther / 2n;
+      await withdrawalQueue.mock__unfinalizedStETH(reservedForWithdrawals);
+
+      expect(await lido.getDepositableEther()).to.equal(bufferedEther - reservedForWithdrawals);
+    });
+  });
 });
