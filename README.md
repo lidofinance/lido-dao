@@ -53,6 +53,7 @@ Users can deposit ether to the Lido smart contract and receive stETH tokens in r
 - [Technical documentation](https://docs.lido.fi/contracts/lido)
 - [Lido addresses](https://docs.lido.fi/deployed-contracts/)
 - [Protocol levers](https://docs.lido.fi/guides/protocol-levers/)
+- [Audits](https://github.com/lidofinance/audits)
 
 ## Bug Bounty
 
