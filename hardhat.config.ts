@@ -6,9 +6,15 @@ import "@typechain/hardhat";
 
 import "solidity-coverage";
 import "tsconfig-paths/register";
+import "hardhat-tracer";
+import "hardhat-watcher";
+import "hardhat-ignore-warnings";
+import "hardhat-contract-sizer";
 import { globSync } from "glob";
 import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/task-names";
 import { HardhatUserConfig, subtask } from "hardhat/config";
+
+import { mochaRootHooks } from "./test/setup";
 
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
@@ -62,6 +68,41 @@ const config: HardhatUserConfig = {
     alwaysGenerateOverloads: false,
     externalArtifacts: ["externalArtifacts/*.json"],
     dontOverrideCompile: false,
+  },
+  watcher: {
+    test: {
+      tasks: [{ command: "test", params: { testFiles: ["{path}"] } }],
+      files: ["./test/**/*"],
+      clearOnStart: true,
+      start: "echo Running tests...",
+    },
+  },
+  mocha: {
+    rootHooks: mochaRootHooks,
+  },
+  warnings: {
+    "@aragon/**/*": {
+      default: "off",
+    },
+    "contracts/*/test_helpers/**/*": {
+      default: "off",
+    },
+    "contracts/*/mocks/**/*": {
+      default: "off",
+    },
+    "test/*/contracts/**/*": {
+      default: "off",
+    },
+    "contracts/common/interfaces/ILidoLocator.sol": {
+      default: "off",
+    },
+  },
+  contractSizer: {
+    alphaSort: false,
+    disambiguatePaths: false,
+    runOnCompile: true,
+    strict: true,
+    except: ["test_helpers", "template", "mocks", "@aragon", "openzeppelin", "test"],
   },
 };
 

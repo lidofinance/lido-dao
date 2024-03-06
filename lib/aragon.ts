@@ -10,6 +10,7 @@ import {
   Kernel,
   Kernel__factory,
   Lido__factory,
+  LidoLocator,
 } from "typechain-types";
 
 import { dummyLocator } from "./dummy";
@@ -60,9 +61,11 @@ export async function addAragonApp({ dao, name, impl, rootAccount }: CreateAddAp
 interface DeployLidoDaoArgs {
   rootAccount: HardhatEthersSigner;
   initialized: boolean;
+  locatorConfig?: Partial<LidoLocator.ConfigStruct>;
 }
 
-export async function deployLidoDao({ rootAccount, initialized }: DeployLidoDaoArgs) {
+// TODO: extract initialization from this function
+export async function deployLidoDao({ rootAccount, initialized, locatorConfig = {} }: DeployLidoDaoArgs) {
   const { dao, acl } = await createAragonDao(rootAccount);
 
   const impl = await new Lido__factory(rootAccount).deploy();
@@ -77,7 +80,7 @@ export async function deployLidoDao({ rootAccount, initialized }: DeployLidoDaoA
   const lido = Lido__factory.connect(lidoProxyAddress, rootAccount);
 
   if (initialized) {
-    const locator = await dummyLocator({ lido }, rootAccount);
+    const locator = await dummyLocator({ lido, ...locatorConfig }, rootAccount);
     const eip712steth = await new EIP712StETH__factory(rootAccount).deploy(lido);
     await lido.initialize(locator, eip712steth, { value: ether("1.0") });
   }
