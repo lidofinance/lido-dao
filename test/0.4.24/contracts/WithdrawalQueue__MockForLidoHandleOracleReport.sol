@@ -11,7 +11,6 @@ contract WithdrawalQueue__MockForLidoHandleOracleReport {
     uint256 timestamp
   );
 
-  uint256 public unfinalizedStETH;
   bool public isPaused;
 
   uint256 private ethToLock_;
@@ -46,10 +45,6 @@ contract WithdrawalQueue__MockForLidoHandleOracleReport {
   }
 
   // test helpers
-
-  function mock__unfinalizedStETH(uint256 amount) external {
-    unfinalizedStETH = amount;
-  }
 
   function mock__isPaused(bool paused) external {
     isPaused = paused;
