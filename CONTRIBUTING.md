@@ -1,4 +1,4 @@
-# Contribution Guide
+# Lido Contribution Guide
 
 Welcome to the Lido Contribution Guide! Thank you for your interest in contributing to Lido! Join our community of contributors who are passionate about advancing liquid staking. Whether you're fixing a bug, adding a new feature, or improving the documentation, your contribution is valuable and your effort to make Lido better is appreciated.
 
@@ -111,4 +111,4 @@ All configuration files are located in the root of the project.
 
 ## Code of Conduct
 
-Please refer to the Lido [Code of Conduct](/CODE_OF_CONDUCT.md).
+Please refer to the [Lido Contributor Code of Conduct](/CODE_OF_CONDUCT.md).

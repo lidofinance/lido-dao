@@ -61,7 +61,11 @@ At the moment, the [Lido bug bounty program](https://immunefi.com/bounty/lido/) 
 
 ## Contributing
 
-Please refer to the [contribution guide](/CONTRIBUTING.md).
+Please refer to the [Lido Contribution Guide](/CONTRIBUTING.md).
+
+## Code of Conduct
+
+Please refer to the [Lido Contributor Code of Conduct](/CODE_OF_CONDUCT.md).
 
 ## License
 
