@@ -14,6 +14,23 @@ This repository is the modernized iteration of the outdated [`lido-dao` reposito
     <img alt="Lido on Ethereum Logo" src="./docs/assets/lido.png" width="500"/>
 </div>
 
+<div style="text-align: end;">
+    <img alt="Lido" src="https://img.shields.io/badge/v2-version?label=lido&labelColor=rgb(91%2C%20162%2C%20252)&color=white"/>
+    <img alt="GitHub license" src="https://img.shields.io/github/license/lidofinance/lido-dao?labelColor=orange&color=white"/>
+    <br/>
+    <img alt="Solidity" src="https://img.shields.io/badge/multiver-s?style=flat&label=solidity&labelColor=rgb(86%2C%2085%2C%20212)&color=white"/>
+    <img alt="Aragon OS" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Flidofinance%2Fcore%2Fmaster%2Fpackage.json&query=%24.dependencies%5B'%40aragon%2Fos'%5D&style=flat&label=aragon%2Fos&labelColor=rgb(70%2C%20100%2C%20246)&color=white"/>
+    <br/>
+    <img alt="Node.js" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Flidofinance%2Fcore%2Fmaster%2Fpackage.json&query=%24.engines.node&style=flat&label=node.js&labelColor=rgb(62%2C%20109%2C%2026)&color=white"/>
+    <img alt="TypeScript" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Flidofinance%2Fcore%2Fmaster%2Fpackage.json&query=%24.devDependencies.typescript&style=flat&label=typescript&labelColor=rgb(78%2C%20119%2C%20194)&color=white" />
+    <img alt="Hardhat" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Flidofinance%2Fcore%2Fmaster%2Fpackage.json&query=%24.devDependencies.hardhat&style=flat&label=hardhat&labelColor=rgb(251%2C%20240%2C%2056)&color=white" />
+    <img alt="Ethers" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Flidofinance%2Fcore%2Fmaster%2Fpackage.json&query=%24.devDependencies.ethers&style=flat&label=ethers&labelColor=rgb(51%2C%2077%2C%20121)&color=white" />
+    <br/>
+    <img alt="GitHub tests" src="https://img.shields.io/github/actions/workflow/status/lidofinance/core/tests.yml?label=tests">
+    <img alt="GitHub linters" src="https://img.shields.io/github/actions/workflow/status/lidofinance/core/linters.yml?label=linters">
+    <img alt="GitHub linters" src="https://img.shields.io/github/actions/workflow/status/lidofinance/core/analyse.yml?label=code analysis">
+</div>
+
 **Lido on Ethereum** is a liquid-staking protocol allowing anyone to earn staking rewards without locking ether or maintaining infrastructure.
 
 Users can deposit ether to the Lido smart contract and receive stETH tokens in return. The smart contract then stakes tokens with the DAO-picked node operators. Users' deposited funds are pooled by the DAO, and node operators never have direct access to the users' assets. Unlike staked ether, the stETH token is free from the limitations associated with a lack of liquidity, and can be transferred at any time. The stETH token balance corresponds to the amount of ether that the holder could request to withdraw.
