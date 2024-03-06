@@ -1,10 +1,28 @@
+## Disclaimer: WIP!
+
+This repository is currently a **work-in-progress**.
+
+This repository is the modernized iteration of the outdated [`lido-dao` repository](https://github.com/lidofinance/lido-dao). Significant efforts were undertaken to update the tooling and infrastructure to align with current standards and best practices. As part of this modernization process:
+
+- the codebase has been transitioned from JavaScript to TypeScript to leverage TypeScript's robust type-checking and scalability features;
+- the test suite was revamped and restructured to ensure consistent approach and comprehensive testing coverage;
+- project dependencies such as Hardhat, ethers and others were upgraded to their modern versions to improve performance and compatibility, and more.
+
+---
+
 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
     <img alt="Lido on Ethereum Logo" src="./docs/assets/lido.png" width="500"/>
 </div>
 
 **Lido on Ethereum** is a liquid-staking protocol allowing anyone to earn staking rewards without locking ether or maintaining infrastructure.
 
-Key features:
+Users can deposit ether to the Lido smart contract and receive stETH tokens in return. The smart contract then stakes tokens with the DAO-picked node operators. Users' deposited funds are pooled by the DAO, and node operators never have direct access to the users' assets. Unlike staked ether, the stETH token is free from the limitations associated with a lack of liquidity, and can be transferred at any time. The stETH token balance corresponds to the amount of ether that the holder could request to withdraw.
+
+**NB:** It's advised to read [Documentation](https://docs.lido.fi/) before getting started with this repo.
+
+---
+
+### Key features
 
 - No minimum deposit amount,
 - Instant rewards within 24 hours of deposit,
@@ -12,45 +30,26 @@ Key features:
 - In-protocol automated withdrawals,
 - Governed by Lido DAO.
 
-Learn more:
+---
 
-- [Lido DAO](https://docs.lido.fi/lido-dao)
-- [Contracts](https://docs.lido.fi/contracts/lido)
-- [Addresses](https://docs.lido.fi/deployed-contracts/)
+### Learn more
+
+- [Lido DAO governance](https://docs.lido.fi/lido-dao)
+- [Technical documentation](https://docs.lido.fi/contracts/lido)
+- [Lido addresses](https://docs.lido.fi/deployed-contracts/)
 - [Protocol levers](https://docs.lido.fi/guides/protocol-levers/)
 
-## Development
+## Bug Bounty
 
-**NB:** Please read [Documentation](https://docs.lido.fi/) before getting started.
+At the moment, the [Lido bug bounty program](https://immunefi.com/bounty/lido/) covers only the contracts in the [Lido DAO repository](https://github.com/lidofinance/lido-dao). Once the work on this repository is finished, the bug bounty program will be updated.
 
-### Requirements
+## Contributing
 
-- Shell - bash or zsh
-- [Node.js v20](https://nodejs.org/en)
-- [Pnpm](https://pnpm.io/)
-- [Foundry](https://book.getfoundry.sh/)
+Please refer to the [contribution guide](/CONTRIBUTING.md).
 
-### Setup
+## License
 
-> Installation is local and doesn't require root privileges.
-
-Install dependencies
-
-```bash
-pnpm install
-```
-
-### Test
-
-Run tests
-
-```bash
-pnpm test
-```
-
-# License
-
-2023 Lido <info@lido.fi>
+2024 Lido <info@lido.fi>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
