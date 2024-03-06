@@ -108,3 +108,7 @@ There have been issues with IDEs failing to properly index this directory result
 ### Config files
 
 All configuration files are located in the root of the project.
+
+## Code of Conduct
+
+Please refer to the Lido [Code of Conduct](/CODE_OF_CONDUCT.md).
