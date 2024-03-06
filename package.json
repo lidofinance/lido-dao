@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "description": "Lido core protocol",
   "main": "index.js",
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "engines": {
     "node": ">=20",
     "pnpm": ">=8"
