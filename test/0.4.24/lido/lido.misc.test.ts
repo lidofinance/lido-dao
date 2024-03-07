@@ -9,8 +9,8 @@ import {
   Lido,
   LidoLocator,
   LidoLocator__factory,
-  StakingRouterMinimalApiForLido,
-  StakingRouterMinimalApiForLido__factory,
+  StakingRouter__MockForLidoMisc,
+  StakingRouter__MockForLidoMisc__factory,
   WithdrawalQueue__MockForLidoMisc,
   WithdrawalQueue__MockForLidoMisc__factory,
 } from "typechain-types";
@@ -23,21 +23,22 @@ describe("Lido:misc", () => {
   let stranger: HardhatEthersSigner;
   let elRewardsVault: HardhatEthersSigner;
   let withdrawalsVault: HardhatEthersSigner;
+  let depositSecurityModule: HardhatEthersSigner;
 
   let lido: Lido;
   let acl: ACL;
   let locator: LidoLocator;
   let withdrawalQueue: WithdrawalQueue__MockForLidoMisc;
-  let stakingRouter: StakingRouterMinimalApiForLido;
+  let stakingRouter: StakingRouter__MockForLidoMisc;
 
   const elRewardsVaultBalance = ether("100.0");
   const withdrawalsVaultBalance = ether("100.0");
 
   beforeEach(async () => {
-    [deployer, user, stranger] = await ethers.getSigners();
+    [deployer, user, stranger, depositSecurityModule] = await ethers.getSigners();
 
     withdrawalQueue = await new WithdrawalQueue__MockForLidoMisc__factory(deployer).deploy();
-    stakingRouter = await new StakingRouterMinimalApiForLido__factory(deployer).deploy();
+    stakingRouter = await new StakingRouter__MockForLidoMisc__factory(deployer).deploy();
 
     ({ lido, acl } = await deployLidoDao({
       rootAccount: deployer,
@@ -45,6 +46,7 @@ describe("Lido:misc", () => {
       locatorConfig: {
         withdrawalQueue,
         stakingRouter,
+        depositSecurityModule,
       },
     }));
 
@@ -221,6 +223,136 @@ describe("Lido:misc", () => {
       modulesFee = (modulesFee * totalBasisPoints) / totalFee;
 
       expect(await lido.getFeeDistribution()).to.deep.equal([treasuryFee, insuranceFee, modulesFee]);
+    });
+  });
+
+  context("getDepositableEther", () => {
+    it("Returns the amount of ether eligible for deposits", async () => {
+      await lido.resume();
+
+      const bufferedEtherBefore = await lido.getBufferedEther();
+
+      // top up buffer
+      const deposit = ether("10.0");
+      await lido.submit(ZeroAddress, { value: deposit });
+
+      expect(await lido.getDepositableEther()).to.equal(bufferedEtherBefore + deposit);
+    });
+
+    it("Returns 0 if reserved by the buffered ether is fully reserved for withdrawals", async () => {
+      await lido.resume();
+
+      const bufferedEther = await lido.getBufferedEther();
+
+      // reserve all buffered ether for withdrawals
+      await withdrawalQueue.mock__unfinalizedStETH(bufferedEther);
+
+      expect(await lido.getDepositableEther()).to.equal(0);
+    });
+
+    it("Returns the difference if the buffered ether is partially reserved", async () => {
+      await lido.resume();
+
+      const bufferedEther = await lido.getBufferedEther();
+
+      // reserve half of buffered ether for withdrawals
+      const reservedForWithdrawals = bufferedEther / 2n;
+      await withdrawalQueue.mock__unfinalizedStETH(reservedForWithdrawals);
+
+      expect(await lido.getDepositableEther()).to.equal(bufferedEther - reservedForWithdrawals);
+    });
+  });
+
+  context("deposit", () => {
+    const maxDepositsCount = 100n;
+    const stakingModuleId = 1n;
+    const depositCalldata = new Uint8Array();
+
+    beforeEach(async () => {
+      await lido.resume();
+      lido = lido.connect(depositSecurityModule);
+    });
+
+    it("Reverts if the caller is not `DepositSecurityModule`", async () => {
+      lido = lido.connect(stranger);
+
+      await expect(lido.deposit(maxDepositsCount, stakingModuleId, depositCalldata)).to.be.revertedWith(
+        "APP_AUTH_DSM_FAILED",
+      );
+    });
+
+    it("Reverts if the contract is stopped", async () => {
+      await lido.connect(user).stop();
+
+      await expect(lido.deposit(maxDepositsCount, stakingModuleId, depositCalldata)).to.be.revertedWith(
+        "CAN_NOT_DEPOSIT",
+      );
+    });
+
+    it("Emits `Unbuffered` and `DepositedValidatorsChanged` events if there are deposits", async () => {
+      const oneDepositWorthOfEther = ether("32.0");
+      // top up Lido buffer enough for 1 deposit of 32 ether
+      await lido.submit(ZeroAddress, { value: oneDepositWorthOfEther });
+
+      expect(await lido.getDepositableEther()).to.be.greaterThanOrEqual(oneDepositWorthOfEther);
+
+      // mock StakingRouter.getStakingModuleMaxDepositsCount returning 1 deposit
+      await stakingRouter.mock__getStakingModuleMaxDepositsCount(1);
+
+      const beforeDeposit = await batch({
+        lidoBalance: ethers.provider.getBalance(lido),
+        stakingRouterBalance: ethers.provider.getBalance(stakingRouter),
+        beaconStat: lido.getBeaconStat(),
+      });
+
+      await expect(lido.deposit(maxDepositsCount, stakingModuleId, depositCalldata))
+        .to.emit(lido, "Unbuffered")
+        .withArgs(oneDepositWorthOfEther)
+        .and.to.emit(lido, "DepositedValidatorsChanged")
+        .withArgs(beforeDeposit.beaconStat.depositedValidators + 1n)
+        .and.to.emit(stakingRouter, "Mock__DepositCalled");
+
+      const afterDeposit = await batch({
+        lidoBalance: ethers.provider.getBalance(lido),
+        stakingRouterBalance: ethers.provider.getBalance(stakingRouter),
+        beaconStat: lido.getBeaconStat(),
+      });
+
+      expect(afterDeposit.beaconStat.depositedValidators).to.equal(beforeDeposit.beaconStat.depositedValidators + 1n);
+      expect(afterDeposit.lidoBalance).to.equal(beforeDeposit.lidoBalance - oneDepositWorthOfEther);
+      expect(afterDeposit.stakingRouterBalance).to.equal(beforeDeposit.stakingRouterBalance + oneDepositWorthOfEther);
+    });
+
+    it("Does not emit `Unbuffered` and `DepositedValidatorsChanged` events if the staking module cannot accomodate new deposit", async () => {
+      const oneDepositWorthOfEther = ether("32.0");
+      // top up Lido buffer enough for 1 deposit of 32 ether
+      await lido.submit(ZeroAddress, { value: oneDepositWorthOfEther });
+
+      expect(await lido.getDepositableEther()).to.be.greaterThanOrEqual(oneDepositWorthOfEther);
+
+      // mock StakingRouter.getStakingModuleMaxDepositsCount returning 1 deposit
+      await stakingRouter.mock__getStakingModuleMaxDepositsCount(0);
+
+      const beforeDeposit = await batch({
+        lidoBalance: ethers.provider.getBalance(lido),
+        stakingRouterBalance: ethers.provider.getBalance(stakingRouter),
+        beaconStat: lido.getBeaconStat(),
+      });
+
+      await expect(lido.deposit(maxDepositsCount, stakingModuleId, depositCalldata))
+        .to.emit(stakingRouter, "Mock__DepositCalled")
+        .not.to.emit(lido, "Unbuffered")
+        .and.not.to.emit(lido, "DepositedValidatorsChanged");
+
+      const afterDeposit = await batch({
+        lidoBalance: ethers.provider.getBalance(lido),
+        stakingRouterBalance: ethers.provider.getBalance(stakingRouter),
+        beaconStat: lido.getBeaconStat(),
+      });
+
+      expect(afterDeposit.beaconStat.depositedValidators).to.equal(beforeDeposit.beaconStat.depositedValidators);
+      expect(afterDeposit.lidoBalance).to.equal(beforeDeposit.lidoBalance);
+      expect(afterDeposit.stakingRouterBalance).to.equal(beforeDeposit.stakingRouterBalance);
     });
   });
 });
