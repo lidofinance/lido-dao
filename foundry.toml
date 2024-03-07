@@ -9,7 +9,7 @@ out = 'foundry/out'
 libs = ['node_modules', 'foundry/lib']
 
 # The test directory
-test = 'foundry/test'
+test = 'test'
 
 # Whether to cache builds or not
 cache = true

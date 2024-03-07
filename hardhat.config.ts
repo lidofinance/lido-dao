@@ -112,7 +112,7 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, hre, runSupe
   const paths = await runSuper();
 
   const otherDirectoryGlob = path.join(hre.config.paths.root, "test", "**", "*.sol");
-  const otherPaths = globSync(otherDirectoryGlob);
+  const otherPaths = globSync(otherDirectoryGlob).filter((x) => !x.endsWith("test.sol"));
 
   return [...paths, ...otherPaths];
 });
