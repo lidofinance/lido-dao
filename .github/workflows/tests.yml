@@ -26,7 +26,7 @@ jobs:
         run: pnpm test
 
   test_foundry:
-    name: Foundry tests
+    name: Foundry Solidity tests
     runs-on: ubuntu-latest
 
     steps:
