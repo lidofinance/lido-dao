@@ -294,7 +294,7 @@ describe("Lido:report", () => {
       await oracleReportSanityChecker.mock__smoothenTokenRebaseReturn(0n, 0n, 0n, sharesRequestedToBurn);
 
       // set up steth whale, in case we need to send steth to other accounts
-      setBalance(stethWhale.address, ether("101.0"));
+      await setBalance(stethWhale.address, ether("101.0"));
       await lido.connect(stethWhale).submit(ZeroAddress, { value: ether("100.0") });
       // top up Burner with steth to burn
       await lido.connect(stethWhale).transferShares(burner, sharesRequestedToBurn);
