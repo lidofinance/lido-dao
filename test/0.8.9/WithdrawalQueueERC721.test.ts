@@ -288,7 +288,7 @@ describe("WithdrawalQueueERC721.sol", () => {
     });
 
     it("Sets the correct baseURI and emit `BaseURISet`", async () => {
-      expect(await queue.connect(tokenManager).setBaseURI(MOCK_TOKEN_BASE_URL))
+      await expect(queue.connect(tokenManager).setBaseURI(MOCK_TOKEN_BASE_URL))
         .to.emit(queue, "BaseURISet")
         .withArgs(MOCK_TOKEN_BASE_URL);
 
@@ -316,7 +316,7 @@ describe("WithdrawalQueueERC721.sol", () => {
     });
 
     it("Sets the correct NFTDescriptorAddress and emit `NftDescriptorAddressSet`", async () => {
-      expect(await queue.connect(tokenManager).setNFTDescriptorAddress(nftDescriptorAddress))
+      await expect(queue.connect(tokenManager).setNFTDescriptorAddress(nftDescriptorAddress))
         .to.emit(queue, "NftDescriptorAddressSet")
         .withArgs(nftDescriptorAddress);
 
@@ -350,7 +350,7 @@ describe("WithdrawalQueueERC721.sol", () => {
       await queue.resume();
       await queue.connect(user).requestWithdrawals([ether("25.00"), ether("25.00")], user);
 
-      expect(await queue.connect(finalizer).finalize(2, shareRate(300n)))
+      await expect(queue.connect(finalizer).finalize(2, shareRate(300n)))
         .to.emit(queue, "BatchMetadataUpdate")
         .withArgs(1, 2);
     });
