@@ -3,8 +3,8 @@ name: Tests
 on: [push]
 
 jobs:
-  test:
-    name: Solidity tests
+  test_hardhat:
+    name: Hardhat Solidity tests
     runs-on: ubuntu-latest
 
     steps:
@@ -24,3 +24,21 @@ jobs:
 
       - name: Run Hardhat Solidity tests
         run: pnpm test
+
+  test_foundry:
+    name: Foundry tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Run tests
+        run: NO_COLOR=1 forge test >> $GITHUB_STEP_SUMMARY
+
+      - name: Run snapshot
+        run: NO_COLOR=1 forge snapshot >> $GITHUB_STEP_SUMMARY
