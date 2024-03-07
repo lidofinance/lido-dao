@@ -1,6 +1,8 @@
 name: Code Analysis
 
 on:
+  push:
+    branches: [master, develop]
   pull_request:
     branches: [master, develop]
 
