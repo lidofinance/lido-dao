@@ -11,4 +11,8 @@ coverage.json
 /cache
 /artifacts
 
+# foundry artifacts
+/foundry/cache
+/foundry/out
+
 .env
