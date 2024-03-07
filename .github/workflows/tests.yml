@@ -48,7 +48,4 @@ jobs:
         run: pnpm install
 
       - name: Run tests
-        run: NO_COLOR=1 forge test >> $GITHUB_STEP_SUMMARY
-
-      - name: Run snapshot
-        run: NO_COLOR=1 forge snapshot >> $GITHUB_STEP_SUMMARY
+        run: forge test --gas-report
