@@ -24,7 +24,7 @@ This repository is the modernized iteration of the outdated [`lido-dao` reposito
     <br/>
     <img alt="GitHub tests" src="https://img.shields.io/github/actions/workflow/status/lidofinance/core/tests.yml?label=tests">
     <img alt="GitHub linters" src="https://img.shields.io/github/actions/workflow/status/lidofinance/core/linters.yml?label=linters">
-    <img alt="GitHub linters" src="https://img.shields.io/github/actions/workflow/status/lidofinance/core/analyse.yml?label=code analysis">
+    <img alt="GitHub code analysis" src="https://img.shields.io/github/actions/workflow/status/lidofinance/core/analyse.yml?label=code analysis">
 </div>
 
 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">

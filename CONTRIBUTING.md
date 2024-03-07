@@ -16,7 +16,7 @@ Issues are a great way to contribute to the project by reporting bugs or suggest
 
 Good documentation is crucial for any project. If you have suggestions for improving the documentation, or if you've noticed an omission or error, making these corrections is a significant contribution. Whether it's a typo, additional examples, or clearer explanations, your help in making the documentation more accessible and understandable is highly appreciated.
 
-For expansive documentation, visit the [Lido Docs repo](https://github.com/lidofinance/core).
+For expansive documentation, visit the [Lido Docs repo](https://github.com/lidofinance/docs).
 
 ### Contributing to codebase
 
