@@ -1,10 +1,45 @@
+## Disclaimer: WIP!
+
+This repository is currently a **work-in-progress**.
+
+This repository is the modernized iteration of the outdated [`lido-dao` repository](https://github.com/lidofinance/lido-dao). Significant efforts were undertaken to update the tooling and infrastructure to align with current standards and best practices. As part of this modernization process:
+
+- the codebase has been transitioned from JavaScript to TypeScript to leverage TypeScript's robust type-checking, IDE autocompletion, and scalability features;
+- the test suite was revamped and restructured to ensure consistent approach and comprehensive testing coverage;
+- deprecated dependencies (e.g. Waffle testing framework) were removed or replaced by modern alternatives;
+- outdated dependencies such as Hardhat, ethers and others were upgraded to their latest versions to improve performance, compatibility and developer experience;
+- Lido Aragon Apps will be migrated to the [Lido Aragon Apps repository](https://github.com/lidofinance/aragon-apps).
+
+---
+
+<div>
+    <img alt="Lido" src="https://img.shields.io/badge/v2-version?label=lido&labelColor=rgb(91%2C%20162%2C%20252)&color=white"/>
+    <img alt="GitHub license" src="https://img.shields.io/github/license/lidofinance/lido-dao?labelColor=orange&color=white"/>
+    <img alt="Solidity" src="https://img.shields.io/badge/multiver-s?style=flat&label=solidity&labelColor=rgb(86%2C%2085%2C%20212)&color=white"/>
+    <img alt="Aragon OS" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Flidofinance%2Fcore%2Fmaster%2Fpackage.json&query=%24.dependencies%5B'%40aragon%2Fos'%5D&style=flat&label=aragon%2Fos&labelColor=rgb(70%2C%20100%2C%20246)&color=white"/>
+    <img alt="Node.js" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Flidofinance%2Fcore%2Fmaster%2Fpackage.json&query=%24.engines.node&style=flat&label=node.js&labelColor=rgb(62%2C%20109%2C%2026)&color=white"/>
+    <img alt="TypeScript" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Flidofinance%2Fcore%2Fmaster%2Fpackage.json&query=%24.devDependencies.typescript&style=flat&label=typescript&labelColor=rgb(78%2C%20119%2C%20194)&color=white" />
+    <img alt="Hardhat" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Flidofinance%2Fcore%2Fmaster%2Fpackage.json&query=%24.devDependencies.hardhat&style=flat&label=hardhat&labelColor=rgb(251%2C%20240%2C%2056)&color=white" />
+    <img alt="Ethers" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Flidofinance%2Fcore%2Fmaster%2Fpackage.json&query=%24.devDependencies.ethers&style=flat&label=ethers&labelColor=rgb(51%2C%2077%2C%20121)&color=white" />
+    <br/>
+    <img alt="GitHub tests" src="https://img.shields.io/github/actions/workflow/status/lidofinance/core/tests.yml?label=tests">
+    <img alt="GitHub linters" src="https://img.shields.io/github/actions/workflow/status/lidofinance/core/linters.yml?label=linters">
+    <img alt="GitHub code analysis" src="https://img.shields.io/github/actions/workflow/status/lidofinance/core/analyse.yml?label=code analysis">
+</div>
+
 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-    <img alt="Lido on Ethereum Logo" src="./docs/assets/lido.png" width="500"/>
+    <img alt="Lido on Ethereum Logo" src="./docs/assets/lido.png" />
 </div>
 
 **Lido on Ethereum** is a liquid-staking protocol allowing anyone to earn staking rewards without locking ether or maintaining infrastructure.
 
-Key features:
+Users can deposit ether to the Lido smart contract and receive stETH tokens in return. The smart contract then stakes tokens with the DAO-picked node operators. Users' deposited funds are pooled by the DAO, and node operators never have direct access to the users' assets. Unlike staked ether, the stETH token is free from the limitations associated with a lack of liquidity, and can be transferred at any time. The stETH token balance corresponds to the amount of ether that the holder could request to withdraw.
+
+**NB:** It's advised to read [Documentation](https://docs.lido.fi/) before getting started with this repo.
+
+---
+
+### Key features
 
 - No minimum deposit amount,
 - Instant rewards within 24 hours of deposit,
@@ -12,45 +47,31 @@ Key features:
 - In-protocol automated withdrawals,
 - Governed by Lido DAO.
 
-Learn more:
+---
 
-- [Lido DAO](https://docs.lido.fi/lido-dao)
-- [Contracts](https://docs.lido.fi/contracts/lido)
-- [Addresses](https://docs.lido.fi/deployed-contracts/)
+### Learn more
+
+- [Lido DAO governance](https://docs.lido.fi/lido-dao)
+- [Technical documentation](https://docs.lido.fi/contracts/lido)
+- [Lido addresses](https://docs.lido.fi/deployed-contracts/)
 - [Protocol levers](https://docs.lido.fi/guides/protocol-levers/)
+- [Audits](https://github.com/lidofinance/audits)
 
-## Development
+## Bug Bounty
 
-**NB:** Please read [Documentation](https://docs.lido.fi/) before getting started.
+At the moment, the [Lido bug bounty program](https://immunefi.com/bounty/lido/) covers only the contracts in the [Lido DAO repository](https://github.com/lidofinance/lido-dao). Once the work on this repository is finished, the bug bounty program will be updated.
 
-### Requirements
+## Contributing
 
-- Shell - bash or zsh
-- [Node.js v20](https://nodejs.org/en)
-- [Pnpm](https://pnpm.io/)
-- [Foundry](https://book.getfoundry.sh/)
+Please refer to the [Lido Contribution Guide](/CONTRIBUTING.md).
 
-### Setup
+## Code of Conduct
 
-> Installation is local and doesn't require root privileges.
+Please refer to the [Lido Contributor Code of Conduct](/CODE_OF_CONDUCT.md).
 
-Install dependencies
+## License
 
-```bash
-pnpm install
-```
-
-### Test
-
-Run tests
-
-```bash
-pnpm test
-```
-
-# License
-
-2023 Lido <info@lido.fi>
+2024 Lido <info@lido.fi>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
