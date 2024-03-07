@@ -1,40 +1,65 @@
-# Lido Core
+<div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <img alt="Lido on Ethereum Logo" src="./docs/assets/lido.png" width="500"/>
+</div>
 
-## Develop
+**Lido on Ethereum** is a liquid-staking protocol allowing anyone to earn staking rewards without locking ether or maintaining infrastructure.
 
-```sh
-# install deps
+Key features:
+
+- No minimum deposit amount,
+- Instant rewards within 24 hours of deposit,
+- stETH, an LST with the deepest liquidity in DeFi,
+- In-protocol automated withdrawals,
+- Governed by Lido DAO.
+
+Learn more:
+
+- [Lido DAO](https://docs.lido.fi/lido-dao)
+- [Contracts](https://docs.lido.fi/contracts/lido)
+- [Addresses](https://docs.lido.fi/deployed-contracts/)
+- [Protocol levers](https://docs.lido.fi/guides/protocol-levers/)
+
+## Development
+
+**NB:** Please read [Documentation](https://docs.lido.fi/) before getting started.
+
+### Requirements
+
+- Shell - bash or zsh
+- [Node.js v20](https://nodejs.org/en)
+- [Pnpm](https://pnpm.io/)
+- [Foundry](https://book.getfoundry.sh/)
+
+### Setup
+
+> Installation is local and doesn't require root privileges.
+
+Install dependencies
+
+```bash
 pnpm install
+```
 
-# run tests
+### Test
+
+Run tests
+
+```bash
 pnpm test
 ```
 
-## Setup
+# License
 
-- node.js v20
-- pnpm
-- hardhat
-- ethers v6
-- typechain
-- commitlint
-- lint-staged
-- eslint
-- prettier
-- solhint
-- slither
+2023 Lido <info@lido.fi>
 
-## Todos
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, version 3 of the License, or any later version.
 
-- anvil
-- readme
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
 
-## Conventions
-
-- use the `batch` helper to resolve multiple promises in parallel
-- use `Snapshot` helper to restore the state at the end of suite
-- use `expect` statements instead of `assert`
-
-### Pending
-
-- test optional ERC-20 methods
+You should have received a copy of the [GNU General Public License](LICENSE)
+along with this program. If not, see <https://www.gnu.org/licenses/>.

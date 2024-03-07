@@ -3,7 +3,7 @@ import { BigNumberish, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
+import { getStorageAt, setBalance } from "@nomicfoundation/hardhat-network-helpers";
 
 import {
   ACL,
@@ -28,7 +28,7 @@ import {
 } from "typechain-types";
 import { LidoLocator__MutableMock } from "typechain-types/test/0.4.24/contracts/LidoLocator__MutableMock";
 
-import { certainAddress, deployLidoDao, ether, getNextBlockTimestamp } from "lib";
+import { certainAddress, deployLidoDao, ether, getNextBlockTimestamp, streccak } from "lib";
 
 // TODO: improve coverage
 // TODO: probably needs some refactoring and optimization
@@ -130,6 +130,58 @@ describe("Lido:report", () => {
           }),
         ),
       ).to.be.revertedWith("REPORTED_MORE_DEPOSITED");
+    });
+
+    it("Reverts if the number of reported CL validators is less than what is stored on the contract", async () => {
+      const depositedValidators = 100n;
+      await lido.connect(deployer).unsafeChangeDepositedValidators(depositedValidators);
+
+      // first report, 100 validators
+      await lido.handleOracleReport(
+        ...report({
+          clValidators: depositedValidators,
+        }),
+      );
+
+      // first report, 99 validators
+      await expect(
+        lido.handleOracleReport(
+          ...report({
+            clValidators: depositedValidators - 1n,
+          }),
+        ),
+      ).to.be.revertedWith("REPORTED_LESS_VALIDATORS");
+    });
+
+    it("Update CL validators count if reported more", async () => {
+      let depositedValidators = 100n;
+      await lido.connect(deployer).unsafeChangeDepositedValidators(depositedValidators);
+
+      // first report, 100 validators
+      await lido.handleOracleReport(
+        ...report({
+          clValidators: depositedValidators,
+        }),
+      );
+
+      const slot = streccak("lido.Lido.beaconValidators");
+      const lidoAddress = await lido.getAddress();
+
+      let clValidatorsPosition = await getStorageAt(lidoAddress, slot);
+      expect(clValidatorsPosition).to.equal(depositedValidators);
+
+      depositedValidators = 101n;
+      await lido.connect(deployer).unsafeChangeDepositedValidators(depositedValidators);
+
+      // second report, 101 validators
+      await lido.handleOracleReport(
+        ...report({
+          clValidators: depositedValidators,
+        }),
+      );
+
+      clValidatorsPosition = await getStorageAt(lidoAddress, slot);
+      expect(clValidatorsPosition).to.equal(depositedValidators);
     });
 
     it("Reverts if the `checkAccountingOracleReport` sanity check fails", async () => {
@@ -294,7 +346,7 @@ describe("Lido:report", () => {
       await oracleReportSanityChecker.mock__smoothenTokenRebaseReturn(0n, 0n, 0n, sharesRequestedToBurn);
 
       // set up steth whale, in case we need to send steth to other accounts
-      setBalance(stethWhale.address, ether("101.0"));
+      await setBalance(stethWhale.address, ether("101.0"));
       await lido.connect(stethWhale).submit(ZeroAddress, { value: ether("100.0") });
       // top up Burner with steth to burn
       await lido.connect(stethWhale).transferShares(burner, sharesRequestedToBurn);

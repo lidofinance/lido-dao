@@ -1,8 +1,10 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-License-Identifier: GPL-3.0
 // for testing purposes only
+
 pragma solidity 0.8.9;
 
-import "contracts/0.8.9/utils/access/AccessControl.sol";
+import {AccessControl} from "contracts/0.8.9/utils/access/AccessControl.sol";
 
 contract AccessControlHarness is AccessControl {
 
