@@ -4,7 +4,7 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { StethMinimalMockWithTotalPooledEther, StethMinimalMockWithTotalPooledEther__factory } from "typechain-types";
+import { Steth__MinimalMock, Steth__MinimalMock__factory } from "typechain-types";
 
 import { batch, ether, ONE_ETHER } from "lib";
 
@@ -16,13 +16,13 @@ describe("StETH:non-ERC-20 behavior", () => {
   const holderBalance = ether("10.0");
   const totalSupply = holderBalance;
 
-  let steth: StethMinimalMockWithTotalPooledEther;
+  let steth: Steth__MinimalMock;
 
   beforeEach(async () => {
     const signers = await ethers.getSigners();
     [holder, recipient, spender] = signers;
 
-    const factory = new StethMinimalMockWithTotalPooledEther__factory(holder);
+    const factory = new Steth__MinimalMock__factory(holder);
     steth = await factory.deploy(holder, { value: holderBalance });
   });
 
