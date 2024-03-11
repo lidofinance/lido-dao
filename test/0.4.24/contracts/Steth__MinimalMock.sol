@@ -24,4 +24,12 @@ contract Steth__MinimalMock is StETH {
   function setTotalPooledEther(uint256 _totalPooledEther) public {
     totalPooledEther = _totalPooledEther;
   }
+
+  function mintShares(address _recipient, uint256 _sharesAmount) external returns (uint256) {
+    return super._mintShares(_recipient, _sharesAmount);
+  }
+
+  function burnShares(address _account, uint256 _sharesAmount) external returns (uint256) {
+    return super._burnShares(_account, _sharesAmount);
+  }
 }

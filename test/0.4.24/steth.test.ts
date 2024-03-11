@@ -1,17 +1,24 @@
 import { expect } from "chai";
-import { ZeroAddress } from "ethers";
+import { MaxUint256, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
+import { beforeEach } from "mocha";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { Steth__MinimalMock, Steth__MinimalMock__factory } from "typechain-types";
 
-import { batch, ether, ONE_ETHER } from "lib";
+import { batch, ether, impersonate, ONE_ETHER } from "lib";
+
+const ONE_STETH = 10n ** 18n;
+const ONE_SHARE = 10n ** 18n;
 
 describe("StETH:non-ERC-20 behavior", () => {
+  let deployer: HardhatEthersSigner;
   let holder: HardhatEthersSigner;
   let recipient: HardhatEthersSigner;
   let spender: HardhatEthersSigner;
+  // required for some strictly theoretical branch checks
+  let zeroAddressSigner: HardhatEthersSigner;
 
   const holderBalance = ether("10.0");
   const totalSupply = holderBalance;
@@ -19,11 +26,14 @@ describe("StETH:non-ERC-20 behavior", () => {
   let steth: Steth__MinimalMock;
 
   beforeEach(async () => {
-    const signers = await ethers.getSigners();
-    [holder, recipient, spender] = signers;
+    zeroAddressSigner = await impersonate(ZeroAddress, ONE_ETHER);
 
-    const factory = new Steth__MinimalMock__factory(holder);
+    const signers = await ethers.getSigners();
+    [deployer, holder, recipient, spender] = signers;
+
+    const factory = new Steth__MinimalMock__factory(deployer);
     steth = await factory.deploy(holder, { value: holderBalance });
+    steth = steth.connect(holder);
   });
 
   context("getTotalPooledEther", () => {
@@ -50,13 +60,12 @@ describe("StETH:non-ERC-20 behavior", () => {
       const beforeTransfer = await batch({
         holderBalance: steth.balanceOf(holder),
         recipientBalance: steth.balanceOf(recipient),
-        shareRate: steth.getSharesByPooledEth(ONE_ETHER),
       });
 
       const transferAmount = beforeTransfer.holderBalance;
-      const transferAmountInShares = (transferAmount * beforeTransfer.shareRate) / ONE_ETHER;
+      const transferAmountInShares = await steth.getSharesByPooledEth(beforeTransfer.holderBalance);
 
-      await expect(steth.connect(holder).transfer(recipient, transferAmount))
+      await expect(steth.transfer(recipient, transferAmount))
         .to.emit(steth, "Transfer")
         .withArgs(holder.address, recipient.address, transferAmount)
         .and.to.emit(steth, "TransferShares")
@@ -74,7 +83,133 @@ describe("StETH:non-ERC-20 behavior", () => {
     it("Reverts when the recipient is zero address", async () => {
       const transferAmount = await steth.balanceOf(holder);
 
-      await expect(steth.connect(holder).transfer(ZeroAddress, transferAmount)).to.be.revertedWith(
+      await expect(steth.transfer(ZeroAddress, transferAmount)).to.be.revertedWith("TRANSFER_TO_ZERO_ADDR");
+    });
+
+    it("Reverts when the recipient is stETH contract", async () => {
+      const transferAmount = await steth.balanceOf(holder);
+
+      await expect(steth.transfer(steth, transferAmount)).to.be.revertedWith("TRANSFER_TO_STETH_CONTRACT");
+    });
+  });
+
+  context("transferShares", () => {
+    it("Transfers shares to the recipient and fires the `Transfer` and `TransferShares` events", async () => {
+      const beforeTransfer = await batch({
+        holderShares: steth.sharesOf(holder),
+        recipientShares: steth.sharesOf(recipient),
+      });
+
+      const transferAmount = await steth.getPooledEthByShares(beforeTransfer.holderShares);
+      const transferAmountInShares = beforeTransfer.holderShares;
+
+      await expect(steth.transferShares(recipient, transferAmountInShares))
+        .to.emit(steth, "Transfer")
+        .withArgs(holder.address, recipient.address, transferAmount)
+        .and.to.emit(steth, "TransferShares")
+        .withArgs(holder.address, recipient.address, transferAmountInShares);
+
+      const afterTransfer = await batch({
+        holderShares: steth.sharesOf(holder),
+        recipientShares: steth.sharesOf(recipient),
+      });
+
+      expect(afterTransfer.holderShares).to.equal(beforeTransfer.holderShares - transferAmountInShares);
+      expect(afterTransfer.recipientShares).to.equal(beforeTransfer.recipientShares + transferAmountInShares);
+    });
+
+    it("Reverts when the recipient is zero address", async () => {
+      const transferAmountOfShares = await steth.sharesOf(holder);
+
+      await expect(steth.transferShares(ZeroAddress, transferAmountOfShares)).to.be.revertedWith(
+        "TRANSFER_TO_ZERO_ADDR",
+      );
+    });
+
+    it("Reverts when the recipient is stETH contract", async () => {
+      const transferAmountOfShares = await steth.sharesOf(holder);
+
+      await expect(steth.transferShares(steth, transferAmountOfShares)).to.be.revertedWith(
+        "TRANSFER_TO_STETH_CONTRACT",
+      );
+    });
+
+    it("Reverts when transfering from zero address", async () => {
+      await expect(steth.connect(zeroAddressSigner).transferShares(recipient, 0)).to.be.revertedWith(
+        "TRANSFER_FROM_ZERO_ADDR",
+      );
+    });
+  });
+
+  context("transferFrom", () => {
+    beforeEach(async () => {
+      const balanceOfHolder = await steth.balanceOf(holder);
+      await steth.approve(spender, balanceOfHolder);
+      expect(await steth.allowance(holder, spender)).to.equal(balanceOfHolder);
+    });
+
+    it("Transfers stETH to the recipient and fires the `Transfer` and `TransferShares` events", async () => {
+      const beforeTransfer = await batch({
+        holderBalance: steth.balanceOf(holder),
+        recipientBalance: steth.balanceOf(recipient),
+        spenderAllowance: steth.allowance(holder, spender),
+        shareRate: steth.getSharesByPooledEth(ONE_ETHER),
+      });
+
+      const transferAmount = beforeTransfer.holderBalance;
+      const transferAmountInShares = (transferAmount * beforeTransfer.shareRate) / ONE_ETHER;
+
+      await expect(steth.connect(spender).transferFrom(holder, recipient, transferAmount))
+        .to.emit(steth, "Transfer")
+        .withArgs(holder.address, recipient.address, transferAmount)
+        .and.to.emit(steth, "TransferShares")
+        .withArgs(holder.address, recipient.address, transferAmountInShares);
+
+      const afterTransfer = await batch({
+        holderBalance: steth.balanceOf(holder),
+        recipientBalance: steth.balanceOf(recipient),
+        spenderAllowance: steth.allowance(holder, spender),
+      });
+
+      expect(afterTransfer.holderBalance).to.equal(beforeTransfer.holderBalance - transferAmount);
+      expect(afterTransfer.recipientBalance).to.equal(beforeTransfer.recipientBalance + transferAmount);
+      expect(afterTransfer.spenderAllowance).to.equal(beforeTransfer.spenderAllowance - transferAmount);
+    });
+
+    it("Does not spend allowance if set to max uint256 (infinite)", async () => {
+      await steth.approve(spender, MaxUint256);
+
+      const beforeTransfer = await batch({
+        holderBalance: steth.balanceOf(holder),
+        recipientBalance: steth.balanceOf(recipient),
+        spenderAllowance: steth.allowance(holder, spender),
+        shareRate: steth.getSharesByPooledEth(ONE_ETHER),
+      });
+
+      const transferAmount = beforeTransfer.holderBalance;
+      const transferAmountInShares = (transferAmount * beforeTransfer.shareRate) / ONE_ETHER;
+
+      await expect(steth.connect(spender).transferFrom(holder, recipient, transferAmount))
+        .to.emit(steth, "Transfer")
+        .withArgs(holder.address, recipient.address, transferAmount)
+        .and.to.emit(steth, "TransferShares")
+        .withArgs(holder.address, recipient.address, transferAmountInShares);
+
+      const afterTransfer = await batch({
+        holderBalance: steth.balanceOf(holder),
+        recipientBalance: steth.balanceOf(recipient),
+        spenderAllowance: steth.allowance(holder, spender),
+      });
+
+      expect(afterTransfer.holderBalance).to.equal(beforeTransfer.holderBalance - transferAmount);
+      expect(afterTransfer.recipientBalance).to.equal(beforeTransfer.recipientBalance + transferAmount);
+      expect(afterTransfer.spenderAllowance).to.equal(beforeTransfer.spenderAllowance);
+    });
+
+    it("Reverts when the recipient is zero address", async () => {
+      const transferAmount = await steth.balanceOf(holder);
+
+      await expect(steth.connect(spender).transferFrom(holder, ZeroAddress, transferAmount)).to.be.revertedWith(
         "TRANSFER_TO_ZERO_ADDR",
       );
     });
@@ -82,9 +217,109 @@ describe("StETH:non-ERC-20 behavior", () => {
     it("Reverts when the recipient is stETH contract", async () => {
       const transferAmount = await steth.balanceOf(holder);
 
-      await expect(steth.connect(holder).transfer(steth, transferAmount)).to.be.revertedWith(
+      await expect(steth.connect(spender).transferFrom(holder, steth, transferAmount)).to.be.revertedWith(
         "TRANSFER_TO_STETH_CONTRACT",
       );
+    });
+
+    it("Reverts when exceeding allowance", async () => {
+      const allowance = await steth.allowance(holder, spender);
+
+      await expect(steth.connect(spender).transferFrom(holder, recipient, allowance + 1n)).to.be.revertedWith(
+        "ALLOWANCE_EXCEEDED",
+      );
+    });
+  });
+
+  context("transferSharesFrom", () => {
+    beforeEach(async () => {
+      const balanceOfHolder = await steth.balanceOf(holder);
+      await steth.approve(spender, balanceOfHolder);
+      expect(await steth.allowance(holder, spender)).to.equal(balanceOfHolder);
+    });
+
+    it("Transfers shares to the recipient and fires the `Transfer` and `TransferShares` events", async () => {
+      const beforeTransfer = await batch({
+        holderShares: steth.sharesOf(holder),
+        recipientShares: steth.sharesOf(recipient),
+        spenderAllowance: steth.allowance(holder, spender),
+      });
+
+      const transferAmount = await steth.getPooledEthByShares(beforeTransfer.holderShares);
+      const transferAmountInShares = beforeTransfer.holderShares;
+
+      await expect(steth.connect(spender).transferSharesFrom(holder, recipient, transferAmountInShares))
+        .to.emit(steth, "Transfer")
+        .withArgs(holder.address, recipient.address, transferAmount)
+        .and.to.emit(steth, "TransferShares")
+        .withArgs(holder.address, recipient.address, transferAmountInShares);
+
+      const afterTransfer = await batch({
+        holderShares: steth.sharesOf(holder),
+        recipientShares: steth.sharesOf(recipient),
+        spenderAllowance: steth.allowance(holder, spender),
+      });
+
+      expect(afterTransfer.holderShares).to.equal(beforeTransfer.holderShares - transferAmountInShares);
+      expect(afterTransfer.recipientShares).to.equal(beforeTransfer.recipientShares + transferAmountInShares);
+      expect(afterTransfer.spenderAllowance).to.equal(beforeTransfer.spenderAllowance - transferAmount);
+    });
+
+    it("Does not spend allowance if set to max uint256 (infinite)", async () => {
+      await steth.approve(spender, MaxUint256);
+
+      const beforeTransfer = await batch({
+        holderShares: steth.sharesOf(holder),
+        recipientShares: steth.sharesOf(recipient),
+        spenderAllowance: steth.allowance(holder, spender),
+      });
+
+      const transferAmount = await steth.getPooledEthByShares(beforeTransfer.holderShares);
+      const transferAmountInShares = beforeTransfer.holderShares;
+
+      await expect(steth.connect(spender).transferSharesFrom(holder, recipient, transferAmountInShares))
+        .to.emit(steth, "Transfer")
+        .withArgs(holder.address, recipient.address, transferAmount)
+        .and.to.emit(steth, "TransferShares")
+        .withArgs(holder.address, recipient.address, transferAmountInShares);
+
+      const afterTransfer = await batch({
+        holderShares: steth.sharesOf(holder),
+        recipientShares: steth.sharesOf(recipient),
+        spenderAllowance: steth.allowance(holder, spender),
+      });
+
+      expect(afterTransfer.holderShares).to.equal(beforeTransfer.holderShares - transferAmountInShares);
+      expect(afterTransfer.recipientShares).to.equal(beforeTransfer.recipientShares + transferAmountInShares);
+      expect(afterTransfer.spenderAllowance).to.equal(beforeTransfer.spenderAllowance);
+    });
+
+    it("Reverts when the recipient is zero address", async () => {
+      const transferAmountOfShares = await steth.sharesOf(holder);
+
+      await expect(steth.connect(spender).transferFrom(holder, ZeroAddress, transferAmountOfShares)).to.be.revertedWith(
+        "TRANSFER_TO_ZERO_ADDR",
+      );
+    });
+
+    it("Reverts when the recipient is stETH contract", async () => {
+      const transferAmountOfShares = await steth.sharesOf(holder);
+
+      await expect(steth.connect(spender).transferFrom(holder, steth, transferAmountOfShares)).to.be.revertedWith(
+        "TRANSFER_TO_STETH_CONTRACT",
+      );
+    });
+  });
+
+  context("approve", () => {
+    it("Reverts if the owner is zero address", async () => {
+      await expect(steth.connect(zeroAddressSigner).approve(spender, ONE_STETH)).to.be.revertedWith(
+        "APPROVE_FROM_ZERO_ADDR",
+      );
+    });
+
+    it("Reverts if the spender is zero address", async () => {
+      await expect(steth.approve(ZeroAddress, ONE_STETH)).to.be.revertedWith("APPROVE_TO_ZERO_ADDR");
     });
   });
 
@@ -106,11 +341,16 @@ describe("StETH:non-ERC-20 behavior", () => {
   });
 
   context("decreaseAllowance", () => {
-    it("Decreases the spender's allowance by the amount and fires the `Approval` event", async () => {
-      const allowance = await steth.balanceOf(holder);
+    let allowance: bigint;
+
+    beforeEach(async () => {
+      allowance = await steth.balanceOf(holder);
+
       await steth.connect(holder).approve(spender, allowance);
       expect(await steth.allowance(holder, spender)).to.equal(allowance);
+    });
 
+    it("Decreases the spender's allowance by the amount and fires the `Approval` event", async () => {
       const decreaseAmount = ether("1.0");
       const updatedAllowance = allowance - decreaseAmount;
 
@@ -119,6 +359,115 @@ describe("StETH:non-ERC-20 behavior", () => {
         .withArgs(holder.address, spender.address, updatedAllowance);
 
       expect(await steth.allowance(holder, spender)).to.equal(updatedAllowance);
+    });
+
+    it("Reverts if the decreased amount is greater than the current allowance", async () => {
+      const invalidDecreaseAmount = allowance + 1n;
+
+      await expect(steth.connect(holder).decreaseAllowance(spender, invalidDecreaseAmount)).to.be.revertedWith(
+        "ALLOWANCE_BELOW_ZERO",
+      );
+    });
+  });
+
+  context("getTotalShares", () => {
+    for (const [rebase, factor] of [
+      ["neutral", 100n], // 1
+      ["positive", 105n], // 0.95
+      ["negative", 95n], // 1.05
+    ]) {
+      it(`The amount of shares is unchaged after a ${rebase} rebase`, async () => {
+        const totalSharesBeforeRebase = await steth.getTotalShares();
+
+        const rebasedSupply = (totalSupply * (factor as bigint)) / 100n;
+        await steth.setTotalPooledEther(rebasedSupply);
+
+        expect(await steth.getTotalShares()).to.equal(totalSharesBeforeRebase);
+      });
+    }
+  });
+
+  context("sharesOf", () => {
+    for (const [rebase, factor] of [
+      ["neutral", 100n], // 1
+      ["positive", 105n], // 0.95
+      ["negative", 95n], // 1.05
+    ]) {
+      it(`The amount of user shares is unchaged after a ${rebase} rebase`, async () => {
+        const sharesOfHolderBeforeRebase = await steth.sharesOf(holder);
+
+        const rebasedSupply = (totalSupply * (factor as bigint)) / 100n;
+        await steth.setTotalPooledEther(rebasedSupply);
+
+        expect(await steth.sharesOf(holder)).to.equal(sharesOfHolderBeforeRebase);
+      });
+    }
+  });
+
+  context("getSharesByPooledEth", () => {
+    for (const [rebase, factor] of [
+      ["neutral", 100n], // 1
+      ["positive", 105n], // 0.95
+      ["negative", 95n], // 1.05
+    ]) {
+      it(`Returns the correct rate after a ${rebase} rebase`, async () => {
+        // before the first rebase, shares are equivalent to steth
+        expect(await steth.getSharesByPooledEth(ONE_STETH)).to.equal(ONE_SHARE);
+
+        const rebasedSupply = (totalSupply * (factor as bigint)) / 100n;
+        await steth.setTotalPooledEther(rebasedSupply);
+
+        const { totalShares, totalPooledEther } = await batch({
+          totalShares: steth.getTotalShares(),
+          totalPooledEther: steth.getTotalPooledEther(),
+        });
+
+        const oneStethInShares = (ONE_STETH * totalShares) / totalPooledEther;
+
+        expect(await steth.getSharesByPooledEth(ONE_STETH)).to.equal(oneStethInShares);
+      });
+    }
+  });
+
+  context("getPooledEthByShares", () => {
+    for (const [rebase, factor] of [
+      ["neutral", 100n], // 1
+      ["positive", 105n], // 0.95
+      ["negative", 95n], // 1.05
+    ]) {
+      it(`Returns the correct rate after a ${rebase} rebase`, async () => {
+        // before the first rebase, steth are equivalent to shares
+        expect(await steth.getPooledEthByShares(ONE_SHARE)).to.equal(ONE_STETH);
+
+        const rebasedSupply = (totalSupply * (factor as bigint)) / 100n;
+        await steth.setTotalPooledEther(rebasedSupply);
+
+        const { totalShares, totalPooledEther } = await batch({
+          totalShares: steth.getTotalShares(),
+          totalPooledEther: steth.getTotalPooledEther(),
+        });
+
+        const oneShareInSteth = (ONE_SHARE * totalPooledEther) / totalShares;
+
+        expect(await steth.getPooledEthByShares(ONE_SHARE)).to.equal(oneShareInSteth);
+      });
+    }
+  });
+
+  context("mintShares", () => {
+    it("Reverts when minting to zero address", async () => {
+      await expect(steth.mintShares(ZeroAddress, 1n)).to.be.revertedWith("MINT_TO_ZERO_ADDR");
+    });
+  });
+
+  context("burnShares", () => {
+    it("Reverts when burning on zero address", async () => {
+      await expect(steth.burnShares(ZeroAddress, 1n)).to.be.revertedWith("BURN_FROM_ZERO_ADDR");
+    });
+
+    it("Reverts when burning more than the owner owns", async () => {
+      const sharesOfHolder = await steth.sharesOf(holder);
+      await expect(steth.burnShares(holder, sharesOfHolder + 1n)).to.be.revertedWith("BALANCE_EXCEEDED");
     });
   });
 });
