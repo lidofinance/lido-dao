@@ -15,20 +15,22 @@ import {
   Snapshot,
 } from "lib";
 
+interface ERC721Deployment {
+  token: ERC721;
+  name: string;
+  symbol: string;
+  holder: HardhatEthersSigner;
+  holderTokenId: bigint;
+}
+
 interface ERC721Target {
   tokenName: string;
-  deploy: () => Promise<{
-    token: ERC721;
-    name: string;
-    symbol: string;
-    holder: HardhatEthersSigner;
-    holderTokenId: bigint;
-  }>;
+  deploy: () => Promise<ERC721Deployment>;
   suiteFunction?: ExclusiveSuiteFunction | PendingSuiteFunction;
 }
 
 /**
- * @function testERC20Compliance
+ * @function testERC721Compliance
  * @description This function provides a black-box test suite for verifying
  * the compliance of Ethereum contracts with the ERC-721 token standard.
  * Reference: https://eips.ethereum.org/EIPS/eip-721
@@ -52,7 +54,7 @@ interface ERC721Target {
  * @param {Function} [target.suiteFunction=describe] function that runs the suite, a temporary workaround for running
  * the suite exclusively or skipping the suite;
  *
- * The `deploy` function should return an object containing:
+ * The `deploy` function should return an object compatible with the `ERC721Deployment` interface.
  * - `token`: The ERC721 token instance.
  * - `name`: The expected name of the token.
  * - `symbol`: The expected symbol of the token.
@@ -90,13 +92,13 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
     afterEach(async () => await Snapshot.restore(originalState));
 
     context("name", () => {
-      it("Returns the name of the token", async () => {
+      it("[OPTIONAL] Returns the name of the token", async () => {
         expect(await token.name()).to.equal(name);
       });
     });
 
     context("symbol", () => {
-      it("Returns the symbol of the token", async () => {
+      it("[OPTIONAL] Returns the symbol of the token", async () => {
         expect(await token.symbol()).to.equal(symbol);
       });
     });
@@ -250,6 +252,30 @@ export function testERC721Compliance({ tokenName, deploy, suiteFunction = descri
               "safeTransferFrom(address,address,uint256,bytes)"
             ](holder, contractRecipient, holderTokenId, new Uint8Array()),
         ).to.be.reverted;
+      });
+
+      it("Allows the holder to transfer the token to the IERC721 contract", async () => {
+        await contractRecipient.setDoesAcceptTokens(true);
+
+        await expect(
+          token.connect(spender)["safeTransferFrom(address,address,uint256)"](holder, contractRecipient, holderTokenId),
+        )
+          .to.emit(token, "Transfer")
+          .withArgs(holder.address, await contractRecipient.getAddress(), holderTokenId);
+      });
+
+      it("Allows the holder to transfer the token to the IERC721 contract (with data)", async () => {
+        await contractRecipient.setDoesAcceptTokens(true);
+
+        await expect(
+          token
+            .connect(spender)
+            [
+              "safeTransferFrom(address,address,uint256,bytes)"
+            ](holder, contractRecipient, holderTokenId, new Uint8Array()),
+        )
+          .to.emit(token, "Transfer")
+          .withArgs(holder.address, await contractRecipient.getAddress(), holderTokenId);
       });
     });
 

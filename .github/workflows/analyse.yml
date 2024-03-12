@@ -63,9 +63,8 @@ jobs:
           echo 'value=present' >> $GITHUB_OUTPUT ||
           echo 'value=not' >> $GITHUB_OUTPUT
 
-#      # https://github.com/lidofinance/core/issues/1
-#      - name: Upload results.sarif file
-#        uses: github/codeql-action/upload-sarif@main
-#        if: ${{ always() && steps.results.outputs.value == 'present' }}
-#        with:
-#          sarif_file: results.sarif
+      - name: Upload results.sarif file
+        uses: github/codeql-action/upload-sarif@v3
+        if: ${{ always() && steps.results.outputs.value == 'present' }}
+        with:
+          sarif_file: results.sarif

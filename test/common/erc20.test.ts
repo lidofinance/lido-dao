@@ -27,6 +27,8 @@ interface ERC20Target {
  * @function testERC20Compliance
  * @description This function provides a black-box test suite for verifying
  * the compliance of Ethereum contracts with the ERC-20 token standard.
+ * Reference: https://eips.ethereum.org/EIPS/eip-20
+ *
  * It is designed to strictly adhere to the specifications prescribed in the ERC-20 standard.
  * The test suite covers all mandatory aspects of the standard, ensuring that the contract
  * correctly implements essential functionalities such as totalSupply, balanceOf, transfer, and approve,
