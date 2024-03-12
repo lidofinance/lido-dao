@@ -5,13 +5,14 @@ import { ethers } from "hardhat";
 
 import { ERCProxy__factory, EVMScriptRegistryFactory__factory, Kernel__factory } from "typechain-types";
 
-import { Contract, DeploymentState, getContractAt, getContractPath, makeTx, TotalGasCounter } from "lib/deploy";
+import { Contract, getContractAt, getContractPath } from "lib/contract";
+import { makeTx, TotalGasCounter } from "lib/deploy";
 // import { loadArtifact } from "lib/artifacts";
 import { findEvents, findEventsWithAbi } from "lib/event";
 import { log } from "lib/log";
 import {
   AppNames,
-  DAOInitialSettings,
+  DeploymentState,
   persistNetworkState,
   readNetworkState,
   setValueInState,
@@ -25,7 +26,7 @@ const KERNEL_DEFAULT_ACL_APP_ID = "0xe3262375f45a6e2026b7e7b18c2b807434f2508fe1a
 async function doTemplateNewDAO(
   template: Contract,
   deployer: string,
-  daoInitialSettings: DAOInitialSettings,
+  daoInitialSettings: DeploymentState,
 ): Promise<ContractTransactionReceipt> {
   // TODO
   // const reposCreatedEvt = await assertLastEvent(template, 'TmplReposCreated', null, state.lidoTemplate.deployBlock)

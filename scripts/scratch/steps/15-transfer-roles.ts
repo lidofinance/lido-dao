@@ -1,6 +1,7 @@
 import { ethers } from "hardhat";
 
-import { getContractAt, makeTx, TotalGasCounter } from "lib/deploy";
+import { getContractAt } from "lib/contract";
+import { makeTx, TotalGasCounter } from "lib/deploy";
 import { log } from "lib/log";
 import { readNetworkState, Sk } from "lib/state-file";
 

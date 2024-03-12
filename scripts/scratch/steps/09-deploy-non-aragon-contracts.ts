@@ -1,11 +1,11 @@
 import { ethers } from "hardhat";
 
+import { getContractPath } from "lib/contract";
 import {
   deployBehindOssifiableProxy,
   deployContract,
   deployImplementation,
   deployWithoutProxy,
-  getContractPath,
   TotalGasCounter,
   updateProxyImplementation,
 } from "lib/deploy";
