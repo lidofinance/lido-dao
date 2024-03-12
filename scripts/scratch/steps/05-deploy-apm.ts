@@ -15,7 +15,7 @@ async function main() {
   log.scriptStart(__filename);
 
   const deployer = (await ethers.provider.getSigner()).address;
-  let state = readNetworkState(deployer);
+  let state = readNetworkState({ deployer });
   const templateAddress = state.lidoTemplate.address;
 
   logSplitter();

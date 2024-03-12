@@ -2,36 +2,36 @@ import { ethers } from "hardhat";
 
 import { getContractAt, makeTx, TotalGasCounter } from "lib/deploy";
 import { log } from "lib/log";
-import { readNetworkState } from "lib/state-file";
+import { readNetworkState, Sk } from "lib/state-file";
 
 const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
 
 async function transferOZAdmin(contractName: string, contractAddress: string, currentAdmin: string, newAdmin: string) {
-  console.log(`Transferring OZ admin of ${contractAddress} from ${currentAdmin} to ${newAdmin}`);
+  log(`Transferring OZ admin of ${contractAddress} from ${currentAdmin} to ${newAdmin}`);
   const contract = await getContractAt(contractName, contractAddress);
   await makeTx(contract, "grantRole", [DEFAULT_ADMIN_ROLE, newAdmin], { from: currentAdmin });
   await makeTx(contract, "renounceRole", [DEFAULT_ADMIN_ROLE, currentAdmin], { from: currentAdmin });
-  console.log();
+  log.emptyLine();
 }
 
 async function changeOssifiableProxyAdmin(contractAddress: string, currentAdmin: string, newAdmin: string) {
-  console.log(`Transferring OssifiableProxy admin of ${contractAddress} from ${currentAdmin} to ${newAdmin}`);
+  log(`Transferring OssifiableProxy admin of ${contractAddress} from ${currentAdmin} to ${newAdmin}`);
   const proxy = await getContractAt("OssifiableProxy", contractAddress);
   await makeTx(proxy, "proxy__changeAdmin", [newAdmin], { from: currentAdmin });
-  console.log();
+  log.emptyLine();
 }
 
 async function changeDepositSecurityModuleAdmin(contractAddress: string, currentAdmin: string, newAdmin: string) {
-  console.log(`Changing DepositSecurityModule owner of ${contractAddress} from ${currentAdmin} to ${newAdmin}`);
+  log(`Changing DepositSecurityModule owner of ${contractAddress} from ${currentAdmin} to ${newAdmin}`);
   const depositSecurityModule = await getContractAt("DepositSecurityModule", contractAddress);
   await makeTx(depositSecurityModule, "setOwner", [newAdmin], { from: currentAdmin });
-  console.log();
+  log.emptyLine();
 }
 
 async function main() {
   log.scriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
-  const state = readNetworkState(deployer);
+  const state = readNetworkState({ deployer });
 
   const agent = state["app:aragon-agent"].proxy.address;
 
@@ -51,7 +51,7 @@ async function main() {
   await changeOssifiableProxyAdmin(state.validatorsExitBusOracle.proxy.address, deployer, agent);
   await changeOssifiableProxyAdmin(state.withdrawalQueueERC721.proxy.address, deployer, agent);
 
-  if (state.depositSecurityModule.deployParameters.usePredefinedAddressInstead === null) {
+  if (state[Sk.depositSecurityModule].deployParameters.usePredefinedAddressInstead === null) {
     await changeDepositSecurityModuleAdmin(state.depositSecurityModule.address, deployer, agent);
   }
 

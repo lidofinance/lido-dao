@@ -19,9 +19,10 @@ export NETWORK_STATE_DEFAULTS_FILE="scripts/scratch/deployed-testnet-defaults.js
 
 bash scripts/scratch/dao-deploy.sh
 
-exit 0
 
-# # Need this to get sure the last transactions are mined
-yarn hardhat --network $NETWORK run ./scripts/scratch/send-hardhat-mine.js --no-compile
+# # # Need this to get sure the last transactions are mined
+# # yarn hardhat --network $NETWORK run ./scripts/scratch/send-hardhat-mine.js --no-compile
+pnpm hardhat --network $NETWORK run --no-compile scripts/scratch/send-hardhat-mine.ts
 
-NETWORK_STATE_FILE=deployed-local.json HARDHAT_FORKING_URL="${RPC_URL}" yarn hardhat run --no-compile ./scripts/scratch/checks/scratch-acceptance-test.js --network hardhat
+# NETWORK_STATE_FILE=deployed-local.json HARDHAT_FORKING_URL="${RPC_URL}" yarn hardhat run --no-compile ./scripts/scratch/checks/scratch-acceptance-test.js --network hardhat
+NETWORK_STATE_FILE=deployed-local.json HARDHAT_FORKING_URL="${RPC_URL}" pnpm hardhat --network hardhat run --no-compile scripts/scratch/scratch-acceptance-test.ts

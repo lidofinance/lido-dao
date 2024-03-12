@@ -10,7 +10,7 @@ const NULL_CONTENT_URI =
 async function main() {
   log.scriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
-  const state = readNetworkState(deployer);
+  const state = readNetworkState({ deployer });
 
   logSplitter();
   const template = await getContractAt("LidoTemplate", state[Sk.lidoTemplate].address);

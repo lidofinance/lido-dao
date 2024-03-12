@@ -14,7 +14,7 @@ import { readNetworkState, Sk, updateObjectInState } from "lib/state-file";
 async function main() {
   log.scriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
-  let state = readNetworkState(deployer);
+  let state = readNetworkState({ deployer });
 
   let daoFactory: Contract;
   let evmScriptRegistryFactory: Contract;

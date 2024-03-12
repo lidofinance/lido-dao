@@ -30,7 +30,6 @@ export async function assignENSName(
 
   let receipt;
   if ((await ens.owner(node)) === owner) {
-    console.log({ args: [node, assigneeAddress], txParams: { from: owner } });
     receipt = await makeTx(ens as unknown as Contract, "setOwner", [node, assigneeAddress], { from: owner });
   } else {
     if ((await ens.owner(parentNode)) !== owner) {
@@ -40,7 +39,6 @@ export async function assignENSName(
       );
     }
     try {
-      console.log({ args2: [parentNode, labelHash], txParams: { from: owner } });
       receipt = await makeTx(ens as unknown as Contract, "setSubnodeOwner", [parentNode, labelHash, assigneeAddress], {
         from: owner,
       });

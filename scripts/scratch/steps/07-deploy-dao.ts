@@ -11,6 +11,7 @@ import { findEvents, findEventsWithAbi } from "lib/event";
 import { log } from "lib/log";
 import {
   AppNames,
+  DAOInitialSettings,
   persistNetworkState,
   readNetworkState,
   setValueInState,
@@ -21,19 +22,12 @@ import {
 // See KernelConstants.sol
 const KERNEL_DEFAULT_ACL_APP_ID = "0xe3262375f45a6e2026b7e7b18c2b807434f2508fe1a2a3dfb493c7df8f4aad6a";
 
-type DaoInitialSettings = {
-  [key: string]: {
-    [key: string]: {
-      [key: string]: string | number;
-    };
-  };
-};
-
 async function doTemplateNewDAO(
   template: Contract,
   deployer: string,
-  daoInitialSettings: DaoInitialSettings,
+  daoInitialSettings: DAOInitialSettings,
 ): Promise<ContractTransactionReceipt> {
+  // TODO
   // const reposCreatedEvt = await assertLastEvent(template, 'TmplReposCreated', null, state.lidoTemplate.deployBlock)
   // state.createAppReposTx = reposCreatedEvt.transactionHash
   // log(`Using createRepos transaction: ${chalk.yellow(state.createAppReposTx)}`)
@@ -264,7 +258,7 @@ async function saveStateFromNewDAOTx(newDAOReceipt: ContractTransactionReceipt) 
 async function main() {
   log.scriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
-  let state = readNetworkState(deployer);
+  let state = readNetworkState({ deployer });
 
   const template = await getContractAt("LidoTemplate", state[Sk.lidoTemplate].address);
   if (state[Sk.lidoTemplate].deployBlock) {

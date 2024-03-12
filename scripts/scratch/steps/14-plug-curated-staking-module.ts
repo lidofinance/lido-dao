@@ -13,7 +13,7 @@ const STAKING_MODULE_MANAGE_ROLE = streccak("STAKING_MODULE_MANAGE_ROLE");
 async function main() {
   log.scriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
-  const state = readNetworkState(deployer);
+  const state = readNetworkState({ deployer });
 
   const stakingRouter = await getContractAt("StakingRouter", state.stakingRouter.proxy.address);
   const nodeOperatorsRegistry = await getContractAt(

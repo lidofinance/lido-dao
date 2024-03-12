@@ -9,9 +9,9 @@ const MAX_HOLDERS_IN_ONE_TX = 30;
 async function main() {
   log.scriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
-  const state = readNetworkState(deployer);
+  const state = readNetworkState({ deployer });
 
-  const vesting: { [key: string]: string | number } = state["vestingParams"];
+  const vesting = state["vestingParams"];
   const pairs = Object.entries(vesting.holders);
   const holders = pairs.map((p) => p[0]);
   const amounts = pairs.map((p) => BigInt(p[1]));
@@ -60,7 +60,7 @@ async function main() {
         vesting.revokable,
         "0x" + endTotalSupply.toString(16),
       ],
-      { from: state.deployer },
+      { from: deployer },
     );
   }
 

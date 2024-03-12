@@ -20,3 +20,5 @@ export * from "./log";
 export * from "./deploy";
 export * from "./ens";
 export * from "./state-file";
+export * from "./contract";
+export * from "./oracle";

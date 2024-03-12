@@ -7,7 +7,7 @@ import { readNetworkState, Sk } from "lib/state-file";
 async function main() {
   log.scriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
-  const state = readNetworkState(deployer);
+  const state = readNetworkState({ deployer });
 
   // TODO
   // await assertLastEvent(template, 'TmplTokensIssued', null, state.lidoTemplate.deployBlock)

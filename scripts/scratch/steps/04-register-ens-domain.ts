@@ -16,7 +16,7 @@ async function main() {
   log.scriptStart(__filename);
   const deployerSigner = await ethers.provider.getSigner();
   const deployer = deployerSigner.address;
-  const state = readNetworkState(deployer);
+  const state = readNetworkState({ deployer });
 
   log.splitter();
 
@@ -90,7 +90,6 @@ async function main() {
     log(`Using commitment:`, yl(commitment));
 
     const rentPrice = await controller.rentPrice(domainLabel, domainRegDuration);
-    console.log({ rentPrice });
 
     log(`Rent price:`, yl(`${ethers.formatUnits(rentPrice, "ether")} ETH`));
 

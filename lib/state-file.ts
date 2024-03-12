@@ -2,16 +2,13 @@ import { readFileSync, writeFileSync } from "fs";
 import { network as hardhatNetwork } from "hardhat";
 import { resolve } from "path";
 
-// TODO: refactor these
-const NETWORK_STATE_FILE_BASENAME = process.env.NETWORK_STATE_FILE_BASENAME || "deployed";
-const NETWORK_STATE_FILE_DIR = process.env.NETWORK_STATE_FILE_DIR || ".";
+const NETWORK_STATE_FILE_BASENAME = "deployed";
+const NETWORK_STATE_FILE_DIR = ".";
 
 export type DeploymentState = {
-  [key: string]: number | null | object | string | boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
 };
-
-// State file contracts root keys
-export const skAragonKernel = "aragon-kernel";
 
 export const AppNames = {
   // Lido apps
@@ -25,63 +22,65 @@ export const AppNames = {
   ARAGON_VOTING: "aragon-voting",
 };
 
-export const Sk = {
-  deployer: "deployer",
-  aragonEnsLabelName: "aragonEnsLabelName",
-  apmRegistryFactory: "apmRegistryFactory",
-  appLido: "app:lido",
-  appOracle: `app:${AppNames.ORACLE}`,
-  appNodeOperatorsRegistry: "app:node-operators-registry",
-  aragonAcl: "aragon-acl",
-  aragonEvmScriptRegistry: "aragon-evm-script-registry",
-  aragonApmRegistry: "aragon-apm-registry",
-  aragonId: "aragonID",
-  aragonKernel: "aragon-kernel",
-  aragonRepoBase: "aragon-repo-base",
-  appAgent: "app:aragon-agent",
-  appFinance: "app:aragon-finance",
-  appTokenManager: "app:aragon-token-manager",
-  appVoting: "app:aragon-voting",
-  daoFactory: "daoFactory",
-  daoInitialSettings: "daoInitialSettings",
-  ens: "ens",
-  ensFactory: "ensFactory",
-  ensNode: "ensNode",
-  evmScriptRegistryFactory: "evmScriptRegistryFactory",
-  ensSubdomainRegistrar: "ensSubdomainRegistrar",
-  ldo: "ldo",
-  lido: "lido",
-  lidoApm: "lidoApm",
-  lidoApmEnsName: "lidoApmEnsName",
-  lidoApmEnsRegDurationSec: "lidoApmEnsRegDurationSec",
-  lidoTemplate: "lidoTemplate",
-  miniMeTokenFactory: "miniMeTokenFactory",
-  lidoTemplateCreateStdAppReposTx: "lidoTemplateCreateStdAppReposTx",
-  createAppReposTx: "createAppReposTx",
-  lidoTemplateNewDaoTx: "lidoTemplateNewDaoTx",
-  callsScript: "callsScript",
-  vestingParams: "vestingParams",
-  withdrawalVault: "withdrawalVault",
-  gateSeal: "gateSeal",
-  stakingRouter: "stakingRouter",
-  burner: "burner",
-  executionLayerRewardsVault: "executionLayerRewardsVault",
-  accountingOracle: "accountingOracle",
-  depositSecurityModule: "depositSecurityModule",
-  dummyEmptyContract: "dummyEmptyContract",
-  eip712StETH: "eip712StETH",
-  hashConsensusForAccountingOracle: "hashConsensusForAccountingOracle",
-  hashConsensusForValidatorsExitBusOracle: "hashConsensusForValidatorsExitBusOracle",
-  oracleDaemonConfig: "oracleDaemonConfig",
-  oracleReportSanityChecker: "oracleReportSanityChecker",
-  validatorsExitBusOracle: "validatorsExitBusOracle",
-  withdrawalQueueERC721: "withdrawalQueueERC721",
-  depositContract: "depositContract",
-  wstETH: "wstETH",
-  lidoLocator: "lidoLocator",
-};
+// State file contracts root keys
+export enum Sk {
+  deployer = "deployer",
+  aragonEnsLabelName = "aragonEnsLabelName",
+  apmRegistryFactory = "apmRegistryFactory",
+  appLido = "app:lido",
+  appOracle = `app:oracle`,
+  appNodeOperatorsRegistry = "app:node-operators-registry",
+  aragonAcl = "aragon-acl",
+  aragonEvmScriptRegistry = "aragon-evm-script-registry",
+  aragonApmRegistry = "aragon-apm-registry",
+  aragonId = "aragonID",
+  aragonKernel = "aragon-kernel",
+  aragonRepoBase = "aragon-repo-base",
+  appAgent = "app:aragon-agent",
+  appFinance = "app:aragon-finance",
+  appTokenManager = "app:aragon-token-manager",
+  appVoting = "app:aragon-voting",
+  daoFactory = "daoFactory",
+  daoInitialSettings = "daoInitialSettings",
+  ens = "ens",
+  ensFactory = "ensFactory",
+  ensNode = "ensNode",
+  evmScriptRegistryFactory = "evmScriptRegistryFactory",
+  ensSubdomainRegistrar = "ensSubdomainRegistrar",
+  ldo = "ldo",
+  // lido = "lido",
+  lidoApm = "lidoApm",
+  lidoApmEnsName = "lidoApmEnsName",
+  lidoApmEnsRegDurationSec = "lidoApmEnsRegDurationSec",
+  lidoTemplate = "lidoTemplate",
+  miniMeTokenFactory = "miniMeTokenFactory",
+  lidoTemplateCreateStdAppReposTx = "lidoTemplateCreateStdAppReposTx",
+  createAppReposTx = "createAppReposTx",
+  lidoTemplateNewDaoTx = "lidoTemplateNewDaoTx",
+  callsScript = "callsScript",
+  vestingParams = "vestingParams",
+  withdrawalVault = "withdrawalVault",
+  gateSeal = "gateSeal",
+  stakingRouter = "stakingRouter",
+  burner = "burner",
+  executionLayerRewardsVault = "executionLayerRewardsVault",
+  accountingOracle = "accountingOracle",
+  depositSecurityModule = "depositSecurityModule",
+  dummyEmptyContract = "dummyEmptyContract",
+  eip712StETH = "eip712StETH",
+  hashConsensusForAccountingOracle = "hashConsensusForAccountingOracle",
+  hashConsensusForValidatorsExitBusOracle = "hashConsensusForValidatorsExitBusOracle",
+  oracleDaemonConfig = "oracleDaemonConfig",
+  oracleReportSanityChecker = "oracleReportSanityChecker",
+  validatorsExitBusOracle = "validatorsExitBusOracle",
+  withdrawalQueueERC721 = "withdrawalQueueERC721",
+  depositContract = "depositContract",
+  wstETH = "wstETH",
+  lidoLocator = "lidoLocator",
+  chainSpec = "chainSpec",
+}
 
-export function getAddress(contractKey: string, state: DeploymentState): string {
+export function getAddress(contractKey: Sk, state: DeploymentState): string | null {
   switch (contractKey) {
     case Sk.accountingOracle:
     case Sk.appAgent:
@@ -129,9 +128,16 @@ export function getAddress(contractKey: string, state: DeploymentState): string 
   }
 }
 
-export function readNetworkState(deployer?: string, networkName?: string) {
-  networkName = networkName || hardhatNetwork.name;
-  const fileName = _getFileName(networkName, NETWORK_STATE_FILE_BASENAME, NETWORK_STATE_FILE_DIR);
+export function readNetworkState({
+  deployer,
+  networkStateFile,
+}: {
+  deployer?: string;
+  networkStateFile?: string;
+} = {}) {
+  const fileName = networkStateFile
+    ? resolve(NETWORK_STATE_FILE_DIR, networkStateFile)
+    : _getFileName(hardhatNetwork.name, NETWORK_STATE_FILE_BASENAME, NETWORK_STATE_FILE_DIR);
   const state = _readStateFile(fileName);
 
   if (deployer !== undefined && deployer != state.deployer) {
@@ -141,20 +147,21 @@ export function readNetworkState(deployer?: string, networkName?: string) {
   return state;
 }
 
-export function updateObjectInState(key: string, supplement: object): DeploymentState {
-  const state = readNetworkState();
+export function updateObjectInState(key: Sk, supplement: object): DeploymentState {
+  const state = readNetworkState() as unknown as { [key: string]: { [key: string]: string } };
   state[key] = {
     ...state[key],
     ...supplement,
   };
-  persistNetworkState(state);
-  return state;
+  // TODO
+  persistNetworkState(state as unknown as DeploymentState);
+  return state as unknown as DeploymentState;
 }
 
 // path is either top level key or array of keys
-export function setValueInState(path: string, value: unknown): DeploymentState {
+export function setValueInState(key: Sk, value: unknown): DeploymentState {
   const state = readNetworkState();
-  state[path] = value;
+  state[key] = value;
   persistNetworkState(state);
   return state;
 }
@@ -176,6 +183,7 @@ function _getFileName(networkName: string, baseName: string, dir: string) {
 function _readStateFile(fileName: string) {
   const data = readFileSync(fileName, "utf8");
   try {
+    // return parseToDeploymentState(data);
     return JSON.parse(data);
   } catch (error) {
     throw new Error(`malformed network state file ${fileName}: ${(error as Error).message}`);

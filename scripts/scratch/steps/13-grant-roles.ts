@@ -2,23 +2,23 @@ import { ethers } from "hardhat";
 
 import { getContractAt, makeTx, TotalGasCounter } from "lib/deploy";
 import { log, logWideSplitter } from "lib/log";
-import { readNetworkState } from "lib/state-file";
+import { readNetworkState, Sk } from "lib/state-file";
 
 async function main() {
   log.scriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
-  const state = readNetworkState(deployer);
+  const state = readNetworkState({ deployer });
 
-  const lidoAddress = state["app:lido"].proxy.address;
-  const nodeOperatorsRegistryAddress = state["app:node-operators-registry"].proxy.address;
+  const lidoAddress = state[Sk.appLido].proxy.address;
+  const nodeOperatorsRegistryAddress = state[Sk.appNodeOperatorsRegistry].proxy.address;
   const gateSealAddress = state.gateSeal.address;
 
-  const burnerAddress = state["burner"].address;
-  const stakingRouterAddress = state["stakingRouter"].proxy.address;
-  const withdrawalQueueAddress = state["withdrawalQueueERC721"].proxy.address;
-  const accountingOracleAddress = state["accountingOracle"].proxy.address;
-  const validatorsExitBusOracleAddress = state["validatorsExitBusOracle"].proxy.address;
-  const depositSecurityModuleAddress = state.depositSecurityModule.address;
+  const burnerAddress = state[Sk.burner].address;
+  const stakingRouterAddress = state[Sk.stakingRouter].proxy.address;
+  const withdrawalQueueAddress = state[Sk.withdrawalQueueERC721].proxy.address;
+  const accountingOracleAddress = state[Sk.accountingOracle].proxy.address;
+  const validatorsExitBusOracleAddress = state[Sk.validatorsExitBusOracle].proxy.address;
+  const depositSecurityModuleAddress = state[Sk.depositSecurityModule].address;
 
   //
   // === StakingRouter

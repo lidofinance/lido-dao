@@ -8,27 +8,26 @@ import { en0x } from "lib/string";
 async function main() {
   log.scriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
-  const state = readNetworkState(deployer);
+  const state = readNetworkState({ deployer });
 
-  // TODO: use Sk.
-  const lidoAddress = state["app:lido"].proxy.address;
-  const legacyOracleAddress = state["app:oracle"].proxy.address;
+  const lidoAddress = state[Sk.appLido].proxy.address;
+  const legacyOracleAddress = state[Sk.appOracle].proxy.address;
   const nodeOperatorsRegistryAddress = state[Sk.appNodeOperatorsRegistry].proxy.address;
   const nodeOperatorsRegistryParams = state["nodeOperatorsRegistry"].deployParameters;
 
-  const validatorsExitBusOracleParams = state["validatorsExitBusOracle"].deployParameters;
-  const accountingOracleParams = state["accountingOracle"].deployParameters;
+  const validatorsExitBusOracleParams = state[Sk.validatorsExitBusOracle].deployParameters;
+  const accountingOracleParams = state[Sk.accountingOracle].deployParameters;
 
-  const stakingRouterAddress = state["stakingRouter"].proxy.address;
-  const withdrawalQueueAddress = state["withdrawalQueueERC721"].proxy.address;
-  const lidoLocatorAddress = state["lidoLocator"].proxy.address;
-  const accountingOracleAddress = state["accountingOracle"].proxy.address;
-  const hashConsensusForAccountingAddress = state["hashConsensusForAccountingOracle"].address;
-  const ValidatorsExitBusOracleAddress = state["validatorsExitBusOracle"].proxy.address;
-  const hashConsensusForValidatorsExitBusOracleAddress = state["hashConsensusForValidatorsExitBusOracle"].address;
-  const eip712StETHAddress = state["eip712StETH"].address;
-  const withdrawalVaultAddress = state["withdrawalVault"].proxy.address;
-  const oracleDaemonConfigAddress = state.oracleDaemonConfig.address;
+  const stakingRouterAddress = state[Sk.stakingRouter].proxy.address;
+  const withdrawalQueueAddress = state[Sk.withdrawalQueueERC721].proxy.address;
+  const lidoLocatorAddress = state[Sk.lidoLocator].proxy.address;
+  const accountingOracleAddress = state[Sk.accountingOracle].proxy.address;
+  const hashConsensusForAccountingAddress = state[Sk.hashConsensusForAccountingOracle].address;
+  const ValidatorsExitBusOracleAddress = state[Sk.validatorsExitBusOracle].proxy.address;
+  const hashConsensusForValidatorsExitBusOracleAddress = state[Sk.hashConsensusForValidatorsExitBusOracle].address;
+  const eip712StETHAddress = state[Sk.eip712StETH].address;
+  const withdrawalVaultAddress = state[Sk.withdrawalVault].proxy.address;
+  const oracleDaemonConfigAddress = state[Sk.oracleDaemonConfig].address;
 
   const testnetAdmin = deployer;
   const accountingOracleAdmin = testnetAdmin;
@@ -112,7 +111,6 @@ async function main() {
     const MANAGE_TOKEN_URI_ROLE = await withdrawalQueue.getFunction("MANAGE_TOKEN_URI_ROLE")();
     await makeTx(withdrawalQueue, "grantRole", [MANAGE_TOKEN_URI_ROLE, deployer], { from: deployer });
     await makeTx(withdrawalQueue, "setBaseURI", [withdrawalQueueBaseUri], { from: deployer });
-    console.log({ withdrawalQueueBaseUri });
     await makeTx(withdrawalQueue, "renounceRole", [MANAGE_TOKEN_URI_ROLE, deployer], { from: deployer });
   }
 

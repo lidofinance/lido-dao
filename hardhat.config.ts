@@ -17,12 +17,27 @@ import { HardhatUserConfig, subtask } from "hardhat/config";
 import { mochaRootHooks } from "./test/setup";
 
 const RPC_URL: string = process.env.RPC_URL || "";
+const HARDHAT_FORKING_URL = process.env.HARDHAT_FORKING_URL || "";
 
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   networks: {
     local: {
       url: RPC_URL,
+    },
+    hardhat: {
+      // NB!: forking get enabled if env variable HARDHAT_FORKING_URL is set, see code below
+      blockGasLimit: 30000000,
+      gasPrice: 0,
+      initialBaseFeePerGas: 0,
+      allowUnlimitedContractSize: true,
+      accounts: {
+        // default hardhat's node mnemonic
+        mnemonic: "test test test test test test test test test test test junk",
+        count: 30,
+        accountsBalance: "100000000000000000000000",
+      },
+      forking: HARDHAT_FORKING_URL ? { url: HARDHAT_FORKING_URL } : undefined,
     },
   },
   solidity: {

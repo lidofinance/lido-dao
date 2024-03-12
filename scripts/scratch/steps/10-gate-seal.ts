@@ -8,7 +8,7 @@ import { readNetworkState, Sk, updateObjectInState } from "lib/state-file";
 async function main() {
   log.scriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
-  const state = readNetworkState(deployer);
+  const state = readNetworkState({ deployer });
 
   // TODO: this and the substituted addresses
   if (state[Sk.gateSeal].address) {

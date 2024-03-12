@@ -1,8 +1,9 @@
-import { BaseContract, ContractDeployTransaction, ContractFactory, ContractTransactionReceipt } from "ethers";
+import { ContractFactory, ContractTransactionReceipt } from "ethers";
 import { artifacts, ethers } from "hardhat";
 
-import { log, yl } from "lib/log";
-import { updateObjectInState } from "lib/state-file";
+import { Contract, getContractAt } from "lib/contract";
+import { ConvertibleToString, log, yl } from "lib/log";
+import { Sk, updateObjectInState } from "lib/state-file";
 
 // TODO: check and remove type 1 support
 const GAS_PRICE = process.env.GAS_PRICE || null;
@@ -15,25 +16,6 @@ type TxParams = {
   from: string;
   value?: bigint | string;
 };
-
-interface ContractHelper {
-  name: string;
-  contractPath: string;
-  deploymentTx?: ContractDeployTransaction | unknown;
-  address: string;
-}
-
-export type Contract = BaseContract & ContractHelper;
-
-export async function getContractAt(name: string, address: string): Promise<Contract> {
-  const contract = (await ethers.getContractAt(name, address)) as unknown as Contract;
-  const artifact = await artifacts.readArtifact(name);
-  // TODO: use updateWithNameAndPath
-  contract.name = name;
-  contract.contractPath = artifact.sourceName;
-  contract.address = await contract.getAddress();
-  return contract as unknown as Contract;
-}
 
 class TotalGasCounterPrivate {
   totalGasUsed: bigint;
@@ -77,7 +59,7 @@ async function getDeploymentGasUsed(contract: Contract) {
 export async function makeTx(
   contract: Contract,
   funcName: string,
-  args: unknown[],
+  args: ConvertibleToString[],
   txParams: TxParams,
 ): Promise<ContractTransactionReceipt> {
   log.lineWithArguments(`${yl(contract.name)}[${contract.address}].${yl(funcName)}`, args);
@@ -175,10 +157,10 @@ export async function deployContract(
 }
 
 export async function deployWithoutProxy(
-  nameInState: string,
+  nameInState: Sk,
   artifactName: string,
   deployer: string,
-  constructorArgs: unknown[] = [],
+  constructorArgs: ConvertibleToString[] = [],
   addressFieldName = "address",
 ): Promise<Contract> {
   // TODO: maybe don't deploy if already deployed / specified
@@ -202,10 +184,10 @@ export async function deployWithoutProxy(
 }
 
 export async function deployImplementation(
-  nameInState: string,
+  nameInState: Sk,
   artifactName: string,
   deployer: string,
-  constructorArgs: unknown[] = [],
+  constructorArgs: ConvertibleToString[] = [],
 ): Promise<Contract> {
   log.lineWithArguments(
     `Deploying implementation for proxy of ${artifactName} with constructor args: `,
@@ -228,11 +210,11 @@ export async function deployImplementation(
 }
 
 export async function deployBehindOssifiableProxy(
-  nameInState: string | null,
+  nameInState: Sk | null,
   artifactName: string,
   proxyOwner: string,
   deployer: string,
-  constructorArgs: unknown[] = [],
+  constructorArgs: ConvertibleToString[] = [],
   implementation: null | string = null,
 ) {
   if (implementation === null) {
@@ -279,7 +261,7 @@ export async function deployBehindOssifiableProxy(
 }
 
 export async function updateProxyImplementation(
-  nameInState: string,
+  nameInState: Sk,
   artifactName: string,
   proxyAddress: string,
   proxyOwner: string,

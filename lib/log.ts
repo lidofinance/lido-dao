@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import path from "path";
 
-type ConvertibleToString = string | number | boolean | { toString(): string };
+export type ConvertibleToString = string | number | boolean | { toString(): string };
 
 export const rd = (s: ConvertibleToString) => chalk.red(s);
 export const yl = (s: ConvertibleToString) => chalk.yellow(s);
