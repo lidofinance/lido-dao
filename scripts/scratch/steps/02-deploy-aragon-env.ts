@@ -4,7 +4,8 @@ import { ethers } from "hardhat";
 
 import { ENS, ENS__factory } from "typechain-types";
 
-import { Contract, deployImplementation, deployWithoutProxy, getContractAt, makeTx, TotalGasCounter } from "lib/deploy";
+import { Contract, getContractAt } from "lib/contract";
+import { deployImplementation, deployWithoutProxy, makeTx, TotalGasCounter } from "lib/deploy";
 import { assignENSName } from "lib/ens";
 import { findEvents } from "lib/event";
 import { streccak } from "lib/keccak";
@@ -25,7 +26,7 @@ async function main() {
     log(`Using ENS: ${chalk.yellow(state[Sk.ens].address)}`);
     ens = ENS__factory.connect(state[Sk.ens].address, await ethers.getSigner(deployer));
   } else {
-    const ensFactory = await deployWithoutProxy("ensFactory", "ENSFactory", deployer);
+    const ensFactory = await deployWithoutProxy(Sk.ensFactory, "ENSFactory", deployer);
     const receipt = await makeTx(ensFactory, "newENS", [deployer], { from: deployer });
     log.splitter();
     const ensAddress = findEvents(receipt, "DeployENS")[0].args.ens;

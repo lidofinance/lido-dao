@@ -1,7 +1,7 @@
 import { ContractFactory, ContractTransactionReceipt } from "ethers";
 import { artifacts, ethers } from "hardhat";
 
-import { Contract, getContractAt } from "lib/contract";
+import { Contract, DeployedContract, getContractAt, getContractPath } from "lib/contract";
 import { ConvertibleToString, log, yl } from "lib/log";
 import { Sk, updateObjectInState } from "lib/state-file";
 
@@ -84,13 +84,6 @@ export async function makeTx(
 //   contract.address = await contract.getAddress();
 // }
 
-export async function getContractPath(contractName: string) {
-  const artifact = await artifacts.readArtifact(contractName);
-  return artifact.sourceName;
-  // TODO
-  // return await artifacts.require(contractName)._hArtifact.sourceName
-}
-
 // TODO: assertProxiedContractBytecode
 // TODO: assertDeployedBytecode
 
@@ -122,10 +115,10 @@ async function deployContractType2(
   artifactName: string,
   constructorArgs: unknown[],
   deployer: string,
-): Promise<Contract> {
+): Promise<DeployedContract> {
   const txParams = await getDeployTxParams(deployer);
-  const factory: ContractFactory = await ethers.getContractFactory(artifactName);
-  const contract: Contract = (await factory.deploy(...constructorArgs, txParams)) as Contract;
+  const factory = (await ethers.getContractFactory(artifactName)) as ContractFactory;
+  const contract = (await factory.deploy(...constructorArgs, txParams)) as DeployedContract;
   const tx = contract.deploymentTransaction();
   if (tx) {
     log(`sent deployment tx ${tx.hash} (nonce ${tx.nonce})...`);
@@ -146,7 +139,7 @@ export async function deployContract(
   artifactName: string,
   constructorArgs: unknown[],
   deployer: string,
-): Promise<Contract> {
+): Promise<DeployedContract> {
   const txParams = await getDeployTxParams(deployer);
   if (txParams.type === 2) {
     return await deployContractType2(artifactName, constructorArgs, deployer);
@@ -162,7 +155,7 @@ export async function deployWithoutProxy(
   deployer: string,
   constructorArgs: ConvertibleToString[] = [],
   addressFieldName = "address",
-): Promise<Contract> {
+): Promise<DeployedContract> {
   // TODO: maybe don't deploy if already deployed / specified
 
   log.lineWithArguments(`Deploying ${artifactName} (without proxy) with constructor args: `, constructorArgs);
@@ -188,7 +181,7 @@ export async function deployImplementation(
   artifactName: string,
   deployer: string,
   constructorArgs: ConvertibleToString[] = [],
-): Promise<Contract> {
+): Promise<DeployedContract> {
   log.lineWithArguments(
     `Deploying implementation for proxy of ${artifactName} with constructor args: `,
     constructorArgs,

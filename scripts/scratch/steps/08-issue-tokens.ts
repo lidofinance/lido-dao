@@ -1,6 +1,7 @@
 import { ethers } from "hardhat";
 
-import { getContractAt, makeTx, TotalGasCounter } from "lib/deploy";
+import { getContractAt } from "lib/contract";
+import { makeTx, TotalGasCounter } from "lib/deploy";
 import { log, yl } from "lib/log";
 import { readNetworkState, Sk } from "lib/state-file";
 
@@ -11,10 +12,10 @@ async function main() {
   const deployer = (await ethers.provider.getSigner()).address;
   const state = readNetworkState({ deployer });
 
-  const vesting = state["vestingParams"];
+  const vesting = state[Sk.vestingParams];
   const pairs = Object.entries(vesting.holders);
   const holders = pairs.map((p) => p[0]);
-  const amounts = pairs.map((p) => BigInt(p[1]));
+  const amounts = pairs.map((p) => BigInt(p[1] as string));
 
   log(`Using vesting settings:`);
   log(`  Start:`, yl(formatDate(vesting.start as number)));

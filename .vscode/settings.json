@@ -4,5 +4,5 @@
     "source.fixAll.eslint": "always"
   },
   "solidity.defaultCompiler": "remote",
-  "cSpell.words": ["streccak"]
+  "cSpell.words": ["sealables", "streccak"]
 }

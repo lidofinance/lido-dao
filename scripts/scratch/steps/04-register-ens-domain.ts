@@ -2,15 +2,15 @@ import { assert } from "chai";
 import chalk from "chalk";
 import { ethers } from "hardhat";
 
-import { ENS__factory, IETHRegistrarController__factory, IInterfaceResolver__factory } from "typechain-types";
+import { ENS__factory } from "typechain-types";
 
-import { Contract, makeTx, TotalGasCounter } from "lib/deploy";
+import { Contract } from "lib/contract";
+import { makeTx, TotalGasCounter } from "lib/deploy";
 import { streccak } from "lib/keccak";
 import { log, yl } from "lib/log";
 import { readNetworkState, Sk } from "lib/state-file";
 
 const TLD = "eth";
-const CONTROLLER_INTERFACE_ID = "0x018fac06";
 
 async function main() {
   log.scriptStart(__filename);
@@ -27,7 +27,7 @@ async function main() {
 
   const domainName = state[Sk.lidoApmEnsName];
   const domainOwner = state[Sk.lidoTemplate].address;
-  const domainRegDuration = state[Sk.lidoApmEnsRegDurationSec];
+  // const domainRegDuration = state[Sk.lidoApmEnsRegDurationSec];
 
   const node = ethers.namehash(domainName);
 
@@ -44,69 +44,70 @@ async function main() {
   log(`Label: ${chalk.yellow(domainLabel)} (${labelHash})`);
 
   if ((await ens.owner(node)) !== deployer && (await ens.owner(tldNode)) !== deployer) {
-    // TODO
     throw new Error(`This branch is not implemented: refactor it if needed`);
 
-    const tldResolverAddr = await ens.resolver(tldNode);
-    log(`Using TLD resolver:`, yl(tldResolverAddr));
-    // const tldResolver = await artifacts.require('IInterfaceResolver').at(tldResolverAddr)
-    const tldResolver = IInterfaceResolver__factory.connect(tldResolverAddr, ethers.provider);
+    // TODO: restore the commented part
+    // const CONTROLLER_INTERFACE_ID = "0x018fac06";
+    // const tldResolverAddr = await ens.resolver(tldNode);
+    // log(`Using TLD resolver:`, yl(tldResolverAddr));
+    // // const tldResolver = await artifacts.require('IInterfaceResolver').at(tldResolverAddr)
+    // const tldResolver = IInterfaceResolver__factory.connect(tldResolverAddr, ethers.provider);
 
-    const controllerAddr = await tldResolver.interfaceImplementer(tldNode, CONTROLLER_INTERFACE_ID);
+    // const controllerAddr = await tldResolver.interfaceImplementer(tldNode, CONTROLLER_INTERFACE_ID);
 
-    log(`Using TLD controller:`, yl(controllerAddr));
-    // const controller = await artifacts.require('IETHRegistrarController').at(controllerAddr)
-    const controller = await IETHRegistrarController__factory.connect(controllerAddr, ethers.provider);
+    // log(`Using TLD controller:`, yl(controllerAddr));
+    // // const controller = await artifacts.require('IETHRegistrarController').at(controllerAddr)
+    // const controller = await IETHRegistrarController__factory.connect(controllerAddr, ethers.provider);
 
-    const controllerParams = await Promise.all([
-      controller.minCommitmentAge(),
-      controller.maxCommitmentAge(),
-      controller.MIN_REGISTRATION_DURATION(),
-    ]);
+    // const controllerParams = await Promise.all([
+    //   controller.minCommitmentAge(),
+    //   controller.maxCommitmentAge(),
+    //   controller.MIN_REGISTRATION_DURATION(),
+    // ]);
 
-    const [minCommitmentAge, maxCommitmentAge, minRegistrationDuration] = controllerParams.map((x) => +x);
+    // const [minCommitmentAge, maxCommitmentAge, minRegistrationDuration] = controllerParams.map((x) => +x);
 
-    log(`Controller min commitment age: ${yl(minCommitmentAge)} sec`);
-    log(`Controller max commitment age: ${yl(maxCommitmentAge)} sec`);
-    log(
-      `Controller min registration duration: ${yl(formatTimeInterval(minRegistrationDuration))} (${minRegistrationDuration} sec)`,
-    );
+    // log(`Controller min commitment age: ${yl(minCommitmentAge)} sec`);
+    // log(`Controller max commitment age: ${yl(maxCommitmentAge)} sec`);
+    // log(
+    //   `Controller min registration duration: ${yl(formatTimeInterval(minRegistrationDuration))} (${minRegistrationDuration} sec)`,
+    // );
 
-    log.splitter();
+    // log.splitter();
 
-    log(`ENS domain owner:`, yl(domainOwner));
-    log(`ENS domain registration duration: ${yl(formatTimeInterval(domainRegDuration))} (${domainRegDuration} sec)`);
+    // log(`ENS domain owner:`, yl(domainOwner));
+    // log(`ENS domain registration duration: ${yl(formatTimeInterval(domainRegDuration))} (${domainRegDuration} sec)`);
 
-    log.splitter();
-    // TODO
-    // assert.log(assert.isTrue, await controller.available(domainLabel), `the domain is available`)
-    // assert.log(assert.isAtLeast, domainRegDuration, minRegistrationDuration, `registration duration is at least the minimum one`)
-    log.splitter();
+    // log.splitter();
+    // // TODO
+    // // assert.log(assert.isTrue, await controller.available(domainLabel), `the domain is available`)
+    // // assert.log(assert.isAtLeast, domainRegDuration, minRegistrationDuration, `registration duration is at least the minimum one`)
+    // log.splitter();
 
-    const salt = "0x" + ethers.hexlify(ethers.randomBytes(32));
-    log(`Using salt:`, yl(salt));
+    // const salt = "0x" + ethers.hexlify(ethers.randomBytes(32));
+    // log(`Using salt:`, yl(salt));
 
-    const commitment = await controller.makeCommitment(domainLabel, domainOwner, salt);
-    log(`Using commitment:`, yl(commitment));
+    // const commitment = await controller.makeCommitment(domainLabel, domainOwner, salt);
+    // log(`Using commitment:`, yl(commitment));
 
-    const rentPrice = await controller.rentPrice(domainLabel, domainRegDuration);
+    // const rentPrice = await controller.rentPrice(domainLabel, domainRegDuration);
 
-    log(`Rent price:`, yl(`${ethers.formatUnits(rentPrice, "ether")} ETH`));
+    // log(`Rent price:`, yl(`${ethers.formatUnits(rentPrice, "ether")} ETH`));
 
-    // increasing by 15% to account for price fluctuation; the difference will be refunded
-    const registerTxValue = rentPrice.muln(115).divn(100);
-    log(`Register TX value:`, yl(`${ethers.formatUnits(registerTxValue, "ether")} ETH`));
+    // // increasing by 15% to account for price fluctuation; the difference will be refunded
+    // const registerTxValue = rentPrice.muln(115).divn(100);
+    // log(`Register TX value:`, yl(`${ethers.formatUnits(registerTxValue, "ether")} ETH`));
 
-    log.splitter();
+    // log.splitter();
 
-    await makeTx(controller as unknown as Contract, "commit", [commitment], { from: deployer });
+    // await makeTx(controller as unknown as Contract, "commit", [commitment], { from: deployer });
 
-    await makeTx(controller as unknown as Contract, "register", [domainLabel, domainOwner, domainRegDuration, salt], {
-      from: deployer,
-      value: "0x" + registerTxValue.toString(16),
-    });
+    // await makeTx(controller as unknown as Contract, "register", [domainLabel, domainOwner, domainRegDuration, salt], {
+    //   from: deployer,
+    //   value: "0x" + registerTxValue.toString(16),
+    // });
 
-    log.splitter();
+    // log.splitter();
   } else {
     log(`ENS domain new owner:`, yl(domainOwner));
     if ((await ens.owner(node)) === deployer) {
@@ -124,28 +125,6 @@ async function main() {
 
   await TotalGasCounter.incrementTotalGasUsedInStateFile();
   log.scriptFinish(__filename);
-}
-
-function formatTimeInterval(sec: number) {
-  const HOUR = 60 * 60;
-  const DAY = HOUR * 24;
-  const MONTH = DAY * 30;
-  const YEAR = DAY * 365;
-
-  if (sec > YEAR) {
-    return floor(sec / YEAR, 100) + " year(s)";
-  }
-  if (sec > MONTH) {
-    return floor(sec / MONTH, 10) + " month(s)";
-  }
-  if (sec > DAY) {
-    return floor(sec / DAY, 10) + " day(s)";
-  }
-  return `${sec} second(s)`;
-}
-
-function floor(n: number, multiplier: number) {
-  return Math.floor(n * multiplier) / multiplier;
 }
 
 main()

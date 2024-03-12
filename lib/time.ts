@@ -27,3 +27,25 @@ export async function advanceChainTime(seconds: number) {
   await ethers.provider.send("evm_increaseTime", [seconds]);
   await ethers.provider.send("evm_mine");
 }
+
+export function formatTimeInterval(sec: number) {
+  function floor(n: number, multiplier: number) {
+    return Math.floor(n * multiplier) / multiplier;
+  }
+
+  const HOUR = 60 * 60;
+  const DAY = HOUR * 24;
+  const MONTH = DAY * 30;
+  const YEAR = DAY * 365;
+
+  if (sec > YEAR) {
+    return floor(sec / YEAR, 100) + " year(s)";
+  }
+  if (sec > MONTH) {
+    return floor(sec / MONTH, 10) + " month(s)";
+  }
+  if (sec > DAY) {
+    return floor(sec / DAY, 10) + " day(s)";
+  }
+  return `${sec} second(s)`;
+}

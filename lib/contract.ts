@@ -1,14 +1,19 @@
-import { BaseContract, ContractDeployTransaction, ContractRunner } from "ethers";
+import { BaseContract, ContractRunner } from "ethers";
 import { artifacts, ethers } from "hardhat";
 
 interface ContractHelper {
   name: string;
   contractPath: string;
-  deploymentTx?: ContractDeployTransaction | unknown;
   address: string;
 }
 
+interface DeployedContractHelper {
+  deploymentTx: string;
+}
+
 export type Contract = BaseContract & ContractHelper;
+
+export type DeployedContract = Contract & DeployedContractHelper;
 
 type ConnectFuncType = (address: string, runner?: ContractRunner | null) => unknown;
 
@@ -26,4 +31,9 @@ export async function getContractAt(name: string, address: string): Promise<Cont
   contract.contractPath = artifact.sourceName;
   contract.address = await contract.getAddress();
   return contract as unknown as Contract;
+}
+
+export async function getContractPath(contractName: string) {
+  const artifact = await artifacts.readArtifact(contractName);
+  return artifact.sourceName;
 }

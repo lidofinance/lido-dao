@@ -4,7 +4,8 @@ import { ethers } from "hardhat";
 
 import { ENS__factory } from "typechain-types";
 
-import { getContractAt, makeTx, TotalGasCounter } from "lib/deploy";
+import { getContractAt } from "lib/contract";
+import { makeTx, TotalGasCounter } from "lib/deploy";
 import { getENSNodeOwner } from "lib/ens";
 import { findEvents } from "lib/event";
 import { streccak } from "lib/keccak";
