@@ -3,9 +3,7 @@ import { ethers } from "hardhat";
 
 import { ENS } from "typechain-types";
 
-import { Contract, makeTx } from "lib/deploy";
-import { streccak } from "lib/keccak";
-import { log } from "lib/log";
+import { Contract, log, makeTx, streccak } from "lib";
 
 // Default parentName is "eth"
 export async function assignENSName(

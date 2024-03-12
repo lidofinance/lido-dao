@@ -11,7 +11,7 @@ import {
   LidoLocator,
 } from "typechain-types";
 
-import { certainAddress, dummyLocator, INITIAL_STETH_HOLDER, proxify } from "lib/address";
+import { certainAddress, dummyLocator, INITIAL_STETH_HOLDER, proxify } from "lib";
 
 describe("Lido:finalizeUpgrade_v2", () => {
   let deployer: HardhatEthersSigner;

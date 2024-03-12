@@ -8,8 +8,7 @@ import {
   TransactionReceipt,
 } from "ethers";
 
-import { Contract } from "lib/deploy";
-import { log, yl } from "lib/log";
+import { Contract, log, yl } from "lib";
 
 export function findEvents(receipt: ContractTransactionReceipt, eventName: string) {
   const events = [];
