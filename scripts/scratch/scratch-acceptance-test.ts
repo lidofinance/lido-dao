@@ -93,43 +93,34 @@ interface Protocol {
 }
 
 async function loadDeployedProtocol(state: DeploymentState, signer: unknown) {
-  const loadContract = <TT, T>(factory: T, stateKey: Sk) => {
+  const loadContract = <T>(factory: ContractFactoryHelper, stateKey: Sk) => {
     const address = getAddress(stateKey, state);
     if (address === null) {
       throw new Error(`Cannot get address from state for key "${stateKey}"`);
     }
-    const result = (factory as ContractFactoryHelper).connect(address, signer as ContractRunner) as Extended<TT>;
+    const result = factory.connect(address, signer as ContractRunner) as Extended<T>;
     result.address = address;
     return result;
   };
 
   return {
-    stakingRouter: loadContract<StakingRouter, typeof StakingRouter__factory>(StakingRouter__factory, Sk.stakingRouter),
-    lido: loadContract<Lido, typeof Lido__factory>(Lido__factory, Sk.appLido),
-    voting: loadContract<Voting, typeof Voting__factory>(Voting__factory, Sk.appVoting),
-    agent: loadContract<Agent, typeof Agent__factory>(Agent__factory, Sk.appAgent),
-    nodeOperatorsRegistry: loadContract<NodeOperatorsRegistry, typeof NodeOperatorsRegistry__factory>(
+    stakingRouter: loadContract<StakingRouter>(StakingRouter__factory, Sk.stakingRouter),
+    lido: loadContract<Lido>(Lido__factory, Sk.appLido),
+    voting: loadContract<Voting>(Voting__factory, Sk.appVoting),
+    agent: loadContract<Agent>(Agent__factory, Sk.appAgent),
+    nodeOperatorsRegistry: loadContract<NodeOperatorsRegistry>(
       NodeOperatorsRegistry__factory,
       Sk.appNodeOperatorsRegistry,
     ),
     depositSecurityModuleAddress: getAddress(Sk.depositSecurityModule, state),
-    accountingOracle: loadContract<AccountingOracle, typeof AccountingOracle__factory>(
-      AccountingOracle__factory,
-      Sk.accountingOracle,
-    ),
-    hashConsensusForAO: loadContract<HashConsensus, typeof HashConsensus__factory>(
-      HashConsensus__factory,
-      Sk.hashConsensusForAccountingOracle,
-    ),
-    elRewardsVault: loadContract<LidoExecutionLayerRewardsVault, typeof LidoExecutionLayerRewardsVault__factory>(
+    accountingOracle: loadContract<AccountingOracle>(AccountingOracle__factory, Sk.accountingOracle),
+    hashConsensusForAO: loadContract<HashConsensus>(HashConsensus__factory, Sk.hashConsensusForAccountingOracle),
+    elRewardsVault: loadContract<LidoExecutionLayerRewardsVault>(
       LidoExecutionLayerRewardsVault__factory,
       Sk.executionLayerRewardsVault,
     ),
-    withdrawalQueue: loadContract<WithdrawalQueue, typeof WithdrawalQueue__factory>(
-      WithdrawalQueue__factory,
-      Sk.withdrawalQueueERC721,
-    ),
-    ldo: loadContract<MiniMeToken, typeof MiniMeToken__factory>(MiniMeToken__factory, Sk.ldo),
+    withdrawalQueue: loadContract<WithdrawalQueue>(WithdrawalQueue__factory, Sk.withdrawalQueueERC721),
+    ldo: loadContract<MiniMeToken>(MiniMeToken__factory, Sk.ldo),
   };
 }
 
@@ -280,7 +271,7 @@ async function checkSubmitDepositReportWithdrawal(
 
   const accountingOracleSigner = await ethers.provider.getSigner(accountingOracle.address);
   // Performing dry-run to estimate simulated share rate
-  const [postTotalPooledEther, postTotalShares, ,] = await lido
+  const [postTotalPooledEther, postTotalShares] = await lido
     .connect(accountingOracleSigner)
     .handleOracleReport.staticCall(
       reportTimestamp,
