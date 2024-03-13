@@ -1,9 +1,8 @@
-import { Assertion, expect, util } from "chai";
-
 /**
  * Custom Chai assertions along with types should be defined in this file.
  * The file will be auto-included in the test suite by the chai setup, no need to import it.
  */
+import { Assertion, expect, util } from "chai";
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace

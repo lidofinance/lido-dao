@@ -25,7 +25,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install
@@ -44,8 +44,8 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'poetry'
+          python-version: "3.12"
+          cache: "poetry"
 
       - name: Install dependencies
         run: poetry install --no-root
@@ -63,9 +63,8 @@ jobs:
           echo 'value=present' >> $GITHUB_OUTPUT ||
           echo 'value=not' >> $GITHUB_OUTPUT
 
-#      # https://github.com/lidofinance/core/issues/1
-#      - name: Upload results.sarif file
-#        uses: github/codeql-action/upload-sarif@main
-#        if: ${{ always() && steps.results.outputs.value == 'present' }}
-#        with:
-#          sarif_file: results.sarif
+      - name: Upload results.sarif file
+        uses: github/codeql-action/upload-sarif@v3
+        if: ${{ always() && steps.results.outputs.value == 'present' }}
+        with:
+          sarif_file: results.sarif

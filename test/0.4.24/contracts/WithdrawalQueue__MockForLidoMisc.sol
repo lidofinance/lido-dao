@@ -2,16 +2,17 @@
 // for testing purposes only
 pragma solidity 0.4.24;
 
-
-contract WithdrawalQueueMinimalApiForLido {
+contract WithdrawalQueue__MockForLidoMisc {
   bool public isBunkerModeActive;
   uint256 public unfinalizedStETH;
 
-  function _setBunkerMode(bool active) external {
+  // test helpers
+
+  function mock__bunkerMode(bool active) external {
     isBunkerModeActive = active;
   }
 
-  function _setUnfinalizedStETH(uint256 amount) external {
+   function mock__unfinalizedStETH(uint256 amount) external {
     unfinalizedStETH = amount;
   }
 }

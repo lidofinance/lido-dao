@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { LidoLocator, LidoLocator__factory } from "typechain-types";
+import { LidoLocator, LidoLocator__MutableMock__factory } from "typechain-types";
 
 import { certainAddress } from ".";
 
@@ -11,7 +11,7 @@ export async function dummyLocator(config?: Partial<LidoLocator.ConfigStruct>, d
     [deployer] = await ethers.getSigners();
   }
 
-  const factory = new LidoLocator__factory(deployer);
+  const factory = new LidoLocator__MutableMock__factory(deployer);
 
   const locator = await factory.deploy({
     accountingOracle: certainAddress("dummy-locator:accountingOracle"),
@@ -31,5 +31,5 @@ export async function dummyLocator(config?: Partial<LidoLocator.ConfigStruct>, d
     ...config,
   });
 
-  return locator;
+  return locator as LidoLocator;
 }
