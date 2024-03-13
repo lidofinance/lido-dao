@@ -9,6 +9,7 @@ import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
 import {Versioned} from "./utils/Versioned.sol";
+import {TriggerableExit} from "./TriggerableExit.sol";
 
 interface ILido {
     /**
@@ -19,6 +20,11 @@ interface ILido {
     function receiveWithdrawals() external payable;
 }
 
+interface ITriggerableExit {
+    function triggerExit(bytes memory validatorPubkey) external payable;
+}
+
+
 /**
  * @title A vault for temporary storage of withdrawals
  */
@@ -27,6 +33,7 @@ contract WithdrawalVault is Versioned {
 
     ILido public immutable LIDO;
     address public immutable TREASURY;
+    ITriggerableExit public immutable TRIGGERABLE_EXIT;
 
     // Events
     /**
@@ -52,7 +59,7 @@ contract WithdrawalVault is Versioned {
      * @param _lido the Lido token (stETH) address
      * @param _treasury the Lido treasury address (see ERC20/ERC721-recovery interfaces)
      */
-    constructor(ILido _lido, address _treasury) {
+    constructor(ILido _lido, address _treasury, ITriggerableExit _triggerableExit) {
         if (address(_lido) == address(0)) {
             revert LidoZeroAddress();
         }
@@ -62,6 +69,7 @@ contract WithdrawalVault is Versioned {
 
         LIDO = _lido;
         TREASURY = _treasury;
+        TRIGGERABLE_EXIT = _triggerableExit;
     }
 
     /**
@@ -123,15 +131,9 @@ contract WithdrawalVault is Versioned {
         _token.transferFrom(address(this), TREASURY, _tokenId);
     }
 
-    event TriggerableExit(
-        uint256 indexed stakingModuleId,
-        uint256 indexed nodeOperatorId,
-        uint256 indexed validatorIndex,
-        bytes validatorPubkey,
-        uint256 timestamp
-    );
-    function forcedExit(uint256 moduleId, uint256 nodeOpId, uint256 valIndex, bytes calldata pubkey) external {
-        emit TriggerableExit(moduleId, nodeOpId, valIndex, pubkey, block.timestamp);
-        // TriggerableExit.trigger_exit()
+    receive() external payable {}
+
+    function forcedExit(bytes calldata pubkey) external payable {
+        ITriggerableExit(TRIGGERABLE_EXIT).triggerExit{value: msg.value}(pubkey);
     }
 }

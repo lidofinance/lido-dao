@@ -6,14 +6,17 @@ import {
   HashConsensusTimeTravellable__factory,
   Lido,
   Lido__factory,
-  PriorityExitBus__factory,
+  OracleReportSanityCheckerMock,
+  OracleReportSanityCheckerMock__factory,
+  TriggerableExit,
+  TriggerableExit__factory,
   ValidatorsExitBusOracle,
   ValidatorsExitBusOracleMock__factory,
   WithdrawalVault,
   WithdrawalVault__factory,
 } from "typechain-types";
 
-import { Snapshot } from "lib";
+import { ether, Snapshot } from "lib";
 import { de0x, dummyLocator } from "lib/dummy";
 
 const pad = (hex, bytesLength, fill = "0") => {
@@ -32,13 +35,23 @@ const INITIAL_EPOCH = 1;
 const CONSENSUS_VERSION = 1;
 const DATA_FORMAT_LIST = 1;
 
-// const PUBKEYS = [
-//   '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-//   '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-//   '0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
-//   '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
-//   '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-// ]
+function genPublicKeysArray(cnt = 1) {
+  const pubkeys = [];
+
+  for (let i = 1; i <= cnt; i++) {
+    pubkeys.push(pad("0x" + i.toString(16), 48));
+  }
+  return pubkeys;
+}
+
+// function genPublicKeysCalldata(cnt = 1) {
+//   let pubkeys = '0x'
+
+//   for (let i = 1; i <= cnt; i++) {
+//     pubkeys = pubkeys + de0x(pad("0x" + i.toString(16), 48))
+//   }
+//   return pubkeys
+// }
 
 const getDefaultReportFields = (overrides) => ({
   consensusVersion: CONSENSUS_VERSION,
@@ -84,6 +97,8 @@ describe("Triggerable exits test", () => {
   let oracle: ValidatorsExitBusOracle;
   let locator: LidoLocator;
   let consensus: HashConsensus;
+  let sanityChecker: OracleReportSanityCheckerMock;
+  let triggerableExit: TriggerableExit;
 
   // let oracleVersion: bigint;
 
@@ -110,17 +125,24 @@ describe("Triggerable exits test", () => {
     lido = await lidoFactory.deploy();
     const treasury = await lido.getAddress();
 
-    const priorityExitBusFactory = new PriorityExitBus__factory(deployer);
-    priorityExitBus = await priorityExitBusFactory.deploy();
+    const triggerableExitFactory = new TriggerableExit__factory(deployer);
+    triggerableExit = await triggerableExitFactory.deploy();
 
     const withdrawalVaultFactory = new WithdrawalVault__factory(deployer);
-    withdrawalVault = await withdrawalVaultFactory.deploy(await lido.getAddress(), treasury);
+    withdrawalVault = await withdrawalVaultFactory.deploy(
+      await lido.getAddress(),
+      treasury,
+      await triggerableExit.getAddress(),
+    );
 
     // const proverFactory = new Prover__factory(deployer)
     // prover = await proverFactory.deploy()
+    const sanityCheckerFactory = new OracleReportSanityCheckerMock__factory(deployer);
+    sanityChecker = await sanityCheckerFactory.deploy();
 
     locator = await dummyLocator({
       withdrawalVault: await withdrawalVault.getAddress(),
+      oracleReportSanityChecker: await sanityChecker.getAddress(),
     });
     const validatorsExitBusOracleFactory = new ValidatorsExitBusOracleMock__factory(deployer);
     oracle = await validatorsExitBusOracleFactory.deploy(SECONDS_PER_SLOT, GENESIS_TIME, locator);
@@ -209,40 +231,10 @@ describe("Triggerable exits test", () => {
 
       const valPubkeyUnknown = pad("0x010101", 48);
 
-      await expect(
-        oracle.forcedExitFromReport(moduleId, nodeOpId, valIndex, valPubkeyUnknown, reportItems),
-      ).to.be.revertedWithCustomError(oracle, "InvalidPubkeyInReport");
-
-      /**
-       * 1. Оракул репортит ключи на выход - ключи попадают в VEBO
-       * 2. VEBO сохраняем refSLot -> reporthash
-       * 3. Stranger приносит пруф oracle.forcedExit(pubkey, reportData) - если pubkey был в VEBO.reportData - тригерим
-       *
-       *
-       *
-       *
-       *
-       * 1. Оракул репортит ключи на выход - ключи попадают в VEBO
-       * 2. VEBO сохраняем refSLot -> reporthash
-       * 3. Stranger приносит пруф WC.forcedExit(pubkey, reportData) - если pubkey был в VEBO.reportData - тригерим
-       *    3.1 Проверяем действительно ли есть stuck ключи, если есть - выводим
-       *
-       *
-       *
-       *
-       * 1. Говернанс приносит ключи в PEB
-       * 2. Простая очередь - добавляем эти ключи в PEB
-       * 3. Кто смотрит в PEB? Как оракулл приоритезирует VEBO + PEB ? + надос сомтреть кого вывели
-       *  или он сомтрит в PEB и все равно пихает в VEBO - а там уже есть Event()
-       *
-       *
-       *
-       *
-       */
-      // WC.forcedExit(pubkey) - false
-      // StakingRouter.updateStuckValidatorsCount(pubkey) -
-      // WC.forcedExit(pubkey) - false
-      // timeTravel
+      await expect(oracle.forcedExitPubkey(valPubkeyUnknown, reportItems)).to.be.revertedWithCustomError(
+        oracle,
+        "ErrorInvalidPubkeyInReport",
+      );
     });
 
     it("forced exit with oracle report works", async () => {
@@ -254,9 +246,6 @@ describe("Triggerable exits test", () => {
       const valIndex2 = 11;
       const valPubkey = pad("0x010203", 48);
       const valPubkey2 = pad("0x010204", 48);
-
-      const tx = await withdrawalVault.forcedExit(moduleId, nodeOpId, valIndex, valPubkey);
-      await expect(tx).to.be.emit(withdrawalVault, "TriggerableExit");
 
       const block = await getLatestBlock();
       await consensus.setTime(block.timestamp);
@@ -284,10 +273,12 @@ describe("Triggerable exits test", () => {
       await expect(tx2).to.be.emit(oracle, "ValidatorExitRequest");
 
       //maximum to exit - 600val
-      await oracle.connect(stranger).forcedExitFromReport(moduleId, nodeOpId, valIndex, valPubkey, reportItems);
+      const tx = await oracle.connect(stranger).forcedExitPubkey(valPubkey, reportItems, { value: ether("1.0") });
+      await expect(tx).to.be.emit(oracle, "ValidatorForcedExitRequest");
+      await expect(tx).to.be.emit(triggerableExit, "TriggerableExit");
     });
 
-    it("governance vote without submitReportData works", async () => {
+    it("governance vote without oracle.submitReportData works", async () => {
       const moduleId = 5;
       const moduleId2 = 1;
       const nodeOpId = 1;
@@ -296,9 +287,6 @@ describe("Triggerable exits test", () => {
       const valIndex2 = 11;
       const valPubkey = pad("0x010203", 48);
       const valPubkey2 = pad("0x010204", 48);
-
-      const tx = await withdrawalVault.forcedExit(moduleId, nodeOpId, valIndex, valPubkey);
-      await expect(tx).to.be.emit(withdrawalVault, "TriggerableExit");
 
       const refSlot = 0; //await consensus.getCurrentFrame()
       const exitRequests = [
@@ -313,10 +301,61 @@ describe("Triggerable exits test", () => {
       });
 
       const reportItems = getValidatorsExitBusReportDataItems(reportFields);
+      const reportHash = calcValidatorsExitBusReportDataHash(reportItems);
 
       //priority
-      await oracle.connect(voting).submitPriorityReportData(reportItems);
-      await oracle.connect(stranger).forcedExitFromReport(moduleId, nodeOpId, valIndex, valPubkey, reportItems);
+      await oracle.connect(voting).submitPriorityReportData(reportHash, exitRequests.length);
+
+      const tx = await oracle.connect(stranger).forcedExitPubkey(valPubkey, reportItems, { value: ether("1.0") });
+      await expect(tx).to.be.emit(oracle, "ValidatorForcedExitRequest");
+      await expect(tx).to.be.emit(triggerableExit, "TriggerableExit");
+    });
+
+    it("exit multiple keys", async () => {
+      const keys = genPublicKeysArray(5);
+
+      const refSlot = 0; //await consensus.getCurrentFrame()
+      const exitRequests = [
+        { moduleId: 1, nodeOpId: 1, valIndex: 0, valPubkey: keys[0] },
+        { moduleId: 2, nodeOpId: 2, valIndex: 0, valPubkey: keys[1] },
+        { moduleId: 3, nodeOpId: 3, valIndex: 0, valPubkey: keys[2] },
+        { moduleId: 4, nodeOpId: 4, valIndex: 0, valPubkey: keys[3] },
+        { moduleId: 5, nodeOpId: 5, valIndex: 0, valPubkey: keys[4] },
+      ];
+
+      const reportFields = getDefaultReportFields({
+        refSlot: +refSlot,
+        requestsCount: exitRequests.length,
+        data: encodeExitRequestsDataList(exitRequests),
+      });
+
+      const reportItems = getValidatorsExitBusReportDataItems(reportFields);
+      const reportHash = calcValidatorsExitBusReportDataHash(reportItems);
+
+      //priority
+      await oracle.connect(voting).submitPriorityReportData(reportHash, exitRequests.length);
+
+      //check invalid request count
+      const keysInvalidRequestCount = genPublicKeysArray(6);
+      await expect(
+        oracle.connect(stranger).forcedExitPubkeys(keysInvalidRequestCount, reportItems),
+      ).to.be.revertedWithCustomError(oracle, "ErrorInvalidKeysRequestsCount");
+
+      //check invalid request count
+      const validRequestLessInTheReport = genPublicKeysArray(3);
+      await expect(
+        oracle.connect(stranger).forcedExitPubkeys(validRequestLessInTheReport, reportItems),
+      ).not.to.be.revertedWithCustomError(oracle, "ErrorInvalidKeysRequestsCount");
+
+      //check invalid request count
+      const invalidKeyInRequest = [...keys];
+      invalidKeyInRequest[2] = pad("0x010203", 48);
+      await expect(
+        oracle.connect(stranger).forcedExitPubkeys(invalidKeyInRequest, reportItems, { value: ether("1.0") }),
+      ).to.be.revertedWithCustomError(oracle, "ErrorInvalidPubkeyInReport");
+
+      //works
+      await oracle.connect(stranger).forcedExitPubkeys(keys, reportItems, { value: ether("1.0") });
     });
 
     it("prover1 test", async () => {

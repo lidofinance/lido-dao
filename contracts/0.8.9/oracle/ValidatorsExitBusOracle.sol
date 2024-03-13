@@ -15,7 +15,7 @@ interface IOracleReportSanityChecker {
     function checkExitBusOracleReport(uint256 _exitRequestsCount) external view;
 }
 interface IWithdrawalVault {
-    function forcedExit(uint256 moduleId, uint256 nodeOpId, uint256 valIndex, bytes calldata pubkey) external;
+    function forcedExit(bytes calldata pubkey) external payable;
 }
 
 
@@ -46,6 +46,14 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         uint256 timestamp
     );
 
+    event ValidatorForcedExitRequest(
+        uint256 indexed stakingModuleId,
+        uint256 indexed nodeOperatorId,
+        uint256 indexed validatorIndex,
+        bytes validatorPubkey,
+        uint256 timestamp
+    );
+
     event WarnDataIncompleteProcessing(
         uint256 indexed refSlot,
         uint256 requestsProcessed,
@@ -67,7 +75,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     /// @notice An ACL role granting the permission to submit the data for a committee report.
     bytes32 public constant SUBMIT_DATA_ROLE = keccak256("SUBMIT_DATA_ROLE");
 
-    /// @notice An ACL role granting the permission to submit the data for a committee report.
+    /// @notice An ACL role granting the permission to submit the priority data.
     bytes32 public constant SUBMIT_PRIORITY_DATA_ROLE = keccak256("SUBMIT_PRIORITY_DATA_ROLE");
 
     /// @notice An ACL role granting the permission to pause accepting validator exit requests
@@ -89,7 +97,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     bytes32 internal constant DATA_PROCESSING_STATE_POSITION =
         keccak256("lido.ValidatorsExitBusOracle.dataProcessingState");
 
-    /// @dev Storage slot: DataProcessingState dataProcessingState
+    /// @dev Storage slot: ReportData reports
     bytes32 internal constant REPORTS_POSITION =
         keccak256("lido.ValidatorsExitBusOracle.reports");
 
@@ -228,7 +236,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         _checkContractVersion(contractVersion);
         // it's a waste of gas to copy the whole calldata into mem but seems there's no way around
         _checkConsensusData(data.refSlot, data.consensusVersion, keccak256(abi.encode(data)));
-        _saveReportData(data);
+        _saveReportData(keccak256(abi.encode(data)), data.requestsCount);
         _startProcessing();
         _handleConsensusReportData(data);
     }
@@ -347,8 +355,8 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             revert InvalidRequestsDataLength();
         }
 
-        // IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
-        //     .checkExitBusOracleReport(data.requestsCount);
+        IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
+            .checkExitBusOracleReport(data.requestsCount);
 
         if (data.data.length / PACKED_REQUEST_LENGTH != data.requestsCount) {
             revert UnexpectedRequestsDataLength();
@@ -479,28 +487,59 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         assembly { r.slot := position }
     }
 
-    error InvalidReport();
-    error InvalidPubkeyInReport();
+    error ErrorInvalidReport();
+    error ErrorInvalidPubkeyInReport();
+    error ErrorReportExists();
+    error ErrorInvalidKeysRequestsCount();
 
-    function forcedExitFromReport(uint256 moduleId, uint256 nodeOpId, uint256 valIndex, bytes calldata pk, ReportData calldata data) external {
+    function forcedExitPubkey(bytes calldata pubkey, ReportData calldata data) external payable {
         if (_storageReports()[keccak256(abi.encode(data))] == 0) {
-            revert InvalidReport();
+            revert ErrorInvalidReport();
         }
-        if (!_validatePubkey(pk, data.data)) {
-            revert InvalidPubkeyInReport();
+
+        uint256 timestamp = _getTime();
+
+        (uint256 moduleId, uint256 nodeOpId, uint256 valIndex) = _validatePubkey(pubkey, data.data);
+        IWithdrawalVault(LOCATOR.withdrawalVault()).forcedExit{value: msg.value}(pubkey);
+
+        emit ValidatorForcedExitRequest(moduleId, nodeOpId, valIndex, pubkey, timestamp);
+    }
+
+
+    function forcedExitPubkeys(bytes[] calldata keys, ReportData calldata data) external payable {
+        uint256 requestsCount = _storageReports()[keccak256(abi.encode(data))];
+        uint256 keysCount = keys.length;
+        if (requestsCount == 0) {
+            revert ErrorInvalidReport();
         }
-        IWithdrawalVault(LOCATOR.withdrawalVault()).forcedExit(moduleId, nodeOpId, valIndex, pk);
+        if (keysCount > requestsCount) {
+            revert ErrorInvalidKeysRequestsCount();
+        }
+
+        uint256 timestamp = _getTime();
+        uint256 fee = msg.value / keysCount;
+
+        for(uint256 i = 0; i < keysCount; i++) {
+            bytes calldata pubkey = keys[i];
+            (uint256 moduleId, uint256 nodeOpId, uint256 valIndex) = _validatePubkey(pubkey, data.data);
+            IWithdrawalVault(LOCATOR.withdrawalVault()).forcedExit{value:fee}(pubkey);
+
+            emit ValidatorForcedExitRequest(moduleId, nodeOpId, valIndex, pubkey, timestamp);
+        }
     }
 
-    function submitPriorityReportData(ReportData calldata data) external onlyRole(SUBMIT_PRIORITY_DATA_ROLE){
-        _saveReportData(data);
+    function submitPriorityReportData(bytes32 reportHash, uint256 requestsCount) external onlyRole(SUBMIT_PRIORITY_DATA_ROLE){
+        _saveReportData(reportHash, requestsCount);
     }
 
-    function _saveReportData(ReportData calldata data) internal {
-        _storageReports()[keccak256(abi.encode(data))] = data.requestsCount;
+    function _saveReportData(bytes32 reportHash, uint256 requestsCount) internal {
+        if (_storageReports()[reportHash] != 0) {
+            revert ErrorReportExists();
+        }
+        _storageReports()[reportHash] = requestsCount;
     }
 
-    function _validatePubkey(bytes calldata pk, bytes calldata data) internal view returns(bool) {
+    function _validatePubkey(bytes calldata pk, bytes calldata data) internal view returns(uint256,uint256,uint256) {
         uint256 offset;
         uint256 offsetPastEnd;
         assembly {
@@ -535,8 +574,8 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
                 revert InvalidRequestsDataSortOrder();
             }
 
-            // uint64 valIndex = uint64(dataWithoutPubkey);
-            // uint256 nodeOpId = uint40(dataWithoutPubkey >> 64);
+            uint64 valIndex = uint64(dataWithoutPubkey);
+            uint256 nodeOpId = uint40(dataWithoutPubkey >> 64);
             uint256 moduleId = uint24(dataWithoutPubkey >> (64 + 40));
 
             if (moduleId == 0) {
@@ -544,11 +583,10 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             }
 
             if (keccak256(pubkey) == k_pk) {
-                return true;
+                return (moduleId, nodeOpId, valIndex);
             }
-
         }
 
-        return false;
+        revert ErrorInvalidPubkeyInReport();
     }
 }
