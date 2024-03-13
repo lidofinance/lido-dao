@@ -18,6 +18,14 @@ import { mochaRootHooks } from "./test/setup";
 
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
+  networks: {
+    hardhat: {
+      // setting base fee and gas price to 0
+      // to avoid extra calculations in tests
+      gasPrice: 0,
+      initialBaseFeePerGas: 0,
+    },
+  },
   solidity: {
     compilers: [
       {
