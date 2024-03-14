@@ -38,3 +38,4 @@ jobs:
           diff-branch: master
           diff-storage: _core_coverage_reports
           coverage-summary-title: "Code Coverage Summary"
+          togglable-report: true
