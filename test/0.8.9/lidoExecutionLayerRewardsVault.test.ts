@@ -9,8 +9,8 @@ import {
   Lido__MockForElRewardsVault__factory,
   LidoExecutionLayerRewardsVault,
   LidoExecutionLayerRewardsVault__factory,
-  NFT__MockForElRewardsVault,
-  NFT__MockForElRewardsVault__factory,
+  NFT__GeneralMock,
+  NFT__GeneralMock__factory,
   Steth__MinimalMock,
   Steth__MinimalMock__factory,
 } from "typechain-types";
@@ -226,11 +226,11 @@ describe("LidoExecutionLayerRewardsVault", () => {
   });
 
   context("recoverERC721", () => {
-    let nft: NFT__MockForElRewardsVault;
+    let nft: NFT__GeneralMock;
     const tokenId = 1n;
 
     beforeEach(async () => {
-      nft = await new NFT__MockForElRewardsVault__factory(deployer).deploy("NFTMock", "NFT");
+      nft = await new NFT__GeneralMock__factory(deployer).deploy("NFTMock", "NFT");
       await nft.mint(vault, tokenId);
       expect(await nft.ownerOf(tokenId)).to.equal(await vault.getAddress());
 
