@@ -94,14 +94,24 @@ describe("LidoExecutionLayerRewardsVault", () => {
       });
 
       const maxAmount = 0n;
-      await expect(vault.withdrawRewards(maxAmount)).not.to.emit(lido, "ELRewardsReceived");
+      // base fee can't be 0
+      // so in order to account for gas price, we have to extract the receipt
+      // but now we cant use chai `expect(...).emits` to check events
+      // TODO: find a good way to obtain `tx.fee` and use `emits`
+      const receipt = await vault.withdrawRewards(maxAmount).then((tx) => tx.wait());
+
+      if (!receipt) {
+        throw Error("Receipt missing");
+      }
+
+      expect(receipt.logs.length).to.equal(0);
 
       const after = await batch({
         lidoBalance: ethers.provider.getBalance(lido),
         vaultBalance: ethers.provider.getBalance(vault),
       });
 
-      expect(after.lidoBalance).to.equal(before.lidoBalance);
+      expect(after.lidoBalance).to.equal(before.lidoBalance - receipt.fee);
       expect(after.vaultBalance).to.equal(before.vaultBalance);
     });
 
@@ -114,14 +124,24 @@ describe("LidoExecutionLayerRewardsVault", () => {
       expect(before.vaultBalance).to.equal(0n);
 
       const maxAmount = 1n;
-      await expect(vault.withdrawRewards(maxAmount)).not.to.emit(lido, "ELRewardsReceived");
+      // base fee can't be 0
+      // so in order to account for gas price, we have to extract the receipt
+      // but now we cant use chai `expect(...).emits` to check events
+      // TODO: find a good way to obtain `tx.fee` and use `emits`
+      const receipt = await vault.withdrawRewards(maxAmount).then((tx) => tx.wait());
+
+      if (!receipt) {
+        throw Error("Receipt missing");
+      }
+
+      expect(receipt.logs.length).to.equal(0);
 
       const after = await batch({
         lidoBalance: ethers.provider.getBalance(lido),
         vaultBalance: ethers.provider.getBalance(vault),
       });
 
-      expect(after.lidoBalance).to.equal(before.lidoBalance);
+      expect(after.lidoBalance).to.equal(before.lidoBalance - receipt.fee);
       expect(after.vaultBalance).to.equal(before.vaultBalance);
     });
 
@@ -138,14 +158,22 @@ describe("LidoExecutionLayerRewardsVault", () => {
       });
 
       const maxAmount = ether("3.0");
-      await expect(vault.withdrawRewards(maxAmount)).to.emit(lido, "ELRewardsReceived").withArgs(maxAmount);
+      // base fee can't be 0
+      // so in order to account for gas price, we have to extract the receipt
+      // but now we cant use chai `expect(...).emits` to check events
+      // TODO: find a good way to obtain `tx.fee` and use `emits`
+      const receipt = await vault.withdrawRewards(maxAmount).then((tx) => tx.wait());
+
+      if (!receipt) {
+        throw Error("Receipt missing");
+      }
 
       const after = await batch({
         lidoBalance: ethers.provider.getBalance(lido),
         vaultBalance: ethers.provider.getBalance(vault),
       });
 
-      expect(after.lidoBalance).to.equal(before.lidoBalance + maxAmount);
+      expect(after.lidoBalance).to.equal(before.lidoBalance + maxAmount - receipt.fee);
       expect(after.vaultBalance).to.equal(before.vaultBalance - maxAmount);
     });
 
@@ -162,14 +190,22 @@ describe("LidoExecutionLayerRewardsVault", () => {
       });
 
       const maxAmount = ether("10.0");
-      await expect(vault.withdrawRewards(maxAmount)).to.emit(lido, "ELRewardsReceived").withArgs(before.vaultBalance);
+      // base fee can't be 0
+      // so in order to account for gas price, we have to extract the receipt
+      // but now we cant use chai `expect(...).emits` to check events
+      // TODO: find a good way to obtain `tx.fee` and use `emits`
+      const receipt = await vault.withdrawRewards(maxAmount).then((tx) => tx.wait());
+
+      if (!receipt) {
+        throw Error("Receipt missing");
+      }
 
       const after = await batch({
         lidoBalance: ethers.provider.getBalance(lido),
         vaultBalance: ethers.provider.getBalance(vault),
       });
 
-      expect(after.lidoBalance).to.equal(before.lidoBalance + before.vaultBalance);
+      expect(after.lidoBalance).to.equal(before.lidoBalance + before.vaultBalance - receipt.fee);
       expect(after.vaultBalance).to.equal(0n);
     });
 

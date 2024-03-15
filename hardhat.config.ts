@@ -20,10 +20,10 @@ const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
-      // setting base fee and gas price to 0
-      // to avoid extra calculations in tests
-      gasPrice: 0,
-      initialBaseFeePerGas: 0,
+      // setting base fee to 0 to avoid extra calculations doesn't work :(
+      // minimal base fee is 1 for EIP-1559
+      // gasPrice: 0,
+      // initialBaseFeePerGas: 0,
     },
   },
   solidity: {
