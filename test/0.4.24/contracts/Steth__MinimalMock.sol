@@ -5,7 +5,7 @@ pragma solidity 0.4.24;
 
 import {StETH} from "contracts/0.4.24/StETH.sol";
 
-contract StethMinimalMockWithTotalPooledEther is StETH {
+contract Steth__MinimalMock is StETH {
   uint256 private totalPooledEther;
 
   constructor(address _holder) public payable {
@@ -23,5 +23,13 @@ contract StethMinimalMockWithTotalPooledEther is StETH {
 
   function setTotalPooledEther(uint256 _totalPooledEther) public {
     totalPooledEther = _totalPooledEther;
+  }
+
+  function mintShares(address _recipient, uint256 _sharesAmount) external returns (uint256) {
+    return super._mintShares(_recipient, _sharesAmount);
+  }
+
+  function burnShares(address _account, uint256 _sharesAmount) external returns (uint256) {
+    return super._burnShares(_account, _sharesAmount);
   }
 }
