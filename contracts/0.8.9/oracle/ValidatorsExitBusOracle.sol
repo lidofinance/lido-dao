@@ -517,15 +517,29 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         }
 
         uint256 timestamp = _getTime();
-        uint256 fee = msg.value / keysCount;
+
+        //calculate value
+        uint256 fee = msg.value;
+
+        //send value to wc
+        IWithdrawalVault(LOCATOR.withdrawalVault()).call{value: fee}();
+
+        // start balance
+
 
         for(uint256 i = 0; i < keysCount; i++) {
             bytes calldata pubkey = keys[i];
             (uint256 moduleId, uint256 nodeOpId, uint256 valIndex) = _validatePubkey(pubkey, data.data);
-            IWithdrawalVault(LOCATOR.withdrawalVault()).forcedExit{value:fee}(pubkey);
+            IWithdrawalVault(LOCATOR.withdrawalVault()).forcedExit(pubkey);
 
             emit ValidatorForcedExitRequest(moduleId, nodeOpId, valIndex, pubkey, timestamp);
         }
+
+        // calculate end balance
+        // require()
+
+        // receiver
+
     }
 
     function submitPriorityReportData(bytes32 reportHash, uint256 requestsCount) external onlyRole(SUBMIT_PRIORITY_DATA_ROLE){
