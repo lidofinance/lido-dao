@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 
 import { ENS } from "typechain-types";
 
-import { Contract, log, makeTx, streccak } from "lib";
+import { LoadedContract, log, makeTx, streccak } from "lib";
 
 // Default parentName is "eth"
 export async function assignENSName(
@@ -28,7 +28,7 @@ export async function assignENSName(
 
   let receipt;
   if ((await ens.owner(node)) === owner) {
-    receipt = await makeTx(ens as unknown as Contract, "setOwner", [node, assigneeAddress], { from: owner });
+    receipt = await makeTx(ens as unknown as LoadedContract, "setOwner", [node, assigneeAddress], { from: owner });
   } else {
     if ((await ens.owner(parentNode)) !== owner) {
       throw new Error(
@@ -37,9 +37,14 @@ export async function assignENSName(
       );
     }
     try {
-      receipt = await makeTx(ens as unknown as Contract, "setSubnodeOwner", [parentNode, labelHash, assigneeAddress], {
-        from: owner,
-      });
+      receipt = await makeTx(
+        ens as unknown as LoadedContract,
+        "setSubnodeOwner",
+        [parentNode, labelHash, assigneeAddress],
+        {
+          from: owner,
+        },
+      );
     } catch (err) {
       log(
         `Error: could not set the owner of '${labelName}.${parentName}' on the given ENS instance`,
@@ -56,5 +61,3 @@ export async function getENSNodeOwner(ens: ENS, node: string) {
   const ownerAddr = await ens.owner(node);
   return ownerAddr == ethers.ZeroAddress ? null : ownerAddr;
 }
-
-// TODO: maybe restore resolveEnsAddress

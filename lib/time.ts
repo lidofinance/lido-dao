@@ -28,7 +28,10 @@ export async function advanceChainTime(seconds: number) {
   await ethers.provider.send("evm_mine");
 }
 
-export function formatTimeInterval(sec: number) {
+export function formatTimeInterval(sec: number | bigint) {
+  if (typeof sec === "bigint") {
+    sec = parseInt(sec.toString());
+  }
   function floor(n: number, multiplier: number) {
     return Math.floor(n * multiplier) / multiplier;
   }

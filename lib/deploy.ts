@@ -1,12 +1,16 @@
 import { ContractFactory, ContractTransactionReceipt } from "ethers";
-import { artifacts, ethers } from "hardhat";
+import { ethers } from "hardhat";
 
-import { Contract, DeployedContract, getContractAt, getContractPath } from "lib/contract";
+import {
+  addContractHelperFields,
+  DeployedContract,
+  getContractAt,
+  getContractPath,
+  LoadedContract,
+} from "lib/contract";
 import { ConvertibleToString, log, yl } from "lib/log";
 import { Sk, updateObjectInState } from "lib/state-file";
 
-// TODO: check and remove type 1 support
-const GAS_PRICE = process.env.GAS_PRICE || null;
 const GAS_PRIORITY_FEE = process.env.GAS_PRIORITY_FEE || null;
 const GAS_MAX_FEE = process.env.GAS_MAX_FEE || null;
 
@@ -51,13 +55,13 @@ export class TotalGasCounter {
   static async incrementTotalGasUsedInStateFile() {}
 }
 
-async function getDeploymentGasUsed(contract: Contract) {
+async function getDeploymentGasUsed(contract: LoadedContract) {
   contract;
   return 0;
 }
 
 export async function makeTx(
-  contract: Contract,
+  contract: LoadedContract,
   funcName: string,
   args: ConvertibleToString[],
   txParams: TxParams,
@@ -76,17 +80,6 @@ export async function makeTx(
   return receipt;
 }
 
-// TODO
-// async function updateWithNameAndPath(contract: Contract, name: string) {
-//   const artifact = await artifacts.readArtifact(name);
-//   contract.name = name;
-//   contract.contractPath = artifact.sourceName;
-//   contract.address = await contract.getAddress();
-// }
-
-// TODO: assertProxiedContractBytecode
-// TODO: assertDeployedBytecode
-
 async function getDeployTxParams(deployer: string) {
   const deployerSigner = await ethers.provider.getSigner();
   if (deployer !== deployerSigner.address) {
@@ -99,15 +92,8 @@ async function getDeployTxParams(deployer: string) {
       maxPriorityFeePerGas: ethers.parseUnits(String(GAS_PRIORITY_FEE), "gwei"),
       maxFeePerGas: ethers.parseUnits(String(GAS_MAX_FEE), "gwei"),
     };
-  } else if (GAS_PRICE !== null) {
-    return {
-      from: deployer,
-      gasPrice: GAS_PRICE,
-    };
   } else {
-    throw new Error(
-      'Must specify gas ENV vars: either "GAS_PRICE" or both "GAS_PRIORITY_FEE" and "GAS_MAX_FEE" in gwei (like just "3")',
-    );
+    throw new Error('Must specify gas ENV vars: "GAS_PRIORITY_FEE" and "GAS_MAX_FEE" in gwei (like just "3")');
   }
 }
 
@@ -118,21 +104,16 @@ async function deployContractType2(
 ): Promise<DeployedContract> {
   const txParams = await getDeployTxParams(deployer);
   const factory = (await ethers.getContractFactory(artifactName)) as ContractFactory;
-  const contract = (await factory.deploy(...constructorArgs, txParams)) as DeployedContract;
+  const contract = await factory.deploy(...constructorArgs, txParams);
   const tx = contract.deploymentTransaction();
-  if (tx) {
-    log(`sent deployment tx ${tx.hash} (nonce ${tx.nonce})...`);
-    await contract.waitForDeployment();
-    const artifact = await artifacts.readArtifact(artifactName);
-    contract.name = artifactName;
-    contract.contractPath = artifact.sourceName;
-    contract.address = contract.target as string;
-    contract.deploymentTx = tx.hash;
-  } else {
+  if (!tx) {
     throw new Error(`Failed to send the deployment transaction for ${artifactName}`);
   }
-
-  return contract;
+  log(`sent deployment tx ${tx.hash} (nonce ${tx.nonce})...`);
+  await contract.waitForDeployment();
+  await addContractHelperFields(contract, artifactName);
+  (contract as DeployedContract).deploymentTx = tx.hash;
+  return contract as DeployedContract;
 }
 
 export async function deployContract(
@@ -144,20 +125,17 @@ export async function deployContract(
   if (txParams.type === 2) {
     return await deployContractType2(artifactName, constructorArgs, deployer);
   } else {
-    // TODO: maybe restore
     throw Error("Tx type 1 is not supported");
   }
 }
 
 export async function deployWithoutProxy(
-  nameInState: Sk,
+  nameInState: Sk | null,
   artifactName: string,
   deployer: string,
   constructorArgs: ConvertibleToString[] = [],
   addressFieldName = "address",
 ): Promise<DeployedContract> {
-  // TODO: maybe don't deploy if already deployed / specified
-
   log.lineWithArguments(`Deploying ${artifactName} (without proxy) with constructor args: `, constructorArgs);
 
   const contract = await deployContract(artifactName, constructorArgs, deployer);
@@ -167,11 +145,13 @@ export async function deployWithoutProxy(
   log.emptyLine();
   TotalGasCounter.add(gasUsed);
 
-  updateObjectInState(nameInState, {
-    contract: await getContractPath(artifactName),
-    [addressFieldName]: contract.address,
-    constructorArgs: constructorArgs,
-  });
+  if (nameInState) {
+    updateObjectInState(nameInState, {
+      contract: await getContractPath(artifactName),
+      [addressFieldName]: contract.address,
+      constructorArgs: constructorArgs,
+    });
+  }
 
   return contract;
 }

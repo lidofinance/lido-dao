@@ -80,7 +80,7 @@ export enum Sk {
   chainSpec = "chainSpec",
 }
 
-export function getAddress(contractKey: Sk, state: DeploymentState): string | null {
+export function getAddress(contractKey: Sk, state: DeploymentState): string {
   switch (contractKey) {
     case Sk.accountingOracle:
     case Sk.appAgent:
@@ -153,8 +153,7 @@ export function updateObjectInState(key: Sk, supplement: object): DeploymentStat
     ...state[key],
     ...supplement,
   };
-  // TODO
-  persistNetworkState(state as unknown as DeploymentState);
+  persistNetworkState(state);
   return state as unknown as DeploymentState;
 }
 

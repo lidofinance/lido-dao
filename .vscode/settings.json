@@ -4,5 +4,5 @@
     "source.fixAll.eslint": "always"
   },
   "solidity.defaultCompiler": "remote",
-  "cSpell.words": ["sealables", "streccak"]
+  "cSpell.words": ["IETHRegistrarController", "sealables", "streccak", "TmplAppInstalled", "TmplDAOAndTokenDeployed"]
 }

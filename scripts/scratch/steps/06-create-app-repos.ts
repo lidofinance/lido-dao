@@ -16,13 +16,6 @@ async function main() {
   logSplitter();
   const template = await getContractAt("LidoTemplate", state[Sk.lidoTemplate].address);
 
-  // TODO
-  // if (state.lidoTemplate.deployBlock) {
-  //   log(`Using LidoTemplate deploy block: ${chalk.yellow(state.lidoTemplate.deployBlock)}`)
-  // }
-  // await assertLastEvent(template, 'TmplAPMDeployed', null, state.lidoTemplate.deployBlock)
-  // logSplitter()
-
   const createReposArguments = [
     [1, 0, 0], // Initial semantic version
     // Lido app

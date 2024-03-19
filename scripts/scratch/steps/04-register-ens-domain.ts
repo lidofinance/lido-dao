@@ -2,9 +2,9 @@ import { assert } from "chai";
 import chalk from "chalk";
 import { ethers } from "hardhat";
 
-import { ENS__factory } from "typechain-types";
+import { ENS, ENS__factory } from "typechain-types";
 
-import { Contract } from "lib/contract";
+import { loadContract } from "lib/contract";
 import { makeTx, TotalGasCounter } from "lib/deploy";
 import { streccak } from "lib/keccak";
 import { log, yl } from "lib/log";
@@ -21,13 +21,12 @@ async function main() {
   log.splitter();
 
   log(`Using ENS:`, yl(state[Sk.ens].address));
-  const ens = ENS__factory.connect(state[Sk.ens].address, deployerSigner);
+  const ens = await loadContract<ENS>(ENS__factory, state[Sk.ens].address, deployerSigner);
 
   const tldNode = ethers.namehash(TLD);
 
   const domainName = state[Sk.lidoApmEnsName];
   const domainOwner = state[Sk.lidoTemplate].address;
-  // const domainRegDuration = state[Sk.lidoApmEnsRegDurationSec];
 
   const node = ethers.namehash(domainName);
 
@@ -44,78 +43,18 @@ async function main() {
   log(`Label: ${chalk.yellow(domainLabel)} (${labelHash})`);
 
   if ((await ens.owner(node)) !== deployer && (await ens.owner(tldNode)) !== deployer) {
-    throw new Error(`This branch is not implemented: refactor it if needed`);
-
-    // TODO: restore the commented part
-    // const CONTROLLER_INTERFACE_ID = "0x018fac06";
-    // const tldResolverAddr = await ens.resolver(tldNode);
-    // log(`Using TLD resolver:`, yl(tldResolverAddr));
-    // // const tldResolver = await artifacts.require('IInterfaceResolver').at(tldResolverAddr)
-    // const tldResolver = IInterfaceResolver__factory.connect(tldResolverAddr, ethers.provider);
-
-    // const controllerAddr = await tldResolver.interfaceImplementer(tldNode, CONTROLLER_INTERFACE_ID);
-
-    // log(`Using TLD controller:`, yl(controllerAddr));
-    // // const controller = await artifacts.require('IETHRegistrarController').at(controllerAddr)
-    // const controller = await IETHRegistrarController__factory.connect(controllerAddr, ethers.provider);
-
-    // const controllerParams = await Promise.all([
-    //   controller.minCommitmentAge(),
-    //   controller.maxCommitmentAge(),
-    //   controller.MIN_REGISTRATION_DURATION(),
-    // ]);
-
-    // const [minCommitmentAge, maxCommitmentAge, minRegistrationDuration] = controllerParams.map((x) => +x);
-
-    // log(`Controller min commitment age: ${yl(minCommitmentAge)} sec`);
-    // log(`Controller max commitment age: ${yl(maxCommitmentAge)} sec`);
-    // log(
-    //   `Controller min registration duration: ${yl(formatTimeInterval(minRegistrationDuration))} (${minRegistrationDuration} sec)`,
-    // );
-
-    // log.splitter();
-
-    // log(`ENS domain owner:`, yl(domainOwner));
-    // log(`ENS domain registration duration: ${yl(formatTimeInterval(domainRegDuration))} (${domainRegDuration} sec)`);
-
-    // log.splitter();
-    // // TODO
-    // // assert.log(assert.isTrue, await controller.available(domainLabel), `the domain is available`)
-    // // assert.log(assert.isAtLeast, domainRegDuration, minRegistrationDuration, `registration duration is at least the minimum one`)
-    // log.splitter();
-
-    // const salt = "0x" + ethers.hexlify(ethers.randomBytes(32));
-    // log(`Using salt:`, yl(salt));
-
-    // const commitment = await controller.makeCommitment(domainLabel, domainOwner, salt);
-    // log(`Using commitment:`, yl(commitment));
-
-    // const rentPrice = await controller.rentPrice(domainLabel, domainRegDuration);
-
-    // log(`Rent price:`, yl(`${ethers.formatUnits(rentPrice, "ether")} ETH`));
-
-    // // increasing by 15% to account for price fluctuation; the difference will be refunded
-    // const registerTxValue = rentPrice.muln(115).divn(100);
-    // log(`Register TX value:`, yl(`${ethers.formatUnits(registerTxValue, "ether")} ETH`));
-
-    // log.splitter();
-
-    // await makeTx(controller as unknown as Contract, "commit", [commitment], { from: deployer });
-
-    // await makeTx(controller as unknown as Contract, "register", [domainLabel, domainOwner, domainRegDuration, salt], {
-    //   from: deployer,
-    //   value: "0x" + registerTxValue.toString(16),
-    // });
-
-    // log.splitter();
+    throw new Error(`This branch is not implemented.
+      For the previous implementation see
+      https://github.com/lidofinance/lido-dao/blob/5fcedc6e9a9f3ec154e69cff47c2b9e25503a78a/scripts/scratch/06-register-ens-domain.js#L57
+    `);
   } else {
     log(`ENS domain new owner:`, yl(domainOwner));
     if ((await ens.owner(node)) === deployer) {
       log(`Transferring name ownership from owner ${chalk.yellow(deployer)} to template ${chalk.yellow(domainOwner)}`);
-      await makeTx(ens as unknown as Contract, "setOwner", [node, domainOwner], { from: deployer });
+      await makeTx(ens, "setOwner", [node, domainOwner], { from: deployer });
     } else {
       log(`Creating the subdomain and assigning it to template ${chalk.yellow(domainOwner)}`);
-      await makeTx(ens as unknown as Contract, "setSubnodeOwner", [tldNode, labelHash, domainOwner], {
+      await makeTx(ens, "setSubnodeOwner", [tldNode, labelHash, domainOwner], {
         from: deployer,
       });
     }

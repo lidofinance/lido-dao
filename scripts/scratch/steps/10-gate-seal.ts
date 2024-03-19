@@ -11,34 +11,33 @@ async function main() {
   const deployer = (await ethers.provider.getSigner()).address;
   const state = readNetworkState({ deployer });
 
-  // TODO: this and the substituted addresses
   if (state[Sk.gateSeal].address) {
     log(`Using the specified GateSeal address ${state[Sk.gateSeal].address}`);
     return;
   } else if (!state[Sk.gateSeal].factoryAddress) {
     log(`GateSealFactory not specified: skipping creating GateSeal instance`);
     return;
+  } else {
+    const sealables = [state.withdrawalQueueERC721.proxy.address, state.validatorsExitBusOracle.proxy.address];
+    const gateSealFactory = await getContractAt("IGateSealFactory", state[Sk.gateSeal].factoryAddress);
+    const receipt = await makeTx(
+      gateSealFactory,
+      "create_gate_seal",
+      [
+        state[Sk.gateSeal].sealingCommittee,
+        state[Sk.gateSeal].sealDuration,
+        sealables,
+        state[Sk.gateSeal].expiryTimestamp,
+      ],
+      { from: deployer },
+    );
+    const gateSealAddress = await findEvents(receipt, "GateSealCreated")[0].args.gate_seal;
+    log(`GateSeal created: ${gateSealAddress}`);
+
+    updateObjectInState(Sk.gateSeal, {
+      address: gateSealAddress,
+    });
   }
-
-  const sealables = [state.withdrawalQueueERC721.proxy.address, state.validatorsExitBusOracle.proxy.address];
-  const gateSealFactory = await getContractAt("IGateSealFactory", state[Sk.gateSeal].factoryAddress);
-  const receipt = await makeTx(
-    gateSealFactory,
-    "create_gate_seal",
-    [
-      state[Sk.gateSeal].sealingCommittee,
-      state[Sk.gateSeal].sealDuration,
-      sealables,
-      state[Sk.gateSeal].expiryTimestamp,
-    ],
-    { from: deployer },
-  );
-  const gateSealAddress = await findEvents(receipt, "GateSealCreated")[0].args.gate_seal;
-  log(`GateSeal created: ${gateSealAddress}`);
-
-  updateObjectInState(Sk.gateSeal, {
-    address: gateSealAddress,
-  });
 
   await TotalGasCounter.incrementTotalGasUsedInStateFile();
   log.scriptFinish(__filename);

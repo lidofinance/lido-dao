@@ -2,9 +2,9 @@ import chalk from "chalk";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import { ENS, ENS__factory } from "typechain-types";
+import { DAOFactory, DAOFactory__factory, ENS, ENS__factory } from "typechain-types";
 
-import { Contract, getContractAt } from "lib/contract";
+import { getContractAt, loadContract, LoadedContract } from "lib/contract";
 import { deployImplementation, deployWithoutProxy, makeTx, TotalGasCounter } from "lib/deploy";
 import { assignENSName } from "lib/ens";
 import { findEvents } from "lib/event";
@@ -17,43 +17,42 @@ async function main() {
   const deployer = (await ethers.provider.getSigner()).address;
   let state = readNetworkState({ deployer });
 
-  let daoFactory: Contract;
-  let evmScriptRegistryFactory: Contract;
-  let ens: ENS;
+  let ens: LoadedContract<ENS>;
 
   log.header(`ENS`);
   if (state[Sk.ens].address) {
     log(`Using ENS: ${chalk.yellow(state[Sk.ens].address)}`);
-    ens = ENS__factory.connect(state[Sk.ens].address, await ethers.getSigner(deployer));
+    ens = await loadContract<ENS>(ENS__factory, state[Sk.ens].address);
   } else {
     const ensFactory = await deployWithoutProxy(Sk.ensFactory, "ENSFactory", deployer);
     const receipt = await makeTx(ensFactory, "newENS", [deployer], { from: deployer });
     log.splitter();
     const ensAddress = findEvents(receipt, "DeployENS")[0].args.ens;
-    ens = (await getContractAt("ENS", ensAddress)) as unknown as ENS;
+
+    ens = await loadContract<ENS>(ENS__factory, ensAddress);
     state = updateObjectInState(Sk.ens, {
       address: ensAddress,
       constructorArgs: [deployer],
-      // TODO
-      // contract: ens.contractPath,
+      contract: ens.contractPath,
     });
   }
 
   log.header(`DAO factory`);
-  if (state[Sk.daoFactory].address) {
+  let daoFactoryAddress = state[Sk.daoFactory].address;
+  if (daoFactoryAddress) {
     log(`Using DAO factory: ${chalk.yellow(state[Sk.daoFactory].address)}`);
-    daoFactory = await getContractAt("DAOFactory", state[Sk.daoFactory].address);
   } else {
     const kernelBase = await deployImplementation(Sk.aragonKernel, "Kernel", deployer, [true]);
     const aclBase = await deployImplementation(Sk.aragonAcl, "ACL", deployer);
-    evmScriptRegistryFactory = await deployWithoutProxy(
+    const evmScriptRegistryFactory = await deployWithoutProxy(
       Sk.evmScriptRegistryFactory,
       "EVMScriptRegistryFactory",
       deployer,
     );
     const daoFactoryArgs = [kernelBase.address, aclBase.address, evmScriptRegistryFactory.address];
-    daoFactory = await deployWithoutProxy(Sk.daoFactory, "DAOFactory", deployer, daoFactoryArgs);
+    daoFactoryAddress = (await deployWithoutProxy(Sk.daoFactory, "DAOFactory", deployer, daoFactoryArgs)).address;
   }
+  const daoFactory = await loadContract<DAOFactory>(DAOFactory__factory, daoFactoryAddress);
 
   log.header(`APM registry factory`);
   const apmRegistryBase = await deployImplementation(Sk.aragonApmRegistry, "APMRegistry", deployer);
@@ -68,7 +67,7 @@ async function main() {
     apmRegistryBase.address,
     apmRepoBase.address,
     ensSubdomainRegistrarBase.address,
-    ens.getAddress(),
+    ens.address,
     ZeroAddress,
   ];
   const apmRegistryFactory = await deployWithoutProxy(
@@ -99,7 +98,6 @@ async function main() {
   log.header(`MiniMeTokenFactory`);
   if (state[Sk.miniMeTokenFactory].address) {
     log(`Using pre-deployed MiniMeTokenFactory ${state[Sk.miniMeTokenFactory].address}`);
-    await getContractAt("MiniMeTokenFactory", state[Sk.miniMeTokenFactory].address);
   } else {
     await deployWithoutProxy(Sk.miniMeTokenFactory, "MiniMeTokenFactory", deployer);
   }
@@ -107,7 +105,6 @@ async function main() {
   log.header(`AragonID`);
   if (state[Sk.aragonId].address) {
     log(`Using pre-deployed AragonID (FIFSResolvingRegistrar) ${state[Sk.aragonId].address}`);
-    await getContractAt("FIFSResolvingRegistrar", state[Sk.aragonId].address);
   } else {
     await deployAragonID(deployer, ens);
   }
@@ -116,12 +113,7 @@ async function main() {
   log.scriptFinish(__filename);
 }
 
-async function deployAPM(
-  owner: string,
-  labelName: string,
-  ens: ENS,
-  apmRegistryFactory: Contract,
-): Promise<{ apmRegistry: Contract; ensNodeName: string; ensNode: string }> {
+async function deployAPM(owner: string, labelName: string, ens: ENS, apmRegistryFactory: LoadedContract) {
   log(`Deploying APM for node ${labelName}.eth...`);
 
   logSplitter();

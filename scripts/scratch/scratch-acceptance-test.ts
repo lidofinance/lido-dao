@@ -1,5 +1,4 @@
 import { assert } from "chai";
-import { ContractRunner } from "ethers";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
@@ -28,7 +27,7 @@ import {
   WithdrawalQueue__factory,
 } from "typechain-types";
 
-import { ContractFactoryHelper } from "lib/contract";
+import { loadContract, LoadedContract } from "lib/contract";
 import { findEvents } from "lib/event";
 import { streccak } from "lib/keccak";
 import { log } from "lib/log";
@@ -58,11 +57,10 @@ const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE;
 
 async function main() {
   log.scriptStart(__filename);
-  const deployerSigner = await ethers.provider.getSigner();
   const state = readNetworkState({ networkStateFile: NETWORK_STATE_FILE });
 
   const [user1, user2, oracleMember1, oracleMember2] = await ethers.getSigners();
-  const protocol = await loadDeployedProtocol(state, deployerSigner);
+  const protocol = await loadDeployedProtocol(state);
 
   await checkLDOCanBeTransferred(protocol.ldo, state);
 
@@ -75,56 +73,53 @@ async function main() {
   log.scriptFinish(__filename);
 }
 
-type Extended<T> = T & { address: string };
-
 interface Protocol {
-  stakingRouter: Extended<StakingRouter>;
-  lido: Extended<Lido>;
-  voting: Extended<Voting>;
-  agent: Extended<Agent>;
-  nodeOperatorsRegistry: Extended<NodeOperatorsRegistry>;
-  depositSecurityModule?: Extended<DepositSecurityModule>;
-  depositSecurityModuleAddress: string | null;
-  accountingOracle: Extended<AccountingOracle>;
-  hashConsensusForAO: Extended<HashConsensus>;
-  elRewardsVault: Extended<LidoExecutionLayerRewardsVault>;
-  withdrawalQueue: Extended<WithdrawalQueue>;
-  ldo: Extended<MiniMeToken>;
+  stakingRouter: LoadedContract<StakingRouter>;
+  lido: LoadedContract<Lido>;
+  voting: LoadedContract<Voting>;
+  agent: LoadedContract<Agent>;
+  nodeOperatorsRegistry: LoadedContract<NodeOperatorsRegistry>;
+  depositSecurityModule?: LoadedContract<DepositSecurityModule>;
+  depositSecurityModuleAddress: string;
+  accountingOracle: LoadedContract<AccountingOracle>;
+  hashConsensusForAO: LoadedContract<HashConsensus>;
+  elRewardsVault: LoadedContract<LidoExecutionLayerRewardsVault>;
+  withdrawalQueue: LoadedContract<WithdrawalQueue>;
+  ldo: LoadedContract<MiniMeToken>;
 }
 
-async function loadDeployedProtocol(state: DeploymentState, signer: unknown) {
-  const loadContract = <T>(factory: ContractFactoryHelper, stateKey: Sk) => {
-    const address = getAddress(stateKey, state);
-    if (address === null) {
-      throw new Error(`Cannot get address from state for key "${stateKey}"`);
-    }
-    const result = factory.connect(address, signer as ContractRunner) as Extended<T>;
-    result.address = address;
-    return result;
-  };
-
+async function loadDeployedProtocol(state: DeploymentState) {
   return {
-    stakingRouter: loadContract<StakingRouter>(StakingRouter__factory, Sk.stakingRouter),
-    lido: loadContract<Lido>(Lido__factory, Sk.appLido),
-    voting: loadContract<Voting>(Voting__factory, Sk.appVoting),
-    agent: loadContract<Agent>(Agent__factory, Sk.appAgent),
-    nodeOperatorsRegistry: loadContract<NodeOperatorsRegistry>(
+    stakingRouter: await loadContract<StakingRouter>(StakingRouter__factory, getAddress(Sk.stakingRouter, state)),
+    lido: await loadContract<Lido>(Lido__factory, getAddress(Sk.appLido, state)),
+    voting: await loadContract<Voting>(Voting__factory, getAddress(Sk.appVoting, state)),
+    agent: await loadContract<Agent>(Agent__factory, getAddress(Sk.appAgent, state)),
+    nodeOperatorsRegistry: await loadContract<NodeOperatorsRegistry>(
       NodeOperatorsRegistry__factory,
-      Sk.appNodeOperatorsRegistry,
+      getAddress(Sk.appNodeOperatorsRegistry, state),
     ),
     depositSecurityModuleAddress: getAddress(Sk.depositSecurityModule, state),
-    accountingOracle: loadContract<AccountingOracle>(AccountingOracle__factory, Sk.accountingOracle),
-    hashConsensusForAO: loadContract<HashConsensus>(HashConsensus__factory, Sk.hashConsensusForAccountingOracle),
-    elRewardsVault: loadContract<LidoExecutionLayerRewardsVault>(
-      LidoExecutionLayerRewardsVault__factory,
-      Sk.executionLayerRewardsVault,
+    accountingOracle: await loadContract<AccountingOracle>(
+      AccountingOracle__factory,
+      getAddress(Sk.accountingOracle, state),
     ),
-    withdrawalQueue: loadContract<WithdrawalQueue>(WithdrawalQueue__factory, Sk.withdrawalQueueERC721),
-    ldo: loadContract<MiniMeToken>(MiniMeToken__factory, Sk.ldo),
+    hashConsensusForAO: await loadContract<HashConsensus>(
+      HashConsensus__factory,
+      getAddress(Sk.hashConsensusForAccountingOracle, state),
+    ),
+    elRewardsVault: await loadContract<LidoExecutionLayerRewardsVault>(
+      LidoExecutionLayerRewardsVault__factory,
+      getAddress(Sk.executionLayerRewardsVault, state),
+    ),
+    withdrawalQueue: await loadContract<WithdrawalQueue>(
+      WithdrawalQueue__factory,
+      getAddress(Sk.withdrawalQueueERC721, state),
+    ),
+    ldo: await loadContract<MiniMeToken>(MiniMeToken__factory, getAddress(Sk.ldo, state)),
   };
 }
 
-async function checkLDOCanBeTransferred(ldo: Extended<MiniMeToken>, state: DeploymentState) {
+async function checkLDOCanBeTransferred(ldo: LoadedContract<MiniMeToken>, state: DeploymentState) {
   const ldoHolder = Object.keys(state.vestingParams.holders)[0];
   const ldoHolderSigner = await ethers.provider.getSigner(ldoHolder);
   await ethers.provider.send("hardhat_impersonateAccount", [ldoHolder]);
