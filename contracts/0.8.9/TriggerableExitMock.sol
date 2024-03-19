@@ -4,7 +4,7 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-contract TriggerableExit {
+contract TriggerableExitMock {
     address constant VALIDATOR_EXIT_PRECOMPILE_ADDRESS = 0x1234567890123456789012345678901234567890;
 
     uint256 private constant EXCESS_EXITS_STORAGE_SLOT = 0;

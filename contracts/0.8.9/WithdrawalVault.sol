@@ -9,7 +9,7 @@ import "@openzeppelin/contracts-v4.4/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
 import {Versioned} from "./utils/Versioned.sol";
-import {TriggerableExit} from "./TriggerableExit.sol";
+import {TriggerableExitMock} from "./TriggerableExitMock.sol";
 
 interface ILido {
     /**

@@ -5,18 +5,18 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import {Test, DSTest} from "../../contracts/forge-std/Test.sol";
-import "../../contracts/0.8.9/TriggerableExit.sol";
+import "../../contracts/0.8.9/TriggerableExitMock.sol";
 import "../../contracts/forge-std/Vm.sol";
 import "../../contracts/forge-std/console.sol";
 
 // forge test -vv --match-path test/0.8.9/TriggerableExit.t.sol --match-contract TriggerableExit
 contract TriggerableExitTest is Test {
 
-    TriggerableExit trExit;
+    TriggerableExitMock trExit;
     address alice = makeAddr("alice");
 
     function setUp() public {
-        trExit = new TriggerableExit();
+        trExit = new TriggerableExitMock();
     }
 
     function testSuccessDummy() public {

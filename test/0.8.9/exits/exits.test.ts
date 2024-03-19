@@ -3,13 +3,21 @@ import { AbiCoder, keccak256 } from "ethers";
 import { ethers } from "hardhat";
 
 import {
+  CuratedModuleMock,
+  CuratedModuleMock__factory,
+  DepositContractMock,
+  DepositContractMock__factory,
   HashConsensusTimeTravellable__factory,
   Lido,
   Lido__factory,
   OracleReportSanityCheckerMock,
   OracleReportSanityCheckerMock__factory,
-  TriggerableExit,
-  TriggerableExit__factory,
+  Prover,
+  Prover__factory,
+  StakingRouterMockForTE,
+  StakingRouterMockForTE__factory,
+  TriggerableExitMock,
+  TriggerableExitMock__factory,
   ValidatorsExitBusOracle,
   ValidatorsExitBusOracleMock__factory,
   WithdrawalVault,
@@ -35,23 +43,33 @@ const INITIAL_EPOCH = 1;
 const CONSENSUS_VERSION = 1;
 const DATA_FORMAT_LIST = 1;
 
+const PENALTY_DELAY = 2 * 24 * 60 * 60; // 2 days
+
 function genPublicKeysArray(cnt = 1) {
   const pubkeys = [];
+  const sigkeys = [];
 
   for (let i = 1; i <= cnt; i++) {
     pubkeys.push(pad("0x" + i.toString(16), 48));
+    sigkeys.push(pad("0x" + i.toString(16), 96));
   }
-  return pubkeys;
+  return { pubkeys, sigkeys };
 }
 
-// function genPublicKeysCalldata(cnt = 1) {
-//   let pubkeys = '0x'
+function genPublicKeysCalldata(cnt = 1) {
+  let pubkeys = "0x";
+  let sigkeys = "0x";
 
-//   for (let i = 1; i <= cnt; i++) {
-//     pubkeys = pubkeys + de0x(pad("0x" + i.toString(16), 48))
-//   }
-//   return pubkeys
-// }
+  for (let i = 1; i <= cnt; i++) {
+    pubkeys = pubkeys + de0x(pad("0x" + i.toString(16), 48));
+    sigkeys = sigkeys + de0x(pad("0x" + i.toString(16), 96));
+  }
+  return { pubkeys, sigkeys };
+}
+
+async function bytes32() {
+  return "0x".padEnd(66, "1234");
+}
 
 const getDefaultReportFields = (overrides) => ({
   consensusVersion: CONSENSUS_VERSION,
@@ -89,6 +107,7 @@ describe("Triggerable exits test", () => {
   let member1: HardhatEthersSigner;
   let member2: HardhatEthersSigner;
   let member3: HardhatEthersSigner;
+  let operator1: HardhatEthersSigner;
 
   let provider: typeof ethers.provider;
 
@@ -98,7 +117,14 @@ describe("Triggerable exits test", () => {
   let locator: LidoLocator;
   let consensus: HashConsensus;
   let sanityChecker: OracleReportSanityCheckerMock;
-  let triggerableExit: TriggerableExit;
+  let triggerableExitMock: TriggerableExitMock;
+  let prover: Prover;
+  let curatedModule: CuratedModuleMock;
+  let depositContract: DepositContractMock;
+  let stakingRouter: StakingRouterMockForTE;
+
+  let curatedModuleId: bigint;
+  const operator1Id: bigint = 0;
 
   // let oracleVersion: bigint;
 
@@ -119,33 +145,56 @@ describe("Triggerable exits test", () => {
 
   before(async () => {
     ({ provider } = ethers);
-    [deployer, stranger, voting, member1, member2, member3] = await ethers.getSigners();
+    [deployer, stranger, voting, member1, member2, member3, operator1] = await ethers.getSigners();
 
     const lidoFactory = new Lido__factory(deployer);
     lido = await lidoFactory.deploy();
     const treasury = await lido.getAddress();
 
-    const triggerableExitFactory = new TriggerableExit__factory(deployer);
-    triggerableExit = await triggerableExitFactory.deploy();
+    //triggerable exits mock
+    const triggerableExitMockFactory = new TriggerableExitMock__factory(deployer);
+    triggerableExitMock = await triggerableExitMockFactory.deploy();
 
+    //withdrawal vault
     const withdrawalVaultFactory = new WithdrawalVault__factory(deployer);
     withdrawalVault = await withdrawalVaultFactory.deploy(
       await lido.getAddress(),
       treasury,
-      await triggerableExit.getAddress(),
+      await triggerableExitMock.getAddress(),
     );
 
-    // const proverFactory = new Prover__factory(deployer)
-    // prover = await proverFactory.deploy()
+    //staking router
+    const depositContractFactory = new DepositContractMock__factory(deployer);
+    depositContract = await depositContractFactory.deploy();
+
+    const stakingRouterFactory = new StakingRouterMockForTE__factory(deployer);
+    stakingRouter = await stakingRouterFactory.deploy(depositContract);
+    await stakingRouter.initialize(deployer, lido, await bytes32());
+
+    //sanity checker
     const sanityCheckerFactory = new OracleReportSanityCheckerMock__factory(deployer);
     sanityChecker = await sanityCheckerFactory.deploy();
 
+    //locator
     locator = await dummyLocator({
       withdrawalVault: await withdrawalVault.getAddress(),
       oracleReportSanityChecker: await sanityChecker.getAddress(),
+      stakingRouter: await stakingRouter.getAddress(),
     });
+
+    //module
+    const type = keccak256("0x01"); //0x01
+    const curatedModuleFactory = new CuratedModuleMock__factory(deployer);
+    curatedModule = await curatedModuleFactory.deploy();
+    await curatedModule.initialize(locator, type, PENALTY_DELAY);
+
+    //oracle
     const validatorsExitBusOracleFactory = new ValidatorsExitBusOracleMock__factory(deployer);
     oracle = await validatorsExitBusOracleFactory.deploy(SECONDS_PER_SLOT, GENESIS_TIME, locator);
+
+    //prover
+    const proverFactory = new Prover__factory(deployer);
+    prover = await proverFactory.deploy(locator, oracle);
 
     //consensus contract
     const consensusFactory = new HashConsensusTimeTravellable__factory(deployer);
@@ -171,6 +220,7 @@ describe("Triggerable exits test", () => {
     await oracle.initialize(deployer, await consensus.getAddress(), CONSENSUS_VERSION, lastProcessingRefSlot);
 
     await oracle.grantRole(await oracle.SUBMIT_PRIORITY_DATA_ROLE(), voting);
+    await oracle.grantRole(await oracle.SUBMIT_PRIORITY_DATA_ROLE(), prover);
     await oracle.grantRole(await oracle.SUBMIT_DATA_ROLE(), deployer);
     await oracle.grantRole(await oracle.PAUSE_ROLE(), deployer);
     await oracle.grantRole(await oracle.RESUME_ROLE(), deployer);
@@ -182,6 +232,24 @@ describe("Triggerable exits test", () => {
 
     //resume after deploy
     await oracle.resume();
+
+    //prover
+    // await prover.grantRole(await oracle.ONLY_MODULE(), voting);
+
+    //add module
+    await stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_MANAGE_ROLE(), deployer);
+    await stakingRouter.grantRole(await stakingRouter.UNSAFE_SET_EXITED_VALIDATORS_ROLE(), deployer);
+
+    await stakingRouter.addStakingModule(
+      "Curated",
+      await curatedModule.getAddress(),
+      10_000, // 100 % _targetShare
+      1_000, // 10 % _moduleFee
+      5_000, // 50 % _treasuryFee
+    );
+    curatedModuleId = (await stakingRouter.getStakingModuleIds())[0];
+
+    await curatedModule.addNodeOperator("1", operator1);
   });
 
   context("stage1", () => {
@@ -275,7 +343,7 @@ describe("Triggerable exits test", () => {
       //maximum to exit - 600val
       const tx = await oracle.connect(stranger).forcedExitPubkey(valPubkey, reportItems, { value: ether("1.0") });
       await expect(tx).to.be.emit(oracle, "ValidatorForcedExitRequest");
-      await expect(tx).to.be.emit(triggerableExit, "TriggerableExit");
+      await expect(tx).to.be.emit(triggerableExitMock, "TriggerableExit");
     });
 
     it("governance vote without oracle.submitReportData works", async () => {
@@ -308,11 +376,11 @@ describe("Triggerable exits test", () => {
 
       const tx = await oracle.connect(stranger).forcedExitPubkey(valPubkey, reportItems, { value: ether("1.0") });
       await expect(tx).to.be.emit(oracle, "ValidatorForcedExitRequest");
-      await expect(tx).to.be.emit(triggerableExit, "TriggerableExit");
+      await expect(tx).to.be.emit(triggerableExitMock, "TriggerableExit");
     });
 
     it("exit multiple keys", async () => {
-      const keys = genPublicKeysArray(5);
+      const { pubkeys: keys } = genPublicKeysArray(5);
 
       const refSlot = 0; //await consensus.getCurrentFrame()
       const exitRequests = [
@@ -336,13 +404,13 @@ describe("Triggerable exits test", () => {
       await oracle.connect(voting).submitPriorityReportData(reportHash, exitRequests.length);
 
       //check invalid request count
-      const keysInvalidRequestCount = genPublicKeysArray(6);
+      const { pubkeys: keysInvalidRequestCount } = genPublicKeysArray(6);
       await expect(
         oracle.connect(stranger).forcedExitPubkeys(keysInvalidRequestCount, reportItems),
       ).to.be.revertedWithCustomError(oracle, "ErrorInvalidKeysRequestsCount");
 
       //check invalid request count
-      const validRequestLessInTheReport = genPublicKeysArray(3);
+      const { pubkeys: validRequestLessInTheReport } = genPublicKeysArray(3);
       await expect(
         oracle.connect(stranger).forcedExitPubkeys(validRequestLessInTheReport, reportItems),
       ).not.to.be.revertedWithCustomError(oracle, "ErrorInvalidKeysRequestsCount");
@@ -358,8 +426,63 @@ describe("Triggerable exits test", () => {
       await oracle.connect(stranger).forcedExitPubkeys(keys, reportItems, { value: ether("1.0") });
     });
 
-    it("prover1 test", async () => {
-      // 8
+    it("module request exit", async () => {
+      const keysAmount = 5;
+      const keys1 = genPublicKeysCalldata(keysAmount);
+
+      await curatedModule.addSigningKeys(operator1Id, keysAmount, keys1.pubkeys, keys1.sigkeys);
+      await curatedModule.setNodeOperatorStakingLimit(operator1Id, keysAmount - 2);
+
+      const { pubkeys: keys } = genPublicKeysArray(keysAmount);
+
+      const valPubkeyUnknown = pad("0x010101", 48);
+
+      const requestIndex = 1;
+      const requestKey = keys[requestIndex];
+
+      //first attempt - no deposits
+      await expect(
+        prover.reportKeyToExit(curatedModuleId, operator1Id, requestIndex, requestKey, await bytes32()),
+      ).to.be.revertedWithCustomError(prover, "ErrorKeyIsNotAvailiableToExit");
+
+      //set keys are deposited
+      await curatedModule.testing_markAllKeysDeposited(operator1Id);
+
+      //calculate report
+      const refSlot = 0; //await consensus.getCurrentFrame()
+      const exitRequests = [
+        { moduleId: 1, nodeOpId: 1, valIndex: 0, valPubkey: keys[0] },
+        { moduleId: 2, nodeOpId: 2, valIndex: 0, valPubkey: keys[1] },
+        { moduleId: 3, nodeOpId: 3, valIndex: 0, valPubkey: keys[2] },
+        { moduleId: 4, nodeOpId: 4, valIndex: 0, valPubkey: keys[3] },
+        { moduleId: 5, nodeOpId: 5, valIndex: 0, valPubkey: keys[4] },
+      ];
+      const reportFields = getDefaultReportFields({
+        refSlot: +refSlot,
+        requestsCount: exitRequests.length,
+        data: encodeExitRequestsDataList(exitRequests),
+      });
+
+      const reportItems = getValidatorsExitBusReportDataItems(reportFields);
+      const reportHash = calcValidatorsExitBusReportDataHash(reportItems);
+
+      await prover.reportKeyToExit(curatedModuleId, operator1Id, requestIndex, requestKey, reportHash);
+
+      //invalid key requested
+      await expect(
+        oracle.connect(stranger).forcedExitPubkey(valPubkeyUnknown, reportItems),
+      ).not.to.be.revertedWithCustomError(oracle, "ErrorInvalidKeysRequestsCount");
+
+      //unvetted key requested
+      await expect(oracle.connect(stranger).forcedExitPubkey(keys[4], reportItems)).not.to.be.revertedWithCustomError(
+        oracle,
+        "ErrorInvalidKeysRequestsCount",
+      );
+
+      //requested key exit
+      const tx = await oracle.connect(stranger).forcedExitPubkey(requestKey, reportItems, { value: ether("1.0") });
+      await expect(tx).to.be.emit(oracle, "ValidatorForcedExitRequest");
+      await expect(tx).to.be.emit(triggerableExitMock, "TriggerableExit");
     });
   });
 });
