@@ -29,6 +29,7 @@ function msg() {
 rm -f ${NETWORK_STATE_FILE}
 cp ${NETWORK_STATE_DEFAULTS_FILE} ${NETWORK_STATE_FILE}
 
+pnpm compile
 
 pnpm hardhat --network $NETWORK run --no-compile scripts/scratch/steps/00-populate-deploy-artifact-from-env.ts
 
