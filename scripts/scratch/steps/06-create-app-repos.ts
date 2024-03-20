@@ -30,9 +30,7 @@ async function main() {
   ];
 
   const lidoAppsReceipt = await makeTx(template, "createRepos", createReposArguments, { from: deployer });
-  log(
-    `=== Aragon Lido Apps Repos (Lido, AccountingOracle, NodeOperatorsRegistry deployed: ${lidoAppsReceipt.hash} ===`,
-  );
+  log(`Aragon Lido Apps Repos (Lido, AccountingOracle, NodeOperatorsRegistry deployed: ${lidoAppsReceipt.hash}`);
 
   const createStdAragonReposArguments = [
     state["app:aragon-agent"].implementation.address,

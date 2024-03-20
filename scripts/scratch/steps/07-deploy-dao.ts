@@ -51,8 +51,6 @@ async function doTemplateNewDAO(
   deployer: string,
   daoInitialSettings: DeploymentState,
 ): Promise<ContractTransactionReceipt> {
-  log.splitter();
-
   const votingSettings = [
     daoInitialSettings.voting.minSupportRequired,
     daoInitialSettings.voting.minAcceptanceQuorum,
@@ -149,8 +147,6 @@ async function saveStateFromNewDAOTx(newDAOReceipt: ContractTransactionReceipt) 
 
   const dataByAppName: { [key: string]: { [key: string]: string } } = {};
   for (const evt of appInstalledEvents) {
-    log.splitter();
-
     const appId = evt.args.appId;
     const appName = appNameByAppId[appId];
 

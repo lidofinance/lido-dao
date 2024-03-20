@@ -26,7 +26,6 @@ async function main() {
   } else {
     const ensFactory = await deployWithoutProxy(Sk.ensFactory, "ENSFactory", deployer);
     const receipt = await makeTx(ensFactory, "newENS", [deployer], { from: deployer });
-    log.splitter();
     const ensAddress = findEvents(receipt, "DeployENS")[0].args.ens;
 
     ens = await loadContract<ENS>(ENS__factory, ensAddress);

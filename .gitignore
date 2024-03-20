@@ -12,3 +12,7 @@ coverage.json
 /artifacts
 
 .env
+deployed-local.json
+
+# MacOS
+.DS_Store

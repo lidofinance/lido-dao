@@ -18,8 +18,6 @@ async function main() {
   const deployer = deployerSigner.address;
   const state = readNetworkState({ deployer });
 
-  log.splitter();
-
   log(`Using ENS:`, yl(state[Sk.ens].address));
   const ens = await loadContract<ENS>(ENS__factory, state[Sk.ens].address, deployerSigner);
 
@@ -58,8 +56,6 @@ async function main() {
         from: deployer,
       });
     }
-
-    log.splitter();
   }
 
   await TotalGasCounter.incrementTotalGasUsedInStateFile();

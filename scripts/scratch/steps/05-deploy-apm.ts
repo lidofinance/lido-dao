@@ -23,8 +23,6 @@ async function main() {
   log(`APM ENS domain: ${chalk.yellow(state.lidoApmEnsName)}`);
   log(`Using DAO template: ${chalk.yellow(templateAddress)}`);
 
-  log.splitter();
-
   const ens = await loadContract<ENS>(ENS__factory, state[Sk.ens].address);
   const lidoApmEnsNode = ethers.namehash(state.lidoApmEnsName);
   const lidoApmEnsNodeOwner = await getENSNodeOwner(ens, lidoApmEnsNode);

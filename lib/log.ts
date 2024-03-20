@@ -34,8 +34,9 @@ log.emptyLine = () => {
 };
 
 log.scriptStart = (filename: string) => {
+  log.emptyLine();
   logWideSplitter();
-  log(`Running script ${bl(path.basename(filename))}`);
+  log(`Started script ${bl(path.basename(filename))}`);
   logWideSplitter();
 };
 

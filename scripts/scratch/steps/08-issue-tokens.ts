@@ -34,8 +34,6 @@ async function main() {
     log(`    ${addr}: ${yl(ethers.formatEther(amount))} (${percentage}%)`);
   });
 
-  log.splitter();
-
   const holdersInOneTx = Math.min(MAX_HOLDERS_IN_ONE_TX, holders.length);
   const totalTransactions = Math.ceil(holders.length / holdersInOneTx);
 
