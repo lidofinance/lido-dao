@@ -4,7 +4,7 @@ pragma solidity 0.8.9;
 
 import { AccessControlEnumerable } from "../utils/access/AccessControlEnumerable.sol";
 
-interface LidoZKOracle {
+interface ILidoZKOracle {
     function getReport(uint256 refSlot) external view returns  (
         bool success,
         uint256 clBalanceGwei,
@@ -13,7 +13,7 @@ interface LidoZKOracle {
 	);
 }
 
-contract Multiprover is LidoZKOracle, AccessControlEnumerable {
+contract Multiprover is ILidoZKOracle, AccessControlEnumerable {
 
     error AdminCannotBeZero();
 
