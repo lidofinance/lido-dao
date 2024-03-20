@@ -34,12 +34,11 @@ contract Multiprover is LidoZKOracle, AccessControlEnumerable {
     bytes32 public constant MANAGE_MEMBERS_AND_QUORUM_ROLE =
         keccak256("MANAGE_MEMBERS_AND_QUORUM_ROLE");
 
+    /// @dev A quorum value that effectively disables the oracle.
+    uint256 internal constant UNREACHABLE_QUORUM = type(uint256).max;
+
     /// @dev Oracle committee members' addresses array
     address[] internal _memberAddresses;
-
-    /// @dev Mapping from an oracle committee member address to the 1-based index in the
-    /// members array
-    mapping(address => uint256) internal _memberIndices1b;
 
     /// @dev Oracle committee members quorum value, must be larger than totalMembers // 2
     uint256 internal _quorum;
@@ -52,15 +51,10 @@ contract Multiprover is LidoZKOracle, AccessControlEnumerable {
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
-    function getIsMember(address addr) external view returns (bool) {
-        return _isMember(addr);
-    }
-
     function getMembers() external view returns (
-        address[] memory addresses,
-        uint256[] memory lastReportedRefSlots
+        address[] memory addresses
     ) {
-        return _getMembers(false);
+        return _memberAddresses;
     }
 
     function addMember(address addr, uint256 quorum)
@@ -83,36 +77,30 @@ contract Multiprover is LidoZKOracle, AccessControlEnumerable {
 
     function setQuorum(uint256 quorum) external {
         // access control is performed inside the next call
-        _setQuorumAndCheckConsensus(quorum, _memberStates.length);
+        _setQuorumAndCheckConsensus(quorum, _memberAddresses.length);
     }
 
     ///
     /// Implementation: members
     ///
 
-    function _isMember(address addr) internal view returns (bool) {
-        return _memberIndices1b[addr] != 0;
+    function isMember(address addr) internal view returns (bool) {
+        for (uint i = 0; i < _memberAddresses.length; i++) {
+            if (_memberAddresses[i] == addr) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    function _getMemberIndex(address addr) internal view returns (uint256) {
-        uint256 index1b = _memberIndices1b[addr];
-        if (index1b == 0) {
-            revert NonMember();
-        }
-        unchecked {
-            return uint256(index1b - 1);
-        }
-    }
 
     function _addMember(address addr, uint256 quorum) internal {
-        if (_isMember(addr)) revert DuplicateMember();
+        if (isMember(addr)) revert DuplicateMember();
         if (addr == address(0)) revert AddressCannotBeZero();
 
-        _memberStates.push(MemberState(0, 0));
         _memberAddresses.push(addr);
 
-        uint256 newTotalMembers = _memberStates.length;
-        _memberIndices1b[addr] = newTotalMembers;
+        uint256 newTotalMembers = _memberAddresses.length;
 
         emit MemberAdded(addr, newTotalMembers, quorum);
 
@@ -120,65 +108,23 @@ contract Multiprover is LidoZKOracle, AccessControlEnumerable {
     }
 
     function _removeMember(address addr, uint256 quorum) internal {
-        uint256 index = _getMemberIndex(addr);
-        uint256 newTotalMembers = _memberStates.length - 1;
+        require(isMember(addr), "Address not a member");
 
-        assert(index <= newTotalMembers);
-        MemberState memory memberState = _memberStates[index];
-
-        if (index != newTotalMembers) {
-            address addrToMove = _memberAddresses[newTotalMembers];
-            _memberAddresses[index] = addrToMove;
-            _memberStates[index] = _memberStates[newTotalMembers];
-            _memberIndices1b[addrToMove] = index + 1;
-        }
-
-        _memberStates.pop();
-        _memberAddresses.pop();
-        _memberIndices1b[addr] = 0;
-
-        emit MemberRemoved(addr, newTotalMembers, quorum);
-
-        if (memberState.lastReportRefSlot > 0) {
-            // member reported at least once
-            ConsensusFrame memory frame = _getCurrentFrame();
-
-            if (memberState.lastReportRefSlot == frame.refSlot &&
-                _getLastProcessingRefSlot() < frame.refSlot
-            ) {
-                // member reported for the current ref. slot and the consensus report
-                // is not processing yet => need to cancel the member's report
-                --_reportVariants[memberState.lastReportVariantIndex].support;
+        for (uint i = 0; i < _memberAddresses.length; i++) {
+            if (_memberAddresses[i] == addr) {
+                // Move the last element into the place to delete
+                _memberAddresses[i] = _memberAddresses[_memberAddresses.length - 1];
+                // Remove the last element
+                _memberAddresses.pop();
+                break;
             }
         }
 
+        uint256 newTotalMembers = _memberAddresses.length - 1;
+
+        emit MemberRemoved(addr, newTotalMembers, quorum);
+
         _setQuorumAndCheckConsensus(quorum, newTotalMembers);
-    }
-
-    function _getMembers(bool fastLane) internal view returns (
-        address[] memory addresses,
-        uint256[] memory lastReportedRefSlots
-    ) {
-        uint256 totalMembers = _memberStates.length;
-        uint256 left;
-        uint256 right;
-
-        if (fastLane) {
-            (left, right) = _getFastLaneSubset(_getCurrentFrame().index, totalMembers);
-        } else {
-            right = totalMembers;
-        }
-
-        addresses = new address[](right - left);
-        lastReportedRefSlots = new uint256[](addresses.length);
-
-        for (uint256 i = left; i < right; ++i) {
-            uint256 iModTotal = i % totalMembers;
-            MemberState memory memberState = _memberStates[iModTotal];
-            uint256 k = i - left;
-            addresses[k] = _memberAddresses[iModTotal];
-            lastReportedRefSlots[k] = memberState.lastReportRefSlot;
-        }
     }
 
     function _setQuorumAndCheckConsensus(uint256 quorum, uint256 totalMembers) internal {
@@ -186,24 +132,13 @@ contract Multiprover is LidoZKOracle, AccessControlEnumerable {
             revert QuorumTooSmall(totalMembers / 2 + 1, quorum);
         }
 
-        // we're explicitly allowing quorum values greater than the number of members to
-        // allow effectively disabling the oracle in case something unpredictable happens
-
         uint256 prevQuorum = _quorum;
         if (quorum != prevQuorum) {
-            _checkRole(
-                quorum == UNREACHABLE_QUORUM ? DISABLE_CONSENSUS_ROLE : MANAGE_MEMBERS_AND_QUORUM_ROLE,
-                _msgSender()
-            );
+            _checkRole(MANAGE_MEMBERS_AND_QUORUM_ROLE, _msgSender());
             _quorum = quorum;
             emit QuorumSet(quorum, totalMembers, prevQuorum);
         }
-
-        if (_computeEpochAtTimestamp(_getTime()) >= _frameConfig.initialEpoch) {
-            _checkConsensus(quorum);
-        }
     }
-
 
     ///
     /// Implementation: LidoZKOracle
@@ -215,6 +150,7 @@ contract Multiprover is LidoZKOracle, AccessControlEnumerable {
         uint256 numValidators,
         uint256 exitedValidators
     ) {
+        refSlot;
         return (true, 100, 100, 100);
     }
 
