@@ -18,7 +18,7 @@ cache = true
 cache_path  = 'foundry/cache'
 
 # Only run tests in contracts matching the specified glob pattern
-match_path = '**/test/**/*.test.sol'
+match_path = '**/test/**/*.t.sol'
 
 [invariant]
 # The number of runs that must execute for each invariant test group. See also fuzz.runs

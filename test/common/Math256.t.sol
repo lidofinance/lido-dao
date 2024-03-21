@@ -5,8 +5,6 @@ import "forge-std/Test.sol";
 
 import { Math256 } from "contracts/common/lib/Math256.sol";
 
-import "contracts/common/test_helpers/Assertions.sol";
-
 contract Math256Test is Test {
 
     /// uint256 tests for max/min
@@ -15,21 +13,21 @@ contract Math256Test is Test {
         uint256 a = 1;
         uint256 b = 2;
 
-        Assert.equal(Math256.max(a, b), b);
+        assertEq(Math256.max(a, b), b);
     }
 
     function test_max_WorksWithBAUint256() public pure {
         uint256 a = 1;
         uint256 b = 2;
 
-        Assert.equal(Math256.max(b, a), b);
+        assertEq(Math256.max(b, a), b);
     }
 
     function test_max_WorksWithEqualBAUint256() public pure {
         uint256 a = 1;
         uint256 b = 1;
 
-        Assert.equal(Math256.max(b, a), b);
+        assertEq(Math256.max(b, a), b);
     }
 
     function testFuzz_max_WorksWithUint256(uint256 a, uint256 b) public pure {
@@ -45,31 +43,31 @@ contract Math256Test is Test {
         Math256.min(b, a);
 
         // Must be commutative
-        Assert.equal(Math256.min(b, a), Math256.min(a, b));
+        assertEq(Math256.min(b, a), Math256.min(a, b));
 
         // Must be expected
-        Assert.equal(Math256.max(b, a), expected);
+        assertEq(Math256.max(b, a), expected);
     }
 
     function test_min_WorksWithABUint256() public pure {
         uint256 a = 2;
         uint256 b = 1;
 
-        Assert.equal(Math256.min(a, b), b);
+        assertEq(Math256.min(a, b), b);
     }
 
     function test_min_WorksWithBAUint256() public pure {
         uint256 a = 1;
         uint256 b = 2;
 
-        Assert.equal(Math256.min(b, a), a);
+        assertEq(Math256.min(b, a), a);
     }
 
     function test_min_WorksWithBothEqualUint256() public pure {
         uint256 a = 1;
         uint256 b = 1;
 
-        Assert.equal(Math256.max(b, a), b);
+        assertEq(Math256.max(b, a), b);
     }
 
     function testFuzz_min_WorksWithUint256(uint256 a, uint256 b) public pure {
@@ -82,10 +80,10 @@ contract Math256Test is Test {
         }
 
         // Must be commutative
-        Assert.equal(Math256.min(b, a), Math256.min(a, b));
+        assertEq(Math256.min(b, a), Math256.min(a, b));
 
         // Must be expected
-        Assert.equal(Math256.min(b, a), expected);
+        assertEq(Math256.min(b, a), expected);
     }
 
     /// int256 tests for max/min
@@ -94,56 +92,56 @@ contract Math256Test is Test {
         int256 a = 1;
         int256 b = 2;
 
-        Assert.equal(Math256.max(a, b), b);
+        assertEq(Math256.max(a, b), b);
     }
 
     function test_max_WorksWithBAInt256() public pure {
         int256 a = 1;
         int256 b = 2;
 
-        Assert.equal(Math256.max(b, a), b);
+        assertEq(Math256.max(b, a), b);
     }
 
     function test_max_WorksWithEqualABInt256() public pure {
         int256 a = 1;
         int256 b = 1;
 
-        Assert.equal(Math256.max(b, a), b);
+        assertEq(Math256.max(b, a), b);
     }
 
     function test_max_WorksWithBothNegativeABInt256() public pure {
         int256 a = -1;
         int256 b = -2;
 
-        Assert.equal(Math256.max(a, b), a);
+        assertEq(Math256.max(a, b), a);
     }
 
     function test_max_WorksWithBothNegativeBAInt256() public pure {
         int256 a = -1;
         int256 b = -2;
 
-        Assert.equal(Math256.max(b, a), a);
+        assertEq(Math256.max(b, a), a);
     }
 
     function test_max_WorksWithPositiveAndNegativeInt256() public pure {
         int256 a = 1;
         int256 b = -2;
 
-        Assert.equal(Math256.max(a, b), a);
+        assertEq(Math256.max(a, b), a);
     }
 
     function test_max_WorksWithNegativeAndPositiveInt256() public pure {
         int256 a = 1;
         int256 b = -2;
 
-        Assert.equal(Math256.max(b, a), a);
+        assertEq(Math256.max(b, a), a);
     }
 
     function test_max_WorksWithEqualNegativeBAInt256() public pure {
         int256 a = -1;
         int256 b = -1;
 
-        Assert.equal(Math256.max(b, a), b);
+        assertEq(Math256.max(b, a), b);
     }
 
     function testFuzz_max_WorksWithInt256(int256 a, int256 b) public pure {
@@ -156,31 +154,31 @@ contract Math256Test is Test {
         }
 
         // Must be commutative
-        Assert.equal(Math256.max(b, a), Math256.max(a, b));
+        assertEq(Math256.max(b, a), Math256.max(a, b));
 
         // Must be exepcted
-        Assert.equal(Math256.max(b, a), expected);
+        assertEq(Math256.max(b, a), expected);
     }
 
     function test_min_WorksWithABInt256() public pure {
         int256 a = 2;
         int256 b = 1;
 
-        Assert.equal(Math256.min(a, b), b);
+        assertEq(Math256.min(a, b), b);
     }
 
     function test_min_WorksWithBAInt256() public pure {
         int256 a = 1;
         int256 b = 2;
 
-        Assert.equal(Math256.min(b, a), a);
+        assertEq(Math256.min(b, a), a);
     }
 
     function test_min_WorksWithEqualBAInt256() public pure {
         int256 a = 1;
         int256 b = 1;
 
-        Assert.equal(Math256.max(b, a), b);
+        assertEq(Math256.max(b, a), b);
     }
 
     function testFuzz_min_WorksWithInt256(int256 a, int256 b) public pure {
@@ -196,10 +194,10 @@ contract Math256Test is Test {
         Math256.min(b, a);
 
         // Must be commutative
-        Assert.equal(Math256.min(b, a), Math256.min(a, b));
+        assertEq(Math256.min(b, a), Math256.min(a, b));
 
         // Must be expected
-        Assert.equal(Math256.min(b, a), expected);
+        assertEq(Math256.min(b, a), expected);
     }
 
     /// tests for ceilDiv
@@ -217,28 +215,28 @@ contract Math256Test is Test {
         uint256 a = 0;
         uint256 b = 4;
 
-        Assert.equal(Math256.ceilDiv(a, b), 0);
+        assertEq(Math256.ceilDiv(a, b), 0);
     }
 
     function test_ceilDiv_WorksForOne() public pure {
         uint256 a = 2;
         uint256 b = 1;
 
-        Assert.equal(Math256.ceilDiv(a, b), a);
+        assertEq(Math256.ceilDiv(a, b), a);
     }
 
     function test_ceilDiv_WorksForTwo() public pure {
         uint256 a = 4;
         uint256 b = 2;
 
-        Assert.equal(Math256.ceilDiv(a, b), b);
+        assertEq(Math256.ceilDiv(a, b), b);
     }
 
     function test_ceilDiv_WorksForThree() public pure {
         uint256 a = 4;
         uint256 b = 3;
 
-        Assert.equal(Math256.ceilDiv(a, b), 2);
+        assertEq(Math256.ceilDiv(a, b), 2);
     }
 
     function testFuzz_ceilDiv(uint256 a, uint256 b) public pure {
@@ -247,17 +245,17 @@ contract Math256Test is Test {
 
         // This case should always be zero
         if (a == 0) {
-            Assert.equal(Math256.ceilDiv(a, b), 0);
+            assertEq(Math256.ceilDiv(a, b), 0);
         }
 
         // When they are both equal, the orientation shouldn't matter, it should be 1
         if (a == b) {
-            Assert.equal(Math256.ceilDiv(a, b), 1);
-            Assert.equal(Math256.ceilDiv(b, a), 1);
+            assertEq(Math256.ceilDiv(a, b), 1);
+            assertEq(Math256.ceilDiv(b, a), 1);
         }
 
         uint256 expected = (a == 0 ? 0 : (a - 1) / b + 1);
-        Assert.equal(Math256.ceilDiv(a, b), expected);
+        assertEq(Math256.ceilDiv(a, b), expected);
     }
 
     /// tests for absDiff
@@ -266,14 +264,14 @@ contract Math256Test is Test {
         uint256 a = 0;
         uint256 b = 0;
 
-        Assert.equal(Math256.absDiff(b, a), 0);
+        assertEq(Math256.absDiff(b, a), 0);
     }
 
     function test_absDiff_WorksWithOnes() public pure {
         uint256 a = 1;
         uint256 b = 1;
 
-        Assert.equal(Math256.absDiff(b, a), 0);
+        assertEq(Math256.absDiff(b, a), 0);
     }
 
     function testFuzz_absDiff(uint256 a, uint256 b) public pure {
@@ -283,22 +281,22 @@ contract Math256Test is Test {
 
         // If they are the same, it's always zero
         if (a == b) {
-            Assert.equal(Math256.absDiff(b, a), 0);
+            assertEq(Math256.absDiff(b, a), 0);
         }
 
         // They are different
         if (b > a) {
-            Assert.equal(Math256.absDiff(b, a), b - a);
+            assertEq(Math256.absDiff(b, a), b - a);
         } else {
-            Assert.equal(Math256.absDiff(a, b), a - b);
+            assertEq(Math256.absDiff(a, b), a - b);
         }
 
         // If one is zero, the difference should always be the other
         if (a == 0) {
-            Assert.equal(Math256.absDiff(b, a), b);
+            assertEq(Math256.absDiff(b, a), b);
         }
 
         // Must be commutative
-        Assert.equal(Math256.absDiff(b, a), Math256.absDiff(a, b));
+        assertEq(Math256.absDiff(b, a), Math256.absDiff(a, b));
     }
 }
