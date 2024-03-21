@@ -45,6 +45,13 @@ contract Multiprover is ILidoZKOracle, AccessControlEnumerable {
     /// @dev Oracle committee members quorum value, must be larger than totalMembers // 2
     uint256 internal _quorum;
 
+    struct Report {
+        bool success;
+        uint256 clBalanceGwei;
+        uint256 numValidators;
+        uint256 exitedValidators;
+    }
+
     constructor(
         address admin
     ) {
@@ -146,17 +153,60 @@ contract Multiprover is ILidoZKOracle, AccessControlEnumerable {
     /// Implementation: LidoZKOracle
     ///
 
+    // Helper function to check if two reports are identical
+    function _areReportsIdentical(Report memory a, Report memory b) internal pure returns (bool) {
+        return a.success == b.success &&
+               a.clBalanceGwei == b.clBalanceGwei &&
+               a.numValidators == b.numValidators &&
+               a.exitedValidators == b.exitedValidators;
+    }
+
+    // Helper function to request a report from an oracle
+    function _requestReportFromOracle(ILidoZKOracle oracle, uint256 refSlot) internal view 
+        returns (Report memory)    {
+        (bool success, uint256 clBalanceGwei, uint256 numValidators, uint256 exitedValidators) = oracle.getReport(refSlot);
+        return Report(success, clBalanceGwei, numValidators, exitedValidators);
+    }
+
     function getReport(uint256 refSlot) external view override returns  (
         bool success,
         uint256 clBalanceGwei,
         uint256 numValidators,
         uint256 exitedValidators
     ) {
-        refSlot;
-        return (true, 100, 100, 100);
-    }
+        Report[] memory reportsData = new Report[](_memberAddresses.length);
+        uint256[] memory reportCounts = new uint256[](_memberAddresses.length);
+        uint256 reports = 0;
+
+        for (uint256 i = 0; i < _memberAddresses.length; i++) {
+            ILidoZKOracle oracle = ILidoZKOracle(_memberAddresses[i]);
+            Report memory report = _requestReportFromOracle(oracle, refSlot);
+            if (report.success) {
+                uint256 currentReportCount = 0;
+                for (uint256 j = 0; j < reports; j++) {
+                    if (_areReportsIdentical(reportsData[j], report)) {
+                        reportCounts[j]++;
+                        currentReportCount = reportCounts[j];
+                        break;
+                    }
+                }
+                if (currentReportCount == 0) {
+                    reportsData[reports] = report;
+                    reportCounts[reports] = 1;
+                    currentReportCount = 1;
+                    reports++;
+                }
+                if (currentReportCount >= _quorum) {
+                    return (report.success, report.clBalanceGwei, report.numValidators, report.exitedValidators);
+                }
+            }
+        }
+        return (false, 0, 0, 0);
+   }
 
     ///
     /// Implementation: Auto-resettable fuse
     /// 
+    
+    // TODO: implement the fuse
 }
