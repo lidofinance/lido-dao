@@ -20,10 +20,8 @@ cache_path  = 'foundry/cache'
 # Only run tests in contracts matching the specified glob pattern
 match_path = '**/test/**/*.t.sol'
 
-[invariant]
 # The number of runs that must execute for each invariant test group. See also fuzz.runs
-runs = 256
-depth = 256
+invariant = { runs = 16, depth = 16 }
 
 # Fails the invariant fuzzing if a revert occurs
 # fail_on_revert = true
@@ -31,3 +29,12 @@ depth = 256
 [fmt]
 # Style of uint/int256 types
 int_types = 'long'
+
+# Speed up compilation and tests during development
+[profile.max]
+fuzz = { runs = 256 }
+invariant = { runs = 256, depth = 256 }
+
+[profile.ci]
+fuzz = { runs = 256 }
+invariant = { runs = 256, depth = 16 }

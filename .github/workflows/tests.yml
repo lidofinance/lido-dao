@@ -48,4 +48,4 @@ jobs:
         run: pnpm install
 
       - name: Run tests
-        run: forge test --gas-report
+        run: FOUNDRY_PROFILE=ci forge test --gas-report
