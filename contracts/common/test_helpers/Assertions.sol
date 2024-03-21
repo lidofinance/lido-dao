@@ -10,6 +10,7 @@ import { MemUtils } from "../../common/lib/MemUtils.sol";
 library Assert {
     error RevertExpected();
     error AssertFailed(bool actual, bool expected);
+    error AssertEqualFailed_int256(int256 actual, int256 expected);
     error AssertEqualFailed_uint256(uint256 actual, uint256 expected);
     error AssertEqualFailed_bytes32(bytes32 actual, bytes32 expected);
     error AssertEqualFailed_bytes(bytes actual, bytes expected);
@@ -34,6 +35,12 @@ library Assert {
     function equal(uint256 actual, uint256 expected) internal pure {
         if (actual != expected) {
             revert AssertEqualFailed_uint256(actual, expected);
+        }
+    }
+
+    function equal(int256 actual, int256 expected) internal pure {
+        if (actual != expected) {
+            revert AssertEqualFailed_int256(actual, expected);
         }
     }
 
