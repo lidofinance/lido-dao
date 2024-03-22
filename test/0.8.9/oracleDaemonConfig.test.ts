@@ -31,13 +31,13 @@ describe("OracleDaemonConfig", () => {
 
   context("constructor", () => {
     context("Reverts", () => {
-      it("Reverts if admin is zero address", async () => {
+      it("if admin is zero address", async () => {
         await expect(
           new OracleDaemonConfig__factory(deployer).deploy(ZeroAddress, [configPrimaryManager, configSecondaryManager]),
         ).to.be.revertedWithCustomError(oracleDaemonConfig, "ZeroAddress");
       });
 
-      it("Reverts if config managers contain zero address", async () => {
+      it("if config managers contain zero address", async () => {
         await expect(
           new OracleDaemonConfig__factory(deployer).deploy(admin, [configPrimaryManager, ZeroAddress]),
         ).to.be.revertedWithCustomError(oracleDaemonConfig, "ZeroAddress");
@@ -75,9 +75,9 @@ describe("OracleDaemonConfig", () => {
     });
   });
 
-  context("Set and get values", () => {
+  context("set", () => {
     context("Reverts", () => {
-      it("Reverts trying to set from unauthorized account", async () => {
+      it("trying to set from unauthorized account", async () => {
         const configManagerRole = await oracleDaemonConfig.CONFIG_MANAGER_ROLE();
 
         await expect(oracleDaemonConfig.set(defaultKey, defaultValue)).to.be.revertedWithOZAccessControlError(
@@ -86,19 +86,13 @@ describe("OracleDaemonConfig", () => {
         );
       });
 
-      it("Reverts trying to get missing value", async () => {
-        await expect(oracleDaemonConfig.get(defaultKey))
-          .to.be.revertedWithCustomError(oracleDaemonConfig, "ValueDoesntExist")
-          .withArgs(defaultKey);
-      });
-
-      it("Reverts trying to set empty value", async () => {
+      it("trying to set empty value", async () => {
         await expect(oracleDaemonConfig.connect(configPrimaryManager).set(defaultKey, "0x"))
           .to.be.revertedWithCustomError(oracleDaemonConfig, "EmptyValue")
           .withArgs(defaultKey);
       });
 
-      it("Reverts trying to set with the same key twice", async () => {
+      it("trying to set with the same key twice", async () => {
         await expect(oracleDaemonConfig.connect(configPrimaryManager).set(defaultKey, defaultValue))
           .to.emit(oracleDaemonConfig, "ConfigValueSet")
           .withArgs(defaultKey, defaultValue);
@@ -109,15 +103,13 @@ describe("OracleDaemonConfig", () => {
       });
     });
 
-    it("Get works after set", async () => {
+    it("Works for new value", async () => {
       await expect(oracleDaemonConfig.connect(configPrimaryManager).set(defaultKey, defaultValue))
         .to.emit(oracleDaemonConfig, "ConfigValueSet")
         .withArgs(defaultKey, defaultValue);
-
-      expect(await oracleDaemonConfig.get(defaultKey)).to.equal(defaultValue);
     });
 
-    it("Get works after set with empty key", async () => {
+    it("Works for new value with empty key", async () => {
       await expect(oracleDaemonConfig.connect(configPrimaryManager).set("", defaultValue))
         .to.emit(oracleDaemonConfig, "ConfigValueSet")
         .withArgs("", defaultValue);
@@ -126,9 +118,35 @@ describe("OracleDaemonConfig", () => {
     });
   });
 
-  context("Function `update`", () => {
+  context("get", () => {
     context("Reverts", () => {
-      it("Reverts trying to update from unauthorized account", async () => {
+      it("trying to get missing value", async () => {
+        await expect(oracleDaemonConfig.get(defaultKey))
+          .to.be.revertedWithCustomError(oracleDaemonConfig, "ValueDoesntExist")
+          .withArgs(defaultKey);
+      });
+    });
+
+    it("Works after set", async () => {
+      await expect(oracleDaemonConfig.connect(configPrimaryManager).set(defaultKey, defaultValue))
+        .to.emit(oracleDaemonConfig, "ConfigValueSet")
+        .withArgs(defaultKey, defaultValue);
+
+      expect(await oracleDaemonConfig.get(defaultKey)).to.equal(defaultValue);
+    });
+
+    it("Works after set with empty key", async () => {
+      await expect(oracleDaemonConfig.connect(configPrimaryManager).set("", defaultValue))
+        .to.emit(oracleDaemonConfig, "ConfigValueSet")
+        .withArgs("", defaultValue);
+
+      expect(await oracleDaemonConfig.get("")).to.equal(defaultValue);
+    });
+  });
+
+  context("update", () => {
+    context("Reverts", () => {
+      it("trying to update from unauthorized account", async () => {
         await expect(oracleDaemonConfig.connect(configPrimaryManager).set(defaultKey, defaultValue))
           .to.emit(oracleDaemonConfig, "ConfigValueSet")
           .withArgs(defaultKey, defaultValue);
@@ -141,13 +159,13 @@ describe("OracleDaemonConfig", () => {
         );
       });
 
-      it("Reverts trying to update missing key", async () => {
+      it("trying to update missing key", async () => {
         await expect(oracleDaemonConfig.connect(configPrimaryManager).update(defaultKey, "0xdead"))
           .to.be.revertedWithCustomError(oracleDaemonConfig, "ValueDoesntExist")
           .withArgs(defaultKey);
       });
 
-      it("Reverts trying to update to empty value", async () => {
+      it("trying to update to empty value", async () => {
         await expect(oracleDaemonConfig.connect(configPrimaryManager).set(defaultKey, defaultValue))
           .to.emit(oracleDaemonConfig, "ConfigValueSet")
           .withArgs(defaultKey, defaultValue);
@@ -157,7 +175,7 @@ describe("OracleDaemonConfig", () => {
           .withArgs(defaultKey);
       });
 
-      it("Reverts trying to update to the same value", async () => {
+      it("trying to update to the same value", async () => {
         await expect(oracleDaemonConfig.connect(configPrimaryManager).set(defaultKey, defaultValue))
           .to.emit(oracleDaemonConfig, "ConfigValueSet")
           .withArgs(defaultKey, defaultValue);
@@ -168,7 +186,7 @@ describe("OracleDaemonConfig", () => {
       });
     });
 
-    it("Update works after set", async () => {
+    it("Works after set", async () => {
       await expect(oracleDaemonConfig.connect(configPrimaryManager).set(defaultKey, defaultValue))
         .to.emit(oracleDaemonConfig, "ConfigValueSet")
         .withArgs(defaultKey, defaultValue);
@@ -178,7 +196,7 @@ describe("OracleDaemonConfig", () => {
         .withArgs(defaultKey, "0xdead");
     });
 
-    it("Update works after set with empty key", async () => {
+    it("Works after set with empty key", async () => {
       await expect(oracleDaemonConfig.connect(configPrimaryManager).set("", defaultValue))
         .to.emit(oracleDaemonConfig, "ConfigValueSet")
         .withArgs("", defaultValue);
@@ -189,9 +207,9 @@ describe("OracleDaemonConfig", () => {
     });
   });
 
-  context("Function `unset`", () => {
+  context("unset", () => {
     context("Reverts", () => {
-      it("Reverts trying to unset from unauthorized account", async () => {
+      it("trying to unset from unauthorized account", async () => {
         await expect(oracleDaemonConfig.connect(configPrimaryManager).set(defaultKey, defaultValue))
           .to.emit(oracleDaemonConfig, "ConfigValueSet")
           .withArgs(defaultKey, defaultValue);
@@ -204,14 +222,14 @@ describe("OracleDaemonConfig", () => {
         );
       });
 
-      it("Reverts trying to unset missing key", async () => {
+      it("trying to unset missing key", async () => {
         await expect(oracleDaemonConfig.connect(configPrimaryManager).unset(defaultKey))
           .to.be.revertedWithCustomError(oracleDaemonConfig, "ValueDoesntExist")
           .withArgs(defaultKey);
       });
     });
 
-    it("Unset works after set", async () => {
+    it("Works after set", async () => {
       await expect(oracleDaemonConfig.connect(configPrimaryManager).set(defaultKey, defaultValue))
         .to.emit(oracleDaemonConfig, "ConfigValueSet")
         .withArgs(defaultKey, defaultValue);
@@ -221,7 +239,7 @@ describe("OracleDaemonConfig", () => {
         .withArgs(defaultKey);
     });
 
-    it("Unset works after set with empty key", async () => {
+    it("Works after set with empty key", async () => {
       await expect(oracleDaemonConfig.connect(configPrimaryManager).set("", defaultValue))
         .to.emit(oracleDaemonConfig, "ConfigValueSet")
         .withArgs("", defaultValue);
@@ -232,9 +250,9 @@ describe("OracleDaemonConfig", () => {
     });
   });
 
-  context("Function `getList`", () => {
+  context("getList", () => {
     context("Reverts", () => {
-      it("Reverts trying to get at least one missing key", async () => {
+      it("trying to get at least one missing key", async () => {
         await expect(oracleDaemonConfig.connect(configPrimaryManager).set(defaultKey, defaultValue))
           .to.emit(oracleDaemonConfig, "ConfigValueSet")
           .withArgs(defaultKey, defaultValue);
@@ -249,11 +267,11 @@ describe("OracleDaemonConfig", () => {
       });
     });
 
-    it("getList works for empty keys list", async () => {
+    it("Works for empty keys list", async () => {
       expect(await oracleDaemonConfig.getList([])).to.be.an("array").that.is.empty;
     });
 
-    it("getList works after set", async () => {
+    it("Works after set", async () => {
       await expect(oracleDaemonConfig.connect(configPrimaryManager).set(defaultKey, defaultValue))
         .to.emit(oracleDaemonConfig, "ConfigValueSet")
         .withArgs(defaultKey, defaultValue);
