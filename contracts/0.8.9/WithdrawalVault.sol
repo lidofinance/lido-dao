@@ -22,6 +22,7 @@ interface ILido {
 
 interface ITriggerableExit {
     function triggerExit(bytes memory validatorPubkey) external payable;
+    function getExitFee() external view returns (uint);
 }
 
 
@@ -131,9 +132,26 @@ contract WithdrawalVault is Versioned {
         _token.transferFrom(address(this), TREASURY, _tokenId);
     }
 
+    event Received(address from, uint256 value);
+
     receive() external payable {}
 
-    function forcedExit(bytes calldata pubkey) external payable {
-        ITriggerableExit(TRIGGERABLE_EXIT).triggerExit{value: msg.value}(pubkey);
+    function forcedExit(bytes[] calldata pubkeys, address sender) external payable {
+        //only VEBO
+
+        uint256 vaultBalance = address(this).balance - msg.value;
+        uint256 fee = msg.value;
+
+        uint256 keysCount = pubkeys.length;
+        for(uint256 i = 0; i < keysCount; ++i) {
+            uint256 beforeBalance = address(this).balance;
+            ITriggerableExit(TRIGGERABLE_EXIT).triggerExit{value: fee}(pubkeys[i]);
+            fee = fee - (beforeBalance - address(this).balance);
+        }
+
+        //return unspent fee to sender
+        address(sender).call{value: fee}("");
+
+        assert(address(this).balance == vaultBalance);
     }
 }

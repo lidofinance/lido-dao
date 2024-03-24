@@ -15,7 +15,7 @@ interface IOracleReportSanityChecker {
     function checkExitBusOracleReport(uint256 _exitRequestsCount) external view;
 }
 interface IWithdrawalVault {
-    function forcedExit(bytes calldata pubkey) external payable;
+    function forcedExit(bytes[] calldata pubkey, address sender) external payable;
 }
 
 
@@ -39,14 +39,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     );
 
     event ValidatorExitRequest(
-        uint256 indexed stakingModuleId,
-        uint256 indexed nodeOperatorId,
-        uint256 indexed validatorIndex,
-        bytes validatorPubkey,
-        uint256 timestamp
-    );
-
-    event ValidatorForcedExitRequest(
         uint256 indexed stakingModuleId,
         uint256 indexed nodeOperatorId,
         uint256 indexed validatorIndex,
@@ -362,7 +354,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             revert UnexpectedRequestsDataLength();
         }
 
-        _processExitRequestsList(data.data);
+        _processExitRequestsList(data.data, "");
 
         _storageDataProcessingState().value = DataProcessingState({
             refSlot: data.refSlot.toUint64(),
@@ -380,7 +372,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         );
     }
 
-    function _processExitRequestsList(bytes calldata data) internal {
+    function _processExitRequestsList(bytes calldata data, bytes32 kCheckedKey) internal returns(uint256,uint256,uint256) {
         uint256 offset;
         uint256 offsetPastEnd;
         assembly {
@@ -425,33 +417,47 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
                 revert InvalidRequestsData();
             }
 
-            uint256 nodeOpKey = _computeNodeOpKey(moduleId, nodeOpId);
-            if (nodeOpKey != lastNodeOpKey) {
-                if (lastNodeOpKey != 0) {
-                    _storageLastRequestedValidatorIndices()[lastNodeOpKey] = lastRequestedVal;
+            if (kCheckedKey == "") {
+                uint256 nodeOpKey = _computeNodeOpKey(moduleId, nodeOpId);
+                if (nodeOpKey != lastNodeOpKey) {
+                    if (lastNodeOpKey != 0) {
+                        _storageLastRequestedValidatorIndices()[lastNodeOpKey] = lastRequestedVal;
+                    }
+                    lastRequestedVal = _storageLastRequestedValidatorIndices()[nodeOpKey];
+                    lastNodeOpKey = nodeOpKey;
                 }
-                lastRequestedVal = _storageLastRequestedValidatorIndices()[nodeOpKey];
-                lastNodeOpKey = nodeOpKey;
-            }
 
-            if (lastRequestedVal.requested && valIndex <= lastRequestedVal.index) {
-                revert NodeOpValidatorIndexMustIncrease(
-                    moduleId,
-                    nodeOpId,
-                    lastRequestedVal.index,
-                    valIndex
-                );
-            }
+                if (lastRequestedVal.requested && valIndex <= lastRequestedVal.index) {
+                    revert NodeOpValidatorIndexMustIncrease(
+                        moduleId,
+                        nodeOpId,
+                        lastRequestedVal.index,
+                        valIndex
+                    );
+                }
 
-            lastRequestedVal = RequestedValidator(true, valIndex);
-            lastDataWithoutPubkey = dataWithoutPubkey;
+                lastRequestedVal = RequestedValidator(true, valIndex);
+                lastDataWithoutPubkey = dataWithoutPubkey;
+
+            } else {
+                if (keccak256(pubkey) == kCheckedKey) {
+                    emit ValidatorExitRequest(moduleId, nodeOpId, valIndex, pubkey, timestamp);
+                    return (moduleId, nodeOpId, valIndex);
+                }
+            }
 
             emit ValidatorExitRequest(moduleId, nodeOpId, valIndex, pubkey, timestamp);
+        }
+
+        if (kCheckedKey != "") {
+            revert ErrorInvalidPubkeyInReport();
         }
 
         if (lastNodeOpKey != 0) {
             _storageLastRequestedValidatorIndices()[lastNodeOpKey] = lastRequestedVal;
         }
+
+        return (0,0,0);
     }
 
     function _computeNodeOpKey(uint256 moduleId, uint256 nodeOpId) internal pure returns (uint256) {
@@ -492,23 +498,10 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     error ErrorReportExists();
     error ErrorInvalidKeysRequestsCount();
 
-    function forcedExitPubkey(bytes calldata pubkey, ReportData calldata data) external payable {
-        if (_storageReports()[keccak256(abi.encode(data))] == 0) {
-            revert ErrorInvalidReport();
-        }
-
-        uint256 timestamp = _getTime();
-
-        (uint256 moduleId, uint256 nodeOpId, uint256 valIndex) = _validatePubkey(pubkey, data.data);
-        IWithdrawalVault(LOCATOR.withdrawalVault()).forcedExit{value: msg.value}(pubkey);
-
-        emit ValidatorForcedExitRequest(moduleId, nodeOpId, valIndex, pubkey, timestamp);
-    }
-
-
     function forcedExitPubkeys(bytes[] calldata keys, ReportData calldata data) external payable {
         uint256 requestsCount = _storageReports()[keccak256(abi.encode(data))];
         uint256 keysCount = keys.length;
+
         if (requestsCount == 0) {
             revert ErrorInvalidReport();
         }
@@ -518,28 +511,12 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
 
         uint256 timestamp = _getTime();
 
-        //calculate value
-        uint256 fee = msg.value;
-
-        //send value to wc
-        IWithdrawalVault(LOCATOR.withdrawalVault()).call{value: fee}();
-
-        // start balance
-
-
         for(uint256 i = 0; i < keysCount; i++) {
             bytes calldata pubkey = keys[i];
-            (uint256 moduleId, uint256 nodeOpId, uint256 valIndex) = _validatePubkey(pubkey, data.data);
-            IWithdrawalVault(LOCATOR.withdrawalVault()).forcedExit(pubkey);
-
-            emit ValidatorForcedExitRequest(moduleId, nodeOpId, valIndex, pubkey, timestamp);
+            (uint256 moduleId, uint256 nodeOpId, uint256 valIndex) = _processExitRequestsList(data.data, keccak256(pubkey));
         }
 
-        // calculate end balance
-        // require()
-
-        // receiver
-
+        IWithdrawalVault(LOCATOR.withdrawalVault()).forcedExit{value: msg.value}(keys, msg.sender);
     }
 
     function submitPriorityReportData(bytes32 reportHash, uint256 requestsCount) external onlyRole(SUBMIT_PRIORITY_DATA_ROLE){
@@ -551,56 +528,5 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             revert ErrorReportExists();
         }
         _storageReports()[reportHash] = requestsCount;
-    }
-
-    function _validatePubkey(bytes calldata pk, bytes calldata data) internal view returns(uint256,uint256,uint256) {
-        uint256 offset;
-        uint256 offsetPastEnd;
-        assembly {
-            offset := data.offset
-            offsetPastEnd := add(offset, data.length)
-        }
-
-        uint256 lastDataWithoutPubkey = 0;
-        bytes calldata pubkey;
-        bytes32 k_pk = keccak256(pk);
-
-
-        assembly {
-            pubkey.length := 48
-        }
-
-        while (offset < offsetPastEnd) {
-            uint256 dataWithoutPubkey;
-            assembly {
-                // 16 most significant bytes are taken by module id, node op id, and val index
-                dataWithoutPubkey := shr(128, calldataload(offset))
-                // the next 48 bytes are taken by the pubkey
-                pubkey.offset := add(offset, 16)
-                // totalling to 64 bytes
-                offset := add(offset, 64)
-            }
-            //                              dataWithoutPubkey
-            // MSB <---------------------------------------------------------------------- LSB
-            // | 128 bits: zeros | 24 bits: moduleId | 40 bits: nodeOpId | 64 bits: valIndex |
-            //
-            if (dataWithoutPubkey <= lastDataWithoutPubkey) {
-                revert InvalidRequestsDataSortOrder();
-            }
-
-            uint64 valIndex = uint64(dataWithoutPubkey);
-            uint256 nodeOpId = uint40(dataWithoutPubkey >> 64);
-            uint256 moduleId = uint24(dataWithoutPubkey >> (64 + 40));
-
-            if (moduleId == 0) {
-                revert InvalidRequestsData();
-            }
-
-            if (keccak256(pubkey) == k_pk) {
-                return (moduleId, nodeOpId, valIndex);
-            }
-        }
-
-        revert ErrorInvalidPubkeyInReport();
     }
 }

@@ -299,7 +299,7 @@ describe("Triggerable exits test", () => {
 
       const valPubkeyUnknown = pad("0x010101", 48);
 
-      await expect(oracle.forcedExitPubkey(valPubkeyUnknown, reportItems)).to.be.revertedWithCustomError(
+      await expect(oracle.forcedExitPubkeys([valPubkeyUnknown], reportItems)).to.be.revertedWithCustomError(
         oracle,
         "ErrorInvalidPubkeyInReport",
       );
@@ -341,7 +341,7 @@ describe("Triggerable exits test", () => {
       await expect(tx2).to.be.emit(oracle, "ValidatorExitRequest");
 
       //maximum to exit - 600val
-      const tx = await oracle.connect(stranger).forcedExitPubkey(valPubkey, reportItems, { value: ether("1.0") });
+      const tx = await oracle.connect(stranger).forcedExitPubkeys([valPubkey], reportItems, { value: ether("1.0") });
       await expect(tx).to.be.emit(oracle, "ValidatorForcedExitRequest");
       await expect(tx).to.be.emit(triggerableExitMock, "TriggerableExit");
     });
@@ -374,7 +374,7 @@ describe("Triggerable exits test", () => {
       //priority
       await oracle.connect(voting).submitPriorityReportData(reportHash, exitRequests.length);
 
-      const tx = await oracle.connect(stranger).forcedExitPubkey(valPubkey, reportItems, { value: ether("1.0") });
+      const tx = await oracle.connect(stranger).forcedExitPubkeys([valPubkey], reportItems, { value: ether("1.0") });
       await expect(tx).to.be.emit(oracle, "ValidatorForcedExitRequest");
       await expect(tx).to.be.emit(triggerableExitMock, "TriggerableExit");
     });
@@ -406,20 +406,20 @@ describe("Triggerable exits test", () => {
       //check invalid request count
       const { pubkeys: keysInvalidRequestCount } = genPublicKeysArray(6);
       await expect(
-        oracle.connect(stranger).forcedExitPubkeys(keysInvalidRequestCount, reportItems),
+        oracle.connect(stranger).forcedExitPubkeys(keysInvalidRequestCount, reportItems, { value: ether("1.0") }),
       ).to.be.revertedWithCustomError(oracle, "ErrorInvalidKeysRequestsCount");
 
-      //check invalid request count
+      //check valid request count (not reverted)
       const { pubkeys: validRequestLessInTheReport } = genPublicKeysArray(3);
       await expect(
-        oracle.connect(stranger).forcedExitPubkeys(validRequestLessInTheReport, reportItems),
+        oracle.connect(stranger).forcedExitPubkeys(validRequestLessInTheReport, reportItems, { value: ether("1.1") }),
       ).not.to.be.revertedWithCustomError(oracle, "ErrorInvalidKeysRequestsCount");
 
       //check invalid request count
       const invalidKeyInRequest = [...keys];
       invalidKeyInRequest[2] = pad("0x010203", 48);
       await expect(
-        oracle.connect(stranger).forcedExitPubkeys(invalidKeyInRequest, reportItems, { value: ether("1.0") }),
+        oracle.connect(stranger).forcedExitPubkeys(invalidKeyInRequest, reportItems, { value: ether("1.2") }),
       ).to.be.revertedWithCustomError(oracle, "ErrorInvalidPubkeyInReport");
 
       //works
@@ -470,19 +470,69 @@ describe("Triggerable exits test", () => {
 
       //invalid key requested
       await expect(
-        oracle.connect(stranger).forcedExitPubkey(valPubkeyUnknown, reportItems),
+        oracle.connect(stranger).forcedExitPubkeys([valPubkeyUnknown], reportItems),
       ).not.to.be.revertedWithCustomError(oracle, "ErrorInvalidKeysRequestsCount");
 
       //unvetted key requested
-      await expect(oracle.connect(stranger).forcedExitPubkey(keys[4], reportItems)).not.to.be.revertedWithCustomError(
-        oracle,
-        "ErrorInvalidKeysRequestsCount",
-      );
+      const unvettedKey = keys[4];
+      await expect(
+        oracle.connect(stranger).forcedExitPubkeys([unvettedKey], reportItems),
+      ).not.to.be.revertedWithCustomError(oracle, "ErrorInvalidKeysRequestsCount");
 
       //requested key exit
-      const tx = await oracle.connect(stranger).forcedExitPubkey(requestKey, reportItems, { value: ether("1.0") });
+      const tx = await oracle.connect(stranger).forcedExitPubkeys([requestKey], reportItems, { value: ether("1.0") });
       await expect(tx).to.be.emit(oracle, "ValidatorForcedExitRequest");
       await expect(tx).to.be.emit(triggerableExitMock, "TriggerableExit");
+    });
+
+    it("increased exitFee", async function () {
+      const { pubkeys: keys } = genPublicKeysArray(5);
+
+      const refSlot = 0; //await consensus.getCurrentFrame()
+
+      const keysCount = 17;
+      const exitRequests = [...Array(keysCount).keys()].map(() => ({
+        moduleId: 1,
+        nodeOpId: 1,
+        valIndex: 0,
+        valPubkey: keys[0],
+      }));
+
+      const reportFields = getDefaultReportFields({
+        refSlot: +refSlot,
+        requestsCount: exitRequests.length,
+        data: encodeExitRequestsDataList(exitRequests),
+      });
+
+      const reportItems = getValidatorsExitBusReportDataItems(reportFields);
+      const reportHash = calcValidatorsExitBusReportDataHash(reportItems);
+
+      //priority
+      await oracle.connect(voting).submitPriorityReportData(reportHash, exitRequests.length);
+
+      const keys1 = [...Array(keysCount).keys()].map(() => keys[0]);
+
+      expect(await triggerableExitMock.getExitFee()).to.be.equal(1n);
+
+      //works
+      const gasEstimate1 = await oracle
+        .connect(stranger)
+        .forcedExitPubkeys.estimateGas(keys1, reportItems, { value: ether("1.0") });
+      await oracle.connect(stranger).forcedExitPubkeys(keys1, reportItems, { value: ether("1.0") });
+
+      await triggerableExitMock.blockProcessing();
+      //after block processing block the fee would be increased
+      expect(await triggerableExitMock.getExitFee()).to.be.equal(2n);
+
+      const gasEstimate2 = await oracle
+        .connect(stranger)
+        .forcedExitPubkeys.estimateGas(keys1, reportItems, { value: ether("1.0") });
+      await oracle.connect(stranger).forcedExitPubkeys(keys1, reportItems, { value: ether("1.0") });
+
+      console.log({
+        gasEstimate1,
+        gasEstimate2,
+      });
     });
   });
 });

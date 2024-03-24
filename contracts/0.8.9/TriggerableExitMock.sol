@@ -17,7 +17,11 @@ contract TriggerableExitMock {
     uint256 private constant EXIT_FEE_UPDATE_FRACTION = 17;
     uint256 private constant EXCESS_RETURN_GAS_STIPEND = 2300;
 
+    uint256 private constant TARGET_EXITS_PER_BLOCK = 2;
+
     event TriggerableExit(bytes indexed validatorPubkey);
+
+    uint256 lastProcessedBlock;
 
     function triggerExit(bytes memory validatorPubkey) external payable {
         checkExitFee(msg.value);
@@ -77,15 +81,15 @@ contract TriggerableExitMock {
         return 1;
     }
 
-    function checkExitFee(uint feeSent) internal view {
-        uint exitFee = getExitFee();
+    function checkExitFee(uint256 feeSent) internal view {
+        uint256 exitFee = getExitFee();
         require(feeSent >= exitFee, 'Insufficient exit fee');
     }
 
-    function getExitFee() private view returns (uint) {
+    function getExitFee() public view returns (uint256) {
         bytes32 position = getSlotReference(EXCESS_EXITS_STORAGE_SLOT);
 
-        uint excessExits;
+        uint256 excessExits;
         assembly {
             excessExits := sload(position)
         }
@@ -95,11 +99,11 @@ contract TriggerableExitMock {
             EXIT_FEE_UPDATE_FRACTION);
     }
 
-    function fakeExponential(uint factor, uint numerator, uint denominator) private pure returns (uint) {
-        uint i = 1;
-        uint output = 0;
+    function fakeExponential(uint256 factor, uint256 numerator, uint256 denominator) private pure returns (uint256) {
+        uint256 i = 1;
+        uint256 output = 0;
 
-        uint numeratorAccum = factor * denominator;
+        uint256 numeratorAccum = factor * denominator;
 
         while (numeratorAccum > 0) {
             output += numeratorAccum;
@@ -113,7 +117,7 @@ contract TriggerableExitMock {
     function incrementExitCount() private {
         bytes32 position = getSlotReference(EXIT_COUNT_STORAGE_SLOT);
 
-        uint exitCount;
+        uint256 exitCount;
         assembly {
             exitCount := sload(position)
         }
@@ -124,11 +128,47 @@ contract TriggerableExitMock {
         }
     }
 
-    function returnExcessPayment(uint feeSent, address sourceAddress) internal {
-        uint excessPayment = feeSent - getExitFee();
+    function returnExcessPayment(uint256 feeSent, address sourceAddress) internal {
+        uint256 excessPayment = feeSent - getExitFee();
         if (excessPayment > 0) {
-            (bool sent, bytes memory data) = sourceAddress.call{value: excessPayment, gas: EXCESS_RETURN_GAS_STIPEND}("");
+            (bool sent, /*bytes memory data*/) = sourceAddress.call{value: excessPayment, gas: EXCESS_RETURN_GAS_STIPEND}("");
             require(sent, "Failed to return excess fee payment");
+        }
+    }
+
+    //block processing
+    function updateExcessExits() internal {
+        bytes32 positionExceessExits = getSlotReference(EXCESS_EXITS_STORAGE_SLOT);
+        bytes32 positionExitsCount = getSlotReference(EXIT_COUNT_STORAGE_SLOT);
+
+        uint256 previousExcessExits;
+        uint256 exitCount;
+        assembly {
+            previousExcessExits := sload(positionExceessExits)
+            exitCount := sload(positionExitsCount)
+        }
+
+        uint256 newExcessExits = 0;
+        if (previousExcessExits + exitCount > TARGET_EXITS_PER_BLOCK) {
+            newExcessExits = previousExcessExits + exitCount - TARGET_EXITS_PER_BLOCK;
+            assembly {
+                sstore(positionExceessExits, newExcessExits)
+            }
+        }
+    }
+
+    function resetExitCount() internal {
+        bytes32 position = getSlotReference(EXIT_COUNT_STORAGE_SLOT);
+        assembly {
+            sstore(position, 0)
+        }
+    }
+
+    function blockProcessing() public {
+        if (block.number != lastProcessedBlock) {
+            lastProcessedBlock = block.number;
+            updateExcessExits();
+            resetExitCount();
         }
     }
 }
