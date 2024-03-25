@@ -83,7 +83,7 @@ contract TriggerableExitMock {
 
     function checkExitFee(uint256 feeSent) internal view {
         uint256 exitFee = getExitFee();
-        require(feeSent >= exitFee, 'Insufficient exit fee');
+        require(feeSent >= exitFee, "Insufficient exit fee");
     }
 
     function getExitFee() public view returns (uint256) {
