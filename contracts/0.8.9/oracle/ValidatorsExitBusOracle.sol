@@ -11,6 +11,8 @@ import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
 
 import { BaseOracle } from "./BaseOracle.sol";
 
+import "hardhat/console.sol";
+
 interface IOracleReportSanityChecker {
     function checkExitBusOracleReport(uint256 _exitRequestsCount) external view;
 }
@@ -372,7 +374,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         );
     }
 
-    function _processExitRequestsList(bytes calldata data, bytes32 kCheckedKey) internal returns(uint256,uint256,uint256) {
+    function _processExitRequestsList(bytes calldata data, bytes32 kCheckedKey) internal {
         uint256 offset;
         uint256 offsetPastEnd;
         assembly {
@@ -442,7 +444,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             } else {
                 if (keccak256(pubkey) == kCheckedKey) {
                     emit ValidatorExitRequest(moduleId, nodeOpId, valIndex, pubkey, timestamp);
-                    return (moduleId, nodeOpId, valIndex);
+                    return;
                 }
             }
 
@@ -456,8 +458,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         if (lastNodeOpKey != 0) {
             _storageLastRequestedValidatorIndices()[lastNodeOpKey] = lastRequestedVal;
         }
-
-        return (0,0,0);
     }
 
     function _computeNodeOpKey(uint256 moduleId, uint256 nodeOpId) internal pure returns (uint256) {
@@ -486,6 +486,13 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         assembly { r.slot := position }
     }
 
+    function _saveReportData(bytes32 reportHash, uint256 requestsCount) internal {
+        if (_storageReports()[reportHash] != 0) {
+            revert ErrorReportExists();
+        }
+        _storageReports()[reportHash] = requestsCount;
+    }
+
     function _storageReports() internal pure returns (
         mapping(bytes32 => uint256) storage r
     ) {
@@ -498,6 +505,10 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     error ErrorReportExists();
     error ErrorInvalidKeysRequestsCount();
 
+    function submitPriorityReportData(bytes32 reportHash, uint256 requestsCount) external onlyRole(SUBMIT_PRIORITY_DATA_ROLE){
+        _saveReportData(reportHash, requestsCount);
+    }
+
     function forcedExitPubkeys(bytes[] calldata keys, ReportData calldata data) external payable {
         uint256 requestsCount = _storageReports()[keccak256(abi.encode(data))];
         uint256 keysCount = keys.length;
@@ -505,28 +516,14 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         if (requestsCount == 0) {
             revert ErrorInvalidReport();
         }
-        if (keysCount > requestsCount) {
+        if (keysCount > requestsCount || requestsCount != data.requestsCount) {
             revert ErrorInvalidKeysRequestsCount();
         }
 
-        uint256 timestamp = _getTime();
-
         for(uint256 i = 0; i < keysCount; i++) {
-            bytes calldata pubkey = keys[i];
-            (uint256 moduleId, uint256 nodeOpId, uint256 valIndex) = _processExitRequestsList(data.data, keccak256(pubkey));
+            _processExitRequestsList(data.data, keccak256(keys[i]));
         }
 
         IWithdrawalVault(LOCATOR.withdrawalVault()).forcedExit{value: msg.value}(keys, msg.sender);
-    }
-
-    function submitPriorityReportData(bytes32 reportHash, uint256 requestsCount) external onlyRole(SUBMIT_PRIORITY_DATA_ROLE){
-        _saveReportData(reportHash, requestsCount);
-    }
-
-    function _saveReportData(bytes32 reportHash, uint256 requestsCount) internal {
-        if (_storageReports()[reportHash] != 0) {
-            revert ErrorReportExists();
-        }
-        _storageReports()[reportHash] = requestsCount;
     }
 }
