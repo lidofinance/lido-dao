@@ -10,7 +10,7 @@ import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
 import {ILidoLocator} from "../common/interfaces/ILidoLocator.sol";
 import {Versioned} from "./utils/Versioned.sol";
-import {TriggerableExitMock} from "./TriggerableExitMock.sol";
+import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 
 interface ILido {
     /**
@@ -23,7 +23,6 @@ interface ILido {
 
 interface ITriggerableExit {
     function triggerExit(bytes memory validatorPubkey) external payable;
-    function getExitFee() external view returns (uint);
 }
 
 
@@ -32,6 +31,7 @@ interface ITriggerableExit {
  */
 contract WithdrawalVault is Versioned {
     using SafeERC20 for IERC20;
+    using UnstructuredStorage for bytes32;
     //
     // CONSTANTS
     //
@@ -58,35 +58,33 @@ contract WithdrawalVault is Versioned {
 
     // Errors
     error NotLido();
+    error NotValidatorsExitBusOracle();
     error NotEnoughEther(uint256 requested, uint256 balance);
     error ZeroAmount();
+    error ZeroAddress();
 
     /**
      * @param _lidoLocator Address of the Lido Locator contract.
      */
-    function initialize(address _lidoLocator, address _triggerableExit) external onlyInit {
-        // Initializations for v1 --> v2
+    function initialize(address _lidoLocator, address _triggerableExit) external {
+        _initializeContractVersionTo(1);
         _initialize_v2(_lidoLocator, _triggerableExit);
-
-        initialized();
     }
 
      function finalizeUpgrade_v2(address _lidoLocator, address _triggerableExit) external {
-        require(hasInitialized(), "CONTRACT_NOT_INITIALIZED");
-
         _checkContractVersion(1);
 
         _initialize_v2(_lidoLocator, _triggerableExit);
     }
 
     function _initialize_v2(address _locator, address _triggerableExit) internal {
-        _onlyNonZeroAddress(_locator);
-        _onlyNonZeroAddress(_triggerableExit);
+        _assertNonZero(_locator);
+        _assertNonZero(_triggerableExit);
 
         LIDO_LOCATOR_POSITION.setStorageAddress(_locator);
         TRIGGERABLE_EXIT_POSITION.setStorageAddress(_triggerableExit);
 
-        _setContractVersion(2);
+        _updateContractVersion(2);
 
         emit LocatorContractSet(_locator);
         emit TriggerableExitContractSet(_triggerableExit);
@@ -156,7 +154,9 @@ contract WithdrawalVault is Versioned {
     receive() external payable {}
 
     function forcedExit(bytes[] calldata pubkeys, address sender) external payable {
-        //only VEBO
+        if (msg.sender != address(getLocator().validatorsExitBusOracle())) {
+            revert NotValidatorsExitBusOracle();
+        }
 
         uint256 vaultBalance = address(this).balance - msg.value;
         uint256 fee = msg.value;
@@ -172,5 +172,9 @@ contract WithdrawalVault is Versioned {
         address(sender).call{value: fee}("");
 
         assert(address(this).balance == vaultBalance);
+    }
+
+    function _assertNonZero(address _address) internal pure {
+        if (_address == address(0)) revert ZeroAddress();
     }
 }

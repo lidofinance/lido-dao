@@ -14,18 +14,21 @@ import {
   OracleReportSanityCheckerMock__factory,
   Prover,
   Prover__factory,
-  StakingRouterMockForTE,
-  StakingRouterMockForTE__factory,
+  StakingRouter,
+  StakingRouter__factory,
   TriggerableExitMock,
   TriggerableExitMock__factory,
   ValidatorsExitBusOracle,
-  ValidatorsExitBusOracleMock__factory,
+  ValidatorsExitBusOracle__factory,
   WithdrawalVault,
   WithdrawalVault__factory,
 } from "typechain-types";
 
 import { ether, Snapshot } from "lib";
+import { proxify } from "lib/address";
 import { de0x, dummyLocator } from "lib/dummy";
+
+type ReportDataStruct = ValidatorsExitBusOracle.ReportDataStruct;
 
 const pad = (hex, bytesLength, fill = "0") => {
   const absentZeroes = bytesLength * 2 + 2 - hex.length;
@@ -84,7 +87,7 @@ function calcValidatorsExitBusReportDataHash(reportItems) {
   return keccak256(new AbiCoder().encode(["(uint256,uint256,uint256,uint256,bytes)"], [reportItems]));
 }
 
-function getValidatorsExitBusReportDataItems(r) {
+function getValidatorsExitBusReportDataItems(r): ReportDataStruct {
   return [r.consensusVersion, r.refSlot, r.requestsCount, r.dataFormat, r.data];
 }
 function hex(n, byteLen = undefined) {
@@ -121,7 +124,7 @@ describe("Triggerable exits test", () => {
   let prover: Prover;
   let curatedModule: CuratedModuleMock;
   let depositContract: DepositContractMock;
-  let stakingRouter: StakingRouterMockForTE;
+  let stakingRouter: StakingRouter;
 
   let curatedModuleId: bigint;
   const operator1Id: bigint = 0;
@@ -149,7 +152,6 @@ describe("Triggerable exits test", () => {
 
     const lidoFactory = new Lido__factory(deployer);
     lido = await lidoFactory.deploy();
-    const treasury = await lido.getAddress();
 
     //triggerable exits mock
     const triggerableExitMockFactory = new TriggerableExitMock__factory(deployer);
@@ -157,18 +159,16 @@ describe("Triggerable exits test", () => {
 
     //withdrawal vault
     const withdrawalVaultFactory = new WithdrawalVault__factory(deployer);
-    withdrawalVault = await withdrawalVaultFactory.deploy(
-      await lido.getAddress(),
-      treasury,
-      await triggerableExitMock.getAddress(),
-    );
+    const withdrawalVaultImpl = await withdrawalVaultFactory.deploy();
+    [withdrawalVault] = await proxify({ impl: withdrawalVaultImpl, admin: deployer });
 
     //staking router
     const depositContractFactory = new DepositContractMock__factory(deployer);
     depositContract = await depositContractFactory.deploy();
 
-    const stakingRouterFactory = new StakingRouterMockForTE__factory(deployer);
-    stakingRouter = await stakingRouterFactory.deploy(depositContract);
+    const stakingRouterFactory = new StakingRouter__factory(deployer);
+    const stakingRouterImpl = await stakingRouterFactory.deploy(depositContract);
+    [stakingRouter] = await proxify({ impl: stakingRouterImpl, admin: deployer });
     await stakingRouter.initialize(deployer, lido, await bytes32());
 
     //sanity checker
@@ -182,6 +182,9 @@ describe("Triggerable exits test", () => {
       stakingRouter: await stakingRouter.getAddress(),
     });
 
+    //initialize WC Vault
+    await withdrawalVault.initialize(locator, triggerableExitMock);
+
     //module
     const type = keccak256("0x01"); //0x01
     const curatedModuleFactory = new CuratedModuleMock__factory(deployer);
@@ -189,8 +192,12 @@ describe("Triggerable exits test", () => {
     await curatedModule.initialize(locator, type, PENALTY_DELAY);
 
     //oracle
-    const validatorsExitBusOracleFactory = new ValidatorsExitBusOracleMock__factory(deployer);
-    oracle = await validatorsExitBusOracleFactory.deploy(SECONDS_PER_SLOT, GENESIS_TIME, locator);
+    const validatorsExitBusOracleFactory = new ValidatorsExitBusOracle__factory(deployer);
+    const oracleImpl = await validatorsExitBusOracleFactory.deploy(SECONDS_PER_SLOT, GENESIS_TIME, locator);
+    [oracle] = await proxify({ impl: oracleImpl, admin: deployer });
+
+    //mock update locator
+    await locator.mock__updateValidatorsExitBusOracle(oracle);
 
     //consensus contract
     const consensusFactory = new HashConsensusTimeTravellable__factory(deployer);
@@ -557,24 +564,19 @@ describe("Triggerable exits test", () => {
       expect(await triggerableExitMock.getExitFee()).to.be.equal(1n);
 
       //works
-      const gasEstimate1 = await oracle
-        .connect(stranger)
-        .forcedExitPubkeys.estimateGas(keys1, reportItems, { value: ether("1.0") });
+      // const gasEstimate1 = await oracle
+      //   .connect(stranger)
+      //   .forcedExitPubkeys.estimateGas(keys1, reportItems, { value: ether("1.0") });
       await oracle.connect(stranger).forcedExitPubkeys(keys1, reportItems, { value: ether("1.0") });
 
       await triggerableExitMock.blockProcessing();
       //after block processing block the fee would be increased
       expect(await triggerableExitMock.getExitFee()).to.be.equal(2n);
 
-      const gasEstimate2 = await oracle
-        .connect(stranger)
-        .forcedExitPubkeys.estimateGas(keys1, reportItems, { value: ether("1.0") });
+      // const gasEstimate2 = await oracle
+      //   .connect(stranger)
+      //   .forcedExitPubkeys.estimateGas(keys1, reportItems, { value: ether("1.0") });
       await oracle.connect(stranger).forcedExitPubkeys(keys1, reportItems, { value: ether("1.0") });
-
-      console.log({
-        gasEstimate1,
-        gasEstimate2,
-      });
     });
   });
 });
