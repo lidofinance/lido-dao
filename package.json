@@ -56,7 +56,7 @@
     "ethereumjs-util": "^7.1.5",
     "ethers": "^6.11.1",
     "glob": "^10.3.10",
-    "hardhat": "^2.22.1",
+    "hardhat": "^2.22.2",
     "hardhat-contract-sizer": "^2.10.0",
     "hardhat-gas-reporter": "^1.0.10",
     "hardhat-ignore-warnings": "^0.2.11",
