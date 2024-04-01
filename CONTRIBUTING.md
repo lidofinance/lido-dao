@@ -66,6 +66,16 @@ All contributions must follow the established conventions:
 
 The repository includes a commit hook that checks your code and commit messages, resolve any issues before submitting a pull request.
 
+## Branches
+
+### `master`
+
+The production branch of the protocol and the default branch of the repository. The [deployed protocol contracts](https://docs.lido.fi/deployed-contracts/) must match what is stored in the `/contracts` directory. Pull requests to `master` must originate from `develop` branch and have at least one approving review before merging.
+
+### `develop`
+
+The development branch. All pull requests to `master` must be submitted to `develop` first for peer review. If appropriate, delete the feature branch after merging to `develop`.
+
 ## Repository structure
 
 ### Contracts
@@ -86,7 +96,7 @@ Hardhat tests are all located in `/tests` in the root of the project. Each subdi
 
 #### Foundry
 
-Foundry tests are located in `TDB`.
+Foundry's Solidity tests are used only for fuzzing library contracts or functions performing complex calculations or byte juggling. Solidity tests are located under `/tests` as well in the appropriate subdirectories.
 
 #### Mocks
 
