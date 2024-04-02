@@ -457,4 +457,53 @@ contract MemUtilsTest is Test {
             bytes32(0x2222222222222222222222222222222222222222222222222222222222222222)
         ));
     }
+
+    ///
+    /// copyBytes
+    ///
+
+    function test_copyBytes_CopiesMemChunksThatAreMultiplesOf32Bytes() external pure {
+        bytes memory src = abi.encodePacked(
+            bytes32(0x1111111111111111111111111111111111111111111111111111111111111111)
+        );
+
+        bytes memory dst = abi.encodePacked(
+            bytes32(0x2222222222222222222222222222222222222222222222222222222222222222)
+        );
+
+        MemUtils.copyBytes(src, dst, 0);
+
+        assertEq(dst, abi.encodePacked(
+            bytes32(0x1111111111111111111111111111111111111111111111111111111111111111)
+        ));
+    }
+
+    function test_copyBytes_CopiesMemChunksThatAreMultiplesOf32BytesFromANon32BytesOffset() external pure {
+        bytes memory src = abi.encodePacked(
+            bytes32(0x1111111111111111111111111111111111111111111111111111111111111111)
+        );
+
+        bytes memory dst = abi.encodePacked(
+            bytes32(0x2222222222222222222222222222222222222222222222222222222222222222)
+        );
+
+        MemUtils.copyBytes(src, dst, 1, 1, 31);
+
+        assertEq(dst, abi.encodePacked(
+            bytes32(0x2211111111111111111111111111111111111111111111111111111111111111)
+        ));
+    }
+
+    function test_copyBytes_RevertsWhenSrcArrayIsOutOfBounds() external {
+        bytes memory src = abi.encodePacked(
+            bytes32(0x1111111111111111111111111111111111111111111111111111111111111111)
+        );
+
+        bytes memory dst = abi.encodePacked(
+            bytes32(0x2222222222222222222222222222222222222222222222222222222222222222)
+        );
+
+        vm.expectRevert(bytes("BYTES_ARRAY_OUT_OF_BOUNDS"));
+        MemUtils.copyBytes(src, dst, 1, 1, 32);
+    }
 }
