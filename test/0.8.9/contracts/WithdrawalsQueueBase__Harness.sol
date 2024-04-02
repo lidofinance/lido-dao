@@ -6,7 +6,7 @@ pragma solidity 0.8.9;
 
 import {WithdrawalQueueBase} from "contracts/0.8.9/WithdrawalQueueBase.sol";
 
-contract WithdrawalsQueueBaseHarness is WithdrawalQueueBase {
+contract WithdrawalsQueueBase__Harness is WithdrawalQueueBase {
 
   constructor() {
     _initializeQueue();

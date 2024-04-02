@@ -4,7 +4,7 @@ import { ethers } from "hardhat";
 import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { AccessControlEnumerableHarness } from "typechain-types";
+import { AccessControlEnumerable__Harness } from "typechain-types";
 
 import {
   ERC165_INTERFACE_ID,
@@ -21,14 +21,14 @@ describe("AccessControlEnumerable", () => {
   let owner: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;
 
-  let contract: AccessControlEnumerableHarness;
+  let contract: AccessControlEnumerable__Harness;
 
   let originalState: string;
 
   before(async () => {
     [owner, stranger] = await ethers.getSigners();
 
-    contract = await ethers.deployContract("AccessControlEnumerableHarness");
+    contract = await ethers.deployContract("AccessControlEnumerable__Harness");
   });
 
   beforeEach(async () => (originalState = await Snapshot.take()));

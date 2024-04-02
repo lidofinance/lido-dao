@@ -5,7 +5,7 @@ import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { setBalance, time } from "@nomicfoundation/hardhat-network-helpers";
 
-import { Receiver__MockForWithdrawalQueueBase, WithdrawalsQueueBaseHarness } from "typechain-types";
+import { Receiver__MockForWithdrawalQueueBase, WithdrawalsQueueBase__Harness } from "typechain-types";
 
 import { ether, shareRate, shares, Snapshot, WITHDRAWAL_MAX_BATCHES_LENGTH } from "lib";
 
@@ -22,7 +22,7 @@ describe("WithdrawalQueueBase.sol", () => {
   let owner: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;
 
-  let queue: WithdrawalsQueueBaseHarness;
+  let queue: WithdrawalsQueueBase__Harness;
   let queueAddress: string;
   let receiver: Receiver__MockForWithdrawalQueueBase;
 
@@ -33,8 +33,9 @@ describe("WithdrawalQueueBase.sol", () => {
     ({ provider } = ethers);
     [owner, stranger] = await ethers.getSigners();
 
-    queue = await ethers.deployContract("WithdrawalsQueueBaseHarness");
     receiver = await ethers.deployContract("Receiver__MockForWithdrawalQueueBase");
+
+    queue = await ethers.deployContract("WithdrawalsQueueBase__Harness");
 
     queueAddress = await queue.getAddress();
   });

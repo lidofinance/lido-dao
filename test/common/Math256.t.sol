@@ -23,7 +23,7 @@ contract Math256Test is Test {
         assertEq(Math256.max(b, a), b);
     }
 
-    function test_max_WorksWithEqualBAUint256() public pure {
+    function test_max_WorksWithBothEqualUint256() public pure {
         uint256 a = 1;
         uint256 b = 1;
 

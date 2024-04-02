@@ -4,7 +4,7 @@
 
 pragma solidity 0.8.9;
 
-library Counters {
+library Counters__GeneralMock {
   struct Counter {
     uint256 _value; // default: 0
   }
