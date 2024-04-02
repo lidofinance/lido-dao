@@ -3,7 +3,7 @@
 
 pragma solidity 0.4.24;
 
-import {MinFirstAllocationStrategyFuzzTesting, MinFirstAllocationStrategyAllocateTestWrapper} from "./MinFirstAllocationStrategy.h.sol";
+import {MinFirstAllocationStrategyFuzzTesting, MinFirstAllocationStrategyAllocateTestWrapper} from "./minFirstAllocationStrategy.h.sol";
 import {MinFirstAllocationStrategy} from "contracts/common/lib/MinFirstAllocationStrategy.sol";
 
 /// @dev this contract is required to make Foundry invariants testing work
