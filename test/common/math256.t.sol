@@ -3,12 +3,9 @@ pragma solidity 0.8.9;
 
 import "forge-std/Test.sol";
 
-import { Math256 } from "contracts/common/lib/Math256.sol";
+import {Math256} from "contracts/common/lib/Math256.sol";
 
 contract Math256Test is Test {
-
-    /// uint256 tests for max/min
-
     function test_max_WorksWithABUint256() public pure {
         uint256 a = 1;
         uint256 b = 2;
@@ -30,6 +27,11 @@ contract Math256Test is Test {
         assertEq(Math256.max(b, a), b);
     }
 
+    /**
+     * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-fuzz-configs
+     * forge-config: default.fuzz.runs = 2048
+     * forge-config: default.fuzz.max-test-rejects = 0
+     */
     function testFuzz_max_WorksWithUint256(uint256 a, uint256 b) public pure {
         uint256 expected;
 
@@ -70,6 +72,11 @@ contract Math256Test is Test {
         assertEq(Math256.max(b, a), b);
     }
 
+    /**
+     * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-fuzz-configs
+     * forge-config: default.fuzz.runs = 2048
+     * forge-config: default.fuzz.max-test-rejects = 0
+     */
     function testFuzz_min_WorksWithUint256(uint256 a, uint256 b) public pure {
         uint256 expected;
 
@@ -85,8 +92,6 @@ contract Math256Test is Test {
         // Must be expected
         assertEq(Math256.min(b, a), expected);
     }
-
-    /// int256 tests for max/min
 
     function test_max_WorksWithABInt256() public pure {
         int256 a = 1;
@@ -144,6 +149,11 @@ contract Math256Test is Test {
         assertEq(Math256.max(b, a), b);
     }
 
+    /**
+     * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-fuzz-configs
+     * forge-config: default.fuzz.runs = 2048
+     * forge-config: default.fuzz.max-test-rejects = 0
+     */
     function testFuzz_max_WorksWithInt256(int256 a, int256 b) public pure {
         int256 expected;
 
@@ -156,7 +166,7 @@ contract Math256Test is Test {
         // Must be commutative
         assertEq(Math256.max(b, a), Math256.max(a, b));
 
-        // Must be exepcted
+        // Must be expected
         assertEq(Math256.max(b, a), expected);
     }
 
@@ -181,6 +191,11 @@ contract Math256Test is Test {
         assertEq(Math256.max(b, a), b);
     }
 
+    /**
+     * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-fuzz-configs
+     * forge-config: default.fuzz.runs = 2048
+     * forge-config: default.fuzz.max-test-rejects = 0
+     */
     function testFuzz_min_WorksWithInt256(int256 a, int256 b) public pure {
         int256 expected;
 
@@ -200,13 +215,11 @@ contract Math256Test is Test {
         assertEq(Math256.min(b, a), expected);
     }
 
-    /// tests for ceilDiv
-
     // Commenting this out, as the implementation doesn't solve for this case
-    // function test_CeilDiv_By_Zero() public pure {
+    // function test_ceilDiv_ByZero() public pure {
     //     uint256 a = 1;
     //     uint256 b = 0;
-
+    //
     //     vm.expectRevert("Division or modulo by 0");
     //     Math256.ceilDiv(a, b);
     // }
@@ -239,6 +252,11 @@ contract Math256Test is Test {
         assertEq(Math256.ceilDiv(a, b), 2);
     }
 
+    /**
+     * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-fuzz-configs
+     * forge-config: default.fuzz.runs = 2048
+     * forge-config: default.fuzz.max-test-rejects = 0
+     */
     function testFuzz_ceilDiv(uint256 a, uint256 b) public pure {
         // Skip zero, implementation is safe against division by zero
         vm.assume(b != 0);
@@ -255,6 +273,7 @@ contract Math256Test is Test {
         }
 
         uint256 expected = (a == 0 ? 0 : (a - 1) / b + 1);
+
         assertEq(Math256.ceilDiv(a, b), expected);
     }
 
@@ -274,6 +293,11 @@ contract Math256Test is Test {
         assertEq(Math256.absDiff(b, a), 0);
     }
 
+    /**
+     * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-fuzz-configs
+     * forge-config: default.fuzz.runs = 2048
+     * forge-config: default.fuzz.max-test-rejects = 0
+     */
     function testFuzz_absDiff(uint256 a, uint256 b) public pure {
 
         // It shouldn't unexpectedly crash
