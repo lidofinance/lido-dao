@@ -15,6 +15,7 @@ module.exports = {
     // Skip contracts that are tested by Foundry tests
     "common/lib/MemUtils.sol", /** 100% covered by test/common/memUtils.t.sol */
     "common/lib/Math256.sol", /** 100% covered by test/common/math256.t.sol */
+    "common/lib/MinFirstAllocationStrategy.sol", /** 100% covered by test/common/minFirstAllocationStrategy.t.sol */
     "0.8.9/lib/UnstructuredStorage.sol", /** 100% covered by test/0.8.9/unstructuredStorage.t.sol */
   ],
 };
