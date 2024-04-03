@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 
-import { deployWithoutProxy, TotalGasCounter } from "lib/deploy";
+import { deployWithoutProxy } from "lib/deploy";
 import { log, yl } from "lib/log";
 import { readNetworkState, Sk, updateObjectInState } from "lib/state-file";
 
@@ -19,7 +19,6 @@ async function main() {
     depositContract: depositContractAddress,
   });
 
-  await TotalGasCounter.incrementTotalGasUsedInStateFile();
   log.scriptFinish(__filename);
 }
 

@@ -5,7 +5,7 @@ import { ethers } from "hardhat";
 import { ENS, ENS__factory, LidoTemplate, LidoTemplate__factory } from "typechain-types";
 
 import { loadContract } from "lib/contract";
-import { makeTx, TotalGasCounter } from "lib/deploy";
+import { makeTx } from "lib/deploy";
 import { getENSNodeOwner } from "lib/ens";
 import { findEvents } from "lib/event";
 import { streccak } from "lib/keccak";
@@ -55,7 +55,6 @@ async function main() {
 
   state = updateObjectInState(Sk.lidoApm, { address: registryAddress });
 
-  await TotalGasCounter.incrementTotalGasUsedInStateFile();
   log.scriptFinish(__filename);
 }
 

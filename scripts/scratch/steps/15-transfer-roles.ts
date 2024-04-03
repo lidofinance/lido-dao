@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 
 import { getContractAt } from "lib/contract";
-import { makeTx, TotalGasCounter } from "lib/deploy";
+import { makeTx } from "lib/deploy";
 import { log } from "lib/log";
 import { readNetworkState, Sk } from "lib/state-file";
 
@@ -56,7 +56,6 @@ async function main() {
     await changeDepositSecurityModuleAdmin(state.depositSecurityModule.address, deployer, agent);
   }
 
-  await TotalGasCounter.incrementTotalGasUsedInStateFile();
   log.scriptFinish(__filename);
 }
 

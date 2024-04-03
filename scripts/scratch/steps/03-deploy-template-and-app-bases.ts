@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 
-import { deployImplementation, deployWithoutProxy, TotalGasCounter } from "lib/deploy";
+import { deployImplementation, deployWithoutProxy } from "lib/deploy";
 import { log } from "lib/log";
 import { readNetworkState, Sk, updateObjectInState } from "lib/state-file";
 
@@ -31,7 +31,6 @@ async function main() {
   const receipt = await ethers.provider.getTransactionReceipt(template.deploymentTx);
   updateObjectInState(Sk.lidoTemplate, { deployBlock: receipt?.blockNumber });
 
-  await TotalGasCounter.incrementTotalGasUsedInStateFile();
   log.scriptFinish(__filename);
 }
 

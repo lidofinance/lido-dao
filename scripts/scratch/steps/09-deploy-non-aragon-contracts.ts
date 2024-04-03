@@ -6,7 +6,6 @@ import {
   deployContract,
   deployImplementation,
   deployWithoutProxy,
-  TotalGasCounter,
   updateProxyImplementation,
 } from "lib/deploy";
 import { log, logWideSplitter } from "lib/log";
@@ -305,7 +304,6 @@ async function main() {
   ];
   await updateProxyImplementation(Sk.lidoLocator, "LidoLocator", locator.address, proxyContractsOwner, [locatorConfig]);
 
-  await TotalGasCounter.incrementTotalGasUsedInStateFile();
   log.scriptFinish(__filename);
 }
 

@@ -5,7 +5,7 @@ import { ethers } from "hardhat";
 import { DAOFactory, DAOFactory__factory, ENS, ENS__factory } from "typechain-types";
 
 import { getContractAt, loadContract, LoadedContract } from "lib/contract";
-import { deployImplementation, deployWithoutProxy, makeTx, TotalGasCounter } from "lib/deploy";
+import { deployImplementation, deployWithoutProxy, makeTx } from "lib/deploy";
 import { assignENSName } from "lib/ens";
 import { findEvents } from "lib/event";
 import { streccak } from "lib/keccak";
@@ -108,7 +108,6 @@ async function main() {
     await deployAragonID(deployer, ens);
   }
 
-  await TotalGasCounter.incrementTotalGasUsedInStateFile();
   log.scriptFinish(__filename);
 }
 

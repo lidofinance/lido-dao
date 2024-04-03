@@ -5,7 +5,7 @@ import { ethers } from "hardhat";
 import { ENS, ENS__factory } from "typechain-types";
 
 import { loadContract } from "lib/contract";
-import { makeTx, TotalGasCounter } from "lib/deploy";
+import { makeTx } from "lib/deploy";
 import { streccak } from "lib/keccak";
 import { log, yl } from "lib/log";
 import { readNetworkState, Sk } from "lib/state-file";
@@ -58,7 +58,6 @@ async function main() {
     }
   }
 
-  await TotalGasCounter.incrementTotalGasUsedInStateFile();
   log.scriptFinish(__filename);
 }
 

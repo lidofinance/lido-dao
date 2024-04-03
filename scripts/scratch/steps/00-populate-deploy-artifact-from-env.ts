@@ -1,6 +1,7 @@
 import { ethers } from "hardhat";
 
-import { log } from "../../../lib/log";
+import { log, Sk } from "lib";
+
 import { persistNetworkState, readNetworkState } from "../../../lib/state-file";
 
 function getEnvVariable(name: string, defaultValue?: string) {
@@ -57,7 +58,7 @@ async function main() {
     };
     state.depositSecurityModule.address = dsmPredefinedAddress;
   }
-
+  state[Sk.scratchDeployGasUsed] = 0n.toString();
   persistNetworkState(state);
   log.scriptFinish(__filename);
 }

@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 
 import { getContractAt } from "lib/contract";
-import { makeTx, TotalGasCounter } from "lib/deploy";
+import { makeTx } from "lib/deploy";
 import { log, logWideSplitter } from "lib/log";
 import { readNetworkState, Sk } from "lib/state-file";
 
@@ -101,7 +101,6 @@ async function main() {
     { from: deployer },
   );
 
-  await TotalGasCounter.incrementTotalGasUsedInStateFile();
   log.scriptFinish(__filename);
 }
 

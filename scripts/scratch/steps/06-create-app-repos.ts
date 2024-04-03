@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 
 import { getContractAt } from "lib/contract";
-import { makeTx, TotalGasCounter } from "lib/deploy";
+import { makeTx } from "lib/deploy";
 import { log, logSplitter } from "lib/log";
 import { readNetworkState, setValueInState, Sk } from "lib/state-file";
 
@@ -46,7 +46,6 @@ async function main() {
   setValueInState(Sk.lidoTemplateCreateStdAppReposTx, aragonStdAppsReceipt.hash);
   setValueInState(Sk.createAppReposTx, lidoAppsReceipt.hash);
 
-  await TotalGasCounter.incrementTotalGasUsedInStateFile();
   log.scriptFinish(__filename);
 }
 

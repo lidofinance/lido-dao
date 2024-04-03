@@ -11,7 +11,7 @@ import {
 } from "typechain-types";
 
 import { getContractAt, getContractPath, loadContract, LoadedContract } from "lib/contract";
-import { makeTx, TotalGasCounter } from "lib/deploy";
+import { makeTx } from "lib/deploy";
 import { findEvents, findEventsWithAbi } from "lib/event";
 import { log } from "lib/log";
 import {
@@ -42,7 +42,6 @@ async function main() {
 
   await saveStateFromNewDAOTx(newDAOReceipt);
 
-  await TotalGasCounter.incrementTotalGasUsedInStateFile();
   log.scriptFinish(__filename);
 }
 

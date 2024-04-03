@@ -9,7 +9,7 @@ import {
   LoadedContract,
 } from "lib/contract";
 import { ConvertibleToString, log, yl } from "lib/log";
-import { Sk, updateObjectInState } from "lib/state-file";
+import { incrementGasUsed, Sk, updateObjectInState } from "lib/state-file";
 
 const GAS_PRIORITY_FEE = process.env.GAS_PRIORITY_FEE || null;
 const GAS_MAX_FEE = process.env.GAS_MAX_FEE || null;
@@ -20,45 +20,6 @@ type TxParams = {
   from: string;
   value?: bigint | string;
 };
-
-class TotalGasCounterPrivate {
-  totalGasUsed: bigint;
-
-  constructor() {
-    this.totalGasUsed = 0n;
-  }
-}
-
-export class TotalGasCounter {
-  static instance: TotalGasCounterPrivate;
-
-  constructor() {
-    throw new Error("Use TotalGasCounter.getInstance()");
-  }
-
-  static getInstance(): TotalGasCounterPrivate {
-    if (!TotalGasCounter.instance) {
-      TotalGasCounter.instance = new TotalGasCounterPrivate();
-    }
-    return TotalGasCounter.instance;
-  }
-
-  static add(gasUsed: number | bigint) {
-    return (this.getInstance().totalGasUsed += BigInt(gasUsed));
-  }
-
-  static getTotalGasUsed(): bigint {
-    return this.getInstance().totalGasUsed;
-  }
-
-  // TODO: rename and maybe remove
-  static async incrementTotalGasUsedInStateFile() {}
-}
-
-async function getDeploymentGasUsed(contract: LoadedContract) {
-  contract;
-  return 0;
-}
 
 export async function makeTx(
   contract: LoadedContract,
@@ -73,10 +34,10 @@ export async function makeTx(
 
   const receipt = await tx.wait();
   const gasUsed = receipt.gasUsed;
+  incrementGasUsed(gasUsed);
   log(`tx executed: gasUsed ${gasUsed}`);
   log.emptyLine();
 
-  TotalGasCounter.add(gasUsed);
   return receipt;
 }
 
@@ -110,9 +71,18 @@ async function deployContractType2(
     throw new Error(`Failed to send the deployment transaction for ${artifactName}`);
   }
   log(`sent deployment tx ${tx.hash} (nonce ${tx.nonce})...`);
-  await contract.waitForDeployment();
+
+  const receipt = await tx.wait();
+  if (receipt) {
+    const gasUsed = receipt.gasUsed;
+    (contract as DeployedContract).deploymentGasUsed = gasUsed;
+    (contract as DeployedContract).deploymentTx = tx.hash;
+    incrementGasUsed(gasUsed);
+    log(`deployed at ${receipt.to} (gas used ${gasUsed})`);
+    log.emptyLine();
+  }
   await addContractHelperFields(contract, artifactName);
-  (contract as DeployedContract).deploymentTx = tx.hash;
+
   return contract as DeployedContract;
 }
 
@@ -140,11 +110,6 @@ export async function deployWithoutProxy(
 
   const contract = await deployContract(artifactName, constructorArgs, deployer);
 
-  const gasUsed = await getDeploymentGasUsed(contract);
-  log(`deployed at ${contract.address} (gas used ${gasUsed})`);
-  log.emptyLine();
-  TotalGasCounter.add(gasUsed);
-
   if (nameInState) {
     updateObjectInState(nameInState, {
       contract: await getContractPath(artifactName),
@@ -167,10 +132,6 @@ export async function deployImplementation(
     constructorArgs,
   );
   const contract = await deployContract(artifactName, constructorArgs, deployer);
-  const gasUsed = await getDeploymentGasUsed(contract);
-  TotalGasCounter.add(gasUsed);
-  log(`deployed at ${contract.address} (gas used ${gasUsed})`);
-  log.emptyLine();
 
   updateObjectInState(nameInState, {
     implementation: {
@@ -196,10 +157,7 @@ export async function deployBehindOssifiableProxy(
       constructorArgs,
     );
     const contract = await deployContract(artifactName, constructorArgs, deployer);
-    const gasUsed = await getDeploymentGasUsed(contract);
-    TotalGasCounter.add(gasUsed);
     implementation = contract.address;
-    log(`deployed at ${implementation} (gas used ${gasUsed})`);
   } else {
     log(`Using pre-deployed implementation of ${artifactName}: ${implementation}`);
   }
@@ -210,10 +168,6 @@ export async function deployBehindOssifiableProxy(
     proxyConstructorArgs,
   );
   const proxy = await deployContract(PROXY_CONTRACT_NAME, proxyConstructorArgs, deployer);
-  const gasUsed = await getDeploymentGasUsed(proxy);
-  TotalGasCounter.add(gasUsed);
-  log(`deployed at ${proxy.address} (gas used ${gasUsed})`);
-  log.emptyLine();
 
   if (nameInState) {
     updateObjectInState(nameInState, {
@@ -241,9 +195,6 @@ export async function updateProxyImplementation(
   constructorArgs: unknown[],
 ) {
   const implementation = await deployContract(artifactName, constructorArgs, proxyOwner);
-  const gasUsed = await getDeploymentGasUsed(implementation);
-  // TODO: unify call levels where gas counter used
-  TotalGasCounter.add(gasUsed);
 
   const proxy = await getContractAt(PROXY_CONTRACT_NAME, proxyAddress);
   await makeTx(proxy, "proxy__upgradeTo", [implementation.address], { from: proxyOwner });

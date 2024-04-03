@@ -78,6 +78,7 @@ export enum Sk {
   wstETH = "wstETH",
   lidoLocator = "lidoLocator",
   chainSpec = "chainSpec",
+  scratchDeployGasUsed = "scratchDeployGasUsed",
 }
 
 export function getAddress(contractKey: Sk, state: DeploymentState): string {
@@ -148,7 +149,7 @@ export function readNetworkState({
 }
 
 export function updateObjectInState(key: Sk, supplement: object): DeploymentState {
-  const state = readNetworkState() as unknown as { [key: string]: { [key: string]: string } };
+  const state = readNetworkState();
   state[key] = {
     ...state[key],
     ...supplement,
@@ -161,6 +162,13 @@ export function updateObjectInState(key: Sk, supplement: object): DeploymentStat
 export function setValueInState(key: Sk, value: unknown): DeploymentState {
   const state = readNetworkState();
   state[key] = value;
+  persistNetworkState(state);
+  return state;
+}
+
+export function incrementGasUsed(increment: bigint | number) {
+  const state = readNetworkState();
+  state[Sk.scratchDeployGasUsed] = (BigInt(state[Sk.scratchDeployGasUsed]) + BigInt(increment)).toString();
   persistNetworkState(state);
   return state;
 }
@@ -183,7 +191,7 @@ function _readStateFile(fileName: string) {
   const data = readFileSync(fileName, "utf8");
   try {
     // return parseToDeploymentState(data);
-    return JSON.parse(data);
+    return JSON.parse(data) as DeploymentState;
   } catch (error) {
     throw new Error(`malformed network state file ${fileName}: ${(error as Error).message}`);
   }

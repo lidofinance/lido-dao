@@ -11,6 +11,7 @@ interface LoadedContractHelper {
 
 interface DeployedContractHelper {
   deploymentTx: string;
+  deploymentGasUsed: bigint;
 }
 
 export type LoadedContract<T extends BaseContract = BaseContract> = T & LoadedContractHelper;

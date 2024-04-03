@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 
 import { getContractAt } from "lib/contract";
-import { makeTx, TotalGasCounter } from "lib/deploy";
+import { makeTx } from "lib/deploy";
 import { streccak } from "lib/keccak";
 import { log } from "lib/log";
 import { readNetworkState, Sk } from "lib/state-file";
@@ -38,7 +38,6 @@ async function main() {
   );
   await makeTx(stakingRouter, "renounceRole", [STAKING_MODULE_MANAGE_ROLE, deployer], { from: deployer });
 
-  await TotalGasCounter.incrementTotalGasUsedInStateFile();
   log.scriptFinish(__filename);
 }
 
