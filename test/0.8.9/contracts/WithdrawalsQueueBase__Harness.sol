@@ -32,7 +32,7 @@ contract WithdrawalsQueueBase__Harness is WithdrawalQueueBase {
     return _sendValue(_recipient, _amount);
   }
 
-  function exposedCalcBatch(WithdrawalRequest memory _preStartRequest, WithdrawalRequest memory _endRequest) external view returns (uint256 shareRate, uint256 stETH, uint256 shares)
+  function exposedCalcBatch(WithdrawalRequest memory _preStartRequest, WithdrawalRequest memory _endRequest) external pure returns (uint256 shareRate, uint256 stETH, uint256 shares)
   {
     return _calcBatch(_preStartRequest, _endRequest);
   }

@@ -1,107 +1,122 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
-// solhint-disable-next-line
 pragma solidity >=0.4.24 <0.9.0;
 
+import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 
 import {Math256} from "contracts/common/lib/Math256.sol";
 
 import {MinFirstAllocationStrategy} from "contracts/common/lib/MinFirstAllocationStrategy.sol";
 
-contract MinFirstAllocationStrategyFuzzTesting {
+contract MinFirstAllocationStrategyInvariants is Test {
     uint256 private constant MAX_BUCKETS_COUNT = 32;
     uint256 private constant MAX_BUCKET_VALUE = 8192;
     uint256 private constant MAX_CAPACITY_VALUE = 8192;
     uint256 private constant MAX_ALLOCATION_SIZE = 1024;
 
-    MinFirstAllocationStrategyTestWrapper internal testWrapper;
+    MinFirstAllocationStrategyBase internal handler;
 
+    function setUp() external {
+        handler = new MinFirstAllocationStrategyAllocateHandler();
+    }
+
+    /**
+     * invariant 1. the allocated value should be equal to the expected output
+     *
+     * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-invariant-configs
+     * forge-config: default.invariant.runs = 512
+     * forge-config: default.invariant.depth = 32
+     * forge-config: default.invariant.fail-on-revert = true
+     */
     function invariant_AllocatedOutput() external view {
-        (, , uint256 allocatedActual) = testWrapper.getActualOutput();
-        (, , uint256 allocatedExpected) = testWrapper.getExpectedOutput();
-        _assertAllocated(allocatedExpected, allocatedActual);
+        (,, uint256 allocatedActual) = handler.getActualOutput();
+        (,, uint256 allocatedExpected) = handler.getExpectedOutput();
+
+        assertEq(allocatedExpected, allocatedActual, "INVALID_ALLOCATED_VALUE");
     }
 
+    /**
+     * invariant 2. the bucket values should be equal to the expected output
+     *
+     * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-invariant-configs
+     * forge-config: default.invariant.runs = 512
+     * forge-config: default.invariant.depth = 32
+     * forge-config: default.invariant.fail-on-revert = true
+     */
     function invariant_BucketsOutput() external view {
-        (uint256[] memory bucketsActual, ,) = testWrapper.getActualOutput();
-        (uint256[] memory bucketsExpected, ,) = testWrapper.getExpectedOutput();
-        _assertBucketsAllocation(bucketsExpected, bucketsActual);
-    }
+        (uint256[] memory bucketsActual,,) = handler.getActualOutput();
+        (uint256[] memory bucketsExpected,,) = handler.getExpectedOutput();
 
-    function invariant_AllocatedBucketValuesNotExceedCapacities() external view {
-        (uint256[] memory inputBuckets, uint256[] memory inputCapacities,) = testWrapper.getInput();
-        (uint256[] memory buckets, uint256[] memory capacities,) = testWrapper.getActualOutput();
-        for (uint256 i = 0; i < buckets.length; ++i) {
-            // when bucket initially overloaded skip it from the check
-            if (inputBuckets[i] > inputCapacities[i]) continue;
-            if (buckets[i] > capacities[i]) {
-                console2.log("Bucket value exceeds capacity");
-                console2.log("bucket index: ", i);
-                console2.log("bucket value:", buckets[i]);
-                console2.log("capacity value:", capacities[i]);
-                revert("BUCKET_VALUE_EXCEEDS_CAPACITY");
-            }
+        for (uint256 i = 0; i < bucketsExpected.length; ++i) {
+            assertEq(bucketsExpected[i], bucketsActual[i], "INVALID_ALLOCATED_VALUE");
         }
     }
 
-    // invariant 5. the sum of new allocation minus the sum of prev allocation equal to distributed
+    /**
+     * invariant 3. the bucket value should not exceed the capacity
+     *
+     * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-invariant-configs
+     * forge-config: default.invariant.runs = 512
+     * forge-config: default.invariant.depth = 32
+     * forge-config: default.invariant.fail-on-revert = true
+     */
+    function invariant_AllocatedBucketValuesNotExceedCapacities() external view {
+        (uint256[] memory inputBuckets, uint256[] memory inputCapacities,) = handler.getInput();
+        (uint256[] memory buckets, uint256[] memory capacities,) = handler.getActualOutput();
+
+        for (uint256 i = 0; i < buckets.length; ++i) {
+            // when bucket initially overloaded skip it from the check
+            if (inputBuckets[i] > inputCapacities[i]) continue;
+            assertTrue(buckets[i] <= capacities[i], "BUCKET_VALUE_EXCEEDS_CAPACITY");
+        }
+    }
+
+    /**
+     * invariant 4. the sum of new allocation minus the sum of prev allocation equal to distributed value
+     *
+     * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-invariant-configs
+     * forge-config: default.invariant.runs = 512
+     * forge-config: default.invariant.depth = 32
+     * forge-config: default.invariant.fail-on-revert = true
+     */
     function invariant_AllocatedMatchesBucketChanges() external view {
-        (uint256[] memory inputBuckets, ,) = testWrapper.getInput();
-        (uint256[] memory buckets, , uint256 allocated) = testWrapper.getActualOutput();
+        (uint256[] memory inputBuckets,,) = handler.getInput();
+        (uint256[] memory buckets,, uint256 allocated) = handler.getActualOutput();
+
         uint256 inputSum = 0;
         uint256 outputSum = 0;
+
         for (uint256 i = 0; i < buckets.length; ++i) {
             inputSum += inputBuckets[i];
             outputSum += buckets[i];
         }
-        if (outputSum != inputSum + allocated) {
-            console2.log("Sum of all buckets is incorrect");
-            console2.log("expected buckets sum:", inputSum + allocated);
-            console2.log("actual buckets sum:", outputSum);
-            revert("INVALID_BUCKETS_SUM");
-        }
+
+        assertEq(outputSum, inputSum + allocated, "INVALID_BUCKETS_SUM");
     }
 
+    /**
+     * invariant 5. the allocated value should be less than or equal to the allocation size
+     *
+     * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-invariant-configs
+     * forge-config: default.invariant.runs = 512
+     * forge-config: default.invariant.depth = 32
+     * forge-config: default.invariant.fail-on-revert = true
+     */
     function invariant_AllocatedLessThenAllocationSizeOnlyWhenAllBucketsFilled() external view {
-        (, , uint256 allocationSize) = testWrapper.getInput();
-        (uint256[] memory buckets, uint256[] memory capacities, uint256 allocated) = testWrapper.getActualOutput();
+        (,, uint256 allocationSize) = handler.getInput();
+        (uint256[] memory buckets, uint256[] memory capacities, uint256 allocated) = handler.getActualOutput();
+
         if (allocationSize == allocated) return;
+
         for (uint256 i = 0; i < buckets.length; ++i) {
-            if (buckets[i] < capacities[i]) {
-                console2.log("The bucket is unfilled");
-                console2.log("bucket index:", i);
-                console2.log("bucket value:", buckets[i]);
-                console2.log("bucket capacity:", capacities[i]);
-                revert("BUCKET_IS_UNFILLED");
-            }
-        }
-    }
-
-    function _assertAllocated(uint256 _expected, uint256 _actual) internal pure {
-        if (_expected != _actual) {
-            console2.log("Invalid allocated value");
-            console2.log("expected allocated value: ", _expected);
-            console2.log("actual allocated value:", _actual);
-            revert("INVALID_ALLOCATED_VALUE");
-        }
-    }
-
-    function _assertBucketsAllocation(uint256[] memory _expected, uint256[] memory _actual) internal pure {
-        for (uint256 i = 0; i < _expected.length; ++i) {
-            if (_expected[i] != _actual[i]) {
-                console2.log("Invalid bucket value after allocation:");
-                console2.log("bucket index:", i);
-                console2.log("expected bucket value:", _expected[i]);
-                console2.log("actual bucket value:", _actual[i]);
-                revert("INVALID_ALLOCATED_VALUE");
-            }
+            assertTrue(buckets[i] >= capacities[i], "BUCKET_IS_UNFILLED");
         }
     }
 }
 
-contract MinFirstAllocationStrategyTestWrapper {
+contract MinFirstAllocationStrategyBase {
     uint256 public constant MAX_BUCKETS_COUNT = 32;
     uint256 public constant MAX_BUCKET_VALUE = 8192;
     uint256 public constant MAX_CAPACITY_VALUE = 8192;
@@ -124,13 +139,9 @@ contract MinFirstAllocationStrategyTestWrapper {
     TestOutput internal _expected;
 
     function getInput()
-    external
-    view
-    returns (
-        uint256[] memory buckets,
-        uint256[] memory capacities,
-        uint256 allocationSize
-    )
+        external
+        view
+        returns (uint256[] memory buckets, uint256[] memory capacities, uint256 allocationSize)
     {
         buckets = _input.buckets;
         capacities = _input.capacities;
@@ -138,13 +149,9 @@ contract MinFirstAllocationStrategyTestWrapper {
     }
 
     function getExpectedOutput()
-    external
-    view
-    returns (
-        uint256[] memory buckets,
-        uint256[] memory capacities,
-        uint256 allocated
-    )
+        external
+        view
+        returns (uint256[] memory buckets, uint256[] memory capacities, uint256 allocated)
     {
         buckets = _expected.buckets;
         capacities = _expected.capacities;
@@ -152,13 +159,9 @@ contract MinFirstAllocationStrategyTestWrapper {
     }
 
     function getActualOutput()
-    external
-    view
-    returns (
-        uint256[] memory buckets,
-        uint256[] memory capacities,
-        uint256 allocated
-    )
+        external
+        view
+        returns (uint256[] memory buckets, uint256[] memory capacities, uint256 allocated)
     {
         buckets = _actual.buckets;
         capacities = _actual.capacities;
@@ -181,12 +184,10 @@ contract MinFirstAllocationStrategyTestWrapper {
     }
 }
 
-contract MinFirstAllocationStrategyAllocateTestWrapper is MinFirstAllocationStrategyTestWrapper {
-    function allocate(
-        uint256[] memory _fuzzBuckets,
-        uint256[] memory _fuzzCapacities,
-        uint256 _fuzzAllocationSize
-    ) public {
+contract MinFirstAllocationStrategyAllocateHandler is MinFirstAllocationStrategyBase {
+    function allocate(uint256[] memory _fuzzBuckets, uint256[] memory _fuzzCapacities, uint256 _fuzzAllocationSize)
+        public
+    {
         _fillTestInput(_fuzzBuckets, _fuzzCapacities, _fuzzAllocationSize);
 
         _fillActualAllocateOutput();
@@ -221,11 +222,11 @@ contract MinFirstAllocationStrategyAllocateTestWrapper is MinFirstAllocationStra
 library NaiveMinFirstAllocationStrategy {
     uint256 private constant MAX_UINT256 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
-    function allocate(
-        uint256[] memory buckets,
-        uint256[] memory capacities,
-        uint256 allocationSize
-    ) internal pure returns (uint256 allocated) {
+    function allocate(uint256[] memory buckets, uint256[] memory capacities, uint256 allocationSize)
+        internal
+        pure
+        returns (uint256 allocated)
+    {
         while (allocated < allocationSize) {
             uint256 bestCandidateIndex = MAX_UINT256;
             uint256 bestCandidateAllocation = MAX_UINT256;

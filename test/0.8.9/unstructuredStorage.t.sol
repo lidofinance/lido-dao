@@ -1,4 +1,6 @@
-// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-License-Identifier: GPL-3.0
+
 pragma solidity 0.8.9;
 
 import "forge-std/Test.sol";
@@ -12,7 +14,7 @@ contract ExposedUnstructuredStorageTest is Test {
         unstructuredStorage = new ExposedUnstructuredStorage();
     }
 
-    function test_getStorageBool_Uninitialized() public {
+    function test_getStorageBool_Uninitialized() public view {
         bytes32 position = keccak256("FOO");
         assertEq(unstructuredStorage.getStorageBool(position), false);
     }
@@ -22,11 +24,11 @@ contract ExposedUnstructuredStorageTest is Test {
      * forge-config: default.fuzz.runs = 2048
      * forge-config: default.fuzz.max-test-rejects = 0
      */
-    function testFuzz_getStorageBool_Uninitialized(bytes32 position) public {
+    function testFuzz_getStorageBool_Uninitialized(bytes32 position) public view {
         assertEq(unstructuredStorage.getStorageBool(position), false);
     }
 
-    function test_getStorageAddress_Uninitialized() public {
+    function test_getStorageAddress_Uninitialized() public view {
         bytes32 position = keccak256("FOO");
         assertEq(unstructuredStorage.getStorageAddress(position), address(0));
     }
@@ -36,11 +38,11 @@ contract ExposedUnstructuredStorageTest is Test {
      * forge-config: default.fuzz.runs = 2048
      * forge-config: default.fuzz.max-test-rejects = 0
      */
-    function testFuzz_getStorageAddress_Uninitialized(bytes32 position) public {
+    function testFuzz_getStorageAddress_Uninitialized(bytes32 position) public view {
         assertEq(unstructuredStorage.getStorageAddress(position), address(0));
     }
 
-    function test_getStorageBytes32_Uninitialized() public {
+    function test_getStorageBytes32_Uninitialized() public view {
         bytes32 position = keccak256("FOO");
         bytes32 data;
         assertEq(unstructuredStorage.getStorageBytes32(position), data);
@@ -51,12 +53,12 @@ contract ExposedUnstructuredStorageTest is Test {
      * forge-config: default.fuzz.runs = 2048
      * forge-config: default.fuzz.max-test-rejects = 0
      */
-    function testFuzz_getStorageBytes32_Uninitialized(bytes32 position) public {
+    function testFuzz_getStorageBytes32_Uninitialized(bytes32 position) public view {
         bytes32 data;
         assertEq(unstructuredStorage.getStorageBytes32(position), data);
     }
 
-    function test_getStorageUint256_Uninitialized() public {
+    function test_getStorageUint256_Uninitialized() public view {
         bytes32 position = keccak256("FOO");
         uint256 data;
         assertEq(unstructuredStorage.getStorageUint256(position), data);
@@ -67,7 +69,7 @@ contract ExposedUnstructuredStorageTest is Test {
      * forge-config: default.fuzz.runs = 2048
      * forge-config: default.fuzz.max-test-rejects = 0
      */
-    function testFuzz_getStorageUint256_Uninitialized(bytes32 position) public {
+    function testFuzz_getStorageUint256_Uninitialized(bytes32 position) public view {
         uint256 data;
         assertEq(unstructuredStorage.getStorageUint256(position), data);
     }

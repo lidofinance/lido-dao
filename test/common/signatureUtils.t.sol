@@ -1,4 +1,6 @@
-// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-License-Identifier: GPL-3.0
+
 pragma solidity >=0.4.24 <0.9.0;
 
 import "forge-std/Test.sol";
@@ -6,13 +8,11 @@ import {ECDSA} from "contracts/common/lib/ECDSA.sol";
 import {SignatureUtils} from "contracts/common/lib/SignatureUtils.sol";
 
 contract ExposedSignatureUtils {
-    function isValidSignature(
-        address signer,
-        bytes32 msgHash,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public view returns (bool) {
+    function isValidSignature(address signer, bytes32 msgHash, uint8 v, bytes32 r, bytes32 s)
+        public
+        view
+        returns (bool)
+    {
         return SignatureUtils.isValidSignature(signer, msgHash, v, r, s);
     }
 
@@ -25,9 +25,7 @@ contract SignatureUtilsTest is Test {
     ExposedSignatureUtils public sigUtil;
 
     function ethMessageHash(string memory message) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encodePacked("\x19Ethereum Signed Message:\n32", message)
-        );
+        return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", message));
     }
 
     function setUp() public {

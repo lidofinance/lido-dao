@@ -1,5 +1,7 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.9;
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-License-Identifier: GPL-3.0
+
+pragma solidity >=0.4.24 <0.9.0;
 
 import "forge-std/Test.sol";
 
@@ -299,7 +301,6 @@ contract Math256Test is Test {
      * forge-config: default.fuzz.max-test-rejects = 0
      */
     function testFuzz_absDiff(uint256 a, uint256 b) public pure {
-
         // It shouldn't unexpectedly crash
         Math256.absDiff(b, a);
 
