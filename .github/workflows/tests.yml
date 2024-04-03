@@ -3,8 +3,8 @@ name: Tests
 on: [push]
 
 jobs:
-  test:
-    name: Solidity tests
+  test_hardhat:
+    name: Hardhat Solidity tests
     runs-on: ubuntu-latest
 
     steps:
@@ -24,3 +24,28 @@ jobs:
 
       - name: Run Hardhat Solidity tests
         run: pnpm test
+
+  test_foundry:
+    name: Foundry Solidity tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - run: corepack enable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run tests
+        run: forge test --gas-report

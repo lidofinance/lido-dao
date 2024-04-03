@@ -3,11 +3,11 @@ import { MaxUint256, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { time } from "@nomicfoundation/hardhat-network-helpers";
+import { setStorageAt, time } from "@nomicfoundation/hardhat-network-helpers";
 
 import { Lido, Lido__factory, LidoLocator } from "typechain-types";
 
-import { certainAddress, dummyLocator, INITIAL_STETH_HOLDER, proxify, Snapshot } from "lib";
+import { certainAddress, dummyLocator, INITIAL_STETH_HOLDER, proxify, Snapshot, streccak } from "lib";
 
 describe("Lido:initialize", () => {
   let deployer: HardhatEthersSigner;
@@ -52,6 +52,14 @@ describe("Lido:initialize", () => {
       await expect(lido.initialize(locator, ZeroAddress)).to.be.reverted;
     });
 
+    it("Reverts if already initialized", async () => {
+      await lido.initialize(locator, eip712helperAddress, { value: initialValue });
+
+      await expect(lido.initialize(locator, eip712helperAddress, { value: initialValue })).to.be.revertedWith(
+        "INIT_ALREADY_INITIALIZED",
+      );
+    });
+
     it("Bootstraps initial holder, sets the locator and EIP-712 helper", async () => {
       const latestBlock = BigInt(await time.latestBlock());
 
@@ -76,6 +84,16 @@ describe("Lido:initialize", () => {
       expect(await lido.getEIP712StETH()).to.equal(eip712helperAddress);
       expect(await lido.allowance(withdrawalQueueAddress, burnerAddress)).to.equal(MaxUint256);
       expect(await lido.getInitializationBlock()).to.equal(latestBlock + 1n);
+    });
+
+    it("Does not bootstrap initial holder if total shares is not zero", async () => {
+      const totalSharesSlot = streccak("lido.StETH.totalShares");
+      await setStorageAt(await lido.getAddress(), totalSharesSlot, 1n);
+
+      await expect(lido.initialize(locator, eip712helperAddress, { value: initialValue }))
+        .not.to.emit(lido, "Submitted")
+        .and.not.to.emit(lido, "Transfer")
+        .and.not.to.emit(lido, "TransferShares");
     });
   });
 });

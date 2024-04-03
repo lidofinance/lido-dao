@@ -6,7 +6,7 @@ import "@typechain/hardhat";
 
 import "solidity-coverage";
 import "tsconfig-paths/register";
-import "hardhat-tracer";
+// import "hardhat-tracer"; doesn't work with hardhat 2.21.0
 import "hardhat-watcher";
 import "hardhat-ignore-warnings";
 import "hardhat-contract-sizer";
@@ -26,10 +26,11 @@ const config: HardhatUserConfig = {
       url: RPC_URL,
     },
     hardhat: {
-      // NB!: forking get enabled if env variable HARDHAT_FORKING_URL is set, see code below
+      // setting base fee to 0 to avoid extra calculations doesn't work :(
+      // minimal base fee is 1 for EIP-1559
+      // gasPrice: 0,
+      // initialBaseFeePerGas: 0,
       blockGasLimit: 30000000,
-      gasPrice: 0,
-      initialBaseFeePerGas: 0,
       allowUnlimitedContractSize: true,
       accounts: {
         // default hardhat's node mnemonic
@@ -144,7 +145,7 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, hre, runSupe
   const paths = await runSuper();
 
   const otherDirectoryGlob = path.join(hre.config.paths.root, "test", "**", "*.sol");
-  const otherPaths = globSync(otherDirectoryGlob);
+  const otherPaths = globSync(otherDirectoryGlob).filter((x) => !x.endsWith("test.sol"));
 
   return [...paths, ...otherPaths];
 });

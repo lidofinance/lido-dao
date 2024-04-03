@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 
 import { WstETH__factory } from "typechain-types";
-import { StethMinimalMockWithTotalPooledEther__factory } from "typechain-types";
+import { Steth__MinimalMock__factory } from "typechain-types";
 
 import { ether } from "lib/units";
 
@@ -14,7 +14,7 @@ testERC20Compliance({
     const [deployer, holder, recipient, spender] = signers;
     const totalSupply = ether("10.0");
 
-    const stethFactory = new StethMinimalMockWithTotalPooledEther__factory(deployer);
+    const stethFactory = new Steth__MinimalMock__factory(deployer);
     const steth = await stethFactory.deploy(holder, { value: totalSupply });
 
     const wstethFactory = new WstETH__factory(deployer);

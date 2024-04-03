@@ -11,6 +11,10 @@ coverage.json
 /cache
 /artifacts
 
+# foundry artifacts
+/foundry/cache
+/foundry/out
+
 .env
 deployed-local.json
 

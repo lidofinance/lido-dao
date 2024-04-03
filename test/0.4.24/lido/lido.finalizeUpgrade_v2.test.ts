@@ -5,19 +5,16 @@ import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
-import {
-  LidoInitializedForFinalizeUpgradeV2,
-  LidoInitializedForFinalizeUpgradeV2__factory,
-  LidoLocator,
-} from "typechain-types";
+import { Lido__MockForFinalizeUpgradeV2, Lido__MockForFinalizeUpgradeV2__factory, LidoLocator } from "typechain-types";
 
-import { certainAddress, dummyLocator, INITIAL_STETH_HOLDER, proxify } from "lib";
+import { certainAddress, dummyLocator, INITIAL_STETH_HOLDER, ONE_ETHER, proxify } from "lib";
 
 describe("Lido:finalizeUpgrade_v2", () => {
   let deployer: HardhatEthersSigner;
+  let user: HardhatEthersSigner;
 
-  let impl: LidoInitializedForFinalizeUpgradeV2;
-  let lido: LidoInitializedForFinalizeUpgradeV2;
+  let impl: Lido__MockForFinalizeUpgradeV2;
+  let lido: Lido__MockForFinalizeUpgradeV2;
   let locator: LidoLocator;
 
   const initialValue = 1n;
@@ -29,8 +26,8 @@ describe("Lido:finalizeUpgrade_v2", () => {
   const eip712helperAddress = certainAddress("lido:initialize:eip712helper");
 
   beforeEach(async () => {
-    [deployer] = await ethers.getSigners();
-    const lidoFactory = new LidoInitializedForFinalizeUpgradeV2__factory(deployer);
+    [deployer, user] = await ethers.getSigners();
+    const lidoFactory = new Lido__MockForFinalizeUpgradeV2__factory(deployer);
     impl = await lidoFactory.deploy();
     [lido] = await proxify({ impl, admin: deployer });
 
@@ -41,7 +38,7 @@ describe("Lido:finalizeUpgrade_v2", () => {
   it("Reverts if contract version does not equal zero", async () => {
     const unexpectedVersion = 1n;
 
-    await expect(lido.__initialize(unexpectedVersion, { value: initialValue }))
+    await expect(lido.mock__initialize(unexpectedVersion, { value: initialValue }))
       .to.emit(lido, "Submitted")
       .withArgs(INITIAL_STETH_HOLDER, initialValue, ZeroAddress)
       .and.to.emit(lido, "Transfer")
@@ -54,11 +51,15 @@ describe("Lido:finalizeUpgrade_v2", () => {
     await expect(lido.finalizeUpgrade_v2(ZeroAddress, eip712helperAddress)).to.be.reverted;
   });
 
+  it("Reverts if not initialized", async () => {
+    await expect(lido.finalizeUpgrade_v2(locator, eip712helperAddress)).to.be.revertedWith("NOT_INITIALIZED");
+  });
+
   context("contractVersion equals 0", () => {
     beforeEach(async () => {
       const latestBlock = BigInt(await time.latestBlock());
 
-      await expect(lido.__initialize(initialVersion, { value: initialValue }))
+      await expect(lido.mock__initialize(initialVersion, { value: initialValue }))
         .to.emit(lido, "Submitted")
         .withArgs(INITIAL_STETH_HOLDER, initialValue, ZeroAddress)
         .and.to.emit(lido, "Transfer")
@@ -78,6 +79,15 @@ describe("Lido:finalizeUpgrade_v2", () => {
 
     it("Reverts if EIP-712 helper is zero address", async () => {
       await expect(lido.finalizeUpgrade_v2(locator, ZeroAddress)).to.be.reverted;
+    });
+
+    it("Reverts if the balance of initial holder is zero", async () => {
+      // first get someone else's some tokens to avoid division by 0 error
+      await lido.mock__mintSharesWithoutChecks(user, ONE_ETHER);
+      // then burn initial user's tokens
+      await lido.mock__burnInitialHoldersShares();
+
+      await expect(lido.finalizeUpgrade_v2(locator, eip712helperAddress)).to.be.revertedWith("INITIAL_HOLDER_EXISTS");
     });
 
     it("Bootstraps initial holder, sets the locator and EIP-712 helper", async () => {
