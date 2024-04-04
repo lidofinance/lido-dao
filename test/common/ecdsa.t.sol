@@ -8,7 +8,7 @@ import {Test} from "forge-std/Test.sol";
 import {ECDSA} from "contracts/common/lib/ECDSA.sol";
 
 contract ECDSATest is Test {
-    function test_recover_Works_V_R_S() public pure {
+    function test_recover_Works() public pure {
         uint256 eoaPk = 1;
         address eoa = vm.addr(eoaPk);
 
@@ -22,7 +22,7 @@ contract ECDSATest is Test {
     }
 
     // https://eips.ethereum.org/EIPS/eip-2098#test-cases
-    function test_recover_Works_R_VS() public pure {
+    function test_recover_WorksWithCompactSignature() public pure {
         uint256 eoaPk = 1;
         address eoa = vm.addr(eoaPk);
 

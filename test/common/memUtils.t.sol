@@ -7,31 +7,9 @@ import "forge-std/Test.sol";
 
 import {MemUtils} from "contracts/common/lib/MemUtils.sol";
 
-contract MemUtilsTest is Test {
-    error AssertMemoryFailed(bytes actual, bytes expected);
+import {MemUtilsTestHelper} from "test/common/memUtils.h.sol";
 
-    // don't use this assertion for testing MemUtils.memcpy as it uses that same function
-    function mem(uint256 _start, uint256 _pastEnd, bytes memory _expected) internal pure {
-        if (memKeccak(_start, _pastEnd) != memKeccak(_expected)) {
-            bytes memory actual = new bytes(_pastEnd - _start);
-            MemUtils.memcpy(_start, getMemPtr(actual) + 32, _pastEnd - _start);
-            revert AssertMemoryFailed(actual, _expected);
-        }
-    }
-
-    function getDataPtr(bytes memory arr) internal pure returns (uint256 dataPtr) {
-        assembly {
-            dataPtr := add(arr, 32)
-        }
-    }
-
-    function fill(bytes memory arr, bytes1 value) internal pure returns (bytes memory) {
-        for (uint256 i = 0; i < arr.length; ++i) {
-            arr[i] = value;
-        }
-        return arr;
-    }
-
+contract MemUtilsTest is Test, MemUtilsTestHelper {
     function test_unsafeAllocateBytes_AllocatesEmptyByteArray() external pure {
         // disable all compiler optimizations by including an assembly block not marked as mem-safe
         assembly {
