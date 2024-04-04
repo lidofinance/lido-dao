@@ -8,7 +8,6 @@ import "forge-std/Test.sol";
 import {MemUtils} from "contracts/common/lib/MemUtils.sol";
 
 contract MemUtilsTest is Test {
-
     error AssertMemoryFailed(bytes actual, bytes expected);
 
     // don't use this assertion for testing MemUtils.memcpy as it uses that same function

@@ -173,9 +173,9 @@ contract SignatureUtilsTest is Test {
 
 contract SignatureUtils__Harness {
     function isValidSignature(address signer, bytes32 msgHash, uint8 v, bytes32 r, bytes32 s)
-    public
-    view
-    returns (bool)
+        public
+        view
+        returns (bool)
     {
         return SignatureUtils.isValidSignature(signer, msgHash, v, r, s);
     }
@@ -186,13 +186,9 @@ contract SignatureUtils__Harness {
 }
 
 contract ERC1271Signer__Mock {
-    // ERC1271 standard magic value for a valid signature
-    bytes4 internal constant MAGIC_VALUE = 0x1626ba7e;
+    bytes4 internal constant MAGIC_VALUE = 0x1626ba7e; // ERC1271 standard magic value for a valid signature
 
-    // Simulate the isValidSignature function of a smart contract following ERC-1271
     function isValidSignature(bytes32 _hash, bytes memory _signature) external pure returns (bytes4) {
-        // For simplicity, this mock just always returns the magic value for valid signatures
-        // In a real contract, you would add logic to verify `_hash` and `_signature`
         if (_signature.length == 0 || _hash == keccak256("BAD")) {
             return 0;
         }
