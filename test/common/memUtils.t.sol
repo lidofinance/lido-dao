@@ -7,9 +7,19 @@ import "forge-std/Test.sol";
 
 import {MemUtils} from "contracts/common/lib/MemUtils.sol";
 
-import "contracts/common/test_helpers/Assertions.sol";
-
 contract MemUtilsTest is Test {
+
+    error AssertMemoryFailed(bytes actual, bytes expected);
+
+    // don't use this assertion for testing MemUtils.memcpy as it uses that same function
+    function mem(uint256 _start, uint256 _pastEnd, bytes memory _expected) internal pure {
+        if (memKeccak(_start, _pastEnd) != memKeccak(_expected)) {
+            bytes memory actual = new bytes(_pastEnd - _start);
+            MemUtils.memcpy(_start, getMemPtr(actual) + 32, _pastEnd - _start);
+            revert AssertMemoryFailed(actual, _expected);
+        }
+    }
+
     function getDataPtr(bytes memory arr) internal pure returns (uint256 dataPtr) {
         assembly {
             dataPtr := add(arr, 32)
@@ -89,7 +99,7 @@ contract MemUtilsTest is Test {
         freeMemPtr = getFreeMemPtr();
         assertEq(freeMemPtr, preAllocFreeMemPtr + 32 + 32 * 100);
 
-        Assert.mem(
+        mem(
             initialFreeMemPtr,
             freeMemPtr,
             abi.encodePacked(
