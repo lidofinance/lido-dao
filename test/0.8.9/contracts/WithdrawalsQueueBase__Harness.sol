@@ -6,7 +6,7 @@ pragma solidity 0.8.9;
 
 import {WithdrawalQueueBase} from "contracts/0.8.9/WithdrawalQueueBase.sol";
 
-contract WithdrawalsQueueBaseHarness is WithdrawalQueueBase {
+contract WithdrawalsQueueBase__Harness is WithdrawalQueueBase {
 
   constructor() {
     _initializeQueue();
@@ -32,7 +32,7 @@ contract WithdrawalsQueueBaseHarness is WithdrawalQueueBase {
     return _sendValue(_recipient, _amount);
   }
 
-  function exposedCalcBatch(WithdrawalRequest memory _preStartRequest, WithdrawalRequest memory _endRequest) external view returns (uint256 shareRate, uint256 stETH, uint256 shares)
+  function exposedCalcBatch(WithdrawalRequest memory _preStartRequest, WithdrawalRequest memory _endRequest) external pure returns (uint256 shareRate, uint256 stETH, uint256 shares)
   {
     return _calcBatch(_preStartRequest, _endRequest);
   }

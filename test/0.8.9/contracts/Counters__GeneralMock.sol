@@ -1,4 +1,10 @@
-library Counters {
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-License-Identifier: GPL-3.0
+// for testing purposes only
+
+pragma solidity 0.8.9;
+
+library Counters__GeneralMock {
   struct Counter {
     uint256 _value; // default: 0
   }

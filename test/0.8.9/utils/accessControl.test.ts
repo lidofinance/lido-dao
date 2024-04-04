@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { AccessControlHarness } from "typechain-types";
+import { AccessControl__Harness } from "typechain-types";
 
 import {
   DEFAULT_ADMIN_ROLE,
@@ -21,14 +21,14 @@ describe("AccessControl", () => {
   let owner: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;
 
-  let contract: AccessControlHarness;
+  let contract: AccessControl__Harness;
 
   let originalState: string;
 
   before(async () => {
     [owner, stranger] = await ethers.getSigners();
 
-    contract = await ethers.deployContract("AccessControlHarness");
+    contract = await ethers.deployContract("AccessControl__Harness");
   });
 
   beforeEach(async () => (originalState = await Snapshot.take()));

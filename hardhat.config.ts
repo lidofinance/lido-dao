@@ -120,7 +120,8 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, hre, runSupe
   const paths = await runSuper();
 
   const otherDirectoryGlob = path.join(hre.config.paths.root, "test", "**", "*.sol");
-  const otherPaths = globSync(otherDirectoryGlob).filter((x) => !x.endsWith("test.sol"));
+  // Don't need to compile test, helper and script files that are not part of the contracts for Hardhat.
+  const otherPaths = globSync(otherDirectoryGlob).filter((x) => !/\.([ths]\.sol)$/.test(x));
 
   return [...paths, ...otherPaths];
 });
