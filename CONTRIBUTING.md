@@ -92,11 +92,23 @@ This repository features a Hardhat-Foundry dual setup:
 
 #### Hardhat
 
-Hardhat tests are all located in `/tests` in the root of the project. Each subdirectory name corresponds to the version of the contract being tested, mirroring the `/contracts` directory structure. Integration, regression and other non-unit tests are placed into corresponding subdirectories, e.g. `/tests/integration/`, `/tests/regression`, etc.
+Hardhat tests are all located in `/tests` in the root of the project.
+Each subdirectory name corresponds to the version of the contract being tested, mirroring the `/contracts` directory
+structure. Integration, regression and other non-unit tests are placed into corresponding subdirectories,
+e.g. `/tests/integration/`, `/tests/regression`, etc.
 
 #### Foundry
 
-Foundry's Solidity tests are used only for fuzzing library contracts or functions performing complex calculations or byte juggling. Solidity tests are located under `/tests` as well in the appropriate subdirectories.
+Foundry's Solidity tests are used only for fuzzing library contracts or functions performing complex calculations
+or byte juggling. Solidity tests are located under `/tests` and in the appropriate subdirectories. Naming conventions
+follow the Foundry's [documentation](https://book.getfoundry.sh/tutorials/best-practices#general-test-guidance):
+
+- for tests, postfix `.t.sol` is used (e.g., `MyContract.t.sol`)
+- for scripts, postfix `.s.sol` is used (e.g., `MyScript.s.sol`)
+- for helpers, postfix `.h.sol` is used (e.g., `MyHelper.h.sol`).
+
+Following the convention of distinguishing Hardhat test files from Foundry-related files is essential to ensure the
+proper execution of Hardhat tests.
 
 #### Mocks
 
