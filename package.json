@@ -21,7 +21,7 @@
     "test:trace": "pnpm hardhat test --trace",
     "test:watch": "pnpm hardhat watch test",
     "type:check": "tsc --noEmit",
-    "prepare": "husky init"
+    "prepare": "husky"
   },
   "lint-staged": {
     "./**/*.ts": [
