@@ -6,7 +6,7 @@ pragma solidity 0.8.9;
 
 import "contracts/0.8.9/WithdrawalQueue.sol";
 
-contract WithdrawalsQueueHarness is WithdrawalQueue {
+contract WithdrawalsQueue__Harness is WithdrawalQueue {
 
   event Mock__Transfer(address indexed from, address indexed to, uint256 requestId);
 

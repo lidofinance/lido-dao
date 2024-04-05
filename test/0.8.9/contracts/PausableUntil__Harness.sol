@@ -6,7 +6,7 @@ pragma solidity 0.8.9;
 
 import "contracts/0.8.9/utils/PausableUntil.sol";
 
-contract PausableUntilHarness is PausableUntil {
+contract PausableUntil__Harness is PausableUntil {
   function modifierWhenPaused() external view whenPaused {}
 
   function modifierWhenResumed() external view whenResumed {}
