@@ -20,3 +20,17 @@ export async function getNextBlockTimestamp() {
   await time.setNextBlockTimestamp(nextBlockTimestamp);
   return nextBlockTimestamp;
 }
+
+export async function getNextBlockNumber() {
+  const latestBlock = BigInt(await time.latestBlock());
+  return latestBlock + 1n;
+}
+
+export async function getNextBlock() {
+  const [timestamp, number] = await Promise.all([getNextBlockTimestamp(), getNextBlockNumber()]);
+
+  return {
+    timestamp,
+    number,
+  };
+}
