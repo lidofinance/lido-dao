@@ -127,10 +127,11 @@ contract StakingModule__Mock is IStakingModule {
     // onRewardsMintedShouldRevertWithMessage = message;
   }
 
-  function updateStuckValidatorsCount(
-    bytes calldata _nodeOperatorIds,
-    bytes calldata _stuckValidatorsCounts
-  ) external {}
+  event Mock__StuckValidatorsCountUpdated(bytes _nodeOperatorIds, bytes _stuckValidatorsCounts);
+
+  function updateStuckValidatorsCount(bytes calldata _nodeOperatorIds, bytes calldata _stuckValidatorsCounts) external {
+    emit Mock__StuckValidatorsCountUpdated(_nodeOperatorIds, _stuckValidatorsCounts);
+  }
 
   function updateExitedValidatorsCount(
     bytes calldata _nodeOperatorIds,
@@ -168,7 +169,25 @@ contract StakingModule__Mock is IStakingModule {
     bytes calldata _depositCalldata
   ) external returns (bytes memory publicKeys, bytes memory signatures) {}
 
-  function onExitedAndStuckValidatorsCountsUpdated() external {}
+  event Mock__onExitedAndStuckValidatorsCountsUpdated();
+
+  bool private onExitedAndStuckValidatorsCountsUpdatedShouldRevert = false;
+  string private onExitedAndStuckValidatorsCountsUpdatedShouldRevertWithMessage = "";
+
+  function onExitedAndStuckValidatorsCountsUpdated() external {
+    if (onExitedAndStuckValidatorsCountsUpdatedShouldRevert) {
+      if (bytes(onExitedAndStuckValidatorsCountsUpdatedShouldRevertWithMessage).length > 0) {
+        require(false, onExitedAndStuckValidatorsCountsUpdatedShouldRevertWithMessage);
+      }
+      require(false);
+    }
+    emit Mock__onExitedAndStuckValidatorsCountsUpdated();
+  }
+
+  function mock__onExitedAndStuckValidatorsCountsUpdated(bool shouldRevert, string calldata revertMessage) external {
+    onExitedAndStuckValidatorsCountsUpdatedShouldRevert = shouldRevert;
+    onExitedAndStuckValidatorsCountsUpdatedShouldRevertWithMessage = revertMessage;
+  }
 
   function onWithdrawalCredentialsChanged() external {}
 }

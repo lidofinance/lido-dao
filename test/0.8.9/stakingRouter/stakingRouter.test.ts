@@ -605,11 +605,33 @@ describe("StakingRouter", () => {
       ).to.be.revertedWithOZAccessControlError(user.address, await stakingRouter.UNSAFE_SET_EXITED_VALIDATORS_ROLE());
     });
 
-    it("Reverts if the numbers of exited validators does not match what is stored on the contract", async () => {
+    it("Reverts if the number of exited validators in the module does not match what is stored on the contract", async () => {
       await expect(
         stakingRouter.unsafeSetExitedValidatorsCount(moduleId, nodeOperatorId, true, {
           ...correction,
           currentModuleExitedValidatorsCount: 1n,
+        }),
+      )
+        .to.be.revertedWithCustomError(stakingRouter, "UnexpectedCurrentValidatorsCount")
+        .withArgs(0n, 0n, 0n);
+    });
+
+    it("Reverts if the number of exited validators of the operator does not match what is stored on the contract", async () => {
+      await expect(
+        stakingRouter.unsafeSetExitedValidatorsCount(moduleId, nodeOperatorId, true, {
+          ...correction,
+          currentNodeOperatorExitedValidatorsCount: 1n,
+        }),
+      )
+        .to.be.revertedWithCustomError(stakingRouter, "UnexpectedCurrentValidatorsCount")
+        .withArgs(0n, 0n, 0n);
+    });
+
+    it("Reverts if the number of stuck validators of the operator does not match what is stored on the contract", async () => {
+      await expect(
+        stakingRouter.unsafeSetExitedValidatorsCount(moduleId, nodeOperatorId, true, {
+          ...correction,
+          currentNodeOperatorStuckValidatorsCount: 1n,
         }),
       )
         .to.be.revertedWithCustomError(stakingRouter, "UnexpectedCurrentValidatorsCount")
@@ -623,7 +645,153 @@ describe("StakingRouter", () => {
           moduleId,
           correction.newNodeOperatorExitedValidatorsCount,
           correction.newNodeOperatorStuckValidatorsCount,
-        );
+        )
+        .and.to.emit(stakingModule, "Mock__onExitedAndStuckValidatorsCountsUpdated");
+    });
+
+    it("Update unsafely the number of exited validators on the staking module", async () => {
+      const triggerHook = false;
+
+      await expect(
+        stakingRouter.unsafeSetExitedValidatorsCount(moduleId, nodeOperatorId, triggerHook, correction),
+      ).not.to.emit(stakingModule, "Mock__onExitedAndStuckValidatorsCountsUpdated");
+    });
+  });
+
+  context("reportStakingModuleStuckValidatorsCountByNodeOperator", () => {
+    let moduleId: bigint;
+    let stakingModule: StakingModule__Mock;
+
+    const nodeOperatorIds = bigintToHex(1n, true, 8);
+    const stuckValidatorCounts = bigintToHex(100n, true, 16);
+
+    beforeEach(async () => {
+      ({ stakingModule, moduleId } = await setupModule(await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE()));
+    });
+
+    it("Reverts if the caller does not have the role", async () => {
+      await expect(
+        stakingRouter
+          .connect(user)
+          .reportStakingModuleStuckValidatorsCountByNodeOperator(moduleId, nodeOperatorIds, stuckValidatorCounts),
+      ).to.be.revertedWithOZAccessControlError(user.address, await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE());
+    });
+
+    it("Reverts if the node operators ids are packed incorrectly", async () => {
+      const incorrectlyPackedNodeOperatorIds = bufToHex(new Uint8Array([1]), true, 7);
+
+      await expect(
+        stakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator(
+          moduleId,
+          incorrectlyPackedNodeOperatorIds,
+          stuckValidatorCounts,
+        ),
+      )
+        .to.be.revertedWithCustomError(stakingRouter, "InvalidReportData")
+        .withArgs(3n);
+    });
+
+    it("Reverts if the validator counts are packed incorrectly", async () => {
+      const incorrectlyPackedValidatorCounts = bufToHex(new Uint8Array([100]), true, 15);
+
+      await expect(
+        stakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator(
+          moduleId,
+          nodeOperatorIds,
+          incorrectlyPackedValidatorCounts,
+        ),
+      )
+        .to.be.revertedWithCustomError(stakingRouter, "InvalidReportData")
+        .withArgs(3n);
+    });
+
+    it("Reverts if the number of node operators does not match validator counts", async () => {
+      const tooManyValidatorCounts = stuckValidatorCounts + bigintToHex(101n, false, 16);
+
+      await expect(
+        stakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator(
+          moduleId,
+          nodeOperatorIds,
+          tooManyValidatorCounts,
+        ),
+      )
+        .to.be.revertedWithCustomError(stakingRouter, "InvalidReportData")
+        .withArgs(2n);
+    });
+
+    it("Reverts if the number of node operators does not match validator counts", async () => {
+      const tooManyValidatorCounts = stuckValidatorCounts + bigintToHex(101n, false, 16);
+
+      await expect(
+        stakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator(
+          moduleId,
+          nodeOperatorIds,
+          tooManyValidatorCounts,
+        ),
+      )
+        .to.be.revertedWithCustomError(stakingRouter, "InvalidReportData")
+        .withArgs(2n);
+    });
+
+    it("Reverts if the node operators ids is empty", async () => {
+      await expect(stakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator(moduleId, "0x", "0x"))
+        .to.be.revertedWithCustomError(stakingRouter, "InvalidReportData")
+        .withArgs(1n);
+    });
+
+    it("Updates stuck validators count on the module", async () => {
+      await expect(
+        stakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator(
+          moduleId,
+          nodeOperatorIds,
+          stuckValidatorCounts,
+        ),
+      )
+        .to.emit(stakingModule, "Mock__StuckValidatorsCountUpdated")
+        .withArgs(nodeOperatorIds, stuckValidatorCounts);
+    });
+  });
+
+  context("onValidatorsCountsByNodeOperatorReportingFinished", () => {
+    let stakingModule: StakingModule__Mock;
+
+    beforeEach(async () => {
+      ({ stakingModule } = await setupModule(await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE()));
+    });
+
+    it("Reverts if the caller does not have the role", async () => {
+      await expect(
+        stakingRouter.connect(user).onValidatorsCountsByNodeOperatorReportingFinished(),
+      ).to.be.revertedWithOZAccessControlError(user.address, await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE());
+    });
+
+    it("Calls the hook on the staking module", async () => {
+      await expect(stakingRouter.onValidatorsCountsByNodeOperatorReportingFinished()).to.emit(
+        stakingModule,
+        "Mock__onExitedAndStuckValidatorsCountsUpdated",
+      );
+    });
+
+    it("Does nothing if there is a mismatch between exited validators count on the module and the router cache", async () => {
+      await stakingModule.mock__getStakingModuleSummary(1n, 0n, 0n);
+
+      await expect(stakingRouter.onValidatorsCountsByNodeOperatorReportingFinished()).not.to.emit(
+        stakingModule,
+        "Mock__onExitedAndStuckValidatorsCountsUpdated",
+      );
+    });
+
+    it("Reverts if the hook fails without revert data", async () => {
+      await stakingModule.mock__onExitedAndStuckValidatorsCountsUpdated(true, "");
+
+      await expect(stakingRouter.onValidatorsCountsByNodeOperatorReportingFinished()).to.be.revertedWithCustomError(
+        stakingRouter,
+        "UnrecoverableModuleError",
+      );
+    });
+
+    it("Logs the revert data if the hook fails", async () => {
+      // TODO
     });
   });
 
