@@ -7,7 +7,7 @@ import { setBalance, time } from "@nomicfoundation/hardhat-network-helpers";
 
 import {
   StETH__MockForWithdrawalQueue,
-  WithdrawalsQueueHarness,
+  WithdrawalsQueue__Harness,
   WstETH__MockForWithdrawalQueue,
 } from "typechain-types";
 
@@ -58,8 +58,8 @@ describe("WithdrawalQueue.sol", () => {
   let wstEth: WstETH__MockForWithdrawalQueue;
   let wstEthAddress: string;
 
-  let impl: WithdrawalsQueueHarness;
-  let queue: WithdrawalsQueueHarness;
+  let impl: WithdrawalsQueue__Harness;
+  let queue: WithdrawalsQueue__Harness;
   let queueAddress: string;
 
   let originalState: string;
@@ -73,7 +73,7 @@ describe("WithdrawalQueue.sol", () => {
     wstEth = await ethers.deployContract("WstETH__MockForWithdrawalQueue", [await stEth.getAddress()]);
     wstEthAddress = await wstEth.getAddress();
 
-    impl = await ethers.deployContract("WithdrawalsQueueHarness", [wstEthAddress], owner);
+    impl = await ethers.deployContract("WithdrawalsQueue__Harness", [wstEthAddress], owner);
 
     [queue] = await proxify({ impl, admin: owner });
 
@@ -118,11 +118,11 @@ describe("WithdrawalQueue.sol", () => {
 
   context("constructor", () => {
     it("Reverts if wstETH address is zero", async () => {
-      await expect(ethers.deployContract("WithdrawalsQueueHarness", [ZeroAddress])).to.be.revertedWithoutReason();
+      await expect(ethers.deployContract("WithdrawalsQueue__Harness", [ZeroAddress])).to.be.revertedWithoutReason();
     });
 
     it("Sets initial properties", async () => {
-      const deployed = await ethers.deployContract("WithdrawalsQueueHarness", [wstEthAddress]);
+      const deployed = await ethers.deployContract("WithdrawalsQueue__Harness", [wstEthAddress]);
 
       expect(await deployed.STETH()).to.equal(stEthAddress, "stETH address");
       expect(await deployed.WSTETH()).to.equal(wstEthAddress, "wstETH address");
