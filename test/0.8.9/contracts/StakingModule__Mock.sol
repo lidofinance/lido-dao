@@ -75,7 +75,7 @@ contract StakingModule__Mock is IStakingModule {
     depositableValidatorsCount = nodeOperatorNodeOperatorDepositableValidatorsCount__mocked;
   }
 
-  function setNodeOperatorSummary(
+  function mock__getNodeOperatorSummary(
     bool isTargetLimitActive,
     uint256 targetValidatorsCount,
     uint256 stuckValidatorsCount,
@@ -95,18 +95,48 @@ contract StakingModule__Mock is IStakingModule {
     nodeOperatorNodeOperatorDepositableValidatorsCount__mocked = depositableValidatorsCount;
   }
 
-  function getNonce() external view returns (uint256) {}
+  uint256 private nonce;
 
-  function getNodeOperatorsCount() external view returns (uint256) {}
+  function getNonce() external view returns (uint256) {
+    return nonce;
+  }
 
-  function getActiveNodeOperatorsCount() external view returns (uint256) {}
+  function mock__getNonce(uint256 newNonce) external {
+    nonce = newNonce;
+  }
 
-  function getNodeOperatorIsActive(uint256 _nodeOperatorId) external view returns (bool) {}
+  uint256 private nodeOperatorsCount__mocked;
+  uint256 private activeNodeOperatorsCount__mocked;
+
+  function getNodeOperatorsCount() external view returns (uint256) {
+    return nodeOperatorsCount__mocked;
+  }
+
+  function getActiveNodeOperatorsCount() external view returns (uint256) {
+    return activeNodeOperatorsCount__mocked;
+  }
+
+  function mock__nodeOperatorsCount(uint256 total, uint256 active) external {
+    nodeOperatorsCount__mocked = total;
+    activeNodeOperatorsCount__mocked = active;
+  }
+
+  function getNodeOperatorIsActive(uint256 _nodeOperatorId) external view returns (bool) {
+    return true;
+  }
+
+  uint256[] private nodeOperatorsIds__mocked;
 
   function getNodeOperatorIds(
     uint256 _offset,
     uint256 _limit
-  ) external view returns (uint256[] memory nodeOperatorIds) {}
+  ) external view returns (uint256[] memory nodeOperatorIds) {
+    return nodeOperatorsIds__mocked;
+  }
+
+  function mock__getNodeOperatorIds(uint256[] calldata nodeOperatorsIds) external {
+    nodeOperatorsIds__mocked = nodeOperatorsIds;
+  }
 
   bool private onRewardsMintedShouldRevert = false;
   string private onRewardsMintedShouldRevertWithMessage = "";
@@ -140,7 +170,9 @@ contract StakingModule__Mock is IStakingModule {
     emit Mock__ExitedValidatorsCountUpdated(_nodeOperatorIds, _stuckValidatorsCounts);
   }
 
-  function updateRefundedValidatorsCount(uint256 _nodeOperatorId, uint256 _refundedValidatorsCount) external {}
+  function updateRefundedValidatorsCount(uint256 _nodeOperatorId, uint256 _refundedValidatorsCount) external {
+    emit Mock__RefundedValidatorsCountUpdated(_nodeOperatorId, _refundedValidatorsCount);
+  }
 
   function updateTargetValidatorsLimits(
     uint256 _nodeOperatorId,
