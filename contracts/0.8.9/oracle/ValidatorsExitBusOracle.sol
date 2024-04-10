@@ -94,7 +94,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         keccak256("lido.ValidatorsExitBusOracle.dataProcessingState");
 
     /// @dev Storage slot: ReportData reports
-    bytes32 internal constant REPORTS_POSITION =
+    bytes32 internal constant REPORTS_HASH_POSITION =
         keccak256("lido.ValidatorsExitBusOracle.reports");
 
     ILidoLocator internal immutable LOCATOR;
@@ -498,7 +498,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     function _getReportHashesStorage() internal pure returns (
         mapping(bytes32 => uint256) storage r
     ) {
-        bytes32 position = REPORTS_POSITION;
+        bytes32 position = REPORTS_HASH_POSITION;
         assembly { r.slot := position }
     }
 
