@@ -4,6 +4,6 @@ out = "artifacts"
 libs = ["node_modules"]
 evm_version = "shanghai"
 optimizer = true
-optimizer_runs = 2000
+optimizer_runs = 200
 # solc = 0.8.9
 # See more config options https://github.com/foundry-rs/foundry

@@ -10,7 +10,6 @@ import "@openzeppelin/contracts-v4.4/token/ERC20/utils/SafeERC20.sol";
 
 import {ILidoLocator} from "../common/interfaces/ILidoLocator.sol";
 import {Versioned} from "./utils/Versioned.sol";
-import {UnstructuredStorage} from "./lib/UnstructuredStorage.sol";
 
 interface ILido {
     /**
@@ -23,6 +22,7 @@ interface ILido {
 
 interface ITriggerableExit {
     function triggerExit(bytes memory validatorPubkey) external payable;
+    function getExitFee() external view returns (uint256);
 }
 
 
@@ -31,14 +31,11 @@ interface ITriggerableExit {
  */
 contract WithdrawalVault is Versioned {
     using SafeERC20 for IERC20;
-    using UnstructuredStorage for bytes32;
-    //
-    // CONSTANTS
-    //
-    // bytes32 internal constant LIDO_LOCATOR_POSITION = keccak256("lido.WithdrawalVault.lidoLocator");
-    bytes32 internal constant LIDO_LOCATOR_POSITION = 0xc0b60c351b70494e3ab52c5bef06f2292b0f5ac139efc05620bc15f3425d97d1;
-    // bytes32 internal constant LIDO_LOCATOR_POSITION = keccak256("lido.WithdrawalVault.triggerableExit");
-    bytes32 internal constant TRIGGERABLE_EXIT_POSITION = 0x2406e554a04ea2a6933d1967461eb6998042fe053bf0118b17e6017532b551a4;
+
+    ILido public immutable LIDO;
+    address public immutable TREASURY;
+    address public immutable VALIDATORS_EXIT_BUS;
+    ITriggerableExit public immutable TRIGGERABLE_EXIT;
 
     // Events
     /**
@@ -53,49 +50,50 @@ contract WithdrawalVault is Versioned {
      */
     event ERC721Recovered(address indexed requestedBy, address indexed token, uint256 tokenId);
 
-    event LocatorContractSet(address locatorAddress);
+    event LidoContractSet(address lido);
+    event TreasuryContractSet(address treasury);
+    event ValidatorsExitBusContractSet(address validatorsExitBusOracle);
     event TriggerableExitContractSet(address triggerableExit);
 
     // Errors
     error NotLido();
-    error NotValidatorsExitBusOracle();
+    error SenderIsNotVEBOContract();
     error NotEnoughEther(uint256 requested, uint256 balance);
     error ZeroAmount();
     error ZeroAddress();
+    error ExitFeeNotEnought();
 
     /**
-     * @param _lidoLocator Address of the Lido Locator contract.
+     * @param _lido the Lido token (stETH) address
+     * @param _treasury the Lido treasury address (see ERC20/ERC721-recovery interfaces)
+     * @param _validatorsExitBus the ValidatorsExitBus contract
+     * @param _triggerableExit the address of the TriggerableExit contracts from EIP-7002
      */
-    function initialize(address _lidoLocator, address _triggerableExit) external {
-        _initializeContractVersionTo(1);
-        _initialize_v2(_lidoLocator, _triggerableExit);
-    }
-
-     function finalizeUpgrade_v2(address _lidoLocator, address _triggerableExit) external {
-        _checkContractVersion(1);
-
-        _initialize_v2(_lidoLocator, _triggerableExit);
-    }
-
-    function _initialize_v2(address _locator, address _triggerableExit) internal {
-        _assertNonZero(_locator);
+    constructor(address _lido, address _treasury, address _validatorsExitBus, address _triggerableExit) {
+        _assertNonZero(_lido);
+        _assertNonZero(_treasury);
+        _assertNonZero(_validatorsExitBus);
         _assertNonZero(_triggerableExit);
 
-        LIDO_LOCATOR_POSITION.setStorageAddress(_locator);
-        TRIGGERABLE_EXIT_POSITION.setStorageAddress(_triggerableExit);
+        LIDO = ILido(_lido);
+        TREASURY = _treasury;
+        VALIDATORS_EXIT_BUS = _validatorsExitBus;
+        TRIGGERABLE_EXIT = ITriggerableExit(_triggerableExit);
 
-        _updateContractVersion(2);
-
-        emit LocatorContractSet(_locator);
+        emit LidoContractSet(_lido);
+        emit TreasuryContractSet(_treasury);
+        emit ValidatorsExitBusContractSet(_validatorsExitBus);
         emit TriggerableExitContractSet(_triggerableExit);
     }
 
-    function getLocator() public view returns (ILidoLocator) {
-        return ILidoLocator(LIDO_LOCATOR_POSITION.getStorageAddress());
+    function initialize() external {
+        _initializeContractVersionTo(1);
+        _updateContractVersion(2);
     }
 
-    function getTriggerableExit() public view returns (ITriggerableExit) {
-        return ITriggerableExit(TRIGGERABLE_EXIT_POSITION.getStorageAddress());
+     function finalizeUpgrade_v2() external {
+        _checkContractVersion(1);
+        _updateContractVersion(2);
     }
 
     /**
@@ -104,7 +102,7 @@ contract WithdrawalVault is Versioned {
      * @param _amount amount of ETH to withdraw
      */
     function withdrawWithdrawals(uint256 _amount) external {
-        if (msg.sender != address(getLocator().lido())) {
+        if (msg.sender != address(LIDO)) {
             revert NotLido();
         }
         if (_amount == 0) {
@@ -116,7 +114,7 @@ contract WithdrawalVault is Versioned {
             revert NotEnoughEther(_amount, balance);
         }
 
-        ILido(getLocator().lido()).receiveWithdrawals{value: _amount}();
+        LIDO.receiveWithdrawals{value: _amount}();
     }
 
     /**
@@ -133,7 +131,7 @@ contract WithdrawalVault is Versioned {
 
         emit ERC20Recovered(msg.sender, address(_token), _amount);
 
-        _token.safeTransfer(getLocator().treasury(), _amount);
+        _token.safeTransfer(TREASURY, _amount);
     }
 
     /**
@@ -146,32 +144,28 @@ contract WithdrawalVault is Versioned {
     function recoverERC721(IERC721 _token, uint256 _tokenId) external {
         emit ERC721Recovered(msg.sender, address(_token), _tokenId);
 
-        _token.transferFrom(address(this), getLocator().treasury(), _tokenId);
+        _token.transferFrom(address(this), TREASURY, _tokenId);
     }
 
-    event Received(address from, uint256 value);
-
-    receive() external payable {}
-
-    function forcedExit(bytes[] calldata pubkeys, address sender) external payable {
-        if (msg.sender != address(getLocator().validatorsExitBusOracle())) {
-            revert NotValidatorsExitBusOracle();
+    function triggerELValidatorExit(bytes[] calldata pubkeys) external payable {
+        if (msg.sender != VALIDATORS_EXIT_BUS) {
+            revert SenderIsNotVEBOContract();
         }
-
-        uint256 vaultBalance = address(this).balance - msg.value;
-        uint256 fee = msg.value;
 
         uint256 keysCount = pubkeys.length;
-        for(uint256 i = 0; i < keysCount; ++i) {
-            uint256 beforeBalance = address(this).balance;
-            getTriggerableExit().triggerExit{value: fee}(pubkeys[i]);
-            fee = fee - (beforeBalance - address(this).balance);
+
+        if (TRIGGERABLE_EXIT.getExitFee() * keysCount > msg.value) {
+            revert ExitFeeNotEnought();
         }
 
-        //return unspent fee to sender
-        address(sender).call{value: fee}("");
+        uint256 prevVaultBalance = address(this).balance - msg.value;
+        uint256 fee = msg.value / keysCount;
 
-        assert(address(this).balance == vaultBalance);
+        for(uint256 i = 0; i < keysCount; ++i) {
+            TRIGGERABLE_EXIT.triggerExit{value: fee}(pubkeys[i]);
+        }
+
+        assert(address(this).balance == prevVaultBalance);
     }
 
     function _assertNonZero(address _address) internal pure {

@@ -15,7 +15,7 @@ interface IOracleReportSanityChecker {
     function checkExitBusOracleReport(uint256 _exitRequestsCount) external view;
 }
 interface IWithdrawalVault {
-    function forcedExit(bytes[] calldata pubkey, address sender) external payable;
+    function triggerELValidatorExit(bytes[] calldata pubkey) external payable;
 }
 
 
@@ -37,6 +37,10 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         uint256 prevRequestedValidatorIndex,
         uint256 requestedValidatorIndex
     );
+    error ErrorInvalidReport();
+    error ErrorInvalidPubkeyInReport();
+    error ErrorReportExists();
+    error ErrorInvalidKeysRequestsCount();
 
     event ValidatorExitRequest(
         uint256 indexed stakingModuleId,
@@ -67,7 +71,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
     /// @notice An ACL role granting the permission to submit the data for a committee report.
     bytes32 public constant SUBMIT_DATA_ROLE = keccak256("SUBMIT_DATA_ROLE");
 
-    /// @notice An ACL role granting the permission to submit the priority data.
+    /// @notice An ACL role granting the permission to submit the prioritized exit requests data.
     bytes32 public constant SUBMIT_PRIORITY_DATA_ROLE = keccak256("SUBMIT_PRIORITY_DATA_ROLE");
 
     /// @notice An ACL role granting the permission to pause accepting validator exit requests
@@ -228,7 +232,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         _checkContractVersion(contractVersion);
         // it's a waste of gas to copy the whole calldata into mem but seems there's no way around
         _checkConsensusData(data.refSlot, data.consensusVersion, keccak256(abi.encode(data)));
-        _saveReportData(keccak256(abi.encode(data)), data.requestsCount);
+        _saveReportDataHash(keccak256(abi.encode(data)), data.requestsCount);
         _startProcessing();
         _handleConsensusReportData(data);
     }
@@ -484,31 +488,26 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         assembly { r.slot := position }
     }
 
-    function _saveReportData(bytes32 reportHash, uint256 requestsCount) internal {
-        if (_storageReports()[reportHash] != 0) {
+    function _saveReportDataHash(bytes32 reportHash, uint256 requestsCount) internal {
+        if (_getReportHashesStorage()[reportHash] != 0) {
             revert ErrorReportExists();
         }
-        _storageReports()[reportHash] = requestsCount;
+        _getReportHashesStorage()[reportHash] = requestsCount;
     }
 
-    function _storageReports() internal pure returns (
+    function _getReportHashesStorage() internal pure returns (
         mapping(bytes32 => uint256) storage r
     ) {
         bytes32 position = REPORTS_POSITION;
         assembly { r.slot := position }
     }
 
-    error ErrorInvalidReport();
-    error ErrorInvalidPubkeyInReport();
-    error ErrorReportExists();
-    error ErrorInvalidKeysRequestsCount();
-
     function submitPriorityReportData(bytes32 reportHash, uint256 requestsCount) external onlyRole(SUBMIT_PRIORITY_DATA_ROLE){
-        _saveReportData(reportHash, requestsCount);
+        _saveReportDataHash(reportHash, requestsCount);
     }
 
     function forcedExitPubkeys(bytes[] calldata keys, ReportData calldata data) external payable {
-        uint256 requestsCount = _storageReports()[keccak256(abi.encode(data))];
+        uint256 requestsCount = _getReportHashesStorage()[keccak256(abi.encode(data))];
         uint256 keysCount = keys.length;
 
         if (requestsCount == 0) {
@@ -522,6 +521,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             _processExitRequestsList(data.data, keccak256(keys[i]));
         }
 
-        IWithdrawalVault(LOCATOR.withdrawalVault()).forcedExit{value: msg.value}(keys, msg.sender);
+        IWithdrawalVault(LOCATOR.withdrawalVault()).triggerELValidatorExit{value: msg.value}(keys);
     }
 }

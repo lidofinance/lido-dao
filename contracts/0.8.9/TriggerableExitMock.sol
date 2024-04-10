@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
+// for testing purposes only
 
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
@@ -27,7 +28,6 @@ contract TriggerableExitMock {
         checkExitFee(msg.value);
         incrementExitCount();
         insertExitToQueue(validatorPubkey);
-        returnExcessPayment(msg.value, msg.sender);
 
         emit TriggerableExit(validatorPubkey);
     }
@@ -77,10 +77,6 @@ contract TriggerableExitMock {
         return keccak256(abi.encodePacked(slotAddress, slotIndex));
     }
 
-    function dummy() public pure returns (uint256) {
-        return 1;
-    }
-
     function checkExitFee(uint256 feeSent) internal view {
         uint256 exitFee = getExitFee();
         require(feeSent >= exitFee, "Insufficient exit fee");
@@ -125,14 +121,6 @@ contract TriggerableExitMock {
         exitCount += 1;
         assembly {
             sstore(position, exitCount)
-        }
-    }
-
-    function returnExcessPayment(uint256 feeSent, address sourceAddress) internal {
-        uint256 excessPayment = feeSent - getExitFee();
-        if (excessPayment > 0) {
-            (bool sent, /*bytes memory data*/) = sourceAddress.call{value: excessPayment, gas: EXCESS_RETURN_GAS_STIPEND}("");
-            require(sent, "Failed to return excess fee payment");
         }
     }
 

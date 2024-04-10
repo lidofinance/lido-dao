@@ -157,11 +157,6 @@ describe("Triggerable exits test", () => {
     const triggerableExitMockFactory = new TriggerableExitMock__factory(deployer);
     triggerableExitMock = await triggerableExitMockFactory.deploy();
 
-    //withdrawal vault
-    const withdrawalVaultFactory = new WithdrawalVault__factory(deployer);
-    const withdrawalVaultImpl = await withdrawalVaultFactory.deploy();
-    [withdrawalVault] = await proxify({ impl: withdrawalVaultImpl, admin: deployer });
-
     //staking router
     const depositContractFactory = new DepositContractMock__factory(deployer);
     depositContract = await depositContractFactory.deploy();
@@ -177,13 +172,9 @@ describe("Triggerable exits test", () => {
 
     //locator
     locator = await dummyLocator({
-      withdrawalVault: await withdrawalVault.getAddress(),
       oracleReportSanityChecker: await sanityChecker.getAddress(),
       stakingRouter: await stakingRouter.getAddress(),
     });
-
-    //initialize WC Vault
-    await withdrawalVault.initialize(locator, triggerableExitMock);
 
     //module
     const type = keccak256("0x01"); //0x01
@@ -196,8 +187,17 @@ describe("Triggerable exits test", () => {
     const oracleImpl = await validatorsExitBusOracleFactory.deploy(SECONDS_PER_SLOT, GENESIS_TIME, locator);
     [oracle] = await proxify({ impl: oracleImpl, admin: deployer });
 
+    //withdrawal vault
+    const treasury = lido;
+    const withdrawalVaultFactory = new WithdrawalVault__factory(deployer);
+    const withdrawalVaultImpl = await withdrawalVaultFactory.deploy(lido, treasury, oracle, triggerableExitMock);
+    [withdrawalVault] = await proxify({ impl: withdrawalVaultImpl, admin: deployer });
+    //initialize WC Vault
+    await withdrawalVault.initialize();
+
     //mock update locator
     await locator.mock__updateValidatorsExitBusOracle(oracle);
+    await locator.mock__updateWithdrawalVault(withdrawalVault);
 
     //consensus contract
     const consensusFactory = new HashConsensusTimeTravellable__factory(deployer);
@@ -567,16 +567,25 @@ describe("Triggerable exits test", () => {
       // const gasEstimate1 = await oracle
       //   .connect(stranger)
       //   .forcedExitPubkeys.estimateGas(keys1, reportItems, { value: ether("1.0") });
-      await oracle.connect(stranger).forcedExitPubkeys(keys1, reportItems, { value: ether("1.0") });
+
+      //calculate exitFee
+      const exitFee1 = await triggerableExitMock.getExitFee();
+      const keysFee1 = ether((exitFee1 * BigInt(keys1.length)).toString());
+
+      await oracle.connect(stranger).forcedExitPubkeys(keys1, reportItems, { value: keysFee1 });
 
       await triggerableExitMock.blockProcessing();
       //after block processing block the fee would be increased
-      expect(await triggerableExitMock.getExitFee()).to.be.equal(2n);
+
+      const exitFee2 = await triggerableExitMock.getExitFee();
+      expect(exitFee2).to.be.equal(2n);
+
+      const keysFee2 = ether((exitFee2 * BigInt(keys1.length)).toString());
 
       // const gasEstimate2 = await oracle
       //   .connect(stranger)
       //   .forcedExitPubkeys.estimateGas(keys1, reportItems, { value: ether("1.0") });
-      await oracle.connect(stranger).forcedExitPubkeys(keys1, reportItems, { value: ether("1.0") });
+      await oracle.connect(stranger).forcedExitPubkeys(keys1, reportItems, { value: keysFee2 });
     });
   });
 });
