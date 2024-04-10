@@ -2,6 +2,7 @@ import { assert } from "chai";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 
 import {
   AccountingOracle,
@@ -62,7 +63,7 @@ async function main() {
   const [user1, user2, oracleMember1, oracleMember2] = await ethers.getSigners();
   const protocol = await loadDeployedProtocol(state);
 
-  await checkLDOCanBeTransferred(protocol.ldo, state);
+  await checkLdoCanBeTransferred(protocol.ldo, state);
 
   await prepareProtocolForSubmitDepositReportWithdrawalFlow(
     protocol,
@@ -119,9 +120,10 @@ async function loadDeployedProtocol(state: DeploymentState) {
   };
 }
 
-async function checkLDOCanBeTransferred(ldo: LoadedContract<MiniMeToken>, state: DeploymentState) {
+async function checkLdoCanBeTransferred(ldo: LoadedContract<MiniMeToken>, state: DeploymentState) {
   const ldoHolder = Object.keys(state.vestingParams.holders)[0];
   const ldoHolderSigner = await ethers.provider.getSigner(ldoHolder);
+  await setBalance(ldoHolder, ether("10"));
   await ethers.provider.send("hardhat_impersonateAccount", [ldoHolder]);
   await ldo.connect(ldoHolderSigner).transfer(ADDRESS_1, ether("1"));
   assert.equal(await ldo.balanceOf(ADDRESS_1), ether("1"));
@@ -146,6 +148,9 @@ async function prepareProtocolForSubmitDepositReportWithdrawalFlow(
   await ethers.provider.send("hardhat_impersonateAccount", [voting.address]);
   await ethers.provider.send("hardhat_impersonateAccount", [depositSecurityModuleAddress]);
   await ethers.provider.send("hardhat_impersonateAccount", [agent.address]);
+  await setBalance(voting.address, ether("10"));
+  await setBalance(agent.address, ether("10"));
+  await setBalance(depositSecurityModuleAddress, ether("10"));
   const votingSigner = await ethers.provider.getSigner(voting.address);
   const agentSigner = await ethers.provider.getSigner(agent.address);
 
@@ -255,7 +260,6 @@ async function checkSubmitDepositReportWithdrawal(
   await advanceChainTime(parseInt(timeToWaitTillReportWindow.toString()));
 
   const stat = await lido.getBeaconStat();
-  // const clBalance = toBN(stat.depositedValidators).mul(toBN(e18(32)));
   const clBalance = BigInt(stat.depositedValidators) * ether("32");
 
   const { refSlot } = await hashConsensusForAO.getCurrentFrame();
