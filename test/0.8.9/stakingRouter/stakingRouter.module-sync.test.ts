@@ -189,8 +189,16 @@ describe("StakingRouter:module-sync", () => {
       });
     });
 
+    context("getAllNodeOperatorDigests", () => {
+      it("Returns all node operator digests", async () => {
+        expect(await stakingRouter.getAllNodeOperatorDigests(moduleId)).to.deep.equal([
+          [0n, true, nodeOperatorSummary],
+        ]);
+      });
+    });
+
     context("getNodeOperatorDigests (by offset)", () => {
-      it("getNodeOperatorDigests", async () => {
+      it("Returns node operator digests by offset and limit", async () => {
         expect(await stakingRouter["getNodeOperatorDigests(uint256,uint256,uint256)"](moduleId, 0n, 1n)).to.deep.equal([
           [0n, true, nodeOperatorSummary],
         ]);
@@ -198,10 +206,38 @@ describe("StakingRouter:module-sync", () => {
     });
 
     context("getNodeOperatorDigests (by ids)", () => {
-      it("getNodeOperatorDigests", async () => {
+      it("Returns node operator digests by ids", async () => {
         expect(await stakingRouter["getNodeOperatorDigests(uint256,uint256[])"](moduleId, [0n])).to.deep.equal([
           [0n, true, nodeOperatorSummary],
         ]);
+      });
+    });
+
+    context("getStakingModuleNonce", () => {
+      it("Returns 0 initially", async () => {
+        expect(await stakingRouter.getStakingModuleNonce(moduleId)).to.equal(0n);
+      });
+
+      it("Returns the updated nonce", async () => {
+        await stakingModule.mock__getNonce(1n);
+
+        expect(await stakingRouter.getStakingModuleNonce(moduleId)).to.equal(1n);
+      });
+    });
+
+    context("getStakingModuleLastDepositBlock", () => {
+      it("Returns initially the register block number", async () => {
+        expect(await stakingRouter.getStakingModuleLastDepositBlock(moduleId)).to.equal(lastDepositBlock);
+      });
+    });
+
+    context("getStakingModuleActiveValidatorsCount", () => {
+      it("Returns the number of active validators in the module", async () => {
+        const [exitedValidators, depositedValidators] = stakingModuleSummary;
+
+        expect(await stakingRouter.getStakingModuleActiveValidatorsCount(moduleId)).to.equal(
+          Number(depositedValidators) - Number(exitedValidators),
+        );
       });
     });
   });
