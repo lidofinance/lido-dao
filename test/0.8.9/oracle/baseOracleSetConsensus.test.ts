@@ -19,7 +19,7 @@ import {
   HASH_2,
   SECONDS_PER_SLOT,
   SLOTS_PER_EPOCH,
-} from "./baseOracleAccessControl.test";
+} from "./baseOracle";
 
 describe("BaseOracle.sol", () => {
   let admin: HardhatEthersSigner;
