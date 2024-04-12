@@ -54,6 +54,7 @@ describe("StakingRouter:module-sync", () => {
     // grant roles
 
     await Promise.all([
+      stakingRouter.grantRole(await stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(), admin),
       stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_MANAGE_ROLE(), admin),
       stakingRouter.grantRole(await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(), admin),
       stakingRouter.grantRole(await stakingRouter.UNSAFE_SET_EXITED_VALIDATORS_ROLE(), admin),
@@ -239,6 +240,36 @@ describe("StakingRouter:module-sync", () => {
           Number(depositedValidators) - Number(exitedValidators),
         );
       });
+    });
+  });
+
+  context("setWithdrawalCredentials", () => {
+    it("Reverts if the caller does not have the role", async () => {
+      await expect(
+        stakingRouter.connect(user).setWithdrawalCredentials(hexlify(randomBytes(32))),
+      ).to.be.revertedWithOZAccessControlError(user.address, await stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE());
+    });
+
+    it("Set new withdrawal credentials and informs modules", async () => {
+      const newWithdrawalCredentials = hexlify(randomBytes(32));
+
+      await expect(stakingRouter.setWithdrawalCredentials(newWithdrawalCredentials))
+        .to.emit(stakingRouter, "WithdrawalCredentialsSet")
+        .withArgs(newWithdrawalCredentials, admin.address)
+        .and.to.emit(stakingModule, "Mock__WithdrawalCredentialsChanged");
+    });
+
+    it("Reverts if the hook fails without revert data", async () => {
+      await stakingModule.mock__onWithdrawalCredentialsChanged(true, "");
+
+      await expect(stakingRouter.setWithdrawalCredentials(hexlify(randomBytes(32)))).to.be.revertedWithCustomError(
+        stakingRouter,
+        "UnrecoverableModuleError",
+      );
+    });
+
+    it("Logs the revert data if the hook fails", async () => {
+      // TODO
     });
   });
 

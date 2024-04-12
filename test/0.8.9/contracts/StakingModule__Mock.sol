@@ -221,5 +221,24 @@ contract StakingModule__Mock is IStakingModule {
     onExitedAndStuckValidatorsCountsUpdatedShouldRevertWithMessage = revertMessage;
   }
 
-  function onWithdrawalCredentialsChanged() external {}
+  event Mock__WithdrawalCredentialsChanged();
+
+  bool private onWithdrawalCredentialsChangedShouldRevert = false;
+  string private onWithdrawalCredentialsChangedShouldRevertWithMessage = "";
+
+  function onWithdrawalCredentialsChanged() external {
+    if (onWithdrawalCredentialsChangedShouldRevert) {
+      if (bytes(onWithdrawalCredentialsChangedShouldRevertWithMessage).length > 0) {
+        require(false, onWithdrawalCredentialsChangedShouldRevertWithMessage);
+      }
+      require(false);
+    }
+
+    emit Mock__WithdrawalCredentialsChanged();
+  }
+
+  function mock__onWithdrawalCredentialsChanged(bool shouldRevert, string calldata revertMessage) external {
+    onWithdrawalCredentialsChangedShouldRevert = shouldRevert;
+    onWithdrawalCredentialsChangedShouldRevertWithMessage = revertMessage;
+  }
 }
