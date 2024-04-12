@@ -107,14 +107,12 @@ describe("BaseOracle.sol", async () => {
   let account1: HardhatEthersSigner;
   let account2: HardhatEthersSigner;
   let member1: HardhatEthersSigner;
-  let member2: HardhatEthersSigner;
   let oracle: BaseOracleTimeTravellable;
   let consensus: MockConsensusContract;
   let originalState: string;
 
   before(async () => {
-    [admin, account1, account2, member1, member2] = await ethers.getSigners();
-    console.log(account1, member2);
+    [admin, account1, account2, member1] = await ethers.getSigners();
   });
 
   const deploy = async (options = undefined) => {
@@ -174,6 +172,92 @@ describe("BaseOracle.sol", async () => {
         await oracle.connect(account2).setConsensusContract(await consensusContract2.getAddress());
         expect(await oracle.getConsensusContract()).to.be.equal(await consensusContract2.getAddress());
       });
+    });
+  });
+
+  context("MANAGE_CONSENSUS_VERSION_ROLE", () => {
+    beforeEach(deploy);
+    afterEach(rollback);
+
+    context("setConsensusVersion", () => {
+      it("should revert without MANAGE_CONSENSUS_VERSION_ROLE role", async () => {
+        const role = await oracle.MANAGE_CONSENSUS_VERSION_ROLE();
+
+        await expect(oracle.connect(account1).setConsensusVersion(1)).to.be.revertedWithOZAccessControlError(
+          account1.address,
+          role,
+        );
+        expect(await oracle.getConsensusVersion()).to.be.equal(CONSENSUS_VERSION);
+      });
+
+      it("should allow calling from a possessor of MANAGE_CONSENSUS_VERSION_ROLE role", async () => {
+        const role = await oracle.MANAGE_CONSENSUS_VERSION_ROLE();
+        await oracle.grantRole(role, account2);
+        await oracle.connect(account2).setConsensusVersion(2);
+
+        expect(await oracle.getConsensusVersion()).to.be.equal(2);
+      });
+    });
+  });
+
+  context("CONSENSUS_CONTRACT", () => {
+    beforeEach(deploy);
+    afterEach(rollback);
+
+    context("submitConsensusReport", async () => {
+      const initialRefSlot = Number(await oracle.getTime());
+
+      it("should revert from not a consensus contract", async () => {
+        await expect(
+          oracle.connect(account1).submitConsensusReport(HASH_1, initialRefSlot, initialRefSlot),
+        ).to.be.revertedWithCustomError(oracle, "SenderIsNotTheConsensusContract");
+
+        expect((await oracle.getConsensusReportLastCall()).callCount).to.be.equal(0);
+      });
+
+      it("should allow calling from a consensus contract", async () => {
+        await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, initialRefSlot + SLOTS_PER_FRAME);
+
+        expect((await oracle.getConsensusReportLastCall()).callCount).to.be.equal(1);
+      });
+    });
+  });
+
+  context("submitConsensusReport", () => {
+    let initialRefSlot: number;
+
+    before(async () => {
+      initialRefSlot = Number(await oracle.getTime());
+    });
+
+    beforeEach(deploy);
+    afterEach(rollback);
+
+    it("should revert from not a consensus contract", async () => {
+      await expect(
+        oracle.connect(account1).submitConsensusReport(HASH_1, initialRefSlot, initialRefSlot),
+      ).to.be.revertedWithCustomError(oracle, "SenderIsNotTheConsensusContract");
+
+      expect((await oracle.getConsensusReportLastCall()).callCount).to.be.equal(0);
+    });
+
+    it("should allow calling from a consensus contract", async () => {
+      await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, initialRefSlot + SLOTS_PER_FRAME);
+
+      expect((await oracle.getConsensusReportLastCall()).callCount).to.be.equal(1);
+    });
+
+    it("should allow to discard report from a consensus contract", async () => {
+      await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, initialRefSlot + SLOTS_PER_FRAME);
+      expect((await oracle.getConsensusReportLastCall()).callCount).to.be.equal(1);
+      await consensus.discardReportAsConsensus(initialRefSlot);
+    });
+
+    it("should revert on discard from stranger", async () => {
+      await expect(oracle.discardConsensusReport(initialRefSlot)).to.be.revertedWithCustomError(
+        oracle,
+        "SenderIsNotTheConsensusContract",
+      );
     });
   });
 });
