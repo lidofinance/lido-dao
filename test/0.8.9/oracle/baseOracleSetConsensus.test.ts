@@ -9,11 +9,14 @@ import { BaseOracleTimeTravellable, MockConsensusContract } from "typechain-type
 import { Snapshot } from "lib";
 
 import {
+  computeDeadlineFromRefSlot,
   computeEpochFirstSlotAt,
+  CONSENSUS_VERSION,
   deployBaseOracle,
   EPOCHS_PER_FRAME,
   GENESIS_TIME,
   HASH_1,
+  HASH_2,
   SECONDS_PER_SLOT,
   SLOTS_PER_EPOCH,
 } from "./baseOracleAccessControl.test";
@@ -21,7 +24,7 @@ import {
 describe("BaseOracle.sol", () => {
   let admin: HardhatEthersSigner;
   let member: HardhatEthersSigner;
-  // let notMember: HardhatEthersSigner;
+  let notMember: HardhatEthersSigner;
   let consensus: MockConsensusContract;
   let originalState: string;
   let baseOracle: BaseOracleTimeTravellable;
@@ -45,10 +48,9 @@ describe("BaseOracle.sol", () => {
     await Snapshot.restore(originalState);
   };
 
-  before(deployContract);
-
   describe("setConsensusContract safely changes used consensus contract", () => {
-    before(rollback);
+    before(deployContract);
+    after(rollback);
 
     it("reverts on zero address", async () => {
       await expect(baseOracle.setConsensusContract(ZeroAddress)).to.be.revertedWithCustomError(
@@ -122,6 +124,102 @@ describe("BaseOracle.sol", () => {
         .to.emit(baseOracle, "ConsensusHashContractSet")
         .withArgs(await newConsensusContract.getAddress(), await consensus.getAddress());
       expect(await baseOracle.getConsensusContract()).to.be.equal(await newConsensusContract.getAddress());
+    });
+  });
+
+  describe("setConsensusVersion updates contract state", () => {
+    before(deployContract);
+    after(rollback);
+
+    it("reverts on same version", async () => {
+      await expect(baseOracle.setConsensusVersion(CONSENSUS_VERSION)).to.be.revertedWithCustomError(
+        baseOracle,
+        "VersionCannotBeSame",
+      );
+    });
+
+    it("sets updated version", async () => {
+      const tx = await baseOracle.setConsensusVersion(2);
+      await expect(tx).to.emit(baseOracle, "ConsensusVersionSet").withArgs(2, CONSENSUS_VERSION);
+      const versionInState = await baseOracle.getConsensusVersion();
+      expect(versionInState).to.equal(2);
+    });
+  });
+
+  describe("_checkConsensusData checks provided data against internal state", () => {
+    before(deployContract);
+    after(rollback);
+    let deadline: number;
+
+    it("report is submitted", async () => {
+      deadline = computeDeadlineFromRefSlot(initialRefSlot);
+      await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, deadline);
+    });
+
+    it("reverts on mismatched slot", async () => {
+      await expect(baseOracle.checkConsensusData(initialRefSlot + 1, CONSENSUS_VERSION, HASH_1))
+        .to.be.revertedWithCustomError(baseOracle, "UnexpectedRefSlot")
+        .withArgs(initialRefSlot, initialRefSlot + 1);
+    });
+
+    it("reverts on mismatched consensus version", async () => {
+      await expect(baseOracle.checkConsensusData(initialRefSlot, CONSENSUS_VERSION + 1, HASH_1))
+        .to.be.revertedWithCustomError(baseOracle, "UnexpectedConsensusVersion")
+        .withArgs(CONSENSUS_VERSION, CONSENSUS_VERSION + 1);
+    });
+
+    it("reverts on mismatched hash", async () => {
+      await expect(baseOracle.checkConsensusData(initialRefSlot, CONSENSUS_VERSION, HASH_2))
+        .to.be.revertedWithCustomError(baseOracle, "UnexpectedDataHash")
+        .withArgs(HASH_1, HASH_2);
+    });
+
+    it("check succeeds", async () => {
+      await baseOracle.checkConsensusData(initialRefSlot, CONSENSUS_VERSION, HASH_1);
+    });
+  });
+
+  describe("_checkProcessingDeadline checks report processing deadline", () => {
+    before(deployContract);
+    after(rollback);
+    let deadline: number;
+
+    it("report is submitted", async () => {
+      deadline = computeDeadlineFromRefSlot(initialRefSlot);
+      await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, deadline);
+    });
+
+    it("reverts if deadline is missed", async () => {
+      await baseOracle.setTime(deadline + 10);
+      await expect(baseOracle.checkProcessingDeadline())
+        .to.be.revertedWithCustomError(baseOracle, "ProcessingDeadlineMissed")
+        .withArgs(deadline);
+    });
+  });
+
+  describe("_isConsensusMember correctly check address for consensus membership trough consensus contract", () => {
+    before(deployContract);
+    after(rollback);
+
+    it("returns false on non member", async () => {
+      const r = await baseOracle.isConsensusMember(notMember);
+      expect(r).to.be.false;
+    });
+
+    it("returns true on member", async () => {
+      const r = await baseOracle.isConsensusMember(member);
+      expect(r).to.be.true;
+    });
+  });
+
+  describe("_getCurrentRefSlot correctly gets refSlot trough consensus contract", () => {
+    before(deployContract);
+    after(rollback);
+
+    it("refSlot matches", async () => {
+      const oracle_slot = await baseOracle.getCurrentRefSlot();
+      const consensus_slot = (await consensus.getCurrentFrame()).refSlot;
+      expect(oracle_slot).to.be.equal(consensus_slot);
     });
   });
 });
