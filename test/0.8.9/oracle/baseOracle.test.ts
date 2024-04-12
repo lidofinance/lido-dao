@@ -3,7 +3,9 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { MockConsensusContract } from "typechain-types";
+import { BaseOracleTimeTravellable, MockConsensusContract } from "typechain-types";
+
+import { Snapshot } from "lib";
 
 const SLOTS_PER_EPOCH = 32;
 const SECONDS_PER_SLOT = 12;
@@ -71,7 +73,7 @@ async function deployBaseOracle(
   return { oracle, consensusContract };
 }
 
-module.exports = {
+export {
   INITIAL_FAST_LANE_LENGTH_SLOTS,
   INITIAL_EPOCH,
   SLOTS_PER_EPOCH,
@@ -101,21 +103,77 @@ module.exports = {
 };
 
 describe("BaseOracle.sol", async () => {
-  const [admin] = await ethers.getSigners();
+  let admin: HardhatEthersSigner;
+  let account1: HardhatEthersSigner;
+  let account2: HardhatEthersSigner;
+  let member1: HardhatEthersSigner;
+  let member2: HardhatEthersSigner;
+  let oracle: BaseOracleTimeTravellable;
+  let consensus: MockConsensusContract;
+  let originalState: string;
+
+  before(async () => {
+    [admin, account1, account2, member1, member2] = await ethers.getSigners();
+    console.log(account1, member2);
+  });
+
+  const deploy = async (options = undefined) => {
+    const deployed = await deployBaseOracle(admin, options);
+    oracle = deployed.oracle;
+    consensus = deployed.consensusContract;
+    originalState = await Snapshot.take();
+  };
+
+  const rollback = async () => {
+    await Snapshot.restore(originalState);
+  };
 
   context("AccountingOracle deployment and initial configuration", () => {
-    it("deploying base oracle ", async () => {
-      await deployBaseOracle(admin);
+    before(deploy);
+    after(rollback);
+
+    it("deploying oracle", async () => {
+      expect(oracle).to.be.ok;
+      expect(consensus).to.be.ok;
     });
 
     it("reverts when slotsPerSecond is zero", async () => {
-      const oracle = await deployBaseOracle(admin);
       await expect(deployBaseOracle(admin, { secondsPerSlot: 0 })).to.be.revertedWithCustomError(
-        oracle.oracle,
+        oracle,
         "SecondsPerSlotCannotBeZero",
       );
     });
+  });
 
-    // TODO: add more base tests
+  context("MANAGE_CONSENSUS_CONTRACT_ROLE", () => {
+    beforeEach(deploy);
+    afterEach(rollback);
+
+    context("setConsensusContract", () => {
+      it("should revert without MANAGE_CONSENSUS_CONTRACT_ROLE role", async () => {
+        const role = await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE();
+        await expect(oracle.setConsensusContract(member1)).to.be.revertedWithOZAccessControlError(admin.address, role);
+
+        expect(await oracle.getConsensusContract()).to.be.equal(await consensus.getAddress());
+      });
+
+      it("should allow calling from a possessor of MANAGE_CONSENSUS_CONTRACT_ROLE role", async () => {
+        const consensusContract2 = await ethers.deployContract("MockConsensusContract", [
+          SECONDS_PER_EPOCH,
+          SECONDS_PER_SLOT,
+          GENESIS_TIME,
+          EPOCHS_PER_FRAME,
+          INITIAL_EPOCH,
+          INITIAL_FAST_LANE_LENGTH_SLOTS,
+          admin,
+        ]);
+
+        const role = await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE();
+
+        await oracle.grantRole(role, account2);
+        await oracle.connect(account2).setConsensusContract(await consensusContract2.getAddress());
+        expect(await oracle.getConsensusContract()).to.be.equal(await consensusContract2.getAddress());
+      });
+    });
   });
 });
