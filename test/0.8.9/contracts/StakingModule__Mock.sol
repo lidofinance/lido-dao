@@ -199,7 +199,10 @@ contract StakingModule__Mock is IStakingModule {
   function obtainDepositData(
     uint256 _depositsCount,
     bytes calldata _depositCalldata
-  ) external returns (bytes memory publicKeys, bytes memory signatures) {}
+  ) external returns (bytes memory publicKeys, bytes memory signatures) {
+    publicKeys = new bytes(48 * _depositsCount);
+    signatures = new bytes(96 * _depositsCount);
+  }
 
   event Mock__onExitedAndStuckValidatorsCountsUpdated();
 

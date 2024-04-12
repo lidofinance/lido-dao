@@ -6,7 +6,7 @@ import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import {
-  BeaconChainDepositor__factory,
+  DepositContract__MockForBeaconChainDepositor,
   DepositContract__MockForBeaconChainDepositor__factory,
   StakingModule__Mock,
   StakingModule__Mock__factory,
@@ -14,15 +14,17 @@ import {
   StakingRouter__factory,
 } from "typechain-types";
 
-import { certainAddress, getNextBlock, proxify } from "lib";
+import { ether, getNextBlock, proxify } from "lib";
 
 describe("StakingRouter:module-sync", () => {
   let deployer: HardhatEthersSigner;
   let admin: HardhatEthersSigner;
   let user: HardhatEthersSigner;
+  let lido: HardhatEthersSigner;
 
   let stakingRouter: StakingRouter;
   let stakingModule: StakingModule__Mock;
+  let depositContract: DepositContract__MockForBeaconChainDepositor;
 
   let moduleId: bigint;
   let stakingModuleAddress: string;
@@ -36,18 +38,17 @@ describe("StakingRouter:module-sync", () => {
   const targetShare = 1_00n;
 
   beforeEach(async () => {
-    [deployer, admin, user] = await ethers.getSigners();
+    [deployer, admin, user, lido] = await ethers.getSigners();
 
-    const depositContract = await new DepositContract__MockForBeaconChainDepositor__factory(deployer).deploy();
-    const beaconChainDepositor = await new BeaconChainDepositor__factory(deployer).deploy(depositContract);
-    const impl = await new StakingRouter__factory(deployer).deploy(beaconChainDepositor);
+    depositContract = await new DepositContract__MockForBeaconChainDepositor__factory(deployer).deploy();
+    const impl = await new StakingRouter__factory(deployer).deploy(depositContract);
 
     [stakingRouter] = await proxify({ impl, admin });
 
     // initialize staking router
     await stakingRouter.initialize(
       admin,
-      certainAddress("test:staking-router-modules:lido"), // mock lido address
+      lido,
       hexlify(randomBytes(32)), // mock withdrawal credentials
     );
 
@@ -56,6 +57,7 @@ describe("StakingRouter:module-sync", () => {
     await Promise.all([
       stakingRouter.grantRole(await stakingRouter.MANAGE_WITHDRAWAL_CREDENTIALS_ROLE(), admin),
       stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_MANAGE_ROLE(), admin),
+      stakingRouter.grantRole(await stakingRouter.STAKING_MODULE_PAUSE_ROLE(), admin),
       stakingRouter.grantRole(await stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(), admin),
       stakingRouter.grantRole(await stakingRouter.UNSAFE_SET_EXITED_VALIDATORS_ROLE(), admin),
       stakingRouter.grantRole(await stakingRouter.REPORT_REWARDS_MINTED_ROLE(), admin),
@@ -269,7 +271,7 @@ describe("StakingRouter:module-sync", () => {
     });
 
     it("Logs the revert data if the hook fails", async () => {
-      // TODO
+      // TODO: catch lowLevelData
     });
   });
 
@@ -357,7 +359,7 @@ describe("StakingRouter:module-sync", () => {
     });
 
     it("Logs the revert data if the hook fails", async () => {
-      // TODO
+      // TODO: catch lowLevelData
     });
   });
 
@@ -736,7 +738,69 @@ describe("StakingRouter:module-sync", () => {
     });
 
     it("Logs the revert data if the hook fails", async () => {
-      // TODO
+      // TODO: catch lowLevelData
+    });
+  });
+
+  context("deposit", () => {
+    beforeEach(async () => {
+      stakingRouter = stakingRouter.connect(lido);
+    });
+
+    it("Reverts if the caller is not Lido", async () => {
+      await expect(stakingRouter.connect(user).deposit(100n, moduleId, "0x")).to.be.revertedWithCustomError(
+        stakingRouter,
+        "AppAuthLidoFailed",
+      );
+    });
+
+    it("Reverts if withdrawal credentials are not set", async () => {
+      await stakingRouter.connect(admin).setWithdrawalCredentials(bigintToHex(0n, true, 32));
+
+      await expect(stakingRouter.deposit(100n, moduleId, "0x")).to.be.revertedWithCustomError(
+        stakingRouter,
+        "EmptyWithdrawalsCredentials",
+      );
+    });
+
+    it("Reverts if the staking module is not active", async () => {
+      await stakingRouter.connect(admin).pauseStakingModule(moduleId);
+
+      await expect(stakingRouter.deposit(100n, moduleId, "0x")).to.be.revertedWithCustomError(
+        stakingRouter,
+        "StakingModuleNotActive",
+      );
+    });
+
+    it("Reverts if ether does correspond to the number of deposits", async () => {
+      const deposits = 2n;
+      const depositValue = ether("32.0");
+      const correctAmount = deposits * depositValue;
+      const etherToSend = correctAmount + 1n;
+
+      await expect(
+        stakingRouter.deposit(deposits, moduleId, "0x", {
+          value: etherToSend,
+        }),
+      )
+        .to.be.revertedWithCustomError(stakingRouter, "InvalidDepositsValue")
+        .withArgs(etherToSend, deposits);
+    });
+
+    it("Does not submit 0 deposits", async () => {
+      await expect(stakingRouter.deposit(0n, moduleId, "0x")).not.to.emit(depositContract, "Deposited__MockEvent");
+    });
+
+    it("Reverts if ether does correspond to the number of deposits", async () => {
+      const deposits = 2n;
+      const depositValue = ether("32.0");
+      const correctAmount = deposits * depositValue;
+
+      await expect(
+        stakingRouter.deposit(deposits, moduleId, "0x", {
+          value: correctAmount,
+        }),
+      ).to.emit(depositContract, "Deposited__MockEvent");
     });
   });
 });
