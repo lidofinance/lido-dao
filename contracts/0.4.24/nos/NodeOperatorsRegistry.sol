@@ -59,7 +59,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         uint256 refundedValidatorsCount,
         uint256 stuckPenaltyEndTimestamp
     );
-    event TargetValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 targetValidatorsCount);
+    event TargetValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 targetValidatorsCount, uint256 targetLimitMode);
     event NodeOperatorPenalized(address indexed recipientAddress, uint256 sharesPenalizedAmount);
 
     // Enum to represent the state of the reward distribution process
@@ -648,7 +648,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         operatorTargetStats.set(TARGET_VALIDATORS_COUNT_OFFSET, _targetLimitMode > 0 ? _targetLimit : 0);
         _saveOperatorTargetValidatorsStats(_nodeOperatorId, operatorTargetStats);
 
-        emit TargetValidatorsCountChanged(_nodeOperatorId, _targetLimit);
+        emit TargetValidatorsCountChanged(_nodeOperatorId, _targetLimit, _targetLimitMode);
 
         _updateSummaryMaxValidatorsCount(_nodeOperatorId);
         _increaseValidatorsKeysNonce();
@@ -860,7 +860,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
                         + operatorTargetStats.get(TARGET_VALIDATORS_COUNT_OFFSET)
                 )
             );
-            }
         }
 
         oldMaxSigningKeysCount = operatorTargetStats.get(MAX_VALIDATORS_COUNT_OFFSET);
@@ -910,7 +909,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
             }
         }
 
-        allocatedKeysCount =
+        (allocatedKeysCount, activeKeyCountsAfterAllocation) =
             MinFirstAllocationStrategy.allocate(activeKeyCountsAfterAllocation, activeKeysCapacities, _keysCount);
 
         /// @dev method NEVER allocates more keys than was requested
