@@ -243,4 +243,76 @@ describe("BaseOracle.sol", () => {
         .withArgs(refSlot2Deadline);
     });
   });
+
+  describe("discardConsensusReport", () => {
+    let nextRefSlot: number;
+
+    before(async () => {
+      await deployContract();
+      nextRefSlot = computeNextRefSlotFromRefSlot(initialRefSlot);
+    });
+
+    after(rollback);
+
+    it("noop if no report for this frame", async () => {
+      const tx = await consensus.discardReportAsConsensus(initialRefSlot);
+      await expect(tx).not.to.emit(baseOracle, "ReportDiscarded");
+    });
+
+    it("initial report", async () => {
+      await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, computeDeadlineFromRefSlot(initialRefSlot));
+    });
+
+    it("noop if discarding future report", async () => {
+      const tx = await consensus.discardReportAsConsensus(nextRefSlot);
+      await expect(tx).not.to.emit(baseOracle, "ReportDiscarded");
+    });
+
+    it("reverts for invalid slot", async () => {
+      await expect(consensus.discardReportAsConsensus(initialRefSlot - 1))
+        .to.be.revertedWithCustomError(baseOracle, "RefSlotCannotDecrease")
+        .withArgs(initialRefSlot - 1, initialRefSlot);
+    });
+
+    it("discards report and throws events", async () => {
+      const tx = await consensus.discardReportAsConsensus(initialRefSlot);
+      await expect(tx).to.emit(baseOracle, "ReportDiscarded").withArgs(initialRefSlot, HASH_1);
+      const currentReport = await baseOracle.getConsensusReport();
+      expect(currentReport.hash).to.be.equal(ZERO_HASH);
+      expect(currentReport.refSlot).to.be.equal(initialRefSlot);
+      expect(currentReport.processingDeadlineTime).to.be.equal(computeDeadlineFromRefSlot(initialRefSlot));
+      expect(currentReport.processingStarted).to.be.false;
+    });
+
+    it("internal _handleConsensusReportDiscarded was called during discard", async () => {
+      const discardedReport = await baseOracle.lastDiscardedReport();
+      expect(discardedReport.hash).to.be.equal(HASH_1);
+      expect(discardedReport.refSlot).to.be.equal(initialRefSlot);
+      expect(discardedReport.processingDeadlineTime).to.be.equal(computeDeadlineFromRefSlot(initialRefSlot));
+    });
+
+    it("cannot start processing on zero report", async () => {
+      await expect(baseOracle.startProcessing()).to.be.revertedWithCustomError(
+        baseOracle,
+        "NoConsensusReportToProcess",
+      );
+    });
+
+    it("report can be resubmitted after discard", async () => {
+      await consensus.submitReportAsConsensus(HASH_2, initialRefSlot, computeDeadlineFromRefSlot(initialRefSlot));
+      const currentReport = await baseOracle.getConsensusReport();
+      expect(currentReport.hash).to.be.equal(HASH_2);
+      expect(currentReport.refSlot).to.be.equal(initialRefSlot);
+      expect(currentReport.processingDeadlineTime).to.be.equal(computeDeadlineFromRefSlot(initialRefSlot));
+      expect(currentReport.processingStarted).to.be.false;
+      await baseOracle.startProcessing();
+    });
+
+    it("reverts if processing started", async () => {
+      await expect(consensus.discardReportAsConsensus(initialRefSlot)).to.be.revertedWithCustomError(
+        baseOracle,
+        "RefSlotAlreadyProcessing",
+      );
+    });
+  });
 });
