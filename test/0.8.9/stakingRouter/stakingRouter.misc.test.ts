@@ -13,7 +13,7 @@ import {
   StakingRouter__factory,
 } from "typechain-types";
 
-import { certainAddress, ether, proxify } from "lib/proxy";
+import { certainAddress, ether, proxify } from "lib";
 
 describe("StakingRouter", () => {
   let deployer: HardhatEthersSigner;
