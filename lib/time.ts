@@ -23,6 +23,20 @@ export async function getNextBlockTimestamp() {
   return nextBlockTimestamp;
 }
 
+export async function getNextBlockNumber() {
+  const latestBlock = BigInt(await time.latestBlock());
+  return latestBlock + 1n;
+}
+
+export async function getNextBlock() {
+  const [timestamp, number] = await Promise.all([getNextBlockTimestamp(), getNextBlockNumber()]);
+
+  return {
+    timestamp,
+    number,
+  };
+}
+
 export async function advanceChainTime(seconds: number) {
   await ethers.provider.send("evm_increaseTime", [seconds]);
   await ethers.provider.send("evm_mine");
