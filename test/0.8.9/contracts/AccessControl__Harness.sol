@@ -6,7 +6,7 @@ pragma solidity 0.8.9;
 
 import {AccessControl} from "contracts/0.8.9/utils/access/AccessControl.sol";
 
-contract AccessControlHarness is AccessControl {
+contract AccessControl__Harness is AccessControl {
 
   bytes32 public constant TEST_ADMIN_ROLE = keccak256("TEST_ADMIN_ROLE");
 

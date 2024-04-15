@@ -66,6 +66,16 @@ All contributions must follow the established conventions:
 
 The repository includes a commit hook that checks your code and commit messages, resolve any issues before submitting a pull request.
 
+## Branches
+
+### `master`
+
+The production branch of the protocol and the default branch of the repository. The [deployed protocol contracts](https://docs.lido.fi/deployed-contracts/) must match what is stored in the `/contracts` directory. Pull requests to `master` must originate from `develop` branch and have at least one approving review before merging.
+
+### `develop`
+
+The development branch. All pull requests to `master` must be submitted to `develop` first for peer review. If appropriate, delete the feature branch after merging to `develop`.
+
 ## Repository structure
 
 ### Contracts
@@ -82,11 +92,23 @@ This repository features a Hardhat-Foundry dual setup:
 
 #### Hardhat
 
-Hardhat tests are all located in `/tests` in the root of the project. Each subdirectory name corresponds to the version of the contract being tested, mirroring the `/contracts` directory structure. Integration, regression and other non-unit tests are placed into corresponding subdirectories, e.g. `/tests/integration/`, `/tests/regression`, etc.
+Hardhat tests are all located in `/tests` in the root of the project.
+Each subdirectory name corresponds to the version of the contract being tested, mirroring the `/contracts` directory
+structure. Integration, regression and other non-unit tests are placed into corresponding subdirectories,
+e.g. `/tests/integration/`, `/tests/regression`, etc.
 
 #### Foundry
 
-Foundry tests are located in `TDB`.
+Foundry's Solidity tests are used only for fuzzing library contracts or functions performing complex calculations
+or byte juggling. Solidity tests are located under `/tests` and in the appropriate subdirectories. Naming conventions
+follow the Foundry's [documentation](https://book.getfoundry.sh/tutorials/best-practices#general-test-guidance):
+
+- for tests, postfix `.t.sol` is used (e.g., `MyContract.t.sol`)
+- for scripts, postfix `.s.sol` is used (e.g., `MyScript.s.sol`)
+- for helpers, postfix `.h.sol` is used (e.g., `MyHelper.h.sol`).
+
+Following the convention of distinguishing Hardhat test files from Foundry-related files is essential to ensure the
+proper execution of Hardhat tests.
 
 #### Mocks
 

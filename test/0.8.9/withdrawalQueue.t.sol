@@ -25,31 +25,52 @@ contract WQInvariants is Test {
         selectors[1] = WQHandler.finalize.selector;
         selectors[2] = WQHandler.claim.selector;
 
-        targetSelector(FuzzSelector({
-            addr: address(handler),
-            selectors: selectors
-        }));
+        targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
 
         targetContract(address(handler));
     }
 
-    function invariant_queueStETH() public {
+    /**
+     * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-invariant-configs
+     * forge-config: default.invariant.runs = 256
+     * forge-config: default.invariant.depth = 256
+     * forge-config: default.invariant.fail-on-revert = true
+     */
+    function invariant_queueStETH() public view {
         uint256 lastRequestId = wq.getLastRequestId();
         uint256 naiveUnfinalizedStETH = handler.sumOfStETHInQueue(wq.getLastFinalizedRequestId() + 1, lastRequestId);
 
         assertEq(naiveUnfinalizedStETH, wq.unfinalizedStETH(), "cumulative stETH in queue is equal to sum of requests");
     }
 
-    function invariant_queueLength() public {
+    /**
+     * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-invariant-configs
+     * forge-config: default.invariant.runs = 256
+     * forge-config: default.invariant.depth = 256
+     * forge-config: default.invariant.fail-on-revert = true
+     */
+    function invariant_queueLength() public view {
         assertEq(wq.getLastRequestId(), handler.ghost_totalRequestNum(), "queue grows on request");
     }
 
-    function invariant_unfinalizedQueue() public {
+    /**
+     * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-invariant-configs
+     * forge-config: default.invariant.runs = 256
+     * forge-config: default.invariant.depth = 256
+     * forge-config: default.invariant.fail-on-revert = true
+     */
+    function invariant_unfinalizedQueue() public view {
         assertEq(wq.getLastRequestId() - wq.getLastFinalizedRequestId(), wq.unfinalizedRequestNumber());
         assertLe(wq.unfinalizedRequestNumber(), handler.ghost_totalRequestNum());
     }
 
-    function invariant_lockedEthIsLessThanInQueue() public {
+    /**
+     * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-invariant-configs
+     * forge-config: default.invariant.runs = 256
+     * forge-config: default.invariant.depth = 256
+     * forge-config: default.invariant.fail-on-revert = true
+     */
+    function invariant_lockedEthIsLessThanInQueue() public view {
         uint256 maxEthInTheQueue = handler.sumOfStETHInQueue(1, wq.getLastFinalizedRequestId());
         assertLe(
             wq.getLockedEtherAmount(),
@@ -58,7 +79,13 @@ contract WQInvariants is Test {
         );
     }
 
-    function invariant_lockedEthDecreasesOnClaim() public {
+    /**
+     * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-invariant-configs
+     * forge-config: default.invariant.runs = 256
+     * forge-config: default.invariant.depth = 256
+     * forge-config: default.invariant.fail-on-revert = true
+     */
+    function invariant_lockedEthDecreasesOnClaim() public view {
         assertEq(
             wq.getLockedEtherAmount(),
             handler.ghost_totalLockedEth() - handler.ghost_totalClaimedEth(),
@@ -66,7 +93,13 @@ contract WQInvariants is Test {
         );
     }
 
-    function invariant_totalLockedEthNaiveCheck() public {
+    /**
+     * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-invariant-configs
+     * forge-config: default.invariant.runs = 256
+     * forge-config: default.invariant.depth = 256
+     * forge-config: default.invariant.fail-on-revert = true
+     */
+    function invariant_totalLockedEthNaiveCheck() public view {
         assertLe(
             handler.ghost_totalLockedEth() - handler.naiveSumOfFinalizedRequestsEth(),
             wq.getLastFinalizedRequestId(),
@@ -74,7 +107,13 @@ contract WQInvariants is Test {
         );
     }
 
-    function invariant_requestCantBeClaimedAndNotFinalizedInTheSameTime() public {
+    /**
+     * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-invariant-configs
+     * forge-config: default.invariant.runs = 256
+     * forge-config: default.invariant.depth = 256
+     * forge-config: default.invariant.fail-on-revert = true
+     */
+    function invariant_requestCantBeClaimedAndNotFinalizedInTheSameTime() public view {
         uint256 lastId = wq.getLastRequestId();
         for (uint256 i = 1; i <= lastId; ++i) {
             WQBase.WithdrawalRequestStatus memory status = wq.status(i);

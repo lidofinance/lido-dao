@@ -3,15 +3,15 @@ import { ethers } from "hardhat";
 
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
-import { PausableUntilHarness } from "typechain-types";
+import { PausableUntil__Harness } from "typechain-types";
 
 import { MAX_UINT256 } from "lib";
 
 describe("PausableUtils", () => {
-  let pausable: PausableUntilHarness;
+  let pausable: PausableUntil__Harness;
 
   beforeEach(async () => {
-    pausable = await ethers.deployContract("PausableUntilHarness");
+    pausable = await ethers.deployContract("PausableUntil__Harness");
   });
 
   context("Constants", () => {
