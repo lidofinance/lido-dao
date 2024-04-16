@@ -18,6 +18,18 @@ contract Packed64x4__Harness {
     function set(uint8 n, uint256 x) public {
         Packed64x4.Packed memory temp = packed;
         temp.set(n, x);
-        packed = temp; // should be saved to storage to be used in other functions
+        packed = temp;
+    }
+
+    function add(uint8 n, uint256 x) public {
+        Packed64x4.Packed memory temp = packed;
+        temp.add(n, x);
+        packed = temp;
+    }
+
+    function sub(uint8 n, uint256 x) public {
+        Packed64x4.Packed memory temp = packed;
+        temp.sub(n, x);
+        packed = temp;
     }
 }
