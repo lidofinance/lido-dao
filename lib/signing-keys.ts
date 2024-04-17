@@ -1,4 +1,4 @@
-import { PUBKEY_LENGTH, SIGNATURE_LENGTH } from "./constants";
+import { PUBKEY_LENGTH_HEX, SIGNATURE_LENGTH_HEX } from "./constants";
 import { de0x } from "./string";
 
 class ValidatorKeys {
@@ -11,13 +11,8 @@ class ValidatorKeys {
       throw new Error("Public keys and signatures length mismatch");
     }
 
-    this.publicKeysList = publicKeys.map(
-      (k) => this.normalizeAndValidate("Public Key", k, PUBKEY_LENGTH * 2), // 2 hex characters per byte
-    );
-
-    this.signaturesList = signatures.map(
-      (s) => this.normalizeAndValidate("Signature", s, SIGNATURE_LENGTH * 2), // 2 hex characters per byte
-    );
+    this.publicKeysList = publicKeys.map((k) => this.normalizeAndValidate("Public Key", k, PUBKEY_LENGTH_HEX));
+    this.signaturesList = signatures.map((s) => this.normalizeAndValidate("Signature", s, SIGNATURE_LENGTH_HEX));
 
     this.count = this.publicKeysList.length;
   }
@@ -53,28 +48,23 @@ interface FakeValidatorKeysOptions {
 }
 
 class FakeValidatorKeys extends ValidatorKeys {
-  constructor(length: number, options: FakeValidatorKeysOptions = {}) {
-    const { seed, kFill, sFill } = {
-      seed: Math.floor(Math.random() * (10 ** 9 - 10 + 1)) + 10,
-      kFill: "f",
-      sFill: "e",
-      ...options,
-    };
+  constructor(length: number, { seed, kFill = "f", sFill = "e" }: FakeValidatorKeysOptions = {}) {
+    const seedMin = 10;
+    const seedMax = 10 ** 9;
+    const seedDefault = Math.min(Math.floor(Math.random() * (seedMax - seedMin + 1)) + seedMin, seedMax);
+    const effectiveSeed = seed || seedDefault;
 
     super(
-      FakeValidatorKeys.generateKeys(length, seed, PUBKEY_LENGTH, kFill),
-      FakeValidatorKeys.generateKeys(length, seed, SIGNATURE_LENGTH, sFill),
+      FakeValidatorKeys.generateKeys(length, effectiveSeed, PUBKEY_LENGTH_HEX, kFill),
+      FakeValidatorKeys.generateKeys(length, effectiveSeed, SIGNATURE_LENGTH_HEX, sFill),
     );
   }
 
-  /**
-   * Generates an array of padded hexadecimal strings.
-   **/
   private static generateKeys(length: number, seed: number, targetLength: number, fill: string): string[] {
     return Array.from({ length }, (_, i) => {
       const hex = Number(seed + i)
         .toString(16)
-        .padStart(targetLength * 2, fill);
+        .padStart(targetLength, fill);
       return `0x${hex}`;
     });
   }
