@@ -3,10 +3,11 @@ import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 
 import { BurnerStub, LidoLocatorStub, LidoStub, OracleReportSanityChecker, WithdrawalQueueStub } from "typechain-types";
 
-import { ether, Snapshot } from "lib";
+import { ether, randomAddress, Snapshot } from "lib";
 
 describe("OracleReportSanityChecker.sol", () => {
   let oracleReportSanityChecker: OracleReportSanityChecker;
@@ -42,12 +43,15 @@ describe("OracleReportSanityChecker.sol", () => {
   };
   let deployer: HardhatEthersSigner;
   let admin: HardhatEthersSigner;
-  let withdrawalVault: HardhatEthersSigner;
+  let withdrawalVault: LikeAddress;
   let elRewardsVault: HardhatEthersSigner;
   let accounts: HardhatEthersSigner[];
 
   before(async () => {
-    [deployer, admin, withdrawalVault, elRewardsVault, ...accounts] = await ethers.getSigners();
+    [deployer, admin, elRewardsVault, ...accounts] = await ethers.getSigners();
+    withdrawalVault = randomAddress();
+    await setBalance(withdrawalVault, ether("500.0"));
+
     // mine 1024 blocks with block duration 12 seconds
     await ethers.provider.send("hardhat_mine", ["0x" + Number(1024).toString(16), "0x" + Number(12).toString(16)]);
     lidoMock = await ethers.deployContract("LidoStub", []);
@@ -57,7 +61,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await lidoMock.getAddress(),
       withdrawalVault,
       await withdrawalQueueMock.getAddress(),
-      elRewardsVault,
+      elRewardsVault.address,
       await burnerMock.getAddress(),
     ]);
 
@@ -217,7 +221,7 @@ describe("OracleReportSanityChecker.sol", () => {
       const maxBasisPoints = 10_000n;
       const preCLBalance = ether("100000");
       const postCLBalance = ether("85000");
-      const withdrawalVaultBalance = ether("1000");
+      const withdrawalVaultBalance = ether("500");
       const unifiedPostCLBalance = postCLBalance + withdrawalVaultBalance;
       const oneOffCLBalanceDecreaseBP = (maxBasisPoints * (preCLBalance - unifiedPostCLBalance)) / preCLBalance;
 
