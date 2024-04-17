@@ -1,9 +1,5 @@
 import { PUBKEY_LENGTH, SIGNATURE_LENGTH } from "./constants";
-import { de0x, hexConcat, pad } from "./string";
-
-function randomInt(min: number, max: number) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+import { de0x } from "./string";
 
 class ValidatorKeys {
   public readonly count: number;
@@ -12,51 +8,75 @@ class ValidatorKeys {
 
   constructor(publicKeys: string[], signatures: string[]) {
     if (publicKeys.length !== signatures.length) {
-      throw new Error("Public keys & signatures length mismatch");
+      throw new Error("Public keys and signatures length mismatch");
     }
 
-    publicKeys = publicKeys.map(de0x);
-    signatures = signatures.map(de0x);
+    this.publicKeysList = publicKeys.map(
+      (k) => this.normalizeAndValidate("Public Key", k, PUBKEY_LENGTH * 2), // 2 hex characters per byte
+    );
 
-    if (!publicKeys.every((pk) => pk.length !== PUBKEY_LENGTH)) {
-      throw new Error("Invalid Public Key length");
-    }
+    this.signaturesList = signatures.map(
+      (s) => this.normalizeAndValidate("Signature", s, SIGNATURE_LENGTH * 2), // 2 hex characters per byte
+    );
 
-    if (!signatures.every((s) => s.length !== SIGNATURE_LENGTH)) {
-      throw new Error("Invalid Signature length");
-    }
-    this.count = publicKeys.length;
-    this.publicKeysList = publicKeys;
-    this.signaturesList = signatures;
+    this.count = this.publicKeysList.length;
   }
 
-  get(index: number) {
-    if (index >= this.count) {
-      throw new Error(`Index out of range`);
+  get(index: number): string[] {
+    if (index < 0 || index >= this.count) {
+      throw new Error("Index out of range");
     }
-
-    return ["0x" + this.publicKeysList[index], "0x" + this.signaturesList[index]];
+    return [`0x${this.publicKeysList[index]}`, `0x${this.signaturesList[index]}`];
   }
 
-  slice(start = 0, end = this.count) {
-    return [hexConcat(...this.publicKeysList.slice(start, end)), hexConcat(...this.signaturesList.slice(start, end))];
+  slice(start: number = 0, end: number = this.count): string[] {
+    const slicedPublicKeys = this.publicKeysList.slice(start, end);
+    const slicedSignatures = this.signaturesList.slice(start, end);
+
+    return [`0x${slicedPublicKeys.join("")}`, `0x${slicedSignatures.join("")}`];
+  }
+
+  private normalizeAndValidate(label: string, hexString: string, expectedLength: number): string {
+    const strippedHex = de0x(hexString);
+    if (strippedHex.length !== expectedLength) {
+      throw new Error(`Invalid ${label} length`);
+    }
+
+    return strippedHex;
   }
 }
 
+interface FakeValidatorKeysOptions {
+  seed?: number;
+  kFill?: string;
+  sFill?: string;
+}
+
 class FakeValidatorKeys extends ValidatorKeys {
-  constructor(length: number, { seed = randomInt(10, 10 ** 9), kFill = "f", sFill = "e" } = {}) {
+  constructor(length: number, options: FakeValidatorKeysOptions = {}) {
+    const { seed, kFill, sFill } = {
+      seed: Math.floor(Math.random() * (10 ** 9 - 10 + 1)) + 10,
+      kFill: "f",
+      sFill: "e",
+      ...options,
+    };
+
     super(
-      Array(length)
-        .fill(0)
-        .map((_, i) => Number(seed + i).toString(16))
-        .map((v) => (v.length % 2 === 0 ? v : "0" + v)) // make resulting hex str length representation even(faa -> 0faa)
-        .map((v) => pad("0x" + v, PUBKEY_LENGTH, kFill)),
-      Array(length)
-        .fill(0)
-        .map((_, i) => Number(seed + i).toString(16))
-        .map((v) => (v.length % 2 === 0 ? v : "0" + v)) // make resulting hex str length representation even(faa -> 0faa)
-        .map((v) => pad("0x" + v, SIGNATURE_LENGTH, sFill)),
+      FakeValidatorKeys.generateKeys(length, seed, PUBKEY_LENGTH, kFill),
+      FakeValidatorKeys.generateKeys(length, seed, SIGNATURE_LENGTH, sFill),
     );
+  }
+
+  /**
+   * Generates an array of padded hexadecimal strings.
+   **/
+  private static generateKeys(length: number, seed: number, targetLength: number, fill: string): string[] {
+    return Array.from({ length }, (_, i) => {
+      const hex = Number(seed + i)
+        .toString(16)
+        .padStart(targetLength * 2, fill);
+      return `0x${hex}`;
+    });
   }
 }
 

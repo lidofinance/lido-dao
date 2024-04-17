@@ -38,7 +38,8 @@ describe("SigningKeys.sol", () => {
       const offset = await signingKeys.getKeyOffset(NODE_OPERATOR_1, 0);
 
       const position = await signingKeys.KEYSSIGS_POSITION();
-      const packedData = solidityPackedKeccak256(["bytes32", "uint256", "uint256"], [position, NODE_OPERATOR_1, 0]); // keccak256(abi.encodePacked(KEYSSIGS_POSITION, NODE_OPERATOR_1, 0))
+      // keccak256(abi.encodePacked(KEYSSIGS_POSITION, NODE_OPERATOR_1, 0))
+      const packedData = solidityPackedKeccak256(["bytes32", "uint256", "uint256"], [position, NODE_OPERATOR_1, 0]);
 
       expect(offset).to.equal(packedData);
     });
@@ -47,7 +48,8 @@ describe("SigningKeys.sol", () => {
       const offset = await signingKeys.getKeyOffset(NODE_OPERATOR_2, 0);
 
       const position = await signingKeys.KEYSSIGS_POSITION();
-      const packedData = solidityPackedKeccak256(["bytes32", "uint256", "uint256"], [position, NODE_OPERATOR_2, 0]); // keccak256(abi.encodePacked(KEYSSIGS_POSITION, NODE_OPERATOR_2, 0))
+      // keccak256(abi.encodePacked(KEYSSIGS_POSITION, NODE_OPERATOR_2, 0))
+      const packedData = solidityPackedKeccak256(["bytes32", "uint256", "uint256"], [position, NODE_OPERATOR_2, 0]);
 
       expect(offset).to.equal(packedData);
     });
