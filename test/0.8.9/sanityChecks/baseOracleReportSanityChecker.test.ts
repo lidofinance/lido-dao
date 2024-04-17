@@ -43,7 +43,7 @@ describe("OracleReportSanityChecker.sol", () => {
   };
   let deployer: HardhatEthersSigner;
   let admin: HardhatEthersSigner;
-  let withdrawalVault: LikeAddress;
+  let withdrawalVault: string;
   let elRewardsVault: HardhatEthersSigner;
   let accounts: HardhatEthersSigner[];
 
