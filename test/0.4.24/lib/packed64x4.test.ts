@@ -3,14 +3,22 @@ import { ethers } from "hardhat";
 
 import { Packed64x4__Harness } from "typechain-types";
 
+import { Snapshot } from "lib";
+
 const OVER_UINT64_MAX = 2n ** 64n;
 
 describe("Packed64x4.sol", () => {
   let packed: Packed64x4__Harness;
 
-  beforeEach(async () => {
+  let originalState: string;
+
+  before(async () => {
     packed = await ethers.deployContract("Packed64x4__Harness");
   });
+
+  beforeEach(async () => (originalState = await Snapshot.take()));
+
+  afterEach(async () => await Snapshot.restore(originalState));
 
   context("get", () => {
     it("Returns the value from position", async () => {
