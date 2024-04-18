@@ -27,16 +27,20 @@ describe("BaseOracle.sol", () => {
   let initialRefSlot: number;
   let consensus: MockConsensusContract;
 
-  before(async () => {
-    [admin] = await ethers.getSigners();
-  });
-
   const deployContract = async () => {
     const deployed = await deployBaseOracle(admin, { initialEpoch: 1 });
     consensus = deployed.consensusContract;
     baseOracle = deployed.oracle;
     const time = Number(await baseOracle.getTime());
     initialRefSlot = computeEpochFirstSlotAt(time);
+  };
+
+  before(async () => {
+    [admin] = await ethers.getSigners();
+    await deployContract();
+  });
+
+  const takeSnapshot = async () => {
     originalState = await Snapshot.take();
   };
 
@@ -46,7 +50,7 @@ describe("BaseOracle.sol", () => {
 
   describe("submitConsensusReport is called and changes the contract state", () => {
     context("submitConsensusReport rejects a report whose deadline has already passed", () => {
-      before(deployContract);
+      before(takeSnapshot);
       after(rollback);
 
       it("the report is rejected", async () => {
@@ -59,7 +63,7 @@ describe("BaseOracle.sol", () => {
     });
 
     context("submitConsensusReport checks pre-conditions", () => {
-      before(deployContract);
+      before(takeSnapshot);
       after(rollback);
 
       it("only setConsensus contract can call submitConsensusReport", async () => {
@@ -131,11 +135,10 @@ describe("BaseOracle.sol", () => {
       let nextRefSlotDeadline: number;
 
       before(async () => {
-        await deployContract();
+        await takeSnapshot();
         nextRefSlot = computeNextRefSlotFromRefSlot(initialRefSlot);
         nextRefSlotDeadline = computeDeadlineFromRefSlot(nextRefSlot);
       });
-
       after(rollback);
 
       it("getConsensusReport at deploy returns empty state", async () => {
@@ -198,7 +201,7 @@ describe("BaseOracle.sol", () => {
     let refSlot1Deadline: number, refSlot2Deadline: number;
 
     before(async () => {
-      await deployContract();
+      await takeSnapshot();
       refSlot1 = computeNextRefSlotFromRefSlot(initialRefSlot);
       refSlot1Deadline = computeDeadlineFromRefSlot(refSlot1);
 
@@ -248,7 +251,7 @@ describe("BaseOracle.sol", () => {
     let nextRefSlot: number;
 
     before(async () => {
-      await deployContract();
+      await takeSnapshot();
       nextRefSlot = computeNextRefSlotFromRefSlot(initialRefSlot);
     });
 
