@@ -12,14 +12,12 @@ const INITIAL_EPOCH = 1;
 const INITIAL_FAST_LANE_LENGTH_SLOTS = 0;
 
 const SECONDS_PER_EPOCH = SLOTS_PER_EPOCH * SECONDS_PER_SLOT;
-const SECONDS_PER_FRAME = SECONDS_PER_EPOCH * EPOCHS_PER_FRAME;
 const SLOTS_PER_FRAME = EPOCHS_PER_FRAME * SLOTS_PER_EPOCH;
 
 const computeSlotAt = (time: number) => Math.floor((time - GENESIS_TIME) / SECONDS_PER_SLOT);
 const computeEpochAt = (time: number) => Math.floor(computeSlotAt(time) / SLOTS_PER_EPOCH);
 const computeEpochFirstSlot = (epoch: number) => epoch * SLOTS_PER_EPOCH;
 const computeEpochFirstSlotAt = (time: number) => computeEpochFirstSlot(computeEpochAt(time));
-const computeTimestampAtEpoch = (epoch: number) => GENESIS_TIME + epoch * SECONDS_PER_EPOCH;
 const computeTimestampAtSlot = (slot: number) => GENESIS_TIME + slot * SECONDS_PER_SLOT;
 const computeDeadlineFromRefSlot = (slot: number) => computeTimestampAtSlot(slot + SLOTS_PER_FRAME);
 const computeNextRefSlotFromRefSlot = (slot: number) => +slot + SLOTS_PER_FRAME;
@@ -29,10 +27,6 @@ const ZERO_HASH = "0x00000000000000000000000000000000000000000000000000000000000
 const HASH_1 = "0x1111111111111111111111111111111111111111111111111111111111111111";
 const HASH_2 = "0x2222222222222222222222222222222222222222222222222222222222222222";
 const HASH_3 = "0x3333333333333333333333333333333333333333333333333333333333333333";
-const HASH_4 = "0x4444444444444444444444444444444444444444444444444444444444444444";
-const HASH_5 = "0x5555555555555555555555555555555555555555555555555555555555555555";
-
-const UNREACHABLE_QUORUM = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
 const CONSENSUS_VERSION = 1;
 
@@ -78,23 +72,18 @@ export {
   GENESIS_TIME,
   EPOCHS_PER_FRAME,
   SECONDS_PER_EPOCH,
-  SECONDS_PER_FRAME,
   SLOTS_PER_FRAME,
   computeSlotAt,
   computeEpochAt,
   computeEpochFirstSlot,
   computeEpochFirstSlotAt,
   computeTimestampAtSlot,
-  computeTimestampAtEpoch,
   computeNextRefSlotFromRefSlot,
   computeDeadlineFromRefSlot,
   ZERO_HASH,
   HASH_1,
   HASH_2,
   HASH_3,
-  HASH_4,
-  HASH_5,
   CONSENSUS_VERSION,
-  UNREACHABLE_QUORUM,
   deployBaseOracle,
 };
