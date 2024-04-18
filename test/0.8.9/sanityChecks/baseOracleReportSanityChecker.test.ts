@@ -378,116 +378,122 @@ describe("OracleReportSanityChecker.sol", () => {
     });
   });
 
-  // describe('checkWithdrawalQueueOracleReport()', () => {
-  //   const oldRequestId = 1
-  //   const newRequestId = 2
-  //   let oldRequestCreationTimestamp, newRequestCreationTimestamp
-  //   const correctWithdrawalQueueOracleReport = {
-  //     lastFinalizableRequestId: oldRequestId,
-  //     refReportTimestamp: -1,
-  //   }
+  describe("checkWithdrawalQueueOracleReport()", () => {
+    const oldRequestId = 1;
+    const newRequestId = 2;
+    let oldRequestCreationTimestamp;
+    let newRequestCreationTimestamp: number;
+    const correctWithdrawalQueueOracleReport = {
+      lastFinalizableRequestId: oldRequestId,
+      refReportTimestamp: -1,
+    };
+    type CheckWithdrawalQueueOracleReportParameters = [number, number];
 
-  //   before(async () => {
-  //     const currentBlockTimestamp = await getCurrentBlockTimestamp()
-  //     correctWithdrawalQueueOracleReport.refReportTimestamp = currentBlockTimestamp
-  //     oldRequestCreationTimestamp = currentBlockTimestamp - defaultLimitsList.requestTimestampMargin
-  //     correctWithdrawalQueueOracleReport.lastFinalizableRequestId = oldRequestCreationTimestamp
-  //     await withdrawalQueueMock.setRequestTimestamp(oldRequestId, oldRequestCreationTimestamp)
-  //     newRequestCreationTimestamp = currentBlockTimestamp - Math.floor(defaultLimitsList.requestTimestampMargin / 2)
-  //     await withdrawalQueueMock.setRequestTimestamp(newRequestId, newRequestCreationTimestamp)
-  //   })
+    before(async () => {
+      const currentBlockTimestamp = await getCurrentBlockTimestamp();
+      correctWithdrawalQueueOracleReport.refReportTimestamp = currentBlockTimestamp;
+      oldRequestCreationTimestamp = currentBlockTimestamp - defaultLimitsList.requestTimestampMargin;
+      correctWithdrawalQueueOracleReport.lastFinalizableRequestId = oldRequestCreationTimestamp;
+      await withdrawalQueueMock.setRequestTimestamp(oldRequestId, oldRequestCreationTimestamp);
+      newRequestCreationTimestamp = currentBlockTimestamp - Math.floor(defaultLimitsList.requestTimestampMargin / 2);
+      await withdrawalQueueMock.setRequestTimestamp(newRequestId, newRequestCreationTimestamp);
+    });
 
-  //   it('reverts with the error IncorrectRequestFinalization() when the creation timestamp of requestIdToFinalizeUpTo is too close to report timestamp', async () => {
-  //     await assert.reverts(
-  //       oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
-  //         ...Object.values({
-  //           ...correctWithdrawalQueueOracleReport,
-  //           lastFinalizableRequestId: newRequestId,
-  //         })
-  //       ),
-  //       `IncorrectRequestFinalization(${newRequestCreationTimestamp})`
-  //     )
-  //   })
+    it("reverts with the error IncorrectRequestFinalization() when the creation timestamp of requestIdToFinalizeUpTo is too close to report timestamp", async () => {
+      await expect(
+        oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
+          ...(Object.values({
+            ...correctWithdrawalQueueOracleReport,
+            lastFinalizableRequestId: newRequestId,
+          }) as CheckWithdrawalQueueOracleReportParameters),
+        ),
+      )
+        .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectRequestFinalization")
+        .withArgs(newRequestCreationTimestamp);
+    });
 
-  //   it('passes all checks with correct withdrawal queue report data', async () => {
-  //     await oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
-  //       ...Object.values(correctWithdrawalQueueOracleReport)
-  //     )
-  //   })
+    it("passes all checks with correct withdrawal queue report data", async () => {
+      await oracleReportSanityChecker.checkWithdrawalQueueOracleReport(
+        ...(Object.values(correctWithdrawalQueueOracleReport) as CheckWithdrawalQueueOracleReportParameters),
+      );
+    });
 
-  //   it('set timestamp margin for finalization', async () => {
-  //     const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).requestTimestampMargin
-  //     const newValue = 3302
-  //     assert.notEquals(newValue, previousValue)
-  //     await assert.revertsOZAccessControl(
-  //       oracleReportSanityChecker.setRequestTimestampMargin(newValue, {
-  //         from: deployer,
-  //       }),
-  //       deployer,
-  //       'REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE'
-  //     )
-  //     const tx = await oracleReportSanityChecker.setRequestTimestampMargin(newValue, {
-  //       from: managersRoster.requestTimestampMarginManagers[0],
-  //     })
-  //     assert.equals((await oracleReportSanityChecker.getOracleReportLimits()).requestTimestampMargin, newValue)
-  //     assert.emits(tx, 'RequestTimestampMarginSet', { requestTimestampMargin: newValue })
-  //   })
-  // })
+    it("set timestamp margin for finalization", async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).requestTimestampMargin;
+      const newValue = 3302;
+      expect(newValue).to.not.equal(previousValue);
+      await expect(
+        oracleReportSanityChecker.connect(deployer).setRequestTimestampMargin(newValue),
+      ).to.be.revertedWithOZAccessControlError(
+        deployer.address,
+        await oracleReportSanityChecker.REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE(),
+      );
+      const tx = await oracleReportSanityChecker
+        .connect(managersRoster.requestTimestampMarginManagers[0])
+        .setRequestTimestampMargin(newValue);
+      expect((await oracleReportSanityChecker.getOracleReportLimits()).requestTimestampMargin).to.equal(newValue);
+      await expect(tx).to.emit(oracleReportSanityChecker, "RequestTimestampMarginSet").withArgs(newValue);
+    });
+  });
 
-  // describe('checkSimulatedShareRate', () => {
-  //   const correctSimulatedShareRate = {
-  //     postTotalPooledEther: ETH(9),
-  //     postTotalShares: ETH(4),
-  //     etherLockedOnWithdrawalQueue: ETH(1),
-  //     sharesBurntFromWithdrawalQueue: ETH(1),
-  //     simulatedShareRate: (BigInt(2) * 10n ** 27n).toString(),
-  //   }
+  describe("checkSimulatedShareRate", () => {
+    const correctSimulatedShareRate = {
+      postTotalPooledEther: ETH(9),
+      postTotalShares: ETH(4),
+      etherLockedOnWithdrawalQueue: ETH(1),
+      sharesBurntFromWithdrawalQueue: ETH(1),
+      simulatedShareRate: 2n * 10n ** 27n,
+    };
+    type CheckSimulatedShareRateParameters = [bigint, bigint, bigint, bigint, bigint];
 
-  //   it('reverts with error IncorrectSimulatedShareRate() when simulated share rate is higher than expected', async () => {
-  //     const simulatedShareRate = BigInt(ETH(2.1)) * 10n ** 9n
-  //     const actualShareRate = BigInt(2) * 10n ** 27n
-  //     await assert.reverts(
-  //       oracleReportSanityChecker.checkSimulatedShareRate(
-  //         ...Object.values({
-  //           ...correctSimulatedShareRate,
-  //           simulatedShareRate: simulatedShareRate.toString(),
-  //         })
-  //       ),
-  //       `IncorrectSimulatedShareRate(${simulatedShareRate.toString()}, ${actualShareRate.toString()})`
-  //     )
-  //   })
+    it("reverts with error IncorrectSimulatedShareRate() when simulated share rate is higher than expected", async () => {
+      const simulatedShareRate = BigInt(ETH(2.1)) * 10n ** 9n;
+      const actualShareRate = 2n * 10n ** 27n;
+      await expect(
+        oracleReportSanityChecker.checkSimulatedShareRate(
+          ...(Object.values({
+            ...correctSimulatedShareRate,
+            simulatedShareRate: simulatedShareRate.toString(),
+          }) as CheckSimulatedShareRateParameters),
+        ),
+      )
+        .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectSimulatedShareRate")
+        .withArgs(simulatedShareRate, actualShareRate);
+    });
 
-  //   it('reverts with error IncorrectSimulatedShareRate() when simulated share rate is lower than expected', async () => {
-  //     const simulatedShareRate = BigInt(ETH(1.9)) * 10n ** 9n
-  //     const actualShareRate = BigInt(2) * 10n ** 27n
-  //     await assert.reverts(
-  //       oracleReportSanityChecker.checkSimulatedShareRate(
-  //         ...Object.values({
-  //           ...correctSimulatedShareRate,
-  //           simulatedShareRate: simulatedShareRate.toString(),
-  //         })
-  //       ),
-  //       `IncorrectSimulatedShareRate(${simulatedShareRate.toString()}, ${actualShareRate.toString()})`
-  //     )
-  //   })
+    it("reverts with error IncorrectSimulatedShareRate() when simulated share rate is lower than expected", async () => {
+      const simulatedShareRate = ETH(1.9) * 10n ** 9n;
+      const actualShareRate = 2n * 10n ** 27n;
+      await expect(
+        oracleReportSanityChecker.checkSimulatedShareRate(
+          ...(Object.values({
+            ...correctSimulatedShareRate,
+            simulatedShareRate: simulatedShareRate,
+          }) as CheckSimulatedShareRateParameters),
+        ),
+      )
+        .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectSimulatedShareRate")
+        .withArgs(simulatedShareRate, actualShareRate);
+    });
 
-  //   it('reverts with error ActualShareRateIsZero() when actual share rate is zero', async () => {
-  //     await assert.reverts(
-  //       oracleReportSanityChecker.checkSimulatedShareRate(
-  //         ...Object.values({
-  //           ...correctSimulatedShareRate,
-  //           etherLockedOnWithdrawalQueue: ETH(0),
-  //           postTotalPooledEther: ETH(0),
-  //         })
-  //       ),
-  //       `ActualShareRateIsZero()`
-  //     )
-  //   })
+    it("reverts with error ActualShareRateIsZero() when actual share rate is zero", async () => {
+      await expect(
+        oracleReportSanityChecker.checkSimulatedShareRate(
+          ...(Object.values({
+            ...correctSimulatedShareRate,
+            etherLockedOnWithdrawalQueue: ETH(0),
+            postTotalPooledEther: ETH(0),
+          }) as CheckSimulatedShareRateParameters),
+        ),
+      ).to.be.revertedWithCustomError(oracleReportSanityChecker, "ActualShareRateIsZero");
+    });
 
-  //   it('passes all checks with correct share rate', async () => {
-  //     await oracleReportSanityChecker.checkSimulatedShareRate(...Object.values(correctSimulatedShareRate))
-  //   })
-  // })
+    it("passes all checks with correct share rate", async () => {
+      await oracleReportSanityChecker.checkSimulatedShareRate(
+        ...(Object.values(correctSimulatedShareRate) as CheckSimulatedShareRateParameters),
+      );
+    });
+  });
 
   // describe('max positive rebase', () => {
   //   const defaultSmoothenTokenRebaseParams = {
