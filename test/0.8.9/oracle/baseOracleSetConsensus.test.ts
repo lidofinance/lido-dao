@@ -32,6 +32,7 @@ describe("BaseOracle.sol", () => {
 
   before(async () => {
     [admin, member, notMember] = await ethers.getSigners();
+    await deployContract();
   });
 
   const deployContract = async () => {
@@ -42,14 +43,18 @@ describe("BaseOracle.sol", () => {
     await baseOracle.grantRole(await baseOracle.MANAGE_CONSENSUS_VERSION_ROLE(), admin);
     const time = Number(await baseOracle.getTime());
     initialRefSlot = computeEpochFirstSlotAt(time);
+  };
+
+  const takeSnapshot = async () => {
     originalState = await Snapshot.take();
   };
+
   const rollback = async () => {
     await Snapshot.restore(originalState);
   };
 
   describe("setConsensusContract safely changes used consensus contract", () => {
-    before(deployContract);
+    before(takeSnapshot);
     after(rollback);
 
     it("reverts on zero address", async () => {
@@ -128,7 +133,7 @@ describe("BaseOracle.sol", () => {
   });
 
   describe("setConsensusVersion updates contract state", () => {
-    before(deployContract);
+    before(takeSnapshot);
     after(rollback);
 
     it("reverts on same version", async () => {
@@ -147,7 +152,7 @@ describe("BaseOracle.sol", () => {
   });
 
   describe("_checkConsensusData checks provided data against internal state", () => {
-    before(deployContract);
+    before(takeSnapshot);
     after(rollback);
     let deadline: number;
 
@@ -180,7 +185,7 @@ describe("BaseOracle.sol", () => {
   });
 
   describe("_checkProcessingDeadline checks report processing deadline", () => {
-    before(deployContract);
+    before(takeSnapshot);
     after(rollback);
     let deadline: number;
 
@@ -198,7 +203,7 @@ describe("BaseOracle.sol", () => {
   });
 
   describe("_isConsensusMember correctly check address for consensus membership trough consensus contract", () => {
-    before(deployContract);
+    before(takeSnapshot);
     after(rollback);
 
     it("returns false on non member", async () => {
@@ -213,7 +218,7 @@ describe("BaseOracle.sol", () => {
   });
 
   describe("_getCurrentRefSlot correctly gets refSlot trough consensus contract", () => {
-    before(deployContract);
+    before(takeSnapshot);
     after(rollback);
 
     it("refSlot matches", async () => {

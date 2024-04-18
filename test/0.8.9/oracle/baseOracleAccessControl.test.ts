@@ -31,12 +31,16 @@ describe("BaseOracle.sol", async () => {
 
   before(async () => {
     [admin, account1, account2, member1] = await ethers.getSigners();
+    await deploy();
   });
 
   const deploy = async (options = undefined) => {
     const deployed = await deployBaseOracle(admin, options);
     oracle = deployed.oracle;
     consensus = deployed.consensusContract;
+  };
+
+  const takeSnapshot = async () => {
     originalState = await Snapshot.take();
   };
 
@@ -45,7 +49,7 @@ describe("BaseOracle.sol", async () => {
   };
 
   context("AccountingOracle deployment and initial configuration", () => {
-    before(deploy);
+    before(takeSnapshot);
     after(rollback);
 
     it("deploying oracle", async () => {
@@ -62,7 +66,7 @@ describe("BaseOracle.sol", async () => {
   });
 
   context("MANAGE_CONSENSUS_CONTRACT_ROLE", () => {
-    beforeEach(deploy);
+    beforeEach(takeSnapshot);
     afterEach(rollback);
 
     context("setConsensusContract", () => {
@@ -94,7 +98,7 @@ describe("BaseOracle.sol", async () => {
   });
 
   context("MANAGE_CONSENSUS_VERSION_ROLE", () => {
-    beforeEach(deploy);
+    beforeEach(takeSnapshot);
     afterEach(rollback);
 
     context("setConsensusVersion", () => {
@@ -119,7 +123,7 @@ describe("BaseOracle.sol", async () => {
   });
 
   context("CONSENSUS_CONTRACT", () => {
-    beforeEach(deploy);
+    beforeEach(takeSnapshot);
     afterEach(rollback);
 
     context("submitConsensusReport", async () => {
@@ -148,7 +152,7 @@ describe("BaseOracle.sol", async () => {
       initialRefSlot = Number(await oracle.getTime());
     });
 
-    beforeEach(deploy);
+    beforeEach(takeSnapshot);
     afterEach(rollback);
 
     it("should revert from not a consensus contract", async () => {
