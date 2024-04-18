@@ -8,16 +8,15 @@ import {Test} from "forge-std/Test.sol";
 import {CommonBase} from "forge-std/Base.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 import {StdAssertions} from "forge-std/StdAssertions.sol";
-import {console2} from "forge-std/console2.sol";
 
 import {BeaconChainDepositor as BCDepositor} from "contracts/0.8.9/BeaconChainDepositor.sol";
 
-/**
- * The following invariants are formulated and enforced for the `BeaconChainDepositor` contract:
- * - exactly 32 ETH gets attached with every single deposit
- * - actual BC deposits count correspond to the validators' pubkeys count provided
- * - BC deposit data tuples go as is to the deposit contract not being altered or corrupted
- */
+// The following invariants are formulated and enforced for the `BeaconChainDepositor` contract:
+// - exactly 32 ETH gets attached with every single deposit
+// - actual BC deposits count correspond to the validators' pubkeys count provided
+// - BC deposit data tuples go as is to the deposit contract not being altered or corrupted
+/// @notice BCDepositor invariants contract for the forge test utils
+/// @dev Uses two harness contracts to put the BCDepositor in the middle of them
 contract BCDepositorInvariants is Test {
   DepositContractHarness public depositContract;
   BCDepositorHarness public bcDepositor;
@@ -116,39 +115,43 @@ contract BCDepositorHandler is CommonBase, StdAssertions, StdUtils {
     depositContract = _depositContract;
   }
 
+  /// @dev Ghosted version of the _makeBeaconChainDeposits32ETH for invariant checks
+  /// @param _keysCount amount of keys to deposit
+  /// @param _withdrawalCredentialsAsUint256 Commitment to a public key for withdrawals
+  /// @param _depositDataSeed Randomized seed for deposit data generation (auxiliary param)
   function makeBeaconChainDeposits32ETH(
-    uint256 keysCount,
-    uint256 withdrawalCredentialsAsUint256,
-    uint256 depositDataSeed
+    uint256 _keysCount,
+    uint256 _withdrawalCredentialsAsUint256,
+    uint256 _depositDataSeed
   ) external {
     // use MAX_DEPOSITS as defined for DSM per a single block
-    keysCount = bound(keysCount, 1, MAX_DEPOSITS);
+    _keysCount = bound(_keysCount, 1, MAX_DEPOSITS);
     // use withdrawal credentials with the `0x01` prefix
-    withdrawalCredentialsAsUint256 = bound(
-      withdrawalCredentialsAsUint256,
+    _withdrawalCredentialsAsUint256 = bound(
+      _withdrawalCredentialsAsUint256,
       WITHDRAWAL_CREDENTIALS_START,
       WITHDRAWAL_CREDENTIALS_END
     );
     // leave some space to prevent overflow for the seed increments
-    depositDataSeed = bound(depositDataSeed, 0, type(uint248).max);
+    _depositDataSeed = bound(_depositDataSeed, 0, type(uint248).max);
 
-    bytes memory withdrawalCredentials = abi.encodePacked(withdrawalCredentialsAsUint256);
+    bytes memory withdrawalCredentials = abi.encodePacked(_withdrawalCredentialsAsUint256);
 
     bytes memory encoded_keys;
     bytes memory encoded_signatures;
 
-    for (uint256 key = 0; key < keysCount; key++) {
+    for (uint256 key = 0; key < _keysCount; key++) {
       bytes memory pubkey = abi.encodePacked(
-        bytes16(sha256(abi.encodePacked(depositDataSeed++))),
-        bytes16(sha256(abi.encodePacked(depositDataSeed++))),
-        bytes16(sha256(abi.encodePacked(depositDataSeed++)))
+        bytes16(sha256(abi.encodePacked(_depositDataSeed++))),
+        bytes16(sha256(abi.encodePacked(_depositDataSeed++))),
+        bytes16(sha256(abi.encodePacked(_depositDataSeed++)))
       );
       encoded_keys = bytes.concat(encoded_keys, pubkey);
 
       bytes memory signature = abi.encodePacked(
-        sha256(abi.encodePacked(depositDataSeed++)),
-        sha256(abi.encodePacked(depositDataSeed++)),
-        sha256(abi.encodePacked(depositDataSeed++))
+        sha256(abi.encodePacked(_depositDataSeed++)),
+        sha256(abi.encodePacked(_depositDataSeed++)),
+        sha256(abi.encodePacked(_depositDataSeed++))
       );
       encoded_signatures = bytes.concat(encoded_signatures, signature);
 
@@ -167,8 +170,8 @@ contract BCDepositorHandler is CommonBase, StdAssertions, StdUtils {
     }
 
     // top-up depositor's balance to perform deposits
-    vm.deal(address(bcDepositor), 32 ether * keysCount);
-    bcDepositor.makeBeaconChainDeposits32ETH(keysCount, withdrawalCredentials, encoded_keys, encoded_signatures);
+    vm.deal(address(bcDepositor), 32 ether * _keysCount);
+    bcDepositor.makeBeaconChainDeposits32ETH(_keysCount, withdrawalCredentials, encoded_keys, encoded_signatures);
   }
 }
 
