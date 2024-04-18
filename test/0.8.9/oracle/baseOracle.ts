@@ -4,33 +4,33 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { MockConsensusContract } from "typechain-types";
 
-const SLOTS_PER_EPOCH = 32;
-const SECONDS_PER_SLOT = 12;
-const GENESIS_TIME = 100;
-const EPOCHS_PER_FRAME = 225; // one day
-const INITIAL_EPOCH = 1;
-const INITIAL_FAST_LANE_LENGTH_SLOTS = 0;
+export const SLOTS_PER_EPOCH = 32;
+export const SECONDS_PER_SLOT = 12;
+export const GENESIS_TIME = 100;
+export const EPOCHS_PER_FRAME = 225; // one day
+export const INITIAL_EPOCH = 1;
+export const INITIAL_FAST_LANE_LENGTH_SLOTS = 0;
 
-const SECONDS_PER_EPOCH = SLOTS_PER_EPOCH * SECONDS_PER_SLOT;
-const SLOTS_PER_FRAME = EPOCHS_PER_FRAME * SLOTS_PER_EPOCH;
+export const SECONDS_PER_EPOCH = SLOTS_PER_EPOCH * SECONDS_PER_SLOT;
+export const SLOTS_PER_FRAME = EPOCHS_PER_FRAME * SLOTS_PER_EPOCH;
 
-const computeSlotAt = (time: number) => Math.floor((time - GENESIS_TIME) / SECONDS_PER_SLOT);
-const computeEpochAt = (time: number) => Math.floor(computeSlotAt(time) / SLOTS_PER_EPOCH);
-const computeEpochFirstSlot = (epoch: number) => epoch * SLOTS_PER_EPOCH;
-const computeEpochFirstSlotAt = (time: number) => computeEpochFirstSlot(computeEpochAt(time));
-const computeTimestampAtSlot = (slot: number) => GENESIS_TIME + slot * SECONDS_PER_SLOT;
-const computeDeadlineFromRefSlot = (slot: number) => computeTimestampAtSlot(slot + SLOTS_PER_FRAME);
-const computeNextRefSlotFromRefSlot = (slot: number) => +slot + SLOTS_PER_FRAME;
+export const computeSlotAt = (time: number) => Math.floor((time - GENESIS_TIME) / SECONDS_PER_SLOT);
+export const computeEpochAt = (time: number) => Math.floor(computeSlotAt(time) / SLOTS_PER_EPOCH);
+export const computeEpochFirstSlot = (epoch: number) => epoch * SLOTS_PER_EPOCH;
+export const computeEpochFirstSlotAt = (time: number) => computeEpochFirstSlot(computeEpochAt(time));
+export const computeTimestampAtSlot = (slot: number) => GENESIS_TIME + slot * SECONDS_PER_SLOT;
+export const computeDeadlineFromRefSlot = (slot: number) => computeTimestampAtSlot(slot + SLOTS_PER_FRAME);
+export const computeNextRefSlotFromRefSlot = (slot: number) => +slot + SLOTS_PER_FRAME;
 
-const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
+export const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
-const HASH_1 = "0x1111111111111111111111111111111111111111111111111111111111111111";
-const HASH_2 = "0x2222222222222222222222222222222222222222222222222222222222222222";
-const HASH_3 = "0x3333333333333333333333333333333333333333333333333333333333333333";
+export const HASH_1 = "0x1111111111111111111111111111111111111111111111111111111111111111";
+export const HASH_2 = "0x2222222222222222222222222222222222222222222222222222222222222222";
+export const HASH_3 = "0x3333333333333333333333333333333333333333333333333333333333333333";
 
-const CONSENSUS_VERSION = 1;
+export const CONSENSUS_VERSION = 1;
 
-async function deployBaseOracle(
+export async function deployBaseOracle(
   admin: HardhatEthersSigner,
   {
     secondsPerSlot = SECONDS_PER_SLOT,
@@ -63,27 +63,3 @@ async function deployBaseOracle(
 
   return { oracle, consensusContract };
 }
-
-export {
-  INITIAL_FAST_LANE_LENGTH_SLOTS,
-  INITIAL_EPOCH,
-  SLOTS_PER_EPOCH,
-  SECONDS_PER_SLOT,
-  GENESIS_TIME,
-  EPOCHS_PER_FRAME,
-  SECONDS_PER_EPOCH,
-  SLOTS_PER_FRAME,
-  computeSlotAt,
-  computeEpochAt,
-  computeEpochFirstSlot,
-  computeEpochFirstSlotAt,
-  computeTimestampAtSlot,
-  computeNextRefSlotFromRefSlot,
-  computeDeadlineFromRefSlot,
-  ZERO_HASH,
-  HASH_1,
-  HASH_2,
-  HASH_3,
-  CONSENSUS_VERSION,
-  deployBaseOracle,
-};
