@@ -12,15 +12,21 @@ import {console2} from "forge-std/console2.sol";
 
 import {BeaconChainDepositor as BCDepositor} from "contracts/0.8.9/BeaconChainDepositor.sol";
 
+/**
+ * The following invariants are formulated and enforced for the `BeaconChainDepositor` contract:
+ * - exactly 32 ETH gets attached with every single deposit
+ * - actual BC deposits count correspond to the validators' pubkeys count provided
+ * - BC deposit data tuples go as is to the deposit contract not being altered or corrupted
+ */
 contract BCDepositorInvariants is Test {
-  DepositContract public depositContract;
+  DepositContractHarness public depositContract;
   BCDepositorHarness public bcDepositor;
   BCDepositorHandler public handler;
 
   function setUp() public {
-    depositContract = new DepositContract();
+    depositContract = new DepositContractHarness();
     bcDepositor = new BCDepositorHarness(address(depositContract));
-    handler = new BCDepositorHandler(bcDepositor);
+    handler = new BCDepositorHandler(bcDepositor, depositContract);
 
     bytes4[] memory selectors = new bytes4[](1);
     selectors[0] = BCDepositorHandler.makeBeaconChainDeposits32ETH.selector;
@@ -30,44 +36,133 @@ contract BCDepositorInvariants is Test {
     targetContract(address(handler));
   }
 
-  function invariant_32ETHPaidPerKey() public {
+  /**
+   * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-invariant-configs
+   * forge-config: default.invariant.runs = 16
+   * forge-config: default.invariant.depth = 16
+   * forge-config: default.invariant.fail-on-revert = true
+   */
+  function invariant_32ETHPaidPerKey() public view {
     uint256 depositContractBalance = address(depositContract).balance;
     assertEq(depositContractBalance, handler.ghost_totalETHDeposited(), "pays 32 ETH per key");
   }
-  function invariant_WithdrawalCredentialsTheSame() public {}
-  function invariant_DepositsCountIsCoherent() public {
-    assertEq(depositContract.get_deposit_count(), handler.ghost_totalDeposits(), "deposit count grows coherently");
+
+  /**
+   * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-invariant-configs
+   * forge-config: default.invariant.runs = 16
+   * forge-config: default.invariant.depth = 16
+   * forge-config: default.invariant.fail-on-revert = true
+   */
+  function invariant_DepositsCountIsCoherent() public view {
+    assertEq(
+      depositContract.get_deposit_count(),
+      depositContract.to_little_endian_64(uint64(handler.ghost_totalDeposits())),
+      "deposit count grows coherently"
+    );
   }
-  function invariant_DepositDataIsNotCorrupted() public {}
+
+  /**
+   * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-invariant-configs
+   * forge-config: default.invariant.runs = 16
+   * forge-config: default.invariant.depth = 16
+   * forge-config: default.invariant.fail-on-revert = true
+   */
+  function invariant_DepositDataIsNotCorrupted() public view {
+    for (uint256 depositId = 0; depositId < handler.ghost_totalDeposits(); ++depositId) {
+      (
+        bytes memory pubkey,
+        bytes memory withdrawal_credentials,
+        bytes memory amount,
+        bytes memory signature,
+        bytes memory index
+      ) = depositContract.depositEvents(depositId);
+
+      (
+        bytes memory ghost_pubkey,
+        bytes memory ghost_withdrawal_credentials,
+        bytes memory ghost_amount,
+        bytes memory ghost_signature,
+        bytes memory ghost_index
+      ) = handler.ghost_DepositEvents(depositId);
+
+      assertEq(amount, ghost_amount, "deposit amount is the same");
+      assertEq(index, ghost_index, "deposit index is the same");
+      assertEq(pubkey, ghost_pubkey, "deposit pubkey is the same");
+      assertEq(signature, ghost_signature, "deposit signature is the same");
+      assertEq(withdrawal_credentials, ghost_withdrawal_credentials, "deposit wc are the same");
+    }
+  }
 }
 
 contract BCDepositorHandler is CommonBase, StdAssertions, StdUtils {
+  uint256 public constant PUB_KEY_LENGTH = 48;
+  uint256 public constant SIG_LENGTH = 96;
+  uint256 public constant WC_LENGTH = 32;
+  uint8 public constant MAX_DEPOSITS = 150;
+
   BCDepositorHarness public bcDepositor;
+  DepositContractHarness public depositContract;
 
   uint256 public ghost_totalDeposits;
   uint256 public ghost_totalETHDeposited;
+  DepositContractHarness.DepositEventData[] public ghost_DepositEvents;
 
-  constructor(BCDepositorHarness _bcDepositor) {
+  constructor(BCDepositorHarness _bcDepositor, DepositContractHarness _depositContract) {
     bcDepositor = _bcDepositor;
+    depositContract = _depositContract;
   }
 
   function makeBeaconChainDeposits32ETH(
     uint256 keysCount,
     uint256 withdrawalCredentialsAsUint256,
-    bytes memory publicKeysBatch,
-    bytes memory signaturesBatch
+    uint256 publicKeysBatchSeed,
+    uint256 signaturesBatchSeed
   ) external {
-    keysCount = bound(keysCount, 1, 1000);
+    keysCount = bound(keysCount, 1, MAX_DEPOSITS);
     withdrawalCredentialsAsUint256 = bound(withdrawalCredentialsAsUint256, 0, type(uint256).max);
-    bytes memory withdrawalCredentials = new bytes(32);
-    for (uint256 i = 0; i < 32; ++i) {
-      withdrawalCredentials[i] = bytes32(withdrawalCredentialsAsUint256)[i];
+    bytes memory withdrawalCredentials = new bytes(WC_LENGTH);
+    withdrawalCredentials = abi.encodePacked(withdrawalCredentialsAsUint256);
+
+    bytes memory publicKeysBatch = new bytes(keysCount * PUB_KEY_LENGTH);
+    bytes memory signaturesBatch = new bytes(keysCount * SIG_LENGTH);
+
+    for (uint256 key = 0; key < keysCount; ++key) {
+      for (uint256 pk = 0; pk < PUB_KEY_LENGTH; ++pk) {
+        publicKeysBatch[key * PUB_KEY_LENGTH + pk] = bytes1(uint8(key));
+      }
+      for (uint256 s = 0; s < SIG_LENGTH; ++s) {
+        signaturesBatch[key * SIG_LENGTH + s] = bytes1(uint8(key));
+      }
     }
 
+    vm.deal(address(bcDepositor), 32 ether * keysCount);
     bcDepositor.makeBeaconChainDeposits32ETH(keysCount, withdrawalCredentials, publicKeysBatch, signaturesBatch);
 
-    ghost_totalDeposits += keysCount;
-    ghost_totalETHDeposited += (keysCount * 32 ether);
+    bytes memory pubkey = new bytes(PUB_KEY_LENGTH);
+    bytes memory signature = new bytes(SIG_LENGTH);
+
+    for (uint256 key = 0; key < keysCount; ++key) {
+      for (uint256 pk = 0; pk < PUB_KEY_LENGTH; ++pk) {
+        pubkey[pk] = bytes1(uint8(key));
+      }
+      for (uint256 s = 0; s < SIG_LENGTH; ++s) {
+        signature[s] = bytes1(uint8(key));
+      }
+
+      ghost_DepositEvents.push(
+        DepositContractHarness.DepositEventData(
+          pubkey,
+          withdrawalCredentials,
+          depositContract.to_little_endian_64(uint64(32 ether / 1 gwei)),
+          signature,
+          depositContract.to_little_endian_64(uint64(ghost_totalDeposits))
+        )
+      );
+
+      ghost_totalDeposits += 1;
+    }
+
+    ghost_totalETHDeposited += 32 ether * keysCount;
   }
 }
 
@@ -133,7 +228,7 @@ interface ERC165 {
 // It tries to stay as close as possible to the original source code.
 /// @notice This is the Ethereum 2.0 deposit contract interface.
 /// For more information see the Phase 0 specification under https://github.com/ethereum/eth2.0-specs
-contract DepositContract is IDepositContract, ERC165 {
+contract DepositContractHarness is IDepositContract, ERC165 {
   uint constant DEPOSIT_CONTRACT_TREE_DEPTH = 32;
   // NOTE: this also ensures `deposit_count` will fit into 64-bits
   uint constant MAX_DEPOSIT_COUNT = 2 ** DEPOSIT_CONTRACT_TREE_DEPTH - 1;
@@ -142,6 +237,16 @@ contract DepositContract is IDepositContract, ERC165 {
   uint256 deposit_count;
 
   bytes32[DEPOSIT_CONTRACT_TREE_DEPTH] zero_hashes;
+
+  struct DepositEventData {
+    bytes pubkey;
+    bytes withdrawal_credentials;
+    bytes amount;
+    bytes signature;
+    bytes index;
+  }
+
+  DepositEventData[] public depositEvents;
 
   constructor() {
     // Compute hashes in empty sparse Merkle tree
@@ -185,6 +290,11 @@ contract DepositContract is IDepositContract, ERC165 {
     bytes memory amount = to_little_endian_64(uint64(deposit_amount));
     emit DepositEvent(pubkey, withdrawal_credentials, amount, signature, to_little_endian_64(uint64(deposit_count)));
 
+    // Dev: harness part
+    depositEvents.push(
+      DepositEventData(pubkey, withdrawal_credentials, amount, signature, to_little_endian_64(uint64(deposit_count)))
+    );
+
     // Compute deposit data root (`DepositData` hash tree root)
     bytes32 pubkey_root = sha256(abi.encodePacked(pubkey, bytes16(0)));
     bytes32 signature_root = sha256(
@@ -226,7 +336,7 @@ contract DepositContract is IDepositContract, ERC165 {
     return interfaceId == type(ERC165).interfaceId || interfaceId == type(IDepositContract).interfaceId;
   }
 
-  function to_little_endian_64(uint64 value) internal pure returns (bytes memory ret) {
+  function to_little_endian_64(uint64 value) public pure returns (bytes memory ret) {
     ret = new bytes(8);
     bytes8 bytesValue = bytes8(value);
     // Byteswapping during copying to bytes.
