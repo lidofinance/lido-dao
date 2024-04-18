@@ -53,7 +53,7 @@ describe("BaseOracle.sol", () => {
     await Snapshot.restore(originalState);
   };
 
-  describe("setConsensusContract safely changes used consensus contract", () => {
+  describe("setConsensusContract", () => {
     before(takeSnapshot);
     after(rollback);
 
@@ -132,7 +132,7 @@ describe("BaseOracle.sol", () => {
     });
   });
 
-  describe("setConsensusVersion updates contract state", () => {
+  describe("setConsensusVersion", () => {
     before(takeSnapshot);
     after(rollback);
 

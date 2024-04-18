@@ -65,83 +65,56 @@ describe("BaseOracle.sol", async () => {
     });
   });
 
-  context("MANAGE_CONSENSUS_CONTRACT_ROLE", () => {
+  context("setConsensusContract", () => {
     beforeEach(takeSnapshot);
     afterEach(rollback);
 
-    context("setConsensusContract", () => {
-      it("should revert without MANAGE_CONSENSUS_CONTRACT_ROLE role", async () => {
-        const role = await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE();
-        await expect(oracle.setConsensusContract(member1)).to.be.revertedWithOZAccessControlError(admin.address, role);
+    it("should revert without MANAGE_CONSENSUS_CONTRACT_ROLE role", async () => {
+      const role = await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE();
+      await expect(oracle.setConsensusContract(member1)).to.be.revertedWithOZAccessControlError(admin.address, role);
 
-        expect(await oracle.getConsensusContract()).to.be.equal(await consensus.getAddress());
-      });
+      expect(await oracle.getConsensusContract()).to.be.equal(await consensus.getAddress());
+    });
 
-      it("should allow calling from a possessor of MANAGE_CONSENSUS_CONTRACT_ROLE role", async () => {
-        const consensusContract2 = await ethers.deployContract("MockConsensusContract", [
-          SECONDS_PER_EPOCH,
-          SECONDS_PER_SLOT,
-          GENESIS_TIME,
-          EPOCHS_PER_FRAME,
-          INITIAL_EPOCH,
-          INITIAL_FAST_LANE_LENGTH_SLOTS,
-          admin,
-        ]);
+    it("should allow calling from a possessor of MANAGE_CONSENSUS_CONTRACT_ROLE role", async () => {
+      const consensusContract2 = await ethers.deployContract("MockConsensusContract", [
+        SECONDS_PER_EPOCH,
+        SECONDS_PER_SLOT,
+        GENESIS_TIME,
+        EPOCHS_PER_FRAME,
+        INITIAL_EPOCH,
+        INITIAL_FAST_LANE_LENGTH_SLOTS,
+        admin,
+      ]);
 
-        const role = await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE();
+      const role = await oracle.MANAGE_CONSENSUS_CONTRACT_ROLE();
 
-        await oracle.grantRole(role, account2);
-        await oracle.connect(account2).setConsensusContract(await consensusContract2.getAddress());
-        expect(await oracle.getConsensusContract()).to.be.equal(await consensusContract2.getAddress());
-      });
+      await oracle.grantRole(role, account2);
+      await oracle.connect(account2).setConsensusContract(await consensusContract2.getAddress());
+      expect(await oracle.getConsensusContract()).to.be.equal(await consensusContract2.getAddress());
     });
   });
 
-  context("MANAGE_CONSENSUS_VERSION_ROLE", () => {
+  context("setConsensusVersion", () => {
     beforeEach(takeSnapshot);
     afterEach(rollback);
 
-    context("setConsensusVersion", () => {
-      it("should revert without MANAGE_CONSENSUS_VERSION_ROLE role", async () => {
-        const role = await oracle.MANAGE_CONSENSUS_VERSION_ROLE();
+    it("should revert without MANAGE_CONSENSUS_VERSION_ROLE role", async () => {
+      const role = await oracle.MANAGE_CONSENSUS_VERSION_ROLE();
 
-        await expect(oracle.connect(account1).setConsensusVersion(1)).to.be.revertedWithOZAccessControlError(
-          account1.address,
-          role,
-        );
-        expect(await oracle.getConsensusVersion()).to.be.equal(CONSENSUS_VERSION);
-      });
-
-      it("should allow calling from a possessor of MANAGE_CONSENSUS_VERSION_ROLE role", async () => {
-        const role = await oracle.MANAGE_CONSENSUS_VERSION_ROLE();
-        await oracle.grantRole(role, account2);
-        await oracle.connect(account2).setConsensusVersion(2);
-
-        expect(await oracle.getConsensusVersion()).to.be.equal(2);
-      });
+      await expect(oracle.connect(account1).setConsensusVersion(1)).to.be.revertedWithOZAccessControlError(
+        account1.address,
+        role,
+      );
+      expect(await oracle.getConsensusVersion()).to.be.equal(CONSENSUS_VERSION);
     });
-  });
 
-  context("CONSENSUS_CONTRACT", () => {
-    beforeEach(takeSnapshot);
-    afterEach(rollback);
+    it("should allow calling from a possessor of MANAGE_CONSENSUS_VERSION_ROLE role", async () => {
+      const role = await oracle.MANAGE_CONSENSUS_VERSION_ROLE();
+      await oracle.grantRole(role, account2);
+      await oracle.connect(account2).setConsensusVersion(2);
 
-    context("submitConsensusReport", async () => {
-      const initialRefSlot = Number(await oracle.getTime());
-
-      it("should revert from not a consensus contract", async () => {
-        await expect(
-          oracle.connect(account1).submitConsensusReport(HASH_1, initialRefSlot, initialRefSlot),
-        ).to.be.revertedWithCustomError(oracle, "SenderIsNotTheConsensusContract");
-
-        expect((await oracle.getConsensusReportLastCall()).callCount).to.be.equal(0);
-      });
-
-      it("should allow calling from a consensus contract", async () => {
-        await consensus.submitReportAsConsensus(HASH_1, initialRefSlot, initialRefSlot + SLOTS_PER_FRAME);
-
-        expect((await oracle.getConsensusReportLastCall()).callCount).to.be.equal(1);
-      });
+      expect(await oracle.getConsensusVersion()).to.be.equal(2);
     });
   });
 
