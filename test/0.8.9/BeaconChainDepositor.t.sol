@@ -38,7 +38,7 @@ contract BCDepositorInvariants is Test {
 
   /**
    * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-invariant-configs
-   * forge-config: default.invariant.runs = 16
+   * forge-config: default.invariant.runs = 32
    * forge-config: default.invariant.depth = 16
    * forge-config: default.invariant.fail-on-revert = true
    */
@@ -49,7 +49,7 @@ contract BCDepositorInvariants is Test {
 
   /**
    * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-invariant-configs
-   * forge-config: default.invariant.runs = 16
+   * forge-config: default.invariant.runs = 32
    * forge-config: default.invariant.depth = 16
    * forge-config: default.invariant.fail-on-revert = true
    */
@@ -63,7 +63,7 @@ contract BCDepositorInvariants is Test {
 
   /**
    * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-invariant-configs
-   * forge-config: default.invariant.runs = 16
+   * forge-config: default.invariant.runs = 32
    * forge-config: default.invariant.depth = 16
    * forge-config: default.invariant.fail-on-revert = true
    */
@@ -98,6 +98,10 @@ contract BCDepositorHandler is CommonBase, StdAssertions, StdUtils {
   uint256 public constant PUB_KEY_LENGTH = 48;
   uint256 public constant SIG_LENGTH = 96;
   uint256 public constant WC_LENGTH = 32;
+
+  uint256 WITHDRAWAL_CREDENTIALS_START = 2 ** 248; // 0x01....00
+  uint256 WITHDRAWAL_CREDENTIALS_END = 2 ** 249 - 1; // 0x01FF...FF
+
   uint8 public constant MAX_DEPOSITS = 150;
 
   BCDepositorHarness public bcDepositor;
@@ -115,39 +119,38 @@ contract BCDepositorHandler is CommonBase, StdAssertions, StdUtils {
   function makeBeaconChainDeposits32ETH(
     uint256 keysCount,
     uint256 withdrawalCredentialsAsUint256,
-    uint256 publicKeysBatchSeed,
-    uint256 signaturesBatchSeed
+    uint256 depositDataSeed
   ) external {
+    // use MAX_DEPOSITS as defined for DSM per a single block
     keysCount = bound(keysCount, 1, MAX_DEPOSITS);
-    withdrawalCredentialsAsUint256 = bound(withdrawalCredentialsAsUint256, 0, type(uint256).max);
-    bytes memory withdrawalCredentials = new bytes(WC_LENGTH);
-    withdrawalCredentials = abi.encodePacked(withdrawalCredentialsAsUint256);
+    // use withdrawal credentials with the `0x01` prefix
+    withdrawalCredentialsAsUint256 = bound(
+      withdrawalCredentialsAsUint256,
+      WITHDRAWAL_CREDENTIALS_START,
+      WITHDRAWAL_CREDENTIALS_END
+    );
+    // leave some space to prevent overflow for the seed increments
+    depositDataSeed = bound(depositDataSeed, 0, type(uint248).max);
 
-    bytes memory publicKeysBatch = new bytes(keysCount * PUB_KEY_LENGTH);
-    bytes memory signaturesBatch = new bytes(keysCount * SIG_LENGTH);
+    bytes memory withdrawalCredentials = abi.encodePacked(withdrawalCredentialsAsUint256);
 
-    for (uint256 key = 0; key < keysCount; ++key) {
-      for (uint256 pk = 0; pk < PUB_KEY_LENGTH; ++pk) {
-        publicKeysBatch[key * PUB_KEY_LENGTH + pk] = bytes1(uint8(key));
-      }
-      for (uint256 s = 0; s < SIG_LENGTH; ++s) {
-        signaturesBatch[key * SIG_LENGTH + s] = bytes1(uint8(key));
-      }
-    }
+    bytes memory encoded_keys;
+    bytes memory encoded_signatures;
 
-    vm.deal(address(bcDepositor), 32 ether * keysCount);
-    bcDepositor.makeBeaconChainDeposits32ETH(keysCount, withdrawalCredentials, publicKeysBatch, signaturesBatch);
+    for (uint256 key = 0; key < keysCount; key++) {
+      bytes memory pubkey = abi.encodePacked(
+        bytes16(sha256(abi.encodePacked(depositDataSeed++))),
+        bytes16(sha256(abi.encodePacked(depositDataSeed++))),
+        bytes16(sha256(abi.encodePacked(depositDataSeed++)))
+      );
+      encoded_keys = bytes.concat(encoded_keys, pubkey);
 
-    bytes memory pubkey = new bytes(PUB_KEY_LENGTH);
-    bytes memory signature = new bytes(SIG_LENGTH);
-
-    for (uint256 key = 0; key < keysCount; ++key) {
-      for (uint256 pk = 0; pk < PUB_KEY_LENGTH; ++pk) {
-        pubkey[pk] = bytes1(uint8(key));
-      }
-      for (uint256 s = 0; s < SIG_LENGTH; ++s) {
-        signature[s] = bytes1(uint8(key));
-      }
+      bytes memory signature = abi.encodePacked(
+        sha256(abi.encodePacked(depositDataSeed++)),
+        sha256(abi.encodePacked(depositDataSeed++)),
+        sha256(abi.encodePacked(depositDataSeed++))
+      );
+      encoded_signatures = bytes.concat(encoded_signatures, signature);
 
       ghost_DepositEvents.push(
         DepositContractHarness.DepositEventData(
@@ -160,9 +163,12 @@ contract BCDepositorHandler is CommonBase, StdAssertions, StdUtils {
       );
 
       ghost_totalDeposits += 1;
+      ghost_totalETHDeposited += 32 ether;
     }
 
-    ghost_totalETHDeposited += 32 ether * keysCount;
+    // top-up depositor's balance to perform deposits
+    vm.deal(address(bcDepositor), 32 ether * keysCount);
+    bcDepositor.makeBeaconChainDeposits32ETH(keysCount, withdrawalCredentials, encoded_keys, encoded_signatures);
   }
 }
 
@@ -336,6 +342,7 @@ contract DepositContractHarness is IDepositContract, ERC165 {
     return interfaceId == type(ERC165).interfaceId || interfaceId == type(IDepositContract).interfaceId;
   }
 
+  // dev: function visibility lifted
   function to_little_endian_64(uint64 value) public pure returns (bytes memory ret) {
     ret = new bytes(8);
     bytes8 bytesValue = bytes8(value);
