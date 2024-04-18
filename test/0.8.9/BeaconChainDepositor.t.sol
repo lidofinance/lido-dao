@@ -38,7 +38,7 @@ contract BCDepositorInvariants is Test {
   function invariant_DepositsCountIsCoherent() public {
     assertEq(depositContract.get_deposit_count(), handler.ghost_totalDeposits(), "deposit count grows coherently");
   }
-  function invarinat_DepositDataIsNotCorrupted() public {}
+  function invariant_DepositDataIsNotCorrupted() public {}
 }
 
 contract BCDepositorHandler is CommonBase, StdAssertions, StdUtils {
