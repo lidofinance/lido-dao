@@ -7,7 +7,7 @@ import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 
 import { BurnerStub, LidoLocatorStub, LidoStub, OracleReportSanityChecker, WithdrawalQueueStub } from "typechain-types";
 
-import { ether, randomAddress, Snapshot } from "lib";
+import { ETH, getCurrentBlockTimestamp, randomAddress, Snapshot } from "lib";
 
 describe("OracleReportSanityChecker.sol", () => {
   let oracleReportSanityChecker: OracleReportSanityChecker;
@@ -33,8 +33,8 @@ describe("OracleReportSanityChecker.sol", () => {
   type CheckAccountingOracleReportParameters = [number, bigint, bigint, number, number, number, number, number];
   const correctLidoOracleReport = {
     timeElapsed: 24 * 60 * 60,
-    preCLBalance: ether("100000"),
-    postCLBalance: ether("100001"),
+    preCLBalance: ETH(100_000),
+    postCLBalance: ETH(100_001),
     withdrawalVaultBalance: 0,
     elRewardsVaultBalance: 0,
     sharesRequestedToBurn: 0,
@@ -50,7 +50,7 @@ describe("OracleReportSanityChecker.sol", () => {
   before(async () => {
     [deployer, admin, elRewardsVault, ...accounts] = await ethers.getSigners();
     withdrawalVault = randomAddress();
-    await setBalance(withdrawalVault, ether("500.0"));
+    await setBalance(withdrawalVault, ETH(500.0));
 
     // mine 1024 blocks with block duration 12 seconds
     await ethers.provider.send("hardhat_mine", ["0x" + Number(1024).toString(16), "0x" + Number(12).toString(16)]);
@@ -219,9 +219,9 @@ describe("OracleReportSanityChecker.sol", () => {
 
     it("reverts with error IncorrectCLBalanceDecrease() when one off CL balance decrease more than limit", async () => {
       const maxBasisPoints = 10_000n;
-      const preCLBalance = ether("100000");
-      const postCLBalance = ether("85000");
-      const withdrawalVaultBalance = ether("500");
+      const preCLBalance = ETH(100_000);
+      const postCLBalance = ETH(85_000);
+      const withdrawalVaultBalance = ETH(500);
       const unifiedPostCLBalance = postCLBalance + withdrawalVaultBalance;
       const oneOffCLBalanceDecreaseBP = (maxBasisPoints * (preCLBalance - unifiedPostCLBalance)) / preCLBalance;
 
@@ -240,7 +240,7 @@ describe("OracleReportSanityChecker.sol", () => {
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectCLBalanceDecrease")
         .withArgs(oneOffCLBalanceDecreaseBP);
 
-      const postCLBalanceCorrect = ether("99000");
+      const postCLBalanceCorrect = ETH(99_000);
       await oracleReportSanityChecker.checkAccountingOracleReport(
         ...(Object.values({
           ...correctLidoOracleReport,
@@ -255,7 +255,7 @@ describe("OracleReportSanityChecker.sol", () => {
       const maxBasisPoints = 10_000n;
       const secondsInOneYear = 365n * 24n * 60n * 60n;
       const preCLBalance = BigInt(correctLidoOracleReport.preCLBalance);
-      const postCLBalance = ether("150000");
+      const postCLBalance = ETH(150_000);
       const timeElapsed = BigInt(correctLidoOracleReport.timeElapsed);
       const annualBalanceIncrease =
         (secondsInOneYear * maxBasisPoints * (postCLBalance - preCLBalance)) / preCLBalance / timeElapsed;
