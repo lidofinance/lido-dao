@@ -29,7 +29,17 @@ describe("WithdrawalQueueBase.sol", () => {
   let originalState: string;
   let provider: typeof ethers.provider;
 
-  beforeEach(async () => {
+  // Required for _findCheckpointHint, _calculateClaimableEther, _calcBatch tests
+  const setUpRequestsState = async (requestsCount: number, finalizedCount: number) => {
+    for (let i = 0; i < requestsCount; i++) {
+      await queue.exposedEnqueue(ether("1.00"), shares(1n), owner);
+      if (i < finalizedCount) {
+        await queue.exposedFinalize(i + 1, ether("1.00"), shareRate(1n));
+      }
+    }
+  };
+
+  before(async () => {
     ({ provider } = ethers);
     [owner, stranger] = await ethers.getSigners();
 
@@ -39,15 +49,6 @@ describe("WithdrawalQueueBase.sol", () => {
 
     queueAddress = await queue.getAddress();
   });
-
-  const setUpRequestsState = async (requestsCount: number, finalizedCount: number) => {
-    for (let i = 0; i < requestsCount; i++) {
-      await queue.exposedEnqueue(ether("1.00"), shares(1n), owner);
-      if (i < finalizedCount) {
-        await queue.exposedFinalize(i + 1, ether("1.00"), shareRate(1n));
-      }
-    }
-  };
 
   beforeEach(async () => (originalState = await Snapshot.take()));
 
