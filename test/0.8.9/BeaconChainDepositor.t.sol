@@ -8,6 +8,7 @@ import {Test} from "forge-std/Test.sol";
 import {CommonBase} from "forge-std/Base.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 import {StdAssertions} from "forge-std/StdAssertions.sol";
+import {IERC165} from "forge-std/interfaces/IERC165.sol";
 
 import {BeaconChainDepositor as BCDepositor} from "contracts/0.8.9/BeaconChainDepositor.sol";
 
@@ -98,10 +99,10 @@ contract BCDepositorHandler is CommonBase, StdAssertions, StdUtils {
   uint256 public constant SIG_LENGTH = 96;
   uint256 public constant WC_LENGTH = 32;
 
-  uint256 WITHDRAWAL_CREDENTIALS_START = 2 ** 248; // 0x01....00
-  uint256 WITHDRAWAL_CREDENTIALS_END = 2 ** 249 - 1; // 0x01FF...FF
+  uint256 public constant WITHDRAWAL_CREDENTIALS_START = 2 ** 248; // 0x01....00
+  uint256 public constant WITHDRAWAL_CREDENTIALS_END = 2 ** 249 - 1; // 0x01FF...FF
 
-  uint8 public constant MAX_DEPOSITS = 150;
+  uint8 public constant MAX_DEPOSITS = 150; // max DSM deposits per block
 
   BCDepositorHarness public bcDepositor;
   DepositContractHarness public depositContract;
@@ -195,7 +196,7 @@ contract BCDepositorHarness is BCDepositor {
 
 // This interface is designed to be compatible with the Vyper version.
 /// @notice This is the Ethereum 2.0 deposit contract interface.
-/// For more information see the Phase 0 specification under https://github.com/ethereum/eth2.0-specs
+/// For more information see the Phase 0 specification under https://github.com/ethereum/consensus-specs/tree/dev/specs/phase0
 interface IDepositContract {
   /// @notice A processed deposit event.
   event DepositEvent(bytes pubkey, bytes withdrawal_credentials, bytes amount, bytes signature, bytes index);
@@ -222,22 +223,11 @@ interface IDepositContract {
   function get_deposit_count() external view returns (bytes memory);
 }
 
-// Based on official specification in https://eips.ethereum.org/EIPS/eip-165
-interface ERC165 {
-  /// @notice Query if a contract implements an interface
-  /// @param interfaceId The interface identifier, as specified in ERC-165
-  /// @dev Interface identification is specified in ERC-165. This function
-  ///  uses less than 30,000 gas.
-  /// @return `true` if the contract implements `interfaceId` and
-  ///  `interfaceId` is not 0xffffffff, `false` otherwise
-  function supportsInterface(bytes4 interfaceId) external pure returns (bool);
-}
-
 // This is a rewrite of the Vyper Eth2.0 deposit contract in Solidity.
 // It tries to stay as close as possible to the original source code.
 /// @notice This is the Ethereum 2.0 deposit contract interface.
-/// For more information see the Phase 0 specification under https://github.com/ethereum/eth2.0-specs
-contract DepositContractHarness is IDepositContract, ERC165 {
+/// For more information see the Phase 0 specification under https://github.com/ethereum/consensus-specs/tree/dev/specs/phase0
+contract DepositContractHarness is IDepositContract, IERC165 {
   uint constant DEPOSIT_CONTRACT_TREE_DEPTH = 32;
   // NOTE: this also ensures `deposit_count` will fit into 64-bits
   uint constant MAX_DEPOSIT_COUNT = 2 ** DEPOSIT_CONTRACT_TREE_DEPTH - 1;
@@ -255,6 +245,7 @@ contract DepositContractHarness is IDepositContract, ERC165 {
     bytes index;
   }
 
+  // Dev: harness part
   DepositEventData[] public depositEvents;
 
   constructor() {
@@ -345,7 +336,7 @@ contract DepositContractHarness is IDepositContract, ERC165 {
     return interfaceId == type(ERC165).interfaceId || interfaceId == type(IDepositContract).interfaceId;
   }
 
-  // dev: function visibility lifted
+  // Dev: function visibility lifted
   function to_little_endian_64(uint64 value) public pure returns (bytes memory ret) {
     ret = new bytes(8);
     bytes8 bytesValue = bytes8(value);
