@@ -95,10 +95,6 @@ contract BCDepositorInvariants is Test {
 }
 
 contract BCDepositorHandler is CommonBase, StdAssertions, StdUtils {
-  uint256 public constant PUB_KEY_LENGTH = 48;
-  uint256 public constant SIG_LENGTH = 96;
-  uint256 public constant WC_LENGTH = 32;
-
   uint256 public constant WITHDRAWAL_CREDENTIALS_START = 2 ** 248; // 0x01....00
   uint256 public constant WITHDRAWAL_CREDENTIALS_END = 2 ** 249 - 1; // 0x01FF...FF
 
@@ -333,7 +329,7 @@ contract DepositContractHarness is IDepositContract, IERC165 {
   }
 
   function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
-    return interfaceId == type(ERC165).interfaceId || interfaceId == type(IDepositContract).interfaceId;
+    return interfaceId == type(IERC165).interfaceId || interfaceId == type(IDepositContract).interfaceId;
   }
 
   // Dev: function visibility lifted
