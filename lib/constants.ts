@@ -38,3 +38,12 @@ export const WITHDRAWAL_MAX_BATCHES_LENGTH = 36n;
 
 export const WITHDRAWAL_MIN_STETH_WITHDRAWAL_AMOUNT = 100n;
 export const WITHDRAWAL_MAX_STETH_WITHDRAWAL_AMOUNT = 10n ** 21n; // 1000 * 1e18
+
+// Validator signing keys related
+export const PUBKEY_LENGTH = 48;
+export const SIGNATURE_LENGTH = 96;
+
+export const PUBKEY_LENGTH_HEX = PUBKEY_LENGTH * 2;
+export const SIGNATURE_LENGTH_HEX = SIGNATURE_LENGTH * 2;
+export const EMPTY_PUBLIC_KEY = "0x".padEnd(PUBKEY_LENGTH_HEX + 2, "0");
+export const EMPTY_SIGNATURE = "0x".padEnd(SIGNATURE_LENGTH_HEX + 2, "0");
