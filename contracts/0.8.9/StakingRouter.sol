@@ -160,7 +160,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         if (_admin == address(0)) revert ZeroAddress("_admin");
         if (_lido == address(0)) revert ZeroAddress("_lido");
 
-        _initializeContractVersionTo(1);
+        _initializeContractVersionTo(2);
 
         _setupRole(DEFAULT_ADMIN_ROLE, _admin);
 
@@ -172,6 +172,35 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     /// @dev prohibit direct transfer to contract
     receive() external payable {
         revert DirectETHTransfer();
+    }
+
+
+    /**
+    * @notice A function to finalize upgrade to v2 (from v1). Can be called only once
+    */
+    function finalizeUpgrade_v2(uint256[] memory _priorityExitShareThresholds) external {
+        _checkContractVersion(1);
+
+        uint256 stakingModulesCount = getStakingModulesCount();
+
+        if (stakingModulesCount != _priorityExitShareThresholds.length) {
+        revert ArraysLengthMismatch(stakingModulesCount, _priorityExitShareThresholds.length);
+        }
+
+        for (uint256 i; i < stakingModulesCount; ) {
+        StakingModule storage stakingModule = _getStakingModuleByIndex(i);
+
+        if (stakingModule.stakeShareLimit > _priorityExitShareThresholds[i]) {
+            revert InvalidPriorityExitShareThreshold();
+        }
+        stakingModule.priorityExitShareThreshold = uint16(_priorityExitShareThresholds[i]);
+
+        unchecked {
+            ++i;
+        }
+        }
+
+        _updateContractVersion(2);
     }
 
     /**
