@@ -1,11 +1,13 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
+// for testing purposes only
+
 pragma solidity 0.8.9;
 
 import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
-import { IConsensusContract } from "../../oracle/BaseOracle.sol";
-import { IReportAsyncProcessor } from "../../oracle/HashConsensus.sol";
+import { IConsensusContract } from "../../../contracts/0.8.9/oracle/BaseOracle.sol";
+import { IReportAsyncProcessor } from "../../../contracts/0.8.9/oracle/HashConsensus.sol";
 
 contract MockConsensusContract is IConsensusContract {
     using SafeCast for uint256;
