@@ -40,7 +40,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aragon/apps-lido@github:lidofinance/aragon-apps#master":
+"@aragon/apps-lido@lidofinance/aragon-apps#master":
   version: 1.0.0
   resolution: "@aragon/apps-lido@https://github.com/lidofinance/aragon-apps.git#commit=b09834d29c0db211ddd50f50905cbeff257fc8e0"
   checksum: 10c0/bf1e6bf16b97a2e6a4d597b45db1ec63fe7709825ceeb5ebba04258ed44131929ba5ada30bc8ecf88fd389db620762c591a5ac1d0fa811e719a387040aebe2a7
@@ -243,7 +243,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@commitlint/cli@npm:^19.2.2":
+"@commitlint/cli@npm:^19.3.0":
   version: 19.3.0
   resolution: "@commitlint/cli@npm:19.3.0"
   dependencies:
@@ -1355,7 +1355,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nomicfoundation/hardhat-verify@npm:^2.0.5":
+"@nomicfoundation/hardhat-verify@npm:^2.0.6":
   version: 2.0.6
   resolution: "@nomicfoundation/hardhat-verify@npm:2.0.6"
   dependencies:
@@ -2117,7 +2117,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@typescript-eslint/eslint-plugin@npm:^7.7.0":
+"@typescript-eslint/eslint-plugin@npm:^7.7.1":
   version: 7.7.1
   resolution: "@typescript-eslint/eslint-plugin@npm:7.7.1"
   dependencies:
@@ -2142,7 +2142,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@typescript-eslint/parser@npm:^7.7.0":
+"@typescript-eslint/parser@npm:^7.7.1":
   version: 7.7.1
   resolution: "@typescript-eslint/parser@npm:7.7.1"
   dependencies:
@@ -6517,7 +6517,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hardhat@npm:^2.22.2":
+"hardhat@npm:^2.22.3":
   version: 2.22.3
   resolution: "hardhat@npm:2.22.3"
   dependencies:
@@ -7825,12 +7825,12 @@ __metadata:
   dependencies:
     "@aragon/apps-agent": "npm:2.1.0"
     "@aragon/apps-finance": "npm:3.0.0"
-    "@aragon/apps-lido": "github:lidofinance/aragon-apps#master"
+    "@aragon/apps-lido": "lidofinance/aragon-apps#master"
     "@aragon/apps-vault": "npm:4.1.0"
     "@aragon/id": "npm:2.1.1"
     "@aragon/minime": "npm:1.0.0"
     "@aragon/os": "npm:4.4.0"
-    "@commitlint/cli": "npm:^19.2.2"
+    "@commitlint/cli": "npm:^19.3.0"
     "@commitlint/config-conventional": "npm:^19.2.2"
     "@nomicfoundation/hardhat-chai-matchers": "npm:^2.0.6"
     "@nomicfoundation/hardhat-ethers": "npm:^3.0.5"
@@ -7838,7 +7838,7 @@ __metadata:
     "@nomicfoundation/hardhat-ignition-ethers": "npm:^0.15.1"
     "@nomicfoundation/hardhat-network-helpers": "npm:^1.0.10"
     "@nomicfoundation/hardhat-toolbox": "npm:^5.0.0"
-    "@nomicfoundation/hardhat-verify": "npm:^2.0.5"
+    "@nomicfoundation/hardhat-verify": "npm:^2.0.6"
     "@nomicfoundation/ignition-core": "npm:^0.15.1"
     "@openzeppelin/contracts": "npm:3.4.0"
     "@openzeppelin/contracts-v4.4": "npm:@openzeppelin/contracts@4.4.1"
@@ -7847,8 +7847,8 @@ __metadata:
     "@types/chai": "npm:^4.3.14"
     "@types/mocha": "npm:10.0.6"
     "@types/node": "npm:20.12.7"
-    "@typescript-eslint/eslint-plugin": "npm:^7.7.0"
-    "@typescript-eslint/parser": "npm:^7.7.0"
+    "@typescript-eslint/eslint-plugin": "npm:^7.7.1"
+    "@typescript-eslint/parser": "npm:^7.7.1"
     bigint-conversion: "npm:^2.4.3"
     chai: "npm:^4.4.1"
     chalk: "npm:^4.1.2"
@@ -7860,7 +7860,7 @@ __metadata:
     ethereumjs-util: "npm:^7.1.5"
     ethers: "npm:^6.12.0"
     glob: "npm:^10.3.12"
-    hardhat: "npm:^2.22.2"
+    hardhat: "npm:^2.22.3"
     hardhat-contract-sizer: "npm:^2.10.0"
     hardhat-gas-reporter: "npm:^1.0.10"
     hardhat-ignore-warnings: "npm:^0.2.11"
