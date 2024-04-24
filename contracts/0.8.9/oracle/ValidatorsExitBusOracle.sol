@@ -15,7 +15,7 @@ interface IOracleReportSanityChecker {
     function checkExitBusOracleReport(uint256 _exitRequestsCount) external view;
 }
 interface IWithdrawalVault {
-    function triggerELValidatorExit(bytes[] calldata pubkey) external payable;
+    function triggerELValidatorExit(bytes[] calldata pubkey, uint256[] calldata amounts) external payable;
 }
 
 
@@ -506,7 +506,7 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
         _saveReportDataHash(reportHash, requestsCount);
     }
 
-    function forcedExitPubkeys(bytes[] calldata keys, ReportData calldata data) external payable {
+    function forcedExitPubkeys(bytes[] calldata keys, uint256[] calldata amounts, ReportData calldata data) external payable {
         uint256 requestsCount = _getReportHashesStorage()[keccak256(abi.encode(data))];
         uint256 keysCount = keys.length;
 
@@ -521,6 +521,6 @@ contract ValidatorsExitBusOracle is BaseOracle, PausableUntil {
             _processExitRequestsList(data.data, keccak256(keys[i]));
         }
 
-        IWithdrawalVault(LOCATOR.withdrawalVault()).triggerELValidatorExit{value: msg.value}(keys);
+        IWithdrawalVault(LOCATOR.withdrawalVault()).triggerELValidatorExit{value: msg.value}(keys, amounts);
     }
 }

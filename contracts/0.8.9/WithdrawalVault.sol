@@ -21,8 +21,8 @@ interface ILido {
 }
 
 interface ITriggerableExit {
-    function triggerExit(bytes memory validatorPubkey) external payable;
-    function getExitFee() external view returns (uint256);
+    function addWithdrawalRequest(bytes memory validatorPubkey, uint256 amount) external payable;
+    function getFee() external view returns (uint256);
 }
 
 
@@ -62,6 +62,7 @@ contract WithdrawalVault is Versioned {
     error ZeroAmount();
     error ZeroAddress();
     error ExitFeeNotEnought();
+    error UnexpectedItemsCount(uint256 keysCount, uint256 amountsCount);
 
     /**
      * @param _lido the Lido token (stETH) address
@@ -147,14 +148,28 @@ contract WithdrawalVault is Versioned {
         _token.transferFrom(address(this), TREASURY, _tokenId);
     }
 
-    function triggerELValidatorExit(bytes[] calldata pubkeys) external payable {
+    /**
+     * The exit request consists of two parts - the keys and the amount requested for the exit,
+     * i.e partial withdrawals.
+     *
+     * @notice The fee will be the same for all keys, because it is updated using a system call
+     *         at the very end of block processing.
+     *
+     * @param _pubkeys the keys requested to exit
+     * @param _amounts the amounts requested to exit for each key
+     */
+    function triggerELValidatorExit(bytes[] calldata _pubkeys, uint256[] calldata _amounts) external payable {
         if (msg.sender != VALIDATORS_EXIT_BUS) {
             revert SenderIsNotVEBOContract();
         }
 
-        uint256 keysCount = pubkeys.length;
+        uint256 keysCount = _pubkeys.length;
+        uint256 amountsCount = _amounts.length;
+        if (keysCount != amountsCount) {
+            revert UnexpectedItemsCount(keysCount, amountsCount);
+        }
 
-        if (TRIGGERABLE_EXIT.getExitFee() * keysCount > msg.value) {
+        if (TRIGGERABLE_EXIT.getFee() * keysCount > msg.value) {
             revert ExitFeeNotEnought();
         }
 
@@ -162,7 +177,7 @@ contract WithdrawalVault is Versioned {
         uint256 fee = msg.value / keysCount;
 
         for(uint256 i = 0; i < keysCount; ++i) {
-            TRIGGERABLE_EXIT.triggerExit{value: fee}(pubkeys[i]);
+            TRIGGERABLE_EXIT.addWithdrawalRequest{value: fee}(_pubkeys[i], _amounts[i]);
         }
 
         assert(address(this).balance == prevVaultBalance);
