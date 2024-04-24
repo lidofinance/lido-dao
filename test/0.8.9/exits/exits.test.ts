@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { AbiCoder, keccak256 } from "ethers";
+import { AbiCoder, BigNumberish, BytesLike, keccak256 } from "ethers";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
@@ -28,9 +28,10 @@ import {
   WithdrawalVault__factory,
 } from "typechain-types";
 
-import { ether, Snapshot } from "lib";
-import { proxify } from "lib/address";
-import { de0x, dummyLocator } from "lib/dummy";
+import { de0x, dummyLocator, ether, proxify, Snapshot } from "lib";
+
+type Report = ValidatorsExitBusOracle.ReportDataStruct;
+type ReportAsArray = ReturnType<typeof getValidatorsExitBusReportDataItems>;
 
 type Block = {
   number: number;
@@ -44,6 +45,12 @@ type ExitRequest = {
   valPubkey: string;
 };
 type ExitRequests = ExitRequest[];
+
+interface WithdrawalRequest {
+  keys: BytesLike[];
+  amounts: BigNumberish[];
+  data: Report;
+}
 
 const pad = (hex: string, bytesLength: number, fill = "0") => {
   const absentZeroes = bytesLength * 2 + 2 - hex.length;
@@ -94,15 +101,6 @@ const createAmounts = (length: number) => {
   return arr.fill(ether("32"));
 };
 
-type Report = {
-  consensusVersion: number;
-  dataFormat: number;
-  refSlot: bigint;
-  requestsCount: number;
-  data: string;
-};
-type ReportArr = [consensusVersion: number, refSlot: bigint, requestsCount: number, dataFormat: number, data: string];
-
 const getDefaultReportFields = (overrides: object) =>
   ({
     consensusVersion: CONSENSUS_VERSION,
@@ -113,11 +111,11 @@ const getDefaultReportFields = (overrides: object) =>
     ...overrides,
   }) as Report;
 
-function calcValidatorsExitBusReportDataHash(reportItems: ReportArr): string {
+function calcValidatorsExitBusReportDataHash(reportItems: ReportAsArray): string {
   return keccak256(new AbiCoder().encode(["(uint256,uint256,uint256,uint256,bytes)"], [reportItems]));
 }
 
-function getValidatorsExitBusReportDataItems(r: Report): ReportArr {
+function getValidatorsExitBusReportDataItems(r: Report) {
   return [r.consensusVersion, r.refSlot, r.requestsCount, r.dataFormat, r.data];
 }
 function hex(n: bigint, byteLen: number) {
@@ -131,6 +129,24 @@ function encodeExitRequestHex({ moduleId, nodeOpId, valIndex, valPubkey }: ExitR
 
 function encodeExitRequestsDataList(requests: ExitRequests) {
   return "0x" + requests.map(encodeExitRequestHex).join("");
+}
+
+async function prepareOracleReport({
+  exitRequests,
+  ...restFields
+}: {
+  exitRequests: ExitRequest[];
+} & Partial<Report>) {
+  const fields = getDefaultReportFields({
+    ...restFields,
+    requestsCount: exitRequests.length,
+    data: encodeExitRequestsDataList(exitRequests),
+  }) as Report;
+
+  const items = getValidatorsExitBusReportDataItems(fields);
+  const hash = calcValidatorsExitBusReportDataHash(items);
+
+  return { fields, items, hash };
 }
 
 describe("Triggerable exits test", () => {
@@ -158,6 +174,7 @@ describe("Triggerable exits test", () => {
 
   let curatedModuleId: bigint;
   const operator1Id = 0n;
+  let withdrawalRequest: WithdrawalRequest;
 
   async function getLatestBlock(): Promise<Block> {
     const block = await provider.getBlock("latest");
@@ -319,25 +336,24 @@ describe("Triggerable exits test", () => {
         { moduleId, nodeOpId, valIndex, valPubkey },
       ];
 
-      const reportFields = getDefaultReportFields({
-        refSlot,
-        requestsCount: exitRequests.length,
-        data: encodeExitRequestsDataList(exitRequests),
-      });
+      const report = await prepareOracleReport({ refSlot, exitRequests });
 
-      const reportItems = getValidatorsExitBusReportDataItems(reportFields);
-      const reportHash = calcValidatorsExitBusReportDataHash(reportItems);
-
-      await triggerConsensusOnHash(reportHash);
+      await triggerConsensusOnHash(report.hash);
 
       //oracle report
-      const tx2 = await oracle.submitReportData(reportFields, 1);
+      const tx2 = await oracle.submitReportData(report.fields, 1);
       await expect(tx2).to.be.emit(oracle, "ValidatorExitRequest");
 
       const valPubkeyUnknown = pad("0x010101", 48);
 
+      withdrawalRequest = {
+        keys: [valPubkeyUnknown],
+        amounts: [ether("32")],
+        data: report.fields,
+      };
+
       await expect(
-        oracle.forcedExitPubkeys([valPubkeyUnknown], [ether("32")], reportItems),
+        oracle.forcedExitPubkeys(withdrawalRequest.keys, withdrawalRequest.amounts, withdrawalRequest.data),
       ).to.be.revertedWithCustomError(oracle, "ErrorInvalidPubkeyInReport");
     });
 
@@ -361,25 +377,25 @@ describe("Triggerable exits test", () => {
         { moduleId, nodeOpId, valIndex, valPubkey },
       ];
 
-      const reportFields = getDefaultReportFields({
-        refSlot,
-        requestsCount: exitRequests.length,
-        data: encodeExitRequestsDataList(exitRequests),
-      });
-
-      const reportItems = getValidatorsExitBusReportDataItems(reportFields);
-      const reportHash = calcValidatorsExitBusReportDataHash(reportItems);
-
-      await triggerConsensusOnHash(reportHash);
+      const report = await prepareOracleReport({ refSlot, exitRequests });
+      await triggerConsensusOnHash(report.hash);
 
       //oracle report
-      const tx2 = await oracle.submitReportData(reportFields, 1);
+      const tx2 = await oracle.submitReportData(report.fields, 1);
       await expect(tx2).to.be.emit(oracle, "ValidatorExitRequest");
+
+      withdrawalRequest = {
+        keys: [valPubkey],
+        amounts: [ether("32")],
+        data: report.fields,
+      };
 
       //maximum to exit - 600val
       const tx = await oracle
         .connect(stranger)
-        .forcedExitPubkeys([valPubkey], [ether("32")], reportItems, { value: ether("1.0") });
+        .forcedExitPubkeys(withdrawalRequest.keys, withdrawalRequest.amounts, withdrawalRequest.data, {
+          value: ether("1.0"),
+        });
       await expect(tx).to.be.emit(oracle, "ValidatorExitRequest");
       await expect(tx).to.be.emit(triggerableExitMock, "WithdrawalRequest");
     });
@@ -400,21 +416,22 @@ describe("Triggerable exits test", () => {
         { moduleId, nodeOpId, valIndex, valPubkey },
       ];
 
-      const reportFields = getDefaultReportFields({
-        refSlot: +refSlot,
-        requestsCount: exitRequests.length,
-        data: encodeExitRequestsDataList(exitRequests),
-      });
-
-      const reportItems = getValidatorsExitBusReportDataItems(reportFields);
-      const reportHash = calcValidatorsExitBusReportDataHash(reportItems);
+      const report = await prepareOracleReport({ refSlot, exitRequests });
 
       //priority
-      await oracle.connect(voting).submitPriorityReportData(reportHash, exitRequests.length);
+      await oracle.connect(voting).submitPriorityReportData(report.hash, report.fields.requestsCount);
+
+      withdrawalRequest = {
+        keys: [valPubkey],
+        amounts: [ether("32")],
+        data: report.fields,
+      };
 
       const tx = await oracle
         .connect(stranger)
-        .forcedExitPubkeys([valPubkey], [ether("32")], reportItems, { value: ether("1.0") });
+        .forcedExitPubkeys(withdrawalRequest.keys, withdrawalRequest.amounts, withdrawalRequest.data, {
+          value: ether("1.0"),
+        });
       await expect(tx).to.be.emit(oracle, "ValidatorExitRequest");
       await expect(tx).to.be.emit(triggerableExitMock, "WithdrawalRequest");
     });
@@ -431,47 +448,70 @@ describe("Triggerable exits test", () => {
         { moduleId: 5n, nodeOpId: 5n, valIndex: 0n, valPubkey: keys[4] },
       ];
 
-      const reportFields = getDefaultReportFields({
-        refSlot: +refSlot,
-        requestsCount: exitRequests.length,
-        data: encodeExitRequestsDataList(exitRequests),
-      });
-
-      const reportItems = getValidatorsExitBusReportDataItems(reportFields);
-      const reportHash = calcValidatorsExitBusReportDataHash(reportItems);
+      const report = await prepareOracleReport({ refSlot, exitRequests });
 
       //priority
-      await oracle.connect(voting).submitPriorityReportData(reportHash, exitRequests.length);
+      await oracle.connect(voting).submitPriorityReportData(report.hash, exitRequests.length);
 
       //check invalid request count
       const { pubkeys: keysInvalidRequestCount } = genPublicKeysArray(6);
-      const amounts1 = createAmounts(keysInvalidRequestCount.length);
+      withdrawalRequest = {
+        keys: keysInvalidRequestCount,
+        amounts: createAmounts(keysInvalidRequestCount.length),
+        data: report.fields,
+      };
+
       await expect(
         oracle
           .connect(stranger)
-          .forcedExitPubkeys(keysInvalidRequestCount, amounts1, reportItems, { value: ether("1.0") }),
+          .forcedExitPubkeys(withdrawalRequest.keys, withdrawalRequest.amounts, withdrawalRequest.data, {
+            value: ether("1.0"),
+          }),
       ).to.be.revertedWithCustomError(oracle, "ErrorInvalidKeysRequestsCount");
 
       //check valid request count (not reverted)
       const { pubkeys: validRequestLessInTheReport } = genPublicKeysArray(3);
-      const amounts2 = createAmounts(validRequestLessInTheReport.length);
+      withdrawalRequest = {
+        keys: validRequestLessInTheReport,
+        amounts: createAmounts(validRequestLessInTheReport.length),
+        data: report.fields,
+      };
       await expect(
         oracle
           .connect(stranger)
-          .forcedExitPubkeys(validRequestLessInTheReport, amounts2, reportItems, { value: ether("1.1") }),
+          .forcedExitPubkeys(withdrawalRequest.keys, withdrawalRequest.amounts, withdrawalRequest.data, {
+            value: ether("1.1"),
+          }),
       ).not.to.be.revertedWithCustomError(oracle, "ErrorInvalidKeysRequestsCount");
 
       //check invalid request count
       const invalidKeyInRequest = [...keys];
       invalidKeyInRequest[2] = pad("0x010203", 48);
-      const amounts3 = createAmounts(invalidKeyInRequest.length);
+      withdrawalRequest = {
+        keys: invalidKeyInRequest,
+        amounts: createAmounts(invalidKeyInRequest.length),
+        data: report.fields,
+      };
       await expect(
-        oracle.connect(stranger).forcedExitPubkeys(invalidKeyInRequest, amounts3, reportItems, { value: ether("1.2") }),
+        oracle
+          .connect(stranger)
+          .forcedExitPubkeys(withdrawalRequest.keys, withdrawalRequest.amounts, withdrawalRequest.data, {
+            value: ether("1.2"),
+          }),
       ).to.be.revertedWithCustomError(oracle, "ErrorInvalidPubkeyInReport");
 
       //works
-      const amounts4 = createAmounts(invalidKeyInRequest.length);
-      await oracle.connect(stranger).forcedExitPubkeys(keys, amounts4, reportItems, { value: ether("1.0") });
+      withdrawalRequest = {
+        keys,
+        amounts: createAmounts(keys.length),
+        data: report.fields,
+      };
+      withdrawalRequest;
+      await oracle
+        .connect(stranger)
+        .forcedExitPubkeys(withdrawalRequest.keys, withdrawalRequest.amounts, withdrawalRequest.data, {
+          value: ether("1.0"),
+        });
     });
 
     it("reverts module request exit - if unvetted/undeposited keys in report", async () => {
@@ -503,14 +543,8 @@ describe("Triggerable exits test", () => {
         { moduleId: curatedModuleId, nodeOpId: operator1Id, valIndex: 3n, valPubkey: keys[3] },
         { moduleId: curatedModuleId, nodeOpId: operator1Id, valIndex: 4n, valPubkey: keys[4] },
       ];
-      const reportFields = getDefaultReportFields({
-        refSlot: +refSlot,
-        requestsCount: exitRequests.length,
-        data: encodeExitRequestsDataList(exitRequests),
-      });
 
-      const reportItems = getValidatorsExitBusReportDataItems(reportFields);
-      const reportHash = calcValidatorsExitBusReportDataHash(reportItems);
+      const report = await prepareOracleReport({ refSlot, exitRequests });
 
       const reportIndexes = exitRequests.map((req) => req.valIndex);
       const reportKeys = exitRequests.map((req) => req.valPubkey);
@@ -518,7 +552,7 @@ describe("Triggerable exits test", () => {
       //keys [0,1,2] - deposited
       //keys [3,4] - not
       await expect(
-        prover.reportKeysToExit(operator1Id, reportIndexes, reportKeys, reportHash),
+        prover.reportKeysToExit(operator1Id, reportIndexes, reportKeys, report.hash),
       ).to.be.revertedWithCustomError(prover, "ErrorKeyIsNotAvailiableToExit");
     });
 
@@ -541,36 +575,51 @@ describe("Triggerable exits test", () => {
         { moduleId: curatedModuleId, nodeOpId: operator1Id, valIndex: 1n, valPubkey: keys[1] },
         { moduleId: curatedModuleId, nodeOpId: operator1Id, valIndex: 2n, valPubkey: keys[2] },
       ];
-      const reportFields = getDefaultReportFields({
-        refSlot: +refSlot,
-        requestsCount: exitRequests.length,
-        data: encodeExitRequestsDataList(exitRequests),
-      });
 
-      const reportItems = getValidatorsExitBusReportDataItems(reportFields);
-      const reportHash = calcValidatorsExitBusReportDataHash(reportItems);
+      const report = await prepareOracleReport({ refSlot, exitRequests });
 
       const reportIndexes = exitRequests.map((req) => req.valIndex);
       const reportKeys = exitRequests.map((req) => req.valPubkey);
 
-      await prover.reportKeysToExit(operator1Id, reportIndexes, reportKeys, reportHash);
+      await prover.reportKeysToExit(operator1Id, reportIndexes, reportKeys, report.hash);
 
       // invalid key requested
       const valPubkeyUnknown = pad("0x010101", 48);
+      withdrawalRequest = {
+        keys: [valPubkeyUnknown],
+        amounts: createAmounts(1),
+        data: report.fields,
+      };
       await expect(
-        oracle.connect(stranger).forcedExitPubkeys([valPubkeyUnknown], [ether("32")], reportItems),
+        oracle
+          .connect(stranger)
+          .forcedExitPubkeys(withdrawalRequest.keys, withdrawalRequest.amounts, withdrawalRequest.data),
       ).to.be.revertedWithCustomError(oracle, "ErrorInvalidPubkeyInReport");
 
       //unvetted key requested
       const unvettedKey = keys[4];
+      withdrawalRequest = {
+        keys: [unvettedKey],
+        amounts: createAmounts(1),
+        data: report.fields,
+      };
       await expect(
-        oracle.connect(stranger).forcedExitPubkeys([unvettedKey], [ether("32")], reportItems),
+        oracle
+          .connect(stranger)
+          .forcedExitPubkeys(withdrawalRequest.keys, withdrawalRequest.amounts, withdrawalRequest.data),
       ).to.be.revertedWithCustomError(oracle, "ErrorInvalidPubkeyInReport");
 
       // //requested key exit
+      withdrawalRequest = {
+        keys: [keys[0], keys[1]],
+        amounts: createAmounts(2),
+        data: report.fields,
+      };
       const tx = await oracle
         .connect(stranger)
-        .forcedExitPubkeys([keys[0], keys[1]], [ether("32"), ether("32")], reportItems, { value: ether("1.0") });
+        .forcedExitPubkeys(withdrawalRequest.keys, withdrawalRequest.amounts, withdrawalRequest.data, {
+          value: ether("1.0"),
+        });
       await expect(tx).to.be.emit(oracle, "ValidatorExitRequest");
       await expect(tx).to.be.emit(triggerableExitMock, "WithdrawalRequest");
     });
@@ -588,17 +637,10 @@ describe("Triggerable exits test", () => {
         valPubkey: keys[0],
       }));
 
-      const reportFields = getDefaultReportFields({
-        refSlot: +refSlot,
-        requestsCount: exitRequests.length,
-        data: encodeExitRequestsDataList(exitRequests),
-      });
-
-      const reportItems = getValidatorsExitBusReportDataItems(reportFields);
-      const reportHash = calcValidatorsExitBusReportDataHash(reportItems);
+      const report = await prepareOracleReport({ refSlot, exitRequests });
 
       //priority
-      await oracle.connect(voting).submitPriorityReportData(reportHash, exitRequests.length);
+      await oracle.connect(voting).submitPriorityReportData(report.hash, report.fields.requestsCount);
 
       const keys1 = [...Array(keysCount).keys()].map(() => keys[0]);
 
@@ -612,9 +654,18 @@ describe("Triggerable exits test", () => {
       //calculate exitFee
       const exitFee1 = await triggerableExitMock.getFee();
       const keysFee1 = ether((exitFee1 * BigInt(keys1.length)).toString());
-      const amounts1 = createAmounts(keys1.length);
 
-      await oracle.connect(stranger).forcedExitPubkeys(keys1, amounts1, reportItems, { value: keysFee1 });
+      withdrawalRequest = {
+        keys: keys1,
+        amounts: createAmounts(keys1.length),
+        data: report.fields,
+      };
+
+      await oracle
+        .connect(stranger)
+        .forcedExitPubkeys(withdrawalRequest.keys, withdrawalRequest.amounts, withdrawalRequest.data, {
+          value: keysFee1,
+        });
 
       await triggerableExitMock.blockProcessing();
       //after block processing block the fee would be increased
@@ -627,7 +678,11 @@ describe("Triggerable exits test", () => {
       // const gasEstimate2 = await oracle
       //   .connect(stranger)
       //   .forcedExitPubkeys.estimateGas(keys1, reportItems, { value: ether("1.0") });
-      await oracle.connect(stranger).forcedExitPubkeys(keys1, amounts1, reportItems, { value: keysFee2 });
+      await oracle
+        .connect(stranger)
+        .forcedExitPubkeys(withdrawalRequest.keys, withdrawalRequest.amounts, withdrawalRequest.data, {
+          value: keysFee2,
+        });
     });
 
     it("test queue size", async function () {
@@ -643,17 +698,10 @@ describe("Triggerable exits test", () => {
         valPubkey: keys[0],
       }));
 
-      const reportFields = getDefaultReportFields({
-        refSlot: +refSlot,
-        requestsCount: exitRequests.length,
-        data: encodeExitRequestsDataList(exitRequests),
-      });
-
-      const reportItems = getValidatorsExitBusReportDataItems(reportFields);
-      const reportHash = calcValidatorsExitBusReportDataHash(reportItems);
+      const report = await prepareOracleReport({ refSlot, exitRequests });
 
       //priority
-      await oracle.connect(voting).submitPriorityReportData(reportHash, exitRequests.length);
+      await oracle.connect(voting).submitPriorityReportData(report.hash, report.fields.requestsCount);
 
       const keys1 = [...Array(keysCount).keys()].map(() => keys[0]);
 
@@ -667,9 +715,17 @@ describe("Triggerable exits test", () => {
       //calculate exitFee
       const exitFee1 = await triggerableExitMock.getFee();
       const keysFee1 = ether((exitFee1 * BigInt(keys1.length)).toString());
-      const amounts1 = createAmounts(keys1.length);
+      withdrawalRequest = {
+        keys: keys1,
+        amounts: createAmounts(keys1.length),
+        data: report.fields,
+      };
 
-      await oracle.connect(stranger).forcedExitPubkeys(keys1, amounts1, reportItems, { value: keysFee1 });
+      await oracle
+        .connect(stranger)
+        .forcedExitPubkeys(withdrawalRequest.keys, withdrawalRequest.amounts, withdrawalRequest.data, {
+          value: keysFee1,
+        });
 
       const queueCountBefore = await triggerableExitMock.getQueueCount();
       expect(queueCountBefore).to.be.equal(keysCount);
