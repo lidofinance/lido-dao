@@ -24,7 +24,7 @@ contract Prover is AccessControlEnumerable {
   IValidatorsExitBusOracle internal immutable ORACLE;
   uint256 public immutable STAKING_MODULE_ID;
 
-  constructor(address _lidoLocator, address _oracle, uint256 _stakingModuleId ) {
+  constructor(address _lidoLocator, address _oracle, uint256 _stakingModuleId) {
     LOCATOR = ILidoLocator(_lidoLocator);
     ORACLE = IValidatorsExitBusOracle(_oracle);
     STAKING_MODULE_ID = _stakingModuleId;
