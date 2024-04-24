@@ -1,9 +1,32 @@
 [profile.default]
-src = "contracts"
-out = "artifacts"
-libs = ["node_modules"]
-evm_version = "shanghai"
-optimizer = true
-optimizer_runs = 200
-# solc = 0.8.9
-# See more config options https://github.com/foundry-rs/foundry
+# The source directory
+src = 'contracts'
+
+# The artifact directory
+out = 'foundry/out'
+
+# A list of paths to look for libraries in
+libs = ['node_modules', 'foundry/lib']
+
+# The test directory
+test = 'test'
+
+# Whether to cache builds or not
+cache = true
+
+# The cache directory if enabled
+cache_path  = 'foundry/cache'
+
+# Only run tests in contracts matching the specified glob pattern
+match_path = '**/test/**/*.t.sol'
+
+# https://book.getfoundry.sh/reference/config/testing#fuzz
+# fuzz = { runs = 256 }
+# https://book.getfoundry.sh/reference/config/testing#invariant
+# invariant = { runs = 256, depth = 15 }
+
+# Fails the invariant fuzzing if a revert occurs
+# fail_on_revert = true
+
+# Style of uint/int256 types
+fmt = { int_types = 'long' }

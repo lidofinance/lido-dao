@@ -4,11 +4,11 @@
 
 pragma solidity 0.8.9;
 
-import {Counters} from "test/0.8.9/contracts/Counters.sol";
+import {Counters__GeneralMock} from "test/0.8.9/contracts/Counters__GeneralMock.sol";
 import {IStETH} from "test/0.8.9/contracts/StETH__MockForWithdrawalQueue.sol";
 
 contract WstETH__MockForWithdrawalQueue {
-  using Counters for Counters.Counter;
+  using Counters__GeneralMock for Counters__GeneralMock.Counter;
 
   IStETH public stETH;
 
@@ -18,7 +18,7 @@ contract WstETH__MockForWithdrawalQueue {
 
   uint256 private _totalSupply;
 
-  mapping (address => Counters.Counter) private _nonces;
+  mapping (address => Counters__GeneralMock.Counter) private _nonces;
 
   bool internal isSignatureValid = true;
 

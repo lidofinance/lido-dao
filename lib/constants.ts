@@ -20,7 +20,13 @@ export const OZ_ACCESS_CONTROL_ENUMERABLE_INTERFACE_ID = "0x5a05180f";
 // special reserved interface id
 export const INVALID_INTERFACE_ID = "0xffffffff";
 
-export const BLOCK_TIME = 12n;
+// Chain related
+export const SECONDS_PER_SLOT = 12n;
+export const EPOCHS_PER_FRAME = 225; // one day;
+
+// Oracle report related
+export const SLOTS_PER_EPOCH = 32;
+export const CONSENSUS_VERSION = 1;
 
 // Default admin role for AccessControl compatible contracts
 export const DEFAULT_ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -32,3 +38,12 @@ export const WITHDRAWAL_MAX_BATCHES_LENGTH = 36n;
 
 export const WITHDRAWAL_MIN_STETH_WITHDRAWAL_AMOUNT = 100n;
 export const WITHDRAWAL_MAX_STETH_WITHDRAWAL_AMOUNT = 10n ** 21n; // 1000 * 1e18
+
+// Validator signing keys related
+export const PUBKEY_LENGTH = 48;
+export const SIGNATURE_LENGTH = 96;
+
+export const PUBKEY_LENGTH_HEX = PUBKEY_LENGTH * 2;
+export const SIGNATURE_LENGTH_HEX = SIGNATURE_LENGTH * 2;
+export const EMPTY_PUBLIC_KEY = "0x".padEnd(PUBKEY_LENGTH_HEX + 2, "0");
+export const EMPTY_SIGNATURE = "0x".padEnd(SIGNATURE_LENGTH_HEX + 2, "0");

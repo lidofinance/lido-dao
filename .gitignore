@@ -1,8 +1,7 @@
-.idea
+/.idea
 
-node_modules
-.env
-coverage
+/node_modules
+/coverage
 coverage.json
 
 /typechain
@@ -12,5 +11,12 @@ coverage.json
 /cache
 /artifacts
 
-broadcast
-cache
+# foundry artifacts
+/foundry/cache
+/foundry/out
+
+.env
+deployed-local.json
+
+# MacOS
+.DS_Store
