@@ -125,25 +125,25 @@ contract StakeLimitUtils__Harness {
   }
 
   function setStakingLimit(uint256 _maxStakeLimit, uint256 _stakeLimitIncreasePerBlock) external {
-    state.setStakingLimit(_maxStakeLimit, _stakeLimitIncreasePerBlock);
+    state = state.setStakingLimit(_maxStakeLimit, _stakeLimitIncreasePerBlock);
 
     emit StakingLimitSet(_maxStakeLimit, _stakeLimitIncreasePerBlock);
   }
 
   function removeStakingLimit() external {
-    state.removeStakingLimit();
+    state = state.removeStakingLimit();
 
     emit StakingLimitRemoved();
   }
 
   function updatePrevStakeLimit(uint256 _newPrevStakeLimit) external {
-    state.updatePrevStakeLimit(_newPrevStakeLimit);
+    state = state.updatePrevStakeLimit(_newPrevStakeLimit);
 
     emit PrevStakeLimitUpdated();
   }
 
   function setStakeLimitPauseState(bool _isPaused) external {
-    state.setStakeLimitPauseState(_isPaused);
+    state = state.setStakeLimitPauseState(_isPaused);
 
     emit StakeLimitPauseStateSet(_isPaused);
   }

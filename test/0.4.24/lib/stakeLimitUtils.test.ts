@@ -219,11 +219,106 @@ describe("StakeLimitUtils.sol", () => {
         // growth blocks mined, the limit should be full
         expect(await stakeLimitUtils.calculateCurrentStakeLimit()).to.be.equal(maxStakeLimit);
       });
+
+      it("consume the whole limit", async () => {
+        const prevStakeBlockNumber = await latestBlock();
+        const prevStakeLimit = 7n * 10n ** 18n;
+        const maxStakeLimit = 7n * 10n ** 18n;
+        const maxStakeLimitGrowthBlocks = 10n;
+
+        await stakeLimitUtils.harness_setState(
+          prevStakeBlockNumber,
+          prevStakeLimit,
+          maxStakeLimitGrowthBlocks,
+          maxStakeLimit,
+        );
+
+        for (let i = 0n; i < maxStakeLimitGrowthBlocks; ++i) {
+          const blockNumber = await latestBlock();
+          const curPrevStakeLimit = prevStakeLimit - ((i + 1n) * maxStakeLimit) / maxStakeLimitGrowthBlocks;
+
+          await stakeLimitUtils.harness_setState(
+            blockNumber,
+            curPrevStakeLimit,
+            maxStakeLimitGrowthBlocks,
+            maxStakeLimit,
+          );
+
+          expect(await stakeLimitUtils.calculateCurrentStakeLimit()).to.be.equal(
+            curPrevStakeLimit + maxStakeLimit / maxStakeLimitGrowthBlocks,
+          );
+        }
+      });
     });
 
-    context("pause", () => {});
+    context("pause", () => {
+      it("zero prev block means paused", async () => {
+        const prevStakeBlockNumber = 0n;
+        const prevStakeLimit = 7n * 10n ** 18n;
+        const maxStakeLimit = 7n * 10n ** 18n;
+        const maxStakeLimitGrowthBlocks = 10n;
 
-    context("set", () => {});
+        await stakeLimitUtils.harness_setState(
+          prevStakeBlockNumber,
+          prevStakeLimit,
+          maxStakeLimitGrowthBlocks,
+          maxStakeLimit,
+        );
+
+        expect(await stakeLimitUtils.isStakingPaused()).to.be.true;
+
+        await stakeLimitUtils.harness_setState(1n, prevStakeLimit, maxStakeLimitGrowthBlocks, maxStakeLimit);
+
+        expect(await stakeLimitUtils.isStakingPaused()).to.be.false;
+      });
+
+      it("can pause and unpause", async () => {
+        const prevStakeBlockNumber = await latestBlock();
+        const prevStakeLimit = 3n * 10n ** 18n;
+        const maxStakeLimit = 4n * 10n ** 18n;
+        const maxStakeLimitGrowthBlocks = 10n;
+
+        await stakeLimitUtils.harness_setState(
+          prevStakeBlockNumber,
+          prevStakeLimit,
+          maxStakeLimitGrowthBlocks,
+          maxStakeLimit,
+        );
+
+        expect(await stakeLimitUtils.isStakingPaused()).to.be.false;
+
+        await stakeLimitUtils.setStakeLimitPauseState(true);
+        expect(await stakeLimitUtils.isStakingPaused()).to.be.true;
+
+        await stakeLimitUtils.setStakeLimitPauseState(false);
+        expect(await stakeLimitUtils.isStakingPaused()).to.be.false;
+      });
+    });
+
+    context("set", () => {
+      it("edge cases revert", async () => {
+        const prevStakeBlockNumber = await latestBlock();
+        const prevStakeLimit = 10n * 10n ** 18n;
+        const maxStakeLimit = 24n * 10n ** 18n;
+        const maxStakeLimitGrowthBlocks = 790n;
+
+        await stakeLimitUtils.harness_setState(
+          prevStakeBlockNumber,
+          prevStakeLimit,
+          maxStakeLimitGrowthBlocks,
+          maxStakeLimit,
+        );
+
+        await expect(stakeLimitUtils.setStakingLimit(0n, 1n)).to.be.revertedWith("ZERO_MAX_STAKE_LIMIT");
+        await expect(stakeLimitUtils.setStakingLimit(2n ** 96n, 1n)).to.be.revertedWith("TOO_LARGE_MAX_STAKE_LIMIT");
+        await expect(stakeLimitUtils.setStakingLimit(99n, 100n)).to.be.revertedWith("TOO_LARGE_LIMIT_INCREASE");
+        await expect(stakeLimitUtils.setStakingLimit(2n ** 32n, 1n)).to.be.revertedWith("TOO_SMALL_LIMIT_INCREASE");
+      });
+
+      it("can use zero increase", async () => {});
+
+      it("can use non zero increase", async () => {});
+    });
 
     context("remove", () => {});
 
