@@ -44,7 +44,7 @@ const config: HardhatUserConfig = {
       url: RPC_URL,
       chainId: 11155111,
       timeout: 60000 * 15,
-      accounts: [""],
+      // accounts: [""],
       urls: {
         apiURL: "https://api-sepolia.etherscan.io/api",
         browserURL: "https://sepolia.etherscan.io/",
