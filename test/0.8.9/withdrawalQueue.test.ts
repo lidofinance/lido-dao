@@ -64,7 +64,7 @@ describe("WithdrawalQueue.sol", () => {
 
   let originalState: string;
 
-  beforeEach(async () => {
+  before(async () => {
     [owner, stranger, user, oracle] = await ethers.getSigners();
 
     stEth = await ethers.deployContract("StETH__MockForWithdrawalQueue", []);

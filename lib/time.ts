@@ -16,6 +16,12 @@ export function days(number: bigint): bigint {
   return number * hours(24n);
 }
 
+export async function getCurrentBlockTimestamp() {
+  const blockNum = await ethers.provider.getBlockNumber();
+  const block = await ethers.provider.getBlock(blockNum);
+  return block?.timestamp ?? 0;
+}
+
 export async function getNextBlockTimestamp() {
   const latestBlockTimestamp = BigInt(await time.latest());
   const nextBlockTimestamp = latestBlockTimestamp + SECONDS_PER_SLOT;
