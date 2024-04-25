@@ -104,6 +104,18 @@ contract StakeLimitUtils__Harness {
   event PrevStakeLimitUpdated();
   event StakeLimitPauseStateSet(bool isPaused);
 
+  function harness_setState(
+    uint32 _prevStakeBlockNumber,
+    uint96 _prevStakeLimit,
+    uint32 _maxStakeLimitGrowthBlocks,
+    uint96 _maxStakeLimit
+  ) external {
+    state.prevStakeBlockNumber = _prevStakeBlockNumber;
+    state.prevStakeLimit = _prevStakeLimit;
+    state.maxStakeLimitGrowthBlocks = _maxStakeLimitGrowthBlocks;
+    state.maxStakeLimit = _maxStakeLimit;
+  }
+
   function calculateCurrentStakeLimit() external view returns (uint256 limit) {
     limit = state.calculateCurrentStakeLimit();
   }
