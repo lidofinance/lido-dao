@@ -5,8 +5,6 @@
 /* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import "hardhat/console.sol";
-
 contract TriggerableExitMock {
     address constant WITHDRAWAL_REQUEST_PREDEPLOY_ADDRESS = 0x00A3ca265EBcb825B45F985A16CEFB49958cE017;
 
