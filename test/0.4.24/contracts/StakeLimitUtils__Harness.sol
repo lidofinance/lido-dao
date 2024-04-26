@@ -99,6 +99,13 @@ contract StakeLimitUtils__Harness {
 
   StakeLimitState.Data public state;
 
+  event DataSet(
+    uint32 prevStakeBlockNumber,
+    uint96 prevStakeLimit,
+    uint32 maxStakeLimitGrowthBlocks,
+    uint96 maxStakeLimit
+  );
+
   event StakingLimitSet(uint256 maxStakeLimit, uint256 stakeLimitIncreasePerBlock);
   event StakingLimitRemoved();
   event PrevStakeLimitUpdated();
@@ -114,6 +121,19 @@ contract StakeLimitUtils__Harness {
     state.prevStakeLimit = _prevStakeLimit;
     state.maxStakeLimitGrowthBlocks = _maxStakeLimitGrowthBlocks;
     state.maxStakeLimit = _maxStakeLimit;
+
+    emit DataSet(_prevStakeBlockNumber, _prevStakeLimit, _maxStakeLimitGrowthBlocks, _maxStakeLimit);
+  }
+
+  function harness_getState()
+    external
+    view
+    returns (uint32 prevStakeBlockNumber, uint96 prevStakeLimit, uint32 maxStakeLimitGrowthBlocks, uint96 maxStakeLimit)
+  {
+    prevStakeBlockNumber = state.prevStakeBlockNumber;
+    prevStakeLimit = state.prevStakeLimit;
+    maxStakeLimitGrowthBlocks = state.maxStakeLimitGrowthBlocks;
+    maxStakeLimit = state.maxStakeLimit;
   }
 
   function calculateCurrentStakeLimit() external view returns (uint256 limit) {
