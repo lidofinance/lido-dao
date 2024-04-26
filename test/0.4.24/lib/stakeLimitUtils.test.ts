@@ -301,9 +301,10 @@ describe("StakeLimitUtils.sol", () => {
             maxStakeLimitGrowthBlocks,
             maxStakeLimit,
           );
-          await expect(stakeLimitUtils.setStakingLimit(maxStakeLimit, maxStakeLimit / maxStakeLimitGrowthBlocks))
+          const stakeLimitIncreasePerBlock = maxStakeLimit / maxStakeLimitGrowthBlocks;
+          await expect(stakeLimitUtils.setStakingLimit(maxStakeLimit, stakeLimitIncreasePerBlock))
             .to.emit(stakeLimitUtils, "StakingLimitSet")
-            .withArgs(maxStakeLimit, maxStakeLimit / maxStakeLimitGrowthBlocks);
+            .withArgs(maxStakeLimit, stakeLimitIncreasePerBlock);
 
           const state = await stakeLimitUtils.harness_getState();
 
@@ -324,7 +325,10 @@ describe("StakeLimitUtils.sol", () => {
           );
 
           const updatedMaxStakeLimit = 10n ** 18n;
-          await stakeLimitUtils.setStakingLimit(updatedMaxStakeLimit, updatedMaxStakeLimit / maxStakeLimitGrowthBlocks);
+          const stakeLimitIncreasePerBlock = updatedMaxStakeLimit / maxStakeLimitGrowthBlocks;
+          await expect(stakeLimitUtils.setStakingLimit(updatedMaxStakeLimit, stakeLimitIncreasePerBlock))
+            .to.emit(stakeLimitUtils, "StakingLimitSet")
+            .withArgs(updatedMaxStakeLimit, stakeLimitIncreasePerBlock);
           const updatedBlock = await latestBlock();
 
           const state = await stakeLimitUtils.harness_getState();
@@ -338,7 +342,10 @@ describe("StakeLimitUtils.sol", () => {
 
         it("new max is lower than the prev stake limit", async () => {
           const updatedMaxStakeLimit = 1n * 10n ** 18n;
-          await stakeLimitUtils.setStakingLimit(updatedMaxStakeLimit, updatedMaxStakeLimit / maxStakeLimitGrowthBlocks);
+          const stakeLimitIncreasePerBlock = updatedMaxStakeLimit / maxStakeLimitGrowthBlocks;
+          await expect(stakeLimitUtils.setStakingLimit(updatedMaxStakeLimit, stakeLimitIncreasePerBlock))
+            .to.emit(stakeLimitUtils, "StakingLimitSet")
+            .withArgs(updatedMaxStakeLimit, stakeLimitIncreasePerBlock);
           const updatedBlock = await latestBlock();
 
           const state = await stakeLimitUtils.harness_getState();
@@ -352,7 +359,9 @@ describe("StakeLimitUtils.sol", () => {
       });
 
       it("can use zero increase", async () => {
-        await stakeLimitUtils.setStakingLimit(maxStakeLimit, 0n);
+        await expect(stakeLimitUtils.setStakingLimit(maxStakeLimit, 0n))
+          .to.emit(stakeLimitUtils, "StakingLimitSet")
+          .withArgs(maxStakeLimit, 0n);
         const updatedBlock = await latestBlock();
 
         const state = await stakeLimitUtils.harness_getState();
@@ -366,7 +375,10 @@ describe("StakeLimitUtils.sol", () => {
       });
 
       it("same prev stake limit", async () => {
-        await stakeLimitUtils.setStakingLimit(maxStakeLimit, maxStakeLimit / maxStakeLimitGrowthBlocks);
+        const stakeLimitIncreasePerBlock = maxStakeLimit / maxStakeLimitGrowthBlocks;
+        await expect(stakeLimitUtils.setStakingLimit(maxStakeLimit, stakeLimitIncreasePerBlock))
+          .to.emit(stakeLimitUtils, "StakingLimitSet")
+          .withArgs(maxStakeLimit, stakeLimitIncreasePerBlock);
         const updatedBlock = await latestBlock();
 
         const state = await stakeLimitUtils.harness_getState();
@@ -380,7 +392,7 @@ describe("StakeLimitUtils.sol", () => {
 
     context("remove", () => {
       it("works always", async () => {
-        await stakeLimitUtils.removeStakingLimit();
+        await expect(stakeLimitUtils.removeStakingLimit()).to.emit(stakeLimitUtils, "StakingLimitRemoved");
 
         const state = await stakeLimitUtils.harness_getState();
 
@@ -400,15 +412,29 @@ describe("StakeLimitUtils.sol", () => {
       });
 
       it("works for regular cases", async () => {
-        await stakeLimitUtils.updatePrevStakeLimit(1n * 10n ** 18n);
+        const updatedValue = 1n * 10n ** 18n;
+
+        await expect(stakeLimitUtils.updatePrevStakeLimit(updatedValue))
+          .to.emit(stakeLimitUtils, "PrevStakeLimitUpdated")
+          .withArgs(updatedValue);
         const prevStakeBlockNumber = await latestBlock();
 
         const state = await stakeLimitUtils.harness_getState();
 
         expect(state.prevStakeBlockNumber).to.be.equal(prevStakeBlockNumber);
-        expect(state.prevStakeLimit).to.be.equal(1n * 10n ** 18n);
+        expect(state.prevStakeLimit).to.be.equal(updatedValue);
         expect(state.maxStakeLimit).to.be.equal(maxStakeLimit);
         expect(state.maxStakeLimitGrowthBlocks).to.be.equal(maxStakeLimitGrowthBlocks);
+      });
+    });
+
+    context("const gas min", () => {
+      it("behaves like `min`", async () => {
+        expect(await stakeLimitUtils.constGasMin(0n, 0n)).to.be.equal(0n);
+        expect(await stakeLimitUtils.constGasMin(0n, 2n ** 256n - 1n)).to.be.equal(0n);
+        expect(await stakeLimitUtils.constGasMin(2n ** 256n - 1n, 0n)).to.be.equal(0n);
+        expect(await stakeLimitUtils.constGasMin(10n, 1000n)).to.be.equal(10n);
+        expect(await stakeLimitUtils.constGasMin(1000n, 10n)).to.be.equal(10n);
       });
     });
   });

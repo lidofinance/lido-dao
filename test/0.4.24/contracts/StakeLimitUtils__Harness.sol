@@ -5,10 +5,8 @@
 pragma solidity 0.4.24;
 
 import {StakeLimitUtils, StakeLimitUnstructuredStorage, StakeLimitState} from "contracts/0.4.24/lib/StakeLimitUtils.sol";
-import {UnstructuredStorage} from "@aragon/os/contracts/common/UnstructuredStorage.sol";
 
 contract StakeLimitUnstructuredStorage__Harness {
-  using UnstructuredStorage for bytes32;
   using StakeLimitUnstructuredStorage for bytes32;
 
   bytes32 public constant position = keccak256("test.test.test");
@@ -108,7 +106,7 @@ contract StakeLimitUtils__Harness {
 
   event StakingLimitSet(uint256 maxStakeLimit, uint256 stakeLimitIncreasePerBlock);
   event StakingLimitRemoved();
-  event PrevStakeLimitUpdated();
+  event PrevStakeLimitUpdated(uint256 newPrevStakeLimit);
   event StakeLimitPauseStateSet(bool isPaused);
 
   function harness_setState(
@@ -159,7 +157,7 @@ contract StakeLimitUtils__Harness {
   function updatePrevStakeLimit(uint256 _newPrevStakeLimit) external {
     state = state.updatePrevStakeLimit(_newPrevStakeLimit);
 
-    emit PrevStakeLimitUpdated();
+    emit PrevStakeLimitUpdated(_newPrevStakeLimit);
   }
 
   function setStakeLimitPauseState(bool _isPaused) external {
