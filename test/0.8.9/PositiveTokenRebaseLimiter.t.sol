@@ -15,25 +15,20 @@ contract PositiveTokenRebaseLimiterTest is Test {
     rebaseLimiter = new PositiveTokenRebaseLimiter__Harness();
   }
 
-  function testFuzz_initLimiterBadLimit(
+  function testFuzz_initLimiterStateTooLowLimit(uint256 _preTotalPooledEther, uint256 _preTotalShares) external {
+    vm.expectRevert();
+    rebaseLimiter.initLimiterState(0, _preTotalPooledEther, _preTotalShares);
+  }
+
+  function testFuzz_initLimiterTooHighLimit(
     uint256 _rebaseLimit,
     uint256 _preTotalPooledEther,
     uint256 _preTotalShares
   ) external {
-    //TODO: bad rebase limit values range
-  }
+    _rebaseLimit = bound(_rebaseLimit, PositiveTokenRebaseLimiter.UNLIMITED_REBASE + 1, type(uint256).max);
 
-  function testFuzz_initLimiterStateZeroTVL(uint256 _rebaseLimit, uint256 _preTotalShares) external {
-    _rebaseLimit = bound(_rebaseLimit, 1, PositiveTokenRebaseLimiter.UNLIMITED_REBASE);
-    _preTotalShares = bound(_preTotalShares, 0, 200_000_000 * 10 ** 18);
-
-    rebaseLimiter.initLimiterState(_rebaseLimit, 0, _preTotalShares);
-
-    TokenRebaseLimiterData memory data = rebaseLimiter.getData__harness();
-
-    assertEq(data.positiveRebaseLimit, PositiveTokenRebaseLimiter.UNLIMITED_REBASE);
-    assertEq(data.preTotalPooledEther, 0);
-    assertEq(data.preTotalShares, _preTotalShares);
+    vm.expectRevert();
+    rebaseLimiter.initLimiterState(_rebaseLimit, _preTotalPooledEther, _preTotalShares);
   }
 
   function testFuzz_initLimiterState(
@@ -42,16 +37,22 @@ contract PositiveTokenRebaseLimiterTest is Test {
     uint256 _preTotalShares
   ) external {
     _rebaseLimit = bound(_rebaseLimit, 1, PositiveTokenRebaseLimiter.UNLIMITED_REBASE);
-    _preTotalPooledEther = bound(_preTotalPooledEther, 1, 200_000_000 * 10 ** 18);
+    _preTotalPooledEther = bound(_preTotalPooledEther, 0, 200_000_000 * 10 ** 18);
     _preTotalShares = bound(_preTotalShares, 0, 200_000_000 * 10 ** 18);
 
     rebaseLimiter.initLimiterState(_rebaseLimit, _preTotalPooledEther, _preTotalShares);
 
     TokenRebaseLimiterData memory data = rebaseLimiter.getData__harness();
 
-    assertEq(data.positiveRebaseLimit, _rebaseLimit);
     assertEq(data.preTotalPooledEther, _preTotalPooledEther);
     assertEq(data.preTotalShares, _preTotalShares);
+
+    if (_preTotalPooledEther != 0) {
+      assertEq(data.positiveRebaseLimit, _rebaseLimit);
+    } else {
+      assertEq(data.positiveRebaseLimit, PositiveTokenRebaseLimiter.UNLIMITED_REBASE);
+      assertEq(data.maxTotalPooledEther, type(uint256).max);
+    }
   }
 }
 
