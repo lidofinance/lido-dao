@@ -20,6 +20,4 @@ contract Proxy__Harness is Proxy {
   function _implementation() internal view override returns (address) {
     return impl;
   }
-
-  receive() external payable override {}
 }

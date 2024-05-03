@@ -10,4 +10,9 @@ contract Impl__MockForERC1967Proxy {
       sstore(slot, value)
     }
   }
+
+  event Received();
+  receive() external payable {
+    emit Received();
+  }
 }
