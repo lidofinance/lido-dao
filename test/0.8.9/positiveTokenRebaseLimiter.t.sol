@@ -11,6 +11,10 @@ import {PositiveTokenRebaseLimiter, TokenRebaseLimiterData} from "contracts/0.8.
 contract PositiveTokenRebaseLimiterTest is Test {
   PositiveTokenRebaseLimiter__Harness public rebaseLimiter;
 
+  uint256 private constant MAX_PROJECTED_ETH = 200_000_000 * 1 ether;
+  uint256 private constant MAX_SHARE_RATE_COEF = 1_000;
+  uint256 private constant MIN_PROTOCOL_ETH = 1 ether;
+
   function setUp() public {
     rebaseLimiter = new PositiveTokenRebaseLimiter__Harness();
   }
@@ -33,8 +37,8 @@ contract PositiveTokenRebaseLimiterTest is Test {
 
   function testFuzz_initLimiterState(TokenRebaseLimiterData calldata _fuzzData) external {
     uint256 rebaseLimit = bound(_fuzzData.positiveRebaseLimit, 1, PositiveTokenRebaseLimiter.UNLIMITED_REBASE);
-    uint256 preTotalPooledEther = bound(_fuzzData.preTotalPooledEther, 0, 200_000_000 * 10 ** 18);
-    uint256 preTotalShares = bound(_fuzzData.preTotalShares, 0, 200_000_000 * 10 ** 18);
+    uint256 preTotalPooledEther = bound(_fuzzData.preTotalPooledEther, 0, MAX_PROJECTED_ETH);
+    uint256 preTotalShares = bound(_fuzzData.preTotalShares, 0, MAX_PROJECTED_ETH);
 
     rebaseLimiter.initLimiterState(rebaseLimit, preTotalPooledEther, preTotalShares);
 
@@ -88,13 +92,13 @@ contract PositiveTokenRebaseLimiterTest is Test {
   function testFuzz_decreaseEther(TokenRebaseLimiterData memory _fuzzData, uint256 _etherAmount) external {
     _fuzzData.positiveRebaseLimit = bound(
       _fuzzData.positiveRebaseLimit,
-      0,
+      1,
       PositiveTokenRebaseLimiter.UNLIMITED_REBASE - 1
     );
-    _fuzzData.currentTotalPooledEther = bound(_fuzzData.currentTotalPooledEther, 0, 200_000_000 * 10 ** 18);
+    _fuzzData.currentTotalPooledEther = bound(_fuzzData.currentTotalPooledEther, 0, MAX_PROJECTED_ETH);
     rebaseLimiter.setData__harness(_fuzzData);
 
-    _etherAmount = bound(_etherAmount, 0, 200_000_000 * 10 ** 18);
+    _etherAmount = bound(_etherAmount, 0, MAX_PROJECTED_ETH);
 
     if (_etherAmount > _fuzzData.currentTotalPooledEther) {
       vm.expectRevert(PositiveTokenRebaseLimiter.NegativeTotalPooledEther.selector);
@@ -125,15 +129,15 @@ contract PositiveTokenRebaseLimiterTest is Test {
   function testFuzz_increaseEther(TokenRebaseLimiterData memory _fuzzData, uint256 _etherAmount) external {
     _fuzzData.positiveRebaseLimit = bound(
       _fuzzData.positiveRebaseLimit,
-      0,
+      1,
       PositiveTokenRebaseLimiter.UNLIMITED_REBASE - 1
     );
-    _fuzzData.maxTotalPooledEther = bound(_fuzzData.maxTotalPooledEther, 0, 200_000_000 * 10 ** 18);
+    _fuzzData.maxTotalPooledEther = bound(_fuzzData.maxTotalPooledEther, 0, MAX_PROJECTED_ETH);
     _fuzzData.currentTotalPooledEther = bound(_fuzzData.currentTotalPooledEther, 0, _fuzzData.maxTotalPooledEther);
 
     rebaseLimiter.setData__harness(_fuzzData);
 
-    _etherAmount = bound(_etherAmount, 0, 200_000_000 * 10 ** 18);
+    _etherAmount = bound(_etherAmount, 0, MAX_PROJECTED_ETH);
 
     uint256 consumed = rebaseLimiter.increaseEther(_etherAmount);
     TokenRebaseLimiterData memory data = rebaseLimiter.getData__harness();
@@ -165,7 +169,7 @@ contract PositiveTokenRebaseLimiterTest is Test {
   function testFuzz_getSharesToBurnLimitZeroTVL(TokenRebaseLimiterData memory _fuzzData) external {
     _fuzzData.positiveRebaseLimit = bound(
       _fuzzData.positiveRebaseLimit,
-      0,
+      1,
       PositiveTokenRebaseLimiter.UNLIMITED_REBASE - 1
     );
     _fuzzData.preTotalPooledEther = 0;
@@ -177,23 +181,72 @@ contract PositiveTokenRebaseLimiterTest is Test {
     }
   }
 
+  uint256 private constant MAX_ETHER_DECREASE_COEF = 1e3;
+  uint256 private constant REBASE_COMPARISON_TOLERANCE = 1e5;
+  uint256 private constant SHARE_RATE_PRECISION = 1e27;
+
+  /**
+   * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-fuzz-configs
+   * forge-config: default.fuzz.runs = 65536
+   * forge-config: default.fuzz.max-test-rejects = 0
+   */
   function testFuzz_getSharesToBurnLimit(TokenRebaseLimiterData memory _fuzzData) external {
-    _fuzzData.preTotalPooledEther = bound(_fuzzData.preTotalPooledEther, 1, 200_000_000 * 10 ** 18);
-    _fuzzData.preTotalShares = bound(_fuzzData.preTotalShares, 0, 200_000_000 * 10 ** 18);
-    _fuzzData.currentTotalPooledEther = bound(_fuzzData.currentTotalPooledEther, 0, _fuzzData.maxTotalPooledEther);
+    /**
+     * Review: As PositiveTokenRebaseLimiter uses a limited precision for calculation (only 1e9),
+     * data boundaries should be reasonable and tight to meet the requirements
+     *
+     * The data boundaries might be extended in future versions of the lib by usins the ray math internally (1e27)
+     */
+
+    _fuzzData.preTotalPooledEther = bound(_fuzzData.preTotalPooledEther, MIN_PROTOCOL_ETH, MAX_PROJECTED_ETH);
+    _fuzzData.preTotalShares = bound(
+      _fuzzData.preTotalShares,
+      _fuzzData.preTotalPooledEther / MAX_SHARE_RATE_COEF,
+      _fuzzData.preTotalPooledEther * MAX_SHARE_RATE_COEF
+    );
     _fuzzData.positiveRebaseLimit = bound(
       _fuzzData.positiveRebaseLimit,
-      0,
-      PositiveTokenRebaseLimiter.UNLIMITED_REBASE - 1
+      1,
+      PositiveTokenRebaseLimiter.LIMITER_PRECISION_BASE
     );
-    _fuzzData.maxTotalPooledEther = bound(_fuzzData.currentTotalPooledEther, 0, 200_000_000 * 10 ** 18);
 
-    rebaseLimiter.setData__harness(_fuzzData);
+    rebaseLimiter.initLimiterState(
+      _fuzzData.positiveRebaseLimit,
+      _fuzzData.preTotalPooledEther,
+      _fuzzData.preTotalShares
+    );
 
-    //TODO: requires proper initialization
-    //uint256 sharesToBurnLimit = rebaseLimiter.getSharesToBurnLimit();
+    TokenRebaseLimiterData memory initializedData = rebaseLimiter.getData__harness();
 
-    //assertEq(sharesToBurnLimit, _data.preTotalShares);
+    initializedData.currentTotalPooledEther = bound(
+      _fuzzData.currentTotalPooledEther,
+      _fuzzData.preTotalPooledEther / MAX_ETHER_DECREASE_COEF, // x1000 drop at max
+      MAX_PROJECTED_ETH
+    );
+
+    rebaseLimiter.setData__harness(initializedData);
+
+    uint256 sharesToBurnLimit = rebaseLimiter.getSharesToBurnLimit();
+
+    if (initializedData.currentTotalPooledEther >= initializedData.maxTotalPooledEther) {
+      assertEq(sharesToBurnLimit, 0);
+    } else {
+      assertLt(sharesToBurnLimit, _fuzzData.preTotalShares);
+
+      uint256 oldShareRate = (_fuzzData.preTotalPooledEther * SHARE_RATE_PRECISION) / _fuzzData.preTotalShares;
+      uint256 newShareRate = (initializedData.currentTotalPooledEther * SHARE_RATE_PRECISION) /
+        (_fuzzData.preTotalShares - sharesToBurnLimit);
+
+      uint256 rebase = (((newShareRate - oldShareRate) * PositiveTokenRebaseLimiter.LIMITER_PRECISION_BASE) /
+        oldShareRate);
+
+      // 0.1 BP difference at max
+      assertApproxEqAbs(
+        rebase,
+        initializedData.positiveRebaseLimit,
+        PositiveTokenRebaseLimiter.LIMITER_PRECISION_BASE / REBASE_COMPARISON_TOLERANCE
+      );
+    }
   }
 }
 
