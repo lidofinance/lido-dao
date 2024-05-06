@@ -32,8 +32,7 @@ If you have a bigger idea on how to improve the protocol, consider publishing yo
 - [Yarn ^4.1](https://yarnpkg.com/)
 - [Foundry ^0.2](https://book.getfoundry.sh/)
 
-[!NOTE]
-
+> [!NOTE]
 > On macOS with Homebrew it is recommended to install Node.js using [`n`](https://github.com/tj/n) or [`nvm`](https://github.com/nvm-sh/nvm) version managers.  
 > Example for `n`:
 >
