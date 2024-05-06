@@ -34,7 +34,7 @@ If you have a bigger idea on how to improve the protocol, consider publishing yo
 
 > [!NOTE]
 > On macOS with Homebrew it is recommended to install Node.js using [`n`](https://github.com/tj/n) or [`nvm`](https://github.com/nvm-sh/nvm) version managers.  
-> Example for `n`:
+> Example setup process using `n` package manager:
 >
 > ```
 > $ brew install n
@@ -46,8 +46,6 @@ If you have a bigger idea on how to improve the protocol, consider publishing yo
 > $ yarn
 > ```
 
-````bash
-
 ### Setup
 
 > Installation is local and doesn't require root privileges.
@@ -56,7 +54,7 @@ Install dependencies
 
 ```bash
 yarn install
-````
+```
 
 ### Test
 
