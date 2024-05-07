@@ -11,18 +11,22 @@ import {
   MockLidoForAccountingOracle,
 } from "typechain-types";
 
-import { calcReportDataHash, ether, getReportDataItems, OracleReport, ReportAsArray, shareRate } from "lib";
-import { CONSENSUS_VERSION } from "lib";
-
 import {
   calcExtraDataListHash,
-  deployAndConfigureAccountingOracle,
+  calcReportDataHash,
   encodeExtraDataItems,
+  ether,
   EXTRA_DATA_FORMAT_EMPTY,
   EXTRA_DATA_FORMAT_LIST,
-  ONE_GWEI,
+  getReportDataItems,
+  OracleReport,
   packExtraDataList,
-} from "./accountingOracleDeploy.test";
+  ReportAsArray,
+  shareRate,
+} from "lib";
+import { CONSENSUS_VERSION } from "lib";
+
+import { deployAndConfigureAccountingOracle, ONE_GWEI } from "./accountingOracleDeploy.test";
 
 describe("AccountingOracle.sol", () => {
   let consensus: HashConsensusTimeTravellable;
@@ -101,7 +105,7 @@ describe("AccountingOracle.sol", () => {
 
   context("SUBMIT_DATA_ROLE", () => {
     context("submitReportData", () => {
-      it("should revert from not consensus member without SUBMIT_DATA_ROLE role", async () => {
+      it("reverts when sender is not allowed", async () => {
         await expect(
           oracle.connect(stranger).submitReportData(reportFields, CONSENSUS_VERSION),
         ).to.be.revertedWithCustomError(oracle, "SenderNotAllowed");
@@ -124,7 +128,7 @@ describe("AccountingOracle.sol", () => {
     });
 
     context("extraDataItems", () => {
-      it("should revert from not consensus member without SUBMIT_DATA_ROLE role ", async () => {
+      it("reverts when sender is not allowed", async () => {
         await expect(oracle.connect(account).submitReportExtraDataList(extraDataList)).to.be.revertedWithCustomError(
           oracle,
           "SenderNotAllowed",
@@ -157,7 +161,7 @@ describe("AccountingOracle.sol", () => {
     context("submitReportExtraDataEmpty", () => {
       beforeEach(() => deploy({ emptyExtraData: true }));
 
-      it("should revert from not consensus member without SUBMIT_DATA_ROLE role ", async () => {
+      it("reverts when sender is not allowed", async () => {
         await expect(oracle.connect(account).submitReportExtraDataEmpty()).to.be.revertedWithCustomError(
           oracle,
           "SenderNotAllowed",

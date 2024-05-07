@@ -15,25 +15,25 @@ import {
 } from "typechain-types";
 
 import {
+  calcExtraDataListHash,
   calcReportDataHash,
+  encodeExtraDataItems,
   ether,
+  EXTRA_DATA_FORMAT_EMPTY,
+  EXTRA_DATA_FORMAT_LIST,
+  ExtraDataType,
   getReportDataItems,
   numberToHex,
   OracleReport,
+  packExtraDataList,
   ReportAsArray,
   shareRate,
 } from "lib";
 import { CONSENSUS_VERSION } from "lib";
 
 import {
-  calcExtraDataListHash,
   deployAndConfigureAccountingOracle,
-  encodeExtraDataItems,
-  EXTRA_DATA_FORMAT_EMPTY,
-  EXTRA_DATA_FORMAT_LIST,
-  ExtraDataType,
   ONE_GWEI,
-  packExtraDataList,
   V1_ORACLE_LAST_REPORT_SLOT,
 } from "./accountingOracleDeploy.test";
 import {

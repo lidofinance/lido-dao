@@ -1,13 +1,25 @@
 import { assert } from "chai";
+import { keccak256 } from "ethers";
 import { ethers } from "hardhat";
 
 import { AccountingOracle, HashConsensus } from "typechain-types";
 
 import { CONSENSUS_VERSION } from "lib/constants";
 
+import { numberToHex } from "./string";
+
 export type OracleReport = AccountingOracle.ReportDataStruct;
 
 export type ReportAsArray = ReturnType<typeof getReportDataItems>;
+
+export type KeyType = { moduleId: number; nodeOpIds: number[]; keysCounts: number[] };
+export type ExtraDataType = { stuckKeys: KeyType[]; exitedKeys: KeyType[] };
+
+export const EXTRA_DATA_FORMAT_EMPTY = 0;
+export const EXTRA_DATA_FORMAT_LIST = 1;
+
+export const EXTRA_DATA_TYPE_STUCK_VALIDATORS = 1;
+export const EXTRA_DATA_TYPE_EXITED_VALIDATORS = 2;
 
 const DEFAULT_REPORT_FIELDS: OracleReport = {
   consensusVersion: 1n,
@@ -122,6 +134,37 @@ export function pushOracleReport(
   elRewardsVaultBalance: bigint,
 ) {
   return reportOracle(consensus, oracle, { numValidators, clBalance, elRewardsVaultBalance });
+}
+
+export function encodeExtraDataItem(
+  itemIndex: number,
+  itemType: number,
+  moduleId: number,
+  nodeOperatorIds: number[],
+  keysCounts: number[],
+) {
+  const itemHeader = numberToHex(itemIndex, 3) + numberToHex(itemType, 2);
+  const payloadHeader = numberToHex(moduleId, 3) + numberToHex(nodeOperatorIds.length, 8);
+  const operatorIdsPayload = nodeOperatorIds.map((id) => numberToHex(id, 8)).join("");
+  const keysCountsPayload = keysCounts.map((count) => numberToHex(count, 16)).join("");
+  return "0x" + itemHeader + payloadHeader + operatorIdsPayload + keysCountsPayload;
+}
+
+export function encodeExtraDataItems(data: ExtraDataType) {
+  const items: string[] = [];
+  const encodeItem = (item: KeyType, type: number) =>
+    encodeExtraDataItem(items.length, type, item.moduleId, item.nodeOpIds, item.keysCounts);
+  data.stuckKeys.forEach((item: KeyType) => items.push(encodeItem(item, EXTRA_DATA_TYPE_STUCK_VALIDATORS)));
+  data.exitedKeys.forEach((item: KeyType) => items.push(encodeItem(item, EXTRA_DATA_TYPE_EXITED_VALIDATORS)));
+  return items;
+}
+
+export function packExtraDataList(extraDataItems: string[]) {
+  return "0x" + extraDataItems.map((s) => s.substring(2)).join("");
+}
+
+export function calcExtraDataListHash(packedExtraDataList: string) {
+  return keccak256(packedExtraDataList);
 }
 
 export async function getSecondsPerFrame(consensus: HashConsensus) {

@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { keccak256, ZeroAddress } from "ethers";
+import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
@@ -14,7 +14,13 @@ import {
   MockWithdrawalQueueForAccountingOracle,
 } from "typechain-types";
 
-import { numberToHex, Snapshot } from "lib";
+import {
+  EXTRA_DATA_FORMAT_EMPTY,
+  EXTRA_DATA_FORMAT_LIST,
+  EXTRA_DATA_TYPE_EXITED_VALIDATORS,
+  EXTRA_DATA_TYPE_STUCK_VALIDATORS,
+  Snapshot,
+} from "lib";
 
 import { deployLocatorWithDummyAddressesImplementation, updateLocatorImplementation } from "../../../lib";
 
@@ -24,47 +30,7 @@ import { deployHashConsensus } from "./hashConsensus";
 const V1_ORACLE_LAST_COMPLETED_EPOCH = 2 * EPOCHS_PER_FRAME;
 export const V1_ORACLE_LAST_REPORT_SLOT = V1_ORACLE_LAST_COMPLETED_EPOCH * SLOTS_PER_EPOCH;
 
-export const EXTRA_DATA_FORMAT_EMPTY = 0;
-export const EXTRA_DATA_FORMAT_LIST = 1;
-
-export const EXTRA_DATA_TYPE_STUCK_VALIDATORS = 1;
-export const EXTRA_DATA_TYPE_EXITED_VALIDATORS = 2;
-
 export const ONE_GWEI = 1_000_000_000n;
-
-export function encodeExtraDataItem(
-  itemIndex: number,
-  itemType: number,
-  moduleId: number,
-  nodeOperatorIds: number[],
-  keysCounts: number[],
-) {
-  const itemHeader = numberToHex(itemIndex, 3) + numberToHex(itemType, 2);
-  const payloadHeader = numberToHex(moduleId, 3) + numberToHex(nodeOperatorIds.length, 8);
-  const operatorIdsPayload = nodeOperatorIds.map((id) => numberToHex(id, 8)).join("");
-  const keysCountsPayload = keysCounts.map((count) => numberToHex(count, 16)).join("");
-  return "0x" + itemHeader + payloadHeader + operatorIdsPayload + keysCountsPayload;
-}
-
-export type KeyType = { moduleId: number; nodeOpIds: number[]; keysCounts: number[] };
-export type ExtraDataType = { stuckKeys: KeyType[]; exitedKeys: KeyType[] };
-
-export function encodeExtraDataItems(data: ExtraDataType) {
-  const items: string[] = [];
-  const encodeItem = (item: KeyType, type: number) =>
-    encodeExtraDataItem(items.length, type, item.moduleId, item.nodeOpIds, item.keysCounts);
-  data.stuckKeys.forEach((item: KeyType) => items.push(encodeItem(item, EXTRA_DATA_TYPE_STUCK_VALIDATORS)));
-  data.exitedKeys.forEach((item: KeyType) => items.push(encodeItem(item, EXTRA_DATA_TYPE_EXITED_VALIDATORS)));
-  return items;
-}
-
-export function packExtraDataList(extraDataItems: string[]) {
-  return "0x" + extraDataItems.map((s) => s.substring(2)).join("");
-}
-
-export function calcExtraDataListHash(packedExtraDataList: string) {
-  return keccak256(packedExtraDataList);
-}
 
 async function deployMockLegacyOracle({
   epochsPerFrame = EPOCHS_PER_FRAME,

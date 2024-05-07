@@ -12,21 +12,26 @@ import {
   OracleReportSanityChecker,
 } from "typechain-types";
 
-import { calcReportDataHash, ether, getReportDataItems, numberToHex, OracleReport, shareRate, Snapshot } from "lib";
-import { CONSENSUS_VERSION } from "lib";
-
 import {
   calcExtraDataListHash,
-  deployAndConfigureAccountingOracle,
+  calcReportDataHash,
   encodeExtraDataItem,
   encodeExtraDataItems,
+  ether,
   EXTRA_DATA_FORMAT_EMPTY,
   EXTRA_DATA_FORMAT_LIST,
   EXTRA_DATA_TYPE_STUCK_VALIDATORS,
   ExtraDataType,
-  ONE_GWEI,
+  getReportDataItems,
+  numberToHex,
+  OracleReport,
   packExtraDataList,
-} from "./accountingOracleDeploy.test";
+  shareRate,
+  Snapshot,
+} from "lib";
+import { CONSENSUS_VERSION } from "lib";
+
+import { deployAndConfigureAccountingOracle, ONE_GWEI } from "./accountingOracleDeploy.test";
 
 const getDefaultExtraData = () => ({
   stuckKeys: [

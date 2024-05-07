@@ -16,19 +16,24 @@ import {
   OracleReportSanityChecker,
 } from "typechain-types";
 
-import { calcReportDataHash, ether, getReportDataItems, OracleReport, ReportAsArray, shareRate, Snapshot } from "lib";
-import { CONSENSUS_VERSION } from "lib";
-
 import {
   calcExtraDataListHash,
-  deployAndConfigureAccountingOracle,
+  calcReportDataHash,
   encodeExtraDataItems,
+  ether,
   EXTRA_DATA_FORMAT_EMPTY,
   EXTRA_DATA_FORMAT_LIST,
   ExtraDataType,
-  ONE_GWEI,
+  getReportDataItems,
+  OracleReport,
   packExtraDataList,
-} from "./accountingOracleDeploy.test";
+  ReportAsArray,
+  shareRate,
+  Snapshot,
+} from "lib";
+import { CONSENSUS_VERSION } from "lib";
+
+import { deployAndConfigureAccountingOracle, ONE_GWEI } from "./accountingOracleDeploy.test";
 import { GENESIS_TIME, HASH_1, SECONDS_PER_SLOT, SLOTS_PER_FRAME } from "./baseOracle";
 
 describe("AccountingOracle.sol", () => {
