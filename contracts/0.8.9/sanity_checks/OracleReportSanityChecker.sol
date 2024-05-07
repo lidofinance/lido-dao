@@ -46,7 +46,7 @@ interface ISecondOpinionOracle {
     function getReport(uint256 refSlot)
         external
         view
-        returns (bool success, uint256 clBalanceGwei, uint256 numValidators, uint256 exitedValidators);
+        returns (bool success, uint256 clBalanceGwei, uint256 totalDepositedValidators, uint256 totalExitedValidators);
 }
 
 interface IStakingRouter {
@@ -109,16 +109,17 @@ struct LimitsList {
     /// @dev uses 1e9 precision, e.g.: 1e6 - 0.1%; 1e9 - 100%, see `setMaxPositiveTokenRebase()`
     uint256 maxPositiveTokenRebase;
 
-    /// @notice The coefficient to calculate initial slashing of the validators' balances on the Consensus Layer
+    /// @notice Initial slashing amount per one validator to calculate initial slashing of the validators' balances on the Consensus Layer
     /// @dev Represented in the PWei (1^15 Wei). Must fit into uint16 (<= 65_535)
-    uint256 initialSlashingCoefPWei;
+    uint256 initialSlashingAmountPWei;
 
-    /// @notice The coefficient to calculate penalties of the validators' balances on the Consensus Layer
+    /// @notice Invactivity penalties amount per one validator to calculate penalties of the validators' balances on the Consensus Layer
     /// @dev Represented in the PWei (1^15 Wei). Must fit into uint16 (<= 65_535)
-    uint256 penaltiesCoefPWei;
+    uint256 invactivityPenaltiesAmountPWei;
 
     /// @notice The maximum percent on how Second Opinion Oracle reported value could be greater
-    ///     than reported by the AccountingOracle.
+    ///     than reported by the AccountingOracle. There is an assumption that second opinion oracle CL balance
+    ///     can be greater as calculated for the withdrawal credentials.
     /// @dev Represented in the Basis Points (100% == 10_000)
     uint256 clBalanceOraclesErrorUpperBPLimit;
 }
@@ -133,8 +134,8 @@ struct LimitsListPacked {
     uint16 maxNodeOperatorsPerExtraDataItemCount;
     uint48 requestTimestampMargin;
     uint64 maxPositiveTokenRebase;
-    uint16 initialSlashingCoefPWei;
-    uint16 penaltiesCoefPWei;
+    uint16 initialSlashingAmountPWei;
+    uint16 invactivityPenaltiesAmountPWei;
     uint16 clBalanceOraclesErrorUpperBPLimit;
 }
 
@@ -188,7 +189,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
     LimitsListPacked private _limits;
 
-    ReportData[] private _reportData;
+    /// @dev Historical reports data
+    ReportData[] public reportData;
 
     /// @dev The address of the second opinion oracle
     ISecondOpinionOracle public secondOpinionOracle;
@@ -381,16 +383,16 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         }
     }
 
-    /// @notice Sets the initial slashing and penalties coefficients
-    /// @param _initialSlashingCoefPWei - initial slashing coefficient (in PWei)
-    /// @param _penaltiesCoefPWei - penalties coefficient (in PWei)
-    function setInitialSlashingAndPenaltiesCoef(uint256 _initialSlashingCoefPWei, uint256 _penaltiesCoefPWei)
+    /// @notice Sets the initial slashing and penalties Amountficients
+    /// @param _initialSlashingAmountPWei - initial slashing Amountficient (in PWei)
+    /// @param _invactivityPenaltiesAmountPWei - penalties Amountficient (in PWei)
+    function setInitialSlashingAndPenaltiesAmount(uint256 _initialSlashingAmountPWei, uint256 _invactivityPenaltiesAmountPWei)
         external
         onlyRole(INITIAL_SLASHING_AND_PENALTIES_MANAGER_ROLE)
     {
         LimitsList memory limitsList = _limits.unpack();
-        limitsList.initialSlashingCoefPWei = _initialSlashingCoefPWei;
-        limitsList.penaltiesCoefPWei = _penaltiesCoefPWei;
+        limitsList.initialSlashingAmountPWei = _initialSlashingAmountPWei;
+        limitsList.invactivityPenaltiesAmountPWei = _invactivityPenaltiesAmountPWei;
         _updateLimits(limitsList);
     }
 
@@ -602,31 +604,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         );
     }
 
-    /// @notice Returns the sum of the negative CL rebase values not older than the provided timestamp
-    /// @param _timestamp the timestamp to check the rebase values
-    /// @return rebaseValuesSum the sum of the negative rebase values not older than the provided timestamp
-    function sumNegativeRebasesNotOlderThan(uint256 _timestamp) public view returns (uint256) {
-        uint256 sum;
-        for (int256 index = int256(_reportData.length) - 1; index >= 0; index--) {
-            if (_reportData[uint256(index)].timestamp >= SafeCast.toUint64(_timestamp)) {
-                sum += _reportData[uint256(index)].negativeCLRebase;
-            } else {
-                break;
-            }
-        }
-        return sum;
-    }
-
-    /// @notice Returns the number of exited validators at the provided timestamp
-    /// @param _timestamp the timestamp to get the exited validators count
-    /// @return exited validators count
-    function exitedValidatorsAtTimestamp(uint256 _timestamp) public view returns (uint256) {
-        for (int256 index = int256(_reportData.length) - 1; index >= 0; index--) {
-            if (_reportData[uint256(index)].timestamp <= SafeCast.toUint64(_timestamp)) {
-                return _reportData[uint256(index)].exitedValidatorsCount;
-            }
-        }
-        return 0;
+    /// @notice Return number of report data elements available on the public reportData array.
+    function getReportDataCount() external view returns (uint256) {
+        return reportData.length;
     }
 
     function _checkWithdrawalVaultBalance(
@@ -656,11 +636,32 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     }
 
     function _addReportData(uint256 _timestamp, uint256 _exitedValidatorsCount, uint256 _negativeCLRebase) internal {
-        _reportData.push(ReportData(
+        reportData.push(ReportData(
             SafeCast.toUint64(_timestamp),
             SafeCast.toUint64(_exitedValidatorsCount),
             SafeCast.toUint128(_negativeCLRebase)
         ));
+    }
+
+    function _sumNegativeRebasesNotOlderThan(uint256 _timestamp) internal view returns (uint256) {
+        uint256 sum;
+        for (int256 index = int256(reportData.length) - 1; index >= 0; index--) {
+            if (reportData[uint256(index)].timestamp >= SafeCast.toUint64(_timestamp)) {
+                sum += reportData[uint256(index)].negativeCLRebase;
+            } else {
+                break;
+            }
+        }
+        return sum;
+    }
+
+    function _exitedValidatorsAtTimestamp(uint256 _timestamp) internal view returns (uint256) {
+        for (int256 index = int256(reportData.length) - 1; index >= 0; index--) {
+            if (reportData[uint256(index)].timestamp <= SafeCast.toUint64(_timestamp)) {
+                return reportData[uint256(index)].exitedValidatorsCount;
+            }
+        }
+        return 0;
     }
 
     function _checkCLBalanceDecrease(
@@ -686,15 +687,14 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             _addReportData(reportTimestamp, stakingRouterExitedValidators, _preCLBalance - _unifiedPostCLBalance);
         } else {
             _addReportData(reportTimestamp, stakingRouterExitedValidators, 0);
+            // If the CL balance is not decreased, we don't need to check anyting here
+            return;
         }
 
-        // If the CL balance is not decreased, we don't need to check anyting here
-        if (_preCLBalance <= _unifiedPostCLBalance) return;
-
-        uint256 negativeCLRebaseSum = sumNegativeRebasesNotOlderThan(reportTimestamp - 18 days);
+        uint256 negativeCLRebaseSum = _sumNegativeRebasesNotOlderThan(reportTimestamp - 18 days);
         uint256 maxCLRebaseNegativeSum =
-            _limits.initialSlashingCoefPWei * ONE_PWEI * (_postCLValidators - exitedValidatorsAtTimestamp(reportTimestamp - 18 days)) +
-            _limits.penaltiesCoefPWei * ONE_PWEI * (_postCLValidators - exitedValidatorsAtTimestamp(reportTimestamp - 54 days));
+            _limits.initialSlashingAmountPWei * ONE_PWEI * (_postCLValidators - _exitedValidatorsAtTimestamp(reportTimestamp - 18 days)) +
+            _limits.invactivityPenaltiesAmountPWei * ONE_PWEI * (_postCLValidators - _exitedValidatorsAtTimestamp(reportTimestamp - 54 days));
 
         if (negativeCLRebaseSum < maxCLRebaseNegativeSum) {
             // If the diff is less than limit we are finishing check
@@ -878,13 +878,13 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             _checkLimitValue(_newLimitsList.maxPositiveTokenRebase, 1, type(uint64).max);
             emit MaxPositiveTokenRebaseSet(_newLimitsList.maxPositiveTokenRebase);
         }
-        if (_oldLimitsList.initialSlashingCoefPWei != _newLimitsList.initialSlashingCoefPWei) {
-            _checkLimitValue(_newLimitsList.initialSlashingCoefPWei, 0, type(uint16).max);
-            emit InitialSlashingCoefSet(_newLimitsList.initialSlashingCoefPWei);
+        if (_oldLimitsList.initialSlashingAmountPWei != _newLimitsList.initialSlashingAmountPWei) {
+            _checkLimitValue(_newLimitsList.initialSlashingAmountPWei, 0, type(uint16).max);
+            emit InitialSlashingAmountSet(_newLimitsList.initialSlashingAmountPWei);
         }
-        if (_oldLimitsList.penaltiesCoefPWei != _newLimitsList.penaltiesCoefPWei) {
-            _checkLimitValue(_newLimitsList.penaltiesCoefPWei, 0, type(uint16).max);
-            emit PenaltiesCoefSet(_newLimitsList.penaltiesCoefPWei);
+        if (_oldLimitsList.invactivityPenaltiesAmountPWei != _newLimitsList.invactivityPenaltiesAmountPWei) {
+            _checkLimitValue(_newLimitsList.invactivityPenaltiesAmountPWei, 0, type(uint16).max);
+            emit PenaltiesAmountSet(_newLimitsList.invactivityPenaltiesAmountPWei);
         }
         _limits = _newLimitsList.pack();
     }
@@ -904,8 +904,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     event MaxAccountingExtraDataListItemsCountSet(uint256 maxAccountingExtraDataListItemsCount);
     event MaxNodeOperatorsPerExtraDataItemCountSet(uint256 maxNodeOperatorsPerExtraDataItemCount);
     event RequestTimestampMarginSet(uint256 requestTimestampMargin);
-    event InitialSlashingCoefSet(uint256 initialSlashingCoefPWei);
-    event PenaltiesCoefSet(uint256 penaltiesCoefPWei);
+    event InitialSlashingAmountSet(uint256 initialSlashingAmountPWei);
+    event PenaltiesAmountSet(uint256 invactivityPenaltiesAmountPWei);
     event CLBalanceOraclesErrorUpperBPLimitSet(uint256 clBalanceOraclesErrorUpperBPLimit);
     event NegativeCLRebaseConfirmed(uint256 refSlot, uint256 clBalanceWei);
     event NegativeCLRebaseAccepted(uint256 refSlot, uint256 clBalance, uint256 clBalanceDecrease, uint256 clBalanceMaxDecrease);
@@ -942,8 +942,8 @@ library LimitsListPacker {
         res.maxValidatorExitRequestsPerReport = SafeCast.toUint16(_limitsList.maxValidatorExitRequestsPerReport);
         res.maxAccountingExtraDataListItemsCount = SafeCast.toUint16(_limitsList.maxAccountingExtraDataListItemsCount);
         res.maxNodeOperatorsPerExtraDataItemCount = SafeCast.toUint16(_limitsList.maxNodeOperatorsPerExtraDataItemCount);
-        res.initialSlashingCoefPWei = SafeCast.toUint16(_limitsList.initialSlashingCoefPWei);
-        res.penaltiesCoefPWei = SafeCast.toUint16(_limitsList.penaltiesCoefPWei);
+        res.initialSlashingAmountPWei = SafeCast.toUint16(_limitsList.initialSlashingAmountPWei);
+        res.invactivityPenaltiesAmountPWei = SafeCast.toUint16(_limitsList.invactivityPenaltiesAmountPWei);
     }
 
     function _toBasisPoints(uint256 _value) private pure returns (uint16) {
@@ -963,7 +963,7 @@ library LimitsListUnpacker {
         res.maxValidatorExitRequestsPerReport = _limitsList.maxValidatorExitRequestsPerReport;
         res.maxAccountingExtraDataListItemsCount = _limitsList.maxAccountingExtraDataListItemsCount;
         res.maxNodeOperatorsPerExtraDataItemCount = _limitsList.maxNodeOperatorsPerExtraDataItemCount;
-        res.initialSlashingCoefPWei = _limitsList.initialSlashingCoefPWei;
-        res.penaltiesCoefPWei = _limitsList.penaltiesCoefPWei;
+        res.initialSlashingAmountPWei = _limitsList.initialSlashingAmountPWei;
+        res.invactivityPenaltiesAmountPWei = _limitsList.invactivityPenaltiesAmountPWei;
     }
 }

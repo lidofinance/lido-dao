@@ -12,23 +12,6 @@ library SafeCastExt {
     error SafeCastOverflowedUintDowncast(uint8 bits, uint256 value);
 
     /**
-     * @dev Returns the downcasted uint192 from uint256, reverting on
-     * overflow (when the input is greater than largest uint192).
-     *
-     * Counterpart to Solidity's `uint192` operator.
-     *
-     * Requirements:
-     *
-     * - input must fit into 192 bits
-     */
-    function toUint192(uint256 value) internal pure returns (uint192) {
-        if (value > type(uint192).max) {
-            revert SafeCastOverflowedUintDowncast(192, value);
-        }
-        return uint192(value);
-    }
-
-    /**
      * @dev Returns the downcasted uint48 from uint256, reverting on
      * overflow (when the input is greater than largest uint48).
      *
