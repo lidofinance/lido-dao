@@ -562,10 +562,10 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
     /// @notice Applies sanity checks to the withdrawal requests finalization
     /// @param _lastFinalizableRequestId last finalizable withdrawal request id
-    /// @param reportTimestamp timestamp when the originated oracle report was submitted
+    /// @param _reportTimestamp timestamp when the originated oracle report was submitted
     function checkWithdrawalQueueOracleReport(
         uint256 _lastFinalizableRequestId,
-        uint256 reportTimestamp
+        uint256 _reportTimestamp
     )
         external
         view
@@ -573,7 +573,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         LimitsList memory limitsList = _limits.unpack();
         address withdrawalQueue = LIDO_LOCATOR.withdrawalQueue();
 
-        _checkLastFinalizableId(limitsList, withdrawalQueue, _lastFinalizableRequestId, reportTimestamp);
+        _checkLastFinalizableId(limitsList, withdrawalQueue, _lastFinalizableRequestId, _reportTimestamp);
     }
 
     /// @notice Applies sanity checks to the simulated share rate for withdrawal requests finalization
@@ -774,14 +774,14 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         LimitsList memory _limitsList,
         address _withdrawalQueue,
         uint256 _lastFinalizableId,
-        uint256 reportTimestamp
+        uint256 _reportTimestamp
     ) internal view {
         uint256[] memory requestIds = new uint256[](1);
         requestIds[0] = _lastFinalizableId;
 
         IWithdrawalQueue.WithdrawalRequestStatus[] memory statuses = IWithdrawalQueue(_withdrawalQueue)
             .getWithdrawalStatus(requestIds);
-        if (reportTimestamp < statuses[0].timestamp + _limitsList.requestTimestampMargin)
+        if (_reportTimestamp < statuses[0].timestamp + _limitsList.requestTimestampMargin)
             revert IncorrectRequestFinalization(statuses[0].timestamp);
     }
 
