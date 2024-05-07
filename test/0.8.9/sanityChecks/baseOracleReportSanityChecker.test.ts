@@ -35,8 +35,8 @@ describe("OracleReportSanityChecker.sol", () => {
     maxNodeOperatorsPerExtraDataItemCount: 16,
     requestTimestampMargin: 128,
     maxPositiveTokenRebase: 5_000_000, // 0.05%
-    initialSlashingCoefPWei: 1000,
-    penaltiesCoefPWei: 101,
+    initialSlashingAmountPWei: 1000,
+    inactivityPenaltiesAmountPWei: 101,
     clBalanceOraclesErrorUpperBPLimit: 74, // 0.74%
   };
 
@@ -139,8 +139,8 @@ describe("OracleReportSanityChecker.sol", () => {
         maxNodeOperatorsPerExtraDataItemCount: 16 + 1,
         requestTimestampMargin: 2048,
         maxPositiveTokenRebase: 10_000_000,
-        initialSlashingCoefPWei: 2000,
-        penaltiesCoefPWei: 303,
+        initialSlashingAmountPWei: 2000,
+        inactivityPenaltiesAmountPWei: 303,
         clBalanceOraclesErrorUpperBPLimit: 12,
       };
       const limitsBefore = await oracleReportSanityChecker.getOracleReportLimits();
@@ -163,8 +163,8 @@ describe("OracleReportSanityChecker.sol", () => {
       expect(limitsBefore.clBalanceOraclesErrorUpperBPLimit).to.not.equal(
         newLimitsList.clBalanceOraclesErrorUpperBPLimit,
       );
-      expect(limitsBefore.initialSlashingCoefPWei).to.not.equal(newLimitsList.initialSlashingCoefPWei);
-      expect(limitsBefore.penaltiesCoefPWei).to.not.equal(newLimitsList.penaltiesCoefPWei);
+      expect(limitsBefore.initialSlashingAmountPWei).to.not.equal(newLimitsList.initialSlashingAmountPWei);
+      expect(limitsBefore.inactivityPenaltiesAmountPWei).to.not.equal(newLimitsList.inactivityPenaltiesAmountPWei);
 
       await expect(
         oracleReportSanityChecker.setOracleReportLimits(newLimitsList, ZeroAddress),
@@ -194,8 +194,8 @@ describe("OracleReportSanityChecker.sol", () => {
       expect(limitsAfter.requestTimestampMargin).to.equal(newLimitsList.requestTimestampMargin);
       expect(limitsAfter.maxPositiveTokenRebase).to.equal(newLimitsList.maxPositiveTokenRebase);
       expect(limitsAfter.clBalanceOraclesErrorUpperBPLimit).to.equal(newLimitsList.clBalanceOraclesErrorUpperBPLimit);
-      expect(limitsAfter.initialSlashingCoefPWei).to.equal(newLimitsList.initialSlashingCoefPWei);
-      expect(limitsAfter.penaltiesCoefPWei).to.equal(newLimitsList.penaltiesCoefPWei);
+      expect(limitsAfter.initialSlashingAmountPWei).to.equal(newLimitsList.initialSlashingAmountPWei);
+      expect(limitsAfter.inactivityPenaltiesAmountPWei).to.equal(newLimitsList.inactivityPenaltiesAmountPWei);
     });
   });
 
@@ -280,9 +280,9 @@ describe("OracleReportSanityChecker.sol", () => {
       );
     });
 
-    it("set initial slashing and penalties coef", async () => {
-      const oldInitialSlashing = (await oracleReportSanityChecker.getOracleReportLimits()).initialSlashingCoefPWei;
-      const oldPenalties = (await oracleReportSanityChecker.getOracleReportLimits()).penaltiesCoefPWei;
+    it("set initial slashing and penalties Amount", async () => {
+      const oldInitialSlashing = (await oracleReportSanityChecker.getOracleReportLimits()).initialSlashingAmountPWei;
+      const oldPenalties = (await oracleReportSanityChecker.getOracleReportLimits()).inactivityPenaltiesAmountPWei;
       const newInitialSlashing = 2000;
       const newPenalties = 202;
       expect(newInitialSlashing).to.not.equal(oldInitialSlashing);
@@ -290,7 +290,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await expect(
         oracleReportSanityChecker
           .connect(deployer)
-          .setInitialSlashingAndPenaltiesCoef(newInitialSlashing, newPenalties),
+          .setInitialSlashingAndPenaltiesAmount(newInitialSlashing, newPenalties),
       ).to.be.revertedWithOZAccessControlError(
         deployer.address,
         await oracleReportSanityChecker.INITIAL_SLASHING_AND_PENALTIES_MANAGER_ROLE(),
@@ -304,16 +304,18 @@ describe("OracleReportSanityChecker.sol", () => {
         );
       const tx = await oracleReportSanityChecker
         .connect(managersRoster.initialSlashingAndPenaltiesManagers[0])
-        .setInitialSlashingAndPenaltiesCoef(newInitialSlashing, newPenalties);
+        .setInitialSlashingAndPenaltiesAmount(newInitialSlashing, newPenalties);
       await expect(tx)
-        .to.emit(oracleReportSanityChecker, "InitialSlashingCoefSet")
+        .to.emit(oracleReportSanityChecker, "InitialSlashingAmountSet")
         .withArgs(newInitialSlashing)
-        .to.emit(oracleReportSanityChecker, "PenaltiesCoefSet")
+        .to.emit(oracleReportSanityChecker, "PenaltiesAmountSet")
         .withArgs(newPenalties);
-      expect((await oracleReportSanityChecker.getOracleReportLimits()).initialSlashingCoefPWei).to.equal(
+      expect((await oracleReportSanityChecker.getOracleReportLimits()).initialSlashingAmountPWei).to.equal(
         newInitialSlashing,
       );
-      expect((await oracleReportSanityChecker.getOracleReportLimits()).penaltiesCoefPWei).to.equal(newPenalties);
+      expect((await oracleReportSanityChecker.getOracleReportLimits()).inactivityPenaltiesAmountPWei).to.equal(
+        newPenalties,
+      );
     });
 
     it("set CL state oracle and balance error margin limit", async () => {
@@ -1443,7 +1445,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await expect(
         oracleReportSanityChecker
           .connect(managersRoster.allLimitsManagers[0])
-          .setOracleReportLimits({ ...defaultLimitsList, initialSlashingCoefPWei: INVALID_VALUE }, ZeroAddress),
+          .setOracleReportLimits({ ...defaultLimitsList, initialSlashingAmountPWei: INVALID_VALUE }, ZeroAddress),
       )
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
         .withArgs(INVALID_VALUE, 0, MAX_UINT_16);
@@ -1451,7 +1453,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await expect(
         oracleReportSanityChecker
           .connect(managersRoster.allLimitsManagers[0])
-          .setOracleReportLimits({ ...defaultLimitsList, penaltiesCoefPWei: INVALID_VALUE }, ZeroAddress),
+          .setOracleReportLimits({ ...defaultLimitsList, inactivityPenaltiesAmountPWei: INVALID_VALUE }, ZeroAddress),
       )
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
         .withArgs(INVALID_VALUE, 0, MAX_UINT_16);

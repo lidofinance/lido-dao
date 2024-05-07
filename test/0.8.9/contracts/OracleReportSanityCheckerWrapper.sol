@@ -24,6 +24,14 @@ contract OracleReportSanityCheckerWrapper is OracleReportSanityChecker {
         _addReportData(_timestamp, _exitedValidatorsCount, _negativeCLRebase);
     }
 
+    function sumNegativeRebasesNotOlderThan(uint256 _timestamp) public view returns (uint256) {
+        return _sumNegativeRebasesNotOlderThan(_timestamp);
+    }
+
+    function exitedValidatorsAtTimestamp(uint256 _timestamp) public view returns (uint256) {
+        return _exitedValidatorsAtTimestamp(_timestamp);
+    }
+
     function exposePackedLimits() public view returns (LimitsListPacked memory) {
         return _limitsListPacked;
     }

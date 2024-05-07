@@ -35,8 +35,8 @@ describe("OracleReportSanityChecker.sol", () => {
     maxNodeOperatorsPerExtraDataItemCount: 16,
     requestTimestampMargin: 128,
     maxPositiveTokenRebase: 5_000_000, // 0.05%
-    initialSlashingCoefPWei: 1000, // 1 ETH = 1000 PWei
-    penaltiesCoefPWei: 101, // 0.101 ETH = 101 PWei
+    initialSlashingAmountPWei: 1000, // 1 ETH = 1000 PWei
+    inactivityPenaltiesAmountPWei: 101, // 0.101 ETH = 101 PWei
     clBalanceOraclesErrorUpperBPLimit: 74, // 0.74%
   };
 
@@ -315,12 +315,12 @@ describe("OracleReportSanityChecker.sol", () => {
     it(`CL Oracle related functions require INITIAL_SLASHING_AND_PENALTIES_MANAGER_ROLE`, async () => {
       const role = await checker.INITIAL_SLASHING_AND_PENALTIES_MANAGER_ROLE();
 
-      await expect(checker.setInitialSlashingAndPenaltiesCoef(0, 0)).to.be.revertedWith(
+      await expect(checker.setInitialSlashingAndPenaltiesAmount(0, 0)).to.be.revertedWith(
         genAccessControlError(deployer.address, role),
       );
 
       await checker.grantRole(role, deployer.address);
-      await expect(checker.setInitialSlashingAndPenaltiesCoef(1000, 101)).to.not.be.reverted;
+      await expect(checker.setInitialSlashingAndPenaltiesAmount(1000, 101)).to.not.be.reverted;
     });
 
     it(`CL Oracle related functions require SECOND_OPINION_MANAGER_ROLE`, async () => {
