@@ -262,6 +262,41 @@ describe("OracleReportSanityChecker.sol", () => {
         .withArgs(refSlot, ether("300"));
     });
 
+    it("works with staking router reports exited validators at day 18 and 54", async () => {
+      const refSlot = Math.floor(((await time.latest()) - Number(genesisTime)) / 12);
+      const refSlot18 = refSlot - 18 * SLOTS_PER_DAY;
+      const refSlot54 = refSlot - 54 * SLOTS_PER_DAY;
+      const refSlot55 = refSlot - 55 * SLOTS_PER_DAY;
+
+      const summary1 = {
+        totalExitedValidators: 2,
+        totalDepositedValidators: 20,
+        depositableValidatorsCount: 0,
+      };
+      await stakingRouter.addStakingModule(1, { ...summary1, totalExitedValidators: 1 });
+      await accountingOracle.setLastProcessingRefSlot(refSlot55);
+      await checker.checkAccountingOracleReport(0, ether("320"), ether("320"), 0, 0, 0, 10, 10);
+
+      await stakingRouter.removeStakingModule(1);
+      await stakingRouter.addStakingModule(1, { ...summary1, totalExitedValidators: 2 });
+      await accountingOracle.setLastProcessingRefSlot(refSlot54);
+      await checker.checkAccountingOracleReport(0, ether("320"), ether("320"), 0, 0, 0, 10, 10);
+
+      await stakingRouter.removeStakingModule(1);
+      await stakingRouter.addStakingModule(1, { ...summary1, totalExitedValidators: 3 });
+      await accountingOracle.setLastProcessingRefSlot(refSlot18);
+      await checker.checkAccountingOracleReport(0, ether("320"), ether("315"), 0, 0, 0, 10, 10);
+
+      await accountingOracle.setLastProcessingRefSlot(refSlot);
+      await expect(checker.checkAccountingOracleReport(0, ether("315"), ether("300"), 0, 0, 0, 10, 10))
+        .to.be.revertedWithCustomError(checker, "IncorrectCLBalanceDecrease")
+        .withArgs(20n * ether("1"), 7n * ether("1") + 8n * ether("0.101"));
+
+      const res = await checker.getReportDataCount();
+      const res2 = await checker.reportData(0);
+      log("reportData", res, res2);
+    });
+
     it(`works for reports close together`, async () => {
       const numGenesis = Number(genesisTime);
       const refSlot = Math.floor(((await time.latest()) - numGenesis) / 12);

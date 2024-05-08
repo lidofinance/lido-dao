@@ -122,9 +122,13 @@ describe("OracleReportSanityChecker.sol", () => {
     ).to.be.revertedWithCustomError(oracleReportSanityChecker, "AdminCannotBeZero");
   });
 
-  describe("getLidoLocator()", () => {
+  describe("Sanity checker public getters", () => {
     it("retrieves correct locator address", async () => {
       expect(await oracleReportSanityChecker.getLidoLocator()).to.equal(await lidoLocatorMock.getAddress());
+    });
+
+    it("retrieves correct report data count", async () => {
+      expect(await oracleReportSanityChecker.getReportDataCount()).to.equal(0);
     });
   });
 
