@@ -832,12 +832,6 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         }
     }
 
-    function _grantRole(bytes32 _role, address[] memory _accounts) internal {
-        for (uint256 i = 0; i < _accounts.length; ++i) {
-            _grantRole(_role, _accounts[i]);
-        }
-    }
-
     function _updateLimits(LimitsList memory _newLimitsList) internal {
         LimitsList memory _oldLimitsList = _limits.unpack();
         if (_oldLimitsList.churnValidatorsPerDayLimit != _newLimitsList.churnValidatorsPerDayLimit) {
