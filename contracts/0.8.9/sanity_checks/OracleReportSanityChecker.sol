@@ -11,7 +11,6 @@ import {Math256} from "../../common/lib/Math256.sol";
 import {AccessControlEnumerable} from "../utils/access/AccessControlEnumerable.sol";
 import {PositiveTokenRebaseLimiter, TokenRebaseLimiterData} from "../lib/PositiveTokenRebaseLimiter.sol";
 import {ILidoLocator} from "../../common/interfaces/ILidoLocator.sol";
-
 import {IBurner} from "../../common/interfaces/IBurner.sol";
 
 interface IWithdrawalQueue {
@@ -170,8 +169,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         keccak256("MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE");
     bytes32 public constant MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_COUNT_ROLE =
         keccak256("MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_COUNT_ROLE");
-    bytes32 public constant REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE =
-        keccak256("REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE");
+    bytes32 public constant REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE = keccak256("REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE");
     bytes32 public constant MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE =
         keccak256("MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE");
     bytes32 public constant SECOND_OPINION_MANAGER_ROLE =
@@ -467,9 +465,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
     /// @notice Applies sanity checks to the accounting params of Lido's oracle report
     /// WARNING. The function has side effects and modifies the state of the contract.
-    ///          It's because of negative rebase checks the cummulative sum over the time.
-    ///          It's called from Lido contract that uses the 'old' Solidity version (0.4.24) and will do a correct
-    ///          call to this method even it's declared as "view" there.
+    ///          It's needed to keep information about exited validators counts and negative rebase values over time.
+    ///          The function called from Lido contract that uses the 'old' Solidity version (0.4.24) and will do a correct
+    ///          call to this method even it's declared as "view" in interface there.
     /// @param _timeElapsed time elapsed since the previous oracle report
     /// @param _preCLBalance sum of all Lido validators' balances on the Consensus Layer before the
     ///     current oracle report (NB: also include the initial balance of newly appeared validators)
@@ -846,10 +844,6 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             _checkLimitValue(_newLimitsList.churnValidatorsPerDayLimit, 0, type(uint16).max);
             emit ChurnValidatorsPerDayLimitSet(_newLimitsList.churnValidatorsPerDayLimit);
         }
-        if (_oldLimitsList.clBalanceOraclesErrorUpperBPLimit != _newLimitsList.clBalanceOraclesErrorUpperBPLimit) {
-            _checkLimitValue(_newLimitsList.clBalanceOraclesErrorUpperBPLimit, 0, MAX_BASIS_POINTS);
-            emit CLBalanceOraclesErrorUpperBPLimitSet(_newLimitsList.clBalanceOraclesErrorUpperBPLimit);
-        }
         if (_oldLimitsList.annualBalanceIncreaseBPLimit != _newLimitsList.annualBalanceIncreaseBPLimit) {
             _checkLimitValue(_newLimitsList.annualBalanceIncreaseBPLimit, 0, MAX_BASIS_POINTS);
             emit AnnualBalanceIncreaseBPLimitSet(_newLimitsList.annualBalanceIncreaseBPLimit);
@@ -885,6 +879,10 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         if (_oldLimitsList.inactivityPenaltiesAmountPWei != _newLimitsList.inactivityPenaltiesAmountPWei) {
             _checkLimitValue(_newLimitsList.inactivityPenaltiesAmountPWei, 0, type(uint16).max);
             emit PenaltiesAmountSet(_newLimitsList.inactivityPenaltiesAmountPWei);
+        }
+        if (_oldLimitsList.clBalanceOraclesErrorUpperBPLimit != _newLimitsList.clBalanceOraclesErrorUpperBPLimit) {
+            _checkLimitValue(_newLimitsList.clBalanceOraclesErrorUpperBPLimit, 0, MAX_BASIS_POINTS);
+            emit CLBalanceOraclesErrorUpperBPLimitSet(_newLimitsList.clBalanceOraclesErrorUpperBPLimit);
         }
         _limits = _newLimitsList.pack();
     }
@@ -934,7 +932,6 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 library LimitsListPacker {
     function pack(LimitsList memory _limitsList) internal pure returns (LimitsListPacked memory res) {
         res.churnValidatorsPerDayLimit = SafeCast.toUint16(_limitsList.churnValidatorsPerDayLimit);
-        res.clBalanceOraclesErrorUpperBPLimit = _toBasisPoints(_limitsList.clBalanceOraclesErrorUpperBPLimit);
         res.annualBalanceIncreaseBPLimit = _toBasisPoints(_limitsList.annualBalanceIncreaseBPLimit);
         res.simulatedShareRateDeviationBPLimit = _toBasisPoints(_limitsList.simulatedShareRateDeviationBPLimit);
         res.requestTimestampMargin = SafeCastExt.toUint48(_limitsList.requestTimestampMargin);
@@ -944,6 +941,7 @@ library LimitsListPacker {
         res.maxNodeOperatorsPerExtraDataItemCount = SafeCast.toUint16(_limitsList.maxNodeOperatorsPerExtraDataItemCount);
         res.initialSlashingAmountPWei = SafeCast.toUint16(_limitsList.initialSlashingAmountPWei);
         res.inactivityPenaltiesAmountPWei = SafeCast.toUint16(_limitsList.inactivityPenaltiesAmountPWei);
+        res.clBalanceOraclesErrorUpperBPLimit = _toBasisPoints(_limitsList.clBalanceOraclesErrorUpperBPLimit);
     }
 
     function _toBasisPoints(uint256 _value) private pure returns (uint16) {
@@ -955,7 +953,6 @@ library LimitsListPacker {
 library LimitsListUnpacker {
     function unpack(LimitsListPacked memory _limitsList) internal pure returns (LimitsList memory res) {
         res.churnValidatorsPerDayLimit = _limitsList.churnValidatorsPerDayLimit;
-        res.clBalanceOraclesErrorUpperBPLimit = _limitsList.clBalanceOraclesErrorUpperBPLimit;
         res.annualBalanceIncreaseBPLimit = _limitsList.annualBalanceIncreaseBPLimit;
         res.simulatedShareRateDeviationBPLimit = _limitsList.simulatedShareRateDeviationBPLimit;
         res.requestTimestampMargin = _limitsList.requestTimestampMargin;
@@ -965,5 +962,6 @@ library LimitsListUnpacker {
         res.maxNodeOperatorsPerExtraDataItemCount = _limitsList.maxNodeOperatorsPerExtraDataItemCount;
         res.initialSlashingAmountPWei = _limitsList.initialSlashingAmountPWei;
         res.inactivityPenaltiesAmountPWei = _limitsList.inactivityPenaltiesAmountPWei;
+        res.clBalanceOraclesErrorUpperBPLimit = _limitsList.clBalanceOraclesErrorUpperBPLimit;
     }
 }
