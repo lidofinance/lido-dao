@@ -4,7 +4,7 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { AccountingOracleMock, LegacyOracle, LidoLocator, MockConsensusContract } from "typechain-types";
+import { AccountingOracle__Mock, LegacyOracle, LidoLocator, MockConsensusContract } from "typechain-types";
 
 import {
   certainAddress,
@@ -26,7 +26,7 @@ describe("LegacyOracle.sol", () => {
 
   let locator: LidoLocator;
   let consensusContract: MockConsensusContract;
-  let accountingOracle: AccountingOracleMock;
+  let accountingOracle: AccountingOracle__Mock;
 
   let lido: string;
 

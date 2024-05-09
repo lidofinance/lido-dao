@@ -14,6 +14,7 @@ import {
   LidoExecutionLayerRewardsVault__MockForLidoHandleOracleReport__factory,
   LidoLocator,
   LidoLocator__factory,
+  LidoLocator__MutableMock,
   LidoLocator__MutableMock__factory,
   OracleReportSanityChecker__MockForLidoHandleOracleReport,
   OracleReportSanityChecker__MockForLidoHandleOracleReport__factory,
@@ -26,7 +27,6 @@ import {
   WithdrawalVault__MockForLidoHandleOracleReport,
   WithdrawalVault__MockForLidoHandleOracleReport__factory,
 } from "typechain-types";
-import { LidoLocator__MutableMock } from "typechain-types/test/0.4.24/contracts/LidoLocator__MutableMock";
 
 import { certainAddress, ether, getNextBlockTimestamp, streccak } from "lib";
 
