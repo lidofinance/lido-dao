@@ -2,89 +2,102 @@
 // for testing purposes only
 pragma solidity 0.8.9;
 
-contract LidoLocator__MutableMock {
-  struct Config {
-    address accountingOracle;
-    address depositSecurityModule;
-    address elRewardsVault;
-    address legacyOracle;
-    address lido;
-    address oracleReportSanityChecker;
-    address postTokenRebaseReceiver;
-    address burner;
-    address stakingRouter;
-    address treasury;
-    address validatorsExitBusOracle;
-    address withdrawalQueue;
-    address withdrawalVault;
-    address oracleDaemonConfig;
-  }
+abstract contract LidoLocator__MutableMockBase {
+    struct Config {
+        address accountingOracle;
+        address depositSecurityModule;
+        address elRewardsVault;
+        address legacyOracle;
+        address lido;
+        address oracleReportSanityChecker;
+        address postTokenRebaseReceiver;
+        address burner;
+        address stakingRouter;
+        address treasury;
+        address validatorsExitBusOracle;
+        address withdrawalQueue;
+        address withdrawalVault;
+        address oracleDaemonConfig;
+    }
 
-  error ZeroAddress();
+    error ZeroAddress();
 
-  address public accountingOracle;
-  address public depositSecurityModule;
-  address public elRewardsVault;
-  address public legacyOracle;
-  address public lido;
-  address public oracleReportSanityChecker;
-  address public postTokenRebaseReceiver;
-  address public burner;
-  address public stakingRouter;
-  address public treasury;
-  address public validatorsExitBusOracle;
-  address public withdrawalQueue;
-  address public withdrawalVault;
-  address public oracleDaemonConfig;
+    address public accountingOracle;
+    address public depositSecurityModule;
+    address public elRewardsVault;
+    address public legacyOracle;
+    address public lido;
+    address public oracleReportSanityChecker;
+    address public postTokenRebaseReceiver;
+    address public burner;
+    address public stakingRouter;
+    address public treasury;
+    address public validatorsExitBusOracle;
+    address public withdrawalQueue;
+    address public withdrawalVault;
+    address public oracleDaemonConfig;
 
-  /**
-   * @notice declare service locations
+    /**
+     * @notice declare service locations
    * @dev accepts a struct to avoid the "stack-too-deep" error
    * @param _config struct of addresses
    */
-  constructor(Config memory _config) {
-    accountingOracle = _assertNonZero(_config.accountingOracle);
-    depositSecurityModule = _assertNonZero(_config.depositSecurityModule);
-    elRewardsVault = _assertNonZero(_config.elRewardsVault);
-    legacyOracle = _assertNonZero(_config.legacyOracle);
-    lido = _assertNonZero(_config.lido);
-    oracleReportSanityChecker = _assertNonZero(_config.oracleReportSanityChecker);
-    postTokenRebaseReceiver = _assertNonZero(_config.postTokenRebaseReceiver);
-    burner = _assertNonZero(_config.burner);
-    stakingRouter = _assertNonZero(_config.stakingRouter);
-    treasury = _assertNonZero(_config.treasury);
-    validatorsExitBusOracle = _assertNonZero(_config.validatorsExitBusOracle);
-    withdrawalQueue = _assertNonZero(_config.withdrawalQueue);
-    withdrawalVault = _assertNonZero(_config.withdrawalVault);
-    oracleDaemonConfig = _assertNonZero(_config.oracleDaemonConfig);
-  }
+    constructor(Config memory _config) {
+        accountingOracle = _assertNonZero(_config.accountingOracle);
+        depositSecurityModule = _assertNonZero(_config.depositSecurityModule);
+        elRewardsVault = _assertNonZero(_config.elRewardsVault);
+        legacyOracle = _assertNonZero(_config.legacyOracle);
+        lido = _assertNonZero(_config.lido);
+        oracleReportSanityChecker = _assertNonZero(_config.oracleReportSanityChecker);
+        postTokenRebaseReceiver = _assertNonZero(_config.postTokenRebaseReceiver);
+        burner = _assertNonZero(_config.burner);
+        stakingRouter = _assertNonZero(_config.stakingRouter);
+        treasury = _assertNonZero(_config.treasury);
+        validatorsExitBusOracle = _assertNonZero(_config.validatorsExitBusOracle);
+        withdrawalQueue = _assertNonZero(_config.withdrawalQueue);
+        withdrawalVault = _assertNonZero(_config.withdrawalVault);
+        oracleDaemonConfig = _assertNonZero(_config.oracleDaemonConfig);
+    }
 
-  function coreComponents() external view returns (address, address, address, address, address, address) {
-    return (elRewardsVault, oracleReportSanityChecker, stakingRouter, treasury, withdrawalQueue, withdrawalVault);
-  }
+    function coreComponents() external view returns (address, address, address, address, address, address) {
+        return (elRewardsVault, oracleReportSanityChecker, stakingRouter, treasury, withdrawalQueue, withdrawalVault);
+    }
 
-  function oracleReportComponentsForLido()
+    function oracleReportComponentsForLido()
     external
     view
     returns (address, address, address, address, address, address, address)
-  {
-    return (
-      accountingOracle,
-      elRewardsVault,
-      oracleReportSanityChecker,
-      burner,
-      withdrawalQueue,
-      withdrawalVault,
-      postTokenRebaseReceiver
-    );
-  }
+    {
+        return (
+            accountingOracle,
+            elRewardsVault,
+            oracleReportSanityChecker,
+            burner,
+            withdrawalQueue,
+            withdrawalVault,
+            postTokenRebaseReceiver
+        );
+    }
 
-  function _assertNonZero(address _address) internal pure returns (address) {
-    if (_address == address(0)) revert ZeroAddress();
-    return _address;
-  }
+    function _assertNonZero(address _address) internal virtual pure returns (address) {
+        if (_address == address(0)) revert ZeroAddress();
+        return _address;
+    }
 
-  function mock___updatePostTokenRebaseReceiver(address newAddress) external {
-    postTokenRebaseReceiver = newAddress;
-  }
+    function mock___updatePostTokenRebaseReceiver(address newAddress) external {
+        postTokenRebaseReceiver = newAddress;
+    }
+}
+
+
+contract LidoLocator__MutableMock is LidoLocator__MutableMockBase {
+    constructor(Config memory _config) LidoLocator__MutableMockBase(_config) {}
+}
+
+contract LidoLocator__MutableMockNoValidation is LidoLocator__MutableMockBase {
+    constructor(Config memory _config) LidoLocator__MutableMockBase(_config) {}
+
+    function _assertNonZero(address _address) internal virtual pure override returns (address) {
+        return _address;
+    }
 }
