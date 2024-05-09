@@ -7,7 +7,9 @@ import { mine } from "@nomicfoundation/hardhat-network-helpers";
 
 import { ACL, Lido } from "typechain-types";
 
-import { certainAddress, deployLidoDao, ether, ONE_ETHER } from "lib";
+import { certainAddress, ether, ONE_ETHER } from "lib";
+
+import { deployAragonLidoDao } from "test/deploy";
 
 describe("Lido:staking-limit", () => {
   let deployer: HardhatEthersSigner;
@@ -23,7 +25,7 @@ describe("Lido:staking-limit", () => {
   beforeEach(async () => {
     [deployer, user, stranger] = await ethers.getSigners();
 
-    ({ lido, acl } = await deployLidoDao({ rootAccount: deployer, initialized: true }));
+    ({ lido, acl } = await deployAragonLidoDao({ rootAccount: deployer, initialized: true }));
 
     await acl.createPermission(user, lido, await lido.STAKING_CONTROL_ROLE(), deployer);
     await acl.createPermission(user, lido, await lido.STAKING_PAUSE_ROLE(), deployer);

@@ -13,12 +13,22 @@ import {
   LidoLocator,
 } from "typechain-types";
 
-import { dummyLocator } from "./dummy";
-import { findEvents } from "./event";
-import { streccak } from "./keccak";
-import { ether } from "./units";
+import { dummyLocator, ether, findEvents, streccak } from "lib";
 
-export async function createAragonDao(rootAccount: HardhatEthersSigner) {
+interface CreateAddAppArgs {
+  dao: Kernel;
+  name: string;
+  impl: BaseContract;
+  rootAccount: HardhatEthersSigner;
+}
+
+interface DeployLidoDaoArgs {
+  rootAccount: HardhatEthersSigner;
+  initialized: boolean;
+  locatorConfig?: Partial<LidoLocator.ConfigStruct>;
+}
+
+async function createAragonDao(rootAccount: HardhatEthersSigner) {
   const kernelBase = await new Kernel__factory(rootAccount).deploy(true);
   const aclBase = await new ACL__factory(rootAccount).deploy();
   const EvmScriptRegistryFactory = await new EVMScriptRegistryFactory__factory(rootAccount).deploy();
@@ -36,14 +46,7 @@ export async function createAragonDao(rootAccount: HardhatEthersSigner) {
   return { dao, acl };
 }
 
-interface CreateAddAppArgs {
-  dao: Kernel;
-  name: string;
-  impl: BaseContract;
-  rootAccount: HardhatEthersSigner;
-}
-
-export async function addAragonApp({ dao, name, impl, rootAccount }: CreateAddAppArgs): Promise<string> {
+async function addAragonApp({ dao, name, impl, rootAccount }: CreateAddAppArgs): Promise<string> {
   const tx = await dao["newAppInstance(bytes32,address,bytes,bool)"](
     streccak(`${name}.aragonpm.test`),
     await impl.getAddress(),
@@ -53,19 +56,12 @@ export async function addAragonApp({ dao, name, impl, rootAccount }: CreateAddAp
   );
 
   const receipt = await tx.wait();
-  const proxyAddress = findEvents(receipt!, "NewAppProxy")[0].args[0];
 
-  return proxyAddress;
-}
-
-interface DeployLidoDaoArgs {
-  rootAccount: HardhatEthersSigner;
-  initialized: boolean;
-  locatorConfig?: Partial<LidoLocator.ConfigStruct>;
+  return findEvents(receipt!, "NewAppProxy")[0].args[0];
 }
 
 // TODO: extract initialization from this function
-export async function deployLidoDao({ rootAccount, initialized, locatorConfig = {} }: DeployLidoDaoArgs) {
+export async function deployAragonLidoDao({ rootAccount, initialized, locatorConfig = {} }: DeployLidoDaoArgs) {
   const { dao, acl } = await createAragonDao(rootAccount);
 
   const impl = await new Lido__factory(rootAccount).deploy();

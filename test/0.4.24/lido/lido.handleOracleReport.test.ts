@@ -28,7 +28,9 @@ import {
 } from "typechain-types";
 import { LidoLocator__MutableMock } from "typechain-types/test/0.4.24/contracts/LidoLocator__MutableMock";
 
-import { certainAddress, deployLidoDao, ether, getNextBlockTimestamp, streccak } from "lib";
+import { certainAddress, ether, getNextBlockTimestamp, streccak } from "lib";
+
+import { deployAragonLidoDao } from "test/deploy";
 
 // TODO: improve coverage
 // TODO: probably needs some refactoring and optimization
@@ -71,7 +73,7 @@ describe("Lido:report", () => {
       new WithdrawalVault__MockForLidoHandleOracleReport__factory(deployer).deploy(),
     ]);
 
-    ({ lido, acl } = await deployLidoDao({
+    ({ lido, acl } = await deployAragonLidoDao({
       rootAccount: deployer,
       initialized: true,
       locatorConfig: {
