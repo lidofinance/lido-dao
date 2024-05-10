@@ -18,6 +18,7 @@ export const epochAt = (time: bigint) => slotAt(time) / SLOTS_PER_EPOCH;
 export const epochFirstSlot = (epoch: bigint) => epoch * SLOTS_PER_EPOCH;
 export const epochFirstSlotAt = (time: bigint) => epochFirstSlot(epochAt(time));
 export const timestampAtSlot = (slot: bigint) => GENESIS_TIME + slot * SECONDS_PER_SLOT;
+export const timestampAtEpoch = (epoch: bigint) => timestampAtSlot(epochFirstSlot(epoch));
 export const deadlineFromRefSlot = (slot: bigint) => timestampAtSlot(slot + SLOTS_PER_FRAME);
 export const nextRefSlotFromRefSlot = (slot: bigint) => slot + SLOTS_PER_FRAME;
 

@@ -31,4 +31,8 @@ contract LegacyOracle__Harness is LegacyOracle {
     function harness__updateChainSpec(address _consensusContract) external {
         _setChainSpec(_getAccountingOracleChainSpec(_consensusContract));
     }
+
+    function harness__getTime() external view returns (uint256) {
+        return super._getTime();
+    }
 }

@@ -17,6 +17,7 @@ import {
   CONSENSUS_VERSION,
   dummyLocator,
   EPOCHS_PER_FRAME,
+  getCurrentBlockTimestamp,
   proxify,
   randomAddress,
   SECONDS_PER_SLOT,
@@ -24,7 +25,13 @@ import {
   Snapshot,
 } from "lib";
 
-import { GENESIS_TIME, INITIAL_EPOCH, INITIAL_FAST_LANE_LENGTH_SLOTS } from "test/deploy";
+import {
+  GENESIS_TIME,
+  INITIAL_EPOCH,
+  INITIAL_FAST_LANE_LENGTH_SLOTS,
+  timestampAtEpoch,
+  timestampAtSlot,
+} from "test/deploy";
 
 describe("LegacyOracle.sol", () => {
   let admin: HardhatEthersSigner;
@@ -60,6 +67,8 @@ describe("LegacyOracle.sol", () => {
       reportProcessor,
     ]);
 
+    await consensusContract.updateInitialEpoch(INITIAL_EPOCH);
+
     accountingOracle = await ethers.deployContract("AccountingOracle__MockForLegacyOracle", [
       lido,
       consensusContract,
@@ -72,6 +81,101 @@ describe("LegacyOracle.sol", () => {
   beforeEach(async () => (originalState = await Snapshot.take()));
 
   afterEach(async () => await Snapshot.restore(originalState));
+
+  context("getLido", () => {
+    it("Returns lido address", async () => {
+      await legacyOracle.initialize(locator, consensusContract);
+
+      expect(await legacyOracle.getLido()).to.equal(lido);
+    });
+  });
+
+  context("getAccountingOracle", () => {
+    it("Returns accountingOracle address", async () => {
+      await legacyOracle.initialize(locator, consensusContract);
+
+      expect(await legacyOracle.getAccountingOracle()).to.equal(accountingOracle);
+    });
+  });
+
+  context("getVersion", () => {
+    it("Returns version", async () => {
+      await legacyOracle.initialize(locator, consensusContract);
+
+      expect(await legacyOracle.getVersion()).to.equal(4);
+    });
+  });
+
+  // getBeaconSpec
+  context("getBeaconSpec", () => {
+    it("Returns beacon spec", async () => {
+      await legacyOracle.initialize(locator, consensusContract);
+
+      const spec = await legacyOracle.getBeaconSpec();
+
+      expect(spec.epochsPerFrame).to.equal(EPOCHS_PER_FRAME);
+      expect(spec.slotsPerEpoch).to.equal(SLOTS_PER_EPOCH);
+      expect(spec.secondsPerSlot).to.equal(SECONDS_PER_SLOT);
+      expect(spec.genesisTime).to.equal(GENESIS_TIME);
+    });
+  });
+
+  context("getCurrentEpochId", () => {
+    it("Returns current epoch id", async () => {
+      await legacyOracle.initialize(locator, consensusContract);
+
+      for (let index = 0; index < 20; index++) {
+        const consensusTime = await consensusContract.getTime();
+        const oracleEpochId = await legacyOracle.getCurrentEpochId();
+
+        const consensusEpochId = (consensusTime - GENESIS_TIME) / (SLOTS_PER_EPOCH * SECONDS_PER_SLOT);
+
+        expect(oracleEpochId).to.be.equal(consensusEpochId);
+
+        await consensusContract.advanceTimeByEpochs(1);
+      }
+    });
+  });
+
+  context("getCurrentFrame", () => {
+    it("Returns frame synced with consensus contract", async () => {
+      await legacyOracle.initialize(locator, consensusContract);
+      const consensusFrame = await consensusContract.getCurrentFrame();
+
+      const frame = await legacyOracle.getCurrentFrame();
+
+      expect(frame.frameEpochId).to.be.equal((consensusFrame.refSlot + 1n) / SLOTS_PER_EPOCH, "frameEpochId");
+      expect(frame.frameStartTime).to.be.equal(timestampAtSlot(consensusFrame.refSlot + 1n), "frameStartTime");
+      expect(frame.frameEndTime).to.be.equal(
+        timestampAtEpoch(frame.frameEpochId + EPOCHS_PER_FRAME) - 1n,
+        "frameEndTime",
+      );
+    });
+  });
+
+  context("getLastCompletedEpochId", () => {
+    it("Returns last completed epoch id", async () => {
+      await legacyOracle.initialize(locator, consensusContract);
+
+      expect(await legacyOracle.getLastCompletedEpochId()).to.equal(0);
+    });
+  });
+
+  // getLastCompletedReportDelta
+  context("getLastCompletedReportDelta", () => {
+    it("Returns last completed report delta", async () => {
+      await legacyOracle.initialize(locator, consensusContract);
+
+      const delta = await legacyOracle.getLastCompletedReportDelta();
+      expect(delta.postTotalPooledEther).to.equal(0, "postTotalPooledEther");
+      expect(delta.preTotalPooledEther).to.equal(0, "preTotalPooledEther");
+      expect(delta.timeElapsed).to.equal(0, "timeElapsed");
+    });
+  });
+
+  // handlePostTokenRebase
+
+  // handleConsensusLayerReport
 
   context("initialize", () => {
     context("Reverts", () => {
@@ -179,72 +283,6 @@ describe("LegacyOracle.sol", () => {
     });
   });
 
-  context("getLido", () => {
-    it("Returns lido address", async () => {
-      await legacyOracle.initialize(locator, consensusContract);
-
-      expect(await legacyOracle.getLido()).to.equal(lido);
-    });
-  });
-
-  context("getAccountingOracle", () => {
-    it("Returns accountingOracle address", async () => {
-      await legacyOracle.initialize(locator, consensusContract);
-
-      expect(await legacyOracle.getAccountingOracle()).to.equal(accountingOracle);
-    });
-  });
-
-  context("getVersion", () => {
-    it("Returns version", async () => {
-      await legacyOracle.initialize(locator, consensusContract);
-
-      expect(await legacyOracle.getVersion()).to.equal(4);
-    });
-  });
-
-  // getBeaconSpec
-  context("getBeaconSpec", () => {
-    it("Returns beacon spec", async () => {
-      await legacyOracle.initialize(locator, consensusContract);
-
-      const spec = await legacyOracle.getBeaconSpec();
-
-      expect(spec.epochsPerFrame).to.equal(EPOCHS_PER_FRAME);
-      expect(spec.slotsPerEpoch).to.equal(SLOTS_PER_EPOCH);
-      expect(spec.secondsPerSlot).to.equal(SECONDS_PER_SLOT);
-      expect(spec.genesisTime).to.equal(GENESIS_TIME);
-    });
-  });
-
-  // getCurrentEpochId
-  context("getCurrentEpochId", () => {
-    it("Returns current epoch id", async () => {
-      await legacyOracle.initialize(locator, consensusContract);
-
-      for (let index = 0; index < 20; index++) {
-        const consensusTime = await consensusContract.getTime();
-        const oracleEpochId = await legacyOracle.getCurrentEpochId();
-
-        const consensusEpochId = (consensusTime - GENESIS_TIME) / (SLOTS_PER_EPOCH * SECONDS_PER_SLOT);
-
-        expect(oracleEpochId).to.be.equal(consensusEpochId);
-
-        await consensusContract.advanceTimeByEpochs(1);
-      }
-    });
-  });
-
-  // getCurrentFrame
-
-  // getLastCompletedEpochId
-
-  // getLastCompletedReportDelta
-
-  // handlePostTokenRebase
-
-  // handleConsensusLayerReport
-
   context("finalizeUpgrade_v4 (deprecated)", () => {
     context("Reverts", () => {
       it("if not upgradeable", async () => {
@@ -267,6 +305,18 @@ describe("LegacyOracle.sol", () => {
       await legacyOracle.finalizeUpgrade_v4(accountingOracle);
 
       expect(await legacyOracle.getVersion()).to.equal(4);
+    });
+  });
+
+  // @dev just to have full coverage, because for testing purposes _getTime is overridden in the Harness contract
+  context("_getTime", () => {
+    it("Returns current time", async () => {
+      await legacyOracle.initialize(locator, consensusContract);
+
+      const time = await legacyOracle.harness__getTime();
+      const blockTimestamp = await getCurrentBlockTimestamp();
+
+      expect(time).to.be.equal(blockTimestamp);
     });
   });
 });
