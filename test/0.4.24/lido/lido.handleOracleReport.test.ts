@@ -28,7 +28,14 @@ import {
 } from "typechain-types";
 import { LidoLocator__MutableMock } from "typechain-types/test/0.4.24/contracts/LidoLocator__MutableMock";
 
-import { certainAddress, deployLidoDao, ether, getNextBlockTimestamp, streccak } from "lib";
+import {
+  certainAddress,
+  deployLidoDao,
+  ether,
+  getNextBlockTimestamp,
+  streccak,
+  updateLocatorImplementation,
+} from "lib";
 
 // TODO: improve coverage
 // TODO: probably needs some refactoring and optimization
@@ -569,6 +576,7 @@ describe("Lido:report", () => {
     });
 
     it("Does not relay the report data to `PostTokenRebaseReceiver` if the locator returns zero address", async () => {
+      await updateLocatorImplementation(await lido.getLidoLocator(), {}, "LidoLocator__MutableMock", deployer);
       const locatorMutable: LidoLocator__MutableMock = LidoLocator__MutableMock__factory.connect(
         await lido.getLidoLocator(),
         deployer,

@@ -22,7 +22,7 @@ import {
   Snapshot,
 } from "lib";
 
-import { deployLocatorWithDummyAddressesImplementation, updateLocatorImplementation } from "../../../lib";
+import { dummyLocator, updateLocatorImplementation } from "../../../lib";
 
 import { CONSENSUS_VERSION, EPOCHS_PER_FRAME, GENESIS_TIME, SECONDS_PER_SLOT, SLOTS_PER_EPOCH } from "./baseOracle";
 import { deployHashConsensus } from "./hashConsensus";
@@ -66,7 +66,7 @@ async function deployAccountingOracleSetup(
     lidoAddr = null as string | null,
   } = {},
 ) {
-  const locatorAddr = await (await deployLocatorWithDummyAddressesImplementation(admin)).getAddress();
+  const locatorAddr = await (await dummyLocator()).getAddress();
   const { lido, stakingRouter, withdrawalQueue } = await getLidoAndStakingRouter();
   const oracleReportSanityChecker = await deployOracleReportSanityCheckerForAccounting(locatorAddr, admin);
 
@@ -92,7 +92,7 @@ async function deployAccountingOracleSetup(
     genesisTime,
     initialEpoch,
   });
-  await updateLocatorImplementation(locatorAddr, admin, {
+  await updateLocatorImplementation(locatorAddr, {
     lido: lidoAddr || (await lido.getAddress()),
     stakingRouter: await stakingRouter.getAddress(),
     withdrawalQueue: await withdrawalQueue.getAddress(),

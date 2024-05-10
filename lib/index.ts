@@ -12,7 +12,6 @@ export * from "./eip712";
 export * from "./ens";
 export * from "./event";
 export * from "./keccak";
-export * from "./locator-deploy";
 export * from "./log";
 export * from "./oracle";
 export * from "./promise";
