@@ -11,19 +11,35 @@ import {PositiveTokenRebaseLimiter, TokenRebaseLimiterData} from "contracts/0.8.
 contract PositiveTokenRebaseLimiterTest is Test {
   PositiveTokenRebaseLimiter__Harness public rebaseLimiter;
 
+  // general purpose fuzz test constants
   uint256 private constant MAX_PROJECTED_ETH = 200_000_000 * 1 ether;
   uint256 private constant MAX_SHARE_RATE_COEF = 1_000;
   uint256 private constant MIN_PROTOCOL_ETH = 1 ether;
+
+  // constants for `getSharesToBurnLimit` fuzz cases
+  uint256 private constant MAX_ETHER_DECREASE_COEF = 1e3;
+  uint256 private constant REBASE_COMPARISON_TOLERANCE = 1e5;
+  uint256 private constant SHARE_RATE_PRECISION = 1e27;
 
   function setUp() public {
     rebaseLimiter = new PositiveTokenRebaseLimiter__Harness();
   }
 
+  /**
+   * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-fuzz-configs
+   * forge-config: default.fuzz.runs = 65536
+   * forge-config: default.fuzz.max-test-rejects = 0
+   */
   function testFuzz_initLimiterStateTooLowLimit(TokenRebaseLimiterData calldata _fuzzData) external {
     vm.expectRevert(PositiveTokenRebaseLimiter.TooLowTokenRebaseLimit.selector);
     rebaseLimiter.initLimiterState(0, _fuzzData.preTotalPooledEther, _fuzzData.preTotalShares);
   }
 
+  /**
+   * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-fuzz-configs
+   * forge-config: default.fuzz.runs = 65536
+   * forge-config: default.fuzz.max-test-rejects = 0
+   */
   function testFuzz_initLimiterTooHighLimit(TokenRebaseLimiterData calldata _fuzzData) external {
     uint256 rebaseLimit = bound(
       _fuzzData.positiveRebaseLimit,
@@ -35,6 +51,11 @@ contract PositiveTokenRebaseLimiterTest is Test {
     rebaseLimiter.initLimiterState(rebaseLimit, _fuzzData.preTotalPooledEther, _fuzzData.preTotalShares);
   }
 
+  /**
+   * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-fuzz-configs
+   * forge-config: default.fuzz.runs = 65536
+   * forge-config: default.fuzz.max-test-rejects = 0
+   */
   function testFuzz_initLimiterState(TokenRebaseLimiterData calldata _fuzzData) external {
     uint256 rebaseLimit = bound(_fuzzData.positiveRebaseLimit, 1, PositiveTokenRebaseLimiter.UNLIMITED_REBASE);
     uint256 preTotalPooledEther = bound(_fuzzData.preTotalPooledEther, 0, MAX_PROJECTED_ETH);
@@ -65,6 +86,11 @@ contract PositiveTokenRebaseLimiterTest is Test {
     }
   }
 
+  /**
+   * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-fuzz-configs
+   * forge-config: default.fuzz.runs = 65536
+   * forge-config: default.fuzz.max-test-rejects = 0
+   */
   function testFuzz_isLimitReached(TokenRebaseLimiterData calldata _fuzzData) external {
     rebaseLimiter.setData__harness(_fuzzData);
 
@@ -76,6 +102,11 @@ contract PositiveTokenRebaseLimiterTest is Test {
     }
   }
 
+  /**
+   * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-fuzz-configs
+   * forge-config: default.fuzz.runs = 65536
+   * forge-config: default.fuzz.max-test-rejects = 0
+   */
   function testFuzz_decreaseEtherUnlimited(TokenRebaseLimiterData memory _fuzzData, uint256 _etherAmount) external {
     _fuzzData.positiveRebaseLimit = PositiveTokenRebaseLimiter.UNLIMITED_REBASE;
     rebaseLimiter.setData__harness(_fuzzData);
@@ -89,6 +120,11 @@ contract PositiveTokenRebaseLimiterTest is Test {
     assertEq(data.positiveRebaseLimit, PositiveTokenRebaseLimiter.UNLIMITED_REBASE);
   }
 
+  /**
+   * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-fuzz-configs
+   * forge-config: default.fuzz.runs = 65536
+   * forge-config: default.fuzz.max-test-rejects = 0
+   */
   function testFuzz_decreaseEther(TokenRebaseLimiterData memory _fuzzData, uint256 _etherAmount) external {
     _fuzzData.positiveRebaseLimit = bound(
       _fuzzData.positiveRebaseLimit,
@@ -112,6 +148,11 @@ contract PositiveTokenRebaseLimiterTest is Test {
     }
   }
 
+  /**
+   * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-fuzz-configs
+   * forge-config: default.fuzz.runs = 65536
+   * forge-config: default.fuzz.max-test-rejects = 0
+   */
   function testFuzz_increaseEtherUnlimited(TokenRebaseLimiterData memory _fuzzData, uint256 _etherAmount) external {
     _fuzzData.positiveRebaseLimit = PositiveTokenRebaseLimiter.UNLIMITED_REBASE;
     rebaseLimiter.setData__harness(_fuzzData);
@@ -126,6 +167,11 @@ contract PositiveTokenRebaseLimiterTest is Test {
     assertEq(data.maxTotalPooledEther, _fuzzData.maxTotalPooledEther);
   }
 
+  /**
+   * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-fuzz-configs
+   * forge-config: default.fuzz.runs = 65536
+   * forge-config: default.fuzz.max-test-rejects = 0
+   */
   function testFuzz_increaseEther(TokenRebaseLimiterData memory _fuzzData, uint256 _etherAmount) external {
     _fuzzData.positiveRebaseLimit = bound(
       _fuzzData.positiveRebaseLimit,
@@ -157,6 +203,11 @@ contract PositiveTokenRebaseLimiterTest is Test {
     assertEq(data.positiveRebaseLimit, _fuzzData.positiveRebaseLimit);
   }
 
+  /**
+   * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-fuzz-configs
+   * forge-config: default.fuzz.runs = 65536
+   * forge-config: default.fuzz.max-test-rejects = 0
+   */
   function testFuzz_getSharesToBurnLimitUnlimited(TokenRebaseLimiterData memory _fuzzData) external {
     _fuzzData.positiveRebaseLimit = PositiveTokenRebaseLimiter.UNLIMITED_REBASE;
     rebaseLimiter.setData__harness(_fuzzData);
@@ -166,6 +217,11 @@ contract PositiveTokenRebaseLimiterTest is Test {
     assertEq(sharesToBurnLimit, _fuzzData.preTotalShares);
   }
 
+  /**
+   * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-fuzz-configs
+   * forge-config: default.fuzz.runs = 65536
+   * forge-config: default.fuzz.max-test-rejects = 0
+   */
   function testFuzz_getSharesToBurnLimitZeroTVL(TokenRebaseLimiterData memory _fuzzData) external {
     _fuzzData.positiveRebaseLimit = bound(
       _fuzzData.positiveRebaseLimit,
@@ -180,10 +236,6 @@ contract PositiveTokenRebaseLimiterTest is Test {
       rebaseLimiter.getSharesToBurnLimit();
     }
   }
-
-  uint256 private constant MAX_ETHER_DECREASE_COEF = 1e3;
-  uint256 private constant REBASE_COMPARISON_TOLERANCE = 1e5;
-  uint256 private constant SHARE_RATE_PRECISION = 1e27;
 
   /**
    * https://book.getfoundry.sh/reference/config/inline-test-config#in-line-fuzz-configs
