@@ -9,17 +9,16 @@ import {
   HashConsensus__MockForLegacyOracle,
   LegacyOracle__Harness,
   LidoLocator,
-  ReportProcessor__MockForLegacyOracle,
 } from "typechain-types";
 
 import {
   certainAddress,
-  CONSENSUS_VERSION,
   dummyLocator,
   EPOCHS_PER_FRAME,
+  ether,
   getCurrentBlockTimestamp,
+  impersonate,
   proxify,
-  randomAddress,
   SECONDS_PER_SLOT,
   SLOTS_PER_EPOCH,
   Snapshot,
@@ -35,11 +34,11 @@ import {
 
 describe("LegacyOracle.sol", () => {
   let admin: HardhatEthersSigner;
+  let stranger: HardhatEthersSigner;
 
   let legacyOracle: LegacyOracle__Harness;
 
   let locator: LidoLocator;
-  let reportProcessor: ReportProcessor__MockForLegacyOracle;
   let consensusContract: HashConsensus__MockForLegacyOracle;
   let accountingOracle: AccountingOracle__MockForLegacyOracle;
 
@@ -48,26 +47,21 @@ describe("LegacyOracle.sol", () => {
   let originalState: string;
 
   before(async () => {
-    [admin] = await ethers.getSigners();
+    [admin, stranger] = await ethers.getSigners();
 
     const impl = await ethers.deployContract("LegacyOracle__Harness");
     [legacyOracle] = await proxify({ impl, admin });
 
     lido = certainAddress("legacy-oracle:lido");
 
-    reportProcessor = await ethers.deployContract("ReportProcessor__MockForLegacyOracle", [CONSENSUS_VERSION]);
-
     consensusContract = await ethers.deployContract("HashConsensus__MockForLegacyOracle", [
       SLOTS_PER_EPOCH,
       SECONDS_PER_SLOT,
       GENESIS_TIME,
+      INITIAL_EPOCH,
       EPOCHS_PER_FRAME,
       INITIAL_FAST_LANE_LENGTH_SLOTS,
-      admin,
-      reportProcessor,
     ]);
-
-    await consensusContract.updateInitialEpoch(INITIAL_EPOCH);
 
     accountingOracle = await ethers.deployContract("AccountingOracle__MockForLegacyOracle", [
       lido,
@@ -106,7 +100,6 @@ describe("LegacyOracle.sol", () => {
     });
   });
 
-  // getBeaconSpec
   context("getBeaconSpec", () => {
     it("Returns beacon spec", async () => {
       await legacyOracle.initialize(locator, consensusContract);
@@ -121,9 +114,11 @@ describe("LegacyOracle.sol", () => {
   });
 
   context("getCurrentEpochId", () => {
-    it("Returns current epoch id", async () => {
+    beforeEach(async () => {
       await legacyOracle.initialize(locator, consensusContract);
+    });
 
+    it("Returns current epoch id", async () => {
       for (let index = 0; index < 20; index++) {
         const consensusTime = await consensusContract.getTime();
         const oracleEpochId = await legacyOracle.getCurrentEpochId();
@@ -135,11 +130,25 @@ describe("LegacyOracle.sol", () => {
         await consensusContract.advanceTimeByEpochs(1);
       }
     });
+
+    it("Returns current epoch id on the edge", async () => {
+      const epochDuration = SLOTS_PER_EPOCH * SECONDS_PER_SLOT;
+      const consensusTime = GENESIS_TIME + epochDuration;
+
+      await consensusContract.setTime(consensusTime);
+
+      const oracleEpochId = await legacyOracle.getCurrentEpochId();
+
+      expect(oracleEpochId).to.be.equal(1);
+    });
   });
 
   context("getCurrentFrame", () => {
-    it("Returns frame synced with consensus contract", async () => {
+    beforeEach(async () => {
       await legacyOracle.initialize(locator, consensusContract);
+    });
+
+    it("Returns frame synced with consensus contract", async () => {
       const consensusFrame = await consensusContract.getCurrentFrame();
 
       const frame = await legacyOracle.getCurrentFrame();
@@ -151,6 +160,23 @@ describe("LegacyOracle.sol", () => {
         "frameEndTime",
       );
     });
+
+    it("Returns frame synced with consensus contract on the edge", async () => {
+      const frameDuration = EPOCHS_PER_FRAME * SLOTS_PER_EPOCH * SECONDS_PER_SLOT;
+      const consensusTime = GENESIS_TIME + frameDuration;
+
+      await consensusContract.setTime(consensusTime);
+
+      const frame = await legacyOracle.getCurrentFrame();
+
+      const expectedFrameEpochId = 1n;
+      const expectedFrameStartTime = timestampAtEpoch(expectedFrameEpochId);
+      const expectedFrameEndTime = timestampAtEpoch(expectedFrameEpochId + EPOCHS_PER_FRAME) - 1n;
+
+      expect(frame.frameEpochId).to.be.equal(expectedFrameEpochId, "frameEpochId");
+      expect(frame.frameStartTime).to.be.equal(expectedFrameStartTime, "frameStartTime");
+      expect(frame.frameEndTime).to.be.equal(expectedFrameEndTime, "frameEndTime");
+    });
   });
 
   context("getLastCompletedEpochId", () => {
@@ -161,7 +187,6 @@ describe("LegacyOracle.sol", () => {
     });
   });
 
-  // getLastCompletedReportDelta
   context("getLastCompletedReportDelta", () => {
     it("Returns last completed report delta", async () => {
       await legacyOracle.initialize(locator, consensusContract);
@@ -173,9 +198,87 @@ describe("LegacyOracle.sol", () => {
     });
   });
 
-  // handlePostTokenRebase
+  context("handlePostTokenRebase", () => {
+    beforeEach(async () => {
+      await legacyOracle.initialize(locator, consensusContract);
+    });
 
-  // handleConsensusLayerReport
+    it("Reverts if called by non Lido", async () => {
+      await expect(legacyOracle.connect(stranger).handlePostTokenRebase(1, 2, 3, 4, 5, 6, 7)).to.be.revertedWith(
+        "SENDER_NOT_ALLOWED",
+      );
+    });
+
+    it("Handles post token rebase report", async () => {
+      const lidoActor = await impersonate(lido, ether("1000"));
+
+      await expect(legacyOracle.connect(lidoActor).handlePostTokenRebase(1, 2, 3, 4, 5, 6, 7))
+        .to.emit(legacyOracle, "PostTotalShares")
+        .withArgs(6, 4, 2, 5);
+
+      const delta = await legacyOracle.getLastCompletedReportDelta();
+      expect(delta.postTotalPooledEther).to.equal(6, "postTotalPooledEther");
+      expect(delta.preTotalPooledEther).to.equal(4, "preTotalPooledEther");
+      expect(delta.timeElapsed).to.equal(2, "timeElapsed");
+    });
+
+    it("Emits PostTotalShares event with zero values when appropriate", async () => {
+      const lidoActor = await impersonate(lido, ether("1000"));
+
+      await expect(legacyOracle.connect(lidoActor).handlePostTokenRebase(0, 0, 0, 0, 0, 0, 0))
+        .to.emit(legacyOracle, "PostTotalShares")
+        .withArgs(0, 0, 0, 0);
+
+      const delta = await legacyOracle.getLastCompletedReportDelta();
+      expect(delta.postTotalPooledEther).to.equal(0, "postTotalPooledEther");
+      expect(delta.preTotalPooledEther).to.equal(0, "preTotalPooledEther");
+      expect(delta.timeElapsed).to.equal(0, "timeElapsed");
+    });
+  });
+
+  context("handleConsensusLayerReport", () => {
+    const refSlot = 3000n;
+
+    beforeEach(async () => {
+      await legacyOracle.initialize(locator, consensusContract);
+    });
+
+    it("Reverts if called by non Lido", async () => {
+      await expect(legacyOracle.connect(stranger).handleConsensusLayerReport(refSlot, 2, 3)).to.be.revertedWith(
+        "SENDER_NOT_ALLOWED",
+      );
+    });
+
+    it("Handles consensus layer report", async () => {
+      const accountingOracleAddress = await accountingOracle.getAddress();
+      const accountingOracleActor = await impersonate(accountingOracleAddress, ether("1000"));
+
+      const epochId = (refSlot + 1n) / SLOTS_PER_EPOCH;
+
+      await expect(legacyOracle.connect(accountingOracleActor).handleConsensusLayerReport(refSlot, 2, 3))
+        .to.emit(legacyOracle, "Completed")
+        .withArgs(epochId, 2, 3);
+
+      const lastCompletedEpochId = await legacyOracle.getLastCompletedEpochId();
+
+      expect(lastCompletedEpochId).to.equal(epochId);
+    });
+
+    it("Emits Completed event with zero values when appropriate", async () => {
+      const accountingOracleAddress = await accountingOracle.getAddress();
+      const accountingOracleActor = await impersonate(accountingOracleAddress, ether("1000"));
+
+      const refSlot = 0n;
+      const expectedEpochId = (refSlot + 1n) / SLOTS_PER_EPOCH;
+
+      await expect(legacyOracle.connect(accountingOracleActor).handleConsensusLayerReport(refSlot, 0, 0))
+        .to.emit(legacyOracle, "Completed")
+        .withArgs(expectedEpochId, 0, 0);
+
+      const lastCompletedEpochId = await legacyOracle.getLastCompletedEpochId();
+      expect(lastCompletedEpochId).to.equal(expectedEpochId);
+    });
+  });
 
   context("initialize", () => {
     context("Reverts", () => {
@@ -184,7 +287,7 @@ describe("LegacyOracle.sol", () => {
       });
 
       it("if accountingOracle is zero address", async () => {
-        const badLocator = await dummyLocator(
+        const brokenLocator = await dummyLocator(
           {
             legacyOracle: legacyOracle,
             accountingOracle: ZeroAddress,
@@ -193,7 +296,7 @@ describe("LegacyOracle.sol", () => {
           false,
         );
 
-        await expect(legacyOracle.initialize(badLocator, ZeroAddress)).to.revertedWith(
+        await expect(legacyOracle.initialize(brokenLocator, ZeroAddress)).to.revertedWith(
           "ZERO_ACCOUNTING_ORACLE_ADDRESS",
         );
       });
@@ -206,54 +309,71 @@ describe("LegacyOracle.sol", () => {
         );
       });
 
-      async function getSpoiledChainSpecMocks(secondsPerSlot: bigint, genesisTime: bigint, epochsPerFrame: bigint) {
-        const badConsensusContract = await ethers.deployContract("MockConsensusContract", [
-          SLOTS_PER_EPOCH,
+      async function getSpoiledChainSpecMocks({
+        slotsPerEpoch = SLOTS_PER_EPOCH,
+        secondsPerSlot = SECONDS_PER_SLOT,
+        genesisTime = GENESIS_TIME,
+        initialEpoch = INITIAL_EPOCH,
+        epochsPerFrame = EPOCHS_PER_FRAME,
+        initialFastLaneLengthSlots = INITIAL_FAST_LANE_LENGTH_SLOTS,
+      }) {
+        const invalidConsensusContract = await ethers.deployContract("HashConsensus__MockForLegacyOracle", [
+          slotsPerEpoch,
           secondsPerSlot,
           genesisTime,
+          initialEpoch,
           epochsPerFrame,
-          INITIAL_EPOCH,
-          INITIAL_FAST_LANE_LENGTH_SLOTS,
-          randomAddress(),
+          initialFastLaneLengthSlots,
         ]);
 
         const accountingOracle = await ethers.deployContract("AccountingOracle__MockForLegacyOracle", [
           lido,
-          badConsensusContract,
-          SECONDS_PER_SLOT,
+          invalidConsensusContract,
+          secondsPerSlot,
         ]);
 
         const locatorConfig = { legacyOracle, accountingOracle, lido };
-        const badLocator = await dummyLocator(locatorConfig, admin, false);
+        const invalidLocator = await dummyLocator(locatorConfig, admin, false);
 
-        return { badLocator, badConsensusContract };
+        return { invalidLocator, invalidConsensusContract };
       }
 
-      // @dev test for slotsPerEpoch cannot be performed because it causes panic code 0x11
-      // (Arithmetic operation overflowed outside of an unchecked block)
+      it("if chain spec SLOTS_PER_EPOCH is 0", async () => {
+        const { invalidLocator, invalidConsensusContract } = await getSpoiledChainSpecMocks({
+          slotsPerEpoch: 0n,
+        });
+
+        await expect(legacyOracle.initialize(invalidLocator, invalidConsensusContract)).to.be.revertedWith(
+          "BAD_SLOTS_PER_EPOCH",
+        );
+      });
 
       it("if chain spec SECONDS_PER_SLOT is 0", async () => {
-        const { badLocator, badConsensusContract } = await getSpoiledChainSpecMocks(0n, GENESIS_TIME, EPOCHS_PER_FRAME);
+        const { invalidLocator, invalidConsensusContract } = await getSpoiledChainSpecMocks({
+          secondsPerSlot: 0n,
+        });
 
-        await expect(legacyOracle.initialize(badLocator, badConsensusContract)).to.be.revertedWith(
+        await expect(legacyOracle.initialize(invalidLocator, invalidConsensusContract)).to.be.revertedWith(
           "BAD_SECONDS_PER_SLOT",
         );
       });
 
       it("if chain spec GENESIS_TIME is 0", async () => {
-        const { badLocator, badConsensusContract } = await getSpoiledChainSpecMocks(
-          SECONDS_PER_SLOT,
-          0n,
-          EPOCHS_PER_FRAME,
-        );
+        const { invalidLocator, invalidConsensusContract } = await getSpoiledChainSpecMocks({
+          genesisTime: 0n,
+        });
 
-        await expect(legacyOracle.initialize(badLocator, badConsensusContract)).to.be.revertedWith("BAD_GENESIS_TIME");
+        await expect(legacyOracle.initialize(invalidLocator, invalidConsensusContract)).to.be.revertedWith(
+          "BAD_GENESIS_TIME",
+        );
       });
 
       it("if chain spec EPOCHS_PER_FRAME is 0", async () => {
-        const { badLocator, badConsensusContract } = await getSpoiledChainSpecMocks(SECONDS_PER_SLOT, GENESIS_TIME, 0n);
+        const { invalidLocator, invalidConsensusContract } = await getSpoiledChainSpecMocks({
+          epochsPerFrame: 0n,
+        });
 
-        await expect(legacyOracle.initialize(badLocator, badConsensusContract)).to.be.revertedWith(
+        await expect(legacyOracle.initialize(invalidLocator, invalidConsensusContract)).to.be.revertedWith(
           "BAD_EPOCHS_PER_FRAME",
         );
       });
