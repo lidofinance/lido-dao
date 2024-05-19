@@ -249,7 +249,7 @@ describe("OracleReportSanityChecker.sol", () => {
 
       await expect(
         checker.checkAccountingOracleReport(0, ether("330"), ether("300"), 0, 0, 0, 10, 10),
-      ).to.be.revertedWithCustomError(checker, "NegativeRebaseFailedCLStateReportIsNotReady");
+      ).to.be.revertedWithCustomError(checker, "NegativeRebaseFailedSecondOpinionReportIsNotReady");
 
       await secondOracle.addReport(refSlot, {
         success: true,

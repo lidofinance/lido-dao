@@ -312,7 +312,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await expect(tx)
         .to.emit(oracleReportSanityChecker, "InitialSlashingAmountSet")
         .withArgs(newInitialSlashing)
-        .to.emit(oracleReportSanityChecker, "PenaltiesAmountSet")
+        .to.emit(oracleReportSanityChecker, "InactivityPenaltiesAmountSet")
         .withArgs(newPenalties);
       expect((await oracleReportSanityChecker.getOracleReportLimits()).initialSlashingAmountPWei).to.equal(
         newInitialSlashing,

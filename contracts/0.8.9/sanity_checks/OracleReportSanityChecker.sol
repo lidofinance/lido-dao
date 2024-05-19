@@ -140,8 +140,8 @@ struct LimitsListPacked {
 
 struct ReportData {
     uint64 timestamp;
-    uint64 exitedValidatorsCount;
-    uint128 negativeCLRebase;
+    uint64 totalExitedValidators;
+    uint128 negativeCLRebaseWei;
 }
 
 uint256 constant MAX_BASIS_POINTS = 10_000;
@@ -645,7 +645,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 sum;
         for (int256 index = int256(reportData.length) - 1; index >= 0; index--) {
             if (reportData[uint256(index)].timestamp >= SafeCast.toUint64(_timestamp)) {
-                sum += reportData[uint256(index)].negativeCLRebase;
+                sum += reportData[uint256(index)].negativeCLRebaseWei;
             } else {
                 break;
             }
@@ -656,7 +656,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     function _exitedValidatorsAtTimestamp(uint256 _timestamp) internal view returns (uint256) {
         for (int256 index = int256(reportData.length) - 1; index >= 0; index--) {
             if (reportData[uint256(index)].timestamp <= SafeCast.toUint64(_timestamp)) {
-                return reportData[uint256(index)].exitedValidatorsCount;
+                return reportData[uint256(index)].totalExitedValidators;
             }
         }
         return 0;
@@ -681,29 +681,28 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             stakingRouterExitedValidators += summary.totalExitedValidators;
         }
 
-        if (_preCLBalance > _unifiedPostCLBalance) {
-            _addReportData(reportTimestamp, stakingRouterExitedValidators, _preCLBalance - _unifiedPostCLBalance);
-        } else {
+        if (_preCLBalance <= _unifiedPostCLBalance) {
             _addReportData(reportTimestamp, stakingRouterExitedValidators, 0);
             // If the CL balance is not decreased, we don't need to check anyting here
             return;
         }
+        _addReportData(reportTimestamp, stakingRouterExitedValidators, _preCLBalance - _unifiedPostCLBalance);
 
         uint256 negativeCLRebaseSum = _sumNegativeRebasesNotOlderThan(reportTimestamp - 18 days);
-        uint256 maxCLRebaseNegativeSum =
+        uint256 maxAllowedCLRebaseNegativeSum =
             _limits.initialSlashingAmountPWei * ONE_PWEI * (_postCLValidators - _exitedValidatorsAtTimestamp(reportTimestamp - 18 days)) +
             _limits.inactivityPenaltiesAmountPWei * ONE_PWEI * (_postCLValidators - _exitedValidatorsAtTimestamp(reportTimestamp - 54 days));
 
-        if (negativeCLRebaseSum < maxCLRebaseNegativeSum) {
+        if (negativeCLRebaseSum < maxAllowedCLRebaseNegativeSum) {
             // If the diff is less than limit we are finishing check
-            emit NegativeCLRebaseAccepted(_refSlot, _unifiedPostCLBalance, negativeCLRebaseSum, maxCLRebaseNegativeSum);
+            emit NegativeCLRebaseAccepted(_refSlot, _unifiedPostCLBalance, negativeCLRebaseSum, maxAllowedCLRebaseNegativeSum);
             return;
         }
 
         // If there is no negative rebase oracle, then we don't need to check it's report
         if (address(secondOpinionOracle) == address(0)) {
             // If there is no oracle and the diff is more than limit, we revert
-            revert IncorrectCLBalanceDecrease(negativeCLRebaseSum, maxCLRebaseNegativeSum);
+            revert IncorrectCLBalanceDecrease(negativeCLRebaseSum, maxAllowedCLRebaseNegativeSum);
         }
         _askSecondOpinion(_refSlot, _unifiedPostCLBalance, _limitsList);
     }
@@ -722,7 +721,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             }
             emit NegativeCLRebaseConfirmed(_refSlot, _unifiedPostCLBalance);
         } else {
-            revert NegativeRebaseFailedCLStateReportIsNotReady();
+            revert NegativeRebaseFailedSecondOpinionReportIsNotReady();
         }
     }
 
@@ -872,7 +871,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         }
         if (_oldLimitsList.inactivityPenaltiesAmountPWei != _newLimitsList.inactivityPenaltiesAmountPWei) {
             _checkLimitValue(_newLimitsList.inactivityPenaltiesAmountPWei, 0, type(uint16).max);
-            emit PenaltiesAmountSet(_newLimitsList.inactivityPenaltiesAmountPWei);
+            emit InactivityPenaltiesAmountSet(_newLimitsList.inactivityPenaltiesAmountPWei);
         }
         if (_oldLimitsList.clBalanceOraclesErrorUpperBPLimit != _newLimitsList.clBalanceOraclesErrorUpperBPLimit) {
             _checkLimitValue(_newLimitsList.clBalanceOraclesErrorUpperBPLimit, 0, MAX_BASIS_POINTS);
@@ -897,7 +896,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     event MaxNodeOperatorsPerExtraDataItemCountSet(uint256 maxNodeOperatorsPerExtraDataItemCount);
     event RequestTimestampMarginSet(uint256 requestTimestampMargin);
     event InitialSlashingAmountSet(uint256 initialSlashingAmountPWei);
-    event PenaltiesAmountSet(uint256 inactivityPenaltiesAmountPWei);
+    event InactivityPenaltiesAmountSet(uint256 inactivityPenaltiesAmountPWei);
     event CLBalanceOraclesErrorUpperBPLimitSet(uint256 clBalanceOraclesErrorUpperBPLimit);
     event NegativeCLRebaseConfirmed(uint256 refSlot, uint256 clBalanceWei);
     event NegativeCLRebaseAccepted(uint256 refSlot, uint256 clBalance, uint256 clBalanceDecrease, uint256 clBalanceMaxDecrease);
@@ -920,7 +919,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
     error IncorrectCLBalanceDecrease(uint256 negativeCLRebaseSum, uint256 maxNegativeCLRebaseSum);
     error NegativeRebaseFailedCLBalanceMismatch(uint256 reportedValue, uint256 provedValue, uint256 limitBP);
-    error NegativeRebaseFailedCLStateReportIsNotReady();
+    error NegativeRebaseFailedSecondOpinionReportIsNotReady();
 }
 
 library LimitsListPacker {
