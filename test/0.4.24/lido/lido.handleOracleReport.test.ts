@@ -14,7 +14,6 @@ import {
   LidoExecutionLayerRewardsVault__MockForLidoHandleOracleReport__factory,
   LidoLocator,
   LidoLocator__factory,
-  LidoLocator__MutableMock,
   LidoLocator__MutableMock__factory,
   OracleReportSanityChecker__MockForLidoHandleOracleReport,
   OracleReportSanityChecker__MockForLidoHandleOracleReport__factory,
@@ -27,10 +26,16 @@ import {
   WithdrawalVault__MockForLidoHandleOracleReport,
   WithdrawalVault__MockForLidoHandleOracleReport__factory,
 } from "typechain-types";
+import { LidoLocator__MutableMock } from "typechain-types/test/0.4.24/contracts/LidoLocator__MutableMock";
 
-import { certainAddress, ether, getNextBlockTimestamp, streccak } from "lib";
-
-import { deployAragonLidoDao } from "test/deploy";
+import {
+  certainAddress,
+  deployLidoDao,
+  ether,
+  getNextBlockTimestamp,
+  streccak,
+  updateLocatorImplementation,
+} from "lib";
 
 // TODO: improve coverage
 // TODO: probably needs some refactoring and optimization
@@ -73,7 +78,7 @@ describe("Lido:report", () => {
       new WithdrawalVault__MockForLidoHandleOracleReport__factory(deployer).deploy(),
     ]);
 
-    ({ lido, acl } = await deployAragonLidoDao({
+    ({ lido, acl } = await deployLidoDao({
       rootAccount: deployer,
       initialized: true,
       locatorConfig: {
@@ -571,6 +576,7 @@ describe("Lido:report", () => {
     });
 
     it("Does not relay the report data to `PostTokenRebaseReceiver` if the locator returns zero address", async () => {
+      await updateLocatorImplementation(await lido.getLidoLocator(), {}, "LidoLocator__MutableMock", deployer);
       const locatorMutable: LidoLocator__MutableMock = LidoLocator__MutableMock__factory.connect(
         await lido.getLidoLocator(),
         deployer,

@@ -2,26 +2,16 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import {
-  LidoLocator,
-  LidoLocator__MutableMock__factory,
-  LidoLocator__MutableMockNoValidation__factory,
-} from "typechain-types";
+import { LidoLocator, LidoLocator__factory, OssifiableProxy, OssifiableProxy__factory } from "typechain-types";
 
 import { certainAddress } from ".";
 
-export async function dummyLocator(
-  config?: Partial<LidoLocator.ConfigStruct>,
-  deployer?: HardhatEthersSigner,
-  validateZeroAddress: boolean = true,
-) {
+async function deployLocator(config?: Partial<LidoLocator.ConfigStruct>, deployer?: HardhatEthersSigner) {
   if (!deployer) {
     [deployer] = await ethers.getSigners();
   }
 
-  const factory = validateZeroAddress
-    ? new LidoLocator__MutableMock__factory(deployer)
-    : new LidoLocator__MutableMockNoValidation__factory(deployer);
+  const factory = new LidoLocator__factory(deployer);
 
   const locator = await factory.deploy({
     accountingOracle: certainAddress("dummy-locator:accountingOracle"),
@@ -40,6 +30,100 @@ export async function dummyLocator(
     withdrawalVault: certainAddress("dummy-locator:withdrawalVault"),
     ...config,
   });
-
   return locator as LidoLocator;
+}
+
+export async function dummyLocator(config?: Partial<LidoLocator.ConfigStruct>, deployer?: HardhatEthersSigner) {
+  if (!deployer) {
+    [deployer] = await ethers.getSigners();
+  }
+  const locator = await deployLocator(config, deployer);
+  const proxyFactory = new OssifiableProxy__factory(deployer);
+  const proxy = await proxyFactory.deploy(await locator.getAddress(), await deployer.getAddress(), new Uint8Array());
+  return locator.attach(await proxy.getAddress()) as LidoLocator;
+}
+
+async function updateProxyImplementation(
+  proxyAddress: string,
+  config: LidoLocator.ConfigStruct,
+  customLocator?: string,
+  proxyOwner?: HardhatEthersSigner,
+) {
+  if (!proxyOwner) {
+    [proxyOwner] = await ethers.getSigners();
+  }
+  const proxyFactory = new OssifiableProxy__factory(proxyOwner);
+  const proxy = (await proxyFactory.attach(proxyAddress)) as OssifiableProxy;
+  let implementation;
+  if (customLocator) {
+    const contractFactory = await ethers.getContractFactory(customLocator);
+    implementation = await contractFactory.connect(proxyOwner).deploy(config);
+  } else {
+    implementation = await deployLocator(config, proxyOwner);
+  }
+  await proxy.proxy__upgradeTo(await implementation.getAddress());
+}
+
+async function getLocatorConfig(locatorAddress: string) {
+  const locator = await ethers.getContractAt("LidoLocator", locatorAddress);
+  const [
+    accountingOracle,
+    depositSecurityModule,
+    elRewardsVault,
+    legacyOracle,
+    lido,
+    oracleReportSanityChecker,
+    postTokenRebaseReceiver,
+    burner,
+    stakingRouter,
+    treasury,
+    validatorsExitBusOracle,
+    withdrawalQueue,
+    withdrawalVault,
+    oracleDaemonConfig,
+  ] = await Promise.all([
+    locator.accountingOracle(),
+    locator.depositSecurityModule(),
+    locator.elRewardsVault(),
+    locator.legacyOracle(),
+    locator.lido(),
+    locator.oracleReportSanityChecker(),
+    locator.postTokenRebaseReceiver(),
+    locator.burner(),
+    locator.stakingRouter(),
+    locator.treasury(),
+    locator.validatorsExitBusOracle(),
+    locator.withdrawalQueue(),
+    locator.withdrawalVault(),
+    locator.oracleDaemonConfig(),
+  ]);
+
+  const config = {
+    accountingOracle,
+    depositSecurityModule,
+    elRewardsVault,
+    legacyOracle,
+    lido,
+    oracleReportSanityChecker,
+    postTokenRebaseReceiver,
+    burner,
+    stakingRouter,
+    treasury,
+    validatorsExitBusOracle,
+    withdrawalQueue,
+    withdrawalVault,
+    oracleDaemonConfig,
+  };
+  return config;
+}
+
+export async function updateLocatorImplementation(
+  locatorAddress: string,
+  configUpdate = {},
+  customLocator?: string,
+  admin?: HardhatEthersSigner,
+) {
+  const config = await getLocatorConfig(locatorAddress);
+  Object.assign(config, configUpdate);
+  await updateProxyImplementation(locatorAddress, config, customLocator, admin);
 }

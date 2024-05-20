@@ -55,6 +55,10 @@ contract BaseOracle__Harness is BaseOracle {
         return _time;
     }
 
+    function originalGetTime() external view returns (uint256) {
+        return BaseOracle._getTime();
+    }
+
     function setTime(uint256 newTime) external {
         _time = newTime;
     }
