@@ -2,9 +2,15 @@ import { ethers } from "hardhat";
 
 import { IReportAsyncProcessor } from "typechain-types";
 
-import { CONSENSUS_VERSION, EPOCHS_PER_FRAME, SECONDS_PER_SLOT, SLOTS_PER_EPOCH } from "lib";
-
-import { GENESIS_TIME, INITIAL_EPOCH, INITIAL_FAST_LANE_LENGTH_SLOTS } from "./baseOracle";
+import {
+  CONSENSUS_VERSION,
+  EPOCHS_PER_FRAME,
+  GENESIS_TIME,
+  INITIAL_EPOCH,
+  INITIAL_FAST_LANE_LENGTH_SLOTS,
+  SECONDS_PER_SLOT,
+  SLOTS_PER_EPOCH,
+} from "lib";
 
 export async function deployHashConsensus(
   admin: string,

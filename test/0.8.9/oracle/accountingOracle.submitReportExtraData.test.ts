@@ -25,13 +25,14 @@ import {
   ExtraDataType,
   getReportDataItems,
   numberToHex,
+  ONE_GWEI,
   OracleReport,
   packExtraDataList,
   shareRate,
-  Snapshot,
 } from "lib";
 
-import { deployAndConfigureAccountingOracle, ONE_GWEI } from "./accountingOracle.deploy.test";
+import { deployAndConfigureAccountingOracle } from "test/deploy";
+import { Snapshot } from "test/suite";
 
 const getDefaultExtraData = () => ({
   stuckKeys: [

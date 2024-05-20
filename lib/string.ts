@@ -15,6 +15,6 @@ export function randomString(length: number) {
   return hexlify(randomBytes(length));
 }
 
-export function numberToHex(n: number | bigint, byteLen: number | undefined = undefined) {
+export function numberToHex(n: number, byteLen: number | undefined = undefined) {
   return bigintToHex(BigInt(n), false, byteLen);
 }

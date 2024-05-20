@@ -26,11 +26,12 @@ import {
   proxify,
   shareRate,
   shares,
-  Snapshot,
   streccak,
   WITHDRAWAL_QUEUE_NAME,
   WITHDRAWAL_QUEUE_SYMBOL,
 } from "lib";
+
+import { Snapshot } from "test/suite";
 
 const MANAGE_TOKEN_URI_ROLE = streccak("MANAGE_TOKEN_URI_ROLE");
 

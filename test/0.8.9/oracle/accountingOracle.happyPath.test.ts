@@ -17,28 +17,31 @@ import {
 import {
   calcExtraDataListHash,
   calcReportDataHash,
+  CONSENSUS_VERSION,
   encodeExtraDataItems,
   ether,
   EXTRA_DATA_FORMAT_EMPTY,
   EXTRA_DATA_FORMAT_LIST,
   ExtraDataType,
+  GENESIS_TIME,
   getReportDataItems,
   numberToHex,
+  ONE_GWEI,
   OracleReport,
   packExtraDataList,
   ReportAsArray,
   SECONDS_PER_SLOT,
   shareRate,
 } from "lib";
-import { CONSENSUS_VERSION } from "lib";
-
-import { GENESIS_TIME, SECONDS_PER_EPOCH, SECONDS_PER_FRAME, SLOTS_PER_FRAME, timestampAtSlot } from "test/deploy";
 
 import {
   deployAndConfigureAccountingOracle,
-  ONE_GWEI,
+  SECONDS_PER_EPOCH,
+  SECONDS_PER_FRAME,
+  SLOTS_PER_FRAME,
+  timestampAtSlot,
   V1_ORACLE_LAST_REPORT_SLOT,
-} from "./accountingOracle.deploy.test";
+} from "test/deploy";
 
 describe("AccountingOracle.sol:happyPath", () => {
   context("Happy path", () => {

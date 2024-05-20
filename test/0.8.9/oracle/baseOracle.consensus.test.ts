@@ -6,9 +6,10 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { BaseOracle__Harness, MockConsensusContract } from "typechain-types";
 
-import { CONSENSUS_VERSION, EPOCHS_PER_FRAME, SECONDS_PER_SLOT, SLOTS_PER_EPOCH, Snapshot } from "lib";
+import { CONSENSUS_VERSION, EPOCHS_PER_FRAME, GENESIS_TIME, SECONDS_PER_SLOT, SLOTS_PER_EPOCH } from "lib";
 
-import { deadlineFromRefSlot, deployBaseOracle, epochFirstSlotAt, GENESIS_TIME, HASH_1, HASH_2 } from "test/deploy";
+import { deadlineFromRefSlot, deployBaseOracle, epochFirstSlotAt, HASH_1, HASH_2 } from "test/deploy";
+import { Snapshot } from "test/suite";
 
 describe("BaseOracle:consensus", () => {
   let admin: HardhatEthersSigner;

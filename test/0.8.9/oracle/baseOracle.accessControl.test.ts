@@ -5,17 +5,17 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { BaseOracle__Harness, MockConsensusContract } from "typechain-types";
 
-import { CONSENSUS_VERSION, EPOCHS_PER_FRAME, SECONDS_PER_SLOT, Snapshot } from "lib";
-
 import {
-  deployBaseOracle,
+  CONSENSUS_VERSION,
+  EPOCHS_PER_FRAME,
   GENESIS_TIME,
-  HASH_1,
   INITIAL_EPOCH,
   INITIAL_FAST_LANE_LENGTH_SLOTS,
-  SECONDS_PER_EPOCH,
-  SLOTS_PER_FRAME,
-} from "test/deploy";
+  SECONDS_PER_SLOT,
+} from "lib";
+
+import { deployBaseOracle, HASH_1, SECONDS_PER_EPOCH, SLOTS_PER_FRAME } from "test/deploy";
+import { Snapshot } from "test/suite";
 
 describe("BaseOracle:accessControl", () => {
   let admin: HardhatEthersSigner;

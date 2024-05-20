@@ -11,9 +11,10 @@ import {
   INVALID_INTERFACE_ID,
   OZ_ACCESS_CONTROL_ENUMERABLE_INTERFACE_ID,
   OZ_ACCESS_CONTROL_INTERFACE_ID,
-  Snapshot,
   streccak,
 } from "lib";
+
+import { Snapshot } from "test/suite";
 
 const TEST_ROLE = streccak("TEST_ROLE");
 

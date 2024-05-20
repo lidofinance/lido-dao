@@ -15,23 +15,18 @@ import {
   certainAddress,
   EPOCHS_PER_FRAME,
   ether,
+  GENESIS_TIME,
   getCurrentBlockTimestamp,
   impersonate,
+  INITIAL_EPOCH,
+  INITIAL_FAST_LANE_LENGTH_SLOTS,
   proxify,
   SECONDS_PER_SLOT,
   SLOTS_PER_EPOCH,
-  Snapshot,
 } from "lib";
 
-import {
-  deployLidoLocator,
-  GENESIS_TIME,
-  INITIAL_EPOCH,
-  INITIAL_FAST_LANE_LENGTH_SLOTS,
-  timestampAtEpoch,
-  timestampAtSlot,
-  updateLidoLocatorImplementation,
-} from "test/deploy";
+import { deployLidoLocator, timestampAtEpoch, timestampAtSlot, updateLidoLocatorImplementation } from "test/deploy";
+import { Snapshot } from "test/suite";
 
 describe("LegacyOracle.sol", () => {
   let admin: HardhatEthersSigner;

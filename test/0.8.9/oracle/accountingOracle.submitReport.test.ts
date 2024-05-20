@@ -19,24 +19,24 @@ import {
 import {
   calcExtraDataListHash,
   calcReportDataHash,
+  CONSENSUS_VERSION,
   encodeExtraDataItems,
   ether,
   EXTRA_DATA_FORMAT_EMPTY,
   EXTRA_DATA_FORMAT_LIST,
   ExtraDataType,
+  GENESIS_TIME,
   getReportDataItems,
+  ONE_GWEI,
   OracleReport,
   packExtraDataList,
   ReportAsArray,
   SECONDS_PER_SLOT,
   shareRate,
-  Snapshot,
 } from "lib";
-import { CONSENSUS_VERSION } from "lib";
 
-import { GENESIS_TIME, HASH_1, SLOTS_PER_FRAME } from "test/deploy";
-
-import { deployAndConfigureAccountingOracle, ONE_GWEI } from "./accountingOracle.deploy.test";
+import { deployAndConfigureAccountingOracle, HASH_1, SLOTS_PER_FRAME } from "test/deploy";
+import { Snapshot } from "test/suite";
 
 describe("AccountingOracle.sol:submitReport", () => {
   let consensus: HashConsensusTimeTravellable;
@@ -150,6 +150,7 @@ describe("AccountingOracle.sol:submitReport", () => {
     });
     return next;
   }
+
   before(deploy);
 
   context("deploying", () => {

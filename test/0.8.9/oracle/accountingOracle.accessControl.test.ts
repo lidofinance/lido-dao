@@ -20,13 +20,14 @@ import {
   EXTRA_DATA_FORMAT_EMPTY,
   EXTRA_DATA_FORMAT_LIST,
   getReportDataItems,
+  ONE_GWEI,
   OracleReport,
   packExtraDataList,
   ReportAsArray,
   shareRate,
 } from "lib";
 
-import { deployAndConfigureAccountingOracle, ONE_GWEI } from "./accountingOracle.deploy.test";
+import { deployAndConfigureAccountingOracle } from "test/deploy";
 
 describe("AccountingOracle.sol:accessControl", () => {
   let consensus: HashConsensusTimeTravellable;

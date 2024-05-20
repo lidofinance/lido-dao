@@ -24,8 +24,11 @@ export const SECONDS_PER_SLOT = 12n;
 export const EPOCHS_PER_FRAME = 225n; // one day;
 
 // Oracle report related
+export const GENESIS_TIME = 100n;
 export const SLOTS_PER_EPOCH = 32n;
 export const CONSENSUS_VERSION = 1n;
+export const INITIAL_EPOCH = 1n;
+export const INITIAL_FAST_LANE_LENGTH_SLOTS = 0n;
 
 // Default admin role for AccessControl compatible contracts
 export const DEFAULT_ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -46,3 +49,5 @@ export const PUBKEY_LENGTH_HEX = PUBKEY_LENGTH * 2;
 export const SIGNATURE_LENGTH_HEX = SIGNATURE_LENGTH * 2;
 export const EMPTY_PUBLIC_KEY = "0x".padEnd(PUBKEY_LENGTH_HEX + 2, "0");
 export const EMPTY_SIGNATURE = "0x".padEnd(SIGNATURE_LENGTH_HEX + 2, "0");
+
+export const ONE_GWEI = 1_000_000_000n;

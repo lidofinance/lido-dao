@@ -15,7 +15,6 @@ export * from "./oracle";
 export * from "./promise";
 export * from "./proxy";
 export * from "./signing-keys";
-export * from "./snapshot";
 export * from "./state-file";
 export * from "./string";
 export * from "./time";

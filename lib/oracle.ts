@@ -1,3 +1,4 @@
+import { bigintToHex } from "bigint-conversion";
 import { assert } from "chai";
 import { keccak256 } from "ethers";
 import { ethers } from "hardhat";
@@ -143,7 +144,7 @@ export function encodeExtraDataItem(
   nodeOperatorIds: number[],
   keysCounts: number[],
 ) {
-  const itemHeader = numberToHex(itemIndex, 3) + numberToHex(itemType, 2);
+  const itemHeader = numberToHex(itemIndex, 3) + bigintToHex(itemType);
   const payloadHeader = numberToHex(moduleId, 3) + numberToHex(nodeOperatorIds.length, 8);
   const operatorIdsPayload = nodeOperatorIds.map((id) => numberToHex(id, 8)).join("");
   const keysCountsPayload = keysCounts.map((count) => numberToHex(count, 16)).join("");
