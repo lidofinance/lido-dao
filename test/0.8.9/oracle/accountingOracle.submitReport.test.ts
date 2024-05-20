@@ -28,19 +28,21 @@ import {
   OracleReport,
   packExtraDataList,
   ReportAsArray,
+  SECONDS_PER_SLOT,
   shareRate,
   Snapshot,
 } from "lib";
 import { CONSENSUS_VERSION } from "lib";
 
-import { deployAndConfigureAccountingOracle, ONE_GWEI } from "./accountingOracleDeploy.test";
-import { GENESIS_TIME, HASH_1, SECONDS_PER_SLOT, SLOTS_PER_FRAME } from "./baseOracle";
+import { GENESIS_TIME, HASH_1, SLOTS_PER_FRAME } from "test/deploy";
 
-describe("AccountingOracle.sol", () => {
+import { deployAndConfigureAccountingOracle, ONE_GWEI } from "./accountingOracle.deploy.test";
+
+describe("AccountingOracle.sol:submitReport", () => {
   let consensus: HashConsensusTimeTravellable;
   let oracle: AccountingOracleTimeTravellable;
   let reportItems: ReportAsArray;
-  let reportFields: OracleReport;
+  let reportFields: OracleReport & { refSlot: bigint };
   let reportHash: string;
   let extraDataList: string;
   let extraDataHash: string;
@@ -61,8 +63,8 @@ describe("AccountingOracle.sol", () => {
 
   const getReportFields = (override = {}) => ({
     consensusVersion: BigInt(CONSENSUS_VERSION),
-    refSlot: 0,
-    numValidators: 10,
+    refSlot: 0n,
+    numValidators: 10n,
     clBalanceGwei: 320n * ONE_GWEI,
     stakingModuleIdsWithNewlyExitedValidators: [1],
     numExitedValidatorsByStakingModule: [3],
@@ -98,9 +100,7 @@ describe("AccountingOracle.sol", () => {
     extraDataItems = encodeExtraDataItems(extraData);
     extraDataList = packExtraDataList(extraDataItems);
     extraDataHash = calcExtraDataListHash(extraDataList);
-    reportFields = getReportFields({
-      refSlot: refSlot,
-    });
+    reportFields = getReportFields({ refSlot });
     reportItems = getReportDataItems(reportFields);
     reportHash = calcReportDataHash(reportItems);
     await deployed.consensus.connect(admin).addMember(member1, 1);
@@ -146,7 +146,7 @@ describe("AccountingOracle.sol", () => {
     const { refSlot } = await consensus.getCurrentFrame();
     const next = await prepareNextReport({
       ...newReportFields,
-      refSlot: Number(refSlot) + SLOTS_PER_FRAME,
+      refSlot: refSlot + SLOTS_PER_FRAME,
     });
     return next;
   }
@@ -267,8 +267,8 @@ describe("AccountingOracle.sol", () => {
       it("should revert if incorrect consensus version", async () => {
         await consensus.setTime(deadline);
 
-        const incorrectNextVersion = CONSENSUS_VERSION + 1;
-        const incorrectPrevVersion = CONSENSUS_VERSION + 1;
+        const incorrectNextVersion = CONSENSUS_VERSION + 1n;
+        const incorrectPrevVersion = CONSENSUS_VERSION + 1n;
 
         const newReportFields = {
           ...reportFields,
@@ -293,8 +293,8 @@ describe("AccountingOracle.sol", () => {
         const tx = await oracle.connect(member1).submitReportData(reportFields, oracleVersion);
         await expect(tx).to.emit(oracle, "ProcessingStarted").withArgs(refSlot, anyValue);
 
-        const newConsensusVersion = CONSENSUS_VERSION + 1;
-        const nextRefSlot = Number(refSlot) + SLOTS_PER_FRAME;
+        const newConsensusVersion = CONSENSUS_VERSION + 1n;
+        const nextRefSlot = refSlot + SLOTS_PER_FRAME;
         const newReportFields = {
           ...reportFields,
           refSlot: nextRefSlot,
@@ -447,11 +447,11 @@ describe("AccountingOracle.sol", () => {
 
         expect(lastOracleReportToLido.callCount).to.be.equal(1);
         expect(lastOracleReportToLido.currentReportTimestamp).to.be.equal(
-          GENESIS_TIME + Number(reportFields.refSlot) * SECONDS_PER_SLOT,
+          GENESIS_TIME + reportFields.refSlot * SECONDS_PER_SLOT,
         );
         expect(lastOracleReportToLido.callCount).to.be.equal(1);
         expect(lastOracleReportToLido.currentReportTimestamp).to.be.equal(
-          GENESIS_TIME + Number(reportFields.refSlot) * SECONDS_PER_SLOT,
+          GENESIS_TIME + reportFields.refSlot * SECONDS_PER_SLOT,
         );
 
         expect(lastOracleReportToLido.clBalance).to.be.equal(reportFields.clBalanceGwei + "000000000");
@@ -502,9 +502,9 @@ describe("AccountingOracle.sol", () => {
       });
 
       it("should call onOracleReport on WithdrawalQueue", async () => {
-        const prevProcessingRefSlot = Number(await oracle.getLastProcessingRefSlot());
+        const prevProcessingRefSlot = await oracle.getLastProcessingRefSlot();
         await oracle.connect(member1).submitReportData(reportFields, oracleVersion);
-        const currentProcessingRefSlot = Number(await oracle.getLastProcessingRefSlot());
+        const currentProcessingRefSlot = await oracle.getLastProcessingRefSlot();
         const lastCall = await mockWithdrawalQueue.lastCall__onOracleReport();
         expect(lastCall.callCount).to.be.equal(1);
         expect(lastCall.isBunkerMode).to.be.equal(reportFields.isBunkerMode);
@@ -532,11 +532,11 @@ describe("AccountingOracle.sol", () => {
         await consensus.setTime(deadline);
         await oracle.connect(member1).submitReportData(reportFields, oracleVersion);
 
-        const nextRefSlot = Number(reportFields.refSlot) + SLOTS_PER_FRAME;
+        const nextRefSlot = reportFields.refSlot + SLOTS_PER_FRAME;
         const changedReportFields = {
           ...reportFields,
           refSlot: nextRefSlot,
-          extraDataFormat: EXTRA_DATA_FORMAT_LIST + 1,
+          extraDataFormat: EXTRA_DATA_FORMAT_LIST + 1n,
         };
         const changedReportItems = getReportDataItems(changedReportFields);
 
@@ -546,7 +546,7 @@ describe("AccountingOracle.sol", () => {
 
         await expect(oracle.connect(member1).submitReportData(changedReportFields, oracleVersion))
           .to.be.revertedWithCustomError(oracle, "UnsupportedExtraDataFormat")
-          .withArgs(EXTRA_DATA_FORMAT_LIST + 1);
+          .withArgs(EXTRA_DATA_FORMAT_LIST + 1n);
       });
 
       it("should revert on non-empty format but zero length", async () => {

@@ -13,7 +13,9 @@ import {
   LidoLocator,
 } from "typechain-types";
 
-import { dummyLocator, ether, findEvents, streccak } from "lib";
+import { ether, findEvents, streccak } from "lib";
+
+import { deployLidoLocator } from "./locator";
 
 interface CreateAddAppArgs {
   dao: Kernel;
@@ -76,7 +78,7 @@ export async function deployAragonLidoDao({ rootAccount, initialized, locatorCon
   const lido = Lido__factory.connect(lidoProxyAddress, rootAccount);
 
   if (initialized) {
-    const locator = await dummyLocator({ lido, ...locatorConfig }, rootAccount);
+    const locator = await deployLidoLocator({ lido, ...locatorConfig }, rootAccount);
     const eip712steth = await new EIP712StETH__factory(rootAccount).deploy(lido);
     await lido.initialize(locator, eip712steth, { value: ether("1.0") });
   }

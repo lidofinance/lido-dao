@@ -13,7 +13,6 @@ import {
 
 import {
   certainAddress,
-  dummyLocator,
   EPOCHS_PER_FRAME,
   ether,
   getCurrentBlockTimestamp,
@@ -25,11 +24,13 @@ import {
 } from "lib";
 
 import {
+  deployLidoLocator,
   GENESIS_TIME,
   INITIAL_EPOCH,
   INITIAL_FAST_LANE_LENGTH_SLOTS,
   timestampAtEpoch,
   timestampAtSlot,
+  updateLocatorImplementation,
 } from "test/deploy";
 
 describe("LegacyOracle.sol", () => {
@@ -69,7 +70,7 @@ describe("LegacyOracle.sol", () => {
       SECONDS_PER_SLOT,
     ]);
 
-    locator = await dummyLocator({ legacyOracle, accountingOracle, lido });
+    locator = await deployLidoLocator({ legacyOracle, accountingOracle, lido });
   });
 
   beforeEach(async () => (originalState = await Snapshot.take()));
@@ -287,16 +288,20 @@ describe("LegacyOracle.sol", () => {
       });
 
       it("if accountingOracle is zero address", async () => {
-        const brokenLocator = await dummyLocator(
-          {
-            legacyOracle: legacyOracle,
-            accountingOracle: ZeroAddress,
-          },
+        const brokenLocator = await deployLidoLocator({ legacyOracle, accountingOracle }, admin);
+
+        const brokenLocatorAddress = await brokenLocator.getAddress();
+        await updateLocatorImplementation(
+          brokenLocatorAddress,
+          { accountingOracle },
+          "LidoLocator__MutableMock",
           admin,
-          false,
         );
 
-        await expect(legacyOracle.initialize(brokenLocator, ZeroAddress)).to.revertedWith(
+        const locatorMutable = await ethers.getContractAt("LidoLocator__MutableMock", brokenLocatorAddress);
+        await locatorMutable.mock___updateAccountingOracle(ZeroAddress);
+
+        await expect(legacyOracle.initialize(locatorMutable, ZeroAddress)).to.revertedWith(
           "ZERO_ACCOUNTING_ORACLE_ADDRESS",
         );
       });
@@ -333,7 +338,7 @@ describe("LegacyOracle.sol", () => {
         ]);
 
         const locatorConfig = { legacyOracle, accountingOracle, lido };
-        const invalidLocator = await dummyLocator(locatorConfig, admin, false);
+        const invalidLocator = await deployLidoLocator(locatorConfig, admin);
 
         return { invalidLocator, invalidConsensusContract };
       }
@@ -403,7 +408,7 @@ describe("LegacyOracle.sol", () => {
     });
   });
 
-  context("finalizeUpgrade_v4 (deprecated)", () => {
+  context("finalizeUpgrade_v4", () => {
     context("Reverts", () => {
       it("if not upgradeable", async () => {
         await legacyOracle.initialize(locator, consensusContract);

@@ -7,7 +7,9 @@ import { setStorageAt, time } from "@nomicfoundation/hardhat-network-helpers";
 
 import { Lido, Lido__factory, LidoLocator } from "typechain-types";
 
-import { certainAddress, dummyLocator, INITIAL_STETH_HOLDER, proxify, Snapshot, streccak } from "lib";
+import { certainAddress, INITIAL_STETH_HOLDER, proxify, Snapshot, streccak } from "lib";
+
+import { deployLidoLocator } from "test/deploy";
 
 describe("Lido:initialize", () => {
   let deployer: HardhatEthersSigner;
@@ -40,7 +42,7 @@ describe("Lido:initialize", () => {
     let locator: LidoLocator;
 
     beforeEach(async () => {
-      locator = await dummyLocator({ lido });
+      locator = await deployLidoLocator({ lido });
       [withdrawalQueueAddress, burnerAddress] = await Promise.all([locator.withdrawalQueue(), locator.burner()]);
     });
 

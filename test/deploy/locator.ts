@@ -4,9 +4,9 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { LidoLocator, LidoLocator__factory, OssifiableProxy, OssifiableProxy__factory } from "typechain-types";
 
-import { certainAddress } from ".";
+import { certainAddress } from "lib";
 
-async function deployLocator(config?: Partial<LidoLocator.ConfigStruct>, deployer?: HardhatEthersSigner) {
+async function deployDummyLocator(config?: Partial<LidoLocator.ConfigStruct>, deployer?: HardhatEthersSigner) {
   if (!deployer) {
     [deployer] = await ethers.getSigners();
   }
@@ -30,20 +30,21 @@ async function deployLocator(config?: Partial<LidoLocator.ConfigStruct>, deploye
     withdrawalVault: certainAddress("dummy-locator:withdrawalVault"),
     ...config,
   });
+
   return locator as LidoLocator;
 }
 
-export async function dummyLocator(config?: Partial<LidoLocator.ConfigStruct>, deployer?: HardhatEthersSigner) {
+export async function deployLidoLocator(config?: Partial<LidoLocator.ConfigStruct>, deployer?: HardhatEthersSigner) {
   if (!deployer) {
     [deployer] = await ethers.getSigners();
   }
-  const locator = await deployLocator(config, deployer);
+  const locator = await deployDummyLocator(config, deployer);
   const proxyFactory = new OssifiableProxy__factory(deployer);
   const proxy = await proxyFactory.deploy(await locator.getAddress(), await deployer.getAddress(), new Uint8Array());
   return locator.attach(await proxy.getAddress()) as LidoLocator;
 }
 
-async function updateProxyImplementation(
+async function updateImplementation(
   proxyAddress: string,
   config: LidoLocator.ConfigStruct,
   customLocator?: string,
@@ -52,69 +53,20 @@ async function updateProxyImplementation(
   if (!proxyOwner) {
     [proxyOwner] = await ethers.getSigners();
   }
+
   const proxyFactory = new OssifiableProxy__factory(proxyOwner);
-  const proxy = (await proxyFactory.attach(proxyAddress)) as OssifiableProxy;
+  const proxy = proxyFactory.attach(proxyAddress) as OssifiableProxy;
+
   let implementation;
   if (customLocator) {
     const contractFactory = await ethers.getContractFactory(customLocator);
     implementation = await contractFactory.connect(proxyOwner).deploy(config);
   } else {
-    implementation = await deployLocator(config, proxyOwner);
+    implementation = await deployDummyLocator(config, proxyOwner);
   }
-  await proxy.proxy__upgradeTo(await implementation.getAddress());
-}
 
-async function getLocatorConfig(locatorAddress: string) {
-  const locator = await ethers.getContractAt("LidoLocator", locatorAddress);
-  const [
-    accountingOracle,
-    depositSecurityModule,
-    elRewardsVault,
-    legacyOracle,
-    lido,
-    oracleReportSanityChecker,
-    postTokenRebaseReceiver,
-    burner,
-    stakingRouter,
-    treasury,
-    validatorsExitBusOracle,
-    withdrawalQueue,
-    withdrawalVault,
-    oracleDaemonConfig,
-  ] = await Promise.all([
-    locator.accountingOracle(),
-    locator.depositSecurityModule(),
-    locator.elRewardsVault(),
-    locator.legacyOracle(),
-    locator.lido(),
-    locator.oracleReportSanityChecker(),
-    locator.postTokenRebaseReceiver(),
-    locator.burner(),
-    locator.stakingRouter(),
-    locator.treasury(),
-    locator.validatorsExitBusOracle(),
-    locator.withdrawalQueue(),
-    locator.withdrawalVault(),
-    locator.oracleDaemonConfig(),
-  ]);
-
-  const config = {
-    accountingOracle,
-    depositSecurityModule,
-    elRewardsVault,
-    legacyOracle,
-    lido,
-    oracleReportSanityChecker,
-    postTokenRebaseReceiver,
-    burner,
-    stakingRouter,
-    treasury,
-    validatorsExitBusOracle,
-    withdrawalQueue,
-    withdrawalVault,
-    oracleDaemonConfig,
-  };
-  return config;
+  const implementationAddress = await implementation.getAddress();
+  await proxy.proxy__upgradeTo(implementationAddress);
 }
 
 export async function updateLocatorImplementation(
@@ -124,6 +76,35 @@ export async function updateLocatorImplementation(
   admin?: HardhatEthersSigner,
 ) {
   const config = await getLocatorConfig(locatorAddress);
+
   Object.assign(config, configUpdate);
-  await updateProxyImplementation(locatorAddress, config, customLocator, admin);
+
+  await updateImplementation(locatorAddress, config, customLocator, admin);
+}
+
+async function getLocatorConfig(locatorAddress: string) {
+  const locator = await ethers.getContractAt("LidoLocator", locatorAddress);
+
+  const addresses = [
+    "accountingOracle",
+    "depositSecurityModule",
+    "elRewardsVault",
+    "legacyOracle",
+    "lido",
+    "oracleReportSanityChecker",
+    "postTokenRebaseReceiver",
+    "burner",
+    "stakingRouter",
+    "treasury",
+    "validatorsExitBusOracle",
+    "withdrawalQueue",
+    "withdrawalVault",
+    "oracleDaemonConfig",
+  ] as Partial<keyof LidoLocator.ConfigStruct>[];
+
+  const configPromises = addresses.map((name) => locator[name]());
+
+  const config = await Promise.all(configPromises);
+
+  return Object.fromEntries(addresses.map((n, i) => [n, config[i]])) as LidoLocator.ConfigStruct;
 }

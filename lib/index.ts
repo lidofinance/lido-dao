@@ -4,7 +4,6 @@ export * from "./constants";
 export * from "./contract";
 export * from "./deploy";
 export * from "./dsm";
-export * from "./dummy";
 export * from "./ec";
 export * from "./eip712";
 export * from "./ens";
