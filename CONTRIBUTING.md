@@ -34,7 +34,7 @@ If you have a bigger idea on how to improve the protocol, consider publishing yo
 
 > [!NOTE]
 > On macOS with Homebrew it is recommended to install Node.js using [`n`](https://github.com/tj/n) or [`nvm`](https://github.com/nvm-sh/nvm) version managers.  
-> Example setup process using `n` package manager:
+> Example setup process using `n` package manager for zsh users:
 >
 > ```
 > $ brew install n
