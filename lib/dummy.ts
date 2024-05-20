@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { LidoLocator, LidoLocator__factory, OssifiableProxy__factory } from "typechain-types";
+import { LidoLocator, LidoLocator__factory, OssifiableProxy, OssifiableProxy__factory } from "typechain-types";
 
 import { certainAddress } from ".";
 
@@ -40,7 +40,7 @@ export async function dummyLocator(config?: Partial<LidoLocator.ConfigStruct>, d
   const locator = await deployLocator(config, deployer);
   const proxyFactory = new OssifiableProxy__factory(deployer);
   const proxy = await proxyFactory.deploy(await locator.getAddress(), await deployer.getAddress(), new Uint8Array());
-  return await ethers.getContractAt("LidoLocator", await proxy.getAddress());
+  return locator.attach(await proxy.getAddress());
 }
 
 async function updateProxyImplementation(
@@ -52,7 +52,8 @@ async function updateProxyImplementation(
   if (!proxyOwner) {
     [proxyOwner] = await ethers.getSigners();
   }
-  const proxy = await ethers.getContractAt("OssifiableProxy", proxyAddress);
+  const proxyFactory = new OssifiableProxy__factory(proxyOwner);
+  const proxy = (await proxyFactory.attach(proxyAddress)) as OssifiableProxy;
   let implementation;
   if (customLocator) {
     const contractFactory = await ethers.getContractFactory(customLocator);
