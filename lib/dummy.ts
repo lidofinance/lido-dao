@@ -40,7 +40,7 @@ export async function dummyLocator(config?: Partial<LidoLocator.ConfigStruct>, d
   const locator = await deployLocator(config, deployer);
   const proxyFactory = new OssifiableProxy__factory(deployer);
   const proxy = await proxyFactory.deploy(await locator.getAddress(), await deployer.getAddress(), new Uint8Array());
-  return locator.attach(await proxy.getAddress());
+  return locator.attach(await proxy.getAddress()) as LidoLocator;
 }
 
 async function updateProxyImplementation(
