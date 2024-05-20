@@ -30,7 +30,7 @@ import {
   INITIAL_FAST_LANE_LENGTH_SLOTS,
   timestampAtEpoch,
   timestampAtSlot,
-  updateLocatorImplementation,
+  updateLidoLocatorImplementation,
 } from "test/deploy";
 
 describe("LegacyOracle.sol", () => {
@@ -291,7 +291,7 @@ describe("LegacyOracle.sol", () => {
         const brokenLocator = await deployLidoLocator({ legacyOracle, accountingOracle }, admin);
 
         const brokenLocatorAddress = await brokenLocator.getAddress();
-        await updateLocatorImplementation(
+        await updateLidoLocatorImplementation(
           brokenLocatorAddress,
           { accountingOracle },
           "LidoLocator__MutableMock",

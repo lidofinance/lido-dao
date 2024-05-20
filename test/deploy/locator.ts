@@ -38,9 +38,11 @@ export async function deployLidoLocator(config?: Partial<LidoLocator.ConfigStruc
   if (!deployer) {
     [deployer] = await ethers.getSigners();
   }
+
   const locator = await deployDummyLocator(config, deployer);
   const proxyFactory = new OssifiableProxy__factory(deployer);
   const proxy = await proxyFactory.deploy(await locator.getAddress(), await deployer.getAddress(), new Uint8Array());
+
   return locator.attach(await proxy.getAddress()) as LidoLocator;
 }
 
@@ -69,7 +71,7 @@ async function updateImplementation(
   await proxy.proxy__upgradeTo(implementationAddress);
 }
 
-export async function updateLocatorImplementation(
+export async function updateLidoLocatorImplementation(
   locatorAddress: string,
   configUpdate = {},
   customLocator?: string,

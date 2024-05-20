@@ -28,7 +28,7 @@ import {
 
 import { certainAddress, ether, getNextBlockTimestamp, impersonate, streccak } from "lib";
 
-import { deployAragonLidoDao, updateLocatorImplementation } from "test/deploy";
+import { deployLidoDao, updateLidoLocatorImplementation } from "test/deploy";
 
 // TODO: improve coverage
 // TODO: probably needs some refactoring and optimization
@@ -71,7 +71,7 @@ describe("Lido:report", () => {
       new WithdrawalVault__MockForLidoHandleOracleReport__factory(deployer).deploy(),
     ]);
 
-    ({ lido, acl } = await deployAragonLidoDao({
+    ({ lido, acl } = await deployLidoDao({
       rootAccount: deployer,
       initialized: true,
       locatorConfig: {
@@ -572,7 +572,7 @@ describe("Lido:report", () => {
       const lidoLocatorAddress = await lido.getLidoLocator();
 
       // Change the locator implementation to support zero address
-      await updateLocatorImplementation(lidoLocatorAddress, {}, "LidoLocator__MutableMock", deployer);
+      await updateLidoLocatorImplementation(lidoLocatorAddress, {}, "LidoLocator__MutableMock", deployer);
       const locatorMutable = await ethers.getContractAt("LidoLocator__MutableMock", lidoLocatorAddress, deployer);
       await locatorMutable.mock___updatePostTokenRebaseReceiver(ZeroAddress);
 

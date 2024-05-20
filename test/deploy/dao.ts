@@ -63,7 +63,7 @@ async function addAragonApp({ dao, name, impl, rootAccount }: CreateAddAppArgs):
 }
 
 // TODO: extract initialization from this function
-export async function deployAragonLidoDao({ rootAccount, initialized, locatorConfig = {} }: DeployLidoDaoArgs) {
+export async function deployLidoDao({ rootAccount, initialized, locatorConfig = {} }: DeployLidoDaoArgs) {
   const { dao, acl } = await createAragonDao(rootAccount);
 
   const impl = await new Lido__factory(rootAccount).deploy();

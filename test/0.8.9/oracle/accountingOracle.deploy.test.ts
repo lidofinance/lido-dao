@@ -26,7 +26,7 @@ import {
   Snapshot,
 } from "lib";
 
-import { deployHashConsensus, deployLidoLocator, GENESIS_TIME, updateLocatorImplementation } from "test/deploy";
+import { deployHashConsensus, deployLidoLocator, GENESIS_TIME, updateLidoLocatorImplementation } from "test/deploy";
 
 const V1_ORACLE_LAST_COMPLETED_EPOCH = 2n * EPOCHS_PER_FRAME;
 export const V1_ORACLE_LAST_REPORT_SLOT = V1_ORACLE_LAST_COMPLETED_EPOCH * SLOTS_PER_EPOCH;
@@ -95,7 +95,7 @@ async function deployAccountingOracleSetup(
     initialEpoch,
   });
 
-  await updateLocatorImplementation(locatorAddr, {
+  await updateLidoLocatorImplementation(locatorAddr, {
     lido: lidoAddr || (await lido.getAddress()),
     stakingRouter: await stakingRouter.getAddress(),
     withdrawalQueue: await withdrawalQueue.getAddress(),

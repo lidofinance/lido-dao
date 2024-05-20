@@ -5,7 +5,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { ACL, Lido } from "typechain-types";
 
-import { deployAragonLidoDao } from "test/deploy";
+import { deployLidoDao } from "test/deploy";
 
 describe("Lido:Pausable", () => {
   let deployer: HardhatEthersSigner;
@@ -18,7 +18,7 @@ describe("Lido:Pausable", () => {
   beforeEach(async () => {
     [deployer, user, stranger] = await ethers.getSigners();
 
-    ({ lido, acl } = await deployAragonLidoDao({ rootAccount: deployer, initialized: true }));
+    ({ lido, acl } = await deployLidoDao({ rootAccount: deployer, initialized: true }));
 
     await acl.createPermission(user, lido, await lido.STAKING_CONTROL_ROLE(), deployer);
     await acl.createPermission(user, lido, await lido.STAKING_PAUSE_ROLE(), deployer);

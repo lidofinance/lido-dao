@@ -17,7 +17,7 @@ import {
 
 import { batch, certainAddress, ether, impersonate, ONE_ETHER } from "lib";
 
-import { deployAragonLidoDao } from "test/deploy";
+import { deployLidoDao } from "test/deploy";
 
 describe("Lido:misc", () => {
   let deployer: HardhatEthersSigner;
@@ -42,7 +42,7 @@ describe("Lido:misc", () => {
     withdrawalQueue = await new WithdrawalQueue__MockForLidoMisc__factory(deployer).deploy();
     stakingRouter = await new StakingRouter__MockForLidoMisc__factory(deployer).deploy();
 
-    ({ lido, acl } = await deployAragonLidoDao({
+    ({ lido, acl } = await deployLidoDao({
       rootAccount: deployer,
       initialized: true,
       locatorConfig: {
