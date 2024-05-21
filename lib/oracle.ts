@@ -144,7 +144,7 @@ export function encodeExtraDataItem(
   nodeOperatorIds: number[],
   keysCounts: number[],
 ) {
-  const itemHeader = numberToHex(itemIndex, 3) + bigintToHex(itemType);
+  const itemHeader = numberToHex(itemIndex, 3) + bigintToHex(itemType, false, 2);
   const payloadHeader = numberToHex(moduleId, 3) + numberToHex(nodeOperatorIds.length, 8);
   const operatorIdsPayload = nodeOperatorIds.map((id) => numberToHex(id, 8)).join("");
   const keysCountsPayload = keysCounts.map((count) => numberToHex(count, 16)).join("");
