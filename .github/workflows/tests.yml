@@ -36,6 +36,8 @@ jobs:
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly-54d8510c0f2b0f791f4c5ef99866c6af99b7606a
 
       - run: corepack enable
 
@@ -48,4 +50,4 @@ jobs:
         run: yarn install
 
       - name: Run tests
-        run: forge test --gas-report
+        run: forge test -vvv
