@@ -1,3 +1,4 @@
+import { bigintToHex } from "bigint-conversion";
 import { assert } from "chai";
 import { keccak256 } from "ethers";
 import { ethers } from "hardhat";
@@ -15,11 +16,11 @@ export type ReportAsArray = ReturnType<typeof getReportDataItems>;
 export type KeyType = { moduleId: number; nodeOpIds: number[]; keysCounts: number[] };
 export type ExtraDataType = { stuckKeys: KeyType[]; exitedKeys: KeyType[] };
 
-export const EXTRA_DATA_FORMAT_EMPTY = 0;
-export const EXTRA_DATA_FORMAT_LIST = 1;
+export const EXTRA_DATA_FORMAT_EMPTY = 0n;
+export const EXTRA_DATA_FORMAT_LIST = 1n;
 
-export const EXTRA_DATA_TYPE_STUCK_VALIDATORS = 1;
-export const EXTRA_DATA_TYPE_EXITED_VALIDATORS = 2;
+export const EXTRA_DATA_TYPE_STUCK_VALIDATORS = 1n;
+export const EXTRA_DATA_TYPE_EXITED_VALIDATORS = 2n;
 
 const DEFAULT_REPORT_FIELDS: OracleReport = {
   consensusVersion: 1n,
@@ -138,12 +139,12 @@ export function pushOracleReport(
 
 export function encodeExtraDataItem(
   itemIndex: number,
-  itemType: number,
+  itemType: bigint,
   moduleId: number,
   nodeOperatorIds: number[],
   keysCounts: number[],
 ) {
-  const itemHeader = numberToHex(itemIndex, 3) + numberToHex(itemType, 2);
+  const itemHeader = numberToHex(itemIndex, 3) + bigintToHex(itemType, false, 2);
   const payloadHeader = numberToHex(moduleId, 3) + numberToHex(nodeOperatorIds.length, 8);
   const operatorIdsPayload = nodeOperatorIds.map((id) => numberToHex(id, 8)).join("");
   const keysCountsPayload = keysCounts.map((count) => numberToHex(count, 16)).join("");
@@ -152,7 +153,7 @@ export function encodeExtraDataItem(
 
 export function encodeExtraDataItems(data: ExtraDataType) {
   const items: string[] = [];
-  const encodeItem = (item: KeyType, type: number) =>
+  const encodeItem = (item: KeyType, type: bigint) =>
     encodeExtraDataItem(items.length, type, item.moduleId, item.nodeOpIds, item.keysCounts);
   data.stuckKeys.forEach((item: KeyType) => items.push(encodeItem(item, EXTRA_DATA_TYPE_STUCK_VALIDATORS)));
   data.exitedKeys.forEach((item: KeyType) => items.push(encodeItem(item, EXTRA_DATA_TYPE_EXITED_VALIDATORS)));

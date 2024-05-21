@@ -22,7 +22,7 @@ contract LidoLocator__MutableMock {
 
   error ZeroAddress();
 
-  address public immutable accountingOracle;
+  address public accountingOracle;
   address public immutable depositSecurityModule;
   address public immutable elRewardsVault;
   address public immutable legacyOracle;
@@ -86,5 +86,9 @@ contract LidoLocator__MutableMock {
 
   function mock___updatePostTokenRebaseReceiver(address newAddress) external {
     postTokenRebaseReceiver = newAddress;
+  }
+
+  function mock___updateAccountingOracle(address newAddress) external {
+    accountingOracle = newAddress;
   }
 }
