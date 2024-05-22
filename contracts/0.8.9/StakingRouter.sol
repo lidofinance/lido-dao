@@ -39,8 +39,11 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     event StakingRouterETHDeposited(uint256 indexed stakingModuleId, uint256 amount);
 
     /// @dev errors
-    error ZeroAddress(string field);
-    error ValueOver100Percent(string field);
+    error ZeroAddressLido();
+    error ZeroAddressAdmin();
+    error ZeroAddressStakingModule();
+    error InvalidStakeShareLimit();
+    error InvalidFeeSum();
     error StakingModuleNotActive();
     error EmptyWithdrawalsCredentials();
     error DirectETHTransfer();
@@ -157,8 +160,8 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
      * @param _withdrawalCredentials Lido withdrawal vault contract address
      */
     function initialize(address _admin, address _lido, bytes32 _withdrawalCredentials) external {
-        if (_admin == address(0)) revert ZeroAddress("_admin");
-        if (_lido == address(0)) revert ZeroAddress("_lido");
+        if (_admin == address(0)) revert ZeroAddressAdmin();
+        if (_lido == address(0)) revert ZeroAddressLido();
 
         _initializeContractVersionTo(2);
 
@@ -231,7 +234,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint256 _maxDepositsPerBlock,
         uint256 _minDepositBlockDistance
     ) external onlyRole(STAKING_MODULE_MANAGE_ROLE) {
-        if (_stakingModuleAddress == address(0)) revert ZeroAddress("_stakingModuleAddress");
+        if (_stakingModuleAddress == address(0)) revert ZeroAddressStakingModule();
         if (bytes(_name).length == 0 || bytes(_name).length > MAX_STAKING_MODULE_NAME_LENGTH) revert StakingModuleWrongName();
 
         uint256 newStakingModuleIndex = getStakingModulesCount();
@@ -324,18 +327,10 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         uint256 _maxDepositsPerBlock,
         uint256 _minDepositBlockDistance
     ) internal {
-        if (_stakeShareLimit > TOTAL_BASIS_POINTS) {
-            revert ValueOver100Percent("_stakeShareLimit");
-        }
-        if (_priorityExitShareThreshold > TOTAL_BASIS_POINTS) {
-            revert ValueOver100Percent("_priorityExitShareThreshold");
-        }
-        if (_stakeShareLimit > _priorityExitShareThreshold) {
-            revert InvalidPriorityExitShareThreshold();
-        }
-        if (_stakingModuleFee + _treasuryFee > TOTAL_BASIS_POINTS) {
-            revert ValueOver100Percent("_stakingModuleFee + _treasuryFee");
-        }
+        if (_stakeShareLimit > TOTAL_BASIS_POINTS) revert InvalidStakeShareLimit();
+        if (_priorityExitShareThreshold > TOTAL_BASIS_POINTS) revert InvalidPriorityExitShareThreshold();
+        if (_stakeShareLimit > _priorityExitShareThreshold) revert InvalidPriorityExitShareThreshold();
+        if (_stakingModuleFee + _treasuryFee > TOTAL_BASIS_POINTS) revert InvalidFeeSum();
         if (_minDepositBlockDistance == 0) revert InvalidMinDepositBlockDistance();
 
         stakingModule.stakeShareLimit = uint16(_stakeShareLimit);
@@ -718,7 +713,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
     }
 
     /**
-     *  @dev Returns staking module by id
+     * @dev Returns staking module by id
      */
     function getStakingModule(uint256 _stakingModuleId)
         public
