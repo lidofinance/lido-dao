@@ -98,7 +98,6 @@ contract AccountingOracle is BaseOracle {
     error UnsupportedExtraDataType(uint256 itemIndex, uint256 dataType);
     error CannotSubmitExtraDataBeforeMainData();
     error ExtraDataAlreadyProcessed();
-    error ExtraDataProcessingInProgress();
     error UnexpectedExtraDataHash(bytes32 consensusHash, bytes32 receivedHash);
     error UnexpectedExtraDataFormat(uint256 expectedFormat, uint256 receivedFormat);
     error ExtraDataTransactionDoesNotContainsNextTransactionHash();
@@ -687,11 +686,8 @@ contract AccountingOracle is BaseOracle {
     function _submitReportExtraDataEmpty() internal {
         ExtraDataProcessingState memory procState = _storageExtraDataProcessingState().value;
         _checkCanSubmitExtraData(procState, EXTRA_DATA_FORMAT_EMPTY);
-        if (procState.submitted) {
-            revert ExtraDataAlreadyProcessed();
-        } else if (procState.itemsProcessed < procState.itemsCount ) {
-            revert ExtraDataProcessingInProgress();
-        }
+        if (procState.submitted) revert ExtraDataAlreadyProcessed();
+
         IStakingRouter(LOCATOR.stakingRouter()).onValidatorsCountsByNodeOperatorReportingFinished();
         _storageExtraDataProcessingState().value.submitted = true;
         emit ExtraDataSubmitted(procState.refSlot, 0, 0);
