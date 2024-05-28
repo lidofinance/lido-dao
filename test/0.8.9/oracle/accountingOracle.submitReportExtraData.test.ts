@@ -609,6 +609,31 @@ describe("AccountingOracle.sol:submitReportExtraData", () => {
           .to.be.revertedWithCustomError(oracle, "InvalidExtraDataSortOrder")
           .withArgs(4);
       });
+
+      it("second transaction should revert if extra data not sorted", async () => {
+        const invalidExtraData = {
+          stuckKeys: [
+            { moduleId: 1, nodeOpIds: [0], keysCounts: [1] },
+            { moduleId: 2, nodeOpIds: [3], keysCounts: [2] },
+            // Items for second transaction.
+            // Break report data sorting order, nodeOpId 3 already processed.
+            { moduleId: 2, nodeOpIds: [3], keysCounts: [4] },
+          ],
+          exitedKeys: [{ moduleId: 2, nodeOpIds: [1, 2], keysCounts: [1, 3] }],
+        };
+
+        const { report, extraDataChunks } = await constructOracleReportForCurrentFrameAndSubmitReportHash({
+          extraData: invalidExtraData,
+          config: { maxItemsPerChunk: 2 },
+        });
+
+        await oracleMemberSubmitReportData(report);
+        await oracleMemberSubmitExtraData(extraDataChunks[0]);
+
+        await expect(oracleMemberSubmitExtraData(extraDataChunks[1]))
+          .to.be.revertedWithCustomError(oracle, "InvalidExtraDataSortOrder")
+          .withArgs(2);
+      });
     });
 
     context("enforces data safety boundaries", () => {
@@ -956,10 +981,18 @@ describe("AccountingOracle.sol:submitReportExtraData", () => {
 
       it("calls onValidatorsCountsByNodeOperatorReportingFinished on StakingRouter", async () => {
         await consensus.advanceTimeToNextFrameStart();
-        const { reportFields, extraDataList } = await submitReportHash();
-        await oracle.connect(member1).submitReportData(reportFields, oracleVersion);
+        const { report, extraDataChunks } = await constructOracleReportForCurrentFrameAndSubmitReportHash({
+          config: { maxItemsPerChunk: 3 },
+        });
+        expect(extraDataChunks.length).to.be.equal(2);
 
-        await oracle.connect(member1).submitReportExtraDataList(extraDataList);
+        await oracleMemberSubmitReportData(report);
+        await oracleMemberSubmitExtraData(extraDataChunks[0]);
+        const callsCountAfterFirstChunk =
+          await stakingRouter.totalCalls_onValidatorsCountsByNodeOperatorReportingFinished();
+        expect(callsCountAfterFirstChunk).to.be.equal(0);
+
+        await oracleMemberSubmitExtraData(extraDataChunks[1]);
         const callsCount = await stakingRouter.totalCalls_onValidatorsCountsByNodeOperatorReportingFinished();
         expect(callsCount).to.be.equal(1);
       });
