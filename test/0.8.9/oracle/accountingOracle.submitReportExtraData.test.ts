@@ -1057,5 +1057,64 @@ describe("AccountingOracle.sol:submitReportExtraData", () => {
       );
       expect(stateAfter.dataHash).to.be.equal(extraDataHash);
     });
+
+    it("updates extra data state after previous day report fail", async () => {
+      await consensus.advanceTimeToNextFrameStart();
+
+      const extraDataDay1 = {
+        stuckKeys: [
+          { moduleId: 1, nodeOpIds: [0], keysCounts: [1] },
+          { moduleId: 2, nodeOpIds: [0], keysCounts: [2] },
+          { moduleId: 3, nodeOpIds: [2], keysCounts: [3] },
+        ],
+        exitedKeys: [
+          { moduleId: 2, nodeOpIds: [1, 2], keysCounts: [1, 3] },
+          { moduleId: 3, nodeOpIds: [1], keysCounts: [2] },
+        ],
+      };
+
+      const { report: reportDay1, extraDataChunks: extraDataChunksDay1 } =
+        await constructOracleReportWithDefaultValuesForCurrentRefSlot({
+          extraData: extraDataDay1,
+          config: { maxItemsPerChunk: 4 },
+        });
+
+      expect(extraDataChunksDay1.length).to.be.equal(2);
+
+      const validExtraDataItemsCount = 5;
+      const invalidExtraDataItemsCount = 7;
+      const reportDay1WithInvalidItemsCount = { ...reportDay1, extraDataItemsCount: invalidExtraDataItemsCount };
+
+      const hashOfReportWithInvalidItemsCount = calcReportDataHash(getReportDataItems(reportDay1WithInvalidItemsCount));
+      await oracleMemberSubmitReportHash(reportDay1.refSlot, hashOfReportWithInvalidItemsCount);
+      await oracleMemberSubmitReportData(reportDay1WithInvalidItemsCount);
+      await oracleMemberSubmitExtraData(extraDataChunksDay1[0]);
+
+      await expect(oracleMemberSubmitExtraData(extraDataChunksDay1[1]))
+        .to.be.revertedWithCustomError(oracle, "UnexpectedExtraDataItemsCount")
+        .withArgs(invalidExtraDataItemsCount, validExtraDataItemsCount);
+
+      const callsCountAfterDay1 = await stakingRouter.totalCalls_onValidatorsCountsByNodeOperatorReportingFinished();
+      expect(callsCountAfterDay1).to.be.equal(0);
+
+      await consensus.advanceTimeToNextFrameStart();
+
+      const extraDataDay2 = JSON.parse(JSON.stringify(extraDataDay1));
+      extraDataDay2.stuckKeys[0].keysCounts = [2];
+      extraDataDay2.exitedKeys[0].keysCounts = [1, 4];
+
+      const { report: reportDay2, extraDataChunks: extraDataChunksDay2 } =
+        await constructOracleReportForCurrentFrameAndSubmitReportHash({
+          extraData: extraDataDay2,
+          config: { maxItemsPerChunk: 4 },
+        });
+
+      await oracleMemberSubmitReportData(reportDay2);
+      await oracleMemberSubmitExtraData(extraDataChunksDay2[0]);
+      await oracleMemberSubmitExtraData(extraDataChunksDay2[1]);
+
+      const callsCountAfterDay2 = await stakingRouter.totalCalls_onValidatorsCountsByNodeOperatorReportingFinished();
+      expect(callsCountAfterDay2).to.be.equal(1);
+    });
   });
 });
