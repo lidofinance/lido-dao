@@ -771,6 +771,36 @@ describe("AccountingOracle.sol:submitReportExtraData", () => {
           const tx = await oracle.connect(member1).submitReportExtraDataList(extraDataList);
           await expect(tx).to.emit(oracle, "ExtraDataSubmitted").withArgs(reportFields.refSlot, anyValue, anyValue);
         });
+
+        it("should revert in case when items count exceed limit", async () => {
+          const maxItemsPerChunk = 3;
+          const extraData = getDefaultExtraData();
+          const itemsCount = extraData.exitedKeys.length + extraData.stuckKeys.length;
+          const { report, extraDataChunks } = await constructOracleReportForCurrentFrameAndSubmitReportHash({
+            extraData,
+            config: { maxItemsPerChunk },
+          });
+
+          expect(itemsCount).to.be.equal(5);
+          expect(extraDataChunks.length).to.be.equal(2);
+
+          await oracleMemberSubmitReportData(report);
+
+          await sanityChecker.setMaxAccountingExtraDataListItemsCount(maxItemsPerChunk - 1);
+          await expect(oracleMemberSubmitExtraData(extraDataChunks[0]))
+            .to.be.revertedWithCustomError(sanityChecker, "MaxAccountingExtraDataItemsCountExceeded")
+            .withArgs(maxItemsPerChunk - 1, maxItemsPerChunk);
+
+          await sanityChecker.setMaxAccountingExtraDataListItemsCount(maxItemsPerChunk);
+
+          const tx0 = await oracleMemberSubmitExtraData(extraDataChunks[0]);
+          await expect(tx0)
+            .to.emit(oracle, "ExtraDataSubmitted")
+            .withArgs(report.refSlot, maxItemsPerChunk, itemsCount);
+
+          const tx1 = await oracleMemberSubmitExtraData(extraDataChunks[1]);
+          await expect(tx1).to.emit(oracle, "ExtraDataSubmitted").withArgs(report.refSlot, itemsCount, itemsCount);
+        });
       });
 
       context("checks for InvalidExtraDataItem reverts", () => {

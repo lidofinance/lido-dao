@@ -789,8 +789,10 @@ contract AccountingOracle is BaseOracle {
         uint256 dataOffset = iter.dataOffset;
         uint256 maxNodeOperatorsPerItem = 0;
         uint256 maxNodeOperatorItemIndex = 0;
+        uint256 itemsCount = 0;
 
         while (dataOffset < data.length) {
+            itemsCount++;
             uint256 index;
             uint256 itemType;
 
@@ -839,7 +841,7 @@ contract AccountingOracle is BaseOracle {
         assert(maxNodeOperatorsPerItem > 0);
 
         IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
-            .checkExtraDataItemsCountPerTransaction(iter.index + 1);
+            .checkExtraDataItemsCountPerTransaction(itemsCount);
 
         IOracleReportSanityChecker(LOCATOR.oracleReportSanityChecker())
             .checkNodeOperatorsPerExtraDataItemCount(maxNodeOperatorItemIndex, maxNodeOperatorsPerItem);
