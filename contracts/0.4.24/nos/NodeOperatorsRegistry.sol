@@ -44,6 +44,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     event KeysOpIndexSet(uint256 keysOpIndex);
     event StakingModuleTypeSet(bytes32 moduleType);
     event RewardsDistributed(address indexed rewardAddress, uint256 sharesAmount);
+    event RewardDistributionStateChanged(RewardDistributionState state);
     event LocatorContractSet(address locatorAddress);
     event VettedSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 approvedValidatorsCount);
     event DepositedSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 depositedValidatorsCount);
@@ -60,6 +61,15 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     );
     event TargetValidatorsCountChanged(uint256 indexed nodeOperatorId, uint256 targetValidatorsCount);
     event NodeOperatorPenalized(address indexed recipientAddress, uint256 sharesPenalizedAmount);
+
+    // Enum to represent the state of the reward distribution process
+    enum RewardDistributionState {
+        TransferredToModule,      // New reward portion minted and transferred to the module
+        ReadyForDistribution,     // Operators' statistics updated, reward ready for distribution
+        Distributed               // Reward distributed among operators
+    }
+
+    RewardDistributionState public rewardDistributionState = RewardDistributionState.Distributed;
 
     //
     // ACL
@@ -413,8 +423,10 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     }
 
     /// @notice Called by StakingRouter to signal that stETH rewards were minted for this module.
-    function onRewardsMinted(uint256 /* _totalShares */) external view {
+    function onRewardsMinted(uint256 /* _totalShares */) external {
         _auth(STAKING_ROUTER_ROLE);
+        _updateRewardDistributionState(RewardDistributionState.TransferredToModule);
+
         // since we're pushing rewards to operators after exited validators counts are
         // updated (as opposed to pulling by node ops), we don't need any handling here
         // see `onExitedAndStuckValidatorsCountsUpdated()`
@@ -511,6 +523,13 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _updateRefundValidatorsKeysCount(_nodeOperatorId, _refundedValidatorsCount);
     }
 
+    // Function to distribute rewards
+    function distributeReward() external {
+        require(rewardDistributionState == RewardDistributionState.ReadyForDistribution, "Reward distribution is not ready");
+        _updateRewardDistributionState(RewardDistributionState.Distributed);
+        _distributeRewards();
+    }
+
     /// @notice Called by StakingRouter after it finishes updating exited and stuck validators
     /// counts for this module's node operators.
     ///
@@ -520,9 +539,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     /// is the same as StakingRouter expects based on the total count received from the oracle.
     function onExitedAndStuckValidatorsCountsUpdated() external {
         _auth(STAKING_ROUTER_ROLE);
-        // for the permissioned module, we're distributing rewards within oracle operation
-        // since the number of node ops won't be high and thus gas costs are limited
-        _distributeRewards();
+        _updateRewardDistributionState(RewardDistributionState.ReadyForDistribution);
     }
 
     /// @notice Unsafely updates the number of validators in the EXITED/STUCK states for node operator with given id
@@ -1448,5 +1465,10 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     function _onlyNonZeroAddress(address _a) internal pure {
         require(_a != address(0), "ZERO_ADDRESS");
+    }
+
+    function _updateRewardDistributionState(RewardDistributionState _state) internal {
+        rewardDistributionState = _state;
+        emit RewardDistributionStateChanged(_state);
     }
 }
