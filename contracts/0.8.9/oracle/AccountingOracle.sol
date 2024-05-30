@@ -784,10 +784,10 @@ contract AccountingOracle is BaseOracle {
         uint256 dataOffset = iter.dataOffset;
         uint256 maxNodeOperatorsPerItem = 0;
         uint256 maxNodeOperatorItemIndex = 0;
-        uint256 itemsCount = 0;
+        uint256 itemsCount;
         uint256 index;
         uint256 itemType;
- 
+
         while (dataOffset < data.length) {
             /// @solidity memory-safe-assembly
             assembly {
@@ -846,7 +846,7 @@ contract AccountingOracle is BaseOracle {
         uint256 dataOffset = iter.dataOffset;
         uint256 moduleId;
         uint256 nodeOpsCount;
-        uint256 firstNodeOpId;
+        uint256 lastNodeOpId;
         bytes calldata nodeOpIds;
         bytes calldata valuesCounts;
 
@@ -866,7 +866,8 @@ contract AccountingOracle is BaseOracle {
             nodeOpsCount := and(shr(168, header), 0xffffffffffffffff)
             nodeOpIds.offset := add(data.offset, add(dataOffset, 11))
             nodeOpIds.length := mul(nodeOpsCount, 8)
-            firstNodeOpId := shr(192, calldataload(nodeOpIds.offset))
+            // read the 1st node operator id for checking the sorting order later
+            lastNodeOpId := shr(192, calldataload(nodeOpIds.offset))
             valuesCounts.offset := add(nodeOpIds.offset, nodeOpIds.length)
             valuesCounts.length := mul(nodeOpsCount, 16)
             dataOffset := sub(add(valuesCounts.offset, valuesCounts.length), data.offset)
@@ -877,13 +878,31 @@ contract AccountingOracle is BaseOracle {
         }
 
         unchecked {
-            // | 2 bytes  | 19 bytes | 3 bytes  |    8 bytes    |
-            // | itemType | 00000000 | moduleId | firstNodeOpId |
-            uint256 sortingKey = (iter.itemType << 240) | (moduleId << 64) | firstNodeOpId;
+            // firstly, check the sorting order between the 1st item's element and the last one of the previous item
+
+            // | 2 bytes  | 19 bytes | 3 bytes  | 8 bytes      |
+            // | itemType | 00000000 | moduleId | lastNodeOpId |
+            uint256 sortingKey = (iter.itemType << 240) | (moduleId << 64) | lastNodeOpId;
             if (sortingKey <= iter.lastSortingKey) {
                 revert InvalidExtraDataSortOrder(iter.index);
             }
-            iter.lastSortingKey = sortingKey;
+
+            // secondly, check the sorting order between the rest of the elements
+            uint256 tmpNodeOpId;
+            for (uint256 i = 1; i < nodeOpsCount;) {
+                /// @solidity memory-safe-assembly
+                assembly {
+                    tmpNodeOpId := shr(192, calldataload(add(nodeOpIds.offset, mul(i, 8))))
+                    i := add(i, 1)
+                }
+                if (tmpNodeOpId <= lastNodeOpId) {
+                    revert InvalidExtraDataSortOrder(iter.index);
+                }
+                lastNodeOpId = tmpNodeOpId;
+            }
+
+            // update the last sorting key with the last item's element
+            iter.lastSortingKey = (sortingKey & ~uint256(0xffffffffffffffff)) | lastNodeOpId;
         }
 
         if (dataOffset > data.length || nodeOpsCount == 0) {
