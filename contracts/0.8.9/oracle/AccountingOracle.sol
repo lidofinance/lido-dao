@@ -902,7 +902,7 @@ contract AccountingOracle is BaseOracle {
             }
 
             // update the last sorting key with the last item's element
-            iter.lastSortingKey = (sortingKey & ~uint256(0xffffffffffffffff)) | lastNodeOpId;
+            iter.lastSortingKey = ((sortingKey >> 64) << 64) | lastNodeOpId;
         }
 
         if (dataOffset > data.length || nodeOpsCount == 0) {
