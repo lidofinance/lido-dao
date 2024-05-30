@@ -100,7 +100,7 @@ contract AccountingOracle is BaseOracle {
     error ExtraDataAlreadyProcessed();
     error UnexpectedExtraDataHash(bytes32 consensusHash, bytes32 receivedHash);
     error UnexpectedExtraDataFormat(uint256 expectedFormat, uint256 receivedFormat);
-    error ExtraDataTransactionDoesNotContainsNextTransactionHash();
+    error UnexpectedExtraDataLength();
     error ExtraDataItemsCountCannotBeZeroForNonEmptyData();
     error ExtraDataHashCannotBeZeroForNonEmptyData();
     error UnexpectedExtraDataItemsCount(uint256 expectedCount, uint256 receivedCount);
@@ -730,20 +730,19 @@ contract AccountingOracle is BaseOracle {
             revert ExtraDataAlreadyProcessed();
         }
 
+        // at least 32 bytes for the next hash value + 35 bytes for the first item with 1 node operator
+        if(data.length < 67) {
+            revert UnexpectedExtraDataLength();
+        }
+
         bytes32 dataHash = keccak256(data);
         if (dataHash != procState.dataHash) {
             revert UnexpectedExtraDataHash(procState.dataHash, dataHash);
         }
 
-        uint256 initialDataOffset = 32;
-
-        if(data.length < initialDataOffset) {
-            revert ExtraDataTransactionDoesNotContainsNextTransactionHash();
-        }
-
-        bytes32 nextHash;
+        // load the next hash value
         assembly {
-            nextHash := calldataload(data.offset)
+            dataHash := calldataload(data.offset)
         }
 
         bool started = procState.itemsProcessed > 0;
@@ -752,7 +751,7 @@ contract AccountingOracle is BaseOracle {
             started: started,
             index: started ? procState.itemsProcessed - 1 : 0,
             itemType: 0,
-            dataOffset: initialDataOffset,
+            dataOffset: 32, // skip the next hash bytes
             lastSortingKey: procState.lastSortingKey,
             stakingRouter: LOCATOR.stakingRouter()
         });
@@ -760,7 +759,7 @@ contract AccountingOracle is BaseOracle {
         _processExtraDataItems(data, iter);
         uint256 itemsProcessed = iter.index + 1;
 
-        if(nextHash == ZERO_HASH) {
+        if(dataHash == ZERO_HASH) {
             if (itemsProcessed != procState.itemsCount) {
                 revert UnexpectedExtraDataItemsCount(procState.itemsCount, itemsProcessed);
             }
@@ -776,7 +775,8 @@ contract AccountingOracle is BaseOracle {
                 revert UnexpectedExtraDataItemsCount(procState.itemsCount, itemsProcessed);
             }
 
-            procState.dataHash = nextHash;
+            // save the next hash value
+            procState.dataHash = dataHash;
             procState.itemsProcessed = uint64(itemsProcessed);
             procState.lastSortingKey = iter.lastSortingKey;
              _storageExtraDataProcessingState().value = procState;
