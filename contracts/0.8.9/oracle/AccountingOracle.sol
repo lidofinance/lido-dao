@@ -712,8 +712,6 @@ contract AccountingOracle is BaseOracle {
     }
 
     struct ExtraDataIterState {
-        // volatile
-        bool started;
         uint256 index;
         uint256 itemType;
         uint256 dataOffset;
@@ -745,11 +743,8 @@ contract AccountingOracle is BaseOracle {
             dataHash := calldataload(data.offset)
         }
 
-        bool started = procState.itemsProcessed > 0;
-
         ExtraDataIterState memory iter = ExtraDataIterState({
-            started: started,
-            index: started ? procState.itemsProcessed - 1 : 0,
+            index: procState.itemsProcessed > 0 ? procState.itemsProcessed - 1 : 0,
             itemType: 0,
             dataOffset: 32, // skip the next hash bytes
             lastSortingKey: procState.lastSortingKey,
@@ -790,12 +785,10 @@ contract AccountingOracle is BaseOracle {
         uint256 maxNodeOperatorsPerItem = 0;
         uint256 maxNodeOperatorItemIndex = 0;
         uint256 itemsCount = 0;
-
+        uint256 index;
+        uint256 itemType;
+ 
         while (dataOffset < data.length) {
-            itemsCount++;
-            uint256 index;
-            uint256 itemType;
-
             /// @solidity memory-safe-assembly
             assembly {
                 // layout at the dataOffset:
@@ -807,12 +800,10 @@ contract AccountingOracle is BaseOracle {
                 dataOffset := add(dataOffset, 5)
             }
 
-            if (!iter.started) {
+            if (iter.lastSortingKey == 0) {
                 if (index != 0) {
                     revert UnexpectedExtraDataIndex(0, index);
                 }
-
-                iter.started = true;
             } else if (index != iter.index + 1) {
                 revert UnexpectedExtraDataIndex(iter.index + 1, index);
             }
@@ -836,6 +827,10 @@ contract AccountingOracle is BaseOracle {
 
             assert(iter.dataOffset > dataOffset);
             dataOffset = iter.dataOffset;
+            unchecked {
+                // oberflow is not possible here
+                 ++itemsCount;
+            }
         }
 
         assert(maxNodeOperatorsPerItem > 0);
