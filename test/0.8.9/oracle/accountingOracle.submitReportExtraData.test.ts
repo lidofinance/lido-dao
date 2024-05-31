@@ -190,6 +190,17 @@ describe("AccountingOracle.sol:submitReportExtraData", () => {
     return data;
   }
 
+  async function submitOracleReport({ extraData, reportFields, config }: ConstructOracleReportWithDefaultValuesProps) {
+    const data = await constructOracleReportForCurrentFrameAndSubmitReportHash({
+      extraData,
+      reportFields,
+      config,
+    });
+
+    await oracleMemberSubmitReportData(data.report);
+    return data;
+  }
+
   async function submitReportHash({ extraData, reportFields }: ReportDataArgs = {}) {
     const data = await constructOracleReportWithSingeExtraDataTransactionForCurrentRefSlot({ extraData, reportFields });
     await oracleMemberSubmitReportHash(data.reportFields.refSlot, data.reportHash);
@@ -221,12 +232,13 @@ describe("AccountingOracle.sol:submitReportExtraData", () => {
       });
 
       it("submit extra data report within two transaction", async () => {
+        const defaultExtraData = getDefaultExtraData();
+
         const { report, extraDataChunks, extraDataChunkHashes } =
           await constructOracleReportForCurrentFrameAndSubmitReportHash({
             config: { maxItemsPerChunk: 3 },
           });
 
-        const defaultExtraData = getDefaultExtraData();
         expect(extraDataChunks.length).to.be.equal(2);
         await oracleMemberSubmitReportData(report);
 
@@ -269,6 +281,36 @@ describe("AccountingOracle.sol:submitReportExtraData", () => {
           ),
         );
         expect(state2.dataHash).to.be.equal(extraDataChunkHashes[1]);
+      });
+
+      it("submit extra data with multiple items per module splitted on many transactions", async () => {
+        const validExtraDataForLargeReport = {
+          stuckKeys: [
+            { moduleId: 1, nodeOpIds: [1, 2, 3], keysCounts: [1, 2, 3] },
+            { moduleId: 1, nodeOpIds: [4, 5, 6], keysCounts: [4, 5, 6] },
+            { moduleId: 2, nodeOpIds: [0], keysCounts: [1] },
+          ],
+          exitedKeys: [
+            { moduleId: 1, nodeOpIds: [1, 2, 3], keysCounts: [1, 2, 3] },
+            { moduleId: 1, nodeOpIds: [4, 5], keysCounts: [4, 5] },
+            { moduleId: 2, nodeOpIds: [0], keysCounts: [1] },
+          ],
+        };
+
+        // Submit report with extra data splitted on many transactions
+        // It does not matter on how many transactions we will split extra data
+        for (let i = 1; i <= 6; i++) {
+          await consensus.advanceTimeToNextFrameStart();
+
+          const { extraDataChunks } = await submitOracleReport({
+            extraData: validExtraDataForLargeReport,
+            config: { maxItemsPerChunk: i },
+          });
+
+          for (let j = 0; j < extraDataChunks.length; j++) {
+            await oracleMemberSubmitExtraData(extraDataChunks[j]);
+          }
+        }
       });
     });
 
@@ -589,28 +631,86 @@ describe("AccountingOracle.sol:submitReportExtraData", () => {
       });
     });
 
-    context("enforces module ids sorting order", () => {
-      it("should revert if incorrect extra data list stuckKeys moduleId", async () => {
-        const extraDataDefault = getDefaultExtraData();
-        const invalidExtraData = {
-          ...extraDataDefault,
-          stuckKeys: [
-            ...extraDataDefault.stuckKeys,
-            { moduleId: 4, nodeOpIds: [1], keysCounts: [2] },
-            { moduleId: 4, nodeOpIds: [1], keysCounts: [2] },
-          ],
-        };
-
+    context("enforces extra data sorting order", () => {
+      /*
+        Extra data report sorted by composite key which is calculated as:
+          - item type (stuck = 1 or exited = 2 validators)
+          - module id
+          - node operator id
+      */
+      async function extraDataSubmitShouldRevertWithSortOrderError(
+        incorrectlySortedExtraData: ExtraData,
+        invalidItemIndex: number,
+      ) {
         await consensus.advanceTimeToNextFrameStart();
-        const { reportFields, extraDataList } = await submitReportHash({ extraData: invalidExtraData });
-        await oracle.connect(member1).submitReportData(reportFields, oracleVersion);
 
-        await expect(oracle.connect(member1).submitReportExtraDataList(extraDataList))
+        const { extraDataChunks } = await submitOracleReport({ extraData: incorrectlySortedExtraData });
+
+        await expect(oracleMemberSubmitExtraData(extraDataChunks[0]))
           .to.be.revertedWithCustomError(oracle, "InvalidExtraDataSortOrder")
-          .withArgs(4);
+          .withArgs(invalidItemIndex);
+      }
+
+      it("should revert if stuckKeys processed after exitedKeys", async () => {
+        const invalidExtraDataItemsArray = [
+          { type: EXTRA_DATA_TYPE_EXITED_VALIDATORS, moduleId: 1, nodeOpIds: [0], keysCounts: [1] },
+          { type: EXTRA_DATA_TYPE_EXITED_VALIDATORS, moduleId: 2, nodeOpIds: [0], keysCounts: [1] },
+          { type: EXTRA_DATA_TYPE_STUCK_VALIDATORS, moduleId: 1, nodeOpIds: [0], keysCounts: [1] },
+        ];
+
+        await extraDataSubmitShouldRevertWithSortOrderError(invalidExtraDataItemsArray, 2);
       });
 
-      it("second transaction should revert if extra data not sorted", async () => {
+      it("should revert if modules items not sorted by module id", async () => {
+        const invalidStuckKeysItemsOrder = [
+          { type: EXTRA_DATA_TYPE_STUCK_VALIDATORS, moduleId: 2, nodeOpIds: [0], keysCounts: [1] },
+          { type: EXTRA_DATA_TYPE_STUCK_VALIDATORS, moduleId: 1, nodeOpIds: [0], keysCounts: [1] },
+        ];
+
+        await extraDataSubmitShouldRevertWithSortOrderError(invalidStuckKeysItemsOrder, 1);
+
+        const invalidExitedKeysItemsOrder = [
+          { type: EXTRA_DATA_TYPE_EXITED_VALIDATORS, moduleId: 2, nodeOpIds: [0], keysCounts: [1] },
+          { type: EXTRA_DATA_TYPE_EXITED_VALIDATORS, moduleId: 1, nodeOpIds: [0], keysCounts: [1] },
+        ];
+
+        await extraDataSubmitShouldRevertWithSortOrderError(invalidExitedKeysItemsOrder, 1);
+      });
+
+      it("should revert if node operators not sorted", async () => {
+        async function check(nodeOpIds: number[]) {
+          function data(type: bigint) {
+            return [{ type, moduleId: 1, nodeOpIds, keysCounts: Array(nodeOpIds.length).fill(1) }];
+          }
+
+          await extraDataSubmitShouldRevertWithSortOrderError(data(EXTRA_DATA_TYPE_STUCK_VALIDATORS), 0);
+          await extraDataSubmitShouldRevertWithSortOrderError(data(EXTRA_DATA_TYPE_EXITED_VALIDATORS), 0);
+        }
+
+        // operator id duplicated in item
+        await check([1, 2, 2, 3]);
+
+        // operator id not sorted
+        await check([1, 3, 2]);
+      });
+
+      it("should revert if module node operators not sorted within multiple items", async () => {
+        const invalidStuckKeysItemsOrder = [
+          { type: EXTRA_DATA_TYPE_STUCK_VALIDATORS, moduleId: 1, nodeOpIds: [1, 2, 3], keysCounts: [1, 2, 3] },
+          { type: EXTRA_DATA_TYPE_STUCK_VALIDATORS, moduleId: 1, nodeOpIds: [3, 4, 5], keysCounts: [1, 2, 3] },
+        ];
+
+        await extraDataSubmitShouldRevertWithSortOrderError(invalidStuckKeysItemsOrder, 1);
+
+        const invalidExitedKeysItemsOrder = [
+          { type: EXTRA_DATA_TYPE_EXITED_VALIDATORS, moduleId: 1, nodeOpIds: [1, 2, 3], keysCounts: [1, 2, 3] },
+          { type: EXTRA_DATA_TYPE_EXITED_VALIDATORS, moduleId: 1, nodeOpIds: [3, 4, 5], keysCounts: [1, 2, 3] },
+        ];
+
+        await extraDataSubmitShouldRevertWithSortOrderError(invalidExitedKeysItemsOrder, 1);
+      });
+
+      it("should revert if second transaction extra data not sorted", async () => {
         const invalidExtraData = {
           stuckKeys: [
             { moduleId: 1, nodeOpIds: [0], keysCounts: [1] },
@@ -622,12 +722,10 @@ describe("AccountingOracle.sol:submitReportExtraData", () => {
           exitedKeys: [{ moduleId: 2, nodeOpIds: [1, 2], keysCounts: [1, 3] }],
         };
 
-        const { report, extraDataChunks } = await constructOracleReportForCurrentFrameAndSubmitReportHash({
+        const { extraDataChunks } = await submitOracleReport({
           extraData: invalidExtraData,
           config: { maxItemsPerChunk: 2 },
         });
-
-        await oracleMemberSubmitReportData(report);
         await oracleMemberSubmitExtraData(extraDataChunks[0]);
 
         await expect(oracleMemberSubmitExtraData(extraDataChunks[1]))
