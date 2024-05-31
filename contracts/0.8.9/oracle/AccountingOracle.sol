@@ -828,7 +828,7 @@ contract AccountingOracle is BaseOracle {
             assert(iter.dataOffset > dataOffset);
             dataOffset = iter.dataOffset;
             unchecked {
-                // oberflow is not possible here
+                // overflow is not possible here
                  ++itemsCount;
             }
         }
@@ -846,7 +846,7 @@ contract AccountingOracle is BaseOracle {
         uint256 dataOffset = iter.dataOffset;
         uint256 moduleId;
         uint256 nodeOpsCount;
-        uint256 lastNodeOpId;
+        uint256 nodeOpId;
         bytes calldata nodeOpIds;
         bytes calldata valuesCounts;
 
@@ -867,7 +867,7 @@ contract AccountingOracle is BaseOracle {
             nodeOpIds.offset := add(data.offset, add(dataOffset, 11))
             nodeOpIds.length := mul(nodeOpsCount, 8)
             // read the 1st node operator id for checking the sorting order later
-            lastNodeOpId := shr(192, calldataload(nodeOpIds.offset))
+            nodeOpId := shr(192, calldataload(nodeOpIds.offset))
             valuesCounts.offset := add(nodeOpIds.offset, nodeOpIds.length)
             valuesCounts.length := mul(nodeOpsCount, 16)
             dataOffset := sub(add(valuesCounts.offset, valuesCounts.length), data.offset)
@@ -881,8 +881,8 @@ contract AccountingOracle is BaseOracle {
             // firstly, check the sorting order between the 1st item's element and the last one of the previous item
 
             // | 2 bytes  | 19 bytes | 3 bytes  | 8 bytes      |
-            // | itemType | 00000000 | moduleId | lastNodeOpId |
-            uint256 sortingKey = (iter.itemType << 240) | (moduleId << 64) | lastNodeOpId;
+            // | itemType | 00000000 | moduleId | nodeOpId |
+            uint256 sortingKey = (iter.itemType << 240) | (moduleId << 64) | nodeOpId;
             if (sortingKey <= iter.lastSortingKey) {
                 revert InvalidExtraDataSortOrder(iter.index);
             }
@@ -895,14 +895,14 @@ contract AccountingOracle is BaseOracle {
                     tmpNodeOpId := shr(192, calldataload(add(nodeOpIds.offset, mul(i, 8))))
                     i := add(i, 1)
                 }
-                if (tmpNodeOpId <= lastNodeOpId) {
+                if (tmpNodeOpId <= nodeOpId) {
                     revert InvalidExtraDataSortOrder(iter.index);
                 }
-                lastNodeOpId = tmpNodeOpId;
+                nodeOpId = tmpNodeOpId;
             }
 
             // update the last sorting key with the last item's element
-            iter.lastSortingKey = ((sortingKey >> 64) << 64) | lastNodeOpId;
+            iter.lastSortingKey = ((sortingKey >> 64) << 64) | nodeOpId;
         }
 
         if (dataOffset > data.length || nodeOpsCount == 0) {
