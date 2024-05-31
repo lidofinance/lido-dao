@@ -100,7 +100,7 @@ contract AccountingOracle is BaseOracle {
     error ExtraDataAlreadyProcessed();
     error UnexpectedExtraDataHash(bytes32 consensusHash, bytes32 receivedHash);
     error UnexpectedExtraDataFormat(uint256 expectedFormat, uint256 receivedFormat);
-    error ExtraDataTransactionDoesNotContainsNextTransactionHash();
+    error UnexpectedExtraDataLength();
     error ExtraDataItemsCountCannotBeZeroForNonEmptyData();
     error ExtraDataHashCannotBeZeroForNonEmptyData();
     error UnexpectedExtraDataItemsCount(uint256 expectedCount, uint256 receivedCount);
@@ -712,8 +712,6 @@ contract AccountingOracle is BaseOracle {
     }
 
     struct ExtraDataIterState {
-        // volatile
-        bool started;
         uint256 index;
         uint256 itemType;
         uint256 dataOffset;
@@ -730,29 +728,25 @@ contract AccountingOracle is BaseOracle {
             revert ExtraDataAlreadyProcessed();
         }
 
+        // at least 32 bytes for the next hash value + 35 bytes for the first item with 1 node operator
+        if(data.length < 67) {
+            revert UnexpectedExtraDataLength();
+        }
+
         bytes32 dataHash = keccak256(data);
         if (dataHash != procState.dataHash) {
             revert UnexpectedExtraDataHash(procState.dataHash, dataHash);
         }
 
-        uint256 initialDataOffset = 32;
-
-        if(data.length < initialDataOffset) {
-            revert ExtraDataTransactionDoesNotContainsNextTransactionHash();
-        }
-
-        bytes32 nextHash;
+        // load the next hash value
         assembly {
-            nextHash := calldataload(data.offset)
+            dataHash := calldataload(data.offset)
         }
-
-        bool started = procState.itemsProcessed > 0;
 
         ExtraDataIterState memory iter = ExtraDataIterState({
-            started: started,
-            index: started ? procState.itemsProcessed - 1 : 0,
+            index: procState.itemsProcessed > 0 ? procState.itemsProcessed - 1 : 0,
             itemType: 0,
-            dataOffset: initialDataOffset,
+            dataOffset: 32, // skip the next hash bytes
             lastSortingKey: procState.lastSortingKey,
             stakingRouter: LOCATOR.stakingRouter()
         });
@@ -760,7 +754,7 @@ contract AccountingOracle is BaseOracle {
         _processExtraDataItems(data, iter);
         uint256 itemsProcessed = iter.index + 1;
 
-        if(nextHash == ZERO_HASH) {
+        if(dataHash == ZERO_HASH) {
             if (itemsProcessed != procState.itemsCount) {
                 revert UnexpectedExtraDataItemsCount(procState.itemsCount, itemsProcessed);
             }
@@ -776,7 +770,8 @@ contract AccountingOracle is BaseOracle {
                 revert UnexpectedExtraDataItemsCount(procState.itemsCount, itemsProcessed);
             }
 
-            procState.dataHash = nextHash;
+            // save the next hash value
+            procState.dataHash = dataHash;
             procState.itemsProcessed = uint64(itemsProcessed);
             procState.lastSortingKey = iter.lastSortingKey;
              _storageExtraDataProcessingState().value = procState;
@@ -789,13 +784,11 @@ contract AccountingOracle is BaseOracle {
         uint256 dataOffset = iter.dataOffset;
         uint256 maxNodeOperatorsPerItem = 0;
         uint256 maxNodeOperatorItemIndex = 0;
-        uint256 itemsCount = 0;
+        uint256 itemsCount;
+        uint256 index;
+        uint256 itemType;
 
         while (dataOffset < data.length) {
-            itemsCount++;
-            uint256 index;
-            uint256 itemType;
-
             /// @solidity memory-safe-assembly
             assembly {
                 // layout at the dataOffset:
@@ -807,12 +800,10 @@ contract AccountingOracle is BaseOracle {
                 dataOffset := add(dataOffset, 5)
             }
 
-            if (!iter.started) {
+            if (iter.lastSortingKey == 0) {
                 if (index != 0) {
                     revert UnexpectedExtraDataIndex(0, index);
                 }
-
-                iter.started = true;
             } else if (index != iter.index + 1) {
                 revert UnexpectedExtraDataIndex(iter.index + 1, index);
             }
@@ -836,6 +827,10 @@ contract AccountingOracle is BaseOracle {
 
             assert(iter.dataOffset > dataOffset);
             dataOffset = iter.dataOffset;
+            unchecked {
+                // oberflow is not possible here
+                 ++itemsCount;
+            }
         }
 
         assert(maxNodeOperatorsPerItem > 0);
@@ -851,7 +846,7 @@ contract AccountingOracle is BaseOracle {
         uint256 dataOffset = iter.dataOffset;
         uint256 moduleId;
         uint256 nodeOpsCount;
-        uint256 firstNodeOpId;
+        uint256 lastNodeOpId;
         bytes calldata nodeOpIds;
         bytes calldata valuesCounts;
 
@@ -871,7 +866,8 @@ contract AccountingOracle is BaseOracle {
             nodeOpsCount := and(shr(168, header), 0xffffffffffffffff)
             nodeOpIds.offset := add(data.offset, add(dataOffset, 11))
             nodeOpIds.length := mul(nodeOpsCount, 8)
-            firstNodeOpId := shr(192, calldataload(nodeOpIds.offset))
+            // read the 1st node operator id for checking the sorting order later
+            lastNodeOpId := shr(192, calldataload(nodeOpIds.offset))
             valuesCounts.offset := add(nodeOpIds.offset, nodeOpIds.length)
             valuesCounts.length := mul(nodeOpsCount, 16)
             dataOffset := sub(add(valuesCounts.offset, valuesCounts.length), data.offset)
@@ -882,13 +878,31 @@ contract AccountingOracle is BaseOracle {
         }
 
         unchecked {
-            // | 2 bytes  | 19 bytes | 3 bytes  |    8 bytes    |
-            // | itemType | 00000000 | moduleId | firstNodeOpId |
-            uint256 sortingKey = (iter.itemType << 240) | (moduleId << 64) | firstNodeOpId;
+            // firstly, check the sorting order between the 1st item's element and the last one of the previous item
+
+            // | 2 bytes  | 19 bytes | 3 bytes  | 8 bytes      |
+            // | itemType | 00000000 | moduleId | lastNodeOpId |
+            uint256 sortingKey = (iter.itemType << 240) | (moduleId << 64) | lastNodeOpId;
             if (sortingKey <= iter.lastSortingKey) {
                 revert InvalidExtraDataSortOrder(iter.index);
             }
-            iter.lastSortingKey = sortingKey;
+
+            // secondly, check the sorting order between the rest of the elements
+            uint256 tmpNodeOpId;
+            for (uint256 i = 1; i < nodeOpsCount;) {
+                /// @solidity memory-safe-assembly
+                assembly {
+                    tmpNodeOpId := shr(192, calldataload(add(nodeOpIds.offset, mul(i, 8))))
+                    i := add(i, 1)
+                }
+                if (tmpNodeOpId <= lastNodeOpId) {
+                    revert InvalidExtraDataSortOrder(iter.index);
+                }
+                lastNodeOpId = tmpNodeOpId;
+            }
+
+            // update the last sorting key with the last item's element
+            iter.lastSortingKey = ((sortingKey >> 64) << 64) | lastNodeOpId;
         }
 
         if (dataOffset > data.length || nodeOpsCount == 0) {
