@@ -169,6 +169,8 @@ contract AccountingOracle is BaseOracle {
 
         uint256 lastProcessingRefSlot = _checkOracleMigration(LEGACY_ORACLE, consensusContract);
         _initialize(admin, consensusContract, consensusVersion, lastProcessingRefSlot);
+
+        _updateContractVersion(2);
     }
 
     function initializeWithoutMigration(
@@ -180,6 +182,13 @@ contract AccountingOracle is BaseOracle {
         if (admin == address(0)) revert AdminCannotBeZero();
 
         _initialize(admin, consensusContract, consensusVersion, lastProcessingRefSlot);
+
+        _updateContractVersion(2);
+    }
+
+    function finalizeUpgrade_v2(uint256 consensusVersion) external {
+        _updateContractVersion(2);
+        _setConsensusVersion(consensusVersion);
     }
 
     ///
@@ -774,7 +783,7 @@ contract AccountingOracle is BaseOracle {
             procState.dataHash = dataHash;
             procState.itemsProcessed = uint64(itemsProcessed);
             procState.lastSortingKey = iter.lastSortingKey;
-            _storageExtraDataProcessingState().value = procState;
+             _storageExtraDataProcessingState().value = procState;
         }
 
         emit ExtraDataSubmitted(procState.refSlot, procState.itemsProcessed, procState.itemsCount);
