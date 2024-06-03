@@ -76,7 +76,8 @@ async function main() {
     locator.address,
     admin,
     [
-      sanityChecks.churnValidatorsPerDayLimit,
+      sanityChecks.exitedValidatorsPerDayLimit,
+      sanityChecks.appearedValidatorsPerDayLimit,
       sanityChecks.oneOffCLBalanceDecreaseBPLimit,
       sanityChecks.annualBalanceIncreaseBPLimit,
       sanityChecks.simulatedShareRateDeviationBPLimit,
@@ -86,7 +87,7 @@ async function main() {
       sanityChecks.requestTimestampMargin,
       sanityChecks.maxPositiveTokenRebase,
     ],
-    [[], [], [], [], [], [], [], [], [], []],
+    [[], [], [], [], [], [], [], [], [], [], []],
   ];
   const oracleReportSanityChecker = await deployWithoutProxy(
     Sk.oracleReportSanityChecker,
