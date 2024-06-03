@@ -774,7 +774,7 @@ contract AccountingOracle is BaseOracle {
             procState.dataHash = dataHash;
             procState.itemsProcessed = uint64(itemsProcessed);
             procState.lastSortingKey = iter.lastSortingKey;
-             _storageExtraDataProcessingState().value = procState;
+            _storageExtraDataProcessingState().value = procState;
         }
 
         emit ExtraDataSubmitted(procState.refSlot, procState.itemsProcessed, procState.itemsCount);
