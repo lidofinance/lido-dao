@@ -69,8 +69,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         Distributed               // Reward distributed among operators
     }
 
-    RewardDistributionState public rewardDistributionState = RewardDistributionState.Distributed;
-
     //
     // ACL
     //
@@ -210,12 +208,20 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     mapping(uint256 => NodeOperator) internal _nodeOperators;
     NodeOperatorSummary internal _nodeOperatorSummary;
 
+    /// @dev Current reward distribution state, reward distribution bot monitor this state
+    /// and distribute rewards (call distributeReward methoid) among operators when it's `ReadyForDistribution`
+    RewardDistributionState public rewardDistributionState;
+
     //
     // METHODS
     //
     function initialize(address _locator, bytes32 _type, uint256 _stuckPenaltyDelay) public onlyInit {
         // Initializations for v1 --> v2
         _initialize_v2(_locator, _type, _stuckPenaltyDelay);
+
+        // Initializations for v2 --> v3
+        _initialize_v3();
+
         initialized();
     }
 
@@ -288,6 +294,17 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
         emit LocatorContractSet(_locator);
         emit StakingModuleTypeSet(_type);
+    }
+
+    function finalizeUpgrade_v3() external {
+        require(hasInitialized(), "CONTRACT_NOT_INITIALIZED");
+        _checkContractVersion(2);
+        _initialize_v3();
+    }
+
+    function _initialize_v3() internal {
+        _setContractVersion(3);
+        rewardDistributionState = RewardDistributionState.Distributed;
     }
 
     /// @notice Add node operator named `name` with reward address `rewardAddress` and staking limit = 0 validators
@@ -426,10 +443,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     function onRewardsMinted(uint256 /* _totalShares */) external {
         _auth(STAKING_ROUTER_ROLE);
         _updateRewardDistributionState(RewardDistributionState.TransferredToModule);
-
-        // since we're pushing rewards to operators after exited validators counts are
-        // updated (as opposed to pulling by node ops), we don't need any handling here
-        // see `onExitedAndStuckValidatorsCountsUpdated()`
     }
 
     function _checkReportPayload(uint256 idsLength, uint256 countsLength) internal pure returns (uint256 count) {
@@ -523,9 +536,37 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _updateRefundValidatorsKeysCount(_nodeOperatorId, _refundedValidatorsCount);
     }
 
-    // Function to distribute rewards
+    /// @notice Permissionless method for distributing all accumulated module rewards among node operators
+    /// based on the latest accounting report.
+    ///
+    /// @dev Rewards can be distributed after node operators' statistics are updated
+    /// until the next reward is transferred to the module during the next oracle frame.
+    ///
+    /// ===================================== Start report frame 1 =====================================
+    ///
+    /// 1. Oracle first phase: Reach hash consensus.
+    /// 2. Oracle second phase: Module receives rewards.
+    /// 3. Oracle third phase: Operator statistics are updated.
+    ///
+    ///                                 ... Reward can be distributed ...
+    ///
+    /// =====================================  Start report frame 2  =====================================
+    ///
+    ///                                 ... Reward can be distributed ...
+    ///                                      (if not distributed yet)
+    ///
+    /// 1. Oracle first phase: Reach hash consensus.
+    /// 2. Oracle second phase: Module receives rewards.
+    ///
+    ///                                ... Reward CANNOT be distributed ...
+    ///
+    /// 3. Oracle third phase: Operator statistics are updated.
+    ///
+    ///                                 ... Reward can be distributed ...
+    ///
+    /// =====================================  Start report frame 3  =====================================
     function distributeReward() external {
-        require(rewardDistributionState == RewardDistributionState.ReadyForDistribution, "Reward distribution is not ready");
+        require(rewardDistributionState == RewardDistributionState.ReadyForDistribution, "DISTRIBUTION_NOT_READY");
         _updateRewardDistributionState(RewardDistributionState.Distributed);
         _distributeRewards();
     }
