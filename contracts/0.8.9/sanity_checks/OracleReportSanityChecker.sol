@@ -504,7 +504,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
         // 4. Consensus Layer balance decrease
         _checkCLBalanceDecrease(limitsList, _preCLBalance,
-            _postCLBalance + _withdrawalVaultBalance, _postCLValidators, refSlot);
+            _postCLBalance, _withdrawalVaultBalance, _postCLValidators, refSlot);
 
         // 5. Consensus Layer annual balances increase
         _checkAnnualBalancesIncrease(limitsList, _preCLBalance, _postCLBalance, _timeElapsed);
@@ -665,10 +665,12 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     function _checkCLBalanceDecrease(
         LimitsList memory _limitsList,
         uint256 _preCLBalance,
-        uint256 _unifiedPostCLBalance,
+        uint256 _postCLBalance,
+        uint256 _withdrawalVaultBalance,
         uint256 _postCLValidators,
         uint256 _refSlot
     ) internal {
+        uint256 _unifiedPostCLBalance = _postCLBalance + _withdrawalVaultBalance;
         uint256 reportTimestamp = GENESIS_TIME + _refSlot * SECONDS_PER_SLOT;
 
         // Checking exitedValidators against StakingRouter
@@ -704,22 +706,22 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             // If there is no oracle and the diff is more than limit, we revert
             revert IncorrectCLBalanceDecrease(negativeCLRebaseSum, maxAllowedCLRebaseNegativeSum);
         }
-        _askSecondOpinion(_refSlot, _unifiedPostCLBalance, _limitsList);
+        _askSecondOpinion(_refSlot, _postCLBalance, _limitsList);
     }
 
-    function _askSecondOpinion(uint256 _refSlot, uint256 _unifiedPostCLBalance, LimitsList memory _limitsList) internal {
+    function _askSecondOpinion(uint256 _refSlot, uint256 _postCLBalance, LimitsList memory _limitsList) internal {
         (bool success, uint256 clOracleBalanceGwei,,) = secondOpinionOracle.getReport(_refSlot);
 
         if (success) {
             uint256 clBalanceWei = clOracleBalanceGwei * 1 gwei;
-            if (clBalanceWei < _unifiedPostCLBalance) {
-                revert NegativeRebaseFailedCLBalanceMismatch(_unifiedPostCLBalance, clBalanceWei, _limitsList.clBalanceOraclesErrorUpperBPLimit);
+            if (clBalanceWei < _postCLBalance) {
+                revert NegativeRebaseFailedCLBalanceMismatch(_postCLBalance, clBalanceWei, _limitsList.clBalanceOraclesErrorUpperBPLimit);
             }
-            if (MAX_BASIS_POINTS * (clBalanceWei - _unifiedPostCLBalance) >
+            if (MAX_BASIS_POINTS * (clBalanceWei - _postCLBalance) >
                 _limitsList.clBalanceOraclesErrorUpperBPLimit * clBalanceWei) {
-                revert NegativeRebaseFailedCLBalanceMismatch(_unifiedPostCLBalance, clBalanceWei, _limitsList.clBalanceOraclesErrorUpperBPLimit);
+                revert NegativeRebaseFailedCLBalanceMismatch(_postCLBalance, clBalanceWei, _limitsList.clBalanceOraclesErrorUpperBPLimit);
             }
-            emit NegativeCLRebaseConfirmed(_refSlot, _unifiedPostCLBalance);
+            emit NegativeCLRebaseConfirmed(_refSlot, _postCLBalance);
         } else {
             revert NegativeRebaseFailedSecondOpinionReportIsNotReady();
         }
