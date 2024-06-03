@@ -693,8 +693,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             _limits.initialSlashingAmountPWei * ONE_PWEI * (_postCLValidators - _exitedValidatorsAtTimestamp(reportTimestamp - 18 days)) +
             _limits.inactivityPenaltiesAmountPWei * ONE_PWEI * (_postCLValidators - _exitedValidatorsAtTimestamp(reportTimestamp - 54 days));
 
-        if (negativeCLRebaseSum < maxAllowedCLRebaseNegativeSum) {
-            // If the diff is less than limit we are finishing check
+        if (negativeCLRebaseSum <= maxAllowedCLRebaseNegativeSum) {
+            // If the rebase diff is less or equal max allowed sum, we accept the report
             emit NegativeCLRebaseAccepted(_refSlot, _unifiedPostCLBalance, negativeCLRebaseSum, maxAllowedCLRebaseNegativeSum);
             return;
         }
