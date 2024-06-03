@@ -644,7 +644,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     function _sumNegativeRebasesNotOlderThan(uint256 _timestamp) internal view returns (uint256) {
         uint256 sum;
         for (int256 index = int256(reportData.length) - 1; index >= 0; index--) {
-            if (reportData[uint256(index)].timestamp >= SafeCast.toUint64(_timestamp)) {
+            if (reportData[uint256(index)].timestamp > SafeCast.toUint64(_timestamp)) {
                 sum += reportData[uint256(index)].negativeCLRebaseWei;
             } else {
                 break;
