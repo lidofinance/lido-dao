@@ -161,6 +161,9 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     // bytes32 internal constant STUCK_PENALTY_DELAY_POSITION = keccak256("lido.NodeOperatorsRegistry.stuckPenaltyDelay");
     bytes32 internal constant STUCK_PENALTY_DELAY_POSITION = 0x8e3a1f3826a82c1116044b334cae49f3c3d12c3866a1c4b18af461e12e58a18e;
 
+    // bytes32 internal constant REWARD_DISTRIBUTION_STATE = keccak256("lido.NodeOperatorsRegistry.rewardDistributionState");
+    bytes32 internal constant REWARD_DISTRIBUTION_STATE = 0x4ddbb0dcdc5f7692e494c15a7fca1f9eb65f31da0b5ce1c3381f6a1a1fd579b6;
+
     //
     // DATA TYPES
     //
@@ -207,10 +210,6 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     /// @dev Mapping of all node operators. Mapping is used to be able to extend the struct.
     mapping(uint256 => NodeOperator) internal _nodeOperators;
     NodeOperatorSummary internal _nodeOperatorSummary;
-
-    /// @dev Current reward distribution state, reward distribution bot monitor this state
-    /// and distribute rewards (call distributeReward methoid) among operators when it's `ReadyForDistribution`
-    RewardDistributionState public rewardDistributionState;
 
     //
     // METHODS
@@ -304,7 +303,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     function _initialize_v3() internal {
         _setContractVersion(3);
-        rewardDistributionState = RewardDistributionState.Distributed;
+        _updateRewardDistributionState(RewardDistributionState.Distributed);
     }
 
     /// @notice Add node operator named `name` with reward address `rewardAddress` and staking limit = 0 validators
@@ -566,7 +565,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     ///
     /// =====================================  Start report frame 3  =====================================
     function distributeReward() external {
-        require(rewardDistributionState == RewardDistributionState.ReadyForDistribution, "DISTRIBUTION_NOT_READY");
+        require(getRewardDistributionState() == RewardDistributionState.ReadyForDistribution, "DISTRIBUTION_NOT_READY");
         _updateRewardDistributionState(RewardDistributionState.Distributed);
         _distributeRewards();
     }
@@ -1412,6 +1411,18 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _setStuckPenaltyDelay(_delay);
     }
 
+    /// @dev Current reward distribution state, reward distribution bot monitor this state
+    /// and distribute rewards (call distributeReward method) among operators when it's `ReadyForDistribution`
+    function getRewardDistributionState() public view returns (RewardDistributionState) {
+        uint256 state = REWARD_DISTRIBUTION_STATE.getStorageUint256();
+        return RewardDistributionState(state);
+    }
+
+    function _updateRewardDistributionState(RewardDistributionState _state) internal {
+        REWARD_DISTRIBUTION_STATE.setStorageUint256(uint256(_state));
+        emit RewardDistributionStateChanged(_state);
+    }
+
     /// @dev set new stuck penalty delay, duration in sec
     function _setStuckPenaltyDelay(uint256 _delay) internal {
         _requireValidRange(_delay <= MAX_STUCK_PENALTY_DELAY);
@@ -1506,10 +1517,5 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     function _onlyNonZeroAddress(address _a) internal pure {
         require(_a != address(0), "ZERO_ADDRESS");
-    }
-
-    function _updateRewardDistributionState(RewardDistributionState _state) internal {
-        rewardDistributionState = _state;
-        emit RewardDistributionStateChanged(_state);
     }
 }
