@@ -286,12 +286,12 @@ describe("AccountingOracle.sol:submitReportExtraData", () => {
       it("submit extra data with multiple items per module splitted on many transactions", async () => {
         const validExtraDataForLargeReport = {
           stuckKeys: [
-            { moduleId: 1, nodeOpIds: [1, 2, 3], keysCounts: [1, 2, 3] },
-            { moduleId: 1, nodeOpIds: [4, 5, 6], keysCounts: [4, 5, 6] },
+            { moduleId: 1, nodeOpIds: [0, 1, 2], keysCounts: [1, 2, 3] },
+            { moduleId: 1, nodeOpIds: [3, 4, 5], keysCounts: [4, 5, 6] },
             { moduleId: 2, nodeOpIds: [0], keysCounts: [1] },
           ],
           exitedKeys: [
-            { moduleId: 1, nodeOpIds: [1, 2, 3], keysCounts: [1, 2, 3] },
+            { moduleId: 1, nodeOpIds: [0, 1, 2, 3], keysCounts: [1, 2, 3, 4] },
             { moduleId: 1, nodeOpIds: [4, 5], keysCounts: [4, 5] },
             { moduleId: 2, nodeOpIds: [0], keysCounts: [1] },
           ],
