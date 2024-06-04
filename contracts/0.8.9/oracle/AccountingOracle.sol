@@ -599,7 +599,7 @@ contract AccountingOracle is BaseOracle {
             if (data.extraDataItemsCount == 0) {
                 revert ExtraDataItemsCountCannotBeZeroForNonEmptyData();
             }
-             if (data.extraDataHash == ZERO_HASH) {
+            if (data.extraDataHash == ZERO_HASH) {
                 revert ExtraDataHashCannotBeZeroForNonEmptyData();
             }
         }
@@ -838,7 +838,7 @@ contract AccountingOracle is BaseOracle {
             dataOffset = iter.dataOffset;
             unchecked {
                 // overflow is not possible here
-                 ++itemsCount;
+                ++itemsCount;
             }
         }
 
@@ -889,7 +889,7 @@ contract AccountingOracle is BaseOracle {
         unchecked {
             // firstly, check the sorting order between the 1st item's element and the last one of the previous item
 
-            // | 2 bytes  | 19 bytes | 3 bytes  | 8 bytes      |
+            // | 2 bytes  | 19 bytes | 3 bytes  | 8 bytes  |
             // | itemType | 00000000 | moduleId | nodeOpId |
             uint256 sortingKey = (iter.itemType << 240) | (moduleId << 64) | nodeOpId;
             if (sortingKey <= iter.lastSortingKey) {
