@@ -175,9 +175,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await checker.addReportData(timestamp - 5 * SLOTS_PER_DAY, 0, 5);
       await checker.addReportData(timestamp - 2 * SLOTS_PER_DAY, 0, 150);
       await checker.addReportData(timestamp - 1 * SLOTS_PER_DAY, 0, 100);
-      expect(await checker.sumNegativeRebasesNotOlderThan(timestamp - 18 * SLOTS_PER_DAY)).to.equal(
-        100 + 150 + 5 + 10 + 13,
-      );
+      expect(await checker.sumNegativeRebasesNotOlderThan(timestamp - 18 * SLOTS_PER_DAY)).to.equal(100 + 150 + 5 + 10);
     });
 
     it(`returns exited validators count`, async () => {
@@ -268,6 +266,7 @@ describe("OracleReportSanityChecker.sol", () => {
 
     it("works with staking router reports exited validators at day 18 and 54", async () => {
       const refSlot = Math.floor(((await time.latest()) - Number(genesisTime)) / 12);
+      const refSlot17 = refSlot - 17 * SLOTS_PER_DAY;
       const refSlot18 = refSlot - 18 * SLOTS_PER_DAY;
       const refSlot54 = refSlot - 54 * SLOTS_PER_DAY;
       const refSlot55 = refSlot - 55 * SLOTS_PER_DAY;
@@ -289,6 +288,9 @@ describe("OracleReportSanityChecker.sol", () => {
       await stakingRouter.removeStakingModule(1);
       await stakingRouter.addStakingModule(1, { ...summary1, totalExitedValidators: 3 });
       await accountingOracle.setLastProcessingRefSlot(refSlot18);
+      await checker.checkAccountingOracleReport(0, ether("320"), ether("320"), 0, 0, 0, 10, 10);
+
+      await accountingOracle.setLastProcessingRefSlot(refSlot17);
       await checker.checkAccountingOracleReport(0, ether("320"), ether("315"), 0, 0, 0, 10, 10);
 
       await accountingOracle.setLastProcessingRefSlot(refSlot);
