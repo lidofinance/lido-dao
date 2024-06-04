@@ -14,7 +14,9 @@ import {
   WithdrawalQueueStub,
 } from "typechain-types";
 
-import { ether, getCurrentBlockTimestamp, randomAddress, Snapshot } from "lib";
+import { ether, getCurrentBlockTimestamp, randomAddress } from "lib";
+
+import { Snapshot } from "test/suite";
 
 describe("OracleReportSanityChecker.sol", () => {
   let oracleReportSanityChecker: OracleReportSanityChecker;
