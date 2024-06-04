@@ -1411,8 +1411,8 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _setStuckPenaltyDelay(_delay);
     }
 
-    /// @dev Current reward distribution state, reward distribution bot monitor this state
-    /// and distribute rewards (call distributeReward method) among operators when it's `ReadyForDistribution`
+    /// @dev Get the current reward distribution state, anyone can monitor this state
+    /// and distribute reward (call distributeReward method) among operators when it's `ReadyForDistribution`
     function getRewardDistributionState() public view returns (RewardDistributionState) {
         uint256 state = REWARD_DISTRIBUTION_STATE.getStorageUint256();
         return RewardDistributionState(state);
