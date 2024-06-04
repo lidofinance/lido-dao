@@ -42,12 +42,6 @@ struct LimitsList {
     /// @dev Must fit into uint16 (<= 65_535)
     uint256 exitedValidatorsPerDayLimit;
 
-    /// @notice The max possible number of validators that might be reported as `appeared`
-    ///     per single day, limited by the max daily deposits via DepositSecurityModule in practice
-    ///     isn't limited by a consensus layer (because `appeared` includes `pending`, i.e., not `activated` yet)
-    /// @dev Must fit into uint16 (<= 65_535)
-    uint256 appearedValidatorsPerDayLimit;
-
     /// @dev Represented in the Basis Points (100% == 10_000)
     uint256 oneOffCLBalanceDecreaseBPLimit;
 
@@ -79,6 +73,12 @@ struct LimitsList {
     /// @notice The positive token rebase allowed per single LidoOracle report
     /// @dev uses 1e9 precision, e.g.: 1e6 - 0.1%; 1e9 - 100%, see `setMaxPositiveTokenRebase()`
     uint256 maxPositiveTokenRebase;
+
+    /// @notice The max possible number of validators that might be reported as `appeared`
+    ///     per single day, limited by the max daily deposits via DepositSecurityModule in practice
+    ///     isn't limited by a consensus layer (because `appeared` includes `pending`, i.e., not `activated` yet)
+    /// @dev Must fit into uint16 (<= 65_535)
+    uint256 appearedValidatorsPerDayLimit;
 }
 
 /// @dev The packed version of the LimitsList struct to be effectively persisted in storage
