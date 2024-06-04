@@ -8,7 +8,6 @@ import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import {
   BurnerStub,
   LidoLocatorMock,
-  LidoStub,
   OracleReportSanityChecker,
   StakingRouterMockForValidatorsCount,
   WithdrawalQueueStub,
@@ -21,7 +20,6 @@ import { Snapshot } from "test/suite";
 describe("OracleReportSanityChecker.sol", () => {
   let oracleReportSanityChecker: OracleReportSanityChecker;
   let lidoLocatorMock: LidoLocatorMock;
-  let lidoMock: LidoStub;
   let burnerMock: BurnerStub;
   let withdrawalQueueMock: WithdrawalQueueStub;
   let originalState: string;
@@ -67,7 +65,6 @@ describe("OracleReportSanityChecker.sol", () => {
 
     // mine 1024 blocks with block duration 12 seconds
     await ethers.provider.send("hardhat_mine", ["0x" + Number(1024).toString(16), "0x" + Number(12).toString(16)]);
-    lidoMock = await ethers.deployContract("LidoStub", []);
     withdrawalQueueMock = await ethers.deployContract("WithdrawalQueueStub");
     burnerMock = await ethers.deployContract("BurnerStub");
     const accountingOracle = await ethers.deployContract("AccountingOracle__MockForSanityChecker", [
@@ -79,7 +76,7 @@ describe("OracleReportSanityChecker.sol", () => {
 
     lidoLocatorMock = await ethers.deployContract("LidoLocatorMock", [
       {
-        lido: await lidoMock.getAddress(),
+        lido: deployer.address,
         depositSecurityModule: deployer.address,
         elRewardsVault: elRewardsVault.address,
         accountingOracle: await accountingOracle.getAddress(),
