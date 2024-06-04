@@ -23,7 +23,6 @@ describe("OracleReportSanityChecker.sol", () => {
 
   const defaultLimitsList = {
     exitedValidatorsPerDayLimit: 55,
-    appearedValidatorsPerDayLimit: 100,
     oneOffCLBalanceDecreaseBPLimit: 5_00, // 5%
     annualBalanceIncreaseBPLimit: 10_00, // 10%
     simulatedShareRateDeviationBPLimit: 2_50, // 2.5%
@@ -32,6 +31,7 @@ describe("OracleReportSanityChecker.sol", () => {
     maxNodeOperatorsPerExtraDataItemCount: 16,
     requestTimestampMargin: 128,
     maxPositiveTokenRebase: 5_000_000, // 0.05%
+    appearedValidatorsPerDayLimit: 100,
   };
 
   const correctLidoOracleReport = {
