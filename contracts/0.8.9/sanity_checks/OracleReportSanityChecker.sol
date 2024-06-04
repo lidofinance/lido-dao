@@ -488,6 +488,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _preCLValidators,
         uint256 _postCLValidators
     ) external {
+        if (msg.sender != LIDO_LOCATOR.lido()) {
+            revert CalledNotFromLido();
+        }
         LimitsList memory limitsList = _limits.unpack();
         uint256 refSlot = IBaseOracle(LIDO_LOCATOR.accountingOracle()).getLastProcessingRefSlot();
 
@@ -922,6 +925,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     error IncorrectCLBalanceDecrease(uint256 negativeCLRebaseSum, uint256 maxNegativeCLRebaseSum);
     error NegativeRebaseFailedCLBalanceMismatch(uint256 reportedValue, uint256 provedValue, uint256 limitBP);
     error NegativeRebaseFailedSecondOpinionReportIsNotReady();
+    error CalledNotFromLido();
 }
 
 library LimitsListPacker {
