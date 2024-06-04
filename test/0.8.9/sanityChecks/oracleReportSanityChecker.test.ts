@@ -7,7 +7,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 import {
-  AccountingOracleMock,
+  AccountingOracle__MockForSanityChecker,
   LidoLocatorMock,
   OracleReportSanityChecker,
   StakingRouterMockForValidatorsCount,
@@ -20,7 +20,7 @@ import { ether } from "lib";
 describe("OracleReportSanityChecker.sol", () => {
   let locator: LidoLocatorMock;
   let checker: OracleReportSanityChecker;
-  let accountingOracle: AccountingOracleMock;
+  let accountingOracle: AccountingOracle__MockForSanityChecker;
   let stakingRouter: StakingRouterMockForValidatorsCount;
   let deployer: HardhatEthersSigner;
   let genesisTime: bigint;
@@ -52,7 +52,11 @@ describe("OracleReportSanityChecker.sol", () => {
   beforeEach(async () => {
     [deployer] = await ethers.getSigners();
 
-    accountingOracle = await ethers.deployContract("AccountingOracleMock", [deployer.address, 12, 1606824023]);
+    accountingOracle = await ethers.deployContract("AccountingOracle__MockForSanityChecker", [
+      deployer.address,
+      12,
+      1606824023,
+    ]);
     genesisTime = await accountingOracle.GENESIS_TIME();
     const sanityChecker = deployer.address;
     const burner = await ethers.deployContract("BurnerStub", []);

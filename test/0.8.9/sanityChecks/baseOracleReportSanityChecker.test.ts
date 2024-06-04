@@ -70,7 +70,11 @@ describe("OracleReportSanityChecker.sol", () => {
     lidoMock = await ethers.deployContract("LidoStub", []);
     withdrawalQueueMock = await ethers.deployContract("WithdrawalQueueStub");
     burnerMock = await ethers.deployContract("BurnerStub");
-    const accountingOracle = await ethers.deployContract("AccountingOracleMock", [deployer.address, 12, 1606824023]);
+    const accountingOracle = await ethers.deployContract("AccountingOracle__MockForSanityChecker", [
+      deployer.address,
+      12,
+      1606824023,
+    ]);
     stakingRouter = await ethers.deployContract("StakingRouterMockForValidatorsCount");
 
     lidoLocatorMock = await ethers.deployContract("LidoLocatorMock", [
