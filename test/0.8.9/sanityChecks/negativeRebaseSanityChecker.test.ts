@@ -40,9 +40,6 @@ describe("OracleReportSanityChecker.sol", () => {
     clBalanceOraclesErrorUpperBPLimit: 74, // 0.74%
   };
 
-  // const log = console.log;
-  const log = () => {};
-
   const gweis = (x: number) => parseUnits(x.toString(), "gwei");
 
   const genAccessControlError = (caller: string, role: string): string => {
@@ -97,9 +94,7 @@ describe("OracleReportSanityChecker.sol", () => {
       expect(locateLocator).to.equal(await locator.getAddress());
 
       const secondsPerSlot = await accountingOracle.SECONDS_PER_SLOT();
-      const genesisTime = await accountingOracle.GENESIS_TIME();
       expect(secondsPerSlot).to.equal(12);
-      log("genesisTime", genesisTime);
     });
 
     it("has compact packed limits representation", async () => {
@@ -297,10 +292,6 @@ describe("OracleReportSanityChecker.sol", () => {
       await expect(checker.checkAccountingOracleReport(0, ether("315"), ether("300"), 0, 0, 0, 10, 10))
         .to.be.revertedWithCustomError(checker, "IncorrectCLBalanceDecrease")
         .withArgs(20n * ether("1"), 7n * ether("1") + 8n * ether("0.101"));
-
-      const res = await checker.getReportDataCount();
-      const res2 = await checker.reportData(0);
-      log("reportData", res, res2);
     });
 
     it(`works for reports close together`, async () => {
