@@ -40,8 +40,8 @@ describe("OracleReportSanityChecker.sol", () => {
     clBalanceOraclesErrorUpperBPLimit: 74, // 0.74%
   };
 
-  const log = console.log;
-  // const log = () => {}
+  // const log = console.log;
+  const log = () => {};
 
   const gweis = (x: number) => parseUnits(x.toString(), "gwei");
 
@@ -373,6 +373,19 @@ describe("OracleReportSanityChecker.sol", () => {
 
       await checker.grantRole(clOraclesRole, deployer.address);
       await expect(checker.setSecondOpinionOracleAndCLBalanceUpperMargin(ZeroAddress, 74)).to.not.be.reverted;
+    });
+  });
+
+  context("OracleReportSanityChecker checkAccountingOracleReport authorization", () => {
+    it("should allow calling from Lido address", async () => {
+      await checker.checkAccountingOracleReport(0, 110 * 1e9, 109.99 * 1e9, 0, 0, 0, 10, 10);
+    });
+
+    it("should not allow calling from non-Lido address", async () => {
+      const [, otherClient] = await ethers.getSigners();
+      await expect(
+        checker.connect(otherClient).checkAccountingOracleReport(0, 110 * 1e9, 110.01 * 1e9, 0, 0, 0, 10, 10),
+      ).to.be.revertedWithCustomError(checker, "CalledNotFromLido");
     });
   });
 });
