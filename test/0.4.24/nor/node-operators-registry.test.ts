@@ -487,6 +487,81 @@ describe("NodeOperatorsRegistry", () => {
       expect(noSummary.targetLimitMode).to.equal(targetLimitMode2);
     });
   });
+
+  context("getRewardDistributionState()", () => {
+    it("returns correct reward distribution state", async () => {
+      await nor.testing_setRewardDistributionStatus(RewardDistributionState.ReadyForDistribution);
+      expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.ReadyForDistribution);
+
+      await nor.testing_setRewardDistributionStatus(RewardDistributionState.TransferredToModule);
+      expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.TransferredToModule);
+
+      await nor.testing_setRewardDistributionStatus(RewardDistributionState.Distributed);
+      expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.Distributed);
+    });
+  });
+
+  context("distributeReward()", () => {
+    it('distribute reward when module not in "ReadyForDistribution" status', async () => {
+      await nor.testing_setRewardDistributionStatus(RewardDistributionState.ReadyForDistribution);
+
+      expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.ReadyForDistribution);
+      await expect(nor.distributeReward())
+        .to.emit(nor, "RewardDistributionStateChanged")
+        .withArgs(RewardDistributionState.Distributed);
+      expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.Distributed);
+    });
+
+    it('reverts with "DISTRIBUTION_NOT_READY" error when module not in "ReadyForDistribution" status', async () => {
+      await nor.testing_setRewardDistributionStatus(RewardDistributionState.TransferredToModule);
+      await expect(nor.distributeReward()).to.be.revertedWith("DISTRIBUTION_NOT_READY");
+
+      await nor.testing_setRewardDistributionStatus(RewardDistributionState.Distributed);
+      await expect(nor.distributeReward()).to.be.revertedWith("DISTRIBUTION_NOT_READY");
+    });
+  });
+
+  describe("onRewardsMinted()", () => {
+    it("reverts with no STAKING_ROUTER_ROLE", async () => {
+      expect(await hasPermission(dao, nor, "STAKING_ROUTER_ROLE", stranger)).to.be.false;
+      await expect(nor.connect(stranger).onRewardsMinted(123)).to.be.revertedWith("APP_AUTH_FAILED");
+    });
+
+    it("no reverts with STAKING_ROUTER_ROLE", async () => {
+      expect(await hasPermission(dao, nor, "STAKING_ROUTER_ROLE", stakingRouter)).to.be.true;
+      await nor.connect(stakingRouter).onRewardsMinted(123);
+    });
+
+    it("emits RewardDistributionStateChanged event", async () => {
+      expect(await hasPermission(dao, nor, "STAKING_ROUTER_ROLE", stakingRouter)).to.be.true;
+      await expect(nor.connect(stakingRouter).onRewardsMinted(123))
+        .to.emit(nor, "RewardDistributionStateChanged")
+        .withArgs(RewardDistributionState.TransferredToModule);
+      expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.TransferredToModule);
+    });
+  });
+
+  describe("onExitedAndStuckValidatorsCountsUpdated()", () => {
+    it("reverts with no STAKING_ROUTER_ROLE", async () => {
+      expect(await hasPermission(dao, nor, "STAKING_ROUTER_ROLE", stranger)).to.be.false;
+      await expect(nor.connect(stranger).onExitedAndStuckValidatorsCountsUpdated()).to.be.revertedWith(
+        "APP_AUTH_FAILED",
+      );
+    });
+
+    it("no reverts with STAKING_ROUTER_ROLE", async () => {
+      expect(await hasPermission(dao, nor, "STAKING_ROUTER_ROLE", stakingRouter)).to.be.true;
+      await nor.connect(stakingRouter).onExitedAndStuckValidatorsCountsUpdated();
+    });
+
+    it("emits ExitedAndStuckValidatorsCountsUpdated event", async () => {
+      expect(await hasPermission(dao, nor, "STAKING_ROUTER_ROLE", stakingRouter)).to.be.true;
+      await expect(nor.connect(stakingRouter).onExitedAndStuckValidatorsCountsUpdated())
+        .to.emit(nor, "RewardDistributionStateChanged")
+        .withArgs(RewardDistributionState.ReadyForDistribution);
+      expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.ReadyForDistribution);
+    });
+  });
 });
 
 interface NodeOperatorConfig {
