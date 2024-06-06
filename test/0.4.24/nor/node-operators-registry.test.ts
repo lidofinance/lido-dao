@@ -64,6 +64,12 @@ const NODE_OPERATORS: NodeOperatorConfig[] = [
   },
 ];
 
+enum RewardDistributionState {
+  TransferredToModule, // New reward portion minted and transferred to the module
+  ReadyForDistribution, // Operators' statistics updated, reward ready for distribution
+  Distributed, // Reward distributed among operators
+}
+
 describe("NodeOperatorsRegistry", () => {
   let deployer: HardhatEthersSigner;
   let user: HardhatEthersSigner;
@@ -144,6 +150,10 @@ describe("NodeOperatorsRegistry", () => {
       expect(await nor.getContractVersion()).to.be.equal(3);
     });
 
+    it("sets reward distribution state correctly", async () => {
+      expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.Distributed);
+    });
+
     it("sets hasInitialized() to true", async () => {
       expect(await nor.hasInitialized()).to.be.true;
     });
@@ -208,6 +218,41 @@ describe("NodeOperatorsRegistry", () => {
       await expect(nor.finalizeUpgrade_v2(locator, CURATED_TYPE, PENALTY_DELAY)).to.be.revertedWith(
         "UNEXPECTED_CONTRACT_VERSION",
       );
+    });
+  });
+
+  context("finalizeUpgrade_v3()", () => {
+    beforeEach(async () => {
+      // reset version there to test upgrade finalization
+      await nor.testing_setBaseVersion(2);
+      await nor.testing_setRewardDistributionStatus(0);
+    });
+
+    it("fails with CONTRACT_NOT_INITIALIZED error when called on implementation", async () => {
+      await expect(impl.finalizeUpgrade_v3()).to.be.revertedWith("CONTRACT_NOT_INITIALIZED");
+    });
+
+    it("fails with CONTRACT_NOT_INITIALIZED error when nor instance not initialized yet", async () => {
+      const appProxy = await addAragonApp({
+        dao,
+        name: "new-node-operators-registry",
+        impl,
+        rootAccount: deployer,
+      });
+      const registry = NodeOperatorsRegistryMock__factory.connect(appProxy, deployer);
+      await expect(registry.finalizeUpgrade_v3()).to.be.revertedWith("CONTRACT_NOT_INITIALIZED");
+    });
+
+    it("sets correct contract version", async () => {
+      await nor.finalizeUpgrade_v3();
+      expect(await nor.getContractVersion()).to.be.equal(3);
+      expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.Distributed);
+    });
+
+    it("reverts with error UNEXPECTED_CONTRACT_VERSION when called on already initialized contract", async () => {
+      await nor.finalizeUpgrade_v3();
+      expect(await nor.getContractVersion()).to.be.equal(3);
+      await expect(nor.finalizeUpgrade_v3()).to.be.revertedWith("UNEXPECTED_CONTRACT_VERSION");
     });
   });
 
