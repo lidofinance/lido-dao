@@ -6521,17 +6521,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hardhat-tracer@npm:2.8.0":
-  version: 2.8.0
-  resolution: "hardhat-tracer@npm:2.8.0"
+"hardhat-tracer@npm:3.0.1":
+  version: 3.0.1
+  resolution: "hardhat-tracer@npm:3.0.1"
   dependencies:
     chalk: "npm:^4.1.2"
     debug: "npm:^4.3.4"
     ethers: "npm:^5.6.1"
+    semver: "npm:^7.6.2"
   peerDependencies:
     chai: 4.x
-    hardhat: ">=2.16 <3.x"
-  checksum: 10c0/78d2097736b1c22fc0c3c161f72e94bdd7aadb026bc1033f90701c22ec66f907885a475e67e042d2b2b35756b835f34d79f790ec02a04c592a7e6fb20d6f47f6
+    hardhat: ">=2.22.5 <3.x"
+  checksum: 10c0/a03b871a6beed23b006cdfccc7326cecf0a596f319502da668cf63701d2adc2c0e1e8140e596e75714ca5aa091e45e1674f3eb3cc4d34eba2ab20a8ad554fbe0
   languageName: node
   linkType: hard
 
@@ -7906,13 +7907,13 @@ __metadata:
     hardhat-contract-sizer: "npm:^2.10.0"
     hardhat-gas-reporter: "npm:^1.0.10"
     hardhat-ignore-warnings: "npm:^0.2.11"
-    hardhat-tracer: "npm:2.8.0"
+    hardhat-tracer: "npm:3.0.1"
     hardhat-watcher: "npm:2.5.0"
     husky: "npm:^9.0.11"
     lint-staged: "npm:^15.2.5"
     openzeppelin-solidity: "npm:2.0.0"
     prettier: "npm:^3.3.1"
-    solhint: "npm:^4.5.4"
+    solhint: "npm:^5.0.1"
     solhint-plugin-lido: "npm:^0.0.4"
     solidity-coverage: "npm:^0.8.12"
     ts-node: "npm:^10.9.2"
@@ -10164,6 +10165,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"semver@npm:^7.6.2":
+  version: 7.6.2
+  resolution: "semver@npm:7.6.2"
+  bin:
+    semver: bin/semver.js
+  checksum: 10c0/97d3441e97ace8be4b1976433d1c32658f6afaff09f143e52c593bae7eef33de19e3e369c88bd985ce1042c6f441c80c6803078d1de2a9988080b66684cbb30c
+  languageName: node
+  linkType: hard
+
 "semver@npm:~5.4.1":
   version: 5.4.1
   resolution: "semver@npm:5.4.1"
@@ -10441,9 +10451,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"solhint@npm:^4.5.4":
-  version: 4.5.4
-  resolution: "solhint@npm:4.5.4"
+"solhint@npm:^5.0.1":
+  version: 5.0.1
+  resolution: "solhint@npm:5.0.1"
   dependencies:
     "@solidity-parser/parser": "npm:^0.18.0"
     ajv: "npm:^6.12.6"
@@ -10469,7 +10479,7 @@ __metadata:
       optional: true
   bin:
     solhint: solhint.js
-  checksum: 10c0/85bc62536c6b1269403b2af369dcfc7c63d07c6efb994f4e3c4e7e96d3511a64ab10c68635c6676e09eee289104b5d349091960994e990cacf240497170c8aed
+  checksum: 10c0/0da4ce2aca4fcd2bb74a7d656f359940cb5c7059101db7d5f25ef31708763a8e8362480c20ee8dd525ded6ec897b328aa0e9b86b79ffaa59585c5c59722612dc
   languageName: node
   linkType: hard
 
