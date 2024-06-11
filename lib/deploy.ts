@@ -147,6 +147,8 @@ export async function deployImplementation(
   return contract;
 }
 
+export async function deployLibraru() {}
+
 export async function deployBehindOssifiableProxy(
   nameInState: Sk | null,
   artifactName: string,
