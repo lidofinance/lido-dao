@@ -27,6 +27,7 @@ async function main() {
   const hashConsensusForAccountingParams = state[Sk.hashConsensusForAccountingOracle].deployParameters;
   const hashConsensusForExitBusParams = state[Sk.hashConsensusForValidatorsExitBusOracle].deployParameters;
   const withdrawalQueueERC721Params = state[Sk.withdrawalQueueERC721].deployParameters;
+  const minFirstAllocationStrategyAddress = state[Sk.minFirstAllocationStrategy].address;
 
   const proxyContractsOwner = deployer;
   const admin = deployer;
@@ -165,12 +166,17 @@ async function main() {
   //
   // === StakingRouter ===
   //
+
   const stakingRouter = await deployBehindOssifiableProxy(
     Sk.stakingRouter,
     "StakingRouter",
     proxyContractsOwner,
     deployer,
     [depositContract],
+    null,
+    {
+      libraries: { MinFirstAllocationStrategy: minFirstAllocationStrategyAddress },
+    },
   );
 
   //
