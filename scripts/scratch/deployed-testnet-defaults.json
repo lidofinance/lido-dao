@@ -94,8 +94,7 @@
   },
   "depositSecurityModule": {
     "deployParameters": {
-      "maxDepositsPerBlock": 150,
-      "minDepositBlockDistance": 5,
+      "maxOperatorsPerUnvetting": 200,
       "pauseIntentValidityPeriodBlocks": 6646,
       "usePredefinedAddressInstead": null
     }

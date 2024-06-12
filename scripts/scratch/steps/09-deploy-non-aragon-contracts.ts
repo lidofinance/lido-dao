@@ -178,15 +178,13 @@ async function main() {
   //
   let depositSecurityModuleAddress = depositSecurityModuleParams.usePredefinedAddressInstead;
   if (depositSecurityModuleAddress === null) {
-    const { maxDepositsPerBlock, minDepositBlockDistance, pauseIntentValidityPeriodBlocks } =
-      depositSecurityModuleParams;
+    const { maxOperatorsPerUnvetting, pauseIntentValidityPeriodBlocks } = depositSecurityModuleParams;
     const depositSecurityModuleArgs = [
       lidoAddress,
       depositContract,
       stakingRouter.address,
-      maxDepositsPerBlock,
-      minDepositBlockDistance,
       pauseIntentValidityPeriodBlocks,
+      maxOperatorsPerUnvetting,
     ];
     depositSecurityModuleAddress = (
       await deployWithoutProxy(Sk.depositSecurityModule, "DepositSecurityModule", deployer, depositSecurityModuleArgs)
