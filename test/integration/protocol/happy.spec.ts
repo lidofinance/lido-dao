@@ -4,9 +4,9 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { ether, impersonate } from "lib";
+import { BigIntMath, ether, impersonate } from "lib";
 
-import { Snapshot } from "test/suite";
+import { logBlock, Snapshot } from "test/suite";
 import { Contracts, Protocol } from "test/suite/protocol";
 
 describe("Protocol all-round happy path", () => {
@@ -56,7 +56,8 @@ describe("Protocol all-round happy path", () => {
       await stEthHolder.sendTransaction({ to: await contracts.lido.getAddress(), value: ether("10000") });
     });
 
-    it("finalize all current requests", async () => {
+    it("passes", async () => {
+      const amount = ether("100");
       const withdrawalQueueAddress = await contracts.withdrawalQueue.getAddress();
       const lastFinalizedRequestId = await contracts.withdrawalQueue.getLastFinalizedRequestId();
       const lastRequestId = await contracts.withdrawalQueue.getLastRequestId();
@@ -72,9 +73,78 @@ describe("Protocol all-round happy path", () => {
       await contracts.withdrawalQueue.connect(stEthHolder).requestWithdrawals([1000n], stEthHolder);
 
       const strangerAddress = stranger.address;
-      const strangerBalance = await ethers.provider.getBalance(strangerAddress);
+      const strangerBalanceBeforeSubmit = await ethers.provider.getBalance(strangerAddress);
+      const strangerStEthBalanceBeforeSubmit = await contracts.lido.balanceOf(strangerAddress);
 
-      console.log(`Stranger: ${strangerAddress} has ${ethers.formatEther(strangerBalance)} ETH`);
+      logBlock("Stranger before submit", {
+        address: strangerAddress,
+        ETH: ethers.formatEther(strangerBalanceBeforeSubmit),
+        stETH: ethers.formatEther(strangerStEthBalanceBeforeSubmit),
+      });
+
+      expect(strangerStEthBalanceBeforeSubmit).to.be.equal(0n);
+
+      // # ensure SimpleDVT has some keys to deposit
+      // fill_simple_dvt_ops_vetted_keys(stranger, 3, 5)
+
+      const stakeLimitInfoBefore = await contracts.lido.getStakeLimitFullInfo();
+
+      const growthPerBlock = stakeLimitInfoBefore.maxStakeLimit;
+      const totalSupplyBeforeSubmit = await contracts.lido.totalSupply();
+      const bufferedEtherBeforeSubmit = await contracts.lido.getBufferedEther();
+      const stakingLimitBeforeSubmit = await contracts.lido.getCurrentStakeLimit();
+      const heightBeforeSubmit = await ethers.provider.getBlockNumber();
+
+      logBlock("Before submit", {
+        "Chain height": heightBeforeSubmit.toString(),
+        "Growth per block": ethers.formatEther(growthPerBlock),
+        "Total supply": ethers.formatEther(totalSupplyBeforeSubmit),
+        "Buffered ether": ethers.formatEther(bufferedEtherBeforeSubmit),
+        "Staking limit": ethers.formatEther(stakingLimitBeforeSubmit),
+      });
+
+      const tx = await contracts.lido.connect(stranger).submit(ZeroAddress, { value: amount, from: stranger });
+      const receipt = await tx.wait();
+
+      const stEthBalanceAfterSubmit = await contracts.lido.balanceOf(strangerAddress);
+      const strangerBalanceAfterSubmit = await ethers.provider.getBalance(strangerAddress);
+
+      logBlock("Stranger after submit", {
+        ETH: ethers.formatEther(strangerBalanceAfterSubmit),
+        stETH: ethers.formatEther(stEthBalanceAfterSubmit),
+      });
+
+      const balanceChange = BigIntMath.abs(strangerBalanceAfterSubmit - strangerBalanceBeforeSubmit);
+      const gasUsed = receipt!.cumulativeGasUsed * receipt!.gasPrice!;
+      const balanceChangeDiff = BigIntMath.abs(balanceChange - amount - gasUsed);
+      expect(balanceChangeDiff).to.be.lt(10n).and.to.be.gte(0); // 0 <= x < 10
+
+      const stEthBalanceChange = BigIntMath.abs(stEthBalanceAfterSubmit - strangerStEthBalanceBeforeSubmit);
+      const stEthBalanceChangeDiff = BigIntMath.abs(stEthBalanceChange - amount);
+      expect(stEthBalanceChangeDiff).to.be.lt(10n).and.to.be.gte(0); // 0 <= x < 10
+
+      logBlock("Balance changes", {
+        "ETH (Wei)": balanceChange.toString(),
+        "stETH (stWei)": stEthBalanceChange.toString(),
+      });
+
+      const stakeLimitInfoAfter = await contracts.lido.getStakeLimitFullInfo();
+      const growthPerBlockAfterSubmit = stakeLimitInfoAfter.maxStakeLimit;
+      const totalSupplyAfterSubmit = await contracts.lido.totalSupply();
+      const bufferedEtherAfterSubmit = await contracts.lido.getBufferedEther();
+      const stakingLimitAfterSubmit = await contracts.lido.getCurrentStakeLimit();
+
+      const heightAfterSubmit = await ethers.provider.getBlockNumber();
+
+      logBlock("After submit", {
+        "Chain height": heightAfterSubmit.toString(),
+        "Growth per block": ethers.formatEther(growthPerBlockAfterSubmit),
+        "Total supply": ethers.formatEther(totalSupplyAfterSubmit),
+        "Buffered ether": ethers.formatEther(bufferedEtherAfterSubmit),
+        "Staking limit": ethers.formatEther(stakingLimitAfterSubmit),
+      });
+
+      // const sharesToBeMinted = await contracts.lido.getSharesByPooledEth(amount);
     });
   });
 });
