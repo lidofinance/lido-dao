@@ -78,7 +78,6 @@ async function main() {
     admin,
     [
       sanityChecks.exitedValidatorsPerDayLimit,
-      sanityChecks.appearedValidatorsPerDayLimit,
       sanityChecks.oneOffCLBalanceDecreaseBPLimit,
       sanityChecks.annualBalanceIncreaseBPLimit,
       sanityChecks.simulatedShareRateDeviationBPLimit,
@@ -87,6 +86,7 @@ async function main() {
       sanityChecks.maxNodeOperatorsPerExtraDataItemCount,
       sanityChecks.requestTimestampMargin,
       sanityChecks.maxPositiveTokenRebase,
+      sanityChecks.appearedValidatorsPerDayLimit,
     ],
     [[], [], [], [], [], [], [], [], [], [], []],
   ];
