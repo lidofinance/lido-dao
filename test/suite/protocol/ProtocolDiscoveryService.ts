@@ -36,7 +36,7 @@ export abstract class ProtocolDiscoveryService {
       this.agentAddress = process.env.LOCAL_AGENT_ADDRESS || "";
       this.votingAddress = process.env.LOCAL_VOTING_ADDRESS || "";
     } else if (this.isMainnetForkNetwork()) {
-      this.locatorAddress = process.env.MAINNET_FORK_LOCATOR_ADDRESS || "";
+      this.locatorAddress = process.env.MAINNET_LOCATOR_ADDRESS || "";
       this.agentAddress = process.env.MAINNET_AGENT_ADDRESS || "";
       this.votingAddress = process.env.MAINNET_VOTING_ADDRESS || "";
     } else {
@@ -47,9 +47,9 @@ export abstract class ProtocolDiscoveryService {
       return `${address} address is not set, please set it in the environment variables: ${vars}`;
     };
 
-    if (!this.locatorAddress) throw new Error(error("Locator", "LOCAL_LOCATOR_ADDRESS, MAINNET_FORK_LOCATOR_ADDRESS"));
-    if (!this.agentAddress) throw new Error(error("Agent", "LOCAL_AGENT_ADDRESS, MAINNET_FORK_AGENT_ADDRESS"));
-    if (!this.votingAddress) throw new Error(error("Voting", "LOCAL_VOTING_ADDRESS, MAINNET_FORK_VOTING_ADDRESS"));
+    if (!this.locatorAddress) throw new Error(error("Locator", "LOCAL_LOCATOR_ADDRESS, MAINNET_LOCATOR_ADDRESS"));
+    if (!this.agentAddress) throw new Error(error("Agent", "LOCAL_AGENT_ADDRESS, MAINNET_AGENT_ADDRESS"));
+    if (!this.votingAddress) throw new Error(error("Voting", "LOCAL_VOTING_ADDRESS, MAINNET_VOTING_ADDRESS"));
   }
 
   async locator(): Promise<LidoLocator> {
@@ -107,11 +107,11 @@ export abstract class ProtocolDiscoveryService {
     return contract as unknown as LoadedContract<ContractType>;
   }
 
-  private isLocalNetwork(): boolean {
+  public isLocalNetwork(): boolean {
     return hre.network.name === "local";
   }
 
-  private isMainnetForkNetwork(): boolean {
+  public isMainnetForkNetwork(): boolean {
     return hre.network.name === "mainnet-fork";
   }
 }

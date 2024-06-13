@@ -49,9 +49,14 @@ describe("Protocol all-round happy path", () => {
       await protocol.unpauseWithdrawalQueue();
 
       const signers = await ethers.getSigners();
+
       ethHolder = await impersonate(signers[0].address, ether("1000000"));
       stEthHolder = await impersonate(signers[1].address, ether("1000000"));
       stranger = await impersonate(signers[2].address);
+
+      // logBlock("Stake limit", {
+      //   "Current stake limit": ethers.formatEther(await contracts.lido.getCurrentStakeLimit()),
+      // });
 
       await stEthHolder.sendTransaction({ to: await contracts.lido.getAddress(), value: ether("10000") });
     });
@@ -59,13 +64,29 @@ describe("Protocol all-round happy path", () => {
     it("passes", async () => {
       const amount = ether("100");
       const withdrawalQueueAddress = await contracts.withdrawalQueue.getAddress();
-      const lastFinalizedRequestId = await contracts.withdrawalQueue.getLastFinalizedRequestId();
-      const lastRequestId = await contracts.withdrawalQueue.getLastRequestId();
+      let lastFinalizedRequestId = await contracts.withdrawalQueue.getLastFinalizedRequestId();
+      let lastRequestId = await contracts.withdrawalQueue.getLastRequestId();
+
+      // logBlock("Stake limit", {
+      //   "Current stake limit": ethers.formatEther(await contracts.lido.getCurrentStakeLimit()),
+      // });
 
       while (lastFinalizedRequestId != lastRequestId) {
         // report_tx = oracle_report()[0] // TODO: implement
+
+        [lastFinalizedRequestId, lastRequestId] = await Promise.all([
+          contracts.withdrawalQueue.getLastFinalizedRequestId(),
+          await contracts.withdrawalQueue.getLastRequestId(),
+        ]);
+
+        logBlock("Withdrawal queue", {
+          "Last finalized request ID": lastFinalizedRequestId.toString(),
+          "Last request ID": lastRequestId.toString(),
+        });
+
         await contracts.lido.submit(ZeroAddress, { value: ether("10000"), from: ethHolder });
       }
+
       await contracts.lido.submit(ZeroAddress, { value: ether("10000"), from: ethHolder });
 
       // const uncountedStETHShares = await contracts.lido.balanceOf(withdrawalQueueAddress);
