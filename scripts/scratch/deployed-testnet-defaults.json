@@ -78,7 +78,7 @@
   },
   "accountingOracle": {
     "deployParameters": {
-      "consensusVersion": 1
+      "consensusVersion": 2
     }
   },
   "hashConsensusForValidatorsExitBusOracle": {
