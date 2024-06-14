@@ -184,6 +184,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     ILidoLocator private immutable LIDO_LOCATOR;
     uint256 private immutable GENESIS_TIME;
     uint256 private immutable SECONDS_PER_SLOT;
+    address private immutable LIDO_ADDRESS;
 
     LimitsListPacked private _limits;
 
@@ -207,6 +208,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         address accountingOracle = LIDO_LOCATOR.accountingOracle();
         GENESIS_TIME = IBaseOracle(accountingOracle).GENESIS_TIME();
         SECONDS_PER_SLOT = IBaseOracle(accountingOracle).SECONDS_PER_SLOT();
+        LIDO_ADDRESS = LIDO_LOCATOR.lido();
 
         _updateLimits(_limitsList);
 
@@ -488,7 +490,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _preCLValidators,
         uint256 _postCLValidators
     ) external {
-        if (msg.sender != LIDO_LOCATOR.lido()) {
+        if (msg.sender != LIDO_ADDRESS) {
             revert CalledNotFromLido();
         }
         LimitsList memory limitsList = _limits.unpack();
