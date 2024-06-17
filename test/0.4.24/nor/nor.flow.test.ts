@@ -5,19 +5,19 @@ import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import {
-    ACL,
-    Kernel,
-    Lido,
-    LidoLocator,
-    LidoLocator__factory,
-    MinFirstAllocationStrategyConsumerMockLegacyVersion__factory,
-    NodeOperatorsRegistryMock,
-    NodeOperatorsRegistryMock__factory,
+  ACL,
+  Kernel,
+  Lido,
+  LidoLocator,
+  LidoLocator__factory,
+  NodeOperatorsRegistryMock,
+  NodeOperatorsRegistryMock__factory,
 } from "typechain-types";
 
-import { addAragonApp, deployLidoDao, hasPermission, randomAddress } from "lib";
-import { certainAddress, dummyLocator, proxify, Snapshot } from "lib";
-import { ether } from "lib/units";
+import { certainAddress, randomAddress } from "lib";
+
+import { addAragonApp, deployLidoDao } from "test/deploy";
+import { Snapshot } from "test/suite";
 
 describe("NodeOperatorsRegistry", () => {
   let deployer: HardhatEthersSigner;

@@ -13,8 +13,11 @@ import {
   Steth__MinimalMock__factory
 } from "typechain-types";
 
-import { certainAddress, dummyLocator, proxify, Snapshot } from "lib";
+import { proxify } from "lib/proxy";
 import { ether } from "lib/units";
+
+import { deployLidoLocator } from "test/deploy";
+import { Snapshot } from "test/suite";
 
 describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
   let deployer: HardhatEthersSigner;
@@ -46,7 +49,7 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
 
   context("initialize", () => {
     beforeEach(async () => {
-      locator = await dummyLocator({ lido: lido });
+      locator = await deployLidoLocator({ lido: lido });
     });
 
     it("Reverts if Locator is zero address", async () => {
@@ -115,7 +118,7 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
     let preInitState: string;
 
     beforeEach(async () => {
-      locator = await dummyLocator({ lido: lido });
+      locator = await deployLidoLocator({ lido: lido });
       burnerAddress = await locator.burner();
 
       preInitState = await Snapshot.take();
