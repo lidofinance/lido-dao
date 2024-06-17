@@ -6,7 +6,7 @@ import "@typechain/hardhat";
 
 import "solidity-coverage";
 import "tsconfig-paths/register";
-// import "hardhat-tracer"; // doesn't work with hardhat >= 2.21.0
+import "hardhat-tracer";
 import "hardhat-watcher";
 import "hardhat-ignore-warnings";
 import "hardhat-contract-sizer";
@@ -14,7 +14,7 @@ import { globSync } from "glob";
 import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/task-names";
 import { HardhatUserConfig, subtask } from "hardhat/config";
 
-import { mochaRootHooks } from "./test/setup";
+import { mochaRootHooks } from "test/hooks";
 
 const RPC_URL: string = process.env.RPC_URL || "";
 const HARDHAT_FORKING_URL = process.env.HARDHAT_FORKING_URL || "";
