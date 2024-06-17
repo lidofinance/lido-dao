@@ -44,13 +44,10 @@ describe("NodeOperatorsRegistry", () => {
     const contractVersion = 2n;
     const moduleType = encodeBytes32String("curated-onchain-v1");
 
-    let burnerAddress: string;
     let locator: LidoLocator;
 
     beforeEach(async () => {
       locator = await dummyLocator({ lido: lido });
-
-      burnerAddress = await locator.burner();
     });
 
     it("Reverts if Locator is zero address", async () => {
@@ -80,7 +77,19 @@ describe("NodeOperatorsRegistry", () => {
       );
     });
 
+    it("Reverts if has been upgraded to v2 before", async () => {
+      const MAX_STUCK_PENALTY_DELAY = await nor.MAX_STUCK_PENALTY_DELAY();
+
+      await nor.mock__initialize(0n);
+      await nor.finalizeUpgrade_v2(locator, encodeBytes32String("curated-onchain-v1"), MAX_STUCK_PENALTY_DELAY);
+
+      await expect(nor.initialize(locator, moduleType, MAX_STUCK_PENALTY_DELAY)).to.be.revertedWith(
+        "INIT_ALREADY_INITIALIZED",
+      );
+    });
+
     it("Makes the contract initialized to v2", async () => {
+      const burnerAddress = await locator.burner();
       const latestBlock = BigInt(await time.latestBlock());
 
       await expect(nor.initialize(locator, moduleType, 86400n))
@@ -102,7 +111,80 @@ describe("NodeOperatorsRegistry", () => {
     });
   });
 
-  context("finalizeUpgrade_v2", () => {});
+  context("finalizeUpgrade_v2", () => {
+    const contractVersion = 2n;
+    const moduleType = encodeBytes32String("curated-onchain-v1");
+
+    let burnerAddress: string;
+    let locator: LidoLocator;
+    let preInitState: string;
+
+    beforeEach(async () => {
+      locator = await dummyLocator({ lido: lido });
+      burnerAddress = await locator.burner();
+
+      preInitState = await Snapshot.take();
+      await nor.mock__initialize(0n);
+    });
+
+    it("Reverts if Locator is zero address", async () => {
+      await expect(nor.finalizeUpgrade_v2(ZeroAddress, moduleType, 43200n)).to.be.reverted;
+    });
+
+    it("Reverts if stuck penalty delay exceeds MAX_STUCK_PENALTY_DELAY", async () => {
+      const MAX_STUCK_PENALTY_DELAY = await nor.MAX_STUCK_PENALTY_DELAY();
+      await expect(nor.finalizeUpgrade_v2(locator, "curated-onchain-v1", MAX_STUCK_PENALTY_DELAY + 1n));
+    });
+
+    it("Reverts if hasn't been initialized yet", async () => {
+      await Snapshot.restore(preInitState);
+
+      const MAX_STUCK_PENALTY_DELAY = await nor.MAX_STUCK_PENALTY_DELAY();
+      await expect(nor.finalizeUpgrade_v2(locator, moduleType, MAX_STUCK_PENALTY_DELAY)).to.be.revertedWith(
+        "CONTRACT_NOT_INITIALIZED",
+      );
+    })
+
+    it("Reverts if already initialized to v2", async () => {
+      await Snapshot.restore(preInitState);
+      const MAX_STUCK_PENALTY_DELAY = await nor.MAX_STUCK_PENALTY_DELAY();
+      await nor.initialize(locator, encodeBytes32String("curated-onchain-v1"), MAX_STUCK_PENALTY_DELAY);
+
+      await expect(nor.finalizeUpgrade_v2(locator, moduleType, MAX_STUCK_PENALTY_DELAY)).to.be.revertedWith(
+        "UNEXPECTED_CONTRACT_VERSION",
+      );
+    });
+
+    it("Reverts if already upgraded to v2", async () => {
+      const MAX_STUCK_PENALTY_DELAY = await nor.MAX_STUCK_PENALTY_DELAY();
+      await nor.finalizeUpgrade_v2(locator, encodeBytes32String("curated-onchain-v1"), MAX_STUCK_PENALTY_DELAY);
+
+      await expect(nor.finalizeUpgrade_v2(locator, moduleType, MAX_STUCK_PENALTY_DELAY)).to.be.revertedWith(
+        "UNEXPECTED_CONTRACT_VERSION",
+      );
+    });
+
+    it("Makes the contract upgraded to v2", async () => {
+      const latestBlock = BigInt(await time.latestBlock());
+
+      await expect(nor.finalizeUpgrade_v2(locator, moduleType, 86400n))
+        .to.emit(nor, "ContractVersionSet")
+        .withArgs(contractVersion)
+        .and.to.emit(nor, "StuckPenaltyDelayChanged")
+        .withArgs(86400n)
+        .and.to.emit(nor, "LocatorContractSet")
+        .withArgs(await locator.getAddress())
+        .and.to.emit(nor, "StakingModuleTypeSet")
+        .withArgs(moduleType);
+
+      expect(await nor.getLocator()).to.equal(await locator.getAddress());
+      expect(await nor.getInitializationBlock()).to.equal(latestBlock);
+      expect(await lido.allowance(await nor.getAddress(), burnerAddress)).to.equal(MaxUint256);
+      expect(await nor.getStuckPenaltyDelay()).to.equal(86400n);
+      expect(await nor.getContractVersion()).to.equal(contractVersion);
+      expect(await nor.getType()).to.equal(moduleType);
+    });
+  });
 
   context("addNodeOperator", () => {});
 
