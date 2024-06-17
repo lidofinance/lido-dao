@@ -257,7 +257,7 @@ describe("OracleReportSanityChecker.sol", () => {
       });
       await expect(checker.checkAccountingOracleReport(0, ether("330"), ether("300"), 0, 0, 0, 10, 10))
         .to.emit(checker, "NegativeCLRebaseConfirmed")
-        .withArgs(refSlot, ether("300"));
+        .withArgs(refSlot, ether("300"), ether("0"));
     });
 
     it("works with staking router reports exited validators at day 18 and 54", async () => {
@@ -331,7 +331,7 @@ describe("OracleReportSanityChecker.sol", () => {
       });
       await expect(checker.checkAccountingOracleReport(0, ether("330"), ether("299"), 0, 0, 0, 10, 10))
         .to.emit(checker, "NegativeCLRebaseConfirmed")
-        .withArgs(refSlot, ether("299"));
+        .withArgs(refSlot, ether("299"), ether("0"));
 
       // Second opinion balance is slightly less than general Oracle's (0.01%) - should fail
       await secondOracle.addReport(refSlot, {

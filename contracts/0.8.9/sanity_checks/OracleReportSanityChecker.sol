@@ -734,7 +734,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             if (oracleWithdrawalVaultBalance != _withdrawalVaultBalance) {
                 revert NegativeRebaseFailedWithdrawalVaultBalanceMismatch(_withdrawalVaultBalance, oracleWithdrawalVaultBalance);
             }
-            emit NegativeCLRebaseConfirmed(_refSlot, _postCLBalance);
+            emit NegativeCLRebaseConfirmed(_refSlot, _postCLBalance, _withdrawalVaultBalance);
         } else {
             revert NegativeRebaseFailedSecondOpinionReportIsNotReady();
         }
@@ -913,7 +913,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     event InitialSlashingAmountSet(uint256 initialSlashingAmountPWei);
     event InactivityPenaltiesAmountSet(uint256 inactivityPenaltiesAmountPWei);
     event CLBalanceOraclesErrorUpperBPLimitSet(uint256 clBalanceOraclesErrorUpperBPLimit);
-    event NegativeCLRebaseConfirmed(uint256 refSlot, uint256 clBalanceWei);
+    event NegativeCLRebaseConfirmed(uint256 refSlot, uint256 clBalanceWei, uint256 withdrawalVaultBalance);
     event NegativeCLRebaseAccepted(uint256 refSlot, uint256 clBalance, uint256 clBalanceDecrease, uint256 clBalanceMaxDecrease);
 
     error IncorrectLimitValue(uint256 value, uint256 minAllowedValue, uint256 maxAllowedValue);
