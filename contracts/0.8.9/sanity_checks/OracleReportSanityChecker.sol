@@ -45,7 +45,13 @@ interface ISecondOpinionOracle {
     function getReport(uint256 refSlot)
         external
         view
-        returns (bool success, uint256 clBalanceGwei, uint256 totalDepositedValidators, uint256 totalExitedValidators);
+        returns (
+            bool success,
+            uint256 clBalanceGwei,
+            uint256 withdrawalVaultBalance,
+            uint256 totalDepositedValidators,
+            uint256 totalExitedValidators
+        );
 }
 
 interface IStakingRouter {
@@ -675,7 +681,6 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _postCLValidators,
         uint256 _refSlot
     ) internal {
-        uint256 unifiedPostCLBalance = _postCLBalance + _withdrawalVaultBalance;
         uint256 reportTimestamp = GENESIS_TIME + _refSlot * SECONDS_PER_SLOT;
 
         // Checking exitedValidators against StakingRouter
@@ -688,12 +693,12 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             stakingRouterExitedValidators += summary.totalExitedValidators;
         }
 
-        if (_preCLBalance <= unifiedPostCLBalance) {
+        if (_preCLBalance <= _postCLBalance + _withdrawalVaultBalance) {
             _addReportData(reportTimestamp, stakingRouterExitedValidators, 0);
             // If the CL balance is not decreased, we don't need to check anyting here
             return;
         }
-        _addReportData(reportTimestamp, stakingRouterExitedValidators, _preCLBalance - unifiedPostCLBalance);
+        _addReportData(reportTimestamp, stakingRouterExitedValidators, _preCLBalance - _postCLBalance - _withdrawalVaultBalance);
 
         uint256 negativeCLRebaseSum = _sumNegativeRebasesNotOlderThan(reportTimestamp - 18 days);
         uint256 maxAllowedCLRebaseNegativeSum =
@@ -702,7 +707,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
         if (negativeCLRebaseSum <= maxAllowedCLRebaseNegativeSum) {
             // If the rebase diff is less or equal max allowed sum, we accept the report
-            emit NegativeCLRebaseAccepted(_refSlot, unifiedPostCLBalance, negativeCLRebaseSum, maxAllowedCLRebaseNegativeSum);
+            emit NegativeCLRebaseAccepted(_refSlot, _postCLBalance + _withdrawalVaultBalance, negativeCLRebaseSum, maxAllowedCLRebaseNegativeSum);
             return;
         }
 
@@ -711,11 +716,11 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             // If there is no oracle and the diff is more than limit, we revert
             revert IncorrectCLBalanceDecrease(negativeCLRebaseSum, maxAllowedCLRebaseNegativeSum);
         }
-        _askSecondOpinion(_refSlot, _postCLBalance, _limitsList);
+        _askSecondOpinion(_refSlot, _postCLBalance, _withdrawalVaultBalance, _limitsList);
     }
 
-    function _askSecondOpinion(uint256 _refSlot, uint256 _postCLBalance, LimitsList memory _limitsList) internal {
-        (bool success, uint256 clOracleBalanceGwei,,) = secondOpinionOracle.getReport(_refSlot);
+    function _askSecondOpinion(uint256 _refSlot, uint256 _postCLBalance, uint256 _withdrawalVaultBalance, LimitsList memory _limitsList) internal {
+        (bool success, uint256 clOracleBalanceGwei, uint256 oracleWithdrawalVaultBalance,,) = secondOpinionOracle.getReport(_refSlot);
 
         if (success) {
             uint256 clBalanceWei = clOracleBalanceGwei * 1 gwei;
@@ -725,6 +730,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             if (MAX_BASIS_POINTS * (clBalanceWei - _postCLBalance) >
                 _limitsList.clBalanceOraclesErrorUpperBPLimit * clBalanceWei) {
                 revert NegativeRebaseFailedCLBalanceMismatch(_postCLBalance, clBalanceWei, _limitsList.clBalanceOraclesErrorUpperBPLimit);
+            }
+            if (oracleWithdrawalVaultBalance != _withdrawalVaultBalance) {
+                revert NegativeRebaseFailedWithdrawalVaultBalanceMismatch(_withdrawalVaultBalance, oracleWithdrawalVaultBalance);
             }
             emit NegativeCLRebaseConfirmed(_refSlot, _postCLBalance);
         } else {
@@ -926,6 +934,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
     error IncorrectCLBalanceDecrease(uint256 negativeCLRebaseSum, uint256 maxNegativeCLRebaseSum);
     error NegativeRebaseFailedCLBalanceMismatch(uint256 reportedValue, uint256 provedValue, uint256 limitBP);
+    error NegativeRebaseFailedWithdrawalVaultBalanceMismatch(uint256 reportedValue, uint256 provedValue);
     error NegativeRebaseFailedSecondOpinionReportIsNotReady();
     error CalledNotFromLido();
 }
