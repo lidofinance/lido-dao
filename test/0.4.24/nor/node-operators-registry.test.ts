@@ -5,24 +5,35 @@ import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
-import { Lido__factory, LidoLocator, NodeOperatorsRegistry, NodeOperatorsRegistry__factory } from "typechain-types";
+import {
+  LidoLocator,
+  NodeOperatorsRegistry__MockForInitialize,
+  NodeOperatorsRegistry__MockForInitialize__factory,
+  Steth__MinimalMock,
+  Steth__MinimalMock__factory
+} from "typechain-types";
 
 import { dummyLocator, proxify, Snapshot } from "lib";
+import { ether } from "lib/units";
 
 describe("NodeOperatorsRegistry", () => {
   let deployer: HardhatEthersSigner;
 
-  let nor: NodeOperatorsRegistry;
+  let nor: NodeOperatorsRegistry__MockForInitialize;
+  let lido: Steth__MinimalMock;
 
   let originalState: string;
 
   before(async () => {
     [deployer] = await ethers.getSigners();
-    const factory = new NodeOperatorsRegistry__factory(deployer);
+    const factory = new NodeOperatorsRegistry__MockForInitialize__factory(deployer);
     const impl = await factory.deploy();
 
     expect(await impl.getInitializationBlock()).to.equal(MaxUint256);
     [nor] = await proxify({ impl, admin: deployer });
+
+    const stethfactory = new Steth__MinimalMock__factory(deployer);
+    lido = await stethfactory.deploy(deployer, { value: ether("10.0") });
   });
 
   beforeEach(async () => (originalState = await Snapshot.take()));
@@ -30,17 +41,15 @@ describe("NodeOperatorsRegistry", () => {
   afterEach(async () => await Snapshot.restore(originalState));
 
   context("initialize", () => {
-    //const contractVersion = 2n;
+    const contractVersion = 2n;
     const moduleType = encodeBytes32String("curated-onchain-v1");
 
-    let lidoAddress: string;
     let burnerAddress: string;
     let locator: LidoLocator;
 
     beforeEach(async () => {
-      locator = await dummyLocator();
+      locator = await dummyLocator({ lido: lido });
 
-      lidoAddress = await locator.lido();
       burnerAddress = await locator.burner();
     });
 
@@ -53,7 +62,16 @@ describe("NodeOperatorsRegistry", () => {
       await expect(nor.initialize(locator, "curated-onchain-v1", MAX_STUCK_PENALTY_DELAY + 1n));
     });
 
-    it("Reverts if already initialized", async () => {
+    it("Reverts if was initialized with v1", async () => {
+      const MAX_STUCK_PENALTY_DELAY = await nor.MAX_STUCK_PENALTY_DELAY();
+      await nor.mock__initialize(1n);
+
+      await expect(nor.initialize(locator, moduleType, MAX_STUCK_PENALTY_DELAY)).to.be.revertedWith(
+        "INIT_ALREADY_INITIALIZED",
+      );
+    })
+
+    it("Reverts if already initialized with v2", async () => {
       const MAX_STUCK_PENALTY_DELAY = await nor.MAX_STUCK_PENALTY_DELAY();
       await nor.initialize(locator, encodeBytes32String("curated-onchain-v1"), MAX_STUCK_PENALTY_DELAY);
 
@@ -64,23 +82,22 @@ describe("NodeOperatorsRegistry", () => {
 
     it("Makes the contract initialized to v2", async () => {
       const latestBlock = BigInt(await time.latestBlock());
-      const lido = Lido__factory.connect(lidoAddress);
 
       await expect(nor.initialize(locator, moduleType, 86400n))
         .to.emit(nor, "ContractVersionSet")
-        .withArgs(2n)
+        .withArgs(contractVersion)
         .and.to.emit(nor, "StuckPenaltyDelayChanged")
         .withArgs(86400n)
         .and.to.emit(nor, "LocatorContractSet")
         .withArgs(await locator.getAddress())
         .and.to.emit(nor, "StakingModuleTypeSet")
-        .withArgs("curated-onchain-v1");
+        .withArgs(moduleType);
 
       expect(await nor.getLocator()).to.equal(await locator.getAddress());
       expect(await nor.getInitializationBlock()).to.equal(latestBlock + 1n);
       expect(await lido.allowance(await nor.getAddress(), burnerAddress)).to.equal(MaxUint256);
       expect(await nor.getStuckPenaltyDelay()).to.equal(86400n);
-      expect(await nor.getContractVersion()).to.equal(2n);
+      expect(await nor.getContractVersion()).to.equal(contractVersion);
       expect(await nor.getType()).to.equal(moduleType);
     });
   });
