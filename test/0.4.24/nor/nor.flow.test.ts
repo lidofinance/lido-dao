@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { encodeBytes32String, MaxUint256, ZeroAddress } from "ethers";
+import { encodeBytes32String, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
@@ -22,7 +22,6 @@ import { Snapshot } from "test/suite";
 describe("NodeOperatorsRegistry", () => {
   let deployer: HardhatEthersSigner;
   let user: HardhatEthersSigner;
-  let stranger: HardhatEthersSigner;
 
   let limitsManager: HardhatEthersSigner;
   let nodeOperatorsManager: HardhatEthersSigner;
@@ -43,7 +42,7 @@ describe("NodeOperatorsRegistry", () => {
   const contractVersion = 2n;
 
   before(async () => {
-    [deployer, user, stranger, stakingRouter, nodeOperatorsManager, signingKeysManager, limitsManager] =
+    [deployer, user, stakingRouter, nodeOperatorsManager, signingKeysManager, limitsManager] =
       await ethers.getSigners();
 
     ({ lido, dao, acl } = await deployLidoDao({
@@ -126,30 +125,27 @@ describe("NodeOperatorsRegistry", () => {
     })
 
     it("Reverts if MAX_NODE_OPERATORS_COUNT exceeded", async () => {
-      nor = nor.connect(nodeOperatorsManager);
-
       const maxNodeOperators = await nor.MAX_NODE_OPERATORS_COUNT();
 
       const promises = [];
       for (let i = 0n; i < maxNodeOperators; ++i) {
-        promises.push(nor.addNodeOperator(i.toString(), randomAddress()));
+        promises.push(nor.connect(nodeOperatorsManager).addNodeOperator(i.toString(), randomAddress()));
       }
       await Promise.all(promises);
 
-      await expect(nor.addNodeOperator("abcdef", certainAddress("reward-address-0"))).to.be.revertedWith(
-        "MAX_OPERATORS_COUNT_EXCEEDED"
-      );
+      await expect(nor.connect(nodeOperatorsManager).addNodeOperator(
+        "abcdef",
+        certainAddress("reward-address-0")
+      )).to.be.revertedWith("MAX_OPERATORS_COUNT_EXCEEDED");
     })
 
     it("Adds a new node operator", async () => {
-      nor = nor.connect(nodeOperatorsManager);
-
       for (let i = 0n; i < 10; ++i) {
         const id = i;
         const name = "no " + i.toString();
         const rewardAddress = certainAddress("reward-address-" + i.toString());
 
-        await expect(nor.addNodeOperator(name, rewardAddress))
+        await expect(nor.connect(nodeOperatorsManager).addNodeOperator(name, rewardAddress))
           .to.emit(nor, "NodeOperatorAdded")
           .withArgs(id, name, rewardAddress, 0n)
 
@@ -167,9 +163,52 @@ describe("NodeOperatorsRegistry", () => {
     })
   });
 
-  context("activateNodeOperator", () => {});
+  context("activateNodeOperator", () => {
+    beforeEach(async () => {
+      await nor.connect(nodeOperatorsManager).addNodeOperator("abcdef", randomAddress());
 
-  context("deactivateNodeOperator", () => {});
+      expect(await nor.getNodeOperatorIsActive(0n)).to.be.true;
+      await nor.connect(nodeOperatorsManager).deactivateNodeOperator(0n);
+      expect(await nor.getNodeOperatorIsActive(0n)).to.be.false;
+    })
+
+    it("Reverts if no such an operator exists", async () => {
+      await expect(nor.activateNodeOperator(1n)).to.be.revertedWith("OUT_OF_RANGE");
+    })
+
+    it("Reverts if has no MANAGE_NODE_OPERATOR_ROLE assigned", async () => {
+      await expect(nor.activateNodeOperator(0n)).to.be.revertedWith("APP_AUTH_FAILED");
+    })
+
+    it("Reverts if already active", async () => {
+      await nor.connect(nodeOperatorsManager).addNodeOperator("second", randomAddress());
+
+      await expect(nor.connect(nodeOperatorsManager).activateNodeOperator(1n)).to.be.revertedWith(
+        "WRONG_OPERATOR_ACTIVE_STATE"
+      );
+    })
+
+    it("Activates an inactive node operator", async () => {
+      await expect(nor.connect(nodeOperatorsManager).activateNodeOperator(0n))
+        .to.emit(nor, "NodeOperatorActiveSet")
+        .withArgs(0n, true)
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(2n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(2n)
+
+        const nodeOperator = await nor.getNodeOperator(0n, true);
+        expect(nodeOperator.active).to.be.true;
+        expect(await nor.getNodeOperatorIsActive(0n)).to.be.true;
+    })
+  });
+
+  context("deactivateNodeOperator", () => {
+    beforeEach(async () => {
+      await nor.connect(nodeOperatorsManager).addNodeOperator("abcdef", randomAddress());
+      expect(await nor.getNodeOperatorIsActive(0n)).to.be.true;
+    })
+  });
 
   context("setNodeOperatorName", () => {});
 
