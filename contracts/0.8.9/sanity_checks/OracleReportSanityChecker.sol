@@ -675,7 +675,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 _postCLValidators,
         uint256 _refSlot
     ) internal {
-        uint256 _unifiedPostCLBalance = _postCLBalance + _withdrawalVaultBalance;
+        uint256 unifiedPostCLBalance = _postCLBalance + _withdrawalVaultBalance;
         uint256 reportTimestamp = GENESIS_TIME + _refSlot * SECONDS_PER_SLOT;
 
         // Checking exitedValidators against StakingRouter
@@ -688,12 +688,12 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             stakingRouterExitedValidators += summary.totalExitedValidators;
         }
 
-        if (_preCLBalance <= _unifiedPostCLBalance) {
+        if (_preCLBalance <= unifiedPostCLBalance) {
             _addReportData(reportTimestamp, stakingRouterExitedValidators, 0);
             // If the CL balance is not decreased, we don't need to check anyting here
             return;
         }
-        _addReportData(reportTimestamp, stakingRouterExitedValidators, _preCLBalance - _unifiedPostCLBalance);
+        _addReportData(reportTimestamp, stakingRouterExitedValidators, _preCLBalance - unifiedPostCLBalance);
 
         uint256 negativeCLRebaseSum = _sumNegativeRebasesNotOlderThan(reportTimestamp - 18 days);
         uint256 maxAllowedCLRebaseNegativeSum =
@@ -702,7 +702,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
         if (negativeCLRebaseSum <= maxAllowedCLRebaseNegativeSum) {
             // If the rebase diff is less or equal max allowed sum, we accept the report
-            emit NegativeCLRebaseAccepted(_refSlot, _unifiedPostCLBalance, negativeCLRebaseSum, maxAllowedCLRebaseNegativeSum);
+            emit NegativeCLRebaseAccepted(_refSlot, unifiedPostCLBalance, negativeCLRebaseSum, maxAllowedCLRebaseNegativeSum);
             return;
         }
 
