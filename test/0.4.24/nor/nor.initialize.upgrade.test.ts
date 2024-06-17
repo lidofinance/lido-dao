@@ -13,16 +13,20 @@ import {
   Steth__MinimalMock__factory
 } from "typechain-types";
 
-import { dummyLocator, proxify, Snapshot } from "lib";
+import { certainAddress, dummyLocator, proxify, Snapshot } from "lib";
 import { ether } from "lib/units";
 
-describe("NodeOperatorsRegistry", () => {
+describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
   let deployer: HardhatEthersSigner;
 
   let nor: NodeOperatorsRegistry__MockForInitialize;
   let lido: Steth__MinimalMock;
+  let locator: LidoLocator;
 
   let originalState: string;
+
+  const moduleType = encodeBytes32String("curated-onchain-v1");
+  const contractVersion = 2n;
 
   before(async () => {
     [deployer] = await ethers.getSigners();
@@ -41,11 +45,6 @@ describe("NodeOperatorsRegistry", () => {
   afterEach(async () => await Snapshot.restore(originalState));
 
   context("initialize", () => {
-    const contractVersion = 2n;
-    const moduleType = encodeBytes32String("curated-onchain-v1");
-
-    let locator: LidoLocator;
-
     beforeEach(async () => {
       locator = await dummyLocator({ lido: lido });
     });
@@ -112,11 +111,7 @@ describe("NodeOperatorsRegistry", () => {
   });
 
   context("finalizeUpgrade_v2", () => {
-    const contractVersion = 2n;
-    const moduleType = encodeBytes32String("curated-onchain-v1");
-
     let burnerAddress: string;
-    let locator: LidoLocator;
     let preInitState: string;
 
     beforeEach(async () => {
@@ -184,91 +179,9 @@ describe("NodeOperatorsRegistry", () => {
       expect(await nor.getContractVersion()).to.equal(contractVersion);
       expect(await nor.getType()).to.equal(moduleType);
     });
+
+    it.skip("Migrates the contract storage from v1 to v2", async () => {
+
+    })
   });
-
-  context("addNodeOperator", () => {});
-
-  context("activateNodeOperator", () => {});
-
-  context("deactivateNodeOperator", () => {});
-
-  context("setNodeOperatorName", () => {});
-
-  context("setNodeOperatorRewardAddress", () => {});
-
-  context("setNodeOperatorStakingLimit", () => {});
-
-  context("onRewardsMinted", () => {});
-
-  context("updateStuckValidatorsCount", () => {});
-
-  context("updateExitedValidatorsCount", () => {});
-
-  context("updateRefundedValidatorsCount", () => {});
-
-  context("onExitedAndStuckValidatorsCountsUpdated", () => {});
-
-  context("unsafeUpdateValidatorsCount", () => {});
-
-  context("updateTargetValidatorsLimits", () => {});
-
-  context("onWithdrawalCredentialsChanged", () => {});
-
-  context("invalidateReadyToDepositKeysRange", () => {});
-
-  context("obtainDepositData", () => {});
-
-  context("getNodeOperator", () => {});
-
-  context("getRewardsDistribution", () => {});
-
-  context("addSigningKeys", () => {});
-
-  context("addSigningKeysOperatorBH", () => {});
-
-  context("removeSigningKey", () => {});
-
-  context("removeSigningKeys", () => {});
-
-  context("removeSigningKeyOperatorBH", () => {});
-
-  context("removeSigningKeysOperatorBH", () => {});
-
-  context("getTotalSigningKeyCount", () => {});
-
-  context("getUnusedSigningKeyCount", () => {});
-
-  context("getSigningKey", () => {});
-
-  context("getSigningKeys", () => {});
-
-  context("getType", () => {});
-
-  context("getStakingModuleSummary", () => {});
-
-  context("getNodeOperatorSummary", () => {});
-
-  context("isOperatorPenalized", () => {});
-
-  context("isOperatorPenaltyCleared", () => {});
-
-  context("clearNodeOperatorPenalty", () => {});
-
-  context("getNodeOperatorsCount", () => {});
-
-  context("getActiveNodeOperatorsCount", () => {});
-
-  context("getNodeOperatorIsActive", () => {});
-
-  context("getNodeOperatorIds", () => {});
-
-  context("getNonce", () => {});
-
-  context("getKeysOpIndex", () => {});
-
-  context("getLocator", () => {});
-
-  context("getStuckPenaltyDelay", () => {});
-
-  context("setStuckPenaltyDelay", () => {});
 });
