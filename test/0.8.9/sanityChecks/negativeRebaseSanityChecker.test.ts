@@ -46,6 +46,18 @@ describe("OracleReportSanityChecker.sol", () => {
     return `AccessControl: account ${caller.toLowerCase()} is missing role ${role}`;
   };
 
+  const deploySecondOpinionOracle = async () => {
+    const secondOpinionOracle = await ethers.deployContract("SecondOpinionOracleMock");
+
+    const clOraclesRole = await checker.SECOND_OPINION_MANAGER_ROLE();
+    await checker.grantRole(clOraclesRole, deployer.address);
+
+    // 10000 BP - 100%
+    // 74 BP - 0.74%
+    await checker.setSecondOpinionOracleAndCLBalanceUpperMargin(await secondOpinionOracle.getAddress(), 74);
+    return secondOpinionOracle;
+  };
+
   beforeEach(async () => {
     [deployer] = await ethers.getSigners();
 
@@ -237,18 +249,13 @@ describe("OracleReportSanityChecker.sol", () => {
       // Expect to pass through
       await checker.checkAccountingOracleReport(0, 96 * 1e9, 96 * 1e9, 0, 0, 0, 10, 10);
 
-      const secondOracle = await ethers.deployContract("SecondOpinionOracleMock");
-
-      const clOraclesRole = await checker.SECOND_OPINION_MANAGER_ROLE();
-      await checker.grantRole(clOraclesRole, deployer.address);
-
-      await checker.setSecondOpinionOracleAndCLBalanceUpperMargin(await secondOracle.getAddress(), 74);
+      const secondOpinionOracle = await deploySecondOpinionOracle();
 
       await expect(
         checker.checkAccountingOracleReport(0, ether("330"), ether("300"), 0, 0, 0, 10, 10),
       ).to.be.revertedWithCustomError(checker, "NegativeRebaseFailedSecondOpinionReportIsNotReady");
 
-      await secondOracle.addReport(refSlot, {
+      await secondOpinionOracle.addReport(refSlot, {
         success: true,
         clBalanceGwei: gweis(300),
         withdrawalVaultBalance: 0,
@@ -300,17 +307,10 @@ describe("OracleReportSanityChecker.sol", () => {
       const refSlot = Math.floor(((await time.latest()) - numGenesis) / 12);
       await accountingOracle.setLastProcessingRefSlot(refSlot);
 
-      const secondOracle = await ethers.deployContract("SecondOpinionOracleMock");
-
-      const clOraclesRole = await checker.SECOND_OPINION_MANAGER_ROLE();
-      await checker.grantRole(clOraclesRole, deployer.address);
-
-      // 10000 BP - 100%
-      // 74 BP - 0.74%
-      await checker.setSecondOpinionOracleAndCLBalanceUpperMargin(await secondOracle.getAddress(), 74);
+      const secondOpinionOracle = await deploySecondOpinionOracle();
 
       // Second opinion balance is way bigger than general Oracle's (~1%)
-      await secondOracle.addReport(refSlot, {
+      await secondOpinionOracle.addReport(refSlot, {
         success: true,
         clBalanceGwei: gweis(302),
         withdrawalVaultBalance: 0,
@@ -322,7 +322,7 @@ describe("OracleReportSanityChecker.sol", () => {
         .withArgs(ether("299"), ether("302"), anyValue);
 
       // Second opinion balance is almost equal general Oracle's (<0.74%) - should pass
-      await secondOracle.addReport(refSlot, {
+      await secondOpinionOracle.addReport(refSlot, {
         success: true,
         clBalanceGwei: gweis(301),
         withdrawalVaultBalance: 0,
@@ -334,7 +334,7 @@ describe("OracleReportSanityChecker.sol", () => {
         .withArgs(refSlot, ether("299"), ether("0"));
 
       // Second opinion balance is slightly less than general Oracle's (0.01%) - should fail
-      await secondOracle.addReport(refSlot, {
+      await secondOpinionOracle.addReport(refSlot, {
         success: true,
         clBalanceGwei: 100,
         withdrawalVaultBalance: 0,
@@ -344,6 +344,38 @@ describe("OracleReportSanityChecker.sol", () => {
       await expect(checker.checkAccountingOracleReport(0, 110 * 1e9, 100.01 * 1e9, 0, 0, 0, 10, 10))
         .to.be.revertedWithCustomError(checker, "NegativeRebaseFailedCLBalanceMismatch")
         .withArgs(100.01 * 1e9, 100 * 1e9, anyValue);
+    });
+
+    it(`works for reports with incorrect withdrawal vault balance`, async () => {
+      const numGenesis = Number(genesisTime);
+      const refSlot = Math.floor(((await time.latest()) - numGenesis) / 12);
+      await accountingOracle.setLastProcessingRefSlot(refSlot);
+
+      const secondOpinionOracle = await deploySecondOpinionOracle();
+
+      // Second opinion balance is almost equal general Oracle's (<0.74%) and withdrawal vauls is the same - should pass
+      await secondOpinionOracle.addReport(refSlot, {
+        success: true,
+        clBalanceGwei: gweis(300),
+        withdrawalVaultBalance: ether("1"),
+        numValidators: 0,
+        exitedValidators: 0,
+      });
+      await expect(checker.checkAccountingOracleReport(0, ether("330"), ether("299"), ether("1"), 0, 0, 10, 10))
+        .to.emit(checker, "NegativeCLRebaseConfirmed")
+        .withArgs(refSlot, ether("299"), ether("1"));
+
+      // Second opinion withdrawal vault balance is different - should fail
+      await secondOpinionOracle.addReport(refSlot, {
+        success: true,
+        clBalanceGwei: gweis(300),
+        withdrawalVaultBalance: 0,
+        numValidators: 0,
+        exitedValidators: 0,
+      });
+      await expect(checker.checkAccountingOracleReport(0, ether("330"), ether("299"), ether("1"), 0, 0, 10, 10))
+        .to.be.revertedWithCustomError(checker, "NegativeRebaseFailedWithdrawalVaultBalanceMismatch")
+        .withArgs(ether("1"), 0);
     });
   });
 
