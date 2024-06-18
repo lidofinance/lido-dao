@@ -698,7 +698,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             // If the CL balance is not decreased, we don't need to check anyting here
             return;
         }
-        _addReportData(reportTimestamp, stakingRouterExitedValidators, _preCLBalance - _postCLBalance - _withdrawalVaultBalance);
+        _addReportData(reportTimestamp, stakingRouterExitedValidators, _preCLBalance - (_postCLBalance + _withdrawalVaultBalance));
 
         uint256 negativeCLRebaseSum = _sumNegativeRebasesNotOlderThan(reportTimestamp - 18 days);
         uint256 maxAllowedCLRebaseNegativeSum =
