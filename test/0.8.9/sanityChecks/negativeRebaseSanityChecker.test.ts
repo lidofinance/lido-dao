@@ -258,7 +258,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await secondOpinionOracle.addReport(refSlot, {
         success: true,
         clBalanceGwei: gweis(300),
-        withdrawalVaultBalance: 0,
+        withdrawalVaultBalanceWei: 0,
         numValidators: 0,
         exitedValidators: 0,
       });
@@ -313,7 +313,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await secondOpinionOracle.addReport(refSlot, {
         success: true,
         clBalanceGwei: gweis(302),
-        withdrawalVaultBalance: 0,
+        withdrawalVaultBalanceWei: 0,
         numValidators: 0,
         exitedValidators: 0,
       });
@@ -325,7 +325,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await secondOpinionOracle.addReport(refSlot, {
         success: true,
         clBalanceGwei: gweis(301),
-        withdrawalVaultBalance: 0,
+        withdrawalVaultBalanceWei: 0,
         numValidators: 0,
         exitedValidators: 0,
       });
@@ -337,7 +337,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await secondOpinionOracle.addReport(refSlot, {
         success: true,
         clBalanceGwei: 100,
-        withdrawalVaultBalance: 0,
+        withdrawalVaultBalanceWei: 0,
         numValidators: 0,
         exitedValidators: 0,
       });
@@ -357,7 +357,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await secondOpinionOracle.addReport(refSlot, {
         success: true,
         clBalanceGwei: gweis(300),
-        withdrawalVaultBalance: ether("1"),
+        withdrawalVaultBalanceWei: ether("1"),
         numValidators: 0,
         exitedValidators: 0,
       });
@@ -369,7 +369,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await secondOpinionOracle.addReport(refSlot, {
         success: true,
         clBalanceGwei: gweis(300),
-        withdrawalVaultBalance: 0,
+        withdrawalVaultBalanceWei: 0,
         numValidators: 0,
         exitedValidators: 0,
       });

@@ -7,7 +7,7 @@ interface ISecondOpinionOracle {
     function getReport(uint256 refSlot)
         external
         view
-        returns (bool success, uint256 clBalanceGwei, uint256 withdrawalVaultBalance, uint256 numValidators, uint256 exitedValidators);
+        returns (bool success, uint256 clBalanceGwei, uint256 withdrawalVaultBalanceWei, uint256 numValidators, uint256 exitedValidators);
 }
 
 contract SecondOpinionOracleMock is ISecondOpinionOracle {
@@ -15,7 +15,7 @@ contract SecondOpinionOracleMock is ISecondOpinionOracle {
     struct Report {
         bool success;
         uint256 clBalanceGwei;
-        uint256 withdrawalVaultBalance;
+        uint256 withdrawalVaultBalanceWei;
         uint256 numValidators;
         uint256 exitedValidators;
     }
@@ -31,9 +31,9 @@ contract SecondOpinionOracleMock is ISecondOpinionOracle {
     }
 
     function getReport(uint256 refSlot) external view override
-        returns (bool success, uint256 clBalanceGwei, uint256 withdrawalVaultBalance, uint256 numValidators, uint256 exitedValidators)
+        returns (bool success, uint256 clBalanceGwei, uint256 withdrawalVaultBalanceWei, uint256 numValidators, uint256 exitedValidators)
     {
         Report memory report = reports[refSlot];
-        return (report.success, report.clBalanceGwei, report.withdrawalVaultBalance, report.numValidators, report.exitedValidators);
+        return (report.success, report.clBalanceGwei, report.withdrawalVaultBalanceWei, report.numValidators, report.exitedValidators);
     }
 }

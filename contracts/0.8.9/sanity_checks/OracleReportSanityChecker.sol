@@ -48,7 +48,7 @@ interface ISecondOpinionOracle {
         returns (
             bool success,
             uint256 clBalanceGwei,
-            uint256 withdrawalVaultBalance,
+            uint256 withdrawalVaultBalanceWei,
             uint256 totalDepositedValidators,
             uint256 totalExitedValidators
         );
@@ -720,7 +720,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     }
 
     function _askSecondOpinion(uint256 _refSlot, uint256 _postCLBalance, uint256 _withdrawalVaultBalance, LimitsList memory _limitsList) internal {
-        (bool success, uint256 clOracleBalanceGwei, uint256 oracleWithdrawalVaultBalance,,) = secondOpinionOracle.getReport(_refSlot);
+        (bool success, uint256 clOracleBalanceGwei, uint256 oracleWithdrawalVaultBalanceWei,,) = secondOpinionOracle.getReport(_refSlot);
 
         if (success) {
             uint256 clBalanceWei = clOracleBalanceGwei * 1 gwei;
@@ -731,8 +731,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
                 _limitsList.clBalanceOraclesErrorUpperBPLimit * clBalanceWei) {
                 revert NegativeRebaseFailedCLBalanceMismatch(_postCLBalance, clBalanceWei, _limitsList.clBalanceOraclesErrorUpperBPLimit);
             }
-            if (oracleWithdrawalVaultBalance != _withdrawalVaultBalance) {
-                revert NegativeRebaseFailedWithdrawalVaultBalanceMismatch(_withdrawalVaultBalance, oracleWithdrawalVaultBalance);
+            if (oracleWithdrawalVaultBalanceWei != _withdrawalVaultBalance) {
+                revert NegativeRebaseFailedWithdrawalVaultBalanceMismatch(_withdrawalVaultBalance, oracleWithdrawalVaultBalanceWei);
             }
             emit NegativeCLRebaseConfirmed(_refSlot, _postCLBalance, _withdrawalVaultBalance);
         } else {
