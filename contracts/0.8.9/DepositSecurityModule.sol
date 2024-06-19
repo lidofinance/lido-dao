@@ -308,8 +308,12 @@ contract DepositSecurityModule {
      * Reverts if any of the addresses is already a guardian or is zero.
      */
     function addGuardians(address[] memory addresses, uint256 newQuorum) external onlyOwner {
-        for (uint256 i = 0; i < addresses.length; ++i) {
+        for (uint256 i = 0; i < addresses.length; ) {
             _addGuardian(addresses[i]);
+
+            unchecked {
+                ++i;
+            }
         }
         _setGuardianQuorum(newQuorum);
     }
