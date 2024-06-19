@@ -453,6 +453,9 @@ contract DepositSecurityModule {
     }
 
     function _isMinDepositDistancePassed(uint256 stakingModuleId) internal view returns (bool) {
+        /// @dev The distance is reset when a deposit is made to any module. This prevents a front-run attack
+        /// by colluding guardians on several modules at once, providing the necessary window for an honest
+        /// guardian to react and pause deposits to all modules.
         uint256 lastDepositToModuleBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
         uint256 minDepositBlockDistance = STAKING_ROUTER.getStakingModuleMinDepositBlockDistance(stakingModuleId);
         uint256 maxLastDepositBlock = lastDepositToModuleBlock >= lastDepositBlock ? lastDepositToModuleBlock : lastDepositBlock;
