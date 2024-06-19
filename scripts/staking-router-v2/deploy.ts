@@ -77,9 +77,8 @@ async function main() {
   log(`SimpleDvt address implementation: ${appSDVT}`);
 
   if (Number(chainId) == 17000) {
-    const appSandbox = (
-      await deployImplementationWithLinkedLibrary(Sk.appSandbox, "NodeOperatorsRegistry", deployer, [], libraries)
-    ).address;
+    const appSandbox = (await deployImplementation(Sk.appSandbox, "NodeOperatorsRegistry", deployer, [], { libraries }))
+      .address;
 
     log(`Sandbox address implementation: ${appSandbox}`);
   }
