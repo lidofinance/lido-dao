@@ -32,6 +32,7 @@ export ORACLE_DAEMON_CONFIG="0xbf05A929c3D7885a6aeAd833a992dA6E5ac23b09"
 export LOCATOR="0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb"
 export LEGACY_ORACLE="0x442af784A788A5bd6F42A01Ebe9F287a871243fb"
 export VEBO="0x0De4Ea0184c2ad0BacA7183356Aea5B8d5Bf5c6e"
+export ARAGON_AGENT="0xE92329EC7ddB11D25e25b3c21eeBf11f15eB325d"
 
 # Run the deployment script with the environment variables
 yarn hardhat --network $NETWORK run scripts/staking-router-v2/deploy.ts

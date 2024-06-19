@@ -25,6 +25,10 @@ async function main() {
   state[Sk.scratchDeployGasUsed] = 0n.toString();
   persistNetworkState(state);
 
+  const SC_ADMIN = getEnvVariable("ARAGON_AGENT");
+  const LIMITS_LIST = [1500, 500, 1000, 250, 2000, 100, 100, 128, 5000000, 1500];
+  const MANAGERS_ROSTER = [[], [], [], [], [], [], [], [], [], [], []];
+
   // Read all the constants from environment variables
   const LIDO = getEnvVariable("LIDO");
   const DEPOSIT_CONTRACT = getEnvVariable("DEPOSIT_CONTRACT");
@@ -71,18 +75,6 @@ async function main() {
 
   log(`NodeOperatorsRegistry address implementation: ${appNodeOperatorsRegistry}`);
 
-  const appSDVT = (await deployImplementation(Sk.appSDVT, "NodeOperatorsRegistry", deployer, [], { libraries }))
-    .address;
-
-  log(`SimpleDvt address implementation: ${appSDVT}`);
-
-  if (Number(chainId) == 17000) {
-    const appSandbox = (await deployImplementation(Sk.appSandbox, "NodeOperatorsRegistry", deployer, [], { libraries }))
-      .address;
-
-    log(`Sandbox address implementation: ${appSandbox}`);
-  }
-
   const depositSecurityModuleParams = [
     LIDO,
     DEPOSIT_CONTRACT,
@@ -105,21 +97,6 @@ async function main() {
 
   log(`AO implementation address: ${accountingOracleAddress}`);
 
-  const SC_ADMIN = deployer;
-  const LIMITS_LIST = [1500, 500, 1000, 250, 2000, 100, 100, 128, 5000000, 1500];
-  const MANAGERS_ROSTER = [
-    [SC_ADMIN],
-    [SC_ADMIN],
-    [SC_ADMIN],
-    [SC_ADMIN],
-    [SC_ADMIN],
-    [SC_ADMIN],
-    [SC_ADMIN],
-    [SC_ADMIN],
-    [SC_ADMIN],
-    [SC_ADMIN],
-    [SC_ADMIN],
-  ];
   const oracleReportSanityCheckerArgs = [LOCATOR, SC_ADMIN, LIMITS_LIST, MANAGERS_ROSTER];
 
   const oracleReportSanityCheckerAddress = (
