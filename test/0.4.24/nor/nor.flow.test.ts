@@ -310,7 +310,20 @@ describe("NodeOperatorsRegistry", () => {
 
   context("setNodeOperatorStakingLimit", () => {});
 
-  context("onRewardsMinted", () => {});
+  context("onRewardsMinted", () => {
+    beforeEach(async () => {
+      await nor.connect(nodeOperatorsManager).addNodeOperator("abcdef", certainAddress("node-operator-0"));
+      expect(await nor.getNodeOperatorIsActive(0n)).to.be.true;
+    });
+
+    it("Reverts if has no STAKING_ROUTER_ROLE assigned", async () => {
+      await expect(nor.onRewardsMinted(10n)).to.be.revertedWith("APP_AUTH_FAILED");
+    });
+
+    it("Does nothing", async () => {
+      await nor.connect(stakingRouter).onRewardsMinted(10n);
+    });
+  });
 
   context("updateStuckValidatorsCount", () => {});
 
@@ -354,7 +367,11 @@ describe("NodeOperatorsRegistry", () => {
 
   context("getSigningKeys", () => {});
 
-  context("getType", () => {});
+  context("getType", () => {
+    it("Returns module type", async () => {
+      expect(await nor.getType()).to.be.equal(moduleType);
+    });
+  });
 
   context("getStakingModuleSummary", () => {});
 
@@ -378,7 +395,11 @@ describe("NodeOperatorsRegistry", () => {
 
   context("getKeysOpIndex", () => {});
 
-  context("getLocator", () => {});
+  context("getLocator", () => {
+    it("Returns LidoLocator address", async () => {
+      expect(await nor.getLocator()).to.be.equal(locator);
+    });
+  });
 
   context("getStuckPenaltyDelay", () => {});
 
