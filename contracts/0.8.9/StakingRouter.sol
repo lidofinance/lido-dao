@@ -592,7 +592,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         IStakingModule stakingModule = IStakingModule(stakingModuleState.stakingModuleAddress);
 
         (
-            /* uint156 targetLimitMode */,
+            /* uint256 targetLimitMode */,
             /* uint256 targetValidatorsCount */,
             uint256 stuckValidatorsCount,
             /* uint256 refundedValidatorsCount */,
