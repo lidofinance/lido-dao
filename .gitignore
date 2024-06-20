@@ -20,5 +20,8 @@ foundry/out/
 .env
 deployed-local.json
 
+deployed-mainnet.json
+deployed-holesky.json
+
 # MacOS
 .DS_Store

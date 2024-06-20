@@ -15,42 +15,43 @@ function getEnvVariable(name: string, defaultValue?: string) {
   }
 }
 
+// TODO: add guardians
 async function main() {
   const deployer = ethers.getAddress(getEnvVariable("DEPLOYER"));
   const chainId = (await ethers.provider.getNetwork()).chainId;
   const balance = await ethers.provider.getBalance(deployer);
   log(`Deployer ${deployer} on network ${chainId} has balance: ${ethers.formatEther(balance)} ETH`);
 
+  // parameters from env variables
+
+  const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = parseInt(getEnvVariable("PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS"));
+  const MAX_OPERATORS_PER_UNVETTING = parseInt(getEnvVariable("MAX_OPERATORS_PER_UNVETTING"));
+  const SECONDS_PER_SLOT = parseInt(getEnvVariable("SECONDS_PER_SLOT"));
+  const GENESIS_TIME = parseInt(getEnvVariable("GENESIS_TIME"));
+
+  const LIMITS_LIST = [1500, 500, 1000, 250, 2000, 100, 100, 128, 5000000, 1500];
+  const MANAGERS_ROSTER = [[], [], [], [], [], [], [], [], [], [], []];
+
   const state = readNetworkState();
   state[Sk.scratchDeployGasUsed] = 0n.toString();
   persistNetworkState(state);
 
-  const SC_ADMIN = getEnvVariable("ARAGON_AGENT");
-  const LIMITS_LIST = [1500, 500, 1000, 250, 2000, 100, 100, 128, 5000000, 1500];
-  const MANAGERS_ROSTER = [[], [], [], [], [], [], [], [], [], [], []];
-
-  // Read all the constants from environment variables
-  const LIDO = getEnvVariable("LIDO");
-  const DEPOSIT_CONTRACT = getEnvVariable("DEPOSIT_CONTRACT");
-  const STAKING_ROUTER = getEnvVariable("STAKING_ROUTER");
-  const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = parseInt(getEnvVariable("PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS"));
-  const MAX_OPERATORS_PER_UNVETTING = parseInt(getEnvVariable("MAX_OPERATORS_PER_UNVETTING"));
-
-  const LOCATOR = getEnvVariable("LOCATOR");
-  const LEGACY_ORACLE = getEnvVariable("LEGACY_ORACLE");
-  const SECONDS_PER_SLOT = parseInt(getEnvVariable("SECONDS_PER_SLOT"));
-  const GENESIS_TIME = parseInt(getEnvVariable("GENESIS_TIME"));
-
-  const ACCOUNTING_ORACLE_PROXY = getEnvVariable("ACCOUNTING_ORACLE_PROXY");
-  const EL_REWARDS_VAULT = getEnvVariable("EL_REWARDS_VAULT");
-  const BURNER = getEnvVariable("BURNER");
-  const TREASURY_ADDRESS = getEnvVariable("TREASURY_ADDRESS");
-  const VEBO = getEnvVariable("VEBO");
-  const WQ = getEnvVariable("WITHDRAWAL_QUEUE_ERC721");
-  const WITHDRAWAL_VAULT = getEnvVariable("WITHDRAWAL_VAULT_ADDRESS");
-  const ORACLE_DAEMON_CONFIG = getEnvVariable("ORACLE_DAEMON_CONFIG");
-
-  // StakingRouter deploy
+  // Read contracts addresses from config
+  const DEPOSIT_CONTRACT_ADDRESS = state[Sk.chainSpec].depositContractAddress;
+  const APP_AGENT_ADDRESS = state[Sk.appAgent].proxy.address;
+  const SC_ADMIN = APP_AGENT_ADDRESS;
+  const LIDO = state[Sk.appLido].proxy.address;
+  const STAKING_ROUTER = state[Sk.stakingRouter].proxy.address;
+  const LOCATOR = state[Sk.lidoLocator].proxy.address;
+  const LEGACY_ORACLE = state[Sk.appOracle].proxy.address;
+  const ACCOUNTING_ORACLE_PROXY = state[Sk.accountingOracle].proxy.address;
+  const EL_REWARDS_VAULT = state[Sk.executionLayerRewardsVault].address;
+  const BURNER = state[Sk.burner].address;
+  const TREASURY_ADDRESS = APP_AGENT_ADDRESS;
+  const VEBO = state[Sk.validatorsExitBusOracle].proxy.address;
+  const WQ = state[Sk.withdrawalQueueERC721].proxy.address;
+  const WITHDRAWAL_VAULT = state[Sk.withdrawalVault].proxy.address;
+  const ORACLE_DAEMON_CONFIG = state[Sk.oracleDaemonConfig].address;
 
   // Deploy MinFirstAllocationStrategy
   const minFirstAllocationStrategyAddress = (
@@ -64,7 +65,7 @@ async function main() {
   };
 
   const stakingRouterAddress = (
-    await deployImplementation(Sk.stakingRouter, "StakingRouter", deployer, [DEPOSIT_CONTRACT], { libraries })
+    await deployImplementation(Sk.stakingRouter, "StakingRouter", deployer, [DEPOSIT_CONTRACT_ADDRESS], { libraries })
   ).address;
 
   log(`StakingRouter implementation address: ${stakingRouterAddress}`);
@@ -77,7 +78,7 @@ async function main() {
 
   const depositSecurityModuleParams = [
     LIDO,
-    DEPOSIT_CONTRACT,
+    DEPOSIT_CONTRACT_ADDRESS,
     STAKING_ROUTER,
     PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS,
     MAX_OPERATORS_PER_UNVETTING,
