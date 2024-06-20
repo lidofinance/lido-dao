@@ -1,6 +1,16 @@
 import { ethers } from "hardhat";
 
-import { deployImplementation, deployWithoutProxy, log, persistNetworkState, readNetworkState, Sk } from "lib";
+import { DepositSecurityModule, DepositSecurityModule__factory } from "typechain-types";
+
+import {
+  deployImplementation,
+  deployWithoutProxy,
+  loadContract,
+  log,
+  persistNetworkState,
+  readNetworkState,
+  Sk,
+} from "lib";
 
 function getEnvVariable(name: string, defaultValue?: string) {
   const value = process.env[name];
@@ -15,26 +25,31 @@ function getEnvVariable(name: string, defaultValue?: string) {
   }
 }
 
-// TODO: add guardians
 async function main() {
-  const deployer = ethers.getAddress(getEnvVariable("DEPLOYER"));
-  const chainId = (await ethers.provider.getNetwork()).chainId;
-  const balance = await ethers.provider.getBalance(deployer);
-  log(`Deployer ${deployer} on network ${chainId} has balance: ${ethers.formatEther(balance)} ETH`);
-
   // parameters from env variables
-
   const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = parseInt(getEnvVariable("PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS"));
   const MAX_OPERATORS_PER_UNVETTING = parseInt(getEnvVariable("MAX_OPERATORS_PER_UNVETTING"));
   const SECONDS_PER_SLOT = parseInt(getEnvVariable("SECONDS_PER_SLOT"));
   const GENESIS_TIME = parseInt(getEnvVariable("GENESIS_TIME"));
+  const deployer = ethers.getAddress(getEnvVariable("DEPLOYER"));
+  const chainId = (await ethers.provider.getNetwork()).chainId;
 
-  const LIMITS_LIST = [1500, 500, 1000, 250, 2000, 100, 100, 128, 5000000, 1500];
-  const MANAGERS_ROSTER = [[], [], [], [], [], [], [], [], [], [], []];
+  const balance = await ethers.provider.getBalance(deployer);
+  log(`Deployer ${deployer} on network ${chainId} has balance: ${ethers.formatEther(balance)} ETH`);
 
   const state = readNetworkState();
   state[Sk.scratchDeployGasUsed] = 0n.toString();
   persistNetworkState(state);
+
+  const appearedValidatorsPerDayLimit = 1500;
+  const maxPositiveTokenRebaseManagers: string[] = [];
+  const currentLimits = state[Sk.oracleReportSanityChecker].constructorArgs[2];
+  const managersRoster = state[Sk.oracleReportSanityChecker].constructorArgs[3];
+  const LIMITS_LIST = [...currentLimits, appearedValidatorsPerDayLimit];
+  const MANAGERS_ROSTER = [...managersRoster, maxPositiveTokenRebaseManagers];
+
+  const guardians = state[Sk.depositSecurityModule].guardians.addresses;
+  const quorum = state[Sk.depositSecurityModule].guardians.quorum;
 
   // Read contracts addresses from config
   const DEPOSIT_CONTRACT_ADDRESS = state[Sk.chainSpec].depositContractAddress;
@@ -89,6 +104,14 @@ async function main() {
   ).address;
 
   log(`New DSM address: ${depositSecurityModuleAddress}`);
+
+  const dsmContract = await loadContract<DepositSecurityModule>(
+    DepositSecurityModule__factory,
+    depositSecurityModuleAddress,
+  );
+  await dsmContract.addGuardians(guardians, quorum);
+
+  log(`Guardians list: ${await dsmContract.getGuardians()}, quorum ${await dsmContract.getGuardianQuorum()}`);
 
   const accountingOracleArgs = [LOCATOR, LIDO, LEGACY_ORACLE, SECONDS_PER_SLOT, GENESIS_TIME];
 
