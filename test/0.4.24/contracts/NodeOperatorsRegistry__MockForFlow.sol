@@ -1,13 +1,13 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-// SPDX-License-Identifier: GPL-3.0
-
+// SPDX-License-Identifier: UNLICENSED
+// for testing purposes only
 pragma solidity 0.4.24;
 
-import "../nos/NodeOperatorsRegistry.sol";
+import { NodeOperatorsRegistry } from "contracts/0.4.24/nos/NodeOperatorsRegistry.sol";
+import { Packed64x4 } from "contracts/0.4.24/lib/Packed64x4.sol";
 
-contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
+contract NodeOperatorsRegistry__MockForFlow is NodeOperatorsRegistry {
 
-    function increaseNodeOperatorDepositedSigningKeysCount(uint256 _nodeOperatorId, uint64 _keysCount) external {
+    function mock__increaseNodeOperatorDepositedSigningKeysCount(uint256 _nodeOperatorId, uint64 _keysCount) external {
         Packed64x4.Packed memory signingKeysStats = _nodeOperators[_nodeOperatorId].signingKeysStats;
         signingKeysStats.set(TOTAL_DEPOSITED_KEYS_COUNT_OFFSET, signingKeysStats.get(TOTAL_DEPOSITED_KEYS_COUNT_OFFSET) + _keysCount);
         _nodeOperators[_nodeOperatorId].signingKeysStats = signingKeysStats;
@@ -21,22 +21,22 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         _updateSummaryMaxValidatorsCount(_nodeOperatorId);
     }
 
-    function testing_markAllKeysDeposited() external {
+    function mock__markAllKeysDeposited() external {
         uint256 nodeOperatorsCount = getNodeOperatorsCount();
         Packed64x4.Packed memory signingKeysStats;
         for (uint256 i; i < nodeOperatorsCount; ++i) {
             signingKeysStats =  _loadOperatorSigningKeysStats(i);
-            testing_setDepositedSigningKeysCount(i, signingKeysStats.get(TOTAL_VETTED_KEYS_COUNT_OFFSET));
+            mock__setDepositedSigningKeysCount(i, signingKeysStats.get(TOTAL_VETTED_KEYS_COUNT_OFFSET));
         }
     }
 
-    function testing_markAllKeysDeposited(uint256 _nodeOperatorId) external {
+    function mock__markAllKeysDeposited(uint256 _nodeOperatorId) external {
         _onlyExistedNodeOperator(_nodeOperatorId);
         Packed64x4.Packed memory signingKeysStats = _nodeOperators[_nodeOperatorId].signingKeysStats;
-        testing_setDepositedSigningKeysCount(_nodeOperatorId, signingKeysStats.get(TOTAL_VETTED_KEYS_COUNT_OFFSET));
+        mock__setDepositedSigningKeysCount(_nodeOperatorId, signingKeysStats.get(TOTAL_VETTED_KEYS_COUNT_OFFSET));
     }
 
-    function testing_setDepositedSigningKeysCount(uint256 _nodeOperatorId, uint256 _depositedSigningKeysCount) public {
+    function mock__setDepositedSigningKeysCount(uint256 _nodeOperatorId, uint256 _depositedSigningKeysCount) public {
         _onlyExistedNodeOperator(_nodeOperatorId);
         // NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
         Packed64x4.Packed memory signingKeysStats = _loadOperatorSigningKeysStats(_nodeOperatorId);
@@ -60,12 +60,12 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         _increaseValidatorsKeysNonce();
     }
 
-    function testing_unsafeDeactivateNodeOperator(uint256 _nodeOperatorId) external {
+    function mock__unsafeDeactivateNodeOperator(uint256 _nodeOperatorId) external {
         NodeOperator storage operator = _nodeOperators[_nodeOperatorId];
         operator.active = false;
     }
 
-    function testing_addNodeOperator(
+    function mock__addNodeOperator(
         string _name,
         address _rewardAddress,
         uint64 totalSigningKeysCount,
@@ -108,7 +108,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         _saveSummarySigningKeysStats(summarySigningKeysStats);
     }
 
-    function testing_setNodeOperatorLimits(
+    function mock__setNodeOperatorLimits(
         uint256 _nodeOperatorId,
         uint64 stuckValidatorsCount,
         uint64 refundedValidatorsCount,
@@ -122,7 +122,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         _updateSummaryMaxValidatorsCount(_nodeOperatorId);
     }
 
-    function testing_getTotalSigningKeysStats()
+    function mock__getTotalSigningKeysStats()
         external
         view
         returns (
@@ -139,11 +139,11 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         exitedSigningKeysCount = summarySigningKeysStats.get(SUMMARY_EXITED_KEYS_COUNT_OFFSET);
     }
 
-    function testing_setBaseVersion(uint256 _newBaseVersion) external {
+    function mock__setBaseVersion(uint256 _newBaseVersion) external {
         _setContractVersion(_newBaseVersion);
     }
 
-    function testing_resetRegistry() external {
+    function mock__resetRegistry() external {
         uint256 totalOperatorsCount = TOTAL_OPERATORS_COUNT_POSITION.getStorageUint256();
         TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(0);
         ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(0);
@@ -159,7 +159,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         }
     }
 
-    function testing_getSigningKeysAllocationData(uint256 _keysCount)
+    function mock__getSigningKeysAllocationData(uint256 _keysCount)
         external
         view
         returns (
@@ -171,7 +171,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         return _getSigningKeysAllocationData(_keysCount);
     }
 
-    function testing_obtainDepositData(uint256 _keysToAllocate)
+    function mock__obtainDepositData(uint256 _keysToAllocate)
         external
         returns (uint256 loadedValidatorsKeysCount, bytes memory publicKeys, bytes memory signatures)
     {
@@ -179,7 +179,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         emit ValidatorsKeysLoaded(publicKeys, signatures);
     }
 
-    function testing_isNodeOperatorPenalized(uint256 operatorId) external view returns (bool) {
+    function mock__isNodeOperatorPenalized(uint256 operatorId) external view returns (bool) {
         Packed64x4.Packed memory stuckPenaltyStats = _loadOperatorStuckPenaltyStats(operatorId);
         if (
             stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET) < stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET)
@@ -190,7 +190,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         return false;
     }
 
-    function testing_getNodeOperator(uint256 operatorId) external view
+    function mock__getNodeOperator(uint256 operatorId) external view
         returns (uint256 exitedSigningKeysCount, uint256 depositedSigningKeysCount, uint256 maxSigningKeysCount)
     {
         return _getNodeOperator(operatorId);
@@ -198,11 +198,11 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
 
     event ValidatorsKeysLoaded(bytes publicKeys, bytes signatures);
 
-    function testing_distributeRewards() external returns (uint256) {
+    function mock__distributeRewards() external returns (uint256) {
         return _distributeRewards();
     }
 
-     function testing_setNodeOperatorPenalty(
+     function mock__setNodeOperatorPenalty(
         uint256 _nodeOperatorId,
         uint256 _refundedValidatorsCount,
         uint256 _stuckValidatorsCount,
