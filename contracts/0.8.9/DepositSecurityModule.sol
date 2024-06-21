@@ -476,14 +476,15 @@ contract DepositSecurityModule {
      * @param depositCalldata The calldata for the deposit.
      * @param sortedGuardianSignatures The list of guardian signatures ascendingly sorted by address.
      * @dev Reverts if any of the following is true:
+     *   - onchain deposit root is different from the provided one;
+     *   - onchain module nonce is different from the provided one;
      *   - quorum is zero;
      *   - the number of guardian signatures is less than the quorum;
-     *   - onchain deposit root is different from the provided one;
      *   - module is not active;
      *   - min deposit distance is not passed;
      *   - blockHash is zero or not equal to the blockhash(blockNumber);
-     *   - onchain module nonce is different from the provided one;
-     *   - invalid or non-guardian signature received;
+     *   - deposits are paused;
+     *   - invalid or non-guardian signature received.
      *
      * Signatures must be sorted in ascending order by address of the guardian. Each signature must
      * be produced for the keccak256 hash of the following message (each component taking 32 bytes):
