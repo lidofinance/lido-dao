@@ -32,6 +32,7 @@ async function main() {
   const SECONDS_PER_SLOT = parseInt(getEnvVariable("SECONDS_PER_SLOT"));
   const GENESIS_TIME = parseInt(getEnvVariable("GENESIS_TIME"));
   const deployer = ethers.getAddress(getEnvVariable("DEPLOYER"));
+  const APPEARED_VALIDATORS_PER_DAY_LIMIT = parseInt(getEnvVariable("APPEARED_VALIDATORS_PER_DAY_LIMIT"));
   const chainId = (await ethers.provider.getNetwork()).chainId;
 
   const balance = await ethers.provider.getBalance(deployer);
@@ -41,11 +42,10 @@ async function main() {
   state[Sk.scratchDeployGasUsed] = 0n.toString();
   persistNetworkState(state);
 
-  const appearedValidatorsPerDayLimit = 1500;
   const maxPositiveTokenRebaseManagers: string[] = [];
   const currentLimits = state[Sk.oracleReportSanityChecker].constructorArgs[2];
   const managersRoster = state[Sk.oracleReportSanityChecker].constructorArgs[3];
-  const LIMITS_LIST = [...currentLimits, appearedValidatorsPerDayLimit];
+  const LIMITS_LIST = [...currentLimits, APPEARED_VALIDATORS_PER_DAY_LIMIT];
   const MANAGERS_ROSTER = [...managersRoster, maxPositiveTokenRebaseManagers];
 
   const guardians = state[Sk.depositSecurityModule].guardians.addresses;
