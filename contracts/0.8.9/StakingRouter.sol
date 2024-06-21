@@ -74,7 +74,6 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         Active, // deposits and rewards allowed
         DepositsPaused, // deposits NOT allowed, rewards allowed
         Stopped // deposits and rewards NOT allowed
-
     }
 
     struct StakingModule {
@@ -238,7 +237,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
      * @param _name name of staking module
      * @param _stakingModuleAddress address of staking module
      * @param _stakeShareLimit maximum share that can be allocated to a module
-     * @param _priorityExitShareThreshold module's proirity exit share threshold
+     * @param _priorityExitShareThreshold module's priority exit share threshold
      * @param _stakingModuleFee fee of the staking module taken from the consensus layer rewards
      * @param _treasuryFee treasury fee
      * @param _maxDepositsPerBlock the maximum number of validators that can be deposited in a single block
@@ -309,7 +308,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
      * @notice Update staking module params
      * @param _stakingModuleId staking module id
      * @param _stakeShareLimit target total stake share
-     * @param _priorityExitShareThreshold module's proirity exit share threshold
+     * @param _priorityExitShareThreshold module's priority exit share threshold
      * @param _stakingModuleFee fee of the staking module taken from the consensus layer rewards
      * @param _treasuryFee treasury fee
      * @param _maxDepositsPerBlock the maximum number of validators that can be deposited in a single block
@@ -690,10 +689,10 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
         }
     }
 
-    /// @notice decrese vetted signing keys counts per node operator for the staking module with
+    /// @notice decrease vetted signing keys counts per node operator for the staking module with
     /// the specified id.
     ///
-    /// @param _stakingModuleId The id of the staking modules to be updated.
+    /// @param _stakingModuleId The id of the staking module to be updated.
     /// @param _nodeOperatorIds Ids of the node operators to be updated.
     /// @param _vettedSigningKeysCounts New counts of vetted signing keys for the specified node operators.
     ///
