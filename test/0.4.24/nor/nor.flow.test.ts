@@ -403,43 +403,61 @@ describe("NodeOperatorsRegistry", () => {
     it("Allows reading the changed LidoLocator address", async () => {
       await nor.mock__setLocator(certainAddress("mocked-locator"));
       expect(await nor.getLocator()).to.be.equal(certainAddress("mocked-locator"));
-    })
+    });
 
     it("Allows reading zero LidoLocator address", async () => {
       await nor.mock__setLocator(ZeroAddress);
       expect(await nor.getLocator()).to.be.equal(ZeroAddress);
-    })
+    });
   });
 
   context("getStuckPenaltyDelay", () => {
     it("Returns stuck penalty delay", async () => {
       expect(await nor.getStuckPenaltyDelay()).to.be.equal(penaltyDelay);
-    })
+    });
 
     it("Allows reading the changed stuck penalty delay", async () => {
       const maxStuckPenaltyDelay = await nor.MAX_STUCK_PENALTY_DELAY();
 
       await nor.mock__setStuckPenaltyDelay(maxStuckPenaltyDelay);
       expect(await nor.getStuckPenaltyDelay()).to.be.equal(maxStuckPenaltyDelay);
-    })
+    });
 
     it("Allows reading zero stuck penalty delay", async () => {
       await nor.mock__setStuckPenaltyDelay(0n);
       expect(await nor.getStuckPenaltyDelay()).to.be.equal(0n);
-    })
+    });
   });
 
   context("setStuckPenaltyDelay", () => {
     it("Reverts if has no MANAGE_NODE_OPERATOR_ROLE assigned", async () => {
-
-    })
+      await expect(nor.setStuckPenaltyDelay(86400n)).to.be.revertedWith("APP_AUTH_FAILED");
+    });
 
     it("Reverts if invalid range value provided", async () => {
+      const maxStuckPenaltyDelay = await nor.MAX_STUCK_PENALTY_DELAY();
 
-    })
+      await expect(
+        nor.connect(nodeOperatorsManager).setStuckPenaltyDelay(maxStuckPenaltyDelay + 1n),
+      ).to.be.revertedWith("OUT_OF_RANGE");
+    });
 
-    it("Sets a new vault for the stuck penalty delay", async () => {
+    it("Sets a new value for the stuck penalty delay", async () => {
+      await expect(nor.connect(nodeOperatorsManager).setStuckPenaltyDelay(7200n))
+        .to.emit(nor, "StuckPenaltyDelayChanged")
+        .withArgs(7200n);
 
-    })
+      const stuckPenaltyDelay = await nor.getStuckPenaltyDelay();
+      expect(stuckPenaltyDelay).to.be.equal(7200n);
+    });
+
+    it("Allows setting a zero delay", async () => {
+      await expect(nor.connect(nodeOperatorsManager).setStuckPenaltyDelay(0n))
+        .to.emit(nor, "StuckPenaltyDelayChanged")
+        .withArgs(0n);
+
+      const stuckPenaltyDelay = await nor.getStuckPenaltyDelay();
+      expect(stuckPenaltyDelay).to.be.equal(0n);
+    });
   });
 });
