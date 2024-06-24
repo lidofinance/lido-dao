@@ -399,9 +399,47 @@ describe("NodeOperatorsRegistry", () => {
     it("Returns LidoLocator address", async () => {
       expect(await nor.getLocator()).to.be.equal(locator);
     });
+
+    it("Allows reading the changed LidoLocator address", async () => {
+      await nor.mock__setLocator(certainAddress("mocked-locator"));
+      expect(await nor.getLocator()).to.be.equal(certainAddress("mocked-locator"));
+    })
+
+    it("Allows reading zero LidoLocator address", async () => {
+      await nor.mock__setLocator(ZeroAddress);
+      expect(await nor.getLocator()).to.be.equal(ZeroAddress);
+    })
   });
 
-  context("getStuckPenaltyDelay", () => {});
+  context("getStuckPenaltyDelay", () => {
+    it("Returns stuck penalty delay", async () => {
+      expect(await nor.getStuckPenaltyDelay()).to.be.equal(penaltyDelay);
+    })
 
-  context("setStuckPenaltyDelay", () => {});
+    it("Allows reading the changed stuck penalty delay", async () => {
+      const maxStuckPenaltyDelay = await nor.MAX_STUCK_PENALTY_DELAY();
+
+      await nor.mock__setStuckPenaltyDelay(maxStuckPenaltyDelay);
+      expect(await nor.getStuckPenaltyDelay()).to.be.equal(maxStuckPenaltyDelay);
+    })
+
+    it("Allows reading zero stuck penalty delay", async () => {
+      await nor.mock__setStuckPenaltyDelay(0n);
+      expect(await nor.getStuckPenaltyDelay()).to.be.equal(0n);
+    })
+  });
+
+  context("setStuckPenaltyDelay", () => {
+    it("Reverts if has no MANAGE_NODE_OPERATOR_ROLE assigned", async () => {
+
+    })
+
+    it("Reverts if invalid range value provided", async () => {
+
+    })
+
+    it("Sets a new vault for the stuck penalty delay", async () => {
+
+    })
+  });
 });

@@ -202,7 +202,7 @@ contract NodeOperatorsRegistry__MockForFlow is NodeOperatorsRegistry {
         return _distributeRewards();
     }
 
-     function mock__setNodeOperatorPenalty(
+    function mock__setNodeOperatorPenalty(
         uint256 _nodeOperatorId,
         uint256 _refundedValidatorsCount,
         uint256 _stuckValidatorsCount,
@@ -220,5 +220,13 @@ contract NodeOperatorsRegistry__MockForFlow is NodeOperatorsRegistry {
         stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, uint64(_stuckPenaltyEndTimestamp));
         _saveOperatorStuckPenaltyStats(_nodeOperatorId, stuckPenaltyStats);
         _updateSummaryMaxValidatorsCount(_nodeOperatorId);
+    }
+
+    function mock__setLocator(address _mockedLocator) {
+        LIDO_LOCATOR_POSITION.setStorageAddress(_mockedLocator);
+    }
+
+    function mock__setStuckPenaltyDelay(uint256 _stuckPenaltyDelay) {
+        STUCK_PENALTY_DELAY_POSITION.setStorageUint256(_stuckPenaltyDelay);
     }
 }
