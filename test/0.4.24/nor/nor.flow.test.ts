@@ -131,7 +131,7 @@ describe("NodeOperatorsRegistry", () => {
     });
 
     it("Adds a new node operator", async () => {
-      for (let i = 0n; i < 10; ++i) {
+      for (let i = 0n; i < 10n; ++i) {
         const id = i;
         const name = "no " + i.toString();
         const rewardAddress = certainAddress("reward-address-" + i.toString());
@@ -389,11 +389,107 @@ describe("NodeOperatorsRegistry", () => {
 
   context("getNodeOperatorIsActive", () => {});
 
-  context("getNodeOperatorIds", () => {});
+  context("getNodeOperatorIds", () => {
+    let beforePopulating: string;
 
-  context("getNonce", () => {});
+    beforeEach(async () => {
+      beforePopulating = await Snapshot.take();
 
-  context("getKeysOpIndex", () => {});
+      for (let i = 0n; i < 10n; ++i) {
+        const id = i;
+        const name = "no " + i.toString();
+        const rewardAddress = certainAddress("reward-address-" + i.toString());
+
+        await expect(nor.connect(nodeOperatorsManager).addNodeOperator(name, rewardAddress))
+          .to.emit(nor, "NodeOperatorAdded")
+          .withArgs(id, name, rewardAddress, 0n);
+
+        expect(await nor.getNodeOperatorsCount()).to.equal(id + 1n);
+      }
+    });
+
+    it("Returns empty list if no operators added", async () => {
+      await Snapshot.restore(beforePopulating);
+
+      const ids = await nor.getNodeOperatorIds(0n, 10n);
+
+      expect(ids.length).to.be.equal(0n);
+      expect(await nor.getNodeOperatorsCount()).to.be.equal(0n);
+    });
+
+    it("Returns empty list if limit is zero", async () => {
+      const ids = await nor.getNodeOperatorIds(0n, 0n);
+
+      expect(ids.length).to.be.equal(0n);
+      expect(await nor.getNodeOperatorsCount()).to.be.equal(10n);
+    });
+
+    it("Returns empty list if offset is past the final element", async () => {
+      const ids = await nor.getNodeOperatorIds(10n, 10n);
+
+      expect(ids.length).to.be.equal(0n);
+      expect(await nor.getNodeOperatorsCount()).to.be.equal(10n);
+    });
+
+    it("Returns up to limit node operator ids", async () => {
+      const ids = await nor.getNodeOperatorIds(0n, 5n);
+
+      expect(ids.length).to.be.equal(5n);
+      expect(await nor.getNodeOperatorsCount()).to.be.equal(10n);
+    });
+
+    it("Returns all ids if limit hadn't been reached", async () => {
+      const ids = await nor.getNodeOperatorIds(0n, 10n);
+
+      expect(ids.length).to.be.equal(10n);
+      expect(await nor.getNodeOperatorsCount()).to.be.equal(10n);
+
+      for (let i = 0n; i < ids.length; ++i) {
+        expect(ids[Number(i)]).to.be.equal(i);
+      }
+    });
+  });
+
+  context("getNonce", () => {
+    it("Returns nonce value", async () => {
+      expect(await nor.getNonce()).to.be.equal(0n);
+    });
+
+    it("Allows reading the changed nonce value", async () => {
+      await nor.mock__setNonce(123n);
+      expect(await nor.getNonce()).to.be.equal(123n);
+    });
+
+    it("Allows zero nonce", async () => {
+      await nor.mock__setNonce(0n);
+      expect(await nor.getNonce()).to.be.equal(0n);
+    });
+  });
+
+  context("getKeysOpIndex", () => {
+    it("Returns keys op value", async () => {
+      expect(await nor.getKeysOpIndex()).to.be.equal(0n);
+    });
+
+    it("Allows reading the changed keys op value", async () => {
+      await nor.mock__setNonce(123n);
+      expect(await nor.getKeysOpIndex()).to.be.equal(123n);
+    });
+
+    it("Allows zero keys op", async () => {
+      await nor.mock__setNonce(0n);
+      expect(await nor.getKeysOpIndex()).to.be.equal(0n);
+    });
+
+    it("Returns the same value as getNonce", async () => {
+      for (let i = 0n; i < 100n; ++i) {
+        await nor.mock__setNonce(i);
+
+        expect(await nor.getNonce()).to.be.equal(i);
+        expect(await nor.getKeysOpIndex()).to.be.equal(i);
+      }
+    });
+  });
 
   context("getLocator", () => {
     it("Returns LidoLocator address", async () => {
