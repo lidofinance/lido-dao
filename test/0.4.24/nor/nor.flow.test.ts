@@ -383,13 +383,12 @@ describe("NodeOperatorsRegistry", () => {
 
   context("clearNodeOperatorPenalty", () => {});
 
-  context("getNodeOperatorsCount", () => {});
+  context("getNodeOperatorsCount", () => {
+    it("Returns zero if no operators added", async () => {
+      expect(await nor.getNodeOperatorsCount()).to.be.equal(0n);
+    });
 
-  context("getActiveNodeOperatorsCount", () => {
-    let beforePopulating: string;
-
-    beforeEach(async () => {
-      beforePopulating = await Snapshot.take();
+    it("Returns all added node operators", async () => {
       for (let i = 0n; i < 10n; ++i) {
         const id = i;
         const name = "no " + i.toString();
@@ -401,6 +400,25 @@ describe("NodeOperatorsRegistry", () => {
 
         expect(await nor.getNodeOperatorsCount()).to.equal(id + 1n);
       }
+
+      expect(await nor.getNodeOperatorsCount()).to.equal(10n);
+    });
+  });
+
+  context("getActiveNodeOperatorsCount", () => {
+    let beforePopulating: string;
+
+    beforeEach(async () => {
+      beforePopulating = await Snapshot.take();
+
+      const promises = [];
+      for (let i = 0n; i < 10n; ++i) {
+        const name = "no " + i.toString();
+        const rewardAddress = certainAddress("reward-address-" + i.toString());
+
+        promises.push(nor.connect(nodeOperatorsManager).addNodeOperator(name, rewardAddress));
+      }
+      await Promise.all(promises);
     });
 
     it("Returns zero if no operators added", async () => {
@@ -436,17 +454,16 @@ describe("NodeOperatorsRegistry", () => {
 
   context("getNodeOperatorIsActive", () => {
     beforeEach(async () => {
+      const promises = [];
       for (let i = 0n; i < 10n; ++i) {
-        const id = i;
         const name = "no " + i.toString();
         const rewardAddress = certainAddress("reward-address-" + i.toString());
 
-        await expect(nor.connect(nodeOperatorsManager).addNodeOperator(name, rewardAddress))
-          .to.emit(nor, "NodeOperatorAdded")
-          .withArgs(id, name, rewardAddress, 0n);
+        promises.push(nor.connect(nodeOperatorsManager).addNodeOperator(name, rewardAddress));
+      }
+      await Promise.all(promises);
 
-        expect(await nor.getNodeOperatorsCount()).to.equal(id + 1n);
-
+      for (let i = 0n; i < 10n; ++i) {
         await nor.mock__setNodeOperatorIsActive(i, i % 2n != 0n ? true : false);
       }
     });
@@ -493,17 +510,14 @@ describe("NodeOperatorsRegistry", () => {
     beforeEach(async () => {
       beforePopulating = await Snapshot.take();
 
+      const promises = [];
       for (let i = 0n; i < 10n; ++i) {
-        const id = i;
         const name = "no " + i.toString();
         const rewardAddress = certainAddress("reward-address-" + i.toString());
 
-        await expect(nor.connect(nodeOperatorsManager).addNodeOperator(name, rewardAddress))
-          .to.emit(nor, "NodeOperatorAdded")
-          .withArgs(id, name, rewardAddress, 0n);
-
-        expect(await nor.getNodeOperatorsCount()).to.equal(id + 1n);
+        promises.push(nor.connect(nodeOperatorsManager).addNodeOperator(name, rewardAddress));
       }
+      await Promise.all(promises);
     });
 
     it("Returns empty list if no operators added", async () => {
