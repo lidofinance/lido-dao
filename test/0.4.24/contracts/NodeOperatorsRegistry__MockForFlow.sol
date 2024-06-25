@@ -64,11 +64,6 @@ contract NodeOperatorsRegistry__MockForFlow is NodeOperatorsRegistry {
     _increaseValidatorsKeysNonce();
   }
 
-  function mock__unsafeDeactivateNodeOperator(uint256 _nodeOperatorId) external {
-    NodeOperator storage operator = _nodeOperators[_nodeOperatorId];
-    operator.active = false;
-  }
-
   function mock__addNodeOperator(
     string _name,
     address _rewardAddress,
@@ -239,7 +234,11 @@ contract NodeOperatorsRegistry__MockForFlow is NodeOperatorsRegistry {
     KEYS_OP_INDEX_POSITION.setStorageUint256(_nonce);
   }
 
-  function mock__setNodeOperatorIsActive(uint256 _nodeOperatorId, bool _isActive) {
+  /**
+   * @dev Extra care is needed.
+   * Doesn't update the active node operators counter and node operator's summary
+   */
+  function mock__unsafeSetNodeOperatorIsActive(uint256 _nodeOperatorId, bool _isActive) {
     _nodeOperators[_nodeOperatorId].active = _isActive;
   }
 }

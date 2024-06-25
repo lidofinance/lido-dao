@@ -348,7 +348,45 @@ describe("NodeOperatorsRegistry", () => {
     });
   });
 
-  context("setNodeOperatorStakingLimit", () => {});
+  context("setNodeOperatorStakingLimit", () => {
+    const firstNodeOperatorId = 0;
+    const secondNodeOperatorId = 1;
+    const thirdNodeOperatorId = 2;
+
+    beforeEach(async () => {
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
+        firstNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
+        secondNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[thirdNodeOperatorId])).to.be.equal(
+        thirdNodeOperatorId,
+      );
+    });
+
+    it("Reverts if no such an operator exists", async () => {
+      await expect(nor.setNodeOperatorStakingLimit(5n, 10n)).to.be.revertedWith("OUT_OF_RANGE");
+    });
+
+    it("Reverts if no SET_NODE_OPERATOR_LIMIT_ROLE assigned", async () => {
+      await expect(nor.setNodeOperatorStakingLimit(firstNodeOperatorId, 0n)).to.be.revertedWith("APP_AUTH_FAILED");
+    });
+
+    it("Reverts if the node operator is inactive", async () => {
+      await expect(nor.connect(limitsManager).setNodeOperatorStakingLimit(thirdNodeOperatorId, 0n)).to.be.revertedWith(
+        "WRONG_OPERATOR_ACTIVE_STATE",
+      );
+    });
+
+    it("Does nothing if vetted keys count stays the same", async () => {});
+
+    it("Able to set lower vetted keys count", async () => {});
+
+    it("Able to set higher vetted keys count", async () => {});
+
+    it("Vetted keys count can't exceed total keys", async () => {});
+  });
 
   context("onRewardsMinted", () => {
     beforeEach(async () => {
@@ -376,8 +414,12 @@ describe("NodeOperatorsRegistry", () => {
     const secondNodeOperatorId = 1;
 
     beforeEach(async () => {
-      expect(await addNodeOperator(nor, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(firstNodeOperatorId);
-      expect(await addNodeOperator(nor, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(secondNodeOperatorId);
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
+        firstNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
+        secondNodeOperatorId,
+      );
     });
 
     it("Reverts if has no STAKING_ROUTER_ROLE assigned", async () => {
@@ -413,8 +455,12 @@ describe("NodeOperatorsRegistry", () => {
     let targetLimit = 0n;
 
     beforeEach(async () => {
-      expect(await addNodeOperator(nor, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(firstNodeOperatorId);
-      expect(await addNodeOperator(nor, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(secondNodeOperatorId);
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
+        firstNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
+        secondNodeOperatorId,
+      );
     });
 
     it('reverts with "APP_AUTH_FAILED" error when called by sender without STAKING_ROUTER_ROLE', async () => {
@@ -639,7 +685,7 @@ describe("NodeOperatorsRegistry", () => {
       await Promise.all(promises);
 
       for (let i = 0n; i < 10n; ++i) {
-        await nor.mock__setNodeOperatorIsActive(i, i % 2n != 0n ? true : false);
+        await nor.mock__unsafeSetNodeOperatorIsActive(i, i % 2n != 0n ? true : false);
       }
     });
 
@@ -865,6 +911,7 @@ interface NodeOperatorConfig {
 /***
  * Adds new Node Operator to the registry and configures it
  * @param {object} norMock Node operators registry mocked instance
+ * @param {HardhatEthersSigner} norManager Node operators registry manager
  * @param {object} config Configuration of the added node operator
  * @param {string} config.name Name of the new node operator
  * @param {string} config.rewardAddress Reward address of the new node operator
@@ -879,6 +926,7 @@ interface NodeOperatorConfig {
  */
 async function addNodeOperator(
   norMock: NodeOperatorsRegistry__MockForFlow,
+  norManager: HardhatEthersSigner,
   config: NodeOperatorConfig,
 ): Promise<bigint> {
   const isActive = config.isActive === undefined ? true : config.isActive;
@@ -920,7 +968,7 @@ async function addNodeOperator(
   );
 
   if (!isActive) {
-    await norMock.mock__unsafeDeactivateNodeOperator(newOperatorId);
+    await norMock.connect(norManager).deactivateNodeOperator(newOperatorId);
   }
 
   const nodeOperatorsSummary = await norMock.getNodeOperatorSummary(newOperatorId);
