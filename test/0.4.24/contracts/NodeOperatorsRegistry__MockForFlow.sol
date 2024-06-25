@@ -238,4 +238,8 @@ contract NodeOperatorsRegistry__MockForFlow is NodeOperatorsRegistry {
   function mock__setNonce(uint256 _nonce) {
     KEYS_OP_INDEX_POSITION.setStorageUint256(_nonce);
   }
+
+  function mock__setNodeOperatorIsActive(uint256 _nodeOperatorId, bool _isActive) {
+    _nodeOperators[_nodeOperatorId].active = _isActive;
+  }
 }

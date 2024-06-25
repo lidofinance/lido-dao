@@ -387,7 +387,58 @@ describe("NodeOperatorsRegistry", () => {
 
   context("getActiveNodeOperatorsCount", () => {});
 
-  context("getNodeOperatorIsActive", () => {});
+  context("getNodeOperatorIsActive", () => {
+    beforeEach(async () => {
+      for (let i = 0n; i < 10n; ++i) {
+        const id = i;
+        const name = "no " + i.toString();
+        const rewardAddress = certainAddress("reward-address-" + i.toString());
+
+        await expect(nor.connect(nodeOperatorsManager).addNodeOperator(name, rewardAddress))
+          .to.emit(nor, "NodeOperatorAdded")
+          .withArgs(id, name, rewardAddress, 0n);
+
+        expect(await nor.getNodeOperatorsCount()).to.equal(id + 1n);
+
+        await nor.mock__setNodeOperatorIsActive(i, i % 2n != 0n ? true : false);
+      }
+    });
+
+    it("Returns false if such an operator doesn't exist", async () => {
+      expect(await nor.getNodeOperatorsCount()).to.be.equal(10n);
+      expect(await nor.getNodeOperatorIsActive(11n)).to.be.false;
+    });
+
+    it("Returns false if the operator is inactive", async () => {
+      for (let i = 0n; i < 5n; ++i) {
+        expect(await nor.getNodeOperatorIsActive(i * 2n)).to.be.false;
+      }
+    });
+
+    it("Returns true if the operator is active", async () => {
+      for (let i = 0n; i < 5n; ++i) {
+        expect(await nor.getNodeOperatorIsActive(i * 2n + 1n)).to.be.true;
+      }
+    });
+
+    it("Allows reading changed activity state", async () => {
+      for (let i = 0n; i < 5n; ++i) {
+        await nor.connect(nodeOperatorsManager).activateNodeOperator(i * 2n);
+      }
+
+      for (let i = 0n; i < 10n; ++i) {
+        expect(await nor.getNodeOperatorIsActive(i)).to.be.true;
+      }
+
+      for (let i = 0n; i < 10n; ++i) {
+        await nor.connect(nodeOperatorsManager).deactivateNodeOperator(i);
+      }
+
+      for (let i = 0n; i < 10n; ++i) {
+        expect(await nor.getNodeOperatorIsActive(i)).to.be.false;
+      }
+    });
+  });
 
   context("getNodeOperatorIds", () => {
     let beforePopulating: string;
