@@ -14,7 +14,7 @@ import {
   NodeOperatorsRegistry__MockForFlow__factory,
 } from "typechain-types";
 
-import { certainAddress, randomAddress } from "lib";
+import { certainAddress, ether, randomAddress } from "lib";
 
 import { addAragonApp, deployLidoDao } from "test/deploy";
 import { Snapshot } from "test/suite";
@@ -22,6 +22,7 @@ import { Snapshot } from "test/suite";
 describe("NodeOperatorsRegistry", () => {
   let deployer: HardhatEthersSigner;
   let user: HardhatEthersSigner;
+  let stranger: HardhatEthersSigner;
 
   let limitsManager: HardhatEthersSigner;
   let nodeOperatorsManager: HardhatEthersSigner;
@@ -37,12 +38,49 @@ describe("NodeOperatorsRegistry", () => {
 
   let originalState: string;
 
+  const NODE_OPERATORS: NodeOperatorConfig[] = [
+    {
+      name: "foo",
+      rewardAddress: certainAddress("node-operator-1"),
+      totalSigningKeysCount: 10n,
+      depositedSigningKeysCount: 5n,
+      exitedSigningKeysCount: 1n,
+      vettedSigningKeysCount: 6n,
+      stuckValidatorsCount: 0n,
+      refundedValidatorsCount: 0n,
+      stuckPenaltyEndAt: 0n,
+    },
+    {
+      name: " bar",
+      rewardAddress: certainAddress("node-operator-2"),
+      totalSigningKeysCount: 15n,
+      depositedSigningKeysCount: 7n,
+      exitedSigningKeysCount: 0n,
+      vettedSigningKeysCount: 10n,
+      stuckValidatorsCount: 0n,
+      refundedValidatorsCount: 0n,
+      stuckPenaltyEndAt: 0n,
+    },
+    {
+      name: "deactivated",
+      isActive: false,
+      rewardAddress: certainAddress("node-operator-3"),
+      totalSigningKeysCount: 10n,
+      depositedSigningKeysCount: 0n,
+      exitedSigningKeysCount: 0n,
+      vettedSigningKeysCount: 5n,
+      stuckValidatorsCount: 0n,
+      refundedValidatorsCount: 0n,
+      stuckPenaltyEndAt: 0n,
+    },
+  ];
+
   const moduleType = encodeBytes32String("curated-onchain-v1");
   const penaltyDelay = 86400n;
   const contractVersion = 2n;
 
   before(async () => {
-    [deployer, user, stakingRouter, nodeOperatorsManager, signingKeysManager, limitsManager] =
+    [deployer, user, stakingRouter, nodeOperatorsManager, signingKeysManager, limitsManager, stranger] =
       await ethers.getSigners();
 
     ({ lido, dao, acl } = await deployLidoDao({
@@ -62,6 +100,8 @@ describe("NodeOperatorsRegistry", () => {
     });
 
     nor = NodeOperatorsRegistry__MockForFlow__factory.connect(appProxy, deployer);
+
+    await acl.createPermission(user, lido, await lido.RESUME_ROLE(), deployer);
 
     await acl.createPermission(stakingRouter, nor, await nor.STAKING_ROUTER_ROLE(), deployer);
     await acl.createPermission(signingKeysManager, nor, await nor.MANAGE_SIGNING_KEYS(), deployer);
@@ -320,7 +360,7 @@ describe("NodeOperatorsRegistry", () => {
       await expect(nor.onRewardsMinted(10n)).to.be.revertedWith("APP_AUTH_FAILED");
     });
 
-    it("Does nothing", async () => {
+    it("Does nothing yet if called by StakingRouter", async () => {
       await nor.connect(stakingRouter).onRewardsMinted(10n);
     });
   });
@@ -331,11 +371,138 @@ describe("NodeOperatorsRegistry", () => {
 
   context("updateRefundedValidatorsCount", () => {});
 
-  context("onExitedAndStuckValidatorsCountsUpdated", () => {});
+  context("onExitedAndStuckValidatorsCountsUpdated", () => {
+    const firstNodeOperatorId = 0;
+    const secondNodeOperatorId = 1;
+
+    beforeEach(async () => {
+      expect(await addNodeOperator(nor, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(firstNodeOperatorId);
+      expect(await addNodeOperator(nor, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(secondNodeOperatorId);
+    });
+
+    it("Reverts if has no STAKING_ROUTER_ROLE assigned", async () => {
+      expect(await acl["hasPermission(address,address,bytes32)"](stranger, nor, await nor.STAKING_ROUTER_ROLE())).to.be
+        .false;
+
+      await expect(nor.connect(stranger).onExitedAndStuckValidatorsCountsUpdated()).to.be.revertedWith(
+        "APP_AUTH_FAILED",
+      );
+    });
+
+    it("Performs rewards distribution when called by StakingRouter", async () => {
+      expect(await acl["hasPermission(address,address,bytes32)"](stakingRouter, nor, await nor.STAKING_ROUTER_ROLE()))
+        .to.be.true;
+
+      await lido.connect(user).resume();
+      await user.sendTransaction({ to: await lido.getAddress(), value: ether("1.0") });
+      await lido.connect(user).transfer(await nor.getAddress(), await lido.balanceOf(user));
+
+      await expect(nor.connect(stakingRouter).onExitedAndStuckValidatorsCountsUpdated()).to.emit(
+        nor,
+        "RewardsDistributed",
+      );
+    });
+  });
 
   context("unsafeUpdateValidatorsCount", () => {});
 
-  context("updateTargetValidatorsLimits", () => {});
+  context("updateTargetValidatorsLimits", () => {
+    const firstNodeOperatorId = 0;
+    const secondNodeOperatorId = 1;
+
+    let targetLimit = 0n;
+
+    beforeEach(async () => {
+      expect(await addNodeOperator(nor, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(firstNodeOperatorId);
+      expect(await addNodeOperator(nor, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(secondNodeOperatorId);
+    });
+
+    it('reverts with "APP_AUTH_FAILED" error when called by sender without STAKING_ROUTER_ROLE', async () => {
+      expect(await acl["hasPermission(address,address,bytes32)"](stranger, nor, await nor.STAKING_ROUTER_ROLE())).to.be
+        .false;
+
+      await expect(nor.updateTargetValidatorsLimits(firstNodeOperatorId, true, targetLimit)).to.be.revertedWith(
+        "APP_AUTH_FAILED",
+      );
+    });
+
+    it('reverts with "OUT_OF_RANGE" error when called with targetLimit > UINT64_MAX', async () => {
+      const targetLimitWrong = BigInt("0x10000000000000000");
+
+      await expect(
+        nor.connect(stakingRouter).updateTargetValidatorsLimits(firstNodeOperatorId, true, targetLimitWrong),
+      ).to.be.revertedWith("OUT_OF_RANGE");
+    });
+
+    it("updates node operator target limit if called by sender with STAKING_ROUTER_ROLE", async () => {
+      expect(await acl["hasPermission(address,address,bytes32)"](stakingRouter, nor, await nor.STAKING_ROUTER_ROLE()))
+        .to.be.true;
+
+      targetLimit = 10n;
+
+      await expect(nor.connect(stakingRouter).updateTargetValidatorsLimits(firstNodeOperatorId, true, targetLimit))
+        .to.emit(nor, "TargetValidatorsCountChanged")
+        .withArgs(firstNodeOperatorId, targetLimit);
+
+      const keysStatTotal = await nor.getStakingModuleSummary();
+      const expectedExitedValidatorsCount =
+        NODE_OPERATORS[firstNodeOperatorId].exitedSigningKeysCount +
+        NODE_OPERATORS[secondNodeOperatorId].exitedSigningKeysCount;
+      expect(keysStatTotal.totalExitedValidators).to.equal(expectedExitedValidatorsCount);
+
+      const expectedDepositedValidatorsCount =
+        NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount +
+        NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount;
+      expect(keysStatTotal.totalDepositedValidators).to.equal(expectedDepositedValidatorsCount);
+
+      const firstNodeOperatorDepositableValidators =
+        NODE_OPERATORS[firstNodeOperatorId].vettedSigningKeysCount -
+        NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount;
+
+      const secondNodeOperatorDepositableValidators =
+        NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount -
+        NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount;
+
+      const expectedDepositableValidatorsCount =
+        targetLimit < firstNodeOperatorDepositableValidators
+          ? targetLimit
+          : firstNodeOperatorDepositableValidators + secondNodeOperatorDepositableValidators;
+
+      expect(keysStatTotal.depositableValidatorsCount).to.equal(expectedDepositableValidatorsCount);
+    });
+
+    it("updates node operator target limit mode correctly", async () => {
+      expect(await acl["hasPermission(address,address,bytes32)"](stakingRouter, nor, await nor.STAKING_ROUTER_ROLE()))
+        .to.be.true;
+
+      targetLimit = 10n;
+
+      await expect(nor.connect(stakingRouter).updateTargetValidatorsLimits(firstNodeOperatorId, true, targetLimit))
+        .to.emit(nor, "TargetValidatorsCountChanged")
+        .withArgs(firstNodeOperatorId, targetLimit);
+
+      let noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+      expect(noSummary.isTargetLimitActive).to.be.true;
+
+      await expect(nor.connect(stakingRouter).updateTargetValidatorsLimits(secondNodeOperatorId, false, targetLimit))
+        .to.emit(nor, "TargetValidatorsCountChanged")
+        .withArgs(secondNodeOperatorId, targetLimit);
+
+      noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
+      expect(noSummary.isTargetLimitActive).to.be.false;
+
+      // reset limit
+      await expect(nor.connect(stakingRouter).updateTargetValidatorsLimits(firstNodeOperatorId, false, targetLimit))
+        .to.emit(nor, "TargetValidatorsCountChanged")
+        .withArgs(firstNodeOperatorId, 10n); // expect limit set to 0
+
+      noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+      expect(noSummary.isTargetLimitActive).to.equal(false);
+
+      noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
+      expect(noSummary.isTargetLimitActive).to.equal(false);
+    });
+  });
 
   context("onWithdrawalCredentialsChanged", () => {});
 
@@ -345,7 +512,15 @@ describe("NodeOperatorsRegistry", () => {
 
   context("getNodeOperator", () => {});
 
-  context("getRewardsDistribution", () => {});
+  context("getRewardsDistribution", () => {
+    it("Returns empty lists if no operators", async () => {});
+
+    it("Returns zero rewards if zero shares distributed", async () => {});
+
+    it("Distributes all rewards to a single operator if no others", async () => {});
+
+    it("Returns correct reward distribution for multiple NOs", async () => {});
+  });
 
   context("addSigningKeys", () => {});
 
@@ -603,6 +778,10 @@ describe("NodeOperatorsRegistry", () => {
     });
   });
 
+  context("_distributeRewards()", () => {
+    it("TODO", async () => {});
+  });
+
   context("getLocator", () => {
     it("Returns LidoLocator address", async () => {
       expect(await nor.getLocator()).to.be.equal(locator);
@@ -669,3 +848,96 @@ describe("NodeOperatorsRegistry", () => {
     });
   });
 });
+
+interface NodeOperatorConfig {
+  name: string;
+  rewardAddress: string;
+  totalSigningKeysCount: bigint;
+  depositedSigningKeysCount: bigint;
+  exitedSigningKeysCount: bigint;
+  vettedSigningKeysCount: bigint;
+  stuckValidatorsCount: bigint;
+  refundedValidatorsCount: bigint;
+  stuckPenaltyEndAt: bigint;
+  isActive?: boolean;
+}
+
+/***
+ * Adds new Node Operator to the registry and configures it
+ * @param {object} norMock Node operators registry mocked instance
+ * @param {object} config Configuration of the added node operator
+ * @param {string} config.name Name of the new node operator
+ * @param {string} config.rewardAddress Reward address of the new node operator
+ * @param {bigint} config.totalSigningKeysCount Count of the validators in the new node operator
+ * @param {bigint} config.depositedSigningKeysCount Count of used signing keys in the new node operator
+ * @param {bigint} config.exitedSigningKeysCount Count of stopped signing keys in the new node operator
+ * @param {bigint} config.vettedSigningKeysCount Staking limit of the new node operator
+ * @param {bigint} config.stuckValidatorsCount Stuck keys count of the new node operator
+ * @param {bigint} config.refundedValidatorsKeysCount Repaid keys count of the new node operator
+ * @param {bigint} config.isActive The active state of new node operator
+ * @returns {bigint} newOperatorId Id of newly added Node Operator
+ */
+async function addNodeOperator(
+  norMock: NodeOperatorsRegistry__MockForFlow,
+  config: NodeOperatorConfig,
+): Promise<bigint> {
+  const isActive = config.isActive === undefined ? true : config.isActive;
+
+  if (config.vettedSigningKeysCount < config.depositedSigningKeysCount) {
+    throw new Error("Invalid keys config: vettedSigningKeysCount < depositedSigningKeysCount");
+  }
+
+  if (config.vettedSigningKeysCount > config.totalSigningKeysCount) {
+    throw new Error("Invalid keys config: vettedSigningKeysCount > totalSigningKeysCount");
+  }
+
+  if (config.exitedSigningKeysCount > config.depositedSigningKeysCount) {
+    throw new Error("Invalid keys config: depositedSigningKeysCount < exitedSigningKeysCount");
+  }
+
+  if (config.stuckValidatorsCount > config.depositedSigningKeysCount - config.exitedSigningKeysCount) {
+    throw new Error("Invalid keys config: stuckValidatorsCount > depositedSigningKeysCount - exitedSigningKeysCount");
+  }
+
+  if (config.totalSigningKeysCount < config.exitedSigningKeysCount + config.depositedSigningKeysCount) {
+    throw new Error("Invalid keys config: totalSigningKeys < stoppedValidators + usedSigningKeys");
+  }
+
+  const newOperatorId = await norMock.getNodeOperatorsCount();
+  await norMock.mock__addNodeOperator(
+    config.name,
+    config.rewardAddress,
+    config.totalSigningKeysCount,
+    config.vettedSigningKeysCount,
+    config.depositedSigningKeysCount,
+    config.exitedSigningKeysCount,
+  );
+  await norMock.mock__setNodeOperatorLimits(
+    newOperatorId,
+    config.stuckValidatorsCount,
+    config.refundedValidatorsCount,
+    config.stuckPenaltyEndAt,
+  );
+
+  if (!isActive) {
+    await norMock.mock__unsafeDeactivateNodeOperator(newOperatorId);
+  }
+
+  const nodeOperatorsSummary = await norMock.getNodeOperatorSummary(newOperatorId);
+  const nodeOperator = await norMock.getNodeOperator(newOperatorId, true);
+
+  if (isActive) {
+    expect(nodeOperator.totalVettedValidators).to.equal(config.vettedSigningKeysCount);
+    expect(nodeOperator.totalAddedValidators).to.equal(config.totalSigningKeysCount);
+    expect(nodeOperatorsSummary.totalExitedValidators).to.equal(config.exitedSigningKeysCount);
+    expect(nodeOperatorsSummary.totalDepositedValidators).to.equal(config.depositedSigningKeysCount);
+    expect(nodeOperatorsSummary.depositableValidatorsCount).to.equal(
+      config.vettedSigningKeysCount - config.depositedSigningKeysCount,
+    );
+  } else {
+    expect(nodeOperatorsSummary.totalExitedValidators).to.equal(config.exitedSigningKeysCount);
+    expect(nodeOperatorsSummary.totalDepositedValidators).to.equal(config.depositedSigningKeysCount);
+    expect(nodeOperatorsSummary.depositableValidatorsCount).to.equal(0);
+  }
+  return newOperatorId;
+}
