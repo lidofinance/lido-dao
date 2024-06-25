@@ -385,7 +385,54 @@ describe("NodeOperatorsRegistry", () => {
 
   context("getNodeOperatorsCount", () => {});
 
-  context("getActiveNodeOperatorsCount", () => {});
+  context("getActiveNodeOperatorsCount", () => {
+    let beforePopulating: string;
+
+    beforeEach(async () => {
+      beforePopulating = await Snapshot.take();
+      for (let i = 0n; i < 10n; ++i) {
+        const id = i;
+        const name = "no " + i.toString();
+        const rewardAddress = certainAddress("reward-address-" + i.toString());
+
+        await expect(nor.connect(nodeOperatorsManager).addNodeOperator(name, rewardAddress))
+          .to.emit(nor, "NodeOperatorAdded")
+          .withArgs(id, name, rewardAddress, 0n);
+
+        expect(await nor.getNodeOperatorsCount()).to.equal(id + 1n);
+      }
+    });
+
+    it("Returns zero if no operators added", async () => {
+      await Snapshot.restore(beforePopulating);
+
+      expect(await nor.getActiveNodeOperatorsCount()).to.be.equal(0n);
+    });
+
+    it("Returns all operators count if no one has been deactivated yet", async () => {
+      expect(await nor.getNodeOperatorsCount()).to.be.equal(10n);
+      expect(await nor.getActiveNodeOperatorsCount()).to.be.equal(10n);
+    });
+
+    it("Returns zero if no active operators", async () => {
+      for (let i = 0n; i < 10n; ++i) {
+        await nor.connect(nodeOperatorsManager).deactivateNodeOperator(i);
+        expect(await nor.getNodeOperatorIsActive(i)).to.be.false;
+      }
+
+      expect(await nor.getNodeOperatorsCount()).to.be.equal(10n);
+      expect(await nor.getActiveNodeOperatorsCount()).to.be.equal(0n);
+    });
+
+    it("Returns active node operators only if some were deactivated", async () => {
+      expect(await nor.getNodeOperatorsCount()).to.be.equal(10n);
+
+      await nor.connect(nodeOperatorsManager).deactivateNodeOperator(5n);
+      await nor.connect(nodeOperatorsManager).deactivateNodeOperator(3n);
+
+      expect(await nor.getActiveNodeOperatorsCount()).to.be.equal(10n - 2n);
+    });
+  });
 
   context("getNodeOperatorIsActive", () => {
     beforeEach(async () => {
