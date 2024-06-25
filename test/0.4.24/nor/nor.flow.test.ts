@@ -3,6 +3,7 @@ import { encodeBytes32String, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 import {
   ACL,
@@ -379,13 +380,104 @@ describe("NodeOperatorsRegistry", () => {
       );
     });
 
-    it("Does nothing if vetted keys count stays the same", async () => {});
+    it("Does nothing if vetted keys count stays the same", async () => {
+      const vetted = (await nor.getNodeOperator(firstNodeOperatorId, false)).totalVettedValidators;
 
-    it("Able to set lower vetted keys count", async () => {});
+      await expect(nor.connect(limitsManager).setNodeOperatorStakingLimit(firstNodeOperatorId, vetted)).to.not.emit(
+        nor,
+        "VettedSigningKeysCountChanged",
+      );
+    });
 
-    it("Able to set higher vetted keys count", async () => {});
+    it("Able to set decrease vetted keys count", async () => {
+      const oldVetted = 6n;
+      const newVetted = 5n;
+      expect(newVetted < oldVetted);
 
-    it("Vetted keys count can't exceed total keys", async () => {});
+      expect((await nor.getNodeOperator(firstNodeOperatorId, false)).totalVettedValidators).to.be.equal(oldVetted);
+      const oldNonce = await nor.getNonce();
+
+      await expect(nor.connect(limitsManager).setNodeOperatorStakingLimit(firstNodeOperatorId, newVetted))
+        .to.emit(nor, "VettedSigningKeysCountChanged")
+        .withArgs(firstNodeOperatorId, newVetted)
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(oldNonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(oldNonce + 1n);
+
+      expect((await nor.getNodeOperator(firstNodeOperatorId, false)).totalVettedValidators).to.be.equal(newVetted);
+    });
+
+    it("Able to increase vetted keys count", async () => {
+      const oldVetted = 6n;
+      const newVetted = 8n;
+      expect(newVetted > oldVetted);
+
+      expect((await nor.getNodeOperator(firstNodeOperatorId, false)).totalVettedValidators).to.be.equal(oldVetted);
+      const oldNonce = await nor.getNonce();
+
+      await expect(nor.connect(limitsManager).setNodeOperatorStakingLimit(firstNodeOperatorId, newVetted))
+        .to.emit(nor, "VettedSigningKeysCountChanged")
+        .withArgs(firstNodeOperatorId, newVetted)
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(oldNonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(oldNonce + 1n);
+
+      expect((await nor.getNodeOperator(firstNodeOperatorId, false)).totalVettedValidators).to.be.equal(newVetted);
+    });
+
+    it("Vetted keys count can only be ≥ deposited", async () => {
+      const oldVetted = 6n;
+      const vettedBelowDeposited = 3n;
+
+      expect(vettedBelowDeposited < oldVetted);
+      const firstNo = await nor.getNodeOperator(firstNodeOperatorId, false);
+      expect(vettedBelowDeposited < firstNo.totalDepositedValidators);
+
+      expect((await nor.getNodeOperator(firstNodeOperatorId, false)).totalVettedValidators).to.be.equal(oldVetted);
+      const oldNonce = await nor.getNonce();
+
+      await expect(
+        nor.connect(limitsManager).setNodeOperatorStakingLimit(firstNodeOperatorId, firstNo.totalDepositedValidators),
+      )
+        .to.emit(nor, "VettedSigningKeysCountChanged")
+        .withArgs(firstNodeOperatorId, firstNo.totalDepositedValidators)
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(oldNonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(oldNonce + 1n);
+
+      expect((await nor.getNodeOperator(firstNodeOperatorId, false)).totalVettedValidators).to.be.equal(
+        firstNo.totalDepositedValidators,
+      );
+    });
+
+    it("Vetted keys count can only be ≤ total added", async () => {
+      const oldVetted = 6n;
+      const vettedAboveTotal = 11n;
+
+      expect(vettedAboveTotal > oldVetted);
+      const firstNo = await nor.getNodeOperator(firstNodeOperatorId, false);
+      expect(vettedAboveTotal > firstNo.totalAddedValidators);
+
+      expect((await nor.getNodeOperator(firstNodeOperatorId, false)).totalVettedValidators).to.be.equal(oldVetted);
+      const oldNonce = await nor.getNonce();
+
+      await expect(
+        nor.connect(limitsManager).setNodeOperatorStakingLimit(firstNodeOperatorId, firstNo.totalAddedValidators),
+      )
+        .to.emit(nor, "VettedSigningKeysCountChanged")
+        .withArgs(firstNodeOperatorId, firstNo.totalAddedValidators)
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(oldNonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(oldNonce + 1n);
+
+      expect((await nor.getNodeOperator(firstNodeOperatorId, false)).totalVettedValidators).to.be.equal(
+        firstNo.totalAddedValidators,
+      );
+    });
   });
 
   context("onRewardsMinted", () => {
@@ -403,9 +495,209 @@ describe("NodeOperatorsRegistry", () => {
     });
   });
 
-  context("updateStuckValidatorsCount", () => {});
+  context("updateStuckValidatorsCount", () => {
+    const firstNodeOperatorId = 0;
+    const secondNodeOperatorId = 1;
+    const thirdNodeOperatorId = 2;
 
-  context("updateExitedValidatorsCount", () => {});
+    beforeEach(async () => {
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
+        firstNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
+        secondNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[thirdNodeOperatorId])).to.be.equal(
+        thirdNodeOperatorId,
+      );
+
+      await nor.connect(nodeOperatorsManager).setStuckPenaltyDelay(86400n);
+    });
+
+    it("Reverts if has no STAKING_ROUTER_ROLE assigned", async () => {
+      const idsPayload = prepIdsCountsPayload([], []);
+      await expect(nor.updateStuckValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts)).to.be.revertedWith("APP_AUTH_FAILED");
+    })
+
+    it("Allows calling with zero length data", async () => {
+      const nonce = await nor.getNonce();
+      const idsPayload = prepIdsCountsPayload([], []);
+      await expect(nor.connect(stakingRouter).updateStuckValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts))
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n)
+        .to.not.emit(nor, "StuckPenaltyStateChanged");
+    })
+
+    it("Allows updating a single NO", async () => {
+      const nonce = await nor.getNonce();
+      const idsPayload = prepIdsCountsPayload([BigInt(firstNodeOperatorId)], [2n]);
+      await expect(nor.connect(stakingRouter).updateStuckValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts))
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "StuckPenaltyStateChanged")
+        .withArgs(firstNodeOperatorId, 2n, 0n, 0n);
+    })
+
+    it("Allows updating a group of NOs", async () => {
+      const nonce = await nor.getNonce();
+      const idsPayload = prepIdsCountsPayload([BigInt(firstNodeOperatorId), BigInt(secondNodeOperatorId)], [2n, 3n]);
+      await expect(nor.connect(stakingRouter).updateStuckValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts))
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "StuckPenaltyStateChanged")
+        .withArgs(firstNodeOperatorId, 2n, 0n, 0n)
+        .to.emit(nor, "StuckPenaltyStateChanged")
+        .withArgs(secondNodeOperatorId, 3n, 0n, 0n);
+    })
+
+    it("Does nothing if stuck keys haven't changed", async () => {
+      const nonce = await nor.getNonce();
+      const idsPayload = prepIdsCountsPayload([BigInt(firstNodeOperatorId)], [2n]);
+      await expect(nor.connect(stakingRouter).updateStuckValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts))
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "StuckPenaltyStateChanged")
+        .withArgs(firstNodeOperatorId, 2n, 0n, 0n);
+
+        await expect(nor.connect(stakingRouter).updateStuckValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts))
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 2n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 2n)
+        .to.not.emit(nor, "StuckPenaltyStateChanged")
+    })
+
+    it("Allows setting stuck count to zero after all", async () => {
+      const nonce = await nor.getNonce();
+      const idsPayload = prepIdsCountsPayload([BigInt(firstNodeOperatorId)], [2n]);
+
+      await expect(nor.connect(stakingRouter).updateStuckValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts))
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "StuckPenaltyStateChanged")
+        .withArgs(firstNodeOperatorId, 2n, 0n, 0n);
+
+      const idsPayloadZero = prepIdsCountsPayload([BigInt(firstNodeOperatorId)], [0n]);
+
+      const timestamp = BigInt(await time.latest());
+      await expect(nor.connect(stakingRouter).updateStuckValidatorsCount(idsPayloadZero.operatorIds, idsPayloadZero.keysCounts))
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 2n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 2n)
+        .to.emit(nor, "StuckPenaltyStateChanged")
+        .withArgs(firstNodeOperatorId, 0n, 0n, timestamp + 86400n + 1n);
+    })
+  });
+
+  context("updateExitedValidatorsCount", () => {
+    const firstNodeOperatorId = 0;
+    const secondNodeOperatorId = 1;
+    const thirdNodeOperatorId = 2;
+
+    beforeEach(async () => {
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
+        firstNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
+        secondNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[thirdNodeOperatorId])).to.be.equal(
+        thirdNodeOperatorId,
+      );
+
+      await nor.connect(nodeOperatorsManager).setStuckPenaltyDelay(86400n);
+    });
+
+    it("Reverts if has no STAKING_ROUTER_ROLE assigned", async () => {
+      const idsPayload = prepIdsCountsPayload([], []);
+      await expect(nor.updateExitedValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts)).to.be.revertedWith("APP_AUTH_FAILED");
+    })
+
+    it("Allows calling with zero length data", async () => {
+      const nonce = await nor.getNonce();
+      const idsPayload = prepIdsCountsPayload([], []);
+      await expect(nor.connect(stakingRouter).updateExitedValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts))
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n)
+        .to.not.emit(nor, "ExitedSigningKeysCountChanged");
+    })
+
+    it("Allows updating exited keys for a single NO", async () => {
+      const nonce = await nor.getNonce();
+      const idsPayload = prepIdsCountsPayload([BigInt(firstNodeOperatorId)], [2n]);
+      await expect(nor.connect(stakingRouter).updateExitedValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts))
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "ExitedSigningKeysCountChanged")
+        .withArgs(firstNodeOperatorId, 2n);
+    })
+
+    it("Allows updating exited keys for a group of NOs", async () => {
+      const nonce = await nor.getNonce();
+      const idsPayload = prepIdsCountsPayload([BigInt(firstNodeOperatorId), BigInt(secondNodeOperatorId)], [2n, 3n]);
+      await expect(nor.connect(stakingRouter).updateExitedValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts))
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "ExitedSigningKeysCountChanged")
+        .withArgs(firstNodeOperatorId, 2n)
+        .to.emit(nor, "ExitedSigningKeysCountChanged")
+        .withArgs(secondNodeOperatorId, 3n);
+    })
+
+    it("Does nothing if exited keys haven't changed", async () => {
+      const nonce = await nor.getNonce();
+      const idsPayload = prepIdsCountsPayload([BigInt(firstNodeOperatorId)], [2n]);
+      await expect(nor.connect(stakingRouter).updateExitedValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts))
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "ExitedSigningKeysCountChanged")
+        .withArgs(firstNodeOperatorId, 2n);
+
+        await expect(nor.connect(stakingRouter).updateExitedValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts))
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 2n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 2n)
+        .to.not.emit(nor, "ExitedSigningKeysCountChanged")
+    })
+
+    it("Reverts on attemp to decrease exited keys count", async () => {
+      const nonce = await nor.getNonce();
+      const idsPayload = prepIdsCountsPayload([BigInt(firstNodeOperatorId)], [2n]);
+
+      await expect(nor.connect(stakingRouter).updateExitedValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts))
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "ExitedSigningKeysCountChanged")
+        .withArgs(firstNodeOperatorId, 2n);
+
+      const idsPayloadZero = prepIdsCountsPayload([BigInt(firstNodeOperatorId)], [0n]);
+
+      await expect(nor.connect(stakingRouter).updateExitedValidatorsCount(idsPayloadZero.operatorIds, idsPayloadZero.keysCounts))
+        .to.revertedWith("EXITED_VALIDATORS_COUNT_DECREASED");
+    })
+  });
 
   context("updateRefundedValidatorsCount", () => {});
 
@@ -988,4 +1280,21 @@ async function addNodeOperator(
     expect(nodeOperatorsSummary.depositableValidatorsCount).to.equal(0);
   }
   return newOperatorId;
+}
+
+interface IdsCountsPayload {
+  operatorIds: string,
+  keysCounts: string,
+}
+
+function hex(n: bigint, byteLen?: number) {
+  const s = n.toString(16)
+  return byteLen === undefined ? s : s.padStart(byteLen * 2, '0')
+}
+
+const prepIdsCountsPayload = (ids: bigint[], counts: bigint[]): IdsCountsPayload => {
+  return {
+    operatorIds: '0x' + ids.map((id) => hex(id, 8)).join(''),
+    keysCounts: '0x' + counts.map((count) => hex(count, 16)).join(''),
+  }
 }
