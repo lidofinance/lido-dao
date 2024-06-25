@@ -111,6 +111,8 @@ async function main() {
   );
   await dsmContract.addGuardians(guardians, quorum);
 
+  await dsmContract.setOwner(APP_AGENT_ADDRESS);
+
   log(`Guardians list: ${await dsmContract.getGuardians()}, quorum ${await dsmContract.getGuardianQuorum()}`);
 
   const accountingOracleArgs = [LOCATOR, LIDO, LEGACY_ORACLE, SECONDS_PER_SLOT, GENESIS_TIME];
