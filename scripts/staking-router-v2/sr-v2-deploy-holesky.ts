@@ -171,7 +171,7 @@ async function main() {
   // verification part
 
   log("sleep before starting verification of contracts...");
-  sleep(60_000);
+  await sleep(10_000);
   log("start verification of contracts...");
 
   await run("verify:verify", {
