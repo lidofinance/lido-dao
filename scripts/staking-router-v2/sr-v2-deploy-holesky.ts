@@ -177,7 +177,7 @@ async function main() {
   await run("verify:verify", {
     address: minFirstAllocationStrategyAddress,
     constructorArguments: [],
-    // contract: "contracts/common/lib/MinFirstAllocationStrategy.sol:MinFirstAllocationStrategy",
+    contract: "contracts/common/lib/MinFirstAllocationStrategy.sol:MinFirstAllocationStrategy",
   });
 
   await run("verify:verify", {
@@ -186,7 +186,7 @@ async function main() {
     libraries: {
       MinFirstAllocationStrategy: minFirstAllocationStrategyAddress,
     },
-    // contract: "contracts/0.8.9/StakingRouter.sol:StakingRouter",
+    contract: "contracts/0.8.9/StakingRouter.sol:StakingRouter",
   });
 
   await run("verify:verify", {
@@ -195,25 +195,25 @@ async function main() {
     libraries: {
       MinFirstAllocationStrategy: minFirstAllocationStrategyAddress,
     },
-    // contract: "contracts/0.4.24/nos/NodeOperatorsRegistry.sol:NodeOperatorsRegistry",
+    contract: "contracts/0.4.24/nos/NodeOperatorsRegistry.sol:NodeOperatorsRegistry",
   });
 
   await run("verify:verify", {
     address: depositSecurityModuleAddress,
     constructorArguments: depositSecurityModuleParams,
-    // contract: "contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule",
+    contract: "contracts/0.8.9/DepositSecurityModule.sol:DepositSecurityModule",
   });
 
   await run("verify:verify", {
     address: accountingOracleAddress,
     constructorArguments: accountingOracleArgs,
-    // contract: "contracts/0.8.9/oracle/AccountingOracle.sol:AccountingOracle",
+    contract: "contracts/0.8.9/oracle/AccountingOracle.sol:AccountingOracle",
   });
 
   await run("verify:verify", {
     address: oracleReportSanityCheckerAddress,
     constructorArguments: oracleReportSanityCheckerArgs,
-    // contract: "contracts/0.8.9/sanity_checks/OracleReportSanityChecker.sol:OracleReportSanityChecker",
+    contract: "contracts/0.8.9/sanity_checks/OracleReportSanityChecker.sol:OracleReportSanityChecker",
   });
 
   await run("verify:verify", {
