@@ -28,7 +28,7 @@ function getEnvVariable(name: string, defaultValue?: string) {
 async function main() {
   // DSM args
   const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 7200;
-  const MAX_OPERATORS_PER_UNVETTING = 20;
+  const MAX_OPERATORS_PER_UNVETTING = 200;
 
   // Accounting Oracle args
   const SECONDS_PER_SLOT = 12;
@@ -36,7 +36,7 @@ async function main() {
 
   // Oracle report sanity checker
   // 43200 check value
-  const LIMITS = [9000, 500, 1000, 50, 600, 4, 59, 7680, 750000, 43200];
+  const LIMITS = [9000, 500, 1000, 50, 600, 8, 62, 7680, 750000, 43200];
   const MANAGERS_ROSTER = [[], [], [], [], [], [], [], [], [], [], []];
 
   const deployer = ethers.getAddress(getEnvVariable("DEPLOYER"));
