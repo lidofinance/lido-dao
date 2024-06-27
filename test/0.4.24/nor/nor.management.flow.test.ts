@@ -14,7 +14,7 @@ import {
   NodeOperatorsRegistry__MockForFlow__factory,
 } from "typechain-types";
 
-import { addNodeOperator, certainAddress, randomAddress } from "lib";
+import { addNodeOperator, certainAddress, NodeOperatorConfig, randomAddress } from "lib";
 
 import { addAragonApp, deployLidoDao } from "test/deploy";
 import { Snapshot } from "test/suite";

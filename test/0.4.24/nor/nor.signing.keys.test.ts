@@ -1,9 +1,8 @@
 import { expect } from "chai";
-import { encodeBytes32String, ZeroAddress } from "ethers";
+import { encodeBytes32String } from "ethers";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 import {
   ACL,
@@ -15,15 +14,12 @@ import {
   NodeOperatorsRegistry__MockForFlow__factory,
 } from "typechain-types";
 
-import { certainAddress, ether, randomAddress } from "lib";
-
 import { addAragonApp, deployLidoDao } from "test/deploy";
 import { Snapshot } from "test/suite";
 
 describe("NodeOperatorsRegistry", () => {
   let deployer: HardhatEthersSigner;
   let user: HardhatEthersSigner;
-  let stranger: HardhatEthersSigner;
 
   let limitsManager: HardhatEthersSigner;
   let nodeOperatorsManager: HardhatEthersSigner;
@@ -39,49 +35,12 @@ describe("NodeOperatorsRegistry", () => {
 
   let originalState: string;
 
-  const NODE_OPERATORS: NodeOperatorConfig[] = [
-    {
-      name: "foo",
-      rewardAddress: certainAddress("node-operator-1"),
-      totalSigningKeysCount: 10n,
-      depositedSigningKeysCount: 5n,
-      exitedSigningKeysCount: 1n,
-      vettedSigningKeysCount: 6n,
-      stuckValidatorsCount: 0n,
-      refundedValidatorsCount: 0n,
-      stuckPenaltyEndAt: 0n,
-    },
-    {
-      name: " bar",
-      rewardAddress: certainAddress("node-operator-2"),
-      totalSigningKeysCount: 15n,
-      depositedSigningKeysCount: 7n,
-      exitedSigningKeysCount: 0n,
-      vettedSigningKeysCount: 10n,
-      stuckValidatorsCount: 0n,
-      refundedValidatorsCount: 0n,
-      stuckPenaltyEndAt: 0n,
-    },
-    {
-      name: "deactivated",
-      isActive: false,
-      rewardAddress: certainAddress("node-operator-3"),
-      totalSigningKeysCount: 10n,
-      depositedSigningKeysCount: 0n,
-      exitedSigningKeysCount: 0n,
-      vettedSigningKeysCount: 5n,
-      stuckValidatorsCount: 0n,
-      refundedValidatorsCount: 0n,
-      stuckPenaltyEndAt: 0n,
-    },
-  ];
-
   const moduleType = encodeBytes32String("curated-onchain-v1");
   const penaltyDelay = 86400n;
   const contractVersion = 2n;
 
   before(async () => {
-    [deployer, user, stakingRouter, nodeOperatorsManager, signingKeysManager, limitsManager, stranger] =
+    [deployer, user, stakingRouter, nodeOperatorsManager, signingKeysManager, limitsManager] =
       await ethers.getSigners();
 
     ({ lido, dao, acl } = await deployLidoDao({

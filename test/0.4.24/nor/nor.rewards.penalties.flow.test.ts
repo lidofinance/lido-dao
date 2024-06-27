@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { encodeBytes32String, ZeroAddress } from "ethers";
+import { encodeBytes32String } from "ethers";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
@@ -15,7 +15,7 @@ import {
   NodeOperatorsRegistry__MockForFlow__factory,
 } from "typechain-types";
 
-import { addNodeOperator,certainAddress, ether, NodeOperatorConfig, prepIdsCountsPayload } from "lib";
+import { addNodeOperator, certainAddress, ether, NodeOperatorConfig, prepIdsCountsPayload } from "lib";
 
 import { addAragonApp, deployLidoDao } from "test/deploy";
 import { Snapshot } from "test/suite";
@@ -476,6 +476,6 @@ describe("NodeOperatorsRegistry", () => {
   context("clearNodeOperatorPenalty", () => {});
 
   context("_distributeRewards()", () => {
-    it("TODO", async () => {});
+    it.skip("TODO", async () => {});
   });
 });
