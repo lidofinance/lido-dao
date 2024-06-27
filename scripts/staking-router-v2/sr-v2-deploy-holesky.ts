@@ -27,7 +27,7 @@ function getEnvVariable(name: string, defaultValue?: string) {
 
 async function main() {
   // DSM args
-  const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 7200;
+  const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 6646;
   const MAX_OPERATORS_PER_UNVETTING = 200;
 
   // Accounting Oracle args
