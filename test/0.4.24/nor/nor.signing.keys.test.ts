@@ -147,6 +147,13 @@ describe("NodeOperatorsRegistry", () => {
 
     firstNOManager = await impersonate(NODE_OPERATORS[firstNodeOperatorId].rewardAddress, ether("100.0"));
     secondNOManager = await impersonate(NODE_OPERATORS[secondNodeOperatorId].rewardAddress, ether("100.0"));
+
+    expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
+      firstNodeOperatorId,
+    );
+    expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
+      secondNodeOperatorId,
+    );
   });
 
   beforeEach(async () => (originalState = await Snapshot.take()));
@@ -162,15 +169,6 @@ describe("NodeOperatorsRegistry", () => {
       _signatures: BytesLike,
     ) => TResult,
   ) {
-    beforeEach(async () => {
-      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
-        firstNodeOperatorId,
-      );
-      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
-        secondNodeOperatorId,
-      );
-    });
-
     it("Reverts if no such an operator exists", async () => {
       await expect(addKeysFn(nor, 5n, 0n, EMPTY_PUBLIC_KEY, EMPTY_SIGNATURE)).to.be.revertedWith("OUT_OF_RANGE");
     });
@@ -351,15 +349,6 @@ describe("NodeOperatorsRegistry", () => {
       _keysCount: BigNumberish,
     ) => TResult,
   ) {
-    beforeEach(async () => {
-      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
-        firstNodeOperatorId,
-      );
-      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
-        secondNodeOperatorId,
-      );
-    });
-
     it("Reverts if no such an operator exists", async () => {
       await expect(removeKeysFn(nor, 5n, 0n, 0n)).to.be.revertedWith("OUT_OF_RANGE");
     });
@@ -553,15 +542,6 @@ describe("NodeOperatorsRegistry", () => {
       _fromIndex: BigNumberish,
     ) => TResult,
   ) {
-    beforeEach(async () => {
-      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
-        firstNodeOperatorId,
-      );
-      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
-        secondNodeOperatorId,
-      );
-    });
-
     it("Reverts if no such an operator exists", async () => {
       await expect(removeKeyFn(nor, 5n, 0n)).to.be.revertedWith("OUT_OF_RANGE");
     });
@@ -759,7 +739,47 @@ describe("NodeOperatorsRegistry", () => {
     removeSigningKeysCases(funcBH);
   });
 
-  context("getTotalSigningKeyCount", () => {});
+  context("getTotalSigningKeyCount", () => {
+    it("Reverts if no such an operator exists", async () => {
+      await expect(nor.getTotalSigningKeyCount(3n)).to.be.revertedWith("OUT_OF_RANGE");
+    });
+
+    it("Returns the correct number of total keys NO has", async () => {
+      const firstNOCount = await nor.getTotalSigningKeyCount(firstNodeOperatorId);
+      const secondNOCount = await nor.getTotalSigningKeyCount(secondNodeOperatorId);
+
+      const firstNOInfo = await nor.getNodeOperator(firstNodeOperatorId, true);
+      const secondNOInfo = await nor.getNodeOperator(secondNodeOperatorId, true);
+
+      expect(firstNOCount).to.be.equal(firstNOInfo.totalAddedValidators);
+      expect(secondNOCount).to.be.equal(secondNOInfo.totalAddedValidators);
+
+      const keysCountToAdd = 2n;
+      let [publicKeys, signatures] = firstNOKeys.slice(0, Number(keysCountToAdd));
+      await nor.connect(signingKeysManager).addSigningKeys(firstNodeOperatorId, keysCountToAdd, publicKeys, signatures);
+      [publicKeys, signatures] = secondNOKeys.slice(0, Number(keysCountToAdd));
+      await nor
+        .connect(signingKeysManager)
+        .addSigningKeys(secondNodeOperatorId, keysCountToAdd, publicKeys, signatures);
+
+      expect(await nor.getTotalSigningKeyCount(firstNodeOperatorId)).to.be.equal(firstNOCount + keysCountToAdd);
+      expect(await nor.getTotalSigningKeyCount(secondNodeOperatorId)).to.be.equal(secondNOCount + keysCountToAdd);
+
+      const keysCountToRemove = 3n;
+      await nor
+        .connect(signingKeysManager)
+        .removeSigningKeys(firstNodeOperatorId, firstNOCount - 1n, keysCountToRemove);
+      await nor
+        .connect(signingKeysManager)
+        .removeSigningKeys(secondNodeOperatorId, secondNOCount - 1n, keysCountToRemove);
+      expect(await nor.getTotalSigningKeyCount(firstNodeOperatorId)).to.be.equal(
+        firstNOCount + keysCountToAdd - keysCountToRemove,
+      );
+      expect(await nor.getTotalSigningKeyCount(secondNodeOperatorId)).to.be.equal(
+        secondNOCount + keysCountToAdd - keysCountToRemove,
+      );
+    });
+  });
 
   context("getUnusedSigningKeyCount", () => {});
 
