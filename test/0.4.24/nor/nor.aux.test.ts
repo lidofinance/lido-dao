@@ -191,9 +191,6 @@ describe("NodeOperatorsRegistry:auxiliary", () => {
   });
 
   context("updateTargetValidatorsLimits", () => {
-    const firstNodeOperatorId = 0;
-    const secondNodeOperatorId = 1;
-
     let targetLimit = 0n;
 
     beforeEach(async () => {

@@ -47,6 +47,10 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
 
   let originalState: string;
 
+  const firstNodeOperatorId = 0;
+  const secondNodeOperatorId = 1;
+  const thirdNodeOperatorId = 2;
+
   const NODE_OPERATORS: NodeOperatorConfig[] = [
     {
       name: "foo",
@@ -158,10 +162,6 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
   });
 
   context("updateStuckValidatorsCount", () => {
-    const firstNodeOperatorId = 0;
-    const secondNodeOperatorId = 1;
-    const thirdNodeOperatorId = 2;
-
     beforeEach(async () => {
       expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
         firstNodeOperatorId,
@@ -267,10 +267,6 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
   });
 
   context("updateExitedValidatorsCount", () => {
-    const firstNodeOperatorId = 0;
-    const secondNodeOperatorId = 1;
-    const thirdNodeOperatorId = 2;
-
     beforeEach(async () => {
       expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
         firstNodeOperatorId,
@@ -381,10 +377,6 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
   });
 
   context("updateRefundedValidatorsCount", () => {
-    const firstNodeOperatorId = 0;
-    const secondNodeOperatorId = 1;
-    const thirdNodeOperatorId = 2;
-
     beforeEach(async () => {
       expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
         firstNodeOperatorId,
@@ -444,9 +436,6 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
   });
 
   context("onExitedAndStuckValidatorsCountsUpdated", () => {
-    const firstNodeOperatorId = 0;
-    const secondNodeOperatorId = 1;
-
     beforeEach(async () => {
       expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
         firstNodeOperatorId,
@@ -509,9 +498,6 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
   });
 
   context("isOperatorPenalized", () => {
-    const firstNodeOperatorId = 0;
-    const secondNodeOperatorId = 1;
-
     beforeEach(async () => {
       expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
         firstNodeOperatorId,
@@ -585,9 +571,6 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
   });
 
   context("isOperatorPenaltyCleared", () => {
-    const firstNodeOperatorId = 0;
-    const secondNodeOperatorId = 1;
-
     beforeEach(async () => {
       expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
         firstNodeOperatorId,
@@ -673,9 +656,6 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
   });
 
   context("clearNodeOperatorPenalty", () => {
-    const firstNodeOperatorId = 0;
-    const secondNodeOperatorId = 1;
-
     beforeEach(async () => {
       expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
         firstNodeOperatorId,

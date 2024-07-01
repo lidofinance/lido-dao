@@ -37,6 +37,10 @@ describe("NodeOperatorsRegistry:management", () => {
 
   let originalState: string;
 
+  const firstNodeOperatorId = 0;
+  const secondNodeOperatorId = 1;
+  const thirdNodeOperatorId = 2;
+
   const NODE_OPERATORS: NodeOperatorConfig[] = [
     {
       name: "foo",
@@ -348,10 +352,6 @@ describe("NodeOperatorsRegistry:management", () => {
   });
 
   context("setNodeOperatorStakingLimit", () => {
-    const firstNodeOperatorId = 0;
-    const secondNodeOperatorId = 1;
-    const thirdNodeOperatorId = 2;
-
     beforeEach(async () => {
       expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
         firstNodeOperatorId,
@@ -478,7 +478,51 @@ describe("NodeOperatorsRegistry:management", () => {
     });
   });
 
-  context("getNodeOperator", () => {});
+  context("getNodeOperator", () => {
+    beforeEach(async () => {
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
+        firstNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
+        secondNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[thirdNodeOperatorId])).to.be.equal(
+        thirdNodeOperatorId,
+      );
+    });
+
+    it("Reverts if no such an operator exists", async () => {
+      await expect(nor.getNodeOperator(3n, false)).to.be.revertedWith("OUT_OF_RANGE");
+    });
+
+    it("Returns short info without name", async () => {
+      const noInfo = await nor.getNodeOperator(secondNodeOperatorId, false);
+
+      expect(noInfo.active).to.be.true;
+      expect(noInfo.name).to.be.empty;
+      expect(noInfo.rewardAddress).to.be.equal(NODE_OPERATORS[secondNodeOperatorId].rewardAddress);
+      expect(noInfo.totalVettedValidators).to.be.equal(NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount);
+      expect(noInfo.totalExitedValidators).to.be.equal(NODE_OPERATORS[secondNodeOperatorId].exitedSigningKeysCount);
+      expect(noInfo.totalAddedValidators).to.be.equal(NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount);
+      expect(noInfo.totalDepositedValidators).to.be.equal(
+        NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount,
+      );
+    });
+
+    it("Returns full info with name", async () => {
+      const noInfo = await nor.getNodeOperator(secondNodeOperatorId, true);
+
+      expect(noInfo.active).to.be.true;
+      expect(noInfo.name).to.be.equal(NODE_OPERATORS[secondNodeOperatorId].name);
+      expect(noInfo.rewardAddress).to.be.equal(NODE_OPERATORS[secondNodeOperatorId].rewardAddress);
+      expect(noInfo.totalVettedValidators).to.be.equal(NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount);
+      expect(noInfo.totalExitedValidators).to.be.equal(NODE_OPERATORS[secondNodeOperatorId].exitedSigningKeysCount);
+      expect(noInfo.totalAddedValidators).to.be.equal(NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount);
+      expect(noInfo.totalDepositedValidators).to.be.equal(
+        NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount,
+      );
+    });
+  });
 
   context("getType", () => {
     it("Returns module type", async () => {
@@ -486,9 +530,77 @@ describe("NodeOperatorsRegistry:management", () => {
     });
   });
 
-  context("getStakingModuleSummary", () => {});
+  context("getStakingModuleSummary", () => {
+    it("Returns zeros if no operators yet", async () => {
+      const summary = await nor.getStakingModuleSummary();
 
-  context("getNodeOperatorSummary", () => {});
+      expect(summary.totalExitedValidators).to.be.equal(0n);
+      expect(summary.totalDepositedValidators).to.be.equal(0n);
+      expect(summary.depositableValidatorsCount).to.be.equal(0n);
+    });
+
+    it("Returns summarized key stats", async () => {
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
+        firstNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
+        secondNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[thirdNodeOperatorId])).to.be.equal(
+        thirdNodeOperatorId,
+      );
+
+      const summary = await nor.getStakingModuleSummary();
+
+      expect(summary.totalExitedValidators).to.be.equal(1n + 0n + 0n);
+      expect(summary.totalDepositedValidators).to.be.equal(5n + 7n + 0n);
+      expect(summary.depositableValidatorsCount).to.be.equal(1n + 3n + 0n);
+    });
+  });
+
+  context("getNodeOperatorSummary", () => {
+    it("Reverts if no such an operator exists", async () => {
+      await expect(nor.getNodeOperatorSummary(10n)).to.be.revertedWith("OUT_OF_RANGE");
+    });
+
+    it("Returns zeros for a new node operator", async () => {
+      await nor.connect(nodeOperatorsManager).addNodeOperator("operator-0", randomAddress());
+
+      const noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+
+      expect(noSummary.isTargetLimitActive).to.be.false;
+      expect(noSummary.targetValidatorsCount).to.be.equal(0n);
+      expect(noSummary.stuckValidatorsCount).to.be.equal(0n);
+      expect(noSummary.refundedValidatorsCount).to.be.equal(0n);
+      expect(noSummary.stuckPenaltyEndTimestamp).to.be.equal(0n);
+      expect(noSummary.totalExitedValidators).to.be.equal(0n);
+      expect(noSummary.totalDepositedValidators).to.be.equal(0n);
+      expect(noSummary.depositableValidatorsCount).to.be.equal(0n);
+    });
+
+    it("Returns zeros for a new node operator", async () => {
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
+        firstNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
+        secondNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[thirdNodeOperatorId])).to.be.equal(
+        thirdNodeOperatorId,
+      );
+
+      const noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
+
+      expect(noSummary.isTargetLimitActive).to.be.false;
+      expect(noSummary.targetValidatorsCount).to.be.equal(0n);
+      expect(noSummary.stuckValidatorsCount).to.be.equal(0n);
+      expect(noSummary.refundedValidatorsCount).to.be.equal(0n);
+      expect(noSummary.stuckPenaltyEndTimestamp).to.be.equal(0n);
+      expect(noSummary.totalExitedValidators).to.be.equal(0n);
+      expect(noSummary.totalDepositedValidators).to.be.equal(7n);
+      expect(noSummary.depositableValidatorsCount).to.be.equal(3n);
+    });
+  });
 
   context("getNodeOperatorsCount", () => {
     it("Returns zero if no operators added", async () => {
