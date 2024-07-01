@@ -4,6 +4,8 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { NodeOperatorsRegistry__MockForFlow } from "typechain-types";
 
+import { PUBKEY_LENGTH_HEX, SIGNATURE_LENGTH_HEX } from "./constants";
+
 export interface NodeOperatorConfig {
   name: string;
   rewardAddress: string;
@@ -102,6 +104,20 @@ export async function addNodeOperator(
 export interface IdsCountsPayload {
   operatorIds: string;
   keysCounts: string;
+}
+
+/***
+ * Extracts a single pubkey from the given string of concatenated keys
+ * @param {string} keys encoded keys string starting with "0x"
+ * @param {string} signatures encoded signatures string starting with "0x"
+ * @param {number} index key/signature id
+ * @returns {string[]} extracted key/signature
+ */
+export function unpackKeySig(keys: string, signatures: string, index: number): string[] {
+  return [
+    "0x" + keys.substring(2 + PUBKEY_LENGTH_HEX * index, 2 + PUBKEY_LENGTH_HEX * (index + 1)),
+    "0x" + signatures.substring(2 + SIGNATURE_LENGTH_HEX * index, 2 + SIGNATURE_LENGTH_HEX * (index + 1)),
+  ];
 }
 
 /***

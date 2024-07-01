@@ -24,6 +24,7 @@ import {
   impersonate,
   NodeOperatorConfig,
   randomAddress,
+  unpackKeySig,
 } from "lib";
 
 import { addAragonApp, deployLidoDao } from "test/deploy";
@@ -825,15 +826,30 @@ describe("NodeOperatorsRegistry", () => {
   });
 
   context("getSigningKey", () => {
-    it("Reverts if no such an operator exists", async () => {
-      await expect(nor.getSigningKey(2n, 0n)).to.be.revertedWith("OUT_OF_RANGE");
-    });
+    const thirdNOKeysCount = 30;
+    const thirdNOKeysDeposited = 12;
+    const [thirdNOPublicKeys, thirdNOSignatures] = thirdNOKeys.slice(0, thirdNOKeysCount);
 
-    it("Reverts if no keys added yet for the node operator", async () => {
+    beforeEach(async () => {
       await nor.connect(nodeOperatorsManager).addNodeOperator("node-operator-3", randomAddress());
       expect(await nor.getNodeOperatorsCount()).to.be.equal(3n);
 
-      await expect(nor.getSigningKey(2n, 0n)).to.be.revertedWith("OUT_OF_RANGE");
+      await nor
+        .connect(signingKeysManager)
+        .addSigningKeys(thirdNodeOperatorId, thirdNOKeysCount, thirdNOPublicKeys, thirdNOSignatures);
+      await nor.connect(limitsManager).setNodeOperatorStakingLimit(thirdNodeOperatorId, thirdNOKeysCount);
+      await nor.mock__setDepositedSigningKeysCount(thirdNodeOperatorId, thirdNOKeysDeposited);
+    });
+
+    it("Reverts if no such an operator exists", async () => {
+      await expect(nor.getSigningKey(3n, 0n)).to.be.revertedWith("OUT_OF_RANGE");
+    });
+
+    it("Reverts if no keys added yet for the node operator", async () => {
+      await nor.connect(nodeOperatorsManager).addNodeOperator("node-operator-4", randomAddress());
+      expect(await nor.getNodeOperatorsCount()).to.be.equal(4n);
+
+      await expect(nor.getSigningKey(3n, 0n)).to.be.revertedWith("OUT_OF_RANGE");
     });
 
     it("Reverts if invalid index requested", async () => {
@@ -843,16 +859,30 @@ describe("NodeOperatorsRegistry", () => {
       await expect(
         nor.getSigningKey(secondNodeOperatorId, NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount),
       ).to.be.revertedWith("OUT_OF_RANGE");
+
+      await expect(nor.getSigningKey(thirdNodeOperatorId, thirdNOKeysCount)).to.be.revertedWith("OUT_OF_RANGE");
     });
 
     it("Can retrieve a deposited key (in use)", async () => {
       for (let i = 0n; i < NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount; ++i) {
-        const [, , used] = await nor.getSigningKey(firstNodeOperatorId, i);
+        const [key, signature, used] = await nor.getSigningKey(firstNodeOperatorId, i);
+        expect(key).to.be.equal(EMPTY_PUBLIC_KEY);
+        expect(signature).to.be.equal(EMPTY_SIGNATURE);
         expect(used).to.be.true;
       }
 
       for (let i = 0n; i < NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount; ++i) {
-        const [, , used] = await nor.getSigningKey(secondNodeOperatorId, i);
+        const [key, signature, used] = await nor.getSigningKey(secondNodeOperatorId, i);
+        expect(key).to.be.equal(EMPTY_PUBLIC_KEY);
+        expect(signature).to.be.equal(EMPTY_SIGNATURE);
+        expect(used).to.be.true;
+      }
+
+      for (let i = 0n; i < thirdNOKeysDeposited; ++i) {
+        const [key, signature, used] = await nor.getSigningKey(thirdNodeOperatorId, i);
+        const [expectedPublicKey, expectedSignature] = thirdNOKeys.get(Number(i));
+        expect(key).to.be.equal(expectedPublicKey);
+        expect(signature).to.be.equal(expectedSignature);
         expect(used).to.be.true;
       }
     });
@@ -863,7 +893,9 @@ describe("NodeOperatorsRegistry", () => {
         i < NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount;
         ++i
       ) {
-        const [, , used] = await nor.getSigningKey(firstNodeOperatorId, i);
+        const [key, signature, used] = await nor.getSigningKey(firstNodeOperatorId, i);
+        expect(key).to.be.equal(EMPTY_PUBLIC_KEY);
+        expect(signature).to.be.equal(EMPTY_SIGNATURE);
         expect(used).to.be.false;
       }
 
@@ -872,22 +904,47 @@ describe("NodeOperatorsRegistry", () => {
         i < NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount;
         ++i
       ) {
-        const [, , used] = await nor.getSigningKey(secondNodeOperatorId, i);
+        const [key, signature, used] = await nor.getSigningKey(secondNodeOperatorId, i);
+        expect(key).to.be.equal(EMPTY_PUBLIC_KEY);
+        expect(signature).to.be.equal(EMPTY_SIGNATURE);
         expect(used).to.be.false;
+      }
+
+      for (let i = thirdNOKeysDeposited; i < thirdNOKeysCount; ++i) {
+        const [keys, signatures, used] = await nor.getSigningKey(thirdNodeOperatorId, i);
+        expect(used).to.be.false;
+        const [expectedPublicKey, expectedSignature] = thirdNOKeys.get(Number(i));
+        expect(keys).to.be.equal(expectedPublicKey);
+        expect(signatures).to.be.equal(expectedSignature);
       }
     });
   });
 
   context("getSigningKeys", () => {
-    it("Reverts if no such an operator exists", async () => {
-      await expect(nor.getSigningKeys(2n, 0n, 0n)).to.be.revertedWith("OUT_OF_RANGE");
-    });
+    const thirdNOKeysCount = 25;
+    const thirdNOKeysDeposited = 19;
+    const [thirdNOPublicKeys, thirdNOSignatures] = thirdNOKeys.slice(0, thirdNOKeysCount);
 
-    it("Does nothing if zero limit is passed", async () => {
+    beforeEach(async () => {
       await nor.connect(nodeOperatorsManager).addNodeOperator("node-operator-3", randomAddress());
       expect(await nor.getNodeOperatorsCount()).to.be.equal(3n);
 
-      const [keys, signatures, used] = await nor.getSigningKeys(2n, 0n, 0n);
+      await nor
+        .connect(signingKeysManager)
+        .addSigningKeys(thirdNodeOperatorId, thirdNOKeysCount, thirdNOPublicKeys, thirdNOSignatures);
+      await nor.connect(limitsManager).setNodeOperatorStakingLimit(thirdNodeOperatorId, thirdNOKeysCount);
+      await nor.mock__setDepositedSigningKeysCount(thirdNodeOperatorId, thirdNOKeysDeposited);
+    });
+
+    it("Reverts if no such an operator exists", async () => {
+      await expect(nor.getSigningKeys(3n, 0n, 0n)).to.be.revertedWith("OUT_OF_RANGE");
+    });
+
+    it("Returns empty data is zero limit passed", async () => {
+      await nor.connect(nodeOperatorsManager).addNodeOperator("node-operator-4", randomAddress());
+      expect(await nor.getNodeOperatorsCount()).to.be.equal(4n);
+
+      const [keys, signatures, used] = await nor.getSigningKeys(3n, 0n, 0n);
 
       expect(keys).to.be.equal("0x");
       expect(signatures).to.be.equal("0x");
@@ -895,10 +952,10 @@ describe("NodeOperatorsRegistry", () => {
     });
 
     it("Reverts if no keys added yet for the node operator", async () => {
-      await nor.connect(nodeOperatorsManager).addNodeOperator("node-operator-3", randomAddress());
-      expect(await nor.getNodeOperatorsCount()).to.be.equal(3n);
+      await nor.connect(nodeOperatorsManager).addNodeOperator("node-operator-4", randomAddress());
+      expect(await nor.getNodeOperatorsCount()).to.be.equal(4n);
 
-      await expect(nor.getSigningKeys(2n, 0n, 1n)).to.be.revertedWith("OUT_OF_RANGE");
+      await expect(nor.getSigningKeys(3n, 0n, 1n)).to.be.revertedWith("OUT_OF_RANGE");
     });
 
     it("Reverts if invalid offset requested", async () => {
@@ -920,17 +977,59 @@ describe("NodeOperatorsRegistry", () => {
     });
 
     it("Can retrieve all keys", async () => {
-      await nor.getSigningKeys(firstNodeOperatorId, 0n, NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount);
-      await nor.getSigningKeys(secondNodeOperatorId, 0n, NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount);
+      {
+        const [keys, signatures, used] = await nor.getSigningKeys(
+          firstNodeOperatorId,
+          0n,
+          NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount,
+        );
+
+        for (let i = 0; i < NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount; ++i) {
+          expect(used[i]).to.be.equal(i < NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount);
+          const [key, sig] = unpackKeySig(keys, signatures, i);
+          expect(key).to.be.equal(EMPTY_PUBLIC_KEY);
+          expect(sig).to.be.equal(EMPTY_SIGNATURE);
+        }
+      }
+
+      {
+        const [keys, signatures, used] = await nor.getSigningKeys(
+          secondNodeOperatorId,
+          0n,
+          NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount,
+        );
+
+        for (let i = 0; i < NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount; ++i) {
+          expect(used[i]).to.be.equal(i < NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount);
+          const [key, sig] = unpackKeySig(keys, signatures, i);
+          expect(key).to.be.equal(EMPTY_PUBLIC_KEY);
+          expect(sig).to.be.equal(EMPTY_SIGNATURE);
+        }
+      }
+
+      {
+        const [keys, signatures, used] = await nor.getSigningKeys(thirdNodeOperatorId, 0n, thirdNOKeysCount);
+
+        for (let i = 0; i < thirdNOKeysCount; ++i) {
+          expect(used[i]).to.be.equal(i < thirdNOKeysDeposited);
+          const [key, sig] = unpackKeySig(keys, signatures, i);
+          const [expectedKey, expectedSig] = thirdNOKeys.get(i);
+          expect(key).to.be.equal(expectedKey);
+          expect(sig).to.be.equal(expectedSig);
+        }
+      }
     });
 
     it("Can retrieve a subrange of keys", async () => {
-      await nor.getSigningKeys(firstNodeOperatorId, 2n, NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount - 2n);
-      await nor.getSigningKeys(
-        secondNodeOperatorId,
-        3n,
-        NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount - 3n,
-      );
+      const [keys, signatures, used] = await nor.getSigningKeys(thirdNodeOperatorId, 5n, thirdNOKeysCount - 8);
+
+      for (let i = 5; i < thirdNOKeysCount - 8; ++i) {
+        expect(used[i - 5]).to.be.equal(i < thirdNOKeysDeposited);
+        const [key, sig] = unpackKeySig(keys, signatures, i - 5);
+        const [expectedKey, expectedSig] = thirdNOKeys.get(i);
+        expect(key).to.be.equal(expectedKey);
+        expect(sig).to.be.equal(expectedSig);
+      }
     });
   });
 });
