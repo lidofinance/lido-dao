@@ -389,6 +389,9 @@ describe("NodeOperatorsRegistry", () => {
   });
 
   context("updateTargetValidatorsLimits", () => {
+    const updateTargetLimits = "updateTargetValidatorsLimits(uint256,uint256,uint256)";
+    const updateTargetLimitsDeprecated = "updateTargetValidatorsLimits(uint256,bool,uint256)";
+
     const firstNodeOperatorId = 0;
     const secondNodeOperatorId = 1;
     let targetLimitMode = 0;
@@ -463,35 +466,21 @@ describe("NodeOperatorsRegistry", () => {
       const targetLimitMode2 = 2;
       targetLimit = 10;
 
-      await expect(
-        nor
-          .connect(stakingRouter)
-          ["updateTargetValidatorsLimits(uint256,uint256,uint256)"](firstNodeOperatorId, targetLimitMode1, targetLimit),
-      )
+      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, targetLimitMode1, targetLimit))
         .to.emit(nor, "TargetValidatorsCountChanged")
         .withArgs(firstNodeOperatorId, targetLimit, targetLimitMode1);
 
       let noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
       expect(noSummary.targetLimitMode).to.equal(targetLimitMode1);
 
-      await expect(
-        nor
-          .connect(stakingRouter)
-          [
-            "updateTargetValidatorsLimits(uint256,uint256,uint256)"
-          ](secondNodeOperatorId, targetLimitMode2, targetLimit),
-      )
+      await expect(nor.connect(stakingRouter)[updateTargetLimits](secondNodeOperatorId, targetLimitMode2, targetLimit))
         .to.emit(nor, "TargetValidatorsCountChanged")
         .withArgs(secondNodeOperatorId, targetLimit, targetLimitMode2);
       noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
       expect(noSummary.targetLimitMode).to.equal(targetLimitMode2);
 
       // reset limit
-      await expect(
-        nor
-          .connect(stakingRouter)
-          ["updateTargetValidatorsLimits(uint256,uint256,uint256)"](firstNodeOperatorId, 0, targetLimit),
-      )
+      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 0, targetLimit))
         .to.emit(nor, "TargetValidatorsCountChanged")
         .withArgs(firstNodeOperatorId, 0, 0); // expect limit set to 0
 
@@ -506,16 +495,18 @@ describe("NodeOperatorsRegistry", () => {
     it("updates node operator target limit with deprecated method correctly", async () => {
       expect(await hasPermission(dao, nor, "STAKING_ROUTER_ROLE", stakingRouter)).to.be.true;
 
-      await expect(
-        nor
-          .connect(stakingRouter)
-          ["updateTargetValidatorsLimits(uint256,bool,uint256)"](firstNodeOperatorId, true, targetLimit),
-      )
+      await expect(nor.connect(stakingRouter)[updateTargetLimitsDeprecated](firstNodeOperatorId, true, 100))
         .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(firstNodeOperatorId, targetLimit, 1);
+        .withArgs(firstNodeOperatorId, 100, 1);
 
       const noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
       expect(noSummary.targetLimitMode).to.equal(1);
+
+      await expect(nor.connect(stakingRouter)[updateTargetLimitsDeprecated](firstNodeOperatorId, false, 0))
+        .to.emit(nor, "TargetValidatorsCountChanged")
+        .withArgs(firstNodeOperatorId, 0, 0);
+      const noSummary2 = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+      expect(noSummary2.targetLimitMode).to.equal(0);
     });
   });
 
