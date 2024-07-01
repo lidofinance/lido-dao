@@ -19,7 +19,7 @@ import { addNodeOperator, certainAddress, NodeOperatorConfig, randomAddress } fr
 import { addAragonApp, deployLidoDao } from "test/deploy";
 import { Snapshot } from "test/suite";
 
-describe("NodeOperatorsRegistry", () => {
+describe("NodeOperatorsRegistry:management", () => {
   let deployer: HardhatEthersSigner;
   let user: HardhatEthersSigner;
 

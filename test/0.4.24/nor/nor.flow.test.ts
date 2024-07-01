@@ -14,12 +14,12 @@ import {
   NodeOperatorsRegistry__Harness__factory,
 } from "typechain-types";
 
-import { addNodeOperator, certainAddress, NodeOperatorConfig } from "lib";
+import { addNodeOperator, certainAddress, NodeOperatorConfig, prepIdsCountsPayload } from "lib";
 
 import { addAragonApp, deployLidoDao } from "test/deploy";
 import { Snapshot } from "test/suite";
 
-describe("NodeOperatorsRegistry", () => {
+describe("NodeOperatorsRegistry:flow", () => {
   let deployer: HardhatEthersSigner;
   let user: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;
@@ -40,6 +40,7 @@ describe("NodeOperatorsRegistry", () => {
 
   const firstNodeOperatorId = 0;
   const secondNodeOperatorId = 1;
+  const thirdNodeOperatorId = 2;
 
   const NODE_OPERATORS: NodeOperatorConfig[] = [
     {
@@ -392,12 +393,88 @@ describe("NodeOperatorsRegistry", () => {
   });
 
   context("getRewardsDistribution", () => {
-    it("Returns empty lists if no operators", async () => {});
+    it("Returns empty lists if no operators", async () => {
+      const [recipients, shares, penalized] = await nor.getRewardsDistribution(10n);
 
-    it("Returns zero rewards if zero shares distributed", async () => {});
+      expect(recipients).to.be.empty;
+      expect(shares).to.be.empty;
+      expect(penalized).to.be.empty;
+    });
 
-    it("Distributes all rewards to a single operator if no others", async () => {});
+    it("Returns zero rewards if zero shares distributed", async () => {
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
+        firstNodeOperatorId,
+      );
 
-    it("Returns correct reward distribution for multiple NOs", async () => {});
+      const [recipients, shares, penalized] = await nor.getRewardsDistribution(0n);
+
+      expect(recipients.length).to.be.equal(1n);
+      expect(shares.length).to.be.equal(1n);
+      expect(penalized.length).to.be.equal(1n);
+
+      expect(recipients[0]).to.be.equal(NODE_OPERATORS[firstNodeOperatorId].rewardAddress);
+      expect(shares[0]).to.be.equal(0n);
+      expect(penalized[0]).to.be.equal(false);
+    });
+
+    it("Distributes all rewards to a single active operator if no others", async () => {
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
+        firstNodeOperatorId,
+      );
+
+      const [recipients, shares, penalized] = await nor.getRewardsDistribution(10n);
+
+      expect(recipients.length).to.be.equal(1n);
+      expect(shares.length).to.be.equal(1n);
+      expect(penalized.length).to.be.equal(1n);
+
+      expect(recipients[0]).to.be.equal(NODE_OPERATORS[firstNodeOperatorId].rewardAddress);
+      expect(shares[0]).to.be.equal(10n);
+      expect(penalized[0]).to.be.equal(false);
+    });
+
+    it("Returns correct reward distribution for multiple NOs", async () => {
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
+        firstNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
+        secondNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[thirdNodeOperatorId])).to.be.equal(
+        thirdNodeOperatorId,
+      );
+
+      const nonce = await nor.getNonce();
+      const idsPayload = prepIdsCountsPayload([BigInt(firstNodeOperatorId)], [2n]);
+      await expect(nor.connect(stakingRouter).updateStuckValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts))
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "StuckPenaltyStateChanged")
+        .withArgs(firstNodeOperatorId, 2n, 0n, 0n);
+
+      const [recipients, shares, penalized] = await nor.getRewardsDistribution(100n);
+
+      expect(recipients.length).to.be.equal(2n);
+      expect(shares.length).to.be.equal(2n);
+      expect(penalized.length).to.be.equal(2n);
+
+      const firstNOActiveKeys =
+        NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount -
+        NODE_OPERATORS[firstNodeOperatorId].exitedSigningKeysCount;
+      const secondNOActiveKeys =
+        NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount -
+        NODE_OPERATORS[secondNodeOperatorId].exitedSigningKeysCount;
+      const totalActiveKeys = firstNOActiveKeys + secondNOActiveKeys;
+
+      expect(recipients[0]).to.be.equal(NODE_OPERATORS[firstNodeOperatorId].rewardAddress);
+      expect(shares[0]).to.be.equal((100n * firstNOActiveKeys) / totalActiveKeys);
+      expect(penalized[0]).to.be.equal(true);
+
+      expect(recipients[1]).to.be.equal(NODE_OPERATORS[secondNodeOperatorId].rewardAddress);
+      expect(shares[1]).to.be.equal((100n * secondNOActiveKeys) / totalActiveKeys);
+      expect(penalized[1]).to.be.equal(false);
+    });
   });
 });

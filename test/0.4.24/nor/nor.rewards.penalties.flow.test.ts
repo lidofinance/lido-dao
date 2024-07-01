@@ -20,7 +20,7 @@ import { addNodeOperator, certainAddress, ether, NodeOperatorConfig, prepIdsCoun
 import { addAragonApp, deployLidoDao } from "test/deploy";
 import { Snapshot } from "test/suite";
 
-describe("NodeOperatorsRegistry", () => {
+describe("NodeOperatorsRegistry:rewards-penalties", () => {
   let deployer: HardhatEthersSigner;
   let user: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;
