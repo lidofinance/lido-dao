@@ -722,7 +722,7 @@ describe("NodeOperatorsRegistry", () => {
       _nodeOperatorId: BigNumberish,
       _fromIndex: BigNumberish,
     ) => {
-      return nor_instance.removeSigningKey(_nodeOperatorId, _fromIndex);
+      return nor_instance.removeSigningKeyOperatorBH(_nodeOperatorId, _fromIndex);
     };
 
     removeSigningKeyCases(funcOneKeyBH);
@@ -735,7 +735,7 @@ describe("NodeOperatorsRegistry", () => {
       _fromIndex: BigNumberish,
       _keysCount: BigNumberish,
     ) => {
-      return nor_instance.removeSigningKeys(_nodeOperatorId, _fromIndex, _keysCount);
+      return nor_instance.removeSigningKeysOperatorBH(_nodeOperatorId, _fromIndex, _keysCount);
     };
 
     removeSigningKeysCases(funcBH);
