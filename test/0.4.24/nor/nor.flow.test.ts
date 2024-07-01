@@ -302,7 +302,7 @@ describe("NodeOperatorsRegistry", () => {
         .to.not.emit(nor, "NonceChanged");
     });
 
-    it("Invalidates all deposit dat for every operator", async () => {
+    it("Invalidates all deposit data for every operator", async () => {
       expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
         firstNodeOperatorId,
       );
@@ -340,9 +340,56 @@ describe("NodeOperatorsRegistry", () => {
     });
   });
 
-  context("invalidateReadyToDepositKeysRange", () => {});
+  context("invalidateReadyToDepositKeysRange", () => {
+    it("Reverts if has no MANAGE_NODE_OPERATOR_ROLE assigned", async () => {
+      await expect(nor.invalidateReadyToDepositKeysRange(0n, 0n)).to.be.revertedWith("APP_AUTH_FAILED");
+    });
 
-  context("obtainDepositData", () => {});
+    it("Reverts if there are no operators", async () => {
+      await expect(nor.connect(nodeOperatorsManager).invalidateReadyToDepositKeysRange(0n, 0n)).to.be.revertedWith(
+        "OUT_OF_RANGE",
+      );
+    });
+
+    it("Invalidates all deposit data for every operator", async () => {
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
+        firstNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
+        secondNodeOperatorId,
+      );
+
+      const nonce = await nor.getNonce();
+
+      await expect(
+        nor.connect(nodeOperatorsManager).invalidateReadyToDepositKeysRange(firstNodeOperatorId, secondNodeOperatorId),
+      )
+        .to.emit(nor, "TotalSigningKeysCountChanged")
+        .withArgs(firstNodeOperatorId, NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount)
+        .and.to.emit(nor, "TotalSigningKeysCountChanged")
+        .withArgs(secondNodeOperatorId, NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount)
+        .to.emit(nor, "VettedSigningKeysCountChanged")
+        .withArgs(firstNodeOperatorId, NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount)
+        .and.to.emit(nor, "VettedSigningKeysCountChanged")
+        .withArgs(secondNodeOperatorId, NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount)
+        .to.emit(nor, "NodeOperatorTotalKeysTrimmed")
+        .withArgs(
+          firstNodeOperatorId,
+          NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount -
+            NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount,
+        )
+        .and.to.emit(nor, "NodeOperatorTotalKeysTrimmed")
+        .withArgs(
+          secondNodeOperatorId,
+          NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount -
+            NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount,
+        )
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n);
+    });
+  });
 
   context("getRewardsDistribution", () => {
     it("Returns empty lists if no operators", async () => {});

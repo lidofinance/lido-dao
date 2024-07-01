@@ -162,6 +162,53 @@ describe("NodeOperatorsRegistry", () => {
 
   afterEach(async () => await Snapshot.restore(originalState));
 
+  context("obtainDepositData", () => {
+    it("Reverts if has no STAKING_ROUTER_ROLE assigned", async () => {
+      await expect(nor.obtainDepositData(0n, "0x")).to.be.revertedWith("APP_AUTH_FAILED");
+    });
+
+    it("Returns empty data is zero deposits requested", async () => {
+      await nor.connect(stakingRouter).harness__obtainDepositData(0n);
+
+      expect(await nor.obtainedPublicKeys()).to.be.equal("0x");
+      expect(await nor.obtainedSignatures()).to.be.equal("0x");
+    });
+
+    it("Reverts if allocated keys count != requested", async () => {
+      const depositable = (await nor.getStakingModuleSummary()).depositableValidatorsCount;
+
+      await expect(nor.connect(stakingRouter).harness__obtainDepositData(depositable + 1n)).to.be.revertedWith(
+        "INVALID_ALLOCATED_KEYS_COUNT",
+      );
+    });
+
+    it("Returns allocated keys and updates nonce", async () => {
+      const nonce = await nor.getNonce();
+
+      const summaryBefore = await nor.getStakingModuleSummary();
+      expect(summaryBefore.depositableValidatorsCount).to.be.equal(
+        NODE_OPERATORS[firstNodeOperatorId].vettedSigningKeysCount -
+          NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount +
+          NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount -
+          NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount,
+      );
+
+      await expect(nor.connect(stakingRouter).harness__obtainDepositData(summaryBefore.depositableValidatorsCount))
+        .to.emit(nor, "ValidatorsKeysLoaded")
+        .to.emit(nor, "DepositedSigningKeysCountChanged")
+        .withArgs(firstNodeOperatorId, NODE_OPERATORS[firstNodeOperatorId].vettedSigningKeysCount)
+        .and.to.emit(nor, "DepositedSigningKeysCountChanged")
+        .withArgs(secondNodeOperatorId, NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount)
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n);
+
+      const summaryAfter = await nor.getStakingModuleSummary();
+      expect(summaryAfter.depositableValidatorsCount).to.be.equal(0);
+    });
+  });
+
   function addSigningKeysCases<TResult>(
     addKeysFn: (
       nor_instance: NodeOperatorsRegistry__Harness,

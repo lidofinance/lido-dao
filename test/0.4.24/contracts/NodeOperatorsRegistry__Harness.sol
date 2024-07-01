@@ -6,6 +6,9 @@ import {NodeOperatorsRegistry} from "contracts/0.4.24/nos/NodeOperatorsRegistry.
 import {Packed64x4} from "contracts/0.4.24/lib/Packed64x4.sol";
 
 contract NodeOperatorsRegistry__Harness is NodeOperatorsRegistry {
+  bytes public obtainedPublicKeys;
+  bytes public obtainedSignatures;
+
   function harness__initialize(uint256 _initialVersion) external {
     _setContractVersion(_initialVersion);
     initialized();
@@ -179,6 +182,10 @@ contract NodeOperatorsRegistry__Harness is NodeOperatorsRegistry {
     uint256 _keysToAllocate
   ) external returns (uint256 loadedValidatorsKeysCount, bytes memory publicKeys, bytes memory signatures) {
     (publicKeys, signatures) = this.obtainDepositData(_keysToAllocate, new bytes(0));
+
+    obtainedPublicKeys = publicKeys;
+    obtainedSignatures = signatures;
+
     emit ValidatorsKeysLoaded(publicKeys, signatures);
   }
 
