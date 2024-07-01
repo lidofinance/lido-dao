@@ -2,6 +2,8 @@ import { expect } from "chai";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
+import { NodeOperatorsRegistry__Harness } from "typechain-types";
+
 import { PUBKEY_LENGTH_HEX, SIGNATURE_LENGTH_HEX } from "./constants";
 
 export interface NodeOperatorConfig {
@@ -34,7 +36,7 @@ export interface NodeOperatorConfig {
  * @returns {bigint} newOperatorId Id of newly added Node Operator
  */
 export async function addNodeOperator(
-  norMock: NodeOperatorsRegistry__MockForFlow,
+  norMock: NodeOperatorsRegistry__Harness,
   norManager: HardhatEthersSigner,
   config: NodeOperatorConfig,
 ): Promise<bigint> {

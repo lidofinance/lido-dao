@@ -291,7 +291,54 @@ describe("NodeOperatorsRegistry", () => {
     });
   });
 
-  context("onWithdrawalCredentialsChanged", () => {});
+  context("onWithdrawalCredentialsChanged", () => {
+    it("Reverts if has no STAKING_ROUTER_ROLE assigned", async () => {
+      await expect(nor.onWithdrawalCredentialsChanged()).to.be.revertedWith("APP_AUTH_FAILED");
+    });
+
+    it("Does nothing if have no operators yet", async () => {
+      await expect(nor.connect(stakingRouter).onWithdrawalCredentialsChanged())
+        .to.not.emit(nor, "KeysOpIndexSet")
+        .to.not.emit(nor, "NonceChanged");
+    });
+
+    it("Invalidates all deposit dat for every operator", async () => {
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
+        firstNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
+        secondNodeOperatorId,
+      );
+
+      const nonce = await nor.getNonce();
+
+      await expect(nor.connect(stakingRouter).onWithdrawalCredentialsChanged())
+        .to.emit(nor, "TotalSigningKeysCountChanged")
+        .withArgs(firstNodeOperatorId, NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount)
+        .and.to.emit(nor, "TotalSigningKeysCountChanged")
+        .withArgs(secondNodeOperatorId, NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount)
+        .to.emit(nor, "VettedSigningKeysCountChanged")
+        .withArgs(firstNodeOperatorId, NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount)
+        .and.to.emit(nor, "VettedSigningKeysCountChanged")
+        .withArgs(secondNodeOperatorId, NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount)
+        .to.emit(nor, "NodeOperatorTotalKeysTrimmed")
+        .withArgs(
+          firstNodeOperatorId,
+          NODE_OPERATORS[firstNodeOperatorId].totalSigningKeysCount -
+            NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount,
+        )
+        .and.to.emit(nor, "NodeOperatorTotalKeysTrimmed")
+        .withArgs(
+          secondNodeOperatorId,
+          NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount -
+            NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount,
+        )
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n);
+    });
+  });
 
   context("invalidateReadyToDepositKeysRange", () => {});
 
