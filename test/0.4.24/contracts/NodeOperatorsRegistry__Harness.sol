@@ -14,39 +14,6 @@ contract NodeOperatorsRegistry__Harness is NodeOperatorsRegistry {
     initialized();
   }
 
-  function harness__increaseNodeOperatorDepositedSigningKeysCount(uint256 _nodeOperatorId, uint64 _keysCount) external {
-    Packed64x4.Packed memory signingKeysStats = _nodeOperators[_nodeOperatorId].signingKeysStats;
-    signingKeysStats.set(
-      TOTAL_DEPOSITED_KEYS_COUNT_OFFSET,
-      signingKeysStats.get(TOTAL_DEPOSITED_KEYS_COUNT_OFFSET) + _keysCount
-    );
-    _nodeOperators[_nodeOperatorId].signingKeysStats = signingKeysStats;
-
-    Packed64x4.Packed memory totalSigningKeysStats = _loadSummarySigningKeysStats();
-    totalSigningKeysStats.set(
-      TOTAL_DEPOSITED_KEYS_COUNT_OFFSET,
-      totalSigningKeysStats.get(TOTAL_DEPOSITED_KEYS_COUNT_OFFSET).add(_keysCount)
-    );
-    _saveSummarySigningKeysStats(totalSigningKeysStats);
-
-    _updateSummaryMaxValidatorsCount(_nodeOperatorId);
-  }
-
-  function harness__markAllKeysDeposited() external {
-    uint256 nodeOperatorsCount = getNodeOperatorsCount();
-    Packed64x4.Packed memory signingKeysStats;
-    for (uint256 i; i < nodeOperatorsCount; ++i) {
-      signingKeysStats = _loadOperatorSigningKeysStats(i);
-      harness__setDepositedSigningKeysCount(i, signingKeysStats.get(TOTAL_VETTED_KEYS_COUNT_OFFSET));
-    }
-  }
-
-  function harness__markAllKeysDeposited(uint256 _nodeOperatorId) external {
-    _onlyExistedNodeOperator(_nodeOperatorId);
-    Packed64x4.Packed memory signingKeysStats = _nodeOperators[_nodeOperatorId].signingKeysStats;
-    harness__setDepositedSigningKeysCount(_nodeOperatorId, signingKeysStats.get(TOTAL_VETTED_KEYS_COUNT_OFFSET));
-  }
-
   function harness__setDepositedSigningKeysCount(uint256 _nodeOperatorId, uint256 _depositedSigningKeysCount) public {
     _onlyExistedNodeOperator(_nodeOperatorId);
     // NodeOperator storage nodeOperator = _nodeOperators[_nodeOperatorId];
@@ -129,55 +96,6 @@ contract NodeOperatorsRegistry__Harness is NodeOperatorsRegistry {
     _updateSummaryMaxValidatorsCount(_nodeOperatorId);
   }
 
-  function harness__getTotalSigningKeysStats()
-    external
-    view
-    returns (
-      uint256 totalSigningKeysCount,
-      uint256 maxValidatorsCount,
-      uint256 depositedSigningKeysCount,
-      uint256 exitedSigningKeysCount
-    )
-  {
-    Packed64x4.Packed memory summarySigningKeysStats = _loadSummarySigningKeysStats();
-    totalSigningKeysCount = summarySigningKeysStats.get(SUMMARY_TOTAL_KEYS_COUNT_OFFSET);
-    maxValidatorsCount = summarySigningKeysStats.get(SUMMARY_MAX_VALIDATORS_COUNT_OFFSET);
-    depositedSigningKeysCount = summarySigningKeysStats.get(SUMMARY_DEPOSITED_KEYS_COUNT_OFFSET);
-    exitedSigningKeysCount = summarySigningKeysStats.get(SUMMARY_EXITED_KEYS_COUNT_OFFSET);
-  }
-
-  function harness__setBaseVersion(uint256 _newBaseVersion) external {
-    _setContractVersion(_newBaseVersion);
-  }
-
-  function harness__resetRegistry() external {
-    uint256 totalOperatorsCount = TOTAL_OPERATORS_COUNT_POSITION.getStorageUint256();
-    TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(0);
-    ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(0);
-    KEYS_OP_INDEX_POSITION.setStorageUint256(0);
-
-    _nodeOperatorSummary = NodeOperatorSummary({summarySigningKeysStats: Packed64x4.Packed(0)});
-
-    Packed64x4.Packed memory tmp;
-    for (uint256 i = 0; i < totalOperatorsCount; ++i) {
-      _nodeOperators[i] = NodeOperator(false, address(0), new string(0), tmp, tmp, tmp);
-    }
-  }
-
-  function harness__getSigningKeysAllocationData(
-    uint256 _keysCount
-  )
-    external
-    view
-    returns (
-      uint256 allocatedKeysCount,
-      uint256[] memory nodeOperatorIds,
-      uint256[] memory activeKeyCountsAfterAllocation
-    )
-  {
-    return _getSigningKeysAllocationData(_keysCount);
-  }
-
   function harness__obtainDepositData(
     uint256 _keysToAllocate
   ) external returns (uint256 loadedValidatorsKeysCount, bytes memory publicKeys, bytes memory signatures) {
@@ -189,50 +107,7 @@ contract NodeOperatorsRegistry__Harness is NodeOperatorsRegistry {
     emit ValidatorsKeysLoaded(publicKeys, signatures);
   }
 
-  function harness__isNodeOperatorPenalized(uint256 operatorId) external view returns (bool) {
-    Packed64x4.Packed memory stuckPenaltyStats = _loadOperatorStuckPenaltyStats(operatorId);
-    if (
-      stuckPenaltyStats.get(REFUNDED_VALIDATORS_COUNT_OFFSET) < stuckPenaltyStats.get(STUCK_VALIDATORS_COUNT_OFFSET) ||
-      block.timestamp <= stuckPenaltyStats.get(STUCK_PENALTY_END_TIMESTAMP_OFFSET)
-    ) {
-      return true;
-    }
-    return false;
-  }
-
-  function harness__getNodeOperator(
-    uint256 operatorId
-  )
-    external
-    view
-    returns (uint256 exitedSigningKeysCount, uint256 depositedSigningKeysCount, uint256 maxSigningKeysCount)
-  {
-    return _getNodeOperator(operatorId);
-  }
-
   event ValidatorsKeysLoaded(bytes publicKeys, bytes signatures);
-
-  function harness__distributeRewards() external returns (uint256) {
-    return _distributeRewards();
-  }
-
-  function harness__setNodeOperatorPenalty(
-    uint256 _nodeOperatorId,
-    uint256 _refundedValidatorsCount,
-    uint256 _stuckValidatorsCount,
-    uint256 _stuckPenaltyEndTimestamp
-  ) external {
-    _requireValidRange(_refundedValidatorsCount <= UINT64_MAX);
-    _requireValidRange(_stuckValidatorsCount <= UINT64_MAX);
-    _requireValidRange(_stuckPenaltyEndTimestamp <= UINT64_MAX);
-    Packed64x4.Packed memory stuckPenaltyStats = _loadOperatorStuckPenaltyStats(_nodeOperatorId);
-
-    stuckPenaltyStats.set(REFUNDED_VALIDATORS_COUNT_OFFSET, uint64(_refundedValidatorsCount));
-    stuckPenaltyStats.set(STUCK_VALIDATORS_COUNT_OFFSET, uint64(_stuckValidatorsCount));
-    stuckPenaltyStats.set(STUCK_PENALTY_END_TIMESTAMP_OFFSET, uint64(_stuckPenaltyEndTimestamp));
-    _saveOperatorStuckPenaltyStats(_nodeOperatorId, stuckPenaltyStats);
-    _updateSummaryMaxValidatorsCount(_nodeOperatorId);
-  }
 
   function harness__setLocator(address _mockedLocator) external {
     LIDO_LOCATOR_POSITION.setStorageAddress(_mockedLocator);

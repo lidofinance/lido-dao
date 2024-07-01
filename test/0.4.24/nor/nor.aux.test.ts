@@ -19,7 +19,7 @@ import { addNodeOperator, certainAddress, NodeOperatorConfig, prepIdsCountsPaylo
 import { addAragonApp, deployLidoDao } from "test/deploy";
 import { Snapshot } from "test/suite";
 
-describe("NodeOperatorsRegistry:flow", () => {
+describe("NodeOperatorsRegistry:auxiliary", () => {
   let deployer: HardhatEthersSigner;
   let user: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;
