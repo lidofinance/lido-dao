@@ -16,6 +16,10 @@ import {
 } from "lib";
 
 import readline from "readline";
+import * as dotenv from "dotenv";
+import { join } from "path";
+
+dotenv.config({ path: join(__dirname, "../../.env") });
 
 function getEnvVariable(name: string, defaultValue?: string) {
   const value = process.env[name];
