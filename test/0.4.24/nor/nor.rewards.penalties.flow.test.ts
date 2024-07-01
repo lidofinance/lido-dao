@@ -7,6 +7,7 @@ import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 import {
   ACL,
+  Burner__MockForLidoHandleOracleReport__factory,
   Kernel,
   Lido,
   LidoLocator,
@@ -91,11 +92,14 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
     [deployer, user, stakingRouter, nodeOperatorsManager, signingKeysManager, limitsManager, stranger] =
       await ethers.getSigners();
 
+    const burner = await new Burner__MockForLidoHandleOracleReport__factory(deployer).deploy();
+
     ({ lido, dao, acl } = await deployLidoDao({
       rootAccount: deployer,
       initialized: true,
       locatorConfig: {
         stakingRouter,
+        burner,
       },
     }));
 
@@ -462,6 +466,29 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
     });
 
     it("Performs rewards distribution when called by StakingRouter", async () => {
+      expect(await acl["hasPermission(address,address,bytes32)"](stakingRouter, nor, await nor.STAKING_ROUTER_ROLE()))
+        .to.be.true;
+
+      await lido.connect(user).resume();
+      await user.sendTransaction({ to: await lido.getAddress(), value: ether("1.0") });
+      await lido.connect(user).transfer(await nor.getAddress(), await lido.balanceOf(user));
+
+      const nonce = await nor.getNonce();
+      const idsPayload = prepIdsCountsPayload([1n], [2n]);
+      await expect(nor.connect(stakingRouter).updateStuckValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts))
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "StuckPenaltyStateChanged")
+        .withArgs(1n, 2n, 0n, 0n);
+
+      await expect(nor.connect(stakingRouter).onExitedAndStuckValidatorsCountsUpdated())
+        .to.emit(nor, "RewardsDistributed")
+        .to.emit(nor, "NodeOperatorPenalized");
+    });
+
+    it("Penalizes node operators with stuck penalty active", async () => {
       expect(await acl["hasPermission(address,address,bytes32)"](stakingRouter, nor, await nor.STAKING_ROUTER_ROLE()))
         .to.be.true;
 
