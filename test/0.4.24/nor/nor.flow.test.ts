@@ -10,8 +10,8 @@ import {
   Lido,
   LidoLocator,
   LidoLocator__factory,
-  NodeOperatorsRegistry__MockForFlow,
-  NodeOperatorsRegistry__MockForFlow__factory,
+  NodeOperatorsRegistry__Harness,
+  NodeOperatorsRegistry__Harness__factory,
 } from "typechain-types";
 
 import { addNodeOperator, certainAddress, NodeOperatorConfig } from "lib";
@@ -33,8 +33,8 @@ describe("NodeOperatorsRegistry", () => {
   let acl: ACL;
   let locator: LidoLocator;
 
-  let impl: NodeOperatorsRegistry__MockForFlow;
-  let nor: NodeOperatorsRegistry__MockForFlow;
+  let impl: NodeOperatorsRegistry__Harness;
+  let nor: NodeOperatorsRegistry__Harness;
 
   let originalState: string;
 
@@ -91,7 +91,7 @@ describe("NodeOperatorsRegistry", () => {
       },
     }));
 
-    impl = await new NodeOperatorsRegistry__MockForFlow__factory(deployer).deploy();
+    impl = await new NodeOperatorsRegistry__Harness__factory(deployer).deploy();
     const appProxy = await addAragonApp({
       dao,
       name: "node-operators-registry",
@@ -99,7 +99,7 @@ describe("NodeOperatorsRegistry", () => {
       rootAccount: deployer,
     });
 
-    nor = NodeOperatorsRegistry__MockForFlow__factory.connect(appProxy, deployer);
+    nor = NodeOperatorsRegistry__Harness__factory.connect(appProxy, deployer);
 
     await acl.createPermission(user, lido, await lido.RESUME_ROLE(), deployer);
 
@@ -109,7 +109,7 @@ describe("NodeOperatorsRegistry", () => {
     await acl.createPermission(limitsManager, nor, await nor.SET_NODE_OPERATOR_LIMIT_ROLE(), deployer);
 
     // grant role to nor itself cause it uses solidity's call method to itself
-    // inside the testing_requestValidatorsKeysForDeposits() method
+    // inside the harness__requestValidatorsKeysForDeposits() method
     await acl.grantPermission(nor, nor, await nor.STAKING_ROUTER_ROLE());
 
     locator = LidoLocator__factory.connect(await lido.getLidoLocator(), user);

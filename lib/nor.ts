@@ -2,8 +2,6 @@ import { expect } from "chai";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { NodeOperatorsRegistry__MockForFlow } from "typechain-types";
-
 import { PUBKEY_LENGTH_HEX, SIGNATURE_LENGTH_HEX } from "./constants";
 
 export interface NodeOperatorConfig {
@@ -63,7 +61,7 @@ export async function addNodeOperator(
   }
 
   const newOperatorId = await norMock.getNodeOperatorsCount();
-  await norMock.mock__addNodeOperator(
+  await norMock.harness__addNodeOperator(
     config.name,
     config.rewardAddress,
     config.totalSigningKeysCount,
@@ -71,7 +69,7 @@ export async function addNodeOperator(
     config.depositedSigningKeysCount,
     config.exitedSigningKeysCount,
   );
-  await norMock.mock__setNodeOperatorLimits(
+  await norMock.harness__setNodeOperatorLimits(
     newOperatorId,
     config.stuckValidatorsCount,
     config.refundedValidatorsCount,

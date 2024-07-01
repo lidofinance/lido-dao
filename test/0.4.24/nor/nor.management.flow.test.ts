@@ -10,8 +10,8 @@ import {
   Lido,
   LidoLocator,
   LidoLocator__factory,
-  NodeOperatorsRegistry__MockForFlow,
-  NodeOperatorsRegistry__MockForFlow__factory,
+  NodeOperatorsRegistry__Harness,
+  NodeOperatorsRegistry__Harness__factory,
 } from "typechain-types";
 
 import { addNodeOperator, certainAddress, NodeOperatorConfig, randomAddress } from "lib";
@@ -32,8 +32,8 @@ describe("NodeOperatorsRegistry", () => {
   let acl: ACL;
   let locator: LidoLocator;
 
-  let impl: NodeOperatorsRegistry__MockForFlow;
-  let nor: NodeOperatorsRegistry__MockForFlow;
+  let impl: NodeOperatorsRegistry__Harness;
+  let nor: NodeOperatorsRegistry__Harness;
 
   let originalState: string;
 
@@ -90,7 +90,7 @@ describe("NodeOperatorsRegistry", () => {
       },
     }));
 
-    impl = await new NodeOperatorsRegistry__MockForFlow__factory(deployer).deploy();
+    impl = await new NodeOperatorsRegistry__Harness__factory(deployer).deploy();
     const appProxy = await addAragonApp({
       dao,
       name: "node-operators-registry",
@@ -98,7 +98,7 @@ describe("NodeOperatorsRegistry", () => {
       rootAccount: deployer,
     });
 
-    nor = NodeOperatorsRegistry__MockForFlow__factory.connect(appProxy, deployer);
+    nor = NodeOperatorsRegistry__Harness__factory.connect(appProxy, deployer);
 
     await acl.createPermission(user, lido, await lido.RESUME_ROLE(), deployer);
 
@@ -571,7 +571,7 @@ describe("NodeOperatorsRegistry", () => {
       await Promise.all(promises);
 
       for (let i = 0n; i < 10n; ++i) {
-        await nor.mock__unsafeSetNodeOperatorIsActive(i, i % 2n != 0n ? true : false);
+        await nor.harness__unsafeSetNodeOperatorIsActive(i, i % 2n != 0n ? true : false);
       }
     });
 
@@ -675,12 +675,12 @@ describe("NodeOperatorsRegistry", () => {
     });
 
     it("Allows reading the changed nonce value", async () => {
-      await nor.mock__setNonce(123n);
+      await nor.harness__setNonce(123n);
       expect(await nor.getNonce()).to.be.equal(123n);
     });
 
     it("Allows zero nonce", async () => {
-      await nor.mock__setNonce(0n);
+      await nor.harness__setNonce(0n);
       expect(await nor.getNonce()).to.be.equal(0n);
     });
   });
@@ -691,18 +691,18 @@ describe("NodeOperatorsRegistry", () => {
     });
 
     it("Allows reading the changed keys op value", async () => {
-      await nor.mock__setNonce(123n);
+      await nor.harness__setNonce(123n);
       expect(await nor.getKeysOpIndex()).to.be.equal(123n);
     });
 
     it("Allows zero keys op", async () => {
-      await nor.mock__setNonce(0n);
+      await nor.harness__setNonce(0n);
       expect(await nor.getKeysOpIndex()).to.be.equal(0n);
     });
 
     it("Returns the same value as getNonce", async () => {
       for (let i = 0n; i < 100n; ++i) {
-        await nor.mock__setNonce(i);
+        await nor.harness__setNonce(i);
 
         expect(await nor.getNonce()).to.be.equal(i);
         expect(await nor.getKeysOpIndex()).to.be.equal(i);
@@ -716,12 +716,12 @@ describe("NodeOperatorsRegistry", () => {
     });
 
     it("Allows reading the changed LidoLocator address", async () => {
-      await nor.mock__setLocator(certainAddress("mocked-locator"));
+      await nor.harness__setLocator(certainAddress("mocked-locator"));
       expect(await nor.getLocator()).to.be.equal(certainAddress("mocked-locator"));
     });
 
     it("Allows reading zero LidoLocator address", async () => {
-      await nor.mock__setLocator(ZeroAddress);
+      await nor.harness__setLocator(ZeroAddress);
       expect(await nor.getLocator()).to.be.equal(ZeroAddress);
     });
   });
@@ -734,12 +734,12 @@ describe("NodeOperatorsRegistry", () => {
     it("Allows reading the changed stuck penalty delay", async () => {
       const maxStuckPenaltyDelay = await nor.MAX_STUCK_PENALTY_DELAY();
 
-      await nor.mock__setStuckPenaltyDelay(maxStuckPenaltyDelay);
+      await nor.harness__setStuckPenaltyDelay(maxStuckPenaltyDelay);
       expect(await nor.getStuckPenaltyDelay()).to.be.equal(maxStuckPenaltyDelay);
     });
 
     it("Allows reading zero stuck penalty delay", async () => {
-      await nor.mock__setStuckPenaltyDelay(0n);
+      await nor.harness__setStuckPenaltyDelay(0n);
       expect(await nor.getStuckPenaltyDelay()).to.be.equal(0n);
     });
   });

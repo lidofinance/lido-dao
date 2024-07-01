@@ -10,8 +10,8 @@ import {
   Lido,
   LidoLocator,
   LidoLocator__factory,
-  NodeOperatorsRegistry__MockForFlow,
-  NodeOperatorsRegistry__MockForFlow__factory,
+  NodeOperatorsRegistry__Harness,
+  NodeOperatorsRegistry__Harness__factory,
 } from "typechain-types";
 
 import {
@@ -48,8 +48,8 @@ describe("NodeOperatorsRegistry", () => {
   let acl: ACL;
   let locator: LidoLocator;
 
-  let impl: NodeOperatorsRegistry__MockForFlow;
-  let nor: NodeOperatorsRegistry__MockForFlow;
+  let impl: NodeOperatorsRegistry__Harness;
+  let nor: NodeOperatorsRegistry__Harness;
 
   let originalState: string;
 
@@ -113,7 +113,7 @@ describe("NodeOperatorsRegistry", () => {
       },
     }));
 
-    impl = await new NodeOperatorsRegistry__MockForFlow__factory(deployer).deploy();
+    impl = await new NodeOperatorsRegistry__Harness__factory(deployer).deploy();
     const appProxy = await addAragonApp({
       dao,
       name: "node-operators-registry",
@@ -121,7 +121,7 @@ describe("NodeOperatorsRegistry", () => {
       rootAccount: deployer,
     });
 
-    nor = NodeOperatorsRegistry__MockForFlow__factory.connect(appProxy, deployer);
+    nor = NodeOperatorsRegistry__Harness__factory.connect(appProxy, deployer);
 
     await acl.createPermission(user, lido, await lido.RESUME_ROLE(), deployer);
 
@@ -164,7 +164,7 @@ describe("NodeOperatorsRegistry", () => {
 
   function addSigningKeysCases<TResult>(
     addKeysFn: (
-      nor_instance: NodeOperatorsRegistry__MockForFlow,
+      nor_instance: NodeOperatorsRegistry__Harness,
       _nodeOperatorId: BigNumberish,
       _keysCount: BigNumberish,
       _publicKeys: BytesLike,
@@ -317,7 +317,7 @@ describe("NodeOperatorsRegistry", () => {
 
   context("addSigningKeys", () => {
     const func = async (
-      nor_instance: NodeOperatorsRegistry__MockForFlow,
+      nor_instance: NodeOperatorsRegistry__Harness,
       _nodeOperatorId: BigNumberish,
       _keysCount: BigNumberish,
       _publicKeys: BytesLike,
@@ -331,7 +331,7 @@ describe("NodeOperatorsRegistry", () => {
 
   context("addSigningKeysOperatorBH", () => {
     const funcBH = async (
-      nor_instance: NodeOperatorsRegistry__MockForFlow,
+      nor_instance: NodeOperatorsRegistry__Harness,
       _nodeOperatorId: BigNumberish,
       _keysCount: BigNumberish,
       _publicKeys: BytesLike,
@@ -345,7 +345,7 @@ describe("NodeOperatorsRegistry", () => {
 
   function removeSigningKeysCases<TResult>(
     removeKeysFn: (
-      nor_instance: NodeOperatorsRegistry__MockForFlow,
+      nor_instance: NodeOperatorsRegistry__Harness,
       _nodeOperatorId: BigNumberish,
       _fromIndex: BigNumberish,
       _keysCount: BigNumberish,
@@ -539,7 +539,7 @@ describe("NodeOperatorsRegistry", () => {
 
   function removeSigningKeyCases<TResult>(
     removeKeyFn: (
-      nor_instance: NodeOperatorsRegistry__MockForFlow,
+      nor_instance: NodeOperatorsRegistry__Harness,
       _nodeOperatorId: BigNumberish,
       _fromIndex: BigNumberish,
     ) => TResult,
@@ -693,7 +693,7 @@ describe("NodeOperatorsRegistry", () => {
 
   context("removeSigningKey", () => {
     const funcOneKey = async (
-      nor_instance: NodeOperatorsRegistry__MockForFlow,
+      nor_instance: NodeOperatorsRegistry__Harness,
       _nodeOperatorId: BigNumberish,
       _fromIndex: BigNumberish,
     ) => {
@@ -705,7 +705,7 @@ describe("NodeOperatorsRegistry", () => {
 
   context("removeSigningKeys", () => {
     const func = async (
-      nor_instance: NodeOperatorsRegistry__MockForFlow,
+      nor_instance: NodeOperatorsRegistry__Harness,
       _nodeOperatorId: BigNumberish,
       _fromIndex: BigNumberish,
       _keysCount: BigNumberish,
@@ -718,7 +718,7 @@ describe("NodeOperatorsRegistry", () => {
 
   context("removeSigningKeyOperatorBH", () => {
     const funcOneKeyBH = async (
-      nor_instance: NodeOperatorsRegistry__MockForFlow,
+      nor_instance: NodeOperatorsRegistry__Harness,
       _nodeOperatorId: BigNumberish,
       _fromIndex: BigNumberish,
     ) => {
@@ -730,7 +730,7 @@ describe("NodeOperatorsRegistry", () => {
 
   context("removeSigningKeysOperatorBH", () => {
     const funcBH = async (
-      nor_instance: NodeOperatorsRegistry__MockForFlow,
+      nor_instance: NodeOperatorsRegistry__Harness,
       _nodeOperatorId: BigNumberish,
       _fromIndex: BigNumberish,
       _keysCount: BigNumberish,
@@ -838,7 +838,7 @@ describe("NodeOperatorsRegistry", () => {
         .connect(signingKeysManager)
         .addSigningKeys(thirdNodeOperatorId, thirdNOKeysCount, thirdNOPublicKeys, thirdNOSignatures);
       await nor.connect(limitsManager).setNodeOperatorStakingLimit(thirdNodeOperatorId, thirdNOKeysCount);
-      await nor.mock__setDepositedSigningKeysCount(thirdNodeOperatorId, thirdNOKeysDeposited);
+      await nor.harness__setDepositedSigningKeysCount(thirdNodeOperatorId, thirdNOKeysDeposited);
     });
 
     it("Reverts if no such an operator exists", async () => {
@@ -933,7 +933,7 @@ describe("NodeOperatorsRegistry", () => {
         .connect(signingKeysManager)
         .addSigningKeys(thirdNodeOperatorId, thirdNOKeysCount, thirdNOPublicKeys, thirdNOSignatures);
       await nor.connect(limitsManager).setNodeOperatorStakingLimit(thirdNodeOperatorId, thirdNOKeysCount);
-      await nor.mock__setDepositedSigningKeysCount(thirdNodeOperatorId, thirdNOKeysDeposited);
+      await nor.harness__setDepositedSigningKeysCount(thirdNodeOperatorId, thirdNOKeysDeposited);
     });
 
     it("Reverts if no such an operator exists", async () => {

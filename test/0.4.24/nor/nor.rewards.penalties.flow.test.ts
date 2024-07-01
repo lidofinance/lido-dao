@@ -11,8 +11,8 @@ import {
   Lido,
   LidoLocator,
   LidoLocator__factory,
-  NodeOperatorsRegistry__MockForFlow,
-  NodeOperatorsRegistry__MockForFlow__factory,
+  NodeOperatorsRegistry__Harness,
+  NodeOperatorsRegistry__Harness__factory,
 } from "typechain-types";
 
 import { addNodeOperator, certainAddress, ether, NodeOperatorConfig, prepIdsCountsPayload } from "lib";
@@ -34,8 +34,8 @@ describe("NodeOperatorsRegistry", () => {
   let acl: ACL;
   let locator: LidoLocator;
 
-  let impl: NodeOperatorsRegistry__MockForFlow;
-  let nor: NodeOperatorsRegistry__MockForFlow;
+  let impl: NodeOperatorsRegistry__Harness;
+  let nor: NodeOperatorsRegistry__Harness;
 
   let originalState: string;
 
@@ -92,7 +92,7 @@ describe("NodeOperatorsRegistry", () => {
       },
     }));
 
-    impl = await new NodeOperatorsRegistry__MockForFlow__factory(deployer).deploy();
+    impl = await new NodeOperatorsRegistry__Harness__factory(deployer).deploy();
     const appProxy = await addAragonApp({
       dao,
       name: "node-operators-registry",
@@ -100,7 +100,7 @@ describe("NodeOperatorsRegistry", () => {
       rootAccount: deployer,
     });
 
-    nor = NodeOperatorsRegistry__MockForFlow__factory.connect(appProxy, deployer);
+    nor = NodeOperatorsRegistry__Harness__factory.connect(appProxy, deployer);
 
     await acl.createPermission(user, lido, await lido.RESUME_ROLE(), deployer);
 
