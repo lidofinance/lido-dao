@@ -687,8 +687,17 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
 
     /// @notice Updates the limit of the validators that can be used for deposit by DAO
     /// @param _nodeOperatorId Id of the node operator
+    /// @param _isTargetLimitActive Flag indicating if the soft target limit is active
     /// @param _targetLimit Target limit of the node operator
+    /// @dev This function is deprecated, use updateTargetValidatorsLimits instead
+    function updateTargetValidatorsLimits(uint256 _nodeOperatorId, bool _isTargetLimitActive, uint256 _targetLimit) public {
+        updateTargetValidatorsLimits(_nodeOperatorId, _isTargetLimitActive ? 1 : 0, _targetLimit);
+    }
+
+    /// @notice Updates the limit of the validators that can be used for deposit by DAO
+    /// @param _nodeOperatorId Id of the node operator
     /// @param _targetLimitMode target limit mode (0 = disabled, 1 = soft mode, 2 = forced mode)
+    /// @param _targetLimit Target limit of the node operator
     function updateTargetValidatorsLimits(uint256 _nodeOperatorId, uint256 _targetLimitMode, uint256 _targetLimit) public {
         _onlyExistedNodeOperator(_nodeOperatorId);
         _auth(STAKING_ROUTER_ROLE);

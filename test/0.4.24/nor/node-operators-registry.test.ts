@@ -389,6 +389,9 @@ describe("NodeOperatorsRegistry", () => {
   });
 
   context("updateTargetValidatorsLimits", () => {
+    const updateTargetLimits = "updateTargetValidatorsLimits(uint256,uint256,uint256)";
+    const updateTargetLimitsDeprecated = "updateTargetValidatorsLimits(uint256,bool,uint256)";
+
     const firstNodeOperatorId = 0;
     const secondNodeOperatorId = 1;
     let targetLimitMode = 0;
@@ -401,16 +404,16 @@ describe("NodeOperatorsRegistry", () => {
 
     it('reverts with "APP_AUTH_FAILED" error when called by sender without STAKING_ROUTER_ROLE', async () => {
       expect(await hasPermission(dao, nor, "STAKING_ROUTER_ROLE", stranger)).to.be.false;
-      await expect(
-        nor.updateTargetValidatorsLimits(firstNodeOperatorId, targetLimitMode, targetLimit),
-      ).to.be.revertedWith("APP_AUTH_FAILED");
+      await expect(nor[updateTargetLimits](firstNodeOperatorId, targetLimitMode, targetLimit)).to.be.revertedWith(
+        "APP_AUTH_FAILED",
+      );
     });
 
     it('reverts with "OUT_OF_RANGE" error when called with targetLimit > UINT64_MAX', async () => {
       const targetLimitWrong = BigInt("0x10000000000000000");
 
       await expect(
-        nor.connect(stakingRouter).updateTargetValidatorsLimits(firstNodeOperatorId, targetLimitMode, targetLimitWrong),
+        nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, targetLimitMode, targetLimitWrong),
       ).to.be.revertedWith("OUT_OF_RANGE");
     });
 
@@ -420,9 +423,7 @@ describe("NodeOperatorsRegistry", () => {
       targetLimitMode = 1;
       targetLimit = 10;
 
-      await expect(
-        nor.connect(stakingRouter).updateTargetValidatorsLimits(firstNodeOperatorId, targetLimitMode, targetLimit),
-      )
+      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, targetLimitMode, targetLimit))
         .to.emit(nor, "TargetValidatorsCountChanged")
         .withArgs(firstNodeOperatorId, targetLimit, targetLimitMode);
 
@@ -454,28 +455,24 @@ describe("NodeOperatorsRegistry", () => {
       expect(await hasPermission(dao, nor, "STAKING_ROUTER_ROLE", stakingRouter)).to.be.true;
 
       const targetLimitMode1 = 1;
-      const targetLimitMode2 = 1;
+      const targetLimitMode2 = 2;
       targetLimit = 10;
 
-      await expect(
-        nor.connect(stakingRouter).updateTargetValidatorsLimits(firstNodeOperatorId, targetLimitMode1, targetLimit),
-      )
+      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, targetLimitMode1, targetLimit))
         .to.emit(nor, "TargetValidatorsCountChanged")
         .withArgs(firstNodeOperatorId, targetLimit, targetLimitMode1);
 
       let noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
       expect(noSummary.targetLimitMode).to.equal(targetLimitMode1);
 
-      await expect(
-        nor.connect(stakingRouter).updateTargetValidatorsLimits(secondNodeOperatorId, targetLimitMode2, targetLimit),
-      )
+      await expect(nor.connect(stakingRouter)[updateTargetLimits](secondNodeOperatorId, targetLimitMode2, targetLimit))
         .to.emit(nor, "TargetValidatorsCountChanged")
         .withArgs(secondNodeOperatorId, targetLimit, targetLimitMode2);
       noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
       expect(noSummary.targetLimitMode).to.equal(targetLimitMode2);
 
       // reset limit
-      await expect(nor.connect(stakingRouter).updateTargetValidatorsLimits(firstNodeOperatorId, 0, targetLimit))
+      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 0, targetLimit))
         .to.emit(nor, "TargetValidatorsCountChanged")
         .withArgs(firstNodeOperatorId, 0, 0); // expect limit set to 0
 
@@ -485,6 +482,23 @@ describe("NodeOperatorsRegistry", () => {
       // mode for 2nt NO is not changed
       noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
       expect(noSummary.targetLimitMode).to.equal(targetLimitMode2);
+    });
+
+    it("updates node operator target limit with deprecated method correctly", async () => {
+      expect(await hasPermission(dao, nor, "STAKING_ROUTER_ROLE", stakingRouter)).to.be.true;
+
+      await expect(nor.connect(stakingRouter)[updateTargetLimitsDeprecated](firstNodeOperatorId, true, 100))
+        .to.emit(nor, "TargetValidatorsCountChanged")
+        .withArgs(firstNodeOperatorId, 100, 1);
+
+      const noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+      expect(noSummary.targetLimitMode).to.equal(1);
+
+      await expect(nor.connect(stakingRouter)[updateTargetLimitsDeprecated](firstNodeOperatorId, false, 0))
+        .to.emit(nor, "TargetValidatorsCountChanged")
+        .withArgs(firstNodeOperatorId, 0, 0);
+      const noSummary2 = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+      expect(noSummary2.targetLimitMode).to.equal(0);
     });
   });
 
