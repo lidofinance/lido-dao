@@ -57,6 +57,8 @@ async function main() {
   const deployer = ethers.getAddress(getEnvVariable("DEPLOYER"));
   const chainId = (await ethers.provider.getNetwork()).chainId;
 
+  log(cy(`Deploy of contracts on chain ${chainId}`));
+
   const state = readNetworkState();
   state[Sk.scratchDeployGasUsed] = 0n.toString();
   persistNetworkState(state);
@@ -82,7 +84,7 @@ async function main() {
   const minFirstAllocationStrategyAddress = (
     await deployWithoutProxy(Sk.minFirstAllocationStrategy, "MinFirstAllocationStrategy", deployer)
   ).address;
-  log.success(gr(`MinFirstAllocationStrategy address: ${minFirstAllocationStrategyAddress}`));
+  log.success(`MinFirstAllocationStrategy address: ${minFirstAllocationStrategyAddress}`);
   log.emptyLine();
 
   const libraries = {
@@ -93,14 +95,14 @@ async function main() {
   const stakingRouterAddress = (
     await deployImplementation(Sk.stakingRouter, "StakingRouter", deployer, [DEPOSIT_CONTRACT_ADDRESS], { libraries })
   ).address;
-  log.success(gr(`StakingRouter implementation address: ${stakingRouterAddress}`));
+  log.success(`StakingRouter implementation address: ${stakingRouterAddress}`);
   log.emptyLine();
 
   // Deploy NOR
   const appNodeOperatorsRegistry = (
     await deployImplementation(Sk.appNodeOperatorsRegistry, "NodeOperatorsRegistry", deployer, [], { libraries })
   ).address;
-  log.success(gr(`NodeOperatorsRegistry address implementation: ${appNodeOperatorsRegistry}`));
+  log.success(`NodeOperatorsRegistry address implementation: ${appNodeOperatorsRegistry}`);
   log.emptyLine();
 
   updateObjectInState(Sk.appSimpleDvt, {
@@ -122,7 +124,7 @@ async function main() {
   const depositSecurityModuleAddress = (
     await deployWithoutProxy(Sk.depositSecurityModule, "DepositSecurityModule", deployer, depositSecurityModuleParams)
   ).address;
-  log.success(gr(`New DSM address: ${depositSecurityModuleAddress}`));
+  log.success(`New DSM address: ${depositSecurityModuleAddress}`);
   log.emptyLine();
 
   const dsmContract = await loadContract<DepositSecurityModule>(
@@ -131,8 +133,8 @@ async function main() {
   );
   await dsmContract.addGuardians(guardians, quorum);
   await dsmContract.setOwner(APP_AGENT_ADDRESS);
-  log.success(gr(`Guardians list: ${await dsmContract.getGuardians()}`));
-  log.success(gr(`Quorum: ${await dsmContract.getGuardianQuorum()}`));
+  log.success(`Guardians list: ${await dsmContract.getGuardians()}`);
+  log.success(`Quorum: ${await dsmContract.getGuardianQuorum()}`);
   log.emptyLine();
 
   // Deploy AO
@@ -140,7 +142,7 @@ async function main() {
   const accountingOracleAddress = (
     await deployImplementation(Sk.accountingOracle, "AccountingOracle", deployer, accountingOracleArgs)
   ).address;
-  log.success(gr(`AO implementation address: ${accountingOracleAddress}`));
+  log.success(`AO implementation address: ${accountingOracleAddress}`);
   log.emptyLine();
 
   // Deploy OracleReportSanityCheckerArgs
@@ -153,7 +155,7 @@ async function main() {
       oracleReportSanityCheckerArgs,
     )
   ).address;
-  log.success(gr(`OracleReportSanityChecker new address ${oracleReportSanityCheckerAddress}`));
+  log.success(`OracleReportSanityChecker new address ${oracleReportSanityCheckerAddress}`);
   log.emptyLine();
 
   const locatorConfig = [
@@ -176,7 +178,7 @@ async function main() {
   ];
 
   const locatorAddress = (await deployImplementation(Sk.lidoLocator, "LidoLocator", deployer, locatorConfig)).address;
-  log.success(gr(`Locator implementation address ${locatorAddress}`));
+  log.success(`Locator implementation address ${locatorAddress}`);
   log.emptyLine();
 
   if (getEnvVariable("RUN_ON_FORK", "false") === "true") {
