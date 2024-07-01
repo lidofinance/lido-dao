@@ -454,6 +454,8 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
       expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
         secondNodeOperatorId,
       );
+      expect(await acl["hasPermission(address,address,bytes32)"](stakingRouter, nor, await nor.STAKING_ROUTER_ROLE()))
+        .to.be.true;
     });
 
     it("Reverts if has no STAKING_ROUTER_ROLE assigned", async () => {
@@ -465,10 +467,13 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
       );
     });
 
-    it("Performs rewards distribution when called by StakingRouter", async () => {
-      expect(await acl["hasPermission(address,address,bytes32)"](stakingRouter, nor, await nor.STAKING_ROUTER_ROLE()))
-        .to.be.true;
+    it("Returns early if nothing to distribute", async () => {
+      await expect(nor.connect(stakingRouter).onExitedAndStuckValidatorsCountsUpdated())
+        .to.not.emit(nor, "RewardsDistributed")
+        .to.not.emit(nor, "NodeOperatorPenalized");
+    });
 
+    it("Performs rewards distribution when called by StakingRouter", async () => {
       await lido.connect(user).resume();
       await user.sendTransaction({ to: await lido.getAddress(), value: ether("1.0") });
       await lido.connect(user).transfer(await nor.getAddress(), await lido.balanceOf(user));
