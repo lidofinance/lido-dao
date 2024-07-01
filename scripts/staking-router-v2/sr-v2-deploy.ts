@@ -12,6 +12,7 @@ import {
   persistNetworkState,
   readNetworkState,
   Sk,
+  updateObjectInState,
 } from "lib";
 
 import readline from "readline";
@@ -98,7 +99,13 @@ async function main() {
   log.success(gr(`NodeOperatorsRegistry address implementation: ${appNodeOperatorsRegistry}`));
   log.emptyLine();
 
-  // TODO: update sdvt too
+  updateObjectInState(Sk.appSimpleDvt, {
+    implementation: {
+      contract: "contracts/0.4.24/nos/NodeOperatorsRegistry.sol",
+      address: appNodeOperatorsRegistry,
+      constructorArgs: [],
+    },
+  });
 
   // Deploy DSM
   const depositSecurityModuleParams = [
