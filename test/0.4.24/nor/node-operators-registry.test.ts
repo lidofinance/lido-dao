@@ -404,20 +404,16 @@ describe("NodeOperatorsRegistry", () => {
 
     it('reverts with "APP_AUTH_FAILED" error when called by sender without STAKING_ROUTER_ROLE', async () => {
       expect(await hasPermission(dao, nor, "STAKING_ROUTER_ROLE", stranger)).to.be.false;
-      await expect(
-        nor["updateTargetValidatorsLimits(uint256,uint256,uint256)"](firstNodeOperatorId, targetLimitMode, targetLimit),
-      ).to.be.revertedWith("APP_AUTH_FAILED");
+      await expect(nor[updateTargetLimits](firstNodeOperatorId, targetLimitMode, targetLimit)).to.be.revertedWith(
+        "APP_AUTH_FAILED",
+      );
     });
 
     it('reverts with "OUT_OF_RANGE" error when called with targetLimit > UINT64_MAX', async () => {
       const targetLimitWrong = BigInt("0x10000000000000000");
 
       await expect(
-        nor
-          .connect(stakingRouter)
-          [
-            "updateTargetValidatorsLimits(uint256,uint256,uint256)"
-          ](firstNodeOperatorId, targetLimitMode, targetLimitWrong),
+        nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, targetLimitMode, targetLimitWrong),
       ).to.be.revertedWith("OUT_OF_RANGE");
     });
 
@@ -427,11 +423,7 @@ describe("NodeOperatorsRegistry", () => {
       targetLimitMode = 1;
       targetLimit = 10;
 
-      await expect(
-        nor
-          .connect(stakingRouter)
-          ["updateTargetValidatorsLimits(uint256,uint256,uint256)"](firstNodeOperatorId, targetLimitMode, targetLimit),
-      )
+      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, targetLimitMode, targetLimit))
         .to.emit(nor, "TargetValidatorsCountChanged")
         .withArgs(firstNodeOperatorId, targetLimit, targetLimitMode);
 
