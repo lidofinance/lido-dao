@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import "@nomicfoundation/hardhat-chai-matchers";
@@ -39,6 +40,11 @@ const config: HardhatUserConfig = {
         accountsBalance: "100000000000000000000000",
       },
       forking: HARDHAT_FORKING_URL ? { url: HARDHAT_FORKING_URL } : undefined,
+    },
+    sepolia: {
+      url: RPC_URL,
+      chainId: 11155111,
+      accounts: JSON.parse(readFileSync("./accounts.json", "utf-8")).eth.sepolia,
     },
   },
   solidity: {
