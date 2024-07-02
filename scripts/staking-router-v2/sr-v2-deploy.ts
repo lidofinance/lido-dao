@@ -1,12 +1,9 @@
 import { ethers, run } from "hardhat";
-
 import { DepositSecurityModule, DepositSecurityModule__factory } from "typechain-types";
-
 import {
   cy,
   deployImplementation,
   deployWithoutProxy,
-  gr,
   loadContract,
   log,
   persistNetworkState,
