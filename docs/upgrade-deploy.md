@@ -17,3 +17,5 @@ yarn hardhat --network sepolia run --no-compile scripts/upgrade/deploy-locator.t
 ```
 
 specifying require values under `<PUT-YOU-VALUE>`.
+
+Names of env variables specifying new addresses (e.g. `postTokenRebaseReceiver`) correspond to immutables names of `LidoLocator` contract.
