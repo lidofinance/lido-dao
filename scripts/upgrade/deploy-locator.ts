@@ -5,20 +5,20 @@ import { deployImplementation, getContractAt, LoadedContract, log, readNetworkSt
 
 const VIEW_NAMES_AND_CTOR_ARGS = [
   // As view names on LidoLocator
-  Sk.accountingOracle,
-  Sk.depositSecurityModule,
+  "accountingOracle",
+  "depositSecurityModule",
   "elRewardsVault",
   "legacyOracle",
   "lido",
-  Sk.oracleReportSanityChecker,
+  "oracleReportSanityChecker",
   "postTokenRebaseReceiver",
-  Sk.burner,
-  Sk.stakingRouter,
+  "burner",
+  "stakingRouter",
   "treasury",
-  Sk.validatorsExitBusOracle,
+  "validatorsExitBusOracle",
   "withdrawalQueue",
-  Sk.withdrawalVault,
-  Sk.oracleDaemonConfig,
+  "withdrawalVault",
+  "oracleDaemonConfig",
 ];
 
 /////////////// GLOBAL VARIABLES ///////////////
