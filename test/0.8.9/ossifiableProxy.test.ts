@@ -2,7 +2,12 @@ import { expect } from "chai";
 import { Signer, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import { Initializable__Mock, OssifiableProxy } from "typechain-types";
+import {
+  Initializable__Mock,
+  Initializable__Mock__factory,
+  OssifiableProxy,
+  OssifiableProxy__factory,
+} from "typechain-types";
 
 import { Snapshot } from "test/suite";
 
@@ -13,6 +18,8 @@ describe("OssifiableProxy", () => {
   let proxy: OssifiableProxy;
   let snapshot: string;
   let initPayload: string;
+  let InitializableContract: Initializable__Mock__factory;
+  let OssifiableProxy: OssifiableProxy__factory;
 
   async function takeSnapshot() {
     snapshot = await Snapshot.take();
@@ -24,8 +31,8 @@ describe("OssifiableProxy", () => {
 
   beforeEach(async () => {
     [admin, stranger] = await ethers.getSigners();
-    const InitializableContract = await ethers.getContractFactory("Initializable__Mock");
-    const OssifiableProxy = await ethers.getContractFactory("OssifiableProxy");
+    InitializableContract = await ethers.getContractFactory("Initializable__Mock");
+    OssifiableProxy = await ethers.getContractFactory("OssifiableProxy");
 
     currentImpl = await InitializableContract.deploy();
     proxy = await OssifiableProxy.deploy(await currentImpl.getAddress(), await admin.getAddress(), "0x");
@@ -35,6 +42,38 @@ describe("OssifiableProxy", () => {
 
   before(takeSnapshot);
   after(rollback);
+
+  describe("deploy", () => {
+    it("with empty calldata", async () => {
+      currentImpl = await InitializableContract.deploy();
+      proxy = await OssifiableProxy.deploy(await currentImpl.getAddress(), await admin.getAddress(), "0x");
+
+      const tx = proxy.deploymentTransaction();
+      const implInterfaceOnProxyAddr = currentImpl.attach(await proxy.getAddress()) as Initializable__Mock;
+
+      await expect(tx)
+        .to.emit(proxy, "Upgraded")
+        .withArgs(await currentImpl.getAddress());
+
+      expect(await implInterfaceOnProxyAddr.version()).to.equal(0);
+    });
+
+    it("with calldata", async () => {
+      currentImpl = await InitializableContract.deploy();
+      proxy = await OssifiableProxy.deploy(await currentImpl.getAddress(), await admin.getAddress(), initPayload);
+
+      const tx = proxy.deploymentTransaction();
+      const implInterfaceOnProxyAddr = currentImpl.attach(await proxy.getAddress()) as Initializable__Mock;
+
+      await expect(tx)
+        .to.emit(proxy, "Upgraded")
+        .withArgs(await currentImpl.getAddress())
+        .and.to.emit(implInterfaceOnProxyAddr, "Initialized")
+        .withArgs(1);
+
+      expect(await implInterfaceOnProxyAddr.version()).to.equal(1);
+    });
+  });
 
   describe("getters", () => {
     it("proxy__getAdmin()", async () => {
@@ -67,6 +106,7 @@ describe("OssifiableProxy", () => {
         .withArgs(admin.getAddress(), ZeroAddress);
 
       expect(await proxy.proxy__getIsOssified()).to.be.true;
+      expect(await proxy.proxy__getAdmin()).to.be.equal(ZeroAddress);
     });
   });
 
@@ -98,6 +138,13 @@ describe("OssifiableProxy", () => {
       await expect(proxy.connect(admin).proxy__changeAdmin(admin.getAddress())).to.be.revertedWithCustomError(
         proxy,
         "NotAdmin()",
+      );
+    });
+
+    it("should fail to change admin to zero address", async () => {
+      const newAdmin = ZeroAddress;
+      await expect(proxy.connect(admin).proxy__changeAdmin(newAdmin)).to.be.revertedWith(
+        "ERC1967: new admin is the zero address",
       );
     });
   });
