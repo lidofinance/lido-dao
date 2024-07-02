@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { Signer } from "ethers";
+import { Signer, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
 import { Initializable__Mock, OssifiableProxy } from "typechain-types";
@@ -64,7 +64,7 @@ describe("OssifiableProxy", () => {
       await expect(proxy.connect(admin).proxy__ossify())
         .to.emit(proxy, "ProxyOssified")
         .and.to.emit(proxy, "AdminChanged")
-        .withArgs(admin.getAddress(), "0x0000000000000000000000000000000000000000");
+        .withArgs(admin.getAddress(), ZeroAddress);
 
       expect(await proxy.proxy__getIsOssified()).to.be.true;
     });
