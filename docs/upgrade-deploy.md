@@ -4,6 +4,16 @@ To help with deploying contracts on upgrades there are scripts under [scripts/up
 
 ## Deploy LidoLocator
 
+At first, you need to specify `DEPLOYER` private key in accounts.json under `/eth/sepolia`, e.g.:
+
+```json
+{
+  "eth": {
+    "sepolia": ["<DEPLOYER-PK>"]
+  }
+}
+```
+
 E. g. to deploy `LidoLocator` implementation with new addresses for `legacyOracle` and `postTokenRebaseReceiver`
 on Sepolia run
 
