@@ -107,6 +107,14 @@ contract NodeOperatorsRegistry__Harness is NodeOperatorsRegistry {
     emit ValidatorsKeysLoaded(publicKeys, signatures);
   }
 
+  function harness__getSigningKeysAllocationData(uint256 _keysCount) external view returns (
+    uint256 allocatedKeysCount,
+    uint256[] memory nodeOperatorIds,
+    uint256[] memory activeKeyCountsAfterAllocation
+  ) {
+    return _getSigningKeysAllocationData(_keysCount);
+  }
+
   event ValidatorsKeysLoaded(bytes publicKeys, bytes signatures);
 
   function harness__setLocator(address _mockedLocator) external {

@@ -53,6 +53,11 @@ describe("NodeOperatorsRegistry:signing-keys", () => {
 
   let originalState: string;
 
+  const firstNodeOperatorId = 0;
+  const secondNodeOperatorId = 1;
+  const thirdNodeOperatorId = 2;
+  const fourthNodeOperatorId = 3;
+
   const NODE_OPERATORS: NodeOperatorConfig[] = [
     {
       name: "foo",
@@ -87,6 +92,17 @@ describe("NodeOperatorsRegistry:signing-keys", () => {
       refundedValidatorsCount: 0n,
       stuckPenaltyEndAt: 0n,
     },
+    {
+      name: "extra",
+      rewardAddress: certainAddress("node-operator-4"),
+      totalSigningKeysCount: 5n,
+      depositedSigningKeysCount: 5n,
+      exitedSigningKeysCount: 0n,
+      vettedSigningKeysCount: 5n,
+      stuckValidatorsCount: 0n,
+      refundedValidatorsCount: 0n,
+      stuckPenaltyEndAt: 0n,
+    },
   ];
 
   const moduleType = encodeBytes32String("curated-onchain-v1");
@@ -96,10 +112,6 @@ describe("NodeOperatorsRegistry:signing-keys", () => {
   const firstNOKeys = new FakeValidatorKeys(5, { kFill: "a", sFill: "b" });
   const secondNOKeys = new FakeValidatorKeys(9, { kFill: "c", sFill: "d" });
   const thirdNOKeys = new FakeValidatorKeys(30, { kFill: "c", sFill: "d" });
-
-  const firstNodeOperatorId = 0;
-  const secondNodeOperatorId = 1;
-  const thirdNodeOperatorId = 2;
 
   before(async () => {
     [deployer, user, stakingRouter, nodeOperatorsManager, signingKeysManager, limitsManager, stranger] =
@@ -167,7 +179,25 @@ describe("NodeOperatorsRegistry:signing-keys", () => {
       await expect(nor.obtainDepositData(0n, "0x")).to.be.revertedWith("APP_AUTH_FAILED");
     });
 
-    it("Returns empty data is zero deposits requested", async () => {
+    it("returns empty data if zero available keys", async () => {
+      await nor.connect(nodeOperatorsManager).deactivateNodeOperator(firstNodeOperatorId);
+      await nor.connect(nodeOperatorsManager).deactivateNodeOperator(secondNodeOperatorId);
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[fourthNodeOperatorId])).to.be.equal(
+        thirdNodeOperatorId,
+      );
+
+      const [allocatedKeys, noIds, activeKeys] = await nor.harness__getSigningKeysAllocationData(1n);
+
+      expect(allocatedKeys).to.be.equal(0n);
+      expect(noIds).to.be.empty;
+      expect(activeKeys).to.be.empty;
+
+      await expect(nor.connect(stakingRouter).harness__obtainDepositData(1n)).to.be.revertedWith(
+        "INVALID_ALLOCATED_KEYS_COUNT",
+      );
+    });
+
+    it("Returns empty data if zero deposits requested", async () => {
       await nor.connect(stakingRouter).harness__obtainDepositData(0n);
 
       expect(await nor.obtainedPublicKeys()).to.be.equal("0x");
