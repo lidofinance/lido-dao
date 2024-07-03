@@ -471,7 +471,35 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
         .to.not.emit(nor, "NodeOperatorPenalized");
     });
 
+    it("Doesn't distribute dust amounts", async () => {
+      await expect(nor.connect(stakingRouter).onExitedAndStuckValidatorsCountsUpdated())
+        .to.not.emit(nor, "RewardsDistributed")
+        .to.not.emit(nor, "NodeOperatorPenalized");
+
+      await lido.connect(user).resume();
+      await user.sendTransaction({ to: await lido.getAddress(), value: ether("1.0") });
+      await lido.connect(user).transferShares(await nor.getAddress(), 1n);
+
+      await expect(nor.connect(stakingRouter).onExitedAndStuckValidatorsCountsUpdated())
+        .to.not.emit(nor, "RewardsDistributed",
+      );
+    });
+
     it("Performs rewards distribution when called by StakingRouter", async () => {
+      expect(await acl["hasPermission(address,address,bytes32)"](stakingRouter, nor, await nor.STAKING_ROUTER_ROLE()))
+        .to.be.true;
+
+      await lido.connect(user).resume();
+      await user.sendTransaction({ to: await lido.getAddress(), value: ether("1.0") });
+      await lido.connect(user).transfer(await nor.getAddress(), await lido.balanceOf(user));
+
+      await expect(nor.connect(stakingRouter).onExitedAndStuckValidatorsCountsUpdated()).to.emit(
+        nor,
+        "RewardsDistributed",
+      );
+    });
+
+    it("Penalizes node operators with stuck penalty active", async () => {
       await lido.connect(user).resume();
       await user.sendTransaction({ to: await lido.getAddress(), value: ether("1.0") });
       await lido.connect(user).transfer(await nor.getAddress(), await lido.balanceOf(user));
@@ -489,20 +517,6 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
       await expect(nor.connect(stakingRouter).onExitedAndStuckValidatorsCountsUpdated())
         .to.emit(nor, "RewardsDistributed")
         .to.emit(nor, "NodeOperatorPenalized");
-    });
-
-    it("Penalizes node operators with stuck penalty active", async () => {
-      expect(await acl["hasPermission(address,address,bytes32)"](stakingRouter, nor, await nor.STAKING_ROUTER_ROLE()))
-        .to.be.true;
-
-      await lido.connect(user).resume();
-      await user.sendTransaction({ to: await lido.getAddress(), value: ether("1.0") });
-      await lido.connect(user).transfer(await nor.getAddress(), await lido.balanceOf(user));
-
-      await expect(nor.connect(stakingRouter).onExitedAndStuckValidatorsCountsUpdated()).to.emit(
-        nor,
-        "RewardsDistributed",
-      );
     });
   });
 
