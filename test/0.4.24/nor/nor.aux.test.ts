@@ -41,6 +41,7 @@ describe("NodeOperatorsRegistry:auxiliary", () => {
   const firstNodeOperatorId = 0;
   const secondNodeOperatorId = 1;
   const thirdNodeOperatorId = 2;
+  const fourthNodeOperatorId = 3;
 
   const NODE_OPERATORS: NodeOperatorConfig[] = [
     {
@@ -73,6 +74,17 @@ describe("NodeOperatorsRegistry:auxiliary", () => {
       depositedSigningKeysCount: 0n,
       exitedSigningKeysCount: 0n,
       vettedSigningKeysCount: 5n,
+      stuckValidatorsCount: 0n,
+      refundedValidatorsCount: 0n,
+      stuckPenaltyEndAt: 0n,
+    },
+    {
+      name: "extra-no",
+      rewardAddress: certainAddress("node-operator-4"),
+      totalSigningKeysCount: 3n,
+      depositedSigningKeysCount: 3n,
+      exitedSigningKeysCount: 0n,
+      vettedSigningKeysCount: 3n,
       stuckValidatorsCount: 0n,
       refundedValidatorsCount: 0n,
       stuckPenaltyEndAt: 0n,
@@ -347,6 +359,21 @@ describe("NodeOperatorsRegistry:auxiliary", () => {
       await expect(nor.connect(nodeOperatorsManager).invalidateReadyToDepositKeysRange(0n, 0n)).to.be.revertedWith(
         "OUT_OF_RANGE",
       );
+    });
+
+    it("Invalidates the deposit data even if no trimming needed", async () => {
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[fourthNodeOperatorId])).to.be.equal(
+        firstNodeOperatorId,
+      );
+
+      await expect(
+        nor.connect(nodeOperatorsManager).invalidateReadyToDepositKeysRange(firstNodeOperatorId, firstNodeOperatorId),
+      )
+        .to.not.emit(nor, "TotalSigningKeysCountChanged")
+        .to.not.emit(nor, "VettedSigningKeysCountChanged")
+        .to.not.emit(nor, "NodeOperatorTotalKeysTrimmed")
+        .to.not.emit(nor, "KeysOpIndexSet")
+        .to.not.emit(nor, "NonceChanged");
     });
 
     it("Invalidates all deposit data for every operator", async () => {
