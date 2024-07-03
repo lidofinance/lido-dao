@@ -2,18 +2,18 @@ import { ethers } from "hardhat";
 
 import { getContractAt } from "lib/contract";
 import { makeTx } from "lib/deploy";
-import { log, logSplitter } from "lib/log";
+import { log } from "lib/log";
 import { readNetworkState, setValueInState, Sk } from "lib/state-file";
 
 const NULL_CONTENT_URI =
   "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 
 async function main() {
-  log.scriptStart(__filename);
+  log.deployScriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
   const state = readNetworkState({ deployer });
 
-  logSplitter();
+  log.splitter();
   const template = await getContractAt("LidoTemplate", state[Sk.lidoTemplate].address);
 
   const createReposArguments = [
@@ -46,7 +46,7 @@ async function main() {
   setValueInState(Sk.lidoTemplateCreateStdAppReposTx, aragonStdAppsReceipt.hash);
   setValueInState(Sk.createAppReposTx, lidoAppsReceipt.hash);
 
-  log.scriptFinish(__filename);
+  log.deployScriptFinish(__filename);
 }
 
 main()

@@ -28,7 +28,7 @@ import {
 const KERNEL_DEFAULT_ACL_APP_ID = "0xe3262375f45a6e2026b7e7b18c2b807434f2508fe1a2a3dfb493c7df8f4aad6a";
 
 async function main() {
-  log.scriptStart(__filename);
+  log.deployScriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
   let state = readNetworkState({ deployer });
 
@@ -42,7 +42,7 @@ async function main() {
 
   await saveStateFromNewDAOTx(newDAOReceipt);
 
-  log.scriptFinish(__filename);
+  log.deployScriptFinish(__filename);
 }
 
 async function doTemplateNewDAO(

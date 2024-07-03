@@ -2,12 +2,12 @@ import { ethers } from "hardhat";
 
 import { getContractAt } from "lib/contract";
 import { makeTx } from "lib/deploy";
-import { log, logWideSplitter } from "lib/log";
+import { log } from "lib/log";
 import { readNetworkState, Sk } from "lib/state-file";
 import { en0x } from "lib/string";
 
 async function main() {
-  log.scriptStart(__filename);
+  log.deployScriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
   const state = readNetworkState({ deployer });
 
@@ -59,7 +59,7 @@ async function main() {
   const bootstrapInitBalance = 10n; // wei
   const lido = await getContractAt("Lido", lidoAddress);
   await makeTx(lido, "initialize", lidoInitArgs, { value: bootstrapInitBalance, from: deployer });
-  logWideSplitter();
+  log.wideSplitter();
 
   //
   // === LegacyOracle: initialize ===
@@ -126,7 +126,7 @@ async function main() {
   ];
   const stakingRouter = await getContractAt("StakingRouter", stakingRouterAddress);
   await makeTx(stakingRouter, "initialize", stakingRouterArgs, { from: deployer });
-  logWideSplitter();
+  log.wideSplitter();
 
   //
   // === OracleDaemonConfig: set parameters ===
@@ -139,7 +139,7 @@ async function main() {
   }
   await makeTx(oracleDaemonConfig, "renounceRole", [CONFIG_MANAGER_ROLE, testnetAdmin], { from: testnetAdmin });
 
-  log.scriptFinish(__filename);
+  log.deployScriptFinish(__filename);
 }
 
 main()

@@ -6,7 +6,7 @@ import { log } from "lib/log";
 import { readNetworkState, Sk } from "lib/state-file";
 
 async function main() {
-  log.scriptStart(__filename);
+  log.deployScriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
   const state = readNetworkState({ deployer });
 
@@ -18,7 +18,7 @@ async function main() {
     { from: state.deployer },
   );
 
-  log.scriptFinish(__filename);
+  log.deployScriptFinish(__filename);
 }
 
 main()

@@ -30,7 +30,7 @@ async function changeDepositSecurityModuleAdmin(contractAddress: string, current
 }
 
 async function main() {
-  log.scriptStart(__filename);
+  log.deployScriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
   const state = readNetworkState({ deployer });
 
@@ -56,7 +56,7 @@ async function main() {
     await changeDepositSecurityModuleAdmin(state.depositSecurityModule.address, deployer, agent);
   }
 
-  log.scriptFinish(__filename);
+  log.deployScriptFinish(__filename);
 }
 
 main()

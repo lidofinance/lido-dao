@@ -9,17 +9,17 @@ import { makeTx } from "lib/deploy";
 import { getENSNodeOwner } from "lib/ens";
 import { findEvents } from "lib/event";
 import { streccak } from "lib/keccak";
-import { log, logSplitter, yl } from "lib/log";
+import { log, yl } from "lib/log";
 import { readNetworkState, Sk, updateObjectInState } from "lib/state-file";
 
 async function main() {
-  log.scriptStart(__filename);
+  log.deployScriptStart(__filename);
 
   const deployer = (await ethers.provider.getSigner()).address;
   let state = readNetworkState({ deployer });
   const templateAddress = state.lidoTemplate.address;
 
-  logSplitter();
+  log.splitter();
   log(`APM ENS domain: ${chalk.yellow(state.lidoApmEnsName)}`);
   log(`Using DAO template: ${chalk.yellow(templateAddress)}`);
 
@@ -31,7 +31,7 @@ async function main() {
   assert.equal(lidoApmEnsNodeOwner, templateAddress, checkDesc);
   log.success(checkDesc);
 
-  logSplitter();
+  log.splitter();
 
   const domain = splitDomain(state.lidoApmEnsName);
   const parentHash = ethers.namehash(domain.parent);
@@ -40,7 +40,7 @@ async function main() {
   log(`Parent domain: ${chalk.yellow(domain.parent)} ${parentHash}`);
   log(`Subdomain label: ${chalk.yellow(domain.sub)} ${subHash}`);
 
-  logSplitter();
+  log.splitter();
 
   const template = await loadContract<LidoTemplate>(LidoTemplate__factory, templateAddress);
   const lidoApmDeployArguments = [parentHash, subHash];
@@ -55,7 +55,7 @@ async function main() {
 
   state = updateObjectInState(Sk.lidoApm, { address: registryAddress });
 
-  log.scriptFinish(__filename);
+  log.deployScriptFinish(__filename);
 }
 
 function splitDomain(domain: string) {

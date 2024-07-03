@@ -13,7 +13,7 @@ import { readNetworkState, Sk } from "lib/state-file";
 const TLD = "eth";
 
 async function main() {
-  log.scriptStart(__filename);
+  log.deployScriptStart(__filename);
   const deployerSigner = await ethers.provider.getSigner();
   const deployer = deployerSigner.address;
   const state = readNetworkState({ deployer });
@@ -58,7 +58,7 @@ async function main() {
     }
   }
 
-  log.scriptFinish(__filename);
+  log.deployScriptFinish(__filename);
 }
 
 main()

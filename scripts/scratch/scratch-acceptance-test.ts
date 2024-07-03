@@ -57,7 +57,7 @@ if (!process.env.NETWORK_STATE_FILE) {
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE;
 
 async function main() {
-  log.scriptStart(__filename);
+  log.deployScriptStart(__filename);
   const state = readNetworkState({ networkStateFile: NETWORK_STATE_FILE });
 
   const [user1, user2, oracleMember1, oracleMember2] = await ethers.getSigners();
@@ -71,7 +71,7 @@ async function main() {
     await oracleMember2.getAddress(),
   );
   await checkSubmitDepositReportWithdrawal(protocol, state, user1, user2);
-  log.scriptFinish(__filename);
+  log.deployScriptFinish(__filename);
 }
 
 interface Protocol {
