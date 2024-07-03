@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { Signer } from "ethers";
 import { ethers } from "hardhat";
 
-import { HashConsensusTimeTravellable, IReportAsyncProcessor, MockReportProcessor } from "typechain-types";
+import { HashConsensusTimeTravellable, MockReportProcessor } from "typechain-types";
 
 import { CONSENSUS_VERSION } from "lib";
 
