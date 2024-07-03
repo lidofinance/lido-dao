@@ -480,9 +480,12 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
       await user.sendTransaction({ to: await lido.getAddress(), value: ether("1.0") });
       await lido.connect(user).transferShares(await nor.getAddress(), 1n);
 
-      await expect(nor.connect(stakingRouter).onExitedAndStuckValidatorsCountsUpdated())
-        .to.not.emit(nor, "RewardsDistributed",
+      await expect(nor.connect(stakingRouter).onExitedAndStuckValidatorsCountsUpdated()).to.not.emit(
+        nor,
+        "RewardsDistributed",
       );
+
+      expect(await lido.sharesOf(nor)).to.equal(1n);
     });
 
     it("Performs rewards distribution when called by StakingRouter", async () => {
