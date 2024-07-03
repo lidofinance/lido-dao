@@ -183,6 +183,14 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
       );
     });
 
+    it("Reverts with INVALID_REPORT_DATA if report data is malformed", async () => {
+      const idsPayload = prepIdsCountsPayload([1], [1]);
+
+      const malformedKeys = idsPayload.keysCounts + "00";
+      await expect(nor.connect(stakingRouter).updateStuckValidatorsCount(idsPayload.operatorIds, malformedKeys))
+        .to.be.revertedWith("INVALID_REPORT_DATA");
+    })
+
     it("Allows calling with zero length data", async () => {
       const nonce = await nor.getNonce();
       const idsPayload = prepIdsCountsPayload([], []);
