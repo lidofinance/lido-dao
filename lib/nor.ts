@@ -5,6 +5,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { NodeOperatorsRegistry__Harness } from "typechain-types";
 
 import { PUBKEY_LENGTH_HEX, SIGNATURE_LENGTH_HEX } from "./constants";
+import { numberToHex } from "./string";
 
 export interface NodeOperatorConfig {
   name: string;
@@ -40,7 +41,7 @@ export async function addNodeOperator(
   norManager: HardhatEthersSigner,
   config: NodeOperatorConfig,
 ): Promise<bigint> {
-  const isActive = config.isActive === undefined ? true : config.isActive;
+  const isActive = config.isActive ?? true;
 
   if (config.vettedSigningKeysCount < config.depositedSigningKeysCount) {
     throw new Error("Invalid keys config: vettedSigningKeysCount < depositedSigningKeysCount");
@@ -128,18 +129,7 @@ export function unpackKeySig(keys: string, signatures: string, index: number): s
  */
 export function prepIdsCountsPayload(ids: bigint[], counts: bigint[]): IdsCountsPayload {
   return {
-    operatorIds: "0x" + ids.map((id) => _hex(id, 8)).join(""),
-    keysCounts: "0x" + counts.map((count) => _hex(count, 16)).join(""),
+    operatorIds: "0x" + ids.map((id) => numberToHex(id, 8)).join(""),
+    keysCounts: "0x" + counts.map((count) => numberToHex(count, 16)).join(""),
   };
-}
-
-/***
- * Returns a hexadecimal representation of the given number
- * @param {bigint} n number to represent in hex
- * @param {number} byteLen bytes to pad
- * @returns {string} hexadecimal string
- */
-function _hex(n: bigint, byteLen?: number): string {
-  const s = n.toString(16);
-  return byteLen === undefined ? s : s.padStart(byteLen * 2, "0");
 }
