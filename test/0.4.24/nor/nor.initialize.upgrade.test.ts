@@ -40,6 +40,7 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
   const firstNodeOperatorId = 0;
   const secondNodeOperatorId = 1;
   const thirdNodeOperatorId = 2;
+  const fourthNodeOperatorId = 3;
 
   const NODE_OPERATORS: NodeOperatorConfig[] = [
     {
@@ -73,6 +74,17 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
       exitedSigningKeysCount: 0n,
       vettedSigningKeysCount: 5n,
       stuckValidatorsCount: 0n,
+      refundedValidatorsCount: 0n,
+      stuckPenaltyEndAt: 0n,
+    },
+    {
+      name: "extra-no",
+      rewardAddress: certainAddress("node-operator-4"),
+      totalSigningKeysCount: 3n,
+      depositedSigningKeysCount: 2n,
+      exitedSigningKeysCount: 1n,
+      vettedSigningKeysCount: 2n,
+      stuckValidatorsCount: 1n,
       refundedValidatorsCount: 0n,
       stuckPenaltyEndAt: 0n,
     },
@@ -268,6 +280,9 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
       expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[thirdNodeOperatorId])).to.be.equal(
         thirdNodeOperatorId,
       );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[fourthNodeOperatorId])).to.be.equal(
+        fourthNodeOperatorId,
+      );
 
       await nor.harness__unsafeResetModuleSummary();
       const resetSummary = await nor.getStakingModuleSummary();
@@ -299,9 +314,9 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
         .withArgs(moduleType);
 
       const summary = await nor.getStakingModuleSummary();
-      expect(summary.totalExitedValidators).to.be.equal(1n + 0n + 0n);
-      expect(summary.totalDepositedValidators).to.be.equal(5n + 7n + 0n);
-      expect(summary.depositableValidatorsCount).to.be.equal(0n + 8n + 0n);
+      expect(summary.totalExitedValidators).to.be.equal(1n + 0n + 0n + 1n);
+      expect(summary.totalDepositedValidators).to.be.equal(5n + 7n + 0n + 2n);
+      expect(summary.depositableValidatorsCount).to.be.equal(0n + 8n + 0n + 0n);
 
       const firstNoInfo = await nor.getNodeOperator(firstNodeOperatorId, true);
       expect(firstNoInfo.totalVettedValidators).to.be.equal(
@@ -316,6 +331,11 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
       const thirdNoInfo = await nor.getNodeOperator(thirdNodeOperatorId, true);
       expect(thirdNoInfo.totalVettedValidators).to.be.equal(
         NODE_OPERATORS[thirdNodeOperatorId].depositedSigningKeysCount,
+      );
+
+      const fourthNoInfo = await nor.getNodeOperator(fourthNodeOperatorId, true);
+      expect(fourthNoInfo.totalVettedValidators).to.be.equal(
+        NODE_OPERATORS[fourthNodeOperatorId].vettedSigningKeysCount,
       );
     });
   });
