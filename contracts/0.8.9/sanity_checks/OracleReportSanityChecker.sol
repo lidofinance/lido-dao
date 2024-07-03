@@ -773,7 +773,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     error IncorrectCLBalanceIncrease(uint256 annualBalanceDiff);
     error IncorrectAppearedValidators(uint256 appearedValidatorsLimit);
     error IncorrectNumberOfExitRequestsPerReport(uint256 maxRequestsCount);
-    error IncorrectExitedValidators(uint256 exitedValudatorsLimit);
+    error IncorrectExitedValidators(uint256 exitedValidatorsLimit);
     error IncorrectRequestFinalization(uint256 requestCreationBlock);
     error ActualShareRateIsZero();
     error IncorrectSimulatedShareRate(uint256 simulatedShareRate, uint256 actualShareRate);

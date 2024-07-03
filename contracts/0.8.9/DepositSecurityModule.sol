@@ -308,8 +308,12 @@ contract DepositSecurityModule {
      * Reverts if any of the addresses is already a guardian or is zero.
      */
     function addGuardians(address[] memory addresses, uint256 newQuorum) external onlyOwner {
-        for (uint256 i = 0; i < addresses.length; ++i) {
+        for (uint256 i = 0; i < addresses.length; ) {
             _addGuardian(addresses[i]);
+
+            unchecked {
+                ++i;
+            }
         }
         _setGuardianQuorum(newQuorum);
     }
@@ -453,6 +457,9 @@ contract DepositSecurityModule {
     }
 
     function _isMinDepositDistancePassed(uint256 stakingModuleId) internal view returns (bool) {
+        /// @dev The distance is reset when a deposit is made to any module. This prevents a front-run attack
+        /// by colluding guardians on several modules at once, providing the necessary window for an honest
+        /// guardian to react and pause deposits to all modules.
         uint256 lastDepositToModuleBlock = STAKING_ROUTER.getStakingModuleLastDepositBlock(stakingModuleId);
         uint256 minDepositBlockDistance = STAKING_ROUTER.getStakingModuleMinDepositBlockDistance(stakingModuleId);
         uint256 maxLastDepositBlock = lastDepositToModuleBlock >= lastDepositBlock ? lastDepositToModuleBlock : lastDepositBlock;
@@ -469,14 +476,15 @@ contract DepositSecurityModule {
      * @param depositCalldata The calldata for the deposit.
      * @param sortedGuardianSignatures The list of guardian signatures ascendingly sorted by address.
      * @dev Reverts if any of the following is true:
+     *   - onchain deposit root is different from the provided one;
+     *   - onchain module nonce is different from the provided one;
      *   - quorum is zero;
      *   - the number of guardian signatures is less than the quorum;
-     *   - onchain deposit root is different from the provided one;
      *   - module is not active;
      *   - min deposit distance is not passed;
      *   - blockHash is zero or not equal to the blockhash(blockNumber);
-     *   - onchain module nonce is different from the provided one;
-     *   - invalid or non-guardian signature received;
+     *   - deposits are paused;
+     *   - invalid or non-guardian signature received.
      *
      * Signatures must be sorted in ascending order by address of the guardian. Each signature must
      * be produced for the keccak256 hash of the following message (each component taking 32 bytes):
@@ -526,10 +534,11 @@ contract DepositSecurityModule {
             abi.encodePacked(ATTEST_MESSAGE_PREFIX, blockNumber, blockHash, depositRoot, stakingModuleId, nonce)
         );
 
-        address prevSignerAddr = address(0);
+        address prevSignerAddr;
+        address signerAddr;
 
         for (uint256 i = 0; i < sigs.length; ) {
-            address signerAddr = ECDSA.recover(msgHash, sigs[i].r, sigs[i].vs);
+            signerAddr = ECDSA.recover(msgHash, sigs[i].r, sigs[i].vs);
             if (!_isGuardian(signerAddr)) revert InvalidSignature();
             if (signerAddr <= prevSignerAddr) revert SignaturesNotSorted();
             prevSignerAddr = signerAddr;

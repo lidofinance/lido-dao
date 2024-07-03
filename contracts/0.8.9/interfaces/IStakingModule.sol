@@ -118,7 +118,7 @@ interface IStakingModule {
 
     /// @notice Updates the limit of the validators that can be used for deposit
     /// @param _nodeOperatorId Id of the node operator
-    /// @param _targetLimitMode taret limit mode
+    /// @param _targetLimitMode target limit mode
     /// @param _targetLimit Target limit of the node operator
     function updateTargetValidatorsLimits(
         uint256 _nodeOperatorId,
