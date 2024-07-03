@@ -59,8 +59,8 @@ export async function addNodeOperator(
     throw new Error("Invalid keys config: stuckValidatorsCount > depositedSigningKeysCount - exitedSigningKeysCount");
   }
 
-  if (config.totalSigningKeysCount < config.exitedSigningKeysCount + config.depositedSigningKeysCount) {
-    throw new Error("Invalid keys config: totalSigningKeys < stoppedValidators + usedSigningKeys");
+  if (config.totalSigningKeysCount < config.vettedSigningKeysCount) {
+    throw new Error("Invalid keys config: totalSigningKeys < vettedSigningKeys");
   }
 
   const newOperatorId = await norMock.getNodeOperatorsCount();

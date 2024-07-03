@@ -197,6 +197,29 @@ describe("NodeOperatorsRegistry:signing-keys", () => {
       );
     });
 
+    it("Shrinks the length of signing keys", async () => {
+      await nor.connect(nodeOperatorsManager).deactivateNodeOperator(firstNodeOperatorId);
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[fourthNodeOperatorId])).to.be.equal(
+        thirdNodeOperatorId,
+      );
+
+      const [allocatedKeys, noIds, activeKeys] = await nor.harness__getSigningKeysAllocationData(1n);
+
+      expect(allocatedKeys).to.be.equal(1n);
+      expect(noIds.length).to.be.equal(1n);
+      expect(activeKeys.length).to.be.equal(1n);
+
+      expect(noIds[0]).to.be.equal(secondNodeOperatorId);
+      expect(activeKeys[0]).to.be.equal(7n + 1n);
+
+      const nonce = await nor.getNonce();
+      await expect(nor.connect(stakingRouter).harness__obtainDepositData(1n))
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n);
+    });
+
     it("Returns empty data if zero deposits requested", async () => {
       await nor.connect(stakingRouter).harness__obtainDepositData(0n);
 
@@ -213,6 +236,10 @@ describe("NodeOperatorsRegistry:signing-keys", () => {
     });
 
     it("Returns allocated keys and updates nonce", async () => {
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[fourthNodeOperatorId])).to.be.equal(
+        thirdNodeOperatorId,
+      );
+
       const nonce = await nor.getNonce();
 
       const summaryBefore = await nor.getStakingModuleSummary();
