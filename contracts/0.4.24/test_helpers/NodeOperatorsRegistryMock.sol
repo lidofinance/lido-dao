@@ -143,7 +143,7 @@ contract NodeOperatorsRegistryMock is NodeOperatorsRegistry {
         _setContractVersion(_newBaseVersion);
     }
 
-    function testing_setRewardDistributionStatus(RewardDistributionState _state) external {
+    function testing_setRewardDistributionState(RewardDistributionState _state) external {
         _updateRewardDistributionState(_state);
     }
 
