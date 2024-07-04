@@ -118,7 +118,7 @@ struct LimitsList {
     /// @dev Represented in the PWei (1^15 Wei). Must fit into uint16 (<= 65_535)
     uint256 initialSlashingAmountPWei;
 
-    /// @notice Invactivity penalties amount per one validator to calculate penalties of the validators' balances on the Consensus Layer
+    /// @notice Inactivity penalties amount per one validator to calculate penalties of the validators' balances on the Consensus Layer
     /// @dev Represented in the PWei (1^15 Wei). Must fit into uint16 (<= 65_535)
     uint256 inactivityPenaltiesAmountPWei;
 
@@ -263,7 +263,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         return _limits.maxPositiveTokenRebase;
     }
 
-    /// @notice Sets the new values for the limits list
+    /// @notice Sets the new values for the limits list and second opinion oracle
     /// @param _limitsList new limits list
     /// @param _secondOpinionOracle negative rebase oracle.
     function setOracleReportLimits(LimitsList calldata _limitsList, ISecondOpinionOracle _secondOpinionOracle) external onlyRole(ALL_LIMITS_MANAGER_ROLE) {
@@ -376,7 +376,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _updateLimits(limitsList);
     }
 
-    /// @notice Sets the address of the second opinion oracle
+    /// @notice Sets the address of the second opinion oracle and clBalanceOraclesErrorUpperBPLimit value
     /// @param _secondOpinionOracle second opinion oracle.
     ///     If it's zero address — oracle is disabled.
     ///     Default value is zero address.
