@@ -1217,7 +1217,7 @@ describe("OracleReportSanityChecker.sol", () => {
         ),
       )
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectAppearedValidators")
-        .withArgs(churnLimit + 1);
+        .withArgs(churnLimit, churnLimit + 1);
     });
   });
 
