@@ -136,7 +136,6 @@ struct LimitsList {
 /// @dev The packed version of the LimitsList struct to be effectively persisted in storage
 struct LimitsListPacked {
     uint16 exitedValidatorsPerDayLimit;
-    uint16 appearedValidatorsPerDayLimit;
     uint16 annualBalanceIncreaseBPLimit;
     uint16 simulatedShareRateDeviationBPLimit;
     uint16 maxValidatorExitRequestsPerReport;
@@ -147,6 +146,7 @@ struct LimitsListPacked {
     uint16 initialSlashingAmountPWei;
     uint16 inactivityPenaltiesAmountPWei;
     uint16 clBalanceOraclesErrorUpperBPLimit;
+    uint16 appearedValidatorsPerDayLimit;
 }
 
 struct ReportData {
@@ -285,23 +285,6 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     ///
     /// NB: AccountingOracle reports validators as exited once they passed the `EXIT_EPOCH` on Consensus Layer
     ///     therefore, the value should be set in accordance to the consensus layer churn limit
-    ///
-    /// @param _exitedValidatorsPerDayLimit new exitedValidatorsPerDayLimit value
-    function setExitedValidatorsPerDayLimit(uint256 _exitedValidatorsPerDayLimit)
-        external
-        onlyRole(EXITED_VALIDATORS_PER_DAY_LIMIT_MANAGER_ROLE)
-    {
-        LimitsList memory limitsList = _limits.unpack();
-        limitsList.exitedValidatorsPerDayLimit = _exitedValidatorsPerDayLimit;
-        _updateLimits(limitsList);
-    }
-
-    /// @notice Sets the new value for the appearedValidatorsPerDayLimit
-    ///
-    /// NB: AccountingOracle reports validators as appeared once they become `pending`
-    ///     (might be not `activated` yet). Thus, this limit should be high enough because consensus layer
-    ///     has no intrinsic churn limit for the amount of `pending` validators (only for `activated` instead).
-    ///     For Lido it depends on the amount of deposits that can be made via DepositSecurityModule daily.
     ///
     /// @param _exitedValidatorsPerDayLimit new exitedValidatorsPerDayLimit value
     function setExitedValidatorsPerDayLimit(uint256 _exitedValidatorsPerDayLimit)

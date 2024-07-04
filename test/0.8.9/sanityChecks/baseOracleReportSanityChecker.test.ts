@@ -141,7 +141,6 @@ describe("OracleReportSanityChecker.sol", () => {
     it("sets limits correctly", async () => {
       const newLimitsList = {
         exitedValidatorsPerDayLimit: 50,
-        appearedValidatorsPerDayLimit: 75,
         annualBalanceIncreaseBPLimit: 15_00,
         simulatedShareRateDeviationBPLimit: 1_50, // 1.5%
         maxValidatorExitRequestsPerReport: 3000,
@@ -152,6 +151,7 @@ describe("OracleReportSanityChecker.sol", () => {
         initialSlashingAmountPWei: 2000,
         inactivityPenaltiesAmountPWei: 303,
         clBalanceOraclesErrorUpperBPLimit: 12,
+        appearedValidatorsPerDayLimit: 75,
       };
       const limitsBefore = await oracleReportSanityChecker.getOracleReportLimits();
       expect(limitsBefore.exitedValidatorsPerDayLimit).to.not.equal(newLimitsList.exitedValidatorsPerDayLimit);
@@ -1183,7 +1183,7 @@ describe("OracleReportSanityChecker.sol", () => {
         .connect(admin)
         .grantRole(
           await oracleReportSanityChecker.EXITED_VALIDATORS_PER_DAY_LIMIT_MANAGER_ROLE(),
-          managersRoster.churnValidatorsPerDayLimitManagers[0],
+          managersRoster.exitedValidatorsPerDayLimitManagers[0],
         );
       const tx = await oracleReportSanityChecker
         .connect(managersRoster.exitedValidatorsPerDayLimitManagers[0])
@@ -1235,8 +1235,8 @@ describe("OracleReportSanityChecker.sol", () => {
       await oracleReportSanityChecker
         .connect(admin)
         .grantRole(
-          await oracleReportSanityChecker.EXITED_VALIDATORS_PER_DAY_LIMIT_MANAGER_ROLE(),
-          managersRoster.churnValidatorsPerDayLimitManagers[0],
+          await oracleReportSanityChecker.APPEARED_VALIDATORS_PER_DAY_LIMIT_MANAGER_ROLE(),
+          managersRoster.appearedValidatorsPerDayLimitManagers[0],
         );
 
       const tx = await oracleReportSanityChecker
@@ -1457,13 +1457,6 @@ describe("OracleReportSanityChecker.sol", () => {
       await oracleReportSanityChecker
         .connect(admin)
         .grantRole(await oracleReportSanityChecker.ALL_LIMITS_MANAGER_ROLE(), managersRoster.allLimitsManagers[0]);
-      await expect(
-        oracleReportSanityChecker
-          .connect(managersRoster.allLimitsManagers[0])
-          .setOracleReportLimits({ ...defaultLimitsList, churnValidatorsPerDayLimit: INVALID_VALUE }, ZeroAddress),
-      )
-        .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
-        .withArgs(INVALID_VALUE, 0, MAX_UINT_16);
 
       await expect(
         oracleReportSanityChecker
@@ -1479,7 +1472,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await expect(
         oracleReportSanityChecker
           .connect(managersRoster.allLimitsManagers[0])
-          .setOracleReportLimits({ ...defaultLimitsList, exitedValidatorsPerDayLimit: INVALID_VALUE }),
+          .setOracleReportLimits({ ...defaultLimitsList, exitedValidatorsPerDayLimit: INVALID_VALUE }, ZeroAddress),
       )
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
         .withArgs(INVALID_VALUE, 0, MAX_UINT_16);
@@ -1487,7 +1480,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await expect(
         oracleReportSanityChecker
           .connect(managersRoster.allLimitsManagers[0])
-          .setOracleReportLimits({ ...defaultLimitsList, appearedValidatorsPerDayLimit: INVALID_VALUE }),
+          .setOracleReportLimits({ ...defaultLimitsList, appearedValidatorsPerDayLimit: INVALID_VALUE }, ZeroAddress),
       )
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
         .withArgs(INVALID_VALUE, 0, MAX_UINT_16);

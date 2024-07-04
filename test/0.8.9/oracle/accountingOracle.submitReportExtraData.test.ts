@@ -917,6 +917,7 @@ describe("AccountingOracle.sol:submitReportExtraData", () => {
 
           await oracleMemberSubmitReportData(report);
 
+          await sanityChecker.grantRole(await sanityChecker.MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE(), admin);
           await sanityChecker.setMaxAccountingExtraDataListItemsCount(maxItemsPerChunk - 1);
           await expect(oracleMemberSubmitExtraData(extraDataChunks[0]))
             .to.be.revertedWithCustomError(sanityChecker, "MaxAccountingExtraDataItemsCountExceeded")
