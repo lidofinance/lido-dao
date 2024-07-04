@@ -781,7 +781,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
         uint256 churnLimit = (_limitsList.churnValidatorsPerDayLimit * _timeElapsed) / SECONDS_PER_DAY;
 
-        if (_appearedValidators > churnLimit) revert IncorrectAppearedValidators(_appearedValidators);
+        if (_appearedValidators > churnLimit) revert IncorrectAppearedValidators(churnLimit, _appearedValidators);
     }
 
     function _checkLastFinalizableId(
@@ -923,7 +923,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     error IncorrectELRewardsVaultBalance(uint256 actualELRewardsVaultBalance);
     error IncorrectSharesRequestedToBurn(uint256 actualSharesToBurn);
     error IncorrectCLBalanceIncrease(uint256 annualBalanceDiff);
-    error IncorrectAppearedValidators(uint256 churnLimit);
+    error IncorrectAppearedValidators(uint256 churnLimit, uint256 actualAppearedValidators);
     error IncorrectNumberOfExitRequestsPerReport(uint256 maxRequestsCount);
     error IncorrectRequestFinalization(uint256 requestCreationBlock);
     error ActualShareRateIsZero();
