@@ -8,8 +8,8 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import {
   DepositContract__MockForBeaconChainDepositor__factory,
   MinFirstAllocationStrategy__factory,
-  StakingRouter,
-  StakingRouter__factory,
+  StakingRouterMock,
+  StakingRouterMock__factory,
 } from "typechain-types";
 import { StakingRouterLibraryAddresses } from "typechain-types/factories/contracts/0.8.9/StakingRouter__factory";
 
@@ -26,7 +26,7 @@ context("StakingRouter:status-control", () => {
   let admin: HardhatEthersSigner;
   let user: HardhatEthersSigner;
 
-  let stakingRouter: StakingRouter;
+  let stakingRouter: StakingRouterMock;
   let moduleId: bigint;
 
   beforeEach(async () => {
@@ -39,7 +39,7 @@ context("StakingRouter:status-control", () => {
       ["contracts/common/lib/MinFirstAllocationStrategy.sol:MinFirstAllocationStrategy"]: await allocLib.getAddress(),
     };
 
-    const impl = await new StakingRouter__factory(allocLibAddr, deployer).deploy(depositContract);
+    const impl = await new StakingRouterMock__factory(allocLibAddr, deployer).deploy(depositContract);
 
     [stakingRouter] = await proxify({ impl, admin });
 
@@ -84,6 +84,16 @@ context("StakingRouter:status-control", () => {
       await expect(stakingRouter.setStakingModuleStatus(moduleId, Status.DepositsPaused))
         .to.emit(stakingRouter, "StakingModuleStatusSet")
         .withArgs(moduleId, Status.DepositsPaused, admin.address);
+    });
+
+    it("Not emit event when new status is the same", async () => {
+      await stakingRouter.setStakingModuleStatus(moduleId, Status.DepositsPaused);
+
+      await expect(stakingRouter.testing_setStakingModuleStatus(moduleId, Status.DepositsPaused)).to.not.emit(
+        stakingRouter,
+        "StakingModuleStatusSet",
+      );
+      expect(await stakingRouter.getStakingModuleStatus(moduleId)).to.equal(Status.DepositsPaused);
     });
   });
 
