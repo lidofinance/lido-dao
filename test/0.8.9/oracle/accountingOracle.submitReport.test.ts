@@ -378,6 +378,9 @@ describe("AccountingOracle.sol:submitReport", () => {
 
         expect(reportFields.extraDataItemsCount).to.be.greaterThan(MAX_ACCOUNTING_EXTRA_DATA_LIMIT);
 
+        await sanityChecker
+          .connect(admin)
+          .grantRole(await sanityChecker.MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE(), admin.address);
         await sanityChecker.connect(admin).setMaxAccountingExtraDataListItemsCount(MAX_ACCOUNTING_EXTRA_DATA_LIMIT);
 
         expect((await sanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount).to.be.equal(
@@ -390,6 +393,9 @@ describe("AccountingOracle.sol:submitReport", () => {
       it("passes fine when extra data feet in a single third phase transaction", async () => {
         const MAX_ACCOUNTING_EXTRA_DATA_LIMIT = reportFields.extraDataItemsCount;
 
+        await sanityChecker
+          .connect(admin)
+          .grantRole(await sanityChecker.MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE(), admin.address);
         await sanityChecker.connect(admin).setMaxAccountingExtraDataListItemsCount(MAX_ACCOUNTING_EXTRA_DATA_LIMIT);
 
         expect((await sanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount).to.be.equal(
@@ -430,6 +436,10 @@ describe("AccountingOracle.sol:submitReport", () => {
           0,
         );
         const exitingRateLimit = getBigInt(totalExitedValidators) - 1n;
+        await sanityChecker.grantRole(
+          await sanityChecker.EXITED_VALIDATORS_PER_DAY_LIMIT_MANAGER_ROLE(),
+          admin.address,
+        );
         await sanityChecker.setExitedValidatorsPerDayLimit(exitingRateLimit);
         expect((await sanityChecker.getOracleReportLimits()).exitedValidatorsPerDayLimit).to.be.equal(exitingRateLimit);
         await expect(oracle.connect(member1).submitReportData(reportFields, oracleVersion))
