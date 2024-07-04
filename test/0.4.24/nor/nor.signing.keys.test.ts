@@ -220,6 +220,18 @@ describe("NodeOperatorsRegistry:signing-keys", () => {
         .withArgs(nonce + 1n);
     });
 
+    it("Skips loading the operator's keys if hasn't participated in allocation [test coverage sentinel]", async () => {
+      const depositedBefore = (await nor.getStakingModuleSummary()).totalDepositedValidators;
+
+      await expect(nor.harness__loadAllocatedSigningKeys(1n, [0n, 1n], [5n, 7n]))
+        .to.emit(nor, "DepositedSigningKeysCountChanged")
+        .withArgs(0n, 6n);
+
+      const depositedAfter = (await nor.getStakingModuleSummary()).totalDepositedValidators;
+
+      expect(depositedAfter).to.be.equal(depositedBefore + 1n);
+    });
+
     it("Returns empty data if zero deposits requested", async () => {
       await nor.connect(stakingRouter).harness__obtainDepositData(0n);
 
