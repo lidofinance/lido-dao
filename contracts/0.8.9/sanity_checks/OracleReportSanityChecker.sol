@@ -141,7 +141,7 @@ struct LimitsListPacked {
     uint16 maxValidatorExitRequestsPerReport;
     uint16 maxAccountingExtraDataListItemsCount;
     uint16 maxNodeOperatorsPerExtraDataItemCount;
-    uint48 requestTimestampMargin;
+    uint32 requestTimestampMargin;
     uint64 maxPositiveTokenRebase;
     uint16 initialSlashingAmountPWei;
     uint16 inactivityPenaltiesAmountPWei;
@@ -968,7 +968,7 @@ library LimitsListPacker {
         res.appearedValidatorsPerDayLimit = SafeCast.toUint16(_limitsList.appearedValidatorsPerDayLimit);
         res.annualBalanceIncreaseBPLimit = _toBasisPoints(_limitsList.annualBalanceIncreaseBPLimit);
         res.simulatedShareRateDeviationBPLimit = _toBasisPoints(_limitsList.simulatedShareRateDeviationBPLimit);
-        res.requestTimestampMargin = SafeCastExt.toUint48(_limitsList.requestTimestampMargin);
+        res.requestTimestampMargin = SafeCast.toUint32(_limitsList.requestTimestampMargin);
         res.maxPositiveTokenRebase = SafeCast.toUint64(_limitsList.maxPositiveTokenRebase);
         res.maxValidatorExitRequestsPerReport = SafeCast.toUint16(_limitsList.maxValidatorExitRequestsPerReport);
         res.maxAccountingExtraDataListItemsCount = SafeCast.toUint16(_limitsList.maxAccountingExtraDataListItemsCount);
