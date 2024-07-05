@@ -12,6 +12,7 @@ export * from "./event";
 export * from "./keccak";
 export * from "./log";
 export * from "./network";
+export * from "./nor";
 export * from "./oracle";
 export * from "./promise";
 export * from "./proxy";
