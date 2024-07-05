@@ -10,9 +10,11 @@ import {
   Lido,
   LidoLocator,
   LidoLocator__factory,
+  MinFirstAllocationStrategy__factory,
   NodeOperatorsRegistry__Harness,
   NodeOperatorsRegistry__Harness__factory,
 } from "typechain-types";
+import { NodeOperatorsRegistryLibraryAddresses } from "typechain-types/factories/contracts/0.4.24/nos/NodeOperatorsRegistry.sol/NodeOperatorsRegistry__factory";
 
 import { addNodeOperator, certainAddress, NodeOperatorConfig, randomAddress } from "lib";
 
@@ -94,7 +96,12 @@ describe("NodeOperatorsRegistry:management", () => {
       },
     }));
 
-    impl = await new NodeOperatorsRegistry__Harness__factory(deployer).deploy();
+    const allocLib = await new MinFirstAllocationStrategy__factory(deployer).deploy();
+    const allocLibAddr: NodeOperatorsRegistryLibraryAddresses = {
+      ["__contracts/common/lib/MinFirstAllocat__"]: await allocLib.getAddress(),
+    };
+
+    impl = await new NodeOperatorsRegistry__Harness__factory(allocLibAddr, deployer).deploy();
     const appProxy = await addAragonApp({
       dao,
       name: "node-operators-registry",
@@ -568,7 +575,7 @@ describe("NodeOperatorsRegistry:management", () => {
 
       const noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
 
-      expect(noSummary.isTargetLimitActive).to.be.false;
+      expect(noSummary.targetLimitMode).to.be.equal(0n);
       expect(noSummary.targetValidatorsCount).to.be.equal(0n);
       expect(noSummary.stuckValidatorsCount).to.be.equal(0n);
       expect(noSummary.refundedValidatorsCount).to.be.equal(0n);
@@ -591,7 +598,7 @@ describe("NodeOperatorsRegistry:management", () => {
 
       const noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
 
-      expect(noSummary.isTargetLimitActive).to.be.false;
+      expect(noSummary.targetLimitMode).to.be.equal(0n);;
       expect(noSummary.targetValidatorsCount).to.be.equal(0n);
       expect(noSummary.stuckValidatorsCount).to.be.equal(0n);
       expect(noSummary.refundedValidatorsCount).to.be.equal(0n);

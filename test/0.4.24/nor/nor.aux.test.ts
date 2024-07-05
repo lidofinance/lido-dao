@@ -10,9 +10,11 @@ import {
   Lido,
   LidoLocator,
   LidoLocator__factory,
+  MinFirstAllocationStrategy__factory,
   NodeOperatorsRegistry__Harness,
   NodeOperatorsRegistry__Harness__factory,
 } from "typechain-types";
+import { NodeOperatorsRegistryLibraryAddresses } from "typechain-types/factories/contracts/0.4.24/nos/NodeOperatorsRegistry.sol/NodeOperatorsRegistry__factory";
 
 import { addNodeOperator, certainAddress, NodeOperatorConfig, prepIdsCountsPayload } from "lib";
 
@@ -107,7 +109,12 @@ describe("NodeOperatorsRegistry:auxiliary", () => {
       },
     }));
 
-    impl = await new NodeOperatorsRegistry__Harness__factory(deployer).deploy();
+    const allocLib = await new MinFirstAllocationStrategy__factory(deployer).deploy();
+    const allocLibAddr: NodeOperatorsRegistryLibraryAddresses = {
+      ["__contracts/common/lib/MinFirstAllocat__"]: await allocLib.getAddress(),
+    };
+
+    impl = await new NodeOperatorsRegistry__Harness__factory(allocLibAddr, deployer).deploy();
     const appProxy = await addAragonApp({
       dao,
       name: "node-operators-registry",
@@ -218,7 +225,7 @@ describe("NodeOperatorsRegistry:auxiliary", () => {
       expect(await acl["hasPermission(address,address,bytes32)"](stranger, nor, await nor.STAKING_ROUTER_ROLE())).to.be
         .false;
 
-      await expect(nor.updateTargetValidatorsLimits(firstNodeOperatorId, true, targetLimit)).to.be.revertedWith(
+      await expect(nor['updateTargetValidatorsLimits(uint256,bool,uint256)'](firstNodeOperatorId, true, targetLimit)).to.be.revertedWith(
         "APP_AUTH_FAILED",
       );
     });
@@ -227,7 +234,7 @@ describe("NodeOperatorsRegistry:auxiliary", () => {
       const targetLimitWrong = BigInt("0x10000000000000000");
 
       await expect(
-        nor.connect(stakingRouter).updateTargetValidatorsLimits(firstNodeOperatorId, true, targetLimitWrong),
+        nor.connect(stakingRouter)['updateTargetValidatorsLimits(uint256,bool,uint256)'](firstNodeOperatorId, true, targetLimitWrong),
       ).to.be.revertedWith("OUT_OF_RANGE");
     });
 
@@ -237,9 +244,9 @@ describe("NodeOperatorsRegistry:auxiliary", () => {
 
       targetLimit = 10n;
 
-      await expect(nor.connect(stakingRouter).updateTargetValidatorsLimits(firstNodeOperatorId, true, targetLimit))
+      await expect(nor.connect(stakingRouter)['updateTargetValidatorsLimits(uint256,bool,uint256)'](firstNodeOperatorId, true, targetLimit))
         .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(firstNodeOperatorId, targetLimit);
+        .withArgs(firstNodeOperatorId, targetLimit, 1n);
 
       const keysStatTotal = await nor.getStakingModuleSummary();
       const expectedExitedValidatorsCount =
@@ -274,30 +281,30 @@ describe("NodeOperatorsRegistry:auxiliary", () => {
 
       targetLimit = 10n;
 
-      await expect(nor.connect(stakingRouter).updateTargetValidatorsLimits(firstNodeOperatorId, true, targetLimit))
+      await expect(nor.connect(stakingRouter)['updateTargetValidatorsLimits(uint256,bool,uint256)'](firstNodeOperatorId, true, targetLimit))
         .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(firstNodeOperatorId, targetLimit);
+        .withArgs(firstNodeOperatorId, targetLimit, 1n);
 
       let noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
-      expect(noSummary.isTargetLimitActive).to.be.true;
+      expect(noSummary.targetLimitMode).to.be.equal(1n);
 
-      await expect(nor.connect(stakingRouter).updateTargetValidatorsLimits(secondNodeOperatorId, false, targetLimit))
+      await expect(nor.connect(stakingRouter)['updateTargetValidatorsLimits(uint256,bool,uint256)'](secondNodeOperatorId, false, targetLimit))
         .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(secondNodeOperatorId, targetLimit);
+        .withArgs(secondNodeOperatorId, 0n, 0n);
 
       noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
-      expect(noSummary.isTargetLimitActive).to.be.false;
+      expect(noSummary.targetLimitMode).to.be.equal(0n);
 
       // reset limit
-      await expect(nor.connect(stakingRouter).updateTargetValidatorsLimits(firstNodeOperatorId, false, targetLimit))
+      await expect(nor.connect(stakingRouter)['updateTargetValidatorsLimits(uint256,bool,uint256)'](firstNodeOperatorId, false, targetLimit))
         .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(firstNodeOperatorId, 10n); // expect limit set to 0
+        .withArgs(firstNodeOperatorId, 0n, 0n); // expect limit set to 0
 
       noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
-      expect(noSummary.isTargetLimitActive).to.equal(false);
+      expect(noSummary.targetLimitMode).to.equal(0n);
 
       noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
-      expect(noSummary.isTargetLimitActive).to.equal(false);
+      expect(noSummary.targetLimitMode).to.equal(0n);
     });
   });
 

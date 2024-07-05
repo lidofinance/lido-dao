@@ -12,9 +12,11 @@ import {
   Lido,
   LidoLocator,
   LidoLocator__factory,
+  MinFirstAllocationStrategy__factory,
   NodeOperatorsRegistry__Harness,
   NodeOperatorsRegistry__Harness__factory,
 } from "typechain-types";
+import { NodeOperatorsRegistryLibraryAddresses } from "typechain-types/factories/contracts/0.4.24/nos/NodeOperatorsRegistry.sol/NodeOperatorsRegistry__factory";
 
 import {
   addNodeOperator,
@@ -107,7 +109,12 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
       },
     }));
 
-    impl = await new NodeOperatorsRegistry__Harness__factory(deployer).deploy();
+    const allocLib = await new MinFirstAllocationStrategy__factory(deployer).deploy();
+    const allocLibAddr: NodeOperatorsRegistryLibraryAddresses = {
+      ["__contracts/common/lib/MinFirstAllocat__"]: await allocLib.getAddress(),
+    };
+
+    impl = await new NodeOperatorsRegistry__Harness__factory(allocLibAddr, deployer).deploy();
     const appProxy = await addAragonApp({
       dao,
       name: "node-operators-registry",
