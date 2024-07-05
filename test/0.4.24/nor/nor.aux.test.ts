@@ -21,6 +21,9 @@ import { addNodeOperator, certainAddress, NodeOperatorConfig, prepIdsCountsPaylo
 import { addAragonApp, deployLidoDao } from "test/deploy";
 import { Snapshot } from "test/suite";
 
+const updateTargetLimits = "updateTargetValidatorsLimits(uint256,uint256,uint256)";
+const updateTargetLimitsDeprecated = "updateTargetValidatorsLimits(uint256,bool,uint256)";
+
 describe("NodeOperatorsRegistry:auxiliary", () => {
   let deployer: HardhatEthersSigner;
   let user: HardhatEthersSigner;
@@ -225,7 +228,11 @@ describe("NodeOperatorsRegistry:auxiliary", () => {
       expect(await acl["hasPermission(address,address,bytes32)"](stranger, nor, await nor.STAKING_ROUTER_ROLE())).to.be
         .false;
 
-      await expect(nor['updateTargetValidatorsLimits(uint256,bool,uint256)'](firstNodeOperatorId, true, targetLimit)).to.be.revertedWith(
+      await expect(nor[updateTargetLimitsDeprecated](firstNodeOperatorId, true, targetLimit)).to.be.revertedWith(
+        "APP_AUTH_FAILED",
+      );
+
+      await expect(nor[updateTargetLimits](firstNodeOperatorId, 0n, targetLimit)).to.be.revertedWith(
         "APP_AUTH_FAILED",
       );
     });
@@ -234,7 +241,11 @@ describe("NodeOperatorsRegistry:auxiliary", () => {
       const targetLimitWrong = BigInt("0x10000000000000000");
 
       await expect(
-        nor.connect(stakingRouter)['updateTargetValidatorsLimits(uint256,bool,uint256)'](firstNodeOperatorId, true, targetLimitWrong),
+        nor.connect(stakingRouter)[updateTargetLimitsDeprecated](firstNodeOperatorId, true, targetLimitWrong),
+      ).to.be.revertedWith("OUT_OF_RANGE");
+
+      await expect(
+        nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 1n, targetLimitWrong),
       ).to.be.revertedWith("OUT_OF_RANGE");
     });
 
@@ -244,7 +255,7 @@ describe("NodeOperatorsRegistry:auxiliary", () => {
 
       targetLimit = 10n;
 
-      await expect(nor.connect(stakingRouter)['updateTargetValidatorsLimits(uint256,bool,uint256)'](firstNodeOperatorId, true, targetLimit))
+      await expect(nor.connect(stakingRouter)[updateTargetLimitsDeprecated](firstNodeOperatorId, true, targetLimit))
         .to.emit(nor, "TargetValidatorsCountChanged")
         .withArgs(firstNodeOperatorId, targetLimit, 1n);
 
@@ -281,14 +292,14 @@ describe("NodeOperatorsRegistry:auxiliary", () => {
 
       targetLimit = 10n;
 
-      await expect(nor.connect(stakingRouter)['updateTargetValidatorsLimits(uint256,bool,uint256)'](firstNodeOperatorId, true, targetLimit))
+      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 1n, targetLimit))
         .to.emit(nor, "TargetValidatorsCountChanged")
         .withArgs(firstNodeOperatorId, targetLimit, 1n);
 
       let noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
       expect(noSummary.targetLimitMode).to.be.equal(1n);
 
-      await expect(nor.connect(stakingRouter)['updateTargetValidatorsLimits(uint256,bool,uint256)'](secondNodeOperatorId, false, targetLimit))
+      await expect(nor.connect(stakingRouter)[updateTargetLimits](secondNodeOperatorId, 0n, targetLimit))
         .to.emit(nor, "TargetValidatorsCountChanged")
         .withArgs(secondNodeOperatorId, 0n, 0n);
 
@@ -296,7 +307,39 @@ describe("NodeOperatorsRegistry:auxiliary", () => {
       expect(noSummary.targetLimitMode).to.be.equal(0n);
 
       // reset limit
-      await expect(nor.connect(stakingRouter)['updateTargetValidatorsLimits(uint256,bool,uint256)'](firstNodeOperatorId, false, targetLimit))
+      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 0n, targetLimit))
+        .to.emit(nor, "TargetValidatorsCountChanged")
+        .withArgs(firstNodeOperatorId, 0n, 0n); // expect limit set to 0
+
+      noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+      expect(noSummary.targetLimitMode).to.equal(0n);
+
+      noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
+      expect(noSummary.targetLimitMode).to.equal(0n);
+    });
+
+    it("updates node operator target limit mode correctly using updateTargetLimitsDeprecated", async () => {
+      expect(await acl["hasPermission(address,address,bytes32)"](stakingRouter, nor, await nor.STAKING_ROUTER_ROLE()))
+        .to.be.true;
+
+      targetLimit = 10n;
+
+      await expect(nor.connect(stakingRouter)[updateTargetLimitsDeprecated](firstNodeOperatorId, true, targetLimit))
+        .to.emit(nor, "TargetValidatorsCountChanged")
+        .withArgs(firstNodeOperatorId, targetLimit, 1n);
+
+      let noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+      expect(noSummary.targetLimitMode).to.be.equal(1n);
+
+      await expect(nor.connect(stakingRouter)[updateTargetLimitsDeprecated](secondNodeOperatorId, false, targetLimit))
+        .to.emit(nor, "TargetValidatorsCountChanged")
+        .withArgs(secondNodeOperatorId, 0n, 0n);
+
+      noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
+      expect(noSummary.targetLimitMode).to.be.equal(0n);
+
+      // reset limit
+      await expect(nor.connect(stakingRouter)[updateTargetLimitsDeprecated](firstNodeOperatorId, false, targetLimit))
         .to.emit(nor, "TargetValidatorsCountChanged")
         .withArgs(firstNodeOperatorId, 0n, 0n); // expect limit set to 0
 
