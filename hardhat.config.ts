@@ -28,6 +28,7 @@ const config: HardhatUserConfig = {
     },
     "mainnet-fork": {
       url: process.env.MAINNET_RPC_URL || RPC_URL,
+      timeout: 20 * 60 * 1000, // 20 minutes
     },
     hardhat: {
       // setting base fee to 0 to avoid extra calculations doesn't work :(
@@ -116,6 +117,7 @@ const config: HardhatUserConfig = {
   },
   mocha: {
     rootHooks: mochaRootHooks,
+    timeout: 20 * 60 * 1000, // 20 minutes
   },
   warnings: {
     "@aragon/**/*": {

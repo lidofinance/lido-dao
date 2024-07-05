@@ -1,46 +1,29 @@
-import hre from "hardhat";
+import { DiscoveryConfig, DiscoveryService } from "./discovery";
+import { AccountingOracleService, PauseService, SimpleDVTService } from "./services";
+import { Contracts, LidoProtocol } from "./types";
 
-import { ether, impersonate } from "lib";
+export class Protocol {
+  public readonly pauseService: PauseService;
+  public readonly accountingOracleService: AccountingOracleService;
+  public readonly simpleDVTService: SimpleDVTService;
 
-import { ProtocolDiscoveryService } from "./ProtocolDiscoveryService";
+  constructor(
+    public readonly contracts: Contracts,
+    public readonly discoveryService: DiscoveryService,
+  ) {
+    this.contracts = contracts;
+    this.discoveryService = discoveryService;
 
-export class Protocol extends ProtocolDiscoveryService {
-  constructor() {
-    super();
-  }
-
-  async votingSigner() {
-    const signer = await hre.ethers.getSigner(this.votingAddress);
-    return impersonate(signer.address, ether("100"));
-  }
-
-  async agentSigner() {
-    const signer = await hre.ethers.getSigner(this.agentAddress);
-    return impersonate(signer.address, ether("100"));
-  }
-
-  async unpauseStaking() {
-    const { lido } = await this.discover();
-
-    if (await lido.isStakingPaused()) {
-      const votingSigner = await this.votingSigner();
-      await lido.connect(votingSigner).resume();
-    }
-  }
-
-  async unpauseWithdrawalQueue() {
-    const { withdrawalQueue } = await this.discover();
-
-    if (await withdrawalQueue.isPaused()) {
-      const resumeRole = await withdrawalQueue.RESUME_ROLE();
-      const agentSigner = await this.agentSigner();
-      const agentSignerAddress = await agentSigner.getAddress();
-
-      await withdrawalQueue.connect(agentSigner).grantRole(resumeRole, agentSignerAddress);
-      await withdrawalQueue.connect(agentSigner).resume();
-      await withdrawalQueue.connect(agentSigner).revokeRole(resumeRole, agentSignerAddress);
-    }
+    this.pauseService = new PauseService(this);
+    this.accountingOracleService = new AccountingOracleService(this);
+    this.simpleDVTService = new SimpleDVTService(this);
   }
 }
 
-export { Contracts } from "./Contracts";
+export async function getLidoProtocol(): Promise<LidoProtocol> {
+  const discoveryConfig = new DiscoveryConfig();
+  const discoveryService = new DiscoveryService(discoveryConfig);
+  const contracts = await discoveryService.discover();
+
+  return new Protocol(contracts, discoveryService);
+}

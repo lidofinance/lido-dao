@@ -1,2 +1,3 @@
-export { Protocol } from "./Protocol";
-export { Contracts } from "./Contracts";
+export { getLidoProtocol } from "./Protocol";
+export { Contracts, LidoProtocol } from "./types";
+export * from "./services";

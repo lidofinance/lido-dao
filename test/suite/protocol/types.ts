@@ -1,12 +1,14 @@
-import { BaseContract } from "ethers";
+import { BaseContract as EthersBaseContract } from "ethers";
 
 import {
   AccountingOracle,
   Burner,
   DepositSecurityModule,
+  HashConsensus,
   LegacyOracle,
   Lido,
   LidoExecutionLayerRewardsVault,
+  NodeOperatorsRegistry,
   OracleDaemonConfig,
   OracleReportSanityChecker,
   StakingRouter,
@@ -15,7 +17,11 @@ import {
   WithdrawalVault,
 } from "typechain-types";
 
-export type LoadedContract<T extends BaseContract = BaseContract> = T;
+import { Protocol } from "./Protocol";
+
+export type LoadedContract<T extends EthersBaseContract = EthersBaseContract> = T & {
+  address: string;
+};
 
 export interface Contracts {
   // Contracts
@@ -34,4 +40,14 @@ export interface Contracts {
   // Addresses
   postTokenRebaseReceiverAddress: string;
   treasuryAddress: string;
+  // Dependencies
+  hashConsensus: LoadedContract<HashConsensus>;
+  // NOR & SDVT
+  nodeOperatorsRegistry: LoadedContract<NodeOperatorsRegistry>;
+  simpleDVT: LoadedContract<NodeOperatorsRegistry>;
 }
+
+export type BaseContract = EthersBaseContract;
+export type BaseContracts = Omit<Contracts, "hashConsensus">;
+
+export type LidoProtocol = Protocol;

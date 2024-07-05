@@ -13,7 +13,6 @@ export const mg = (s: ConvertibleToString) => chalk.magenta(s);
 export const log = (...args: ConvertibleToString[]) => console.log(...args);
 
 const INDENT = "    ";
-const DEFAULT_PADDING = 8;
 
 const MIN_LINE_LENGTH = 4;
 const LINE_LENGTH = 20;
@@ -22,10 +21,7 @@ const LONG_LINE_LENGTH = 40;
 export const OK = gr("[✓]");
 export const NOT_OK = rd("[×]");
 
-/**
- * Returns a string of the specified length, padded with spaces.
- */
-const _pad = (size: number = DEFAULT_PADDING) => " ".repeat(size);
+const DEBUG = process.env.DEBUG || false;
 
 /**
  * Prints a line of the specified length, padded with "=" characters.
@@ -79,10 +75,9 @@ const _header = (minLength = 20, ...args: ConvertibleToString[]) => {
   }
 };
 
-const _title = (title: string, padding = DEFAULT_PADDING) => log(`${_pad(padding)}${mg(title)}`);
+const _title = (title: string) => log(mg(title));
 
-const _record = (label: string, value: ConvertibleToString, padding = DEFAULT_PADDING) =>
-  log(`${_pad(padding)}${chalk.grey(label)}: ${yl(value.toString())}`);
+const _record = (label: string, value: ConvertibleToString) => log(`${chalk.grey(label)}: ${yl(value.toString())}`);
 
 // TODO: add logging to file
 
@@ -124,11 +119,40 @@ log.deployScriptFinish = (filename: string) => {
   log(`Finished running script ${bl(path.basename(filename))}`);
 };
 
-log.infoBlock = (title: string, records: Record<string, ConvertibleToString>, padding = DEFAULT_PADDING) => {
-  _title(title, padding);
-  Object.keys(records).forEach((label) => _record(label, records[label], padding + 2));
+log.debug = (title: string, records: Record<string, ConvertibleToString>) => {
+  if (!DEBUG) return;
+
+  _title(title);
+  Object.keys(records).forEach((label) => _record(label, records[label]));
+  log.emptyLine();
 };
 
-log.warning = (title: string, padding = DEFAULT_PADDING): void => {
-  console.log(`${_pad(padding)}${chalk.bold.yellow(title)}`);
+log.warning = (title: string): void => {
+  log(chalk.bold.yellow(title));
+  log.emptyLine();
+};
+
+log.trace = (
+  name: string,
+  tx: {
+    from: string;
+    to: string;
+    value: string;
+    gasUsed: string;
+    gasPrice: string;
+    gasLimit: string;
+    gasUsedPercent: string;
+    nonce: number;
+    blockNumber: number;
+    hash: string;
+    status: boolean;
+  },
+) => {
+  const color = tx.status ? gr : rd;
+  log.splitter();
+  log(`Transaction sent`, yl(tx.hash));
+  log(`  Gas price: ${yl(tx.gasPrice)} gwei   Gas limit: ${yl(tx.gasLimit)}   Nonce: ${yl(tx.nonce)}`);
+  log(`  Block: ${yl(tx.blockNumber)}   Gas used: ${yl(tx.gasUsed)} (${yl(tx.gasUsedPercent)}%)`);
+  log(`  ${color(name)} ${color(tx.status ? "confirmed" : "failed")}`);
+  log.emptyLine();
 };
