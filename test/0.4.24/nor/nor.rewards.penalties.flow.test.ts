@@ -30,6 +30,12 @@ import {
 import { addAragonApp, deployLidoDao } from "test/deploy";
 import { Snapshot } from "test/suite";
 
+enum RewardDistributionState {
+  TransferredToModule, // New reward portion minted and transferred to the module
+  ReadyForDistribution, // Operators' statistics updated, reward ready for distribution
+  Distributed, // Reward distributed among operators
+}
+
 describe("NodeOperatorsRegistry:rewards-penalties", () => {
   let deployer: HardhatEthersSigner;
   let user: HardhatEthersSigner;
@@ -509,9 +515,10 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
         .withArgs(nonce + 1n)
         .to.emit(nor, "StuckPenaltyStateChanged")
         .withArgs(1n, 2n, 0n, 0n);
-      // TODO: how to cover it now?
-      // await expect(nor.connect(stakingRouter).onExitedAndStuckValidatorsCountsUpdated())
-      //   .to.emit(nor, "NodeOperatorPenalized");
+
+      await nor.harness__setRewardDistributionState(RewardDistributionState.ReadyForDistribution);
+      await expect(nor.connect(stakingRouter).distributeReward())
+        .to.emit(nor, "NodeOperatorPenalized");
     });
   });
 

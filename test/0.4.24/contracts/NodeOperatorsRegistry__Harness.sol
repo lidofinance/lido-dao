@@ -161,4 +161,8 @@ contract NodeOperatorsRegistry__Harness is NodeOperatorsRegistry {
     signingKeysStats.set(TOTAL_VETTED_KEYS_COUNT_OFFSET, _newVettedKeys);
     _saveOperatorSigningKeysStats(_nodeOperatorId, signingKeysStats);
   }
+
+  function harness__setRewardDistributionState(RewardDistributionState _state) external {
+        _updateRewardDistributionState(_state);
+    }
 }
