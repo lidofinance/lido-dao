@@ -23,14 +23,14 @@ const HARDHAT_FORKING_URL = process.env.HARDHAT_FORKING_URL || "";
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   networks: {
-    local: {
+    "local": {
       url: process.env.LOCAL_RPC_URL || RPC_URL,
     },
     "mainnet-fork": {
       url: process.env.MAINNET_RPC_URL || RPC_URL,
       timeout: 20 * 60 * 1000, // 20 minutes
     },
-    hardhat: {
+    "hardhat": {
       // setting base fee to 0 to avoid extra calculations doesn't work :(
       // minimal base fee is 1 for EIP-1559
       // gasPrice: 0,

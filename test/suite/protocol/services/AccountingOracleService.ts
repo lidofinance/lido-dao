@@ -158,7 +158,7 @@ export class AccountingOracleService {
       log.debug("Simulated report", {
         "Post Total Pooled Ether": ethers.formatEther(postTotalPooledEther),
         "Post Total Shares": postTotalShares,
-        Withdrawals: ethers.formatEther(withdrawals),
+        "Withdrawals": ethers.formatEther(withdrawals),
         "El Rewards": ethers.formatEther(elRewards),
       });
 
@@ -256,7 +256,7 @@ export class AccountingOracleService {
     log.debug("Pushing oracle report", {
       "Ref slot": refSlot,
       "CL balance": ethers.formatEther(clBalance),
-      Validators: numValidators,
+      "Validators": numValidators,
       "Withdrawal vault": ethers.formatEther(withdrawalVaultBalance),
       "El rewards vault": ethers.formatEther(elRewardsVaultBalance),
       "Shares requested to burn": sharesRequestedToBurn,
@@ -355,7 +355,7 @@ export class AccountingOracleService {
       "Ref slot": refSlot,
       "Report hash": reportHash,
       "Consensus version": consensusVersion,
-      Addresses: addresses.join(", "),
+      "Addresses": addresses.join(", "),
     });
 
     for (const address of addresses) {
@@ -474,7 +474,7 @@ export class AccountingOracleService {
       log.debug("Simulation result", {
         "Post Total Pooled Ether": ethers.formatEther(postTotalPooledEther),
         "Post Total Shares": postTotalShares,
-        Withdrawals: ethers.formatEther(withdrawals),
+        "Withdrawals": ethers.formatEther(withdrawals),
         "El Rewards": ethers.formatEther(elRewards),
       });
 
@@ -530,8 +530,8 @@ export class AccountingOracleService {
     );
 
     log.debug("Calculated finalization batches", {
-      Batches: batchesState.batches.join(", "),
-      Finished: batchesState.finished,
+      "Batches": batchesState.batches.join(", "),
+      "Finished": batchesState.finished,
       "Batches Length": batchesState.batchesLength,
     });
 
@@ -552,8 +552,8 @@ export class AccountingOracleService {
       );
 
       log.debug("Calculated finalization batches", {
-        Batches: batchesState.batches.join(", "),
-        Finished: batchesState.finished,
+        "Batches": batchesState.batches.join(", "),
+        "Finished": batchesState.finished,
         "Batches Length": batchesState.batchesLength,
       });
     }

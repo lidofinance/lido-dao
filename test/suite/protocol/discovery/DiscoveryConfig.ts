@@ -56,7 +56,7 @@ export class DiscoveryConfig {
     this.validateAddresses();
 
     log.debug("Discovery config", {
-      Network: hre.network.name,
+      "Network": hre.network.name,
       "Locator address": this.locatorAddress,
       "Agent address": this.agentAddress,
       "Voting address": this.votingAddress,
