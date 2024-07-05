@@ -93,7 +93,8 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
   ];
 
   const moduleType = encodeBytes32String("curated-onchain-v1");
-  const contractVersion = 2n;
+  const contractVersionV2 = 2n;
+  const contractVersionV3 = 3n;
 
   before(async () => {
     [deployer, user, stakingRouter, nodeOperatorsManager, signingKeysManager, limitsManager] =
@@ -190,7 +191,9 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
 
       await expect(nor.initialize(locator, moduleType, 86400n))
         .to.emit(nor, "ContractVersionSet")
-        .withArgs(contractVersion)
+        .withArgs(contractVersionV2)
+        .to.emit(nor, "ContractVersionSet")
+        .withArgs(contractVersionV3)
         .and.to.emit(nor, "StuckPenaltyDelayChanged")
         .withArgs(86400n)
         .and.to.emit(nor, "LocatorContractSet")
@@ -202,7 +205,7 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
       expect(await nor.getInitializationBlock()).to.equal(latestBlock + 1n);
       expect(await lido.allowance(await nor.getAddress(), burnerAddress)).to.equal(MaxUint256);
       expect(await nor.getStuckPenaltyDelay()).to.equal(86400n);
-      expect(await nor.getContractVersion()).to.equal(contractVersion);
+      expect(await nor.getContractVersion()).to.equal(3);
       expect(await nor.getType()).to.equal(moduleType);
     });
   });
@@ -261,7 +264,7 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
 
       await expect(nor.finalizeUpgrade_v2(locator, moduleType, 86400n))
         .to.emit(nor, "ContractVersionSet")
-        .withArgs(contractVersion)
+        .withArgs(contractVersionV2)
         .and.to.emit(nor, "StuckPenaltyDelayChanged")
         .withArgs(86400n)
         .and.to.emit(nor, "LocatorContractSet")
@@ -273,7 +276,7 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
       expect(await nor.getInitializationBlock()).to.equal(latestBlock);
       expect(await lido.allowance(await nor.getAddress(), burnerAddress)).to.equal(MaxUint256);
       expect(await nor.getStuckPenaltyDelay()).to.equal(86400n);
-      expect(await nor.getContractVersion()).to.equal(contractVersion);
+      expect(await nor.getContractVersion()).to.equal(contractVersionV2);
       expect(await nor.getType()).to.equal(moduleType);
     });
 
@@ -312,7 +315,7 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
 
       await expect(nor.finalizeUpgrade_v2(locator, moduleType, 86400n))
         .to.emit(nor, "ContractVersionSet")
-        .withArgs(contractVersion)
+        .withArgs(contractVersionV2)
         .and.to.emit(nor, "StuckPenaltyDelayChanged")
         .withArgs(86400n)
         .and.to.emit(nor, "LocatorContractSet")
