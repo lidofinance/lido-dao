@@ -1,5 +1,10 @@
+import * as dotenv from "dotenv";
 import { ethers, run } from "hardhat";
+import { join } from "path";
+import readline from "readline";
+
 import { DepositSecurityModule, DepositSecurityModule__factory } from "typechain-types";
+
 import {
   cy,
   deployImplementation,
@@ -11,10 +16,6 @@ import {
   Sk,
   updateObjectInState,
 } from "lib";
-
-import readline from "readline";
-import * as dotenv from "dotenv";
-import { join } from "path";
 
 dotenv.config({ path: join(__dirname, "../../.env") });
 
