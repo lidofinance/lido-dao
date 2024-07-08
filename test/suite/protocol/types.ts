@@ -43,8 +43,8 @@ export interface Contracts {
   // Dependencies
   hashConsensus: LoadedContract<HashConsensus>;
   // NOR & SDVT
-  nodeOperatorsRegistry: LoadedContract<NodeOperatorsRegistry>;
-  simpleDVT: LoadedContract<NodeOperatorsRegistry>;
+  nor: LoadedContract<NodeOperatorsRegistry>;
+  sdvt: LoadedContract<NodeOperatorsRegistry>;
 }
 
 export type BaseContract = EthersBaseContract;

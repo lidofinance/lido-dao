@@ -113,8 +113,8 @@ export class DiscoveryService {
       "Post Token Rebase Receiver": this.contracts.postTokenRebaseReceiverAddress,
       "Treasury": this.contracts.treasuryAddress,
       "Hash Consensus": this.contracts.hashConsensus.address,
-      "Node Operators Registry": this.contracts.nodeOperatorsRegistry.address,
-      "Simple DVT": this.contracts.simpleDVT.address,
+      "Node Operators Registry": this.contracts.nor.address,
+      "Simple DVT": this.contracts.sdvt.address,
     });
 
     return this.contracts;
@@ -136,13 +136,10 @@ export class DiscoveryService {
   }
 
   private async loadStakingModules(stakingRouter: LoadedContract<StakingRouter>) {
-    const modules = await stakingRouter.getStakingModules();
+    const [nor, sdvt] = await stakingRouter.getStakingModules();
     return {
-      nodeOperatorsRegistry: this.loadContract<NodeOperatorsRegistry>(
-        "NodeOperatorsRegistry",
-        modules[0].stakingModuleAddress,
-      ),
-      simpleDVT: this.loadContract<NodeOperatorsRegistry>("NodeOperatorsRegistry", modules[1].stakingModuleAddress),
+      nodeOperatorsRegistry: this.loadContract<NodeOperatorsRegistry>("NodeOperatorsRegistry", nor.stakingModuleAddress),
+      simpleDVT: this.loadContract<NodeOperatorsRegistry>("NodeOperatorsRegistry", sdvt.stakingModuleAddress),
     };
   }
 }

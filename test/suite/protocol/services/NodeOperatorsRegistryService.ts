@@ -4,7 +4,7 @@ import { log, trace } from "lib";
 
 import { LidoProtocol } from "../types";
 
-export class SimpleDVTService {
+export class NodeOperatorsRegistryService {
   public readonly MIN_OPS_COUNT = 3n;
   public readonly MIN_OP_KEYS_COUNT = 10n;
 
@@ -35,9 +35,9 @@ export class SimpleDVTService {
   }
 
   async fillOps(signer: HardhatEthersSigner, minOperatorsCount = this.MIN_OPS_COUNT) {
-    const { simpleDVT } = this.protocol.contracts;
+    const { sdvt } = this.protocol.contracts;
 
-    const nodeOperatorsCountBefore = await simpleDVT.getNodeOperatorsCount();
+    const nodeOperatorsCountBefore = await sdvt.getNodeOperatorsCount();
 
     let count = 0n;
     while (nodeOperatorsCountBefore + count < minOperatorsCount) {
@@ -48,7 +48,7 @@ export class SimpleDVTService {
       // const managersAddress = this.getManagersAddress(operatorId);
 
       // TODO: verify this calls are correct, compare with FactoryContract
-      const addTx = await simpleDVT.connect(signer).addNodeOperator(name, address);
+      const addTx = await sdvt.connect(signer).addNodeOperator(name, address);
 
       await trace("simpleDVT.addNodeOperator", addTx);
 

@@ -1,11 +1,12 @@
 import { DiscoveryConfig, DiscoveryService } from "./discovery";
-import { AccountingOracleService, PauseService, SimpleDVTService } from "./services";
+import { AccountingOracleService, NodeOperatorsRegistryService,PauseService } from "./services";
 import { Contracts, LidoProtocol } from "./types";
 
 export class Protocol {
-  public readonly pauseService: PauseService;
-  public readonly accountingOracleService: AccountingOracleService;
-  public readonly simpleDVTService: SimpleDVTService;
+  public readonly pause: PauseService;
+  public readonly accounting: AccountingOracleService;
+  public readonly nor: NodeOperatorsRegistryService;
+  public readonly sdvt: NodeOperatorsRegistryService;
 
   constructor(
     public readonly contracts: Contracts,
@@ -14,9 +15,10 @@ export class Protocol {
     this.contracts = contracts;
     this.discoveryService = discoveryService;
 
-    this.pauseService = new PauseService(this);
-    this.accountingOracleService = new AccountingOracleService(this);
-    this.simpleDVTService = new SimpleDVTService(this);
+    this.pause = new PauseService(this);
+    this.accounting = new AccountingOracleService(this);
+    this.nor = new NodeOperatorsRegistryService(this);
+    this.sdvt = new NodeOperatorsRegistryService(this);
   }
 }
 

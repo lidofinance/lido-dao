@@ -12,8 +12,8 @@ import {
   Contracts,
   getLidoProtocol,
   LidoProtocol,
+  NodeOperatorsRegistryService,
   PauseService,
-  SimpleDVTService,
 } from "test/suite/protocol";
 
 describe("Protocol: All-round happy path", () => {
@@ -21,9 +21,9 @@ describe("Protocol: All-round happy path", () => {
   let contracts: Contracts;
 
   let snapshot: string;
-  let pauseService: PauseService;
-  let accountingOracleService: AccountingOracleService;
-  let simpleDVTService: SimpleDVTService;
+  let pause: PauseService;
+  let accounting: AccountingOracleService;
+  let sdvt: NodeOperatorsRegistryService;
 
   let ethHolder: HardhatEthersSigner;
   let stEthHolder: HardhatEthersSigner;
@@ -35,10 +35,10 @@ describe("Protocol: All-round happy path", () => {
 
   before(async () => {
     protocol = await getLidoProtocol();
-    ({ contracts, pauseService, accountingOracleService, simpleDVTService } = protocol);
+    ({ contracts, pause, accounting, sdvt } = protocol);
 
-    await pauseService.unpauseStaking();
-    await pauseService.unpauseWithdrawalQueue();
+    await pause.unpauseStaking();
+    await pause.unpauseWithdrawalQueue();
 
     const signers = await ethers.getSigners();
 
@@ -72,7 +72,7 @@ describe("Protocol: All-round happy path", () => {
     let [lastFinalizedRequestId, lastRequestId] = await getWQRequestIds();
 
     while (lastFinalizedRequestId != lastRequestId) {
-      await accountingOracleService.oracleReport();
+      await accounting.oracleReport();
 
       [lastFinalizedRequestId, lastRequestId] = await getWQRequestIds();
 
@@ -114,7 +114,7 @@ describe("Protocol: All-round happy path", () => {
 
     log.success("allows to submit eth by stranger");
 
-    await simpleDVTService.fillOpsVettedKeys(stranger, 3n, 5n);
+    await sdvt.fillOpsVettedKeys(stranger, 3n, 5n);
 
     log.success("ensures Simple DVT has some keys to deposit");
 
