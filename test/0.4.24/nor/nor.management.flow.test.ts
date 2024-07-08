@@ -16,7 +16,7 @@ import {
 } from "typechain-types";
 import { NodeOperatorsRegistryLibraryAddresses } from "typechain-types/factories/contracts/0.4.24/nos/NodeOperatorsRegistry.sol/NodeOperatorsRegistry__factory";
 
-import { addNodeOperator, certainAddress, NodeOperatorConfig, randomAddress } from "lib";
+import { addNodeOperator, certainAddress, NodeOperatorConfig, randomAddress, RewardDistributionState } from "lib";
 
 import { addAragonApp, deployLidoDao } from "test/deploy";
 import { Snapshot } from "test/suite";
@@ -727,6 +727,39 @@ describe("NodeOperatorsRegistry:management", () => {
       for (let i = 0n; i < 10n; ++i) {
         expect(await nor.getNodeOperatorIsActive(i)).to.be.false;
       }
+    });
+  });
+
+  context("getRewardDistributionState()", () => {
+    it("returns correct reward distribution state", async () => {
+      await nor.harness__setRewardDistributionState(RewardDistributionState.ReadyForDistribution);
+      expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.ReadyForDistribution);
+
+      await nor.harness__setRewardDistributionState(RewardDistributionState.TransferredToModule);
+      expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.TransferredToModule);
+
+      await nor.harness__setRewardDistributionState(RewardDistributionState.Distributed);
+      expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.Distributed);
+    });
+  });
+
+  context("distributeReward()", () => {
+    it('distribute reward when module not in "ReadyForDistribution" status', async () => {
+      await nor.harness__setRewardDistributionState(RewardDistributionState.ReadyForDistribution);
+
+      expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.ReadyForDistribution);
+      await expect(nor.distributeReward())
+        .to.emit(nor, "RewardDistributionStateChanged")
+        .withArgs(RewardDistributionState.Distributed);
+      expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.Distributed);
+    });
+
+    it('reverts with "DISTRIBUTION_NOT_READY" error when module not in "ReadyForDistribution" status', async () => {
+      await nor.harness__setRewardDistributionState(RewardDistributionState.TransferredToModule);
+      await expect(nor.distributeReward()).to.be.revertedWith("DISTRIBUTION_NOT_READY");
+
+      await nor.harness__setRewardDistributionState(RewardDistributionState.Distributed);
+      await expect(nor.distributeReward()).to.be.revertedWith("DISTRIBUTION_NOT_READY");
     });
   });
 

@@ -17,7 +17,7 @@ import {
 } from "typechain-types";
 import { NodeOperatorsRegistryLibraryAddresses } from "typechain-types/factories/contracts/0.4.24/nos/NodeOperatorsRegistry.sol/NodeOperatorsRegistry__factory";
 
-import { addNodeOperator, certainAddress, NodeOperatorConfig } from "lib";
+import { addNodeOperator, certainAddress, NodeOperatorConfig, RewardDistributionState } from "lib";
 
 import { addAragonApp, deployLidoDao, deployLidoLocator } from "test/deploy";
 import { Snapshot } from "test/suite";
@@ -36,6 +36,7 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
   let dao: Kernel;
   let acl: ACL;
   let locator: LidoLocator;
+  let impl: NodeOperatorsRegistry__Harness;
 
   let originalState: string;
 
@@ -113,7 +114,7 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
       ["__contracts/common/lib/MinFirstAllocat__"]: await allocLib.getAddress(),
     };
 
-    const impl = await new NodeOperatorsRegistry__Harness__factory(allocLibAddr, deployer).deploy();
+    impl = await new NodeOperatorsRegistry__Harness__factory(allocLibAddr, deployer).deploy();
     expect(await impl.getInitializationBlock()).to.equal(MaxUint256);
     const appProxy = await addAragonApp({
       dao,
@@ -347,6 +348,40 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
       expect(fourthNoInfo.totalVettedValidators).to.be.equal(
         NODE_OPERATORS[fourthNodeOperatorId].vettedSigningKeysCount,
       );
+    });
+  });
+
+  context("finalizeUpgrade_v3()", () => {
+    beforeEach(async () => {
+      locator = await deployLidoLocator({ lido: lido });
+      await nor.harness__initialize(2n);
+    });
+
+    it("fails with CONTRACT_NOT_INITIALIZED error when called on implementation", async () => {
+      await expect(impl.finalizeUpgrade_v3()).to.be.revertedWith("CONTRACT_NOT_INITIALIZED");
+    });
+
+    it("fails with CONTRACT_NOT_INITIALIZED error when nor instance not initialized yet", async () => {
+      const appProxy = await addAragonApp({
+        dao,
+        name: "new-node-operators-registry",
+        impl,
+        rootAccount: deployer,
+      });
+      const registry = NodeOperatorsRegistry__Harness__factory.connect(appProxy, deployer);
+      await expect(registry.finalizeUpgrade_v3()).to.be.revertedWith("CONTRACT_NOT_INITIALIZED");
+    });
+
+    it("sets correct contract version", async () => {
+      await nor.finalizeUpgrade_v3();
+      expect(await nor.getContractVersion()).to.be.equal(3);
+      expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.Distributed);
+    });
+
+    it("reverts with error UNEXPECTED_CONTRACT_VERSION when called on already initialized contract", async () => {
+      await nor.finalizeUpgrade_v3();
+      expect(await nor.getContractVersion()).to.be.equal(3);
+      await expect(nor.finalizeUpgrade_v3()).to.be.revertedWith("UNEXPECTED_CONTRACT_VERSION");
     });
   });
 });
