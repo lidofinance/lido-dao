@@ -1025,7 +1025,7 @@ describe("OracleReportSanityChecker.sol", () => {
     it("setChurnValidatorsPerDayLimit works", async () => {
       const oldChurnLimit = defaultLimitsList.churnValidatorsPerDayLimit;
 
-      await oracleReportSanityChecker.checkExitedValidatorsRatePerDay(oldChurnLimit + 1n);
+      await oracleReportSanityChecker.checkExitedValidatorsRatePerDay(oldChurnLimit);
       await expect(oracleReportSanityChecker.checkExitedValidatorsRatePerDay(oldChurnLimit + 1n))
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "ExitedValidatorsLimitExceeded")
         .withArgs(oldChurnLimit, oldChurnLimit + 1n);
@@ -1093,14 +1093,13 @@ describe("OracleReportSanityChecker.sol", () => {
 
     it("checkExitBusOracleReport works", async () => {
       const maxRequests = defaultLimitsList.maxValidatorExitRequestsPerReport;
-      const newMaxRequests = maxRequests + 1n;
 
       expect((await oracleReportSanityChecker.getOracleReportLimits()).maxValidatorExitRequestsPerReport).to.be.equal(
         maxRequests,
       );
 
       await oracleReportSanityChecker.checkExitBusOracleReport(maxRequests);
-      await expect(oracleReportSanityChecker.checkExitBusOracleReport(newMaxRequests))
+      await expect(oracleReportSanityChecker.checkExitBusOracleReport(maxRequests + 1n))
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectNumberOfExitRequestsPerReport")
         .withArgs(maxRequests);
     });
