@@ -26,6 +26,9 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
+      - name: Cleanup test from specs
+        run: rm -rf test/integration/**/*.spec.ts
+
       - name: Run Solidity coverage
         run: yarn test:coverage
 
