@@ -1,4 +1,4 @@
-name: Code analysis
+name: Analysis
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Common Setup
+      - name: Common setup
         uses: ./.github/workflows/setup
 
       # REVIEW: here and below steps taken from official guide

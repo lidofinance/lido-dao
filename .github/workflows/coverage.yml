@@ -8,20 +8,20 @@ on:
 
 jobs:
   coverage:
-    name: Hardhat Unit Tests Coverage
+    name: Hardhat Code Coverage
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Common Setup
+      - name: Common setup
         uses: ./.github/workflows/setup
 
       # Remove the integration tests from the test suite, as they require a mainnet fork to run properly
-      - name: Cleanup test from specs
+      - name: Remove integration tests
         run: rm -rf test/integration/**/*.spec.ts
 
-      - name: Run Solidity coverage
+      - name: Collect coverage
         run: yarn test:coverage
 
       - name: Produce the coverage report

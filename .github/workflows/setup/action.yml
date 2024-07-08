@@ -1,4 +1,4 @@
-name: Common Setup
+name: Common setup
 
 on: workflow_call
 

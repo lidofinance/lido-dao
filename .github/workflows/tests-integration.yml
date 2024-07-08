@@ -20,11 +20,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Common Setup
+      - name: Common setup
         uses: ./.github/workflows/setup
 
       - name: Set env
         run: cp .env.example .env
 
-      - name: Run Hardhat Solidity tests
+      - name: Run integration tests
         run: yarn test:integration:fork
+        env:
+          DEBUG: true
