@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import "@nomicfoundation/hardhat-chai-matchers";
@@ -19,6 +19,18 @@ import { mochaRootHooks } from "test/hooks";
 
 const RPC_URL: string = process.env.RPC_URL || "";
 const HARDHAT_FORKING_URL = process.env.HARDHAT_FORKING_URL || "";
+const ACCOUNTS_PATH = "./accounts.json";
+
+function loadAccounts(networkName: string) {
+  if (!existsSync(ACCOUNTS_PATH)) {
+    return [];
+  }
+  const content = JSON.parse(readFileSync(ACCOUNTS_PATH, "utf-8"));
+  if (!content.eth) {
+    return [];
+  }
+  return content.eth[networkName] || [];
+}
 
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
@@ -44,7 +56,7 @@ const config: HardhatUserConfig = {
     sepolia: {
       url: RPC_URL,
       chainId: 11155111,
-      accounts: JSON.parse(readFileSync("./accounts.json", "utf-8")).eth.sepolia,
+      accounts: loadAccounts("sepolia"),
     },
   },
   solidity: {
