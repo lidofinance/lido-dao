@@ -13,19 +13,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
 
-      - run: corepack enable
+      - name: Common Setup
+        uses: ./.github/workflows/setup
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: "yarn"
-
-      - name: Install dependencies
-        run: yarn install
-
+      # Remove the integration tests from the test suite, as they require a mainnet fork to run properly
       - name: Cleanup test from specs
         run: rm -rf test/integration/**/*.spec.ts
 

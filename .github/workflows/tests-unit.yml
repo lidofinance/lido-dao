@@ -1,0 +1,37 @@
+name: Tests
+
+on: [push]
+
+jobs:
+  test_hardhat_unit:
+    name: Hardhat Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Common Setup
+        uses: ./.github/workflows/setup
+
+      - name: Run Hardhat Solidity tests
+        run: yarn test
+
+  test_foundry_fuzzing:
+    name: Foundry Fuzzing & Invariant Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Common Setup
+        uses: ./.github/workflows/setup
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        # Use a specific version of Foundry in case nightly is broken
+        # https://github.com/foundry-rs/foundry/releases
+        # with:
+        #   version: nightly-54d8510c0f2b0f791f4c5ef99866c6af99b7606a
+
+      - name: Run tests
+        run: forge test -vvv

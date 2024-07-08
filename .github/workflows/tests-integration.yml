@@ -1,0 +1,30 @@
+name: Tests
+
+on: [push]
+
+jobs:
+
+  test_hardhat_integration:
+    name: Hardhat Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    services:
+      hardhat-node:
+        image: feofanov/hardhat-node
+        ports:
+          - 8545:8545
+        env:
+          ETH_RPC_URL: https://eth.drpc.org
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Common Setup
+        uses: ./.github/workflows/setup
+
+      - name: Set env
+        run: cp .env.example .env
+
+      - name: Run Hardhat Solidity tests
+        run: yarn test:integration:fork

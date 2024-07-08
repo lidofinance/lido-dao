@@ -1,0 +1,34 @@
+name: Common Setup
+
+on: workflow_call
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+
+    - name: Enable corepack
+      shell: bash
+      run: corepack enable
+
+    - name: Cache dependencies
+      id: yarn-cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.npm
+          ~/.cache/yarn
+        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-yarn-
+
+    - name: Install dependencies
+      shell: bash
+      run: yarn install
+      if: steps.yarn-cache.outputs.cache-hit != 'true'
