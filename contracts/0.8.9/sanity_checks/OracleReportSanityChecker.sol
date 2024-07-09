@@ -5,7 +5,6 @@
 pragma solidity 0.8.9;
 
 import {SafeCast} from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
-import {SafeCastExt} from "../lib/SafeCastExt.sol";
 
 import {Math256} from "../../common/lib/Math256.sol";
 import {AccessControlEnumerable} from "../utils/access/AccessControlEnumerable.sol";
