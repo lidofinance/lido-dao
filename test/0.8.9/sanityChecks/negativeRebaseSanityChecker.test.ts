@@ -28,6 +28,7 @@ describe("OracleReportSanityChecker.sol", () => {
 
   const defaultLimitsList = {
     exitedValidatorsPerDayLimit: 50,
+    deprecatedOneOffCLBalanceDecreaseBPLimit: 0,
     annualBalanceIncreaseBPLimit: 10_00, // 10%
     simulatedShareRateDeviationBPLimit: 2_50, // 2.5%
     maxValidatorExitRequestsPerReport: 2000,
@@ -275,22 +276,17 @@ describe("OracleReportSanityChecker.sol", () => {
       const refSlot54 = refSlot - 54 * SLOTS_PER_DAY;
       const refSlot55 = refSlot - 55 * SLOTS_PER_DAY;
 
-      const summary1 = {
-        totalExitedValidators: 2,
-        totalDepositedValidators: 20,
-        depositableValidatorsCount: 0,
-      };
-      await stakingRouter.addStakingModule(1, { ...summary1, totalExitedValidators: 1 });
+      await stakingRouter.addStakingModuleExitedValidators(1, 1);
       await accountingOracle.setLastProcessingRefSlot(refSlot55);
       await checker.checkAccountingOracleReport(0, ether("320"), ether("320"), 0, 0, 0, 10, 10);
 
       await stakingRouter.removeStakingModule(1);
-      await stakingRouter.addStakingModule(1, { ...summary1, totalExitedValidators: 2 });
+      await stakingRouter.addStakingModuleExitedValidators(1, 2);
       await accountingOracle.setLastProcessingRefSlot(refSlot54);
       await checker.checkAccountingOracleReport(0, ether("320"), ether("320"), 0, 0, 0, 10, 10);
 
       await stakingRouter.removeStakingModule(1);
-      await stakingRouter.addStakingModule(1, { ...summary1, totalExitedValidators: 3 });
+      await stakingRouter.addStakingModuleExitedValidators(1, 3);
       await accountingOracle.setLastProcessingRefSlot(refSlot18);
       await checker.checkAccountingOracleReport(0, ether("320"), ether("320"), 0, 0, 0, 10, 10);
 

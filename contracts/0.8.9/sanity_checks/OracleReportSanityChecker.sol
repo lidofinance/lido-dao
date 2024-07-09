@@ -11,6 +11,7 @@ import {AccessControlEnumerable} from "../utils/access/AccessControlEnumerable.s
 import {PositiveTokenRebaseLimiter, TokenRebaseLimiterData} from "../lib/PositiveTokenRebaseLimiter.sol";
 import {ILidoLocator} from "../../common/interfaces/ILidoLocator.sol";
 import {IBurner} from "../../common/interfaces/IBurner.sol";
+import {StakingRouter} from "../../0.8.9/StakingRouter.sol";
 
 interface IWithdrawalQueue {
     struct WithdrawalRequestStatus {
@@ -53,27 +54,6 @@ interface ISecondOpinionOracle {
         );
 }
 
-interface IStakingRouter {
-    struct StakingModuleSummary {
-        /// @notice The total number of validators in the EXITED state on the Consensus Layer
-        /// @dev This value can't decrease in normal conditions
-        uint256 totalExitedValidators;
-
-        /// @notice The total number of validators deposited via the official Deposit Contract
-        /// @dev This value is a cumulative counter: even when the validator goes into EXITED state this
-        ///     counter is not decreasing
-        uint256 totalDepositedValidators;
-
-        /// @notice The number of validators in the set available for deposit
-        uint256 depositableValidatorsCount;
-    }
-
-    function getStakingModuleIds() external view returns (uint256[] memory stakingModuleIds);
-
-    function getStakingModuleSummary(uint256 _stakingModuleId) external view
-        returns (StakingModuleSummary memory summary);
-}
-
 /// @notice The set of restrictions used in the sanity checks of the oracle report
 /// @dev struct is loaded from the storage and stored in memory during the tx running
 struct LimitsList {
@@ -81,6 +61,12 @@ struct LimitsList {
     ///     per single day, depends on the Consensus Layer churn limit
     /// @dev Must fit into uint16 (<= 65_535)
     uint256 exitedValidatorsPerDayLimit;
+
+    /// @notice Left for structure backward compatibility. Currently always return 0. Previously the max
+    //      decrease of the total validators' balances on the Consensus Layer since
+    ///     the previous oracle report.
+    /// @dev Represented in the Basis Points (100% == 10_000)
+    uint256 deprecatedOneOffCLBalanceDecreaseBPLimit;
 
     /// @notice The max annual increase of the total validators' balances on the Consensus Layer
     ///     since the previous oracle report
@@ -115,7 +101,7 @@ struct LimitsList {
     /// @dev Represented in the PWei (1^15 Wei). Must fit into uint16 (<= 65_535)
     uint256 initialSlashingAmountPWei;
 
-    /// @notice Invactivity penalties amount per one validator to calculate penalties of the validators' balances on the Consensus Layer
+    /// @notice Inactivity penalties amount per one validator to calculate penalties of the validators' balances on the Consensus Layer
     /// @dev Represented in the PWei (1^15 Wei). Must fit into uint16 (<= 65_535)
     uint256 inactivityPenaltiesAmountPWei;
 
@@ -159,7 +145,7 @@ uint256 constant SHARE_RATE_PRECISION_E27 = 1e27;
 uint256 constant ONE_PWEI = 1e15;
 
 /// @title Sanity checks for the Lido's oracle report
-/// @notice The contracts contain view methods to perform sanity checks of the Lido's oracle report
+/// @notice The contracts contain methods to perform sanity checks of the Lido's oracle report
 ///     and lever methods for granular tuning of the params of the checks
 contract OracleReportSanityChecker is AccessControlEnumerable {
     using LimitsListPacker for LimitsList;
@@ -269,7 +255,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         return _limits.maxPositiveTokenRebase;
     }
 
-    /// @notice Sets the new values for the limits list
+    /// @notice Sets the new values for the limits list and second opinion oracle
     /// @param _limitsList new limits list
     /// @param _secondOpinionOracle negative rebase oracle.
     function setOracleReportLimits(LimitsList calldata _limitsList, ISecondOpinionOracle _secondOpinionOracle) external onlyRole(ALL_LIMITS_MANAGER_ROLE) {
@@ -394,7 +380,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _updateLimits(limitsList);
     }
 
-    /// @notice Sets the address of the second opinion oracle
+    /// @notice Sets the address of the second opinion oracle and clBalanceOraclesErrorUpperBPLimit value
     /// @param _secondOpinionOracle second opinion oracle.
     ///     If it's zero address — oracle is disabled.
     ///     Default value is zero address.
@@ -701,26 +687,28 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 reportTimestamp = GENESIS_TIME + _refSlot * SECONDS_PER_SLOT;
 
         // Checking exitedValidators against StakingRouter
-        IStakingRouter stakingRouter = IStakingRouter(LIDO_LOCATOR.stakingRouter());
+        StakingRouter stakingRouter = StakingRouter(payable(LIDO_LOCATOR.stakingRouter()));
         uint256[] memory ids = stakingRouter.getStakingModuleIds();
 
         uint256 stakingRouterExitedValidators;
         for (uint256 i = 0; i < ids.length; i++) {
-            IStakingRouter.StakingModuleSummary memory summary = stakingRouter.getStakingModuleSummary(ids[i]);
-            stakingRouterExitedValidators += summary.totalExitedValidators;
+            StakingRouter.StakingModule memory module = stakingRouter.getStakingModule(ids[i]);
+            stakingRouterExitedValidators += module.exitedValidatorsCount;
         }
 
         if (_preCLBalance <= _postCLBalance + _withdrawalVaultBalance) {
             _addReportData(reportTimestamp, stakingRouterExitedValidators, 0);
-            // If the CL balance is not decreased, we don't need to check anyting here
+            // If the CL balance is not decreased, we don't need to check anything here
             return;
         }
         _addReportData(reportTimestamp, stakingRouterExitedValidators, _preCLBalance - (_postCLBalance + _withdrawalVaultBalance));
 
+        // NOTE. Values of 18 and 54 days are taken from spec. Check the details here
+        // https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-23.md
         uint256 negativeCLRebaseSum = _sumNegativeRebasesNotOlderThan(reportTimestamp - 18 days);
         uint256 maxAllowedCLRebaseNegativeSum =
-            _limits.initialSlashingAmountPWei * ONE_PWEI * (_postCLValidators - _exitedValidatorsAtTimestamp(reportTimestamp - 18 days)) +
-            _limits.inactivityPenaltiesAmountPWei * ONE_PWEI * (_postCLValidators - _exitedValidatorsAtTimestamp(reportTimestamp - 54 days));
+            _limitsList.initialSlashingAmountPWei * ONE_PWEI * (_postCLValidators - _exitedValidatorsAtTimestamp(reportTimestamp - 18 days)) +
+            _limitsList.inactivityPenaltiesAmountPWei * ONE_PWEI * (_postCLValidators - _exitedValidatorsAtTimestamp(reportTimestamp - 54 days));
 
         if (negativeCLRebaseSum <= maxAllowedCLRebaseNegativeSum) {
             // If the rebase diff is less or equal max allowed sum, we accept the report
