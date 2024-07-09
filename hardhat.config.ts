@@ -22,6 +22,8 @@ const HARDHAT_FORKING_URL = process.env.HARDHAT_FORKING_URL || "";
 const ACCOUNTS_PATH = "./accounts.json";
 
 function loadAccounts(networkName: string) {
+  // TODO: this plaintext accounts.json private keys management is a subject
+  //       of rework to a solution with the keys stored encrypted
   if (!existsSync(ACCOUNTS_PATH)) {
     return [];
   }
