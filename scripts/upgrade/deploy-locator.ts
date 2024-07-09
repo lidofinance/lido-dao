@@ -18,11 +18,12 @@ const VIEW_NAMES_AND_CTOR_ARGS = [
   "validatorsExitBusOracle",
   "withdrawalQueue",
   "withdrawalVault",
-  "oracleDaemonConfig",
+  "oracleDaemonConfig"
 ];
 
 /////////////// GLOBAL VARIABLES ///////////////
 const g_newAddresses: { [key: string]: string } = {};
+
 /////////////// GLOBAL VARIABLES ///////////////
 
 async function getNewFromEnvOrCurrent(name: string, locator: LoadedContract) {
@@ -39,7 +40,7 @@ async function getNewFromEnvOrCurrent(name: string, locator: LoadedContract) {
 }
 
 async function main() {
-  log.scriptStart(__filename);
+  log.deployScriptStart(__filename);
 
   const deployer = (await ethers.provider.getSigner()).address;
   assert.equal(process.env.DEPLOYER, deployer);
@@ -71,7 +72,7 @@ async function main() {
     assert.equal(actual, await getNewFromEnvOrCurrent(viewName, locator));
   }
 
-  log.scriptFinish(__filename);
+  log.deployScriptFinish(__filename);
 }
 
 main()

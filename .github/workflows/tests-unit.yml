@@ -1,10 +1,10 @@
-name: Tests
+name: Unit Tests
 
 on: [push]
 
 jobs:
   test_hardhat_unit:
-    name: Hardhat Unit Tests
+    name: Hardhat
     runs-on: ubuntu-latest
 
     steps:
@@ -17,7 +17,7 @@ jobs:
         run: yarn test
 
   test_foundry_fuzzing:
-    name: Foundry Fuzzing & Invariant Tests
+    name: Foundry (fuzzing & invariant)
     runs-on: ubuntu-latest
 
     steps:

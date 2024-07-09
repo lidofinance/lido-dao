@@ -8,7 +8,7 @@ on:
 
 jobs:
   coverage:
-    name: Hardhat Code Coverage
+    name: Hardhat
     runs-on: ubuntu-latest
 
     steps:
