@@ -1517,8 +1517,9 @@ describe("OracleReportSanityChecker.sol", () => {
 
     it("values must be less or equals to type(uint64).max", async () => {
       const MAX_UINT_64 = 2n ** 64n - 1n;
-      const MAX_UINT_48 = 2n ** 48n - 1n;
-      const INVALID_VALUE = MAX_UINT_64 + 1n;
+      const MAX_UINT_32 = 2n ** 32n - 1n;
+      const INVALID_VALUE_UINT_64 = MAX_UINT_64 + 1n;
+      const INVALID_VALUE_UINT_32 = MAX_UINT_32 + 1n;
 
       await oracleReportSanityChecker
         .connect(admin)
@@ -1526,18 +1527,18 @@ describe("OracleReportSanityChecker.sol", () => {
       await expect(
         oracleReportSanityChecker
           .connect(managersRoster.allLimitsManagers[0])
-          .setOracleReportLimits({ ...defaultLimitsList, requestTimestampMargin: INVALID_VALUE }, ZeroAddress),
+          .setOracleReportLimits({ ...defaultLimitsList, requestTimestampMargin: INVALID_VALUE_UINT_32 }, ZeroAddress),
       )
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
-        .withArgs(INVALID_VALUE.toString(), 0, MAX_UINT_48);
+        .withArgs(INVALID_VALUE_UINT_32.toString(), 0, MAX_UINT_32);
 
       await expect(
         oracleReportSanityChecker
           .connect(managersRoster.allLimitsManagers[0])
-          .setOracleReportLimits({ ...defaultLimitsList, maxPositiveTokenRebase: INVALID_VALUE }, ZeroAddress),
+          .setOracleReportLimits({ ...defaultLimitsList, maxPositiveTokenRebase: INVALID_VALUE_UINT_64 }, ZeroAddress),
       )
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
-        .withArgs(INVALID_VALUE.toString(), 1, MAX_UINT_64);
+        .withArgs(INVALID_VALUE_UINT_64.toString(), 1, MAX_UINT_64);
     });
 
     it("value must be greater than zero", async () => {
