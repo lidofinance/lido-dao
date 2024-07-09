@@ -28,7 +28,7 @@ describe("OracleReportSanityChecker.sol", () => {
 
   const defaultLimitsList = {
     exitedValidatorsPerDayLimit: 55,
-    deprecatedOneOffCLBalanceDecreaseBPLimit: 0,
+    appearedValidatorsPerDayLimit: 100,
     annualBalanceIncreaseBPLimit: 10_00, // 10%
     simulatedShareRateDeviationBPLimit: 2_50, // 2.5%
     maxValidatorExitRequestsPerReport: 2000,
@@ -39,7 +39,6 @@ describe("OracleReportSanityChecker.sol", () => {
     initialSlashingAmountPWei: 1000,
     inactivityPenaltiesAmountPWei: 101,
     clBalanceOraclesErrorUpperBPLimit: 74, // 0.74%
-    appearedValidatorsPerDayLimit: 100,
   };
 
   const correctLidoOracleReport = {
@@ -142,7 +141,7 @@ describe("OracleReportSanityChecker.sol", () => {
     it("sets limits correctly", async () => {
       const newLimitsList = {
         exitedValidatorsPerDayLimit: 50,
-        deprecatedOneOffCLBalanceDecreaseBPLimit: 0,
+        appearedValidatorsPerDayLimit: 75,
         annualBalanceIncreaseBPLimit: 15_00,
         simulatedShareRateDeviationBPLimit: 1_50, // 1.5%
         maxValidatorExitRequestsPerReport: 3000,
@@ -153,7 +152,6 @@ describe("OracleReportSanityChecker.sol", () => {
         initialSlashingAmountPWei: 2000,
         inactivityPenaltiesAmountPWei: 303,
         clBalanceOraclesErrorUpperBPLimit: 12,
-        appearedValidatorsPerDayLimit: 75,
       };
       const limitsBefore = await oracleReportSanityChecker.getOracleReportLimits();
       expect(limitsBefore.exitedValidatorsPerDayLimit).to.not.equal(newLimitsList.exitedValidatorsPerDayLimit);

@@ -62,11 +62,11 @@ struct LimitsList {
     /// @dev Must fit into uint16 (<= 65_535)
     uint256 exitedValidatorsPerDayLimit;
 
-    /// @notice Left for structure backward compatibility. Currently always return 0. Previously the max
-    //      decrease of the total validators' balances on the Consensus Layer since
-    ///     the previous oracle report.
-    /// @dev Represented in the Basis Points (100% == 10_000)
-    uint256 deprecatedOneOffCLBalanceDecreaseBPLimit;
+    /// @notice The max possible number of validators that might be reported as `appeared`
+    ///     per single day, limited by the max daily deposits via DepositSecurityModule in practice
+    ///     isn't limited by a consensus layer (because `appeared` includes `pending`, i.e., not `activated` yet)
+    /// @dev Must fit into uint16 (<= 65_535)
+    uint256 appearedValidatorsPerDayLimit;
 
     /// @notice The max annual increase of the total validators' balances on the Consensus Layer
     ///     since the previous oracle report
@@ -110,17 +110,12 @@ struct LimitsList {
     ///     can be greater as calculated for the withdrawal credentials.
     /// @dev Represented in the Basis Points (100% == 10_000)
     uint256 clBalanceOraclesErrorUpperBPLimit;
-
-    /// @notice The max possible number of validators that might be reported as `appeared`
-    ///     per single day, limited by the max daily deposits via DepositSecurityModule in practice
-    ///     isn't limited by a consensus layer (because `appeared` includes `pending`, i.e., not `activated` yet)
-    /// @dev Must fit into uint16 (<= 65_535)
-    uint256 appearedValidatorsPerDayLimit;
 }
 
 /// @dev The packed version of the LimitsList struct to be effectively persisted in storage
 struct LimitsListPacked {
     uint16 exitedValidatorsPerDayLimit;
+    uint16 appearedValidatorsPerDayLimit;
     uint16 annualBalanceIncreaseBPLimit;
     uint16 simulatedShareRateDeviationBPLimit;
     uint16 maxValidatorExitRequestsPerReport;
@@ -131,7 +126,6 @@ struct LimitsListPacked {
     uint16 initialSlashingAmountPWei;
     uint16 inactivityPenaltiesAmountPWei;
     uint16 clBalanceOraclesErrorUpperBPLimit;
-    uint16 appearedValidatorsPerDayLimit;
 }
 
 struct ReportData {
