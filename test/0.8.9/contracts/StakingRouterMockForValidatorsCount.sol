@@ -6,31 +6,22 @@ pragma solidity 0.8.9;
 
 import {StakingRouter} from "contracts/0.8.9/StakingRouter.sol";
 
-interface IStakingRouter {
+contract StakingRouterMockForValidatorsCount {
 
-    function getStakingModuleIds() external view returns (uint256[] memory);
-
-    function getStakingModuleSummary(uint256 stakingModuleId) external view
-        returns (StakingRouter.StakingModuleSummary memory summary);
-}
-
-
-contract StakingRouterMockForValidatorsCount is IStakingRouter {
-
-    mapping(uint256 => StakingRouter.StakingModuleSummary) private modules;
+    mapping(uint256 => StakingRouter.StakingModule) private modules;
 
     uint256[] private moduleIds;
 
     constructor() {
     }
 
-    function addStakingModule(uint256 moduleId, StakingRouter.StakingModuleSummary memory summary) external {
-        modules[moduleId] = summary;
+    function addStakingModuleExitedValidators(uint24 moduleId, uint256 exitedValidators) external {
+        StakingRouter.StakingModule memory module = StakingRouter.StakingModule(moduleId, address(0), 0, 0, 0, 0, "", 0, 0, exitedValidators);
+        modules[moduleId] = module;
         moduleIds.push(moduleId);
     }
 
     function removeStakingModule(uint256 moduleId) external {
-        modules[moduleId] = StakingRouter.StakingModuleSummary(0, 0, 0);
         for (uint256 i = 0; i < moduleIds.length; i++) {
             if (moduleIds[i] == moduleId) {
                 // Move the last element into the place to delete
@@ -46,10 +37,10 @@ contract StakingRouterMockForValidatorsCount is IStakingRouter {
         return moduleIds;
     }
 
-    function getStakingModuleSummary(uint256 stakingModuleId)
-        external
+    function getStakingModule(uint256 stakingModuleId)
+        public
         view
-        returns (StakingRouter.StakingModuleSummary memory summary) {
+        returns (StakingRouter.StakingModule memory module) {
         return modules[stakingModuleId];
     }
 }

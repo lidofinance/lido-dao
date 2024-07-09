@@ -12,6 +12,7 @@ import {AccessControlEnumerable} from "../utils/access/AccessControlEnumerable.s
 import {PositiveTokenRebaseLimiter, TokenRebaseLimiterData} from "../lib/PositiveTokenRebaseLimiter.sol";
 import {ILidoLocator} from "../../common/interfaces/ILidoLocator.sol";
 import {IBurner} from "../../common/interfaces/IBurner.sol";
+import {StakingRouter} from "../../0.8.9/StakingRouter.sol";
 
 interface IWithdrawalQueue {
     struct WithdrawalRequestStatus {
@@ -52,27 +53,6 @@ interface ISecondOpinionOracle {
             uint256 totalDepositedValidators,
             uint256 totalExitedValidators
         );
-}
-
-interface IStakingRouter {
-    struct StakingModuleSummary {
-        /// @notice The total number of validators in the EXITED state on the Consensus Layer
-        /// @dev This value can't decrease in normal conditions
-        uint256 totalExitedValidators;
-
-        /// @notice The total number of validators deposited via the official Deposit Contract
-        /// @dev This value is a cumulative counter: even when the validator goes into EXITED state this
-        ///     counter is not decreasing
-        uint256 totalDepositedValidators;
-
-        /// @notice The number of validators in the set available for deposit
-        uint256 depositableValidatorsCount;
-    }
-
-    function getStakingModuleIds() external view returns (uint256[] memory stakingModuleIds);
-
-    function getStakingModuleSummary(uint256 _stakingModuleId) external view
-        returns (StakingModuleSummary memory summary);
 }
 
 /// @notice The set of restrictions used in the sanity checks of the oracle report
@@ -684,13 +664,13 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         uint256 reportTimestamp = GENESIS_TIME + _refSlot * SECONDS_PER_SLOT;
 
         // Checking exitedValidators against StakingRouter
-        IStakingRouter stakingRouter = IStakingRouter(LIDO_LOCATOR.stakingRouter());
+        StakingRouter stakingRouter = StakingRouter(payable(LIDO_LOCATOR.stakingRouter()));
         uint256[] memory ids = stakingRouter.getStakingModuleIds();
 
         uint256 stakingRouterExitedValidators;
         for (uint256 i = 0; i < ids.length; i++) {
-            IStakingRouter.StakingModuleSummary memory summary = stakingRouter.getStakingModuleSummary(ids[i]);
-            stakingRouterExitedValidators += summary.totalExitedValidators;
+            StakingRouter.StakingModule memory module = stakingRouter.getStakingModule(ids[i]);
+            stakingRouterExitedValidators += module.exitedValidatorsCount;
         }
 
         if (_preCLBalance <= _postCLBalance + _withdrawalVaultBalance) {
