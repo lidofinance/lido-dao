@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 
-import { AccountingOracleTimeTravellable, MockReportProcessor } from "typechain-types";
+import { MockReportProcessor } from "typechain-types";
 
 import {
   CONSENSUS_VERSION,
@@ -15,7 +15,7 @@ import {
 export async function deployHashConsensus(
   admin: string,
   {
-    reportProcessor = null as MockReportProcessor | AccountingOracleTimeTravellable | null,
+    reportProcessor = null as MockReportProcessor | null,
     slotsPerEpoch = SLOTS_PER_EPOCH,
     secondsPerSlot = SECONDS_PER_SLOT,
     genesisTime = GENESIS_TIME,
