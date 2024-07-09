@@ -65,6 +65,12 @@ struct LimitsList {
     /// @dev Must fit into uint16 (<= 65_535)
     uint256 churnValidatorsPerDayLimit;
 
+    /// @notice Left for structure backward compatibility. Currently always return 0. Previously the max
+    //      decrease of the total validators' balances on the Consensus Layer since
+    ///     the previous oracle report.
+    /// @dev Represented in the Basis Points (100% == 10_000)
+    uint256 deprecatedOneOffCLBalanceDecreaseBPLimit;
+
     /// @notice The max annual increase of the total validators' balances on the Consensus Layer
     ///     since the previous oracle report
     /// @dev Represented in the Basis Points (100% == 10_000)
@@ -944,6 +950,7 @@ library LimitsListPacker {
 library LimitsListUnpacker {
     function unpack(LimitsListPacked memory _limitsList) internal pure returns (LimitsList memory res) {
         res.churnValidatorsPerDayLimit = _limitsList.churnValidatorsPerDayLimit;
+        res.deprecatedOneOffCLBalanceDecreaseBPLimit = 0;
         res.annualBalanceIncreaseBPLimit = _limitsList.annualBalanceIncreaseBPLimit;
         res.simulatedShareRateDeviationBPLimit = _limitsList.simulatedShareRateDeviationBPLimit;
         res.requestTimestampMargin = _limitsList.requestTimestampMargin;

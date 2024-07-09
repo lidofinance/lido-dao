@@ -28,6 +28,7 @@ describe("OracleReportSanityChecker.sol", () => {
 
   const defaultLimitsList = {
     churnValidatorsPerDayLimit: 55,
+    deprecatedOneOffCLBalanceDecreaseBPLimit: 0,
     annualBalanceIncreaseBPLimit: 10_00, // 10%
     simulatedShareRateDeviationBPLimit: 2_50, // 2.5%
     maxValidatorExitRequestsPerReport: 2000,
