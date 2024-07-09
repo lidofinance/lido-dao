@@ -15,7 +15,7 @@ import {
 
 import { deployHashConsensus } from "test/deploy";
 
-describe("HashConsensus", function () {
+describe("HashConsensus:deploy", function () {
   let admin: Signer;
   let consensus: HashConsensus;
   let mockReportProcessor: MockReportProcessor;

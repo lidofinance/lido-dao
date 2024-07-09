@@ -11,7 +11,7 @@ import { Snapshot } from "test/suite";
 
 const CONSENSUS_VERSION_2 = 2n;
 
-describe("HashConsensus", function () {
+describe("HashConsensus:submitReport", function () {
   let admin: Signer;
   let member1: Signer;
   let member2: Signer;

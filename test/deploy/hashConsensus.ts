@@ -12,6 +12,16 @@ import {
   SLOTS_PER_EPOCH,
 } from "lib";
 
+export interface DeployHashConsensusParams {
+  reportProcessor?: MockReportProcessor | null | undefined;
+  slotsPerEpoch?: bigint | undefined;
+  secondsPerSlot?: bigint | undefined;
+  genesisTime?: bigint | undefined;
+  epochsPerFrame?: bigint | undefined;
+  fastLaneLengthSlots?: bigint | undefined;
+  initialEpoch?: bigint | null;
+}
+
 export async function deployHashConsensus(
   admin: string,
   {
@@ -22,7 +32,7 @@ export async function deployHashConsensus(
     epochsPerFrame = EPOCHS_PER_FRAME,
     fastLaneLengthSlots = INITIAL_FAST_LANE_LENGTH_SLOTS,
     initialEpoch = INITIAL_EPOCH,
-  } = {},
+  }: DeployHashConsensusParams = {},
 ) {
   if (!reportProcessor) {
     reportProcessor = await ethers.deployContract("MockReportProcessor", [CONSENSUS_VERSION]);
