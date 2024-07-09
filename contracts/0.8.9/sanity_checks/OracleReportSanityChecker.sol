@@ -895,7 +895,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             emit MaxNodeOperatorsPerExtraDataItemCountSet(_newLimitsList.maxNodeOperatorsPerExtraDataItemCount);
         }
         if (_oldLimitsList.requestTimestampMargin != _newLimitsList.requestTimestampMargin) {
-            _checkLimitValue(_newLimitsList.requestTimestampMargin, 0, type(uint48).max);
+            _checkLimitValue(_newLimitsList.requestTimestampMargin, 0, type(uint32).max);
             emit RequestTimestampMarginSet(_newLimitsList.requestTimestampMargin);
         }
         if (_oldLimitsList.maxPositiveTokenRebase != _newLimitsList.maxPositiveTokenRebase) {
