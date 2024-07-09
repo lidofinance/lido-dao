@@ -23,21 +23,8 @@ export const NOT_OK = rd("[×]");
 
 const DEBUG = process.env.DEBUG || false;
 
-/**
- * Prints a line of the specified length, padded with "=" characters.
- * Example:
- *   line(20, 5)
- *    => '===================='
- */
 const _line = (length = LINE_LENGTH, minLength = LINE_LENGTH): string => "=".repeat(Math.max(length, minLength));
 
-/**
- * Prints a splitter with the specified length, padded with "=" characters.
- * Example:
- *   splitter(20, "Hello world!")
- *    => '===================='
- *       [ 'Hello world!' ]
- */
 const _splitter = (minLength = LINE_LENGTH, ...args: ConvertibleToString[]) => {
   if (minLength < MIN_LINE_LENGTH) minLength = MIN_LINE_LENGTH;
 
@@ -48,15 +35,6 @@ const _splitter = (minLength = LINE_LENGTH, ...args: ConvertibleToString[]) => {
   }
 };
 
-/**
- * Prints a header with the specified message and arguments.
- * Example:
- *   header(20, "Hello world!", "Second optional argument")
- *      => '===================='
- *         '=   Hello world!   ='
- *         '===================='
- *         [ 'Second optional argument' ]
- */
 const _header = (minLength = 20, ...args: ConvertibleToString[]) => {
   if (minLength < MIN_LINE_LENGTH) minLength = MIN_LINE_LENGTH;
 

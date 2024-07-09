@@ -21,8 +21,9 @@
     "test:sequential": "hardhat test test/**/*.test.ts",
     "test:trace": "hardhat test test/**/*.test.ts --trace",
     "test:watch": "hardhat watch",
-    "test:integration": "hardhat test test/**/*.spec.ts --network local",
+    "test:integration:local": "hardhat test test/**/*.spec.ts --network local",
     "test:integration:fork": "hardhat test test/**/*.spec.ts --network mainnet-fork",
+    "test:integration:trace": "hardhat test test/**/*.spec.ts --trace",
     "typecheck": "tsc --noEmit",
     "prepare": "husky"
   },

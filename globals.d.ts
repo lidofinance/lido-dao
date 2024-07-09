@@ -11,5 +11,7 @@ declare namespace NodeJS {
     MAINNET_LOCATOR_ADDRESS: string;
     MAINNET_AGENT_ADDRESS: string;
     MAINNET_VOTING_ADDRESS: string;
+
+    HARDHAT_FORKING_URL?: string;
   }
 }
