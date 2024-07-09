@@ -118,7 +118,7 @@ struct LimitsList {
     /// @dev Represented in the PWei (1^15 Wei). Must fit into uint16 (<= 65_535)
     uint256 initialSlashingAmountPWei;
 
-    /// @notice Invactivity penalties amount per one validator to calculate penalties of the validators' balances on the Consensus Layer
+    /// @notice Inactivity penalties amount per one validator to calculate penalties of the validators' balances on the Consensus Layer
     /// @dev Represented in the PWei (1^15 Wei). Must fit into uint16 (<= 65_535)
     uint256 inactivityPenaltiesAmountPWei;
 
@@ -263,7 +263,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         return _limits.maxPositiveTokenRebase;
     }
 
-    /// @notice Sets the new values for the limits list
+    /// @notice Sets the new values for the limits list and second opinion oracle
     /// @param _limitsList new limits list
     /// @param _secondOpinionOracle negative rebase oracle.
     function setOracleReportLimits(LimitsList calldata _limitsList, ISecondOpinionOracle _secondOpinionOracle) external onlyRole(ALL_LIMITS_MANAGER_ROLE) {
@@ -376,7 +376,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _updateLimits(limitsList);
     }
 
-    /// @notice Sets the address of the second opinion oracle
+    /// @notice Sets the address of the second opinion oracle and clBalanceOraclesErrorUpperBPLimit value
     /// @param _secondOpinionOracle second opinion oracle.
     ///     If it's zero address — oracle is disabled.
     ///     Default value is zero address.
@@ -700,10 +700,12 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         }
         _addReportData(reportTimestamp, stakingRouterExitedValidators, _preCLBalance - (_postCLBalance + _withdrawalVaultBalance));
 
+        // NOTE. Values of 18 and 54 days are taken from spec. Check the details here
+        // https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-23.md
         uint256 negativeCLRebaseSum = _sumNegativeRebasesNotOlderThan(reportTimestamp - 18 days);
         uint256 maxAllowedCLRebaseNegativeSum =
-            _limits.initialSlashingAmountPWei * ONE_PWEI * (_postCLValidators - _exitedValidatorsAtTimestamp(reportTimestamp - 18 days)) +
-            _limits.inactivityPenaltiesAmountPWei * ONE_PWEI * (_postCLValidators - _exitedValidatorsAtTimestamp(reportTimestamp - 54 days));
+            _limitsList.initialSlashingAmountPWei * ONE_PWEI * (_postCLValidators - _exitedValidatorsAtTimestamp(reportTimestamp - 18 days)) +
+            _limitsList.inactivityPenaltiesAmountPWei * ONE_PWEI * (_postCLValidators - _exitedValidatorsAtTimestamp(reportTimestamp - 54 days));
 
         if (negativeCLRebaseSum <= maxAllowedCLRebaseNegativeSum) {
             // If the rebase diff is less or equal max allowed sum, we accept the report
@@ -779,7 +781,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
         uint256 churnLimit = (_limitsList.churnValidatorsPerDayLimit * _timeElapsed) / SECONDS_PER_DAY;
 
-        if (_appearedValidators > churnLimit) revert IncorrectAppearedValidators(_appearedValidators);
+        if (_appearedValidators > churnLimit) revert IncorrectAppearedValidators(churnLimit, _appearedValidators);
     }
 
     function _checkLastFinalizableId(
@@ -921,9 +923,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     error IncorrectELRewardsVaultBalance(uint256 actualELRewardsVaultBalance);
     error IncorrectSharesRequestedToBurn(uint256 actualSharesToBurn);
     error IncorrectCLBalanceIncrease(uint256 annualBalanceDiff);
-    error IncorrectAppearedValidators(uint256 churnLimit);
+    error IncorrectAppearedValidators(uint256 churnLimit, uint256 actualAppearedValidators);
     error IncorrectNumberOfExitRequestsPerReport(uint256 maxRequestsCount);
-    error IncorrectExitedValidators(uint256 churnLimit);
     error IncorrectRequestFinalization(uint256 requestCreationBlock);
     error ActualShareRateIsZero();
     error IncorrectSimulatedShareRate(uint256 simulatedShareRate, uint256 actualShareRate);
