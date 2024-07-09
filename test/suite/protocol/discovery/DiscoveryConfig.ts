@@ -24,7 +24,7 @@ export class DiscoveryConfig {
       "Network": hre.network.name,
       "Locator address": this.locatorAddress,
       "Agent address": this.agentAddress,
-      "Voting address": this.votingAddress
+      "Voting address": this.votingAddress,
     });
   }
 

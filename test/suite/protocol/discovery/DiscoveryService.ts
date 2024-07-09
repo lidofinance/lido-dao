@@ -138,8 +138,8 @@ export class DiscoveryService {
   private async loadStakingModules(stakingRouter: LoadedContract<StakingRouter>) {
     const [nor, sdvt] = await stakingRouter.getStakingModules();
     return {
-      nodeOperatorsRegistry: this.loadContract<NodeOperatorsRegistry>("NodeOperatorsRegistry", nor.stakingModuleAddress),
-      simpleDVT: this.loadContract<NodeOperatorsRegistry>("NodeOperatorsRegistry", sdvt.stakingModuleAddress),
+      nor: this.loadContract<NodeOperatorsRegistry>("NodeOperatorsRegistry", nor.stakingModuleAddress),
+      sdvt: this.loadContract<NodeOperatorsRegistry>("NodeOperatorsRegistry", sdvt.stakingModuleAddress),
     };
   }
 }

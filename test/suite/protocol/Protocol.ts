@@ -1,5 +1,5 @@
 import { DiscoveryConfig, DiscoveryService } from "./discovery";
-import { AccountingOracleService, NodeOperatorsRegistryService,PauseService } from "./services";
+import { AccountingOracleService, NodeOperatorsRegistryService, PauseService } from "./services";
 import { Contracts, LidoProtocol } from "./types";
 
 export class Protocol {

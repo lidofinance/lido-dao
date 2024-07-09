@@ -119,11 +119,16 @@ log.deployScriptFinish = (filename: string) => {
   log(`Finished running script ${bl(path.basename(filename))}`);
 };
 
+log.done = (message: string) => {
+  log.success(message);
+  log.emptyLine();
+}
+
 log.debug = (title: string, records: Record<string, ConvertibleToString>) => {
   if (!DEBUG) return;
 
   _title(title);
-  Object.keys(records).forEach((label) => _record(label, records[label]));
+  Object.keys(records).forEach((label) => _record(`  ${label}`, records[label]));
   log.emptyLine();
 };
 
@@ -149,7 +154,7 @@ log.trace = (
   },
 ) => {
   const color = tx.status ? gr : rd;
-  log.splitter();
+
   log(`Transaction sent`, yl(tx.hash));
   log(`  Gas price: ${yl(tx.gasPrice)} gwei   Gas limit: ${yl(tx.gasLimit)}   Nonce: ${yl(tx.nonce)}`);
   log(`  Block: ${yl(tx.blockNumber)}   Gas used: ${yl(tx.gasUsed)} (${yl(tx.gasUsedPercent)}%)`);

@@ -67,7 +67,7 @@ describe("Protocol: All-round happy path", () => {
     expect(await contracts.lido.isStakingPaused()).to.be.false;
     expect(await contracts.withdrawalQueue.isPaused()).to.be.false;
 
-    log.success("validates that the protocol is unpaused");
+    log.done("validates that the protocol is unpaused");
 
     let [lastFinalizedRequestId, lastRequestId] = await getWQRequestIds();
 
@@ -85,7 +85,8 @@ describe("Protocol: All-round happy path", () => {
     }
 
     await submitStake(ether("10000"));
-    log.success("finalizes the withdrawal queue");
+
+    log.done("finalizes the withdrawal queue");
 
     const getStrangerBalances = async (stranger: HardhatEthersSigner) =>
       batch({
@@ -112,11 +113,11 @@ describe("Protocol: All-round happy path", () => {
 
     expect(balancesBeforeSubmit.stETH).to.be.equal(0n);
 
-    log.success("allows to submit eth by stranger");
+    log.done("allows to submit eth by stranger");
 
     await sdvt.fillOpsVettedKeys(stranger, 3n, 5n);
 
-    log.success("ensures Simple DVT has some keys to deposit");
+    log.done("ensures Simple DVT has some keys to deposit");
 
     const stakeLimitInfoBefore = await contracts.lido.getStakeLimitFullInfo();
 

@@ -60,7 +60,7 @@ const config: HardhatUserConfig = {
       },
       forking: HARDHAT_FORKING_URL ? { url: HARDHAT_FORKING_URL } : undefined,
     },
-    sepolia: {
+    "sepolia": {
       url: RPC_URL,
       chainId: 11155111,
       accounts: loadAccounts("sepolia"),
