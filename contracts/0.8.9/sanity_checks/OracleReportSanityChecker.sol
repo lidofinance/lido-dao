@@ -155,7 +155,7 @@ uint256 constant SHARE_RATE_PRECISION_E27 = 1e27;
 uint256 constant ONE_PWEI = 1e15;
 
 /// @title Sanity checks for the Lido's oracle report
-/// @notice The contracts contain view methods to perform sanity checks of the Lido's oracle report
+/// @notice The contracts contain methods to perform sanity checks of the Lido's oracle report
 ///     and lever methods for granular tuning of the params of the checks
 contract OracleReportSanityChecker is AccessControlEnumerable {
     using LimitsListPacker for LimitsList;
@@ -695,7 +695,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
         if (_preCLBalance <= _postCLBalance + _withdrawalVaultBalance) {
             _addReportData(reportTimestamp, stakingRouterExitedValidators, 0);
-            // If the CL balance is not decreased, we don't need to check anyting here
+            // If the CL balance is not decreased, we don't need to check anything here
             return;
         }
         _addReportData(reportTimestamp, stakingRouterExitedValidators, _preCLBalance - (_postCLBalance + _withdrawalVaultBalance));
