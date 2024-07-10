@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ZeroAddress } from "ethers";
+import { LogDescription, TransactionReceipt, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
@@ -29,9 +29,7 @@ describe("Protocol: All-round happy path", () => {
   let stEthHolder: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;
 
-  let balancesBeforeSubmit: { ETH: bigint; stETH: bigint };
-
-  // const amount = ether("100");
+  const amount = ether("100");
 
   before(async () => {
     protocol = await getLidoProtocol();
@@ -44,7 +42,7 @@ describe("Protocol: All-round happy path", () => {
 
     ethHolder = await impersonate(signers[0].address, ether("1000000"));
     stEthHolder = await impersonate(signers[1].address, ether("1000000"));
-    stranger = await impersonate(signers[2].address);
+    stranger = await impersonate(signers[2].address, ether("1000000"));
 
     // Fund the Lido contract with ETH
     const tx = await stEthHolder.sendTransaction({ to: contracts.lido.address, value: ether("10000") });
@@ -64,8 +62,10 @@ describe("Protocol: All-round happy path", () => {
   };
 
   it("works correctly", async () => {
-    expect(await contracts.lido.isStakingPaused()).to.be.false;
-    expect(await contracts.withdrawalQueue.isPaused()).to.be.false;
+    const { lido, withdrawalQueue } = contracts;
+
+    expect(await lido.isStakingPaused()).to.be.false;
+    expect(await withdrawalQueue.isPaused()).to.be.false;
 
     log.done("validates that the protocol is unpaused");
 
@@ -90,28 +90,27 @@ describe("Protocol: All-round happy path", () => {
 
     const getStrangerBalances = async (stranger: HardhatEthersSigner) =>
       batch({
-        ETH: ethers.provider.getBalance(stranger.address),
-        stETH: contracts.lido.balanceOf(stranger.address)
+        ETH: ethers.provider.getBalance(stranger),
+        stETH: lido.balanceOf(stranger)
       });
 
-    // const uncountedStETHShares = await contracts.lido.sharesOf(contracts.withdrawalQueue.address);
-    const approveTx = await contracts.lido.connect(stEthHolder).approve(contracts.withdrawalQueue.address, 1000n);
+    // const uncountedStETHShares = await lido.sharesOf(contracts.withdrawalQueue.address);
+    const approveTx = await lido.connect(stEthHolder).approve(contracts.withdrawalQueue.address, 1000n);
     await trace("lido.approve", approveTx);
 
-    const requestWithdrawalsTx = await contracts.withdrawalQueue
-      .connect(stEthHolder)
-      .requestWithdrawals([1000n], stEthHolder);
+    const requestWithdrawalsTx = await withdrawalQueue.connect(stEthHolder).requestWithdrawals([1000n], stEthHolder);
     await trace("withdrawalQueue.requestWithdrawals", requestWithdrawalsTx);
 
-    balancesBeforeSubmit = await getStrangerBalances(stranger);
+    const balancesBeforeSubmit = await getStrangerBalances(stranger);
 
     log.debug("Stranger before submit", {
-      address: stranger.address,
+      address: stranger,
       ETH: ethers.formatEther(balancesBeforeSubmit.ETH),
       stETH: ethers.formatEther(balancesBeforeSubmit.stETH)
     });
 
-    expect(balancesBeforeSubmit.stETH).to.be.equal(0n);
+    expect(balancesBeforeSubmit.stETH).to.be.equal(0n, "stETH balance before submit");
+    expect(balancesBeforeSubmit.ETH).to.be.equal(ether("1000000"), "ETH balance before submit");
 
     log.done("allows to submit eth by stranger");
 
@@ -119,63 +118,73 @@ describe("Protocol: All-round happy path", () => {
 
     log.done("ensures Simple DVT has some keys to deposit");
 
-    // const stakeLimitInfoBefore = await contracts.lido.getStakeLimitFullInfo();
-    //
-    // const growthPerBlock = stakeLimitInfoBefore.maxStakeLimit;
-    // const totalSupplyBeforeSubmit = await contracts.lido.totalSupply();
-    // const bufferedEtherBeforeSubmit = await contracts.lido.getBufferedEther();
-    // const stakingLimitBeforeSubmit = await contracts.lido.getCurrentStakeLimit();
-    // const heightBeforeSubmit = await ethers.provider.getBlockNumber();
-    //
-    // log.debug("Before submit", {
-    //   "Chain height": heightBeforeSubmit,
-    //   "Growth per block": ethers.formatEther(growthPerBlock),
-    //   "Total supply": ethers.formatEther(totalSupplyBeforeSubmit),
-    //   "Buffered ether": ethers.formatEther(bufferedEtherBeforeSubmit),
-    //   "Staking limit": ethers.formatEther(stakingLimitBeforeSubmit),
-    // });
+    const stakeLimitInfoBefore = await lido.getStakeLimitFullInfo();
+    const growthPerBlock = stakeLimitInfoBefore.maxStakeLimit / stakeLimitInfoBefore.maxStakeLimitGrowthBlocks;
 
-    // const tx = await contracts.lido.connect(stranger).submit(ZeroAddress, { value: amount, from: stranger });
-    // const receipt = await tx.wait();
-    //
-    // const stEthBalanceAfterSubmit = await contracts.lido.balanceOf(stranger.address);
-    // const strangerBalanceAfterSubmit = await ethers.provider.getBalance(stranger.address);
-    //
-    // log.debug("Stranger after submit", {
-    //   ETH: ethers.formatEther(strangerBalanceAfterSubmit),
-    //   stETH: ethers.formatEther(stEthBalanceAfterSubmit)
-    // });
-    //
-    // const balanceChange = BigIntMath.abs(strangerBalanceAfterSubmit - balancesBeforeSubmit.ETH);
-    // const gasUsed = receipt!.cumulativeGasUsed * receipt!.gasPrice!;
-    // const balanceChangeDiff = BigIntMath.abs(balanceChange - amount - gasUsed);
-    // expect(balanceChangeDiff).to.be.approximately(amount, 10n); // 0 <= x < 10
-    //
-    // const stEthBalanceChange = BigIntMath.abs(stEthBalanceAfterSubmit - balancesBeforeSubmit.stETH);
-    // const stEthBalanceChangeDiff = BigIntMath.abs(stEthBalanceChange - amount);
-    // expect(stEthBalanceChangeDiff).to.be.approximately(amount, 10n); // 0 <= x < 10
-    //
-    // log.debug("Balance changes", {
-    //   "ETH (Wei)": balanceChange,
-    //   "stETH (stWei)": stEthBalanceChange
-    // });
-    //
-    // const stakeLimitInfoAfter = await contracts.lido.getStakeLimitFullInfo();
-    // const growthPerBlockAfterSubmit = stakeLimitInfoAfter.maxStakeLimit;
-    // const totalSupplyAfterSubmit = await contracts.lido.totalSupply();
-    // const bufferedEtherAfterSubmit = await contracts.lido.getBufferedEther();
-    // const stakingLimitAfterSubmit = await contracts.lido.getCurrentStakeLimit();
-    //
-    // const heightAfterSubmit = await ethers.provider.getBlockNumber();
-    //
-    // log.debug("After submit", {
-    //   "Chain height": heightAfterSubmit,
-    //   "Growth per block": ethers.formatEther(growthPerBlockAfterSubmit),
-    //   "Total supply": ethers.formatEther(totalSupplyAfterSubmit),
-    //   "Buffered ether": ethers.formatEther(bufferedEtherAfterSubmit),
-    //   "Staking limit": ethers.formatEther(stakingLimitAfterSubmit)
-    // });
+    const totalSupplyBeforeSubmit = await lido.totalSupply();
+    const bufferedEtherBeforeSubmit = await lido.getBufferedEther();
+    const stakingLimitBeforeSubmit = await lido.getCurrentStakeLimit();
+    const heightBeforeSubmit = await ethers.provider.getBlockNumber();
 
-    // const sharesToBeMinted = await contracts.lido.getSharesByPooledEth(amount);
+    log.debug("Before submit", {
+      "Chain height": heightBeforeSubmit,
+      "Growth per block": ethers.formatEther(growthPerBlock),
+      "Total supply": ethers.formatEther(totalSupplyBeforeSubmit),
+      "Buffered ether": ethers.formatEther(bufferedEtherBeforeSubmit),
+      "Staking limit": ethers.formatEther(stakingLimitBeforeSubmit)
+    });
+
+    const tx = await lido.connect(stranger).submit(ZeroAddress, { value: amount });
+    const receipt = await trace("lido.submit", tx) as TransactionReceipt;
+
+    expect(receipt).not.to.be.null;
+
+    const balancesAfterSubmit = await getStrangerBalances(stranger);
+
+    log.debug("Stranger after submit", {
+      address: stranger,
+      ETH: ethers.formatEther(balancesAfterSubmit.ETH),
+      stETH: ethers.formatEther(balancesAfterSubmit.stETH)
+    });
+
+    const spendEth = amount + receipt.cumulativeGasUsed;
+
+    expect(balancesAfterSubmit.stETH).to.be.approximately(balancesBeforeSubmit.stETH + amount, 10n, "stETH balance after submit");
+    expect(balancesAfterSubmit.ETH).to.be.approximately(balancesBeforeSubmit.ETH - spendEth, 10n, "ETH balance after submit");
+
+    const logs = receipt.logs.map(l => lido.interface.parseLog(l)) as LogDescription[];
+
+    const submittedEvent = logs.find(l => l.name === "Submitted");
+    const transferSharesEvent = logs.find(l => l.name === "TransferShares");
+    const sharesToBeMinted = await lido.getSharesByPooledEth(amount);
+    const mintedShares = await lido.sharesOf(stranger);
+
+    expect(submittedEvent).not.to.be.undefined;
+    expect(transferSharesEvent).not.to.be.undefined;
+
+    expect(submittedEvent!.args[0]).to.be.equal(stranger, "Submitted event sender");
+    expect(submittedEvent!.args[1]).to.be.equal(amount, "Submitted event amount");
+    expect(submittedEvent!.args[2]).to.be.equal(ZeroAddress, "Submitted event referral");
+
+    expect(transferSharesEvent!.args[0]).to.be.equal(ZeroAddress, "TransferShares event sender");
+    expect(transferSharesEvent!.args[1]).to.be.equal(stranger, "TransferShares event recipient");
+    expect(transferSharesEvent!.args[2]).to.be.approximately(sharesToBeMinted, 10n, "TransferShares event amount");
+
+    expect(mintedShares).to.be.equal(sharesToBeMinted, "Minted shares");
+
+    const totalSupplyAfterSubmit = await lido.totalSupply();
+    const bufferedEtherAfterSubmit = await lido.getBufferedEther();
+    const stakingLimitAfterSubmit = await lido.getCurrentStakeLimit();
+
+    expect(totalSupplyAfterSubmit).to.be.equal(totalSupplyBeforeSubmit + amount, "Total supply after submit");
+    expect(bufferedEtherAfterSubmit).to.be.equal(bufferedEtherBeforeSubmit + amount, "Buffered ether after submit");
+
+    if (stakingLimitBeforeSubmit >= stakeLimitInfoBefore.maxStakeLimit - growthPerBlock) {
+      expect(stakingLimitAfterSubmit).to.be.equal(stakingLimitBeforeSubmit - amount, "Staking limit after submit without growth");
+    } else {
+      expect(stakingLimitAfterSubmit).to.be.equal(stakingLimitBeforeSubmit - amount + growthPerBlock, "Staking limit after submit");
+    }
+
+    log.done("submits eth to the Lido contract");
   });
 });

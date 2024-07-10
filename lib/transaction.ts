@@ -1,7 +1,7 @@
 import { ContractTransactionResponse, TransactionResponse } from "ethers";
 import hre, { ethers } from "hardhat";
 
-import { log } from "./index";
+import { log } from "lib";
 
 type Transaction = TransactionResponse | ContractTransactionResponse;
 
@@ -10,7 +10,7 @@ export async function trace(name: string, tx: Transaction) {
 
   if (!receipt) {
     log.error("Failed to trace transaction: no receipt!");
-    return;
+    return receipt;
   }
 
   const network = await tx.provider.getNetwork();
@@ -29,6 +29,8 @@ export async function trace(name: string, tx: Transaction) {
     nonce: tx.nonce,
     blockNumber: receipt.blockNumber,
     hash: receipt.hash,
-    status: !!receipt.status,
+    status: !!receipt.status
   });
+
+  return receipt;
 }
