@@ -115,7 +115,7 @@ describe("Protocol: All-round happy path", () => {
 
     log.done("allows to submit eth by stranger");
 
-    await sdvt.fillOpsVettedKeys(41n, 5n);
+    await sdvt.fillOpsVettedKeys(3n, 5n);
 
     log.done("ensures Simple DVT has some keys to deposit");
 
