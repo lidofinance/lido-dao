@@ -738,7 +738,7 @@ contract AccountingOracle is BaseOracle {
         }
 
         // at least 32 bytes for the next hash value + 35 bytes for the first item with 1 node operator
-        if(data.length < 67) {
+        if (data.length < 67) {
             revert UnexpectedExtraDataLength();
         }
 
@@ -763,7 +763,7 @@ contract AccountingOracle is BaseOracle {
         _processExtraDataItems(data, iter);
         uint256 itemsProcessed = iter.index + 1;
 
-        if(dataHash == ZERO_HASH) {
+        if (dataHash == ZERO_HASH) {
             if (itemsProcessed != procState.itemsCount) {
                 revert UnexpectedExtraDataItemsCount(procState.itemsCount, itemsProcessed);
             }

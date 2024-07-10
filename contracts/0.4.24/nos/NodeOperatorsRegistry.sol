@@ -589,32 +589,19 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
     /// @notice Permissionless method for distributing all accumulated module rewards among node operators
     /// based on the latest accounting report.
     ///
-    /// @dev Rewards can be distributed after node operators' statistics are updated
-    /// until the next reward is transferred to the module during the next oracle frame.
+    /// @dev Rewards can be distributed after all necessary data required to distribute rewards among operators
+    /// has been delivered, including exited and stuck keys.
     ///
-    /// ===================================== Start report frame 1 =====================================
+    /// The reward distribution lifecycle:
     ///
-    /// 1. Oracle first phase: Reach hash consensus.
-    /// 2. Oracle second phase: Module receives rewards.
-    /// 3. Oracle third phase: Operator statistics are updated.
+    /// 1. TransferredToModule: Rewards are transferred to the module during an oracle main report.
+    /// 2. ReadyForDistribution: All necessary data required to distribute rewards among operators has been delivered.
+    /// 3. Distributed: Rewards have been successfully distributed.
     ///
-    ///                                 ... Reward can be distributed ...
+    /// The function can only be called when the state is ReadyForDistribution.
     ///
-    /// =====================================  Start report frame 2  =====================================
-    ///
-    ///                                 ... Reward can be distributed ...
-    ///                                      (if not distributed yet)
-    ///
-    /// 1. Oracle first phase: Reach hash consensus.
-    /// 2. Oracle second phase: Module receives rewards.
-    ///
-    ///                                ... Reward CANNOT be distributed ...
-    ///
-    /// 3. Oracle third phase: Operator statistics are updated.
-    ///
-    ///                                 ... Reward can be distributed ...
-    ///
-    /// =====================================  Start report frame 3  =====================================
+    /// @dev Rewards can be distributed after node operators' statistics are updated until the next reward
+    /// is transferred to the module during the next oracle frame.
     function distributeReward() external {
         require(getRewardDistributionState() == RewardDistributionState.ReadyForDistribution, "DISTRIBUTION_NOT_READY");
         _updateRewardDistributionState(RewardDistributionState.Distributed);

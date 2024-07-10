@@ -78,7 +78,7 @@ async function main() {
     admin,
     [
       sanityChecks.exitedValidatorsPerDayLimit,
-      sanityChecks.oneOffCLBalanceDecreaseBPLimit,
+      sanityChecks.appearedValidatorsPerDayLimit,
       sanityChecks.annualBalanceIncreaseBPLimit,
       sanityChecks.simulatedShareRateDeviationBPLimit,
       sanityChecks.maxValidatorExitRequestsPerReport,
@@ -86,9 +86,10 @@ async function main() {
       sanityChecks.maxNodeOperatorsPerExtraDataItemCount,
       sanityChecks.requestTimestampMargin,
       sanityChecks.maxPositiveTokenRebase,
-      sanityChecks.appearedValidatorsPerDayLimit,
+      sanityChecks.initialSlashingAmountPWei,
+      sanityChecks.inactivityPenaltiesAmountPWei,
+      sanityChecks.clBalanceOraclesErrorUpperBPLimit,
     ],
-    [[], [], [], [], [], [], [], [], [], [], []],
   ];
   const oracleReportSanityChecker = await deployWithoutProxy(
     Sk.oracleReportSanityChecker,

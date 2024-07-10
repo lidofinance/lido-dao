@@ -71,8 +71,7 @@ describe("StakingRouter:module-management", () => {
           ),
       ).to.be.revertedWithOZAccessControlError(user.address, await stakingRouter.STAKING_MODULE_MANAGE_ROLE());
     });
-    //todo priority < share
-    //todo priority > 100
+
     it("Reverts if the target share is greater than 100%", async () => {
       const STAKE_SHARE_LIMIT_OVER_100 = 100_01;
 
@@ -368,6 +367,20 @@ describe("StakingRouter:module-management", () => {
           NEW_MIN_DEPOSIT_BLOCK_DISTANCE,
         ),
       ).to.be.revertedWithCustomError(stakingRouter, "InvalidPriorityExitShareThreshold");
+    });
+
+    it("Reverts if the new deposit block distance is zero", async () => {
+      await expect(
+        stakingRouter.updateStakingModule(
+          ID,
+          NEW_STAKE_SHARE_LIMIT,
+          NEW_PRIORITY_EXIT_SHARE_THRESHOLD,
+          NEW_MODULE_FEE,
+          NEW_TREASURY_FEE,
+          NEW_MAX_DEPOSITS_PER_BLOCK,
+          0n,
+        ),
+      ).to.be.revertedWithCustomError(stakingRouter, "InvalidMinDepositBlockDistance");
     });
 
     it("Reverts if the sum of the new module and treasury fees is greater than 100%", async () => {

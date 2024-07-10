@@ -225,7 +225,7 @@ describe("NodeOperatorsRegistry", () => {
     beforeEach(async () => {
       // reset version there to test upgrade finalization
       await nor.testing_setBaseVersion(2);
-      await nor.testing_setRewardDistributionStatus(0);
+      await nor.testing_setRewardDistributionState(0);
     });
 
     it("fails with CONTRACT_NOT_INITIALIZED error when called on implementation", async () => {
@@ -504,20 +504,20 @@ describe("NodeOperatorsRegistry", () => {
 
   context("getRewardDistributionState()", () => {
     it("returns correct reward distribution state", async () => {
-      await nor.testing_setRewardDistributionStatus(RewardDistributionState.ReadyForDistribution);
+      await nor.testing_setRewardDistributionState(RewardDistributionState.ReadyForDistribution);
       expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.ReadyForDistribution);
 
-      await nor.testing_setRewardDistributionStatus(RewardDistributionState.TransferredToModule);
+      await nor.testing_setRewardDistributionState(RewardDistributionState.TransferredToModule);
       expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.TransferredToModule);
 
-      await nor.testing_setRewardDistributionStatus(RewardDistributionState.Distributed);
+      await nor.testing_setRewardDistributionState(RewardDistributionState.Distributed);
       expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.Distributed);
     });
   });
 
   context("distributeReward()", () => {
     it('distribute reward when module not in "ReadyForDistribution" status', async () => {
-      await nor.testing_setRewardDistributionStatus(RewardDistributionState.ReadyForDistribution);
+      await nor.testing_setRewardDistributionState(RewardDistributionState.ReadyForDistribution);
 
       expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.ReadyForDistribution);
       await expect(nor.distributeReward())
@@ -527,10 +527,10 @@ describe("NodeOperatorsRegistry", () => {
     });
 
     it('reverts with "DISTRIBUTION_NOT_READY" error when module not in "ReadyForDistribution" status', async () => {
-      await nor.testing_setRewardDistributionStatus(RewardDistributionState.TransferredToModule);
+      await nor.testing_setRewardDistributionState(RewardDistributionState.TransferredToModule);
       await expect(nor.distributeReward()).to.be.revertedWith("DISTRIBUTION_NOT_READY");
 
-      await nor.testing_setRewardDistributionStatus(RewardDistributionState.Distributed);
+      await nor.testing_setRewardDistributionState(RewardDistributionState.Distributed);
       await expect(nor.distributeReward()).to.be.revertedWith("DISTRIBUTION_NOT_READY");
     });
   });
