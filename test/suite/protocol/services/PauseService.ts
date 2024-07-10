@@ -1,7 +1,8 @@
 import { LidoProtocol } from "../types";
 
 export class PauseService {
-  constructor(protected readonly protocol: LidoProtocol) {}
+  constructor(protected readonly protocol: LidoProtocol) {
+  }
 
   /**
    * Unpauses the staking contract.
@@ -9,7 +10,7 @@ export class PauseService {
   async unpauseStaking() {
     const { lido } = this.protocol.contracts;
     if (await lido.isStakingPaused()) {
-      const votingSigner = await this.protocol.discoveryService.votingSigner();
+      const votingSigner = await this.protocol.getSigner("voting");
       await lido.connect(votingSigner).resume();
     }
   }
@@ -22,7 +23,7 @@ export class PauseService {
 
     if (await withdrawalQueue.isPaused()) {
       const resumeRole = await withdrawalQueue.RESUME_ROLE();
-      const agentSigner = await this.protocol.discoveryService.agentSigner();
+      const agentSigner = await this.protocol.getSigner("agent");
       const agentSignerAddress = await agentSigner.getAddress();
 
       await withdrawalQueue.connect(agentSigner).grantRole(resumeRole, agentSignerAddress);

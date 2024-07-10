@@ -6,8 +6,10 @@ import { networks, ProtocolNetworkConfig } from "./networks";
 
 export class DiscoveryConfig {
   public readonly locatorAddress: string;
+
   public readonly agentAddress: string;
   public readonly votingAddress: string;
+  public readonly easyTrackExecutorAddress: string;
 
   private networkConfig: ProtocolNetworkConfig;
 
@@ -15,8 +17,10 @@ export class DiscoveryConfig {
     this.networkConfig = this.getNetworkConf();
 
     this.locatorAddress = process.env[this.networkConfig.env.locator] ?? this.networkConfig.defaults.locator ?? "";
+
     this.agentAddress = process.env[this.networkConfig.env.agent] ?? this.networkConfig.defaults.agent ?? "";
     this.votingAddress = process.env[this.networkConfig.env.voting] ?? this.networkConfig.defaults.voting ?? "";
+    this.easyTrackExecutorAddress = process.env[this.networkConfig.env.easyTrack] ?? this.networkConfig.defaults.easyTrack ?? "";
 
     this.validateAddresses();
 
@@ -25,6 +29,7 @@ export class DiscoveryConfig {
       "Locator address": this.locatorAddress,
       "Agent address": this.agentAddress,
       "Voting address": this.votingAddress,
+      "Easy track executor address": this.easyTrackExecutorAddress
     });
   }
 

@@ -1,12 +1,12 @@
 import hre from "hardhat";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-
 import {
   AccountingOracle,
+  ACL,
   Burner,
   DepositSecurityModule,
   HashConsensus,
+  Kernel,
   LegacyOracle,
   Lido,
   LidoExecutionLayerRewardsVault,
@@ -17,107 +17,118 @@ import {
   StakingRouter,
   ValidatorsExitBusOracle,
   WithdrawalQueueERC721,
-  WithdrawalVault,
+  WithdrawalVault
 } from "typechain-types";
 
-import { batch, ether, impersonate, log } from "lib";
+import { batch, log } from "lib";
 
-import { BaseContract, BaseContracts, Contracts, LoadedContract } from "../types";
+import { BaseContract, BaseContracts, Contracts, LoadedContract, Signers } from "../types";
 
 import { DiscoveryConfig } from "./DiscoveryConfig";
 
 export class DiscoveryService {
   protected contracts: Contracts | null = null;
+  protected signers: Signers | null = null;
 
-  constructor(protected readonly discoveryConfig: DiscoveryConfig) {}
+  constructor(protected readonly discoveryConfig: DiscoveryConfig) {
+  }
 
   async locator(): Promise<LidoLocator> {
     return await hre.ethers.getContractAt("LidoLocator", this.discoveryConfig.locatorAddress);
   }
 
-  async agentSigner(balance = ether("100")): Promise<HardhatEthersSigner> {
-    const signer = await hre.ethers.getSigner(this.discoveryConfig.agentAddress);
-    return impersonate(signer.address, balance);
-  }
-
-  async votingSigner(balance = ether("100")): Promise<HardhatEthersSigner> {
-    const signer = await hre.ethers.getSigner(this.discoveryConfig.votingAddress);
-    return impersonate(signer.address, balance);
-  }
-
   async discover() {
     const locator = await this.locator();
 
-    if (this.contracts) {
-      log("Contracts are already discovered");
-      return this.contracts;
+    if (!this.contracts) {
+      this.contracts = await this.discoverContracts(locator);
     }
 
+    if (!this.signers) {
+      this.signers = await this.discoverSigners();
+    }
+
+    return {
+      contracts: this.contracts,
+      signers: this.signers
+    };
+  }
+
+  private async discoverContracts(locator: LidoLocator) {
     const baseContracts = (await batch({
       accountingOracle: this.loadContract<AccountingOracle>("AccountingOracle", await locator.accountingOracle()),
       depositSecurityModule: this.loadContract<DepositSecurityModule>(
         "DepositSecurityModule",
-        await locator.depositSecurityModule(),
+        await locator.depositSecurityModule()
       ),
       elRewardsVault: this.loadContract<LidoExecutionLayerRewardsVault>(
         "LidoExecutionLayerRewardsVault",
-        await locator.elRewardsVault(),
+        await locator.elRewardsVault()
       ),
       legacyOracle: this.loadContract<LegacyOracle>("LegacyOracle", await locator.legacyOracle()),
       lido: this.loadContract<Lido>("Lido", await locator.lido()),
       oracleReportSanityChecker: this.loadContract<OracleReportSanityChecker>(
         "OracleReportSanityChecker",
-        await locator.oracleReportSanityChecker(),
+        await locator.oracleReportSanityChecker()
       ),
       burner: this.loadContract<Burner>("Burner", await locator.burner()),
       stakingRouter: this.loadContract<StakingRouter>("StakingRouter", await locator.stakingRouter()),
       validatorsExitBusOracle: this.loadContract<ValidatorsExitBusOracle>(
         "ValidatorsExitBusOracle",
-        await locator.validatorsExitBusOracle(),
+        await locator.validatorsExitBusOracle()
       ),
       withdrawalQueue: this.loadContract<WithdrawalQueueERC721>(
         "WithdrawalQueueERC721",
-        await locator.withdrawalQueue(),
+        await locator.withdrawalQueue()
       ),
       withdrawalVault: this.loadContract<WithdrawalVault>("WithdrawalVault", await locator.withdrawalVault()),
       oracleDaemonConfig: this.loadContract<OracleDaemonConfig>(
         "OracleDaemonConfig",
-        await locator.oracleDaemonConfig(),
+        await locator.oracleDaemonConfig()
       ),
       postTokenRebaseReceiverAddress: locator.postTokenRebaseReceiver(),
-      treasuryAddress: locator.treasury(),
+      treasuryAddress: locator.treasury()
     })) as BaseContracts;
 
     // Extend contracts with auto-discoverable contracts
-    this.contracts = {
+    const contracts = {
       ...baseContracts,
       ...(await batch({
+        ...(await this.loadAragonContracts(baseContracts.lido)),
         ...(await this.loadHashConsensus(baseContracts.accountingOracle)),
-        ...(await this.loadStakingModules(baseContracts.stakingRouter)),
-      })),
+        ...(await this.loadStakingModules(baseContracts.stakingRouter))
+      }))
     } as Contracts;
 
     log.debug("Discovered contracts", {
-      "Accounting Oracle": this.contracts.accountingOracle.address,
-      "Deposit Security Module": this.contracts.depositSecurityModule.address,
-      "EL Rewards Vault": this.contracts.elRewardsVault.address,
-      "Legacy Oracle": this.contracts.legacyOracle.address,
-      "Lido": this.contracts.lido.address,
-      "Oracle Report Sanity Checker": this.contracts.oracleReportSanityChecker.address,
-      "Burner": this.contracts.burner.address,
-      "Staking Router": this.contracts.stakingRouter.address,
-      "Validators Exit Bus Oracle": this.contracts.validatorsExitBusOracle.address,
-      "Withdrawal Queue": this.contracts.withdrawalQueue.address,
-      "Withdrawal Vault": this.contracts.withdrawalVault.address,
-      "Oracle Daemon Config": this.contracts.oracleDaemonConfig.address,
-      "Post Token Rebase Receiver": this.contracts.postTokenRebaseReceiverAddress,
-      "Treasury": this.contracts.treasuryAddress,
-      "Hash Consensus": this.contracts.hashConsensus.address,
-      "Node Operators Registry": this.contracts.nor.address,
-      "Simple DVT": this.contracts.sdvt.address,
+      "Accounting Oracle": contracts.accountingOracle.address,
+      "Deposit Security Module": contracts.depositSecurityModule.address,
+      "EL Rewards Vault": contracts.elRewardsVault.address,
+      "Legacy Oracle": contracts.legacyOracle.address,
+      "Lido": contracts.lido.address,
+      "Oracle Report Sanity Checker": contracts.oracleReportSanityChecker.address,
+      "Burner": contracts.burner.address,
+      "Staking Router": contracts.stakingRouter.address,
+      "Validators Exit Bus Oracle": contracts.validatorsExitBusOracle.address,
+      "Withdrawal Queue": contracts.withdrawalQueue.address,
+      "Withdrawal Vault": contracts.withdrawalVault.address,
+      "Oracle Daemon Config": contracts.oracleDaemonConfig.address,
+      "Post Token Rebase Receiver": contracts.postTokenRebaseReceiverAddress,
+      "Treasury": contracts.treasuryAddress,
+      "Hash Consensus": contracts.hashConsensus.address,
+      "Node Operators Registry": contracts.nor.address,
+      "Simple DVT": contracts.sdvt.address
     });
 
-    return this.contracts;
+    return contracts;
+  }
+
+  private async discoverSigners() {
+    return {
+      agent: this.discoveryConfig.agentAddress,
+      voting: this.discoveryConfig.votingAddress,
+      easyTrackExecutor: this.discoveryConfig.easyTrackExecutorAddress
+    };
   }
 
   private async loadContract<ContractType extends BaseContract>(name: string, address: string) {
@@ -128,10 +139,20 @@ export class DiscoveryService {
     return contract;
   }
 
+  private async loadAragonContracts(lido: LoadedContract<Lido>) {
+    const kernelAddress = await lido.kernel();
+    const kernel = await this.loadContract<Kernel>("Kernel", kernelAddress);
+
+    return {
+      kernel: new Promise((resolve) => resolve(kernel)), // hack to avoid batch TS error
+      acl: this.loadContract<ACL>("ACL", await kernel.acl())
+    };
+  }
+
   private async loadHashConsensus(accountingOracle: LoadedContract<AccountingOracle>) {
     const hashConsensusAddress = await accountingOracle.getConsensusContract();
     return {
-      hashConsensus: this.loadContract<HashConsensus>("HashConsensus", hashConsensusAddress),
+      hashConsensus: this.loadContract<HashConsensus>("HashConsensus", hashConsensusAddress)
     };
   }
 
@@ -139,7 +160,7 @@ export class DiscoveryService {
     const [nor, sdvt] = await stakingRouter.getStakingModules();
     return {
       nor: this.loadContract<NodeOperatorsRegistry>("NodeOperatorsRegistry", nor.stakingModuleAddress),
-      sdvt: this.loadContract<NodeOperatorsRegistry>("NodeOperatorsRegistry", sdvt.stakingModuleAddress),
+      sdvt: this.loadContract<NodeOperatorsRegistry>("NodeOperatorsRegistry", sdvt.stakingModuleAddress)
     };
   }
 }

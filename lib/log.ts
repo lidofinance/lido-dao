@@ -100,7 +100,7 @@ log.deployScriptFinish = (filename: string) => {
 log.done = (message: string) => {
   log.success(message);
   log.emptyLine();
-}
+};
 
 log.debug = (title: string, records: Record<string, ConvertibleToString>) => {
   if (!DEBUG) return;
@@ -129,7 +129,7 @@ log.trace = (
     blockNumber: number;
     hash: string;
     status: boolean;
-  },
+  }
 ) => {
   const color = tx.status ? gr : rd;
 

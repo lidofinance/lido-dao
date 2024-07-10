@@ -2,9 +2,11 @@ import { BaseContract as EthersBaseContract } from "ethers";
 
 import {
   AccountingOracle,
+  ACL,
   Burner,
   DepositSecurityModule,
   HashConsensus,
+  Kernel,
   LegacyOracle,
   Lido,
   LidoExecutionLayerRewardsVault,
@@ -14,7 +16,7 @@ import {
   StakingRouter,
   ValidatorsExitBusOracle,
   WithdrawalQueueERC721,
-  WithdrawalVault,
+  WithdrawalVault
 } from "typechain-types";
 
 import { Protocol } from "./Protocol";
@@ -40,11 +42,20 @@ export interface Contracts {
   // Addresses
   postTokenRebaseReceiverAddress: string;
   treasuryAddress: string;
+  // Kernel
+  kernel: LoadedContract<Kernel>;
+  acl: LoadedContract<ACL>;
   // Dependencies
   hashConsensus: LoadedContract<HashConsensus>;
   // NOR & SDVT
   nor: LoadedContract<NodeOperatorsRegistry>;
   sdvt: LoadedContract<NodeOperatorsRegistry>;
+}
+
+export interface Signers {
+  agent: string;
+  voting: string;
+  easyTrackExecutor: string;
 }
 
 export type BaseContract = EthersBaseContract;

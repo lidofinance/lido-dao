@@ -4,7 +4,7 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { batch, ether, impersonate, log, trace } from "lib";
+import { ether, impersonate, log, trace } from "lib";
 
 import { Snapshot } from "test/suite";
 import {
@@ -12,8 +12,8 @@ import {
   Contracts,
   getLidoProtocol,
   LidoProtocol,
-  NodeOperatorsRegistryService,
   PauseService,
+  SimpleDVTService
 } from "test/suite/protocol";
 
 describe("Protocol: All-round happy path", () => {
@@ -23,7 +23,7 @@ describe("Protocol: All-round happy path", () => {
   let snapshot: string;
   let pause: PauseService;
   let accounting: AccountingOracleService;
-  let sdvt: NodeOperatorsRegistryService;
+  let sdvt: SimpleDVTService;
 
   let ethHolder: HardhatEthersSigner;
   let stEthHolder: HardhatEthersSigner;
@@ -78,7 +78,7 @@ describe("Protocol: All-round happy path", () => {
 
       log.debug("Withdrawal queue", {
         "Last finalized request ID": lastFinalizedRequestId,
-        "Last request ID": lastRequestId,
+        "Last request ID": lastRequestId
       });
 
       await submitStake(ether("10000"));
@@ -91,7 +91,7 @@ describe("Protocol: All-round happy path", () => {
     const getStrangerBalances = async (stranger: HardhatEthersSigner) =>
       batch({
         ETH: ethers.provider.getBalance(stranger.address),
-        stETH: contracts.lido.balanceOf(stranger.address),
+        stETH: contracts.lido.balanceOf(stranger.address)
       });
 
     // const uncountedStETHShares = await contracts.lido.sharesOf(contracts.withdrawalQueue.address);
@@ -108,32 +108,32 @@ describe("Protocol: All-round happy path", () => {
     log.debug("Stranger before submit", {
       address: stranger.address,
       ETH: ethers.formatEther(balancesBeforeSubmit.ETH),
-      stETH: ethers.formatEther(balancesBeforeSubmit.stETH),
+      stETH: ethers.formatEther(balancesBeforeSubmit.stETH)
     });
 
     expect(balancesBeforeSubmit.stETH).to.be.equal(0n);
 
     log.done("allows to submit eth by stranger");
 
-    await sdvt.fillOpsVettedKeys(stranger, 3n, 5n);
+    await sdvt.fillOpsVettedKeys(41n, 5n);
 
     log.done("ensures Simple DVT has some keys to deposit");
 
-    const stakeLimitInfoBefore = await contracts.lido.getStakeLimitFullInfo();
-
-    const growthPerBlock = stakeLimitInfoBefore.maxStakeLimit;
-    const totalSupplyBeforeSubmit = await contracts.lido.totalSupply();
-    const bufferedEtherBeforeSubmit = await contracts.lido.getBufferedEther();
-    const stakingLimitBeforeSubmit = await contracts.lido.getCurrentStakeLimit();
-    const heightBeforeSubmit = await ethers.provider.getBlockNumber();
-
-    log.debug("Before submit", {
-      "Chain height": heightBeforeSubmit,
-      "Growth per block": ethers.formatEther(growthPerBlock),
-      "Total supply": ethers.formatEther(totalSupplyBeforeSubmit),
-      "Buffered ether": ethers.formatEther(bufferedEtherBeforeSubmit),
-      "Staking limit": ethers.formatEther(stakingLimitBeforeSubmit),
-    });
+    // const stakeLimitInfoBefore = await contracts.lido.getStakeLimitFullInfo();
+    //
+    // const growthPerBlock = stakeLimitInfoBefore.maxStakeLimit;
+    // const totalSupplyBeforeSubmit = await contracts.lido.totalSupply();
+    // const bufferedEtherBeforeSubmit = await contracts.lido.getBufferedEther();
+    // const stakingLimitBeforeSubmit = await contracts.lido.getCurrentStakeLimit();
+    // const heightBeforeSubmit = await ethers.provider.getBlockNumber();
+    //
+    // log.debug("Before submit", {
+    //   "Chain height": heightBeforeSubmit,
+    //   "Growth per block": ethers.formatEther(growthPerBlock),
+    //   "Total supply": ethers.formatEther(totalSupplyBeforeSubmit),
+    //   "Buffered ether": ethers.formatEther(bufferedEtherBeforeSubmit),
+    //   "Staking limit": ethers.formatEther(stakingLimitBeforeSubmit),
+    // });
 
     // const tx = await contracts.lido.connect(stranger).submit(ZeroAddress, { value: amount, from: stranger });
     // const receipt = await tx.wait();
