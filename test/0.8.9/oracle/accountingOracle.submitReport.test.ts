@@ -383,7 +383,7 @@ describe("AccountingOracle.sol:submitReport", () => {
           .grantRole(await sanityChecker.MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE(), admin.address);
         await sanityChecker.connect(admin).setMaxAccountingExtraDataListItemsCount(MAX_ACCOUNTING_EXTRA_DATA_LIMIT);
 
-        expect((await sanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount).to.be.equal(
+        expect((await sanityChecker.getOracleReportLimits()).maxItemsPerExtraDataTransaction).to.be.equal(
           MAX_ACCOUNTING_EXTRA_DATA_LIMIT,
         );
 
@@ -398,7 +398,7 @@ describe("AccountingOracle.sol:submitReport", () => {
           .grantRole(await sanityChecker.MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE(), admin.address);
         await sanityChecker.connect(admin).setMaxAccountingExtraDataListItemsCount(MAX_ACCOUNTING_EXTRA_DATA_LIMIT);
 
-        expect((await sanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount).to.be.equal(
+        expect((await sanityChecker.getOracleReportLimits()).maxItemsPerExtraDataTransaction).to.be.equal(
           MAX_ACCOUNTING_EXTRA_DATA_LIMIT,
         );
 
