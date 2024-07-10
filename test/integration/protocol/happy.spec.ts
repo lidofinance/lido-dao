@@ -4,7 +4,7 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { ether, impersonate, log, trace } from "lib";
+import { batch, ether, impersonate, log, trace } from "lib";
 
 import { Snapshot } from "test/suite";
 import {
