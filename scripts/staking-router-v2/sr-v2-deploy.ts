@@ -36,8 +36,7 @@ function getEnvVariable(name: string, defaultValue?: string) {
 const SECONDS_PER_SLOT = 12;
 const GENESIS_TIME = 1606824023;
 // Oracle report sanity checker
-const LIMITS = [9000, 500, 1000, 50, 600, 8, 62, 7680, 750000, 43200];
-const MANAGERS_ROSTER = [[], [], [], [], [], [], [], [], [], [], []];
+const LIMITS = [9000, 43200, 1000, 50, 600, 8, 62, 7680, 750000, 1000, 101, 74];
 // DSM args
 const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 6646;
 const MAX_OPERATORS_PER_UNVETTING = 200;
@@ -144,7 +143,7 @@ async function main() {
   log.emptyLine();
 
   // Deploy OracleReportSanityCheckerArgs
-  const oracleReportSanityCheckerArgs = [LOCATOR, SC_ADMIN, LIMITS, MANAGERS_ROSTER];
+  const oracleReportSanityCheckerArgs = [LOCATOR, SC_ADMIN, LIMITS];
   const oracleReportSanityCheckerAddress = (
     await deployWithoutProxy(
       Sk.oracleReportSanityChecker,
