@@ -133,9 +133,12 @@ log.trace = (
 ) => {
   const color = tx.status ? gr : rd;
 
-  log(`Transaction sent`, yl(tx.hash));
-  log(`  Gas price: ${yl(tx.gasPrice)} gwei   Gas limit: ${yl(tx.gasLimit)}   Nonce: ${yl(tx.nonce)}`);
-  log(`  Block: ${yl(tx.blockNumber)}   Gas used: ${yl(tx.gasUsed)} (${yl(tx.gasUsedPercent)}%)`);
+  const value = tx.value === "0.0" ? "" : `Value: ${yl(tx.value)} ETH`;
+
+  log(`Transaction sent:`, yl(tx.hash));
+  log(`  From: ${yl(tx.from)}   To: ${yl(tx.to)}  ${value}`);
+  log(`  Gas price: ${yl(tx.gasPrice)} gwei   Gas limit: ${yl(tx.gasLimit)}   Gas used: ${yl(tx.gasUsed)} (${yl(tx.gasUsedPercent)})`);
+  log(`  Block: ${yl(tx.blockNumber)}   Nonce: ${yl(tx.nonce)}`);
   log(`  ${color(name)} ${color(tx.status ? "confirmed" : "failed")}`);
   log.emptyLine();
 };

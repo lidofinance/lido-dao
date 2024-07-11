@@ -1,17 +1,8 @@
-type ProtocolNetworkItems = {
-  locator: string;
-  agent: string;
-  voting: string;
-  easyTrack: string;
-};
+import { ProtocolNetworkConfig } from "./types";
 
-export type ProtocolNetworkConfig = {
-  env: Record<keyof ProtocolNetworkItems, string>;
-  defaults: Record<keyof ProtocolNetworkItems, string>;
-};
-
-// TODO: inflate config from whatever source is available (yaml, json, etc)
-
+/**
+ * Network configuration for the protocol discovery in the test environment.
+ */
 const local: ProtocolNetworkConfig = {
   env: {
     locator: "LOCAL_LOCATOR_ADDRESS",
@@ -27,7 +18,10 @@ const local: ProtocolNetworkConfig = {
   }
 };
 
-const mainnetFork: ProtocolNetworkConfig = {
+/**
+ * Network configuration for the protocol discovery in the mainnet environment.
+ */
+const mainnet: ProtocolNetworkConfig = {
   env: {
     locator: "MAINNET_LOCATOR_ADDRESS",
     agent: "MAINNET_AGENT_ADDRESS",
@@ -44,8 +38,11 @@ const mainnetFork: ProtocolNetworkConfig = {
   }
 };
 
-export const networks: Record<string, ProtocolNetworkConfig> = {
-  "local": local,
-  "mainnet-fork": mainnetFork,
-  "hardhat": mainnetFork
-};
+/**
+ * Map of HardHat networks to the protocol discovery config
+ */
+export const networks = new Map<string, ProtocolNetworkConfig>([
+  ["local", local],
+  ["mainnet-fork", mainnet],
+  ["hardhat", mainnet]
+]);
