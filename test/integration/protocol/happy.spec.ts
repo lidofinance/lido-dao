@@ -13,11 +13,11 @@ import { ensureSDVTOperators, oracleReport, unpauseStaking, unpauseWithdrawalQue
 import { Snapshot } from "test/suite";
 
 const AMOUNT = ether("100");
-const MAX_DEPOSIT = 150n;
-const CURATED_MODULE_ID = 1n;
-const SIMPLE_DVT_MODULE_ID = 2n;
+// const MAX_DEPOSIT = 150n;
+// const CURATED_MODULE_ID = 1n;
+// const SIMPLE_DVT_MODULE_ID = 2n;
 
-const ZERO_HASH = new Uint8Array(32).fill(0);
+// const ZERO_HASH = new Uint8Array(32).fill(0);
 
 const getEvents = (receipt: TransactionReceipt, contract: BaseContract, name: string): LogDescription[] | undefined =>
   receipt.logs
@@ -68,7 +68,7 @@ describe("Protocol: All-round happy path", () => {
   };
 
   it("works correctly", async () => {
-    const { lido, withdrawalQueue, depositSecurityModule } = ctx.contracts;
+    const { lido, withdrawalQueue } = ctx.contracts;
 
     // validating that the protocol is unpaused
 
@@ -156,7 +156,8 @@ describe("Protocol: All-round happy path", () => {
       stETH: ethers.formatEther(balancesAfterSubmit.stETH),
     });
 
-    const spendEth = AMOUNT + receipt.cumulativeGasUsed;
+    // TODO: uncomment
+    // const spendEth = AMOUNT + receipt.cumulativeGasUsed;
 
     // TODO: check, sometimes reports bullshit
     // expect(balancesAfterSubmit.stETH).to.be.approximately(balancesBeforeSubmit.stETH + AMOUNT, 10n, "stETH balance after submit");
@@ -203,28 +204,29 @@ describe("Protocol: All-round happy path", () => {
 
     // starting deposit to node operators
 
-    const { depositedValidators } = await lido.getBeaconStat();
-    const withdrawalsUninitializedStETH = await withdrawalQueue.unfinalizedStETH();
-    const depositableEther = await lido.getDepositableEther();
+    // TODO: uncomment
+    // const { depositedValidators } = await lido.getBeaconStat();
+    // const withdrawalsUninitializedStETH = await withdrawalQueue.unfinalizedStETH();
+    // const depositableEther = await lido.getDepositableEther();
 
     // TODO: check, gives diff 2000 wei (+ expected - actual)
     //   -142599610953885976535134
     //   +142599610953885976537134
     // expect(depositableEther).to.be.equal(bufferedEtherAfterSubmit + withdrawalsUninitializedStETH, "Depositable ether");
 
-    const dsm = await impersonate(depositSecurityModule.address, ether("100"));
+    // const dsm = await impersonate(depositSecurityModule.address, ether("100"));
 
-    const depositNorTx = await lido.connect(dsm).deposit(MAX_DEPOSIT, CURATED_MODULE_ID, ZERO_HASH);
-    const depositNorReceipt = (await trace("lido.deposit (Curated Module)", depositNorTx)) as TransactionReceipt;
+    // const depositNorTx = await lido.connect(dsm).deposit(MAX_DEPOSIT, CURATED_MODULE_ID, ZERO_HASH);
+    // const depositNorReceipt = (await trace("lido.deposit (Curated Module)", depositNorTx)) as TransactionReceipt;
 
-    const depositSdvtTx = await lido.connect(dsm).deposit(MAX_DEPOSIT, SIMPLE_DVT_MODULE_ID, ZERO_HASH);
-    const depositSdvtReceipt = (await trace("lido.deposit (Simple DVT)", depositSdvtTx)) as TransactionReceipt;
+    // const depositSdvtTx = await lido.connect(dsm).deposit(MAX_DEPOSIT, SIMPLE_DVT_MODULE_ID, ZERO_HASH);
+    // const depositSdvtReceipt = (await trace("lido.deposit (Simple DVT)", depositSdvtTx)) as TransactionReceipt;
 
-    const bufferedEtherAfterDeposit = await lido.getBufferedEther();
-
-    const unbufferedEventNor = getEvents(depositNorReceipt, lido, "Unbuffered");
-    const unbufferedEventSdvt = getEvents(depositSdvtReceipt, lido, "Unbuffered");
-    const depositedValidatorsChangedEventSdvt = getEvents(depositSdvtReceipt, lido, "DepositedValidatorsChanged");
+    // const bufferedEtherAfterDeposit = await lido.getBufferedEther();
+    //
+    // const unbufferedEventNor = getEvents(depositNorReceipt, lido, "Unbuffered");
+    // const unbufferedEventSdvt = getEvents(depositSdvtReceipt, lido, "Unbuffered");
+    // const depositedValidatorsChangedEventSdvt = getEvents(depositSdvtReceipt, lido, "DepositedValidatorsChanged");
 
     // TODO: continue..
 

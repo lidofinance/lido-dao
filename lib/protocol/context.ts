@@ -4,7 +4,6 @@ import { discover } from "./discovery";
 import type { ProtocolContext, ProtocolSigners, Signer } from "./types";
 
 const getSigner = async (signer: Signer, balance = ether("100"), signers: ProtocolSigners) => {
-  // @ts-expect-error TS7053
   const signerAddress = signers[signer] ?? signer;
   return impersonate(signerAddress, balance);
 };

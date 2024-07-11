@@ -329,13 +329,13 @@ describe("WithdrawalQueue.sol", () => {
 
       it("Creates requests for multiple amounts with zero owner address", async () => {
         const amount = ether("10.00");
-        const shares = await stEth.getSharesByPooledEth(amount);
+        const sharesToWithdraw = await stEth.getSharesByPooledEth(amount);
 
         const requestIdBefore = await queue.getLastRequestId();
 
         await expect(queue.connect(user).requestWithdrawals([amount], ZeroAddress))
           .to.emit(queue, "WithdrawalRequested")
-          .withArgs(1, user.address, user.address, amount, shares);
+          .withArgs(1, user.address, user.address, amount, sharesToWithdraw);
 
         const diff = (await queue.getLastRequestId()) - requestIdBefore;
         expect(diff).to.equal(requestIdBefore + 1n);
@@ -395,13 +395,13 @@ describe("WithdrawalQueue.sol", () => {
         const amount = ether("10.00");
 
         const stEthAmount = await wstEth.getStETHByWstETH(amount);
-        const shares = await stEth.getSharesByPooledEth(stEthAmount);
+        const sharesToWithdraw = await stEth.getSharesByPooledEth(stEthAmount);
 
         const requestIdBefore = await queue.getLastRequestId();
 
         await expect(queue.connect(user).requestWithdrawalsWstETH([amount], ZeroAddress))
           .to.emit(queue, "WithdrawalRequested")
-          .withArgs(1, user.address, user.address, stEthAmount, shares);
+          .withArgs(1, user.address, user.address, stEthAmount, sharesToWithdraw);
 
         const requestIdAfter = await queue.getLastRequestId();
         const diff = requestIdAfter - requestIdBefore;
@@ -444,15 +444,15 @@ describe("WithdrawalQueue.sol", () => {
 
       it("Creates requests for multiple amounts with valid permit", async () => {
         const oneRequestSize = requests[0];
-        const shares = await stEth.getSharesByPooledEth(oneRequestSize);
+        const sharesToWithdraw = await stEth.getSharesByPooledEth(oneRequestSize);
 
         const requestIdBefore = await queue.getLastRequestId();
 
         await expect(queue.connect(alice).requestWithdrawalsWithPermit(requests, owner, permit))
           .to.emit(queue, "WithdrawalRequested")
-          .withArgs(1, alice.address, owner.address, oneRequestSize, shares)
+          .withArgs(1, alice.address, owner.address, oneRequestSize, sharesToWithdraw)
           .to.emit(queue, "WithdrawalRequested")
-          .withArgs(2, alice.address, owner.address, oneRequestSize, shares);
+          .withArgs(2, alice.address, owner.address, oneRequestSize, sharesToWithdraw);
 
         const diff = (await queue.getLastRequestId()) - requestIdBefore;
         expect(diff).to.equal(requestIdBefore + BigInt(requests.length));
@@ -460,13 +460,13 @@ describe("WithdrawalQueue.sol", () => {
 
       it("Creates requests for single amounts with valid permit and zero owner address", async () => {
         const request = requests[0];
-        const shares = await stEth.getSharesByPooledEth(request);
+        const sharesToWithdraw = await stEth.getSharesByPooledEth(request);
 
         const requestIdBefore = await queue.getLastRequestId();
 
         await expect(queue.connect(alice).requestWithdrawalsWithPermit([request], ZeroAddress, permit))
           .to.emit(queue, "WithdrawalRequested")
-          .withArgs(1, alice.address, alice.address, request, shares);
+          .withArgs(1, alice.address, alice.address, request, sharesToWithdraw);
 
         const diff = (await queue.getLastRequestId()) - requestIdBefore;
         expect(diff).to.equal(requestIdBefore + 1n);
@@ -508,14 +508,14 @@ describe("WithdrawalQueue.sol", () => {
       it("Creates requests for multiple amounts with valid permit", async () => {
         const oneRequestSize = requests[0];
         const stEthAmount = await wstEth.getStETHByWstETH(oneRequestSize);
-        const shares = await stEth.getSharesByPooledEth(stEthAmount);
+        const sharesToWithdraw = await stEth.getSharesByPooledEth(stEthAmount);
         const requestIdBefore = await queue.getLastRequestId();
 
         await expect(queue.connect(alice).requestWithdrawalsWstETHWithPermit(requests, owner, permit))
           .to.emit(queue, "WithdrawalRequested")
-          .withArgs(1, alice.address, owner.address, stEthAmount, shares)
+          .withArgs(1, alice.address, owner.address, stEthAmount, sharesToWithdraw)
           .to.emit(queue, "WithdrawalRequested")
-          .withArgs(2, alice.address, owner.address, stEthAmount, shares);
+          .withArgs(2, alice.address, owner.address, stEthAmount, sharesToWithdraw);
 
         const requestIdAfter = await queue.getLastRequestId();
         const diff = requestIdAfter - requestIdBefore;
@@ -525,12 +525,12 @@ describe("WithdrawalQueue.sol", () => {
       it("Creates requests for single amounts with valid permit and zero owner address", async () => {
         const request = requests[0];
         const stEthAmount = await wstEth.getStETHByWstETH(request);
-        const shares = await stEth.getSharesByPooledEth(stEthAmount);
+        const sharesToWithdraw = await stEth.getSharesByPooledEth(stEthAmount);
         const requestIdBefore = await queue.getLastRequestId();
 
         await expect(queue.connect(alice).requestWithdrawalsWstETHWithPermit([request], ZeroAddress, permit))
           .to.emit(queue, "WithdrawalRequested")
-          .withArgs(1, alice.address, alice.address, stEthAmount, shares);
+          .withArgs(1, alice.address, alice.address, stEthAmount, sharesToWithdraw);
 
         const requestIdAfter = await queue.getLastRequestId();
         const diff = requestIdAfter - requestIdBefore;
