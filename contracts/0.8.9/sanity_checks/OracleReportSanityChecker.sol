@@ -902,7 +902,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     event InactivityPenaltiesAmountSet(uint256 inactivityPenaltiesAmountPWei);
     event CLBalanceOraclesErrorUpperBPLimitSet(uint256 clBalanceOraclesErrorUpperBPLimit);
     event NegativeCLRebaseConfirmed(uint256 refSlot, uint256 clBalanceWei, uint256 withdrawalVaultBalance);
-    event NegativeCLRebaseAccepted(uint256 refSlot, uint256 clBalance, uint256 clBalanceDecrease, uint256 clBalanceMaxDecrease);
+    event NegativeCLRebaseAccepted(uint256 refSlot, uint256 clTotalBalance, uint256 clBalanceDecrease, uint256 maxAllowedCLRebaseNegativeSum);
 
     error IncorrectLimitValue(uint256 value, uint256 minAllowedValue, uint256 maxAllowedValue);
     error IncorrectWithdrawalsVaultBalance(uint256 actualWithdrawalVaultBalance);
