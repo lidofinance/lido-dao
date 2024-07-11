@@ -1,4 +1,5 @@
-import { Addressable, Signature, Signer, TypedDataDomain } from "ethers";
+import type { Addressable, Signer, TypedDataDomain } from "ethers";
+import { Signature } from "ethers";
 import { network } from "hardhat";
 
 export interface Permit {

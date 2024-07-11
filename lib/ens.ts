@@ -1,9 +1,10 @@
 import chalk from "chalk";
 import { ethers } from "hardhat";
 
-import { ENS } from "typechain-types";
+import type { ENS } from "typechain-types";
 
-import { LoadedContract, log, makeTx, streccak } from "lib";
+import type { LoadedContract } from "lib";
+import { log, makeTx, streccak } from "lib";
 
 // Default parentName is "eth"
 export async function assignENSName(

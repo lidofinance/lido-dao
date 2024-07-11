@@ -1,9 +1,10 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { WithdrawalsManagerStub, WithdrawalsManagerStub__factory } from "typechain-types";
+import type { WithdrawalsManagerStub } from "typechain-types";
+import { WithdrawalsManagerStub__factory } from "typechain-types";
 
 import { ether } from "lib";
 

@@ -1,8 +1,8 @@
 import { expect } from "chai";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { NodeOperatorsRegistry__Harness } from "typechain-types";
+import type { NodeOperatorsRegistry__Harness } from "typechain-types";
 
 import { PUBKEY_LENGTH_HEX, SIGNATURE_LENGTH_HEX } from "./constants";
 import { numberToHex } from "./string";

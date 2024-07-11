@@ -1,16 +1,15 @@
 import { expect } from "chai";
-import { Signature, Signer, ZeroAddress } from "ethers";
+import type { Signature, Signer } from "ethers";
+import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
-import {
-  EIP712StETH__factory,
-  StethPermitMockWithEip712Initialization,
-  StethPermitMockWithEip712Initialization__factory,
-} from "typechain-types";
+import type { StethPermitMockWithEip712Initialization } from "typechain-types";
+import { EIP712StETH__factory, StethPermitMockWithEip712Initialization__factory } from "typechain-types";
 
-import { certainAddress, days, ether, Permit, signPermit, stethDomain } from "lib";
+import type { Permit } from "lib";
+import { certainAddress, days, ether, signPermit, stethDomain } from "lib";
 
 import { Snapshot } from "test/suite";
 

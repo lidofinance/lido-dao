@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 
-import { HardhatEthersProvider } from "@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider";
+import type { HardhatEthersProvider } from "@nomicfoundation/hardhat-ethers/internal/hardhat-ethers-provider";
 
 export class Snapshot {
   private static provider: HardhatEthersProvider = ethers.provider;

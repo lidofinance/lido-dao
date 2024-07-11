@@ -1,8 +1,8 @@
-import { BaseContract as EthersBaseContract } from "ethers";
+import type { BaseContract as EthersBaseContract } from "ethers";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import {
+import type {
   AccountingOracle,
   ACL,
   Burner,
@@ -19,7 +19,7 @@ import {
   StakingRouter,
   ValidatorsExitBusOracle,
   WithdrawalQueueERC721,
-  WithdrawalVault
+  WithdrawalVault,
 } from "typechain-types";
 
 type ProtocolNetworkItems = {
@@ -35,23 +35,23 @@ export type ProtocolNetworkConfig = {
 };
 
 export interface ContractTypes {
-  "LidoLocator": LidoLocator;
-  "AccountingOracle": AccountingOracle;
-  "DepositSecurityModule": DepositSecurityModule;
-  "LidoExecutionLayerRewardsVault": LidoExecutionLayerRewardsVault;
-  "LegacyOracle": LegacyOracle;
-  "Lido": Lido;
-  "OracleReportSanityChecker": OracleReportSanityChecker;
-  "Burner": Burner;
-  "StakingRouter": StakingRouter;
-  "ValidatorsExitBusOracle": ValidatorsExitBusOracle;
-  "WithdrawalQueueERC721": WithdrawalQueueERC721;
-  "WithdrawalVault": WithdrawalVault;
-  "OracleDaemonConfig": OracleDaemonConfig;
-  "Kernel": Kernel;
-  "ACL": ACL;
-  "HashConsensus": HashConsensus;
-  "NodeOperatorsRegistry": NodeOperatorsRegistry;
+  LidoLocator: LidoLocator;
+  AccountingOracle: AccountingOracle;
+  DepositSecurityModule: DepositSecurityModule;
+  LidoExecutionLayerRewardsVault: LidoExecutionLayerRewardsVault;
+  LegacyOracle: LegacyOracle;
+  Lido: Lido;
+  OracleReportSanityChecker: OracleReportSanityChecker;
+  Burner: Burner;
+  StakingRouter: StakingRouter;
+  ValidatorsExitBusOracle: ValidatorsExitBusOracle;
+  WithdrawalQueueERC721: WithdrawalQueueERC721;
+  WithdrawalVault: WithdrawalVault;
+  OracleDaemonConfig: OracleDaemonConfig;
+  Kernel: Kernel;
+  ACL: ACL;
+  HashConsensus: HashConsensus;
+  NodeOperatorsRegistry: NodeOperatorsRegistry;
 }
 
 export type ContractName = keyof ContractTypes;
@@ -76,37 +76,37 @@ export type FoundationContracts = {
   withdrawalQueue: LoadedContract<WithdrawalQueueERC721>;
   withdrawalVault: LoadedContract<WithdrawalVault>;
   oracleDaemonConfig: LoadedContract<OracleDaemonConfig>;
-}
+};
 
 export type AragonContracts = {
   kernel: LoadedContract<Kernel>;
   acl: LoadedContract<ACL>;
-}
+};
 
 export type StackingModulesContracts = {
   nor: LoadedContract<NodeOperatorsRegistry>;
   sdvt: LoadedContract<NodeOperatorsRegistry>;
-}
+};
 
 export type HashConsensusContracts = {
   hashConsensus: LoadedContract<HashConsensus>;
-}
+};
 
-export type ProtocolContracts =
-  { locator: LoadedContract<LidoLocator> }
-  & FoundationContracts
-  & AragonContracts
-  & StackingModulesContracts
-  & HashConsensusContracts;
+export type ProtocolContracts = { locator: LoadedContract<LidoLocator> } & FoundationContracts &
+  AragonContracts &
+  StackingModulesContracts &
+  HashConsensusContracts;
 
 export type ProtocolSigners = {
   agent: string;
   voting: string;
   easyTrack: string;
-}
+};
+
+export type Signer = keyof ProtocolSigners;
 
 export type ProtocolContext = {
   contracts: ProtocolContracts;
   signers: ProtocolSigners;
-  getSigner: (signer: string, balance?: bigint) => Promise<HardhatEthersSigner>;
-}
+  getSigner: (signer: Signer, balance?: bigint) => Promise<HardhatEthersSigner>;
+};

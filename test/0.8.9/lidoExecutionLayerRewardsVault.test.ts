@@ -2,16 +2,18 @@ import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import {
+import type {
   Lido__MockForElRewardsVault,
-  Lido__MockForElRewardsVault__factory,
   LidoExecutionLayerRewardsVault,
-  LidoExecutionLayerRewardsVault__factory,
   NFT__GeneralMock,
-  NFT__GeneralMock__factory,
   Steth__MinimalMock,
+} from "typechain-types";
+import {
+  Lido__MockForElRewardsVault__factory,
+  LidoExecutionLayerRewardsVault__factory,
+  NFT__GeneralMock__factory,
   Steth__MinimalMock__factory,
 } from "typechain-types";
 

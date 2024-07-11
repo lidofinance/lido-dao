@@ -17,7 +17,7 @@ const MANAGE_SIGNING_KEYS_ROLE = streccak("MANAGE_SIGNING_KEYS");
 export const ensureSDVTOperators = async (
   ctx: ProtocolContext,
   minOperatorsCount = MIN_OPS_COUNT,
-  minOperatorKeysCount = MIN_OP_KEYS_COUNT
+  minOperatorKeysCount = MIN_OP_KEYS_COUNT,
 ) => {
   await ensureSDVTOperatorsHaveMinKeys(ctx, minOperatorsCount, minOperatorKeysCount);
 
@@ -29,7 +29,7 @@ export const ensureSDVTOperators = async (
     if (nodeOperatorBefore.totalVettedValidators < nodeOperatorBefore.totalAddedValidators) {
       await setSDVTOperatorStakingLimit(ctx, {
         operatorId,
-        limit: nodeOperatorBefore.totalAddedValidators
+        limit: nodeOperatorBefore.totalAddedValidators,
       });
     }
 
@@ -45,7 +45,7 @@ export const ensureSDVTOperators = async (
 const ensureSDVTOperatorsHaveMinKeys = async (
   ctx: ProtocolContext,
   minOperatorsCount = MIN_OPS_COUNT,
-  minKeysCount = MIN_OP_KEYS_COUNT
+  minKeysCount = MIN_OP_KEYS_COUNT,
 ) => {
   await ensureSDVTMinOperators(ctx, minOperatorsCount);
 
@@ -57,7 +57,7 @@ const ensureSDVTOperatorsHaveMinKeys = async (
     if (unusedKeysCount < minKeysCount) {
       await addFakeNodeOperatorKeysToSDVT(ctx, {
         operatorId,
-        keysToAdd: minKeysCount - unusedKeysCount
+        keysToAdd: minKeysCount - unusedKeysCount,
       });
     }
 
@@ -65,16 +65,12 @@ const ensureSDVTOperatorsHaveMinKeys = async (
 
     expect(unusedKeysCountAfter).to.be.gte(minKeysCount);
   }
-
 };
 
 /**
  * Fills the Simple DVT with some operators in case there are not enough of them.
  */
-const ensureSDVTMinOperators = async (
-  ctx: ProtocolContext,
-  minOperatorsCount = MIN_OPS_COUNT
-) => {
+const ensureSDVTMinOperators = async (ctx: ProtocolContext, minOperatorsCount = MIN_OPS_COUNT) => {
   const { sdvt } = ctx.contracts;
 
   const before = await sdvt.getNodeOperatorsCount();
@@ -87,7 +83,7 @@ const ensureSDVTMinOperators = async (
       operatorId,
       name: getOperatorName(operatorId),
       rewardAddress: getOperatorRewardAddress(operatorId),
-      managerAddress: getOperatorManagerAddress(operatorId)
+      managerAddress: getOperatorManagerAddress(operatorId),
     };
 
     await addFakeNodeOperatorToSDVT(ctx, operator);
@@ -101,7 +97,7 @@ const ensureSDVTMinOperators = async (
 
   log.debug("Checked operators count", {
     "Min operators count": minOperatorsCount,
-    "Operators count": after
+    "Operators count": after,
   });
 };
 
@@ -114,13 +110,13 @@ export const addFakeNodeOperatorToSDVT = async (
     operatorId: bigint;
     name: string;
     rewardAddress: string;
-    managerAddress: string
-  }
+    managerAddress: string;
+  },
 ) => {
   const { sdvt, acl } = ctx.contracts;
   const { operatorId, name, rewardAddress, managerAddress } = params;
 
-  const easyTrackExecutor = await ctx.getSigner("easyTrackExecutor");
+  const easyTrackExecutor = await ctx.getSigner("easyTrack");
 
   const addTx = await sdvt.connect(easyTrackExecutor).addNodeOperator(name, rewardAddress);
   await trace("simpleDVT.addNodeOperator", addTx);
@@ -130,7 +126,7 @@ export const addFakeNodeOperatorToSDVT = async (
     sdvt.address,
     MANAGE_SIGNING_KEYS_ROLE,
     // See https://legacy-docs.aragon.org/developers/tools/aragonos/reference-aragonos-3#parameter-interpretation for details
-    [1 << 240 + Number(operatorId)]
+    [1 << (240 + Number(operatorId))],
   );
   await trace("acl.grantPermissionP", grantPermissionTx);
 };
@@ -143,7 +139,7 @@ export const addFakeNodeOperatorKeysToSDVT = async (
   params: {
     operatorId: bigint;
     keysToAdd: bigint;
-  }
+  },
 ) => {
   const { sdvt } = ctx.contracts;
   const { operatorId, keysToAdd } = params;
@@ -154,12 +150,14 @@ export const addFakeNodeOperatorKeysToSDVT = async (
 
   const actor = await impersonate(rewardAddress, ether("100"));
 
-  const addKeysTx = await sdvt.connect(actor).addSigningKeys(
-    operatorId,
-    keysToAdd,
-    randomBytes(Number(keysToAdd * PUBKEY_LENGTH)),
-    randomBytes(Number(keysToAdd * SIGNATURE_LENGTH))
-  );
+  const addKeysTx = await sdvt
+    .connect(actor)
+    .addSigningKeys(
+      operatorId,
+      keysToAdd,
+      randomBytes(Number(keysToAdd * PUBKEY_LENGTH)),
+      randomBytes(Number(keysToAdd * SIGNATURE_LENGTH)),
+    );
   await trace("simpleDVT.addSigningKeys", addKeysTx);
 
   const totalKeysAfter = await sdvt.getTotalSigningKeyCount(operatorId);
@@ -177,16 +175,14 @@ const setSDVTOperatorStakingLimit = async (
   params: {
     operatorId: bigint;
     limit: bigint;
-  }
+  },
 ) => {
   const { sdvt } = ctx.contracts;
   const { operatorId, limit } = params;
 
-  const easyTrackExecutor = await ctx.getSigner("easyTrackExecutor");
+  const easyTrackExecutor = await ctx.getSigner("easyTrack");
 
-  const setLimitTx = await sdvt
-    .connect(easyTrackExecutor)
-    .setNodeOperatorStakingLimit(operatorId, limit);
+  const setLimitTx = await sdvt.connect(easyTrackExecutor).setNodeOperatorStakingLimit(operatorId, limit);
   await trace("simpleDVT.setNodeOperatorStakingLimit", setLimitTx);
 };
 

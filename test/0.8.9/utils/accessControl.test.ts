@@ -1,9 +1,9 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { AccessControl__Harness } from "typechain-types";
+import type { AccessControl__Harness } from "typechain-types";
 
 import {
   DEFAULT_ADMIN_ROLE,

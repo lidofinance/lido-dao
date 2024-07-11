@@ -1,4 +1,4 @@
-import { ContractTransactionResponse, TransactionResponse } from "ethers";
+import type { ContractTransactionResponse, TransactionResponse } from "ethers";
 import hre, { ethers } from "hardhat";
 
 import { log } from "lib";
@@ -29,7 +29,7 @@ export async function trace(name: string, tx: Transaction) {
     nonce: tx.nonce,
     blockNumber: receipt.blockNumber,
     hash: receipt.hash,
-    status: !!receipt.status
+    status: !!receipt.status,
   });
 
   return receipt;

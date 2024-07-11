@@ -1,12 +1,5 @@
-import {
-  bufferToHex,
-  ECDSASignature,
-  ecrecover,
-  ecsign,
-  pubToAddress,
-  toBuffer,
-  toChecksumAddress,
-} from "ethereumjs-util";
+import type { ECDSASignature } from "ethereumjs-util";
+import { bufferToHex, ecrecover, ecsign, pubToAddress, toBuffer, toChecksumAddress } from "ethereumjs-util";
 
 import { de0x } from "./string";
 

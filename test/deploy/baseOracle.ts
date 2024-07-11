@@ -1,8 +1,8 @@
 import { ethers } from "hardhat";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { MockConsensusContract } from "typechain-types";
+import type { MockConsensusContract } from "typechain-types";
 
 import {
   CONSENSUS_VERSION,

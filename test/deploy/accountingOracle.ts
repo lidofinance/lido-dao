@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-import { AccountingOracle, HashConsensusTimeTravellable, LegacyOracle } from "typechain-types";
+import type { AccountingOracle, HashConsensusTimeTravellable, LegacyOracle } from "typechain-types";
 
 import {
   CONSENSUS_VERSION,

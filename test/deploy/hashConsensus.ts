@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 
-import { IReportAsyncProcessor } from "typechain-types";
+import type { IReportAsyncProcessor } from "typechain-types";
 
 import {
   CONSENSUS_VERSION,

@@ -1,15 +1,12 @@
-import { ContractFactory, ContractTransactionReceipt } from "ethers";
+import type { ContractFactory, ContractTransactionReceipt } from "ethers";
 import { ethers } from "hardhat";
 
-import {
-  addContractHelperFields,
-  DeployedContract,
-  getContractAt,
-  getContractPath,
-  LoadedContract,
-} from "lib/contract";
-import { ConvertibleToString, log, yl } from "lib/log";
-import { incrementGasUsed, Sk, updateObjectInState } from "lib/state-file";
+import type { DeployedContract, LoadedContract } from "lib/contract";
+import { addContractHelperFields, getContractAt, getContractPath } from "lib/contract";
+import type { ConvertibleToString } from "lib/log";
+import { log, yl } from "lib/log";
+import type { Sk } from "lib/state-file";
+import { incrementGasUsed, updateObjectInState } from "lib/state-file";
 
 const GAS_PRIORITY_FEE = process.env.GAS_PRIORITY_FEE || null;
 const GAS_MAX_FEE = process.env.GAS_MAX_FEE || null;

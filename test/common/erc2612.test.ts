@@ -1,13 +1,15 @@
 import { expect } from "chai";
-import { MaxUint256, Signature, Signer, TypedDataDomain, TypedDataEncoder, ZeroAddress } from "ethers";
+import type { Signature, Signer, TypedDataDomain } from "ethers";
+import { MaxUint256, TypedDataEncoder, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
-import { ExclusiveSuiteFunction, PendingSuiteFunction } from "mocha";
+import type { ExclusiveSuiteFunction, PendingSuiteFunction } from "mocha";
 
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
-import { IERC20, IERC2612 } from "typechain-types";
+import type { IERC20, IERC2612 } from "typechain-types";
 
-import { certainAddress, days, Permit, signPermit } from "lib";
+import type { Permit } from "lib";
+import { certainAddress, days, signPermit } from "lib";
 
 import { Snapshot } from "test/suite";
 

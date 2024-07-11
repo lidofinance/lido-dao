@@ -1,9 +1,9 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { ACL, Lido } from "typechain-types";
+import type { ACL, Lido } from "typechain-types";
 
 import { deployLidoDao } from "test/deploy";
 

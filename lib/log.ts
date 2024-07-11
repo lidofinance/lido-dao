@@ -129,7 +129,7 @@ log.trace = (
     blockNumber: number;
     hash: string;
     status: boolean;
-  }
+  },
 ) => {
   const color = tx.status ? gr : rd;
 
@@ -137,7 +137,9 @@ log.trace = (
 
   log(`Transaction sent:`, yl(tx.hash));
   log(`  From: ${yl(tx.from)}   To: ${yl(tx.to)}  ${value}`);
-  log(`  Gas price: ${yl(tx.gasPrice)} gwei   Gas limit: ${yl(tx.gasLimit)}   Gas used: ${yl(tx.gasUsed)} (${yl(tx.gasUsedPercent)})`);
+  log(
+    `  Gas price: ${yl(tx.gasPrice)} gwei   Gas limit: ${yl(tx.gasLimit)}   Gas used: ${yl(tx.gasUsed)} (${yl(tx.gasUsedPercent)})`,
+  );
   log(`  Block: ${yl(tx.blockNumber)}   Nonce: ${yl(tx.nonce)}`);
   log(`  ${color(name)} ${color(tx.status ? "confirmed" : "failed")}`);
   log.emptyLine();

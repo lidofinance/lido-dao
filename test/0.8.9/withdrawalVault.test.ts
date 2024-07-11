@@ -2,10 +2,10 @@ import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 
-import {
+import type {
   ERC20Token__MockForWithdrawalVault,
   ERC721Token_MockForWithdrawalVault,
   Lido__MockForWithdrawalVault,

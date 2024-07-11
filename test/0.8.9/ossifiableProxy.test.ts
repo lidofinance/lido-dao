@@ -1,8 +1,9 @@
 import { expect } from "chai";
-import { Signer, ZeroAddress } from "ethers";
+import type { Signer } from "ethers";
+import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import {
+import type {
   Initializable__Mock,
   Initializable__Mock__factory,
   OssifiableProxy,

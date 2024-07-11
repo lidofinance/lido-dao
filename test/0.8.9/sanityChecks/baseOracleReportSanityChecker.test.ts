@@ -2,10 +2,16 @@ import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 
-import { BurnerStub, LidoLocatorStub, LidoStub, OracleReportSanityChecker, WithdrawalQueueStub } from "typechain-types";
+import type {
+  BurnerStub,
+  LidoLocatorStub,
+  LidoStub,
+  OracleReportSanityChecker,
+  WithdrawalQueueStub,
+} from "typechain-types";
 
 import { ether, getCurrentBlockTimestamp, randomAddress } from "lib";
 

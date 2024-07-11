@@ -1,9 +1,9 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { BaseOracle__Harness, MockConsensusContract } from "typechain-types";
+import type { BaseOracle__Harness, MockConsensusContract } from "typechain-types";
 
 import { SECONDS_PER_SLOT } from "lib";
 

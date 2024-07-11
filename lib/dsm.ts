@@ -1,6 +1,6 @@
 import { solidityPackedKeccak256 } from "ethers";
 
-import { DepositSecurityModule } from "typechain-types";
+import type { DepositSecurityModule } from "typechain-types";
 
 import { sign, toEip2098 } from "./ec";
 

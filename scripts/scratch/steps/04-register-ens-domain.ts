@@ -2,7 +2,8 @@ import { assert } from "chai";
 import chalk from "chalk";
 import { ethers } from "hardhat";
 
-import { ENS, ENS__factory } from "typechain-types";
+import type { ENS } from "typechain-types";
+import { ENS__factory } from "typechain-types";
 
 import { loadContract } from "lib/contract";
 import { makeTx } from "lib/deploy";

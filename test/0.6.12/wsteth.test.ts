@@ -2,9 +2,10 @@ import { expect } from "chai";
 import { MaxUint256, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { Steth__MockForWsteth, Steth__MockForWsteth__factory, WstETH, WstETH__factory } from "typechain-types";
+import type { Steth__MockForWsteth, WstETH } from "typechain-types";
+import { Steth__MockForWsteth__factory, WstETH__factory } from "typechain-types";
 
 import { batch, ether, ONE_ETHER } from "lib";
 

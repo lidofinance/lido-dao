@@ -2,9 +2,11 @@ import chalk from "chalk";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import { DAOFactory, DAOFactory__factory, ENS, ENS__factory } from "typechain-types";
+import type { DAOFactory, ENS } from "typechain-types";
+import { DAOFactory__factory, ENS__factory } from "typechain-types";
 
-import { getContractAt, loadContract, LoadedContract } from "lib/contract";
+import type { LoadedContract } from "lib/contract";
+import { getContractAt, loadContract } from "lib/contract";
 import { deployImplementation, deployWithoutProxy, makeTx } from "lib/deploy";
 import { assignENSName } from "lib/ens";
 import { findEvents } from "lib/event";

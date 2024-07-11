@@ -14,7 +14,8 @@ import "hardhat-ignore-warnings";
 import "hardhat-contract-sizer";
 import { globSync } from "glob";
 import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/task-names";
-import { HardhatUserConfig, subtask } from "hardhat/config";
+import type { HardhatUserConfig } from "hardhat/config";
+import { subtask } from "hardhat/config";
 
 import { mochaRootHooks } from "test/hooks";
 

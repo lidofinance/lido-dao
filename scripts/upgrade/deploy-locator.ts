@@ -1,7 +1,8 @@
 import { assert } from "chai";
 import { ethers } from "hardhat";
 
-import { deployImplementation, getContractAt, LoadedContract, log, readNetworkState, Sk } from "lib";
+import type { LoadedContract } from "lib";
+import { deployImplementation, getContractAt, log, readNetworkState, Sk } from "lib";
 
 const VIEW_NAMES_AND_CTOR_ARGS = [
   // As view names on LidoLocator
@@ -18,7 +19,7 @@ const VIEW_NAMES_AND_CTOR_ARGS = [
   "validatorsExitBusOracle",
   "withdrawalQueue",
   "withdrawalVault",
-  "oracleDaemonConfig"
+  "oracleDaemonConfig",
 ];
 
 /////////////// GLOBAL VARIABLES ///////////////

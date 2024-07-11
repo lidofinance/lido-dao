@@ -1,10 +1,10 @@
 import { expect } from "chai";
 import { parseUnits } from "ethers";
-import { ExclusiveSuiteFunction, PendingSuiteFunction } from "mocha";
+import type { ExclusiveSuiteFunction, PendingSuiteFunction } from "mocha";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { ERC20 } from "typechain-types/@openzeppelin/contracts/token/ERC20/ERC20";
+import type { ERC20 } from "typechain-types/@openzeppelin/contracts/token/ERC20/ERC20";
 
 import { batch } from "lib";
 

@@ -3,13 +3,10 @@ import { randomBytes } from "crypto";
 import { hexlify } from "ethers";
 import { ethers } from "hardhat";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import {
-  DepositContract__MockForBeaconChainDepositor__factory,
-  StakingRouter,
-  StakingRouter__factory,
-} from "typechain-types";
+import type { StakingRouter } from "typechain-types";
+import { DepositContract__MockForBeaconChainDepositor__factory, StakingRouter__factory } from "typechain-types";
 
 import { certainAddress, proxify } from "lib";
 

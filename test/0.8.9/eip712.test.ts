@@ -1,8 +1,10 @@
 import { expect } from "chai";
-import { MaxUint256, TypedDataDomain, TypedDataEncoder, ZeroAddress } from "ethers";
+import type { TypedDataDomain } from "ethers";
+import { MaxUint256, TypedDataEncoder, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import { EIP712StETH, EIP712StETH__factory } from "typechain-types";
+import type { EIP712StETH } from "typechain-types";
+import { EIP712StETH__factory } from "typechain-types";
 
 import { certainAddress } from "lib";
 

@@ -1,39 +1,43 @@
 import { assert } from "chai";
 import { ethers } from "hardhat";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 
-import {
+import type {
   AccountingOracle,
-  AccountingOracle__factory,
   Agent,
-  Agent__factory,
   DepositSecurityModule,
   HashConsensus,
-  HashConsensus__factory,
   Lido,
-  Lido__factory,
   LidoExecutionLayerRewardsVault,
-  LidoExecutionLayerRewardsVault__factory,
   MiniMeToken,
-  MiniMeToken__factory,
   NodeOperatorsRegistry,
-  NodeOperatorsRegistry__factory,
   StakingRouter,
-  StakingRouter__factory,
   Voting,
-  Voting__factory,
   WithdrawalQueue,
+} from "typechain-types";
+import {
+  AccountingOracle__factory,
+  Agent__factory,
+  HashConsensus__factory,
+  Lido__factory,
+  LidoExecutionLayerRewardsVault__factory,
+  MiniMeToken__factory,
+  NodeOperatorsRegistry__factory,
+  StakingRouter__factory,
+  Voting__factory,
   WithdrawalQueue__factory,
 } from "typechain-types";
 
-import { loadContract, LoadedContract } from "lib/contract";
+import type { LoadedContract } from "lib/contract";
+import { loadContract } from "lib/contract";
 import { findEvents } from "lib/event";
 import { streccak } from "lib/keccak";
 import { log } from "lib/log";
 import { reportOracle } from "lib/oracle";
-import { DeploymentState, getAddress, readNetworkState, Sk } from "lib/state-file";
+import type { DeploymentState } from "lib/state-file";
+import { getAddress, readNetworkState, Sk } from "lib/state-file";
 import { advanceChainTime } from "lib/time";
 import { ether } from "lib/units";
 

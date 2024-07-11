@@ -1,11 +1,11 @@
 import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
-import { ExclusiveSuiteFunction, PendingSuiteFunction } from "mocha";
+import type { ExclusiveSuiteFunction, PendingSuiteFunction } from "mocha";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { ERC721, ERC721ReceiverMock } from "typechain-types";
+import type { ERC721, ERC721ReceiverMock } from "typechain-types";
 
 import { ERC165_INTERFACE_ID, ERC721_INTERFACE_ID, ERC721METADATA_INTERFACE_ID, INVALID_INTERFACE_ID } from "lib";
 

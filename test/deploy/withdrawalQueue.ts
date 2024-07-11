@@ -1,9 +1,9 @@
-import { ContractTransactionResponse } from "ethers";
+import type { ContractTransactionResponse } from "ethers";
 import { ethers } from "hardhat";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import {
+import type {
   NFTDescriptorMock,
   OssifiableProxy,
   StETHPermitMock,

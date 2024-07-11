@@ -1,7 +1,7 @@
 import { bigintToHex } from "bigint-conversion";
 import { ethers } from "hardhat";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { getNetworkName } from "./network";
 

@@ -20,9 +20,10 @@ const SIMPLE_DVT_MODULE_ID = 2n;
 const ZERO_HASH = new Uint8Array(32).fill(0);
 
 const getEvents = (receipt: TransactionReceipt, contract: BaseContract, name: string): LogDescription[] | undefined =>
-  (receipt.logs.filter(l => l !== null)
-    .map(l => contract.interface.parseLog(l))
-    .filter(l => l?.name === name) as LogDescription[]);
+  receipt.logs
+    .filter((l) => l !== null)
+    .map((l) => contract.interface.parseLog(l))
+    .filter((l) => l?.name === name) as LogDescription[];
 
 describe("Protocol: All-round happy path", () => {
   let ctx: ProtocolContext;
@@ -87,7 +88,7 @@ describe("Protocol: All-round happy path", () => {
 
       log.debug("Withdrawal queue", {
         "Last finalized request ID": lastFinalizedRequestId,
-        "Last request ID": lastRequestId
+        "Last request ID": lastRequestId,
       });
 
       await submitStake(ether("10000"), ethHolder);
@@ -109,9 +110,7 @@ describe("Protocol: All-round happy path", () => {
       batch({ ETH: ethers.provider.getBalance(wallet), stETH: lido.balanceOf(wallet) });
 
     // const uncountedStETHShares = await lido.sharesOf(contracts.withdrawalQueue.address);
-    const approveTx = await lido
-      .connect(stEthHolder)
-      .approve(withdrawalQueue.address, 1000n);
+    const approveTx = await lido.connect(stEthHolder).approve(withdrawalQueue.address, 1000n);
     await trace("lido.approve", approveTx);
 
     const requestWithdrawalsTx = await withdrawalQueue.connect(stEthHolder).requestWithdrawals([1000n], stEthHolder);
@@ -122,7 +121,7 @@ describe("Protocol: All-round happy path", () => {
     log.debug("Stranger before submit", {
       address: stranger.address,
       ETH: ethers.formatEther(balancesBeforeSubmit.ETH),
-      stETH: ethers.formatEther(balancesBeforeSubmit.stETH)
+      stETH: ethers.formatEther(balancesBeforeSubmit.stETH),
     });
 
     expect(balancesBeforeSubmit.stETH).to.be.equal(0n, "stETH balance before submit");
@@ -141,11 +140,11 @@ describe("Protocol: All-round happy path", () => {
       "Growth per block": ethers.formatEther(growthPerBlock),
       "Total supply": ethers.formatEther(totalSupplyBeforeSubmit),
       "Buffered ether": ethers.formatEther(bufferedEtherBeforeSubmit),
-      "Staking limit": ethers.formatEther(stakingLimitBeforeSubmit)
+      "Staking limit": ethers.formatEther(stakingLimitBeforeSubmit),
     });
 
     const tx = await lido.connect(stranger).submit(ZeroAddress, { value: AMOUNT });
-    const receipt = await trace("lido.submit", tx) as TransactionReceipt;
+    const receipt = (await trace("lido.submit", tx)) as TransactionReceipt;
 
     expect(receipt).not.to.be.null;
 
@@ -154,7 +153,7 @@ describe("Protocol: All-round happy path", () => {
     log.debug("Stranger after submit", {
       address: stranger.address,
       ETH: ethers.formatEther(balancesAfterSubmit.ETH),
-      stETH: ethers.formatEther(balancesAfterSubmit.stETH)
+      stETH: ethers.formatEther(balancesAfterSubmit.stETH),
     });
 
     const spendEth = AMOUNT + receipt.cumulativeGasUsed;
@@ -189,9 +188,15 @@ describe("Protocol: All-round happy path", () => {
     expect(bufferedEtherAfterSubmit).to.be.equal(bufferedEtherBeforeSubmit + AMOUNT, "Buffered ether after submit");
 
     if (stakingLimitBeforeSubmit >= stakeLimitInfoBefore.maxStakeLimit - growthPerBlock) {
-      expect(stakingLimitAfterSubmit).to.be.equal(stakingLimitBeforeSubmit - AMOUNT, "Staking limit after submit without growth");
+      expect(stakingLimitAfterSubmit).to.be.equal(
+        stakingLimitBeforeSubmit - AMOUNT,
+        "Staking limit after submit without growth",
+      );
     } else {
-      expect(stakingLimitAfterSubmit).to.be.equal(stakingLimitBeforeSubmit - AMOUNT + growthPerBlock, "Staking limit after submit");
+      expect(stakingLimitAfterSubmit).to.be.equal(
+        stakingLimitBeforeSubmit - AMOUNT + growthPerBlock,
+        "Staking limit after submit",
+      );
     }
 
     log.done("submits ETH to the Lido contract");
@@ -210,10 +215,10 @@ describe("Protocol: All-round happy path", () => {
     const dsm = await impersonate(depositSecurityModule.address, ether("100"));
 
     const depositNorTx = await lido.connect(dsm).deposit(MAX_DEPOSIT, CURATED_MODULE_ID, ZERO_HASH);
-    const depositNorReceipt = await trace("lido.deposit (Curated Module)", depositNorTx) as TransactionReceipt;
+    const depositNorReceipt = (await trace("lido.deposit (Curated Module)", depositNorTx)) as TransactionReceipt;
 
     const depositSdvtTx = await lido.connect(dsm).deposit(MAX_DEPOSIT, SIMPLE_DVT_MODULE_ID, ZERO_HASH);
-    const depositSdvtReceipt = await trace("lido.deposit (Simple DVT)", depositSdvtTx) as TransactionReceipt;
+    const depositSdvtReceipt = (await trace("lido.deposit (Simple DVT)", depositSdvtTx)) as TransactionReceipt;
 
     const bufferedEtherAfterDeposit = await lido.getBufferedEther();
 

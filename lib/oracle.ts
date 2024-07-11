@@ -3,7 +3,7 @@ import { assert } from "chai";
 import { keccak256 } from "ethers";
 import { ethers } from "hardhat";
 
-import { AccountingOracle, HashConsensus } from "typechain-types";
+import type { AccountingOracle, HashConsensus } from "typechain-types";
 
 import { CONSENSUS_VERSION } from "lib/constants";
 

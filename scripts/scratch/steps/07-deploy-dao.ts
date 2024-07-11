@@ -1,22 +1,19 @@
 import { assert } from "chai";
 import chalk from "chalk";
-import { ContractTransactionReceipt } from "ethers";
+import type { ContractTransactionReceipt } from "ethers";
 import { ethers } from "hardhat";
 
-import {
-  ERCProxy__factory,
-  EVMScriptRegistryFactory,
-  EVMScriptRegistryFactory__factory,
-  Kernel__factory,
-} from "typechain-types";
+import type { EVMScriptRegistryFactory } from "typechain-types";
+import { ERCProxy__factory, EVMScriptRegistryFactory__factory, Kernel__factory } from "typechain-types";
 
-import { getContractAt, getContractPath, loadContract, LoadedContract } from "lib/contract";
+import type { LoadedContract } from "lib/contract";
+import { getContractAt, getContractPath, loadContract } from "lib/contract";
 import { makeTx } from "lib/deploy";
 import { findEvents, findEventsWithAbi } from "lib/event";
 import { log } from "lib/log";
+import type { DeploymentState } from "lib/state-file";
 import {
   AppNames,
-  DeploymentState,
   persistNetworkState,
   readNetworkState,
   setValueInState,

@@ -1,8 +1,9 @@
 import { ethers } from "hardhat";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { LidoLocator, LidoLocator__factory, OssifiableProxy, OssifiableProxy__factory } from "typechain-types";
+import type { LidoLocator, OssifiableProxy } from "typechain-types";
+import { LidoLocator__factory, OssifiableProxy__factory } from "typechain-types";
 
 import { certainAddress } from "lib";
 

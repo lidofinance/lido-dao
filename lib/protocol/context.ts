@@ -1,9 +1,7 @@
 import { ether, impersonate } from "lib";
 
 import { discover } from "./discovery";
-import { ProtocolContext, ProtocolSigners } from "./types";
-
-type Signer = string | keyof ProtocolSigners;
+import type { ProtocolContext, ProtocolSigners, Signer } from "./types";
 
 const getSigner = async (signer: Signer, balance = ether("100"), signers: ProtocolSigners) => {
   // @ts-expect-error TS7053
@@ -17,6 +15,6 @@ export const getProtocolContext = async (): Promise<ProtocolContext> => {
   return {
     contracts,
     signers,
-    getSigner: async (signer: Signer, balance?: bigint) => getSigner(signer, balance, signers)
+    getSigner: async (signer: Signer, balance?: bigint) => getSigner(signer, balance, signers),
   };
 };

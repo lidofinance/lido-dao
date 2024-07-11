@@ -2,10 +2,10 @@ import { expect } from "chai";
 import { MaxUint256, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { mine } from "@nomicfoundation/hardhat-network-helpers";
 
-import { ACL, Lido } from "typechain-types";
+import type { ACL, Lido } from "typechain-types";
 
 import { certainAddress, ether, ONE_ETHER } from "lib";
 

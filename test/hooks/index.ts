@@ -1,4 +1,4 @@
-import * as Mocha from "mocha";
+import type * as Mocha from "mocha";
 
 import "./assertion/revertedWithOZAccessControlError";
 

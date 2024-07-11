@@ -3,15 +3,16 @@ import { ZeroHash } from "ethers";
 import { ethers } from "hardhat";
 
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import {
+import type {
   AccountingOracleTimeTravellable,
   HashConsensusTimeTravellable,
   MockStakingRouterForAccountingOracle,
   OracleReportSanityChecker,
 } from "typechain-types";
 
+import type { ExtraDataType, OracleReport } from "lib";
 import {
   calcExtraDataListHash,
   calcReportDataHash,
@@ -22,11 +23,9 @@ import {
   EXTRA_DATA_FORMAT_EMPTY,
   EXTRA_DATA_FORMAT_LIST,
   EXTRA_DATA_TYPE_STUCK_VALIDATORS,
-  ExtraDataType,
   getReportDataItems,
   numberToHex,
   ONE_GWEI,
-  OracleReport,
   packExtraDataList,
   shareRate,
 } from "lib";

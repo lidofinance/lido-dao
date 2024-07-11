@@ -1,11 +1,11 @@
 import hre from "hardhat";
 
-import { AccountingOracle, Lido, LidoLocator, StakingRouter } from "typechain-types";
+import type { AccountingOracle, Lido, LidoLocator, StakingRouter } from "typechain-types";
 
 import { batch, log } from "lib";
 
 import { networks } from "./networks";
-import {
+import type {
   AragonContracts,
   ContractName,
   ContractType,
@@ -14,7 +14,7 @@ import {
   LoadedContract,
   ProtocolContracts,
   ProtocolSigners,
-  StackingModulesContracts
+  StackingModulesContracts,
 } from "./types";
 
 // TODO: inflate config from whatever source is available (yaml, json, etc)
@@ -44,14 +44,14 @@ const getDiscoveryConfig = () => {
     "Locator address": locatorAddress,
     "Agent address": agentAddress,
     "Voting address": votingAddress,
-    "Easy track executor address": easyTrackExecutorAddress
+    "Easy track executor address": easyTrackExecutorAddress,
   });
 
   return {
     locatorAddress,
     agentAddress,
     votingAddress,
-    easyTrackExecutorAddress
+    easyTrackExecutorAddress,
   };
 };
 
@@ -59,8 +59,7 @@ const getDiscoveryConfig = () => {
  * Load contract by name and address.
  */
 const loadContract = async <Name extends ContractName>(name: Name, address: string) => {
-  const contract = await hre.ethers
-    .getContractAt(name, address) as unknown as LoadedContract<ContractType<Name>>;
+  const contract = (await hre.ethers.getContractAt(name, address)) as unknown as LoadedContract<ContractType<Name>>;
   contract.address = address;
   return contract;
 };
@@ -68,20 +67,21 @@ const loadContract = async <Name extends ContractName>(name: Name, address: stri
 /**
  * Load all Lido protocol foundation contracts.
  */
-const getFoundationContracts = async (locator: LoadedContract<LidoLocator>) => (await batch({
-  accountingOracle: loadContract("AccountingOracle", await locator.accountingOracle()),
-  depositSecurityModule: loadContract("DepositSecurityModule", await locator.depositSecurityModule()),
-  elRewardsVault: loadContract("LidoExecutionLayerRewardsVault", await locator.elRewardsVault()),
-  legacyOracle: loadContract("LegacyOracle", await locator.legacyOracle()),
-  lido: loadContract("Lido", await locator.lido()),
-  oracleReportSanityChecker: loadContract("OracleReportSanityChecker", await locator.oracleReportSanityChecker()),
-  burner: loadContract("Burner", await locator.burner()),
-  stakingRouter: loadContract("StakingRouter", await locator.stakingRouter()),
-  validatorsExitBusOracle: loadContract("ValidatorsExitBusOracle", await locator.validatorsExitBusOracle()),
-  withdrawalQueue: loadContract("WithdrawalQueueERC721", await locator.withdrawalQueue()),
-  withdrawalVault: loadContract("WithdrawalVault", await locator.withdrawalVault()),
-  oracleDaemonConfig: loadContract("OracleDaemonConfig", await locator.oracleDaemonConfig())
-}) as FoundationContracts);
+const getFoundationContracts = async (locator: LoadedContract<LidoLocator>) =>
+  (await batch({
+    accountingOracle: loadContract("AccountingOracle", await locator.accountingOracle()),
+    depositSecurityModule: loadContract("DepositSecurityModule", await locator.depositSecurityModule()),
+    elRewardsVault: loadContract("LidoExecutionLayerRewardsVault", await locator.elRewardsVault()),
+    legacyOracle: loadContract("LegacyOracle", await locator.legacyOracle()),
+    lido: loadContract("Lido", await locator.lido()),
+    oracleReportSanityChecker: loadContract("OracleReportSanityChecker", await locator.oracleReportSanityChecker()),
+    burner: loadContract("Burner", await locator.burner()),
+    stakingRouter: loadContract("StakingRouter", await locator.stakingRouter()),
+    validatorsExitBusOracle: loadContract("ValidatorsExitBusOracle", await locator.validatorsExitBusOracle()),
+    withdrawalQueue: loadContract("WithdrawalQueueERC721", await locator.withdrawalQueue()),
+    withdrawalVault: loadContract("WithdrawalVault", await locator.withdrawalVault()),
+    oracleDaemonConfig: loadContract("OracleDaemonConfig", await locator.oracleDaemonConfig()),
+  })) as FoundationContracts;
 
 /**
  * Load Aragon contracts required for protocol.
@@ -89,10 +89,10 @@ const getFoundationContracts = async (locator: LoadedContract<LidoLocator>) => (
 const getAragonContracts = async (lido: LoadedContract<Lido>) => {
   const kernelAddress = await lido.kernel();
   const kernel = await loadContract("Kernel", kernelAddress);
-  return await batch({
-    kernel: new Promise(resolve => resolve(kernel)), // Avoiding double loading
-    acl: loadContract("ACL", await kernel.acl())
-  }) as AragonContracts;
+  return (await batch({
+    kernel: new Promise((resolve) => resolve(kernel)), // Avoiding double loading
+    acl: loadContract("ACL", await kernel.acl()),
+  })) as AragonContracts;
 };
 
 /**
@@ -100,10 +100,10 @@ const getAragonContracts = async (lido: LoadedContract<Lido>) => {
  */
 const getStakingModules = async (stakingRouter: LoadedContract<StakingRouter>) => {
   const [nor, sdvt] = await stakingRouter.getStakingModules();
-  return await batch({
+  return (await batch({
     nor: loadContract("NodeOperatorsRegistry", nor.stakingModuleAddress),
-    sdvt: loadContract("NodeOperatorsRegistry", sdvt.stakingModuleAddress)
-  }) as StackingModulesContracts;
+    sdvt: loadContract("NodeOperatorsRegistry", sdvt.stakingModuleAddress),
+  })) as StackingModulesContracts;
 };
 
 /**
@@ -111,9 +111,9 @@ const getStakingModules = async (stakingRouter: LoadedContract<StakingRouter>) =
  */
 const getHashConsensus = async (accountingOracle: LoadedContract<AccountingOracle>) => {
   const hashConsensusAddress = await accountingOracle.getConsensusContract();
-  return await batch({
-    hashConsensus: loadContract("HashConsensus", hashConsensusAddress)
-  }) as HashConsensusContracts;
+  return (await batch({
+    hashConsensus: loadContract("HashConsensus", hashConsensusAddress),
+  })) as HashConsensusContracts;
 };
 
 export async function discover() {
@@ -124,9 +124,9 @@ export async function discover() {
   const contracts = {
     locator,
     ...foundationContracts,
-    ...await getAragonContracts(foundationContracts.lido),
-    ...await getStakingModules(foundationContracts.stakingRouter),
-    ...await getHashConsensus(foundationContracts.accountingOracle)
+    ...(await getAragonContracts(foundationContracts.lido)),
+    ...(await getStakingModules(foundationContracts.stakingRouter)),
+    ...(await getHashConsensus(foundationContracts.accountingOracle)),
   } as ProtocolContracts;
 
   log.debug("Contracts discovered", contracts);
@@ -134,7 +134,7 @@ export async function discover() {
   const signers = {
     agent: networkConfig.agentAddress,
     voting: networkConfig.votingAddress,
-    easyTrack: networkConfig.easyTrackExecutorAddress
+    easyTrack: networkConfig.easyTrackExecutorAddress,
   } as ProtocolSigners;
 
   log.debug("Signers discovered", signers);

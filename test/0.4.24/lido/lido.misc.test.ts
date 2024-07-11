@@ -2,16 +2,18 @@ import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import {
+import type {
   ACL,
   Lido,
   LidoLocator,
-  LidoLocator__factory,
   StakingRouter__MockForLidoMisc,
-  StakingRouter__MockForLidoMisc__factory,
   WithdrawalQueue__MockForLidoMisc,
+} from "typechain-types";
+import {
+  LidoLocator__factory,
+  StakingRouter__MockForLidoMisc__factory,
   WithdrawalQueue__MockForLidoMisc__factory,
 } from "typechain-types";
 
