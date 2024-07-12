@@ -382,5 +382,9 @@ describe("HashConsensus:frames", function () {
       expect(newFrame.refSlot).to.equal(computeEpochFirstSlot(10n) - 1n);
       expect(newFrame.reportProcessingDeadlineSlot).to.equal(computeEpochFirstSlot(14n) - 1n);
     });
+
+    it("a report for the current ref. slot cannot be processed anymore");
+    // if (_computeSlotAtTimestamp(timestamp) > frame.reportProcessingDeadlineSlot) {
+    // this code branch will not be executed, because we cannot change `DEADLINE_SLOT_OFFSET`
   });
 });
