@@ -91,7 +91,7 @@ export const oracleReport = async (
     numExitedValidatorsByStakingModule = [],
     reportElVault = true,
     reportWithdrawalsVault = true,
-  } = {} as OracleReportPrepareOptions,
+  } = {} as Partial<OracleReportPrepareOptions>,
 ) => {
   const { hashConsensus, lido, elRewardsVault, withdrawalVault, burner, accountingOracle } = ctx.contracts;
 
@@ -220,7 +220,7 @@ export const oracleReport = async (
       "Extra data items count": report.extraDataItemsCount,
     });
 
-    return report;
+    return { report, reportTx: undefined, extraDataTx: undefined };
   }
 
   const reportParams = {
@@ -370,10 +370,8 @@ const getFinalizationBatches = async (
 
   const { requestTimestampMargin } = await oracleReportSanityChecker.getOracleReportLimits();
 
-  const [bufferedEther, unfinalizedSteth] = await Promise.all([
-    lido.getBufferedEther(),
-    withdrawalQueue.unfinalizedStETH(),
-  ]);
+  const bufferedEther = await lido.getBufferedEther();
+  const unfinalizedSteth = await withdrawalQueue.unfinalizedStETH();
 
   const reservedBuffer = BigIntMath.min(bufferedEther, unfinalizedSteth);
   const availableEth = limitedWithdrawalVaultBalance + limitedElRewardsVaultBalance + reservedBuffer;
@@ -554,7 +552,7 @@ export const pushOracleReport = async (
     "Processing state extra data items submitted is incorrect",
   );
 
-  return { reportTx, extraDataTx };
+  return { report, reportTx, extraDataTx };
 };
 
 /**

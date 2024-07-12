@@ -129,7 +129,26 @@ export async function discover() {
     ...(await getHashConsensus(foundationContracts.accountingOracle)),
   } as ProtocolContracts;
 
-  log.debug("Contracts discovered", contracts);
+  log.debug("Contracts discovered", {
+    "Locator": locator.address,
+    "Lido": foundationContracts.lido.address,
+    "Accounting Oracle": foundationContracts.accountingOracle.address,
+    "Hash Consensus": contracts.hashConsensus.address,
+    "Execution Layer Rewards Vault": foundationContracts.elRewardsVault.address,
+    "Withdrawal Queue": foundationContracts.withdrawalQueue.address,
+    "Withdrawal Vault": foundationContracts.withdrawalVault.address,
+    "Validators Exit Bus Oracle": foundationContracts.validatorsExitBusOracle.address,
+    "Oracle Daemon Config": foundationContracts.oracleDaemonConfig.address,
+    "Oracle Report Sanity Checker": foundationContracts.oracleReportSanityChecker.address,
+    "Staking Router": foundationContracts.stakingRouter.address,
+    "Deposit Security Module": foundationContracts.depositSecurityModule.address,
+    "NOR": contracts.nor.address,
+    "sDVT": contracts.sdvt.address,
+    "Kernel": contracts.kernel.address,
+    "ACL": contracts.acl.address,
+    "Burner": foundationContracts.burner.address,
+    "Legacy Oracle": foundationContracts.legacyOracle.address,
+  });
 
   const signers = {
     agent: networkConfig.agentAddress,

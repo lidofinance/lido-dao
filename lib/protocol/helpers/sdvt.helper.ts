@@ -55,6 +55,8 @@ const ensureSDVTOperatorsHaveMinKeys = async (
     const unusedKeysCount = await sdvt.getUnusedSigningKeyCount(operatorId);
 
     if (unusedKeysCount < minKeysCount) {
+      log.warning(`Adding fake keys to operator ${operatorId}`);
+
       await addFakeNodeOperatorKeysToSDVT(ctx, {
         operatorId,
         keysToAdd: minKeysCount - unusedKeysCount,
@@ -65,6 +67,11 @@ const ensureSDVTOperatorsHaveMinKeys = async (
 
     expect(unusedKeysCountAfter).to.be.gte(minKeysCount);
   }
+
+  log.debug("Checked operators keys count", {
+    "Min operators count": minOperatorsCount,
+    "Min keys count": minKeysCount,
+  });
 };
 
 /**
@@ -85,6 +92,8 @@ const ensureSDVTMinOperators = async (ctx: ProtocolContext, minOperatorsCount = 
       rewardAddress: getOperatorRewardAddress(operatorId),
       managerAddress: getOperatorManagerAddress(operatorId),
     };
+
+    log.warning(`Adding fake operator ${operatorId}`);
 
     await addFakeNodeOperatorToSDVT(ctx, operator);
     count++;
@@ -129,6 +138,13 @@ export const addFakeNodeOperatorToSDVT = async (
     [1 << (240 + Number(operatorId))],
   );
   await trace("acl.grantPermissionP", grantPermissionTx);
+
+  log.debug("Added fake operator", {
+    "Operator ID": operatorId,
+    "Name": name,
+    "Reward address": rewardAddress,
+    "Manager address": managerAddress,
+  });
 };
 
 /**
@@ -165,6 +181,15 @@ export const addFakeNodeOperatorKeysToSDVT = async (
 
   expect(totalKeysAfter).to.be.equal(totalKeysBefore + keysToAdd);
   expect(unusedKeysAfter).to.be.equal(unusedKeysBefore + keysToAdd);
+
+  log.debug("Added fake signing keys", {
+    "Operator ID": operatorId,
+    "Keys to add": keysToAdd,
+    "Total keys before": totalKeysBefore,
+    "Total keys after": totalKeysAfter,
+    "Unused keys before": unusedKeysBefore,
+    "Unused keys after": unusedKeysAfter,
+  });
 };
 
 /**
