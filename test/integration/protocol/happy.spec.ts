@@ -256,7 +256,7 @@ describe("Protocol", () => {
   });
 
   it("Should rebase correctly", async () => {
-    const { lido, withdrawalQueue, stakingRouter, locator, burner, nor, sdvt } = ctx.contracts;
+    const { lido, withdrawalQueue, locator, burner, nor, sdvt } = ctx.contracts;
 
     const treasuryAddress = await locator.treasury();
     const strangerBalancesBeforeRebase = await getBalances(stranger);
@@ -291,8 +291,8 @@ describe("Protocol", () => {
       return { penalized: penalizedIds.length, count };
     };
 
-    const { penalized: norPenalized, count: norCount } = await getNodeOperatorsState(nor, "NOR");
-    const { penalized: sdvtPenalized, count: sdvtCount } = await getNodeOperatorsState(sdvt, "sDVT");
+    const { penalized: norPenalized } = await getNodeOperatorsState(nor, "NOR");
+    const { penalized: sdvtPenalized } = await getNodeOperatorsState(sdvt, "sDVT");
 
     const treasuryBalanceBeforeRebase = await lido.sharesOf(treasuryAddress);
 
@@ -371,6 +371,7 @@ describe("Protocol", () => {
     log.done("rebases the protocol again and finalizes withdrawals");
 
     // withdrawing stETH
+    console.log(uncountedStETHShares); // keep it while test is not finished
 
     log.done("withdraws stETH");
   });
