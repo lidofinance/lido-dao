@@ -6,11 +6,11 @@ import { ethers } from "hardhat";
 import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { batch, ether, impersonate, log, trace } from "lib";
-import type { ProtocolContext } from "lib/protocol";
-import { getProtocolContext } from "lib/protocol";
-import { ensureSDVTOperators, oracleReport, unpauseStaking, unpauseWithdrawalQueue } from "lib/protocol/helpers";
 
-import { Snapshot } from "test/suite";
+import type { ProtocolContext } from "../../lib/protocol";
+import { getProtocolContext } from "../../lib/protocol";
+import { ensureSDVTOperators, oracleReport, unpauseStaking, unpauseWithdrawalQueue } from "../../lib/protocol/helpers";
+import { Snapshot } from "../suite";
 
 const AMOUNT = ether("100");
 const MAX_DEPOSIT = 150n;

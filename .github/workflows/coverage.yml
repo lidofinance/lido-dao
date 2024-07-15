@@ -2,9 +2,9 @@ name: Coverage
 
 on:
   push:
-    branches: [master, develop]
+    branches: [ master, develop ]
   pull_request:
-    branches: [master, develop]
+    branches: [ master, develop ]
 
 jobs:
   coverage:
@@ -19,7 +19,7 @@ jobs:
 
       # Remove the integration tests from the test suite, as they require a mainnet fork to run properly
       - name: Remove integration tests
-        run: rm -rf test/integration/**/*.spec.ts
+        run: rm -rf test/integration/**/*.ts
 
       - name: Collect coverage
         run: yarn test:coverage
