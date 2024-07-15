@@ -73,7 +73,7 @@ describe("NodeOperatorsRegistry:signing-keys", () => {
       stuckPenaltyEndAt: 0n,
     },
     {
-      name: " bar",
+      name: "bar",
       rewardAddress: certainAddress("node-operator-2"),
       totalSigningKeysCount: 12n,
       depositedSigningKeysCount: 7n,

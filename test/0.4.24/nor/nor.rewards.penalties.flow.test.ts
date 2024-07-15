@@ -25,16 +25,11 @@ import {
   ether,
   NodeOperatorConfig,
   prepIdsCountsPayload,
+  RewardDistributionState,
 } from "lib";
 
 import { addAragonApp, deployLidoDao } from "test/deploy";
 import { Snapshot } from "test/suite";
-
-enum RewardDistributionState {
-  TransferredToModule, // New reward portion minted and transferred to the module
-  ReadyForDistribution, // Operators' statistics updated, reward ready for distribution
-  Distributed, // Reward distributed among operators
-}
 
 describe("NodeOperatorsRegistry:rewards-penalties", () => {
   let deployer: HardhatEthersSigner;
@@ -72,7 +67,7 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
       stuckPenaltyEndAt: 0n,
     },
     {
-      name: " bar",
+      name: "bar",
       rewardAddress: certainAddress("node-operator-2"),
       totalSigningKeysCount: 15n,
       depositedSigningKeysCount: 7n,
@@ -376,7 +371,7 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
         .to.not.emit(nor, "ExitedSigningKeysCountChanged");
     });
 
-    it("Reverts on attemp to decrease exited keys count", async () => {
+    it("Reverts on attempt to decrease exited keys count", async () => {
       const nonce = await nor.getNonce();
       const idsPayload = prepIdsCountsPayload([BigInt(firstNodeOperatorId)], [2n]);
 
