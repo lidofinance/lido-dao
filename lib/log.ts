@@ -21,7 +21,7 @@ const LONG_LINE_LENGTH = 40;
 export const OK = gr("[✓]");
 export const NOT_OK = rd("[×]");
 
-const DEBUG = process.env.DEBUG || false;
+const DEBUG_LOGS = process.env.DEBUG_LOGS || false;
 
 const _line = (length = LINE_LENGTH, minLength = LINE_LENGTH): string => "=".repeat(Math.max(length, minLength));
 
@@ -103,7 +103,7 @@ log.done = (message: string) => {
 };
 
 log.debug = (title: string, records: Record<string, ConvertibleToString>) => {
-  if (!DEBUG) return;
+  if (!DEBUG_LOGS) return;
 
   _title(title);
   Object.keys(records).forEach((label) => _record(`  ${label}`, records[label]));

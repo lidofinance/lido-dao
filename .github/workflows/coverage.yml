@@ -19,7 +19,7 @@ jobs:
 
       # Remove the integration tests from the test suite, as they require a mainnet fork to run properly
       - name: Remove integration tests
-        run: rm -rf test/integration/**/*.ts
+        run: rm -rf test/integration
 
       - name: Collect coverage
         run: yarn test:coverage
