@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: 2021 Lido <info@lido.fi>
-
 // SPDX-License-Identifier: GPL-3.0
+// for testing purposes only
 
 pragma solidity 0.6.12; // latest available for using OZ
 
-import "../WstETH.sol";
-import "../interfaces/IStETH.sol";
+import "contracts/0.6.12/WstETH.sol";
+import "contracts/0.6.12/interfaces/IStETH.sol";
 
 
-contract WstETHMock is WstETH {
+contract WstETH__MockForWithdrawalQueueDeploy is WstETH {
     constructor(IStETH _StETH) public WstETH(_StETH) {}
 
     function mint(address recipient, uint256 amount) public {

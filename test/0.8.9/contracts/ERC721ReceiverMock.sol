@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
+// for testing purposes only
 
 pragma solidity 0.8.9;
 
-import { IERC721Receiver } from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721Receiver.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721Receiver.sol";
 
 contract ERC721ReceiverMock is IERC721Receiver {
     bool public doesAcceptTokens;
@@ -24,8 +25,8 @@ contract ERC721ReceiverMock is IERC721Receiver {
         }
         return
             bytes4(
-                keccak256("onERC721Received(address,address,uint256,bytes)")
-            );
+            keccak256("onERC721Received(address,address,uint256,bytes)")
+        );
     }
 
     receive() external payable {
