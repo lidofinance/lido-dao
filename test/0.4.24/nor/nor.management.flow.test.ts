@@ -471,7 +471,7 @@ describe("NodeOperatorsRegistry:management", () => {
 
       const noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
 
-      expect(noSummary.targetLimitMode).to.be.equal(0n);;
+      expect(noSummary.targetLimitMode).to.be.equal(0n);
       expect(noSummary.targetValidatorsCount).to.be.equal(0n);
       expect(noSummary.stuckValidatorsCount).to.be.equal(0n);
       expect(noSummary.refundedValidatorsCount).to.be.equal(0n);
