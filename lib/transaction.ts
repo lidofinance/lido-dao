@@ -1,11 +1,17 @@
-import { ContractTransactionResponse, TransactionResponse } from "ethers";
+import {
+  BaseContract,
+  ContractTransactionResponse,
+  LogDescription,
+  TransactionReceipt,
+  TransactionResponse,
+} from "ethers";
 import hre, { ethers } from "hardhat";
 
 import { log } from "lib";
 
 type Transaction = TransactionResponse | ContractTransactionResponse;
 
-export async function trace(name: string, tx: Transaction) {
+export const trace = async (name: string, tx: Transaction) => {
   const receipt = await tx.wait();
 
   if (!receipt) {
@@ -33,4 +39,13 @@ export async function trace(name: string, tx: Transaction) {
   });
 
   return receipt;
-}
+};
+
+export const getTransactionEvents = (receipt: TransactionReceipt, contract: BaseContract, name: string) =>
+  receipt.logs
+    .filter((l) => l !== null)
+    .map((l) => contract.interface.parseLog(l))
+    .filter((l) => l?.name === name) || ([] as LogDescription[]);
+
+export const getTransactionEvent = (receipt: TransactionReceipt, contract: BaseContract, name: string, index = 0) =>
+  getTransactionEvents(receipt, contract, name)[index] as LogDescription | undefined;

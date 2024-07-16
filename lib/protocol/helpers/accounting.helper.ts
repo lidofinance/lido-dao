@@ -551,6 +551,12 @@ export const pushOracleReport = async (
     "Processing state extra data items submitted is incorrect",
   );
 
+  log.debug("Oracle report pushed", {
+    "Ref slot": refSlot,
+    "Consensus version": consensusVersion,
+    "Report hash": hash,
+  });
+
   return { report, reportTx, extraDataTx };
 };
 
