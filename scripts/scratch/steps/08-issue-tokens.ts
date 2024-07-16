@@ -8,7 +8,7 @@ import { readNetworkState, Sk } from "lib/state-file";
 const MAX_HOLDERS_IN_ONE_TX = 30;
 
 async function main() {
-  log.deployScriptStart(__filename);
+  log.scriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
   const state = readNetworkState({ deployer });
 
@@ -63,7 +63,7 @@ async function main() {
     );
   }
 
-  log.deployScriptFinish(__filename);
+  log.scriptFinish(__filename);
 }
 
 function formatDate(unixTimestamp: number) {

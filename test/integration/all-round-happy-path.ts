@@ -1,14 +1,12 @@
 import { expect } from "chai";
-import type { BaseContract, LogDescription, TransactionReceipt, TransactionResponse } from "ethers";
-import { ZeroAddress } from "ethers";
+import { BaseContract, LogDescription, TransactionReceipt, TransactionResponse, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { batch, ether, impersonate, log, trace } from "lib";
 
-import type { ProtocolContext } from "../../lib/protocol";
-import { getProtocolContext } from "../../lib/protocol";
+import { getProtocolContext, ProtocolContext } from "../../lib/protocol";
 import { ensureSDVTOperators, oracleReport, unpauseStaking, unpauseWithdrawalQueue } from "../../lib/protocol/helpers";
 import { Snapshot } from "../suite";
 
@@ -19,20 +17,14 @@ const SIMPLE_DVT_MODULE_ID = 2n;
 
 const ZERO_HASH = new Uint8Array(32).fill(0);
 
-const getEvents = (
-  receipt: TransactionReceipt,
-  contract: BaseContract,
-  name: string,
-) => receipt.logs
-  .filter(l => l !== null)
-  .map(l => contract.interface.parseLog(l))
-  .filter(l => l?.name === name) || [] as LogDescription[];
+const getEvents = (receipt: TransactionReceipt, contract: BaseContract, name: string) =>
+  receipt.logs
+    .filter((l) => l !== null)
+    .map((l) => contract.interface.parseLog(l))
+    .filter((l) => l?.name === name) || ([] as LogDescription[]);
 
-const getEvent = (
-  receipt: TransactionReceipt,
-  contract: BaseContract,
-  name: string, index = 0,
-) => getEvents(receipt, contract, name)[index] as LogDescription | undefined;
+const getEvent = (receipt: TransactionReceipt, contract: BaseContract, name: string, index = 0) =>
+  getEvents(receipt, contract, name)[index] as LogDescription | undefined;
 
 describe("Protocol", () => {
   let ctx: ProtocolContext;
@@ -177,8 +169,16 @@ describe("Protocol", () => {
 
     const spendEth = AMOUNT + receipt.gasUsed * receipt.gasPrice;
 
-    expect(strangerBalancesAfterSubmit.stETH).to.be.approximately(strangerBalancesBeforeSubmit.stETH + AMOUNT, 10n, "stETH balance after submit");
-    expect(strangerBalancesAfterSubmit.ETH).to.be.approximately(strangerBalancesBeforeSubmit.ETH - spendEth, 10n, "ETH balance after submit");
+    expect(strangerBalancesAfterSubmit.stETH).to.be.approximately(
+      strangerBalancesBeforeSubmit.stETH + AMOUNT,
+      10n,
+      "stETH balance after submit",
+    );
+    expect(strangerBalancesAfterSubmit.ETH).to.be.approximately(
+      strangerBalancesBeforeSubmit.ETH - spendEth,
+      10n,
+      "ETH balance after submit",
+    );
 
     const submittedEvent = getEvent(receipt, lido, "Submitted");
     const transferSharesEvent = getEvent(receipt, lido, "TransferShares");
@@ -251,8 +251,14 @@ describe("Protocol", () => {
 
     const depositCounts = unbufferedAmountNor / ether("32") + unbufferedAmountSdvt / ether("32");
 
-    expect(bufferedEtherAfterDeposit).to.be.equal(bufferedEtherBeforeDeposit - unbufferedAmountNor - unbufferedAmountSdvt, "Buffered ether after deposit");
-    expect(newValidatorsCountSdvt).to.be.equal(depositedValidatorsBeforeDeposit + depositCounts, "New validators count after deposit");
+    expect(bufferedEtherAfterDeposit).to.be.equal(
+      bufferedEtherBeforeDeposit - unbufferedAmountNor - unbufferedAmountSdvt,
+      "Buffered ether after deposit",
+    );
+    expect(newValidatorsCountSdvt).to.be.equal(
+      depositedValidatorsBeforeDeposit + depositCounts,
+      "New validators count after deposit",
+    );
   });
 
   it("Should rebase correctly", async () => {
@@ -277,7 +283,10 @@ describe("Protocol", () => {
           registry.isOperatorPenalized(i),
         ]);
         if (isNodeOperatorPenalized) penalizedIds.push(i);
-        if (!operator.totalDepositedValidators || operator.totalDepositedValidators === operator.totalExitedValidators) {
+        if (
+          !operator.totalDepositedValidators ||
+          operator.totalDepositedValidators === operator.totalExitedValidators
+        ) {
           count--;
         }
       }
@@ -298,16 +307,16 @@ describe("Protocol", () => {
 
     const reportParams = { clDiff: ether("100") };
 
-    const { reportTx, extraDataTx } = await oracleReport(ctx, reportParams) as {
+    const { reportTx, extraDataTx } = (await oracleReport(ctx, reportParams)) as {
       reportTx: TransactionResponse;
-      extraDataTx: TransactionResponse
+      extraDataTx: TransactionResponse;
     };
 
     const strangerBalancesAfterRebase = await getBalances(stranger);
     const treasuryBalanceAfterRebase = await lido.sharesOf(treasuryAddress);
 
-    const reportTxReceipt = await reportTx.wait() as TransactionReceipt;
-    const extraDataTxReceipt = await extraDataTx.wait() as TransactionReceipt;
+    const reportTxReceipt = (await reportTx.wait()) as TransactionReceipt;
+    const extraDataTxReceipt = (await extraDataTx.wait()) as TransactionReceipt;
 
     const tokenRebasedEvent = getEvent(reportTxReceipt, lido, "TokenRebased");
     const transferEvents = getEvents(reportTxReceipt, lido, "Transfer");
@@ -327,14 +336,22 @@ describe("Protocol", () => {
     const treasuryTransferValue = transferEvents[3]?.args[2];
     const treasurySharesMinted = await lido.getSharesByPooledEth(treasuryTransferValue);
 
-    expect(treasuryBalanceAfterRebase).to.be.approximately(treasuryBalanceBeforeRebase + treasurySharesMinted, 10n, "Treasury balance after rebase");
+    expect(treasuryBalanceAfterRebase).to.be.approximately(
+      treasuryBalanceBeforeRebase + treasurySharesMinted,
+      10n,
+      "Treasury balance after rebase",
+    );
     expect(treasuryBalanceAfterRebase).to.be.gt(treasuryBalanceBeforeRebase, "Treasury balance after rebase increased");
-    expect(strangerBalancesAfterRebase.stETH).to.be.gt(strangerBalancesBeforeRebase.stETH, "Stranger stETH balance after rebase increased");
+    expect(strangerBalancesAfterRebase.stETH).to.be.gt(
+      strangerBalancesBeforeRebase.stETH,
+      "Stranger stETH balance after rebase increased",
+    );
 
     const expectedBurnerTransfers = (norPenalized > 0 ? 1 : 0) + (sdvtPenalized > 0 ? 1 : 0);
 
-    const burnerTransfers = getEvents(extraDataTxReceipt, lido, "Transfer")
-      .filter(e => e?.args[1] == burner.address).length;
+    const burnerTransfers = getEvents(extraDataTxReceipt, lido, "Transfer").filter(
+      (e) => e?.args[1] == burner.address,
+    ).length;
 
     expect(burnerTransfers).to.be.equal(expectedBurnerTransfers, "Burner transfers is correct");
 

@@ -3,11 +3,15 @@ import { randomBytes } from "crypto";
 import { AbiCoder, hexlify } from "ethers";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { getStorageAt, setCode } from "@nomicfoundation/hardhat-network-helpers";
 
-import type { Address__Harness, Recipient__MockForAddress } from "typechain-types";
-import { Address__Harness__factory, Recipient__MockForAddress__factory } from "typechain-types";
+import {
+  Address__Harness,
+  Address__Harness__factory,
+  Recipient__MockForAddress,
+  Recipient__MockForAddress__factory,
+} from "typechain-types";
 
 import { batch, certainAddress } from "lib";
 

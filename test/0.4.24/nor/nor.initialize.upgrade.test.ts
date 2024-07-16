@@ -2,14 +2,20 @@ import { expect } from "chai";
 import { encodeBytes32String, MaxUint256, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
-import type { ACL, Kernel, Lido, LidoLocator, NodeOperatorsRegistry__Harness } from "typechain-types";
-import { LidoLocator__factory, NodeOperatorsRegistry__Harness__factory } from "typechain-types";
+import {
+  ACL,
+  Kernel,
+  Lido,
+  LidoLocator,
+  LidoLocator__factory,
+  NodeOperatorsRegistry__Harness,
+  NodeOperatorsRegistry__Harness__factory,
+} from "typechain-types";
 
-import type { NodeOperatorConfig } from "lib";
-import { addNodeOperator, certainAddress } from "lib";
+import { addNodeOperator, certainAddress, NodeOperatorConfig } from "lib";
 
 import { addAragonApp, deployLidoDao, deployLidoLocator } from "test/deploy";
 import { Snapshot } from "test/suite";

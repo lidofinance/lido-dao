@@ -1,4 +1,4 @@
-import type { ProtocolContext } from "../types";
+import { ProtocolContext } from "../types";
 
 /**
  * Unpauses the withdrawal queue contract.

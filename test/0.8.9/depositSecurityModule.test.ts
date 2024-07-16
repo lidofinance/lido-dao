@@ -4,10 +4,10 @@ import { ethers, network } from "hardhat";
 import { describe } from "mocha";
 
 import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { mineUpTo, setBalance, time } from "@nomicfoundation/hardhat-network-helpers";
 
-import type {
+import {
   DepositContractMockForDepositSecurityModule,
   DepositSecurityModule,
   LidoMockForDepositSecurityModule,

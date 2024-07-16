@@ -5,7 +5,7 @@ import { log } from "lib/log";
 import { readNetworkState, Sk, updateObjectInState } from "lib/state-file";
 
 async function main() {
-  log.deployScriptStart(__filename);
+  log.scriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
   const state = readNetworkState({ deployer });
 
@@ -31,7 +31,7 @@ async function main() {
   const receipt = await ethers.provider.getTransactionReceipt(template.deploymentTx);
   updateObjectInState(Sk.lidoTemplate, { deployBlock: receipt?.blockNumber });
 
-  log.deployScriptFinish(__filename);
+  log.scriptFinish(__filename);
 }
 
 main()

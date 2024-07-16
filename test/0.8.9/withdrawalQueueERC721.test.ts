@@ -2,10 +2,10 @@ import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 
-import type {
+import {
   ERC721Receiver__MockWithdrawalQueueERC721,
   NFTDescriptor__MockWithdrawalQueueERC721,
   Receiver__MockForWithdrawalQueueBase,
@@ -16,9 +16,9 @@ import type {
 
 import {
   ERC165_INTERFACE_ID,
+  ERC4906_INTERFACE_ID,
   ERC721_INTERFACE_ID,
   ERC721METADATA_INTERFACE_ID,
-  ERC4906_INTERFACE_ID,
   ether,
   INVALID_INTERFACE_ID,
   OZ_ACCESS_CONTROL_ENUMERABLE_INTERFACE_ID,

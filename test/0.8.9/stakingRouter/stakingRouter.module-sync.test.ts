@@ -3,12 +3,14 @@ import { expect } from "chai";
 import { hexlify, randomBytes } from "ethers";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import type { DepositContract__MockForBeaconChainDepositor, StakingModule__Mock, StakingRouter } from "typechain-types";
 import {
+  DepositContract__MockForBeaconChainDepositor,
   DepositContract__MockForBeaconChainDepositor__factory,
+  StakingModule__Mock,
   StakingModule__Mock__factory,
+  StakingRouter,
   StakingRouter__factory,
 } from "typechain-types";
 

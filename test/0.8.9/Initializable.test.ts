@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-import type { Initializable__Mock } from "typechain-types";
+import { Initializable__Mock } from "typechain-types";
 
 describe("Initializable", function () {
   let initializable: Initializable__Mock;

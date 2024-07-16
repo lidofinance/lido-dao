@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { solidityPackedKeccak256 } from "ethers";
 import { ethers } from "hardhat";
 
-import type { SigningKeys__Harness } from "typechain-types";
+import { SigningKeys__Harness } from "typechain-types";
 
 import { EMPTY_PUBLIC_KEY, EMPTY_SIGNATURE, FakeValidatorKeys } from "lib";
 

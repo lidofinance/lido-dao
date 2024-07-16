@@ -9,7 +9,7 @@ const NULL_CONTENT_URI =
   "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 
 async function main() {
-  log.deployScriptStart(__filename);
+  log.scriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
   const state = readNetworkState({ deployer });
 
@@ -46,7 +46,7 @@ async function main() {
   setValueInState(Sk.lidoTemplateCreateStdAppReposTx, aragonStdAppsReceipt.hash);
   setValueInState(Sk.createAppReposTx, lidoAppsReceipt.hash);
 
-  log.deployScriptFinish(__filename);
+  log.scriptFinish(__filename);
 }
 
 main()

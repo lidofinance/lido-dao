@@ -3,13 +3,15 @@ import { randomBytes } from "crypto";
 import { hexlify } from "ethers";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { getStorageAt } from "@nomicfoundation/hardhat-network-helpers";
 
-import type { ERC1967Proxy__Harness } from "typechain-types";
-import { ERC1967Proxy__Harness__factory } from "typechain-types";
-import { Impl__MockForERC1967Proxy__factory } from "typechain-types/factories/test/0.8.4/contracts/Impl__MockForERC1967Proxy__factory";
-import type { Impl__MockForERC1967Proxy } from "typechain-types/test/0.8.4/contracts/Impl__MockForERC1967Proxy";
+import {
+  ERC1967Proxy__Harness,
+  ERC1967Proxy__Harness__factory,
+  Impl__MockForERC1967Proxy,
+  Impl__MockForERC1967Proxy__factory,
+} from "typechain-types";
 
 import { certainAddress } from "lib";
 

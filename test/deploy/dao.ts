@@ -1,15 +1,16 @@
-import type { BaseContract } from "ethers";
+import { BaseContract } from "ethers";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import type { Kernel, LidoLocator } from "typechain-types";
 import {
   ACL__factory,
   DAOFactory__factory,
   EIP712StETH__factory,
   EVMScriptRegistryFactory__factory,
+  Kernel,
   Kernel__factory,
   Lido__factory,
+  LidoLocator,
 } from "typechain-types";
 
 import { ether, findEvents, streccak } from "lib";

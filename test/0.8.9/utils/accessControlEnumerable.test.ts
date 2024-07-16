@@ -2,9 +2,9 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import type { AccessControlEnumerable__Harness } from "typechain-types";
+import { AccessControlEnumerable__Harness } from "typechain-types";
 
 import {
   ERC165_INTERFACE_ID,

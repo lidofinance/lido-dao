@@ -2,18 +2,28 @@ import { expect } from "chai";
 import { encodeBytes32String } from "ethers";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
-import type { ACL, Kernel, Lido, LidoLocator, NodeOperatorsRegistry__Harness } from "typechain-types";
 import {
+  ACL,
   Burner__MockForLidoHandleOracleReport__factory,
+  Kernel,
+  Lido,
+  LidoLocator,
   LidoLocator__factory,
+  NodeOperatorsRegistry__Harness,
   NodeOperatorsRegistry__Harness__factory,
 } from "typechain-types";
 
-import type { NodeOperatorConfig } from "lib";
-import { addNodeOperator, advanceChainTime, certainAddress, ether, prepIdsCountsPayload } from "lib";
+import {
+  addNodeOperator,
+  advanceChainTime,
+  certainAddress,
+  ether,
+  NodeOperatorConfig,
+  prepIdsCountsPayload,
+} from "lib";
 
 import { addAragonApp, deployLidoDao } from "test/deploy";
 import { Snapshot } from "test/suite";

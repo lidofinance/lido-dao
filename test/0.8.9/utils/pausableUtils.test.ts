@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
-import type { PausableUntil__Harness } from "typechain-types";
+import { PausableUntil__Harness } from "typechain-types";
 
 import { MAX_UINT256 } from "lib";
 

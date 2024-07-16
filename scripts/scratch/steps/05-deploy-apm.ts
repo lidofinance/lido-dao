@@ -2,8 +2,7 @@ import { assert } from "chai";
 import chalk from "chalk";
 import { ethers } from "hardhat";
 
-import type { ENS, LidoTemplate } from "typechain-types";
-import { ENS__factory, LidoTemplate__factory } from "typechain-types";
+import { ENS, ENS__factory, LidoTemplate, LidoTemplate__factory } from "typechain-types";
 
 import { loadContract } from "lib/contract";
 import { makeTx } from "lib/deploy";
@@ -14,7 +13,7 @@ import { log, yl } from "lib/log";
 import { readNetworkState, Sk, updateObjectInState } from "lib/state-file";
 
 async function main() {
-  log.deployScriptStart(__filename);
+  log.scriptStart(__filename);
 
   const deployer = (await ethers.provider.getSigner()).address;
   let state = readNetworkState({ deployer });
@@ -56,7 +55,7 @@ async function main() {
 
   state = updateObjectInState(Sk.lidoApm, { address: registryAddress });
 
-  log.deployScriptFinish(__filename);
+  log.scriptFinish(__filename);
 }
 
 function splitDomain(domain: string) {

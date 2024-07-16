@@ -1,8 +1,7 @@
 import { assert } from "chai";
 import { ethers } from "hardhat";
 
-import type { LoadedContract } from "lib";
-import { deployImplementation, getContractAt, log, readNetworkState, Sk } from "lib";
+import { deployImplementation, getContractAt, LoadedContract, log, readNetworkState, Sk } from "lib";
 
 const VIEW_NAMES_AND_CTOR_ARGS = [
   // As view names on LidoLocator
@@ -41,7 +40,7 @@ async function getNewFromEnvOrCurrent(name: string, locator: LoadedContract) {
 }
 
 async function main() {
-  log.deployScriptStart(__filename);
+  log.scriptStart(__filename);
 
   const deployer = (await ethers.provider.getSigner()).address;
   assert.equal(process.env.DEPLOYER, deployer);
@@ -73,7 +72,7 @@ async function main() {
     assert.equal(actual, await getNewFromEnvOrCurrent(viewName, locator));
   }
 
-  log.deployScriptFinish(__filename);
+  log.scriptFinish(__filename);
 }
 
 main()

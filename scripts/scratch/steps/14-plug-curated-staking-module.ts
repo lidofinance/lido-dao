@@ -12,7 +12,7 @@ const NOR_STAKING_MODULE_TREASURY_FEE_BP = 500; // 5%
 const STAKING_MODULE_MANAGE_ROLE = streccak("STAKING_MODULE_MANAGE_ROLE");
 
 async function main() {
-  log.deployScriptStart(__filename);
+  log.scriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
   const state = readNetworkState({ deployer });
 
@@ -38,7 +38,7 @@ async function main() {
   );
   await makeTx(stakingRouter, "renounceRole", [STAKING_MODULE_MANAGE_ROLE, deployer], { from: deployer });
 
-  log.deployScriptFinish(__filename);
+  log.scriptFinish(__filename);
 }
 
 main()

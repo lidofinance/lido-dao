@@ -1,6 +1,8 @@
 import chalk from "chalk";
 import path from "path";
 
+import { TraceableTransaction } from "./type";
+
 export type ConvertibleToString = string | number | boolean | { toString(): string };
 
 export const rd = (s: ConvertibleToString) => chalk.red(s);
@@ -86,14 +88,14 @@ log.withArguments = (firstLine: string, args: ConvertibleToString[]) => {
   log(`)... `);
 };
 
-log.deployScriptStart = (filename: string) => {
+log.scriptStart = (filename: string) => {
   log.emptyLine();
   log.wideSplitter();
   log(`Started script ${bl(path.basename(filename))}`);
   log.wideSplitter();
 };
 
-log.deployScriptFinish = (filename: string) => {
+log.scriptFinish = (filename: string) => {
   log(`Finished running script ${bl(path.basename(filename))}`);
 };
 
@@ -115,32 +117,23 @@ log.warning = (title: string): void => {
   log.emptyLine();
 };
 
-log.trace = (
-  name: string,
-  tx: {
-    from: string;
-    to: string;
-    value: string;
-    gasUsed: string;
-    gasPrice: string;
-    gasLimit: string;
-    gasUsedPercent: string;
-    nonce: number;
-    blockNumber: number;
-    hash: string;
-    status: boolean;
-  },
-) => {
-  const color = tx.status ? gr : rd;
-
+log.traceTransaction = (name: string, tx: TraceableTransaction) => {
   const value = tx.value === "0.0" ? "" : `Value: ${yl(tx.value)} ETH`;
+  const from = `From: ${yl(tx.from)}`;
+  const to = `To: ${yl(tx.to)}`;
+  const gasPrice = `Gas price: ${yl(tx.gasPrice)} gwei`;
+  const gasLimit = `Gas limit: ${yl(tx.gasLimit)}`;
+  const gasUsed = `Gas used: ${yl(tx.gasUsed)} (${yl(tx.gasUsedPercent)})`;
+  const block = `Block: ${yl(tx.blockNumber)}`;
+  const nonce = `Nonce: ${yl(tx.nonce)}`;
+
+  const color = tx.status ? gr : rd;
+  const status = `${color(name)} ${color(tx.status ? "confirmed" : "failed")}`;
 
   log(`Transaction sent:`, yl(tx.hash));
-  log(`  From: ${yl(tx.from)}   To: ${yl(tx.to)}  ${value}`);
-  log(
-    `  Gas price: ${yl(tx.gasPrice)} gwei   Gas limit: ${yl(tx.gasLimit)}   Gas used: ${yl(tx.gasUsed)} (${yl(tx.gasUsedPercent)})`,
-  );
-  log(`  Block: ${yl(tx.blockNumber)}   Nonce: ${yl(tx.nonce)}`);
-  log(`  ${color(name)} ${color(tx.status ? "confirmed" : "failed")}`);
+  log(`   ${from}   ${to}   ${value}`);
+  log(`   ${gasPrice}   ${gasLimit}   ${gasUsed}`);
+  log(`   ${block}   ${nonce}`);
+  log(`   ${status}`);
   log.emptyLine();
 };

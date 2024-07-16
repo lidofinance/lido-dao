@@ -1,12 +1,11 @@
 import { expect } from "chai";
-import type { HDNodeWallet } from "ethers";
-import { Wallet, ZeroAddress } from "ethers";
+import { HDNodeWallet, Wallet, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { setBalance, time } from "@nomicfoundation/hardhat-network-helpers";
 
-import type {
+import {
   StETH__MockForWithdrawalQueue,
   WithdrawalsQueue__Harness,
   WstETH__MockForWithdrawalQueue,

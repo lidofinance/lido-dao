@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-import type { Packed64x4__Harness } from "typechain-types";
+import { Packed64x4__Harness } from "typechain-types";
 
 import { Snapshot } from "test/suite";
 

@@ -1,11 +1,11 @@
 import { expect } from "chai";
-import type { ContractTransactionResponse } from "ethers";
+import { ContractTransactionResponse } from "ethers";
 import { ethers } from "hardhat";
 
 import { mineUpTo } from "@nomicfoundation/hardhat-network-helpers";
 import { latestBlock } from "@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time";
 
-import type { StakeLimitUnstructuredStorage__Harness, StakeLimitUtils__Harness } from "typechain-types";
+import { StakeLimitUnstructuredStorage__Harness, StakeLimitUtils__Harness } from "typechain-types";
 
 import { Snapshot } from "test/suite";
 

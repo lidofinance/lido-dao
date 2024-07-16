@@ -1,9 +1,9 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import type { AccountingOracle } from "typechain-types";
+import { AccountingOracle } from "typechain-types";
 
 import {
   advanceChainTime,
@@ -17,7 +17,7 @@ import {
   trace,
 } from "lib";
 
-import type { ProtocolContext } from "../types";
+import { ProtocolContext } from "../types";
 
 type OracleReportPrepareOptions = {
   clDiff: bigint;
@@ -306,8 +306,7 @@ const simulateReport = async (
     elRewardsVaultBalance: bigint;
   },
 ): Promise<
-  | { postTotalPooledEther: bigint; postTotalShares: bigint; withdrawals: bigint; elRewards: bigint; }
-  | undefined
+  { postTotalPooledEther: bigint; postTotalShares: bigint; withdrawals: bigint; elRewards: bigint } | undefined
 > => {
   const { hashConsensus, accountingOracle, lido } = ctx.contracts;
   const { refSlot, beaconValidators, clBalance, withdrawalVaultBalance, elRewardsVaultBalance } = params;

@@ -28,7 +28,12 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "./**/*.ts": ["eslint --ignore-path .gitignore --max-warnings=0"], "./**/*.{ts,md,json}": ["prettier --write"]
+    "./**/*.ts": [
+      "eslint --ignore-path .gitignore --max-warnings=0"
+    ],
+    "./**/*.{ts,md,json}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
     "@commitlint/cli": "^19.3.0",
@@ -46,8 +51,8 @@
     "@types/chai": "^4.3.16",
     "@types/mocha": "10.0.7",
     "@types/node": "20.14.10",
-    "@typescript-eslint/eslint-plugin": "^7.16.0",
-    "@typescript-eslint/parser": "^7.16.0",
+    "@typescript-eslint/eslint-plugin": "^7.16.1",
+    "@typescript-eslint/parser": "^7.16.1",
     "bigint-conversion": "^2.4.3",
     "chai": "^4.4.1",
     "chalk": "^4.1.2",
@@ -67,7 +72,7 @@
     "hardhat-watcher": "2.5.0",
     "husky": "^9.0.11",
     "lint-staged": "^15.2.7",
-    "prettier": "^3.3.2",
+    "prettier": "^3.3.3",
     "solhint": "^5.0.1",
     "solhint-plugin-lido": "^0.0.4",
     "solidity-coverage": "^0.8.12",

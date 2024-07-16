@@ -2,8 +2,7 @@ import { assert } from "chai";
 import chalk from "chalk";
 import { ethers } from "hardhat";
 
-import type { ENS } from "typechain-types";
-import { ENS__factory } from "typechain-types";
+import { ENS, ENS__factory } from "typechain-types";
 
 import { loadContract } from "lib/contract";
 import { makeTx } from "lib/deploy";
@@ -14,7 +13,7 @@ import { readNetworkState, Sk } from "lib/state-file";
 const TLD = "eth";
 
 async function main() {
-  log.deployScriptStart(__filename);
+  log.scriptStart(__filename);
   const deployerSigner = await ethers.provider.getSigner();
   const deployer = deployerSigner.address;
   const state = readNetworkState({ deployer });
@@ -59,7 +58,7 @@ async function main() {
     }
   }
 
-  log.deployScriptFinish(__filename);
+  log.scriptFinish(__filename);
 }
 
 main()

@@ -1,7 +1,7 @@
 import { ether, impersonate } from "lib";
 
 import { discover } from "./discovery";
-import type { ProtocolContext, ProtocolSigners, Signer } from "./types";
+import { ProtocolContext, ProtocolSigners, Signer } from "./types";
 
 const getSigner = async (signer: Signer, balance = ether("100"), signers: ProtocolSigners) => {
   const signerAddress = signers[signer] ?? signer;

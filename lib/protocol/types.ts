@@ -1,8 +1,8 @@
-import type { BaseContract as EthersBaseContract } from "ethers";
+import { BaseContract as EthersBaseContract } from "ethers";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import type {
+import {
   AccountingOracle,
   ACL,
   Burner,

@@ -1,31 +1,28 @@
 import { expect } from "chai";
-import type { BigNumberish } from "ethers";
-import { ZeroAddress } from "ethers";
+import { BigNumberish, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { getStorageAt, setBalance } from "@nomicfoundation/hardhat-network-helpers";
 
-import type {
+import {
   ACL,
   Burner__MockForLidoHandleOracleReport,
+  Burner__MockForLidoHandleOracleReport__factory,
   Lido,
   LidoExecutionLayerRewardsVault__MockForLidoHandleOracleReport,
-  LidoLocator,
-  OracleReportSanityChecker__MockForLidoHandleOracleReport,
-  PostTokenRebaseReceiver__MockForLidoHandleOracleReport,
-  StakingRouter__MockForLidoHandleOracleReport,
-  WithdrawalQueue__MockForLidoHandleOracleReport,
-  WithdrawalVault__MockForLidoHandleOracleReport,
-} from "typechain-types";
-import {
-  Burner__MockForLidoHandleOracleReport__factory,
   LidoExecutionLayerRewardsVault__MockForLidoHandleOracleReport__factory,
+  LidoLocator,
   LidoLocator__factory,
+  OracleReportSanityChecker__MockForLidoHandleOracleReport,
   OracleReportSanityChecker__MockForLidoHandleOracleReport__factory,
+  PostTokenRebaseReceiver__MockForLidoHandleOracleReport,
   PostTokenRebaseReceiver__MockForLidoHandleOracleReport__factory,
+  StakingRouter__MockForLidoHandleOracleReport,
   StakingRouter__MockForLidoHandleOracleReport__factory,
+  WithdrawalQueue__MockForLidoHandleOracleReport,
   WithdrawalQueue__MockForLidoHandleOracleReport__factory,
+  WithdrawalVault__MockForLidoHandleOracleReport,
   WithdrawalVault__MockForLidoHandleOracleReport__factory,
 } from "typechain-types";
 

@@ -2,9 +2,9 @@ import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import type { ACL, Lido } from "typechain-types";
+import { ACL, Lido } from "typechain-types";
 
 import { certainAddress, ether, ONE_ETHER } from "lib";
 

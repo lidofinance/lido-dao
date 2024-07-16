@@ -1,43 +1,39 @@
 import { assert } from "chai";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 
-import type {
+import {
   AccountingOracle,
+  AccountingOracle__factory,
   Agent,
+  Agent__factory,
   DepositSecurityModule,
   HashConsensus,
-  Lido,
-  LidoExecutionLayerRewardsVault,
-  MiniMeToken,
-  NodeOperatorsRegistry,
-  StakingRouter,
-  Voting,
-  WithdrawalQueue,
-} from "typechain-types";
-import {
-  AccountingOracle__factory,
-  Agent__factory,
   HashConsensus__factory,
+  Lido,
   Lido__factory,
+  LidoExecutionLayerRewardsVault,
   LidoExecutionLayerRewardsVault__factory,
+  MiniMeToken,
   MiniMeToken__factory,
+  NodeOperatorsRegistry,
   NodeOperatorsRegistry__factory,
+  StakingRouter,
   StakingRouter__factory,
+  Voting,
   Voting__factory,
+  WithdrawalQueue,
   WithdrawalQueue__factory,
 } from "typechain-types";
 
-import type { LoadedContract } from "lib/contract";
-import { loadContract } from "lib/contract";
+import { loadContract, LoadedContract } from "lib/contract";
 import { findEvents } from "lib/event";
 import { streccak } from "lib/keccak";
 import { log } from "lib/log";
 import { reportOracle } from "lib/oracle";
-import type { DeploymentState } from "lib/state-file";
-import { getAddress, readNetworkState, Sk } from "lib/state-file";
+import { DeploymentState, getAddress, readNetworkState, Sk } from "lib/state-file";
 import { advanceChainTime } from "lib/time";
 import { ether } from "lib/units";
 
@@ -61,7 +57,7 @@ if (!process.env.NETWORK_STATE_FILE) {
 const NETWORK_STATE_FILE = process.env.NETWORK_STATE_FILE;
 
 async function main() {
-  log.deployScriptStart(__filename);
+  log.scriptStart(__filename);
   const state = readNetworkState({ networkStateFile: NETWORK_STATE_FILE });
 
   const [user1, user2, oracleMember1, oracleMember2] = await ethers.getSigners();
@@ -75,7 +71,7 @@ async function main() {
     await oracleMember2.getAddress(),
   );
   await checkSubmitDepositReportWithdrawal(protocol, state, user1, user2);
-  log.deployScriptFinish(__filename);
+  log.scriptFinish(__filename);
 }
 
 interface Protocol {

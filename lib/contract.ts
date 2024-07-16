@@ -1,7 +1,7 @@
-import type { BaseContract, ContractRunner } from "ethers";
+import { BaseContract, ContractRunner } from "ethers";
 import { artifacts, ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 interface LoadedContractHelper {
   name: string;

@@ -1,14 +1,19 @@
 import { expect } from "chai";
-import type { BigNumberish, BytesLike } from "ethers";
-import { encodeBytes32String } from "ethers";
+import { BigNumberish, BytesLike, encodeBytes32String } from "ethers";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import type { ACL, Kernel, Lido, LidoLocator, NodeOperatorsRegistry__Harness } from "typechain-types";
-import { LidoLocator__factory, NodeOperatorsRegistry__Harness__factory } from "typechain-types";
+import {
+  ACL,
+  Kernel,
+  Lido,
+  LidoLocator,
+  LidoLocator__factory,
+  NodeOperatorsRegistry__Harness,
+  NodeOperatorsRegistry__Harness__factory,
+} from "typechain-types";
 
-import type { NodeOperatorConfig } from "lib";
 import {
   addNodeOperator,
   certainAddress,
@@ -17,6 +22,7 @@ import {
   ether,
   FakeValidatorKeys,
   impersonate,
+  NodeOperatorConfig,
   randomAddress,
   unpackKeySig,
 } from "lib";

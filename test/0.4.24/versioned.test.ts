@@ -1,11 +1,9 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import type { OssifiableProxy } from "typechain-types";
-import type { VersionedMock } from "typechain-types/contracts/0.4.24/test_helpers";
-import { VersionedMock__factory } from "typechain-types/factories/contracts/0.4.24/test_helpers";
+import { OssifiableProxy, VersionedMock, VersionedMock__factory } from "typechain-types";
 
 // TODO: rewrite to be reusable for any derived contract
 describe("Versioned", () => {

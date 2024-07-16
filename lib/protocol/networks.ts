@@ -1,4 +1,4 @@
-import type { ProtocolNetworkConfig } from "./types";
+import { ProtocolNetworkConfig } from "./types";
 
 /**
  * Network configuration for the protocol discovery in the test environment.

@@ -3,10 +3,9 @@ import { MaxUint256, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 import { beforeEach } from "mocha";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import type { Steth__MinimalMock } from "typechain-types";
-import { Steth__MinimalMock__factory } from "typechain-types";
+import { Steth__MinimalMock, Steth__MinimalMock__factory } from "typechain-types";
 
 import { batch, ether, impersonate, ONE_ETHER } from "lib";
 

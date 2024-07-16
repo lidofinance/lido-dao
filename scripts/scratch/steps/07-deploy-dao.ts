@@ -1,19 +1,22 @@
 import { assert } from "chai";
 import chalk from "chalk";
-import type { ContractTransactionReceipt } from "ethers";
+import { ContractTransactionReceipt } from "ethers";
 import { ethers } from "hardhat";
 
-import type { EVMScriptRegistryFactory } from "typechain-types";
-import { ERCProxy__factory, EVMScriptRegistryFactory__factory, Kernel__factory } from "typechain-types";
+import {
+  ERCProxy__factory,
+  EVMScriptRegistryFactory,
+  EVMScriptRegistryFactory__factory,
+  Kernel__factory,
+} from "typechain-types";
 
-import type { LoadedContract } from "lib/contract";
-import { getContractAt, getContractPath, loadContract } from "lib/contract";
+import { getContractAt, getContractPath, loadContract, LoadedContract } from "lib/contract";
 import { makeTx } from "lib/deploy";
 import { findEvents, findEventsWithAbi } from "lib/event";
 import { log } from "lib/log";
-import type { DeploymentState } from "lib/state-file";
 import {
   AppNames,
+  DeploymentState,
   persistNetworkState,
   readNetworkState,
   setValueInState,
@@ -25,7 +28,7 @@ import {
 const KERNEL_DEFAULT_ACL_APP_ID = "0xe3262375f45a6e2026b7e7b18c2b807434f2508fe1a2a3dfb493c7df8f4aad6a";
 
 async function main() {
-  log.deployScriptStart(__filename);
+  log.scriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
   let state = readNetworkState({ deployer });
 
@@ -39,7 +42,7 @@ async function main() {
 
   await saveStateFromNewDAOTx(newDAOReceipt);
 
-  log.deployScriptFinish(__filename);
+  log.scriptFinish(__filename);
 }
 
 async function doTemplateNewDAO(

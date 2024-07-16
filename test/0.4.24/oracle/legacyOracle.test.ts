@@ -2,9 +2,9 @@ import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import type {
+import {
   AccountingOracle__MockForLegacyOracle,
   HashConsensus__MockForLegacyOracle,
   LegacyOracle__Harness,

@@ -18,7 +18,7 @@ function getEnvVariable(name: string, defaultValue?: string) {
 }
 
 async function main() {
-  log.deployScriptStart(__filename);
+  log.scriptStart(__filename);
 
   const deployer = ethers.getAddress(getEnvVariable("DEPLOYER"));
   const gateSealFactoryAddress = getEnvVariable("GATE_SEAL_FACTORY", "");
@@ -60,7 +60,7 @@ async function main() {
   }
   state[Sk.scratchDeployGasUsed] = 0n.toString();
   persistNetworkState(state);
-  log.deployScriptFinish(__filename);
+  log.scriptFinish(__filename);
 }
 
 main()

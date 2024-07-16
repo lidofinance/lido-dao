@@ -2,10 +2,9 @@ import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import type { LidoLocator } from "typechain-types";
+import { LidoLocator } from "typechain-types";
 
-import type { ArrayToUnion } from "lib";
-import { randomAddress } from "lib";
+import { ArrayToUnion, randomAddress } from "lib";
 
 const services = [
   "accountingOracle",

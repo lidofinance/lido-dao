@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-import type { PausableMockWithExposedApi } from "typechain-types";
+import { PausableMockWithExposedApi } from "typechain-types";
 
 describe("Pausable", () => {
   let pausable: PausableMockWithExposedApi;

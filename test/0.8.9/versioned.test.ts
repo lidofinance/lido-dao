@@ -1,9 +1,9 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import type { VersionedConsumerMock } from "typechain-types";
+import { VersionedConsumerMock } from "typechain-types";
 
 import { MAX_UINT256, proxify, streccak } from "lib";
 

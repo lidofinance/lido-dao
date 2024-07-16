@@ -2,10 +2,9 @@ import { expect } from "chai";
 import { randomBytes } from "ethers";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import type { OssifiableProxy, StakingRouter } from "typechain-types";
-import { StakingRouter__factory } from "typechain-types";
+import { OssifiableProxy, StakingRouter, StakingRouter__factory } from "typechain-types";
 
 import { MAX_UINT256, randomAddress } from "lib";
 

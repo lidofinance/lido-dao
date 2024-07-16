@@ -1,11 +1,11 @@
 import hre from "hardhat";
 
-import type { AccountingOracle, Lido, LidoLocator, StakingRouter } from "typechain-types";
+import { AccountingOracle, Lido, LidoLocator, StakingRouter } from "typechain-types";
 
 import { batch, log } from "lib";
 
 import { networks } from "./networks";
-import type {
+import {
   AragonContracts,
   ContractName,
   ContractType,

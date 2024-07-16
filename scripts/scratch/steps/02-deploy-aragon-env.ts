@@ -2,11 +2,9 @@ import chalk from "chalk";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import type { DAOFactory, ENS } from "typechain-types";
-import { DAOFactory__factory, ENS__factory } from "typechain-types";
+import { DAOFactory, DAOFactory__factory, ENS, ENS__factory } from "typechain-types";
 
-import type { LoadedContract } from "lib/contract";
-import { getContractAt, loadContract } from "lib/contract";
+import { getContractAt, loadContract, LoadedContract } from "lib/contract";
 import { deployImplementation, deployWithoutProxy, makeTx } from "lib/deploy";
 import { assignENSName } from "lib/ens";
 import { findEvents } from "lib/event";
@@ -15,7 +13,7 @@ import { log } from "lib/log";
 import { readNetworkState, Sk, updateObjectInState } from "lib/state-file";
 
 async function main() {
-  log.deployScriptStart(__filename);
+  log.scriptStart(__filename);
   const deployer = (await ethers.provider.getSigner()).address;
   let state = readNetworkState({ deployer });
 
@@ -110,7 +108,7 @@ async function main() {
     await deployAragonID(deployer, ens);
   }
 
-  log.deployScriptFinish(__filename);
+  log.scriptFinish(__filename);
 }
 
 async function deployAPM(owner: string, labelName: string, ens: ENS, apmRegistryFactory: LoadedContract) {

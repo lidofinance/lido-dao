@@ -2,17 +2,15 @@ import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { getStorageAt } from "@nomicfoundation/hardhat-network-helpers";
 
-import type {
-  WithdrawalsManagerProxy,
-  WithdrawalsManagerStub,
-  WithdrawalsVault__MockForWithdrawalManagerProxy,
-} from "typechain-types";
 import {
+  WithdrawalsManagerProxy,
   WithdrawalsManagerProxy__factory,
+  WithdrawalsManagerStub,
   WithdrawalsManagerStub__factory,
+  WithdrawalsVault__MockForWithdrawalManagerProxy,
   WithdrawalsVault__MockForWithdrawalManagerProxy__factory,
 } from "typechain-types";
 

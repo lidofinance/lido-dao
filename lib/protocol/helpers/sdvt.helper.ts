@@ -4,7 +4,7 @@ import { randomBytes } from "ethers";
 import { certainAddress, impersonate, log, streccak, trace } from "lib";
 
 import { ether } from "../../units";
-import type { ProtocolContext } from "../types";
+import { ProtocolContext } from "../types";
 
 const MIN_OPS_COUNT = 3n;
 const MIN_OP_KEYS_COUNT = 10n;

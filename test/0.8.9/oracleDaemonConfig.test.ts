@@ -1,12 +1,11 @@
 import { expect } from "chai";
 import { ZeroAddress } from "ethers";
-import type { HexString } from "ethers/lib.commonjs/utils/data";
+import { HexString } from "ethers/lib.commonjs/utils/data";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import type { OracleDaemonConfig } from "typechain-types";
-import { OracleDaemonConfig__factory } from "typechain-types";
+import { OracleDaemonConfig, OracleDaemonConfig__factory } from "typechain-types";
 
 describe("OracleDaemonConfig", () => {
   let deployer: HardhatEthersSigner;

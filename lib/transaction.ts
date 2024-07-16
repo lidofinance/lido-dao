@@ -1,4 +1,4 @@
-import type { ContractTransactionResponse, TransactionResponse } from "ethers";
+import { ContractTransactionResponse, TransactionResponse } from "ethers";
 import hre, { ethers } from "hardhat";
 
 import { log } from "lib";
@@ -18,7 +18,7 @@ export async function trace(name: string, tx: Transaction) {
   const blockGasLimit = "blockGasLimit" in config ? config.blockGasLimit : 30_000_000;
   const gasUsedPercent = (Number(receipt.gasUsed) / blockGasLimit) * 100;
 
-  log.trace(name, {
+  log.traceTransaction(name, {
     from: tx.from,
     to: tx.to ?? `New contract @ ${receipt.contractAddress}`,
     value: ethers.formatEther(tx.value),

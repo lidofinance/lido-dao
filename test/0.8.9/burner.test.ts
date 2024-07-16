@@ -2,13 +2,16 @@ import { expect } from "chai";
 import { MaxUint256, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import type { Burner, ERC20Token__MockForBurner, NFT__GeneralMock, Steth__MinimalMock } from "typechain-types";
 import {
+  Burner,
   Burner__factory,
+  ERC20Token__MockForBurner,
   ERC20Token__MockForBurner__factory,
+  NFT__GeneralMock,
   NFT__GeneralMock__factory,
+  Steth__MinimalMock,
   Steth__MinimalMock__factory,
 } from "typechain-types";
 
