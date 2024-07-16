@@ -204,6 +204,10 @@ describe("NodeOperatorsRegistry:validatorsLimits", () => {
       );
     });
 
+    it("nonce changing");
+    it("targetValidatorsCount changing");
+    it("module stats updating (summarySigningKeysStats)");
+
     it('reverts with "APP_AUTH_FAILED" error when called by sender without STAKING_ROUTER_ROLE', async () => {
       expect(await acl["hasPermission(address,address,bytes32)"](stranger, nor, await nor.STAKING_ROUTER_ROLE())).to.be
         .false;
