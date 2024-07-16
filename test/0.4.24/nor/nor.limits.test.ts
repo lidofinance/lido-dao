@@ -294,6 +294,7 @@ describe("NodeOperatorsRegistry:validatorsLimits", () => {
 
       noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
       expect(noSummary.targetLimitMode).to.equal(0n);
+      expect(noSummary.targetValidatorsCount).to.equal(0n);
     });
 
     it("updates node operator target limit mode correctly using updateTargetLimitsDeprecated", async () => {
@@ -326,6 +327,7 @@ describe("NodeOperatorsRegistry:validatorsLimits", () => {
 
       noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
       expect(noSummary.targetLimitMode).to.equal(0n);
+      expect(noSummary.targetValidatorsCount).to.equal(0n);
     });
   });
 });
