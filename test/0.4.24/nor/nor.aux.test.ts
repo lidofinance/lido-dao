@@ -16,7 +16,13 @@ import {
 } from "typechain-types";
 import { NodeOperatorsRegistryLibraryAddresses } from "typechain-types/factories/contracts/0.4.24/nos/NodeOperatorsRegistry.sol/NodeOperatorsRegistry__factory";
 
-import { addNodeOperator, certainAddress, NodeOperatorConfig, prepIdsCountsPayload } from "lib";
+import {
+  addNodeOperator,
+  certainAddress,
+  NodeOperatorConfig,
+  prepIdsCountsPayload,
+  RewardDistributionState,
+} from "lib";
 
 import { addAragonApp, deployLidoDao } from "test/deploy";
 import { Snapshot } from "test/suite";
@@ -98,7 +104,8 @@ describe("NodeOperatorsRegistry:auxiliary", () => {
 
   const moduleType = encodeBytes32String("curated-onchain-v1");
   const penaltyDelay = 86400n;
-  const contractVersion = 2n;
+  const contractVersionV2 = 2n;
+  const contractVersionV3 = 3n;
 
   before(async () => {
     [deployer, user, stakingRouter, nodeOperatorsManager, signingKeysManager, limitsManager, stranger] =
@@ -143,11 +150,15 @@ describe("NodeOperatorsRegistry:auxiliary", () => {
     // Initialize the nor's proxy.
     await expect(nor.initialize(locator, moduleType, penaltyDelay))
       .to.emit(nor, "ContractVersionSet")
-      .withArgs(contractVersion)
+      .withArgs(contractVersionV2)
+      .to.emit(nor, "ContractVersionSet")
+      .withArgs(contractVersionV3)
       .and.to.emit(nor, "LocatorContractSet")
       .withArgs(locator)
       .and.to.emit(nor, "StakingModuleTypeSet")
-      .withArgs(moduleType);
+      .withArgs(moduleType)
+      .to.emit(nor, "RewardDistributionStateChanged")
+      .withArgs(RewardDistributionState.Distributed);
 
     nor = nor.connect(user);
   });
@@ -232,9 +243,7 @@ describe("NodeOperatorsRegistry:auxiliary", () => {
         "APP_AUTH_FAILED",
       );
 
-      await expect(nor[updateTargetLimits](firstNodeOperatorId, 0n, targetLimit)).to.be.revertedWith(
-        "APP_AUTH_FAILED",
-      );
+      await expect(nor[updateTargetLimits](firstNodeOperatorId, 0n, targetLimit)).to.be.revertedWith("APP_AUTH_FAILED");
     });
 
     it('reverts with "OUT_OF_RANGE" error when called with targetLimit > UINT64_MAX', async () => {
