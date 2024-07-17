@@ -129,17 +129,48 @@ This repository features a Hardhat-Foundry dual setup:
 - Foundry's anvil is faster than the Hardhat Network;
 - Foundry fuzzing capabilities allows for a better edge-case coverage.
 
+#### Tracing
+
+`hardhat-tracer` is used to trace contract calls and state changes during tests.
+This feature is disabled by default, and event using `:trace` postfix in the test command will **NOT** enable it
+project-wide because it can slow down the tests significantly.
+
+To enable tracing, you need wrap the code you want to trace with `Tracer.enable` / `Tracer.disable` and run the tests
+with commands that have the `:trace` postfix.
+
+```typescript
+import { Tracer } from 'test/suite';
+
+describe('MyContract', () => {
+  it('should do something', async () => {
+    Tracer.enable();
+    // code to trace
+    Tracer.disable();
+  });
+});
+```
+
+> [!NOTE]
+> Tracing is not supported in Foundry tests and integration tests other that Hardhat mainnet fork tests.
+
 #### Hardhat
 
-Hardhat tests are all located in `/tests` in the root of the project.
-Each subdirectory name corresponds to the version of the contract being tested, mirroring the `/contracts` directory
+Hardhat tests are all located in ` / tests` in the root of the project.
+Each subdirectory name corresponds to the version of the contract being tested, mirroring the ` / contracts` directory
 structure. Integration, regression and other non-unit tests are placed into corresponding subdirectories,
-e.g. `/tests/integration/`, `/tests/regression`, etc.
+e.g. ` / tests / integration / `, ` / tests / regression`, etc.
+
+```bash
+yarn test               # Run all tests in parallel
+yarn test:sequential    # Run all tests sequentially
+yarn test:trace         # Run all tests with trace logging (see Tracing section)
+yarn test:watch         # Run all tests in watch mode
+```
 
 #### Foundry
 
 Foundry's Solidity tests are used only for fuzzing library contracts or functions performing complex calculations
-or byte juggling. Solidity tests are located under `/tests` and in the appropriate subdirectories. Naming conventions
+or byte juggling. Solidity tests are located under ` / tests` and in the appropriate subdirectories. Naming conventions
 follow the Foundry's [documentation](https://book.getfoundry.sh/tutorials/best-practices#general-test-guidance):
 
 - for tests, postfix `.t.sol` is used (e.g., `MyContract.t.sol`)
@@ -149,9 +180,13 @@ follow the Foundry's [documentation](https://book.getfoundry.sh/tutorials/best-p
 Following the convention of distinguishing Hardhat test files from Foundry-related files is essential to ensure the
 proper execution of Hardhat tests.
 
+```bash
+yarn test:foundry        # Run all Foundry tests
+```
+
 #### Integration tests
 
-Integration tests are located in `/tests/integration` in the root of the project.
+Integration tests are located in ` / tests / integration` in the root of the project.
 These tests are used to verify the interaction between different contracts and their behavior in a real-world scenario.
 
 You can run integration tests in multiple ways, but for all of them, you need to have a `.env` file in the root of
@@ -165,15 +200,8 @@ along with `MAINNET_*` env variables (see `.env.example`).
 
 ```bash
 yarn test:integration         # Run all integration tests
-yarn test:integration:trace   # Run all integration tests with trace logging 
+yarn test:integration:trace   # Run all integration tests with trace logging (see Tracing section) 
 ```
-
-> [!NOTE]
-> Running with trace logging can be very verbose and slow down the tests drastically.
-> To trace only specific
-> tests, [use `hre.tracer.enabled` feature](https://github.com/zemse/hardhat-tracer?tab=readme-ov-file#usage) in the
-> test
-> files.
 
 ##### Local setup
 
@@ -191,6 +219,17 @@ This method is used to run integration tests against any fork. Requires `MAINNET
 
 ```bash
 yarn test:integration:fork
+```
+
+#### Coverage
+
+Project uses `hardhat-coverage` plugin to generate coverage reports.
+Foundry tests are not included in the coverage.
+
+To generate coverage reports, run the following command:
+
+```bash
+yarn test:coverage
 ```
 
 #### Mocks
