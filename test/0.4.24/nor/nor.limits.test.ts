@@ -21,8 +21,13 @@ import { addNodeOperator, certainAddress, NodeOperatorConfig, RewardDistribution
 import { addAragonApp, deployLidoDao } from "test/deploy";
 import { Snapshot } from "test/suite";
 
-const updateTargetLimits = "updateTargetValidatorsLimits(uint256,uint256,uint256)";
-const updateTargetLimitsDeprecated = "updateTargetValidatorsLimits(uint256,bool,uint256)";
+const updateTargetLimits = "updateTargetValidatorsLimits(uint256,uint256,uint256)" as const;
+const updateTargetLimitsDeprecated = "updateTargetValidatorsLimits(uint256,bool,uint256)" as const;
+
+enum UpdateTargetLimitsMethods {
+  UpdateTargetValidatorsLimits = "updateTargetValidatorsLimits(uint256,uint256,uint256)",
+  UpdateTargetValidatorsLimitsDeprecated = "updateTargetValidatorsLimits(uint256,bool,uint256)",
+}
 
 describe("NodeOperatorsRegistry:validatorsLimits", () => {
   let deployer: HardhatEthersSigner;
@@ -130,16 +135,26 @@ describe("NodeOperatorsRegistry:validatorsLimits", () => {
       .withArgs(RewardDistributionState.Distributed);
 
     nor = nor.connect(user);
+    originalState = await Snapshot.take();
   });
 
-  beforeEach(async () => (originalState = await Snapshot.take()));
+  afterEach(async () => (originalState = await Snapshot.refresh(originalState)));
 
-  afterEach(async () => await Snapshot.restore(originalState));
+  const updateLimitCall = (
+    updateTargetLimitsMethod: UpdateTargetLimitsMethods,
+    nodeOperatorId: number,
+    isTargetLimitActiveOrMode: bigint,
+    targetLimit: bigint,
+  ) => {
+    const id = BigInt(nodeOperatorId);
+    if (updateTargetLimitsMethod === UpdateTargetLimitsMethods.UpdateTargetValidatorsLimitsDeprecated)
+      return nor.connect(stakingRouter)[updateTargetLimitsMethod](id, Boolean(isTargetLimitActiveOrMode), targetLimit);
+    return nor.connect(stakingRouter)[updateTargetLimitsMethod](id, isTargetLimitActiveOrMode, targetLimit);
+  };
 
-  context("updateTargetValidatorsLimits", () => {
-    let targetLimit = 0n;
-
-    beforeEach(async () => {
+  context(`updateTargetValidatorsLimits auth`, () => {
+    const targetLimit = 0n;
+    before(async () => {
       expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
         firstNodeOperatorId,
       );
@@ -158,198 +173,169 @@ describe("NodeOperatorsRegistry:validatorsLimits", () => {
 
       await expect(nor[updateTargetLimits](firstNodeOperatorId, 0n, targetLimit)).to.be.revertedWith("APP_AUTH_FAILED");
     });
-
-    it('reverts with "OUT_OF_RANGE" error when called with targetLimit > UINT64_MAX', async () => {
-      const targetLimitWrong = BigInt("0x10000000000000000");
-
-      await expect(
-        nor.connect(stakingRouter)[updateTargetLimitsDeprecated](firstNodeOperatorId, true, targetLimitWrong),
-      ).to.be.revertedWith("OUT_OF_RANGE");
-
-      await expect(
-        nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 1n, targetLimitWrong),
-      ).to.be.revertedWith("OUT_OF_RANGE");
-    });
-
-    it("updates node operator target limit if called by sender with STAKING_ROUTER_ROLE", async () => {
-      expect(await acl["hasPermission(address,address,bytes32)"](stakingRouter, nor, await nor.STAKING_ROUTER_ROLE()))
-        .to.be.true;
-
-      targetLimit = 10n;
-
-      await expect(nor.connect(stakingRouter)[updateTargetLimitsDeprecated](firstNodeOperatorId, true, targetLimit))
-        .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(firstNodeOperatorId, targetLimit, 1n);
-
-      const keysStatTotal = await nor.getStakingModuleSummary();
-      const expectedExitedValidatorsCount =
-        NODE_OPERATORS[firstNodeOperatorId].exitedSigningKeysCount +
-        NODE_OPERATORS[secondNodeOperatorId].exitedSigningKeysCount;
-      expect(keysStatTotal.totalExitedValidators).to.equal(expectedExitedValidatorsCount);
-
-      const expectedDepositedValidatorsCount =
-        NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount +
-        NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount;
-      expect(keysStatTotal.totalDepositedValidators).to.equal(expectedDepositedValidatorsCount);
-
-      const firstNodeOperatorDepositableValidators =
-        NODE_OPERATORS[firstNodeOperatorId].vettedSigningKeysCount -
-        NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount;
-
-      const secondNodeOperatorDepositableValidators =
-        NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount -
-        NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount;
-
-      const expectedDepositableValidatorsCount =
-        targetLimit < firstNodeOperatorDepositableValidators
-          ? targetLimit
-          : firstNodeOperatorDepositableValidators + secondNodeOperatorDepositableValidators;
-
-      expect(keysStatTotal.depositableValidatorsCount).to.equal(expectedDepositableValidatorsCount);
-    });
-
-    it("updates node operator target limit mode correctly", async () => {
-      expect(await acl["hasPermission(address,address,bytes32)"](stakingRouter, nor, await nor.STAKING_ROUTER_ROLE()))
-        .to.be.true;
-
-      targetLimit = 10n;
-
-      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 1n, targetLimit))
-        .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(firstNodeOperatorId, targetLimit, 1n);
-
-      let noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
-      expect(noSummary.targetLimitMode).to.be.equal(1n);
-
-      await expect(nor.connect(stakingRouter)[updateTargetLimits](secondNodeOperatorId, 0n, targetLimit))
-        .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(secondNodeOperatorId, 0n, 0n);
-
-      noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
-      expect(noSummary.targetLimitMode).to.be.equal(0n);
-
-      // reset limit
-      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 0n, targetLimit))
-        .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(firstNodeOperatorId, 0n, 0n); // expect limit set to 0
-
-      noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
-      expect(noSummary.targetLimitMode).to.equal(0n);
-
-      noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
-      expect(noSummary.targetLimitMode).to.equal(0n);
-      expect(noSummary.targetValidatorsCount).to.equal(0n);
-    });
-
-    it("nonce changing", async () => {
-      targetLimit = 10n;
-
-      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 1n, targetLimit))
-        .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(firstNodeOperatorId, targetLimit, 1n);
-
-      await expect(await nor.connect(stakingRouter).getNonce()).to.be.equal(1n);
-
-      await expect(nor.connect(stakingRouter)[updateTargetLimits](secondNodeOperatorId, 0n, targetLimit))
-        .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(secondNodeOperatorId, 0n, 0n);
-
-      await expect(await nor.connect(stakingRouter).getNonce()).to.be.equal(2n);
-
-      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 0n, targetLimit))
-        .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(firstNodeOperatorId, 0n, 0n);
-
-      await expect(await nor.connect(stakingRouter).getNonce()).to.be.equal(3n);
-    });
-
-    it("target validator limit changing", async () => {
-      targetLimit = 10n;
-
-      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 1n, targetLimit))
-        .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(firstNodeOperatorId, targetLimit, 1n);
-
-      let noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
-      expect(noSummary.targetLimitMode).to.be.equal(1n);
-      expect(noSummary.targetValidatorsCount).to.equal(10n);
-      expect(noSummary.stuckValidatorsCount).to.be.equal(0n);
-      expect(noSummary.refundedValidatorsCount).to.be.equal(0n);
-      expect(noSummary.stuckPenaltyEndTimestamp).to.be.equal(0n);
-      expect(noSummary.totalExitedValidators).to.be.equal(1n);
-      expect(noSummary.totalDepositedValidators).to.be.equal(5n);
-      expect(noSummary.depositableValidatorsCount).to.be.equal(1n);
-
-      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 1n, 0n))
-        .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(firstNodeOperatorId, 0n, 1n);
-
-      noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
-      expect(noSummary.targetLimitMode).to.equal(1n);
-      expect(noSummary.targetValidatorsCount).to.equal(0n);
-      expect(noSummary.stuckValidatorsCount).to.be.equal(0n);
-      expect(noSummary.refundedValidatorsCount).to.be.equal(0n);
-      expect(noSummary.stuckPenaltyEndTimestamp).to.be.equal(0n);
-      expect(noSummary.totalExitedValidators).to.be.equal(1n);
-      expect(noSummary.totalDepositedValidators).to.be.equal(5n);
-      expect(noSummary.depositableValidatorsCount).to.be.equal(0n);
-
-      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 1n, targetLimit))
-        .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(firstNodeOperatorId, targetLimit, 1n);
-
-      noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
-      expect(noSummary.targetLimitMode).to.equal(1n);
-      expect(noSummary.targetValidatorsCount).to.equal(10n);
-      expect(noSummary.stuckValidatorsCount).to.be.equal(0n);
-      expect(noSummary.refundedValidatorsCount).to.be.equal(0n);
-      expect(noSummary.stuckPenaltyEndTimestamp).to.be.equal(0n);
-      expect(noSummary.totalExitedValidators).to.be.equal(1n);
-      expect(noSummary.totalDepositedValidators).to.be.equal(5n);
-      expect(noSummary.depositableValidatorsCount).to.be.equal(1n);
-    });
-
-    // describe("all target limits: 0,1,2");
-
-    it("module stats updating (NodeOperatorSummary)", async () => {
-      targetLimit = 10n;
-
-      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 1n, targetLimit))
-        .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(firstNodeOperatorId, targetLimit, 1n);
-    });
-
-    it("updates node operator target limit mode correctly using updateTargetLimitsDeprecated", async () => {
-      expect(await acl["hasPermission(address,address,bytes32)"](stakingRouter, nor, await nor.STAKING_ROUTER_ROLE()))
-        .to.be.true;
-
-      targetLimit = 10n;
-
-      await expect(nor.connect(stakingRouter)[updateTargetLimitsDeprecated](firstNodeOperatorId, true, targetLimit))
-        .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(firstNodeOperatorId, targetLimit, 1n);
-
-      let noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
-      expect(noSummary.targetLimitMode).to.be.equal(1n);
-
-      await expect(nor.connect(stakingRouter)[updateTargetLimitsDeprecated](secondNodeOperatorId, false, targetLimit))
-        .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(secondNodeOperatorId, 0n, 0n);
-
-      noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
-      expect(noSummary.targetLimitMode).to.be.equal(0n);
-
-      // reset limit
-      await expect(nor.connect(stakingRouter)[updateTargetLimitsDeprecated](firstNodeOperatorId, false, targetLimit))
-        .to.emit(nor, "TargetValidatorsCountChanged")
-        .withArgs(firstNodeOperatorId, 0n, 0n); // expect limit set to 0
-
-      noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
-      expect(noSummary.targetLimitMode).to.equal(0n);
-
-      noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
-      expect(noSummary.targetLimitMode).to.equal(0n);
-      expect(noSummary.targetValidatorsCount).to.equal(0n);
-    });
   });
+
+  const runTests = (updateTargetLimitsMethod: UpdateTargetLimitsMethods) => {
+    context(`updateTargetValidatorsLimits:${updateTargetLimitsMethod}`, () => {
+      let targetLimit = 0n;
+
+      beforeEach(async () => {
+        expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
+          firstNodeOperatorId,
+        );
+        expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
+          secondNodeOperatorId,
+        );
+      });
+
+      it('reverts with "OUT_OF_RANGE" error when called with targetLimit > UINT64_MAX', async () => {
+        const targetLimitWrong = BigInt("0x10000000000000000");
+
+        await expect(
+          updateLimitCall(updateTargetLimitsMethod, firstNodeOperatorId, 1n, targetLimitWrong),
+        ).to.be.revertedWith("OUT_OF_RANGE");
+      });
+
+      it("updates node operator target limit if called by sender with STAKING_ROUTER_ROLE", async () => {
+        expect(await acl["hasPermission(address,address,bytes32)"](stakingRouter, nor, await nor.STAKING_ROUTER_ROLE()))
+          .to.be.true;
+
+        targetLimit = 10n;
+
+        await expect(updateLimitCall(updateTargetLimitsMethod, firstNodeOperatorId, 1n, targetLimit))
+          .to.emit(nor, "TargetValidatorsCountChanged")
+          .withArgs(firstNodeOperatorId, targetLimit, 1n);
+
+        const keysStatTotal = await nor.getStakingModuleSummary();
+        const expectedExitedValidatorsCount =
+          NODE_OPERATORS[firstNodeOperatorId].exitedSigningKeysCount +
+          NODE_OPERATORS[secondNodeOperatorId].exitedSigningKeysCount;
+        expect(keysStatTotal.totalExitedValidators).to.equal(expectedExitedValidatorsCount);
+
+        const expectedDepositedValidatorsCount =
+          NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount +
+          NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount;
+        expect(keysStatTotal.totalDepositedValidators).to.equal(expectedDepositedValidatorsCount);
+
+        const firstNodeOperatorDepositableValidators =
+          NODE_OPERATORS[firstNodeOperatorId].vettedSigningKeysCount -
+          NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount;
+
+        const secondNodeOperatorDepositableValidators =
+          NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount -
+          NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount;
+
+        const expectedDepositableValidatorsCount =
+          targetLimit < firstNodeOperatorDepositableValidators
+            ? targetLimit
+            : firstNodeOperatorDepositableValidators + secondNodeOperatorDepositableValidators;
+
+        expect(keysStatTotal.depositableValidatorsCount).to.equal(expectedDepositableValidatorsCount);
+      });
+
+      it("updates node operator target limit mode correctly", async () => {
+        expect(await acl["hasPermission(address,address,bytes32)"](stakingRouter, nor, await nor.STAKING_ROUTER_ROLE()))
+          .to.be.true;
+
+        targetLimit = 10n;
+
+        await expect(updateLimitCall(updateTargetLimitsMethod, firstNodeOperatorId, 1n, targetLimit))
+          .to.emit(nor, "TargetValidatorsCountChanged")
+          .withArgs(firstNodeOperatorId, targetLimit, 1n);
+
+        let noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+        expect(noSummary.targetLimitMode).to.be.equal(1n);
+
+        await expect(updateLimitCall(updateTargetLimitsMethod, secondNodeOperatorId, 0n, targetLimit))
+          .to.emit(nor, "TargetValidatorsCountChanged")
+          .withArgs(secondNodeOperatorId, 0n, 0n);
+
+        noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
+        expect(noSummary.targetLimitMode).to.be.equal(0n);
+
+        // reset limit
+        await expect(updateLimitCall(updateTargetLimitsMethod, firstNodeOperatorId, 0n, targetLimit))
+          .to.emit(nor, "TargetValidatorsCountChanged")
+          .withArgs(firstNodeOperatorId, 0n, 0n);
+
+        noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+        expect(noSummary.targetLimitMode).to.equal(0n);
+
+        noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
+        expect(noSummary.targetLimitMode).to.equal(0n);
+        expect(noSummary.targetValidatorsCount).to.equal(0n);
+      });
+
+      it("nonce changing", async () => {
+        targetLimit = 10n;
+
+        await expect(updateLimitCall(updateTargetLimitsMethod, firstNodeOperatorId, 1n, targetLimit))
+          .to.emit(nor, "TargetValidatorsCountChanged")
+          .withArgs(firstNodeOperatorId, targetLimit, 1n);
+
+        await expect(await nor.connect(stakingRouter).getNonce()).to.be.equal(1n);
+
+        await expect(updateLimitCall(updateTargetLimitsMethod, secondNodeOperatorId, 0n, targetLimit))
+          .to.emit(nor, "TargetValidatorsCountChanged")
+          .withArgs(secondNodeOperatorId, 0n, 0n);
+
+        await expect(await nor.connect(stakingRouter).getNonce()).to.be.equal(2n);
+
+        await expect(updateLimitCall(updateTargetLimitsMethod, firstNodeOperatorId, 0n, targetLimit))
+          .to.emit(nor, "TargetValidatorsCountChanged")
+          .withArgs(firstNodeOperatorId, 0n, 0n);
+
+        await expect(await nor.connect(stakingRouter).getNonce()).to.be.equal(3n);
+      });
+
+      it("target validator limit changing", async () => {
+        targetLimit = 10n;
+
+        await expect(updateLimitCall(updateTargetLimitsMethod, firstNodeOperatorId, 1n, targetLimit))
+          .to.emit(nor, "TargetValidatorsCountChanged")
+          .withArgs(firstNodeOperatorId, targetLimit, 1n);
+
+        let noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+        expect(noSummary.targetLimitMode).to.be.equal(1n);
+        expect(noSummary.targetValidatorsCount).to.equal(10n);
+        expect(noSummary.stuckValidatorsCount).to.be.equal(0n);
+        expect(noSummary.refundedValidatorsCount).to.be.equal(0n);
+        expect(noSummary.stuckPenaltyEndTimestamp).to.be.equal(0n);
+        expect(noSummary.totalExitedValidators).to.be.equal(1n);
+        expect(noSummary.totalDepositedValidators).to.be.equal(5n);
+        expect(noSummary.depositableValidatorsCount).to.be.equal(1n);
+
+        await expect(updateLimitCall(updateTargetLimitsMethod, firstNodeOperatorId, 1n, 0n))
+          .to.emit(nor, "TargetValidatorsCountChanged")
+          .withArgs(firstNodeOperatorId, 0n, 1n);
+
+        noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+        expect(noSummary.targetLimitMode).to.equal(1n);
+        expect(noSummary.targetValidatorsCount).to.equal(0n);
+        expect(noSummary.stuckValidatorsCount).to.be.equal(0n);
+        expect(noSummary.refundedValidatorsCount).to.be.equal(0n);
+        expect(noSummary.stuckPenaltyEndTimestamp).to.be.equal(0n);
+        expect(noSummary.totalExitedValidators).to.be.equal(1n);
+        expect(noSummary.totalDepositedValidators).to.be.equal(5n);
+        expect(noSummary.depositableValidatorsCount).to.be.equal(0n);
+
+        await expect(updateLimitCall(updateTargetLimitsMethod, firstNodeOperatorId, 1n, targetLimit))
+          .to.emit(nor, "TargetValidatorsCountChanged")
+          .withArgs(firstNodeOperatorId, targetLimit, 1n);
+
+        noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+        expect(noSummary.targetLimitMode).to.equal(1n);
+        expect(noSummary.targetValidatorsCount).to.equal(10n);
+        expect(noSummary.stuckValidatorsCount).to.be.equal(0n);
+        expect(noSummary.refundedValidatorsCount).to.be.equal(0n);
+        expect(noSummary.stuckPenaltyEndTimestamp).to.be.equal(0n);
+        expect(noSummary.totalExitedValidators).to.be.equal(1n);
+        expect(noSummary.totalDepositedValidators).to.be.equal(5n);
+        expect(noSummary.depositableValidatorsCount).to.be.equal(1n);
+      });
+    });
+  };
+
+  runTests(UpdateTargetLimitsMethods.UpdateTargetValidatorsLimits);
+  runTests(UpdateTargetLimitsMethods.UpdateTargetValidatorsLimitsDeprecated);
 });
