@@ -878,7 +878,7 @@ describe("AccountingOracle.sol:submitReportExtraData", () => {
             await sanityChecker.MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_COUNT_ROLE(),
             admin.address,
           );
-          await sanityChecker.setMaxNodeOperatorsPerExtraDataItemCount(problematicItemsCount - 1);
+          await sanityChecker.setMaxNodeOperatorsPerExtraDataItem(problematicItemsCount - 1);
           await expect(oracle.connect(member1).submitReportExtraDataList(extraDataList))
             .to.be.revertedWithCustomError(sanityChecker, "TooManyNodeOpsPerExtraDataItem")
             .withArgs(problematicItemIdx, problematicItemsCount);

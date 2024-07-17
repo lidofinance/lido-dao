@@ -365,7 +365,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
     /// @notice Sets the new value for the max maxNodeOperatorsPerExtraDataItem
     /// @param _maxNodeOperatorsPerExtraDataItem new maxNodeOperatorsPerExtraDataItem value
-    function setMaxNodeOperatorsPerExtraDataItemCount(uint256 _maxNodeOperatorsPerExtraDataItem)
+    function setMaxNodeOperatorsPerExtraDataItem(uint256 _maxNodeOperatorsPerExtraDataItem)
         external
         onlyRole(MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_COUNT_ROLE)
     {

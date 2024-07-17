@@ -1345,7 +1345,7 @@ describe("OracleReportSanityChecker.sol", () => {
       const newValue = 33;
       expect(newValue).to.not.equal(previousValue);
       await expect(
-        oracleReportSanityChecker.connect(deployer).setMaxNodeOperatorsPerExtraDataItemCount(newValue),
+        oracleReportSanityChecker.connect(deployer).setMaxNodeOperatorsPerExtraDataItem(newValue),
       ).to.be.revertedWithOZAccessControlError(
         deployer.address,
         await oracleReportSanityChecker.MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_COUNT_ROLE(),
@@ -1358,7 +1358,7 @@ describe("OracleReportSanityChecker.sol", () => {
         );
       const tx = await oracleReportSanityChecker
         .connect(managersRoster.maxNodeOperatorsPerExtraDataItemManagers[0])
-        .setMaxNodeOperatorsPerExtraDataItemCount(newValue);
+        .setMaxNodeOperatorsPerExtraDataItem(newValue);
       expect((await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItem).to.be.equal(
         newValue,
       );
