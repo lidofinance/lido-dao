@@ -1373,12 +1373,12 @@ describe("OracleReportSanityChecker.sol", () => {
         oracleReportSanityChecker.connect(deployer).setMaxItemsPerExtraDataTransaction(newValue),
       ).to.be.revertedWithOZAccessControlError(
         deployer.address,
-        await oracleReportSanityChecker.MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE(),
+        await oracleReportSanityChecker.MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION_ROLE(),
       );
       await oracleReportSanityChecker
         .connect(admin)
         .grantRole(
-          await oracleReportSanityChecker.MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE(),
+          await oracleReportSanityChecker.MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION_ROLE(),
           managersRoster.maxItemsPerExtraDataTransactionManagers[0],
         );
       const tx = await oracleReportSanityChecker

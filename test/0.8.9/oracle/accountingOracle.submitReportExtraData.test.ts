@@ -894,10 +894,7 @@ describe("AccountingOracle.sol:submitReportExtraData", () => {
           await consensus.advanceTimeToNextFrameStart();
           const { reportFields, extraDataList } = await submitReportHash({ extraData });
           await oracle.connect(member1).submitReportData(reportFields, oracleVersion);
-          await sanityChecker.grantRole(
-            await sanityChecker.MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE(),
-            admin.address,
-          );
+          await sanityChecker.grantRole(await sanityChecker.MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION_ROLE(), admin.address);
           await sanityChecker.setMaxItemsPerExtraDataTransaction(problematicItemsCount);
           const tx = await oracle.connect(member1).submitReportExtraDataList(extraDataList);
           await expect(tx).to.emit(oracle, "ExtraDataSubmitted").withArgs(reportFields.refSlot, anyValue, anyValue);
@@ -917,7 +914,7 @@ describe("AccountingOracle.sol:submitReportExtraData", () => {
 
           await oracleMemberSubmitReportData(report);
 
-          await sanityChecker.grantRole(await sanityChecker.MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE(), admin);
+          await sanityChecker.grantRole(await sanityChecker.MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION_ROLE(), admin);
           await sanityChecker.setMaxItemsPerExtraDataTransaction(maxItemsPerChunk - 1);
           await expect(oracleMemberSubmitExtraData(extraDataChunks[0]))
             .to.be.revertedWithCustomError(sanityChecker, "TooManyItemsPerExtraDataTransaction")
