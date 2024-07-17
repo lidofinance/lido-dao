@@ -875,7 +875,7 @@ describe("AccountingOracle.sol:submitReportExtraData", () => {
           const { reportFields, extraDataList } = await submitReportHash({ extraData });
           await oracle.connect(member1).submitReportData(reportFields, oracleVersion);
           await sanityChecker.grantRole(
-            await sanityChecker.MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_COUNT_ROLE(),
+            await sanityChecker.MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_ROLE(),
             admin.address,
           );
           await sanityChecker.setMaxNodeOperatorsPerExtraDataItem(problematicItemsCount - 1);
