@@ -112,8 +112,9 @@ log.debug = (title: string, records: Record<string, ConvertibleToString>) => {
   log.emptyLine();
 };
 
-log.warning = (title: string): void => {
+log.warning = (title: string, ...args: ConvertibleToString[]): void => {
   log(chalk.bold.yellow(title));
+  args.forEach((arg) => log(arg));
   log.emptyLine();
 };
 

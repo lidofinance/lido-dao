@@ -1,4 +1,5 @@
 import { expect } from "chai";
+import { Result } from "ethers";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
@@ -414,7 +415,7 @@ const getFinalizationBatches = async (
     const state = {
       remainingEthBudget: batchesState.remainingEthBudget,
       finished: batchesState.finished,
-      batches: normalizeBatches(batchesState.batches),
+      batches: (batchesState.batches as Result).toArray(),
       batchesLength: batchesState.batchesLength,
     };
 
@@ -432,7 +433,7 @@ const getFinalizationBatches = async (
     });
   }
 
-  return normalizeBatches(batchesState.batches).filter((x) => x > 0n);
+  return (batchesState.batches as Result).toArray().filter((x) => x > 0n);
 };
 
 /**
@@ -662,8 +663,3 @@ const calcReportDataHash = (items: ReturnType<typeof getReportDataItems>) => {
   const data = ethers.AbiCoder.defaultAbiCoder().encode([`(${types.join(",")})`], [items]);
   return ethers.keccak256(data);
 };
-
-/**
- * Normalize finalization batches, converting Result[] to bigint[]
- */
-const normalizeBatches = (batches: bigint[]) => batches.map((x) => x);

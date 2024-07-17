@@ -108,5 +108,6 @@ export type Signer = keyof ProtocolSigners;
 export type ProtocolContext = {
   contracts: ProtocolContracts;
   signers: ProtocolSigners;
+  interfaces: Array<BaseContract["interface"]>;
   getSigner: (signer: Signer, balance?: bigint) => Promise<HardhatEthersSigner>;
 };

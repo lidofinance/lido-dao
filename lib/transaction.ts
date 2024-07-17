@@ -1,7 +1,6 @@
 import {
-  BaseContract,
+  ContractTransactionReceipt,
   ContractTransactionResponse,
-  LogDescription,
   TransactionReceipt,
   TransactionResponse,
 } from "ethers";
@@ -10,13 +9,14 @@ import hre, { ethers } from "hardhat";
 import { log } from "lib";
 
 type Transaction = TransactionResponse | ContractTransactionResponse;
+type Receipt = TransactionReceipt | ContractTransactionReceipt;
 
-export const trace = async (name: string, tx: Transaction) => {
+export const trace = async <T extends Receipt>(name: string, tx: Transaction) => {
   const receipt = await tx.wait();
 
   if (!receipt) {
     log.error("Failed to trace transaction: no receipt!");
-    return receipt;
+    throw new Error(`Failed to trace transaction for ${name}: no receipt!`);
   }
 
   const network = await tx.provider.getNetwork();
@@ -38,14 +38,5 @@ export const trace = async (name: string, tx: Transaction) => {
     status: !!receipt.status,
   });
 
-  return receipt;
+  return receipt as T;
 };
-
-export const getTransactionEvents = (receipt: TransactionReceipt, contract: BaseContract, name: string) =>
-  receipt.logs
-    .filter((l) => l !== null)
-    .map((l) => contract.interface.parseLog(l))
-    .filter((l) => l?.name === name) || ([] as LogDescription[]);
-
-export const getTransactionEvent = (receipt: TransactionReceipt, contract: BaseContract, name: string, index = 0) =>
-  getTransactionEvents(receipt, contract, name)[index] as LogDescription | undefined;

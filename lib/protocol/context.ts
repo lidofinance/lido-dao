@@ -14,6 +14,7 @@ export const getProtocolContext = async (): Promise<ProtocolContext> => {
   return {
     contracts,
     signers,
+    interfaces: Object.entries(contracts).map(([, contract]) => contract.interface),
     getSigner: async (signer: Signer, balance?: bigint) => getSigner(signer, balance, signers),
   };
 };

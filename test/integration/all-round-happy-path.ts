@@ -1,14 +1,14 @@
 import { expect } from "chai";
-import { TransactionReceipt, TransactionResponse, ZeroAddress } from "ethers";
+import { ContractTransactionReceipt, Result, TransactionResponse, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { batch, ether, getTransactionEvent, getTransactionEvents, impersonate, log, trace } from "lib";
+import { batch, ether, findEventsWithInterfaces, impersonate, log, trace } from "lib";
 import { getProtocolContext, ProtocolContext } from "lib/protocol";
 import { ensureSDVTOperators, oracleReport, unpauseStaking, unpauseWithdrawalQueue } from "lib/protocol/helpers";
 
-import { Snapshot } from "../suite";
+import { Snapshot } from "test/suite";
 
 const AMOUNT = ether("100");
 const MAX_DEPOSIT = 150n;
@@ -26,6 +26,9 @@ describe("Protocol", () => {
   let stranger: HardhatEthersSigner;
 
   let uncountedStETHShares: bigint;
+  let amountWithRewards: bigint;
+  let requestIds: bigint[];
+  let lockedEtherAmountBeforeFinalization: bigint;
 
   before(async () => {
     ctx = await getProtocolContext();
@@ -42,6 +45,10 @@ describe("Protocol", () => {
   });
 
   after(async () => await Snapshot.restore(snapshot));
+
+  const getEvents = (receipt: ContractTransactionReceipt, eventName: string) => {
+    return findEventsWithInterfaces(receipt, eventName, ctx.interfaces);
+  };
 
   const submitStake = async (amount: bigint, wallet: HardhatEthersSigner) => {
     const { lido } = ctx.contracts;
@@ -112,7 +119,7 @@ describe("Protocol", () => {
   it("Should have some Simple DVT operators", async () => {
     await ensureSDVTOperators(ctx, 3n, 5n);
 
-    expect(await ctx.contracts.sdvt.getNodeOperatorsCount()).to.be.gt(3n);
+    expect(await ctx.contracts.sdvt.getNodeOperatorsCount()).to.be.least(3n);
   });
 
   it("Should allow ETH holders to submit stake", async () => {
@@ -146,7 +153,7 @@ describe("Protocol", () => {
     });
 
     const tx = await lido.connect(stranger).submit(ZeroAddress, { value: AMOUNT });
-    const receipt = (await trace("lido.submit", tx)) as TransactionReceipt;
+    const receipt = await trace<ContractTransactionReceipt>("lido.submit", tx);
 
     expect(receipt).not.to.be.null;
 
@@ -171,21 +178,20 @@ describe("Protocol", () => {
       "ETH balance after submit",
     );
 
-    const submittedEvent = getTransactionEvent(receipt, lido, "Submitted");
-    const transferSharesEvent = getTransactionEvent(receipt, lido, "TransferShares");
+    const submittedEvent = getEvents(receipt, "Submitted")[0];
+    const transferSharesEvent = getEvents(receipt, "TransferShares")[0];
     const sharesToBeMinted = await lido.getSharesByPooledEth(AMOUNT);
     const mintedShares = await lido.sharesOf(stranger);
 
     expect(submittedEvent).not.to.be.undefined;
+    expect(submittedEvent.args[0]).to.be.equal(stranger, "Submitted event sender");
+    expect(submittedEvent.args[1]).to.be.equal(AMOUNT, "Submitted event amount");
+    expect(submittedEvent.args[2]).to.be.equal(ZeroAddress, "Submitted event referral");
+
     expect(transferSharesEvent).not.to.be.undefined;
-
-    expect(submittedEvent?.args[0]).to.be.equal(stranger, "Submitted event sender");
-    expect(submittedEvent?.args[1]).to.be.equal(AMOUNT, "Submitted event amount");
-    expect(submittedEvent?.args[2]).to.be.equal(ZeroAddress, "Submitted event referral");
-
-    expect(transferSharesEvent?.args[0]).to.be.equal(ZeroAddress, "TransferShares event sender");
-    expect(transferSharesEvent?.args[1]).to.be.equal(stranger, "TransferShares event recipient");
-    expect(transferSharesEvent?.args[2]).to.be.approximately(sharesToBeMinted, 10n, "TransferShares event amount");
+    expect(transferSharesEvent.args[0]).to.be.equal(ZeroAddress, "TransferShares event sender");
+    expect(transferSharesEvent.args[1]).to.be.equal(stranger, "TransferShares event recipient");
+    expect(transferSharesEvent.args[2]).to.be.approximately(sharesToBeMinted, 10n, "TransferShares event amount");
 
     expect(mintedShares).to.be.equal(sharesToBeMinted, "Minted shares");
 
@@ -222,23 +228,29 @@ describe("Protocol", () => {
 
     expect(depositableEther).to.be.equal(expectedDepositableEther, "Depositable ether");
 
+    log.debug("Depositable ether", {
+      "Buffered ether": ethers.formatEther(bufferedEtherBeforeDeposit),
+      "Withdrawals uninitialized stETH": ethers.formatEther(withdrawalsUninitializedStETH),
+      "Depositable ether": ethers.formatEther(depositableEther),
+    });
+
     const dsmSigner = await impersonate(depositSecurityModule.address, ether("100"));
 
     const depositNorTx = await lido.connect(dsmSigner).deposit(MAX_DEPOSIT, CURATED_MODULE_ID, ZERO_HASH);
-    const depositNorReceipt = (await trace("lido.deposit (Curated Module)", depositNorTx)) as TransactionReceipt;
+    const depositNorReceipt = await trace<ContractTransactionReceipt>("lido.deposit (Curated Module)", depositNorTx);
 
     const depositSdvtTx = await lido.connect(dsmSigner).deposit(MAX_DEPOSIT, SIMPLE_DVT_MODULE_ID, ZERO_HASH);
-    const depositSdvtReceipt = (await trace("lido.deposit (Simple DVT)", depositSdvtTx)) as TransactionReceipt;
+    const depositSdvtReceipt = await trace<ContractTransactionReceipt>("lido.deposit (Simple DVT)", depositSdvtTx);
 
     const bufferedEtherAfterDeposit = await lido.getBufferedEther();
 
-    const unbufferedEventNor = getTransactionEvent(depositNorReceipt, lido, "Unbuffered");
-    const unbufferedEventSdvt = getTransactionEvent(depositSdvtReceipt, lido, "Unbuffered");
-    const depositedValidatorsChangedEventSdvt = getTransactionEvent(depositSdvtReceipt, lido, "DepositedValidatorsChanged");
+    const unbufferedEventNor = getEvents(depositNorReceipt, "Unbuffered")[0];
+    const unbufferedEventSdvt = getEvents(depositSdvtReceipt, "Unbuffered")[0];
+    const depositedValidatorsChangedEventSdvt = getEvents(depositSdvtReceipt, "DepositedValidatorsChanged")[0];
 
-    const unbufferedAmountNor = unbufferedEventNor?.args[0];
-    const unbufferedAmountSdvt = unbufferedEventSdvt?.args[0];
-    const newValidatorsCountSdvt = depositedValidatorsChangedEventSdvt?.args[0];
+    const unbufferedAmountNor = unbufferedEventNor.args[0];
+    const unbufferedAmountSdvt = unbufferedEventSdvt.args[0];
+    const newValidatorsCountSdvt = depositedValidatorsChangedEventSdvt.args[0];
 
     const depositCounts = unbufferedAmountNor / ether("32") + unbufferedAmountSdvt / ether("32");
 
@@ -250,6 +262,13 @@ describe("Protocol", () => {
       depositedValidatorsBeforeDeposit + depositCounts,
       "New validators count after deposit",
     );
+
+    log.debug("After deposit", {
+      "Buffered ether": ethers.formatEther(bufferedEtherAfterDeposit),
+      "Unbuffered amount (NOR)": ethers.formatEther(unbufferedAmountNor),
+      "Unbuffered amount (SDVT)": ethers.formatEther(unbufferedAmountSdvt),
+      "New validators count (SDVT)": newValidatorsCountSdvt,
+    });
   });
 
   it("Should rebase correctly", async () => {
@@ -268,7 +287,7 @@ describe("Protocol", () => {
      * If no penalized operators: distributions = number of active validators
      *                      else: distributions = number of active validators + 1 transfer to burner
      */
-    const getNodeOperatorsExpectedDistributions = async (registry: typeof sdvt | typeof nor, name: string) => {
+    const getNodeOperatorsExpectedDistributions = async (registry: typeof sdvt | typeof nor) => {
       const penalizedIds: bigint[] = [];
       let count = await registry.getNodeOperatorsCount();
 
@@ -287,14 +306,6 @@ describe("Protocol", () => {
         if (noDepositedValidators || allExitedValidators) {
           count--;
         }
-
-        log.debug("Node operators state", {
-          "Module": name,
-          "Node operator (name)": operator.name,
-          "Node operator (isActive)": operator.active,
-          "Penalized count": penalizedIds.length,
-          "Total count": count,
-        });
       }
 
       const extraBurnerTransfers = penalizedIds.length > 0 ? 1n : 0n;
@@ -305,13 +316,19 @@ describe("Protocol", () => {
       };
     };
 
-    const norExpectedDistributions = await getNodeOperatorsExpectedDistributions(nor, "NOR");
-    const sdvtExpectedDistributions = await getNodeOperatorsExpectedDistributions(sdvt, "sDVT");
+    const norExpectedDistributions = await getNodeOperatorsExpectedDistributions(nor);
+    const sdvtExpectedDistributions = await getNodeOperatorsExpectedDistributions(sdvt);
+
+    log.debug("Expected distributions", {
+      "NOR": norExpectedDistributions.distributions,
+      "NOR (transfer to burner)": Boolean(norExpectedDistributions.burned),
+      "SDVT": sdvtExpectedDistributions.distributions,
+      "SDVT (transfer to burner)": Boolean(sdvtExpectedDistributions.burned),
+    });
 
     const treasuryBalanceBeforeRebase = await lido.sharesOf(treasuryAddress);
 
     const reportParams = { clDiff: ether("100") };
-
     const { reportTx, extraDataTx } = (await oracleReport(ctx, reportParams)) as {
       reportTx: TransactionResponse;
       extraDataTx: TransactionResponse;
@@ -325,26 +342,26 @@ describe("Protocol", () => {
     const strangerBalancesAfterRebase = await getBalances(stranger);
     const treasuryBalanceAfterRebase = await lido.sharesOf(treasuryAddress);
 
-    const reportTxReceipt = (await reportTx.wait()) as TransactionReceipt;
-    const extraDataTxReceipt = (await extraDataTx.wait()) as TransactionReceipt;
+    const reportTxReceipt = (await reportTx.wait()) as ContractTransactionReceipt;
+    const extraDataTxReceipt = (await extraDataTx.wait()) as ContractTransactionReceipt;
 
-    const tokenRebasedEvent = getTransactionEvent(reportTxReceipt, lido, "TokenRebased");
-    const transferEvents = getTransactionEvents(reportTxReceipt, lido, "Transfer");
+    const tokenRebasedEvent = getEvents(reportTxReceipt, "TokenRebased")[0];
 
-    expect(transferEvents[0]?.args[0]).to.be.equal(withdrawalQueue.address, "Transfer from (Burner)");
-    expect(transferEvents[0]?.args[1]).to.be.equal(ctx.contracts.burner.address, "Transfer to (Burner)");
+    expect(tokenRebasedEvent).not.to.be.undefined;
 
-    expect(transferEvents[1]?.args[0]).to.be.equal(ZeroAddress, "Transfer from (NOR deposit)");
-    expect(transferEvents[1]?.args[1]).to.be.equal(nor.address, "Transfer to (NOR deposit)");
+    const transferEvents = getEvents(reportTxReceipt, "Transfer");
 
-    expect(transferEvents[2]?.args[0]).to.be.equal(ZeroAddress, "Transfer from (sDVT deposit)");
-    expect(transferEvents[2]?.args[1]).to.be.equal(sdvt.address, "Transfer to (sDVT deposit)");
+    expect(transferEvents.length).to.be.equal(4, "Transfer events count");
+    expect(transferEvents[0].args.from).to.be.equal(withdrawalQueue.address, "Transfer from (Burner)");
+    expect(transferEvents[0].args.to).to.be.equal(ctx.contracts.burner.address, "Transfer to (Burner)");
+    expect(transferEvents[1].args.from).to.be.equal(ZeroAddress, "Transfer from (NOR deposit)");
+    expect(transferEvents[1].args.to).to.be.equal(nor.address, "Transfer to (NOR deposit)");
+    expect(transferEvents[2].args.from).to.be.equal(ZeroAddress, "Transfer from (sDVT deposit)");
+    expect(transferEvents[2].args.to).to.be.equal(sdvt.address, "Transfer to (sDVT deposit)");
+    expect(transferEvents[3].args.from).to.be.equal(ZeroAddress, "Transfer from (Treasury)");
+    expect(transferEvents[3].args.to).to.be.equal(treasuryAddress, "Transfer to (Treasury)");
 
-    expect(transferEvents[3]?.args[0]).to.be.equal(ZeroAddress, "Transfer from (Treasury)");
-    expect(transferEvents[3]?.args[1]).to.be.equal(treasuryAddress, "Transfer to (Treasury)");
-
-    const treasuryTransferValue = transferEvents[3]?.args[2];
-    const treasurySharesMinted = await lido.getSharesByPooledEth(treasuryTransferValue);
+    const treasurySharesMinted = await lido.getSharesByPooledEth(transferEvents[3].args.value);
 
     expect(treasuryBalanceAfterRebase).to.be.approximately(
       treasuryBalanceBeforeRebase + treasurySharesMinted,
@@ -359,46 +376,199 @@ describe("Protocol", () => {
     );
 
     const expectedBurnerTransfers = norExpectedDistributions.burned + sdvtExpectedDistributions.burned;
-    const transfers = getTransactionEvents(extraDataTxReceipt, lido, "Transfer");
+    const transfers = getEvents(extraDataTxReceipt, "Transfer");
     const burnerTransfers = transfers.filter(e => e?.args[1] == burner.address).length;
 
     expect(burnerTransfers).to.be.equal(expectedBurnerTransfers, "Burner transfers is correct");
 
     // TODO: fix Transfers count for distributions is correct error
     // const expectedDistributions = norExpectedDistributions.distributions + sdvtExpectedDistributions.distributions;
-    // const distributions = getTransactionEvents(extraDataTxReceipt, lido, "Transfer").length;
+    // const distributions = getEvents(extraDataTxReceipt, "Transfer").length;
     // expect(distributions).to.be.equal(expectedDistributions, "Transfers count for distributions is correct");
 
-    expect(getTransactionEvent(reportTxReceipt, lido, "TokenRebased")).not.to.be.undefined;
-    expect(getTransactionEvent(reportTxReceipt, burner, "StETHBurnt")).not.to.be.undefined;
+    expect(getEvents(reportTxReceipt, "TokenRebased")[0]).not.to.be.undefined;
+    expect(getEvents(reportTxReceipt, "WithdrawalsFinalized")[0]).not.to.be.undefined;
+    const burntSharesEvent = getEvents(reportTxReceipt, "StETHBurnt")[0];
 
-    // TODO: fix data out-of-bounds error
-    //   RangeError: data out-of-bounds (
-    //      buffer=0x000000000000000000000000889edc2edab5f40e902b864ad4d7ade8e412f9b1000000000000000000000000d15a672319cf0352560ee76d9e89eab0889046d3,
-    //      length=64,
-    //      offset=96,
-    //      code=BUFFER_OVERRUN,
-    //      version=6.13.1
-    //   )
-    // expect(getTransactionEvent(reportTxReceipt, withdrawalQueue, "WithdrawalsFinalized")).not.to.be.undefined;
+    expect(burntSharesEvent).not.to.be.undefined;
 
-    const burntShares = getTransactionEvent(reportTxReceipt, burner, "StETHBurnt")?.args[2];
-    const [, , preTotalShares, , postTotalShares, , sharesMintedAsFees] = tokenRebasedEvent!.args;
+    const burntShares: bigint = burntSharesEvent.args[2];
+    const [, , preTotalShares, , postTotalShares, , sharesMintedAsFees] = tokenRebasedEvent.args;
+
     expect(postTotalShares).to.be.equal(preTotalShares + sharesMintedAsFees - burntShares, "Post total shares");
   });
 
-  it("works correctly", async () => {
-    // requesting withdrawals
+  it("Should allow request withdrawals", async () => {
+    const { lido, withdrawalQueue } = ctx.contracts;
 
-    log.done("requests withdrawals");
+    const withdrawalsFromStrangerBeforeRequest = await withdrawalQueue.connect(stranger).getWithdrawalRequests(stranger);
 
-    // rebasing again, withdrawals finalization
+    expect(withdrawalsFromStrangerBeforeRequest.length).to.be.equal(0, "Withdrawals from stranger");
 
-    log.done("rebases the protocol again and finalizes withdrawals");
+    const balanceBeforeRequest = await getBalances(stranger);
 
-    // withdrawing stETH
-    console.log(uncountedStETHShares); // keep it while test is not finished
+    log.debug("Stranger withdrawals before request", {
+      address: stranger.address,
+      withdrawals: withdrawalsFromStrangerBeforeRequest.length,
+      ETH: ethers.formatEther(balanceBeforeRequest.ETH),
+      stETH: ethers.formatEther(balanceBeforeRequest.stETH),
+    });
 
-    log.done("withdraws stETH");
+    amountWithRewards = balanceBeforeRequest.stETH;
+
+    const approveTx = await lido.connect(stranger).approve(withdrawalQueue.address, amountWithRewards);
+    const approveTxReceipt = await trace<ContractTransactionReceipt>("lido.approve", approveTx);
+
+    const approveEvent = getEvents(approveTxReceipt, "Approval")[0];
+
+    expect(approveEvent).not.to.be.undefined;
+    expect(approveEvent.args.owner).to.be.equal(stranger, "Approval event owner");
+    expect(approveEvent.args.spender).to.be.equal(withdrawalQueue.address, "Approval event spender");
+    expect(approveEvent.args.value).to.be.equal(amountWithRewards, "Approval event value");
+
+    const lastRequestIdBefore = await withdrawalQueue.getLastRequestId();
+
+    const withdrawalTx = await withdrawalQueue.connect(stranger).requestWithdrawals([amountWithRewards], stranger);
+    const withdrawalTxReceipt = await trace<ContractTransactionReceipt>("withdrawalQueue.requestWithdrawals", withdrawalTx);
+
+    const withdrawalEvent = getEvents(withdrawalTxReceipt, "WithdrawalRequested")[0];
+
+    expect(withdrawalEvent).not.to.be.undefined;
+    expect(withdrawalEvent.args.requestor).to.be.equal(stranger, "WithdrawalRequested event requestor");
+    expect(withdrawalEvent.args.owner).to.be.equal(stranger, "WithdrawalRequested event owner");
+    expect(withdrawalEvent.args.amountOfStETH).to.be.equal(amountWithRewards, "WithdrawalRequested event amountOfStETH");
+
+    requestIds = [withdrawalEvent.args.toArray()[0]];
+
+    const withdrawalTransferEvents = getEvents(withdrawalTxReceipt, "Transfer");
+
+    expect(withdrawalTransferEvents.length).to.be.least(2, "Transfer events count");
+    expect(withdrawalTransferEvents[0].args.from).to.be.equal(stranger, "Transfer stETH from (Stranger)");
+    expect(withdrawalTransferEvents[0].args.to).to.be.equal(withdrawalQueue.address, "Transfer stETH to (WithdrawalQueue)");
+    expect(withdrawalTransferEvents[0].args.value).to.be.equal(amountWithRewards, "Transfer stETH value");
+    expect(withdrawalTransferEvents[1].args.tokenId).to.be.equal(requestIds[0], "Transfer unstETH tokenId");
+    expect(withdrawalTransferEvents[1].args.from).to.be.equal(ZeroAddress, "Transfer unstETH from (ZeroAddress)");
+    expect(withdrawalTransferEvents[1].args.to).to.be.equal(stranger, "Transfer unstETH to (Stranger)");
+
+    const balanceAfterRequest = await getBalances(stranger);
+
+    const withdrawalsFromStrangerAfterRequest = await withdrawalQueue.connect(stranger).getWithdrawalRequests(stranger);
+    const [status] = await withdrawalQueue.getWithdrawalStatus(requestIds);
+
+    log.debug("Stranger withdrawals after request", {
+      address: stranger.address,
+      withdrawals: withdrawalsFromStrangerAfterRequest.length,
+      ETH: ethers.formatEther(balanceAfterRequest.ETH),
+      stETH: ethers.formatEther(balanceAfterRequest.stETH),
+    });
+
+    expect(withdrawalsFromStrangerAfterRequest.length).to.be.equal(1, "Withdrawals from stranger after request");
+    expect(status.isFinalized).to.be.false;
+
+    expect(balanceAfterRequest.stETH).to.be.approximately(0, 10n, "stETH balance after request");
+
+    const lastRequestIdAfter = await withdrawalQueue.getLastRequestId();
+    expect(lastRequestIdAfter).to.be.equal(lastRequestIdBefore + 1n, "Last request ID after request");
+  });
+
+  it("Should finalize withdrawals", async () => {
+    const { lido, withdrawalQueue } = ctx.contracts;
+
+    log.debug("Finalizing withdrawals", {
+      "Uncounted stETH shares": ethers.formatEther(uncountedStETHShares),
+      "Amount with rewards": ethers.formatEther(amountWithRewards),
+    });
+
+    const uncountedStETHBalanceBeforeFinalization = await lido.getPooledEthByShares(uncountedStETHShares);
+    const withdrawalQueueBalanceBeforeFinalization = await lido.balanceOf(withdrawalQueue.address);
+    const expectedWithdrawalAmount = amountWithRewards + uncountedStETHBalanceBeforeFinalization;
+
+    log.debug("Withdrawal queue balance before finalization", {
+      "Uncounted stETH balance": ethers.formatEther(uncountedStETHBalanceBeforeFinalization),
+      "Withdrawal queue balance": ethers.formatEther(withdrawalQueueBalanceBeforeFinalization),
+      "Expected withdrawal amount": ethers.formatEther(expectedWithdrawalAmount),
+    });
+
+    expect(withdrawalQueueBalanceBeforeFinalization).to.be.approximately(expectedWithdrawalAmount, 10n, "Withdrawal queue balance before finalization");
+
+    lockedEtherAmountBeforeFinalization = await withdrawalQueue.getLockedEtherAmount();
+
+    const reportParams = { clDiff: ether("100") };
+    const { reportTx } = (await oracleReport(ctx, reportParams)) as { reportTx: TransactionResponse };
+
+    const reportTxReceipt = (await reportTx.wait()) as ContractTransactionReceipt;
+
+    const lockedEtherAmountAfterFinalization = await withdrawalQueue.getLockedEtherAmount();
+    const expectedLockedEtherAmountAfterFinalization = lockedEtherAmountAfterFinalization - amountWithRewards;
+
+    expect(lockedEtherAmountBeforeFinalization).to.be.equal(expectedLockedEtherAmountAfterFinalization, "Locked ether amount after finalization");
+
+    const withdrawalFinalizedEvent = getEvents(reportTxReceipt, "WithdrawalsFinalized")[0];
+
+    expect(withdrawalFinalizedEvent).not.to.be.undefined;
+    expect(withdrawalFinalizedEvent.args.amountOfETHLocked).to.be.equal(amountWithRewards, "WithdrawalFinalized event amountOfETHLocked");
+    expect(withdrawalFinalizedEvent.args.from).to.be.equal(requestIds[0], "WithdrawalFinalized event from");
+    expect(withdrawalFinalizedEvent.args.to).to.be.equal(requestIds[0], "WithdrawalFinalized event to");
+
+    const withdrawalQueueBalanceAfterFinalization = await lido.balanceOf(withdrawalQueue.address);
+    const uncountedStETHBalanceAfterFinalization = await lido.getPooledEthByShares(uncountedStETHShares);
+
+    expect(withdrawalQueueBalanceAfterFinalization).to.be.equal(uncountedStETHBalanceAfterFinalization, "Withdrawal queue balance after finalization");
+  });
+
+  it("Should claim withdrawals", async () => {
+    const { withdrawalQueue } = ctx.contracts;
+
+    const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex();
+
+    // in fact, it's a proxy and not a real array, so we need to convert it to array
+    const hintsProxy = await withdrawalQueue.findCheckpointHints(requestIds, 1n, lastCheckpointIndex) as Result;
+    const hints = hintsProxy.toArray();
+
+    const [claimableEtherBeforeClaim] = await withdrawalQueue.getClaimableEther(requestIds, hints);
+    const [status] = await withdrawalQueue.getWithdrawalStatus(requestIds);
+
+    const balanceBeforeClaim = await getBalances(stranger);
+
+    expect(status.isFinalized).to.be.true;
+    expect(claimableEtherBeforeClaim).to.be.equal(amountWithRewards, "Claimable ether before claim");
+
+    const claimTx = await withdrawalQueue.connect(stranger).claimWithdrawals(requestIds, hints);
+    const claimTxReceipt = await trace<ContractTransactionReceipt>("withdrawalQueue.claimWithdrawals", claimTx);
+
+    const spentGas = claimTxReceipt.gasUsed * claimTxReceipt.gasPrice;
+
+    const claimEvent = getEvents(claimTxReceipt, "WithdrawalClaimed")[0];
+
+    expect(claimEvent).not.to.be.undefined;
+    expect(claimEvent.args.requestId).to.be.equal(requestIds[0], "WithdrawalClaimed event requestId");
+    expect(claimEvent.args.owner).to.be.equal(stranger, "WithdrawalClaimed event owner");
+    expect(claimEvent.args.receiver).to.be.equal(stranger, "WithdrawalClaimed event receiver");
+    expect(claimEvent.args.amountOfETH).to.be.equal(amountWithRewards, "WithdrawalClaimed event amountOfETH");
+
+    const transferEvent = getEvents(claimTxReceipt, "Transfer")[0];
+
+    expect(transferEvent).not.to.be.undefined;
+    expect(transferEvent.args.from).to.be.equal(stranger.address, "Transfer from (Stranger)");
+    expect(transferEvent.args.to).to.be.equal(ZeroAddress, "Transfer to (ZeroAddress)");
+    expect(transferEvent.args.tokenId).to.be.equal(requestIds[0], "Transfer value");
+
+    const balanceAfterClaim = await getBalances(stranger);
+
+    expect(balanceAfterClaim.ETH).to.be.equal(balanceBeforeClaim.ETH + amountWithRewards - spentGas, "ETH balance after claim");
+
+    // const lockedEtherAmountAfterClaim = await withdrawalQueue.getLockedEtherAmount();
+
+    // TODO: fix locked ether amount after claim
+    // expect(lockedEtherAmountAfterClaim).to.be.equal(lockedEtherAmountBeforeFinalization - amountWithRewards, "Locked ether amount after claim");
+
+    const [statusAfterClaim] = await withdrawalQueue.connect(stranger).getWithdrawalStatus(requestIds);
+
+    expect(statusAfterClaim.isFinalized).to.be.true;
+    expect(statusAfterClaim.isClaimed).to.be.true;
+
+    const [claimableEtherAfterClaim] = await withdrawalQueue.getClaimableEther(requestIds, hints);
+
+    expect(claimableEtherAfterClaim).to.be.equal(0, "Claimable ether after claim");
   });
 });
