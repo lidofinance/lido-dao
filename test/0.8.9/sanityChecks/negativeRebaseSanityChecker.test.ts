@@ -32,8 +32,8 @@ describe("OracleReportSanityChecker.sol", () => {
     annualBalanceIncreaseBPLimit: 10_00, // 10%
     simulatedShareRateDeviationBPLimit: 2_50, // 2.5%
     maxValidatorExitRequestsPerReport: 2000,
-    maxAccountingExtraDataListItemsCount: 15,
-    maxNodeOperatorsPerExtraDataItemCount: 16,
+    maxItemsPerExtraDataTransaction: 15,
+    maxNodeOperatorsPerExtraDataItem: 16,
     requestTimestampMargin: 128,
     maxPositiveTokenRebase: 5_000_000, // 0.05%
     initialSlashingAmountPWei: 1000, // 1 ETH = 1000 PWei

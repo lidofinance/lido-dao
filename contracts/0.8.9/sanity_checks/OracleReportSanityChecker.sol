@@ -83,11 +83,11 @@ struct LimitsList {
 
     /// @notice The max number of data list items reported to accounting oracle in extra data per single transaction
     /// @dev Must fit into uint16 (<= 65_535)
-    uint256 maxAccountingExtraDataListItemsCount;
+    uint256 maxItemsPerExtraDataTransaction;
 
     /// @notice The max number of node operators reported per extra data list item
     /// @dev Must fit into uint16 (<= 65_535)
-    uint256 maxNodeOperatorsPerExtraDataItemCount;
+    uint256 maxNodeOperatorsPerExtraDataItem;
 
     /// @notice The min time required to be passed from the creation of the request to be
     ///     finalized till the time of the oracle report
@@ -119,8 +119,8 @@ struct LimitsListPacked {
     uint16 annualBalanceIncreaseBPLimit;
     uint16 simulatedShareRateDeviationBPLimit;
     uint16 maxValidatorExitRequestsPerReport;
-    uint16 maxAccountingExtraDataListItemsCount;
-    uint16 maxNodeOperatorsPerExtraDataItemCount;
+    uint16 maxItemsPerExtraDataTransaction;
+    uint16 maxNodeOperatorsPerExtraDataItem;
     uint32 requestTimestampMargin;
     uint64 maxPositiveTokenRebase;
     uint16 initialSlashingAmountPWei;
@@ -157,10 +157,10 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         keccak256("SHARE_RATE_DEVIATION_LIMIT_MANAGER_ROLE");
     bytes32 public constant MAX_VALIDATOR_EXIT_REQUESTS_PER_REPORT_ROLE =
         keccak256("MAX_VALIDATOR_EXIT_REQUESTS_PER_REPORT_ROLE");
-    bytes32 public constant MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE =
-        keccak256("MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE");
-    bytes32 public constant MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_COUNT_ROLE =
-        keccak256("MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_COUNT_ROLE");
+    bytes32 public constant MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION_ROLE =
+        keccak256("MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION_ROLE");
+    bytes32 public constant MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_ROLE =
+        keccak256("MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_ROLE");
     bytes32 public constant REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE = keccak256("REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE");
     bytes32 public constant MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE =
         keccak256("MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE");
@@ -352,25 +352,25 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         _updateLimits(limitsList);
     }
 
-    /// @notice Sets the new value for the maxAccountingExtraDataListItemsCount
-    /// @param _maxAccountingExtraDataListItemsCount new maxAccountingExtraDataListItemsCount value
-    function setMaxAccountingExtraDataListItemsCount(uint256 _maxAccountingExtraDataListItemsCount)
+    /// @notice Sets the new value for the maxItemsPerExtraDataTransaction
+    /// @param _maxItemsPerExtraDataTransaction new maxItemsPerExtraDataTransaction value
+    function setMaxItemsPerExtraDataTransaction(uint256 _maxItemsPerExtraDataTransaction)
         external
-        onlyRole(MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE)
+        onlyRole(MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION_ROLE)
     {
         LimitsList memory limitsList = _limits.unpack();
-        limitsList.maxAccountingExtraDataListItemsCount = _maxAccountingExtraDataListItemsCount;
+        limitsList.maxItemsPerExtraDataTransaction = _maxItemsPerExtraDataTransaction;
         _updateLimits(limitsList);
     }
 
-    /// @notice Sets the new value for the max maxNodeOperatorsPerExtraDataItemCount
-    /// @param _maxNodeOperatorsPerExtraDataItemCount new maxNodeOperatorsPerExtraDataItemCount value
-    function setMaxNodeOperatorsPerExtraDataItemCount(uint256 _maxNodeOperatorsPerExtraDataItemCount)
+    /// @notice Sets the new value for the max maxNodeOperatorsPerExtraDataItem
+    /// @param _maxNodeOperatorsPerExtraDataItem new maxNodeOperatorsPerExtraDataItem value
+    function setMaxNodeOperatorsPerExtraDataItem(uint256 _maxNodeOperatorsPerExtraDataItem)
         external
-        onlyRole(MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_COUNT_ROLE)
+        onlyRole(MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_ROLE)
     {
         LimitsList memory limitsList = _limits.unpack();
-        limitsList.maxNodeOperatorsPerExtraDataItemCount = _maxNodeOperatorsPerExtraDataItemCount;
+        limitsList.maxNodeOperatorsPerExtraDataItem = _maxNodeOperatorsPerExtraDataItem;
         _updateLimits(limitsList);
     }
 
@@ -555,7 +555,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         external
         view
     {
-        uint256 limit = _limits.unpack().maxNodeOperatorsPerExtraDataItemCount;
+        uint256 limit = _limits.unpack().maxNodeOperatorsPerExtraDataItem;
         if (_nodeOperatorsCount > limit) {
             revert TooManyNodeOpsPerExtraDataItem(_itemIndex, _nodeOperatorsCount);
         }
@@ -567,9 +567,9 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
         external
         view
     {
-        uint256 limit = _limits.unpack().maxAccountingExtraDataListItemsCount;
+        uint256 limit = _limits.unpack().maxItemsPerExtraDataTransaction;
         if (_extraDataListItemsCount > limit) {
-            revert MaxAccountingExtraDataItemsCountExceeded(limit, _extraDataListItemsCount);
+            revert TooManyItemsPerExtraDataTransaction(limit, _extraDataListItemsCount);
         }
     }
 
@@ -867,13 +867,13 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
             _checkLimitValue(_newLimitsList.maxValidatorExitRequestsPerReport, 0, type(uint16).max);
             emit MaxValidatorExitRequestsPerReportSet(_newLimitsList.maxValidatorExitRequestsPerReport);
         }
-        if (_oldLimitsList.maxAccountingExtraDataListItemsCount != _newLimitsList.maxAccountingExtraDataListItemsCount) {
-            _checkLimitValue(_newLimitsList.maxAccountingExtraDataListItemsCount, 0, type(uint16).max);
-            emit MaxAccountingExtraDataListItemsCountSet(_newLimitsList.maxAccountingExtraDataListItemsCount);
+        if (_oldLimitsList.maxItemsPerExtraDataTransaction != _newLimitsList.maxItemsPerExtraDataTransaction) {
+            _checkLimitValue(_newLimitsList.maxItemsPerExtraDataTransaction, 0, type(uint16).max);
+            emit MaxItemsPerExtraDataTransactionSet(_newLimitsList.maxItemsPerExtraDataTransaction);
         }
-        if (_oldLimitsList.maxNodeOperatorsPerExtraDataItemCount != _newLimitsList.maxNodeOperatorsPerExtraDataItemCount) {
-            _checkLimitValue(_newLimitsList.maxNodeOperatorsPerExtraDataItemCount, 0, type(uint16).max);
-            emit MaxNodeOperatorsPerExtraDataItemCountSet(_newLimitsList.maxNodeOperatorsPerExtraDataItemCount);
+        if (_oldLimitsList.maxNodeOperatorsPerExtraDataItem != _newLimitsList.maxNodeOperatorsPerExtraDataItem) {
+            _checkLimitValue(_newLimitsList.maxNodeOperatorsPerExtraDataItem, 0, type(uint16).max);
+            emit MaxNodeOperatorsPerExtraDataItemSet(_newLimitsList.maxNodeOperatorsPerExtraDataItem);
         }
         if (_oldLimitsList.requestTimestampMargin != _newLimitsList.requestTimestampMargin) {
             _checkLimitValue(_newLimitsList.requestTimestampMargin, 0, type(uint32).max);
@@ -911,8 +911,8 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     event SimulatedShareRateDeviationBPLimitSet(uint256 simulatedShareRateDeviationBPLimit);
     event MaxPositiveTokenRebaseSet(uint256 maxPositiveTokenRebase);
     event MaxValidatorExitRequestsPerReportSet(uint256 maxValidatorExitRequestsPerReport);
-    event MaxAccountingExtraDataListItemsCountSet(uint256 maxAccountingExtraDataListItemsCount);
-    event MaxNodeOperatorsPerExtraDataItemCountSet(uint256 maxNodeOperatorsPerExtraDataItemCount);
+    event MaxItemsPerExtraDataTransactionSet(uint256 maxItemsPerExtraDataTransaction);
+    event MaxNodeOperatorsPerExtraDataItemSet(uint256 maxNodeOperatorsPerExtraDataItem);
     event RequestTimestampMarginSet(uint256 requestTimestampMargin);
     event InitialSlashingAmountSet(uint256 initialSlashingAmountPWei);
     event InactivityPenaltiesAmountSet(uint256 inactivityPenaltiesAmountPWei);
@@ -931,7 +931,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
     error IncorrectRequestFinalization(uint256 requestCreationBlock);
     error ActualShareRateIsZero();
     error IncorrectSimulatedShareRate(uint256 simulatedShareRate, uint256 actualShareRate);
-    error MaxAccountingExtraDataItemsCountExceeded(uint256 maxItemsCount, uint256 receivedItemsCount);
+    error TooManyItemsPerExtraDataTransaction(uint256 maxItemsCount, uint256 receivedItemsCount);
     error ExitedValidatorsLimitExceeded(uint256 limitPerDay, uint256 exitedPerDay);
     error TooManyNodeOpsPerExtraDataItem(uint256 itemIndex, uint256 nodeOpsCount);
     error AdminCannotBeZero();
@@ -952,8 +952,8 @@ library LimitsListPacker {
         res.requestTimestampMargin = SafeCast.toUint32(_limitsList.requestTimestampMargin);
         res.maxPositiveTokenRebase = SafeCast.toUint64(_limitsList.maxPositiveTokenRebase);
         res.maxValidatorExitRequestsPerReport = SafeCast.toUint16(_limitsList.maxValidatorExitRequestsPerReport);
-        res.maxAccountingExtraDataListItemsCount = SafeCast.toUint16(_limitsList.maxAccountingExtraDataListItemsCount);
-        res.maxNodeOperatorsPerExtraDataItemCount = SafeCast.toUint16(_limitsList.maxNodeOperatorsPerExtraDataItemCount);
+        res.maxItemsPerExtraDataTransaction = SafeCast.toUint16(_limitsList.maxItemsPerExtraDataTransaction);
+        res.maxNodeOperatorsPerExtraDataItem = SafeCast.toUint16(_limitsList.maxNodeOperatorsPerExtraDataItem);
         res.initialSlashingAmountPWei = SafeCast.toUint16(_limitsList.initialSlashingAmountPWei);
         res.inactivityPenaltiesAmountPWei = SafeCast.toUint16(_limitsList.inactivityPenaltiesAmountPWei);
         res.clBalanceOraclesErrorUpperBPLimit = _toBasisPoints(_limitsList.clBalanceOraclesErrorUpperBPLimit);
@@ -974,8 +974,8 @@ library LimitsListUnpacker {
         res.requestTimestampMargin = _limitsList.requestTimestampMargin;
         res.maxPositiveTokenRebase = _limitsList.maxPositiveTokenRebase;
         res.maxValidatorExitRequestsPerReport = _limitsList.maxValidatorExitRequestsPerReport;
-        res.maxAccountingExtraDataListItemsCount = _limitsList.maxAccountingExtraDataListItemsCount;
-        res.maxNodeOperatorsPerExtraDataItemCount = _limitsList.maxNodeOperatorsPerExtraDataItemCount;
+        res.maxItemsPerExtraDataTransaction = _limitsList.maxItemsPerExtraDataTransaction;
+        res.maxNodeOperatorsPerExtraDataItem = _limitsList.maxNodeOperatorsPerExtraDataItem;
         res.initialSlashingAmountPWei = _limitsList.initialSlashingAmountPWei;
         res.inactivityPenaltiesAmountPWei = _limitsList.inactivityPenaltiesAmountPWei;
         res.clBalanceOraclesErrorUpperBPLimit = _limitsList.clBalanceOraclesErrorUpperBPLimit;

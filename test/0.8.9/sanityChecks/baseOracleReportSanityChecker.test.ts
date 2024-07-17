@@ -32,8 +32,8 @@ describe("OracleReportSanityChecker.sol", () => {
     annualBalanceIncreaseBPLimit: 10_00, // 10%
     simulatedShareRateDeviationBPLimit: 2_50, // 2.5%
     maxValidatorExitRequestsPerReport: 2000,
-    maxAccountingExtraDataListItemsCount: 15,
-    maxNodeOperatorsPerExtraDataItemCount: 16,
+    maxItemsPerExtraDataTransaction: 15,
+    maxNodeOperatorsPerExtraDataItem: 16,
     requestTimestampMargin: 128,
     maxPositiveTokenRebase: 5_000_000, // 0.05%
     initialSlashingAmountPWei: 1000,
@@ -101,8 +101,8 @@ describe("OracleReportSanityChecker.sol", () => {
       annualBalanceIncreaseLimitManagers: accounts.slice(8, 10),
       shareRateDeviationLimitManagers: accounts.slice(10, 12),
       maxValidatorExitRequestsPerReportManagers: accounts.slice(12, 14),
-      maxAccountingExtraDataListItemsCountManagers: accounts.slice(14, 16),
-      maxNodeOperatorsPerExtraDataItemCountManagers: accounts.slice(16, 18),
+      maxItemsPerExtraDataTransactionManagers: accounts.slice(14, 16),
+      maxNodeOperatorsPerExtraDataItemManagers: accounts.slice(16, 18),
       requestTimestampMarginManagers: accounts.slice(18, 20),
       maxPositiveTokenRebaseManagers: accounts.slice(20, 22),
     };
@@ -145,8 +145,8 @@ describe("OracleReportSanityChecker.sol", () => {
         annualBalanceIncreaseBPLimit: 15_00,
         simulatedShareRateDeviationBPLimit: 1_50, // 1.5%
         maxValidatorExitRequestsPerReport: 3000,
-        maxAccountingExtraDataListItemsCount: 15 + 1,
-        maxNodeOperatorsPerExtraDataItemCount: 16 + 1,
+        maxItemsPerExtraDataTransaction: 15 + 1,
+        maxNodeOperatorsPerExtraDataItem: 16 + 1,
         requestTimestampMargin: 2048,
         maxPositiveTokenRebase: 10_000_000,
         initialSlashingAmountPWei: 2000,
@@ -163,11 +163,9 @@ describe("OracleReportSanityChecker.sol", () => {
       expect(limitsBefore.maxValidatorExitRequestsPerReport).to.not.equal(
         newLimitsList.maxValidatorExitRequestsPerReport,
       );
-      expect(limitsBefore.maxAccountingExtraDataListItemsCount).to.not.equal(
-        newLimitsList.maxAccountingExtraDataListItemsCount,
-      );
-      expect(limitsBefore.maxNodeOperatorsPerExtraDataItemCount).to.not.equal(
-        newLimitsList.maxNodeOperatorsPerExtraDataItemCount,
+      expect(limitsBefore.maxItemsPerExtraDataTransaction).to.not.equal(newLimitsList.maxItemsPerExtraDataTransaction);
+      expect(limitsBefore.maxNodeOperatorsPerExtraDataItem).to.not.equal(
+        newLimitsList.maxNodeOperatorsPerExtraDataItem,
       );
       expect(limitsBefore.requestTimestampMargin).to.not.equal(newLimitsList.requestTimestampMargin);
       expect(limitsBefore.maxPositiveTokenRebase).to.not.equal(newLimitsList.maxPositiveTokenRebase);
@@ -197,12 +195,8 @@ describe("OracleReportSanityChecker.sol", () => {
       expect(limitsAfter.annualBalanceIncreaseBPLimit).to.equal(newLimitsList.annualBalanceIncreaseBPLimit);
       expect(limitsAfter.simulatedShareRateDeviationBPLimit).to.equal(newLimitsList.simulatedShareRateDeviationBPLimit);
       expect(limitsAfter.maxValidatorExitRequestsPerReport).to.equal(newLimitsList.maxValidatorExitRequestsPerReport);
-      expect(limitsAfter.maxAccountingExtraDataListItemsCount).to.equal(
-        newLimitsList.maxAccountingExtraDataListItemsCount,
-      );
-      expect(limitsAfter.maxNodeOperatorsPerExtraDataItemCount).to.equal(
-        newLimitsList.maxNodeOperatorsPerExtraDataItemCount,
-      );
+      expect(limitsAfter.maxItemsPerExtraDataTransaction).to.equal(newLimitsList.maxItemsPerExtraDataTransaction);
+      expect(limitsAfter.maxNodeOperatorsPerExtraDataItem).to.equal(newLimitsList.maxNodeOperatorsPerExtraDataItem);
       expect(limitsAfter.requestTimestampMargin).to.equal(newLimitsList.requestTimestampMargin);
       expect(limitsAfter.maxPositiveTokenRebase).to.equal(newLimitsList.maxPositiveTokenRebase);
       expect(limitsAfter.clBalanceOraclesErrorUpperBPLimit).to.equal(newLimitsList.clBalanceOraclesErrorUpperBPLimit);
@@ -1346,62 +1340,58 @@ describe("OracleReportSanityChecker.sol", () => {
         .setOracleReportLimits(defaultLimitsList, ZeroAddress);
     });
 
-    it("set maxNodeOperatorsPerExtraDataItemCount", async () => {
-      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits())
-        .maxNodeOperatorsPerExtraDataItemCount;
+    it("set maxNodeOperatorsPerExtraDataItem", async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItem;
       const newValue = 33;
       expect(newValue).to.not.equal(previousValue);
       await expect(
-        oracleReportSanityChecker.connect(deployer).setMaxNodeOperatorsPerExtraDataItemCount(newValue),
+        oracleReportSanityChecker.connect(deployer).setMaxNodeOperatorsPerExtraDataItem(newValue),
       ).to.be.revertedWithOZAccessControlError(
         deployer.address,
-        await oracleReportSanityChecker.MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_COUNT_ROLE(),
+        await oracleReportSanityChecker.MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_ROLE(),
       );
       await oracleReportSanityChecker
         .connect(admin)
         .grantRole(
-          await oracleReportSanityChecker.MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_COUNT_ROLE(),
-          managersRoster.maxNodeOperatorsPerExtraDataItemCountManagers[0],
+          await oracleReportSanityChecker.MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_ROLE(),
+          managersRoster.maxNodeOperatorsPerExtraDataItemManagers[0],
         );
       const tx = await oracleReportSanityChecker
-        .connect(managersRoster.maxNodeOperatorsPerExtraDataItemCountManagers[0])
-        .setMaxNodeOperatorsPerExtraDataItemCount(newValue);
-      expect(
-        (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItemCount,
-      ).to.be.equal(newValue);
-      await expect(tx)
-        .to.emit(oracleReportSanityChecker, "MaxNodeOperatorsPerExtraDataItemCountSet")
-        .withArgs(newValue);
+        .connect(managersRoster.maxNodeOperatorsPerExtraDataItemManagers[0])
+        .setMaxNodeOperatorsPerExtraDataItem(newValue);
+      expect((await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItem).to.be.equal(
+        newValue,
+      );
+      await expect(tx).to.emit(oracleReportSanityChecker, "MaxNodeOperatorsPerExtraDataItemSet").withArgs(newValue);
     });
 
-    it("set maxAccountingExtraDataListItemsCount", async () => {
-      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits())
-        .maxAccountingExtraDataListItemsCount;
+    it("set maxItemsPerExtraDataTransaction", async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).maxItemsPerExtraDataTransaction;
       const newValue = 31;
       expect(newValue).to.not.equal(previousValue);
       await expect(
-        oracleReportSanityChecker.connect(deployer).setMaxAccountingExtraDataListItemsCount(newValue),
+        oracleReportSanityChecker.connect(deployer).setMaxItemsPerExtraDataTransaction(newValue),
       ).to.be.revertedWithOZAccessControlError(
         deployer.address,
-        await oracleReportSanityChecker.MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE(),
+        await oracleReportSanityChecker.MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION_ROLE(),
       );
       await oracleReportSanityChecker
         .connect(admin)
         .grantRole(
-          await oracleReportSanityChecker.MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE(),
-          managersRoster.maxAccountingExtraDataListItemsCountManagers[0],
+          await oracleReportSanityChecker.MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION_ROLE(),
+          managersRoster.maxItemsPerExtraDataTransactionManagers[0],
         );
       const tx = await oracleReportSanityChecker
-        .connect(managersRoster.maxAccountingExtraDataListItemsCountManagers[0])
-        .setMaxAccountingExtraDataListItemsCount(newValue);
-      expect(
-        (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount,
-      ).to.be.equal(newValue);
-      await expect(tx).to.emit(oracleReportSanityChecker, "MaxAccountingExtraDataListItemsCountSet").withArgs(newValue);
+        .connect(managersRoster.maxItemsPerExtraDataTransactionManagers[0])
+        .setMaxItemsPerExtraDataTransaction(newValue);
+      expect((await oracleReportSanityChecker.getOracleReportLimits()).maxItemsPerExtraDataTransaction).to.be.equal(
+        newValue,
+      );
+      await expect(tx).to.emit(oracleReportSanityChecker, "MaxItemsPerExtraDataTransactionSet").withArgs(newValue);
     });
 
     it("checkNodeOperatorsPerExtraDataItemCount", async () => {
-      const maxCount = (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItemCount;
+      const maxCount = (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItem;
 
       await oracleReportSanityChecker.checkNodeOperatorsPerExtraDataItemCount(12, maxCount);
 
@@ -1411,12 +1401,12 @@ describe("OracleReportSanityChecker.sol", () => {
     });
 
     it("checkExtraDataItemsCountPerTransaction", async () => {
-      const maxCount = (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount;
+      const maxCount = (await oracleReportSanityChecker.getOracleReportLimits()).maxItemsPerExtraDataTransaction;
 
       await oracleReportSanityChecker.checkExtraDataItemsCountPerTransaction(maxCount);
 
       await expect(oracleReportSanityChecker.checkExtraDataItemsCountPerTransaction(maxCount + 1n))
-        .to.be.revertedWithCustomError(oracleReportSanityChecker, "MaxAccountingExtraDataItemsCountExceeded")
+        .to.be.revertedWithCustomError(oracleReportSanityChecker, "TooManyItemsPerExtraDataTransaction")
         .withArgs(maxCount, maxCount + 1n);
     });
   });
@@ -1489,7 +1479,7 @@ describe("OracleReportSanityChecker.sol", () => {
         oracleReportSanityChecker
           .connect(managersRoster.allLimitsManagers[0])
           .setOracleReportLimits(
-            { ...defaultLimitsList, maxNodeOperatorsPerExtraDataItemCount: INVALID_VALUE },
+            { ...defaultLimitsList, maxNodeOperatorsPerExtraDataItem: INVALID_VALUE },
             ZeroAddress,
           ),
       )
