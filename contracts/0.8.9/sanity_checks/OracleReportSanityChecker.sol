@@ -354,7 +354,7 @@ contract OracleReportSanityChecker is AccessControlEnumerable {
 
     /// @notice Sets the new value for the maxItemsPerExtraDataTransaction
     /// @param _maxItemsPerExtraDataTransaction new maxItemsPerExtraDataTransaction value
-    function setMaxAccountingExtraDataListItemsCount(uint256 _maxItemsPerExtraDataTransaction)
+    function setMaxItemsPerExtraDataTransaction(uint256 _maxItemsPerExtraDataTransaction)
         external
         onlyRole(MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE)
     {
