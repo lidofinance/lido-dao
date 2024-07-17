@@ -354,8 +354,10 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
   });
 
   context("finalizeUpgrade_v3()", () => {
+    let preInitState: string;
     beforeEach(async () => {
       locator = await deployLidoLocator({ lido: lido });
+      preInitState = await Snapshot.take();
       await nor.harness__initialize(2n);
     });
 
@@ -392,7 +394,50 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
     });
 
     it("Migrates the contract storage from v2 to v3");
-    it("Calling finalizeUpgrade_v3 on v1 version");
-    it("Happy path test for update from v1: finalizeUpgrade_v2 -> finalizeUpgrade_v3");
+
+    it("Calling finalizeUpgrade_v3 on v1 version", async () => {
+      preInitState = await Snapshot.refresh(preInitState);
+      await nor.harness__initialize(1n);
+      await expect(nor.finalizeUpgrade_v3()).to.be.revertedWith("UNEXPECTED_CONTRACT_VERSION");
+    });
+
+    it("Happy path test for update from v1: finalizeUpgrade_v2 -> finalizeUpgrade_v3", async () => {
+      preInitState = await Snapshot.refresh(preInitState);
+
+      await nor.harness__initialize(0n);
+
+      const latestBlock = BigInt(await time.latestBlock());
+      const burnerAddress = await locator.burner();
+
+      await expect(nor.finalizeUpgrade_v2(locator, moduleType, 86400n))
+        .to.emit(nor, "ContractVersionSet")
+        .withArgs(contractVersionV2)
+        .and.to.emit(nor, "StuckPenaltyDelayChanged")
+        .withArgs(86400n)
+        .and.to.emit(nor, "LocatorContractSet")
+        .withArgs(await locator.getAddress())
+        .and.to.emit(nor, "StakingModuleTypeSet")
+        .withArgs(moduleType);
+
+      expect(await nor.getLocator()).to.equal(await locator.getAddress());
+      expect(await nor.getInitializationBlock()).to.equal(latestBlock);
+      expect(await lido.allowance(await nor.getAddress(), burnerAddress)).to.equal(MaxUint256);
+      expect(await nor.getStuckPenaltyDelay()).to.equal(86400n);
+      expect(await nor.getContractVersion()).to.equal(contractVersionV2);
+      expect(await nor.getType()).to.equal(moduleType);
+
+      await expect(nor.finalizeUpgrade_v3())
+        .to.emit(nor, "ContractVersionSet")
+        .withArgs(contractVersionV3)
+        .to.emit(nor, "RewardDistributionStateChanged")
+        .withArgs(RewardDistributionState.Distributed);
+
+      expect(await nor.getLocator()).to.equal(await locator.getAddress());
+      expect(await nor.getInitializationBlock()).to.equal(latestBlock);
+      expect(await lido.allowance(await nor.getAddress(), burnerAddress)).to.equal(MaxUint256);
+      expect(await nor.getStuckPenaltyDelay()).to.equal(86400n);
+      expect(await nor.getContractVersion()).to.equal(contractVersionV3);
+      expect(await nor.getType()).to.equal(moduleType);
+    });
   });
 });
