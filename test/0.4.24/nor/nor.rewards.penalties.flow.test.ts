@@ -281,6 +281,25 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
         .to.emit(nor, "StuckPenaltyStateChanged")
         .withArgs(firstNodeOperatorId, 0n, 0n, timestamp + 86400n + 1n);
     });
+
+    it("Penalizes node operators with stuck penalty active", async () => {
+      await lido.connect(user).resume();
+      await user.sendTransaction({ to: await lido.getAddress(), value: ether("1.0") });
+      await lido.connect(user).transfer(await nor.getAddress(), await lido.balanceOf(user));
+
+      const nonce = await nor.getNonce();
+      const idsPayload = prepIdsCountsPayload([1n], [2n]);
+      await expect(nor.connect(stakingRouter).updateStuckValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts))
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "StuckPenaltyStateChanged")
+        .withArgs(1n, 2n, 0n, 0n);
+
+      await nor.harness__setRewardDistributionState(RewardDistributionState.ReadyForDistribution);
+      await expect(nor.connect(stakingRouter).distributeReward()).to.emit(nor, "NodeOperatorPenalized");
+    });
   });
 
   context("updateExitedValidatorsCount", () => {
@@ -494,25 +513,6 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
       );
 
       expect(await lido.sharesOf(nor)).to.equal(1n);
-    });
-
-    it("Penalizes node operators with stuck penalty active", async () => {
-      await lido.connect(user).resume();
-      await user.sendTransaction({ to: await lido.getAddress(), value: ether("1.0") });
-      await lido.connect(user).transfer(await nor.getAddress(), await lido.balanceOf(user));
-
-      const nonce = await nor.getNonce();
-      const idsPayload = prepIdsCountsPayload([1n], [2n]);
-      await expect(nor.connect(stakingRouter).updateStuckValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts))
-        .to.emit(nor, "KeysOpIndexSet")
-        .withArgs(nonce + 1n)
-        .to.emit(nor, "NonceChanged")
-        .withArgs(nonce + 1n)
-        .to.emit(nor, "StuckPenaltyStateChanged")
-        .withArgs(1n, 2n, 0n, 0n);
-
-      await nor.harness__setRewardDistributionState(RewardDistributionState.ReadyForDistribution);
-      await expect(nor.connect(stakingRouter).distributeReward()).to.emit(nor, "NodeOperatorPenalized");
     });
   });
 
