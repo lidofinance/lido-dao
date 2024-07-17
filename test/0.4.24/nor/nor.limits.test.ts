@@ -204,10 +204,6 @@ describe("NodeOperatorsRegistry:validatorsLimits", () => {
       );
     });
 
-    it("nonce changing");
-    it("targetValidatorsCount changing");
-    it("module stats updating (summarySigningKeysStats)");
-
     it('reverts with "APP_AUTH_FAILED" error when called by sender without STAKING_ROUTER_ROLE', async () => {
       expect(await acl["hasPermission(address,address,bytes32)"](stranger, nor, await nor.STAKING_ROUTER_ROLE())).to.be
         .false;
@@ -300,6 +296,58 @@ describe("NodeOperatorsRegistry:validatorsLimits", () => {
       expect(noSummary.targetLimitMode).to.equal(0n);
       expect(noSummary.targetValidatorsCount).to.equal(0n);
     });
+
+    it("nonce changing", async () => {
+      targetLimit = 10n;
+
+      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 1n, targetLimit))
+        .to.emit(nor, "TargetValidatorsCountChanged")
+        .withArgs(firstNodeOperatorId, targetLimit, 1n);
+
+      await expect(await nor.connect(stakingRouter).getNonce()).to.be.equal(1n);
+
+      await expect(nor.connect(stakingRouter)[updateTargetLimits](secondNodeOperatorId, 0n, targetLimit))
+        .to.emit(nor, "TargetValidatorsCountChanged")
+        .withArgs(secondNodeOperatorId, 0n, 0n);
+
+      await expect(await nor.connect(stakingRouter).getNonce()).to.be.equal(2n);
+
+      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 0n, targetLimit))
+        .to.emit(nor, "TargetValidatorsCountChanged")
+        .withArgs(firstNodeOperatorId, 0n, 0n);
+
+      await expect(await nor.connect(stakingRouter).getNonce()).to.be.equal(3n);
+    });
+
+    it("targetValidatorsCount changing", async () => {
+      targetLimit = 10n;
+
+      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 1n, targetLimit))
+        .to.emit(nor, "TargetValidatorsCountChanged")
+        .withArgs(firstNodeOperatorId, targetLimit, 1n);
+
+      let noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+      expect(noSummary.targetLimitMode).to.be.equal(1n);
+      expect(noSummary.targetValidatorsCount).to.equal(10n);
+
+      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 0n, targetLimit))
+        .to.emit(nor, "TargetValidatorsCountChanged")
+        .withArgs(firstNodeOperatorId, 0n, 0n);
+
+      noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+      expect(noSummary.targetLimitMode).to.equal(0n);
+      expect(noSummary.targetValidatorsCount).to.equal(0n);
+
+      await expect(nor.connect(stakingRouter)[updateTargetLimits](firstNodeOperatorId, 1n, targetLimit))
+        .to.emit(nor, "TargetValidatorsCountChanged")
+        .withArgs(firstNodeOperatorId, targetLimit, 1n);
+
+      noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+      expect(noSummary.targetLimitMode).to.equal(1n);
+      expect(noSummary.targetValidatorsCount).to.equal(10n);
+    });
+
+    it("module stats updating (summarySigningKeysStats)");
 
     it("updates node operator target limit mode correctly using updateTargetLimitsDeprecated", async () => {
       expect(await acl["hasPermission(address,address,bytes32)"](stakingRouter, nor, await nor.STAKING_ROUTER_ROLE()))
