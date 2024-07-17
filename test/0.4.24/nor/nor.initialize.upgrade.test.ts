@@ -393,11 +393,94 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
       await expect(nor.finalizeUpgrade_v3()).to.be.revertedWith("UNEXPECTED_CONTRACT_VERSION");
     });
 
-    it("Migrates the contract storage from v2 to v3");
+    it("Migrates the contract storage from v2 to v3", async () => {
+      preInitState = await Snapshot.refresh(preInitState);
+
+      await nor.harness__initialize(0n);
+
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
+        firstNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
+        secondNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[thirdNodeOperatorId])).to.be.equal(
+        thirdNodeOperatorId,
+      );
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[fourthNodeOperatorId])).to.be.equal(
+        fourthNodeOperatorId,
+      );
+
+      await nor.harness__unsafeResetModuleSummary();
+      const resetSummary = await nor.getStakingModuleSummary();
+      expect(resetSummary.totalExitedValidators).to.be.equal(0n);
+      expect(resetSummary.totalDepositedValidators).to.be.equal(0n);
+      expect(resetSummary.depositableValidatorsCount).to.be.equal(0n);
+
+      await nor.harness__unsafeSetVettedKeys(
+        firstNodeOperatorId,
+        NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount - 1n,
+      );
+      await nor.harness__unsafeSetVettedKeys(
+        secondNodeOperatorId,
+        NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount + 1n,
+      );
+      await nor.harness__unsafeSetVettedKeys(
+        thirdNodeOperatorId,
+        NODE_OPERATORS[thirdNodeOperatorId].totalSigningKeysCount,
+      );
+
+      const checkStorage = async () => {
+        const summary = await nor.getStakingModuleSummary();
+        expect(summary.totalExitedValidators).to.be.equal(1n + 0n + 0n + 1n);
+        expect(summary.totalDepositedValidators).to.be.equal(5n + 7n + 0n + 2n);
+        expect(summary.depositableValidatorsCount).to.be.equal(0n + 8n + 0n + 0n);
+
+        const firstNoInfo = await nor.getNodeOperator(firstNodeOperatorId, true);
+        expect(firstNoInfo.totalVettedValidators).to.be.equal(
+          NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount,
+        );
+
+        const secondNoInfo = await nor.getNodeOperator(secondNodeOperatorId, true);
+        expect(secondNoInfo.totalVettedValidators).to.be.equal(
+          NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount,
+        );
+
+        const thirdNoInfo = await nor.getNodeOperator(thirdNodeOperatorId, true);
+        expect(thirdNoInfo.totalVettedValidators).to.be.equal(
+          NODE_OPERATORS[thirdNodeOperatorId].depositedSigningKeysCount,
+        );
+
+        const fourthNoInfo = await nor.getNodeOperator(fourthNodeOperatorId, true);
+        expect(fourthNoInfo.totalVettedValidators).to.be.equal(
+          NODE_OPERATORS[fourthNodeOperatorId].vettedSigningKeysCount,
+        );
+      };
+
+      await expect(nor.finalizeUpgrade_v2(locator, moduleType, 86400n))
+        .to.emit(nor, "ContractVersionSet")
+        .withArgs(contractVersionV2)
+        .and.to.emit(nor, "StuckPenaltyDelayChanged")
+        .withArgs(86400n)
+        .and.to.emit(nor, "LocatorContractSet")
+        .withArgs(await locator.getAddress())
+        .and.to.emit(nor, "StakingModuleTypeSet")
+        .withArgs(moduleType);
+
+      await checkStorage();
+
+      await expect(nor.finalizeUpgrade_v3())
+        .to.emit(nor, "ContractVersionSet")
+        .withArgs(contractVersionV3)
+        .to.emit(nor, "RewardDistributionStateChanged")
+        .withArgs(RewardDistributionState.Distributed);
+
+      await checkStorage();
+    });
 
     it("Calling finalizeUpgrade_v3 on v1 version", async () => {
       preInitState = await Snapshot.refresh(preInitState);
-      await nor.harness__initialize(1n);
+      await nor.harness__initialize(0n);
       await expect(nor.finalizeUpgrade_v3()).to.be.revertedWith("UNEXPECTED_CONTRACT_VERSION");
     });
 
