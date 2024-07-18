@@ -283,47 +283,31 @@ describe("Protocol", () => {
       stETH: ethers.formatEther(strangerBalancesBeforeRebase.stETH),
     });
 
-    /**
-     * If no penalized operators: distributions = number of active validators
-     *                      else: distributions = number of active validators + 1 transfer to burner
-     */
-    const getNodeOperatorsExpectedDistributions = async (registry: typeof sdvt | typeof nor) => {
-      const penalizedIds: bigint[] = [];
-      let count = await registry.getNodeOperatorsCount();
+    const getNodeOperatorsStatus = async (registry: typeof sdvt | typeof nor) => {
+      const totalOperators = await registry.getNodeOperatorsCount();
+      let hasPenalizedOperators = false;
+      let activeOperators = 0n;
 
-      for (let i = 0n; i < count; i++) {
-        const [operator, isNodeOperatorPenalized] = await Promise.all([
-          registry.getNodeOperator(i, false),
-          registry.isOperatorPenalized(i),
-        ]);
+      for (let i = 0n; i < totalOperators; i++) {
+        const operator = await registry.getNodeOperator(i, false);
+        hasPenalizedOperators ||= await registry.isOperatorPenalized(i);
 
-        if (isNodeOperatorPenalized) penalizedIds.push(i);
-
-        const noDepositedValidators = !operator.totalDepositedValidators;
-        const allExitedValidators = operator.totalDepositedValidators === operator.totalExitedValidators;
-
-        // if no deposited validators or all exited validators: decrease total active validators count
-        if (noDepositedValidators || allExitedValidators) {
-          count--;
+        if (operator.totalDepositedValidators > operator.totalExitedValidators) {
+          activeOperators++;
         }
       }
 
-      const extraBurnerTransfers = penalizedIds.length > 0 ? 1n : 0n;
-
-      return {
-        distributions: count + extraBurnerTransfers,
-        burned: extraBurnerTransfers,
-      };
+      return { hasPenalizedOperators, activeOperators };
     };
 
-    const norExpectedDistributions = await getNodeOperatorsExpectedDistributions(nor);
-    const sdvtExpectedDistributions = await getNodeOperatorsExpectedDistributions(sdvt);
+    const norStatus = await getNodeOperatorsStatus(nor);
+    const sdvtStatus = await getNodeOperatorsStatus(sdvt);
 
     log.debug("Expected distributions", {
-      "NOR": norExpectedDistributions.distributions,
-      "NOR (transfer to burner)": Boolean(norExpectedDistributions.burned),
-      "SDVT": sdvtExpectedDistributions.distributions,
-      "SDVT (transfer to burner)": Boolean(sdvtExpectedDistributions.burned),
+      "NOR active operators": norStatus.activeOperators,
+      "NOR (transfer to burner)": norStatus.hasPenalizedOperators,
+      "SDVT active operators": sdvtStatus.activeOperators,
+      "SDVT (transfer to burner)": sdvtStatus.hasPenalizedOperators,
     });
 
     const treasuryBalanceBeforeRebase = await lido.sharesOf(treasuryAddress);
@@ -375,16 +359,20 @@ describe("Protocol", () => {
       "Stranger stETH balance after rebase increased",
     );
 
-    const expectedBurnerTransfers = norExpectedDistributions.burned + sdvtExpectedDistributions.burned;
+    const expectedBurnerTransfers = (norStatus.hasPenalizedOperators ? 1n : 0n) + (sdvtStatus.hasPenalizedOperators ? 1n : 0n);
     const transfers = getEvents(extraDataTxReceipt, "Transfer");
     const burnerTransfers = transfers.filter(e => e?.args[1] == burner.address).length;
 
     expect(burnerTransfers).to.be.equal(expectedBurnerTransfers, "Burner transfers is correct");
 
-    // TODO: fix Transfers count for distributions is correct error
-    // const expectedDistributions = norExpectedDistributions.distributions + sdvtExpectedDistributions.distributions;
-    // const distributions = getEvents(extraDataTxReceipt, "Transfer").length;
-    // expect(distributions).to.be.equal(expectedDistributions, "Transfers count for distributions is correct");
+    const expectedTransfers = norStatus.activeOperators + sdvtStatus.activeOperators + expectedBurnerTransfers;
+
+    expect(transfers.length).to.be.equal(expectedTransfers, "All active operators received transfers");
+
+    log.debug("Transfers", {
+      "Transfers to operators": norStatus.activeOperators + sdvtStatus.activeOperators,
+      "Burner transfers": burnerTransfers,
+    });
 
     expect(getEvents(reportTxReceipt, "TokenRebased")[0]).not.to.be.undefined;
     expect(getEvents(reportTxReceipt, "WithdrawalsFinalized")[0]).not.to.be.undefined;
