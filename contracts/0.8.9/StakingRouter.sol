@@ -281,9 +281,7 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
         /// @dev Simulate zero value deposit to prevent real deposits into the new StakingModule via
         ///      DepositSecurityModule just after the addition.
-        newStakingModule.lastDepositAt = uint64(block.timestamp);
-        newStakingModule.lastDepositBlock = block.number;
-        emit StakingRouterETHDeposited(newStakingModuleId, 0);
+        _updateModuleLastDepositState(newStakingModule, newStakingModuleId, 0);
 
         _setStakingModuleIndexById(newStakingModuleId, newStakingModuleIndex);
         LAST_STAKING_MODULE_ID_POSITION.setStorageUint256(newStakingModuleId);
@@ -1253,14 +1251,10 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
 
         /// @dev Firstly update the local state of the contract to prevent a reentrancy attack
         /// even though the staking modules are trusted contracts.
-        stakingModule.lastDepositAt = uint64(block.timestamp);
-        stakingModule.lastDepositBlock = block.number;
-
         uint256 depositsValue = msg.value;
-        emit StakingRouterETHDeposited(_stakingModuleId, depositsValue);
+        if (depositsValue != _depositsCount * DEPOSIT_SIZE) revert InvalidDepositsValue(depositsValue, _depositsCount);
 
-        if (depositsValue != _depositsCount * DEPOSIT_SIZE)
-            revert InvalidDepositsValue(depositsValue, _depositsCount);
+        _updateModuleLastDepositState(stakingModule, _stakingModuleId, depositsValue);
 
         if (_depositsCount > 0) {
             (bytes memory publicKeysBatch, bytes memory signaturesBatch) =
@@ -1335,6 +1329,21 @@ contract StakingRouter is AccessControlEnumerable, BeaconChainDepositor, Version
             revert InvalidReportData(1);
         }
     }
+
+    /// @dev Save the last deposit state for the staking module and emit the event
+    /// @param stakingModule staking module storage ref
+    /// @param stakingModuleId id of the staking module to be deposited
+    /// @param depositsValue value to deposit
+    function _updateModuleLastDepositState(
+        StakingModule storage stakingModule,
+        uint256 stakingModuleId,
+        uint256 depositsValue
+    ) internal {
+        stakingModule.lastDepositAt = uint64(block.timestamp);
+        stakingModule.lastDepositBlock = block.number;
+        emit StakingRouterETHDeposited(stakingModuleId, depositsValue);
+    }
+
 
     /// @dev Loads modules into a memory cache.
     /// @return totalActiveValidators Total active validators across all modules.

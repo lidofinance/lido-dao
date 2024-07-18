@@ -5,7 +5,13 @@ import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 
-import { BurnerStub, LidoLocatorStub, LidoStub, OracleReportSanityChecker, WithdrawalQueueStub } from "typechain-types";
+import {
+  BurnerStub,
+  LidoLocatorMock,
+  OracleReportSanityChecker,
+  StakingRouterMockForValidatorsCount,
+  WithdrawalQueueStub,
+} from "typechain-types";
 
 import { ether, getCurrentBlockTimestamp, randomAddress } from "lib";
 
@@ -13,8 +19,7 @@ import { Snapshot } from "test/suite";
 
 describe("OracleReportSanityChecker.sol", () => {
   let oracleReportSanityChecker: OracleReportSanityChecker;
-  let lidoLocatorMock: LidoLocatorStub;
-  let lidoMock: LidoStub;
+  let lidoLocatorMock: LidoLocatorMock;
   let burnerMock: BurnerStub;
   let withdrawalQueueMock: WithdrawalQueueStub;
   let originalState: string;
@@ -23,15 +28,17 @@ describe("OracleReportSanityChecker.sol", () => {
 
   const defaultLimitsList = {
     exitedValidatorsPerDayLimit: 55,
-    oneOffCLBalanceDecreaseBPLimit: 5_00, // 5%
+    appearedValidatorsPerDayLimit: 100,
     annualBalanceIncreaseBPLimit: 10_00, // 10%
     simulatedShareRateDeviationBPLimit: 2_50, // 2.5%
     maxValidatorExitRequestsPerReport: 2000,
-    maxAccountingExtraDataListItemsCount: 15,
-    maxNodeOperatorsPerExtraDataItemCount: 16,
+    maxItemsPerExtraDataTransaction: 15,
+    maxNodeOperatorsPerExtraDataItem: 16,
     requestTimestampMargin: 128,
     maxPositiveTokenRebase: 5_000_000, // 0.05%
-    appearedValidatorsPerDayLimit: 100,
+    initialSlashingAmountPWei: 1000,
+    inactivityPenaltiesAmountPWei: 101,
+    clBalanceOraclesErrorUpperBPLimit: 74, // 0.74%
   };
 
   const correctLidoOracleReport = {
@@ -49,6 +56,7 @@ describe("OracleReportSanityChecker.sol", () => {
   let admin: HardhatEthersSigner;
   let withdrawalVault: string;
   let elRewardsVault: HardhatEthersSigner;
+  let stakingRouter: StakingRouterMockForValidatorsCount;
   let accounts: HardhatEthersSigner[];
 
   before(async () => {
@@ -58,36 +66,50 @@ describe("OracleReportSanityChecker.sol", () => {
 
     // mine 1024 blocks with block duration 12 seconds
     await ethers.provider.send("hardhat_mine", ["0x" + Number(1024).toString(16), "0x" + Number(12).toString(16)]);
-    lidoMock = await ethers.deployContract("LidoStub", []);
     withdrawalQueueMock = await ethers.deployContract("WithdrawalQueueStub");
     burnerMock = await ethers.deployContract("BurnerStub");
-    lidoLocatorMock = await ethers.deployContract("LidoLocatorStub", [
-      await lidoMock.getAddress(),
-      withdrawalVault,
-      await withdrawalQueueMock.getAddress(),
-      elRewardsVault.address,
-      await burnerMock.getAddress(),
+    const accountingOracle = await ethers.deployContract("AccountingOracle__MockForSanityChecker", [
+      deployer.address,
+      12,
+      1606824023,
     ]);
+    stakingRouter = await ethers.deployContract("StakingRouterMockForValidatorsCount");
 
-    // const accounts = signers.map(s => s.address);
+    lidoLocatorMock = await ethers.deployContract("LidoLocatorMock", [
+      {
+        lido: deployer.address,
+        depositSecurityModule: deployer.address,
+        elRewardsVault: elRewardsVault.address,
+        accountingOracle: await accountingOracle.getAddress(),
+        legacyOracle: deployer.address,
+        oracleReportSanityChecker: deployer.address,
+        burner: await burnerMock.getAddress(),
+        validatorsExitBusOracle: deployer.address,
+        stakingRouter: await stakingRouter.getAddress(),
+        treasury: deployer.address,
+        withdrawalQueue: await withdrawalQueueMock.getAddress(),
+        withdrawalVault: withdrawalVault,
+        postTokenRebaseReceiver: deployer.address,
+        oracleDaemonConfig: deployer.address,
+      },
+    ]);
     managersRoster = {
       allLimitsManagers: accounts.slice(0, 2),
       exitedValidatorsPerDayLimitManagers: accounts.slice(2, 4),
       appearedValidatorsPerDayLimitManagers: accounts.slice(4, 6),
-      oneOffCLBalanceDecreaseLimitManagers: accounts.slice(6, 8),
+      initialSlashingAndPenaltiesManagers: accounts.slice(6, 8),
       annualBalanceIncreaseLimitManagers: accounts.slice(8, 10),
       shareRateDeviationLimitManagers: accounts.slice(10, 12),
       maxValidatorExitRequestsPerReportManagers: accounts.slice(12, 14),
-      maxAccountingExtraDataListItemsCountManagers: accounts.slice(14, 16),
-      maxNodeOperatorsPerExtraDataItemCountManagers: accounts.slice(16, 18),
+      maxItemsPerExtraDataTransactionManagers: accounts.slice(14, 16),
+      maxNodeOperatorsPerExtraDataItemManagers: accounts.slice(16, 18),
       requestTimestampMarginManagers: accounts.slice(18, 20),
       maxPositiveTokenRebaseManagers: accounts.slice(20, 22),
     };
     oracleReportSanityChecker = await ethers.deployContract("OracleReportSanityChecker", [
       await lidoLocatorMock.getAddress(),
-      admin,
+      admin.address,
       Object.values(defaultLimitsList),
-      Object.values(managersRoster).map((m) => m.map((s) => s.address)),
     ]);
   });
 
@@ -101,14 +123,17 @@ describe("OracleReportSanityChecker.sol", () => {
         await lidoLocatorMock.getAddress(),
         ZeroAddress,
         Object.values(defaultLimitsList),
-        Object.values(managersRoster),
       ]),
     ).to.be.revertedWithCustomError(oracleReportSanityChecker, "AdminCannotBeZero");
   });
 
-  describe("getLidoLocator()", () => {
+  describe("Sanity checker public getters", () => {
     it("retrieves correct locator address", async () => {
       expect(await oracleReportSanityChecker.getLidoLocator()).to.equal(await lidoLocatorMock.getAddress());
+    });
+
+    it("retrieves correct report data count", async () => {
+      expect(await oracleReportSanityChecker.getReportDataCount()).to.equal(0);
     });
   });
 
@@ -117,68 +142,77 @@ describe("OracleReportSanityChecker.sol", () => {
       const newLimitsList = {
         exitedValidatorsPerDayLimit: 50,
         appearedValidatorsPerDayLimit: 75,
-        oneOffCLBalanceDecreaseBPLimit: 10_00,
         annualBalanceIncreaseBPLimit: 15_00,
         simulatedShareRateDeviationBPLimit: 1_50, // 1.5%
         maxValidatorExitRequestsPerReport: 3000,
-        maxAccountingExtraDataListItemsCount: 15 + 1,
-        maxNodeOperatorsPerExtraDataItemCount: 16 + 1,
+        maxItemsPerExtraDataTransaction: 15 + 1,
+        maxNodeOperatorsPerExtraDataItem: 16 + 1,
         requestTimestampMargin: 2048,
         maxPositiveTokenRebase: 10_000_000,
+        initialSlashingAmountPWei: 2000,
+        inactivityPenaltiesAmountPWei: 303,
+        clBalanceOraclesErrorUpperBPLimit: 12,
       };
       const limitsBefore = await oracleReportSanityChecker.getOracleReportLimits();
       expect(limitsBefore.exitedValidatorsPerDayLimit).to.not.equal(newLimitsList.exitedValidatorsPerDayLimit);
       expect(limitsBefore.appearedValidatorsPerDayLimit).to.not.equal(newLimitsList.appearedValidatorsPerDayLimit);
-      expect(limitsBefore.oneOffCLBalanceDecreaseBPLimit).to.not.equal(newLimitsList.oneOffCLBalanceDecreaseBPLimit);
       expect(limitsBefore.annualBalanceIncreaseBPLimit).to.not.equal(newLimitsList.annualBalanceIncreaseBPLimit);
       expect(limitsBefore.simulatedShareRateDeviationBPLimit).to.not.equal(
         newLimitsList.simulatedShareRateDeviationBPLimit,
       );
-
       expect(limitsBefore.maxValidatorExitRequestsPerReport).to.not.equal(
         newLimitsList.maxValidatorExitRequestsPerReport,
       );
-      expect(limitsBefore.maxAccountingExtraDataListItemsCount).to.not.equal(
-        newLimitsList.maxAccountingExtraDataListItemsCount,
-      );
-      expect(limitsBefore.maxNodeOperatorsPerExtraDataItemCount).to.not.equal(
-        newLimitsList.maxNodeOperatorsPerExtraDataItemCount,
+      expect(limitsBefore.maxItemsPerExtraDataTransaction).to.not.equal(newLimitsList.maxItemsPerExtraDataTransaction);
+      expect(limitsBefore.maxNodeOperatorsPerExtraDataItem).to.not.equal(
+        newLimitsList.maxNodeOperatorsPerExtraDataItem,
       );
       expect(limitsBefore.requestTimestampMargin).to.not.equal(newLimitsList.requestTimestampMargin);
       expect(limitsBefore.maxPositiveTokenRebase).to.not.equal(newLimitsList.maxPositiveTokenRebase);
+      expect(limitsBefore.clBalanceOraclesErrorUpperBPLimit).to.not.equal(
+        newLimitsList.clBalanceOraclesErrorUpperBPLimit,
+      );
+      expect(limitsBefore.initialSlashingAmountPWei).to.not.equal(newLimitsList.initialSlashingAmountPWei);
+      expect(limitsBefore.inactivityPenaltiesAmountPWei).to.not.equal(newLimitsList.inactivityPenaltiesAmountPWei);
 
       await expect(
-        oracleReportSanityChecker.setOracleReportLimits(newLimitsList),
+        oracleReportSanityChecker.setOracleReportLimits(newLimitsList, ZeroAddress),
       ).to.be.revertedWithOZAccessControlError(
         deployer.address,
         await oracleReportSanityChecker.ALL_LIMITS_MANAGER_ROLE(),
       );
 
-      await oracleReportSanityChecker.connect(managersRoster.allLimitsManagers[0]).setOracleReportLimits(newLimitsList);
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(await oracleReportSanityChecker.ALL_LIMITS_MANAGER_ROLE(), managersRoster.allLimitsManagers[0]);
+      await oracleReportSanityChecker
+        .connect(managersRoster.allLimitsManagers[0])
+        .setOracleReportLimits(newLimitsList, ZeroAddress);
 
       const limitsAfter = await oracleReportSanityChecker.getOracleReportLimits();
       expect(limitsAfter.exitedValidatorsPerDayLimit).to.equal(newLimitsList.exitedValidatorsPerDayLimit);
       expect(limitsAfter.appearedValidatorsPerDayLimit).to.equal(newLimitsList.appearedValidatorsPerDayLimit);
-      expect(limitsAfter.oneOffCLBalanceDecreaseBPLimit).to.equal(newLimitsList.oneOffCLBalanceDecreaseBPLimit);
       expect(limitsAfter.annualBalanceIncreaseBPLimit).to.equal(newLimitsList.annualBalanceIncreaseBPLimit);
       expect(limitsAfter.simulatedShareRateDeviationBPLimit).to.equal(newLimitsList.simulatedShareRateDeviationBPLimit);
       expect(limitsAfter.maxValidatorExitRequestsPerReport).to.equal(newLimitsList.maxValidatorExitRequestsPerReport);
-      expect(limitsAfter.maxAccountingExtraDataListItemsCount).to.equal(
-        newLimitsList.maxAccountingExtraDataListItemsCount,
-      );
-      expect(limitsAfter.maxNodeOperatorsPerExtraDataItemCount).to.equal(
-        newLimitsList.maxNodeOperatorsPerExtraDataItemCount,
-      );
+      expect(limitsAfter.maxItemsPerExtraDataTransaction).to.equal(newLimitsList.maxItemsPerExtraDataTransaction);
+      expect(limitsAfter.maxNodeOperatorsPerExtraDataItem).to.equal(newLimitsList.maxNodeOperatorsPerExtraDataItem);
       expect(limitsAfter.requestTimestampMargin).to.equal(newLimitsList.requestTimestampMargin);
       expect(limitsAfter.maxPositiveTokenRebase).to.equal(newLimitsList.maxPositiveTokenRebase);
+      expect(limitsAfter.clBalanceOraclesErrorUpperBPLimit).to.equal(newLimitsList.clBalanceOraclesErrorUpperBPLimit);
+      expect(limitsAfter.initialSlashingAmountPWei).to.equal(newLimitsList.initialSlashingAmountPWei);
+      expect(limitsAfter.inactivityPenaltiesAmountPWei).to.equal(newLimitsList.inactivityPenaltiesAmountPWei);
     });
   });
 
   describe("checkAccountingOracleReport()", () => {
     beforeEach(async () => {
       await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(await oracleReportSanityChecker.ALL_LIMITS_MANAGER_ROLE(), managersRoster.allLimitsManagers[0]);
+      await oracleReportSanityChecker
         .connect(managersRoster.allLimitsManagers[0])
-        .setOracleReportLimits(defaultLimitsList);
+        .setOracleReportLimits(defaultLimitsList, ZeroAddress);
     });
 
     it("reverts with error IncorrectWithdrawalsVaultBalance() when actual withdrawal vault balance is less than passed", async () => {
@@ -225,40 +259,6 @@ describe("OracleReportSanityChecker.sol", () => {
         .withArgs(31);
     });
 
-    it("reverts with error IncorrectCLBalanceDecrease() when one off CL balance decrease more than limit", async () => {
-      const maxBasisPoints = 10_000n;
-      const preCLBalance = ether("100000");
-      const postCLBalance = ether("85000");
-      const withdrawalVaultBalance = ether("500");
-      const unifiedPostCLBalance = postCLBalance + withdrawalVaultBalance;
-      const oneOffCLBalanceDecreaseBP = (maxBasisPoints * (preCLBalance - unifiedPostCLBalance)) / preCLBalance;
-
-      await expect(
-        oracleReportSanityChecker.checkAccountingOracleReport(
-          correctLidoOracleReport.timeElapsed,
-          preCLBalance,
-          postCLBalance,
-          withdrawalVaultBalance,
-          correctLidoOracleReport.elRewardsVaultBalance,
-          correctLidoOracleReport.sharesRequestedToBurn,
-          correctLidoOracleReport.preCLValidators,
-          correctLidoOracleReport.postCLValidators,
-        ),
-      )
-        .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectCLBalanceDecrease")
-        .withArgs(oneOffCLBalanceDecreaseBP);
-
-      const postCLBalanceCorrect = ether("99000");
-      await oracleReportSanityChecker.checkAccountingOracleReport(
-        ...(Object.values({
-          ...correctLidoOracleReport,
-          preCLBalance: preCLBalance.toString(),
-          postCLBalance: postCLBalanceCorrect.toString(),
-          withdrawalVaultBalance: withdrawalVaultBalance.toString(),
-        }) as CheckAccountingOracleReportParameters),
-      );
-    });
-
     it("reverts with error IncorrectCLBalanceIncrease() when reported values overcome annual CL balance limit", async () => {
       const maxBasisPoints = 10_000n;
       const secondsInOneYear = 365n * 24n * 60n * 60n;
@@ -272,7 +272,7 @@ describe("OracleReportSanityChecker.sol", () => {
         oracleReportSanityChecker.checkAccountingOracleReport(
           ...(Object.values({
             ...correctLidoOracleReport,
-            postCLBalance: postCLBalance.toString(),
+            postCLBalance: postCLBalance,
           }) as CheckAccountingOracleReportParameters),
         ),
       )
@@ -286,24 +286,78 @@ describe("OracleReportSanityChecker.sol", () => {
       );
     });
 
-    it("set one-off CL balance decrease", async () => {
-      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).oneOffCLBalanceDecreaseBPLimit;
-      const newValue = 3;
-      expect(newValue).to.not.equal(previousValue);
+    it("set initial slashing and penalties Amount", async () => {
+      const oldInitialSlashing = (await oracleReportSanityChecker.getOracleReportLimits()).initialSlashingAmountPWei;
+      const oldPenalties = (await oracleReportSanityChecker.getOracleReportLimits()).inactivityPenaltiesAmountPWei;
+      const newInitialSlashing = 2000;
+      const newPenalties = 202;
+      expect(newInitialSlashing).to.not.equal(oldInitialSlashing);
+      expect(newPenalties).to.not.equal(oldPenalties);
       await expect(
-        oracleReportSanityChecker.connect(deployer).setOneOffCLBalanceDecreaseBPLimit(newValue),
+        oracleReportSanityChecker
+          .connect(deployer)
+          .setInitialSlashingAndPenaltiesAmount(newInitialSlashing, newPenalties),
       ).to.be.revertedWithOZAccessControlError(
         deployer.address,
-        await oracleReportSanityChecker.ONE_OFF_CL_BALANCE_DECREASE_LIMIT_MANAGER_ROLE(),
+        await oracleReportSanityChecker.INITIAL_SLASHING_AND_PENALTIES_MANAGER_ROLE(),
       );
 
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.INITIAL_SLASHING_AND_PENALTIES_MANAGER_ROLE(),
+          managersRoster.initialSlashingAndPenaltiesManagers[0],
+        );
       const tx = await oracleReportSanityChecker
-        .connect(managersRoster.oneOffCLBalanceDecreaseLimitManagers[0])
-        .setOneOffCLBalanceDecreaseBPLimit(newValue);
-      expect((await oracleReportSanityChecker.getOracleReportLimits()).oneOffCLBalanceDecreaseBPLimit).to.equal(
-        newValue,
+        .connect(managersRoster.initialSlashingAndPenaltiesManagers[0])
+        .setInitialSlashingAndPenaltiesAmount(newInitialSlashing, newPenalties);
+      await expect(tx)
+        .to.emit(oracleReportSanityChecker, "InitialSlashingAmountSet")
+        .withArgs(newInitialSlashing)
+        .to.emit(oracleReportSanityChecker, "InactivityPenaltiesAmountSet")
+        .withArgs(newPenalties);
+      expect((await oracleReportSanityChecker.getOracleReportLimits()).initialSlashingAmountPWei).to.equal(
+        newInitialSlashing,
       );
-      await expect(tx).to.emit(oracleReportSanityChecker, "OneOffCLBalanceDecreaseBPLimitSet").withArgs(newValue);
+      expect((await oracleReportSanityChecker.getOracleReportLimits()).inactivityPenaltiesAmountPWei).to.equal(
+        newPenalties,
+      );
+    });
+
+    it("set CL state oracle and balance error margin limit", async () => {
+      const previousOracle = await oracleReportSanityChecker.secondOpinionOracle();
+      const previousErrorMargin = (await oracleReportSanityChecker.getOracleReportLimits())
+        .clBalanceOraclesErrorUpperBPLimit;
+      const newOracle = deployer.address;
+      const newErrorMargin = 1;
+      expect(newOracle).to.not.equal(previousOracle);
+      expect(newErrorMargin).to.not.equal(previousErrorMargin);
+      await expect(
+        oracleReportSanityChecker
+          .connect(deployer)
+          .setSecondOpinionOracleAndCLBalanceUpperMargin(newOracle, newErrorMargin),
+      ).to.be.revertedWithOZAccessControlError(
+        deployer.address,
+        await oracleReportSanityChecker.SECOND_OPINION_MANAGER_ROLE(),
+      );
+
+      const oracleManagerRole = await oracleReportSanityChecker.SECOND_OPINION_MANAGER_ROLE();
+      const oracleManagerAccount = accounts[21];
+      await oracleReportSanityChecker.connect(admin).grantRole(oracleManagerRole, oracleManagerAccount);
+
+      const tx = await oracleReportSanityChecker
+        .connect(oracleManagerAccount)
+        .setSecondOpinionOracleAndCLBalanceUpperMargin(newOracle, newErrorMargin);
+
+      expect(await oracleReportSanityChecker.secondOpinionOracle()).to.equal(newOracle);
+      expect((await oracleReportSanityChecker.getOracleReportLimits()).clBalanceOraclesErrorUpperBPLimit).to.equal(
+        newErrorMargin,
+      );
+      await expect(tx)
+        .to.emit(oracleReportSanityChecker, "CLBalanceOraclesErrorUpperBPLimitSet")
+        .withArgs(newErrorMargin)
+        .to.emit(oracleReportSanityChecker, "SecondOpinionOracleChanged")
+        .withArgs(newOracle);
     });
 
     it("set annual balance increase", async () => {
@@ -317,6 +371,12 @@ describe("OracleReportSanityChecker.sol", () => {
         await oracleReportSanityChecker.ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE(),
       );
 
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.ANNUAL_BALANCE_INCREASE_LIMIT_MANAGER_ROLE(),
+          managersRoster.annualBalanceIncreaseLimitManagers[0],
+        );
       const tx = await oracleReportSanityChecker
         .connect(managersRoster.annualBalanceIncreaseLimitManagers[0])
         .setAnnualBalanceIncreaseBPLimit(newValue);
@@ -338,7 +398,7 @@ describe("OracleReportSanityChecker.sol", () => {
     });
 
     it("handles zero pre CL balance estimating balance increase", async () => {
-      const preCLBalance = BigInt(0);
+      const preCLBalance = 0n;
       const postCLBalance = preCLBalance + 1000n;
 
       await oracleReportSanityChecker.checkAccountingOracleReport(
@@ -376,6 +436,12 @@ describe("OracleReportSanityChecker.sol", () => {
         deployer.address,
         await oracleReportSanityChecker.SHARE_RATE_DEVIATION_LIMIT_MANAGER_ROLE(),
       );
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.SHARE_RATE_DEVIATION_LIMIT_MANAGER_ROLE(),
+          managersRoster.shareRateDeviationLimitManagers[0],
+        );
       const tx = await oracleReportSanityChecker
         .connect(managersRoster.shareRateDeviationLimitManagers[0])
         .setSimulatedShareRateDeviationBPLimit(newValue);
@@ -436,6 +502,12 @@ describe("OracleReportSanityChecker.sol", () => {
         deployer.address,
         await oracleReportSanityChecker.REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE(),
       );
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.REQUEST_TIMESTAMP_MARGIN_MANAGER_ROLE(),
+          managersRoster.requestTimestampMarginManagers[0],
+        );
       const tx = await oracleReportSanityChecker
         .connect(managersRoster.requestTimestampMarginManagers[0])
         .setRequestTimestampMargin(newValue);
@@ -461,7 +533,7 @@ describe("OracleReportSanityChecker.sol", () => {
         oracleReportSanityChecker.checkSimulatedShareRate(
           ...(Object.values({
             ...correctSimulatedShareRate,
-            simulatedShareRate: simulatedShareRate.toString(),
+            simulatedShareRate: simulatedShareRate,
           }) as CheckSimulatedShareRateParameters),
         ),
       )
@@ -534,6 +606,12 @@ describe("OracleReportSanityChecker.sol", () => {
         await oracleReportSanityChecker.MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE(),
       );
 
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE(),
+          managersRoster.maxPositiveTokenRebaseManagers[0],
+        );
       const tx = await oracleReportSanityChecker
         .connect(managersRoster.maxPositiveTokenRebaseManagers[0])
         .setMaxPositiveTokenRebase(newRebaseLimit);
@@ -562,6 +640,12 @@ describe("OracleReportSanityChecker.sol", () => {
 
     it("trivial smoothen rebase works when post CL < pre CL and no withdrawals", async () => {
       const newRebaseLimit = 100_000; // 0.01%
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE(),
+          managersRoster.maxPositiveTokenRebaseManagers[0],
+        );
       await oracleReportSanityChecker
         .connect(managersRoster.maxPositiveTokenRebaseManagers[0])
         .setMaxPositiveTokenRebase(newRebaseLimit);
@@ -623,6 +707,12 @@ describe("OracleReportSanityChecker.sol", () => {
     it("trivial smoothen rebase works when post CL > pre CL and no withdrawals", async () => {
       const newRebaseLimit = 100_000_000; // 10%
       await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE(),
+          managersRoster.maxPositiveTokenRebaseManagers[0],
+        );
+      await oracleReportSanityChecker
         .connect(managersRoster.maxPositiveTokenRebaseManagers[0])
         .setMaxPositiveTokenRebase(newRebaseLimit);
 
@@ -681,6 +771,12 @@ describe("OracleReportSanityChecker.sol", () => {
 
     it("non-trivial smoothen rebase works when post CL < pre CL and no withdrawals", async () => {
       const newRebaseLimit = 10_000_000; // 1%
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE(),
+          managersRoster.maxPositiveTokenRebaseManagers[0],
+        );
       await oracleReportSanityChecker
         .connect(managersRoster.maxPositiveTokenRebaseManagers[0])
         .setMaxPositiveTokenRebase(newRebaseLimit);
@@ -754,6 +850,12 @@ describe("OracleReportSanityChecker.sol", () => {
     it("non-trivial smoothen rebase works when post CL > pre CL and no withdrawals", async () => {
       const newRebaseLimit = 20_000_000; // 2%
       await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE(),
+          managersRoster.maxPositiveTokenRebaseManagers[0],
+        );
+      await oracleReportSanityChecker
         .connect(managersRoster.maxPositiveTokenRebaseManagers[0])
         .setMaxPositiveTokenRebase(newRebaseLimit);
 
@@ -825,6 +927,12 @@ describe("OracleReportSanityChecker.sol", () => {
 
     it("non-trivial smoothen rebase works when post CL < pre CL and withdrawals", async () => {
       const newRebaseLimit = 5_000_000; // 0.5%
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE(),
+          managersRoster.maxPositiveTokenRebaseManagers[0],
+        );
       await oracleReportSanityChecker
         .connect(managersRoster.maxPositiveTokenRebaseManagers[0])
         .setMaxPositiveTokenRebase(newRebaseLimit);
@@ -898,6 +1006,12 @@ describe("OracleReportSanityChecker.sol", () => {
     it("non-trivial smoothen rebase works when post CL > pre CL and withdrawals", async () => {
       const newRebaseLimit = 40_000_000; // 4%
       await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE(),
+          managersRoster.maxPositiveTokenRebaseManagers[0],
+        );
+      await oracleReportSanityChecker
         .connect(managersRoster.maxPositiveTokenRebaseManagers[0])
         .setMaxPositiveTokenRebase(newRebaseLimit);
 
@@ -970,6 +1084,12 @@ describe("OracleReportSanityChecker.sol", () => {
     it("share rate ~1 case with huge withdrawal", async () => {
       const newRebaseLimit = 1_000_000; // 0.1%
       await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE(),
+          managersRoster.maxPositiveTokenRebaseManagers[0],
+        );
+      await oracleReportSanityChecker
         .connect(managersRoster.maxPositiveTokenRebaseManagers[0])
         .setMaxPositiveTokenRebase(newRebaseLimit);
 
@@ -998,6 +1118,12 @@ describe("OracleReportSanityChecker.sol", () => {
 
     it("rounding case from Görli", async () => {
       const newRebaseLimit = 750_000; // 0.075% or 7.5 basis points
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE(),
+          managersRoster.maxPositiveTokenRebaseManagers[0],
+        );
       await oracleReportSanityChecker
         .connect(managersRoster.maxPositiveTokenRebaseManagers[0])
         .setMaxPositiveTokenRebase(newRebaseLimit);
@@ -1047,6 +1173,12 @@ describe("OracleReportSanityChecker.sol", () => {
         await oracleReportSanityChecker.EXITED_VALIDATORS_PER_DAY_LIMIT_MANAGER_ROLE(),
       );
 
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.EXITED_VALIDATORS_PER_DAY_LIMIT_MANAGER_ROLE(),
+          managersRoster.exitedValidatorsPerDayLimitManagers[0],
+        );
       const tx = await oracleReportSanityChecker
         .connect(managersRoster.exitedValidatorsPerDayLimitManagers[0])
         .setExitedValidatorsPerDayLimit(newExitedLimit);
@@ -1094,6 +1226,13 @@ describe("OracleReportSanityChecker.sol", () => {
         await oracleReportSanityChecker.APPEARED_VALIDATORS_PER_DAY_LIMIT_MANAGER_ROLE(),
       );
 
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.APPEARED_VALIDATORS_PER_DAY_LIMIT_MANAGER_ROLE(),
+          managersRoster.appearedValidatorsPerDayLimitManagers[0],
+        );
+
       const tx = await oracleReportSanityChecker
         .connect(managersRoster.appearedValidatorsPerDayLimitManagers[0])
         .setAppearedValidatorsPerDayLimit(newAppearedLimit);
@@ -1128,8 +1267,11 @@ describe("OracleReportSanityChecker.sol", () => {
   describe("checkExitBusOracleReport", () => {
     beforeEach(async () => {
       await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(await oracleReportSanityChecker.ALL_LIMITS_MANAGER_ROLE(), managersRoster.allLimitsManagers[0]);
+      await oracleReportSanityChecker
         .connect(managersRoster.allLimitsManagers[0])
-        .setOracleReportLimits(defaultLimitsList);
+        .setOracleReportLimits(defaultLimitsList, ZeroAddress);
     });
 
     it("checkExitBusOracleReport works", async () => {
@@ -1164,6 +1306,12 @@ describe("OracleReportSanityChecker.sol", () => {
         await oracleReportSanityChecker.MAX_VALIDATOR_EXIT_REQUESTS_PER_REPORT_ROLE(),
       );
 
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.MAX_VALIDATOR_EXIT_REQUESTS_PER_REPORT_ROLE(),
+          managersRoster.maxValidatorExitRequestsPerReportManagers[0],
+        );
       const tx = await oracleReportSanityChecker
         .connect(managersRoster.maxValidatorExitRequestsPerReportManagers[0])
         .setMaxExitRequestsPerOracleReport(newMaxRequests);
@@ -1185,54 +1333,65 @@ describe("OracleReportSanityChecker.sol", () => {
   describe("extra data reporting", () => {
     beforeEach(async () => {
       await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(await oracleReportSanityChecker.ALL_LIMITS_MANAGER_ROLE(), managersRoster.allLimitsManagers[0]);
+      await oracleReportSanityChecker
         .connect(managersRoster.allLimitsManagers[0])
-        .setOracleReportLimits(defaultLimitsList);
+        .setOracleReportLimits(defaultLimitsList, ZeroAddress);
     });
 
-    it("set maxNodeOperatorsPerExtraDataItemCount", async () => {
-      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits())
-        .maxNodeOperatorsPerExtraDataItemCount;
+    it("set maxNodeOperatorsPerExtraDataItem", async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItem;
       const newValue = 33;
       expect(newValue).to.not.equal(previousValue);
       await expect(
-        oracleReportSanityChecker.connect(deployer).setMaxNodeOperatorsPerExtraDataItemCount(newValue),
+        oracleReportSanityChecker.connect(deployer).setMaxNodeOperatorsPerExtraDataItem(newValue),
       ).to.be.revertedWithOZAccessControlError(
         deployer.address,
-        await oracleReportSanityChecker.MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_COUNT_ROLE(),
+        await oracleReportSanityChecker.MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_ROLE(),
       );
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM_ROLE(),
+          managersRoster.maxNodeOperatorsPerExtraDataItemManagers[0],
+        );
       const tx = await oracleReportSanityChecker
-        .connect(managersRoster.maxNodeOperatorsPerExtraDataItemCountManagers[0])
-        .setMaxNodeOperatorsPerExtraDataItemCount(newValue);
-      expect(
-        (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItemCount,
-      ).to.be.equal(newValue);
-      await expect(tx)
-        .to.emit(oracleReportSanityChecker, "MaxNodeOperatorsPerExtraDataItemCountSet")
-        .withArgs(newValue);
+        .connect(managersRoster.maxNodeOperatorsPerExtraDataItemManagers[0])
+        .setMaxNodeOperatorsPerExtraDataItem(newValue);
+      expect((await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItem).to.be.equal(
+        newValue,
+      );
+      await expect(tx).to.emit(oracleReportSanityChecker, "MaxNodeOperatorsPerExtraDataItemSet").withArgs(newValue);
     });
 
-    it("set maxAccountingExtraDataListItemsCount", async () => {
-      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits())
-        .maxAccountingExtraDataListItemsCount;
+    it("set maxItemsPerExtraDataTransaction", async () => {
+      const previousValue = (await oracleReportSanityChecker.getOracleReportLimits()).maxItemsPerExtraDataTransaction;
       const newValue = 31;
       expect(newValue).to.not.equal(previousValue);
       await expect(
-        oracleReportSanityChecker.connect(deployer).setMaxAccountingExtraDataListItemsCount(newValue),
+        oracleReportSanityChecker.connect(deployer).setMaxItemsPerExtraDataTransaction(newValue),
       ).to.be.revertedWithOZAccessControlError(
         deployer.address,
-        await oracleReportSanityChecker.MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE(),
+        await oracleReportSanityChecker.MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION_ROLE(),
       );
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION_ROLE(),
+          managersRoster.maxItemsPerExtraDataTransactionManagers[0],
+        );
       const tx = await oracleReportSanityChecker
-        .connect(managersRoster.maxAccountingExtraDataListItemsCountManagers[0])
-        .setMaxAccountingExtraDataListItemsCount(newValue);
-      expect(
-        (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount,
-      ).to.be.equal(newValue);
-      await expect(tx).to.emit(oracleReportSanityChecker, "MaxAccountingExtraDataListItemsCountSet").withArgs(newValue);
+        .connect(managersRoster.maxItemsPerExtraDataTransactionManagers[0])
+        .setMaxItemsPerExtraDataTransaction(newValue);
+      expect((await oracleReportSanityChecker.getOracleReportLimits()).maxItemsPerExtraDataTransaction).to.be.equal(
+        newValue,
+      );
+      await expect(tx).to.emit(oracleReportSanityChecker, "MaxItemsPerExtraDataTransactionSet").withArgs(newValue);
     });
 
     it("checkNodeOperatorsPerExtraDataItemCount", async () => {
-      const maxCount = (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItemCount;
+      const maxCount = (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItem;
 
       await oracleReportSanityChecker.checkNodeOperatorsPerExtraDataItemCount(12, maxCount);
 
@@ -1242,12 +1401,12 @@ describe("OracleReportSanityChecker.sol", () => {
     });
 
     it("checkExtraDataItemsCountPerTransaction", async () => {
-      const maxCount = (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount;
+      const maxCount = (await oracleReportSanityChecker.getOracleReportLimits()).maxItemsPerExtraDataTransaction;
 
       await oracleReportSanityChecker.checkExtraDataItemsCountPerTransaction(maxCount);
 
       await expect(oracleReportSanityChecker.checkExtraDataItemsCountPerTransaction(maxCount + 1n))
-        .to.be.revertedWithCustomError(oracleReportSanityChecker, "MaxAccountingExtraDataItemsCountExceeded")
+        .to.be.revertedWithCustomError(oracleReportSanityChecker, "TooManyItemsPerExtraDataTransaction")
         .withArgs(maxCount, maxCount + 1n);
     });
   });
@@ -1257,10 +1416,17 @@ describe("OracleReportSanityChecker.sol", () => {
       const MAX_BASIS_POINTS = 10000;
       const INVALID_BASIS_POINTS = MAX_BASIS_POINTS + 1;
 
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(await oracleReportSanityChecker.ALL_LIMITS_MANAGER_ROLE(), managersRoster.allLimitsManagers[0]);
+
       await expect(
         oracleReportSanityChecker
           .connect(managersRoster.allLimitsManagers[0])
-          .setOracleReportLimits({ ...defaultLimitsList, oneOffCLBalanceDecreaseBPLimit: INVALID_BASIS_POINTS }),
+          .setOracleReportLimits(
+            { ...defaultLimitsList, annualBalanceIncreaseBPLimit: INVALID_BASIS_POINTS },
+            ZeroAddress,
+          ),
       )
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
         .withArgs(INVALID_BASIS_POINTS, 0, MAX_BASIS_POINTS);
@@ -1268,15 +1434,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await expect(
         oracleReportSanityChecker
           .connect(managersRoster.allLimitsManagers[0])
-          .setOracleReportLimits({ ...defaultLimitsList, annualBalanceIncreaseBPLimit: INVALID_BASIS_POINTS }),
-      )
-        .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
-        .withArgs(INVALID_BASIS_POINTS, 0, MAX_BASIS_POINTS);
-
-      await expect(
-        oracleReportSanityChecker
-          .connect(managersRoster.allLimitsManagers[0])
-          .setOracleReportLimits({ ...defaultLimitsList, simulatedShareRateDeviationBPLimit: 10001 }),
+          .setOracleReportLimits({ ...defaultLimitsList, simulatedShareRateDeviationBPLimit: 10001 }, ZeroAddress),
       )
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
         .withArgs(INVALID_BASIS_POINTS, 0, MAX_BASIS_POINTS);
@@ -1286,10 +1444,17 @@ describe("OracleReportSanityChecker.sol", () => {
       const MAX_UINT_16 = 65535;
       const INVALID_VALUE = MAX_UINT_16 + 1;
 
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(await oracleReportSanityChecker.ALL_LIMITS_MANAGER_ROLE(), managersRoster.allLimitsManagers[0]);
+
       await expect(
         oracleReportSanityChecker
           .connect(managersRoster.allLimitsManagers[0])
-          .setOracleReportLimits({ ...defaultLimitsList, exitedValidatorsPerDayLimit: INVALID_VALUE }),
+          .setOracleReportLimits(
+            { ...defaultLimitsList, maxValidatorExitRequestsPerReport: INVALID_VALUE },
+            ZeroAddress,
+          ),
       )
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
         .withArgs(INVALID_VALUE, 0, MAX_UINT_16);
@@ -1297,7 +1462,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await expect(
         oracleReportSanityChecker
           .connect(managersRoster.allLimitsManagers[0])
-          .setOracleReportLimits({ ...defaultLimitsList, appearedValidatorsPerDayLimit: INVALID_VALUE }),
+          .setOracleReportLimits({ ...defaultLimitsList, exitedValidatorsPerDayLimit: INVALID_VALUE }, ZeroAddress),
       )
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
         .withArgs(INVALID_VALUE, 0, MAX_UINT_16);
@@ -1305,7 +1470,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await expect(
         oracleReportSanityChecker
           .connect(managersRoster.allLimitsManagers[0])
-          .setOracleReportLimits({ ...defaultLimitsList, maxValidatorExitRequestsPerReport: INVALID_VALUE }),
+          .setOracleReportLimits({ ...defaultLimitsList, appearedValidatorsPerDayLimit: INVALID_VALUE }, ZeroAddress),
       )
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
         .withArgs(INVALID_VALUE, 0, MAX_UINT_16);
@@ -1313,7 +1478,10 @@ describe("OracleReportSanityChecker.sol", () => {
       await expect(
         oracleReportSanityChecker
           .connect(managersRoster.allLimitsManagers[0])
-          .setOracleReportLimits({ ...defaultLimitsList, maxAccountingExtraDataListItemsCount: INVALID_VALUE }),
+          .setOracleReportLimits(
+            { ...defaultLimitsList, maxNodeOperatorsPerExtraDataItem: INVALID_VALUE },
+            ZeroAddress,
+          ),
       )
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
         .withArgs(INVALID_VALUE, 0, MAX_UINT_16);
@@ -1321,7 +1489,15 @@ describe("OracleReportSanityChecker.sol", () => {
       await expect(
         oracleReportSanityChecker
           .connect(managersRoster.allLimitsManagers[0])
-          .setOracleReportLimits({ ...defaultLimitsList, maxNodeOperatorsPerExtraDataItemCount: INVALID_VALUE }),
+          .setOracleReportLimits({ ...defaultLimitsList, initialSlashingAmountPWei: INVALID_VALUE }, ZeroAddress),
+      )
+        .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
+        .withArgs(INVALID_VALUE, 0, MAX_UINT_16);
+
+      await expect(
+        oracleReportSanityChecker
+          .connect(managersRoster.allLimitsManagers[0])
+          .setOracleReportLimits({ ...defaultLimitsList, inactivityPenaltiesAmountPWei: INVALID_VALUE }, ZeroAddress),
       )
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
         .withArgs(INVALID_VALUE, 0, MAX_UINT_16);
@@ -1329,29 +1505,40 @@ describe("OracleReportSanityChecker.sol", () => {
 
     it("values must be less or equals to type(uint64).max", async () => {
       const MAX_UINT_64 = 2n ** 64n - 1n;
-      const INVALID_VALUE = MAX_UINT_64 + 1n;
+      const MAX_UINT_32 = 2n ** 32n - 1n;
+      const INVALID_VALUE_UINT_64 = MAX_UINT_64 + 1n;
+      const INVALID_VALUE_UINT_32 = MAX_UINT_32 + 1n;
+
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(await oracleReportSanityChecker.ALL_LIMITS_MANAGER_ROLE(), managersRoster.allLimitsManagers[0]);
+      await expect(
+        oracleReportSanityChecker
+          .connect(managersRoster.allLimitsManagers[0])
+          .setOracleReportLimits({ ...defaultLimitsList, requestTimestampMargin: INVALID_VALUE_UINT_32 }, ZeroAddress),
+      )
+        .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
+        .withArgs(INVALID_VALUE_UINT_32.toString(), 0, MAX_UINT_32);
 
       await expect(
         oracleReportSanityChecker
           .connect(managersRoster.allLimitsManagers[0])
-          .setOracleReportLimits({ ...defaultLimitsList, requestTimestampMargin: INVALID_VALUE }),
+          .setOracleReportLimits({ ...defaultLimitsList, maxPositiveTokenRebase: INVALID_VALUE_UINT_64 }, ZeroAddress),
       )
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
-        .withArgs(INVALID_VALUE.toString(), 0, MAX_UINT_64);
-
-      await expect(
-        oracleReportSanityChecker
-          .connect(managersRoster.allLimitsManagers[0])
-          .setOracleReportLimits({ ...defaultLimitsList, maxPositiveTokenRebase: INVALID_VALUE }),
-      )
-        .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
-        .withArgs(INVALID_VALUE.toString(), 1, MAX_UINT_64);
+        .withArgs(INVALID_VALUE_UINT_64.toString(), 1, MAX_UINT_64);
     });
 
     it("value must be greater than zero", async () => {
       const MAX_UINT_64 = 2n ** 64n - 1n;
       const INVALID_VALUE = 0;
 
+      await oracleReportSanityChecker
+        .connect(admin)
+        .grantRole(
+          await oracleReportSanityChecker.MAX_POSITIVE_TOKEN_REBASE_MANAGER_ROLE(),
+          managersRoster.maxPositiveTokenRebaseManagers[0],
+        );
       await expect(
         oracleReportSanityChecker
           .connect(managersRoster.maxPositiveTokenRebaseManagers[0])
