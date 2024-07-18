@@ -27,8 +27,6 @@ describe("Protocol", () => {
 
   let uncountedStETHShares: bigint;
   let amountWithRewards: bigint;
-  let requestIds: bigint[];
-  let lockedEtherAmountBeforeFinalization: bigint;
 
   before(async () => {
     ctx = await getProtocolContext();
@@ -426,22 +424,21 @@ describe("Protocol", () => {
     expect(withdrawalEvent.args.owner).to.be.equal(stranger, "WithdrawalRequested event owner");
     expect(withdrawalEvent.args.amountOfStETH).to.be.equal(amountWithRewards, "WithdrawalRequested event amountOfStETH");
 
-    requestIds = [withdrawalEvent.args.toArray()[0]];
-
+    const requestId = withdrawalEvent.args.requestId;
     const withdrawalTransferEvents = getEvents(withdrawalTxReceipt, "Transfer");
 
     expect(withdrawalTransferEvents.length).to.be.least(2, "Transfer events count");
     expect(withdrawalTransferEvents[0].args.from).to.be.equal(stranger, "Transfer stETH from (Stranger)");
     expect(withdrawalTransferEvents[0].args.to).to.be.equal(withdrawalQueue.address, "Transfer stETH to (WithdrawalQueue)");
     expect(withdrawalTransferEvents[0].args.value).to.be.equal(amountWithRewards, "Transfer stETH value");
-    expect(withdrawalTransferEvents[1].args.tokenId).to.be.equal(requestIds[0], "Transfer unstETH tokenId");
+    expect(withdrawalTransferEvents[1].args.tokenId).to.be.equal(requestId, "Transfer unstETH tokenId");
     expect(withdrawalTransferEvents[1].args.from).to.be.equal(ZeroAddress, "Transfer unstETH from (ZeroAddress)");
     expect(withdrawalTransferEvents[1].args.to).to.be.equal(stranger, "Transfer unstETH to (Stranger)");
 
     const balanceAfterRequest = await getBalances(stranger);
 
     const withdrawalsFromStrangerAfterRequest = await withdrawalQueue.connect(stranger).getWithdrawalRequests(stranger);
-    const [status] = await withdrawalQueue.getWithdrawalStatus(requestIds);
+    const [status] = await withdrawalQueue.getWithdrawalStatus([requestId]);
 
     log.debug("Stranger withdrawals after request", {
       address: stranger.address,
@@ -479,12 +476,14 @@ describe("Protocol", () => {
 
     expect(withdrawalQueueBalanceBeforeFinalization).to.be.approximately(expectedWithdrawalAmount, 10n, "Withdrawal queue balance before finalization");
 
-    lockedEtherAmountBeforeFinalization = await withdrawalQueue.getLockedEtherAmount();
+    const lockedEtherAmountBeforeFinalization = await withdrawalQueue.getLockedEtherAmount();
 
     const reportParams = { clDiff: ether("100") };
     const { reportTx } = (await oracleReport(ctx, reportParams)) as { reportTx: TransactionResponse };
 
     const reportTxReceipt = (await reportTx.wait()) as ContractTransactionReceipt;
+
+    const requestId = await withdrawalQueue.getLastRequestId();
 
     const lockedEtherAmountAfterFinalization = await withdrawalQueue.getLockedEtherAmount();
     const expectedLockedEtherAmountAfterFinalization = lockedEtherAmountAfterFinalization - amountWithRewards;
@@ -495,8 +494,8 @@ describe("Protocol", () => {
 
     expect(withdrawalFinalizedEvent).not.to.be.undefined;
     expect(withdrawalFinalizedEvent.args.amountOfETHLocked).to.be.equal(amountWithRewards, "WithdrawalFinalized event amountOfETHLocked");
-    expect(withdrawalFinalizedEvent.args.from).to.be.equal(requestIds[0], "WithdrawalFinalized event from");
-    expect(withdrawalFinalizedEvent.args.to).to.be.equal(requestIds[0], "WithdrawalFinalized event to");
+    expect(withdrawalFinalizedEvent.args.from).to.be.equal(requestId, "WithdrawalFinalized event from");
+    expect(withdrawalFinalizedEvent.args.to).to.be.equal(requestId, "WithdrawalFinalized event to");
 
     const withdrawalQueueBalanceAfterFinalization = await lido.balanceOf(withdrawalQueue.address);
     const uncountedStETHBalanceAfterFinalization = await lido.getPooledEthByShares(uncountedStETHShares);
@@ -507,21 +506,24 @@ describe("Protocol", () => {
   it("Should claim withdrawals", async () => {
     const { withdrawalQueue } = ctx.contracts;
 
+    const lockedEtherAmountBeforeWithdrawal = await withdrawalQueue.getLockedEtherAmount();
+
     const lastCheckpointIndex = await withdrawalQueue.getLastCheckpointIndex();
+    const requestId = await withdrawalQueue.getLastRequestId();
 
     // in fact, it's a proxy and not a real array, so we need to convert it to array
-    const hintsProxy = await withdrawalQueue.findCheckpointHints(requestIds, 1n, lastCheckpointIndex) as Result;
+    const hintsProxy = await withdrawalQueue.findCheckpointHints([requestId], 1n, lastCheckpointIndex) as Result;
     const hints = hintsProxy.toArray();
 
-    const [claimableEtherBeforeClaim] = await withdrawalQueue.getClaimableEther(requestIds, hints);
-    const [status] = await withdrawalQueue.getWithdrawalStatus(requestIds);
+    const [claimableEtherBeforeClaim] = await withdrawalQueue.getClaimableEther([requestId], hints);
+    const [status] = await withdrawalQueue.getWithdrawalStatus([requestId]);
 
     const balanceBeforeClaim = await getBalances(stranger);
 
     expect(status.isFinalized).to.be.true;
     expect(claimableEtherBeforeClaim).to.be.equal(amountWithRewards, "Claimable ether before claim");
 
-    const claimTx = await withdrawalQueue.connect(stranger).claimWithdrawals(requestIds, hints);
+    const claimTx = await withdrawalQueue.connect(stranger).claimWithdrawals([requestId], hints);
     const claimTxReceipt = await trace<ContractTransactionReceipt>("withdrawalQueue.claimWithdrawals", claimTx);
 
     const spentGas = claimTxReceipt.gasUsed * claimTxReceipt.gasPrice;
@@ -529,7 +531,7 @@ describe("Protocol", () => {
     const claimEvent = getEvents(claimTxReceipt, "WithdrawalClaimed")[0];
 
     expect(claimEvent).not.to.be.undefined;
-    expect(claimEvent.args.requestId).to.be.equal(requestIds[0], "WithdrawalClaimed event requestId");
+    expect(claimEvent.args.requestId).to.be.equal(requestId, "WithdrawalClaimed event requestId");
     expect(claimEvent.args.owner).to.be.equal(stranger, "WithdrawalClaimed event owner");
     expect(claimEvent.args.receiver).to.be.equal(stranger, "WithdrawalClaimed event receiver");
     expect(claimEvent.args.amountOfETH).to.be.equal(amountWithRewards, "WithdrawalClaimed event amountOfETH");
@@ -539,23 +541,28 @@ describe("Protocol", () => {
     expect(transferEvent).not.to.be.undefined;
     expect(transferEvent.args.from).to.be.equal(stranger.address, "Transfer from (Stranger)");
     expect(transferEvent.args.to).to.be.equal(ZeroAddress, "Transfer to (ZeroAddress)");
-    expect(transferEvent.args.tokenId).to.be.equal(requestIds[0], "Transfer value");
+    expect(transferEvent.args.tokenId).to.be.equal(requestId, "Transfer value");
 
     const balanceAfterClaim = await getBalances(stranger);
 
     expect(balanceAfterClaim.ETH).to.be.equal(balanceBeforeClaim.ETH + amountWithRewards - spentGas, "ETH balance after claim");
 
-    // const lockedEtherAmountAfterClaim = await withdrawalQueue.getLockedEtherAmount();
+    const lockedEtherAmountAfterClaim = await withdrawalQueue.getLockedEtherAmount();
 
-    // TODO: fix locked ether amount after claim
-    // expect(lockedEtherAmountAfterClaim).to.be.equal(lockedEtherAmountBeforeFinalization - amountWithRewards, "Locked ether amount after claim");
+    log.debug("Locked ether amount", {
+      "Before withdrawal": ethers.formatEther(lockedEtherAmountBeforeWithdrawal),
+      "After claim": ethers.formatEther(lockedEtherAmountAfterClaim),
+      "Amount with rewards": ethers.formatEther(amountWithRewards),
+    });
 
-    const [statusAfterClaim] = await withdrawalQueue.connect(stranger).getWithdrawalStatus(requestIds);
+    expect(lockedEtherAmountAfterClaim).to.be.equal(lockedEtherAmountBeforeWithdrawal - amountWithRewards, "Locked ether amount after claim");
+
+    const [statusAfterClaim] = await withdrawalQueue.connect(stranger).getWithdrawalStatus([requestId]);
 
     expect(statusAfterClaim.isFinalized).to.be.true;
     expect(statusAfterClaim.isClaimed).to.be.true;
 
-    const [claimableEtherAfterClaim] = await withdrawalQueue.getClaimableEther(requestIds, hints);
+    const [claimableEtherAfterClaim] = await withdrawalQueue.getClaimableEther([requestId], hints);
 
     expect(claimableEtherAfterClaim).to.be.equal(0, "Claimable ether after claim");
   });
