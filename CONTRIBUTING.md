@@ -132,11 +132,10 @@ This repository features a Hardhat-Foundry dual setup:
 #### Tracing
 
 `hardhat-tracer` is used to trace contract calls and state changes during tests.
-This feature is disabled by default, and event using `:trace` postfix in the test command will **NOT** enable it
-project-wide because it can slow down the tests significantly.
+Full scale transaction tracing is disabled by default because it can significantly slow down the tests.
 
-To enable tracing, you need wrap the code you want to trace with `Tracer.enable` / `Tracer.disable` and run the tests
-with commands that have the `:trace` postfix.
+To enable tracing, you need wrap the code you want to trace with `Tracer.enable()` and `Tracer.disable()` functions and
+run the tests with commands that have the `:trace` or `:fulltrace` postfix.
 
 ```typescript
 import { Tracer } from 'test/suite';
@@ -148,6 +147,15 @@ describe('MyContract', () => {
     Tracer.disable();
   });
 });
+```
+
+And then run the tests with the following commands:
+
+```bash
+yarn test:trace                   # Run all tests with trace logging (calls only)
+yarn test:fulltrace               # Run all tests with full trace logging (calls and storage ops)
+yarn test:integration:trace       # Run all integration tests with trace logging
+yarn test:integration:fulltrace   # Run all integration tests with full trace logging
 ```
 
 > [!NOTE]
