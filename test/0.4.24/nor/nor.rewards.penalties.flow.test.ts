@@ -492,27 +492,10 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
       );
     });
 
-    it("Returns early if nothing to distribute", async () => {
+    it("Update reward distribution state", async () => {
       await expect(nor.connect(stakingRouter).onExitedAndStuckValidatorsCountsUpdated())
-        .to.not.emit(nor, "RewardsDistributed")
-        .to.not.emit(nor, "NodeOperatorPenalized");
-    });
-
-    it("Doesn't distribute dust amounts", async () => {
-      await expect(nor.connect(stakingRouter).onExitedAndStuckValidatorsCountsUpdated())
-        .to.not.emit(nor, "RewardsDistributed")
-        .to.not.emit(nor, "NodeOperatorPenalized");
-
-      await lido.connect(user).resume();
-      await user.sendTransaction({ to: await lido.getAddress(), value: ether("1.0") });
-      await lido.connect(user).transferShares(await nor.getAddress(), 1n);
-
-      await expect(nor.connect(stakingRouter).onExitedAndStuckValidatorsCountsUpdated()).to.not.emit(
-        nor,
-        "RewardsDistributed",
-      );
-
-      expect(await lido.sharesOf(nor)).to.equal(1n);
+        .to.emit(nor, "RewardDistributionStateChanged")
+        .withArgs(RewardDistributionState.ReadyForDistribution);
     });
   });
 
