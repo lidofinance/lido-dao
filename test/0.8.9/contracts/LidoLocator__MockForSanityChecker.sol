@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
+// for testing purposes only
 
-// See contracts/COMPILERS.md
 pragma solidity 0.8.9;
 
-import "../../common/interfaces/ILidoLocator.sol";
+import "contracts/common/interfaces/ILidoLocator.sol";
 
-contract LidoLocatorMock is ILidoLocator {
+contract LidoLocator__MockForSanityChecker is ILidoLocator {
     struct ContractAddresses {
         address lido;
         address depositSecurityModule;
@@ -58,7 +58,7 @@ contract LidoLocatorMock is ILidoLocator {
         oracleDaemonConfig = addresses.oracleDaemonConfig;
     }
 
-    function coreComponents() external view returns(address,address,address,address,address,address) {
+    function coreComponents() external view returns (address, address, address, address, address, address) {
         return (
             elRewardsVault,
             oracleReportSanityChecker,
@@ -69,7 +69,7 @@ contract LidoLocatorMock is ILidoLocator {
         );
     }
 
-    function oracleReportComponentsForLido() external view returns(
+    function oracleReportComponentsForLido() external view returns (
         address,
         address,
         address,
