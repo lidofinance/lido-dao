@@ -8,7 +8,7 @@ import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 import {
   AccountingOracle__MockForSanityChecker,
-  LidoLocatorMock,
+  LidoLocator__MockForSanityChecker,
   OracleReportSanityChecker,
   StakingRouter__MockForSanityChecker,
 } from "typechain-types";
@@ -18,7 +18,7 @@ import { ether } from "lib";
 // pnpm hardhat test --grep "OracleReportSanityChecker"
 
 describe("OracleReportSanityChecker.sol", () => {
-  let locator: LidoLocatorMock;
+  let locator: LidoLocator__MockForSanityChecker;
   let checker: OracleReportSanityChecker;
   let accountingOracle: AccountingOracle__MockForSanityChecker;
   let stakingRouter: StakingRouter__MockForSanityChecker;
@@ -72,7 +72,7 @@ describe("OracleReportSanityChecker.sol", () => {
     const burner = await ethers.deployContract("BurnerStub", []);
     stakingRouter = await ethers.deployContract("StakingRouter__MockForSanityChecker");
 
-    locator = await ethers.deployContract("LidoLocatorMock", [
+    locator = await ethers.deployContract("LidoLocator__MockForSanityChecker", [
       {
         lido: deployer.address,
         depositSecurityModule: deployer.address,
