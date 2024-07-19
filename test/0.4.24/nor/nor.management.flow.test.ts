@@ -640,6 +640,10 @@ describe("NodeOperatorsRegistry:management", () => {
       await nor.harness__addNodeOperator("2", user3, 0, 0, 0, 0);
 
       await nor.harness__setRewardDistributionState(RewardDistributionState.ReadyForDistribution);
+
+      expect(await lido.sharesOf(user1)).to.be.equal(0);
+      expect(await lido.sharesOf(user2)).to.be.equal(0);
+      expect(await lido.sharesOf(user3)).to.be.equal(0);
     });
 
     it('distribute reward when module in "ReadyForDistribution" status', async () => {

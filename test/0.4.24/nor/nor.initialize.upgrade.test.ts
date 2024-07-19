@@ -376,7 +376,7 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
       await expect(registry.finalizeUpgrade_v3()).to.be.revertedWith("CONTRACT_NOT_INITIALIZED");
     });
 
-    it("sets correct contract version", async () => {
+    it("sets correct contract version and reward distribution state", async () => {
       await expect(nor.finalizeUpgrade_v3())
         .to.emit(nor, "ContractVersionSet")
         .withArgs(contractVersionV3)
@@ -393,7 +393,7 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
       await expect(nor.finalizeUpgrade_v3()).to.be.revertedWith("UNEXPECTED_CONTRACT_VERSION");
     });
 
-    it("Migrates the contract storage from v2 to v3", async () => {
+    it("Migrates the contract storage from v1 to v3", async () => {
       preInitState = await Snapshot.refresh(preInitState);
 
       await nor.harness__initialize(0n);

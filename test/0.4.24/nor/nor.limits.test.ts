@@ -246,12 +246,12 @@ describe("NodeOperatorsRegistry:validatorsLimits", () => {
         let noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
         expect(noSummary.targetLimitMode).to.be.equal(1n);
 
-        await expect(updateLimitCall(updateTargetLimitsMethod, secondNodeOperatorId, 0n, targetLimit))
+        await expect(updateLimitCall(updateTargetLimitsMethod, secondNodeOperatorId, 1n, targetLimit))
           .to.emit(nor, "TargetValidatorsCountChanged")
-          .withArgs(secondNodeOperatorId, 0n, 0n);
+          .withArgs(secondNodeOperatorId, targetLimit, 1n);
 
         noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
-        expect(noSummary.targetLimitMode).to.be.equal(0n);
+        expect(noSummary.targetLimitMode).to.be.equal(1n);
 
         // reset limit
         await expect(updateLimitCall(updateTargetLimitsMethod, firstNodeOperatorId, 0n, targetLimit))
@@ -260,13 +260,34 @@ describe("NodeOperatorsRegistry:validatorsLimits", () => {
 
         noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
         expect(noSummary.targetLimitMode).to.equal(0n);
+        expect(noSummary.targetValidatorsCount).to.equal(0n);
 
-        noSummary = await nor.getNodeOperatorSummary(secondNodeOperatorId);
+        await expect(updateLimitCall(updateTargetLimitsMethod, firstNodeOperatorId, 0n, targetLimit))
+          .to.emit(nor, "TargetValidatorsCountChanged")
+          .withArgs(firstNodeOperatorId, 0n, 0n);
+
+        noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
         expect(noSummary.targetLimitMode).to.equal(0n);
         expect(noSummary.targetValidatorsCount).to.equal(0n);
       });
 
       it("nonce changing", async () => {
+        targetLimit = 10n;
+
+        await expect(updateLimitCall(updateTargetLimitsMethod, firstNodeOperatorId, 1n, targetLimit))
+          .to.emit(nor, "TargetValidatorsCountChanged")
+          .withArgs(firstNodeOperatorId, targetLimit, 1n);
+
+        await expect(await nor.connect(stakingRouter).getNonce()).to.be.equal(1n);
+
+        await expect(updateLimitCall(updateTargetLimitsMethod, secondNodeOperatorId, 0n, targetLimit))
+          .to.emit(nor, "TargetValidatorsCountChanged")
+          .withArgs(secondNodeOperatorId, 0n, 0n);
+
+        await expect(await nor.connect(stakingRouter).getNonce()).to.be.equal(2n);
+      });
+
+      it("nonce changing even if limit is the same", async () => {
         targetLimit = 10n;
 
         await expect(updateLimitCall(updateTargetLimitsMethod, firstNodeOperatorId, 1n, targetLimit))
