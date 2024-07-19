@@ -336,6 +336,74 @@ describe("NodeOperatorsRegistry:validatorsLimits", () => {
           expect(noSummary.depositableValidatorsCount).to.be.equal(1n);
         });
 
+        it("targetLimitMode = 2; targetLimit = 10", async () => {
+          const targetLimitMode = 2n;
+          targetLimit = 10n;
+
+          await expect(
+            updateLimitCall(
+              UpdateTargetLimitsMethods.UpdateTargetValidatorsLimits,
+              firstNodeOperatorId,
+              targetLimitMode,
+              targetLimit,
+            ),
+          )
+            .to.emit(nor, "TargetValidatorsCountChanged")
+            .withArgs(firstNodeOperatorId, targetLimit, targetLimitMode);
+
+          let noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+          expect(noSummary.targetLimitMode).to.be.equal(2n);
+          expect(noSummary.targetValidatorsCount).to.equal(10n);
+          expect(noSummary.stuckValidatorsCount).to.be.equal(0n);
+          expect(noSummary.refundedValidatorsCount).to.be.equal(0n);
+          expect(noSummary.stuckPenaltyEndTimestamp).to.be.equal(0n);
+          expect(noSummary.totalExitedValidators).to.be.equal(1n);
+          expect(noSummary.totalDepositedValidators).to.be.equal(5n);
+          expect(noSummary.depositableValidatorsCount).to.be.equal(1n);
+
+          await expect(
+            updateLimitCall(
+              UpdateTargetLimitsMethods.UpdateTargetValidatorsLimits,
+              firstNodeOperatorId,
+              targetLimitMode,
+              0n,
+            ),
+          )
+            .to.emit(nor, "TargetValidatorsCountChanged")
+            .withArgs(firstNodeOperatorId, 0n, 2n);
+
+          noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+          expect(noSummary.targetLimitMode).to.equal(2n);
+          expect(noSummary.targetValidatorsCount).to.equal(0n);
+          expect(noSummary.stuckValidatorsCount).to.be.equal(0n);
+          expect(noSummary.refundedValidatorsCount).to.be.equal(0n);
+          expect(noSummary.stuckPenaltyEndTimestamp).to.be.equal(0n);
+          expect(noSummary.totalExitedValidators).to.be.equal(1n);
+          expect(noSummary.totalDepositedValidators).to.be.equal(5n);
+          expect(noSummary.depositableValidatorsCount).to.be.equal(0n);
+
+          await expect(
+            updateLimitCall(
+              UpdateTargetLimitsMethods.UpdateTargetValidatorsLimits,
+              firstNodeOperatorId,
+              targetLimitMode,
+              targetLimit,
+            ),
+          )
+            .to.emit(nor, "TargetValidatorsCountChanged")
+            .withArgs(firstNodeOperatorId, targetLimit, 2n);
+
+          noSummary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+          expect(noSummary.targetLimitMode).to.equal(2n);
+          expect(noSummary.targetValidatorsCount).to.equal(10n);
+          expect(noSummary.stuckValidatorsCount).to.be.equal(0n);
+          expect(noSummary.refundedValidatorsCount).to.be.equal(0n);
+          expect(noSummary.stuckPenaltyEndTimestamp).to.be.equal(0n);
+          expect(noSummary.totalExitedValidators).to.be.equal(1n);
+          expect(noSummary.totalDepositedValidators).to.be.equal(5n);
+          expect(noSummary.depositableValidatorsCount).to.be.equal(1n);
+        });
+
         it("targetLimitMode = 0; targetLimit = 10", async () => {
           const targetLimitMode = 0n;
           targetLimit = 10n;

@@ -642,7 +642,7 @@ describe("NodeOperatorsRegistry:management", () => {
       await nor.harness__setRewardDistributionState(RewardDistributionState.ReadyForDistribution);
     });
 
-    it('distribute reward when module not in "ReadyForDistribution" status', async () => {
+    it('distribute reward when module in "ReadyForDistribution" status', async () => {
       expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.ReadyForDistribution);
       await expect(nor.distributeReward())
         .to.emit(nor, "RewardDistributionStateChanged")
@@ -668,7 +668,6 @@ describe("NodeOperatorsRegistry:management", () => {
         lido.sharesOf(user3),
       ]);
 
-      // calls distributeRewards() inside
       await nor.distributeReward();
 
       const recipientsSharesAfter = await Promise.all([
@@ -686,7 +685,6 @@ describe("NodeOperatorsRegistry:management", () => {
       await lido.setTotalPooledEther(ether("100"));
       await lido.mintShares(await nor.getAddress(), ether("10"));
 
-      // calls distributeRewards() inside
       await nor.distributeReward();
       expect(await lido.sharesOf(user1)).to.be.equal(ether("3"));
       expect(await lido.sharesOf(user2)).to.be.equal(ether("7"));
@@ -697,7 +695,6 @@ describe("NodeOperatorsRegistry:management", () => {
       await lido.setTotalPooledEther(ether("100"));
       await lido.mintShares(await nor.getAddress(), ether("10"));
 
-      // calls distributeRewards() inside
       await expect(nor.distributeReward())
         .to.emit(nor, "RewardsDistributed")
         .withArgs(await user1.getAddress(), ether("3"))
@@ -773,7 +770,7 @@ describe("NodeOperatorsRegistry:management", () => {
       // perValidatorShare 10*10^18 / 8 = 1250000000000000000 == 1.25 * 10^18
       // but half goes to burner
       await expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.ReadyForDistribution);
-      // calls distributeRewards() inside
+
       await expect(nor.distributeReward())
         .to.emit(nor, "RewardsDistributed")
         .withArgs(await user1.getAddress(), ether(1.25 + ""))
@@ -795,7 +792,6 @@ describe("NodeOperatorsRegistry:management", () => {
 
       await nor.connect(stakingRouter).updateRefundedValidatorsCount(firstNodeOperator, 1);
 
-      // calls distributeRewards() inside
       await expect(nor.distributeReward())
         .to.emit(nor, "RewardsDistributed")
         .withArgs(await user1.getAddress(), ether(1.25 + ""))
@@ -817,7 +813,6 @@ describe("NodeOperatorsRegistry:management", () => {
 
       await nor.connect(stakingRouter).updateRefundedValidatorsCount(firstNodeOperator, 1);
 
-      // calls distributeRewards() inside
       await expect(nor.distributeReward())
         .to.emit(nor, "RewardsDistributed")
         .withArgs(await user1.getAddress(), ether(1 + ""))
@@ -844,8 +839,6 @@ describe("NodeOperatorsRegistry:management", () => {
       await advanceChainTime(2 * 24 * 60 * 60 + 10);
 
       expect(await nor.isOperatorPenalized(firstNodeOperator)).to.be.false;
-
-      // calls distributeRewards() inside
 
       await expect(nor.distributeReward())
         .to.emit(nor, "RewardsDistributed")

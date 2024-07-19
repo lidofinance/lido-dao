@@ -366,5 +366,28 @@ describe("NodeOperatorsRegistry:stakingLimit", () => {
         firstNo.totalDepositedValidators,
       );
     });
+
+    it("depositableValidatorsCount in getStakingModuleSummary is decreasing", async () => {
+      let summary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+      const oldNonce = await nor.getNonce();
+      const oldDepositableValidatorsCount = summary.depositableValidatorsCount;
+      const firstNo = await nor.getNodeOperator(firstNodeOperatorId, false);
+      const idsPayload = prepIdsCountsPayload([BigInt(firstNodeOperatorId)], [firstNo.totalDepositedValidators]);
+
+      await expect(
+        nor.connect(stakingRouter).decreaseVettedSigningKeysCount(idsPayload.operatorIds, idsPayload.keysCounts),
+      )
+        .to.emit(nor, "VettedSigningKeysCountChanged")
+        .withArgs(firstNodeOperatorId, firstNo.totalDepositedValidators)
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(oldNonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(oldNonce + 1n);
+
+      summary = await nor.getNodeOperatorSummary(firstNodeOperatorId);
+      const newDepositableValidatorsCount = summary.depositableValidatorsCount;
+
+      expect(newDepositableValidatorsCount).to.be.lessThan(oldDepositableValidatorsCount);
+    });
   });
 });
