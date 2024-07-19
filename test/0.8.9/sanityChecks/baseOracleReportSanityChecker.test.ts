@@ -7,7 +7,7 @@ import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 
 import {
   BurnerStub,
-  LidoLocatorMock,
+  LidoLocator__MockForSanityChecker,
   OracleReportSanityChecker,
   StakingRouter__MockForSanityChecker,
   WithdrawalQueueStub,
@@ -19,7 +19,7 @@ import { Snapshot } from "test/suite";
 
 describe("OracleReportSanityChecker.sol", () => {
   let oracleReportSanityChecker: OracleReportSanityChecker;
-  let lidoLocatorMock: LidoLocatorMock;
+  let lidoLocatorMock: LidoLocator__MockForSanityChecker;
   let burnerMock: BurnerStub;
   let withdrawalQueueMock: WithdrawalQueueStub;
   let originalState: string;
@@ -75,7 +75,7 @@ describe("OracleReportSanityChecker.sol", () => {
     ]);
     stakingRouter = await ethers.deployContract("StakingRouter__MockForSanityChecker");
 
-    lidoLocatorMock = await ethers.deployContract("LidoLocatorMock", [
+    lidoLocatorMock = await ethers.deployContract("LidoLocator__MockForSanityChecker", [
       {
         lido: deployer.address,
         depositSecurityModule: deployer.address,
