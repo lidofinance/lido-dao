@@ -186,7 +186,7 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
       );
     });
 
-    it("Makes the contract initialized to v2", async () => {
+    it("Makes the contract initialized to v3", async () => {
       const burnerAddress = await locator.burner();
       const latestBlock = BigInt(await time.latestBlock());
 
