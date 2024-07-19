@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
-// NB: for testing purposes only
+// for testing purposes only
+
 pragma solidity 0.8.9;
 
-import { OracleReportSanityChecker, LimitsList, LimitsListPacked, LimitsListPacker } from "../../../contracts/0.8.9/sanity_checks/OracleReportSanityChecker.sol";
+import {OracleReportSanityChecker, LimitsList, LimitsListPacked, LimitsListPacker} from "contracts/0.8.9/sanity_checks/OracleReportSanityChecker.sol";
 
 contract OracleReportSanityCheckerWrapper is OracleReportSanityChecker {
     using LimitsListPacker for LimitsList;

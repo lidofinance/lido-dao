@@ -1,8 +1,10 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
+// for testing purposes only
+
 pragma solidity 0.4.24;
 
-import "../oracle/LegacyOracle.sol";
+import "contracts/0.4.24/oracle/LegacyOracle.sol";
 
 interface ILegacyOracle {
     function getBeaconSpec() external view returns (
@@ -20,7 +22,7 @@ interface ITimeProvider {
 }
 
 
-contract MockLegacyOracle is ILegacyOracle, LegacyOracle {
+contract LegacyOracle__MockForAccountingOracle is ILegacyOracle, LegacyOracle {
 
     struct HandleConsensusLayerReportCallData {
         uint256 totalCalls;
@@ -39,32 +41,32 @@ contract MockLegacyOracle is ILegacyOracle, LegacyOracle {
         uint64 genesisTime
     ) {
 
-        ChainSpec memory spec =  _getChainSpec();
+        ChainSpec memory spec = _getChainSpec();
         epochsPerFrame = spec.epochsPerFrame;
         slotsPerEpoch = spec.slotsPerEpoch;
         secondsPerSlot = spec.secondsPerSlot;
         genesisTime = spec.genesisTime;
     }
 
-    function setBeaconSpec( uint64 epochsPerFrame,
+    function setBeaconSpec(uint64 epochsPerFrame,
         uint64 slotsPerEpoch,
         uint64 secondsPerSlot,
         uint64 genesisTime) external {
-            _setChainSpec(ChainSpec(epochsPerFrame,slotsPerEpoch,secondsPerSlot,genesisTime));
+        _setChainSpec(ChainSpec(epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime));
     }
 
 
-     function _getTime() internal view returns (uint256) {
+    function _getTime() internal view returns (uint256) {
         address accountingOracle = ACCOUNTING_ORACLE_POSITION.getStorageAddress();
         return ITimeProvider(accountingOracle).getTime();
     }
 
-     function getTime() external view returns (uint256) {
+    function getTime() external view returns (uint256) {
         return _getTime();
     }
 
     function handleConsensusLayerReport(uint256 refSlot, uint256 clBalance, uint256 clValidators)
-        external
+    external
     {
         ++lastCall__handleConsensusLayerReport.totalCalls;
         lastCall__handleConsensusLayerReport.refSlot = refSlot;
@@ -80,12 +82,12 @@ contract MockLegacyOracle is ILegacyOracle, LegacyOracle {
         uint64 genesisTime,
         uint256 lastCompletedEpochId
     ) external {
-          _setChainSpec(ChainSpec(epochsPerFrame,slotsPerEpoch,secondsPerSlot,genesisTime));
+        _setChainSpec(ChainSpec(epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime));
         LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(lastCompletedEpochId);
     }
 
     function setLastCompletedEpochId(uint256 lastCompletedEpochId) external {
-         LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(lastCompletedEpochId);
+        LAST_COMPLETED_EPOCH_ID_POSITION.setStorageUint256(lastCompletedEpochId);
     }
 
     function initializeAsVersion(uint256 _version) external {

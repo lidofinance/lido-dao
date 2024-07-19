@@ -169,7 +169,7 @@ export function setValueInState(key: Sk, value: unknown): DeploymentState {
 
 export function incrementGasUsed(increment: bigint | number) {
   const state = readNetworkState();
-  state[Sk.scratchDeployGasUsed] = (BigInt(state[Sk.scratchDeployGasUsed]) + BigInt(increment)).toString();
+  state[Sk.scratchDeployGasUsed] = (BigInt(state[Sk.scratchDeployGasUsed] || 0) + BigInt(increment)).toString();
   persistNetworkState(state);
   return state;
 }

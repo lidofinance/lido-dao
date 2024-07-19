@@ -3,8 +3,7 @@
 
 pragma solidity 0.4.24;
 
-import "../Lido.sol";
-import "./VaultMock.sol";
+import {Lido} from "contracts/0.4.24/Lido.sol";
 // import "./StETHMock.sol";
 // distributeReward
 /**

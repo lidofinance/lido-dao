@@ -8,9 +8,9 @@ import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 import {
   AccountingOracle__MockForSanityChecker,
-  LidoLocatorMock,
+  LidoLocator__MockForSanityChecker,
   OracleReportSanityChecker,
-  StakingRouterMockForValidatorsCount,
+  StakingRouter__MockForSanityChecker,
 } from "typechain-types";
 
 import { ether } from "lib";
@@ -18,10 +18,10 @@ import { ether } from "lib";
 // pnpm hardhat test --grep "OracleReportSanityChecker"
 
 describe("OracleReportSanityChecker.sol", () => {
-  let locator: LidoLocatorMock;
+  let locator: LidoLocator__MockForSanityChecker;
   let checker: OracleReportSanityChecker;
   let accountingOracle: AccountingOracle__MockForSanityChecker;
-  let stakingRouter: StakingRouterMockForValidatorsCount;
+  let stakingRouter: StakingRouter__MockForSanityChecker;
   let deployer: HardhatEthersSigner;
   let genesisTime: bigint;
   const SLOTS_PER_DAY = 7200;
@@ -70,9 +70,9 @@ describe("OracleReportSanityChecker.sol", () => {
     genesisTime = await accountingOracle.GENESIS_TIME();
     const sanityChecker = deployer.address;
     const burner = await ethers.deployContract("BurnerStub", []);
-    stakingRouter = await ethers.deployContract("StakingRouterMockForValidatorsCount");
+    stakingRouter = await ethers.deployContract("StakingRouter__MockForSanityChecker");
 
-    locator = await ethers.deployContract("LidoLocatorMock", [
+    locator = await ethers.deployContract("LidoLocator__MockForSanityChecker", [
       {
         lido: deployer.address,
         depositSecurityModule: deployer.address,
