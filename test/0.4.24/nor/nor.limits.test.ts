@@ -189,7 +189,7 @@ describe("NodeOperatorsRegistry:validatorsLimits", () => {
       });
 
       it('reverts with "OUT_OF_RANGE" error when called with targetLimit > UINT64_MAX', async () => {
-        const targetLimitWrong = BigInt("0x10000000000000000");
+        const targetLimitWrong = 2n ** 64n;
 
         await expect(
           updateLimitCall(updateTargetLimitsMethod, firstNodeOperatorId, 1n, targetLimitWrong),
