@@ -243,7 +243,7 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
       );
     });
 
-    it("Reverts if already initialized to v2", async () => {
+    it("Reverts if already initialized to v3", async () => {
       await Snapshot.restore(preInitState);
       const MAX_STUCK_PENALTY_DELAY = await nor.MAX_STUCK_PENALTY_DELAY();
       await nor.initialize(locator, encodeBytes32String("curated-onchain-v1"), MAX_STUCK_PENALTY_DELAY);
