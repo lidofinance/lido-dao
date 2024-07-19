@@ -22,7 +22,7 @@ const prepareFrameData = async ({
   };
 };
 
-describe("HashConsensus:Fast-lane members", () => {
+describe("HashConsensus:Fastlane members", () => {
   let admin: Signer;
   let member1: Signer;
   let member2: Signer;
