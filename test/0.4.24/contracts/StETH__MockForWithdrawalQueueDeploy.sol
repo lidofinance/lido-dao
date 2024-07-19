@@ -1,18 +1,19 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
+// for testing purposes only
 
 pragma solidity 0.4.24;
 
-import "../StETH.sol";
+import "contracts/0.4.24/StETH.sol";
 
 /**
  * @dev Only for testing purposes!
  * StETH mock version of mintable/burnable/stoppable token.
  */
-contract StETHMock is StETH {
+contract StETH__MockForWithdrawalQueueDeploy is StETH {
     uint256 private totalPooledEther;
 
-    constructor() public payable{
+    constructor() public payable {
         _resume();
         // _bootstrapInitialHolder
         uint256 balance = address(this).balance;
@@ -44,7 +45,7 @@ contract StETHMock is StETH {
         _emitTransferAfterMintingShares(_to, _sharesAmount);
     }
 
-    function mintSteth(address _to) public payable  {
+    function mintSteth(address _to) public payable {
         uint256 sharesAmount = getSharesByPooledEth(msg.value);
         mintShares(_to, sharesAmount);
         setTotalPooledEther(_getTotalPooledEther().add(msg.value));

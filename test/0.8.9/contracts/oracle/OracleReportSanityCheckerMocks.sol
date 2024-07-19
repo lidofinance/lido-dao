@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
+// for testing purposes only
 
-/* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import {IWithdrawalQueue} from "../sanity_checks/OracleReportSanityChecker.sol";
+import {IWithdrawalQueue} from "contracts/0.8.9/sanity_checks/OracleReportSanityChecker.sol";
 
 contract LidoStub {
     uint256 private _shareRate = 1 ether;
@@ -56,8 +56,11 @@ contract BurnerStub {
 
 interface ILidoLocator {
     function lido() external view returns (address);
+
     function burner() external view returns (address);
+
     function withdrawalVault() external view returns (address);
+
     function withdrawalQueue() external view returns (address);
 }
 
@@ -106,7 +109,7 @@ contract LidoLocatorStub is ILidoLocator {
 contract OracleReportSanityCheckerStub {
     error SelectorNotFound(bytes4 sig, uint256 value, bytes data);
 
-    fallback() external payable { revert SelectorNotFound(msg.sig, msg.value, msg.data); }
+    fallback() external payable {revert SelectorNotFound(msg.sig, msg.value, msg.data);}
 
     function checkAccountingOracleReport(
         uint256 _timeElapsed,

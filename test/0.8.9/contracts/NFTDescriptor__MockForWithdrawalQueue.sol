@@ -1,13 +1,13 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
+// for testing purposes only
 
-/* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import { Strings } from "@openzeppelin/contracts-v4.4/utils/Strings.sol";
-import { INFTDescriptor } from "../WithdrawalQueueERC721.sol";
+import {Strings} from "@openzeppelin/contracts-v4.4/utils/Strings.sol";
+import {INFTDescriptor} from "contracts/0.8.9/WithdrawalQueueERC721.sol";
 
-contract NFTDescriptorMock is INFTDescriptor {
+contract NFTDescriptor__MockForWithdrawalQueue is INFTDescriptor {
     using Strings for uint256;
 
     bytes32 private BASE_TOKEN_URI;
