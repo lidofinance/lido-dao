@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.9;
 
-/// @title Second Opinion Oracle interface for Lido. See LIP-23 for details.
+/// @title Second Opinion Oracle interface for Lido. See LIP-23 for details
 interface ISecondOpinionOracle {
     /// @notice Returns second opinion report for the given reference slot
     /// @param refSlot is a reference slot to return report for
