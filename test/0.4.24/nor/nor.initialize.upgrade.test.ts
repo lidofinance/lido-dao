@@ -387,7 +387,7 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
       expect(await nor.getRewardDistributionState()).to.be.equal(RewardDistributionState.Distributed);
     });
 
-    it("reverts with error UNEXPECTED_CONTRACT_VERSION when called on already initialized contract", async () => {
+    it("reverts with error UNEXPECTED_CONTRACT_VERSION when called on already upgraded contract", async () => {
       await nor.finalizeUpgrade_v3();
       expect(await nor.getContractVersion()).to.be.equal(3);
       await expect(nor.finalizeUpgrade_v3()).to.be.revertedWith("UNEXPECTED_CONTRACT_VERSION");
