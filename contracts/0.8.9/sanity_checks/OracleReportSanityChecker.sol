@@ -13,6 +13,7 @@ import {PositiveTokenRebaseLimiter, TokenRebaseLimiterData} from "../lib/Positiv
 import {ILidoLocator} from "../../common/interfaces/ILidoLocator.sol";
 import {IBurner} from "../../common/interfaces/IBurner.sol";
 import {StakingRouter} from "../../0.8.9/StakingRouter.sol";
+import {ISecondOpinionOracle} from "../interfaces/ISecondOpinionOracle.sol";
 
 interface IWithdrawalQueue {
     struct WithdrawalRequestStatus {
@@ -40,19 +41,6 @@ interface IBaseOracle {
     function SECONDS_PER_SLOT() external view returns (uint256);
     function GENESIS_TIME() external view returns (uint256);
     function getLastProcessingRefSlot() external view returns (uint256);
-}
-
-interface ISecondOpinionOracle {
-    function getReport(uint256 refSlot)
-        external
-        view
-        returns (
-            bool success,
-            uint256 clBalanceGwei,
-            uint256 withdrawalVaultBalanceWei,
-            uint256 totalDepositedValidators,
-            uint256 totalExitedValidators
-        );
 }
 
 /// @notice The set of restrictions used in the sanity checks of the oracle report
