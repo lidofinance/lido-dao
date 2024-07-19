@@ -23,14 +23,14 @@ describe("OracleReportSanityChecker.sol", () => {
 
   const defaultLimitsList = {
     churnValidatorsPerDayLimit: 55n,
-    oneOffCLBalanceDecreaseBPLimit: 500n, // 5%
-    annualBalanceIncreaseBPLimit: 1000n, // 10%
-    simulatedShareRateDeviationBPLimit: 250n, // 2.5%
+    oneOffCLBalanceDecreaseBPLimit: 5_00n, // 5%
+    annualBalanceIncreaseBPLimit: 10_00n, // 10%
+    simulatedShareRateDeviationBPLimit: 2_50n, // 2.5%
     maxValidatorExitRequestsPerReport: 2000n,
     maxAccountingExtraDataListItemsCount: 15n,
     maxNodeOperatorsPerExtraDataItemCount: 16n,
     requestTimestampMargin: 128n,
-    maxPositiveTokenRebase: 5000000n, // 0.05%
+    maxPositiveTokenRebase: 5_000_000n, // 0.05%
   };
 
   const correctLidoOracleReport = {
