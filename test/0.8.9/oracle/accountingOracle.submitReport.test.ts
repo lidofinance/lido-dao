@@ -9,7 +9,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import {
   AccountingOracleTimeTravellable,
   HashConsensusTimeTravellable,
-  MockLegacyOracle,
+  LegacyOracle__MockForAccountingOracle,
   MockLidoForAccountingOracle,
   MockStakingRouterForAccountingOracle,
   MockWithdrawalQueueForAccountingOracle,
@@ -53,7 +53,7 @@ describe("AccountingOracle.sol:submitReport", () => {
   let extraData: ExtraDataType;
   let mockLido: MockLidoForAccountingOracle;
   let sanityChecker: OracleReportSanityChecker;
-  let mockLegacyOracle: MockLegacyOracle;
+  let mockLegacyOracle: LegacyOracle__MockForAccountingOracle;
   let mockWithdrawalQueue: MockWithdrawalQueueForAccountingOracle;
   let snapshot: string;
 
@@ -374,32 +374,32 @@ describe("AccountingOracle.sol:submitReport", () => {
 
     context("enforces data safety boundaries", () => {
       it("passes fine when extra data do not feet in a single third phase transaction", async () => {
-        const MAX_ACCOUNTING_EXTRA_DATA_LIMIT = 1;
+        const MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION = 1;
 
-        expect(reportFields.extraDataItemsCount).to.be.greaterThan(MAX_ACCOUNTING_EXTRA_DATA_LIMIT);
+        expect(reportFields.extraDataItemsCount).to.be.greaterThan(MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION);
 
         await sanityChecker
           .connect(admin)
-          .grantRole(await sanityChecker.MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE(), admin.address);
-        await sanityChecker.connect(admin).setMaxAccountingExtraDataListItemsCount(MAX_ACCOUNTING_EXTRA_DATA_LIMIT);
+          .grantRole(await sanityChecker.MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION_ROLE(), admin.address);
+        await sanityChecker.connect(admin).setMaxItemsPerExtraDataTransaction(MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION);
 
-        expect((await sanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount).to.be.equal(
-          MAX_ACCOUNTING_EXTRA_DATA_LIMIT,
+        expect((await sanityChecker.getOracleReportLimits()).maxItemsPerExtraDataTransaction).to.be.equal(
+          MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION,
         );
 
         await oracle.connect(member1).submitReportData(reportFields, oracleVersion);
       });
 
       it("passes fine when extra data feet in a single third phase transaction", async () => {
-        const MAX_ACCOUNTING_EXTRA_DATA_LIMIT = reportFields.extraDataItemsCount;
+        const MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION = reportFields.extraDataItemsCount;
 
         await sanityChecker
           .connect(admin)
-          .grantRole(await sanityChecker.MAX_ACCOUNTING_EXTRA_DATA_LIST_ITEMS_COUNT_ROLE(), admin.address);
-        await sanityChecker.connect(admin).setMaxAccountingExtraDataListItemsCount(MAX_ACCOUNTING_EXTRA_DATA_LIMIT);
+          .grantRole(await sanityChecker.MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION_ROLE(), admin.address);
+        await sanityChecker.connect(admin).setMaxItemsPerExtraDataTransaction(MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION);
 
-        expect((await sanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount).to.be.equal(
-          MAX_ACCOUNTING_EXTRA_DATA_LIMIT,
+        expect((await sanityChecker.getOracleReportLimits()).maxItemsPerExtraDataTransaction).to.be.equal(
+          MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION,
         );
 
         await oracle.connect(member1).submitReportData(reportFields, oracleVersion);

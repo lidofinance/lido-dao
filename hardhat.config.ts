@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import "@nomicfoundation/hardhat-chai-matchers";
@@ -6,7 +7,7 @@ import "@typechain/hardhat";
 
 import "solidity-coverage";
 import "tsconfig-paths/register";
-// import "hardhat-tracer"; // doesn't work with hardhat >= 2.21.0
+import "hardhat-tracer";
 import "hardhat-watcher";
 import "hardhat-ignore-warnings";
 import "hardhat-contract-sizer";
@@ -18,6 +19,20 @@ import { mochaRootHooks } from "test/hooks";
 
 const RPC_URL: string = process.env.RPC_URL || "";
 const HARDHAT_FORKING_URL = process.env.HARDHAT_FORKING_URL || "";
+const ACCOUNTS_PATH = "./accounts.json";
+
+function loadAccounts(networkName: string) {
+  // TODO: this plaintext accounts.json private keys management is a subject
+  //       of rework to a solution with the keys stored encrypted
+  if (!existsSync(ACCOUNTS_PATH)) {
+    return [];
+  }
+  const content = JSON.parse(readFileSync(ACCOUNTS_PATH, "utf-8"));
+  if (!content.eth) {
+    return [];
+  }
+  return content.eth[networkName] || [];
+}
 
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
@@ -39,6 +54,11 @@ const config: HardhatUserConfig = {
         accountsBalance: "100000000000000000000000",
       },
       forking: HARDHAT_FORKING_URL ? { url: HARDHAT_FORKING_URL } : undefined,
+    },
+    sepolia: {
+      url: RPC_URL,
+      chainId: 11155111,
+      accounts: loadAccounts("sepolia"),
     },
   },
   solidity: {
@@ -117,9 +137,6 @@ const config: HardhatUserConfig = {
     "@aragon/**/*": {
       default: "off",
     },
-    "contracts/*/test_helpers/**/*": {
-      default: "off",
-    },
     "contracts/*/mocks/**/*": {
       default: "off",
     },
@@ -135,7 +152,7 @@ const config: HardhatUserConfig = {
     disambiguatePaths: false,
     runOnCompile: true,
     strict: true,
-    except: ["test_helpers", "template", "mocks", "@aragon", "openzeppelin", "test"],
+    except: ["template", "mocks", "@aragon", "openzeppelin", "test"],
   },
 };
 

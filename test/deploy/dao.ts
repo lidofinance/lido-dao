@@ -4,11 +4,13 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import {
   ACL__factory,
+  Burner__MockForDistributeReward__factory,
   DAOFactory__factory,
   EIP712StETH__factory,
   EVMScriptRegistryFactory__factory,
   Kernel,
   Kernel__factory,
+  Lido__DistributeRewardMock__factory,
   Lido__factory,
   LidoLocator,
 } from "typechain-types";
@@ -84,6 +86,31 @@ export async function deployLidoDao({ rootAccount, initialized, locatorConfig = 
   }
 
   return { lido, dao, acl };
+}
+
+export async function deployLidoDaoForNor({ rootAccount, initialized, locatorConfig = {} }: DeployLidoDaoArgs) {
+  const { dao, acl } = await createAragonDao(rootAccount);
+
+  const impl = await new Lido__DistributeRewardMock__factory(rootAccount).deploy();
+
+  const lidoProxyAddress = await addAragonApp({
+    dao,
+    name: "lido",
+    impl,
+    rootAccount,
+  });
+
+  const lido = Lido__DistributeRewardMock__factory.connect(lidoProxyAddress, rootAccount);
+
+  const burner = await new Burner__MockForDistributeReward__factory(rootAccount).deploy();
+
+  if (initialized) {
+    const locator = await deployLidoLocator({ lido, burner, ...locatorConfig }, rootAccount);
+    const eip712steth = await new EIP712StETH__factory(rootAccount).deploy(lido);
+    await lido.initialize(locator, eip712steth, { value: ether("1.0") });
+  }
+
+  return { lido, dao, acl, burner };
 }
 
 export async function hasPermission(

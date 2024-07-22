@@ -318,7 +318,7 @@ contract AccountingOracle is BaseOracle {
         /// order. Each count is a 16-byte uint, counts are packed tightly. Thus,
         /// byteLength(stuckValidatorsCounts) = nodeOpsCount * 16.
         ///
-        /// nodeOpsCount must not be greater than maxAccountingExtraDataListItemsCount specified
+        /// nodeOpsCount must not be greater than maxNodeOperatorsPerExtraDataItem specified
         /// in OracleReportSanityChecker contract. If a staking module has more node operators
         /// with total stuck validators counts changed compared to the staking module smart contract
         /// storage (as observed at the reference slot), reporting for that module should be split
