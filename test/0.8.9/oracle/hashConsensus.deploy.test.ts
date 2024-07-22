@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { Signer, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import { HashConsensus, MockReportProcessor } from "typechain-types";
+import { HashConsensus, MockReportProcessor, MockReportProcessor__factory } from "typechain-types";
 
 import {
   CONSENSUS_VERSION,
@@ -22,8 +22,7 @@ describe("HashConsensus:deploy", function () {
 
   before(async () => {
     [admin] = await ethers.getSigners();
-    const mockReportProcessorFactory = await ethers.getContractFactory("MockReportProcessor");
-    mockReportProcessor = await mockReportProcessorFactory.deploy(CONSENSUS_VERSION);
+    mockReportProcessor = await new MockReportProcessor__factory(admin).deploy(CONSENSUS_VERSION);
   });
 
   context("Deployment and initial configuration", () => {

@@ -1,15 +1,15 @@
 import { expect } from "chai";
-import { keccak256, Signer, toUtf8Bytes, ZeroAddress } from "ethers";
+import { Signer, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import { HashConsensusTimeTravellable, MockReportProcessor } from "typechain-types";
+import { HashConsensusTimeTravellable, MockReportProcessor, MockReportProcessor__factory } from "typechain-types";
 
-import { CONSENSUS_VERSION } from "lib";
+import { CONSENSUS_VERSION, streccak } from "lib";
 
 import { deployHashConsensus, HASH_1, HASH_2 } from "test/deploy";
 import { Snapshot } from "test/suite";
 
-const manageReportProcessorRoleKeccak256 = keccak256(toUtf8Bytes("MANAGE_REPORT_PROCESSOR_ROLE"));
+const manageReportProcessorRoleKeccak256 = streccak("MANAGE_REPORT_PROCESSOR_ROLE");
 
 describe("HashConsensus:reportProcessor", function () {
   let admin: Signer;
@@ -29,8 +29,7 @@ describe("HashConsensus:reportProcessor", function () {
     consensus = deployed.consensus;
     reportProcessor1 = deployed.reportProcessor;
 
-    const mockReportProcessorFactory = await ethers.getContractFactory("MockReportProcessor");
-    reportProcessor2 = await mockReportProcessorFactory.deploy(CONSENSUS_VERSION);
+    reportProcessor2 = await new MockReportProcessor__factory(admin).deploy(CONSENSUS_VERSION);
 
     snapshot = await Snapshot.take();
   };
@@ -168,8 +167,7 @@ describe("HashConsensus:reportProcessor", function () {
     it("equals to new processor version after it was changed", async () => {
       const CONSENSUS_VERSION_2 = 2;
 
-      const mockReportProcessorFactory = await ethers.getContractFactory("MockReportProcessor");
-      const reportProcessor_v2 = await mockReportProcessorFactory.deploy(CONSENSUS_VERSION_2);
+      const reportProcessor_v2 = await new MockReportProcessor__factory(admin).deploy(CONSENSUS_VERSION_2);
 
       await consensus.setReportProcessor(await reportProcessor_v2.getAddress());
       expect(await consensus.getConsensusVersion()).to.equal(CONSENSUS_VERSION_2);

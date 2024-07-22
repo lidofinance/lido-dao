@@ -13,7 +13,7 @@ import {
 } from "lib";
 
 export interface DeployHashConsensusParams {
-  reportProcessor?: MockReportProcessor | null | undefined;
+  reportProcessor?: MockReportProcessor;
   slotsPerEpoch?: bigint | undefined;
   secondsPerSlot?: bigint | undefined;
   genesisTime?: bigint | undefined;
@@ -25,7 +25,7 @@ export interface DeployHashConsensusParams {
 export async function deployHashConsensus(
   admin: string,
   {
-    reportProcessor = null as MockReportProcessor | null,
+    reportProcessor,
     slotsPerEpoch = SLOTS_PER_EPOCH,
     secondsPerSlot = SECONDS_PER_SLOT,
     genesisTime = GENESIS_TIME,
