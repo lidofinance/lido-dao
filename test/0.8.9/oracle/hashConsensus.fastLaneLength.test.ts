@@ -25,7 +25,7 @@ describe("HashConsensus:fastLaneLength", function () {
     });
   });
 
-  context("method setFastLaneLengthSlots", () => {
+  context("setFastLaneLengthSlots", () => {
     beforeEach(() => deploy());
 
     const getFastLaneLengthSlotsLimit = async () => {

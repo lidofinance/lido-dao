@@ -22,14 +22,14 @@ const prepareFrameData = async ({
   };
 };
 
-describe("HashConsensus:Fast-lane members", () => {
-  let admin: Signer,
-    member1: Signer,
-    member2: Signer,
-    member3: Signer,
-    member4: Signer,
-    member5: Signer,
-    stranger: Signer;
+describe("HashConsensus:Fastlane members", () => {
+  let admin: Signer;
+  let member1: Signer;
+  let member2: Signer;
+  let member3: Signer;
+  let member4: Signer;
+  let member5: Signer;
+  let stranger: Signer;
   let consensus: HashConsensusTimeTravellable;
 
   const deploy = async (options?: DeployHashConsensusParams) => {
