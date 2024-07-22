@@ -22,16 +22,33 @@ import {
   WithdrawalVault,
 } from "typechain-types";
 
-type ProtocolNetworkItems = {
+export type ProtocolNetworkItems = {
   locator: string;
-  agent: string;
-  voting: string;
-  easyTrack: string;
-};
-
-export type ProtocolNetworkConfig = {
-  env: Record<keyof ProtocolNetworkItems, string>;
-  defaults: Record<keyof ProtocolNetworkItems, string>;
+  // signers
+  agentAddress: string;
+  votingAddress: string;
+  easyTrackAddress: string;
+  // foundation contracts
+  accountingOracle: string;
+  depositSecurityModule: string;
+  elRewardsVault: string;
+  legacyOracle: string;
+  lido: string;
+  oracleReportSanityChecker: string;
+  burner: string;
+  stakingRouter: string;
+  validatorsExitBusOracle: string;
+  withdrawalQueue: string;
+  withdrawalVault: string;
+  oracleDaemonConfig: string;
+  // aragon contracts
+  kernel: string;
+  acl: string;
+  // stacking modules
+  nor: string;
+  sdvt: string;
+  // hash consensus
+  hashConsensus: string;
 };
 
 export interface ContractTypes {

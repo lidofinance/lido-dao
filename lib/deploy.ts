@@ -203,3 +203,11 @@ export async function updateProxyImplementation(
     },
   });
 }
+
+export async function parseLocalDeploymentJson() {
+  try {
+    return await import("../deployed-local.json");
+  } catch (e) {
+    throw new Error("Failed to parse deployed-local.json. Did you run scratch deploy?");
+  }
+}

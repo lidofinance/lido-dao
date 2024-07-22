@@ -4,7 +4,7 @@ import { AccountingOracle, Lido, LidoLocator, StakingRouter } from "typechain-ty
 
 import { batch, log } from "lib";
 
-import { networks } from "./networks";
+import { getNetworkConfig, ProtocolNetworkConfig } from "./networks";
 import {
   AragonContracts,
   ContractName,
@@ -23,21 +23,21 @@ const guard = (address: string, env: string) => {
   if (!address) throw new Error(`${address} address is not set, please set it in the environment variables: ${env}`);
 };
 
-const getDiscoveryConfig = () => {
-  const config = networks.get(hre.network.name);
-
+const getDiscoveryConfig = async () => {
+  const config = await getNetworkConfig(hre.network.name);
   if (!config) {
     throw new Error(`Network ${hre.network.name} is not supported`);
   }
 
-  const locatorAddress = process.env[config.env.locator] ?? config.defaults.locator ?? "";
-  const agentAddress = process.env[config.env.agent] ?? config.defaults.agent ?? "";
-  const votingAddress = process.env[config.env.voting] ?? config.defaults.voting ?? "";
-  const easyTrackExecutorAddress = process.env[config.env.easyTrack] ?? config.defaults.easyTrack ?? "";
+  const locatorAddress = config.get("locator");
+  const agentAddress = config.get("agentAddress");
+  const votingAddress = config.get("votingAddress");
+  const easyTrackExecutorAddress = config.get("easyTrackAddress");
 
   guard(locatorAddress, config.env.locator);
-  guard(agentAddress, config.env.agent);
-  guard(votingAddress, config.env.voting);
+  guard(agentAddress, config.env.agentAddress);
+  guard(votingAddress, config.env.votingAddress);
+  guard(easyTrackExecutorAddress, config.env.easyTrackAddress);
 
   log.debug("Discovery config", {
     "Network": hre.network.name,
@@ -47,12 +47,7 @@ const getDiscoveryConfig = () => {
     "Easy track executor address": easyTrackExecutorAddress,
   });
 
-  return {
-    locatorAddress,
-    agentAddress,
-    votingAddress,
-    easyTrackExecutorAddress,
-  };
+  return config;
 };
 
 /**
@@ -67,66 +62,90 @@ const loadContract = async <Name extends ContractName>(name: Name, address: stri
 /**
  * Load all Lido protocol foundation contracts.
  */
-const getFoundationContracts = async (locator: LoadedContract<LidoLocator>) =>
+const getFoundationContracts = async (locator: LoadedContract<LidoLocator>, config: ProtocolNetworkConfig) =>
   (await batch({
-    accountingOracle: loadContract("AccountingOracle", await locator.accountingOracle()),
-    depositSecurityModule: loadContract("DepositSecurityModule", await locator.depositSecurityModule()),
-    elRewardsVault: loadContract("LidoExecutionLayerRewardsVault", await locator.elRewardsVault()),
-    legacyOracle: loadContract("LegacyOracle", await locator.legacyOracle()),
-    lido: loadContract("Lido", await locator.lido()),
-    oracleReportSanityChecker: loadContract("OracleReportSanityChecker", await locator.oracleReportSanityChecker()),
-    burner: loadContract("Burner", await locator.burner()),
-    stakingRouter: loadContract("StakingRouter", await locator.stakingRouter()),
-    validatorsExitBusOracle: loadContract("ValidatorsExitBusOracle", await locator.validatorsExitBusOracle()),
-    withdrawalQueue: loadContract("WithdrawalQueueERC721", await locator.withdrawalQueue()),
-    withdrawalVault: loadContract("WithdrawalVault", await locator.withdrawalVault()),
-    oracleDaemonConfig: loadContract("OracleDaemonConfig", await locator.oracleDaemonConfig()),
+    accountingOracle: loadContract(
+      "AccountingOracle",
+      config.get("accountingOracle") || await locator.accountingOracle(),
+    ),
+    depositSecurityModule: loadContract(
+      "DepositSecurityModule",
+      config.get("depositSecurityModule") || await locator.depositSecurityModule(),
+    ),
+    elRewardsVault: loadContract(
+      "LidoExecutionLayerRewardsVault",
+      config.get("elRewardsVault") || await locator.elRewardsVault(),
+    ),
+    legacyOracle: loadContract("LegacyOracle", config.get("legacyOracle") || await locator.legacyOracle()),
+    lido: loadContract("Lido", config.get("lido") || await locator.lido()),
+    oracleReportSanityChecker: loadContract(
+      "OracleReportSanityChecker",
+      config.get("oracleReportSanityChecker") || await locator.oracleReportSanityChecker(),
+    ),
+    burner: loadContract("Burner", config.get("burner") || await locator.burner()),
+    stakingRouter: loadContract("StakingRouter", config.get("stakingRouter") || await locator.stakingRouter()),
+    validatorsExitBusOracle: loadContract(
+      "ValidatorsExitBusOracle",
+      config.get("validatorsExitBusOracle") || await locator.validatorsExitBusOracle(),
+    ),
+    withdrawalQueue: loadContract(
+      "WithdrawalQueueERC721",
+      config.get("withdrawalQueue") || await locator.withdrawalQueue(),
+    ),
+    withdrawalVault: loadContract(
+      "WithdrawalVault",
+      config.get("withdrawalVault") || await locator.withdrawalVault(),
+    ),
+    oracleDaemonConfig: loadContract(
+      "OracleDaemonConfig",
+      config.get("oracleDaemonConfig") || await locator.oracleDaemonConfig(),
+    ),
   })) as FoundationContracts;
 
 /**
  * Load Aragon contracts required for protocol.
  */
-const getAragonContracts = async (lido: LoadedContract<Lido>) => {
-  const kernelAddress = await lido.kernel();
+const getAragonContracts = async (lido: LoadedContract<Lido>, config: ProtocolNetworkConfig) => {
+  const kernelAddress = config.get("kernel") || await lido.kernel();
   const kernel = await loadContract("Kernel", kernelAddress);
   return (await batch({
     kernel: new Promise((resolve) => resolve(kernel)), // Avoiding double loading
-    acl: loadContract("ACL", await kernel.acl()),
+    acl: loadContract("ACL", config.get("acl") || await kernel.acl()),
   })) as AragonContracts;
 };
 
 /**
  * Load staking modules contracts registered in the staking router.
  */
-const getStakingModules = async (stakingRouter: LoadedContract<StakingRouter>) => {
+const getStakingModules = async (stakingRouter: LoadedContract<StakingRouter>, config: ProtocolNetworkConfig) => {
   const [nor, sdvt] = await stakingRouter.getStakingModules();
   return (await batch({
-    nor: loadContract("NodeOperatorsRegistry", nor.stakingModuleAddress),
-    sdvt: loadContract("NodeOperatorsRegistry", sdvt.stakingModuleAddress),
+    nor: loadContract("NodeOperatorsRegistry", config.get("nor") || nor.stakingModuleAddress),
+    sdvt: loadContract("NodeOperatorsRegistry", config.get("sdvt") || sdvt.stakingModuleAddress),
   })) as StackingModulesContracts;
 };
 
 /**
  * Load HashConsensus contract for accounting oracle.
  */
-const getHashConsensus = async (accountingOracle: LoadedContract<AccountingOracle>) => {
-  const hashConsensusAddress = await accountingOracle.getConsensusContract();
+const getHashConsensus = async (accountingOracle: LoadedContract<AccountingOracle>, config: ProtocolNetworkConfig) => {
+  const hashConsensusAddress = config.get("hashConsensus") || await accountingOracle.getConsensusContract();
   return (await batch({
     hashConsensus: loadContract("HashConsensus", hashConsensusAddress),
   })) as HashConsensusContracts;
 };
 
 export async function discover() {
-  const networkConfig = getDiscoveryConfig();
-  const locator = await loadContract("LidoLocator", networkConfig.locatorAddress);
-  const foundationContracts = await getFoundationContracts(locator);
+  const networkConfig = await getDiscoveryConfig();
+  const locator = await loadContract("LidoLocator", networkConfig.get("locator"));
+  const foundationContracts = await getFoundationContracts(locator, networkConfig);
 
   const contracts = {
     locator,
     ...foundationContracts,
-    ...(await getAragonContracts(foundationContracts.lido)),
-    ...(await getStakingModules(foundationContracts.stakingRouter)),
-    ...(await getHashConsensus(foundationContracts.accountingOracle)),
+    ...(await getAragonContracts(foundationContracts.lido, networkConfig)),
+    ...(await getStakingModules(foundationContracts.stakingRouter, networkConfig)),
+    ...(await getHashConsensus(foundationContracts.accountingOracle, networkConfig)),
   } as ProtocolContracts;
 
   log.debug("Contracts discovered", {
@@ -151,9 +170,9 @@ export async function discover() {
   });
 
   const signers = {
-    agent: networkConfig.agentAddress,
-    voting: networkConfig.votingAddress,
-    easyTrack: networkConfig.easyTrackExecutorAddress,
+    agent: networkConfig.get("agentAddress"),
+    voting: networkConfig.get("votingAddress"),
+    easyTrack: networkConfig.get("easyTrackAddress"),
   } as ProtocolSigners;
 
   log.debug("Signers discovered", signers);
