@@ -301,7 +301,7 @@ describe("HashConsensus:members", function () {
     context("Re-triggering consensus via members and quorum manipulation", () => {
       beforeEach(deploy);
 
-      it("scenario 1", async () => {
+      it("adding an extra member", async () => {
         await consensus.connect(admin).addMember(await member1.getAddress(), 1);
         await consensus.connect(admin).addMember(await member2.getAddress(), 2);
 
@@ -327,7 +327,7 @@ describe("HashConsensus:members", function () {
         expect((await consensus.getConsensusState()).consensusReport).to.be.equal(HASH_1);
       });
 
-      it("scenario 2", async () => {
+      it("adding an extra member and its deletion", async () => {
         await consensus.connect(admin).addMember(await member1.getAddress(), 1);
         await consensus.connect(admin).addMember(await member2.getAddress(), 2);
 
@@ -353,7 +353,7 @@ describe("HashConsensus:members", function () {
         expect((await consensus.getConsensusState()).consensusReport).to.be.equal(HASH_1);
       });
 
-      it("scenario 3", async () => {
+      it("adding an extra member and its deletion with report", async () => {
         await consensus.connect(admin).addMember(await member1.getAddress(), 1);
         await consensus.connect(admin).addMember(await member2.getAddress(), 2);
 
@@ -383,7 +383,7 @@ describe("HashConsensus:members", function () {
         expect((await consensus.getConsensusState()).consensusReport).to.be.equal(HASH_1);
       });
 
-      it("scenario 4", async () => {
+      it("adding an extra 2 members", async () => {
         const { refSlot } = await consensus.getCurrentFrame();
 
         await consensus.connect(admin).addMember(await member1.getAddress(), 1);
@@ -424,7 +424,7 @@ describe("HashConsensus:members", function () {
         expect((await consensus.getConsensusState()).consensusReport).to.be.equal(HASH_2);
       });
 
-      it("scenario 5", async () => {
+      it("adding an extra 2 members and deleting one of the members", async () => {
         const { refSlot } = await consensus.getCurrentFrame();
 
         await consensus.connect(admin).addMember(await member1.getAddress(), 1);
