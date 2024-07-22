@@ -52,7 +52,7 @@ describe("HashConsensus:AccessControl", function () {
 
   context("DEFAULT_ADMIN_ROLE", () => {
     before(async () => {
-      await deploy({ initialEpoch: 1n });
+      await deploy({ initialEpoch: null });
     });
 
     afterEach(refresh);
