@@ -54,7 +54,7 @@ async function getDeployTxParams(deployer: string) {
       maxFeePerGas: ethers.parseUnits(String(GAS_MAX_FEE), "gwei"),
     };
   } else {
-    throw new Error('Must specify gas ENV vars: "GAS_PRIORITY_FEE" and "GAS_MAX_FEE" in gwei (like just "3")');
+    throw new Error("Must specify gas ENV vars: \"GAS_PRIORITY_FEE\" and \"GAS_MAX_FEE\" in gwei (like just \"3\")");
   }
 }
 
@@ -206,6 +206,8 @@ export async function updateProxyImplementation(
 
 export async function parseLocalDeploymentJson() {
   try {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error - file is missing out of the box, that's why we need to catch the error
     return await import("../deployed-local.json");
   } catch (e) {
     throw new Error("Failed to parse deployed-local.json. Did you run scratch deploy?");
