@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
+// for testing purposes only
+
 pragma solidity 0.4.24;
 
-import { Versioned } from "../utils/Versioned.sol";
+import {Versioned} from "contracts/0.4.24/utils/Versioned.sol";
 
-contract VersionedMock is Versioned {
+contract Versioned__Harness0424 is Versioned {
     constructor() public {}
 
     function getPetrifiedVersionMark() external pure returns (uint256) {
