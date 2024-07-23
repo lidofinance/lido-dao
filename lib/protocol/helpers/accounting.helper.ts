@@ -354,6 +354,55 @@ const simulateReport = async (
   }
 };
 
+export const handleOracleReport = async (
+  ctx: ProtocolContext,
+  params: {
+    beaconValidators: bigint;
+    clBalance: bigint;
+    sharesRequestedToBurn: bigint;
+    withdrawalVaultBalance: bigint;
+    elRewardsVaultBalance: bigint;
+  },
+): Promise<void> => {
+  const { hashConsensus, accountingOracle, lido } = ctx.contracts;
+  const { beaconValidators, clBalance, sharesRequestedToBurn, withdrawalVaultBalance, elRewardsVaultBalance } = params;
+
+  const { refSlot } = await hashConsensus.getCurrentFrame();
+  const { genesisTime, secondsPerSlot } = await hashConsensus.getChainConfig();
+  const reportTimestamp = genesisTime + refSlot * secondsPerSlot;
+
+  const accountingOracleAccount = await impersonate(accountingOracle.address, ether("100"));
+
+  try {
+    log.debug("Handle oracle report", {
+      "Ref Slot": refSlot,
+      "Beacon Validators": beaconValidators,
+      "CL Balance": ethers.formatEther(clBalance),
+      "Withdrawal Vault Balance": ethers.formatEther(withdrawalVaultBalance),
+      "El Rewards Vault Balance": ethers.formatEther(elRewardsVaultBalance),
+    });
+
+    const handleReportTx = await lido
+      .connect(accountingOracleAccount)
+      .handleOracleReport(
+        reportTimestamp,
+        1n * 24n * 60n * 60n, // 1 day
+        beaconValidators,
+        clBalance,
+        withdrawalVaultBalance,
+        elRewardsVaultBalance,
+        sharesRequestedToBurn,
+        [],
+        0n,
+      );
+
+    await trace("lido.handleOracleReport", handleReportTx);
+  } catch (error) {
+    log.error("Error", (error as Error).message ?? "Unknown error during oracle report simulation");
+    expect(error).to.be.undefined;
+  }
+};
+
 /**
  * Get finalization batches to finalize withdrawals.
  */
