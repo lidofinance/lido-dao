@@ -9,11 +9,13 @@ import { AccountingOracle } from "typechain-types";
 import {
   advanceChainTime,
   BigIntMath,
+  certainAddress,
   ether,
   EXTRA_DATA_FORMAT_EMPTY,
   getCurrentBlockTimestamp,
   impersonate,
   log,
+  MAX_UINT64,
   ONE_GWEI,
   trace,
 } from "lib";
@@ -65,11 +67,12 @@ type OracleReportPushOptions = {
 const ZERO_HASH = new Uint8Array(32).fill(0);
 const ZERO_BYTES32 = "0x" + Buffer.from(ZERO_HASH).toString("hex");
 const SHARE_RATE_PRECISION = 10n ** 27n;
+const MIN_MEMBERS_COUNT = 3n;
 
 /**
  * Prepare and push oracle report.
  */
-export const oracleReport = async (
+export const report = async (
   ctx: ProtocolContext,
   {
     clDiff = ether("10"),
@@ -242,13 +245,13 @@ export const oracleReport = async (
     extraDataList,
   };
 
-  return pushOracleReport(ctx, reportParams);
+  return submitReport(ctx, reportParams);
 };
 
 /**
  * Wait for the next available report time.
  */
-const waitNextAvailableReportTime = async (ctx: ProtocolContext): Promise<void> => {
+export const waitNextAvailableReportTime = async (ctx: ProtocolContext): Promise<void> => {
   const { hashConsensus } = ctx.contracts;
   const { slotsPerEpoch, secondsPerSlot, genesisTime } = await hashConsensus.getChainConfig();
   const { refSlot } = await hashConsensus.getCurrentFrame();
@@ -488,7 +491,7 @@ const getFinalizationBatches = async (
 /**
  * Main function to push oracle report to the protocol.
  */
-export const pushOracleReport = async (
+export const submitReport = async (
   ctx: ProtocolContext,
   {
     refSlot,
@@ -611,6 +614,63 @@ export const pushOracleReport = async (
 };
 
 /**
+ * Ensure that the oracle committee has the required number of members.
+ */
+export const ensureOracleCommitteeMembers = async (
+  ctx: ProtocolContext,
+  minMembersCount = MIN_MEMBERS_COUNT,
+) => {
+  const { hashConsensus } = ctx.contracts;
+
+  const { addresses } = await hashConsensus.getFastLaneMembers();
+
+  let count = 0n;
+
+  const agentSigner = await ctx.getSigner("agent");
+
+  while (addresses.length < minMembersCount) {
+    log.warning(`Adding oracle committee member ${count}`);
+
+    const address = getOracleCommitteeMemberAddress(count);
+    const addTx = await hashConsensus.connect(agentSigner).addMember(address, minMembersCount);
+    await trace("hashConsensus.addMember", addTx);
+
+    addresses.push(address);
+    count++;
+  }
+
+  log.debug("Checked oracle committee members count", {
+    "Min members count": minMembersCount,
+    "Members count": addresses.length,
+  });
+
+  expect(addresses.length).to.be.gte(minMembersCount);
+};
+
+export const ensureHashConsensusInitialEpoch = async (ctx: ProtocolContext) => {
+  const { hashConsensus } = ctx.contracts;
+
+  const { initialEpoch } = await hashConsensus.getFrameConfig();
+  if (initialEpoch === MAX_UINT64) {
+    log.warning("Initializing hash consensus epoch");
+
+    const latestBlockTimestamp = await getCurrentBlockTimestamp();
+
+    // TODO: get it from chain spec
+    const slotsPerEpoch = 32n;
+    const secondsPerSlot = 12n;
+    const genesisTime = 1639659600n;
+
+    const updatedInitialEpoch = (latestBlockTimestamp - genesisTime) / (slotsPerEpoch * secondsPerSlot);
+
+    const agentSigner = await ctx.getSigner("agent");
+
+    const tx = await hashConsensus.connect(agentSigner).updateInitialEpoch(updatedInitialEpoch);
+    await trace("hashConsensus.updateInitialEpoch", tx);
+  }
+};
+
+/**
  * Submit reports from all fast lane members to reach consensus on the report.
  */
 const reachConsensus = async (
@@ -712,3 +772,8 @@ const calcReportDataHash = (items: ReturnType<typeof getReportDataItems>) => {
   const data = ethers.AbiCoder.defaultAbiCoder().encode([`(${types.join(",")})`], [items]);
   return ethers.keccak256(data);
 };
+
+/**
+ * Helper function to get oracle committee member address by id.
+ */
+const getOracleCommitteeMemberAddress = (id: bigint) => certainAddress(`AO:HC:OC:${id}`);

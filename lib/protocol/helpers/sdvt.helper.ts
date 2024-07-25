@@ -55,7 +55,7 @@ const ensureSDVTOperatorsHaveMinKeys = async (
     const unusedKeysCount = await sdvt.getUnusedSigningKeyCount(operatorId);
 
     if (unusedKeysCount < minKeysCount) {
-      log.warning(`Adding fake keys to operator ${operatorId}`);
+      log.warning(`Adding SDVT fake keys to operator ${operatorId}`);
 
       await addFakeNodeOperatorKeysToSDVT(ctx, {
         operatorId,
@@ -68,7 +68,7 @@ const ensureSDVTOperatorsHaveMinKeys = async (
     expect(unusedKeysCountAfter).to.be.gte(minKeysCount);
   }
 
-  log.debug("Checked operators keys count", {
+  log.debug("Checked SDVT operators keys count", {
     "Min operators count": minOperatorsCount,
     "Min keys count": minKeysCount,
   });
@@ -93,7 +93,7 @@ const ensureSDVTMinOperators = async (ctx: ProtocolContext, minOperatorsCount = 
       managerAddress: getOperatorManagerAddress(operatorId),
     };
 
-    log.warning(`Adding fake operator ${operatorId}`);
+    log.warning(`Adding SDVT fake operator ${operatorId}`);
 
     await addFakeNodeOperatorToSDVT(ctx, operator);
     count++;
@@ -104,7 +104,7 @@ const ensureSDVTMinOperators = async (ctx: ProtocolContext, minOperatorsCount = 
   expect(after).to.be.equal(before + count);
   expect(after).to.be.gte(minOperatorsCount);
 
-  log.debug("Checked operators count", {
+  log.debug("Checked SDVT operators count", {
     "Min operators count": minOperatorsCount,
     "Operators count": after,
   });
@@ -113,7 +113,7 @@ const ensureSDVTMinOperators = async (ctx: ProtocolContext, minOperatorsCount = 
 /**
  * Adds a new node operator to the Simple DVT.
  */
-export const addFakeNodeOperatorToSDVT = async (
+const addFakeNodeOperatorToSDVT = async (
   ctx: ProtocolContext,
   params: {
     operatorId: bigint;
@@ -139,7 +139,7 @@ export const addFakeNodeOperatorToSDVT = async (
   );
   await trace("acl.grantPermissionP", grantPermissionTx);
 
-  log.debug("Added fake operator", {
+  log.debug("Added SDVT fake operator", {
     "Operator ID": operatorId,
     "Name": name,
     "Reward address": rewardAddress,
@@ -150,7 +150,7 @@ export const addFakeNodeOperatorToSDVT = async (
 /**
  * Adds some signing keys to the operator in the Simple DVT.
  */
-export const addFakeNodeOperatorKeysToSDVT = async (
+const addFakeNodeOperatorKeysToSDVT = async (
   ctx: ProtocolContext,
   params: {
     operatorId: bigint;
@@ -182,7 +182,7 @@ export const addFakeNodeOperatorKeysToSDVT = async (
   expect(totalKeysAfter).to.be.equal(totalKeysBefore + keysToAdd);
   expect(unusedKeysAfter).to.be.equal(unusedKeysBefore + keysToAdd);
 
-  log.debug("Added fake signing keys", {
+  log.debug("Added SDVT fake signing keys", {
     "Operator ID": operatorId,
     "Keys to add": keysToAdd,
     "Total keys before": totalKeysBefore,
@@ -214,14 +214,14 @@ const setSDVTOperatorStakingLimit = async (
 /**
  * Helper function to get some operator name.
  */
-const getOperatorName = (id: bigint, group: bigint = 0n) => `OP-${group}-${id}`;
+const getOperatorName = (id: bigint, group: bigint = 0n) => `SDVT:OP-${group}-${id}`;
 
 /**
  * Helper function to get some operator reward address.
  */
-const getOperatorRewardAddress = (id: bigint, group: bigint = 0n) => certainAddress(`OPR:${group}:${id}`);
+const getOperatorRewardAddress = (id: bigint, group: bigint = 0n) => certainAddress(`SDVT:OPR:${group}:${id}`);
 
 /**
  * Helper function to get some operator manager address.
  */
-const getOperatorManagerAddress = (id: bigint, group: bigint = 0n) => certainAddress(`OPM:${group}:${id}`);
+const getOperatorManagerAddress = (id: bigint, group: bigint = 0n) => certainAddress(`SDVT:OPM:${group}:${id}`);

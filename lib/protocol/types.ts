@@ -1,4 +1,4 @@
-import { BaseContract as EthersBaseContract } from "ethers";
+import { BaseContract as EthersBaseContract, ContractTransactionReceipt, LogDescription } from "ethers";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
@@ -127,4 +127,5 @@ export type ProtocolContext = {
   signers: ProtocolSigners;
   interfaces: Array<BaseContract["interface"]>;
   getSigner: (signer: Signer, balance?: bigint) => Promise<HardhatEthersSigner>;
+  getEvents: (receipt: ContractTransactionReceipt, eventName: string) => LogDescription[];
 };

@@ -4,9 +4,9 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { batch, ether, findEventsWithInterfaces, impersonate, log, trace } from "lib";
+import { batch, ether, impersonate, log, trace } from "lib";
 import { getProtocolContext, ProtocolContext } from "lib/protocol";
-import { ensureSDVTOperators, oracleReport, unpauseStaking, unpauseWithdrawalQueue } from "lib/protocol/helpers";
+import { ensureSDVTOperators, report } from "lib/protocol/helpers";
 
 import { Snapshot } from "test/suite";
 
@@ -44,16 +44,6 @@ describe("Happy Path", () => {
 
   after(async () => await Snapshot.restore(snapshot));
 
-  const getEvents = (receipt: ContractTransactionReceipt, eventName: string) => {
-    return findEventsWithInterfaces(receipt, eventName, ctx.interfaces);
-  };
-
-  const submitStake = async (amount: bigint, wallet: HardhatEthersSigner) => {
-    const { lido } = ctx.contracts;
-    const tx = await lido.connect(wallet).submit(ZeroAddress, { value: amount });
-    await trace("lido.submit", tx);
-  };
-
   const getBalances = async (wallet: HardhatEthersSigner) => {
     const { lido } = ctx.contracts;
     return batch({
@@ -62,16 +52,6 @@ describe("Happy Path", () => {
     });
   };
 
-  it("Should be unpaused", async () => {
-    const { lido, withdrawalQueue } = ctx.contracts;
-
-    await unpauseStaking(ctx);
-    await unpauseWithdrawalQueue(ctx);
-
-    expect(await lido.isStakingPaused()).to.be.false;
-    expect(await withdrawalQueue.isPaused()).to.be.false;
-  });
-
   it("Should be able to finalize the withdrawal queue", async () => {
     const { lido, withdrawalQueue } = ctx.contracts;
 
@@ -79,30 +59,32 @@ describe("Happy Path", () => {
     const tx = await stEthHolder.sendTransaction({ to: lido.address, value: stEthHolderAmount });
     await trace("stEthHolder.sendTransaction", tx);
 
-    // Note: when using tracer it stops on promise.all concurrency, and slows down the test
-    const getRequests = async () => {
-      const lastFinalizedRequestId = await withdrawalQueue.getLastFinalizedRequestId();
-      const lastRequestId = await withdrawalQueue.getLastRequestId();
-
-      return { lastFinalizedRequestId, lastRequestId };
-    };
-
-    let { lastFinalizedRequestId, lastRequestId } = await getRequests();
+    let lastFinalizedRequestId = await withdrawalQueue.getLastFinalizedRequestId();
+    let lastRequestId = await withdrawalQueue.getLastRequestId();
 
     while (lastFinalizedRequestId != lastRequestId) {
-      await oracleReport(ctx);
+      await report(ctx);
 
-      ({ lastFinalizedRequestId, lastRequestId } = await getRequests());
+      lastFinalizedRequestId = await withdrawalQueue.getLastFinalizedRequestId();
+      lastRequestId = await withdrawalQueue.getLastRequestId();
 
       log.debug("Withdrawal queue", {
         "Last finalized request ID": lastFinalizedRequestId,
         "Last request ID": lastRequestId,
       });
 
-      await submitStake(ether("10000"), ethHolder);
+      const submitTx = await ctx.contracts.lido
+        .connect(ethHolder)
+        .submit(ZeroAddress, { value: ether("10000") });
+
+      await trace("lido.submit", submitTx);
     }
 
-    await submitStake(ether("10000"), ethHolder);
+    const submitTx = await ctx.contracts.lido
+      .connect(ethHolder)
+      .submit(ZeroAddress, { value: ether("10000") });
+
+    await trace("lido.submit", submitTx);
 
     // Will be used in finalization part
     uncountedStETHShares = await lido.sharesOf(withdrawalQueue.address);
@@ -176,8 +158,8 @@ describe("Happy Path", () => {
       "ETH balance after submit",
     );
 
-    const submittedEvent = getEvents(receipt, "Submitted")[0];
-    const transferSharesEvent = getEvents(receipt, "TransferShares")[0];
+    const submittedEvent = ctx.getEvents(receipt, "Submitted")[0];
+    const transferSharesEvent = ctx.getEvents(receipt, "TransferShares")[0];
     const sharesToBeMinted = await lido.getSharesByPooledEth(AMOUNT);
     const mintedShares = await lido.sharesOf(stranger);
 
@@ -242,9 +224,9 @@ describe("Happy Path", () => {
 
     const bufferedEtherAfterDeposit = await lido.getBufferedEther();
 
-    const unbufferedEventNor = getEvents(depositNorReceipt, "Unbuffered")[0];
-    const unbufferedEventSdvt = getEvents(depositSdvtReceipt, "Unbuffered")[0];
-    const depositedValidatorsChangedEventSdvt = getEvents(depositSdvtReceipt, "DepositedValidatorsChanged")[0];
+    const unbufferedEventNor = ctx.getEvents(depositNorReceipt, "Unbuffered")[0];
+    const unbufferedEventSdvt = ctx.getEvents(depositSdvtReceipt, "Unbuffered")[0];
+    const depositedValidatorsChangedEventSdvt = ctx.getEvents(depositSdvtReceipt, "DepositedValidatorsChanged")[0];
 
     const unbufferedAmountNor = unbufferedEventNor.args[0];
     const unbufferedAmountSdvt = unbufferedEventSdvt.args[0];
@@ -311,7 +293,7 @@ describe("Happy Path", () => {
     const treasuryBalanceBeforeRebase = await lido.sharesOf(treasuryAddress);
 
     const reportParams = { clDiff: ether("100") };
-    const { reportTx, extraDataTx } = (await oracleReport(ctx, reportParams)) as {
+    const { reportTx, extraDataTx } = (await report(ctx, reportParams)) as {
       reportTx: TransactionResponse;
       extraDataTx: TransactionResponse;
     };
@@ -327,11 +309,11 @@ describe("Happy Path", () => {
     const reportTxReceipt = (await reportTx.wait()) as ContractTransactionReceipt;
     const extraDataTxReceipt = (await extraDataTx.wait()) as ContractTransactionReceipt;
 
-    const tokenRebasedEvent = getEvents(reportTxReceipt, "TokenRebased")[0];
+    const tokenRebasedEvent = ctx.getEvents(reportTxReceipt, "TokenRebased")[0];
 
     expect(tokenRebasedEvent).not.to.be.undefined;
 
-    const transferEvents = getEvents(reportTxReceipt, "Transfer");
+    const transferEvents = ctx.getEvents(reportTxReceipt, "Transfer");
 
     expect(transferEvents.length).to.be.equal(4, "Transfer events count");
     expect(transferEvents[0].args.from).to.be.equal(withdrawalQueue.address, "Transfer from (Burner)");
@@ -358,7 +340,7 @@ describe("Happy Path", () => {
     );
 
     const expectedBurnerTransfers = (norStatus.hasPenalizedOperators ? 1n : 0n) + (sdvtStatus.hasPenalizedOperators ? 1n : 0n);
-    const transfers = getEvents(extraDataTxReceipt, "Transfer");
+    const transfers = ctx.getEvents(extraDataTxReceipt, "Transfer");
     const burnerTransfers = transfers.filter(e => e?.args[1] == burner.address).length;
 
     expect(burnerTransfers).to.be.equal(expectedBurnerTransfers, "Burner transfers is correct");
@@ -372,9 +354,9 @@ describe("Happy Path", () => {
       "Burner transfers": burnerTransfers,
     });
 
-    expect(getEvents(reportTxReceipt, "TokenRebased")[0]).not.to.be.undefined;
-    expect(getEvents(reportTxReceipt, "WithdrawalsFinalized")[0]).not.to.be.undefined;
-    const burntSharesEvent = getEvents(reportTxReceipt, "StETHBurnt")[0];
+    expect(ctx.getEvents(reportTxReceipt, "TokenRebased")[0]).not.to.be.undefined;
+    expect(ctx.getEvents(reportTxReceipt, "WithdrawalsFinalized")[0]).not.to.be.undefined;
+    const burntSharesEvent = ctx.getEvents(reportTxReceipt, "StETHBurnt")[0];
 
     expect(burntSharesEvent).not.to.be.undefined;
 
@@ -405,7 +387,7 @@ describe("Happy Path", () => {
     const approveTx = await lido.connect(stranger).approve(withdrawalQueue.address, amountWithRewards);
     const approveTxReceipt = await trace<ContractTransactionReceipt>("lido.approve", approveTx);
 
-    const approveEvent = getEvents(approveTxReceipt, "Approval")[0];
+    const approveEvent = ctx.getEvents(approveTxReceipt, "Approval")[0];
 
     expect(approveEvent).not.to.be.undefined;
     expect(approveEvent.args.owner).to.be.equal(stranger, "Approval event owner");
@@ -417,7 +399,7 @@ describe("Happy Path", () => {
     const withdrawalTx = await withdrawalQueue.connect(stranger).requestWithdrawals([amountWithRewards], stranger);
     const withdrawalTxReceipt = await trace<ContractTransactionReceipt>("withdrawalQueue.requestWithdrawals", withdrawalTx);
 
-    const withdrawalEvent = getEvents(withdrawalTxReceipt, "WithdrawalRequested")[0];
+    const withdrawalEvent = ctx.getEvents(withdrawalTxReceipt, "WithdrawalRequested")[0];
 
     expect(withdrawalEvent).not.to.be.undefined;
     expect(withdrawalEvent.args.requestor).to.be.equal(stranger, "WithdrawalRequested event requestor");
@@ -425,7 +407,7 @@ describe("Happy Path", () => {
     expect(withdrawalEvent.args.amountOfStETH).to.be.equal(amountWithRewards, "WithdrawalRequested event amountOfStETH");
 
     const requestId = withdrawalEvent.args.requestId;
-    const withdrawalTransferEvents = getEvents(withdrawalTxReceipt, "Transfer");
+    const withdrawalTransferEvents = ctx.getEvents(withdrawalTxReceipt, "Transfer");
 
     expect(withdrawalTransferEvents.length).to.be.least(2, "Transfer events count");
     expect(withdrawalTransferEvents[0].args.from).to.be.equal(stranger, "Transfer stETH from (Stranger)");
@@ -479,7 +461,7 @@ describe("Happy Path", () => {
     const lockedEtherAmountBeforeFinalization = await withdrawalQueue.getLockedEtherAmount();
 
     const reportParams = { clDiff: ether("100") };
-    const { reportTx } = (await oracleReport(ctx, reportParams)) as { reportTx: TransactionResponse };
+    const { reportTx } = (await report(ctx, reportParams)) as { reportTx: TransactionResponse };
 
     const reportTxReceipt = (await reportTx.wait()) as ContractTransactionReceipt;
 
@@ -490,7 +472,7 @@ describe("Happy Path", () => {
 
     expect(lockedEtherAmountBeforeFinalization).to.be.equal(expectedLockedEtherAmountAfterFinalization, "Locked ether amount after finalization");
 
-    const withdrawalFinalizedEvent = getEvents(reportTxReceipt, "WithdrawalsFinalized")[0];
+    const withdrawalFinalizedEvent = ctx.getEvents(reportTxReceipt, "WithdrawalsFinalized")[0];
 
     expect(withdrawalFinalizedEvent).not.to.be.undefined;
     expect(withdrawalFinalizedEvent.args.amountOfETHLocked).to.be.equal(amountWithRewards, "WithdrawalFinalized event amountOfETHLocked");
@@ -528,7 +510,7 @@ describe("Happy Path", () => {
 
     const spentGas = claimTxReceipt.gasUsed * claimTxReceipt.gasPrice;
 
-    const claimEvent = getEvents(claimTxReceipt, "WithdrawalClaimed")[0];
+    const claimEvent = ctx.getEvents(claimTxReceipt, "WithdrawalClaimed")[0];
 
     expect(claimEvent).not.to.be.undefined;
     expect(claimEvent.args.requestId).to.be.equal(requestId, "WithdrawalClaimed event requestId");
@@ -536,7 +518,7 @@ describe("Happy Path", () => {
     expect(claimEvent.args.receiver).to.be.equal(stranger, "WithdrawalClaimed event receiver");
     expect(claimEvent.args.amountOfETH).to.be.equal(amountWithRewards, "WithdrawalClaimed event amountOfETH");
 
-    const transferEvent = getEvents(claimTxReceipt, "Transfer")[0];
+    const transferEvent = ctx.getEvents(claimTxReceipt, "Transfer")[0];
 
     expect(transferEvent).not.to.be.undefined;
     expect(transferEvent.args.from).to.be.equal(stranger.address, "Transfer from (Stranger)");
